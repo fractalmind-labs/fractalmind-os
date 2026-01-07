@@ -14,6 +14,14 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 
+def _find_repo_root(start: Path) -> Path:
+    """Find the monorepo root even when this skill is installed via symlink."""
+    for candidate in [start, *start.parents]:
+        if (candidate / 'teams').is_dir() and (candidate / '.agent').is_dir():
+            return candidate
+    return start.parents[4]
+
+
 def get_teams_dir() -> Path:
     """Get the teams directory path."""
     # Allow override via environment variable
@@ -26,10 +34,10 @@ def get_teams_dir() -> Path:
     if repo_root:
         return Path(repo_root) / 'teams'
 
-    # Prefer repo-root derived from this skill's path so commands work from any CWD.
-    # .agent/skills/team-manager/scripts/team_config.py -> repo root is 4 parents up.
+    # Prefer repo-root derived from this skill's path so commands work from any CWD,
+    # including when the skill is installed via symlink into a submodule.
     try:
-        repo_root_from_file = Path(__file__).resolve().parents[4]
+        repo_root_from_file = _find_repo_root(Path(__file__).resolve())
         candidate = repo_root_from_file / 'teams'
         if candidate.exists():
             return candidate

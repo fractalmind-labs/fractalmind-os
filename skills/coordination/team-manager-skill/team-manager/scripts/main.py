@@ -17,16 +17,19 @@ from datetime import datetime, timezone
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'agent-manager' / 'scripts'))
 
+def _find_repo_root(start: Path) -> Path:
+    """Find the monorepo root even when this skill is installed via symlink."""
+    for candidate in [start, *start.parents]:
+        if (candidate / 'teams').is_dir() and (candidate / '.agent').is_dir():
+            return candidate
+    return start.parents[4]
+
+
 # Ensure repo-root relative paths and ${REPO_ROOT} expansions work even when invoked
-# from a subdirectory (e.g., inside projects/*).
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+# from a subdirectory (e.g., inside projects/*) or via a symlinked skill.
+_REPO_ROOT = _find_repo_root(Path(__file__).resolve())
 os.environ.setdefault('REPO_ROOT', str(_REPO_ROOT))
 _AGENTS_DIR = _REPO_ROOT / 'agents'
-
-# DEBUG
-print(f"DEBUG: _REPO_ROOT={_REPO_ROOT}", file=sys.stderr)
-print(f"DEBUG: REPO_ROOT={os.environ.get('REPO_ROOT')}", file=sys.stderr)
-print(f"DEBUG: teams dir would be={_REPO_ROOT / 'teams'}", file=sys.stderr)
 
 from team_config import (
     list_all_teams,
