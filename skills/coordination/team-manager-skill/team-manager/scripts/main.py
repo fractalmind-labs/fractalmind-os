@@ -17,6 +17,12 @@ from datetime import datetime, timezone
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'agent-manager' / 'scripts'))
 
+# Ensure repo-root relative paths and ${REPO_ROOT} expansions work even when invoked
+# from a subdirectory (e.g., inside projects/*).
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+os.environ.setdefault('REPO_ROOT', str(_REPO_ROOT))
+_AGENTS_DIR = _REPO_ROOT / 'agents'
+
 from team_config import (
     list_all_teams,
     resolve_team,
@@ -55,7 +61,7 @@ def _format_duration(seconds: int) -> str:
 def persist_last_team_task(team_name: str, task: str) -> None:
     """Persist the last assigned task for a team for recovery/nudging."""
     # Resolve repo root based on this script's location (stable even when invoked from subdirectories).
-    repo_root = find_repo_root()
+    repo_root = Path(__file__).resolve().parents[4]
     state_dir = repo_root / '.claude' / 'state' / 'team-assignments'
     state_dir.mkdir(parents=True, exist_ok=True)
 
@@ -76,7 +82,7 @@ def get_agent_name(employee_id: str) -> str:
     Returns:
         Agent name (e.g., 'dev') or employee_id if not found
     """
-    config = resolve_agent(employee_id)
+    config = resolve_agent(employee_id, agents_dir=_AGENTS_DIR)
     if config:
         return config.get('name', employee_id)
     return employee_id
@@ -191,7 +197,7 @@ def cmd_status(args):
         lead_mark = " 👑" if emp_id == lead_id else ""
 
         # Check if running and surface best-effort runtime state.
-        agent_config = resolve_agent(emp_id)
+        agent_config = resolve_agent(emp_id, agents_dir=_AGENTS_DIR)
         is_running = False
         runtime_state = None
 
@@ -209,6 +215,7 @@ def cmd_status(args):
 
         state = (runtime_state or {}).get('state')
         elapsed_seconds = (runtime_state or {}).get('elapsed_seconds')
+        reason = (runtime_state or {}).get('reason')
 
         suffix = ""
         if state in ("busy", "stuck"):
@@ -218,6 +225,8 @@ def cmd_status(args):
                 suffix = f" ({state})"
         elif state == "blocked":
             suffix = " (blocked: approval/user input)"
+        elif state == "error":
+            suffix = f" (error: {reason})" if reason else " (error)"
         elif state == "idle":
             suffix = " (idle)"
 
@@ -314,20 +323,14 @@ Please coordinate this task with your team and report back when complete.
     import subprocess
 
     # Find agent-manager script
-    agent_manager_dir = find_agent_manager_dir()
-    if agent_manager_dir:
-        agent_manager = agent_manager_dir / 'scripts' / 'main.py'
-    else:
-        print("⚠️  agent-manager skill not found. Please install it first.")
-        print("   openskills install fractalmind-ai/agent-manager-skill")
-        return 1
+    agent_manager = Path(__file__).parent.parent.parent / 'agent-manager' / 'scripts' / 'main.py'
 
     if not agent_manager.exists():
         # Try to use via python module import
         print(f"⚠️  agent-manager not found, attempting direct assignment...")
 
         # Try direct tmux send
-        agent_config = resolve_agent(lead_id)
+        agent_config = resolve_agent(lead_id, agents_dir=_AGENTS_DIR)
         if agent_config:
             agent_id = get_agent_id(agent_config)
             if session_exists(agent_id):
@@ -345,7 +348,7 @@ Please coordinate this task with your team and report back when complete.
             return 1
 
     # Start lead agent with team working directory if not running
-    agent_config = resolve_agent(lead_id)
+    agent_config = resolve_agent(lead_id, agents_dir=_AGENTS_DIR)
     if agent_config:
         agent_session_id = get_agent_id(agent_config)
         if not session_exists(agent_session_id):
@@ -407,7 +410,7 @@ def cmd_monitor(args):
                 for member in members:
                     emp_id = member.get('employee_id', 'unknown')
 
-                    agent_config = resolve_agent(emp_id)
+                    agent_config = resolve_agent(emp_id, agents_dir=_AGENTS_DIR)
                     if not agent_config:
                         continue
 
@@ -438,7 +441,7 @@ def cmd_monitor(args):
             emp_id = member.get('employee_id', 'unknown')
             agent_name = get_agent_name(emp_id)
 
-            agent_config = resolve_agent(emp_id)
+            agent_config = resolve_agent(emp_id, agents_dir=_AGENTS_DIR)
             if not agent_config:
                 continue
 

@@ -1,21 +1,11 @@
 #!/usr/bin/env python3
 """
 Team configuration parser for team-manager skill.
+
+Teams are defined in teams/TEAM_NAME.md files with YAML frontmatter.
+Team members are referenced by employee ID (e.g., EMP_0001).
+Workflow is defined in the markdown body using mermaid diagrams.
 """
-
-import re
-import yaml
-from pathlib import Path
-from typing import Optional, Dict, Any, List
-
-# Import path helper
-try:
-    from path_helper import find_teams_dir, find_repo_root
-except ImportError:
-    # Fallback for development
-    def find_teams_dir(): return Path.cwd() / 'teams'
-    def find_repo_root(): return Path.cwd()
-
 
 import re
 import os
@@ -25,23 +15,7 @@ from typing import Dict, List, Optional, Any
 
 
 def get_teams_dir() -> Path:
-    """
-Team configuration parser for team-manager skill.
-"""
-
-import re
-import yaml
-from pathlib import Path
-from typing import Optional, Dict, Any, List
-
-# Import path helper
-try:
-    from path_helper import find_teams_dir, find_repo_root
-except ImportError:
-    # Fallback for development
-    def find_teams_dir(): return Path.cwd() / 'teams'
-    def find_repo_root(): return Path.cwd()
-
+    """Get the teams directory path."""
     # Allow override via environment variable
     teams_dir = os.environ.get('TEAMS_DIR')
     if teams_dir:
@@ -52,28 +26,48 @@ except ImportError:
     if repo_root:
         return Path(repo_root) / 'teams'
 
-    # Fallback to current directory
+    # Prefer repo-root derived from this skill's path so commands work from any CWD.
+    # .agent/skills/team-manager/scripts/team_config.py -> repo root is 4 parents up.
+    try:
+        repo_root_from_file = Path(__file__).resolve().parents[4]
+        candidate = repo_root_from_file / 'teams'
+        if candidate.exists():
+            return candidate
+    except Exception:
+        pass
+
+    # Fallback to current working directory
     return Path.cwd() / 'teams'
 
 
 def parse_team_frontmatter(file_path: Path) -> Optional[Dict[str, Any]]:
     """
-Team configuration parser for team-manager skill.
-"""
+    Parse YAML frontmatter from a team configuration file.
 
-import re
-import yaml
-from pathlib import Path
-from typing import Optional, Dict, Any, List
+    Format:
+    ---
+    name: frontend
+    description: Frontend Development Team
+    lead_agent: EMP_0001
+    members:
+      - employee_id: EMP_0001
+        role: lead developer
+      - employee_id: EMP_0002
+        role: qa tester
+    ---
 
-# Import path helper
-try:
-    from path_helper import find_teams_dir, find_repo_root
-except ImportError:
-    # Fallback for development
-    def find_teams_dir(): return Path.cwd() / 'teams'
-    def find_repo_root(): return Path.cwd()
+    # TEAM NAME
 
+    ## Workflow
+    ```mermaid
+    graph TD
+      A[Lead receives task] --> B[Assign to Dev]
+      B --> C[Dev completes]
+      C --> D[Assign to QA]
+      D --> E[QA approves]
+      E --> F[Lead reports completion]
+    ```
+    """
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -114,23 +108,7 @@ except ImportError:
 
 
 def list_all_teams() -> Dict[str, Dict[str, Any]]:
-    """
-Team configuration parser for team-manager skill.
-"""
-
-import re
-import yaml
-from pathlib import Path
-from typing import Optional, Dict, Any, List
-
-# Import path helper
-try:
-    from path_helper import find_teams_dir, find_repo_root
-except ImportError:
-    # Fallback for development
-    def find_teams_dir(): return Path.cwd() / 'teams'
-    def find_repo_root(): return Path.cwd()
-
+    """List all configured teams from teams/ directory."""
     teams_dir = get_teams_dir()
 
     if not teams_dir.exists():
@@ -147,22 +125,14 @@ except ImportError:
 
 def resolve_team(team_identifier: str) -> Optional[Dict[str, Any]]:
     """
-Team configuration parser for team-manager skill.
-"""
+    Resolve a team by name or file name.
 
-import re
-import yaml
-from pathlib import Path
-from typing import Optional, Dict, Any, List
+    Args:
+        team_identifier: Team name (e.g., 'frontend') or file name (e.g., 'frontend')
 
-# Import path helper
-try:
-    from path_helper import find_teams_dir, find_repo_root
-except ImportError:
-    # Fallback for development
-    def find_teams_dir(): return Path.cwd() / 'teams'
-    def find_repo_root(): return Path.cwd()
-
+    Returns:
+        Team configuration dict or None if not found.
+    """
     all_teams = list_all_teams()
 
     # Try exact name match
@@ -179,22 +149,11 @@ except ImportError:
 
 def get_team_members(team_config: Dict[str, Any]) -> List[Dict[str, str]]:
     """
-Team configuration parser for team-manager skill.
-"""
+    Get list of team members with their roles.
 
-import re
-import yaml
-from pathlib import Path
-from typing import Optional, Dict, Any, List
-
-# Import path helper
-try:
-    from path_helper import find_teams_dir, find_repo_root
-except ImportError:
-    # Fallback for development
-    def find_teams_dir(): return Path.cwd() / 'teams'
-    def find_repo_root(): return Path.cwd()
-
+    Returns:
+        List of dicts with 'employee_id' and 'role' keys.
+    """
     members = team_config.get('members', [])
 
     # Support both old format (agent) and new format (employee_id)
@@ -218,64 +177,34 @@ except ImportError:
 
 def get_lead_agent_id(team_config: Dict[str, Any]) -> Optional[str]:
     """
-Team configuration parser for team-manager skill.
-"""
+    Get the lead agent's employee ID.
 
-import re
-import yaml
-from pathlib import Path
-from typing import Optional, Dict, Any, List
-
-# Import path helper
-try:
-    from path_helper import find_teams_dir, find_repo_root
-except ImportError:
-    # Fallback for development
-    def find_teams_dir(): return Path.cwd() / 'teams'
-    def find_repo_root(): return Path.cwd()
-
+    Returns:
+        Employee ID (e.g., 'EMP_0001') or None if not set.
+    """
     return team_config.get('lead_agent')
 
 
 def get_team_body(team_config: Dict[str, Any]) -> str:
     """
-Team configuration parser for team-manager skill.
-"""
+    Get the markdown body of the team configuration.
 
-import re
-import yaml
-from pathlib import Path
-from typing import Optional, Dict, Any, List
-
-# Import path helper
-try:
-    from path_helper import find_teams_dir, find_repo_root
-except ImportError:
-    # Fallback for development
-    def find_teams_dir(): return Path.cwd() / 'teams'
-    def find_repo_root(): return Path.cwd()
-
+    Returns:
+        Markdown content (including workflow diagrams).
+    """
     return team_config.get('body', '')
 
 
 def get_team_working_directory(team_config: Dict[str, Any]) -> Optional[str]:
     """
-Team configuration parser for team-manager skill.
-"""
+    Get the team's working directory.
 
-import re
-import yaml
-from pathlib import Path
-from typing import Optional, Dict, Any, List
+    This directory overrides individual agent working directories
+    when team members are started for team tasks.
 
-# Import path helper
-try:
-    from path_helper import find_teams_dir, find_repo_root
-except ImportError:
-    # Fallback for development
-    def find_teams_dir(): return Path.cwd() / 'teams'
-    def find_repo_root(): return Path.cwd()
-
+    Returns:
+        Working directory path or None if not set.
+    """
     wd = team_config.get('working_directory')
     if not wd:
         return None
@@ -289,22 +218,11 @@ except ImportError:
 
 def validate_team_config(config: Dict[str, Any]) -> List[str]:
     """
-Team configuration parser for team-manager skill.
-"""
+    Validate team configuration.
 
-import re
-import yaml
-from pathlib import Path
-from typing import Optional, Dict, Any, List
-
-# Import path helper
-try:
-    from path_helper import find_teams_dir, find_repo_root
-except ImportError:
-    # Fallback for development
-    def find_teams_dir(): return Path.cwd() / 'teams'
-    def find_repo_root(): return Path.cwd()
-
+    Returns:
+        List of error messages (empty if valid).
+    """
     errors = []
 
     required_fields = ['name', 'description', 'lead_agent']

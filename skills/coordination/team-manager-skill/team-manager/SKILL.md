@@ -423,37 +423,3 @@ sequenceDiagram
 5. **Monitor actively**: Use `monitor --follow` during active work
 6. **Use employee IDs**: Always reference members by employee ID, not agent name
 7. **Document thoroughly**: The body is for documentation - be detailed
-
-## Installation
-
-### via openskills (recommended)
-
-```bash
-# Project installation
-openskills install fractalmind-ai/team-manager-skill
-
-# Global installation
-openskills install fractalmind-ai/team-manager-skill --global
-```
-
-### Manual installation
-
-```bash
-git clone https://github.com/fractalmind-ai/team-manager-skill.git
-cp -r team-manager-skill ~/.claude/skills/team-manager
-```
-
-## Requirements
-
-- agent-manager skill (install via: `openskills install fractalmind-ai/agent-manager-skill`)
-- Agents defined in `agents/EMP_*.md` files
-- Teams defined in `teams/TEAM_NAME.md` files
-
-## Path Resolution
-
-The skill automatically detects:
-- **Skill Root**: Directory containing `SKILL.md`
-- **Repo Root**: Parent directory containing `teams/` folder
-- **Agent Manager**: Searches for agent-manager in `.claude/skills/` or `.agent/skills/`
-
-This allows installation to any location.
