@@ -23,6 +23,11 @@ _REPO_ROOT = Path(__file__).resolve().parents[4]
 os.environ.setdefault('REPO_ROOT', str(_REPO_ROOT))
 _AGENTS_DIR = _REPO_ROOT / 'agents'
 
+# DEBUG
+print(f"DEBUG: _REPO_ROOT={_REPO_ROOT}", file=sys.stderr)
+print(f"DEBUG: REPO_ROOT={os.environ.get('REPO_ROOT')}", file=sys.stderr)
+print(f"DEBUG: teams dir would be={_REPO_ROOT / 'teams'}", file=sys.stderr)
+
 from team_config import (
     list_all_teams,
     resolve_team,
