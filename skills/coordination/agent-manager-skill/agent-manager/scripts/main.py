@@ -51,8 +51,20 @@ def get_repo_root() -> Path:
     repo_root_env = os.environ.get('REPO_ROOT')
     if repo_root_env:
         return Path(repo_root_env)
-    # scripts/main.py -> scripts -> agent-manager -> skills -> .agent -> REPO_ROOT
-    return Path(__file__).resolve().parents[4]
+
+    # NOTE: This skill may be symlinked into `${REPO_ROOT}/.agent/skills/...`.
+    # Avoid `.resolve()` here; it would follow the symlink into `projects/` and break
+    # repo root detection.
+    start_dir = Path(__file__).absolute().parent
+    for candidate in [start_dir, *start_dir.parents]:
+        if (candidate / '.agent').is_dir() and (candidate / 'agents').is_dir():
+            return candidate
+
+    # Best-effort fallback (kept for compatibility with older layouts).
+    try:
+        return start_dir.parents[4]
+    except IndexError:
+        return start_dir
 
 
 def write_system_prompt_file(repo_root: Path, agent_id: str, system_prompt: str) -> Path:
