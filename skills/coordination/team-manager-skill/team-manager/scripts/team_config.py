@@ -9,6 +9,7 @@ Workflow is defined in the markdown body using mermaid diagrams.
 
 import re
 import os
+import subprocess
 import yaml
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -16,10 +17,41 @@ from typing import Dict, List, Optional, Any
 
 def _find_repo_root(start: Path) -> Path:
     """Find the monorepo root even when this skill is installed via symlink."""
-    for candidate in [start, *start.parents]:
+    start_dir = start if start.is_dir() else start.parent
+
+    env_repo_root = os.environ.get('REPO_ROOT')
+    if env_repo_root:
+        return Path(env_repo_root).expanduser().resolve()
+
+    try:
+        sp = subprocess.run(
+            ['git', 'rev-parse', '--show-superproject-working-tree'],
+            cwd=str(start_dir),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        if sp:
+            return Path(sp).resolve()
+
+        top = subprocess.run(
+            ['git', 'rev-parse', '--show-toplevel'],
+            cwd=str(start_dir),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        if top:
+            return Path(top).resolve()
+    except Exception:
+        pass
+
+    for candidate in [start_dir, *start_dir.parents]:
         if (candidate / 'teams').is_dir() and (candidate / '.agent').is_dir():
             return candidate
-    return start.parents[4]
+    return start_dir
 
 
 def get_teams_dir() -> Path:

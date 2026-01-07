@@ -10,6 +10,7 @@ Workflow is defined in the team configuration body using mermaid diagrams.
 import argparse
 import sys
 import os
+import subprocess
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -19,10 +20,41 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'agent-manager' / '
 
 def _find_repo_root(start: Path) -> Path:
     """Find the monorepo root even when this skill is installed via symlink."""
-    for candidate in [start, *start.parents]:
+    start_dir = start if start.is_dir() else start.parent
+
+    env_repo_root = os.environ.get('REPO_ROOT')
+    if env_repo_root:
+        return Path(env_repo_root).expanduser().resolve()
+
+    try:
+        sp = subprocess.run(
+            ['git', 'rev-parse', '--show-superproject-working-tree'],
+            cwd=str(start_dir),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        if sp:
+            return Path(sp).resolve()
+
+        top = subprocess.run(
+            ['git', 'rev-parse', '--show-toplevel'],
+            cwd=str(start_dir),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        if top:
+            return Path(top).resolve()
+    except Exception:
+        pass
+
+    for candidate in [start_dir, *start_dir.parents]:
         if (candidate / 'teams').is_dir() and (candidate / '.agent').is_dir():
             return candidate
-    return start.parents[4]
+    return start_dir
 
 
 # Ensure repo-root relative paths and ${REPO_ROOT} expansions work even when invoked
@@ -68,9 +100,7 @@ def _format_duration(seconds: int) -> str:
 
 def persist_last_team_task(team_name: str, task: str) -> None:
     """Persist the last assigned task for a team for recovery/nudging."""
-    # Resolve repo root based on this script's location (stable even when invoked from subdirectories).
-    repo_root = Path(__file__).resolve().parents[4]
-    state_dir = repo_root / '.claude' / 'state' / 'team-assignments'
+    state_dir = _REPO_ROOT / '.claude' / 'state' / 'team-assignments'
     state_dir.mkdir(parents=True, exist_ok=True)
 
     task_file = state_dir / f"{team_name}.md"
