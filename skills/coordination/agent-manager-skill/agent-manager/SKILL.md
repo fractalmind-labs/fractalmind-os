@@ -12,27 +12,23 @@ Employee agent orchestration system for managing AI agents in tmux sessions. A s
 ## Quick Start
 
 ```bash
-# After installation with openskills, the command path is auto-detected
 # List all agents
-python3 scripts/main.py list
+python3 .agent/skills/agent-manager/scripts/main.py list
 
 # Start dev agent
-python3 scripts/main.py start dev
+python3 .agent/skills/agent-manager/scripts/main.py start dev
 
 # Monitor output (live)
-python3 scripts/main.py monitor dev --follow
+python3 .agent/skills/agent-manager/scripts/main.py monitor dev --follow
 
 # Assign task
-python3 scripts/main.py assign dev <<EOF
+python3 .agent/skills/agent-manager/scripts/main.py assign dev <<EOF
 Fix the login bug in the auth module
 EOF
 
 # Stop agent
-python3 scripts/main.py stop dev
+python3 .agent/skills/agent-manager/scripts/main.py stop dev
 ```
-
-> **Note**: The command path above assumes you're in the skill directory. If installed via `openskills`,
-> you can also use: `openskills read agent-manager` to get the correct base directory.
 
 ## Core Concepts
 
@@ -98,12 +94,8 @@ launcher_args: []
 Show all configured agents and their status.
 
 ```bash
-# From skill directory
 python3 scripts/main.py list              # All agents
 python3 scripts/main.py list --running    # Only running
-
-# From repo root (with REPO_ROOT set)
-python3 .claude/skills/agent-manager/scripts/main.py list
 ```
 
 Output:
@@ -276,7 +268,7 @@ This generates crontab entries like:
 # === agent-manager schedules (auto-generated) ===
 # dev (EMP_0001)
 # daily-standup
-0 9 * * 1-5 cd /path/to/repo && python3 .claude/skills/agent-manager/scripts/main.py schedule run dev --job daily-standup >> /tmp/agent-emp-0001-daily-standup.log 2>&1
+0 9 * * 1-5 cd /path/to/repo && python3 .agent/skills/agent-manager/scripts/main.py schedule run dev --job daily-standup >> /tmp/agent-emp-0001-daily-standup.log 2>&1
 # === end agent-manager schedules ===
 ```
 
@@ -293,7 +285,7 @@ python3 scripts/main.py schedule run dev --job daily-standup --timeout 1h
 
 ## Skills Integration
 
-Agents can reference skills from `.agent/skills/` or `.claude/skills/`:
+Agents can reference skills from `.agent/skills/`:
 
 ```yaml
 skills:
@@ -324,11 +316,10 @@ Comprehensive BSC smart contract development expertise...
 ## Architecture
 
 ```
-agent-manager/
+.agent/skills/agent-manager/
 ├── SKILL.md                    # This file
 ├── scripts/
 │   ├── main.py                 # CLI entry point
-│   ├── path_helper.py          # Dynamic path resolution
 │   ├── agent_config.py         # Agent file parser
 │   ├── tmux_helper.py          # Tmux wrapper
 │   └── schedule_helper.py      # Crontab management
@@ -340,32 +331,12 @@ agent-manager/
 
 ### Design Principles
 
-1. **Installation-Agnostic**: Works from any installation location
-2. **Zero CAO Dependency**: Only tmux + Python required
-3. **Provider Pattern Inspiration**: Learn from CAO but implement simply
-4. **Tmux-Native**: Each agent in its own tmux session
-5. **YAML Frontmatter**: Leverage existing agent file format
-6. **Environment Variables**: Handle `${REPO_ROOT}` expansion
-7. **One Agent, One Terminal**: Reject duplicate starts
-
-### Path Resolution
-
-The skill automatically detects:
-- **Skill Root**: Directory containing `SKILL.md`
-- **Repo Root**: Parent directory containing `agents/` folder
-- **Skills Dir**: Either `.agent/skills/` or `.claude/skills/`
-
-This allows installation via:
-```bash
-# Local installation
-openskills install ./path/to/agent-manager
-
-# GitHub installation
-openskills install fractalmind-ai/agent-manager-skill
-
-# Global installation
-openskills install fractalmind-ai/agent-manager-skill --global
-```
+1. **Zero CAO Dependency**: Only tmux + Python required
+2. **Provider Pattern Inspiration**: Learn from CAO but implement simply
+3. **Tmux-Native**: Each agent in its own tmux session
+4. **YAML Frontmatter**: Leverage existing agent file format
+5. **Environment Variables**: Handle `${REPO_ROOT}` expansion
+6. **One Agent, One Terminal**: Reject duplicate starts
 
 ## Comparison with CAO
 
