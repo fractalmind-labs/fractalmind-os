@@ -253,9 +253,12 @@ def cmd_start(args):
     print(f"⏳ Waiting for CLI to be ready...")
     if not wait_for_prompt(agent_id, launcher, timeout=30):
         print(f"⚠️  Timeout waiting for CLI prompt")
-        if system_prompt:
-            print(f"   System prompt not injected. Agent may still be starting...")
-        return 1
+        if use_cli_system_prompt:
+            print(f"   Continuing: system prompt injected via {system_prompt_flag}; CLI may still be starting...")
+        else:
+            if system_prompt:
+                print(f"   System prompt not injected. Agent may still be starting...")
+            return 1
 
     if system_prompt:
         if use_cli_system_prompt:

@@ -9,7 +9,8 @@ from typing import List, Dict, Optional
 PROVIDERS: Dict[str, Dict] = {
     'claude-code': {
         'name': 'Claude Code',
-        'prompt_patterns': ['>', '>\xa0', '⟩'],
+        # Claude Code v2.1+ often renders the prompt as "❯" in the TUI.
+        'prompt_patterns': ['>', '>\xa0', '⟩', '❯'],
         'startup_wait': 0,
         'description': 'Official Claude Code CLI',
         'launch_command': None,  # Uses ccc script
