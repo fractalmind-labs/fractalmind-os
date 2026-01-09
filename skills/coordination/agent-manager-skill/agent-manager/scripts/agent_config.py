@@ -82,6 +82,7 @@ def parse_agent_file(agent_path: Path) -> Dict[str, Any]:
     config.setdefault('launcher_args', [])
     config.setdefault('skills', [])
     config.setdefault('schedules', [])
+    config.setdefault('enabled', True)  # Agents are enabled by default
 
     return config
 
@@ -333,6 +334,15 @@ def build_system_prompt(config: Dict[str, Any], skills_dir: Optional[Path] = Non
     skills_content = load_skills(config, skills_dir)
     if skills_content:
         parts.append(skills_content)
+
+        parts.append(
+            "## Workspace Preflight\n\n"
+            "If `openskills` can't find skills when you're working inside a subdirectory or git submodule, "
+            "first `cd` to the superproject (repo root) and retry:\n\n"
+            "```bash\n"
+            "cd \"$(git rev-parse --show-superproject-working-tree 2>/dev/null || git rev-parse --show-toplevel 2>/dev/null)\"\n"
+            "```\n"
+        )
 
     # Combine all parts
     if not parts:

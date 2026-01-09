@@ -148,7 +148,13 @@ def generate_crontab_entries(repo_root: Optional[Path] = None) -> str:
     current_agent_file_id = None
 
     for sched in schedules:
+        # Skip if schedule is disabled
         if not sched.get('enabled', True):
+            continue
+
+        # Skip if agent is disabled
+        agent_config = resolve_agent(sched['file_id'])
+        if agent_config and not agent_config.get('enabled', True):
             continue
 
         cron = sched.get('cron', '')

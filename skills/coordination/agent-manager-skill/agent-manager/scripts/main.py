@@ -104,6 +104,7 @@ def cmd_list(args):
         agent_name = config.get('name') or file_id
         agent_id = get_agent_id(config)
         is_running = agent_id in running_sessions
+        is_enabled = config.get('enabled', True)
 
         # Skip if --running and not active
         if args.running and not is_running:
@@ -117,6 +118,13 @@ def cmd_list(args):
                 print(f"{status} {session_info['session']}({agent_name})")
             else:
                 print(f"{status} agent-{agent_id}({agent_name})")
+        elif not is_enabled:
+            status = "⛔ Disabled"
+            print(f"{status} agent-{agent_id}({agent_name})")
+            print(f"   Description: {config.get('description', 'No description')}")
+            print(f"   Working Dir: {config.get('working_directory', 'N/A')}")
+            print()
+            continue
         else:
             status = "⭕ Stopped"
             print(f"{status} agent-{agent_id}({agent_name})")
@@ -153,6 +161,14 @@ def cmd_start(args):
     agent_name = agent_config['name']
     agent_id = get_agent_id(agent_config)
     agent_file_id = agent_config.get('file_id', args.agent)
+
+    # Check if agent is disabled
+    if not agent_config.get('enabled', True):
+        agent_file_path = agent_config.get('_file_path', f'agents/{agent_file_id}.md')
+        print(f"⚠️  Agent '{agent_name}' is disabled")
+        print(f"   Config: {agent_file_path}")
+        print(f"   To enable: Set 'enabled: true' in the agent config")
+        return 1
 
     # Check if already running
     if session_exists(agent_id):
@@ -481,7 +497,15 @@ def cmd_schedule_run(args):
     agent_name = agent_config['name']
     agent_id = get_agent_id(agent_config)
 
-    # Check if enabled
+    # Check if agent is disabled (early exit to avoid failed start attempts)
+    if not agent_config.get('enabled', True):
+        agent_file_id = agent_config.get('file_id', args.agent)
+        agent_file_path = agent_config.get('_file_path', f'agents/{agent_file_id}.md')
+        print(f"⏭️  Agent '{agent_name}' is disabled - skipping scheduled job '{args.job}'")
+        print(f"   Config: {agent_file_path}")
+        return 0
+
+    # Check if schedule is disabled
     if not schedule.get('enabled', True):
         print(f"⏭️  Schedule '{args.job}' is disabled for agent '{agent_name}'")
         return 0

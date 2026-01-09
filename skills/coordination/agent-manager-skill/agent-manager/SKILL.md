@@ -59,6 +59,7 @@ You are the Dev Agent...
 **Fields:**
 - `name`: Agent identifier (dev, qa)
 - `description`: Agent description
+- `enabled`: Whether agent can be started (default: `true`, set `false` to disable)
 - `working_directory`: Default working directory (supports `${REPO_ROOT}`)
 - `launcher`: Full path OR provider name
 - `launcher_args`: Arguments for launcher
@@ -110,6 +111,10 @@ Output:
 ⭕ Stopped qa
    Description: QA Agent in a multi-agent system
    Working Dir: /home/user/repo/projects/CloudBank-feat-invite-code
+
+⛔ Disabled old-dev
+   Description: Legacy Dev Agent (deprecated)
+   Working Dir: /home/user/repo
 ```
 
 ### `start` - Start an Agent
@@ -122,6 +127,7 @@ python3 scripts/main.py start dev --working-dir /path   # Override working dir
 ```
 
 - Rejects if already running (one agent, one terminal)
+- Rejects if agent is disabled (`enabled: false` in config)
 - Loads skills and injects as system prompt
 - Session named `agent-{name}`
 
@@ -175,6 +181,40 @@ python3 scripts/main.py assign dev --task-file task.md
 > ```bash
 > tmux send-keys -t agent-dev Enter
 > ```
+
+## Disabling Agents
+
+Agents can be temporarily disabled to prevent them from being started (useful for maintenance, testing, or decommissioning).
+
+### Disable an Agent
+
+Add `enabled: false` to the agent's YAML frontmatter:
+
+```yaml
+---
+name: dev
+description: Dev Agent (project-agnostic)
+enabled: false  # ← Agent cannot be started
+working_directory: ${REPO_ROOT}
+launcher: ${REPO_ROOT}/projects/claude-code-switch/ccc
+---
+```
+
+### Behavior
+
+**When an agent is disabled:**
+- ⛔ `list` command shows "Disabled" status
+- ⚠️ `start` command is rejected with error message
+- `schedule sync` skips all schedules for the disabled agent
+- Running sessions are NOT automatically stopped (manual stop required)
+
+**To re-enable:** Set `enabled: true` or remove the field (defaults to `true`)
+
+### Use Cases
+
+- **Maintenance**: Temporarily disable an agent while updating its configuration
+- **Testing**: Prevent a scheduled agent from running during testing
+- **Decommissioning**: Mark an agent as obsolete before removing its file
 
 ## Scheduling
 
