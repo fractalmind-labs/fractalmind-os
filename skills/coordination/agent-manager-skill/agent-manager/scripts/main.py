@@ -75,6 +75,37 @@ def write_system_prompt_file(repo_root: Path, agent_id: str, system_prompt: str)
     return prompt_file
 
 
+def cleanup_old_logs(repo_root: Path, days: int = 7) -> int:
+    """Remove log files older than specified days.
+
+    Args:
+        repo_root: Repository root path
+        days: Number of days to retain logs (default: 7)
+
+    Returns:
+        Number of log files removed
+    """
+    log_dir = repo_root / '.crontab_logs'
+    if not log_dir.exists():
+        # Create log directory if it doesn't exist
+        log_dir.mkdir(parents=True, exist_ok=True)
+        return 0
+
+    cutoff = time.time() - (days * 86400)
+    removed = 0
+
+    for log_file in log_dir.glob("*.log"):
+        try:
+            if log_file.stat().st_mtime < cutoff:
+                log_file.unlink()
+                removed += 1
+        except (OSError, IOError):
+            # Silently skip files that can't be removed
+            pass
+
+    return removed
+
+
 def build_start_command(working_dir: str, launcher: str, launcher_args: list[str]) -> str:
     cd_part = f"cd {shlex.quote(working_dir)}"
     cmd_parts = [launcher] + list(launcher_args or [])
@@ -512,6 +543,12 @@ def cmd_schedule_run(args):
 
     # Get task content
     repo_root = get_repo_root()
+
+    # Clean up old logs (silently, failures won't affect the scheduled job)
+    removed = cleanup_old_logs(repo_root, days=7)
+    if removed > 0:
+        print(f"   🗑️  Cleaned up {removed} old log file(s)")
+
     task = get_schedule_task(schedule, repo_root)
     if not task:
         print(f"❌ No task content for schedule '{args.job}'")

@@ -176,7 +176,8 @@ def generate_crontab_entries(repo_root: Optional[Path] = None) -> str:
 
         # Build command
         main_script = repo_root / '.agent' / 'skills' / 'agent-manager' / 'scripts' / 'main.py'
-        log_file = f"/tmp/agent-{sched['agent_id']}-{job_name}.log"
+        log_dir = repo_root / '.crontab_logs'
+        log_file = str(log_dir / f"agent-{sched['agent_id']}-{job_name}.log")
 
         cmd_parts = [
             f"cd {repo_root}",
