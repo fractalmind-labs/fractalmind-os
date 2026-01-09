@@ -77,17 +77,32 @@ from team_config import (
 # Import agent-manager helpers
 try:
     from agent_config import resolve_agent
-    # get_agent_id is defined in main.py, not agent_config.py
-    from main import get_agent_id
-    from tmux_helper import capture_output, send_keys, session_exists, get_agent_runtime_state
 except ImportError:
     # Fallback if agent-manager is not available
-    def resolve_agent(name): return None
-    def get_agent_id(config): return name
+    def resolve_agent(name, agents_dir=None): return None
+
+try:
+    from tmux_helper import capture_output, send_keys, session_exists, get_agent_runtime_state
+except ImportError:
     def capture_output(agent_id, lines=100): return None
     def send_keys(agent_id, message): return False
     def session_exists(agent_id): return False
     def get_agent_runtime_state(agent_id, launcher=""): return {'state': 'unknown'}
+
+# get_agent_id is a simple function - define it locally to avoid circular import
+def get_agent_id(agent_config):
+    """Extract agent ID from config (e.g., EMP_0001 -> emp-0001)."""
+    file_id = agent_config.get('file_id', '')
+    if not file_id:
+        name = agent_config.get('name', '')
+        # Extract from name if it contains the ID
+        # Common patterns: EMP_0001, emp-0001, etc.
+        import re
+        match = re.search(r'EMP[_-]?\d+', name, re.IGNORECASE)
+        if match:
+            file_id = match.group(0)
+    # Convert EMP_0001 -> emp-0001
+    return file_id.lower().replace('_', '-') if file_id else file_id
 
 
 def _format_duration(seconds: int) -> str:
@@ -141,7 +156,14 @@ def cmd_list(args):
         return
 
     for team_name, config in sorted(all_teams.items()):
-        print(f"📦 {team_name}")
+        # Check if team is disabled
+        is_enabled = config.get('enabled', True)
+        status_icon = "" if is_enabled else "⛔ Disabled"
+
+        if status_icon:
+            print(f"{status_icon} 📦 {team_name}")
+        else:
+            print(f"📦 {team_name}")
         print(f"   Description: {config.get('description', 'No description')}")
 
         lead_id = get_lead_agent_id(config)
@@ -222,6 +244,14 @@ def cmd_status(args):
         print(f"❌ Team not found: {args.team}")
         return 1
 
+    # Check if team is disabled
+    is_enabled = team.get('enabled', True)
+    if not is_enabled:
+        print(f"⛔ Team '{team['name']}' is disabled")
+        print(f"   Config: {team.get('_file', 'teams/' + team['_file_name'] + '.md')}")
+        print(f"   To enable: Set 'enabled: true' in the team config")
+        return 1
+
     print(f"📊 Team Status: {team['name']}")
     print(f"{'=' * 60}")
 
@@ -240,6 +270,12 @@ def cmd_status(args):
         runtime_state = None
 
         if agent_config:
+            # Check if agent is disabled
+            is_enabled = agent_config.get('enabled', True)
+            if not is_enabled:
+                print(f"⛔ Disabled {emp_id} ({agent_name}) - {role}{lead_mark}")
+                continue
+
             agent_id = get_agent_id(agent_config)
             is_running = session_exists(agent_id)
 
@@ -281,6 +317,14 @@ def cmd_assign(args):
         print(f"❌ Team not found: {args.team}")
         return 1
 
+    # Check if team is disabled
+    is_enabled = team.get('enabled', True)
+    if not is_enabled:
+        print(f"⚠️  Team '{team['name']}' is disabled")
+        print(f"   Config: {team.get('_file', 'teams/' + team['_file_name'] + '.md')}")
+        print(f"   To enable: Set 'enabled: true' in the team config")
+        return 1
+
     # Read task
     if args.task_file:
         try:
@@ -310,7 +354,7 @@ def cmd_assign(args):
         print("❌ Team has no lead_agent configured")
         return 1
 
-    # Get team working directory (overrides agent's working directory)
+    # Get team working directory (overrides agent's working_directory)
     team_wd = get_team_working_directory(team)
 
     # Build task message with team context

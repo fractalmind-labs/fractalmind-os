@@ -140,6 +140,9 @@ def parse_team_frontmatter(file_path: Path) -> Optional[Dict[str, Any]]:
     else:
         config['body'] = ''
 
+    # Set defaults for optional fields
+    config.setdefault('enabled', True)  # Teams are enabled by default
+
     # Add metadata
     config['_file'] = file_path
     config['_file_name'] = file_path.stem
