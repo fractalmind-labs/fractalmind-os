@@ -591,8 +591,10 @@ def cmd_schedule_run(args):
     runtime = get_agent_runtime_state(agent_id, launcher=launcher)
     state = str(runtime.get('state', 'unknown'))
     elapsed = runtime.get('elapsed_seconds')
+    did_restart = False
 
     def _restart_agent(reason: str) -> bool:
+        nonlocal did_restart
         print(f"♻️  Restarting agent (reason: {reason})")
         stop_session(agent_id)
         time.sleep(1)
@@ -601,6 +603,7 @@ def cmd_schedule_run(args):
             print("❌ Failed to restart agent")
             return False
         time.sleep(2)
+        did_restart = True
         return True
 
     if state in ('blocked', 'stuck', 'error'):
@@ -620,6 +623,16 @@ def cmd_schedule_run(args):
                 print(f"⏭️  Agent is busy, skipping scheduled task")
                 print(f"   Will retry on next cron execution")
                 return 0
+
+    # Optional: clear context by restarting the session before sending the scheduled task.
+    # This is intentionally "idle-only" to avoid interrupting interactive use.
+    clear_context = bool(schedule.get('clear_context', False))
+    if clear_context and not was_started and not did_restart:
+        runtime_after = get_agent_runtime_state(agent_id, launcher=launcher)
+        state_after = str(runtime_after.get('state', 'unknown'))
+        if state_after == 'idle':
+            if not _restart_agent('clear_context'):
+                return 1
 
     # Send task
     task_message = f"# Scheduled Task: {args.job}\n\n{task}"
