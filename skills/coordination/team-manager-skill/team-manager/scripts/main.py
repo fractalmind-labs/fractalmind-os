@@ -63,6 +63,17 @@ _REPO_ROOT = _find_repo_root(Path(__file__).resolve())
 os.environ.setdefault('REPO_ROOT', str(_REPO_ROOT))
 _AGENTS_DIR = _REPO_ROOT / 'agents'
 
+# Optional shared skill reader (openskills read replacement).
+_SKILL_SCRIPTS_DIR = _REPO_ROOT / '.agent' / 'scripts'
+if _SKILL_SCRIPTS_DIR.exists():
+    sys.path.insert(0, str(_SKILL_SCRIPTS_DIR))
+
+try:
+    from skill_read import read_skill as _read_skill
+except Exception:
+    def _read_skill(skill_name, repo_root):
+        raise FileNotFoundError(f"Skill not found: {skill_name}")
+
 from team_config import (
     list_all_teams,
     resolve_team,
@@ -143,8 +154,35 @@ def get_agent_name(employee_id: str) -> str:
 
 def cmd_list(args):
     """List all teams."""
+    import json
     all_teams = list_all_teams()
 
+    # JSON output for programmatic consumption
+    if args.json:
+        teams_data = []
+        for team_name, config in sorted(all_teams.items()):
+            lead_id = get_lead_agent_id(config)
+            members = get_team_members(config)
+
+            # Extract member employee IDs for easy access
+            member_ids = [m.get('employee_id') for m in members]
+
+            team_info = {
+                'name': team_name,
+                'enabled': config.get('enabled', True),
+                'description': config.get('description', ''),
+                'lead_agent_id': lead_id,
+                'lead_agent_name': get_agent_name(lead_id) if lead_id else None,
+                'working_directory': get_team_working_directory(config),
+                'member_ids': member_ids,
+                'members': members,
+            }
+            teams_data.append(team_info)
+
+        print(json.dumps(teams_data, indent=2))
+        return
+
+    # Human-readable output
     print("📋 Teams:")
     print()
 
@@ -385,6 +423,30 @@ You are the **Lead Agent** for the **{team['name']}** team.
 
 {body}
 """
+
+    team_skills = team.get('skills', []) or []
+    if team_skills:
+        loaded_skills = []
+        missing_skills = []
+
+        for skill_name in team_skills:
+            try:
+                content = _read_skill(skill_name, _REPO_ROOT)
+                content = content.strip()
+            except Exception:
+                missing_skills.append(skill_name)
+                continue
+
+            if content:
+                loaded_skills.append(f"### {skill_name}\n\n{content}")
+
+        if missing_skills:
+            print(f"⚠️  Missing team skills: {', '.join(missing_skills)}")
+
+        if loaded_skills:
+            task_message += "\n## Team Skills (Loaded for this task)\n\n"
+            task_message += "\n\n---\n\n".join(loaded_skills)
+            task_message += "\n"
 
     task_message += f"""
 
@@ -658,6 +720,8 @@ Examples:
 
     # list command
     list_parser = subparsers.add_parser('list', help='List all teams')
+    list_parser.add_argument('--json', action='store_true',
+                            help='Output in JSON format for programmatic consumption')
 
     # show command
     show_parser = subparsers.add_parser('show', help='Show team details')
