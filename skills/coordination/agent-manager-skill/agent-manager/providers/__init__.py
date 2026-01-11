@@ -18,6 +18,12 @@ PROVIDERS: Dict[str, Dict] = {
             'mode': 'cli_append',
             'flag': '--append-system-prompt',
         },
+        'mcp_config': {
+            # Claude Code supports passing MCP config JSON.
+            # We pass: {"mcpServers": { ... }}
+            'mode': 'cli_json',
+            'flag': '--mcp-config',
+        },
         # Best-effort runtime heuristics (used by agent-manager/tmux_helper).
         'runtime': {
             'busy_patterns': [
@@ -47,6 +53,10 @@ PROVIDERS: Dict[str, Dict] = {
         'launch_command': 'droid',  # Direct droid command
         'system_prompt': {
             'mode': 'tmux_paste',
+        },
+        'mcp_config': {
+            # Droid CLI MCP support is provider/version dependent; default to unsupported.
+            'mode': 'unsupported',
         },
         'runtime': {
             'busy_patterns': [
@@ -82,6 +92,10 @@ PROVIDERS: Dict[str, Dict] = {
             'mode': 'cli_append',
             'flag': '--append-system-prompt',
         },
+        'mcp_config': {
+            'mode': 'cli_json',
+            'flag': '--mcp-config',
+        },
         'runtime': {
             'busy_patterns': [
                 '✻ Thinking',
@@ -103,6 +117,9 @@ PROVIDERS: Dict[str, Dict] = {
         'description': 'Generic CLI with common prompts',
         'system_prompt': {
             'mode': 'tmux_paste',
+        },
+        'mcp_config': {
+            'mode': 'unsupported',
         },
         'runtime': {
             'busy_patterns': [
@@ -132,6 +149,9 @@ PROVIDERS: Dict[str, Dict] = {
             # OpenCode supports passing a prompt via CLI.
             'mode': 'cli_append',
             'flag': '--prompt',
+        },
+        'mcp_config': {
+            'mode': 'unsupported',
         },
         'runtime': {
             'busy_patterns': [
@@ -216,6 +236,12 @@ def get_system_prompt_config(launcher: str) -> Dict:
     return provider.get('system_prompt', {'mode': 'tmux_paste'})
 
 
+def get_mcp_config_config(launcher: str) -> Dict:
+    """Get MCP config injection configuration for a given launcher."""
+    provider = get_provider(launcher)
+    return provider.get('mcp_config', {'mode': 'unsupported'})
+
+
 def get_runtime_config(launcher: str) -> Dict:
     """Get provider runtime heuristics configuration."""
     provider = get_provider(launcher)
@@ -253,6 +279,21 @@ def get_system_prompt_mode(launcher: str) -> str:
 def get_system_prompt_flag(launcher: str) -> Optional[str]:
     """Get the CLI flag to use for system prompt injection, if supported."""
     return get_system_prompt_config(launcher).get('flag')
+
+
+def get_mcp_config_mode(launcher: str) -> str:
+    """Get MCP config injection mode.
+
+    Modes:
+    - cli_json: pass MCP config as JSON via CLI flag
+    - unsupported: provider does not support MCP config injection
+    """
+    return get_mcp_config_config(launcher).get('mode', 'unsupported')
+
+
+def get_mcp_config_flag(launcher: str) -> Optional[str]:
+    """Get the CLI flag to use for MCP config injection, if supported."""
+    return get_mcp_config_config(launcher).get('flag')
 
 
 def list_providers() -> Dict[str, Dict]:

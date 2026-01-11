@@ -82,6 +82,9 @@ def parse_agent_file(agent_path: Path) -> Dict[str, Any]:
     config.setdefault('launcher_args', [])
     config.setdefault('skills', [])
     config.setdefault('schedules', [])
+    # Optional MCP server configuration (provider-dependent).
+    # Expected shape: mapping of server_name -> server_config (dict)
+    config.setdefault('mcps', {})
     config.setdefault('enabled', True)  # Agents are enabled by default
 
     return config

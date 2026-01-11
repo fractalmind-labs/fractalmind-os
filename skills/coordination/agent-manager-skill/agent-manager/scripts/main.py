@@ -7,6 +7,7 @@ Sessions are named: agent-{agent_id} where agent_id is file_id in lowercase (e.g
 """
 
 import argparse
+import json
 import os
 import shlex
 import sys
@@ -44,7 +45,13 @@ from tmux_helper import (
 
 # Import provider system (lives at .agent/skills/agent-manager/providers)
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from providers import get_system_prompt_mode, get_system_prompt_flag, resolve_launcher_command
+from providers import (
+    get_system_prompt_mode,
+    get_system_prompt_flag,
+    get_mcp_config_mode,
+    get_mcp_config_flag,
+    resolve_launcher_command,
+)
 
 
 def get_repo_root() -> Path:
@@ -73,6 +80,26 @@ def write_system_prompt_file(repo_root: Path, agent_id: str, system_prompt: str)
     prompt_file = state_dir / f"{agent_id}.txt"
     prompt_file.write_text(system_prompt + "\n", encoding='utf-8')
     return prompt_file
+
+
+def build_mcp_config_json(agent_config: dict) -> str:
+    """Build MCP config JSON for provider CLIs that support it.
+
+    Agent frontmatter uses `mcps` (a mapping of server_name -> server_config).
+    For Claude Code, we pass a JSON object with `mcpServers`.
+    """
+    mcps = agent_config.get('mcps')
+    if mcps is None:
+        mcps = {}
+
+    if not isinstance(mcps, dict):
+        raise ValueError("Invalid 'mcps' in agent config (expected a mapping)")
+
+    if not mcps:
+        return ""
+
+    payload = {"mcpServers": mcps}
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
 
 
 def cleanup_old_logs(repo_root: Path, days: int = 7) -> int:
@@ -107,10 +134,13 @@ def cleanup_old_logs(repo_root: Path, days: int = 7) -> int:
 
 
 def build_start_command(working_dir: str, launcher: str, launcher_args: list[str]) -> str:
+    # Cron/tmux often runs with a minimal PATH; include common user-local bin dirs so
+    # launchers like `ccc` can find `claude` (usually installed under ~/.local/bin).
+    env_part = 'export PATH="$HOME/.local/bin:$HOME/bin:$PATH"'
     cd_part = f"cd {shlex.quote(working_dir)}"
     cmd_parts = [launcher] + list(launcher_args or [])
     exec_part = " ".join(shlex.quote(str(part)) for part in cmd_parts if part is not None and str(part) != "")
-    return f"{cd_part} && {exec_part}".strip()
+    return f"{env_part} && {cd_part} && {exec_part}".strip()
 
 
 def get_agent_id(config: dict) -> str:
@@ -229,12 +259,28 @@ def cmd_start(args):
     system_prompt_mode = get_system_prompt_mode(launcher)
     system_prompt_flag = get_system_prompt_flag(launcher)
 
+    # Build MCP config early so supported providers can receive it at process start.
+    mcp_config_mode = get_mcp_config_mode(launcher)
+    mcp_config_flag = get_mcp_config_flag(launcher)
+    try:
+        mcp_config_json = build_mcp_config_json(agent_config)
+    except ValueError as e:
+        print(f"❌ {e}")
+        return 1
+
     use_cli_system_prompt = bool(system_prompt and system_prompt_mode == 'cli_append' and system_prompt_flag)
     command = build_start_command(working_dir, launcher, launcher_args)
 
     if use_cli_system_prompt:
         prompt_file = write_system_prompt_file(repo_root, agent_id, system_prompt)
         command = f"{command} {shlex.quote(system_prompt_flag)} \"$(cat {shlex.quote(str(prompt_file))})\""
+
+    # Inject MCP config if provider supports it.
+    if mcp_config_json:
+        if mcp_config_mode == 'cli_json' and mcp_config_flag:
+            command = f"{command} {shlex.quote(mcp_config_flag)} {shlex.quote(mcp_config_json)}"
+        else:
+            print(f"⚠️  MCP config present but not supported for launcher '{launcher}' - ignoring")
 
     # Start session
     if not start_session(agent_id, command):
@@ -253,6 +299,11 @@ def cmd_start(args):
     print(f"⏳ Waiting for CLI to be ready...")
     if not wait_for_prompt(agent_id, launcher, timeout=30):
         print(f"⚠️  Timeout waiting for CLI prompt")
+        # If the underlying command exited immediately (e.g., PATH/launcher issues),
+        # the tmux session may have already disappeared.
+        if not session_exists(agent_id):
+            print(f"❌ Agent session exited during startup")
+            return 1
         if use_cli_system_prompt:
             print(f"   Continuing: system prompt injected via {system_prompt_flag}; CLI may still be starting...")
         else:
@@ -285,6 +336,11 @@ def cmd_start(args):
         print(f"✅ Agent is ready!")
     else:
         print(f"⚠️  Agent readiness timeout, but may still be processing...")
+
+    # Final sanity check: ensure the session is still alive before returning success.
+    if not session_exists(agent_id):
+        print(f"❌ Agent session exited during startup")
+        return 1
 
     print()
     print(f"Attach with: tmux attach -t {session_name}")
