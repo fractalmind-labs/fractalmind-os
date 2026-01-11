@@ -27,6 +27,8 @@ from agent_config import (
     get_schedule_task,
     parse_duration,
 )
+
+from repo_root import get_repo_root
 from tmux_helper import (
     check_tmux,
     list_sessions,
@@ -52,26 +54,6 @@ from providers import (
     get_mcp_config_flag,
     resolve_launcher_command,
 )
-
-
-def get_repo_root() -> Path:
-    repo_root_env = os.environ.get('REPO_ROOT')
-    if repo_root_env:
-        return Path(repo_root_env)
-
-    # NOTE: This skill may be symlinked into `${REPO_ROOT}/.agent/skills/...`.
-    # Avoid `.resolve()` here; it would follow the symlink into `projects/` and break
-    # repo root detection.
-    start_dir = Path(__file__).absolute().parent
-    for candidate in [start_dir, *start_dir.parents]:
-        if (candidate / '.agent').is_dir() and (candidate / 'agents').is_dir():
-            return candidate
-
-    # Best-effort fallback (kept for compatibility with older layouts).
-    try:
-        return start_dir.parents[4]
-    except IndexError:
-        return start_dir
 
 
 def write_system_prompt_file(repo_root: Path, agent_id: str, system_prompt: str) -> Path:
@@ -255,7 +237,7 @@ def cmd_start(args):
     launcher_args = agent_config.get('launcher_args', [])
 
     # Build system prompt early so supported providers can receive it at process start.
-    system_prompt = build_system_prompt(agent_config, skills_dir=skills_dir)
+    system_prompt = build_system_prompt(agent_config, repo_root=repo_root, skills_dir=skills_dir)
     system_prompt_mode = get_system_prompt_mode(launcher)
     system_prompt_flag = get_system_prompt_flag(launcher)
 
@@ -819,4 +801,11 @@ Examples:
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except BrokenPipeError:
+        # Allow piping to tools like `head` without dumping a stack trace.
+        try:
+            sys.stdout.close()
+        finally:
+            sys.exit(0)

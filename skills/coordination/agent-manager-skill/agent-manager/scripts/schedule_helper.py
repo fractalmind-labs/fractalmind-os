@@ -5,12 +5,14 @@ Manages crontab entries for scheduled agent jobs.
 """
 
 import os
+import shlex
 import subprocess
 import tempfile
 from pathlib import Path
 from typing import List, Optional
 
 from agent_config import list_all_schedules, resolve_agent, get_schedule_task, parse_duration
+from repo_root import get_repo_root
 
 
 # Markers for our crontab section
@@ -48,27 +50,6 @@ def _count_cron_entries(section: str) -> int:
             continue
         count += 1
     return count
-
-
-def get_repo_root() -> Path:
-    """Get repository root from env or by traversing up."""
-    repo_root_env = os.environ.get('REPO_ROOT')
-    if repo_root_env:
-        return Path(repo_root_env)
-
-    # NOTE: This skill may be symlinked into `${REPO_ROOT}/.agent/skills/...`.
-    # Avoid `.resolve()` here; it would follow the symlink into `projects/` and break
-    # repo root detection.
-    start_dir = Path(__file__).absolute().parent
-    for candidate in [start_dir, *start_dir.parents]:
-        if (candidate / '.agent').is_dir() and (candidate / 'agents').is_dir():
-            return candidate
-
-    # Best-effort fallback (kept for compatibility with older layouts).
-    try:
-        return start_dir.parents[4]
-    except IndexError:
-        return start_dir
 
 
 def get_current_crontab() -> str:
@@ -174,21 +155,30 @@ def generate_crontab_entries(repo_root: Optional[Path] = None) -> str:
             lines.append(f"# {agent_display}")
             current_agent_file_id = file_id
 
-        # Build command
-        main_script = repo_root / '.agent' / 'skills' / 'agent-manager' / 'scripts' / 'main.py'
+        # Build command.
+        # Use the installed location of this skill (works for OpenSkills global/project installs).
+        main_script = Path(__file__).resolve().parent / 'main.py'
         log_dir = repo_root / '.crontab_logs'
         log_file = str(log_dir / f"agent-{sched['agent_id']}-{job_name}.log")
 
+        repo_root_q = shlex.quote(str(repo_root))
+        main_script_q = shlex.quote(str(main_script))
+        log_dir_q = shlex.quote(str(log_dir))
+        log_file_q = shlex.quote(log_file)
+        file_id_q = shlex.quote(str(file_id))
+        job_name_q = shlex.quote(str(job_name))
+
         cmd_parts = [
-            f"cd {repo_root}",
-            f"python3 {main_script} schedule run {file_id} --job {job_name}"
+            f"cd {repo_root_q}",
+            f"mkdir -p {log_dir_q}",
+            f"python3 {main_script_q} schedule run {file_id_q} --job {job_name_q}",
         ]
 
         if max_runtime:
             cmd_parts[-1] += f" --timeout {max_runtime}"
 
         cmd = " && ".join(cmd_parts)
-        cmd += f" >> {log_file} 2>&1"
+        cmd += f" >> {log_file_q} 2>&1"
 
         # Add crontab entry
         lines.append(f"# {job_name}")

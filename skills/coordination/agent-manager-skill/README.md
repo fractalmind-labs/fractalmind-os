@@ -2,6 +2,8 @@
 
 Employee agent lifecycle management system for managing AI agents in tmux sessions.
 
+This skill is designed to be installable via OpenSkills into arbitrary locations and still work correctly (including cron/schedule usage).
+
 ## Installation
 
 ### via openskills (recommended)
@@ -40,10 +42,31 @@ cat ~/.claude/skills/agent-manager/SKILL.md
 ```bash
 # From your repository root
 cd your-project
+
+# If installed with `--universal` (repo-local):
+python3 .agent/skills/agent-manager/scripts/main.py list
+
+# If installed with `--global`:
 python3 ~/.claude/skills/agent-manager/scripts/main.py list
-python3 ~/.claude/skills/agent-manager/scripts/main.py start dev
-python3 ~/.claude/skills/agent-manager/scripts/main.py monitor dev --follow
+
+# Start/monitor examples (adjust the path based on your install location)
+python3 .agent/skills/agent-manager/scripts/main.py start dev
+python3 .agent/skills/agent-manager/scripts/main.py monitor dev --follow
 ```
+
+## Path & Repo Root Resolution
+
+- Repo root is resolved in this priority order: `$REPO_ROOT` → git superproject (submodule-safe) → git toplevel → parent-walk fallback.
+- `schedule sync` writes crontab entries that call the *installed* `main.py` absolute path (so cron keeps working regardless of where the skill is installed).
+
+## Skills Resolution
+
+When injecting agent skills into the system prompt, `agent-manager` searches for `SKILL.md` in the following locations (first match wins):
+
+1) `<repo>/.agent/skills/<skill>/SKILL.md`
+2) `~/.agent/skills/<skill>/SKILL.md`
+3) `<repo>/.claude/skills/<skill>/SKILL.md`
+4) `~/.claude/skills/<skill>/SKILL.md`
 
 ## Documentation
 

@@ -11,6 +11,8 @@ import yaml
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Iterable
 
+from repo_root import find_repo_root, get_repo_root, get_skill_search_dirs
+
 
 AGENT_DIR_PROFILE_FILENAME = "AGENTS.md"
 
@@ -104,10 +106,10 @@ def expand_env_vars(value: str, env_vars: Optional[Dict[str, str]] = None) -> st
     if env_vars is None:
         env_vars = dict(os.environ)
 
-    # Set REPO_ROOT default if not in environment
+    # Set REPO_ROOT default if not in environment.
+    # Use git-based detection so configs work from subdirectories/submodules.
     if 'REPO_ROOT' not in env_vars:
-        # Default to current working directory
-        env_vars['REPO_ROOT'] = str(Path.cwd())
+        env_vars['REPO_ROOT'] = str(find_repo_root(Path.cwd()))
 
     # Replace ${VAR_NAME} patterns
     pattern = re.compile(r'\$\{([^}]+)\}')
@@ -185,7 +187,7 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
     # 2) If it's a bare filename, try resolving it inside agents_dir.
     if name_or_id.endswith('.md'):
         if agents_dir is None:
-            agents_dir = Path.cwd() / 'agents'
+            agents_dir = get_repo_root() / 'agents'
         agent_file = agents_dir / candidate_path.name
         if agent_file.exists() and agent_file.is_file():
             try:
@@ -196,8 +198,7 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
                 return None
 
     if agents_dir is None:
-        # Use current working directory / agents
-        agents_dir = Path.cwd() / 'agents'
+        agents_dir = get_repo_root() / 'agents'
 
     if not agents_dir.exists():
         return None
@@ -247,7 +248,7 @@ def list_all_agents(agents_dir: Optional[Path] = None) -> Dict[str, Dict[str, An
         (File IDs are stable and avoid collisions when multiple agents share the same `name`.)
     """
     if agents_dir is None:
-        agents_dir = Path.cwd() / 'agents'
+        agents_dir = get_repo_root() / 'agents'
 
     if not agents_dir.exists():
         return {}
@@ -267,7 +268,32 @@ def list_all_agents(agents_dir: Optional[Path] = None) -> Dict[str, Dict[str, An
     return agents
 
 
-def load_skills(config: Dict[str, Any], skills_dir: Optional[Path] = None) -> str:
+def _dedupe_paths(paths: List[Path]) -> List[Path]:
+    seen: set[str] = set()
+    deduped: List[Path] = []
+    for path in paths:
+        key = str(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(path)
+    return deduped
+
+
+def _find_skill_file(skill_name: str, roots: List[Path]) -> Optional[Path]:
+    for root in roots:
+        candidate = root / skill_name / 'SKILL.md'
+        if candidate.exists() and candidate.is_file():
+            return candidate
+    return None
+
+
+def load_skills(
+    config: Dict[str, Any],
+    *,
+    repo_root: Optional[Path] = None,
+    skills_dir: Optional[Path] = None,
+) -> str:
     """
     Load skill contents from .agent/skills/ and format as system prompt.
 
@@ -282,32 +308,36 @@ def load_skills(config: Dict[str, Any], skills_dir: Optional[Path] = None) -> st
     if not skills:
         return ""
 
-    if skills_dir is None:
-        skills_dir = Path.cwd() / '.agent' / 'skills'
+    if repo_root is None:
+        repo_root = get_repo_root()
 
-    if not skills_dir.exists():
-        return ""
+    search_dirs: List[Path] = []
+    if skills_dir is not None:
+        search_dirs.append(skills_dir)
+    search_dirs.extend(get_skill_search_dirs(repo_root))
+    search_dirs = _dedupe_paths(search_dirs)
 
     skill_contents = []
 
     for skill_name in skills:
-        skill_file = skills_dir / skill_name / 'SKILL.md'
-        if skill_file.exists():
-            try:
-                content = skill_file.read_text()
-                # Extract YAML frontmatter for description
-                frontmatter_match = re.match(r'^---\n(.*?)\n---\n(.*)$', content, re.DOTALL)
-                if frontmatter_match:
-                    yaml_content = frontmatter_match.group(1)
-                    skill_meta = yaml.safe_load(yaml_content) or {}
-                    description = skill_meta.get('description', 'No description')
-                else:
-                    description = 'No description'
+        skill_file = _find_skill_file(skill_name, search_dirs)
+        if not skill_file:
+            continue
+        try:
+            content = skill_file.read_text(encoding='utf-8')
+            # Extract YAML frontmatter for description
+            frontmatter_match = re.match(r'^---\n(.*?)\n---\n(.*)$', content, re.DOTALL)
+            if frontmatter_match:
+                yaml_content = frontmatter_match.group(1)
+                skill_meta = yaml.safe_load(yaml_content) or {}
+                description = skill_meta.get('description', 'No description')
+            else:
+                description = 'No description'
 
-                skill_contents.append(f"### {skill_name}\n\n{description}\n")
-            except Exception:
-                # Skip skills that can't be loaded
-                continue
+            skill_contents.append(f"### {skill_name}\n\n{description}\n")
+        except Exception:
+            # Skip skills that can't be loaded
+            continue
 
     if not skill_contents:
         return ""
@@ -315,7 +345,12 @@ def load_skills(config: Dict[str, Any], skills_dir: Optional[Path] = None) -> st
     return "## Available Skills\n\n" + "\n\n".join(skill_contents)
 
 
-def build_system_prompt(config: Dict[str, Any], skills_dir: Optional[Path] = None) -> str:
+def build_system_prompt(
+    config: Dict[str, Any],
+    *,
+    repo_root: Optional[Path] = None,
+    skills_dir: Optional[Path] = None,
+) -> str:
     """
     Build complete system prompt from agent role definition and skills.
 
@@ -334,7 +369,7 @@ def build_system_prompt(config: Dict[str, Any], skills_dir: Optional[Path] = Non
         parts.append(f"# {config.get('name', 'Agent').upper()} ROLE\n\n{role_definition}")
 
     # 2. Skills
-    skills_content = load_skills(config, skills_dir)
+    skills_content = load_skills(config, repo_root=repo_root, skills_dir=skills_dir)
     if skills_content:
         parts.append(skills_content)
 
