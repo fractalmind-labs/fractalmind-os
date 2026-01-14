@@ -1,8 +1,33 @@
-# Agent Manager Skill
+# Agent Manager (agent-manager)
 
-Employee agent lifecycle management system for managing AI agents in tmux sessions.
+Simple, installation-agnostic agent lifecycle management using **tmux + Python**.
 
-This skill is designed to be installable via OpenSkills into arbitrary locations and still work correctly (including cron/schedule usage).
+Manage multiple AI agents without running a server, wiring HTTP APIs, or pulling in heavy dependencies.
+
+![agent-manager demo](assets/demo.svg)
+
+## Why agent-manager?
+
+Managing multiple AI agents is deceptively complex:
+
+- Each agent needs its own long-running process
+- You need a reliable way to start/stop/monitor them
+- Scheduling (cron) should keep working even if you move the skill around
+
+**agent-manager** solves this with a tiny architecture: **tmux sessions + a single Python CLI**.
+
+**Advantages:**
+
+- **Zero dependencies** beyond `tmux` + `python3`
+- **Cross-platform** (where tmux runs)
+- **Cron-friendly**: `schedule sync` writes crontab entries calling the installed `main.py` by absolute path
+
+## Highlights
+
+- 🚀 Simple agent lifecycle management
+- 📅 Scheduled task execution via cron
+- 🔧 Installation-agnostic design
+- 🎯 Zero dependencies beyond tmux + Python
 
 ## Installation
 
@@ -40,15 +65,31 @@ cat ~/.claude/skills/agent-manager/SKILL.md
 ## Quick Start
 
 ```bash
-# From your repository root
-cd your-project
-
 # If installed with `--universal` (repo-local):
 python3 .agent/skills/agent-manager/scripts/main.py list
 
 # If installed with `--global`:
 python3 ~/.claude/skills/agent-manager/scripts/main.py list
 
+# Or from this repo (cloned):
+python3 agent-manager/scripts/main.py list
+
+# Start / monitor / stop
+python3 .agent/skills/agent-manager/scripts/main.py start dev
+python3 .agent/skills/agent-manager/scripts/main.py monitor dev --follow
+python3 .agent/skills/agent-manager/scripts/main.py stop dev
+
+
+## Demo
+
+The screenshot above shows a real run of:
+
+- `list` (see configured agents + status)
+- `start` (launches an agent into `tmux`)
+- `monitor` (captures output from the tmux pane)
+- `stop` (kills the agent's tmux session)
+
+Want an animated GIF instead? You can record it with tools like `termttogif` (or any terminal recorder) and replace `assets/demo.svg`.
 # Start/monitor examples (adjust the path based on your install location)
 python3 .agent/skills/agent-manager/scripts/main.py start dev
 python3 .agent/skills/agent-manager/scripts/main.py monitor dev --follow
@@ -70,7 +111,7 @@ When injecting agent skills into the system prompt, `agent-manager` searches for
 
 ## Documentation
 
-See [SKILL.md](SKILL.md) for complete documentation.
+See [agent-manager/SKILL.md](agent-manager/SKILL.md) for complete documentation.
 
 ## Requirements
 
@@ -81,10 +122,10 @@ See [SKILL.md](SKILL.md) for complete documentation.
 ## Features
 
 - 🚀 Simple agent lifecycle management (start/stop/monitor)
-- 📅 Scheduled task execution via cron
+- 📅 Scheduled task execution via cron (`schedule list`, `schedule sync`, `schedule run`)
 - 🔧 Installation-agnostic (works from any location)
 - 🎯 Zero dependencies beyond tmux + Python
-- 💡 Dynamic path resolution for flexibility
+- 💡 Dynamic path resolution (submodule-safe repo root detection)
 
 ## License
 
