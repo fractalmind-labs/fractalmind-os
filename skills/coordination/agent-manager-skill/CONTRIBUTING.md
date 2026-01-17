@@ -16,7 +16,7 @@ The agent-manager skill is designed to be installation-agnostic and work from an
 
 ### Key Components
 
-- **scripts/path_helper.py**: Dynamic path resolution
+- **scripts/repo_root.py**: Repo root + skills directory resolution
 - **scripts/main.py**: CLI entry point
 - **scripts/agent_config.py**: Agent configuration parser
 - **scripts/tmux_helper.py**: Tmux session management

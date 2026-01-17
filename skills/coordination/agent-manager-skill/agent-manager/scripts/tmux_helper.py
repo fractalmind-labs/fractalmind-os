@@ -471,6 +471,10 @@ def _parse_elapsed_seconds(output: str) -> Optional[int]:
         seconds = int(match.group(2))
         return minutes * 60 + seconds
 
+    match = re.search(r"\[\s*(?:⏱|⏳)\s*(\d+)s\s*\]", output)
+    if match:
+        return int(match.group(1))
+
     match = re.search(r"\b(\d+\.\d+)s\b", output)
     if match:
         try:
