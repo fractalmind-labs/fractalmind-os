@@ -45,7 +45,8 @@ openskills install fractalmind-ai/agent-manager-skill --global
 
 ```bash
 git clone https://github.com/fractalmind-ai/agent-manager-skill.git
-cp -r agent-manager-skill ~/.claude/skills/agent-manager
+cd agent-manager-skill
+cp -r agent-manager ~/.claude/skills/agent-manager
 ```
 
 ## Usage
@@ -65,20 +66,30 @@ cat ~/.claude/skills/agent-manager/SKILL.md
 ## Quick Start
 
 ```bash
-# If installed with `--universal` (repo-local):
+# From your repository root (where `agents/` lives)
+cd your-project
+
+# If installed (project-local):
 python3 .agent/skills/agent-manager/scripts/main.py list
 
-# If installed with `--global`:
+# If installed (global):
 python3 ~/.claude/skills/agent-manager/scripts/main.py list
 
-# Or from this repo (cloned):
-python3 agent-manager/scripts/main.py list
+# Sanity check your setup
+python3 .agent/skills/agent-manager/scripts/main.py doctor
 
 # Start / monitor / stop
-python3 .agent/skills/agent-manager/scripts/main.py start dev
-python3 .agent/skills/agent-manager/scripts/main.py monitor dev --follow
-python3 .agent/skills/agent-manager/scripts/main.py stop dev
+python3 .agent/skills/agent-manager/scripts/main.py start EMP_0001
+python3 .agent/skills/agent-manager/scripts/main.py monitor EMP_0001 --follow
+python3 .agent/skills/agent-manager/scripts/main.py stop EMP_0001
 
+# If you want to run the CLI from a cloned copy of this repo:
+REPO_ROOT="$PWD/your-project" python3 agent-manager/scripts/main.py doctor
+```
+
+## Getting Started
+
+See `examples/getting-started.md` for a 2-minute end-to-end walkthrough.
 
 ## Demo
 
@@ -90,10 +101,6 @@ The screenshot above shows a real run of:
 - `stop` (kills the agent's tmux session)
 
 Want an animated GIF instead? You can record it with tools like `termttogif` (or any terminal recorder) and replace `assets/demo.svg`.
-# Start/monitor examples (adjust the path based on your install location)
-python3 .agent/skills/agent-manager/scripts/main.py start dev
-python3 .agent/skills/agent-manager/scripts/main.py monitor dev --follow
-```
 
 ## Path & Repo Root Resolution
 
@@ -117,7 +124,7 @@ See [agent-manager/SKILL.md](agent-manager/SKILL.md) for complete documentation.
 
 - Python 3.x
 - tmux
-- Agents defined in `agents/EMP_*.md` files
+- Agents defined under `agents/` (supports `agents/EMP_0001.md` and `agents/EMP_0001/AGENTS.md`)
 
 ## Features
 

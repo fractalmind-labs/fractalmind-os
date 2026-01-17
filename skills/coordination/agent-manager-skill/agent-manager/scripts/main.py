@@ -10,9 +10,11 @@ import argparse
 import json
 import os
 import shlex
+import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import Optional
 
 # Add scripts directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
@@ -180,6 +182,103 @@ def cmd_list(args):
             print(f"   Skills: {', '.join(skills)}")
 
         print()
+
+
+def _tmux_install_hint() -> str:
+    if sys.platform == 'darwin':
+        return 'brew install tmux'
+    if sys.platform.startswith('linux'):
+        return 'sudo apt install tmux'
+    return 'Install tmux and ensure it is on PATH'
+
+
+def cmd_doctor(args):
+    """Run basic environment checks for agent-manager."""
+    repo_root = get_repo_root()
+    agents_dir = repo_root / 'agents'
+    skills_dir = repo_root / '.agent' / 'skills'
+    claude_dir = repo_root / '.claude'
+
+    problems = 0
+
+    print("🩺 agent-manager doctor")
+    print()
+    print(f"Repo root: {repo_root}")
+    print(f"Python: {sys.version.split()[0]} ({sys.executable})")
+    print(f"Platform: {sys.platform}")
+    print()
+
+    if check_tmux():
+        print("✅ tmux: found")
+    else:
+        problems += 1
+        print("❌ tmux: missing")
+        print(f"   Fix: {_tmux_install_hint()}")
+
+    if agents_dir.exists() and agents_dir.is_dir():
+        agents = list_all_agents(agents_dir)
+        print(f"✅ agents/: found ({len(agents)} configured)")
+    else:
+        problems += 1
+        print("❌ agents/: missing")
+        print(f"   Expected at: {agents_dir}")
+
+    if skills_dir.exists() and skills_dir.is_dir():
+        print("✅ .agent/skills/: found")
+    else:
+        print("⚠️  .agent/skills/: missing")
+        print(f"   Expected at: {skills_dir}")
+
+    if claude_dir.exists() and claude_dir.is_dir():
+        print("✅ .claude/: found")
+    else:
+        print("⚠️  .claude/: missing")
+        print(f"   Expected at: {claude_dir}")
+
+    try:
+        result = subprocess.run(['crontab', '-l'], capture_output=True, text=True)
+        if result.returncode == 0:
+            print("✅ crontab: readable")
+        else:
+            # macOS exits non-zero when no crontab exists; treat as warning.
+            print("⚠️  crontab: not set (or not readable)")
+    except FileNotFoundError:
+        problems += 1
+        print("❌ crontab: command not found")
+
+    if args.deep and agents_dir.exists() and agents_dir.is_dir():
+        print()
+        print("🔎 Deep checks:")
+        agents = list_all_agents(agents_dir)
+        for file_id, config in sorted(agents.items(), key=lambda item: item[0]):
+            agent_id = get_agent_id(config)
+            working_dir = config.get('working_directory')
+            launcher = resolve_launcher_command(config.get('launcher', ''))
+            enabled = config.get('enabled', True)
+
+            status = "✅" if enabled else "⛔"
+            print(f"{status} {file_id} (agent-{agent_id})")
+            if working_dir:
+                wd_ok = Path(working_dir).exists()
+                print(f"   Working dir: {working_dir} ({'ok' if wd_ok else 'missing'})")
+                if not wd_ok and enabled:
+                    problems += 1
+            else:
+                print("   Working dir: (not set)")
+                if enabled:
+                    problems += 1
+
+            if launcher:
+                print(f"   Launcher: {launcher}")
+            else:
+                print("   Launcher: (not set)")
+
+    print()
+    if problems:
+        print(f"❌ Doctor found {problems} problem(s)")
+        return 1
+    print("✅ Doctor checks passed")
+    return 0
 
 
 def cmd_start(args):
@@ -644,8 +743,12 @@ def cmd_schedule_run(args):
         did_restart = True
         return True
 
-    if state in ('blocked', 'stuck', 'error'):
+    if state in ('blocked', 'stuck'):
         if not _restart_agent(state):
+            return 1
+    elif state == 'error':
+        reason = str(runtime.get('reason', 'unknown'))
+        if not _restart_agent(f"error:{reason}"):
             return 1
     elif state == 'busy':
         should_restart = False
@@ -672,13 +775,70 @@ def cmd_schedule_run(args):
             if not _restart_agent('clear_context'):
                 return 1
 
-    # Send task
-    task_message = f"# Scheduled Task: {args.job}\n\n{task}"
+    # Wait for agent to be idle before sending the scheduled task.
+    # This prevents the task from being queued with the startup prompt.
+    if not was_started and not did_restart:
+        idle_wait_seconds = 5
+        deadline = time.time() + idle_wait_seconds
+        while time.time() < deadline:
+            runtime_check = get_agent_runtime_state(agent_id, launcher=launcher)
+            if str(runtime_check.get('state', 'unknown')) == 'idle':
+                break
+            time.sleep(0.5)
+
+    # Send only the task content without any wrapper
+    task_message = task
     if not send_keys(agent_id, task_message, send_enter=True):
         print(f"❌ Failed to send task to agent")
         return 1
 
     print(f"✅ Task sent to {agent_name}")
+
+    # Best-effort: wait for the agent to finish and print a tail of its output.
+    # Cron captures stdout/stderr to the log file, so this makes scheduled jobs
+    # actually useful (they include the generated report).
+    wait_seconds = timeout_seconds if timeout_seconds else 600
+    if wait_seconds and wait_seconds > 0:
+        start_time = time.time()
+        last_state: Optional[str] = None
+        poll_seconds = 2
+
+        # First, wait briefly for the agent to actually start processing the message.
+        # Some TUIs report "idle" immediately after keystroke injection.
+        start_deadline = min(30, int(wait_seconds))
+        while (time.time() - start_time) < start_deadline:
+            runtime = get_agent_runtime_state(agent_id, launcher=launcher)
+            last_state = str(runtime.get('state', 'unknown'))
+            if last_state != 'idle':
+                break
+            time.sleep(1)
+
+        print(f"   Waiting for completion (up to {int(wait_seconds)}s)...")
+        while (time.time() - start_time) < wait_seconds:
+            runtime = get_agent_runtime_state(agent_id, launcher=launcher)
+            last_state = str(runtime.get('state', 'unknown'))
+
+            if last_state == 'idle':
+                break
+
+            # If we hit a non-idle terminal state, stop waiting and log output.
+            if last_state in ('blocked', 'error', 'stuck'):
+                break
+
+            time.sleep(poll_seconds)
+
+        # Give the TUI a moment to flush output.
+        time.sleep(1)
+        tail = capture_output(agent_id, lines=200)
+        if tail:
+            print("----- Agent Output (tail) -----")
+            print(tail.rstrip())
+            print("----- End Agent Output -----")
+        else:
+            print("⚠️  Could not capture agent output")
+
+        if last_state and last_state != 'idle':
+            print(f"⚠️  Agent state after wait: {last_state}")
 
     # If timeout specified, wait and then stop
     if timeout_seconds and was_started:
@@ -760,6 +920,10 @@ Examples:
     schedule_parser = subparsers.add_parser('schedule', help='Manage scheduled jobs')
     schedule_subparsers = schedule_parser.add_subparsers(dest='schedule_command', help='Schedule commands')
 
+    # doctor command
+    doctor_parser = subparsers.add_parser('doctor', help='Check environment and configuration')
+    doctor_parser.add_argument('--deep', action='store_true', help='Perform deeper checks')
+
     # schedule list
     schedule_list_parser = schedule_subparsers.add_parser('list', help='List all scheduled jobs')
 
@@ -784,6 +948,7 @@ Examples:
     # Route to appropriate handler
     handlers = {
         'list': cmd_list,
+        'doctor': cmd_doctor,
         'start': cmd_start,
         'stop': cmd_stop,
         'monitor': cmd_monitor,
