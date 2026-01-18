@@ -89,3 +89,84 @@ Every agent response must end with:
 - Never commit or push unless explicitly asked.
 - Never add secrets/keys; never paste tokens into logs.
 
+## Troubleshooting
+
+### Agent not starting (tmux session issues)
+
+**Symptoms:**
+- `python3 .claude/skills/agent-manager/scripts/main.py start <agent>` fails
+- Error: "tmux session already exists" or "tmux not found"
+
+**Resolution:**
+```bash
+# Check if tmux is installed
+tmux -V
+
+# List existing tmux sessions
+tmux list-sessions
+
+# Kill stuck session (replace name with actual agent name)
+tmux kill-session -t sisyphus
+
+# Verify agent-manager scripts are executable
+chmod +x .claude/skills/agent-manager/scripts/main.py
+```
+
+### Agent not responding (health check failures)
+
+**Symptoms:**
+- `assign` command hangs or times out
+- `monitor` shows no output
+
+**Resolution:**
+```bash
+# Check if agent session is running
+python3 .claude/skills/agent-manager/scripts/main.py list
+
+# Attach to session directly to inspect
+tmux attach-session -t sisyphus
+# Press Ctrl+B then D to detach without killing
+
+# Restart the agent
+python3 .claude/skills/agent-manager/scripts/main.py stop sisyphus
+python3 .claude/skills/agent-manager/scripts/main.py start sisyphus
+```
+
+### Log file location and interpretation
+
+**Symptoms:**
+- Need to debug past agent behavior
+- Want to review conversation history
+
+**Resolution:**
+```bash
+# Agent logs are stored in tmux session buffer
+tmux capture-pane -t sisyphus -p > /tmp/agent.log
+
+# For workspace-specific logs, check:
+ls -la ~/.cache/claude/  # or your CLI's cache directory
+
+# Check agent-manager status
+python3 .claude/skills/agent-manager/scripts/main.py status
+```
+
+### Common CLI path issues
+
+**Symptoms:**
+- Agent launches but uses wrong CLI (e.g., `droid` instead of `claude`)
+- Launcher not found errors
+
+**Resolution:**
+```bash
+# Verify your CLI is on PATH
+which claude  # or droid, etc.
+
+# Update agent configuration
+# Edit agents/EMP_0001.md and agents/EMP_0002.md
+# Set the correct `launcher:` path
+
+# Reload agent after config change
+python3 .claude/skills/agent-manager/scripts/main.py stop <agent>
+python3 .claude/skills/agent-manager/scripts/main.py start <agent>
+```
+
