@@ -234,6 +234,18 @@ tmux send-keys -t agent-EMP_0001 Enter
 python3 .agent/skills/team-manager/scripts/main.py assign frontend --task-file task.md
 ```
 
+**Restore Behavior:**
+- By default, `--restore` is enabled (true)
+- When assigning a task, the Lead agent's session state is checked:
+  - If Lead agent is **already running**:
+    - `--restore` (default): Continue and assign task to existing session
+    - `--no-restore`: Fail with error (require manual stop first)
+  - If Lead agent is **not running**: Automatically start it, then assign task
+
+**Restore vs No-Restore:**
+- `--restore` (default): Assign task even if Lead agent session exists
+- `--no-restore`: Fail if Lead agent session exists (prevents accidental reassignment)
+
 The lead agent receives:
 - Task description
 - Team configuration (members with employee IDs and agent names)

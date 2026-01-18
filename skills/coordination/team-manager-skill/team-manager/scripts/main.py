@@ -16,63 +16,27 @@ from datetime import datetime, timezone
 
 # Add scripts directory to path
 sys.path.insert(0, str(Path(__file__).parent))
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'agent-manager' / 'scripts'))
 
-def _find_repo_root(start: Path) -> Path:
-    """Find the monorepo root even when this skill is installed via symlink."""
-    start_dir = start if start.is_dir() else start.parent
-
-    env_repo_root = os.environ.get('REPO_ROOT')
-    if env_repo_root:
-        return Path(env_repo_root).expanduser().resolve()
-
-    try:
-        sp = subprocess.run(
-            ['git', 'rev-parse', '--show-superproject-working-tree'],
-            cwd=str(start_dir),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            check=True,
-        ).stdout.strip()
-        if sp:
-            return Path(sp).resolve()
-
-        top = subprocess.run(
-            ['git', 'rev-parse', '--show-toplevel'],
-            cwd=str(start_dir),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            check=True,
-        ).stdout.strip()
-        if top:
-            return Path(top).resolve()
-    except Exception:
-        pass
-
-    for candidate in [start_dir, *start_dir.parents]:
-        if (candidate / 'teams').is_dir() and (candidate / '.agent').is_dir():
-            return candidate
-    return start_dir
+from repo_root import get_repo_root, find_agent_manager_scripts_dir, get_skill_search_dirs
 
 
 # Ensure repo-root relative paths and ${REPO_ROOT} expansions work even when invoked
-# from a subdirectory (e.g., inside projects/*) or via a symlinked skill.
-_REPO_ROOT = _find_repo_root(Path(__file__).resolve())
+# from a subdirectory (e.g., inside projects/*) or via a globally installed skill.
+_REPO_ROOT = get_repo_root()
 os.environ.setdefault('REPO_ROOT', str(_REPO_ROOT))
 _AGENTS_DIR = _REPO_ROOT / 'agents'
 
-# Optional shared skill reader (openskills read replacement).
-_SKILL_SCRIPTS_DIR = _REPO_ROOT / '.agent' / 'scripts'
-if _SKILL_SCRIPTS_DIR.exists():
-    sys.path.insert(0, str(_SKILL_SCRIPTS_DIR))
+_AGENT_MANAGER_SCRIPTS_DIR = find_agent_manager_scripts_dir(_REPO_ROOT)
+if _AGENT_MANAGER_SCRIPTS_DIR:
+    sys.path.insert(0, str(_AGENT_MANAGER_SCRIPTS_DIR))
 
-try:
-    from skill_read import read_skill as _read_skill
-except Exception:
-    def _read_skill(skill_name, repo_root):
-        raise FileNotFoundError(f"Skill not found: {skill_name}")
+
+def _read_skill_md(skill_name: str, repo_root: Path) -> str:
+    for root in get_skill_search_dirs(repo_root):
+        candidate = root / skill_name / 'SKILL.md'
+        if candidate.exists() and candidate.is_file():
+            return candidate.read_text(encoding='utf-8')
+    raise FileNotFoundError(f"Skill not found: {skill_name}")
 
 from team_config import (
     list_all_teams,
@@ -431,7 +395,7 @@ You are the **Lead Agent** for the **{team['name']}** team.
 
         for skill_name in team_skills:
             try:
-                content = _read_skill(skill_name, _REPO_ROOT)
+                content = _read_skill_md(skill_name, _REPO_ROOT)
                 content = content.strip()
             except Exception:
                 missing_skills.append(skill_name)
@@ -456,6 +420,27 @@ You are the **Lead Agent** for the **{team['name']}** team.
 3. Ensure quality and completeness
 4. Report back with final results
 
+## Session Recovery (If you were restarted / new session)
+- Before doing any new work, inspect the repo state:
+  - `git status -sb`
+  - `git branch --show-current`
+  - `git log -10 --oneline --decorate`
+- If there is already a WIP branch/commits for this task, continue on that branch (do NOT create a new branch).
+- If an open PR already exists for your current branch, continue pushing commits to that PR (do NOT create a new PR).
+  - Example:
+    - `BRANCH="$(git branch --show-current)"`
+    - `gh pr list --state open --head "$BRANCH" --json number,url,title,headRefName --limit 20`
+- If `gh` is unavailable/not authenticated, still avoid creating a duplicate PR: report the current branch + last commits and ask for human help to locate the existing PR.
+
+## PR Hygiene (One PR per Issue)
+- If this task references a GitHub Issue (e.g., `Issue #123`), you MUST avoid creating multiple concurrent PRs for the same issue.
+- Before creating a new PR, search for an existing open PR that already references that issue.
+  - Example (run inside the repo):
+    - `ISSUE_NUMBER=123`
+    - `gh pr list --state open --search "#$ISSUE_NUMBER" --json number,url,title,headRefName --limit 20`
+    - If a matching PR exists: `gh pr checkout <PR_NUMBER>` and push commits to that branch instead of opening a new PR.
+- If you accidentally created a duplicate PR for the same issue, close the newest duplicate and continue on the original PR (unless the original is explicitly abandoned).
+
 ## Task
 {task}
 
@@ -466,10 +451,14 @@ Please coordinate this task with your team and report back when complete.
     # Use agent-manager to assign task to lead agent
     import subprocess
 
-    # Find agent-manager script
-    agent_manager = Path(__file__).parent.parent.parent / 'agent-manager' / 'scripts' / 'main.py'
+    # Find agent-manager script (installed location; do not assume repo layout).
+    agent_manager = None
+    if _AGENT_MANAGER_SCRIPTS_DIR:
+        candidate = _AGENT_MANAGER_SCRIPTS_DIR / 'main.py'
+        if candidate.exists():
+            agent_manager = candidate
 
-    if not agent_manager.exists():
+    if not agent_manager:
         # Try to use via python module import
         print(f"⚠️  agent-manager not found, attempting direct assignment...")
 
@@ -485,7 +474,9 @@ Please coordinate this task with your team and report back when complete.
                 return 0
             else:
                 print(f"⚠️  Lead agent '{lead_id}' is not running")
-                print(f"   Start with: python3 .agent/skills/agent-manager/scripts/main.py start {lead_id}")
+                repo_local = _REPO_ROOT / '.agent' / 'skills' / 'agent-manager' / 'scripts' / 'main.py'
+                hint = f"python3 {repo_local}" if repo_local.exists() else "python3 ~/.claude/skills/agent-manager/scripts/main.py"
+                print(f"   Start with: {hint} start {lead_id}")
                 return 1
         else:
             print(f"❌ Lead agent '{lead_id}' not found")
@@ -495,7 +486,22 @@ Please coordinate this task with your team and report back when complete.
     agent_config = resolve_agent(lead_id, agents_dir=_AGENTS_DIR)
     if agent_config:
         agent_session_id = get_agent_id(agent_config)
-        if not session_exists(agent_session_id):
+        if session_exists(agent_session_id):
+            # Lead agent is already running
+            if args.restore:
+                # --restore (default): Continue with existing session
+                print(f"✅ Using existing session for lead agent '{lead_id}' ({get_agent_name(lead_id)})")
+                print()
+            else:
+                # --no-restore: Fail if session exists
+                print(f"❌ Lead agent '{lead_id}' ({get_agent_name(lead_id)}) is already running")
+                print(f"   Session: agent-{agent_session_id}")
+                print()
+                print(f"   To assign to the existing session, use --restore (default)")
+                print(f"   To stop first: python3 {Path(__file__).name} stop {team['name']}")
+                print(f"   Or: python3 ~/.claude/skills/agent-manager/scripts/main.py stop {lead_id}")
+                return 1
+        else:
             # Agent not running, start it with team working directory
             start_cmd = ['python3', str(agent_manager), 'start', lead_id]
             if team_wd:
@@ -524,7 +530,7 @@ Please coordinate this task with your team and report back when complete.
             print(f"   Working Dir: {team_wd}")
         print()
         print("Monitor team progress:")
-        print(f"  python3 .agent/skills/team-manager/scripts/main.py monitor {team['name']}")
+        print(f"  python3 {Path(__file__).resolve()} monitor {team['name']}")
         return 0
     else:
         print(f"❌ Failed to assign task: {result.stderr}")
@@ -693,7 +699,7 @@ python3 .agent/skills/team-manager/scripts/main.py monitor {args.name} --follow
     print(f"Next steps:")
     print(f"  1. Review and edit the workflow in {team_file}")
     print(f"  2. Ensure agents are configured in agents/")
-    print(f"  3. Assign a task: python3 .agent/skills/team-manager/scripts/main.py assign {args.name}")
+    print(f"  3. Assign a task: python3 {Path(__file__).resolve()} assign {args.name}")
 
     return 0
 
@@ -707,9 +713,10 @@ Examples:
   %(prog)s list                           List all teams
   %(prog)s show frontend                  Show team details (including workflow)
   %(prog)s status frontend                Show team member status
-  %(prog)s assign frontend <<EOF          Assign task to team
+  %(prog)s assign frontend <<EOF          Assign task to team (auto-starts Lead)
   Implement the feature
   EOF
+  %(prog)s assign frontend --no-restore   Fail if Lead agent already running
   %(prog)s monitor frontend --follow      Monitor team output (live)
   %(prog)s create backend --lead EMP_0001 \\
       --members EMP_0001 EMP_0002         Create new team (using employee IDs)
@@ -735,6 +742,10 @@ Examples:
     assign_parser = subparsers.add_parser('assign', help='Assign task to team')
     assign_parser.add_argument('team', help='Team name')
     assign_parser.add_argument('--task-file', '-f', help='Read task from file')
+    assign_parser.add_argument('--restore', '-r', action='store_true', default=True,
+                              help='Restore/reuse existing tmux session if Lead agent is already running (default: true)')
+    assign_parser.add_argument('--no-restore', dest='restore', action='store_false',
+                              help='Do not restore; require Lead agent to be stopped first')
 
     # monitor command
     monitor_parser = subparsers.add_parser('monitor', help='Monitor team output')
@@ -782,4 +793,10 @@ Examples:
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except BrokenPipeError:
+        try:
+            sys.stdout.close()
+        finally:
+            sys.exit(0)
