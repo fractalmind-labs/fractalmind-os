@@ -24,6 +24,11 @@ PROVIDERS: Dict[str, Dict] = {
             'mode': 'cli_json',
             'flag': '--mcp-config',
         },
+        'session_restore': {
+            # Claude Code supports resuming a previous session by session ID.
+            'mode': 'cli_optional_arg',
+            'flag': '--resume',
+        },
         # Best-effort runtime heuristics (used by agent-manager/tmux_helper).
         'runtime': {
             'busy_patterns': [
@@ -51,6 +56,12 @@ PROVIDERS: Dict[str, Dict] = {
         'prompt_check': 'droid',  # Look for droid-specific patterns
         'description': 'Droid CLI agent',
         'launch_command': 'droid',  # Direct droid command
+        'session_restore': {
+            # Droid supports resuming a previous session. If no sessionId is
+            # provided, it resumes the last modified session.
+            'mode': 'cli_optional_arg',
+            'flag': '--resume',
+        },
         'system_prompt': {
             'mode': 'tmux_paste',
         },
@@ -88,6 +99,10 @@ PROVIDERS: Dict[str, Dict] = {
         'prompt_patterns': ['>', '⟩', ':'],
         'startup_wait': 1,
         'description': 'Generic Claude CLI',
+        'session_restore': {
+            'mode': 'cli_optional_arg',
+            'flag': '--resume',
+        },
         'system_prompt': {
             'mode': 'cli_append',
             'flag': '--append-system-prompt',
@@ -145,6 +160,11 @@ PROVIDERS: Dict[str, Dict] = {
         'startup_wait': 2,
         'description': 'OpenCode CLI agent (opencode.ai)',
         'launch_command': 'opencode',
+        'session_restore': {
+            # OpenCode supports continuing a session by session id.
+            'mode': 'cli_optional_arg',
+            'flag': '--session',
+        },
         'system_prompt': {
             # OpenCode supports passing a prompt via CLI.
             'mode': 'cli_append',
@@ -169,6 +189,21 @@ PROVIDERS: Dict[str, Dict] = {
         },
     },
 }
+
+
+def get_provider_key(launcher: str) -> str:
+    """Get provider key based on launcher path/name."""
+    launcher_lower = (launcher or "").lower()
+
+    if 'droid' in launcher_lower:
+        return 'droid'
+    if 'opencode' in launcher_lower:
+        return 'opencode'
+    if 'claude-code' in launcher_lower or 'ccc' in launcher_lower:
+        return 'claude-code'
+    if 'claude' in launcher_lower:
+        return 'claude'
+    return 'generic'
 
 
 def resolve_launcher_command(launcher: str) -> str:
@@ -203,19 +238,7 @@ def get_provider(launcher: str) -> Dict:
     Returns:
         Provider configuration dict
     """
-    launcher_lower = launcher.lower()
-
-    # Check for provider name in launcher
-    if 'droid' in launcher_lower:
-        return PROVIDERS['droid']
-    elif 'opencode' in launcher_lower:
-        return PROVIDERS['opencode']
-    elif 'claude-code' in launcher_lower or 'ccc' in launcher_lower:
-        return PROVIDERS['claude-code']
-    elif 'claude' in launcher_lower:
-        return PROVIDERS['claude']
-    else:
-        return PROVIDERS['generic']
+    return PROVIDERS[get_provider_key(launcher)]
 
 
 def get_prompt_patterns(launcher: str) -> List[str]:
@@ -294,6 +317,27 @@ def get_mcp_config_mode(launcher: str) -> str:
 def get_mcp_config_flag(launcher: str) -> Optional[str]:
     """Get the CLI flag to use for MCP config injection, if supported."""
     return get_mcp_config_config(launcher).get('flag')
+
+
+def get_session_restore_config(launcher: str) -> Dict:
+    """Get provider session restore configuration.
+
+    Modes:
+    - cli_optional_arg: add flag (and optional value) to resume provider session
+    - unsupported: provider has no resume support
+    """
+    provider = get_provider(launcher)
+    return provider.get('session_restore', {'mode': 'unsupported'})
+
+
+def get_session_restore_mode(launcher: str) -> str:
+    """Get session restore mode for a given launcher/provider."""
+    return get_session_restore_config(launcher).get('mode', 'unsupported')
+
+
+def get_session_restore_flag(launcher: str) -> Optional[str]:
+    """Get the CLI flag to use for session restore, if supported."""
+    return get_session_restore_config(launcher).get('flag')
 
 
 def list_providers() -> Dict[str, Dict]:
