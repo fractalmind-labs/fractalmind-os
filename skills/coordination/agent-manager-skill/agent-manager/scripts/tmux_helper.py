@@ -327,6 +327,7 @@ def wait_for_agent_ready(agent_id: str, launcher: str, timeout: int = 45) -> boo
     # Detect provider for special handling
     launcher_lower = launcher.lower()
     is_droid = 'droid' in launcher_lower
+    is_codex = 'codex' in launcher_lower
 
     # Give agent time to process the prompt
     time.sleep(min_wait)
@@ -345,6 +346,13 @@ def wait_for_agent_ready(agent_id: str, launcher: str, timeout: int = 45) -> boo
                 # Droid shows help text when ready
                 if '? for help' in output or '/ide for VS Code' in output:
                     return True
+
+            # Special handling for codex: prompt may include inline suggestions (e.g. "› Summarize...")
+            if is_codex:
+                for line in output.split('\n'):
+                    stripped = line.strip()
+                    if stripped.startswith(('›', '❯')):
+                        return True
                 # Also check for mode line which indicates readiness
                 if 'Auto (High)' in output or 'shift+tab to cycle modes' in output:
                     return True
@@ -358,6 +366,9 @@ def wait_for_agent_ready(agent_id: str, launcher: str, timeout: int = 45) -> boo
                         # For droid, be more lenient with prompt detection
                         if is_droid:
                             if stripped.startswith('>'):
+                                return True
+                        elif is_codex:
+                            if stripped.startswith(pattern):
                                 return True
                         else:
                             # Look for standalone prompt
@@ -678,6 +689,7 @@ def wait_for_prompt(agent_id: str, launcher: str, timeout: int = 30) -> bool:
     # Detect provider for special handling
     launcher_lower = launcher.lower()
     is_droid = 'droid' in launcher_lower
+    is_codex = 'codex' in launcher_lower
 
     # Initial wait for CLI to start
     time.sleep(startup_wait)
@@ -704,6 +716,13 @@ def wait_for_prompt(agent_id: str, launcher: str, timeout: int = 30) -> bool:
                 # Droid shows help text when ready
                 if '? for help' in output or '/ide for VS Code' in output:
                     return True
+
+            # Special handling for codex: prompt may include inline suggestions (e.g. "› Summarize...")
+            if is_codex:
+                for line in output.split('\n'):
+                    stripped = line.strip()
+                    if stripped.startswith(('›', '❯')):
+                        return True
                 # Also check for mode line which indicates readiness
                 if 'Auto (High)' in output or 'shift+tab to cycle modes' in output:
                     return True
@@ -717,6 +736,9 @@ def wait_for_prompt(agent_id: str, launcher: str, timeout: int = 30) -> bool:
                         # For droid, be more lenient with prompt detection
                         if is_droid:
                             if stripped.startswith('>'):
+                                return True
+                        elif is_codex:
+                            if stripped.startswith(pattern):
                                 return True
                         else:
                             # Standard check: line is just the prompt

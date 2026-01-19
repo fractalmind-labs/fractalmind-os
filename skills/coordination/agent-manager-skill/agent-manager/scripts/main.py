@@ -25,6 +25,7 @@ from agent_config import (
     list_all_agents,
     load_skills,
     build_system_prompt,
+    expand_env_vars,
     get_launcher_command,
     get_agent_schedule,
     get_schedule_task,
@@ -53,6 +54,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from providers import (
     get_system_prompt_mode,
     get_system_prompt_flag,
+    get_system_prompt_key,
+    get_agents_md_mode,
     get_mcp_config_mode,
     get_mcp_config_flag,
     resolve_launcher_command,
@@ -402,6 +405,15 @@ def write_system_prompt_file(repo_root: Path, agent_id: str, system_prompt: str)
     return prompt_file
 
 
+def write_scheduled_task_file(repo_root: Path, agent_id: str, job: str, task: str) -> Path:
+    state_dir = repo_root / '.claude' / 'state' / 'agent-manager' / 'scheduled-tasks' / agent_id
+    state_dir.mkdir(parents=True, exist_ok=True)
+    safe_job = "".join(ch if (ch.isalnum() or ch in ('-', '_')) else '-' for ch in (job or 'job'))
+    task_file = state_dir / f"{safe_job}.md"
+    task_file.write_text(task + "\n", encoding='utf-8')
+    return task_file
+
+
 def build_mcp_config_json(agent_config: dict) -> str:
     """Build MCP config JSON for provider CLIs that support it.
 
@@ -718,6 +730,14 @@ def cmd_start(args):
     system_prompt = build_system_prompt(agent_config, repo_root=repo_root, skills_dir=skills_dir)
     system_prompt_mode = get_system_prompt_mode(launcher)
     system_prompt_flag = get_system_prompt_flag(launcher)
+    system_prompt_key = get_system_prompt_key(launcher)
+
+    # If the underlying provider reads AGENTS.md from the working directory, prefer that
+    # mechanism and skip injecting an additional agent-manager system prompt.
+    if system_prompt and not did_provider_restore and get_agents_md_mode(launcher) == 'cwd':
+        if (Path(working_dir) / 'AGENTS.md').exists():
+            print("ℹ️  AGENTS.md found in working directory; skipping system prompt injection")
+            system_prompt = ""
 
     # Build MCP config early so supported providers can receive it at process start.
     mcp_config_mode = get_mcp_config_mode(launcher)
@@ -731,14 +751,23 @@ def cmd_start(args):
     use_cli_system_prompt = bool(
         system_prompt
         and not did_provider_restore
-        and system_prompt_mode == 'cli_append'
+        and system_prompt_mode in {'cli_append', 'cli_config_kv'}
         and system_prompt_flag
+        and (system_prompt_mode != 'cli_config_kv' or system_prompt_key)
     )
     command = build_start_command(working_dir, launcher, launcher_args)
 
     if use_cli_system_prompt:
         prompt_file = write_system_prompt_file(repo_root, agent_id, system_prompt)
-        command = f"{command} {shlex.quote(system_prompt_flag)} \"$(cat {shlex.quote(str(prompt_file))})\""
+
+        if system_prompt_mode == 'cli_append':
+            command = f"{command} {shlex.quote(system_prompt_flag)} \"$(cat {shlex.quote(str(prompt_file))})\""
+        elif system_prompt_mode == 'cli_config_kv':
+            # Codex `-c/--config` expects a single `key=value` argument, where value is parsed as TOML.
+            # Use a TOML string literal for the file path (double-quoted).
+            toml_path = json.dumps(str(prompt_file))
+            kv = f"{system_prompt_key}={toml_path}"
+            command = f"{command} {shlex.quote(system_prompt_flag)} {shlex.quote(kv)}"
 
     # Inject MCP config if provider supports it.
     if mcp_config_json and not did_provider_restore:
@@ -782,6 +811,10 @@ def cmd_start(args):
         if use_cli_system_prompt:
             print(f"✅ CLI ready (system prompt injected via {system_prompt_flag})")
         else:
+            if get_provider_key(launcher) == 'codex':
+                print("❌ Codex system prompt injection is configured as CLI-only (no tmux_paste fallback)")
+                return 1
+
             print(f"✅ CLI ready, injecting system prompt via tmux...")
 
             # Step 2 (fallback): Inject system prompt using tmux buffer
@@ -1098,6 +1131,19 @@ def cmd_schedule_run(args):
         print(f"❌ No task content for schedule '{args.job}'")
         return 1
 
+    # If the schedule points to a task file, keep a resolved path so we can reference it
+    # directly (more reliable for TUIs than pasting the full content).
+    schedule_task_path: Optional[Path] = None
+    if not str(schedule.get('task') or '').strip():
+        raw_task_file = str(schedule.get('task_file') or '').strip()
+        if raw_task_file:
+            raw_task_file = expand_env_vars(raw_task_file)
+            path = Path(raw_task_file)
+            if not path.is_absolute():
+                path = repo_root / path
+            if path.exists():
+                schedule_task_path = path
+
     print(f"🚀 Running scheduled job: {agent_name}/{args.job}")
     print(f"   Time: {time.strftime('%Y-%m-%d %H:%M:%S')}")
 
@@ -1203,8 +1249,24 @@ def cmd_schedule_run(args):
                 break
             time.sleep(0.5)
 
-    # Send only the task content without any wrapper
+    # Send the task.
+    # Note: Codex TUI can be unreliable with very large multi-line pastes; prefer a file pointer.
+    provider_key = get_provider_key(launcher)
     task_message = task
+    if provider_key == 'codex':
+        # Prefer referencing the original schedule task_file (e.g. agents/EMP_0001/prompt/team-monitor.md)
+        # to avoid large multi-line pastes in the Codex TUI.
+        if schedule_task_path is not None:
+            task_message = (
+                f"Run scheduled job '{args.job}'. Read and follow instructions from file: {schedule_task_path}"
+            )
+        # Fallback for inline schedules with large multi-line tasks.
+        elif "\n" in task_message or len(task_message) > 2000:
+            task_file = write_scheduled_task_file(repo_root, agent_id, args.job, task_message)
+            task_message = (
+                f"Run scheduled job '{args.job}'. Read and follow instructions from file: {task_file}"
+            )
+
     if not send_keys(agent_id, task_message, send_enter=True):
         print(f"❌ Failed to send task to agent")
         return 1

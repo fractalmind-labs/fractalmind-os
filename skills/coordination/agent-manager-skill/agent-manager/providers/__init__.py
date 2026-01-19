@@ -7,6 +7,58 @@ from typing import List, Dict, Optional
 
 # Provider definitions
 PROVIDERS: Dict[str, Dict] = {
+    'codex': {
+        'name': 'Codex',
+        # Codex CLI commonly uses the arrow prompt (❯) or a chevron (›).
+        # Include legacy prompts for compatibility.
+        'prompt_patterns': ['❯', '›', '>', 'codex>', 'You>'],
+        'startup_wait': 1,
+        'description': 'OpenAI Codex CLI',
+        'system_prompt': {
+            # Codex supports overriding config keys via `-c/--config key=value`.
+            # Use a file-backed system prompt for reliability (no multi-line shell quoting).
+            'mode': 'cli_config_kv',
+            'flag': '-c',
+            'key': 'system_prompt_file',
+        },
+        'agents_md': {
+            'mode': 'cwd',
+        },
+        'mcp_config': {
+            'mode': 'unsupported',
+        },
+        'session_restore': {
+            'mode': 'unsupported',
+        },
+        'runtime': {
+            'busy_patterns': [
+                # Status lines commonly shown during work.
+                '◦ Working',
+                '• Working',
+                'Working',
+                'Monitoring',
+                'Performing',
+                'Executing',
+                'Running',
+                'Processing',
+                'Analyzing',
+                'Thinking',
+                'Thinking…',
+                'Thinking...',
+                'thinking',
+                # Codex often prints this without parentheses.
+                'esc to interrupt',
+            ],
+            'blocked_patterns': [
+                # Keep these patterns specific to avoid false positives (e.g., issue titles containing
+                # the word "Approve").
+                'actions require approval',
+                'requires approval',
+                'waiting for approval',
+            ],
+            'stuck_after_seconds': 180,
+        },
+    },
     'claude-code': {
         'name': 'Claude Code',
         # Claude Code v2.1+ often renders the prompt as "❯" in the TUI.
@@ -64,6 +116,9 @@ PROVIDERS: Dict[str, Dict] = {
         },
         'system_prompt': {
             'mode': 'tmux_paste',
+        },
+        'agents_md': {
+            'mode': 'cwd',
         },
         'mcp_config': {
             # Droid CLI MCP support is provider/version dependent; default to unsupported.
@@ -195,6 +250,8 @@ def get_provider_key(launcher: str) -> str:
     """Get provider key based on launcher path/name."""
     launcher_lower = (launcher or "").lower()
 
+    if 'codex' in launcher_lower:
+        return 'codex'
     if 'droid' in launcher_lower:
         return 'droid'
     if 'opencode' in launcher_lower:
@@ -224,6 +281,17 @@ def resolve_launcher_command(launcher: str) -> str:
         candidate = Path(os.path.expanduser("~")) / ".opencode" / "bin" / "opencode"
         if candidate.exists():
             return str(candidate)
+
+    if launcher.lower() == "codex":
+        candidates = [
+            Path(os.path.expanduser("~")) / ".local" / "bin" / "codex",
+            Path(os.path.expanduser("~")) / "bin" / "codex",
+            Path("/usr/local/bin/codex"),
+            Path("/usr/bin/codex"),
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return str(candidate)
 
     return launcher
 
@@ -294,6 +362,7 @@ def get_system_prompt_mode(launcher: str) -> str:
 
     Modes:
     - cli_append: pass system prompt via CLI flag (true system prompt)
+    - cli_config_kv: pass config override via CLI key=value (e.g. `-c system_prompt_file="..."`)
     - tmux_paste: paste prompt into the session after startup (fallback)
     """
     return get_system_prompt_config(launcher).get('mode', 'tmux_paste')
@@ -302,6 +371,22 @@ def get_system_prompt_mode(launcher: str) -> str:
 def get_system_prompt_flag(launcher: str) -> Optional[str]:
     """Get the CLI flag to use for system prompt injection, if supported."""
     return get_system_prompt_config(launcher).get('flag')
+
+
+def get_system_prompt_key(launcher: str) -> Optional[str]:
+    """Get the config key to override for system prompt injection, if supported."""
+    return get_system_prompt_config(launcher).get('key')
+
+
+def get_agents_md_mode(launcher: str) -> str:
+    """Get AGENTS.md discovery mode for a given launcher/provider.
+
+    Modes:
+    - cwd: provider reads `AGENTS.md` from working directory
+    - disabled: provider does not support / not enabled
+    """
+    provider = get_provider(launcher)
+    return (provider.get('agents_md') or {}).get('mode', 'disabled')
 
 
 def get_mcp_config_mode(launcher: str) -> str:
