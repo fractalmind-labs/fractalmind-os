@@ -9,49 +9,11 @@ Workflow is defined in the markdown body using mermaid diagrams.
 
 import re
 import os
-import subprocess
 import yaml
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
-
-def _find_repo_root(start: Path) -> Path:
-    """Find the monorepo root even when this skill is installed via symlink."""
-    start_dir = start if start.is_dir() else start.parent
-
-    env_repo_root = os.environ.get('REPO_ROOT')
-    if env_repo_root:
-        return Path(env_repo_root).expanduser().resolve()
-
-    try:
-        sp = subprocess.run(
-            ['git', 'rev-parse', '--show-superproject-working-tree'],
-            cwd=str(start_dir),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            check=True,
-        ).stdout.strip()
-        if sp:
-            return Path(sp).resolve()
-
-        top = subprocess.run(
-            ['git', 'rev-parse', '--show-toplevel'],
-            cwd=str(start_dir),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            check=True,
-        ).stdout.strip()
-        if top:
-            return Path(top).resolve()
-    except Exception:
-        pass
-
-    for candidate in [start_dir, *start_dir.parents]:
-        if (candidate / 'teams').is_dir() and (candidate / '.agent').is_dir():
-            return candidate
-    return start_dir
+from repo_root import get_repo_root
 
 
 def get_teams_dir() -> Path:
@@ -61,23 +23,14 @@ def get_teams_dir() -> Path:
     if teams_dir:
         return Path(teams_dir)
 
-    # Default: teams/ in repository root
+    # Default: teams/ in repository root.
     repo_root = os.environ.get('REPO_ROOT')
     if repo_root:
         return Path(repo_root) / 'teams'
 
-    # Prefer repo-root derived from this skill's path so commands work from any CWD,
-    # including when the skill is installed via symlink into a submodule.
-    try:
-        repo_root_from_file = _find_repo_root(Path(__file__).resolve())
-        candidate = repo_root_from_file / 'teams'
-        if candidate.exists():
-            return candidate
-    except Exception:
-        pass
-
-    # Fallback to current working directory
-    return Path.cwd() / 'teams'
+    # If REPO_ROOT isn't set, infer it from the current working directory.
+    inferred = get_repo_root()
+    return inferred / 'teams'
 
 
 def parse_team_frontmatter(file_path: Path) -> Optional[Dict[str, Any]]:
