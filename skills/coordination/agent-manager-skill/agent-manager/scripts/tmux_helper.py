@@ -110,6 +110,8 @@ def _set_agent_pane_title(agent_id: str) -> None:
     subprocess.run(['tmux', 'select-pane', '-t', container, '-T', title], capture_output=True, text=True)
 
 _CODEX_MENU_OPTION_RE = re.compile(r'^[›❯]\s*\d+\.')
+_CODEX_MODEL_PROMPT_FAILURE_THROTTLE_S = 15.0
+_CODEX_MODEL_PROMPT_LAST_FAILURE: Dict[str, float] = {}
 
 
 def check_tmux() -> bool:
@@ -415,7 +417,8 @@ def _dismiss_codex_model_choice_prompt(agent_id: str) -> bool:
     _tmux_send_key(agent_id, 'Down')
     send_keys(agent_id, "", send_enter=True)
     time.sleep(1.0)
-    return True
+    tail_after = capture_output(agent_id, lines=80) or ""
+    return not _is_codex_model_choice_prompt(tail_after)
 
 
 def inject_system_prompt(agent_id: str, prompt: str) -> bool:
@@ -831,12 +834,35 @@ def get_agent_runtime_state(agent_id: str, launcher: str = "") -> Dict[str, obje
     # Codex can present a first-run/upgrade model selection prompt that looks "idle"
     # but actually blocks all automation (cron + tmux send-keys). Dismiss it if present.
     if launcher and 'codex' in launcher.lower() and _is_codex_model_choice_prompt(output):
-        dismissed = _dismiss_codex_model_choice_prompt(agent_id)
-        return {
-            'state': 'busy' if dismissed else 'blocked',
-            'reason': 'codex_model_choice',
-            'elapsed_seconds': elapsed_seconds,
-        }
+        now = time.time()
+        last_failure = _CODEX_MODEL_PROMPT_LAST_FAILURE.get(agent_id)
+        if last_failure is not None and (now - last_failure) < _CODEX_MODEL_PROMPT_FAILURE_THROTTLE_S:
+            return {
+                'state': 'blocked',
+                'reason': 'codex_model_choice',
+                'elapsed_seconds': elapsed_seconds,
+            }
+
+        if _dismiss_codex_model_choice_prompt(agent_id):
+            # Give Codex a moment to redraw after dismissing the menu, then re-evaluate.
+            time.sleep(0.5)
+            recapture = subprocess.run(
+                ['tmux', 'capture-pane', '-p', '-t', target, '-S-200'],
+                capture_output=True,
+                text=True,
+            )
+            if recapture.returncode == 0:
+                output = recapture.stdout
+                elapsed_seconds = _parse_elapsed_seconds(output)
+            else:
+                return {'state': 'busy', 'reason': 'unreadable_output'}
+        else:
+            _CODEX_MODEL_PROMPT_LAST_FAILURE[agent_id] = now
+            return {
+                'state': 'blocked',
+                'reason': 'codex_model_choice',
+                'elapsed_seconds': elapsed_seconds,
+            }
 
     if is_agent_blocked(agent_id, launcher=launcher):
         return {
