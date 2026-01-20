@@ -125,6 +125,12 @@ def generate_crontab_entries(repo_root: Optional[Path] = None) -> str:
 
     lines = [CRONTAB_START_MARKER]
 
+    # Add PATH environment variable for crontab execution
+    # This ensures commands like tmux can be found when running via cron
+    lines.append("# Set PATH for cron jobs (include user-local bins for CLIs like codex)")
+    lines.append('PATH=$HOME/.local/bin:$HOME/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin')
+    lines.append("")
+
     # Group by agent file_id for readability (names may not be unique)
     current_agent_file_id = None
 

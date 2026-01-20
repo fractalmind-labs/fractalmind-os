@@ -12,12 +12,19 @@ Instead, we enforce a high-quality, repeatable engineering workflow via:
 - Never modify unrelated repositories or paths outside the task scope.
 - Before any work that changes files, capture baseline: `git status --porcelain`.
 
+## Exploration Budget (Anti-Drift)
+- Hard stop and ask the user before exceeding:
+  - 10 minutes of exploration without starting an implementation, or
+  - 10 `rg`/search commands, or
+  - 8 file reads outside the files you will actually change.
+
 ## Startup (Required)
 1. Read nearest `AGENTS.md` (this file).
 2. Confirm prerequisites:
    - `python3` available
    - `tmux` available
    - you are at repo root (`pwd` shows the `oh-my-code` directory)
+ 3. Run preflight: `bash scripts/preflight.sh`
 
 ## Target Effects (What we replicate)
 - Parallelize work across multiple CLI agents (dev/qa/etc) using separate tmux sessions.
@@ -81,9 +88,31 @@ Every agent response must end with:
 4. **Risks/Assumptions**: anything uncertain.
 5. **Next Step**: what to do next (or “ready for review”).
 
+### Short Form (No Code / No File Changes)
+If you did not run tools and did not change files, keep the same 5 sections but use 1 line each (Evidence can be “None”).
+
 ## Quality Gates
 - If code changed: run the project’s relevant `format/lint/typecheck/test/build` commands and report results.
 - If only docs/rules changed: at minimum ensure the file is readable and references valid paths.
+
+### Default Quality Gates Command
+Prefer running the repo-local wrapper (auto-detects common stacks and supports `--mode check|fix`):
+
+```bash
+bash scripts/quality-gates.sh --repo <changed-repo-path>
+```
+
+Default order (when available): `format → lint → typecheck → test → build`.
+
+If auto-detection is insufficient, set `QUALITY_GATES` to explicit commands.
+
+## When To Use agent-manager
+- Use agent-manager when there are parallel tracks (implementation + QA + docs) or uncertainty that benefits from a second opinion.
+- Skip agent-manager for tiny single-file edits, quick Q&A, or tasks that complete in <10 minutes.
+
+Quick decision table:
+- Start agent-manager: multi-file change, risky migration, flaky tests, unclear requirements, or “ship today” urgency.
+- Don’t start: docs-only edits, one-liner fixes, simple refactors with local tests.
 
 ## Safety
 - Never commit or push unless explicitly asked.
@@ -169,4 +198,3 @@ which claude  # or droid, etc.
 python3 .claude/skills/agent-manager/scripts/main.py stop <agent>
 python3 .claude/skills/agent-manager/scripts/main.py start <agent>
 ```
-

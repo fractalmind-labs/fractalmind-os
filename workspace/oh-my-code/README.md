@@ -21,6 +21,8 @@ To enable/disable the 15-minute scheduled work cycle:
 Or run directly from the repo root:
 
 ```bash
+bash scripts/preflight.sh
+
 python3 .claude/skills/agent-manager/scripts/main.py list
 python3 .claude/skills/agent-manager/scripts/main.py start sisyphus
 python3 .claude/skills/agent-manager/scripts/main.py start oracle
@@ -29,6 +31,18 @@ Task:
 - <what you want done>
 EOF
 python3 .claude/skills/agent-manager/scripts/main.py monitor sisyphus --follow
+```
+
+## Quality Gates (Default)
+
+Run on the repo you changed (often a `workspace/<repo>` submodule):
+
+```bash
+# auto-detect gates in that repo
+bash scripts/quality-gates.sh --repo workspace/<repo>
+
+# verify without allowing file changes
+bash scripts/quality-gates.sh --repo workspace/<repo> --mode check
 ```
 
 ## Agents
