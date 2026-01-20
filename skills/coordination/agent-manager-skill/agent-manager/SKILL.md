@@ -12,9 +12,12 @@ Employee agent orchestration system for managing AI agents in tmux sessions. A s
 ## Quick Start
 
 ```bash
+# Project-local install path varies by tool. If `.agent/skills/` doesn't exist, try `.claude/skills/`.
 # List all agents
 python3 .agent/skills/agent-manager/scripts/main.py list
+python3 .claude/skills/agent-manager/scripts/main.py list
 
+# (use the same path you chose above for the remaining commands)
 # Start dev agent
 python3 .agent/skills/agent-manager/scripts/main.py start dev
 

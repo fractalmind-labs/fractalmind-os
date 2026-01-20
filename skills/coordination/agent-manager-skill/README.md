@@ -69,16 +69,22 @@ cat ~/.claude/skills/agent-manager/SKILL.md
 # From your repository root (where `agents/` lives)
 cd your-project
 
-# If installed (project-local):
+# If installed (project-local; path varies by tool):
 python3 .agent/skills/agent-manager/scripts/main.py list
+# (or, if you use `.claude/skills/` instead of `.agent/skills/`)
+python3 .claude/skills/agent-manager/scripts/main.py list
 
 # If installed (global):
 python3 ~/.claude/skills/agent-manager/scripts/main.py list
+# (or, if you use `~/.agent/skills/` instead of `~/.claude/skills/`)
+python3 ~/.agent/skills/agent-manager/scripts/main.py list
 
 # Sanity check your setup
+# (use the same install path as above; replace `.agent/skills/` with `.claude/skills/` if needed)
 python3 .agent/skills/agent-manager/scripts/main.py doctor
 
 # Start / monitor / stop
+# (same note: replace `.agent/skills/` with `.claude/skills/` if needed)
 python3 .agent/skills/agent-manager/scripts/main.py start EMP_0001
 python3 .agent/skills/agent-manager/scripts/main.py monitor EMP_0001 --follow
 python3 .agent/skills/agent-manager/scripts/main.py stop EMP_0001
