@@ -662,14 +662,19 @@ def cmd_start(args):
 
     # Check if already running
     if session_exists(agent_id):
-        session_name = f"agent-{agent_id}"
+        session_info = get_session_info(agent_id) or {}
+        session_name = session_info.get('session', f"agent-{agent_id}")
         if getattr(args, 'restore', True):
             print(f"✅ Restored existing session for '{agent_name}'")
             print(f"   Session: {session_name}({agent_name})")
             if getattr(args, 'working_dir', None):
                 print(f"   Note: --working-dir is ignored when restoring")
             print()
-            print(f"Attach with: tmux attach -t {session_name}")
+            if session_info.get('mode') == 'windows':
+                group = session_name.split(':', 1)[0]
+                print(f"Attach with: tmux attach -t {group}")
+            else:
+                print(f"Attach with: tmux attach -t {session_name}")
             print(f"Monitor with: python3 {Path(__file__).name} monitor {agent_file_id}")
             return 0
 
@@ -677,7 +682,11 @@ def cmd_start(args):
         print(f"   Session: {session_name}({agent_name})")
         print()
         print(f"   To stop first: python3 {Path(__file__).name} stop {agent_file_id}")
-        print(f"   Or attach directly: tmux attach -t {session_name}")
+        if session_info.get('mode') == 'windows':
+            group = session_name.split(':', 1)[0]
+            print(f"   Or attach directly: tmux attach -t {group}")
+        else:
+            print(f"   Or attach directly: tmux attach -t {session_name}")
         print(f"   Or restore (reuse existing): python3 {Path(__file__).name} start {agent_file_id} --restore")
         return 1
 
@@ -779,11 +788,12 @@ def cmd_start(args):
         print(f"ℹ️  Provider session restored; skipping MCP config injection")
 
     # Start session
-    if not start_session(agent_id, command):
+    if not start_session(agent_id, command, layout=getattr(args, 'tmux_layout', 'sessions')):
         print(f"❌ Failed to start agent '{agent_name}'")
         return 1
 
-    session_name = f"agent-{agent_id}"
+    session_info = get_session_info(agent_id) or {}
+    session_name = session_info.get('session', f"agent-{agent_id}")
     print(f"✅ Agent '{agent_name}' started")
     print(f"   Session: {session_name}({agent_name})")
     print(f"   Working Dir: {working_dir}")
@@ -1337,6 +1347,7 @@ def main():
 Examples:
   %(prog)s list                          List all agents
   %(prog)s start dev                     Start dev agent (session: agent-emp-0001)
+  %(prog)s start dev --tmux-layout windows  Start dev agent in a shared tmux session
   %(prog)s start dev --working-dir /path  Start with custom working dir
   %(prog)s stop dev                      Stop dev agent
   %(prog)s monitor dev --follow          Monitor dev output (live)
@@ -1358,6 +1369,12 @@ Examples:
     start_parser = subparsers.add_parser('start', help='Start an agent')
     start_parser.add_argument('agent', help='Agent name (e.g., dev, qa) or file ID (e.g., EMP_0001)')
     start_parser.add_argument('--working-dir', '-w', help='Override working directory')
+    start_parser.add_argument(
+        '--tmux-layout',
+        choices=['sessions', 'windows'],
+        default='sessions',
+        help="tmux layout: 'sessions' (default, one session per agent) or 'windows' (single shared session with one window per agent)",
+    )
     start_restore_group = start_parser.add_mutually_exclusive_group()
     start_restore_group.add_argument(
         '--restore',
