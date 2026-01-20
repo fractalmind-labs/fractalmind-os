@@ -24,13 +24,14 @@ Or run directly from the repo root:
 bash scripts/preflight.sh
 
 python3 .claude/skills/agent-manager/scripts/main.py list
-python3 .claude/skills/agent-manager/scripts/main.py start sisyphus
-python3 .claude/skills/agent-manager/scripts/main.py start oracle
-python3 .claude/skills/agent-manager/scripts/main.py assign sisyphus <<'EOF'
+python3 .claude/skills/agent-manager/scripts/main.py start supervisor
+python3 .claude/skills/agent-manager/scripts/main.py start developer
+python3 .claude/skills/agent-manager/scripts/main.py start qa
+python3 .claude/skills/agent-manager/scripts/main.py assign supervisor <<'EOF'
 Task:
 - <what you want done>
 EOF
-python3 .claude/skills/agent-manager/scripts/main.py monitor sisyphus --follow
+python3 .claude/skills/agent-manager/scripts/main.py monitor supervisor --follow
 ```
 
 ## Quality Gates (Default)
@@ -48,12 +49,8 @@ bash scripts/quality-gates.sh --repo workspace/<repo> --mode check
 ## Agents
 
 Agents live in `agents/EMP_*.md`:
-- `sisyphus`: orchestrator
-- `oracle`: architecture/review/strategy
-- `librarian`: docs + multi-repo analysis
-- `explore`: fast codebase exploration
-- `frontend-ui-ux-engineer`: UI/UX specialist
-- `document-writer`: writing specialist
-- `multimodal-looker`: image/PDF/diagram analysis
+- `supervisor`: drives `workflows/github_issues.md` and monitors `developer` + `qa`
+- `developer`: development + task management
+- `qa`: quality assurance (quality gates + edge cases)
 
-To switch CLIs, edit each agent file’s `launcher:` field.
+To switch CLIs, edit `agents/EMP_0001.md`, `agents/EMP_0002.md`, `agents/EMP_0003.md` `launcher:` fields.

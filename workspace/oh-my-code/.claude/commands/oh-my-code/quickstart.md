@@ -18,28 +18,30 @@ Run a zero-setup multi-agent workflow using the vendored `agent-manager` skill i
 python3 .claude/skills/agent-manager/scripts/main.py list
 ```
 
-### 2) Start the orchestrator + one reviewer
+### 2) Start supervisor + developer + qa
 ```bash
-python3 .claude/skills/agent-manager/scripts/main.py start sisyphus
-python3 .claude/skills/agent-manager/scripts/main.py start oracle
+python3 .claude/skills/agent-manager/scripts/main.py start supervisor
+python3 .claude/skills/agent-manager/scripts/main.py start developer
+python3 .claude/skills/agent-manager/scripts/main.py start qa
 ```
 
-### 3) Assign a task to the orchestrator
+### 3) Assign a task to the supervisor
 ```bash
-python3 .claude/skills/agent-manager/scripts/main.py assign sisyphus <<'EOF'
+python3 .claude/skills/agent-manager/scripts/main.py assign supervisor <<'EOF'
 Task:
 - <describe what you want built>
 
 Requirements:
 - Follow AGENTS.md
-- Split into parallel subtasks (oracle + librarian/explore as needed)
+- Primary workflow: workflows/github_issues.md
+- Split into parallel subtasks (developer + qa)
 - Provide evidence (commands run, files changed)
 EOF
 ```
 
 ### 4) Monitor output
 ```bash
-python3 .claude/skills/agent-manager/scripts/main.py monitor sisyphus --follow
+python3 .claude/skills/agent-manager/scripts/main.py monitor supervisor --follow
 ```
 
 ## Notes

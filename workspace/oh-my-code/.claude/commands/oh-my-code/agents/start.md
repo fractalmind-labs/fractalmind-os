@@ -1,12 +1,11 @@
 ---
-description: Start core agents (sisyphus/oracle/librarian/explore)
+description: Start core agents (supervisor/developer/qa)
 ---
 
 # Agents: Start (Core)
 
 ```bash
-python3 .claude/skills/agent-manager/scripts/main.py start sisyphus
-python3 .claude/skills/agent-manager/scripts/main.py start oracle
-python3 .claude/skills/agent-manager/scripts/main.py start librarian
-python3 .claude/skills/agent-manager/scripts/main.py start explore
+python3 .claude/skills/agent-manager/scripts/main.py start supervisor
+python3 .claude/skills/agent-manager/scripts/main.py start developer
+python3 .claude/skills/agent-manager/scripts/main.py start qa
 ```
