@@ -383,12 +383,14 @@ def _is_codex_model_choice_prompt(output: str) -> bool:
 
 
 def _tmux_send_key(agent_id: str, key: str) -> bool:
-    """Send a tmux key name (e.g., 'Down') to a session."""
+    """Send a tmux key name (e.g., 'Down') to an agent pane (layout-safe)."""
     if not session_exists(agent_id):
         return False
-    session_name = f"{SESSION_PREFIX}{agent_id}"
+    target = _agent_pane_target(agent_id)
+    if not target:
+        return False
     result = subprocess.run(
-        ['tmux', 'send-keys', '-t', session_name, key],
+        ['tmux', 'send-keys', '-t', target, key],
         capture_output=True,
         text=True,
     )
