@@ -8,11 +8,106 @@ Sessions are named: agent-{agent_id} where agent_id is file_id in lowercase (e.g
 import subprocess
 import time
 import re
+import os
 from typing import Optional, List, Dict
 
 
 # Session prefix for all agent sessions
 SESSION_PREFIX = "agent-"
+
+# Optional "single session" mode: keep all agents in one tmux session, each in its own window.
+DEFAULT_GROUP_SESSION_NAME = "agent-manager"
+GROUP_SESSION_ENV_VAR = "AGENT_MANAGER_TMUX_GROUP_SESSION"
+
+
+def get_group_session_name() -> str:
+    return os.environ.get(GROUP_SESSION_ENV_VAR, DEFAULT_GROUP_SESSION_NAME)
+
+
+def _session_name_for_agent(agent_id: str) -> str:
+    return f"{SESSION_PREFIX}{agent_id}"
+
+
+def _window_name_for_agent(agent_id: str) -> str:
+    # Keep window names consistent with existing session names for familiarity.
+    return f"{SESSION_PREFIX}{agent_id}"
+
+
+def _tmux_has_session(session_name: str) -> bool:
+    result = subprocess.run(['tmux', 'has-session', '-t', session_name], capture_output=True)
+    return result.returncode == 0
+
+
+def _group_session_exists() -> bool:
+    return _tmux_has_session(get_group_session_name())
+
+
+def _group_window_exists(agent_id: str) -> bool:
+    group = get_group_session_name()
+    window_name = _window_name_for_agent(agent_id)
+    result = subprocess.run(
+        ['tmux', 'list-windows', '-t', group, '-F', '#{window_name}'],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return False
+    return any(line.strip() == window_name for line in result.stdout.splitlines())
+
+
+def _agent_attach_target(agent_id: str) -> Optional[str]:
+    dedicated = _session_name_for_agent(agent_id)
+    if _tmux_has_session(dedicated):
+        return dedicated
+    if _group_window_exists(agent_id):
+        group = get_group_session_name()
+        return f"{group}:{_window_name_for_agent(agent_id)}"
+    return None
+
+
+def _agent_container_target(agent_id: str) -> Optional[str]:
+    dedicated = _session_name_for_agent(agent_id)
+    if _tmux_has_session(dedicated):
+        return dedicated
+    if _group_window_exists(agent_id):
+        group = get_group_session_name()
+        return f"{group}:{_window_name_for_agent(agent_id)}"
+    return None
+
+
+def _agent_pane_target(agent_id: str) -> Optional[str]:
+    """Best-effort stable tmux target for an agent (pane_id preferred)."""
+    container = _agent_container_target(agent_id)
+    if not container:
+        return None
+
+    expected_title = _window_name_for_agent(agent_id)
+    result = subprocess.run(
+        ['tmux', 'list-panes', '-t', container, '-F', '#{pane_id}\t#{pane_title}'],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        for line in result.stdout.splitlines():
+            try:
+                pane_id, pane_title = line.split('\t', 1)
+            except ValueError:
+                continue
+            if pane_title.strip() == expected_title:
+                return pane_id.strip()
+
+    # Fall back to the container target (uses the active pane).
+    return container
+
+
+def _set_agent_pane_title(agent_id: str) -> None:
+    """Set the initial agent pane title so we can target it even after splits."""
+    container = _agent_container_target(agent_id)
+    if not container:
+        return
+    title = _window_name_for_agent(agent_id)
+    # Best-effort; older tmux versions may not support -T.
+    subprocess.run(['tmux', 'select-pane', '-t', container, '-T', title], capture_output=True, text=True)
 
 
 def check_tmux() -> bool:
@@ -33,21 +128,29 @@ def list_sessions() -> List[str]:
     Returns:
         List of agent_id values (e.g., ['emp-0001', 'emp-0002'])
     """
+    agent_ids: set[str] = set()
+
     result = subprocess.run(['tmux', 'ls'], capture_output=True, text=True)
+    if result.returncode == 0:
+        for line in result.stdout.split('\n'):
+            if ':' in line:
+                session_name = line.split(':')[0]
+                if session_name.startswith(SESSION_PREFIX):
+                    agent_ids.add(session_name[len(SESSION_PREFIX):])
 
-    if result.returncode != 0:
-        return []
+    group = get_group_session_name()
+    result = subprocess.run(
+        ['tmux', 'list-windows', '-t', group, '-F', '#{window_name}'],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        for window_name in result.stdout.splitlines():
+            window_name = window_name.strip()
+            if window_name.startswith(SESSION_PREFIX):
+                agent_ids.add(window_name[len(SESSION_PREFIX):])
 
-    sessions = []
-    for line in result.stdout.split('\n'):
-        if ':' in line:
-            session_name = line.split(':')[0]
-            if session_name.startswith(SESSION_PREFIX):
-                # Extract agent_id from session name
-                agent_id = session_name[len(SESSION_PREFIX):]
-                sessions.append(agent_id)
-
-    return sessions
+    return sorted(agent_ids)
 
 
 def session_exists(agent_id: str) -> bool:
@@ -60,10 +163,12 @@ def session_exists(agent_id: str) -> bool:
     Returns:
         True if session exists
     """
-    return agent_id in list_sessions()
+    if _tmux_has_session(_session_name_for_agent(agent_id)):
+        return True
+    return _group_window_exists(agent_id)
 
 
-def start_session(agent_id: str, command: str) -> bool:
+def start_session(agent_id: str, command: str, *, layout: str = "sessions") -> bool:
     """
     Start a new tmux session for an agent.
 
@@ -74,17 +179,39 @@ def start_session(agent_id: str, command: str) -> bool:
     Returns:
         True if session was started successfully
     """
-    session_name = f"{SESSION_PREFIX}{agent_id}"
-
     if session_exists(agent_id):
         return False
 
-    # Start tmux session in detached mode
-    result = subprocess.run([
-        'tmux', 'new-session', '-d', '-s', session_name, command
-    ], capture_output=True, text=True)
+    if layout == "windows":
+        group = get_group_session_name()
+        window_name = _window_name_for_agent(agent_id)
+        if _group_session_exists():
+            result = subprocess.run(
+                ['tmux', 'new-window', '-d', '-t', group, '-n', window_name, command],
+                capture_output=True,
+                text=True,
+            )
+        else:
+            result = subprocess.run(
+                ['tmux', 'new-session', '-d', '-s', group, '-n', window_name, command],
+                capture_output=True,
+                text=True,
+            )
+        ok = result.returncode == 0
+        if ok:
+            _set_agent_pane_title(agent_id)
+        return ok
 
-    return result.returncode == 0
+    session_name = _session_name_for_agent(agent_id)
+    result = subprocess.run(
+        ['tmux', 'new-session', '-d', '-s', session_name, command],
+        capture_output=True,
+        text=True,
+    )
+    ok = result.returncode == 0
+    if ok:
+        _set_agent_pane_title(agent_id)
+    return ok
 
 
 def stop_session(agent_id: str) -> bool:
@@ -97,13 +224,26 @@ def stop_session(agent_id: str) -> bool:
     Returns:
         True if session was stopped
     """
-    session_name = f"{SESSION_PREFIX}{agent_id}"
+    session_name = _session_name_for_agent(agent_id)
+    if _tmux_has_session(session_name):
+        result = subprocess.run(
+            ['tmux', 'kill-session', '-t', session_name],
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode == 0
 
-    result = subprocess.run([
-        'tmux', 'kill-session', '-t', session_name
-    ], capture_output=True, text=True)
+    if _group_window_exists(agent_id):
+        group = get_group_session_name()
+        window_name = _window_name_for_agent(agent_id)
+        result = subprocess.run(
+            ['tmux', 'kill-window', '-t', f"{group}:{window_name}"],
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode == 0
 
-    return result.returncode == 0
+    return False
 
 
 def capture_output(agent_id: str, lines: int = 100) -> Optional[str]:
@@ -120,10 +260,12 @@ def capture_output(agent_id: str, lines: int = 100) -> Optional[str]:
     if not session_exists(agent_id):
         return None
 
-    session_name = f"{SESSION_PREFIX}{agent_id}"
+    target = _agent_pane_target(agent_id)
+    if not target:
+        return None
 
     result = subprocess.run([
-        'tmux', 'capture-pane', '-p', '-t', session_name, f'-S-{lines}'
+        'tmux', 'capture-pane', '-p', '-t', target, f'-S-{lines}'
     ], capture_output=True, text=True)
 
     if result.returncode != 0:
@@ -147,13 +289,15 @@ def send_keys(agent_id: str, keys: str, *, send_enter: bool = True) -> bool:
     if not session_exists(agent_id):
         return False
 
-    session_name = f"{SESSION_PREFIX}{agent_id}"
+    target = _agent_pane_target(agent_id)
+    if not target:
+        return False
 
     def _send_literal(text: str) -> bool:
         if not text:
             return True
         result = subprocess.run(
-            ['tmux', 'send-keys', '-t', session_name, '-l', text],
+            ['tmux', 'send-keys', '-t', target, '-l', text],
             capture_output=True,
             text=True,
         )
@@ -171,7 +315,7 @@ def send_keys(agent_id: str, keys: str, *, send_enter: bool = True) -> bool:
                 check=True,
             )
             subprocess.run(
-                ['tmux', 'paste-buffer', '-d', '-b', 'enter-key', '-t', session_name],
+                ['tmux', 'paste-buffer', '-d', '-b', 'enter-key', '-t', target],
                 capture_output=True,
                 text=True,
                 check=True,
@@ -194,7 +338,7 @@ def send_keys(agent_id: str, keys: str, *, send_enter: bool = True) -> bool:
                 check=True,
             )
             subprocess.run(
-                ['tmux', 'paste-buffer', '-d', '-b', 'agent-send', '-t', session_name],
+                ['tmux', 'paste-buffer', '-d', '-b', 'agent-send', '-t', target],
                 capture_output=True,
                 check=True,
             )
@@ -239,7 +383,9 @@ def inject_system_prompt(agent_id: str, prompt: str) -> bool:
     from pathlib import Path
     sys.path.insert(0, str(Path(__file__).parent.parent))
 
-    session_name = f"{SESSION_PREFIX}{agent_id}"
+    target = _agent_pane_target(agent_id)
+    if not target:
+        return False
 
     # Write prompt to a temp file for reliable multi-line injection
     import tempfile
@@ -257,7 +403,7 @@ def inject_system_prompt(agent_id: str, prompt: str) -> bool:
 
         # Paste the buffer content
         subprocess.run([
-            'tmux', 'paste-buffer', '-d', '-b', 'agent-prompt', '-t', session_name
+            'tmux', 'paste-buffer', '-d', '-b', 'agent-prompt', '-t', target
         ], capture_output=True, check=True)
 
         # Wait a bit for paste to complete
@@ -272,7 +418,7 @@ def inject_system_prompt(agent_id: str, prompt: str) -> bool:
             check=True,
         )
         subprocess.run(
-            ['tmux', 'paste-buffer', '-d', '-b', 'enter-key', '-t', session_name],
+            ['tmux', 'paste-buffer', '-d', '-b', 'enter-key', '-t', target],
             capture_output=True,
             text=True,
             check=True,
@@ -304,7 +450,9 @@ def wait_for_agent_ready(agent_id: str, launcher: str, timeout: int = 45) -> boo
     Returns:
         True if agent is ready, False if timeout
     """
-    session_name = f"{SESSION_PREFIX}{agent_id}"
+    target = _agent_pane_target(agent_id)
+    if not target:
+        return False
 
     # Import provider system
     import sys
@@ -335,7 +483,7 @@ def wait_for_agent_ready(agent_id: str, launcher: str, timeout: int = 45) -> boo
     while (time.time() - start_time) < timeout:
         # Capture recent output
         result = subprocess.run([
-            'tmux', 'capture-pane', '-p', '-t', session_name, '-S-15'
+            'tmux', 'capture-pane', '-p', '-t', target, '-S-15'
         ], capture_output=True, text=True)
 
         if result.returncode == 0:
@@ -393,25 +541,43 @@ def get_session_info(agent_id: str) -> Optional[Dict[str, str]]:
     if not session_exists(agent_id):
         return None
 
-    session_name = f"{SESSION_PREFIX}{agent_id}"
+    session_name = _session_name_for_agent(agent_id)
+    if _tmux_has_session(session_name):
+        # Get session info from tmux ls
+        result = subprocess.run(['tmux', 'ls'], capture_output=True, text=True)
 
-    # Get session info from tmux ls
-    result = subprocess.run(['tmux', 'ls'], capture_output=True, text=True)
+        if result.returncode != 0:
+            return None
 
-    if result.returncode != 0:
-        return None
+        for line in result.stdout.split('\n'):
+            if line.startswith(f"{session_name}:"):
+                # Parse session info (e.g., "agent-emp-0001: 1 windows (created Fri Jan  3 10:00:00 2025)")
+                parts = line.split('(', 1)
+                status = "running" if len(parts) > 1 else "unknown"
 
-    for line in result.stdout.split('\n'):
-        if line.startswith(f"{session_name}:"):
-            # Parse session info (e.g., "agent-emp-0001: 1 windows (created Fri Jan  3 10:00:00 2025)")
-            parts = line.split('(', 1)
-            status = "running" if len(parts) > 1 else "unknown"
+                return {
+                    'agent_id': agent_id,
+                    'session': session_name,
+                    'status': status,
+                    'mode': 'sessions',
+                }
 
-            return {
-                'agent_id': agent_id,
-                'session': session_name,
-                'status': status
-            }
+        return {
+            'agent_id': agent_id,
+            'session': session_name,
+            'status': 'running',
+            'mode': 'sessions',
+        }
+
+    if _group_window_exists(agent_id):
+        group = get_group_session_name()
+        window_name = _window_name_for_agent(agent_id)
+        return {
+            'agent_id': agent_id,
+            'session': f"{group}:{window_name}",
+            'status': 'running',
+            'mode': 'windows',
+        }
 
     return None
 
@@ -430,12 +596,14 @@ def is_agent_busy(agent_id: str, launcher: str = "") -> bool:
     if not session_exists(agent_id):
         return False
 
-    session_name = f"{SESSION_PREFIX}{agent_id}"
+    target = _agent_pane_target(agent_id)
+    if not target:
+        return False
 
     # Capture only the last few lines to detect current state
     # Using -5 to avoid matching old output that scrolled by
     result = subprocess.run([
-        'tmux', 'capture-pane', '-p', '-t', session_name, '-S-5'
+        'tmux', 'capture-pane', '-p', '-t', target, '-S-5'
     ], capture_output=True, text=True)
 
     if result.returncode != 0:
@@ -537,9 +705,11 @@ def is_agent_blocked(agent_id: str, launcher: str = "") -> bool:
     if not session_exists(agent_id):
         return False
 
-    session_name = f"{SESSION_PREFIX}{agent_id}"
+    target = _agent_pane_target(agent_id)
+    if not target:
+        return False
     result = subprocess.run(
-        ['tmux', 'capture-pane', '-p', '-t', session_name, '-S-30'],
+        ['tmux', 'capture-pane', '-p', '-t', target, '-S-30'],
         capture_output=True,
         text=True,
     )
@@ -583,11 +753,13 @@ def get_agent_runtime_state(agent_id: str, launcher: str = "") -> Dict[str, obje
     if not session_exists(agent_id):
         return {'state': 'stopped'}
 
-    session_name = f"{SESSION_PREFIX}{agent_id}"
+    target = _agent_pane_target(agent_id)
+    if not target:
+        return {'state': 'busy', 'reason': 'missing_tmux_target'}
     result = subprocess.run(
         # Capture a larger window so we can reliably detect error pages/output
         # (e.g., Cloudflare 522 HTML) that may not fit in the last ~40 lines.
-        ['tmux', 'capture-pane', '-p', '-t', session_name, '-S-200'],
+        ['tmux', 'capture-pane', '-p', '-t', target, '-S-200'],
         capture_output=True,
         text=True,
     )
@@ -654,10 +826,12 @@ def attach_session(agent_id: str) -> bool:
     if not session_exists(agent_id):
         return False
 
-    session_name = f"{SESSION_PREFIX}{agent_id}"
+    attach_target = _agent_attach_target(agent_id)
+    if not attach_target:
+        return False
 
     # This will block and take over the terminal
-    result = subprocess.run(['tmux', 'attach', '-t', session_name])
+    result = subprocess.run(['tmux', 'attach', '-t', attach_target])
 
     return result.returncode == 0
 
@@ -680,7 +854,9 @@ def wait_for_prompt(agent_id: str, launcher: str, timeout: int = 30) -> bool:
     sys.path.insert(0, str(Path(__file__).parent.parent))
     from providers import get_prompt_patterns, get_startup_wait, PROVIDERS
 
-    session_name = f"{SESSION_PREFIX}{agent_id}"
+    target = _agent_pane_target(agent_id)
+    if not target:
+        return False
 
     # Get prompt patterns based on launcher (provider)
     prompt_patterns = get_prompt_patterns(launcher)
@@ -705,7 +881,7 @@ def wait_for_prompt(agent_id: str, launcher: str, timeout: int = 30) -> bool:
     while (time.time() - start_time) < timeout:
         # Capture last few lines of output
         result = subprocess.run([
-            'tmux', 'capture-pane', '-p', '-t', session_name, '-S-20'
+            'tmux', 'capture-pane', '-p', '-t', target, '-S-20'
         ], capture_output=True, text=True)
 
         if result.returncode == 0:
