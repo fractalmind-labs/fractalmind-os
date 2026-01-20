@@ -88,6 +88,15 @@ launcher: droid
 launcher_args: []
 ```
 
+**Provider name**: OpenAI Codex CLI
+```yaml
+launcher: codex
+launcher_args:
+  - --model=gpt-5.2
+```
+
+Note: For scheduled jobs, `agent-manager` will best-effort auto-dismiss Codex's first-run/upgrade model selection prompt to keep cron runs non-interactive.
+
 ## Commands
 
 ### `list` - List All Agents

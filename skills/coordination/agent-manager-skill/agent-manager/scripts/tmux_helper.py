@@ -109,6 +109,8 @@ def _set_agent_pane_title(agent_id: str) -> None:
     # Best-effort; older tmux versions may not support -T.
     subprocess.run(['tmux', 'select-pane', '-t', container, '-T', title], capture_output=True, text=True)
 
+_CODEX_MENU_OPTION_RE = re.compile(r'^[›❯]\s*\d+\.')
+
 
 def check_tmux() -> bool:
     """
@@ -368,6 +370,52 @@ def send_keys(agent_id: str, keys: str, *, send_enter: bool = True) -> bool:
     return True
 
 
+def _is_codex_model_choice_prompt(output: str) -> bool:
+    """Detect Codex first-run/upgrade model selection prompt (non-interactive blocker)."""
+    if not output:
+        return False
+    lowered = output.lower()
+    if 'codex just got an upgrade' in lowered:
+        return True
+    if 'choose how you' in lowered and 'codex' in lowered and 'try new model' in lowered and 'use existing model' in lowered:
+        return True
+    return False
+
+
+def _tmux_send_key(agent_id: str, key: str) -> bool:
+    """Send a tmux key name (e.g., 'Down') to a session."""
+    if not session_exists(agent_id):
+        return False
+    session_name = f"{SESSION_PREFIX}{agent_id}"
+    result = subprocess.run(
+        ['tmux', 'send-keys', '-t', session_name, key],
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0
+
+
+def _dismiss_codex_model_choice_prompt(agent_id: str) -> bool:
+    """Best-effort dismissal of Codex model selection prompt."""
+    if not session_exists(agent_id):
+        return False
+
+    # Prefer "Use existing model" (option 2) to preserve prior behavior.
+    if not send_keys(agent_id, "2", send_enter=True):
+        return False
+
+    time.sleep(1.0)
+    tail = capture_output(agent_id, lines=80) or ""
+    if not _is_codex_model_choice_prompt(tail):
+        return True
+
+    # Fallback: move selection down then Enter (or just Enter if Down fails).
+    _tmux_send_key(agent_id, 'Down')
+    send_keys(agent_id, "", send_enter=True)
+    time.sleep(1.0)
+    return True
+
+
 def inject_system_prompt(agent_id: str, prompt: str) -> bool:
     """
     Inject system prompt to agent and wait for it to be processed.
@@ -480,6 +528,7 @@ def wait_for_agent_ready(agent_id: str, launcher: str, timeout: int = 45) -> boo
     # Give agent time to process the prompt
     time.sleep(min_wait)
 
+    codex_model_prompt_attempts = 0
     while (time.time() - start_time) < timeout:
         # Capture recent output
         result = subprocess.run([
@@ -495,11 +544,18 @@ def wait_for_agent_ready(agent_id: str, launcher: str, timeout: int = 45) -> boo
                 if '? for help' in output or '/ide for VS Code' in output:
                     return True
 
+            # Special handling for codex: dismiss first-run/upgrade model selection prompt.
+            if is_codex and codex_model_prompt_attempts < 3 and _is_codex_model_choice_prompt(output):
+                codex_model_prompt_attempts += 1
+                _dismiss_codex_model_choice_prompt(agent_id)
+                time.sleep(1.0)
+                continue
+
             # Special handling for codex: prompt may include inline suggestions (e.g. "› Summarize...")
             if is_codex:
                 for line in output.split('\n'):
                     stripped = line.strip()
-                    if stripped.startswith(('›', '❯')):
+                    if stripped.startswith(('›', '❯')) and not _CODEX_MENU_OPTION_RE.match(stripped):
                         return True
                 # Also check for mode line which indicates readiness
                 if 'Auto (High)' in output or 'shift+tab to cycle modes' in output:
@@ -516,7 +572,7 @@ def wait_for_agent_ready(agent_id: str, launcher: str, timeout: int = 45) -> boo
                             if stripped.startswith('>'):
                                 return True
                         elif is_codex:
-                            if stripped.startswith(pattern):
+                            if stripped.startswith(pattern) and not _CODEX_MENU_OPTION_RE.match(stripped):
                                 return True
                         else:
                             # Look for standalone prompt
@@ -770,6 +826,16 @@ def get_agent_runtime_state(agent_id: str, launcher: str = "") -> Dict[str, obje
     output = result.stdout
     elapsed_seconds = _parse_elapsed_seconds(output)
 
+    # Codex can present a first-run/upgrade model selection prompt that looks "idle"
+    # but actually blocks all automation (cron + tmux send-keys). Dismiss it if present.
+    if launcher and 'codex' in launcher.lower() and _is_codex_model_choice_prompt(output):
+        dismissed = _dismiss_codex_model_choice_prompt(agent_id)
+        return {
+            'state': 'busy' if dismissed else 'blocked',
+            'reason': 'codex_model_choice',
+            'elapsed_seconds': elapsed_seconds,
+        }
+
     if is_agent_blocked(agent_id, launcher=launcher):
         return {
             'state': 'blocked',
@@ -878,6 +944,7 @@ def wait_for_prompt(agent_id: str, launcher: str, timeout: int = 30) -> bool:
     start_time = time.time()
     check_interval = 1  # Check every second
 
+    codex_model_prompt_attempts = 0
     while (time.time() - start_time) < timeout:
         # Capture last few lines of output
         result = subprocess.run([
@@ -893,11 +960,18 @@ def wait_for_prompt(agent_id: str, launcher: str, timeout: int = 30) -> bool:
                 if '? for help' in output or '/ide for VS Code' in output:
                     return True
 
+            # Special handling for codex: dismiss first-run/upgrade model selection prompt.
+            if is_codex and codex_model_prompt_attempts < 3 and _is_codex_model_choice_prompt(output):
+                codex_model_prompt_attempts += 1
+                _dismiss_codex_model_choice_prompt(agent_id)
+                time.sleep(1.0)
+                continue
+
             # Special handling for codex: prompt may include inline suggestions (e.g. "› Summarize...")
             if is_codex:
                 for line in output.split('\n'):
                     stripped = line.strip()
-                    if stripped.startswith(('›', '❯')):
+                    if stripped.startswith(('›', '❯')) and not _CODEX_MENU_OPTION_RE.match(stripped):
                         return True
                 # Also check for mode line which indicates readiness
                 if 'Auto (High)' in output or 'shift+tab to cycle modes' in output:
@@ -914,7 +988,7 @@ def wait_for_prompt(agent_id: str, launcher: str, timeout: int = 30) -> bool:
                             if stripped.startswith('>'):
                                 return True
                         elif is_codex:
-                            if stripped.startswith(pattern):
+                            if stripped.startswith(pattern) and not _CODEX_MENU_OPTION_RE.match(stripped):
                                 return True
                         else:
                             # Standard check: line is just the prompt
