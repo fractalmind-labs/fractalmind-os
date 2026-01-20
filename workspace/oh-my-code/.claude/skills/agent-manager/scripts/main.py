@@ -9,10 +9,13 @@ Sessions are named: agent-{agent_id} where agent_id is file_id in lowercase (e.g
 import argparse
 import json
 import os
+import re
 import shlex
+import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import Optional
 
 # Add scripts directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
@@ -22,6 +25,7 @@ from agent_config import (
     list_all_agents,
     load_skills,
     build_system_prompt,
+    expand_env_vars,
     get_launcher_command,
     get_agent_schedule,
     get_schedule_task,
@@ -50,10 +54,347 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from providers import (
     get_system_prompt_mode,
     get_system_prompt_flag,
+    get_system_prompt_key,
+    get_agents_md_mode,
     get_mcp_config_mode,
     get_mcp_config_flag,
     resolve_launcher_command,
+    get_provider_key,
+    get_session_restore_mode,
+    get_session_restore_flag,
 )
+
+
+def _normalize_path(path: str) -> str:
+    try:
+        return str(Path(path).resolve())
+    except Exception:
+        return os.path.abspath(path)
+
+
+def _provider_sessions_state_dir(repo_root: Path) -> Path:
+    return repo_root / '.claude' / 'state' / 'agent-manager' / 'provider-sessions'
+
+
+def _load_provider_session_id(repo_root: Path, provider: str, agent_id: str) -> str:
+    path = _provider_sessions_state_dir(repo_root) / provider / f"{agent_id}.json"
+    try:
+        payload = json.loads(path.read_text(encoding='utf-8'))
+        session_id = str(payload.get('session_id') or '').strip()
+        return session_id
+    except Exception:
+        return ""
+
+
+def _save_provider_session_id(repo_root: Path, provider: str, agent_id: str, *, session_id: str, cwd: str) -> None:
+    provider_dir = _provider_sessions_state_dir(repo_root) / provider
+    provider_dir.mkdir(parents=True, exist_ok=True)
+    path = provider_dir / f"{agent_id}.json"
+    payload = {
+        'provider': provider,
+        'agent_id': agent_id,
+        'session_id': session_id,
+        'cwd': cwd,
+        'updated_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding='utf-8')
+
+
+def _droid_sessions_dir_for_cwd(cwd: str) -> Path:
+    normalized = _normalize_path(cwd)
+    folder_name = "-" + normalized.lstrip('/').replace('/', '-')
+    return Path.home() / '.factory' / 'sessions' / folder_name
+
+
+def _droid_session_jsonl_path(cwd: str, session_id: str) -> Path:
+    return _droid_sessions_dir_for_cwd(cwd) / f"{session_id}.jsonl"
+
+
+def _droid_session_exists(cwd: str, session_id: str) -> bool:
+    if not session_id:
+        return False
+    try:
+        return _droid_session_jsonl_path(cwd, session_id).exists()
+    except Exception:
+        return False
+
+
+def _snapshot_droid_sessions(cwd: str) -> set[str]:
+    sessions_dir = _droid_sessions_dir_for_cwd(cwd)
+    if not sessions_dir.exists() or not sessions_dir.is_dir():
+        return set()
+    return {str(p) for p in sessions_dir.glob('*.jsonl')}
+
+
+def _extract_droid_session_id_from_jsonl(jsonl_path: Path) -> str:
+    try:
+        with jsonl_path.open('r', encoding='utf-8') as f:
+            for _ in range(10):
+                line = f.readline()
+                if not line:
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+                payload = json.loads(line)
+                if payload.get('type') == 'session_start':
+                    return str(payload.get('id') or '').strip()
+        return ""
+    except Exception:
+        return ""
+
+
+def _find_new_droid_session_id(cwd: str, *, before_jsonl_paths: set[str]) -> str:
+    sessions_dir = _droid_sessions_dir_for_cwd(cwd)
+    if not sessions_dir.exists() or not sessions_dir.is_dir():
+        return ""
+
+    candidates = [p for p in sessions_dir.glob('*.jsonl') if str(p) not in before_jsonl_paths]
+    if not candidates:
+        return ""
+
+    newest = max(candidates, key=lambda p: p.stat().st_mtime)
+    return _extract_droid_session_id_from_jsonl(newest)
+
+
+def _find_new_droid_session_id_with_retry(cwd: str, *, before_jsonl_paths: set[str], timeout_s: float = 2.0) -> str:
+    deadline = time.time() + max(0.0, float(timeout_s))
+    while True:
+        session_id = _find_new_droid_session_id(cwd, before_jsonl_paths=before_jsonl_paths)
+        if session_id:
+            return session_id
+        if time.time() >= deadline:
+            return ""
+        time.sleep(0.2)
+
+
+_UUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+
+
+def _looks_like_uuid(value: str) -> bool:
+    return bool(value and _UUID_RE.match(value))
+
+
+def _claude_projects_dir_for_cwd(cwd: str) -> Path:
+    normalized = _normalize_path(cwd)
+    folder_name = "-" + normalized.lstrip('/').replace('/', '-')
+    return Path.home() / '.claude' / 'projects' / folder_name
+
+
+def _claude_session_jsonl_path(cwd: str, session_id: str) -> Path:
+    return _claude_projects_dir_for_cwd(cwd) / f"{session_id}.jsonl"
+
+
+def _claude_session_exists(cwd: str, session_id: str) -> bool:
+    if not _looks_like_uuid(session_id):
+        return False
+    try:
+        return _claude_session_jsonl_path(cwd, session_id).exists()
+    except Exception:
+        return False
+
+
+def _snapshot_claude_sessions(cwd: str) -> set[str]:
+    sessions_dir = _claude_projects_dir_for_cwd(cwd)
+    if not sessions_dir.exists() or not sessions_dir.is_dir():
+        return set()
+    return {str(p) for p in sessions_dir.glob('*.jsonl')}
+
+
+def _extract_claude_session_id_from_jsonl(jsonl_path: Path) -> str:
+    try:
+        with jsonl_path.open('r', encoding='utf-8') as f:
+            for _ in range(10):
+                line = f.readline()
+                if not line:
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+                payload = json.loads(line)
+                session_id = str(payload.get('sessionId') or payload.get('session_id') or '').strip()
+                if _looks_like_uuid(session_id):
+                    return session_id
+        return ""
+    except Exception:
+        return ""
+
+
+def _find_new_claude_session_id(cwd: str, *, before_jsonl_paths: set[str]) -> str:
+    sessions_dir = _claude_projects_dir_for_cwd(cwd)
+    if not sessions_dir.exists() or not sessions_dir.is_dir():
+        return ""
+
+    candidates = [p for p in sessions_dir.glob('*.jsonl') if str(p) not in before_jsonl_paths]
+    if not candidates:
+        # Best-effort fallback: pick newest session file we can parse.
+        candidates = list(sessions_dir.glob('*.jsonl'))
+    if not candidates:
+        return ""
+
+    for candidate in sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True):
+        session_id = _extract_claude_session_id_from_jsonl(candidate)
+        if session_id:
+            return session_id
+
+    return ""
+
+
+def _find_new_claude_session_id_with_retry(cwd: str, *, before_jsonl_paths: set[str], timeout_s: float = 2.0) -> str:
+    deadline = time.time() + max(0.0, float(timeout_s))
+    while True:
+        session_id = _find_new_claude_session_id(cwd, before_jsonl_paths=before_jsonl_paths)
+        if session_id:
+            return session_id
+        if time.time() >= deadline:
+            return ""
+        time.sleep(0.2)
+
+
+def _opencode_storage_dir() -> Path:
+    return Path.home() / '.local' / 'share' / 'opencode' / 'storage'
+
+
+def _opencode_project_id_for_cwd(cwd: str) -> str:
+    normalized = _normalize_path(cwd)
+    project_dir = _opencode_storage_dir() / 'project'
+    if not project_dir.exists() or not project_dir.is_dir():
+        return ""
+
+    for p in project_dir.glob('*.json'):
+        try:
+            payload = json.loads(p.read_text(encoding='utf-8'))
+            worktree = str(payload.get('worktree') or '').strip()
+            if worktree and _normalize_path(worktree) == normalized:
+                return str(payload.get('id') or p.stem).strip()
+        except Exception:
+            continue
+
+    return ""
+
+
+def _opencode_sessions_dir_for_project(project_id: str) -> Path:
+    return _opencode_storage_dir() / 'session' / project_id
+
+
+def _opencode_session_json_path(cwd: str, session_id: str) -> Path:
+    project_id = _opencode_project_id_for_cwd(cwd)
+    return _opencode_sessions_dir_for_project(project_id) / f"{session_id}.json"
+
+
+def _opencode_session_exists(cwd: str, session_id: str) -> bool:
+    if not session_id or not session_id.startswith('ses_'):
+        return False
+    project_id = _opencode_project_id_for_cwd(cwd)
+    if not project_id:
+        return False
+    try:
+        return (_opencode_sessions_dir_for_project(project_id) / f"{session_id}.json").exists()
+    except Exception:
+        return False
+
+
+def _snapshot_opencode_sessions(cwd: str) -> set[str]:
+    project_id = _opencode_project_id_for_cwd(cwd)
+    if not project_id:
+        return set()
+    sessions_dir = _opencode_sessions_dir_for_project(project_id)
+    if not sessions_dir.exists() or not sessions_dir.is_dir():
+        return set()
+    return {str(p) for p in sessions_dir.glob('*.json')}
+
+
+def _extract_opencode_session_id_from_json(json_path: Path) -> str:
+    try:
+        payload = json.loads(json_path.read_text(encoding='utf-8'))
+        session_id = str(payload.get('id') or '').strip()
+        if session_id.startswith('ses_'):
+            return session_id
+        return ""
+    except Exception:
+        return ""
+
+
+def _find_new_opencode_session_id(cwd: str, *, before_json_paths: set[str]) -> str:
+    project_id = _opencode_project_id_for_cwd(cwd)
+    if not project_id:
+        return ""
+    sessions_dir = _opencode_sessions_dir_for_project(project_id)
+    if not sessions_dir.exists() or not sessions_dir.is_dir():
+        return ""
+
+    candidates = [p for p in sessions_dir.glob('*.json') if str(p) not in before_json_paths]
+    if not candidates:
+        candidates = list(sessions_dir.glob('*.json'))
+    if not candidates:
+        return ""
+
+    for candidate in sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True):
+        session_id = _extract_opencode_session_id_from_json(candidate)
+        if session_id:
+            return session_id
+
+    return ""
+
+
+def _find_new_opencode_session_id_with_retry(cwd: str, *, before_json_paths: set[str], timeout_s: float = 2.0) -> str:
+    deadline = time.time() + max(0.0, float(timeout_s))
+    while True:
+        session_id = _find_new_opencode_session_id(cwd, before_json_paths=before_json_paths)
+        if session_id:
+            return session_id
+        if time.time() >= deadline:
+            return ""
+        time.sleep(0.2)
+
+
+def _provider_session_exists(provider_key: str, cwd: str, session_id: str) -> bool:
+    if provider_key == 'droid':
+        return _droid_session_exists(cwd, session_id)
+    if provider_key in {'claude', 'claude-code'}:
+        return _claude_session_exists(cwd, session_id)
+    if provider_key == 'opencode':
+        return _opencode_session_exists(cwd, session_id)
+    return False
+
+
+def _snapshot_provider_sessions(provider_key: str, cwd: str) -> set[str]:
+    if provider_key == 'droid':
+        return _snapshot_droid_sessions(cwd)
+    if provider_key in {'claude', 'claude-code'}:
+        return _snapshot_claude_sessions(cwd)
+    if provider_key == 'opencode':
+        return _snapshot_opencode_sessions(cwd)
+    return set()
+
+
+def _find_new_provider_session_id_with_retry(provider_key: str, cwd: str, *, before_paths: set[str], timeout_s: float = 2.0) -> str:
+    if provider_key == 'droid':
+        return _find_new_droid_session_id_with_retry(cwd, before_jsonl_paths=before_paths, timeout_s=timeout_s)
+    if provider_key in {'claude', 'claude-code'}:
+        return _find_new_claude_session_id_with_retry(cwd, before_jsonl_paths=before_paths, timeout_s=timeout_s)
+    if provider_key == 'opencode':
+        return _find_new_opencode_session_id_with_retry(cwd, before_json_paths=before_paths, timeout_s=timeout_s)
+    return ""
+
+
+def _apply_session_restore_args(
+    provider_key: str,
+    launcher: str,
+    launcher_args: list[str],
+    restore_flag: str,
+    session_id: str,
+) -> list[str]:
+    """Insert provider resume args without breaking wrapper launchers.
+
+    For the repo-local `ccc` wrapper, the first arg is a model/account selector and
+    must stay first; claude options follow after.
+    """
+    launcher_lower = (launcher or "").lower()
+    if provider_key == 'claude-code' and 'ccc' in launcher_lower:
+        if launcher_args and not str(launcher_args[0]).startswith('-'):
+            return [launcher_args[0], restore_flag, session_id] + launcher_args[1:]
+    return [restore_flag, session_id] + list(launcher_args or [])
 
 
 def write_system_prompt_file(repo_root: Path, agent_id: str, system_prompt: str) -> Path:
@@ -62,6 +403,15 @@ def write_system_prompt_file(repo_root: Path, agent_id: str, system_prompt: str)
     prompt_file = state_dir / f"{agent_id}.txt"
     prompt_file.write_text(system_prompt + "\n", encoding='utf-8')
     return prompt_file
+
+
+def write_scheduled_task_file(repo_root: Path, agent_id: str, job: str, task: str) -> Path:
+    state_dir = repo_root / '.claude' / 'state' / 'agent-manager' / 'scheduled-tasks' / agent_id
+    state_dir.mkdir(parents=True, exist_ok=True)
+    safe_job = "".join(ch if (ch.isalnum() or ch in ('-', '_')) else '-' for ch in (job or 'job'))
+    task_file = state_dir / f"{safe_job}.md"
+    task_file.write_text(task + "\n", encoding='utf-8')
+    return task_file
 
 
 def build_mcp_config_json(agent_config: dict) -> str:
@@ -182,6 +532,103 @@ def cmd_list(args):
         print()
 
 
+def _tmux_install_hint() -> str:
+    if sys.platform == 'darwin':
+        return 'brew install tmux'
+    if sys.platform.startswith('linux'):
+        return 'sudo apt install tmux'
+    return 'Install tmux and ensure it is on PATH'
+
+
+def cmd_doctor(args):
+    """Run basic environment checks for agent-manager."""
+    repo_root = get_repo_root()
+    agents_dir = repo_root / 'agents'
+    skills_dir = repo_root / '.agent' / 'skills'
+    claude_dir = repo_root / '.claude'
+
+    problems = 0
+
+    print("🩺 agent-manager doctor")
+    print()
+    print(f"Repo root: {repo_root}")
+    print(f"Python: {sys.version.split()[0]} ({sys.executable})")
+    print(f"Platform: {sys.platform}")
+    print()
+
+    if check_tmux():
+        print("✅ tmux: found")
+    else:
+        problems += 1
+        print("❌ tmux: missing")
+        print(f"   Fix: {_tmux_install_hint()}")
+
+    if agents_dir.exists() and agents_dir.is_dir():
+        agents = list_all_agents(agents_dir)
+        print(f"✅ agents/: found ({len(agents)} configured)")
+    else:
+        problems += 1
+        print("❌ agents/: missing")
+        print(f"   Expected at: {agents_dir}")
+
+    if skills_dir.exists() and skills_dir.is_dir():
+        print("✅ .agent/skills/: found")
+    else:
+        print("⚠️  .agent/skills/: missing")
+        print(f"   Expected at: {skills_dir}")
+
+    if claude_dir.exists() and claude_dir.is_dir():
+        print("✅ .claude/: found")
+    else:
+        print("⚠️  .claude/: missing")
+        print(f"   Expected at: {claude_dir}")
+
+    try:
+        result = subprocess.run(['crontab', '-l'], capture_output=True, text=True)
+        if result.returncode == 0:
+            print("✅ crontab: readable")
+        else:
+            # macOS exits non-zero when no crontab exists; treat as warning.
+            print("⚠️  crontab: not set (or not readable)")
+    except FileNotFoundError:
+        problems += 1
+        print("❌ crontab: command not found")
+
+    if args.deep and agents_dir.exists() and agents_dir.is_dir():
+        print()
+        print("🔎 Deep checks:")
+        agents = list_all_agents(agents_dir)
+        for file_id, config in sorted(agents.items(), key=lambda item: item[0]):
+            agent_id = get_agent_id(config)
+            working_dir = config.get('working_directory')
+            launcher = resolve_launcher_command(config.get('launcher', ''))
+            enabled = config.get('enabled', True)
+
+            status = "✅" if enabled else "⛔"
+            print(f"{status} {file_id} (agent-{agent_id})")
+            if working_dir:
+                wd_ok = Path(working_dir).exists()
+                print(f"   Working dir: {working_dir} ({'ok' if wd_ok else 'missing'})")
+                if not wd_ok and enabled:
+                    problems += 1
+            else:
+                print("   Working dir: (not set)")
+                if enabled:
+                    problems += 1
+
+            if launcher:
+                print(f"   Launcher: {launcher}")
+            else:
+                print("   Launcher: (not set)")
+
+    print()
+    if problems:
+        print(f"❌ Doctor found {problems} problem(s)")
+        return 1
+    print("✅ Doctor checks passed")
+    return 0
+
+
 def cmd_start(args):
     """Start an agent in tmux session."""
     # Check tmux
@@ -216,11 +663,22 @@ def cmd_start(args):
     # Check if already running
     if session_exists(agent_id):
         session_name = f"agent-{agent_id}"
+        if getattr(args, 'restore', True):
+            print(f"✅ Restored existing session for '{agent_name}'")
+            print(f"   Session: {session_name}({agent_name})")
+            if getattr(args, 'working_dir', None):
+                print(f"   Note: --working-dir is ignored when restoring")
+            print()
+            print(f"Attach with: tmux attach -t {session_name}")
+            print(f"Monitor with: python3 {Path(__file__).name} monitor {agent_file_id}")
+            return 0
+
         print(f"⚠️  Agent '{agent_name}' is already running")
         print(f"   Session: {session_name}({agent_name})")
         print()
         print(f"   To stop first: python3 {Path(__file__).name} stop {agent_file_id}")
         print(f"   Or attach directly: tmux attach -t {session_name}")
+        print(f"   Or restore (reuse existing): python3 {Path(__file__).name} start {agent_file_id} --restore")
         return 1
 
     # Override working directory if specified
@@ -229,17 +687,57 @@ def cmd_start(args):
         print("❌ No working directory specified")
         return 1
 
+    working_dir = _normalize_path(working_dir)
+
     repo_root = get_repo_root()
     skills_dir = repo_root / '.agent' / 'skills'
 
     # Build launcher command
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
-    launcher_args = agent_config.get('launcher_args', [])
+    launcher_args = list(agent_config.get('launcher_args', []) or [])
+
+    # Provider-aware restore: prefer resuming the provider session with an explicit sessionId.
+    provider_key = get_provider_key(launcher)
+    did_provider_restore = False
+    provider_before_sessions: set[str] = set()
+
+    track_provider_session = provider_key in {'droid', 'claude', 'claude-code', 'opencode'}
+    if provider_key == 'droid' and 'exec' in launcher_args:
+        # `droid exec ...` doesn't create a resumable session in ~/.factory/sessions.
+        track_provider_session = False
+
+    if track_provider_session:
+        provider_before_sessions = _snapshot_provider_sessions(provider_key, working_dir)
+
+    if getattr(args, 'restore', True) and track_provider_session:
+        restore_mode = get_session_restore_mode(launcher)
+        restore_flag = get_session_restore_flag(launcher)
+        if restore_mode == 'cli_optional_arg' and restore_flag:
+            stored_session_id = _load_provider_session_id(repo_root, provider_key, agent_id)
+            if stored_session_id and _provider_session_exists(provider_key, working_dir, stored_session_id):
+                launcher_args = _apply_session_restore_args(
+                    provider_key,
+                    launcher,
+                    launcher_args,
+                    restore_flag,
+                    stored_session_id,
+                )
+                did_provider_restore = True
+            elif stored_session_id:
+                print(f"⚠️  Stored {provider_key} sessionId not found for cwd; starting fresh")
 
     # Build system prompt early so supported providers can receive it at process start.
     system_prompt = build_system_prompt(agent_config, repo_root=repo_root, skills_dir=skills_dir)
     system_prompt_mode = get_system_prompt_mode(launcher)
     system_prompt_flag = get_system_prompt_flag(launcher)
+    system_prompt_key = get_system_prompt_key(launcher)
+
+    # If the underlying provider reads AGENTS.md from the working directory, prefer that
+    # mechanism and skip injecting an additional agent-manager system prompt.
+    if system_prompt and not did_provider_restore and get_agents_md_mode(launcher) == 'cwd':
+        if (Path(working_dir) / 'AGENTS.md').exists():
+            print("ℹ️  AGENTS.md found in working directory; skipping system prompt injection")
+            system_prompt = ""
 
     # Build MCP config early so supported providers can receive it at process start.
     mcp_config_mode = get_mcp_config_mode(launcher)
@@ -250,19 +748,35 @@ def cmd_start(args):
         print(f"❌ {e}")
         return 1
 
-    use_cli_system_prompt = bool(system_prompt and system_prompt_mode == 'cli_append' and system_prompt_flag)
+    use_cli_system_prompt = bool(
+        system_prompt
+        and not did_provider_restore
+        and system_prompt_mode in {'cli_append', 'cli_config_kv'}
+        and system_prompt_flag
+        and (system_prompt_mode != 'cli_config_kv' or system_prompt_key)
+    )
     command = build_start_command(working_dir, launcher, launcher_args)
 
     if use_cli_system_prompt:
         prompt_file = write_system_prompt_file(repo_root, agent_id, system_prompt)
-        command = f"{command} {shlex.quote(system_prompt_flag)} \"$(cat {shlex.quote(str(prompt_file))})\""
+
+        if system_prompt_mode == 'cli_append':
+            command = f"{command} {shlex.quote(system_prompt_flag)} \"$(cat {shlex.quote(str(prompt_file))})\""
+        elif system_prompt_mode == 'cli_config_kv':
+            # Codex `-c/--config` expects a single `key=value` argument, where value is parsed as TOML.
+            # Use a TOML string literal for the file path (double-quoted).
+            toml_path = json.dumps(str(prompt_file))
+            kv = f"{system_prompt_key}={toml_path}"
+            command = f"{command} {shlex.quote(system_prompt_flag)} {shlex.quote(kv)}"
 
     # Inject MCP config if provider supports it.
-    if mcp_config_json:
+    if mcp_config_json and not did_provider_restore:
         if mcp_config_mode == 'cli_json' and mcp_config_flag:
             command = f"{command} {shlex.quote(mcp_config_flag)} {shlex.quote(mcp_config_json)}"
         else:
             print(f"⚠️  MCP config present but not supported for launcher '{launcher}' - ignoring")
+    elif mcp_config_json and did_provider_restore:
+        print(f"ℹ️  Provider session restored; skipping MCP config injection")
 
     # Start session
     if not start_session(agent_id, command):
@@ -293,10 +807,14 @@ def cmd_start(args):
                 print(f"   System prompt not injected. Agent may still be starting...")
             return 1
 
-    if system_prompt:
+    if system_prompt and not did_provider_restore:
         if use_cli_system_prompt:
             print(f"✅ CLI ready (system prompt injected via {system_prompt_flag})")
         else:
+            if get_provider_key(launcher) == 'codex':
+                print("❌ Codex system prompt injection is configured as CLI-only (no tmux_paste fallback)")
+                return 1
+
             print(f"✅ CLI ready, injecting system prompt via tmux...")
 
             # Step 2 (fallback): Inject system prompt using tmux buffer
@@ -309,8 +827,26 @@ def cmd_start(args):
                 print(f"   System prompt injected ({len(system_prompt)} chars, {len(skills)} skills)")
             else:
                 print(f"   System prompt injected ({len(system_prompt)} chars)")
+    elif system_prompt and did_provider_restore:
+        print(f"ℹ️  Provider session restored; skipping system prompt injection")
     else:
         print(f"ℹ️  No system prompt configured for this agent")
+
+    # Persist provider session id for future restores.
+    if track_provider_session:
+        if did_provider_restore:
+            session_id = _load_provider_session_id(repo_root, provider_key, agent_id)
+            if session_id:
+                _save_provider_session_id(repo_root, provider_key, agent_id, session_id=session_id, cwd=working_dir)
+        else:
+            new_session_id = _find_new_provider_session_id_with_retry(
+                provider_key,
+                working_dir,
+                before_paths=provider_before_sessions,
+                timeout_s=2.0,
+            )
+            if new_session_id:
+                _save_provider_session_id(repo_root, provider_key, agent_id, session_id=new_session_id, cwd=working_dir)
 
     # Step 3: Wait for agent to be ready
     print(f"⏳ Waiting for agent to be ready...")
@@ -595,6 +1131,19 @@ def cmd_schedule_run(args):
         print(f"❌ No task content for schedule '{args.job}'")
         return 1
 
+    # If the schedule points to a task file, keep a resolved path so we can reference it
+    # directly (more reliable for TUIs than pasting the full content).
+    schedule_task_path: Optional[Path] = None
+    if not str(schedule.get('task') or '').strip():
+        raw_task_file = str(schedule.get('task_file') or '').strip()
+        if raw_task_file:
+            raw_task_file = expand_env_vars(raw_task_file)
+            path = Path(raw_task_file)
+            if not path.is_absolute():
+                path = repo_root / path
+            if path.exists():
+                schedule_task_path = path
+
     print(f"🚀 Running scheduled job: {agent_name}/{args.job}")
     print(f"   Time: {time.strftime('%Y-%m-%d %H:%M:%S')}")
 
@@ -613,7 +1162,8 @@ def cmd_schedule_run(args):
 
         start_args = argparse.Namespace(
             agent=args.agent,
-            working_dir=None
+            working_dir=None,
+            restore=False,
         )
 
         if cmd_start(start_args) != 0:
@@ -623,7 +1173,7 @@ def cmd_schedule_run(args):
         was_started = True
         time.sleep(2)
 
-    # Check if agent is busy (processing previous task). For long-running stuck/blocked
+    # Check if agent is busy (processing previous task). For long-running stuck/error
     # states, self-heal by restarting the session so schedules don't deadlock.
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
     runtime = get_agent_runtime_state(agent_id, launcher=launcher)
@@ -644,9 +1194,25 @@ def cmd_schedule_run(args):
         did_restart = True
         return True
 
-    if state in ('blocked', 'stuck', 'error'):
-        if not _restart_agent(state):
+    if state == 'blocked':
+        # Blocked usually means the agent is waiting for user approval/input; restarting
+        # would lose context and won't unblock the workflow.
+        print(f"⏭️  Agent is blocked, skipping scheduled task")
+        print(f"   Will retry on next cron execution")
+        return 0
+    if state == 'error':
+        reason = str(runtime.get('reason', 'unknown'))
+        if not _restart_agent(f"error:{reason}"):
             return 1
+    elif state == 'stuck':
+        restart_threshold = timeout_seconds if timeout_seconds else 900
+        if isinstance(elapsed, int) and elapsed >= restart_threshold:
+            if not _restart_agent(f"stuck>{restart_threshold}s"):
+                return 1
+        else:
+            print(f"⏭️  Agent appears stuck but below restart threshold; skipping scheduled task")
+            print(f"   Will retry on next cron execution")
+            return 0
     elif state == 'busy':
         should_restart = False
         if timeout_seconds and isinstance(elapsed, int) and elapsed >= timeout_seconds:
@@ -672,13 +1238,86 @@ def cmd_schedule_run(args):
             if not _restart_agent('clear_context'):
                 return 1
 
-    # Send task
-    task_message = f"# Scheduled Task: {args.job}\n\n{task}"
+    # Wait for agent to be idle before sending the scheduled task.
+    # This prevents the task from being queued with the startup prompt.
+    if not was_started and not did_restart:
+        idle_wait_seconds = 5
+        deadline = time.time() + idle_wait_seconds
+        while time.time() < deadline:
+            runtime_check = get_agent_runtime_state(agent_id, launcher=launcher)
+            if str(runtime_check.get('state', 'unknown')) == 'idle':
+                break
+            time.sleep(0.5)
+
+    # Send the task.
+    # Note: Codex TUI can be unreliable with very large multi-line pastes; prefer a file pointer.
+    provider_key = get_provider_key(launcher)
+    task_message = task
+    if provider_key == 'codex':
+        # Prefer referencing the original schedule task_file (e.g. agents/EMP_0001/prompt/team-monitor.md)
+        # to avoid large multi-line pastes in the Codex TUI.
+        if schedule_task_path is not None:
+            task_message = (
+                f"Run scheduled job '{args.job}'. Read and follow instructions from file: {schedule_task_path}"
+            )
+        # Fallback for inline schedules with large multi-line tasks.
+        elif "\n" in task_message or len(task_message) > 2000:
+            task_file = write_scheduled_task_file(repo_root, agent_id, args.job, task_message)
+            task_message = (
+                f"Run scheduled job '{args.job}'. Read and follow instructions from file: {task_file}"
+            )
+
     if not send_keys(agent_id, task_message, send_enter=True):
         print(f"❌ Failed to send task to agent")
         return 1
 
     print(f"✅ Task sent to {agent_name}")
+
+    # Best-effort: wait for the agent to finish and print a tail of its output.
+    # Cron captures stdout/stderr to the log file, so this makes scheduled jobs
+    # actually useful (they include the generated report).
+    wait_seconds = timeout_seconds if timeout_seconds else 600
+    if wait_seconds and wait_seconds > 0:
+        start_time = time.time()
+        last_state: Optional[str] = None
+        poll_seconds = 2
+
+        # First, wait briefly for the agent to actually start processing the message.
+        # Some TUIs report "idle" immediately after keystroke injection.
+        start_deadline = min(30, int(wait_seconds))
+        while (time.time() - start_time) < start_deadline:
+            runtime = get_agent_runtime_state(agent_id, launcher=launcher)
+            last_state = str(runtime.get('state', 'unknown'))
+            if last_state != 'idle':
+                break
+            time.sleep(1)
+
+        print(f"   Waiting for completion (up to {int(wait_seconds)}s)...")
+        while (time.time() - start_time) < wait_seconds:
+            runtime = get_agent_runtime_state(agent_id, launcher=launcher)
+            last_state = str(runtime.get('state', 'unknown'))
+
+            if last_state == 'idle':
+                break
+
+            # If we hit a non-idle terminal state, stop waiting and log output.
+            if last_state in ('blocked', 'error', 'stuck'):
+                break
+
+            time.sleep(poll_seconds)
+
+        # Give the TUI a moment to flush output.
+        time.sleep(1)
+        tail = capture_output(agent_id, lines=200)
+        if tail:
+            print("----- Agent Output (tail) -----")
+            print(tail.rstrip())
+            print("----- End Agent Output -----")
+        else:
+            print("⚠️  Could not capture agent output")
+
+        if last_state and last_state != 'idle':
+            print(f"⚠️  Agent state after wait: {last_state}")
 
     # If timeout specified, wait and then stop
     if timeout_seconds and was_started:
@@ -719,6 +1358,20 @@ Examples:
     start_parser = subparsers.add_parser('start', help='Start an agent')
     start_parser.add_argument('agent', help='Agent name (e.g., dev, qa) or file ID (e.g., EMP_0001)')
     start_parser.add_argument('--working-dir', '-w', help='Override working directory')
+    start_restore_group = start_parser.add_mutually_exclusive_group()
+    start_restore_group.add_argument(
+        '--restore',
+        '-r',
+        action='store_true',
+        default=True,
+        help='Restore/reuse the existing tmux session if it already exists (default)'
+    )
+    start_restore_group.add_argument(
+        '--no-restore',
+        dest='restore',
+        action='store_false',
+        help='Fail if the tmux session already exists'
+    )
 
     # stop command
     stop_parser = subparsers.add_parser('stop', help='Stop a running agent')
@@ -760,6 +1413,10 @@ Examples:
     schedule_parser = subparsers.add_parser('schedule', help='Manage scheduled jobs')
     schedule_subparsers = schedule_parser.add_subparsers(dest='schedule_command', help='Schedule commands')
 
+    # doctor command
+    doctor_parser = subparsers.add_parser('doctor', help='Check environment and configuration')
+    doctor_parser.add_argument('--deep', action='store_true', help='Perform deeper checks')
+
     # schedule list
     schedule_list_parser = schedule_subparsers.add_parser('list', help='List all scheduled jobs')
 
@@ -784,6 +1441,7 @@ Examples:
     # Route to appropriate handler
     handlers = {
         'list': cmd_list,
+        'doctor': cmd_doctor,
         'start': cmd_start,
         'stop': cmd_stop,
         'monitor': cmd_monitor,

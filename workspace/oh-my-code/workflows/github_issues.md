@@ -13,27 +13,28 @@ Provide a repeatable, out-of-the-box workflow for turning GitHub Issues into shi
 ### Tools
 - `gh` installed and authenticated (`gh auth status`)
 
+### Target repository
+This workflow is configured to run against:
+
+- GitHub repo: `fractalmind-ai/agent-manager-skill`
+- Local path (recommended): `workspace/agent-manager-skill`
+
 ### Workspace setup (recommended)
-Clone the target repository as a **git submodule** under `projects/` so agents can work on code locally:
+Clone the target repository as a **git submodule** under `workspace/` so agents can work on code locally:
 
 ```bash
 # from the oh-my-code repo root
-mkdir -p projects
+mkdir -p workspace
 
-# pick a local folder name (example: repo)
-git submodule add "https://github.com/OWNER/REPO.git" "projects/repo"
+# clone the target repo as a submodule
+git submodule add "git@github.com:fractalmind-ai/agent-manager-skill.git" "workspace/agent-manager-skill"
 git submodule update --init --recursive
 ```
 
 Then run work from the submodule directory when implementing:
 
 ```bash
-cd projects/repo
-```
-
-### Set your target repo once
-```bash
-REPO="OWNER/REPO"
+cd workspace/agent-manager-skill
 ```
 
 ## Label Conventions (Recommended)
@@ -88,12 +89,12 @@ graph TD
 
 ### 1) Find work
 ```bash
-gh issue list --repo "$REPO" --state open
+gh issue list --repo "fractalmind-ai/agent-manager-skill" --state open
 ```
 
 To focus on unclaimed issues (no `team:*` labels), use search:
 ```bash
-gh search issues --repo "$REPO" --state open --search "-label:team:*"
+gh search issues --repo "fractalmind-ai/agent-manager-skill" --state open --search "-label:team:*"
 ```
 
 ### 2) Claim an issue (recommended)
@@ -102,7 +103,7 @@ Pick an issue number, then claim it:
 ISSUE_NUMBER=123
 TEAM_LABEL="team:core"
 
-gh issue edit "$ISSUE_NUMBER" --repo "$REPO" \
+gh issue edit "$ISSUE_NUMBER" --repo "fractalmind-ai/agent-manager-skill" \
   --add-label "$TEAM_LABEL" \
   --add-label 'status:in-progress'
 ```
@@ -138,13 +139,19 @@ If there are multiple viable options, stop and ask the human to explicitly pick 
 
 Create a PR that links the issue:
 ```bash
-gh pr create --repo "$REPO" --fill --title "<title>" --body "Closes #$ISSUE_NUMBER"
+gh pr create --repo "fractalmind-ai/agent-manager-skill" --fill --title "<title>" --body "Closes #$ISSUE_NUMBER"
 ```
 
 ### 5) Review loop (PASS/FAIL)
+Run quality gates in the repo you changed before calling it PASS:
+```bash
+# from oh-my-code repo root
+bash scripts/quality-gates.sh --repo workspace/<repo>
+```
+
 For a quick checks snapshot:
 ```bash
-gh pr view --repo "$REPO" --json number,title,state,mergeable,reviewDecision,statusCheckRollup
+gh pr view --repo "fractalmind-ai/agent-manager-skill" --json number,title,state,mergeable,reviewDecision,statusCheckRollup
 ```
 
 ### 6) Merge policy (choose one)
@@ -153,7 +160,7 @@ gh pr view --repo "$REPO" --json number,title,state,mergeable,reviewDecision,sta
 - When QA/review is PASS and checks are green: mark as waiting and notify the human owner.
 
 ```bash
-gh issue edit "$ISSUE_NUMBER" --repo "$REPO" --add-label 'status:awaiting-human-merge'
+gh issue edit "$ISSUE_NUMBER" --repo "fractalmind-ai/agent-manager-skill" --add-label 'status:awaiting-human-merge'
 ```
 
 #### Option B: Maintainer merge (default GitHub flow)
@@ -162,7 +169,7 @@ gh issue edit "$ISSUE_NUMBER" --repo "$REPO" --add-label 'status:awaiting-human-
 ### 7) Close the loop after merge
 After PR is merged:
 ```bash
-gh issue edit "$ISSUE_NUMBER" --repo "$REPO" \
+gh issue edit "$ISSUE_NUMBER" --repo "fractalmind-ai/agent-manager-skill" \
   --remove-label 'status:in-progress' \
   --add-label 'status:done'
 ```
@@ -179,6 +186,5 @@ Every work cycle update ends with:
 ## Optional: AWAITING HUMAN MERGE Queue Cap
 If you want to cap pending human merges (e.g., max 3 across teams), check before adding `status:awaiting-human-merge`:
 ```bash
-gh search issues --repo "$REPO" --state open --label 'status:awaiting-human-merge'
+gh search issues --repo "fractalmind-ai/agent-manager-skill" --state open --label 'status:awaiting-human-merge'
 ```
-

@@ -1,0 +1,3 @@
+[submodule "workspace/agent-manager-skill"]
+	path = workspace/agent-manager-skill
+	url = git@github.com:fractalmind-ai/agent-manager-skill.git
