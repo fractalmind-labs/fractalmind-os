@@ -131,6 +131,10 @@ See [agent-manager/SKILL.md](agent-manager/SKILL.md) for complete documentation.
 - tmux
 - Agents defined under `agents/` (supports `agents/EMP_0001.md` and `agents/EMP_0001/AGENTS.md`)
 
+## Codex Launcher Notes
+
+When using `launcher: codex` with cron schedules, `agent-manager` will best-effort auto-dismiss Codex's first-run/upgrade model selection prompt to keep scheduled jobs non-interactive.
+
 ## Features
 
 - 🚀 Simple agent lifecycle management (start/stop/monitor)
