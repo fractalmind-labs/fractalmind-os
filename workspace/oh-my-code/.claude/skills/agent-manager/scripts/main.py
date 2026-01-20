@@ -955,6 +955,70 @@ def cmd_monitor(args):
     return 0
 
 
+def cmd_activity(args):
+    """Show runtime state (busy/idle/blocked/error/stuck) for one or more agents.
+
+    This inspects recent tmux screen content using tmux capture-pane heuristics.
+    """
+    if not check_tmux():
+        print("❌ tmux is not installed")
+        return 1
+
+    payload: dict[str, object] = {}
+    had_error = False
+
+    for agent_ref in args.agents:
+        agent_config = resolve_agent(agent_ref)
+        if not agent_config:
+            had_error = True
+            if args.json:
+                payload[agent_ref] = {'error': 'agent_not_found'}
+            else:
+                print(f"❌ Agent not found: {agent_ref}")
+            continue
+
+        agent_name = agent_config.get('name') or agent_ref
+        agent_id = get_agent_id(agent_config)
+        launcher = agent_config.get('launcher') or ''
+
+        runtime = get_agent_runtime_state(agent_id, launcher=launcher)
+        state = str(runtime.get('state') or 'unknown')
+
+        record: dict[str, object] = {
+            'agent': agent_name,
+            'agent_id': agent_id,
+            'state': state,
+        }
+
+        if 'elapsed_seconds' in runtime:
+            record['elapsed_seconds'] = runtime.get('elapsed_seconds')
+        if 'reason' in runtime:
+            record['reason'] = runtime.get('reason')
+
+        if args.lines and state != 'stopped':
+            record['output'] = capture_output(agent_id, args.lines) or ''
+
+        if args.json:
+            payload[agent_name] = record
+        else:
+            details = []
+            if record.get('elapsed_seconds') is not None:
+                details.append(f"elapsed={record['elapsed_seconds']}s")
+            if record.get('reason'):
+                details.append(f"reason={record['reason']}")
+            suffix = f" ({', '.join(details)})" if details else ""
+            print(f"{agent_name}: {state}{suffix}")
+            if args.lines and record.get('output'):
+                print("-" * 60)
+                print(record['output'], end='' if str(record['output']).endswith('\n') else '\n')
+                print("-" * 60)
+
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+    return 1 if had_error else 0
+
+
 def cmd_send(args):
     """Send message to agent."""
     if not check_tmux():
@@ -1385,6 +1449,17 @@ Examples:
     monitor_parser.add_argument('--lines', '-n', type=int, default=100,
                                help='Number of lines to show (default: 100)')
 
+    # activity command
+    activity_parser = subparsers.add_parser(
+        'activity',
+        help='Show runtime state by inspecting tmux output (busy/idle/blocked/stuck/error)'
+    )
+    activity_parser.add_argument('agents', nargs='+', help='Agent name(s)')
+    activity_parser.add_argument('--lines', '-n', type=int, default=0,
+                                 help='Include last N lines of tmux output (default: 0)')
+    activity_parser.add_argument('--json', action='store_true',
+                                 help='Output JSON (default: plain text)')
+
     # send command
     send_parser = subparsers.add_parser('send', help='Send message to agent')
     send_parser.add_argument('agent', help='Agent name')
@@ -1445,6 +1520,7 @@ Examples:
         'start': cmd_start,
         'stop': cmd_stop,
         'monitor': cmd_monitor,
+        'activity': cmd_activity,
         'send': cmd_send,
         'assign': cmd_assign,
         'schedule': cmd_schedule,

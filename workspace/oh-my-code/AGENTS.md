@@ -31,22 +31,19 @@ Instead, we enforce a high-quality, repeatable engineering workflow via:
 - Prevent drift by enforcing scope rules + evidence.
 - Make outputs verifiable and repeatable via a strict output contract.
 - Ensure quality gates are run and reported.
+- Primary workflow: `workflows/github_issues.md` (team driven by `supervisor`).
 
 ## Roles (Recommended)
-- **sisyphus**: the orchestrator (recommended model: anthropic/claude-opus-4-5)
-- **oracle**: architecture, code review, strategy (recommended model: openai/gpt-5.2)
-- **librarian**: multi-repo analysis, doc lookup (recommended model: opencode/glm-4.7-free)
-- **explore**: fast codebase exploration (recommended model: grok/gemini/haiku)
-- **frontend-ui-ux-engineer**: UI/UX specialist (recommended model: google/gemini-3-pro-preview)
-- **document-writer**: technical writing (recommended model: google/gemini-3-flash)
-- **multimodal-looker**: PDF/image analysis (recommended model: google/gemini-3-flash)
+- **supervisor**: drives `workflows/github_issues.md` and monitors `developer` + `qa`
+- **developer**: development + task management
+- **qa**: quality assurance (quality gates + edge cases)
 
 ## Multi-Agent Protocol (agent-manager)
 Use `agent-manager` to run workers in separate tmux sessions, then feed tasks in parallel.
 
 This repo vendors `agent-manager` under `.claude/skills/agent-manager`, so it works after a plain git clone (no `openskills install` required). You only need `python3` and `tmux` available.
 
-If you are using a different CLI (e.g. `droid` or `claude`), update `agents/EMP_0001.md` and `agents/EMP_0002.md` to point `launcher:` to your CLI.
+If you are using a different CLI (e.g. `droid` or `claude`), update `agents/EMP_0001.md`, `agents/EMP_0002.md`, and `agents/EMP_0003.md` to point `launcher:` to your CLI.
 
 ### Commands
 ```bash
@@ -54,26 +51,29 @@ If you are using a different CLI (e.g. `droid` or `claude`), update `agents/EMP_
 python3 .claude/skills/agent-manager/scripts/main.py list
 
 # start if needed
-python3 .claude/skills/agent-manager/scripts/main.py start sisyphus
-python3 .claude/skills/agent-manager/scripts/main.py start oracle
+python3 .claude/skills/agent-manager/scripts/main.py start supervisor
+python3 .claude/skills/agent-manager/scripts/main.py start developer
+python3 .claude/skills/agent-manager/scripts/main.py start qa
 
 # assign tasks (stdin)
-python3 .claude/skills/agent-manager/scripts/main.py assign sisyphus <<'EOF'
+python3 .claude/skills/agent-manager/scripts/main.py assign supervisor <<'EOF'
 <task>
 EOF
 
 # monitor
-python3 .claude/skills/agent-manager/scripts/main.py monitor sisyphus --follow
+python3 .claude/skills/agent-manager/scripts/main.py monitor supervisor --follow
 
 # stop
-python3 .claude/skills/agent-manager/scripts/main.py stop sisyphus
+python3 .claude/skills/agent-manager/scripts/main.py stop supervisor
+python3 .claude/skills/agent-manager/scripts/main.py stop developer
+python3 .claude/skills/agent-manager/scripts/main.py stop qa
 ```
 
 ## Task Decomposition Template
-When you are orchestrator, produce a short split like:
-- Subtask A (Dev): implement
-- Subtask B (QA): validate + edge cases
-- Subtask C (Optional): quick research
+When you are `supervisor`, produce a short split like:
+- Subtask A (Developer): implement + manage rollout
+- Subtask B (QA): validate + edge cases + quality gates
+- Subtask C (Supervisor): check-in + unblock + prompt if idle
 
 Each subtask must have:
 - Objective
@@ -135,7 +135,8 @@ tmux -V
 tmux list-sessions
 
 # Kill stuck session (replace name with actual agent name)
-tmux kill-session -t sisyphus
+# Kill stuck session (replace with actual tmux session, e.g. agent-emp-0001)
+tmux kill-session -t agent-emp-0001
 
 # Verify agent-manager scripts are executable
 chmod +x .claude/skills/agent-manager/scripts/main.py
@@ -153,12 +154,12 @@ chmod +x .claude/skills/agent-manager/scripts/main.py
 python3 .claude/skills/agent-manager/scripts/main.py list
 
 # Attach to session directly to inspect
-tmux attach-session -t sisyphus
+tmux attach-session -t agent-emp-0001
 # Press Ctrl+B then D to detach without killing
 
 # Restart the agent
-python3 .claude/skills/agent-manager/scripts/main.py stop sisyphus
-python3 .claude/skills/agent-manager/scripts/main.py start sisyphus
+python3 .claude/skills/agent-manager/scripts/main.py stop supervisor
+python3 .claude/skills/agent-manager/scripts/main.py start supervisor
 ```
 
 ### Log file location and interpretation
@@ -170,7 +171,7 @@ python3 .claude/skills/agent-manager/scripts/main.py start sisyphus
 **Resolution:**
 ```bash
 # Agent logs are stored in tmux session buffer
-tmux capture-pane -t sisyphus -p > /tmp/agent.log
+tmux capture-pane -t agent-emp-0001 -p > /tmp/agent.log
 
 # For workspace-specific logs, check:
 ls -la ~/.cache/claude/  # or your CLI's cache directory
