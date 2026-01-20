@@ -154,17 +154,16 @@ For a quick checks snapshot:
 gh pr view --repo "fractalmind-ai/agent-manager-skill" --json number,title,state,mergeable,reviewDecision,statusCheckRollup
 ```
 
-### 6) Merge policy (choose one)
+### 6) Merge policy (human-only)
 
-#### Option A: Human-only merge (recommended for teams)
-- When QA/review is PASS and checks are green: mark as waiting and notify the human owner.
+Agents (all `EMP_*`) MUST NOT merge PRs.
+- Do not run `gh pr merge` (or any equivalent).
+- Do not click “Merge” in the GitHub UI.
+- When QA/review is PASS and checks are green: mark as waiting, notify the human owner, then stop.
 
 ```bash
 gh issue edit "$ISSUE_NUMBER" --repo "fractalmind-ai/agent-manager-skill" --add-label 'status:awaiting-human-merge'
 ```
-
-#### Option B: Maintainer merge (default GitHub flow)
-- Merge once checks/reviews are satisfied.
 
 ### 7) Close the loop after merge
 After PR is merged:
