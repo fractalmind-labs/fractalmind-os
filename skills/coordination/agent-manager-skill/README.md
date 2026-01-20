@@ -86,6 +86,7 @@ python3 .agent/skills/agent-manager/scripts/main.py stop EMP_0001
 # Optional: keep all agents in one shared tmux session (tabs/windows)
 python3 .agent/skills/agent-manager/scripts/main.py start EMP_0001 --tmux-layout windows
 tmux attach -t agent-manager
+# (Optional) Customize the shared session name via: $AGENT_MANAGER_TMUX_GROUP_SESSION
 
 # If you want to run the CLI from a cloned copy of this repo:
 REPO_ROOT="$PWD/your-project" python3 agent-manager/scripts/main.py doctor
