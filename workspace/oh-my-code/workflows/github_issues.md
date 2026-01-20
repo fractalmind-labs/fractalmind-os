@@ -160,6 +160,7 @@ Agents (all `EMP_*`) MUST NOT merge PRs.
 - Do not run `gh pr merge` (or any equivalent).
 - Do not click “Merge” in the GitHub UI.
 - When QA/review is PASS and checks are green: mark as waiting, notify the human owner, then stop.
+- If there are already 3+ pending human merges (`status:awaiting-human-merge`), do not add another one; idle instead.
 
 ```bash
 gh issue edit "$ISSUE_NUMBER" --repo "fractalmind-ai/agent-manager-skill" --add-label 'status:awaiting-human-merge'
@@ -182,8 +183,12 @@ Every work cycle update ends with:
 4. **Risks/Assumptions**
 5. **Next Step**
 
-## Optional: AWAITING HUMAN MERGE Queue Cap
-If you want to cap pending human merges (e.g., max 3 across teams), check before adding `status:awaiting-human-merge`:
+## Rule: Awaiting human merge cap (max 3)
+
+Agents MUST keep the number of PRs waiting on a human merge/review capped at 3.
+If the cap is reached, agents stop starting new work and can idle until the count drops.
+
+Check the current queue size:
 ```bash
-gh search issues --repo "fractalmind-ai/agent-manager-skill" --state open --label 'status:awaiting-human-merge'
+gh search issues --repo "fractalmind-ai/agent-manager-skill" --state open --label 'status:awaiting-human-merge' --json number --jq 'length'
 ```
