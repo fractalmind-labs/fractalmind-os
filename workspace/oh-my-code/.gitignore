@@ -5,3 +5,8 @@
 .crontab_logs/
 
 __pycache__
+
+# local cloned repos (not submodules)
+workspace/*
+!workspace/.gitkeep
+!workspace/README.md

@@ -5,6 +5,16 @@ description: Turnkey GitHub Issues workflow (triage → plan → PR → review �
 
 # GitHub Issues Workflow
 
+## Multi-Repo Support
+This workflow supports **multiple repositories** simultaneously. Any git repo under `workspace/` is maintained independently using the same workflow.
+
+Agents should iterate through all repos under `workspace/` when looking for work, unless explicitly assigned to a specific repo.
+
+To list repos (directory name + detected GitHub slug):
+```bash
+bash scripts/workspace-repos.sh
+```
+
 ## Goal
 Provide a repeatable, out-of-the-box workflow for turning GitHub Issues into shipped code changes with clear planning, ownership, and review loops.
 
@@ -13,29 +23,27 @@ Provide a repeatable, out-of-the-box workflow for turning GitHub Issues into shi
 ### Tools
 - `gh` installed and authenticated (`gh auth status`)
 
-### Target repository
-This workflow is configured to run against:
-
-- GitHub repo: `fractalmind-ai/agent-manager-skill`
-- Local path (recommended): `workspace/agent-manager-skill`
-
 ### Workspace setup (recommended)
-Clone the target repository as a **git submodule** under `workspace/` so agents can work on code locally:
+Clone target repositories into `workspace/` as normal git clones (not submodules). The `workspace/` directory is intended to be gitignored in this repo.
 
 ```bash
 # from the oh-my-code repo root
 mkdir -p workspace
 
-# clone the target repo as a submodule
-git submodule add "git@github.com:fractalmind-ai/agent-manager-skill.git" "workspace/agent-manager-skill"
-git submodule update --init --recursive
+# clone a repo (example)
+git clone "git@github.com:OWNER/REPO.git" "workspace/repo"
 ```
 
-Then run work from the submodule directory when implementing:
+#### Working with a specific repo
+When implementing work, set the target repo context:
 
 ```bash
-cd workspace/agent-manager-skill
+TARGET_REPO="repo"
+TARGET_PATH="workspace/$TARGET_REPO"
+GITHUB_REPO="$(bash scripts/github-repo-from-origin.sh "$TARGET_PATH")"
 ```
+
+If the repo has no `origin` remote or it is not a GitHub URL, set `GITHUB_REPO` manually (e.g. `OWNER/REPO`).
 
 ## Label Conventions (Recommended)
 
@@ -89,12 +97,12 @@ graph TD
 
 ### 1) Find work
 ```bash
-gh issue list --repo "fractalmind-ai/agent-manager-skill" --state open
+gh issue list --repo "$GITHUB_REPO" --state open
 ```
 
 To focus on unclaimed issues (no `team:*` labels), use search:
 ```bash
-gh search issues --repo "fractalmind-ai/agent-manager-skill" --state open --search "-label:team:*"
+gh search issues --repo "$GITHUB_REPO" --state open --search "-label:team:*"
 ```
 
 ### 2) Claim an issue (recommended)
@@ -103,7 +111,7 @@ Pick an issue number, then claim it:
 ISSUE_NUMBER=123
 TEAM_LABEL="team:core"
 
-gh issue edit "$ISSUE_NUMBER" --repo "fractalmind-ai/agent-manager-skill" \
+gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPO" \
   --add-label "$TEAM_LABEL" \
   --add-label 'status:in-progress'
 ```
@@ -141,7 +149,7 @@ If the issue needs a technical design decision (multiple viable approaches, trad
 
 Example (comment options on the Issue):
 ```bash
-gh issue comment "$ISSUE_NUMBER" --repo "fractalmind-ai/agent-manager-skill" --body-file - <<'EOF'
+gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPO" --body-file - <<'EOF'
 Design options:
 
 Option 1: <name>
@@ -168,14 +176,14 @@ Newline reminder (important):
 
 To check for the human reply:
 ```bash
-gh issue view "$ISSUE_NUMBER" --repo "fractalmind-ai/agent-manager-skill" --comments
+gh issue view "$ISSUE_NUMBER" --repo "$GITHUB_REPO" --comments
 ```
 
 ### 4) Implement → PR
 
 Create a PR that links the issue:
 ```bash
-gh pr create --repo "fractalmind-ai/agent-manager-skill" --fill --title "<title>" --body "Closes #$ISSUE_NUMBER"
+gh pr create --repo "$GITHUB_REPO" --fill --title "<title>" --body "Closes #$ISSUE_NUMBER"
 ```
 
 Newline reminder (important):
@@ -187,12 +195,12 @@ Newline reminder (important):
 Run quality gates in the repo you changed before calling it PASS:
 ```bash
 # from oh-my-code repo root
-bash scripts/quality-gates.sh --repo workspace/<repo>
+bash scripts/quality-gates.sh --repo "$TARGET_PATH"
 ```
 
 For a quick checks snapshot:
 ```bash
-gh pr view --repo "fractalmind-ai/agent-manager-skill" --json number,title,state,mergeable,reviewDecision,statusCheckRollup
+gh pr view --repo "$GITHUB_REPO" --json number,title,state,mergeable,reviewDecision,statusCheckRollup
 ```
 
 ### 6) Merge policy (human-only)
@@ -204,13 +212,13 @@ Agents (all `EMP_*`) MUST NOT merge PRs.
 - If there are already 3+ pending human merges (`status:awaiting-human-merge`), do not add another one; idle instead.
 
 ```bash
-gh issue edit "$ISSUE_NUMBER" --repo "fractalmind-ai/agent-manager-skill" --add-label 'status:awaiting-human-merge'
+gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPO" --add-label 'status:awaiting-human-merge'
 ```
 
 ### 7) Close the loop after merge
 After PR is merged:
 ```bash
-gh issue edit "$ISSUE_NUMBER" --repo "fractalmind-ai/agent-manager-skill" \
+gh issue edit "$ISSUE_NUMBER" --repo "$GITHUB_REPO" \
   --remove-label 'status:in-progress' \
   --add-label 'status:done'
 ```
@@ -231,5 +239,5 @@ If the cap is reached, agents stop starting new work and can idle until the coun
 
 Check the current queue size:
 ```bash
-gh search issues --repo "fractalmind-ai/agent-manager-skill" --state open --label 'status:awaiting-human-merge' --json number --jq 'length'
+gh search issues --repo "$GITHUB_REPO" --state open --label 'status:awaiting-human-merge' --json number --jq 'length'
 ```
