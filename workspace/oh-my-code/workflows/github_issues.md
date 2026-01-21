@@ -133,7 +133,43 @@ Use this structure:
 
 **Recommendation**: Option X
 
-If there are multiple viable options, stop and ask the human to explicitly pick one before implementing.
+#### Technical design review (required when design matters)
+If the issue needs a technical design decision (multiple viable approaches, tradeoffs, migrations, risky changes):
+1. Post the options + recommendation as an **Issue comment**.
+2. Explicitly ask the human to pick an option (or approve the recommendation).
+3. STOP and wait for a human reply before implementing.
+
+Example (comment options on the Issue):
+```bash
+gh issue comment "$ISSUE_NUMBER" --repo "fractalmind-ai/agent-manager-skill" --body-file - <<'EOF'
+Design options:
+
+Option 1: <name>
+- Approach:
+- Pros/Cons:
+- Risks:
+- Effort:
+
+Option 2: <name>
+- Approach:
+- Pros/Cons:
+- Risks:
+- Effort:
+
+Recommendation: Option X because <reason>.
+
+Question for human: Please reply with "Option 1" / "Option 2" (or edits) before I implement.
+EOF
+```
+
+Newline reminder (important):
+- If you pass multi-line text via `--body "line1\nline2"`, GitHub may show the literal `\n` instead of a line break.
+- Prefer `--body-file` (as above) or `--editor` to preserve newlines reliably.
+
+To check for the human reply:
+```bash
+gh issue view "$ISSUE_NUMBER" --repo "fractalmind-ai/agent-manager-skill" --comments
+```
 
 ### 4) Implement → PR
 
@@ -141,6 +177,11 @@ Create a PR that links the issue:
 ```bash
 gh pr create --repo "fractalmind-ai/agent-manager-skill" --fill --title "<title>" --body "Closes #$ISSUE_NUMBER"
 ```
+
+Newline reminder (important):
+- Avoid embedding `\n` in `--body "..."` / `--comment "..."` strings.
+- Prefer `--body-file` for multi-line PR descriptions, e.g.:
+  `gh pr create ... --body-file - <<'EOF'`
 
 ### 5) Review loop (PASS/FAIL)
 Run quality gates in the repo you changed before calling it PASS:
@@ -154,17 +195,17 @@ For a quick checks snapshot:
 gh pr view --repo "fractalmind-ai/agent-manager-skill" --json number,title,state,mergeable,reviewDecision,statusCheckRollup
 ```
 
-### 6) Merge policy (choose one)
+### 6) Merge policy (human-only)
 
-#### Option A: Human-only merge (recommended for teams)
-- When QA/review is PASS and checks are green: mark as waiting and notify the human owner.
+Agents (all `EMP_*`) MUST NOT merge PRs.
+- Do not run `gh pr merge` (or any equivalent).
+- Do not click “Merge” in the GitHub UI.
+- When QA/review is PASS and checks are green: mark as waiting, notify the human owner, then stop.
+- If there are already 3+ pending human merges (`status:awaiting-human-merge`), do not add another one; idle instead.
 
 ```bash
 gh issue edit "$ISSUE_NUMBER" --repo "fractalmind-ai/agent-manager-skill" --add-label 'status:awaiting-human-merge'
 ```
-
-#### Option B: Maintainer merge (default GitHub flow)
-- Merge once checks/reviews are satisfied.
 
 ### 7) Close the loop after merge
 After PR is merged:
@@ -183,8 +224,12 @@ Every work cycle update ends with:
 4. **Risks/Assumptions**
 5. **Next Step**
 
-## Optional: AWAITING HUMAN MERGE Queue Cap
-If you want to cap pending human merges (e.g., max 3 across teams), check before adding `status:awaiting-human-merge`:
+## Rule: Awaiting human merge cap (max 3)
+
+Agents MUST keep the number of PRs waiting on a human merge/review capped at 3.
+If the cap is reached, agents stop starting new work and can idle until the count drops.
+
+Check the current queue size:
 ```bash
-gh search issues --repo "fractalmind-ai/agent-manager-skill" --state open --label 'status:awaiting-human-merge'
+gh search issues --repo "fractalmind-ai/agent-manager-skill" --state open --label 'status:awaiting-human-merge' --json number --jq 'length'
 ```
