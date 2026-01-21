@@ -162,6 +162,10 @@ Question for human: Please reply with "Option 1" / "Option 2" (or edits) before 
 EOF
 ```
 
+Newline reminder (important):
+- If you pass multi-line text via `--body "line1\nline2"`, GitHub may show the literal `\n` instead of a line break.
+- Prefer `--body-file` (as above) or `--editor` to preserve newlines reliably.
+
 To check for the human reply:
 ```bash
 gh issue view "$ISSUE_NUMBER" --repo "fractalmind-ai/agent-manager-skill" --comments
@@ -173,6 +177,11 @@ Create a PR that links the issue:
 ```bash
 gh pr create --repo "fractalmind-ai/agent-manager-skill" --fill --title "<title>" --body "Closes #$ISSUE_NUMBER"
 ```
+
+Newline reminder (important):
+- Avoid embedding `\n` in `--body "..."` / `--comment "..."` strings.
+- Prefer `--body-file` for multi-line PR descriptions, e.g.:
+  `gh pr create ... --body-file - <<'EOF'`
 
 ### 5) Review loop (PASS/FAIL)
 Run quality gates in the repo you changed before calling it PASS:
