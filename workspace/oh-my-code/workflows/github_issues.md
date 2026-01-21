@@ -133,7 +133,39 @@ Use this structure:
 
 **Recommendation**: Option X
 
-If there are multiple viable options, stop and ask the human to explicitly pick one before implementing.
+#### Technical design review (required when design matters)
+If the issue needs a technical design decision (multiple viable approaches, tradeoffs, migrations, risky changes):
+1. Post the options + recommendation as an **Issue comment**.
+2. Explicitly ask the human to pick an option (or approve the recommendation).
+3. STOP and wait for a human reply before implementing.
+
+Example (comment options on the Issue):
+```bash
+gh issue comment "$ISSUE_NUMBER" --repo "fractalmind-ai/agent-manager-skill" --body-file - <<'EOF'
+Design options:
+
+Option 1: <name>
+- Approach:
+- Pros/Cons:
+- Risks:
+- Effort:
+
+Option 2: <name>
+- Approach:
+- Pros/Cons:
+- Risks:
+- Effort:
+
+Recommendation: Option X because <reason>.
+
+Question for human: Please reply with "Option 1" / "Option 2" (or edits) before I implement.
+EOF
+```
+
+To check for the human reply:
+```bash
+gh issue view "$ISSUE_NUMBER" --repo "fractalmind-ai/agent-manager-skill" --comments
+```
 
 ### 4) Implement → PR
 
