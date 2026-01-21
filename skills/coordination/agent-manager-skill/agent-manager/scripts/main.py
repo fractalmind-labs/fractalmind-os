@@ -38,6 +38,7 @@ from tmux_helper import (
     list_sessions,
     session_exists,
     start_session,
+    start_session_with_layout,
     stop_session,
     capture_output,
     send_keys,
@@ -787,10 +788,35 @@ def cmd_start(args):
     elif mcp_config_json and did_provider_restore:
         print(f"ℹ️  Provider session restored; skipping MCP config injection")
 
-    # Start session
-    if not start_session(agent_id, command, layout=getattr(args, 'tmux_layout', 'sessions')):
-        print(f"❌ Failed to start agent '{agent_name}'")
+    tmux_config = agent_config.get('tmux') or {}
+    if tmux_config and not isinstance(tmux_config, dict):
+        print("❌ Invalid 'tmux' in agent config (expected a mapping)")
         return 1
+
+    tmux_layout_spec = tmux_config.get('layout') if tmux_config else None
+    tmux_target_path = tmux_config.get('target_pane') if tmux_config else None
+
+    if tmux_layout_spec is None and tmux_target_path is not None:
+        print("❌ tmux.target_pane requires tmux.layout")
+        return 1
+
+    # Start session
+    if tmux_layout_spec is not None:
+        try:
+            start_session_with_layout(
+                agent_id,
+                command,
+                layout_spec=tmux_layout_spec,
+                target_path=tmux_target_path,
+                session_layout=getattr(args, 'tmux_layout', 'sessions'),
+            )
+        except ValueError as e:
+            print(f"❌ {e}")
+            return 1
+    else:
+        if not start_session(agent_id, command, layout=getattr(args, 'tmux_layout', 'sessions')):
+            print(f"❌ Failed to start agent '{agent_name}'")
+            return 1
 
     session_info = get_session_info(agent_id) or {}
     session_name = session_info.get('session', f"agent-{agent_id}")

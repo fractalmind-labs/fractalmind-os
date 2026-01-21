@@ -65,6 +65,7 @@ You are the Dev Agent...
 - `launcher_args`: Arguments for launcher
 - `skills`: Array of skill names from `.agent/skills/` (optional, injected at start)
 - `schedules`: Array of scheduled jobs (optional, see Scheduling section)
+- `tmux`: Optional tmux layout metadata (layout + target pane)
 
 ### Tmux Sessions
 
@@ -73,6 +74,29 @@ Each agent runs in a dedicated tmux session (`agent-{name}`):
 - **Easy monitoring**: `tmux capture-pane -t agent-dev`
 - **Direct interaction**: `tmux attach -t agent-dev`
 - **Clean separation**: No process pollution
+
+### Optional: Tmux Layouts
+
+You can auto-create a tmux layout and launch the agent in a specific pane:
+
+```yaml
+tmux:
+  layout:
+    split: h
+    panes:
+      - {}
+      - split: v
+        panes:
+          - {}
+          - {}
+  target_pane: "1.1"
+```
+
+Notes:
+- `split`: `h` (left/right) or `v` (top/bottom). `horizontal`/`vertical` also work.
+- `target_pane`: dot-separated path of `0`/`1` indexes into the layout tree.
+  `0` = left/top, `1` = right/bottom. `"1.1"` means right -> bottom.
+- If `tmux.layout` is set, `tmux.target_pane` is required.
 
 ### Launcher Types
 

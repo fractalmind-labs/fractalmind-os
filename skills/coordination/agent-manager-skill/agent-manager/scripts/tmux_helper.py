@@ -9,7 +9,7 @@ import subprocess
 import time
 import re
 import os
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any, Tuple
 
 
 # Session prefix for all agent sessions
@@ -216,6 +216,194 @@ def start_session(agent_id: str, command: str, *, layout: str = "sessions") -> b
     if ok:
         _set_agent_pane_title(agent_id)
     return ok
+
+
+_LAYOUT_SPLIT_ALIASES = {
+    'h': 'h',
+    'horizontal': 'h',
+    'v': 'v',
+    'vertical': 'v',
+}
+
+
+def _normalize_layout_node(node: Any, *, path: str = "tmux.layout") -> Optional[dict]:
+    """Normalize a nested layout spec into a canonical dict structure.
+
+    Leaves are represented as {} or null (both treated as a leaf pane).
+    """
+    if node is None or node == {}:
+        return None
+    if not isinstance(node, dict):
+        raise ValueError(f"Invalid {path}: expected a mapping")
+
+    allowed_keys = {'split', 'panes'}
+    extra_keys = set(node.keys()) - allowed_keys
+    if extra_keys:
+        extra = ", ".join(sorted(extra_keys))
+        raise ValueError(f"Invalid {path}: unexpected keys {extra}")
+
+    split = node.get('split')
+    panes = node.get('panes')
+    if split is None or panes is None:
+        raise ValueError(f"Invalid {path}: expected 'split' and 'panes'")
+    if not isinstance(split, str):
+        raise ValueError(f"Invalid {path}: 'split' must be a string")
+
+    split_key = _LAYOUT_SPLIT_ALIASES.get(split.strip().lower())
+    if split_key not in {'h', 'v'}:
+        raise ValueError(f"Invalid {path}: 'split' must be 'h' or 'v'")
+
+    if not isinstance(panes, list) or len(panes) != 2:
+        raise ValueError(f"Invalid {path}: 'panes' must be a list of 2 items")
+
+    return {
+        'split': split_key,
+        'panes': [
+            _normalize_layout_node(panes[0], path=f"{path}.panes[0]"),
+            _normalize_layout_node(panes[1], path=f"{path}.panes[1]"),
+        ],
+    }
+
+
+def _parse_target_path(value: Any) -> Tuple[int, ...]:
+    if value is None:
+        raise ValueError("tmux.target_pane is required when tmux.layout is set")
+    if isinstance(value, (int, bool)):
+        parts = [value]
+    elif isinstance(value, list):
+        parts = value
+    elif isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return tuple()
+        parts = text.replace('/', '.').split('.')
+    else:
+        raise ValueError("tmux.target_pane must be a list or dot-separated string")
+
+    path: list[int] = []
+    for item in parts:
+        if isinstance(item, bool):
+            raise ValueError("tmux.target_pane entries must be 0 or 1")
+        try:
+            index = int(item)
+        except (TypeError, ValueError):
+            raise ValueError("tmux.target_pane entries must be 0 or 1")
+        if index not in (0, 1):
+            raise ValueError("tmux.target_pane entries must be 0 or 1")
+        path.append(index)
+    return tuple(path)
+
+
+def _resolve_pane_id(target: str) -> str:
+    result = subprocess.run(
+        ['tmux', 'display-message', '-p', '-t', target, '#{pane_id}'],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        error = (result.stderr or result.stdout).strip()
+        raise ValueError(f"Failed to resolve pane id for tmux target {target}: {error}")
+    pane_id = result.stdout.strip()
+    if not pane_id:
+        raise ValueError(f"Failed to resolve pane id for tmux target {target}")
+    return pane_id
+
+
+def _set_pane_title(pane_target: str, title: str) -> None:
+    subprocess.run(
+        ['tmux', 'select-pane', '-t', pane_target, '-T', title],
+        capture_output=True,
+        text=True,
+    )
+
+
+def _split_pane(pane_id: str, split: str) -> str:
+    split_flag = '-h' if split == 'h' else '-v'
+    result = subprocess.run(
+        ['tmux', 'split-window', split_flag, '-d', '-t', pane_id, '-P', '-F', '#{pane_id}'],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        error = (result.stderr or result.stdout).strip()
+        raise ValueError(f"Failed to split pane {pane_id}: {error}")
+    new_pane_id = result.stdout.strip()
+    if not new_pane_id:
+        raise ValueError(f"Failed to resolve new pane id for {pane_id}")
+    return new_pane_id
+
+
+def _build_layout(
+    pane_id: str,
+    layout: Optional[dict],
+    *,
+    pane_map: Dict[Tuple[int, ...], str],
+    path: Tuple[int, ...] = (),
+) -> None:
+    if layout is None:
+        pane_map[path] = pane_id
+        return
+
+    new_pane_id = _split_pane(pane_id, layout['split'])
+    _build_layout(pane_id, layout['panes'][0], pane_map=pane_map, path=path + (0,))
+    _build_layout(new_pane_id, layout['panes'][1], pane_map=pane_map, path=path + (1,))
+
+
+def start_session_with_layout(
+    agent_id: str,
+    command: str,
+    *,
+    layout_spec: Any,
+    target_path: Any,
+    session_layout: str = "sessions",
+) -> str:
+    """Start an agent and place it into a specific pane within a generated layout.
+
+    This starts a placeholder shell first, creates the tmux split layout, then respawns the
+    configured target pane to run the real command.
+    """
+    layout = _normalize_layout_node(layout_spec)
+    if layout is None:
+        raise ValueError("tmux.layout must define at least one split")
+    target = _parse_target_path(target_path)
+
+    if not start_session(agent_id, "bash", layout=session_layout):
+        raise ValueError("Failed to start tmux container for agent")
+
+    try:
+        root_target = _agent_pane_target(agent_id)
+        if not root_target:
+            raise ValueError("Failed to resolve agent tmux target after startup")
+        root_pane_id = _resolve_pane_id(root_target)
+
+        pane_map: Dict[Tuple[int, ...], str] = {}
+        _build_layout(root_pane_id, layout, pane_map=pane_map)
+        if target not in pane_map:
+            raise ValueError(f"tmux.target_pane {target} does not match any leaf pane")
+
+        expected_title = _window_name_for_agent(agent_id)
+        for path, pane_id in pane_map.items():
+            if path == target:
+                _set_pane_title(pane_id, expected_title)
+            else:
+                suffix = ".".join(str(i) for i in path) if path else "root"
+                _set_pane_title(pane_id, f"{expected_title}:{suffix}")
+
+        target_pane = pane_map[target]
+        result = subprocess.run(
+            ['tmux', 'respawn-pane', '-k', '-t', target_pane, command],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            error = (result.stderr or result.stdout).strip()
+            raise ValueError(f"Failed to launch command in target pane: {error}")
+
+        subprocess.run(['tmux', 'select-pane', '-t', target_pane], capture_output=True, text=True)
+        return target_pane
+    except Exception:
+        stop_session(agent_id)
+        raise
 
 
 def stop_session(agent_id: str) -> bool:

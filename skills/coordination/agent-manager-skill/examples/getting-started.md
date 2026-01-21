@@ -33,6 +33,23 @@ python3 .agent/skills/agent-manager/scripts/main.py list
 python3 .agent/skills/agent-manager/scripts/main.py start EMP_0001
 ```
 
+### Optional: auto tmux layout
+
+Add to your agent frontmatter to split panes and choose the target pane:
+
+```yaml
+tmux:
+  layout:
+    split: h
+    panes:
+      - {}
+      - split: v
+        panes:
+          - {}
+          - {}
+  target_pane: "1.1"
+```
+
 ## 4) Monitor output
 
 ```bash
