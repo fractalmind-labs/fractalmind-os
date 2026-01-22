@@ -18,14 +18,37 @@ while IFS=$'\t' read -r repo_dir github_repo; do
   [[ "$github_repo" != "(unknown)" ]] || continue
 
   issue="$(
-    gh search issues \
+    gh issue list \
       --repo "$github_repo" \
       --state open \
-      --limit 1 \
-      --json number,title,url \
-      --jq '.[0] | [.number,.url,.title] | @tsv' \
-      --search '-label:team:* -label:status:awaiting-human-merge' \
-      2>/dev/null || true
+      --limit 200 \
+      --json number,title,url,labels 2>/dev/null \
+      | python3 -c '
+import json, sys
+
+raw = sys.stdin.read().strip()
+if not raw:
+  raise SystemExit(0)
+
+issues = json.loads(raw)
+
+def is_actionable(issue: dict) -> bool:
+  labels = [l.get("name", "") for l in (issue.get("labels") or [])]
+  if any(name.startswith("team:") for name in labels):
+    return False
+  if "status:awaiting-human-merge" in labels:
+    return False
+  if "status:in-progress" in labels:
+    return False
+  if "status:blocked" in labels:
+    return False
+  return True
+
+for issue in issues:
+  if is_actionable(issue):
+    print("{}\t{}\t{}".format(issue["number"], issue["url"], issue["title"]))
+    break
+'
   )"
 
   if [[ -n "$issue" ]]; then
