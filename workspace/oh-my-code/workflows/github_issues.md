@@ -59,6 +59,14 @@ Use exactly one `team:*` label to claim an issue.
 
 ## Workflow
 
+## Assignment scope (mandatory)
+
+Agents MUST only work on Issues that are assigned to the current GitHub account (i.e. `assignee:@me`).
+
+- Do not triage, claim, or start work on Issues assigned to someone else or unassigned.
+- Ignore other Issues entirely unless the human explicitly instructs you to work on them.
+- If you need an Issue assigned to proceed, ask the human to assign it rather than self-assigning.
+
 ```mermaid
 graph TD
     Start[Start work cycle] --> Sync[List open issues]
@@ -97,16 +105,25 @@ graph TD
 
 ### 1) Find work
 ```bash
-gh issue list --repo "$GITHUB_REPO" --state open
+gh issue list --repo "$GITHUB_REPO" --state open --assignee @me
 ```
 
-To quickly find an unclaimed issue (no `team:*` labels) across all repos in `workspace/`:
+To list your assigned Issues across all repos in `workspace/`:
+```bash
+for TARGET_PATH in workspace/*; do
+  [ -d "$TARGET_PATH/.git" ] || continue
+  GITHUB_REPO="$(bash scripts/github-repo-from-origin.sh "$TARGET_PATH")"
+  gh issue list --repo "$GITHUB_REPO" --state open --assignee @me
+done
+```
+
+To quickly find an unclaimed issue (no `team:*` labels) across all repos in `workspace/` (ONLY when explicitly instructed to pick up unassigned work):
 ```bash
 bash scripts/workspace-next-issue.sh
 ```
 
 ### 2) Claim an issue (recommended)
-Pick an issue number, then claim it:
+Pick an issue number (that is assigned to you), then claim it:
 ```bash
 ISSUE_NUMBER=123
 TEAM_LABEL="team:core"
