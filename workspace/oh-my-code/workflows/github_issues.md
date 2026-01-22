@@ -100,9 +100,9 @@ graph TD
 gh issue list --repo "$GITHUB_REPO" --state open
 ```
 
-To focus on unclaimed issues (no `team:*` labels), use search:
+To quickly find an unclaimed issue (no `team:*` labels) across all repos in `workspace/`:
 ```bash
-gh search issues --repo "$GITHUB_REPO" --state open --search "-label:team:*"
+bash scripts/workspace-next-issue.sh
 ```
 
 ### 2) Claim an issue (recommended)
