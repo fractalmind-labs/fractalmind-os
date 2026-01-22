@@ -1245,6 +1245,44 @@ def cmd_schedule_run(args):
     elapsed = runtime.get('elapsed_seconds')
     did_restart = False
 
+    busy_restart_after_seconds: Optional[int] = None
+    busy_restart_after_str = str(schedule.get('busy_restart_after', '') or '').strip()
+    if busy_restart_after_str:
+        busy_restart_after_seconds = parse_duration(busy_restart_after_str)
+
+    schedule_state_key = f"{agent_id}:{args.job}"
+
+    def _schedule_state_path() -> Path:
+        return repo_root / '.claude' / 'state' / 'agent-manager' / 'schedules' / 'schedule_run_state.json'
+
+    def _load_schedule_state() -> dict:
+        path = _schedule_state_path()
+        try:
+            if path.exists():
+                return json.loads(path.read_text(encoding='utf-8'))
+        except Exception:
+            return {}
+        return {}
+
+    def _save_schedule_state(payload: dict) -> None:
+        path = _schedule_state_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding='utf-8')
+
+    def _clear_busy_series() -> None:
+        try:
+            payload = _load_schedule_state()
+            busy = payload.get('busy_series', {}) if isinstance(payload, dict) else {}
+            if isinstance(busy, dict) and schedule_state_key in busy:
+                del busy[schedule_state_key]
+                payload['busy_series'] = busy
+                _save_schedule_state(payload)
+        except Exception:
+            pass
+
+    if state != 'busy':
+        _clear_busy_series()
+
     def _restart_agent(reason: str) -> bool:
         nonlocal did_restart
         print(f"♻️  Restarting agent (reason: {reason})")
@@ -1288,9 +1326,51 @@ def cmd_schedule_run(args):
         else:
             # Fall back to legacy busy detection for compatibility.
             if is_agent_busy(agent_id, launcher):
-                print(f"⏭️  Agent is busy, skipping scheduled task")
-                print(f"   Will retry on next cron execution")
-                return 0
+                if busy_restart_after_seconds:
+                    try:
+                        now = int(time.time())
+                        payload = _load_schedule_state()
+                        busy = payload.get('busy_series', {}) if isinstance(payload, dict) else {}
+                        if not isinstance(busy, dict):
+                            busy = {}
+
+                        series = (
+                            busy.get(schedule_state_key, {})
+                            if isinstance(busy.get(schedule_state_key, {}), dict)
+                            else {}
+                        )
+                        since = int(series.get('since', now))
+                        count = int(series.get('count', 0)) + 1
+                        busy_for = max(0, now - since)
+
+                        busy[schedule_state_key] = {'since': since, 'last': now, 'count': count}
+                        payload['busy_series'] = busy
+                        _save_schedule_state(payload)
+
+                        if busy_for >= busy_restart_after_seconds:
+                            print(
+                                f"♻️  Agent has been busy for ~{busy_for}s across cron runs "
+                                f"(threshold: {busy_restart_after_str}); restarting to run schedule"
+                            )
+                            _clear_busy_series()
+                            if not _restart_agent(f"busy_series>{busy_restart_after_seconds}s"):
+                                return 1
+                        else:
+                            print(f"⏭️  Agent is busy, skipping scheduled task")
+                            print(f"   Busy for ~{busy_for}s across cron runs (threshold: {busy_restart_after_str})")
+                            print(f"   Will retry on next cron execution")
+                            return 0
+                    except Exception:
+                        # If state tracking fails for any reason, keep the conservative behavior.
+                        print(f"⏭️  Agent is busy, skipping scheduled task")
+                        print(f"   Will retry on next cron execution")
+                        return 0
+                else:
+                    print(f"⏭️  Agent is busy, skipping scheduled task")
+                    print(f"   Will retry on next cron execution")
+                    return 0
+            else:
+                _clear_busy_series()
 
     # Optional: clear context by restarting the session before sending the scheduled task.
     # This is intentionally "idle-only" to avoid interrupting interactive use.
