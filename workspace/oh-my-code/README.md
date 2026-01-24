@@ -25,13 +25,13 @@ bash scripts/preflight.sh
 
 python3 .claude/skills/agent-manager/scripts/main.py list
 python3 .claude/skills/agent-manager/scripts/main.py start supervisor
-python3 .claude/skills/agent-manager/scripts/main.py start developer
-python3 .claude/skills/agent-manager/scripts/main.py start qa
-python3 .claude/skills/agent-manager/scripts/main.py assign supervisor <<'EOF'
+python3 .claude/skills/agent-manager/scripts/main.py start coder-b
+python3 .claude/skills/agent-manager/scripts/main.py start coder-a
+python3 .claude/skills/agent-manager/scripts/main.py assign coder-a <<'EOF'
 Task:
 - <what you want done>
 EOF
-python3 .claude/skills/agent-manager/scripts/main.py monitor supervisor --follow
+python3 .claude/skills/agent-manager/scripts/main.py monitor coder-a --follow
 ```
 
 ## Quality Gates (Default)
@@ -46,11 +46,17 @@ bash scripts/quality-gates.sh --repo workspace/<repo>
 bash scripts/quality-gates.sh --repo workspace/<repo> --mode check
 ```
 
+## Team
+
+Team membership and roles: `TEAM.md`.
+
+Workflow: follow `workflows/github_issues.md`.
+
 ## Agents
 
 Agents live in `agents/EMP_*.md`:
-- `supervisor`: drives `workflows/github_issues.md` and monitors `developer` + `qa`
-- `developer`: development + task management
-- `qa`: quality assurance (quality gates + edge cases)
+- `coder-a` (EMP_0002): Team Lead + QA; drives `workflows/github_issues.md` + quality gates
+- `supervisor`: watchdog that keeps the Team Lead alive
+- `coder-b` (EMP_0003): developer (implementation)
 
 To switch CLIs, edit `agents/EMP_0001.md`, `agents/EMP_0002.md`, `agents/EMP_0003.md` `launcher:` fields.
