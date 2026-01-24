@@ -31,12 +31,13 @@ Instead, we enforce a high-quality, repeatable engineering workflow via:
 - Prevent drift by enforcing scope rules + evidence.
 - Make outputs verifiable and repeatable via a strict output contract.
 - Ensure quality gates are run and reported.
-- Primary workflow: `workflows/github_issues.md` (team driven by `supervisor`).
+- Team definition: `TEAM.md`.
+- Workflow: follow `workflows/github_issues.md` (driven by Team Lead `EMP_0002` / `coder-a`).
 
 ## Roles (Recommended)
-- **supervisor**: drives `workflows/github_issues.md` and monitors `developer` + `qa`
-- **developer**: development + task management
-- **qa**: quality assurance (quality gates + edge cases)
+- **team lead (EMP_0002 / coder-a)**: drives `workflows/github_issues.md` and coordinates the team
+- **supervisor**: watchdog that ensures the Team Lead is alive (nudge/restart/escalate)
+- **coder-b (EMP_0003)**: developer; implementation (no task management)
 
 ## Multi-Agent Protocol (agent-manager)
 Use `agent-manager` to run workers in separate tmux sessions, then feed tasks in parallel.
@@ -52,28 +53,28 @@ python3 .claude/skills/agent-manager/scripts/main.py list
 
 # start if needed
 python3 .claude/skills/agent-manager/scripts/main.py start supervisor
-python3 .claude/skills/agent-manager/scripts/main.py start developer
-python3 .claude/skills/agent-manager/scripts/main.py start qa
+python3 .claude/skills/agent-manager/scripts/main.py start coder-b
+python3 .claude/skills/agent-manager/scripts/main.py start coder-a
 
-# assign tasks (stdin)
-python3 .claude/skills/agent-manager/scripts/main.py assign supervisor <<'EOF'
+# assign tasks to Team Lead (stdin)
+python3 .claude/skills/agent-manager/scripts/main.py assign coder-a <<'EOF'
 <task>
 EOF
 
 # monitor
-python3 .claude/skills/agent-manager/scripts/main.py monitor supervisor --follow
+python3 .claude/skills/agent-manager/scripts/main.py monitor coder-a --follow
 
 # stop
 python3 .claude/skills/agent-manager/scripts/main.py stop supervisor
-python3 .claude/skills/agent-manager/scripts/main.py stop developer
-python3 .claude/skills/agent-manager/scripts/main.py stop qa
+python3 .claude/skills/agent-manager/scripts/main.py stop coder-b
+python3 .claude/skills/agent-manager/scripts/main.py stop coder-a
 ```
 
 ## Task Decomposition Template
-When you are `supervisor`, produce a short split like:
-- Subtask A (Developer): implement + manage rollout
-- Subtask B (QA): validate + edge cases + quality gates
-- Subtask C (Supervisor): check-in + unblock + prompt if idle
+When you are the Team Lead (`coder-a` / EMP_0002), produce a short split like:
+- Subtask A (coder-b): implement + manage rollout
+- Subtask B (coder-a): validate + edge cases + quality gates
+- Subtask C (Supervisor): watchdog check-in (nudge/restart/escalate if stuck)
 
 Each subtask must have:
 - Objective
