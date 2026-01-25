@@ -20,6 +20,7 @@ while IFS=$'\t' read -r repo_dir github_repo; do
   issue="$(
     gh issue list \
       --repo "$github_repo" \
+      --assignee @me \
       --state open \
       --limit 200 \
       --json number,title,url,labels 2>/dev/null \
