@@ -104,22 +104,31 @@ graph TD
 ## Step-by-step Commands
 
 ### 1) Find work
+When looking for the next Issue, you MUST iterate through every repo under `workspace/` (unless the human explicitly pins you to a specific repo).
+
+Recommended (find next actionable Issue assigned to you across all workspace repos):
 ```bash
-gh issue list --repo "$GITHUB_REPO" --state open --assignee @me
+bash scripts/workspace-next-issue.sh workspace
 ```
 
-To list your assigned Issues across all repos in `workspace/`:
+This prints tab-separated output:
+`<repo_dir>\t<github_repo>\t<issue_number>\t<issue_url>\t<issue_title>`
+
+If you need to set context from the output:
+```bash
+IFS=$'\t' read -r TARGET_REPO GITHUB_REPO ISSUE_NUMBER ISSUE_URL ISSUE_TITLE < <(
+  bash scripts/workspace-next-issue.sh workspace
+)
+TARGET_PATH="workspace/$TARGET_REPO"
+```
+
+Fallback (list your assigned issues across all repos):
 ```bash
 for TARGET_PATH in workspace/*; do
   [ -d "$TARGET_PATH/.git" ] || continue
   GITHUB_REPO="$(bash scripts/github-repo-from-origin.sh "$TARGET_PATH")"
   gh issue list --repo "$GITHUB_REPO" --state open --assignee @me
 done
-```
-
-To quickly find an unclaimed issue (no `team:*` labels) across all repos in `workspace/` (ONLY when explicitly instructed to pick up unassigned work):
-```bash
-bash scripts/workspace-next-issue.sh
 ```
 
 ### 2) Claim an issue (recommended)
