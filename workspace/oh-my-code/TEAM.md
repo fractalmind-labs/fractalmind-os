@@ -30,6 +30,7 @@ Follow `workflows/github_issues.md`.
 ## Working Style
 
 - Source of truth for process rules: `AGENTS.md`
+- Scope principle: only modify code under `workspace/`
 - Default validation wrapper: `bash scripts/quality-gates.sh --repo <changed-repo-path>`
 
 ## Quick Commands
