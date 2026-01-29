@@ -564,6 +564,16 @@ def cmd_doctor(args):
         print("❌ tmux: missing")
         print(f"   Fix: {_tmux_install_hint()}")
 
+    try:
+        import yaml  # type: ignore
+
+        _ = yaml
+        print("✅ pyyaml: found")
+    except Exception:
+        problems += 1
+        print("❌ pyyaml: missing")
+        print("   Fix: python3 -m pip install pyyaml")
+
     if agents_dir.exists() and agents_dir.is_dir():
         agents = list_all_agents(agents_dir)
         print(f"✅ agents/: found ({len(agents)} configured)")
@@ -1495,7 +1505,11 @@ Examples:
 
     handler = handlers.get(args.command)
     if handler:
-        return handler(args)
+        try:
+            return handler(args)
+        except RuntimeError as e:
+            print(f"❌ {e}")
+            return 1
 
     parser.print_help()
     return 1

@@ -7,14 +7,43 @@ Supports two agent profile layouts under `agents/`:
 
 import os
 import re
-import yaml
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Iterable
+
+try:
+    import yaml  # type: ignore
+except Exception:  # pragma: no cover
+    yaml = None
 
 from repo_root import find_repo_root, get_repo_root, get_skill_search_dirs
 
 
 AGENT_DIR_PROFILE_FILENAME = "AGENTS.md"
+
+
+_PYYAML_REQUIRED = (
+    "PyYAML is required to parse YAML frontmatter. "
+    "Install it with: python3 -m pip install pyyaml"
+)
+
+
+def _require_yaml() -> None:
+    if yaml is None:
+        raise RuntimeError(_PYYAML_REQUIRED)
+
+
+def _yaml_safe_load(payload: str) -> dict:
+    _require_yaml()
+    assert yaml is not None
+    loaded = yaml.safe_load(payload) or {}
+    if not isinstance(loaded, dict):
+        raise ValueError("Invalid YAML frontmatter: expected a mapping")
+    return loaded
+
+
+_YAML_PARSE_EXCEPTIONS = (ValueError,)
+if yaml is not None:  # pragma: no cover
+    _YAML_PARSE_EXCEPTIONS = (ValueError, yaml.YAMLError)
 
 
 def _file_id_from_profile_path(profile_path: Path) -> str:
@@ -73,7 +102,7 @@ def parse_agent_file(agent_path: Path) -> Dict[str, Any]:
     yaml_content = frontmatter_match.group(1)
     markdown_content = frontmatter_match.group(2)
 
-    config = yaml.safe_load(yaml_content) or {}
+    config = _yaml_safe_load(yaml_content)
     config['role_definition'] = markdown_content.strip()
 
     # Extract file ID from path (e.g., EMP_0001 from EMP_0001.md; EMP_0001 from EMP_0001/AGENTS.md)
@@ -181,7 +210,7 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
                 config = parse_agent_file(profile_path)
                 config['_file_path'] = profile_path
                 return expand_config_env_vars(config)
-            except (ValueError, yaml.YAMLError):
+            except _YAML_PARSE_EXCEPTIONS:
                 return None
 
     # 2) If it's a bare filename, try resolving it inside agents_dir.
@@ -194,7 +223,7 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
                 config = parse_agent_file(agent_file)
                 config['_file_path'] = agent_file
                 return expand_config_env_vars(config)
-            except (ValueError, yaml.YAMLError):
+            except _YAML_PARSE_EXCEPTIONS:
                 return None
 
     if agents_dir is None:
@@ -211,7 +240,7 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
                 # Add file path to config
                 config['_file_path'] = agent_file
                 return expand_config_env_vars(config)
-        except (ValueError, yaml.YAMLError):
+        except _YAML_PARSE_EXCEPTIONS:
             continue
 
     # Try by file ID
@@ -221,7 +250,7 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
             config = parse_agent_file(agent_file)
             config['_file_path'] = agent_file
             return expand_config_env_vars(config)
-        except (ValueError, yaml.YAMLError):
+        except _YAML_PARSE_EXCEPTIONS:
             return None
 
     agent_dir_profile = agents_dir / name_or_id / AGENT_DIR_PROFILE_FILENAME
@@ -230,7 +259,7 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
             config = parse_agent_file(agent_dir_profile)
             config['_file_path'] = agent_dir_profile
             return expand_config_env_vars(config)
-        except (ValueError, yaml.YAMLError):
+        except _YAML_PARSE_EXCEPTIONS:
             return None
 
     return None
@@ -262,7 +291,7 @@ def list_all_agents(agents_dir: Optional[Path] = None) -> Dict[str, Dict[str, An
             file_id = config.get('file_id')
             if file_id:
                 agents[file_id] = config
-        except (ValueError, yaml.YAMLError):
+        except _YAML_PARSE_EXCEPTIONS:
             continue
 
     return agents
@@ -329,7 +358,7 @@ def load_skills(
             frontmatter_match = re.match(r'^---\n(.*?)\n---\n(.*)$', content, re.DOTALL)
             if frontmatter_match:
                 yaml_content = frontmatter_match.group(1)
-                skill_meta = yaml.safe_load(yaml_content) or {}
+                skill_meta = _yaml_safe_load(yaml_content)
                 description = skill_meta.get('description', 'No description')
             else:
                 description = 'No description'

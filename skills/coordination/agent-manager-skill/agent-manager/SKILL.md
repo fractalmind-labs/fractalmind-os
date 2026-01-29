@@ -9,6 +9,16 @@ allowed-tools: [Read, Write, Edit, Bash, Task]
 
 Employee agent orchestration system for managing AI agents in tmux sessions. A simple, dependency-light alternative to CAO.
 
+## Dependencies
+
+- `tmux`
+- Python 3
+- `pyyaml` (required to parse YAML frontmatter)
+
+```bash
+python3 -m pip install pyyaml
+```
+
 ## Quick Start
 
 ```bash
