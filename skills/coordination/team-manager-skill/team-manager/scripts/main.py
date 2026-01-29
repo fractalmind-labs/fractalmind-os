@@ -59,10 +59,19 @@ except ImportError:
 try:
     from tmux_helper import capture_output, send_keys, session_exists, get_agent_runtime_state
 except ImportError:
-    def capture_output(agent_id, lines=100): return None
-    def send_keys(agent_id, message): return False
-    def session_exists(agent_id): return False
-    def get_agent_runtime_state(agent_id, launcher=""): return {'state': 'unknown'}
+    def capture_output(agent_id, lines=100):
+        return None
+
+    def send_keys(agent_id, message, **kwargs):
+        _ = kwargs
+        return False
+
+    def session_exists(agent_id):
+        return False
+
+    def get_agent_runtime_state(agent_id, launcher=""):
+        _ = launcher
+        return {'state': 'unknown'}
 
 # get_agent_id is a simple function - define it locally to avoid circular import
 def get_agent_id(agent_config):
@@ -467,15 +476,22 @@ Please coordinate this task with your team and report back when complete.
         if agent_config:
             agent_id = get_agent_id(agent_config)
             if session_exists(agent_id):
-                send_keys(agent_id, task_message)
+                send_keys(agent_id, task_message, send_enter=True)
                 print(f"✅ Task assigned to {team['name']} team")
                 print(f"   Lead Agent: {lead_id} ({get_agent_name(lead_id)})")
                 print(f"   Monitor: tmux attach -t agent-{agent_id}")
                 return 0
             else:
                 print(f"⚠️  Lead agent '{lead_id}' is not running")
-                repo_local = _REPO_ROOT / '.agent' / 'skills' / 'agent-manager' / 'scripts' / 'main.py'
-                hint = f"python3 {repo_local}" if repo_local.exists() else "python3 ~/.claude/skills/agent-manager/scripts/main.py"
+                repo_local_claude = _REPO_ROOT / '.claude' / 'skills' / 'agent-manager' / 'scripts' / 'main.py'
+                repo_local_agent = _REPO_ROOT / '.agent' / 'skills' / 'agent-manager' / 'scripts' / 'main.py'
+
+                if repo_local_claude.exists():
+                    hint = f"python3 {repo_local_claude}"
+                elif repo_local_agent.exists():
+                    hint = f"python3 {repo_local_agent}"
+                else:
+                    hint = "python3 ~/.claude/skills/agent-manager/scripts/main.py"
                 print(f"   Start with: {hint} start {lead_id}")
                 return 1
         else:

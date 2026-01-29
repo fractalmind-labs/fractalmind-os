@@ -227,8 +227,7 @@ python3 .agent/skills/team-manager/scripts/main.py assign frontend <<EOF
 4. Logout functionality
 EOF
 
-# ⚠️ Important: Send ENTER to trigger execution
-tmux send-keys -t agent-EMP_0001 Enter
+# Note: team-manager assigns via agent-manager and submits automatically (no manual ENTER needed).
 
 # From file
 python3 .agent/skills/team-manager/scripts/main.py assign frontend --task-file task.md
