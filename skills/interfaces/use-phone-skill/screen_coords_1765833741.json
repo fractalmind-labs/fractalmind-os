@@ -1,0 +1,42 @@
+{
+  "timestamp": 1765833741.357204,
+  "screen_info": {
+    "width": 1080,
+    "height": 1920,
+    "density": 320,
+    "aspect_ratio": 0.5625,
+    "source": "screenshot"
+  },
+  "coordinates": {
+    "elements": [
+      {
+        "description": "搜索框",
+        "type": "unknown",
+        "priority": "high",
+        "relative_coordinates": {
+          "x": 500,
+          "y": 150
+        },
+        "coordinates": {
+          "x": 540,
+          "y": 288
+        },
+        "command": "python3 scripts/phone_control.py tap --relative 500 150"
+      },
+      {
+        "description": "Trending标签",
+        "type": "unknown",
+        "priority": "medium",
+        "relative_coordinates": {
+          "x": 300,
+          "y": 200
+        },
+        "coordinates": {
+          "x": 324,
+          "y": 384
+        },
+        "command": "python3 scripts/phone_control.py tap --relative 300 200"
+      }
+    ]
+  }
+}
