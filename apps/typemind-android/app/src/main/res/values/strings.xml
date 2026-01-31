@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">TypeMind IME</string>
+    <string name="settings_title">TypeMind IME Setup</string>
+    <string name="settings_instructions">1. Enable TypeMind IME in system settings.\n2. Select TypeMind IME as your current keyboard.\n3. Return to your app and start typing.</string>
+    <string name="open_input_settings">Open Input Method Settings</string>
+    <string name="show_ime_picker">Show Keyboard Picker</string>
+    <string name="ime_active_label">TypeMind IME active</string>
+    <string name="ime_subtype_label">Default</string>
+</resources>
