@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+OPENCLAW_NODE="${OPENCLAW_NODE:-/opt/homebrew/bin/node}"
+OPENCLAW_ENTRY="${OPENCLAW_ENTRY:-/opt/homebrew/lib/node_modules/openclaw/openclaw.mjs}"
+
+if [[ ! -x "$OPENCLAW_NODE" ]]; then
+  echo "OPENCLAW_NODE not executable: $OPENCLAW_NODE" >&2
+  echo "Set OPENCLAW_NODE in your launchd plist EnvironmentVariables." >&2
+  exit 1
+fi
+
+if [[ ! -f "$OPENCLAW_ENTRY" ]]; then
+  echo "OPENCLAW_ENTRY not found: $OPENCLAW_ENTRY" >&2
+  echo "Set OPENCLAW_ENTRY in your launchd plist EnvironmentVariables." >&2
+  exit 1
+fi
+
+arch_prefix=()
+if [[ "$(uname -m)" == "arm64" ]]; then
+  arch_prefix=(/usr/bin/arch -arm64)
+fi
+
+exec "${arch_prefix[@]}" "$OPENCLAW_NODE" "$OPENCLAW_ENTRY" "$@"
+
