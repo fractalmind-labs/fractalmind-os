@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
+import android.widget.CheckBox
 import androidx.appcompat.app.AppCompatActivity
 
 class SettingsActivity : AppCompatActivity() {
@@ -19,6 +20,14 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<Button>(R.id.show_picker_button).setOnClickListener {
             val imm = getSystemService(InputMethodManager::class.java)
             imm?.showInputMethodPicker()
+        }
+
+        syncReceiverComponents(this)
+
+        val allowAll = findViewById<CheckBox>(R.id.allow_all_broadcasts_checkbox)
+        allowAll.isChecked = isAllowAllSendersEnabled(this)
+        allowAll.setOnCheckedChangeListener { _, isChecked ->
+            setAllowAllSendersEnabled(this, isChecked)
         }
     }
 }

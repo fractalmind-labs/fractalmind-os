@@ -34,4 +34,19 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:text="@string/show_ime_picker" />
+
+    <CheckBox
+        android:id="@+id/allow_all_broadcasts_checkbox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="@string/allow_all_broadcasts_label" />
+
+    <TextView
+        android:id="@+id/allow_all_broadcasts_hint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/allow_all_broadcasts_hint"
+        android:textSize="14sp" />
 </LinearLayout>
