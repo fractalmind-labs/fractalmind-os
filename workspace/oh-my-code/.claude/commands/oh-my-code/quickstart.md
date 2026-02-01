@@ -18,11 +18,11 @@ Run a zero-setup multi-agent workflow using the vendored `agent-manager` skill i
 python3 .claude/skills/agent-manager/scripts/main.py list
 ```
 
-### 2) Start supervisor + developer + qa
+### 2) Start supervisor + coder-b + coder-a
 ```bash
 python3 .claude/skills/agent-manager/scripts/main.py start supervisor
-python3 .claude/skills/agent-manager/scripts/main.py start developer
-python3 .claude/skills/agent-manager/scripts/main.py start qa
+python3 .claude/skills/agent-manager/scripts/main.py start coder-b
+python3 .claude/skills/agent-manager/scripts/main.py start coder-a
 ```
 
 ### 3) Assign a task to the supervisor
@@ -34,7 +34,7 @@ Task:
 Requirements:
 - Follow AGENTS.md
 - Primary workflow: workflows/github_issues.md
-- Split into parallel subtasks (developer + qa)
+- Split into parallel subtasks (coder-b + coder-a)
 - Provide evidence (commands run, files changed)
 EOF
 ```
