@@ -12,7 +12,8 @@ Task:
 Must:
 - Follow AGENTS.md
 - Decompose into parallel subtasks
-- Ask `qa` to run quality gates and check edge cases
+- Ask `coder-a` to run quality gates and check edge cases
+- Ask `coder-b` to implement changes
 - Report evidence: commands run + files changed
 EOF
 ```
