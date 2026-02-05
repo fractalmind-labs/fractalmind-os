@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 from typing import List, Optional
 
-from agent_config import list_all_schedules, resolve_agent, get_schedule_task, parse_duration
+from agent_config import list_all_schedules, list_all_heartbeats, resolve_agent, get_schedule_task, parse_duration
 from repo_root import get_repo_root
 
 
@@ -111,16 +111,18 @@ def remove_agent_manager_section(crontab: str) -> str:
 
 def generate_crontab_entries(repo_root: Optional[Path] = None) -> str:
     """
-    Generate crontab entries for all scheduled agent jobs.
+    Generate crontab entries for all scheduled agent jobs and heartbeats.
 
     Returns:
-        Crontab section with all agent schedules
+        Crontab section with all agent schedules and heartbeats
     """
     if repo_root is None:
         repo_root = get_repo_root()
 
     schedules = list_all_schedules()
-    if not schedules:
+    heartbeats = list_all_heartbeats()
+
+    if not schedules and not heartbeats:
         return ""
 
     lines = [CRONTAB_START_MARKER]
@@ -134,6 +136,7 @@ def generate_crontab_entries(repo_root: Optional[Path] = None) -> str:
     # Group by agent file_id for readability (names may not be unique)
     current_agent_file_id = None
 
+    # Add schedules first
     for sched in schedules:
         # Skip if schedule is disabled
         if not sched.get('enabled', True):
@@ -188,6 +191,60 @@ def generate_crontab_entries(repo_root: Optional[Path] = None) -> str:
 
         # Add crontab entry
         lines.append(f"# {job_name}")
+        lines.append(f"{cron} {cmd}")
+
+    # Add heartbeats (use a different comment style to distinguish)
+    for hb in heartbeats:
+        # Skip if heartbeat is disabled
+        if not hb.get('enabled', True):
+            continue
+
+        # Skip if agent is disabled
+        agent_config = resolve_agent(hb['file_id'])
+        if agent_config and not agent_config.get('enabled', True):
+            continue
+
+        cron = hb.get('cron', '')
+        if not cron:
+            continue
+
+        agent_name = hb['agent_name']
+        file_id = hb['file_id']
+        agent_display = hb.get('agent_display') or f"{agent_name} ({file_id})"
+        max_runtime = hb.get('max_runtime', '')
+
+        # Add agent header comment if not already added
+        if file_id != current_agent_file_id:
+            if current_agent_file_id is not None:
+                lines.append("")  # Blank line between agents
+            lines.append(f"# {agent_display}")
+            current_agent_file_id = file_id
+
+        # Build command for heartbeat
+        main_script = Path(__file__).resolve().parent / 'main.py'
+        log_dir = repo_root / '.crontab_logs'
+        log_file = str(log_dir / f"agent-{hb['agent_id']}-heartbeat.log")
+
+        repo_root_q = shlex.quote(str(repo_root))
+        main_script_q = shlex.quote(str(main_script))
+        log_dir_q = shlex.quote(str(log_dir))
+        log_file_q = shlex.quote(log_file)
+        file_id_q = shlex.quote(str(file_id))
+
+        cmd_parts = [
+            f"cd {repo_root_q}",
+            f"mkdir -p {log_dir_q}",
+            f"python3 {main_script_q} heartbeat run {file_id_q}",
+        ]
+
+        if max_runtime:
+            cmd_parts[-1] += f" --timeout {max_runtime}"
+
+        cmd = " && ".join(cmd_parts)
+        cmd += f" >> {log_file_q} 2>&1"
+
+        # Add crontab entry (heartbeat marked with [HB])
+        lines.append(f"# heartbeat [HB]")
         lines.append(f"{cron} {cmd}")
 
     lines.append(CRONTAB_END_MARKER)
@@ -267,5 +324,37 @@ def list_schedules_formatted() -> str:
         runtime_str = f"({max_runtime})" if max_runtime else ""
 
         lines.append(f"  {status} {job_name:20} {cron:20} {runtime_str}")
+
+    return '\n'.join(lines)
+
+
+def list_heartbeats_formatted() -> str:
+    """Get formatted list of all heartbeats for display."""
+    heartbeats = list_all_heartbeats()
+
+    if not heartbeats:
+        return "No heartbeat jobs configured."
+
+    lines = ["💓 Heartbeats:", ""]
+
+    current_agent_file_id = None
+    for hb in heartbeats:
+        agent_name = hb['agent_name']
+        file_id = hb['file_id']
+        agent_display = hb.get('agent_display') or f"{agent_name} ({file_id})"
+
+        if file_id != current_agent_file_id:
+            if current_agent_file_id is not None:
+                lines.append("")
+            lines.append(f"{agent_display}:")
+            current_agent_file_id = file_id
+
+        enabled = hb.get('enabled', True)
+        status = "✓" if enabled else "✗"
+        cron = hb.get('cron', 'N/A')
+        max_runtime = hb.get('max_runtime', '')
+        runtime_str = f"({max_runtime})" if max_runtime else ""
+
+        lines.append(f"  {status} heartbeat           {cron:20} {runtime_str}")
 
     return '\n'.join(lines)

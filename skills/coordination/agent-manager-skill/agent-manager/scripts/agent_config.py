@@ -88,6 +88,8 @@ def parse_agent_file(agent_path: Path) -> Dict[str, Any]:
     # Expected shape: mapping of server_name -> server_config (dict)
     config.setdefault('mcps', {})
     config.setdefault('enabled', True)  # Agents are enabled by default
+    # Heartbeat configuration (optional dict or None)
+    config.setdefault('heartbeat', None)
 
     return config
 
@@ -531,3 +533,35 @@ def get_agent_schedule(agent_name: str, job_name: str, agents_dir: Optional[Path
             }
 
     return None
+
+
+def list_all_heartbeats(agents_dir: Optional[Path] = None) -> List[Dict[str, Any]]:
+    """
+    List all heartbeat configurations across all agents.
+
+    Args:
+        agents_dir: Directory containing agent files
+
+    Returns:
+        List of dicts with agent info and heartbeat details
+    """
+    all_agents = list_all_agents(agents_dir)
+    all_heartbeats = []
+
+    for file_id, config in all_agents.items():
+        heartbeat = config.get('heartbeat')
+        if not heartbeat or not isinstance(heartbeat, dict):
+            continue
+
+        agent_name = config.get('name') or file_id
+        all_heartbeats.append({
+            'agent_name': agent_name,
+            'agent_display': f"{agent_name} ({file_id})",
+            'agent_id': config.get('file_id', '').lower().replace('_', '-'),
+            'file_id': config.get('file_id', ''),
+            'cron': heartbeat.get('cron', ''),
+            'max_runtime': heartbeat.get('max_runtime', ''),
+            'enabled': heartbeat.get('enabled', True),
+        })
+
+    return all_heartbeats
