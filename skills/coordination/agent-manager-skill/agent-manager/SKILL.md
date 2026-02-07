@@ -9,6 +9,13 @@ allowed-tools: [Read, Write, Edit, Bash, Task]
 
 Employee agent orchestration system for managing AI agents in tmux sessions. A simple, dependency-light alternative to CAO.
 
+## Dependencies
+
+- `tmux`
+- Python 3
+
+(YAML frontmatter parsing is built-in; no `pyyaml` dependency.)
+
 ## Quick Start
 
 ```bash
@@ -358,112 +365,6 @@ python3 scripts/main.py schedule run dev --job daily-standup
 # Override timeout
 python3 scripts/main.py schedule run dev --job daily-standup --timeout 1h
 ```
-
-## Heartbeat
-
-Heartbeat is a special type of periodic job that sends a standard check-in message to running agents. Unlike schedules (which can have multiple jobs per agent), each agent can have **0 or 1 heartbeat** configuration.
-
-### Heartbeat Configuration
-
-Add a `heartbeat` dict to the agent's YAML frontmatter:
-
-```yaml
----
-name: dev
-description: Dev Agent
-working_directory: ${REPO_ROOT}
-launcher: codex
-launcher_args:
-  - --model=gpt-4.7
-  - --dangerously-bypass-approvals-and-sandbox
-
-heartbeat:
-  cron: "*/30 * * * *"  # Every 30 minutes
-  max_runtime: 5m
-  enabled: true
----
-```
-
-**Heartbeat Fields:**
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `cron` | string | ✓ | Cron expression (e.g., `*/30 * * * *`) |
-| `max_runtime` | string | | Maximum runtime (e.g., `5m`, `10m`) |
-| `enabled` | bool | | Default: `true` |
-
-### Heartbeat vs Schedules
-
-| Feature | Heartbeat | Schedules |
-|---------|-----------|-----------|
-| **Per agent** | 0-1 heartbeat | 0-N schedules |
-| **Task content** | Fixed (standard check-in) | Custom per job |
-| **Behavior** | Only checks running agents | Starts agent if needed |
-| **Use case** | Periodic health checks | Task automation |
-
-### Heartbeat Commands
-
-#### `heartbeat list` - List All Heartbeat Jobs
-
-```bash
-python3 scripts/main.py heartbeat list
-```
-
-Output:
-```
-💓 Heartbeats:
-
-dev (EMP_0001):
-  ✓ heartbeat           */30 * * * *         (5m)
-```
-
-#### `heartbeat sync` - Sync Heartbeats to Crontab
-
-Heartbeats and schedules are synced together to the system crontab.
-
-```bash
-# Preview changes (dry run)
-python3 scripts/main.py heartbeat sync --dry-run
-
-# Apply changes
-python3 scripts/main.py heartbeat sync
-```
-
-This generates crontab entries like:
-```cron
-# === agent-manager schedules (auto-generated) ===
-# dev (EMP_0001)
-# heartbeat [HB]
-*/30 * * * * cd /path/to/repo && python3 .agent/skills/agent-manager/scripts/main.py heartbeat run EMP_0001 >> /path/to/.crontab_logs/agent-emp-0001-heartbeat.log 2>&1
-# === end agent-manager schedules ===
-```
-
-#### `heartbeat run` - Run a Heartbeat Manually
-
-Manually trigger a heartbeat (useful for testing).
-
-```bash
-python3 scripts/main.py heartbeat run EMP_0001
-
-# Override timeout
-python3 scripts/main.py heartbeat run EMP_0001 --timeout 1m
-```
-
-**Heartbeat behavior:**
-- Skips if agent is disabled
-- Skips if agent is not running (does NOT start the agent)
-- Sends standard heartbeat message to the agent
-- Waits for response (up to `max_runtime`)
-
-### Standard Heartbeat Message
-
-The heartbeat sends this message to the agent:
-
-```
-Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.
-```
-
-Agents should respond with `HEARTBEAT_OK` if nothing needs attention, or take action based on their `HEARTBEAT.md` file contents.
 
 ## Skills Integration
 

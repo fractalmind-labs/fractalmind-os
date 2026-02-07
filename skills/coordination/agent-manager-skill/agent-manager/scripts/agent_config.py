@@ -7,14 +7,18 @@ Supports two agent profile layouts under `agents/`:
 
 import os
 import re
-import yaml
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Iterable
 
 from repo_root import find_repo_root, get_repo_root, get_skill_search_dirs
 
+from frontmatter_yaml import YamlParseError, safe_load as _yaml_safe_load
+
 
 AGENT_DIR_PROFILE_FILENAME = "AGENTS.md"
+
+
+_YAML_PARSE_EXCEPTIONS = (ValueError, YamlParseError)
 
 
 def _file_id_from_profile_path(profile_path: Path) -> str:
@@ -73,7 +77,7 @@ def parse_agent_file(agent_path: Path) -> Dict[str, Any]:
     yaml_content = frontmatter_match.group(1)
     markdown_content = frontmatter_match.group(2)
 
-    config = yaml.safe_load(yaml_content) or {}
+    config = _yaml_safe_load(yaml_content)
     config['role_definition'] = markdown_content.strip()
 
     # Extract file ID from path (e.g., EMP_0001 from EMP_0001.md; EMP_0001 from EMP_0001/AGENTS.md)
@@ -88,8 +92,6 @@ def parse_agent_file(agent_path: Path) -> Dict[str, Any]:
     # Expected shape: mapping of server_name -> server_config (dict)
     config.setdefault('mcps', {})
     config.setdefault('enabled', True)  # Agents are enabled by default
-    # Heartbeat configuration (optional dict or None)
-    config.setdefault('heartbeat', None)
 
     return config
 
@@ -183,7 +185,7 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
                 config = parse_agent_file(profile_path)
                 config['_file_path'] = profile_path
                 return expand_config_env_vars(config)
-            except (ValueError, yaml.YAMLError):
+            except _YAML_PARSE_EXCEPTIONS:
                 return None
 
     # 2) If it's a bare filename, try resolving it inside agents_dir.
@@ -196,7 +198,7 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
                 config = parse_agent_file(agent_file)
                 config['_file_path'] = agent_file
                 return expand_config_env_vars(config)
-            except (ValueError, yaml.YAMLError):
+            except _YAML_PARSE_EXCEPTIONS:
                 return None
 
     if agents_dir is None:
@@ -213,7 +215,7 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
                 # Add file path to config
                 config['_file_path'] = agent_file
                 return expand_config_env_vars(config)
-        except (ValueError, yaml.YAMLError):
+        except _YAML_PARSE_EXCEPTIONS:
             continue
 
     # Try by file ID
@@ -223,7 +225,7 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
             config = parse_agent_file(agent_file)
             config['_file_path'] = agent_file
             return expand_config_env_vars(config)
-        except (ValueError, yaml.YAMLError):
+        except _YAML_PARSE_EXCEPTIONS:
             return None
 
     agent_dir_profile = agents_dir / name_or_id / AGENT_DIR_PROFILE_FILENAME
@@ -232,7 +234,7 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
             config = parse_agent_file(agent_dir_profile)
             config['_file_path'] = agent_dir_profile
             return expand_config_env_vars(config)
-        except (ValueError, yaml.YAMLError):
+        except _YAML_PARSE_EXCEPTIONS:
             return None
 
     return None
@@ -264,7 +266,7 @@ def list_all_agents(agents_dir: Optional[Path] = None) -> Dict[str, Dict[str, An
             file_id = config.get('file_id')
             if file_id:
                 agents[file_id] = config
-        except (ValueError, yaml.YAMLError):
+        except _YAML_PARSE_EXCEPTIONS:
             continue
 
     return agents
@@ -331,7 +333,7 @@ def load_skills(
             frontmatter_match = re.match(r'^---\n(.*?)\n---\n(.*)$', content, re.DOTALL)
             if frontmatter_match:
                 yaml_content = frontmatter_match.group(1)
-                skill_meta = yaml.safe_load(yaml_content) or {}
+                skill_meta = _yaml_safe_load(yaml_content)
                 description = skill_meta.get('description', 'No description')
             else:
                 description = 'No description'
@@ -533,35 +535,3 @@ def get_agent_schedule(agent_name: str, job_name: str, agents_dir: Optional[Path
             }
 
     return None
-
-
-def list_all_heartbeats(agents_dir: Optional[Path] = None) -> List[Dict[str, Any]]:
-    """
-    List all heartbeat configurations across all agents.
-
-    Args:
-        agents_dir: Directory containing agent files
-
-    Returns:
-        List of dicts with agent info and heartbeat details
-    """
-    all_agents = list_all_agents(agents_dir)
-    all_heartbeats = []
-
-    for file_id, config in all_agents.items():
-        heartbeat = config.get('heartbeat')
-        if not heartbeat or not isinstance(heartbeat, dict):
-            continue
-
-        agent_name = config.get('name') or file_id
-        all_heartbeats.append({
-            'agent_name': agent_name,
-            'agent_display': f"{agent_name} ({file_id})",
-            'agent_id': config.get('file_id', '').lower().replace('_', '-'),
-            'file_id': config.get('file_id', ''),
-            'cron': heartbeat.get('cron', ''),
-            'max_runtime': heartbeat.get('max_runtime', ''),
-            'enabled': heartbeat.get('enabled', True),
-        })
-
-    return all_heartbeats

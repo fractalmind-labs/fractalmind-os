@@ -564,6 +564,8 @@ def cmd_doctor(args):
         print("❌ tmux: missing")
         print(f"   Fix: {_tmux_install_hint()}")
 
+    print("✅ frontmatter: built-in parser")
+
     if agents_dir.exists() and agents_dir.is_dir():
         agents = list_all_agents(agents_dir)
         print(f"✅ agents/: found ({len(agents)} configured)")
@@ -1125,147 +1127,6 @@ def cmd_schedule(args):
         return 1
 
 
-def cmd_heartbeat(args):
-    """Handle heartbeat subcommands."""
-    from schedule_helper import list_heartbeats_formatted, sync_crontab
-
-    if args.heartbeat_command == 'list':
-        print(list_heartbeats_formatted())
-        return 0
-
-    elif args.heartbeat_command == 'sync':
-        # Reuse sync_crontab - it handles both schedules and heartbeats
-        result = sync_crontab(dry_run=args.dry_run)
-
-        if args.dry_run:
-            print("🔍 Dry run - would sync the following to crontab:")
-            print()
-            if result['content']:
-                print(result['content'])
-            else:
-                print("(no heartbeats configured)")
-            return 0
-
-        if result['success']:
-            print(f"✅ Crontab synced successfully")
-            entries = result.get('entries', 0)
-            added = result.get('added', 0)
-            removed = result.get('removed', 0)
-            print(f"   {entries} entries configured (schedules + heartbeats)")
-            if added or removed:
-                print(f"   Changes: +{added} -{removed}")
-        else:
-            print(f"❌ Failed to sync crontab")
-            return 1
-
-        return 0
-
-    elif args.heartbeat_command == 'run':
-        return cmd_heartbeat_run(args)
-
-    else:
-        print(f"Unknown heartbeat command: {args.heartbeat_command}")
-        return 1
-
-
-def cmd_heartbeat_run(args):
-    """Run a heartbeat check for an agent."""
-    if not check_tmux():
-        print("❌ tmux is not installed")
-        return 1
-
-    # Resolve agent
-    agent_config = resolve_agent(args.agent)
-    if not agent_config:
-        print(f"❌ Agent not found: {args.agent}")
-        return 1
-
-    agent_name = agent_config['name']
-    agent_id = get_agent_id(agent_config)
-    agent_file_id = agent_config.get('file_id', args.agent)
-
-    # Check if agent is disabled
-    if not agent_config.get('enabled', True):
-        agent_file_path = agent_config.get('_file_path', f'agents/{agent_file_id}.md')
-        print(f"⏭️  Agent '{agent_name}' is disabled - skipping heartbeat")
-        print(f"   Config: {agent_file_path}")
-        return 0
-
-    # Get heartbeat config
-    heartbeat = agent_config.get('heartbeat')
-    if not heartbeat or not isinstance(heartbeat, dict):
-        print(f"❌ No heartbeat configured for agent '{agent_name}'")
-        return 1
-
-    # Check if heartbeat is disabled
-    if not heartbeat.get('enabled', True):
-        print(f"⏭️  Heartbeat is disabled for agent '{agent_name}'")
-        return 0
-
-    # Heartbeats only check running agents - don't start if not running
-    if not session_exists(agent_id):
-        print(f"⏭️  Agent '{agent_name}' is not running - skipping heartbeat")
-        return 0
-
-    # Parse timeout
-    timeout_seconds = None
-    timeout_str = args.timeout or heartbeat.get('max_runtime', '')
-    if timeout_str:
-        timeout_seconds = parse_duration(timeout_str)
-
-    print(f"💓 Heartbeat: {agent_name}")
-    print(f"   Time: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-
-    # Standard heartbeat message
-    heartbeat_message = "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK."
-
-    # Send heartbeat
-    if not send_keys(agent_id, heartbeat_message, send_enter=True):
-        print(f"❌ Failed to send heartbeat to {agent_name}")
-        return 1
-
-    print(f"✅ Heartbeat sent to {agent_name}")
-
-    # Wait for response (if timeout specified)
-    if timeout_seconds and timeout_seconds > 0:
-        launcher = resolve_launcher_command(agent_config.get('launcher', ''))
-        start_time = time.time()
-        poll_seconds = 2
-
-        print(f"   Waiting for response (up to {int(timeout_seconds)}s)...")
-        last_state = None
-
-        # Wait briefly for agent to start processing
-        time.sleep(3)
-
-        while (time.time() - start_time) < timeout_seconds:
-            runtime = get_agent_runtime_state(agent_id, launcher=launcher)
-            last_state = str(runtime.get('state', 'unknown'))
-
-            if last_state == 'idle':
-                break
-
-            if last_state in ('blocked', 'error', 'stuck'):
-                break
-
-            time.sleep(poll_seconds)
-
-        # Give the TUI a moment to flush output
-        time.sleep(1)
-        tail = capture_output(agent_id, lines=50)
-        if tail:
-            print("----- Agent Output (tail) -----")
-            print(tail.rstrip())
-            print("----- End Agent Output -----")
-        else:
-            print("⚠️  Could not capture agent output")
-
-        if last_state and last_state != 'idle':
-            print(f"⚠️  Agent state after wait: {last_state}")
-
-    return 0
-
-
 def cmd_schedule_run(args):
     """Run a scheduled job for an agent."""
     if not check_tmux():
@@ -1615,23 +1476,6 @@ Examples:
     schedule_run_parser.add_argument('--job', '-j', required=True, help='Job name to run')
     schedule_run_parser.add_argument('--timeout', '-t', help='Override max runtime (e.g., 30m, 2h)')
 
-    # heartbeat command with subcommands
-    heartbeat_parser = subparsers.add_parser('heartbeat', help='Manage heartbeat jobs')
-    heartbeat_subparsers = heartbeat_parser.add_subparsers(dest='heartbeat_command', help='Heartbeat commands')
-
-    # heartbeat list
-    heartbeat_list_parser = heartbeat_subparsers.add_parser('list', help='List all heartbeat jobs')
-
-    # heartbeat sync (reuses crontab sync)
-    heartbeat_sync_parser = heartbeat_subparsers.add_parser('sync', help='Sync heartbeats to crontab')
-    heartbeat_sync_parser.add_argument('--dry-run', '-n', action='store_true',
-                                       help='Show what would be synced without making changes')
-
-    # heartbeat run
-    heartbeat_run_parser = heartbeat_subparsers.add_parser('run', help='Run a heartbeat manually')
-    heartbeat_run_parser.add_argument('agent', help='Agent name or file ID')
-    heartbeat_run_parser.add_argument('--timeout', '-t', help='Override max runtime (e.g., 30m, 2h)')
-
     args = parser.parse_args()
 
     # Show help if no command
@@ -1649,12 +1493,15 @@ Examples:
         'send': cmd_send,
         'assign': cmd_assign,
         'schedule': cmd_schedule,
-        'heartbeat': cmd_heartbeat,
     }
 
     handler = handlers.get(args.command)
     if handler:
-        return handler(args)
+        try:
+            return handler(args)
+        except RuntimeError as e:
+            print(f"❌ {e}")
+            return 1
 
     parser.print_help()
     return 1

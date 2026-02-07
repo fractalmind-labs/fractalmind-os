@@ -18,7 +18,7 @@ Managing multiple AI agents is deceptively complex:
 
 **Advantages:**
 
-- **Zero dependencies** beyond `tmux` + `python3`
+- **Minimal dependencies**: `tmux` + `python3` (YAML frontmatter parsing is built-in)
 - **Cross-platform** (where tmux runs)
 - **Cron-friendly**: `schedule sync` writes crontab entries calling the installed `main.py` by absolute path
 
@@ -136,6 +136,8 @@ See [agent-manager/SKILL.md](agent-manager/SKILL.md) for complete documentation.
 - Python 3.x
 - tmux
 - Agents defined under `agents/` (supports `agents/EMP_0001.md` and `agents/EMP_0001/AGENTS.md`)
+
+(YAML frontmatter parsing is built-in; no `pyyaml` dependency.)
 
 ## Codex Launcher Notes
 
