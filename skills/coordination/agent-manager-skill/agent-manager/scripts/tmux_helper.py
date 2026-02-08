@@ -466,7 +466,14 @@ def capture_output(agent_id: str, lines: int = 100) -> Optional[str]:
     return result.stdout
 
 
-def send_keys(agent_id: str, keys: str, *, send_enter: bool = True) -> bool:
+def send_keys(
+    agent_id: str,
+    keys: str,
+    *,
+    send_enter: bool = True,
+    clear_input: bool = False,
+    escape_first: bool = False,
+) -> bool:
     """
     Send keys to a tmux session.
 
@@ -474,6 +481,8 @@ def send_keys(agent_id: str, keys: str, *, send_enter: bool = True) -> bool:
         agent_id: Agent ID (e.g., 'emp-0001', without agent- prefix)
         keys: Keys to send
         send_enter: Whether to send Enter after the keys (default: True)
+        clear_input: Whether to clear current input line before sending text
+        escape_first: Whether to send Escape before sending text
 
     Returns:
         True if keys were sent successfully
@@ -484,6 +493,14 @@ def send_keys(agent_id: str, keys: str, *, send_enter: bool = True) -> bool:
     target = _agent_pane_target(agent_id)
     if not target:
         return False
+
+    def _send_tmux_key(key: str) -> bool:
+        result = subprocess.run(
+            ['tmux', 'send-keys', '-t', target, key],
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode == 0
 
     def _send_literal(text: str) -> bool:
         if not text:
@@ -515,6 +532,14 @@ def send_keys(agent_id: str, keys: str, *, send_enter: bool = True) -> bool:
             return True
         except Exception:
             return False
+
+    if escape_first:
+        _send_tmux_key('Escape')
+        time.sleep(0.05)
+
+    if clear_input:
+        _send_tmux_key('C-u')
+        time.sleep(0.05)
 
     # For multi-line content, paste via tmux buffer (more reliable than send-keys).
     if '\n' in keys:

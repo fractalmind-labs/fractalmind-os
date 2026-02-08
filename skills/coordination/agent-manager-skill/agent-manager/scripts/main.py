@@ -1011,8 +1011,17 @@ def cmd_send(args):
         print(f"   Start with: python3 {Path(__file__).name} start {agent_config.get('file_id', agent_name)}")
         return 1
 
+    launcher = resolve_launcher_command(agent_config.get('launcher', ''))
+    is_codex = 'codex' in launcher.lower()
+
     # Send message
-    if not send_keys(agent_id, args.message, send_enter=args.send_enter):
+    if not send_keys(
+        agent_id,
+        args.message,
+        send_enter=args.send_enter,
+        clear_input=is_codex,
+        escape_first=is_codex,
+    ):
         print(f"❌ Failed to send message to {agent_name}")
         return 1
 
@@ -1071,9 +1080,18 @@ def cmd_assign(args):
         print()
         time.sleep(3)  # Give Claude Code time to start
 
+    launcher = resolve_launcher_command(agent_config.get('launcher', ''))
+    is_codex = 'codex' in launcher.lower()
+
     # Send task
     task_message = f"# Task Assignment\n\n{task}"
-    if not send_keys(agent_id, task_message, send_enter=True):
+    if not send_keys(
+        agent_id,
+        task_message,
+        send_enter=True,
+        clear_input=is_codex,
+        escape_first=is_codex,
+    ):
         print(f"❌ Failed to assign task to {agent_name}")
         return 1
 
@@ -1219,8 +1237,17 @@ def cmd_heartbeat_run(args):
     # Standard heartbeat message
     heartbeat_message = "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK."
 
+    launcher = resolve_launcher_command(agent_config.get('launcher', ''))
+    is_codex = 'codex' in launcher.lower()
+
     # Send heartbeat
-    if not send_keys(agent_id, heartbeat_message, send_enter=True):
+    if not send_keys(
+        agent_id,
+        heartbeat_message,
+        send_enter=True,
+        clear_input=is_codex,
+        escape_first=is_codex,
+    ):
         print(f"❌ Failed to send heartbeat to {agent_name}")
         return 1
 
@@ -1228,7 +1255,6 @@ def cmd_heartbeat_run(args):
 
     # Wait for response (if timeout specified)
     if timeout_seconds and timeout_seconds > 0:
-        launcher = resolve_launcher_command(agent_config.get('launcher', ''))
         start_time = time.time()
         poll_seconds = 2
 
@@ -1444,7 +1470,14 @@ def cmd_schedule_run(args):
                 f"Run scheduled job '{args.job}'. Read and follow instructions from file: {task_file}"
             )
 
-    if not send_keys(agent_id, task_message, send_enter=True):
+    is_codex = provider_key == 'codex'
+    if not send_keys(
+        agent_id,
+        task_message,
+        send_enter=True,
+        clear_input=is_codex,
+        escape_first=is_codex,
+    ):
         print(f"❌ Failed to send task to agent")
         return 1
 
