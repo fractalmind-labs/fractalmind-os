@@ -135,6 +135,19 @@ See [agent-manager/SKILL.md](agent-manager/SKILL.md) for complete documentation.
 
 For CLI refactor progress and migration notes, see [agent-manager/docs/cli-modularization-plan.md](agent-manager/docs/cli-modularization-plan.md).
 
+## Testing
+
+```bash
+# Full suite
+python3 -m unittest discover -s agent-manager/scripts/tests -p 'test_*.py' -v
+
+# Integration matrix suite (with flaky-control retries + artifacts)
+python3 agent-manager/scripts/tests/run_integration_suite.py \
+  --attempts 2 \
+  --pattern 'test_integration_*.py' \
+  --artifact-dir .artifacts/integration
+```
+
 ## Requirements
 
 - Python 3.x
