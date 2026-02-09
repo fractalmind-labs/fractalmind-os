@@ -458,6 +458,44 @@ python3 scripts/main.py heartbeat run EMP_0001 --timeout 1m
 - Optional session rollover via `session_mode` (handoff first, then fresh session)
 - Waits for response (up to `max_runtime`)
 
+Each run appends structured JSONL audit events to:
+
+```
+.claude/state/agent-manager/heartbeat-audit/{agent_id}.jsonl
+```
+
+Event fields:
+
+- `timestamp`
+- `agent_id`
+- `hb_id`
+- `send_status`
+- `ack_status`
+- `duration_ms`
+- `context_left`
+- `failure_type`
+- `session_mode`
+
+Failure classification (`failure_type`) includes:
+
+- `send_fail`
+- `no_ack`
+- `timeout`
+- `blocked`
+
+#### `heartbeat trace` - Query Heartbeat Audit Logs
+
+```bash
+# Recent events
+python3 scripts/main.py heartbeat trace
+
+# Filter by heartbeat id
+python3 scripts/main.py heartbeat trace --hb-id 20260209-120001
+
+# Filter by agent and output JSON
+python3 scripts/main.py heartbeat trace --agent EMP_0001 --json
+```
+
 ### Standard Heartbeat Message
 
 The heartbeat sends this message to the agent:
