@@ -1359,11 +1359,17 @@ def cmd_heartbeat_run(args):
     print(f"💓 Heartbeat: {agent_name}")
     print(f"   Time: {time.strftime('%Y-%m-%d %H:%M:%S')}")
 
-    # Standard heartbeat message
-    heartbeat_message = "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK."
+    # Standard heartbeat message (with traceable id for delivery debugging)
+    heartbeat_id = time.strftime('%Y%m%d-%H%M%S')
+    heartbeat_message = (
+        "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. "
+        "Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK. "
+        f"[HB_ID:{heartbeat_id}]"
+    )
 
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
+    print(f"   HB_ID: {heartbeat_id}")
 
     # Send heartbeat
     if not send_keys(
