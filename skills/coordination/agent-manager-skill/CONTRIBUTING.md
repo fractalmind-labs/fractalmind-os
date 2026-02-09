@@ -71,8 +71,8 @@ Before submitting a PR, ensure:
 Use the same commands as GitHub Actions `pr-quality` workflow:
 
 ```bash
-# Install dependencies used by tests (if not already installed)
-python3 -m pip install pyyaml
+# Install dependencies used by tests/coverage gate (if not already installed)
+python3 -m pip install pyyaml coverage
 
 # Static compile sanity
 python3 -m compileall -q agent-manager
@@ -80,8 +80,18 @@ python3 -m compileall -q agent-manager
 # Unit tests (same flags as CI)
 python3 -m unittest discover -s agent-manager/scripts/tests -p 'test_*.py' -v
 
-# Or run both via Makefile
+# Coverage gate (default threshold: 45%)
+python3 -m coverage run -m unittest discover -s agent-manager/scripts/tests -p 'test_*.py' -v
+python3 -m coverage report --show-missing --fail-under=45
+
+# Or run all checks via Makefile (includes coverage gate)
 make ci
+
+# Optional: override threshold locally
+COVERAGE_MIN=70 make ci
+
+# Optional fallback when coverage isn't installed globally
+COVERAGE_CMD="uvx --with pyyaml coverage" make ci
 ```
 
 ## 📖 Documentation

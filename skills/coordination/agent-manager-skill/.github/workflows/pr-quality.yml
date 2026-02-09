@@ -12,6 +12,8 @@ jobs:
   quality:
     name: Quality Checks
     runs-on: ubuntu-latest
+    env:
+      QUALITY_COVERAGE_MIN: ${{ vars.QUALITY_COVERAGE_MIN || '45' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,9 +31,15 @@ jobs:
           else
             python3 -m pip install pyyaml
           fi
+          python3 -m pip install coverage
 
       - name: Static compile sanity
         run: python3 -m compileall -q agent-manager
 
       - name: Unit tests
         run: python3 -m unittest discover -s agent-manager/scripts/tests -p 'test_*.py' -v
+
+      - name: Coverage gate
+        run: |
+          python3 -m coverage run -m unittest discover -s agent-manager/scripts/tests -p 'test_*.py' -v
+          python3 -m coverage report --show-missing --fail-under=${QUALITY_COVERAGE_MIN}

@@ -18,3 +18,8 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Coverage
+.coverage
+htmlcov/
+coverage.xml
