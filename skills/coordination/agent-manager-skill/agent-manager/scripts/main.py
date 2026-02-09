@@ -499,6 +499,23 @@ def write_scheduled_task_file(repo_root: Path, agent_id: str, job: str, task: st
     return task_file
 
 
+def _should_use_codex_file_pointer(message: str) -> bool:
+    if not message:
+        return False
+    line_count = message.count("\n") + 1
+    return line_count >= 12 or len(message) >= 1800
+
+
+def write_codex_message_file(repo_root: Path, agent_id: str, purpose: str, message: str) -> Path:
+    state_dir = repo_root / '.claude' / 'state' / 'agent-manager' / 'codex-messages' / agent_id
+    state_dir.mkdir(parents=True, exist_ok=True)
+    safe_purpose = "".join(ch if (ch.isalnum() or ch in ('-', '_')) else '-' for ch in (purpose or 'message'))
+    ts = int(time.time())
+    msg_file = state_dir / f"{safe_purpose}-{ts}.md"
+    msg_file.write_text(message + "\n", encoding='utf-8')
+    return msg_file
+
+
 def build_mcp_config_json(agent_config: dict) -> str:
     """Build MCP config JSON for provider CLIs that support it.
 
@@ -1098,10 +1115,20 @@ def cmd_send(args):
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
 
+    outgoing_message = args.message
+    if is_codex and _should_use_codex_file_pointer(outgoing_message):
+        repo_root = get_repo_root()
+        message_file = write_codex_message_file(repo_root, agent_id, 'send', outgoing_message)
+        outgoing_message = (
+            f"Read and execute the message from file: {message_file}\n"
+            "After completing it, summarize key results."
+        )
+        print(f"ℹ️  Codex long message detected; using file pointer: {message_file}")
+
     # Send message
     if not send_keys(
         agent_id,
-        args.message,
+        outgoing_message,
         send_enter=args.send_enter,
         clear_input=is_codex,
         escape_first=is_codex,
@@ -1111,7 +1138,10 @@ def cmd_send(args):
         return 1
 
     print(f"✅ Message sent to {agent_name}")
-    print(f"   Message: {args.message}")
+    if outgoing_message == args.message:
+        print(f"   Message: {args.message}")
+    else:
+        print(f"   Original message length: {len(args.message)} chars")
     print()
     print(f"Monitor response: python3 {Path(__file__).name} monitor {agent_name}")
     return 0
@@ -1170,6 +1200,15 @@ def cmd_assign(args):
 
     # Send task
     task_message = f"# Task Assignment\n\n{task}"
+    if is_codex and _should_use_codex_file_pointer(task_message):
+        repo_root = get_repo_root()
+        task_file = write_codex_message_file(repo_root, agent_id, 'assign', task_message)
+        task_message = (
+            f"Task assignment received. Read and follow instructions from file: {task_file}\n"
+            "Execute the task now and report progress/blocks."
+        )
+        print(f"ℹ️  Codex long assignment detected; using file pointer: {task_file}")
+
     if not send_keys(
         agent_id,
         task_message,
@@ -1551,7 +1590,7 @@ def cmd_schedule_run(args):
                 f"Run scheduled job '{args.job}'. Read and follow instructions from file: {schedule_task_path}"
             )
         # Fallback for inline schedules with large multi-line tasks.
-        elif "\n" in task_message or len(task_message) > 2000:
+        elif _should_use_codex_file_pointer(task_message):
             task_file = write_scheduled_task_file(repo_root, agent_id, args.job, task_message)
             task_message = (
                 f"Run scheduled job '{args.job}'. Read and follow instructions from file: {task_file}"
