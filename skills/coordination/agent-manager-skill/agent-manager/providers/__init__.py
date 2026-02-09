@@ -59,6 +59,9 @@ PROVIDERS: Dict[str, Dict] = {
                 'waiting for approval',
             ],
             'stuck_after_seconds': 180,
+            'context_left_patterns': [
+                r'(\d{1,3})%\s*context left',
+            ],
         },
     },
     'claude-code': {
@@ -101,6 +104,10 @@ PROVIDERS: Dict[str, Dict] = {
                 'waiting for approval',
             ],
             'stuck_after_seconds': 180,
+            'context_left_patterns': [
+                r'(\d{1,3})%\s*context left',
+                r'context (?:window|budget)[: ]+(\d{1,3})%',
+            ],
         },
     },
     'droid': {
@@ -149,6 +156,9 @@ PROVIDERS: Dict[str, Dict] = {
                 'waiting for approval',
             ],
             'stuck_after_seconds': 180,
+            'context_left_patterns': [
+                r'(\d{1,3})%\s*context left',
+            ],
         },
     },
     'claude': {
@@ -180,6 +190,10 @@ PROVIDERS: Dict[str, Dict] = {
                 'requires approval',
             ],
             'stuck_after_seconds': 180,
+            'context_left_patterns': [
+                r'(\d{1,3})%\s*context left',
+                r'context remaining[: ]+(\d{1,3})%',
+            ],
         },
     },
     'generic': {
@@ -207,6 +221,9 @@ PROVIDERS: Dict[str, Dict] = {
                 'waiting for approval',
             ],
             'stuck_after_seconds': 180,
+            'context_left_patterns': [
+                r'(\d{1,3})%\s*context left',
+            ],
         },
     },
     'opencode': {
@@ -243,6 +260,9 @@ PROVIDERS: Dict[str, Dict] = {
                 'waiting for approval',
             ],
             'stuck_after_seconds': 180,
+            'context_left_patterns': [
+                r'(\d{1,3})%\s*context left',
+            ],
         },
     },
 }
@@ -357,6 +377,12 @@ def get_stuck_after_seconds(launcher: str) -> int:
     """Get "stuck" threshold (seconds) for a given launcher/provider."""
     cfg = get_runtime_config(launcher)
     return int(cfg.get('stuck_after_seconds', 180))
+
+
+def get_context_left_patterns(launcher: str) -> List[str]:
+    """Get provider-specific regex patterns for context-left detection."""
+    cfg = get_runtime_config(launcher)
+    return list(cfg.get('context_left_patterns', []) or [])
 
 
 def get_system_prompt_mode(launcher: str) -> str:

@@ -63,6 +63,7 @@ from providers import (
     get_provider_key,
     get_session_restore_mode,
     get_session_restore_flag,
+    get_context_left_patterns,
 )
 
 
@@ -517,9 +518,9 @@ def write_codex_message_file(repo_root: Path, agent_id: str, purpose: str, messa
 
 
 
-_HEARTBEAT_CONTEXT_LEFT_RE = re.compile(r"(\d{1,3})%\s*context left", re.IGNORECASE)
 _HEARTBEAT_SESSION_MODES = {"restore", "auto", "fresh"}
 _HEARTBEAT_AUTO_CONTEXT_THRESHOLD = 25
+_CONTEXT_LEFT_PATTERN_CACHE: dict[str, list[re.Pattern]] = {}
 
 
 def _normalize_heartbeat_session_mode(value: object) -> str:
@@ -529,25 +530,53 @@ def _normalize_heartbeat_session_mode(value: object) -> str:
     return "restore"
 
 
-def _extract_context_left_percent(output: str) -> Optional[int]:
-    if not output:
-        return None
-    matches = _HEARTBEAT_CONTEXT_LEFT_RE.findall(output)
-    for match in reversed(matches):
+def _get_compiled_context_left_patterns(launcher: str) -> list[re.Pattern]:
+    provider_key = get_provider_key(launcher)
+    cached = _CONTEXT_LEFT_PATTERN_CACHE.get(provider_key)
+    if cached is not None:
+        return cached
+
+    compiled: list[re.Pattern] = []
+    for raw in get_context_left_patterns(launcher):
         try:
-            percent = int(match)
+            compiled.append(re.compile(str(raw), re.IGNORECASE))
         except Exception:
             continue
-        if 0 <= percent <= 100:
-            return percent
+
+    _CONTEXT_LEFT_PATTERN_CACHE[provider_key] = compiled
+    return compiled
+
+
+def _extract_context_left_percent(output: str, *, launcher: str) -> Optional[int]:
+    if not output:
+        return None
+
+    patterns = _get_compiled_context_left_patterns(launcher)
+    if not patterns:
+        return None
+
+    for line in reversed(output.splitlines()):
+        for pattern in patterns:
+            match = pattern.search(line)
+            if not match:
+                continue
+            captures = list(match.groups()) or [match.group(0)]
+            for value in captures:
+                try:
+                    percent = int(str(value))
+                except Exception:
+                    continue
+                if 0 <= percent <= 100:
+                    return percent
+
     return None
 
 
-def _detect_agent_context_left_percent(agent_id: str) -> Optional[int]:
+def _detect_agent_context_left_percent(agent_id: str, *, launcher: str) -> Optional[int]:
     output = capture_output(agent_id, lines=220)
     if not output:
         return None
-    return _extract_context_left_percent(output)
+    return _extract_context_left_percent(output, launcher=launcher)
 
 
 def _should_rollover_heartbeat_session(
@@ -637,7 +666,7 @@ def _maybe_rollover_heartbeat_session(
     if session_mode not in {'auto', 'fresh'}:
         return None
 
-    context_left_percent = _detect_agent_context_left_percent(agent_id)
+    context_left_percent = _detect_agent_context_left_percent(agent_id, launcher=launcher)
     if context_left_percent is not None:
         print(f"   Context left: {context_left_percent}%")
     elif session_mode == 'auto':

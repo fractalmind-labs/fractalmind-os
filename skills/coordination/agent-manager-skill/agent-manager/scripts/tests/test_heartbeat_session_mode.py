@@ -27,12 +27,16 @@ class HeartbeatSessionModeTests(unittest.TestCase):
             '... some more text\n'
             '... 18% context left\n'
         )
-        self.assertEqual(main._extract_context_left_percent(output), 18)
+        self.assertEqual(main._extract_context_left_percent(output, launcher='codex'), 18)
 
     def test_extract_context_left_percent_handles_missing_values(self):
-        self.assertIsNone(main._extract_context_left_percent('no context marker here'))
-        self.assertIsNone(main._extract_context_left_percent('999% context left'))
+        self.assertIsNone(main._extract_context_left_percent('no context marker here', launcher='codex'))
+        self.assertIsNone(main._extract_context_left_percent('999% context left', launcher='codex'))
 
+    def test_extract_context_left_percent_respects_provider_patterns(self):
+        output = '18% context left'
+        self.assertEqual(main._extract_context_left_percent(output, launcher='codex'), 18)
+        self.assertEqual(main._extract_context_left_percent(output, launcher='unknown-cli'), 18)
 
     def test_heartbeat_handoff_saved_detection(self):
         temp_root = Path(tempfile.mkdtemp(prefix='hb-handoff-'))
