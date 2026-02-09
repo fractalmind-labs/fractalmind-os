@@ -234,6 +234,7 @@ def generate_crontab_entries(repo_root: Optional[Path] = None) -> str:
         cmd_parts = [
             f"cd {repo_root_q}",
             f"mkdir -p {log_dir_q}",
+            f"python3 {main_script_q} start {file_id_q} --restore",
             f"python3 {main_script_q} heartbeat run {file_id_q}",
         ]
 
