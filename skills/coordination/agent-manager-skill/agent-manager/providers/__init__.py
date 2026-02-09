@@ -28,7 +28,9 @@ PROVIDERS: Dict[str, Dict] = {
             'mode': 'unsupported',
         },
         'session_restore': {
-            'mode': 'unsupported',
+            # Codex supports `resume [SESSION_ID]` to continue an existing session.
+            'mode': 'cli_optional_arg',
+            'flag': 'resume',
         },
         'runtime': {
             'busy_patterns': [

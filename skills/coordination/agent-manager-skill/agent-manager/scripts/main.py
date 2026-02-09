@@ -252,6 +252,82 @@ def _find_new_claude_session_id_with_retry(cwd: str, *, before_jsonl_paths: set[
         time.sleep(0.2)
 
 
+def _codex_sessions_dir() -> Path:
+    return Path.home() / '.codex' / 'sessions'
+
+
+def _codex_session_exists(cwd: str, session_id: str) -> bool:
+    if not _looks_like_uuid(session_id):
+        return False
+    sessions_dir = _codex_sessions_dir()
+    if not sessions_dir.exists() or not sessions_dir.is_dir():
+        return False
+    try:
+        for p in sessions_dir.rglob('*.jsonl'):
+            if session_id in p.name:
+                return True
+        return False
+    except Exception:
+        return False
+
+
+def _snapshot_codex_sessions(cwd: str) -> set[str]:
+    sessions_dir = _codex_sessions_dir()
+    if not sessions_dir.exists() or not sessions_dir.is_dir():
+        return set()
+    return {str(p) for p in sessions_dir.rglob('*.jsonl')}
+
+
+def _extract_codex_session_id_from_jsonl(jsonl_path: Path) -> str:
+    try:
+        with jsonl_path.open('r', encoding='utf-8') as f:
+            for _ in range(10):
+                line = f.readline()
+                if not line:
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+                payload = json.loads(line)
+                p = payload.get('payload') or {}
+                session_id = str(p.get('id') or '').strip()
+                if _looks_like_uuid(session_id):
+                    return session_id
+        return ""
+    except Exception:
+        return ""
+
+
+def _find_new_codex_session_id(cwd: str, *, before_jsonl_paths: set[str]) -> str:
+    sessions_dir = _codex_sessions_dir()
+    if not sessions_dir.exists() or not sessions_dir.is_dir():
+        return ""
+
+    candidates = [p for p in sessions_dir.rglob('*.jsonl') if str(p) not in before_jsonl_paths]
+    if not candidates:
+        candidates = list(sessions_dir.rglob('*.jsonl'))
+    if not candidates:
+        return ""
+
+    for candidate in sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True):
+        session_id = _extract_codex_session_id_from_jsonl(candidate)
+        if session_id:
+            return session_id
+
+    return ""
+
+
+def _find_new_codex_session_id_with_retry(cwd: str, *, before_jsonl_paths: set[str], timeout_s: float = 2.0) -> str:
+    deadline = time.time() + max(0.0, float(timeout_s))
+    while True:
+        session_id = _find_new_codex_session_id(cwd, before_jsonl_paths=before_jsonl_paths)
+        if session_id:
+            return session_id
+        if time.time() >= deadline:
+            return ""
+        time.sleep(0.2)
+
+
 def _opencode_storage_dir() -> Path:
     return Path.home() / '.local' / 'share' / 'opencode' / 'storage'
 
@@ -354,6 +430,8 @@ def _provider_session_exists(provider_key: str, cwd: str, session_id: str) -> bo
         return _droid_session_exists(cwd, session_id)
     if provider_key in {'claude', 'claude-code'}:
         return _claude_session_exists(cwd, session_id)
+    if provider_key == 'codex':
+        return _codex_session_exists(cwd, session_id)
     if provider_key == 'opencode':
         return _opencode_session_exists(cwd, session_id)
     return False
@@ -364,6 +442,8 @@ def _snapshot_provider_sessions(provider_key: str, cwd: str) -> set[str]:
         return _snapshot_droid_sessions(cwd)
     if provider_key in {'claude', 'claude-code'}:
         return _snapshot_claude_sessions(cwd)
+    if provider_key == 'codex':
+        return _snapshot_codex_sessions(cwd)
     if provider_key == 'opencode':
         return _snapshot_opencode_sessions(cwd)
     return set()
@@ -374,6 +454,8 @@ def _find_new_provider_session_id_with_retry(provider_key: str, cwd: str, *, bef
         return _find_new_droid_session_id_with_retry(cwd, before_jsonl_paths=before_paths, timeout_s=timeout_s)
     if provider_key in {'claude', 'claude-code'}:
         return _find_new_claude_session_id_with_retry(cwd, before_jsonl_paths=before_paths, timeout_s=timeout_s)
+    if provider_key == 'codex':
+        return _find_new_codex_session_id_with_retry(cwd, before_jsonl_paths=before_paths, timeout_s=timeout_s)
     if provider_key == 'opencode':
         return _find_new_opencode_session_id_with_retry(cwd, before_json_paths=before_paths, timeout_s=timeout_s)
     return ""
@@ -392,6 +474,8 @@ def _apply_session_restore_args(
     must stay first; claude options follow after.
     """
     launcher_lower = (launcher or "").lower()
+    if provider_key == 'codex' and restore_flag == 'resume':
+        return ['resume', session_id] + list(launcher_args or [])
     if provider_key == 'claude-code' and 'ccc' in launcher_lower:
         if launcher_args and not str(launcher_args[0]).startswith('-'):
             return [launcher_args[0], restore_flag, session_id] + launcher_args[1:]
@@ -711,7 +795,7 @@ def cmd_start(args):
     did_provider_restore = False
     provider_before_sessions: set[str] = set()
 
-    track_provider_session = provider_key in {'droid', 'claude', 'claude-code', 'opencode'}
+    track_provider_session = provider_key in {'droid', 'claude', 'claude-code', 'codex', 'opencode'}
     if provider_key == 'droid' and 'exec' in launcher_args:
         # `droid exec ...` doesn't create a resumable session in ~/.factory/sessions.
         track_provider_session = False
