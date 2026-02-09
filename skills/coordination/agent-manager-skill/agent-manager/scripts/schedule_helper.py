@@ -354,7 +354,12 @@ def list_heartbeats_formatted() -> str:
         status = "✓" if enabled else "✗"
         cron = hb.get('cron', 'N/A')
         max_runtime = hb.get('max_runtime', '')
-        runtime_str = f"({max_runtime})" if max_runtime else ""
+        session_mode = str(hb.get('session_mode', 'restore') or 'restore').strip().lower()
+        details = []
+        if max_runtime:
+            details.append(max_runtime)
+        details.append(f"mode:{session_mode}")
+        runtime_str = f"({' '.join(details)})" if details else ""
 
         lines.append(f"  {status} heartbeat           {cron:20} {runtime_str}")
 

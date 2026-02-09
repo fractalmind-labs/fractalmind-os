@@ -380,6 +380,7 @@ launcher_args:
 heartbeat:
   cron: "*/30 * * * *"  # Every 30 minutes
   max_runtime: 5m
+  session_mode: auto     # restore | auto | fresh
   enabled: true
 ---
 ```
@@ -390,6 +391,7 @@ heartbeat:
 |-------|------|----------|-------------|
 | `cron` | string | ✓ | Cron expression (e.g., `*/30 * * * *`) |
 | `max_runtime` | string | | Maximum runtime (e.g., `5m`, `10m`) |
+| `session_mode` | string | | Session policy: `restore` (default), `auto` (rollover when context <25%), `fresh` (always rollover after handoff) |
 | `enabled` | bool | | Default: `true` |
 
 ### Heartbeat vs Schedules
@@ -414,7 +416,7 @@ Output:
 💓 Heartbeats:
 
 dev (EMP_0001):
-  ✓ heartbeat           */30 * * * *         (5m)
+  ✓ heartbeat           */30 * * * *         (5m mode:auto)
 ```
 
 #### `heartbeat sync` - Sync Heartbeats to Crontab
@@ -453,6 +455,7 @@ python3 scripts/main.py heartbeat run EMP_0001 --timeout 1m
 - Skips if agent is disabled
 - Skips if agent is not running (does NOT start the agent)
 - Sends standard heartbeat message to the agent
+- Optional session rollover via `session_mode` (handoff first, then fresh session)
 - Waits for response (up to `max_runtime`)
 
 ### Standard Heartbeat Message
