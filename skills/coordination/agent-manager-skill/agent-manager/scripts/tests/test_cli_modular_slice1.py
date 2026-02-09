@@ -1,6 +1,7 @@
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 SCRIPTS_DIR = Path(__file__).resolve().parents[1]
@@ -26,6 +27,12 @@ class CliModularSlice1Tests(unittest.TestCase):
         self.assertEqual(args.agent, 'dev')
         self.assertFalse(args.send_enter)
         self.assertEqual(args.message, 'hello')
+
+    def test_assign_task_file_default_preserved(self):
+        args = create_parser().parse_args(['assign', 'dev'])
+        self.assertEqual(args.command, 'assign')
+        self.assertEqual(args.agent, 'dev')
+        self.assertIsNone(args.task_file)
 
     def test_heartbeat_trace_time_range_flags(self):
         args = create_parser().parse_args(
@@ -69,6 +76,25 @@ class CliModularSlice1Tests(unittest.TestCase):
         self.assertIs(handlers['start'], main.cmd_start)
         self.assertIs(handlers['status'], main.cmd_status)
         self.assertIs(handlers['heartbeat'], main.cmd_heartbeat)
+
+    def test_start_wrapper_delegates_to_lifecycle_handler(self):
+        args = object()
+        with patch('main.lifecycle_cmd_start', return_value=17) as mock_handler:
+            result = main.cmd_start(args)
+
+        self.assertEqual(result, 17)
+        mock_handler.assert_called_once()
+        self.assertIs(mock_handler.call_args.kwargs['deps'], main)
+
+    def test_assign_wrapper_delegates_with_main_start_handler(self):
+        args = object()
+        with patch('main.lifecycle_cmd_assign', return_value=23) as mock_handler:
+            result = main.cmd_assign(args)
+
+        self.assertEqual(result, 23)
+        mock_handler.assert_called_once()
+        self.assertIs(mock_handler.call_args.kwargs['deps'], main)
+        self.assertIs(mock_handler.call_args.kwargs['start_handler'], main.cmd_start)
 
 
 if __name__ == '__main__':
