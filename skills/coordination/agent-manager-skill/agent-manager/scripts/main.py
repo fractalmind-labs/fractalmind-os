@@ -63,6 +63,7 @@ from providers import (
     get_provider_key,
     get_session_restore_mode,
     get_session_restore_flag,
+    get_context_left_patterns,
 )
 
 
@@ -497,6 +498,229 @@ def write_scheduled_task_file(repo_root: Path, agent_id: str, job: str, task: st
     task_file = state_dir / f"{safe_job}.md"
     task_file.write_text(task + "\n", encoding='utf-8')
     return task_file
+
+
+def _should_use_codex_file_pointer(message: str) -> bool:
+    if not message:
+        return False
+    line_count = message.count("\n") + 1
+    return line_count >= 12 or len(message) >= 1800
+
+
+def write_codex_message_file(repo_root: Path, agent_id: str, purpose: str, message: str) -> Path:
+    state_dir = repo_root / '.claude' / 'state' / 'agent-manager' / 'codex-messages' / agent_id
+    state_dir.mkdir(parents=True, exist_ok=True)
+    safe_purpose = "".join(ch if (ch.isalnum() or ch in ('-', '_')) else '-' for ch in (purpose or 'message'))
+    ts = int(time.time())
+    msg_file = state_dir / f"{safe_purpose}-{ts}.md"
+    msg_file.write_text(message + "\n", encoding='utf-8')
+    return msg_file
+
+
+
+_HEARTBEAT_SESSION_MODES = {"restore", "auto", "fresh"}
+_HEARTBEAT_AUTO_CONTEXT_THRESHOLD = 25
+_CONTEXT_LEFT_PATTERN_CACHE: dict[str, list[re.Pattern]] = {}
+
+
+def _normalize_heartbeat_session_mode(value: object) -> str:
+    mode = str(value or "restore").strip().lower()
+    if mode in _HEARTBEAT_SESSION_MODES:
+        return mode
+    return "restore"
+
+
+def _get_compiled_context_left_patterns(launcher: str) -> list[re.Pattern]:
+    provider_key = get_provider_key(launcher)
+    cached = _CONTEXT_LEFT_PATTERN_CACHE.get(provider_key)
+    if cached is not None:
+        return cached
+
+    compiled: list[re.Pattern] = []
+    for raw in get_context_left_patterns(launcher):
+        try:
+            compiled.append(re.compile(str(raw), re.IGNORECASE))
+        except Exception:
+            continue
+
+    _CONTEXT_LEFT_PATTERN_CACHE[provider_key] = compiled
+    return compiled
+
+
+def _extract_context_left_percent(output: str, *, launcher: str) -> Optional[int]:
+    if not output:
+        return None
+
+    patterns = _get_compiled_context_left_patterns(launcher)
+    if not patterns:
+        return None
+
+    for line in reversed(output.splitlines()):
+        for pattern in patterns:
+            match = pattern.search(line)
+            if not match:
+                continue
+            captures = list(match.groups()) or [match.group(0)]
+            for value in captures:
+                try:
+                    percent = int(str(value))
+                except Exception:
+                    continue
+                if 0 <= percent <= 100:
+                    return percent
+
+    return None
+
+
+def _detect_agent_context_left_percent(agent_id: str, *, launcher: str) -> Optional[int]:
+    output = capture_output(agent_id, lines=220)
+    if not output:
+        return None
+    return _extract_context_left_percent(output, launcher=launcher)
+
+
+def _should_rollover_heartbeat_session(
+    session_mode: str,
+    context_left_percent: Optional[int],
+    *,
+    threshold: int = _HEARTBEAT_AUTO_CONTEXT_THRESHOLD,
+) -> bool:
+    if session_mode == "fresh":
+        return True
+    if session_mode != "auto":
+        return False
+    if context_left_percent is None:
+        return False
+    return context_left_percent < int(threshold)
+
+
+def _write_heartbeat_handoff_template(repo_root: Path, agent_id: str, heartbeat_id: str) -> Path:
+    state_dir = repo_root / '.claude' / 'state' / 'agent-manager' / 'heartbeat-handoffs' / agent_id
+    state_dir.mkdir(parents=True, exist_ok=True)
+    handoff_file = state_dir / f"{heartbeat_id}.md"
+    template = (
+        "# Heartbeat Session Handoff\n\n"
+        f"- HB_ID: {heartbeat_id}\n"
+        "- Status: pending\n\n"
+        "## Current Objective\n- \n\n"
+        "## Completed\n- \n\n"
+        "## Pending / Blockers\n- \n\n"
+        "## Next Action\n- \n\n"
+        "## References\n- \n"
+    )
+    handoff_file.write_text(template, encoding='utf-8')
+    return handoff_file
+
+
+def _heartbeat_handoff_saved(handoff_file: Path) -> bool:
+    try:
+        content = handoff_file.read_text(encoding='utf-8')
+    except Exception:
+        return False
+    stripped = content.strip()
+    if not stripped:
+        return False
+    if 'Status: saved' in content:
+        return True
+    if 'Status: pending' not in content and len(stripped) >= 80:
+        return True
+    return False
+
+
+def _build_heartbeat_handoff_prompt(handoff_file: Path, heartbeat_id: str) -> str:
+    return (
+        "Context is low. Before session rollover, persist a concise handoff.\n"
+        f"Update file: {handoff_file}\n"
+        "Requirements:\n"
+        "1) Replace `Status: pending` with `Status: saved`.\n"
+        "2) Fill sections: Current Objective, Completed, Pending / Blockers, Next Action, References.\n"
+        "3) Keep it concise and actionable.\n"
+        f"4) Then reply exactly: HEARTBEAT_HANDOFF_SAVED [HB_ID:{heartbeat_id}]"
+    )
+
+
+def _wait_for_idle_after_handoff(agent_id: str, launcher: str, timeout_seconds: int) -> str:
+    deadline = time.time() + max(10, int(timeout_seconds))
+    last_state = 'unknown'
+    while time.time() < deadline:
+        runtime = get_agent_runtime_state(agent_id, launcher=launcher)
+        last_state = str(runtime.get('state', 'unknown'))
+        if last_state == 'idle':
+            return last_state
+        if last_state in {'blocked', 'error', 'stuck'}:
+            return last_state
+        time.sleep(2)
+    return last_state
+
+
+def _maybe_rollover_heartbeat_session(
+    *,
+    agent_name: str,
+    agent_id: str,
+    agent_file_id: str,
+    launcher: str,
+    timeout_seconds: Optional[int],
+    heartbeat_id: str,
+    session_mode: str,
+) -> Optional[Path]:
+    if session_mode not in {'auto', 'fresh'}:
+        return None
+
+    context_left_percent = _detect_agent_context_left_percent(agent_id, launcher=launcher)
+    if context_left_percent is not None:
+        print(f"   Context left: {context_left_percent}%")
+    elif session_mode == 'auto':
+        print("   Context left: unknown (skip auto rollover)")
+
+    if not _should_rollover_heartbeat_session(session_mode, context_left_percent):
+        return None
+
+    reason = 'fresh session_mode' if session_mode == 'fresh' else f'context<{_HEARTBEAT_AUTO_CONTEXT_THRESHOLD}%'
+    print(f"♻️  Heartbeat session rollover triggered ({reason})")
+
+    is_codex = 'codex' in (launcher or '').lower()
+    repo_root = get_repo_root()
+    handoff_file = _write_heartbeat_handoff_template(repo_root, agent_id, heartbeat_id)
+    handoff_prompt = _build_heartbeat_handoff_prompt(handoff_file, heartbeat_id)
+
+    if not send_keys(
+        agent_id,
+        handoff_prompt,
+        send_enter=True,
+        clear_input=is_codex,
+        escape_first=is_codex,
+        enter_via_key=is_codex,
+    ):
+        print("⚠️  Failed to send handoff prompt; skip rollover")
+        return None
+
+    handoff_timeout = min(180, max(45, int(timeout_seconds or 90)))
+    state_after_handoff = _wait_for_idle_after_handoff(agent_id, launcher=launcher, timeout_seconds=handoff_timeout)
+    saved = _heartbeat_handoff_saved(handoff_file)
+    if not saved:
+        print(f"⚠️  Handoff not saved (state={state_after_handoff}); skip rollover")
+        return None
+
+    print(f"✅ Handoff saved: {handoff_file}")
+
+    if not stop_session(agent_id):
+        print(f"⚠️  Failed to stop session for '{agent_name}'; skip rollover")
+        return None
+
+    time.sleep(1)
+    restart_args = argparse.Namespace(
+        agent=agent_file_id,
+        working_dir=None,
+        restore=False,
+        tmux_layout='sessions',
+    )
+    if cmd_start(restart_args) != 0:
+        print(f"⚠️  Failed to restart '{agent_name}' with fresh session")
+        return None
+
+    # Give the restarted TUI a brief moment before sending heartbeat.
+    time.sleep(2)
+    return handoff_file
 
 
 def build_mcp_config_json(agent_config: dict) -> str:
@@ -1098,19 +1322,33 @@ def cmd_send(args):
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
 
+    outgoing_message = args.message
+    if is_codex and _should_use_codex_file_pointer(outgoing_message):
+        repo_root = get_repo_root()
+        message_file = write_codex_message_file(repo_root, agent_id, 'send', outgoing_message)
+        outgoing_message = (
+            f"Read and execute the message from file: {message_file}\n"
+            "After completing it, summarize key results."
+        )
+        print(f"ℹ️  Codex long message detected; using file pointer: {message_file}")
+
     # Send message
     if not send_keys(
         agent_id,
-        args.message,
+        outgoing_message,
         send_enter=args.send_enter,
         clear_input=is_codex,
         escape_first=is_codex,
+        enter_via_key=is_codex,
     ):
         print(f"❌ Failed to send message to {agent_name}")
         return 1
 
     print(f"✅ Message sent to {agent_name}")
-    print(f"   Message: {args.message}")
+    if outgoing_message == args.message:
+        print(f"   Message: {args.message}")
+    else:
+        print(f"   Original message length: {len(args.message)} chars")
     print()
     print(f"Monitor response: python3 {Path(__file__).name} monitor {agent_name}")
     return 0
@@ -1169,12 +1407,22 @@ def cmd_assign(args):
 
     # Send task
     task_message = f"# Task Assignment\n\n{task}"
+    if is_codex and _should_use_codex_file_pointer(task_message):
+        repo_root = get_repo_root()
+        task_file = write_codex_message_file(repo_root, agent_id, 'assign', task_message)
+        task_message = (
+            f"Task assignment received. Read and follow instructions from file: {task_file}\n"
+            "Execute the task now and report progress/blocks."
+        )
+        print(f"ℹ️  Codex long assignment detected; using file pointer: {task_file}")
+
     if not send_keys(
         agent_id,
         task_message,
         send_enter=True,
         clear_input=is_codex,
         escape_first=is_codex,
+        enter_via_key=is_codex,
     ):
         print(f"❌ Failed to assign task to {agent_name}")
         return 1
@@ -1318,11 +1566,39 @@ def cmd_heartbeat_run(args):
     print(f"💓 Heartbeat: {agent_name}")
     print(f"   Time: {time.strftime('%Y-%m-%d %H:%M:%S')}")
 
-    # Standard heartbeat message
-    heartbeat_message = "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK."
-
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
+
+    session_mode_raw = heartbeat.get('session_mode', 'restore')
+    session_mode = _normalize_heartbeat_session_mode(session_mode_raw)
+    if str(session_mode_raw).strip().lower() not in _HEARTBEAT_SESSION_MODES:
+        print(f"⚠️  Unknown heartbeat session_mode '{session_mode_raw}', fallback to 'restore'")
+    print(f"   Session mode: {session_mode}")
+
+    # Standard heartbeat message (with traceable id for delivery debugging)
+    heartbeat_id = time.strftime('%Y%m%d-%H%M%S')
+    print(f"   HB_ID: {heartbeat_id}")
+
+    rollover_handoff_file = _maybe_rollover_heartbeat_session(
+        agent_name=agent_name,
+        agent_id=agent_id,
+        agent_file_id=agent_file_id,
+        launcher=launcher,
+        timeout_seconds=timeout_seconds,
+        heartbeat_id=heartbeat_id,
+        session_mode=session_mode,
+    )
+
+    heartbeat_message = (
+        "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. "
+        "Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK. "
+        f"[HB_ID:{heartbeat_id}]"
+    )
+    if rollover_handoff_file is not None:
+        heartbeat_message = (
+            f"First read rollover handoff file: {rollover_handoff_file}.\n"
+            + heartbeat_message
+        )
 
     # Send heartbeat
     if not send_keys(
@@ -1331,6 +1607,7 @@ def cmd_heartbeat_run(args):
         send_enter=True,
         clear_input=is_codex,
         escape_first=is_codex,
+        enter_via_key=is_codex,
     ):
         print(f"❌ Failed to send heartbeat to {agent_name}")
         return 1
@@ -1548,7 +1825,7 @@ def cmd_schedule_run(args):
                 f"Run scheduled job '{args.job}'. Read and follow instructions from file: {schedule_task_path}"
             )
         # Fallback for inline schedules with large multi-line tasks.
-        elif "\n" in task_message or len(task_message) > 2000:
+        elif _should_use_codex_file_pointer(task_message):
             task_file = write_scheduled_task_file(repo_root, agent_id, args.job, task_message)
             task_message = (
                 f"Run scheduled job '{args.job}'. Read and follow instructions from file: {task_file}"
@@ -1561,6 +1838,7 @@ def cmd_schedule_run(args):
         send_enter=True,
         clear_input=is_codex,
         escape_first=is_codex,
+        enter_via_key=is_codex,
     ):
         print(f"❌ Failed to send task to agent")
         return 1
