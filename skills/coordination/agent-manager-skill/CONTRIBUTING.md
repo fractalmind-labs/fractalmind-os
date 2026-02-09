@@ -66,6 +66,24 @@ Before submitting a PR, ensure:
 - No new linting errors are introduced
 - Changes are well-tested
 
+### Reproduce CI checks locally
+
+Use the same commands as GitHub Actions `pr-quality` workflow:
+
+```bash
+# Install dependencies used by tests (if not already installed)
+python3 -m pip install pyyaml
+
+# Static compile sanity
+python3 -m compileall -q agent-manager
+
+# Unit tests (same flags as CI)
+python3 -m unittest discover -s agent-manager/scripts/tests -p 'test_*.py' -v
+
+# Or run both via Makefile
+make ci
+```
+
 ## 📖 Documentation
 
 - Keep documentation up-to-date
