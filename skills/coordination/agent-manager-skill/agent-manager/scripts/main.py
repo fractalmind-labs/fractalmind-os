@@ -46,7 +46,6 @@ from tmux_helper import (
     wait_for_prompt,
     inject_system_prompt,
     wait_for_agent_ready,
-    is_agent_busy,
     get_agent_runtime_state,
 )
 
@@ -1786,11 +1785,9 @@ def cmd_schedule_run(args):
             if not _restart_agent(f"busy>{timeout_seconds}s"):
                 return 1
         else:
-            # Fall back to legacy busy detection for compatibility.
-            if is_agent_busy(agent_id, launcher):
-                print(f"⏭️  Agent is busy, skipping scheduled task")
-                print(f"   Will retry on next cron execution")
-                return 0
+            print(f"⏭️  Agent is busy, skipping scheduled task")
+            print(f"   Will retry on next cron execution")
+            return 0
 
     # Optional: clear context by restarting the session before sending the scheduled task.
     # This is intentionally "idle-only" to avoid interrupting interactive use.

@@ -11,6 +11,12 @@ import re
 import os
 from typing import Optional, List, Dict, Any, Tuple
 
+from runtime_state import (
+    evaluate_runtime_state,
+    parse_elapsed_seconds,
+    detect_error_reason,
+)
+
 
 # Session prefix for all agent sessions
 SESSION_PREFIX = "agent-"
@@ -874,197 +880,108 @@ def is_agent_busy(agent_id: str, launcher: str = "") -> bool:
     Returns:
         True if agent is busy (should not send new tasks)
     """
-    if not session_exists(agent_id):
-        return False
+    runtime = get_agent_runtime_state(agent_id, launcher=launcher)
+    return str(runtime.get('state', 'unknown')) in {'busy', 'stuck'}
 
-    target = _agent_pane_target(agent_id)
-    if not target:
-        return False
 
-    # Capture only the last few lines to detect current state
-    # Using -5 to avoid matching old output that scrolled by
-    result = subprocess.run([
-        'tmux', 'capture-pane', '-p', '-t', target, '-S-5'
-    ], capture_output=True, text=True)
+def _parse_elapsed_seconds(output: str) -> Optional[int]:
+    return parse_elapsed_seconds(output)
 
-    if result.returncode != 0:
-        return True  # If we can't read, assume busy
 
-    output = result.stdout
+def _detect_error_reason(output: str) -> Optional[str]:
+    return detect_error_reason(output)
 
-    # Provider-specific activity indicators.
-    try:
-        import sys
-        from pathlib import Path
 
-        sys.path.insert(0, str(Path(__file__).parent.parent))
-        from providers import get_busy_patterns
+def is_agent_blocked(agent_id: str, launcher: str = "") -> bool:
+    runtime = get_agent_runtime_state(agent_id, launcher=launcher)
+    return str(runtime.get('state', 'unknown')) == 'blocked'
 
-        busy_patterns = get_busy_patterns(launcher)
-    except Exception:
-        busy_patterns = []
 
-    # Fallback patterns (minimal, cross-provider).
-    if not busy_patterns:
-        busy_patterns = [
+def _get_runtime_config(launcher: str) -> Dict[str, object]:
+    runtime_config: Dict[str, object] = {
+        'busy_patterns': [
             '✻ Thinking',
             'Thinking...',
             '⏳ Thinking',
             '(esc to interrupt',
-        ]
-
-    for pattern in busy_patterns:
-        if pattern in output:
-            return True
-
-    return False
-
-
-def _parse_elapsed_seconds(output: str) -> Optional[int]:
-    """Best-effort parse of an on-screen elapsed timer (e.g., "[⏱ 5m 7s]")."""
-    if not output:
-        return None
-
-    match = re.search(r"\[\s*(?:⏱|⏳)\s*(\d+)m\s*(\d+)s\s*\]", output)
-    if match:
-        minutes = int(match.group(1))
-        seconds = int(match.group(2))
-        return minutes * 60 + seconds
-
-    match = re.search(r"\[\s*(?:⏱|⏳)\s*(\d+)s\s*\]", output)
-    if match:
-        return int(match.group(1))
-
-    match = re.search(r"\b(\d+\.\d+)s\b", output)
-    if match:
-        try:
-            return int(float(match.group(1)))
-        except Exception:
-            return None
-
-    return None
-
-
-def _detect_error_reason(output: str) -> Optional[str]:
-    """Best-effort detect a terminal/tool error in recent agent output.
-
-    This is intentionally heuristic: we only use it to decide whether an agent
-    is "idle" versus "error" (needs restart/retry).
-    """
-    if not output:
-        return None
-
-    lowered = output.lower()
-
-    # Network / gateway issues seen in this repo.
-    if 'stopped after 10 redirects' in lowered:
-        return 'redirect_loop'
-    if 'error 522' in lowered or 'cloudflare ray id' in lowered:
-        return 'cloudflare_522'
-    if 'error: 500 post ' in lowered:
-        return 'http_500'
-
-    # Provider/model config issues.
-    if 'api error: 400' in lowered and 'unknown provider' in lowered:
-        return 'unknown_provider'
-    if 'invalid_request_error' in lowered:
-        return 'invalid_request'
-
-    # Generic timeouts / connection failures.
-    if 'timed out' in lowered or 'timeout' in lowered:
-        return 'timeout'
-    if 'econnrefused' in lowered or 'connection refused' in lowered:
-        return 'connection_refused'
-    if 'etimedout' in lowered:
-        return 'connection_timed_out'
-
-    return None
-
-
-def is_agent_blocked(agent_id: str, launcher: str = "") -> bool:
-    """Detect whether an agent is blocked on approvals/user input (best-effort)."""
-    if not session_exists(agent_id):
-        return False
-
-    target = _agent_pane_target(agent_id)
-    if not target:
-        return False
-    result = subprocess.run(
-        ['tmux', 'capture-pane', '-p', '-t', target, '-S-30'],
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        return False
-
-    output = result.stdout
+        ],
+        'blocked_patterns': [
+            'all actions require approval',
+            'actions require approval',
+            'requires approval',
+            'waiting for approval',
+        ],
+        'stuck_after_seconds': 180,
+    }
     try:
         import sys
         from pathlib import Path
 
         sys.path.insert(0, str(Path(__file__).parent.parent))
-        from providers import get_blocked_patterns
+        from providers import get_runtime_config
 
-        blocked_patterns = get_blocked_patterns(launcher)
+        provider_runtime_config = get_runtime_config(launcher)
+        if isinstance(provider_runtime_config, dict):
+            runtime_config.update(provider_runtime_config)
     except Exception:
-        blocked_patterns = []
-
-    if not blocked_patterns:
-        blocked_patterns = [
-            'all actions require approval',
-            'actions require approval',
-            'requires approval',
-            'waiting for approval',
-        ]
-
-    return any(p in output for p in blocked_patterns)
+        pass
+    return runtime_config
 
 
 def get_agent_runtime_state(agent_id: str, launcher: str = "") -> Dict[str, object]:
-    """Return a more truthful runtime state than just "tmux session exists".
+    """Return unified runtime state using the shared runtime state machine.
 
-    States:
-      - stopped: no tmux session
-      - blocked: waiting on approvals/user input
-      - error: last action failed (network/provider/etc) and agent is otherwise idle
-      - stuck: busy for a long time (heuristic)
-      - busy: actively processing
-      - idle: running and ready
+    States are normalized to:
+      idle|busy|blocked|stuck|error|unknown
     """
+    runtime_config = _get_runtime_config(launcher)
+
     if not session_exists(agent_id):
-        return {'state': 'stopped'}
+        return evaluate_runtime_state(
+            output="",
+            runtime_config=runtime_config,
+            session_running=False,
+        )
 
     target = _agent_pane_target(agent_id)
     if not target:
-        return {'state': 'busy', 'reason': 'missing_tmux_target'}
+        return evaluate_runtime_state(
+            output="",
+            runtime_config=runtime_config,
+            output_readable=False,
+            force_state='unknown',
+            force_reason='missing_tmux_target',
+        )
+
     result = subprocess.run(
-        # Capture a larger window so we can reliably detect error pages/output
-        # (e.g., Cloudflare 522 HTML) that may not fit in the last ~40 lines.
         ['tmux', 'capture-pane', '-p', '-t', target, '-S-200'],
         capture_output=True,
         text=True,
     )
 
     if result.returncode != 0:
-        return {'state': 'busy', 'reason': 'unreadable_output'}
+        return evaluate_runtime_state(
+            output="",
+            runtime_config=runtime_config,
+            output_readable=False,
+        )
 
     output = result.stdout
     elapsed_seconds = _parse_elapsed_seconds(output)
 
-    # Codex can present a first-run/upgrade model selection prompt that looks "idle"
-    # but actually blocks all automation (cron + tmux send-keys). Dismiss it if present.
     if launcher and 'codex' in launcher.lower() and _is_codex_model_choice_prompt(output):
         now = time.time()
         last_failure = _CODEX_MODEL_PROMPT_LAST_FAILURE.get(agent_id)
         if last_failure is not None and (now - last_failure) < _CODEX_MODEL_PROMPT_FAILURE_THROTTLE_S:
-            return {
-                'state': 'blocked',
-                'reason': 'codex_model_choice',
-                'elapsed_seconds': elapsed_seconds,
-            }
+            return evaluate_runtime_state(
+                output=output,
+                runtime_config=runtime_config,
+                elapsed_seconds=elapsed_seconds,
+                force_state='blocked',
+                force_reason='codex_model_choice',
+            )
 
         if _dismiss_codex_model_choice_prompt(agent_id):
-            # Give Codex a moment to redraw after dismissing the menu, then re-evaluate.
             time.sleep(0.5)
             recapture = subprocess.run(
                 ['tmux', 'capture-pane', '-p', '-t', target, '-S-200'],
@@ -1075,56 +992,27 @@ def get_agent_runtime_state(agent_id: str, launcher: str = "") -> Dict[str, obje
                 output = recapture.stdout
                 elapsed_seconds = _parse_elapsed_seconds(output)
             else:
-                return {'state': 'busy', 'reason': 'unreadable_output'}
+                return evaluate_runtime_state(
+                    output="",
+                    runtime_config=runtime_config,
+                    output_readable=False,
+                )
         else:
             _CODEX_MODEL_PROMPT_LAST_FAILURE[agent_id] = now
-            return {
-                'state': 'blocked',
-                'reason': 'codex_model_choice',
-                'elapsed_seconds': elapsed_seconds,
-            }
+            return evaluate_runtime_state(
+                output=output,
+                runtime_config=runtime_config,
+                elapsed_seconds=elapsed_seconds,
+                force_state='blocked',
+                force_reason='codex_model_choice',
+            )
 
-    if is_agent_blocked(agent_id, launcher=launcher):
-        return {
-            'state': 'blocked',
-            'elapsed_seconds': elapsed_seconds,
-        }
-
-    if is_agent_busy(agent_id, launcher=launcher):
-        stuck_after_seconds = 180
-        try:
-            import sys
-            from pathlib import Path
-
-            sys.path.insert(0, str(Path(__file__).parent.parent))
-            from providers import get_stuck_after_seconds
-
-            stuck_after_seconds = int(get_stuck_after_seconds(launcher))
-        except Exception:
-            stuck_after_seconds = 180
-
-        if elapsed_seconds is not None and elapsed_seconds >= stuck_after_seconds:
-            return {
-                'state': 'stuck',
-                'elapsed_seconds': elapsed_seconds,
-            }
-        return {
-            'state': 'busy',
-            'elapsed_seconds': elapsed_seconds,
-        }
-
-    error_reason = _detect_error_reason(output)
-    if error_reason:
-        return {
-            'state': 'error',
-            'reason': error_reason,
-            'elapsed_seconds': elapsed_seconds,
-        }
-
-    return {
-        'state': 'idle',
-        'elapsed_seconds': elapsed_seconds,
-    }
+    return evaluate_runtime_state(
+        output=output,
+        runtime_config=runtime_config,
+        elapsed_seconds=elapsed_seconds,
+        error_reason=_detect_error_reason(output),
+    )
 
 
 def attach_session(agent_id: str) -> bool:
