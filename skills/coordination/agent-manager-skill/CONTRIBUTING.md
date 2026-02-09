@@ -94,6 +94,15 @@ COVERAGE_MIN=70 make ci
 COVERAGE_CMD="uvx --with pyyaml coverage" make ci
 ```
 
+
+## 🔐 CI Governance
+
+Branch protection and required CI gate rollout guidance is documented in:
+
+- `docs/branch-protection-rollout.md`
+
+Use this when enabling required checks/review policies on `main` (or reusing the pattern in new repositories).
+
 ## 📖 Documentation
 
 - Keep documentation up-to-date
