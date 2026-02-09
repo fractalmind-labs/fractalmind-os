@@ -473,6 +473,7 @@ def send_keys(
     send_enter: bool = True,
     clear_input: bool = False,
     escape_first: bool = False,
+    enter_via_key: bool = False,
 ) -> bool:
     """
     Send keys to a tmux session.
@@ -483,6 +484,7 @@ def send_keys(
         send_enter: Whether to send Enter after the keys (default: True)
         clear_input: Whether to clear current input line before sending text
         escape_first: Whether to send Escape before sending text
+        enter_via_key: Whether to send Enter as a real keypress first (needed by some TUIs)
 
     Returns:
         True if keys were sent successfully
@@ -513,8 +515,13 @@ def send_keys(
         return result.returncode == 0
 
     def _send_enter() -> bool:
-        # Use load-buffer + paste-buffer for more reliable Enter key
-        # tmux send-keys 'Enter' doesn't work reliably with some TUI apps
+        # Some TUIs (notably Codex) require a real Enter keypress to confirm submit.
+        # Try native key first when requested, then fall back to newline paste.
+        if enter_via_key:
+            if _send_tmux_key('C-m') or _send_tmux_key('Enter'):
+                return True
+
+        # Fallback: paste a newline for TUIs where keypress Enter is unreliable.
         try:
             subprocess.run(
                 ['tmux', 'load-buffer', '-b', 'enter-key', '-'],
@@ -618,7 +625,7 @@ def _dismiss_codex_model_choice_prompt(agent_id: str) -> bool:
         return False
 
     # Prefer "Use existing model" (option 2) to preserve prior behavior.
-    if not send_keys(agent_id, "2", send_enter=True):
+    if not send_keys(agent_id, "2", send_enter=True, enter_via_key=True):
         return False
 
     time.sleep(1.0)
@@ -628,7 +635,7 @@ def _dismiss_codex_model_choice_prompt(agent_id: str) -> bool:
 
     # Fallback: move selection down then Enter (or just Enter if Down fails).
     _tmux_send_key(agent_id, 'Down')
-    send_keys(agent_id, "", send_enter=True)
+    send_keys(agent_id, "", send_enter=True, enter_via_key=True)
     time.sleep(1.0)
     tail_after = capture_output(agent_id, lines=80) or ""
     return not _is_codex_model_choice_prompt(tail_after)

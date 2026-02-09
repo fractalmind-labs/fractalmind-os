@@ -1105,6 +1105,7 @@ def cmd_send(args):
         send_enter=args.send_enter,
         clear_input=is_codex,
         escape_first=is_codex,
+        enter_via_key=is_codex,
     ):
         print(f"❌ Failed to send message to {agent_name}")
         return 1
@@ -1175,6 +1176,7 @@ def cmd_assign(args):
         send_enter=True,
         clear_input=is_codex,
         escape_first=is_codex,
+        enter_via_key=is_codex,
     ):
         print(f"❌ Failed to assign task to {agent_name}")
         return 1
@@ -1331,6 +1333,7 @@ def cmd_heartbeat_run(args):
         send_enter=True,
         clear_input=is_codex,
         escape_first=is_codex,
+        enter_via_key=is_codex,
     ):
         print(f"❌ Failed to send heartbeat to {agent_name}")
         return 1
@@ -1561,6 +1564,7 @@ def cmd_schedule_run(args):
         send_enter=True,
         clear_input=is_codex,
         escape_first=is_codex,
+        enter_via_key=is_codex,
     ):
         print(f"❌ Failed to send task to agent")
         return 1
