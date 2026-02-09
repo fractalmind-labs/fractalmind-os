@@ -87,6 +87,8 @@ from services.heartbeat_state_machine import (
     failure_reason_code as service_failure_reason_code,
     should_retry_heartbeat_attempt as service_should_retry_heartbeat_attempt,
 )
+from commands.status import cmd_status as status_cmd_status
+from commands.schedule import cmd_schedule as schedule_cmd_schedule
 
 
 def _normalize_path(path: str) -> str:
@@ -694,6 +696,78 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
 
 
+def _parse_iso8601_utc(value: object) -> Optional[datetime]:
+    text = str(value or '').strip()
+    if not text:
+        return None
+
+    normalized = text
+    if normalized.endswith('Z'):
+        normalized = normalized[:-1] + '+00:00'
+
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except Exception:
+        return None
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    else:
+        parsed = parsed.astimezone(timezone.utc)
+    return parsed
+
+
+def _heartbeat_result(*, send_status: str, ack_status: str, failure_type: str) -> str:
+    failure = str(failure_type or '').strip().lower()
+    if failure:
+        return 'failure'
+
+    send = str(send_status or '').strip().lower()
+    ack = str(ack_status or '').strip().lower()
+
+    if send == 'ok' and ack == 'ack':
+        return 'success'
+    if send != 'ok':
+        return 'failure'
+    if ack in {'timeout', 'blocked', 'no_ack'}:
+        return 'failure'
+    if ack in {'not_checked', ''}:
+        return 'pending'
+    return 'unknown'
+
+
+def _resolve_trace_agent_id(agent_value: Optional[str]) -> Optional[str]:
+    if not agent_value:
+        return None
+
+    value = str(agent_value).strip()
+    if not value:
+        return None
+
+    resolved = resolve_agent(value)
+    if resolved:
+        return get_agent_id(resolved)
+
+    normalized = value.lower()
+    if normalized.startswith('agent-'):
+        normalized = normalized[len('agent-'):]
+    return normalized.replace('_', '-')
+
+
+def _resolve_trace_time_range(*, since_text: Optional[str], until_text: Optional[str]) -> tuple[Optional[datetime], Optional[datetime]]:
+    since = _parse_iso8601_utc(since_text)
+    until = _parse_iso8601_utc(until_text)
+
+    if since_text and since is None:
+        raise ValueError(f"Invalid --since timestamp: {since_text}")
+    if until_text and until is None:
+        raise ValueError(f"Invalid --until timestamp: {until_text}")
+    if since and until and since > until:
+        raise ValueError("Invalid time range: --since cannot be later than --until")
+
+    return since, until
+
+
 def _append_heartbeat_audit_event(
     repo_root: Path,
     *,
@@ -714,17 +788,21 @@ def _append_heartbeat_audit_event(
     audit_file = _heartbeat_audit_file(repo_root, agent_id)
     audit_file.parent.mkdir(parents=True, exist_ok=True)
 
+    duration_value = int(max(0, duration_ms))
     event = {
         'timestamp': timestamp or _utc_now_iso(),
         'agent_id': str(agent_id),
         'hb_id': str(heartbeat_id),
         'send_status': str(send_status),
         'ack_status': str(ack_status),
-        'duration_ms': int(max(0, duration_ms)),
+        'duration_ms': duration_value,
+        'duration': duration_value,
         'context_left': context_left if isinstance(context_left, int) else None,
         'failure_type': str(failure_type or ''),
         'session_mode': str(session_mode or ''),
         'phase': str(phase or ''),
+        'stage': str(phase or 'heartbeat_attempt'),
+        'result': _heartbeat_result(send_status=send_status, ack_status=ack_status, failure_type=failure_type),
         'attempt': int(max(0, attempt)),
         'recovery_action': str(recovery_action or ''),
         'reason_code': str(reason_code or ''),
@@ -740,6 +818,8 @@ def _read_heartbeat_audit_events(
     *,
     heartbeat_id: Optional[str] = None,
     agent_id: Optional[str] = None,
+    since: Optional[datetime] = None,
+    until: Optional[datetime] = None,
     limit: int = 20,
 ) -> list[dict]:
     trace_limit = max(1, min(_HEARTBEAT_TRACE_MAX_LIMIT, int(limit or 20)))
@@ -776,12 +856,109 @@ def _read_heartbeat_audit_events(
                         continue
                     if agent_filter and str(payload.get('agent_id', '')).lower() != agent_filter:
                         continue
+
+                    event_ts = _parse_iso8601_utc(payload.get('timestamp'))
+                    if since and (event_ts is None or event_ts < since):
+                        continue
+                    if until and (event_ts is None or event_ts > until):
+                        continue
+
                     events.append(payload)
         except Exception:
             continue
 
     events.sort(key=lambda item: str(item.get('timestamp', '')), reverse=True)
     return events[:trace_limit]
+
+
+def cmd_heartbeat_trace(args) -> int:
+    """Query heartbeat audit logs by HB_ID and/or agent."""
+    repo_root = get_repo_root()
+
+    try:
+        since, until = _resolve_trace_time_range(
+            since_text=getattr(args, 'since', None),
+            until_text=getattr(args, 'until', None),
+        )
+    except ValueError as e:
+        print(f"❌ {e}")
+        return 1
+
+    agent_id = _resolve_trace_agent_id(getattr(args, 'agent', None))
+
+    events = _read_heartbeat_audit_events(
+        repo_root,
+        heartbeat_id=getattr(args, 'hb_id', None),
+        agent_id=agent_id,
+        since=since,
+        until=until,
+        limit=getattr(args, 'limit', 20),
+    )
+
+    if getattr(args, 'json', False):
+        print(json.dumps(events, ensure_ascii=False, indent=2))
+        return 0
+
+    if not events:
+        print("No heartbeat trace events found.")
+        return 0
+
+    print("🔎 Heartbeat Trace Events:")
+    for event in events:
+        timestamp = str(event.get('timestamp', 'unknown'))
+        hb_id = str(event.get('hb_id', 'unknown'))
+        event_agent = str(event.get('agent_id', 'unknown'))
+        send_status = str(event.get('send_status', 'unknown'))
+        ack_status = str(event.get('ack_status', 'unknown'))
+        duration_ms = event.get('duration_ms')
+        context_left = event.get('context_left')
+        failure_type = str(event.get('failure_type', '') or '')
+        stage = str(event.get('stage', event.get('phase', 'heartbeat_attempt')))
+        result = str(event.get('result', _heartbeat_result(send_status=send_status, ack_status=ack_status, failure_type=failure_type)))
+
+        duration_text = f"{duration_ms}ms" if isinstance(duration_ms, int) else 'n/a'
+        context_text = f"{context_left}%" if isinstance(context_left, int) else 'unknown'
+        failure_text = failure_type if failure_type else '-'
+        print(
+            f"- {timestamp} agent={event_agent} hb_id={hb_id} stage={stage} result={result} "
+            f"send={send_status} ack={ack_status} duration={duration_text} "
+            f"context_left={context_text} failure={failure_text}"
+        )
+    return 0
+
+
+def cmd_heartbeat_slo(args) -> int:
+    """Summarize heartbeat SLO metrics for daily/weekly windows."""
+    from heartbeat_slo import build_slo_summary, format_slo_summary
+
+    try:
+        since, until = _resolve_trace_time_range(
+            since_text=getattr(args, 'since', None),
+            until_text=getattr(args, 'until', None),
+        )
+    except ValueError as e:
+        print(f"❌ {e}")
+        return 1
+
+    agent_id = _resolve_trace_agent_id(getattr(args, 'agent', None))
+
+    try:
+        summary = build_slo_summary(
+            repo_root=get_repo_root(),
+            agent_id=agent_id,
+            window=str(getattr(args, 'window', 'daily') or 'daily'),
+            since=since,
+            until=until,
+        )
+    except ValueError as e:
+        print(f"❌ {e}")
+        return 1
+
+    if getattr(args, 'json', False):
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+    else:
+        print(format_slo_summary(summary))
+    return 0
 
 
 def _parse_non_negative_int(value: object, default: int) -> int:
@@ -820,59 +997,6 @@ def _classify_heartbeat_ack(*, waited_for_ack: bool, last_state: Optional[str], 
         timed_out=timed_out,
     )
     return ack_status, failure_type
-
-
-def cmd_heartbeat_trace(args) -> int:
-    """Query heartbeat audit logs by HB_ID and/or agent."""
-    repo_root = get_repo_root()
-
-    agent_id: Optional[str] = None
-    if getattr(args, 'agent', None):
-        agent_value = str(args.agent).strip()
-        resolved = resolve_agent(agent_value)
-        if resolved:
-            agent_id = get_agent_id(resolved)
-        else:
-            normalized = agent_value.lower()
-            if normalized.startswith('agent-'):
-                normalized = normalized[len('agent-'):]
-            agent_id = normalized
-
-    events = _read_heartbeat_audit_events(
-        repo_root,
-        heartbeat_id=getattr(args, 'hb_id', None),
-        agent_id=agent_id,
-        limit=getattr(args, 'limit', 20),
-    )
-
-    if getattr(args, 'json', False):
-        print(json.dumps(events, ensure_ascii=False, indent=2))
-        return 0
-
-    if not events:
-        print("No heartbeat trace events found.")
-        return 0
-
-    print("🔎 Heartbeat Trace Events:")
-    for event in events:
-        timestamp = str(event.get('timestamp', 'unknown'))
-        hb_id = str(event.get('hb_id', 'unknown'))
-        event_agent = str(event.get('agent_id', 'unknown'))
-        send_status = str(event.get('send_status', 'unknown'))
-        ack_status = str(event.get('ack_status', 'unknown'))
-        duration_ms = event.get('duration_ms')
-        context_left = event.get('context_left')
-        failure_type = str(event.get('failure_type', '') or '')
-
-        duration_text = f"{duration_ms}ms" if isinstance(duration_ms, int) else 'n/a'
-        context_text = f"{context_left}%" if isinstance(context_left, int) else 'unknown'
-        failure_text = failure_type if failure_type else '-'
-        print(
-            f"- {timestamp} agent={event_agent} hb_id={hb_id} "
-            f"send={send_status} ack={ack_status} duration={duration_text} "
-            f"context_left={context_text} failure={failure_text}"
-        )
-    return 0
 
 
 def _should_retry_heartbeat_attempt(*, failure_type: str, attempt_index: int, max_retries: int) -> bool:
@@ -1081,116 +1205,9 @@ def get_agent_id(config: dict) -> str:
     return file_id.lower().replace('_', '-')
 
 
-def _heartbeat_audit_path(repo_root: Path, agent_id: str) -> Path:
-    return repo_root / '.claude' / 'state' / 'agent-manager' / 'heartbeat-audit' / f"{agent_id}.jsonl"
-
-
-def _load_recent_heartbeat_event(repo_root: Path, agent_id: str) -> Optional[dict]:
-    audit_file = _heartbeat_audit_path(repo_root, agent_id)
-    if not audit_file.exists():
-        return None
-
-    try:
-        lines = audit_file.read_text(encoding='utf-8').splitlines()
-    except Exception:
-        return None
-
-    for raw in reversed(lines):
-        line = raw.strip()
-        if not line:
-            continue
-        try:
-            payload = json.loads(line)
-        except Exception:
-            continue
-        if isinstance(payload, dict):
-            return payload
-
-    return None
-
-
-def _extract_recent_hb_id_from_output(output: str) -> str:
-    if not output:
-        return ""
-
-    inline_matches = re.findall(r"\[HB_ID:([A-Za-z0-9_-]+)\]", output)
-    if inline_matches:
-        return str(inline_matches[-1])
-
-    plain_matches = re.findall(r"HB_ID:\s*([A-Za-z0-9_-]+)", output)
-    if plain_matches:
-        return str(plain_matches[-1])
-
-    return ""
-
-
 def cmd_status(args):
     """Show status for one agent."""
-    if not check_tmux():
-        print("❌ tmux is not installed")
-        return 1
-
-    agent_config = resolve_agent(args.agent)
-    if not agent_config:
-        print(f"❌ Agent not found: {args.agent}")
-        return 1
-
-    agent_name = agent_config['name']
-    agent_id = get_agent_id(agent_config)
-    enabled = bool(agent_config.get('enabled', True))
-    running = session_exists(agent_id)
-    launcher = resolve_launcher_command(agent_config.get('launcher', ''))
-
-    session_info = get_session_info(agent_id) if running else None
-    session_name = session_info.get('session', f"agent-{agent_id}") if session_info else f"agent-{agent_id}"
-
-    if running:
-        runtime = get_agent_runtime_state(agent_id, launcher=launcher)
-    else:
-        runtime = {'state': 'stopped'}
-
-    runtime_state = str(runtime.get('state', 'unknown'))
-    runtime_reason = str(runtime.get('reason', '')).strip()
-    elapsed_seconds = runtime.get('elapsed_seconds')
-
-    recent_heartbeat = "none"
-    recent_heartbeat_detail = ""
-
-    repo_root = get_repo_root()
-    event = _load_recent_heartbeat_event(repo_root, agent_id)
-    if event:
-        hb_id = str(event.get('hb_id') or '').strip()
-        timestamp = str(event.get('timestamp') or '').strip()
-        send_status = str(event.get('send_status') or 'unknown').strip()
-        ack_status = str(event.get('ack_status') or 'unknown').strip()
-        if hb_id and timestamp:
-            recent_heartbeat = f"{hb_id} ({timestamp})"
-        elif hb_id:
-            recent_heartbeat = hb_id
-        else:
-            recent_heartbeat = "recorded (missing hb_id)"
-        recent_heartbeat_detail = f"send={send_status} ack={ack_status}"
-    elif running:
-        tail = capture_output(agent_id, lines=220) or ""
-        hb_id = _extract_recent_hb_id_from_output(tail)
-        if hb_id:
-            recent_heartbeat = f"{hb_id} (from tmux output)"
-
-    print(f"📌 Status: {agent_name}")
-    print(f"   Agent ID: {agent_id}")
-    print(f"   Enabled: {'yes' if enabled else 'no'}")
-    print(f"   Running: {'yes' if running else 'no'}")
-    print(f"   Session: {session_name}({agent_name})" if running else f"   Session: {session_name} (not running)")
-    print(f"   Runtime state: {runtime_state}")
-    if runtime_reason:
-        print(f"   Runtime reason: {runtime_reason}")
-    if elapsed_seconds is not None:
-        print(f"   Runtime elapsed: {elapsed_seconds}s")
-    print(f"   Recent heartbeat: {recent_heartbeat}")
-    if recent_heartbeat_detail:
-        print(f"   Heartbeat detail: {recent_heartbeat_detail}")
-
-    return 0
+    return status_cmd_status(args, deps=_lifecycle_deps_module())
 
 
 def cmd_list(args):
@@ -1372,44 +1389,7 @@ def cmd_assign(args):
 
 def cmd_schedule(args):
     """Handle schedule subcommands."""
-    from schedule_helper import list_schedules_formatted, sync_crontab
-
-    if args.schedule_command == 'list':
-        print(list_schedules_formatted())
-        return 0
-
-    elif args.schedule_command == 'sync':
-        result = sync_crontab(dry_run=args.dry_run)
-
-        if args.dry_run:
-            print("🔍 Dry run - would sync the following to crontab:")
-            print()
-            if result['content']:
-                print(result['content'])
-            else:
-                print("(no schedules configured)")
-            return 0
-
-        if result['success']:
-            print(f"✅ Crontab synced successfully")
-            entries = result.get('entries', 0)
-            added = result.get('added', 0)
-            removed = result.get('removed', 0)
-            print(f"   {entries} schedule entries configured")
-            if added or removed:
-                print(f"   Changes: +{added} -{removed}")
-        else:
-            print(f"❌ Failed to sync crontab")
-            return 1
-
-        return 0
-
-    elif args.schedule_command == 'run':
-        return cmd_schedule_run(args)
-
-    else:
-        print(f"Unknown schedule command: {args.schedule_command}")
-        return 1
+    return schedule_cmd_schedule(args, deps=_lifecycle_deps_module(), schedule_run_handler=cmd_schedule_run)
 
 
 def cmd_heartbeat(args):
@@ -1452,6 +1432,9 @@ def cmd_heartbeat(args):
 
     elif args.heartbeat_command == 'trace':
         return cmd_heartbeat_trace(args)
+
+    elif args.heartbeat_command == 'slo':
+        return cmd_heartbeat_slo(args)
 
     else:
         print(f"Unknown heartbeat command: {args.heartbeat_command}")

@@ -71,6 +71,35 @@ class HeartbeatTraceTests(unittest.TestCase):
         events = main._read_heartbeat_audit_events(self.temp_root, agent_id='emp-0002', limit=5)
         self.assertEqual(len(events), 5)
 
+    def test_read_filters_since_until(self):
+        main._append_heartbeat_audit_event(
+            self.temp_root,
+            agent_id='emp-0005',
+            heartbeat_id='hb-1',
+            send_status='ok',
+            ack_status='ack',
+            duration_ms=50,
+            context_left=80,
+            timestamp='2026-02-09T11:00:00Z',
+        )
+        main._append_heartbeat_audit_event(
+            self.temp_root,
+            agent_id='emp-0005',
+            heartbeat_id='hb-2',
+            send_status='ok',
+            ack_status='ack',
+            duration_ms=60,
+            context_left=81,
+            timestamp='2026-02-09T12:00:00Z',
+        )
+
+        since = main._parse_iso8601_utc('2026-02-09T11:30:00Z')
+        until = main._parse_iso8601_utc('2026-02-09T12:00:00Z')
+        events = main._read_heartbeat_audit_events(self.temp_root, agent_id='emp-0005', since=since, until=until, limit=10)
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]['hb_id'], 'hb-2')
+
     def test_classify_heartbeat_ack(self):
         self.assertEqual(main._classify_heartbeat_ack(last_state='idle', timed_out=False, waited_for_ack=True), ('ack', ''))
         self.assertEqual(main._classify_heartbeat_ack(last_state='blocked', timed_out=False, waited_for_ack=True), ('blocked', 'blocked'))
@@ -110,6 +139,10 @@ class HeartbeatTraceTests(unittest.TestCase):
         self.assertEqual(payload['agent_id'], 'emp-0004')
         self.assertEqual(payload['hb_id'], 'hb-shape')
         self.assertIn('duration_ms', payload)
+        self.assertIn('reason_code', payload)
+        self.assertIn('duration', payload)
+        self.assertIn('stage', payload)
+        self.assertIn('result', payload)
         self.assertIn('reason_code', payload)
 
 

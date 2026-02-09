@@ -472,17 +472,23 @@ Each run appends structured JSONL audit events to:
 .claude/state/agent-manager/heartbeat-audit/{agent_id}.jsonl
 ```
 
-Event fields:
+Event fields (standardized for observability):
 
 - `timestamp`
 - `agent_id`
 - `hb_id`
+- `stage` (standard stage name, default `heartbeat_attempt`)
+- `result` (`success` / `failure` / `pending`)
+- `duration` (milliseconds, alias of `duration_ms`)
 - `send_status`
 - `ack_status`
 - `duration_ms`
 - `context_left`
 - `failure_type`
 - `session_mode`
+- `reason_code`
+- `attempt`
+- `recovery_action`
 - `reason_code`
 
 Failure classification (`failure_type`) includes:
@@ -501,8 +507,37 @@ python3 scripts/main.py heartbeat trace
 # Filter by heartbeat id
 python3 scripts/main.py heartbeat trace --hb-id 20260209-120001
 
-# Filter by agent and output JSON
+# Filter by agent + time range (UTC)
+python3 scripts/main.py heartbeat trace   --agent EMP_0001   --since 2026-02-09T00:00:00Z   --until 2026-02-10T00:00:00Z
+
+# Output JSON
 python3 scripts/main.py heartbeat trace --agent EMP_0001 --json
+```
+
+#### `heartbeat slo` - Daily/Weekly SLO Summary
+
+```bash
+# Daily summary (default)
+python3 scripts/main.py heartbeat slo
+
+# Weekly summary for one agent
+python3 scripts/main.py heartbeat slo --window weekly --agent EMP_0001
+
+# Explicit time window + JSON
+python3 scripts/main.py heartbeat slo   --since 2026-02-01T00:00:00Z   --until 2026-02-08T00:00:00Z   --json
+```
+
+Built-in SLO checks:
+
+- Success rate target: `>= 99%`
+- Timeout rate target: `<= 2%`
+- Recovery p95 target: `<= 120000ms`
+
+Standalone summary script (same metrics):
+
+```bash
+python3 scripts/heartbeat_slo.py --window daily
+python3 scripts/heartbeat_slo.py --window weekly --agent EMP_0001 --json
 ```
 
 ### Standard Heartbeat Message
@@ -552,6 +587,7 @@ Comprehensive BSC smart contract development expertise...
 ├── SKILL.md                    # This file
 ├── scripts/
 │   ├── main.py                 # CLI entry point
+│   ├── heartbeat_slo.py        # Heartbeat SLO summary script
 │   ├── agent_config.py         # Agent file parser
 │   ├── tmux_helper.py          # Tmux wrapper
 │   └── schedule_helper.py      # Crontab management

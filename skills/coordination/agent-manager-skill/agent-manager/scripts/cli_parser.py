@@ -151,7 +151,21 @@ Examples:
     heartbeat_trace_parser = heartbeat_subparsers.add_parser('trace', help='Query heartbeat audit trace logs')
     heartbeat_trace_parser.add_argument('--hb-id', help='Filter by heartbeat id (HB_ID)')
     heartbeat_trace_parser.add_argument('--agent', help='Filter by agent name/file ID/agent-id')
+    heartbeat_trace_parser.add_argument('--since', help='Filter events at/after time (ISO-8601, UTC recommended)')
+    heartbeat_trace_parser.add_argument('--until', help='Filter events at/before time (ISO-8601, UTC recommended)')
     heartbeat_trace_parser.add_argument('--limit', '-n', type=int, default=20, help='Max number of records to show (default: 20)')
     heartbeat_trace_parser.add_argument('--json', action='store_true', help='Output records as JSON')
+
+    heartbeat_slo_parser = heartbeat_subparsers.add_parser('slo', help='Summarize heartbeat SLO metrics')
+    heartbeat_slo_parser.add_argument('--agent', help='Filter by agent name/file ID/agent-id')
+    heartbeat_slo_parser.add_argument(
+        '--window',
+        choices=['daily', 'weekly'],
+        default='daily',
+        help='Preset time window (default: daily)',
+    )
+    heartbeat_slo_parser.add_argument('--since', help='Override start time (ISO-8601, UTC recommended)')
+    heartbeat_slo_parser.add_argument('--until', help='Override end time (ISO-8601, UTC recommended)')
+    heartbeat_slo_parser.add_argument('--json', action='store_true', help='Output summary as JSON')
 
     return parser
