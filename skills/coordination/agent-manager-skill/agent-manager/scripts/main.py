@@ -68,6 +68,18 @@ from providers import (
 
 from cli_parser import create_parser
 from command_registry import get_command_handlers
+from services.heartbeat_service import (
+    notify_heartbeat_failure as service_notify_heartbeat_failure,
+    parse_heartbeat_recovery_policy as service_parse_heartbeat_recovery_policy,
+    restart_heartbeat_session_fresh as service_restart_heartbeat_session_fresh,
+    run_heartbeat_attempt as service_run_heartbeat_attempt,
+)
+from services.heartbeat_state_machine import (
+    RECOVERABLE_FAILURE_TYPES as SERVICE_RECOVERABLE_FAILURE_TYPES,
+    classify_heartbeat_ack as service_classify_heartbeat_ack,
+    failure_reason_code as service_failure_reason_code,
+    should_retry_heartbeat_attempt as service_should_retry_heartbeat_attempt,
+)
 
 
 def _normalize_path(path: str) -> str:
@@ -524,7 +536,7 @@ def write_codex_message_file(repo_root: Path, agent_id: str, purpose: str, messa
 _HEARTBEAT_SESSION_MODES = {"restore", "auto", "fresh"}
 _HEARTBEAT_AUTO_CONTEXT_THRESHOLD = 25
 _HEARTBEAT_FALLBACK_MODES = {"none", "fresh"}
-_HEARTBEAT_RECOVERY_FAILURE_TYPES = {"send_fail", "no_ack", "timeout", "blocked"}
+_HEARTBEAT_RECOVERY_FAILURE_TYPES = set(SERVICE_RECOVERABLE_FAILURE_TYPES)
 _CONTEXT_LEFT_PATTERN_CACHE: dict[str, list[re.Pattern]] = {}
 _HEARTBEAT_TRACE_MAX_LIMIT = 5000
 
@@ -689,6 +701,7 @@ def _append_heartbeat_audit_event(
     phase: str = "",
     attempt: int = 0,
     recovery_action: str = "",
+    reason_code: str = "",
     timestamp: Optional[str] = None,
 ) -> Path:
     audit_file = _heartbeat_audit_file(repo_root, agent_id)
@@ -707,6 +720,7 @@ def _append_heartbeat_audit_event(
         'phase': str(phase or ''),
         'attempt': int(max(0, attempt)),
         'recovery_action': str(recovery_action or ''),
+        'reason_code': str(reason_code or ''),
     }
 
     with audit_file.open('a', encoding='utf-8') as fp:
@@ -785,68 +799,20 @@ def _parse_bool(value: object, default: bool = False) -> bool:
 
 
 def _parse_heartbeat_recovery_policy(heartbeat: dict, args: Optional[argparse.Namespace] = None) -> dict:
-    defaults = {
-        'max_retries': 1,
-        'retry_backoff_seconds': 3,
-        'fallback_mode': 'fresh',
-        'notify_on_failure': False,
-        'notifier_channel': 'all',
-    }
-
-    recovery = heartbeat.get('recovery') if isinstance(heartbeat, dict) else {}
-    raw = dict(recovery) if isinstance(recovery, dict) else {}
-
-    for key in defaults.keys():
-        if key in heartbeat and key not in raw:
-            raw[key] = heartbeat.get(key)
-
-    policy = {
-        'max_retries': _parse_non_negative_int(raw.get('max_retries', defaults['max_retries']), defaults['max_retries']),
-        'retry_backoff_seconds': _parse_non_negative_int(
-            raw.get('retry_backoff_seconds', defaults['retry_backoff_seconds']),
-            defaults['retry_backoff_seconds'],
-        ),
-        'fallback_mode': str(raw.get('fallback_mode', defaults['fallback_mode']) or defaults['fallback_mode']).strip().lower(),
-        'notify_on_failure': _parse_bool(raw.get('notify_on_failure', defaults['notify_on_failure']), defaults['notify_on_failure']),
-        'notifier_channel': str(raw.get('notifier_channel', defaults['notifier_channel']) or defaults['notifier_channel']).strip(),
-    }
-
-    if policy['fallback_mode'] == 'restart':
-        policy['fallback_mode'] = 'fresh'
-    if policy['fallback_mode'] not in _HEARTBEAT_FALLBACK_MODES:
-        policy['fallback_mode'] = defaults['fallback_mode']
-
-    if args is not None:
-        if getattr(args, 'retry', None) is not None:
-            policy['max_retries'] = _parse_non_negative_int(args.retry, policy['max_retries'])
-        if getattr(args, 'backoff_seconds', None) is not None:
-            policy['retry_backoff_seconds'] = _parse_non_negative_int(args.backoff_seconds, policy['retry_backoff_seconds'])
-        if getattr(args, 'fallback_mode', None):
-            fallback_mode = str(args.fallback_mode).strip().lower()
-            if fallback_mode == 'restart':
-                fallback_mode = 'fresh'
-            if fallback_mode in _HEARTBEAT_FALLBACK_MODES:
-                policy['fallback_mode'] = fallback_mode
-        if getattr(args, 'notify_on_failure', None) is not None:
-            policy['notify_on_failure'] = _parse_bool(args.notify_on_failure, policy['notify_on_failure'])
-        if getattr(args, 'notifier_channel', None):
-            policy['notifier_channel'] = str(args.notifier_channel).strip() or policy['notifier_channel']
-
-    return policy
+    return service_parse_heartbeat_recovery_policy(
+        heartbeat,
+        args=args,
+        fallback_modes=_HEARTBEAT_FALLBACK_MODES,
+    )
 
 
 def _classify_heartbeat_ack(*, waited_for_ack: bool, last_state: Optional[str], timed_out: bool) -> tuple[str, str]:
-    if not waited_for_ack:
-        return 'not_checked', ''
-
-    state = str(last_state or '').strip().lower()
-    if state == 'idle':
-        return 'ack', ''
-    if state == 'blocked':
-        return 'blocked', 'blocked'
-    if timed_out:
-        return 'timeout', 'timeout'
-    return 'no_ack', 'no_ack'
+    ack_status, failure_type, _reason_code = service_classify_heartbeat_ack(
+        waited_for_ack=waited_for_ack,
+        last_state=last_state,
+        timed_out=timed_out,
+    )
+    return ack_status, failure_type
 
 
 def cmd_heartbeat_trace(args) -> int:
@@ -903,9 +869,11 @@ def cmd_heartbeat_trace(args) -> int:
 
 
 def _should_retry_heartbeat_attempt(*, failure_type: str, attempt_index: int, max_retries: int) -> bool:
-    if attempt_index >= max_retries:
-        return False
-    return str(failure_type or '').strip().lower() in _HEARTBEAT_RECOVERY_FAILURE_TYPES
+    return service_should_retry_heartbeat_attempt(
+        failure_type=failure_type,
+        attempt_index=attempt_index,
+        max_retries=max_retries,
+    )
 
 
 def _resolve_notifier_script(repo_root: Path) -> Optional[Path]:
@@ -930,59 +898,23 @@ def _notify_heartbeat_failure(
     heartbeat_id: str,
     failure_type: str,
 ) -> bool:
-    script = _resolve_notifier_script(repo_root)
-    if not script:
-        print("⚠️  notifier skill script not found; skip failure notification")
-        return False
-
-    message = (
-        f"Heartbeat recovery failed for **{agent_name}** (`{agent_id}`).\n\n"
-        f"- HB_ID: `{heartbeat_id}`\n"
-        f"- Failure: `{failure_type or 'unknown'}`\n"
-        f"- Action: manual investigation required"
+    return service_notify_heartbeat_failure(
+        repo_root,
+        channel=channel,
+        agent_name=agent_name,
+        agent_id=agent_id,
+        heartbeat_id=heartbeat_id,
+        failure_type=failure_type,
     )
-
-    cmd = [
-        'python3',
-        str(script),
-        '--channel',
-        channel or 'all',
-        '--title',
-        'Heartbeat Recovery Failed',
-        '--message',
-        message,
-    ]
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-        if result.returncode == 0:
-            print(f"📣 Failure notification sent via channel '{channel or 'all'}'")
-            return True
-        stderr = (result.stderr or '').strip()
-        print(f"⚠️  notifier command failed (code={result.returncode})")
-        if stderr:
-            print(f"   {stderr}")
-        return False
-    except Exception as e:
-        print(f"⚠️  notifier command error: {e}")
-        return False
 
 
 def _restart_heartbeat_session_fresh(agent_file_id: str, agent_name: str, agent_id: str) -> bool:
-    print(f"♻️  Restarting '{agent_name}' with fresh session")
-    stop_session(agent_id)
-    time.sleep(1)
-
-    restart_args = argparse.Namespace(
-        agent=agent_file_id,
-        working_dir=None,
-        restore=False,
-        tmux_layout='sessions',
+    return service_restart_heartbeat_session_fresh(
+        agent_file_id,
+        agent_name,
+        agent_id,
+        deps=sys.modules[__name__],
     )
-    if cmd_start(restart_args) != 0:
-        print(f"❌ Failed to restart '{agent_name}'")
-        return False
-    time.sleep(2)
-    return True
 
 
 def _run_heartbeat_attempt(
@@ -994,74 +926,15 @@ def _run_heartbeat_attempt(
     timeout_seconds: Optional[int],
     is_codex: bool,
 ) -> dict:
-    started = time.time()
-
-    if not send_keys(
-        agent_id,
-        heartbeat_message,
-        send_enter=True,
-        clear_input=is_codex,
-        escape_first=is_codex,
-        enter_via_key=is_codex,
-    ):
-        return {
-            'send_status': 'fail',
-            'ack_status': 'not_checked',
-            'failure_type': 'send_fail',
-            'last_state': None,
-            'duration_ms': int((time.time() - started) * 1000),
-        }
-
-    print(f"✅ Heartbeat sent to {agent_name}")
-
-    waited_for_ack = bool(timeout_seconds and timeout_seconds > 0)
-    last_state: Optional[str] = None
-    timed_out = False
-
-    if waited_for_ack:
-        start_time = time.time()
-        poll_seconds = 2
-        print(f"   Waiting for response (up to {int(timeout_seconds)}s)...")
-
-        time.sleep(3)
-        while (time.time() - start_time) < timeout_seconds:
-            runtime = get_agent_runtime_state(agent_id, launcher=launcher)
-            last_state = str(runtime.get('state', 'unknown'))
-
-            if last_state == 'idle':
-                break
-            if last_state in ('blocked', 'error', 'stuck'):
-                break
-            time.sleep(poll_seconds)
-
-        if last_state != 'idle' and (time.time() - start_time) >= timeout_seconds:
-            timed_out = True
-
-        time.sleep(1)
-        tail = capture_output(agent_id, lines=50)
-        if tail:
-            print("----- Agent Output (tail) -----")
-            print(tail.rstrip())
-            print("----- End Agent Output -----")
-        else:
-            print("⚠️  Could not capture agent output")
-
-    ack_status, failure_type = _classify_heartbeat_ack(
-        waited_for_ack=waited_for_ack,
-        last_state=last_state,
-        timed_out=timed_out,
+    return service_run_heartbeat_attempt(
+        agent_id=agent_id,
+        agent_name=agent_name,
+        launcher=launcher,
+        heartbeat_message=heartbeat_message,
+        timeout_seconds=timeout_seconds,
+        is_codex=is_codex,
+        deps=sys.modules[__name__],
     )
-
-    if last_state and last_state != 'idle':
-        print(f"⚠️  Agent state after wait: {last_state}")
-
-    return {
-        'send_status': 'ok',
-        'ack_status': ack_status,
-        'failure_type': failure_type,
-        'last_state': last_state,
-        'duration_ms': int((time.time() - started) * 1000),
-    }
 
 
 def _maybe_rollover_heartbeat_session(
@@ -2163,6 +2036,7 @@ def cmd_heartbeat_run(args):
         send_status = str(result.get('send_status', 'fail'))
         ack_status = str(result.get('ack_status', 'not_checked'))
         failure_type = str(result.get('failure_type', ''))
+        reason_code = str(result.get('reason_code', ''))
         duration_ms = int(result.get('duration_ms', 0) or 0)
 
         _append_heartbeat_audit_event(
@@ -2178,6 +2052,7 @@ def cmd_heartbeat_run(args):
             phase='attempt',
             attempt=attempt_no,
             recovery_action=recovery_action,
+            reason_code=reason_code,
         )
 
         final_attempt_result = result
@@ -2203,6 +2078,7 @@ def cmd_heartbeat_run(args):
     send_status = str(final_attempt_result.get('send_status', 'fail'))
     ack_status = str(final_attempt_result.get('ack_status', 'not_checked'))
     failure_type = str(final_attempt_result.get('failure_type', ''))
+    reason_code = str(final_attempt_result.get('reason_code', ''))
 
     if send_status == 'ok' and ack_status in {'ack', 'not_checked'}:
         print("✅ Heartbeat completed successfully")
@@ -2223,6 +2099,7 @@ def cmd_heartbeat_run(args):
             send_status = str(fallback_result.get('send_status', 'fail'))
             ack_status = str(fallback_result.get('ack_status', 'not_checked'))
             failure_type = str(fallback_result.get('failure_type', ''))
+            reason_code = str(fallback_result.get('reason_code', ''))
             duration_ms = int(fallback_result.get('duration_ms', 0) or 0)
             _append_heartbeat_audit_event(
                 repo_root,
@@ -2237,12 +2114,18 @@ def cmd_heartbeat_run(args):
                 phase='fallback',
                 attempt=max_retries + 2,
                 recovery_action=recovery_action,
+                reason_code=reason_code,
             )
         else:
             send_status = 'fail'
             ack_status = 'no_ack'
             if not failure_type:
                 failure_type = 'timeout'
+            reason_code = service_failure_reason_code(
+                failure_type=failure_type,
+                ack_status=ack_status,
+                send_status=send_status,
+            )
 
     if send_status == 'ok' and ack_status in {'ack', 'not_checked'}:
         print("✅ Heartbeat recovered via fallback policy")

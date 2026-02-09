@@ -483,6 +483,7 @@ Event fields:
 - `context_left`
 - `failure_type`
 - `session_mode`
+- `reason_code`
 
 Failure classification (`failure_type`) includes:
 

@@ -134,6 +134,7 @@ When injecting agent skills into the system prompt, `agent-manager` searches for
 See [agent-manager/SKILL.md](agent-manager/SKILL.md) for complete documentation.
 
 For CLI refactor progress and migration notes, see [agent-manager/docs/cli-modularization-plan.md](agent-manager/docs/cli-modularization-plan.md).
+For heartbeat serviceization notes, see [agent-manager/docs/heartbeat-serviceization.md](agent-manager/docs/heartbeat-serviceization.md).
 
 ## Requirements
 
