@@ -27,6 +27,23 @@ class CliModularSlice1Tests(unittest.TestCase):
         self.assertFalse(args.send_enter)
         self.assertEqual(args.message, 'hello')
 
+    def test_heartbeat_trace_time_range_flags(self):
+        args = create_parser().parse_args(
+            ['heartbeat', 'trace', '--agent', 'EMP_0001', '--since', '2026-02-09T00:00:00Z', '--until', '2026-02-10T00:00:00Z']
+        )
+        self.assertEqual(args.command, 'heartbeat')
+        self.assertEqual(args.heartbeat_command, 'trace')
+        self.assertEqual(args.agent, 'EMP_0001')
+        self.assertEqual(args.since, '2026-02-09T00:00:00Z')
+        self.assertEqual(args.until, '2026-02-10T00:00:00Z')
+
+    def test_heartbeat_slo_defaults(self):
+        args = create_parser().parse_args(['heartbeat', 'slo'])
+        self.assertEqual(args.command, 'heartbeat')
+        self.assertEqual(args.heartbeat_command, 'slo')
+        self.assertEqual(args.window, 'daily')
+        self.assertIsNone(args.agent)
+
     def test_schedule_run_still_requires_job(self):
         parser = create_parser()
         with self.assertRaises(SystemExit):
