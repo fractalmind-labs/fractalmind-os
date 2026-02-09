@@ -76,6 +76,7 @@ from commands.lifecycle import (
     cmd_assign as lifecycle_cmd_assign,
 )
 from commands.status import cmd_status as status_cmd_status
+from commands.schedule import cmd_schedule as schedule_cmd_schedule
 
 
 def _normalize_path(path: str) -> str:
@@ -1393,44 +1394,7 @@ def cmd_assign(args):
 
 def cmd_schedule(args):
     """Handle schedule subcommands."""
-    from schedule_helper import list_schedules_formatted, sync_crontab
-
-    if args.schedule_command == 'list':
-        print(list_schedules_formatted())
-        return 0
-
-    elif args.schedule_command == 'sync':
-        result = sync_crontab(dry_run=args.dry_run)
-
-        if args.dry_run:
-            print("🔍 Dry run - would sync the following to crontab:")
-            print()
-            if result['content']:
-                print(result['content'])
-            else:
-                print("(no schedules configured)")
-            return 0
-
-        if result['success']:
-            print(f"✅ Crontab synced successfully")
-            entries = result.get('entries', 0)
-            added = result.get('added', 0)
-            removed = result.get('removed', 0)
-            print(f"   {entries} schedule entries configured")
-            if added or removed:
-                print(f"   Changes: +{added} -{removed}")
-        else:
-            print(f"❌ Failed to sync crontab")
-            return 1
-
-        return 0
-
-    elif args.schedule_command == 'run':
-        return cmd_schedule_run(args)
-
-    else:
-        print(f"Unknown schedule command: {args.schedule_command}")
-        return 1
+    return schedule_cmd_schedule(args, deps=_lifecycle_deps_module(), schedule_run_handler=cmd_schedule_run)
 
 
 def cmd_heartbeat(args):
