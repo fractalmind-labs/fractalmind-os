@@ -175,6 +175,14 @@ Stop (kill) an agent's tmux session.
 python3 scripts/main.py stop dev
 ```
 
+### `status` - Show Agent Status
+
+Show one agent's runtime snapshot, including running state, runtime state, and the most recent heartbeat marker/event.
+
+```bash
+python3 scripts/main.py status dev
+```
+
 ### `monitor` - Monitor Agent Output
 
 View agent output from tmux session.
@@ -191,8 +199,11 @@ Send a message/command to a running agent.
 
 ```bash
 python3 scripts/main.py send dev "Please run tests"
-# ⚠️ Don't forget: tmux send-keys -t agent-dev Enter
+python3 scripts/main.py send dev --no-enter "Draft message only"
 ```
+
+By default, `send` submits the message immediately (Enter is sent automatically).
+Use `--no-enter` to type without submitting.
 
 ### `assign` - Assign Task to Agent
 
@@ -213,10 +224,7 @@ EOF
 python3 scripts/main.py assign dev --task-file task.md
 ```
 
-> **⚠️ Important**: After assigning a task, send an ENTER key to trigger execution:
-> ```bash
-> tmux send-keys -t agent-dev Enter
-> ```
+`assign` submits automatically (Enter is sent by default), so no manual tmux Enter step is required.
 
 ## Disabling Agents
 
@@ -611,7 +619,9 @@ Implement the user profile feature:
 2. Profile view component
 3. Integration tests
 EOF
-# ⚠️ Don't forget: tmux send-keys -t agent-dev Enter
+
+# Quick runtime snapshot
+python3 scripts/main.py status dev
 
 # Monitor progress
 python3 scripts/main.py monitor dev --follow

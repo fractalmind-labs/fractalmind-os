@@ -86,6 +86,7 @@ python3 .agent/skills/agent-manager/scripts/main.py doctor
 # Start / monitor / stop
 # (same note: replace `.agent/skills/` with `.claude/skills/` if needed)
 python3 .agent/skills/agent-manager/scripts/main.py start EMP_0001
+python3 .agent/skills/agent-manager/scripts/main.py status EMP_0001
 python3 .agent/skills/agent-manager/scripts/main.py monitor EMP_0001 --follow
 python3 .agent/skills/agent-manager/scripts/main.py stop EMP_0001
 
@@ -108,6 +109,7 @@ The screenshot above shows a real run of:
 
 - `list` (see configured agents + status)
 - `start` (launches an agent into `tmux`)
+- `status` (quick runtime + heartbeat snapshot)
 - `monitor` (captures output from the tmux pane)
 - `stop` (kills the agent's tmux session)
 
