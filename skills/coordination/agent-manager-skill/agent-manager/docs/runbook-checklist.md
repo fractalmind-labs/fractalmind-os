@@ -126,3 +126,37 @@ Progress update:
 - Gate: CI=<...>, QA=<...>, blocking comments=<...>
 - Owner/ETA: <who does next step by when>
 ```
+
+
+## 7) Expected Output Anchors (Quick QA)
+
+Use these as lightweight checks when validating docs/command behavior:
+
+- `doctor` should end with either `✅ Doctor checks passed` or a clear problem count line.
+- `schedule sync --dry-run` should print `🔍 Dry run - would sync` and show generated content/no-config message.
+- `heartbeat run` failure path should print one of:
+  - `❌ Heartbeat failed after recovery policy`
+  - `⚠️  Heartbeat unresolved ... applying fallback: fresh`
+- `status <agent>` should print `Runtime state:` and `Recent heartbeat:` lines.
+
+## 8) QA Review Checklist for Docs PRs
+
+Before posting `QA Verdict`, verify:
+
+- [ ] all command paths in docs are repo-relative and executable in current tree
+- [ ] examples align with current CLI flags/subcommands
+- [ ] merge-gate policy text matches team rule (CI PASS + QA PASS + no blocking comments)
+- [ ] at least one copy-paste command sequence was executed end-to-end
+
+Suggested QA evidence snippet:
+
+```text
+QA Verdict: PASS
+Commands:
+- python3 -m compileall -q agent-manager
+- python3 -m unittest discover -s agent-manager/scripts/tests -p 'test_*.py' -v
+- gh pr checks <PR>
+Evidence:
+- docs command paths/flags matched runtime behavior
+- gate checklist wording verified
+```
