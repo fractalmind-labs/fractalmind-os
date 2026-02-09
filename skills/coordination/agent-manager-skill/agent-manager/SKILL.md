@@ -588,6 +588,17 @@ Comprehensive BSC smart contract development expertise...
 - **Already running**: Prompts to stop first
 - **Not running**: Prompts to start first
 
+## Runbook Checklist
+
+For operations handoff and incident response, use:
+- `agent-manager/docs/runbook-checklist.md`
+
+It includes:
+- 30-minute newcomer self-check path
+- heartbeat no-ack troubleshooting SOP
+- stuck-session recovery SOP
+- CI/QA merge-gate checklist and evidence template
+
 ## Advanced Usage
 
 ### Direct Tmux Interaction
