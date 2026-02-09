@@ -160,3 +160,37 @@ Evidence:
 - docs command paths/flags matched runtime behavior
 - gate checklist wording verified
 ```
+
+## 9) Stale-Issue 30-Minute Recovery Protocol
+
+Use this when heartbeat/dispatch reports an issue stalled for >45 minutes.
+
+Action rules:
+- post one repo-visible increment within 30 minutes (commit or PR update)
+- include owner + ETA + current blocker in the issue thread
+- include evidence link (`commit` / `PR comment` / `CI run`)
+
+Minimum execution sequence:
+
+```bash
+# 1) capture current branch / pending changes
+ git status -sb
+ git branch --show-current
+
+# 2) produce one minimal, reviewable delta
+ # (code/docs/test change)
+
+# 3) publish issue update with evidence link
+ gh issue comment <ISSUE_NUMBER> --body-file /tmp/update.md
+```
+
+Stale-recovery comment template:
+
+```text
+Stale recovery update:
+- Visible increment: <commit-or-pr-link>
+- Scope: <what changed>
+- Validation: <commands + result>
+- Owner/ETA: <owner>, <time>
+- Blocker: <none or explicit blocker>
+```
