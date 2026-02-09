@@ -71,3 +71,42 @@ When a metric breaches threshold, output status is `ALERT`.
 - `blocked`
 
 If `failure_type` is missing, bucket is inferred from `send_status`/`ack_status`.
+
+## 30-Minute Triage Checklist
+
+When heartbeat reliability appears degraded, use this sequence to produce reproducible evidence quickly.
+
+1. Inspect recent trace events (last 20 rows by default):
+
+```bash
+python3 scripts/main.py heartbeat trace --agent EMP_0001
+```
+
+2. Narrow to a concrete incident window:
+
+```bash
+python3 scripts/main.py heartbeat trace --agent EMP_0001 \
+  --since 2026-02-10T00:00:00Z --until 2026-02-10T01:00:00Z --json
+```
+
+3. Generate SLO summary to detect threshold breach:
+
+```bash
+python3 scripts/main.py heartbeat slo --window daily --agent EMP_0001
+```
+
+4. If status is `ALERT`, include below fields in issue/PR update:
+
+- affected `agent_id`
+- representative `hb_id`
+- failed bucket (`send_fail` / `timeout` / `blocked` / `no_ack`)
+- latest success rate / timeout rate / recovery p95
+
+## QA Gate Evidence Template
+
+For PR gate closure, QA should provide:
+
+- CI status (`Quality Checks` and any integration jobs)
+- local command evidence (trace/slo commands and relevant unit tests)
+- PASS/FAIL verdict on the latest head commit
+- blocker summary with owner + ETA if verdict is FAIL
