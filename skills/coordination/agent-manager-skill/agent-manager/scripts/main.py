@@ -66,6 +66,9 @@ from providers import (
     get_context_left_patterns,
 )
 
+from cli_parser import create_parser
+from command_registry import get_command_handlers
+
 
 def _normalize_path(path: str) -> str:
     try:
@@ -2506,175 +2509,24 @@ def cmd_schedule_run(args):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Agent Manager - Manage employee agents via tmux",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  %(prog)s list                          List all agents
-  %(prog)s start dev                     Start dev agent (session: agent-emp-0001)
-  %(prog)s start dev --tmux-layout windows  Start dev agent in a shared tmux session
-  %(prog)s start dev --working-dir /path  Start with custom working dir
-  %(prog)s stop dev                      Stop dev agent
-  %(prog)s status dev                    Show runtime + heartbeat status
-  %(prog)s monitor dev --follow          Monitor dev output (live)
-  %(prog)s send dev "hello"              Send message to dev
-  %(prog)s assign dev <<EOF              Assign task to dev
-  Fix the bug
-  EOF
-        """
-    )
-
-    subparsers = parser.add_subparsers(dest='command', help='Commands')
-
-    # list command
-    list_parser = subparsers.add_parser('list', help='List all agents')
-    list_parser.add_argument('--running', '-r', action='store_true',
-                            help='Show only running agents')
-
-    # start command
-    start_parser = subparsers.add_parser('start', help='Start an agent')
-    start_parser.add_argument('agent', help='Agent name (e.g., dev, qa) or file ID (e.g., EMP_0001)')
-    start_parser.add_argument('--working-dir', '-w', help='Override working directory')
-    start_parser.add_argument(
-        '--tmux-layout',
-        choices=['sessions', 'windows'],
-        default='sessions',
-        help="tmux layout: 'sessions' (default, one session per agent) or 'windows' (single shared session with one window per agent)",
-    )
-    start_restore_group = start_parser.add_mutually_exclusive_group()
-    start_restore_group.add_argument(
-        '--restore',
-        '-r',
-        action='store_true',
-        default=True,
-        help='Restore/reuse the existing tmux session if it already exists (default)'
-    )
-    start_restore_group.add_argument(
-        '--no-restore',
-        dest='restore',
-        action='store_false',
-        help='Fail if the tmux session already exists'
-    )
-
-    # stop command
-    stop_parser = subparsers.add_parser('stop', help='Stop a running agent')
-    stop_parser.add_argument('agent', help='Agent name')
-
-    # status command
-    status_parser = subparsers.add_parser('status', help='Show status for one agent')
-    status_parser.add_argument('agent', help='Agent name or file ID')
-
-    # monitor command
-    monitor_parser = subparsers.add_parser('monitor', help='Monitor agent output')
-    monitor_parser.add_argument('agent', help='Agent name')
-    monitor_parser.add_argument('--follow', '-f', action='store_true',
-                               help='Follow output (like tail -f)')
-    monitor_parser.add_argument('--lines', '-n', type=int, default=100,
-                               help='Number of lines to show (default: 100)')
-
-    # send command
-    send_parser = subparsers.add_parser('send', help='Send message to agent')
-    send_parser.add_argument('agent', help='Agent name')
-    send_parser.add_argument(
-        '--send-enter',
-        dest='send_enter',
-        action='store_true',
-        default=True,
-        help='Send Enter after message (default)'
-    )
-    send_parser.add_argument(
-        '--no-enter',
-        dest='send_enter',
-        action='store_false',
-        default=True,
-        help='Do not send Enter after message (message will be typed but not submitted)'
-    )
-    send_parser.add_argument('message', help='Message to send')
-
-    # assign command
-    assign_parser = subparsers.add_parser('assign', help='Assign task to agent')
-    assign_parser.add_argument('agent', help='Agent name')
-    assign_parser.add_argument('--task-file', '-f', help='Read task from file')
-
-    # schedule command with subcommands
-    schedule_parser = subparsers.add_parser('schedule', help='Manage scheduled jobs')
-    schedule_subparsers = schedule_parser.add_subparsers(dest='schedule_command', help='Schedule commands')
-
-    # doctor command
-    doctor_parser = subparsers.add_parser('doctor', help='Check environment and configuration')
-    doctor_parser.add_argument('--deep', action='store_true', help='Perform deeper checks')
-
-    # schedule list
-    schedule_list_parser = schedule_subparsers.add_parser('list', help='List all scheduled jobs')
-
-    # schedule sync
-    schedule_sync_parser = schedule_subparsers.add_parser('sync', help='Sync schedules to crontab')
-    schedule_sync_parser.add_argument('--dry-run', '-n', action='store_true',
-                                      help='Show what would be synced without making changes')
-
-    # schedule run
-    schedule_run_parser = schedule_subparsers.add_parser('run', help='Run a scheduled job manually')
-    schedule_run_parser.add_argument('agent', help='Agent name')
-    schedule_run_parser.add_argument('--job', '-j', required=True, help='Job name to run')
-    schedule_run_parser.add_argument('--timeout', '-t', help='Override max runtime (e.g., 30m, 2h)')
-
-    # heartbeat command with subcommands
-    heartbeat_parser = subparsers.add_parser('heartbeat', help='Manage heartbeat jobs')
-    heartbeat_subparsers = heartbeat_parser.add_subparsers(dest='heartbeat_command', help='Heartbeat commands')
-
-    # heartbeat list
-    heartbeat_list_parser = heartbeat_subparsers.add_parser('list', help='List all heartbeat jobs')
-
-    # heartbeat sync (reuses crontab sync)
-    heartbeat_sync_parser = heartbeat_subparsers.add_parser('sync', help='Sync heartbeats to crontab')
-    heartbeat_sync_parser.add_argument('--dry-run', '-n', action='store_true',
-                                       help='Show what would be synced without making changes')
-
-    # heartbeat run
-    heartbeat_run_parser = heartbeat_subparsers.add_parser('run', help='Run a heartbeat manually')
-    heartbeat_run_parser.add_argument('agent', help='Agent name or file ID')
-    heartbeat_run_parser.add_argument('--timeout', '-t', help='Override max runtime (e.g., 30m, 2h)')
-    heartbeat_run_parser.add_argument('--retry', type=int,
-                                      help='Heartbeat retry count on recoverable failures (default: 1)')
-    heartbeat_run_parser.add_argument('--backoff-seconds', type=int,
-                                      help='Retry backoff seconds (default: 3)')
-    heartbeat_run_parser.add_argument('--fallback-mode', choices=['none', 'fresh'],
-                                      help='Fallback policy after retries (default: fresh)')
-    heartbeat_run_parser.add_argument('--notify-on-failure', action='store_true',
-                                      help='Send notifier alert when recovery still fails')
-    heartbeat_run_parser.add_argument('--notifier-channel',
-                                      help='Notifier channel when --notify-on-failure is enabled (default: all)')
-
-    # heartbeat trace
-    heartbeat_trace_parser = heartbeat_subparsers.add_parser('trace', help='Query heartbeat audit trace logs')
-    heartbeat_trace_parser.add_argument('--hb-id', help='Filter by heartbeat id (HB_ID)')
-    heartbeat_trace_parser.add_argument('--agent', help='Filter by agent name/file ID/agent-id')
-    heartbeat_trace_parser.add_argument('--limit', '-n', type=int, default=20,
-                                        help='Max number of records to show (default: 20)')
-    heartbeat_trace_parser.add_argument('--json', action='store_true',
-                                        help='Output records as JSON')
-
+    parser = create_parser()
     args = parser.parse_args()
 
-    # Show help if no command
     if not args.command:
         parser.print_help()
         return 0
-
-    # Route to appropriate handler
-    handlers = {
-        'list': cmd_list,
-        'doctor': cmd_doctor,
-        'start': cmd_start,
-        'stop': cmd_stop,
-        'status': cmd_status,
-        'monitor': cmd_monitor,
-        'send': cmd_send,
-        'assign': cmd_assign,
-        'schedule': cmd_schedule,
-        'heartbeat': cmd_heartbeat,
-    }
+    handlers = get_command_handlers(
+        cmd_list=cmd_list,
+        cmd_doctor=cmd_doctor,
+        cmd_start=cmd_start,
+        cmd_stop=cmd_stop,
+        cmd_status=cmd_status,
+        cmd_monitor=cmd_monitor,
+        cmd_send=cmd_send,
+        cmd_assign=cmd_assign,
+        cmd_schedule=cmd_schedule,
+        cmd_heartbeat=cmd_heartbeat,
+    )
 
     handler = handlers.get(args.command)
     if handler:

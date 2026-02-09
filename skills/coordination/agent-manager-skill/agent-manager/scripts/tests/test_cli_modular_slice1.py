@@ -1,0 +1,58 @@
+import sys
+import unittest
+from pathlib import Path
+
+
+SCRIPTS_DIR = Path(__file__).resolve().parents[1]
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from cli_parser import create_parser  # noqa: E402
+from command_registry import get_command_handlers  # noqa: E402
+import main  # noqa: E402
+
+
+class CliModularSlice1Tests(unittest.TestCase):
+    def test_start_defaults_preserved(self):
+        args = create_parser().parse_args(['start', 'dev'])
+        self.assertEqual(args.command, 'start')
+        self.assertEqual(args.agent, 'dev')
+        self.assertTrue(args.restore)
+        self.assertEqual(args.tmux_layout, 'sessions')
+
+    def test_send_no_enter_flag_preserved(self):
+        args = create_parser().parse_args(['send', 'dev', '--no-enter', 'hello'])
+        self.assertEqual(args.command, 'send')
+        self.assertEqual(args.agent, 'dev')
+        self.assertFalse(args.send_enter)
+        self.assertEqual(args.message, 'hello')
+
+    def test_schedule_run_still_requires_job(self):
+        parser = create_parser()
+        with self.assertRaises(SystemExit):
+            parser.parse_args(['schedule', 'run', 'dev'])
+
+    def test_registry_contract_points_to_main_handlers(self):
+        handlers = get_command_handlers(
+            cmd_list=main.cmd_list,
+            cmd_doctor=main.cmd_doctor,
+            cmd_start=main.cmd_start,
+            cmd_stop=main.cmd_stop,
+            cmd_status=main.cmd_status,
+            cmd_monitor=main.cmd_monitor,
+            cmd_send=main.cmd_send,
+            cmd_assign=main.cmd_assign,
+            cmd_schedule=main.cmd_schedule,
+            cmd_heartbeat=main.cmd_heartbeat,
+        )
+        self.assertEqual(
+            set(handlers.keys()),
+            {'list', 'doctor', 'start', 'stop', 'status', 'monitor', 'send', 'assign', 'schedule', 'heartbeat'},
+        )
+        self.assertIs(handlers['start'], main.cmd_start)
+        self.assertIs(handlers['status'], main.cmd_status)
+        self.assertIs(handlers['heartbeat'], main.cmd_heartbeat)
+
+
+if __name__ == '__main__':
+    unittest.main()
