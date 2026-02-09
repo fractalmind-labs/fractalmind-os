@@ -60,6 +60,9 @@ def parse_heartbeat_recovery_policy(
         'notifier_channel': str(raw.get('notifier_channel', defaults['notifier_channel']) or defaults['notifier_channel']).strip(),
     }
 
+    if not policy['notifier_channel']:
+        policy['notifier_channel'] = defaults['notifier_channel']
+
     normalized_fallback_modes = fallback_modes or {'none', 'fresh'}
     if policy['fallback_mode'] == 'restart':
         policy['fallback_mode'] = 'fresh'
