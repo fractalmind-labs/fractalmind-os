@@ -79,6 +79,25 @@ class CliModularSlice1Tests(unittest.TestCase):
         self.assertIs(mock_handler.call_args.kwargs['deps'], main)
         self.assertIs(mock_handler.call_args.kwargs['start_handler'], main.cmd_start)
 
+    def test_status_wrapper_delegates_to_status_handler(self):
+        args = object()
+        with patch('main.status_cmd_status', return_value=29) as mock_handler:
+            result = main.cmd_status(args)
+
+        self.assertEqual(result, 29)
+        mock_handler.assert_called_once()
+        self.assertIs(mock_handler.call_args.kwargs['deps'], main)
+
+    def test_schedule_wrapper_delegates_to_schedule_handler(self):
+        args = object()
+        with patch('main.schedule_cmd_schedule', return_value=31) as mock_handler:
+            result = main.cmd_schedule(args)
+
+        self.assertEqual(result, 31)
+        mock_handler.assert_called_once()
+        self.assertIs(mock_handler.call_args.kwargs['deps'], main)
+        self.assertIs(mock_handler.call_args.kwargs['schedule_run_handler'], main.cmd_schedule_run)
+
 
 if __name__ == '__main__':
     unittest.main()
