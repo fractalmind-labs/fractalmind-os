@@ -55,6 +55,7 @@ The most contributed Agent Skills repository, built and maintained together with
 - [Skills by Microsoft](#skills-by-microsoft)
 - [Skills by Neon Team](#skills-by-neon-team)
 - [Skill by Cloudflare Engineer](#skill-by-cloudflare-engineer)
+- [Skill by ClickHouse](#skill-by-click-house)
 - [Skills by fal.ai Team](#skills-by-falai-team)
 - [Skills by HashiCorp Team for Terraform](#skills-by-hashicorp-team-for-terraform)
 - [Skills by Sanity Team](#skills-by-sanity-team)
@@ -417,6 +418,13 @@ Domain-specific knowledge for Azure SDK and Foundry development.
 <summary><h3 style="display:inline">Skill by Cloudflare Engineer</h3></summary>
 
 - **[dmmulroy/cloudflare-skill](https://github.com/dmmulroy/cloudflare-skill/tree/main/skills/cloudflare)** - Cloudflare platform reference for Workers, Pages, storage, AI, and networking
+
+</details>
+
+<details>
+<summary><h3 style="display:inline">Skill by ClickHouse</h3></summary>
+
+- **[ClickHouse/agent-skills](https://github.com/ClickHouse/agent-skills)** - The official Agent Skills for [ClickHouse](https://clickhouse.com/). These skills help LLMs and agents to adopt best practices when working with ClickHouse.
 
 </details>
 
