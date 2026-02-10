@@ -22,14 +22,23 @@ This document tracks incremental modularization of `agent-manager/scripts/main.p
   - `agent-manager/scripts/commands/status.py`
   - `agent-manager/scripts/commands/schedule.py`
   - wrapper delegation tests updated
+- **Slice 4**: list handler extraction
+  - `agent-manager/scripts/commands/listing.py`
+  - `main.py` `cmd_list` converted to wrapper delegation
+  - list output/filter regression tests added
+- **Slice 5**: doctor handler extraction
+  - `agent-manager/scripts/commands/doctor.py`
+  - `main.py` `cmd_doctor` converted to wrapper delegation
+  - doctor command behavior + wrapper delegation tests added
 
 ### Next slice (current target)
 
-- **Slice 3-B**: heartbeat dispatch wrapper extraction
-  - move `cmd_heartbeat` dispatch branching into `scripts/commands/heartbeat.py`
+- **Slice 6**: heartbeat/schedule boundary extraction
+  - extract `cmd_heartbeat` dispatch branching into `scripts/commands/heartbeat.py`
+  - extract `cmd_schedule_run` orchestration path into a command module helper
   - keep `cmd_heartbeat_run/cmd_heartbeat_trace/cmd_heartbeat_slo` behavior unchanged
-  - keep `main.py` wrapper-only delegation for backward compatibility
-  - add regression tests for wrapper routing and unchanged exit/output contract
+  - keep `main.py` as wrapper-only delegation for this command family
+  - add wrapper routing tests + unchanged output/exit-code assertions
 
 ## Migration Notes
 
