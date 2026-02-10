@@ -106,6 +106,23 @@ tmux attach -t agent-manager
 REPO_ROOT="$PWD/your-project" python3 agent-manager/scripts/main.py doctor
 ```
 
+### Command Path Parity (Docs Baseline)
+
+To avoid path drift across docs and runbooks, define one CLI alias and reuse it:
+
+```bash
+# Installed skill path (pick one that exists in your environment)
+CLI="python3 .agent/skills/agent-manager/scripts/main.py"
+# CLI="python3 .claude/skills/agent-manager/scripts/main.py"
+
+# If running from a cloned repo (not installed):
+# CLI="python3 agent-manager/scripts/main.py"
+
+$CLI doctor
+$CLI list
+$CLI status EMP_0001
+```
+
 ## Getting Started
 
 See `examples/getting-started.md` for a 2-minute end-to-end walkthrough.
