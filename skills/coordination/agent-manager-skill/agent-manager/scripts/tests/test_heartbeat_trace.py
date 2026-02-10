@@ -139,9 +139,11 @@ class HeartbeatTraceTests(unittest.TestCase):
         self.assertEqual(payload['agent_id'], 'emp-0004')
         self.assertEqual(payload['hb_id'], 'hb-shape')
         self.assertIn('duration_ms', payload)
+        self.assertIn('reason_code', payload)
         self.assertIn('duration', payload)
         self.assertIn('stage', payload)
         self.assertIn('result', payload)
+        self.assertIn('reason_code', payload)
 
 
 if __name__ == '__main__':

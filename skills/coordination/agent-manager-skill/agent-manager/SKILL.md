@@ -486,8 +486,10 @@ Event fields (standardized for observability):
 - `context_left`
 - `failure_type`
 - `session_mode`
+- `reason_code`
 - `attempt`
 - `recovery_action`
+- `reason_code`
 
 Failure classification (`failure_type`) includes:
 
