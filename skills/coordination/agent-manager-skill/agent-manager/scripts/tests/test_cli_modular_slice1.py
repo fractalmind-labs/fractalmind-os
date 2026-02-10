@@ -123,6 +123,17 @@ class CliModularSlice1Tests(unittest.TestCase):
         mock_handler.assert_called_once()
         self.assertIs(mock_handler.call_args.kwargs['deps'], main)
 
+    def test_heartbeat_wrapper_delegates_to_heartbeat_handler(self):
+        args = object()
+        with patch('main.heartbeat_cmd_heartbeat', return_value=43) as mock_handler:
+            result = main.cmd_heartbeat(args)
+
+        self.assertEqual(result, 43)
+        mock_handler.assert_called_once()
+        self.assertIs(mock_handler.call_args.kwargs['run_handler'], main.cmd_heartbeat_run)
+        self.assertIs(mock_handler.call_args.kwargs['trace_handler'], main.cmd_heartbeat_trace)
+        self.assertIs(mock_handler.call_args.kwargs['slo_handler'], main.cmd_heartbeat_slo)
+
     def test_schedule_wrapper_delegates_to_schedule_handler(self):
         args = object()
         with patch('main.schedule_cmd_schedule', return_value=31) as mock_handler:
