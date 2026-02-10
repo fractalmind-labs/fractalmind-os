@@ -61,6 +61,7 @@ The most contributed Agent Skills repository, built and maintained together with
 - [Skills by Sanity Team](#skills-by-sanity-team)
 - [Skills by Remotion Team](#skills-by-remotion-team)
 - [Skills by WordPress Development Team](#skills-by-wordpress-development-team)
+- [Skills by Transloadit Team](#skills-by-transloadit-team)
 - [Community Skills](#community-skills)
 
 
@@ -482,6 +483,18 @@ Domain-specific knowledge for Azure SDK and Foundry development.
 - **[WordPress/wp-phpstan](https://github.com/WordPress/agent-skills/tree/trunk/skills/wp-phpstan)** - PHPStan static analysis for WordPress projects
 - **[WordPress/wp-playground](https://github.com/WordPress/agent-skills/tree/trunk/skills/wp-playground)** - WordPress Playground for instant local environments
 - **[WordPress/wpds](https://github.com/WordPress/agent-skills/tree/trunk/skills/wpds)** - WordPress Design System
+
+</details>
+
+<details>
+<summary><h3 style="display:inline">Skills by Transloadit Team</h3></summary>
+
+- **[transloadit/transloadit](https://github.com/transloadit/skills/tree/main/skills/transloadit)** - Routes media tasks to the right skill
+- **[transloadit/docs-transloadit-robots](https://github.com/transloadit/skills/tree/main/skills/docs-transloadit-robots)** - Look up any of 86+ processing Robots
+- **[transloadit/transform-generate-image](https://github.com/transloadit/skills/tree/main/skills/transform-generate-image-with-transloadit)** - Generate images via AI models
+- **[transloadit/transform-encode-hls-video](https://github.com/transloadit/skills/tree/main/skills/transform-encode-hls-video-with-transloadit)** - Encode video to HLS streaming format
+- **[transloadit/integrate-uppy-s3-uploading](https://github.com/transloadit/skills/tree/main/skills/integrate-uppy-transloadit-s3-uploading-to-nextjs)** - Add Uppy file uploads to Next.js apps
+- **[transloadit/integrate-smartcdn-delivery](https://github.com/transloadit/skills/tree/main/skills/integrate-asset-delivery-with-transloadit-smartcdn-in-nextjs)** - Smart CDN asset delivery in Next.js
 
 </details>
 
