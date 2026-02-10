@@ -1,45 +1,52 @@
-# CLI Modularization Plan (Issue #31)
+# CLI Modularization Plan (Issue #46)
 
-This document defines the incremental refactor plan for `agent-manager/scripts/main.py`.
+This document tracks incremental modularization of `agent-manager/scripts/main.py`.
 
 ## Goals
 
 - keep CLI behavior stable while reducing entrypoint complexity
 - make command wiring explicit and testable
-- prepare later extraction of command implementations into dedicated modules
+- move command implementations into dedicated modules in small merge-safe slices
 
-## Slice Plan
+## Delivery Status
 
-### Slice 1 (this PR)
+### Completed slices
 
-- extract argparse tree into `scripts/cli_parser.py`
-- extract command dispatch map into `scripts/command_registry.py`
-- keep all command implementations in `main.py`
-- add regression tests for parser defaults + command routing contract
-
-### Slice 2
-
-- extract lifecycle commands to modules under `scripts/commands/`:
-  - `start.py`, `stop.py`, `monitor.py`, `send.py`, `assign.py`
-- keep shared helpers in `main.py` until service layer is introduced
-
-### Slice 3
-
-- extract scheduler/heartbeat command handlers:
-  - `schedule.py`, `heartbeat.py`
-- move heartbeat helper functions into `scripts/services/heartbeat_service.py`
-
-### Slice 4
-
-- introduce shared services:
-  - `session_service.py`, `provider_service.py`, `runtime_service.py`
-- reduce `main.py` to a thin entrypoint (parser + dispatch + process exit)
-
-## Migration Notes (Slice 1)
-
-- **User-facing CLI is unchanged**: command names, arguments, defaults, and outputs are preserved.
-- `main.py` now imports parser/registry from:
+- **Slice 1**: parser/registry extraction
   - `agent-manager/scripts/cli_parser.py`
   - `agent-manager/scripts/command_registry.py`
-- Extensions/custom forks should add new command flags in `cli_parser.py` and register handlers in `command_registry.py`.
+- **Slice 2**: lifecycle command extraction
+  - `agent-manager/scripts/commands/lifecycle.py`
+  - `main.py` wrappers delegate to lifecycle handlers
+- **Slice 3-A**: status/schedule handler extraction
+  - `agent-manager/scripts/commands/status.py`
+  - `agent-manager/scripts/commands/schedule.py`
+  - wrapper delegation tests updated
+
+### Next slice (current target)
+
+- **Slice 3-B**: heartbeat dispatch wrapper extraction
+  - move `cmd_heartbeat` dispatch branching into `scripts/commands/heartbeat.py`
+  - keep `cmd_heartbeat_run/cmd_heartbeat_trace/cmd_heartbeat_slo` behavior unchanged
+  - keep `main.py` wrapper-only delegation for backward compatibility
+  - add regression tests for wrapper routing and unchanged exit/output contract
+
+## Migration Notes
+
+- User-facing CLI remains unchanged: command names, arguments, defaults, and outputs are preserved.
 - No config/schema migration is required for existing `agents/*.md` files.
+- Any future command extension should update:
+  - argument definitions in `cli_parser.py`
+  - command routing in `command_registry.py`
+  - command implementation in `scripts/commands/`
+
+## Validation Baseline
+
+- `python3 -m compileall -q agent-manager`
+- `python3 -m unittest discover -s agent-manager/scripts/tests -p 'test_*.py' -q`
+- plus targeted wrapper tests for each extracted slice
+
+## Rollback Strategy
+
+- revert only the latest slice commit(s) if behavior drift is detected
+- keep wrappers in `main.py` stable so rollback does not change CLI surface
