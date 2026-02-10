@@ -136,7 +136,21 @@ See [agent-manager/SKILL.md](agent-manager/SKILL.md) for complete documentation.
 For CLI refactor progress and migration notes, see [agent-manager/docs/cli-modularization-plan.md](agent-manager/docs/cli-modularization-plan.md).
 For heartbeat serviceization notes, see [agent-manager/docs/heartbeat-serviceization.md](agent-manager/docs/heartbeat-serviceization.md).
 
+For operational SOPs and failure handling checklists, see [agent-manager/docs/runbook-checklist.md](agent-manager/docs/runbook-checklist.md).
 For heartbeat observability and SLO metrics, see [agent-manager/docs/heartbeat-observability.md](agent-manager/docs/heartbeat-observability.md).
+
+## Testing
+
+```bash
+# Full suite
+python3 -m unittest discover -s agent-manager/scripts/tests -p 'test_*.py' -v
+
+# Integration matrix suite (with flaky-control retries + artifacts)
+python3 agent-manager/scripts/tests/run_integration_suite.py \
+  --attempts 2 \
+  --pattern 'test_integration_*.py' \
+  --artifact-dir .artifacts/integration
+```
 
 ## Requirements
 
