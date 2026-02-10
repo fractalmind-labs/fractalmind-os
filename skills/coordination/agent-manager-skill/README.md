@@ -34,11 +34,14 @@ Managing multiple AI agents is deceptively complex:
 ### via openskills (recommended)
 
 ```bash
-# Project installation
-openskills install fractalmind-ai/agent-manager-skill
+# Project installation (works even when `openskills` is not globally installed)
+npx --yes openskills install fractalmind-ai/agent-manager-skill
 
 # Global installation
-openskills install fractalmind-ai/agent-manager-skill --global
+npx --yes openskills install fractalmind-ai/agent-manager-skill --global
+
+# If you already have a global openskills binary, this also works:
+# openskills install fractalmind-ai/agent-manager-skill
 ```
 
 ### Manual installation
@@ -54,7 +57,11 @@ cp -r agent-manager ~/.claude/skills/agent-manager
 After installation, read the skill documentation:
 
 ```bash
-openskills read agent-manager
+# Preferred (portable)
+npx --yes openskills read agent-manager
+
+# Optional when openskills is globally installed:
+# openskills read agent-manager
 ```
 
 Or view directly:
