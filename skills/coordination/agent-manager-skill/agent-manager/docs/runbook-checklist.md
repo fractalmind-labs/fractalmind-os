@@ -4,10 +4,15 @@ This runbook is an actionable SOP for day-to-day operation and common failures.
 
 ## 0) 30-Minute Newcomer Path
 
-Use this exact sequence from repo root:
+Use this exact sequence from repo root (choose one CLI path first):
 
 ```bash
-CLI="python3 agent-manager/scripts/main.py"
+# Installed skill path (pick one that exists in your environment)
+CLI="python3 .agent/skills/agent-manager/scripts/main.py"
+# CLI="python3 .claude/skills/agent-manager/scripts/main.py"
+
+# If running directly from a cloned repo (not installed skill):
+# CLI="python3 agent-manager/scripts/main.py"
 
 $CLI doctor
 $CLI list
@@ -26,7 +31,7 @@ Checklist:
 ## 1) Preflight Before Heartbeat / Schedule Operations
 
 ```bash
-CLI="python3 agent-manager/scripts/main.py"
+# Reuse CLI defined in section 0
 $CLI doctor
 $CLI heartbeat list
 $CLI schedule list
@@ -46,7 +51,7 @@ Symptoms:
 Commands:
 
 ```bash
-CLI="python3 agent-manager/scripts/main.py"
+# Reuse CLI defined in section 0
 $CLI heartbeat run EMP_0001 --timeout 30
 $CLI heartbeat trace --agent EMP_0001 --limit 20
 $CLI status EMP_0001
@@ -68,7 +73,7 @@ Symptoms:
 Commands:
 
 ```bash
-CLI="python3 agent-manager/scripts/main.py"
+# Reuse CLI defined in section 0
 $CLI status EMP_0001
 $CLI monitor EMP_0001 -n 160
 $CLI heartbeat run EMP_0001 --timeout 20
