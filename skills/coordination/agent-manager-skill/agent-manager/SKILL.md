@@ -33,6 +33,23 @@ EOF
 python3 .agent/skills/agent-manager/scripts/main.py stop dev
 ```
 
+### Command Path Parity (Docs Baseline)
+
+For consistency with `README.md` and runbook examples, define one CLI alias and reuse it in your session:
+
+```bash
+# Installed skill path (pick one that exists)
+CLI="python3 .agent/skills/agent-manager/scripts/main.py"
+# CLI="python3 .claude/skills/agent-manager/scripts/main.py"
+
+# If operating from a cloned repo instead of installed skill:
+# CLI="python3 agent-manager/scripts/main.py"
+
+$CLI doctor
+$CLI list
+$CLI status EMP_0001
+```
+
 ## Core Concepts
 
 ### Agent Configuration
