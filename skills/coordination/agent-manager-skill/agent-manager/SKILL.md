@@ -143,13 +143,15 @@ Note: For scheduled jobs, `agent-manager` will best-effort auto-dismiss Codex's 
 
 ## Commands
 
+All examples below assume you already defined `$CLI` in **Command Path Parity (Docs Baseline)**.
+
 ### `list` - List All Agents
 
 Show all configured agents and their status.
 
 ```bash
-python3 scripts/main.py list              # All agents
-python3 scripts/main.py list --running    # Only running
+$CLI list              # All agents
+$CLI list --running    # Only running
 ```
 
 Output:
@@ -175,8 +177,8 @@ Output:
 Start an agent in a tmux session.
 
 ```bash
-python3 scripts/main.py start dev                      # Use default working_dir
-python3 scripts/main.py start dev --working-dir /path   # Override working dir
+$CLI start dev                      # Use default working_dir
+$CLI start dev --working-dir /path   # Override working dir
 ```
 
 - Rejects if already running (one agent, one terminal)
@@ -189,7 +191,7 @@ python3 scripts/main.py start dev --working-dir /path   # Override working dir
 Stop (kill) an agent's tmux session.
 
 ```bash
-python3 scripts/main.py stop dev
+$CLI stop dev
 ```
 
 ### `status` - Show Agent Status
@@ -197,7 +199,7 @@ python3 scripts/main.py stop dev
 Show one agent's runtime snapshot, including running state, runtime state, and the most recent heartbeat marker/event.
 
 ```bash
-python3 scripts/main.py status dev
+$CLI status dev
 ```
 
 ### `monitor` - Monitor Agent Output
@@ -205,9 +207,9 @@ python3 scripts/main.py status dev
 View agent output from tmux session.
 
 ```bash
-python3 scripts/main.py monitor dev              # Last 100 lines
-python3 scripts/main.py monitor dev -n 500       # Last 500 lines
-python3 scripts/main.py monitor dev --follow     # Live monitoring (Ctrl+C to stop)
+$CLI monitor dev              # Last 100 lines
+$CLI monitor dev -n 500       # Last 500 lines
+$CLI monitor dev --follow     # Live monitoring (Ctrl+C to stop)
 ```
 
 ### `send` - Send Message to Agent
@@ -215,8 +217,8 @@ python3 scripts/main.py monitor dev --follow     # Live monitoring (Ctrl+C to st
 Send a message/command to a running agent.
 
 ```bash
-python3 scripts/main.py send dev "Please run tests"
-python3 scripts/main.py send dev --no-enter "Draft message only"
+$CLI send dev "Please run tests"
+$CLI send dev --no-enter "Draft message only"
 ```
 
 By default, `send` submits the message immediately (Enter is sent automatically).
@@ -228,7 +230,7 @@ Assign a task to an agent (starts if not running).
 
 ```bash
 # From stdin
-python3 scripts/main.py assign dev <<EOF
+$CLI assign dev <<EOF
 🎯 Task: Fix the login bug
 
 1. Reproduce the issue
@@ -238,7 +240,7 @@ python3 scripts/main.py assign dev <<EOF
 EOF
 
 # From file
-python3 scripts/main.py assign dev --task-file task.md
+$CLI assign dev --task-file task.md
 ```
 
 `assign` submits automatically (Enter is sent by default), so no manual tmux Enter step is required.
@@ -336,7 +338,7 @@ schedules:
 #### `schedule list` - List All Scheduled Jobs
 
 ```bash
-python3 scripts/main.py schedule list
+$CLI schedule list
 ```
 
 Output:
@@ -358,10 +360,10 @@ Synchronize all agent schedules to the system crontab.
 
 ```bash
 # Preview changes (dry run)
-python3 scripts/main.py schedule sync --dry-run
+$CLI schedule sync --dry-run
 
 # Apply changes
-python3 scripts/main.py schedule sync
+$CLI schedule sync
 ```
 
 This generates crontab entries like:
@@ -369,7 +371,7 @@ This generates crontab entries like:
 # === agent-manager schedules (auto-generated) ===
 # dev (EMP_0001)
 # daily-standup
-0 9 * * 1-5 cd /path/to/repo && python3 .agent/skills/agent-manager/scripts/main.py schedule run dev --job daily-standup >> /tmp/agent-emp-0001-daily-standup.log 2>&1
+0 9 * * 1-5 cd /path/to/repo && python3 /absolute/path/to/agent-manager/scripts/main.py schedule run dev --job daily-standup >> /tmp/agent-emp-0001-daily-standup.log 2>&1
 # === end agent-manager schedules ===
 ```
 
@@ -378,10 +380,10 @@ This generates crontab entries like:
 Manually trigger a scheduled job (useful for testing).
 
 ```bash
-python3 scripts/main.py schedule run dev --job daily-standup
+$CLI schedule run dev --job daily-standup
 
 # Override timeout
-python3 scripts/main.py schedule run dev --job daily-standup --timeout 1h
+$CLI schedule run dev --job daily-standup --timeout 1h
 ```
 
 ## Heartbeat
@@ -433,7 +435,7 @@ heartbeat:
 #### `heartbeat list` - List All Heartbeat Jobs
 
 ```bash
-python3 scripts/main.py heartbeat list
+$CLI heartbeat list
 ```
 
 Output:
@@ -450,10 +452,10 @@ Heartbeats and schedules are synced together to the system crontab.
 
 ```bash
 # Preview changes (dry run)
-python3 scripts/main.py heartbeat sync --dry-run
+$CLI heartbeat sync --dry-run
 
 # Apply changes
-python3 scripts/main.py heartbeat sync
+$CLI heartbeat sync
 ```
 
 This generates crontab entries like:
@@ -461,7 +463,7 @@ This generates crontab entries like:
 # === agent-manager schedules (auto-generated) ===
 # dev (EMP_0001)
 # heartbeat [HB]
-*/30 * * * * cd /path/to/repo && python3 .agent/skills/agent-manager/scripts/main.py heartbeat run EMP_0001 >> /path/to/.crontab_logs/agent-emp-0001-heartbeat.log 2>&1
+*/30 * * * * cd /path/to/repo && python3 /absolute/path/to/agent-manager/scripts/main.py heartbeat run EMP_0001 >> /path/to/.crontab_logs/agent-emp-0001-heartbeat.log 2>&1
 # === end agent-manager schedules ===
 ```
 
@@ -470,10 +472,10 @@ This generates crontab entries like:
 Manually trigger a heartbeat (useful for testing).
 
 ```bash
-python3 scripts/main.py heartbeat run EMP_0001
+$CLI heartbeat run EMP_0001
 
 # Override timeout
-python3 scripts/main.py heartbeat run EMP_0001 --timeout 1m
+$CLI heartbeat run EMP_0001 --timeout 1m
 ```
 
 **Heartbeat behavior:**
@@ -519,29 +521,29 @@ Failure classification (`failure_type`) includes:
 
 ```bash
 # Recent events
-python3 scripts/main.py heartbeat trace
+$CLI heartbeat trace
 
 # Filter by heartbeat id
-python3 scripts/main.py heartbeat trace --hb-id 20260209-120001
+$CLI heartbeat trace --hb-id 20260209-120001
 
 # Filter by agent + time range (UTC)
-python3 scripts/main.py heartbeat trace   --agent EMP_0001   --since 2026-02-09T00:00:00Z   --until 2026-02-10T00:00:00Z
+$CLI heartbeat trace   --agent EMP_0001   --since 2026-02-09T00:00:00Z   --until 2026-02-10T00:00:00Z
 
 # Output JSON
-python3 scripts/main.py heartbeat trace --agent EMP_0001 --json
+$CLI heartbeat trace --agent EMP_0001 --json
 ```
 
 #### `heartbeat slo` - Daily/Weekly SLO Summary
 
 ```bash
 # Daily summary (default)
-python3 scripts/main.py heartbeat slo
+$CLI heartbeat slo
 
 # Weekly summary for one agent
-python3 scripts/main.py heartbeat slo --window weekly --agent EMP_0001
+$CLI heartbeat slo --window weekly --agent EMP_0001
 
 # Explicit time window + JSON
-python3 scripts/main.py heartbeat slo   --since 2026-02-01T00:00:00Z   --until 2026-02-08T00:00:00Z   --json
+$CLI heartbeat slo   --since 2026-02-01T00:00:00Z   --until 2026-02-08T00:00:00Z   --json
 ```
 
 Built-in SLO checks:
@@ -674,11 +676,11 @@ tmux ls | grep ^agent-
 
 ```bash
 # Morning: Start agents
-python3 scripts/main.py start dev
-python3 scripts/main.py start qa
+$CLI start dev
+$CLI start qa
 
 # Assign task to dev
-python3 scripts/main.py assign dev <<EOF
+$CLI assign dev <<EOF
 Implement the user profile feature:
 1. Profile update API
 2. Profile view component
@@ -686,16 +688,16 @@ Implement the user profile feature:
 EOF
 
 # Quick runtime snapshot
-python3 scripts/main.py status dev
+$CLI status dev
 
 # Monitor progress
-python3 scripts/main.py monitor dev --follow
+$CLI monitor dev --follow
 
 # Send clarification if needed
-python3 scripts/main.py send dev "Please add validation for email format"
+$CLI send dev "Please add validation for email format"
 
 # After dev completes, assign to QA
-python3 scripts/main.py assign qa <<EOF
+$CLI assign qa <<EOF
 Review the user profile feature:
 - Security check
 - Edge cases
@@ -703,6 +705,6 @@ Review the user profile feature:
 EOF
 
 # Evening: Stop agents
-python3 scripts/main.py stop dev
-python3 scripts/main.py stop qa
+$CLI stop dev
+$CLI stop qa
 ```
