@@ -26,6 +26,8 @@ class RuntimeStateMachineTests(unittest.TestCase):
         self.assertEqual(runtime_state.detect_error_reason('Error 522 Cloudflare Ray ID'), 'cloudflare_522')
         self.assertEqual(runtime_state.detect_error_reason('API Error: 400 unknown provider'), 'unknown_provider')
         self.assertEqual(runtime_state.detect_error_reason('connection refused'), 'connection_refused')
+        self.assertIsNone(runtime_state.detect_error_reason('timeout/cancel/unwind 成功率与耗尽计数'))
+        self.assertIsNone(runtime_state.detect_error_reason('timeout/cancel/unwind 成功率与耗尽计数\nfailure modes'))
         self.assertIsNone(runtime_state.detect_error_reason('all good'))
 
     def test_unknown_when_session_not_running(self):

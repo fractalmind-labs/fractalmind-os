@@ -76,8 +76,27 @@ def detect_error_reason(output: str) -> Optional[str]:
     if 'invalid_request_error' in lowered:
         return 'invalid_request'
 
-    if 'timed out' in lowered or 'timeout' in lowered:
+    # Be conservative with "timeout": it can appear in normal logs/metrics
+    # (e.g. "timeout/cancel/unwind") and should not force an error state.
+    if 'timed out' in lowered:
         return 'timeout'
+    if 'timeout' in lowered:
+        if re.search(r"\b(etimedout|deadline exceeded|context deadline exceeded)\b", lowered):
+            return 'timeout'
+
+        # Only treat "timeout" as an error when it is clearly part of an error line.
+        # Avoid false positives where "timeout" appears in normal domain text
+        # (e.g. "timeout/cancel/unwind" metrics) and other unrelated lines contain
+        # words like "failure modes".
+        for line in lowered.splitlines():
+            if 'timeout' not in line:
+                continue
+            if re.search(r"\b(etimedout|deadline exceeded|context deadline exceeded|timed out)\b", line):
+                return 'timeout'
+            if re.search(r"\b(error|failed|exception|traceback)\b", line):
+                return 'timeout'
+            if re.search(r"\bfailure\b", line) and not re.search(r"\bfailure modes\b", line):
+                return 'timeout'
     if 'econnrefused' in lowered or 'connection refused' in lowered:
         return 'connection_refused'
     if 'etimedout' in lowered:
