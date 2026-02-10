@@ -2,6 +2,16 @@
 
 This document describes heartbeat audit fields, trace queries, and SLO summary metrics.
 
+## Command Path Baseline
+
+Define one CLI alias first (same baseline as README/SKILL/runbook docs):
+
+```bash
+CLI="python3 .agent/skills/agent-manager/scripts/main.py"
+# CLI="python3 .claude/skills/agent-manager/scripts/main.py"
+# CLI="python3 agent-manager/scripts/main.py"  # cloned repo mode
+```
+
 ## Audit Log Location
 
 Heartbeat runs append JSONL events to:
@@ -32,7 +42,7 @@ Each JSONL row includes:
 Use `heartbeat trace` to query audit logs by heartbeat id, agent, and time range.
 
 ```bash
-python3 scripts/main.py heartbeat trace --agent EMP_0001 \
+$CLI heartbeat trace --agent EMP_0001 \
   --since 2026-02-09T00:00:00Z \
   --until 2026-02-10T00:00:00Z
 ```
@@ -42,15 +52,15 @@ python3 scripts/main.py heartbeat trace --agent EMP_0001 \
 Use `heartbeat slo` for daily/weekly summaries.
 
 ```bash
-python3 scripts/main.py heartbeat slo --window daily
-python3 scripts/main.py heartbeat slo --window weekly --agent EMP_0001
-python3 scripts/main.py heartbeat slo --json
+$CLI heartbeat slo --window daily
+$CLI heartbeat slo --window weekly --agent EMP_0001
+$CLI heartbeat slo --json
 ```
 
 Standalone script:
 
 ```bash
-python3 scripts/heartbeat_slo.py --window daily
+python3 agent-manager/scripts/heartbeat_slo.py --window daily
 ```
 
 ## Built-in SLO Thresholds
@@ -79,20 +89,20 @@ When heartbeat reliability appears degraded, use this sequence to produce reprod
 1. Inspect recent trace events (last 20 rows by default):
 
 ```bash
-python3 scripts/main.py heartbeat trace --agent EMP_0001
+$CLI heartbeat trace --agent EMP_0001
 ```
 
 2. Narrow to a concrete incident window:
 
 ```bash
-python3 scripts/main.py heartbeat trace --agent EMP_0001 \
+$CLI heartbeat trace --agent EMP_0001 \
   --since 2026-02-10T00:00:00Z --until 2026-02-10T01:00:00Z --json
 ```
 
 3. Generate SLO summary to detect threshold breach:
 
 ```bash
-python3 scripts/main.py heartbeat slo --window daily --agent EMP_0001
+$CLI heartbeat slo --window daily --agent EMP_0001
 ```
 
 4. If status is `ALERT`, include below fields in issue/PR update:
