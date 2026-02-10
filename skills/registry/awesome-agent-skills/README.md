@@ -55,7 +55,7 @@ The most contributed Agent Skills repository, built and maintained together with
 - [Skills by Microsoft](#skills-by-microsoft)
 - [Skills by Neon Team](#skills-by-neon-team)
 - [Skill by Cloudflare Engineer](#skill-by-cloudflare-engineer)
-- [Skill by ClickHouse](#skill-by-click-house)
+- [Skill by ClickHouse](#skill-by-clickhouse)
 - [Skills by fal.ai Team](#skills-by-falai-team)
 - [Skills by HashiCorp Team for Terraform](#skills-by-hashicorp-team-for-terraform)
 - [Skills by Sanity Team](#skills-by-sanity-team)
