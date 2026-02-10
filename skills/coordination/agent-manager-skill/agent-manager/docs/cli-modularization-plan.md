@@ -33,19 +33,18 @@ This document tracks incremental modularization of `agent-manager/scripts/main.p
 
 ### Completed slice (latest)
 
-- **Slice 6**: heartbeat dispatch extraction
-  - extracted `cmd_heartbeat` subcommand routing to `scripts/commands/heartbeat.py`
-  - kept `cmd_heartbeat_run/cmd_heartbeat_trace/cmd_heartbeat_slo` behavior unchanged
-  - converted `main.py` `cmd_heartbeat` to wrapper-only delegation
-  - added wrapper routing + command branching tests
+- **Slice 7**: schedule run orchestration extraction
+  - extracted `cmd_schedule_run` orchestration to `scripts/commands/schedule_run.py`
+  - converted `main.py` `cmd_schedule_run` to wrapper-only delegation
+  - kept schedule guardrails/restart-policy behavior unchanged
+  - added wrapper delegation + schedule-run command regression tests
 
 ### Next slice (current target)
 
-- **Slice 7**: schedule run orchestration extraction
-  - extract `cmd_schedule_run` orchestration path into command/service helpers
-  - keep schedule guardrails and restart policy behavior unchanged
-  - keep `main.py` wrapper-only delegation for schedule command family
-  - add regression tests for busy/stuck/error restart boundaries
+- **Slice 8**: schedule run flow decomposition
+  - split schedule-run runtime/restart decision logic into helper functions/services
+  - keep CLI output and exit-code behavior stable
+  - add deeper tests for busy/stuck/error restart boundaries and codex task-file fallback
 
 ## Migration Notes
 
