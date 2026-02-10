@@ -105,6 +105,15 @@ class CliModularSlice1Tests(unittest.TestCase):
         mock_handler.assert_called_once()
         self.assertIs(mock_handler.call_args.kwargs['deps'], main)
 
+    def test_list_wrapper_delegates_to_listing_handler(self):
+        args = object()
+        with patch('main.listing_cmd_list', return_value=37) as mock_handler:
+            result = main.cmd_list(args)
+
+        self.assertEqual(result, 37)
+        mock_handler.assert_called_once()
+        self.assertIs(mock_handler.call_args.kwargs['deps'], main)
+
     def test_schedule_wrapper_delegates_to_schedule_handler(self):
         args = object()
         with patch('main.schedule_cmd_schedule', return_value=31) as mock_handler:

@@ -88,6 +88,7 @@ from services.heartbeat_state_machine import (
     should_retry_heartbeat_attempt as service_should_retry_heartbeat_attempt,
 )
 from commands.status import cmd_status as status_cmd_status
+from commands.listing import cmd_list as listing_cmd_list
 from commands.schedule import cmd_schedule as schedule_cmd_schedule
 
 
@@ -1212,53 +1213,7 @@ def cmd_status(args):
 
 def cmd_list(args):
     """List all agents (configured and running)."""
-    all_agents = list_all_agents()
-    running_sessions = set(list_sessions())
-
-    print("📋 Agents:")
-    print()
-
-    if not all_agents:
-        print("  No agents configured in agents/")
-        return
-
-    for file_id, config in sorted(all_agents.items(), key=lambda item: item[0]):
-        agent_name = config.get('name') or file_id
-        agent_id = get_agent_id(config)
-        is_running = agent_id in running_sessions
-        is_enabled = config.get('enabled', True)
-
-        # Skip if --running and not active
-        if args.running and not is_running:
-            continue
-
-        # Status indicator - show: agent-emp-0001(dev)
-        if is_running:
-            status = "✅ Running"
-            session_info = get_session_info(agent_id)
-            if session_info:
-                print(f"{status} {session_info['session']}({agent_name})")
-            else:
-                print(f"{status} agent-{agent_id}({agent_name})")
-        elif not is_enabled:
-            status = "⛔ Disabled"
-            print(f"{status} agent-{agent_id}({agent_name})")
-            print(f"   Description: {config.get('description', 'No description')}")
-            print(f"   Working Dir: {config.get('working_directory', 'N/A')}")
-            print()
-            continue
-        else:
-            status = "⭕ Stopped"
-            print(f"{status} agent-{agent_id}({agent_name})")
-
-        print(f"   Description: {config.get('description', 'No description')}")
-        print(f"   Working Dir: {config.get('working_directory', 'N/A')}")
-
-        skills = config.get('skills', [])
-        if skills:
-            print(f"   Skills: {', '.join(skills)}")
-
-        print()
+    return listing_cmd_list(args, deps=_lifecycle_deps_module())
 
 
 def _tmux_install_hint() -> str:
