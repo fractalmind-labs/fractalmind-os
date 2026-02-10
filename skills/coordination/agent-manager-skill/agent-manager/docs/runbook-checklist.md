@@ -99,6 +99,8 @@ gh pr view <PR_NUMBER> --json mergeable,mergeStateStatus,statusCheckRollup,revie
 Checklist:
 - [ ] required checks are green on latest head
 - [ ] QA posts explicit `PASS` / `FAIL` with commands and evidence
+- [ ] PR is mergeable (CLEAN/no conflicts)
+- [ ] no unresolved CHANGES_REQUESTED reviews
 - [ ] no blocking comments/reviews remain
 - [ ] only then mark merge-ready
 
@@ -107,6 +109,8 @@ Checklist:
 A PR is merge-ready only if all are true:
 - [ ] CI PASS
 - [ ] QA PASS (explicit, evidence-backed)
+- [ ] PR is mergeable (CLEAN/no conflicts)
+- [ ] no unresolved CHANGES_REQUESTED reviews
 - [ ] no blocking comments/reviews
 
 If any item is missing, post a gate-status comment with:
@@ -123,7 +127,7 @@ Progress update:
 - Scope: <what was executed>
 - Commands: <exact commands>
 - Result: PASS/FAIL + key evidence
-- Gate: CI=<...>, QA=<...>, blocking comments=<...>
+- Gate: CI=<...>, QA=<...>, mergeable=<...>, changes_requested=<...>, blocking comments=<...>
 - Owner/ETA: <who does next step by when>
 ```
 
@@ -145,7 +149,7 @@ Before posting `QA Verdict`, verify:
 
 - [ ] all command paths in docs are repo-relative and executable in current tree
 - [ ] examples align with current CLI flags/subcommands
-- [ ] merge-gate policy text matches team rule (CI PASS + QA PASS + no blocking comments)
+- [ ] merge-gate policy text matches team rule (CI PASS + QA PASS + mergeable/no conflicts + no unresolved CHANGES_REQUESTED + no blocking comments)
 - [ ] at least one copy-paste command sequence was executed end-to-end
 
 Suggested QA evidence snippet:
