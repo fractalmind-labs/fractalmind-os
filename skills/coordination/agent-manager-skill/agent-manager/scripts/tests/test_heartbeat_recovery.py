@@ -241,5 +241,73 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         mock_notify.assert_called_once()
 
 
+    @patch('main._notify_heartbeat_failure', return_value=True)
+    @patch('main._append_heartbeat_audit_event')
+    @patch('main.time.sleep', return_value=None)
+    @patch('main._run_heartbeat_attempt')
+    @patch('main._maybe_rollover_heartbeat_session', return_value=None)
+    @patch('main._detect_agent_context_left_percent', return_value=40)
+    @patch('main.resolve_launcher_command', return_value='codex')
+    @patch('main.session_exists', return_value=True)
+    @patch('main.resolve_agent')
+    @patch('main.check_tmux', return_value=True)
+    def test_cmd_heartbeat_run_ignores_legacy_guard_config_keys(
+        self,
+        _mock_tmux,
+        mock_resolve_agent,
+        _mock_session,
+        _mock_launcher,
+        _mock_context,
+        _mock_rollover,
+        mock_run_attempt,
+        _mock_sleep,
+        mock_audit,
+        mock_notify,
+    ):
+        mock_resolve_agent.return_value = {
+            'name': 'qa-agent',
+            'file_id': 'EMP_0001',
+            'enabled': True,
+            'heartbeat': {
+                'enabled': True,
+                'watch_repo': True,
+                'force_action_when_open_work': True,
+                'recovery': {
+                    'max_retries': 0,
+                    'retry_backoff_seconds': 0,
+                    'fallback_mode': 'none',
+                    'notify_on_failure': False,
+                },
+            },
+            'launcher': 'codex',
+        }
+
+        mock_run_attempt.return_value = {
+            'send_status': 'ok',
+            'ack_status': 'ack',
+            'failure_type': '',
+            'duration_ms': 80,
+            'reason_code': 'HB_ACK_OK',
+        }
+
+        args = type('Args', (), {
+            'agent': 'EMP_0001',
+            'timeout': None,
+            'retry': 0,
+            'backoff_seconds': 0,
+            'fallback_mode': 'none',
+            'notify_on_failure': False,
+            'notifier_channel': None,
+        })()
+
+        result = main.cmd_heartbeat_run(args)
+        self.assertEqual(result, 0)
+        self.assertEqual(mock_run_attempt.call_count, 1)
+        mock_notify.assert_not_called()
+
+        self.assertEqual(mock_audit.call_count, 1)
+        self.assertEqual(mock_audit.call_args.kwargs.get('phase'), 'attempt')
+        self.assertNotEqual(mock_audit.call_args.kwargs.get('phase'), 'guard_followup')
+
 if __name__ == '__main__':
     unittest.main()
