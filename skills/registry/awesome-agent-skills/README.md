@@ -44,6 +44,7 @@ The most contributed Agent Skills repository, built and maintained together with
 - [Skills by Vercel Engineering Team](#skills-by-vercel-engineering-team)
 - [Skills by Cloudflare Team](#skills-by-cloudflare-team)
 - [Skills by Supabase Team](#skills-by-supabase-team)
+- [Skills by Google Gemini](#skills-by-google-gemini)
 - [Skills by Google Labs (Stitch)](#skills-by-google-labs-stitch)
 - [Skills by Hugging Face Team](#skills-by-hugging-face-team)
 - [Skills by Stripe Team](#skills-by-stripe-team)
@@ -142,6 +143,13 @@ The most contributed Agent Skills repository, built and maintained together with
 <summary><h3 style="display:inline">Skills by Supabase Team</h3></summary>
 
 - **[supabase/postgres-best-practices](https://github.com/supabase/agent-skills/tree/main/skills/supabase-postgres-best-practices)** - PostgreSQL best practices for Supabase
+
+</details>
+
+<details>
+<summary><h3 style="display:inline">Skills by Google Gemini</h3></summary>
+
+- **[google-gemini/gemini-skills](https://github.com/google-gemini/gemini-skills)** - A library of skills for the Gemini API, SDK and model interactions.
 
 </details>
 
