@@ -49,6 +49,7 @@ The most contributed Agent Skills repository, built and maintained together with
 - [Skills by Google Labs (Stitch)](#skills-by-google-labs-stitch)
 - [Skills by Hugging Face Team](#skills-by-hugging-face-team)
 - [Skills by Stripe Team](#skills-by-stripe-team)
+- [Skills by CallStack](#skills-by-callstack)
 - [Security Skills by Trail of Bits Team](#security-skills-by-trail-of-bits-team)
 - [Skills by Expo Team](#skills-by-expo-team)
 - [Skills by Sentry Team](#skills-by-sentry-team-for-their-dev-team)
@@ -188,8 +189,17 @@ Official AI agent skills from the Hugging Face team for ML workflows.
 <details>
 <summary><h3 style="display:inline">Skills by Stripe Team</h3></summary>
 
-- **[stripe/stripe-best-practices](https://github.com/stripe/ai/tree/main/skills/stripe-best-practices)** - Best practices for building Stripe integrations
+- **[/-best-practices](https://github.com//ai/tree/main/skills/stripe-best-practices)** - Best practices for building Stripe integrations
 - **[stripe/upgrade-stripe](https://github.com/stripe/ai/tree/main/skills/upgrade-stripe)** - Upgrade Stripe SDK and API versions
+
+</details>
+
+<details>
+<summary><h3 style="display:inline">Skills by CallStack</h3></summary>
+
+- **[callstackincubator/react-native-best-practices](https://github.com/callstackincubator/agent-skills/blob/main/skills/react-native-best-practices/SKILL.md)** - Performance optimization for React Native apps from Callstack
+- **[callstackincubator/github](https://github.com/callstackincubator/agent-skills/tree/main/skills/github)** - GitHub workflow patterns for PRs, code review, branching
+- **[callstackincubator/upgrading-react-native](https://github.com/callstackincubator/agent-skills/tree/main/skills/upgrading-react-native)** - React Native upgrade workflow: templates, dependencies, and common pitfalls
 
 </details>
 
@@ -585,7 +595,6 @@ Domain-specific knowledge for Azure SDK and Foundry development.
 - **[alinaqi/claude-bootstrap](https://github.com/alinaqi/claude-bootstrap)** - Opinionated project initialization with security-first guardrails, spec-driven atomic todos, LLM testing patterns, and CLI tool orchestration (gh, vercel, supabase)
 - **[ZhangHanDong/makepad-skills](https://github.com/ZhangHanDong/makepad-skills)** - Makepad UI development skills for Rust apps: setup, patterns, shaders, packaging, and troubleshooting.
 - **[massimodeluisa/recursive-decomposition-skill](https://github.com/massimodeluisa/recursive-decomposition-skill)** - Handle long-context tasks (100+ files, 50k+ tokens) through recursive decomposition strategies based on RLM research
-- **[callstackincubator/react-native-best-practices](https://github.com/callstackincubator/agent-skills/blob/main/skills/react-native-best-practices/SKILL.md)** - Performance optimization for React Native apps from Callstack
 - **[AvdLee/swiftui-expert-skill](https://github.com/AvdLee/SwiftUI-Agent-Skill/tree/main/swiftui-expert-skill)** - Modern SwiftUI best practices and iOS 26+ Liquid Glass adoption
 - **[efremidze/swift-patterns-skill](https://github.com/efremidze/swift-patterns-skill/tree/main/swift-patterns)** - Modern Swift/SwiftUI best practices
 - **[Joannis/claude-skills](https://github.com/Joannis/claude-skills)** - Swift Server development guidance with linting tool for best practices
