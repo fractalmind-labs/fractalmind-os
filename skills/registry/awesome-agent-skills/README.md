@@ -65,6 +65,7 @@ The most contributed Agent Skills repository, built and maintained together with
 - [Skills by Remotion Team](#skills-by-remotion-team)
 - [Skills by WordPress Development Team](#skills-by-wordpress-development-team)
 - [Skills by Transloadit Team](#skills-by-transloadit-team)
+- [Skills by Firecrawl Team](#skills-by-firecrawl-team)
 - [Community Skills](#community-skills)
 - [Skill Quality Standards](#skill-quality-standards)
 
@@ -515,6 +516,14 @@ Domain-specific knowledge for Azure SDK and Foundry development.
 - **[transloadit/transform-encode-hls-video](https://github.com/transloadit/skills/tree/main/skills/transform-encode-hls-video-with-transloadit)** - Encode video to HLS streaming format
 - **[transloadit/integrate-uppy-s3-uploading](https://github.com/transloadit/skills/tree/main/skills/integrate-uppy-transloadit-s3-uploading-to-nextjs)** - Add Uppy file uploads to Next.js apps
 - **[transloadit/integrate-smartcdn-delivery](https://github.com/transloadit/skills/tree/main/skills/integrate-asset-delivery-with-transloadit-smartcdn-in-nextjs)** - Smart CDN asset delivery in Next.js
+
+</details>
+
+<details>
+<summary><h3 style="display:inline">Skills by Firecrawl Team</h3></summary>
+
+- **[firecrawl/firecrawl-cli](https://github.com/firecrawl/cli/tree/main/skills/firecrawl-cli)** - Scrape, crawl, search, and map the web via CLI
+- **[firecrawl/firecrawl-claude-plugin](https://github.com/firecrawl/firecrawl-claude-plugin)** - Claude Code plugin for web scraping and search
 
 </details>
 
