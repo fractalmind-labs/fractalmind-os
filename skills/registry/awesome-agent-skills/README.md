@@ -41,34 +41,18 @@ The most contributed Agent Skills repository, built and maintained together with
 
 ## Table of Contents
 
-- [Official Claude Skills](#official-claude-skills)
-- [Skills by Vercel Engineering Team](#skills-by-vercel-engineering-team)
-- [Skills by Cloudflare Team](#skills-by-cloudflare-team)
-- [Skills by Supabase Team](#skills-by-supabase-team)
-- [Skills by Google Gemini](#skills-by-google-gemini)
-- [Skills by Google Labs (Stitch)](#skills-by-google-labs-stitch)
-- [Skills by Hugging Face Team](#skills-by-hugging-face-team)
-- [Skills by Stripe Team](#skills-by-stripe-team)
-- [Skills by CallStack](#skills-by-callstack)
-- [Security Skills by Trail of Bits Team](#security-skills-by-trail-of-bits-team)
-- [Skills by Expo Team](#skills-by-expo-team)
-- [Skills by Sentry Team](#skills-by-sentry-team-for-their-dev-team)
-- [Skills by Better Auth Team](#skills-by-better-auth-team)
-- [Skills by Tinybird Team](#skills-by-tinybird-team)
-- [Skills by Microsoft](#skills-by-microsoft)
-- [Skills by Neon Team](#skills-by-neon-team)
-- [Skill by Cloudflare Engineer](#skill-by-cloudflare-engineer)
-- [Skill by ClickHouse](#skill-by-clickhouse)
-- [Skills by fal.ai Team](#skills-by-falai-team)
-- [Skills by HashiCorp Team for Terraform](#skills-by-hashicorp-team-for-terraform)
-- [Skills by Sanity Team](#skills-by-sanity-team)
-- [Skills by Remotion Team](#skills-by-remotion-team)
-- [Skills by WordPress Development Team](#skills-by-wordpress-development-team)
-- [Skills by Transloadit Team](#skills-by-transloadit-team)
-- [Skills by Firecrawl Team](#skills-by-firecrawl-team)
-- [Skills by OpenAI](#skills-by-openai)
-- [Community Skills](#community-skills)
-- [Skill Quality Standards](#skill-quality-standards)
+| | | |
+|---|---|---|
+| [Official Claude Skills](#official-claude-skills) | [Skills by Vercel](#skills-by-vercel-engineering-team) | [Skills by Cloudflare](#skills-by-cloudflare-team) |
+| [Skills by Supabase](#skills-by-supabase-team) | [Skills by Google Gemini](#skills-by-google-gemini) | [Skills by Google Labs (Stitch)](#skills-by-google-labs-stitch) |
+| [Skills by Hugging Face](#skills-by-hugging-face-team) | [Skills by Stripe](#skills-by-stripe-team) | [Skills by CallStack](#skills-by-callstack) |
+| [Skills by Trail of Bits](#security-skills-by-trail-of-bits-team) | [Skills by Expo](#skills-by-expo-team) | [Skills by Sentry](#skills-by-sentry-team-for-their-dev-team) |
+| [Skills by Better Auth](#skills-by-better-auth-team) | [Skills by Tinybird](#skills-by-tinybird-team) | [Skills by Microsoft](#skills-by-microsoft) |
+| [Skills by Neon](#skills-by-neon-team) | [Skills by Cloudflare Engineer](#skill-by-cloudflare-engineer) | [Skills by ClickHouse](#skill-by-clickhouse) |
+| [Skills by fal.ai](#skills-by-falai-team) | [Skills by HashiCorp](#skills-by-hashicorp-team-for-terraform) | [Skills by Sanity](#skills-by-sanity-team) |
+| [Skills by Remotion](#skills-by-remotion-team) | [Skills by WordPress](#skills-by-wordpress-development-team) | [Skills by Transloadit](#skills-by-transloadit-team) |
+| [Skills by Firecrawl](#skills-by-firecrawl-team) | [Skills by OpenAI](#skills-by-openai) | [Community Skills](#community-skills) |
+| [Skill Quality Standards](#skill-quality-standards) | | |
 
 
 ### Skills Paths for Other AI Coding Assistants
