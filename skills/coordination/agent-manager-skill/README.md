@@ -162,6 +162,7 @@ For heartbeat serviceization notes, see [agent-manager/docs/heartbeat-serviceiza
 
 For operational SOPs and failure handling checklists, see [agent-manager/docs/runbook-checklist.md](agent-manager/docs/runbook-checklist.md).
 For heartbeat observability and SLO metrics, see [agent-manager/docs/heartbeat-observability.md](agent-manager/docs/heartbeat-observability.md).
+For local team-chat skill mounting and team rollout steps, see [docs/team-chat-skill-install.md](docs/team-chat-skill-install.md).
 
 ## Testing
 
