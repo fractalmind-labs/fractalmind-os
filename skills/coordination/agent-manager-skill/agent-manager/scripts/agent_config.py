@@ -7,6 +7,7 @@ Supports two agent profile layouts under `agents/`:
 
 import os
 import re
+import shlex
 import yaml
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Iterable
@@ -15,6 +16,68 @@ from repo_root import find_repo_root, get_repo_root, get_skill_search_dirs
 
 
 AGENT_DIR_PROFILE_FILENAME = "AGENTS.md"
+MAIN_AGENT_NAME = "main"
+MAIN_AGENT_FILE_ID = "main"
+MAIN_AGENT_WORKSPACE_ENV = "AGENT_MANAGER_MAIN_WORKSPACE"
+MAIN_AGENT_LAUNCHER_ENV = "AGENT_MANAGER_MAIN_LAUNCHER"
+MAIN_AGENT_LAUNCHER_ARGS_ENV = "AGENT_MANAGER_MAIN_LAUNCHER_ARGS"
+
+
+def _is_main_agent_query(name_or_id: str) -> bool:
+    return str(name_or_id or '').strip().lower() == MAIN_AGENT_NAME
+
+
+def _path_is_within(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except Exception:
+        return False
+
+
+def _resolve_workspace_root(repo_root: Path) -> Path:
+    for candidate in [repo_root] + list(repo_root.parents):
+        projects_dir = candidate / 'projects'
+        if projects_dir.is_dir() and _path_is_within(repo_root, projects_dir):
+            return candidate
+    return repo_root
+
+
+def _build_main_agent_config(
+    *,
+    repo_root: Optional[Path] = None,
+    env_vars: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
+    if repo_root is None:
+        repo_root = get_repo_root()
+    if env_vars is None:
+        env_vars = dict(os.environ)
+
+    workspace_override = str(env_vars.get(MAIN_AGENT_WORKSPACE_ENV, '') or '').strip()
+    if workspace_override:
+        workspace_root = Path(expand_env_vars(workspace_override, env_vars=env_vars))
+    else:
+        workspace_root = _resolve_workspace_root(repo_root)
+
+    launcher = str(env_vars.get(MAIN_AGENT_LAUNCHER_ENV, 'codex') or '').strip() or 'codex'
+    launcher_args_raw = str(env_vars.get(MAIN_AGENT_LAUNCHER_ARGS_ENV, '') or '').strip()
+    launcher_args = shlex.split(launcher_args_raw) if launcher_args_raw else []
+
+    return {
+        'name': MAIN_AGENT_NAME,
+        'description': 'Reserved main agent (default workspace root routing)',
+        'file_id': MAIN_AGENT_FILE_ID,
+        'working_directory': str(workspace_root),
+        'launcher': launcher,
+        'launcher_args': launcher_args,
+        'skills': [],
+        'schedules': [],
+        'mcps': {},
+        'enabled': True,
+        'heartbeat': None,
+        'role_definition': '',
+        '_reserved_main': True,
+    }
 
 
 def _file_id_from_profile_path(profile_path: Path) -> str:
@@ -162,6 +225,10 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
     Returns:
         Parsed agent configuration, or None if not found
     """
+    query = str(name_or_id or '').strip()
+    if _is_main_agent_query(query):
+        return _build_main_agent_config(repo_root=get_repo_root())
+
     # Accept direct paths (absolute or relative) for convenience, e.g.:
     #   agents/EMP_0008.md
     #   agents/EMP_0008/AGENTS.md
@@ -250,23 +317,26 @@ def list_all_agents(agents_dir: Optional[Path] = None) -> Dict[str, Dict[str, An
         (File IDs are stable and avoid collisions when multiple agents share the same `name`.)
     """
     if agents_dir is None:
-        agents_dir = get_repo_root() / 'agents'
-
-    if not agents_dir.exists():
-        return {}
+        repo_root = get_repo_root()
+        agents_dir = repo_root / 'agents'
+    else:
+        repo_root = agents_dir.parent if agents_dir.name == 'agents' else get_repo_root()
 
     agents: Dict[str, Dict[str, Any]] = {}
-    for agent_file in _iter_agent_profile_paths(agents_dir):
-        try:
-            config = parse_agent_file(agent_file)
-            config['_file_path'] = agent_file
-            config = expand_config_env_vars(config)
-            file_id = config.get('file_id')
-            if file_id:
-                agents[file_id] = config
-        except (ValueError, yaml.YAMLError):
-            continue
 
+    if agents_dir.exists():
+        for agent_file in _iter_agent_profile_paths(agents_dir):
+            try:
+                config = parse_agent_file(agent_file)
+                config['_file_path'] = agent_file
+                config = expand_config_env_vars(config)
+                file_id = config.get('file_id')
+                if file_id:
+                    agents[file_id] = config
+            except (ValueError, yaml.YAMLError):
+                continue
+
+    agents.setdefault(MAIN_AGENT_FILE_ID, _build_main_agent_config(repo_root=repo_root))
     return agents
 
 

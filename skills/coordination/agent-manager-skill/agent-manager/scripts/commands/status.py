@@ -3,6 +3,10 @@ import re
 from typing import Any, Optional
 
 
+def _session_label(agent_id: str) -> str:
+    return 'main' if str(agent_id).strip().lower() == 'main' else f"agent-{agent_id}"
+
+
 def _heartbeat_audit_path(repo_root, agent_id: str):
     return repo_root / '.claude' / 'state' / 'agent-manager' / 'heartbeat-audit' / f"{agent_id}.jsonl"
 
@@ -72,8 +76,9 @@ def cmd_status(args, *, deps: Any):
     running = session_exists(agent_id)
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
 
+    default_session_name = _session_label(agent_id)
     session_info = get_session_info(agent_id) if running else None
-    session_name = session_info.get('session', f"agent-{agent_id}") if session_info else f"agent-{agent_id}"
+    session_name = session_info.get('session', default_session_name) if session_info else default_session_name
 
     if running:
         runtime = get_agent_runtime_state(agent_id, launcher=launcher)

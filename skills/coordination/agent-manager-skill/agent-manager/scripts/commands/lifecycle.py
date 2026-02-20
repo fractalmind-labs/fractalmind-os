@@ -8,6 +8,10 @@ def _script_name(deps: Any) -> str:
         return "main.py"
 
 
+def _session_label(agent_id: str) -> str:
+    return "main" if str(agent_id).strip().lower() == "main" else f"agent-{agent_id}"
+
+
 def cmd_start(args, *, deps: Any):
     """Start an agent in tmux session."""
     check_tmux = deps.check_tmux
@@ -59,7 +63,7 @@ def cmd_start(args, *, deps: Any):
         for file_id, config in sorted(all_agents.items(), key=lambda item: item[0]):
             name = config.get('name') or file_id
             agent_id = get_agent_id(config)
-            print(f"   - {file_id} ({name}) (agent-{agent_id})")
+            print(f"   - {file_id} ({name}) ({_session_label(agent_id)})")
         return 1
 
     agent_name = agent_config['name']
@@ -75,7 +79,7 @@ def cmd_start(args, *, deps: Any):
 
     if session_exists(agent_id):
         session_info = get_session_info(agent_id) or {}
-        session_name = session_info.get('session', f"agent-{agent_id}")
+        session_name = session_info.get('session', _session_label(agent_id))
         if getattr(args, 'restore', True):
             print(f"✅ Restored existing session for '{agent_name}'")
             print(f"   Session: {session_name}({agent_name})")
@@ -218,7 +222,7 @@ def cmd_start(args, *, deps: Any):
             return 1
 
     session_info = get_session_info(agent_id) or {}
-    session_name = session_info.get('session', f"agent-{agent_id}")
+    session_name = session_info.get('session', _session_label(agent_id))
     print(f"✅ Agent '{agent_name}' started")
     print(f"   Session: {session_name}({agent_name})")
     print(f"   Working Dir: {working_dir}")
@@ -323,7 +327,7 @@ def cmd_stop(args, *, deps: Any):
         print(f"❌ Failed to stop agent '{agent_name}'")
         return 1
 
-    session_name = f"agent-{agent_id}"
+    session_name = _session_label(agent_id)
     print(f"✅ Agent '{agent_name}' stopped")
     print(f"   Session {session_name}({agent_name}) terminated")
     return 0
@@ -350,7 +354,7 @@ def cmd_monitor(args, *, deps: Any):
     agent_id = get_agent_id(agent_config)
 
     if args.follow:
-        session_name = f"agent-{agent_id}"
+        session_name = _session_label(agent_id)
         print(f"📺 Following output for {session_name}({agent_name}) (Ctrl+C to stop)...")
         print()
 
@@ -379,7 +383,7 @@ def cmd_monitor(args, *, deps: Any):
             print(f"⚠️  Agent '{agent_name}' is not running")
             return 1
 
-        session_name = f"agent-{agent_id}"
+        session_name = _session_label(agent_id)
         print(f"📺 Last {args.lines} lines from {session_name}({agent_name}):")
         print("=" * 60)
         print(output)

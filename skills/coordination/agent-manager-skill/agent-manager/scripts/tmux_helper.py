@@ -20,6 +20,7 @@ from runtime_state import (
 
 # Session prefix for all agent sessions
 SESSION_PREFIX = "agent-"
+MAIN_AGENT_ID = "main"
 
 # Optional "single session" mode: keep all agents in one tmux session, each in its own window.
 DEFAULT_GROUP_SESSION_NAME = "agent-manager"
@@ -30,12 +31,19 @@ def get_group_session_name() -> str:
     return os.environ.get(GROUP_SESSION_ENV_VAR, DEFAULT_GROUP_SESSION_NAME)
 
 
+def _is_main_agent_id(agent_id: str) -> bool:
+    return str(agent_id).strip().lower() == MAIN_AGENT_ID
+
+
 def _session_name_for_agent(agent_id: str) -> str:
+    if _is_main_agent_id(agent_id):
+        return MAIN_AGENT_ID
     return f"{SESSION_PREFIX}{agent_id}"
 
 
 def _window_name_for_agent(agent_id: str) -> str:
-    # Keep window names consistent with existing session names for familiarity.
+    if _is_main_agent_id(agent_id):
+        return MAIN_AGENT_ID
     return f"{SESSION_PREFIX}{agent_id}"
 
 
@@ -147,6 +155,8 @@ def list_sessions() -> List[str]:
                 session_name = line.split(':')[0]
                 if session_name.startswith(SESSION_PREFIX):
                     agent_ids.add(session_name[len(SESSION_PREFIX):])
+                elif session_name == MAIN_AGENT_ID:
+                    agent_ids.add(MAIN_AGENT_ID)
 
     group = get_group_session_name()
     result = subprocess.run(
@@ -159,6 +169,8 @@ def list_sessions() -> List[str]:
             window_name = window_name.strip()
             if window_name.startswith(SESSION_PREFIX):
                 agent_ids.add(window_name[len(SESSION_PREFIX):])
+            elif window_name == MAIN_AGENT_ID:
+                agent_ids.add(MAIN_AGENT_ID)
 
     return sorted(agent_ids)
 

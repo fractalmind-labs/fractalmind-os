@@ -1,6 +1,10 @@
 from typing import Any
 
 
+def _session_label(agent_id: str) -> str:
+    return 'main' if str(agent_id).strip().lower() == 'main' else f"agent-{agent_id}"
+
+
 def cmd_list(args, *, deps: Any):
     """List all agents (configured and running)."""
     list_all_agents = deps.list_all_agents
@@ -23,6 +27,7 @@ def cmd_list(args, *, deps: Any):
         agent_id = get_agent_id(config)
         is_running = agent_id in running_sessions
         is_enabled = config.get('enabled', True)
+        session_label = _session_label(agent_id)
 
         if args.running and not is_running:
             continue
@@ -33,17 +38,17 @@ def cmd_list(args, *, deps: Any):
             if session_info:
                 print(f"{status} {session_info['session']}({agent_name})")
             else:
-                print(f"{status} agent-{agent_id}({agent_name})")
+                print(f"{status} {session_label}({agent_name})")
         elif not is_enabled:
             status = "⛔ Disabled"
-            print(f"{status} agent-{agent_id}({agent_name})")
+            print(f"{status} {session_label}({agent_name})")
             print(f"   Description: {config.get('description', 'No description')}")
             print(f"   Working Dir: {config.get('working_directory', 'N/A')}")
             print()
             continue
         else:
             status = "⭕ Stopped"
-            print(f"{status} agent-{agent_id}({agent_name})")
+            print(f"{status} {session_label}({agent_name})")
 
         print(f"   Description: {config.get('description', 'No description')}")
         print(f"   Working Dir: {config.get('working_directory', 'N/A')}")

@@ -56,6 +56,36 @@ class _Deps:
         return None
 
 
+
+
+class _MainDeps:
+    @staticmethod
+    def list_all_agents():
+        return {
+            'main': {
+                'file_id': 'main',
+                'name': 'main',
+                'description': 'Reserved main agent',
+                'working_directory': '/tmp/workspace',
+                'enabled': True,
+            },
+        }
+
+    @staticmethod
+    def list_sessions():
+        return ['main']
+
+    @staticmethod
+    def get_agent_id(config):
+        return config.get('file_id', '').lower().replace('_', '-')
+
+    @staticmethod
+    def get_session_info(agent_id):
+        if agent_id == 'main':
+            return {'session': 'main'}
+        return None
+
+
 class ListCommandTests(unittest.TestCase):
     def _run(self, running=False):
         out = io.StringIO()
@@ -79,6 +109,16 @@ class ListCommandTests(unittest.TestCase):
         self.assertIn('✅ Running agent-emp-0001(dev)', text)
         self.assertNotIn('⭕ Stopped agent-emp-0003(ops)', text)
         self.assertNotIn('⛔ Disabled agent-emp-0002(qa)', text)
+
+    def test_list_supports_reserved_main_agent_session_name(self):
+        out = io.StringIO()
+        args = argparse.Namespace(running=False)
+        with redirect_stdout(out):
+            cmd_list(args, deps=_MainDeps)
+
+        text = out.getvalue()
+        self.assertIn('✅ Running main(main)', text)
+        self.assertNotIn('agent-main', text)
 
 
 if __name__ == '__main__':

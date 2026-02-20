@@ -90,5 +90,23 @@ class StatusCommandTests(unittest.TestCase):
         self.assertIn('Recent heartbeat: none', text)
 
 
+    def test_status_main_agent_uses_main_session_label(self):
+        agent_config = {'name': 'main', 'file_id': 'main', 'enabled': True, 'launcher': 'codex'}
+
+        with patch('main.check_tmux', return_value=True), \
+                patch('main.resolve_agent', return_value=agent_config), \
+                patch('main.session_exists', return_value=True), \
+                patch('main.get_session_info', return_value=None), \
+                patch('main.resolve_launcher_command', return_value='codex'), \
+                patch('main.get_agent_runtime_state', return_value={'state': 'idle'}), \
+                patch('main.get_repo_root', return_value=self.temp_root), \
+                patch('main.capture_output', return_value=''):
+            code, text = self._run_status('main')
+
+        self.assertEqual(code, 0)
+        self.assertIn('Session: main(main)', text)
+        self.assertNotIn('agent-main', text)
+
+
 if __name__ == '__main__':
     unittest.main()
