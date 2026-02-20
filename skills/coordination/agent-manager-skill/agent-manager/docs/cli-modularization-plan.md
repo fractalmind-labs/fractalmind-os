@@ -33,18 +33,17 @@ This document tracks incremental modularization of `agent-manager/scripts/main.p
 
 ### Completed slice (latest)
 
-- **Slice 7**: schedule run orchestration extraction
-  - extracted `cmd_schedule_run` orchestration to `scripts/commands/schedule_run.py`
-  - converted `main.py` `cmd_schedule_run` to wrapper-only delegation
-  - kept schedule guardrails/restart-policy behavior unchanged
-  - added wrapper delegation + schedule-run command regression tests
+- **Slice 8**: schedule run flow decomposition
+  - extracted runtime/restart decision and task-message building into helper functions
+  - kept `cmd_schedule_run` CLI output and exit-code behavior stable
+  - added deeper tests for busy/stuck/error restart boundaries and codex task-file fallback
 
 ### Next slice (current target)
 
-- **Slice 8**: schedule run flow decomposition
-  - split schedule-run runtime/restart decision logic into helper functions/services
-  - keep CLI output and exit-code behavior stable
-  - add deeper tests for busy/stuck/error restart boundaries and codex task-file fallback
+- **Slice 9**: schedule run waiting/monitoring maintainability pass
+  - isolate wait-loop and tail-capture section into focused helper(s)
+  - keep current completion-detection behavior unchanged
+  - add regression tests for idle/non-idle terminal state handling
 
 ## Migration Notes
 

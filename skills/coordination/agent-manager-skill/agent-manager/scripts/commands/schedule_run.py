@@ -4,6 +4,89 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 
+def _resolve_schedule_task_path(schedule: dict, repo_root: Path, *, expand_env_vars: Callable[[str], str]) -> Optional[Path]:
+    if str(schedule.get('task') or '').strip():
+        return None
+
+    raw_task_file = str(schedule.get('task_file') or '').strip()
+    if not raw_task_file:
+        return None
+
+    expanded = expand_env_vars(raw_task_file)
+    path = Path(expanded)
+    if not path.is_absolute():
+        path = repo_root / path
+    if path.exists():
+        return path
+    return None
+
+
+def _decide_runtime_action(
+    *,
+    state: str,
+    elapsed: Any,
+    timeout_seconds: Optional[int],
+    reason: str,
+) -> tuple[str, str]:
+    if state == 'blocked':
+        return 'skip', 'blocked'
+
+    if state == 'error':
+        return 'restart', f"error:{reason}"
+
+    if state == 'stuck':
+        restart_threshold = timeout_seconds if timeout_seconds else 900
+        if isinstance(elapsed, int) and elapsed >= restart_threshold:
+            return 'restart', f"stuck>{restart_threshold}s"
+        return 'skip', 'stuck_below_threshold'
+
+    if state == 'busy':
+        if timeout_seconds and isinstance(elapsed, int) and elapsed >= timeout_seconds:
+            return 'restart', f"busy>{timeout_seconds}s"
+        return 'skip', 'busy'
+
+    return 'continue', ''
+
+
+def _print_runtime_skip_message(skip_reason: str) -> None:
+    if skip_reason == 'blocked':
+        print("⏭️  Agent is blocked, skipping scheduled task")
+        print("   Will retry on next cron execution")
+        return
+
+    if skip_reason == 'stuck_below_threshold':
+        print("⏭️  Agent appears stuck but below restart threshold; skipping scheduled task")
+        print("   Will retry on next cron execution")
+        return
+
+    if skip_reason == 'busy':
+        print("⏭️  Agent is busy, skipping scheduled task")
+        print("   Will retry on next cron execution")
+
+
+def _build_task_message_for_provider(
+    *,
+    provider_key: str,
+    task: str,
+    schedule_task_path: Optional[Path],
+    repo_root: Path,
+    agent_id: str,
+    job_name: str,
+    deps: Any,
+) -> str:
+    if provider_key != 'codex':
+        return task
+
+    if schedule_task_path is not None:
+        return f"Run scheduled job '{job_name}'. Read and follow instructions from file: {schedule_task_path}"
+
+    if deps._should_use_codex_file_pointer(task):
+        task_file = deps.write_scheduled_task_file(repo_root, agent_id, job_name, task)
+        return f"Run scheduled job '{job_name}'. Read and follow instructions from file: {task_file}"
+
+    return task
+
+
 def cmd_schedule_run(args, *, deps: Any, start_handler: Callable):
     """Run a scheduled job for an agent."""
     if not deps.check_tmux():
@@ -41,16 +124,11 @@ def cmd_schedule_run(args, *, deps: Any, start_handler: Callable):
         print(f"❌ No task content for schedule '{args.job}'")
         return 1
 
-    schedule_task_path: Optional[Path] = None
-    if not str(schedule.get('task') or '').strip():
-        raw_task_file = str(schedule.get('task_file') or '').strip()
-        if raw_task_file:
-            raw_task_file = deps.expand_env_vars(raw_task_file)
-            path = Path(raw_task_file)
-            if not path.is_absolute():
-                path = repo_root / path
-            if path.exists():
-                schedule_task_path = path
+    schedule_task_path = _resolve_schedule_task_path(
+        schedule,
+        repo_root,
+        expand_env_vars=deps.expand_env_vars,
+    )
 
     print(f"🚀 Running scheduled job: {agent_name}/{args.job}")
     print(f"   Time: {time.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -83,11 +161,12 @@ def cmd_schedule_run(args, *, deps: Any, start_handler: Callable):
     runtime = deps.get_agent_runtime_state(agent_id, launcher=launcher)
     state = str(runtime.get('state', 'unknown'))
     elapsed = runtime.get('elapsed_seconds')
+    runtime_reason = str(runtime.get('reason', 'unknown'))
     did_restart = False
 
-    def _restart_agent(reason: str) -> bool:
+    def _restart_agent(restart_reason: str) -> bool:
         nonlocal did_restart
-        print(f"♻️  Restarting agent (reason: {reason})")
+        print(f"♻️  Restarting agent (reason: {restart_reason})")
         deps.stop_session(agent_id)
         time.sleep(1)
         restart_args = argparse.Namespace(agent=args.agent, working_dir=None)
@@ -98,35 +177,20 @@ def cmd_schedule_run(args, *, deps: Any, start_handler: Callable):
         did_restart = True
         return True
 
-    if state == 'blocked':
-        print("⏭️  Agent is blocked, skipping scheduled task")
-        print("   Will retry on next cron execution")
-        return 0
-    if state == 'error':
-        reason = str(runtime.get('reason', 'unknown'))
-        if not _restart_agent(f"error:{reason}"):
-            return 1
-    elif state == 'stuck':
-        restart_threshold = timeout_seconds if timeout_seconds else 900
-        if isinstance(elapsed, int) and elapsed >= restart_threshold:
-            if not _restart_agent(f"stuck>{restart_threshold}s"):
-                return 1
-        else:
-            print("⏭️  Agent appears stuck but below restart threshold; skipping scheduled task")
-            print("   Will retry on next cron execution")
-            return 0
-    elif state == 'busy':
-        should_restart = False
-        if timeout_seconds and isinstance(elapsed, int) and elapsed >= timeout_seconds:
-            should_restart = True
+    runtime_action, runtime_action_reason = _decide_runtime_action(
+        state=state,
+        elapsed=elapsed,
+        timeout_seconds=timeout_seconds,
+        reason=runtime_reason,
+    )
 
-        if should_restart:
-            if not _restart_agent(f"busy>{timeout_seconds}s"):
-                return 1
-        else:
-            print("⏭️  Agent is busy, skipping scheduled task")
-            print("   Will retry on next cron execution")
-            return 0
+    if runtime_action == 'skip':
+        _print_runtime_skip_message(runtime_action_reason)
+        return 0
+
+    if runtime_action == 'restart':
+        if not _restart_agent(runtime_action_reason):
+            return 1
 
     clear_context = bool(schedule.get('clear_context', False))
     if clear_context and not was_started and not did_restart:
@@ -146,17 +210,15 @@ def cmd_schedule_run(args, *, deps: Any, start_handler: Callable):
             time.sleep(0.5)
 
     provider_key = deps.get_provider_key(launcher)
-    task_message = task
-    if provider_key == 'codex':
-        if schedule_task_path is not None:
-            task_message = (
-                f"Run scheduled job '{args.job}'. Read and follow instructions from file: {schedule_task_path}"
-            )
-        elif deps._should_use_codex_file_pointer(task_message):
-            task_file = deps.write_scheduled_task_file(repo_root, agent_id, args.job, task_message)
-            task_message = (
-                f"Run scheduled job '{args.job}'. Read and follow instructions from file: {task_file}"
-            )
+    task_message = _build_task_message_for_provider(
+        provider_key=provider_key,
+        task=task,
+        schedule_task_path=schedule_task_path,
+        repo_root=repo_root,
+        agent_id=agent_id,
+        job_name=args.job,
+        deps=deps,
+    )
 
     is_codex = provider_key == 'codex'
     if not deps.send_keys(
