@@ -63,7 +63,7 @@ def _build_main_agent_config(
     launcher_args_raw = str(env_vars.get(MAIN_AGENT_LAUNCHER_ARGS_ENV, '') or '').strip()
     launcher_args = shlex.split(launcher_args_raw) if launcher_args_raw else []
 
-    return {
+    base = {
         'name': MAIN_AGENT_NAME,
         'description': 'Reserved main agent (default workspace root routing)',
         'file_id': MAIN_AGENT_FILE_ID,
@@ -78,6 +78,28 @@ def _build_main_agent_config(
         'role_definition': '',
         '_reserved_main': True,
     }
+
+    # Merge overrides from root AGENTS.md or agents/main.md if present.
+    agents_dir = repo_root / 'agents'
+    for candidate in [
+        repo_root / AGENT_DIR_PROFILE_FILENAME,       # root AGENTS.md
+        agents_dir / f'{MAIN_AGENT_NAME}.md',          # agents/main.md
+        agents_dir / MAIN_AGENT_NAME / AGENT_DIR_PROFILE_FILENAME,  # agents/main/AGENTS.md
+    ]:
+        if candidate.exists() and candidate.is_file():
+            try:
+                override = parse_agent_file(candidate)
+                override = expand_config_env_vars(override)
+                for key in ('heartbeat', 'schedules', 'skills', 'mcps', 'description', 'role_definition',
+                            'launcher', 'launcher_args', 'working_directory'):
+                    val = override.get(key)
+                    if val is not None:
+                        base[key] = val
+                break  # first match wins
+            except Exception:
+                continue
+
+    return base
 
 
 def _file_id_from_profile_path(profile_path: Path) -> str:
