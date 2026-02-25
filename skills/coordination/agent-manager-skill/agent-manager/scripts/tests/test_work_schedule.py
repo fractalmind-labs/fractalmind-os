@@ -69,6 +69,38 @@ class TestWorkHours(unittest.TestCase):
         self.assertIn("outside_hours", reason)
 
 
+class TestOvernightWorkHours(unittest.TestCase):
+    """Overnight range: start > end, e.g. 21:00-09:00."""
+    SCHED = {"timezone": "Asia/Shanghai", "work_hours": {"start": "21:00", "end": "09:00"}, "work_days": [1,2,3,4,5,6,7]}
+
+    def test_late_night_active(self):
+        now = datetime(2026, 2, 25, 23, 0, tzinfo=CST)
+        active, _ = is_within_work_schedule(self.SCHED, now=now)
+        self.assertTrue(active)
+
+    def test_early_morning_active(self):
+        now = datetime(2026, 2, 26, 2, 0, tzinfo=CST)
+        active, _ = is_within_work_schedule(self.SCHED, now=now)
+        self.assertTrue(active)
+
+    def test_at_start_inclusive(self):
+        now = datetime(2026, 2, 25, 21, 0, tzinfo=CST)
+        active, _ = is_within_work_schedule(self.SCHED, now=now)
+        self.assertTrue(active)
+
+    def test_at_end_exclusive(self):
+        now = datetime(2026, 2, 26, 9, 0, tzinfo=CST)
+        active, reason = is_within_work_schedule(self.SCHED, now=now)
+        self.assertFalse(active)
+        self.assertIn("outside_hours", reason)
+
+    def test_daytime_inactive(self):
+        now = datetime(2026, 2, 26, 14, 0, tzinfo=CST)
+        active, reason = is_within_work_schedule(self.SCHED, now=now)
+        self.assertFalse(active)
+        self.assertIn("outside_hours", reason)
+
+
 class TestWorkDays(unittest.TestCase):
     SCHED = {"timezone": "Asia/Shanghai", "work_days": [1, 2, 3, 4, 5]}
 

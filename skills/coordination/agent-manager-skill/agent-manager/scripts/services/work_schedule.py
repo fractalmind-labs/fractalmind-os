@@ -208,7 +208,13 @@ def _check_single_rule(
                 end_t = _parse_time(end_str)
             except (ValueError, IndexError):
                 return True, ""  # malformed -- fail open
-            if not (start_t <= current_time < end_t):
+            if start_t <= end_t:
+                # Normal range: e.g. 09:00-18:00
+                in_range = start_t <= current_time < end_t
+            else:
+                # Overnight range: e.g. 21:00-09:00 → active if >= 21:00 OR < 09:00
+                in_range = current_time >= start_t or current_time < end_t
+            if not in_range:
                 return False, f"outside_hours:{current_time.strftime('%H:%M')}"
 
     return True, ""
