@@ -359,6 +359,14 @@ def list_heartbeats_formatted() -> str:
         if max_runtime:
             details.append(max_runtime)
         details.append(f"mode:{session_mode}")
+
+        schedule = hb.get('schedule')
+        if schedule:
+            from services.work_schedule import format_schedule_summary
+            sched_summary = format_schedule_summary(schedule)
+            if sched_summary:
+                details.append(f"sched:{sched_summary}")
+
         runtime_str = f"({' '.join(details)})" if details else ""
 
         lines.append(f"  {status} heartbeat           {cron:20} {runtime_str}")

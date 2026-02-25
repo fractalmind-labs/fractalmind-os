@@ -1315,6 +1315,15 @@ def cmd_heartbeat_run(args):
         print(f"⏭️  Agent '{agent_name}' is not running - skipping heartbeat")
         return 0
 
+    # Check work schedule
+    schedule_config = heartbeat.get('schedule')
+    if schedule_config:
+        from services.work_schedule import is_within_work_schedule
+        is_active, skip_reason = is_within_work_schedule(schedule_config)
+        if not is_active:
+            print(f"⏭️  Outside work schedule for '{agent_name}' - skipping heartbeat ({skip_reason})")
+            return 0
+
     # Parse timeout
     timeout_seconds = None
     timeout_str = args.timeout or heartbeat.get('max_runtime', '')
