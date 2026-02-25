@@ -233,6 +233,41 @@ class TestWhenExpression(unittest.TestCase):
         active, reason = is_within_work_schedule(sched, now=now, env=env)
         self.assertFalse(active)
 
+    def test_cmd_eq_match(self):
+        sched = [{"when": "$(hostname) == worker001", "timezone": "Asia/Shanghai"}]
+        now = datetime(2026, 2, 25, 12, 0, tzinfo=CST)
+        import subprocess
+        actual_hostname = subprocess.run("hostname", capture_output=True, text=True).stdout.strip()
+        expected_active = actual_hostname == "worker001"
+        active, _ = is_within_work_schedule(sched, now=now, env={})
+        self.assertEqual(active, expected_active)
+
+    def test_cmd_eq_no_match(self):
+        sched = [{"when": "$(echo nope) == yes", "timezone": "Asia/Shanghai"}]
+        now = datetime(2026, 2, 25, 12, 0, tzinfo=CST)
+        active, reason = is_within_work_schedule(sched, now=now, env={})
+        self.assertFalse(active)
+        self.assertEqual(reason, "no_matching_rule")
+
+    def test_cmd_neq(self):
+        sched = [{"when": "$(echo hello) != world", "timezone": "Asia/Shanghai"}]
+        now = datetime(2026, 2, 25, 12, 0, tzinfo=CST)
+        active, _ = is_within_work_schedule(sched, now=now, env={})
+        self.assertTrue(active)
+
+    def test_cmd_truthy(self):
+        sched = [{"when": "$(echo yes)", "timezone": "Asia/Shanghai"}]
+        now = datetime(2026, 2, 25, 12, 0, tzinfo=CST)
+        active, _ = is_within_work_schedule(sched, now=now, env={})
+        self.assertTrue(active)
+
+    def test_cmd_truthy_empty(self):
+        sched = [{"when": "$(echo)", "timezone": "Asia/Shanghai"}]
+        now = datetime(2026, 2, 25, 12, 0, tzinfo=CST)
+        active, reason = is_within_work_schedule(sched, now=now, env={})
+        self.assertFalse(active)
+        self.assertEqual(reason, "no_matching_rule")
+
 
 class TestMultipleRules(unittest.TestCase):
     def test_first_matching_rule_wins(self):

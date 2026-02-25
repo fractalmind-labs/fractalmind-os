@@ -7,6 +7,7 @@ rules with conditional ``when`` expressions for multi-machine deployments.
 
 import os
 import re
+import subprocess
 from datetime import datetime, time as dt_time, date as dt_date
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -81,6 +82,24 @@ _WHEN_CMP_RE = re.compile(
 _WHEN_TRUTHY_RE = re.compile(
     r'^\$([A-Za-z_][A-Za-z0-9_]*)$'
 )
+# $(command) == value  or  $(command) != value  or  $(command)
+_WHEN_CMD_CMP_RE = re.compile(
+    r'^\$\((.+?)\)\s*(==|!=)\s*(.+)$'
+)
+_WHEN_CMD_TRUTHY_RE = re.compile(
+    r'^\$\((.+?)\)$'
+)
+
+
+def _run_when_command(cmd: str) -> str:
+    """Run a shell command and return stripped stdout. Empty on failure."""
+    try:
+        result = subprocess.run(
+            cmd, shell=True, capture_output=True, text=True, timeout=5,
+        )
+        return result.stdout.strip()
+    except Exception:
+        return ""
 
 
 def _evaluate_when(expr: str, env: dict) -> bool:
@@ -88,10 +107,27 @@ def _evaluate_when(expr: str, env: dict) -> bool:
 
     Supported forms::
 
-        $VAR == value
+        $VAR == value       env var comparison
         $VAR != value
-        $VAR              (truthy: exists and non-empty)
+        $VAR                env var truthy
+        $(cmd) == value     shell command comparison
+        $(cmd) != value
+        $(cmd)              shell command truthy
     """
+    # --- $(command) forms ---
+    m = _WHEN_CMD_CMP_RE.match(expr)
+    if m:
+        actual = _run_when_command(m.group(1))
+        op, expected = m.group(2), m.group(3).strip()
+        if op == "==":
+            return actual == expected
+        return actual != expected
+
+    m = _WHEN_CMD_TRUTHY_RE.match(expr)
+    if m:
+        return bool(_run_when_command(m.group(1)))
+
+    # --- $VAR forms ---
     m = _WHEN_CMP_RE.match(expr)
     if m:
         var_name, op, expected = m.group(1), m.group(2), m.group(3).strip()
