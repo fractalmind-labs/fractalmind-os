@@ -309,5 +309,61 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         self.assertEqual(mock_audit.call_args.kwargs.get('phase'), 'attempt')
         self.assertNotEqual(mock_audit.call_args.kwargs.get('phase'), 'guard_followup')
 
+    @patch('main._append_heartbeat_audit_event')
+    @patch('main.time.sleep', return_value=None)
+    @patch('main._run_heartbeat_attempt')
+    @patch('main._maybe_rollover_heartbeat_session', return_value=None)
+    @patch('main._detect_agent_context_left_percent', return_value=55)
+    @patch('main.get_agent_runtime_state', return_value={'state': 'busy', 'reason': 'busy_pattern:Thinking...'})
+    @patch('main.resolve_launcher_command', return_value='codex')
+    @patch('main.session_exists', return_value=True)
+    @patch('main.resolve_agent')
+    @patch('main.check_tmux', return_value=True)
+    def test_cmd_heartbeat_run_auto_mode_skips_when_agent_busy(
+        self,
+        _mock_tmux,
+        mock_resolve_agent,
+        _mock_session,
+        _mock_launcher,
+        _mock_runtime,
+        _mock_context,
+        _mock_rollover,
+        mock_run_attempt,
+        _mock_sleep,
+        mock_audit,
+    ):
+        mock_resolve_agent.return_value = {
+            'name': 'qa-agent',
+            'file_id': 'EMP_0001',
+            'enabled': True,
+            'heartbeat': {
+                'enabled': True,
+                'session_mode': 'auto',
+                'recovery': {
+                    'max_retries': 1,
+                    'retry_backoff_seconds': 0,
+                    'fallback_mode': 'none',
+                },
+            },
+            'launcher': 'codex',
+        }
+
+        args = type('Args', (), {
+            'agent': 'EMP_0001',
+            'timeout': None,
+            'retry': None,
+            'backoff_seconds': 0,
+            'fallback_mode': None,
+            'notify_on_failure': False,
+            'notifier_channel': None,
+        })()
+
+        result = main.cmd_heartbeat_run(args)
+        self.assertEqual(result, 0)
+        mock_run_attempt.assert_not_called()
+        mock_audit.assert_called_once()
+        self.assertEqual(mock_audit.call_args.kwargs.get('phase'), 'preflight')
+        self.assertEqual(mock_audit.call_args.kwargs.get('failure_type'), 'busy_skip')
+
 if __name__ == '__main__':
     unittest.main()

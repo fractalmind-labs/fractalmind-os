@@ -1358,6 +1358,32 @@ def cmd_heartbeat_run(args):
     heartbeat_id = time.strftime('%Y%m%d-%H%M%S')
     print(f"   HB_ID: {heartbeat_id}")
 
+    preflight_runtime = get_agent_runtime_state(agent_id, launcher=launcher)
+    preflight_state = str(preflight_runtime.get('state', 'unknown'))
+    preflight_reason = str(preflight_runtime.get('reason', 'unknown'))
+    if session_mode == 'auto' and preflight_state in {'busy', 'stuck', 'blocked', 'error'}:
+        print(
+            "⏭️  Agent is not idle "
+            f"(state={preflight_state}, reason={preflight_reason}); "
+            "skipping heartbeat dispatch in auto mode to avoid batch accumulation"
+        )
+        _append_heartbeat_audit_event(
+            repo_root,
+            agent_id=agent_id,
+            heartbeat_id=heartbeat_id,
+            send_status='skip',
+            ack_status='not_checked',
+            duration_ms=0,
+            context_left=context_left_percent,
+            failure_type='busy_skip',
+            session_mode=session_mode,
+            phase='preflight',
+            attempt=0,
+            recovery_action='skip_busy',
+            reason_code='HB_AUTO_BUSY_SKIP',
+        )
+        return 0
+
     rollover_handoff_file = _maybe_rollover_heartbeat_session(
         agent_name=agent_name,
         agent_id=agent_id,
