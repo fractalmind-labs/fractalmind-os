@@ -684,6 +684,60 @@ def _wait_for_idle_after_handoff(agent_id: str, launcher: str, timeout_seconds: 
     return last_state
 
 
+_HEARTBEAT_PREFLIGHT_SAMPLE_COUNT = 3
+_HEARTBEAT_PREFLIGHT_SAMPLE_INTERVAL_SECONDS = 2.0
+_HEARTBEAT_PREFLIGHT_CAPTURE_LINES = 120
+
+
+def _heartbeat_preflight_runtime_state(
+    *,
+    agent_id: str,
+    launcher: str,
+    sample_count: int = _HEARTBEAT_PREFLIGHT_SAMPLE_COUNT,
+    sample_interval_seconds: float = _HEARTBEAT_PREFLIGHT_SAMPLE_INTERVAL_SECONDS,
+    capture_lines: int = _HEARTBEAT_PREFLIGHT_CAPTURE_LINES,
+) -> tuple[str, str]:
+    """Best-effort heartbeat preflight state.
+
+    For auto-mode heartbeat gating we avoid relying on one snapshot only.
+    If pane output changes across idle samples, treat the agent as active (busy)
+    to prevent heartbeat injection from interrupting an in-progress conversation.
+    """
+    runtime = get_agent_runtime_state(agent_id, launcher=launcher)
+    state = str(runtime.get('state', 'unknown'))
+    reason = str(runtime.get('reason', 'unknown'))
+    if state != 'idle':
+        return state, reason
+
+    samples = max(1, int(sample_count))
+    interval = max(0.1, float(sample_interval_seconds))
+    lines = max(20, int(capture_lines))
+
+    previous_output = capture_output(agent_id, lines=lines)
+    if previous_output is None:
+        previous_output = ""
+
+    for sample_index in range(1, samples):
+        time.sleep(interval)
+
+        runtime = get_agent_runtime_state(agent_id, launcher=launcher)
+        state = str(runtime.get('state', 'unknown'))
+        reason = str(runtime.get('reason', 'unknown'))
+        if state != 'idle':
+            return state, reason
+
+        current_output = capture_output(agent_id, lines=lines)
+        if current_output is None:
+            current_output = ""
+
+        if current_output != previous_output:
+            return 'busy', f'preflight_pane_changed:{sample_index}'
+
+        previous_output = current_output
+
+    return 'idle', reason
+
+
 
 
 def _heartbeat_audit_dir(repo_root: Path) -> Path:
@@ -1358,10 +1412,16 @@ def cmd_heartbeat_run(args):
     heartbeat_id = time.strftime('%Y%m%d-%H%M%S')
     print(f"   HB_ID: {heartbeat_id}")
 
-    preflight_runtime = get_agent_runtime_state(agent_id, launcher=launcher)
-    preflight_state = str(preflight_runtime.get('state', 'unknown'))
-    preflight_reason = str(preflight_runtime.get('reason', 'unknown'))
+    preflight_state, preflight_reason = _heartbeat_preflight_runtime_state(
+        agent_id=agent_id,
+        launcher=launcher,
+    )
     if session_mode == 'auto' and preflight_state in {'busy', 'stuck', 'blocked', 'error'}:
+        skip_failure_type = 'busy_skip'
+        skip_reason_code = 'HB_AUTO_BUSY_SKIP'
+        if preflight_state == 'busy' and str(preflight_reason).startswith('preflight_pane_changed:'):
+            skip_failure_type = 'active_skip'
+            skip_reason_code = 'HB_AUTO_ACTIVE_SKIP'
         print(
             "⏭️  Agent is not idle "
             f"(state={preflight_state}, reason={preflight_reason}); "
@@ -1375,12 +1435,12 @@ def cmd_heartbeat_run(args):
             ack_status='not_checked',
             duration_ms=0,
             context_left=context_left_percent,
-            failure_type='busy_skip',
+            failure_type=skip_failure_type,
             session_mode=session_mode,
             phase='preflight',
             attempt=0,
             recovery_action='skip_busy',
-            reason_code='HB_AUTO_BUSY_SKIP',
+            reason_code=skip_reason_code,
         )
         return 0
 
