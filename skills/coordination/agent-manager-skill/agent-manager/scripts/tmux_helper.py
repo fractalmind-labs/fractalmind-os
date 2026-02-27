@@ -532,14 +532,40 @@ def send_keys(
         )
         return result.returncode == 0
 
+    op_gap_seconds = 0.12
+
     def _send_enter() -> bool:
         # Some TUIs (notably Codex) require a real Enter keypress to confirm submit.
-        # Try native key first when requested, then fall back to newline paste.
+        # Try native key first when requested, and verify pane output changes.
+        # If output does not change, fall back to newline paste to avoid idle stalls.
+        def _capture_tail(lines: int = 30) -> Optional[str]:
+            result = subprocess.run(
+                ['tmux', 'capture-pane', '-p', '-t', target, f'-S-{max(1, int(lines))}'],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode != 0:
+                return None
+            return result.stdout
+
+        def _pane_changed(reference: Optional[str], *, attempts: int = 3, interval: float = 0.1) -> bool:
+            if reference is None:
+                return False
+            for _ in range(max(1, attempts)):
+                time.sleep(interval)
+                current = _capture_tail()
+                if current is not None and current != reference:
+                    return True
+            return False
+
         if enter_via_key:
+            before = _capture_tail()
             if _send_tmux_key('C-m') or _send_tmux_key('Enter'):
-                return True
+                if _pane_changed(before):
+                    return True
 
         # Fallback: paste a newline for TUIs where keypress Enter is unreliable.
+        fallback_before = _capture_tail()
         try:
             subprocess.run(
                 ['tmux', 'load-buffer', '-b', 'enter-key', '-'],
@@ -554,17 +580,17 @@ def send_keys(
                 text=True,
                 check=True,
             )
-            return True
+            return _pane_changed(fallback_before)
         except Exception:
             return False
 
     if escape_first:
         _send_tmux_key('Escape')
-        time.sleep(0.05)
+        time.sleep(op_gap_seconds)
 
     if clear_input:
         _send_tmux_key('C-u')
-        time.sleep(0.05)
+        time.sleep(op_gap_seconds)
 
     # For multi-line content, paste via tmux buffer (more reliable than send-keys).
     if '\n' in keys:

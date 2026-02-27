@@ -1,4 +1,4 @@
-from typing import Any, Callable
+from typing import Any, Callable, Optional, Tuple
 
 
 def _script_name(deps: Any) -> str:
@@ -10,6 +10,62 @@ def _script_name(deps: Any) -> str:
 
 def _session_label(agent_id: str) -> str:
     return "main" if str(agent_id).strip().lower() == "main" else f"agent-{agent_id}"
+
+
+def _probe_runtime_state(deps: Any, *, agent_id: str, launcher: str) -> Optional[Tuple[str, str]]:
+    get_agent_runtime_state = getattr(deps, 'get_agent_runtime_state', None)
+    if not callable(get_agent_runtime_state):
+        return None
+
+    try:
+        runtime = get_agent_runtime_state(agent_id, launcher=launcher)
+    except TypeError:
+        runtime = get_agent_runtime_state(agent_id)
+    except Exception:
+        return None
+
+    if not isinstance(runtime, dict):
+        return None
+
+    state = str(runtime.get('state', 'unknown'))
+    reason = str(runtime.get('reason', 'unknown'))
+    return state, reason
+
+
+def _confirm_delivery_after_send(
+    deps: Any,
+    *,
+    agent_id: str,
+    launcher: str,
+    timeout_seconds: int = 8,
+    poll_seconds: float = 1.0,
+) -> tuple[bool, str, str]:
+    first = _probe_runtime_state(deps, agent_id=agent_id, launcher=launcher)
+    if first is None:
+        return True, 'unknown', 'runtime_probe_unavailable'
+
+    state, reason = first
+    if state != 'idle':
+        return True, state, reason
+
+    import time as py_time
+
+    deps_time = getattr(deps, 'time', None)
+    now_fn = getattr(deps_time, 'time', None) or py_time.time
+    sleep_fn = getattr(deps_time, 'sleep', None) or py_time.sleep
+
+    deadline = now_fn() + max(1, int(timeout_seconds))
+    last_state, last_reason = state, reason
+    while now_fn() < deadline:
+        sleep_fn(poll_seconds)
+        snapshot = _probe_runtime_state(deps, agent_id=agent_id, launcher=launcher)
+        if snapshot is None:
+            continue
+        last_state, last_reason = snapshot
+        if last_state != 'idle':
+            return True, last_state, last_reason
+
+    return False, last_state, last_reason
 
 
 def cmd_start(args, *, deps: Any):
@@ -424,6 +480,14 @@ def cmd_send(args, *, deps: Any):
 
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
+    runtime_snapshot = _probe_runtime_state(deps, agent_id=agent_id, launcher=launcher)
+    if runtime_snapshot is not None:
+        runtime_state, runtime_reason = runtime_snapshot
+        if runtime_state != 'idle':
+            print(
+                f"⚠️  Agent '{agent_name}' runtime is {runtime_state} ({runtime_reason}); "
+                "message may be delayed or ignored"
+            )
 
     outgoing_message = args.message
     if is_codex and should_use_codex_file_pointer(outgoing_message):
@@ -447,6 +511,17 @@ def cmd_send(args, *, deps: Any):
         return 1
 
     print(f"✅ Message sent to {agent_name}")
+    delivery_confirmed, observed_state, observed_reason = _confirm_delivery_after_send(
+        deps,
+        agent_id=agent_id,
+        launcher=launcher,
+    )
+    if not delivery_confirmed:
+        print(
+            f"⚠️  Delivery unconfirmed: agent remained idle after send "
+            f"(state={observed_state}, reason={observed_reason})"
+        )
+
     if outgoing_message == args.message:
         print(f"   Message: {args.message}")
     else:
@@ -518,6 +593,14 @@ def cmd_assign(args, *, deps: Any, start_handler: Callable | None = None):
 
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
+    runtime_snapshot = _probe_runtime_state(deps, agent_id=agent_id, launcher=launcher)
+    if runtime_snapshot is not None:
+        runtime_state, runtime_reason = runtime_snapshot
+        if runtime_state != 'idle':
+            print(
+                f"⚠️  Agent '{agent_name}' runtime is {runtime_state} ({runtime_reason}); "
+                "assignment may be delayed or ignored"
+            )
 
     task_message = f"# Task Assignment\n\n{task}"
     if is_codex and should_use_codex_file_pointer(task_message):
@@ -541,6 +624,17 @@ def cmd_assign(args, *, deps: Any, start_handler: Callable | None = None):
         return 1
 
     print(f"✅ Task assigned to {agent_name}")
+    delivery_confirmed, observed_state, observed_reason = _confirm_delivery_after_send(
+        deps,
+        agent_id=agent_id,
+        launcher=launcher,
+    )
+    if not delivery_confirmed:
+        print(
+            f"⚠️  Delivery unconfirmed: agent remained idle after assign "
+            f"(state={observed_state}, reason={observed_reason})"
+        )
+
     print()
     print(f"Monitor progress: python3 {Path(deps.__file__).name} monitor {agent_name} --follow")
     return 0
