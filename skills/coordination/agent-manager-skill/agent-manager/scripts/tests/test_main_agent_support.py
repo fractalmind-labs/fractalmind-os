@@ -134,6 +134,126 @@ class MainAgentLifecycleTests(unittest.TestCase):
         self.assertIn('Last 20 lines from main(main)', text)
         self.assertNotIn('agent-main', text)
 
+    def test_send_warns_when_runtime_not_idle_before_dispatch(self):
+        calls = []
+
+        deps = SimpleNamespace(
+            __file__='main.py',
+            check_tmux=lambda: True,
+            resolve_agent=lambda _agent: {'name': 'main', 'file_id': 'main', 'launcher': 'droid'},
+            get_agent_id=lambda config: config.get('file_id', '').lower(),
+            session_exists=lambda agent_id: agent_id == 'main',
+            Path=Path,
+            resolve_launcher_command=lambda launcher: launcher,
+            _should_use_codex_file_pointer=lambda _msg: False,
+            get_repo_root=lambda: Path('/tmp'),
+            write_codex_message_file=lambda *_args, **_kwargs: Path('/tmp/message.md'),
+            send_keys=lambda agent_id, message, **kwargs: calls.append((agent_id, message, kwargs)) or True,
+            get_agent_runtime_state=lambda _agent_id, launcher='': {'state': 'busy', 'reason': 'busy_pattern:Thinking...'},
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            rc = cmd_send(
+                argparse.Namespace(agent='main', message='hello-main', send_enter=True),
+                deps=deps,
+            )
+
+        text = output.getvalue()
+        self.assertEqual(rc, 0)
+        self.assertEqual(calls[0][0], 'main')
+        self.assertIn("runtime is busy", text)
+        self.assertIn("message may be delayed or ignored", text)
+
+    def test_send_warns_when_delivery_unconfirmed(self):
+        calls = []
+
+        class _FakeTime:
+            def __init__(self):
+                self._now = 0.0
+
+            def time(self):
+                return self._now
+
+            def sleep(self, seconds):
+                self._now += float(seconds)
+
+        fake_time = _FakeTime()
+
+        deps = SimpleNamespace(
+            __file__='main.py',
+            check_tmux=lambda: True,
+            resolve_agent=lambda _agent: {'name': 'main', 'file_id': 'main', 'launcher': 'droid'},
+            get_agent_id=lambda config: config.get('file_id', '').lower(),
+            session_exists=lambda agent_id: agent_id == 'main',
+            Path=Path,
+            resolve_launcher_command=lambda launcher: launcher,
+            _should_use_codex_file_pointer=lambda _msg: False,
+            get_repo_root=lambda: Path('/tmp'),
+            write_codex_message_file=lambda *_args, **_kwargs: Path('/tmp/message.md'),
+            send_keys=lambda agent_id, message, **kwargs: calls.append((agent_id, message, kwargs)) or True,
+            get_agent_runtime_state=lambda _agent_id, launcher='': {'state': 'idle', 'reason': 'ready'},
+            time=fake_time,
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            rc = cmd_send(
+                argparse.Namespace(agent='main', message='hello-main', send_enter=True),
+                deps=deps,
+            )
+
+        text = output.getvalue()
+        self.assertEqual(rc, 0)
+        self.assertEqual(calls[0][0], 'main')
+        self.assertIn("Delivery unconfirmed: agent remained idle after send", text)
+
+    def test_assign_warns_when_delivery_unconfirmed(self):
+        calls = []
+
+        class _FakeTime:
+            def __init__(self):
+                self._now = 0.0
+
+            def time(self):
+                return self._now
+
+            def sleep(self, seconds):
+                self._now += float(seconds)
+
+        fake_time = _FakeTime()
+
+        deps = SimpleNamespace(
+            __file__='main.py',
+            check_tmux=lambda: True,
+            resolve_agent=lambda _agent: {'name': 'main', 'file_id': 'main', 'launcher': 'droid'},
+            get_agent_id=lambda config: config.get('file_id', '').lower(),
+            session_exists=lambda agent_id: agent_id == 'main',
+            argparse=argparse,
+            time=fake_time,
+            resolve_launcher_command=lambda launcher: launcher,
+            _should_use_codex_file_pointer=lambda _msg: False,
+            get_repo_root=lambda: Path('/tmp'),
+            write_codex_message_file=lambda *_args, **_kwargs: Path('/tmp/assign.md'),
+            send_keys=lambda agent_id, message, **kwargs: calls.append((agent_id, message, kwargs)) or True,
+            get_agent_runtime_state=lambda _agent_id, launcher='': {'state': 'idle', 'reason': 'ready'},
+            Path=Path,
+            sys=SimpleNamespace(stdin=io.StringIO('run health check')),
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            rc = cmd_assign(
+                argparse.Namespace(agent='main', task_file=None),
+                deps=deps,
+                start_handler=lambda _args: 0,
+            )
+
+        text = output.getvalue()
+        self.assertEqual(rc, 0)
+        self.assertEqual(calls[0][0], 'main')
+        self.assertIn("Delivery unconfirmed: agent remained idle after assign", text)
+
 
 if __name__ == '__main__':
     unittest.main()

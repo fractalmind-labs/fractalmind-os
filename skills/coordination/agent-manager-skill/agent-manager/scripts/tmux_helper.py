@@ -532,6 +532,8 @@ def send_keys(
         )
         return result.returncode == 0
 
+    op_gap_seconds = 0.12
+
     def _send_enter() -> bool:
         # Some TUIs (notably Codex) require a real Enter keypress to confirm submit.
         # Try native key first when requested, and verify pane output changes.
@@ -546,15 +548,24 @@ def send_keys(
                 return None
             return result.stdout
 
+        def _pane_changed(reference: Optional[str], *, attempts: int = 3, interval: float = 0.1) -> bool:
+            if reference is None:
+                return False
+            for _ in range(max(1, attempts)):
+                time.sleep(interval)
+                current = _capture_tail()
+                if current is not None and current != reference:
+                    return True
+            return False
+
         if enter_via_key:
             before = _capture_tail()
             if _send_tmux_key('C-m') or _send_tmux_key('Enter'):
-                time.sleep(0.15)
-                after = _capture_tail()
-                if before is not None and after is not None and after != before:
+                if _pane_changed(before):
                     return True
 
         # Fallback: paste a newline for TUIs where keypress Enter is unreliable.
+        fallback_before = _capture_tail()
         try:
             subprocess.run(
                 ['tmux', 'load-buffer', '-b', 'enter-key', '-'],
@@ -569,17 +580,17 @@ def send_keys(
                 text=True,
                 check=True,
             )
-            return True
+            return _pane_changed(fallback_before)
         except Exception:
             return False
 
     if escape_first:
         _send_tmux_key('Escape')
-        time.sleep(0.05)
+        time.sleep(op_gap_seconds)
 
     if clear_input:
         _send_tmux_key('C-u')
-        time.sleep(0.05)
+        time.sleep(op_gap_seconds)
 
     # For multi-line content, paste via tmux buffer (more reliable than send-keys).
     if '\n' in keys:
