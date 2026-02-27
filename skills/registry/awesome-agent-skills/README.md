@@ -672,6 +672,7 @@ Official curated skills from OpenAI's skills repository.
 - **[zechenzhangAGI/AI-research-SKILLs](https://github.com/zechenzhangAGI/AI-research-SKILLs)** - 77 AI research skills for model training, inference, and MLOps
 - **[Orchestra-Research/AI-research-SKILLs](https://github.com/Orchestra-Research/AI-research-SKILLs)** - 20-module AI research skill library for model architecture, training, and ML paper writing
 - **[komal-SkyNET/claude-skill-homeassistant](https://github.com/komal-SkyNET/claude-skill-homeassistant)** - Supercharge and manage Home Assistant workflows
+- **[more-io/apple-bridges](https://github.com/more-io/claude-apple-bridges)** - Native macOS app access — manage Apple Reminders, Calendar, Contacts, Notes, Mail, and tmux sessions via Swift CLI bridges
 - **[prompt-security/clawsec](https://github.com/prompt-security/clawsec)** - Security skill suite with drift detection, automated audits, and skill integrity verification
 - **[lawvable/awesome-legal-skills](https://github.com/lawvable/awesome-legal-skills)** - Curated agent skills for automating legal workflows
 - **[peas/genealogy-research](https://paulo.com.br/skills/genealogy-research/SKILL.md)** - Genealogy research agent with OCR, FamilySearch, YAML data, and human-in-the-loop
