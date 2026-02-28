@@ -159,14 +159,47 @@ class HeartbeatRecoveryTests(unittest.TestCase):
     @patch('main.capture_output')
     @patch('main.get_agent_runtime_state', return_value={'state': 'idle'})
     @patch('main.send_keys', return_value=True)
-    def test_run_heartbeat_attempt_activation_via_output_change(self, _mock_send, _mock_state, mock_capture, _mock_sleep):
-        """Agent stays idle in state check but pane output grows significantly — activation via output change."""
-        # First call: baseline before send_keys (short output)
-        # Subsequent calls during polling: output grows beyond threshold
-        # Final call: tail capture
-        short_output = 'short baseline'
-        long_output = short_output + 'x' * 300  # >200 chars more than baseline
-        mock_capture.side_effect = [short_output, long_output, long_output]
+    def test_run_heartbeat_attempt_hash_only_activation_is_not_ack(self, _mock_send, _mock_state, mock_capture, _mock_sleep):
+        """Hash-only activation with idle runtime should not be acknowledged."""
+        calls = {'count': 0}
+
+        def _capture(*_args, **_kwargs):
+            calls['count'] += 1
+            if calls['count'] == 1:
+                return 'baseline'
+            return 'baseline changed'
+
+        mock_capture.side_effect = _capture
+        result = main._run_heartbeat_attempt(
+            agent_id='emp-0001',
+            agent_name='qa-agent',
+            launcher='codex',
+            heartbeat_message='hello',
+            timeout_seconds=4,
+            is_codex=True,
+        )
+        self.assertEqual(result['send_status'], 'ok')
+        self.assertEqual(result['ack_status'], 'no_ack')
+        self.assertEqual(result['failure_type'], 'no_activation')
+        self.assertEqual(result['reason_code'], 'HB_NO_ACTIVATION')
+
+    @patch('main.time.sleep', return_value=None)
+    @patch('main.capture_output')
+    @patch('main.get_agent_runtime_state', side_effect=[
+        {'state': 'idle'},
+        {'state': 'busy', 'reason': 'busy_pattern:Thinking'},
+        {'state': 'idle'},
+    ])
+    @patch('main.send_keys', return_value=True)
+    def test_run_heartbeat_attempt_hash_activation_then_busy_idle_ack(self, _mock_send, _mock_state, mock_capture, _mock_sleep):
+        """Hash activation is ack only after runtime confirms non-idle then returns idle."""
+        mock_capture.side_effect = [
+            'baseline',
+            'baseline changed',  # phase-1 content-hash activation
+            'baseline changed',  # phase-2 first poll (busy)
+            'baseline changed',  # phase-2 second poll (idle)
+            'baseline changed',  # final tail capture
+        ]
         result = main._run_heartbeat_attempt(
             agent_id='emp-0001',
             agent_name='qa-agent',
@@ -176,7 +209,6 @@ class HeartbeatRecoveryTests(unittest.TestCase):
             is_codex=True,
         )
         self.assertEqual(result['send_status'], 'ok')
-        # Agent is idle + activated via output change → ack
         self.assertEqual(result['ack_status'], 'ack')
 
     @patch('main.cmd_start', return_value=0)

@@ -1,11 +1,41 @@
 from __future__ import annotations
 import argparse
+import hashlib
+import re
 import subprocess
 import time
 from pathlib import Path
 from typing import Any, Optional
 
 from .heartbeat_state_machine import classify_heartbeat_ack, failure_reason_code
+
+_HEARTBEAT_ID_PATTERN = re.compile(r"\[HB_ID:([^\]\s]+)\]")
+
+
+def _extract_heartbeat_id(message: str) -> str:
+    text = str(message or '')
+    matched = _HEARTBEAT_ID_PATTERN.search(text)
+    return str(matched.group(1)) if matched else ''
+
+
+def _tail_hash(output: str) -> str:
+    return hashlib.sha1(str(output or '').encode('utf-8')).hexdigest()
+
+
+def _has_hb_id_marker(output: str, heartbeat_id: str) -> bool:
+    if not heartbeat_id:
+        return False
+    return f"[HB_ID:{heartbeat_id}]" in str(output or '')
+
+
+def _has_direct_ack(output: str, heartbeat_id: str) -> bool:
+    if not heartbeat_id:
+        return False
+    marker = f"[HB_ID:{heartbeat_id}]"
+    for line in str(output or '').splitlines():
+        if 'HEARTBEAT_OK' in line and marker in line:
+            return True
+    return False
 
 
 def _parse_non_negative_int(value: object, default: int) -> int:
@@ -179,9 +209,11 @@ def run_heartbeat_attempt(
     deps: Any,
 ) -> dict:
     started = deps.time.time()
+    heartbeat_id = _extract_heartbeat_id(heartbeat_message)
 
     # Capture baseline output BEFORE sending for activation detection.
     baseline_output = deps.capture_output(agent_id, lines=50) or ""
+    baseline_hash = _tail_hash(baseline_output)
 
     if not deps.send_keys(
         agent_id,
@@ -207,6 +239,9 @@ def run_heartbeat_attempt(
     last_state: Optional[str] = None
     timed_out = False
     activated = False
+    direct_ack = False
+    activation_source: Optional[str] = None
+    hash_activation_confirmed = False
 
     if waited_for_ack:
         start_time = deps.time.time()
@@ -223,28 +258,60 @@ def run_heartbeat_attempt(
         while (deps.time.time() - start_time) < activation_timeout:
             runtime = deps.get_agent_runtime_state(agent_id, launcher=launcher)
             last_state = str(runtime.get('state', 'unknown'))
+            current_output = deps.capture_output(agent_id, lines=50) or ""
 
             if last_state != 'idle':
                 activated = True
+                activation_source = 'state_change'
                 print(f"   Agent activated (state={last_state})")
                 break
 
-            # Secondary activation signal: significant pane content change.
-            # Catches cases where the agent processes fast enough that state polling
-            # misses the busy→idle transition, but output clearly grew.
-            current_output = deps.capture_output(agent_id, lines=50) or ""
-            if len(current_output) > len(baseline_output) + 200:
+            if _has_direct_ack(current_output, heartbeat_id):
                 activated = True
+                direct_ack = True
+                activation_source = 'direct_ack'
+                last_state = 'idle'
+                print("   Agent ack detected in pane output")
+                break
+
+            if _has_hb_id_marker(current_output, heartbeat_id):
+                activated = True
+                activation_source = 'hb_id_marker'
+                print("   Agent activated (HB_ID observed in pane)")
+                break
+
+            if _tail_hash(current_output) != baseline_hash:
+                activated = True
+                activation_source = 'content_hash'
                 print("   Agent activated (output changed)")
                 break
 
             deps.time.sleep(poll_seconds)
 
         # Phase 2: Wait for agent to return to idle (completion).
-        if activated:
+        if activated and not direct_ack:
             while (deps.time.time() - start_time) < timeout_seconds:
                 runtime = deps.get_agent_runtime_state(agent_id, launcher=launcher)
                 last_state = str(runtime.get('state', 'unknown'))
+                current_output = deps.capture_output(agent_id, lines=50) or ""
+
+                if _has_direct_ack(current_output, heartbeat_id):
+                    direct_ack = True
+                    last_state = 'idle'
+                    activation_source = 'direct_ack'
+                    print("   Agent ack detected in pane output")
+                    break
+
+                if activation_source == 'content_hash':
+                    if last_state != 'idle':
+                        hash_activation_confirmed = True
+                        print(f"   Agent activation confirmed after output change (state={last_state})")
+                    if hash_activation_confirmed and last_state == 'idle':
+                        break
+                    if last_state in ('blocked', 'error', 'stuck'):
+                        break
+                    deps.time.sleep(poll_seconds)
+                    continue
 
                 if last_state == 'idle':
                     break
@@ -253,6 +320,10 @@ def run_heartbeat_attempt(
                 deps.time.sleep(poll_seconds)
         else:
             print("⚠️  Agent did not activate within timeout — possible delivery failure")
+
+        if activation_source == 'content_hash' and not direct_ack and not hash_activation_confirmed:
+            activated = False
+            print("⚠️  Output changed but no non-idle state observed; treat as no activation")
 
         if last_state != 'idle' and (deps.time.time() - start_time) >= timeout_seconds:
             timed_out = True
@@ -267,7 +338,11 @@ def run_heartbeat_attempt(
             print("⚠️  Could not capture agent output")
 
     # If agent never activated, classify as no_activation instead of false ack.
-    if waited_for_ack and not activated:
+    if direct_ack:
+        ack_status = 'ack'
+        failure_type = ''
+        reason_code = 'HB_ACK_OK'
+    elif waited_for_ack and not activated:
         ack_status = 'no_ack'
         failure_type = 'no_activation'
         reason_code = 'HB_NO_ACTIVATION'
