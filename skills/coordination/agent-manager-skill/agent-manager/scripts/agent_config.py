@@ -114,19 +114,27 @@ def _parse_yaml_list(list_str: str) -> List[Any]:
     return [_parse_yaml_value(item) for item in items if item]
 
 
-def _parse_yaml_dict(lines: List[str], indent_level: int = 0) -> Dict[str, Any]:
+def _parse_yaml_dict(lines: List[str], indent_level: int = 0, base_indent: Optional[int] = None) -> Dict[str, Any]:
     """
     Parse YAML dict from lines, handling nested structures via indentation.
 
     Args:
         lines: List of YAML lines (without --- markers)
-        indent_level: Current indentation level for nested structures
+        indent_level: Current nesting depth (0 for root level)
+        base_indent: Base indentation for this level (auto-detected if None)
 
     Returns:
         Parsed dictionary
     """
     result = {}
     i = 0
+
+    # Auto-detect base indentation from first non-empty line
+    if base_indent is None:
+        for line in lines:
+            if line.strip():
+                base_indent = len(line) - len(line.lstrip())
+                break
 
     while i < len(lines):
         line = lines[i]
@@ -140,32 +148,13 @@ def _parse_yaml_dict(lines: List[str], indent_level: int = 0) -> Dict[str, Any]:
         stripped = line.lstrip()
         current_indent = len(line) - len(stripped)
 
-        # End of current dict level (less indented or same level but we're nested)
-        if current_indent < indent_level:
+        # End of current dict level (less indented than base)
+        if current_indent < base_indent:
             break
 
-        # Check for nested dict (more indented)
-        if current_indent > indent_level:
-            # Collect all lines at this indentation level
-            nested_lines = [lines[i]]
+        # Skip lines that are more indented than base (handled separately)
+        if current_indent > base_indent:
             i += 1
-            while i < len(lines):
-                next_line = lines[i]
-                if not next_line.strip():
-                    nested_lines.append(next_line)
-                    i += 1
-                    continue
-                next_indent = len(next_line) - len(next_line.lstrip())
-                if next_indent <= indent_level:
-                    break
-                nested_lines.append(next_line)
-                i += 1
-
-            # Parse nested dict and assign to last key
-            if result:
-                last_key = list(result.keys())[-1]
-                nested_dict = _parse_yaml_dict(nested_lines, current_indent)
-                result[last_key] = nested_dict
             continue
 
         # Parse key: value pair
@@ -182,29 +171,56 @@ def _parse_yaml_dict(lines: List[str], indent_level: int = 0) -> Dict[str, Any]:
                 i += 1
                 if i < len(lines):
                     next_line = lines[i]
-                    next_indent = len(next_line) - len(next_line.lstrip()) if next_line.strip() else 0
+                    if next_line.strip():
+                        next_indent = len(next_line) - len(next_line.lstrip())
 
-                    if next_indent > indent_level:
-                        # Nested dict
-                        nested_lines = [next_line]
-                        i += 1
-                        while i < len(lines):
-                            next_line = lines[i]
-                            if not next_line.strip():
-                                nested_lines.append(next_line)
-                                i += 1
+                        if next_indent > base_indent:
+                            # Check if nested content is a list (starts with '-')
+                            next_stripped = next_line.lstrip()
+                            if next_stripped.startswith('- '):
+                                # Parse as list
+                                list_items = []
+                                while i < len(lines):
+                                    next_line = lines[i]
+                                    if not next_line.strip():
+                                        i += 1
+                                        continue
+                                    item_indent = len(next_line) - len(next_line.lstrip())
+                                    if item_indent < base_indent:
+                                        break
+                                    stripped_item = next_line.lstrip()
+                                    if stripped_item.startswith('- '):
+                                        list_items.append(stripped_item[2:].strip())
+                                    else:
+                                        break
+                                    i += 1
+
+                                result[key] = [_parse_yaml_value(item) for item in list_items]
                                 continue
-                            next_indent2 = len(next_line) - len(next_line.lstrip())
-                            if next_indent2 <= indent_level:
-                                break
-                            nested_lines.append(next_line)
-                            i += 1
+                            else:
+                                # Parse as nested dict
+                                nested_lines = []
+                                while i < len(lines):
+                                    next_line = lines[i]
+                                    if not next_line.strip():
+                                        nested_lines.append(next_line)
+                                        i += 1
+                                        continue
+                                    next_indent2 = len(next_line) - len(next_line.lstrip())
+                                    if next_indent2 <= base_indent:
+                                        break
+                                    nested_lines.append(next_line)
+                                    i += 1
 
-                        result[key] = _parse_yaml_dict(nested_lines, current_indent)
-                        continue
-
-                # Empty value
-                result[key] = None
+                                # Parse nested dict with new base_indent
+                                result[key] = _parse_yaml_dict(nested_lines, indent_level + 1, next_indent)
+                                continue
+                        else:
+                            # No nested content, empty value
+                            result[key] = None
+                    else:
+                        # No nested content, empty value
+                        result[key] = None
         else:
             # Malformed line, skip
             pass
