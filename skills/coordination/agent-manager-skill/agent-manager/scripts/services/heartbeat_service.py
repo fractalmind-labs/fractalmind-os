@@ -240,8 +240,6 @@ def run_heartbeat_attempt(
     timed_out = False
     activated = False
     direct_ack = False
-    activation_source: Optional[str] = None
-    hash_activation_confirmed = False
 
     if waited_for_ack:
         start_time = deps.time.time()
@@ -279,68 +277,53 @@ def run_heartbeat_attempt(
 
             if last_state != 'idle':
                 activated = True
-                activation_source = 'state_change'
                 print(f"   Agent activated (state={last_state})")
                 break
 
+            # Direct acknowledgment by the current HB_ID is final evidence.
             if _has_direct_ack(current_output, heartbeat_id):
                 activated = True
                 direct_ack = True
-                activation_source = 'direct_ack'
                 last_state = 'idle'
                 print("   Agent ack detected in pane output")
                 break
 
+            # HB_ID marker in pane confirms current heartbeat message presence.
             if _has_hb_id_marker(current_output, heartbeat_id):
                 activated = True
-                activation_source = 'hb_id_marker'
                 print("   Agent activated (HB_ID observed in pane)")
                 break
 
+            # Secondary activation signal: any pane tail content change.
+            # Catches cases where output mutates without net length growth.
             if _tail_hash(current_output) != baseline_hash:
                 activated = True
-                activation_source = 'content_hash'
                 print("   Agent activated (output changed)")
                 break
 
             deps.time.sleep(poll_seconds)
 
         # Phase 2: Wait for agent to return to idle (completion).
-        if activated and not direct_ack:
-            while (deps.time.time() - start_time) < timeout_seconds:
-                runtime = deps.get_agent_runtime_state(agent_id, launcher=launcher)
-                last_state = str(runtime.get('state', 'unknown'))
-                current_output = deps.capture_output(agent_id, lines=50) or ""
+        if activated:
+            if not direct_ack:
+                while (deps.time.time() - start_time) < timeout_seconds:
+                    runtime = deps.get_agent_runtime_state(agent_id, launcher=launcher)
+                    last_state = str(runtime.get('state', 'unknown'))
+                    current_output = deps.capture_output(agent_id, lines=50) or ""
 
-                if _has_direct_ack(current_output, heartbeat_id):
-                    direct_ack = True
-                    last_state = 'idle'
-                    activation_source = 'direct_ack'
-                    print("   Agent ack detected in pane output")
-                    break
+                    if _has_direct_ack(current_output, heartbeat_id):
+                        direct_ack = True
+                        last_state = 'idle'
+                        print("   Agent ack detected in pane output")
+                        break
 
-                if activation_source == 'content_hash':
-                    if last_state != 'idle':
-                        hash_activation_confirmed = True
-                        print(f"   Agent activation confirmed after output change (state={last_state})")
-                    if hash_activation_confirmed and last_state == 'idle':
+                    if last_state == 'idle':
                         break
                     if last_state in ('blocked', 'error', 'stuck', 'interrupted'):
                         break
                     deps.time.sleep(poll_seconds)
-                    continue
-
-                if last_state == 'idle':
-                    break
-                if last_state in ('blocked', 'error', 'stuck', 'interrupted'):
-                    break
-                deps.time.sleep(poll_seconds)
         else:
             print("⚠️  Agent did not activate within timeout — possible delivery failure")
-
-        if activation_source == 'content_hash' and not direct_ack and not hash_activation_confirmed:
-            activated = False
-            print("⚠️  Output changed but no non-idle state observed; treat as no activation")
 
         if last_state != 'idle' and (deps.time.time() - start_time) >= timeout_seconds:
             timed_out = True
