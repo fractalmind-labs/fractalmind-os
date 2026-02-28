@@ -6,6 +6,7 @@ A simple alternative to CAO using only tmux + Python.
 Sessions are named: agent-{agent_id} where agent_id is file_id in lowercase (e.g., emp-0001)
 """
 
+from __future__ import annotations
 import argparse
 import json
 import os

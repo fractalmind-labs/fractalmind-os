@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any, Callable, Optional, Tuple
 
 
@@ -39,7 +40,7 @@ def _confirm_delivery_after_send(
     launcher: str,
     timeout_seconds: int = 8,
     poll_seconds: float = 1.0,
-) -> tuple[bool, str, str]:
+) -> Tuple[bool, str, str]:
     first = _probe_runtime_state(deps, agent_id=agent_id, launcher=launcher)
     if first is None:
         return True, 'unknown', 'runtime_probe_unavailable'
@@ -531,7 +532,7 @@ def cmd_send(args, *, deps: Any):
     return 0
 
 
-def cmd_assign(args, *, deps: Any, start_handler: Callable | None = None):
+def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
     """Assign task to agent."""
     check_tmux = deps.check_tmux
     resolve_agent = deps.resolve_agent

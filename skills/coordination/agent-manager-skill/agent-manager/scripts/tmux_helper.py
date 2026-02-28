@@ -5,6 +5,7 @@ Wraps tmux commands for managing agent sessions.
 Sessions are named: agent-{agent_id} where agent_id is file_id in lowercase (e.g., emp-0001)
 """
 
+from __future__ import annotations
 import subprocess
 import time
 import re
