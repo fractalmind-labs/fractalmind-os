@@ -50,12 +50,14 @@ jobs:
       - name: Import test (validates type annotations)
         run: |
           # Import all main modules to catch PEP 604 syntax errors on Python 3.9
-          python3 -c "
-          from agent_manager.scripts.commands import lifecycle
-          from agent_manager.scripts.commands import doctor
-          from agent_manager.scripts.commands import heartbeat
-          from agent_manager.scripts.services import heartbeat_state_machine
-          from agent_manager.scripts.services import work_schedule
+          cd agent-manager/scripts && python3 -c "
+          import sys
+          sys.path.insert(0, '.')
+          from commands import lifecycle
+          from commands import doctor
+          from commands import heartbeat
+          from services import heartbeat_state_machine
+          from services import work_schedule
           print('All imports successful')
           "
 
