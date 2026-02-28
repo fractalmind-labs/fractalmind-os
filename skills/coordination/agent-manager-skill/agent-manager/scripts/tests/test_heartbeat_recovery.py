@@ -60,6 +60,7 @@ class HeartbeatRecoveryTests(unittest.TestCase):
     def test_should_retry_heartbeat_attempt(self):
         self.assertTrue(main._should_retry_heartbeat_attempt(failure_type='send_fail', attempt_index=0, max_retries=1))
         self.assertTrue(main._should_retry_heartbeat_attempt(failure_type='timeout', attempt_index=0, max_retries=1))
+        self.assertTrue(main._should_retry_heartbeat_attempt(failure_type='no_activation', attempt_index=0, max_retries=1))
         self.assertFalse(main._should_retry_heartbeat_attempt(failure_type='unknown', attempt_index=0, max_retries=1))
         self.assertFalse(main._should_retry_heartbeat_attempt(failure_type='send_fail', attempt_index=1, max_retries=1))
 
@@ -101,8 +102,9 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         self.assertEqual(state, 'idle')
         self.assertEqual(reason, 'ready')
 
+    @patch('main.capture_output', return_value='baseline')
     @patch('main.send_keys', return_value=False)
-    def test_run_heartbeat_attempt_send_fail(self, _mock_send):
+    def test_run_heartbeat_attempt_send_fail(self, _mock_send, _mock_capture):
         result = main._run_heartbeat_attempt(
             agent_id='emp-0001',
             agent_name='qa-agent',
@@ -116,7 +118,10 @@ class HeartbeatRecoveryTests(unittest.TestCase):
 
     @patch('main.time.sleep', return_value=None)
     @patch('main.capture_output', return_value='tail output')
-    @patch('main.get_agent_runtime_state', return_value={'state': 'idle'})
+    @patch('main.get_agent_runtime_state', side_effect=[
+        {'state': 'busy', 'reason': 'busy_pattern:Thinking'},  # activation detected
+        {'state': 'idle', 'reason': 'ready'},                   # completion detected
+    ])
     @patch('main.send_keys', return_value=True)
     def test_run_heartbeat_attempt_ack(self, _mock_send, _mock_state, _mock_capture, _mock_sleep):
         result = main._run_heartbeat_attempt(
@@ -128,6 +133,49 @@ class HeartbeatRecoveryTests(unittest.TestCase):
             is_codex=True,
         )
         self.assertEqual(result['send_status'], 'ok')
+        self.assertEqual(result['ack_status'], 'ack')
+
+    @patch('main.time.sleep', return_value=None)
+    @patch('main.capture_output', return_value='tail output')
+    @patch('main.get_agent_runtime_state', return_value={'state': 'idle'})
+    @patch('main.send_keys', return_value=True)
+    def test_run_heartbeat_attempt_no_activation(self, _mock_send, _mock_state, _mock_capture, _mock_sleep):
+        """Agent stays idle the entire time — no activation detected, classified as no_ack."""
+        result = main._run_heartbeat_attempt(
+            agent_id='emp-0001',
+            agent_name='qa-agent',
+            launcher='codex',
+            heartbeat_message='hello',
+            timeout_seconds=30,
+            is_codex=True,
+        )
+        self.assertEqual(result['send_status'], 'ok')
+        self.assertEqual(result['ack_status'], 'no_ack')
+        self.assertEqual(result['failure_type'], 'no_activation')
+        self.assertEqual(result['reason_code'], 'HB_NO_ACTIVATION')
+
+    @patch('main.time.sleep', return_value=None)
+    @patch('main.capture_output')
+    @patch('main.get_agent_runtime_state', return_value={'state': 'idle'})
+    @patch('main.send_keys', return_value=True)
+    def test_run_heartbeat_attempt_activation_via_output_change(self, _mock_send, _mock_state, mock_capture, _mock_sleep):
+        """Agent stays idle in state check but pane output grows significantly — activation via output change."""
+        # First call: baseline before send_keys (short output)
+        # Subsequent calls during polling: output grows beyond threshold
+        # Final call: tail capture
+        short_output = 'short baseline'
+        long_output = short_output + 'x' * 300  # >200 chars more than baseline
+        mock_capture.side_effect = [short_output, long_output, long_output]
+        result = main._run_heartbeat_attempt(
+            agent_id='emp-0001',
+            agent_name='qa-agent',
+            launcher='codex',
+            heartbeat_message='hello',
+            timeout_seconds=30,
+            is_codex=True,
+        )
+        self.assertEqual(result['send_status'], 'ok')
+        # Agent is idle + activated via output change → ack
         self.assertEqual(result['ack_status'], 'ack')
 
     @patch('main.cmd_start', return_value=0)

@@ -179,6 +179,9 @@ def run_heartbeat_attempt(
 ) -> dict:
     started = deps.time.time()
 
+    # Capture baseline output BEFORE sending for activation detection.
+    baseline_output = deps.capture_output(agent_id, lines=50) or ""
+
     if not deps.send_keys(
         agent_id,
         heartbeat_message,
@@ -202,22 +205,53 @@ def run_heartbeat_attempt(
     waited_for_ack = bool(timeout_seconds and timeout_seconds > 0)
     last_state: Optional[str] = None
     timed_out = False
+    activated = False
 
     if waited_for_ack:
         start_time = deps.time.time()
         poll_seconds = 2
+        activation_timeout = min(60, timeout_seconds)
         print(f"   Waiting for response (up to {int(timeout_seconds)}s)...")
 
         deps.time.sleep(3)
-        while (deps.time.time() - start_time) < timeout_seconds:
+
+        # Phase 1: Wait for agent to become non-idle (activation).
+        # Prevents false-positive ack when the agent hasn't started processing yet.
+        # After send_keys, the agent may still appear idle for several seconds before
+        # busy indicators (e.g. "✻ Thinking") appear in the pane.
+        while (deps.time.time() - start_time) < activation_timeout:
             runtime = deps.get_agent_runtime_state(agent_id, launcher=launcher)
             last_state = str(runtime.get('state', 'unknown'))
 
-            if last_state == 'idle':
+            if last_state != 'idle':
+                activated = True
+                print(f"   Agent activated (state={last_state})")
                 break
-            if last_state in ('blocked', 'error', 'stuck'):
+
+            # Secondary activation signal: significant pane content change.
+            # Catches cases where the agent processes fast enough that state polling
+            # misses the busy→idle transition, but output clearly grew.
+            current_output = deps.capture_output(agent_id, lines=50) or ""
+            if len(current_output) > len(baseline_output) + 200:
+                activated = True
+                print("   Agent activated (output changed)")
                 break
+
             deps.time.sleep(poll_seconds)
+
+        # Phase 2: Wait for agent to return to idle (completion).
+        if activated:
+            while (deps.time.time() - start_time) < timeout_seconds:
+                runtime = deps.get_agent_runtime_state(agent_id, launcher=launcher)
+                last_state = str(runtime.get('state', 'unknown'))
+
+                if last_state == 'idle':
+                    break
+                if last_state in ('blocked', 'error', 'stuck'):
+                    break
+                deps.time.sleep(poll_seconds)
+        else:
+            print("⚠️  Agent did not activate within timeout — possible delivery failure")
 
         if last_state != 'idle' and (deps.time.time() - start_time) >= timeout_seconds:
             timed_out = True
@@ -231,11 +265,17 @@ def run_heartbeat_attempt(
         else:
             print("⚠️  Could not capture agent output")
 
-    ack_status, failure_type, reason_code = classify_heartbeat_ack(
-        waited_for_ack=waited_for_ack,
-        last_state=last_state,
-        timed_out=timed_out,
-    )
+    # If agent never activated, classify as no_activation instead of false ack.
+    if waited_for_ack and not activated:
+        ack_status = 'no_ack'
+        failure_type = 'no_activation'
+        reason_code = 'HB_NO_ACTIVATION'
+    else:
+        ack_status, failure_type, reason_code = classify_heartbeat_ack(
+            waited_for_ack=waited_for_ack,
+            last_state=last_state,
+            timed_out=timed_out,
+        )
 
     if last_state and last_state != 'idle':
         print(f"⚠️  Agent state after wait: {last_state}")

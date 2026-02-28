@@ -189,6 +189,16 @@ class CliIntegrationFlowTests(unittest.TestCase):
         self.agent_config['heartbeat'] = {'enabled': True, 'session_mode': 'auto'}
         handoff_file = self.temp_root / 'auto-handoff.md'
 
+        # Simulate realistic activation: returns busy once per ack attempt,
+        # then idle. Preflight and other callers see idle.
+        call_count = {'n': 0}
+        def _fake_runtime_state(*_args, **_kwargs):
+            call_count['n'] += 1
+            # Every 4th call returns busy (simulates activation during ack polling)
+            if call_count['n'] % 4 == 0:
+                return {'state': 'busy', 'reason': 'busy_pattern:Thinking'}
+            return {'state': 'idle', 'reason': 'ready'}
+
         with ExitStack() as stack:
             self._patch_common(stack, runtime)
             stack.enter_context(patch('main._detect_agent_context_left_percent', return_value=10))
@@ -196,6 +206,7 @@ class CliIntegrationFlowTests(unittest.TestCase):
             stack.enter_context(patch('main._wait_for_idle_after_handoff', return_value='idle'))
             stack.enter_context(patch('main._heartbeat_handoff_saved', return_value=True))
             stack.enter_context(patch('main.cmd_start', return_value=0))
+            stack.enter_context(patch('main.get_agent_runtime_state', side_effect=_fake_runtime_state))
 
             output = self._run_stage_ok(
                 'heartbeat-auto',
@@ -213,6 +224,14 @@ class CliIntegrationFlowTests(unittest.TestCase):
         self.agent_config['heartbeat'] = {'enabled': True, 'session_mode': 'fresh'}
         handoff_file = self.temp_root / 'fresh-handoff.md'
 
+        # Same activation pattern: returns busy periodically to trigger activation.
+        call_count = {'n': 0}
+        def _fake_runtime_state(*_args, **_kwargs):
+            call_count['n'] += 1
+            if call_count['n'] % 4 == 0:
+                return {'state': 'busy', 'reason': 'busy_pattern:Thinking'}
+            return {'state': 'idle', 'reason': 'ready'}
+
         with ExitStack() as stack:
             self._patch_common(stack, runtime)
             stack.enter_context(patch('main._detect_agent_context_left_percent', return_value=None))
@@ -220,6 +239,7 @@ class CliIntegrationFlowTests(unittest.TestCase):
             stack.enter_context(patch('main._wait_for_idle_after_handoff', return_value='idle'))
             stack.enter_context(patch('main._heartbeat_handoff_saved', return_value=True))
             stack.enter_context(patch('main.cmd_start', return_value=0))
+            stack.enter_context(patch('main.get_agent_runtime_state', side_effect=_fake_runtime_state))
 
             output = self._run_stage_ok(
                 'heartbeat-fresh',

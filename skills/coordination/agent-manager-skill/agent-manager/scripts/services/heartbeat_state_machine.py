@@ -1,7 +1,7 @@
 from typing import Optional
 
 
-RECOVERABLE_FAILURE_TYPES = {'send_fail', 'no_ack', 'timeout', 'blocked'}
+RECOVERABLE_FAILURE_TYPES = {'send_fail', 'no_ack', 'no_activation', 'timeout', 'blocked'}
 
 
 def failure_reason_code(*, failure_type: str, ack_status: str = '', send_status: str = '') -> str:
@@ -14,6 +14,8 @@ def failure_reason_code(*, failure_type: str, ack_status: str = '', send_status:
         return 'HB_ACK_TIMEOUT'
     if failure == 'no_ack':
         return 'HB_NO_ACK'
+    if failure == 'no_activation':
+        return 'HB_NO_ACTIVATION'
 
     ack = str(ack_status or '').strip().lower()
     if ack == 'blocked':
