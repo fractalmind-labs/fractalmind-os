@@ -9,11 +9,242 @@ from __future__ import annotations
 import os
 import re
 import shlex
-import yaml
 from pathlib import Path
-from typing import Optional, Dict, Any, List, Iterable
+from typing import Optional, Dict, Any, List, Iterable, Union
 
 from repo_root import find_repo_root, get_repo_root, get_skill_search_dirs
+
+
+# =============================================================================
+# Stdlib-only YAML Frontmatter Parser
+# =============================================================================
+
+class _YAMLParseError(Exception):
+    """Raised when YAML parsing fails."""
+    pass
+
+
+def _parse_yaml_value(value: str) -> Any:
+    """
+    Parse a YAML value string into appropriate Python type.
+
+    Supports:
+    - Strings (unquoted or quoted)
+    - Booleans: true, false, yes, no (case-insensitive)
+    - None/null: ~, null, None (case-insensitive)
+    - Integers and floats
+    - Lists: [item1, item2]
+    - Nested dicts via indentation (handled by _parse_yaml_dict)
+    """
+    value = value.strip()
+
+    # None/null
+    if value.lower() in ('~', 'null', 'none'):
+        return None
+
+    # Booleans
+    if value.lower() in ('true', 'yes'):
+        return True
+    if value.lower() in ('false', 'no'):
+        return False
+
+    # Empty string
+    if not value:
+        return ''
+
+    # List syntax: [item1, item2, "quoted item"]
+    if value.startswith('[') and value.endswith(']'):
+        return _parse_yaml_list(value[1:-1])
+
+    # Try parsing as number
+    try:
+        if '.' in value:
+            return float(value)
+        return int(value)
+    except ValueError:
+        pass
+
+    # Remove quotes if present
+    if (value.startswith('"') and value.endswith('"')) or \
+       (value.startswith("'") and value.endswith("'")):
+        return value[1:-1]
+
+    # Return as string
+    return value
+
+
+def _parse_yaml_list(list_str: str) -> List[Any]:
+    """Parse a YAML list string into Python list."""
+    items = []
+    current = []
+    in_quotes = False
+    quote_char = None
+
+    i = 0
+    while i < len(list_str):
+        char = list_str[i]
+
+        # Handle quoted strings
+        if char in ('"', "'") and (i == 0 or list_str[i-1] != '\\'):
+            if not in_quotes:
+                in_quotes = True
+                quote_char = char
+            elif char == quote_char:
+                in_quotes = False
+                quote_char = None
+            current.append(char)
+        elif in_quotes:
+            current.append(char)
+        # Handle list separator
+        elif char == ',':
+            items.append(''.join(current).strip())
+            current = []
+        # Handle whitespace (skip between items)
+        elif char.isspace() and not current:
+            pass
+        else:
+            current.append(char)
+
+        i += 1
+
+    # Add last item
+    if current or items:
+        items.append(''.join(current).strip())
+
+    return [_parse_yaml_value(item) for item in items if item]
+
+
+def _parse_yaml_dict(lines: List[str], indent_level: int = 0) -> Dict[str, Any]:
+    """
+    Parse YAML dict from lines, handling nested structures via indentation.
+
+    Args:
+        lines: List of YAML lines (without --- markers)
+        indent_level: Current indentation level for nested structures
+
+    Returns:
+        Parsed dictionary
+    """
+    result = {}
+    i = 0
+
+    while i < len(lines):
+        line = lines[i]
+
+        # Skip empty lines and comments
+        if not line.strip() or line.strip().startswith('#'):
+            i += 1
+            continue
+
+        # Count indentation
+        stripped = line.lstrip()
+        current_indent = len(line) - len(stripped)
+
+        # End of current dict level (less indented or same level but we're nested)
+        if current_indent < indent_level:
+            break
+
+        # Check for nested dict (more indented)
+        if current_indent > indent_level:
+            # Collect all lines at this indentation level
+            nested_lines = [lines[i]]
+            i += 1
+            while i < len(lines):
+                next_line = lines[i]
+                if not next_line.strip():
+                    nested_lines.append(next_line)
+                    i += 1
+                    continue
+                next_indent = len(next_line) - len(next_line.lstrip())
+                if next_indent <= indent_level:
+                    break
+                nested_lines.append(next_line)
+                i += 1
+
+            # Parse nested dict and assign to last key
+            if result:
+                last_key = list(result.keys())[-1]
+                nested_dict = _parse_yaml_dict(nested_lines, current_indent)
+                result[last_key] = nested_dict
+            continue
+
+        # Parse key: value pair
+        if ':' in stripped:
+            key_part, value_part = stripped.split(':', 1)
+            key = key_part.strip()
+            value_str = value_part.strip()
+
+            if value_str:
+                # Inline value
+                result[key] = _parse_yaml_value(value_str)
+            else:
+                # Check if next lines are nested (more indented)
+                i += 1
+                if i < len(lines):
+                    next_line = lines[i]
+                    next_indent = len(next_line) - len(next_line.lstrip()) if next_line.strip() else 0
+
+                    if next_indent > indent_level:
+                        # Nested dict
+                        nested_lines = [next_line]
+                        i += 1
+                        while i < len(lines):
+                            next_line = lines[i]
+                            if not next_line.strip():
+                                nested_lines.append(next_line)
+                                i += 1
+                                continue
+                            next_indent2 = len(next_line) - len(next_line.lstrip())
+                            if next_indent2 <= indent_level:
+                                break
+                            nested_lines.append(next_line)
+                            i += 1
+
+                        result[key] = _parse_yaml_dict(nested_lines, current_indent)
+                        continue
+
+                # Empty value
+                result[key] = None
+        else:
+            # Malformed line, skip
+            pass
+
+        i += 1
+
+    return result
+
+
+def _parse_yaml_frontmatter(content: str) -> Dict[str, Any]:
+    """
+    Parse YAML frontmatter from markdown file content.
+
+    Supports a subset of YAML sufficient for agent config files:
+    - String values (quoted or unquoted)
+    - Boolean values (true/false, yes/no)
+    - None/null values (~, null, None)
+    - Integer and float values
+    - Lists: [item1, item2, "quoted item"]
+    - Nested dicts (for schedules, heartbeat, tmux, etc.)
+
+    Args:
+        content: Full file content with YAML frontmatter between --- markers
+
+    Returns:
+        Parsed configuration dictionary
+    """
+    # Extract YAML frontmatter (between --- markers)
+    frontmatter_match = re.match(r'^---\n(.*?)\n---\n(.*)$', content, re.DOTALL)
+    if not frontmatter_match:
+        return {}
+
+    yaml_content = frontmatter_match.group(1)
+
+    if not yaml_content.strip():
+        return {}
+
+    # Split into lines and parse
+    lines = yaml_content.split('\n')
+    return _parse_yaml_dict(lines, indent_level=0)
 
 
 AGENT_DIR_PROFILE_FILENAME = "AGENTS.md"
@@ -159,7 +390,7 @@ def parse_agent_file(agent_path: Path) -> Dict[str, Any]:
     yaml_content = frontmatter_match.group(1)
     markdown_content = frontmatter_match.group(2)
 
-    config = yaml.safe_load(yaml_content) or {}
+    config = _parse_yaml_frontmatter(content)
     config['role_definition'] = markdown_content.strip()
 
     # Extract file ID from path (e.g., EMP_0001 from EMP_0001.md; EMP_0001 from EMP_0001/AGENTS.md)
@@ -273,7 +504,7 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
                 config = parse_agent_file(profile_path)
                 config['_file_path'] = profile_path
                 return expand_config_env_vars(config)
-            except (ValueError, yaml.YAMLError):
+            except (ValueError, _YAMLParseError):
                 return None
 
     # 2) If it's a bare filename, try resolving it inside agents_dir.
@@ -286,7 +517,7 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
                 config = parse_agent_file(agent_file)
                 config['_file_path'] = agent_file
                 return expand_config_env_vars(config)
-            except (ValueError, yaml.YAMLError):
+            except (ValueError, _YAMLParseError):
                 return None
 
     if agents_dir is None:
@@ -303,7 +534,7 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
                 # Add file path to config
                 config['_file_path'] = agent_file
                 return expand_config_env_vars(config)
-        except (ValueError, yaml.YAMLError):
+        except (ValueError, _YAMLParseError):
             continue
 
     # Try by file ID
@@ -313,7 +544,7 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
             config = parse_agent_file(agent_file)
             config['_file_path'] = agent_file
             return expand_config_env_vars(config)
-        except (ValueError, yaml.YAMLError):
+        except (ValueError, _YAMLParseError):
             return None
 
     agent_dir_profile = agents_dir / name_or_id / AGENT_DIR_PROFILE_FILENAME
@@ -322,7 +553,7 @@ def resolve_agent(name_or_id: str, agents_dir: Optional[Path] = None) -> Optiona
             config = parse_agent_file(agent_dir_profile)
             config['_file_path'] = agent_dir_profile
             return expand_config_env_vars(config)
-        except (ValueError, yaml.YAMLError):
+        except (ValueError, _YAMLParseError):
             return None
 
     return None
@@ -356,7 +587,7 @@ def list_all_agents(agents_dir: Optional[Path] = None) -> Dict[str, Dict[str, An
                 file_id = config.get('file_id')
                 if file_id:
                     agents[file_id] = config
-            except (ValueError, yaml.YAMLError):
+            except (ValueError, _YAMLParseError):
                 continue
 
     agents.setdefault(MAIN_AGENT_FILE_ID, _build_main_agent_config(repo_root=repo_root))
@@ -423,8 +654,7 @@ def load_skills(
             # Extract YAML frontmatter for description
             frontmatter_match = re.match(r'^---\n(.*?)\n---\n(.*)$', content, re.DOTALL)
             if frontmatter_match:
-                yaml_content = frontmatter_match.group(1)
-                skill_meta = yaml.safe_load(yaml_content) or {}
+                skill_meta = _parse_yaml_frontmatter(content)
                 description = skill_meta.get('description', 'No description')
             else:
                 description = 'No description'
