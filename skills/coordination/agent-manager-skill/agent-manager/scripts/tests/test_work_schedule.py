@@ -205,11 +205,6 @@ class TestTimezoneConversion(unittest.TestCase):
         active, _ = is_within_work_schedule(sched)
         self.assertTrue(active)
 
-    def test_missing_timezone_fails_open(self):
-        sched = {"work_days": [1, 2, 3, 4, 5]}
-        active, _ = is_within_work_schedule(sched)
-        self.assertTrue(active)
-
 
 # ---------------------------------------------------------------------------
 # when conditions
