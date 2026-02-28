@@ -1,5 +1,7 @@
 """Tests for services.work_schedule module."""
 
+from __future__ import annotations
+
 import os
 import sys
 import unittest
@@ -23,8 +25,6 @@ UTC = ZoneInfo("UTC")
 
 class TestNoSchedule(unittest.TestCase):
     """No schedule configured → always active."""
-
-from __future__ import annotations
 
     def test_none(self):
         self.assertEqual(is_within_work_schedule(None), (True, ""))
