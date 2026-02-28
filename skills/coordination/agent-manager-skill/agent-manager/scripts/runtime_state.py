@@ -4,6 +4,7 @@ This module centralizes runtime state evaluation so callers can rely on one
 consistent API.
 """
 
+from __future__ import annotations
 import re
 from typing import Dict, Optional, Sequence, Any
 

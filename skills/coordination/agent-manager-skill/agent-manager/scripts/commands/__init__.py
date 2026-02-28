@@ -1,5 +1,7 @@
 """Command handler modules for Agent Manager CLI."""
 
+from __future__ import annotations
+
 from .doctor import cmd_doctor
 from .heartbeat import cmd_heartbeat
 from .lifecycle import cmd_assign, cmd_monitor, cmd_send, cmd_start, cmd_stop

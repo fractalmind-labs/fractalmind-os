@@ -5,6 +5,7 @@ Determines whether the current moment falls within the configured work schedule
 rules with conditional ``when`` expressions for multi-machine deployments.
 """
 
+from __future__ import annotations
 import os
 import re
 import subprocess

@@ -1,5 +1,7 @@
 """Service modules for heartbeat and runtime orchestration."""
 
+from __future__ import annotations
+
 from .heartbeat_service import (
     notify_heartbeat_failure,
     parse_heartbeat_recovery_policy,

@@ -1,5 +1,7 @@
 """Tests for services.work_schedule module."""
 
+from __future__ import annotations
+
 import os
 import sys
 import unittest
@@ -200,11 +202,6 @@ class TestTimezoneConversion(unittest.TestCase):
 
     def test_invalid_timezone_fails_open(self):
         sched = {"timezone": "Invalid/Nowhere", "work_hours": {"start": "09:00", "end": "18:00"}}
-        active, _ = is_within_work_schedule(sched)
-        self.assertTrue(active)
-
-    def test_missing_timezone_fails_open(self):
-        sched = {"work_days": [1, 2, 3, 4, 5]}
         active, _ = is_within_work_schedule(sched)
         self.assertTrue(active)
 

@@ -5,6 +5,7 @@ Supports two agent profile layouts under `agents/`:
 2) Folder-based: `agents/EMP_0001/AGENTS.md`
 """
 
+from __future__ import annotations
 import os
 import re
 import shlex
