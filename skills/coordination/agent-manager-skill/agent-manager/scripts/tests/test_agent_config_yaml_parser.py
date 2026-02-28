@@ -52,6 +52,39 @@ skills:
         )
         self.assertEqual(config.get("skills"), ["agent-manager", "team-manager"])
 
+    def test_parse_yaml_value_scalar_types(self):
+        self.assertIsNone(agent_config._parse_yaml_value("~"))
+        self.assertIsNone(agent_config._parse_yaml_value("NULL"))
+        self.assertIsNone(agent_config._parse_yaml_value("None"))
+
+        self.assertTrue(agent_config._parse_yaml_value("true"))
+        self.assertTrue(agent_config._parse_yaml_value("Yes"))
+        self.assertFalse(agent_config._parse_yaml_value("false"))
+        self.assertFalse(agent_config._parse_yaml_value("NO"))
+
+        self.assertEqual(agent_config._parse_yaml_value(""), "")
+        self.assertEqual(agent_config._parse_yaml_value("  "), "")
+
+        self.assertEqual(agent_config._parse_yaml_value("42"), 42)
+        self.assertEqual(agent_config._parse_yaml_value("3.14"), 3.14)
+        self.assertEqual(agent_config._parse_yaml_value('"hello"'), "hello")
+        self.assertEqual(agent_config._parse_yaml_value("'world'"), "world")
+        self.assertEqual(agent_config._parse_yaml_value("plain-string"), "plain-string")
+        self.assertEqual(agent_config._parse_yaml_value("[1, \"two\", false]"), [1, "two", False])
+
+    def test_parse_yaml_list_quotes_commas_and_escaped_quotes(self):
+        parsed = agent_config._parse_yaml_list('"a,b", \'c,d\', plain, 1, true, null')
+        self.assertEqual(parsed, ["a,b", "c,d", "plain", 1, True, None])
+
+        parsed2 = agent_config._parse_yaml_list(r'"x\"y", z')
+        self.assertEqual(parsed2, ['x\\"y', "z"])
+
+    def test_looks_like_mapping_entry(self):
+        self.assertTrue(agent_config._looks_like_mapping_entry("name: value"))
+        self.assertTrue(agent_config._looks_like_mapping_entry("key_1: 123"))
+        self.assertFalse(agent_config._looks_like_mapping_entry("1name: value"))
+        self.assertFalse(agent_config._looks_like_mapping_entry("https://example.com/a:b"))
+
     def test_parse_block_list_of_dicts_for_schedules(self):
         agent_file = self._write_agent_file(
             "agents/EMP_0002/AGENTS.md",
@@ -83,6 +116,113 @@ schedules:
         self.assertEqual(schedules[1]["name"], "weekly-report")
         self.assertFalse(schedules[1]["enabled"])
 
+    def test_parse_block_list_with_empty_item_and_non_item_lines(self):
+        lines = [
+            "  # comment",
+            "",
+            "  -",
+            "    foo: bar",
+            "  -",
+            "  - https://example.com/a:b",
+            "  key: value",  # not a list item, should be ignored by block-list parser
+            "not-indented-enough",
+        ]
+        parsed = agent_config._parse_yaml_block_list(lines, parent_indent=0)
+        self.assertEqual(parsed[0], {"foo": "bar"})
+        self.assertIsNone(parsed[1])
+        self.assertEqual(parsed[2], "https://example.com/a:b")
+
+    def test_parse_block_list_handles_blank_continuation_lines(self):
+        lines = [
+            "  - name: job1",
+            "",
+            "    cron: \"*/5 * * * *\"",
+            "  - plain",
+        ]
+        parsed = agent_config._parse_yaml_block_list(lines, parent_indent=0)
+        self.assertEqual(parsed[0]["name"], "job1")
+        self.assertEqual(parsed[0]["cron"], "*/5 * * * *")
+        self.assertEqual(parsed[1], "plain")
+
+    def test_parse_yaml_dict_handles_nested_blocks_and_malformed_lines(self):
+        lines = [
+            "name: dev",
+            "",
+            "# comment",
+            "badline-without-colon",
+            "heartbeat:",
+            "  cron: \"*/10 * * * *\"",
+            "",
+            "  enabled: true",
+            "skills:",
+            "  - agent-manager",
+            "  - team-manager",
+        ]
+        parsed = agent_config._parse_yaml_dict(lines, indent_level=0)
+        self.assertEqual(parsed["name"], "dev")
+        self.assertEqual(parsed["heartbeat"]["cron"], "*/10 * * * *")
+        self.assertTrue(parsed["heartbeat"]["enabled"])
+        self.assertEqual(parsed["skills"], ["agent-manager", "team-manager"])
+
+    def test_parse_yaml_dict_nested_branch_without_result_and_empty_value(self):
+        # Indented content with no previous key should be skipped safely.
+        parsed = agent_config._parse_yaml_dict(["  child: 1"], indent_level=0)
+        self.assertEqual(parsed, {})
+
+        # Empty value with no nested block becomes None.
+        parsed2 = agent_config._parse_yaml_dict(["name:"], indent_level=0)
+        self.assertEqual(parsed2, {"name": None})
+
+        # Early break path: current indent less than indent_level.
+        parsed3 = agent_config._parse_yaml_dict(["name: dev"], indent_level=2)
+        self.assertEqual(parsed3, {})
+
+    def test_parse_yaml_dict_nested_branch_reassigns_last_key(self):
+        parsed_list = agent_config._parse_yaml_dict(
+            [
+                "root: null",
+                "  - one",
+                "  - two",
+                "after: ok",
+            ],
+            indent_level=0,
+        )
+        self.assertEqual(parsed_list["root"], ["one", "two"])
+        self.assertEqual(parsed_list["after"], "ok")
+
+        parsed_map = agent_config._parse_yaml_dict(
+            [
+                "root: null",
+                "  child: 1",
+                "",
+                "after: ok",
+            ],
+            indent_level=0,
+        )
+        self.assertEqual(parsed_map["root"]["child"], 1)
+        self.assertEqual(parsed_map["after"], "ok")
+
+    def test_parse_yaml_frontmatter_variants(self):
+        no_frontmatter = "hello world"
+        self.assertEqual(agent_config._parse_yaml_frontmatter(no_frontmatter), {})
+
+        empty_frontmatter = "---\n\n---\nbody"
+        self.assertEqual(agent_config._parse_yaml_frontmatter(empty_frontmatter), {})
+
+        valid_frontmatter = "---\nname: demo\nenabled: true\n---\nbody"
+        self.assertEqual(
+            agent_config._parse_yaml_frontmatter(valid_frontmatter),
+            {"name": "demo", "enabled": True},
+        )
+
+    def test_parse_agent_file_invalid_format_raises(self):
+        path = self.temp_root / "agents" / "EMP_9999" / "AGENTS.md"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("name: missing-frontmatter-markers\n", encoding="utf-8")
+
+        with self.assertRaises(ValueError):
+            agent_config.parse_agent_file(path)
+
     @patch("agent_config.get_repo_root")
     def test_resolve_main_keeps_block_list_launcher_args(self, mock_get_repo_root):
         repo_root = self.temp_root
@@ -109,6 +249,24 @@ skills:
         self.assertEqual(cfg.get("launcher"), "claude")
         self.assertEqual(cfg.get("launcher_args"), ["--dangerously-skip-permissions"])
         self.assertEqual(cfg.get("skills"), ["agent-manager"])
+
+    def test_parse_agent_file_sets_defaults_for_optional_fields(self):
+        agent_file = self._write_agent_file(
+            "agents/EMP_0003/AGENTS.md",
+            """
+name: simple
+description: simple
+working_directory: ${REPO_ROOT}
+launcher: claude
+""",
+        )
+        cfg = agent_config.parse_agent_file(agent_file)
+        self.assertEqual(cfg.get("launcher_args"), [])
+        self.assertEqual(cfg.get("skills"), [])
+        self.assertEqual(cfg.get("schedules"), [])
+        self.assertEqual(cfg.get("mcps"), {})
+        self.assertTrue(cfg.get("enabled"))
+        self.assertIsNone(cfg.get("heartbeat"))
 
 
 if __name__ == "__main__":

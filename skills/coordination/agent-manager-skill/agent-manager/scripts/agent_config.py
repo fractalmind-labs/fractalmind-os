@@ -293,7 +293,8 @@ def _parse_yaml_dict(lines: List[str], indent_level: int = 0) -> Dict[str, Any]:
                         if first_meaningful.startswith('-'):
                             result[key] = _parse_yaml_block_list(nested_lines, current_indent)
                         else:
-                            result[key] = _parse_yaml_dict(nested_lines, current_indent)
+                            # Parse nested mapping at its own indentation level.
+                            result[key] = _parse_yaml_dict(nested_lines, next_indent)
                         continue
 
                 # Empty value
