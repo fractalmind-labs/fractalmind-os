@@ -10,6 +10,7 @@ import subprocess
 import time
 import re
 import os
+import shutil
 from typing import Optional, List, Dict, Any, Tuple
 
 from runtime_state import (
@@ -30,6 +31,37 @@ GROUP_SESSION_ENV_VAR = "AGENT_MANAGER_TMUX_GROUP_SESSION"
 
 def get_group_session_name() -> str:
     return os.environ.get(GROUP_SESSION_ENV_VAR, DEFAULT_GROUP_SESSION_NAME)
+
+
+def _ensure_tmux_in_path() -> bool:
+    """Ensure `tmux` is resolvable even in restricted service environments."""
+    if shutil.which("tmux"):
+        return True
+
+    candidates = [
+        os.environ.get("TMUX_BIN", ""),
+        "/opt/homebrew/bin/tmux",  # macOS Homebrew (Apple Silicon)
+        "/usr/local/bin/tmux",     # macOS Homebrew (Intel)
+        "/opt/local/bin/tmux",     # MacPorts
+        "/usr/bin/tmux",
+    ]
+
+    for candidate in candidates:
+        candidate = str(candidate or "").strip()
+        if not candidate:
+            continue
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            bin_dir = os.path.dirname(candidate)
+            path = os.environ.get("PATH", "")
+            path_parts = [p for p in path.split(":") if p]
+            if bin_dir not in path_parts:
+                os.environ["PATH"] = f"{bin_dir}:{path}" if path else bin_dir
+            return True
+    return False
+
+
+# Try once at import-time so all subprocess(['tmux', ...]) calls can resolve.
+_ensure_tmux_in_path()
 
 
 def _is_main_agent_id(agent_id: str) -> bool:
@@ -136,8 +168,7 @@ def check_tmux() -> bool:
     Returns:
         True if tmux is installed and accessible
     """
-    result = subprocess.run(['which', 'tmux'], capture_output=True)
-    return result.returncode == 0
+    return _ensure_tmux_in_path() and shutil.which("tmux") is not None
 
 
 def list_sessions() -> List[str]:
