@@ -39,8 +39,10 @@ class MainAgentConfigTests(unittest.TestCase):
         self.assertIn('main', agents)
         self.assertEqual(agents['main'].get('name'), 'main')
 
+    @patch('agent_config.get_repo_root')
     @patch.dict(os.environ, {'AGENT_MANAGER_MAIN_LAUNCHER': 'custom-launcher'})
-    def test_main_launcher_env_override(self):
+    def test_main_launcher_env_override(self, mock_get_repo_root):
+        mock_get_repo_root.return_value = Path('/tmp/fake-repo')
         config = agent_config.resolve_agent('main', agents_dir=Path('/tmp/not-needed'))
         self.assertEqual(config.get('launcher'), 'custom-launcher')
 
