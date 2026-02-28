@@ -29,6 +29,11 @@ jobs:
       - name: Verify Python version
         run: python3 --version
 
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pyyaml
+
       - name: Static compile sanity
         run: python3 -m compileall -q agent-manager
 
