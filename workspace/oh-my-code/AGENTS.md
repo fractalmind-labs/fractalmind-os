@@ -48,8 +48,29 @@ Instead, we enforce a high-quality, repeatable engineering workflow via:
 - Prevent drift by enforcing scope rules + evidence.
 - Make outputs verifiable and repeatable via a strict output contract.
 - Ensure quality gates are run and reported.
+- Drive strategic progress via the heartbeat-OKR loop (`HEARTBEAT.md` + `OKR.md`).
 - Team definition: `TEAM.md`.
 - Workflow: follow `workflows/github_issues.md` (driven by Team Lead `EMP_0002` / `coder-a`).
+
+## Heartbeat-OKR Workflow
+
+The coordinator uses a two-layer model to keep work moving:
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| **Strategic** | `OKR.md` | Defines objectives and measurable key results. Tracks what matters. |
+| **Tactical** | `workflows/github_issues.md` | Drives individual issues and PRs through the dev lifecycle. |
+| **Operational** | `HEARTBEAT.md` | Periodic heartbeat that reads OKR state, identifies blockers, and pushes work forward. |
+| **State** | `memory/heartbeat-state.json` | Persistent state: last postmortem timestamp, open PR list. |
+
+**How it works:**
+1. The coordinator's heartbeat fires periodically (configured via cron in the AGENTS.md frontmatter).
+2. It reads `OKR.md` to find ACTIVE objectives and their blocked KRs.
+3. It takes the smallest action to unblock each KR (assign agent, check CI, label PR).
+4. It updates `OKR.md` when KR status changes.
+5. If no OKRs are active or everything is waiting, it replies `HEARTBEAT_OK`.
+
+The heartbeat does **not** bypass the GitHub Issues workflow — it feeds work into it.
 
 ## Roles (Recommended)
 - **team lead (EMP_0002 / coder-a)**: drives `workflows/github_issues.md` and coordinates the team
