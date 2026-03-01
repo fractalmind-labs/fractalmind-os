@@ -696,7 +696,7 @@ _HEARTBEAT_PREFLIGHT_CAPTURE_LINES = 120
 _HB_ID_PATTERN = re.compile(r'\[HB_ID:(\d{8}-\d{6})\]')
 
 
-def _has_pending_heartbeat(pane_output: str) -> tuple[bool, str]:
+def _has_pending_heartbeat(pane_output: str, stale_threshold_seconds: int = 900) -> tuple[bool, str]:
     """Check if there is an unprocessed heartbeat message in the pane.
 
     Returns (True, hb_id) if a HB_ID marker exists without a matching
@@ -724,6 +724,16 @@ def _has_pending_heartbeat(pane_output: str) -> tuple[bool, str]:
 
     # Pending if the last HB_ID has no HEARTBEAT_OK after it.
     if last_ok_line <= last_hb_line:
+        # HB_ID format: YYYYMMDD-HHMMSS (UTC). If it's stale, allow a new heartbeat.
+        # Parsing failures are treated as pending to preserve conservative behavior.
+        threshold = max(0, int(stale_threshold_seconds))
+        try:
+            hb_time = datetime.strptime(last_hb_id, '%Y%m%d-%H%M%S').replace(tzinfo=timezone.utc)
+            age_seconds = (datetime.now(timezone.utc) - hb_time).total_seconds()
+            if age_seconds >= threshold:
+                return False, ''
+        except Exception:
+            return True, last_hb_id
         return True, last_hb_id
 
     return False, ''

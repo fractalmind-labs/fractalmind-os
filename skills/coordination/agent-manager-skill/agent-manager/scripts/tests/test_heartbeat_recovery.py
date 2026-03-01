@@ -1,6 +1,7 @@
 from __future__ import annotations
 import sys
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -661,14 +662,15 @@ class PendingHeartbeatDetectionTests(unittest.TestCase):
         self.assertFalse(pending)
 
     def test_pending_hb_no_response(self):
+        fresh_hb = (datetime.now(timezone.utc) - timedelta(minutes=1)).strftime('%Y%m%d-%H%M%S')
         output = (
-            "Read HEARTBEAT.md if it exists... [HB_ID:20260301-150002]\n"
+            f"Read HEARTBEAT.md if it exists... [HB_ID:{fresh_hb}]\n"
             "› Implement {feature}\n"
             "  ? for shortcuts  100% context left\n"
         )
         pending, hb_id = main._has_pending_heartbeat(output)
         self.assertTrue(pending)
-        self.assertEqual(hb_id, '20260301-150002')
+        self.assertEqual(hb_id, fresh_hb)
 
     def test_hb_with_ok_response(self):
         output = (
@@ -680,15 +682,17 @@ class PendingHeartbeatDetectionTests(unittest.TestCase):
         self.assertFalse(pending)
 
     def test_multiple_hbs_last_unanswered(self):
+        old_hb = (datetime.now(timezone.utc) - timedelta(minutes=30)).strftime('%Y%m%d-%H%M%S')
+        fresh_hb = (datetime.now(timezone.utc) - timedelta(minutes=1)).strftime('%Y%m%d-%H%M%S')
         output = (
-            "Read HEARTBEAT.md if it exists... [HB_ID:20260301-140002]\n"
+            f"Read HEARTBEAT.md if it exists... [HB_ID:{old_hb}]\n"
             "HEARTBEAT_OK\n"
-            "Read HEARTBEAT.md if it exists... [HB_ID:20260301-150002]\n"
+            f"Read HEARTBEAT.md if it exists... [HB_ID:{fresh_hb}]\n"
             "› Implement {feature}\n"
         )
         pending, hb_id = main._has_pending_heartbeat(output)
         self.assertTrue(pending)
-        self.assertEqual(hb_id, '20260301-150002')
+        self.assertEqual(hb_id, fresh_hb)
 
     def test_multiple_hbs_all_answered(self):
         output = (
@@ -699,6 +703,26 @@ class PendingHeartbeatDetectionTests(unittest.TestCase):
         )
         pending, hb_id = main._has_pending_heartbeat(output)
         self.assertFalse(pending)
+
+    def test_pending_hb_fresh_under_stale_threshold(self):
+        hb_id = (datetime.now(timezone.utc) - timedelta(minutes=5)).strftime('%Y%m%d-%H%M%S')
+        output = f"Read HEARTBEAT.md if it exists... [HB_ID:{hb_id}]\n"
+        pending, parsed_hb_id = main._has_pending_heartbeat(output, stale_threshold_seconds=900)
+        self.assertTrue(pending)
+        self.assertEqual(parsed_hb_id, hb_id)
+
+    def test_pending_hb_stale_over_stale_threshold(self):
+        hb_id = (datetime.now(timezone.utc) - timedelta(minutes=16)).strftime('%Y%m%d-%H%M%S')
+        output = f"Read HEARTBEAT.md if it exists... [HB_ID:{hb_id}]\n"
+        pending, parsed_hb_id = main._has_pending_heartbeat(output, stale_threshold_seconds=900)
+        self.assertFalse(pending)
+        self.assertEqual(parsed_hb_id, '')
+
+    def test_pending_hb_parse_failure_falls_back_to_pending(self):
+        output = "Read HEARTBEAT.md if it exists... [HB_ID:20261301-250000]\n"
+        pending, hb_id = main._has_pending_heartbeat(output, stale_threshold_seconds=900)
+        self.assertTrue(pending)
+        self.assertEqual(hb_id, '20261301-250000')
 
 
 if __name__ == '__main__':
