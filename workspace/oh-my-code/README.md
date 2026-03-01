@@ -17,6 +17,8 @@ It vendors `agent-manager` under `.claude/skills/agent-manager`, so a plain `git
 - [Quality Gates](#quality-gates)
 - [Team](#team)
 - [Agents](#agents)
+- [OKR-Driven Heartbeat](#okr-driven-heartbeat)
+- [Personality Files](#personality-files)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -24,8 +26,10 @@ It vendors `agent-manager` under `.claude/skills/agent-manager`, so a plain `git
 
 - **Turnkey Setup**: Clone and go - no external dependencies
 - **Multi-Agent Orchestration**: Automated task distribution and execution
+- **Agent Personality System**: Configurable identity, soul, and memory files for persistent agent behavior
 - **Quality Gates**: Automated code quality checks
 - **Scheduled Work Cycles**: 15-minute automated work cycles
+- **OKR-Driven Heartbeat**: Periodic heartbeat loop that reads OKR state, identifies blockers, and advances objectives
 - **Process-Oriented**: GitHub issues-driven workflow
 
 ## 📦 Requirements
@@ -84,6 +88,41 @@ Agents live in `agents/EMP_*.md`:
 - `coder-b` (EMP_0003): developer (implementation)
 
 To switch CLIs, edit `agents/EMP_0001.md`, `agents/EMP_0002.md`, `agents/EMP_0003.md` `launcher:` fields.
+
+## 🎯 OKR-Driven Heartbeat
+
+The coordinator agent runs a periodic heartbeat that keeps work aligned with objectives:
+
+1. **Read** `OKR.md` to find active objectives and their blocked key results.
+2. **Check** progress via `gh` CLI and agent status (`tmux capture-pane`).
+3. **Advance** — take the smallest action to unblock (assign agent, check CI, label PR).
+4. **Update** `OKR.md` when a key result status changes.
+5. **Notify** (optional) — send a summary to Slack or Telegram.
+
+If no OKRs are active, the heartbeat replies `HEARTBEAT_OK` and idles.
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| [`HEARTBEAT.md`](HEARTBEAT.md) | Coordinator's heartbeat runbook |
+| [`OKR.md`](OKR.md) | Active and archived OKRs |
+| [`memory/heartbeat-state.json`](memory/heartbeat-state.json) | Persistent heartbeat state |
+| [`workflows/github_issues.md`](workflows/github_issues.md) | Tactical issue-to-PR workflow |
+
+## 🧠 Personality Files
+
+These files give your agent a persistent identity and memory across sessions. Fill them in to customize behavior:
+
+| File | Purpose |
+|------|---------|
+| [`SOUL.md`](SOUL.md) | Core values, boundaries, and behavioral principles |
+| [`IDENTITY.md`](IDENTITY.md) | Agent name, role, and avatar |
+| [`USER.md`](USER.md) | Info about the human operator (timezone, preferences) |
+| [`MEMORY.md`](MEMORY.md) | Curated long-term memory (people, workflows, lessons) |
+| [`TOOLS.md`](TOOLS.md) | Environment-specific notes (SSH hosts, endpoints, devices) |
+
+All files are templates with placeholder comments — fill in your details and delete the comments.
 
 ## 🤝 Contributing
 
