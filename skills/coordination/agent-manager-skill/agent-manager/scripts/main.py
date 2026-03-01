@@ -690,6 +690,44 @@ _HEARTBEAT_PREFLIGHT_SAMPLE_COUNT = 3
 _HEARTBEAT_PREFLIGHT_SAMPLE_INTERVAL_SECONDS = 2.0
 _HEARTBEAT_PREFLIGHT_CAPTURE_LINES = 120
 
+# Pattern to detect an unprocessed heartbeat message still visible in the pane.
+# If the pane shows [HB_ID:...] but no subsequent HEARTBEAT_OK for that same id,
+# it means a previous heartbeat was injected but not yet consumed by the agent.
+_HB_ID_PATTERN = re.compile(r'\[HB_ID:(\d{8}-\d{6})\]')
+
+
+def _has_pending_heartbeat(pane_output: str) -> tuple[bool, str]:
+    """Check if there is an unprocessed heartbeat message in the pane.
+
+    Returns (True, hb_id) if a HB_ID marker exists without a matching
+    HEARTBEAT_OK response after it.  Returns (False, '') otherwise.
+    """
+    if not pane_output:
+        return False, ''
+
+    # Find all HB_ID markers and HEARTBEAT_OK responses in order.
+    lines = pane_output.splitlines()
+    last_hb_id = ''
+    last_hb_line = -1
+    last_ok_line = -1
+
+    for i, line in enumerate(lines):
+        m = _HB_ID_PATTERN.search(line)
+        if m:
+            last_hb_id = m.group(1)
+            last_hb_line = i
+        if 'HEARTBEAT_OK' in line and i > last_hb_line >= 0:
+            last_ok_line = i
+
+    if last_hb_line < 0:
+        return False, ''
+
+    # Pending if the last HB_ID has no HEARTBEAT_OK after it.
+    if last_ok_line <= last_hb_line:
+        return True, last_hb_id
+
+    return False, ''
+
 
 def _heartbeat_preflight_runtime_state(
     *,
@@ -704,6 +742,10 @@ def _heartbeat_preflight_runtime_state(
     For auto-mode heartbeat gating we avoid relying on one snapshot only.
     If pane output changes across idle samples, treat the agent as active (busy)
     to prevent heartbeat injection from interrupting an in-progress conversation.
+
+    Also checks for pending (unprocessed) heartbeat messages already in the
+    pane buffer to prevent accumulation when the agent hasn't consumed the
+    previous heartbeat yet.
     """
     runtime = get_agent_runtime_state(agent_id, launcher=launcher)
     state = str(runtime.get('state', 'unknown'))
@@ -718,6 +760,11 @@ def _heartbeat_preflight_runtime_state(
     previous_output = capture_output(agent_id, lines=lines)
     if previous_output is None:
         previous_output = ""
+
+    # Check for pending heartbeat in pane before sampling.
+    pending, pending_hb_id = _has_pending_heartbeat(previous_output)
+    if pending:
+        return 'busy', f'pending_heartbeat:{pending_hb_id}'
 
     for sample_index in range(1, samples):
         time.sleep(interval)
@@ -1424,6 +1471,9 @@ def cmd_heartbeat_run(args):
         if preflight_state == 'busy' and str(preflight_reason).startswith('preflight_pane_changed:'):
             skip_failure_type = 'active_skip'
             skip_reason_code = 'HB_AUTO_ACTIVE_SKIP'
+        elif preflight_state == 'busy' and str(preflight_reason).startswith('pending_heartbeat:'):
+            skip_failure_type = 'pending_skip'
+            skip_reason_code = 'HB_AUTO_PENDING_SKIP'
         print(
             "⏭️  Agent is not idle "
             f"(state={preflight_state}, reason={preflight_reason}); "

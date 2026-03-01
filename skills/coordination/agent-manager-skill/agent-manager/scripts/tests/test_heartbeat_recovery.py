@@ -159,47 +159,15 @@ class HeartbeatRecoveryTests(unittest.TestCase):
     @patch('main.capture_output')
     @patch('main.get_agent_runtime_state', return_value={'state': 'idle'})
     @patch('main.send_keys', return_value=True)
-    def test_run_heartbeat_attempt_hash_only_activation_is_not_ack(self, _mock_send, _mock_state, mock_capture, _mock_sleep):
-        """Hash-only activation with idle runtime should not be acknowledged."""
-        calls = {'count': 0}
-
-        def _capture(*_args, **_kwargs):
-            calls['count'] += 1
-            if calls['count'] == 1:
-                return 'baseline'
-            return 'baseline changed'
-
-        mock_capture.side_effect = _capture
-        result = main._run_heartbeat_attempt(
-            agent_id='emp-0001',
-            agent_name='qa-agent',
-            launcher='codex',
-            heartbeat_message='hello',
-            timeout_seconds=4,
-            is_codex=True,
-        )
-        self.assertEqual(result['send_status'], 'ok')
-        self.assertEqual(result['ack_status'], 'no_ack')
-        self.assertEqual(result['failure_type'], 'no_activation')
-        self.assertEqual(result['reason_code'], 'HB_NO_ACTIVATION')
-
-    @patch('main.time.sleep', return_value=None)
-    @patch('main.capture_output')
-    @patch('main.get_agent_runtime_state', side_effect=[
-        {'state': 'idle'},
-        {'state': 'busy', 'reason': 'busy_pattern:Thinking'},
-        {'state': 'idle'},
-    ])
-    @patch('main.send_keys', return_value=True)
-    def test_run_heartbeat_attempt_hash_activation_then_busy_idle_ack(self, _mock_send, _mock_state, mock_capture, _mock_sleep):
-        """Hash activation is ack only after runtime confirms non-idle then returns idle."""
-        mock_capture.side_effect = [
-            'baseline',
-            'baseline changed',  # phase-1 content-hash activation
-            'baseline changed',  # phase-2 first poll (busy)
-            'baseline changed',  # phase-2 second poll (idle)
-            'baseline changed',  # final tail capture
-        ]
+    def test_run_heartbeat_attempt_activation_via_output_change(self, _mock_send, _mock_state, mock_capture, _mock_sleep):
+        """Agent stays idle in state checks, but pane output changes — activation via output change."""
+        # First call: baseline before send_keys.
+        # Second call: changed pane tail during activation polling.
+        # Third call: phase-2 polling capture.
+        # Fourth call: final tail capture.
+        short_output = 'short baseline'
+        changed_output = 'short baseLine'
+        mock_capture.side_effect = [short_output, changed_output, changed_output, changed_output]
         result = main._run_heartbeat_attempt(
             agent_id='emp-0001',
             agent_name='qa-agent',
@@ -210,6 +178,47 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         )
         self.assertEqual(result['send_status'], 'ok')
         self.assertEqual(result['ack_status'], 'ack')
+
+    @patch('main.time.sleep', return_value=None)
+    @patch('main.capture_output')
+    @patch('main.get_agent_runtime_state', return_value={'state': 'idle'})
+    @patch('main.send_keys', return_value=True)
+    def test_run_heartbeat_attempt_activation_via_hb_id_in_pane(self, _mock_send, _mock_state, mock_capture, _mock_sleep):
+        heartbeat_id = '20260228-120001'
+        pane_tail = f"some output [HB_ID:{heartbeat_id}]"
+        mock_capture.side_effect = [pane_tail, pane_tail, pane_tail, pane_tail]
+        result = main._run_heartbeat_attempt(
+            agent_id='emp-0001',
+            agent_name='qa-agent',
+            launcher='codex',
+            heartbeat_message=f'hello [HB_ID:{heartbeat_id}]',
+            timeout_seconds=30,
+            is_codex=True,
+        )
+        self.assertEqual(result['send_status'], 'ok')
+        self.assertEqual(result['ack_status'], 'ack')
+        self.assertNotEqual(result['failure_type'], 'no_activation')
+
+    @patch('main.time.sleep', return_value=None)
+    @patch('main.capture_output')
+    @patch('main.get_agent_runtime_state', return_value={'state': 'idle'})
+    @patch('main.send_keys', return_value=True)
+    def test_run_heartbeat_attempt_direct_ack_via_pane_output(self, _mock_send, _mock_state, mock_capture, _mock_sleep):
+        heartbeat_id = '20260228-120002'
+        baseline = 'before heartbeat'
+        ack_line = f'HEARTBEAT_OK [HB_ID:{heartbeat_id}]'
+        mock_capture.side_effect = [baseline, ack_line, ack_line]
+        result = main._run_heartbeat_attempt(
+            agent_id='emp-0001',
+            agent_name='qa-agent',
+            launcher='codex',
+            heartbeat_message=f'hello [HB_ID:{heartbeat_id}]',
+            timeout_seconds=30,
+            is_codex=True,
+        )
+        self.assertEqual(result['send_status'], 'ok')
+        self.assertEqual(result['ack_status'], 'ack')
+        self.assertEqual(result['reason_code'], 'HB_ACK_OK')
 
     @patch('main.cmd_start', return_value=0)
     @patch('main.stop_session', return_value=True)
@@ -636,6 +645,60 @@ class RuntimeStateInterruptedTests(unittest.TestCase):
         )
         # suggestion_tip detection runs before busy, so this should be interrupted
         self.assertEqual(result['state'], 'interrupted')
+
+
+class PendingHeartbeatDetectionTests(unittest.TestCase):
+    """Tests for _has_pending_heartbeat() — prevents HB accumulation."""
+
+    def test_no_hb_id_in_pane(self):
+        output = "› Implement {feature}\n  ? for shortcuts  100% context left"
+        pending, hb_id = main._has_pending_heartbeat(output)
+        self.assertFalse(pending)
+        self.assertEqual(hb_id, '')
+
+    def test_empty_output(self):
+        pending, hb_id = main._has_pending_heartbeat('')
+        self.assertFalse(pending)
+
+    def test_pending_hb_no_response(self):
+        output = (
+            "Read HEARTBEAT.md if it exists... [HB_ID:20260301-150002]\n"
+            "› Implement {feature}\n"
+            "  ? for shortcuts  100% context left\n"
+        )
+        pending, hb_id = main._has_pending_heartbeat(output)
+        self.assertTrue(pending)
+        self.assertEqual(hb_id, '20260301-150002')
+
+    def test_hb_with_ok_response(self):
+        output = (
+            "Read HEARTBEAT.md if it exists... [HB_ID:20260301-150002]\n"
+            "HEARTBEAT_OK\n"
+            "› Implement {feature}\n"
+        )
+        pending, hb_id = main._has_pending_heartbeat(output)
+        self.assertFalse(pending)
+
+    def test_multiple_hbs_last_unanswered(self):
+        output = (
+            "Read HEARTBEAT.md if it exists... [HB_ID:20260301-140002]\n"
+            "HEARTBEAT_OK\n"
+            "Read HEARTBEAT.md if it exists... [HB_ID:20260301-150002]\n"
+            "› Implement {feature}\n"
+        )
+        pending, hb_id = main._has_pending_heartbeat(output)
+        self.assertTrue(pending)
+        self.assertEqual(hb_id, '20260301-150002')
+
+    def test_multiple_hbs_all_answered(self):
+        output = (
+            "Read HEARTBEAT.md if it exists... [HB_ID:20260301-140002]\n"
+            "HEARTBEAT_OK\n"
+            "Read HEARTBEAT.md if it exists... [HB_ID:20260301-150002]\n"
+            "HEARTBEAT_OK\n"
+        )
+        pending, hb_id = main._has_pending_heartbeat(output)
+        self.assertFalse(pending)
 
 
 if __name__ == '__main__':
