@@ -1,0 +1,32 @@
+# Scenario: Documentation Generator Agent
+# Goal: Keep technical docs current from code, issues, and release notes.
+
+name: docs-writer
+description: Generates and refreshes project documentation
+enabled: true
+working_directory: ${REPO_ROOT}
+
+launcher: codex
+launcher_args:
+  - --model=gpt-5.3-codex
+  - --dangerously-bypass-approvals-and-sandbox
+
+skills:
+  - docs
+  - api-docs
+  - changelog-maintenance
+
+schedules:
+  - name: nightly-doc-sync
+    cron: "30 1 * * *"
+    task: |
+      Scan merged PRs from the previous day and update:
+      1) README quick-start snippets
+      2) docs/ API pages
+      3) docs/changelog.md summary section
+    max_runtime: 90m
+
+  - name: weekly-doc-audit
+    cron: "0 10 * * 1"
+    task_file: ${REPO_ROOT}/tasks/docs/weekly-audit.md
+    max_runtime: 2h

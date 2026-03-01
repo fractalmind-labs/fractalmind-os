@@ -127,6 +127,17 @@ $CLI status EMP_0001
 
 See `examples/getting-started.md` for a 2-minute end-to-end walkthrough.
 
+## Scenario Config Examples
+
+See [examples/agent-configs/README.md](examples/agent-configs/README.md) for six ready-to-adapt agent YAML templates:
+
+- Code review agent
+- Documentation generator agent
+- Test runner agent
+- Deployment assistant agent
+- Monitoring and alert agent
+- Data analysis agent
+
 ## Demo
 
 The screenshot above shows a real run of:

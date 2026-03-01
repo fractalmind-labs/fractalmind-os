@@ -1,0 +1,37 @@
+# Scenario: Test Runner Agent
+# Goal: Execute targeted test suites and report regressions quickly.
+
+name: test-runner
+description: Runs CI-like tests and summarizes failures
+enabled: true
+working_directory: ${REPO_ROOT}
+
+launcher: codex
+launcher_args:
+  - --model=gpt-5.3-codex
+  - --dangerously-bypass-approvals-and-sandbox
+
+skills:
+  - qa
+  - test-automation
+  - bug-reproduction
+
+schedules:
+  - name: pull-request-smoke
+    cron: "*/30 * * * *"
+    task: |
+      Run the smoke test suite for open pull requests.
+      If a failure appears, provide minimal reproduction steps and likely root cause.
+    max_runtime: 25m
+
+  - name: nightly-full-regression
+    cron: "0 2 * * *"
+    task_file: ${REPO_ROOT}/tasks/testing/nightly-regression.md
+    max_runtime: 4h
+
+# Heartbeat is useful for long-running sessions where you want periodic check-ins.
+heartbeat:
+  cron: "*/20 * * * *"
+  max_runtime: 8m
+  session_mode: auto
+  enabled: true

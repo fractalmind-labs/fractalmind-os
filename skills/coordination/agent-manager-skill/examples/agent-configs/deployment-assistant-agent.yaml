@@ -1,0 +1,39 @@
+# Scenario: Deployment Assistant Agent
+# Goal: Coordinate release checklists, deploy steps, and rollback readiness.
+
+name: deploy-assistant
+description: Guides staged deployment and rollback checks
+enabled: true
+working_directory: ${REPO_ROOT}
+
+# Example using a local launcher script path instead of provider name
+launcher: ${REPO_ROOT}/projects/claude-code-switch/ccc
+launcher_args:
+  - cp
+  - --dangerously-skip-permissions
+
+skills:
+  - release-management
+  - incident-response
+  - runbook-authoring
+
+schedules:
+  - name: pre-release-check
+    cron: "0 15 * * 1-5"
+    task: |
+      Prepare release readiness report:
+      - Build status and artifact integrity
+      - Open blocker issues
+      - Rollback command verification
+    max_runtime: 1h
+
+  - name: friday-release-window
+    cron: "0 17 * * 5"
+    task_file: ${REPO_ROOT}/tasks/deploy/release-window.md
+    max_runtime: 3h
+
+heartbeat:
+  cron: "*/30 * * * *"
+  max_runtime: 5m
+  session_mode: restore
+  enabled: true

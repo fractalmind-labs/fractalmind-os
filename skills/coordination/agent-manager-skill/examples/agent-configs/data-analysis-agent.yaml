@@ -1,0 +1,37 @@
+# Scenario: Data Analysis Agent
+# Goal: Analyze product/ops data and publish weekly insights.
+
+name: data-analyst
+description: Analyzes logs and business metrics for trends
+enabled: true
+working_directory: ${REPO_ROOT}
+launcher: codex
+launcher_args:
+  - --model=gpt-5.3-codex
+  - --dangerously-bypass-approvals-and-sandbox
+
+skills:
+  - sql-analysis
+  - log-analysis
+  - report-generation
+
+schedules:
+  - name: daily-anomaly-scan
+    cron: "15 8 * * *"
+    task: |
+      Inspect yesterday's logs and KPI dashboards for anomalies.
+      Produce a short summary with confidence level and next checks.
+    max_runtime: 50m
+
+  - name: weekly-insight-report
+    cron: "30 16 * * 5"
+    task_file: ${REPO_ROOT}/tasks/analytics/weekly-insight-report.md
+    max_runtime: 2h
+
+tmux:
+  layout:
+    split: v
+    panes:
+      - {}
+      - {}
+  target_pane: "1"
