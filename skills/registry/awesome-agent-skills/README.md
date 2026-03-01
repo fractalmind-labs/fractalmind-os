@@ -33,7 +33,7 @@
 
 Unlike many bulk-generated skill repositories, this collection focuses on real-world Agent Skills created and used by actual engineering teams, not mass AI‑generated stuff.
 
-This collection features official skills published by leading development teams, including Anthropic, Google Labs, Vercel, Stripe, Cloudflare, Trail of Bits, Sentry, Expo, Hugging Face, and more, alongside community-built skills.
+This collection features official skills published by leading development teams, including Anthropic, Google Labs, Vercel, Stripe, Cloudflare, Netlify, Trail of Bits, Sentry, Expo, Hugging Face, and more, alongside community-built skills.
 
 Compatible with Claude Code, Codex, Antigravity, Gemini CLI, Cursor, GitHub Copilot, OpenCode, Windsurf, and more. See the table below for paths and documentation.
 
@@ -58,15 +58,16 @@ Agent skills can include prompt injections, tool poisoning, hidden malware paylo
 | | | |
 |---|---|---|
 | [Official Claude Skills](#official-claude-skills) | [Skills by Vercel](#skills-by-vercel-engineering-team) | [Skills by Cloudflare](#skills-by-cloudflare-team) |
-| [Skills by Supabase](#skills-by-supabase-team) | [Skills by Google Gemini](#skills-by-google-gemini) | [Skills by Google Labs (Stitch)](#skills-by-google-labs-stitch) |
-| [Skills by Hugging Face](#skills-by-hugging-face-team) | [Skills by Stripe](#skills-by-stripe-team) | [Skills by CallStack](#skills-by-callstack) |
-| [Skills by Trail of Bits](#security-skills-by-trail-of-bits-team) | [Skills by Expo](#skills-by-expo-team) | [Skills by Sentry](#skills-by-sentry-team-for-their-dev-team) |
-| [Skills by Better Auth](#skills-by-better-auth-team) | [Skills by Tinybird](#skills-by-tinybird-team) | [Skills by Microsoft](#skills-by-microsoft) |
-| [Skills by Neon](#skills-by-neon-team) | [Skills by Cloudflare Engineer](#skill-by-cloudflare-engineer) | [Skills by ClickHouse](#skill-by-clickhouse) |
-| [Skills by fal.ai](#skills-by-falai-team) | [Skills by HashiCorp](#skills-by-hashicorp-team-for-terraform) | [Skills by Sanity](#skills-by-sanity-team) |
-| [Skills by Remotion](#skills-by-remotion-team) | [Skills by WordPress](#skills-by-wordpress-development-team) | [Skills by Transloadit](#skills-by-transloadit-team) |
-| [Skills by Firecrawl](#skills-by-firecrawl-team) | [Skills by OpenAI](#skills-by-openai) | [Skills by Replicate](#skills-by-replicate) |
-| [Skills by Typefully](#skills-by-typefully) | [Community Skills](#community-skills) | [Skill Quality Standards](#skill-quality-standards) |
+| [Skills by Netlify](#skills-by-netlify-team) | [Skills by Supabase](#skills-by-supabase-team) | [Skills by Google Gemini](#skills-by-google-gemini) |
+| [Skills by Google Labs (Stitch)](#skills-by-google-labs-stitch) | [Skills by Hugging Face](#skills-by-hugging-face-team) | [Skills by Stripe](#skills-by-stripe-team) |
+| [Skills by CallStack](#skills-by-callstack) | [Skills by Trail of Bits](#security-skills-by-trail-of-bits-team) | [Skills by Expo](#skills-by-expo-team) |
+| [Skills by Sentry](#skills-by-sentry-team-for-their-dev-team) | [Skills by Better Auth](#skills-by-better-auth-team) | [Skills by Tinybird](#skills-by-tinybird-team) |
+| [Skills by Microsoft](#skills-by-microsoft) | [Skills by Neon](#skills-by-neon-team) | [Skills by Cloudflare Engineer](#skill-by-cloudflare-engineer) |
+| [Skills by ClickHouse](#skill-by-clickhouse) | [Skills by fal.ai](#skills-by-falai-team) | [Skills by HashiCorp](#skills-by-hashicorp-team-for-terraform) |
+| [Skills by Sanity](#skills-by-sanity-team) | [Skills by Remotion](#skills-by-remotion-team) | [Skills by WordPress](#skills-by-wordpress-development-team) |
+| [Skills by Transloadit](#skills-by-transloadit-team) | [Skills by Firecrawl](#skills-by-firecrawl-team) | [Skills by OpenAI](#skills-by-openai) |
+| [Skills by Replicate](#skills-by-replicate) | [Skills by Typefully](#skills-by-typefully) | [Community Skills](#community-skills) |
+| [Skill Quality Standards](#skill-quality-standards) | | |
 
 
 ### Skills Paths for Other AI Coding Assistants
@@ -139,6 +140,24 @@ Agent skills can include prompt injections, tool poisoning, hidden malware paylo
 - **[cloudflare/durable-objects](https://github.com/cloudflare/skills/tree/main/skills/durable-objects)** - Stateful coordination with RPC, SQLite, and WebSockets
 - **[cloudflare/web-perf](https://github.com/cloudflare/skills/tree/main/skills/web-perf)** - Audit Core Web Vitals and render-blocking resources
 - **[cloudflare/wrangler](https://github.com/cloudflare/skills/tree/main/skills/wrangler)** - Deploy and manage Workers, KV, R2, D1, Vectorize, Queues, Workflows
+
+</details>
+
+<details>
+<summary><h3 style="display:inline">Skills by Netlify Team</h3></summary>
+
+- **[netlify/netlify-functions](https://github.com/netlify/context-and-tools/tree/main/skills/netlify-functions)** - Build serverless API endpoints and background tasks
+- **[netlify/netlify-edge-functions](https://github.com/netlify/context-and-tools/tree/main/skills/netlify-edge-functions)** - Low-latency edge middleware and geolocation logic
+- **[netlify/netlify-blobs](https://github.com/netlify/context-and-tools/tree/main/skills/netlify-blobs)** - Key-value object storage for files and data
+- **[netlify/netlify-db](https://github.com/netlify/context-and-tools/tree/main/skills/netlify-db)** - Managed Postgres with deploy preview branching
+- **[netlify/netlify-image-cdn](https://github.com/netlify/context-and-tools/tree/main/skills/netlify-image-cdn)** - Optimize and transform images via CDN
+- **[netlify/netlify-forms](https://github.com/netlify/context-and-tools/tree/main/skills/netlify-forms)** - HTML form handling with spam filtering
+- **[netlify/netlify-frameworks](https://github.com/netlify/context-and-tools/tree/main/skills/netlify-frameworks)** - Deploy web frameworks with SSR support
+- **[netlify/netlify-caching](https://github.com/netlify/context-and-tools/tree/main/skills/netlify-caching)** - Configure CDN caching and cache purging
+- **[netlify/netlify-config](https://github.com/netlify/context-and-tools/tree/main/skills/netlify-config)** - Reference for netlify.toml site configuration
+- **[netlify/netlify-cli-and-deploy](https://github.com/netlify/context-and-tools/tree/main/skills/netlify-cli-and-deploy)** - CLI setup, local dev, and deployment workflows
+- **[netlify/netlify-deploy](https://github.com/netlify/context-and-tools/tree/main/skills/netlify-deploy)** - Automated deployment workflow for Netlify sites
+- **[netlify/netlify-ai-gateway](https://github.com/netlify/context-and-tools/tree/main/skills/netlify-ai-gateway)** - Access AI models via unified gateway endpoint
 
 </details>
 
@@ -561,6 +580,7 @@ Official curated skills from OpenAI's skills repository.
 - **[wshuyi/x-article-publisher-skill](https://github.com/wshuyi/x-article-publisher-skill)** - Publish articles to X/Twitter
 - **[CosmoBlk/email-marketing-bible](https://github.com/CosmoBlk/email-marketing-bible)** - 55K-word email marketing guide as an AI skill
 - **[smixs/creative-director-skill](https://github.com/smixs/creative-director-skill)** - AI creative director with recursive self-assessment: 20+ methodologies (SIT, TRIZ, Bisociation, SCAMPER, Synectics), 3-axis evaluation calibrated against Cannes/D&AD/HumanKind, 5-phase process from brief to presentation
+- **[Xquik-dev/x-twitter-scraper](https://github.com/Xquik-dev/x-twitter-scraper)** - X/Twitter data platform: extractions, monitoring, draws, MCP server
 
 </details>
 
@@ -592,6 +612,7 @@ Official curated skills from OpenAI's skills repository.
 - **[hanfang/claude-memory-skill](https://github.com/hanfang/claude-memory-skill)** - Minimal, low-friction hierarchical memory system with background agents and filesystem-based persistence
 - **[kreuzberg-dev/kreuzberg](https://github.com/kreuzberg-dev/kreuzberg/tree/main/skills/kreuzberg)** - Extract text, tables, and metadata from 62+ document formats
 - **[Paramchoudhary/ResumeSkills](https://github.com/Paramchoudhary/ResumeSkills)** - 20 specialized skills for resume optimization, ATS analysis, interview prep, and career transitions
+- **[RoundTable02/tutor-skills](https://github.com/RoundTable02/tutor-skills)** - Transform docs or codebases into Obsidian StudyVaults with interactive quizzes
 
 </details>
 
