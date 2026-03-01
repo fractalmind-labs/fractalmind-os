@@ -1,3 +1,20 @@
+---
+name: main
+description: "main — coordinator, routes tasks to sub-agents"
+enabled: true
+working_directory: ${REPO_ROOT}
+launcher: claude
+launcher_args:
+  - --dangerously-skip-permissions
+heartbeat:
+  cron: "*/10 * * * *"
+  max_runtime: 8m
+  session_mode: auto
+  enabled: true
+skills:
+  - agent-manager
+  - use-fractalbot
+---
 
 # oh-my-code (Process-Oriented Agent Rules)
 
