@@ -260,6 +260,23 @@ def run_heartbeat_attempt(
             last_state = str(runtime.get('state', 'unknown'))
             current_output = deps.capture_output(agent_id, lines=50) or ""
 
+            # Codex suggestion tip interrupted the turn — dismiss and re-send.
+            if last_state == 'interrupted' and is_codex:
+                print("⚠️  Agent interrupted by suggestion tip — recovering")
+                if hasattr(deps, 'recover_codex_interrupted'):
+                    deps.recover_codex_interrupted(agent_id)
+                deps.time.sleep(1)
+                deps.send_keys(
+                    agent_id,
+                    heartbeat_message,
+                    send_enter=True,
+                    clear_input=True,
+                    escape_first=True,
+                    enter_via_key=True,
+                )
+                deps.time.sleep(3)
+                continue
+
             if last_state != 'idle':
                 activated = True
                 activation_source = 'state_change'
@@ -308,14 +325,14 @@ def run_heartbeat_attempt(
                         print(f"   Agent activation confirmed after output change (state={last_state})")
                     if hash_activation_confirmed and last_state == 'idle':
                         break
-                    if last_state in ('blocked', 'error', 'stuck'):
+                    if last_state in ('blocked', 'error', 'stuck', 'interrupted'):
                         break
                     deps.time.sleep(poll_seconds)
                     continue
 
                 if last_state == 'idle':
                     break
-                if last_state in ('blocked', 'error', 'stuck'):
+                if last_state in ('blocked', 'error', 'stuck', 'interrupted'):
                     break
                 deps.time.sleep(poll_seconds)
         else:

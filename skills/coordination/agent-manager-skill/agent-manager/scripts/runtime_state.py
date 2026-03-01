@@ -14,6 +14,7 @@ RUNTIME_STATES = {
     'busy',
     'blocked',
     'stuck',
+    'interrupted',
     'error',
     'unknown',
 }
@@ -164,6 +165,24 @@ def evaluate_runtime_state(
         payload['state'] = 'blocked'
         payload['reason'] = f'blocked_pattern:{blocked_pattern}'
         return payload
+
+    # Detect interrupted turn (Codex suggestion tip appeared mid-turn).
+    interrupted_patterns = list(cfg.get('interrupted_patterns', []) or [])
+    suggestion_tip_re = cfg.get('suggestion_tip_pattern')
+    interrupted_match = detect_first_pattern(output, interrupted_patterns)
+    if interrupted_match:
+        payload['state'] = 'interrupted'
+        payload['reason'] = f'interrupted:{interrupted_match}'
+        return payload
+
+    # Suggestion tip visible on last line(s) while no busy pattern → interrupted.
+    if suggestion_tip_re:
+        tail_lines = [ln.strip() for ln in output.strip().splitlines()[-5:] if ln.strip()]
+        for line in tail_lines:
+            if re.match(suggestion_tip_re, line) and '? for shortcuts' in output:
+                payload['state'] = 'interrupted'
+                payload['reason'] = f'suggestion_tip:{line[:60]}'
+                return payload
 
     busy_pattern = detect_first_pattern(output, busy_patterns)
     if busy_pattern:

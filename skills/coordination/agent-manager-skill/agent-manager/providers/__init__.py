@@ -61,6 +61,10 @@ PROVIDERS: Dict[str, Dict] = {
                 'waiting for approval',
             ],
             'stuck_after_seconds': 180,
+            'interrupted_patterns': [
+                'Conversation interrupted',
+            ],
+            'suggestion_tip_pattern': r'^[›❯]\s+(?!\d+\.)',
             'context_left_patterns': [
                 r'(\d{1,3})%\s*context left',
             ],

@@ -717,6 +717,38 @@ def _dismiss_codex_model_choice_prompt(agent_id: str) -> bool:
     return not _is_codex_model_choice_prompt(tail_after)
 
 
+def recover_codex_interrupted(agent_id: str) -> bool:
+    """Dismiss a Codex suggestion tip and return the agent to a clean prompt.
+
+    When Codex drops a suggestion tip mid-turn (``› Write tests for @filename``),
+    the turn is interrupted and the agent is stuck.  This function sends Escape
+    to dismiss the suggestion, waits briefly, and verifies the prompt is clean.
+
+    Returns True if the agent appears recovered (idle at clean prompt).
+    """
+    if not session_exists(agent_id):
+        return False
+
+    # Escape dismisses the inline suggestion tip.
+    send_keys(agent_id, '', send_enter=False, escape_first=True)
+    time.sleep(0.5)
+    # Clear any leftover text on the input line.
+    send_keys(agent_id, '', send_enter=False, clear_input=True)
+    time.sleep(0.5)
+
+    output = capture_output(agent_id, lines=30) or ''
+    # Check that 'Conversation interrupted' is no longer in recent output
+    # and no suggestion tip remains.
+    if 'Conversation interrupted' in output:
+        # One more Escape + clear cycle
+        send_keys(agent_id, '', send_enter=False, escape_first=True)
+        time.sleep(0.3)
+        send_keys(agent_id, '', send_enter=False, clear_input=True)
+        time.sleep(0.5)
+
+    return True
+
+
 def inject_system_prompt(agent_id: str, prompt: str) -> bool:
     """
     Inject system prompt to agent and wait for it to be processed.

@@ -49,6 +49,7 @@ from tmux_helper import (
     inject_system_prompt,
     wait_for_agent_ready,
     get_agent_runtime_state,
+    recover_codex_interrupted,
 )
 
 # Import provider system (lives at .agent/skills/agent-manager/providers)
