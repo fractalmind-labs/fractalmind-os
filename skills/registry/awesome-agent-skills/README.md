@@ -787,6 +787,7 @@ Official Web3 and trading skills from the Binance team. Includes crypto market d
 - **[zscole/model-hierarchy-skill](https://github.com/zscole/model-hierarchy-skill)** - Cost-optimized model routing based on task complexity
 - **[CloudAI-X/threejs-skills](https://github.com/CloudAI-X/threejs-skills)** - Three.js skills for creating 3D elements and interactive experiences
 - **[Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill)** - High-agency frontend skill that gives AI good taste with tunable design variance, motion intensity, and visual density to stop generic UI slop
+- **[testdino-hq/playwright-skill](https://github.com/testdino-hq/playwright-skill)** - 70+ production-tested Playwright automation testing patterns: E2E, POM, CI/CD, migrations, CLI
 
 </details>
 
