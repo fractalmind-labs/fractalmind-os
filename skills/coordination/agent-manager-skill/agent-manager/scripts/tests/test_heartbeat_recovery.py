@@ -552,6 +552,69 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         self.assertEqual(mock_audit.call_args.kwargs.get('failure_type'), 'active_skip')
         self.assertEqual(mock_audit.call_args.kwargs.get('reason_code'), 'HB_AUTO_ACTIVE_SKIP')
 
+    @patch('main._append_heartbeat_audit_event')
+    @patch('main.time.sleep', return_value=None)
+    @patch('main._run_heartbeat_attempt', return_value={
+        'send_status': 'ok',
+        'ack_status': 'ack',
+        'failure_type': '',
+        'reason_code': '',
+        'duration_ms': 1,
+    })
+    @patch('main._maybe_rollover_heartbeat_session', return_value=None)
+    @patch('main._heartbeat_preflight_runtime_state', return_value=('error', 'timeout'))
+    @patch('main._detect_agent_context_left_percent', return_value=55)
+    @patch('main.resolve_launcher_command', return_value='claude-code')
+    @patch('main.session_exists', return_value=True)
+    @patch('main.resolve_agent')
+    @patch('main.check_tmux', return_value=True)
+    def test_cmd_heartbeat_run_force_mode_bypasses_preflight_idle_gate(
+        self,
+        _mock_tmux,
+        mock_resolve_agent,
+        _mock_session,
+        _mock_launcher,
+        _mock_context,
+        mock_preflight,
+        _mock_rollover,
+        mock_run_attempt,
+        _mock_sleep,
+        mock_audit,
+    ):
+        mock_resolve_agent.return_value = {
+            'name': 'qa-agent',
+            'file_id': 'EMP_0001',
+            'enabled': True,
+            'heartbeat': {
+                'enabled': True,
+                'session_mode': 'force',
+                'recovery': {
+                    'max_retries': 1,
+                    'retry_backoff_seconds': 0,
+                    'fallback_mode': 'none',
+                },
+            },
+            'launcher': 'claude-code',
+        }
+
+        args = type('Args', (), {
+            'agent': 'EMP_0001',
+            'timeout': None,
+            'retry': None,
+            'backoff_seconds': 0,
+            'fallback_mode': None,
+            'notify_on_failure': False,
+            'notifier_channel': None,
+        })()
+
+        result = main.cmd_heartbeat_run(args)
+        self.assertEqual(result, 0)
+        mock_preflight.assert_not_called()
+        mock_run_attempt.assert_called_once()
+        self.assertGreaterEqual(mock_audit.call_count, 1)
+        self.assertEqual(mock_audit.call_args.kwargs.get('phase'), 'attempt')
+        self.assertEqual(mock_audit.call_args.kwargs.get('session_mode'), 'force')
+
 
 class RuntimeStateInterruptedTests(unittest.TestCase):
     """Tests for the new 'interrupted' runtime state (Issue #97)."""

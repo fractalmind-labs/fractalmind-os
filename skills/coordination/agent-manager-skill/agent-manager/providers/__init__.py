@@ -73,7 +73,7 @@ PROVIDERS: Dict[str, Dict] = {
     'claude-code': {
         'name': 'Claude Code',
         # Claude Code v2.1+ often renders the prompt as "❯" in the TUI.
-        'prompt_patterns': ['>', '>\xa0', '⟩', '❯'],
+        'prompt_patterns': ['>', '>\xa0', '⟩', '❯', '›'],
         'startup_wait': 0,
         'description': 'Official Claude Code CLI',
         'launch_command': None,  # Uses ccc script

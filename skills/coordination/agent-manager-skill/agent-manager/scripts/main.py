@@ -548,7 +548,7 @@ def write_codex_message_file(repo_root: Path, agent_id: str, purpose: str, messa
 
 
 
-_HEARTBEAT_SESSION_MODES = {"restore", "auto", "fresh"}
+_HEARTBEAT_SESSION_MODES = {"restore", "auto", "fresh", "force"}
 _HEARTBEAT_AUTO_CONTEXT_THRESHOLD = 25
 _HEARTBEAT_FALLBACK_MODES = {"none", "fresh"}
 _HEARTBEAT_RECOVERY_FAILURE_TYPES = set(SERVICE_RECOVERABLE_FAILURE_TYPES)
@@ -1471,40 +1471,43 @@ def cmd_heartbeat_run(args):
     heartbeat_id = time.strftime('%Y%m%d-%H%M%S')
     print(f"   HB_ID: {heartbeat_id}")
 
-    preflight_state, preflight_reason = _heartbeat_preflight_runtime_state(
-        agent_id=agent_id,
-        launcher=launcher,
-    )
-    if session_mode == 'auto' and preflight_state in {'busy', 'stuck', 'blocked', 'error'}:
-        skip_failure_type = 'busy_skip'
-        skip_reason_code = 'HB_AUTO_BUSY_SKIP'
-        if preflight_state == 'busy' and str(preflight_reason).startswith('preflight_pane_changed:'):
-            skip_failure_type = 'active_skip'
-            skip_reason_code = 'HB_AUTO_ACTIVE_SKIP'
-        elif preflight_state == 'busy' and str(preflight_reason).startswith('pending_heartbeat:'):
-            skip_failure_type = 'pending_skip'
-            skip_reason_code = 'HB_AUTO_PENDING_SKIP'
-        print(
-            "⏭️  Agent is not idle "
-            f"(state={preflight_state}, reason={preflight_reason}); "
-            "skipping heartbeat dispatch in auto mode to avoid batch accumulation"
-        )
-        _append_heartbeat_audit_event(
-            repo_root,
+    if session_mode == 'auto':
+        preflight_state, preflight_reason = _heartbeat_preflight_runtime_state(
             agent_id=agent_id,
-            heartbeat_id=heartbeat_id,
-            send_status='skip',
-            ack_status='not_checked',
-            duration_ms=0,
-            context_left=context_left_percent,
-            failure_type=skip_failure_type,
-            session_mode=session_mode,
-            phase='preflight',
-            attempt=0,
-            recovery_action='skip_busy',
-            reason_code=skip_reason_code,
+            launcher=launcher,
         )
-        return 0
+        if preflight_state in {'busy', 'stuck', 'blocked', 'error'}:
+            skip_failure_type = 'busy_skip'
+            skip_reason_code = 'HB_AUTO_BUSY_SKIP'
+            if preflight_state == 'busy' and str(preflight_reason).startswith('preflight_pane_changed:'):
+                skip_failure_type = 'active_skip'
+                skip_reason_code = 'HB_AUTO_ACTIVE_SKIP'
+            elif preflight_state == 'busy' and str(preflight_reason).startswith('pending_heartbeat:'):
+                skip_failure_type = 'pending_skip'
+                skip_reason_code = 'HB_AUTO_PENDING_SKIP'
+            print(
+                "⏭️  Agent is not idle "
+                f"(state={preflight_state}, reason={preflight_reason}); "
+                "skipping heartbeat dispatch in auto mode to avoid batch accumulation"
+            )
+            _append_heartbeat_audit_event(
+                repo_root,
+                agent_id=agent_id,
+                heartbeat_id=heartbeat_id,
+                send_status='skip',
+                ack_status='not_checked',
+                duration_ms=0,
+                context_left=context_left_percent,
+                failure_type=skip_failure_type,
+                session_mode=session_mode,
+                phase='preflight',
+                attempt=0,
+                recovery_action='skip_busy',
+                reason_code=skip_reason_code,
+            )
+            return 0
+    elif session_mode == 'force':
+        print("   Force mode: bypass preflight idle check and always dispatch heartbeat")
 
     rollover_handoff_file = _maybe_rollover_heartbeat_session(
         agent_name=agent_name,

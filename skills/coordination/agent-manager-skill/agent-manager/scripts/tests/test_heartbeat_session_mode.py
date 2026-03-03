@@ -17,6 +17,7 @@ class HeartbeatSessionModeTests(unittest.TestCase):
     def test_normalize_heartbeat_session_mode(self):
         self.assertEqual(main._normalize_heartbeat_session_mode('auto'), 'auto')
         self.assertEqual(main._normalize_heartbeat_session_mode('fresh'), 'fresh')
+        self.assertEqual(main._normalize_heartbeat_session_mode('force'), 'force')
         self.assertEqual(main._normalize_heartbeat_session_mode('restore'), 'restore')
         self.assertEqual(main._normalize_heartbeat_session_mode('AUTO'), 'auto')
         self.assertEqual(main._normalize_heartbeat_session_mode('unknown'), 'restore')
