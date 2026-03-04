@@ -57,7 +57,7 @@ Agent skills can include prompt injections, tool poisoning, hidden malware paylo
 
 | | | |
 |---|---|---|
-| [Official Claude Skills](#official-claude-skills) | [Skills by Vercel](#skills-by-vercel-engineering-team) | [Skills by Cloudflare](#skills-by-cloudflare-team) |
+| [Official Claude Skills](#official-claude-skills) | [Skills by Vercel](#skills-by-vercel-engineering-team) | [Skills by Cloudflare](#skills-by-cloudflare-team) | [Skills by Composio](#skills-by-composio) |
 | [Skills by Netlify](#skills-by-netlify-team) | [Skills by Supabase](#skills-by-supabase-team) | [Skills by Google Gemini](#skills-by-google-gemini) |
 | [Skills by Google Labs (Stitch)](#skills-by-google-labs-stitch) | [Skills by Hugging Face](#skills-by-hugging-face-team) | [Skills by Stripe](#skills-by-stripe-team) |
 | [Skills by CallStack](#skills-by-callstack) | [Skills by Trail of Bits](#security-skills-by-trail-of-bits-team) | [Skills by Expo](#skills-by-expo-team) |
@@ -130,6 +130,13 @@ Agent skills can include prompt injections, tool poisoning, hidden malware paylo
 - **[cloudflare/durable-objects](https://github.com/cloudflare/skills/tree/main/skills/durable-objects)** - Stateful coordination with RPC, SQLite, and WebSockets
 - **[cloudflare/web-perf](https://github.com/cloudflare/skills/tree/main/skills/web-perf)** - Audit Core Web Vitals and render-blocking resources
 - **[cloudflare/wrangler](https://github.com/cloudflare/skills/tree/main/skills/wrangler)** - Deploy and manage Workers, KV, R2, D1, Vectorize, Queues, Workflows
+
+</details>
+
+<details>
+<summary><h3 style="display:inline">Skills by Composio Team</h3></summary>
+
+- **[ComposioHQ/skills](https://github.com/ComposioHQ/skills)** - Connect AI agents to 1000+ external apps with managed authentication
 
 </details>
 
