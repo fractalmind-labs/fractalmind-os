@@ -133,8 +133,12 @@ Agent skills can include prompt injections, tool poisoning, hidden malware paylo
 
 </details>
 
-### Skills by Composio
+<details>
+<summary><h3 style="display:inline">Skills by Composio Team</h3></summary>
+
 - **[ComposioHQ/skills](https://github.com/ComposioHQ/skills)** - Connect AI agents to 1000+ external apps with managed authentication
+
+</details>
 
 <details>
 <summary><h3 style="display:inline">Skills by Netlify Team</h3></summary>
