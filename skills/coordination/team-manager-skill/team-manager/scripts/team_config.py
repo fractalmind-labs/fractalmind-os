@@ -9,7 +9,13 @@ Workflow is defined in the markdown body using mermaid diagrams.
 
 import re
 import os
-import yaml
+import sys
+
+try:
+    import yaml  # type: ignore
+except Exception:  # pragma: no cover
+    yaml = None
+
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
@@ -79,9 +85,12 @@ def parse_team_frontmatter(file_path: Path) -> Optional[Dict[str, Any]]:
 
     yaml_content = match.group(1)
 
+    if yaml is None:
+        return None
+
     try:
         config = yaml.safe_load(yaml_content) or {}
-    except yaml.YAMLError as e:
+    except Exception as e:
         print(f"Error parsing YAML in {file_path}: {e}")
         return None
 
@@ -105,6 +114,14 @@ def parse_team_frontmatter(file_path: Path) -> Optional[Dict[str, Any]]:
 
 def list_all_teams() -> Dict[str, Dict[str, Any]]:
     """List all configured teams from teams/ directory."""
+    if yaml is None:
+        print(
+            "Error: PyYAML is required to parse team config frontmatter. "
+            "Install it with: pip install pyyaml",
+            file=sys.stderr,
+        )
+        return {}
+
     teams_dir = get_teams_dir()
 
     if not teams_dir.exists():

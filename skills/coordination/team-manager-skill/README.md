@@ -39,6 +39,12 @@ This skill depends on **agent-manager**:
 openskills install fractalmind-ai/agent-manager-skill
 ```
 
+Python dependency:
+
+```bash
+python3 -m pip install pyyaml
+```
+
 ## 🚀 Quick Start
 
 ```bash
@@ -60,7 +66,7 @@ python3 ~/.claude/skills/team-manager/scripts/main.py monitor backend --follow
 
 ## 📖 Documentation
 
-See [SKILL.md](team-manager-skill/SKILL.md) for complete documentation.
+See [SKILL.md](team-manager/SKILL.md) for complete documentation.
 
 ## 🤝 Contributing
 
