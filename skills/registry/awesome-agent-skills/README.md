@@ -688,7 +688,7 @@ Official Web3 and trading skills from the Binance team. Includes crypto market d
 <details>
 <summary><h3 style="display:inline">Product Management Skills by Pawel Huryn</h3></summary>
 
-65 product management skills by [Paweł Huryn](https://github.com/phuryn), creator of The Product Compass newsletter (130K+ subscribers). Covers the full PM lifecycle — from discovery and strategy to execution, analytics, and go-to-market — with frameworks from Teresa Torres, Geoffrey Moore, and more.
+65 product management skills by [Paweł Huryn](https://github.com/phuryn), creator of The Product Compass newsletter. Covers the full PM lifecycle — from discovery and strategy to execution, analytics, and go-to-market — with frameworks from Teresa Torres, Geoffrey Moore, and more.
 
 **Data Analytics**
 
