@@ -41,6 +41,12 @@ export default defineConfig({
             { text: 'Quick Start', link: '/guide/quick-start' },
           ],
         },
+        {
+          text: 'Setup Guides',
+          items: [
+            { text: 'envd Quick Start', link: '/guide/envd-quickstart' },
+          ],
+        },
       ],
       '/architecture/': [
         {
@@ -59,6 +65,7 @@ export default defineConfig({
           items: [
             { text: 'Overview', link: '/components/overview' },
             { text: 'fractalmind-protocol', link: '/components/protocol' },
+            { text: 'fractalmind-envd', link: '/components/envd' },
             { text: 'fractalbot', link: '/components/fractalbot' },
             { text: 'agent-manager', link: '/components/agent-manager' },
             { text: 'team-manager', link: '/components/team-manager' },
