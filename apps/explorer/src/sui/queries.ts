@@ -2,22 +2,24 @@ import { SuiClient, SuiObjectResponse } from "@mysten/sui/client";
 import { SUI_CONFIG } from "./config.ts";
 import type {
   Organization,
-  Agent,
+  AgentCertificate,
   Task,
-  Fractal,
   PeerNode,
 } from "./types.ts";
+import { TASK_STATUS_MAP, AGENT_STATUS_MAP } from "./types.ts";
 
 const client = new SuiClient({ url: SUI_CONFIG.rpcUrl });
 
-/** Extract typed fields from a SUI object response */
-function extractFields(resp: SuiObjectResponse): Record<string, unknown> | null {
+// ── Low-level helpers ──────────────────────────────────────────────
+
+function extractFields(
+  resp: SuiObjectResponse,
+): Record<string, unknown> | null {
   const data = resp.data;
   if (!data?.content || data.content.dataType !== "moveObject") return null;
   return (data.content as { fields: Record<string, unknown> }).fields ?? null;
 }
 
-/** Read a single object by ID with full content */
 async function getObject(objectId: string): Promise<SuiObjectResponse> {
   return client.getObject({
     id: objectId,
@@ -25,13 +27,69 @@ async function getObject(objectId: string): Promise<SuiObjectResponse> {
   });
 }
 
-/** Read multiple objects in a single batch */
 async function multiGetObjects(ids: string[]): Promise<SuiObjectResponse[]> {
   if (ids.length === 0) return [];
-  return client.multiGetObjects({
-    ids,
-    options: { showContent: true, showType: true, showOwner: true },
-  });
+  const results: SuiObjectResponse[] = [];
+  for (let i = 0; i < ids.length; i += 50) {
+    const batch = ids.slice(i, i + 50);
+    const resp = await client.multiGetObjects({
+      ids: batch,
+      options: { showContent: true, showType: true, showOwner: true },
+    });
+    results.push(...resp);
+  }
+  return results;
+}
+
+/**
+ * Traverse all keys from a SUI Table via getDynamicFields.
+ * Tables store entries as dynamic fields on the table's UID.
+ */
+async function getTableKeys(tableId: string): Promise<string[]> {
+  const keys: string[] = [];
+  let cursor: string | null = null;
+  let hasNext = true;
+
+  while (hasNext) {
+    const page = await client.getDynamicFields({
+      parentId: tableId,
+      cursor: cursor ?? undefined,
+      limit: 50,
+    });
+    for (const entry of page.data) {
+      keys.push(String(entry.name.value));
+    }
+    cursor = page.nextCursor ?? null;
+    hasNext = page.hasNextPage;
+  }
+
+  return keys;
+}
+
+/**
+ * Get dynamic field objects from a Table (for Tables with non-bool values).
+ */
+async function getTableDynamicFieldObjects(
+  tableId: string,
+): Promise<SuiObjectResponse[]> {
+  const objectIds: string[] = [];
+  let cursor: string | null = null;
+  let hasNext = true;
+
+  while (hasNext) {
+    const page = await client.getDynamicFields({
+      parentId: tableId,
+      cursor: cursor ?? undefined,
+      limit: 50,
+    });
+    for (const entry of page.data) {
+      objectIds.push(entry.objectId);
+    }
+    cursor = page.nextCursor ?? null;
+    hasNext = page.hasNextPage;
+  }
+
+  return multiGetObjects(objectIds);
 }
 
 // ── Field helpers ──────────────────────────────────────────────────
@@ -40,18 +98,46 @@ function getString(fields: Record<string, unknown>, key: string): string {
   return String(fields[key] ?? "");
 }
 
+function getOptionalString(
+  fields: Record<string, unknown>,
+  key: string,
+): string | null {
+  const val = fields[key];
+  if (val === null || val === undefined) return null;
+  return String(val);
+}
+
+function getNumber(fields: Record<string, unknown>, key: string): number {
+  return Number(fields[key] ?? 0);
+}
+
 function getStringArray(
   fields: Record<string, unknown>,
   key: string,
 ): string[] {
   const val = fields[key];
   if (Array.isArray(val)) return val.map(String);
-  // SUI stores Vec as { type: "...", fields: { contents: [...] } }
-  if (val && typeof val === "object" && "fields" in val) {
-    const inner = (val as { fields: { contents?: unknown[] } }).fields;
-    if (Array.isArray(inner?.contents)) return inner.contents.map(String);
-  }
   return [];
+}
+
+/** Extract the inner UID from a Table field */
+function getTableId(
+  fields: Record<string, unknown>,
+  key: string,
+): string | null {
+  const table = fields[key];
+  if (!table || typeof table !== "object") return null;
+  const tableObj = table as {
+    fields?: { id?: { id?: string }; size?: string };
+  };
+  return tableObj.fields?.id?.id ?? null;
+}
+
+function getTableSize(fields: Record<string, unknown>, key: string): number {
+  const table = fields[key];
+  if (!table || typeof table !== "object") return 0;
+  const tableObj = table as { fields?: { size?: string } };
+  return Number(tableObj.fields?.size ?? 0);
 }
 
 // ── Parse functions ────────────────────────────────────────────────
@@ -65,58 +151,51 @@ function parseOrganization(
     name: getString(fields, "name"),
     description: getString(fields, "description"),
     admin: getString(fields, "admin"),
-    agents: getStringArray(fields, "agents"),
-    fractals: getStringArray(fields, "fractals"),
-    tasks: getStringArray(fields, "tasks"),
+    depth: getNumber(fields, "depth"),
+    is_active: fields["is_active"] === true,
+    parent_org: getOptionalString(fields, "parent_org"),
+    agent_count: getTableSize(fields, "agents"),
+    task_count: getTableSize(fields, "tasks"),
+    child_org_count: getTableSize(fields, "child_orgs"),
+    agent_addresses: [],
+    task_ids: [],
+    child_org_ids: [],
     created_at: getString(fields, "created_at"),
   };
 }
 
-function parseAgent(id: string, fields: Record<string, unknown>): Agent {
-  const statusRaw = getString(fields, "status").toLowerCase();
-  const status = (["active", "idle", "suspended", "offline"].includes(statusRaw)
-    ? statusRaw
-    : "idle") as Agent["status"];
+function parseAgentCertificate(
+  id: string,
+  fields: Record<string, unknown>,
+): AgentCertificate {
+  const statusNum = getNumber(fields, "status");
   return {
     id,
-    name: getString(fields, "name"),
-    role: getString(fields, "role"),
-    status,
+    agent: getString(fields, "agent"),
     org_id: getString(fields, "org_id"),
-    capabilities: getStringArray(fields, "capabilities"),
-    tasks_assigned: getStringArray(fields, "tasks_assigned"),
-    created_at: getString(fields, "created_at"),
+    capability_tags: getStringArray(fields, "capability_tags"),
+    reputation_score: getNumber(fields, "reputation_score"),
+    status: AGENT_STATUS_MAP[statusNum] ?? "idle",
+    tasks_completed: getNumber(fields, "tasks_completed"),
   };
 }
 
 function parseTask(id: string, fields: Record<string, unknown>): Task {
-  const statusRaw = getString(fields, "status").toLowerCase();
-  const validStatuses = ["created", "assigned", "submitted", "verified", "completed"];
-  const status = (validStatuses.includes(statusRaw)
-    ? statusRaw
-    : "created") as Task["status"];
+  const statusNum = getNumber(fields, "status");
   return {
     id,
     title: getString(fields, "title"),
     description: getString(fields, "description"),
-    status,
+    status: TASK_STATUS_MAP[statusNum] ?? "created",
     org_id: getString(fields, "org_id"),
-    assignee: fields["assignee"] ? getString(fields, "assignee") : null,
+    assignee: getOptionalString(fields, "assignee"),
     creator: getString(fields, "creator"),
+    verifier: getOptionalString(fields, "verifier"),
+    submission: getOptionalString(fields, "submission"),
     created_at: getString(fields, "created_at"),
-    updated_at: getString(fields, "updated_at"),
-  };
-}
-
-function parseFractal(id: string, fields: Record<string, unknown>): Fractal {
-  return {
-    id,
-    name: getString(fields, "name"),
-    parent_org: getString(fields, "parent_org"),
-    depth: Number(fields["depth"] ?? 0),
-    agents: getStringArray(fields, "agents"),
-    sub_fractals: getStringArray(fields, "sub_fractals"),
-    created_at: getString(fields, "created_at"),
+    assigned_at: getOptionalString(fields, "assigned_at"),
+    submitted_at: getOptionalString(fields, "submitted_at"),
+    completed_at: getOptionalString(fields, "completed_at"),
   };
 }
 
@@ -125,9 +204,11 @@ function parsePeerNode(
   fields: Record<string, unknown>,
 ): PeerNode {
   const statusRaw = getString(fields, "status").toLowerCase();
-  const status = (["online", "offline", "syncing"].includes(statusRaw)
-    ? statusRaw
-    : "offline") as PeerNode["status"];
+  const status = (
+    ["online", "offline", "syncing"].includes(statusRaw)
+      ? statusRaw
+      : "offline"
+  ) as PeerNode["status"];
   return {
     id,
     node_id: getString(fields, "node_id"),
@@ -140,58 +221,91 @@ function parsePeerNode(
 
 // ── Public query API ───────────────────────────────────────────────
 
-/** Fetch the Registry and discover all referenced objects */
-export async function fetchRegistry(): Promise<{
-  orgIds: string[];
-  agentIds: string[];
-  taskIds: string[];
-  fractalIds: string[];
-}> {
+async function fetchOrgIdsFromRegistry(): Promise<string[]> {
   const resp = await getObject(SUI_CONFIG.registry);
   const fields = extractFields(resp);
-  if (!fields) {
-    return { orgIds: [], agentIds: [], taskIds: [], fractalIds: [] };
+  if (!fields) return [];
+
+  const orgsTableId = getTableId(fields, "organizations");
+  if (!orgsTableId) return [];
+
+  return getTableKeys(orgsTableId);
+}
+
+async function fetchOrganizationsWithTables(
+  orgIds: string[],
+): Promise<Organization[]> {
+  const responses = await multiGetObjects(orgIds);
+  const orgs: Organization[] = [];
+
+  for (const r of responses) {
+    const id = r.data?.objectId;
+    const fields = extractFields(r);
+    if (!id || !fields) continue;
+
+    const org = parseOrganization(id, fields);
+
+    const agentsTableId = getTableId(fields, "agents");
+    if (agentsTableId && org.agent_count > 0) {
+      org.agent_addresses = await getTableKeys(agentsTableId);
+    }
+
+    const tasksTableId = getTableId(fields, "tasks");
+    if (tasksTableId && org.task_count > 0) {
+      org.task_ids = await getTableKeys(tasksTableId);
+    }
+
+    const childOrgsTableId = getTableId(fields, "child_orgs");
+    if (childOrgsTableId && org.child_org_count > 0) {
+      org.child_org_ids = await getTableKeys(childOrgsTableId);
+    }
+
+    orgs.push(org);
   }
 
-  return {
-    orgIds: getStringArray(fields, "organizations"),
-    agentIds: getStringArray(fields, "agents"),
-    taskIds: getStringArray(fields, "tasks"),
-    fractalIds: getStringArray(fields, "fractals"),
-  };
+  return orgs;
 }
 
-/** Fetch Organizations by their IDs */
-export async function fetchOrganizations(
-  ids: string[],
-): Promise<Organization[]> {
-  const responses = await multiGetObjects(ids);
-  return responses
-    .map((r) => {
-      const id = r.data?.objectId;
-      const fields = extractFields(r);
-      if (!id || !fields) return null;
-      return parseOrganization(id, fields);
-    })
-    .filter((o): o is Organization => o !== null);
+async function fetchAgentCertificates(
+  agentAddresses: string[],
+): Promise<AgentCertificate[]> {
+  const certs: AgentCertificate[] = [];
+  const seen = new Set<string>();
+
+  for (const addr of agentAddresses) {
+    let cursor: string | null = null;
+    let hasNext = true;
+
+    while (hasNext) {
+      const page = await client.getOwnedObjects({
+        owner: addr,
+        filter: {
+          StructType: `${SUI_CONFIG.protocolPackage}::agent::AgentCertificate`,
+        },
+        options: { showContent: true, showType: true },
+        cursor: cursor ?? undefined,
+        limit: 50,
+      });
+
+      for (const item of page.data) {
+        const id = item.data?.objectId;
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        const fields = extractFields(item);
+        if (!fields) continue;
+        certs.push(parseAgentCertificate(id, fields));
+      }
+
+      cursor = page.nextCursor ?? null;
+      hasNext = page.hasNextPage;
+    }
+  }
+
+  return certs;
 }
 
-/** Fetch Agents by their IDs */
-export async function fetchAgents(ids: string[]): Promise<Agent[]> {
-  const responses = await multiGetObjects(ids);
-  return responses
-    .map((r) => {
-      const id = r.data?.objectId;
-      const fields = extractFields(r);
-      if (!id || !fields) return null;
-      return parseAgent(id, fields);
-    })
-    .filter((a): a is Agent => a !== null);
-}
-
-/** Fetch Tasks by their IDs */
-export async function fetchTasks(ids: string[]): Promise<Task[]> {
-  const responses = await multiGetObjects(ids);
+async function fetchTasks(taskIds: string[]): Promise<Task[]> {
+  const responses = await multiGetObjects(taskIds);
   return responses
     .map((r) => {
       const id = r.data?.objectId;
@@ -202,52 +316,51 @@ export async function fetchTasks(ids: string[]): Promise<Task[]> {
     .filter((t): t is Task => t !== null);
 }
 
-/** Fetch Fractals by their IDs */
-export async function fetchFractals(ids: string[]): Promise<Fractal[]> {
-  const responses = await multiGetObjects(ids);
-  return responses
-    .map((r) => {
-      const id = r.data?.objectId;
-      const fields = extractFields(r);
-      if (!id || !fields) return null;
-      return parseFractal(id, fields);
-    })
-    .filter((f): f is Fractal => f !== null);
-}
-
-/** Fetch the PeerRegistry and discover peer nodes */
-export async function fetchPeerRegistry(): Promise<PeerNode[]> {
+async function fetchPeerNodes(): Promise<PeerNode[]> {
   const resp = await getObject(SUI_CONFIG.peerRegistry);
   const fields = extractFields(resp);
   if (!fields) return [];
 
-  const peerIds = getStringArray(fields, "peers");
-  if (peerIds.length === 0) return [];
+  const peersTableId = getTableId(fields, "peers");
+  const peerCount = getTableSize(fields, "peers");
+  if (!peersTableId || peerCount === 0) return [];
 
-  const responses = await multiGetObjects(peerIds);
-  return responses
-    .map((r) => {
-      const id = r.data?.objectId;
-      const f = extractFields(r);
-      if (!id || !f) return null;
-      return parsePeerNode(id, f);
-    })
-    .filter((p): p is PeerNode => p !== null);
+  const dfObjects = await getTableDynamicFieldObjects(peersTableId);
+  const peers: PeerNode[] = [];
+
+  for (const obj of dfObjects) {
+    const objFields = extractFields(obj);
+    if (!objFields) continue;
+    const valueObj = objFields["value"];
+    if (!valueObj || typeof valueObj !== "object") continue;
+    const peerFields = (valueObj as { fields?: Record<string, unknown> })
+      .fields;
+    if (!peerFields) continue;
+    const id = obj.data?.objectId ?? "";
+    peers.push(parsePeerNode(id, peerFields));
+  }
+
+  return peers;
 }
 
-/** Fetch all data from the chain in one call */
+/** Fetch all data from the chain using Table-aware dynamic field traversal */
 export async function fetchAllData() {
-  // 1) Read registry to discover object IDs
-  const registry = await fetchRegistry();
+  const orgIds = await fetchOrgIdsFromRegistry();
+  const organizations = await fetchOrganizationsWithTables(orgIds);
 
-  // 2) Fetch all objects in parallel
-  const [organizations, agents, tasks, fractals, peers] = await Promise.all([
-    fetchOrganizations(registry.orgIds),
-    fetchAgents(registry.agentIds),
-    fetchTasks(registry.taskIds),
-    fetchFractals(registry.fractalIds),
-    fetchPeerRegistry(),
+  const allAgentAddresses = new Set<string>();
+  const allTaskIds = new Set<string>();
+
+  for (const org of organizations) {
+    for (const addr of org.agent_addresses) allAgentAddresses.add(addr);
+    for (const tid of org.task_ids) allTaskIds.add(tid);
+  }
+
+  const [agents, tasks, peers] = await Promise.all([
+    fetchAgentCertificates([...allAgentAddresses]),
+    fetchTasks([...allTaskIds]),
+    fetchPeerNodes(),
   ]);
 
-  return { organizations, agents, tasks, fractals, peers };
+  return { organizations, agents, tasks, peers };
 }

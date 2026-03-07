@@ -17,6 +17,22 @@ export default {
           900: "#364fc7",
         },
       },
+      textColor: {
+        primary: "var(--color-primary)",
+        secondary: "var(--color-secondary)",
+        muted: "var(--color-muted)",
+      },
+      backgroundColor: {
+        base: "var(--color-bg)",
+        surface: "var(--color-surface)",
+        "surface-alt": "var(--color-surface-alt)",
+        hover: "var(--color-hover)",
+        skeleton: "var(--color-skeleton)",
+      },
+      borderColor: {
+        border: "var(--color-border)",
+        "border-hover": "var(--color-border-hover)",
+      },
     },
   },
   plugins: [],

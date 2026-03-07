@@ -2,9 +2,8 @@ import { useRef, useEffect, useCallback } from "react";
 import * as d3 from "d3";
 import type {
   Organization,
-  Agent,
+  AgentCertificate,
   Task,
-  Fractal,
   PeerNode,
   GraphNode,
   GraphLink,
@@ -13,9 +12,8 @@ import { NODE_COLORS, truncateId } from "./utils.ts";
 
 interface Props {
   organizations: Organization[];
-  agents: Agent[];
+  agents: AgentCertificate[];
   tasks: Task[];
-  fractals: Fractal[];
   peers: PeerNode[];
   activeView: "org" | "tasks" | "peers";
   onNodeClick: (node: GraphNode) => void;
@@ -23,9 +21,8 @@ interface Props {
 
 function buildGraph(
   orgs: Organization[],
-  agents: Agent[],
+  agents: AgentCertificate[],
   tasks: Task[],
-  fractals: Fractal[],
   peers: PeerNode[],
   view: "org" | "tasks" | "peers",
 ): { nodes: GraphNode[]; links: GraphLink[] } {
@@ -33,36 +30,33 @@ function buildGraph(
   const links: GraphLink[] = [];
 
   if (view === "org" || view === "tasks") {
-    // Organization nodes
     for (const org of orgs) {
-      nodes.push({ id: org.id, label: org.name || truncateId(org.id), type: "org", data: org });
-    }
-
-    // Fractal nodes
-    for (const f of fractals) {
-      nodes.push({ id: f.id, label: f.name || truncateId(f.id), type: "fractal", data: f });
-      if (f.parent_org) {
-        links.push({ source: f.parent_org, target: f.id, type: "contains" });
+      const isSubOrg = org.depth > 0;
+      nodes.push({
+        id: org.id,
+        label: org.name || truncateId(org.id),
+        type: isSubOrg ? "suborg" : "org",
+        data: org,
+      });
+      if (org.parent_org) {
+        links.push({ source: org.parent_org, target: org.id, type: "parent" });
       }
     }
 
-    // Agent nodes
     for (const a of agents) {
       nodes.push({
         id: a.id,
-        label: a.name || truncateId(a.id),
+        label: truncateId(a.agent, 4),
         type: "agent",
         status: a.status,
         data: a,
       });
-      // Link to org
       if (a.org_id) {
         links.push({ source: a.org_id, target: a.id, type: "contains" });
       }
     }
 
     if (view === "tasks") {
-      // Task nodes
       for (const t of tasks) {
         nodes.push({
           id: t.id,
@@ -72,7 +66,14 @@ function buildGraph(
           data: t,
         });
         if (t.assignee) {
-          links.push({ source: t.assignee, target: t.id, type: "assigned" });
+          const cert = agents.find(
+            (a) => a.agent === t.assignee && a.org_id === t.org_id,
+          );
+          if (cert) {
+            links.push({ source: cert.id, target: t.id, type: "assigned" });
+          } else if (t.org_id) {
+            links.push({ source: t.org_id, target: t.id, type: "contains" });
+          }
         } else if (t.org_id) {
           links.push({ source: t.org_id, target: t.id, type: "contains" });
         }
@@ -90,7 +91,6 @@ function buildGraph(
         data: p,
       });
     }
-    // Create a mesh topology between peers
     for (let i = 0; i < peers.length; i++) {
       for (let j = i + 1; j < peers.length; j++) {
         links.push({
@@ -102,7 +102,6 @@ function buildGraph(
     }
   }
 
-  // Deduplicate: only keep links where both source and target exist in nodes
   const nodeIds = new Set(nodes.map((n) => n.id));
   const validLinks = links.filter(
     (l) => nodeIds.has(l.source as string) && nodeIds.has(l.target as string),
@@ -115,7 +114,6 @@ export default function ForceGraph({
   organizations,
   agents,
   tasks,
-  fractals,
   peers,
   activeView,
   onNodeClick,
@@ -135,18 +133,14 @@ export default function ForceGraph({
       organizations,
       agents,
       tasks,
-      fractals,
       peers,
       activeView,
     );
 
-    // Clear previous
     const sel = d3.select(svg);
     sel.selectAll("*").remove();
-
     sel.attr("viewBox", `0 0 ${width} ${height}`);
 
-    // Defs for glow effect
     const defs = sel.append("defs");
     const filter = defs.append("filter").attr("id", "glow");
     filter
@@ -159,7 +153,6 @@ export default function ForceGraph({
 
     const g = sel.append("g");
 
-    // Zoom behavior
     const zoom = d3
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.2, 4])
@@ -168,7 +161,6 @@ export default function ForceGraph({
       });
     sel.call(zoom);
 
-    // Simulation
     const simulation = d3
       .forceSimulation<GraphNode>(nodes)
       .force(
@@ -182,17 +174,15 @@ export default function ForceGraph({
       .force("center", d3.forceCenter(width / 2, height / 2))
       .force("collision", d3.forceCollide().radius(30));
 
-    // Links
     const link = g
       .append("g")
       .selectAll("line")
       .data(links)
       .join("line")
-      .attr("stroke", "#374151")
+      .attr("stroke", "var(--color-graph-line)")
       .attr("stroke-width", 1.5)
       .attr("stroke-opacity", 0.6);
 
-    // Node groups
     const node = g
       .append("g")
       .selectAll<SVGGElement, GraphNode>("g")
@@ -219,25 +209,17 @@ export default function ForceGraph({
           }),
       );
 
-    // Node size by type
     const nodeRadius = (d: GraphNode) => {
       switch (d.type) {
-        case "org":
-          return 24;
-        case "fractal":
-          return 18;
-        case "agent":
-          return 16;
-        case "task":
-          return 12;
-        case "peer":
-          return 14;
-        default:
-          return 12;
+        case "org": return 24;
+        case "suborg": return 18;
+        case "agent": return 16;
+        case "task": return 12;
+        case "peer": return 14;
+        default: return 12;
       }
     };
 
-    // Circle
     node
       .append("circle")
       .attr("r", nodeRadius)
@@ -247,21 +229,14 @@ export default function ForceGraph({
       .attr("stroke-width", 2)
       .attr("filter", "url(#glow)");
 
-    // Icon text inside node
     const nodeIcon = (d: GraphNode) => {
       switch (d.type) {
-        case "org":
-          return "O";
-        case "fractal":
-          return "F";
-        case "agent":
-          return "A";
-        case "task":
-          return "T";
-        case "peer":
-          return "P";
-        default:
-          return "?";
+        case "org": return "O";
+        case "suborg": return "S";
+        case "agent": return "A";
+        case "task": return "T";
+        case "peer": return "P";
+        default: return "?";
       }
     };
 
@@ -275,34 +250,30 @@ export default function ForceGraph({
       .attr("pointer-events", "none")
       .text(nodeIcon);
 
-    // Label below node
     node
       .append("text")
       .attr("text-anchor", "middle")
       .attr("dy", (d) => nodeRadius(d) + 14)
-      .attr("fill", "#9ca3af")
+      .attr("fill", "var(--color-graph-label)")
       .attr("font-size", "10px")
       .attr("pointer-events", "none")
       .text((d) =>
         d.label.length > 16 ? d.label.slice(0, 14) + "…" : d.label,
       );
 
-    // Tick
     simulation.on("tick", () => {
       link
         .attr("x1", (d) => (d.source as unknown as GraphNode).x ?? 0)
         .attr("y1", (d) => (d.source as unknown as GraphNode).y ?? 0)
         .attr("x2", (d) => (d.target as unknown as GraphNode).x ?? 0)
         .attr("y2", (d) => (d.target as unknown as GraphNode).y ?? 0);
-
       node.attr("transform", (d) => `translate(${d.x ?? 0},${d.y ?? 0})`);
     });
 
-    // Cleanup
     return () => {
       simulation.stop();
     };
-  }, [organizations, agents, tasks, fractals, peers, activeView, onNodeClick]);
+  }, [organizations, agents, tasks, peers, activeView, onNodeClick]);
 
   useEffect(() => {
     const cleanup = render();

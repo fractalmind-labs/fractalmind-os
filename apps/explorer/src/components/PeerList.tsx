@@ -8,7 +8,7 @@ interface Props {
 export default function PeerList({ peers }: Props) {
   if (peers.length === 0) {
     return (
-      <div className="text-center text-gray-600 py-8">
+      <div className="text-center text-muted py-8">
         No peer nodes found in PeerRegistry
       </div>
     );
@@ -20,10 +20,10 @@ export default function PeerList({ peers }: Props) {
         <button
           key={peer.id}
           onClick={() => openOnSuiScan(peer.id)}
-          className="w-full text-left bg-gray-900/50 rounded-lg border border-gray-800 p-3 hover:border-gray-700 transition-colors cursor-pointer"
+          className="w-full text-left bg-surface-alt rounded-lg border border-border p-3 hover:border-border-hover transition-colors cursor-pointer"
         >
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-200 font-medium">
+            <span className="text-sm text-primary font-medium">
               {peer.node_id || truncateId(peer.id)}
             </span>
             <span
@@ -42,9 +42,9 @@ export default function PeerList({ peers }: Props) {
             </span>
           </div>
           {peer.endpoint && (
-            <div className="text-xs text-gray-500 mt-1">{peer.endpoint}</div>
+            <div className="text-xs text-muted mt-1">{peer.endpoint}</div>
           )}
-          <div className="text-xs text-gray-600 mt-1 font-mono">
+          <div className="text-xs text-muted mt-1 font-mono">
             {truncateId(peer.id)}
           </div>
         </button>
