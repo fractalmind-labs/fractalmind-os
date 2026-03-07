@@ -263,18 +263,105 @@ onMounted(() => {
       </div>
     </section>
 
+    <!-- Live Demo -->
+    <section class="demo-section">
+      <div class="section-container">
+        <h2 class="section-title">Live Demo</h2>
+        <p class="section-subtitle">Browse the FractalMind organization on SUI Testnet</p>
+        <div class="demo-card">
+          <div class="demo-preview">
+            <svg viewBox="0 0 600 300" fill="none" class="demo-svg">
+              <rect width="600" height="300" rx="8" fill="#0f3460" />
+              <pattern id="demo-dots" width="30" height="30" patternUnits="userSpaceOnUse">
+                <circle cx="15" cy="15" r="0.8" fill="#4ecdc4" opacity="0.2" />
+              </pattern>
+              <rect width="600" height="300" fill="url(#demo-dots)" />
+
+              <!-- Central org node -->
+              <circle cx="300" cy="90" r="28" fill="#1a1a2e" stroke="#4DA2FF" stroke-width="2" />
+              <text x="300" y="86" text-anchor="middle" fill="#4DA2FF" font-size="8" font-weight="600">SuLabs</text>
+              <text x="300" y="98" text-anchor="middle" fill="#8892b0" font-size="7">Organization</text>
+
+              <!-- Team nodes -->
+              <circle cx="140" cy="180" r="22" fill="#1a1a2e" stroke="#4ecdc4" stroke-width="1.5" />
+              <text x="140" y="177" text-anchor="middle" fill="#4ecdc4" font-size="7" font-weight="600">Infra</text>
+              <text x="140" y="188" text-anchor="middle" fill="#8892b0" font-size="6">Team</text>
+
+              <circle cx="300" cy="180" r="22" fill="#1a1a2e" stroke="#4ecdc4" stroke-width="1.5" />
+              <text x="300" y="177" text-anchor="middle" fill="#4ecdc4" font-size="7" font-weight="600">Product</text>
+              <text x="300" y="188" text-anchor="middle" fill="#8892b0" font-size="6">Team</text>
+
+              <circle cx="460" cy="180" r="22" fill="#1a1a2e" stroke="#4ecdc4" stroke-width="1.5" />
+              <text x="460" y="177" text-anchor="middle" fill="#4ecdc4" font-size="7" font-weight="600">QA</text>
+              <text x="460" y="188" text-anchor="middle" fill="#8892b0" font-size="6">Team</text>
+
+              <!-- Agent nodes -->
+              <circle cx="90" cy="250" r="14" fill="#1a1a2e" stroke="#e94560" stroke-width="1" />
+              <text x="90" y="253" text-anchor="middle" fill="#e94560" font-size="6">A1</text>
+              <circle cx="190" cy="250" r="14" fill="#1a1a2e" stroke="#e94560" stroke-width="1" />
+              <text x="190" y="253" text-anchor="middle" fill="#e94560" font-size="6">A2</text>
+              <circle cx="260" cy="250" r="14" fill="#1a1a2e" stroke="#e94560" stroke-width="1" />
+              <text x="260" y="253" text-anchor="middle" fill="#e94560" font-size="6">A3</text>
+              <circle cx="340" cy="250" r="14" fill="#1a1a2e" stroke="#e94560" stroke-width="1" />
+              <text x="340" y="253" text-anchor="middle" fill="#e94560" font-size="6">A4</text>
+              <circle cx="420" cy="250" r="14" fill="#1a1a2e" stroke="#e94560" stroke-width="1" />
+              <text x="420" y="253" text-anchor="middle" fill="#e94560" font-size="6">A5</text>
+              <circle cx="500" cy="250" r="14" fill="#1a1a2e" stroke="#e94560" stroke-width="1" />
+              <text x="500" y="253" text-anchor="middle" fill="#e94560" font-size="6">A6</text>
+
+              <!-- Connection lines -->
+              <line x1="280" y1="112" x2="155" y2="162" stroke="#4DA2FF" stroke-width="1" opacity="0.4" />
+              <line x1="300" y1="118" x2="300" y2="158" stroke="#4DA2FF" stroke-width="1" opacity="0.4" />
+              <line x1="320" y1="112" x2="445" y2="162" stroke="#4DA2FF" stroke-width="1" opacity="0.4" />
+              <line x1="125" y1="198" x2="95" y2="238" stroke="#4ecdc4" stroke-width="1" opacity="0.3" />
+              <line x1="155" y1="198" x2="185" y2="238" stroke="#4ecdc4" stroke-width="1" opacity="0.3" />
+              <line x1="282" y1="198" x2="264" y2="238" stroke="#4ecdc4" stroke-width="1" opacity="0.3" />
+              <line x1="318" y1="198" x2="336" y2="238" stroke="#4ecdc4" stroke-width="1" opacity="0.3" />
+              <line x1="443" y1="198" x2="425" y2="238" stroke="#4ecdc4" stroke-width="1" opacity="0.3" />
+              <line x1="477" y1="198" x2="495" y2="238" stroke="#4ecdc4" stroke-width="1" opacity="0.3" />
+
+              <!-- Legend -->
+              <circle cx="30" cy="20" r="6" fill="#1a1a2e" stroke="#4DA2FF" stroke-width="1" />
+              <text x="42" y="23" fill="#8892b0" font-size="7">Organization</text>
+              <circle cx="130" cy="20" r="6" fill="#1a1a2e" stroke="#4ecdc4" stroke-width="1" />
+              <text x="142" y="23" fill="#8892b0" font-size="7">Team</text>
+              <circle cx="200" cy="20" r="6" fill="#1a1a2e" stroke="#e94560" stroke-width="1" />
+              <text x="212" y="23" fill="#8892b0" font-size="7">Agent</text>
+            </svg>
+          </div>
+          <div class="demo-info">
+            <h3>On-Chain Organization Explorer</h3>
+            <p>
+              Visualize the full FractalMind organization hierarchy on SUI Testnet.
+              Browse teams, agents, tasks, and governance structures — all
+              read directly from the blockchain.
+            </p>
+            <ul class="demo-features">
+              <li>Interactive D3.js force-directed graph</li>
+              <li>Real-time data from SUI Testnet</li>
+              <li>Browse org hierarchy, agents, and tasks</li>
+              <li>View on-chain certificates and governance</li>
+            </ul>
+            <a href="https://fractalmind-ai.github.io/explorer" class="btn btn-primary" target="_blank" rel="noopener">
+              Launch Explorer
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- CTA Section -->
     <section class="cta-section">
       <div class="section-container">
         <div class="cta-content">
-          <h2>Ready to explore?</h2>
-          <p>See the live organization on SUI Testnet or dive into the source code.</p>
+          <h2>Ready to build?</h2>
+          <p>Dive into the documentation or explore the source code on GitHub.</p>
           <div class="cta-actions">
-            <a href="https://fractalmind-ai.github.io/explorer" class="btn btn-primary" target="_blank" rel="noopener">
-              Live Explorer
-            </a>
-            <a href="/guide/quick-start" class="btn btn-secondary">
+            <a href="/guide/quick-start" class="btn btn-primary">
               Quick Start Guide
+            </a>
+            <a href="/components/overview" class="btn btn-secondary">
+              Browse Components
             </a>
             <a href="https://github.com/fractalmind-ai" class="btn btn-ghost" target="_blank" rel="noopener">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -290,7 +377,59 @@ onMounted(() => {
     <!-- Footer -->
     <footer class="brand-footer">
       <div class="section-container">
-        <div class="footer-content">
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <div class="footer-logo">
+              <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+                <path d="M16 4L28 26H4L16 4Z" fill="#4DA2FF" opacity="0.9" />
+                <path d="M16 10L22 22H10L16 10Z" fill="#1a1a2e" />
+                <path d="M16 14L19 20H13L16 14Z" fill="#4DA2FF" opacity="0.7" />
+              </svg>
+              <span>FractalMind AI</span>
+            </div>
+            <p class="footer-tagline">Fractal Intelligence, On-Chain Governance</p>
+          </div>
+          <div class="footer-links">
+            <h4>Documentation</h4>
+            <ul>
+              <li><a href="/guide/what-is-fractalmind">What is FractalMind?</a></li>
+              <li><a href="/guide/quick-start">Quick Start</a></li>
+              <li><a href="/architecture/overview">Architecture</a></li>
+              <li><a href="/protocol/overview">Protocol</a></li>
+            </ul>
+          </div>
+          <div class="footer-links">
+            <h4>Components</h4>
+            <ul>
+              <li><a href="/components/protocol">fractalmind-protocol</a></li>
+              <li><a href="/components/fractalbot">fractalbot</a></li>
+              <li><a href="/components/agent-manager">agent-manager</a></li>
+              <li><a href="/components/team-manager">team-manager</a></li>
+            </ul>
+          </div>
+          <div class="footer-links">
+            <h4>Community</h4>
+            <ul>
+              <li>
+                <a href="https://github.com/fractalmind-ai" target="_blank" rel="noopener">
+                  GitHub Organization
+                </a>
+              </li>
+              <li>
+                <a href="https://fractalmind-ai.github.io/explorer" target="_blank" rel="noopener">
+                  Explorer (Live Demo)
+                </a>
+              </li>
+              <li>
+                <a href="https://github.com/fractalmind-ai/fractalmind-ai.github.io" target="_blank" rel="noopener">
+                  Docs Source
+                </a>
+              </li>
+              <li><a href="/roadmap/">Roadmap</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
           <p>Released under the MIT License. Copyright &copy; 2026 FractalMind AI</p>
         </div>
       </div>
@@ -596,6 +735,71 @@ onMounted(() => {
   margin-top: 32px;
 }
 
+/* ===== Live Demo ===== */
+.demo-section {
+  background: #16162a;
+  padding: 80px 0;
+}
+.demo-card {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 40px;
+  align-items: center;
+  background: #1a1a2e;
+  border: 1px solid #2a2a4e;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.demo-preview {
+  background: #0f3460;
+  padding: 24px;
+}
+.demo-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.demo-svg text {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+.demo-info {
+  padding: 32px 32px 32px 0;
+}
+.demo-info h3 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin-bottom: 12px;
+}
+.demo-info p {
+  color: #8892b0;
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+.demo-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+}
+.demo-features li {
+  color: #8892b0;
+  font-size: 0.95rem;
+  padding: 4px 0;
+  padding-left: 20px;
+  position: relative;
+}
+.demo-features li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 11px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4ecdc4;
+  opacity: 0.7;
+}
+
 /* ===== CTA ===== */
 .cta-section {
   background: linear-gradient(135deg, #0f3460, #1a1a2e);
@@ -624,13 +828,65 @@ onMounted(() => {
 /* ===== Footer ===== */
 .brand-footer {
   background: #12121e;
-  padding: 24px 0;
+  padding: 48px 0 0;
   border-top: 1px solid #2a2a4e;
 }
-.footer-content {
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  gap: 32px;
+  padding-bottom: 40px;
+}
+.footer-brand {
+  padding-right: 24px;
+}
+.footer-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.footer-logo span {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+.footer-tagline {
+  color: #8892b0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.footer-links h4 {
+  color: #e2e8f0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+}
+.footer-links ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.footer-links li {
+  margin-bottom: 10px;
+}
+.footer-links a {
+  color: #8892b0;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
+}
+.footer-links a:hover {
+  color: #4ecdc4;
+}
+.footer-bottom {
+  border-top: 1px solid #2a2a4e;
+  padding: 20px 0;
   text-align: center;
 }
-.footer-content p {
+.footer-bottom p {
   color: #8892b066;
   font-size: 0.85rem;
 }
@@ -664,6 +920,20 @@ onMounted(() => {
   .arch-diagram {
     overflow-x: auto;
   }
+  .demo-card {
+    grid-template-columns: 1fr;
+  }
+  .demo-info {
+    padding: 24px;
+  }
+  .footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .footer-brand {
+    grid-column: 1 / -1;
+    padding-right: 0;
+  }
 }
 
 @media (max-width: 480px) {
@@ -682,6 +952,9 @@ onMounted(() => {
     width: 100%;
     justify-content: center;
     max-width: 280px;
+  }
+  .footer-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
