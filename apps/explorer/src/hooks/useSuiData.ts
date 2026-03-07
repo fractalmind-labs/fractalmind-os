@@ -6,7 +6,6 @@ const EMPTY: ExplorerData = {
   organizations: [],
   agents: [],
   tasks: [],
-  fractals: [],
   peers: [],
   loading: true,
   error: null,

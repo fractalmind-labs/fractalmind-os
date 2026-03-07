@@ -2,9 +2,8 @@ import { useRef, useEffect, useCallback } from "react";
 import * as d3 from "d3";
 import type {
   Organization,
-  Agent,
+  AgentCertificate,
   Task,
-  Fractal,
   PeerNode,
   GraphNode,
   GraphLink,
@@ -13,9 +12,8 @@ import { NODE_COLORS, truncateId } from "./utils.ts";
 
 interface Props {
   organizations: Organization[];
-  agents: Agent[];
+  agents: AgentCertificate[];
   tasks: Task[];
-  fractals: Fractal[];
   peers: PeerNode[];
   activeView: "org" | "tasks" | "peers";
   onNodeClick: (node: GraphNode) => void;
@@ -23,9 +21,8 @@ interface Props {
 
 function buildGraph(
   orgs: Organization[],
-  agents: Agent[],
+  agents: AgentCertificate[],
   tasks: Task[],
-  fractals: Fractal[],
   peers: PeerNode[],
   view: "org" | "tasks" | "peers",
 ): { nodes: GraphNode[]; links: GraphLink[] } {
@@ -33,29 +30,31 @@ function buildGraph(
   const links: GraphLink[] = [];
 
   if (view === "org" || view === "tasks") {
-    // Organization nodes
+    // Organization nodes (root orgs vs sub-orgs distinguished by depth)
     for (const org of orgs) {
-      nodes.push({ id: org.id, label: org.name || truncateId(org.id), type: "org", data: org });
-    }
-
-    // Fractal nodes
-    for (const f of fractals) {
-      nodes.push({ id: f.id, label: f.name || truncateId(f.id), type: "fractal", data: f });
-      if (f.parent_org) {
-        links.push({ source: f.parent_org, target: f.id, type: "contains" });
+      const isSubOrg = org.depth > 0;
+      nodes.push({
+        id: org.id,
+        label: org.name || truncateId(org.id),
+        type: isSubOrg ? "suborg" : "org",
+        data: org,
+      });
+      // Link sub-orgs to parent
+      if (org.parent_org) {
+        links.push({ source: org.parent_org, target: org.id, type: "parent" });
       }
     }
 
-    // Agent nodes
+    // Agent nodes (from AgentCertificates)
     for (const a of agents) {
       nodes.push({
         id: a.id,
-        label: a.name || truncateId(a.id),
+        label: truncateId(a.agent, 4),
         type: "agent",
         status: a.status,
         data: a,
       });
-      // Link to org
+      // Link agent to its org
       if (a.org_id) {
         links.push({ source: a.org_id, target: a.id, type: "contains" });
       }
@@ -72,7 +71,15 @@ function buildGraph(
           data: t,
         });
         if (t.assignee) {
-          links.push({ source: t.assignee, target: t.id, type: "assigned" });
+          // Try linking to agent cert; fall back to org
+          const cert = agents.find(
+            (a) => a.agent === t.assignee && a.org_id === t.org_id,
+          );
+          if (cert) {
+            links.push({ source: cert.id, target: t.id, type: "assigned" });
+          } else if (t.org_id) {
+            links.push({ source: t.org_id, target: t.id, type: "contains" });
+          }
         } else if (t.org_id) {
           links.push({ source: t.org_id, target: t.id, type: "contains" });
         }
@@ -102,7 +109,7 @@ function buildGraph(
     }
   }
 
-  // Deduplicate: only keep links where both source and target exist in nodes
+  // Only keep links where both source and target exist in nodes
   const nodeIds = new Set(nodes.map((n) => n.id));
   const validLinks = links.filter(
     (l) => nodeIds.has(l.source as string) && nodeIds.has(l.target as string),
@@ -115,7 +122,6 @@ export default function ForceGraph({
   organizations,
   agents,
   tasks,
-  fractals,
   peers,
   activeView,
   onNodeClick,
@@ -135,7 +141,6 @@ export default function ForceGraph({
       organizations,
       agents,
       tasks,
-      fractals,
       peers,
       activeView,
     );
@@ -224,7 +229,7 @@ export default function ForceGraph({
       switch (d.type) {
         case "org":
           return 24;
-        case "fractal":
+        case "suborg":
           return 18;
         case "agent":
           return 16;
@@ -252,8 +257,8 @@ export default function ForceGraph({
       switch (d.type) {
         case "org":
           return "O";
-        case "fractal":
-          return "F";
+        case "suborg":
+          return "S";
         case "agent":
           return "A";
         case "task":
@@ -302,7 +307,7 @@ export default function ForceGraph({
     return () => {
       simulation.stop();
     };
-  }, [organizations, agents, tasks, fractals, peers, activeView, onNodeClick]);
+  }, [organizations, agents, tasks, peers, activeView, onNodeClick]);
 
   useEffect(() => {
     const cleanup = render();

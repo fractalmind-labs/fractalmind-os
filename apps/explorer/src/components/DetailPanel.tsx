@@ -1,15 +1,14 @@
 import { truncateId, openOnSuiScan, STATUS_COLORS } from "./utils.ts";
 import type {
   Organization,
-  Agent,
+  AgentCertificate,
   Task,
-  Fractal,
   PeerNode,
 } from "../sui/types.ts";
 
 export interface DetailItem {
-  type: "org" | "agent" | "task" | "fractal" | "peer";
-  data: Organization | Agent | Task | Fractal | PeerNode;
+  type: "org" | "suborg" | "agent" | "task" | "peer";
+  data: Organization | AgentCertificate | Task | PeerNode;
 }
 
 interface Props {
@@ -60,6 +59,7 @@ function getDisplayName(item: DetailItem): string {
   if (typeof d.name === "string" && d.name) return d.name;
   if (typeof d.title === "string" && d.title) return d.title;
   if (typeof d.node_id === "string" && d.node_id) return d.node_id;
+  if (typeof d.agent === "string" && d.agent) return truncateId(d.agent as string, 4);
   return truncateId(String(d.id ?? ""));
 }
 
@@ -72,7 +72,7 @@ export default function DetailPanel({ item, onClose }: Props) {
       <div className="sticky top-0 bg-gray-900/90 backdrop-blur-sm border-b border-gray-800 px-5 py-4 flex items-center justify-between">
         <div>
           <div className="text-xs text-gray-500 uppercase tracking-wider">
-            {item.type}
+            {item.type === "suborg" ? "Sub-Organization" : item.type}
           </div>
           <h2 className="text-lg font-semibold text-white mt-0.5">
             {getDisplayName(item)}
@@ -92,10 +92,13 @@ export default function DetailPanel({ item, onClose }: Props) {
       <div className="px-5 py-4">
         <Field label="Object ID" value={<IdLink id={(item.data as { id: string }).id} />} />
 
-        {item.type === "org" && <OrgDetail org={item.data as Organization} />}
-        {item.type === "agent" && <AgentDetail agent={item.data as Agent} />}
+        {(item.type === "org" || item.type === "suborg") && (
+          <OrgDetail org={item.data as Organization} />
+        )}
+        {item.type === "agent" && (
+          <AgentDetail agent={item.data as AgentCertificate} />
+        )}
         {item.type === "task" && <TaskDetail task={item.data as Task} />}
-        {item.type === "fractal" && <FractalDetail fractal={item.data as Fractal} />}
         {item.type === "peer" && <PeerDetail peer={item.data as PeerNode} />}
       </div>
     </div>
@@ -106,43 +109,73 @@ function OrgDetail({ org }: { org: Organization }) {
   return (
     <>
       <Field label="Description" value={org.description || "—"} />
+      <Field label="Depth" value={String(org.depth)} />
+      <Field
+        label="Active"
+        value={
+          <Badge
+            label={org.is_active ? "Yes" : "No"}
+            color={org.is_active ? "#20c997" : "#ff6b6b"}
+          />
+        }
+      />
       <Field label="Admin" value={<IdLink id={org.admin} />} />
+      {org.parent_org && (
+        <Field label="Parent Org" value={<IdLink id={org.parent_org} />} />
+      )}
       <Field
-        label="Agents"
+        label={`Agents (${org.agent_count})`}
         value={
-          org.agents.length > 0
-            ? org.agents.map((a) => <IdLink key={a} id={a} />)
-            : "None"
+          org.agent_addresses.length > 0 ? (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {org.agent_addresses.map((a) => (
+                <IdLink key={a} id={a} />
+              ))}
+            </div>
+          ) : (
+            "None"
+          )
         }
       />
       <Field
-        label="Fractals"
+        label={`Child Orgs (${org.child_org_count})`}
         value={
-          org.fractals.length > 0
-            ? org.fractals.map((f) => <IdLink key={f} id={f} />)
-            : "None"
+          org.child_org_ids.length > 0 ? (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {org.child_org_ids.map((id) => (
+                <IdLink key={id} id={id} />
+              ))}
+            </div>
+          ) : (
+            "None"
+          )
         }
       />
-      <Field label="Tasks" value={`${org.tasks.length} task(s)`} />
+      <Field label="Tasks" value={`${org.task_count} task(s)`} />
     </>
   );
 }
 
-function AgentDetail({ agent }: { agent: Agent }) {
+function AgentDetail({ agent }: { agent: AgentCertificate }) {
   return (
     <>
-      <Field label="Role" value={agent.role || "—"} />
+      <Field label="Agent Address" value={<IdLink id={agent.agent} />} />
       <Field
         label="Status"
-        value={<Badge label={agent.status} color={STATUS_COLORS[agent.status]} />}
+        value={
+          <Badge
+            label={agent.status}
+            color={STATUS_COLORS[agent.status]}
+          />
+        }
       />
       <Field label="Organization" value={<IdLink id={agent.org_id} />} />
       <Field
         label="Capabilities"
         value={
-          agent.capabilities.length > 0 ? (
+          agent.capability_tags.length > 0 ? (
             <div className="flex flex-wrap gap-1 mt-1">
-              {agent.capabilities.map((c, i) => (
+              {agent.capability_tags.map((c, i) => (
                 <Badge key={i} label={c} />
               ))}
             </div>
@@ -152,8 +185,12 @@ function AgentDetail({ agent }: { agent: Agent }) {
         }
       />
       <Field
-        label="Assigned Tasks"
-        value={`${agent.tasks_assigned.length} task(s)`}
+        label="Reputation Score"
+        value={String(agent.reputation_score)}
+      />
+      <Field
+        label="Tasks Completed"
+        value={String(agent.tasks_completed)}
       />
     </>
   );
@@ -174,7 +211,12 @@ function TaskDetail({ task }: { task: Task }) {
       <Field label="Description" value={task.description || "—"} />
       <Field
         label="Status"
-        value={<Badge label={task.status} color={STATUS_COLORS[task.status]} />}
+        value={
+          <Badge
+            label={task.status}
+            color={STATUS_COLORS[task.status]}
+          />
+        }
       />
 
       {/* Task lifecycle flow */}
@@ -224,32 +266,13 @@ function TaskDetail({ task }: { task: Task }) {
         label="Assignee"
         value={task.assignee ? <IdLink id={task.assignee} /> : "Unassigned"}
       />
+      {task.verifier && (
+        <Field label="Verifier" value={<IdLink id={task.verifier} />} />
+      )}
+      {task.submission && (
+        <Field label="Submission" value={task.submission} />
+      )}
       <Field label="Organization" value={<IdLink id={task.org_id} />} />
-    </>
-  );
-}
-
-function FractalDetail({ fractal }: { fractal: Fractal }) {
-  return (
-    <>
-      <Field label="Depth" value={String(fractal.depth)} />
-      <Field label="Parent Org" value={<IdLink id={fractal.parent_org} />} />
-      <Field
-        label="Agents"
-        value={
-          fractal.agents.length > 0
-            ? fractal.agents.map((a) => <IdLink key={a} id={a} />)
-            : "None"
-        }
-      />
-      <Field
-        label="Sub-Fractals"
-        value={
-          fractal.sub_fractals.length > 0
-            ? fractal.sub_fractals.map((f) => <IdLink key={f} id={f} />)
-            : "None"
-        }
-      />
     </>
   );
 }
@@ -261,7 +284,12 @@ function PeerDetail({ peer }: { peer: PeerNode }) {
       <Field label="Endpoint" value={peer.endpoint || "—"} />
       <Field
         label="Status"
-        value={<Badge label={peer.status} color={STATUS_COLORS[peer.status]} />}
+        value={
+          <Badge
+            label={peer.status}
+            color={STATUS_COLORS[peer.status]}
+          />
+        }
       />
       <Field
         label="Last Heartbeat"

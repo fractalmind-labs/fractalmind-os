@@ -31,8 +31,10 @@ export default function App() {
     data.organizations.length +
     data.agents.length +
     data.tasks.length +
-    data.fractals.length +
     data.peers.length;
+
+  const rootOrgs = data.organizations.filter((o) => o.depth === 0);
+  const subOrgs = data.organizations.filter((o) => o.depth > 0);
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col">
@@ -157,7 +159,7 @@ export default function App() {
                     style={{ backgroundColor: color }}
                   />
                   <span className="text-xs text-gray-400 capitalize">
-                    {type}
+                    {type === "suborg" ? "Sub-Org" : type}
                   </span>
                 </div>
               ))}
@@ -171,10 +173,10 @@ export default function App() {
             </h3>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: "Orgs", count: data.organizations.length, color: NODE_COLORS.org },
+                { label: "Orgs", count: rootOrgs.length, color: NODE_COLORS.org },
+                { label: "Sub-Orgs", count: subOrgs.length, color: NODE_COLORS.suborg },
                 { label: "Agents", count: data.agents.length, color: NODE_COLORS.agent },
                 { label: "Tasks", count: data.tasks.length, color: NODE_COLORS.task },
-                { label: "Fractals", count: data.fractals.length, color: NODE_COLORS.fractal },
                 { label: "Peers", count: data.peers.length, color: NODE_COLORS.peer },
               ].map((item) => (
                 <div
@@ -259,7 +261,6 @@ export default function App() {
               organizations={data.organizations}
               agents={data.agents}
               tasks={data.tasks}
-              fractals={data.fractals}
               peers={data.peers}
               activeView={activeView}
               onNodeClick={handleNodeClick}
