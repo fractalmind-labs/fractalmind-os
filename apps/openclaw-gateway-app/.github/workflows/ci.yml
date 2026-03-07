@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate expected app files
+        run: |
+          test -f OpenClaw.app/Contents/Info.plist
+          test -f OpenClaw.app/Contents/MacOS/OpenClaw
+          test -f scripts/install-to-applications.sh
+
+      - name: Validate installer has strict mode and Darwin guard
+        run: |
+          grep -q "set -euo pipefail" scripts/install-to-applications.sh
+          grep -q "Darwin" scripts/install-to-applications.sh
