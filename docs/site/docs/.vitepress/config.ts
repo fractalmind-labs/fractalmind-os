@@ -12,11 +12,23 @@ export default defineConfig({
     siteTitle: 'FractalMind AI',
 
     nav: [
-      { text: 'Guide', link: '/guide/what-is-fractalmind' },
+      {
+        text: 'Docs',
+        items: [
+          { text: 'What is FractalMind?', link: '/guide/what-is-fractalmind' },
+          { text: 'Quick Start', link: '/guide/quick-start' },
+          { text: 'Core Principles', link: '/guide/principles' },
+        ],
+      },
       { text: 'Architecture', link: '/architecture/overview' },
       { text: 'Components', link: '/components/overview' },
       { text: 'Protocol', link: '/protocol/overview' },
       { text: 'Roadmap', link: '/roadmap/' },
+      {
+        text: 'Explorer',
+        link: 'https://fractalmind-ai.github.io/explorer',
+        target: '_blank',
+      },
     ],
 
     sidebar: {
