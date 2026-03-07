@@ -9,6 +9,7 @@ These are the essential building blocks of the FractalMind stack.
 | Component | Repo | Language | Role | Status |
 |-----------|------|----------|------|--------|
 | [fractalmind-protocol](/components/protocol) | [GitHub](https://github.com/fractalmind-ai/fractalmind-protocol) | Move + TS | On-chain org/agent/task/governance | Stable |
+| [fractalmind-envd](/components/envd) | [GitHub](https://github.com/fractalmind-ai/fractalmind-envd) | Go | Remote agent management (SUI + WireGuard) | Active |
 | [agent-manager](/components/agent-manager) | [GitHub](https://github.com/fractalmind-ai/agent-manager-skill) | Python | Agent lifecycle (tmux) | Stable |
 | [team-manager](/components/team-manager) | [GitHub](https://github.com/fractalmind-ai/team-manager-skill) | Python | Team orchestration | Stable |
 | [fractalbot](/components/fractalbot) | [GitHub](https://github.com/fractalmind-ai/fractalbot) | Go | Multi-channel messaging | Active |
@@ -38,7 +39,6 @@ End-user products built on the FractalMind stack.
 
 | Component | Role | Phase |
 |-----------|------|-------|
-| fractalmind-envd | Remote agent environment daemon | Phase 3 |
 | Gateway Service | On-chain ↔ off-chain bridge | Phase 3 |
 
 ## How They Connect
