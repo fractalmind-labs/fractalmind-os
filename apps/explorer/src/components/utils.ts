@@ -14,7 +14,7 @@ export function openOnSuiScan(objectId: string) {
 /** Color mapping for node types */
 export const NODE_COLORS: Record<string, string> = {
   org: "#4c6ef5",
-  fractal: "#7950f2",
+  suborg: "#7950f2",
   agent: "#20c997",
   task: "#fcc419",
   peer: "#ff6b6b",
