@@ -1,0 +1,36 @@
+/* FractalMind AI — Custom Theme Overrides */
+
+:root {
+  --vp-c-brand-1: #4DA2FF;
+  --vp-c-brand-2: #4ecdc4;
+  --vp-c-brand-3: #e94560;
+  --vp-c-bg: #1a1a2e;
+}
+
+/* Force dark mode for landing page consistency */
+.brand-home {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  color: #e2e8f0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Hide VitePress default footer when brand home is shown */
+.brand-home ~ .VPFooter,
+.VPPage:has(.brand-home) + .VPFooter {
+  display: none;
+}
+
+/* Remove VitePress content padding on the brand home page */
+.VPPage:has(.brand-home) {
+  padding: 0 !important;
+}
+.VPPage:has(.brand-home) > div {
+  padding: 0;
+  max-width: none;
+}
