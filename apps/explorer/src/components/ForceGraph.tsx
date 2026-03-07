@@ -32,9 +32,11 @@ function buildGraph(
   if (view === "org" || view === "tasks") {
     for (const org of orgs) {
       const isSubOrg = org.depth > 0;
+      const displayName = org.name?.replace(/-\d{13}$/, "") || truncateId(org.id);
+      const agentSuffix = org.agent_count > 0 ? ` (${org.agent_count}A)` : "";
       nodes.push({
         id: org.id,
-        label: org.name || truncateId(org.id),
+        label: displayName + agentSuffix,
         type: isSubOrg ? "suborg" : "org",
         data: org,
       });
@@ -211,7 +213,10 @@ export default function ForceGraph({
 
     const nodeRadius = (d: GraphNode) => {
       switch (d.type) {
-        case "org": return 24;
+        case "org": {
+          const org = d.data as Organization;
+          return Math.min(24 + (org.agent_count ?? 0) * 3, 40);
+        }
         case "suborg": return 18;
         case "agent": return 16;
         case "task": return 12;
@@ -257,9 +262,12 @@ export default function ForceGraph({
       .attr("fill", "var(--color-graph-label)")
       .attr("font-size", "10px")
       .attr("pointer-events", "none")
-      .text((d) =>
-        d.label.length > 16 ? d.label.slice(0, 14) + "…" : d.label,
-      );
+      .text((d) => {
+        const maxLen = d.type === "org" || d.type === "suborg" ? 24 : 16;
+        return d.label.length > maxLen
+          ? d.label.slice(0, maxLen - 2) + "…"
+          : d.label;
+      });
 
     simulation.on("tick", () => {
       link
