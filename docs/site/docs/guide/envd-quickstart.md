@@ -62,16 +62,6 @@ sudo make install
 
 The `sentinel.yaml` file controls all envd behavior. Here's every field explained:
 
-### Gateway
-
-```yaml
-gateway:
-  url: ws://localhost:8080/ws       # WebSocket URL of the Gateway server
-  reconnect_interval: 5s           # Wait time before reconnecting on disconnect
-```
-
-The Gateway is the WebSocket server that envd connects to for receiving remote commands in Gateway mode. This is the simpler deployment option that doesn't require SUI or WireGuard.
-
 ### Identity
 
 ```yaml
@@ -79,6 +69,25 @@ identity:
   host_id: ""        # Unique ID for this host. Auto-generated (UUID) if empty.
   hostname: ""       # Human-readable name. Defaults to os.Hostname() if empty.
 ```
+
+### Roles
+
+```yaml
+roles:
+  coordinator: false   # Enable REST API management interface
+  sponsor: false       # Enable org-level gas sponsorship (requires org wallet)
+  # relay + stun server: auto-detected — enabled when public IP is detected
+```
+
+Roles determine what capabilities this envd node provides:
+
+| Role | How enabled | Description |
+|------|------------|-------------|
+| **worker** | Always on | Agent management, heartbeat, P2P communication |
+| **coordinator** | `roles.coordinator: true` | REST API for remote management |
+| **relay** | Auto (public IP) | WireGuard packet forwarding for NAT-blocked peers |
+| **stun** | Auto (public IP) | STUN Server for NAT endpoint discovery |
+| **sponsor** | `roles.sponsor: true` | Org gas sponsorship (needs org wallet keypair) |
 
 ### Agents
 
@@ -101,13 +110,13 @@ heartbeat:
   interval: 30s    # How often to send heartbeat
 ```
 
-In Gateway mode, heartbeat is sent via WebSocket. In P2P mode, heartbeat is sent directly via WireGuard (no on-chain cost).
+Heartbeat is sent directly via WireGuard P2P (no on-chain cost). Relay nodes include `relay_load` info (current_load, capacity, avg_latency_ms) in heartbeat packets.
 
-### SUI (Advanced)
+### SUI
 
 ```yaml
 sui:
-  enabled: false
+  enabled: true
   rpc: https://fullnode.testnet.sui.io:443
   keypair_path: ~/.sui/envd.key       # Ed25519 keypair (auto-generated if missing)
   package_id: "0x74aef8ff3bb0da5d5626780e6c0e5f1f36308a40580e519920fdc9204e73d958"
@@ -117,67 +126,71 @@ sui:
   poll_interval: 30s                  # How often to poll for new peer events
 ```
 
-When enabled, envd uses SUI blockchain for peer discovery and identity instead of relying on a central Gateway.
+SUI blockchain provides decentralized peer discovery, identity, and authorization.
 
-### WireGuard (Advanced)
+### WireGuard
 
 ```yaml
 wireguard:
-  enabled: false
+  enabled: true
   interface_name: wg0
   listen_port: 51820
   keypair_path: ~/.wireguard/envd.key  # Curve25519 keypair (auto-generated)
   # address: 10.100.X.Y/32             # Auto-assigned from SUI address hash if empty
 ```
 
-When enabled alongside SUI, envd creates WireGuard P2P tunnels to other envd nodes discovered through SUI Events.
+WireGuard creates P2P tunnels to other envd nodes discovered through SUI Events.
 
-### STUN (Advanced)
+### STUN
 
 ```yaml
 stun:
-  enabled: false
-  servers:
+  enabled: true
+  servers:                            # Fallback STUN servers (used after org/shared STUN)
     - stun:stun.l.google.com:19302
     - stun:stun1.l.google.com:19302
 ```
 
-STUN discovers your public IP and port for NAT traversal. Only needed when envd nodes are behind NAT.
+STUN discovers your public IP and port for NAT traversal. envd uses a layered STUN fallback:
 
-## Deployment Modes
+1. **Org STUN** — Public IP nodes within the same organization (discovered on-chain)
+2. **Shared STUN** — Public IP nodes in other organizations (discovered on-chain)
+3. **Public STUN** — Google/Cloudflare (configured in `stun.servers`)
 
-### Gateway Mode (Simple)
-
-The simplest setup — envd connects to a central Gateway via WebSocket for command routing and heartbeat.
+### Sponsor
 
 ```yaml
-# sentinel.yaml — Gateway mode
-gateway:
-  url: ws://your-gateway:8080/ws
-agents:
-  scan_method: tmux
-  auto_restart: true
-heartbeat:
-  interval: 30s
-# sui and wireguard remain disabled
+sponsor:
+  org_wallet_path: ~/.sui/org-wallet.key  # Organization wallet private key
+  max_gas_per_tx: 10000000     # Max gas per transaction (MIST)
+  daily_gas_limit: 100000000   # Daily gas budget (MIST)
+  allowed_packages:            # Contract allowlist (only envd contracts)
+    - "0x74aef8ff3bb0da5d5626780e6c0e5f1f36308a40580e519920fdc9204e73d958"
 ```
 
-**Pros:** Easy setup, no blockchain knowledge needed.
-**Cons:** Relies on a central Gateway server.
+Only needed when `roles.sponsor: true`. The sponsor node receives partial-signed transactions from other org nodes via WireGuard, validates them, co-signs with the org wallet, and submits to SUI.
 
-### P2P Mode (Decentralized)
+## Deployment
 
-Full decentralized mode — envd uses SUI for peer discovery and WireGuard for direct P2P communication. No central server required.
+envd runs as a fully decentralized P2P system — SUI for peer discovery, WireGuard for direct communication. No central server required.
 
 ```yaml
-# sentinel.yaml — P2P mode
-gateway:
-  url: ws://localhost:8080/ws    # Fallback only, not required
+# sentinel.yaml
+identity:
+  hostname: my-agent-host
+
+roles:
+  coordinator: false          # Set true for management node
+  sponsor: false              # Set true + add sponsor config for gas sponsorship
+
 agents:
   scan_method: tmux
   auto_restart: true
+  max_restart_attempts: 3
+
 heartbeat:
   interval: 30s
+
 sui:
   enabled: true
   rpc: https://fullnode.testnet.sui.io:443
@@ -187,19 +200,29 @@ sui:
   org_id: "0x..."    # Your org
   cert_id: "0x..."   # Your agent certificate
   poll_interval: 30s
+
 wireguard:
   enabled: true
   listen_port: 51820
+
 stun:
   enabled: true
+  servers:
+    - stun:stun.l.google.com:19302
 ```
 
-**Pros:** Fully decentralized, no single point of failure, on-chain auditability.
+**What happens automatically:**
+- STUN probe detects NAT type
+- Public IP nodes auto-enable STUN Server + Relay on :3478
+- Peers are discovered via SUI Events and WireGuard tunnels are established
+- Heartbeats flow P2P (no on-chain cost)
+
+**Pros:** Fully decentralized, no single point of failure, on-chain auditability, zero separate components.
 **Cons:** Requires SUI keypair, AgentCertificate, and WireGuard setup.
 
 ## Remote Commands
 
-Once envd is running, you can send commands through the Gateway (Gateway mode) or directly via WireGuard (P2P mode):
+Once envd is running, you can send commands directly via WireGuard P2P:
 
 ### status
 
@@ -249,9 +272,9 @@ Execute an arbitrary shell command on the host.
 ← { "output": "..." }
 ```
 
-## SUI + WireGuard Setup (Advanced)
+## SUI + WireGuard Setup
 
-To enable the full decentralized P2P mode:
+To set up the full decentralized P2P mode:
 
 ### 1. Get a SUI Keypair
 
@@ -289,14 +312,14 @@ brew install wireguard-tools
 
 ### 4. Configure and Run
 
-Update `sentinel.yaml` with SUI and WireGuard settings (see [P2P Mode](#p2p-mode-decentralized) above), then:
+Update `sentinel.yaml` with SUI and WireGuard settings (see [Deployment](#deployment) above), then:
 
 ```bash
 sudo ./bin/envd --config sentinel.yaml
 ```
 
 ::: tip
-`sudo` is needed for WireGuard interface creation. In Gateway-only mode, root is not required.
+`sudo` is needed for WireGuard interface creation.
 :::
 
 ### 5. Verify
@@ -323,12 +346,6 @@ curl -s https://fullnode.testnet.sui.io:443 \
 - Check that agents are running as tmux sessions: `tmux list-sessions`
 - Ensure `scan_method` in config matches your setup
 
-### WebSocket connection keeps dropping
-
-- Verify Gateway URL is correct and reachable
-- Check firewall rules for the Gateway port
-- Increase `reconnect_interval` if the Gateway is under load
-
 ### WireGuard tunnel not establishing
 
 - Verify WireGuard is installed: `wg --version`
@@ -336,12 +353,20 @@ curl -s https://fullnode.testnet.sui.io:443 \
 - Ensure STUN is enabled if nodes are behind NAT
 - Check envd logs for `[wg]` and `[stun]` entries
 
+### STUN discovery failing
+
+- Check that at least one STUN source is reachable:
+  - Org STUN: other public IP nodes in your org (check SUI events)
+  - Public STUN: `stun.l.google.com:19302` must be reachable
+- If behind strict firewall, ensure UDP port 3478 is not blocked
+
 ### SUI registration fails
 
 - Verify SUI RPC endpoint is reachable
 - Check that `org_id` and `cert_id` are correct
 - Ensure the AgentCertificate is in `active` status
 - If self-paying: ensure your SUI address has balance (~0.01 SUI is enough)
+- If using org sponsor: verify sponsor node is running and reachable via WireGuard
 
 ### Agent auto-restart not working
 
