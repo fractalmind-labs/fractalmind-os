@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useSuiData } from "./hooks/useSuiData.ts";
 import { useTheme } from "./hooks/useTheme.ts";
 import ForceGraph from "./components/ForceGraph.tsx";
+import BabylonGraph from "./components/BabylonGraph.tsx";
 import DetailPanel, { type DetailItem } from "./components/DetailPanel.tsx";
 import TaskFlow from "./components/TaskFlow.tsx";
 import PeerList from "./components/PeerList.tsx";
@@ -23,6 +24,7 @@ export default function App() {
   const data = useSuiData();
   const { theme, toggle: toggleTheme } = useTheme();
   const [activeView, setActiveView] = useState<View>("org");
+  const [renderMode, setRenderMode] = useState<"2d" | "3d">("3d");
   const [selectedNode, setSelectedNode] = useState<DetailItem | null>(null);
 
   const handleNodeClick = useCallback((node: GraphNode) => {
@@ -266,17 +268,38 @@ export default function App() {
             <ErrorRetry error={data.error} onRetry={data.refresh} />
           )}
 
-          {/* Force graph */}
+          {/* Force graph / 3D graph */}
           <div className="flex-1 bg-surface-alt rounded-xl border border-border overflow-hidden relative min-h-[400px]">
             {isFirstLoad && <GraphSkeleton />}
-            <ForceGraph
-              organizations={data.organizations}
-              agents={data.agents}
-              tasks={data.tasks}
-              peers={data.peers}
-              activeView={activeView}
-              onNodeClick={handleNodeClick}
-            />
+
+            {/* 2D/3D toggle */}
+            <button
+              onClick={() => setRenderMode((m) => (m === "2d" ? "3d" : "2d"))}
+              className="absolute top-3 right-3 z-10 px-3 py-1.5 rounded-lg bg-base/80 backdrop-blur-sm border border-border text-xs font-medium text-secondary hover:text-primary hover:bg-hover transition-colors cursor-pointer"
+              title={`Switch to ${renderMode === "3d" ? "2D" : "3D"} view`}
+            >
+              {renderMode === "3d" ? "2D" : "3D"}
+            </button>
+
+            {renderMode === "2d" ? (
+              <ForceGraph
+                organizations={data.organizations}
+                agents={data.agents}
+                tasks={data.tasks}
+                peers={data.peers}
+                activeView={activeView}
+                onNodeClick={handleNodeClick}
+              />
+            ) : (
+              <BabylonGraph
+                organizations={data.organizations}
+                agents={data.agents}
+                tasks={data.tasks}
+                peers={data.peers}
+                activeView={activeView}
+                onNodeClick={handleNodeClick}
+              />
+            )}
           </div>
 
           {/* Bottom panel for task/peer lists */}
@@ -298,7 +321,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="border-t border-border py-3 text-center text-xs text-muted">
-        FractalMind Explorer — Built with React + D3.js + SUI SDK — Data from{" "}
+        FractalMind Explorer — Built with React + BabylonJS + D3.js + SUI SDK — Data from{" "}
         <a
           href="https://suiscan.xyz/testnet"
           target="_blank"
