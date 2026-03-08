@@ -104,31 +104,40 @@ export default function BabylonGraph({
     camera.wheelPrecision = 20;
     camera.panningSensibility = 100;
 
-    new HemisphericLight("hemi", new Vector3(0, 1, 0.5), scene);
+    // Hemispheric light for ambient illumination
+    new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
 
-    // Point lights for depth
-    const pl1 = new PointLight("pl1", new Vector3(10, 8, 10), scene);
-    pl1.intensity = 0.6;
-    pl1.diffuse = new Color3(0.6, 0.7, 1.0);
+    // Multiple point lights for dynamic depth and highlights
+    const pl1 = new PointLight("pl1", new Vector3(10, 10, 10), scene);
+    pl1.intensity = 0.7;
+    pl1.diffuse = new Color3(0.8, 0.9, 1.0); // Cool tone
 
-    const pl2 = new PointLight("pl2", new Vector3(-10, -5, -8), scene);
-    pl2.intensity = 0.4;
-    pl2.diffuse = new Color3(1.0, 0.6, 0.8);
+    const pl2 = new PointLight("pl2", new Vector3(-10, -10, 10), scene);
+    pl2.intensity = 0.6;
+    pl2.diffuse = new Color3(1.0, 0.8, 0.9); // Warm tone
 
-    // GlowLayer for node emission
+    const pl3 = new PointLight("pl3", new Vector3(0, 15, -15), scene);
+    pl3.intensity = 0.5;
+    pl3.diffuse = new Color3(0.7, 1.0, 0.8); // Greenish tone
+
+    const pl4 = new PointLight("pl4", new Vector3(-15, 5, 0), scene);
+    pl4.intensity = 0.4;
+    pl4.diffuse = new Color3(0.9, 0.7, 1.0); // Purplish tone
+
+    // GlowLayer for node emission and highlight effects
     const glow = new GlowLayer("glow", scene);
-    glow.intensity = 0.6;
+    glow.intensity = 0.8; // Increased base glow intensity
     glowRef.current = glow;
 
-    // Rendering pipeline: bloom + FXAA
+    // Default Rendering Pipeline with Bloom and FXAA
     const pipeline = new DefaultRenderingPipeline("pipeline", true, scene, [
       camera,
     ]);
     pipeline.bloomEnabled = true;
-    pipeline.bloomThreshold = 0.3;
-    pipeline.bloomWeight = 0.4;
-    pipeline.bloomKernel = 64;
-    pipeline.fxaaEnabled = true;
+    pipeline.bloomThreshold = 0.2; // Softer bloom activation
+    pipeline.bloomWeight = 0.5; // Slightly stronger bloom effect
+    pipeline.bloomKernel = 128; // Higher quality bloom
+    pipeline.fxaaEnabled = true; // Anti-aliasing
 
     const gui = AdvancedDynamicTexture.CreateFullscreenUI("UI", true, scene);
     guiRef.current = gui;
@@ -213,6 +222,11 @@ export default function BabylonGraph({
       mat.specularColor = new Color3(0.2, 0.2, 0.2);
       sphere.material = mat;
 
+      // Add all nodes to glow layer initially
+      if (glowRef.current) {
+        glowRef.current.addIncludedOnlyMesh(sphere);
+      }
+
       // Click handling with highlight
       sphere.actionManager = new ActionManager(scene);
       sphere.actionManager.registerAction(
@@ -230,17 +244,22 @@ export default function BabylonGraph({
 
           // Highlight new selection
           selectedMeshRef.current = sphere;
-          mat.emissiveColor = color.scale(1.2);
+          mat.emissiveColor = color.scale(1.5); // Brighter emissive for selected
 
           onNodeClick(node);
         }),
       );
 
-      // Hover cursor
+      // Hover handling
       sphere.actionManager.registerAction(
         new ExecuteCodeAction(ActionManager.OnPointerOverTrigger, () => {
           if (scene.getEngine().getRenderingCanvas()) {
             scene.getEngine().getRenderingCanvas()!.style.cursor = "pointer";
+          }
+
+          // Only brighten on hover if not currently selected
+          if (selectedMeshRef.current !== sphere) {
+            mat.emissiveColor = color.scale(0.8); // Brighter emissive on hover
           }
         }),
       );
@@ -248,6 +267,11 @@ export default function BabylonGraph({
         new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => {
           if (scene.getEngine().getRenderingCanvas()) {
             scene.getEngine().getRenderingCanvas()!.style.cursor = "default";
+          }
+
+          // Only reset emissive if not currently selected
+          if (selectedMeshRef.current !== sphere) {
+            mat.emissiveColor = color.scale(0.4); // Reset emissive
           }
         }),
       );
