@@ -59,6 +59,8 @@ function getDisplayName(item: DetailItem): string {
   if (typeof d.name === "string" && d.name) return d.name;
   if (typeof d.title === "string" && d.title) return d.title;
   if (typeof d.node_id === "string" && d.node_id) return d.node_id;
+  if (typeof d.profile_name === "string" && d.profile_name)
+    return d.profile_name;
   if (typeof d.agent === "string" && d.agent)
     return truncateId(d.agent as string, 4);
   return truncateId(String(d.id ?? ""));
@@ -171,6 +173,9 @@ function OrgDetail({ org }: { org: Organization }) {
 function AgentDetail({ agent }: { agent: AgentCertificate }) {
   return (
     <>
+      {agent.profile_name && (
+        <Field label="Profile Name" value={agent.profile_name} />
+      )}
       <Field label="Agent Address" value={<IdLink id={agent.agent} />} />
       <Field
         label="Status"

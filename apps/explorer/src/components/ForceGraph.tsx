@@ -48,7 +48,7 @@ function buildGraph(
     for (const a of agents) {
       nodes.push({
         id: a.id,
-        label: truncateId(a.agent, 4),
+        label: a.profile_name || truncateId(a.agent, 4),
         type: "agent",
         status: a.status,
         data: a,

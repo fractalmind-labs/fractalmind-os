@@ -221,6 +221,56 @@ function parsePeerNode(
 
 // ── Public query API ───────────────────────────────────────────────
 
+/**
+ * Fetch AgentProfile DOFs from an Organization object.
+ * Returns a map of agent address → { name, avatar_url }.
+ */
+async function fetchAgentProfiles(
+  orgId: string,
+): Promise<Map<string, { name: string; avatar_url: string }>> {
+  const profileMap = new Map<string, { name: string; avatar_url: string }>();
+
+  try {
+    let cursor: string | null = null;
+    let hasNext = true;
+
+    while (hasNext) {
+      const page = await client.getDynamicFields({
+        parentId: orgId,
+        cursor: cursor ?? undefined,
+        limit: 50,
+      });
+
+      for (const entry of page.data) {
+        if (
+          entry.type === "DynamicObject" &&
+          typeof entry.name.type === "string" &&
+          entry.name.type.includes("::profile::ProfileKey")
+        ) {
+          const profileResp = await getObject(entry.objectId);
+          const fields = extractFields(profileResp);
+          if (!fields) continue;
+
+          const agentAddr = getString(fields, "agent");
+          const name = getString(fields, "name");
+          const avatarUrl = getString(fields, "avatar_url");
+
+          if (agentAddr) {
+            profileMap.set(agentAddr, { name, avatar_url: avatarUrl });
+          }
+        }
+      }
+
+      cursor = page.nextCursor ?? null;
+      hasNext = page.hasNextPage;
+    }
+  } catch (error) {
+    console.error(`Failed to fetch AgentProfiles for org ${orgId}:`, error);
+  }
+
+  return profileMap;
+}
+
 async function fetchOrgIdsFromRegistry(): Promise<string[]> {
   const resp = await getObject(SUI_CONFIG.registry);
   const fields = extractFields(resp);
@@ -268,6 +318,7 @@ async function fetchOrganizationsWithTables(
 
 async function fetchAgentCertificates(
   agentAddresses: string[],
+  profilesByAgent: Map<string, { name: string; avatar_url: string }>,
 ): Promise<AgentCertificate[]> {
   const certs: AgentCertificate[] = [];
   const seen = new Set<string>();
@@ -293,7 +344,13 @@ async function fetchAgentCertificates(
         seen.add(id);
         const fields = extractFields(item);
         if (!fields) continue;
-        certs.push(parseAgentCertificate(id, fields));
+        const cert = parseAgentCertificate(id, fields);
+        const profile = profilesByAgent.get(cert.agent);
+        if (profile) {
+          cert.profile_name = profile.name;
+          cert.profile_avatar_url = profile.avatar_url || undefined;
+        }
+        certs.push(cert);
       }
 
       cursor = page.nextCursor ?? null;
@@ -350,14 +407,23 @@ export async function fetchAllData() {
 
   const allAgentAddresses = new Set<string>();
   const allTaskIds = new Set<string>();
+  const allProfiles = new Map<string, { name: string; avatar_url: string }>();
 
   for (const org of organizations) {
     for (const addr of org.agent_addresses) allAgentAddresses.add(addr);
     for (const tid of org.task_ids) allTaskIds.add(tid);
   }
 
+  // Fetch profiles from all orgs in parallel
+  const profileResults = await Promise.all(
+    organizations.map((org) => fetchAgentProfiles(org.id)),
+  );
+  for (const profileMap of profileResults) {
+    profileMap.forEach((profile, addr) => allProfiles.set(addr, profile));
+  }
+
   const [agents, tasks, peers] = await Promise.all([
-    fetchAgentCertificates([...allAgentAddresses]),
+    fetchAgentCertificates([...allAgentAddresses], allProfiles),
     fetchTasks([...allTaskIds]),
     fetchPeerNodes(),
   ]);
