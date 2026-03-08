@@ -37,6 +37,9 @@ export interface AgentCertificate {
   reputation_score: number;
   status: AgentStatus;
   tasks_completed: number;
+  /** From AgentProfile DOF on Organization */
+  profile_name?: string;
+  profile_avatar_url?: string;
 }
 
 /** Agent status u8: 0 = active, 1 = idle, 2 = suspended, 3 = offline */
