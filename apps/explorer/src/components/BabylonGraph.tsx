@@ -271,7 +271,7 @@ export default function BabylonGraph({
   }, [organizations, agents, tasks, peers, activeView, onNodeClick]);
 
   return (
-    <div className="w-full h-full min-h-[280px] sm:min-h-[400px]">
+    <div className="w-full h-full">
       <canvas
         ref={canvasRef}
         className="w-full h-full outline-none"

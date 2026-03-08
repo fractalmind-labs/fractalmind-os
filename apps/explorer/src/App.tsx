@@ -46,7 +46,7 @@ export default function App() {
   const subOrgs = data.organizations.filter((o) => o.depth > 0);
 
   return (
-    <div className="min-h-screen bg-base flex flex-col">
+    <div className="h-[100dvh] lg:min-h-screen lg:h-auto bg-base flex flex-col overflow-hidden lg:overflow-visible">
       {/* Header */}
       <header className="border-b border-border bg-base/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -159,7 +159,7 @@ export default function App() {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 flex flex-col lg:flex-row max-w-7xl mx-auto w-full px-3 sm:px-4 py-3 sm:py-4 gap-3 sm:gap-4">
+      <main className="flex-1 flex flex-col lg:flex-row max-w-7xl mx-auto w-full px-3 sm:px-4 py-3 sm:py-4 gap-3 sm:gap-4 min-h-0 overflow-hidden lg:overflow-visible">
         {/* Mobile sidebar backdrop */}
         {sidebarOpen && (
           <div
@@ -289,14 +289,14 @@ export default function App() {
         </aside>
 
         {/* Graph + detail area */}
-        <div className="flex-1 flex flex-col gap-4 min-h-0">
+        <div className="flex-1 flex flex-col gap-3 sm:gap-4 min-h-0">
           {/* Error banner */}
           {data.error && !data.loading && (
             <ErrorRetry error={data.error} onRetry={data.refresh} />
           )}
 
           {/* Force graph / 3D graph */}
-          <div className="flex-1 bg-surface-alt rounded-xl border border-border overflow-hidden relative min-h-[280px] sm:min-h-[400px]">
+          <div className="flex-1 bg-surface-alt rounded-xl border border-border overflow-hidden relative min-h-0">
             {isFirstLoad && <GraphSkeleton />}
 
             {/* 2D/3D toggle */}
@@ -347,7 +347,7 @@ export default function App() {
       <DetailPanel item={selectedNode} onClose={handleClose} />
 
       {/* Footer */}
-      <footer className="border-t border-border py-3 text-center text-xs text-muted">
+      <footer className="hidden sm:block border-t border-border py-3 text-center text-xs text-muted">
         FractalMind Explorer — Built with React + BabylonJS + D3.js + SUI SDK — Data from{" "}
         <a
           href="https://suiscan.xyz/testnet"
