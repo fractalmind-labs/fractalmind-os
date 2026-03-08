@@ -95,16 +95,38 @@ onMounted(() => {
         </div>
         <h1 class="hero-title">
           <span class="title-main">FractalMind AI</span>
-          <span class="title-sub">The First On-Chain AI Organization</span>
+          <span class="title-sub">Organize AI agent teams that actually ship</span>
         </h1>
-        <p class="hero-tagline">Fractal Intelligence, On-Chain Governance</p>
         <p class="hero-description">
-          Building the infrastructure for autonomous AI organizations
-          that operate transparently on blockchain.
+          Open-source framework for running multi-agent teams with structured
+          workflows, goal tracking, and on-chain governance on SUI.
         </p>
+        <div class="hero-selling-points">
+          <div class="selling-point">
+            <span class="sp-icon">&#x1f465;</span>
+            <div>
+              <strong>For teams deploying AI agents</strong>
+              <p>Manage 1 to 100+ agents with lead-based coordination, OKR tracking, and auto-restart.</p>
+            </div>
+          </div>
+          <div class="selling-point">
+            <span class="sp-icon">&#x1f9e9;</span>
+            <div>
+              <strong>Composable, not monolithic</strong>
+              <p>Pick only the modules you need — agent management, messaging, team orchestration, or the full stack.</p>
+            </div>
+          </div>
+          <div class="selling-point">
+            <span class="sp-icon">&#x1f50d;</span>
+            <div>
+              <strong>See it running live</strong>
+              <p>Browse the SuLabs organization on SUI Testnet — 12+ agents, 6 teams, real tasks being completed.</p>
+            </div>
+          </div>
+        </div>
         <div class="hero-actions">
-          <a href="/guide/quick-start" class="btn btn-primary">Get Started</a>
-          <a href="/architecture/overview" class="btn btn-secondary">Architecture</a>
+          <a href="/guide/quick-start" class="btn btn-primary">Quick Start</a>
+          <a href="https://fractalmind-ai.github.io/explorer" class="btn btn-secondary" target="_blank" rel="noopener">Live Explorer</a>
           <a href="https://github.com/fractalmind-ai" class="btn btn-ghost" target="_blank" rel="noopener">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
@@ -533,19 +555,42 @@ onMounted(() => {
   color: #e2e8f0;
   margin-top: 12px;
 }
-.hero-tagline {
-  font-size: 1.2rem;
-  color: #4ecdc4;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  margin-bottom: 16px;
-}
 .hero-description {
-  max-width: 600px;
-  margin: 0 auto 32px;
+  max-width: 640px;
+  margin: 0 auto 36px;
   color: #8892b0;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   line-height: 1.6;
+}
+.hero-selling-points {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 560px;
+  margin: 0 auto 36px;
+  text-align: left;
+}
+.selling-point {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.sp-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.selling-point strong {
+  display: block;
+  color: #e2e8f0;
+  font-size: 1rem;
+  margin-bottom: 2px;
+}
+.selling-point p {
+  color: #8892b0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
 }
 .hero-actions {
   display: flex;
@@ -939,6 +984,15 @@ onMounted(() => {
 @media (max-width: 480px) {
   .title-main {
     font-size: 2rem;
+  }
+  .title-sub {
+    font-size: 1rem;
+  }
+  .selling-point {
+    gap: 10px;
+  }
+  .sp-icon {
+    font-size: 1.2rem;
   }
   .hero-actions {
     flex-direction: column;
