@@ -15,7 +15,7 @@ python3 - <<'PY'
 import sys
 from pathlib import Path
 
-scripts = Path('.claude/skills/agent-manager/scripts').resolve()
+scripts = Path('.agent/skills/agent-manager/scripts').resolve()
 sys.path.insert(0, str(scripts))
 
 from schedule_helper import get_current_crontab, _get_agent_manager_section
@@ -31,7 +31,7 @@ python3 - <<'PY'
 import sys
 from pathlib import Path
 
-scripts = Path('.claude/skills/agent-manager/scripts').resolve()
+scripts = Path('.agent/skills/agent-manager/scripts').resolve()
 sys.path.insert(0, str(scripts))
 
 from schedule_helper import get_current_crontab, remove_agent_manager_section, set_crontab

@@ -7,7 +7,7 @@
 
 `oh-my-code` is a turnkey, process-oriented multi-agent setup for automated development workflows.
 
-It vendors `agent-manager` under `.claude/skills/agent-manager`, so a plain `git clone` is enough (no `openskills install` required).
+Skills are stored in `.agent/skills/` (CLI-agnostic path). Install via [OpenSkills](https://github.com/fractalmind-ai/agent-manager-skill) or vendor manually.
 
 ## 📋 Table of Contents
 
@@ -24,7 +24,8 @@ It vendors `agent-manager` under `.claude/skills/agent-manager`, so a plain `git
 
 ## ✨ Features
 
-- **Turnkey Setup**: Clone and go - no external dependencies
+- **CLI-Agnostic**: Works with `claude`, `codex`, or any compatible CLI
+- **Turnkey Setup**: Clone, install skills, go
 - **Multi-Agent Orchestration**: Automated task distribution and execution
 - **Agent Personality System**: Configurable identity, soul, and memory files for persistent agent behavior
 - **Quality Gates**: Automated code quality checks
@@ -36,30 +37,46 @@ It vendors `agent-manager` under `.claude/skills/agent-manager`, so a plain `git
 
 - `python3`
 - `tmux`
+- An agent CLI (`claude`, `codex`, etc.) on `$PATH`
+- `npx` (for OpenSkills — skill installation)
 
 ## 🚀 Quickstart
+
+### 1) Install skills (first time only)
+
+```bash
+npx -y openskills@latest install fractalmind-ai/agent-manager-skill --skills-dir .agent/skills -y
+```
+
+### 2) Run preflight
+
+```bash
+bash scripts/preflight.sh
+```
+
+### 3) Switch CLI (optional)
+
+Default launcher is `claude`. To use a different CLI (e.g. `codex`), edit `agents/EMP_*.md` `launcher:` fields.
+
+### 4) Start agents
 
 If your agent CLI supports `.claude/commands`, use:
 - `/oh-my-code/quickstart`
 
-To enable/disable the 15-minute scheduled work cycle:
-- `/oh-my-code/startup`
-- `/oh-my-code/shutdown`
-
-Or run directly from the repo root:
+Or run directly:
 
 ```bash
 bash scripts/preflight.sh
 
-python3 .claude/skills/agent-manager/scripts/main.py list
-python3 .claude/skills/agent-manager/scripts/main.py start supervisor
-python3 .claude/skills/agent-manager/scripts/main.py start coder-b
-python3 .claude/skills/agent-manager/scripts/main.py start coder-a
-python3 .claude/skills/agent-manager/scripts/main.py assign coder-a <<'EOF'
+python3 .agent/skills/agent-manager/scripts/main.py list
+python3 .agent/skills/agent-manager/scripts/main.py start supervisor
+python3 .agent/skills/agent-manager/scripts/main.py start coder-b
+python3 .agent/skills/agent-manager/scripts/main.py start coder-a
+python3 .agent/skills/agent-manager/scripts/main.py assign coder-a <<'EOF'
 Task:
 - <what you want done>
 EOF
-python3 .claude/skills/agent-manager/scripts/main.py monitor coder-a --follow
+python3 .agent/skills/agent-manager/scripts/main.py monitor coder-a --follow
 ```
 
 ## 🔍 Quality Gates (Default)
@@ -123,6 +140,17 @@ These files give your agent a persistent identity and memory across sessions. Fi
 | [`TOOLS.md`](TOOLS.md) | Environment-specific notes (SSH hosts, endpoints, devices) |
 
 All files are templates with placeholder comments — fill in your details and delete the comments.
+
+## 🌐 Remote Management (Optional)
+
+oh-my-code agents can be managed remotely via [fractalmind-envd](https://github.com/fractalmind-ai/fractalmind-envd) — a decentralized agent management system using SUI blockchain + WireGuard P2P.
+
+To enable:
+1. Copy `sentinel.yaml.example` to `sentinel.yaml`
+2. Fill in your SUI wallet and network config
+3. Run `envd` alongside your agents
+
+This gives you remote status, restart, logs, and kill for oh-my-code agents from any envd-connected machine.
 
 ## 🤝 Contributing
 

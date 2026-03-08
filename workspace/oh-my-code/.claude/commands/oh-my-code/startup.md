@@ -11,15 +11,15 @@ Syncs all enabled agent schedules (from `agents/EMP_*.md`) into your user cronta
 
 ### 1) Preview configured schedules
 ```bash
-python3 .claude/skills/agent-manager/scripts/main.py schedule list
+python3 .agent/skills/agent-manager/scripts/main.py schedule list
 ```
 
 ### 2) Dry-run the crontab content
 ```bash
-python3 .claude/skills/agent-manager/scripts/main.py schedule sync --dry-run
+python3 .agent/skills/agent-manager/scripts/main.py schedule sync --dry-run
 ```
 
 ### 3) Apply (write to crontab)
 ```bash
-python3 .claude/skills/agent-manager/scripts/main.py schedule sync
+python3 .agent/skills/agent-manager/scripts/main.py schedule sync
 ```

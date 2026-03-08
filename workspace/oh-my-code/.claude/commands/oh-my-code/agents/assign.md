@@ -5,7 +5,7 @@ description: Assign a task to the supervisor
 # Agents: Assign (Supervisor)
 
 ```bash
-python3 .claude/skills/agent-manager/scripts/main.py assign supervisor <<'EOF'
+python3 .agent/skills/agent-manager/scripts/main.py assign supervisor <<'EOF'
 Task:
 - <what you want done>
 

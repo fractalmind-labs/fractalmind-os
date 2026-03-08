@@ -2,9 +2,13 @@
 
 # agent-manager runtime state
 .claude/state/
+.agent/state/
 .crontab_logs/
 
 __pycache__
+
+# envd local config (contains secrets)
+sentinel.yaml
 
 # local cloned repos (not submodules)
 workspace/*

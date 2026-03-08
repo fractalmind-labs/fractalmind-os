@@ -1,0 +1,45 @@
+# sentinel.yaml — Optional envd integration for remote Agent management
+#
+# Copy this file to sentinel.yaml and fill in your values.
+# envd will discover oh-my-code tmux agents and expose them for remote management.
+#
+# Requires: fractalmind-envd (https://github.com/fractalmind-ai/fractalmind-envd)
+#
+# What this enables:
+#   - Remote agent status/restart/logs/kill via WireGuard P2P
+#   - SUI chain identity for this node's agents
+#   - Heartbeat reporting to remote coordinators
+
+identity:
+  name: "oh-my-code-node"
+  # SUI wallet key path (ed25519)
+  key_path: ~/.sui/sui_config/sui.keystore
+
+sui:
+  rpc: "https://fullnode.testnet.sui.io:443"
+  package_id: "0xc3448b4cfbe7771a9d42b12d3231b4819dc68583e44f39f9f2613d085e90f8f1"
+  peer_registry_id: "0xceaf0c2208cd561e01694e80ca7de37a0b0113856ddb45c032be02bbb1969bee"
+
+roles:
+  worker: true
+  coordinator: false
+  relay: false
+  sponsor: false
+  stun_server: false
+
+agents:
+  # envd auto-discovers tmux sessions matching this pattern
+  tmux_prefix: "agent-"
+  # Or explicit list:
+  # sessions:
+  #   - agent-emp-0001
+  #   - agent-emp-0002
+  #   - agent-emp-0003
+
+heartbeat:
+  interval: 30s
+  report_agents: true
+
+wireguard:
+  listen_port: 51820
+  # Peers are discovered via SUI chain events

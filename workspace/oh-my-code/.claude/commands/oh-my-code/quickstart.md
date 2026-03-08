@@ -15,19 +15,19 @@ Run a zero-setup multi-agent workflow using the vendored `agent-manager` skill i
 
 ### 1) List configured agents
 ```bash
-python3 .claude/skills/agent-manager/scripts/main.py list
+python3 .agent/skills/agent-manager/scripts/main.py list
 ```
 
 ### 2) Start supervisor + coder-b + coder-a
 ```bash
-python3 .claude/skills/agent-manager/scripts/main.py start supervisor
-python3 .claude/skills/agent-manager/scripts/main.py start coder-b
-python3 .claude/skills/agent-manager/scripts/main.py start coder-a
+python3 .agent/skills/agent-manager/scripts/main.py start supervisor
+python3 .agent/skills/agent-manager/scripts/main.py start coder-b
+python3 .agent/skills/agent-manager/scripts/main.py start coder-a
 ```
 
 ### 3) Assign a task to the supervisor
 ```bash
-python3 .claude/skills/agent-manager/scripts/main.py assign supervisor <<'EOF'
+python3 .agent/skills/agent-manager/scripts/main.py assign supervisor <<'EOF'
 Task:
 - <describe what you want built>
 
@@ -41,8 +41,8 @@ EOF
 
 ### 4) Monitor output
 ```bash
-python3 .claude/skills/agent-manager/scripts/main.py monitor supervisor --follow
+python3 .agent/skills/agent-manager/scripts/main.py monitor supervisor --follow
 ```
 
 ## Notes
-- If you use a different CLI than `codex`, update `agents/EMP_*.md` `launcher:` fields.
+- If you use a different CLI than `claude`, update `agents/EMP_*.md` `launcher:` fields.

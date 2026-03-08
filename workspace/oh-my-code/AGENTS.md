@@ -80,32 +80,32 @@ The heartbeat does **not** bypass the GitHub Issues workflow — it feeds work i
 ## Multi-Agent Protocol (agent-manager)
 Use `agent-manager` to run workers in separate tmux sessions, then feed tasks in parallel.
 
-This repo vendors `agent-manager` under `.claude/skills/agent-manager`, so it works after a plain git clone (no `openskills install` required). You only need `python3` and `tmux` available.
+This repo vendors `agent-manager` under `.agent/skills/agent-manager`. Install via OpenSkills or vendor manually. You need `python3` and `tmux` available.
 
-If you are using a different CLI (e.g. `droid` or `claude`), update `agents/EMP_0001.md`, `agents/EMP_0002.md`, and `agents/EMP_0003.md` to point `launcher:` to your CLI.
+If you are using a different CLI (e.g. `codex` or `droid`), update `agents/EMP_0001.md`, `agents/EMP_0002.md`, and `agents/EMP_0003.md` to point `launcher:` to your CLI.
 
 ### Commands
 ```bash
 # list agents
-python3 .claude/skills/agent-manager/scripts/main.py list
+python3 .agent/skills/agent-manager/scripts/main.py list
 
 # start if needed
-python3 .claude/skills/agent-manager/scripts/main.py start supervisor
-python3 .claude/skills/agent-manager/scripts/main.py start coder-b
-python3 .claude/skills/agent-manager/scripts/main.py start coder-a
+python3 .agent/skills/agent-manager/scripts/main.py start supervisor
+python3 .agent/skills/agent-manager/scripts/main.py start coder-b
+python3 .agent/skills/agent-manager/scripts/main.py start coder-a
 
 # assign tasks to Team Lead (stdin)
-python3 .claude/skills/agent-manager/scripts/main.py assign coder-a <<'EOF'
+python3 .agent/skills/agent-manager/scripts/main.py assign coder-a <<'EOF'
 <task>
 EOF
 
 # monitor
-python3 .claude/skills/agent-manager/scripts/main.py monitor coder-a --follow
+python3 .agent/skills/agent-manager/scripts/main.py monitor coder-a --follow
 
 # stop
-python3 .claude/skills/agent-manager/scripts/main.py stop supervisor
-python3 .claude/skills/agent-manager/scripts/main.py stop coder-b
-python3 .claude/skills/agent-manager/scripts/main.py stop coder-a
+python3 .agent/skills/agent-manager/scripts/main.py stop supervisor
+python3 .agent/skills/agent-manager/scripts/main.py stop coder-b
+python3 .agent/skills/agent-manager/scripts/main.py stop coder-a
 ```
 
 ## Task Decomposition Template
@@ -162,7 +162,7 @@ Quick decision table:
 ### Agent not starting (tmux session issues)
 
 **Symptoms:**
-- `python3 .claude/skills/agent-manager/scripts/main.py start <agent>` fails
+- `python3 .agent/skills/agent-manager/scripts/main.py start <agent>` fails
 - Error: "tmux session already exists" or "tmux not found"
 
 **Resolution:**
@@ -178,7 +178,7 @@ tmux list-sessions
 tmux kill-session -t agent-emp-0001
 
 # Verify agent-manager scripts are executable
-chmod +x .claude/skills/agent-manager/scripts/main.py
+chmod +x .agent/skills/agent-manager/scripts/main.py
 ```
 
 ### Agent not responding (health check failures)
@@ -190,15 +190,15 @@ chmod +x .claude/skills/agent-manager/scripts/main.py
 **Resolution:**
 ```bash
 # Check if agent session is running
-python3 .claude/skills/agent-manager/scripts/main.py list
+python3 .agent/skills/agent-manager/scripts/main.py list
 
 # Attach to session directly to inspect
 tmux attach-session -t agent-emp-0001
 # Press Ctrl+B then D to detach without killing
 
 # Restart the agent
-python3 .claude/skills/agent-manager/scripts/main.py stop supervisor
-python3 .claude/skills/agent-manager/scripts/main.py start supervisor
+python3 .agent/skills/agent-manager/scripts/main.py stop supervisor
+python3 .agent/skills/agent-manager/scripts/main.py start supervisor
 ```
 
 ### Log file location and interpretation
@@ -216,7 +216,7 @@ tmux capture-pane -t agent-emp-0001 -p > /tmp/agent.log
 ls -la ~/.cache/claude/  # or your CLI's cache directory
 
 # Check agent-manager status
-python3 .claude/skills/agent-manager/scripts/main.py status
+python3 .agent/skills/agent-manager/scripts/main.py status
 ```
 
 ### Common CLI path issues
@@ -235,6 +235,6 @@ which claude  # or droid, etc.
 # Set the correct `launcher:` path
 
 # Reload agent after config change
-python3 .claude/skills/agent-manager/scripts/main.py stop <agent>
-python3 .claude/skills/agent-manager/scripts/main.py start <agent>
+python3 .agent/skills/agent-manager/scripts/main.py stop <agent>
+python3 .agent/skills/agent-manager/scripts/main.py start <agent>
 ```

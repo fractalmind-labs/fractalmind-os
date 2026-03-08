@@ -46,7 +46,7 @@ cd oh-my-code
 bash scripts/preflight.sh
 
 # List available agents
-python3 .claude/skills/agent-manager/scripts/main.py list
+python3 .agent/skills/agent-manager/scripts/main.py list
 ```
 
 ## 📝 Coding Standards

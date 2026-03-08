@@ -20,7 +20,7 @@ need_cmd git
 need_cmd python3
 need_cmd tmux
 
-agent_manager=".claude/skills/agent-manager/scripts/main.py"
+agent_manager=".agent/skills/agent-manager/scripts/main.py"
 [[ -f "$agent_manager" ]] || fail "Missing $agent_manager"
 
 python3 "$agent_manager" list >/dev/null 2>&1 || fail "agent-manager health check failed: python3 $agent_manager list"

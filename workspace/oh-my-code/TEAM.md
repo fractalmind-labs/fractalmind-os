@@ -39,9 +39,9 @@ Follow `workflows/github_issues.md`.
 # from repo root
 bash scripts/preflight.sh
 
-python3 .claude/skills/agent-manager/scripts/main.py list
-python3 .claude/skills/agent-manager/scripts/main.py start coder-b
-python3 .claude/skills/agent-manager/scripts/main.py start coder-a
+python3 .agent/skills/agent-manager/scripts/main.py list
+python3 .agent/skills/agent-manager/scripts/main.py start coder-b
+python3 .agent/skills/agent-manager/scripts/main.py start coder-a
 
-python3 .claude/skills/agent-manager/scripts/main.py monitor coder-a --follow
+python3 .agent/skills/agent-manager/scripts/main.py monitor coder-a --follow
 ```
