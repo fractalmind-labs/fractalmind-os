@@ -221,25 +221,60 @@ export default function BabylonGraph({
       label.linkWithMesh(sphere);
     }
 
-    // Create link lines
+    // Create link lines with hierarchy-based widths
     for (const link of links) {
       const sPos = posMap.get(link.source as string);
       const tPos = posMap.get(link.target as string);
       if (!sPos || !tPos) continue;
 
-      const line = MeshBuilder.CreateLines(
-        `link_${link.source}_${link.target}`,
-        {
-          points: [
-            new Vector3(sPos.x, sPos.y, sPos.z),
-            new Vector3(tPos.x, tPos.y, tPos.z),
-          ],
-        },
-        scene,
-      );
-      line.color = new Color3(0.3, 0.35, 0.45);
-      line.alpha = 0.5;
-      line.metadata = { [GRAPH_TAG]: true };
+      const from = new Vector3(sPos.x, sPos.y, sPos.z);
+      const to = new Vector3(tPos.x, tPos.y, tPos.z);
+
+      if (link.type === "parent" || link.type === "contains") {
+        // Thick tubes for structural links
+        const dist = Vector3.Distance(from, to);
+        if (dist < 0.01) continue;
+        const dir = to.subtract(from);
+        const mid = from.add(dir.scale(0.5));
+
+        const isParent = link.type === "parent";
+        const tubeRadius = isParent ? 0.06 : 0.035;
+
+        const tube = MeshBuilder.CreateTube(
+          `link_${link.source}_${link.target}`,
+          {
+            path: [from, mid, to],
+            radius: tubeRadius,
+            tessellation: 6,
+            cap: 0,
+          },
+          scene,
+        );
+        const tubeMat = new StandardMaterial(
+          `linkMat_${link.source}_${link.target}`,
+          scene,
+        );
+        const linkColor = isParent
+          ? new Color3(0.45, 0.5, 0.65)
+          : new Color3(0.3, 0.35, 0.45);
+        tubeMat.diffuseColor = linkColor;
+        tubeMat.emissiveColor = linkColor.scale(0.3);
+        tubeMat.alpha = isParent ? 0.7 : 0.5;
+        tube.material = tubeMat;
+        tube.metadata = { [GRAPH_TAG]: true };
+      } else {
+        // Thin lines for assigned / peer-link
+        const line = MeshBuilder.CreateLines(
+          `link_${link.source}_${link.target}`,
+          { points: [from, to] },
+          scene,
+        );
+        line.color = link.type === "assigned"
+          ? new Color3(0.4, 0.4, 0.2)
+          : new Color3(0.3, 0.35, 0.45);
+        line.alpha = 0.4;
+        line.metadata = { [GRAPH_TAG]: true };
+      }
     }
 
     // Auto-fit camera
