@@ -9,6 +9,8 @@ import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { ActionManager } from "@babylonjs/core/Actions/actionManager";
 import { ExecuteCodeAction } from "@babylonjs/core/Actions/directActions";
+import { Animation } from "@babylonjs/core/Animations/animation";
+import { CubicEase, EasingFunction } from "@babylonjs/core/Animations/easing";
 import { GlowLayer } from "@babylonjs/core/Layers/glowLayer";
 import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
 import { AdvancedDynamicTexture } from "@babylonjs/gui/2D/advancedDynamicTexture";
@@ -61,7 +63,16 @@ function nodeRadius(type: GraphNode["type"], data: GraphNode["data"]): number {
   }
 }
 
+/** Shared cubic ease-out for all animations */
+function makeEase(): CubicEase {
+  const ease = new CubicEase();
+  ease.setEasingMode(EasingFunction.EASINGMODE_EASEOUT);
+  return ease;
+}
+
 const GRAPH_TAG = "isGraph";
+const AUTO_ORBIT_SPEED = 0.001; // radians per frame
+const IDLE_RESUME_MS = 3000; // resume auto-orbit after 3s idle
 
 export default function BabylonGraph({
   organizations,
@@ -75,6 +86,9 @@ export default function BabylonGraph({
   const engineRef = useRef<Engine | null>(null);
   const sceneRef = useRef<Scene | null>(null);
   const guiRef = useRef<AdvancedDynamicTexture | null>(null);
+  const autoOrbitRef = useRef(true);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const entryDoneRef = useRef(false);
   const glowRef = useRef<GlowLayer | null>(null);
   const selectedMeshRef = useRef<Mesh | null>(null);
 
@@ -94,7 +108,7 @@ export default function BabylonGraph({
       "camera",
       Math.PI / 4,
       Math.PI / 3,
-      20,
+      60, // start far for entry animation
       Vector3.Zero(),
       scene,
     );
@@ -133,6 +147,25 @@ export default function BabylonGraph({
     const gui = AdvancedDynamicTexture.CreateFullscreenUI("UI", true, scene);
     guiRef.current = gui;
 
+    // Auto-orbit: slowly rotate camera when idle
+    scene.onBeforeRenderObservable.add(() => {
+      if (autoOrbitRef.current) {
+        camera.alpha += AUTO_ORBIT_SPEED;
+      }
+    });
+
+    // Pause auto-orbit on user interaction, resume after idle
+    const pauseOrbit = () => {
+      autoOrbitRef.current = false;
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = setTimeout(() => {
+        autoOrbitRef.current = true;
+      }, IDLE_RESUME_MS);
+    };
+
+    canvas.addEventListener("pointerdown", pauseOrbit);
+    canvas.addEventListener("wheel", pauseOrbit);
+
     engine.runRenderLoop(() => scene.render());
 
     const container = canvas.parentElement;
@@ -143,6 +176,9 @@ export default function BabylonGraph({
     }
 
     return () => {
+      canvas.removeEventListener("pointerdown", pauseOrbit);
+      canvas.removeEventListener("wheel", pauseOrbit);
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       resizeObserver?.disconnect();
       gui.dispose();
       engine.dispose();
@@ -213,7 +249,12 @@ export default function BabylonGraph({
       mat.specularColor = new Color3(0.2, 0.2, 0.2);
       sphere.material = mat;
 
-      // Click handling with highlight
+      // Add to glow layer
+      if (glowRef.current) {
+        glowRef.current.addIncludedOnlyMesh(sphere);
+      }
+
+      // Click handling — fly camera to node + highlight
       sphere.actionManager = new ActionManager(scene);
       sphere.actionManager.registerAction(
         new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
@@ -231,6 +272,19 @@ export default function BabylonGraph({
           // Highlight new selection
           selectedMeshRef.current = sphere;
           mat.emissiveColor = color.scale(1.2);
+
+          // Pause auto-orbit during fly-to
+          autoOrbitRef.current = false;
+          if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+
+          const cam = scene.activeCamera as ArcRotateCamera;
+          const targetPos = sphere.position.clone();
+          animateCameraTo(cam, targetPos, 5, scene);
+
+          // Resume orbit after fly-to + idle
+          idleTimerRef.current = setTimeout(() => {
+            autoOrbitRef.current = true;
+          }, IDLE_RESUME_MS + 1000);
 
           onNodeClick(node);
         }),
@@ -324,7 +378,7 @@ export default function BabylonGraph({
       }
     }
 
-    // Auto-fit camera
+    // Auto-fit camera + entry fly-in
     const camera = scene.activeCamera as ArcRotateCamera | null;
     if (camera && positions.length > 0) {
       let cx = 0,
@@ -347,8 +401,19 @@ export default function BabylonGraph({
         if (d > maxDist) maxDist = d;
       }
 
-      camera.target = new Vector3(cx, cy, cz);
-      camera.radius = Math.max(maxDist * 2.5, 8);
+      const finalRadius = Math.max(maxDist * 2.5, 8);
+      const finalTarget = new Vector3(cx, cy, cz);
+
+      if (!entryDoneRef.current) {
+        // Entry fly-in: start far, animate to final position
+        entryDoneRef.current = true;
+        camera.target = finalTarget;
+        camera.radius = finalRadius * 4;
+        animateCameraTo(camera, finalTarget, finalRadius, scene, 90);
+      } else {
+        camera.target = finalTarget;
+        camera.radius = finalRadius;
+      }
     }
   }, [organizations, agents, tasks, peers, activeView, onNodeClick]);
 
@@ -361,4 +426,47 @@ export default function BabylonGraph({
       />
     </div>
   );
+}
+
+/** Animate camera target + radius smoothly */
+function animateCameraTo(
+  camera: ArcRotateCamera,
+  target: Vector3,
+  radius: number,
+  scene: Scene,
+  frames = 60,
+) {
+  const fps = 60;
+  const ease = makeEase();
+
+  // Animate target
+  const targetAnim = new Animation(
+    "camTarget",
+    "target",
+    fps,
+    Animation.ANIMATIONTYPE_VECTOR3,
+    Animation.ANIMATIONLOOPMODE_CONSTANT,
+  );
+  targetAnim.setKeys([
+    { frame: 0, value: camera.target.clone() },
+    { frame: frames, value: target },
+  ]);
+  targetAnim.setEasingFunction(ease);
+
+  // Animate radius
+  const radiusAnim = new Animation(
+    "camRadius",
+    "radius",
+    fps,
+    Animation.ANIMATIONTYPE_FLOAT,
+    Animation.ANIMATIONLOOPMODE_CONSTANT,
+  );
+  radiusAnim.setKeys([
+    { frame: 0, value: camera.radius },
+    { frame: frames, value: radius },
+  ]);
+  radiusAnim.setEasingFunction(ease);
+
+  camera.animations = [targetAnim, radiusAnim];
+  scene.beginAnimation(camera, 0, frames, false);
 }
