@@ -3,14 +3,18 @@ import { Engine } from "@babylonjs/core/Engines/engine";
 import { Scene } from "@babylonjs/core/scene";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
+import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { Vector3, Color3, Color4 } from "@babylonjs/core/Maths/math";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { ActionManager } from "@babylonjs/core/Actions/actionManager";
 import { ExecuteCodeAction } from "@babylonjs/core/Actions/directActions";
+import { GlowLayer } from "@babylonjs/core/Layers/glowLayer";
+import { DefaultRenderingPipeline } from "@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline";
 import { AdvancedDynamicTexture } from "@babylonjs/gui/2D/advancedDynamicTexture";
 import { TextBlock } from "@babylonjs/gui/2D/controls/textBlock";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
+import type { Mesh } from "@babylonjs/core/Meshes/mesh";
 import type {
   Organization,
   AgentCertificate,
@@ -71,6 +75,8 @@ export default function BabylonGraph({
   const engineRef = useRef<Engine | null>(null);
   const sceneRef = useRef<Scene | null>(null);
   const guiRef = useRef<AdvancedDynamicTexture | null>(null);
+  const glowRef = useRef<GlowLayer | null>(null);
+  const selectedMeshRef = useRef<Mesh | null>(null);
 
   // Mount engine/scene/camera/lights once
   useEffect(() => {
@@ -98,7 +104,31 @@ export default function BabylonGraph({
     camera.wheelPrecision = 20;
     camera.panningSensibility = 100;
 
-    new HemisphericLight("light", new Vector3(0, 1, 0.5), scene);
+    new HemisphericLight("hemi", new Vector3(0, 1, 0.5), scene);
+
+    // Point lights for depth
+    const pl1 = new PointLight("pl1", new Vector3(10, 8, 10), scene);
+    pl1.intensity = 0.6;
+    pl1.diffuse = new Color3(0.6, 0.7, 1.0);
+
+    const pl2 = new PointLight("pl2", new Vector3(-10, -5, -8), scene);
+    pl2.intensity = 0.4;
+    pl2.diffuse = new Color3(1.0, 0.6, 0.8);
+
+    // GlowLayer for node emission
+    const glow = new GlowLayer("glow", scene);
+    glow.intensity = 0.6;
+    glowRef.current = glow;
+
+    // Rendering pipeline: bloom + FXAA
+    const pipeline = new DefaultRenderingPipeline("pipeline", true, scene, [
+      camera,
+    ]);
+    pipeline.bloomEnabled = true;
+    pipeline.bloomThreshold = 0.3;
+    pipeline.bloomWeight = 0.4;
+    pipeline.bloomKernel = 64;
+    pipeline.fxaaEnabled = true;
 
     const gui = AdvancedDynamicTexture.CreateFullscreenUI("UI", true, scene);
     guiRef.current = gui;
@@ -119,6 +149,8 @@ export default function BabylonGraph({
       engineRef.current = null;
       sceneRef.current = null;
       guiRef.current = null;
+      glowRef.current = null;
+      selectedMeshRef.current = null;
     };
   }, []);
 
@@ -181,10 +213,25 @@ export default function BabylonGraph({
       mat.specularColor = new Color3(0.2, 0.2, 0.2);
       sphere.material = mat;
 
-      // Click handling
+      // Click handling with highlight
       sphere.actionManager = new ActionManager(scene);
       sphere.actionManager.registerAction(
         new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+          // Unhighlight previous selection
+          const prev = selectedMeshRef.current;
+          if (prev && prev.material) {
+            const prevMat = prev.material as StandardMaterial;
+            const prevNode = prev.metadata?.graphNode as GraphNode | undefined;
+            const prevColor = hexToColor3(
+              NODE_COLORS[prevNode?.type ?? ""] ?? "#6b7280",
+            );
+            prevMat.emissiveColor = prevColor.scale(0.4);
+          }
+
+          // Highlight new selection
+          selectedMeshRef.current = sphere;
+          mat.emissiveColor = color.scale(1.2);
+
           onNodeClick(node);
         }),
       );
