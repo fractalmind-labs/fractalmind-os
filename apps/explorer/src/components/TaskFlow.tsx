@@ -25,12 +25,12 @@ export default function TaskFlow({ tasks }: Props) {
         <h3 className="text-sm font-medium text-secondary mb-3">
           Task Pipeline
         </h3>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between overflow-x-auto gap-1 pb-1">
           {STEPS.map((step, i) => (
-            <div key={step} className="flex items-center">
+            <div key={step} className="flex items-center shrink-0">
               <div className="text-center">
                 <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold border-2 mx-auto"
+                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-base sm:text-lg font-bold border-2 mx-auto"
                   style={{
                     borderColor: STATUS_COLORS[step],
                     backgroundColor: STATUS_COLORS[step] + "22",

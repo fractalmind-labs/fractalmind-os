@@ -70,7 +70,7 @@ export default function DetailPanel({ item, onClose }: Props) {
   if (!item) return null;
 
   return (
-    <div className="fixed right-0 top-0 h-full w-96 bg-surface/95 backdrop-blur-sm border-l border-border shadow-2xl z-50 overflow-y-auto animate-flow-in">
+    <div className="fixed right-0 top-0 h-full w-full sm:w-96 bg-surface/95 backdrop-blur-sm border-l border-border shadow-2xl z-50 overflow-y-auto animate-flow-in">
       <div className="sticky top-0 bg-surface/90 backdrop-blur-sm border-b border-border px-5 py-4 flex items-center justify-between">
         <div>
           <div className="text-xs text-muted uppercase tracking-wider">

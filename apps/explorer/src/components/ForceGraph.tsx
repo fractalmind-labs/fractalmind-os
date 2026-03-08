@@ -202,7 +202,7 @@ export default function ForceGraph({
   }, [render]);
 
   return (
-    <div ref={containerRef} className="w-full h-full min-h-[400px]">
+    <div ref={containerRef} className="w-full h-full min-h-[280px] sm:min-h-[400px]">
       <svg
         ref={svgRef}
         className="w-full h-full"

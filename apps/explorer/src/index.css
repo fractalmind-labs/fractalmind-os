@@ -93,3 +93,11 @@ body {
     background-position: 200% 0;
   }
 }
+
+/* Prevent page scroll when interacting with 3D/2D canvas on touch devices */
+canvas {
+  touch-action: none;
+}
+svg {
+  touch-action: pan-x pan-y;
+}

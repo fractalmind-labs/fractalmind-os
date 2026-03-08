@@ -26,6 +26,7 @@ export default function App() {
   const [activeView, setActiveView] = useState<View>("org");
   const [renderMode, setRenderMode] = useState<"2d" | "3d">("3d");
   const [selectedNode, setSelectedNode] = useState<DetailItem | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleNodeClick = useCallback((node: GraphNode) => {
     setSelectedNode({ type: node.type, data: node.data });
@@ -57,13 +58,24 @@ export default function App() {
               <h1 className="text-lg font-bold text-primary leading-tight">
                 FractalMind Explorer
               </h1>
-              <p className="text-xs text-muted">
+              <p className="text-xs text-muted hidden sm:block">
                 On-chain AI Organization Visualizer — SUI Testnet
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Mobile sidebar toggle */}
+            <button
+              onClick={() => setSidebarOpen((o) => !o)}
+              className="lg:hidden p-2 rounded-lg hover:bg-hover text-secondary hover:text-primary transition-colors cursor-pointer"
+              title="Toggle sidebar"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+
             {/* Stats */}
             <div className="hidden sm:flex items-center gap-3 text-xs text-muted mr-1">
               {data.loading && (
@@ -147,9 +159,23 @@ export default function App() {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 flex flex-col lg:flex-row max-w-7xl mx-auto w-full px-4 py-4 gap-4">
+      <main className="flex-1 flex flex-col lg:flex-row max-w-7xl mx-auto w-full px-3 sm:px-4 py-3 sm:py-4 gap-3 sm:gap-4">
+        {/* Mobile sidebar backdrop */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
-        <aside className="w-full lg:w-72 shrink-0 space-y-4">
+        <aside
+          className={`
+            fixed inset-y-0 left-0 z-40 w-64 bg-base border-r border-border p-4 space-y-3 overflow-y-auto transform transition-transform duration-200 ease-out
+            lg:static lg:transform-none lg:w-72 lg:border-r-0 lg:p-0 lg:bg-transparent
+            ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          `}
+        >
           {isFirstLoad ? (
             <SidebarSkeleton />
           ) : (
@@ -162,6 +188,7 @@ export default function App() {
                     onClick={() => {
                       setActiveView(v.key);
                       setSelectedNode(null);
+                      setSidebarOpen(false);
                     }}
                     className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                       activeView === v.key
@@ -269,7 +296,7 @@ export default function App() {
           )}
 
           {/* Force graph / 3D graph */}
-          <div className="flex-1 bg-surface-alt rounded-xl border border-border overflow-hidden relative min-h-[400px]">
+          <div className="flex-1 bg-surface-alt rounded-xl border border-border overflow-hidden relative min-h-[280px] sm:min-h-[400px]">
             {isFirstLoad && <GraphSkeleton />}
 
             {/* 2D/3D toggle */}
@@ -304,12 +331,12 @@ export default function App() {
 
           {/* Bottom panel for task/peer lists */}
           {activeView === "tasks" && !isFirstLoad && (
-            <div className="bg-surface-alt rounded-xl border border-border p-4 max-h-64 overflow-y-auto">
+            <div className="bg-surface-alt rounded-xl border border-border p-3 sm:p-4 max-h-48 sm:max-h-64 overflow-y-auto">
               <TaskFlow tasks={data.tasks} />
             </div>
           )}
           {activeView === "peers" && !isFirstLoad && (
-            <div className="bg-surface-alt rounded-xl border border-border p-4 max-h-64 overflow-y-auto">
+            <div className="bg-surface-alt rounded-xl border border-border p-3 sm:p-4 max-h-48 sm:max-h-64 overflow-y-auto">
               <PeerList peers={data.peers} />
             </div>
           )}
