@@ -12,6 +12,7 @@ export default defineConfig({
     siteTitle: 'FractalMind AI',
 
     nav: [
+      { text: 'Why FractalMind', link: '/why' },
       {
         text: 'Docs',
         items: [
