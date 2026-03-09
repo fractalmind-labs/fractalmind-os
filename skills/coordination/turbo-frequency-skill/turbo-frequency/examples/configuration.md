@@ -20,6 +20,7 @@ This shows a typical `memory/heartbeat-state.json` with the turboFrequency field
     "cron": "*/30 * * * *",
     "score": 25,
     "changedAt": "2026-03-09T10:00:00Z",
+    "lastUpgradeAt": "2026-03-09T09:30:00Z",
     "reason": "pendingDecisions non-empty (+20), tmux has 1 agent session (+25), quiet hours (-30). Score: 15 → but deploy awaiting review (+10) → 25 → MEDIUM",
     "unchangedCount": 2
   }
@@ -36,6 +37,7 @@ This shows a typical `memory/heartbeat-state.json` with the turboFrequency field
 | `cron` | string | Current cron expression matching the tier |
 | `score` | number | Latest computed busyness score (0-100) |
 | `changedAt` | string | ISO 8601 timestamp of last tier change |
+| `lastUpgradeAt` | string? | ISO 8601 timestamp of last **upward** tier change. Used for 30-min downgrade cooldown. |
 | `reason` | string | Human-readable explanation |
 | `unchangedCount` | number | Consecutive evaluations with same tier |
 | `manualOverride` | object? | Optional: `{ "tier": "HIGH", "until": "..." }` |

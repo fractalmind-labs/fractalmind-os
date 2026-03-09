@@ -98,8 +98,9 @@ The skill instructions will guide your agent through signal evaluation and frequ
 | Signal | Score | Condition |
 |--------|-------|-----------|
 | Active deployment | +40 | Deploy in progress |
-| Agent active tasks | +30 | Any agent is non-idle |
-| tmux active sessions | +25 | Agent sessions detected |
+| Agent active tasks | +30 | tmux shows running sessions (primary) or JSON non-idle (fallback) |
+| Recent human interaction | +25 | lastNudge or lastHumanMessage within 15 min |
+| tmux active sessions | +25 | Agent sessions detected (do not double-count with above) |
 | Pending decisions | +20 | Decisions awaiting human input |
 | Queued tasks | +15 | Tasks waiting to be assigned |
 | Deploy awaiting review | +10 | Deploy done, needs review |
@@ -111,6 +112,11 @@ Score is clamped to 0-100, then mapped to a tier.
 
 - **6 frequency tiers** — from 5-minute turbo to 4-hour sleep
 - **Signal-driven** — quantitative scoring, not guesswork
+- **tmux as ground truth** — live agent session count takes priority over stale JSON state
+- **Upgrade smoothing** — max 2 tiers up per evaluation, no jarring jumps from SLEEP to TURBO
+- **Downgrade cooldown** — 30-minute hold after upgrades, prevents oscillation
+- **Human presence detection** — boosts frequency when a human is actively interacting (within 15 min)
+- **Cron/tier consistency check** — auto-detects and fixes mismatches between config and state
 - **Debounce** — skips crontab sync after 3 consecutive unchanged evaluations
 - **Manual override** — lock to a specific tier with expiry
 - **Quiet hours** — automatic night-time reduction
