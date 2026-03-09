@@ -3,7 +3,7 @@
 - Candidate ID: `okr_2fd08f5c54`
 - Objective: Candidate OKR sync repo is not available as a local git checkout
 - Governance: `L1`
-- Status: `under_review`
+- Status: `resolved`
 - Score: `1.26`
 
 ## Sync Contract
