@@ -20,17 +20,21 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Hide VitePress default footer when brand home is shown */
+/* Hide VitePress default footer when brand pages are shown */
 .brand-home ~ .VPFooter,
-.VPPage:has(.brand-home) + .VPFooter {
+.VPPage:has(.brand-home) + .VPFooter,
+.why-page ~ .VPFooter,
+.VPPage:has(.why-page) + .VPFooter {
   display: none;
 }
 
-/* Remove VitePress content padding on the brand home page */
-.VPPage:has(.brand-home) {
+/* Remove VitePress content padding on brand pages */
+.VPPage:has(.brand-home),
+.VPPage:has(.why-page) {
   padding: 0 !important;
 }
-.VPPage:has(.brand-home) > div {
+.VPPage:has(.brand-home) > div,
+.VPPage:has(.why-page) > div {
   padding: 0;
   max-width: none;
 }
