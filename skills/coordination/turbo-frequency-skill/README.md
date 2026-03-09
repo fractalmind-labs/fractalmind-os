@@ -46,41 +46,68 @@ cp -r turbo-frequency-skill/turbo-frequency ~/.claude/skills/turbo-frequency
 
 ## Quick Start
 
-### 1. Add to your agent's skill list
+### 1. Install & register the skill
 
-In your `AGENTS.md` or `.claude/settings.json`, register the skill:
+```bash
+npx openskills install fractalmind-ai/turbo-frequency-skill
+```
+
+Then add `turbo-frequency` to your `AGENTS.md` frontmatter **and** enable heartbeat:
 
 ```yaml
+---
+name: my-agent
 skills:
-  - turbo-frequency
+  - turbo-frequency          # add this
+heartbeat:
+  cron: "*/30 * * * *"       # initial interval (will be auto-adjusted)
+  max_runtime: 8m
+  session_mode: force
+  enabled: true               # must be true
+---
 ```
 
 ### 2. Initialize heartbeat state
 
-Add the `turboFrequency` field to your `memory/heartbeat-state.json`:
+Create (or update) `memory/heartbeat-state.json` in your workspace root:
 
 ```json
 {
+  "lastChecks": {},
   "turboFrequency": {
     "currentTier": "MEDIUM",
     "cron": "*/30 * * * *",
-    "score": 20,
-    "changedAt": "2026-03-09T00:00:00Z",
-    "reason": "Initial setup",
+    "score": 30,
+    "changedAt": "",
+    "reason": "initial setup",
     "unchangedCount": 0
   }
 }
 ```
 
-### 3. Invoke at heartbeat end
+### 3. Invoke at the end of each heartbeat
 
-At the end of your heartbeat handler, load the skill:
+At the **end** of your heartbeat handler (after all checks are done), load the skill:
 
 ```bash
 npx openskills read turbo-frequency
 ```
 
-The skill instructions will guide your agent through signal evaluation and frequency adjustment.
+The skill output guides your agent to:
+1. Collect workload signals (active tasks, pending decisions, human activity, etc.)
+2. Compute a busyness score (0–100)
+3. Map the score to a frequency tier
+4. Update `AGENTS.md` heartbeat cron and `heartbeat-state.json`
+
+### 4. Verify it works
+
+After 2–3 heartbeat cycles, check `memory/heartbeat-state.json`:
+
+```bash
+cat memory/heartbeat-state.json | jq .turboFrequency
+```
+
+You should see `currentTier`, `score`, and `reason` updating each cycle.
 
 ## Frequency Tiers
 
