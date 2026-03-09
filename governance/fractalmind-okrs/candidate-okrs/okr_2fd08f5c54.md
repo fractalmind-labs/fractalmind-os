@@ -8,6 +8,6 @@
 
 ## Sync Contract
 
-- Source: FractalMind OS heartbeat candidate generation
+- Source: FractalMind heartbeat state
 - Repo target: `git@github.com:fractalmind-ai/fractalmind-okrs.git`
 
