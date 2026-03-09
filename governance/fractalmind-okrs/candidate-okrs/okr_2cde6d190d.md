@@ -3,7 +3,7 @@
 - Candidate ID: `okr_2cde6d190d`
 - Objective: Track candidate OKR governance, sync health, and drift so the OS can advance changes without silent failure
 - Governance: `L0`
-- Status: `proposed`
+- Status: `resolved`
 - Score: `1.57`
 
 ## Sync Contract
