@@ -60,6 +60,32 @@ const stats = [
   { value: 'Live', label: 'SUI Testnet' },
 ]
 
+const milestones = [
+  { date: '2025 Q4', title: 'Core Protocol Shipped', description: 'fractalmind-protocol deployed to SUI Testnet with 9 Move modules.' },
+  { date: '2026 Q1', title: 'Agent Infrastructure', description: 'agent-manager, team-manager, OKR tracking, and fractalbot all production-ready.' },
+  { date: '2026 Q1', title: '12+ Agents Running', description: 'SuLabs org operating with 12 AI agents across 6 teams, completing real tasks.' },
+  { date: '2026 Q1', title: 'envd Decentralized Management', description: 'WireGuard P2P + SUI identity for remote agent management — no central server.' },
+  { date: '2026 Q1', title: 'Explorer & Docs Site', description: 'On-chain org visualizer and full documentation site launched.' },
+]
+
+const githubLinks = [
+  {
+    label: '13+ Repositories',
+    description: 'Protocol, agents, messaging, tools — all open source under MIT.',
+    url: 'https://github.com/fractalmind-ai',
+  },
+  {
+    label: 'On-Chain Proof',
+    description: 'Verify the protocol contract and transactions live on SUI Testnet.',
+    url: 'https://suiscan.xyz/testnet/object/0x685d6fb6ed8b0e679bb467ea73111819ec6ff68b1466d24ca26b400095dcdf24',
+  },
+  {
+    label: 'Live Explorer',
+    description: 'Browse the SuLabs organization — agents, teams, and tasks on-chain.',
+    url: 'https://fractalmind-ai.github.io/explorer',
+  },
+]
+
 const visible = ref(false)
 onMounted(() => {
   visible.value = true
@@ -367,6 +393,62 @@ onMounted(() => {
             <a href="https://fractalmind-ai.github.io/explorer" class="btn btn-primary" target="_blank" rel="noopener">
               Launch Explorer
             </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trust & Transparency -->
+    <section class="trust-section">
+      <div class="section-container">
+        <div class="trust-header">
+          <div class="stage-badge">Alpha</div>
+          <h2 class="section-title">Trust &amp; Transparency</h2>
+          <p class="section-subtitle">Everything is open source, on-chain, and verifiable</p>
+        </div>
+
+        <div class="trust-grid">
+          <!-- Milestones -->
+          <div class="trust-card milestones-card">
+            <h3>Milestones</h3>
+            <div class="timeline">
+              <div v-for="ms in milestones" :key="ms.title" class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                  <span class="timeline-date">{{ ms.date }}</span>
+                  <strong>{{ ms.title }}</strong>
+                  <p>{{ ms.description }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Verify -->
+          <div class="trust-card verify-card">
+            <h3>Verify It Yourself</h3>
+            <div class="verify-links">
+              <a
+                v-for="link in githubLinks"
+                :key="link.label"
+                :href="link.url"
+                class="verify-link"
+                target="_blank"
+                rel="noopener"
+              >
+                <strong>{{ link.label }}</strong>
+                <p>{{ link.description }}</p>
+                <span class="verify-arrow">&rarr;</span>
+              </a>
+            </div>
+
+            <div class="stage-info">
+              <h4>Project Stage: Alpha</h4>
+              <p>
+                FractalMind is in active development. The core protocol is deployed on
+                SUI Testnet, and the agent infrastructure is running in production at
+                SuLabs. We ship openly — check the commit history.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -845,6 +927,173 @@ onMounted(() => {
   opacity: 0.7;
 }
 
+/* ===== Trust & Transparency ===== */
+.trust-section {
+  background: #1a1a2e;
+  padding: 80px 0;
+  border-top: 1px solid #2a2a4e;
+}
+.trust-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+.stage-badge {
+  display: inline-block;
+  background: rgba(78, 205, 196, 0.15);
+  color: #4ecdc4;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(78, 205, 196, 0.3);
+  margin-bottom: 16px;
+}
+.trust-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.trust-card {
+  background: rgba(15, 52, 96, 0.2);
+  border: 1px solid #2a2a4e;
+  border-radius: 12px;
+  padding: 32px;
+}
+.trust-card h3 {
+  font-size: 1.2rem;
+  color: #e2e8f0;
+  margin-bottom: 24px;
+  font-weight: 600;
+}
+
+/* Timeline */
+.timeline {
+  position: relative;
+  padding-left: 24px;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  background: linear-gradient(to bottom, #4ecdc4, #e94560);
+  border-radius: 1px;
+}
+.timeline-item {
+  position: relative;
+  margin-bottom: 20px;
+}
+.timeline-item:last-child {
+  margin-bottom: 0;
+}
+.timeline-dot {
+  position: absolute;
+  left: -24px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #4ecdc4;
+  border: 2px solid #1a1a2e;
+  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.2);
+}
+.timeline-content {
+  padding-bottom: 4px;
+}
+.timeline-date {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: #4ecdc4;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+.timeline-content strong {
+  display: block;
+  color: #e2e8f0;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+.timeline-content p {
+  color: #8892b0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Verify card */
+.verify-links {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.verify-link {
+  display: block;
+  padding: 16px;
+  background: rgba(26, 26, 46, 0.6);
+  border: 1px solid #2a2a4e;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  position: relative;
+}
+.verify-link:hover {
+  border-color: #4ecdc4;
+  background: rgba(78, 205, 196, 0.05);
+  transform: translateX(4px);
+}
+.verify-link strong {
+  color: #4DA2FF;
+  font-size: 0.95rem;
+  display: block;
+  margin-bottom: 4px;
+}
+.verify-link p {
+  color: #8892b0;
+  font-size: 0.85rem;
+  margin: 0;
+  line-height: 1.4;
+}
+.verify-arrow {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #4ecdc4;
+  font-size: 1.2rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.verify-link:hover .verify-arrow {
+  opacity: 1;
+}
+
+/* Stage info */
+.stage-info {
+  background: rgba(233, 69, 96, 0.08);
+  border: 1px solid rgba(233, 69, 96, 0.2);
+  border-radius: 8px;
+  padding: 20px;
+}
+.stage-info h4 {
+  color: #e94560;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.stage-info p {
+  color: #8892b0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
 /* ===== CTA ===== */
 .cta-section {
   background: linear-gradient(135deg, #0f3460, #1a1a2e);
@@ -969,6 +1218,12 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
   .demo-info {
+    padding: 24px;
+  }
+  .trust-grid {
+    grid-template-columns: 1fr;
+  }
+  .trust-card {
     padding: 24px;
   }
   .footer-grid {
