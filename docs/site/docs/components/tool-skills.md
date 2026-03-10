@@ -32,6 +32,16 @@ Control Android devices via ADB (Android Debug Bridge). Tap, swipe, type, take s
 npx openskills install fractalmind-ai/use-phone-skill
 ```
 
+## turbo-frequency-skill
+
+**Repo**: [fractalmind-ai/turbo-frequency-skill](https://github.com/fractalmind-ai/turbo-frequency-skill)
+
+Dynamic heartbeat frequency adjustment for AI agents — like CPU turbo boost. Automatically scales agent check-in intervals based on workload: faster when tasks are active, slower when idle.
+
+```bash
+npx openskills install fractalmind-ai/turbo-frequency-skill
+```
+
 ## Creating Your Own Skill
 
 Any skill that follows the openskills format can be published and shared:

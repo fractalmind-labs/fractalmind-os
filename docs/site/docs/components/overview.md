@@ -25,6 +25,7 @@ Optional skills that extend agent capabilities.
 | use-fractalbot | [GitHub](https://github.com/fractalmind-ai/use-fractalbot-skill) | Agent-side message sending |
 | agent-browser | [GitHub](https://github.com/fractalmind-ai/agent-browser-skill) | Headless browser automation |
 | use-phone | [GitHub](https://github.com/fractalmind-ai/use-phone-skill) | ADB Android device control |
+| turbo-frequency | [GitHub](https://github.com/fractalmind-ai/turbo-frequency-skill) | Dynamic heartbeat frequency adjustment |
 
 ## Applications
 
