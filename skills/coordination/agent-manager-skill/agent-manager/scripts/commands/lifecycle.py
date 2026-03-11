@@ -198,7 +198,12 @@ def cmd_start(args, *, deps: Any):
         restore_flag = get_session_restore_flag(launcher)
         if restore_mode == 'cli_optional_arg' and restore_flag:
             stored_session_id = load_provider_session_id(repo_root, provider_key, agent_id)
-            if stored_session_id and provider_session_exists(provider_key, working_dir, stored_session_id):
+            if stored_session_id and provider_session_exists(
+                provider_key,
+                working_dir,
+                stored_session_id,
+                agent_id=agent_id,
+            ):
                 launcher_args = apply_session_restore_args(
                     provider_key,
                     launcher,
@@ -211,6 +216,8 @@ def cmd_start(args, *, deps: Any):
                 print(f"⚠️  Stored {provider_key} sessionId not found for cwd; starting fresh")
 
     system_prompt = build_system_prompt(agent_config, repo_root=repo_root, skills_dir=skills_dir)
+    if provider_key == 'codex' and not did_provider_restore and deps._should_enforce_codex_session_owner(agent_id):
+        system_prompt = deps._inject_codex_session_owner_marker(system_prompt, agent_id)
     system_prompt_mode = get_system_prompt_mode(launcher)
     system_prompt_flag = get_system_prompt_flag(launcher)
     system_prompt_key = get_system_prompt_key(launcher)
@@ -256,6 +263,15 @@ def cmd_start(args, *, deps: Any):
     )
     command = build_start_command(working_dir, launcher, launcher_args)
 
+    if use_launcher_config:
+        for key, value in launcher_config_overrides.items():
+            kv = f"{key}={to_toml_literal(value)}"
+            command = f"{command} {shlex.quote(launcher_config_flag)} {shlex.quote(kv)}"
+    elif launcher_config_overrides and did_provider_restore:
+        print("ℹ️  Provider session restored; skipping launcher_config injection")
+    elif launcher_config_overrides and launcher_config_mode != 'cli_config_kv':
+        print(f"⚠️  launcher_config present but not supported for launcher '{launcher}' - ignoring")
+
     if use_cli_system_prompt:
         if system_prompt_mode == 'cli_append':
             prompt_file = write_system_prompt_file(repo_root, agent_id, system_prompt)
@@ -268,15 +284,6 @@ def cmd_start(args, *, deps: Any):
                 toml_value = json.dumps(str(prompt_file))
             kv = f"{system_prompt_key}={toml_value}"
             command = f"{command} {shlex.quote(system_prompt_flag)} {shlex.quote(kv)}"
-
-    if use_launcher_config:
-        for key, value in launcher_config_overrides.items():
-            kv = f"{key}={to_toml_literal(value)}"
-            command = f"{command} {shlex.quote(launcher_config_flag)} {shlex.quote(kv)}"
-    elif launcher_config_overrides and did_provider_restore:
-        print("ℹ️  Provider session restored; skipping launcher_config injection")
-    elif launcher_config_overrides and launcher_config_mode != 'cli_config_kv':
-        print(f"⚠️  launcher_config present but not supported for launcher '{launcher}' - ignoring")
 
     if len(command) > 6000:
         command_script = write_start_command_script(repo_root, agent_id, command)
@@ -375,6 +382,7 @@ def cmd_start(args, *, deps: Any):
                 provider_key,
                 working_dir,
                 before_paths=provider_before_sessions,
+                agent_id=agent_id,
                 timeout_s=2.0,
             )
             if new_session_id:

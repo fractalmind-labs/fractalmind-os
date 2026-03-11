@@ -7,6 +7,8 @@ RECOVERABLE_FAILURE_TYPES = {'send_fail', 'no_ack', 'no_activation', 'timeout', 
 
 def failure_reason_code(*, failure_type: str, ack_status: str = '', send_status: str = '') -> str:
     failure = str(failure_type or '').strip().lower()
+    if failure == 'interrupted':
+        return 'HB_INTERRUPTED'
     if failure == 'send_fail':
         return 'HB_SEND_FAIL'
     if failure == 'blocked':

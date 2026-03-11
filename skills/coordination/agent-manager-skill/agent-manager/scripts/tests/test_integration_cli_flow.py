@@ -222,6 +222,7 @@ class CliIntegrationFlowTests(unittest.TestCase):
 
         with ExitStack() as stack:
             self._patch_common(stack, runtime)
+            stack.enter_context(patch('main.build_system_prompt', return_value='main role prompt'))
             stack.enter_context(patch('main.get_system_prompt_mode', return_value='cli_config_kv'))
             stack.enter_context(patch('main.get_system_prompt_flag', return_value='-c'))
             stack.enter_context(patch('main.get_system_prompt_key', return_value='developer_instructions'))
@@ -236,6 +237,12 @@ class CliIntegrationFlowTests(unittest.TestCase):
             start_command = runtime.start_commands[0]
             self.assertIn('model_instructions_file=', start_command, msg='[stage:start-model-instructions-file] expected model_instructions_file override in command')
             self.assertIn(str(override_file), start_command, msg='[stage:start-model-instructions-file] expected absolute override path in command')
+            self.assertIn('developer_instructions=', start_command, msg='[stage:start-model-instructions-file] expected developer_instructions override in command')
+            self.assertLess(
+                start_command.index('model_instructions_file='),
+                start_command.index('developer_instructions='),
+                msg='[stage:start-model-instructions-file] expected model_instructions_file override before developer_instructions',
+            )
 
     def test_heartbeat_auto_session_mode_rollover_path(self):
         runtime = _FakeRuntime()

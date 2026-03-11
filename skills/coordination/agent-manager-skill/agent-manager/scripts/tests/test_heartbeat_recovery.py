@@ -221,6 +221,63 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         self.assertEqual(result['ack_status'], 'ack')
         self.assertEqual(result['reason_code'], 'HB_ACK_OK')
 
+    @patch('main.recover_codex_interrupted')
+    @patch('main.time.sleep', return_value=None)
+    @patch('main.capture_output', side_effect=['baseline', 'interrupted tail', 'interrupted tail'])
+    @patch('main.get_agent_runtime_state', return_value={'state': 'interrupted', 'reason': 'interrupted:Conversation interrupted'})
+    @patch('main.send_keys', return_value=True)
+    def test_run_heartbeat_attempt_interrupted_requires_fresh_recovery(
+        self,
+        mock_send,
+        _mock_state,
+        _mock_capture,
+        _mock_sleep,
+        mock_recover,
+    ):
+        result = main._run_heartbeat_attempt(
+            agent_id='emp-0001',
+            agent_name='qa-agent',
+            launcher='codex',
+            heartbeat_message='hello [HB_ID:20260228-120003]',
+            timeout_seconds=30,
+            is_codex=True,
+        )
+        self.assertEqual(result['send_status'], 'ok')
+        self.assertEqual(result['ack_status'], 'no_ack')
+        self.assertEqual(result['failure_type'], 'interrupted')
+        self.assertEqual(result['reason_code'], 'HB_INTERRUPTED')
+        self.assertEqual(mock_send.call_count, 1)
+        mock_recover.assert_not_called()
+
+    @patch('main.recover_codex_interrupted')
+    @patch('main.time.sleep', return_value=None)
+    @patch('main.capture_output', side_effect=['baseline', 'suggestion tip', 'HEARTBEAT_OK [HB_ID:20260228-120004]', 'HEARTBEAT_OK [HB_ID:20260228-120004]'])
+    @patch('main.get_agent_runtime_state', side_effect=[
+        {'state': 'interrupted', 'reason': 'suggestion_tip:› Improve docs'},
+        {'state': 'idle', 'reason': 'ready'},
+    ])
+    @patch('main.send_keys', return_value=True)
+    def test_run_heartbeat_attempt_suggestion_tip_still_recovers_locally(
+        self,
+        mock_send,
+        _mock_state,
+        _mock_capture,
+        _mock_sleep,
+        mock_recover,
+    ):
+        result = main._run_heartbeat_attempt(
+            agent_id='emp-0001',
+            agent_name='qa-agent',
+            launcher='codex',
+            heartbeat_message='hello [HB_ID:20260228-120004]',
+            timeout_seconds=30,
+            is_codex=True,
+        )
+        self.assertEqual(result['ack_status'], 'ack')
+        self.assertEqual(result['failure_type'], '')
+        self.assertEqual(mock_send.call_count, 2)
+        mock_recover.assert_called_once()
+
     @patch('main.cmd_start', return_value=0)
     @patch('main.stop_session', return_value=True)
     @patch('main.time.sleep', return_value=None)
@@ -297,6 +354,7 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         mock_notify.assert_not_called()
 
     @patch('main._notify_heartbeat_failure', return_value=True)
+    @patch('main.stabilize_codex_session', return_value=True)
     @patch('main._restart_heartbeat_session_fresh', return_value=True)
     @patch('main._append_heartbeat_audit_event')
     @patch('main.time.sleep', return_value=None)
@@ -319,6 +377,7 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         _mock_sleep,
         mock_audit,
         mock_restart,
+        _mock_stabilize,
         mock_notify,
     ):
         mock_resolve_agent.return_value = {
@@ -368,6 +427,145 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         self.assertEqual(mock_audit.call_count, 2)
         mock_restart.assert_called_once()
         mock_notify.assert_called_once()
+
+    @patch('main.stabilize_codex_session', return_value=True)
+    @patch('main._restart_heartbeat_session_fresh', return_value=True)
+    @patch('main._append_heartbeat_audit_event')
+    @patch('main.time.sleep', return_value=None)
+    @patch('main._run_heartbeat_attempt')
+    @patch('main._maybe_rollover_heartbeat_session', return_value=None)
+    @patch('main._detect_agent_context_left_percent', return_value=12)
+    @patch('main.resolve_launcher_command', return_value='codex')
+    @patch('main.session_exists', return_value=True)
+    @patch('main.resolve_agent')
+    @patch('main.check_tmux', return_value=True)
+    def test_cmd_heartbeat_run_interrupted_skips_same_session_retry_and_uses_fresh_fallback(
+        self,
+        _mock_tmux,
+        mock_resolve_agent,
+        _mock_session,
+        _mock_launcher,
+        _mock_context,
+        _mock_rollover,
+        mock_run_attempt,
+        _mock_sleep,
+        mock_audit,
+        mock_restart,
+        mock_stabilize,
+    ):
+        mock_resolve_agent.return_value = {
+            'name': 'qa-agent',
+            'file_id': 'EMP_0001',
+            'enabled': True,
+            'heartbeat': {
+                'enabled': True,
+                'recovery': {
+                    'max_retries': 1,
+                    'retry_backoff_seconds': 0,
+                    'fallback_mode': 'fresh',
+                    'notify_on_failure': False,
+                },
+            },
+            'launcher': 'codex',
+        }
+        mock_run_attempt.side_effect = [
+            {
+                'send_status': 'ok',
+                'ack_status': 'no_ack',
+                'failure_type': 'interrupted',
+                'reason_code': 'HB_INTERRUPTED',
+                'duration_ms': 200,
+            },
+            {
+                'send_status': 'ok',
+                'ack_status': 'ack',
+                'failure_type': '',
+                'reason_code': 'HB_ACK_OK',
+                'duration_ms': 150,
+            },
+        ]
+
+        args = type('Args', (), {
+            'agent': 'EMP_0001',
+            'timeout': None,
+            'retry': None,
+            'backoff_seconds': 0,
+            'fallback_mode': 'fresh',
+            'notify_on_failure': False,
+            'notifier_channel': None,
+        })()
+
+        result = main.cmd_heartbeat_run(args)
+        self.assertEqual(result, 0)
+        self.assertEqual(mock_run_attempt.call_count, 2)
+        self.assertEqual(mock_audit.call_count, 2)
+        mock_restart.assert_called_once()
+        mock_stabilize.assert_called_once()
+
+    @patch('main.stabilize_codex_session', return_value=False)
+    @patch('main._restart_heartbeat_session_fresh', return_value=True)
+    @patch('main._append_heartbeat_audit_event')
+    @patch('main.time.sleep', return_value=None)
+    @patch('main._run_heartbeat_attempt')
+    @patch('main._maybe_rollover_heartbeat_session', return_value=None)
+    @patch('main._detect_agent_context_left_percent', return_value=12)
+    @patch('main.resolve_launcher_command', return_value='codex')
+    @patch('main.session_exists', return_value=True)
+    @patch('main.resolve_agent')
+    @patch('main.check_tmux', return_value=True)
+    def test_cmd_heartbeat_run_fallback_stabilize_failure_skips_second_send(
+        self,
+        _mock_tmux,
+        mock_resolve_agent,
+        _mock_session,
+        _mock_launcher,
+        _mock_context,
+        _mock_rollover,
+        mock_run_attempt,
+        _mock_sleep,
+        mock_audit,
+        mock_restart,
+        mock_stabilize,
+    ):
+        mock_resolve_agent.return_value = {
+            'name': 'qa-agent',
+            'file_id': 'EMP_0001',
+            'enabled': True,
+            'heartbeat': {
+                'enabled': True,
+                'recovery': {
+                    'max_retries': 1,
+                    'retry_backoff_seconds': 0,
+                    'fallback_mode': 'fresh',
+                    'notify_on_failure': False,
+                },
+            },
+            'launcher': 'codex',
+        }
+        mock_run_attempt.return_value = {
+            'send_status': 'ok',
+            'ack_status': 'no_ack',
+            'failure_type': 'interrupted',
+            'reason_code': 'HB_INTERRUPTED',
+            'duration_ms': 200,
+        }
+
+        args = type('Args', (), {
+            'agent': 'EMP_0001',
+            'timeout': None,
+            'retry': None,
+            'backoff_seconds': 0,
+            'fallback_mode': 'fresh',
+            'notify_on_failure': False,
+            'notifier_channel': None,
+        })()
+
+        result = main.cmd_heartbeat_run(args)
+        self.assertEqual(result, 1)
+        self.assertEqual(mock_run_attempt.call_count, 1)
+        mock_restart.assert_called_once()
+        mock_stabilize.assert_called_once()
+        self.assertEqual(mock_audit.call_count, 2)
 
 
     @patch('main._notify_heartbeat_failure', return_value=True)
