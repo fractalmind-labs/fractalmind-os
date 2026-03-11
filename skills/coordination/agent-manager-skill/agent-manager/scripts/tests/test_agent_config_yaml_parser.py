@@ -265,8 +265,31 @@ launcher: claude
         self.assertEqual(cfg.get("skills"), [])
         self.assertEqual(cfg.get("schedules"), [])
         self.assertEqual(cfg.get("mcps"), {})
+        self.assertEqual(cfg.get("launcher_config"), {})
         self.assertTrue(cfg.get("enabled"))
         self.assertIsNone(cfg.get("heartbeat"))
+
+    def test_parse_agent_file_supports_launcher_config(self):
+        agent_file = self._write_agent_file(
+            "agents/EMP_0004/AGENTS.md",
+            """
+name: shade
+description: shade
+working_directory: ${REPO_ROOT}
+launcher: codex
+launcher_config:
+  model_instructions_file: ${REPO_ROOT}/prompt/shade.md
+  feature_flag: true
+""",
+        )
+        cfg = agent_config.parse_agent_file(agent_file)
+        self.assertEqual(
+            cfg.get("launcher_config"),
+            {
+                "model_instructions_file": "${REPO_ROOT}/prompt/shade.md",
+                "feature_flag": True,
+            },
+        )
 
 
 if __name__ == "__main__":

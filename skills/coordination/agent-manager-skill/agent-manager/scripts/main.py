@@ -17,7 +17,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 # Add scripts directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
@@ -58,6 +58,9 @@ from providers import (
     get_system_prompt_mode,
     get_system_prompt_flag,
     get_system_prompt_key,
+    get_system_prompt_value_mode,
+    get_launcher_config_mode,
+    get_launcher_config_flag,
     get_agents_md_mode,
     get_mcp_config_mode,
     get_mcp_config_flag,
@@ -519,6 +522,64 @@ def write_system_prompt_file(repo_root: Path, agent_id: str, system_prompt: str)
     prompt_file = state_dir / f"{agent_id}.txt"
     prompt_file.write_text(system_prompt + "\n", encoding='utf-8')
     return prompt_file
+
+
+def write_start_command_script(repo_root: Path, agent_id: str, command: str) -> Path:
+    state_dir = repo_root / '.claude' / 'state' / 'agent-manager' / 'start-commands'
+    state_dir.mkdir(parents=True, exist_ok=True)
+    script_path = state_dir / f"{agent_id}.sh"
+    script_path.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -e\n"
+        f"{command}\n",
+        encoding='utf-8',
+    )
+    script_path.chmod(0o755)
+    return script_path
+
+
+def _to_toml_literal(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return str(value)
+    if isinstance(value, str):
+        return json.dumps(value)
+    if isinstance(value, list):
+        return "[" + ", ".join(_to_toml_literal(item) for item in value) + "]"
+    if isinstance(value, dict):
+        parts = []
+        for key, item in value.items():
+            parts.append(f"{json.dumps(str(key))} = {_to_toml_literal(item)}")
+        return "{ " + ", ".join(parts) + " }"
+    raise ValueError(f"Unsupported CLI config value type: {type(value).__name__}")
+
+
+def _normalize_cli_config_value(*, key: str, value: Any, working_dir: str) -> Any:
+    if isinstance(value, str):
+        expanded = expand_env_vars(value)
+        if key.endswith(('_file', '_path')) and expanded and not Path(expanded).is_absolute():
+            return str((Path(working_dir) / expanded).resolve())
+        return expanded
+    if isinstance(value, list):
+        return [_normalize_cli_config_value(key=key, value=item, working_dir=working_dir) for item in value]
+    if isinstance(value, dict):
+        return {
+            str(subkey): _normalize_cli_config_value(key=str(subkey), value=item, working_dir=working_dir)
+            for subkey, item in value.items()
+        }
+    return value
+
+
+def build_launcher_config_overrides(config: dict, *, working_dir: str) -> dict[str, Any]:
+    launcher_config = config.get('launcher_config') or {}
+    if launcher_config and not isinstance(launcher_config, dict):
+        raise ValueError("Invalid 'launcher_config' in agent config (expected a mapping)")
+
+    return {
+        str(key): _normalize_cli_config_value(key=str(key), value=value, working_dir=working_dir)
+        for key, value in dict(launcher_config).items()
+    }
 
 
 def write_scheduled_task_file(repo_root: Path, agent_id: str, job: str, task: str) -> Path:

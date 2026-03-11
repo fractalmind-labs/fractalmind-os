@@ -83,6 +83,7 @@ You are the Dev Agent...
 - `working_directory`: Default working directory (supports `${REPO_ROOT}`)
 - `launcher`: Full path OR provider name
 - `launcher_args`: Arguments for launcher
+- `launcher_config`: Optional launcher/provider-specific startup config
 - `skills`: Array of skill names from `.agent/skills/` (optional, injected at start)
 - `schedules`: Array of scheduled jobs (optional, see Scheduling section)
 - `tmux`: Optional tmux layout metadata (layout + target pane)
@@ -137,7 +138,11 @@ launcher_args: []
 launcher: codex
 launcher_args:
   - --model=gpt-5.2
+launcher_config:
+  model_instructions_file: ${REPO_ROOT}/agents/EMP_0001/prompt/shade-main-model.md
 ```
+
+`launcher_config` is the generic escape hatch for launcher/provider-specific startup config. Each CLI provider adapts this flat mapping into its own startup flags (for Codex, each entry becomes `-c key=value`).
 
 Note: For scheduled jobs, `agent-manager` will best-effort auto-dismiss Codex's first-run/upgrade model selection prompt to keep cron runs non-interactive.
 

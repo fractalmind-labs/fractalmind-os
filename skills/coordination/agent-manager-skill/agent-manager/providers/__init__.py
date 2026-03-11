@@ -18,10 +18,16 @@ PROVIDERS: Dict[str, Dict] = {
         'description': 'OpenAI Codex CLI',
         'system_prompt': {
             # Codex supports overriding config keys via `-c/--config key=value`.
-            # Use a file-backed system prompt for reliability (no multi-line shell quoting).
+            # Agent-manager overlays should be injected as developer instructions.
             'mode': 'cli_config_kv',
             'flag': '-c',
-            'key': 'system_prompt_file',
+            'key': 'developer_instructions',
+            'value_mode': 'inline_text',
+        },
+        'launcher_config': {
+            # Flat `launcher_config` entries are translated by the provider.
+            'mode': 'cli_config_kv',
+            'flag': '-c',
         },
         'agents_md': {
             'mode': 'cwd',
@@ -462,7 +468,7 @@ def get_system_prompt_mode(launcher: str) -> str:
 
     Modes:
     - cli_append: pass system prompt via CLI flag (true system prompt)
-    - cli_config_kv: pass config override via CLI key=value (e.g. `-c system_prompt_file="..."`)
+    - cli_config_kv: pass config override via CLI key=value (e.g. `-c developer_instructions="..."`)
     - tmux_paste: paste prompt into the session after startup (fallback)
     """
     return get_system_prompt_config(launcher).get('mode', 'tmux_paste')
@@ -478,6 +484,16 @@ def get_system_prompt_key(launcher: str) -> Optional[str]:
     return get_system_prompt_config(launcher).get('key')
 
 
+def get_system_prompt_value_mode(launcher: str) -> str:
+    """Get how the system prompt payload should be encoded for CLI config injection.
+
+    Modes:
+    - file_path: write prompt to disk and pass a file path
+    - inline_text: pass prompt contents as an inline TOML string
+    """
+    return get_system_prompt_config(launcher).get('value_mode', 'file_path')
+
+
 def get_agents_md_mode(launcher: str) -> str:
     """Get AGENTS.md discovery mode for a given launcher/provider.
 
@@ -487,6 +503,27 @@ def get_agents_md_mode(launcher: str) -> str:
     """
     provider = get_provider(launcher)
     return (provider.get('agents_md') or {}).get('mode', 'disabled')
+
+
+def get_launcher_config_config(launcher: str) -> Dict:
+    """Get provider-specific launcher_config injection settings."""
+    provider = get_provider(launcher)
+    return provider.get('launcher_config', {'mode': 'unsupported'})
+
+
+def get_launcher_config_mode(launcher: str) -> str:
+    """Get how flat `launcher_config` entries should be injected for a provider.
+
+    Modes:
+    - cli_config_kv: append one key=value config override per entry
+    - unsupported: provider does not support launcher_config injection
+    """
+    return get_launcher_config_config(launcher).get('mode', 'unsupported')
+
+
+def get_launcher_config_flag(launcher: str) -> Optional[str]:
+    """Get the CLI flag used to inject launcher_config entries, if supported."""
+    return get_launcher_config_config(launcher).get('flag')
 
 
 def get_mcp_config_mode(launcher: str) -> str:

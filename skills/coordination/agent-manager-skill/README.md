@@ -198,6 +198,8 @@ python3 agent-manager/scripts/tests/run_integration_suite.py \
 
 When using `launcher: codex` with cron schedules, `agent-manager` will best-effort auto-dismiss Codex's first-run/upgrade model selection prompt to keep scheduled jobs non-interactive.
 
+For provider-specific startup overrides, use a flat `launcher_config` mapping in the agent file. Providers adapt the same field differently; for Codex, each entry becomes a `-c key=value` override.
+
 ## Features
 
 - 🚀 Simple agent lifecycle management (start/stop/monitor)

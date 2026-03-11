@@ -498,6 +498,9 @@ def parse_agent_file(agent_path: Path) -> Dict[str, Any]:
     # Optional MCP server configuration (provider-dependent).
     # Expected shape: mapping of server_name -> server_config (dict)
     config.setdefault('mcps', {})
+    # Optional provider/launcher-specific startup configuration.
+    # Current shape: {'key': value}
+    config.setdefault('launcher_config', {})
     config.setdefault('enabled', True)  # Agents are enabled by default
     # Heartbeat configuration (optional dict or None)
     config.setdefault('heartbeat', None)
