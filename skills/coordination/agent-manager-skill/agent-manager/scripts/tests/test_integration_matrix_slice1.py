@@ -157,8 +157,8 @@ class IntegrationMatrixSlice1Tests(unittest.TestCase):
                 },
                 'attempts': [
                     {'send_status': 'ok', 'ack_status': 'timeout', 'failure_type': 'timeout', 'duration_ms': 30},
-                    {'send_status': 'fail', 'ack_status': 'no_ack', 'failure_type': 'send_fail', 'duration_ms': 40},
                 ],
+                'stabilize_ok': False,
                 'expected_rc': 1,
                 'expect_restart_calls': 1,
                 'expect_notify_calls': 1,
@@ -177,6 +177,9 @@ class IntegrationMatrixSlice1Tests(unittest.TestCase):
                     )
                     restart_mock = stack.enter_context(
                         patch('main._restart_heartbeat_session_fresh', return_value=True)
+                    )
+                    stack.enter_context(
+                        patch('main.stabilize_codex_session', return_value=case.get('stabilize_ok', True))
                     )
                     notify_mock = stack.enter_context(
                         patch('main._notify_heartbeat_failure', return_value=True)
