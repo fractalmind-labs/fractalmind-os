@@ -90,6 +90,7 @@ class CliIntegrationFlowTests(unittest.TestCase):
         stack.enter_context(patch('main.get_system_prompt_mode', return_value=''))
         stack.enter_context(patch('main.get_system_prompt_flag', return_value=''))
         stack.enter_context(patch('main.get_system_prompt_key', return_value=''))
+        stack.enter_context(patch('main.get_system_prompt_value_mode', return_value='file_path'))
         stack.enter_context(patch('main.get_agents_md_mode', return_value=''))
         stack.enter_context(patch('main.get_mcp_config_mode', return_value=''))
         stack.enter_context(patch('main.get_mcp_config_flag', return_value=''))
@@ -183,6 +184,65 @@ class CliIntegrationFlowTests(unittest.TestCase):
             )
             self.assertIn('Restored existing session', output, msg='[stage:start-restore] expected restore confirmation')
             self.assertEqual(len(runtime.start_commands), 0, msg='[stage:start-restore] should not create a new tmux session')
+
+    def test_codex_start_uses_inline_developer_instructions_even_with_agents_md(self):
+        runtime = _FakeRuntime()
+        (self.work_dir / 'AGENTS.md').write_text("workspace instructions\n", encoding='utf-8')
+        long_overlay = "manager overlay\n" + ("x" * 7000)
+
+        with ExitStack() as stack:
+            self._patch_common(stack, runtime)
+            stack.enter_context(patch('main.build_system_prompt', return_value=long_overlay))
+            stack.enter_context(patch('main.get_system_prompt_mode', return_value='cli_config_kv'))
+            stack.enter_context(patch('main.get_system_prompt_flag', return_value='-c'))
+            stack.enter_context(patch('main.get_system_prompt_key', return_value='developer_instructions'))
+            stack.enter_context(patch('main.get_system_prompt_value_mode', return_value='inline_text'))
+            stack.enter_context(patch('main.get_agents_md_mode', return_value='cwd'))
+
+            output = self._run_stage_ok(
+                'start-inline-dev',
+                main.cmd_start,
+                argparse.Namespace(agent='dev', working_dir=None, restore=True, tmux_layout='sessions'),
+            )
+
+            start_command = runtime.start_commands[0]
+            script_path = Path(start_command.split(':', 1)[1].strip().strip("'"))
+            self.assertTrue(script_path.exists(), msg='[stage:start-inline-dev] expected wrapped start command script')
+            script_text = script_path.read_text(encoding='utf-8')
+            self.assertIn('developer_instructions=', script_text, msg='[stage:start-inline-dev] expected developer_instructions override in wrapped command')
+            self.assertNotIn('skipping system prompt injection', output, msg='[stage:start-inline-dev] should not skip injection when AGENTS.md exists')
+
+    def test_codex_start_appends_model_instructions_file_override(self):
+        runtime = _FakeRuntime()
+        override_file = self.temp_root / 'manager-base.md'
+        override_file.write_text('replace builtins\n', encoding='utf-8')
+        self.agent_config['launcher_config'] = {
+            'model_instructions_file': '../manager-base.md',
+        }
+
+        with ExitStack() as stack:
+            self._patch_common(stack, runtime)
+            stack.enter_context(patch('main.build_system_prompt', return_value='main role prompt'))
+            stack.enter_context(patch('main.get_system_prompt_mode', return_value='cli_config_kv'))
+            stack.enter_context(patch('main.get_system_prompt_flag', return_value='-c'))
+            stack.enter_context(patch('main.get_system_prompt_key', return_value='developer_instructions'))
+            stack.enter_context(patch('main.get_system_prompt_value_mode', return_value='inline_text'))
+
+            self._run_stage_ok(
+                'start-model-instructions-file',
+                main.cmd_start,
+                argparse.Namespace(agent='dev', working_dir=None, restore=True, tmux_layout='sessions'),
+            )
+
+            start_command = runtime.start_commands[0]
+            self.assertIn('model_instructions_file=', start_command, msg='[stage:start-model-instructions-file] expected model_instructions_file override in command')
+            self.assertIn(str(override_file), start_command, msg='[stage:start-model-instructions-file] expected absolute override path in command')
+            self.assertIn('developer_instructions=', start_command, msg='[stage:start-model-instructions-file] expected developer_instructions override in command')
+            self.assertLess(
+                start_command.index('model_instructions_file='),
+                start_command.index('developer_instructions='),
+                msg='[stage:start-model-instructions-file] expected model_instructions_file override before developer_instructions',
+            )
 
     def test_heartbeat_auto_session_mode_rollover_path(self):
         runtime = _FakeRuntime()

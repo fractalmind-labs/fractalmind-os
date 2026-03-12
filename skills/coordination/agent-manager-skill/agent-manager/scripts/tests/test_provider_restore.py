@@ -1,7 +1,10 @@
 from __future__ import annotations
+import os
+import tempfile
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 SCRIPTS_DIR = Path(__file__).resolve().parents[1]
@@ -32,7 +35,60 @@ class ProviderRestoreTests(unittest.TestCase):
         self.assertEqual(args[1], "019c3eb0-bca0-7ab0-8b93-3b54b5f582dc")
         self.assertIn("--model=gpt-5.3-codex", args)
 
+    def test_find_new_codex_session_id_filters_by_owner_marker_and_cwd(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sessions_root = Path(tmpdir)
+            target_cwd = "/home/elliot245/work-assistant"
+            agent_id = "main"
+            good_id = "019c3eb0-bca0-7ab0-8b93-3b54b5f582dc"
+            bad_id = "019c3eb0-bca0-7ab0-8b93-3b54b5f582dd"
+            marker = main._codex_session_owner_marker(agent_id)
+
+            good_file = sessions_root / f"rollout-good-{good_id}.jsonl"
+            good_file.write_text(
+                '{"type":"session_meta","payload":{"id":"%s","cwd":"%s","base_instructions":{"text":"%s\\nmain prompt"}}}\n'
+                % (good_id, target_cwd, marker),
+                encoding="utf-8",
+            )
+
+            bad_file = sessions_root / f"rollout-bad-{bad_id}.jsonl"
+            bad_file.write_text(
+                '{"type":"session_meta","payload":{"id":"%s","cwd":"%s","base_instructions":{"text":"other session"}}}\n'
+                % (bad_id, target_cwd),
+                encoding="utf-8",
+            )
+            os.utime(good_file, (1, 1))
+            os.utime(bad_file, (2, 2))
+
+            with patch("main._codex_sessions_dir", return_value=sessions_root):
+                session_id = main._find_new_codex_session_id(
+                    target_cwd,
+                    before_jsonl_paths=set(),
+                    agent_id=agent_id,
+                )
+
+            self.assertEqual(session_id, good_id)
+
+    def test_codex_session_exists_rejects_wrong_owner(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sessions_root = Path(tmpdir)
+            session_id = "019c3eb0-bca0-7ab0-8b93-3b54b5f582dc"
+            session_file = sessions_root / f"rollout-{session_id}.jsonl"
+            session_file.write_text(
+                '{"type":"session_meta","payload":{"id":"%s","cwd":"/home/elliot245/work-assistant","base_instructions":{"text":"other owner"}}}\n'
+                % session_id,
+                encoding="utf-8",
+            )
+
+            with patch("main._codex_sessions_dir", return_value=sessions_root):
+                ok = main._codex_session_exists(
+                    "/home/elliot245/work-assistant",
+                    session_id,
+                    agent_id="main",
+                )
+
+            self.assertFalse(ok)
+
 
 if __name__ == "__main__":
     unittest.main()
-

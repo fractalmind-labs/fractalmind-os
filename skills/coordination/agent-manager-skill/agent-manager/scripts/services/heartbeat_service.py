@@ -256,11 +256,16 @@ def run_heartbeat_attempt(
         while (deps.time.time() - start_time) < activation_timeout:
             runtime = deps.get_agent_runtime_state(agent_id, launcher=launcher)
             last_state = str(runtime.get('state', 'unknown'))
+            last_reason = str(runtime.get('reason', 'unknown'))
             current_output = deps.capture_output(agent_id, lines=50) or ""
 
-            # Codex suggestion tip interrupted the turn — dismiss and re-send.
+            # Only a real "Conversation interrupted" turn needs a fresh session.
+            # Plain suggestion tips are recoverable with Escape + resend.
             if last_state == 'interrupted' and is_codex:
-                print("⚠️  Agent interrupted by suggestion tip — recovering")
+                if 'Conversation interrupted' in current_output or last_reason.startswith('interrupted:'):
+                    print("⚠️  Agent entered interrupted state — require fresh recovery")
+                    break
+                print("⚠️  Agent suggestion tip interrupted the prompt — dismissing and retrying send")
                 if hasattr(deps, 'recover_codex_interrupted'):
                     deps.recover_codex_interrupted(agent_id)
                 deps.time.sleep(1)
@@ -342,6 +347,10 @@ def run_heartbeat_attempt(
         ack_status = 'ack'
         failure_type = ''
         reason_code = 'HB_ACK_OK'
+    elif waited_for_ack and last_state == 'interrupted':
+        ack_status = 'no_ack'
+        failure_type = 'interrupted'
+        reason_code = failure_reason_code(failure_type=failure_type, send_status='ok', ack_status=ack_status)
     elif waited_for_ack and not activated:
         ack_status = 'no_ack'
         failure_type = 'no_activation'

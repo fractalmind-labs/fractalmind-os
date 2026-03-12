@@ -17,7 +17,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 # Add scripts directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
@@ -50,6 +50,7 @@ from tmux_helper import (
     wait_for_agent_ready,
     get_agent_runtime_state,
     recover_codex_interrupted,
+    stabilize_codex_session,
 )
 
 # Import provider system (lives at .agent/skills/agent-manager/providers)
@@ -58,6 +59,9 @@ from providers import (
     get_system_prompt_mode,
     get_system_prompt_flag,
     get_system_prompt_key,
+    get_system_prompt_value_mode,
+    get_launcher_config_mode,
+    get_launcher_config_flag,
     get_agents_md_mode,
     get_mcp_config_mode,
     get_mcp_config_flag,
@@ -130,6 +134,24 @@ def _save_provider_session_id(repo_root: Path, provider: str, agent_id: str, *, 
         'updated_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
     }
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding='utf-8')
+
+
+def _codex_session_owner_marker(agent_id: str) -> str:
+    return f"AGENT_MANAGER_OWNER:{str(agent_id or '').strip().lower()}"
+
+
+def _inject_codex_session_owner_marker(system_prompt: str, agent_id: str) -> str:
+    marker = _codex_session_owner_marker(agent_id)
+    text = str(system_prompt or '')
+    if marker in text:
+        return text
+    if text:
+        return f"{marker}\n\n{text}"
+    return marker
+
+
+def _should_enforce_codex_session_owner(agent_id: str) -> bool:
+    return str(agent_id or '').strip().lower() == 'main'
 
 
 def _droid_sessions_dir_for_cwd(cwd: str) -> Path:
@@ -287,19 +309,68 @@ def _codex_sessions_dir() -> Path:
     return Path.home() / '.codex' / 'sessions'
 
 
-def _codex_session_exists(cwd: str, session_id: str) -> bool:
+def _read_codex_session_meta(jsonl_path: Path) -> dict[str, str]:
+    try:
+        with jsonl_path.open('r', encoding='utf-8') as f:
+            for _ in range(20):
+                line = f.readline()
+                if not line:
+                    break
+                line = line.strip()
+                if not line:
+                    continue
+                payload = json.loads(line)
+                if payload.get('type') != 'session_meta':
+                    continue
+                meta = payload.get('payload') or {}
+                base_instructions = meta.get('base_instructions') or {}
+                return {
+                    'session_id': str(meta.get('id') or '').strip(),
+                    'cwd': _normalize_path(str(meta.get('cwd') or '').strip()) if meta.get('cwd') else '',
+                    'base_instructions': str(base_instructions.get('text') or ''),
+                }
+    except Exception:
+        pass
+    return {}
+
+
+def _codex_session_file_for_id(session_id: str) -> Optional[Path]:
     if not _looks_like_uuid(session_id):
-        return False
+        return None
     sessions_dir = _codex_sessions_dir()
     if not sessions_dir.exists() or not sessions_dir.is_dir():
-        return False
+        return None
     try:
         for p in sessions_dir.rglob('*.jsonl'):
             if session_id in p.name:
-                return True
-        return False
+                return p
     except Exception:
+        return None
+    return None
+
+
+def _codex_session_matches_owner(jsonl_path: Path, *, cwd: str, agent_id: str) -> bool:
+    if not _should_enforce_codex_session_owner(agent_id):
+        return True
+    meta = _read_codex_session_meta(jsonl_path)
+    if not meta:
         return False
+    expected_cwd = _normalize_path(cwd)
+    if meta.get('cwd') != expected_cwd:
+        return False
+    marker = _codex_session_owner_marker(agent_id)
+    return marker in str(meta.get('base_instructions') or '')
+
+
+def _codex_session_exists(cwd: str, session_id: str, *, agent_id: str = '') -> bool:
+    if not _looks_like_uuid(session_id):
+        return False
+    session_file = _codex_session_file_for_id(session_id)
+    if session_file is None:
+        return False
+    if agent_id and _should_enforce_codex_session_owner(agent_id):
+        return _codex_session_matches_owner(session_file, cwd=cwd, agent_id=agent_id)
+    return True
 
 
 def _snapshot_codex_sessions(cwd: str) -> set[str]:
@@ -310,26 +381,12 @@ def _snapshot_codex_sessions(cwd: str) -> set[str]:
 
 
 def _extract_codex_session_id_from_jsonl(jsonl_path: Path) -> str:
-    try:
-        with jsonl_path.open('r', encoding='utf-8') as f:
-            for _ in range(10):
-                line = f.readline()
-                if not line:
-                    break
-                line = line.strip()
-                if not line:
-                    continue
-                payload = json.loads(line)
-                p = payload.get('payload') or {}
-                session_id = str(p.get('id') or '').strip()
-                if _looks_like_uuid(session_id):
-                    return session_id
-        return ""
-    except Exception:
-        return ""
+    meta = _read_codex_session_meta(jsonl_path)
+    session_id = str(meta.get('session_id') or '').strip()
+    return session_id if _looks_like_uuid(session_id) else ""
 
 
-def _find_new_codex_session_id(cwd: str, *, before_jsonl_paths: set[str]) -> str:
+def _find_new_codex_session_id(cwd: str, *, before_jsonl_paths: set[str], agent_id: str) -> str:
     sessions_dir = _codex_sessions_dir()
     if not sessions_dir.exists() or not sessions_dir.is_dir():
         return ""
@@ -341,6 +398,8 @@ def _find_new_codex_session_id(cwd: str, *, before_jsonl_paths: set[str]) -> str
         return ""
 
     for candidate in sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True):
+        if not _codex_session_matches_owner(candidate, cwd=cwd, agent_id=agent_id):
+            continue
         session_id = _extract_codex_session_id_from_jsonl(candidate)
         if session_id:
             return session_id
@@ -348,10 +407,16 @@ def _find_new_codex_session_id(cwd: str, *, before_jsonl_paths: set[str]) -> str
     return ""
 
 
-def _find_new_codex_session_id_with_retry(cwd: str, *, before_jsonl_paths: set[str], timeout_s: float = 2.0) -> str:
+def _find_new_codex_session_id_with_retry(
+    cwd: str,
+    *,
+    before_jsonl_paths: set[str],
+    agent_id: str,
+    timeout_s: float = 2.0,
+) -> str:
     deadline = time.time() + max(0.0, float(timeout_s))
     while True:
-        session_id = _find_new_codex_session_id(cwd, before_jsonl_paths=before_jsonl_paths)
+        session_id = _find_new_codex_session_id(cwd, before_jsonl_paths=before_jsonl_paths, agent_id=agent_id)
         if session_id:
             return session_id
         if time.time() >= deadline:
@@ -456,13 +521,13 @@ def _find_new_opencode_session_id_with_retry(cwd: str, *, before_json_paths: set
         time.sleep(0.2)
 
 
-def _provider_session_exists(provider_key: str, cwd: str, session_id: str) -> bool:
+def _provider_session_exists(provider_key: str, cwd: str, session_id: str, *, agent_id: str = '') -> bool:
     if provider_key == 'droid':
         return _droid_session_exists(cwd, session_id)
     if provider_key in {'claude', 'claude-code'}:
         return _claude_session_exists(cwd, session_id)
     if provider_key == 'codex':
-        return _codex_session_exists(cwd, session_id)
+        return _codex_session_exists(cwd, session_id, agent_id=agent_id)
     if provider_key == 'opencode':
         return _opencode_session_exists(cwd, session_id)
     return False
@@ -480,13 +545,25 @@ def _snapshot_provider_sessions(provider_key: str, cwd: str) -> set[str]:
     return set()
 
 
-def _find_new_provider_session_id_with_retry(provider_key: str, cwd: str, *, before_paths: set[str], timeout_s: float = 2.0) -> str:
+def _find_new_provider_session_id_with_retry(
+    provider_key: str,
+    cwd: str,
+    *,
+    before_paths: set[str],
+    agent_id: str = '',
+    timeout_s: float = 2.0,
+) -> str:
     if provider_key == 'droid':
         return _find_new_droid_session_id_with_retry(cwd, before_jsonl_paths=before_paths, timeout_s=timeout_s)
     if provider_key in {'claude', 'claude-code'}:
         return _find_new_claude_session_id_with_retry(cwd, before_jsonl_paths=before_paths, timeout_s=timeout_s)
     if provider_key == 'codex':
-        return _find_new_codex_session_id_with_retry(cwd, before_jsonl_paths=before_paths, timeout_s=timeout_s)
+        return _find_new_codex_session_id_with_retry(
+            cwd,
+            before_jsonl_paths=before_paths,
+            agent_id=agent_id,
+            timeout_s=timeout_s,
+        )
     if provider_key == 'opencode':
         return _find_new_opencode_session_id_with_retry(cwd, before_json_paths=before_paths, timeout_s=timeout_s)
     return ""
@@ -519,6 +596,64 @@ def write_system_prompt_file(repo_root: Path, agent_id: str, system_prompt: str)
     prompt_file = state_dir / f"{agent_id}.txt"
     prompt_file.write_text(system_prompt + "\n", encoding='utf-8')
     return prompt_file
+
+
+def write_start_command_script(repo_root: Path, agent_id: str, command: str) -> Path:
+    state_dir = repo_root / '.claude' / 'state' / 'agent-manager' / 'start-commands'
+    state_dir.mkdir(parents=True, exist_ok=True)
+    script_path = state_dir / f"{agent_id}.sh"
+    script_path.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -e\n"
+        f"{command}\n",
+        encoding='utf-8',
+    )
+    script_path.chmod(0o755)
+    return script_path
+
+
+def _to_toml_literal(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return str(value)
+    if isinstance(value, str):
+        return json.dumps(value)
+    if isinstance(value, list):
+        return "[" + ", ".join(_to_toml_literal(item) for item in value) + "]"
+    if isinstance(value, dict):
+        parts = []
+        for key, item in value.items():
+            parts.append(f"{json.dumps(str(key))} = {_to_toml_literal(item)}")
+        return "{ " + ", ".join(parts) + " }"
+    raise ValueError(f"Unsupported CLI config value type: {type(value).__name__}")
+
+
+def _normalize_cli_config_value(*, key: str, value: Any, working_dir: str) -> Any:
+    if isinstance(value, str):
+        expanded = expand_env_vars(value)
+        if key.endswith(('_file', '_path')) and expanded and not Path(expanded).is_absolute():
+            return str((Path(working_dir) / expanded).resolve())
+        return expanded
+    if isinstance(value, list):
+        return [_normalize_cli_config_value(key=key, value=item, working_dir=working_dir) for item in value]
+    if isinstance(value, dict):
+        return {
+            str(subkey): _normalize_cli_config_value(key=str(subkey), value=item, working_dir=working_dir)
+            for subkey, item in value.items()
+        }
+    return value
+
+
+def build_launcher_config_overrides(config: dict, *, working_dir: str) -> dict[str, Any]:
+    launcher_config = config.get('launcher_config') or {}
+    if launcher_config and not isinstance(launcher_config, dict):
+        raise ValueError("Invalid 'launcher_config' in agent config (expected a mapping)")
+
+    return {
+        str(key): _normalize_cli_config_value(key=str(key), value=value, working_dir=working_dir)
+        for key, value in dict(launcher_config).items()
+    }
 
 
 def write_scheduled_task_file(repo_root: Path, agent_id: str, job: str, task: str) -> Path:
@@ -1607,34 +1742,63 @@ def cmd_heartbeat_run(args):
         recovery_action = 'fallback_fresh'
         print(f"⚠️  Heartbeat unresolved (failure={failure_type or 'unknown'}), applying fallback: fresh")
         if _restart_heartbeat_session_fresh(agent_file_id, agent_name, agent_id):
-            fallback_result = _run_heartbeat_attempt(
-                agent_id=agent_id,
-                agent_name=agent_name,
-                launcher=launcher,
-                heartbeat_message=heartbeat_message,
-                timeout_seconds=timeout_seconds,
-                is_codex=is_codex,
-            )
-            send_status = str(fallback_result.get('send_status', 'fail'))
-            ack_status = str(fallback_result.get('ack_status', 'not_checked'))
-            failure_type = str(fallback_result.get('failure_type', ''))
-            reason_code = str(fallback_result.get('reason_code', ''))
-            duration_ms = int(fallback_result.get('duration_ms', 0) or 0)
-            _append_heartbeat_audit_event(
-                repo_root,
-                agent_id=agent_id,
-                heartbeat_id=heartbeat_id,
-                send_status=send_status,
-                ack_status=ack_status,
-                duration_ms=duration_ms,
-                context_left=context_left_percent,
-                failure_type=failure_type,
-                session_mode='fresh',
-                phase='fallback',
-                attempt=max_retries + 2,
-                recovery_action=recovery_action,
-                reason_code=reason_code,
-            )
+            fallback_result = None
+            if is_codex and not stabilize_codex_session(agent_id, timeout=min(30, int(timeout_seconds or 30))):
+                send_status = 'fail'
+                ack_status = 'no_ack'
+                failure_type = 'interrupted'
+                reason_code = service_failure_reason_code(
+                    failure_type=failure_type,
+                    ack_status=ack_status,
+                    send_status=send_status,
+                )
+                duration_ms = 0
+                _append_heartbeat_audit_event(
+                    repo_root,
+                    agent_id=agent_id,
+                    heartbeat_id=heartbeat_id,
+                    send_status=send_status,
+                    ack_status=ack_status,
+                    duration_ms=duration_ms,
+                    context_left=context_left_percent,
+                    failure_type=failure_type,
+                    session_mode='fresh',
+                    phase='fallback',
+                    attempt=max_retries + 2,
+                    recovery_action='fallback_fresh_stabilize_failed',
+                    reason_code=reason_code,
+                )
+                print("⚠️  Fresh Codex session did not stabilize after restart")
+            else:
+                fallback_result = _run_heartbeat_attempt(
+                    agent_id=agent_id,
+                    agent_name=agent_name,
+                    launcher=launcher,
+                    heartbeat_message=heartbeat_message,
+                    timeout_seconds=timeout_seconds,
+                    is_codex=is_codex,
+                )
+            if fallback_result is not None:
+                send_status = str(fallback_result.get('send_status', 'fail'))
+                ack_status = str(fallback_result.get('ack_status', 'not_checked'))
+                failure_type = str(fallback_result.get('failure_type', ''))
+                reason_code = str(fallback_result.get('reason_code', ''))
+                duration_ms = int(fallback_result.get('duration_ms', 0) or 0)
+                _append_heartbeat_audit_event(
+                    repo_root,
+                    agent_id=agent_id,
+                    heartbeat_id=heartbeat_id,
+                    send_status=send_status,
+                    ack_status=ack_status,
+                    duration_ms=duration_ms,
+                    context_left=context_left_percent,
+                    failure_type=failure_type,
+                    session_mode='fresh',
+                    phase='fallback',
+                    attempt=max_retries + 2,
+                    recovery_action=recovery_action,
+                    reason_code=reason_code,
+                )
         else:
             send_status = 'fail'
             ack_status = 'no_ack'

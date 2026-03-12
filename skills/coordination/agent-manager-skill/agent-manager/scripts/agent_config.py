@@ -349,6 +349,13 @@ MAIN_AGENT_LAUNCHER_ENV = "AGENT_MANAGER_MAIN_LAUNCHER"
 MAIN_AGENT_LAUNCHER_ARGS_ENV = "AGENT_MANAGER_MAIN_LAUNCHER_ARGS"
 
 
+def _bundled_main_codex_model_file() -> Optional[Path]:
+    candidate = Path(__file__).resolve().parents[1] / '.codex' / 'main-codex-model.md'
+    if candidate.exists() and candidate.is_file():
+        return candidate
+    return None
+
+
 def _is_main_agent_query(name_or_id: str) -> bool:
     return str(name_or_id or '').strip().lower() == MAIN_AGENT_NAME
 
@@ -396,6 +403,7 @@ def _build_main_agent_config(
         'working_directory': str(workspace_root),
         'launcher': launcher,
         'launcher_args': launcher_args,
+        'launcher_config': {},
         'skills': [],
         'schedules': [],
         'mcps': {},
@@ -404,6 +412,12 @@ def _build_main_agent_config(
         'role_definition': '',
         '_reserved_main': True,
     }
+
+    bundled_main_model = _bundled_main_codex_model_file()
+    if launcher.lower() == 'codex' and bundled_main_model is not None:
+        base['launcher_config'] = {
+            'model_instructions_file': str(bundled_main_model),
+        }
 
     # Merge overrides from root AGENTS.md or agents/main.md if present.
     agents_dir = repo_root / 'agents'
@@ -417,7 +431,7 @@ def _build_main_agent_config(
                 override = parse_agent_file(candidate)
                 override = expand_config_env_vars(override)
                 for key in ('heartbeat', 'schedules', 'skills', 'mcps', 'description', 'role_definition',
-                            'launcher', 'launcher_args', 'working_directory'):
+                            'launcher', 'launcher_args', 'launcher_config', 'working_directory'):
                     val = override.get(key)
                     if val is not None:
                         base[key] = val
@@ -498,6 +512,9 @@ def parse_agent_file(agent_path: Path) -> Dict[str, Any]:
     # Optional MCP server configuration (provider-dependent).
     # Expected shape: mapping of server_name -> server_config (dict)
     config.setdefault('mcps', {})
+    # Optional provider/launcher-specific startup configuration.
+    # Current shape: {'key': value}
+    config.setdefault('launcher_config', {})
     config.setdefault('enabled', True)  # Agents are enabled by default
     # Heartbeat configuration (optional dict or None)
     config.setdefault('heartbeat', None)

@@ -30,6 +30,18 @@ class MainAgentConfigTests(unittest.TestCase):
         self.assertTrue(bool(config.get('working_directory')))
         self.assertTrue(bool(config.get('launcher')))
 
+    @patch('agent_config.get_repo_root')
+    def test_resolve_agent_main_defaults_to_bundled_codex_model_file(self, mock_get_repo_root):
+        temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-main-default-model-'))
+        mock_get_repo_root.return_value = temp_root
+
+        config = agent_config.resolve_agent('main', agents_dir=temp_root / 'agents')
+
+        launcher_config = config.get('launcher_config') or {}
+        model_file = launcher_config.get('model_instructions_file', '')
+        self.assertTrue(model_file.endswith('/agent-manager/.codex/main-codex-model.md'))
+        self.assertTrue(Path(model_file).exists())
+
     def test_list_all_agents_includes_main_without_agents_dir(self):
         temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-main-agent-'))
         agents_dir = temp_root / 'agents'
@@ -45,6 +57,7 @@ class MainAgentConfigTests(unittest.TestCase):
         mock_get_repo_root.return_value = Path('/tmp/fake-repo')
         config = agent_config.resolve_agent('main', agents_dir=Path('/tmp/not-needed'))
         self.assertEqual(config.get('launcher'), 'custom-launcher')
+        self.assertEqual(config.get('launcher_config'), {})
 
 
 class MainAgentTmuxNamingTests(unittest.TestCase):

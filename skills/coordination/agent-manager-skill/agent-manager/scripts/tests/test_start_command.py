@@ -43,5 +43,26 @@ class BuildStartCommandTests(unittest.TestCase):
         self.assertIn('export PATH="$HOME/.local/bin:$HOME/bin:$PATH"', cmd)
 
 
+class LauncherCliConfigTests(unittest.TestCase):
+    def test_build_launcher_config_overrides_from_flat_launcher_config(self):
+        cfg = {
+            "launcher_config": {
+                "model_instructions_file": "prompts/shade.md",
+                "feature_flag": True,
+                "retries": 3,
+            }
+        }
+        overrides = main.build_launcher_config_overrides(cfg, working_dir="/repo")
+        self.assertEqual(overrides["model_instructions_file"], "/repo/prompts/shade.md")
+        self.assertTrue(overrides["feature_flag"])
+        self.assertEqual(overrides["retries"], 3)
+
+    def test_to_toml_literal_supports_scalars_lists_and_dicts(self):
+        self.assertEqual(main._to_toml_literal("x"), '"x"')
+        self.assertEqual(main._to_toml_literal(True), "true")
+        self.assertEqual(main._to_toml_literal([1, "two"]), '[1, "two"]')
+        self.assertEqual(main._to_toml_literal({"flag": True, "count": 2}), '{ "flag" = true, "count" = 2 }')
+
+
 if __name__ == "__main__":
     unittest.main()

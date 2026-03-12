@@ -250,6 +250,31 @@ skills:
         self.assertEqual(cfg.get("launcher_args"), ["--dangerously-skip-permissions"])
         self.assertEqual(cfg.get("skills"), ["agent-manager"])
 
+    @patch("agent_config.get_repo_root")
+    def test_resolve_main_reads_launcher_config(self, mock_get_repo_root):
+        repo_root = self.temp_root
+        mock_get_repo_root.return_value = repo_root
+
+        (repo_root / "agents").mkdir(parents=True, exist_ok=True)
+        (repo_root / "AGENTS.md").write_text(
+            """---
+name: main
+description: Main
+working_directory: ${REPO_ROOT}
+launcher: codex
+launcher_config:
+  model_instructions_file: ${REPO_ROOT}/.codex/main-codex-model.md
+skills:
+  - agent-manager
+---
+# Main Agent
+""",
+            encoding="utf-8",
+        )
+
+        cfg = agent_config.resolve_agent("main")
+        self.assertTrue(cfg.get("launcher_config", {}).get("model_instructions_file", "").endswith("/.codex/main-codex-model.md"))
+
     def test_parse_agent_file_sets_defaults_for_optional_fields(self):
         agent_file = self._write_agent_file(
             "agents/EMP_0003/AGENTS.md",
@@ -265,8 +290,31 @@ launcher: claude
         self.assertEqual(cfg.get("skills"), [])
         self.assertEqual(cfg.get("schedules"), [])
         self.assertEqual(cfg.get("mcps"), {})
+        self.assertEqual(cfg.get("launcher_config"), {})
         self.assertTrue(cfg.get("enabled"))
         self.assertIsNone(cfg.get("heartbeat"))
+
+    def test_parse_agent_file_supports_launcher_config(self):
+        agent_file = self._write_agent_file(
+            "agents/EMP_0004/AGENTS.md",
+            """
+name: shade
+description: shade
+working_directory: ${REPO_ROOT}
+launcher: codex
+launcher_config:
+  model_instructions_file: ${REPO_ROOT}/prompt/shade.md
+  feature_flag: true
+""",
+        )
+        cfg = agent_config.parse_agent_file(agent_file)
+        self.assertEqual(
+            cfg.get("launcher_config"),
+            {
+                "model_instructions_file": "${REPO_ROOT}/prompt/shade.md",
+                "feature_flag": True,
+            },
+        )
 
 
 if __name__ == "__main__":

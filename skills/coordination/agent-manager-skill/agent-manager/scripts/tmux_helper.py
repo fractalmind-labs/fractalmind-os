@@ -749,6 +749,94 @@ def recover_codex_interrupted(agent_id: str) -> bool:
     return True
 
 
+def _is_codex_loading_output(output: str) -> bool:
+    return bool(re.search(r'\bmodel:\s+loading\b', str(output or ''), re.IGNORECASE))
+
+
+def _codex_recent_output(output: str, *, max_lines: int = 20) -> str:
+    lines = str(output or '').splitlines()
+    if len(lines) <= max_lines:
+        return str(output or '')
+    return '\n'.join(lines[-max_lines:])
+
+
+def stabilize_codex_session(
+    agent_id: str,
+    *,
+    timeout: int = 20,
+    stable_samples: int = 2,
+    poll_interval: float = 1.0,
+) -> bool:
+    """Wait until a Codex session is actually usable for the next turn.
+
+    A visible Codex prompt is not sufficient. Fresh sessions often surface
+    loading banners, inline suggestion tips, or "Conversation interrupted"
+    state before they become stable. This helper actively clears recoverable
+    interrupted states and only returns once the session is idle for multiple
+    consecutive samples.
+    """
+    if not session_exists(agent_id):
+        return False
+
+    target = _agent_pane_target(agent_id)
+    if not target:
+        return False
+
+    stable_needed = max(1, int(stable_samples))
+    sleep_seconds = max(0.2, float(poll_interval))
+    deadline = time.time() + max(1, int(timeout))
+    stable_count = 0
+    model_prompt_attempts = 0
+
+    while time.time() < deadline:
+        capture = subprocess.run(
+            ['tmux', 'capture-pane', '-p', '-t', target, '-S-40'],
+            capture_output=True,
+            text=True,
+        )
+        output = capture.stdout if capture.returncode == 0 else ''
+        recent_output = _codex_recent_output(output, max_lines=20)
+
+        if _is_codex_model_choice_prompt(recent_output):
+            stable_count = 0
+            if model_prompt_attempts < 3:
+                model_prompt_attempts += 1
+                _dismiss_codex_model_choice_prompt(agent_id)
+            time.sleep(sleep_seconds)
+            continue
+
+        runtime = get_agent_runtime_state(agent_id, launcher='codex')
+        state = str(runtime.get('state', 'unknown'))
+        reason = str(runtime.get('reason', 'unknown'))
+
+        if _is_codex_loading_output(recent_output):
+            stable_count = 0
+            time.sleep(sleep_seconds)
+            continue
+
+        if (
+            state == 'interrupted'
+            or 'Conversation interrupted' in recent_output
+            or reason.startswith('interrupted:')
+            or reason.startswith('suggestion_tip:')
+        ):
+            stable_count = 0
+            recover_codex_interrupted(agent_id)
+            time.sleep(sleep_seconds)
+            continue
+
+        if state == 'idle':
+            stable_count += 1
+            if stable_count >= stable_needed:
+                return True
+        else:
+            stable_count = 0
+
+        time.sleep(sleep_seconds)
+
+    return False
+
+
 def inject_system_prompt(agent_id: str, prompt: str) -> bool:
     """
     Inject system prompt to agent and wait for it to be processed.
@@ -860,6 +948,10 @@ def wait_for_agent_ready(agent_id: str, launcher: str, timeout: int = 45) -> boo
 
     # Give agent time to process the prompt
     time.sleep(min_wait)
+
+    if is_codex:
+        remaining = max(1, int(timeout - (time.time() - start_time)))
+        return stabilize_codex_session(agent_id, timeout=remaining, stable_samples=2, poll_interval=1.0)
 
     codex_model_prompt_attempts = 0
     while (time.time() - start_time) < timeout:
@@ -1069,6 +1161,8 @@ def get_agent_runtime_state(agent_id: str, launcher: str = "") -> Dict[str, obje
         )
 
     output = result.stdout
+    if launcher and 'codex' in launcher.lower():
+        output = _codex_recent_output(output)
     elapsed_seconds = _parse_elapsed_seconds(output)
 
     if launcher and 'codex' in launcher.lower() and _is_codex_model_choice_prompt(output):
