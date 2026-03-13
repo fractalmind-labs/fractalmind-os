@@ -3,7 +3,7 @@
 - Candidate ID: `okr_81483fbfa2`
 - Objective: Add a repeatable subtree-aware drift check between `.agent/skills/agent-manager` and `workspace/agent-manager-skill/agent-manager` so heartbeat can raise concrete vendor-drift candidates automatically after upstream changes.
 - Governance: `L0`
-- Status: `in_progress`
+- Status: `resolved`
 - Score: `2.18`
 
 ## Sync Contract
