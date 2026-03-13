@@ -625,7 +625,7 @@ Official Web3 and trading skills from the Binance team. Includes crypto market d
 <details open>
 <summary><h3 style="display:inline">Skills by Helius Labs</h3></summary>
 
-Official Solana development skills from [Helius Labs](https://github.com/helius-labs). Build Solana applications with Helius infrastructure, DFlow trading APIs, Phantom wallet integration, and deep protocol knowledge.
+Official Solana development skills from [Helius](https://www.helius.dev/). Build Solana applications with Helius infrastructure, DFlow trading APIs, Phantom wallet integration, and deep protocol knowledge.
 
 - **[helius-labs/helius](https://github.com/helius-labs/core-ai/tree/main/helius-skills/helius)** - Build Solana apps with Helius Sender, DAS API, streaming, and webhooks
 - **[helius-labs/helius-dflow](https://github.com/helius-labs/core-ai/tree/main/helius-skills/helius-dflow)** - Trading apps combining DFlow swaps and predictions with Helius infrastructure
