@@ -623,7 +623,7 @@ Official Web3 and trading skills from the Binance team. Includes crypto market d
 </details>
 
 <details open>
-<summary><h3 style="display:inline">Skills by Helius Labs</h3></summary>
+<summary><h3 style="display:inline">Skills by Helius</h3></summary>
 
 Official Solana development skills from [Helius](https://www.helius.dev/). Build Solana applications with Helius infrastructure, DFlow trading APIs, Phantom wallet integration, and deep protocol knowledge.
 
