@@ -3,7 +3,7 @@
 - Candidate ID: `okr_82f6cca971`
 - Objective: Publish the prepared FractalBot telemetry slice upstream by committing the validated local diff, opening the drafted issue, and opening the drafted PR once a human explicitly approves the external action.
 - Governance: `L2`
-- Status: `proposed`
+- Status: `in_progress`
 - Score: `2.08`
 
 ## Sync Contract
