@@ -68,7 +68,7 @@ Agent skills can include prompt injections, tool poisoning, hidden malware paylo
 | [Skills by Hugging Face](#skills-by-hugging-face-team) | [Skills by Trail of Bits](#security-skills-by-trail-of-bits-team) | [Skills by Sentry](#skills-by-sentry-team-for-their-dev-team) |
 | [Skills by Microsoft](#skills-by-microsoft) | [Skills by fal.ai](#skills-by-falai-team) | [Skills by WordPress](#skills-by-wordpress-development-team) |
 | [Skills by Transloadit](#skills-by-transloadit-team) | [Skills by OpenAI](#skills-by-openai) | [Marketing Skills by Corey Haines](#marketing-skills-by-corey-haines) |
-| [Skills by Binance](#skills-by-binance) | [Skills by Helius Labs](#skills-by-helius-labs) | [Product Manager Skills by Dean Peters](#product-manager-skills-by-dean-peters) |
+| [Skills by Binance](#skills-by-binance) | [Skills by Helius](#skills-by-helius) | [Product Manager Skills by Dean Peters](#product-manager-skills-by-dean-peters) |
 | [Product Management Skills by Paweł Huryn](#product-management-skills-by-pawel-huryn) | [Community Skills](#community-skills) | [Skill Quality Standards](#skill-quality-standards) |
 
 
