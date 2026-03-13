@@ -3,7 +3,7 @@
 - Candidate ID: `okr_bfea7c9aed`
 - Objective: Bring `fractalmind-ai/agent-manager-skill` into local discovery coverage and compare upstream changes against the vendored `.agent/skills/agent-manager` copy so heartbeat can create drift-driven candidate OKRs before orchestration drift accumulates.
 - Governance: `L0`
-- Status: `in_progress`
+- Status: `resolved`
 - Score: `2.04`
 
 ## Sync Contract
