@@ -39,7 +39,7 @@ FractalMind has moved beyond a pure **protocol-first** story. The current focus 
 
 - **heartbeat-driven coordination**
 - **structured memory and durable runtime state**
-- **governed autonomy with human veto on irreversible actions**
+- **governed autonomy through human–AI co-creation, not human bottlenecks**
 - **reviewable delivery with evidence, QA, and outcome tracking**
 - **public trust surfaces when on-chain guarantees matter**
 

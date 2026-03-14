@@ -48,7 +48,7 @@ The important shift is that **FractalMind is now OS-first, not only protocol-fir
 - **AI builders** who need more than a chat bot or single-agent wrapper
 - **Teams operating multiple agents** with real delivery pressure
 - **Researchers** exploring governed autonomy and long-horizon coordination
-- **Organizations** that want auditability, human veto boundaries, and repeatable execution
+- **Organizations** that want auditability, human–AI co-creation, and repeatable execution
 
 ## Current State
 
