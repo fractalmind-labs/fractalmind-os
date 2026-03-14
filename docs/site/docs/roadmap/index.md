@@ -1,68 +1,80 @@
 # Roadmap
 
-FractalMind AI follows a four-phase development plan.
+FractalMind AI has moved from **protocol validation** into **operating-system operationalization**.
 
-## Phase 1: Validation (2026 Q1) — Current
+## Current Track: FractalMind OS v1.0
 
-**Goal**: Core components live, first organization instance on SUI Testnet.
+The active work now centers on making the heartbeat-driven operating loop reliable in practice:
+
+| Focus | Why it matters |
+|------|-----------------|
+| **Heartbeat control loop** | Keep discovery, governance, dispatch, and follow-through running without heroics |
+| **Structured memory** | Make state durable across sessions and agents |
+| **Candidate OKR governance** | Turn raw signals into reviewable, measurable work |
+| **Observability & evidence** | Require logs, QA evidence, sync state, and outcome records |
+| **Distribution surfaces** | Prepare the system to run beyond one workspace or machine |
+
+## Phase 1: Validation — Complete
+
+**Goal**: prove the stack can exist end-to-end.
 
 | Milestone | Status |
 |-----------|--------|
-| fractalmind-protocol Testnet deployment | **Complete** |
-| SuLabs org + 2 agents + 5 tasks on-chain | **Complete** |
-| okr-manager-skill third-party validation | **Complete** |
-| fractalbot multi-channel support | Active |
-| Documentation site | Active |
+| `fractalmind-protocol` live on SUI Testnet | **Complete** |
+| First organization instance on-chain | **Complete** |
+| Core management skills working together | **Complete** |
+| Public docs + GitHub organization surfaces online | **Complete** |
 
-**Success Criteria**: SuLabs registered on SUI Testnet with ≥2 AI agents completing ≥5 task lifecycle cycles on-chain.
+## Phase 2: Operating System — Current
 
-**Status**: Success criteria met.
-
-## Phase 2: Capability (2026 Q2)
-
-**Goal**: Fill the three biggest gaps — security, memory, and tool protocol.
+**Goal**: make FractalMind usable as a governed AI operating system, not just a protocol demo.
 
 | Milestone | Description |
 |-----------|-------------|
-| **Capability Permission System** | Fine-grained, capability-based access control for agent-manager + fractalbot |
-| **Shared Memory Layer** | SQLite + vector search for cross-agent/session knowledge persistence |
-| **MCP Bridge** | Unified tool protocol — openskills supports MCP import/export |
-| **Security Telemetry** | Operation audit chain + prompt injection detection |
+| **Heartbeat OS loop** | `signal -> memory -> candidate OKR -> governance -> execution -> outcome -> evolution` runs as the default operating model |
+| **Shared strategic memory** | Durable state, postmortems, and runtime memory stay coherent across sessions |
+| **Governed autonomy** | Low-risk work can move automatically while high-risk actions stop at clear human boundaries |
+| **Reviewable delivery** | QA evidence, reviewable change sets, and sync state become standard, not optional |
+| **Public narrative alignment** | Website, GitHub, and docs describe the real OS-first system instead of an older protocol-only framing |
 
-## Phase 3: Distribution (2026 Q3)
+## Phase 3: Distribution
 
-**Goal**: Agents can run on any machine, managed remotely.
-
-| Milestone | Description |
-|-----------|-------------|
-| **fractalmind-envd MVP** | Go daemon with WebSocket connection, heartbeat, state discovery |
-| **Gateway Service** | TypeScript service that listens to on-chain events and dispatches to envd |
-| **On-chain Integration** | Tasks automatically recorded on-chain, reputation system operational |
-| **Deployment Automation** | `fractalctl` CLI for one-command installation of core components |
-
-## Phase 4: Emergence (2026 Q4+)
-
-**Goal**: DAO governance loop complete, fractal structures self-operate.
+**Goal**: let the OS run across machines and environments.
 
 | Milestone | Description |
 |-----------|-------------|
-| **DAO → Remote Execution** | On-chain votes trigger agent upgrades/migrations via envd |
-| **Fractal Sub-org Autonomy** | Sub-orgs operate independently with parent oversight |
-| **Inter-Org Federation** | Multiple FractalMind organizations collaborate via cross-org DAO |
-| **Desktop Client** | Optional visual interface for organization management |
+| **fractalmind-envd MVP** | Distributed runtime for remote agent execution |
+| **Gateway / bridge services** | Stronger handoff between trust surfaces and off-chain execution |
+| **Deployment automation** | One-command bootstrap of the core operating stack |
+| **Remote observability** | Health, routing, and state remain inspectable outside one machine |
+
+## Phase 4: Federation
+
+**Goal**: multiple FractalMind systems coordinate as a larger organism.
+
+| Milestone | Description |
+|-----------|-------------|
+| **DAO → execution link** | Governance decisions can safely drive remote changes |
+| **Sub-org autonomy** | Independent sub-systems operate under parent oversight |
+| **Inter-org federation** | Multiple organizations collaborate through shared trust and protocol surfaces |
+| **Operator-grade clients** | Better public and internal interfaces for humans steering the system |
 
 ## Known Gaps
 
-Based on comparative research with existing frameworks:
+| Gap | Impact | Priority |
+|-----|--------|----------|
+| Reviewable delivery still uneven across projects | Changes exist but are not always packaged as clean evidence-backed submissions | P0 |
+| Shared memory depth is still shallow | State is persistent, but cross-project learning remains immature | P1 |
+| Fine-grained capability / security controls | Needed before higher autonomy levels | P1 |
+| Distribution bootstrap remains manual | Slows scaling beyond one primary workspace | P1 |
+| Public narrative lag | Website and org surfaces can drift behind the real operating model | P1 |
 
-| Gap | Impact | Priority | Phase |
-|-----|--------|----------|-------|
-| Weak security model | Agent permissions lack fine-grained control | P0 | Phase 2 |
-| No structured memory | Cross-agent knowledge doesn't persist | P1 | Phase 2 |
-| No unified tool protocol | Tool discovery/invocation not standardized | P1 | Phase 2 |
-| Manual deployment | Each machine needs manual tmux/cron/skills setup | P1 | Phase 3 |
-| No desktop client | CLI-only, high barrier for non-technical users | P2 | Phase 4 |
+## Contributing
 
-## Contributing to the Roadmap
+The best contributions now are the ones that improve **operability**:
 
-We welcome contributions at every phase. Check the [GitHub organization](https://github.com/fractalmind-ai) for open issues, or start a discussion in any repository.
+- make the control loop more reliable
+- improve observability
+- reduce manual coordination
+- produce stronger QA evidence
+- align public docs with the system that actually runs

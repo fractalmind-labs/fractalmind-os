@@ -1,105 +1,107 @@
 # Architecture Overview
 
-FractalMind AI is organized into four layers, each responsible for a different level of abstraction.
+FractalMind AI is currently best understood as a **heartbeat-driven operating system for AI agent teams**, with optional on-chain trust surfaces.
 
-## Full Architecture
+## Current Operating Stack
 
 ```
-                 ┌─────────────────────────┐
-                 │   Users / Human Admins   │
-                 │  (Telegram/Slack/CLI)    │
-                 └───────────┬─────────────┘
-                             │
-                 ┌───────────▼─────────────┐
-                 │       fractalbot        │  Communication Layer
-                 │  Multi-channel gateway  │  Go · TG · Slack · Discord
-                 │                         │  Feishu · iMessage
-                 └───────────┬─────────────┘
-                             │ Route + context injection
-                 ┌───────────▼─────────────┐
-                 │     agent-manager       │  Management Layer (L0)
-                 │  Agent lifecycle (tmux) │  start · stop · heartbeat
-                 └─────┬───────────┬───────┘
-                       │           │
-          ┌────────────▼──┐  ┌────▼──────────┐
-          │ team-manager  │  │ okr-manager   │  Management Layer (L1)
-          │ Team orchestr │  │ Goal tracking │
-          └───────┬───────┘  └──────────────┘
-                  │
-          ┌───────▼───────────────────────┐
-          │         team-chat             │  Collaboration Layer
-          │  File messaging · Audit trail │
-          └───────────────────────────────┘
+                   ┌──────────────────────────────┐
+                   │    Humans / External Tools   │
+                   │   Slack · Telegram · CLI     │
+                   └──────────────┬───────────────┘
+                                  │
+                        ┌─────────▼─────────┐
+                        │    fractalbot     │  Communication surface
+                        │ routing + context │
+                        └─────────┬─────────┘
+                                  │
+               ┌──────────────────▼──────────────────┐
+               │         FractalMind OS core         │
+               │   oh-my-code + heartbeat control    │
+               │ signal -> memory -> OKR -> outcome  │
+               └───────┬───────────────┬─────────────┘
+                       │               │
+          ┌────────────▼───────┐   ┌───▼──────────────────┐
+          │   structured state │   │  fractalmind-okrs    │
+          │ memory/*.json*     │   │ candidate publication │
+          └────────────┬───────┘   └──────────────────────┘
+                       │
+               ┌───────▼────────┐
+               │ agent-manager  │  Execution plane
+               │ tmux lifecycle │
+               └───────┬────────┘
+                       │
+               ┌───────▼────────┐
+               │  Agent sessions │
+               │ main / coder-*  │
+               └─────────────────┘
 
-                 ═══ On-chain (SUI) ═══
-
-          ┌───────────────────────────────┐
-          │   fractalmind-protocol        │  Protocol Layer (L2)
-          │  Org · Agent · Task · DAO     │  Move contracts + TS SDK
-          └───────────────────────────────┘
-
-                 ═══ Future ═══
-
-          ┌───────────────────────────────┐
-          │   fractalmind-envd + Gateway  │  Execution Layer
-          │  On-chain ↔ off-chain bridge  │  Go daemon + TS service
-          └───────────────────────────────┘
+      Optional trust / distribution surfaces:
+      fractalmind-protocol · fractalmind-envd · explorer · openclaw-gateway-app
 ```
 
 ## Layer Responsibilities
 
-### Communication Layer — fractalbot
+### Communication Surface — `fractalbot`
 
-The entry point for human-to-agent communication. fractalbot is a Go binary that routes messages from external channels (Telegram, Slack, Discord, Feishu, iMessage) to the appropriate agent.
+Routes humans and agents across channels, injects routing context, and acts as the boundary between outside requests and the internal operating loop.
 
-### Management Layer — agent-manager, team-manager, okr-manager
+### Operating System Core — `oh-my-code` + heartbeat
 
-The operational core. These skills run as part of an AI agent's context and provide:
-- **agent-manager** (L0): Start, stop, monitor individual agents in tmux sessions
-- **team-manager** (L1): Coordinate multi-agent teams with a lead-based model
-- **okr-manager**: Track objectives and key results across agents and teams
+The current center of gravity. This is where the system:
 
-### Collaboration Layer — team-chat
+- records signals
+- reduces state into priorities
+- manages candidate OKRs
+- governs actions by risk level
+- dispatches work to agents
+- records outcomes and evolution
 
-Asynchronous, file-backed messaging between agents. Append-only inboxes, task state snapshots, and audit trails — all stored as local files.
+### Execution Plane — `agent-manager`
 
-### Protocol Layer — fractalmind-protocol
+Runs agents in tmux sessions, handles lifecycle management, and provides the actual execution plane for work chosen by the heartbeat.
 
-On-chain organizational primitives on SUI:
-- **Organization**: Create and manage AI organizations
-- **AgentCertificate**: On-chain agent identity with reputation
-- **Task**: Full lifecycle (create → assign → submit → verify → complete)
-- **Governance**: DAO proposals, voting, execution
-- **Fractal**: Nested sub-organizations with the same structure
+### Shared Governance Surface — `fractalmind-okrs`
 
-### Execution Layer — fractalmind-envd (Future)
+Stores exported candidate OKRs so strategy stays visible, reviewable, and durable beyond a single terminal session.
 
-A daemon that bridges on-chain governance with off-chain execution. When a DAO vote passes to upgrade an agent, envd carries out the action on the target machine.
+### Trust & Distribution Surfaces — `fractalmind-protocol`, `fractalmind-envd`, `explorer`
 
-## Component Dependencies
+These remain important, but they are now part of a broader system story:
+
+- **`fractalmind-protocol`** — optional on-chain identity / governance / trust layer on SUI
+- **`fractalmind-envd`** — remote execution and distributed runtime direction
+- **`explorer`** — public visualization surface
+
+## Dependency Shape
 
 ```
-fractalmind-protocol (standalone, on-chain)
+fractalmind-protocol (optional trust layer)
     │
-    └──▸ [future] Gateway Service (TS)
-              │
-              └──▸ [future] fractalmind-envd (Go daemon)
+    ├──▸ explorer
+    └──▸ [future] envd / gateway integration
 
-fractalbot (standalone, communication gateway)
+fractalbot
     │
-    ├──▸ agent-manager-skill (routes to agents)
-    │         │
-    │         ├──▸ team-manager-skill (depends on agent-manager)
-    │         │
-    │         ├──▸ okr-manager-skill (standalone, called by heartbeat)
-    │         │
-    │         └──▸ team-chat-skill (standalone, integrated by team-manager)
-    │
-    └──▸ use-fractalbot-skill (agent-side sending)
-
-oh-my-code (reference implementation, integrates all above)
+    └──▸ oh-my-code heartbeat
+             │
+             ├──▸ memory/*.json*
+             ├──▸ fractalmind-okrs
+             └──▸ agent-manager
+                      │
+                      ├──▸ team-manager
+                      ├──▸ okr-manager
+                      └──▸ team-chat / tool skills
 ```
 
-## Key Design Decisions
+## The Architectural Shift
 
-See [Design Decisions](/architecture/design-decisions) for the rationale behind major technical choices.
+The older public framing emphasized **protocol-first infrastructure on SUI**.
+
+The current reality is broader:
+
+- the protocol is still real and valuable
+- but the system that runs every day is a **governed execution OS**
+- heartbeat, memory, OKRs, routing, and outcomes are now the main operational story
+
+That is the architecture the public docs should describe.
