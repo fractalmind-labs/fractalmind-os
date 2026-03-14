@@ -3,85 +3,85 @@ import { ref, onMounted } from 'vue'
 
 const products = [
   {
+    name: 'oh-my-code',
+    description: 'Reference workspace where the heartbeat-driven FractalMind OS runs: memory, OKRs, governance, dispatch, and outcomes.',
+    icon: '&#x267b;',
+    color: '#4DA2FF',
+    link: 'https://github.com/fractalmind-ai/oh-my-code',
+  },
+  {
+    name: 'fractalmind-okrs',
+    description: 'Shared publication surface for candidate OKRs, portfolio review, and durable strategic memory.',
+    icon: '&#x1f4ca;',
+    color: '#e94560',
+    link: 'https://github.com/fractalmind-ai/fractalmind-okrs',
+  },
+  {
+    name: 'fractalbot',
+    description: 'Multi-channel messaging bridge that routes humans and agents across Slack, Telegram, Discord, Feishu, and more.',
+    icon: '&#x1f4e1;',
+    color: '#4ecdc4',
+    link: '/components/fractalbot',
+  },
+  {
+    name: 'agent-manager',
+    description: 'Execution plane for tmux-based agents with lifecycle management, monitoring, and dispatch support.',
+    icon: '&#x1f916;',
+    color: '#4ecdc4',
+    link: '/components/agent-manager',
+  },
+  {
     name: 'fractalmind-protocol',
-    description: 'SUI Move smart contracts for on-chain AI org identity, governance, and task management.',
+    description: 'Optional trust layer on SUI for identity, governance, and organization primitives when on-chain guarantees matter.',
     icon: '&#x26d3;',
     color: '#4DA2FF',
     link: '/components/protocol',
   },
   {
     name: 'fractalmind-envd',
-    description: 'Decentralized agent remote management with WireGuard tunnels and SUI-based authorization.',
+    description: 'Go runtime for remote and distributed execution beyond a single machine.',
     icon: '&#x1f310;',
     color: '#4ecdc4',
-    link: '/components/overview',
-  },
-  {
-    name: 'fractalbot',
-    description: 'Multi-channel messaging bridge — iMessage, Telegram, Slack, Discord, and Feishu in one gateway.',
-    icon: '&#x1f4e1;',
-    color: '#e94560',
-    link: '/components/fractalbot',
-  },
-  {
-    name: 'agent-manager',
-    description: 'AI agent lifecycle management with tmux-based sessions, heartbeat monitoring, and auto-restart.',
-    icon: '&#x1f916;',
-    color: '#4ecdc4',
-    link: '/components/agent-manager',
-  },
-  {
-    name: 'team-manager',
-    description: 'Multi-agent team orchestration with lead-based coordination and workflow definitions.',
-    icon: '&#x1f465;',
-    color: '#4DA2FF',
-    link: '/components/team-manager',
-  },
-  {
-    name: 'okr-manager',
-    description: 'Goal tracking for AI teams — objectives, key results, quality gates, and progress monitoring.',
-    icon: '&#x1f3af;',
-    color: '#e94560',
-    link: '/components/okr-manager',
+    link: '/components/envd',
   },
   {
     name: 'explorer',
-    description: 'On-chain organization visualization with D3.js — browse orgs, agents, and tasks on SUI.',
+    description: 'Public visualization surface for organizations, components, and trust-critical state.',
     icon: '&#x1f50d;',
-    color: '#4ecdc4',
+    color: '#e94560',
     link: 'https://fractalmind-ai.github.io/explorer',
   },
 ]
 
 const stats = [
-  { value: '12+', label: 'AI Agents' },
-  { value: '6', label: 'Active Teams' },
-  { value: '7', label: 'Core Components' },
-  { value: 'Live', label: 'SUI Testnet' },
+  { value: '18', label: 'Public Repositories' },
+  { value: '14', label: 'Local Checkouts' },
+  { value: '100%', label: 'Closed-Loop Delivery' },
+  { value: 'Live', label: 'Heartbeat Control Loop' },
 ]
 
 const milestones = [
-  { date: '2025 Q4', title: 'Core Protocol Shipped', description: 'fractalmind-protocol deployed to SUI Testnet with 9 Move modules.' },
-  { date: '2026 Q1', title: 'Agent Infrastructure', description: 'agent-manager, team-manager, OKR tracking, and fractalbot all production-ready.' },
-  { date: '2026 Q1', title: '12+ Agents Running', description: 'SuLabs org operating with 12 AI agents across 6 teams, completing real tasks.' },
-  { date: '2026 Q1', title: 'envd Decentralized Management', description: 'WireGuard P2P + SUI identity for remote agent management — no central server.' },
-  { date: '2026 Q1', title: 'Explorer & Docs Site', description: 'On-chain org visualizer and full documentation site launched.' },
+  { date: '2025 Q4', title: 'Protocol trust layer validated', description: 'fractalmind-protocol shipped to SUI Testnet as the optional trust surface.' },
+  { date: '2026 Q1', title: 'FractalMind OS control loop aligned', description: 'SOUL, HEARTBEAT, runtime memory, and heartbeat execution now share one operating model.' },
+  { date: '2026 Q1', title: 'Candidate OKR sync live', description: 'Strategic candidates now publish through fractalmind-okrs instead of staying trapped in one terminal.' },
+  { date: '2026 Q1', title: 'Multi-channel execution running', description: 'fractalbot + agent-manager route humans to agents and keep delivery observable.' },
+  { date: '2026 Q1', title: 'Public surfaces being re-aligned', description: 'Docs and GitHub are being updated from a protocol-first story to the current OS-first reality.' },
 ]
 
 const githubLinks = [
   {
-    label: '13+ Repositories',
-    description: 'Protocol, agents, messaging, tools — all open source under MIT.',
+    label: '18 Repositories',
+    description: 'Browse the full OS kernel, execution surfaces, protocol, and application repos.',
     url: 'https://github.com/fractalmind-ai',
   },
   {
-    label: 'On-Chain Proof',
-    description: 'Verify the protocol contract and transactions live on SUI Testnet.',
-    url: 'https://suiscan.xyz/testnet/object/0x685d6fb6ed8b0e679bb467ea73111819ec6ff68b1466d24ca26b400095dcdf24',
+    label: 'Candidate OKR Portfolio',
+    description: 'See the shared strategy surface in fractalmind-okrs.',
+    url: 'https://github.com/fractalmind-ai/fractalmind-okrs',
   },
   {
     label: 'Live Explorer',
-    description: 'Browse the SuLabs organization — agents, teams, and tasks on-chain.',
+    description: 'Inspect the public visualization / trust surface.',
     url: 'https://fractalmind-ai.github.io/explorer',
   },
 ]
@@ -121,32 +121,32 @@ onMounted(() => {
         </div>
         <h1 class="hero-title">
           <span class="title-main">FractalMind AI</span>
-          <span class="title-sub">Organize AI agent teams that actually ship</span>
+          <span class="title-sub">Heartbeat-driven operating system for AI agent teams</span>
         </h1>
         <p class="hero-description">
-          Open-source framework for running multi-agent teams with structured
-          workflows, goal tracking, and on-chain governance on SUI.
+          Open-source operating system for governed autonomy, structured memory,
+          multi-channel execution, and optional on-chain trust surfaces.
         </p>
         <div class="hero-selling-points">
           <div class="selling-point">
             <span class="sp-icon">&#x1f465;</span>
             <div>
-              <strong>For teams deploying AI agents</strong>
-              <p>Manage 1 to 100+ agents with lead-based coordination, OKR tracking, and auto-restart.</p>
+              <strong>Heartbeat-driven execution</strong>
+              <p>Run delivery through a repeatable loop: signal, memory, candidate OKR, governance, execution, and outcome.</p>
             </div>
           </div>
           <div class="selling-point">
             <span class="sp-icon">&#x1f9e9;</span>
             <div>
-              <strong>Composable, not monolithic</strong>
-              <p>Pick only the modules you need — agent management, messaging, team orchestration, or the full stack.</p>
+              <strong>Governed autonomy</strong>
+              <p>Low-risk work can move automatically, while production, money, and public actions stay behind human approval.</p>
             </div>
           </div>
           <div class="selling-point">
             <span class="sp-icon">&#x1f50d;</span>
             <div>
-              <strong>See it running live</strong>
-              <p>Browse the SuLabs organization on SUI Testnet — 12+ agents, 6 teams, real tasks being completed.</p>
+              <strong>Protocol when trust matters</strong>
+              <p>Use SUI and public visualization surfaces when identity, governance, or trust-critical proof is required — without making that the whole story.</p>
             </div>
           </div>
         </div>
@@ -180,20 +180,18 @@ onMounted(() => {
           <div class="ps-card problem">
             <h3>The Problem</h3>
             <p>
-              AI agent systems today are opaque, centralized, and fragile. There's no standard
-              way to verify agent identity, coordinate multi-agent teams, or govern autonomous
-              operations transparently. As organizations deploy more AI agents, they need
-              infrastructure that scales without sacrificing trust.
+              Most AI stacks stop at chat, tools, or single-agent orchestration. Real operations
+              still leak through ad hoc memory, manual follow-up, and unclear ownership. As the
+              number of agents grows, teams need a repeatable operating system — not just another framework.
             </p>
           </div>
           <div class="ps-card solution">
             <h3>The Solution</h3>
             <p>
-              FractalMind uses <strong>fractal architecture</strong> — the same self-similar
-              pattern at every level — combined with <strong>on-chain governance on SUI</strong>.
-              Agent identity, team structure, task assignment, and organizational hierarchy all
-              live on-chain. The only AI management system where governance is fully
-              permissionless and auditable.
+              FractalMind now centers on a <strong>heartbeat-driven OS</strong>: structured memory,
+              candidate OKRs, governed autonomy, agent dispatch, and outcome tracking. The
+              protocol and explorer remain valuable trust surfaces, but the daily system runs
+              through an OS-first control loop instead of a protocol-only story.
             </p>
           </div>
         </div>
@@ -203,8 +201,8 @@ onMounted(() => {
     <!-- Product Matrix -->
     <section class="products-section">
       <div class="section-container">
-        <h2 class="section-title">Core Components</h2>
-        <p class="section-subtitle">Seven composable modules — install only what you need</p>
+        <h2 class="section-title">Core Operating Surfaces</h2>
+        <p class="section-subtitle">The current system is OS-first: communication, execution, governance, and trust surfaces.</p>
         <div class="products-grid">
           <a
             v-for="product in products"
@@ -226,8 +224,8 @@ onMounted(() => {
     <!-- Architecture Diagram -->
     <section class="architecture-section">
       <div class="section-container">
-        <h2 class="section-title">Fractal Architecture</h2>
-        <p class="section-subtitle">Self-similar patterns at every layer</p>
+        <h2 class="section-title">Current Operating Stack</h2>
+        <p class="section-subtitle">Heartbeat-driven coordination with optional on-chain trust layers.</p>
         <div class="arch-diagram">
           <svg viewBox="0 0 800 420" fill="none" class="arch-svg">
             <!-- Background grid dots -->
@@ -314,8 +312,8 @@ onMounted(() => {
     <!-- Live Demo -->
     <section class="demo-section">
       <div class="section-container">
-        <h2 class="section-title">Live Demo</h2>
-        <p class="section-subtitle">Browse the FractalMind organization on SUI Testnet</p>
+        <h2 class="section-title">Public Surfaces</h2>
+        <p class="section-subtitle">Docs, GitHub, and Explorer show the public side of the system.</p>
         <div class="demo-card">
           <div class="demo-preview">
             <svg viewBox="0 0 600 300" fill="none" class="demo-svg">
@@ -378,11 +376,11 @@ onMounted(() => {
             </svg>
           </div>
           <div class="demo-info">
-            <h3>On-Chain Organization Explorer</h3>
+            <h3>Explorer + Open Documentation</h3>
             <p>
-              Visualize the full FractalMind organization hierarchy on SUI Testnet.
-              Browse teams, agents, tasks, and governance structures — all
-              read directly from the blockchain.
+              The explorer remains a public trust and visualization surface. It complements the
+              docs, GitHub organization, and operating-system narrative by showing a verifiable
+              public side of the stack.
             </p>
             <ul class="demo-features">
               <li>Interactive D3.js force-directed graph</li>
@@ -402,9 +400,9 @@ onMounted(() => {
     <section class="trust-section">
       <div class="section-container">
         <div class="trust-header">
-          <div class="stage-badge">Alpha</div>
+          <div class="stage-badge">OS v1.0</div>
           <h2 class="section-title">Trust &amp; Transparency</h2>
-          <p class="section-subtitle">Everything is open source, on-chain, and verifiable</p>
+          <p class="section-subtitle">Open source, file-backed, and publicly inspectable.</p>
         </div>
 
         <div class="trust-grid">
@@ -442,11 +440,12 @@ onMounted(() => {
             </div>
 
             <div class="stage-info">
-              <h4>Project Stage: Alpha</h4>
+              <h4>Project Stage: Operating-system rollout</h4>
               <p>
-                FractalMind is in active development. The core protocol is deployed on
-                SUI Testnet, and the agent infrastructure is running in production at
-                SuLabs. We ship openly — check the commit history.
+                FractalMind is actively shifting from a protocol-first public story to the
+                current OS-first reality: heartbeat, structured memory, candidate OKRs,
+                governed execution, and observable outcomes. The protocol is still live on
+                SUI Testnet — it is now one important surface inside a broader operating system.
               </p>
             </div>
           </div>
@@ -458,8 +457,8 @@ onMounted(() => {
     <section class="cta-section">
       <div class="section-container">
         <div class="cta-content">
-          <h2>Ready to build?</h2>
-          <p>Dive into the documentation or explore the source code on GitHub.</p>
+          <h2>Ready to run agent teams?</h2>
+          <p>Start with the docs, inspect the public repos, and follow the operating model all the way down.</p>
           <div class="cta-actions">
             <a href="/guide/quick-start" class="btn btn-primary">
               Quick Start Guide
@@ -491,7 +490,7 @@ onMounted(() => {
               </svg>
               <span>FractalMind AI</span>
             </div>
-            <p class="footer-tagline">Fractal Intelligence, On-Chain Governance</p>
+            <p class="footer-tagline">Governed autonomy for AI agent teams</p>
           </div>
           <div class="footer-links">
             <h4>Documentation</h4>

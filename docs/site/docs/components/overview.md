@@ -1,60 +1,74 @@
 # Components Overview
 
-FractalMind AI consists of 13 repositories organized into four categories.
+FractalMind AI currently spans **18 repositories** organized into four operating surfaces.
 
-## Core Components
+## 1. OS Kernel & Governance
 
-These are the essential building blocks of the FractalMind stack.
+These repositories define how the system discovers work, governs action, and records durable state.
 
-| Component | Repo | Language | Role | Status |
-|-----------|------|----------|------|--------|
-| [fractalmind-protocol](/components/protocol) | [GitHub](https://github.com/fractalmind-ai/fractalmind-protocol) | Move + TS | On-chain org/agent/task/governance | Stable |
-| [fractalmind-envd](/components/envd) | [GitHub](https://github.com/fractalmind-ai/fractalmind-envd) | Go | Remote agent management (SUI + WireGuard) | Active |
-| [agent-manager](/components/agent-manager) | [GitHub](https://github.com/fractalmind-ai/agent-manager-skill) | Python | Agent lifecycle (tmux) | Stable |
-| [team-manager](/components/team-manager) | [GitHub](https://github.com/fractalmind-ai/team-manager-skill) | Python | Team orchestration | Stable |
-| [fractalbot](/components/fractalbot) | [GitHub](https://github.com/fractalmind-ai/fractalbot) | Go | Multi-channel messaging | Active |
-| [okr-manager](/components/okr-manager) | [GitHub](https://github.com/fractalmind-ai/okr-manager-skill) | Skill | OKR lifecycle | Stable |
-| [team-chat](/components/team-chat) | [GitHub](https://github.com/fractalmind-ai/team-chat-skill) | Python | File-backed messaging | Stable |
+| Component | Repo | Role |
+|-----------|------|------|
+| **oh-my-code** | [GitHub](https://github.com/fractalmind-ai/oh-my-code) | Reference workspace where the heartbeat-driven OS runs |
+| **fractalmind-okrs** | [GitHub](https://github.com/fractalmind-ai/fractalmind-okrs) | Candidate OKR publication and review surface |
+| **agent-manager** | [GitHub](https://github.com/fractalmind-ai/agent-manager-skill) | Execution plane for tmux-based agents |
+| **team-manager** | [GitHub](https://github.com/fractalmind-ai/team-manager-skill) | Team orchestration and lead-based coordination |
+| **okr-manager** | [GitHub](https://github.com/fractalmind-ai/okr-manager-skill) | Goal lifecycle and progress tracking |
+| **.github** | [GitHub](https://github.com/fractalmind-ai/.github) | Shared org-level workflows and public profile surface |
 
-## Tool Skills
+## 2. Execution & Collaboration Interfaces
 
-Optional skills that extend agent capabilities.
+These repositories connect humans, agents, and tools.
 
-| Component | Repo | Description |
-|-----------|------|-------------|
-| use-fractalbot | [GitHub](https://github.com/fractalmind-ai/use-fractalbot-skill) | Agent-side message sending |
-| agent-browser | [GitHub](https://github.com/fractalmind-ai/agent-browser-skill) | Headless browser automation |
-| use-phone | [GitHub](https://github.com/fractalmind-ai/use-phone-skill) | ADB Android device control |
-| turbo-frequency | [GitHub](https://github.com/fractalmind-ai/turbo-frequency-skill) | Dynamic heartbeat frequency adjustment |
+| Component | Repo | Role |
+|-----------|------|------|
+| **fractalbot** | [GitHub](https://github.com/fractalmind-ai/fractalbot) | Multi-channel routing across Slack, Telegram, Discord, Feishu, etc. |
+| **team-chat** | [GitHub](https://github.com/fractalmind-ai/team-chat-skill) | File-backed team collaboration and audit trail |
+| **use-fractalbot** | [GitHub](https://github.com/fractalmind-ai/use-fractalbot-skill) | Agent-side outbound messaging skill |
+| **agent-browser** | [GitHub](https://github.com/fractalmind-ai/agent-browser-skill) | Browser automation skill |
+| **use-phone** | [GitHub](https://github.com/fractalmind-ai/use-phone-skill) | Android / ADB control skill |
+| **turbo-frequency** | [GitHub](https://github.com/fractalmind-ai/turbo-frequency-skill) | Dynamic heartbeat frequency control |
 
-## Applications
+## 3. Protocol & Runtime
 
-End-user products built on the FractalMind stack.
+These repositories extend FractalMind into public trust, distributed execution, and visualization.
 
-| Component | Repo | Description |
-|-----------|------|-------------|
-| [oh-my-code](/components/applications) | [GitHub](https://github.com/fractalmind-ai/oh-my-code) | Reference AI agent workspace |
-| [typemind-android](/components/applications) | [GitHub](https://github.com/fractalmind-ai/typemind-android) | Android AI keyboard |
+| Component | Repo | Role |
+|-----------|------|------|
+| **fractalmind-protocol** | [GitHub](https://github.com/fractalmind-ai/fractalmind-protocol) | Optional on-chain trust layer on SUI |
+| **fractalmind-envd** | [GitHub](https://github.com/fractalmind-ai/fractalmind-envd) | Runtime for remote / distributed agent execution |
+| **explorer** | [GitHub](https://github.com/fractalmind-ai/explorer) | Public visualization surface |
+| **openclaw-gateway-app** | [GitHub](https://github.com/fractalmind-ai/openclaw-gateway-app) | Gateway-facing application surface |
 
-## Planned
+## 4. Applications & Distribution
 
-| Component | Role | Phase |
-|-----------|------|-------|
-| Gateway Service | On-chain ↔ off-chain bridge | Phase 3 |
+These are end-user or public-facing surfaces built on top of the stack.
 
-## How They Connect
+| Component | Repo | Role |
+|-----------|------|------|
+| **fractalmind-ai.github.io** | [GitHub](https://github.com/fractalmind-ai/fractalmind-ai.github.io) | Public documentation site |
+| **typemind-android** | [GitHub](https://github.com/fractalmind-ai/typemind-android) | Android AI keyboard product surface |
 
-See the [Architecture Overview](/architecture/overview) for dependency diagrams and data flow.
+## What Matters Most Right Now
+
+The daily operating core today is:
+
+```
+oh-my-code + heartbeat + memory + fractalmind-okrs + agent-manager + fractalbot
+```
+
+That is the current center of gravity.
+
+The protocol, envd, and explorer still matter — but they are now part of a broader **OS-first** story instead of the whole story by themselves.
 
 ## Installation
 
-All skills are distributed via openskills:
+Skills continue to be distributed via openskills:
 
 ```bash
 npx openskills install fractalmind-ai/<skill-name>
 ```
 
-The protocol SDK is available via npm:
+The protocol SDK remains available via npm when you need the trust layer:
 
 ```bash
 npm install @anthropic-ai/fractalmind-sdk

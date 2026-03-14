@@ -1,55 +1,63 @@
 # What is FractalMind?
 
-FractalMind AI is **open-source, permissionless infrastructure** for organizing AI agents into fractal structures.
+FractalMind AI is **open-source infrastructure for running AI agent teams as a governed operating system**.
 
 ## The Problem
 
-Current AI agent frameworks manage individual capabilities:
-- **LangChain** manages tools
-- **CrewAI** manages teams
-- **OpenFang** manages agents
+Most agent tooling stops at one layer:
 
-But none of them manage **organizations** — the recursive, self-similar structures that emerge when you scale beyond a single team.
+- chat interfaces move messages
+- agent frameworks manage one worker at a time
+- team frameworks coordinate a local swarm
+- protocol projects define trust surfaces
 
-## The Solution
+But real delivery needs the whole loop: shared state, priorities, governance, execution, evidence, and learning. Without that, multi-agent work becomes fragile, opaque, and dependent on heroic manual coordination.
 
-FractalMind provides a complete stack for AI organization management:
+## The Current Answer
 
-- **On-chain protocol** (SUI) for permissionless org registration, agent identity, and task lifecycle
-- **Management skills** for agent lifecycle, team orchestration, and OKR tracking
-- **Communication gateway** for multi-channel messaging
-- **Fractal model** where every layer is a complete, self-similar copy of the one above it
+FractalMind combines four surfaces into one operating model:
 
-## How It Works
+- **Communication** — `fractalbot` routes humans and agents across Slack, Telegram, Discord, Feishu, and more
+- **Execution** — `agent-manager` runs tmux-based agents and lets the system dispatch work reliably
+- **Operating system loop** — heartbeat, structured memory, candidate OKRs, governance, outcomes, and evolution
+- **Trust surfaces** — `fractalmind-protocol`, `explorer`, and `fractalmind-envd` extend the system when on-chain identity or distributed execution matters
+
+The control loop is explicit:
 
 ```
-L3+ Inter-Org Federation    DAO governance          Emergent superintelligence
-L2  Organization            fractalmind-protocol    On-chain orgs, agents, tasks
-L1  Agent Team              team-manager            Lead-based team orchestration
-L0  Single Agent            agent-manager           Lifecycle, heartbeat, skills
+signal -> memory -> candidate OKR -> governance -> execution -> outcome -> evolution
 ```
 
-Each layer manages the next using the **same pattern**:
-- **L0**: A single agent has a heartbeat, tasks, and state
-- **L1**: A team has a heartbeat (via its lead), team tasks, and team state
-- **L2**: An organization has a heartbeat (via envd), org tasks, and org state
-- **L3+**: A federation has a heartbeat (via gateway), federated tasks, and federated state
+## How It Works Today
 
-One pattern. Infinite depth.
+```
+L3  Trust & Distribution    protocol / envd / explorer    Optional trust and remote execution
+L2  Operating System        heartbeat + memory + OKRs     Governed coordination and delivery
+L1  Teams & Workflows       team-manager / okr-manager    Team-level planning and tracking
+L0  Single Agent Execution  agent-manager                 Lifecycle, dispatch, and local work
+```
+
+The important shift is that **FractalMind is now OS-first, not only protocol-first**.
+
+- The daily running core lives in `oh-my-code`
+- Shared candidate OKRs land in `fractalmind-okrs`
+- Public trust surfaces still matter, but they are no longer the only story
 
 ## Who Is This For?
 
-- **AI researchers** building multi-agent systems that need organizational structure
-- **Developers** who want to deploy and manage fleets of AI agents
-- **Organizations** exploring autonomous AI operations
-- **Anyone** who believes the future of AI is collaborative, not singular
+- **AI builders** who need more than a chat bot or single-agent wrapper
+- **Teams operating multiple agents** with real delivery pressure
+- **Researchers** exploring governed autonomy and long-horizon coordination
+- **Organizations** that want auditability, human–AI co-creation, and repeatable execution
 
-## Current Status
+## Current State
 
-FractalMind is in **Phase 1: Validation**.
+As of the current public org state:
 
-- The protocol is [live on SUI Testnet](https://suiscan.xyz/testnet/object/0x685d6fb6ed8b0e679bb467ea73111819ec6ff68b1466d24ca26b400095dcdf24)
-- Core management skills are stable and in production use
-- SuLabs is the first organization instance with 2 AI agents completing tasks on-chain
+- FractalMind AI spans **18 public repositories**
+- The heartbeat-driven OS loop is running in `oh-my-code`
+- Candidate OKR sync is active through `fractalmind-okrs`
+- The protocol remains live on **SUI Testnet** as an optional trust layer
+- Current work focuses on observability, governed delivery, memory, and distribution — not just proving the protocol exists
 
-See the [Roadmap](/roadmap/) for what's next.
+See the [Architecture Overview](/architecture/overview) and [Roadmap](/roadmap/) for the latest framing.

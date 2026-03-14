@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'FractalMind AI',
-  description: 'Organize AI Agents into Fractal Structures. Emerge Superintelligence.',
+  description: 'Heartbeat-driven operating system for AI agent teams.',
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
   ],
