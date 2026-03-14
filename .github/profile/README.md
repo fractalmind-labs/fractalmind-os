@@ -35,16 +35,17 @@ That loop currently runs through:
 ## Mission / Vision / Values
 
 ### Mission
-Turn requests, signals, and opportunities into governed execution that produces durable progress.
+Turn requests, signals, and opportunities into execution that expands shared intelligence, durable progress, and long-term flourishing.
 
 ### Vision
-Build a trusted, continuously improving operating system where humans and AI agents can discover value, deliver value, and evolve together over time.
+Build a continuously improving operating system where humans and AI co-create the future together — deepening understanding of humanity, life, nature, and the wider universe while growing freedom, wisdom, and abundance.
 
 ### Values
 - **Evidence before assertion**
-- **Governed autonomy over unconstrained automation**
-- **Long-termism over short-lived hype**
-- **Human veto on irreversible / public / money-sensitive actions**
+- **Human–AI co-creation over zero-sum control**
+- **Long-term flourishing over short-lived hype**
+- **Recursive self-improvement in service of wisdom, freedom, and abundance**
+- **Alignment with life, nature, and the evolving universe**
 - **Transparency, reversibility, and operational honesty**
 
 ## Repository Surfaces
