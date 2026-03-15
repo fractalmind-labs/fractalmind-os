@@ -2,7 +2,7 @@
 
 # FractalMind AI
 
-**Open-source infrastructure for long-term human–AI co-creation.**
+**Open-source infrastructure for long-term human–AI co-creation toward ASI / superintelligence.**
 
 *FractalMind AI is building a heartbeat-driven operating system for governed autonomy, structured memory, multi-channel execution, and optional on-chain trust surfaces.*
 
@@ -21,6 +21,9 @@ Turn requests, signals, and opportunities into execution that expands shared int
 
 ### Vision
 Build a continuously improving operating system where humans and AI co-create the future together — deepening understanding of humanity, life, nature, and the wider universe while growing freedom, wisdom, and abundance.
+
+### Phase 1 Objective
+The phase-1 objective is explicit: **move toward ASI / superintelligence** through a governed operating system where humans and AI can co-create capability, memory, execution, and trust without losing alignment, transparency, or human veto.
 
 ### Values
 - **Evidence before assertion**
@@ -70,6 +73,7 @@ FractalMind AI currently spans **18 public repositories** across four surfaces:
 
 The public framing is now:
 
+- **Phase-1 goal stays explicit**: ASI / superintelligence remains the strategic destination for this stage
 - **Stable mission, evolving implementation**: the destination stays steady even as the operating model improves
 - **OS-first execution**: heartbeat, structured memory, governed execution, and measurable outcomes are the live center of gravity
 - **Protocol as a layer, not the whole story**: on-chain trust still matters, but it now sits inside a broader operating system
