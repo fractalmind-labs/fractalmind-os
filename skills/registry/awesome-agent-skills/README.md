@@ -783,6 +783,8 @@ Official Web3 and trading skills from the Binance team. Includes crypto market d
 
 ### Community Skills
 
+- **[ethos-link/rails-conventions](https://github.com/ethos-link/rails-conventions)** - Rails 8 conventions for consistent production code changes
+
 <details>
 <summary><h3 style="display:inline">Marketing</h3></summary>
 
