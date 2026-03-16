@@ -783,8 +783,6 @@ Official Web3 and trading skills from the Binance team. Includes crypto market d
 
 ### Community Skills
 
-- **[ethos-link/rails-conventions](https://github.com/ethos-link/rails-conventions)** - Rails 8 conventions for consistent production code changes
-
 <details>
 <summary><h3 style="display:inline">Marketing</h3></summary>
 
@@ -835,6 +833,8 @@ Official Web3 and trading skills from the Binance team. Includes crypto market d
 
 <details>
 <summary><h3 style="display:inline">Development and Testing</h3></summary>
+
+- **[ethos-link/rails-conventions](https://github.com/ethos-link/rails-conventions)** - Rails 8 conventions for consistent production code changes
 
 - **[robzolkos/skill-rails-upgrade](https://github.com/robzolkos/skill-rails-upgrade)** - Analyze Rails apps and provide upgrade assessments
 - **[Shpigford/screenshots](https://github.com/Shpigford/skills/tree/main/screenshots)** - Generate marketing screenshots with Playwright
