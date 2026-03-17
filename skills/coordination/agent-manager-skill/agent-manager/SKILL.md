@@ -139,7 +139,7 @@ launcher: codex
 launcher_args:
   - --model=gpt-5.2
 launcher_config:
-  model_instructions_file: ${REPO_ROOT}/agents/EMP_0001/prompt/shade-main-model.md
+  model_instructions_file: ${REPO_ROOT}/agents/EMP_0001/prompt/main-heartbeat-supervisor.md
 ```
 
 `launcher_config` is the generic escape hatch for launcher/provider-specific startup config. Each CLI provider adapts this flat mapping into its own startup flags (for Codex, each entry becomes `-c key=value`).
