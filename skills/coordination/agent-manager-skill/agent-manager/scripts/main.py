@@ -689,6 +689,8 @@ _HEARTBEAT_FALLBACK_MODES = {"none", "fresh"}
 _HEARTBEAT_RECOVERY_FAILURE_TYPES = set(SERVICE_RECOVERABLE_FAILURE_TYPES)
 _CONTEXT_LEFT_PATTERN_CACHE: dict[str, list[re.Pattern]] = {}
 _HEARTBEAT_TRACE_MAX_LIMIT = 5000
+_HEARTBEAT_AUTO_STARVATION_SKIP_THRESHOLD = 3
+_HEARTBEAT_AUTO_STARVATION_LOOKBACK_LIMIT = 32
 
 
 def _normalize_heartbeat_session_mode(value: object) -> str:
@@ -1121,6 +1123,35 @@ def _read_heartbeat_audit_events(
 
     events.sort(key=lambda item: str(item.get('timestamp', '')), reverse=True)
     return events[:trace_limit]
+
+
+def _is_auto_preflight_skip_event(event: dict) -> bool:
+    if not isinstance(event, dict):
+        return False
+    return (
+        str(event.get('session_mode', '')) == 'auto'
+        and str(event.get('phase', '')) == 'preflight'
+        and str(event.get('send_status', '')) == 'skip'
+    )
+
+
+def _count_consecutive_auto_preflight_skips(
+    repo_root: Path,
+    *,
+    agent_id: str,
+    limit: int = _HEARTBEAT_AUTO_STARVATION_LOOKBACK_LIMIT,
+) -> int:
+    events = _read_heartbeat_audit_events(
+        repo_root,
+        agent_id=agent_id,
+        limit=max(1, int(limit or _HEARTBEAT_AUTO_STARVATION_LOOKBACK_LIMIT)),
+    )
+    count = 0
+    for event in events:
+        if not _is_auto_preflight_skip_event(event):
+            break
+        count += 1
+    return count
 
 
 def cmd_heartbeat_trace(args) -> int:
@@ -1605,6 +1636,7 @@ def cmd_heartbeat_run(args):
     # Standard heartbeat message (with traceable id for delivery debugging)
     heartbeat_id = time.strftime('%Y%m%d-%H%M%S')
     print(f"   HB_ID: {heartbeat_id}")
+    recovery_action = ''
 
     if session_mode == 'auto':
         preflight_state, preflight_reason = _heartbeat_preflight_runtime_state(
@@ -1620,27 +1652,44 @@ def cmd_heartbeat_run(args):
             elif preflight_state == 'busy' and str(preflight_reason).startswith('pending_heartbeat:'):
                 skip_failure_type = 'pending_skip'
                 skip_reason_code = 'HB_AUTO_PENDING_SKIP'
-            print(
-                "⏭️  Agent is not idle "
-                f"(state={preflight_state}, reason={preflight_reason}); "
-                "skipping heartbeat dispatch in auto mode to avoid batch accumulation"
-            )
-            _append_heartbeat_audit_event(
-                repo_root,
-                agent_id=agent_id,
-                heartbeat_id=heartbeat_id,
-                send_status='skip',
-                ack_status='not_checked',
-                duration_ms=0,
-                context_left=context_left_percent,
-                failure_type=skip_failure_type,
-                session_mode=session_mode,
-                phase='preflight',
-                attempt=0,
-                recovery_action='skip_busy',
-                reason_code=skip_reason_code,
-            )
-            return 0
+            starvation_guard_armed = skip_reason_code != 'HB_AUTO_PENDING_SKIP'
+            consecutive_skip_count = 0
+            if starvation_guard_armed:
+                consecutive_skip_count = _count_consecutive_auto_preflight_skips(
+                    repo_root,
+                    agent_id=agent_id,
+                )
+                if consecutive_skip_count >= _HEARTBEAT_AUTO_STARVATION_SKIP_THRESHOLD:
+                    recovery_action = 'auto_starvation_bypass'
+                    print(
+                        "⚠️  Auto-mode starvation guard triggered after "
+                        f"{consecutive_skip_count} consecutive preflight skips; "
+                        "dispatching one heartbeat attempt anyway"
+                    )
+                else:
+                    starvation_guard_armed = False
+            if not starvation_guard_armed:
+                print(
+                    "⏭️  Agent is not idle "
+                    f"(state={preflight_state}, reason={preflight_reason}); "
+                    "skipping heartbeat dispatch in auto mode to avoid batch accumulation"
+                )
+                _append_heartbeat_audit_event(
+                    repo_root,
+                    agent_id=agent_id,
+                    heartbeat_id=heartbeat_id,
+                    send_status='skip',
+                    ack_status='not_checked',
+                    duration_ms=0,
+                    context_left=context_left_percent,
+                    failure_type=skip_failure_type,
+                    session_mode=session_mode,
+                    phase='preflight',
+                    attempt=0,
+                    recovery_action='skip_busy',
+                    reason_code=skip_reason_code,
+                )
+                return 0
     elif session_mode == 'force':
         print("   Force mode: bypass preflight idle check and always dispatch heartbeat")
 
@@ -1673,7 +1722,6 @@ def cmd_heartbeat_run(args):
     notifier_channel = str(recovery_policy['notifier_channel'] or 'all')
 
     final_attempt_result: Optional[dict] = None
-    recovery_action = ''
 
     for attempt in range(max_retries + 1):
         attempt_no = attempt + 1
