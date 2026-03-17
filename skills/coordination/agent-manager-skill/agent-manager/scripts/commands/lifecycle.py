@@ -63,6 +63,32 @@ def _mark_main_inbound_state(
     )
 
 
+def _mark_main_inbound_resumed_if_needed(
+    deps: Any,
+    repo_root: Any,
+    *,
+    agent_id: str,
+    message_id: str,
+    detail: str,
+) -> None:
+    if str(agent_id).strip().lower() != 'main' or not repo_root or not message_id:
+        return
+    was_message_yielded = getattr(deps, 'was_message_yielded', None)
+    append_inbound_message_event = getattr(deps, 'append_inbound_message_event', None)
+    if not callable(was_message_yielded) or not callable(append_inbound_message_event):
+        raise RuntimeError("inbound queue resume helpers are unavailable")
+    if not was_message_yielded(repo_root, agent_id=agent_id, message_id=message_id):
+        return
+    append_inbound_message_event(
+        repo_root,
+        agent_id=agent_id,
+        message_id=message_id,
+        event='resumed',
+        state='dispatching',
+        detail=detail,
+    )
+
+
 def _probe_runtime_state(deps: Any, *, agent_id: str, launcher: str) -> Optional[Tuple[str, str]]:
     get_agent_runtime_state = getattr(deps, 'get_agent_runtime_state', None)
     if not callable(get_agent_runtime_state):
@@ -606,6 +632,13 @@ def cmd_send(args, *, deps: Any):
         )
         print(f"ℹ️  Codex long message detected; using file pointer: {message_file}")
 
+    _mark_main_inbound_resumed_if_needed(
+        deps,
+        queue_repo_root,
+        agent_id=agent_id,
+        message_id=queue_message_id,
+        detail='message_dispatch_resumed',
+    )
     _mark_main_inbound_state(
         deps,
         queue_repo_root,
@@ -647,6 +680,15 @@ def cmd_send(args, *, deps: Any):
         agent_id=agent_id,
         launcher=launcher,
     )
+    if delivery_confirmed:
+        _mark_main_inbound_state(
+            deps,
+            queue_repo_root,
+            agent_id=agent_id,
+            message_id=queue_message_id,
+            state='handled',
+            detail=f"delivery_confirmed:{observed_state}:{observed_reason}",
+        )
     if not delivery_confirmed:
         print(
             f"⚠️  Delivery unconfirmed: agent remained idle after send "
@@ -751,6 +793,13 @@ def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
         )
         print(f"ℹ️  Codex long assignment detected; using file pointer: {task_file}")
 
+    _mark_main_inbound_resumed_if_needed(
+        deps,
+        queue_repo_root,
+        agent_id=agent_id,
+        message_id=queue_message_id,
+        detail='assignment_dispatch_resumed',
+    )
     _mark_main_inbound_state(
         deps,
         queue_repo_root,
@@ -792,6 +841,15 @@ def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
         agent_id=agent_id,
         launcher=launcher,
     )
+    if delivery_confirmed:
+        _mark_main_inbound_state(
+            deps,
+            queue_repo_root,
+            agent_id=agent_id,
+            message_id=queue_message_id,
+            state='handled',
+            detail=f"delivery_confirmed:{observed_state}:{observed_reason}",
+        )
     if not delivery_confirmed:
         print(
             f"⚠️  Delivery unconfirmed: agent remained idle after assign "

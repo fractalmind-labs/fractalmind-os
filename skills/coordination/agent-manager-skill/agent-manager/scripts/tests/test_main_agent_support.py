@@ -20,6 +20,10 @@ import tmux_helper  # noqa: E402
 from services.inbound_queue import enqueue_inbound_message  # noqa: E402
 from services.inbound_queue import mark_inbound_message_state  # noqa: E402
 from services.inbound_queue import load_pending_inbound_messages  # noqa: E402
+from services.inbound_queue import note_pending_messages_yielded  # noqa: E402
+from services.inbound_queue import read_inbound_events  # noqa: E402
+from services.inbound_queue import was_message_yielded  # noqa: E402
+from services.inbound_queue import append_inbound_message_event  # noqa: E402
 from commands.lifecycle import cmd_assign, cmd_monitor, cmd_send  # noqa: E402
 
 
@@ -89,6 +93,8 @@ class MainAgentLifecycleTests(unittest.TestCase):
             send_keys=lambda agent_id, message, **kwargs: calls.append((agent_id, message, kwargs)) or True,
             enqueue_inbound_message=enqueue_inbound_message,
             mark_inbound_message_state=mark_inbound_message_state,
+            was_message_yielded=was_message_yielded,
+            append_inbound_message_event=append_inbound_message_event,
         )
 
         output = io.StringIO()
@@ -124,6 +130,8 @@ class MainAgentLifecycleTests(unittest.TestCase):
             sys=SimpleNamespace(stdin=io.StringIO('run health check')),
             enqueue_inbound_message=enqueue_inbound_message,
             mark_inbound_message_state=mark_inbound_message_state,
+            was_message_yielded=was_message_yielded,
+            append_inbound_message_event=append_inbound_message_event,
         )
 
         output = io.StringIO()
@@ -180,6 +188,8 @@ class MainAgentLifecycleTests(unittest.TestCase):
             get_agent_runtime_state=lambda _agent_id, launcher='': {'state': 'busy', 'reason': 'busy_pattern:Thinking...'},
             enqueue_inbound_message=enqueue_inbound_message,
             mark_inbound_message_state=mark_inbound_message_state,
+            was_message_yielded=was_message_yielded,
+            append_inbound_message_event=append_inbound_message_event,
         )
 
         output = io.StringIO()
@@ -228,6 +238,8 @@ class MainAgentLifecycleTests(unittest.TestCase):
             time=fake_time,
             enqueue_inbound_message=enqueue_inbound_message,
             mark_inbound_message_state=mark_inbound_message_state,
+            was_message_yielded=was_message_yielded,
+            append_inbound_message_event=append_inbound_message_event,
         )
 
         output = io.StringIO()
@@ -277,6 +289,8 @@ class MainAgentLifecycleTests(unittest.TestCase):
             sys=SimpleNamespace(stdin=io.StringIO('run health check')),
             enqueue_inbound_message=enqueue_inbound_message,
             mark_inbound_message_state=mark_inbound_message_state,
+            was_message_yielded=was_message_yielded,
+            append_inbound_message_event=append_inbound_message_event,
         )
 
         output = io.StringIO()
@@ -309,6 +323,8 @@ class MainAgentLifecycleTests(unittest.TestCase):
             send_keys=lambda *_args, **_kwargs: False,
             enqueue_inbound_message=enqueue_inbound_message,
             mark_inbound_message_state=mark_inbound_message_state,
+            was_message_yielded=was_message_yielded,
+            append_inbound_message_event=append_inbound_message_event,
         )
 
         output = io.StringIO()
@@ -322,6 +338,58 @@ class MainAgentLifecycleTests(unittest.TestCase):
         pending = load_pending_inbound_messages(temp_root, agent_id='main')
         self.assertEqual(len(pending), 1)
         self.assertEqual(pending[0].get('state'), 'dispatch_failed')
+
+    def test_send_main_marks_resumed_and_handled_after_prior_yield(self):
+        calls = []
+        temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-main-resume-queue-'))
+        message_id = enqueue_inbound_message(
+            temp_root,
+            agent_id='main',
+            source='send',
+            message_kind='message',
+            message='resume-this',
+        )
+        note_pending_messages_yielded(
+            temp_root,
+            agent_id='main',
+            heartbeat_id='HB-123',
+            reason_code='HB_USER_QUEUE_PENDING',
+            detail='heartbeat_pre_dispatch_yield',
+        )
+
+        deps = SimpleNamespace(
+            __file__='main.py',
+            resolve_agent=lambda _agent: {'name': 'main', 'file_id': 'main', 'launcher': 'droid'},
+            get_agent_id=lambda config: config.get('file_id', '').lower(),
+            check_tmux=lambda: True,
+            session_exists=lambda agent_id: agent_id == 'main',
+            Path=Path,
+            resolve_launcher_command=lambda launcher: launcher,
+            _should_use_codex_file_pointer=lambda _msg: False,
+            get_repo_root=lambda: temp_root,
+            write_codex_message_file=lambda *_args, **_kwargs: Path('/tmp/message.md'),
+            send_keys=lambda agent_id, message, **kwargs: calls.append((agent_id, message, kwargs)) or True,
+            get_agent_runtime_state=lambda _agent_id, launcher='': {'state': 'busy', 'reason': 'busy_pattern:Thinking...'},
+            enqueue_inbound_message=lambda *_args, **_kwargs: message_id,
+            mark_inbound_message_state=mark_inbound_message_state,
+            was_message_yielded=was_message_yielded,
+            append_inbound_message_event=append_inbound_message_event,
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            rc = cmd_send(
+                argparse.Namespace(agent='main', message='resume-this', send_enter=True),
+                deps=deps,
+            )
+
+        self.assertEqual(rc, 0)
+        events = read_inbound_events(temp_root, agent_id='main', message_id=message_id)
+        names = [event.get('event') for event in events]
+        self.assertEqual(
+            names,
+            ['received', 'queued', 'yielded', 'resumed', 'dispatching', 'dispatched', 'handled'],
+        )
 
 
 if __name__ == '__main__':

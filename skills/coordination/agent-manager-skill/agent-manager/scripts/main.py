@@ -88,9 +88,13 @@ from services.heartbeat_service import (
     run_heartbeat_attempt as service_run_heartbeat_attempt,
 )
 from services.inbound_queue import (
+    append_inbound_message_event,
     enqueue_inbound_message,
     has_pending_inbound_messages,
     mark_inbound_message_state,
+    note_pending_messages_yielded,
+    read_inbound_events,
+    was_message_yielded,
 )
 from services.heartbeat_state_machine import (
     RECOVERABLE_FAILURE_TYPES as SERVICE_RECOVERABLE_FAILURE_TYPES,
@@ -1644,6 +1648,13 @@ def cmd_heartbeat_run(args):
     recovery_action = ''
 
     if has_pending_inbound_messages(repo_root, agent_id=agent_id):
+        note_pending_messages_yielded(
+            repo_root,
+            agent_id=agent_id,
+            heartbeat_id=heartbeat_id,
+            reason_code='HB_USER_QUEUE_PENDING',
+            detail='heartbeat_pre_dispatch_yield',
+        )
         print("⏭️  Pending inbound user work detected; yielding heartbeat before dispatch")
         _append_heartbeat_audit_event(
             repo_root,
@@ -1749,6 +1760,13 @@ def cmd_heartbeat_run(args):
 
     for attempt in range(max_retries + 1):
         if has_pending_inbound_messages(repo_root, agent_id=agent_id):
+            note_pending_messages_yielded(
+                repo_root,
+                agent_id=agent_id,
+                heartbeat_id=heartbeat_id,
+                reason_code='HB_USER_QUEUE_PENDING',
+                detail='heartbeat_pre_attempt_yield',
+            )
             print("⏭️  Pending inbound user work detected; yielding heartbeat before next attempt")
             _append_heartbeat_audit_event(
                 repo_root,
@@ -1802,6 +1820,13 @@ def cmd_heartbeat_run(args):
         final_attempt_result = result
 
         if failure_type == 'user_queue_yield':
+            note_pending_messages_yielded(
+                repo_root,
+                agent_id=agent_id,
+                heartbeat_id=heartbeat_id,
+                reason_code=reason_code or 'HB_USER_QUEUE_YIELD',
+                detail='heartbeat_wait_yield',
+            )
             print("⏭️  Inbound user work arrived during heartbeat; yielding to user-first priority")
             return 0
 

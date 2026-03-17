@@ -5,7 +5,7 @@ import os
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 _PENDING_STATES = {'queued', 'dispatching', 'dispatch_failed'}
@@ -24,6 +24,31 @@ def _append_event(repo_root: Path, agent_id: str, payload: Dict[str, Any]) -> No
         os.fsync(fh.fileno())
 
 
+def append_inbound_message_event(
+    repo_root: Path,
+    *,
+    agent_id: str,
+    message_id: str,
+    event: str,
+    state: Optional[str] = None,
+    detail: str = "",
+    **extra: Any,
+) -> None:
+    payload: Dict[str, Any] = {
+        'message_id': str(message_id),
+        'agent_id': str(agent_id),
+        'event': str(event),
+        'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+    }
+    if state is not None:
+        payload['state'] = str(state)
+    if detail:
+        payload['detail'] = str(detail)
+    for key, value in extra.items():
+        payload[str(key)] = value
+    _append_event(repo_root, agent_id, payload)
+
+
 def enqueue_inbound_message(
     repo_root: Path,
     *,
@@ -40,10 +65,28 @@ def enqueue_inbound_message(
         'source': str(source),
         'message_kind': str(message_kind),
         'message': str(message),
-        'timestamp': timestamp,
     }
-    _append_event(repo_root, agent_id, {**base, 'event': 'received', 'state': 'received'})
-    _append_event(repo_root, agent_id, {**base, 'event': 'queued', 'state': 'queued'})
+    append_inbound_message_event(
+        repo_root,
+        agent_id=agent_id,
+        message_id=message_id,
+        event='received',
+        state='received',
+        source=source,
+        message_kind=message_kind,
+        message=message,
+        received_at=timestamp,
+    )
+    append_inbound_message_event(
+        repo_root,
+        agent_id=agent_id,
+        message_id=message_id,
+        event='queued',
+        state='queued',
+        source=source,
+        message_kind=message_kind,
+        message=message,
+    )
     return message_id
 
 
@@ -54,27 +97,31 @@ def mark_inbound_message_state(
     message_id: str,
     state: str,
     detail: str = "",
+    **extra: Any,
 ) -> None:
-    _append_event(
+    append_inbound_message_event(
         repo_root,
-        agent_id,
-        {
-            'message_id': str(message_id),
-            'agent_id': str(agent_id),
-            'event': str(state),
-            'state': str(state),
-            'detail': str(detail),
-            'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-        },
+        agent_id=agent_id,
+        message_id=message_id,
+        event=str(state),
+        state=str(state),
+        detail=detail,
+        **extra,
     )
 
 
-def load_pending_inbound_messages(repo_root: Path, *, agent_id: str) -> List[Dict[str, Any]]:
+def read_inbound_events(
+    repo_root: Path,
+    *,
+    agent_id: str,
+    message_id: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> List[Dict[str, Any]]:
     queue_file = _queue_file(repo_root, agent_id)
     if not queue_file.exists():
         return []
 
-    latest: Dict[str, Dict[str, Any]] = {}
+    events: List[Dict[str, Any]] = []
     with queue_file.open('r', encoding='utf-8') as fh:
         for raw_line in fh:
             line = raw_line.strip()
@@ -84,13 +131,63 @@ def load_pending_inbound_messages(repo_root: Path, *, agent_id: str) -> List[Dic
                 payload = json.loads(line)
             except Exception:
                 continue
-            message_id = str(payload.get('message_id') or '').strip()
-            if not message_id:
+            if not isinstance(payload, dict):
                 continue
-            current = latest.get(message_id, {})
-            merged = dict(current)
-            merged.update(payload)
-            latest[message_id] = merged
+            if message_id and str(payload.get('message_id') or '') != str(message_id):
+                continue
+            events.append(payload)
+
+    events.sort(key=lambda item: str(item.get('timestamp') or ''))
+    if limit is not None:
+        return events[-max(0, int(limit)) :]
+    return events
+
+
+def was_message_yielded(repo_root: Path, *, agent_id: str, message_id: str) -> bool:
+    return any(
+        str(event.get('event') or '') == 'yielded'
+        for event in read_inbound_events(repo_root, agent_id=agent_id, message_id=message_id)
+    )
+
+
+def note_pending_messages_yielded(
+    repo_root: Path,
+    *,
+    agent_id: str,
+    heartbeat_id: str,
+    reason_code: str,
+    detail: str = "",
+) -> List[str]:
+    pending = load_pending_inbound_messages(repo_root, agent_id=agent_id)
+    yielded_ids: List[str] = []
+    for payload in pending:
+        message_id = str(payload.get('message_id') or '').strip()
+        if not message_id:
+            continue
+        append_inbound_message_event(
+            repo_root,
+            agent_id=agent_id,
+            message_id=message_id,
+            event='yielded',
+            state=str(payload.get('state') or 'queued'),
+            detail=detail,
+            heartbeat_id=heartbeat_id,
+            reason_code=reason_code,
+        )
+        yielded_ids.append(message_id)
+    return yielded_ids
+
+
+def load_pending_inbound_messages(repo_root: Path, *, agent_id: str) -> List[Dict[str, Any]]:
+    latest: Dict[str, Dict[str, Any]] = {}
+    for payload in read_inbound_events(repo_root, agent_id=agent_id):
+        message_id = str(payload.get('message_id') or '').strip()
+        if not message_id:
+            continue
+        current = latest.get(message_id, {})
+        merged = dict(current)
+        merged.update(payload)
+        latest[message_id] = merged
 
     pending = [payload for payload in latest.values() if str(payload.get('state') or '') in _PENDING_STATES]
     pending.sort(key=lambda item: str(item.get('timestamp') or ''))
