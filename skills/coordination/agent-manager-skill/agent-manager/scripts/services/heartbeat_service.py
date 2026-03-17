@@ -210,6 +210,17 @@ def run_heartbeat_attempt(
 ) -> dict:
     started = deps.time.time()
     heartbeat_id = _extract_heartbeat_id(heartbeat_message)
+    get_repo_root = getattr(deps, 'get_repo_root', None)
+    has_pending_inbound_messages = getattr(deps, 'has_pending_inbound_messages', None)
+    repo_root = get_repo_root() if callable(get_repo_root) else None
+
+    def _has_pending_user_work() -> bool:
+        if repo_root is None or not callable(has_pending_inbound_messages):
+            return False
+        try:
+            return bool(has_pending_inbound_messages(repo_root, agent_id=agent_id))
+        except Exception:
+            return False
 
     # Capture baseline output BEFORE sending for activation detection.
     baseline_output = deps.capture_output(agent_id, lines=50) or ""
@@ -254,6 +265,16 @@ def run_heartbeat_attempt(
         # After send_keys, the agent may still appear idle for several seconds before
         # busy indicators (e.g. "✻ Thinking") appear in the pane.
         while (deps.time.time() - start_time) < activation_timeout:
+            if _has_pending_user_work():
+                print("⏭️  Pending inbound user work detected; yielding heartbeat wait")
+                return {
+                    'send_status': 'ok',
+                    'ack_status': 'yielded',
+                    'failure_type': 'user_queue_yield',
+                    'reason_code': 'HB_USER_QUEUE_YIELD',
+                    'last_state': last_state,
+                    'duration_ms': int((deps.time.time() - started) * 1000),
+                }
             runtime = deps.get_agent_runtime_state(agent_id, launcher=launcher)
             last_state = str(runtime.get('state', 'unknown'))
             last_reason = str(runtime.get('reason', 'unknown'))
@@ -312,6 +333,16 @@ def run_heartbeat_attempt(
         if activated:
             if not direct_ack:
                 while (deps.time.time() - start_time) < timeout_seconds:
+                    if _has_pending_user_work():
+                        print("⏭️  Pending inbound user work detected; yielding heartbeat completion wait")
+                        return {
+                            'send_status': 'ok',
+                            'ack_status': 'yielded',
+                            'failure_type': 'user_queue_yield',
+                            'reason_code': 'HB_USER_QUEUE_YIELD',
+                            'last_state': last_state,
+                            'duration_ms': int((deps.time.time() - started) * 1000),
+                        }
                     runtime = deps.get_agent_runtime_state(agent_id, launcher=launcher)
                     last_state = str(runtime.get('state', 'unknown'))
                     current_output = deps.capture_output(agent_id, lines=50) or ""

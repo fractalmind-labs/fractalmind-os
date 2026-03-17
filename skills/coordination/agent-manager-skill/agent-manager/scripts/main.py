@@ -87,6 +87,11 @@ from services.heartbeat_service import (
     restart_heartbeat_session_fresh as service_restart_heartbeat_session_fresh,
     run_heartbeat_attempt as service_run_heartbeat_attempt,
 )
+from services.inbound_queue import (
+    enqueue_inbound_message,
+    has_pending_inbound_messages,
+    mark_inbound_message_state,
+)
 from services.heartbeat_state_machine import (
     RECOVERABLE_FAILURE_TYPES as SERVICE_RECOVERABLE_FAILURE_TYPES,
     classify_heartbeat_ack as service_classify_heartbeat_ack,
@@ -1638,6 +1643,25 @@ def cmd_heartbeat_run(args):
     print(f"   HB_ID: {heartbeat_id}")
     recovery_action = ''
 
+    if has_pending_inbound_messages(repo_root, agent_id=agent_id):
+        print("⏭️  Pending inbound user work detected; yielding heartbeat before dispatch")
+        _append_heartbeat_audit_event(
+            repo_root,
+            agent_id=agent_id,
+            heartbeat_id=heartbeat_id,
+            send_status='skip',
+            ack_status='yielded',
+            duration_ms=0,
+            context_left=context_left_percent,
+            failure_type='user_queue_yield',
+            session_mode=session_mode,
+            phase='preflight',
+            attempt=0,
+            recovery_action='yield_to_user',
+            reason_code='HB_USER_QUEUE_PENDING',
+        )
+        return 0
+
     if session_mode == 'auto':
         preflight_state, preflight_reason = _heartbeat_preflight_runtime_state(
             agent_id=agent_id,
@@ -1724,6 +1748,24 @@ def cmd_heartbeat_run(args):
     final_attempt_result: Optional[dict] = None
 
     for attempt in range(max_retries + 1):
+        if has_pending_inbound_messages(repo_root, agent_id=agent_id):
+            print("⏭️  Pending inbound user work detected; yielding heartbeat before next attempt")
+            _append_heartbeat_audit_event(
+                repo_root,
+                agent_id=agent_id,
+                heartbeat_id=heartbeat_id,
+                send_status='skip',
+                ack_status='yielded',
+                duration_ms=0,
+                context_left=context_left_percent,
+                failure_type='user_queue_yield',
+                session_mode=session_mode,
+                phase='preflight',
+                attempt=attempt,
+                recovery_action='yield_to_user',
+                reason_code='HB_USER_QUEUE_PENDING',
+            )
+            return 0
         attempt_no = attempt + 1
         print(f"   Attempt {attempt_no}/{max_retries + 1}")
         result = _run_heartbeat_attempt(
@@ -1758,6 +1800,10 @@ def cmd_heartbeat_run(args):
         )
 
         final_attempt_result = result
+
+        if failure_type == 'user_queue_yield':
+            print("⏭️  Inbound user work arrived during heartbeat; yielding to user-first priority")
+            return 0
 
         if send_status == 'ok' and ack_status in {'ack', 'not_checked'}:
             break

@@ -17,6 +17,9 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 import agent_config  # noqa: E402
 import tmux_helper  # noqa: E402
+from services.inbound_queue import enqueue_inbound_message  # noqa: E402
+from services.inbound_queue import mark_inbound_message_state  # noqa: E402
+from services.inbound_queue import load_pending_inbound_messages  # noqa: E402
 from commands.lifecycle import cmd_assign, cmd_monitor, cmd_send  # noqa: E402
 
 
@@ -70,19 +73,22 @@ class MainAgentTmuxNamingTests(unittest.TestCase):
 class MainAgentLifecycleTests(unittest.TestCase):
     def test_send_main_routes_message_to_main_agent_id(self):
         calls = []
+        temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-main-send-queue-'))
 
         deps = SimpleNamespace(
             __file__='main.py',
-            check_tmux=lambda: True,
             resolve_agent=lambda _agent: {'name': 'main', 'file_id': 'main', 'launcher': 'droid'},
             get_agent_id=lambda config: config.get('file_id', '').lower(),
+            check_tmux=lambda: True,
             session_exists=lambda agent_id: agent_id == 'main',
             Path=Path,
             resolve_launcher_command=lambda launcher: launcher,
             _should_use_codex_file_pointer=lambda _msg: False,
-            get_repo_root=lambda: Path('/tmp'),
+            get_repo_root=lambda: temp_root,
             write_codex_message_file=lambda *_args, **_kwargs: Path('/tmp/message.md'),
             send_keys=lambda agent_id, message, **kwargs: calls.append((agent_id, message, kwargs)) or True,
+            enqueue_inbound_message=enqueue_inbound_message,
+            mark_inbound_message_state=mark_inbound_message_state,
         )
 
         output = io.StringIO()
@@ -95,25 +101,29 @@ class MainAgentLifecycleTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertEqual(calls[0][0], 'main')
         self.assertIn('Message sent to main', output.getvalue())
+        self.assertEqual(load_pending_inbound_messages(temp_root, agent_id='main'), [])
 
     def test_assign_main_reads_stdin_and_sends(self):
         calls = []
+        temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-main-assign-queue-'))
 
         deps = SimpleNamespace(
             __file__='main.py',
-            check_tmux=lambda: True,
             resolve_agent=lambda _agent: {'name': 'main', 'file_id': 'main', 'launcher': 'droid'},
             get_agent_id=lambda config: config.get('file_id', '').lower(),
+            check_tmux=lambda: True,
             session_exists=lambda agent_id: agent_id == 'main',
             argparse=argparse,
             time=SimpleNamespace(sleep=lambda _s: None),
             resolve_launcher_command=lambda launcher: launcher,
             _should_use_codex_file_pointer=lambda _msg: False,
-            get_repo_root=lambda: Path('/tmp'),
+            get_repo_root=lambda: temp_root,
             write_codex_message_file=lambda *_args, **_kwargs: Path('/tmp/assign.md'),
             send_keys=lambda agent_id, message, **kwargs: calls.append((agent_id, message, kwargs)) or True,
             Path=Path,
             sys=SimpleNamespace(stdin=io.StringIO('run health check')),
+            enqueue_inbound_message=enqueue_inbound_message,
+            mark_inbound_message_state=mark_inbound_message_state,
         )
 
         output = io.StringIO()
@@ -128,6 +138,7 @@ class MainAgentLifecycleTests(unittest.TestCase):
         self.assertEqual(calls[0][0], 'main')
         self.assertIn('# Task Assignment', calls[0][1])
         self.assertIn('Task assigned to main', output.getvalue())
+        self.assertEqual(load_pending_inbound_messages(temp_root, agent_id='main'), [])
 
     def test_monitor_main_shows_main_session_label(self):
         deps = SimpleNamespace(
@@ -152,20 +163,23 @@ class MainAgentLifecycleTests(unittest.TestCase):
 
     def test_send_warns_when_runtime_not_idle_before_dispatch(self):
         calls = []
+        temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-main-busy-queue-'))
 
         deps = SimpleNamespace(
             __file__='main.py',
-            check_tmux=lambda: True,
             resolve_agent=lambda _agent: {'name': 'main', 'file_id': 'main', 'launcher': 'droid'},
             get_agent_id=lambda config: config.get('file_id', '').lower(),
+            check_tmux=lambda: True,
             session_exists=lambda agent_id: agent_id == 'main',
             Path=Path,
             resolve_launcher_command=lambda launcher: launcher,
             _should_use_codex_file_pointer=lambda _msg: False,
-            get_repo_root=lambda: Path('/tmp'),
+            get_repo_root=lambda: temp_root,
             write_codex_message_file=lambda *_args, **_kwargs: Path('/tmp/message.md'),
             send_keys=lambda agent_id, message, **kwargs: calls.append((agent_id, message, kwargs)) or True,
             get_agent_runtime_state=lambda _agent_id, launcher='': {'state': 'busy', 'reason': 'busy_pattern:Thinking...'},
+            enqueue_inbound_message=enqueue_inbound_message,
+            mark_inbound_message_state=mark_inbound_message_state,
         )
 
         output = io.StringIO()
@@ -180,9 +194,11 @@ class MainAgentLifecycleTests(unittest.TestCase):
         self.assertEqual(calls[0][0], 'main')
         self.assertIn("runtime is busy", text)
         self.assertIn("message may be delayed or ignored", text)
+        self.assertEqual(load_pending_inbound_messages(temp_root, agent_id='main'), [])
 
     def test_send_warns_when_delivery_unconfirmed(self):
         calls = []
+        temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-main-unconfirmed-queue-'))
 
         class _FakeTime:
             def __init__(self):
@@ -198,18 +214,20 @@ class MainAgentLifecycleTests(unittest.TestCase):
 
         deps = SimpleNamespace(
             __file__='main.py',
-            check_tmux=lambda: True,
             resolve_agent=lambda _agent: {'name': 'main', 'file_id': 'main', 'launcher': 'droid'},
             get_agent_id=lambda config: config.get('file_id', '').lower(),
+            check_tmux=lambda: True,
             session_exists=lambda agent_id: agent_id == 'main',
             Path=Path,
             resolve_launcher_command=lambda launcher: launcher,
             _should_use_codex_file_pointer=lambda _msg: False,
-            get_repo_root=lambda: Path('/tmp'),
+            get_repo_root=lambda: temp_root,
             write_codex_message_file=lambda *_args, **_kwargs: Path('/tmp/message.md'),
             send_keys=lambda agent_id, message, **kwargs: calls.append((agent_id, message, kwargs)) or True,
             get_agent_runtime_state=lambda _agent_id, launcher='': {'state': 'idle', 'reason': 'ready'},
             time=fake_time,
+            enqueue_inbound_message=enqueue_inbound_message,
+            mark_inbound_message_state=mark_inbound_message_state,
         )
 
         output = io.StringIO()
@@ -223,9 +241,11 @@ class MainAgentLifecycleTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertEqual(calls[0][0], 'main')
         self.assertIn("Delivery unconfirmed: agent remained idle after send", text)
+        self.assertEqual(load_pending_inbound_messages(temp_root, agent_id='main'), [])
 
     def test_assign_warns_when_delivery_unconfirmed(self):
         calls = []
+        temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-main-assign-unconfirmed-queue-'))
 
         class _FakeTime:
             def __init__(self):
@@ -241,20 +261,22 @@ class MainAgentLifecycleTests(unittest.TestCase):
 
         deps = SimpleNamespace(
             __file__='main.py',
-            check_tmux=lambda: True,
             resolve_agent=lambda _agent: {'name': 'main', 'file_id': 'main', 'launcher': 'droid'},
             get_agent_id=lambda config: config.get('file_id', '').lower(),
+            check_tmux=lambda: True,
             session_exists=lambda agent_id: agent_id == 'main',
             argparse=argparse,
             time=fake_time,
             resolve_launcher_command=lambda launcher: launcher,
             _should_use_codex_file_pointer=lambda _msg: False,
-            get_repo_root=lambda: Path('/tmp'),
+            get_repo_root=lambda: temp_root,
             write_codex_message_file=lambda *_args, **_kwargs: Path('/tmp/assign.md'),
             send_keys=lambda agent_id, message, **kwargs: calls.append((agent_id, message, kwargs)) or True,
             get_agent_runtime_state=lambda _agent_id, launcher='': {'state': 'idle', 'reason': 'ready'},
             Path=Path,
             sys=SimpleNamespace(stdin=io.StringIO('run health check')),
+            enqueue_inbound_message=enqueue_inbound_message,
+            mark_inbound_message_state=mark_inbound_message_state,
         )
 
         output = io.StringIO()
@@ -269,6 +291,37 @@ class MainAgentLifecycleTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertEqual(calls[0][0], 'main')
         self.assertIn("Delivery unconfirmed: agent remained idle after assign", text)
+        self.assertEqual(load_pending_inbound_messages(temp_root, agent_id='main'), [])
+
+    def test_send_main_failure_keeps_message_pending_in_queue(self):
+        temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-main-send-fail-queue-'))
+        deps = SimpleNamespace(
+            __file__='main.py',
+            resolve_agent=lambda _agent: {'name': 'main', 'file_id': 'main', 'launcher': 'droid'},
+            get_agent_id=lambda config: config.get('file_id', '').lower(),
+            check_tmux=lambda: True,
+            session_exists=lambda agent_id: agent_id == 'main',
+            Path=Path,
+            resolve_launcher_command=lambda launcher: launcher,
+            _should_use_codex_file_pointer=lambda _msg: False,
+            get_repo_root=lambda: temp_root,
+            write_codex_message_file=lambda *_args, **_kwargs: Path('/tmp/message.md'),
+            send_keys=lambda *_args, **_kwargs: False,
+            enqueue_inbound_message=enqueue_inbound_message,
+            mark_inbound_message_state=mark_inbound_message_state,
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            rc = cmd_send(
+                argparse.Namespace(agent='main', message='keep-pending', send_enter=True),
+                deps=deps,
+            )
+
+        self.assertEqual(rc, 1)
+        pending = load_pending_inbound_messages(temp_root, agent_id='main')
+        self.assertEqual(len(pending), 1)
+        self.assertEqual(pending[0].get('state'), 'dispatch_failed')
 
 
 if __name__ == '__main__':

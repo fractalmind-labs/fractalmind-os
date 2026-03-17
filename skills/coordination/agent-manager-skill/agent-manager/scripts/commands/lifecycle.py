@@ -13,6 +13,56 @@ def _session_label(agent_id: str) -> str:
     return "main" if str(agent_id).strip().lower() == "main" else f"agent-{agent_id}"
 
 
+def _queue_main_inbound_message(
+    deps: Any,
+    *,
+    agent_id: str,
+    source: str,
+    message_kind: str,
+    message: str,
+) -> Tuple[Optional[Any], str]:
+    if str(agent_id).strip().lower() != 'main':
+        return None, ""
+
+    get_repo_root = getattr(deps, 'get_repo_root', None)
+    enqueue_inbound_message = getattr(deps, 'enqueue_inbound_message', None)
+    if not callable(get_repo_root) or not callable(enqueue_inbound_message):
+        raise RuntimeError("inbound queue helpers are unavailable")
+
+    repo_root = get_repo_root()
+    message_id = enqueue_inbound_message(
+        repo_root,
+        agent_id=agent_id,
+        source=source,
+        message_kind=message_kind,
+        message=message,
+    )
+    return repo_root, message_id
+
+
+def _mark_main_inbound_state(
+    deps: Any,
+    repo_root: Any,
+    *,
+    agent_id: str,
+    message_id: str,
+    state: str,
+    detail: str = "",
+) -> None:
+    if str(agent_id).strip().lower() != 'main' or not repo_root or not message_id:
+        return
+    mark_inbound_message_state = getattr(deps, 'mark_inbound_message_state', None)
+    if not callable(mark_inbound_message_state):
+        raise RuntimeError("inbound queue state helper is unavailable")
+    mark_inbound_message_state(
+        repo_root,
+        agent_id=agent_id,
+        message_id=message_id,
+        state=state,
+        detail=detail,
+    )
+
+
 def _probe_runtime_state(deps: Any, *, agent_id: str, launcher: str) -> Optional[Tuple[str, str]]:
     get_agent_runtime_state = getattr(deps, 'get_agent_runtime_state', None)
     if not callable(get_agent_runtime_state):
@@ -500,9 +550,9 @@ def cmd_monitor(args, *, deps: Any):
 
 def cmd_send(args, *, deps: Any):
     """Send message to agent."""
-    check_tmux = deps.check_tmux
     resolve_agent = deps.resolve_agent
     get_agent_id = deps.get_agent_id
+    check_tmux = deps.check_tmux
     session_exists = deps.session_exists
     Path = deps.Path
     resolve_launcher_command = deps.resolve_launcher_command
@@ -511,10 +561,6 @@ def cmd_send(args, *, deps: Any):
     write_codex_message_file = deps.write_codex_message_file
     send_keys = deps.send_keys
 
-    if not check_tmux():
-        print("❌ tmux is not installed")
-        return 1
-
     agent_config = resolve_agent(args.agent)
     if not agent_config:
         print(f"❌ Agent not found: {args.agent}")
@@ -522,6 +568,17 @@ def cmd_send(args, *, deps: Any):
 
     agent_name = agent_config['name']
     agent_id = get_agent_id(agent_config)
+    queue_repo_root, queue_message_id = _queue_main_inbound_message(
+        deps,
+        agent_id=agent_id,
+        source='send',
+        message_kind='message',
+        message=args.message,
+    )
+
+    if not check_tmux():
+        print("❌ tmux is not installed")
+        return 1
 
     if not session_exists(agent_id):
         print(f"⚠️  Agent '{agent_name}' is not running")
@@ -549,6 +606,14 @@ def cmd_send(args, *, deps: Any):
         )
         print(f"ℹ️  Codex long message detected; using file pointer: {message_file}")
 
+    _mark_main_inbound_state(
+        deps,
+        queue_repo_root,
+        agent_id=agent_id,
+        message_id=queue_message_id,
+        state='dispatching',
+        detail='tmux_send_start',
+    )
     if not send_keys(
         agent_id,
         outgoing_message,
@@ -557,9 +622,25 @@ def cmd_send(args, *, deps: Any):
         escape_first=is_codex,
         enter_via_key=is_codex,
     ):
+        _mark_main_inbound_state(
+            deps,
+            queue_repo_root,
+            agent_id=agent_id,
+            message_id=queue_message_id,
+            state='dispatch_failed',
+            detail='send_keys_failed',
+        )
         print(f"❌ Failed to send message to {agent_name}")
         return 1
 
+    _mark_main_inbound_state(
+        deps,
+        queue_repo_root,
+        agent_id=agent_id,
+        message_id=queue_message_id,
+        state='dispatched',
+        detail='tmux_send_ok',
+    )
     print(f"✅ Message sent to {agent_name}")
     delivery_confirmed, observed_state, observed_reason = _confirm_delivery_after_send(
         deps,
@@ -583,9 +664,9 @@ def cmd_send(args, *, deps: Any):
 
 def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
     """Assign task to agent."""
-    check_tmux = deps.check_tmux
     resolve_agent = deps.resolve_agent
     get_agent_id = deps.get_agent_id
+    check_tmux = deps.check_tmux
     session_exists = deps.session_exists
     argparse = deps.argparse
     time = deps.time
@@ -599,10 +680,6 @@ def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
 
     if start_handler is None:
         start_handler = deps.cmd_start
-
-    if not check_tmux():
-        print("❌ tmux is not installed")
-        return 1
 
     agent_config = resolve_agent(args.agent)
     if not agent_config:
@@ -625,6 +702,18 @@ def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
     if not task.strip():
         print("❌ Task cannot be empty")
         print("   Provide task via stdin or --task-file")
+        return 1
+
+    queue_repo_root, queue_message_id = _queue_main_inbound_message(
+        deps,
+        agent_id=agent_id,
+        source='assign',
+        message_kind='task_assignment',
+        message=task,
+    )
+
+    if not check_tmux():
+        print("❌ tmux is not installed")
         return 1
 
     if not session_exists(agent_id):
@@ -662,6 +751,14 @@ def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
         )
         print(f"ℹ️  Codex long assignment detected; using file pointer: {task_file}")
 
+    _mark_main_inbound_state(
+        deps,
+        queue_repo_root,
+        agent_id=agent_id,
+        message_id=queue_message_id,
+        state='dispatching',
+        detail='tmux_assign_start',
+    )
     if not send_keys(
         agent_id,
         task_message,
@@ -670,9 +767,25 @@ def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
         escape_first=is_codex,
         enter_via_key=is_codex,
     ):
+        _mark_main_inbound_state(
+            deps,
+            queue_repo_root,
+            agent_id=agent_id,
+            message_id=queue_message_id,
+            state='dispatch_failed',
+            detail='assign_send_keys_failed',
+        )
         print(f"❌ Failed to assign task to {agent_name}")
         return 1
 
+    _mark_main_inbound_state(
+        deps,
+        queue_repo_root,
+        agent_id=agent_id,
+        message_id=queue_message_id,
+        state='dispatched',
+        detail='tmux_assign_ok',
+    )
     print(f"✅ Task assigned to {agent_name}")
     delivery_confirmed, observed_state, observed_reason = _confirm_delivery_after_send(
         deps,

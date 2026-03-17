@@ -232,6 +232,31 @@ class HeartbeatRecoveryTests(unittest.TestCase):
 
     @patch('main.time.sleep', return_value=None)
     @patch('main.capture_output', return_value='tail output')
+    @patch('main.get_agent_runtime_state', return_value={'state': 'busy', 'reason': 'busy_pattern:Thinking'})
+    @patch('main.has_pending_inbound_messages', side_effect=[True])
+    @patch('main.send_keys', return_value=True)
+    def test_run_heartbeat_attempt_yields_when_pending_user_work_detected(
+        self,
+        _mock_send,
+        _mock_pending,
+        _mock_state,
+        _mock_capture,
+        _mock_sleep,
+    ):
+        result = main._run_heartbeat_attempt(
+            agent_id='main',
+            agent_name='main',
+            launcher='codex',
+            heartbeat_message='hello [HB_ID:20260317-000001]',
+            timeout_seconds=30,
+            is_codex=True,
+        )
+        self.assertEqual(result['send_status'], 'ok')
+        self.assertEqual(result['ack_status'], 'yielded')
+        self.assertEqual(result['failure_type'], 'user_queue_yield')
+
+    @patch('main.time.sleep', return_value=None)
+    @patch('main.capture_output', return_value='tail output')
     @patch('main.get_agent_runtime_state', return_value={'state': 'idle'})
     @patch('main.send_keys', return_value=True)
     def test_run_heartbeat_attempt_no_activation(self, _mock_send, _mock_state, _mock_capture, _mock_sleep):
@@ -787,6 +812,131 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         self.assertEqual(mock_audit.call_args.kwargs.get('phase'), 'preflight')
         self.assertEqual(mock_audit.call_args.kwargs.get('failure_type'), 'busy_skip')
         self.assertEqual(mock_audit.call_args.kwargs.get('reason_code'), 'HB_AUTO_BUSY_SKIP')
+
+    @patch('main._append_heartbeat_audit_event')
+    @patch('main.has_pending_inbound_messages', return_value=True)
+    @patch('main.time.sleep', return_value=None)
+    @patch('main._run_heartbeat_attempt')
+    @patch('main._maybe_rollover_heartbeat_session', return_value=None)
+    @patch('main._count_consecutive_auto_preflight_skips', return_value=0)
+    @patch('main._heartbeat_preflight_runtime_state', return_value=('idle', 'ready'))
+    @patch('main._detect_agent_context_left_percent', return_value=55)
+    @patch('main.resolve_launcher_command', return_value='codex')
+    @patch('main.session_exists', return_value=True)
+    @patch('main.resolve_agent')
+    @patch('main.check_tmux', return_value=True)
+    def test_cmd_heartbeat_run_yields_when_pending_user_queue_exists(
+        self,
+        _mock_tmux,
+        mock_resolve_agent,
+        _mock_session,
+        _mock_launcher,
+        _mock_context,
+        _mock_preflight,
+        _mock_skip_count,
+        _mock_rollover,
+        mock_run_attempt,
+        _mock_sleep,
+        _mock_pending,
+        mock_audit,
+    ):
+        mock_resolve_agent.return_value = {
+            'name': 'main',
+            'file_id': 'main',
+            'enabled': True,
+            'heartbeat': {
+                'enabled': True,
+                'session_mode': 'auto',
+                'recovery': {
+                    'max_retries': 1,
+                    'retry_backoff_seconds': 0,
+                    'fallback_mode': 'none',
+                },
+            },
+            'launcher': 'codex',
+        }
+
+        args = type('Args', (), {
+            'agent': 'main',
+            'timeout': None,
+            'retry': None,
+            'backoff_seconds': 0,
+            'fallback_mode': None,
+            'notify_on_failure': False,
+            'notifier_channel': None,
+        })()
+
+        result = main.cmd_heartbeat_run(args)
+        self.assertEqual(result, 0)
+        mock_run_attempt.assert_not_called()
+        mock_audit.assert_called_once()
+        self.assertEqual(mock_audit.call_args.kwargs.get('phase'), 'preflight')
+        self.assertEqual(mock_audit.call_args.kwargs.get('failure_type'), 'user_queue_yield')
+        self.assertEqual(mock_audit.call_args.kwargs.get('reason_code'), 'HB_USER_QUEUE_PENDING')
+
+    @patch('main._append_heartbeat_audit_event')
+    @patch('main.time.sleep', return_value=None)
+    @patch('main._run_heartbeat_attempt', return_value={
+        'send_status': 'ok',
+        'ack_status': 'yielded',
+        'failure_type': 'user_queue_yield',
+        'reason_code': 'HB_USER_QUEUE_YIELD',
+        'duration_ms': 1,
+    })
+    @patch('main._maybe_rollover_heartbeat_session', return_value=None)
+    @patch('main.has_pending_inbound_messages', side_effect=[False, False])
+    @patch('main._count_consecutive_auto_preflight_skips', return_value=0)
+    @patch('main._heartbeat_preflight_runtime_state', return_value=('idle', 'ready'))
+    @patch('main._detect_agent_context_left_percent', return_value=55)
+    @patch('main.resolve_launcher_command', return_value='codex')
+    @patch('main.session_exists', return_value=True)
+    @patch('main.resolve_agent')
+    @patch('main.check_tmux', return_value=True)
+    def test_cmd_heartbeat_run_yields_when_user_queue_arrives_during_attempt(
+        self,
+        _mock_tmux,
+        mock_resolve_agent,
+        _mock_session,
+        _mock_launcher,
+        _mock_context,
+        _mock_preflight,
+        _mock_skip_count,
+        _mock_pending,
+        _mock_rollover,
+        mock_run_attempt,
+        _mock_sleep,
+        mock_audit,
+    ):
+        mock_resolve_agent.return_value = {
+            'name': 'main',
+            'file_id': 'main',
+            'enabled': True,
+            'heartbeat': {
+                'enabled': True,
+                'session_mode': 'auto',
+                'recovery': {
+                    'max_retries': 1,
+                    'retry_backoff_seconds': 0,
+                    'fallback_mode': 'none',
+                },
+            },
+            'launcher': 'codex',
+        }
+
+        args = type('Args', (), {
+            'agent': 'main',
+            'timeout': None,
+            'retry': None,
+            'backoff_seconds': 0,
+            'fallback_mode': None,
+            'notify_on_failure': False,
+            'notifier_channel': None,
+        })()
+
+        result = main.cmd_heartbeat_run(args)
+        self.assertEqual(result, 0)
+        mock_run_attempt.assert_called_once()
+        self.assertEqual(mock_audit.call_args.kwargs.get('failure_type'), 'user_queue_yield')
 
     @patch('main._append_heartbeat_audit_event')
     @patch('main.time.sleep', return_value=None)
