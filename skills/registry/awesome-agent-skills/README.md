@@ -791,7 +791,7 @@ Official Web3 and trading skills from the Binance team. Includes crypto market d
 - **[wshuyi/x-article-publisher-skill](https://github.com/wshuyi/x-article-publisher-skill)** - Publish articles to X/Twitter
 - **[CosmoBlk/email-marketing-bible](https://github.com/CosmoBlk/email-marketing-bible)** - 55K-word email marketing guide as an AI skill
 - **[smixs/creative-director-skill](https://github.com/smixs/creative-director-skill)** - AI creative director with recursive self-assessment: 20+ methodologies (SIT, TRIZ, Bisociation, SCAMPER, Synectics), 3-axis evaluation calibrated against Cannes/D&AD/HumanKind, 5-phase process from brief to presentation
-- **[Xquik-dev/x-twitter-scraper](https://github.com/Xquik-dev/x-twitter-scraper)** - X/Twitter data platform: extractions, monitoring, draws, MCP server
+- **[Xquik-dev/tweetclaw](https://github.com/Xquik-dev/tweetclaw)** - 40+ X/Twitter actions: post, extract, monitor, compose
 - **[SHADOWPR0/beautiful_prose](https://github.com/SHADOWPR0/beautiful_prose)** - Hard-edged writing style contract for timeless, forceful English prose without AI tics
 - **[blader/humanizer](https://github.com/blader/humanizer)** - Remove signs of AI-generated writing from text, making it sound more natural and human
 
@@ -828,6 +828,7 @@ Official Web3 and trading skills from the Binance team. Includes crypto market d
 - **[ReScienceLab/opc-skills](https://github.com/ReScienceLab/opc-skills)** - Agent skills for solopreneurs with SEO, geo, and LLM tools
 - **[SeanZoR/claude-speed-reader](https://github.com/SeanZoR/claude-speed-reader)** - Speed read Claude's responses at 600+ WPM using RSVP with Spritz-style ORP highlighting
 - **[Charlie85270/Dorothy](https://github.com/Charlie85270/Dorothy)** - Orchestrate multiple AI CLI agents with automations and MCP servers
+- **[Digidai/product-manager-skills](https://github.com/Digidai/product-manager-skills)** - Senior PM agent with 30+ frameworks and SaaS metrics
 
 </details>
 
@@ -893,8 +894,9 @@ Official Web3 and trading skills from the Binance team. Includes crypto market d
 - **[wrsmith108/varlock-claude-skill](https://github.com/wrsmith108/varlock-claude-skill)** - Secure environment variable management ensuring secrets are never exposed in Claude sessions, terminals, logs, or git commits
 - **[Skill_Seekers](https://github.com/yusufkaraaslan/Skill_Seekers)** - Automatically convert documentation websites, GitHub repositories, and PDFs into Claude AI skills in minutes
 - **[NoizAI/skills](https://github.com/NoizAI/skills)** - Human-like TTS workflows with local/cloud APIs and app delivery
+- **[Kevin7Qi/codex-collab](https://github.com/Kevin7Qi/codex-collab)** - Collaborate with Codex from Claude Code
 - **[ethos-link/rails-conventions](https://github.com/ethos-link/rails-conventions)** - Rails 8 conventions for consistent production code changes
-
+ 
 </details>
 
 <details>
