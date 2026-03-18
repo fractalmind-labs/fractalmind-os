@@ -234,6 +234,16 @@ def drain_main_inbound_once(
                 attempt_count=next_attempt,
                 claim_owner=claim_owner,
             )
+            deps.append_inbound_message_event(
+                repo_root,
+                agent_id=agent_id,
+                message_id=message_id,
+                event='replied',
+                state='replied',
+                detail=f"inbound_drain_reply_audit_closed:{trigger}",
+                attempt_count=next_attempt,
+                claim_owner=claim_owner,
+            )
             summary['drained'] += 1
             continue
 

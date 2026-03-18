@@ -89,6 +89,29 @@ def _mark_main_inbound_resumed_if_needed(
     )
 
 
+def _mark_main_inbound_replied(
+    deps: Any,
+    repo_root: Any,
+    *,
+    agent_id: str,
+    message_id: str,
+    detail: str,
+) -> None:
+    if str(agent_id).strip().lower() != 'main' or not repo_root or not message_id:
+        return
+    append_inbound_message_event = getattr(deps, 'append_inbound_message_event', None)
+    if not callable(append_inbound_message_event):
+        raise RuntimeError("inbound queue reply helpers are unavailable")
+    append_inbound_message_event(
+        repo_root,
+        agent_id=agent_id,
+        message_id=message_id,
+        event='replied',
+        state='replied',
+        detail=detail,
+    )
+
+
 def _probe_runtime_state(deps: Any, *, agent_id: str, launcher: str) -> Optional[Tuple[str, str]]:
     get_agent_runtime_state = getattr(deps, 'get_agent_runtime_state', None)
     if not callable(get_agent_runtime_state):
@@ -721,6 +744,13 @@ def cmd_send(args, *, deps: Any):
             state='handled',
             detail=f"delivery_confirmed:{observed_state}:{observed_reason}",
         )
+        _mark_main_inbound_replied(
+            deps,
+            queue_repo_root,
+            agent_id=agent_id,
+            message_id=queue_message_id,
+            detail='reply_audit_closed:send',
+        )
     if not delivery_confirmed:
         print(
             f"⚠️  Delivery unconfirmed: agent remained idle after send "
@@ -881,6 +911,13 @@ def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
             message_id=queue_message_id,
             state='handled',
             detail=f"delivery_confirmed:{observed_state}:{observed_reason}",
+        )
+        _mark_main_inbound_replied(
+            deps,
+            queue_repo_root,
+            agent_id=agent_id,
+            message_id=queue_message_id,
+            detail='reply_audit_closed:assign',
         )
     if not delivery_confirmed:
         print(

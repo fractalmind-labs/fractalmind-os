@@ -389,7 +389,7 @@ class MainAgentLifecycleTests(unittest.TestCase):
         names = [event.get('event') for event in events]
         self.assertEqual(
             names,
-            ['received', 'queued', 'yielded', 'resumed', 'dispatching', 'dispatched', 'handled'],
+            ['received', 'queued', 'yielded', 'resumed', 'dispatching', 'dispatched', 'handled', 'replied'],
         )
 
     def test_inbound_drain_once_replays_pending_main_message(self):
@@ -424,7 +424,7 @@ class MainAgentLifecycleTests(unittest.TestCase):
         events = read_inbound_events(temp_root, agent_id='main', message_id=message_id)
         self.assertEqual(
             [event.get('event') for event in events],
-            ['received', 'queued', 'claimed', 'dispatching', 'dispatched', 'handled'],
+            ['received', 'queued', 'claimed', 'dispatching', 'dispatched', 'handled', 'replied'],
         )
         self.assertIn('drained=1', output.getvalue())
 
@@ -475,6 +475,7 @@ class MainAgentLifecycleTests(unittest.TestCase):
             ['received', 'queued', 'claimed', 'dispatching', 'dispatched', 'failed'],
         )
         self.assertNotIn('handled', [event.get('event') for event in events])
+        self.assertNotIn('replied', [event.get('event') for event in events])
 
     def test_inbound_drain_once_marks_reclaimed_for_stale_dispatching(self):
         calls = []
@@ -530,7 +531,7 @@ class MainAgentLifecycleTests(unittest.TestCase):
         events = read_inbound_events(temp_root, agent_id='main', message_id=message_id)
         self.assertEqual(
             [event.get('event') for event in events],
-            ['received', 'queued', 'dispatching', 'reclaimed', 'claimed', 'dispatching', 'dispatched', 'handled'],
+            ['received', 'queued', 'dispatching', 'reclaimed', 'claimed', 'dispatching', 'dispatched', 'handled', 'replied'],
         )
         reclaimed = events[3]
         self.assertEqual(reclaimed.get('detail'), 'inbound_drain_reclaimed:cli:stale_dispatching_lease')
