@@ -225,6 +225,13 @@ def drain_main_inbound_once(
             launcher=launcher,
         )
         if delivery_confirmed:
+            reply_evidence = 'repo_local'
+            transport_ack_status = 'unverified'
+            transport_ack_detail = ''
+            if observed_reason != 'runtime_probe_unavailable':
+                reply_evidence = 'transport_ack'
+                transport_ack_status = 'ack'
+                transport_ack_detail = f"{observed_state}:{observed_reason}"
             deps.mark_inbound_message_state(
                 repo_root,
                 agent_id=agent_id,
@@ -241,8 +248,9 @@ def drain_main_inbound_once(
                     agent_id=agent_id,
                     message_id=message_id,
                     detail=f"inbound_drain_reply_audit_closed:{trigger}",
-                    reply_evidence='repo_local',
-                    transport_ack_status='unverified',
+                    reply_evidence=reply_evidence,
+                    transport_ack_status=transport_ack_status,
+                    transport_ack_detail=transport_ack_detail,
                     attempt_count=next_attempt,
                     claim_owner=claim_owner,
                 )
@@ -254,8 +262,9 @@ def drain_main_inbound_once(
                     event='replied',
                     state='replied',
                     detail=f"inbound_drain_reply_audit_closed:{trigger}",
-                    reply_evidence='repo_local',
-                    transport_ack_status='unverified',
+                    reply_evidence=reply_evidence,
+                    transport_ack_status=transport_ack_status,
+                    transport_ack_detail=transport_ack_detail,
                     attempt_count=next_attempt,
                     claim_owner=claim_owner,
                 )

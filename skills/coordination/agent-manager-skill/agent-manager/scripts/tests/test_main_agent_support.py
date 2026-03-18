@@ -475,8 +475,9 @@ class MainAgentLifecycleTests(unittest.TestCase):
             [event.get('event') for event in events],
             ['received', 'queued', 'claimed', 'dispatching', 'dispatched', 'handled', 'replied'],
         )
-        self.assertEqual(events[-1].get('reply_evidence'), 'repo_local')
-        self.assertEqual(events[-1].get('transport_ack_status'), 'unverified')
+        self.assertEqual(events[-1].get('reply_evidence'), 'transport_ack')
+        self.assertEqual(events[-1].get('transport_ack_status'), 'ack')
+        self.assertEqual(events[-1].get('transport_ack_detail'), 'busy:busy_pattern:Thinking')
         self.assertIn('drained=1', output.getvalue())
 
     def test_inbound_drain_once_does_not_mark_handled_when_delivery_unconfirmed(self):
@@ -586,8 +587,9 @@ class MainAgentLifecycleTests(unittest.TestCase):
         )
         reclaimed = events[3]
         self.assertEqual(reclaimed.get('detail'), 'inbound_drain_reclaimed:cli:stale_dispatching_lease')
-        self.assertEqual(events[-1].get('reply_evidence'), 'repo_local')
-        self.assertEqual(events[-1].get('transport_ack_status'), 'unverified')
+        self.assertEqual(events[-1].get('reply_evidence'), 'transport_ack')
+        self.assertEqual(events[-1].get('transport_ack_status'), 'ack')
+        self.assertEqual(events[-1].get('transport_ack_detail'), 'busy:busy_pattern:Thinking')
 
     def test_start_restore_main_runs_one_inbound_drain_pass_for_existing_session(self):
         args = argparse.Namespace(agent='main', working_dir=None, restore=True, tmux_layout='sessions')
