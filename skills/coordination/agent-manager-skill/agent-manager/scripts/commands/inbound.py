@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import shlex
 from typing import Any, Callable, Dict, Optional
 
 from .lifecycle import _confirm_delivery_after_send
@@ -15,6 +16,8 @@ from services.inbound_queue import (
 _DISPATCH_LEASE_SECONDS = 300
 _RETRY_BACKOFF_SECONDS = 60
 _MAX_REPLAY_ATTEMPTS = 3
+_DEFAULT_RESCUE_CRON = '*/5 * * * *'
+_DEFAULT_RESCUE_ON_CALENDAR = '*:0/5'
 
 
 def _utc_now() -> datetime:
@@ -59,6 +62,55 @@ def _build_replay_message(
             "After completing it, summarize key results."
         )
     return message
+
+
+def build_inbound_rescue_plan(*, deps: Any, agent_id: str = 'main') -> Dict[str, str]:
+    repo_root = deps.get_repo_root()
+    main_script = deps.Path(deps.__file__).resolve()
+    log_dir = repo_root / '.crontab_logs'
+    log_file = log_dir / f'agent-{agent_id}-inbound-rescue.log'
+
+    repo_root_q = shlex.quote(str(repo_root))
+    main_script_q = shlex.quote(str(main_script))
+    log_dir_q = shlex.quote(str(log_dir))
+    log_file_q = shlex.quote(str(log_file))
+    agent_id_q = shlex.quote(str(agent_id))
+
+    shell_command = (
+        f"cd {repo_root_q} && "
+        f"mkdir -p {log_dir_q} && "
+        f"python3 {main_script_q} inbound drain {agent_id_q} --once "
+        f">> {log_file_q} 2>&1"
+    )
+
+    systemd_exec = shlex.quote(shell_command)
+    service_unit = "\n".join([
+        "[Unit]",
+        "Description=Agent Manager inbound rescue sweep for main",
+        "",
+        "[Service]",
+        "Type=oneshot",
+        f"WorkingDirectory={repo_root}",
+        f"ExecStart=/usr/bin/env bash -lc {systemd_exec}",
+    ])
+    timer_unit = "\n".join([
+        "[Unit]",
+        "Description=Run Agent Manager inbound rescue sweep every 5 minutes",
+        "",
+        "[Timer]",
+        f"OnCalendar={_DEFAULT_RESCUE_ON_CALENDAR}",
+        "Persistent=true",
+        "",
+        "[Install]",
+        "WantedBy=timers.target",
+    ])
+
+    return {
+        'shell': shell_command,
+        'cron': f"{_DEFAULT_RESCUE_CRON} {shell_command}",
+        'systemd_service': service_unit,
+        'systemd_timer': timer_unit,
+    }
 
 
 def drain_main_inbound_once(
@@ -293,7 +345,7 @@ def cmd_inbound(args, *, deps: Any, drain_once_handler: Optional[Callable[..., D
     if drain_once_handler is None:
         drain_once_handler = drain_main_inbound_once
 
-    if args.inbound_command != 'drain':
+    if args.inbound_command not in {'drain', 'rescue'}:
         print(f"Unknown inbound command: {args.inbound_command}")
         return 1
 
@@ -306,6 +358,21 @@ def cmd_inbound(args, *, deps: Any, drain_once_handler: Optional[Callable[..., D
     if agent_id != 'main':
         print("❌ inbound drain currently supports only the main agent")
         return 1
+
+    if args.inbound_command == 'rescue':
+        plan = build_inbound_rescue_plan(deps=deps, agent_id=agent_id)
+        print("Inbound rescue shell command:")
+        print(plan['shell'])
+        print()
+        print("Cron example:")
+        print(plan['cron'])
+        print()
+        print("Systemd service example:")
+        print(plan['systemd_service'])
+        print()
+        print("Systemd timer example:")
+        print(plan['systemd_timer'])
+        return 0
 
     if not getattr(args, 'once', False):
         print("❌ inbound drain currently requires --once")

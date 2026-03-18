@@ -180,4 +180,10 @@ Examples:
         help='Run exactly one drain pass and exit',
     )
 
+    inbound_rescue_parser = inbound_subparsers.add_parser(
+        'rescue',
+        help='Print a periodic rescue sweep invocation for cron/systemd timers',
+    )
+    inbound_rescue_parser.add_argument('agent', help='Agent name or file ID')
+
     return parser

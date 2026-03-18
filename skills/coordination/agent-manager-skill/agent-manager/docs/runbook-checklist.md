@@ -88,7 +88,28 @@ Checklist:
 - [ ] after restart, confirm status returns to healthy state
 - [ ] post incident note with owner and ETA for follow-up prevention
 
-## 4) Incident SOP: CI Gate Failure (PR Not Merge-Ready)
+## 4) Periodic Rescue Sweep
+
+Use the built-in rescue printer to generate a lightweight periodic sweep for residual main inbound work:
+
+```bash
+# Reuse CLI defined in section 0
+$CLI inbound rescue main
+```
+
+The printed shell/cron/systemd snippets all converge on the same one-shot rescue command:
+
+```bash
+python3 agent-manager/scripts/main.py inbound drain main --once
+```
+
+Checklist:
+- [ ] rescue path is periodic (cron/systemd timer), not heartbeat-owned
+- [ ] restore/start auto-drain stays enabled separately
+- [ ] rescue invocation remains one-pass / idempotent
+- [ ] residual queued work can be recovered without manual operator typing
+
+## 5) Incident SOP: CI Gate Failure (PR Not Merge-Ready)
 
 Commands:
 
@@ -109,7 +130,7 @@ Checklist:
 - [ ] no blocking comments/reviews remain
 - [ ] only then mark merge-ready
 
-## 5) Merge Gate (Hard Rule)
+## 6) Merge Gate (Hard Rule)
 
 A PR is merge-ready only if all are true:
 - [ ] CI PASS
@@ -123,7 +144,7 @@ If any item is missing, post a gate-status comment with:
 2) owner
 3) ETA
 
-## 6) Evidence Comment Template
+## 7) Evidence Comment Template
 
 Use this template on issue/PR threads:
 
@@ -137,7 +158,7 @@ Progress update:
 ```
 
 
-## 7) Expected Output Anchors (Quick QA)
+## 8) Expected Output Anchors (Quick QA)
 
 Use these as lightweight checks when validating docs/command behavior:
 

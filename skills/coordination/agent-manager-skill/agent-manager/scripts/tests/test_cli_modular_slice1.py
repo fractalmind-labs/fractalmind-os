@@ -59,6 +59,12 @@ class CliModularSlice1Tests(unittest.TestCase):
         self.assertEqual(args.agent, 'main')
         self.assertTrue(args.once)
 
+    def test_inbound_rescue_flags(self):
+        args = create_parser().parse_args(['inbound', 'rescue', 'main'])
+        self.assertEqual(args.command, 'inbound')
+        self.assertEqual(args.inbound_command, 'rescue')
+        self.assertEqual(args.agent, 'main')
+
     def test_schedule_run_still_requires_job(self):
         parser = create_parser()
         with self.assertRaises(SystemExit):
