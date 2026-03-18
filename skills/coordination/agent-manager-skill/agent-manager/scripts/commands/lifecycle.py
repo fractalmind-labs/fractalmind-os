@@ -932,6 +932,13 @@ def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
         launcher=launcher,
     )
     if delivery_confirmed:
+        reply_evidence = 'repo_local'
+        transport_ack_status = 'unverified'
+        transport_ack_detail = ''
+        if observed_reason != 'runtime_probe_unavailable':
+            reply_evidence = 'transport_ack'
+            transport_ack_status = 'ack'
+            transport_ack_detail = f"{observed_state}:{observed_reason}"
         _mark_main_inbound_state(
             deps,
             queue_repo_root,
@@ -946,6 +953,9 @@ def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
             agent_id=agent_id,
             message_id=queue_message_id,
             detail='reply_audit_closed:assign',
+            reply_evidence=reply_evidence,
+            transport_ack_status=transport_ack_status,
+            transport_ack_detail=transport_ack_detail,
         )
     if not delivery_confirmed:
         print(

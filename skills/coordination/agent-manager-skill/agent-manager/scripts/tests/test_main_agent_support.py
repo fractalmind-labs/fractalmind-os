@@ -148,6 +148,52 @@ class MainAgentLifecycleTests(unittest.TestCase):
         self.assertIn('# Task Assignment', calls[0][1])
         self.assertIn('Task assigned to main', output.getvalue())
         self.assertEqual(load_pending_inbound_messages(temp_root, agent_id='main'), [])
+        events = read_inbound_events(temp_root, agent_id='main')
+        self.assertEqual([event.get('event') for event in events], ['received', 'queued', 'dispatching', 'dispatched', 'handled', 'replied'])
+        self.assertEqual(events[-1].get('reply_evidence'), 'repo_local')
+        self.assertEqual(events[-1].get('transport_ack_status'), 'unverified')
+
+    def test_assign_main_marks_transport_ack_when_delivery_confirmed(self):
+        calls = []
+        temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-main-assign-ack-queue-'))
+
+        deps = SimpleNamespace(
+            __file__='main.py',
+            resolve_agent=lambda _agent: {'name': 'main', 'file_id': 'main', 'launcher': 'droid'},
+            get_agent_id=lambda config: config.get('file_id', '').lower(),
+            check_tmux=lambda: True,
+            session_exists=lambda agent_id: agent_id == 'main',
+            argparse=argparse,
+            time=SimpleNamespace(sleep=lambda _s: None),
+            resolve_launcher_command=lambda launcher: launcher,
+            _should_use_codex_file_pointer=lambda _msg: False,
+            get_repo_root=lambda: temp_root,
+            write_codex_message_file=lambda *_args, **_kwargs: Path('/tmp/assign.md'),
+            send_keys=lambda agent_id, message, **kwargs: calls.append((agent_id, message, kwargs)) or True,
+            get_agent_runtime_state=lambda _agent_id, launcher='': {'state': 'busy', 'reason': 'busy_pattern:Thinking...'},
+            Path=Path,
+            sys=SimpleNamespace(stdin=io.StringIO('run health check')),
+            enqueue_inbound_message=enqueue_inbound_message,
+            mark_inbound_message_state=mark_inbound_message_state,
+            was_message_yielded=was_message_yielded,
+            append_inbound_message_event=append_inbound_message_event,
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            rc = cmd_assign(
+                argparse.Namespace(agent='main', task_file=None),
+                deps=deps,
+                start_handler=lambda _args: 0,
+            )
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(calls[0][0], 'main')
+        events = read_inbound_events(temp_root, agent_id='main')
+        self.assertEqual([event.get('event') for event in events], ['received', 'queued', 'dispatching', 'dispatched', 'handled', 'replied'])
+        self.assertEqual(events[-1].get('reply_evidence'), 'transport_ack')
+        self.assertEqual(events[-1].get('transport_ack_status'), 'ack')
+        self.assertEqual(events[-1].get('transport_ack_detail'), 'busy:busy_pattern:Thinking...')
 
     def test_monitor_main_shows_main_session_label(self):
         deps = SimpleNamespace(
