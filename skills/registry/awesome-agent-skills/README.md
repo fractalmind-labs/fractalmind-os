@@ -68,8 +68,8 @@ Agent skills can include prompt injections, tool poisoning, hidden malware paylo
 | [Skills by Hugging Face](#skills-by-hugging-face-team) | [Skills by Trail of Bits](#security-skills-by-trail-of-bits-team) | [Skills by Sentry](#skills-by-sentry-team-for-their-dev-team) |
 | [Skills by Microsoft](#skills-by-microsoft) | [Skills by fal.ai](#skills-by-falai-team) | [Skills by WordPress](#skills-by-wordpress-development-team) |
 | [Skills by Transloadit](#skills-by-transloadit-team) | [Skills by OpenAI](#skills-by-openai) | [Marketing Skills by Corey Haines](#marketing-skills-by-corey-haines) |
-| [Skills by Binance](#skills-by-binance) | [Skills by Helius](#skills-by-helius) | [Product Manager Skills by Dean Peters](#product-manager-skills-by-dean-peters) |
-| [Product Management Skills by Paweł Huryn](#product-management-skills-by-pawel-huryn) | [Community Skills](#community-skills) | [Skill Quality Standards](#skill-quality-standards) |
+| [Skills by Binance](#skills-by-binance) | [Product Manager Skills by Dean Peters](#product-manager-skills-by-dean-peters) | [Product Management Skills by Paweł Huryn](#product-management-skills-by-pawel-huryn) |
+| [Community Skills](#community-skills) | [Skill Quality Standards](#skill-quality-standards) | |
 
 
 
@@ -622,18 +622,6 @@ Official Web3 and trading skills from the Binance team. Includes crypto market d
 
 </details>
 
-<details open>
-<summary><h3 style="display:inline">Skills by Helius</h3></summary>
-
-Official Solana development skills from [Helius](https://www.helius.dev/). Build Solana applications with Helius infrastructure, DFlow trading APIs, Phantom wallet integration, and deep protocol knowledge.
-
-- **[helius-labs/helius](https://github.com/helius-labs/core-ai/tree/main/helius-skills/helius)** - Build Solana apps with Helius Sender, DAS API, streaming, and webhooks
-- **[helius-labs/helius-dflow](https://github.com/helius-labs/core-ai/tree/main/helius-skills/helius-dflow)** - Trading apps combining DFlow swaps and predictions with Helius infrastructure
-- **[helius-labs/helius-phantom](https://github.com/helius-labs/core-ai/tree/main/helius-skills/helius-phantom)** - Frontend Solana apps with Phantom Connect SDK and Helius APIs
-- **[helius-labs/svm](https://github.com/helius-labs/core-ai/tree/main/helius-skills/svm)** - Explore Solana's SVM architecture, consensus, and protocol internals
-
-</details>
-
 <details>
 <summary><h3 style="display:inline">Product Manager Skills by Dean Peters</h3></summary>
 
@@ -949,6 +937,7 @@ Official Solana development skills from [Helius](https://www.helius.dev/). Build
 - **[video-db/skills](https://github.com/video-db/skills)** - Realtime and batch video workflows: capture screen/audio, ingest URLs/YouTube/RTSP, transcribe, index, search, generate subtitles, edit timelines, and stream HLS output
 - **[materials-simulation-skills](https://github.com/HeshamFS/materials-simulation-skills)** - Agent skills for computational materials science: numerical stability, time-stepping, linear solvers, mesh generation, simulation validation, parameter optimization, and post-processing
 - **[takechanman1228/claude-ecom](https://github.com/takechanman1228/claude-ecom)** - Ecommerce CSV to business review with KPI decomposition
+- **[helius-labs/helius-skills](https://github.com/helius-labs/core-ai/tree/main/helius-skills)** - Ship Solana apps end-to-end; transaction sending, asset queries, real-time streaming, token swaps, prediction markets, browser wallets, and deep research into protocol internals all powered by Helius APIs, DFlow trading, and Phantom wallet integrations
 
 </details>
 
