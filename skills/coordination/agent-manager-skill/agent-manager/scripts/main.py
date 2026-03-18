@@ -92,6 +92,7 @@ from services.heartbeat_service import (
     run_heartbeat_attempt as service_run_heartbeat_attempt,
 )
 from services.inbound_queue import (
+    append_inbound_reply_closure,
     append_inbound_message_event,
     enqueue_inbound_message,
     has_pending_inbound_messages,

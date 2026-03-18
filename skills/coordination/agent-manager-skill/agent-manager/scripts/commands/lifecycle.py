@@ -99,7 +99,18 @@ def _mark_main_inbound_replied(
 ) -> None:
     if str(agent_id).strip().lower() != 'main' or not repo_root or not message_id:
         return
+    append_inbound_reply_closure = getattr(deps, 'append_inbound_reply_closure', None)
     append_inbound_message_event = getattr(deps, 'append_inbound_message_event', None)
+    if callable(append_inbound_reply_closure):
+        append_inbound_reply_closure(
+            repo_root,
+            agent_id=agent_id,
+            message_id=message_id,
+            detail=detail,
+            reply_evidence='repo_local',
+            transport_ack_status='unverified',
+        )
+        return
     if not callable(append_inbound_message_event):
         raise RuntimeError("inbound queue reply helpers are unavailable")
     append_inbound_message_event(
@@ -109,6 +120,8 @@ def _mark_main_inbound_replied(
         event='replied',
         state='replied',
         detail=detail,
+        reply_evidence='repo_local',
+        transport_ack_status='unverified',
     )
 
 

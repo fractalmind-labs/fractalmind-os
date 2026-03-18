@@ -121,6 +121,34 @@ def append_inbound_message_event(
     _append_event(repo_root, agent_id, payload)
 
 
+def append_inbound_reply_closure(
+    repo_root: Path,
+    *,
+    agent_id: str,
+    message_id: str,
+    detail: str,
+    reply_evidence: str = 'repo_local',
+    transport_ack_status: str = 'unverified',
+    transport_ack_detail: str = '',
+    **extra: Any,
+) -> None:
+    payload_extra: Dict[str, Any] = dict(extra)
+    payload_extra['reply_evidence'] = str(reply_evidence or 'repo_local')
+    payload_extra['transport_ack_status'] = str(transport_ack_status or 'unverified')
+    if transport_ack_detail:
+        payload_extra['transport_ack_detail'] = str(transport_ack_detail)
+
+    append_inbound_message_event(
+        repo_root,
+        agent_id=agent_id,
+        message_id=message_id,
+        event='replied',
+        state='replied',
+        detail=detail,
+        **payload_extra,
+    )
+
+
 def enqueue_inbound_message(
     repo_root: Path,
     *,

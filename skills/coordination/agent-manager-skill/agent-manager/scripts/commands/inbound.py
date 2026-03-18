@@ -234,16 +234,31 @@ def drain_main_inbound_once(
                 attempt_count=next_attempt,
                 claim_owner=claim_owner,
             )
-            deps.append_inbound_message_event(
-                repo_root,
-                agent_id=agent_id,
-                message_id=message_id,
-                event='replied',
-                state='replied',
-                detail=f"inbound_drain_reply_audit_closed:{trigger}",
-                attempt_count=next_attempt,
-                claim_owner=claim_owner,
-            )
+            append_reply_closure = getattr(deps, 'append_inbound_reply_closure', None)
+            if callable(append_reply_closure):
+                append_reply_closure(
+                    repo_root,
+                    agent_id=agent_id,
+                    message_id=message_id,
+                    detail=f"inbound_drain_reply_audit_closed:{trigger}",
+                    reply_evidence='repo_local',
+                    transport_ack_status='unverified',
+                    attempt_count=next_attempt,
+                    claim_owner=claim_owner,
+                )
+            else:
+                deps.append_inbound_message_event(
+                    repo_root,
+                    agent_id=agent_id,
+                    message_id=message_id,
+                    event='replied',
+                    state='replied',
+                    detail=f"inbound_drain_reply_audit_closed:{trigger}",
+                    reply_evidence='repo_local',
+                    transport_ack_status='unverified',
+                    attempt_count=next_attempt,
+                    claim_owner=claim_owner,
+                )
             summary['drained'] += 1
             continue
 
