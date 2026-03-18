@@ -692,7 +692,7 @@ def cmd_send(args, *, deps: Any):
             queue_repo_root,
             agent_id=agent_id,
             message_id=queue_message_id,
-            state='dispatch_failed',
+            state='failed',
             detail='send_keys_failed',
         )
         print(f"❌ Failed to send message to {agent_name}")
@@ -853,7 +853,7 @@ def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
             queue_repo_root,
             agent_id=agent_id,
             message_id=queue_message_id,
-            state='dispatch_failed',
+            state='failed',
             detail='assign_send_keys_failed',
         )
         print(f"❌ Failed to assign task to {agent_name}")

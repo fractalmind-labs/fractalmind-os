@@ -338,7 +338,7 @@ class MainAgentLifecycleTests(unittest.TestCase):
         self.assertEqual(rc, 1)
         pending = load_pending_inbound_messages(temp_root, agent_id='main')
         self.assertEqual(len(pending), 1)
-        self.assertEqual(pending[0].get('state'), 'dispatch_failed')
+        self.assertEqual(pending[0].get('state'), 'failed')
 
     def test_send_main_marks_resumed_and_handled_after_prior_yield(self):
         calls = []
@@ -472,7 +472,7 @@ class MainAgentLifecycleTests(unittest.TestCase):
         events = read_inbound_events(temp_root, agent_id='main', message_id=message_id)
         self.assertEqual(
             [event.get('event') for event in events],
-            ['received', 'queued', 'claimed', 'dispatching', 'dispatched', 'dispatch_failed'],
+            ['received', 'queued', 'claimed', 'dispatching', 'dispatched', 'failed'],
         )
         self.assertNotIn('handled', [event.get('event') for event in events])
 

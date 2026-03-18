@@ -5,69 +5,20 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 from .lifecycle import _confirm_delivery_after_send
+from services.inbound_queue import (
+    classify_inbound_replay_state,
+    inbound_message_attempt_count,
+    load_pending_inbound_messages,
+)
 
 
 _DISPATCH_LEASE_SECONDS = 300
 _RETRY_BACKOFF_SECONDS = 60
 _MAX_REPLAY_ATTEMPTS = 3
-_RETRYABLE_STATES = {'queued', 'dispatch_failed', 'failed'}
-_LEASED_STATES = {'claimed', 'dispatching'}
 
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def _parse_utc_timestamp(value: object) -> Optional[datetime]:
-    text = str(value or '').strip()
-    if not text:
-        return None
-
-    normalized = text[:-1] + '+00:00' if text.endswith('Z') else text
-    try:
-        parsed = datetime.fromisoformat(normalized)
-    except Exception:
-        return None
-
-    if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
-
-
-def _attempt_count(payload: Dict[str, Any]) -> int:
-    try:
-        return max(0, int(payload.get('attempt_count') or 0))
-    except Exception:
-        return 0
-
-
-def _next_retry_due(payload: Dict[str, Any], *, now: datetime) -> bool:
-    next_retry_at = _parse_utc_timestamp(payload.get('next_retry_at'))
-    return next_retry_at is None or next_retry_at <= now
-
-
-def _lease_expired(payload: Dict[str, Any], *, now: datetime) -> bool:
-    lease_anchor = (
-        _parse_utc_timestamp(payload.get('claimed_at'))
-        or _parse_utc_timestamp(payload.get('dispatching_at'))
-        or _parse_utc_timestamp(payload.get('timestamp'))
-    )
-    if lease_anchor is None:
-        return True
-    return now >= lease_anchor + timedelta(seconds=_DISPATCH_LEASE_SECONDS)
-
-
-def _is_replayable(payload: Dict[str, Any], *, now: datetime) -> bool:
-    state = str(payload.get('state') or '').strip()
-    attempts = _attempt_count(payload)
-
-    if attempts >= _MAX_REPLAY_ATTEMPTS:
-        return False
-    if state in _RETRYABLE_STATES:
-        return _next_retry_due(payload, now=now)
-    if state in _LEASED_STATES:
-        return _lease_expired(payload, now=now)
-    return False
 
 
 def _build_replay_message(
@@ -108,7 +59,7 @@ def drain_main_inbound_once(
     trigger: str = 'manual',
 ) -> Dict[str, int]:
     repo_root = deps.get_repo_root()
-    pending = deps.load_pending_inbound_messages(repo_root, agent_id=agent_id)
+    pending = load_pending_inbound_messages(repo_root, agent_id=agent_id)
     if not pending:
         return {'rc': 0, 'drained': 0, 'skipped': 0, 'failed': 0, 'dead_lettered': 0}
 
@@ -137,8 +88,14 @@ def drain_main_inbound_once(
             summary['skipped'] += 1
             continue
 
-        attempts = _attempt_count(payload)
-        if attempts >= _MAX_REPLAY_ATTEMPTS:
+        attempts = inbound_message_attempt_count(payload)
+        replay_state = classify_inbound_replay_state(
+            payload,
+            now=now,
+            max_attempts=_MAX_REPLAY_ATTEMPTS,
+            dispatch_lease_seconds=_DISPATCH_LEASE_SECONDS,
+        )
+        if replay_state == 'dead_letter':
             deps.mark_inbound_message_state(
                 repo_root,
                 agent_id=agent_id,
@@ -150,7 +107,7 @@ def drain_main_inbound_once(
             summary['dead_lettered'] += 1
             continue
 
-        if not _is_replayable(payload, now=now):
+        if replay_state != 'replayable':
             summary['skipped'] += 1
             continue
 
@@ -222,7 +179,7 @@ def drain_main_inbound_once(
                     repo_root,
                     agent_id=agent_id,
                     message_id=message_id,
-                    state='dispatch_failed',
+                    state='failed',
                     detail='inbound_drain_send_keys_failed',
                     attempt_count=next_attempt,
                     claim_owner=claim_owner,
@@ -264,7 +221,7 @@ def drain_main_inbound_once(
             repo_root,
             agent_id=agent_id,
             message_id=message_id,
-            state='dispatch_failed',
+            state='failed',
             detail=f"inbound_drain_delivery_unconfirmed:{observed_state}:{observed_reason}",
             attempt_count=next_attempt,
             claim_owner=claim_owner,
