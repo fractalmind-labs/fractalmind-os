@@ -12,6 +12,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 import main  # noqa: E402
+from services.inbound_queue import append_inbound_message_event  # noqa: E402
 from services.inbound_queue import enqueue_inbound_message  # noqa: E402
 from services.inbound_queue import read_inbound_events  # noqa: E402
 
@@ -820,6 +821,7 @@ class HeartbeatRecoveryTests(unittest.TestCase):
     @patch('main.time.sleep', return_value=None)
     @patch('main._run_heartbeat_attempt')
     @patch('main._maybe_rollover_heartbeat_session', return_value=None)
+    @patch('main._maybe_run_main_inbound_heartbeat_sweep', return_value=False)
     @patch('main._count_consecutive_auto_preflight_skips', return_value=0)
     @patch('main._heartbeat_preflight_runtime_state', return_value=('idle', 'ready'))
     @patch('main._detect_agent_context_left_percent', return_value=55)
@@ -836,6 +838,7 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         _mock_context,
         _mock_preflight,
         _mock_skip_count,
+        _mock_sweep,
         _mock_rollover,
         mock_run_attempt,
         _mock_sleep,
@@ -913,6 +916,16 @@ class HeartbeatRecoveryTests(unittest.TestCase):
                 message_kind='message',
                 message='pending user work',
             )
+            append_inbound_message_event(
+                temp_root,
+                agent_id='main',
+                message_id=message_id,
+                event='failed',
+                state='failed',
+                detail='waiting_for_retry_window',
+                attempt_count=1,
+                next_retry_at='2099-01-01T00:00:00Z',
+            )
             mock_resolve_agent.return_value = {
                 'name': 'main',
                 'file_id': 'main',
@@ -944,8 +957,89 @@ class HeartbeatRecoveryTests(unittest.TestCase):
             mock_run_attempt.assert_not_called()
             mock_audit.assert_called_once()
             events = read_inbound_events(temp_root, agent_id='main', message_id=message_id)
-            self.assertEqual([event.get('event') for event in events], ['received', 'queued', 'yielded'])
+            self.assertEqual([event.get('event') for event in events], ['received', 'queued', 'failed', 'yielded'])
             self.assertEqual(events[-1].get('reason_code'), 'HB_USER_QUEUE_PENDING')
+
+    @patch('main.get_repo_root')
+    @patch('main._append_heartbeat_audit_event')
+    @patch('main.time.sleep', return_value=None)
+    @patch('main._run_heartbeat_attempt')
+    @patch('main.drain_main_inbound_once')
+    @patch('main._maybe_rollover_heartbeat_session', return_value=None)
+    @patch('main._count_consecutive_auto_preflight_skips', return_value=0)
+    @patch('main._heartbeat_preflight_runtime_state', return_value=('idle', 'ready'))
+    @patch('main._detect_agent_context_left_percent', return_value=55)
+    @patch('main.resolve_launcher_command', return_value='codex')
+    @patch('main.session_exists', return_value=True)
+    @patch('main.resolve_agent')
+    @patch('main.check_tmux', return_value=True)
+    def test_cmd_heartbeat_run_sweeps_replayable_queue_before_dispatch(
+        self,
+        _mock_tmux,
+        mock_resolve_agent,
+        _mock_session,
+        _mock_launcher,
+        _mock_context,
+        _mock_preflight,
+        _mock_skip_count,
+        _mock_rollover,
+        mock_drain,
+        mock_run_attempt,
+        _mock_sleep,
+        mock_audit,
+        mock_repo_root,
+    ):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            temp_root = Path(tmpdir)
+            mock_repo_root.return_value = temp_root
+            enqueue_inbound_message(
+                temp_root,
+                agent_id='main',
+                source='send',
+                message_kind='message',
+                message='queued user work',
+            )
+            mock_resolve_agent.return_value = {
+                'name': 'main',
+                'file_id': 'main',
+                'enabled': True,
+                'heartbeat': {
+                    'enabled': True,
+                    'session_mode': 'auto',
+                    'recovery': {
+                        'max_retries': 1,
+                        'retry_backoff_seconds': 0,
+                        'fallback_mode': 'none',
+                    },
+                },
+                'launcher': 'codex',
+            }
+            mock_drain.return_value = {
+                'rc': 0,
+                'drained': 1,
+                'failed': 0,
+                'dead_lettered': 0,
+                'skipped': 0,
+            }
+
+            args = type('Args', (), {
+                'agent': 'main',
+                'timeout': None,
+                'retry': None,
+                'backoff_seconds': 0,
+                'fallback_mode': None,
+                'notify_on_failure': False,
+                'notifier_channel': None,
+            })()
+
+            result = main.cmd_heartbeat_run(args)
+            self.assertEqual(result, 0)
+            mock_drain.assert_called_once_with(agent_id='main', trigger='heartbeat_sweep')
+            mock_run_attempt.assert_not_called()
+            mock_audit.assert_called_once()
+            self.assertEqual(mock_audit.call_args.kwargs.get('reason_code'), 'HB_INBOUND_SWEEP')
+            self.assertEqual(mock_audit.call_args.kwargs.get('recovery_action'), 'inbound_sweep')
+            self.assertEqual(mock_audit.call_args.kwargs.get('failure_type'), 'inbound_queue_sweep')
 
     @patch('main._append_heartbeat_audit_event')
     @patch('main.time.sleep', return_value=None)
@@ -958,6 +1052,7 @@ class HeartbeatRecoveryTests(unittest.TestCase):
     })
     @patch('main._maybe_rollover_heartbeat_session', return_value=None)
     @patch('main.has_pending_inbound_messages', side_effect=[False, False])
+    @patch('main._maybe_run_main_inbound_heartbeat_sweep', return_value=False)
     @patch('main._count_consecutive_auto_preflight_skips', return_value=0)
     @patch('main._heartbeat_preflight_runtime_state', return_value=('idle', 'ready'))
     @patch('main._detect_agent_context_left_percent', return_value=55)
@@ -974,6 +1069,7 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         _mock_context,
         _mock_preflight,
         _mock_skip_count,
+        _mock_sweep,
         _mock_pending,
         _mock_rollover,
         mock_run_attempt,

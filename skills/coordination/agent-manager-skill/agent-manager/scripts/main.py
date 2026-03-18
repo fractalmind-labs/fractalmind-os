@@ -96,6 +96,7 @@ from services.inbound_queue import (
     enqueue_inbound_message,
     has_pending_inbound_messages,
     load_pending_inbound_messages,
+    load_replayable_inbound_messages,
     mark_inbound_message_state,
     note_pending_messages_yielded,
     read_inbound_events,
@@ -1564,6 +1565,49 @@ def drain_main_inbound_once(*, agent_id: str = 'main', trigger: str = 'manual', 
     )
 
 
+def _maybe_run_main_inbound_heartbeat_sweep(
+    *,
+    repo_root: Path,
+    agent_id: str,
+    heartbeat_id: str,
+    context_left_percent: Optional[int],
+    session_mode: str,
+) -> bool:
+    """Consume one main heartbeat run on replayable inbound queue work."""
+    if str(agent_id).strip().lower() != 'main':
+        return False
+
+    replayable = load_replayable_inbound_messages(repo_root, agent_id=agent_id)
+    if not replayable:
+        return False
+
+    print("⏭️  Replayable inbound queue work detected; running inbound sweep before heartbeat dispatch")
+    summary = drain_main_inbound_once(agent_id=agent_id, trigger='heartbeat_sweep')
+    print(
+        "   Inbound sweep summary: "
+        f"drained={summary['drained']} "
+        f"failed={summary['failed']} "
+        f"dead_lettered={summary['dead_lettered']} "
+        f"skipped={summary['skipped']}"
+    )
+    _append_heartbeat_audit_event(
+        repo_root,
+        agent_id=agent_id,
+        heartbeat_id=heartbeat_id,
+        send_status='skip',
+        ack_status='not_checked',
+        duration_ms=0,
+        context_left=context_left_percent,
+        failure_type='inbound_queue_sweep',
+        session_mode=session_mode,
+        phase='preflight',
+        attempt=0,
+        recovery_action='inbound_sweep',
+        reason_code='HB_INBOUND_SWEEP',
+    )
+    return True
+
+
 def cmd_inbound(args):
     """Handle inbound queue recovery subcommands."""
     return inbound_cmd_inbound(
@@ -1670,6 +1714,15 @@ def cmd_heartbeat_run(args):
     heartbeat_id = time.strftime('%Y%m%d-%H%M%S')
     print(f"   HB_ID: {heartbeat_id}")
     recovery_action = ''
+
+    if _maybe_run_main_inbound_heartbeat_sweep(
+        repo_root=repo_root,
+        agent_id=agent_id,
+        heartbeat_id=heartbeat_id,
+        context_left_percent=context_left_percent,
+        session_mode=session_mode,
+    ):
+        return 0
 
     if has_pending_inbound_messages(repo_root, agent_id=agent_id):
         note_pending_messages_yielded(
