@@ -21,6 +21,15 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _reclaim_reason(payload: Dict[str, Any]) -> str:
+    state = str(payload.get('state') or '').strip()
+    if state == 'claimed':
+        return 'stale_claimed_lease'
+    if state == 'dispatching':
+        return 'stale_dispatching_lease'
+    return ''
+
+
 def _build_replay_message(
     deps: Any,
     *,
@@ -112,6 +121,18 @@ def drain_main_inbound_once(
             continue
 
         next_attempt = attempts + 1
+        reclaim_reason = _reclaim_reason(payload)
+        if reclaim_reason:
+            deps.append_inbound_message_event(
+                repo_root,
+                agent_id=agent_id,
+                message_id=message_id,
+                event='reclaimed',
+                state=str(payload.get('state') or ''),
+                detail=f"inbound_drain_reclaimed:{trigger}:{reclaim_reason}",
+                attempt_count=next_attempt,
+                claim_owner=claim_owner,
+            )
         if deps.was_message_yielded(repo_root, agent_id=agent_id, message_id=message_id):
             deps.append_inbound_message_event(
                 repo_root,
