@@ -391,8 +391,9 @@ class MainAgentLifecycleTests(unittest.TestCase):
             names,
             ['received', 'queued', 'yielded', 'resumed', 'dispatching', 'dispatched', 'handled', 'replied'],
         )
-        self.assertEqual(events[-1].get('reply_evidence'), 'repo_local')
-        self.assertEqual(events[-1].get('transport_ack_status'), 'unverified')
+        self.assertEqual(events[-1].get('reply_evidence'), 'transport_ack')
+        self.assertEqual(events[-1].get('transport_ack_status'), 'ack')
+        self.assertEqual(events[-1].get('transport_ack_detail'), 'busy:busy_pattern:Thinking...')
 
     def test_inbound_drain_once_replays_pending_main_message(self):
         calls = []

@@ -96,6 +96,9 @@ def _mark_main_inbound_replied(
     agent_id: str,
     message_id: str,
     detail: str,
+    reply_evidence: str = 'repo_local',
+    transport_ack_status: str = 'unverified',
+    transport_ack_detail: str = '',
 ) -> None:
     if str(agent_id).strip().lower() != 'main' or not repo_root or not message_id:
         return
@@ -107,8 +110,9 @@ def _mark_main_inbound_replied(
             agent_id=agent_id,
             message_id=message_id,
             detail=detail,
-            reply_evidence='repo_local',
-            transport_ack_status='unverified',
+            reply_evidence=reply_evidence,
+            transport_ack_status=transport_ack_status,
+            transport_ack_detail=transport_ack_detail,
         )
         return
     if not callable(append_inbound_message_event):
@@ -120,8 +124,9 @@ def _mark_main_inbound_replied(
         event='replied',
         state='replied',
         detail=detail,
-        reply_evidence='repo_local',
-        transport_ack_status='unverified',
+        reply_evidence=reply_evidence,
+        transport_ack_status=transport_ack_status,
+        transport_ack_detail=transport_ack_detail,
     )
 
 
@@ -749,6 +754,13 @@ def cmd_send(args, *, deps: Any):
         launcher=launcher,
     )
     if delivery_confirmed:
+        reply_evidence = 'repo_local'
+        transport_ack_status = 'unverified'
+        transport_ack_detail = ''
+        if observed_reason != 'runtime_probe_unavailable':
+            reply_evidence = 'transport_ack'
+            transport_ack_status = 'ack'
+            transport_ack_detail = f"{observed_state}:{observed_reason}"
         _mark_main_inbound_state(
             deps,
             queue_repo_root,
@@ -763,6 +775,9 @@ def cmd_send(args, *, deps: Any):
             agent_id=agent_id,
             message_id=queue_message_id,
             detail='reply_audit_closed:send',
+            reply_evidence=reply_evidence,
+            transport_ack_status=transport_ack_status,
+            transport_ack_detail=transport_ack_detail,
         )
     if not delivery_confirmed:
         print(
