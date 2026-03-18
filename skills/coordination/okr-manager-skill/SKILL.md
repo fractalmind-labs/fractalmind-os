@@ -1,6 +1,6 @@
 ---
 name: okr-manager
-description: OKR lifecycle management for AI agents. Use when creating, reviewing, updating, or reporting on OKRs. Ensures every OKR has measurable Success Criteria, properly structured KRs with dependencies, and clear completion standards.
+description: OKR lifecycle management for AI agents. Use when creating, reviewing, updating, or reporting on OKRs. Ensures every OKR has measurable Success Criteria, result-oriented KRs with dependencies, and clear completion standards.
 ---
 
 # OKR Manager
@@ -46,16 +46,22 @@ Every OKR MUST have ALL of these. Reject or flag any OKR missing items.
 
 ### 3. Key Results (KR1 → KR2 → ... → KRn)
 Each KR must have:
+- **Outcome statement**: Describe an observable result, not an implementation action
 - **Status**: PENDING / IN PROGRESS / COMPLETE
 - **Dependency**: Explicit prerequisite KRs (e.g., KR1 → KR2)
 - **Deliverable**: Concrete output (PR / Issue / Document / Deployment)
 - **Verification**: How to prove completion (CI green / QA PASS / test passed)
 
-### 4. Priority + Owner
+### 4. Tasks / Milestones (recommended)
+- Use Tasks / Milestones for execution order, owners, and unblock steps
+- Good task examples: "Run k6 and attach report", "Backfill missing receipt checks", "Ask human to approve cutoff"
+- Tasks support KRs; they must not replace KRs
+
+### 5. Priority + Owner
 - Priority: P0 (must do) / P1 (important) / P2 (nice to have)
 - Owner: Who drives this (me / @teammate / Team X)
 
-### 5. Deadline (optional but recommended)
+### 6. Deadline (optional but recommended)
 - If there's a deadline, state it
 - If not, state the expected completion timeframe
 
@@ -68,7 +74,9 @@ Run this check when creating or reviewing OKRs:
 [ ] Success Criteria has quantifiable metric?
 [ ] Success Criteria is binary verifiable (done/not done)?
 [ ] Every KR has a clear status marker?
+[ ] Every KR is result-oriented instead of task-oriented?
 [ ] KR dependencies are explicit?
+[ ] Tasks / milestones are separated from KRs when execution detail is needed?
 [ ] Every KR has a concrete deliverable?
 [ ] Priority is marked?
 [ ] Owner is assigned?
@@ -95,13 +103,18 @@ Missing any item → fix before writing to the OKR file. Do not allow incomplete
 
 **KR1: {title}** — {status}
 - Deliverable: {what is produced}
-- {details}
+- Outcome: {observable change when KR is complete}
 - Verification: {how to prove done}
 
 **KR2: {title}** — {status}
 - Deliverable: {what is produced}
-- {details}
+- Depends on: KR1
+- Outcome: {observable change when KR is complete}
 - Verification: {how to prove done}
+
+#### Tasks / Milestones (recommended)
+- [ ] {execution step tied to KR1 / owner / dependency}
+- [ ] {execution step tied to KR2 / owner / dependency}
 ```
 
 ## OKR Lifecycle
@@ -128,10 +141,11 @@ Human assigns objective
 
 1. Parse the human's objective into a clear, verb-first Objective statement
 2. Draft measurable Success Criteria (what does "done" look like?)
-3. Break down into sequential KRs with dependencies
-4. Validate against the checklist above
-5. Write to OKR file
-6. Confirm with human
+3. Draft sequential, result-oriented KRs with dependencies
+4. Add Tasks / Milestones if execution needs staging, owner mapping, or unblock steps
+5. Validate against the checklist above
+6. Write to OKR file
+7. Confirm with human
 
 ### Updating KR Status
 
@@ -174,8 +188,9 @@ Blockers: {list or "none"}
 
 1. **Vague completion standards**: "launch" "improve" "optimize" — must quantify
 2. **Missing verification**: KR says what to do but not how to prove it's done
-3. **KR too large**: Single KR contains multiple independent pieces of work → split it
-4. **No priority**: All OKRs appear equally important → must rank
-5. **Passive voice**: "wait for deploy" "wait for confirmation" → change to active: "trigger deploy" "verify completion"
-6. **No owner**: Nobody is accountable → every OKR needs an owner
-7. **Stale OKRs**: OKR status not updated for >1 week → audit and update or archive
+3. **Task masquerading as KR**: "build agent manager" / "integrate Slack" — move this into Tasks / Milestones
+4. **KR too large**: Single KR contains multiple independent pieces of work → split it
+5. **No priority**: All OKRs appear equally important → must rank
+6. **Passive voice**: "wait for deploy" "wait for confirmation" → change to active: "trigger deploy" "verify completion"
+7. **No owner**: Nobody is accountable → every OKR needs an owner
+8. **Stale OKRs**: OKR status not updated for >1 week → audit and update or archive

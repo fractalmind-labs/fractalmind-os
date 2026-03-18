@@ -12,22 +12,28 @@
 
 > **Dependency order**: KR1 → KR2 → ... → KRn
 
-**KR1: {Title}** — PENDING
+**KR1: {Observable result}** — PENDING
 - Deliverable: {What is produced — PR / Issue / Document / Deployment}
-- {Implementation details}
+- Outcome: {What changes in the world when this KR is done}
 - Verification: {How to prove done — CI green / QA PASS / test passed}
 
-**KR2: {Title}** — PENDING
+**KR2: {Observable result}** — PENDING
 - Deliverable: {What is produced}
 - Depends on: KR1
-- {Implementation details}
+- Outcome: {What changes in the world when this KR is done}
 - Verification: {How to prove done}
 
-**KR3: {Title}** — PENDING
+**KR3: {Observable result}** — PENDING
 - Deliverable: {What is produced}
 - Depends on: KR2
-- {Implementation details}
+- Outcome: {What changes in the world when this KR is done}
 - Verification: {How to prove done}
+
+#### Tasks / Milestones (recommended)
+
+- [ ] Task A — {Execution step owned by the assigned owner}
+- [ ] Task B — {Execution step that unblocks KR2}
+- [ ] Task C — {Execution step that prepares final verification}
 
 ---
 
@@ -45,31 +51,27 @@ Deploy a **production-ready API Gateway** with rate limiting, authentication, an
 
 #### Key Results
 
-> **Dependency order**: KR1 → KR2 → KR3 → KR4
+> **Dependency order**: KR1 → KR2 → KR3
 
-**KR1: Technical Design** — ✅ COMPLETE
-- Deliverable: Design document (PR #42)
-- Architecture: Kong Gateway + Redis rate limiter + JWT auth
-- Verification: Design doc reviewed and merged ✓
+**KR1: Authenticated gateway path handles end-to-end smoke traffic in staging** — ✅ COMPLETE
+- Deliverable: Staging gateway rollout + smoke-test evidence (PR #42)
+- Outcome: A signed-in request can pass through the gateway, hit the upstream service, and return a traced response
+- Verification: 20/20 smoke requests pass with auth + trace headers present
 
-**KR2: Core Implementation** — 🟡 IN PROGRESS
-- Deliverable: Gateway service + rate limiter + auth middleware (PR #55)
+**KR2: Gateway sustains ≥100 RPS with p99 latency <50ms and error rate <1% in staging** — 🟡 IN PROGRESS
+- Deliverable: Gateway tuning changes + k6 load-test report (PR #55)
 - Depends on: KR1
-- Rate limiting: token bucket algorithm, 100 req/min per user
-- Auth: JWT validation with RSA-256
-- Verification: Unit tests pass, CI green
+- Outcome: The staged gateway meets the target throughput envelope without degraded tail latency
+- Verification: k6 report attached, CI green, p99 latency <50ms, error rate <1%
 
-**KR3: Load Testing** — PENDING
-- Deliverable: Load test report + CI green PR
+**KR3: Production gateway exposes alerts and passes 24h stability observation with 0 downtime** — PENDING
+- Deliverable: Production deployment + monitoring dashboard + stability report
 - Depends on: KR2
-- Run k6 load test: 100 RPS sustained for 10 minutes
-- Verify: p99 latency <50ms, 0 errors, no memory leaks
-- Verification: Load test report + CI green
+- Outcome: Production traffic is protected by rate limits, visible in monitoring, and stable for a full observation window
+- Verification: Monitoring dashboard active, alerts configured, 24h uptime 100%
 
-**KR4: Production Deployment** — PENDING
-- Deliverable: Production deployment + monitoring dashboard
-- Depends on: KR3
-- Deploy to production cluster
-- Configure monitoring alerts (latency, error rate, uptime)
-- 24h stability observation
-- Verification: 24h uptime 100%, monitoring dashboard active
+#### Tasks / Milestones (recommended)
+
+- [x] Task A — Finalize auth + routing smoke test and attach evidence
+- [ ] Task B — Run 10-minute k6 test, tune Redis + rate limit config, post report
+- [ ] Task C — Deploy to production and watch the 24h stability window
