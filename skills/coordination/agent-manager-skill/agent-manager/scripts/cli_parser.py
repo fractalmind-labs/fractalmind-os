@@ -169,4 +169,15 @@ Examples:
     heartbeat_slo_parser.add_argument('--until', help='Override end time (ISO-8601, UTC recommended)')
     heartbeat_slo_parser.add_argument('--json', action='store_true', help='Output summary as JSON')
 
+    inbound_parser = subparsers.add_parser('inbound', help='Manage inbound queue recovery')
+    inbound_subparsers = inbound_parser.add_subparsers(dest='inbound_command', help='Inbound commands')
+
+    inbound_drain_parser = inbound_subparsers.add_parser('drain', help='Drain queued inbound messages')
+    inbound_drain_parser.add_argument('agent', help='Agent name or file ID')
+    inbound_drain_parser.add_argument(
+        '--once',
+        action='store_true',
+        help='Run exactly one drain pass and exit',
+    )
+
     return parser

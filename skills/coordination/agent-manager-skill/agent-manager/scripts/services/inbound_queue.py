@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
-_PENDING_STATES = {'queued', 'dispatching', 'dispatch_failed'}
+_PENDING_STATES = {'queued', 'claimed', 'dispatching', 'dispatch_failed', 'failed'}
 
 
 def _queue_file(repo_root: Path, agent_id: str) -> Path:

@@ -16,6 +16,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 import agent_config  # noqa: E402
+import main  # noqa: E402
 import tmux_helper  # noqa: E402
 from services.inbound_queue import enqueue_inbound_message  # noqa: E402
 from services.inbound_queue import mark_inbound_message_state  # noqa: E402
@@ -390,6 +391,108 @@ class MainAgentLifecycleTests(unittest.TestCase):
             names,
             ['received', 'queued', 'yielded', 'resumed', 'dispatching', 'dispatched', 'handled'],
         )
+
+    def test_inbound_drain_once_replays_pending_main_message(self):
+        calls = []
+        temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-main-drain-queue-'))
+        message_id = enqueue_inbound_message(
+            temp_root,
+            agent_id='main',
+            source='assign',
+            message_kind='task_assignment',
+            message='finish issue 122',
+        )
+
+        with patch('main.resolve_agent', return_value={'name': 'main', 'file_id': 'main', 'launcher': 'codex'}), \
+             patch('main.get_agent_id', side_effect=lambda config: config.get('file_id', '').lower()), \
+             patch('main.check_tmux', return_value=True), \
+             patch('main.session_exists', return_value=True), \
+             patch('main.get_repo_root', return_value=temp_root), \
+             patch('main.resolve_launcher_command', return_value='codex'), \
+             patch('main._should_use_codex_file_pointer', return_value=False), \
+             patch('main.get_agent_runtime_state', return_value={'state': 'busy', 'reason': 'busy_pattern:Thinking'}), \
+             patch('main.send_keys', side_effect=lambda agent_id, message, **kwargs: calls.append((agent_id, message, kwargs)) or True):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                rc = main.cmd_inbound(
+                    argparse.Namespace(inbound_command='drain', agent='main', once=True),
+                )
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(calls[0][0], 'main')
+        self.assertIn('# Task Assignment', calls[0][1])
+        events = read_inbound_events(temp_root, agent_id='main', message_id=message_id)
+        self.assertEqual(
+            [event.get('event') for event in events],
+            ['received', 'queued', 'claimed', 'dispatching', 'dispatched', 'handled'],
+        )
+        self.assertIn('drained=1', output.getvalue())
+
+    def test_inbound_drain_once_does_not_mark_handled_when_delivery_unconfirmed(self):
+        calls = []
+        temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-main-drain-unconfirmed-queue-'))
+        message_id = enqueue_inbound_message(
+            temp_root,
+            agent_id='main',
+            source='send',
+            message_kind='message',
+            message='pending replay',
+        )
+
+        class _FakeTime:
+            def __init__(self):
+                self._now = 0.0
+
+            def time(self):
+                return self._now
+
+            def sleep(self, seconds):
+                self._now += float(seconds)
+
+        fake_time = _FakeTime()
+
+        with patch('main.resolve_agent', return_value={'name': 'main', 'file_id': 'main', 'launcher': 'codex'}), \
+             patch('main.get_agent_id', side_effect=lambda config: config.get('file_id', '').lower()), \
+             patch('main.check_tmux', return_value=True), \
+             patch('main.session_exists', return_value=True), \
+             patch('main.get_repo_root', return_value=temp_root), \
+             patch('main.resolve_launcher_command', return_value='codex'), \
+             patch('main._should_use_codex_file_pointer', return_value=False), \
+             patch('main.get_agent_runtime_state', return_value={'state': 'idle', 'reason': 'ready'}), \
+             patch('main.time', fake_time), \
+             patch('main.send_keys', side_effect=lambda agent_id, message, **kwargs: calls.append((agent_id, message, kwargs)) or True):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                rc = main.cmd_inbound(
+                    argparse.Namespace(inbound_command='drain', agent='main', once=True),
+                )
+
+        self.assertEqual(rc, 1)
+        self.assertEqual(calls[0][0], 'main')
+        events = read_inbound_events(temp_root, agent_id='main', message_id=message_id)
+        self.assertEqual(
+            [event.get('event') for event in events],
+            ['received', 'queued', 'claimed', 'dispatching', 'dispatched', 'dispatch_failed'],
+        )
+        self.assertNotIn('handled', [event.get('event') for event in events])
+
+    def test_start_restore_main_runs_one_inbound_drain_pass_for_existing_session(self):
+        args = argparse.Namespace(agent='main', working_dir=None, restore=True, tmux_layout='sessions')
+
+        with patch('main.check_tmux', return_value=True), \
+             patch('main.resolve_agent', return_value={'name': 'main', 'file_id': 'main', 'launcher': 'codex', 'enabled': True}), \
+             patch('main.get_agent_id', return_value='main'), \
+             patch('main.session_exists', return_value=True), \
+             patch('main.get_session_info', return_value={'session': 'main', 'mode': 'sessions'}), \
+             patch('main.drain_main_inbound_once', return_value={'rc': 0, 'drained': 1, 'failed': 0, 'dead_lettered': 0, 'skipped': 0}) as mock_drain:
+            output = io.StringIO()
+            with redirect_stdout(output):
+                rc = main.cmd_start(args)
+
+        self.assertEqual(rc, 0)
+        mock_drain.assert_called_once_with(agent_id='main', trigger='start_restore')
+        self.assertIn('Restored existing session', output.getvalue())
+        self.assertIn('Inbound drain after restore', output.getvalue())
 
 
 if __name__ == '__main__':

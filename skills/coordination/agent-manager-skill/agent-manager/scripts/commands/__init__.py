@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from .doctor import cmd_doctor
 from .heartbeat import cmd_heartbeat
+from .inbound import cmd_inbound
 from .lifecycle import cmd_assign, cmd_monitor, cmd_send, cmd_start, cmd_stop
 from .listing import cmd_list
 from .schedule import cmd_schedule
@@ -22,4 +23,5 @@ __all__ = [
     'cmd_schedule',
     'cmd_schedule_run',
     'cmd_heartbeat',
+    'cmd_inbound',
 ]

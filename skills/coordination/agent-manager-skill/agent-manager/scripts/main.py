@@ -81,6 +81,10 @@ from commands.lifecycle import (
     cmd_send as lifecycle_cmd_send,
     cmd_assign as lifecycle_cmd_assign,
 )
+from commands.inbound import (
+    cmd_inbound as inbound_cmd_inbound,
+    drain_main_inbound_once as inbound_drain_main_inbound_once,
+)
 from services.heartbeat_service import (
     notify_heartbeat_failure as service_notify_heartbeat_failure,
     parse_heartbeat_recovery_policy as service_parse_heartbeat_recovery_policy,
@@ -91,6 +95,7 @@ from services.inbound_queue import (
     append_inbound_message_event,
     enqueue_inbound_message,
     has_pending_inbound_messages,
+    load_pending_inbound_messages,
     mark_inbound_message_state,
     note_pending_messages_yielded,
     read_inbound_events,
@@ -1549,6 +1554,25 @@ def cmd_assign(args):
     return lifecycle_cmd_assign(args, deps=_lifecycle_deps_module(), start_handler=cmd_start)
 
 
+def drain_main_inbound_once(*, agent_id: str = 'main', trigger: str = 'manual', deps=None):
+    """Run one inbound replay pass for main."""
+    deps_module = deps or _lifecycle_deps_module()
+    return inbound_drain_main_inbound_once(
+        deps=deps_module,
+        agent_id=agent_id,
+        trigger=trigger,
+    )
+
+
+def cmd_inbound(args):
+    """Handle inbound queue recovery subcommands."""
+    return inbound_cmd_inbound(
+        args,
+        deps=_lifecycle_deps_module(),
+        drain_once_handler=drain_main_inbound_once,
+    )
+
+
 def cmd_schedule(args):
     """Handle schedule subcommands."""
     return schedule_cmd_schedule(args, deps=_lifecycle_deps_module(), schedule_run_handler=cmd_schedule_run)
@@ -1973,6 +1997,7 @@ def main():
         cmd_assign=cmd_assign,
         cmd_schedule=cmd_schedule,
         cmd_heartbeat=cmd_heartbeat,
+        cmd_inbound=cmd_inbound,
     )
 
     handler = handlers.get(args.command)

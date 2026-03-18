@@ -185,6 +185,38 @@ class CliIntegrationFlowTests(unittest.TestCase):
             self.assertIn('Restored existing session', output, msg='[stage:start-restore] expected restore confirmation')
             self.assertEqual(len(runtime.start_commands), 0, msg='[stage:start-restore] should not create a new tmux session')
 
+    def test_start_restore_fresh_main_session_runs_inbound_drain_after_ready(self):
+        runtime = _FakeRuntime()
+        self.agent_config = {
+            'name': 'main',
+            'file_id': 'main',
+            'working_directory': str(self.work_dir),
+            'launcher': 'codex',
+            'launcher_args': ['--model=gpt-5.2'],
+            'enabled': True,
+        }
+
+        with ExitStack() as stack:
+            self._patch_common(stack, runtime)
+            stack.enter_context(patch('main._should_enforce_codex_session_owner', return_value=False))
+            mock_drain = stack.enter_context(patch('main.drain_main_inbound_once', return_value={
+                'rc': 0,
+                'drained': 1,
+                'failed': 0,
+                'dead_lettered': 0,
+                'skipped': 0,
+            }))
+
+            output = self._run_stage_ok(
+                'start-restore-fresh-main',
+                main.cmd_start,
+                argparse.Namespace(agent='main', working_dir=None, restore=True, tmux_layout='sessions'),
+            )
+
+            mock_drain.assert_called_once_with(agent_id='main', trigger='start_restore')
+            self.assertEqual(len(runtime.start_commands), 1, msg='[stage:start-restore-fresh-main] expected fresh tmux session start')
+            self.assertIn('Inbound drain after restore', output, msg='[stage:start-restore-fresh-main] expected drain summary')
+
     def test_codex_start_uses_inline_developer_instructions_even_with_agents_md(self):
         runtime = _FakeRuntime()
         (self.work_dir / 'AGENTS.md').write_text("workspace instructions\n", encoding='utf-8')

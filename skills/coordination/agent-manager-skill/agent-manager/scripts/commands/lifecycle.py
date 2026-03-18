@@ -145,6 +145,33 @@ def _confirm_delivery_after_send(
     return False, last_state, last_reason
 
 
+def _maybe_drain_main_inbound_after_restore(deps: Any, *, agent_id: str) -> None:
+    if str(agent_id).strip().lower() != 'main':
+        return
+
+    drain_once = getattr(deps, 'drain_main_inbound_once', None)
+    if not callable(drain_once):
+        return
+
+    try:
+        summary = drain_once(agent_id='main', trigger='start_restore')
+    except Exception as exc:
+        print(f"⚠️  Inbound drain skipped after restore: {exc}")
+        return
+
+    if not isinstance(summary, dict):
+        return
+
+    drained = int(summary.get('drained', 0) or 0)
+    dead_lettered = int(summary.get('dead_lettered', 0) or 0)
+    failed = int(summary.get('failed', 0) or 0)
+    if drained or dead_lettered or failed:
+        print(
+            "ℹ️  Inbound drain after restore: "
+            f"drained={drained} failed={failed} dead_lettered={dead_lettered}"
+        )
+
+
 def cmd_start(args, *, deps: Any):
     """Start an agent in tmux session."""
     check_tmux = deps.check_tmux
@@ -231,6 +258,7 @@ def cmd_start(args, *, deps: Any):
             else:
                 print(f"Attach with: tmux attach -t {session_name}")
             print(f"Monitor with: python3 {_script_name(deps)} monitor {agent_file_id}")
+            _maybe_drain_main_inbound_after_restore(deps, agent_id=agent_id)
             return 0
 
         print(f"⚠️  Agent '{agent_name}' is already running")
@@ -465,7 +493,8 @@ def cmd_start(args, *, deps: Any):
                 save_provider_session_id(repo_root, provider_key, agent_id, session_id=new_session_id, cwd=working_dir)
 
     print(f"⏳ Waiting for agent to be ready...")
-    if wait_for_agent_ready(agent_id, launcher, timeout=45):
+    agent_ready = wait_for_agent_ready(agent_id, launcher, timeout=45)
+    if agent_ready:
         print(f"✅ Agent is ready!")
     else:
         print(f"⚠️  Agent readiness timeout, but may still be processing...")
@@ -473,6 +502,9 @@ def cmd_start(args, *, deps: Any):
     if not session_exists(agent_id):
         print(f"❌ Agent session exited during startup")
         return 1
+
+    if agent_ready and getattr(args, 'restore', True):
+        _maybe_drain_main_inbound_after_restore(deps, agent_id=agent_id)
 
     print()
     print(f"Attach with: tmux attach -t {session_name}")

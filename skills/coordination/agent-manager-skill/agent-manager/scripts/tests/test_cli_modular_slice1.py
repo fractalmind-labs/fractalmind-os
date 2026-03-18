@@ -52,6 +52,13 @@ class CliModularSlice1Tests(unittest.TestCase):
         self.assertEqual(args.window, 'daily')
         self.assertIsNone(args.agent)
 
+    def test_inbound_drain_once_flags(self):
+        args = create_parser().parse_args(['inbound', 'drain', 'main', '--once'])
+        self.assertEqual(args.command, 'inbound')
+        self.assertEqual(args.inbound_command, 'drain')
+        self.assertEqual(args.agent, 'main')
+        self.assertTrue(args.once)
+
     def test_schedule_run_still_requires_job(self):
         parser = create_parser()
         with self.assertRaises(SystemExit):
@@ -69,14 +76,16 @@ class CliModularSlice1Tests(unittest.TestCase):
             cmd_assign=main.cmd_assign,
             cmd_schedule=main.cmd_schedule,
             cmd_heartbeat=main.cmd_heartbeat,
+            cmd_inbound=main.cmd_inbound,
         )
         self.assertEqual(
             set(handlers.keys()),
-            {'list', 'doctor', 'start', 'stop', 'status', 'monitor', 'send', 'assign', 'schedule', 'heartbeat'},
+            {'list', 'doctor', 'start', 'stop', 'status', 'monitor', 'send', 'assign', 'schedule', 'heartbeat', 'inbound'},
         )
         self.assertIs(handlers['start'], main.cmd_start)
         self.assertIs(handlers['status'], main.cmd_status)
         self.assertIs(handlers['heartbeat'], main.cmd_heartbeat)
+        self.assertIs(handlers['inbound'], main.cmd_inbound)
 
     def test_start_wrapper_delegates_to_lifecycle_handler(self):
         args = object()
@@ -154,6 +163,16 @@ class CliModularSlice1Tests(unittest.TestCase):
         mock_handler.assert_called_once()
         self.assertIs(mock_handler.call_args.kwargs['deps'], main)
         self.assertIs(mock_handler.call_args.kwargs['schedule_run_handler'], main.cmd_schedule_run)
+
+    def test_inbound_wrapper_delegates_to_inbound_handler(self):
+        args = object()
+        with patch('main.inbound_cmd_inbound', return_value=53) as mock_handler:
+            result = main.cmd_inbound(args)
+
+        self.assertEqual(result, 53)
+        mock_handler.assert_called_once()
+        self.assertIs(mock_handler.call_args.kwargs['deps'], main)
+        self.assertIs(mock_handler.call_args.kwargs['drain_once_handler'], main.drain_main_inbound_once)
 
 
 if __name__ == '__main__':
