@@ -109,6 +109,16 @@ Checklist:
 - [ ] rescue invocation remains one-pass / idempotent
 - [ ] residual queued work can be recovered without manual operator typing
 
+### Reading Rescue Outcomes
+
+When `inbound drain main --once` reports `failed`, it means the drain attempted dispatch but could not confirm delivery. Treat this as still-open work: do not count it as handled or replied, and leave it in replay/retry flow unless repeated failures force deeper diagnosis.
+
+When the summary reports `dead_lettered`, it means the item exhausted the normal replay budget and was moved out of the optimistic retry lane. Treat this as manual-triage work, not something a later automatic drain should be assumed to close.
+
+A `handled` event means the consumer-side message path completed after a confirmed delivery attempt. That is useful processing evidence, but by itself it is still not the transport-facing closure signal.
+
+A `replied` event is the operator-facing closure signal: the reply/audit closure was written with reply evidence such as `reply_evidence=transport_ack` and `transport_ack_status=ack`. In other words, `handled` says the message path ran; `replied` says the closure evidence was actually recorded.
+
 ## 5) Incident SOP: CI Gate Failure (PR Not Merge-Ready)
 
 Commands:
