@@ -169,6 +169,21 @@ Examples:
     heartbeat_slo_parser.add_argument('--until', help='Override end time (ISO-8601, UTC recommended)')
     heartbeat_slo_parser.add_argument('--json', action='store_true', help='Output summary as JSON')
 
+    timer_parser = subparsers.add_parser('timer', help='Schedule delayed agent-manager actions')
+    timer_subparsers = timer_parser.add_subparsers(dest='timer_command', help='Timer commands')
+
+    timer_list_parser = timer_subparsers.add_parser('list', help='List recent timers')
+    timer_list_parser.add_argument('--limit', '-n', type=int, default=20, help='Max timers to show (default: 20)')
+
+    timer_heartbeat_parser = timer_subparsers.add_parser('heartbeat', help='Run one heartbeat after a delay')
+    timer_heartbeat_parser.add_argument('agent', help='Agent name or file ID')
+    timer_heartbeat_parser.add_argument('--delay', '-d', required=True, help='Delay before running (e.g., 5s, 30s, 5m)')
+    timer_heartbeat_parser.add_argument('--timeout', '-t', help='Override heartbeat timeout')
+
+    timer_command_parser = timer_subparsers.add_parser('command', help='Run one agent-manager command after a delay')
+    timer_command_parser.add_argument('--delay', '-d', required=True, help='Delay before running (e.g., 5s, 30s, 5m)')
+    timer_command_parser.add_argument('command_args', nargs=argparse.REMAINDER, help="Command to run after '--'")
+
     inbound_parser = subparsers.add_parser('inbound', help='Manage inbound queue recovery')
     inbound_subparsers = inbound_parser.add_subparsers(dest='inbound_command', help='Inbound commands')
 

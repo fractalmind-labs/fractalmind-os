@@ -492,6 +492,21 @@ $CLI heartbeat run EMP_0001 --timeout 1m
 - Optional session rollover via `session_mode` (handoff first, then fresh session)
 - Waits for response (up to `max_runtime`)
 
+### `timer` - Schedule Delayed Actions
+
+Use `timer` for one-shot delayed actions without cron:
+
+```bash
+# Run one heartbeat in 5 seconds
+$CLI timer heartbeat main --delay 5s
+
+# Run an arbitrary agent-manager command in 5 seconds
+$CLI timer command --delay 5s -- heartbeat run main --timeout 8m
+
+# Inspect recent timers
+$CLI timer list
+```
+
 Each run appends structured JSONL audit events to:
 
 ```

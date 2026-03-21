@@ -65,6 +65,21 @@ class CliModularSlice1Tests(unittest.TestCase):
         self.assertEqual(args.inbound_command, 'rescue')
         self.assertEqual(args.agent, 'main')
 
+    def test_timer_heartbeat_flags(self):
+        args = create_parser().parse_args(['timer', 'heartbeat', 'main', '--delay', '5s', '--timeout', '8m'])
+        self.assertEqual(args.command, 'timer')
+        self.assertEqual(args.timer_command, 'heartbeat')
+        self.assertEqual(args.agent, 'main')
+        self.assertEqual(args.delay, '5s')
+        self.assertEqual(args.timeout, '8m')
+
+    def test_timer_command_remainder_flags(self):
+        args = create_parser().parse_args(['timer', 'command', '--delay', '5s', '--', 'heartbeat', 'run', 'main'])
+        self.assertEqual(args.command, 'timer')
+        self.assertEqual(args.timer_command, 'command')
+        self.assertEqual(args.delay, '5s')
+        self.assertEqual(args.command_args, ['--', 'heartbeat', 'run', 'main'])
+
     def test_schedule_run_still_requires_job(self):
         parser = create_parser()
         with self.assertRaises(SystemExit):
@@ -82,15 +97,17 @@ class CliModularSlice1Tests(unittest.TestCase):
             cmd_assign=main.cmd_assign,
             cmd_schedule=main.cmd_schedule,
             cmd_heartbeat=main.cmd_heartbeat,
+            cmd_timer=main.cmd_timer,
             cmd_inbound=main.cmd_inbound,
         )
         self.assertEqual(
             set(handlers.keys()),
-            {'list', 'doctor', 'start', 'stop', 'status', 'monitor', 'send', 'assign', 'schedule', 'heartbeat', 'inbound'},
+            {'list', 'doctor', 'start', 'stop', 'status', 'monitor', 'send', 'assign', 'schedule', 'heartbeat', 'timer', 'inbound'},
         )
         self.assertIs(handlers['start'], main.cmd_start)
         self.assertIs(handlers['status'], main.cmd_status)
         self.assertIs(handlers['heartbeat'], main.cmd_heartbeat)
+        self.assertIs(handlers['timer'], main.cmd_timer)
         self.assertIs(handlers['inbound'], main.cmd_inbound)
 
     def test_start_wrapper_delegates_to_lifecycle_handler(self):
@@ -169,6 +186,15 @@ class CliModularSlice1Tests(unittest.TestCase):
         mock_handler.assert_called_once()
         self.assertIs(mock_handler.call_args.kwargs['deps'], main)
         self.assertIs(mock_handler.call_args.kwargs['schedule_run_handler'], main.cmd_schedule_run)
+
+    def test_timer_wrapper_delegates_to_timer_handler(self):
+        args = object()
+        with patch('main.timer_cmd_timer', return_value=59) as mock_handler:
+            result = main.cmd_timer(args)
+
+        self.assertEqual(result, 59)
+        mock_handler.assert_called_once()
+        self.assertIs(mock_handler.call_args.kwargs['deps'], main)
 
     def test_inbound_wrapper_delegates_to_inbound_handler(self):
         args = object()

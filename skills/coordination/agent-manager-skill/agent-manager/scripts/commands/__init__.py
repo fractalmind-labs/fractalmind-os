@@ -10,6 +10,7 @@ from .listing import cmd_list
 from .schedule import cmd_schedule
 from .schedule_run import cmd_schedule_run
 from .status import cmd_status
+from .timer import cmd_timer
 
 __all__ = [
     'cmd_start',
@@ -23,5 +24,6 @@ __all__ = [
     'cmd_schedule',
     'cmd_schedule_run',
     'cmd_heartbeat',
+    'cmd_timer',
     'cmd_inbound',
 ]

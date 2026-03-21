@@ -115,6 +115,7 @@ from commands.doctor import cmd_doctor as doctor_cmd_doctor
 from commands.schedule import cmd_schedule as schedule_cmd_schedule
 from commands.schedule_run import cmd_schedule_run as schedule_run_cmd_schedule_run
 from commands.heartbeat import cmd_heartbeat as heartbeat_cmd_heartbeat
+from commands.timer import cmd_timer as timer_cmd_timer
 
 
 def _normalize_path(path: str) -> str:
@@ -1633,6 +1634,11 @@ def cmd_heartbeat(args):
     )
 
 
+def cmd_timer(args):
+    """Handle timer subcommands."""
+    return timer_cmd_timer(args, deps=_lifecycle_deps_module())
+
+
 def cmd_heartbeat_run(args):
     """Run a heartbeat check for an agent."""
     if not check_tmux():
@@ -2051,6 +2057,7 @@ def main():
         cmd_assign=cmd_assign,
         cmd_schedule=cmd_schedule,
         cmd_heartbeat=cmd_heartbeat,
+        cmd_timer=cmd_timer,
         cmd_inbound=cmd_inbound,
     )
 
