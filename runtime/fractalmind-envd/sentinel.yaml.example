@@ -15,6 +15,7 @@ roles:
 
 coordinator:
   listen_addr: ":8080" # Bind address for the embedded coordinator API when roles.coordinator=true
+  api_token: ""        # Optional: set bearer token to protect /api/* endpoints (Authorization: Bearer <token>)
 
 agents:
   scan_method: tmux    # tmux | systemd | docker

@@ -131,6 +131,7 @@ See [`sentinel.yaml.example`](sentinel.yaml.example) for all options.
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `coordinator.listen_addr` | `:8080` | Bind address for the embedded coordinator API |
+| `coordinator.api_token` | `""` | Optional bearer token for `/api/*` (when set, requests must send `Authorization: Bearer <token>`) |
 | `gateway.url` | `ws://localhost:8080/ws` | Coordinator WebSocket URL for worker nodes |
 | `agents.scan_method` | `tmux` | Agent discovery method |
 | `agents.auto_restart` | `true` | Auto-restart crashed agents |

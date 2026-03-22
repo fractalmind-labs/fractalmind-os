@@ -17,7 +17,7 @@ import (
 )
 
 func TestCoordinatorListsRegisteredWorkers(t *testing.T) {
-	server := NewServer(":0", time.Second)
+	server := NewServer(":0", time.Second, "")
 	testServer := httptest.NewServer(server.Handler())
 	defer testServer.Close()
 
@@ -38,6 +38,8 @@ func TestCoordinatorListsRegisteredWorkers(t *testing.T) {
 		},
 		Uptime: 42,
 	})
+
+	waitForSentinel(t, testServer.URL, "node-1", nil)
 
 	body := httpGet(t, testServer.URL+"/api/sentinels")
 
@@ -78,7 +80,7 @@ func TestCoordinatorListsRegisteredWorkers(t *testing.T) {
 }
 
 func TestCoordinatorShellCommandProxy(t *testing.T) {
-	server := NewServer(":0", 2*time.Second)
+	server := NewServer(":0", 2*time.Second, "")
 	testServer := httptest.NewServer(server.Handler())
 	defer testServer.Close()
 
@@ -127,6 +129,8 @@ func TestCoordinatorShellCommandProxy(t *testing.T) {
 		})
 	}()
 
+	waitForSentinel(t, testServer.URL, "node-2", nil)
+
 	body := httpPostJSON(t, testServer.URL+"/api/sentinels/node-2/command", commandRequest{
 		Command: "shell",
 		Args:    "echo hello",
@@ -145,6 +149,150 @@ func TestCoordinatorShellCommandProxy(t *testing.T) {
 	if resp.Output != "hello\n" {
 		t.Fatalf("output = %q, want hello\\n", resp.Output)
 	}
+}
+
+func TestCoordinatorAPITokenAuthOnHealthAndSentinels(t *testing.T) {
+	server := NewServer(":0", time.Second, "test-token")
+	testServer := httptest.NewServer(server.Handler())
+	defer testServer.Close()
+
+	conn := dialTestWebSocket(t, testServer.URL)
+	defer conn.Close()
+	registerWorker(t, conn, "node-auth", "worker-auth", "dev", heartbeat.Payload{})
+
+	status, _ := httpGetWithHeaders(t, testServer.URL+"/api/health", nil)
+	if status != http.StatusUnauthorized {
+		t.Fatalf("GET /api/health without token status = %d, want %d", status, http.StatusUnauthorized)
+	}
+
+	status, _ = httpGetWithHeaders(t, testServer.URL+"/api/sentinels", map[string]string{
+		"Authorization": "Bearer wrong-token",
+	})
+	if status != http.StatusUnauthorized {
+		t.Fatalf("GET /api/sentinels with wrong token status = %d, want %d", status, http.StatusUnauthorized)
+	}
+
+	waitForSentinel(t, testServer.URL, "node-auth", map[string]string{
+		"Authorization": "Bearer test-token",
+	})
+
+	status, body := httpGetWithHeaders(t, testServer.URL+"/api/sentinels", map[string]string{
+		"Authorization": "Bearer test-token",
+	})
+	if status != http.StatusOK {
+		t.Fatalf("GET /api/sentinels with token status = %d, want %d, body=%s", status, http.StatusOK, string(body))
+	}
+
+	var resp struct {
+		Count int `json:"count"`
+	}
+	decodeJSON(t, body, &resp)
+	if resp.Count != 1 {
+		t.Fatalf("count = %d, want 1", resp.Count)
+	}
+}
+
+func TestCoordinatorAPITokenAuthOnCommandEndpoint(t *testing.T) {
+	server := NewServer(":0", 2*time.Second, "command-token")
+	testServer := httptest.NewServer(server.Handler())
+	defer testServer.Close()
+
+	conn := dialTestWebSocket(t, testServer.URL)
+	defer conn.Close()
+	registerWorker(t, conn, "node-command", "worker-command", "dev", heartbeat.Payload{})
+
+	status, _ := httpPostJSONWithHeaders(t, testServer.URL+"/api/sentinels/node-command/command", commandRequest{
+		Command: "shell",
+		Args:    "echo hello",
+	}, nil)
+	if status != http.StatusUnauthorized {
+		t.Fatalf("POST /api/sentinels/{id}/command without token status = %d, want %d", status, http.StatusUnauthorized)
+	}
+
+	commandDone := make(chan struct{})
+	go func() {
+		defer close(commandDone)
+
+		var msg ws.Message
+		if err := conn.ReadJSON(&msg); err != nil {
+			t.Errorf("read command: %v", err)
+			return
+		}
+		if msg.Type != "command" {
+			t.Errorf("message type = %q, want command", msg.Type)
+			return
+		}
+
+		var payload ws.CommandPayload
+		if err := json.Unmarshal(msg.Payload, &payload); err != nil {
+			t.Errorf("decode command payload: %v", err)
+			return
+		}
+
+		sendWSMessage(t, conn, ws.Message{
+			Type: "command_result",
+			Payload: mustRawJSON(commandResultPayload{
+				RequestID: payload.RequestID,
+				Result: map[string]interface{}{
+					"success": true,
+					"output":  "ok\n",
+				},
+			}),
+		})
+	}()
+
+	waitForSentinel(t, testServer.URL, "node-command", map[string]string{
+		"Authorization": "Bearer command-token",
+	})
+
+	status, body := httpPostJSONWithHeaders(t, testServer.URL+"/api/sentinels/node-command/command", commandRequest{
+		Command: "shell",
+		Args:    "echo hello",
+	}, map[string]string{
+		"Authorization": "Bearer command-token",
+	})
+	if status != http.StatusOK {
+		t.Fatalf("POST /api/sentinels/{id}/command with token status = %d, want %d, body=%s", status, http.StatusOK, string(body))
+	}
+	<-commandDone
+
+	var resp struct {
+		Success bool   `json:"success"`
+		Output  string `json:"output"`
+	}
+	decodeJSON(t, body, &resp)
+	if !resp.Success {
+		t.Fatal("expected success=true")
+	}
+	if resp.Output != "ok\n" {
+		t.Fatalf("output = %q, want ok\\n", resp.Output)
+	}
+}
+
+func TestCoordinatorAPITokenUnsetKeepsCompatibility(t *testing.T) {
+	server := NewServer(":0", time.Second, "")
+	testServer := httptest.NewServer(server.Handler())
+	defer testServer.Close()
+
+	status, body := httpGetWithHeaders(t, testServer.URL+"/api/health", nil)
+	if status != http.StatusOK {
+		t.Fatalf("GET /api/health status = %d, want %d, body=%s", status, http.StatusOK, string(body))
+	}
+}
+
+func waitForSentinel(t *testing.T, baseURL, id string, headers map[string]string) {
+	t.Helper()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		status, _ := httpGetWithHeaders(t, baseURL+"/api/sentinels/"+id, headers)
+		if status == http.StatusOK {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	t.Fatalf("timeout waiting for sentinel %q to be registered", id)
 }
 
 func registerWorker(t *testing.T, conn *websocket.Conn, hostID, hostname, version string, hb heartbeat.Payload) {
@@ -233,6 +381,57 @@ func httpPostJSON(t *testing.T, url string, payload interface{}) []byte {
 		t.Fatalf("read POST response: %v", err)
 	}
 	return body
+}
+
+func httpGetWithHeaders(t *testing.T, url string, headers map[string]string) (int, []byte) {
+	t.Helper()
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		t.Fatalf("new GET request: %v", err)
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
+	return httpDo(t, req)
+}
+
+func httpPostJSONWithHeaders(t *testing.T, url string, payload interface{}, headers map[string]string) (int, []byte) {
+	t.Helper()
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("new POST request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
+	return httpDo(t, req)
+}
+
+func httpDo(t *testing.T, req *http.Request) (int, []byte) {
+	t.Helper()
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("%s %s: %v", req.Method, req.URL, err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read response body: %v", err)
+	}
+
+	return resp.StatusCode, body
 }
 
 func decodeJSON(t *testing.T, body []byte, out interface{}) {

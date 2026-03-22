@@ -276,7 +276,7 @@ func main() {
 	}
 
 	if activeRoles.Coordinator {
-		coordinatorServer = coordinator.NewServer(cfg.Coordinator.ListenAddr, 30*time.Second)
+		coordinatorServer = coordinator.NewServer(cfg.Coordinator.ListenAddr, 30*time.Second, cfg.Coordinator.APIToken)
 		if err := coordinatorServer.Start(); err != nil {
 			log.Fatalf("[coordinator] failed to start server on %s: %v", cfg.Coordinator.ListenAddr, err)
 		}

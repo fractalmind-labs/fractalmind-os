@@ -2,11 +2,13 @@ package coordinator
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/fractalmind-ai/fractalmind-envd/internal/heartbeat"
@@ -34,6 +36,7 @@ type sentinelSummary struct {
 // Server exposes the embedded coordinator REST and WebSocket API.
 type Server struct {
 	addr         string
+	apiToken     string
 	manager      *Manager
 	upgrader     websocket.Upgrader
 	httpServer   *http.Server
@@ -42,14 +45,15 @@ type Server struct {
 	done         chan struct{}
 }
 
-func NewServer(addr string, commandTimeout time.Duration) *Server {
+func NewServer(addr string, commandTimeout time.Duration, apiToken string) *Server {
 	if addr == "" {
 		addr = ":8080"
 	}
 
 	return &Server{
-		addr:    addr,
-		manager: NewManager(commandTimeout),
+		addr:     addr,
+		apiToken: strings.TrimSpace(apiToken),
+		manager:  NewManager(commandTimeout),
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(*http.Request) bool { return true },
 		},
@@ -89,7 +93,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/sentinels/{id}/agents", s.handleGetAgents)
 	mux.HandleFunc("POST /api/sentinels/{id}/command", s.handleCommand)
 	mux.HandleFunc("GET /ws", s.handleWebSocket)
-	return mux
+	return s.withAPITokenAuth(mux)
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
@@ -215,6 +219,36 @@ func (s *Server) pingLoop() {
 			return
 		}
 	}
+}
+
+func (s *Server) withAPITokenAuth(next http.Handler) http.Handler {
+	if s.apiToken == "" {
+		return next
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/api/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		if !validBearerToken(r.Header.Get("Authorization"), s.apiToken) {
+			w.Header().Set("WWW-Authenticate", "Bearer")
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func validBearerToken(authHeader, expectedToken string) bool {
+	parts := strings.Fields(strings.TrimSpace(authHeader))
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return false
+	}
+
+	return subtle.ConstantTimeCompare([]byte(parts[1]), []byte(expectedToken)) == 1
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload interface{}) {

@@ -35,6 +35,7 @@ type RolesConfig struct {
 
 type CoordinatorConfig struct {
 	ListenAddr string `yaml:"listen_addr"`
+	APIToken   string `yaml:"api_token"`
 }
 
 type GatewayConfig struct {
