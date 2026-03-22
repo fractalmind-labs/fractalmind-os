@@ -1,6 +1,6 @@
 # Example: heartbeat-state.json with turboFrequency
 
-This shows a typical `memory/heartbeat-state.json` with the turboFrequency field.
+This shows a typical `memory/heartbeat-state.json` with both the cron-tier state and the optional full-speed follow-up state.
 
 ```json
 {
@@ -19,9 +19,13 @@ This shows a typical `memory/heartbeat-state.json` with the turboFrequency field
     "currentTier": "MEDIUM",
     "cron": "*/30 * * * *",
     "score": 25,
+    "fullSpeedFollowup": false,
+    "fullSpeedDelay": null,
     "changedAt": "2026-03-09T10:00:00Z",
+    "fullSpeedChangedAt": "2026-03-09T10:00:00Z",
     "lastUpgradeAt": "2026-03-09T09:30:00Z",
     "reason": "pendingDecisions non-empty (+20), tmux has 1 agent session (+25), quiet hours (-30). Score: 15 → but deploy awaiting review (+10) → 25 → MEDIUM",
+    "fullSpeedReason": "no-followup: tier=MEDIUM",
     "unchangedCount": 2
   }
 }
@@ -36,11 +40,16 @@ This shows a typical `memory/heartbeat-state.json` with the turboFrequency field
 | `currentTier` | string | One of: TURBO, HIGH, MEDIUM, LOW, IDLE, SLEEP |
 | `cron` | string | Current cron expression matching the tier |
 | `score` | number | Latest computed busyness score (0-100) |
+| `fullSpeedFollowup` | boolean | Whether this evaluation scheduled a timer-driven follow-up |
+| `fullSpeedDelay` | string/null | Last computed delay such as `5s`, `100s`, or `3m` |
 | `changedAt` | string | ISO 8601 timestamp of last tier change |
+| `fullSpeedChangedAt` | string | ISO 8601 timestamp of last follow-up policy change |
 | `lastUpgradeAt` | string? | ISO 8601 timestamp of last **upward** tier change. Used for 30-min downgrade cooldown. |
-| `reason` | string | Human-readable explanation |
+| `reason` | string | Human-readable explanation for the tier decision |
+| `fullSpeedReason` | string | Human-readable explanation for the follow-up decision |
 | `unchangedCount` | number | Consecutive evaluations with same tier |
 | `manualOverride` | object? | Optional: `{ "tier": "HIGH", "until": "..." }` |
+| `fullSpeedOverride` | object? | Optional: `{ "enabled": true, "delay": "5s", "timeout": "8m", "until": "...", "reason": "active incident" }` |
 
 ### Manual Override Example
 
@@ -65,25 +74,33 @@ Lock to TURBO for 2 hours during a critical deployment:
 
 The manual override is checked in Step 1. If `until` has not passed, the auto-adjustment is skipped entirely.
 
-## Custom Signal Sources
+### Full-Speed Override Example
 
-You can extend the scoring rules by adding custom signals to your heartbeat-state.json. The skill evaluates signals by reading the JSON — any additional fields you add can be incorporated into your scoring logic.
-
-Example: Add a `ciStatus` field:
+Force one near-term follow-up heartbeat during an active incident:
 
 ```json
 {
-  "ciStatus": {
-    "lastRun": "2026-03-09T13:45:00Z",
-    "status": "failing",
-    "failCount": 3
+  "turboFrequency": {
+    "currentTier": "HIGH",
+    "cron": "*/10 * * * *",
+    "score": 55,
+    "fullSpeedFollowup": true,
+    "fullSpeedDelay": "5s",
+    "changedAt": "2026-03-09T14:00:00Z",
+    "fullSpeedChangedAt": "2026-03-09T14:00:00Z",
+    "reason": "human active (+25), pendingDecisions (+20), tmux agent session (+30), quiet hours (-20) => 55",
+    "fullSpeedReason": "manual override: active incident",
+    "unchangedCount": 0,
+    "fullSpeedOverride": {
+      "enabled": true,
+      "delay": "5s",
+      "timeout": "8m",
+      "until": "2026-03-09T14:10:00Z",
+      "reason": "active incident"
+    }
   }
 }
 ```
-
-Then in your heartbeat handler, add scoring logic:
-- `ciStatus.status == "failing"` → +40 (triggers TURBO)
-- `ciStatus.failCount > 5` → +40 (critical)
 
 ## Integration with agent-manager
 
@@ -93,11 +110,10 @@ If you use [agent-manager-skill](https://github.com/fractalmind-ai/agent-manager
 python3 .agent/skills/agent-manager/scripts/main.py heartbeat sync
 ```
 
-This reads the cron from your `AGENTS.md` frontmatter and updates the system crontab accordingly.
-
-Without agent-manager, you can use any crontab management approach:
+For timer-driven follow-up, you can schedule a one-shot heartbeat like this:
 
 ```bash
-# Direct crontab update
-(crontab -l 2>/dev/null | grep -v 'heartbeat'; echo "*/30 * * * * /path/to/heartbeat.sh") | crontab -
+python3 .agent/skills/agent-manager/scripts/main.py timer heartbeat main --delay 100s --timeout 8m
 ```
+
+When choosing `delay`, prefer the next likely meaningful update time instead of a fixed preset.
