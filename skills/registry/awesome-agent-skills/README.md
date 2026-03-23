@@ -17,7 +17,7 @@
 <div align="center">
 
 [![Awesome](https://awesome.re/badge.svg)](https://awesome.re)
-![Skills Count](https://img.shields.io/badge/Skills-670+-blue?style=flat-square)
+![Skills Count](https://img.shields.io/badge/Skills-680+-blue?style=flat-square)
 ![Last Update](https://img.shields.io/github/last-commit/VoltAgent/awesome-agent-skills?label=Last%20update&style=flat-square)
 <a href="https://github.com/VoltAgent/voltagent">
   <img alt="VoltAgent" src="https://cdn.voltagent.dev/website/logo/logo-2-svg.svg" height="20" />
@@ -85,8 +85,8 @@ Agent skills can include prompt injections, tool poisoning, hidden malware paylo
 | [Skills by Microsoft](#skills-by-microsoft) | [Skills by fal.ai](#skills-by-falai-team) | [Skills by WordPress](#skills-by-wordpress-development-team) |
 | [Skills by Transloadit](#skills-by-transloadit-team) | [Skills by OpenAI](#skills-by-openai) | [Marketing Skills by Corey Haines](#marketing-skills-by-corey-haines) |
 | [Skills by Binance](#skills-by-binance) | [Product Manager Skills by Dean Peters](#product-manager-skills-by-dean-peters) | [Product Management Skills by Paweł Huryn](#product-management-skills-by-pawel-huryn) |
-| [Skills by MiniMax](#skills-by-minimax-team) | [Skills by DuckDB](#skills-by-duckdb) | [Community Skills](#community-skills) |
-| [Skill Quality Standards](#skill-quality-standards) | | |
+| [Skills by MiniMax](#skills-by-minimax-team) | [Skills by DuckDB](#skills-by-duckdb) | [Skills by GSAP](#skills-by-gsap-greensock) |
+| [Community Skills](#community-skills) | [Skill Quality Standards](#skill-quality-standards) | |
 
 
 
@@ -862,6 +862,22 @@ Official DuckDB skills for data querying, file reading, and documentation search
 - **[duckdb/duckdb-docs](https://github.com/duckdb/duckdb-skills/tree/main/skills/duckdb-docs)** - Search DuckDB and DuckLake documentation using full-text search over HTTPS
 - **[duckdb/read-memories](https://github.com/duckdb/duckdb-skills/tree/main/skills/read-memories)** - Search past Claude Code session logs to recover context from previous conversations
 - **[duckdb/install-duckdb](https://github.com/duckdb/duckdb-skills/tree/main/skills/install-duckdb)** - Install or update DuckDB CLI and extensions with version management
+
+</details>
+
+<details>
+<summary><h3 style="display:inline">Skills by GSAP (GreenSock)</h3></summary>
+
+Official GSAP animation skills covering the full GreenSock ecosystem — core API, timelines, ScrollTrigger, plugins, utilities, React integration, performance optimization, and framework support.
+
+- **[greensock/gsap-core](https://github.com/greensock/gsap-skills/tree/main/skills/gsap-core)** - Core API with gsap.to(), from(), fromTo(), easing, duration, stagger, and defaults
+- **[greensock/gsap-timeline](https://github.com/greensock/gsap-skills/tree/main/skills/gsap-timeline)** - Timelines with sequencing, position parameter, labels, nesting, and playback control
+- **[greensock/gsap-scrolltrigger](https://github.com/greensock/gsap-skills/tree/main/skills/gsap-scrolltrigger)** - ScrollTrigger for scroll-linked animations, pinning, scrub, and refresh handling
+- **[greensock/gsap-plugins](https://github.com/greensock/gsap-skills/tree/main/skills/gsap-plugins)** - Plugins including ScrollToPlugin, Flip, Draggable, SplitText, SVG, and physics
+- **[greensock/gsap-utils](https://github.com/greensock/gsap-skills/tree/main/skills/gsap-utils)** - Utility functions like clamp, mapRange, interpolate, snap, selector, and wrap
+- **[greensock/gsap-react](https://github.com/greensock/gsap-skills/tree/main/skills/gsap-react)** - React integration with useGSAP hook, refs, gsap.context(), cleanup, and SSR
+- **[greensock/gsap-performance](https://github.com/greensock/gsap-skills/tree/main/skills/gsap-performance)** - Performance tips for transforms, will-change, batching, and ScrollTrigger optimization
+- **[greensock/gsap-frameworks](https://github.com/greensock/gsap-skills/tree/main/skills/gsap-frameworks)** - Vue, Svelte, and other frameworks with lifecycle, scoping, and cleanup patterns
 
 </details>
 
