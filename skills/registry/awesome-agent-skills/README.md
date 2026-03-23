@@ -17,7 +17,7 @@
 <div align="center">
 
 [![Awesome](https://awesome.re/badge.svg)](https://awesome.re)
-![Skills Count](https://img.shields.io/badge/Skills-630+-blue?style=flat-square)
+![Skills Count](https://img.shields.io/badge/Skills-670+-blue?style=flat-square)
 ![Last Update](https://img.shields.io/github/last-commit/VoltAgent/awesome-agent-skills?label=Last%20update&style=flat-square)
 <a href="https://github.com/VoltAgent/voltagent">
   <img alt="VoltAgent" src="https://cdn.voltagent.dev/website/logo/logo-2-svg.svg" height="20" />
@@ -85,7 +85,8 @@ Agent skills can include prompt injections, tool poisoning, hidden malware paylo
 | [Skills by Microsoft](#skills-by-microsoft) | [Skills by fal.ai](#skills-by-falai-team) | [Skills by WordPress](#skills-by-wordpress-development-team) |
 | [Skills by Transloadit](#skills-by-transloadit-team) | [Skills by OpenAI](#skills-by-openai) | [Marketing Skills by Corey Haines](#marketing-skills-by-corey-haines) |
 | [Skills by Binance](#skills-by-binance) | [Product Manager Skills by Dean Peters](#product-manager-skills-by-dean-peters) | [Product Management Skills by Paweł Huryn](#product-management-skills-by-pawel-huryn) |
-| [Community Skills](#community-skills) | [Skill Quality Standards](#skill-quality-standards) | |
+| [Skills by MiniMax](#skills-by-minimax-team) | [Skills by DuckDB](#skills-by-duckdb) | [Community Skills](#community-skills) |
+| [Skill Quality Standards](#skill-quality-standards) | | |
 
 
 
@@ -832,6 +833,38 @@ Official Web3 and trading skills from the Binance team. Includes crypto market d
 
 </details>
 
+<details>
+<summary><h3 style="display:inline">Skills by MiniMax Team</h3></summary>
+
+10 development and document generation skills from the MiniMax AI team. Covers frontend, fullstack, mobile, shader development, and document creation (PDF, DOCX, XLSX, PPTX) with MiniMax API integration.
+
+- **[MiniMax-AI/frontend-dev](https://github.com/MiniMax-AI/skills/tree/main/skills/frontend-dev)** - Full-stack frontend with cinematic animations, AI-generated media via MiniMax API, and generative art
+- **[MiniMax-AI/fullstack-dev](https://github.com/MiniMax-AI/skills/tree/main/skills/fullstack-dev)** - Backend architecture with REST API design, auth flows, real-time features, and database integration
+- **[MiniMax-AI/android-native-dev](https://github.com/MiniMax-AI/skills/tree/main/skills/android-native-dev)** - Android native development with Kotlin/Jetpack Compose, Material Design 3, and accessibility
+- **[MiniMax-AI/ios-application-dev](https://github.com/MiniMax-AI/skills/tree/main/skills/ios-application-dev)** - iOS development with UIKit, SnapKit, and SwiftUI covering navigation, Dark Mode, and HIG compliance
+- **[MiniMax-AI/shader-dev](https://github.com/MiniMax-AI/skills/tree/main/skills/shader-dev)** - GLSL shader techniques for ray marching, fluid simulation, particle systems, and procedural generation
+- **[MiniMax-AI/gif-sticker-maker](https://github.com/MiniMax-AI/skills/tree/main/skills/gif-sticker-maker)** - Convert photos into animated GIF stickers in Funko Pop / Pop Mart style via MiniMax API
+- **[MiniMax-AI/minimax-pdf](https://github.com/MiniMax-AI/skills/tree/main/skills/minimax-pdf)** - Generate, fill, and reformat PDFs with a token-based design system and 15 cover styles
+- **[MiniMax-AI/pptx-generator](https://github.com/MiniMax-AI/skills/tree/main/skills/pptx-generator)** - Create and edit PowerPoint presentations from scratch with PptxGenJS
+- **[MiniMax-AI/minimax-xlsx](https://github.com/MiniMax-AI/skills/tree/main/skills/minimax-xlsx)** - Create, read, analyze, and validate Excel/spreadsheet files with zero format loss
+- **[MiniMax-AI/minimax-docx](https://github.com/MiniMax-AI/skills/tree/main/skills/minimax-docx)** - Professional DOCX document creation and editing using OpenXML SDK
+
+</details>
+
+<details>
+<summary><h3 style="display:inline">Skills by DuckDB</h3></summary>
+
+Official DuckDB skills for data querying, file reading, and documentation search directly from Claude Code.
+
+- **[duckdb/attach-db](https://github.com/duckdb/duckdb-skills/tree/main/skills/attach-db)** - Attach a DuckDB database file for interactive querying with automatic schema exploration
+- **[duckdb/query](https://github.com/duckdb/duckdb-skills/tree/main/skills/query)** - Run SQL queries against attached databases or ad-hoc against files using Friendly SQL dialect
+- **[duckdb/read-file](https://github.com/duckdb/duckdb-skills/tree/main/skills/read-file)** - Read any data file (CSV, JSON, Parquet, Avro, Excel, spatial) locally or from remote storage
+- **[duckdb/duckdb-docs](https://github.com/duckdb/duckdb-skills/tree/main/skills/duckdb-docs)** - Search DuckDB and DuckLake documentation using full-text search over HTTPS
+- **[duckdb/read-memories](https://github.com/duckdb/duckdb-skills/tree/main/skills/read-memories)** - Search past Claude Code session logs to recover context from previous conversations
+- **[duckdb/install-duckdb](https://github.com/duckdb/duckdb-skills/tree/main/skills/install-duckdb)** - Install or update DuckDB CLI and extensions with version management
+
+</details>
+
 ### Community Skills
 
 <details>
@@ -893,6 +926,7 @@ Official Web3 and trading skills from the Binance team. Includes crypto market d
 - **[Rootly-AI-Labs/rootly-incident-responder](https://github.com/Rootly-AI-Labs/Rootly-MCP-server/blob/main/examples/skills/rootly-incident-responder.md)** - AI-powered incident response with ML similarity matching, solution suggestions, and on-call coordination. Requires [Rootly MCP Server](https://github.com/Rootly-AI-Labs/Rootly-MCP-server)
 - **[conorluddy/ios-simulator-skill](https://github.com/conorluddy/ios-simulator-skill)** - Control iOS Simulator
 - **[ramzesenok/iOS-Accessibility-Audit-Skill](https://github.com/ramzesenok/iOS-Accessibility-Audit-Skill)** - Audit iOS App against Accessibility norms
+- **[truongduy2611/app-store-preflight-skills](https://github.com/truongduy2611/app-store-preflight-skills)** - Scan iOS/macOS projects to catch common mistakes that lead to App Store rejection before submission
 - **[sanjay3290/postgres](https://github.com/sanjay3290/ai-skills/tree/main/skills/postgres)** - Execute safe read-only SQL queries against PostgreSQL databases
 - **[sanjay3290/deep-research](https://github.com/sanjay3290/ai-skills/tree/main/skills/deep-research)** - Autonomous multi-step research using Gemini Deep Research Agent
 - **[jthack/ffuf-claude-skill](https://github.com/jthack/ffuf_claude_skill)** - Web fuzzing with ffuf
@@ -942,6 +976,8 @@ Official Web3 and trading skills from the Binance team. Includes crypto market d
 - **[hamelsmu/validate-evaluator](https://github.com/hamelsmu/prompts/tree/main/evals-skills/skills/validate-evaluator)** - Calibrate LLM judges against human labels
 - **[hamelsmu/evaluate-rag](https://github.com/hamelsmu/prompts/tree/main/evals-skills/skills/evaluate-rag)** - Evaluate RAG retrieval and generation quality
 - **[hamelsmu/build-review-interface](https://github.com/hamelsmu/prompts/tree/main/evals-skills/skills/build-review-interface)** - Build annotation interfaces for reviewing LLM traces
+- **[mattpocock/skills](https://github.com/mattpocock/skills)** - 17 dev workflow skills: PRD writing, TDD, codebase architecture, git guardrails, issue triage, refactoring plans, and more
+- **[mukul975/Anthropic-Cybersecurity-Skills](https://github.com/mukul975/Anthropic-Cybersecurity-Skills)** - 753 cybersecurity skills across 38 domains: cloud security, pentesting, red teaming, DFIR, malware analysis, threat intel, and more (MITRE ATT&CK mapped)
 - **[wrsmith108/varlock-claude-skill](https://github.com/wrsmith108/varlock-claude-skill)** - Secure environment variable management ensuring secrets are never exposed in Claude sessions, terminals, logs, or git commits
 - **[Skill_Seekers](https://github.com/yusufkaraaslan/Skill_Seekers)** - Automatically convert documentation websites, GitHub repositories, and PDFs into Claude AI skills in minutes
 - **[NoizAI/skills](https://github.com/NoizAI/skills)** - Human-like TTS workflows with local/cloud APIs and app delivery
