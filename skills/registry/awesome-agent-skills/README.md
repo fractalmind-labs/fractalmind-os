@@ -49,7 +49,7 @@
 
 Unlike many bulk-generated skill repositories, this collection focuses on real-world Agent Skills created and used by actual engineering teams, not mass AI‑generated stuff.
 
-This collection features official skills published by leading development teams, including Anthropic, Google Labs, Vercel, Stripe, Cloudflare, Netlify, Trail of Bits, Sentry, Expo, Hugging Face, and more, alongside community-built skills.
+This collection features official skills published by leading development teams, including Anthropic, Google Labs, Vercel, Stripe, Cloudflare, Netlify, Trail of Bits, Sentry, Expo, Hugging Face, Figma, and more, alongside community-built skills.
 
 Compatible with Claude Code, Codex, Antigravity, Gemini CLI, Cursor, GitHub Copilot, OpenCode, Windsurf, and more. See the table below for paths and documentation.
 
@@ -83,10 +83,10 @@ Agent skills can include prompt injections, tool poisoning, hidden malware paylo
 | [Skills by Netlify](#skills-by-netlify-team) | [Skills by Google Labs (Stitch)](#skills-by-google-labs-stitch) | [Skills by Google Workspace CLI](#skills-by-google-workspace-cli) |
 | [Skills by Hugging Face](#skills-by-hugging-face-team) | [Skills by Trail of Bits](#security-skills-by-trail-of-bits-team) | [Skills by Sentry](#skills-by-sentry-team-for-their-dev-team) |
 | [Skills by Microsoft](#skills-by-microsoft) | [Skills by fal.ai](#skills-by-falai-team) | [Skills by WordPress](#skills-by-wordpress-development-team) |
-| [Skills by Transloadit](#skills-by-transloadit-team) | [Skills by OpenAI](#skills-by-openai) | [Marketing Skills by Corey Haines](#marketing-skills-by-corey-haines) |
-| [Skills by Binance](#skills-by-binance) | [Product Manager Skills by Dean Peters](#product-manager-skills-by-dean-peters) | [Product Management Skills by Paweł Huryn](#product-management-skills-by-pawel-huryn) |
-| [Skills by MiniMax](#skills-by-minimax-team) | [Skills by DuckDB](#skills-by-duckdb) | [Skills by GSAP](#skills-by-gsap-greensock) |
-| [Community Skills](#community-skills) | [Skill Quality Standards](#skill-quality-standards) | |
+| [Skills by Transloadit](#skills-by-transloadit-team) | [Skills by OpenAI](#skills-by-openai) | [Skills by Figma](#skills-by-figma) |
+| [Marketing Skills by Corey Haines](#marketing-skills-by-corey-haines) | [Skills by Binance](#skills-by-binance) | [Product Manager Skills by Dean Peters](#product-manager-skills-by-dean-peters) |
+| [Product Management Skills by Paweł Huryn](#product-management-skills-by-pawel-huryn) | [Skills by MiniMax](#skills-by-minimax-team) | [Skills by DuckDB](#skills-by-duckdb) |
+| [Skills by GSAP](#skills-by-gsap-greensock) | [Community Skills](#community-skills) | [Skill Quality Standards](#skill-quality-standards) |
 
 
 
@@ -589,8 +589,6 @@ Official curated skills from OpenAI's skills repository.
 - **[openai/cloudflare-deploy](https://github.com/openai/skills/tree/main/skills/.curated/cloudflare-deploy)** - Deploy apps to Cloudflare using Workers, Pages, and platform services
 - **[openai/develop-web-game](https://github.com/openai/skills/tree/main/skills/.curated/develop-web-game)** - Build and test web games iteratively using Playwright with time-stepping
 - **[openai/doc](https://github.com/openai/skills/tree/main/skills/.curated/doc)** - Read, create, and edit .docx documents with formatting and layout fidelity
-- **[openai/figma-implement-design](https://github.com/openai/skills/tree/main/skills/.curated/figma-implement-design)** - Translate Figma designs into production-ready code with pixel-perfect accuracy
-- **[openai/figma](https://github.com/openai/skills/tree/main/skills/.curated/figma)** - Fetch design context, screenshots, and assets from Figma for implementation
 - **[openai/gh-address-comments](https://github.com/openai/skills/tree/main/skills/.curated/gh-address-comments)** - Address review and issue comments on open GitHub PRs via CLI
 - **[openai/gh-fix-ci](https://github.com/openai/skills/tree/main/skills/.curated/gh-fix-ci)** - Debug and fix failing GitHub Actions PR checks using log inspection
 - **[openai/imagegen](https://github.com/openai/skills/tree/main/skills/.curated/imagegen)** - Generate and edit images using OpenAI's Image API for projects
@@ -616,6 +614,21 @@ Official curated skills from OpenAI's skills repository.
 - **[openai/transcribe](https://github.com/openai/skills/tree/main/skills/.curated/transcribe)** - Transcribe audio files to text with optional speaker diarization
 - **[openai/vercel-deploy](https://github.com/openai/skills/tree/main/skills/.curated/vercel-deploy)** - Deploy applications and websites to Vercel with preview or production options
 - **[openai/yeet](https://github.com/openai/skills/tree/main/skills/.curated/yeet)** - Stage, commit, push code, and open a GitHub pull request via CLI
+
+</details>
+
+<details>
+<summary><h3 style="display:inline">Skills by Figma</h3></summary>
+
+Official skills from Figma's MCP server guide.
+
+- **[figma/figma-code-connect-components](https://github.com/figma/mcp-server-guide/tree/main/skills/figma-code-connect-components)** - Connect Figma design components to code components using Code Connect
+- **[figma/figma-create-design-system-rules](https://github.com/figma/mcp-server-guide/tree/main/skills/figma-create-design-system-rules)** - Generate project-specific design system rules for Figma-to-code workflows
+- **[figma/figma-create-new-file](https://github.com/figma/mcp-server-guide/tree/main/skills/figma-create-new-file)** - Create a new blank Figma Design or FigJam file
+- **[figma/figma-generate-design](https://github.com/figma/mcp-server-guide/tree/main/skills/figma-generate-design)** - Build or update screens in Figma from code or description using design system components
+- **[figma/figma-generate-library](https://github.com/figma/mcp-server-guide/tree/main/skills/figma-generate-library)** - Build or update a design system library in Figma from a codebase
+- **[figma/figma-implement-design](https://github.com/figma/mcp-server-guide/tree/main/skills/figma-implement-design)** - Translate Figma designs into production-ready application code with 1:1 fidelity
+- **[figma/figma-use](https://github.com/figma/mcp-server-guide/tree/main/skills/figma-use)** - Run Figma Plugin API scripts for canvas writes, inspections, variables, and design-system work
 
 </details>
 
