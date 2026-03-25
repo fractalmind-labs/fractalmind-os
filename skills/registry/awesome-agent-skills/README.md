@@ -17,7 +17,7 @@
 <div align="center">
 
 [![Awesome](https://awesome.re/badge.svg)](https://awesome.re)
-![Skills Count](https://img.shields.io/badge/Skills-680+-blue?style=flat-square)
+![Skills Count](https://img.shields.io/badge/Skills-1030+-blue?style=flat-square)
 ![Last Update](https://img.shields.io/github/last-commit/VoltAgent/awesome-agent-skills?label=Last%20update&style=flat-square)
 <a href="https://github.com/VoltAgent/voltagent">
   <img alt="VoltAgent" src="https://cdn.voltagent.dev/website/logo/logo-2-svg.svg" height="20" />
@@ -86,7 +86,8 @@ Agent skills can include prompt injections, tool poisoning, hidden malware paylo
 | [Skills by Transloadit](#skills-by-transloadit-team) | [Skills by OpenAI](#skills-by-openai) | [Skills by Figma](#skills-by-figma) |
 | [Marketing Skills by Corey Haines](#marketing-skills-by-corey-haines) | [Skills by Binance](#skills-by-binance) | [Product Manager Skills by Dean Peters](#product-manager-skills-by-dean-peters) |
 | [Product Management Skills by Paweł Huryn](#product-management-skills-by-pawel-huryn) | [Skills by MiniMax](#skills-by-minimax-team) | [Skills by DuckDB](#skills-by-duckdb) |
-| [Skills by GSAP](#skills-by-gsap-greensock) | [Community Skills](#community-skills) | [Skill Quality Standards](#skill-quality-standards) |
+| [Skills by GSAP](#skills-by-gsap-greensock) | [Skills by Garry Tan (gstack)](#skills-by-garry-tan-gstack) | [Community Skills](#community-skills) |
+| [Skill Quality Standards](#skill-quality-standards) | | |
 
 
 
@@ -894,6 +895,42 @@ Official GSAP animation skills covering the full GreenSock ecosystem — core AP
 
 </details>
 
+<details>
+<summary><h3 style="display:inline">Skills by Garry Tan (gstack)</h3></summary>
+
+28 skills by [Garry Tan](https://github.com/garrytan) (Y Combinator CEO) that transform Claude Code into a virtual engineering team — structured workflows from ideation to production deployment. Ships 600K+ lines of production code in 60 days.
+
+- **[garrytan/office-hours](https://github.com/garrytan/gstack/tree/main/office-hours)** - YC Office Hours: six forcing questions that reframe your product before you write code
+- **[garrytan/plan-ceo-review](https://github.com/garrytan/gstack/tree/main/plan-ceo-review)** - CEO/Founder plan review with four modes: Expansion, Selective Expansion, Hold Scope, Reduction
+- **[garrytan/plan-eng-review](https://github.com/garrytan/gstack/tree/main/plan-eng-review)** - Eng Manager review: lock in architecture, data flow, diagrams, edge cases, and tests
+- **[garrytan/plan-design-review](https://github.com/garrytan/gstack/tree/main/plan-design-review)** - Senior Designer review: rates each design dimension 0-10, explains what a 10 looks like, AI Slop detection
+- **[garrytan/design-consultation](https://github.com/garrytan/gstack/tree/main/design-consultation)** - Build a complete design system from scratch with creative risks and realistic product mockups
+- **[garrytan/design-review](https://github.com/garrytan/gstack/tree/main/design-review)** - Designer Who Codes: visual audit then fixes with atomic commits and before/after screenshots
+- **[garrytan/review](https://github.com/garrytan/gstack/tree/main/review)** - Staff Engineer code review: finds bugs that pass CI but blow up in production
+- **[garrytan/investigate](https://github.com/garrytan/gstack/tree/main/investigate)** - Systematic root-cause debugging: no fixes without investigation, traces data flow, tests hypotheses
+- **[garrytan/qa](https://github.com/garrytan/gstack/tree/main/qa)** - QA Lead: test your app, find bugs, fix them with atomic commits, auto-generate regression tests
+- **[garrytan/qa-only](https://github.com/garrytan/gstack/tree/main/qa-only)** - QA Reporter: same methodology as /qa but report only, no code changes
+- **[garrytan/cso](https://github.com/garrytan/gstack/tree/main/cso)** - Chief Security Officer: OWASP Top 10 + STRIDE threat model with zero false-positive exclusions
+- **[garrytan/ship](https://github.com/garrytan/gstack/tree/main/ship)** - Release Engineer: sync main, run tests, audit coverage, push, open PR
+- **[garrytan/land-and-deploy](https://github.com/garrytan/gstack/tree/main/land-and-deploy)** - Merge the PR, wait for CI and deploy, verify production health
+- **[garrytan/canary](https://github.com/garrytan/gstack/tree/main/canary)** - SRE post-deploy monitoring: watches for console errors, performance regressions, and page failures
+- **[garrytan/benchmark](https://github.com/garrytan/gstack/tree/main/benchmark)** - Performance Engineer: baseline page load times, Core Web Vitals, and resource sizes
+- **[garrytan/document-release](https://github.com/garrytan/gstack/tree/main/document-release)** - Technical Writer: update all project docs to match what you just shipped
+- **[garrytan/retro](https://github.com/garrytan/gstack/tree/main/retro)** - Eng Manager weekly retro with per-person breakdowns and shipping streaks
+- **[garrytan/browse](https://github.com/garrytan/gstack/tree/main/browse)** - Real Chromium browser for QA: real clicks, real screenshots, ~100ms per command
+- **[garrytan/setup-browser-cookies](https://github.com/garrytan/gstack/tree/main/setup-browser-cookies)** - Import cookies from your real browser into the headless session
+- **[garrytan/autoplan](https://github.com/garrytan/gstack/tree/main/autoplan)** - One command, fully reviewed plan: runs CEO → design → eng review automatically
+- **[garrytan/codex](https://github.com/garrytan/gstack/tree/main/codex)** - Second Opinion via OpenAI Codex CLI: review, adversarial challenge, and open consultation
+- **[garrytan/careful](https://github.com/garrytan/gstack/tree/main/careful)** - Safety Guardrails: warns before destructive commands (rm -rf, DROP TABLE, force-push)
+- **[garrytan/freeze](https://github.com/garrytan/gstack/tree/main/freeze)** - Edit Lock: restrict file edits to one directory while debugging
+- **[garrytan/guard](https://github.com/garrytan/gstack/tree/main/guard)** - Full Safety: /careful + /freeze in one command for maximum safety
+- **[garrytan/unfreeze](https://github.com/garrytan/gstack/tree/main/unfreeze)** - Unlock: remove the /freeze boundary
+- **[garrytan/setup-deploy](https://github.com/garrytan/gstack/tree/main/setup-deploy)** - Deploy Configurator: one-time setup for /land-and-deploy
+- **[garrytan/gstack-upgrade](https://github.com/garrytan/gstack/tree/main/gstack-upgrade)** - Self-Updater: upgrade gstack to latest version
+- **[garrytan/supabase](https://github.com/garrytan/gstack/tree/main/supabase)** - Supabase integration skill
+
+</details>
+
 ### Community Skills
 
 <details>
@@ -907,6 +944,7 @@ Official GSAP animation skills covering the full GreenSock ecosystem — core AP
 - **[Xquik-dev/tweetclaw](https://github.com/Xquik-dev/tweetclaw)** - 40+ X/Twitter actions: post, extract, monitor, compose
 - **[SHADOWPR0/beautiful_prose](https://github.com/SHADOWPR0/beautiful_prose)** - Hard-edged writing style contract for timeless, forceful English prose without AI tics
 - **[blader/humanizer](https://github.com/blader/humanizer)** - Remove signs of AI-generated writing from text, making it sound more natural and human
+- **[Eronred/aso-skills](https://github.com/Eronred/aso-skills)** - 30+ App Store Optimization skills for keyword research, metadata optimization, competitor analysis, creative optimization, and mobile growth strategies via Appeeky API
 
 </details>
 
@@ -1016,7 +1054,8 @@ Official GSAP animation skills covering the full GreenSock ecosystem — core AP
 - **[Kevin7Qi/codex-collab](https://github.com/Kevin7Qi/codex-collab)** - Collaborate with Codex from Claude Code
 - **[ethos-link/rails-conventions](https://github.com/ethos-link/rails-conventions)** - Rails 8 conventions for consistent production code changes
 - **[ShunsukeHayashi/agent-skill-bus](https://github.com/ShunsukeHayashi/agent-skill-bus)** - Self-improving task orchestration for AI agent systems
- 
+- **[mcollina/skills](https://github.com/mcollina/skills/tree/main/skills)** - 11 skills by Matteo Collina: Node.js, Fastify, TypeScript, OAuth, Git/GitHub, ESLint neostandard, documentation (Diataxis), Node.js core internals, skill optimizer, and more
+
 </details>
 
 <details>
@@ -1061,6 +1100,7 @@ Official GSAP animation skills covering the full GreenSock ecosystem — core AP
 - **[materials-simulation-skills](https://github.com/HeshamFS/materials-simulation-skills)** - Agent skills for computational materials science: numerical stability, time-stepping, linear solvers, mesh generation, simulation validation, parameter optimization, and post-processing
 - **[takechanman1228/claude-ecom](https://github.com/takechanman1228/claude-ecom)** - Ecommerce CSV to business review with KPI decomposition
 - **[helius-labs/helius-skills](https://github.com/helius-labs/core-ai/tree/main/helius-skills)** - Ship Solana apps end-to-end; transaction sending, asset queries, real-time streaming, token swaps, prediction markets, browser wallets, and deep research into protocol internals all powered by Helius APIs, DFlow trading, and Phantom wallet integrations
+- **[meodai/skill.color-expert](https://github.com/meodai/skill.color-expert)** - Color science expert skill with 286K words of reference material covering OKLCH/OKLAB, palette generation, accessibility/contrast, color naming, pigment mixing, and historical color theory
 
 </details>
 
