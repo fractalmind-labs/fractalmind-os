@@ -148,6 +148,26 @@ Examples:
         '--notifier-channel',
         help='Notifier channel when --notify-on-failure is enabled (default: all)',
     )
+    heartbeat_run_parser.add_argument(
+        '--force-session-mode',
+        choices=['restore', 'auto', 'fresh', 'force'],
+        help=argparse.SUPPRESS,
+    )
+
+    heartbeat_rescue_parser = heartbeat_subparsers.add_parser('rescue', help='Force-stop/start one agent heartbeat session')
+    heartbeat_rescue_parser.add_argument('agent', help='Agent name or file ID')
+    heartbeat_rescue_parser.add_argument('--timeout', '-t', help='Override heartbeat timeout for the post-rescue prime pass')
+    heartbeat_rescue_parser.add_argument('--reason', help='Operator note for why the rescue is being performed')
+    heartbeat_rescue_parser.add_argument(
+        '--no-prime',
+        action='store_true',
+        help='Restart the agent session but skip the immediate heartbeat prime pass',
+    )
+    heartbeat_rescue_parser.add_argument(
+        '--fresh',
+        action='store_true',
+        help='Use a fresh restart instead of restore mode',
+    )
 
     heartbeat_trace_parser = heartbeat_subparsers.add_parser('trace', help='Query heartbeat audit trace logs')
     heartbeat_trace_parser.add_argument('--hb-id', help='Filter by heartbeat id (HB_ID)')
@@ -188,6 +208,24 @@ Examples:
     timer_heartbeat_parser.add_argument('agent', help='Agent name or file ID')
     timer_heartbeat_parser.add_argument('--delay', '-d', required=True, help='Delay before running (e.g., 5s, 30s, 5m)')
     timer_heartbeat_parser.add_argument('--timeout', '-t', help='Override heartbeat timeout')
+
+    timer_rescue_parser = timer_subparsers.add_parser('rescue', help='Run one heartbeat rescue after a delay')
+    timer_rescue_parser.add_argument('agent', help='Agent name or file ID')
+    timer_rescue_parser.add_argument('--delay', '-d', required=True, help='Delay before running (e.g., 5s, 30s, 5m)')
+    timer_rescue_parser.add_argument('--timeout', '-t', help='Override heartbeat timeout for the prime pass')
+    timer_rescue_parser.add_argument('--reason', help='Operator note for why the rescue is being scheduled')
+    timer_rescue_parser.add_argument(
+        '--no-prime',
+        action='store_true',
+        help='Restart the agent session but skip the immediate heartbeat prime pass',
+    )
+    timer_rescue_parser.add_argument(
+        '--fresh',
+        action='store_true',
+        help='Use a fresh restart instead of restore mode',
+    )
+    timer_rescue_parser.add_argument('--heartbeat-id', help=argparse.SUPPRESS)
+    timer_rescue_parser.add_argument('--dedupe-key', help=argparse.SUPPRESS)
 
     timer_command_parser = timer_subparsers.add_parser('command', help='Run one agent-manager command after a delay')
     timer_command_parser.add_argument('--delay', '-d', required=True, help='Delay before running (e.g., 5s, 30s, 5m)')

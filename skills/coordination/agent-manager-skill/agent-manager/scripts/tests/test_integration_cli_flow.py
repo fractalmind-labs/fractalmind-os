@@ -177,12 +177,18 @@ class CliIntegrationFlowTests(unittest.TestCase):
 
         with ExitStack() as stack:
             self._patch_common(stack, runtime)
+            mock_sync_hook = stack.enter_context(patch(
+                'main._sync_codex_fullspeed_stop_hook',
+                return_value={'enabled': True, 'updated': True, 'reason': 'cleaned', 'hooks_path': '/tmp/hooks.json'},
+            ))
             output = self._run_stage_ok(
                 'start-restore',
                 main.cmd_start,
                 argparse.Namespace(agent='dev', working_dir=None, restore=True, tmux_layout='sessions'),
             )
             self.assertIn('Restored existing session', output, msg='[stage:start-restore] expected restore confirmation')
+            mock_sync_hook.assert_called_once()
+            self.assertIn('Removed deprecated Codex full-speed Stop hook', output, msg='[stage:start-restore] expected hook cleanup notice')
             self.assertEqual(len(runtime.start_commands), 0, msg='[stage:start-restore] should not create a new tmux session')
 
     def test_start_restore_fresh_main_session_runs_inbound_drain_after_ready(self):

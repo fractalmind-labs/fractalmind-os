@@ -996,6 +996,7 @@ def list_all_heartbeats(agents_dir: Optional[Path] = None) -> List[Dict[str, Any
             'cron': heartbeat.get('cron', ''),
             'max_runtime': heartbeat.get('max_runtime', ''),
             'session_mode': heartbeat.get('session_mode', 'restore'),
+            'mode': heartbeat.get('mode', 'normal'),
             'enabled': heartbeat.get('enabled', True),
             'schedule': heartbeat.get('schedule'),
         })

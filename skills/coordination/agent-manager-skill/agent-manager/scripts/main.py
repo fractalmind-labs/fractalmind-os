@@ -1913,6 +1913,7 @@ def cmd_heartbeat(args):
     return heartbeat_cmd_heartbeat(
         args,
         run_handler=cmd_heartbeat_run,
+        rescue_handler=cmd_heartbeat_rescue,
         trace_handler=cmd_heartbeat_trace,
         slo_handler=cmd_heartbeat_slo,
     )
@@ -2086,6 +2087,62 @@ def cmd_dream_run(args):
     return 1
 
 
+def cmd_heartbeat_rescue(args):
+    """Force-stop/start one heartbeat session and optionally prime it."""
+    if not check_tmux():
+        print("❌ tmux is not installed")
+        return 1
+
+    agent_config = resolve_agent(args.agent)
+    if not agent_config:
+        print(f"❌ Agent '{args.agent}' not found")
+        return 1
+
+    agent_name = agent_config['name']
+    agent_file_id = agent_config['file_id']
+    agent_id = get_agent_id(agent_config)
+    reason = str(getattr(args, 'reason', '') or '').strip()
+    prime = not bool(getattr(args, 'no_prime', False))
+    use_fresh = bool(getattr(args, 'fresh', False))
+
+    print(f"🛟 Heartbeat rescue: {agent_name}")
+    if reason:
+        print(f"   Reason: {reason}")
+    print(f"   Prime after restart: {'yes' if prime else 'no'}")
+    print(f"   Restart mode: {'fresh' if use_fresh else 'restore'}")
+
+    if use_fresh:
+        restarted = _restart_heartbeat_session_fresh(
+            agent_file_id,
+            agent_name,
+            agent_id,
+            deps=_lifecycle_deps_module(),
+        )
+    else:
+        restarted = _restart_heartbeat_session_restore(agent_file_id, agent_name, agent_id)
+    if not restarted:
+        return 1
+
+    if not prime:
+        print("✅ Heartbeat rescue completed (prime skipped)")
+        return 0
+
+    prime_args = argparse.Namespace(
+        agent=agent_file_id,
+        timeout=getattr(args, 'timeout', None),
+        retry=0,
+        backoff_seconds=0,
+        fallback_mode='none',
+        notify_on_failure=False,
+        notifier_channel=None,
+        force_session_mode='force',
+    )
+    prime_result = cmd_heartbeat_run(prime_args)
+    if prime_result == 0:
+        print("✅ Heartbeat rescue completed and prime pass succeeded")
+    return prime_result
+
+
 def cmd_heartbeat_run(args):
     """Run a heartbeat check for an agent."""
     if not check_tmux():
@@ -2237,63 +2294,111 @@ def cmd_heartbeat_run(args):
         if preflight_state in {'busy', 'stuck', 'blocked', 'error'}:
             skip_failure_type = 'busy_skip'
             skip_reason_code = 'HB_AUTO_BUSY_SKIP'
+            skip_recovery_action = 'skip_busy'
             if preflight_state == 'busy' and str(preflight_reason).startswith('preflight_pane_changed:'):
                 skip_failure_type = 'active_skip'
                 skip_reason_code = 'HB_AUTO_ACTIVE_SKIP'
             elif preflight_state == 'busy' and str(preflight_reason).startswith('pending_heartbeat:'):
                 skip_failure_type = 'pending_skip'
                 skip_reason_code = 'HB_AUTO_PENDING_SKIP'
-            starvation_guard_armed = skip_reason_code != 'HB_AUTO_PENDING_SKIP'
-            consecutive_skip_count = 0
-            if starvation_guard_armed:
-                consecutive_skip_count = _count_consecutive_auto_preflight_skips(
+                pending_hb_id = _parse_pending_heartbeat_reason(preflight_reason)
+                pending_age_seconds = _heartbeat_id_age_seconds(pending_hb_id)
+                pending_skip_count = _count_consecutive_auto_preflight_skips(
                     repo_root,
                     agent_id=agent_id,
+                    reason_codes={'HB_AUTO_PENDING_SKIP'},
                 )
-                if consecutive_skip_count >= _HEARTBEAT_AUTO_STARVATION_SKIP_THRESHOLD:
-                    recovery_action = 'auto_starvation_bypass'
-                    print(
-                        "⚠️  Auto-mode starvation guard triggered after "
-                        f"{consecutive_skip_count} consecutive preflight skips; "
-                        "dispatching one heartbeat attempt anyway"
+                should_rescue_pending = (
+                    (pending_age_seconds is not None and pending_age_seconds >= _HEARTBEAT_PENDING_RESCUE_AGE_SECONDS)
+                    or pending_skip_count >= _HEARTBEAT_PENDING_RESCUE_SKIP_THRESHOLD
+                )
+                if should_rescue_pending:
+                    age_desc = (
+                        f"{pending_age_seconds}s old"
+                        if pending_age_seconds is not None
+                        else 'age=unknown'
                     )
-                else:
-                    starvation_guard_armed = False
-            if not starvation_guard_armed:
-                print(
-                    "⏭️  Agent is not idle "
-                    f"(state={preflight_state}, reason={preflight_reason}); "
-                    "skipping heartbeat dispatch in auto mode to avoid batch accumulation"
-                )
-                _append_heartbeat_audit_event(
-                    repo_root,
-                    agent_id=agent_id,
-                    heartbeat_id=heartbeat_id,
-                    send_status='skip',
-                    ack_status='not_checked',
-                    duration_ms=0,
-                    context_left=context_left_percent,
-                    failure_type=skip_failure_type,
-                    session_mode=session_mode,
-                    phase='preflight',
-                    attempt=0,
-                    recovery_action='skip_busy',
-                    reason_code=skip_reason_code,
-                    ack_evidence='none',
-                )
-                _maybe_trigger_dream_from_heartbeat(
-                    repo_root=repo_root,
-                    agent_config=agent_config,
-                    agent_id=agent_id,
-                    agent_file_id=agent_file_id,
-                    heartbeat=heartbeat,
-                    heartbeat_id=heartbeat_id,
-                    heartbeat_timestamp=_utc_now_iso(),
-                    ack_status='not_checked',
-                    ack_evidence='none',
-                    failure_type=skip_failure_type,
-                )
-                return 0
+                    print(
+                        "🛟 Pending heartbeat rescue triggered "
+                        f"(hb_id={pending_hb_id or 'unknown'}, age={age_desc}, "
+                        f"consecutive_pending_skips={pending_skip_count})"
+                    )
+                    if not _restart_heartbeat_session_restore(agent_file_id, agent_name, agent_id):
+                        print("⚠️  Pending heartbeat rescue failed; falling back to skip")
+                    else:
+                        recovery_action = 'auto_pending_rescue'
+                        context_left_percent = _detect_agent_context_left_percent(agent_id, launcher=launcher)
+                        print("♻️  Pending heartbeat rescue completed; continuing current heartbeat run")
+                        preflight_state = 'idle'
+                        preflight_reason = 'auto_pending_rescue_completed'
+                elif pending_hb_id:
+                    remaining_delay = _HEARTBEAT_PENDING_RESCUE_AGE_SECONDS
+                    if pending_age_seconds is not None:
+                        remaining_delay = max(
+                            _HEARTBEAT_PENDING_RESCUE_MIN_DELAY_SECONDS,
+                            _HEARTBEAT_PENDING_RESCUE_AGE_SECONDS - pending_age_seconds,
+                        )
+                    if _schedule_pending_heartbeat_rescue_timer(
+                        agent_file_id=agent_file_id,
+                        pending_heartbeat_id=pending_hb_id,
+                        delay_seconds=remaining_delay,
+                        timeout_seconds=timeout_seconds,
+                    ):
+                        skip_recovery_action = 'schedule_pending_rescue_timer'
+            if preflight_state == 'idle':
+                pass
+            else:
+                starvation_guard_armed = skip_reason_code != 'HB_AUTO_PENDING_SKIP'
+                consecutive_skip_count = 0
+                if starvation_guard_armed:
+                    consecutive_skip_count = _count_consecutive_auto_preflight_skips(
+                        repo_root,
+                        agent_id=agent_id,
+                    )
+                    if consecutive_skip_count >= _HEARTBEAT_AUTO_STARVATION_SKIP_THRESHOLD:
+                        recovery_action = 'auto_starvation_bypass'
+                        print(
+                            "⚠️  Auto-mode starvation guard triggered after "
+                            f"{consecutive_skip_count} consecutive preflight skips; "
+                            "dispatching one heartbeat attempt anyway"
+                        )
+                    else:
+                        starvation_guard_armed = False
+                if not starvation_guard_armed:
+                    print(
+                        "⏭️  Agent is not idle "
+                        f"(state={preflight_state}, reason={preflight_reason}); "
+                        "skipping heartbeat dispatch in auto mode to avoid batch accumulation"
+                    )
+                    _append_heartbeat_audit_event(
+                        repo_root,
+                        agent_id=agent_id,
+                        heartbeat_id=heartbeat_id,
+                        send_status='skip',
+                        ack_status='not_checked',
+                        duration_ms=0,
+                        context_left=context_left_percent,
+                        failure_type=skip_failure_type,
+                        session_mode=session_mode,
+                        phase='preflight',
+                        attempt=0,
+                        recovery_action=skip_recovery_action,
+                        reason_code=skip_reason_code,
+                        ack_evidence='none',
+                    )
+                    _maybe_trigger_dream_from_heartbeat(
+                        repo_root=repo_root,
+                        agent_config=agent_config,
+                        agent_id=agent_id,
+                        agent_file_id=agent_file_id,
+                        heartbeat=heartbeat,
+                        heartbeat_id=heartbeat_id,
+                        heartbeat_timestamp=_utc_now_iso(),
+                        ack_status='not_checked',
+                        ack_evidence='none',
+                        failure_type=skip_failure_type,
+                    )
+                    return 0
     elif session_mode == 'force':
         print("   Force mode: bypass preflight idle check and always dispatch heartbeat")
 

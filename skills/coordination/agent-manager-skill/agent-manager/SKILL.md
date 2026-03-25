@@ -415,6 +415,7 @@ heartbeat:
   cron: "*/30 * * * *"  # Every 30 minutes
   max_runtime: 5m
   session_mode: auto     # restore | auto | fresh
+  mode: full_speed       # normal | full_speed
   enabled: true
 ---
 ```
@@ -426,7 +427,10 @@ heartbeat:
 | `cron` | string | ✓ | Cron expression (e.g., `*/30 * * * *`) |
 | `max_runtime` | string | | Maximum runtime (e.g., `5m`, `10m`) |
 | `session_mode` | string | | Session policy: `restore` (default), `auto` (rollover when context <25%), `fresh` (always rollover after handoff) |
+| `mode` | string | | Heartbeat trigger mode: `normal` (default cron only) or `full_speed` (Codex Stop hook schedules `start --restore` + `heartbeat run` 5s after a real stop event) |
 | `enabled` | bool | | Default: `true` |
+
+`full_speed` is currently only supported for `launcher: codex`. It uses a stable Codex `Stop` hook that reads the latest heartbeat config at stop time. The first time you add this managed hook to an already-running session, you still need one fresh start so Codex loads the hook; after that, switching `normal`/`full_speed` does not require restarting the session.
 
 ### Heartbeat vs Schedules
 
@@ -450,7 +454,7 @@ Output:
 💓 Heartbeats:
 
 dev (EMP_0001):
-  ✓ heartbeat           */30 * * * *         (5m mode:auto)
+  ✓ heartbeat           */30 * * * *         (5m session:auto heartbeat:full_speed)
 ```
 
 #### `heartbeat sync` - Sync Heartbeats to Crontab
@@ -491,6 +495,24 @@ $CLI heartbeat run EMP_0001 --timeout 1m
 - Sends standard heartbeat message to the agent
 - Optional session rollover via `session_mode` (handoff first, then fresh session)
 - Waits for response (up to `max_runtime`)
+- If `mode: full_speed` is enabled on Codex, a Stop hook schedules one background recovery pass (`start --restore` + `heartbeat run`) 5 seconds after the agent really stops
+
+Note: the old Codex Stop-hook implementation for `full_speed` has been retired because Codex `Stop` events also fire on normal turn completion. Use the `timer` command for timer-driven follow-up heartbeats instead.
+
+### `timer` - Schedule Delayed Actions
+
+Use `timer` for one-shot delayed actions without cron:
+
+```bash
+# Run one heartbeat in 5 seconds
+$CLI timer heartbeat main --delay 5s
+
+# Run an arbitrary agent-manager command in 5 seconds
+$CLI timer command --delay 5s -- heartbeat run main --timeout 8m
+
+# Inspect recent timers
+$CLI timer list
+```
 
 ### `timer` - Schedule Delayed Actions
 

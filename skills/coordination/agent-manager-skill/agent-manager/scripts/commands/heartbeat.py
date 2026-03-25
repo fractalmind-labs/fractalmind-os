@@ -6,6 +6,7 @@ def cmd_heartbeat(
     args,
     *,
     run_handler: Callable,
+    rescue_handler: Callable,
     trace_handler: Callable,
     slo_handler: Callable,
 ):
@@ -44,6 +45,9 @@ def cmd_heartbeat(
 
     if args.heartbeat_command == 'run':
         return run_handler(args)
+
+    if args.heartbeat_command == 'rescue':
+        return rescue_handler(args)
 
     if args.heartbeat_command == 'trace':
         return trace_handler(args)

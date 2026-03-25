@@ -162,6 +162,71 @@ class HeartbeatRecoveryTests(unittest.TestCase):
                 2,
             )
 
+    def test_count_consecutive_auto_preflight_skips_can_filter_reason_codes(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo_root = Path(tmpdir)
+            main._append_heartbeat_audit_event(
+                repo_root,
+                agent_id='emp-0001',
+                heartbeat_id='hb-pending-2',
+                send_status='skip',
+                ack_status='not_checked',
+                duration_ms=0,
+                context_left=55,
+                failure_type='pending_skip',
+                session_mode='auto',
+                phase='preflight',
+                attempt=0,
+                recovery_action='skip_busy',
+                reason_code='HB_AUTO_PENDING_SKIP',
+                timestamp='2026-03-12T10:03:00Z',
+            )
+            main._append_heartbeat_audit_event(
+                repo_root,
+                agent_id='emp-0001',
+                heartbeat_id='hb-pending-1',
+                send_status='skip',
+                ack_status='not_checked',
+                duration_ms=0,
+                context_left=55,
+                failure_type='pending_skip',
+                session_mode='auto',
+                phase='preflight',
+                attempt=0,
+                recovery_action='skip_busy',
+                reason_code='HB_AUTO_PENDING_SKIP',
+                timestamp='2026-03-12T10:02:00Z',
+            )
+            main._append_heartbeat_audit_event(
+                repo_root,
+                agent_id='emp-0001',
+                heartbeat_id='hb-busy',
+                send_status='skip',
+                ack_status='not_checked',
+                duration_ms=0,
+                context_left=55,
+                failure_type='busy_skip',
+                session_mode='auto',
+                phase='preflight',
+                attempt=0,
+                recovery_action='skip_busy',
+                reason_code='HB_AUTO_BUSY_SKIP',
+                timestamp='2026-03-12T10:01:00Z',
+            )
+
+            self.assertEqual(
+                main._count_consecutive_auto_preflight_skips(
+                    repo_root,
+                    agent_id='emp-0001',
+                    reason_codes={'HB_AUTO_PENDING_SKIP'},
+                ),
+                2,
+            )
+
+    def test_generate_heartbeat_id_uses_utc(self):
+        local_now = datetime(2026, 3, 26, 0, 50, 1, tzinfo=timezone(timedelta(hours=8)))
+        self.assertEqual(main._generate_heartbeat_id(local_now), '20260325-165001')
+
     @patch('main.time.sleep', return_value=None)
     @patch('main.capture_output', side_effect=['pane-a', 'pane-b'])
     @patch('main.get_agent_runtime_state', return_value={'state': 'idle', 'reason': 'ready'})
@@ -197,6 +262,46 @@ class HeartbeatRecoveryTests(unittest.TestCase):
             sample_interval_seconds=0.1,
             capture_lines=40,
         )
+        self.assertEqual(state, 'idle')
+        self.assertEqual(reason, 'ready')
+
+    @patch('main.time.sleep', return_value=None)
+    @patch('main.capture_output', side_effect=[
+        'Read HEARTBEAT.md... [HB_ID:20260321-004002]\n• 已处理并继续执行\n',
+        'Read HEARTBEAT.md... [HB_ID:20260321-004002]\n• 已处理并继续执行\n',
+    ])
+    @patch('main.get_agent_runtime_state', return_value={'state': 'idle', 'reason': 'ready'})
+    def test_heartbeat_preflight_ignores_acknowledged_pending_marker(
+        self,
+        _mock_runtime,
+        _mock_capture,
+        _mock_sleep,
+    ):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo_root = Path(tmpdir)
+            main._append_heartbeat_audit_event(
+                repo_root,
+                agent_id='emp-0001',
+                heartbeat_id='20260321-004002',
+                send_status='ok',
+                ack_status='ack',
+                duration_ms=4661,
+                context_left=35,
+                session_mode='auto',
+                phase='attempt',
+                attempt=1,
+                timestamp='2026-03-20T16:40:10Z',
+            )
+
+            state, reason = main._heartbeat_preflight_runtime_state(
+                repo_root=repo_root,
+                agent_id='emp-0001',
+                launcher='codex',
+                sample_count=2,
+                sample_interval_seconds=0.1,
+                capture_lines=40,
+            )
+
         self.assertEqual(state, 'idle')
         self.assertEqual(reason, 'ready')
 
@@ -399,12 +504,14 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         self.assertEqual(mock_send.call_count, 2)
         mock_recover.assert_called_once()
 
+    @patch('main.arm_codex_fullspeed_stop_hook_skip')
     @patch('main.cmd_start', return_value=0)
     @patch('main.stop_session', return_value=True)
     @patch('main.time.sleep', return_value=None)
-    def test_restart_heartbeat_session_fresh(self, _mock_sleep, _mock_stop, _mock_start):
+    def test_restart_heartbeat_session_fresh(self, _mock_sleep, _mock_stop, _mock_start, mock_arm_skip):
         ok = main._restart_heartbeat_session_fresh('EMP_0001', 'qa-agent', 'emp-0001')
         self.assertTrue(ok)
+        mock_arm_skip.assert_not_called()
 
     @patch('main._notify_heartbeat_failure', return_value=True)
     @patch('main._append_heartbeat_audit_event')
@@ -1231,10 +1338,12 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         self.assertEqual(mock_audit.call_args.kwargs.get('recovery_action'), 'auto_starvation_bypass')
 
     @patch('main._append_heartbeat_audit_event')
+    @patch('main._schedule_pending_heartbeat_rescue_timer', return_value=True)
+    @patch('main._heartbeat_id_age_seconds', return_value=60)
     @patch('main.time.sleep', return_value=None)
     @patch('main._run_heartbeat_attempt')
     @patch('main._maybe_rollover_heartbeat_session', return_value=None)
-    @patch('main._count_consecutive_auto_preflight_skips', return_value=main._HEARTBEAT_AUTO_STARVATION_SKIP_THRESHOLD + 2)
+    @patch('main._count_consecutive_auto_preflight_skips', return_value=1)
     @patch('main._heartbeat_preflight_runtime_state', return_value=('busy', 'pending_heartbeat:20260317-010101'))
     @patch('main._detect_agent_context_left_percent', return_value=55)
     @patch('main.resolve_launcher_command', return_value='codex')
@@ -1253,6 +1362,8 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         _mock_rollover,
         mock_run_attempt,
         _mock_sleep,
+        _mock_hb_age,
+        mock_schedule_rescue,
         mock_audit,
     ):
         mock_resolve_agent.return_value = {
@@ -1284,10 +1395,84 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         result = main.cmd_heartbeat_run(args)
         self.assertEqual(result, 0)
         mock_run_attempt.assert_not_called()
+        mock_schedule_rescue.assert_called_once()
         mock_audit.assert_called_once()
         self.assertEqual(mock_audit.call_args.kwargs.get('phase'), 'preflight')
         self.assertEqual(mock_audit.call_args.kwargs.get('failure_type'), 'pending_skip')
         self.assertEqual(mock_audit.call_args.kwargs.get('reason_code'), 'HB_AUTO_PENDING_SKIP')
+        self.assertEqual(mock_audit.call_args.kwargs.get('recovery_action'), 'schedule_pending_rescue_timer')
+
+    @patch('main._append_heartbeat_audit_event')
+    @patch('main._schedule_pending_heartbeat_rescue_timer')
+    @patch('main._restart_heartbeat_session_restore', return_value=True)
+    @patch('main.time.sleep', return_value=None)
+    @patch('main._run_heartbeat_attempt', return_value={
+        'send_status': 'ok',
+        'ack_status': 'ack',
+        'failure_type': '',
+        'reason_code': '',
+        'duration_ms': 1,
+    })
+    @patch('main._maybe_rollover_heartbeat_session', return_value=None)
+    @patch('main._count_consecutive_auto_preflight_skips', side_effect=[main._HEARTBEAT_PENDING_RESCUE_SKIP_THRESHOLD, 0])
+    @patch('main._heartbeat_id_age_seconds', return_value=main._HEARTBEAT_PENDING_RESCUE_AGE_SECONDS + 5)
+    @patch('main._heartbeat_preflight_runtime_state', return_value=('busy', 'pending_heartbeat:20260317-010101'))
+    @patch('main._detect_agent_context_left_percent', return_value=55)
+    @patch('main.resolve_launcher_command', return_value='codex')
+    @patch('main.session_exists', return_value=True)
+    @patch('main.resolve_agent')
+    @patch('main.check_tmux', return_value=True)
+    def test_cmd_heartbeat_run_auto_mode_rescues_stale_pending_heartbeat(
+        self,
+        _mock_tmux,
+        mock_resolve_agent,
+        _mock_session,
+        _mock_launcher,
+        _mock_context,
+        _mock_preflight,
+        _mock_hb_age,
+        _mock_skip_count,
+        _mock_rollover,
+        mock_run_attempt,
+        _mock_sleep,
+        mock_restart_restore,
+        mock_schedule_rescue,
+        mock_audit,
+    ):
+        mock_resolve_agent.return_value = {
+            'name': 'qa-agent',
+            'file_id': 'EMP_0001',
+            'enabled': True,
+            'heartbeat': {
+                'enabled': True,
+                'session_mode': 'auto',
+                'recovery': {
+                    'max_retries': 1,
+                    'retry_backoff_seconds': 0,
+                    'fallback_mode': 'none',
+                },
+            },
+            'launcher': 'codex',
+        }
+
+        args = type('Args', (), {
+            'agent': 'EMP_0001',
+            'timeout': None,
+            'retry': None,
+            'backoff_seconds': 0,
+            'fallback_mode': None,
+            'notify_on_failure': False,
+            'notifier_channel': None,
+        })()
+
+        result = main.cmd_heartbeat_run(args)
+        self.assertEqual(result, 0)
+        mock_restart_restore.assert_called_once()
+        mock_schedule_rescue.assert_not_called()
+        mock_run_attempt.assert_called_once()
+        self.assertGreaterEqual(mock_audit.call_count, 1)
+        self.assertEqual(mock_audit.call_args.kwargs.get('phase'), 'attempt')
+        self.assertEqual(mock_audit.call_args.kwargs.get('recovery_action'), 'auto_pending_rescue')
 
     @patch('main._append_heartbeat_audit_event')
     @patch('main.time.sleep', return_value=None)
@@ -1384,6 +1569,32 @@ class RuntimeStateInterruptedTests(unittest.TestCase):
         )
         self.assertEqual(result['state'], 'interrupted')
         self.assertIn('interrupted', result.get('reason', ''))
+
+    def test_plain_text_conversation_interrupted_is_not_interrupted(self):
+        """Quoted/plain text mentioning 'Conversation interrupted' should not trigger interrupted."""
+        output = (
+            "• Reading Slack transcript\n"
+            "用户说：这里应该是 Conversation interrupted 的误判，不是 Codex UI 中断。\n"
+            "继续检查 timer 和 heartbeat 逻辑。\n"
+        )
+        result = self.runtime_state.evaluate_runtime_state(
+            output=output,
+            runtime_config=self.codex_runtime_cfg,
+        )
+        self.assertNotEqual(result['state'], 'interrupted')
+        self.assertEqual(result['state'], 'idle')
+
+    def test_old_plain_text_interrupted_plus_busy_marker_stays_busy(self):
+        """Busy pane with quoted text should remain busy, not interrupted."""
+        output = (
+            "Slack transcript: Conversation interrupted was reported by the user.\n"
+            "• Working (4s • esc to interrupt)\n"
+        )
+        result = self.runtime_state.evaluate_runtime_state(
+            output=output,
+            runtime_config=self.codex_runtime_cfg,
+        )
+        self.assertEqual(result['state'], 'busy')
 
     def test_suggestion_tip_with_shortcuts_detected(self):
         """Suggestion tip '› Write tests...' + '? for shortcuts' → interrupted."""
