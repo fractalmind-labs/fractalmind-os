@@ -24,7 +24,7 @@ Do not confuse them:
 
 ## Full-Speed Follow-Up
 
-The old Codex `Stop`-hook based `full_speed` implementation has been retired. When your workspace includes `agent-manager`, **full-speed behavior can be implemented through `agent-manager timer`**.
+The old Codex `Stop`-hook based `full_speed` implementation has been retired. In this workspace, **full-speed behavior is now implemented through `agent-manager timer`**.
 
 Use this when you want one extra near-term heartbeat without waiting for the next cron tick.
 
@@ -107,7 +107,7 @@ heartbeat:
 
 `cron:` is still controlled by the turbo tier logic in this skill.
 
-`mode:` should normally stay `normal` unless your workspace has a documented reason to do otherwise.
+`mode:` should normally stay `normal` in this workspace.
 
 #### 2. When you decide a heartbeat needs fast follow-up
 
@@ -321,7 +321,7 @@ new_string: '  cron: "*/30 * * * *"'
 Important:
 
 - `cron:` follows the turbo tier
-- `mode:` should generally remain `normal` unless your workspace has a documented reason to do otherwise
+- `mode:` should generally remain `normal` in this workspace
 - Do not change unrelated fields in the frontmatter
 
 ### Step 7: Sync to Crontab
@@ -387,7 +387,7 @@ Field reference:
 - `fullSpeedReason`: Brief explanation of why the current mode was selected
 - `unchangedCount`: Consecutive unchanged count (used to skip redundant sync)
 - `manualOverride` (optional): `{ "tier": "HIGH", "until": "2026-03-06T12:00:00Z" }` — lock to a specific tier
-- `fullSpeedOverride` (optional): `{ "enabled": true, "delay": "5s", "timeout": "8m", "until": "2026-03-19T04:00:00Z", "reason": "active incident" }`
+- `fullSpeedOverride` (optional): `{ "mode": "full_speed", "until": "2026-03-19T04:00:00Z", "reason": "active incident" }`
 
 ## Notes
 
