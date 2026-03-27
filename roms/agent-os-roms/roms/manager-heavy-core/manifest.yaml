@@ -1,0 +1,70 @@
+rom_name: manager-heavy-core
+rom_family: manager-heavy
+rom_version: 0.1.0
+description: Manager-first AI Agent OS distribution for coordination-heavy workspaces.
+
+spec_version: 1.0.0
+requires_spec: ">=1.0.0"
+compatible_spec_range: ">=1.0.0 <2.0.0"
+compatibility_status: fully-compatible
+
+included_skills:
+  - agent-manager
+  - team-manager
+  - agent-calendar
+  - notifier
+  - use-fractalbot
+
+template_set:
+  - workspace-root
+  - memory-pack
+  - heartbeat-pack
+
+assets:
+  install:
+    - install.sh
+    - templates/
+  upgrade:
+    - upgrade.sh
+  rollback:
+    - rollback.sh
+
+install_boundary:
+  creates_files:
+    - SYSTEM.md
+    - SOUL.md
+    - AGENTS.md
+    - USER.md
+    - HEARTBEAT.md
+    - OKR.md
+  creates_directories:
+    - memory/
+    - okrs/
+  bootstrap_entrypoint: install.sh
+  post_install_expectations:
+    - heartbeat control plane exists
+    - active OKR control plane exists
+    - memory daily note path is writable
+
+upgrade_boundary:
+  upgrade_strategy: overlay-with-preserve
+  mutable_paths:
+    - HEARTBEAT.md
+    - .agent/skills/
+    - templates/
+  preserved_local_overrides:
+    - USER.md
+    - MEMORY.md
+    - TOOLS.md
+  rollback_hint: restore last ROM release snapshot before overlay
+  breaking_changes:
+    - heartbeat rule rename may require manual merge
+
+defaults:
+  default_persona: coordinator-first
+  default_heartbeat_mode: proactive
+  recommended_use_cases:
+    - multi-agent management
+    - OKR-driven execution
+  operator_notes:
+    - optimized for owner-side coordination and active OKR control planes

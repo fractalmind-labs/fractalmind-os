@@ -1,0 +1,7 @@
+rom_name: example-minimal
+rom_family: manager-heavy
+rom_version: 0.1.0
+spec_version: 1.0.0
+requires_spec: ">=1.0.0"
+compatible_spec_range: ">=1.0.0 <2.0.0"
+compatibility_status: fully-compatible
