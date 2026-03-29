@@ -1,16 +1,34 @@
 # HEARTBEAT.md
 
-## Heartbeat rules
-- heartbeat polls must start by reading this file
-- heartbeat is a coordinator loop, not a status ritual
-- read the active control files first (`TODO.md`, `OKR.md`, state/memory files if present)
-- if `TODO.md` is non-empty, advance TODO before OKR work
-- if `TODO.md` is non-empty, push TODO first; then push `OKR.md`
-- every heartbeat must change state on a control surface: assign, verify, reply, unblock, escalate, or update the plan/source of truth
-- inspect reality, not assumptions: check active agents, open PRs/issues, CI, reviews, and discussion surfaces before deciding the next step
-- default to delegation: assign work to the right agent; execute directly only when no capable agent is available
-- open loops must be pushed forward: reviewer comment -> patch or reply draft, CI fail -> fix or assign, QA pass -> merge or queue merge, blocked item -> explicit escalation
-- send success does not equal delivery correctness; verify the destination after each outbound message
-- do not repeat the same reminder with no new action or evidence
-- write back the delta to files so the next heartbeat can resume with context
-- `HEARTBEAT_OK` is allowed only after fresh checks confirm all active items are in explicit external waiting states with no higher-priority follow-up pending
+## Role
+
+Heartbeat is not a status ritual. It is a coordinator loop for pushing active work forward.
+
+## Default rules
+
+- Start every heartbeat by reading this file.
+- Read the active control files first: `TODO.md`, `OKR.md`, and any current state or memory files if they exist.
+- If `TODO.md` is non-empty, advance TODO before OKR work.
+- Do not just repeat the previous status. A heartbeat must change state: assign, verify, reply, unblock, escalate, merge, or update the source of truth.
+- Inspect reality, not assumptions: check active agents, open issues, open PRs, CI, reviews, and relevant discussion surfaces before deciding what to do.
+- Default to delegation. Give the work to the right agent first; execute directly only when no capable agent is available or the loop is too time-sensitive to hand off.
+- Open loops must be actively pushed:
+  - reviewer comment -> patch or reply draft
+  - CI fail -> fix or assign
+  - QA pass -> merge or queue merge
+  - blocked item -> explicit escalation with the exact missing dependency
+- Send success is not delivery correctness. Verify the target surface after every outbound message.
+- Write back the delta to files so the next heartbeat can resume with context instead of guessing.
+
+## Practical loop
+
+1. Read control files.
+2. Identify the highest-priority active item.
+3. Check the real state on the relevant surfaces.
+4. Push exactly one concrete step forward on each active loop.
+5. Record what changed.
+6. Report only the items that actually moved or are explicitly blocked.
+
+## `HEARTBEAT_OK` rule
+
+`HEARTBEAT_OK` is allowed only when fresh checks confirm that all active items are already in explicit external waiting states and there is no higher-priority follow-up pending.
