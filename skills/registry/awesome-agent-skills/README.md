@@ -56,18 +56,6 @@ Compatible with Claude Code, Codex, Antigravity, Gemini CLI, Cursor, GitHub Copi
 The most contributed Agent Skills repository, built and maintained together with the community.
 
 
-## 🔒 Security Notice
-
-Skills in this list are curated, not audited. They may be updated, modified, or replaced by their original maintainers at any time after being added here.
-
-Before installing or using any Agent Skill, review potential security risks and validate the source yourself.
-
-Recommended tools:
-
-- [Synk Skill Security Scanner](https://github.com/snyk/agent-scan)
-- [Agent Trust Hub](https://ai.gendigital.com/agent-trust-hub)
-
-Agent skills can include prompt injections, tool poisoning, hidden malware payloads, or unsafe data handling patterns. Always review the code and use skills at your own discretion.
 
 ## Table of Contents
 
@@ -77,18 +65,16 @@ Agent skills can include prompt injections, tool poisoning, hidden malware paylo
 | [Skills by Supabase](#skills-by-supabase-team) | [Skills by Google Gemini](#skills-by-google-gemini) | [Skills by Stripe](#skills-by-stripe-team) |
 | [Skills by CallStack](#skills-by-callstack) | [Skills by Expo](#skills-by-expo-team) | [Skills by Better Auth](#skills-by-better-auth-team) |
 | [Skills by Tinybird](#skills-by-tinybird-team) | [Skills by HashiCorp](#skills-by-hashicorp-team-for-terraform) | [Skills by Sanity](#skills-by-sanity-team) |
-| [Skills by Firecrawl](#skills-by-firecrawl-team) | [Skills by Neon](#skills-by-neon-team) | [Skills by Cloudflare Engineer](#skills-by-cloudflare-engineer) |
-| [Skill by ClickHouse](#skill-by-clickhouse) | [Skills by Remotion](#skills-by-remotion) | [Skills by Replicate](#skills-by-replicate) |
-| [Skills by Typefully](#skills-by-typefully) | [Skills by Vercel](#skills-by-vercel-engineering-team) | [Skills by Cloudflare](#skills-by-cloudflare-team) |
-| [Skills by Netlify](#skills-by-netlify-team) | [Skills by Google Labs (Stitch)](#skills-by-google-labs-stitch) | [Skills by Google Workspace CLI](#skills-by-google-workspace-cli) |
-| [Skills by Hugging Face](#skills-by-hugging-face-team) | [Skills by Trail of Bits](#security-skills-by-trail-of-bits-team) | [Skills by Sentry](#skills-by-sentry-team-for-their-dev-team) |
-| [Skills by Microsoft](#skills-by-microsoft) | [Skills by fal.ai](#skills-by-falai-team) | [Skills by WordPress](#skills-by-wordpress-development-team) |
-| [Skills by OpenAI](#skills-by-openai) | [Skills by Figma](#skills-by-figma) | |
-| [Marketing Skills by Corey Haines](#marketing-skills-by-corey-haines) | [Skills by Binance](#skills-by-binance) | [Product Manager Skills by Dean Peters](#product-manager-skills-by-dean-peters) |
-| [Product Management Skills by Paweł Huryn](#product-management-skills-by-pawel-huryn) | [Skills by MiniMax](#skills-by-minimax-team) | [Skills by DuckDB](#skills-by-duckdb) |
-| [Skills by GSAP](#skills-by-gsap-greensock) | [Skills by Garry Tan (gstack)](#skills-by-garry-tan-gstack) | [Skills by Notion](#skills-by-notion) |
-| [Community Skills](#community-skills) | | |
-| [Skill Quality Standards](#skill-quality-standards) | | |
+| [Skills by Firecrawl](#skills-by-firecrawl-team) | [Skills by Neon](#skills-by-neon-team) | [Skill by ClickHouse](#skill-by-clickhouse) |
+| [Skills by Remotion](#skills-by-remotion) | [Skills by Replicate](#skills-by-replicate) | [Skills by Typefully](#skills-by-typefully) |
+| [Skills by Vercel](#skills-by-vercel-engineering-team) | [Skills by Cloudflare](#skills-by-cloudflare-team) | [Skills by Netlify](#skills-by-netlify-team) |
+| [Skills by Google Labs (Stitch)](#skills-by-google-labs-stitch) | [Skills by Google Workspace CLI](#skills-by-google-workspace-cli) | [Skills by Hugging Face](#skills-by-hugging-face-team) |
+| [Skills by Trail of Bits](#security-skills-by-trail-of-bits-team) | [Skills by Sentry](#skills-by-sentry-team-for-their-dev-team) | [Skills by Microsoft](#skills-by-microsoft) |
+| [Skills by fal.ai](#skills-by-falai-team) | [Skills by WordPress](#skills-by-wordpress-development-team) | [Skills by OpenAI](#skills-by-openai) |
+| [Skills by Figma](#skills-by-figma) | [Marketing Skills by Corey Haines](#marketing-skills-by-corey-haines) | [Skills by Binance](#skills-by-binance) |
+| [Product Manager Skills by Dean Peters](#product-manager-skills-by-dean-peters) | [Product Management Skills by Paweł Huryn](#product-management-skills-by-pawel-huryn) | [Skills by MiniMax](#skills-by-minimax-team) |
+| [Skills by DuckDB](#skills-by-duckdb) | [Skills by GSAP](#skills-by-gsap-greensock) | [Skills by Garry Tan (gstack)](#skills-by-garry-tan-gstack) |
+| [Skills by Notion](#skills-by-notion) | [Community Skills](#community-skills) | [Skill Quality Standards](#skill-quality-standards) |
 
 
 
@@ -1153,6 +1139,21 @@ Official skills from Notion's repositories — workspace-aware skills for captur
 - **[czlonkowski/n8n-workflow-patterns](https://github.com/czlonkowski/n8n-skills/tree/main/skills/n8n-workflow-patterns)** - Workflow patterns for webhook, HTTP, database, and AI tasks
 
 </details>
+
+
+## 🔒 Security Notice
+
+Skills in this list are curated, not audited. They may be updated, modified, or replaced by their original maintainers at any time after being added here.
+
+Before installing or using any Agent Skill, review potential security risks and validate the source yourself.
+
+Recommended tools:
+
+- [Synk Skill Security Scanner](https://github.com/snyk/agent-scan)
+- [Agent Trust Hub](https://ai.gendigital.com/agent-trust-hub)
+
+Agent skills can include prompt injections, tool poisoning, hidden malware payloads, or unsafe data handling patterns. Always review the code and use skills at your own discretion.
+
 
 
 ## Skills Paths for Other AI Coding Assistants
