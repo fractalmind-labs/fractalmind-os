@@ -17,7 +17,7 @@
 <div align="center">
 
 [![Awesome](https://awesome.re/badge.svg)](https://awesome.re)
-![Skills Count](https://img.shields.io/badge/Skills-1030+-blue?style=flat-square)
+![Skills Count](https://img.shields.io/badge/Skills-1060+-blue?style=flat-square)
 ![Last Update](https://img.shields.io/github/last-commit/VoltAgent/awesome-agent-skills?label=Last%20update&style=flat-square)
 <a href="https://github.com/VoltAgent/voltagent">
   <img alt="VoltAgent" src="https://cdn.voltagent.dev/website/logo/logo-2-svg.svg" height="20" />
@@ -83,10 +83,11 @@ Agent skills can include prompt injections, tool poisoning, hidden malware paylo
 | [Skills by Netlify](#skills-by-netlify-team) | [Skills by Google Labs (Stitch)](#skills-by-google-labs-stitch) | [Skills by Google Workspace CLI](#skills-by-google-workspace-cli) |
 | [Skills by Hugging Face](#skills-by-hugging-face-team) | [Skills by Trail of Bits](#security-skills-by-trail-of-bits-team) | [Skills by Sentry](#skills-by-sentry-team-for-their-dev-team) |
 | [Skills by Microsoft](#skills-by-microsoft) | [Skills by fal.ai](#skills-by-falai-team) | [Skills by WordPress](#skills-by-wordpress-development-team) |
-| [Skills by Transloadit](#skills-by-transloadit-team) | [Skills by OpenAI](#skills-by-openai) | [Skills by Figma](#skills-by-figma) |
+| [Skills by OpenAI](#skills-by-openai) | [Skills by Figma](#skills-by-figma) | |
 | [Marketing Skills by Corey Haines](#marketing-skills-by-corey-haines) | [Skills by Binance](#skills-by-binance) | [Product Manager Skills by Dean Peters](#product-manager-skills-by-dean-peters) |
 | [Product Management Skills by Paweł Huryn](#product-management-skills-by-pawel-huryn) | [Skills by MiniMax](#skills-by-minimax-team) | [Skills by DuckDB](#skills-by-duckdb) |
-| [Skills by GSAP](#skills-by-gsap-greensock) | [Skills by Garry Tan (gstack)](#skills-by-garry-tan-gstack) | [Community Skills](#community-skills) |
+| [Skills by GSAP](#skills-by-gsap-greensock) | [Skills by Garry Tan (gstack)](#skills-by-garry-tan-gstack) | [Skills by Notion](#skills-by-notion) |
+| [Community Skills](#community-skills) | | |
 | [Skill Quality Standards](#skill-quality-standards) | | |
 
 
@@ -385,168 +386,178 @@ Official AI agent skills from the Hugging Face team for ML workflows.
 <details>
 <summary><h3 style="display:inline">Skills by Microsoft</h3></summary>
 
-Domain-specific knowledge for Azure SDK and Foundry development.
+Domain-specific knowledge for Azure SDK and Microsoft AI Foundry development. 133 skills across 6 languages.
+
+### Core Skills
+
+- **[microsoft/cloud-solution-architect](https://github.com/microsoft/skills/tree/main/.github/skills/cloud-solution-architect)** - Design well-architected Azure cloud systems
+- **[microsoft/continual-learning](https://github.com/microsoft/skills/tree/main/.github/skills/continual-learning)** - Continual learning patterns for Azure AI
+- **[microsoft/copilot-sdk](https://github.com/microsoft/skills/tree/main/.github/skills/copilot-sdk)** - Build applications powered by GitHub Copilot SDK
+- **[microsoft/entra-agent-id](https://github.com/microsoft/skills/tree/main/.github/skills/entra-agent-id)** - Microsoft Entra Agent ID OAuth2 identities via Graph API
+- **[microsoft/frontend-design-review](https://github.com/microsoft/skills/tree/main/.github/skills/frontend-design-review)** - Review and create distinctive frontend interfaces
+- **[microsoft/github-issue-creator](https://github.com/microsoft/skills/tree/main/.github/skills/github-issue-creator)** - Structured GitHub issue reports from notes
+- **[microsoft/mcp-builder](https://github.com/microsoft/skills/tree/main/.github/skills/mcp-builder)** - MCP server creation guide for LLM tool integration
+- **[microsoft/podcast-generation](https://github.com/microsoft/skills/tree/main/.github/skills/podcast-generation)** - AI podcast audio with Azure OpenAI Realtime API
+- **[microsoft/skill-creator](https://github.com/microsoft/skills/tree/main/.github/skills/skill-creator)** - Guide for creating effective skills for AI coding agents
 
 ### .NET Skills
 
-- **[microsoft/azure-ai-agents-persistent-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-agents-persistent-dotnet)** - Persistent AI agents with threads and tools
-- **[microsoft/azure-ai-document-intelligence-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-document-intelligence-dotnet)** - Document text, table, and data extraction
-- **[microsoft/azure-ai-openai-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-openai-dotnet)** - GPT-4, embeddings, DALL-E, and Whisper client
-- **[microsoft/azure-ai-projects-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-projects-dotnet)** - AI Foundry project management SDK
-- **[microsoft/azure-ai-voicelive-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-voicelive-dotnet)** - Real-time bidirectional voice AI
-- **[microsoft/azure-eventgrid-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-eventgrid-dotnet)** - Event Grid topic and domain publishing
-- **[microsoft/azure-eventhub-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-eventhub-dotnet)** - High-throughput event streaming
-- **[microsoft/azure-identity-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-identity-dotnet)** - Microsoft Entra ID authentication
-- **[microsoft/azure-maps-search-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-maps-search-dotnet)** - Geocoding, routing, and weather services
-- **[microsoft/azure-mgmt-apicenter-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-mgmt-apicenter-dotnet)** - API inventory and governance
-- **[microsoft/azure-mgmt-apimanagement-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-mgmt-apimanagement-dotnet)** - API Management provisioning via ARM
-- **[microsoft/azure-mgmt-applicationinsights-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-mgmt-applicationinsights-dotnet)** - Application Insights resource management
-- **[microsoft/azure-mgmt-arizeaiobservabilityeval-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-mgmt-arizeaiobservabilityeval-dotnet)** - Arize AI observability management
-- **[microsoft/azure-mgmt-botservice-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-mgmt-botservice-dotnet)** - Bot Service provisioning via ARM
-- **[microsoft/azure-mgmt-fabric-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-mgmt-fabric-dotnet)** - Microsoft Fabric capacity management
-- **[microsoft/azure-mgmt-mongodbatlas-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-mgmt-mongodbatlas-dotnet)** - MongoDB Atlas as ARM resources
-- **[microsoft/azure-mgmt-weightsandbiases-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-mgmt-weightsandbiases-dotnet)** - Weights & Biases deployment management
-- **[microsoft/azure-resource-manager-cosmosdb-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-resource-manager-cosmosdb-dotnet)** - Cosmos DB resource provisioning
-- **[microsoft/azure-resource-manager-durabletask-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-resource-manager-durabletask-dotnet)** - Durable Task Scheduler management
-- **[microsoft/azure-resource-manager-mysql-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-resource-manager-mysql-dotnet)** - MySQL Flexible Server management
-- **[microsoft/azure-resource-manager-playwright-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-resource-manager-playwright-dotnet)** - Playwright Testing workspace management
-- **[microsoft/azure-resource-manager-postgresql-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-resource-manager-postgresql-dotnet)** - PostgreSQL Flexible Server management
-- **[microsoft/azure-resource-manager-redis-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-resource-manager-redis-dotnet)** - Azure Cache for Redis provisioning
-- **[microsoft/azure-resource-manager-sql-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-resource-manager-sql-dotnet)** - Azure SQL resource management
-- **[microsoft/azure-search-documents-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-search-documents-dotnet)** - Full-text, vector, and hybrid search
-- **[microsoft/azure-security-keyvault-keys-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-security-keyvault-keys-dotnet)** - Cryptographic key management
-- **[microsoft/azure-servicebus-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/azure-servicebus-dotnet)** - Enterprise messaging with queues and topics
-- **[microsoft/m365-agents-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/m365-agents-dotnet)** - M365, Teams, and Copilot Studio agents
-- **[microsoft/microsoft-azure-webjobs-extensions-authentication-events-dotnet](https://github.com/microsoft/skills/tree/main/.github/skills/microsoft-azure-webjobs-extensions-authentication-events-dotnet)** - Entra ID custom auth events handler
+- **[microsoft/azure-ai-document-intelligence-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-ai-document-intelligence-dotnet)** - Document text, table, and data extraction
+- **[microsoft/azure-ai-openai-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-ai-openai-dotnet)** - GPT-4, embeddings, DALL-E, and Whisper client
+- **[microsoft/azure-ai-projects-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-ai-projects-dotnet)** - AI Foundry project management SDK
+- **[microsoft/azure-ai-voicelive-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-ai-voicelive-dotnet)** - Real-time bidirectional voice AI
+- **[microsoft/azure-eventgrid-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-eventgrid-dotnet)** - Event Grid topic and domain publishing
+- **[microsoft/azure-eventhub-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-eventhub-dotnet)** - High-throughput event streaming
+- **[microsoft/azure-identity-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-identity-dotnet)** - Microsoft Entra ID authentication
+- **[microsoft/azure-maps-search-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-maps-search-dotnet)** - Geocoding, routing, and weather services
+- **[microsoft/azure-mgmt-apicenter-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-mgmt-apicenter-dotnet)** - API inventory and governance
+- **[microsoft/azure-mgmt-apimanagement-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-mgmt-apimanagement-dotnet)** - API Management provisioning via ARM
+- **[microsoft/azure-mgmt-applicationinsights-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-mgmt-applicationinsights-dotnet)** - Application Insights resource management
+- **[microsoft/azure-mgmt-arizeaiobservabilityeval-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-mgmt-arizeaiobservabilityeval-dotnet)** - Arize AI observability management
+- **[microsoft/azure-mgmt-botservice-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-mgmt-botservice-dotnet)** - Bot Service provisioning via ARM
+- **[microsoft/azure-mgmt-fabric-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-mgmt-fabric-dotnet)** - Microsoft Fabric capacity management
+- **[microsoft/azure-mgmt-mongodbatlas-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-mgmt-mongodbatlas-dotnet)** - MongoDB Atlas as ARM resources
+- **[microsoft/azure-mgmt-weightsandbiases-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-mgmt-weightsandbiases-dotnet)** - Weights & Biases deployment management
+- **[microsoft/azure-resource-manager-cosmosdb-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-resource-manager-cosmosdb-dotnet)** - Cosmos DB resource provisioning
+- **[microsoft/azure-resource-manager-durabletask-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-resource-manager-durabletask-dotnet)** - Durable Task Scheduler management
+- **[microsoft/azure-resource-manager-mysql-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-resource-manager-mysql-dotnet)** - MySQL Flexible Server management
+- **[microsoft/azure-resource-manager-playwright-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-resource-manager-playwright-dotnet)** - Playwright Testing workspace management
+- **[microsoft/azure-resource-manager-postgresql-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-resource-manager-postgresql-dotnet)** - PostgreSQL Flexible Server management
+- **[microsoft/azure-resource-manager-redis-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-resource-manager-redis-dotnet)** - Azure Cache for Redis provisioning
+- **[microsoft/azure-resource-manager-sql-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-resource-manager-sql-dotnet)** - Azure SQL resource management
+- **[microsoft/azure-search-documents-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-search-documents-dotnet)** - Full-text, vector, and hybrid search
+- **[microsoft/azure-security-keyvault-keys-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-security-keyvault-keys-dotnet)** - Cryptographic key management
+- **[microsoft/azure-servicebus-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/azure-servicebus-dotnet)** - Enterprise messaging with queues and topics
+- **[microsoft/m365-agents-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/m365-agents-dotnet)** - M365, Teams, and Copilot Studio agents
+- **[microsoft/microsoft-azure-webjobs-extensions-authentication-events-dotnet](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-dotnet/skills/microsoft-azure-webjobs-extensions-authentication-events-dotnet)** - Entra ID custom auth events handler
 
 ### Java Skills
 
-- **[microsoft/azure-ai-agents-persistent-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-agents-persistent-java)** - Persistent AI agents with threads and tools
-- **[microsoft/azure-ai-anomalydetector-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-anomalydetector-java)** - Anomaly detection applications
-- **[microsoft/azure-ai-contentsafety-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-contentsafety-java)** - Content moderation and safety
-- **[microsoft/azure-ai-formrecognizer-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-formrecognizer-java)** - Document analysis and form extraction
-- **[microsoft/azure-ai-projects-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-projects-java)** - AI Foundry project management
-- **[microsoft/azure-ai-vision-imageanalysis-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-vision-imageanalysis-java)** - Image captioning, OCR, and object detection
-- **[microsoft/azure-ai-voicelive-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-voicelive-java)** - Real-time bidirectional voice AI
-- **[microsoft/azure-appconfiguration-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-appconfiguration-java)** - Centralized app configuration management
-- **[microsoft/azure-communication-callautomation-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-communication-callautomation-java)** - Call automation with IVR and AI
-- **[microsoft/azure-communication-callingserver-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-communication-callingserver-java)** - CallingServer legacy SDK
-- **[microsoft/azure-communication-chat-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-communication-chat-java)** - Real-time chat with threads and receipts
-- **[microsoft/azure-communication-common-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-communication-common-java)** - Communication Services common utilities
-- **[microsoft/azure-communication-sms-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-communication-sms-java)** - SMS sending and delivery reports
-- **[microsoft/azure-compute-batch-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-compute-batch-java)** - Large-scale parallel and HPC batch jobs
-- **[microsoft/azure-cosmos-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-cosmos-java)** - Cosmos DB NoSQL with global distribution
-- **[microsoft/azure-data-tables-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-data-tables-java)** - NoSQL key-value table storage
-- **[microsoft/azure-eventgrid-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-eventgrid-java)** - Event-driven pub/sub messaging
-- **[microsoft/azure-eventhub-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-eventhub-java)** - Real-time high-throughput streaming
-- **[microsoft/azure-identity-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-identity-java)** - Microsoft Entra ID authentication
-- **[microsoft/azure-messaging-webpubsub-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-messaging-webpubsub-java)** - Real-time WebSocket messaging
-- **[microsoft/azure-monitor-ingestion-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-monitor-ingestion-java)** - Custom log ingestion to Azure Monitor
-- **[microsoft/azure-monitor-opentelemetry-exporter-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-monitor-opentelemetry-exporter-java)** - OpenTelemetry export to Azure Monitor
-- **[microsoft/azure-monitor-query-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-monitor-query-java)** - Query Azure Monitor logs and metrics
-- **[microsoft/azure-security-keyvault-keys-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-security-keyvault-keys-java)** - Cryptographic key management
-- **[microsoft/azure-security-keyvault-secrets-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-security-keyvault-secrets-java)** - Secret management for passwords and keys
-- **[microsoft/azure-storage-blob-java](https://github.com/microsoft/skills/tree/main/.github/skills/azure-storage-blob-java)** - Blob storage for file management
+- **[microsoft/azure-ai-anomalydetector-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-ai-anomalydetector-java)** - Anomaly detection applications
+- **[microsoft/azure-ai-contentsafety-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-ai-contentsafety-java)** - Content moderation and safety
+- **[microsoft/azure-ai-formrecognizer-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-ai-formrecognizer-java)** - Document analysis and form extraction
+- **[microsoft/azure-ai-projects-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-ai-projects-java)** - AI Foundry project management
+- **[microsoft/azure-ai-vision-imageanalysis-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-ai-vision-imageanalysis-java)** - Image captioning, OCR, and object detection
+- **[microsoft/azure-ai-voicelive-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-ai-voicelive-java)** - Real-time bidirectional voice AI
+- **[microsoft/azure-appconfiguration-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-appconfiguration-java)** - Centralized app configuration management
+- **[microsoft/azure-communication-callautomation-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-communication-callautomation-java)** - Call automation with IVR and AI
+- **[microsoft/azure-communication-callingserver-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-communication-callingserver-java)** - CallingServer legacy SDK
+- **[microsoft/azure-communication-chat-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-communication-chat-java)** - Real-time chat with threads and receipts
+- **[microsoft/azure-communication-common-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-communication-common-java)** - Communication Services common utilities
+- **[microsoft/azure-communication-sms-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-communication-sms-java)** - SMS sending and delivery reports
+- **[microsoft/azure-compute-batch-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-compute-batch-java)** - Large-scale parallel and HPC batch jobs
+- **[microsoft/azure-cosmos-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-cosmos-java)** - Cosmos DB NoSQL with global distribution
+- **[microsoft/azure-data-tables-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-data-tables-java)** - NoSQL key-value table storage
+- **[microsoft/azure-eventgrid-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-eventgrid-java)** - Event-driven pub/sub messaging
+- **[microsoft/azure-eventhub-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-eventhub-java)** - Real-time high-throughput streaming
+- **[microsoft/azure-identity-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-identity-java)** - Microsoft Entra ID authentication
+- **[microsoft/azure-messaging-webpubsub-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-messaging-webpubsub-java)** - Real-time WebSocket messaging
+- **[microsoft/azure-monitor-ingestion-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-monitor-ingestion-java)** - Custom log ingestion to Azure Monitor
+- **[microsoft/azure-monitor-opentelemetry-exporter-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-monitor-opentelemetry-exporter-java)** - OpenTelemetry export to Azure Monitor
+- **[microsoft/azure-monitor-query-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-monitor-query-java)** - Query Azure Monitor logs and metrics
+- **[microsoft/azure-security-keyvault-keys-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-security-keyvault-keys-java)** - Cryptographic key management
+- **[microsoft/azure-security-keyvault-secrets-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-security-keyvault-secrets-java)** - Secret management for passwords and keys
+- **[microsoft/azure-storage-blob-java](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-java/skills/azure-storage-blob-java)** - Blob storage for file management
 
 ### Python Skills
 
-- **[microsoft/agent-framework-azure-ai-py](https://github.com/microsoft/skills/tree/main/.github/skills/agent-framework-azure-ai-py)** - Agent Framework for Azure AI Foundry
-- **[microsoft/agents-v2-py](https://github.com/microsoft/skills/tree/main/.github/skills/agents-v2-py)** - Container-based hosted agents
-- **[microsoft/azure-ai-contentsafety-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-contentsafety-py)** - Harmful content detection
-- **[microsoft/azure-ai-contentunderstanding-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-contentunderstanding-py)** - Multimodal content extraction
-- **[microsoft/azure-ai-ml-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-ml-py)** - Azure ML workspace and job management
-- **[microsoft/azure-ai-projects-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-projects-py)** - AI Foundry project client and agents
-- **[microsoft/azure-ai-textanalytics-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-textanalytics-py)** - NLP: sentiment, entities, key phrases
-- **[microsoft/azure-ai-transcription-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-transcription-py)** - Speech-to-text transcription
-- **[microsoft/azure-ai-translation-document-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-translation-document-py)** - Batch document translation
-- **[microsoft/azure-ai-translation-text-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-translation-text-py)** - Real-time text translation
-- **[microsoft/azure-ai-vision-imageanalysis-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-vision-imageanalysis-py)** - Image captions, tags, OCR, objects
-- **[microsoft/azure-ai-voicelive-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-voicelive-py)** - Real-time bidirectional voice AI
-- **[microsoft/azure-appconfiguration-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-appconfiguration-py)** - Feature flags and dynamic settings
-- **[microsoft/azure-containerregistry-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-containerregistry-py)** - Container image and registry management
-- **[microsoft/azure-cosmos-db-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-cosmos-db-py)** - Cosmos DB with Python/FastAPI patterns
-- **[microsoft/azure-cosmos-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-cosmos-py)** - Cosmos DB NoSQL client library
-- **[microsoft/azure-data-tables-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-data-tables-py)** - NoSQL key-value table storage
-- **[microsoft/azure-eventgrid-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-eventgrid-py)** - Event-driven pub/sub routing
-- **[microsoft/azure-eventhub-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-eventhub-py)** - High-throughput event streaming
-- **[microsoft/azure-identity-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-identity-py)** - Microsoft Entra ID authentication
-- **[microsoft/azure-keyvault-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-keyvault-py)** - Secrets, keys, and certificate management
-- **[microsoft/azure-messaging-webpubsubservice-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-messaging-webpubsubservice-py)** - Real-time WebSocket messaging
-- **[microsoft/azure-mgmt-apicenter-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-mgmt-apicenter-py)** - API inventory and governance
-- **[microsoft/azure-mgmt-apimanagement-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-mgmt-apimanagement-py)** - API Management service administration
-- **[microsoft/azure-mgmt-botservice-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-mgmt-botservice-py)** - Bot Service resource management
-- **[microsoft/azure-mgmt-fabric-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-mgmt-fabric-py)** - Microsoft Fabric capacity management
-- **[microsoft/azure-monitor-ingestion-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-monitor-ingestion-py)** - Custom log ingestion to Azure Monitor
-- **[microsoft/azure-monitor-opentelemetry-exporter-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-monitor-opentelemetry-exporter-py)** - OpenTelemetry export to Application Insights
-- **[microsoft/azure-monitor-opentelemetry-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-monitor-opentelemetry-py)** - One-line Application Insights setup
-- **[microsoft/azure-monitor-query-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-monitor-query-py)** - Query Azure Monitor logs and metrics
-- **[microsoft/azure-search-documents-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-search-documents-py)** - Full-text, vector, and hybrid search
-- **[microsoft/azure-servicebus-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-servicebus-py)** - Enterprise messaging with queues and topics
-- **[microsoft/azure-speech-to-text-rest-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-speech-to-text-rest-py)** - REST speech-to-text for short audio
-- **[microsoft/azure-storage-blob-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-storage-blob-py)** - Blob object storage client
-- **[microsoft/azure-storage-file-datalake-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-storage-file-datalake-py)** - Hierarchical data lake storage
-- **[microsoft/azure-storage-file-share-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-storage-file-share-py)** - SMB file share management
-- **[microsoft/azure-storage-queue-py](https://github.com/microsoft/skills/tree/main/.github/skills/azure-storage-queue-py)** - Simple message queuing
-- **[microsoft/fastapi-router-py](https://github.com/microsoft/skills/tree/main/.github/skills/fastapi-router-py)** - FastAPI routers with CRUD and auth
-- **[microsoft/hosted-agents-v2-py](https://github.com/microsoft/skills/tree/main/.github/skills/hosted-agents-v2-py)** - Container-based hosted agents
-- **[microsoft/m365-agents-py](https://github.com/microsoft/skills/tree/main/.github/skills/m365-agents-py)** - M365, Teams, and Copilot Studio agents
-- **[microsoft/pydantic-models-py](https://github.com/microsoft/skills/tree/main/.github/skills/pydantic-models-py)** - Pydantic models for API schemas
+- **[microsoft/agent-framework-azure-ai-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/agent-framework-azure-ai-py)** - Agent Framework for Azure AI Foundry
+- **[microsoft/agents-v2-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/agents-v2-py)** - Foundry Agents SDK — container-based agents with custom images
+- **[microsoft/azure-ai-contentsafety-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-ai-contentsafety-py)** - Harmful content detection
+- **[microsoft/azure-ai-contentunderstanding-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-ai-contentunderstanding-py)** - Multimodal content extraction
+- **[microsoft/azure-ai-ml-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-ai-ml-py)** - Azure ML workspace and job management
+- **[microsoft/azure-ai-projects-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-ai-projects-py)** - AI Foundry project client and agents
+- **[microsoft/azure-ai-textanalytics-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-ai-textanalytics-py)** - NLP: sentiment, entities, key phrases
+- **[microsoft/azure-ai-transcription-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-ai-transcription-py)** - Speech-to-text transcription
+- **[microsoft/azure-ai-translation-document-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-ai-translation-document-py)** - Batch document translation
+- **[microsoft/azure-ai-translation-text-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-ai-translation-text-py)** - Real-time text translation
+- **[microsoft/azure-ai-vision-imageanalysis-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-ai-vision-imageanalysis-py)** - Image captions, tags, OCR, objects
+- **[microsoft/azure-ai-voicelive-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-ai-voicelive-py)** - Real-time bidirectional voice AI
+- **[microsoft/azure-appconfiguration-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-appconfiguration-py)** - Feature flags and dynamic settings
+- **[microsoft/azure-containerregistry-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-containerregistry-py)** - Container image and registry management
+- **[microsoft/azure-cosmos-db-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-cosmos-db-py)** - Cosmos DB with Python/FastAPI patterns
+- **[microsoft/azure-cosmos-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-cosmos-py)** - Cosmos DB NoSQL client library
+- **[microsoft/azure-data-tables-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-data-tables-py)** - NoSQL key-value table storage
+- **[microsoft/azure-eventgrid-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-eventgrid-py)** - Event-driven pub/sub routing
+- **[microsoft/azure-eventhub-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-eventhub-py)** - High-throughput event streaming
+- **[microsoft/azure-identity-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-identity-py)** - Microsoft Entra ID authentication
+- **[microsoft/azure-keyvault-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-keyvault-py)** - Secrets, keys, and certificate management
+- **[microsoft/azure-messaging-webpubsubservice-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-messaging-webpubsubservice-py)** - Real-time WebSocket messaging
+- **[microsoft/azure-mgmt-apicenter-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-mgmt-apicenter-py)** - API inventory and governance
+- **[microsoft/azure-mgmt-apimanagement-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-mgmt-apimanagement-py)** - API Management service administration
+- **[microsoft/azure-mgmt-botservice-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-mgmt-botservice-py)** - Bot Service resource management
+- **[microsoft/azure-mgmt-fabric-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-mgmt-fabric-py)** - Microsoft Fabric capacity management
+- **[microsoft/azure-monitor-ingestion-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-monitor-ingestion-py)** - Custom log ingestion to Azure Monitor
+- **[microsoft/azure-monitor-opentelemetry-exporter-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-monitor-opentelemetry-exporter-py)** - OpenTelemetry export to Application Insights
+- **[microsoft/azure-monitor-opentelemetry-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-monitor-opentelemetry-py)** - One-line Application Insights setup
+- **[microsoft/azure-monitor-query-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-monitor-query-py)** - Query Azure Monitor logs and metrics
+- **[microsoft/azure-search-documents-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-search-documents-py)** - Full-text, vector, and hybrid search
+- **[microsoft/azure-servicebus-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-servicebus-py)** - Enterprise messaging with queues and topics
+- **[microsoft/azure-speech-to-text-rest-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-speech-to-text-rest-py)** - REST speech-to-text for short audio
+- **[microsoft/azure-storage-blob-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-storage-blob-py)** - Blob object storage client
+- **[microsoft/azure-storage-file-datalake-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-storage-file-datalake-py)** - Hierarchical data lake storage
+- **[microsoft/azure-storage-file-share-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-storage-file-share-py)** - SMB file share management
+- **[microsoft/azure-storage-queue-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/azure-storage-queue-py)** - Simple message queuing
+- **[microsoft/fastapi-router-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/fastapi-router-py)** - FastAPI routers with CRUD and auth
+- **[microsoft/m365-agents-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/m365-agents-py)** - M365, Teams, and Copilot Studio agents
+- **[microsoft/pydantic-models-py](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-python/skills/pydantic-models-py)** - Pydantic models for API schemas
 
 ### Rust Skills
 
-- **[microsoft/azure-cosmos-rust](https://github.com/microsoft/skills/tree/main/.github/skills/azure-cosmos-rust)** - Cosmos DB NoSQL client
-- **[microsoft/azure-eventhub-rust](https://github.com/microsoft/skills/tree/main/.github/skills/azure-eventhub-rust)** - Event Hubs streaming client
-- **[microsoft/azure-identity-rust](https://github.com/microsoft/skills/tree/main/.github/skills/azure-identity-rust)** - Microsoft Entra ID authentication
-- **[microsoft/azure-keyvault-certificates-rust](https://github.com/microsoft/skills/tree/main/.github/skills/azure-keyvault-certificates-rust)** - Key Vault certificate management
-- **[microsoft/azure-keyvault-keys-rust](https://github.com/microsoft/skills/tree/main/.github/skills/azure-keyvault-keys-rust)** - Key Vault cryptographic key management
-- **[microsoft/azure-keyvault-secrets-rust](https://github.com/microsoft/skills/tree/main/.github/skills/azure-keyvault-secrets-rust)** - Key Vault secret storage
-- **[microsoft/azure-storage-blob-rust](https://github.com/microsoft/skills/tree/main/.github/skills/azure-storage-blob-rust)** - Blob object storage client
+- **[microsoft/azure-cosmos-rust](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-rust/skills/azure-cosmos-rust)** - Cosmos DB NoSQL client
+- **[microsoft/azure-eventhub-rust](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-rust/skills/azure-eventhub-rust)** - Event Hubs streaming client
+- **[microsoft/azure-identity-rust](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-rust/skills/azure-identity-rust)** - Microsoft Entra ID authentication
+- **[microsoft/azure-keyvault-certificates-rust](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-rust/skills/azure-keyvault-certificates-rust)** - Key Vault certificate management
+- **[microsoft/azure-keyvault-keys-rust](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-rust/skills/azure-keyvault-keys-rust)** - Key Vault cryptographic key management
+- **[microsoft/azure-keyvault-secrets-rust](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-rust/skills/azure-keyvault-secrets-rust)** - Key Vault secret storage
+- **[microsoft/azure-storage-blob-rust](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-rust/skills/azure-storage-blob-rust)** - Blob object storage client
 
 ### TypeScript Skills
 
-- **[microsoft/azure-ai-contentsafety-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-contentsafety-ts)** - Content safety for text and images
-- **[microsoft/azure-ai-document-intelligence-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-document-intelligence-ts)** - Document text and table extraction
-- **[microsoft/azure-ai-projects-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-projects-ts)** - AI Foundry project client and agents
-- **[microsoft/azure-ai-translation-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-translation-ts)** - Text and document translation
-- **[microsoft/azure-ai-voicelive-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-ai-voicelive-ts)** - Real-time bidirectional voice AI
-- **[microsoft/azure-appconfiguration-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-appconfiguration-ts)** - App config, feature flags, dynamic refresh
-- **[microsoft/azure-cosmos-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-cosmos-ts)** - Cosmos DB NoSQL CRUD and queries
-- **[microsoft/azure-eventhub-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-eventhub-ts)** - High-throughput event streaming
-- **[microsoft/azure-identity-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-identity-ts)** - Microsoft Entra ID authentication
-- **[microsoft/azure-keyvault-keys-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-keyvault-keys-ts)** - Cryptographic key management
-- **[microsoft/azure-keyvault-secrets-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-keyvault-secrets-ts)** - Secret storage and retrieval
-- **[microsoft/azure-microsoft-playwright-testing-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-microsoft-playwright-testing-ts)** - Playwright tests at scale on Azure
-- **[microsoft/azure-monitor-opentelemetry-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-monitor-opentelemetry-ts)** - Application Insights tracing and metrics
-- **[microsoft/azure-postgres-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-postgres-ts)** - PostgreSQL Flexible Server connection
-- **[microsoft/azure-search-documents-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-search-documents-ts)** - Vector/hybrid search with semantic ranking
-- **[microsoft/azure-servicebus-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-servicebus-ts)** - Messaging with queues and topics
-- **[microsoft/azure-storage-blob-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-storage-blob-ts)** - Blob upload, download, and management
-- **[microsoft/azure-storage-file-share-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-storage-file-share-ts)** - SMB file share operations
-- **[microsoft/azure-storage-queue-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-storage-queue-ts)** - Queue message operations
-- **[microsoft/azure-web-pubsub-ts](https://github.com/microsoft/skills/tree/main/.github/skills/azure-web-pubsub-ts)** - Real-time WebSocket pub/sub messaging
-- **[microsoft/frontend-ui-dark-ts](https://github.com/microsoft/skills/tree/main/.github/skills/frontend-ui-dark-ts)** - Dark-themed React with Tailwind and animations
-- **[microsoft/m365-agents-ts](https://github.com/microsoft/skills/tree/main/.github/skills/m365-agents-ts)** - M365, Teams, and Copilot Studio agents
-- **[microsoft/react-flow-node-ts](https://github.com/microsoft/skills/tree/main/.github/skills/react-flow-node-ts)** - React Flow node components with Zustand
-- **[microsoft/zustand-store-ts](https://github.com/microsoft/skills/tree/main/.github/skills/zustand-store-ts)** - Zustand stores with middleware patterns
-
-### General Skills
-
-- **[microsoft/azd-deployment](https://github.com/microsoft/skills/tree/main/.github/skills/azd-deployment)** - Azure Container Apps deployment with azd
-- **[microsoft/github-issue-creator](https://github.com/microsoft/skills/tree/main/.github/skills/github-issue-creator)** - Structured GitHub issue reports from notes
-- **[microsoft/mcp-builder](https://github.com/microsoft/skills/tree/main/.github/skills/mcp-builder)** - MCP server creation guide
-- **[microsoft/podcast-generation](https://github.com/microsoft/skills/tree/main/.github/skills/podcast-generation)** - AI podcast audio with GPT Realtime Mini
-- **[microsoft/skill-creator](https://github.com/microsoft/skills/tree/main/.github/skills/skill-creator)** - Skill creation guide for Azure AI agents
+- **[microsoft/azure-ai-contentsafety-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-ai-contentsafety-ts)** - Content safety for text and images
+- **[microsoft/azure-ai-document-intelligence-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-ai-document-intelligence-ts)** - Document text and table extraction
+- **[microsoft/azure-ai-projects-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-ai-projects-ts)** - AI Foundry project client and agents
+- **[microsoft/azure-ai-translation-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-ai-translation-ts)** - Text and document translation
+- **[microsoft/azure-ai-voicelive-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-ai-voicelive-ts)** - Real-time bidirectional voice AI
+- **[microsoft/azure-appconfiguration-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-appconfiguration-ts)** - App config, feature flags, dynamic refresh
+- **[microsoft/azure-cosmos-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-cosmos-ts)** - Cosmos DB NoSQL CRUD and queries
+- **[microsoft/azure-eventhub-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-eventhub-ts)** - High-throughput event streaming
+- **[microsoft/azure-identity-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-identity-ts)** - Microsoft Entra ID authentication
+- **[microsoft/azure-keyvault-keys-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-keyvault-keys-ts)** - Cryptographic key management
+- **[microsoft/azure-keyvault-secrets-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-keyvault-secrets-ts)** - Secret storage and retrieval
+- **[microsoft/azure-microsoft-playwright-testing-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-microsoft-playwright-testing-ts)** - Playwright tests at scale on Azure
+- **[microsoft/azure-monitor-opentelemetry-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-monitor-opentelemetry-ts)** - Application Insights tracing and metrics
+- **[microsoft/azure-postgres-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-postgres-ts)** - PostgreSQL Flexible Server connection
+- **[microsoft/azure-search-documents-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-search-documents-ts)** - Vector/hybrid search with semantic ranking
+- **[microsoft/azure-servicebus-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-servicebus-ts)** - Messaging with queues and topics
+- **[microsoft/azure-storage-blob-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-storage-blob-ts)** - Blob upload, download, and management
+- **[microsoft/azure-storage-file-share-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-storage-file-share-ts)** - SMB file share operations
+- **[microsoft/azure-storage-queue-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-storage-queue-ts)** - Queue message operations
+- **[microsoft/azure-web-pubsub-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/azure-web-pubsub-ts)** - Real-time WebSocket pub/sub messaging
+- **[microsoft/frontend-ui-dark-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/frontend-ui-dark-ts)** - Dark-themed React with Tailwind and animations
+- **[microsoft/m365-agents-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/m365-agents-ts)** - M365, Teams, and Copilot Studio agents
+- **[microsoft/react-flow-node-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/react-flow-node-ts)** - React Flow node components with Zustand
+- **[microsoft/zustand-store-ts](https://github.com/microsoft/skills/tree/main/.github/plugins/azure-sdk-typescript/skills/zustand-store-ts)** - Zustand stores with middleware patterns
 
 </details>
 
 <details>
 <summary><h3 style="display:inline">Skills by fal.ai Team</h3></summary>
 
+- **[fal-ai-community/fal-3d](https://github.com/fal-ai-community/skills/blob/main/skills/claude.ai/fal-3d/SKILL.md)** - Generate 3D models from text or images
 - **[fal-ai-community/fal-audio](https://github.com/fal-ai-community/skills/blob/main/skills/claude.ai/fal-audio/SKILL.md)** - Text-to-speech and speech-to-text using fal.ai audio models
 - **[fal-ai-community/fal-generate](https://github.com/fal-ai-community/skills/blob/main/skills/claude.ai/fal-generate/SKILL.md)** - Generate images and videos using fal.ai AI models
 - **[fal-ai-community/fal-image-edit](https://github.com/fal-ai-community/skills/blob/main/skills/claude.ai/fal-image-edit/SKILL.md)** - AI-powered image editing with style transfer and object removal
+- **[fal-ai-community/fal-kling-o3](https://github.com/fal-ai-community/skills/blob/main/skills/claude.ai/fal-kling-o3/SKILL.md)** - Generate images and videos with Kling O3 — Kling's most powerful model family
+- **[fal-ai-community/fal-lip-sync](https://github.com/fal-ai-community/skills/blob/main/skills/claude.ai/fal-lip-sync/SKILL.md)** - Create talking head videos and lip sync audio to video
 - **[fal-ai-community/fal-platform](https://github.com/fal-ai-community/skills/blob/main/skills/claude.ai/fal-platform/SKILL.md)** - Platform APIs for model management, pricing, and usage tracking
+- **[fal-ai-community/fal-realtime](https://github.com/fal-ai-community/skills/blob/main/skills/claude.ai/fal-realtime/SKILL.md)** - Real-time and streaming AI image generation
+- **[fal-ai-community/fal-restore](https://github.com/fal-ai-community/skills/blob/main/skills/claude.ai/fal-restore/SKILL.md)** - Restore and fix image quality — deblur, denoise, fix faces, restore documents
+- **[fal-ai-community/fal-train](https://github.com/fal-ai-community/skills/blob/main/skills/claude.ai/fal-train/SKILL.md)** - Train custom AI models (LoRA) on fal.ai for personalized image generation
+- **[fal-ai-community/fal-tryon](https://github.com/fal-ai-community/skills/blob/main/skills/claude.ai/fal-tryon/SKILL.md)** - Virtual try-on — see how clothes look on a person
 - **[fal-ai-community/fal-upscale](https://github.com/fal-ai-community/skills/blob/main/skills/claude.ai/fal-upscale/SKILL.md)** - Upscale and enhance image and video resolution using AI
+- **[fal-ai-community/fal-video-edit](https://github.com/fal-ai-community/skills/blob/main/skills/claude.ai/fal-video-edit/SKILL.md)** - Edit existing videos using AI — remix style, upscale, remove background, add audio
+- **[fal-ai-community/fal-vision](https://github.com/fal-ai-community/skills/blob/main/skills/claude.ai/fal-vision/SKILL.md)** - Analyze images — segment objects, detect, OCR, describe, visual Q&A
 - **[fal-ai-community/fal-workflow](https://github.com/fal-ai-community/skills/blob/main/skills/claude.ai/fal-workflow/SKILL.md)** - Generate workflow JSON files for chaining AI models
 
 </details>
@@ -567,18 +578,6 @@ Domain-specific knowledge for Azure SDK and Foundry development.
 - **[WordPress/wp-phpstan](https://github.com/WordPress/agent-skills/tree/trunk/skills/wp-phpstan)** - PHPStan static analysis for WordPress projects
 - **[WordPress/wp-playground](https://github.com/WordPress/agent-skills/tree/trunk/skills/wp-playground)** - WordPress Playground for instant local environments
 - **[WordPress/wpds](https://github.com/WordPress/agent-skills/tree/trunk/skills/wpds)** - WordPress Design System
-
-</details>
-
-<details>
-<summary><h3 style="display:inline">Skills by Transloadit Team</h3></summary>
-
-- **[transloadit/transloadit](https://github.com/transloadit/skills/tree/main/skills/transloadit)** - Routes media tasks to the right skill
-- **[transloadit/docs-transloadit-robots](https://github.com/transloadit/skills/tree/main/skills/docs-transloadit-robots)** - Look up any of 86+ processing Robots
-- **[transloadit/transform-generate-image](https://github.com/transloadit/skills/tree/main/skills/transform-generate-image-with-transloadit)** - Generate images via AI models
-- **[transloadit/transform-encode-hls-video](https://github.com/transloadit/skills/tree/main/skills/transform-encode-hls-video-with-transloadit)** - Encode video to HLS streaming format
-- **[transloadit/integrate-uppy-s3-uploading](https://github.com/transloadit/skills/tree/main/skills/integrate-uppy-transloadit-s3-uploading-to-nextjs)** - Add Uppy file uploads to Next.js apps
-- **[transloadit/integrate-smartcdn-delivery](https://github.com/transloadit/skills/tree/main/skills/integrate-asset-delivery-with-transloadit-smartcdn-in-nextjs)** - Smart CDN asset delivery in Next.js
 
 </details>
 
@@ -615,6 +614,20 @@ Official curated skills from OpenAI's skills repository.
 - **[openai/transcribe](https://github.com/openai/skills/tree/main/skills/.curated/transcribe)** - Transcribe audio files to text with optional speaker diarization
 - **[openai/vercel-deploy](https://github.com/openai/skills/tree/main/skills/.curated/vercel-deploy)** - Deploy applications and websites to Vercel with preview or production options
 - **[openai/yeet](https://github.com/openai/skills/tree/main/skills/.curated/yeet)** - Stage, commit, push code, and open a GitHub pull request via CLI
+- **[openai/aspnet-core](https://github.com/openai/skills/tree/main/skills/.curated/aspnet-core)** - Build, review, and architect ASP.NET Core apps (Blazor, MVC, Minimal APIs, etc.)
+- **[openai/chatgpt-apps](https://github.com/openai/skills/tree/main/skills/.curated/chatgpt-apps)** - Build, scaffold, and troubleshoot ChatGPT Apps SDK apps with MCP server and widget UI
+- **[openai/figma](https://github.com/openai/skills/tree/main/skills/.curated/figma)** - Use the Figma MCP server to fetch design context and translate nodes into production code
+- **[openai/figma-code-connect-components](https://github.com/openai/skills/tree/main/skills/.curated/figma-code-connect-components)** - Connect Figma design components to code components using Code Connect
+- **[openai/figma-create-design-system-rules](https://github.com/openai/skills/tree/main/skills/.curated/figma-create-design-system-rules)** - Rules for implementing Figma designs using the Figma MCP server
+- **[openai/figma-create-new-file](https://github.com/openai/skills/tree/main/skills/.curated/figma-create-new-file)** - Create a new blank Figma file or FigJam file
+- **[openai/figma-generate-design](https://github.com/openai/skills/tree/main/skills/.curated/figma-generate-design)** - Translate app pages and layouts into Figma using design system tokens
+- **[openai/figma-generate-library](https://github.com/openai/skills/tree/main/skills/.curated/figma-generate-library)** - Build or update a professional-grade design system in Figma from a codebase
+- **[openai/figma-implement-design](https://github.com/openai/skills/tree/main/skills/.curated/figma-implement-design)** - Translate Figma designs into production-ready code with 1:1 visual fidelity
+- **[openai/figma-use](https://github.com/openai/skills/tree/main/skills/.curated/figma-use)** - Prerequisite skill for every use_figma tool call — write/read actions in Figma context
+- **[openai/frontend-skill](https://github.com/openai/skills/tree/main/skills/.curated/frontend-skill)** - Create visually strong landing pages, websites, and app UIs with restrained composition
+- **[openai/playwright-interactive](https://github.com/openai/skills/tree/main/skills/.curated/playwright-interactive)** - Persistent browser and Electron interaction via js_repl for iterative UI debugging
+- **[openai/slides](https://github.com/openai/skills/tree/main/skills/.curated/slides)** - Create and edit .pptx presentation decks with PptxGenJS
+- **[openai/winui-app](https://github.com/openai/skills/tree/main/skills/.curated/winui-app)** - Bootstrap and develop modern WinUI 3 desktop apps with C# and Windows App SDK
 
 </details>
 
@@ -931,6 +944,27 @@ Official GSAP animation skills covering the full GreenSock ecosystem — core AP
 
 </details>
 
+<details>
+<summary><h3 style="display:inline">Skills by Notion</h3></summary>
+
+Official skills from Notion's repositories — workspace-aware skills for capturing knowledge, preparing meetings, researching, and turning specs into tasks.
+
+**From [notion-cookbook](https://github.com/makenotion/notion-cookbook/tree/main/skills/claude):**
+
+- **[makenotion/knowledge-capture](https://github.com/makenotion/notion-cookbook/tree/main/skills/claude/knowledge-capture)** - Transform conversations into structured Notion documentation pages with proper organization and linking
+- **[makenotion/meeting-intelligence](https://github.com/makenotion/notion-cookbook/tree/main/skills/claude/meeting-intelligence)** - Prepare meeting materials by gathering Notion context and creating pre-reads and agendas
+- **[makenotion/research-documentation](https://github.com/makenotion/notion-cookbook/tree/main/skills/claude/research-documentation)** - Search Notion workspace, synthesize findings, and create comprehensive research reports
+- **[makenotion/spec-to-implementation](https://github.com/makenotion/notion-cookbook/tree/main/skills/claude/spec-to-implementation)** - Turn product/tech specs into concrete Notion tasks with acceptance criteria and progress tracking
+
+**From [claude-code-notion-plugin](https://github.com/makenotion/claude-code-notion-plugin/tree/main/skills/notion):**
+
+- **[makenotion/knowledge-capture](https://github.com/makenotion/claude-code-notion-plugin/tree/main/skills/notion/knowledge-capture)** - Transform conversations into structured Notion documentation pages with proper organization and linking
+- **[makenotion/meeting-intelligence](https://github.com/makenotion/claude-code-notion-plugin/tree/main/skills/notion/meeting-intelligence)** - Prepare meeting materials by gathering Notion context and creating pre-reads and agendas
+- **[makenotion/research-documentation](https://github.com/makenotion/claude-code-notion-plugin/tree/main/skills/notion/research-documentation)** - Search Notion workspace, synthesize findings, and create comprehensive research reports
+- **[makenotion/spec-to-implementation](https://github.com/makenotion/claude-code-notion-plugin/tree/main/skills/notion/spec-to-implementation)** - Turn product/tech specs into concrete Notion tasks with acceptance criteria and progress tracking
+
+</details>
+
 ### Community Skills
 
 <details>
@@ -1078,6 +1112,7 @@ Official GSAP animation skills covering the full GreenSock ecosystem — core AP
 <details>
 <summary><h3 style="display:inline">Specialized Domains</h3></summary>
 
+- **[transloadit/skills](https://github.com/transloadit/skills/tree/main/skills)** - Transloadit skill collection (6)
 - **[raintree-technology/apple-hig-skills](https://github.com/raintree-technology/apple-hig-skills)** - Apple Human Interface Guidelines as 14 agent skills covering platforms, foundations, components, patterns, inputs, and technologies for iOS, macOS, visionOS, watchOS, and tvOS
 - **[K-Dense-AI/claude-scientific-skills](https://github.com/K-Dense-AI/claude-scientific-skills)** - Scientific research and analysis skills
 - **[NotMyself/claude-win11-speckit-update-skill](https://github.com/NotMyself/claude-win11-speckit-update-skill)** - Windows 11 system management
