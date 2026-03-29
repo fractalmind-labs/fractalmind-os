@@ -12,6 +12,7 @@
 ## 当前范围
 - 包含 `manifest.yaml`
 - 包含最小 release notes
+- 包含 4 个 OS 内核模板：`SYSTEM.md` / `AGENTS.md` / `SOUL.md` / `HEARTBEAT.md`
 - 只保留模板占位说明，不引入大体量 installer / upgrade 脚本
 
 ## 设计重点
@@ -23,7 +24,7 @@
 ## 当前已知差异
 - 当前 workspace 还没有 `SYSTEM.md`
 - 当前候选 OKR 路径是 `okr/candidates.md`，与 spec 示例 `okrs/Candidate.md` 不同
-- 当前还未确认 upstream 提交流程（repo 仅见 `READ` 权限）
+- upstream 提交流程已验证：已 fork 并打开 upstream PR `fractalmind-ai/agent-os-roms#1`
 
 ## 下一步
 - 决定最终提交路径（fork/PR 或授权提交）
