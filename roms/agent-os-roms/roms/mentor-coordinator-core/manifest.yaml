@@ -1,0 +1,69 @@
+rom_name: mentor-coordinator-core
+rom_family: manager-heavy
+rom_version: 0.1.0
+description: Mentor-led coordination-first AI Agent OS distribution with TODO-first heartbeat execution, file-backed memory, and strict surface verification.
+
+spec_version: 1.0.0
+requires_spec: ">=1.0.0"
+compatible_spec_range: ">=1.0.0 <2.0.0"
+compatibility_status: draft-compatible
+
+included_skills:
+  - agent-manager
+  - planning-with-files
+  - slack-workspace-inspector
+  - sentry-event-query
+  - use-fractalbot
+
+template_set:
+  - workspace-root
+  - memory-pack
+  - heartbeat-pack
+  - todo-pack
+
+install_boundary:
+  creates_files:
+    - SYSTEM.md
+    - SOUL.md
+    - AGENTS.md
+    - USER.md
+    - HEARTBEAT.md
+    - TODO.md
+    - OKR.md
+  creates_directories:
+    - memory/
+    - okrs/
+  bootstrap_entrypoint: manual-bootstrap
+  post_install_expectations:
+    - heartbeat control plane exists
+    - TODO control plane exists
+    - active OKR control plane exists
+    - memory daily-note path is writable
+
+upgrade_boundary:
+  upgrade_strategy: overlay-with-preserve
+  mutable_paths:
+    - HEARTBEAT.md
+    - TODO.md
+    - templates/
+  preserved_local_overrides:
+    - USER.md
+    - MEMORY.md
+    - TOOLS.md
+    - OKR.md
+  rollback_hint: restore previous ROM snapshot before overlay
+  breaking_changes:
+    - heartbeat rule renames may require manual merge
+    - TODO control-plane changes may require operator review
+
+defaults:
+  default_persona: coordinator-first
+  default_heartbeat_mode: proactive
+  recommended_use_cases:
+    - mentor-led workspaces
+    - multi-agent coordination
+    - GitHub and Slack execution tracking
+  operator_notes:
+    - optimized for owner-side coordination rather than isolated coding workers
+    - expects surface-first delivery and post-send verification
+    - expects file-backed memory plus TODO-before-OKR heartbeat discipline
