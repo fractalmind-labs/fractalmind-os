@@ -3,7 +3,7 @@
 - Candidate ID: `okr_0fee7267e2`
 - Objective: Extend approved execution state with a typed execution guardrail envelope for tool visibility / approval boundaries, run budgets, and guard timing modes (`blocking`, `concurrent`, `monitoring`) so FractalMind can enforce runtime trust inside the existing heartbeat control plane.
 - Governance: `L0`
-- Status: `in_progress`
+- Status: `resolved`
 - Score: `2.84`
 
 ## Sync Contract
