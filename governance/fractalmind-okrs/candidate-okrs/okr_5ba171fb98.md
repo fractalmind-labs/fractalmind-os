@@ -3,7 +3,7 @@
 - Candidate ID: `okr_5ba171fb98`
 - Objective: Review `BIOGEN: Evidence-Grounded Multi-Agent Reasoning Framework for Transcriptomic Interpretation in Antimicrobial Resistance` from academic-research and decide whether FractalMind should absorb it into product, governance, or OS work.
 - Governance: `L0`
-- Status: `proposed`
+- Status: `in_progress`
 - Score: `2.54`
 
 ## Sync Contract
