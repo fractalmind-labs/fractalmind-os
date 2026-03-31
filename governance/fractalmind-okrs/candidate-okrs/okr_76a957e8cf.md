@@ -3,7 +3,7 @@
 - Candidate ID: `okr_76a957e8cf`
 - Objective: Map FractalMind governance and trust claims to exact owners, evidence artifacts, status, and review cadence within the existing heartbeat control plane so trust gaps stay explicit and reviewable.
 - Governance: `L0`
-- Status: `in_progress`
+- Status: `resolved`
 - Score: `2.78`
 
 ## Sync Contract
