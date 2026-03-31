@@ -3,7 +3,7 @@
 - Candidate ID: `okr_1bc1d306e1`
 - Objective: Review `boyand/cc-budget` from github-wide and decide whether FractalMind should absorb it into product, governance, or OS work.
 - Governance: `L0`
-- Status: `in_progress`
+- Status: `resolved`
 - Score: `2.61`
 
 ## Sync Contract
