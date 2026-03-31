@@ -3,7 +3,7 @@
 - Candidate ID: `okr_a3b1e37ea8`
 - Objective: Use the newly landed coding-session and council-execution packets in one real local rollout path so agent-manager or operator flow consumes the state instead of leaving it as passive heartbeat metadata.
 - Governance: `L0`
-- Status: `in_progress`
+- Status: `resolved`
 - Score: `2.92`
 
 ## Sync Contract
