@@ -3,7 +3,7 @@
 - Candidate ID: `okr_ea3635beaa`
 - Objective: Review `elvatis/elvatis-mcp` from github-wide and decide whether FractalMind should absorb it into product, governance, or OS work.
 - Governance: `L0`
-- Status: `in_progress`
+- Status: `resolved`
 - Score: `2.39`
 
 ## Sync Contract
