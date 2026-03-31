@@ -3,7 +3,7 @@
 - Candidate ID: `okr_2c7be0ed9f`
 - Objective: Audit the current heartbeat thin-executor boundary against the repo policy, then promote the staged governance trust matrix into a maintained repo-local control artifact so KR4 trust proof moves from staging into continuous governance.
 - Governance: `L0`
-- Status: `proposed`
+- Status: `in_progress`
 - Score: `2.86`
 
 ## Sync Contract
