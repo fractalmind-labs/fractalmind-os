@@ -3,7 +3,7 @@
 - Candidate ID: `okr_25f5ef45f1`
 - Objective: Review `When Only the Final Text Survives: Implicit Execution Tracing for Multi-Agent Attribution` from academic-research and decide whether FractalMind should absorb it into product, governance, or OS work.
 - Governance: `L0`
-- Status: `in_progress`
+- Status: `resolved`
 - Score: `2.47`
 
 ## Sync Contract
