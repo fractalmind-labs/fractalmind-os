@@ -63,7 +63,8 @@ The most contributed Agent Skills repository, built and maintained together with
 |---|---|---|
 | [Official Claude Skills](#official-claude-skills) | [Skills by VoltAgent](#skills-by-voltagent) | [Skills by Composio](#skills-by-composio-team) |
 | [Skills by Supabase](#skills-by-supabase-team) | [Skills by Google Gemini](#skills-by-google-gemini) | [Skills by Stripe](#skills-by-stripe-team) |
-| [Skills by CallStack](#skills-by-callstack) | [Skills by Expo](#skills-by-expo-team) | [Skills by Better Auth](#skills-by-better-auth-team) |
+| [Skills by Courier](#skills-by-courier) | [Skills by CallStack](#skills-by-callstack) | [Skills by Expo](#skills-by-expo-team) |
+| [Skills by Better Auth](#skills-by-better-auth-team) |
 | [Skills by Tinybird](#skills-by-tinybird-team) | [Skills by HashiCorp](#skills-by-hashicorp-team-for-terraform) | [Skills by Sanity](#skills-by-sanity-team) |
 | [Skills by Firecrawl](#skills-by-firecrawl-team) | [Skills by Neon](#skills-by-neon-team) | [Skill by ClickHouse](#skill-by-clickhouse) |
 | [Skills by Remotion](#skills-by-remotion) | [Skills by Replicate](#skills-by-replicate) | [Skills by Typefully](#skills-by-typefully) |
@@ -134,6 +135,9 @@ Official skills by VoltAgent for building AI agents with the VoltAgent TypeScrip
 ### Skills by Stripe Team
 - **[stripe/stripe-best-practices](https://github.com/stripe/ai/tree/main/skills/stripe-best-practices)** - Best practices for building Stripe integrations
 - **[stripe/upgrade-stripe](https://github.com/stripe/ai/tree/main/skills/upgrade-stripe)** - Upgrade Stripe SDK and API versions
+
+### Skills by Courier
+- **[trycourier/courier-skills](https://github.com/trycourier/courier-skills)** - Multi-channel notifications via email, SMS, push, and chat
 
 ### Skills by CallStack
 - **[callstackincubator/react-native-best-practices](https://github.com/callstackincubator/agent-skills/blob/main/skills/react-native-best-practices/SKILL.md)** - Performance optimization for React Native apps from Callstack
