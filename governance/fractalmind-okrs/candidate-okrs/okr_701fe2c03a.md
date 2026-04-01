@@ -3,7 +3,7 @@
 - Candidate ID: `okr_701fe2c03a`
 - Objective: Review `ATP-Bench: Towards Agentic Tool Planning for MLLM Interleaved Generation` from academic-research and decide whether FractalMind should absorb it into product, governance, or OS work.
 - Governance: `L0`
-- Status: `proposed`
+- Status: `in_progress`
 - Score: `2.36`
 
 ## Sync Contract
