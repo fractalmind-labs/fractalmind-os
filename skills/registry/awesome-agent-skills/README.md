@@ -948,6 +948,13 @@ Official skills from Notion's repositories — workspace-aware skills for captur
 ### Community Skills
 
 <details>
+<summary><h3 style="display:inline">Vector Databases</h3></summary>
+
+- **[qdrant/skills](https://github.com/qdrant/skills)** - Skills for working with Qdrant vector database workflows and retrieval use cases
+
+</details>
+
+<details>
 <summary><h3 style="display:inline">Marketing</h3></summary>
 
 - **[BrianRWagner/ai-marketing-skills](https://github.com/BrianRWagner/ai-marketing-skills)** - 17 marketing frameworks for cold outreach, homepage audit, social cards, and more
