@@ -950,7 +950,7 @@ Official skills from Notion's repositories — workspace-aware skills for captur
 <details>
 <summary><h3 style="display:inline">Vector Databases</h3></summary>
 
-- **[qdrant/skills](https://github.com/qdrant/skills)** - Skills for working with Qdrant vector database workflows and retrieval use cases
+- **[qdrant/skills](https://github.com/qdrant/skills)** - Agent skills for Qdrant vector search, covering scaling, performance optimization, search quality, monitoring, deployment, model migration, version upgrades, and SDK usage across Python, TypeScript, Rust, Go, .NET, and Java
 
 </details>
 
