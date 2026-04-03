@@ -726,6 +726,219 @@ def _normalize_heartbeat_session_mode(value: object) -> str:
     return "restore"
 
 
+def _normalize_heartbeat_mode(value: object) -> str:
+    mode = str(value or "normal").strip().lower()
+    if mode in _HEARTBEAT_MODES:
+        return mode
+    return "normal"
+
+
+def _resolve_auto_starvation_skip_threshold(heartbeat: object) -> Optional[int]:
+    if not isinstance(heartbeat, dict):
+        return _HEARTBEAT_AUTO_STARVATION_SKIP_THRESHOLD
+
+    raw_value = heartbeat.get('auto_starvation_skip_threshold')
+    if raw_value is None:
+        recovery = heartbeat.get('recovery')
+        if isinstance(recovery, dict):
+            raw_value = recovery.get('auto_starvation_skip_threshold')
+
+    if raw_value is None:
+        return _HEARTBEAT_AUTO_STARVATION_SKIP_THRESHOLD
+
+    try:
+        threshold = int(raw_value)
+    except Exception:
+        return _HEARTBEAT_AUTO_STARVATION_SKIP_THRESHOLD
+
+    if threshold <= 0:
+        return None
+    return threshold
+
+
+def _resolve_codex_config_dir(working_dir: str) -> Path:
+    current = Path(working_dir).resolve()
+    for candidate in [current, *current.parents]:
+        if (candidate / '.git').exists():
+            return candidate / '.codex'
+    return current / '.codex'
+
+
+def _heartbeat_stop_hook_skip_file(repo_root: Path, agent_id: str) -> Path:
+    safe_agent_id = str(agent_id or 'unknown').strip().lower().replace('_', '-')
+    safe_agent_id = re.sub(r'[^a-z0-9_-]+', '-', safe_agent_id)
+    return (
+        repo_root
+        / '.claude'
+        / 'state'
+        / 'agent-manager'
+        / 'stop-hook-skips'
+        / f'{safe_agent_id}.json'
+    )
+
+
+def arm_codex_fullspeed_stop_hook_skip(
+    agent_ref: object,
+    *,
+    reason: str,
+    ttl_seconds: int = _FULL_SPEED_STOP_HOOK_SKIP_TTL_SECONDS,
+) -> bool:
+    agent_config = agent_ref if isinstance(agent_ref, dict) else resolve_agent(str(agent_ref or ''))
+    if not isinstance(agent_config, dict):
+        return False
+
+    heartbeat = agent_config.get('heartbeat')
+    if not isinstance(heartbeat, dict):
+        return False
+    if _normalize_heartbeat_mode(heartbeat.get('mode')) != 'full_speed':
+        return False
+
+    launcher = resolve_launcher_command(agent_config.get('launcher', ''))
+    if get_provider_key(launcher) != 'codex':
+        return False
+
+    agent_id = get_agent_id(agent_config)
+    repo_root = get_repo_root()
+    skip_file = _heartbeat_stop_hook_skip_file(repo_root, agent_id)
+    skip_file.parent.mkdir(parents=True, exist_ok=True)
+    expires_at = time.time() + max(1, int(ttl_seconds))
+    payload = {
+        'agent_id': agent_id,
+        'reason': str(reason or ''),
+        'expires_at': int(expires_at),
+        'created_at': int(time.time()),
+    }
+    skip_file.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding='utf-8')
+    return True
+
+
+def _build_fullspeed_stop_hook_command(
+    *,
+    repo_root: Path,
+    agent_file_id: str,
+    agent_id: str,
+    delay_seconds: int,
+) -> str:
+    hook_script = Path(__file__).resolve().parent / 'fullspeed_stop_hook.py'
+    parts = [
+        shlex.quote(sys.executable),
+        shlex.quote(str(hook_script)),
+        '--agent',
+        shlex.quote(str(agent_file_id)),
+        '--agent-id',
+        shlex.quote(str(agent_id)),
+        '--repo-root',
+        shlex.quote(str(repo_root)),
+        '--delay',
+        shlex.quote(str(max(0, int(delay_seconds)))),
+    ]
+    return " ".join(parts)
+
+
+def _is_managed_fullspeed_stop_hook(hook: dict[str, Any]) -> bool:
+    if str(hook.get('type') or '').strip() != 'command':
+        return False
+    if str(hook.get('statusMessage') or '').strip() == _FULL_SPEED_STOP_HOOK_STATUS_MESSAGE:
+        return True
+    command = str(hook.get('command') or '').strip()
+    return 'fullspeed_stop_hook.py' in command
+
+
+def _sync_codex_fullspeed_stop_hook(
+    agent_config: dict,
+    *,
+    working_dir: str,
+    repo_root: Optional[Path] = None,
+    delay_seconds: int = _FULL_SPEED_HEARTBEAT_DELAY_SECONDS,
+) -> dict[str, object]:
+    heartbeat = agent_config.get('heartbeat')
+    if not isinstance(heartbeat, dict):
+        return {'enabled': False, 'reason': 'no_heartbeat'}
+
+    heartbeat_mode = _normalize_heartbeat_mode(heartbeat.get('mode'))
+    launcher = resolve_launcher_command(agent_config.get('launcher', ''))
+    if get_provider_key(launcher) != 'codex':
+        if heartbeat_mode == 'full_speed':
+            return {'enabled': False, 'reason': 'unsupported_provider', 'mode': heartbeat_mode}
+        return {'enabled': False, 'reason': 'not_codex', 'mode': heartbeat_mode}
+
+    config_dir = _resolve_codex_config_dir(working_dir)
+    hooks_path = config_dir / 'hooks.json'
+    config_toml_path = config_dir / 'config.toml'
+    data: dict[str, Any] = {}
+    if hooks_path.exists():
+        try:
+            loaded = json.loads(hooks_path.read_text(encoding='utf-8'))
+        except Exception as exc:
+            raise ValueError(f"Invalid Codex hooks file: {hooks_path} ({exc})") from exc
+        if not isinstance(loaded, dict):
+            raise ValueError(f"Invalid Codex hooks file: {hooks_path} (expected top-level object)")
+        data = dict(loaded)
+
+    hooks_section = data.setdefault('hooks', {})
+    if not isinstance(hooks_section, dict):
+        raise ValueError(f"Invalid Codex hooks file: {hooks_path} (expected 'hooks' object)")
+
+    stop_groups_raw = hooks_section.get('Stop', [])
+    if stop_groups_raw is None:
+        stop_groups_raw = []
+    if not isinstance(stop_groups_raw, list):
+        raise ValueError(f"Invalid Codex hooks file: {hooks_path} (expected 'hooks.Stop' array)")
+
+    stop_groups: list[dict[str, Any]] = []
+    for group in stop_groups_raw:
+        if not isinstance(group, dict):
+            raise ValueError(f"Invalid Codex hooks file: {hooks_path} (expected Stop hook group object)")
+        group_hooks = group.get('hooks', [])
+        if not isinstance(group_hooks, list):
+            raise ValueError(f"Invalid Codex hooks file: {hooks_path} (expected Stop group 'hooks' array)")
+        filtered_hooks = []
+        for hook in group_hooks:
+            if not isinstance(hook, dict):
+                raise ValueError(f"Invalid Codex hooks file: {hooks_path} (expected hook object)")
+            is_managed = _is_managed_fullspeed_stop_hook(hook)
+            if not is_managed:
+                filtered_hooks.append(hook)
+        if filtered_hooks:
+            updated_group = dict(group)
+            updated_group['hooks'] = filtered_hooks
+            stop_groups.append(updated_group)
+
+    updated = False
+    previous_stop_groups = hooks_section.get('Stop')
+    if stop_groups:
+        hooks_section['Stop'] = stop_groups
+    else:
+        hooks_section.pop('Stop', None)
+
+    if hooks_section:
+        data['hooks'] = hooks_section
+    else:
+        data.pop('hooks', None)
+    if previous_stop_groups != hooks_section.get('Stop', None):
+        updated = True
+
+    if data:
+        config_dir.mkdir(parents=True, exist_ok=True)
+        serialized = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+        current_text = hooks_path.read_text(encoding='utf-8') if hooks_path.exists() else None
+        if current_text != serialized:
+            hooks_path.write_text(serialized, encoding='utf-8')
+            updated = True
+    elif hooks_path.exists():
+        hooks_path.unlink()
+        updated = True
+
+    return {
+        'enabled': True,
+        'active': False,
+        'reason': 'cleaned',
+        'mode': heartbeat_mode,
+        'updated': updated,
+        'hooks_path': str(hooks_path),
+    }
+
+
 def _get_compiled_context_left_patterns(launcher: str) -> list[re.Pattern]:
     provider_key = get_provider_key(launcher)
     cached = _CONTEXT_LEFT_PATTERN_CACHE.get(provider_key)
@@ -2213,6 +2426,7 @@ def cmd_heartbeat_run(args):
     print(f"   Session mode: {session_mode}")
 
     recovery_policy = _parse_heartbeat_recovery_policy(heartbeat, args)
+    auto_starvation_skip_threshold = _resolve_auto_starvation_skip_threshold(heartbeat)
     print(
         "   Recovery policy: "
         f"retry={recovery_policy['max_retries']} "
@@ -2351,19 +2565,22 @@ def cmd_heartbeat_run(args):
                 starvation_guard_armed = skip_reason_code != 'HB_AUTO_PENDING_SKIP'
                 consecutive_skip_count = 0
                 if starvation_guard_armed:
-                    consecutive_skip_count = _count_consecutive_auto_preflight_skips(
-                        repo_root,
-                        agent_id=agent_id,
-                    )
-                    if consecutive_skip_count >= _HEARTBEAT_AUTO_STARVATION_SKIP_THRESHOLD:
-                        recovery_action = 'auto_starvation_bypass'
-                        print(
-                            "⚠️  Auto-mode starvation guard triggered after "
-                            f"{consecutive_skip_count} consecutive preflight skips; "
-                            "dispatching one heartbeat attempt anyway"
-                        )
-                    else:
+                    if auto_starvation_skip_threshold is None:
                         starvation_guard_armed = False
+                    else:
+                        consecutive_skip_count = _count_consecutive_auto_preflight_skips(
+                            repo_root,
+                            agent_id=agent_id,
+                        )
+                        if consecutive_skip_count >= auto_starvation_skip_threshold:
+                            recovery_action = 'auto_starvation_bypass'
+                            print(
+                                "⚠️  Auto-mode starvation guard triggered after "
+                                f"{consecutive_skip_count} consecutive preflight skips; "
+                                "dispatching one heartbeat attempt anyway"
+                            )
+                        else:
+                            starvation_guard_armed = False
                 if not starvation_guard_armed:
                     print(
                         "⏭️  Agent is not idle "

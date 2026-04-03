@@ -70,6 +70,23 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         self.assertFalse(main._should_retry_heartbeat_attempt(failure_type='unknown', attempt_index=0, max_retries=1))
         self.assertFalse(main._should_retry_heartbeat_attempt(failure_type='send_fail', attempt_index=1, max_retries=1))
 
+    def test_resolve_auto_starvation_skip_threshold_defaults_and_disable(self):
+        self.assertEqual(
+            main._resolve_auto_starvation_skip_threshold({'enabled': True}),
+            main._HEARTBEAT_AUTO_STARVATION_SKIP_THRESHOLD,
+        )
+        self.assertEqual(
+            main._resolve_auto_starvation_skip_threshold({'auto_starvation_skip_threshold': 5}),
+            5,
+        )
+        self.assertEqual(
+            main._resolve_auto_starvation_skip_threshold({'recovery': {'auto_starvation_skip_threshold': 7}}),
+            7,
+        )
+        self.assertIsNone(
+            main._resolve_auto_starvation_skip_threshold({'auto_starvation_skip_threshold': 0}),
+        )
+
     def test_count_consecutive_auto_preflight_skips_stops_at_first_attempt(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
@@ -1336,6 +1353,65 @@ class HeartbeatRecoveryTests(unittest.TestCase):
         mock_audit.assert_called_once()
         self.assertEqual(mock_audit.call_args.kwargs.get('phase'), 'attempt')
         self.assertEqual(mock_audit.call_args.kwargs.get('recovery_action'), 'auto_starvation_bypass')
+
+    @patch('main._append_heartbeat_audit_event')
+    @patch('main.time.sleep', return_value=None)
+    @patch('main._run_heartbeat_attempt')
+    @patch('main._maybe_rollover_heartbeat_session', return_value=None)
+    @patch('main._count_consecutive_auto_preflight_skips', return_value=99)
+    @patch('main._heartbeat_preflight_runtime_state', return_value=('busy', 'busy_pattern:Thinking...'))
+    @patch('main._detect_agent_context_left_percent', return_value=55)
+    @patch('main.resolve_launcher_command', return_value='codex')
+    @patch('main.session_exists', return_value=True)
+    @patch('main.resolve_agent')
+    @patch('main.check_tmux', return_value=True)
+    def test_cmd_heartbeat_run_auto_mode_can_disable_starvation_bypass(
+        self,
+        _mock_tmux,
+        mock_resolve_agent,
+        _mock_session,
+        _mock_launcher,
+        _mock_context,
+        _mock_preflight,
+        _mock_skip_count,
+        _mock_rollover,
+        mock_run_attempt,
+        _mock_sleep,
+        mock_audit,
+    ):
+        mock_resolve_agent.return_value = {
+            'name': 'main',
+            'file_id': 'main',
+            'enabled': True,
+            'heartbeat': {
+                'enabled': True,
+                'session_mode': 'auto',
+                'auto_starvation_skip_threshold': 0,
+                'recovery': {
+                    'max_retries': 1,
+                    'retry_backoff_seconds': 0,
+                    'fallback_mode': 'none',
+                },
+            },
+            'launcher': 'codex',
+        }
+
+        args = type('Args', (), {
+            'agent': 'main',
+            'timeout': None,
+            'retry': None,
+            'backoff_seconds': 0,
+            'fallback_mode': None,
+            'notify_on_failure': False,
+            'notifier_channel': None,
+        })()
+
+        result = main.cmd_heartbeat_run(args)
+        self.assertEqual(result, 0)
+        mock_run_attempt.assert_not_called()
+        mock_audit.assert_called_once()
+        self.assertEqual(mock_audit.call_args.kwargs.get('phase'), 'preflight')
+        self.assertEqual(mock_audit.call_args.kwargs.get('failure_type'), 'busy_skip')
 
     @patch('main._append_heartbeat_audit_event')
     @patch('main._schedule_pending_heartbeat_rescue_timer', return_value=True)

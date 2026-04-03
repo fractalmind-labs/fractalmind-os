@@ -428,6 +428,7 @@ heartbeat:
 | `max_runtime` | string | | Maximum runtime (e.g., `5m`, `10m`) |
 | `session_mode` | string | | Session policy: `restore` (default), `auto` (rollover when context <25%), `fresh` (always rollover after handoff) |
 | `mode` | string | | Heartbeat trigger mode: `normal` (default cron only) or `full_speed` (Codex Stop hook schedules `start --restore` + `heartbeat run` 5s after a real stop event) |
+| `auto_starvation_skip_threshold` | int | | `auto` mode only. Default `3`; set `0` to disable the forced-dispatch starvation bypass after consecutive preflight skips |
 | `enabled` | bool | | Default: `true` |
 
 `full_speed` is currently only supported for `launcher: codex`. It uses a stable Codex `Stop` hook that reads the latest heartbeat config at stop time. The first time you add this managed hook to an already-running session, you still need one fresh start so Codex loads the hook; after that, switching `normal`/`full_speed` does not require restarting the session.
