@@ -3,7 +3,7 @@
 - Candidate ID: `okr_8f48a833da`
 - Objective: Bring `fractalmind-ai/five-step-workflow-skill` into local discovery coverage and identify the smallest reusable workflow-decomposition, staged execution, or operator-guidance pattern that heartbeat should absorb next.
 - Governance: `L0`
-- Status: `in_progress`
+- Status: `resolved`
 - Score: `2.18`
 
 ## Sync Contract
