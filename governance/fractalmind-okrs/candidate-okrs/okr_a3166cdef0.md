@@ -4,7 +4,7 @@
 - Objective: Review `Vaishnavi-19/sales_agent` from github-wide and decide whether FractalMind should absorb it into product, governance, or OS work.
 - Governance: `L0`
 - Status: `resolved`
-- Score: `0.07`
+- Score: `0.74`
 
 ## Sync Contract
 

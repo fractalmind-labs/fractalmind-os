@@ -4,7 +4,7 @@
 - Objective: Review `dereyesm/hermes` from github-wide and decide whether FractalMind should absorb it into product, governance, or OS work.
 - Governance: `L0`
 - Status: `resolved`
-- Score: `4.71`
+- Score: `4.38`
 
 ## Sync Contract
 
