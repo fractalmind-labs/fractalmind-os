@@ -14,6 +14,7 @@ def get_command_handlers(
     cmd_assign: Callable,
     cmd_schedule: Callable,
     cmd_heartbeat: Callable,
+    cmd_dream: Callable,
     cmd_timer: Callable,
     cmd_inbound: Callable,
 ) -> dict[str, Callable]:
@@ -28,6 +29,7 @@ def get_command_handlers(
         'assign': cmd_assign,
         'schedule': cmd_schedule,
         'heartbeat': cmd_heartbeat,
+        'dream': cmd_dream,
         'timer': cmd_timer,
         'inbound': cmd_inbound,
     }

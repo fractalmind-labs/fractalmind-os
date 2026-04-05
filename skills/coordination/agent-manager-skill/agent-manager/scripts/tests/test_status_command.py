@@ -34,11 +34,18 @@ class StatusCommandTests(unittest.TestCase):
     def test_status_running_uses_recent_audit_event(self):
         agent_config = {'name': 'dev', 'file_id': 'EMP_0001', 'enabled': True, 'launcher': 'codex'}
         audit_file = self.temp_root / '.claude' / 'state' / 'agent-manager' / 'heartbeat-audit' / 'emp-0001.jsonl'
+        dream_audit = self.temp_root / '.claude' / 'state' / 'agent-manager' / 'dream-audit' / 'emp-0001.jsonl'
+        dream_state = self.temp_root / '.claude' / 'state' / 'agent-manager' / 'dream-state' / 'emp-0001.json'
         audit_file.parent.mkdir(parents=True, exist_ok=True)
+        dream_audit.parent.mkdir(parents=True, exist_ok=True)
+        dream_state.parent.mkdir(parents=True, exist_ok=True)
         with audit_file.open('w', encoding='utf-8') as f:
             f.write('not-json\n')
             f.write(json.dumps({'hb_id': 'HB-1', 'timestamp': '2026-02-09T09:00:00Z', 'send_status': 'ok', 'ack_status': 'ack'}) + '\n')
             f.write(json.dumps({'hb_id': 'HB-2', 'timestamp': '2026-02-09T09:10:00Z', 'send_status': 'ok', 'ack_status': 'timeout'}) + '\n')
+        with dream_audit.open('w', encoding='utf-8') as f:
+            f.write(json.dumps({'event': 'run_completed', 'dream_id': 'DREAM-1'}) + '\n')
+        dream_state.write_text(json.dumps({'window_id': 'dream-window-HB-2', 'triggered_for_window': True}), encoding='utf-8')
 
         with patch('main.check_tmux', return_value=True), \
                 patch('main.resolve_agent', return_value=agent_config), \
@@ -56,6 +63,8 @@ class StatusCommandTests(unittest.TestCase):
         self.assertIn('Runtime elapsed: 14s', text)
         self.assertIn('Recent heartbeat: HB-2 (2026-02-09T09:10:00Z)', text)
         self.assertIn('Heartbeat detail: send=ok ack=timeout', text)
+        self.assertIn('Recent dream: run_completed (DREAM-1)', text)
+        self.assertIn('Dream window: dream-window-HB-2 (triggered)', text)
 
     def test_status_running_falls_back_to_tmux_output_hb_id(self):
         agent_config = {'name': 'qa', 'file_id': 'EMP_0002', 'enabled': True, 'launcher': 'codex'}

@@ -238,6 +238,7 @@ def run_heartbeat_attempt(
         return {
             'send_status': 'fail',
             'ack_status': 'not_checked',
+            'ack_evidence': 'none',
             'failure_type': failure_type,
             'reason_code': failure_reason_code(failure_type=failure_type, send_status='fail', ack_status='not_checked'),
             'last_state': None,
@@ -270,6 +271,7 @@ def run_heartbeat_attempt(
                 return {
                     'send_status': 'ok',
                     'ack_status': 'yielded',
+                    'ack_evidence': 'yielded',
                     'failure_type': 'user_queue_yield',
                     'reason_code': 'HB_USER_QUEUE_YIELD',
                     'last_state': last_state,
@@ -338,6 +340,7 @@ def run_heartbeat_attempt(
                         return {
                             'send_status': 'ok',
                             'ack_status': 'yielded',
+                            'ack_evidence': 'yielded',
                             'failure_type': 'user_queue_yield',
                             'reason_code': 'HB_USER_QUEUE_YIELD',
                             'last_state': last_state,
@@ -399,6 +402,7 @@ def run_heartbeat_attempt(
     return {
         'send_status': 'ok',
         'ack_status': ack_status,
+        'ack_evidence': 'direct_heartbeat_ok' if direct_ack else ('idle_only' if ack_status == 'ack' else 'none'),
         'failure_type': failure_type,
         'reason_code': reason_code,
         'last_state': last_state,
