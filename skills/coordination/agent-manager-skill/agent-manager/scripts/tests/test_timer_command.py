@@ -54,6 +54,32 @@ class TimerCommandTests(unittest.TestCase):
         self.assertEqual(payload['timeout'], '8m')
         self.assertEqual(payload['worker_pid'], 12345)
 
+    def test_timer_rescue_schedules_state_and_worker(self):
+        args = argparse.Namespace(
+            timer_command='rescue',
+            agent='main',
+            delay='5s',
+            timeout='8m',
+            reason='stale pending',
+            no_prime=False,
+            fresh=False,
+            heartbeat_id='20260326-010101',
+            dedupe_key='pending-rescue:main:20260326-010101',
+        )
+        with patch('commands.timer._schedule_worker', return_value=12347):
+            code, _text = self._run(args)
+
+        self.assertEqual(code, 0)
+        timer_files = list((self.temp_root / '.claude' / 'state' / 'agent-manager' / 'timers').glob('*.json'))
+        payload = json.loads(timer_files[0].read_text(encoding='utf-8'))
+        self.assertEqual(payload['kind'], 'rescue')
+        self.assertEqual(payload['agent'], 'main')
+        self.assertEqual(payload['timeout'], '8m')
+        self.assertTrue(payload['prime'])
+        self.assertEqual(payload['heartbeat_id'], '20260326-010101')
+        self.assertEqual(payload['dedupe_key'], 'pending-rescue:main:20260326-010101')
+        self.assertEqual(payload['worker_pid'], 12347)
+
     def test_timer_command_requires_command_args(self):
         args = argparse.Namespace(timer_command='command', delay='5s', command_args=['--'])
         code, text = self._run(args)
@@ -70,6 +96,36 @@ class TimerCommandTests(unittest.TestCase):
         payload = json.loads(timer_files[0].read_text(encoding='utf-8'))
         self.assertEqual(payload['kind'], 'command')
         self.assertEqual(payload['command_args'], ['heartbeat', 'run', 'main', '--timeout', '8m'])
+
+    def test_timer_rescue_dedupes_existing_pending_timer(self):
+        timer_dir = self.temp_root / '.claude' / 'state' / 'agent-manager' / 'timers'
+        timer_dir.mkdir(parents=True, exist_ok=True)
+        (timer_dir / 'existing.json').write_text(json.dumps({
+            'timer_id': 'timer-existing',
+            'kind': 'rescue',
+            'status': 'pending',
+            'dedupe_key': 'pending-rescue:main:20260326-010101',
+            'created_at_epoch': 1,
+            'run_at_epoch': 2,
+        }), encoding='utf-8')
+
+        args = argparse.Namespace(
+            timer_command='rescue',
+            agent='main',
+            delay='5s',
+            timeout='8m',
+            reason='stale pending',
+            no_prime=False,
+            fresh=False,
+            heartbeat_id='20260326-010101',
+            dedupe_key='pending-rescue:main:20260326-010101',
+        )
+        with patch('commands.timer._schedule_worker') as worker_mock:
+            code, text = self._run(args)
+
+        self.assertEqual(code, 0)
+        self.assertIn('Timer already scheduled', text)
+        worker_mock.assert_not_called()
 
     def test_timer_list_prints_recent_records(self):
         timer_dir = self.temp_root / '.claude' / 'state' / 'agent-manager' / 'timers'

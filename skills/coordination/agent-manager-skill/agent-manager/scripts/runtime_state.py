@@ -34,6 +34,24 @@ def detect_first_pattern(output: str, patterns: Sequence[str]) -> Optional[str]:
     return None
 
 
+def _tail_text(output: str, *, max_lines: int) -> str:
+    lines = str(output or '').splitlines()
+    if len(lines) <= max_lines:
+        return str(output or '')
+    return "\n".join(lines[-max_lines:])
+
+
+def _detect_codex_conversation_interrupted(output: str) -> bool:
+    """True only when Codex's UI interrupted marker is visible.
+
+    We intentionally do NOT treat the plain substring "Conversation interrupted" as
+    a runtime state, because it can appear in user-provided text (e.g. Slack
+    messages, quoted logs, runbooks) and would cause false positives.
+    """
+    # Codex renders a square marker at the start of the line.
+    return bool(re.search(r'(?m)^\s*■\s*Conversation interrupted\b', str(output or '')))
+
+
 def parse_elapsed_seconds(output: str) -> Optional[int]:
     """Best-effort parse of an on-screen elapsed timer (e.g., "[⏱ 5m 7s]")."""
     if not output:
@@ -169,11 +187,15 @@ def evaluate_runtime_state(
     # Detect interrupted turn (Codex suggestion tip appeared mid-turn).
     interrupted_patterns = list(cfg.get('interrupted_patterns', []) or [])
     suggestion_tip_re = cfg.get('suggestion_tip_pattern')
+    # Only classify as interrupted when Codex's UI marker is present in recent output.
+    # Do not let arbitrary quoted text (e.g. Slack messages) trigger it.
     interrupted_match = detect_first_pattern(output, interrupted_patterns)
     if interrupted_match:
-        payload['state'] = 'interrupted'
-        payload['reason'] = f'interrupted:{interrupted_match}'
-        return payload
+        tail = _tail_text(output, max_lines=20)
+        if _detect_codex_conversation_interrupted(tail):
+            payload['state'] = 'interrupted'
+            payload['reason'] = f'interrupted:{interrupted_match}'
+            return payload
 
     # Suggestion tip visible on last line(s) while no busy pattern → interrupted.
     if suggestion_tip_re:

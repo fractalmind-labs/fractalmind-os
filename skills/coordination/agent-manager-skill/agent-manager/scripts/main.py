@@ -717,6 +717,13 @@ _HEARTBEAT_TRACE_MAX_LIMIT = 5000
 _DREAM_ID_PATTERN = re.compile(r"\[DREAM_ID:([^\]\s]+)\]")
 _HEARTBEAT_AUTO_STARVATION_SKIP_THRESHOLD = 3
 _HEARTBEAT_AUTO_STARVATION_LOOKBACK_LIMIT = 32
+_HEARTBEAT_MODES = {"normal", "full_speed"}
+_HEARTBEAT_PENDING_RESCUE_AGE_SECONDS = 20 * 60
+_HEARTBEAT_PENDING_RESCUE_SKIP_THRESHOLD = 3
+_HEARTBEAT_PENDING_RESCUE_MIN_DELAY_SECONDS = 5
+_FULL_SPEED_HEARTBEAT_DELAY_SECONDS = 5
+_FULL_SPEED_STOP_HOOK_STATUS_MESSAGE = "agent-manager full-speed heartbeat hook"
+_FULL_SPEED_STOP_HOOK_SKIP_TTL_SECONDS = 180
 
 
 def _normalize_heartbeat_session_mode(value: object) -> str:
@@ -724,6 +731,219 @@ def _normalize_heartbeat_session_mode(value: object) -> str:
     if mode in _HEARTBEAT_SESSION_MODES:
         return mode
     return "restore"
+
+
+def _normalize_heartbeat_mode(value: object) -> str:
+    mode = str(value or "normal").strip().lower()
+    if mode in _HEARTBEAT_MODES:
+        return mode
+    return "normal"
+
+
+def _resolve_auto_starvation_skip_threshold(heartbeat: object) -> Optional[int]:
+    if not isinstance(heartbeat, dict):
+        return _HEARTBEAT_AUTO_STARVATION_SKIP_THRESHOLD
+
+    raw_value = heartbeat.get('auto_starvation_skip_threshold')
+    if raw_value is None:
+        recovery = heartbeat.get('recovery')
+        if isinstance(recovery, dict):
+            raw_value = recovery.get('auto_starvation_skip_threshold')
+
+    if raw_value is None:
+        return _HEARTBEAT_AUTO_STARVATION_SKIP_THRESHOLD
+
+    try:
+        threshold = int(raw_value)
+    except Exception:
+        return _HEARTBEAT_AUTO_STARVATION_SKIP_THRESHOLD
+
+    if threshold <= 0:
+        return None
+    return threshold
+
+
+def _resolve_codex_config_dir(working_dir: str) -> Path:
+    current = Path(working_dir).resolve()
+    for candidate in [current, *current.parents]:
+        if (candidate / '.git').exists():
+            return candidate / '.codex'
+    return current / '.codex'
+
+
+def _heartbeat_stop_hook_skip_file(repo_root: Path, agent_id: str) -> Path:
+    safe_agent_id = str(agent_id or 'unknown').strip().lower().replace('_', '-')
+    safe_agent_id = re.sub(r'[^a-z0-9_-]+', '-', safe_agent_id)
+    return (
+        repo_root
+        / '.claude'
+        / 'state'
+        / 'agent-manager'
+        / 'stop-hook-skips'
+        / f'{safe_agent_id}.json'
+    )
+
+
+def arm_codex_fullspeed_stop_hook_skip(
+    agent_ref: object,
+    *,
+    reason: str,
+    ttl_seconds: int = _FULL_SPEED_STOP_HOOK_SKIP_TTL_SECONDS,
+) -> bool:
+    agent_config = agent_ref if isinstance(agent_ref, dict) else resolve_agent(str(agent_ref or ''))
+    if not isinstance(agent_config, dict):
+        return False
+
+    heartbeat = agent_config.get('heartbeat')
+    if not isinstance(heartbeat, dict):
+        return False
+    if _normalize_heartbeat_mode(heartbeat.get('mode')) != 'full_speed':
+        return False
+
+    launcher = resolve_launcher_command(agent_config.get('launcher', ''))
+    if get_provider_key(launcher) != 'codex':
+        return False
+
+    agent_id = get_agent_id(agent_config)
+    repo_root = get_repo_root()
+    skip_file = _heartbeat_stop_hook_skip_file(repo_root, agent_id)
+    skip_file.parent.mkdir(parents=True, exist_ok=True)
+    expires_at = time.time() + max(1, int(ttl_seconds))
+    payload = {
+        'agent_id': agent_id,
+        'reason': str(reason or ''),
+        'expires_at': int(expires_at),
+        'created_at': int(time.time()),
+    }
+    skip_file.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding='utf-8')
+    return True
+
+
+def _build_fullspeed_stop_hook_command(
+    *,
+    repo_root: Path,
+    agent_file_id: str,
+    agent_id: str,
+    delay_seconds: int,
+) -> str:
+    hook_script = Path(__file__).resolve().parent / 'fullspeed_stop_hook.py'
+    parts = [
+        shlex.quote(sys.executable),
+        shlex.quote(str(hook_script)),
+        '--agent',
+        shlex.quote(str(agent_file_id)),
+        '--agent-id',
+        shlex.quote(str(agent_id)),
+        '--repo-root',
+        shlex.quote(str(repo_root)),
+        '--delay',
+        shlex.quote(str(max(0, int(delay_seconds)))),
+    ]
+    return " ".join(parts)
+
+
+def _is_managed_fullspeed_stop_hook(hook: dict[str, Any]) -> bool:
+    if str(hook.get('type') or '').strip() != 'command':
+        return False
+    if str(hook.get('statusMessage') or '').strip() == _FULL_SPEED_STOP_HOOK_STATUS_MESSAGE:
+        return True
+    command = str(hook.get('command') or '').strip()
+    return 'fullspeed_stop_hook.py' in command
+
+
+def _sync_codex_fullspeed_stop_hook(
+    agent_config: dict,
+    *,
+    working_dir: str,
+    repo_root: Optional[Path] = None,
+    delay_seconds: int = _FULL_SPEED_HEARTBEAT_DELAY_SECONDS,
+) -> dict[str, object]:
+    heartbeat = agent_config.get('heartbeat')
+    if not isinstance(heartbeat, dict):
+        return {'enabled': False, 'reason': 'no_heartbeat'}
+
+    heartbeat_mode = _normalize_heartbeat_mode(heartbeat.get('mode'))
+    launcher = resolve_launcher_command(agent_config.get('launcher', ''))
+    if get_provider_key(launcher) != 'codex':
+        if heartbeat_mode == 'full_speed':
+            return {'enabled': False, 'reason': 'unsupported_provider', 'mode': heartbeat_mode}
+        return {'enabled': False, 'reason': 'not_codex', 'mode': heartbeat_mode}
+
+    config_dir = _resolve_codex_config_dir(working_dir)
+    hooks_path = config_dir / 'hooks.json'
+    config_toml_path = config_dir / 'config.toml'
+    data: dict[str, Any] = {}
+    if hooks_path.exists():
+        try:
+            loaded = json.loads(hooks_path.read_text(encoding='utf-8'))
+        except Exception as exc:
+            raise ValueError(f"Invalid Codex hooks file: {hooks_path} ({exc})") from exc
+        if not isinstance(loaded, dict):
+            raise ValueError(f"Invalid Codex hooks file: {hooks_path} (expected top-level object)")
+        data = dict(loaded)
+
+    hooks_section = data.setdefault('hooks', {})
+    if not isinstance(hooks_section, dict):
+        raise ValueError(f"Invalid Codex hooks file: {hooks_path} (expected 'hooks' object)")
+
+    stop_groups_raw = hooks_section.get('Stop', [])
+    if stop_groups_raw is None:
+        stop_groups_raw = []
+    if not isinstance(stop_groups_raw, list):
+        raise ValueError(f"Invalid Codex hooks file: {hooks_path} (expected 'hooks.Stop' array)")
+
+    stop_groups: list[dict[str, Any]] = []
+    for group in stop_groups_raw:
+        if not isinstance(group, dict):
+            raise ValueError(f"Invalid Codex hooks file: {hooks_path} (expected Stop hook group object)")
+        group_hooks = group.get('hooks', [])
+        if not isinstance(group_hooks, list):
+            raise ValueError(f"Invalid Codex hooks file: {hooks_path} (expected Stop group 'hooks' array)")
+        filtered_hooks = []
+        for hook in group_hooks:
+            if not isinstance(hook, dict):
+                raise ValueError(f"Invalid Codex hooks file: {hooks_path} (expected hook object)")
+            is_managed = _is_managed_fullspeed_stop_hook(hook)
+            if not is_managed:
+                filtered_hooks.append(hook)
+        if filtered_hooks:
+            updated_group = dict(group)
+            updated_group['hooks'] = filtered_hooks
+            stop_groups.append(updated_group)
+
+    updated = False
+    previous_stop_groups = hooks_section.get('Stop')
+    if stop_groups:
+        hooks_section['Stop'] = stop_groups
+    else:
+        hooks_section.pop('Stop', None)
+
+    if hooks_section:
+        data['hooks'] = hooks_section
+    else:
+        data.pop('hooks', None)
+    if previous_stop_groups != hooks_section.get('Stop', None):
+        updated = True
+
+    if data:
+        config_dir.mkdir(parents=True, exist_ok=True)
+        serialized = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+        current_text = hooks_path.read_text(encoding='utf-8') if hooks_path.exists() else None
+        if current_text != serialized:
+            hooks_path.write_text(serialized, encoding='utf-8')
+            updated = True
+    elif hooks_path.exists():
+        hooks_path.unlink()
+        updated = True
+
+    return {
+        'enabled': True,
+        'active': False,
+        'reason': 'cleaned',
+        'mode': heartbeat_mode,
+        'updated': updated,
+        'hooks_path': str(hooks_path),
+    }
 
 
 def _get_compiled_context_left_patterns(launcher: str) -> list[re.Pattern]:
@@ -902,8 +1122,44 @@ def _has_pending_heartbeat(pane_output: str, stale_threshold_seconds: int = 900)
     return False, ''
 
 
+def _generate_heartbeat_id(now: Optional[datetime] = None) -> str:
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    current = current.astimezone(timezone.utc)
+    return current.strftime('%Y%m%d-%H%M%S')
+
+
+def _heartbeat_id_age_seconds(heartbeat_id: object, *, now: Optional[datetime] = None) -> Optional[int]:
+    text = str(heartbeat_id or '').strip()
+    if not text:
+        return None
+    try:
+        hb_time = datetime.strptime(text, '%Y%m%d-%H%M%S').replace(tzinfo=timezone.utc)
+    except Exception:
+        return None
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    current = current.astimezone(timezone.utc)
+    return max(0, int((current - hb_time).total_seconds()))
+
+
+def _heartbeat_already_acknowledged(repo_root: Path, *, agent_id: str, heartbeat_id: str) -> bool:
+    if not heartbeat_id:
+        return False
+    events = _read_heartbeat_audit_events(repo_root, agent_id=agent_id, heartbeat_id=heartbeat_id, limit=20)
+    for event in events:
+        if str(event.get('send_status', '')) != 'ok':
+            continue
+        if str(event.get('ack_status', '')) in {'ack', 'yielded'}:
+            return True
+    return False
+
+
 def _heartbeat_preflight_runtime_state(
     *,
+    repo_root: Optional[Path] = None,
     agent_id: str,
     launcher: str,
     sample_count: int = _HEARTBEAT_PREFLIGHT_SAMPLE_COUNT,
@@ -937,7 +1193,8 @@ def _heartbeat_preflight_runtime_state(
     # Check for pending heartbeat in pane before sampling.
     pending, pending_hb_id = _has_pending_heartbeat(previous_output)
     if pending:
-        return 'busy', f'pending_heartbeat:{pending_hb_id}'
+        if repo_root is None or not _heartbeat_already_acknowledged(repo_root, agent_id=agent_id, heartbeat_id=pending_hb_id):
+            return 'busy', f'pending_heartbeat:{pending_hb_id}'
 
     for sample_index in range(1, samples):
         time.sleep(interval)
@@ -1440,6 +1697,7 @@ def _count_consecutive_auto_preflight_skips(
     repo_root: Path,
     *,
     agent_id: str,
+    reason_codes: Optional[set[str]] = None,
     limit: int = _HEARTBEAT_AUTO_STARVATION_LOOKBACK_LIMIT,
 ) -> int:
     events = _read_heartbeat_audit_events(
@@ -1451,8 +1709,18 @@ def _count_consecutive_auto_preflight_skips(
     for event in events:
         if not _is_auto_preflight_skip_event(event):
             break
+        if reason_codes is not None and str(event.get('reason_code', '')) not in reason_codes:
+            break
         count += 1
     return count
+
+
+def _parse_pending_heartbeat_reason(reason: object) -> str:
+    text = str(reason or '').strip()
+    prefix = 'pending_heartbeat:'
+    if not text.startswith(prefix):
+        return ''
+    return text[len(prefix):].strip()
 
 
 def cmd_heartbeat_trace(args) -> int:
@@ -1621,6 +1889,47 @@ def _notify_heartbeat_failure(
         heartbeat_id=heartbeat_id,
         failure_type=failure_type,
     )
+
+
+def _schedule_pending_heartbeat_rescue_timer(
+    *,
+    agent_file_id: str,
+    pending_heartbeat_id: str,
+    delay_seconds: int,
+    timeout_seconds: Optional[int],
+) -> bool:
+    delay = max(_HEARTBEAT_PENDING_RESCUE_MIN_DELAY_SECONDS, int(delay_seconds or 0))
+    dedupe_key = f"pending-rescue:{str(agent_file_id or '').strip().lower()}:{pending_heartbeat_id}"
+    args = argparse.Namespace(
+        timer_command='rescue',
+        agent=agent_file_id,
+        delay=f'{delay}s',
+        timeout=f'{int(timeout_seconds)}s' if timeout_seconds else None,
+        reason='auto_pending_heartbeat_rescue',
+        no_prime=False,
+        fresh=False,
+        heartbeat_id=pending_heartbeat_id,
+        dedupe_key=dedupe_key,
+    )
+    return cmd_timer(args) == 0
+
+
+def _restart_heartbeat_session_restore(agent_file_id: str, agent_name: str, agent_id: str) -> bool:
+    print(f"♻️  Restarting '{agent_name}' in restore mode")
+    if session_exists(agent_id):
+        stop_session(agent_id)
+        time.sleep(1)
+
+    restart_args = argparse.Namespace(
+        agent=agent_file_id,
+        working_dir=None,
+        restore=True,
+        tmux_layout='sessions',
+    )
+    if cmd_start(restart_args) != 0:
+        print(f"❌ Failed to restart '{agent_name}' in restore mode")
+        return False
+    return True
 
 
 def _restart_heartbeat_session_fresh(agent_file_id: str, agent_name: str, agent_id: str) -> bool:
@@ -1913,6 +2222,7 @@ def cmd_heartbeat(args):
     return heartbeat_cmd_heartbeat(
         args,
         run_handler=cmd_heartbeat_run,
+        rescue_handler=cmd_heartbeat_rescue,
         trace_handler=cmd_heartbeat_trace,
         slo_handler=cmd_heartbeat_slo,
     )
@@ -2010,6 +2320,7 @@ def cmd_dream_run(args):
 
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
     preflight_state, preflight_reason = _heartbeat_preflight_runtime_state(
+        repo_root=repo_root,
         agent_id=agent_id,
         launcher=launcher,
     )
@@ -2086,6 +2397,62 @@ def cmd_dream_run(args):
     return 1
 
 
+def cmd_heartbeat_rescue(args):
+    """Force-stop/start one heartbeat session and optionally prime it."""
+    if not check_tmux():
+        print("❌ tmux is not installed")
+        return 1
+
+    agent_config = resolve_agent(args.agent)
+    if not agent_config:
+        print(f"❌ Agent '{args.agent}' not found")
+        return 1
+
+    agent_name = agent_config['name']
+    agent_file_id = agent_config['file_id']
+    agent_id = get_agent_id(agent_config)
+    reason = str(getattr(args, 'reason', '') or '').strip()
+    prime = not bool(getattr(args, 'no_prime', False))
+    use_fresh = bool(getattr(args, 'fresh', False))
+
+    print(f"🛟 Heartbeat rescue: {agent_name}")
+    if reason:
+        print(f"   Reason: {reason}")
+    print(f"   Prime after restart: {'yes' if prime else 'no'}")
+    print(f"   Restart mode: {'fresh' if use_fresh else 'restore'}")
+
+    if use_fresh:
+        restarted = _restart_heartbeat_session_fresh(
+            agent_file_id,
+            agent_name,
+            agent_id,
+            deps=_lifecycle_deps_module(),
+        )
+    else:
+        restarted = _restart_heartbeat_session_restore(agent_file_id, agent_name, agent_id)
+    if not restarted:
+        return 1
+
+    if not prime:
+        print("✅ Heartbeat rescue completed (prime skipped)")
+        return 0
+
+    prime_args = argparse.Namespace(
+        agent=agent_file_id,
+        timeout=getattr(args, 'timeout', None),
+        retry=0,
+        backoff_seconds=0,
+        fallback_mode='none',
+        notify_on_failure=False,
+        notifier_channel=None,
+        force_session_mode='force',
+    )
+    prime_result = cmd_heartbeat_run(prime_args)
+    if prime_result == 0:
+        print("✅ Heartbeat rescue completed and prime pass succeeded")
+    return prime_result
+
+
 def cmd_heartbeat_run(args):
     """Run a heartbeat check for an agent."""
     if not check_tmux():
@@ -2156,6 +2523,7 @@ def cmd_heartbeat_run(args):
     print(f"   Session mode: {session_mode}")
 
     recovery_policy = _parse_heartbeat_recovery_policy(heartbeat, args)
+    auto_starvation_skip_threshold = _resolve_auto_starvation_skip_threshold(heartbeat)
     print(
         "   Recovery policy: "
         f"retry={recovery_policy['max_retries']} "
@@ -2165,7 +2533,7 @@ def cmd_heartbeat_run(args):
     )
 
     # Standard heartbeat message (with traceable id for delivery debugging)
-    heartbeat_id = time.strftime('%Y%m%d-%H%M%S')
+    heartbeat_id = _generate_heartbeat_id()
     print(f"   HB_ID: {heartbeat_id}")
     recovery_action = ''
 
@@ -2231,69 +2599,121 @@ def cmd_heartbeat_run(args):
 
     if session_mode == 'auto':
         preflight_state, preflight_reason = _heartbeat_preflight_runtime_state(
+            repo_root=repo_root,
             agent_id=agent_id,
             launcher=launcher,
         )
         if preflight_state in {'busy', 'stuck', 'blocked', 'error'}:
             skip_failure_type = 'busy_skip'
             skip_reason_code = 'HB_AUTO_BUSY_SKIP'
+            skip_recovery_action = 'skip_busy'
             if preflight_state == 'busy' and str(preflight_reason).startswith('preflight_pane_changed:'):
                 skip_failure_type = 'active_skip'
                 skip_reason_code = 'HB_AUTO_ACTIVE_SKIP'
             elif preflight_state == 'busy' and str(preflight_reason).startswith('pending_heartbeat:'):
                 skip_failure_type = 'pending_skip'
                 skip_reason_code = 'HB_AUTO_PENDING_SKIP'
-            starvation_guard_armed = skip_reason_code != 'HB_AUTO_PENDING_SKIP'
-            consecutive_skip_count = 0
-            if starvation_guard_armed:
-                consecutive_skip_count = _count_consecutive_auto_preflight_skips(
+                pending_hb_id = _parse_pending_heartbeat_reason(preflight_reason)
+                pending_age_seconds = _heartbeat_id_age_seconds(pending_hb_id)
+                pending_skip_count = _count_consecutive_auto_preflight_skips(
                     repo_root,
                     agent_id=agent_id,
+                    reason_codes={'HB_AUTO_PENDING_SKIP'},
                 )
-                if consecutive_skip_count >= _HEARTBEAT_AUTO_STARVATION_SKIP_THRESHOLD:
-                    recovery_action = 'auto_starvation_bypass'
-                    print(
-                        "⚠️  Auto-mode starvation guard triggered after "
-                        f"{consecutive_skip_count} consecutive preflight skips; "
-                        "dispatching one heartbeat attempt anyway"
+                should_rescue_pending = (
+                    (pending_age_seconds is not None and pending_age_seconds >= _HEARTBEAT_PENDING_RESCUE_AGE_SECONDS)
+                    or pending_skip_count >= _HEARTBEAT_PENDING_RESCUE_SKIP_THRESHOLD
+                )
+                if should_rescue_pending:
+                    age_desc = (
+                        f"{pending_age_seconds}s old"
+                        if pending_age_seconds is not None
+                        else 'age=unknown'
                     )
-                else:
-                    starvation_guard_armed = False
-            if not starvation_guard_armed:
-                print(
-                    "⏭️  Agent is not idle "
-                    f"(state={preflight_state}, reason={preflight_reason}); "
-                    "skipping heartbeat dispatch in auto mode to avoid batch accumulation"
-                )
-                _append_heartbeat_audit_event(
-                    repo_root,
-                    agent_id=agent_id,
-                    heartbeat_id=heartbeat_id,
-                    send_status='skip',
-                    ack_status='not_checked',
-                    duration_ms=0,
-                    context_left=context_left_percent,
-                    failure_type=skip_failure_type,
-                    session_mode=session_mode,
-                    phase='preflight',
-                    attempt=0,
-                    recovery_action='skip_busy',
-                    reason_code=skip_reason_code,
-                    ack_evidence='none',
-                )
-                _maybe_trigger_dream_from_heartbeat(
-                    repo_root=repo_root,
-                    agent_config=agent_config,
-                    agent_id=agent_id,
-                    agent_file_id=agent_file_id,
-                    heartbeat=heartbeat,
-                    heartbeat_id=heartbeat_id,
-                    heartbeat_timestamp=_utc_now_iso(),
-                    ack_status='not_checked',
-                    ack_evidence='none',
-                    failure_type=skip_failure_type,
-                )
-                return 0
+                    print(
+                        "🛟 Pending heartbeat rescue triggered "
+                        f"(hb_id={pending_hb_id or 'unknown'}, age={age_desc}, "
+                        f"consecutive_pending_skips={pending_skip_count})"
+                    )
+                    if not _restart_heartbeat_session_restore(agent_file_id, agent_name, agent_id):
+                        print("⚠️  Pending heartbeat rescue failed; falling back to skip")
+                    else:
+                        recovery_action = 'auto_pending_rescue'
+                        context_left_percent = _detect_agent_context_left_percent(agent_id, launcher=launcher)
+                        print("♻️  Pending heartbeat rescue completed; continuing current heartbeat run")
+                        preflight_state = 'idle'
+                        preflight_reason = 'auto_pending_rescue_completed'
+                elif pending_hb_id:
+                    remaining_delay = _HEARTBEAT_PENDING_RESCUE_AGE_SECONDS
+                    if pending_age_seconds is not None:
+                        remaining_delay = max(
+                            _HEARTBEAT_PENDING_RESCUE_MIN_DELAY_SECONDS,
+                            _HEARTBEAT_PENDING_RESCUE_AGE_SECONDS - pending_age_seconds,
+                        )
+                    if _schedule_pending_heartbeat_rescue_timer(
+                        agent_file_id=agent_file_id,
+                        pending_heartbeat_id=pending_hb_id,
+                        delay_seconds=remaining_delay,
+                        timeout_seconds=timeout_seconds,
+                    ):
+                        skip_recovery_action = 'schedule_pending_rescue_timer'
+            if preflight_state == 'idle':
+                pass
+            else:
+                starvation_guard_armed = skip_reason_code != 'HB_AUTO_PENDING_SKIP'
+                consecutive_skip_count = 0
+                if starvation_guard_armed:
+                    if auto_starvation_skip_threshold is None:
+                        starvation_guard_armed = False
+                    else:
+                        consecutive_skip_count = _count_consecutive_auto_preflight_skips(
+                            repo_root,
+                            agent_id=agent_id,
+                        )
+                        if consecutive_skip_count >= auto_starvation_skip_threshold:
+                            recovery_action = 'auto_starvation_bypass'
+                            print(
+                                "⚠️  Auto-mode starvation guard triggered after "
+                                f"{consecutive_skip_count} consecutive preflight skips; "
+                                "dispatching one heartbeat attempt anyway"
+                            )
+                        else:
+                            starvation_guard_armed = False
+                if not starvation_guard_armed:
+                    print(
+                        "⏭️  Agent is not idle "
+                        f"(state={preflight_state}, reason={preflight_reason}); "
+                        "skipping heartbeat dispatch in auto mode to avoid batch accumulation"
+                    )
+                    _append_heartbeat_audit_event(
+                        repo_root,
+                        agent_id=agent_id,
+                        heartbeat_id=heartbeat_id,
+                        send_status='skip',
+                        ack_status='not_checked',
+                        duration_ms=0,
+                        context_left=context_left_percent,
+                        failure_type=skip_failure_type,
+                        session_mode=session_mode,
+                        phase='preflight',
+                        attempt=0,
+                        recovery_action=skip_recovery_action,
+                        reason_code=skip_reason_code,
+                        ack_evidence='none',
+                    )
+                    _maybe_trigger_dream_from_heartbeat(
+                        repo_root=repo_root,
+                        agent_config=agent_config,
+                        agent_id=agent_id,
+                        agent_file_id=agent_file_id,
+                        heartbeat=heartbeat,
+                        heartbeat_id=heartbeat_id,
+                        heartbeat_timestamp=_utc_now_iso(),
+                        ack_status='not_checked',
+                        ack_evidence='none',
+                        failure_type=skip_failure_type,
+                    )
+                    return 0
     elif session_mode == 'force':
         print("   Force mode: bypass preflight idle check and always dispatch heartbeat")
 

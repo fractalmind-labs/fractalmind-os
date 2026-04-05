@@ -46,16 +46,33 @@ class BuildStartCommandTests(unittest.TestCase):
 class LauncherCliConfigTests(unittest.TestCase):
     def test_build_launcher_config_overrides_from_flat_launcher_config(self):
         cfg = {
+            "launcher": "codex",
             "launcher_config": {
                 "model_instructions_file": "prompts/shade.md",
                 "feature_flag": True,
                 "retries": 3,
-            }
+            },
+            "heartbeat": {
+                "enabled": True,
+                "mode": "normal",
+            },
         }
         overrides = main.build_launcher_config_overrides(cfg, working_dir="/repo")
         self.assertEqual(overrides["model_instructions_file"], "/repo/prompts/shade.md")
         self.assertTrue(overrides["feature_flag"])
         self.assertEqual(overrides["retries"], 3)
+
+    def test_build_launcher_config_overrides_does_not_force_codex_hooks(self):
+        cfg = {
+            "launcher": "codex",
+            "launcher_config": {},
+            "heartbeat": {
+                "enabled": False,
+                "mode": "normal",
+            },
+        }
+        overrides = main.build_launcher_config_overrides(cfg, working_dir="/repo")
+        self.assertNotIn("features.codex_hooks", overrides)
 
     def test_to_toml_literal_supports_scalars_lists_and_dicts(self):
         self.assertEqual(main._to_toml_literal("x"), '"x"')

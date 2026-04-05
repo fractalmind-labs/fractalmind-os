@@ -67,6 +67,25 @@ def _run_timer(timer_file: Path) -> int:
             [sys.executable, str(main_script), 'start', agent, '--restore'],
             [sys.executable, str(main_script), 'heartbeat', 'run', agent] + (['--timeout', timeout] if timeout else []),
         ]
+    elif kind == 'rescue':
+        agent = str(payload.get('agent') or '').strip()
+        timeout = str(payload.get('timeout') or '').strip()
+        reason = str(payload.get('reason') or '').strip()
+        heartbeat_id = str(payload.get('heartbeat_id') or '').strip()
+        if not agent:
+            _mark(timer_file, status='failed', finished_at=_utc_now_iso(), exit_code=1, error='missing_agent')
+            return 1
+        rescue_reason = " ".join(part for part in [reason, f"hb_id={heartbeat_id}" if heartbeat_id else ''] if part).strip()
+        rescue_cmd = [sys.executable, str(main_script), 'heartbeat', 'rescue', agent]
+        if timeout:
+            rescue_cmd.extend(['--timeout', timeout])
+        if rescue_reason:
+            rescue_cmd.extend(['--reason', rescue_reason])
+        if bool(payload.get('no_prime')) or not bool(payload.get('prime', True)):
+            rescue_cmd.append('--no-prime')
+        if bool(payload.get('fresh')):
+            rescue_cmd.append('--fresh')
+        commands = [rescue_cmd]
     elif kind == 'command':
         command_args = [str(item) for item in list(payload.get('command_args') or []) if str(item)]
         if not command_args:

@@ -28,6 +28,7 @@ class HeartbeatCommandTests(unittest.TestCase):
             code, text = self._run(
                 args,
                 run_handler=lambda _args: 99,
+                rescue_handler=lambda _args: 98,
                 trace_handler=lambda _args: 99,
                 slo_handler=lambda _args: 99,
             )
@@ -41,6 +42,7 @@ class HeartbeatCommandTests(unittest.TestCase):
             code, text = self._run(
                 args,
                 run_handler=lambda _args: 99,
+                rescue_handler=lambda _args: 98,
                 trace_handler=lambda _args: 99,
                 slo_handler=lambda _args: 99,
             )
@@ -58,6 +60,7 @@ class HeartbeatCommandTests(unittest.TestCase):
             code, text = self._run(
                 args,
                 run_handler=lambda _args: 99,
+                rescue_handler=lambda _args: 98,
                 trace_handler=lambda _args: 99,
                 slo_handler=lambda _args: 99,
             )
@@ -68,29 +71,41 @@ class HeartbeatCommandTests(unittest.TestCase):
 
     def test_run_trace_and_slo_delegate_handlers(self):
         run_args = argparse.Namespace(heartbeat_command='run')
+        rescue_args = argparse.Namespace(heartbeat_command='rescue')
         trace_args = argparse.Namespace(heartbeat_command='trace')
         slo_args = argparse.Namespace(heartbeat_command='slo')
 
         code_run, _ = self._run(
             run_args,
             run_handler=lambda _args: 11,
+            rescue_handler=lambda _args: 44,
+            trace_handler=lambda _args: 22,
+            slo_handler=lambda _args: 33,
+        )
+        code_rescue, _ = self._run(
+            rescue_args,
+            run_handler=lambda _args: 11,
+            rescue_handler=lambda _args: 44,
             trace_handler=lambda _args: 22,
             slo_handler=lambda _args: 33,
         )
         code_trace, _ = self._run(
             trace_args,
             run_handler=lambda _args: 11,
+            rescue_handler=lambda _args: 44,
             trace_handler=lambda _args: 22,
             slo_handler=lambda _args: 33,
         )
         code_slo, _ = self._run(
             slo_args,
             run_handler=lambda _args: 11,
+            rescue_handler=lambda _args: 44,
             trace_handler=lambda _args: 22,
             slo_handler=lambda _args: 33,
         )
 
         self.assertEqual(code_run, 11)
+        self.assertEqual(code_rescue, 44)
         self.assertEqual(code_trace, 22)
         self.assertEqual(code_slo, 33)
 
@@ -99,6 +114,7 @@ class HeartbeatCommandTests(unittest.TestCase):
         code, text = self._run(
             args,
             run_handler=lambda _args: 11,
+            rescue_handler=lambda _args: 44,
             trace_handler=lambda _args: 22,
             slo_handler=lambda _args: 33,
         )

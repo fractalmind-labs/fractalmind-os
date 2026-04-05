@@ -349,10 +349,13 @@ def list_heartbeats_formatted() -> str:
         cron = hb.get('cron', 'N/A')
         max_runtime = hb.get('max_runtime', '')
         session_mode = str(hb.get('session_mode', 'restore') or 'restore').strip().lower()
+        heartbeat_mode = str(hb.get('mode', 'normal') or 'normal').strip().lower()
         details = []
         if max_runtime:
             details.append(max_runtime)
-        details.append(f"mode:{session_mode}")
+        details.append(f"session:{session_mode}")
+        if heartbeat_mode != 'normal':
+            details.append(f"heartbeat:{heartbeat_mode}")
 
         schedule = hb.get('schedule')
         if schedule:

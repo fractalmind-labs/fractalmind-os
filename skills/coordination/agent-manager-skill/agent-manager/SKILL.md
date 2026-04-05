@@ -415,6 +415,7 @@ heartbeat:
   cron: "*/30 * * * *"  # Every 30 minutes
   max_runtime: 5m
   session_mode: auto     # restore | auto | fresh
+  mode: normal           # normal (use `timer` for delayed rescue; `full_speed` is legacy)
   enabled: true
 ---
 ```
@@ -426,7 +427,11 @@ heartbeat:
 | `cron` | string | ✓ | Cron expression (e.g., `*/30 * * * *`) |
 | `max_runtime` | string | | Maximum runtime (e.g., `5m`, `10m`) |
 | `session_mode` | string | | Session policy: `restore` (default), `auto` (rollover when context <25%), `fresh` (always rollover after handoff) |
+| `mode` | string | | Heartbeat trigger mode. `normal` is the only active path. `full_speed` is a deprecated compatibility value that only preserves legacy Codex hook cleanup/readback during `start`; timer-driven follow-up is the supported replacement. |
+| `auto_starvation_skip_threshold` | int | | `auto` mode only. Default `3`; set `0` to disable the forced-dispatch starvation bypass after consecutive preflight skips |
 | `enabled` | bool | | Default: `true` |
+
+`full_speed` should now be treated as a legacy compatibility marker, not a canonical execution path. If an older Codex Stop hook is still present, `start` will clean it up; new delayed follow-up / rescue flows should use `timer`.
 
 ### Heartbeat vs Schedules
 
@@ -450,7 +455,7 @@ Output:
 💓 Heartbeats:
 
 dev (EMP_0001):
-  ✓ heartbeat           */30 * * * *         (5m mode:auto)
+  ✓ heartbeat           */30 * * * *         (5m session:auto)
 ```
 
 #### `heartbeat sync` - Sync Heartbeats to Crontab
@@ -491,6 +496,7 @@ $CLI heartbeat run EMP_0001 --timeout 1m
 - Sends standard heartbeat message to the agent
 - Optional session rollover via `session_mode` (handoff first, then fresh session)
 - Waits for response (up to `max_runtime`)
+- In `auto` mode, stale pending heartbeats can schedule or trigger rescue via the timer-backed recovery path
 
 ### `timer` - Schedule Delayed Actions
 
@@ -499,6 +505,9 @@ Use `timer` for one-shot delayed actions without cron:
 ```bash
 # Run one heartbeat in 5 seconds
 $CLI timer heartbeat main --delay 5s
+
+# Schedule one heartbeat rescue in 5 seconds
+$CLI timer rescue main --delay 5s --timeout 8m --reason auto_pending_heartbeat_rescue
 
 # Run an arbitrary agent-manager command in 5 seconds
 $CLI timer command --delay 5s -- heartbeat run main --timeout 8m

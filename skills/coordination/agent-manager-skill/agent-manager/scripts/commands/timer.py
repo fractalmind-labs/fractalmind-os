@@ -31,6 +31,29 @@ def _read_json(path: Path) -> dict[str, object]:
     return json.loads(path.read_text(encoding='utf-8'))
 
 
+def _find_existing_timer(*, repo_root: Path, kind: str, dedupe_key: str) -> dict[str, object] | None:
+    if not dedupe_key:
+        return None
+
+    timer_dir = _timer_state_dir(repo_root)
+    if not timer_dir.exists():
+        return None
+
+    for timer_file in sorted(timer_dir.glob('*.json')):
+        try:
+            payload = _read_json(timer_file)
+        except Exception:
+            continue
+        if str(payload.get('kind') or '') != kind:
+            continue
+        if str(payload.get('dedupe_key') or '') != dedupe_key:
+            continue
+        if str(payload.get('status') or '') not in {'pending', 'running'}:
+            continue
+        return payload
+    return None
+
+
 def _schedule_worker(*, repo_root: Path, timer_file: Path, log_file: Path) -> int:
     worker_script = _timer_worker_script()
     log_file.parent.mkdir(parents=True, exist_ok=True)
@@ -62,6 +85,15 @@ def _schedule_timer(*, args, deps: Any, kind: str, payload: dict[str, object]) -
         return 1
 
     repo_root = deps.get_repo_root()
+    dedupe_key = str(payload.get('dedupe_key') or '').strip()
+    if dedupe_key:
+        existing = _find_existing_timer(repo_root=repo_root, kind=kind, dedupe_key=dedupe_key)
+        if existing is not None:
+            print(f"⏱️  Timer already scheduled: {existing.get('timer_id')}")
+            print(f"   Kind: {kind}")
+            print(f"   Dedupe key: {dedupe_key}")
+            return 0
+
     timer_id = _create_timer_id(kind)
     now = int(time.time())
     run_at = now + int(delay_seconds)
@@ -144,6 +176,22 @@ def cmd_timer(args, *, deps: Any):
             payload={
                 'agent': args.agent,
                 'timeout': str(args.timeout or '').strip(),
+            },
+        )
+
+    if args.timer_command == 'rescue':
+        return _schedule_timer(
+            args=args,
+            deps=deps,
+            kind='rescue',
+            payload={
+                'agent': args.agent,
+                'timeout': str(args.timeout or '').strip(),
+                'prime': not bool(getattr(args, 'no_prime', False)),
+                'fresh': bool(getattr(args, 'fresh', False)),
+                'reason': str(getattr(args, 'reason', '') or '').strip(),
+                'heartbeat_id': str(getattr(args, 'heartbeat_id', '') or '').strip(),
+                'dedupe_key': str(getattr(args, 'dedupe_key', '') or '').strip(),
             },
         )
 

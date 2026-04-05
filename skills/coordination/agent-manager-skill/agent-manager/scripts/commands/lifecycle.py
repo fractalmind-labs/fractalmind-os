@@ -284,6 +284,26 @@ def cmd_start(args, *, deps: Any):
         print(f"   To enable: Set 'enabled: true' in the agent config")
         return 1
 
+    working_dir = args.working_dir or agent_config.get('working_directory')
+    normalized_working_dir = normalize_path(working_dir) if working_dir else ""
+    repo_root = get_repo_root()
+    sync_fullspeed_hook = getattr(deps, '_sync_codex_fullspeed_stop_hook', None)
+    hook_sync = None
+    if normalized_working_dir and callable(sync_fullspeed_hook):
+        try:
+            hook_sync = sync_fullspeed_hook(
+                agent_config,
+                working_dir=normalized_working_dir,
+                repo_root=repo_root,
+            )
+        except ValueError as exc:
+            print(f"❌ {exc}")
+            return 1
+        if hook_sync.get('reason') == 'unsupported_provider':
+            print("⚠️  heartbeat.mode=full_speed currently only supports launcher: codex")
+        elif hook_sync.get('reason') == 'cleaned' and hook_sync.get('updated'):
+            print(f"ℹ️  Removed deprecated Codex full-speed Stop hook: {hook_sync.get('hooks_path', '')}")
+
     if session_exists(agent_id):
         session_info = get_session_info(agent_id) or {}
         session_name = session_info.get('session', _session_label(agent_id))
@@ -314,14 +334,11 @@ def cmd_start(args, *, deps: Any):
         print(f"   Or restore (reuse existing): python3 {_script_name(deps)} start {agent_file_id} --restore")
         return 1
 
-    working_dir = args.working_dir or agent_config.get('working_directory')
-    if not working_dir:
+    if not normalized_working_dir:
         print("❌ No working directory specified")
         return 1
 
-    working_dir = normalize_path(working_dir)
-
-    repo_root = get_repo_root()
+    working_dir = normalized_working_dir
     skills_dir = repo_root / '.agent' / 'skills'
 
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))

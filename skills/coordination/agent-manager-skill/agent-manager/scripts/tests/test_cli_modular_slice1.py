@@ -52,6 +52,16 @@ class CliModularSlice1Tests(unittest.TestCase):
         self.assertEqual(args.window, 'daily')
         self.assertIsNone(args.agent)
 
+    def test_heartbeat_rescue_flags(self):
+        args = create_parser().parse_args(['heartbeat', 'rescue', 'main', '--timeout', '8m', '--reason', 'stale pending'])
+        self.assertEqual(args.command, 'heartbeat')
+        self.assertEqual(args.heartbeat_command, 'rescue')
+        self.assertEqual(args.agent, 'main')
+        self.assertEqual(args.timeout, '8m')
+        self.assertEqual(args.reason, 'stale pending')
+        self.assertFalse(args.no_prime)
+        self.assertFalse(args.fresh)
+
     def test_inbound_drain_once_flags(self):
         args = create_parser().parse_args(['inbound', 'drain', 'main', '--once'])
         self.assertEqual(args.command, 'inbound')
@@ -72,6 +82,15 @@ class CliModularSlice1Tests(unittest.TestCase):
         self.assertEqual(args.agent, 'main')
         self.assertEqual(args.delay, '5s')
         self.assertEqual(args.timeout, '8m')
+
+    def test_timer_rescue_flags(self):
+        args = create_parser().parse_args(['timer', 'rescue', 'main', '--delay', '5s', '--timeout', '8m', '--reason', 'auto'])
+        self.assertEqual(args.command, 'timer')
+        self.assertEqual(args.timer_command, 'rescue')
+        self.assertEqual(args.agent, 'main')
+        self.assertEqual(args.delay, '5s')
+        self.assertEqual(args.timeout, '8m')
+        self.assertEqual(args.reason, 'auto')
 
     def test_timer_command_remainder_flags(self):
         args = create_parser().parse_args(['timer', 'command', '--delay', '5s', '--', 'heartbeat', 'run', 'main'])
@@ -166,6 +185,7 @@ class CliModularSlice1Tests(unittest.TestCase):
         self.assertEqual(result, 43)
         mock_handler.assert_called_once()
         self.assertIs(mock_handler.call_args.kwargs['run_handler'], main.cmd_heartbeat_run)
+        self.assertIs(mock_handler.call_args.kwargs['rescue_handler'], main.cmd_heartbeat_rescue)
         self.assertIs(mock_handler.call_args.kwargs['trace_handler'], main.cmd_heartbeat_trace)
         self.assertIs(mock_handler.call_args.kwargs['slo_handler'], main.cmd_heartbeat_slo)
 
