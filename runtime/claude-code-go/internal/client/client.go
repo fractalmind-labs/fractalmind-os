@@ -22,6 +22,8 @@ type Provider interface {
 type AnthropicClient struct {
 	apiBase    string
 	apiKey     string
+	model      string
+	maxTokens  int
 	httpClient *http.Client
 }
 
@@ -52,8 +54,10 @@ type DebugResponse struct {
 
 func New(cfg config.Config) AnthropicClient {
 	return AnthropicClient{
-		apiBase: strings.TrimRight(cfg.APIBase, "/"),
-		apiKey:  cfg.APIKey,
+		apiBase:   strings.TrimRight(cfg.APIBase, "/"),
+		apiKey:    cfg.APIKey,
+		model:     cfg.Model,
+		maxTokens: cfg.MaxTokens,
 		httpClient: &http.Client{
 			Timeout: 20 * time.Second,
 		},
@@ -65,8 +69,8 @@ func (c AnthropicClient) APIBase() string { return c.apiBase }
 
 func (c AnthropicClient) BuildMessagesDemoRequest() (DebugRequest, error) {
 	payload := MessagesDemoRequest{
-		Model:     "claude-sonnet-4-5",
-		MaxTokens: 32,
+		Model:     c.model,
+		MaxTokens: c.maxTokens,
 		Messages: []MessagePart{{
 			Role:    "user",
 			Content: "ping from claude-code-go",

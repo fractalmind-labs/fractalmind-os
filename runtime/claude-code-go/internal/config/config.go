@@ -3,8 +3,10 @@ package config
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 type Config struct {
@@ -13,6 +15,8 @@ type Config struct {
 	APIBase      string
 	APIKey       string
 	APIKeySource string
+	Model        string
+	MaxTokens    int
 }
 
 type storedAuth struct {
@@ -24,9 +28,11 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	base := os.Getenv("CLAUDE_CODE_API_BASE")
-	if base == "" {
-		base = "https://api.anthropic.com"
+	base := firstNonEmpty(os.Getenv("CLAUDE_CODE_API_BASE"), "https://api.anthropic.com")
+	model := firstNonEmpty(os.Getenv("CLAUDE_CODE_MODEL"), "claude-sonnet-4-5")
+	maxTokens, err := parsePositiveInt(firstNonEmpty(os.Getenv("CLAUDE_CODE_MAX_TOKENS"), "32"), "CLAUDE_CODE_MAX_TOKENS")
+	if err != nil {
+		return Config{}, err
 	}
 	cfgDir := filepath.Join(dir, "claude-code-go")
 	authFile := filepath.Join(cfgDir, "auth.json")
@@ -40,6 +46,8 @@ func Load() (Config, error) {
 		APIBase:      base,
 		APIKey:       apiKey,
 		APIKeySource: source,
+		Model:        model,
+		MaxTokens:    maxTokens,
 	}, nil
 }
 
@@ -79,4 +87,19 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func parsePositiveInt(raw string, field string) (int, error) {
+	value, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s: %w", field, err)
+	}
+	if value <= 0 {
+		return 0, fmt.Errorf("invalid %s: must be > 0", field)
+	}
+	return value, nil
+}
+
+func ParsePositiveIntForCLI(raw string, field string) (int, error) {
+	return parsePositiveInt(raw, field)
 }
