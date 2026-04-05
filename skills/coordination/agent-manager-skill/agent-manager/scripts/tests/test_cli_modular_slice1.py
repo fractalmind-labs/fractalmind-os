@@ -97,16 +97,18 @@ class CliModularSlice1Tests(unittest.TestCase):
             cmd_assign=main.cmd_assign,
             cmd_schedule=main.cmd_schedule,
             cmd_heartbeat=main.cmd_heartbeat,
+            cmd_dream=main.cmd_dream,
             cmd_timer=main.cmd_timer,
             cmd_inbound=main.cmd_inbound,
         )
         self.assertEqual(
             set(handlers.keys()),
-            {'list', 'doctor', 'start', 'stop', 'status', 'monitor', 'send', 'assign', 'schedule', 'heartbeat', 'timer', 'inbound'},
+            {'list', 'doctor', 'start', 'stop', 'status', 'monitor', 'send', 'assign', 'schedule', 'heartbeat', 'dream', 'timer', 'inbound'},
         )
         self.assertIs(handlers['start'], main.cmd_start)
         self.assertIs(handlers['status'], main.cmd_status)
         self.assertIs(handlers['heartbeat'], main.cmd_heartbeat)
+        self.assertIs(handlers['dream'], main.cmd_dream)
         self.assertIs(handlers['timer'], main.cmd_timer)
         self.assertIs(handlers['inbound'], main.cmd_inbound)
 
