@@ -717,6 +717,13 @@ _HEARTBEAT_TRACE_MAX_LIMIT = 5000
 _DREAM_ID_PATTERN = re.compile(r"\[DREAM_ID:([^\]\s]+)\]")
 _HEARTBEAT_AUTO_STARVATION_SKIP_THRESHOLD = 3
 _HEARTBEAT_AUTO_STARVATION_LOOKBACK_LIMIT = 32
+_HEARTBEAT_MODES = {"normal", "full_speed"}
+_HEARTBEAT_PENDING_RESCUE_AGE_SECONDS = 20 * 60
+_HEARTBEAT_PENDING_RESCUE_SKIP_THRESHOLD = 3
+_HEARTBEAT_PENDING_RESCUE_MIN_DELAY_SECONDS = 5
+_FULL_SPEED_HEARTBEAT_DELAY_SECONDS = 5
+_FULL_SPEED_STOP_HOOK_STATUS_MESSAGE = "agent-manager full-speed heartbeat hook"
+_FULL_SPEED_STOP_HOOK_SKIP_TTL_SECONDS = 180
 
 
 def _normalize_heartbeat_session_mode(value: object) -> str:
@@ -1115,8 +1122,44 @@ def _has_pending_heartbeat(pane_output: str, stale_threshold_seconds: int = 900)
     return False, ''
 
 
+def _generate_heartbeat_id(now: Optional[datetime] = None) -> str:
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    current = current.astimezone(timezone.utc)
+    return current.strftime('%Y%m%d-%H%M%S')
+
+
+def _heartbeat_id_age_seconds(heartbeat_id: object, *, now: Optional[datetime] = None) -> Optional[int]:
+    text = str(heartbeat_id or '').strip()
+    if not text:
+        return None
+    try:
+        hb_time = datetime.strptime(text, '%Y%m%d-%H%M%S').replace(tzinfo=timezone.utc)
+    except Exception:
+        return None
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    current = current.astimezone(timezone.utc)
+    return max(0, int((current - hb_time).total_seconds()))
+
+
+def _heartbeat_already_acknowledged(repo_root: Path, *, agent_id: str, heartbeat_id: str) -> bool:
+    if not heartbeat_id:
+        return False
+    events = _read_heartbeat_audit_events(repo_root, agent_id=agent_id, heartbeat_id=heartbeat_id, limit=20)
+    for event in events:
+        if str(event.get('send_status', '')) != 'ok':
+            continue
+        if str(event.get('ack_status', '')) in {'ack', 'yielded'}:
+            return True
+    return False
+
+
 def _heartbeat_preflight_runtime_state(
     *,
+    repo_root: Optional[Path] = None,
     agent_id: str,
     launcher: str,
     sample_count: int = _HEARTBEAT_PREFLIGHT_SAMPLE_COUNT,
@@ -1150,7 +1193,8 @@ def _heartbeat_preflight_runtime_state(
     # Check for pending heartbeat in pane before sampling.
     pending, pending_hb_id = _has_pending_heartbeat(previous_output)
     if pending:
-        return 'busy', f'pending_heartbeat:{pending_hb_id}'
+        if repo_root is None or not _heartbeat_already_acknowledged(repo_root, agent_id=agent_id, heartbeat_id=pending_hb_id):
+            return 'busy', f'pending_heartbeat:{pending_hb_id}'
 
     for sample_index in range(1, samples):
         time.sleep(interval)
@@ -1653,6 +1697,7 @@ def _count_consecutive_auto_preflight_skips(
     repo_root: Path,
     *,
     agent_id: str,
+    reason_codes: Optional[set[str]] = None,
     limit: int = _HEARTBEAT_AUTO_STARVATION_LOOKBACK_LIMIT,
 ) -> int:
     events = _read_heartbeat_audit_events(
@@ -1664,8 +1709,18 @@ def _count_consecutive_auto_preflight_skips(
     for event in events:
         if not _is_auto_preflight_skip_event(event):
             break
+        if reason_codes is not None and str(event.get('reason_code', '')) not in reason_codes:
+            break
         count += 1
     return count
+
+
+def _parse_pending_heartbeat_reason(reason: object) -> str:
+    text = str(reason or '').strip()
+    prefix = 'pending_heartbeat:'
+    if not text.startswith(prefix):
+        return ''
+    return text[len(prefix):].strip()
 
 
 def cmd_heartbeat_trace(args) -> int:
@@ -1834,6 +1889,47 @@ def _notify_heartbeat_failure(
         heartbeat_id=heartbeat_id,
         failure_type=failure_type,
     )
+
+
+def _schedule_pending_heartbeat_rescue_timer(
+    *,
+    agent_file_id: str,
+    pending_heartbeat_id: str,
+    delay_seconds: int,
+    timeout_seconds: Optional[int],
+) -> bool:
+    delay = max(_HEARTBEAT_PENDING_RESCUE_MIN_DELAY_SECONDS, int(delay_seconds or 0))
+    dedupe_key = f"pending-rescue:{str(agent_file_id or '').strip().lower()}:{pending_heartbeat_id}"
+    args = argparse.Namespace(
+        timer_command='rescue',
+        agent=agent_file_id,
+        delay=f'{delay}s',
+        timeout=f'{int(timeout_seconds)}s' if timeout_seconds else None,
+        reason='auto_pending_heartbeat_rescue',
+        no_prime=False,
+        fresh=False,
+        heartbeat_id=pending_heartbeat_id,
+        dedupe_key=dedupe_key,
+    )
+    return cmd_timer(args) == 0
+
+
+def _restart_heartbeat_session_restore(agent_file_id: str, agent_name: str, agent_id: str) -> bool:
+    print(f"♻️  Restarting '{agent_name}' in restore mode")
+    if session_exists(agent_id):
+        stop_session(agent_id)
+        time.sleep(1)
+
+    restart_args = argparse.Namespace(
+        agent=agent_file_id,
+        working_dir=None,
+        restore=True,
+        tmux_layout='sessions',
+    )
+    if cmd_start(restart_args) != 0:
+        print(f"❌ Failed to restart '{agent_name}' in restore mode")
+        return False
+    return True
 
 
 def _restart_heartbeat_session_fresh(agent_file_id: str, agent_name: str, agent_id: str) -> bool:
@@ -2224,6 +2320,7 @@ def cmd_dream_run(args):
 
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
     preflight_state, preflight_reason = _heartbeat_preflight_runtime_state(
+        repo_root=repo_root,
         agent_id=agent_id,
         launcher=launcher,
     )
@@ -2436,7 +2533,7 @@ def cmd_heartbeat_run(args):
     )
 
     # Standard heartbeat message (with traceable id for delivery debugging)
-    heartbeat_id = time.strftime('%Y%m%d-%H%M%S')
+    heartbeat_id = _generate_heartbeat_id()
     print(f"   HB_ID: {heartbeat_id}")
     recovery_action = ''
 
@@ -2502,6 +2599,7 @@ def cmd_heartbeat_run(args):
 
     if session_mode == 'auto':
         preflight_state, preflight_reason = _heartbeat_preflight_runtime_state(
+            repo_root=repo_root,
             agent_id=agent_id,
             launcher=launcher,
         )
