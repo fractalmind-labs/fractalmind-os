@@ -5,10 +5,8 @@ Manages crontab entries for scheduled agent jobs.
 """
 
 from __future__ import annotations
-import os
 import shlex
 import subprocess
-import tempfile
 from pathlib import Path
 from typing import List, Optional
 
@@ -71,17 +69,12 @@ def get_current_crontab() -> str:
 def set_crontab(content: str) -> bool:
     """Set user's crontab content."""
     try:
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.crontab', delete=False) as f:
-            f.write(content)
-            temp_file = f.name
-
         result = subprocess.run(
-            ['crontab', temp_file],
+            ['crontab', '-'],
+            input=content,
             capture_output=True,
             text=True
         )
-
-        os.unlink(temp_file)
         return result.returncode == 0
     except Exception:
         return False
