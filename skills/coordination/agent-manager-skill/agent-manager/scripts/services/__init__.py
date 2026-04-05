@@ -14,6 +14,13 @@ from .heartbeat_state_machine import (
     failure_reason_code,
     should_retry_heartbeat_attempt,
 )
+from .dream_state import (
+    append_dream_audit_event,
+    load_dream_state,
+    parse_iso8601_utc,
+    process_heartbeat_for_dream,
+    save_dream_state,
+)
 from .work_schedule import (
     format_schedule_summary,
     is_within_work_schedule,
@@ -28,6 +35,11 @@ __all__ = [
     'restart_heartbeat_session_fresh',
     'run_heartbeat_attempt',
     'notify_heartbeat_failure',
+    'load_dream_state',
+    'save_dream_state',
+    'append_dream_audit_event',
+    'process_heartbeat_for_dream',
+    'parse_iso8601_utc',
     'format_schedule_summary',
     'is_within_work_schedule',
 ]

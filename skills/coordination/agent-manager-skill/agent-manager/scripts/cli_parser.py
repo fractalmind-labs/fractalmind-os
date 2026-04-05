@@ -169,6 +169,15 @@ Examples:
     heartbeat_slo_parser.add_argument('--until', help='Override end time (ISO-8601, UTC recommended)')
     heartbeat_slo_parser.add_argument('--json', action='store_true', help='Output summary as JSON')
 
+    dream_parser = subparsers.add_parser('dream', help='Run dream mode tasks')
+    dream_subparsers = dream_parser.add_subparsers(dest='dream_command', help='Dream commands')
+
+    dream_run_parser = dream_subparsers.add_parser('run', help='Run one dream task manually')
+    dream_run_parser.add_argument('agent', help='Agent name or file ID')
+    dream_run_parser.add_argument('--window-id', help='Expected active dream window id')
+    dream_run_parser.add_argument('--trigger-hb-id', help='Heartbeat id that triggered the dream run')
+    dream_run_parser.add_argument('--timeout', '-t', help='Override dream timeout (e.g., 10m, 1h)')
+
     timer_parser = subparsers.add_parser('timer', help='Schedule delayed agent-manager actions')
     timer_subparsers = timer_parser.add_subparsers(dest='timer_command', help='Timer commands')
 

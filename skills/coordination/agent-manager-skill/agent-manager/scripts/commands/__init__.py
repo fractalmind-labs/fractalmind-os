@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .dream import cmd_dream
 from .doctor import cmd_doctor
 from .heartbeat import cmd_heartbeat
 from .inbound import cmd_inbound
@@ -19,6 +20,7 @@ __all__ = [
     'cmd_send',
     'cmd_assign',
     'cmd_doctor',
+    'cmd_dream',
     'cmd_list',
     'cmd_status',
     'cmd_schedule',

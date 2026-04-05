@@ -12,6 +12,14 @@ def _heartbeat_audit_path(repo_root, agent_id: str):
     return repo_root / '.claude' / 'state' / 'agent-manager' / 'heartbeat-audit' / f"{agent_id}.jsonl"
 
 
+def _dream_audit_path(repo_root, agent_id: str):
+    return repo_root / '.claude' / 'state' / 'agent-manager' / 'dream-audit' / f"{agent_id}.jsonl"
+
+
+def _dream_state_path(repo_root, agent_id: str):
+    return repo_root / '.claude' / 'state' / 'agent-manager' / 'dream-state' / f"{agent_id}.json"
+
+
 def _load_recent_heartbeat_event(repo_root, agent_id: str) -> Optional[dict]:
     audit_file = _heartbeat_audit_path(repo_root, agent_id)
     if not audit_file.exists():
@@ -34,6 +42,41 @@ def _load_recent_heartbeat_event(repo_root, agent_id: str) -> Optional[dict]:
             return payload
 
     return None
+
+
+def _load_recent_dream_event(repo_root, agent_id: str) -> Optional[dict]:
+    audit_file = _dream_audit_path(repo_root, agent_id)
+    if not audit_file.exists():
+        return None
+
+    try:
+        lines = audit_file.read_text(encoding='utf-8').splitlines()
+    except Exception:
+        return None
+
+    for raw in reversed(lines):
+        line = raw.strip()
+        if not line:
+            continue
+        try:
+            payload = json.loads(line)
+        except Exception:
+            continue
+        if isinstance(payload, dict):
+            return payload
+
+    return None
+
+
+def _load_dream_state(repo_root, agent_id: str) -> Optional[dict]:
+    path = _dream_state_path(repo_root, agent_id)
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding='utf-8'))
+    except Exception:
+        return None
+    return payload if isinstance(payload, dict) else None
 
 
 def _extract_recent_hb_id_from_output(output: str) -> str:
@@ -92,6 +135,8 @@ def cmd_status(args, *, deps: Any):
 
     recent_heartbeat = "none"
     recent_heartbeat_detail = ""
+    recent_dream = "none"
+    dream_window = "none"
 
     repo_root = get_repo_root()
     event = _load_recent_heartbeat_event(repo_root, agent_id)
@@ -113,6 +158,16 @@ def cmd_status(args, *, deps: Any):
         if hb_id:
             recent_heartbeat = f"{hb_id} (from tmux output)"
 
+    dream_event = _load_recent_dream_event(repo_root, agent_id)
+    dream_state = _load_dream_state(repo_root, agent_id)
+    if dream_event:
+        recent_dream = str(dream_event.get('event') or 'recorded')
+        if dream_event.get('dream_id'):
+            recent_dream += f" ({dream_event.get('dream_id')})"
+    if dream_state and dream_state.get('window_id'):
+        status = 'triggered' if dream_state.get('triggered_for_window') else 'active'
+        dream_window = f"{dream_state.get('window_id')} ({status})"
+
     print(f"📌 Status: {agent_name}")
     print(f"   Agent ID: {agent_id}")
     print(f"   Enabled: {'yes' if enabled else 'no'}")
@@ -126,5 +181,7 @@ def cmd_status(args, *, deps: Any):
     print(f"   Recent heartbeat: {recent_heartbeat}")
     if recent_heartbeat_detail:
         print(f"   Heartbeat detail: {recent_heartbeat_detail}")
+    print(f"   Recent dream: {recent_dream}")
+    print(f"   Dream window: {dream_window}")
 
     return 0
