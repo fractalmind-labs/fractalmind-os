@@ -44,11 +44,19 @@ func run(ctx context.Context, args []string) int {
 
 func runAuth(ctx context.Context, cfg config.Config, args []string) int {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "usage: claude-code-go auth <status|logout>")
+		fmt.Fprintln(os.Stderr, "usage: claude-code-go auth <login|status|logout>")
 		return 1
 	}
 
 	switch args[0] {
+	case "login":
+		apiKey := resolveLoginAPIKey(args[1:])
+		if err := auth.Login(ctx, cfg, apiKey); err != nil {
+			fmt.Fprintf(os.Stderr, "login failed: %v\n", err)
+			return 1
+		}
+		fmt.Printf("logged in\nauth_file=%s\n", cfg.AuthFile)
+		return 0
 	case "status":
 		provider := client.New(cfg)
 		status := auth.Status(cfg, provider)
@@ -65,6 +73,18 @@ func runAuth(ctx context.Context, cfg config.Config, args []string) int {
 		fmt.Fprintf(os.Stderr, "unknown auth subcommand: %s\n", args[0])
 		return 1
 	}
+}
+
+func resolveLoginAPIKey(args []string) string {
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--api-key" && i+1 < len(args) {
+			return args[i+1]
+		}
+	}
+	if len(args) > 0 {
+		return args[0]
+	}
+	return firstNonEmpty(os.Getenv("CLAUDE_CODE_API_KEY"), os.Getenv("ANTHROPIC_API_KEY"))
 }
 
 func runConfig(cfg config.Config, args []string) int {
@@ -117,6 +137,7 @@ func printHelp() {
 	fmt.Println(`claude-code-go
 
 Usage:
+  claude-code-go auth login --api-key <token>
   claude-code-go auth status
   claude-code-go auth logout
   claude-code-go config show
@@ -129,4 +150,13 @@ func valueOrNone(v string) string {
 		return "none"
 	}
 	return v
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
