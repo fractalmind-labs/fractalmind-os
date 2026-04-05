@@ -149,9 +149,11 @@ See [`sentinel.yaml.example`](sentinel.yaml.example) for all options.
 | `logs <agent>` | Get recent agent logs |
 | `shell <cmd>` | Execute a shell command |
 
-## Research
+## Docs
 
-See [`docs/research.md`](docs/research.md) for competitive analysis (Oray/ToDesk/Tailscale) and our SUI-based differentiation.
+- Competitive research and architecture design: [`docs/research.md`](docs/research.md)
+- TCP relay fallback design: [`docs/tcp-relay-design.md`](docs/tcp-relay-design.md)
+- Coordinator local runtime proof (local-only): [`docs/coordinator-local-runtime-proof.md`](docs/coordinator-local-runtime-proof.md)
 
 ## Part of FractalMind AI
 
