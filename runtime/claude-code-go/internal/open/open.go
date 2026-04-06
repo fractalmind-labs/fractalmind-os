@@ -134,6 +134,8 @@ type Result struct {
 	StopTaskEvent                 string
 	ApplyFlagSettingsValidated    bool
 	ApplyFlagSettingsEvent        string
+	GetSettingsValidated          bool
+	GetSettingsEvent              string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 	BackendValidated              bool
@@ -307,6 +309,8 @@ func Run(args []string) (Result, error) {
 		StopTaskEvent:                 streamResult.StopTaskEvent,
 		ApplyFlagSettingsValidated:    streamResult.ApplyFlagSettingsValidated,
 		ApplyFlagSettingsEvent:        streamResult.ApplyFlagSettingsEvent,
+		GetSettingsValidated:          streamResult.GetSettingsValidated,
+		GetSettingsEvent:              streamResult.GetSettingsEvent,
 		EndSessionValidated:           streamResult.EndSessionValidated,
 		EndSessionEvent:               streamResult.EndSessionEvent,
 		BackendValidated:              state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
@@ -710,6 +714,8 @@ type streamValidation struct {
 	StopTaskEvent                 string
 	ApplyFlagSettingsValidated    bool
 	ApplyFlagSettingsEvent        string
+	GetSettingsValidated          bool
+	GetSettingsEvent              string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 }
@@ -1878,6 +1884,50 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 			result.ApplyFlagSettingsEvent = "control_request:apply_flag_settings"
 		}
 	}
+	getSettingsID := "get-settings-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": getSettingsID,
+		"request": map[string]any{
+			"subtype": "get_settings",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect get_settings request: %w", err)
+	}
+	for !result.GetSettingsValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect get_settings flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != getSettingsID {
+			continue
+		}
+		responsePayload, _ := response["response"].(map[string]any)
+		effective, ok := responsePayload["effective"].(map[string]any)
+		if !ok || len(effective) != 0 {
+			return streamValidation{}, fmt.Errorf("invalid get_settings response: expected empty effective")
+		}
+		sources, ok := responsePayload["sources"].([]any)
+		if !ok || len(sources) != 0 {
+			return streamValidation{}, fmt.Errorf("invalid get_settings response: expected empty sources")
+		}
+		applied, ok := responsePayload["applied"].(map[string]any)
+		if !ok {
+			return streamValidation{}, fmt.Errorf("invalid get_settings response: missing applied")
+		}
+		if strings.TrimSpace(asString(applied["model"])) == "" {
+			return streamValidation{}, fmt.Errorf("invalid get_settings response: missing applied.model")
+		}
+		if applied["effort"] != nil {
+			return streamValidation{}, fmt.Errorf("invalid get_settings response: expected applied.effort=null")
+		}
+		result.GetSettingsValidated = true
+		result.GetSettingsEvent = "control_request:get_settings"
+	}
 	endSessionID := "end-session-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -2047,6 +2097,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("stop_task_event=%s\n", valueOrNone(r.StopTaskEvent)))
 	b.WriteString(fmt.Sprintf("apply_flag_settings_validated=%t\n", r.ApplyFlagSettingsValidated))
 	b.WriteString(fmt.Sprintf("apply_flag_settings_event=%s\n", valueOrNone(r.ApplyFlagSettingsEvent)))
+	b.WriteString(fmt.Sprintf("get_settings_validated=%t\n", r.GetSettingsValidated))
+	b.WriteString(fmt.Sprintf("get_settings_event=%s\n", valueOrNone(r.GetSettingsEvent)))
 	b.WriteString(fmt.Sprintf("end_session_validated=%t\n", r.EndSessionValidated))
 	b.WriteString(fmt.Sprintf("end_session_event=%s\n", valueOrNone(r.EndSessionEvent)))
 	b.WriteString(fmt.Sprintf("backend_validated=%t\n", r.BackendValidated))

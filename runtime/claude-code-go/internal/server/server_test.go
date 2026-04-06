@@ -1173,6 +1173,40 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "get-settings-1",
+		"request": map[string]any{
+			"subtype": "get_settings",
+		},
+	}); err != nil {
+		t.Fatalf("write get_settings request failed: %v", err)
+	}
+	var getSettingsResp map[string]any
+	if err := ws.ReadJSON(&getSettingsResp); err != nil {
+		t.Fatalf("read get_settings response failed: %v", err)
+	}
+	if getSettingsResp["type"] != "control_response" {
+		t.Fatalf("unexpected get_settings response: %#v", getSettingsResp)
+	}
+	getSettingsResponse, _ := getSettingsResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(getSettingsResponse["request_id"])) != "get-settings-1" {
+		t.Fatalf("unexpected get_settings request id: %#v", getSettingsResp)
+	}
+	getSettingsPayload, _ := getSettingsResponse["response"].(map[string]any)
+	effective, ok := getSettingsPayload["effective"].(map[string]any)
+	if !ok || len(effective) != 0 {
+		t.Fatalf("unexpected get_settings effective payload: %#v", getSettingsResp)
+	}
+	sources, ok := getSettingsPayload["sources"].([]any)
+	if !ok || len(sources) != 0 {
+		t.Fatalf("unexpected get_settings sources payload: %#v", getSettingsResp)
+	}
+	applied, ok := getSettingsPayload["applied"].(map[string]any)
+	if !ok || strings.TrimSpace(asString(applied["model"])) == "" || applied["effort"] != nil {
+		t.Fatalf("unexpected get_settings applied payload: %#v", getSettingsResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "end-session-1",
 		"request": map[string]any{
 			"subtype": "end_session",

@@ -1026,6 +1026,13 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					responsePayload["cancelled"] = false
 				case "stop_task":
 				case "apply_flag_settings":
+				case "get_settings":
+					responsePayload["effective"] = map[string]any{}
+					responsePayload["sources"] = []any{}
+					responsePayload["applied"] = map[string]any{
+						"model":  "claude-sonnet-4-5",
+						"effort": nil,
+					}
 				case "end_session":
 				default:
 					continue
