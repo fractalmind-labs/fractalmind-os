@@ -292,6 +292,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(postTurnSummary["summarizes_uuid"])) == "" || strings.TrimSpace(asString(postTurnSummary["status_category"])) != "completed" || strings.TrimSpace(asString(postTurnSummary["title"])) == "" || strings.TrimSpace(asString(postTurnSummary["recent_action"])) == "" {
 		t.Fatalf("invalid post_turn_summary payload: %#v", postTurnSummary)
 	}
+	var compactBoundary map[string]any
+	if err := ws.ReadJSON(&compactBoundary); err != nil {
+		t.Fatalf("read compact_boundary failed: %v", err)
+	}
+	if compactBoundary["type"] != "system" || strings.TrimSpace(asString(compactBoundary["subtype"])) != "compact_boundary" || strings.TrimSpace(asString(compactBoundary["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected compact_boundary payload: %#v", compactBoundary)
+	}
+	compactMetadata, _ := compactBoundary["compact_metadata"].(map[string]any)
+	if strings.TrimSpace(asString(compactMetadata["trigger"])) != "auto" || int(compactMetadata["pre_tokens"].(float64)) != 128 {
+		t.Fatalf("invalid compact_boundary payload: %#v", compactBoundary)
+	}
 
 	if err := ws.WriteJSON(map[string]any{
 		"type": "user",
@@ -400,6 +411,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if strings.TrimSpace(asString(secondPostTurnSummary["summarizes_uuid"])) == "" || strings.TrimSpace(asString(secondPostTurnSummary["status_category"])) != "completed" || strings.TrimSpace(asString(secondPostTurnSummary["title"])) == "" || strings.TrimSpace(asString(secondPostTurnSummary["recent_action"])) == "" {
 		t.Fatalf("invalid second post_turn_summary payload: %#v", secondPostTurnSummary)
+	}
+	var secondCompactBoundary map[string]any
+	if err := ws.ReadJSON(&secondCompactBoundary); err != nil {
+		t.Fatalf("read second compact_boundary failed: %v", err)
+	}
+	if secondCompactBoundary["type"] != "system" || strings.TrimSpace(asString(secondCompactBoundary["subtype"])) != "compact_boundary" || strings.TrimSpace(asString(secondCompactBoundary["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second compact_boundary payload: %#v", secondCompactBoundary)
+	}
+	secondCompactMetadata, _ := secondCompactBoundary["compact_metadata"].(map[string]any)
+	if strings.TrimSpace(asString(secondCompactMetadata["trigger"])) != "auto" || int(secondCompactMetadata["pre_tokens"].(float64)) != 128 {
+		t.Fatalf("invalid second compact_boundary payload: %#v", secondCompactBoundary)
 	}
 
 	if err := ws.WriteJSON(map[string]any{

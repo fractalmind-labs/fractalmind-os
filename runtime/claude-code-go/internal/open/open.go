@@ -73,6 +73,8 @@ type Result struct {
 	ToolUseSummaryEvent       string
 	PostTurnSummaryValidated  bool
 	PostTurnSummaryEvent      string
+	CompactBoundaryValidated  bool
+	CompactBoundaryEvent      string
 	ToolExecutionValidated    bool
 	InterruptValidated        bool
 	BackendValidated          bool
@@ -185,6 +187,8 @@ func Run(args []string) (Result, error) {
 		ToolUseSummaryEvent:       streamResult.ToolUseSummaryEvent,
 		PostTurnSummaryValidated:  streamResult.PostTurnSummaryValidated,
 		PostTurnSummaryEvent:      streamResult.PostTurnSummaryEvent,
+		CompactBoundaryValidated:  streamResult.CompactBoundaryValidated,
+		CompactBoundaryEvent:      streamResult.CompactBoundaryEvent,
 		ToolExecutionValidated:    streamResult.ToolExecutionValidated,
 		InterruptValidated:        streamResult.InterruptValidated,
 		BackendValidated:          state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
@@ -527,6 +531,8 @@ type streamValidation struct {
 	ToolUseSummaryEvent       string
 	PostTurnSummaryValidated  bool
 	PostTurnSummaryEvent      string
+	CompactBoundaryValidated  bool
+	CompactBoundaryEvent      string
 	ToolExecutionValidated    bool
 	InterruptValidated        bool
 }
@@ -607,6 +613,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		assistantValidated := false
 		resultValidated := false
 		postTurnSummaryValidated := false
+		compactBoundaryValidated := false
 		for {
 			var incoming map[string]any
 			if err := conn.ReadJSON(&incoming); err != nil {
@@ -656,6 +663,23 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.PostTurnSummaryValidated = true
 					result.PostTurnSummaryEvent = "system:post_turn_summary"
 					postTurnSummaryValidated = true
+				case "compact_boundary":
+					if turn.behavior == "deny" {
+						return streamValidation{}, fmt.Errorf("unexpected compact_boundary during deny turn")
+					}
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid compact_boundary: missing session_id")
+					}
+					compactMetadata, _ := incoming["compact_metadata"].(map[string]any)
+					if strings.TrimSpace(asString(compactMetadata["trigger"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid compact_boundary: missing compact_metadata.trigger")
+					}
+					if _, ok := compactMetadata["pre_tokens"]; !ok {
+						return streamValidation{}, fmt.Errorf("invalid compact_boundary: missing compact_metadata.pre_tokens")
+					}
+					result.CompactBoundaryValidated = true
+					result.CompactBoundaryEvent = "system:compact_boundary"
+					compactBoundaryValidated = true
 				default:
 					return streamValidation{}, fmt.Errorf("invalid system event subtype: %s", asString(incoming["subtype"]))
 				}
@@ -876,7 +900,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && postTurnSummaryValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && postTurnSummaryValidated && compactBoundaryValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -992,6 +1016,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("tool_use_summary_event=%s\n", valueOrNone(r.ToolUseSummaryEvent)))
 	b.WriteString(fmt.Sprintf("post_turn_summary_validated=%t\n", r.PostTurnSummaryValidated))
 	b.WriteString(fmt.Sprintf("post_turn_summary_event=%s\n", valueOrNone(r.PostTurnSummaryEvent)))
+	b.WriteString(fmt.Sprintf("compact_boundary_validated=%t\n", r.CompactBoundaryValidated))
+	b.WriteString(fmt.Sprintf("compact_boundary_event=%s\n", valueOrNone(r.CompactBoundaryEvent)))
 	b.WriteString(fmt.Sprintf("tool_execution_validated=%t\n", r.ToolExecutionValidated))
 	b.WriteString(fmt.Sprintf("interrupt_validated=%t\n", r.InterruptValidated))
 	b.WriteString(fmt.Sprintf("backend_validated=%t\n", r.BackendValidated))

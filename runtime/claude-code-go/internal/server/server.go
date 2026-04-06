@@ -775,6 +775,20 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":            postTurnUUID,
 					"session_id":      session.ID,
 				})
+				compactBoundaryUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":    "system",
+					"subtype": "compact_boundary",
+					"compact_metadata": map[string]any{
+						"trigger":    "auto",
+						"pre_tokens": 128,
+					},
+					"uuid":       compactBoundaryUUID,
+					"session_id": session.ID,
+				})
 				pendingPrompt = ""
 				pendingRequestID = ""
 				pendingToolUseID = ""
