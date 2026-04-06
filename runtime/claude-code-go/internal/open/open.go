@@ -111,6 +111,8 @@ type Result struct {
 	GetContextUsageEvent          string
 	MCPMessageValidated           bool
 	MCPMessageEvent               string
+	SeedReadStateValidated        bool
+	SeedReadStateEvent            string
 	RewindFilesValidated          bool
 	RewindFilesEvent              string
 	RewindFilesCanRewind          bool
@@ -270,6 +272,8 @@ func Run(args []string) (Result, error) {
 		GetContextUsageEvent:          streamResult.GetContextUsageEvent,
 		MCPMessageValidated:           streamResult.MCPMessageValidated,
 		MCPMessageEvent:               streamResult.MCPMessageEvent,
+		SeedReadStateValidated:        streamResult.SeedReadStateValidated,
+		SeedReadStateEvent:            streamResult.SeedReadStateEvent,
 		RewindFilesValidated:          streamResult.RewindFilesValidated,
 		RewindFilesEvent:              streamResult.RewindFilesEvent,
 		RewindFilesCanRewind:          streamResult.RewindFilesCanRewind,
@@ -659,6 +663,8 @@ type streamValidation struct {
 	GetContextUsageEvent          string
 	MCPMessageValidated           bool
 	MCPMessageEvent               string
+	SeedReadStateValidated        bool
+	SeedReadStateEvent            string
 	RewindFilesValidated          bool
 	RewindFilesEvent              string
 	RewindFilesCanRewind          bool
@@ -1534,6 +1540,33 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 			result.MCPMessageEvent = "control_request:mcp_message"
 		}
 	}
+	seedReadStateID := "seed-read-state-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": seedReadStateID,
+		"request": map[string]any{
+			"subtype": "seed_read_state",
+			"path":    "/tmp/missing.txt",
+			"mtime":   123456789,
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect seed_read_state request: %w", err)
+	}
+	for !result.SeedReadStateValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect seed_read_state flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != seedReadStateID {
+			continue
+		}
+		result.SeedReadStateValidated = true
+		result.SeedReadStateEvent = "control_request:seed_read_state"
+	}
 	rewindFilesID := "rewind-files-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -1765,6 +1798,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("get_context_usage_event=%s\n", valueOrNone(r.GetContextUsageEvent)))
 	b.WriteString(fmt.Sprintf("mcp_message_validated=%t\n", r.MCPMessageValidated))
 	b.WriteString(fmt.Sprintf("mcp_message_event=%s\n", valueOrNone(r.MCPMessageEvent)))
+	b.WriteString(fmt.Sprintf("seed_read_state_validated=%t\n", r.SeedReadStateValidated))
+	b.WriteString(fmt.Sprintf("seed_read_state_event=%s\n", valueOrNone(r.SeedReadStateEvent)))
 	b.WriteString(fmt.Sprintf("rewind_files_validated=%t\n", r.RewindFilesValidated))
 	b.WriteString(fmt.Sprintf("rewind_files_event=%s\n", valueOrNone(r.RewindFilesEvent)))
 	b.WriteString(fmt.Sprintf("rewind_files_can_rewind=%t\n", r.RewindFilesCanRewind))

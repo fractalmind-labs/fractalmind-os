@@ -975,6 +975,29 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "seed-read-state-1",
+		"request": map[string]any{
+			"subtype": "seed_read_state",
+			"path":    "/tmp/missing.txt",
+			"mtime":   123456789,
+		},
+	}); err != nil {
+		t.Fatalf("write seed_read_state request failed: %v", err)
+	}
+	var seedReadStateResp map[string]any
+	if err := ws.ReadJSON(&seedReadStateResp); err != nil {
+		t.Fatalf("read seed_read_state response failed: %v", err)
+	}
+	if seedReadStateResp["type"] != "control_response" {
+		t.Fatalf("unexpected seed_read_state response: %#v", seedReadStateResp)
+	}
+	seedReadStateResponse, _ := seedReadStateResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(seedReadStateResponse["request_id"])) != "seed-read-state-1" {
+		t.Fatalf("unexpected seed_read_state request id: %#v", seedReadStateResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "cancel-async-message-1",
 		"request": map[string]any{
 			"subtype":      "cancel_async_message",
