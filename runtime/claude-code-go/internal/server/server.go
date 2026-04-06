@@ -984,6 +984,8 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				case "set_model":
 				case "set_permission_mode":
 				case "set_max_thinking_tokens":
+				case "mcp_status":
+					responsePayload["mcpServers"] = []any{}
 				case "end_session":
 				default:
 					continue

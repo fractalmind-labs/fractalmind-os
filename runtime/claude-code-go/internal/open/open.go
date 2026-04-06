@@ -105,6 +105,8 @@ type Result struct {
 	SetPermissionModeEvent        string
 	SetMaxThinkingTokensValidated bool
 	SetMaxThinkingTokensEvent     string
+	MCPStatusValidated            bool
+	MCPStatusEvent                string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 	BackendValidated              bool
@@ -249,6 +251,8 @@ func Run(args []string) (Result, error) {
 		SetPermissionModeEvent:        streamResult.SetPermissionModeEvent,
 		SetMaxThinkingTokensValidated: streamResult.SetMaxThinkingTokensValidated,
 		SetMaxThinkingTokensEvent:     streamResult.SetMaxThinkingTokensEvent,
+		MCPStatusValidated:            streamResult.MCPStatusValidated,
+		MCPStatusEvent:                streamResult.MCPStatusEvent,
 		EndSessionValidated:           streamResult.EndSessionValidated,
 		EndSessionEvent:               streamResult.EndSessionEvent,
 		BackendValidated:              state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
@@ -623,6 +627,8 @@ type streamValidation struct {
 	SetPermissionModeEvent        string
 	SetMaxThinkingTokensValidated bool
 	SetMaxThinkingTokensEvent     string
+	MCPStatusValidated            bool
+	MCPStatusEvent                string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 }
@@ -1372,6 +1378,39 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 			result.SetMaxThinkingTokensEvent = "control_request:set_max_thinking_tokens"
 		}
 	}
+	mcpStatusID := "mcp-status-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": mcpStatusID,
+		"request": map[string]any{
+			"subtype": "mcp_status",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect mcp_status request: %w", err)
+	}
+	for !result.MCPStatusValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect mcp_status flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != mcpStatusID {
+			continue
+		}
+		responsePayload, _ := response["response"].(map[string]any)
+		mcpServers, ok := responsePayload["mcpServers"].([]any)
+		if !ok {
+			return streamValidation{}, fmt.Errorf("invalid mcp_status response: missing mcpServers")
+		}
+		if len(mcpServers) != 0 {
+			return streamValidation{}, fmt.Errorf("invalid mcp_status response: expected empty mcpServers, got %d", len(mcpServers))
+		}
+		result.MCPStatusValidated = true
+		result.MCPStatusEvent = "control_request:mcp_status"
+	}
 	endSessionID := "end-session-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -1512,6 +1551,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("set_permission_mode_event=%s\n", valueOrNone(r.SetPermissionModeEvent)))
 	b.WriteString(fmt.Sprintf("set_max_thinking_tokens_validated=%t\n", r.SetMaxThinkingTokensValidated))
 	b.WriteString(fmt.Sprintf("set_max_thinking_tokens_event=%s\n", valueOrNone(r.SetMaxThinkingTokensEvent)))
+	b.WriteString(fmt.Sprintf("mcp_status_validated=%t\n", r.MCPStatusValidated))
+	b.WriteString(fmt.Sprintf("mcp_status_event=%s\n", valueOrNone(r.MCPStatusEvent)))
 	b.WriteString(fmt.Sprintf("end_session_validated=%t\n", r.EndSessionValidated))
 	b.WriteString(fmt.Sprintf("end_session_event=%s\n", valueOrNone(r.EndSessionEvent)))
 	b.WriteString(fmt.Sprintf("backend_validated=%t\n", r.BackendValidated))

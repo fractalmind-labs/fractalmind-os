@@ -830,6 +830,31 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "mcp-status-1",
+		"request": map[string]any{
+			"subtype": "mcp_status",
+		},
+	}); err != nil {
+		t.Fatalf("write mcp_status request failed: %v", err)
+	}
+	var mcpStatusResp map[string]any
+	if err := ws.ReadJSON(&mcpStatusResp); err != nil {
+		t.Fatalf("read mcp_status response failed: %v", err)
+	}
+	if mcpStatusResp["type"] != "control_response" {
+		t.Fatalf("unexpected mcp_status response: %#v", mcpStatusResp)
+	}
+	mcpStatusResponse, _ := mcpStatusResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(mcpStatusResponse["request_id"])) != "mcp-status-1" {
+		t.Fatalf("unexpected mcp_status request id: %#v", mcpStatusResp)
+	}
+	mcpStatusPayload, _ := mcpStatusResponse["response"].(map[string]any)
+	if mcpServers, ok := mcpStatusPayload["mcpServers"].([]any); !ok || len(mcpServers) != 0 {
+		t.Fatalf("unexpected mcp_status payload: %#v", mcpStatusResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "end-session-1",
 		"request": map[string]any{
 			"subtype": "end_session",
