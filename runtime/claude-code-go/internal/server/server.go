@@ -999,6 +999,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					responsePayload["agents"] = []any{}
 					responsePayload["isAutoCompactEnabled"] = false
 					responsePayload["apiUsage"] = nil
+				case "mcp_message":
 				case "end_session":
 				default:
 					continue

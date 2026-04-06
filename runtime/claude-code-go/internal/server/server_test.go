@@ -913,6 +913,34 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "mcp-message-1",
+		"request": map[string]any{
+			"subtype":     "mcp_message",
+			"server_name": "demo-mcp",
+			"message": map[string]any{
+				"jsonrpc": "2.0",
+				"id":      "msg-1",
+				"method":  "notifications/ping",
+				"params":  map[string]any{"source": "direct-connect-validation"},
+			},
+		},
+	}); err != nil {
+		t.Fatalf("write mcp_message request failed: %v", err)
+	}
+	var mcpMessageResp map[string]any
+	if err := ws.ReadJSON(&mcpMessageResp); err != nil {
+		t.Fatalf("read mcp_message response failed: %v", err)
+	}
+	if mcpMessageResp["type"] != "control_response" {
+		t.Fatalf("unexpected mcp_message response: %#v", mcpMessageResp)
+	}
+	mcpMessageResponse, _ := mcpMessageResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(mcpMessageResponse["request_id"])) != "mcp-message-1" {
+		t.Fatalf("unexpected mcp_message request id: %#v", mcpMessageResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "end-session-1",
 		"request": map[string]any{
 			"subtype": "end_session",
