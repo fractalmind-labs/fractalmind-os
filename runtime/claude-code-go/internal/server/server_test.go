@@ -999,6 +999,28 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "mcp-reconnect-1",
+		"request": map[string]any{
+			"subtype":    "mcp_reconnect",
+			"serverName": "demo-mcp",
+		},
+	}); err != nil {
+		t.Fatalf("write mcp_reconnect request failed: %v", err)
+	}
+	var mcpReconnectResp map[string]any
+	if err := ws.ReadJSON(&mcpReconnectResp); err != nil {
+		t.Fatalf("read mcp_reconnect response failed: %v", err)
+	}
+	if mcpReconnectResp["type"] != "control_response" {
+		t.Fatalf("unexpected mcp_reconnect response: %#v", mcpReconnectResp)
+	}
+	mcpReconnectResponse, _ := mcpReconnectResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(mcpReconnectResponse["request_id"])) != "mcp-reconnect-1" {
+		t.Fatalf("unexpected mcp_reconnect request id: %#v", mcpReconnectResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "rewind-files-1",
 		"request": map[string]any{
 			"subtype":         "rewind_files",

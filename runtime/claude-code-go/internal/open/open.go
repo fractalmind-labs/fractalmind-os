@@ -115,6 +115,8 @@ type Result struct {
 	MCPSetServersEvent            string
 	ReloadPluginsValidated        bool
 	ReloadPluginsEvent            string
+	MCPReconnectValidated         bool
+	MCPReconnectEvent             string
 	SeedReadStateValidated        bool
 	SeedReadStateEvent            string
 	RewindFilesValidated          bool
@@ -280,6 +282,8 @@ func Run(args []string) (Result, error) {
 		MCPSetServersEvent:            streamResult.MCPSetServersEvent,
 		ReloadPluginsValidated:        streamResult.ReloadPluginsValidated,
 		ReloadPluginsEvent:            streamResult.ReloadPluginsEvent,
+		MCPReconnectValidated:         streamResult.MCPReconnectValidated,
+		MCPReconnectEvent:             streamResult.MCPReconnectEvent,
 		SeedReadStateValidated:        streamResult.SeedReadStateValidated,
 		SeedReadStateEvent:            streamResult.SeedReadStateEvent,
 		RewindFilesValidated:          streamResult.RewindFilesValidated,
@@ -675,6 +679,8 @@ type streamValidation struct {
 	MCPSetServersEvent            string
 	ReloadPluginsValidated        bool
 	ReloadPluginsEvent            string
+	MCPReconnectValidated         bool
+	MCPReconnectEvent             string
 	SeedReadStateValidated        bool
 	SeedReadStateEvent            string
 	RewindFilesValidated          bool
@@ -1637,6 +1643,32 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		result.ReloadPluginsValidated = true
 		result.ReloadPluginsEvent = "control_request:reload_plugins"
 	}
+	mcpReconnectID := "mcp-reconnect-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": mcpReconnectID,
+		"request": map[string]any{
+			"subtype":    "mcp_reconnect",
+			"serverName": "demo-mcp",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect mcp_reconnect request: %w", err)
+	}
+	for !result.MCPReconnectValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect mcp_reconnect flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != mcpReconnectID {
+			continue
+		}
+		result.MCPReconnectValidated = true
+		result.MCPReconnectEvent = "control_request:mcp_reconnect"
+	}
 	seedReadStateID := "seed-read-state-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -1899,6 +1931,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("mcp_set_servers_event=%s\n", valueOrNone(r.MCPSetServersEvent)))
 	b.WriteString(fmt.Sprintf("reload_plugins_validated=%t\n", r.ReloadPluginsValidated))
 	b.WriteString(fmt.Sprintf("reload_plugins_event=%s\n", valueOrNone(r.ReloadPluginsEvent)))
+	b.WriteString(fmt.Sprintf("mcp_reconnect_validated=%t\n", r.MCPReconnectValidated))
+	b.WriteString(fmt.Sprintf("mcp_reconnect_event=%s\n", valueOrNone(r.MCPReconnectEvent)))
 	b.WriteString(fmt.Sprintf("seed_read_state_validated=%t\n", r.SeedReadStateValidated))
 	b.WriteString(fmt.Sprintf("seed_read_state_event=%s\n", valueOrNone(r.SeedReadStateEvent)))
 	b.WriteString(fmt.Sprintf("rewind_files_validated=%t\n", r.RewindFilesValidated))
