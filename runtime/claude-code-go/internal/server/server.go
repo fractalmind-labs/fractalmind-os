@@ -1033,6 +1033,8 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						"model":  "claude-sonnet-4-5",
 						"effort": nil,
 					}
+				case "generate_session_title":
+					responsePayload["title"] = "Direct Connect Session"
 				case "end_session":
 				default:
 					continue

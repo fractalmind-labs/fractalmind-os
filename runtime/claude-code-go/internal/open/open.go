@@ -136,6 +136,8 @@ type Result struct {
 	ApplyFlagSettingsEvent        string
 	GetSettingsValidated          bool
 	GetSettingsEvent              string
+	GenerateSessionTitleValidated bool
+	GenerateSessionTitleEvent     string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 	BackendValidated              bool
@@ -311,6 +313,8 @@ func Run(args []string) (Result, error) {
 		ApplyFlagSettingsEvent:        streamResult.ApplyFlagSettingsEvent,
 		GetSettingsValidated:          streamResult.GetSettingsValidated,
 		GetSettingsEvent:              streamResult.GetSettingsEvent,
+		GenerateSessionTitleValidated: streamResult.GenerateSessionTitleValidated,
+		GenerateSessionTitleEvent:     streamResult.GenerateSessionTitleEvent,
 		EndSessionValidated:           streamResult.EndSessionValidated,
 		EndSessionEvent:               streamResult.EndSessionEvent,
 		BackendValidated:              state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
@@ -716,6 +720,8 @@ type streamValidation struct {
 	ApplyFlagSettingsEvent        string
 	GetSettingsValidated          bool
 	GetSettingsEvent              string
+	GenerateSessionTitleValidated bool
+	GenerateSessionTitleEvent     string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 }
@@ -1928,6 +1934,37 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		result.GetSettingsValidated = true
 		result.GetSettingsEvent = "control_request:get_settings"
 	}
+	generateSessionTitleID := "generate-session-title-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": generateSessionTitleID,
+		"request": map[string]any{
+			"subtype":     "generate_session_title",
+			"description": "summarize this session",
+			"persist":     false,
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect generate_session_title request: %w", err)
+	}
+	for !result.GenerateSessionTitleValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect generate_session_title flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != generateSessionTitleID {
+			continue
+		}
+		responsePayload, _ := response["response"].(map[string]any)
+		if strings.TrimSpace(asString(responsePayload["title"])) == "" {
+			return streamValidation{}, fmt.Errorf("invalid generate_session_title response: missing title")
+		}
+		result.GenerateSessionTitleValidated = true
+		result.GenerateSessionTitleEvent = "control_request:generate_session_title"
+	}
 	endSessionID := "end-session-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -2099,6 +2136,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("apply_flag_settings_event=%s\n", valueOrNone(r.ApplyFlagSettingsEvent)))
 	b.WriteString(fmt.Sprintf("get_settings_validated=%t\n", r.GetSettingsValidated))
 	b.WriteString(fmt.Sprintf("get_settings_event=%s\n", valueOrNone(r.GetSettingsEvent)))
+	b.WriteString(fmt.Sprintf("generate_session_title_validated=%t\n", r.GenerateSessionTitleValidated))
+	b.WriteString(fmt.Sprintf("generate_session_title_event=%s\n", valueOrNone(r.GenerateSessionTitleEvent)))
 	b.WriteString(fmt.Sprintf("end_session_validated=%t\n", r.EndSessionValidated))
 	b.WriteString(fmt.Sprintf("end_session_event=%s\n", valueOrNone(r.EndSessionEvent)))
 	b.WriteString(fmt.Sprintf("backend_validated=%t\n", r.BackendValidated))

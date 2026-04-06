@@ -1207,6 +1207,33 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "generate-session-title-1",
+		"request": map[string]any{
+			"subtype":     "generate_session_title",
+			"description": "summarize this session",
+			"persist":     false,
+		},
+	}); err != nil {
+		t.Fatalf("write generate_session_title request failed: %v", err)
+	}
+	var generateSessionTitleResp map[string]any
+	if err := ws.ReadJSON(&generateSessionTitleResp); err != nil {
+		t.Fatalf("read generate_session_title response failed: %v", err)
+	}
+	if generateSessionTitleResp["type"] != "control_response" {
+		t.Fatalf("unexpected generate_session_title response: %#v", generateSessionTitleResp)
+	}
+	generateSessionTitleResponse, _ := generateSessionTitleResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(generateSessionTitleResponse["request_id"])) != "generate-session-title-1" {
+		t.Fatalf("unexpected generate_session_title request id: %#v", generateSessionTitleResp)
+	}
+	generateSessionTitlePayload, _ := generateSessionTitleResponse["response"].(map[string]any)
+	if strings.TrimSpace(asString(generateSessionTitlePayload["title"])) == "" {
+		t.Fatalf("unexpected generate_session_title payload: %#v", generateSessionTitleResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "end-session-1",
 		"request": map[string]any{
 			"subtype": "end_session",
