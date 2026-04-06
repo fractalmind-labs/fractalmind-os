@@ -1000,6 +1000,8 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					responsePayload["isAutoCompactEnabled"] = false
 					responsePayload["apiUsage"] = nil
 				case "mcp_message":
+				case "cancel_async_message":
+					responsePayload["cancelled"] = false
 				case "end_session":
 				default:
 					continue

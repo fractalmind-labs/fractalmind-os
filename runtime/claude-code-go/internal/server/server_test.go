@@ -941,6 +941,32 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "cancel-async-message-1",
+		"request": map[string]any{
+			"subtype":      "cancel_async_message",
+			"message_uuid": "async-msg-1",
+		},
+	}); err != nil {
+		t.Fatalf("write cancel_async_message request failed: %v", err)
+	}
+	var cancelAsyncMessageResp map[string]any
+	if err := ws.ReadJSON(&cancelAsyncMessageResp); err != nil {
+		t.Fatalf("read cancel_async_message response failed: %v", err)
+	}
+	if cancelAsyncMessageResp["type"] != "control_response" {
+		t.Fatalf("unexpected cancel_async_message response: %#v", cancelAsyncMessageResp)
+	}
+	cancelAsyncMessageResponse, _ := cancelAsyncMessageResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(cancelAsyncMessageResponse["request_id"])) != "cancel-async-message-1" {
+		t.Fatalf("unexpected cancel_async_message request id: %#v", cancelAsyncMessageResp)
+	}
+	cancelAsyncMessagePayload, _ := cancelAsyncMessageResponse["response"].(map[string]any)
+	if cancelled, ok := cancelAsyncMessagePayload["cancelled"].(bool); !ok || cancelled {
+		t.Fatalf("unexpected cancel_async_message payload: %#v", cancelAsyncMessageResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "end-session-1",
 		"request": map[string]any{
 			"subtype": "end_session",
