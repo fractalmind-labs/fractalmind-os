@@ -756,6 +756,25 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":               resultUUID,
 					"session_id":         session.ID,
 				})
+				postTurnUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":            "system",
+					"subtype":         "post_turn_summary",
+					"summarizes_uuid": resultUUID,
+					"status_category": "completed",
+					"status_detail":   "direct-connect turn completed",
+					"is_noteworthy":   false,
+					"title":           "Turn complete",
+					"description":     "Minimal direct-connect post-turn summary emitted by claude-code-go",
+					"recent_action":   "Executed echo tool and returned assistant/result events",
+					"needs_action":    "none",
+					"artifact_urls":   []string{},
+					"uuid":            postTurnUUID,
+					"session_id":      session.ID,
+				})
 				pendingPrompt = ""
 				pendingRequestID = ""
 				pendingToolUseID = ""

@@ -282,6 +282,16 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if result["type"] != "result" || strings.TrimSpace(asString(result["subtype"])) != "success" || strings.TrimSpace(asString(result["result"])) != "echo:hello [approved]" {
 		t.Fatalf("unexpected result event: %#v", result)
 	}
+	var postTurnSummary map[string]any
+	if err := ws.ReadJSON(&postTurnSummary); err != nil {
+		t.Fatalf("read post_turn_summary failed: %v", err)
+	}
+	if postTurnSummary["type"] != "system" || strings.TrimSpace(asString(postTurnSummary["subtype"])) != "post_turn_summary" || strings.TrimSpace(asString(postTurnSummary["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected post_turn_summary payload: %#v", postTurnSummary)
+	}
+	if strings.TrimSpace(asString(postTurnSummary["summarizes_uuid"])) == "" || strings.TrimSpace(asString(postTurnSummary["status_category"])) != "completed" || strings.TrimSpace(asString(postTurnSummary["title"])) == "" || strings.TrimSpace(asString(postTurnSummary["recent_action"])) == "" {
+		t.Fatalf("invalid post_turn_summary payload: %#v", postTurnSummary)
+	}
 
 	if err := ws.WriteJSON(map[string]any{
 		"type": "user",
@@ -380,6 +390,16 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if secondResult["type"] != "result" || strings.TrimSpace(asString(secondResult["subtype"])) != "success" || strings.TrimSpace(asString(secondResult["result"])) != "echo:hello again [approved]" {
 		t.Fatalf("unexpected second result event: %#v", secondResult)
+	}
+	var secondPostTurnSummary map[string]any
+	if err := ws.ReadJSON(&secondPostTurnSummary); err != nil {
+		t.Fatalf("read second post_turn_summary failed: %v", err)
+	}
+	if secondPostTurnSummary["type"] != "system" || strings.TrimSpace(asString(secondPostTurnSummary["subtype"])) != "post_turn_summary" || strings.TrimSpace(asString(secondPostTurnSummary["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second post_turn_summary payload: %#v", secondPostTurnSummary)
+	}
+	if strings.TrimSpace(asString(secondPostTurnSummary["summarizes_uuid"])) == "" || strings.TrimSpace(asString(secondPostTurnSummary["status_category"])) != "completed" || strings.TrimSpace(asString(secondPostTurnSummary["title"])) == "" || strings.TrimSpace(asString(secondPostTurnSummary["recent_action"])) == "" {
+		t.Fatalf("invalid second post_turn_summary payload: %#v", secondPostTurnSummary)
 	}
 
 	if err := ws.WriteJSON(map[string]any{

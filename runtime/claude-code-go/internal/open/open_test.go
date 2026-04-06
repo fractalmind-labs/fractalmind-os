@@ -70,6 +70,7 @@ func TestRunOpenDefaults(t *testing.T) {
 		"status_validated=false",
 		"auth_validated=false",
 		"keep_alive_validated=false",
+		"post_turn_summary_validated=false",
 		"control_cancel_validated=false",
 		"system_validated=false",
 		"result_validated=false",
@@ -103,7 +104,7 @@ func TestRunOpenSupportsPrintModeAndPrompt(t *testing.T) {
 	if result.SessionID != "sess-456" || !result.StreamValidated || result.StreamEvent != "session_ready" {
 		t.Fatalf("expected session response, got %#v", result)
 	}
-	if !result.StreamContentValidated || result.StreamContentEvent != "stream_event:content_block_delta" || !result.SystemValidated || result.SystemEvent != "system:init" || !result.StatusValidated || result.StatusEvent != "system:status" || !result.AuthValidated || result.AuthEvent != "auth_status" || !result.KeepAliveValidated || result.KeepAliveEvent != "keep_alive" || !result.ControlCancelValidated || result.ControlCancelEvent != "control_cancel_request" || !result.MessageValidated || result.MessageEvent != "assistant" || result.ValidatedTurns != 2 || !result.MultiTurnValidated || !result.ResultValidated || result.ResultEvent != "result:success" || !result.ResultErrorValidated || result.ResultErrorEvent != "result:error_during_execution" || !result.ControlValidated || !result.PermissionValidated || !result.PermissionDeniedValidated || result.PermissionDeniedEvent != "permission_denial:echo" || !result.ToolProgressValidated || result.ToolProgressEvent != "tool_progress" || !result.RateLimitValidated || result.RateLimitEvent != "rate_limit_event:default" || !result.ToolUseSummaryValidated || result.ToolUseSummaryEvent != "tool_use_summary" || !result.ToolExecutionValidated || !result.InterruptValidated || !result.BackendValidated {
+	if !result.StreamContentValidated || result.StreamContentEvent != "stream_event:content_block_delta" || !result.SystemValidated || result.SystemEvent != "system:init" || !result.StatusValidated || result.StatusEvent != "system:status" || !result.AuthValidated || result.AuthEvent != "auth_status" || !result.KeepAliveValidated || result.KeepAliveEvent != "keep_alive" || !result.ControlCancelValidated || result.ControlCancelEvent != "control_cancel_request" || !result.MessageValidated || result.MessageEvent != "assistant" || result.ValidatedTurns != 2 || !result.MultiTurnValidated || !result.ResultValidated || result.ResultEvent != "result:success" || !result.ResultErrorValidated || result.ResultErrorEvent != "result:error_during_execution" || !result.ControlValidated || !result.PermissionValidated || !result.PermissionDeniedValidated || result.PermissionDeniedEvent != "permission_denial:echo" || !result.ToolProgressValidated || result.ToolProgressEvent != "tool_progress" || !result.RateLimitValidated || result.RateLimitEvent != "rate_limit_event:default" || !result.ToolUseSummaryValidated || result.ToolUseSummaryEvent != "tool_use_summary" || !result.PostTurnSummaryValidated || result.PostTurnSummaryEvent != "system:post_turn_summary" || !result.ToolExecutionValidated || !result.InterruptValidated || !result.BackendValidated {
 		t.Fatalf("expected session response, got %#v", result)
 	}
 }
@@ -536,6 +537,21 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 				"permission_denials": []map[string]any{},
 				"uuid":               fmt.Sprintf("result-%d", requestCounter),
 				"session_id":         sessionID,
+			})
+			_ = conn.WriteJSON(map[string]any{
+				"type":            "system",
+				"subtype":         "post_turn_summary",
+				"summarizes_uuid": fmt.Sprintf("result-%d", requestCounter),
+				"status_category": "completed",
+				"status_detail":   "direct-connect turn completed",
+				"is_noteworthy":   false,
+				"title":           "Turn complete",
+				"description":     "Minimal direct-connect post-turn summary emitted by test server",
+				"recent_action":   "Executed echo tool and returned assistant/result events",
+				"needs_action":    "none",
+				"artifact_urls":   []string{},
+				"uuid":            fmt.Sprintf("post-turn-summary-%d", requestCounter),
+				"session_id":      sessionID,
 			})
 			pendingRequestID = ""
 			pendingPrompt = ""

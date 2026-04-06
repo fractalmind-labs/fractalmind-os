@@ -71,6 +71,8 @@ type Result struct {
 	RateLimitEvent            string
 	ToolUseSummaryValidated   bool
 	ToolUseSummaryEvent       string
+	PostTurnSummaryValidated  bool
+	PostTurnSummaryEvent      string
 	ToolExecutionValidated    bool
 	InterruptValidated        bool
 	BackendValidated          bool
@@ -181,6 +183,8 @@ func Run(args []string) (Result, error) {
 		RateLimitEvent:            streamResult.RateLimitEvent,
 		ToolUseSummaryValidated:   streamResult.ToolUseSummaryValidated,
 		ToolUseSummaryEvent:       streamResult.ToolUseSummaryEvent,
+		PostTurnSummaryValidated:  streamResult.PostTurnSummaryValidated,
+		PostTurnSummaryEvent:      streamResult.PostTurnSummaryEvent,
 		ToolExecutionValidated:    streamResult.ToolExecutionValidated,
 		InterruptValidated:        streamResult.InterruptValidated,
 		BackendValidated:          state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
@@ -521,6 +525,8 @@ type streamValidation struct {
 	RateLimitEvent            string
 	ToolUseSummaryValidated   bool
 	ToolUseSummaryEvent       string
+	PostTurnSummaryValidated  bool
+	PostTurnSummaryEvent      string
 	ToolExecutionValidated    bool
 	InterruptValidated        bool
 }
@@ -600,6 +606,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 
 		assistantValidated := false
 		resultValidated := false
+		postTurnSummaryValidated := false
 		for {
 			var incoming map[string]any
 			if err := conn.ReadJSON(&incoming); err != nil {
@@ -627,6 +634,28 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					result.StatusValidated = true
 					result.StatusEvent = "system:status"
+				case "post_turn_summary":
+					if turn.behavior == "deny" {
+						return streamValidation{}, fmt.Errorf("unexpected post_turn_summary during deny turn")
+					}
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid post_turn_summary: missing session_id")
+					}
+					if strings.TrimSpace(asString(incoming["summarizes_uuid"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid post_turn_summary: missing summarizes_uuid")
+					}
+					if strings.TrimSpace(asString(incoming["status_category"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid post_turn_summary: missing status_category")
+					}
+					if strings.TrimSpace(asString(incoming["title"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid post_turn_summary: missing title")
+					}
+					if strings.TrimSpace(asString(incoming["recent_action"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid post_turn_summary: missing recent_action")
+					}
+					result.PostTurnSummaryValidated = true
+					result.PostTurnSummaryEvent = "system:post_turn_summary"
+					postTurnSummaryValidated = true
 				default:
 					return streamValidation{}, fmt.Errorf("invalid system event subtype: %s", asString(incoming["subtype"]))
 				}
@@ -847,7 +876,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && postTurnSummaryValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -961,6 +990,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("rate_limit_event=%s\n", valueOrNone(r.RateLimitEvent)))
 	b.WriteString(fmt.Sprintf("tool_use_summary_validated=%t\n", r.ToolUseSummaryValidated))
 	b.WriteString(fmt.Sprintf("tool_use_summary_event=%s\n", valueOrNone(r.ToolUseSummaryEvent)))
+	b.WriteString(fmt.Sprintf("post_turn_summary_validated=%t\n", r.PostTurnSummaryValidated))
+	b.WriteString(fmt.Sprintf("post_turn_summary_event=%s\n", valueOrNone(r.PostTurnSummaryEvent)))
 	b.WriteString(fmt.Sprintf("tool_execution_validated=%t\n", r.ToolExecutionValidated))
 	b.WriteString(fmt.Sprintf("interrupt_validated=%t\n", r.InterruptValidated))
 	b.WriteString(fmt.Sprintf("backend_validated=%t\n", r.BackendValidated))
