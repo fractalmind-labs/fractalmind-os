@@ -111,6 +111,8 @@ type Result struct {
 	GetContextUsageEvent          string
 	MCPMessageValidated           bool
 	MCPMessageEvent               string
+	MCPSetServersValidated        bool
+	MCPSetServersEvent            string
 	SeedReadStateValidated        bool
 	SeedReadStateEvent            string
 	RewindFilesValidated          bool
@@ -272,6 +274,8 @@ func Run(args []string) (Result, error) {
 		GetContextUsageEvent:          streamResult.GetContextUsageEvent,
 		MCPMessageValidated:           streamResult.MCPMessageValidated,
 		MCPMessageEvent:               streamResult.MCPMessageEvent,
+		MCPSetServersValidated:        streamResult.MCPSetServersValidated,
+		MCPSetServersEvent:            streamResult.MCPSetServersEvent,
 		SeedReadStateValidated:        streamResult.SeedReadStateValidated,
 		SeedReadStateEvent:            streamResult.SeedReadStateEvent,
 		RewindFilesValidated:          streamResult.RewindFilesValidated,
@@ -663,6 +667,8 @@ type streamValidation struct {
 	GetContextUsageEvent          string
 	MCPMessageValidated           bool
 	MCPMessageEvent               string
+	MCPSetServersValidated        bool
+	MCPSetServersEvent            string
 	SeedReadStateValidated        bool
 	SeedReadStateEvent            string
 	RewindFilesValidated          bool
@@ -1540,6 +1546,45 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 			result.MCPMessageEvent = "control_request:mcp_message"
 		}
 	}
+	mcpSetServersID := "mcp-set-servers-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": mcpSetServersID,
+		"request": map[string]any{
+			"subtype": "mcp_set_servers",
+			"servers": map[string]any{},
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect mcp_set_servers request: %w", err)
+	}
+	for !result.MCPSetServersValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect mcp_set_servers flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != mcpSetServersID {
+			continue
+		}
+		responsePayload, _ := response["response"].(map[string]any)
+		added, ok := responsePayload["added"].([]any)
+		if !ok || len(added) != 0 {
+			return streamValidation{}, fmt.Errorf("invalid mcp_set_servers response: expected empty added")
+		}
+		removed, ok := responsePayload["removed"].([]any)
+		if !ok || len(removed) != 0 {
+			return streamValidation{}, fmt.Errorf("invalid mcp_set_servers response: expected empty removed")
+		}
+		errorsMap, ok := responsePayload["errors"].(map[string]any)
+		if !ok || len(errorsMap) != 0 {
+			return streamValidation{}, fmt.Errorf("invalid mcp_set_servers response: expected empty errors")
+		}
+		result.MCPSetServersValidated = true
+		result.MCPSetServersEvent = "control_request:mcp_set_servers"
+	}
 	seedReadStateID := "seed-read-state-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -1798,6 +1843,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("get_context_usage_event=%s\n", valueOrNone(r.GetContextUsageEvent)))
 	b.WriteString(fmt.Sprintf("mcp_message_validated=%t\n", r.MCPMessageValidated))
 	b.WriteString(fmt.Sprintf("mcp_message_event=%s\n", valueOrNone(r.MCPMessageEvent)))
+	b.WriteString(fmt.Sprintf("mcp_set_servers_validated=%t\n", r.MCPSetServersValidated))
+	b.WriteString(fmt.Sprintf("mcp_set_servers_event=%s\n", valueOrNone(r.MCPSetServersEvent)))
 	b.WriteString(fmt.Sprintf("seed_read_state_validated=%t\n", r.SeedReadStateValidated))
 	b.WriteString(fmt.Sprintf("seed_read_state_event=%s\n", valueOrNone(r.SeedReadStateEvent)))
 	b.WriteString(fmt.Sprintf("rewind_files_validated=%t\n", r.RewindFilesValidated))

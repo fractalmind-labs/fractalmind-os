@@ -941,6 +941,35 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "mcp-set-servers-1",
+		"request": map[string]any{
+			"subtype": "mcp_set_servers",
+			"servers": map[string]any{},
+		},
+	}); err != nil {
+		t.Fatalf("write mcp_set_servers request failed: %v", err)
+	}
+	var mcpSetServersResp map[string]any
+	if err := ws.ReadJSON(&mcpSetServersResp); err != nil {
+		t.Fatalf("read mcp_set_servers response failed: %v", err)
+	}
+	if mcpSetServersResp["type"] != "control_response" {
+		t.Fatalf("unexpected mcp_set_servers response: %#v", mcpSetServersResp)
+	}
+	mcpSetServersResponse, _ := mcpSetServersResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(mcpSetServersResponse["request_id"])) != "mcp-set-servers-1" {
+		t.Fatalf("unexpected mcp_set_servers request id: %#v", mcpSetServersResp)
+	}
+	mcpSetServersPayload, _ := mcpSetServersResponse["response"].(map[string]any)
+	added, _ := mcpSetServersPayload["added"].([]any)
+	removed, _ := mcpSetServersPayload["removed"].([]any)
+	errorsMap, _ := mcpSetServersPayload["errors"].(map[string]any)
+	if len(added) != 0 || len(removed) != 0 || len(errorsMap) != 0 {
+		t.Fatalf("unexpected mcp_set_servers payload: %#v", mcpSetServersResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "rewind-files-1",
 		"request": map[string]any{
 			"subtype":         "rewind_files",

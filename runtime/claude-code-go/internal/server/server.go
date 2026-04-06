@@ -1001,7 +1001,12 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					responsePayload["apiUsage"] = nil
 				case "mcp_message":
 					_ = responsePayload
+				case "mcp_set_servers":
+					responsePayload["added"] = []any{}
+					responsePayload["removed"] = []any{}
+					responsePayload["errors"] = map[string]any{}
 				case "seed_read_state":
+					_ = responsePayload
 				case "rewind_files":
 					responsePayload["canRewind"] = true
 					responsePayload["filesChanged"] = []any{"README.md"}
