@@ -22,6 +22,7 @@ type Options struct {
 	PrintPrompt     string
 	OutputFormat    string
 	ResumeSessionID string
+	StopSessionID   string
 }
 
 type Result struct {
@@ -89,6 +90,30 @@ func Run(args []string) (Result, error) {
 	serverURL, transport, authToken, err := parseConnectURL(opts.ConnectURL)
 	if err != nil {
 		return Result{}, err
+	}
+	if strings.TrimSpace(opts.StopSessionID) != "" {
+		state, err := stopSession(serverURL, transport, authToken, opts.StopSessionID)
+		if err != nil {
+			return Result{}, err
+		}
+		return Result{
+			Status:           firstNonEmpty(state.Status, "stopped"),
+			Action:           actionForOptions(opts),
+			ConnectURL:       opts.ConnectURL,
+			Transport:        transport,
+			ServerURL:        serverURL,
+			AuthToken:        authToken,
+			PrintMode:        opts.PrintMode,
+			PrintPrompt:      opts.PrintPrompt,
+			OutputFormat:     opts.OutputFormat,
+			SessionID:        state.SessionID,
+			WorkDir:          state.WorkDir,
+			BackendStatus:    state.BackendStatus,
+			BackendPID:       state.BackendPID,
+			BackendStartedAt: state.BackendStartedAt,
+			BackendStoppedAt: state.BackendStoppedAt,
+			BackendExitCode:  state.BackendExitCode,
+		}, nil
 	}
 
 	cwd, err := os.Getwd()
@@ -175,6 +200,7 @@ type sessionResponse struct {
 
 type sessionStateResponse struct {
 	SessionID        string `json:"session_id"`
+	WorkDir          string `json:"work_dir,omitempty"`
 	Status           string `json:"status,omitempty"`
 	BackendStatus    string `json:"backend_status,omitempty"`
 	BackendPID       int    `json:"backend_pid,omitempty"`
@@ -206,25 +232,40 @@ func parseArgs(args []string) (Options, error) {
 			}
 			opts.ResumeSessionID = strings.TrimSpace(args[i+1])
 			i++
+		case "--stop-session":
+			if i+1 >= len(args) {
+				return opts, fmt.Errorf("--stop-session requires a value")
+			}
+			opts.StopSessionID = strings.TrimSpace(args[i+1])
+			i++
 		default:
 			if strings.HasPrefix(args[i], "--") {
 				return opts, fmt.Errorf("unknown option: %s", args[i])
 			}
 			if opts.ConnectURL != "" {
-				return opts, fmt.Errorf("usage: claude-code-go open <cc-url> [-p|--print [prompt]] [--output-format <format>] [--resume-session <sessionId>]")
+				return opts, fmt.Errorf("usage: claude-code-go open <cc-url> [-p|--print [prompt]] [--output-format <format>] [--resume-session <sessionId>] [--stop-session <sessionId>]")
 			}
 			opts.ConnectURL = args[i]
 		}
 	}
 
 	if strings.TrimSpace(opts.ConnectURL) == "" {
-		return opts, fmt.Errorf("usage: claude-code-go open <cc-url> [-p|--print [prompt]] [--output-format <format>] [--resume-session <sessionId>]")
+		return opts, fmt.Errorf("usage: claude-code-go open <cc-url> [-p|--print [prompt]] [--output-format <format>] [--resume-session <sessionId>] [--stop-session <sessionId>]")
 	}
 	if opts.OutputFormat == "" {
 		return opts, fmt.Errorf("--output-format requires a value")
 	}
 	if opts.ResumeSessionID == "" && hasFlag(args, "--resume-session") {
 		return opts, fmt.Errorf("--resume-session requires a value")
+	}
+	if opts.StopSessionID == "" && hasFlag(args, "--stop-session") {
+		return opts, fmt.Errorf("--stop-session requires a value")
+	}
+	if opts.ResumeSessionID != "" && opts.StopSessionID != "" {
+		return opts, fmt.Errorf("--resume-session and --stop-session cannot be used together")
+	}
+	if opts.StopSessionID != "" && opts.PrintMode {
+		return opts, fmt.Errorf("--stop-session cannot be combined with --print")
 	}
 
 	return opts, nil
@@ -416,6 +457,34 @@ func inspectSession(serverURL, transport, authToken, sessionID string) (sessionS
 	var parsed sessionStateResponse
 	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
 		return sessionStateResponse{}, fmt.Errorf("decode inspect session response: %w", err)
+	}
+	return parsed, nil
+}
+
+func stopSession(serverURL, transport, authToken, sessionID string) (sessionStateResponse, error) {
+	client, endpoint, err := buildClient(serverURL, transport)
+	if err != nil {
+		return sessionStateResponse{}, err
+	}
+	stopURL := strings.TrimRight(endpoint, "/") + "/" + url.PathEscape(sessionID)
+	req, err := http.NewRequest(http.MethodDelete, stopURL, nil)
+	if err != nil {
+		return sessionStateResponse{}, fmt.Errorf("build stop request: %w", err)
+	}
+	if strings.TrimSpace(authToken) != "" {
+		req.Header.Set("Authorization", "Bearer "+authToken)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return sessionStateResponse{}, fmt.Errorf("stop direct-connect session: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return sessionStateResponse{}, responseError("stop direct-connect session", resp)
+	}
+	var parsed sessionStateResponse
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return sessionStateResponse{}, fmt.Errorf("decode stop session response: %w", err)
 	}
 	return parsed, nil
 }
@@ -940,6 +1009,9 @@ func valueOrNone(v string) string {
 }
 
 func actionForOptions(opts Options) string {
+	if strings.TrimSpace(opts.StopSessionID) != "" {
+		return "stop-direct-connect-session"
+	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" {
 		return "resume-direct-connect"
 	}

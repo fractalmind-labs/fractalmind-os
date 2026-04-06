@@ -878,7 +878,7 @@ Usage:
   claude-code-go assistant [sessionId]
   claude-code-go server [--port <number>] [--host <string>] [--auth-token <token>] [--unix <path>] [--workspace <dir>] [--idle-timeout <ms>] [--max-sessions <n>]
   claude-code-go ssh <host> [dir] [--permission-mode <mode>] [--dangerously-skip-permissions] [--local]
-  claude-code-go open <cc-url> [-p|--print [prompt]] [--output-format <format>] [--resume-session <sessionId>]
+  claude-code-go open <cc-url> [-p|--print [prompt]] [--output-format <format>] [--resume-session <sessionId>] [--stop-session <sessionId>]
   claude-code-go setup-token [--token <token>] [--write-env-file <path>]
   claude-code-go mcp list
   claude-code-go plugin list

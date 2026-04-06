@@ -148,6 +148,45 @@ func TestRunOpenSupportsResumeSession(t *testing.T) {
 	}
 }
 
+func TestRunOpenSupportsStopSession(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/sessions/sess-stop", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			t.Fatalf("expected DELETE, got %s", r.Method)
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer demo-token" {
+			t.Fatalf("expected auth header, got %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"session_id":         "sess-stop",
+			"work_dir":           "/tmp/stop-work",
+			"status":             "stopped",
+			"backend_status":     "stopped",
+			"backend_pid":        12345,
+			"backend_started_at": 123456789,
+			"backend_stopped_at": 123456999,
+			"backend_exit_code":  0,
+		})
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	result, err := Run([]string{
+		"cc://" + strings.TrimPrefix(srv.URL, "http://") + "?authToken=demo-token",
+		"--stop-session", "sess-stop",
+	})
+	if err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if result.Status != "stopped" || result.Action != "stop-direct-connect-session" || result.SessionID != "sess-stop" {
+		t.Fatalf("unexpected stop result: %#v", result)
+	}
+	if result.WorkDir != "/tmp/stop-work" || result.BackendStatus != "stopped" || result.BackendPID != 12345 || result.BackendStoppedAt != 123456999 || result.BackendExitCode != 0 {
+		t.Fatalf("unexpected stop lifecycle: %#v", result)
+	}
+}
+
 func TestRunOpenSurfacesMaxSessionsGuard(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/sessions", func(w http.ResponseWriter, r *http.Request) {
@@ -176,6 +215,13 @@ func TestRunOpenRejectsUnknownOption(t *testing.T) {
 	_, err := Run([]string{"cc://127.0.0.1:7777", "--unknown"})
 	if err == nil || !strings.Contains(err.Error(), "unknown option") {
 		t.Fatalf("expected unknown option error, got %v", err)
+	}
+}
+
+func TestRunOpenRejectsResumeAndStopTogether(t *testing.T) {
+	_, err := Run([]string{"cc://127.0.0.1:7777", "--resume-session", "sess-1", "--stop-session", "sess-1"})
+	if err == nil || !strings.Contains(err.Error(), "cannot be used together") {
+		t.Fatalf("expected mutual exclusion error, got %v", err)
 	}
 }
 

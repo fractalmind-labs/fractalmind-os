@@ -691,6 +691,97 @@ func TestCreateSessionHonorsMaxSessionsGuard(t *testing.T) {
 	}
 }
 
+func TestDeleteSessionStopsBackendAndReleasesCapacity(t *testing.T) {
+	lockfile := filepath.Join(t.TempDir(), "server.lock.json")
+	sessionIndex := filepath.Join(t.TempDir(), "sessions.json")
+	t.Setenv("CLAUDE_CODE_GO_SERVER_LOCKFILE", lockfile)
+	t.Setenv("CLAUDE_CODE_GO_SERVER_SESSION_INDEX", sessionIndex)
+
+	running, err := Start([]string{
+		"--host", "127.0.0.1",
+		"--port", "0",
+		"--auth-token", "demo-token",
+		"--max-sessions", "1",
+	})
+	if err != nil {
+		t.Fatalf("Start returned error: %v", err)
+	}
+	defer func() {
+		if err := running.Close(); err != nil {
+			t.Fatalf("Close returned error: %v", err)
+		}
+	}()
+
+	createReq, err := http.NewRequest(http.MethodPost, running.Result.SessionsEndpoint, bytes.NewBufferString(`{"cwd":"/tmp/delete-me"}`))
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+	createReq.Header.Set("Authorization", "Bearer demo-token")
+	createReq.Header.Set("Content-Type", "application/json")
+	createResp, err := http.DefaultClient.Do(createReq)
+	if err != nil {
+		t.Fatalf("create session failed: %v", err)
+	}
+	defer createResp.Body.Close()
+	var created map[string]string
+	if err := json.NewDecoder(createResp.Body).Decode(&created); err != nil {
+		t.Fatalf("decode create response: %v", err)
+	}
+
+	ws, _, err := websocket.DefaultDialer.Dial(created["ws_url"], http.Header{
+		"Authorization": []string{"Bearer demo-token"},
+	})
+	if err != nil {
+		t.Fatalf("websocket dial failed: %v", err)
+	}
+	var ready map[string]any
+	if err := ws.ReadJSON(&ready); err != nil {
+		t.Fatalf("read ready event failed: %v", err)
+	}
+	_ = ws.Close()
+
+	deleteReq, err := http.NewRequest(http.MethodDelete, strings.TrimRight(running.Result.SessionsEndpoint, "/")+"/"+created["session_id"], nil)
+	if err != nil {
+		t.Fatalf("build delete request: %v", err)
+	}
+	deleteReq.Header.Set("Authorization", "Bearer demo-token")
+	deleteResp, err := http.DefaultClient.Do(deleteReq)
+	if err != nil {
+		t.Fatalf("delete session failed: %v", err)
+	}
+	defer deleteResp.Body.Close()
+	if deleteResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected delete to succeed, got %s", deleteResp.Status)
+	}
+	var stopped sessionStateResponse
+	if err := json.NewDecoder(deleteResp.Body).Decode(&stopped); err != nil {
+		t.Fatalf("decode delete response: %v", err)
+	}
+	if stopped.Status != "stopped" || stopped.BackendStatus != "stopped" || stopped.BackendPID <= 0 || stopped.BackendStoppedAt <= 0 {
+		t.Fatalf("expected stopped lifecycle in delete response, got %#v", stopped)
+	}
+
+	replacementReq, err := http.NewRequest(http.MethodPost, running.Result.SessionsEndpoint, bytes.NewBufferString(`{"cwd":"/tmp/replacement"}`))
+	if err != nil {
+		t.Fatalf("build replacement request: %v", err)
+	}
+	replacementReq.Header.Set("Authorization", "Bearer demo-token")
+	replacementReq.Header.Set("Content-Type", "application/json")
+	replacementResp, err := http.DefaultClient.Do(replacementReq)
+	if err != nil {
+		t.Fatalf("create replacement session failed: %v", err)
+	}
+	defer replacementResp.Body.Close()
+	if replacementResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected replacement session create to succeed, got %s", replacementResp.Status)
+	}
+
+	state := fetchSessionState(t, running.Result.SessionsEndpoint, created["session_id"], "demo-token")
+	if state.Status != "stopped" || state.BackendStatus != "stopped" {
+		t.Fatalf("expected persisted stopped state after delete, got %#v", state)
+	}
+}
+
 func TestSessionInspectEndpointReportsLifecycle(t *testing.T) {
 	lockfile := filepath.Join(t.TempDir(), "server.lock.json")
 	sessionIndex := filepath.Join(t.TempDir(), "sessions.json")

@@ -379,7 +379,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
-		if r.Method != http.MethodGet {
+		if r.Method != http.MethodGet && r.Method != http.MethodDelete {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
@@ -395,6 +395,53 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 		}
 		if !ok {
 			http.Error(w, "session not found", http.StatusNotFound)
+			return
+		}
+		if r.Method == http.MethodDelete {
+			workDir := entry.CWD
+			if live, ok := store.get(sessionID); ok {
+				if live.Backend != nil {
+					if err := live.Backend.stop(); err != nil {
+						http.Error(w, "failed to stop backend", http.StatusInternalServerError)
+						return
+					}
+					if err := sessionIndex.setBackendSnapshot(sessionID, live.WorkDir, live.Backend.snapshot()); err != nil {
+						http.Error(w, "failed to persist backend lifecycle", http.StatusInternalServerError)
+						return
+					}
+					workDir = firstNonEmpty(live.WorkDir, workDir)
+				}
+				store.delete(sessionID)
+			} else {
+				if err := sessionIndex.setBackendSnapshot(sessionID, workDir, backendSnapshot{Status: "stopped"}); err != nil {
+					http.Error(w, "failed to persist backend lifecycle", http.StatusInternalServerError)
+					return
+				}
+			}
+			if err := sessionIndex.setStatus(sessionID, workDir, "stopped"); err != nil {
+				http.Error(w, "failed to persist session state", http.StatusInternalServerError)
+				return
+			}
+			stoppedEntry, _, err := sessionIndex.get(sessionID)
+			if err != nil {
+				http.Error(w, "failed to read session index", http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(sessionStateResponse{
+				SessionID:           stoppedEntry.SessionID,
+				TranscriptSessionID: stoppedEntry.TranscriptSessionID,
+				WSURL:               strings.TrimRight(wsBase, "/") + "/" + sessionID,
+				WorkDir:             stoppedEntry.CWD,
+				Status:              stoppedEntry.Status,
+				BackendStatus:       stoppedEntry.BackendStatus,
+				BackendPID:          stoppedEntry.BackendPID,
+				BackendStartedAt:    stoppedEntry.BackendStartedAt,
+				BackendStoppedAt:    stoppedEntry.BackendStoppedAt,
+				BackendExitCode:     stoppedEntry.BackendExitCode,
+				CreatedAt:           stoppedEntry.CreatedAt,
+				LastActiveAt:        stoppedEntry.LastActiveAt,
+			})
 			return
 		}
 		if live, ok := store.get(sessionID); ok && live.Backend != nil {
@@ -758,6 +805,15 @@ func (s *sessionStore) count() int {
 	return len(s.sessions)
 }
 
+func (s *sessionStore) delete(id string) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.sessions, id)
+}
+
 func (s *sessionStore) ensureBackend(id string) (sessionInfo, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -976,6 +1032,15 @@ func valueOrNone(v string) string {
 		return "none"
 	}
 	return v
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func minimalModelUsage() map[string]any {
