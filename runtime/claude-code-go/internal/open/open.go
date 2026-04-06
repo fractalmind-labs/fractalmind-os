@@ -130,6 +130,8 @@ type Result struct {
 	RewindFilesError              string
 	CancelAsyncMessageValidated   bool
 	CancelAsyncMessageEvent       string
+	StopTaskValidated             bool
+	StopTaskEvent                 string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 	BackendValidated              bool
@@ -299,6 +301,8 @@ func Run(args []string) (Result, error) {
 		RewindFilesError:              streamResult.RewindFilesError,
 		CancelAsyncMessageValidated:   streamResult.CancelAsyncMessageValidated,
 		CancelAsyncMessageEvent:       streamResult.CancelAsyncMessageEvent,
+		StopTaskValidated:             streamResult.StopTaskValidated,
+		StopTaskEvent:                 streamResult.StopTaskEvent,
 		EndSessionValidated:           streamResult.EndSessionValidated,
 		EndSessionEvent:               streamResult.EndSessionEvent,
 		BackendValidated:              state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
@@ -698,6 +702,8 @@ type streamValidation struct {
 	RewindFilesError              string
 	CancelAsyncMessageValidated   bool
 	CancelAsyncMessageEvent       string
+	StopTaskValidated             bool
+	StopTaskEvent                 string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 }
@@ -1814,6 +1820,31 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		result.CancelAsyncMessageValidated = true
 		result.CancelAsyncMessageEvent = "control_request:cancel_async_message"
 	}
+	stopTaskID := "stop-task-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": stopTaskID,
+		"request": map[string]any{
+			"subtype": "stop_task",
+			"task_id": "task-1",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect stop_task request: %w", err)
+	}
+	for !result.StopTaskValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect stop_task flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) == stopTaskID {
+			result.StopTaskValidated = true
+			result.StopTaskEvent = "control_request:stop_task"
+		}
+	}
 	endSessionID := "end-session-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -1979,6 +2010,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("rewind_files_error=%s\n", valueOrNone(r.RewindFilesError)))
 	b.WriteString(fmt.Sprintf("cancel_async_message_validated=%t\n", r.CancelAsyncMessageValidated))
 	b.WriteString(fmt.Sprintf("cancel_async_message_event=%s\n", valueOrNone(r.CancelAsyncMessageEvent)))
+	b.WriteString(fmt.Sprintf("stop_task_validated=%t\n", r.StopTaskValidated))
+	b.WriteString(fmt.Sprintf("stop_task_event=%s\n", valueOrNone(r.StopTaskEvent)))
 	b.WriteString(fmt.Sprintf("end_session_validated=%t\n", r.EndSessionValidated))
 	b.WriteString(fmt.Sprintf("end_session_event=%s\n", valueOrNone(r.EndSessionEvent)))
 	b.WriteString(fmt.Sprintf("backend_validated=%t\n", r.BackendValidated))

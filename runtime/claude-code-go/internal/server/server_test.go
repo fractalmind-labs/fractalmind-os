@@ -1127,6 +1127,28 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "stop-task-1",
+		"request": map[string]any{
+			"subtype": "stop_task",
+			"task_id": "task-1",
+		},
+	}); err != nil {
+		t.Fatalf("write stop_task request failed: %v", err)
+	}
+	var stopTaskResp map[string]any
+	if err := ws.ReadJSON(&stopTaskResp); err != nil {
+		t.Fatalf("read stop_task response failed: %v", err)
+	}
+	if stopTaskResp["type"] != "control_response" {
+		t.Fatalf("unexpected stop_task response: %#v", stopTaskResp)
+	}
+	stopTaskResponse, _ := stopTaskResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(stopTaskResponse["request_id"])) != "stop-task-1" {
+		t.Fatalf("unexpected stop_task request id: %#v", stopTaskResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "end-session-1",
 		"request": map[string]any{
 			"subtype": "end_session",
