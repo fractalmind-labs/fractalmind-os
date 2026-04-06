@@ -941,6 +941,40 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "rewind-files-1",
+		"request": map[string]any{
+			"subtype":         "rewind_files",
+			"user_message_id": "user-msg-1",
+			"dry_run":         true,
+		},
+	}); err != nil {
+		t.Fatalf("write rewind_files request failed: %v", err)
+	}
+	var rewindFilesResp map[string]any
+	if err := ws.ReadJSON(&rewindFilesResp); err != nil {
+		t.Fatalf("read rewind_files response failed: %v", err)
+	}
+	if rewindFilesResp["type"] != "control_response" {
+		t.Fatalf("unexpected rewind_files response: %#v", rewindFilesResp)
+	}
+	rewindFilesResponse, _ := rewindFilesResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(rewindFilesResponse["request_id"])) != "rewind-files-1" {
+		t.Fatalf("unexpected rewind_files request id: %#v", rewindFilesResp)
+	}
+	rewindFilesPayload, _ := rewindFilesResponse["response"].(map[string]any)
+	if canRewind, ok := rewindFilesPayload["canRewind"].(bool); !ok || !canRewind {
+		t.Fatalf("unexpected rewind_files canRewind payload: %#v", rewindFilesResp)
+	}
+	filesChanged, _ := rewindFilesPayload["filesChanged"].([]any)
+	if len(filesChanged) != 1 || strings.TrimSpace(asString(filesChanged[0])) != "README.md" {
+		t.Fatalf("unexpected rewind_files filesChanged payload: %#v", rewindFilesResp)
+	}
+	if int(rewindFilesPayload["insertions"].(float64)) != 1 || int(rewindFilesPayload["deletions"].(float64)) != 0 {
+		t.Fatalf("unexpected rewind_files diff stats payload: %#v", rewindFilesResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "cancel-async-message-1",
 		"request": map[string]any{
 			"subtype":      "cancel_async_message",

@@ -111,6 +111,13 @@ type Result struct {
 	GetContextUsageEvent          string
 	MCPMessageValidated           bool
 	MCPMessageEvent               string
+	RewindFilesValidated          bool
+	RewindFilesEvent              string
+	RewindFilesCanRewind          bool
+	RewindFilesFilesChanged       int
+	RewindFilesInsertions         int
+	RewindFilesDeletions          int
+	RewindFilesError              string
 	CancelAsyncMessageValidated   bool
 	CancelAsyncMessageEvent       string
 	EndSessionValidated           bool
@@ -263,6 +270,13 @@ func Run(args []string) (Result, error) {
 		GetContextUsageEvent:          streamResult.GetContextUsageEvent,
 		MCPMessageValidated:           streamResult.MCPMessageValidated,
 		MCPMessageEvent:               streamResult.MCPMessageEvent,
+		RewindFilesValidated:          streamResult.RewindFilesValidated,
+		RewindFilesEvent:              streamResult.RewindFilesEvent,
+		RewindFilesCanRewind:          streamResult.RewindFilesCanRewind,
+		RewindFilesFilesChanged:       streamResult.RewindFilesFilesChanged,
+		RewindFilesInsertions:         streamResult.RewindFilesInsertions,
+		RewindFilesDeletions:          streamResult.RewindFilesDeletions,
+		RewindFilesError:              streamResult.RewindFilesError,
 		CancelAsyncMessageValidated:   streamResult.CancelAsyncMessageValidated,
 		CancelAsyncMessageEvent:       streamResult.CancelAsyncMessageEvent,
 		EndSessionValidated:           streamResult.EndSessionValidated,
@@ -645,6 +659,13 @@ type streamValidation struct {
 	GetContextUsageEvent          string
 	MCPMessageValidated           bool
 	MCPMessageEvent               string
+	RewindFilesValidated          bool
+	RewindFilesEvent              string
+	RewindFilesCanRewind          bool
+	RewindFilesFilesChanged       int
+	RewindFilesInsertions         int
+	RewindFilesDeletions          int
+	RewindFilesError              string
 	CancelAsyncMessageValidated   bool
 	CancelAsyncMessageEvent       string
 	EndSessionValidated           bool
@@ -1513,6 +1534,57 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 			result.MCPMessageEvent = "control_request:mcp_message"
 		}
 	}
+	rewindFilesID := "rewind-files-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": rewindFilesID,
+		"request": map[string]any{
+			"subtype":         "rewind_files",
+			"user_message_id": "user-msg-1",
+			"dry_run":         true,
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect rewind_files request: %w", err)
+	}
+	for !result.RewindFilesValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect rewind_files flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != rewindFilesID {
+			continue
+		}
+		responsePayload, _ := response["response"].(map[string]any)
+		canRewind, ok := responsePayload["canRewind"].(bool)
+		if !ok {
+			return streamValidation{}, fmt.Errorf("invalid rewind_files response: missing canRewind")
+		}
+		filesChangedRaw, _ := responsePayload["filesChanged"].([]any)
+		if len(filesChangedRaw) != 1 || strings.TrimSpace(asString(filesChangedRaw[0])) != "README.md" {
+			return streamValidation{}, fmt.Errorf("invalid rewind_files response: unexpected filesChanged=%#v", responsePayload["filesChanged"])
+		}
+		insertions, ok := responsePayload["insertions"].(float64)
+		if !ok {
+			return streamValidation{}, fmt.Errorf("invalid rewind_files response: missing insertions")
+		}
+		deletions, ok := responsePayload["deletions"].(float64)
+		if !ok {
+			return streamValidation{}, fmt.Errorf("invalid rewind_files response: missing deletions")
+		}
+		result.RewindFilesValidated = true
+		result.RewindFilesEvent = "control_request:rewind_files"
+		result.RewindFilesCanRewind = canRewind
+		result.RewindFilesFilesChanged = len(filesChangedRaw)
+		result.RewindFilesInsertions = int(insertions)
+		result.RewindFilesDeletions = int(deletions)
+		if errText := strings.TrimSpace(asString(responsePayload["error"])); errText != "" {
+			result.RewindFilesError = errText
+		}
+	}
 	cancelAsyncMessageID := "cancel-async-message-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -1693,6 +1765,13 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("get_context_usage_event=%s\n", valueOrNone(r.GetContextUsageEvent)))
 	b.WriteString(fmt.Sprintf("mcp_message_validated=%t\n", r.MCPMessageValidated))
 	b.WriteString(fmt.Sprintf("mcp_message_event=%s\n", valueOrNone(r.MCPMessageEvent)))
+	b.WriteString(fmt.Sprintf("rewind_files_validated=%t\n", r.RewindFilesValidated))
+	b.WriteString(fmt.Sprintf("rewind_files_event=%s\n", valueOrNone(r.RewindFilesEvent)))
+	b.WriteString(fmt.Sprintf("rewind_files_can_rewind=%t\n", r.RewindFilesCanRewind))
+	b.WriteString(fmt.Sprintf("rewind_files_files_changed=%d\n", r.RewindFilesFilesChanged))
+	b.WriteString(fmt.Sprintf("rewind_files_insertions=%d\n", r.RewindFilesInsertions))
+	b.WriteString(fmt.Sprintf("rewind_files_deletions=%d\n", r.RewindFilesDeletions))
+	b.WriteString(fmt.Sprintf("rewind_files_error=%s\n", valueOrNone(r.RewindFilesError)))
 	b.WriteString(fmt.Sprintf("cancel_async_message_validated=%t\n", r.CancelAsyncMessageValidated))
 	b.WriteString(fmt.Sprintf("cancel_async_message_event=%s\n", valueOrNone(r.CancelAsyncMessageEvent)))
 	b.WriteString(fmt.Sprintf("end_session_validated=%t\n", r.EndSessionValidated))

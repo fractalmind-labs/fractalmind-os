@@ -1000,6 +1000,12 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					responsePayload["isAutoCompactEnabled"] = false
 					responsePayload["apiUsage"] = nil
 				case "mcp_message":
+					_ = responsePayload
+				case "rewind_files":
+					responsePayload["canRewind"] = true
+					responsePayload["filesChanged"] = []any{"README.md"}
+					responsePayload["insertions"] = 1
+					responsePayload["deletions"] = 0
 				case "cancel_async_message":
 					responsePayload["cancelled"] = false
 				case "end_session":
