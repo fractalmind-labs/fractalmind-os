@@ -140,6 +140,8 @@ type Result struct {
 	GenerateSessionTitleEvent     string
 	SideQuestionValidated         bool
 	SideQuestionEvent             string
+	SetProactiveValidated         bool
+	SetProactiveEvent             string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 	BackendValidated              bool
@@ -319,6 +321,8 @@ func Run(args []string) (Result, error) {
 		GenerateSessionTitleEvent:     streamResult.GenerateSessionTitleEvent,
 		SideQuestionValidated:         streamResult.SideQuestionValidated,
 		SideQuestionEvent:             streamResult.SideQuestionEvent,
+		SetProactiveValidated:         streamResult.SetProactiveValidated,
+		SetProactiveEvent:             streamResult.SetProactiveEvent,
 		EndSessionValidated:           streamResult.EndSessionValidated,
 		EndSessionEvent:               streamResult.EndSessionEvent,
 		BackendValidated:              state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
@@ -728,6 +732,8 @@ type streamValidation struct {
 	GenerateSessionTitleEvent     string
 	SideQuestionValidated         bool
 	SideQuestionEvent             string
+	SetProactiveValidated         bool
+	SetProactiveEvent             string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 }
@@ -2001,6 +2007,31 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		result.SideQuestionValidated = true
 		result.SideQuestionEvent = "control_request:side_question"
 	}
+	setProactiveID := "set-proactive-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": setProactiveID,
+		"request": map[string]any{
+			"subtype": "set_proactive",
+			"enabled": true,
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect set_proactive request: %w", err)
+	}
+	for !result.SetProactiveValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect set_proactive flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) == setProactiveID {
+			result.SetProactiveValidated = true
+			result.SetProactiveEvent = "control_request:set_proactive"
+		}
+	}
 	endSessionID := "end-session-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -2176,6 +2207,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("generate_session_title_event=%s\n", valueOrNone(r.GenerateSessionTitleEvent)))
 	b.WriteString(fmt.Sprintf("side_question_validated=%t\n", r.SideQuestionValidated))
 	b.WriteString(fmt.Sprintf("side_question_event=%s\n", valueOrNone(r.SideQuestionEvent)))
+	b.WriteString(fmt.Sprintf("set_proactive_validated=%t\n", r.SetProactiveValidated))
+	b.WriteString(fmt.Sprintf("set_proactive_event=%s\n", valueOrNone(r.SetProactiveEvent)))
 	b.WriteString(fmt.Sprintf("end_session_validated=%t\n", r.EndSessionValidated))
 	b.WriteString(fmt.Sprintf("end_session_event=%s\n", valueOrNone(r.EndSessionEvent)))
 	b.WriteString(fmt.Sprintf("backend_validated=%t\n", r.BackendValidated))

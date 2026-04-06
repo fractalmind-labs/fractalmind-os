@@ -1260,6 +1260,28 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "set-proactive-1",
+		"request": map[string]any{
+			"subtype": "set_proactive",
+			"enabled": true,
+		},
+	}); err != nil {
+		t.Fatalf("write set_proactive request failed: %v", err)
+	}
+	var setProactiveResp map[string]any
+	if err := ws.ReadJSON(&setProactiveResp); err != nil {
+		t.Fatalf("read set_proactive response failed: %v", err)
+	}
+	if setProactiveResp["type"] != "control_response" {
+		t.Fatalf("unexpected set_proactive response: %#v", setProactiveResp)
+	}
+	setProactiveResponse, _ := setProactiveResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(setProactiveResponse["request_id"])) != "set-proactive-1" {
+		t.Fatalf("unexpected set_proactive request id: %#v", setProactiveResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "end-session-1",
 		"request": map[string]any{
 			"subtype": "end_session",
