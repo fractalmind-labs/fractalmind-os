@@ -103,7 +103,7 @@ func TestRunOpenSupportsPrintModeAndPrompt(t *testing.T) {
 	if result.SessionID != "sess-456" || !result.StreamValidated || result.StreamEvent != "session_ready" {
 		t.Fatalf("expected session response, got %#v", result)
 	}
-	if !result.StreamContentValidated || result.StreamContentEvent != "stream_event:content_block_delta" || !result.SystemValidated || result.SystemEvent != "system:init" || !result.StatusValidated || result.StatusEvent != "system:status" || !result.AuthValidated || result.AuthEvent != "auth_status" || !result.KeepAliveValidated || result.KeepAliveEvent != "keep_alive" || !result.ControlCancelValidated || result.ControlCancelEvent != "control_cancel_request" || !result.MessageValidated || result.MessageEvent != "assistant" || result.ValidatedTurns != 2 || !result.MultiTurnValidated || !result.ResultValidated || result.ResultEvent != "result:success" || !result.ControlValidated || !result.PermissionValidated || !result.ToolProgressValidated || result.ToolProgressEvent != "tool_progress" || !result.RateLimitValidated || result.RateLimitEvent != "rate_limit_event:default" || !result.ToolUseSummaryValidated || result.ToolUseSummaryEvent != "tool_use_summary" || !result.ToolExecutionValidated || !result.InterruptValidated || !result.BackendValidated {
+	if !result.StreamContentValidated || result.StreamContentEvent != "stream_event:content_block_delta" || !result.SystemValidated || result.SystemEvent != "system:init" || !result.StatusValidated || result.StatusEvent != "system:status" || !result.AuthValidated || result.AuthEvent != "auth_status" || !result.KeepAliveValidated || result.KeepAliveEvent != "keep_alive" || !result.ControlCancelValidated || result.ControlCancelEvent != "control_cancel_request" || !result.MessageValidated || result.MessageEvent != "assistant" || result.ValidatedTurns != 2 || !result.MultiTurnValidated || !result.ResultValidated || result.ResultEvent != "result:success" || !result.ResultErrorValidated || result.ResultErrorEvent != "result:error_during_execution" || !result.ControlValidated || !result.PermissionValidated || !result.PermissionDeniedValidated || result.PermissionDeniedEvent != "permission_denial:echo" || !result.ToolProgressValidated || result.ToolProgressEvent != "tool_progress" || !result.RateLimitValidated || result.RateLimitEvent != "rate_limit_event:default" || !result.ToolUseSummaryValidated || result.ToolUseSummaryEvent != "tool_use_summary" || !result.ToolExecutionValidated || !result.InterruptValidated || !result.BackendValidated {
 		t.Fatalf("expected session response, got %#v", result)
 	}
 }
@@ -366,6 +366,35 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 			}
 			toolText := pendingPrompt
 			responsePayload, _ := response["response"].(map[string]any)
+			if strings.TrimSpace(asString(responsePayload["behavior"])) == "deny" {
+				_ = conn.WriteJSON(map[string]any{
+					"type":            "result",
+					"subtype":         "error_during_execution",
+					"duration_ms":     1,
+					"duration_api_ms": 0,
+					"is_error":        true,
+					"num_turns":       requestCounter - 1,
+					"stop_reason":     "permission_denied",
+					"total_cost_usd":  0,
+					"usage":           map[string]any{},
+					"modelUsage":      map[string]any{"claude-sonnet-4-5": minimalModelUsageFixture()},
+					"permission_denials": []map[string]any{
+						{
+							"tool_name":   "echo",
+							"tool_use_id": fmt.Sprintf("toolu-%d", requestCounter),
+							"tool_input": map[string]any{
+								"text": pendingPrompt,
+							},
+						},
+					},
+					"errors":     []string{"permission denied for tool echo"},
+					"uuid":       fmt.Sprintf("result-denied-%d", requestCounter),
+					"session_id": sessionID,
+				})
+				pendingRequestID = ""
+				pendingPrompt = ""
+				continue
+			}
 			if updatedInput, ok := responsePayload["updatedInput"].(map[string]any); ok {
 				if text := strings.TrimSpace(asString(updatedInput["text"])); text != "" {
 					toolText = text

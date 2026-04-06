@@ -562,20 +562,37 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				}
 				responsePayload, _ := responseEnvelope["response"].(map[string]any)
 				if behavior := strings.TrimSpace(asString(responsePayload["behavior"])); behavior == "deny" {
+					resultUUID, err := generateRequestID()
+					if err != nil {
+						return
+					}
 					_ = conn.WriteJSON(map[string]any{
-						"type": "assistant",
-						"message": map[string]any{
-							"role": "assistant",
-							"content": []map[string]any{
-								{
-									"type": "text",
-									"text": "permission-denied:" + pendingPrompt,
+						"type":            "result",
+						"subtype":         "error_during_execution",
+						"duration_ms":     1,
+						"duration_api_ms": 0,
+						"is_error":        true,
+						"num_turns":       completedTurns,
+						"stop_reason":     "permission_denied",
+						"total_cost_usd":  0,
+						"usage":           map[string]any{},
+						"modelUsage":      map[string]any{"claude-sonnet-4-5": minimalModelUsage()},
+						"permission_denials": []map[string]any{
+							{
+								"tool_name":   directConnectEchoToolName,
+								"tool_use_id": pendingToolUseID,
+								"tool_input": map[string]any{
+									"text": pendingPrompt,
 								},
 							},
 						},
+						"errors":     []string{"permission denied for tool " + directConnectEchoToolName},
+						"uuid":       resultUUID,
+						"session_id": session.ID,
 					})
 					pendingPrompt = ""
 					pendingRequestID = ""
+					pendingToolUseID = ""
 					continue
 				}
 				toolInputText := pendingPrompt

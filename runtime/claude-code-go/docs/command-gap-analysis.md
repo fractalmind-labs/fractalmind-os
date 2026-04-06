@@ -109,18 +109,18 @@
 - 有本地凭证持久化闭环
 
 ### 仍缺的关键用户向命令
-- `server/open` 已具备最小 websocket ready/control/message 闭环，且 server 已补单实例 lockfile + session index + reconnect + detached-state + backend process lifecycle + 最小 tool execution / permission bridge；当前 `GET /sessions/{sessionId}` 可直接读到 `starting/running/detached/stopped` 与 `backend_status/backend_pid`，`resume` 期间可复用同一 live backend pid，`open --print` 也已验证 `system_validated=true / auth_validated=true / status_validated=true / keep_alive_validated=true / control_cancel_validated=true / stream_content_validated=true / tool_progress_validated=true / rate_limit_validated=true / tool_use_summary_validated=true / validated_turns=2 / multi_turn_validated=true / result_validated=true / permission_validated / tool_execution_validated`。但 backend 目前仍只是最小 echo worker，尚未接入更完整的 permission-denial / result:error / richer message 类型与更完整的状态机
+- `server/open` 已具备最小 websocket ready/control/message 闭环，且 server 已补单实例 lockfile + session index + reconnect + detached-state + backend process lifecycle + 最小 tool execution / permission bridge；当前 `GET /sessions/{sessionId}` 可直接读到 `starting/running/detached/stopped` 与 `backend_status/backend_pid`，`resume` 期间可复用同一 live backend pid，`open --print` 也已验证 `system_validated=true / auth_validated=true / status_validated=true / keep_alive_validated=true / control_cancel_validated=true / stream_content_validated=true / tool_progress_validated=true / rate_limit_validated=true / tool_use_summary_validated=true / validated_turns=2 / multi_turn_validated=true / result_validated=true / result_error_validated=true / permission_validated=true / permission_denied_validated=true / tool_execution_validated=true`。但 backend 目前仍只是最小 echo worker，尚未接入 multi-session 调度 / `max_sessions` 限制分支、更丰富的 message 类型与更完整的状态机
 - 更接近官方安装体验的远端版本清单 / release 元数据发现（当前最小实现仅支持显式 `--source-url`）
 
 这意味着当前 Go CLI 已具备“可启动 + 可鉴权 + 可发最小请求 + 最小安装/升级 + agents 配置枚举”的骨架，但距离完整官方体验仍有多块命令面差距。
 
 ## 5. 下一优先级结论
 
-### 下一步要补的高频子路径：direct-connect 的最小 permission-denial / result:error path
+### 下一步要补的高频子路径：direct-connect 的最小 multi-session / max-sessions guard path
 
 选择理由：
-1. `server ↔ open` 现在已经形成最小 `/sessions + websocket ready/control/message + lockfile + session index + reconnect + detached-state + backend process lifecycle + system:init + auth_status + system:status + keep_alive + control_cancel_request + tool_progress + rate_limit_event + stream_event + tool_use_summary + result(success) + 两轮持续 loop` 闭环，下一段自然是补更接近官方错误/拒绝分支
-2. permission-denial / result:error path 是 direct-connect 从“已能表达 happy-path 运行态事件”升级到“能表达失败态与拒绝态”的关键缺口
+1. `server ↔ open` 现在已经形成最小 `/sessions + websocket ready/control/message + lockfile + session index + reconnect + detached-state + backend process lifecycle + system:init + auth_status + system:status + keep_alive + control_cancel_request + tool_progress + rate_limit_event + stream_event + tool_use_summary + result(success/error_during_execution)` 闭环，下一段自然是补多 session 调度与容量保护
+2. multi-session / `max_sessions` guard 是 direct-connect 从“单 session happy-path + deny/error 分支可表达”升级到“具备最小并发/容量控制”的关键缺口
 3. 继续沿 direct-connect 主路径推进，比回到已收口的其它子命令组更符合当前 OKR 主路径
 
 ## 6. 结论

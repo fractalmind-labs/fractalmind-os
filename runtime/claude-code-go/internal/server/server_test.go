@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -89,6 +90,10 @@ func TestRunServerSupportsUnixTransport(t *testing.T) {
 }
 
 func TestStartHTTPServerRespondsToSessions(t *testing.T) {
+	lockfile := filepath.Join(t.TempDir(), "server.lock.json")
+	sessionIndex := filepath.Join(t.TempDir(), "session-index.json")
+	t.Setenv("CLAUDE_CODE_GO_SERVER_LOCKFILE", lockfile)
+	t.Setenv("CLAUDE_CODE_GO_SERVER_SESSION_INDEX", sessionIndex)
 	running, err := Start([]string{"--host", "127.0.0.1", "--port", "0", "--auth-token", "demo-token", "--workspace", "/tmp/workspace"})
 	if err != nil {
 		t.Fatalf("Start returned error: %v", err)
@@ -377,6 +382,73 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 
 	if err := ws.WriteJSON(map[string]any{
+		"type": "user",
+		"message": map[string]any{
+			"role":    "user",
+			"content": []map[string]any{{"type": "text", "text": "deny this turn"}},
+		},
+	}); err != nil {
+		t.Fatalf("write deny-turn user message failed: %v", err)
+	}
+
+	var denyControlReq map[string]any
+	if err := ws.ReadJSON(&denyControlReq); err != nil {
+		t.Fatalf("read deny control request failed: %v", err)
+	}
+	if denyControlReq["type"] != "control_request" {
+		t.Fatalf("unexpected deny control request: %#v", denyControlReq)
+	}
+	denyRequest, _ := denyControlReq["request"].(map[string]any)
+	denyInput, _ := denyRequest["input"].(map[string]any)
+	if strings.TrimSpace(asString(denyInput["text"])) != "deny this turn" {
+		t.Fatalf("unexpected deny control payload: %#v", denyControlReq)
+	}
+	denyRequestID := denyControlReq["request_id"].(string)
+	denyToolUseID := strings.TrimSpace(asString(denyRequest["tool_use_id"]))
+	if err := ws.WriteJSON(map[string]any{
+		"type": "control_response",
+		"response": map[string]any{
+			"subtype":    "success",
+			"request_id": denyRequestID,
+			"response": map[string]any{
+				"behavior": "deny",
+			},
+		},
+	}); err != nil {
+		t.Fatalf("write deny control response failed: %v", err)
+	}
+
+	var denyResult map[string]any
+	if err := ws.ReadJSON(&denyResult); err != nil {
+		t.Fatalf("read deny result event failed: %v", err)
+	}
+	if denyResult["type"] != "result" || strings.TrimSpace(asString(denyResult["subtype"])) != "error_during_execution" {
+		t.Fatalf("unexpected deny result event: %#v", denyResult)
+	}
+	if isError, ok := denyResult["is_error"].(bool); !ok || !isError {
+		t.Fatalf("expected deny result is_error=true, got %#v", denyResult)
+	}
+	if int(denyResult["num_turns"].(float64)) != 2 {
+		t.Fatalf("expected deny result num_turns=2, got %#v", denyResult)
+	}
+	permissionDenials, _ := denyResult["permission_denials"].([]any)
+	if len(permissionDenials) != 1 {
+		t.Fatalf("expected single permission denial, got %#v", denyResult)
+	}
+	denial, _ := permissionDenials[0].(map[string]any)
+	if strings.TrimSpace(asString(denial["tool_name"])) != directConnectEchoToolName || strings.TrimSpace(asString(denial["tool_use_id"])) != denyToolUseID {
+		t.Fatalf("unexpected permission denial payload: %#v", denyResult)
+	}
+	toolInput, _ := denial["tool_input"].(map[string]any)
+	if strings.TrimSpace(asString(toolInput["text"])) != "deny this turn" {
+		t.Fatalf("unexpected deny tool_input payload: %#v", denyResult)
+	}
+	errorsList, _ := denyResult["errors"].([]any)
+	if len(errorsList) == 0 || !strings.Contains(strings.TrimSpace(asString(errorsList[0])), "permission denied") {
+		t.Fatalf("unexpected deny errors payload: %#v", denyResult)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
 		"request_id": "interrupt-1",
 		"request": map[string]any{
@@ -395,7 +467,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 }
 
 func TestStartUnixServerRespondsToSessions(t *testing.T) {
-	socketPath := "/tmp/claude-server-test.sock"
+	tempDir := t.TempDir()
+	lockfile := filepath.Join(tempDir, "server.lock.json")
+	sessionIndex := filepath.Join(tempDir, "session-index.json")
+	socketPath := filepath.Join("/tmp", fmt.Sprintf("claude-server-test-%d.sock", time.Now().UnixNano()))
+	t.Setenv("CLAUDE_CODE_GO_SERVER_LOCKFILE", lockfile)
+	t.Setenv("CLAUDE_CODE_GO_SERVER_SESSION_INDEX", sessionIndex)
+	t.Cleanup(func() { _ = os.Remove(socketPath) })
 	running, err := Start([]string{"--unix", socketPath, "--auth-token", "demo-token"})
 	if err != nil {
 		t.Fatalf("Start returned error: %v", err)

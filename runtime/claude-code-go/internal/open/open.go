@@ -24,55 +24,59 @@ type Options struct {
 }
 
 type Result struct {
-	Status                  string
-	Action                  string
-	ConnectURL              string
-	Transport               string
-	ServerURL               string
-	AuthToken               string
-	PrintMode               bool
-	PrintPrompt             string
-	OutputFormat            string
-	RequestCWD              string
-	SessionID               string
-	WSURL                   string
-	WorkDir                 string
-	StreamValidated         bool
-	StreamEvent             string
-	StreamContentValidated  bool
-	StreamContentEvent      string
-	SystemValidated         bool
-	SystemEvent             string
-	StatusValidated         bool
-	StatusEvent             string
-	AuthValidated           bool
-	AuthEvent               string
-	KeepAliveValidated      bool
-	KeepAliveEvent          string
-	ControlCancelValidated  bool
-	ControlCancelEvent      string
-	MessageValidated        bool
-	MessageEvent            string
-	ValidatedTurns          int
-	MultiTurnValidated      bool
-	ResultValidated         bool
-	ResultEvent             string
-	ControlValidated        bool
-	PermissionValidated     bool
-	ToolProgressValidated   bool
-	ToolProgressEvent       string
-	RateLimitValidated      bool
-	RateLimitEvent          string
-	ToolUseSummaryValidated bool
-	ToolUseSummaryEvent     string
-	ToolExecutionValidated  bool
-	InterruptValidated      bool
-	BackendValidated        bool
-	BackendStatus           string
-	BackendPID              int
-	BackendStartedAt        int64
-	BackendStoppedAt        int64
-	BackendExitCode         int
+	Status                    string
+	Action                    string
+	ConnectURL                string
+	Transport                 string
+	ServerURL                 string
+	AuthToken                 string
+	PrintMode                 bool
+	PrintPrompt               string
+	OutputFormat              string
+	RequestCWD                string
+	SessionID                 string
+	WSURL                     string
+	WorkDir                   string
+	StreamValidated           bool
+	StreamEvent               string
+	StreamContentValidated    bool
+	StreamContentEvent        string
+	SystemValidated           bool
+	SystemEvent               string
+	StatusValidated           bool
+	StatusEvent               string
+	AuthValidated             bool
+	AuthEvent                 string
+	KeepAliveValidated        bool
+	KeepAliveEvent            string
+	ControlCancelValidated    bool
+	ControlCancelEvent        string
+	MessageValidated          bool
+	MessageEvent              string
+	ValidatedTurns            int
+	MultiTurnValidated        bool
+	ResultValidated           bool
+	ResultEvent               string
+	ResultErrorValidated      bool
+	ResultErrorEvent          string
+	ControlValidated          bool
+	PermissionValidated       bool
+	PermissionDeniedValidated bool
+	PermissionDeniedEvent     string
+	ToolProgressValidated     bool
+	ToolProgressEvent         string
+	RateLimitValidated        bool
+	RateLimitEvent            string
+	ToolUseSummaryValidated   bool
+	ToolUseSummaryEvent       string
+	ToolExecutionValidated    bool
+	InterruptValidated        bool
+	BackendValidated          bool
+	BackendStatus             string
+	BackendPID                int
+	BackendStartedAt          int64
+	BackendStoppedAt          int64
+	BackendExitCode           int
 }
 
 func Run(args []string) (Result, error) {
@@ -106,55 +110,59 @@ func Run(args []string) (Result, error) {
 	}
 
 	return Result{
-		Status:                  "connected",
-		Action:                  actionForOptions(opts),
-		ConnectURL:              opts.ConnectURL,
-		Transport:               transport,
-		ServerURL:               serverURL,
-		AuthToken:               authToken,
-		PrintMode:               opts.PrintMode,
-		PrintPrompt:             opts.PrintPrompt,
-		OutputFormat:            opts.OutputFormat,
-		RequestCWD:              cwd,
-		SessionID:               session.SessionID,
-		WSURL:                   session.WSURL,
-		WorkDir:                 session.WorkDir,
-		StreamValidated:         true,
-		StreamEvent:             streamResult.StreamEvent,
-		StreamContentValidated:  streamResult.StreamContentValidated,
-		StreamContentEvent:      streamResult.StreamContentEvent,
-		SystemValidated:         streamResult.SystemValidated,
-		SystemEvent:             streamResult.SystemEvent,
-		StatusValidated:         streamResult.StatusValidated,
-		StatusEvent:             streamResult.StatusEvent,
-		AuthValidated:           streamResult.AuthValidated,
-		AuthEvent:               streamResult.AuthEvent,
-		KeepAliveValidated:      streamResult.KeepAliveValidated,
-		KeepAliveEvent:          streamResult.KeepAliveEvent,
-		ControlCancelValidated:  streamResult.ControlCancelValidated,
-		ControlCancelEvent:      streamResult.ControlCancelEvent,
-		MessageValidated:        streamResult.MessageValidated,
-		MessageEvent:            streamResult.MessageEvent,
-		ValidatedTurns:          streamResult.ValidatedTurns,
-		MultiTurnValidated:      streamResult.MultiTurnValidated,
-		ResultValidated:         streamResult.ResultValidated,
-		ResultEvent:             streamResult.ResultEvent,
-		ControlValidated:        streamResult.ControlValidated,
-		PermissionValidated:     streamResult.PermissionValidated,
-		ToolProgressValidated:   streamResult.ToolProgressValidated,
-		ToolProgressEvent:       streamResult.ToolProgressEvent,
-		RateLimitValidated:      streamResult.RateLimitValidated,
-		RateLimitEvent:          streamResult.RateLimitEvent,
-		ToolUseSummaryValidated: streamResult.ToolUseSummaryValidated,
-		ToolUseSummaryEvent:     streamResult.ToolUseSummaryEvent,
-		ToolExecutionValidated:  streamResult.ToolExecutionValidated,
-		InterruptValidated:      streamResult.InterruptValidated,
-		BackendValidated:        state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
-		BackendStatus:           state.BackendStatus,
-		BackendPID:              state.BackendPID,
-		BackendStartedAt:        state.BackendStartedAt,
-		BackendStoppedAt:        state.BackendStoppedAt,
-		BackendExitCode:         state.BackendExitCode,
+		Status:                    "connected",
+		Action:                    actionForOptions(opts),
+		ConnectURL:                opts.ConnectURL,
+		Transport:                 transport,
+		ServerURL:                 serverURL,
+		AuthToken:                 authToken,
+		PrintMode:                 opts.PrintMode,
+		PrintPrompt:               opts.PrintPrompt,
+		OutputFormat:              opts.OutputFormat,
+		RequestCWD:                cwd,
+		SessionID:                 session.SessionID,
+		WSURL:                     session.WSURL,
+		WorkDir:                   session.WorkDir,
+		StreamValidated:           true,
+		StreamEvent:               streamResult.StreamEvent,
+		StreamContentValidated:    streamResult.StreamContentValidated,
+		StreamContentEvent:        streamResult.StreamContentEvent,
+		SystemValidated:           streamResult.SystemValidated,
+		SystemEvent:               streamResult.SystemEvent,
+		StatusValidated:           streamResult.StatusValidated,
+		StatusEvent:               streamResult.StatusEvent,
+		AuthValidated:             streamResult.AuthValidated,
+		AuthEvent:                 streamResult.AuthEvent,
+		KeepAliveValidated:        streamResult.KeepAliveValidated,
+		KeepAliveEvent:            streamResult.KeepAliveEvent,
+		ControlCancelValidated:    streamResult.ControlCancelValidated,
+		ControlCancelEvent:        streamResult.ControlCancelEvent,
+		MessageValidated:          streamResult.MessageValidated,
+		MessageEvent:              streamResult.MessageEvent,
+		ValidatedTurns:            streamResult.ValidatedTurns,
+		MultiTurnValidated:        streamResult.MultiTurnValidated,
+		ResultValidated:           streamResult.ResultValidated,
+		ResultEvent:               streamResult.ResultEvent,
+		ResultErrorValidated:      streamResult.ResultErrorValidated,
+		ResultErrorEvent:          streamResult.ResultErrorEvent,
+		ControlValidated:          streamResult.ControlValidated,
+		PermissionValidated:       streamResult.PermissionValidated,
+		PermissionDeniedValidated: streamResult.PermissionDeniedValidated,
+		PermissionDeniedEvent:     streamResult.PermissionDeniedEvent,
+		ToolProgressValidated:     streamResult.ToolProgressValidated,
+		ToolProgressEvent:         streamResult.ToolProgressEvent,
+		RateLimitValidated:        streamResult.RateLimitValidated,
+		RateLimitEvent:            streamResult.RateLimitEvent,
+		ToolUseSummaryValidated:   streamResult.ToolUseSummaryValidated,
+		ToolUseSummaryEvent:       streamResult.ToolUseSummaryEvent,
+		ToolExecutionValidated:    streamResult.ToolExecutionValidated,
+		InterruptValidated:        streamResult.InterruptValidated,
+		BackendValidated:          state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
+		BackendStatus:             state.BackendStatus,
+		BackendPID:                state.BackendPID,
+		BackendStartedAt:          state.BackendStartedAt,
+		BackendStoppedAt:          state.BackendStoppedAt,
+		BackendExitCode:           state.BackendExitCode,
 	}, nil
 }
 
@@ -400,35 +408,39 @@ func inspectSession(serverURL, transport, authToken, sessionID string) (sessionS
 }
 
 type streamValidation struct {
-	StreamEvent             string
-	StreamContentValidated  bool
-	StreamContentEvent      string
-	SystemValidated         bool
-	SystemEvent             string
-	StatusValidated         bool
-	StatusEvent             string
-	AuthValidated           bool
-	AuthEvent               string
-	KeepAliveValidated      bool
-	KeepAliveEvent          string
-	ControlCancelValidated  bool
-	ControlCancelEvent      string
-	MessageValidated        bool
-	MessageEvent            string
-	ValidatedTurns          int
-	MultiTurnValidated      bool
-	ResultValidated         bool
-	ResultEvent             string
-	ControlValidated        bool
-	PermissionValidated     bool
-	ToolProgressValidated   bool
-	ToolProgressEvent       string
-	RateLimitValidated      bool
-	RateLimitEvent          string
-	ToolUseSummaryValidated bool
-	ToolUseSummaryEvent     string
-	ToolExecutionValidated  bool
-	InterruptValidated      bool
+	StreamEvent               string
+	StreamContentValidated    bool
+	StreamContentEvent        string
+	SystemValidated           bool
+	SystemEvent               string
+	StatusValidated           bool
+	StatusEvent               string
+	AuthValidated             bool
+	AuthEvent                 string
+	KeepAliveValidated        bool
+	KeepAliveEvent            string
+	ControlCancelValidated    bool
+	ControlCancelEvent        string
+	MessageValidated          bool
+	MessageEvent              string
+	ValidatedTurns            int
+	MultiTurnValidated        bool
+	ResultValidated           bool
+	ResultEvent               string
+	ResultErrorValidated      bool
+	ResultErrorEvent          string
+	ControlValidated          bool
+	PermissionValidated       bool
+	PermissionDeniedValidated bool
+	PermissionDeniedEvent     string
+	ToolProgressValidated     bool
+	ToolProgressEvent         string
+	RateLimitValidated        bool
+	RateLimitEvent            string
+	ToolUseSummaryValidated   bool
+	ToolUseSummaryEvent       string
+	ToolExecutionValidated    bool
+	InterruptValidated        bool
 }
 
 func validateStream(rawWSURL, authToken string, opts Options) (streamValidation, error) {
@@ -460,13 +472,31 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	if prompt == "" {
 		prompt = "hello from claude-code-go"
 	}
-	turnPrompts := []string{
-		prompt,
-		prompt + " [turn-2]",
+	type validationTurn struct {
+		prompt           string
+		behavior         string
+		approvedPrompt   string
+		expectedResponse string
 	}
-	for _, turnPrompt := range turnPrompts {
-		approvedPrompt := turnPrompt + " [approved]"
-		expectedResponse := "echo:" + approvedPrompt
+	turns := []validationTurn{
+		{
+			prompt:           prompt,
+			behavior:         "allow",
+			approvedPrompt:   prompt + " [approved]",
+			expectedResponse: "echo:" + prompt + " [approved]",
+		},
+		{
+			prompt:           prompt + " [turn-2]",
+			behavior:         "allow",
+			approvedPrompt:   prompt + " [turn-2] [approved]",
+			expectedResponse: "echo:" + prompt + " [turn-2] [approved]",
+		},
+		{
+			prompt:   prompt + " [deny]",
+			behavior: "deny",
+		},
+	}
+	for _, turn := range turns {
 		currentToolUseID := ""
 		currentRequestID := ""
 		if err := conn.WriteJSON(map[string]any{
@@ -476,7 +506,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				"content": []map[string]any{
 					{
 						"type": "text",
-						"text": turnPrompt,
+						"text": turn.prompt,
 					},
 				},
 			},
@@ -488,7 +518,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 
 		assistantValidated := false
 		resultValidated := false
-		for !(assistantValidated && resultValidated) {
+		for {
 			var incoming map[string]any
 			if err := conn.ReadJSON(&incoming); err != nil {
 				return streamValidation{}, fmt.Errorf("read direct-connect message flow: %w", err)
@@ -549,27 +579,37 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				currentRequestID = requestID
 				currentToolUseID = strings.TrimSpace(asString(request["tool_use_id"]))
 				input, _ := request["input"].(map[string]any)
-				if strings.TrimSpace(asString(input["text"])) != turnPrompt {
-					return streamValidation{}, fmt.Errorf("invalid control request: expected input.text=%q, got %q", turnPrompt, strings.TrimSpace(asString(input["text"])))
+				if strings.TrimSpace(asString(input["text"])) != turn.prompt {
+					return streamValidation{}, fmt.Errorf("invalid control request: expected input.text=%q, got %q", turn.prompt, strings.TrimSpace(asString(input["text"])))
+				}
+				responsePayload := map[string]any{
+					"behavior": turn.behavior,
+				}
+				if turn.behavior == "allow" {
+					responsePayload["updatedInput"] = map[string]any{
+						"text": turn.approvedPrompt,
+					}
 				}
 				if err := conn.WriteJSON(map[string]any{
 					"type": "control_response",
 					"response": map[string]any{
 						"subtype":    "success",
 						"request_id": requestID,
-						"response": map[string]any{
-							"behavior": "allow",
-							"updatedInput": map[string]any{
-								"text": approvedPrompt,
-							},
-						},
+						"response":   responsePayload,
 					},
 				}); err != nil {
 					return streamValidation{}, fmt.Errorf("write direct-connect control response: %w", err)
 				}
 				result.ControlValidated = true
 				result.PermissionValidated = true
+				if turn.behavior == "deny" {
+					result.PermissionDeniedValidated = true
+					result.PermissionDeniedEvent = "permission_denial:echo"
+				}
 			case "control_cancel_request":
+				if turn.behavior == "deny" {
+					return streamValidation{}, fmt.Errorf("unexpected control_cancel_request during deny turn")
+				}
 				requestID := strings.TrimSpace(asString(incoming["request_id"]))
 				if requestID == "" {
 					return streamValidation{}, fmt.Errorf("invalid control_cancel_request: missing request_id")
@@ -580,6 +620,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				result.ControlCancelValidated = true
 				result.ControlCancelEvent = "control_cancel_request"
 			case "tool_progress":
+				if turn.behavior == "deny" {
+					return streamValidation{}, fmt.Errorf("unexpected tool_progress during deny turn")
+				}
 				if strings.TrimSpace(asString(incoming["tool_name"])) == "" || strings.TrimSpace(asString(incoming["tool_use_id"])) == "" {
 					return streamValidation{}, fmt.Errorf("invalid tool_progress event: missing tool_name or tool_use_id")
 				}
@@ -595,6 +638,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				result.ToolProgressValidated = true
 				result.ToolProgressEvent = "tool_progress"
 			case "rate_limit_event":
+				if turn.behavior == "deny" {
+					return streamValidation{}, fmt.Errorf("unexpected rate_limit_event during deny turn")
+				}
 				if strings.TrimSpace(asString(incoming["session_id"])) == "" {
 					return streamValidation{}, fmt.Errorf("invalid rate_limit_event: missing session_id")
 				}
@@ -611,6 +657,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				result.RateLimitValidated = true
 				result.RateLimitEvent = "rate_limit_event:" + bucket
 			case "tool_use_summary":
+				if turn.behavior == "deny" {
+					return streamValidation{}, fmt.Errorf("unexpected tool_use_summary during deny turn")
+				}
 				if strings.TrimSpace(asString(incoming["session_id"])) == "" {
 					return streamValidation{}, fmt.Errorf("invalid tool_use_summary: missing session_id")
 				}
@@ -620,12 +669,15 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				if strings.TrimSpace(asString(incoming["tool_use_id"])) != currentToolUseID {
 					return streamValidation{}, fmt.Errorf("invalid tool_use_summary tool_use_id: expected %q, got %q", currentToolUseID, strings.TrimSpace(asString(incoming["tool_use_id"])))
 				}
-				if strings.TrimSpace(asString(incoming["output_preview"])) != expectedResponse {
-					return streamValidation{}, fmt.Errorf("invalid tool_use_summary output_preview: expected %q, got %q", expectedResponse, strings.TrimSpace(asString(incoming["output_preview"])))
+				if strings.TrimSpace(asString(incoming["output_preview"])) != turn.expectedResponse {
+					return streamValidation{}, fmt.Errorf("invalid tool_use_summary output_preview: expected %q, got %q", turn.expectedResponse, strings.TrimSpace(asString(incoming["output_preview"])))
 				}
 				result.ToolUseSummaryValidated = true
 				result.ToolUseSummaryEvent = "tool_use_summary"
 			case "stream_event":
+				if turn.behavior == "deny" {
+					return streamValidation{}, fmt.Errorf("unexpected stream_event during deny turn")
+				}
 				if strings.TrimSpace(asString(incoming["session_id"])) == "" {
 					return streamValidation{}, fmt.Errorf("invalid stream_event: missing session_id")
 				}
@@ -637,24 +689,27 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				if strings.TrimSpace(asString(delta["type"])) != "text_delta" {
 					return streamValidation{}, fmt.Errorf("invalid stream_event delta type: %s", asString(delta["type"]))
 				}
-				if strings.TrimSpace(asString(delta["text"])) != expectedResponse {
-					return streamValidation{}, fmt.Errorf("invalid stream_event delta text: expected %q, got %q", expectedResponse, strings.TrimSpace(asString(delta["text"])))
+				if strings.TrimSpace(asString(delta["text"])) != turn.expectedResponse {
+					return streamValidation{}, fmt.Errorf("invalid stream_event delta text: expected %q, got %q", turn.expectedResponse, strings.TrimSpace(asString(delta["text"])))
 				}
 				result.StreamContentValidated = true
 				result.StreamContentEvent = "stream_event:content_block_delta"
 			case "assistant":
+				if turn.behavior == "deny" {
+					return streamValidation{}, fmt.Errorf("unexpected assistant payload during deny turn")
+				}
 				message, _ := incoming["message"].(map[string]any)
 				content, _ := message["content"].([]any)
 				found := false
 				for _, item := range content {
 					block, _ := item.(map[string]any)
-					if strings.TrimSpace(asString(block["text"])) == expectedResponse {
+					if strings.TrimSpace(asString(block["text"])) == turn.expectedResponse {
 						found = true
 						break
 					}
 				}
 				if !found {
-					return streamValidation{}, fmt.Errorf("invalid assistant payload: missing echo for %q", approvedPrompt)
+					return streamValidation{}, fmt.Errorf("invalid assistant payload: missing echo for %q", turn.approvedPrompt)
 				}
 				result.MessageValidated = true
 				result.MessageEvent = "assistant"
@@ -662,21 +717,59 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				result.ValidatedTurns++
 				assistantValidated = true
 			case "result":
-				if strings.TrimSpace(asString(incoming["subtype"])) != "success" {
-					return streamValidation{}, fmt.Errorf("invalid result event subtype: %s", asString(incoming["subtype"]))
-				}
 				if asString(incoming["session_id"]) == "" {
 					return streamValidation{}, fmt.Errorf("invalid result event: missing session_id")
 				}
-				if intFromAny(incoming["num_turns"]) != result.ValidatedTurns {
-					return streamValidation{}, fmt.Errorf("invalid result event: expected num_turns=%d, got %d", result.ValidatedTurns, intFromAny(incoming["num_turns"]))
+				if turn.behavior == "allow" {
+					if strings.TrimSpace(asString(incoming["subtype"])) != "success" {
+						return streamValidation{}, fmt.Errorf("invalid result event subtype: %s", asString(incoming["subtype"]))
+					}
+					if intFromAny(incoming["num_turns"]) != result.ValidatedTurns {
+						return streamValidation{}, fmt.Errorf("invalid result event: expected num_turns=%d, got %d", result.ValidatedTurns, intFromAny(incoming["num_turns"]))
+					}
+					if strings.TrimSpace(asString(incoming["result"])) != turn.expectedResponse {
+						return streamValidation{}, fmt.Errorf("invalid result payload: expected result=%q, got %q", turn.expectedResponse, strings.TrimSpace(asString(incoming["result"])))
+					}
+					result.ResultValidated = true
+					result.ResultEvent = "result:success"
+				} else {
+					if strings.TrimSpace(asString(incoming["subtype"])) != "error_during_execution" {
+						return streamValidation{}, fmt.Errorf("invalid deny result subtype: %s", asString(incoming["subtype"]))
+					}
+					if permissionDenials, _ := incoming["permission_denials"].([]any); len(permissionDenials) == 0 {
+						return streamValidation{}, fmt.Errorf("invalid deny result: missing permission_denials")
+					} else {
+						denial, _ := permissionDenials[0].(map[string]any)
+						if strings.TrimSpace(asString(denial["tool_name"])) != "echo" {
+							return streamValidation{}, fmt.Errorf("invalid deny result tool_name: %q", strings.TrimSpace(asString(denial["tool_name"])))
+						}
+						if strings.TrimSpace(asString(denial["tool_use_id"])) != currentToolUseID {
+							return streamValidation{}, fmt.Errorf("invalid deny result tool_use_id: expected %q, got %q", currentToolUseID, strings.TrimSpace(asString(denial["tool_use_id"])))
+						}
+						toolInput, _ := denial["tool_input"].(map[string]any)
+						if strings.TrimSpace(asString(toolInput["text"])) != turn.prompt {
+							return streamValidation{}, fmt.Errorf("invalid deny result tool_input.text: expected %q, got %q", turn.prompt, strings.TrimSpace(asString(toolInput["text"])))
+						}
+					}
+					if errorsList, _ := incoming["errors"].([]any); len(errorsList) == 0 {
+						return streamValidation{}, fmt.Errorf("invalid deny result: missing errors")
+					}
+					if intFromAny(incoming["num_turns"]) != result.ValidatedTurns {
+						return streamValidation{}, fmt.Errorf("invalid deny result: expected num_turns=%d, got %d", result.ValidatedTurns, intFromAny(incoming["num_turns"]))
+					}
+					if isError, ok := incoming["is_error"].(bool); !ok || !isError {
+						return streamValidation{}, fmt.Errorf("invalid deny result: expected is_error=true")
+					}
+					result.ResultErrorValidated = true
+					result.ResultErrorEvent = "result:error_during_execution"
 				}
-				if strings.TrimSpace(asString(incoming["result"])) != expectedResponse {
-					return streamValidation{}, fmt.Errorf("invalid result payload: expected result=%q, got %q", expectedResponse, strings.TrimSpace(asString(incoming["result"])))
-				}
-				result.ResultValidated = true
-				result.ResultEvent = "result:success"
 				resultValidated = true
+			}
+			if turn.behavior == "allow" && assistantValidated && resultValidated {
+				break
+			}
+			if turn.behavior == "deny" && resultValidated {
+				break
 			}
 		}
 	}
@@ -774,8 +867,12 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("multi_turn_validated=%t\n", r.MultiTurnValidated))
 	b.WriteString(fmt.Sprintf("result_validated=%t\n", r.ResultValidated))
 	b.WriteString(fmt.Sprintf("result_event=%s\n", valueOrNone(r.ResultEvent)))
+	b.WriteString(fmt.Sprintf("result_error_validated=%t\n", r.ResultErrorValidated))
+	b.WriteString(fmt.Sprintf("result_error_event=%s\n", valueOrNone(r.ResultErrorEvent)))
 	b.WriteString(fmt.Sprintf("control_validated=%t\n", r.ControlValidated))
 	b.WriteString(fmt.Sprintf("permission_validated=%t\n", r.PermissionValidated))
+	b.WriteString(fmt.Sprintf("permission_denied_validated=%t\n", r.PermissionDeniedValidated))
+	b.WriteString(fmt.Sprintf("permission_denied_event=%s\n", valueOrNone(r.PermissionDeniedEvent)))
 	b.WriteString(fmt.Sprintf("tool_progress_validated=%t\n", r.ToolProgressValidated))
 	b.WriteString(fmt.Sprintf("tool_progress_event=%s\n", valueOrNone(r.ToolProgressEvent)))
 	b.WriteString(fmt.Sprintf("rate_limit_validated=%t\n", r.RateLimitValidated))
