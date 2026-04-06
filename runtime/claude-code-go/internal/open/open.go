@@ -73,6 +73,8 @@ type Result struct {
 	TaskNotificationEvent        string
 	FilesPersistedValidated      bool
 	FilesPersistedEvent          string
+	APIRetryValidated            bool
+	APIRetryEvent                string
 	ToolProgressValidated        bool
 	ToolProgressEvent            string
 	RateLimitValidated           bool
@@ -203,6 +205,8 @@ func Run(args []string) (Result, error) {
 		TaskNotificationEvent:        streamResult.TaskNotificationEvent,
 		FilesPersistedValidated:      streamResult.FilesPersistedValidated,
 		FilesPersistedEvent:          streamResult.FilesPersistedEvent,
+		APIRetryValidated:            streamResult.APIRetryValidated,
+		APIRetryEvent:                streamResult.APIRetryEvent,
 		ToolProgressValidated:        streamResult.ToolProgressValidated,
 		ToolProgressEvent:            streamResult.ToolProgressEvent,
 		RateLimitValidated:           streamResult.RateLimitValidated,
@@ -563,6 +567,8 @@ type streamValidation struct {
 	TaskNotificationEvent        string
 	FilesPersistedValidated      bool
 	FilesPersistedEvent          string
+	APIRetryValidated            bool
+	APIRetryEvent                string
 	ToolProgressValidated        bool
 	ToolProgressEvent            string
 	RateLimitValidated           bool
@@ -665,6 +671,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		taskProgressValidated := false
 		taskNotificationValidated := false
 		filesPersistedValidated := false
+		apiRetryValidated := false
 		postTurnSummaryValidated := false
 		compactBoundaryValidated := false
 		sessionStateRunningValidated := false
@@ -839,6 +846,31 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.FilesPersistedValidated = true
 					result.FilesPersistedEvent = "system:files_persisted"
 					filesPersistedValidated = true
+				case "api_retry":
+					if turn.behavior == "deny" {
+						return streamValidation{}, fmt.Errorf("unexpected api_retry during deny turn")
+					}
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid api_retry: missing session_id")
+					}
+					if intFromAny(incoming["attempt"]) != 1 {
+						return streamValidation{}, fmt.Errorf("invalid api_retry: expected attempt=1, got %d", intFromAny(incoming["attempt"]))
+					}
+					if intFromAny(incoming["max_retries"]) != 3 {
+						return streamValidation{}, fmt.Errorf("invalid api_retry: expected max_retries=3, got %d", intFromAny(incoming["max_retries"]))
+					}
+					if intFromAny(incoming["retry_delay_ms"]) != 500 {
+						return streamValidation{}, fmt.Errorf("invalid api_retry: expected retry_delay_ms=500, got %d", intFromAny(incoming["retry_delay_ms"]))
+					}
+					if intFromAny(incoming["error_status"]) != 529 {
+						return streamValidation{}, fmt.Errorf("invalid api_retry: expected error_status=529, got %d", intFromAny(incoming["error_status"]))
+					}
+					if strings.TrimSpace(asString(incoming["error"])) != "rate_limit" {
+						return streamValidation{}, fmt.Errorf("invalid api_retry: unexpected error=%q", strings.TrimSpace(asString(incoming["error"])))
+					}
+					result.APIRetryValidated = true
+					result.APIRetryEvent = "system:api_retry"
+					apiRetryValidated = true
 				case "compact_boundary":
 					if turn.behavior == "deny" {
 						return streamValidation{}, fmt.Errorf("unexpected compact_boundary during deny turn")
@@ -1165,7 +1197,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -1281,6 +1313,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("task_notification_event=%s\n", valueOrNone(r.TaskNotificationEvent)))
 	b.WriteString(fmt.Sprintf("files_persisted_validated=%t\n", r.FilesPersistedValidated))
 	b.WriteString(fmt.Sprintf("files_persisted_event=%s\n", valueOrNone(r.FilesPersistedEvent)))
+	b.WriteString(fmt.Sprintf("api_retry_validated=%t\n", r.APIRetryValidated))
+	b.WriteString(fmt.Sprintf("api_retry_event=%s\n", valueOrNone(r.APIRetryEvent)))
 	b.WriteString(fmt.Sprintf("tool_progress_validated=%t\n", r.ToolProgressValidated))
 	b.WriteString(fmt.Sprintf("tool_progress_event=%s\n", valueOrNone(r.ToolProgressEvent)))
 	b.WriteString(fmt.Sprintf("rate_limit_validated=%t\n", r.RateLimitValidated))

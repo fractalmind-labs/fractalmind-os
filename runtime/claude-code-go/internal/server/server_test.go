@@ -258,6 +258,16 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(taskProgress["task_id"])) != strings.TrimSpace(asString(taskStarted["task_id"])) || strings.TrimSpace(asString(taskProgress["tool_use_id"])) != strings.TrimSpace(asString(request["tool_use_id"])) || int(taskProgressUsage["tool_uses"].(float64)) != 1 || strings.TrimSpace(asString(taskProgress["last_tool_name"])) != directConnectEchoToolName {
 		t.Fatalf("invalid task_progress payload: %#v", taskProgress)
 	}
+	var apiRetry map[string]any
+	if err := ws.ReadJSON(&apiRetry); err != nil {
+		t.Fatalf("read api_retry failed: %v", err)
+	}
+	if apiRetry["type"] != "system" || strings.TrimSpace(asString(apiRetry["subtype"])) != "api_retry" || strings.TrimSpace(asString(apiRetry["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected api_retry payload: %#v", apiRetry)
+	}
+	if int(apiRetry["attempt"].(float64)) != 1 || int(apiRetry["max_retries"].(float64)) != 3 || int(apiRetry["retry_delay_ms"].(float64)) != 500 || int(apiRetry["error_status"].(float64)) != 529 || strings.TrimSpace(asString(apiRetry["error"])) != "rate_limit" {
+		t.Fatalf("invalid api_retry payload: %#v", apiRetry)
+	}
 
 	var toolProgress map[string]any
 	if err := ws.ReadJSON(&toolProgress); err != nil {
@@ -470,6 +480,16 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondTaskProgressUsage, _ := secondTaskProgress["usage"].(map[string]any)
 	if strings.TrimSpace(asString(secondTaskProgress["task_id"])) != strings.TrimSpace(asString(secondTaskStarted["task_id"])) || strings.TrimSpace(asString(secondTaskProgress["tool_use_id"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) || int(secondTaskProgressUsage["tool_uses"].(float64)) != 1 || strings.TrimSpace(asString(secondTaskProgress["last_tool_name"])) != directConnectEchoToolName {
 		t.Fatalf("invalid second task_progress payload: %#v", secondTaskProgress)
+	}
+	var secondAPIRetry map[string]any
+	if err := ws.ReadJSON(&secondAPIRetry); err != nil {
+		t.Fatalf("read second api_retry failed: %v", err)
+	}
+	if secondAPIRetry["type"] != "system" || strings.TrimSpace(asString(secondAPIRetry["subtype"])) != "api_retry" || strings.TrimSpace(asString(secondAPIRetry["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second api_retry payload: %#v", secondAPIRetry)
+	}
+	if int(secondAPIRetry["attempt"].(float64)) != 1 || int(secondAPIRetry["max_retries"].(float64)) != 3 || int(secondAPIRetry["retry_delay_ms"].(float64)) != 500 || int(secondAPIRetry["error_status"].(float64)) != 529 || strings.TrimSpace(asString(secondAPIRetry["error"])) != "rate_limit" {
+		t.Fatalf("invalid second api_retry payload: %#v", secondAPIRetry)
 	}
 
 	var secondToolProgress map[string]any

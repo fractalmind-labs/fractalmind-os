@@ -706,6 +706,21 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":           taskProgressUUID,
 					"session_id":     session.ID,
 				})
+				apiRetryUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":           "system",
+					"subtype":        "api_retry",
+					"attempt":        1,
+					"max_retries":    3,
+					"retry_delay_ms": 500,
+					"error_status":   529,
+					"error":          "rate_limit",
+					"uuid":           apiRetryUUID,
+					"session_id":     session.ID,
+				})
 				progressUUID, err := generateRequestID()
 				if err != nil {
 					return
