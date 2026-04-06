@@ -209,7 +209,7 @@ func Start(args []string) (*RunningServer, error) {
 		wsBase = fmt.Sprintf("ws://%s:%d/ws", opts.Host, actualPort)
 	}
 
-	handler := buildMux(strings.TrimSpace(opts.Workspace), authToken, transportName, wsBase, store, sessionIndex)
+	handler := buildMux(strings.TrimSpace(opts.Workspace), authToken, transportName, wsBase, store, sessionIndex, opts.MaxSessions)
 	httpServer := &http.Server{Handler: handler}
 
 	running := &RunningServer{
@@ -295,7 +295,7 @@ func (s *RunningServer) Close() error {
 	return err
 }
 
-func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sessionStore, sessionIndex *sessionIndexStore) http.Handler {
+func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sessionStore, sessionIndex *sessionIndexStore, maxSessions int) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/sessions", func(w http.ResponseWriter, r *http.Request) {
 		if strings.TrimSpace(authToken) != "" && r.Header.Get("Authorization") != "Bearer "+authToken {
@@ -319,6 +319,9 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 			}
 			if existing, ok := store.get(sessionID); ok {
 				store.put(sessionInfo{ID: sessionID, WorkDir: entry.CWD, Backend: existing.Backend})
+			} else if maxSessions > 0 && store.count() >= maxSessions {
+				http.Error(w, fmt.Sprintf("max sessions reached (%d/%d)", store.count(), maxSessions), http.StatusTooManyRequests)
+				return
 			} else {
 				store.put(sessionInfo{ID: sessionID, WorkDir: entry.CWD})
 			}
@@ -346,6 +349,10 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 		if workDir == "" {
 			workDir = strings.TrimSpace(defaultWorkspace)
 		}
+		if maxSessions > 0 && store.count() >= maxSessions {
+			http.Error(w, fmt.Sprintf("max sessions reached (%d/%d)", store.count(), maxSessions), http.StatusTooManyRequests)
+			return
+		}
 
 		sessionID, err := generateSessionID()
 		if err != nil {
@@ -354,11 +361,11 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 		}
 
 		wsURL := strings.TrimRight(wsBase, "/") + "/" + sessionID
-		store.put(sessionInfo{ID: sessionID, WorkDir: workDir})
 		if err := sessionIndex.upsert(sessionID, newSessionIndexEntry(sessionID, workDir)); err != nil {
 			http.Error(w, "failed to persist session index", http.StatusInternalServerError)
 			return
 		}
+		store.put(sessionInfo{ID: sessionID, WorkDir: workDir})
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(sessionResponse{
@@ -740,6 +747,15 @@ func (s *sessionStore) get(id string) (sessionInfo, bool) {
 	defer s.mu.RUnlock()
 	info, ok := s.sessions[id]
 	return info, ok
+}
+
+func (s *sessionStore) count() int {
+	if s == nil {
+		return 0
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return len(s.sessions)
 }
 
 func (s *sessionStore) ensureBackend(id string) (sessionInfo, error) {

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -607,6 +608,86 @@ func TestCreateSessionPersistsSessionIndex(t *testing.T) {
 	}
 	if entry["status"] != "starting" {
 		t.Fatalf("expected starting status, got %#v", entry)
+	}
+}
+
+func TestCreateSessionHonorsMaxSessionsGuard(t *testing.T) {
+	lockfile := filepath.Join(t.TempDir(), "server.lock.json")
+	sessionIndex := filepath.Join(t.TempDir(), "sessions.json")
+	t.Setenv("CLAUDE_CODE_GO_SERVER_LOCKFILE", lockfile)
+	t.Setenv("CLAUDE_CODE_GO_SERVER_SESSION_INDEX", sessionIndex)
+
+	running, err := Start([]string{
+		"--host", "127.0.0.1",
+		"--port", "0",
+		"--auth-token", "demo-token",
+		"--max-sessions", "2",
+	})
+	if err != nil {
+		t.Fatalf("Start returned error: %v", err)
+	}
+	defer func() {
+		if err := running.Close(); err != nil {
+			t.Fatalf("Close returned error: %v", err)
+		}
+	}()
+
+	createSession := func(cwd string) *http.Response {
+		t.Helper()
+		req, err := http.NewRequest(http.MethodPost, running.Result.SessionsEndpoint, bytes.NewBufferString(fmt.Sprintf(`{"cwd":%q}`, cwd)))
+		if err != nil {
+			t.Fatalf("NewRequest returned error: %v", err)
+		}
+		req.Header.Set("Authorization", "Bearer demo-token")
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("Do returned error: %v", err)
+		}
+		return resp
+	}
+
+	resp1 := createSession("/tmp/session-1")
+	defer resp1.Body.Close()
+	if resp1.StatusCode != http.StatusOK {
+		t.Fatalf("expected first session create to succeed, got %s", resp1.Status)
+	}
+	var first map[string]string
+	if err := json.NewDecoder(resp1.Body).Decode(&first); err != nil {
+		t.Fatalf("decode first session response: %v", err)
+	}
+
+	resp2 := createSession("/tmp/session-2")
+	defer resp2.Body.Close()
+	if resp2.StatusCode != http.StatusOK {
+		t.Fatalf("expected second session create to succeed, got %s", resp2.Status)
+	}
+
+	resp3 := createSession("/tmp/session-3")
+	defer resp3.Body.Close()
+	if resp3.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("expected third session create to fail with 429, got %s", resp3.Status)
+	}
+	body, err := io.ReadAll(resp3.Body)
+	if err != nil {
+		t.Fatalf("read third response body: %v", err)
+	}
+	if !strings.Contains(string(body), "max sessions reached (2/2)") {
+		t.Fatalf("unexpected guard body: %q", string(body))
+	}
+
+	resumeReq, err := http.NewRequest(http.MethodGet, running.Result.SessionsEndpoint+"?resume="+first["session_id"], nil)
+	if err != nil {
+		t.Fatalf("NewRequest resume returned error: %v", err)
+	}
+	resumeReq.Header.Set("Authorization", "Bearer demo-token")
+	resumeResp, err := http.DefaultClient.Do(resumeReq)
+	if err != nil {
+		t.Fatalf("Do resume returned error: %v", err)
+	}
+	defer resumeResp.Body.Close()
+	if resumeResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected resume for existing session to bypass cap, got %s", resumeResp.Status)
 	}
 }
 

@@ -148,6 +148,23 @@ func TestRunOpenSupportsResumeSession(t *testing.T) {
 	}
 }
 
+func TestRunOpenSurfacesMaxSessionsGuard(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/sessions", func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "max sessions reached (1/1)", http.StatusTooManyRequests)
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	_, err := Run([]string{"cc://" + strings.TrimPrefix(srv.URL, "http://")})
+	if err == nil {
+		t.Fatalf("expected max sessions error")
+	}
+	if !strings.Contains(err.Error(), "429 Too Many Requests") || !strings.Contains(err.Error(), "max sessions reached (1/1)") {
+		t.Fatalf("unexpected max sessions error: %v", err)
+	}
+}
+
 func TestRunOpenRejectsMissingURL(t *testing.T) {
 	_, err := Run(nil)
 	if err == nil || !strings.Contains(err.Error(), "usage: claude-code-go open <cc-url>") {

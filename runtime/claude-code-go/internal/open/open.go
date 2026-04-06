@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -318,7 +319,7 @@ func createSession(serverURL, transport, authToken, cwd string) (sessionResponse
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return sessionResponse{}, fmt.Errorf("create direct-connect session: %s", resp.Status)
+		return sessionResponse{}, responseError("create direct-connect session", resp)
 	}
 
 	var parsed sessionResponse
@@ -349,7 +350,7 @@ func resumeSession(serverURL, transport, authToken, sessionID string) (sessionRe
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return sessionResponse{}, fmt.Errorf("resume direct-connect session: %s", resp.Status)
+		return sessionResponse{}, responseError("resume direct-connect session", resp)
 	}
 	var parsed sessionResponse
 	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
@@ -379,6 +380,18 @@ func buildClient(serverURL, transport string) (*http.Client, string, error) {
 	}
 }
 
+func responseError(prefix string, resp *http.Response) error {
+	if resp == nil {
+		return fmt.Errorf("%s: unknown response", prefix)
+	}
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+	message := strings.TrimSpace(string(body))
+	if message == "" {
+		return fmt.Errorf("%s: %s", prefix, resp.Status)
+	}
+	return fmt.Errorf("%s: %s: %s", prefix, resp.Status, message)
+}
+
 func inspectSession(serverURL, transport, authToken, sessionID string) (sessionStateResponse, error) {
 	client, endpoint, err := buildClient(serverURL, transport)
 	if err != nil {
@@ -398,7 +411,7 @@ func inspectSession(serverURL, transport, authToken, sessionID string) (sessionS
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return sessionStateResponse{}, fmt.Errorf("inspect direct-connect session: %s", resp.Status)
+		return sessionStateResponse{}, responseError("inspect direct-connect session", resp)
 	}
 	var parsed sessionStateResponse
 	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
