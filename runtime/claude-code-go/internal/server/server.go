@@ -974,7 +974,15 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				requestID := strings.TrimSpace(asString(incoming["request_id"]))
 				request, _ := incoming["request"].(map[string]any)
 				subtype := strings.TrimSpace(asString(request["subtype"]))
-				if subtype != "interrupt" || requestID == "" {
+				if requestID == "" {
+					continue
+				}
+				responsePayload := map[string]any{}
+				switch subtype {
+				case "interrupt":
+					responsePayload["interrupted"] = true
+				case "end_session":
+				default:
 					continue
 				}
 				_ = conn.WriteJSON(map[string]any{
@@ -982,11 +990,12 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"response": map[string]any{
 						"subtype":    "success",
 						"request_id": requestID,
-						"response": map[string]any{
-							"interrupted": true,
-						},
+						"response":   responsePayload,
 					},
 				})
+				if subtype == "end_session" {
+					return
+				}
 			}
 		}
 	})

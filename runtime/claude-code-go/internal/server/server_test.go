@@ -761,6 +761,28 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if interruptResp["type"] != "control_response" {
 		t.Fatalf("unexpected interrupt response: %#v", interruptResp)
 	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": "end-session-1",
+		"request": map[string]any{
+			"subtype": "end_session",
+			"reason":  "test shutdown",
+		},
+	}); err != nil {
+		t.Fatalf("write end_session request failed: %v", err)
+	}
+	var endSessionResp map[string]any
+	if err := ws.ReadJSON(&endSessionResp); err != nil {
+		t.Fatalf("read end_session response failed: %v", err)
+	}
+	if endSessionResp["type"] != "control_response" {
+		t.Fatalf("unexpected end_session response: %#v", endSessionResp)
+	}
+	response, _ := endSessionResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(response["request_id"])) != "end-session-1" {
+		t.Fatalf("unexpected end_session request id: %#v", endSessionResp)
+	}
 }
 
 func TestStartUnixServerRespondsToSessions(t *testing.T) {
