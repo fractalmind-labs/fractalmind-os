@@ -237,6 +237,27 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if controlCancel["type"] != "control_cancel_request" || strings.TrimSpace(asString(controlCancel["request_id"])) != requestID {
 		t.Fatalf("unexpected control cancel event: %#v", controlCancel)
 	}
+	var taskStarted map[string]any
+	if err := ws.ReadJSON(&taskStarted); err != nil {
+		t.Fatalf("read task_started failed: %v", err)
+	}
+	if taskStarted["type"] != "system" || strings.TrimSpace(asString(taskStarted["subtype"])) != "task_started" || strings.TrimSpace(asString(taskStarted["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected task_started payload: %#v", taskStarted)
+	}
+	if strings.TrimSpace(asString(taskStarted["task_id"])) == "" || strings.TrimSpace(asString(taskStarted["tool_use_id"])) != strings.TrimSpace(asString(request["tool_use_id"])) || strings.TrimSpace(asString(taskStarted["description"])) == "" || strings.TrimSpace(asString(taskStarted["prompt"])) != "hello [approved]" {
+		t.Fatalf("invalid task_started payload: %#v", taskStarted)
+	}
+	var taskProgress map[string]any
+	if err := ws.ReadJSON(&taskProgress); err != nil {
+		t.Fatalf("read task_progress failed: %v", err)
+	}
+	if taskProgress["type"] != "system" || strings.TrimSpace(asString(taskProgress["subtype"])) != "task_progress" || strings.TrimSpace(asString(taskProgress["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected task_progress payload: %#v", taskProgress)
+	}
+	taskProgressUsage, _ := taskProgress["usage"].(map[string]any)
+	if strings.TrimSpace(asString(taskProgress["task_id"])) != strings.TrimSpace(asString(taskStarted["task_id"])) || strings.TrimSpace(asString(taskProgress["tool_use_id"])) != strings.TrimSpace(asString(request["tool_use_id"])) || int(taskProgressUsage["tool_uses"].(float64)) != 1 || strings.TrimSpace(asString(taskProgress["last_tool_name"])) != directConnectEchoToolName {
+		t.Fatalf("invalid task_progress payload: %#v", taskProgress)
+	}
 
 	var toolProgress map[string]any
 	if err := ws.ReadJSON(&toolProgress); err != nil {
@@ -289,6 +310,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if result["type"] != "result" || strings.TrimSpace(asString(result["subtype"])) != "success" || strings.TrimSpace(asString(result["result"])) != "echo:hello [approved]" {
 		t.Fatalf("unexpected result event: %#v", result)
+	}
+	var taskNotification map[string]any
+	if err := ws.ReadJSON(&taskNotification); err != nil {
+		t.Fatalf("read task_notification failed: %v", err)
+	}
+	if taskNotification["type"] != "system" || strings.TrimSpace(asString(taskNotification["subtype"])) != "task_notification" || strings.TrimSpace(asString(taskNotification["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected task_notification payload: %#v", taskNotification)
+	}
+	taskNotificationUsage, _ := taskNotification["usage"].(map[string]any)
+	if strings.TrimSpace(asString(taskNotification["task_id"])) != strings.TrimSpace(asString(taskStarted["task_id"])) || strings.TrimSpace(asString(taskNotification["tool_use_id"])) != strings.TrimSpace(asString(request["tool_use_id"])) || strings.TrimSpace(asString(taskNotification["status"])) != "completed" || strings.TrimSpace(asString(taskNotification["output_file"])) == "" || strings.TrimSpace(asString(taskNotification["summary"])) != "echo:hello [approved]" || int(taskNotificationUsage["tool_uses"].(float64)) != 1 {
+		t.Fatalf("invalid task_notification payload: %#v", taskNotification)
 	}
 	var postTurnSummary map[string]any
 	if err := ws.ReadJSON(&postTurnSummary); err != nil {
@@ -402,6 +434,27 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if secondControlCancel["type"] != "control_cancel_request" || strings.TrimSpace(asString(secondControlCancel["request_id"])) != secondRequestID {
 		t.Fatalf("unexpected second control cancel event: %#v", secondControlCancel)
 	}
+	var secondTaskStarted map[string]any
+	if err := ws.ReadJSON(&secondTaskStarted); err != nil {
+		t.Fatalf("read second task_started failed: %v", err)
+	}
+	if secondTaskStarted["type"] != "system" || strings.TrimSpace(asString(secondTaskStarted["subtype"])) != "task_started" || strings.TrimSpace(asString(secondTaskStarted["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second task_started payload: %#v", secondTaskStarted)
+	}
+	if strings.TrimSpace(asString(secondTaskStarted["task_id"])) == "" || strings.TrimSpace(asString(secondTaskStarted["tool_use_id"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) || strings.TrimSpace(asString(secondTaskStarted["description"])) == "" || strings.TrimSpace(asString(secondTaskStarted["prompt"])) != "hello again [approved]" {
+		t.Fatalf("invalid second task_started payload: %#v", secondTaskStarted)
+	}
+	var secondTaskProgress map[string]any
+	if err := ws.ReadJSON(&secondTaskProgress); err != nil {
+		t.Fatalf("read second task_progress failed: %v", err)
+	}
+	if secondTaskProgress["type"] != "system" || strings.TrimSpace(asString(secondTaskProgress["subtype"])) != "task_progress" || strings.TrimSpace(asString(secondTaskProgress["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second task_progress payload: %#v", secondTaskProgress)
+	}
+	secondTaskProgressUsage, _ := secondTaskProgress["usage"].(map[string]any)
+	if strings.TrimSpace(asString(secondTaskProgress["task_id"])) != strings.TrimSpace(asString(secondTaskStarted["task_id"])) || strings.TrimSpace(asString(secondTaskProgress["tool_use_id"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) || int(secondTaskProgressUsage["tool_uses"].(float64)) != 1 || strings.TrimSpace(asString(secondTaskProgress["last_tool_name"])) != directConnectEchoToolName {
+		t.Fatalf("invalid second task_progress payload: %#v", secondTaskProgress)
+	}
 
 	var secondToolProgress map[string]any
 	if err := ws.ReadJSON(&secondToolProgress); err != nil {
@@ -454,6 +507,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if secondResult["type"] != "result" || strings.TrimSpace(asString(secondResult["subtype"])) != "success" || strings.TrimSpace(asString(secondResult["result"])) != "echo:hello again [approved]" {
 		t.Fatalf("unexpected second result event: %#v", secondResult)
+	}
+	var secondTaskNotification map[string]any
+	if err := ws.ReadJSON(&secondTaskNotification); err != nil {
+		t.Fatalf("read second task_notification failed: %v", err)
+	}
+	if secondTaskNotification["type"] != "system" || strings.TrimSpace(asString(secondTaskNotification["subtype"])) != "task_notification" || strings.TrimSpace(asString(secondTaskNotification["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second task_notification payload: %#v", secondTaskNotification)
+	}
+	secondTaskNotificationUsage, _ := secondTaskNotification["usage"].(map[string]any)
+	if strings.TrimSpace(asString(secondTaskNotification["task_id"])) != strings.TrimSpace(asString(secondTaskStarted["task_id"])) || strings.TrimSpace(asString(secondTaskNotification["tool_use_id"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) || strings.TrimSpace(asString(secondTaskNotification["status"])) != "completed" || strings.TrimSpace(asString(secondTaskNotification["output_file"])) == "" || strings.TrimSpace(asString(secondTaskNotification["summary"])) != "echo:hello again [approved]" || int(secondTaskNotificationUsage["tool_uses"].(float64)) != 1 {
+		t.Fatalf("invalid second task_notification payload: %#v", secondTaskNotification)
 	}
 	var secondPostTurnSummary map[string]any
 	if err := ws.ReadJSON(&secondPostTurnSummary); err != nil {

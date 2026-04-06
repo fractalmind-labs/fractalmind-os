@@ -671,6 +671,40 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"type":       "control_cancel_request",
 					"request_id": pendingRequestID,
 				})
+				taskID := "task-" + pendingToolUseID
+				taskDescription := "direct-connect echo task"
+				taskStartedUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":          "system",
+					"subtype":       "task_started",
+					"task_id":       taskID,
+					"tool_use_id":   pendingToolUseID,
+					"description":   taskDescription,
+					"task_type":     "tool",
+					"workflow_name": "direct-connect",
+					"prompt":        toolInputText,
+					"uuid":          taskStartedUUID,
+					"session_id":    session.ID,
+				})
+				taskProgressUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":           "system",
+					"subtype":        "task_progress",
+					"task_id":        taskID,
+					"tool_use_id":    pendingToolUseID,
+					"description":    taskDescription,
+					"usage":          map[string]any{"total_tokens": 0, "tool_uses": 1, "duration_ms": 1},
+					"last_tool_name": directConnectEchoToolName,
+					"summary":        "direct-connect echo task approved",
+					"uuid":           taskProgressUUID,
+					"session_id":     session.ID,
+				})
 				progressUUID, err := generateRequestID()
 				if err != nil {
 					return
@@ -766,6 +800,22 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"permission_denials": []map[string]any{},
 					"uuid":               resultUUID,
 					"session_id":         session.ID,
+				})
+				taskNotificationUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":        "system",
+					"subtype":     "task_notification",
+					"task_id":     taskID,
+					"tool_use_id": pendingToolUseID,
+					"status":      "completed",
+					"output_file": session.WorkDir + "/.claude-code-go/tasks/" + taskID + ".log",
+					"summary":     responseText,
+					"usage":       map[string]any{"total_tokens": 0, "tool_uses": 1, "duration_ms": 1},
+					"uuid":        taskNotificationUUID,
+					"session_id":  session.ID,
 				})
 				postTurnUUID, err := generateRequestID()
 				if err != nil {

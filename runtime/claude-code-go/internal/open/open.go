@@ -65,6 +65,12 @@ type Result struct {
 	PermissionValidated          bool
 	PermissionDeniedValidated    bool
 	PermissionDeniedEvent        string
+	TaskStartedValidated         bool
+	TaskStartedEvent             string
+	TaskProgressValidated        bool
+	TaskProgressEvent            string
+	TaskNotificationValidated    bool
+	TaskNotificationEvent        string
 	ToolProgressValidated        bool
 	ToolProgressEvent            string
 	RateLimitValidated           bool
@@ -187,6 +193,12 @@ func Run(args []string) (Result, error) {
 		PermissionValidated:          streamResult.PermissionValidated,
 		PermissionDeniedValidated:    streamResult.PermissionDeniedValidated,
 		PermissionDeniedEvent:        streamResult.PermissionDeniedEvent,
+		TaskStartedValidated:         streamResult.TaskStartedValidated,
+		TaskStartedEvent:             streamResult.TaskStartedEvent,
+		TaskProgressValidated:        streamResult.TaskProgressValidated,
+		TaskProgressEvent:            streamResult.TaskProgressEvent,
+		TaskNotificationValidated:    streamResult.TaskNotificationValidated,
+		TaskNotificationEvent:        streamResult.TaskNotificationEvent,
 		ToolProgressValidated:        streamResult.ToolProgressValidated,
 		ToolProgressEvent:            streamResult.ToolProgressEvent,
 		RateLimitValidated:           streamResult.RateLimitValidated,
@@ -539,6 +551,12 @@ type streamValidation struct {
 	PermissionValidated          bool
 	PermissionDeniedValidated    bool
 	PermissionDeniedEvent        string
+	TaskStartedValidated         bool
+	TaskStartedEvent             string
+	TaskProgressValidated        bool
+	TaskProgressEvent            string
+	TaskNotificationValidated    bool
+	TaskNotificationEvent        string
 	ToolProgressValidated        bool
 	ToolProgressEvent            string
 	RateLimitValidated           bool
@@ -617,6 +635,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	for _, turn := range turns {
 		currentToolUseID := ""
 		currentRequestID := ""
+		currentTaskID := ""
 		if err := conn.WriteJSON(map[string]any{
 			"type": "user",
 			"message": map[string]any{
@@ -636,6 +655,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 
 		assistantValidated := false
 		resultValidated := false
+		taskStartedValidated := false
+		taskProgressValidated := false
+		taskNotificationValidated := false
 		postTurnSummaryValidated := false
 		compactBoundaryValidated := false
 		sessionStateRunningValidated := false
@@ -692,6 +714,96 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.PostTurnSummaryValidated = true
 					result.PostTurnSummaryEvent = "system:post_turn_summary"
 					postTurnSummaryValidated = true
+				case "task_started":
+					if turn.behavior == "deny" {
+						return streamValidation{}, fmt.Errorf("unexpected task_started during deny turn")
+					}
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid task_started: missing session_id")
+					}
+					if strings.TrimSpace(asString(incoming["task_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid task_started: missing task_id")
+					}
+					if strings.TrimSpace(asString(incoming["tool_use_id"])) != currentToolUseID {
+						return streamValidation{}, fmt.Errorf("invalid task_started: expected tool_use_id=%q, got %q", currentToolUseID, strings.TrimSpace(asString(incoming["tool_use_id"])))
+					}
+					if strings.TrimSpace(asString(incoming["description"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid task_started: missing description")
+					}
+					if strings.TrimSpace(asString(incoming["prompt"])) != turn.approvedPrompt {
+						return streamValidation{}, fmt.Errorf("invalid task_started: expected prompt=%q, got %q", turn.approvedPrompt, strings.TrimSpace(asString(incoming["prompt"])))
+					}
+					currentTaskID = strings.TrimSpace(asString(incoming["task_id"]))
+					result.TaskStartedValidated = true
+					result.TaskStartedEvent = "system:task_started"
+					taskStartedValidated = true
+				case "task_progress":
+					if turn.behavior == "deny" {
+						return streamValidation{}, fmt.Errorf("unexpected task_progress during deny turn")
+					}
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid task_progress: missing session_id")
+					}
+					if strings.TrimSpace(asString(incoming["task_id"])) != currentTaskID {
+						return streamValidation{}, fmt.Errorf("invalid task_progress: expected task_id=%q, got %q", currentTaskID, strings.TrimSpace(asString(incoming["task_id"])))
+					}
+					if strings.TrimSpace(asString(incoming["tool_use_id"])) != currentToolUseID {
+						return streamValidation{}, fmt.Errorf("invalid task_progress: expected tool_use_id=%q, got %q", currentToolUseID, strings.TrimSpace(asString(incoming["tool_use_id"])))
+					}
+					if strings.TrimSpace(asString(incoming["description"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid task_progress: missing description")
+					}
+					usage, _ := incoming["usage"].(map[string]any)
+					if intFromAny(usage["tool_uses"]) != 1 {
+						return streamValidation{}, fmt.Errorf("invalid task_progress: expected usage.tool_uses=1, got %d", intFromAny(usage["tool_uses"]))
+					}
+					if _, ok := usage["total_tokens"]; !ok {
+						return streamValidation{}, fmt.Errorf("invalid task_progress: missing usage.total_tokens")
+					}
+					if _, ok := usage["duration_ms"]; !ok {
+						return streamValidation{}, fmt.Errorf("invalid task_progress: missing usage.duration_ms")
+					}
+					if strings.TrimSpace(asString(incoming["last_tool_name"])) != "echo" {
+						return streamValidation{}, fmt.Errorf("invalid task_progress: unexpected last_tool_name=%q", strings.TrimSpace(asString(incoming["last_tool_name"])))
+					}
+					result.TaskProgressValidated = true
+					result.TaskProgressEvent = "system:task_progress"
+					taskProgressValidated = true
+				case "task_notification":
+					if turn.behavior == "deny" {
+						return streamValidation{}, fmt.Errorf("unexpected task_notification during deny turn")
+					}
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid task_notification: missing session_id")
+					}
+					if strings.TrimSpace(asString(incoming["task_id"])) != currentTaskID {
+						return streamValidation{}, fmt.Errorf("invalid task_notification: expected task_id=%q, got %q", currentTaskID, strings.TrimSpace(asString(incoming["task_id"])))
+					}
+					if strings.TrimSpace(asString(incoming["tool_use_id"])) != currentToolUseID {
+						return streamValidation{}, fmt.Errorf("invalid task_notification: expected tool_use_id=%q, got %q", currentToolUseID, strings.TrimSpace(asString(incoming["tool_use_id"])))
+					}
+					if strings.TrimSpace(asString(incoming["status"])) != "completed" {
+						return streamValidation{}, fmt.Errorf("invalid task_notification: unexpected status=%q", strings.TrimSpace(asString(incoming["status"])))
+					}
+					if strings.TrimSpace(asString(incoming["output_file"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid task_notification: missing output_file")
+					}
+					if strings.TrimSpace(asString(incoming["summary"])) != turn.expectedResponse {
+						return streamValidation{}, fmt.Errorf("invalid task_notification: expected summary=%q, got %q", turn.expectedResponse, strings.TrimSpace(asString(incoming["summary"])))
+					}
+					usage, _ := incoming["usage"].(map[string]any)
+					if intFromAny(usage["tool_uses"]) != 1 {
+						return streamValidation{}, fmt.Errorf("invalid task_notification: expected usage.tool_uses=1, got %d", intFromAny(usage["tool_uses"]))
+					}
+					if _, ok := usage["total_tokens"]; !ok {
+						return streamValidation{}, fmt.Errorf("invalid task_notification: missing usage.total_tokens")
+					}
+					if _, ok := usage["duration_ms"]; !ok {
+						return streamValidation{}, fmt.Errorf("invalid task_notification: missing usage.duration_ms")
+					}
+					result.TaskNotificationValidated = true
+					result.TaskNotificationEvent = "system:task_notification"
+					taskNotificationValidated = true
 				case "compact_boundary":
 					if turn.behavior == "deny" {
 						return streamValidation{}, fmt.Errorf("unexpected compact_boundary during deny turn")
@@ -1018,7 +1130,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -1126,6 +1238,12 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("permission_validated=%t\n", r.PermissionValidated))
 	b.WriteString(fmt.Sprintf("permission_denied_validated=%t\n", r.PermissionDeniedValidated))
 	b.WriteString(fmt.Sprintf("permission_denied_event=%s\n", valueOrNone(r.PermissionDeniedEvent)))
+	b.WriteString(fmt.Sprintf("task_started_validated=%t\n", r.TaskStartedValidated))
+	b.WriteString(fmt.Sprintf("task_started_event=%s\n", valueOrNone(r.TaskStartedEvent)))
+	b.WriteString(fmt.Sprintf("task_progress_validated=%t\n", r.TaskProgressValidated))
+	b.WriteString(fmt.Sprintf("task_progress_event=%s\n", valueOrNone(r.TaskProgressEvent)))
+	b.WriteString(fmt.Sprintf("task_notification_validated=%t\n", r.TaskNotificationValidated))
+	b.WriteString(fmt.Sprintf("task_notification_event=%s\n", valueOrNone(r.TaskNotificationEvent)))
 	b.WriteString(fmt.Sprintf("tool_progress_validated=%t\n", r.ToolProgressValidated))
 	b.WriteString(fmt.Sprintf("tool_progress_event=%s\n", valueOrNone(r.ToolProgressEvent)))
 	b.WriteString(fmt.Sprintf("rate_limit_validated=%t\n", r.RateLimitValidated))
