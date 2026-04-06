@@ -1282,6 +1282,58 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "remote-control-enable-1",
+		"request": map[string]any{
+			"subtype": "remote_control",
+			"enabled": true,
+		},
+	}); err != nil {
+		t.Fatalf("write remote_control enable request failed: %v", err)
+	}
+	var remoteControlEnableResp map[string]any
+	if err := ws.ReadJSON(&remoteControlEnableResp); err != nil {
+		t.Fatalf("read remote_control enable response failed: %v", err)
+	}
+	if remoteControlEnableResp["type"] != "control_response" {
+		t.Fatalf("unexpected remote_control enable response: %#v", remoteControlEnableResp)
+	}
+	remoteControlEnableResponse, _ := remoteControlEnableResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(remoteControlEnableResponse["request_id"])) != "remote-control-enable-1" {
+		t.Fatalf("unexpected remote_control enable request id: %#v", remoteControlEnableResp)
+	}
+	remoteControlEnablePayload, _ := remoteControlEnableResponse["response"].(map[string]any)
+	if strings.TrimSpace(asString(remoteControlEnablePayload["session_url"])) == "" || strings.TrimSpace(asString(remoteControlEnablePayload["connect_url"])) == "" || strings.TrimSpace(asString(remoteControlEnablePayload["environment_id"])) == "" {
+		t.Fatalf("unexpected remote_control enable payload: %#v", remoteControlEnableResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": "remote-control-disable-1",
+		"request": map[string]any{
+			"subtype": "remote_control",
+			"enabled": false,
+		},
+	}); err != nil {
+		t.Fatalf("write remote_control disable request failed: %v", err)
+	}
+	var remoteControlDisableResp map[string]any
+	if err := ws.ReadJSON(&remoteControlDisableResp); err != nil {
+		t.Fatalf("read remote_control disable response failed: %v", err)
+	}
+	if remoteControlDisableResp["type"] != "control_response" {
+		t.Fatalf("unexpected remote_control disable response: %#v", remoteControlDisableResp)
+	}
+	remoteControlDisableResponse, _ := remoteControlDisableResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(remoteControlDisableResponse["request_id"])) != "remote-control-disable-1" {
+		t.Fatalf("unexpected remote_control disable request id: %#v", remoteControlDisableResp)
+	}
+	remoteControlDisablePayload, _ := remoteControlDisableResponse["response"].(map[string]any)
+	if strings.TrimSpace(asString(remoteControlDisablePayload["session_url"])) != "" || strings.TrimSpace(asString(remoteControlDisablePayload["connect_url"])) != "" || strings.TrimSpace(asString(remoteControlDisablePayload["environment_id"])) != "" {
+		t.Fatalf("unexpected remote_control disable payload: %#v", remoteControlDisableResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "end-session-1",
 		"request": map[string]any{
 			"subtype": "end_session",

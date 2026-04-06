@@ -142,6 +142,8 @@ type Result struct {
 	SideQuestionEvent             string
 	SetProactiveValidated         bool
 	SetProactiveEvent             string
+	RemoteControlValidated        bool
+	RemoteControlEvent            string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 	BackendValidated              bool
@@ -323,6 +325,8 @@ func Run(args []string) (Result, error) {
 		SideQuestionEvent:             streamResult.SideQuestionEvent,
 		SetProactiveValidated:         streamResult.SetProactiveValidated,
 		SetProactiveEvent:             streamResult.SetProactiveEvent,
+		RemoteControlValidated:        streamResult.RemoteControlValidated,
+		RemoteControlEvent:            streamResult.RemoteControlEvent,
 		EndSessionValidated:           streamResult.EndSessionValidated,
 		EndSessionEvent:               streamResult.EndSessionEvent,
 		BackendValidated:              state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
@@ -734,6 +738,8 @@ type streamValidation struct {
 	SideQuestionEvent             string
 	SetProactiveValidated         bool
 	SetProactiveEvent             string
+	RemoteControlValidated        bool
+	RemoteControlEvent            string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 }
@@ -2032,6 +2038,68 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 			result.SetProactiveEvent = "control_request:set_proactive"
 		}
 	}
+	remoteControlEnableID := "remote-control-enable-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": remoteControlEnableID,
+		"request": map[string]any{
+			"subtype": "remote_control",
+			"enabled": true,
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect remote_control enable request: %w", err)
+	}
+	for !result.RemoteControlValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect remote_control enable flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != remoteControlEnableID {
+			continue
+		}
+		responsePayload, _ := response["response"].(map[string]any)
+		if strings.TrimSpace(asString(responsePayload["session_url"])) == "" || strings.TrimSpace(asString(responsePayload["connect_url"])) == "" || strings.TrimSpace(asString(responsePayload["environment_id"])) == "" {
+			return streamValidation{}, fmt.Errorf("invalid remote_control enable response: missing session_url/connect_url/environment_id")
+		}
+		result.RemoteControlValidated = true
+		result.RemoteControlEvent = "control_request:remote_control"
+	}
+	remoteControlDisableID := "remote-control-disable-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": remoteControlDisableID,
+		"request": map[string]any{
+			"subtype": "remote_control",
+			"enabled": false,
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect remote_control disable request: %w", err)
+	}
+	remoteControlDisabled := false
+	for !remoteControlDisabled {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect remote_control disable flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) == remoteControlDisableID {
+			if strings.TrimSpace(asString(response["subtype"])) != "success" {
+				return streamValidation{}, fmt.Errorf("invalid remote_control disable response subtype: %s", asString(response["subtype"]))
+			}
+			responsePayload, _ := response["response"].(map[string]any)
+			if strings.TrimSpace(asString(responsePayload["session_url"])) != "" || strings.TrimSpace(asString(responsePayload["connect_url"])) != "" || strings.TrimSpace(asString(responsePayload["environment_id"])) != "" {
+				return streamValidation{}, fmt.Errorf("invalid remote_control disable response: expected stub reset payload to be empty")
+			}
+			remoteControlDisabled = true
+		}
+	}
 	endSessionID := "end-session-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -2209,6 +2277,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("side_question_event=%s\n", valueOrNone(r.SideQuestionEvent)))
 	b.WriteString(fmt.Sprintf("set_proactive_validated=%t\n", r.SetProactiveValidated))
 	b.WriteString(fmt.Sprintf("set_proactive_event=%s\n", valueOrNone(r.SetProactiveEvent)))
+	b.WriteString(fmt.Sprintf("remote_control_validated=%t\n", r.RemoteControlValidated))
+	b.WriteString(fmt.Sprintf("remote_control_event=%s\n", valueOrNone(r.RemoteControlEvent)))
 	b.WriteString(fmt.Sprintf("end_session_validated=%t\n", r.EndSessionValidated))
 	b.WriteString(fmt.Sprintf("end_session_event=%s\n", valueOrNone(r.EndSessionEvent)))
 	b.WriteString(fmt.Sprintf("backend_validated=%t\n", r.BackendValidated))

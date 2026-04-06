@@ -567,6 +567,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 			pendingRequestID string
 			pendingToolUseID string
 			completedTurns   int
+			remoteControlOn  bool
 		)
 		for {
 			var incoming map[string]any
@@ -1038,6 +1039,17 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				case "side_question":
 					responsePayload["response"] = "Direct Connect Side Answer"
 				case "set_proactive":
+				case "remote_control":
+					if enabled, ok := request["enabled"].(bool); ok && enabled {
+						if !remoteControlOn {
+							remoteControlOn = true
+						}
+						responsePayload["session_url"] = "https://example.test/sessions/remote-control"
+						responsePayload["connect_url"] = "cc://remote-control?token=demo-token"
+						responsePayload["environment_id"] = "env-demo"
+					} else if remoteControlOn {
+						remoteControlOn = false
+					}
 				case "end_session":
 				default:
 					continue
