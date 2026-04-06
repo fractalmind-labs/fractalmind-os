@@ -1025,6 +1025,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				case "cancel_async_message":
 					responsePayload["cancelled"] = false
 				case "stop_task":
+				case "apply_flag_settings":
 				case "end_session":
 				default:
 					continue

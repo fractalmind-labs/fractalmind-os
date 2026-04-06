@@ -132,6 +132,8 @@ type Result struct {
 	CancelAsyncMessageEvent       string
 	StopTaskValidated             bool
 	StopTaskEvent                 string
+	ApplyFlagSettingsValidated    bool
+	ApplyFlagSettingsEvent        string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 	BackendValidated              bool
@@ -303,6 +305,8 @@ func Run(args []string) (Result, error) {
 		CancelAsyncMessageEvent:       streamResult.CancelAsyncMessageEvent,
 		StopTaskValidated:             streamResult.StopTaskValidated,
 		StopTaskEvent:                 streamResult.StopTaskEvent,
+		ApplyFlagSettingsValidated:    streamResult.ApplyFlagSettingsValidated,
+		ApplyFlagSettingsEvent:        streamResult.ApplyFlagSettingsEvent,
 		EndSessionValidated:           streamResult.EndSessionValidated,
 		EndSessionEvent:               streamResult.EndSessionEvent,
 		BackendValidated:              state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
@@ -704,6 +708,8 @@ type streamValidation struct {
 	CancelAsyncMessageEvent       string
 	StopTaskValidated             bool
 	StopTaskEvent                 string
+	ApplyFlagSettingsValidated    bool
+	ApplyFlagSettingsEvent        string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 }
@@ -1845,6 +1851,33 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 			result.StopTaskEvent = "control_request:stop_task"
 		}
 	}
+	applyFlagSettingsID := "apply-flag-settings-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": applyFlagSettingsID,
+		"request": map[string]any{
+			"subtype": "apply_flag_settings",
+			"settings": map[string]any{
+				"model": "claude-sonnet-4-5",
+			},
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect apply_flag_settings request: %w", err)
+	}
+	for !result.ApplyFlagSettingsValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect apply_flag_settings flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) == applyFlagSettingsID {
+			result.ApplyFlagSettingsValidated = true
+			result.ApplyFlagSettingsEvent = "control_request:apply_flag_settings"
+		}
+	}
 	endSessionID := "end-session-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -2012,6 +2045,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("cancel_async_message_event=%s\n", valueOrNone(r.CancelAsyncMessageEvent)))
 	b.WriteString(fmt.Sprintf("stop_task_validated=%t\n", r.StopTaskValidated))
 	b.WriteString(fmt.Sprintf("stop_task_event=%s\n", valueOrNone(r.StopTaskEvent)))
+	b.WriteString(fmt.Sprintf("apply_flag_settings_validated=%t\n", r.ApplyFlagSettingsValidated))
+	b.WriteString(fmt.Sprintf("apply_flag_settings_event=%s\n", valueOrNone(r.ApplyFlagSettingsEvent)))
 	b.WriteString(fmt.Sprintf("end_session_validated=%t\n", r.EndSessionValidated))
 	b.WriteString(fmt.Sprintf("end_session_event=%s\n", valueOrNone(r.EndSessionEvent)))
 	b.WriteString(fmt.Sprintf("backend_validated=%t\n", r.BackendValidated))

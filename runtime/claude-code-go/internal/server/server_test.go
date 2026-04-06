@@ -1149,6 +1149,30 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "apply-flag-settings-1",
+		"request": map[string]any{
+			"subtype": "apply_flag_settings",
+			"settings": map[string]any{
+				"model": "claude-sonnet-4-5",
+			},
+		},
+	}); err != nil {
+		t.Fatalf("write apply_flag_settings request failed: %v", err)
+	}
+	var applyFlagSettingsResp map[string]any
+	if err := ws.ReadJSON(&applyFlagSettingsResp); err != nil {
+		t.Fatalf("read apply_flag_settings response failed: %v", err)
+	}
+	if applyFlagSettingsResp["type"] != "control_response" {
+		t.Fatalf("unexpected apply_flag_settings response: %#v", applyFlagSettingsResp)
+	}
+	applyFlagSettingsResponse, _ := applyFlagSettingsResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(applyFlagSettingsResponse["request_id"])) != "apply-flag-settings-1" {
+		t.Fatalf("unexpected apply_flag_settings request id: %#v", applyFlagSettingsResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "end-session-1",
 		"request": map[string]any{
 			"subtype": "end_session",
