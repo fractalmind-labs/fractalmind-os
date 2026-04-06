@@ -303,6 +303,26 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(compactMetadata["trigger"])) != "auto" || int(compactMetadata["pre_tokens"].(float64)) != 128 {
 		t.Fatalf("invalid compact_boundary payload: %#v", compactBoundary)
 	}
+	var hookStarted map[string]any
+	if err := ws.ReadJSON(&hookStarted); err != nil {
+		t.Fatalf("read hook_started failed: %v", err)
+	}
+	if hookStarted["type"] != "system" || strings.TrimSpace(asString(hookStarted["subtype"])) != "hook_started" || strings.TrimSpace(asString(hookStarted["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected hook_started payload: %#v", hookStarted)
+	}
+	if strings.TrimSpace(asString(hookStarted["hook_id"])) == "" || strings.TrimSpace(asString(hookStarted["hook_name"])) == "" || strings.TrimSpace(asString(hookStarted["hook_event"])) != "Stop" {
+		t.Fatalf("invalid hook_started payload: %#v", hookStarted)
+	}
+	var hookProgress map[string]any
+	if err := ws.ReadJSON(&hookProgress); err != nil {
+		t.Fatalf("read hook_progress failed: %v", err)
+	}
+	if hookProgress["type"] != "system" || strings.TrimSpace(asString(hookProgress["subtype"])) != "hook_progress" || strings.TrimSpace(asString(hookProgress["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected hook_progress payload: %#v", hookProgress)
+	}
+	if strings.TrimSpace(asString(hookProgress["hook_id"])) == "" || strings.TrimSpace(asString(hookProgress["hook_name"])) == "" || strings.TrimSpace(asString(hookProgress["hook_event"])) != "Stop" || strings.TrimSpace(asString(hookProgress["output"])) == "" {
+		t.Fatalf("invalid hook_progress payload: %#v", hookProgress)
+	}
 	var hookResponse map[string]any
 	if err := ws.ReadJSON(&hookResponse); err != nil {
 		t.Fatalf("read hook_response failed: %v", err)
@@ -432,6 +452,26 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondCompactMetadata, _ := secondCompactBoundary["compact_metadata"].(map[string]any)
 	if strings.TrimSpace(asString(secondCompactMetadata["trigger"])) != "auto" || int(secondCompactMetadata["pre_tokens"].(float64)) != 128 {
 		t.Fatalf("invalid second compact_boundary payload: %#v", secondCompactBoundary)
+	}
+	var secondHookStarted map[string]any
+	if err := ws.ReadJSON(&secondHookStarted); err != nil {
+		t.Fatalf("read second hook_started failed: %v", err)
+	}
+	if secondHookStarted["type"] != "system" || strings.TrimSpace(asString(secondHookStarted["subtype"])) != "hook_started" || strings.TrimSpace(asString(secondHookStarted["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second hook_started payload: %#v", secondHookStarted)
+	}
+	if strings.TrimSpace(asString(secondHookStarted["hook_id"])) == "" || strings.TrimSpace(asString(secondHookStarted["hook_name"])) == "" || strings.TrimSpace(asString(secondHookStarted["hook_event"])) != "Stop" {
+		t.Fatalf("invalid second hook_started payload: %#v", secondHookStarted)
+	}
+	var secondHookProgress map[string]any
+	if err := ws.ReadJSON(&secondHookProgress); err != nil {
+		t.Fatalf("read second hook_progress failed: %v", err)
+	}
+	if secondHookProgress["type"] != "system" || strings.TrimSpace(asString(secondHookProgress["subtype"])) != "hook_progress" || strings.TrimSpace(asString(secondHookProgress["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second hook_progress payload: %#v", secondHookProgress)
+	}
+	if strings.TrimSpace(asString(secondHookProgress["hook_id"])) == "" || strings.TrimSpace(asString(secondHookProgress["hook_name"])) == "" || strings.TrimSpace(asString(secondHookProgress["hook_event"])) != "Stop" || strings.TrimSpace(asString(secondHookProgress["output"])) == "" {
+		t.Fatalf("invalid second hook_progress payload: %#v", secondHookProgress)
 	}
 	var secondHookResponse map[string]any
 	if err := ws.ReadJSON(&secondHookResponse); err != nil {

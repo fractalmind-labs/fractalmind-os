@@ -75,6 +75,10 @@ type Result struct {
 	PostTurnSummaryEvent      string
 	CompactBoundaryValidated  bool
 	CompactBoundaryEvent      string
+	HookStartedValidated      bool
+	HookStartedEvent          string
+	HookProgressValidated     bool
+	HookProgressEvent         string
 	HookResponseValidated     bool
 	HookResponseEvent         string
 	ToolExecutionValidated    bool
@@ -191,6 +195,10 @@ func Run(args []string) (Result, error) {
 		PostTurnSummaryEvent:      streamResult.PostTurnSummaryEvent,
 		CompactBoundaryValidated:  streamResult.CompactBoundaryValidated,
 		CompactBoundaryEvent:      streamResult.CompactBoundaryEvent,
+		HookStartedValidated:      streamResult.HookStartedValidated,
+		HookStartedEvent:          streamResult.HookStartedEvent,
+		HookProgressValidated:     streamResult.HookProgressValidated,
+		HookProgressEvent:         streamResult.HookProgressEvent,
 		HookResponseValidated:     streamResult.HookResponseValidated,
 		HookResponseEvent:         streamResult.HookResponseEvent,
 		ToolExecutionValidated:    streamResult.ToolExecutionValidated,
@@ -537,6 +545,10 @@ type streamValidation struct {
 	PostTurnSummaryEvent      string
 	CompactBoundaryValidated  bool
 	CompactBoundaryEvent      string
+	HookStartedValidated      bool
+	HookStartedEvent          string
+	HookProgressValidated     bool
+	HookProgressEvent         string
 	HookResponseValidated     bool
 	HookResponseEvent         string
 	ToolExecutionValidated    bool
@@ -620,6 +632,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		resultValidated := false
 		postTurnSummaryValidated := false
 		compactBoundaryValidated := false
+		hookStartedValidated := false
+		hookProgressValidated := false
 		hookResponseValidated := false
 		for {
 			var incoming map[string]any
@@ -687,6 +701,53 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.CompactBoundaryValidated = true
 					result.CompactBoundaryEvent = "system:compact_boundary"
 					compactBoundaryValidated = true
+				case "hook_started":
+					if turn.behavior == "deny" {
+						return streamValidation{}, fmt.Errorf("unexpected hook_started during deny turn")
+					}
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid hook_started: missing session_id")
+					}
+					if strings.TrimSpace(asString(incoming["hook_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid hook_started: missing hook_id")
+					}
+					if strings.TrimSpace(asString(incoming["hook_name"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid hook_started: missing hook_name")
+					}
+					if strings.TrimSpace(asString(incoming["hook_event"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid hook_started: missing hook_event")
+					}
+					result.HookStartedValidated = true
+					result.HookStartedEvent = "system:hook_started"
+					hookStartedValidated = true
+				case "hook_progress":
+					if turn.behavior == "deny" {
+						return streamValidation{}, fmt.Errorf("unexpected hook_progress during deny turn")
+					}
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid hook_progress: missing session_id")
+					}
+					if strings.TrimSpace(asString(incoming["hook_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid hook_progress: missing hook_id")
+					}
+					if strings.TrimSpace(asString(incoming["hook_name"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid hook_progress: missing hook_name")
+					}
+					if strings.TrimSpace(asString(incoming["hook_event"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid hook_progress: missing hook_event")
+					}
+					if _, ok := incoming["stdout"]; !ok {
+						return streamValidation{}, fmt.Errorf("invalid hook_progress: missing stdout")
+					}
+					if _, ok := incoming["stderr"]; !ok {
+						return streamValidation{}, fmt.Errorf("invalid hook_progress: missing stderr")
+					}
+					if _, ok := incoming["output"]; !ok {
+						return streamValidation{}, fmt.Errorf("invalid hook_progress: missing output")
+					}
+					result.HookProgressValidated = true
+					result.HookProgressEvent = "system:hook_progress"
+					hookProgressValidated = true
 				case "hook_response":
 					if turn.behavior == "deny" {
 						return streamValidation{}, fmt.Errorf("unexpected hook_response during deny turn")
@@ -929,7 +990,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && postTurnSummaryValidated && compactBoundaryValidated && hookResponseValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && postTurnSummaryValidated && compactBoundaryValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -1047,6 +1108,10 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("post_turn_summary_event=%s\n", valueOrNone(r.PostTurnSummaryEvent)))
 	b.WriteString(fmt.Sprintf("compact_boundary_validated=%t\n", r.CompactBoundaryValidated))
 	b.WriteString(fmt.Sprintf("compact_boundary_event=%s\n", valueOrNone(r.CompactBoundaryEvent)))
+	b.WriteString(fmt.Sprintf("hook_started_validated=%t\n", r.HookStartedValidated))
+	b.WriteString(fmt.Sprintf("hook_started_event=%s\n", valueOrNone(r.HookStartedEvent)))
+	b.WriteString(fmt.Sprintf("hook_progress_validated=%t\n", r.HookProgressValidated))
+	b.WriteString(fmt.Sprintf("hook_progress_event=%s\n", valueOrNone(r.HookProgressEvent)))
 	b.WriteString(fmt.Sprintf("hook_response_validated=%t\n", r.HookResponseValidated))
 	b.WriteString(fmt.Sprintf("hook_response_event=%s\n", valueOrNone(r.HookResponseEvent)))
 	b.WriteString(fmt.Sprintf("tool_execution_validated=%t\n", r.ToolExecutionValidated))

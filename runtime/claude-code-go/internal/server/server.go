@@ -789,6 +789,35 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       compactBoundaryUUID,
 					"session_id": session.ID,
 				})
+				hookStartedUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":       "system",
+					"subtype":    "hook_started",
+					"hook_id":    "hook-direct-connect-echo",
+					"hook_name":  "DirectConnectEchoHook",
+					"hook_event": "Stop",
+					"uuid":       hookStartedUUID,
+					"session_id": session.ID,
+				})
+				hookProgressUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":       "system",
+					"subtype":    "hook_progress",
+					"hook_id":    "hook-direct-connect-echo",
+					"hook_name":  "DirectConnectEchoHook",
+					"hook_event": "Stop",
+					"output":     "echo hook running",
+					"stdout":     responseText,
+					"stderr":     "",
+					"uuid":       hookProgressUUID,
+					"session_id": session.ID,
+				})
 				hookResponseUUID, err := generateRequestID()
 				if err != nil {
 					return

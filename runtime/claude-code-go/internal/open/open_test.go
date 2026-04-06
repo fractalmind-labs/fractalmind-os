@@ -72,6 +72,8 @@ func TestRunOpenDefaults(t *testing.T) {
 		"keep_alive_validated=false",
 		"post_turn_summary_validated=false",
 		"compact_boundary_validated=false",
+		"hook_started_validated=false",
+		"hook_progress_validated=false",
 		"hook_response_validated=false",
 		"control_cancel_validated=false",
 		"system_validated=false",
@@ -106,7 +108,7 @@ func TestRunOpenSupportsPrintModeAndPrompt(t *testing.T) {
 	if result.SessionID != "sess-456" || !result.StreamValidated || result.StreamEvent != "session_ready" {
 		t.Fatalf("expected session response, got %#v", result)
 	}
-	if !result.StreamContentValidated || result.StreamContentEvent != "stream_event:content_block_delta" || !result.SystemValidated || result.SystemEvent != "system:init" || !result.StatusValidated || result.StatusEvent != "system:status" || !result.AuthValidated || result.AuthEvent != "auth_status" || !result.KeepAliveValidated || result.KeepAliveEvent != "keep_alive" || !result.ControlCancelValidated || result.ControlCancelEvent != "control_cancel_request" || !result.MessageValidated || result.MessageEvent != "assistant" || result.ValidatedTurns != 2 || !result.MultiTurnValidated || !result.ResultValidated || result.ResultEvent != "result:success" || !result.ResultErrorValidated || result.ResultErrorEvent != "result:error_during_execution" || !result.ControlValidated || !result.PermissionValidated || !result.PermissionDeniedValidated || result.PermissionDeniedEvent != "permission_denial:echo" || !result.ToolProgressValidated || result.ToolProgressEvent != "tool_progress" || !result.RateLimitValidated || result.RateLimitEvent != "rate_limit_event:default" || !result.ToolUseSummaryValidated || result.ToolUseSummaryEvent != "tool_use_summary" || !result.PostTurnSummaryValidated || result.PostTurnSummaryEvent != "system:post_turn_summary" || !result.CompactBoundaryValidated || result.CompactBoundaryEvent != "system:compact_boundary" || !result.HookResponseValidated || result.HookResponseEvent != "system:hook_response" || !result.ToolExecutionValidated || !result.InterruptValidated || !result.BackendValidated {
+	if !result.StreamContentValidated || result.StreamContentEvent != "stream_event:content_block_delta" || !result.SystemValidated || result.SystemEvent != "system:init" || !result.StatusValidated || result.StatusEvent != "system:status" || !result.AuthValidated || result.AuthEvent != "auth_status" || !result.KeepAliveValidated || result.KeepAliveEvent != "keep_alive" || !result.ControlCancelValidated || result.ControlCancelEvent != "control_cancel_request" || !result.MessageValidated || result.MessageEvent != "assistant" || result.ValidatedTurns != 2 || !result.MultiTurnValidated || !result.ResultValidated || result.ResultEvent != "result:success" || !result.ResultErrorValidated || result.ResultErrorEvent != "result:error_during_execution" || !result.ControlValidated || !result.PermissionValidated || !result.PermissionDeniedValidated || result.PermissionDeniedEvent != "permission_denial:echo" || !result.ToolProgressValidated || result.ToolProgressEvent != "tool_progress" || !result.RateLimitValidated || result.RateLimitEvent != "rate_limit_event:default" || !result.ToolUseSummaryValidated || result.ToolUseSummaryEvent != "tool_use_summary" || !result.PostTurnSummaryValidated || result.PostTurnSummaryEvent != "system:post_turn_summary" || !result.CompactBoundaryValidated || result.CompactBoundaryEvent != "system:compact_boundary" || !result.HookStartedValidated || result.HookStartedEvent != "system:hook_started" || !result.HookProgressValidated || result.HookProgressEvent != "system:hook_progress" || !result.HookResponseValidated || result.HookResponseEvent != "system:hook_response" || !result.ToolExecutionValidated || !result.InterruptValidated || !result.BackendValidated {
 		t.Fatalf("expected session response, got %#v", result)
 	}
 }
@@ -563,6 +565,27 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 					"pre_tokens": 128,
 				},
 				"uuid":       fmt.Sprintf("compact-boundary-%d", requestCounter),
+				"session_id": sessionID,
+			})
+			_ = conn.WriteJSON(map[string]any{
+				"type":       "system",
+				"subtype":    "hook_started",
+				"hook_id":    "hook-direct-connect-echo",
+				"hook_name":  "DirectConnectEchoHook",
+				"hook_event": "Stop",
+				"uuid":       fmt.Sprintf("hook-started-%d", requestCounter),
+				"session_id": sessionID,
+			})
+			_ = conn.WriteJSON(map[string]any{
+				"type":       "system",
+				"subtype":    "hook_progress",
+				"hook_id":    "hook-direct-connect-echo",
+				"hook_name":  "DirectConnectEchoHook",
+				"hook_event": "Stop",
+				"output":     "echo hook running",
+				"stdout":     "echo:" + toolText,
+				"stderr":     "",
+				"uuid":       fmt.Sprintf("hook-progress-%d", requestCounter),
 				"session_id": sessionID,
 			})
 			_ = conn.WriteJSON(map[string]any{
