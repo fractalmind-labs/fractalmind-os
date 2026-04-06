@@ -348,6 +348,16 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(filesPersistedFile0["filename"])) == "" || strings.TrimSpace(asString(filesPersistedFile0["file_id"])) == "" {
 		t.Fatalf("invalid files_persisted file payload: %#v", filesPersisted)
 	}
+	var localCommandOutput map[string]any
+	if err := ws.ReadJSON(&localCommandOutput); err != nil {
+		t.Fatalf("read local_command_output failed: %v", err)
+	}
+	if localCommandOutput["type"] != "system" || strings.TrimSpace(asString(localCommandOutput["subtype"])) != "local_command_output" || strings.TrimSpace(asString(localCommandOutput["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected local_command_output payload: %#v", localCommandOutput)
+	}
+	if strings.TrimSpace(asString(localCommandOutput["content"])) == "" {
+		t.Fatalf("invalid local_command_output payload: %#v", localCommandOutput)
+	}
 	var postTurnSummary map[string]any
 	if err := ws.ReadJSON(&postTurnSummary); err != nil {
 		t.Fatalf("read post_turn_summary failed: %v", err)
@@ -570,6 +580,16 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondFilesPersistedFile0, _ := secondFilesPersistedFiles[0].(map[string]any)
 	if strings.TrimSpace(asString(secondFilesPersistedFile0["filename"])) == "" || strings.TrimSpace(asString(secondFilesPersistedFile0["file_id"])) == "" {
 		t.Fatalf("invalid second files_persisted file payload: %#v", secondFilesPersisted)
+	}
+	var secondLocalCommandOutput map[string]any
+	if err := ws.ReadJSON(&secondLocalCommandOutput); err != nil {
+		t.Fatalf("read second local_command_output failed: %v", err)
+	}
+	if secondLocalCommandOutput["type"] != "system" || strings.TrimSpace(asString(secondLocalCommandOutput["subtype"])) != "local_command_output" || strings.TrimSpace(asString(secondLocalCommandOutput["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second local_command_output payload: %#v", secondLocalCommandOutput)
+	}
+	if strings.TrimSpace(asString(secondLocalCommandOutput["content"])) == "" {
+		t.Fatalf("invalid second local_command_output payload: %#v", secondLocalCommandOutput)
 	}
 	var secondPostTurnSummary map[string]any
 	if err := ws.ReadJSON(&secondPostTurnSummary); err != nil {

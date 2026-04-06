@@ -75,6 +75,8 @@ type Result struct {
 	FilesPersistedEvent          string
 	APIRetryValidated            bool
 	APIRetryEvent                string
+	LocalCommandOutputValidated  bool
+	LocalCommandOutputEvent      string
 	ToolProgressValidated        bool
 	ToolProgressEvent            string
 	RateLimitValidated           bool
@@ -207,6 +209,8 @@ func Run(args []string) (Result, error) {
 		FilesPersistedEvent:          streamResult.FilesPersistedEvent,
 		APIRetryValidated:            streamResult.APIRetryValidated,
 		APIRetryEvent:                streamResult.APIRetryEvent,
+		LocalCommandOutputValidated:  streamResult.LocalCommandOutputValidated,
+		LocalCommandOutputEvent:      streamResult.LocalCommandOutputEvent,
 		ToolProgressValidated:        streamResult.ToolProgressValidated,
 		ToolProgressEvent:            streamResult.ToolProgressEvent,
 		RateLimitValidated:           streamResult.RateLimitValidated,
@@ -569,6 +573,8 @@ type streamValidation struct {
 	FilesPersistedEvent          string
 	APIRetryValidated            bool
 	APIRetryEvent                string
+	LocalCommandOutputValidated  bool
+	LocalCommandOutputEvent      string
 	ToolProgressValidated        bool
 	ToolProgressEvent            string
 	RateLimitValidated           bool
@@ -672,6 +678,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		taskNotificationValidated := false
 		filesPersistedValidated := false
 		apiRetryValidated := false
+		localCommandOutputValidated := false
 		postTurnSummaryValidated := false
 		compactBoundaryValidated := false
 		sessionStateRunningValidated := false
@@ -871,6 +878,19 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.APIRetryValidated = true
 					result.APIRetryEvent = "system:api_retry"
 					apiRetryValidated = true
+				case "local_command_output":
+					if turn.behavior == "deny" {
+						return streamValidation{}, fmt.Errorf("unexpected local_command_output during deny turn")
+					}
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid local_command_output: missing session_id")
+					}
+					if strings.TrimSpace(asString(incoming["content"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid local_command_output: missing content")
+					}
+					result.LocalCommandOutputValidated = true
+					result.LocalCommandOutputEvent = "system:local_command_output"
+					localCommandOutputValidated = true
 				case "compact_boundary":
 					if turn.behavior == "deny" {
 						return streamValidation{}, fmt.Errorf("unexpected compact_boundary during deny turn")
@@ -1197,7 +1217,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -1315,6 +1335,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("files_persisted_event=%s\n", valueOrNone(r.FilesPersistedEvent)))
 	b.WriteString(fmt.Sprintf("api_retry_validated=%t\n", r.APIRetryValidated))
 	b.WriteString(fmt.Sprintf("api_retry_event=%s\n", valueOrNone(r.APIRetryEvent)))
+	b.WriteString(fmt.Sprintf("local_command_output_validated=%t\n", r.LocalCommandOutputValidated))
+	b.WriteString(fmt.Sprintf("local_command_output_event=%s\n", valueOrNone(r.LocalCommandOutputEvent)))
 	b.WriteString(fmt.Sprintf("tool_progress_validated=%t\n", r.ToolProgressValidated))
 	b.WriteString(fmt.Sprintf("tool_progress_event=%s\n", valueOrNone(r.ToolProgressEvent)))
 	b.WriteString(fmt.Sprintf("rate_limit_validated=%t\n", r.RateLimitValidated))

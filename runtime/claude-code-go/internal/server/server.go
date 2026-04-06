@@ -851,6 +851,17 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":         filesPersistedUUID,
 					"session_id":   session.ID,
 				})
+				localCommandOutputUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":       "system",
+					"subtype":    "local_command_output",
+					"content":    "local command output: persisted direct-connect artifacts",
+					"uuid":       localCommandOutputUUID,
+					"session_id": session.ID,
+				})
 				postTurnUUID, err := generateRequestID()
 				if err != nil {
 					return
