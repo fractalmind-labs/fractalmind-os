@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
@@ -28,7 +29,11 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	base := firstNonEmpty(os.Getenv("CLAUDE_CODE_API_BASE"), "https://api.anthropic.com")
+	base := firstNonEmpty(
+		os.Getenv("CLAUDE_CODE_API_BASE"),
+		os.Getenv("ANTHROPIC_BASE_URL"),
+		"https://api.anthropic.com",
+	)
 	model := firstNonEmpty(os.Getenv("CLAUDE_CODE_MODEL"), "claude-sonnet-4-5")
 	maxTokens, err := parsePositiveInt(firstNonEmpty(os.Getenv("CLAUDE_CODE_MAX_TOKENS"), "32"), "CLAUDE_CODE_MAX_TOKENS")
 	if err != nil {
@@ -52,8 +57,17 @@ func Load() (Config, error) {
 }
 
 func resolveAPIKey(authFile string) (string, string, error) {
-	if key := firstNonEmpty(os.Getenv("CLAUDE_CODE_API_KEY"), os.Getenv("ANTHROPIC_API_KEY")); key != "" {
-		return key, "env", nil
+	if key := strings.TrimSpace(os.Getenv("CLAUDE_CODE_API_KEY")); key != "" {
+		return key, "api_key_env", nil
+	}
+	if key := strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")); key != "" {
+		return key, "api_key_env", nil
+	}
+	if key := strings.TrimSpace(os.Getenv("ANTHROPIC_AUTH_TOKEN")); key != "" {
+		return key, "anthropic_auth_env", nil
+	}
+	if key := strings.TrimSpace(os.Getenv("CLAUDE_CODE_OAUTH_TOKEN")); key != "" {
+		return key, "oauth_env", nil
 	}
 	key, err := loadAPIKeyFromAuthFile(authFile)
 	if err != nil {

@@ -1,0 +1,846 @@
+package open
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/gorilla/websocket"
+)
+
+type Options struct {
+	ConnectURL      string
+	PrintMode       bool
+	PrintPrompt     string
+	OutputFormat    string
+	ResumeSessionID string
+}
+
+type Result struct {
+	Status                  string
+	Action                  string
+	ConnectURL              string
+	Transport               string
+	ServerURL               string
+	AuthToken               string
+	PrintMode               bool
+	PrintPrompt             string
+	OutputFormat            string
+	RequestCWD              string
+	SessionID               string
+	WSURL                   string
+	WorkDir                 string
+	StreamValidated         bool
+	StreamEvent             string
+	StreamContentValidated  bool
+	StreamContentEvent      string
+	SystemValidated         bool
+	SystemEvent             string
+	StatusValidated         bool
+	StatusEvent             string
+	AuthValidated           bool
+	AuthEvent               string
+	KeepAliveValidated      bool
+	KeepAliveEvent          string
+	ControlCancelValidated  bool
+	ControlCancelEvent      string
+	MessageValidated        bool
+	MessageEvent            string
+	ValidatedTurns          int
+	MultiTurnValidated      bool
+	ResultValidated         bool
+	ResultEvent             string
+	ControlValidated        bool
+	PermissionValidated     bool
+	ToolProgressValidated   bool
+	ToolProgressEvent       string
+	RateLimitValidated      bool
+	RateLimitEvent          string
+	ToolUseSummaryValidated bool
+	ToolUseSummaryEvent     string
+	ToolExecutionValidated  bool
+	InterruptValidated      bool
+	BackendValidated        bool
+	BackendStatus           string
+	BackendPID              int
+	BackendStartedAt        int64
+	BackendStoppedAt        int64
+	BackendExitCode         int
+}
+
+func Run(args []string) (Result, error) {
+	opts, err := parseArgs(args)
+	if err != nil {
+		return Result{}, err
+	}
+
+	serverURL, transport, authToken, err := parseConnectURL(opts.ConnectURL)
+	if err != nil {
+		return Result{}, err
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return Result{}, fmt.Errorf("get cwd: %w", err)
+	}
+
+	session, err := createOrResumeSession(serverURL, transport, authToken, cwd, opts.ResumeSessionID)
+	if err != nil {
+		return Result{}, err
+	}
+
+	streamResult, err := validateStream(session.WSURL, authToken, opts)
+	if err != nil {
+		return Result{}, err
+	}
+	state, err := inspectSession(serverURL, transport, authToken, session.SessionID)
+	if err != nil {
+		return Result{}, err
+	}
+
+	return Result{
+		Status:                  "connected",
+		Action:                  actionForOptions(opts),
+		ConnectURL:              opts.ConnectURL,
+		Transport:               transport,
+		ServerURL:               serverURL,
+		AuthToken:               authToken,
+		PrintMode:               opts.PrintMode,
+		PrintPrompt:             opts.PrintPrompt,
+		OutputFormat:            opts.OutputFormat,
+		RequestCWD:              cwd,
+		SessionID:               session.SessionID,
+		WSURL:                   session.WSURL,
+		WorkDir:                 session.WorkDir,
+		StreamValidated:         true,
+		StreamEvent:             streamResult.StreamEvent,
+		StreamContentValidated:  streamResult.StreamContentValidated,
+		StreamContentEvent:      streamResult.StreamContentEvent,
+		SystemValidated:         streamResult.SystemValidated,
+		SystemEvent:             streamResult.SystemEvent,
+		StatusValidated:         streamResult.StatusValidated,
+		StatusEvent:             streamResult.StatusEvent,
+		AuthValidated:           streamResult.AuthValidated,
+		AuthEvent:               streamResult.AuthEvent,
+		KeepAliveValidated:      streamResult.KeepAliveValidated,
+		KeepAliveEvent:          streamResult.KeepAliveEvent,
+		ControlCancelValidated:  streamResult.ControlCancelValidated,
+		ControlCancelEvent:      streamResult.ControlCancelEvent,
+		MessageValidated:        streamResult.MessageValidated,
+		MessageEvent:            streamResult.MessageEvent,
+		ValidatedTurns:          streamResult.ValidatedTurns,
+		MultiTurnValidated:      streamResult.MultiTurnValidated,
+		ResultValidated:         streamResult.ResultValidated,
+		ResultEvent:             streamResult.ResultEvent,
+		ControlValidated:        streamResult.ControlValidated,
+		PermissionValidated:     streamResult.PermissionValidated,
+		ToolProgressValidated:   streamResult.ToolProgressValidated,
+		ToolProgressEvent:       streamResult.ToolProgressEvent,
+		RateLimitValidated:      streamResult.RateLimitValidated,
+		RateLimitEvent:          streamResult.RateLimitEvent,
+		ToolUseSummaryValidated: streamResult.ToolUseSummaryValidated,
+		ToolUseSummaryEvent:     streamResult.ToolUseSummaryEvent,
+		ToolExecutionValidated:  streamResult.ToolExecutionValidated,
+		InterruptValidated:      streamResult.InterruptValidated,
+		BackendValidated:        state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
+		BackendStatus:           state.BackendStatus,
+		BackendPID:              state.BackendPID,
+		BackendStartedAt:        state.BackendStartedAt,
+		BackendStoppedAt:        state.BackendStoppedAt,
+		BackendExitCode:         state.BackendExitCode,
+	}, nil
+}
+
+type sessionResponse struct {
+	SessionID string `json:"session_id"`
+	WSURL     string `json:"ws_url"`
+	WorkDir   string `json:"work_dir"`
+}
+
+type sessionStateResponse struct {
+	SessionID        string `json:"session_id"`
+	Status           string `json:"status,omitempty"`
+	BackendStatus    string `json:"backend_status,omitempty"`
+	BackendPID       int    `json:"backend_pid,omitempty"`
+	BackendStartedAt int64  `json:"backend_started_at,omitempty"`
+	BackendStoppedAt int64  `json:"backend_stopped_at,omitempty"`
+	BackendExitCode  int    `json:"backend_exit_code,omitempty"`
+}
+
+func parseArgs(args []string) (Options, error) {
+	opts := Options{OutputFormat: "text"}
+
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "-p", "--print":
+			opts.PrintMode = true
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+				opts.PrintPrompt = args[i+1]
+				i++
+			}
+		case "--output-format":
+			if i+1 >= len(args) {
+				return opts, fmt.Errorf("--output-format requires a value")
+			}
+			opts.OutputFormat = strings.TrimSpace(args[i+1])
+			i++
+		case "--resume-session":
+			if i+1 >= len(args) {
+				return opts, fmt.Errorf("--resume-session requires a value")
+			}
+			opts.ResumeSessionID = strings.TrimSpace(args[i+1])
+			i++
+		default:
+			if strings.HasPrefix(args[i], "--") {
+				return opts, fmt.Errorf("unknown option: %s", args[i])
+			}
+			if opts.ConnectURL != "" {
+				return opts, fmt.Errorf("usage: claude-code-go open <cc-url> [-p|--print [prompt]] [--output-format <format>] [--resume-session <sessionId>]")
+			}
+			opts.ConnectURL = args[i]
+		}
+	}
+
+	if strings.TrimSpace(opts.ConnectURL) == "" {
+		return opts, fmt.Errorf("usage: claude-code-go open <cc-url> [-p|--print [prompt]] [--output-format <format>] [--resume-session <sessionId>]")
+	}
+	if opts.OutputFormat == "" {
+		return opts, fmt.Errorf("--output-format requires a value")
+	}
+	if opts.ResumeSessionID == "" && hasFlag(args, "--resume-session") {
+		return opts, fmt.Errorf("--resume-session requires a value")
+	}
+
+	return opts, nil
+}
+
+func parseConnectURL(raw string) (serverURL string, transport string, authToken string, err error) {
+	if strings.HasPrefix(raw, "cc+unix://") {
+		rest := strings.TrimPrefix(raw, "cc+unix://")
+		socketPart, queryPart, _ := strings.Cut(rest, "?")
+		socketPart = strings.TrimSpace(socketPart)
+		socketPart, err = url.PathUnescape(socketPart)
+		if err != nil {
+			return "", "", "", fmt.Errorf("invalid cc-url: decode unix socket path: %w", err)
+		}
+		if socketPart == "" {
+			return "", "", "", fmt.Errorf("invalid cc-url: missing unix socket path")
+		}
+		if !strings.HasPrefix(socketPart, "/") {
+			socketPart = "/" + socketPart
+		}
+		values, err := url.ParseQuery(queryPart)
+		if err != nil {
+			return "", "", "", fmt.Errorf("invalid cc-url query: %w", err)
+		}
+		return "unix:" + socketPart, "unix", firstNonEmpty(
+			values.Get("authToken"),
+			values.Get("auth_token"),
+			values.Get("token"),
+		), nil
+	}
+
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", "", "", fmt.Errorf("invalid cc-url: %w", err)
+	}
+
+	switch u.Scheme {
+	case "cc":
+		host := strings.TrimSpace(u.Host)
+		if host == "" {
+			return "", "", "", fmt.Errorf("invalid cc-url: missing host")
+		}
+		serverURL = "http://" + host
+		if path := strings.TrimSpace(u.EscapedPath()); path != "" && path != "/" {
+			serverURL += path
+		}
+		transport = "http"
+	default:
+		return "", "", "", fmt.Errorf("invalid cc-url: unsupported scheme %q", u.Scheme)
+	}
+
+	query := u.Query()
+	authToken = firstNonEmpty(
+		query.Get("authToken"),
+		query.Get("auth_token"),
+		query.Get("token"),
+	)
+	return serverURL, transport, authToken, nil
+}
+
+func createOrResumeSession(serverURL, transport, authToken, cwd, resumeSessionID string) (sessionResponse, error) {
+	if strings.TrimSpace(resumeSessionID) != "" {
+		return resumeSession(serverURL, transport, authToken, resumeSessionID)
+	}
+	return createSession(serverURL, transport, authToken, cwd)
+}
+
+func createSession(serverURL, transport, authToken, cwd string) (sessionResponse, error) {
+	payload, err := json.Marshal(map[string]string{"cwd": cwd})
+	if err != nil {
+		return sessionResponse{}, fmt.Errorf("marshal session request: %w", err)
+	}
+
+	client, endpoint, err := buildClient(serverURL, transport)
+	if err != nil {
+		return sessionResponse{}, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(payload))
+	if err != nil {
+		return sessionResponse{}, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if strings.TrimSpace(authToken) != "" {
+		req.Header.Set("Authorization", "Bearer "+authToken)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return sessionResponse{}, fmt.Errorf("create direct-connect session: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return sessionResponse{}, fmt.Errorf("create direct-connect session: %s", resp.Status)
+	}
+
+	var parsed sessionResponse
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return sessionResponse{}, fmt.Errorf("decode session response: %w", err)
+	}
+	if strings.TrimSpace(parsed.SessionID) == "" || strings.TrimSpace(parsed.WSURL) == "" {
+		return sessionResponse{}, fmt.Errorf("invalid session response: missing session_id or ws_url")
+	}
+	return parsed, nil
+}
+
+func resumeSession(serverURL, transport, authToken, sessionID string) (sessionResponse, error) {
+	client, endpoint, err := buildClient(serverURL, transport)
+	if err != nil {
+		return sessionResponse{}, err
+	}
+	req, err := http.NewRequest(http.MethodGet, endpoint+"?resume="+url.QueryEscape(sessionID), nil)
+	if err != nil {
+		return sessionResponse{}, fmt.Errorf("build resume request: %w", err)
+	}
+	if strings.TrimSpace(authToken) != "" {
+		req.Header.Set("Authorization", "Bearer "+authToken)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return sessionResponse{}, fmt.Errorf("resume direct-connect session: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return sessionResponse{}, fmt.Errorf("resume direct-connect session: %s", resp.Status)
+	}
+	var parsed sessionResponse
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return sessionResponse{}, fmt.Errorf("decode resume session response: %w", err)
+	}
+	if strings.TrimSpace(parsed.SessionID) == "" || strings.TrimSpace(parsed.WSURL) == "" {
+		return sessionResponse{}, fmt.Errorf("invalid resume session response: missing session_id or ws_url")
+	}
+	return parsed, nil
+}
+
+func buildClient(serverURL, transport string) (*http.Client, string, error) {
+	client := &http.Client{Timeout: 5 * time.Second}
+	switch transport {
+	case "http":
+		return client, strings.TrimRight(serverURL, "/") + "/sessions", nil
+	case "unix":
+		socketPath := strings.TrimPrefix(serverURL, "unix:")
+		client.Transport = &http.Transport{
+			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+				return net.Dial("unix", socketPath)
+			},
+		}
+		return client, "http://unix/sessions", nil
+	default:
+		return nil, "", fmt.Errorf("unsupported transport: %s", transport)
+	}
+}
+
+func inspectSession(serverURL, transport, authToken, sessionID string) (sessionStateResponse, error) {
+	client, endpoint, err := buildClient(serverURL, transport)
+	if err != nil {
+		return sessionStateResponse{}, err
+	}
+	stateURL := strings.TrimRight(endpoint, "/") + "/" + url.PathEscape(sessionID)
+	req, err := http.NewRequest(http.MethodGet, stateURL, nil)
+	if err != nil {
+		return sessionStateResponse{}, fmt.Errorf("build inspect request: %w", err)
+	}
+	if strings.TrimSpace(authToken) != "" {
+		req.Header.Set("Authorization", "Bearer "+authToken)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return sessionStateResponse{}, fmt.Errorf("inspect direct-connect session: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return sessionStateResponse{}, fmt.Errorf("inspect direct-connect session: %s", resp.Status)
+	}
+	var parsed sessionStateResponse
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		return sessionStateResponse{}, fmt.Errorf("decode inspect session response: %w", err)
+	}
+	return parsed, nil
+}
+
+type streamValidation struct {
+	StreamEvent             string
+	StreamContentValidated  bool
+	StreamContentEvent      string
+	SystemValidated         bool
+	SystemEvent             string
+	StatusValidated         bool
+	StatusEvent             string
+	AuthValidated           bool
+	AuthEvent               string
+	KeepAliveValidated      bool
+	KeepAliveEvent          string
+	ControlCancelValidated  bool
+	ControlCancelEvent      string
+	MessageValidated        bool
+	MessageEvent            string
+	ValidatedTurns          int
+	MultiTurnValidated      bool
+	ResultValidated         bool
+	ResultEvent             string
+	ControlValidated        bool
+	PermissionValidated     bool
+	ToolProgressValidated   bool
+	ToolProgressEvent       string
+	RateLimitValidated      bool
+	RateLimitEvent          string
+	ToolUseSummaryValidated bool
+	ToolUseSummaryEvent     string
+	ToolExecutionValidated  bool
+	InterruptValidated      bool
+}
+
+func validateStream(rawWSURL, authToken string, opts Options) (streamValidation, error) {
+	dialURL, header, dialer, err := buildWebsocketDial(rawWSURL, authToken)
+	if err != nil {
+		return streamValidation{}, err
+	}
+	conn, _, err := dialer.Dial(dialURL, header)
+	if err != nil {
+		return streamValidation{}, fmt.Errorf("validate direct-connect stream: %w", err)
+	}
+	defer conn.Close()
+
+	var event map[string]any
+	if err := conn.ReadJSON(&event); err != nil {
+		return streamValidation{}, fmt.Errorf("read direct-connect stream: %w", err)
+	}
+	typeName, _ := event["type"].(string)
+	if strings.TrimSpace(typeName) == "" {
+		return streamValidation{}, fmt.Errorf("invalid direct-connect stream event: missing type")
+	}
+
+	result := streamValidation{StreamEvent: typeName}
+	if !opts.PrintMode {
+		return result, nil
+	}
+
+	prompt := strings.TrimSpace(opts.PrintPrompt)
+	if prompt == "" {
+		prompt = "hello from claude-code-go"
+	}
+	turnPrompts := []string{
+		prompt,
+		prompt + " [turn-2]",
+	}
+	for _, turnPrompt := range turnPrompts {
+		approvedPrompt := turnPrompt + " [approved]"
+		expectedResponse := "echo:" + approvedPrompt
+		currentToolUseID := ""
+		currentRequestID := ""
+		if err := conn.WriteJSON(map[string]any{
+			"type": "user",
+			"message": map[string]any{
+				"role": "user",
+				"content": []map[string]any{
+					{
+						"type": "text",
+						"text": turnPrompt,
+					},
+				},
+			},
+			"parent_tool_use_id": nil,
+			"session_id":         "",
+		}); err != nil {
+			return streamValidation{}, fmt.Errorf("write direct-connect user message: %w", err)
+		}
+
+		assistantValidated := false
+		resultValidated := false
+		for !(assistantValidated && resultValidated) {
+			var incoming map[string]any
+			if err := conn.ReadJSON(&incoming); err != nil {
+				return streamValidation{}, fmt.Errorf("read direct-connect message flow: %w", err)
+			}
+
+			switch strings.TrimSpace(asString(incoming["type"])) {
+			case "system":
+				switch strings.TrimSpace(asString(incoming["subtype"])) {
+				case "init":
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" || strings.TrimSpace(asString(incoming["model"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid system event: missing session_id or model")
+					}
+					result.SystemValidated = true
+					result.SystemEvent = "system:init"
+				case "status":
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid status event: missing session_id")
+					}
+					if strings.TrimSpace(asString(incoming["permissionMode"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid status event: missing permissionMode")
+					}
+					if _, ok := incoming["status"]; !ok {
+						return streamValidation{}, fmt.Errorf("invalid status event: missing status")
+					}
+					result.StatusValidated = true
+					result.StatusEvent = "system:status"
+				default:
+					return streamValidation{}, fmt.Errorf("invalid system event subtype: %s", asString(incoming["subtype"]))
+				}
+			case "auth_status":
+				if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+					return streamValidation{}, fmt.Errorf("invalid auth_status event: missing session_id")
+				}
+				output, _ := incoming["output"].([]any)
+				if len(output) == 0 {
+					return streamValidation{}, fmt.Errorf("invalid auth_status event: missing output")
+				}
+				if _, ok := incoming["isAuthenticating"].(bool); !ok {
+					return streamValidation{}, fmt.Errorf("invalid auth_status event: missing isAuthenticating")
+				}
+				result.AuthValidated = true
+				result.AuthEvent = "auth_status"
+			case "keep_alive":
+				result.KeepAliveValidated = true
+				result.KeepAliveEvent = "keep_alive"
+			case "control_request":
+				requestID := strings.TrimSpace(asString(incoming["request_id"]))
+				if requestID == "" {
+					return streamValidation{}, fmt.Errorf("invalid control request: missing request_id")
+				}
+				request, _ := incoming["request"].(map[string]any)
+				if strings.TrimSpace(asString(request["subtype"])) != "can_use_tool" {
+					return streamValidation{}, fmt.Errorf("invalid control request subtype: %s", asString(request["subtype"]))
+				}
+				if strings.TrimSpace(asString(request["tool_name"])) == "" || strings.TrimSpace(asString(request["tool_use_id"])) == "" {
+					return streamValidation{}, fmt.Errorf("invalid control request: missing tool_name or tool_use_id")
+				}
+				currentRequestID = requestID
+				currentToolUseID = strings.TrimSpace(asString(request["tool_use_id"]))
+				input, _ := request["input"].(map[string]any)
+				if strings.TrimSpace(asString(input["text"])) != turnPrompt {
+					return streamValidation{}, fmt.Errorf("invalid control request: expected input.text=%q, got %q", turnPrompt, strings.TrimSpace(asString(input["text"])))
+				}
+				if err := conn.WriteJSON(map[string]any{
+					"type": "control_response",
+					"response": map[string]any{
+						"subtype":    "success",
+						"request_id": requestID,
+						"response": map[string]any{
+							"behavior": "allow",
+							"updatedInput": map[string]any{
+								"text": approvedPrompt,
+							},
+						},
+					},
+				}); err != nil {
+					return streamValidation{}, fmt.Errorf("write direct-connect control response: %w", err)
+				}
+				result.ControlValidated = true
+				result.PermissionValidated = true
+			case "control_cancel_request":
+				requestID := strings.TrimSpace(asString(incoming["request_id"]))
+				if requestID == "" {
+					return streamValidation{}, fmt.Errorf("invalid control_cancel_request: missing request_id")
+				}
+				if requestID != currentRequestID {
+					return streamValidation{}, fmt.Errorf("invalid control_cancel_request: expected request_id=%q, got %q", currentRequestID, requestID)
+				}
+				result.ControlCancelValidated = true
+				result.ControlCancelEvent = "control_cancel_request"
+			case "tool_progress":
+				if strings.TrimSpace(asString(incoming["tool_name"])) == "" || strings.TrimSpace(asString(incoming["tool_use_id"])) == "" {
+					return streamValidation{}, fmt.Errorf("invalid tool_progress event: missing tool_name or tool_use_id")
+				}
+				if strings.TrimSpace(asString(incoming["tool_name"])) != "echo" {
+					return streamValidation{}, fmt.Errorf("invalid tool_progress event: unexpected tool_name=%q", strings.TrimSpace(asString(incoming["tool_name"])))
+				}
+				if strings.TrimSpace(asString(incoming["tool_use_id"])) != currentToolUseID {
+					return streamValidation{}, fmt.Errorf("invalid tool_progress event: expected tool_use_id=%q, got %q", currentToolUseID, strings.TrimSpace(asString(incoming["tool_use_id"])))
+				}
+				if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+					return streamValidation{}, fmt.Errorf("invalid tool_progress event: missing session_id")
+				}
+				result.ToolProgressValidated = true
+				result.ToolProgressEvent = "tool_progress"
+			case "rate_limit_event":
+				if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+					return streamValidation{}, fmt.Errorf("invalid rate_limit_event: missing session_id")
+				}
+				bucket := strings.TrimSpace(asString(incoming["bucket"]))
+				if bucket == "" {
+					return streamValidation{}, fmt.Errorf("invalid rate_limit_event: missing bucket")
+				}
+				if _, ok := incoming["limit"]; !ok {
+					return streamValidation{}, fmt.Errorf("invalid rate_limit_event: missing limit")
+				}
+				if _, ok := incoming["remaining"]; !ok {
+					return streamValidation{}, fmt.Errorf("invalid rate_limit_event: missing remaining")
+				}
+				result.RateLimitValidated = true
+				result.RateLimitEvent = "rate_limit_event:" + bucket
+			case "tool_use_summary":
+				if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+					return streamValidation{}, fmt.Errorf("invalid tool_use_summary: missing session_id")
+				}
+				if strings.TrimSpace(asString(incoming["tool_name"])) != "echo" {
+					return streamValidation{}, fmt.Errorf("invalid tool_use_summary tool_name: %q", strings.TrimSpace(asString(incoming["tool_name"])))
+				}
+				if strings.TrimSpace(asString(incoming["tool_use_id"])) != currentToolUseID {
+					return streamValidation{}, fmt.Errorf("invalid tool_use_summary tool_use_id: expected %q, got %q", currentToolUseID, strings.TrimSpace(asString(incoming["tool_use_id"])))
+				}
+				if strings.TrimSpace(asString(incoming["output_preview"])) != expectedResponse {
+					return streamValidation{}, fmt.Errorf("invalid tool_use_summary output_preview: expected %q, got %q", expectedResponse, strings.TrimSpace(asString(incoming["output_preview"])))
+				}
+				result.ToolUseSummaryValidated = true
+				result.ToolUseSummaryEvent = "tool_use_summary"
+			case "stream_event":
+				if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+					return streamValidation{}, fmt.Errorf("invalid stream_event: missing session_id")
+				}
+				event, _ := incoming["event"].(map[string]any)
+				if strings.TrimSpace(asString(event["type"])) != "content_block_delta" {
+					return streamValidation{}, fmt.Errorf("invalid stream_event type: %s", asString(event["type"]))
+				}
+				delta, _ := event["delta"].(map[string]any)
+				if strings.TrimSpace(asString(delta["type"])) != "text_delta" {
+					return streamValidation{}, fmt.Errorf("invalid stream_event delta type: %s", asString(delta["type"]))
+				}
+				if strings.TrimSpace(asString(delta["text"])) != expectedResponse {
+					return streamValidation{}, fmt.Errorf("invalid stream_event delta text: expected %q, got %q", expectedResponse, strings.TrimSpace(asString(delta["text"])))
+				}
+				result.StreamContentValidated = true
+				result.StreamContentEvent = "stream_event:content_block_delta"
+			case "assistant":
+				message, _ := incoming["message"].(map[string]any)
+				content, _ := message["content"].([]any)
+				found := false
+				for _, item := range content {
+					block, _ := item.(map[string]any)
+					if strings.TrimSpace(asString(block["text"])) == expectedResponse {
+						found = true
+						break
+					}
+				}
+				if !found {
+					return streamValidation{}, fmt.Errorf("invalid assistant payload: missing echo for %q", approvedPrompt)
+				}
+				result.MessageValidated = true
+				result.MessageEvent = "assistant"
+				result.ToolExecutionValidated = true
+				result.ValidatedTurns++
+				assistantValidated = true
+			case "result":
+				if strings.TrimSpace(asString(incoming["subtype"])) != "success" {
+					return streamValidation{}, fmt.Errorf("invalid result event subtype: %s", asString(incoming["subtype"]))
+				}
+				if asString(incoming["session_id"]) == "" {
+					return streamValidation{}, fmt.Errorf("invalid result event: missing session_id")
+				}
+				if intFromAny(incoming["num_turns"]) != result.ValidatedTurns {
+					return streamValidation{}, fmt.Errorf("invalid result event: expected num_turns=%d, got %d", result.ValidatedTurns, intFromAny(incoming["num_turns"]))
+				}
+				if strings.TrimSpace(asString(incoming["result"])) != expectedResponse {
+					return streamValidation{}, fmt.Errorf("invalid result payload: expected result=%q, got %q", expectedResponse, strings.TrimSpace(asString(incoming["result"])))
+				}
+				result.ResultValidated = true
+				result.ResultEvent = "result:success"
+				resultValidated = true
+			}
+		}
+	}
+	result.MultiTurnValidated = result.ValidatedTurns >= 2
+
+	interruptID := "interrupt-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": interruptID,
+		"request": map[string]any{
+			"subtype": "interrupt",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect interrupt request: %w", err)
+	}
+	for !result.InterruptValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect interrupt flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) == interruptID {
+			result.InterruptValidated = true
+		}
+	}
+
+	return result, nil
+}
+
+func buildWebsocketDial(rawWSURL, authToken string) (string, http.Header, *websocket.Dialer, error) {
+	header := http.Header{}
+	if strings.TrimSpace(authToken) != "" {
+		header.Set("Authorization", "Bearer "+authToken)
+	}
+
+	if strings.HasPrefix(rawWSURL, "ws+unix://") {
+		rest := strings.TrimPrefix(rawWSURL, "ws+unix://")
+		socketPart, pathPart, _ := strings.Cut(rest, "/")
+		socketPath, err := url.PathUnescape(socketPart)
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("decode ws+unix socket path: %w", err)
+		}
+		if !strings.HasPrefix(socketPath, "/") {
+			socketPath = "/" + socketPath
+		}
+		pathPart = "/" + strings.TrimPrefix(pathPart, "/")
+		dialer := &websocket.Dialer{
+			NetDialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+				return net.Dial("unix", socketPath)
+			},
+			HandshakeTimeout: 5 * time.Second,
+		}
+		return "ws://unix" + pathPart, header, dialer, nil
+	}
+
+	dialer := &websocket.Dialer{HandshakeTimeout: 5 * time.Second}
+	return rawWSURL, header, dialer, nil
+}
+
+func (r Result) String() string {
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("status=%s\n", r.Status))
+	b.WriteString(fmt.Sprintf("action=%s\n", r.Action))
+	b.WriteString(fmt.Sprintf("connect_url=%s\n", valueOrNone(r.ConnectURL)))
+	b.WriteString(fmt.Sprintf("transport=%s\n", valueOrNone(r.Transport)))
+	b.WriteString(fmt.Sprintf("server_url=%s\n", valueOrNone(r.ServerURL)))
+	b.WriteString(fmt.Sprintf("auth_token_present=%t\n", strings.TrimSpace(r.AuthToken) != ""))
+	b.WriteString(fmt.Sprintf("print_mode=%t\n", r.PrintMode))
+	b.WriteString(fmt.Sprintf("print_prompt=%s\n", valueOrNone(r.PrintPrompt)))
+	b.WriteString(fmt.Sprintf("output_format=%s\n", valueOrNone(r.OutputFormat)))
+	b.WriteString(fmt.Sprintf("request_cwd=%s\n", valueOrNone(r.RequestCWD)))
+	b.WriteString(fmt.Sprintf("session_id=%s\n", valueOrNone(r.SessionID)))
+	b.WriteString(fmt.Sprintf("ws_url=%s\n", valueOrNone(r.WSURL)))
+	b.WriteString(fmt.Sprintf("work_dir=%s\n", valueOrNone(r.WorkDir)))
+	b.WriteString(fmt.Sprintf("stream_validated=%t\n", r.StreamValidated))
+	b.WriteString(fmt.Sprintf("stream_event=%s\n", valueOrNone(r.StreamEvent)))
+	b.WriteString(fmt.Sprintf("stream_content_validated=%t\n", r.StreamContentValidated))
+	b.WriteString(fmt.Sprintf("stream_content_event=%s\n", valueOrNone(r.StreamContentEvent)))
+	b.WriteString(fmt.Sprintf("system_validated=%t\n", r.SystemValidated))
+	b.WriteString(fmt.Sprintf("system_event=%s\n", valueOrNone(r.SystemEvent)))
+	b.WriteString(fmt.Sprintf("status_validated=%t\n", r.StatusValidated))
+	b.WriteString(fmt.Sprintf("status_event=%s\n", valueOrNone(r.StatusEvent)))
+	b.WriteString(fmt.Sprintf("auth_validated=%t\n", r.AuthValidated))
+	b.WriteString(fmt.Sprintf("auth_event=%s\n", valueOrNone(r.AuthEvent)))
+	b.WriteString(fmt.Sprintf("keep_alive_validated=%t\n", r.KeepAliveValidated))
+	b.WriteString(fmt.Sprintf("keep_alive_event=%s\n", valueOrNone(r.KeepAliveEvent)))
+	b.WriteString(fmt.Sprintf("control_cancel_validated=%t\n", r.ControlCancelValidated))
+	b.WriteString(fmt.Sprintf("control_cancel_event=%s\n", valueOrNone(r.ControlCancelEvent)))
+	b.WriteString(fmt.Sprintf("message_validated=%t\n", r.MessageValidated))
+	b.WriteString(fmt.Sprintf("message_event=%s\n", valueOrNone(r.MessageEvent)))
+	b.WriteString(fmt.Sprintf("validated_turns=%d\n", r.ValidatedTurns))
+	b.WriteString(fmt.Sprintf("multi_turn_validated=%t\n", r.MultiTurnValidated))
+	b.WriteString(fmt.Sprintf("result_validated=%t\n", r.ResultValidated))
+	b.WriteString(fmt.Sprintf("result_event=%s\n", valueOrNone(r.ResultEvent)))
+	b.WriteString(fmt.Sprintf("control_validated=%t\n", r.ControlValidated))
+	b.WriteString(fmt.Sprintf("permission_validated=%t\n", r.PermissionValidated))
+	b.WriteString(fmt.Sprintf("tool_progress_validated=%t\n", r.ToolProgressValidated))
+	b.WriteString(fmt.Sprintf("tool_progress_event=%s\n", valueOrNone(r.ToolProgressEvent)))
+	b.WriteString(fmt.Sprintf("rate_limit_validated=%t\n", r.RateLimitValidated))
+	b.WriteString(fmt.Sprintf("rate_limit_event=%s\n", valueOrNone(r.RateLimitEvent)))
+	b.WriteString(fmt.Sprintf("tool_use_summary_validated=%t\n", r.ToolUseSummaryValidated))
+	b.WriteString(fmt.Sprintf("tool_use_summary_event=%s\n", valueOrNone(r.ToolUseSummaryEvent)))
+	b.WriteString(fmt.Sprintf("tool_execution_validated=%t\n", r.ToolExecutionValidated))
+	b.WriteString(fmt.Sprintf("interrupt_validated=%t\n", r.InterruptValidated))
+	b.WriteString(fmt.Sprintf("backend_validated=%t\n", r.BackendValidated))
+	b.WriteString(fmt.Sprintf("backend_status=%s\n", valueOrNone(r.BackendStatus)))
+	b.WriteString(fmt.Sprintf("backend_pid=%d\n", r.BackendPID))
+	b.WriteString(fmt.Sprintf("backend_started_at=%d\n", r.BackendStartedAt))
+	b.WriteString(fmt.Sprintf("backend_stopped_at=%d\n", r.BackendStoppedAt))
+	b.WriteString(fmt.Sprintf("backend_exit_code=%d\n", r.BackendExitCode))
+	return b.String()
+}
+
+func asString(v any) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
+}
+
+func intFromAny(v any) int {
+	switch typed := v.(type) {
+	case int:
+		return typed
+	case int64:
+		return int(typed)
+	case float64:
+		return int(typed)
+	default:
+		return 0
+	}
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+func valueOrNone(v string) string {
+	if strings.TrimSpace(v) == "" {
+		return "none"
+	}
+	return v
+}
+
+func actionForOptions(opts Options) string {
+	if strings.TrimSpace(opts.ResumeSessionID) != "" {
+		return "resume-direct-connect"
+	}
+	return "open-direct-connect"
+}
+
+func hasFlag(args []string, flag string) bool {
+	for _, arg := range args {
+		if arg == flag {
+			return true
+		}
+	}
+	return false
+}

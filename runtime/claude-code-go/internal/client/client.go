@@ -52,6 +52,15 @@ type DebugResponse struct {
 	Body       string
 }
 
+type ReachabilityResult struct {
+	TargetURL  string
+	Method     string
+	Reachable  bool
+	StatusCode int
+	Status     string
+	Error      string
+}
+
 func New(cfg config.Config) AnthropicClient {
 	return AnthropicClient{
 		apiBase:   strings.TrimRight(cfg.APIBase, "/"),
@@ -132,6 +141,45 @@ func (c AnthropicClient) requestHeaders(maskSecretValue bool) map[string]string 
 		headers["x-api-key"] = maskSecret(headers["x-api-key"])
 	}
 	return headers
+}
+
+func (c AnthropicClient) CheckReachability(ctx context.Context) ReachabilityResult {
+	targetURL := c.apiBase
+	if targetURL == "" {
+		return ReachabilityResult{
+			TargetURL: targetURL,
+			Method:    http.MethodHead,
+			Error:     "empty api base",
+		}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, targetURL, nil)
+	if err != nil {
+		return ReachabilityResult{
+			TargetURL: targetURL,
+			Method:    http.MethodHead,
+			Error:     err.Error(),
+		}
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return ReachabilityResult{
+			TargetURL: targetURL,
+			Method:    http.MethodHead,
+			Error:     err.Error(),
+		}
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 512))
+
+	return ReachabilityResult{
+		TargetURL:  targetURL,
+		Method:     http.MethodHead,
+		Reachable:  true,
+		StatusCode: resp.StatusCode,
+		Status:     resp.Status,
+	}
 }
 
 func (r DebugRequest) DebugString() string {

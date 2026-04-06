@@ -1,6 +1,6 @@
 # claude-code-go
 
-本地 Go CLI 原型，当前用于快速对齐 `claude-code` 的最小命令入口、鉴权持久化与 Anthropic 兼容请求链路。
+本地 Go CLI 重写实现，当前已具备最小可运行入口、鉴权持久化、Anthropic 兼容请求链路，并开始按源仓库命令面持续补齐功能。
 
 ## 当前已实现
 
@@ -8,6 +8,28 @@
 - `auth status`：展示当前登录态、auth 文件路径、API base、token 来源
 - `auth logout`：删除本地 `auth.json`
 - `config show`：打印当前配置解析结果（含 `model/max_tokens`）
+- `doctor`：打印配置目录、auth 文件、token 来源、API base、`model/max_tokens` 与网络 reachability
+- `auto-mode defaults`：打印最小兼容版 auto-mode 默认规则 JSON
+- `auto-mode config`：打印有效 auto-mode 配置 JSON（读取 trusted settings，按 section 级 fallback 回默认值）
+- `assistant [sessionId]`：提供最小 assistant 入口兼容面；无参数时输出 `discover-sessions`，传 `sessionId` 时输出 `attach-session`
+- `server [--port <number>] [--host <string>] [--auth-token <token>] [--unix <path>] [--workspace <dir>] [--idle-timeout <ms>] [--max-sessions <n>]`：提供最小 direct-connect server 入口，真实监听 HTTP / Unix socket，响应最小 `POST /sessions`、`GET /sessions?resume=<sessionId>`、`GET /sessions/{sessionId}` 与 `/ws/{sessionId}` ready/control/message stream，并维护单实例 lockfile + session index
+- `ssh <host> [dir] [--permission-mode <mode>] [--dangerously-skip-permissions] [--local]`：提供最小 ssh 入口兼容面，解析 host/dir 与官方参数并输出规范化后的连接摘要
+- `open <cc-url> [-p|--print [prompt]] [--output-format <format>] [--resume-session <sessionId>]`：提供最小 direct-connect 入口兼容面，解析 `cc://` / `cc+unix://` URL；默认发起最小 `POST /sessions` 会话创建请求，也支持基于已持久化 session index 的 `--resume-session` reconnect；随后校验 ready/control/message websocket 流，`--print` 会在同一 websocket 上连续完成 2 轮最小消息/工具执行闭环，并额外校验最小 `system:init`、`tool_progress`、`stream_event(content_block_delta)` 与 `result:success` 事件，再输出规范化后的连接/会话摘要
+- `setup-token [--token <token>] [--write-env-file <path>]`：输出 long-lived token 的最小兼容接线结果，可直接生成 `CLAUDE_CODE_OAUTH_TOKEN` 的 shell env 文件
+- `mcp list`：按 `user/project/local` 三层来源汇总已配置 MCP servers，并打印 scope/type/基础连接字段
+- `mcp get <name>`：查看指定 MCP server 的最小只读详情（scope/type/source/command|url/headers|oauth）
+- `mcp add [--scope <scope>] [--transport <stdio|http|sse>] <name> <command-or-url> [args...]`：向 `local/user/project` 对应配置文件写入最小 MCP server 配置
+- `mcp remove <name> [--scope <scope>]`：从可见配置源删除指定 MCP server；若同名 server 同时存在于多个 scope，会提示显式传 `--scope`
+- `plugin list`：读取 `installed_plugins.json`，打印已安装 plugin 的 `id/scope/version/install_path` 与可见时间戳字段
+- `plugin install <plugin> [--scope <user|project|local>] [--version <version>]`：向 `installed_plugins.json` 写入最小安装记录，并创建版本化 cache 目录与安装元数据文件
+- `plugin uninstall <plugin> [--scope <user|project|local>]`：按 scope 删除安装记录并移除对应版本化 cache 目录
+- `plugin marketplace add <source> [--scope <user|project|local>]`：解析 GitHub shorthand / URL / 本地路径来源，向对应 settings 的 `extraKnownMarketplaces` 写入 marketplace 声明，并同步 `known_marketplaces.json` 与最小 cache 目录
+- `plugin marketplace list`：读取 `known_marketplaces.json`，打印已声明 marketplace 的 `name/source/install_path` 与来源字段
+- `plugin marketplace remove <name>`：删除 `known_marketplaces.json` 中的 marketplace，并清理可见 settings 里的 `extraKnownMarketplaces` 声明与对应 cache 目录
+- `agents [--setting-sources <sources>]`：列出已配置 agents，支持 `user,project,local` 三层来源合并
+- `install [target] --dry-run`：打印当前平台、目标安装路径与覆盖保护提示，不执行真实写盘
+- `install <target> --apply`：把当前 CLI 二进制复制到显式目标路径；若目标已存在，先生成时间戳备份再覆盖
+- `update [target] (--source-binary <path> | --source-url <url>) [--apply]`：比较目标安装路径与候选二进制的摘要；支持从本地路径或远端 URL 下载候选二进制，若需要更新，可直接替换并复用 install 的备份保护
 - `api payload`：打印最小 `/v1/messages` 请求模板
 - `api ping`：向配置的 Anthropic 兼容接口发起最小真实请求
 
@@ -15,7 +37,9 @@
 
 1. `CLAUDE_CODE_API_KEY`
 2. `ANTHROPIC_API_KEY`
-3. `auth.json`（默认位于 `~/Library/Application Support/claude-code-go/auth.json`）
+3. `ANTHROPIC_AUTH_TOKEN`
+4. `CLAUDE_CODE_OAUTH_TOKEN`
+5. `auth.json`（默认位于 `~/Library/Application Support/claude-code-go/auth.json`）
 
 ## 当前请求参数配置方式
 
@@ -28,6 +52,7 @@
 
 1. 环境变量
    - `CLAUDE_CODE_API_BASE`
+   - `ANTHROPIC_BASE_URL`
    - `CLAUDE_CODE_MODEL`
    - `CLAUDE_CODE_MAX_TOKENS`
 2. 命令参数
@@ -35,17 +60,95 @@
    - `--model`
    - `--max-tokens`
 
+## 当前 auto-mode 配置来源
+
+- `~/.claude/settings.json`
+- `./.claude/settings.local.json`
+- 可选：`CLAUDE_CODE_GO_FLAG_SETTINGS_PATH`
+- 可选：`CLAUDE_CODE_GO_POLICY_SETTINGS_PATH`
+
+## 当前 plugin 配置来源
+
+- `CLAUDE_CODE_PLUGIN_CACHE_DIR/installed_plugins.json`（显式覆盖）
+- `CLAUDE_CONFIG_DIR/{plugins|cowork_plugins}/installed_plugins.json`
+- 默认：`~/.claude/{plugins|cowork_plugins}/installed_plugins.json`
+
+补充：
+- `CLAUDE_CODE_USE_COWORK_PLUGINS=true` 时会切到 `cowork_plugins`
+- 当前 `plugin list/install/uninstall/marketplace add/list/remove` 只实现最小读写基线；`plugin install` 会在 cache 目录下创建版本化占位安装目录与 `.claude-code-go-plugin-install.json` 元数据文件，`plugin uninstall` 会删除对应 scope 安装记录与该版本目录，`plugin marketplace add` 会写入 settings + `known_marketplaces.json` 并创建最小 marketplace 目录，`plugin marketplace list` 会读取并格式化当前 materialized marketplace 状态，`plugin marketplace remove` 会清理 visible settings 声明、`known_marketplaces.json` 与 marketplace cache 目录
+- 尚未覆盖 `plugin marketplace update`、`--json`、`--available`、enabled 状态判定、真实 marketplace 下载与完整 marketplace 管理
+
+## 当前 MCP 配置来源
+
+- `~/.claude/settings.json`（user scope）
+- 从仓库根到当前目录逐级查找的 `.mcp.json`（project scope，越近优先级越高）
+- `./.claude/settings.local.json`（local scope）
+
+补充：
+- `mcp list/get` 的 project scope 会读取从仓库根到当前目录的可见 `.mcp.json` 链路
+- `mcp add --scope project` / `mcp remove --scope project` 当前会直接写当前工作目录下的 `.mcp.json`
+
+说明：
+- 当前 `auto-mode` 只实现 `defaults/config` 两个只读子命令
+- 当前 `setup-token` 只实现最小兼容接线路径：接收现成 token、打印 export 指令、可选写入 env 文件；尚未实现浏览器 OAuth 取 token
+- 当前 `mcp` 仅实现 `list/get/add/remove` 的最小兼容路径，尚未覆盖 health check、desktop import、auth secret 存储等官方增强行为
+- 当前 `assistant` 只实现最小入口与参数兼容面，尚未接入真实 session discovery、远端 attach、REPL viewer 或 daemon/bridge 行为
+- 当前 `server` 已实现最小监听、`POST /sessions`、`GET /sessions?resume=`、`GET /sessions/{sessionId}`、`/ws/{sessionId}` ready/control/message stream，以及单实例 lockfile（启动写入、重复启动拦截、退出清理）+ session index 持久化；当前最小 lifecycle 状态已覆盖 `starting -> running -> detached -> stopped`，并补齐了最小 backend process lifecycle：session 首次 attach 会拉起真实 backend 子进程、detach/resume 期间保持存活、shutdown 后写回 `backend_status=stopped`；同时已补最小 tool execution / permission bridge，并可在同一 websocket 上连续完成 2 轮 `user -> can_use_tool(control_request) -> control_response(updatedInput) -> control_cancel_request -> tool_progress -> rate_limit_event -> stream_event(content_block_delta/text_delta) -> assistant -> tool_use_summary -> result(success)` 闭环，连接建立后也会额外发出最小 `system:init`、`auth_status`、`system:status` 与 `keep_alive`；session inspect endpoint 现可直接读取 `backend_status/backend_pid/backend_started_at`；但尚未接入 multi-session 调度或更完整的 permission-denial / result:error 事件路径
+- 当前 `ssh` 只实现最小入口与参数兼容面，尚未接入真实远端 probe/deploy、SSH 隧道、auth proxy 或 remote session lifecycle
+- 当前 `open` 已实现最小 `POST /sessions` + `GET /sessions?resume=` reconnect + websocket ready/control/message 校验链路，`--print` 会在同一 websocket 上连续验证 2 轮 `user -> can_use_tool -> control_response(updatedInput) -> control_cancel_request -> tool_progress -> rate_limit_event -> stream_event(content_block_delta/text_delta) -> assistant -> tool_use_summary -> result(success)`，并额外校验 `system:init`、`auth_status`、`system:status`、`keep_alive` 与 `GET /sessions/{sessionId}` 的 `backend_status/backend_pid`；输出中现包含 `validated_turns=2` / `multi_turn_validated=true` / `system_validated=true` / `auth_validated=true` / `status_validated=true` / `keep_alive_validated=true` / `control_cancel_validated=true` / `stream_content_validated=true` / `tool_progress_validated=true` / `rate_limit_validated=true` / `tool_use_summary_validated=true` / `result_validated=true`，以及最小 permission bridge / tool execution 闭环（`permission_validated=true`、`tool_execution_validated=true`）；但尚未接入完整 headless/connect runner、自动重连、错误分类与更完整的 permission-denial / result:error 事件链路
+- `project settings` 故意不参与 `auto-mode config` 合并，跟随源仓库的安全边界
+- 默认规则集目前是 **最小兼容基线**，已对齐输出 JSON 形状与 section fallback 语义，但尚未逐字对齐官方模板文本
+
 ## 本地验证样例
 
 ```bash
 go build ./cmd/claude-code-go
 ./claude-code-go auth login --api-key 'sk-ant-demo-1234567890'
 ./claude-code-go auth status
+./claude-code-go doctor
+./claude-code-go auto-mode defaults
+./claude-code-go auto-mode config
+./claude-code-go assistant
+./claude-code-go assistant sess-123
+./claude-code-go server --port 7777 --host 127.0.0.1 --auth-token demo-token --workspace /tmp/workspace --idle-timeout 0 --max-sessions 8
+./claude-code-go open 'cc://127.0.0.1:7777?authToken=demo-token'
+curl -H 'Authorization: Bearer demo-token' http://127.0.0.1:7777/sessions/<session-id>
+./claude-code-go open 'cc://127.0.0.1:7777?authToken=demo-token' --resume-session sess-123
+./claude-code-go server --unix /tmp/claude.sock --auth-token demo-token
+./claude-code-go open 'cc+unix://%2Ftmp%2Fclaude.sock?token=demo-token'
+./claude-code-go open 'cc+unix://%2Ftmp%2Fclaude.sock?token=demo-token' --resume-session sess-123
+# `open` 输出会包含 `stream_validated=true` / `stream_event=session_ready` / `backend_validated=true`
+# `open --print` 还会包含 `system_validated=true` / `auth_validated=true` / `status_validated=true` / `keep_alive_validated=true` / `control_cancel_validated=true` / `stream_content_validated=true` / `tool_progress_validated=true` / `rate_limit_validated=true` / `tool_use_summary_validated=true` / `message_validated=true` / `validated_turns=2` / `multi_turn_validated=true` / `result_validated=true` / `control_validated=true` / `permission_validated=true` / `tool_execution_validated=true` / `interrupt_validated=true`
+# `server` 输出会包含 `lockfile_path=...` / `session_index_path=...`
+# `GET /sessions/<session-id>` 可直接查看 `status=starting|running|detached|stopped` 与 `backend_status/backend_pid`
+./claude-code-go ssh demo-host
+./claude-code-go ssh demo-host /tmp/work --permission-mode auto --dangerously-skip-permissions --local
+./claude-code-go open 'cc://127.0.0.1:7777?authToken=demo-token' --print 'hello world' --output-format json
+./claude-code-go setup-token
+./claude-code-go setup-token --token tok-demo-1234567890 --write-env-file ~/.config/claude-code-go/oauth-token.env
+./claude-code-go mcp list
+./claude-code-go mcp get github
+./claude-code-go mcp add --scope local demo -- npx -y demo-mcp
+./claude-code-go mcp add --scope user --transport http --header "Authorization: Bearer demo" sentry https://mcp.sentry.dev/mcp
+./claude-code-go mcp remove demo --scope local
+./claude-code-go plugin install demo@market --scope project --version 2.3.4
+./claude-code-go plugin uninstall demo@market --scope project
+./claude-code-go plugin list
+./claude-code-go plugin marketplace add demo-owner/demo-market --scope user
+./claude-code-go plugin marketplace list
+./claude-code-go plugin marketplace remove demo-market
+./claude-code-go agents
+./claude-code-go install --dry-run
+./claude-code-go install ./dist/claude-code-go --apply
+./claude-code-go update ./dist/claude-code-go --source-binary ./claude-code-go
+./claude-code-go update ./dist/claude-code-go --source-binary ./claude-code-go --apply
+./claude-code-go update ./dist/claude-code-go --source-url http://127.0.0.1:18080/claude-code-go
+./claude-code-go update ./dist/claude-code-go --source-url http://127.0.0.1:18080/claude-code-go --apply
 ./claude-code-go api payload --model claude-3-5-haiku-latest --max-tokens 8
 ./claude-code-go auth logout
 ```
 
 ## 当前限制
 
-- 仍是最小原型，尚未接入完整 `claude-code` 命令面
+- 仍未接入完整 `claude-code` 命令面，当前正按 `agents -> auto-mode -> setup-token -> mcp -> plugin -> assistant -> server -> ssh -> open -> direct-connect permission-denial / result:error path -> ...` 的顺序持续补齐；其中 `assistant` / `server` / `ssh` / `open` / `auto-mode` / `setup-token` / `mcp list|get|add|remove` / `plugin list|install|uninstall|marketplace add|list|remove` 均为最小兼容面
 - `api ping` 目前只验证最小请求链路，不代表完整业务行为已对齐
