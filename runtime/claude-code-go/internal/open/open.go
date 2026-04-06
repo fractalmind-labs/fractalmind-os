@@ -75,6 +75,8 @@ type Result struct {
 	PostTurnSummaryEvent      string
 	CompactBoundaryValidated  bool
 	CompactBoundaryEvent      string
+	HookResponseValidated     bool
+	HookResponseEvent         string
 	ToolExecutionValidated    bool
 	InterruptValidated        bool
 	BackendValidated          bool
@@ -189,6 +191,8 @@ func Run(args []string) (Result, error) {
 		PostTurnSummaryEvent:      streamResult.PostTurnSummaryEvent,
 		CompactBoundaryValidated:  streamResult.CompactBoundaryValidated,
 		CompactBoundaryEvent:      streamResult.CompactBoundaryEvent,
+		HookResponseValidated:     streamResult.HookResponseValidated,
+		HookResponseEvent:         streamResult.HookResponseEvent,
 		ToolExecutionValidated:    streamResult.ToolExecutionValidated,
 		InterruptValidated:        streamResult.InterruptValidated,
 		BackendValidated:          state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
@@ -533,6 +537,8 @@ type streamValidation struct {
 	PostTurnSummaryEvent      string
 	CompactBoundaryValidated  bool
 	CompactBoundaryEvent      string
+	HookResponseValidated     bool
+	HookResponseEvent         string
 	ToolExecutionValidated    bool
 	InterruptValidated        bool
 }
@@ -614,6 +620,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		resultValidated := false
 		postTurnSummaryValidated := false
 		compactBoundaryValidated := false
+		hookResponseValidated := false
 		for {
 			var incoming map[string]any
 			if err := conn.ReadJSON(&incoming); err != nil {
@@ -680,6 +687,28 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.CompactBoundaryValidated = true
 					result.CompactBoundaryEvent = "system:compact_boundary"
 					compactBoundaryValidated = true
+				case "hook_response":
+					if turn.behavior == "deny" {
+						return streamValidation{}, fmt.Errorf("unexpected hook_response during deny turn")
+					}
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid hook_response: missing session_id")
+					}
+					if strings.TrimSpace(asString(incoming["hook_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid hook_response: missing hook_id")
+					}
+					if strings.TrimSpace(asString(incoming["hook_name"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid hook_response: missing hook_name")
+					}
+					if strings.TrimSpace(asString(incoming["hook_event"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid hook_response: missing hook_event")
+					}
+					if strings.TrimSpace(asString(incoming["outcome"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid hook_response: missing outcome")
+					}
+					result.HookResponseValidated = true
+					result.HookResponseEvent = "system:hook_response"
+					hookResponseValidated = true
 				default:
 					return streamValidation{}, fmt.Errorf("invalid system event subtype: %s", asString(incoming["subtype"]))
 				}
@@ -900,7 +929,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && postTurnSummaryValidated && compactBoundaryValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && postTurnSummaryValidated && compactBoundaryValidated && hookResponseValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -1018,6 +1047,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("post_turn_summary_event=%s\n", valueOrNone(r.PostTurnSummaryEvent)))
 	b.WriteString(fmt.Sprintf("compact_boundary_validated=%t\n", r.CompactBoundaryValidated))
 	b.WriteString(fmt.Sprintf("compact_boundary_event=%s\n", valueOrNone(r.CompactBoundaryEvent)))
+	b.WriteString(fmt.Sprintf("hook_response_validated=%t\n", r.HookResponseValidated))
+	b.WriteString(fmt.Sprintf("hook_response_event=%s\n", valueOrNone(r.HookResponseEvent)))
 	b.WriteString(fmt.Sprintf("tool_execution_validated=%t\n", r.ToolExecutionValidated))
 	b.WriteString(fmt.Sprintf("interrupt_validated=%t\n", r.InterruptValidated))
 	b.WriteString(fmt.Sprintf("backend_validated=%t\n", r.BackendValidated))

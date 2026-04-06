@@ -303,6 +303,16 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(compactMetadata["trigger"])) != "auto" || int(compactMetadata["pre_tokens"].(float64)) != 128 {
 		t.Fatalf("invalid compact_boundary payload: %#v", compactBoundary)
 	}
+	var hookResponse map[string]any
+	if err := ws.ReadJSON(&hookResponse); err != nil {
+		t.Fatalf("read hook_response failed: %v", err)
+	}
+	if hookResponse["type"] != "system" || strings.TrimSpace(asString(hookResponse["subtype"])) != "hook_response" || strings.TrimSpace(asString(hookResponse["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected hook_response payload: %#v", hookResponse)
+	}
+	if strings.TrimSpace(asString(hookResponse["hook_id"])) == "" || strings.TrimSpace(asString(hookResponse["hook_name"])) == "" || strings.TrimSpace(asString(hookResponse["hook_event"])) != "Stop" || strings.TrimSpace(asString(hookResponse["outcome"])) != "success" {
+		t.Fatalf("invalid hook_response payload: %#v", hookResponse)
+	}
 
 	if err := ws.WriteJSON(map[string]any{
 		"type": "user",
@@ -422,6 +432,16 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondCompactMetadata, _ := secondCompactBoundary["compact_metadata"].(map[string]any)
 	if strings.TrimSpace(asString(secondCompactMetadata["trigger"])) != "auto" || int(secondCompactMetadata["pre_tokens"].(float64)) != 128 {
 		t.Fatalf("invalid second compact_boundary payload: %#v", secondCompactBoundary)
+	}
+	var secondHookResponse map[string]any
+	if err := ws.ReadJSON(&secondHookResponse); err != nil {
+		t.Fatalf("read second hook_response failed: %v", err)
+	}
+	if secondHookResponse["type"] != "system" || strings.TrimSpace(asString(secondHookResponse["subtype"])) != "hook_response" || strings.TrimSpace(asString(secondHookResponse["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second hook_response payload: %#v", secondHookResponse)
+	}
+	if strings.TrimSpace(asString(secondHookResponse["hook_id"])) == "" || strings.TrimSpace(asString(secondHookResponse["hook_name"])) == "" || strings.TrimSpace(asString(secondHookResponse["hook_event"])) != "Stop" || strings.TrimSpace(asString(secondHookResponse["outcome"])) != "success" {
+		t.Fatalf("invalid second hook_response payload: %#v", secondHookResponse)
 	}
 
 	if err := ws.WriteJSON(map[string]any{

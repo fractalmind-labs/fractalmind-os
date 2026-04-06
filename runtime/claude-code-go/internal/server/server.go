@@ -789,6 +789,24 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       compactBoundaryUUID,
 					"session_id": session.ID,
 				})
+				hookResponseUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":       "system",
+					"subtype":    "hook_response",
+					"hook_id":    "hook-direct-connect-echo",
+					"hook_name":  "DirectConnectEchoHook",
+					"hook_event": "Stop",
+					"output":     "echo hook completed",
+					"stdout":     responseText,
+					"stderr":     "",
+					"exit_code":  0,
+					"outcome":    "success",
+					"uuid":       hookResponseUUID,
+					"session_id": session.ID,
+				})
 				pendingPrompt = ""
 				pendingRequestID = ""
 				pendingToolUseID = ""
