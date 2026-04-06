@@ -1047,8 +1047,32 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						responsePayload["session_url"] = "https://example.test/sessions/remote-control"
 						responsePayload["connect_url"] = "cc://remote-control?token=demo-token"
 						responsePayload["environment_id"] = "env-demo"
+						bridgeStateUUID, err := generateRequestID()
+						if err != nil {
+							return
+						}
+						_ = conn.WriteJSON(map[string]any{
+							"type":       "system",
+							"subtype":    "bridge_state",
+							"state":      "connected",
+							"detail":     "stub remote control enabled",
+							"uuid":       bridgeStateUUID,
+							"session_id": session.ID,
+						})
 					} else if remoteControlOn {
 						remoteControlOn = false
+						bridgeStateUUID, err := generateRequestID()
+						if err != nil {
+							return
+						}
+						_ = conn.WriteJSON(map[string]any{
+							"type":       "system",
+							"subtype":    "bridge_state",
+							"state":      "disconnected",
+							"detail":     "stub remote control disabled",
+							"uuid":       bridgeStateUUID,
+							"session_id": session.ID,
+						})
 					}
 				case "end_session":
 				default:

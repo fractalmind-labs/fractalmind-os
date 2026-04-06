@@ -1290,6 +1290,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("write remote_control enable request failed: %v", err)
 	}
+	var bridgeStateEnable map[string]any
+	if err := ws.ReadJSON(&bridgeStateEnable); err != nil {
+		t.Fatalf("read bridge_state enable event failed: %v", err)
+	}
+	if bridgeStateEnable["type"] != "system" || strings.TrimSpace(asString(bridgeStateEnable["subtype"])) != "bridge_state" || strings.TrimSpace(asString(bridgeStateEnable["state"])) != "connected" || strings.TrimSpace(asString(bridgeStateEnable["detail"])) != "stub remote control enabled" {
+		t.Fatalf("unexpected bridge_state enable event: %#v", bridgeStateEnable)
+	}
 	var remoteControlEnableResp map[string]any
 	if err := ws.ReadJSON(&remoteControlEnableResp); err != nil {
 		t.Fatalf("read remote_control enable response failed: %v", err)
@@ -1315,6 +1322,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 		},
 	}); err != nil {
 		t.Fatalf("write remote_control disable request failed: %v", err)
+	}
+	var bridgeStateDisable map[string]any
+	if err := ws.ReadJSON(&bridgeStateDisable); err != nil {
+		t.Fatalf("read bridge_state disable event failed: %v", err)
+	}
+	if bridgeStateDisable["type"] != "system" || strings.TrimSpace(asString(bridgeStateDisable["subtype"])) != "bridge_state" || strings.TrimSpace(asString(bridgeStateDisable["state"])) != "disconnected" || strings.TrimSpace(asString(bridgeStateDisable["detail"])) != "stub remote control disabled" {
+		t.Fatalf("unexpected bridge_state disable event: %#v", bridgeStateDisable)
 	}
 	var remoteControlDisableResp map[string]any
 	if err := ws.ReadJSON(&remoteControlDisableResp); err != nil {

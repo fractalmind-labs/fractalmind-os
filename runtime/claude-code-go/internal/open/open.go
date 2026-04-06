@@ -142,6 +142,8 @@ type Result struct {
 	SideQuestionEvent             string
 	SetProactiveValidated         bool
 	SetProactiveEvent             string
+	BridgeStateValidated          bool
+	BridgeStateEvent              string
 	RemoteControlValidated        bool
 	RemoteControlEvent            string
 	EndSessionValidated           bool
@@ -325,6 +327,8 @@ func Run(args []string) (Result, error) {
 		SideQuestionEvent:             streamResult.SideQuestionEvent,
 		SetProactiveValidated:         streamResult.SetProactiveValidated,
 		SetProactiveEvent:             streamResult.SetProactiveEvent,
+		BridgeStateValidated:          streamResult.BridgeStateValidated,
+		BridgeStateEvent:              streamResult.BridgeStateEvent,
 		RemoteControlValidated:        streamResult.RemoteControlValidated,
 		RemoteControlEvent:            streamResult.RemoteControlEvent,
 		EndSessionValidated:           streamResult.EndSessionValidated,
@@ -738,6 +742,8 @@ type streamValidation struct {
 	SideQuestionEvent             string
 	SetProactiveValidated         bool
 	SetProactiveEvent             string
+	BridgeStateValidated          bool
+	BridgeStateEvent              string
 	RemoteControlValidated        bool
 	RemoteControlEvent            string
 	EndSessionValidated           bool
@@ -2054,6 +2060,17 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		if err := conn.ReadJSON(&incoming); err != nil {
 			return streamValidation{}, fmt.Errorf("read direct-connect remote_control enable flow: %w", err)
 		}
+		if strings.TrimSpace(asString(incoming["type"])) == "system" && strings.TrimSpace(asString(incoming["subtype"])) == "bridge_state" {
+			if strings.TrimSpace(asString(incoming["state"])) != "connected" {
+				return streamValidation{}, fmt.Errorf("invalid bridge_state enable event state: %s", asString(incoming["state"]))
+			}
+			if strings.TrimSpace(asString(incoming["detail"])) != "stub remote control enabled" {
+				return streamValidation{}, fmt.Errorf("invalid bridge_state enable event detail: %s", asString(incoming["detail"]))
+			}
+			result.BridgeStateValidated = true
+			result.BridgeStateEvent = "system:bridge_state:connected"
+			continue
+		}
 		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
 			continue
 		}
@@ -2084,6 +2101,15 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		var incoming map[string]any
 		if err := conn.ReadJSON(&incoming); err != nil {
 			return streamValidation{}, fmt.Errorf("read direct-connect remote_control disable flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) == "system" && strings.TrimSpace(asString(incoming["subtype"])) == "bridge_state" {
+			if strings.TrimSpace(asString(incoming["state"])) != "disconnected" {
+				return streamValidation{}, fmt.Errorf("invalid bridge_state disable event state: %s", asString(incoming["state"]))
+			}
+			if strings.TrimSpace(asString(incoming["detail"])) != "stub remote control disabled" {
+				return streamValidation{}, fmt.Errorf("invalid bridge_state disable event detail: %s", asString(incoming["detail"]))
+			}
+			continue
 		}
 		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
 			continue
@@ -2277,6 +2303,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("side_question_event=%s\n", valueOrNone(r.SideQuestionEvent)))
 	b.WriteString(fmt.Sprintf("set_proactive_validated=%t\n", r.SetProactiveValidated))
 	b.WriteString(fmt.Sprintf("set_proactive_event=%s\n", valueOrNone(r.SetProactiveEvent)))
+	b.WriteString(fmt.Sprintf("bridge_state_validated=%t\n", r.BridgeStateValidated))
+	b.WriteString(fmt.Sprintf("bridge_state_event=%s\n", valueOrNone(r.BridgeStateEvent)))
 	b.WriteString(fmt.Sprintf("remote_control_validated=%t\n", r.RemoteControlValidated))
 	b.WriteString(fmt.Sprintf("remote_control_event=%s\n", valueOrNone(r.RemoteControlEvent)))
 	b.WriteString(fmt.Sprintf("end_session_validated=%t\n", r.EndSessionValidated))
