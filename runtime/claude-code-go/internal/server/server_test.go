@@ -764,6 +764,28 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "set-model-1",
+		"request": map[string]any{
+			"subtype": "set_model",
+			"model":   "claude-sonnet-4-5",
+		},
+	}); err != nil {
+		t.Fatalf("write set_model request failed: %v", err)
+	}
+	var setModelResp map[string]any
+	if err := ws.ReadJSON(&setModelResp); err != nil {
+		t.Fatalf("read set_model response failed: %v", err)
+	}
+	if setModelResp["type"] != "control_response" {
+		t.Fatalf("unexpected set_model response: %#v", setModelResp)
+	}
+	setModelResponse, _ := setModelResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(setModelResponse["request_id"])) != "set-model-1" {
+		t.Fatalf("unexpected set_model request id: %#v", setModelResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "end-session-1",
 		"request": map[string]any{
 			"subtype": "end_session",

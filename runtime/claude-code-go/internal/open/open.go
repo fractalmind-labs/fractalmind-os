@@ -99,6 +99,8 @@ type Result struct {
 	HookResponseEvent            string
 	ToolExecutionValidated       bool
 	InterruptValidated           bool
+	SetModelValidated            bool
+	SetModelEvent                string
 	EndSessionValidated          bool
 	EndSessionEvent              string
 	BackendValidated             bool
@@ -237,6 +239,8 @@ func Run(args []string) (Result, error) {
 		HookResponseEvent:            streamResult.HookResponseEvent,
 		ToolExecutionValidated:       streamResult.ToolExecutionValidated,
 		InterruptValidated:           streamResult.InterruptValidated,
+		SetModelValidated:            streamResult.SetModelValidated,
+		SetModelEvent:                streamResult.SetModelEvent,
 		EndSessionValidated:          streamResult.EndSessionValidated,
 		EndSessionEvent:              streamResult.EndSessionEvent,
 		BackendValidated:             state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
@@ -605,6 +609,8 @@ type streamValidation struct {
 	HookResponseEvent            string
 	ToolExecutionValidated       bool
 	InterruptValidated           bool
+	SetModelValidated            bool
+	SetModelEvent                string
 	EndSessionValidated          bool
 	EndSessionEvent              string
 }
@@ -1279,6 +1285,31 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 			result.InterruptValidated = true
 		}
 	}
+	setModelID := "set-model-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": setModelID,
+		"request": map[string]any{
+			"subtype": "set_model",
+			"model":   "claude-sonnet-4-5",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect set_model request: %w", err)
+	}
+	for !result.SetModelValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect set_model flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) == setModelID {
+			result.SetModelValidated = true
+			result.SetModelEvent = "control_request:set_model"
+		}
+	}
 	endSessionID := "end-session-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -1413,6 +1444,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("hook_response_event=%s\n", valueOrNone(r.HookResponseEvent)))
 	b.WriteString(fmt.Sprintf("tool_execution_validated=%t\n", r.ToolExecutionValidated))
 	b.WriteString(fmt.Sprintf("interrupt_validated=%t\n", r.InterruptValidated))
+	b.WriteString(fmt.Sprintf("set_model_validated=%t\n", r.SetModelValidated))
+	b.WriteString(fmt.Sprintf("set_model_event=%s\n", valueOrNone(r.SetModelEvent)))
 	b.WriteString(fmt.Sprintf("end_session_validated=%t\n", r.EndSessionValidated))
 	b.WriteString(fmt.Sprintf("end_session_event=%s\n", valueOrNone(r.EndSessionEvent)))
 	b.WriteString(fmt.Sprintf("backend_validated=%t\n", r.BackendValidated))

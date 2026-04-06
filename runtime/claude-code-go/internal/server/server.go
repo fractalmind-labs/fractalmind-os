@@ -981,6 +981,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				switch subtype {
 				case "interrupt":
 					responsePayload["interrupted"] = true
+				case "set_model":
 				case "end_session":
 				default:
 					continue
