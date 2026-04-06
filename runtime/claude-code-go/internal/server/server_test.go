@@ -808,6 +808,28 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "set-max-thinking-tokens-1",
+		"request": map[string]any{
+			"subtype":             "set_max_thinking_tokens",
+			"max_thinking_tokens": 2048,
+		},
+	}); err != nil {
+		t.Fatalf("write set_max_thinking_tokens request failed: %v", err)
+	}
+	var setMaxThinkingTokensResp map[string]any
+	if err := ws.ReadJSON(&setMaxThinkingTokensResp); err != nil {
+		t.Fatalf("read set_max_thinking_tokens response failed: %v", err)
+	}
+	if setMaxThinkingTokensResp["type"] != "control_response" {
+		t.Fatalf("unexpected set_max_thinking_tokens response: %#v", setMaxThinkingTokensResp)
+	}
+	setMaxThinkingTokensResponse, _ := setMaxThinkingTokensResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(setMaxThinkingTokensResponse["request_id"])) != "set-max-thinking-tokens-1" {
+		t.Fatalf("unexpected set_max_thinking_tokens request id: %#v", setMaxThinkingTokensResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "end-session-1",
 		"request": map[string]any{
 			"subtype": "end_session",

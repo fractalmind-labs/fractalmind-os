@@ -983,6 +983,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					responsePayload["interrupted"] = true
 				case "set_model":
 				case "set_permission_mode":
+				case "set_max_thinking_tokens":
 				case "end_session":
 				default:
 					continue
