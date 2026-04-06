@@ -862,6 +862,18 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       localCommandOutputUUID,
 					"session_id": session.ID,
 				})
+				elicitationCompleteUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":            "system",
+					"subtype":         "elicitation_complete",
+					"mcp_server_name": "demo-mcp-server",
+					"elicitation_id":  "elicitation-direct-connect-echo",
+					"uuid":            elicitationCompleteUUID,
+					"session_id":      session.ID,
+				})
 				postTurnUUID, err := generateRequestID()
 				if err != nil {
 					return

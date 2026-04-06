@@ -358,6 +358,16 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(localCommandOutput["content"])) == "" {
 		t.Fatalf("invalid local_command_output payload: %#v", localCommandOutput)
 	}
+	var elicitationComplete map[string]any
+	if err := ws.ReadJSON(&elicitationComplete); err != nil {
+		t.Fatalf("read elicitation_complete failed: %v", err)
+	}
+	if elicitationComplete["type"] != "system" || strings.TrimSpace(asString(elicitationComplete["subtype"])) != "elicitation_complete" || strings.TrimSpace(asString(elicitationComplete["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected elicitation_complete payload: %#v", elicitationComplete)
+	}
+	if strings.TrimSpace(asString(elicitationComplete["mcp_server_name"])) == "" || strings.TrimSpace(asString(elicitationComplete["elicitation_id"])) == "" {
+		t.Fatalf("invalid elicitation_complete payload: %#v", elicitationComplete)
+	}
 	var postTurnSummary map[string]any
 	if err := ws.ReadJSON(&postTurnSummary); err != nil {
 		t.Fatalf("read post_turn_summary failed: %v", err)
@@ -590,6 +600,16 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if strings.TrimSpace(asString(secondLocalCommandOutput["content"])) == "" {
 		t.Fatalf("invalid second local_command_output payload: %#v", secondLocalCommandOutput)
+	}
+	var secondElicitationComplete map[string]any
+	if err := ws.ReadJSON(&secondElicitationComplete); err != nil {
+		t.Fatalf("read second elicitation_complete failed: %v", err)
+	}
+	if secondElicitationComplete["type"] != "system" || strings.TrimSpace(asString(secondElicitationComplete["subtype"])) != "elicitation_complete" || strings.TrimSpace(asString(secondElicitationComplete["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second elicitation_complete payload: %#v", secondElicitationComplete)
+	}
+	if strings.TrimSpace(asString(secondElicitationComplete["mcp_server_name"])) == "" || strings.TrimSpace(asString(secondElicitationComplete["elicitation_id"])) == "" {
+		t.Fatalf("invalid second elicitation_complete payload: %#v", secondElicitationComplete)
 	}
 	var secondPostTurnSummary map[string]any
 	if err := ws.ReadJSON(&secondPostTurnSummary); err != nil {

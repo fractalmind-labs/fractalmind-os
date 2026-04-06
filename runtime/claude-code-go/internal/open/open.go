@@ -77,6 +77,8 @@ type Result struct {
 	APIRetryEvent                string
 	LocalCommandOutputValidated  bool
 	LocalCommandOutputEvent      string
+	ElicitationCompleteValidated bool
+	ElicitationCompleteEvent     string
 	ToolProgressValidated        bool
 	ToolProgressEvent            string
 	RateLimitValidated           bool
@@ -211,6 +213,8 @@ func Run(args []string) (Result, error) {
 		APIRetryEvent:                streamResult.APIRetryEvent,
 		LocalCommandOutputValidated:  streamResult.LocalCommandOutputValidated,
 		LocalCommandOutputEvent:      streamResult.LocalCommandOutputEvent,
+		ElicitationCompleteValidated: streamResult.ElicitationCompleteValidated,
+		ElicitationCompleteEvent:     streamResult.ElicitationCompleteEvent,
 		ToolProgressValidated:        streamResult.ToolProgressValidated,
 		ToolProgressEvent:            streamResult.ToolProgressEvent,
 		RateLimitValidated:           streamResult.RateLimitValidated,
@@ -575,6 +579,8 @@ type streamValidation struct {
 	APIRetryEvent                string
 	LocalCommandOutputValidated  bool
 	LocalCommandOutputEvent      string
+	ElicitationCompleteValidated bool
+	ElicitationCompleteEvent     string
 	ToolProgressValidated        bool
 	ToolProgressEvent            string
 	RateLimitValidated           bool
@@ -679,6 +685,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		filesPersistedValidated := false
 		apiRetryValidated := false
 		localCommandOutputValidated := false
+		elicitationCompleteValidated := false
 		postTurnSummaryValidated := false
 		compactBoundaryValidated := false
 		sessionStateRunningValidated := false
@@ -891,6 +898,22 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.LocalCommandOutputValidated = true
 					result.LocalCommandOutputEvent = "system:local_command_output"
 					localCommandOutputValidated = true
+				case "elicitation_complete":
+					if turn.behavior == "deny" {
+						return streamValidation{}, fmt.Errorf("unexpected elicitation_complete during deny turn")
+					}
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid elicitation_complete: missing session_id")
+					}
+					if strings.TrimSpace(asString(incoming["mcp_server_name"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid elicitation_complete: missing mcp_server_name")
+					}
+					if strings.TrimSpace(asString(incoming["elicitation_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid elicitation_complete: missing elicitation_id")
+					}
+					result.ElicitationCompleteValidated = true
+					result.ElicitationCompleteEvent = "system:elicitation_complete"
+					elicitationCompleteValidated = true
 				case "compact_boundary":
 					if turn.behavior == "deny" {
 						return streamValidation{}, fmt.Errorf("unexpected compact_boundary during deny turn")
@@ -1217,7 +1240,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -1337,6 +1360,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("api_retry_event=%s\n", valueOrNone(r.APIRetryEvent)))
 	b.WriteString(fmt.Sprintf("local_command_output_validated=%t\n", r.LocalCommandOutputValidated))
 	b.WriteString(fmt.Sprintf("local_command_output_event=%s\n", valueOrNone(r.LocalCommandOutputEvent)))
+	b.WriteString(fmt.Sprintf("elicitation_complete_validated=%t\n", r.ElicitationCompleteValidated))
+	b.WriteString(fmt.Sprintf("elicitation_complete_event=%s\n", valueOrNone(r.ElicitationCompleteEvent)))
 	b.WriteString(fmt.Sprintf("tool_progress_validated=%t\n", r.ToolProgressValidated))
 	b.WriteString(fmt.Sprintf("tool_progress_event=%s\n", valueOrNone(r.ToolProgressEvent)))
 	b.WriteString(fmt.Sprintf("rate_limit_validated=%t\n", r.RateLimitValidated))

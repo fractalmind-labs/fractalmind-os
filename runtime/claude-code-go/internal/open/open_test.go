@@ -76,6 +76,7 @@ func TestRunOpenDefaults(t *testing.T) {
 		"files_persisted_validated=false",
 		"api_retry_validated=false",
 		"local_command_output_validated=false",
+		"elicitation_complete_validated=false",
 		"post_turn_summary_validated=false",
 		"compact_boundary_validated=false",
 		"session_state_changed_validated=false",
@@ -115,7 +116,7 @@ func TestRunOpenSupportsPrintModeAndPrompt(t *testing.T) {
 	if result.SessionID != "sess-456" || !result.StreamValidated || result.StreamEvent != "session_ready" {
 		t.Fatalf("expected session response, got %#v", result)
 	}
-	if !result.StreamContentValidated || result.StreamContentEvent != "stream_event:content_block_delta" || !result.SystemValidated || result.SystemEvent != "system:init" || !result.StatusValidated || result.StatusEvent != "system:status" || !result.AuthValidated || result.AuthEvent != "auth_status" || !result.KeepAliveValidated || result.KeepAliveEvent != "keep_alive" || !result.ControlCancelValidated || result.ControlCancelEvent != "control_cancel_request" || !result.MessageValidated || result.MessageEvent != "assistant" || result.ValidatedTurns != 2 || !result.MultiTurnValidated || !result.ResultValidated || result.ResultEvent != "result:success" || !result.ResultErrorValidated || result.ResultErrorEvent != "result:error_during_execution" || !result.ControlValidated || !result.PermissionValidated || !result.PermissionDeniedValidated || result.PermissionDeniedEvent != "permission_denial:echo" || !result.TaskStartedValidated || result.TaskStartedEvent != "system:task_started" || !result.TaskProgressValidated || result.TaskProgressEvent != "system:task_progress" || !result.TaskNotificationValidated || result.TaskNotificationEvent != "system:task_notification" || !result.FilesPersistedValidated || result.FilesPersistedEvent != "system:files_persisted" || !result.APIRetryValidated || result.APIRetryEvent != "system:api_retry" || !result.LocalCommandOutputValidated || result.LocalCommandOutputEvent != "system:local_command_output" || !result.ToolProgressValidated || result.ToolProgressEvent != "tool_progress" || !result.RateLimitValidated || result.RateLimitEvent != "rate_limit_event:default" || !result.ToolUseSummaryValidated || result.ToolUseSummaryEvent != "tool_use_summary" || !result.PostTurnSummaryValidated || result.PostTurnSummaryEvent != "system:post_turn_summary" || !result.CompactBoundaryValidated || result.CompactBoundaryEvent != "system:compact_boundary" || !result.SessionStateChangedValidated || result.SessionStateChangedEvent != "system:session_state_changed:idle" || !result.HookStartedValidated || result.HookStartedEvent != "system:hook_started" || !result.HookProgressValidated || result.HookProgressEvent != "system:hook_progress" || !result.HookResponseValidated || result.HookResponseEvent != "system:hook_response" || !result.ToolExecutionValidated || !result.InterruptValidated || !result.BackendValidated {
+	if !result.StreamContentValidated || result.StreamContentEvent != "stream_event:content_block_delta" || !result.SystemValidated || result.SystemEvent != "system:init" || !result.StatusValidated || result.StatusEvent != "system:status" || !result.AuthValidated || result.AuthEvent != "auth_status" || !result.KeepAliveValidated || result.KeepAliveEvent != "keep_alive" || !result.ControlCancelValidated || result.ControlCancelEvent != "control_cancel_request" || !result.MessageValidated || result.MessageEvent != "assistant" || result.ValidatedTurns != 2 || !result.MultiTurnValidated || !result.ResultValidated || result.ResultEvent != "result:success" || !result.ResultErrorValidated || result.ResultErrorEvent != "result:error_during_execution" || !result.ControlValidated || !result.PermissionValidated || !result.PermissionDeniedValidated || result.PermissionDeniedEvent != "permission_denial:echo" || !result.TaskStartedValidated || result.TaskStartedEvent != "system:task_started" || !result.TaskProgressValidated || result.TaskProgressEvent != "system:task_progress" || !result.TaskNotificationValidated || result.TaskNotificationEvent != "system:task_notification" || !result.FilesPersistedValidated || result.FilesPersistedEvent != "system:files_persisted" || !result.APIRetryValidated || result.APIRetryEvent != "system:api_retry" || !result.LocalCommandOutputValidated || result.LocalCommandOutputEvent != "system:local_command_output" || !result.ElicitationCompleteValidated || result.ElicitationCompleteEvent != "system:elicitation_complete" || !result.ToolProgressValidated || result.ToolProgressEvent != "tool_progress" || !result.RateLimitValidated || result.RateLimitEvent != "rate_limit_event:default" || !result.ToolUseSummaryValidated || result.ToolUseSummaryEvent != "tool_use_summary" || !result.PostTurnSummaryValidated || result.PostTurnSummaryEvent != "system:post_turn_summary" || !result.CompactBoundaryValidated || result.CompactBoundaryEvent != "system:compact_boundary" || !result.SessionStateChangedValidated || result.SessionStateChangedEvent != "system:session_state_changed:idle" || !result.HookStartedValidated || result.HookStartedEvent != "system:hook_started" || !result.HookProgressValidated || result.HookProgressEvent != "system:hook_progress" || !result.HookResponseValidated || result.HookResponseEvent != "system:hook_response" || !result.ToolExecutionValidated || !result.InterruptValidated || !result.BackendValidated {
 		t.Fatalf("expected session response, got %#v", result)
 	}
 }
@@ -624,6 +625,14 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 				"content":    "local command output: persisted direct-connect artifacts",
 				"uuid":       fmt.Sprintf("local-command-output-%d", requestCounter),
 				"session_id": sessionID,
+			})
+			_ = conn.WriteJSON(map[string]any{
+				"type":            "system",
+				"subtype":         "elicitation_complete",
+				"mcp_server_name": "demo-mcp-server",
+				"elicitation_id":  "elicitation-direct-connect-echo",
+				"uuid":            fmt.Sprintf("elicitation-complete-%d", requestCounter),
+				"session_id":      sessionID,
 			})
 			_ = conn.WriteJSON(map[string]any{
 				"type":            "system",
