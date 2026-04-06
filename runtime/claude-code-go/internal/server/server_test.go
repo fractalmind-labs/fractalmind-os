@@ -970,6 +970,35 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "reload-plugins-1",
+		"request": map[string]any{
+			"subtype": "reload_plugins",
+		},
+	}); err != nil {
+		t.Fatalf("write reload_plugins request failed: %v", err)
+	}
+	var reloadPluginsResp map[string]any
+	if err := ws.ReadJSON(&reloadPluginsResp); err != nil {
+		t.Fatalf("read reload_plugins response failed: %v", err)
+	}
+	if reloadPluginsResp["type"] != "control_response" {
+		t.Fatalf("unexpected reload_plugins response: %#v", reloadPluginsResp)
+	}
+	reloadPluginsResponse, _ := reloadPluginsResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(reloadPluginsResponse["request_id"])) != "reload-plugins-1" {
+		t.Fatalf("unexpected reload_plugins request id: %#v", reloadPluginsResp)
+	}
+	reloadPluginsPayload, _ := reloadPluginsResponse["response"].(map[string]any)
+	commands, _ := reloadPluginsPayload["commands"].([]any)
+	agents, _ := reloadPluginsPayload["agents"].([]any)
+	plugins, _ := reloadPluginsPayload["plugins"].([]any)
+	mcpServers, _ := reloadPluginsPayload["mcpServers"].([]any)
+	if len(commands) != 0 || len(agents) != 0 || len(plugins) != 0 || len(mcpServers) != 0 || int(reloadPluginsPayload["error_count"].(float64)) != 0 {
+		t.Fatalf("unexpected reload_plugins payload: %#v", reloadPluginsResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "rewind-files-1",
 		"request": map[string]any{
 			"subtype":         "rewind_files",

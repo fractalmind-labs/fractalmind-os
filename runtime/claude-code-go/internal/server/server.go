@@ -1005,6 +1005,12 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					responsePayload["added"] = []any{}
 					responsePayload["removed"] = []any{}
 					responsePayload["errors"] = map[string]any{}
+				case "reload_plugins":
+					responsePayload["commands"] = []any{}
+					responsePayload["agents"] = []any{}
+					responsePayload["plugins"] = []any{}
+					responsePayload["mcpServers"] = []any{}
+					responsePayload["error_count"] = 0
 				case "seed_read_state":
 					_ = responsePayload
 				case "rewind_files":

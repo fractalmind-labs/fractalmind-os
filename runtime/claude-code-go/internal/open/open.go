@@ -113,6 +113,8 @@ type Result struct {
 	MCPMessageEvent               string
 	MCPSetServersValidated        bool
 	MCPSetServersEvent            string
+	ReloadPluginsValidated        bool
+	ReloadPluginsEvent            string
 	SeedReadStateValidated        bool
 	SeedReadStateEvent            string
 	RewindFilesValidated          bool
@@ -276,6 +278,8 @@ func Run(args []string) (Result, error) {
 		MCPMessageEvent:               streamResult.MCPMessageEvent,
 		MCPSetServersValidated:        streamResult.MCPSetServersValidated,
 		MCPSetServersEvent:            streamResult.MCPSetServersEvent,
+		ReloadPluginsValidated:        streamResult.ReloadPluginsValidated,
+		ReloadPluginsEvent:            streamResult.ReloadPluginsEvent,
 		SeedReadStateValidated:        streamResult.SeedReadStateValidated,
 		SeedReadStateEvent:            streamResult.SeedReadStateEvent,
 		RewindFilesValidated:          streamResult.RewindFilesValidated,
@@ -669,6 +673,8 @@ type streamValidation struct {
 	MCPMessageEvent               string
 	MCPSetServersValidated        bool
 	MCPSetServersEvent            string
+	ReloadPluginsValidated        bool
+	ReloadPluginsEvent            string
 	SeedReadStateValidated        bool
 	SeedReadStateEvent            string
 	RewindFilesValidated          bool
@@ -1585,6 +1591,52 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		result.MCPSetServersValidated = true
 		result.MCPSetServersEvent = "control_request:mcp_set_servers"
 	}
+	reloadPluginsID := "reload-plugins-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": reloadPluginsID,
+		"request": map[string]any{
+			"subtype": "reload_plugins",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect reload_plugins request: %w", err)
+	}
+	for !result.ReloadPluginsValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect reload_plugins flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != reloadPluginsID {
+			continue
+		}
+		responsePayload, _ := response["response"].(map[string]any)
+		commands, ok := responsePayload["commands"].([]any)
+		if !ok || len(commands) != 0 {
+			return streamValidation{}, fmt.Errorf("invalid reload_plugins response: expected empty commands")
+		}
+		agents, ok := responsePayload["agents"].([]any)
+		if !ok || len(agents) != 0 {
+			return streamValidation{}, fmt.Errorf("invalid reload_plugins response: expected empty agents")
+		}
+		plugins, ok := responsePayload["plugins"].([]any)
+		if !ok || len(plugins) != 0 {
+			return streamValidation{}, fmt.Errorf("invalid reload_plugins response: expected empty plugins")
+		}
+		mcpServers, ok := responsePayload["mcpServers"].([]any)
+		if !ok || len(mcpServers) != 0 {
+			return streamValidation{}, fmt.Errorf("invalid reload_plugins response: expected empty mcpServers")
+		}
+		errorCount, ok := responsePayload["error_count"].(float64)
+		if !ok || int(errorCount) != 0 {
+			return streamValidation{}, fmt.Errorf("invalid reload_plugins response: expected error_count=0")
+		}
+		result.ReloadPluginsValidated = true
+		result.ReloadPluginsEvent = "control_request:reload_plugins"
+	}
 	seedReadStateID := "seed-read-state-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -1845,6 +1897,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("mcp_message_event=%s\n", valueOrNone(r.MCPMessageEvent)))
 	b.WriteString(fmt.Sprintf("mcp_set_servers_validated=%t\n", r.MCPSetServersValidated))
 	b.WriteString(fmt.Sprintf("mcp_set_servers_event=%s\n", valueOrNone(r.MCPSetServersEvent)))
+	b.WriteString(fmt.Sprintf("reload_plugins_validated=%t\n", r.ReloadPluginsValidated))
+	b.WriteString(fmt.Sprintf("reload_plugins_event=%s\n", valueOrNone(r.ReloadPluginsEvent)))
 	b.WriteString(fmt.Sprintf("seed_read_state_validated=%t\n", r.SeedReadStateValidated))
 	b.WriteString(fmt.Sprintf("seed_read_state_event=%s\n", valueOrNone(r.SeedReadStateEvent)))
 	b.WriteString(fmt.Sprintf("rewind_files_validated=%t\n", r.RewindFilesValidated))
