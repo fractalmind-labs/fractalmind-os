@@ -580,6 +580,17 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 			switch strings.TrimSpace(asString(incoming["type"])) {
 			case "user":
 				_ = sessionIndex.setStatus(sessionID, session.WorkDir, "running")
+				runningStateUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":       "system",
+					"subtype":    "session_state_changed",
+					"state":      "running",
+					"uuid":       runningStateUUID,
+					"session_id": session.ID,
+				})
 				pendingPrompt = extractPromptText(incoming)
 				requestID, err := generateRequestID()
 				if err != nil {
@@ -787,6 +798,18 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						"pre_tokens": 128,
 					},
 					"uuid":       compactBoundaryUUID,
+					"session_id": session.ID,
+				})
+				idleStateUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = sessionIndex.setStatus(sessionID, session.WorkDir, "idle")
+				_ = conn.WriteJSON(map[string]any{
+					"type":       "system",
+					"subtype":    "session_state_changed",
+					"state":      "idle",
+					"uuid":       idleStateUUID,
 					"session_id": session.ID,
 				})
 				hookStartedUUID, err := generateRequestID()

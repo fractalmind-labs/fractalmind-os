@@ -191,6 +191,14 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 		t.Fatalf("write user message failed: %v", err)
 	}
 
+	var runningState map[string]any
+	if err := ws.ReadJSON(&runningState); err != nil {
+		t.Fatalf("read running session_state_changed failed: %v", err)
+	}
+	if runningState["type"] != "system" || strings.TrimSpace(asString(runningState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(runningState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(runningState["state"])) != "running" {
+		t.Fatalf("unexpected running session_state_changed payload: %#v", runningState)
+	}
+
 	var controlReq map[string]any
 	if err := ws.ReadJSON(&controlReq); err != nil {
 		t.Fatalf("read control request failed: %v", err)
@@ -303,6 +311,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(compactMetadata["trigger"])) != "auto" || int(compactMetadata["pre_tokens"].(float64)) != 128 {
 		t.Fatalf("invalid compact_boundary payload: %#v", compactBoundary)
 	}
+	var idleState map[string]any
+	if err := ws.ReadJSON(&idleState); err != nil {
+		t.Fatalf("read idle session_state_changed failed: %v", err)
+	}
+	if idleState["type"] != "system" || strings.TrimSpace(asString(idleState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(idleState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(idleState["state"])) != "idle" {
+		t.Fatalf("unexpected idle session_state_changed payload: %#v", idleState)
+	}
 	var hookStarted map[string]any
 	if err := ws.ReadJSON(&hookStarted); err != nil {
 		t.Fatalf("read hook_started failed: %v", err)
@@ -342,6 +357,14 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 		},
 	}); err != nil {
 		t.Fatalf("write second user message failed: %v", err)
+	}
+
+	var secondRunningState map[string]any
+	if err := ws.ReadJSON(&secondRunningState); err != nil {
+		t.Fatalf("read second running session_state_changed failed: %v", err)
+	}
+	if secondRunningState["type"] != "system" || strings.TrimSpace(asString(secondRunningState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(secondRunningState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(secondRunningState["state"])) != "running" {
+		t.Fatalf("unexpected second running session_state_changed payload: %#v", secondRunningState)
 	}
 
 	var secondControlReq map[string]any
@@ -453,6 +476,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(secondCompactMetadata["trigger"])) != "auto" || int(secondCompactMetadata["pre_tokens"].(float64)) != 128 {
 		t.Fatalf("invalid second compact_boundary payload: %#v", secondCompactBoundary)
 	}
+	var secondIdleState map[string]any
+	if err := ws.ReadJSON(&secondIdleState); err != nil {
+		t.Fatalf("read second idle session_state_changed failed: %v", err)
+	}
+	if secondIdleState["type"] != "system" || strings.TrimSpace(asString(secondIdleState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(secondIdleState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(secondIdleState["state"])) != "idle" {
+		t.Fatalf("unexpected second idle session_state_changed payload: %#v", secondIdleState)
+	}
 	var secondHookStarted map[string]any
 	if err := ws.ReadJSON(&secondHookStarted); err != nil {
 		t.Fatalf("read second hook_started failed: %v", err)
@@ -492,6 +522,14 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 		},
 	}); err != nil {
 		t.Fatalf("write deny-turn user message failed: %v", err)
+	}
+
+	var denyRunningState map[string]any
+	if err := ws.ReadJSON(&denyRunningState); err != nil {
+		t.Fatalf("read deny running session_state_changed failed: %v", err)
+	}
+	if denyRunningState["type"] != "system" || strings.TrimSpace(asString(denyRunningState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(denyRunningState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(denyRunningState["state"])) != "running" {
+		t.Fatalf("unexpected deny running session_state_changed payload: %#v", denyRunningState)
 	}
 
 	var denyControlReq map[string]any

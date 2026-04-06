@@ -26,69 +26,71 @@ type Options struct {
 }
 
 type Result struct {
-	Status                    string
-	Action                    string
-	ConnectURL                string
-	Transport                 string
-	ServerURL                 string
-	AuthToken                 string
-	PrintMode                 bool
-	PrintPrompt               string
-	OutputFormat              string
-	RequestCWD                string
-	SessionID                 string
-	WSURL                     string
-	WorkDir                   string
-	StreamValidated           bool
-	StreamEvent               string
-	StreamContentValidated    bool
-	StreamContentEvent        string
-	SystemValidated           bool
-	SystemEvent               string
-	StatusValidated           bool
-	StatusEvent               string
-	AuthValidated             bool
-	AuthEvent                 string
-	KeepAliveValidated        bool
-	KeepAliveEvent            string
-	ControlCancelValidated    bool
-	ControlCancelEvent        string
-	MessageValidated          bool
-	MessageEvent              string
-	ValidatedTurns            int
-	MultiTurnValidated        bool
-	ResultValidated           bool
-	ResultEvent               string
-	ResultErrorValidated      bool
-	ResultErrorEvent          string
-	ControlValidated          bool
-	PermissionValidated       bool
-	PermissionDeniedValidated bool
-	PermissionDeniedEvent     string
-	ToolProgressValidated     bool
-	ToolProgressEvent         string
-	RateLimitValidated        bool
-	RateLimitEvent            string
-	ToolUseSummaryValidated   bool
-	ToolUseSummaryEvent       string
-	PostTurnSummaryValidated  bool
-	PostTurnSummaryEvent      string
-	CompactBoundaryValidated  bool
-	CompactBoundaryEvent      string
-	HookStartedValidated      bool
-	HookStartedEvent          string
-	HookProgressValidated     bool
-	HookProgressEvent         string
-	HookResponseValidated     bool
-	HookResponseEvent         string
-	ToolExecutionValidated    bool
-	InterruptValidated        bool
-	BackendValidated          bool
-	BackendStatus             string
-	BackendPID                int
-	BackendStartedAt          int64
-	BackendStoppedAt          int64
-	BackendExitCode           int
+	Status                       string
+	Action                       string
+	ConnectURL                   string
+	Transport                    string
+	ServerURL                    string
+	AuthToken                    string
+	PrintMode                    bool
+	PrintPrompt                  string
+	OutputFormat                 string
+	RequestCWD                   string
+	SessionID                    string
+	WSURL                        string
+	WorkDir                      string
+	StreamValidated              bool
+	StreamEvent                  string
+	StreamContentValidated       bool
+	StreamContentEvent           string
+	SystemValidated              bool
+	SystemEvent                  string
+	StatusValidated              bool
+	StatusEvent                  string
+	AuthValidated                bool
+	AuthEvent                    string
+	KeepAliveValidated           bool
+	KeepAliveEvent               string
+	ControlCancelValidated       bool
+	ControlCancelEvent           string
+	MessageValidated             bool
+	MessageEvent                 string
+	ValidatedTurns               int
+	MultiTurnValidated           bool
+	ResultValidated              bool
+	ResultEvent                  string
+	ResultErrorValidated         bool
+	ResultErrorEvent             string
+	ControlValidated             bool
+	PermissionValidated          bool
+	PermissionDeniedValidated    bool
+	PermissionDeniedEvent        string
+	ToolProgressValidated        bool
+	ToolProgressEvent            string
+	RateLimitValidated           bool
+	RateLimitEvent               string
+	ToolUseSummaryValidated      bool
+	ToolUseSummaryEvent          string
+	PostTurnSummaryValidated     bool
+	PostTurnSummaryEvent         string
+	CompactBoundaryValidated     bool
+	CompactBoundaryEvent         string
+	SessionStateChangedValidated bool
+	SessionStateChangedEvent     string
+	HookStartedValidated         bool
+	HookStartedEvent             string
+	HookProgressValidated        bool
+	HookProgressEvent            string
+	HookResponseValidated        bool
+	HookResponseEvent            string
+	ToolExecutionValidated       bool
+	InterruptValidated           bool
+	BackendValidated             bool
+	BackendStatus                string
+	BackendPID                   int
+	BackendStartedAt             int64
+	BackendStoppedAt             int64
+	BackendExitCode              int
 }
 
 func Run(args []string) (Result, error) {
@@ -146,69 +148,71 @@ func Run(args []string) (Result, error) {
 	}
 
 	return Result{
-		Status:                    "connected",
-		Action:                    actionForOptions(opts),
-		ConnectURL:                opts.ConnectURL,
-		Transport:                 transport,
-		ServerURL:                 serverURL,
-		AuthToken:                 authToken,
-		PrintMode:                 opts.PrintMode,
-		PrintPrompt:               opts.PrintPrompt,
-		OutputFormat:              opts.OutputFormat,
-		RequestCWD:                cwd,
-		SessionID:                 session.SessionID,
-		WSURL:                     session.WSURL,
-		WorkDir:                   session.WorkDir,
-		StreamValidated:           true,
-		StreamEvent:               streamResult.StreamEvent,
-		StreamContentValidated:    streamResult.StreamContentValidated,
-		StreamContentEvent:        streamResult.StreamContentEvent,
-		SystemValidated:           streamResult.SystemValidated,
-		SystemEvent:               streamResult.SystemEvent,
-		StatusValidated:           streamResult.StatusValidated,
-		StatusEvent:               streamResult.StatusEvent,
-		AuthValidated:             streamResult.AuthValidated,
-		AuthEvent:                 streamResult.AuthEvent,
-		KeepAliveValidated:        streamResult.KeepAliveValidated,
-		KeepAliveEvent:            streamResult.KeepAliveEvent,
-		ControlCancelValidated:    streamResult.ControlCancelValidated,
-		ControlCancelEvent:        streamResult.ControlCancelEvent,
-		MessageValidated:          streamResult.MessageValidated,
-		MessageEvent:              streamResult.MessageEvent,
-		ValidatedTurns:            streamResult.ValidatedTurns,
-		MultiTurnValidated:        streamResult.MultiTurnValidated,
-		ResultValidated:           streamResult.ResultValidated,
-		ResultEvent:               streamResult.ResultEvent,
-		ResultErrorValidated:      streamResult.ResultErrorValidated,
-		ResultErrorEvent:          streamResult.ResultErrorEvent,
-		ControlValidated:          streamResult.ControlValidated,
-		PermissionValidated:       streamResult.PermissionValidated,
-		PermissionDeniedValidated: streamResult.PermissionDeniedValidated,
-		PermissionDeniedEvent:     streamResult.PermissionDeniedEvent,
-		ToolProgressValidated:     streamResult.ToolProgressValidated,
-		ToolProgressEvent:         streamResult.ToolProgressEvent,
-		RateLimitValidated:        streamResult.RateLimitValidated,
-		RateLimitEvent:            streamResult.RateLimitEvent,
-		ToolUseSummaryValidated:   streamResult.ToolUseSummaryValidated,
-		ToolUseSummaryEvent:       streamResult.ToolUseSummaryEvent,
-		PostTurnSummaryValidated:  streamResult.PostTurnSummaryValidated,
-		PostTurnSummaryEvent:      streamResult.PostTurnSummaryEvent,
-		CompactBoundaryValidated:  streamResult.CompactBoundaryValidated,
-		CompactBoundaryEvent:      streamResult.CompactBoundaryEvent,
-		HookStartedValidated:      streamResult.HookStartedValidated,
-		HookStartedEvent:          streamResult.HookStartedEvent,
-		HookProgressValidated:     streamResult.HookProgressValidated,
-		HookProgressEvent:         streamResult.HookProgressEvent,
-		HookResponseValidated:     streamResult.HookResponseValidated,
-		HookResponseEvent:         streamResult.HookResponseEvent,
-		ToolExecutionValidated:    streamResult.ToolExecutionValidated,
-		InterruptValidated:        streamResult.InterruptValidated,
-		BackendValidated:          state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
-		BackendStatus:             state.BackendStatus,
-		BackendPID:                state.BackendPID,
-		BackendStartedAt:          state.BackendStartedAt,
-		BackendStoppedAt:          state.BackendStoppedAt,
-		BackendExitCode:           state.BackendExitCode,
+		Status:                       "connected",
+		Action:                       actionForOptions(opts),
+		ConnectURL:                   opts.ConnectURL,
+		Transport:                    transport,
+		ServerURL:                    serverURL,
+		AuthToken:                    authToken,
+		PrintMode:                    opts.PrintMode,
+		PrintPrompt:                  opts.PrintPrompt,
+		OutputFormat:                 opts.OutputFormat,
+		RequestCWD:                   cwd,
+		SessionID:                    session.SessionID,
+		WSURL:                        session.WSURL,
+		WorkDir:                      session.WorkDir,
+		StreamValidated:              true,
+		StreamEvent:                  streamResult.StreamEvent,
+		StreamContentValidated:       streamResult.StreamContentValidated,
+		StreamContentEvent:           streamResult.StreamContentEvent,
+		SystemValidated:              streamResult.SystemValidated,
+		SystemEvent:                  streamResult.SystemEvent,
+		StatusValidated:              streamResult.StatusValidated,
+		StatusEvent:                  streamResult.StatusEvent,
+		AuthValidated:                streamResult.AuthValidated,
+		AuthEvent:                    streamResult.AuthEvent,
+		KeepAliveValidated:           streamResult.KeepAliveValidated,
+		KeepAliveEvent:               streamResult.KeepAliveEvent,
+		ControlCancelValidated:       streamResult.ControlCancelValidated,
+		ControlCancelEvent:           streamResult.ControlCancelEvent,
+		MessageValidated:             streamResult.MessageValidated,
+		MessageEvent:                 streamResult.MessageEvent,
+		ValidatedTurns:               streamResult.ValidatedTurns,
+		MultiTurnValidated:           streamResult.MultiTurnValidated,
+		ResultValidated:              streamResult.ResultValidated,
+		ResultEvent:                  streamResult.ResultEvent,
+		ResultErrorValidated:         streamResult.ResultErrorValidated,
+		ResultErrorEvent:             streamResult.ResultErrorEvent,
+		ControlValidated:             streamResult.ControlValidated,
+		PermissionValidated:          streamResult.PermissionValidated,
+		PermissionDeniedValidated:    streamResult.PermissionDeniedValidated,
+		PermissionDeniedEvent:        streamResult.PermissionDeniedEvent,
+		ToolProgressValidated:        streamResult.ToolProgressValidated,
+		ToolProgressEvent:            streamResult.ToolProgressEvent,
+		RateLimitValidated:           streamResult.RateLimitValidated,
+		RateLimitEvent:               streamResult.RateLimitEvent,
+		ToolUseSummaryValidated:      streamResult.ToolUseSummaryValidated,
+		ToolUseSummaryEvent:          streamResult.ToolUseSummaryEvent,
+		PostTurnSummaryValidated:     streamResult.PostTurnSummaryValidated,
+		PostTurnSummaryEvent:         streamResult.PostTurnSummaryEvent,
+		CompactBoundaryValidated:     streamResult.CompactBoundaryValidated,
+		CompactBoundaryEvent:         streamResult.CompactBoundaryEvent,
+		SessionStateChangedValidated: streamResult.SessionStateChangedValidated,
+		SessionStateChangedEvent:     streamResult.SessionStateChangedEvent,
+		HookStartedValidated:         streamResult.HookStartedValidated,
+		HookStartedEvent:             streamResult.HookStartedEvent,
+		HookProgressValidated:        streamResult.HookProgressValidated,
+		HookProgressEvent:            streamResult.HookProgressEvent,
+		HookResponseValidated:        streamResult.HookResponseValidated,
+		HookResponseEvent:            streamResult.HookResponseEvent,
+		ToolExecutionValidated:       streamResult.ToolExecutionValidated,
+		InterruptValidated:           streamResult.InterruptValidated,
+		BackendValidated:             state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
+		BackendStatus:                state.BackendStatus,
+		BackendPID:                   state.BackendPID,
+		BackendStartedAt:             state.BackendStartedAt,
+		BackendStoppedAt:             state.BackendStoppedAt,
+		BackendExitCode:              state.BackendExitCode,
 	}, nil
 }
 
@@ -510,49 +514,51 @@ func stopSession(serverURL, transport, authToken, sessionID string) (sessionStat
 }
 
 type streamValidation struct {
-	StreamEvent               string
-	StreamContentValidated    bool
-	StreamContentEvent        string
-	SystemValidated           bool
-	SystemEvent               string
-	StatusValidated           bool
-	StatusEvent               string
-	AuthValidated             bool
-	AuthEvent                 string
-	KeepAliveValidated        bool
-	KeepAliveEvent            string
-	ControlCancelValidated    bool
-	ControlCancelEvent        string
-	MessageValidated          bool
-	MessageEvent              string
-	ValidatedTurns            int
-	MultiTurnValidated        bool
-	ResultValidated           bool
-	ResultEvent               string
-	ResultErrorValidated      bool
-	ResultErrorEvent          string
-	ControlValidated          bool
-	PermissionValidated       bool
-	PermissionDeniedValidated bool
-	PermissionDeniedEvent     string
-	ToolProgressValidated     bool
-	ToolProgressEvent         string
-	RateLimitValidated        bool
-	RateLimitEvent            string
-	ToolUseSummaryValidated   bool
-	ToolUseSummaryEvent       string
-	PostTurnSummaryValidated  bool
-	PostTurnSummaryEvent      string
-	CompactBoundaryValidated  bool
-	CompactBoundaryEvent      string
-	HookStartedValidated      bool
-	HookStartedEvent          string
-	HookProgressValidated     bool
-	HookProgressEvent         string
-	HookResponseValidated     bool
-	HookResponseEvent         string
-	ToolExecutionValidated    bool
-	InterruptValidated        bool
+	StreamEvent                  string
+	StreamContentValidated       bool
+	StreamContentEvent           string
+	SystemValidated              bool
+	SystemEvent                  string
+	StatusValidated              bool
+	StatusEvent                  string
+	AuthValidated                bool
+	AuthEvent                    string
+	KeepAliveValidated           bool
+	KeepAliveEvent               string
+	ControlCancelValidated       bool
+	ControlCancelEvent           string
+	MessageValidated             bool
+	MessageEvent                 string
+	ValidatedTurns               int
+	MultiTurnValidated           bool
+	ResultValidated              bool
+	ResultEvent                  string
+	ResultErrorValidated         bool
+	ResultErrorEvent             string
+	ControlValidated             bool
+	PermissionValidated          bool
+	PermissionDeniedValidated    bool
+	PermissionDeniedEvent        string
+	ToolProgressValidated        bool
+	ToolProgressEvent            string
+	RateLimitValidated           bool
+	RateLimitEvent               string
+	ToolUseSummaryValidated      bool
+	ToolUseSummaryEvent          string
+	PostTurnSummaryValidated     bool
+	PostTurnSummaryEvent         string
+	CompactBoundaryValidated     bool
+	CompactBoundaryEvent         string
+	SessionStateChangedValidated bool
+	SessionStateChangedEvent     string
+	HookStartedValidated         bool
+	HookStartedEvent             string
+	HookProgressValidated        bool
+	HookProgressEvent            string
+	HookResponseValidated        bool
+	HookResponseEvent            string
+	ToolExecutionValidated       bool
+	InterruptValidated           bool
 }
 
 func validateStream(rawWSURL, authToken string, opts Options) (streamValidation, error) {
@@ -632,6 +638,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		resultValidated := false
 		postTurnSummaryValidated := false
 		compactBoundaryValidated := false
+		sessionStateRunningValidated := false
+		sessionStateIdleValidated := false
 		hookStartedValidated := false
 		hookProgressValidated := false
 		hookResponseValidated := false
@@ -701,6 +709,26 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.CompactBoundaryValidated = true
 					result.CompactBoundaryEvent = "system:compact_boundary"
 					compactBoundaryValidated = true
+				case "session_state_changed":
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid session_state_changed: missing session_id")
+					}
+					state := strings.TrimSpace(asString(incoming["state"]))
+					switch state {
+					case "running":
+						sessionStateRunningValidated = true
+					case "idle":
+						if !sessionStateRunningValidated {
+							return streamValidation{}, fmt.Errorf("invalid session_state_changed: idle seen before running")
+						}
+						sessionStateIdleValidated = true
+						result.SessionStateChangedValidated = true
+						result.SessionStateChangedEvent = "system:session_state_changed:idle"
+					case "requires_action":
+						return streamValidation{}, fmt.Errorf("unexpected session_state_changed state: %s", state)
+					default:
+						return streamValidation{}, fmt.Errorf("invalid session_state_changed: missing/unknown state")
+					}
 				case "hook_started":
 					if turn.behavior == "deny" {
 						return streamValidation{}, fmt.Errorf("unexpected hook_started during deny turn")
@@ -990,7 +1018,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && postTurnSummaryValidated && compactBoundaryValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -1108,6 +1136,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("post_turn_summary_event=%s\n", valueOrNone(r.PostTurnSummaryEvent)))
 	b.WriteString(fmt.Sprintf("compact_boundary_validated=%t\n", r.CompactBoundaryValidated))
 	b.WriteString(fmt.Sprintf("compact_boundary_event=%s\n", valueOrNone(r.CompactBoundaryEvent)))
+	b.WriteString(fmt.Sprintf("session_state_changed_validated=%t\n", r.SessionStateChangedValidated))
+	b.WriteString(fmt.Sprintf("session_state_changed_event=%s\n", valueOrNone(r.SessionStateChangedEvent)))
 	b.WriteString(fmt.Sprintf("hook_started_validated=%t\n", r.HookStartedValidated))
 	b.WriteString(fmt.Sprintf("hook_started_event=%s\n", valueOrNone(r.HookStartedEvent)))
 	b.WriteString(fmt.Sprintf("hook_progress_validated=%t\n", r.HookProgressValidated))
