@@ -986,6 +986,19 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				case "set_max_thinking_tokens":
 				case "mcp_status":
 					responsePayload["mcpServers"] = []any{}
+				case "get_context_usage":
+					responsePayload["categories"] = []any{}
+					responsePayload["totalTokens"] = 0
+					responsePayload["maxTokens"] = 0
+					responsePayload["rawMaxTokens"] = 0
+					responsePayload["percentage"] = 0
+					responsePayload["gridRows"] = []any{}
+					responsePayload["model"] = "claude-sonnet-4-5"
+					responsePayload["memoryFiles"] = []any{}
+					responsePayload["mcpTools"] = []any{}
+					responsePayload["agents"] = []any{}
+					responsePayload["isAutoCompactEnabled"] = false
+					responsePayload["apiUsage"] = nil
 				case "end_session":
 				default:
 					continue

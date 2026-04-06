@@ -107,6 +107,8 @@ type Result struct {
 	SetMaxThinkingTokensEvent     string
 	MCPStatusValidated            bool
 	MCPStatusEvent                string
+	GetContextUsageValidated      bool
+	GetContextUsageEvent          string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 	BackendValidated              bool
@@ -253,6 +255,8 @@ func Run(args []string) (Result, error) {
 		SetMaxThinkingTokensEvent:     streamResult.SetMaxThinkingTokensEvent,
 		MCPStatusValidated:            streamResult.MCPStatusValidated,
 		MCPStatusEvent:                streamResult.MCPStatusEvent,
+		GetContextUsageValidated:      streamResult.GetContextUsageValidated,
+		GetContextUsageEvent:          streamResult.GetContextUsageEvent,
 		EndSessionValidated:           streamResult.EndSessionValidated,
 		EndSessionEvent:               streamResult.EndSessionEvent,
 		BackendValidated:              state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
@@ -629,6 +633,8 @@ type streamValidation struct {
 	SetMaxThinkingTokensEvent     string
 	MCPStatusValidated            bool
 	MCPStatusEvent                string
+	GetContextUsageValidated      bool
+	GetContextUsageEvent          string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 }
@@ -1411,6 +1417,59 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		result.MCPStatusValidated = true
 		result.MCPStatusEvent = "control_request:mcp_status"
 	}
+	getContextUsageID := "get-context-usage-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": getContextUsageID,
+		"request": map[string]any{
+			"subtype": "get_context_usage",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect get_context_usage request: %w", err)
+	}
+	for !result.GetContextUsageValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect get_context_usage flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != getContextUsageID {
+			continue
+		}
+		responsePayload, _ := response["response"].(map[string]any)
+		if _, ok := responsePayload["categories"].([]any); !ok {
+			return streamValidation{}, fmt.Errorf("invalid get_context_usage response: missing categories")
+		}
+		if intFromAny(responsePayload["totalTokens"]) != 0 || intFromAny(responsePayload["maxTokens"]) != 0 || intFromAny(responsePayload["rawMaxTokens"]) != 0 || intFromAny(responsePayload["percentage"]) != 0 {
+			return streamValidation{}, fmt.Errorf("invalid get_context_usage response: expected zero totals")
+		}
+		if _, ok := responsePayload["gridRows"].([]any); !ok {
+			return streamValidation{}, fmt.Errorf("invalid get_context_usage response: missing gridRows")
+		}
+		if strings.TrimSpace(asString(responsePayload["model"])) == "" {
+			return streamValidation{}, fmt.Errorf("invalid get_context_usage response: missing model")
+		}
+		if _, ok := responsePayload["memoryFiles"].([]any); !ok {
+			return streamValidation{}, fmt.Errorf("invalid get_context_usage response: missing memoryFiles")
+		}
+		if _, ok := responsePayload["mcpTools"].([]any); !ok {
+			return streamValidation{}, fmt.Errorf("invalid get_context_usage response: missing mcpTools")
+		}
+		if _, ok := responsePayload["agents"].([]any); !ok {
+			return streamValidation{}, fmt.Errorf("invalid get_context_usage response: missing agents")
+		}
+		if isAutoCompactEnabled, ok := responsePayload["isAutoCompactEnabled"].(bool); !ok || isAutoCompactEnabled {
+			return streamValidation{}, fmt.Errorf("invalid get_context_usage response: expected isAutoCompactEnabled=false")
+		}
+		if responsePayload["apiUsage"] != nil {
+			return streamValidation{}, fmt.Errorf("invalid get_context_usage response: expected apiUsage=null")
+		}
+		result.GetContextUsageValidated = true
+		result.GetContextUsageEvent = "control_request:get_context_usage"
+	}
 	endSessionID := "end-session-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -1553,6 +1612,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("set_max_thinking_tokens_event=%s\n", valueOrNone(r.SetMaxThinkingTokensEvent)))
 	b.WriteString(fmt.Sprintf("mcp_status_validated=%t\n", r.MCPStatusValidated))
 	b.WriteString(fmt.Sprintf("mcp_status_event=%s\n", valueOrNone(r.MCPStatusEvent)))
+	b.WriteString(fmt.Sprintf("get_context_usage_validated=%t\n", r.GetContextUsageValidated))
+	b.WriteString(fmt.Sprintf("get_context_usage_event=%s\n", valueOrNone(r.GetContextUsageEvent)))
 	b.WriteString(fmt.Sprintf("end_session_validated=%t\n", r.EndSessionValidated))
 	b.WriteString(fmt.Sprintf("end_session_event=%s\n", valueOrNone(r.EndSessionEvent)))
 	b.WriteString(fmt.Sprintf("backend_validated=%t\n", r.BackendValidated))

@@ -855,6 +855,64 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "get-context-usage-1",
+		"request": map[string]any{
+			"subtype": "get_context_usage",
+		},
+	}); err != nil {
+		t.Fatalf("write get_context_usage request failed: %v", err)
+	}
+	var getContextUsageResp map[string]any
+	if err := ws.ReadJSON(&getContextUsageResp); err != nil {
+		t.Fatalf("read get_context_usage response failed: %v", err)
+	}
+	if getContextUsageResp["type"] != "control_response" {
+		t.Fatalf("unexpected get_context_usage response: %#v", getContextUsageResp)
+	}
+	getContextUsageResponse, _ := getContextUsageResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(getContextUsageResponse["request_id"])) != "get-context-usage-1" {
+		t.Fatalf("unexpected get_context_usage request id: %#v", getContextUsageResp)
+	}
+	getContextUsagePayload, _ := getContextUsageResponse["response"].(map[string]any)
+	if _, ok := getContextUsagePayload["categories"].([]any); !ok {
+		t.Fatalf("unexpected get_context_usage payload: %#v", getContextUsageResp)
+	}
+	if totalTokens, ok := getContextUsagePayload["totalTokens"].(float64); !ok || totalTokens != 0 {
+		t.Fatalf("unexpected get_context_usage totalTokens: %#v", getContextUsageResp)
+	}
+	if maxTokens, ok := getContextUsagePayload["maxTokens"].(float64); !ok || maxTokens != 0 {
+		t.Fatalf("unexpected get_context_usage maxTokens: %#v", getContextUsageResp)
+	}
+	if rawMaxTokens, ok := getContextUsagePayload["rawMaxTokens"].(float64); !ok || rawMaxTokens != 0 {
+		t.Fatalf("unexpected get_context_usage rawMaxTokens: %#v", getContextUsageResp)
+	}
+	if percentage, ok := getContextUsagePayload["percentage"].(float64); !ok || percentage != 0 {
+		t.Fatalf("unexpected get_context_usage totals: %#v", getContextUsageResp)
+	}
+	if _, ok := getContextUsagePayload["gridRows"].([]any); !ok {
+		t.Fatalf("unexpected get_context_usage gridRows: %#v", getContextUsageResp)
+	}
+	if strings.TrimSpace(asString(getContextUsagePayload["model"])) == "" {
+		t.Fatalf("unexpected get_context_usage model: %#v", getContextUsageResp)
+	}
+	if _, ok := getContextUsagePayload["memoryFiles"].([]any); !ok {
+		t.Fatalf("unexpected get_context_usage memoryFiles: %#v", getContextUsageResp)
+	}
+	if _, ok := getContextUsagePayload["mcpTools"].([]any); !ok {
+		t.Fatalf("unexpected get_context_usage mcpTools: %#v", getContextUsageResp)
+	}
+	if _, ok := getContextUsagePayload["agents"].([]any); !ok {
+		t.Fatalf("unexpected get_context_usage agents: %#v", getContextUsageResp)
+	}
+	if isAutoCompactEnabled, ok := getContextUsagePayload["isAutoCompactEnabled"].(bool); !ok || isAutoCompactEnabled {
+		t.Fatalf("unexpected get_context_usage isAutoCompactEnabled: %#v", getContextUsageResp)
+	}
+	if getContextUsagePayload["apiUsage"] != nil {
+		t.Fatalf("unexpected get_context_usage apiUsage: %#v", getContextUsageResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "end-session-1",
 		"request": map[string]any{
 			"subtype": "end_session",
