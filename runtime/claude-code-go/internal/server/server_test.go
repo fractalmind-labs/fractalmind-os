@@ -322,6 +322,22 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(taskNotification["task_id"])) != strings.TrimSpace(asString(taskStarted["task_id"])) || strings.TrimSpace(asString(taskNotification["tool_use_id"])) != strings.TrimSpace(asString(request["tool_use_id"])) || strings.TrimSpace(asString(taskNotification["status"])) != "completed" || strings.TrimSpace(asString(taskNotification["output_file"])) == "" || strings.TrimSpace(asString(taskNotification["summary"])) != "echo:hello [approved]" || int(taskNotificationUsage["tool_uses"].(float64)) != 1 {
 		t.Fatalf("invalid task_notification payload: %#v", taskNotification)
 	}
+	var filesPersisted map[string]any
+	if err := ws.ReadJSON(&filesPersisted); err != nil {
+		t.Fatalf("read files_persisted failed: %v", err)
+	}
+	if filesPersisted["type"] != "system" || strings.TrimSpace(asString(filesPersisted["subtype"])) != "files_persisted" || strings.TrimSpace(asString(filesPersisted["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected files_persisted payload: %#v", filesPersisted)
+	}
+	filesPersistedFiles, _ := filesPersisted["files"].([]any)
+	filesPersistedFailed, _ := filesPersisted["failed"].([]any)
+	if len(filesPersistedFiles) != 1 || len(filesPersistedFailed) != 0 || strings.TrimSpace(asString(filesPersisted["processed_at"])) == "" {
+		t.Fatalf("invalid files_persisted payload: %#v", filesPersisted)
+	}
+	filesPersistedFile0, _ := filesPersistedFiles[0].(map[string]any)
+	if strings.TrimSpace(asString(filesPersistedFile0["filename"])) == "" || strings.TrimSpace(asString(filesPersistedFile0["file_id"])) == "" {
+		t.Fatalf("invalid files_persisted file payload: %#v", filesPersisted)
+	}
 	var postTurnSummary map[string]any
 	if err := ws.ReadJSON(&postTurnSummary); err != nil {
 		t.Fatalf("read post_turn_summary failed: %v", err)
@@ -518,6 +534,22 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondTaskNotificationUsage, _ := secondTaskNotification["usage"].(map[string]any)
 	if strings.TrimSpace(asString(secondTaskNotification["task_id"])) != strings.TrimSpace(asString(secondTaskStarted["task_id"])) || strings.TrimSpace(asString(secondTaskNotification["tool_use_id"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) || strings.TrimSpace(asString(secondTaskNotification["status"])) != "completed" || strings.TrimSpace(asString(secondTaskNotification["output_file"])) == "" || strings.TrimSpace(asString(secondTaskNotification["summary"])) != "echo:hello again [approved]" || int(secondTaskNotificationUsage["tool_uses"].(float64)) != 1 {
 		t.Fatalf("invalid second task_notification payload: %#v", secondTaskNotification)
+	}
+	var secondFilesPersisted map[string]any
+	if err := ws.ReadJSON(&secondFilesPersisted); err != nil {
+		t.Fatalf("read second files_persisted failed: %v", err)
+	}
+	if secondFilesPersisted["type"] != "system" || strings.TrimSpace(asString(secondFilesPersisted["subtype"])) != "files_persisted" || strings.TrimSpace(asString(secondFilesPersisted["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second files_persisted payload: %#v", secondFilesPersisted)
+	}
+	secondFilesPersistedFiles, _ := secondFilesPersisted["files"].([]any)
+	secondFilesPersistedFailed, _ := secondFilesPersisted["failed"].([]any)
+	if len(secondFilesPersistedFiles) != 1 || len(secondFilesPersistedFailed) != 0 || strings.TrimSpace(asString(secondFilesPersisted["processed_at"])) == "" {
+		t.Fatalf("invalid second files_persisted payload: %#v", secondFilesPersisted)
+	}
+	secondFilesPersistedFile0, _ := secondFilesPersistedFiles[0].(map[string]any)
+	if strings.TrimSpace(asString(secondFilesPersistedFile0["filename"])) == "" || strings.TrimSpace(asString(secondFilesPersistedFile0["file_id"])) == "" {
+		t.Fatalf("invalid second files_persisted file payload: %#v", secondFilesPersisted)
 	}
 	var secondPostTurnSummary map[string]any
 	if err := ws.ReadJSON(&secondPostTurnSummary); err != nil {

@@ -17,6 +17,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -816,6 +817,24 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"usage":       map[string]any{"total_tokens": 0, "tool_uses": 1, "duration_ms": 1},
 					"uuid":        taskNotificationUUID,
 					"session_id":  session.ID,
+				})
+				filesPersistedUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":    "system",
+					"subtype": "files_persisted",
+					"files": []map[string]any{
+						{
+							"filename": session.WorkDir + "/.claude-code-go/tasks/" + taskID + ".log",
+							"file_id":  taskID + "-output",
+						},
+					},
+					"failed":       []map[string]any{},
+					"processed_at": time.Now().UTC().Format(time.RFC3339),
+					"uuid":         filesPersistedUUID,
+					"session_id":   session.ID,
 				})
 				postTurnUUID, err := generateRequestID()
 				if err != nil {

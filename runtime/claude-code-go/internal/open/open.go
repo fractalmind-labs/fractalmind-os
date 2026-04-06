@@ -71,6 +71,8 @@ type Result struct {
 	TaskProgressEvent            string
 	TaskNotificationValidated    bool
 	TaskNotificationEvent        string
+	FilesPersistedValidated      bool
+	FilesPersistedEvent          string
 	ToolProgressValidated        bool
 	ToolProgressEvent            string
 	RateLimitValidated           bool
@@ -199,6 +201,8 @@ func Run(args []string) (Result, error) {
 		TaskProgressEvent:            streamResult.TaskProgressEvent,
 		TaskNotificationValidated:    streamResult.TaskNotificationValidated,
 		TaskNotificationEvent:        streamResult.TaskNotificationEvent,
+		FilesPersistedValidated:      streamResult.FilesPersistedValidated,
+		FilesPersistedEvent:          streamResult.FilesPersistedEvent,
 		ToolProgressValidated:        streamResult.ToolProgressValidated,
 		ToolProgressEvent:            streamResult.ToolProgressEvent,
 		RateLimitValidated:           streamResult.RateLimitValidated,
@@ -557,6 +561,8 @@ type streamValidation struct {
 	TaskProgressEvent            string
 	TaskNotificationValidated    bool
 	TaskNotificationEvent        string
+	FilesPersistedValidated      bool
+	FilesPersistedEvent          string
 	ToolProgressValidated        bool
 	ToolProgressEvent            string
 	RateLimitValidated           bool
@@ -658,6 +664,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		taskStartedValidated := false
 		taskProgressValidated := false
 		taskNotificationValidated := false
+		filesPersistedValidated := false
 		postTurnSummaryValidated := false
 		compactBoundaryValidated := false
 		sessionStateRunningValidated := false
@@ -804,6 +811,34 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.TaskNotificationValidated = true
 					result.TaskNotificationEvent = "system:task_notification"
 					taskNotificationValidated = true
+				case "files_persisted":
+					if turn.behavior == "deny" {
+						return streamValidation{}, fmt.Errorf("unexpected files_persisted during deny turn")
+					}
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid files_persisted: missing session_id")
+					}
+					files, _ := incoming["files"].([]any)
+					if len(files) == 0 {
+						return streamValidation{}, fmt.Errorf("invalid files_persisted: missing files")
+					}
+					file0, _ := files[0].(map[string]any)
+					if strings.TrimSpace(asString(file0["filename"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid files_persisted: missing files[0].filename")
+					}
+					if strings.TrimSpace(asString(file0["file_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid files_persisted: missing files[0].file_id")
+					}
+					failed, _ := incoming["failed"].([]any)
+					if len(failed) != 0 {
+						return streamValidation{}, fmt.Errorf("invalid files_persisted: expected failed=[], got %d items", len(failed))
+					}
+					if strings.TrimSpace(asString(incoming["processed_at"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid files_persisted: missing processed_at")
+					}
+					result.FilesPersistedValidated = true
+					result.FilesPersistedEvent = "system:files_persisted"
+					filesPersistedValidated = true
 				case "compact_boundary":
 					if turn.behavior == "deny" {
 						return streamValidation{}, fmt.Errorf("unexpected compact_boundary during deny turn")
@@ -1130,7 +1165,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -1244,6 +1279,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("task_progress_event=%s\n", valueOrNone(r.TaskProgressEvent)))
 	b.WriteString(fmt.Sprintf("task_notification_validated=%t\n", r.TaskNotificationValidated))
 	b.WriteString(fmt.Sprintf("task_notification_event=%s\n", valueOrNone(r.TaskNotificationEvent)))
+	b.WriteString(fmt.Sprintf("files_persisted_validated=%t\n", r.FilesPersistedValidated))
+	b.WriteString(fmt.Sprintf("files_persisted_event=%s\n", valueOrNone(r.FilesPersistedEvent)))
 	b.WriteString(fmt.Sprintf("tool_progress_validated=%t\n", r.ToolProgressValidated))
 	b.WriteString(fmt.Sprintf("tool_progress_event=%s\n", valueOrNone(r.ToolProgressEvent)))
 	b.WriteString(fmt.Sprintf("rate_limit_validated=%t\n", r.RateLimitValidated))
