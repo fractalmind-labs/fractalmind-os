@@ -1035,6 +1035,8 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					}
 				case "generate_session_title":
 					responsePayload["title"] = "Direct Connect Session"
+				case "side_question":
+					responsePayload["response"] = "Direct Connect Side Answer"
 				case "end_session":
 				default:
 					continue

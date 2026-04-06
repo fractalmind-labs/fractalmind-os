@@ -1234,6 +1234,32 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "side-question-1",
+		"request": map[string]any{
+			"subtype":  "side_question",
+			"question": "what is the summary?",
+		},
+	}); err != nil {
+		t.Fatalf("write side_question request failed: %v", err)
+	}
+	var sideQuestionResp map[string]any
+	if err := ws.ReadJSON(&sideQuestionResp); err != nil {
+		t.Fatalf("read side_question response failed: %v", err)
+	}
+	if sideQuestionResp["type"] != "control_response" {
+		t.Fatalf("unexpected side_question response: %#v", sideQuestionResp)
+	}
+	sideQuestionResponse, _ := sideQuestionResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(sideQuestionResponse["request_id"])) != "side-question-1" {
+		t.Fatalf("unexpected side_question request id: %#v", sideQuestionResp)
+	}
+	sideQuestionPayload, _ := sideQuestionResponse["response"].(map[string]any)
+	if strings.TrimSpace(asString(sideQuestionPayload["response"])) == "" {
+		t.Fatalf("unexpected side_question payload: %#v", sideQuestionResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "end-session-1",
 		"request": map[string]any{
 			"subtype": "end_session",

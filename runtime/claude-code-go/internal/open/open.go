@@ -138,6 +138,8 @@ type Result struct {
 	GetSettingsEvent              string
 	GenerateSessionTitleValidated bool
 	GenerateSessionTitleEvent     string
+	SideQuestionValidated         bool
+	SideQuestionEvent             string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 	BackendValidated              bool
@@ -315,6 +317,8 @@ func Run(args []string) (Result, error) {
 		GetSettingsEvent:              streamResult.GetSettingsEvent,
 		GenerateSessionTitleValidated: streamResult.GenerateSessionTitleValidated,
 		GenerateSessionTitleEvent:     streamResult.GenerateSessionTitleEvent,
+		SideQuestionValidated:         streamResult.SideQuestionValidated,
+		SideQuestionEvent:             streamResult.SideQuestionEvent,
 		EndSessionValidated:           streamResult.EndSessionValidated,
 		EndSessionEvent:               streamResult.EndSessionEvent,
 		BackendValidated:              state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
@@ -722,6 +726,8 @@ type streamValidation struct {
 	GetSettingsEvent              string
 	GenerateSessionTitleValidated bool
 	GenerateSessionTitleEvent     string
+	SideQuestionValidated         bool
+	SideQuestionEvent             string
 	EndSessionValidated           bool
 	EndSessionEvent               string
 }
@@ -1965,6 +1971,36 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		result.GenerateSessionTitleValidated = true
 		result.GenerateSessionTitleEvent = "control_request:generate_session_title"
 	}
+	sideQuestionID := "side-question-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": sideQuestionID,
+		"request": map[string]any{
+			"subtype":  "side_question",
+			"question": "what is the summary?",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect side_question request: %w", err)
+	}
+	for !result.SideQuestionValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect side_question flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != sideQuestionID {
+			continue
+		}
+		responsePayload, _ := response["response"].(map[string]any)
+		if strings.TrimSpace(asString(responsePayload["response"])) == "" {
+			return streamValidation{}, fmt.Errorf("invalid side_question response: missing response")
+		}
+		result.SideQuestionValidated = true
+		result.SideQuestionEvent = "control_request:side_question"
+	}
 	endSessionID := "end-session-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -2138,6 +2174,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("get_settings_event=%s\n", valueOrNone(r.GetSettingsEvent)))
 	b.WriteString(fmt.Sprintf("generate_session_title_validated=%t\n", r.GenerateSessionTitleValidated))
 	b.WriteString(fmt.Sprintf("generate_session_title_event=%s\n", valueOrNone(r.GenerateSessionTitleEvent)))
+	b.WriteString(fmt.Sprintf("side_question_validated=%t\n", r.SideQuestionValidated))
+	b.WriteString(fmt.Sprintf("side_question_event=%s\n", valueOrNone(r.SideQuestionEvent)))
 	b.WriteString(fmt.Sprintf("end_session_validated=%t\n", r.EndSessionValidated))
 	b.WriteString(fmt.Sprintf("end_session_event=%s\n", valueOrNone(r.EndSessionEvent)))
 	b.WriteString(fmt.Sprintf("backend_validated=%t\n", r.BackendValidated))
