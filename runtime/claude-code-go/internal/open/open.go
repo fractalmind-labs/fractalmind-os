@@ -117,6 +117,8 @@ type Result struct {
 	ReloadPluginsEvent            string
 	MCPReconnectValidated         bool
 	MCPReconnectEvent             string
+	MCPToggleValidated            bool
+	MCPToggleEvent                string
 	SeedReadStateValidated        bool
 	SeedReadStateEvent            string
 	RewindFilesValidated          bool
@@ -284,6 +286,8 @@ func Run(args []string) (Result, error) {
 		ReloadPluginsEvent:            streamResult.ReloadPluginsEvent,
 		MCPReconnectValidated:         streamResult.MCPReconnectValidated,
 		MCPReconnectEvent:             streamResult.MCPReconnectEvent,
+		MCPToggleValidated:            streamResult.MCPToggleValidated,
+		MCPToggleEvent:                streamResult.MCPToggleEvent,
 		SeedReadStateValidated:        streamResult.SeedReadStateValidated,
 		SeedReadStateEvent:            streamResult.SeedReadStateEvent,
 		RewindFilesValidated:          streamResult.RewindFilesValidated,
@@ -681,6 +685,8 @@ type streamValidation struct {
 	ReloadPluginsEvent            string
 	MCPReconnectValidated         bool
 	MCPReconnectEvent             string
+	MCPToggleValidated            bool
+	MCPToggleEvent                string
 	SeedReadStateValidated        bool
 	SeedReadStateEvent            string
 	RewindFilesValidated          bool
@@ -1669,6 +1675,33 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		result.MCPReconnectValidated = true
 		result.MCPReconnectEvent = "control_request:mcp_reconnect"
 	}
+	mcpToggleID := "mcp-toggle-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": mcpToggleID,
+		"request": map[string]any{
+			"subtype":    "mcp_toggle",
+			"serverName": "demo-mcp",
+			"enabled":    true,
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect mcp_toggle request: %w", err)
+	}
+	for !result.MCPToggleValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect mcp_toggle flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != mcpToggleID {
+			continue
+		}
+		result.MCPToggleValidated = true
+		result.MCPToggleEvent = "control_request:mcp_toggle"
+	}
 	seedReadStateID := "seed-read-state-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -1933,6 +1966,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("reload_plugins_event=%s\n", valueOrNone(r.ReloadPluginsEvent)))
 	b.WriteString(fmt.Sprintf("mcp_reconnect_validated=%t\n", r.MCPReconnectValidated))
 	b.WriteString(fmt.Sprintf("mcp_reconnect_event=%s\n", valueOrNone(r.MCPReconnectEvent)))
+	b.WriteString(fmt.Sprintf("mcp_toggle_validated=%t\n", r.MCPToggleValidated))
+	b.WriteString(fmt.Sprintf("mcp_toggle_event=%s\n", valueOrNone(r.MCPToggleEvent)))
 	b.WriteString(fmt.Sprintf("seed_read_state_validated=%t\n", r.SeedReadStateValidated))
 	b.WriteString(fmt.Sprintf("seed_read_state_event=%s\n", valueOrNone(r.SeedReadStateEvent)))
 	b.WriteString(fmt.Sprintf("rewind_files_validated=%t\n", r.RewindFilesValidated))

@@ -1013,6 +1013,8 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					responsePayload["error_count"] = 0
 				case "mcp_reconnect":
 					_ = responsePayload
+				case "mcp_toggle":
+					_ = responsePayload
 				case "seed_read_state":
 					_ = responsePayload
 				case "rewind_files":

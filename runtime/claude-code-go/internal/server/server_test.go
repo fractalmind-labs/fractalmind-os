@@ -1021,6 +1021,29 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "mcp-toggle-1",
+		"request": map[string]any{
+			"subtype":    "mcp_toggle",
+			"serverName": "demo-mcp",
+			"enabled":    true,
+		},
+	}); err != nil {
+		t.Fatalf("write mcp_toggle request failed: %v", err)
+	}
+	var mcpToggleResp map[string]any
+	if err := ws.ReadJSON(&mcpToggleResp); err != nil {
+		t.Fatalf("read mcp_toggle response failed: %v", err)
+	}
+	if mcpToggleResp["type"] != "control_response" {
+		t.Fatalf("unexpected mcp_toggle response: %#v", mcpToggleResp)
+	}
+	mcpToggleResponse, _ := mcpToggleResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(mcpToggleResponse["request_id"])) != "mcp-toggle-1" {
+		t.Fatalf("unexpected mcp_toggle request id: %#v", mcpToggleResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "rewind-files-1",
 		"request": map[string]any{
 			"subtype":         "rewind_files",
