@@ -786,6 +786,28 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "set-permission-mode-1",
+		"request": map[string]any{
+			"subtype": "set_permission_mode",
+			"mode":    "acceptEdits",
+		},
+	}); err != nil {
+		t.Fatalf("write set_permission_mode request failed: %v", err)
+	}
+	var setPermissionModeResp map[string]any
+	if err := ws.ReadJSON(&setPermissionModeResp); err != nil {
+		t.Fatalf("read set_permission_mode response failed: %v", err)
+	}
+	if setPermissionModeResp["type"] != "control_response" {
+		t.Fatalf("unexpected set_permission_mode response: %#v", setPermissionModeResp)
+	}
+	setPermissionModeResponse, _ := setPermissionModeResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(setPermissionModeResponse["request_id"])) != "set-permission-mode-1" {
+		t.Fatalf("unexpected set_permission_mode request id: %#v", setPermissionModeResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "end-session-1",
 		"request": map[string]any{
 			"subtype": "end_session",

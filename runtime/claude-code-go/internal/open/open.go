@@ -101,6 +101,8 @@ type Result struct {
 	InterruptValidated           bool
 	SetModelValidated            bool
 	SetModelEvent                string
+	SetPermissionModeValidated   bool
+	SetPermissionModeEvent       string
 	EndSessionValidated          bool
 	EndSessionEvent              string
 	BackendValidated             bool
@@ -241,6 +243,8 @@ func Run(args []string) (Result, error) {
 		InterruptValidated:           streamResult.InterruptValidated,
 		SetModelValidated:            streamResult.SetModelValidated,
 		SetModelEvent:                streamResult.SetModelEvent,
+		SetPermissionModeValidated:   streamResult.SetPermissionModeValidated,
+		SetPermissionModeEvent:       streamResult.SetPermissionModeEvent,
 		EndSessionValidated:          streamResult.EndSessionValidated,
 		EndSessionEvent:              streamResult.EndSessionEvent,
 		BackendValidated:             state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
@@ -611,6 +615,8 @@ type streamValidation struct {
 	InterruptValidated           bool
 	SetModelValidated            bool
 	SetModelEvent                string
+	SetPermissionModeValidated   bool
+	SetPermissionModeEvent       string
 	EndSessionValidated          bool
 	EndSessionEvent              string
 }
@@ -1310,6 +1316,31 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 			result.SetModelEvent = "control_request:set_model"
 		}
 	}
+	setPermissionModeID := "set-permission-mode-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": setPermissionModeID,
+		"request": map[string]any{
+			"subtype": "set_permission_mode",
+			"mode":    "acceptEdits",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect set_permission_mode request: %w", err)
+	}
+	for !result.SetPermissionModeValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect set_permission_mode flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) == setPermissionModeID {
+			result.SetPermissionModeValidated = true
+			result.SetPermissionModeEvent = "control_request:set_permission_mode"
+		}
+	}
 	endSessionID := "end-session-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -1446,6 +1477,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("interrupt_validated=%t\n", r.InterruptValidated))
 	b.WriteString(fmt.Sprintf("set_model_validated=%t\n", r.SetModelValidated))
 	b.WriteString(fmt.Sprintf("set_model_event=%s\n", valueOrNone(r.SetModelEvent)))
+	b.WriteString(fmt.Sprintf("set_permission_mode_validated=%t\n", r.SetPermissionModeValidated))
+	b.WriteString(fmt.Sprintf("set_permission_mode_event=%s\n", valueOrNone(r.SetPermissionModeEvent)))
 	b.WriteString(fmt.Sprintf("end_session_validated=%t\n", r.EndSessionValidated))
 	b.WriteString(fmt.Sprintf("end_session_event=%s\n", valueOrNone(r.EndSessionEvent)))
 	b.WriteString(fmt.Sprintf("backend_validated=%t\n", r.BackendValidated))
