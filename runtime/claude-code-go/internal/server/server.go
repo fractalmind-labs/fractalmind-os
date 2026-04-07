@@ -692,6 +692,30 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					pendingRequestID = ""
 					pendingToolUseID = ""
 					continue
+				} else if behavior == "max_budget_usd" {
+					resultUUID, err := generateRequestID()
+					if err != nil {
+						return
+					}
+					_ = conn.WriteJSON(map[string]any{
+						"type":            "result",
+						"subtype":         "error_max_budget_usd",
+						"duration_ms":     1,
+						"duration_api_ms": 0,
+						"is_error":        true,
+						"num_turns":       completedTurns,
+						"stop_reason":     "max_budget_usd",
+						"total_cost_usd":  0,
+						"usage":           map[string]any{},
+						"modelUsage":      map[string]any{"claude-sonnet-4-5": minimalModelUsage()},
+						"errors":          []string{"max budget usd reached in direct-connect stub"},
+						"uuid":            resultUUID,
+						"session_id":      session.ID,
+					})
+					pendingPrompt = ""
+					pendingRequestID = ""
+					pendingToolUseID = ""
+					continue
 				}
 				toolInputText := pendingPrompt
 				if updatedInput, ok := responsePayload["updatedInput"].(map[string]any); ok {

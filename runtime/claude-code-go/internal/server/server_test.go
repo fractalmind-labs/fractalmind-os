@@ -810,6 +810,62 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 
 	if err := ws.WriteJSON(map[string]any{
+		"type": "user",
+		"message": map[string]any{
+			"role":    "user",
+			"content": []map[string]any{{"type": "text", "text": "hit max budget usd"}},
+		},
+	}); err != nil {
+		t.Fatalf("write max-budget-usd user message failed: %v", err)
+	}
+
+	var maxBudgetRunningState map[string]any
+	if err := ws.ReadJSON(&maxBudgetRunningState); err != nil {
+		t.Fatalf("read max-budget-usd running session_state_changed failed: %v", err)
+	}
+	if maxBudgetRunningState["type"] != "system" || strings.TrimSpace(asString(maxBudgetRunningState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(maxBudgetRunningState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(maxBudgetRunningState["state"])) != "running" {
+		t.Fatalf("unexpected max-budget-usd running session_state_changed payload: %#v", maxBudgetRunningState)
+	}
+
+	var maxBudgetControlReq map[string]any
+	if err := ws.ReadJSON(&maxBudgetControlReq); err != nil {
+		t.Fatalf("read max-budget-usd control request failed: %v", err)
+	}
+	if maxBudgetControlReq["type"] != "control_request" {
+		t.Fatalf("unexpected max-budget-usd control request: %#v", maxBudgetControlReq)
+	}
+	maxBudgetRequestID := maxBudgetControlReq["request_id"].(string)
+	if err := ws.WriteJSON(map[string]any{
+		"type": "control_response",
+		"response": map[string]any{
+			"subtype":    "success",
+			"request_id": maxBudgetRequestID,
+			"response": map[string]any{
+				"behavior": "max_budget_usd",
+			},
+		},
+	}); err != nil {
+		t.Fatalf("write max-budget-usd control response failed: %v", err)
+	}
+
+	var maxBudgetResult map[string]any
+	if err := ws.ReadJSON(&maxBudgetResult); err != nil {
+		t.Fatalf("read max-budget-usd result event failed: %v", err)
+	}
+	if maxBudgetResult["type"] != "result" || strings.TrimSpace(asString(maxBudgetResult["subtype"])) != "error_max_budget_usd" {
+		t.Fatalf("unexpected max-budget-usd result event: %#v", maxBudgetResult)
+	}
+	if isError, ok := maxBudgetResult["is_error"].(bool); !ok || !isError {
+		t.Fatalf("expected max-budget-usd result is_error=true, got %#v", maxBudgetResult)
+	}
+	if int(maxBudgetResult["num_turns"].(float64)) != 2 {
+		t.Fatalf("expected max-budget-usd result num_turns=2, got %#v", maxBudgetResult)
+	}
+	if strings.TrimSpace(asString(maxBudgetResult["stop_reason"])) != "max_budget_usd" {
+		t.Fatalf("unexpected max-budget-usd stop_reason: %#v", maxBudgetResult)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
 		"request_id": "interrupt-1",
 		"request": map[string]any{
