@@ -413,6 +413,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(postTurnSummary["summarizes_uuid"])) == "" || strings.TrimSpace(asString(postTurnSummary["status_category"])) != "completed" || strings.TrimSpace(asString(postTurnSummary["title"])) == "" || strings.TrimSpace(asString(postTurnSummary["recent_action"])) == "" {
 		t.Fatalf("invalid post_turn_summary payload: %#v", postTurnSummary)
 	}
+	var compactingStatus map[string]any
+	if err := ws.ReadJSON(&compactingStatus); err != nil {
+		t.Fatalf("read compacting status failed: %v", err)
+	}
+	if compactingStatus["type"] != "system" || strings.TrimSpace(asString(compactingStatus["subtype"])) != "status" || strings.TrimSpace(asString(compactingStatus["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(compactingStatus["permissionMode"])) != "default" || strings.TrimSpace(asString(compactingStatus["status"])) != "compacting" {
+		t.Fatalf("unexpected compacting status payload: %#v", compactingStatus)
+	}
 	var compactBoundary map[string]any
 	if err := ws.ReadJSON(&compactBoundary); err != nil {
 		t.Fatalf("read compact_boundary failed: %v", err)
@@ -425,6 +432,16 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 		t.Fatalf("invalid compact_boundary payload: %#v", compactBoundary)
 	}
 	var idleState map[string]any
+	var compactionDoneStatus map[string]any
+	if err := ws.ReadJSON(&compactionDoneStatus); err != nil {
+		t.Fatalf("read compaction-done status failed: %v", err)
+	}
+	if compactionDoneStatus["type"] != "system" || strings.TrimSpace(asString(compactionDoneStatus["subtype"])) != "status" || strings.TrimSpace(asString(compactionDoneStatus["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(compactionDoneStatus["permissionMode"])) != "default" {
+		t.Fatalf("unexpected compaction-done status payload: %#v", compactionDoneStatus)
+	}
+	if status, ok := compactionDoneStatus["status"]; !ok || status != nil {
+		t.Fatalf("invalid compaction-done status payload: %#v", compactionDoneStatus)
+	}
 	if err := ws.ReadJSON(&idleState); err != nil {
 		t.Fatalf("read idle session_state_changed failed: %v", err)
 	}
@@ -684,6 +701,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(secondPostTurnSummary["summarizes_uuid"])) == "" || strings.TrimSpace(asString(secondPostTurnSummary["status_category"])) != "completed" || strings.TrimSpace(asString(secondPostTurnSummary["title"])) == "" || strings.TrimSpace(asString(secondPostTurnSummary["recent_action"])) == "" {
 		t.Fatalf("invalid second post_turn_summary payload: %#v", secondPostTurnSummary)
 	}
+	var secondCompactingStatus map[string]any
+	if err := ws.ReadJSON(&secondCompactingStatus); err != nil {
+		t.Fatalf("read second compacting status failed: %v", err)
+	}
+	if secondCompactingStatus["type"] != "system" || strings.TrimSpace(asString(secondCompactingStatus["subtype"])) != "status" || strings.TrimSpace(asString(secondCompactingStatus["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(secondCompactingStatus["permissionMode"])) != "default" || strings.TrimSpace(asString(secondCompactingStatus["status"])) != "compacting" {
+		t.Fatalf("unexpected second compacting status payload: %#v", secondCompactingStatus)
+	}
 	var secondCompactBoundary map[string]any
 	if err := ws.ReadJSON(&secondCompactBoundary); err != nil {
 		t.Fatalf("read second compact_boundary failed: %v", err)
@@ -694,6 +718,16 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondCompactMetadata, _ := secondCompactBoundary["compact_metadata"].(map[string]any)
 	if strings.TrimSpace(asString(secondCompactMetadata["trigger"])) != "auto" || int(secondCompactMetadata["pre_tokens"].(float64)) != 128 {
 		t.Fatalf("invalid second compact_boundary payload: %#v", secondCompactBoundary)
+	}
+	var secondCompactionDoneStatus map[string]any
+	if err := ws.ReadJSON(&secondCompactionDoneStatus); err != nil {
+		t.Fatalf("read second compaction-done status failed: %v", err)
+	}
+	if secondCompactionDoneStatus["type"] != "system" || strings.TrimSpace(asString(secondCompactionDoneStatus["subtype"])) != "status" || strings.TrimSpace(asString(secondCompactionDoneStatus["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(secondCompactionDoneStatus["permissionMode"])) != "default" {
+		t.Fatalf("unexpected second compaction-done status payload: %#v", secondCompactionDoneStatus)
+	}
+	if status, ok := secondCompactionDoneStatus["status"]; !ok || status != nil {
+		t.Fatalf("invalid second compaction-done status payload: %#v", secondCompactionDoneStatus)
 	}
 	var secondIdleState map[string]any
 	if err := ws.ReadJSON(&secondIdleState); err != nil {

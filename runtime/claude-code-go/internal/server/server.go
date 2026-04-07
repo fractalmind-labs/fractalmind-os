@@ -1015,6 +1015,18 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":            postTurnUUID,
 					"session_id":      session.ID,
 				})
+				compactingStatusUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":           "system",
+					"subtype":        "status",
+					"status":         "compacting",
+					"permissionMode": permissionMode,
+					"uuid":           compactingStatusUUID,
+					"session_id":     session.ID,
+				})
 				compactBoundaryUUID, err := generateRequestID()
 				if err != nil {
 					return
@@ -1028,6 +1040,18 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					},
 					"uuid":       compactBoundaryUUID,
 					"session_id": session.ID,
+				})
+				compactionDoneStatusUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":           "system",
+					"subtype":        "status",
+					"status":         nil,
+					"permissionMode": permissionMode,
+					"uuid":           compactionDoneStatusUUID,
+					"session_id":     session.ID,
 				})
 				idleStateUUID, err := generateRequestID()
 				if err != nil {

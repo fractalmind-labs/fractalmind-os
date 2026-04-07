@@ -51,6 +51,8 @@ type Result struct {
 	StatusEvent                                    string
 	StatusTransitionValidated                      bool
 	StatusTransitionEvent                          string
+	StatusCompactingLifecycleValidated             bool
+	StatusCompactingLifecycleEvent                 string
 	AuthValidated                                  bool
 	AuthEvent                                      string
 	KeepAliveValidated                             bool
@@ -266,6 +268,8 @@ func Run(args []string) (Result, error) {
 		StatusEvent:                         streamResult.StatusEvent,
 		StatusTransitionValidated:           streamResult.StatusTransitionValidated,
 		StatusTransitionEvent:               streamResult.StatusTransitionEvent,
+		StatusCompactingLifecycleValidated:  streamResult.StatusCompactingLifecycleValidated,
+		StatusCompactingLifecycleEvent:      streamResult.StatusCompactingLifecycleEvent,
 		AuthValidated:                       streamResult.AuthValidated,
 		AuthEvent:                           streamResult.AuthEvent,
 		KeepAliveValidated:                  streamResult.KeepAliveValidated,
@@ -711,6 +715,8 @@ type streamValidation struct {
 	StatusEvent                                    string
 	StatusTransitionValidated                      bool
 	StatusTransitionEvent                          string
+	StatusCompactingLifecycleValidated             bool
+	StatusCompactingLifecycleEvent                 string
 	AuthValidated                                  bool
 	AuthEvent                                      string
 	KeepAliveValidated                             bool
@@ -947,6 +953,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		elicitationCompleteValidated := false
 		postTurnSummaryValidated := false
 		compactBoundaryValidated := false
+		statusCompactingValidated := false
+		statusClearedValidated := false
 		sessionStateRunningValidated := false
 		sessionStateRequiresActionValidated := false
 		sessionStateIdleValidated := false
@@ -983,6 +991,26 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					result.StatusValidated = true
 					result.StatusEvent = "system:status"
+					if turn.behavior == "allow" {
+						statusValue, _ := incoming["status"]
+						statusText := strings.TrimSpace(asString(statusValue))
+						if !compactBoundaryValidated && statusText == "compacting" {
+							statusCompactingValidated = true
+							result.StatusCompactingLifecycleValidated = true
+							result.StatusCompactingLifecycleEvent = "system:status:compacting->null"
+						}
+						if compactBoundaryValidated {
+							if !statusCompactingValidated {
+								return streamValidation{}, fmt.Errorf("invalid status lifecycle: expected compacting before status clear")
+							}
+							if statusValue != nil {
+								return streamValidation{}, fmt.Errorf("invalid status lifecycle: expected status=null after compact_boundary, got %q", statusText)
+							}
+							statusClearedValidated = true
+							result.StatusCompactingLifecycleValidated = true
+							result.StatusCompactingLifecycleEvent = "system:status:compacting->null"
+						}
+					}
 				case "post_turn_summary":
 					if turn.behavior == "deny" {
 						return streamValidation{}, fmt.Errorf("unexpected post_turn_summary during deny turn")
@@ -1191,6 +1219,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if _, ok := compactMetadata["pre_tokens"]; !ok {
 						return streamValidation{}, fmt.Errorf("invalid compact_boundary: missing compact_metadata.pre_tokens")
 					}
+					if !statusCompactingValidated {
+						return streamValidation{}, fmt.Errorf("invalid compact_boundary: expected status=compacting before compact_boundary")
+					}
 					result.CompactBoundaryValidated = true
 					result.CompactBoundaryEvent = "system:compact_boundary"
 					compactBoundaryValidated = true
@@ -1205,6 +1236,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					case "idle":
 						if !sessionStateRunningValidated || !sessionStateRequiresActionValidated {
 							return streamValidation{}, fmt.Errorf("invalid session_state_changed: idle seen before running/requires_action")
+						}
+						if !statusClearedValidated {
+							return streamValidation{}, fmt.Errorf("invalid session_state_changed: expected status=null before idle")
 						}
 						sessionStateIdleValidated = true
 						result.SessionStateChangedValidated = true
@@ -1598,7 +1632,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -2833,6 +2867,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("status_event=%s\n", valueOrNone(r.StatusEvent)))
 	b.WriteString(fmt.Sprintf("status_transition_validated=%t\n", r.StatusTransitionValidated))
 	b.WriteString(fmt.Sprintf("status_transition_event=%s\n", valueOrNone(r.StatusTransitionEvent)))
+	b.WriteString(fmt.Sprintf("status_compacting_lifecycle_validated=%t\n", r.StatusCompactingLifecycleValidated))
+	b.WriteString(fmt.Sprintf("status_compacting_lifecycle_event=%s\n", valueOrNone(r.StatusCompactingLifecycleEvent)))
 	b.WriteString(fmt.Sprintf("auth_validated=%t\n", r.AuthValidated))
 	b.WriteString(fmt.Sprintf("auth_event=%s\n", valueOrNone(r.AuthEvent)))
 	b.WriteString(fmt.Sprintf("keep_alive_validated=%t\n", r.KeepAliveValidated))
