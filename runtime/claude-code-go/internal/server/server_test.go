@@ -1383,6 +1383,94 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "mcp-auth-missing-1",
+		"request": map[string]any{
+			"subtype":    "mcp_authenticate",
+			"serverName": "missing-mcp",
+		},
+	}); err != nil {
+		t.Fatalf("write mcp_authenticate missing request failed: %v", err)
+	}
+	var mcpAuthMissingResp map[string]any
+	if err := ws.ReadJSON(&mcpAuthMissingResp); err != nil {
+		t.Fatalf("read mcp_authenticate missing response failed: %v", err)
+	}
+	if mcpAuthMissingResp["type"] != "control_response" {
+		t.Fatalf("unexpected mcp_authenticate missing response: %#v", mcpAuthMissingResp)
+	}
+	mcpAuthMissingResponse, _ := mcpAuthMissingResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(mcpAuthMissingResponse["request_id"])) != "mcp-auth-missing-1" {
+		t.Fatalf("unexpected mcp_authenticate missing request id: %#v", mcpAuthMissingResp)
+	}
+	if strings.TrimSpace(asString(mcpAuthMissingResponse["subtype"])) != "error" {
+		t.Fatalf("unexpected mcp_authenticate missing subtype: %#v", mcpAuthMissingResp)
+	}
+	if strings.TrimSpace(asString(mcpAuthMissingResponse["error"])) != "Server not found: missing-mcp" {
+		t.Fatalf("unexpected mcp_authenticate missing error: %#v", mcpAuthMissingResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": "mcp-auth-unsupported-1",
+		"request": map[string]any{
+			"subtype":    "mcp_authenticate",
+			"serverName": "demo-stdio-mcp",
+		},
+	}); err != nil {
+		t.Fatalf("write mcp_authenticate unsupported request failed: %v", err)
+	}
+	var mcpAuthUnsupportedResp map[string]any
+	if err := ws.ReadJSON(&mcpAuthUnsupportedResp); err != nil {
+		t.Fatalf("read mcp_authenticate unsupported response failed: %v", err)
+	}
+	if mcpAuthUnsupportedResp["type"] != "control_response" {
+		t.Fatalf("unexpected mcp_authenticate unsupported response: %#v", mcpAuthUnsupportedResp)
+	}
+	mcpAuthUnsupportedResponse, _ := mcpAuthUnsupportedResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(mcpAuthUnsupportedResponse["request_id"])) != "mcp-auth-unsupported-1" {
+		t.Fatalf("unexpected mcp_authenticate unsupported request id: %#v", mcpAuthUnsupportedResp)
+	}
+	if strings.TrimSpace(asString(mcpAuthUnsupportedResponse["subtype"])) != "error" {
+		t.Fatalf("unexpected mcp_authenticate unsupported subtype: %#v", mcpAuthUnsupportedResp)
+	}
+	if strings.TrimSpace(asString(mcpAuthUnsupportedResponse["error"])) != `Server type "stdio" does not support OAuth authentication` {
+		t.Fatalf("unexpected mcp_authenticate unsupported error: %#v", mcpAuthUnsupportedResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": "mcp-auth-success-1",
+		"request": map[string]any{
+			"subtype":    "mcp_authenticate",
+			"serverName": "demo-http-mcp",
+		},
+	}); err != nil {
+		t.Fatalf("write mcp_authenticate success request failed: %v", err)
+	}
+	var mcpAuthSuccessResp map[string]any
+	if err := ws.ReadJSON(&mcpAuthSuccessResp); err != nil {
+		t.Fatalf("read mcp_authenticate success response failed: %v", err)
+	}
+	if mcpAuthSuccessResp["type"] != "control_response" {
+		t.Fatalf("unexpected mcp_authenticate success response: %#v", mcpAuthSuccessResp)
+	}
+	mcpAuthSuccessResponse, _ := mcpAuthSuccessResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(mcpAuthSuccessResponse["request_id"])) != "mcp-auth-success-1" {
+		t.Fatalf("unexpected mcp_authenticate success request id: %#v", mcpAuthSuccessResp)
+	}
+	if strings.TrimSpace(asString(mcpAuthSuccessResponse["subtype"])) != "success" {
+		t.Fatalf("unexpected mcp_authenticate success subtype: %#v", mcpAuthSuccessResp)
+	}
+	mcpAuthSuccessPayload, _ := mcpAuthSuccessResponse["response"].(map[string]any)
+	if requiresUserAction, ok := mcpAuthSuccessPayload["requiresUserAction"].(bool); !ok || !requiresUserAction {
+		t.Fatalf("unexpected mcp_authenticate success payload: %#v", mcpAuthSuccessResp)
+	}
+	if strings.TrimSpace(asString(mcpAuthSuccessPayload["authUrl"])) != "https://example.test/oauth/demo-http-mcp" {
+		t.Fatalf("unexpected mcp_authenticate success authUrl: %#v", mcpAuthSuccessResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "set-proactive-1",
 		"request": map[string]any{
 			"subtype": "set_proactive",

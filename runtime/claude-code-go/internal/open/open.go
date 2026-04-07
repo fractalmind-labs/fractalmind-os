@@ -121,6 +121,8 @@ type Result struct {
 	MCPSetServersEvent            string
 	ReloadPluginsValidated        bool
 	ReloadPluginsEvent            string
+	MCPAuthenticateValidated      bool
+	MCPAuthenticateEvent          string
 	MCPReconnectValidated         bool
 	MCPReconnectEvent             string
 	MCPToggleValidated            bool
@@ -314,6 +316,8 @@ func Run(args []string) (Result, error) {
 		MCPSetServersEvent:            streamResult.MCPSetServersEvent,
 		ReloadPluginsValidated:        streamResult.ReloadPluginsValidated,
 		ReloadPluginsEvent:            streamResult.ReloadPluginsEvent,
+		MCPAuthenticateValidated:      streamResult.MCPAuthenticateValidated,
+		MCPAuthenticateEvent:          streamResult.MCPAuthenticateEvent,
 		MCPReconnectValidated:         streamResult.MCPReconnectValidated,
 		MCPReconnectEvent:             streamResult.MCPReconnectEvent,
 		MCPToggleValidated:            streamResult.MCPToggleValidated,
@@ -737,6 +741,8 @@ type streamValidation struct {
 	MCPSetServersEvent            string
 	ReloadPluginsValidated        bool
 	ReloadPluginsEvent            string
+	MCPAuthenticateValidated      bool
+	MCPAuthenticateEvent          string
 	MCPReconnectValidated         bool
 	MCPReconnectEvent             string
 	MCPToggleValidated            bool
@@ -1721,6 +1727,107 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		result.ReloadPluginsValidated = true
 		result.ReloadPluginsEvent = "control_request:reload_plugins"
 	}
+	mcpAuthMissingID := "mcp-authenticate-missing-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": mcpAuthMissingID,
+		"request": map[string]any{
+			"subtype":    "mcp_authenticate",
+			"serverName": "missing-mcp",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect mcp_authenticate missing request: %w", err)
+	}
+	mcpAuthMissingValidated := false
+	for !mcpAuthMissingValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect mcp_authenticate missing flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != mcpAuthMissingID {
+			continue
+		}
+		if strings.TrimSpace(asString(response["subtype"])) != "error" {
+			return streamValidation{}, fmt.Errorf("invalid mcp_authenticate missing response subtype: %s", asString(response["subtype"]))
+		}
+		if strings.TrimSpace(asString(response["error"])) != "Server not found: missing-mcp" {
+			return streamValidation{}, fmt.Errorf("invalid mcp_authenticate missing error: %s", asString(response["error"]))
+		}
+		mcpAuthMissingValidated = true
+	}
+	mcpAuthUnsupportedID := "mcp-authenticate-unsupported-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": mcpAuthUnsupportedID,
+		"request": map[string]any{
+			"subtype":    "mcp_authenticate",
+			"serverName": "demo-stdio-mcp",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect mcp_authenticate unsupported request: %w", err)
+	}
+	mcpAuthUnsupportedValidated := false
+	for !mcpAuthUnsupportedValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect mcp_authenticate unsupported flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != mcpAuthUnsupportedID {
+			continue
+		}
+		if strings.TrimSpace(asString(response["subtype"])) != "error" {
+			return streamValidation{}, fmt.Errorf("invalid mcp_authenticate unsupported response subtype: %s", asString(response["subtype"]))
+		}
+		if strings.TrimSpace(asString(response["error"])) != `Server type "stdio" does not support OAuth authentication` {
+			return streamValidation{}, fmt.Errorf("invalid mcp_authenticate unsupported error: %s", asString(response["error"]))
+		}
+		mcpAuthUnsupportedValidated = true
+	}
+	mcpAuthSuccessID := "mcp-authenticate-success-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": mcpAuthSuccessID,
+		"request": map[string]any{
+			"subtype":    "mcp_authenticate",
+			"serverName": "demo-http-mcp",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect mcp_authenticate success request: %w", err)
+	}
+	for !result.MCPAuthenticateValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect mcp_authenticate success flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != mcpAuthSuccessID {
+			continue
+		}
+		if strings.TrimSpace(asString(response["subtype"])) != "success" {
+			return streamValidation{}, fmt.Errorf("invalid mcp_authenticate success response subtype: %s", asString(response["subtype"]))
+		}
+		responsePayload, _ := response["response"].(map[string]any)
+		requiresUserAction, ok := responsePayload["requiresUserAction"].(bool)
+		if !ok || !requiresUserAction {
+			return streamValidation{}, fmt.Errorf("invalid mcp_authenticate success response: missing requiresUserAction=true")
+		}
+		if strings.TrimSpace(asString(responsePayload["authUrl"])) != "https://example.test/oauth/demo-http-mcp" {
+			return streamValidation{}, fmt.Errorf("invalid mcp_authenticate success response: unexpected authUrl")
+		}
+		result.MCPAuthenticateValidated = true
+		result.MCPAuthenticateEvent = "control_request:mcp_authenticate"
+	}
 	mcpReconnectID := "mcp-reconnect-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -2459,6 +2566,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("mcp_set_servers_event=%s\n", valueOrNone(r.MCPSetServersEvent)))
 	b.WriteString(fmt.Sprintf("reload_plugins_validated=%t\n", r.ReloadPluginsValidated))
 	b.WriteString(fmt.Sprintf("reload_plugins_event=%s\n", valueOrNone(r.ReloadPluginsEvent)))
+	b.WriteString(fmt.Sprintf("mcp_authenticate_validated=%t\n", r.MCPAuthenticateValidated))
+	b.WriteString(fmt.Sprintf("mcp_authenticate_event=%s\n", valueOrNone(r.MCPAuthenticateEvent)))
 	b.WriteString(fmt.Sprintf("mcp_reconnect_validated=%t\n", r.MCPReconnectValidated))
 	b.WriteString(fmt.Sprintf("mcp_reconnect_event=%s\n", valueOrNone(r.MCPReconnectEvent)))
 	b.WriteString(fmt.Sprintf("mcp_toggle_validated=%t\n", r.MCPToggleValidated))

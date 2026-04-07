@@ -979,6 +979,8 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					continue
 				}
 				responsePayload := map[string]any{}
+				responseSubtype := "success"
+				responseError := ""
 				switch subtype {
 				case "interrupt":
 					responsePayload["interrupted"] = true
@@ -1033,6 +1035,19 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					_ = responsePayload
 				case "mcp_toggle":
 					_ = responsePayload
+				case "mcp_authenticate":
+					serverName := strings.TrimSpace(asString(request["serverName"]))
+					switch serverName {
+					case "demo-http-mcp", "demo-sse-mcp":
+						responsePayload["requiresUserAction"] = true
+						responsePayload["authUrl"] = "https://example.test/oauth/" + serverName
+					case "demo-stdio-mcp":
+						responseSubtype = "error"
+						responseError = `Server type "stdio" does not support OAuth authentication`
+					default:
+						responseSubtype = "error"
+						responseError = "Server not found: " + serverName
+					}
 				case "seed_read_state":
 					_ = responsePayload
 				case "rewind_files":
@@ -1095,13 +1110,18 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				default:
 					continue
 				}
+				responseEnvelope := map[string]any{
+					"subtype":    responseSubtype,
+					"request_id": requestID,
+				}
+				if responseSubtype == "error" {
+					responseEnvelope["error"] = responseError
+				} else {
+					responseEnvelope["response"] = responsePayload
+				}
 				_ = conn.WriteJSON(map[string]any{
-					"type": "control_response",
-					"response": map[string]any{
-						"subtype":    "success",
-						"request_id": requestID,
-						"response":   responsePayload,
-					},
+					"type":     "control_response",
+					"response": responseEnvelope,
 				})
 				if subtype == "end_session" {
 					return
