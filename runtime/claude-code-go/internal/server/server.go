@@ -601,6 +601,17 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"session_id": session.ID,
 				})
 				pendingPrompt = extractPromptText(incoming)
+				requiresActionUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":       "system",
+					"subtype":    "session_state_changed",
+					"state":      "requires_action",
+					"uuid":       requiresActionUUID,
+					"session_id": session.ID,
+				})
 				requestID, err := generateRequestID()
 				if err != nil {
 					return

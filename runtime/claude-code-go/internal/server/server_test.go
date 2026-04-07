@@ -206,7 +206,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if runningState["type"] != "system" || strings.TrimSpace(asString(runningState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(runningState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(runningState["state"])) != "running" {
 		t.Fatalf("unexpected running session_state_changed payload: %#v", runningState)
 	}
-
+	var requiresActionState map[string]any
+	if err := ws.ReadJSON(&requiresActionState); err != nil {
+		t.Fatalf("read requires_action session_state_changed failed: %v", err)
+	}
+	if requiresActionState["type"] != "system" || strings.TrimSpace(asString(requiresActionState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(requiresActionState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(requiresActionState["state"])) != "requires_action" {
+		t.Fatalf("unexpected requires_action session_state_changed payload: %#v", requiresActionState)
+	}
 	var controlReq map[string]any
 	if err := ws.ReadJSON(&controlReq); err != nil {
 		t.Fatalf("read control request failed: %v", err)
@@ -473,6 +479,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if secondRunningState["type"] != "system" || strings.TrimSpace(asString(secondRunningState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(secondRunningState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(secondRunningState["state"])) != "running" {
 		t.Fatalf("unexpected second running session_state_changed payload: %#v", secondRunningState)
 	}
+	var secondRequiresActionState map[string]any
+	if err := ws.ReadJSON(&secondRequiresActionState); err != nil {
+		t.Fatalf("read second requires_action session_state_changed failed: %v", err)
+	}
+	if secondRequiresActionState["type"] != "system" || strings.TrimSpace(asString(secondRequiresActionState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(secondRequiresActionState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(secondRequiresActionState["state"])) != "requires_action" {
+		t.Fatalf("unexpected second requires_action session_state_changed payload: %#v", secondRequiresActionState)
+	}
 
 	var secondControlReq map[string]any
 	if err := ws.ReadJSON(&secondControlReq); err != nil {
@@ -737,6 +750,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if denyRunningState["type"] != "system" || strings.TrimSpace(asString(denyRunningState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(denyRunningState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(denyRunningState["state"])) != "running" {
 		t.Fatalf("unexpected deny running session_state_changed payload: %#v", denyRunningState)
 	}
+	var denyRequiresActionState map[string]any
+	if err := ws.ReadJSON(&denyRequiresActionState); err != nil {
+		t.Fatalf("read deny requires_action session_state_changed failed: %v", err)
+	}
+	if denyRequiresActionState["type"] != "system" || strings.TrimSpace(asString(denyRequiresActionState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(denyRequiresActionState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(denyRequiresActionState["state"])) != "requires_action" {
+		t.Fatalf("unexpected deny requires_action session_state_changed payload: %#v", denyRequiresActionState)
+	}
 
 	var denyControlReq map[string]any
 	if err := ws.ReadJSON(&denyControlReq); err != nil {
@@ -812,6 +832,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if maxTurnsRunningState["type"] != "system" || strings.TrimSpace(asString(maxTurnsRunningState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(maxTurnsRunningState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(maxTurnsRunningState["state"])) != "running" {
 		t.Fatalf("unexpected max-turns running session_state_changed payload: %#v", maxTurnsRunningState)
 	}
+	var maxTurnsRequiresActionState map[string]any
+	if err := ws.ReadJSON(&maxTurnsRequiresActionState); err != nil {
+		t.Fatalf("read max-turns requires_action session_state_changed failed: %v", err)
+	}
+	if maxTurnsRequiresActionState["type"] != "system" || strings.TrimSpace(asString(maxTurnsRequiresActionState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(maxTurnsRequiresActionState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(maxTurnsRequiresActionState["state"])) != "requires_action" {
+		t.Fatalf("unexpected max-turns requires_action session_state_changed payload: %#v", maxTurnsRequiresActionState)
+	}
 
 	var maxTurnsControlReq map[string]any
 	if err := ws.ReadJSON(&maxTurnsControlReq); err != nil {
@@ -868,6 +895,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if maxBudgetRunningState["type"] != "system" || strings.TrimSpace(asString(maxBudgetRunningState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(maxBudgetRunningState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(maxBudgetRunningState["state"])) != "running" {
 		t.Fatalf("unexpected max-budget-usd running session_state_changed payload: %#v", maxBudgetRunningState)
 	}
+	var maxBudgetRequiresActionState map[string]any
+	if err := ws.ReadJSON(&maxBudgetRequiresActionState); err != nil {
+		t.Fatalf("read max-budget-usd requires_action session_state_changed failed: %v", err)
+	}
+	if maxBudgetRequiresActionState["type"] != "system" || strings.TrimSpace(asString(maxBudgetRequiresActionState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(maxBudgetRequiresActionState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(maxBudgetRequiresActionState["state"])) != "requires_action" {
+		t.Fatalf("unexpected max-budget-usd requires_action session_state_changed payload: %#v", maxBudgetRequiresActionState)
+	}
 
 	var maxBudgetControlReq map[string]any
 	if err := ws.ReadJSON(&maxBudgetControlReq); err != nil {
@@ -923,6 +957,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if maxStructuredRunningState["type"] != "system" || strings.TrimSpace(asString(maxStructuredRunningState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(maxStructuredRunningState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(maxStructuredRunningState["state"])) != "running" {
 		t.Fatalf("unexpected max-structured-output-retries running session_state_changed payload: %#v", maxStructuredRunningState)
+	}
+	var maxStructuredRequiresActionState map[string]any
+	if err := ws.ReadJSON(&maxStructuredRequiresActionState); err != nil {
+		t.Fatalf("read max-structured-output-retries requires_action session_state_changed failed: %v", err)
+	}
+	if maxStructuredRequiresActionState["type"] != "system" || strings.TrimSpace(asString(maxStructuredRequiresActionState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(maxStructuredRequiresActionState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(maxStructuredRequiresActionState["state"])) != "requires_action" {
+		t.Fatalf("unexpected max-structured-output-retries requires_action session_state_changed payload: %#v", maxStructuredRequiresActionState)
 	}
 
 	var maxStructuredControlReq map[string]any
