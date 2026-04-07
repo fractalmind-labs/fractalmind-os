@@ -77,6 +77,8 @@ type Result struct {
 	APIRetryEvent                 string
 	LocalCommandOutputValidated   bool
 	LocalCommandOutputEvent       string
+	ElicitationValidated          bool
+	ElicitationEvent              string
 	ElicitationCompleteValidated  bool
 	ElicitationCompleteEvent      string
 	ToolProgressValidated         bool
@@ -264,6 +266,8 @@ func Run(args []string) (Result, error) {
 		APIRetryEvent:                 streamResult.APIRetryEvent,
 		LocalCommandOutputValidated:   streamResult.LocalCommandOutputValidated,
 		LocalCommandOutputEvent:       streamResult.LocalCommandOutputEvent,
+		ElicitationValidated:          streamResult.ElicitationValidated,
+		ElicitationEvent:              streamResult.ElicitationEvent,
 		ElicitationCompleteValidated:  streamResult.ElicitationCompleteValidated,
 		ElicitationCompleteEvent:      streamResult.ElicitationCompleteEvent,
 		ToolProgressValidated:         streamResult.ToolProgressValidated,
@@ -681,6 +685,8 @@ type streamValidation struct {
 	APIRetryEvent                 string
 	LocalCommandOutputValidated   bool
 	LocalCommandOutputEvent       string
+	ElicitationValidated          bool
+	ElicitationEvent              string
 	ElicitationCompleteValidated  bool
 	ElicitationCompleteEvent      string
 	ToolProgressValidated         bool
@@ -2065,6 +2071,48 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		result.InitializeValidated = true
 		result.InitializeEvent = "control_request:initialize"
 	}
+	elicitationID := "elicitation-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": elicitationID,
+		"request": map[string]any{
+			"subtype":         "elicitation",
+			"mcp_server_name": "demo-mcp",
+			"message":         "Need more input",
+			"mode":            "form",
+			"elicitation_id":  "eli-probe",
+			"requested_schema": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"answer": map[string]any{"type": "string"},
+				},
+			},
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect elicitation request: %w", err)
+	}
+	for !result.ElicitationValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect elicitation flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != elicitationID {
+			continue
+		}
+		if strings.TrimSpace(asString(response["subtype"])) != "success" {
+			return streamValidation{}, fmt.Errorf("invalid elicitation response subtype: %s", asString(response["subtype"]))
+		}
+		responsePayload, _ := response["response"].(map[string]any)
+		if strings.TrimSpace(asString(responsePayload["action"])) != "cancel" {
+			return streamValidation{}, fmt.Errorf("invalid elicitation response: expected action=cancel")
+		}
+		result.ElicitationValidated = true
+		result.ElicitationEvent = "control_request:elicitation"
+	}
 	setProactiveID := "set-proactive-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -2284,6 +2332,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("api_retry_event=%s\n", valueOrNone(r.APIRetryEvent)))
 	b.WriteString(fmt.Sprintf("local_command_output_validated=%t\n", r.LocalCommandOutputValidated))
 	b.WriteString(fmt.Sprintf("local_command_output_event=%s\n", valueOrNone(r.LocalCommandOutputEvent)))
+	b.WriteString(fmt.Sprintf("elicitation_validated=%t\n", r.ElicitationValidated))
+	b.WriteString(fmt.Sprintf("elicitation_event=%s\n", valueOrNone(r.ElicitationEvent)))
 	b.WriteString(fmt.Sprintf("elicitation_complete_validated=%t\n", r.ElicitationCompleteValidated))
 	b.WriteString(fmt.Sprintf("elicitation_complete_event=%s\n", valueOrNone(r.ElicitationCompleteEvent)))
 	b.WriteString(fmt.Sprintf("tool_progress_validated=%t\n", r.ToolProgressValidated))

@@ -994,6 +994,8 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						"apiKeySource": "oauth",
 					}
 					responsePayload["pid"] = os.Getpid()
+				case "elicitation":
+					responsePayload["action"] = "cancel"
 				case "set_model":
 				case "set_permission_mode":
 				case "set_max_thinking_tokens":

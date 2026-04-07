@@ -1290,6 +1290,36 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "elicitation-1",
+		"request": map[string]any{
+			"subtype":          "elicitation",
+			"mcp_server_name":  "demo-mcp",
+			"message":          "Need more input",
+			"mode":             "form",
+			"elicitation_id":   "eli-1",
+			"requested_schema": map[string]any{"type": "object"},
+		},
+	}); err != nil {
+		t.Fatalf("write elicitation request failed: %v", err)
+	}
+	var elicitationResp map[string]any
+	if err := ws.ReadJSON(&elicitationResp); err != nil {
+		t.Fatalf("read elicitation response failed: %v", err)
+	}
+	if elicitationResp["type"] != "control_response" {
+		t.Fatalf("unexpected elicitation response: %#v", elicitationResp)
+	}
+	elicitationResponse, _ := elicitationResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(elicitationResponse["request_id"])) != "elicitation-1" {
+		t.Fatalf("unexpected elicitation request id: %#v", elicitationResp)
+	}
+	elicitationPayload, _ := elicitationResponse["response"].(map[string]any)
+	if strings.TrimSpace(asString(elicitationPayload["action"])) != "cancel" {
+		t.Fatalf("unexpected elicitation payload: %#v", elicitationResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "set-proactive-1",
 		"request": map[string]any{
 			"subtype": "set_proactive",
