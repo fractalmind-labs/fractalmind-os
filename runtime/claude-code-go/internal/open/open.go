@@ -53,6 +53,8 @@ type Result struct {
 	StatusTransitionEvent                          string
 	StatusCompactingLifecycleValidated             bool
 	StatusCompactingLifecycleEvent                 string
+	ReplayedUserMessageValidated                   bool
+	ReplayedUserMessageEvent                       string
 	AuthValidated                                  bool
 	AuthEvent                                      string
 	KeepAliveValidated                             bool
@@ -270,6 +272,8 @@ func Run(args []string) (Result, error) {
 		StatusTransitionEvent:               streamResult.StatusTransitionEvent,
 		StatusCompactingLifecycleValidated:  streamResult.StatusCompactingLifecycleValidated,
 		StatusCompactingLifecycleEvent:      streamResult.StatusCompactingLifecycleEvent,
+		ReplayedUserMessageValidated:        streamResult.ReplayedUserMessageValidated,
+		ReplayedUserMessageEvent:            streamResult.ReplayedUserMessageEvent,
 		AuthValidated:                       streamResult.AuthValidated,
 		AuthEvent:                           streamResult.AuthEvent,
 		KeepAliveValidated:                  streamResult.KeepAliveValidated,
@@ -717,6 +721,8 @@ type streamValidation struct {
 	StatusTransitionEvent                          string
 	StatusCompactingLifecycleValidated             bool
 	StatusCompactingLifecycleEvent                 string
+	ReplayedUserMessageValidated                   bool
+	ReplayedUserMessageEvent                       string
 	AuthValidated                                  bool
 	AuthEvent                                      string
 	KeepAliveValidated                             bool
@@ -971,6 +977,31 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 			}
 
 			switch strings.TrimSpace(asString(incoming["type"])) {
+			case "user":
+				if !result.ReplayedUserMessageValidated {
+					replayed, ok := incoming["isReplay"].(bool)
+					if !ok || !replayed {
+						return streamValidation{}, fmt.Errorf("invalid user replay event: missing isReplay=true")
+					}
+					if strings.TrimSpace(asString(incoming["uuid"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid user replay event: missing uuid")
+					}
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid user replay event: missing session_id")
+					}
+					message, _ := incoming["message"].(map[string]any)
+					if strings.TrimSpace(asString(message["role"])) != "user" {
+						return streamValidation{}, fmt.Errorf("invalid user replay event: missing role=user")
+					}
+					replayedPrompt := extractPromptText(map[string]any{"message": message})
+					if replayedPrompt == "" {
+						return streamValidation{}, fmt.Errorf("invalid user replay event: missing replayed text content")
+					}
+					result.ReplayedUserMessageValidated = true
+					result.ReplayedUserMessageEvent = "user:isReplay"
+					continue
+				}
+				return streamValidation{}, fmt.Errorf("unexpected non-replay user event from server")
 			case "system":
 				switch strings.TrimSpace(asString(incoming["subtype"])) {
 				case "init":
@@ -1648,6 +1679,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				break
 			}
 		}
+	}
+	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedUserMessageValidated {
+		return streamValidation{}, fmt.Errorf("missing replayed user message during resume validation")
 	}
 	result.MultiTurnValidated = result.ValidatedTurns >= 2
 
@@ -2869,6 +2903,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("status_transition_event=%s\n", valueOrNone(r.StatusTransitionEvent)))
 	b.WriteString(fmt.Sprintf("status_compacting_lifecycle_validated=%t\n", r.StatusCompactingLifecycleValidated))
 	b.WriteString(fmt.Sprintf("status_compacting_lifecycle_event=%s\n", valueOrNone(r.StatusCompactingLifecycleEvent)))
+	b.WriteString(fmt.Sprintf("replayed_user_message_validated=%t\n", r.ReplayedUserMessageValidated))
+	b.WriteString(fmt.Sprintf("replayed_user_message_event=%s\n", valueOrNone(r.ReplayedUserMessageEvent)))
 	b.WriteString(fmt.Sprintf("auth_validated=%t\n", r.AuthValidated))
 	b.WriteString(fmt.Sprintf("auth_event=%s\n", valueOrNone(r.AuthEvent)))
 	b.WriteString(fmt.Sprintf("keep_alive_validated=%t\n", r.KeepAliveValidated))
@@ -3023,6 +3059,29 @@ func intFromAny(v any) int {
 	default:
 		return 0
 	}
+}
+
+func extractPromptText(messageEnvelope map[string]any) string {
+	message, _ := messageEnvelope["message"].(map[string]any)
+	content := message["content"]
+	switch typed := content.(type) {
+	case string:
+		return strings.TrimSpace(typed)
+	case []any:
+		for _, item := range typed {
+			entry, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			if strings.TrimSpace(asString(entry["type"])) != "text" {
+				continue
+			}
+			if text := strings.TrimSpace(asString(entry["text"])); text != "" {
+				return text
+			}
+		}
+	}
+	return ""
 }
 
 func firstNonEmpty(values ...string) string {

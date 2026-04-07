@@ -72,6 +72,7 @@ func TestRunOpenDefaults(t *testing.T) {
 		"tool_progress_validated=false",
 		"status_validated=false",
 		"status_compacting_lifecycle_validated=false",
+		"replayed_user_message_validated=false",
 		"auth_validated=false",
 		"keep_alive_validated=false",
 		"update_environment_variables_validated=false",
@@ -202,6 +203,28 @@ func TestRunOpenSupportsResumeSession(t *testing.T) {
 	}
 }
 
+func TestRunOpenSupportsResumePrintReplayValidation(t *testing.T) {
+	srv := newHTTPDirectConnectTestServer(t, "sess-resume-print", "/tmp/resume-print-work", nil)
+	defer srv.Close()
+
+	connectURL := "cc://" + strings.TrimPrefix(srv.URL, "http://") + "?authToken=demo-token"
+	initial, err := Run([]string{connectURL, "--print", "resume replay seed"})
+	if err != nil {
+		t.Fatalf("initial Run returned error: %v", err)
+	}
+	resumed, err := Run([]string{
+		connectURL,
+		"--resume-session", initial.SessionID,
+		"--print", "resume replay verify",
+	})
+	if err != nil {
+		t.Fatalf("resumed Run returned error: %v", err)
+	}
+	if !resumed.ReplayedUserMessageValidated || resumed.ReplayedUserMessageEvent != "user:isReplay" {
+		t.Fatalf("expected replay validation, got %#v", resumed)
+	}
+}
+
 func TestRunOpenSupportsStopSession(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/sessions/sess-stop", func(w http.ResponseWriter, r *http.Request) {
@@ -292,6 +315,8 @@ func newHTTPDirectConnectTestServer(t *testing.T, sessionID, workDir string, onS
 	upgrader := websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
 	mux := http.NewServeMux()
 	var wsBase string
+	replayedPrompt := ""
+	emitReplayOnAttach := false
 
 	mux.HandleFunc("/sessions", func(w http.ResponseWriter, r *http.Request) {
 		if onSession != nil {
@@ -299,6 +324,7 @@ func newHTTPDirectConnectTestServer(t *testing.T, sessionID, workDir string, onS
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodGet {
+			emitReplayOnAttach = strings.TrimSpace(r.URL.Query().Get("resume")) != "" && replayedPrompt != ""
 			_ = json.NewEncoder(w).Encode(map[string]string{
 				"session_id": sessionID,
 				"ws_url":     wsBase + "/" + sessionID,
@@ -330,7 +356,10 @@ func newHTTPDirectConnectTestServer(t *testing.T, sessionID, workDir string, onS
 			return
 		}
 		defer conn.Close()
-		serveDirectConnectWS(t, conn, sessionID, workDir, "http")
+		serveDirectConnectWS(t, conn, sessionID, workDir, "http", emitReplayOnAttach, replayedPrompt, func(prompt string) {
+			replayedPrompt = prompt
+		})
+		emitReplayOnAttach = false
 	})
 
 	srv := httptest.NewServer(mux)
@@ -349,10 +378,13 @@ func newUnixDirectConnectTestServer(t *testing.T, socketPath, sessionID, workDir
 	upgrader := websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
 	mux := http.NewServeMux()
 	wsURL := "ws+unix://" + url.PathEscape(socketPath) + "/ws/" + sessionID
+	replayedPrompt := ""
+	emitReplayOnAttach := false
 
 	mux.HandleFunc("/sessions", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodGet {
+			emitReplayOnAttach = strings.TrimSpace(r.URL.Query().Get("resume")) != "" && replayedPrompt != ""
 			_ = json.NewEncoder(w).Encode(map[string]string{
 				"session_id": sessionID,
 				"ws_url":     wsURL,
@@ -384,7 +416,10 @@ func newUnixDirectConnectTestServer(t *testing.T, socketPath, sessionID, workDir
 			return
 		}
 		defer conn.Close()
-		serveDirectConnectWS(t, conn, sessionID, workDir, "unix")
+		serveDirectConnectWS(t, conn, sessionID, workDir, "unix", emitReplayOnAttach, replayedPrompt, func(prompt string) {
+			replayedPrompt = prompt
+		})
+		emitReplayOnAttach = false
 	})
 
 	srv := httptest.NewUnstartedServer(mux)
@@ -394,7 +429,7 @@ func newUnixDirectConnectTestServer(t *testing.T, socketPath, sessionID, workDir
 	return srv, nil
 }
 
-func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir, transport string) {
+func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir, transport string, emitReplay bool, replayedPrompt string, rememberPrompt func(string)) {
 	t.Helper()
 	_ = conn.WriteJSON(map[string]string{
 		"type":       "session_ready",
@@ -437,6 +472,23 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 	_ = conn.WriteJSON(map[string]any{
 		"type": "keep_alive",
 	})
+	if emitReplay && strings.TrimSpace(replayedPrompt) != "" {
+		_ = conn.WriteJSON(map[string]any{
+			"type":       "user",
+			"isReplay":   true,
+			"uuid":       "replayed-user-1",
+			"session_id": sessionID,
+			"message": map[string]any{
+				"role": "user",
+				"content": []map[string]any{
+					{
+						"type": "text",
+						"text": replayedPrompt,
+					},
+				},
+			},
+		})
+	}
 
 	requestCounter := 0
 	completedTurns := 0
@@ -480,6 +532,9 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 					prompt = text
 					break
 				}
+			}
+			if rememberPrompt != nil {
+				rememberPrompt(prompt)
 			}
 			requestCounter++
 			pendingRequestID = fmt.Sprintf("req-%d", requestCounter)

@@ -60,9 +60,10 @@ type RunningServer struct {
 }
 
 type sessionInfo struct {
-	ID      string
-	WorkDir string
-	Backend *backendProcess
+	ID              string
+	WorkDir         string
+	Backend         *backendProcess
+	LastUserMessage string
 }
 
 type sessionStore struct {
@@ -319,7 +320,12 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				return
 			}
 			if existing, ok := store.get(sessionID); ok {
-				store.put(sessionInfo{ID: sessionID, WorkDir: entry.CWD, Backend: existing.Backend})
+				store.put(sessionInfo{
+					ID:              sessionID,
+					WorkDir:         entry.CWD,
+					Backend:         existing.Backend,
+					LastUserMessage: existing.LastUserMessage,
+				})
 			} else if maxSessions > 0 && store.count() >= maxSessions {
 				http.Error(w, fmt.Sprintf("max sessions reached (%d/%d)", store.count(), maxSessions), http.StatusTooManyRequests)
 				return
@@ -562,6 +568,27 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 		_ = conn.WriteJSON(map[string]any{
 			"type": "keep_alive",
 		})
+		if strings.TrimSpace(session.LastUserMessage) != "" {
+			replayUUID, err := generateRequestID()
+			if err != nil {
+				return
+			}
+			_ = conn.WriteJSON(map[string]any{
+				"type":       "user",
+				"isReplay":   true,
+				"uuid":       replayUUID,
+				"session_id": session.ID,
+				"message": map[string]any{
+					"role": "user",
+					"content": []map[string]any{
+						{
+							"type": "text",
+							"text": session.LastUserMessage,
+						},
+					},
+				},
+			})
+		}
 		var (
 			pendingPrompt    string
 			pendingRequestID string
@@ -589,6 +616,11 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				}
 				_ = variables
 			case "user":
+				pendingPrompt = extractPromptText(incoming)
+				if pendingPrompt != "" {
+					session.LastUserMessage = pendingPrompt
+					store.put(session)
+				}
 				_ = sessionIndex.setStatus(sessionID, session.WorkDir, "running")
 				runningStateUUID, err := generateRequestID()
 				if err != nil {
@@ -601,7 +633,6 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       runningStateUUID,
 					"session_id": session.ID,
 				})
-				pendingPrompt = extractPromptText(incoming)
 				requiresActionUUID, err := generateRequestID()
 				if err != nil {
 					return

@@ -2607,6 +2607,43 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	if err := ws.ReadJSON(&ready); err != nil {
 		t.Fatalf("read ready event failed: %v", err)
 	}
+	for i, subtype := range []string{"init", "", "status"} {
+		var event map[string]any
+		if err := ws.ReadJSON(&event); err != nil {
+			t.Fatalf("read initial event %d failed: %v", i, err)
+		}
+		if subtype == "" {
+			if event["type"] != "auth_status" {
+				t.Fatalf("unexpected auth event: %#v", event)
+			}
+			continue
+		}
+		if event["type"] != "system" || strings.TrimSpace(asString(event["subtype"])) != subtype {
+			t.Fatalf("unexpected system event: %#v", event)
+		}
+	}
+	var keepAlive map[string]any
+	if err := ws.ReadJSON(&keepAlive); err != nil {
+		t.Fatalf("read keep_alive failed: %v", err)
+	}
+	if keepAlive["type"] != "keep_alive" {
+		t.Fatalf("unexpected keep_alive event: %#v", keepAlive)
+	}
+	if err := ws.WriteJSON(map[string]any{
+		"type": "user",
+		"message": map[string]any{
+			"role":    "user",
+			"content": []map[string]any{{"type": "text", "text": "resume replay seed"}},
+		},
+	}); err != nil {
+		t.Fatalf("write replay seed user failed: %v", err)
+	}
+	for i := 0; i < 3; i++ {
+		var event map[string]any
+		if err := ws.ReadJSON(&event); err != nil {
+			t.Fatalf("read seed event %d failed: %v", i, err)
+		}
+	}
 	initialState := fetchSessionState(t, running.Result.SessionsEndpoint, created["session_id"], "demo-token")
 	initialPID := initialState.BackendPID
 	_ = ws.Close()
@@ -2634,6 +2671,38 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	}
 	if err := ws.ReadJSON(&ready); err != nil {
 		t.Fatalf("read resumed ready event failed: %v", err)
+	}
+	for i, subtype := range []string{"init", "", "status"} {
+		var event map[string]any
+		if err := ws.ReadJSON(&event); err != nil {
+			t.Fatalf("read resumed initial event %d failed: %v", i, err)
+		}
+		if subtype == "" {
+			if event["type"] != "auth_status" {
+				t.Fatalf("unexpected resumed auth event: %#v", event)
+			}
+			continue
+		}
+		if event["type"] != "system" || strings.TrimSpace(asString(event["subtype"])) != subtype {
+			t.Fatalf("unexpected resumed system event: %#v", event)
+		}
+	}
+	if err := ws.ReadJSON(&keepAlive); err != nil {
+		t.Fatalf("read resumed keep_alive failed: %v", err)
+	}
+	if keepAlive["type"] != "keep_alive" {
+		t.Fatalf("unexpected resumed keep_alive event: %#v", keepAlive)
+	}
+	var replayedUser map[string]any
+	if err := ws.ReadJSON(&replayedUser); err != nil {
+		t.Fatalf("read replayed user failed: %v", err)
+	}
+	if replayedUser["type"] != "user" || replayedUser["isReplay"] != true || strings.TrimSpace(asString(replayedUser["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedUser["uuid"])) == "" {
+		t.Fatalf("unexpected replayed user payload: %#v", replayedUser)
+	}
+	message, _ := replayedUser["message"].(map[string]any)
+	if strings.TrimSpace(asString(message["role"])) != "user" || extractPromptText(replayedUser) != "resume replay seed" {
+		t.Fatalf("unexpected replayed user message payload: %#v", replayedUser)
 	}
 	resumedState := fetchSessionState(t, running.Result.SessionsEndpoint, created["session_id"], "demo-token")
 	if initialPID <= 0 || resumedState.BackendPID != initialPID || resumedState.BackendStatus != "running" {
