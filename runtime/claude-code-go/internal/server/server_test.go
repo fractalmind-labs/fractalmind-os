@@ -2638,10 +2638,44 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("write replay seed user failed: %v", err)
 	}
-	for i := 0; i < 3; i++ {
+	var runningState map[string]any
+	if err := ws.ReadJSON(&runningState); err != nil {
+		t.Fatalf("read seed running state failed: %v", err)
+	}
+	var requiresActionState map[string]any
+	if err := ws.ReadJSON(&requiresActionState); err != nil {
+		t.Fatalf("read seed requires_action state failed: %v", err)
+	}
+	var controlReq map[string]any
+	if err := ws.ReadJSON(&controlReq); err != nil {
+		t.Fatalf("read seed control request failed: %v", err)
+	}
+	requestID := strings.TrimSpace(asString(controlReq["request_id"]))
+	if requestID == "" {
+		t.Fatalf("missing seed control request id: %#v", controlReq)
+	}
+	if err := ws.WriteJSON(map[string]any{
+		"type": "control_response",
+		"response": map[string]any{
+			"subtype":    "success",
+			"request_id": requestID,
+			"response": map[string]any{
+				"behavior": "allow",
+				"updatedInput": map[string]any{
+					"text": "resume replay seed [approved]",
+				},
+			},
+		},
+	}); err != nil {
+		t.Fatalf("write seed control response failed: %v", err)
+	}
+	for i := 0; i < 32; i++ {
 		var event map[string]any
 		if err := ws.ReadJSON(&event); err != nil {
-			t.Fatalf("read seed event %d failed: %v", i, err)
+			t.Fatalf("read seed completion event %d failed: %v", i, err)
+		}
+		if event["type"] == "system" && strings.TrimSpace(asString(event["subtype"])) == "hook_response" {
+			break
 		}
 	}
 	initialState := fetchSessionState(t, running.Result.SessionsEndpoint, created["session_id"], "demo-token")
@@ -2703,6 +2737,29 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	message, _ := replayedUser["message"].(map[string]any)
 	if strings.TrimSpace(asString(message["role"])) != "user" || extractPromptText(replayedUser) != "resume replay seed" {
 		t.Fatalf("unexpected replayed user message payload: %#v", replayedUser)
+	}
+	var replayedToolResult map[string]any
+	if err := ws.ReadJSON(&replayedToolResult); err != nil {
+		t.Fatalf("read replayed tool_result failed: %v", err)
+	}
+	if replayedToolResult["type"] != "user" || replayedToolResult["isReplay"] != true || strings.TrimSpace(asString(replayedToolResult["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedToolResult["uuid"])) == "" {
+		t.Fatalf("unexpected replayed tool_result payload: %#v", replayedToolResult)
+	}
+	toolResultMessage, _ := replayedToolResult["message"].(map[string]any)
+	if strings.TrimSpace(asString(toolResultMessage["role"])) != "user" {
+		t.Fatalf("unexpected replayed tool_result message payload: %#v", replayedToolResult)
+	}
+	content, _ := toolResultMessage["content"].([]any)
+	if len(content) == 0 {
+		t.Fatalf("missing replayed tool_result content: %#v", replayedToolResult)
+	}
+	firstBlock, _ := content[0].(map[string]any)
+	if strings.TrimSpace(asString(firstBlock["type"])) != "tool_result" || strings.TrimSpace(asString(firstBlock["tool_use_id"])) == "" || strings.TrimSpace(asString(firstBlock["content"])) != "echo:resume replay seed [approved]" {
+		t.Fatalf("unexpected replayed tool_result content payload: %#v", replayedToolResult)
+	}
+	toolUseResult, _ := replayedToolResult["tool_use_result"].(map[string]any)
+	if strings.TrimSpace(asString(toolUseResult["tool_use_id"])) == "" || strings.TrimSpace(asString(toolUseResult["content"])) != "echo:resume replay seed [approved]" {
+		t.Fatalf("unexpected replayed tool_use_result payload: %#v", replayedToolResult)
 	}
 	resumedState := fetchSessionState(t, running.Result.SessionsEndpoint, created["session_id"], "demo-token")
 	if initialPID <= 0 || resumedState.BackendPID != initialPID || resumedState.BackendStatus != "running" {

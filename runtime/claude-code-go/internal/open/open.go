@@ -55,6 +55,8 @@ type Result struct {
 	StatusCompactingLifecycleEvent                 string
 	ReplayedUserMessageValidated                   bool
 	ReplayedUserMessageEvent                       string
+	ReplayedToolResultValidated                    bool
+	ReplayedToolResultEvent                        string
 	AuthValidated                                  bool
 	AuthEvent                                      string
 	KeepAliveValidated                             bool
@@ -274,6 +276,8 @@ func Run(args []string) (Result, error) {
 		StatusCompactingLifecycleEvent:      streamResult.StatusCompactingLifecycleEvent,
 		ReplayedUserMessageValidated:        streamResult.ReplayedUserMessageValidated,
 		ReplayedUserMessageEvent:            streamResult.ReplayedUserMessageEvent,
+		ReplayedToolResultValidated:         streamResult.ReplayedToolResultValidated,
+		ReplayedToolResultEvent:             streamResult.ReplayedToolResultEvent,
 		AuthValidated:                       streamResult.AuthValidated,
 		AuthEvent:                           streamResult.AuthEvent,
 		KeepAliveValidated:                  streamResult.KeepAliveValidated,
@@ -723,6 +727,8 @@ type streamValidation struct {
 	StatusCompactingLifecycleEvent                 string
 	ReplayedUserMessageValidated                   bool
 	ReplayedUserMessageEvent                       string
+	ReplayedToolResultValidated                    bool
+	ReplayedToolResultEvent                        string
 	AuthValidated                                  bool
 	AuthEvent                                      string
 	KeepAliveValidated                             bool
@@ -978,30 +984,53 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 
 			switch strings.TrimSpace(asString(incoming["type"])) {
 			case "user":
-				if !result.ReplayedUserMessageValidated {
-					replayed, ok := incoming["isReplay"].(bool)
-					if !ok || !replayed {
-						return streamValidation{}, fmt.Errorf("invalid user replay event: missing isReplay=true")
+				replayed, ok := incoming["isReplay"].(bool)
+				if !ok || !replayed {
+					return streamValidation{}, fmt.Errorf("invalid user replay event: missing isReplay=true")
+				}
+				if strings.TrimSpace(asString(incoming["uuid"])) == "" {
+					return streamValidation{}, fmt.Errorf("invalid user replay event: missing uuid")
+				}
+				if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+					return streamValidation{}, fmt.Errorf("invalid user replay event: missing session_id")
+				}
+				message, _ := incoming["message"].(map[string]any)
+				if strings.TrimSpace(asString(message["role"])) != "user" {
+					return streamValidation{}, fmt.Errorf("invalid user replay event: missing role=user")
+				}
+				content, _ := message["content"].([]any)
+				isToolResult := false
+				for _, item := range content {
+					block, _ := item.(map[string]any)
+					if strings.TrimSpace(asString(block["type"])) == "tool_result" {
+						isToolResult = true
+						if strings.TrimSpace(asString(block["tool_use_id"])) == "" {
+							return streamValidation{}, fmt.Errorf("invalid replayed tool_result: missing tool_use_id")
+						}
+						if _, ok := block["content"]; !ok {
+							return streamValidation{}, fmt.Errorf("invalid replayed tool_result: missing content")
+						}
 					}
-					if strings.TrimSpace(asString(incoming["uuid"])) == "" {
-						return streamValidation{}, fmt.Errorf("invalid user replay event: missing uuid")
+				}
+				if isToolResult {
+					toolUseResult, _ := incoming["tool_use_result"].(map[string]any)
+					if strings.TrimSpace(asString(toolUseResult["tool_use_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid replayed tool_result: missing tool_use_result.tool_use_id")
 					}
-					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
-						return streamValidation{}, fmt.Errorf("invalid user replay event: missing session_id")
+					if _, ok := toolUseResult["content"]; !ok {
+						return streamValidation{}, fmt.Errorf("invalid replayed tool_result: missing tool_use_result.content")
 					}
-					message, _ := incoming["message"].(map[string]any)
-					if strings.TrimSpace(asString(message["role"])) != "user" {
-						return streamValidation{}, fmt.Errorf("invalid user replay event: missing role=user")
-					}
-					replayedPrompt := extractPromptText(map[string]any{"message": message})
-					if replayedPrompt == "" {
-						return streamValidation{}, fmt.Errorf("invalid user replay event: missing replayed text content")
-					}
-					result.ReplayedUserMessageValidated = true
-					result.ReplayedUserMessageEvent = "user:isReplay"
+					result.ReplayedToolResultValidated = true
+					result.ReplayedToolResultEvent = "user:tool_result:isReplay"
 					continue
 				}
-				return streamValidation{}, fmt.Errorf("unexpected non-replay user event from server")
+				replayedPrompt := extractPromptText(map[string]any{"message": message})
+				if replayedPrompt == "" {
+					return streamValidation{}, fmt.Errorf("invalid user replay event: missing replayed text content")
+				}
+				result.ReplayedUserMessageValidated = true
+				result.ReplayedUserMessageEvent = "user:isReplay"
+				continue
 			case "system":
 				switch strings.TrimSpace(asString(incoming["subtype"])) {
 				case "init":
@@ -1682,6 +1711,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedUserMessageValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed user message during resume validation")
+	}
+	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedToolResultValidated {
+		return streamValidation{}, fmt.Errorf("missing replayed tool_result message during resume validation")
 	}
 	result.MultiTurnValidated = result.ValidatedTurns >= 2
 
@@ -2905,6 +2937,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("status_compacting_lifecycle_event=%s\n", valueOrNone(r.StatusCompactingLifecycleEvent)))
 	b.WriteString(fmt.Sprintf("replayed_user_message_validated=%t\n", r.ReplayedUserMessageValidated))
 	b.WriteString(fmt.Sprintf("replayed_user_message_event=%s\n", valueOrNone(r.ReplayedUserMessageEvent)))
+	b.WriteString(fmt.Sprintf("replayed_tool_result_validated=%t\n", r.ReplayedToolResultValidated))
+	b.WriteString(fmt.Sprintf("replayed_tool_result_event=%s\n", valueOrNone(r.ReplayedToolResultEvent)))
 	b.WriteString(fmt.Sprintf("auth_validated=%t\n", r.AuthValidated))
 	b.WriteString(fmt.Sprintf("auth_event=%s\n", valueOrNone(r.AuthEvent)))
 	b.WriteString(fmt.Sprintf("keep_alive_validated=%t\n", r.KeepAliveValidated))

@@ -73,6 +73,7 @@ func TestRunOpenDefaults(t *testing.T) {
 		"status_validated=false",
 		"status_compacting_lifecycle_validated=false",
 		"replayed_user_message_validated=false",
+		"replayed_tool_result_validated=false",
 		"auth_validated=false",
 		"keep_alive_validated=false",
 		"update_environment_variables_validated=false",
@@ -220,7 +221,7 @@ func TestRunOpenSupportsResumePrintReplayValidation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resumed Run returned error: %v", err)
 	}
-	if !resumed.ReplayedUserMessageValidated || resumed.ReplayedUserMessageEvent != "user:isReplay" {
+	if !resumed.ReplayedUserMessageValidated || resumed.ReplayedUserMessageEvent != "user:isReplay" || !resumed.ReplayedToolResultValidated || resumed.ReplayedToolResultEvent != "user:tool_result:isReplay" {
 		t.Fatalf("expected replay validation, got %#v", resumed)
 	}
 }
@@ -316,6 +317,8 @@ func newHTTPDirectConnectTestServer(t *testing.T, sessionID, workDir string, onS
 	mux := http.NewServeMux()
 	var wsBase string
 	replayedPrompt := ""
+	replayedToolUseID := ""
+	replayedToolResult := ""
 	emitReplayOnAttach := false
 
 	mux.HandleFunc("/sessions", func(w http.ResponseWriter, r *http.Request) {
@@ -324,7 +327,7 @@ func newHTTPDirectConnectTestServer(t *testing.T, sessionID, workDir string, onS
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodGet {
-			emitReplayOnAttach = strings.TrimSpace(r.URL.Query().Get("resume")) != "" && replayedPrompt != ""
+			emitReplayOnAttach = strings.TrimSpace(r.URL.Query().Get("resume")) != "" && replayedPrompt != "" && replayedToolUseID != "" && replayedToolResult != ""
 			_ = json.NewEncoder(w).Encode(map[string]string{
 				"session_id": sessionID,
 				"ws_url":     wsBase + "/" + sessionID,
@@ -356,8 +359,10 @@ func newHTTPDirectConnectTestServer(t *testing.T, sessionID, workDir string, onS
 			return
 		}
 		defer conn.Close()
-		serveDirectConnectWS(t, conn, sessionID, workDir, "http", emitReplayOnAttach, replayedPrompt, func(prompt string) {
+		serveDirectConnectWS(t, conn, sessionID, workDir, "http", emitReplayOnAttach, replayedPrompt, replayedToolUseID, replayedToolResult, func(prompt, toolUseID, toolResult string) {
 			replayedPrompt = prompt
+			replayedToolUseID = toolUseID
+			replayedToolResult = toolResult
 		})
 		emitReplayOnAttach = false
 	})
@@ -379,12 +384,14 @@ func newUnixDirectConnectTestServer(t *testing.T, socketPath, sessionID, workDir
 	mux := http.NewServeMux()
 	wsURL := "ws+unix://" + url.PathEscape(socketPath) + "/ws/" + sessionID
 	replayedPrompt := ""
+	replayedToolUseID := ""
+	replayedToolResult := ""
 	emitReplayOnAttach := false
 
 	mux.HandleFunc("/sessions", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodGet {
-			emitReplayOnAttach = strings.TrimSpace(r.URL.Query().Get("resume")) != "" && replayedPrompt != ""
+			emitReplayOnAttach = strings.TrimSpace(r.URL.Query().Get("resume")) != "" && replayedPrompt != "" && replayedToolUseID != "" && replayedToolResult != ""
 			_ = json.NewEncoder(w).Encode(map[string]string{
 				"session_id": sessionID,
 				"ws_url":     wsURL,
@@ -416,8 +423,10 @@ func newUnixDirectConnectTestServer(t *testing.T, socketPath, sessionID, workDir
 			return
 		}
 		defer conn.Close()
-		serveDirectConnectWS(t, conn, sessionID, workDir, "unix", emitReplayOnAttach, replayedPrompt, func(prompt string) {
+		serveDirectConnectWS(t, conn, sessionID, workDir, "unix", emitReplayOnAttach, replayedPrompt, replayedToolUseID, replayedToolResult, func(prompt, toolUseID, toolResult string) {
 			replayedPrompt = prompt
+			replayedToolUseID = toolUseID
+			replayedToolResult = toolResult
 		})
 		emitReplayOnAttach = false
 	})
@@ -429,7 +438,7 @@ func newUnixDirectConnectTestServer(t *testing.T, socketPath, sessionID, workDir
 	return srv, nil
 }
 
-func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir, transport string, emitReplay bool, replayedPrompt string, rememberPrompt func(string)) {
+func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir, transport string, emitReplay bool, replayedPrompt, replayedToolUseID, replayedToolResult string, rememberReplay func(string, string, string)) {
 	t.Helper()
 	_ = conn.WriteJSON(map[string]string{
 		"type":       "session_ready",
@@ -489,6 +498,31 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 			},
 		})
 	}
+	if emitReplay && strings.TrimSpace(replayedToolUseID) != "" && strings.TrimSpace(replayedToolResult) != "" {
+		_ = conn.WriteJSON(map[string]any{
+			"type":               "user",
+			"isReplay":           true,
+			"uuid":               "replayed-tool-result-1",
+			"session_id":         sessionID,
+			"parent_tool_use_id": nil,
+			"tool_use_result": map[string]any{
+				"tool_use_id": replayedToolUseID,
+				"content":     replayedToolResult,
+				"is_error":    false,
+			},
+			"message": map[string]any{
+				"role": "user",
+				"content": []map[string]any{
+					{
+						"type":        "tool_result",
+						"tool_use_id": replayedToolUseID,
+						"content":     replayedToolResult,
+						"is_error":    false,
+					},
+				},
+			},
+		})
+	}
 
 	requestCounter := 0
 	completedTurns := 0
@@ -532,9 +566,6 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 					prompt = text
 					break
 				}
-			}
-			if rememberPrompt != nil {
-				rememberPrompt(prompt)
 			}
 			requestCounter++
 			pendingRequestID = fmt.Sprintf("req-%d", requestCounter)
@@ -651,6 +682,9 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 				if text := strings.TrimSpace(asString(updatedInput["text"])); text != "" {
 					toolText = text
 				}
+			}
+			if rememberReplay != nil {
+				rememberReplay(pendingPrompt, fmt.Sprintf("toolu-%d", requestCounter), "echo:"+toolText)
 			}
 			_ = conn.WriteJSON(map[string]any{
 				"type":       "control_cancel_request",

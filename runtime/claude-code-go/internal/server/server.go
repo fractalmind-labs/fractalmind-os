@@ -64,6 +64,8 @@ type sessionInfo struct {
 	WorkDir         string
 	Backend         *backendProcess
 	LastUserMessage string
+	LastToolUseID   string
+	LastToolResult  string
 }
 
 type sessionStore struct {
@@ -325,6 +327,8 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					WorkDir:         entry.CWD,
 					Backend:         existing.Backend,
 					LastUserMessage: existing.LastUserMessage,
+					LastToolUseID:   existing.LastToolUseID,
+					LastToolResult:  existing.LastToolResult,
 				})
 			} else if maxSessions > 0 && store.count() >= maxSessions {
 				http.Error(w, fmt.Sprintf("max sessions reached (%d/%d)", store.count(), maxSessions), http.StatusTooManyRequests)
@@ -584,6 +588,35 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						{
 							"type": "text",
 							"text": session.LastUserMessage,
+						},
+					},
+				},
+			})
+		}
+		if strings.TrimSpace(session.LastToolResult) != "" && strings.TrimSpace(session.LastToolUseID) != "" {
+			replayUUID, err := generateRequestID()
+			if err != nil {
+				return
+			}
+			_ = conn.WriteJSON(map[string]any{
+				"type":               "user",
+				"isReplay":           true,
+				"uuid":               replayUUID,
+				"session_id":         session.ID,
+				"parent_tool_use_id": nil,
+				"tool_use_result": map[string]any{
+					"tool_use_id": session.LastToolUseID,
+					"content":     session.LastToolResult,
+					"is_error":    false,
+				},
+				"message": map[string]any{
+					"role": "user",
+					"content": []map[string]any{
+						{
+							"type":        "tool_result",
+							"tool_use_id": session.LastToolUseID,
+							"content":     session.LastToolResult,
+							"is_error":    false,
 						},
 					},
 				},
@@ -874,6 +907,9 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				if err != nil {
 					return
 				}
+				session.LastToolUseID = pendingToolUseID
+				session.LastToolResult = responseText
+				store.put(session)
 				_ = sessionIndex.setBackendSnapshot(sessionID, session.WorkDir, session.Backend.snapshot())
 				streamUUID, err := generateRequestID()
 				if err != nil {
