@@ -982,6 +982,18 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				switch subtype {
 				case "interrupt":
 					responsePayload["interrupted"] = true
+				case "initialize":
+					responsePayload["commands"] = []any{}
+					responsePayload["agents"] = []any{}
+					responsePayload["output_style"] = "text"
+					responsePayload["available_output_styles"] = []any{"text"}
+					responsePayload["models"] = []any{}
+					responsePayload["account"] = map[string]any{
+						"apiProvider":  "anthropic",
+						"tokenSource":  "oauth",
+						"apiKeySource": "oauth",
+					}
+					responsePayload["pid"] = os.Getpid()
 				case "set_model":
 				case "set_permission_mode":
 				case "set_max_thinking_tokens":

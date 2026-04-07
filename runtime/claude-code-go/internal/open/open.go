@@ -140,6 +140,8 @@ type Result struct {
 	GenerateSessionTitleEvent     string
 	SideQuestionValidated         bool
 	SideQuestionEvent             string
+	InitializeValidated           bool
+	InitializeEvent               string
 	SetProactiveValidated         bool
 	SetProactiveEvent             string
 	BridgeStateValidated          bool
@@ -325,6 +327,8 @@ func Run(args []string) (Result, error) {
 		GenerateSessionTitleEvent:     streamResult.GenerateSessionTitleEvent,
 		SideQuestionValidated:         streamResult.SideQuestionValidated,
 		SideQuestionEvent:             streamResult.SideQuestionEvent,
+		InitializeValidated:           streamResult.InitializeValidated,
+		InitializeEvent:               streamResult.InitializeEvent,
 		SetProactiveValidated:         streamResult.SetProactiveValidated,
 		SetProactiveEvent:             streamResult.SetProactiveEvent,
 		BridgeStateValidated:          streamResult.BridgeStateValidated,
@@ -740,6 +744,8 @@ type streamValidation struct {
 	GenerateSessionTitleEvent     string
 	SideQuestionValidated         bool
 	SideQuestionEvent             string
+	InitializeValidated           bool
+	InitializeEvent               string
 	SetProactiveValidated         bool
 	SetProactiveEvent             string
 	BridgeStateValidated          bool
@@ -2019,6 +2025,46 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		result.SideQuestionValidated = true
 		result.SideQuestionEvent = "control_request:side_question"
 	}
+	initializeID := "initialize-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": initializeID,
+		"request": map[string]any{
+			"subtype": "initialize",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect initialize request: %w", err)
+	}
+	for !result.InitializeValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect initialize flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != initializeID {
+			continue
+		}
+		responsePayload, _ := response["response"].(map[string]any)
+		availableOutputStyles, _ := responsePayload["available_output_styles"].([]any)
+		accountPayload, _ := responsePayload["account"].(map[string]any)
+		if _, ok := responsePayload["commands"].([]any); !ok || strings.TrimSpace(asString(responsePayload["output_style"])) == "" || len(availableOutputStyles) == 0 {
+			return streamValidation{}, fmt.Errorf("invalid initialize response: missing commands/output_style/available_output_styles")
+		}
+		if _, ok := responsePayload["agents"].([]any); !ok {
+			return streamValidation{}, fmt.Errorf("invalid initialize response: missing agents")
+		}
+		if _, ok := responsePayload["models"].([]any); !ok {
+			return streamValidation{}, fmt.Errorf("invalid initialize response: missing models")
+		}
+		if strings.TrimSpace(asString(accountPayload["apiProvider"])) == "" {
+			return streamValidation{}, fmt.Errorf("invalid initialize response: missing account.apiProvider")
+		}
+		result.InitializeValidated = true
+		result.InitializeEvent = "control_request:initialize"
+	}
 	setProactiveID := "set-proactive-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -2301,6 +2347,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("generate_session_title_event=%s\n", valueOrNone(r.GenerateSessionTitleEvent)))
 	b.WriteString(fmt.Sprintf("side_question_validated=%t\n", r.SideQuestionValidated))
 	b.WriteString(fmt.Sprintf("side_question_event=%s\n", valueOrNone(r.SideQuestionEvent)))
+	b.WriteString(fmt.Sprintf("initialize_validated=%t\n", r.InitializeValidated))
+	b.WriteString(fmt.Sprintf("initialize_event=%s\n", valueOrNone(r.InitializeEvent)))
 	b.WriteString(fmt.Sprintf("set_proactive_validated=%t\n", r.SetProactiveValidated))
 	b.WriteString(fmt.Sprintf("set_proactive_event=%s\n", valueOrNone(r.SetProactiveEvent)))
 	b.WriteString(fmt.Sprintf("bridge_state_validated=%t\n", r.BridgeStateValidated))

@@ -1260,6 +1260,36 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "initialize-1",
+		"request": map[string]any{
+			"subtype": "initialize",
+		},
+	}); err != nil {
+		t.Fatalf("write initialize request failed: %v", err)
+	}
+	var initializeResp map[string]any
+	if err := ws.ReadJSON(&initializeResp); err != nil {
+		t.Fatalf("read initialize response failed: %v", err)
+	}
+	if initializeResp["type"] != "control_response" {
+		t.Fatalf("unexpected initialize response: %#v", initializeResp)
+	}
+	initializeResponse, _ := initializeResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(initializeResponse["request_id"])) != "initialize-1" {
+		t.Fatalf("unexpected initialize request id: %#v", initializeResp)
+	}
+	initializePayload, _ := initializeResponse["response"].(map[string]any)
+	availableOutputStyles, _ := initializePayload["available_output_styles"].([]any)
+	if _, ok := initializePayload["commands"].([]any); !ok || len(availableOutputStyles) == 0 || strings.TrimSpace(asString(initializePayload["output_style"])) == "" {
+		t.Fatalf("unexpected initialize payload: %#v", initializeResp)
+	}
+	accountPayload, _ := initializePayload["account"].(map[string]any)
+	if strings.TrimSpace(asString(accountPayload["apiProvider"])) == "" || strings.TrimSpace(asString(accountPayload["tokenSource"])) == "" || strings.TrimSpace(asString(accountPayload["apiKeySource"])) == "" {
+		t.Fatalf("unexpected initialize account payload: %#v", initializeResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "set-proactive-1",
 		"request": map[string]any{
 			"subtype": "set_proactive",
