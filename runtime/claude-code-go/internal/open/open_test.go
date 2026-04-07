@@ -67,6 +67,7 @@ func TestRunOpenDefaults(t *testing.T) {
 		"stream_event=session_ready",
 		"stream_content_validated=false",
 		"streamlined_text_validated=false",
+		"streamlined_tool_use_summary_validated=false",
 		"tool_progress_validated=false",
 		"status_validated=false",
 		"auth_validated=false",
@@ -684,6 +685,12 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 				"output_preview": "echo:" + toolText,
 				"uuid":           fmt.Sprintf("tool-summary-%d", requestCounter),
 				"session_id":     sessionID,
+			})
+			_ = conn.WriteJSON(map[string]any{
+				"type":         "streamlined_tool_use_summary",
+				"tool_summary": "Used echo 1 time",
+				"uuid":         fmt.Sprintf("streamlined-tool-summary-%d", requestCounter),
+				"session_id":   sessionID,
 			})
 			_ = conn.WriteJSON(map[string]any{
 				"type":               "result",

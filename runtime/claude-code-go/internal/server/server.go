@@ -886,6 +886,16 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":           toolSummaryUUID,
 					"session_id":     session.ID,
 				})
+				streamlinedToolSummaryUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":         "streamlined_tool_use_summary",
+					"tool_summary": "Used echo 1 time",
+					"uuid":         streamlinedToolSummaryUUID,
+					"session_id":   session.ID,
+				})
 				completedTurns++
 				resultUUID, err := generateRequestID()
 				if err != nil {

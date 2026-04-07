@@ -329,6 +329,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if toolSummary["type"] != "tool_use_summary" || strings.TrimSpace(asString(toolSummary["tool_name"])) != directConnectEchoToolName || strings.TrimSpace(asString(toolSummary["tool_use_id"])) != strings.TrimSpace(asString(request["tool_use_id"])) || strings.TrimSpace(asString(toolSummary["output_preview"])) != "echo:hello [approved]" {
 		t.Fatalf("unexpected tool summary payload: %#v", toolSummary)
 	}
+	var streamlinedToolSummary map[string]any
+	if err := ws.ReadJSON(&streamlinedToolSummary); err != nil {
+		t.Fatalf("read streamlined_tool_use_summary failed: %v", err)
+	}
+	if streamlinedToolSummary["type"] != "streamlined_tool_use_summary" || strings.TrimSpace(asString(streamlinedToolSummary["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(streamlinedToolSummary["tool_summary"])) != "Used echo 1 time" {
+		t.Fatalf("unexpected streamlined_tool_use_summary payload: %#v", streamlinedToolSummary)
+	}
 	var result map[string]any
 	if err := ws.ReadJSON(&result); err != nil {
 		t.Fatalf("read result event failed: %v", err)
@@ -578,6 +585,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if secondToolSummary["type"] != "tool_use_summary" || strings.TrimSpace(asString(secondToolSummary["tool_name"])) != directConnectEchoToolName || strings.TrimSpace(asString(secondToolSummary["tool_use_id"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) || strings.TrimSpace(asString(secondToolSummary["output_preview"])) != "echo:hello again [approved]" {
 		t.Fatalf("unexpected second tool summary payload: %#v", secondToolSummary)
+	}
+	var secondStreamlinedToolSummary map[string]any
+	if err := ws.ReadJSON(&secondStreamlinedToolSummary); err != nil {
+		t.Fatalf("read second streamlined_tool_use_summary failed: %v", err)
+	}
+	if secondStreamlinedToolSummary["type"] != "streamlined_tool_use_summary" || strings.TrimSpace(asString(secondStreamlinedToolSummary["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(secondStreamlinedToolSummary["tool_summary"])) != "Used echo 1 time" {
+		t.Fatalf("unexpected second streamlined_tool_use_summary payload: %#v", secondStreamlinedToolSummary)
 	}
 	var secondResult map[string]any
 	if err := ws.ReadJSON(&secondResult); err != nil {

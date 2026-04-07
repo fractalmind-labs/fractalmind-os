@@ -101,6 +101,8 @@ type Result struct {
 	RateLimitEvent                                 string
 	ToolUseSummaryValidated                        bool
 	ToolUseSummaryEvent                            string
+	StreamlinedToolUseSummaryValidated             bool
+	StreamlinedToolUseSummaryEvent                 string
 	PostTurnSummaryValidated                       bool
 	PostTurnSummaryEvent                           string
 	CompactBoundaryValidated                       bool
@@ -278,111 +280,113 @@ func Run(args []string) (Result, error) {
 		ResultErrorMaxBudgetUSDEvent:        streamResult.ResultErrorMaxBudgetUSDEvent,
 		ResultErrorMaxStructuredOutputRetriesValidated: streamResult.ResultErrorMaxStructuredOutputRetriesValidated,
 		ResultErrorMaxStructuredOutputRetriesEvent:     streamResult.ResultErrorMaxStructuredOutputRetriesEvent,
-		ControlValidated:              streamResult.ControlValidated,
-		PermissionValidated:           streamResult.PermissionValidated,
-		PermissionDeniedValidated:     streamResult.PermissionDeniedValidated,
-		PermissionDeniedEvent:         streamResult.PermissionDeniedEvent,
-		TaskStartedValidated:          streamResult.TaskStartedValidated,
-		TaskStartedEvent:              streamResult.TaskStartedEvent,
-		TaskProgressValidated:         streamResult.TaskProgressValidated,
-		TaskProgressEvent:             streamResult.TaskProgressEvent,
-		TaskNotificationValidated:     streamResult.TaskNotificationValidated,
-		TaskNotificationEvent:         streamResult.TaskNotificationEvent,
-		FilesPersistedValidated:       streamResult.FilesPersistedValidated,
-		FilesPersistedEvent:           streamResult.FilesPersistedEvent,
-		APIRetryValidated:             streamResult.APIRetryValidated,
-		APIRetryEvent:                 streamResult.APIRetryEvent,
-		LocalCommandOutputValidated:   streamResult.LocalCommandOutputValidated,
-		LocalCommandOutputEvent:       streamResult.LocalCommandOutputEvent,
-		ElicitationValidated:          streamResult.ElicitationValidated,
-		ElicitationEvent:              streamResult.ElicitationEvent,
-		HookCallbackValidated:         streamResult.HookCallbackValidated,
-		HookCallbackEvent:             streamResult.HookCallbackEvent,
-		ChannelEnableValidated:        streamResult.ChannelEnableValidated,
-		ChannelEnableEvent:            streamResult.ChannelEnableEvent,
-		ElicitationCompleteValidated:  streamResult.ElicitationCompleteValidated,
-		ElicitationCompleteEvent:      streamResult.ElicitationCompleteEvent,
-		ToolProgressValidated:         streamResult.ToolProgressValidated,
-		ToolProgressEvent:             streamResult.ToolProgressEvent,
-		RateLimitValidated:            streamResult.RateLimitValidated,
-		RateLimitEvent:                streamResult.RateLimitEvent,
-		ToolUseSummaryValidated:       streamResult.ToolUseSummaryValidated,
-		ToolUseSummaryEvent:           streamResult.ToolUseSummaryEvent,
-		PostTurnSummaryValidated:      streamResult.PostTurnSummaryValidated,
-		PostTurnSummaryEvent:          streamResult.PostTurnSummaryEvent,
-		CompactBoundaryValidated:      streamResult.CompactBoundaryValidated,
-		CompactBoundaryEvent:          streamResult.CompactBoundaryEvent,
-		SessionStateChangedValidated:  streamResult.SessionStateChangedValidated,
-		SessionStateChangedEvent:      streamResult.SessionStateChangedEvent,
-		HookStartedValidated:          streamResult.HookStartedValidated,
-		HookStartedEvent:              streamResult.HookStartedEvent,
-		HookProgressValidated:         streamResult.HookProgressValidated,
-		HookProgressEvent:             streamResult.HookProgressEvent,
-		HookResponseValidated:         streamResult.HookResponseValidated,
-		HookResponseEvent:             streamResult.HookResponseEvent,
-		ToolExecutionValidated:        streamResult.ToolExecutionValidated,
-		InterruptValidated:            streamResult.InterruptValidated,
-		SetModelValidated:             streamResult.SetModelValidated,
-		SetModelEvent:                 streamResult.SetModelEvent,
-		SetPermissionModeValidated:    streamResult.SetPermissionModeValidated,
-		SetPermissionModeEvent:        streamResult.SetPermissionModeEvent,
-		SetMaxThinkingTokensValidated: streamResult.SetMaxThinkingTokensValidated,
-		SetMaxThinkingTokensEvent:     streamResult.SetMaxThinkingTokensEvent,
-		MCPStatusValidated:            streamResult.MCPStatusValidated,
-		MCPStatusEvent:                streamResult.MCPStatusEvent,
-		GetContextUsageValidated:      streamResult.GetContextUsageValidated,
-		GetContextUsageEvent:          streamResult.GetContextUsageEvent,
-		MCPMessageValidated:           streamResult.MCPMessageValidated,
-		MCPMessageEvent:               streamResult.MCPMessageEvent,
-		MCPSetServersValidated:        streamResult.MCPSetServersValidated,
-		MCPSetServersEvent:            streamResult.MCPSetServersEvent,
-		ReloadPluginsValidated:        streamResult.ReloadPluginsValidated,
-		ReloadPluginsEvent:            streamResult.ReloadPluginsEvent,
-		MCPAuthenticateValidated:      streamResult.MCPAuthenticateValidated,
-		MCPAuthenticateEvent:          streamResult.MCPAuthenticateEvent,
-		MCPOAuthCallbackURLValidated:  streamResult.MCPOAuthCallbackURLValidated,
-		MCPOAuthCallbackURLEvent:      streamResult.MCPOAuthCallbackURLEvent,
-		MCPReconnectValidated:         streamResult.MCPReconnectValidated,
-		MCPReconnectEvent:             streamResult.MCPReconnectEvent,
-		MCPToggleValidated:            streamResult.MCPToggleValidated,
-		MCPToggleEvent:                streamResult.MCPToggleEvent,
-		SeedReadStateValidated:        streamResult.SeedReadStateValidated,
-		SeedReadStateEvent:            streamResult.SeedReadStateEvent,
-		RewindFilesValidated:          streamResult.RewindFilesValidated,
-		RewindFilesEvent:              streamResult.RewindFilesEvent,
-		RewindFilesCanRewind:          streamResult.RewindFilesCanRewind,
-		RewindFilesFilesChanged:       streamResult.RewindFilesFilesChanged,
-		RewindFilesInsertions:         streamResult.RewindFilesInsertions,
-		RewindFilesDeletions:          streamResult.RewindFilesDeletions,
-		RewindFilesError:              streamResult.RewindFilesError,
-		CancelAsyncMessageValidated:   streamResult.CancelAsyncMessageValidated,
-		CancelAsyncMessageEvent:       streamResult.CancelAsyncMessageEvent,
-		StopTaskValidated:             streamResult.StopTaskValidated,
-		StopTaskEvent:                 streamResult.StopTaskEvent,
-		ApplyFlagSettingsValidated:    streamResult.ApplyFlagSettingsValidated,
-		ApplyFlagSettingsEvent:        streamResult.ApplyFlagSettingsEvent,
-		GetSettingsValidated:          streamResult.GetSettingsValidated,
-		GetSettingsEvent:              streamResult.GetSettingsEvent,
-		GenerateSessionTitleValidated: streamResult.GenerateSessionTitleValidated,
-		GenerateSessionTitleEvent:     streamResult.GenerateSessionTitleEvent,
-		SideQuestionValidated:         streamResult.SideQuestionValidated,
-		SideQuestionEvent:             streamResult.SideQuestionEvent,
-		InitializeValidated:           streamResult.InitializeValidated,
-		InitializeEvent:               streamResult.InitializeEvent,
-		SetProactiveValidated:         streamResult.SetProactiveValidated,
-		SetProactiveEvent:             streamResult.SetProactiveEvent,
-		BridgeStateValidated:          streamResult.BridgeStateValidated,
-		BridgeStateEvent:              streamResult.BridgeStateEvent,
-		RemoteControlValidated:        streamResult.RemoteControlValidated,
-		RemoteControlEvent:            streamResult.RemoteControlEvent,
-		EndSessionValidated:           streamResult.EndSessionValidated,
-		EndSessionEvent:               streamResult.EndSessionEvent,
-		BackendValidated:              state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
-		BackendStatus:                 state.BackendStatus,
-		BackendPID:                    state.BackendPID,
-		BackendStartedAt:              state.BackendStartedAt,
-		BackendStoppedAt:              state.BackendStoppedAt,
-		BackendExitCode:               state.BackendExitCode,
+		ControlValidated:                   streamResult.ControlValidated,
+		PermissionValidated:                streamResult.PermissionValidated,
+		PermissionDeniedValidated:          streamResult.PermissionDeniedValidated,
+		PermissionDeniedEvent:              streamResult.PermissionDeniedEvent,
+		TaskStartedValidated:               streamResult.TaskStartedValidated,
+		TaskStartedEvent:                   streamResult.TaskStartedEvent,
+		TaskProgressValidated:              streamResult.TaskProgressValidated,
+		TaskProgressEvent:                  streamResult.TaskProgressEvent,
+		TaskNotificationValidated:          streamResult.TaskNotificationValidated,
+		TaskNotificationEvent:              streamResult.TaskNotificationEvent,
+		FilesPersistedValidated:            streamResult.FilesPersistedValidated,
+		FilesPersistedEvent:                streamResult.FilesPersistedEvent,
+		APIRetryValidated:                  streamResult.APIRetryValidated,
+		APIRetryEvent:                      streamResult.APIRetryEvent,
+		LocalCommandOutputValidated:        streamResult.LocalCommandOutputValidated,
+		LocalCommandOutputEvent:            streamResult.LocalCommandOutputEvent,
+		ElicitationValidated:               streamResult.ElicitationValidated,
+		ElicitationEvent:                   streamResult.ElicitationEvent,
+		HookCallbackValidated:              streamResult.HookCallbackValidated,
+		HookCallbackEvent:                  streamResult.HookCallbackEvent,
+		ChannelEnableValidated:             streamResult.ChannelEnableValidated,
+		ChannelEnableEvent:                 streamResult.ChannelEnableEvent,
+		ElicitationCompleteValidated:       streamResult.ElicitationCompleteValidated,
+		ElicitationCompleteEvent:           streamResult.ElicitationCompleteEvent,
+		ToolProgressValidated:              streamResult.ToolProgressValidated,
+		ToolProgressEvent:                  streamResult.ToolProgressEvent,
+		RateLimitValidated:                 streamResult.RateLimitValidated,
+		RateLimitEvent:                     streamResult.RateLimitEvent,
+		ToolUseSummaryValidated:            streamResult.ToolUseSummaryValidated,
+		ToolUseSummaryEvent:                streamResult.ToolUseSummaryEvent,
+		StreamlinedToolUseSummaryValidated: streamResult.StreamlinedToolUseSummaryValidated,
+		StreamlinedToolUseSummaryEvent:     streamResult.StreamlinedToolUseSummaryEvent,
+		PostTurnSummaryValidated:           streamResult.PostTurnSummaryValidated,
+		PostTurnSummaryEvent:               streamResult.PostTurnSummaryEvent,
+		CompactBoundaryValidated:           streamResult.CompactBoundaryValidated,
+		CompactBoundaryEvent:               streamResult.CompactBoundaryEvent,
+		SessionStateChangedValidated:       streamResult.SessionStateChangedValidated,
+		SessionStateChangedEvent:           streamResult.SessionStateChangedEvent,
+		HookStartedValidated:               streamResult.HookStartedValidated,
+		HookStartedEvent:                   streamResult.HookStartedEvent,
+		HookProgressValidated:              streamResult.HookProgressValidated,
+		HookProgressEvent:                  streamResult.HookProgressEvent,
+		HookResponseValidated:              streamResult.HookResponseValidated,
+		HookResponseEvent:                  streamResult.HookResponseEvent,
+		ToolExecutionValidated:             streamResult.ToolExecutionValidated,
+		InterruptValidated:                 streamResult.InterruptValidated,
+		SetModelValidated:                  streamResult.SetModelValidated,
+		SetModelEvent:                      streamResult.SetModelEvent,
+		SetPermissionModeValidated:         streamResult.SetPermissionModeValidated,
+		SetPermissionModeEvent:             streamResult.SetPermissionModeEvent,
+		SetMaxThinkingTokensValidated:      streamResult.SetMaxThinkingTokensValidated,
+		SetMaxThinkingTokensEvent:          streamResult.SetMaxThinkingTokensEvent,
+		MCPStatusValidated:                 streamResult.MCPStatusValidated,
+		MCPStatusEvent:                     streamResult.MCPStatusEvent,
+		GetContextUsageValidated:           streamResult.GetContextUsageValidated,
+		GetContextUsageEvent:               streamResult.GetContextUsageEvent,
+		MCPMessageValidated:                streamResult.MCPMessageValidated,
+		MCPMessageEvent:                    streamResult.MCPMessageEvent,
+		MCPSetServersValidated:             streamResult.MCPSetServersValidated,
+		MCPSetServersEvent:                 streamResult.MCPSetServersEvent,
+		ReloadPluginsValidated:             streamResult.ReloadPluginsValidated,
+		ReloadPluginsEvent:                 streamResult.ReloadPluginsEvent,
+		MCPAuthenticateValidated:           streamResult.MCPAuthenticateValidated,
+		MCPAuthenticateEvent:               streamResult.MCPAuthenticateEvent,
+		MCPOAuthCallbackURLValidated:       streamResult.MCPOAuthCallbackURLValidated,
+		MCPOAuthCallbackURLEvent:           streamResult.MCPOAuthCallbackURLEvent,
+		MCPReconnectValidated:              streamResult.MCPReconnectValidated,
+		MCPReconnectEvent:                  streamResult.MCPReconnectEvent,
+		MCPToggleValidated:                 streamResult.MCPToggleValidated,
+		MCPToggleEvent:                     streamResult.MCPToggleEvent,
+		SeedReadStateValidated:             streamResult.SeedReadStateValidated,
+		SeedReadStateEvent:                 streamResult.SeedReadStateEvent,
+		RewindFilesValidated:               streamResult.RewindFilesValidated,
+		RewindFilesEvent:                   streamResult.RewindFilesEvent,
+		RewindFilesCanRewind:               streamResult.RewindFilesCanRewind,
+		RewindFilesFilesChanged:            streamResult.RewindFilesFilesChanged,
+		RewindFilesInsertions:              streamResult.RewindFilesInsertions,
+		RewindFilesDeletions:               streamResult.RewindFilesDeletions,
+		RewindFilesError:                   streamResult.RewindFilesError,
+		CancelAsyncMessageValidated:        streamResult.CancelAsyncMessageValidated,
+		CancelAsyncMessageEvent:            streamResult.CancelAsyncMessageEvent,
+		StopTaskValidated:                  streamResult.StopTaskValidated,
+		StopTaskEvent:                      streamResult.StopTaskEvent,
+		ApplyFlagSettingsValidated:         streamResult.ApplyFlagSettingsValidated,
+		ApplyFlagSettingsEvent:             streamResult.ApplyFlagSettingsEvent,
+		GetSettingsValidated:               streamResult.GetSettingsValidated,
+		GetSettingsEvent:                   streamResult.GetSettingsEvent,
+		GenerateSessionTitleValidated:      streamResult.GenerateSessionTitleValidated,
+		GenerateSessionTitleEvent:          streamResult.GenerateSessionTitleEvent,
+		SideQuestionValidated:              streamResult.SideQuestionValidated,
+		SideQuestionEvent:                  streamResult.SideQuestionEvent,
+		InitializeValidated:                streamResult.InitializeValidated,
+		InitializeEvent:                    streamResult.InitializeEvent,
+		SetProactiveValidated:              streamResult.SetProactiveValidated,
+		SetProactiveEvent:                  streamResult.SetProactiveEvent,
+		BridgeStateValidated:               streamResult.BridgeStateValidated,
+		BridgeStateEvent:                   streamResult.BridgeStateEvent,
+		RemoteControlValidated:             streamResult.RemoteControlValidated,
+		RemoteControlEvent:                 streamResult.RemoteControlEvent,
+		EndSessionValidated:                streamResult.EndSessionValidated,
+		EndSessionEvent:                    streamResult.EndSessionEvent,
+		BackendValidated:                   state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
+		BackendStatus:                      state.BackendStatus,
+		BackendPID:                         state.BackendPID,
+		BackendStartedAt:                   state.BackendStartedAt,
+		BackendStoppedAt:                   state.BackendStoppedAt,
+		BackendExitCode:                    state.BackendExitCode,
 	}, nil
 }
 
@@ -745,6 +749,8 @@ type streamValidation struct {
 	RateLimitEvent                                 string
 	ToolUseSummaryValidated                        bool
 	ToolUseSummaryEvent                            string
+	StreamlinedToolUseSummaryValidated             bool
+	StreamlinedToolUseSummaryEvent                 string
 	PostTurnSummaryValidated                       bool
 	PostTurnSummaryEvent                           string
 	CompactBoundaryValidated                       bool
@@ -929,6 +935,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		hookProgressValidated := false
 		hookResponseValidated := false
 		streamlinedTextValidated := false
+		streamlinedToolUseSummaryValidated := false
 		for {
 			var incoming map[string]any
 			if err := conn.ReadJSON(&incoming); err != nil {
@@ -1385,6 +1392,19 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				result.ToolUseSummaryValidated = true
 				result.ToolUseSummaryEvent = "tool_use_summary"
+			case "streamlined_tool_use_summary":
+				if turn.behavior == "deny" {
+					return streamValidation{}, fmt.Errorf("unexpected streamlined_tool_use_summary during deny turn")
+				}
+				if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+					return streamValidation{}, fmt.Errorf("invalid streamlined_tool_use_summary: missing session_id")
+				}
+				if strings.TrimSpace(asString(incoming["tool_summary"])) != "Used echo 1 time" {
+					return streamValidation{}, fmt.Errorf("invalid streamlined_tool_use_summary tool_summary: got %q", strings.TrimSpace(asString(incoming["tool_summary"])))
+				}
+				result.StreamlinedToolUseSummaryValidated = true
+				result.StreamlinedToolUseSummaryEvent = "streamlined_tool_use_summary"
+				streamlinedToolUseSummaryValidated = true
 			case "stream_event":
 				if turn.behavior == "deny" {
 					return streamValidation{}, fmt.Errorf("unexpected stream_event during deny turn")
@@ -1534,7 +1554,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && streamlinedTextValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -2801,6 +2821,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("rate_limit_event=%s\n", valueOrNone(r.RateLimitEvent)))
 	b.WriteString(fmt.Sprintf("tool_use_summary_validated=%t\n", r.ToolUseSummaryValidated))
 	b.WriteString(fmt.Sprintf("tool_use_summary_event=%s\n", valueOrNone(r.ToolUseSummaryEvent)))
+	b.WriteString(fmt.Sprintf("streamlined_tool_use_summary_validated=%t\n", r.StreamlinedToolUseSummaryValidated))
+	b.WriteString(fmt.Sprintf("streamlined_tool_use_summary_event=%s\n", valueOrNone(r.StreamlinedToolUseSummaryEvent)))
 	b.WriteString(fmt.Sprintf("post_turn_summary_validated=%t\n", r.PostTurnSummaryValidated))
 	b.WriteString(fmt.Sprintf("post_turn_summary_event=%s\n", valueOrNone(r.PostTurnSummaryEvent)))
 	b.WriteString(fmt.Sprintf("compact_boundary_validated=%t\n", r.CompactBoundaryValidated))
