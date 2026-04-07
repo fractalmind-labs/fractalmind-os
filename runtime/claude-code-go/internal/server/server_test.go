@@ -754,6 +754,62 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 
 	if err := ws.WriteJSON(map[string]any{
+		"type": "user",
+		"message": map[string]any{
+			"role":    "user",
+			"content": []map[string]any{{"type": "text", "text": "hit max turns"}},
+		},
+	}); err != nil {
+		t.Fatalf("write max-turns user message failed: %v", err)
+	}
+
+	var maxTurnsRunningState map[string]any
+	if err := ws.ReadJSON(&maxTurnsRunningState); err != nil {
+		t.Fatalf("read max-turns running session_state_changed failed: %v", err)
+	}
+	if maxTurnsRunningState["type"] != "system" || strings.TrimSpace(asString(maxTurnsRunningState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(maxTurnsRunningState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(maxTurnsRunningState["state"])) != "running" {
+		t.Fatalf("unexpected max-turns running session_state_changed payload: %#v", maxTurnsRunningState)
+	}
+
+	var maxTurnsControlReq map[string]any
+	if err := ws.ReadJSON(&maxTurnsControlReq); err != nil {
+		t.Fatalf("read max-turns control request failed: %v", err)
+	}
+	if maxTurnsControlReq["type"] != "control_request" {
+		t.Fatalf("unexpected max-turns control request: %#v", maxTurnsControlReq)
+	}
+	maxTurnsRequestID := maxTurnsControlReq["request_id"].(string)
+	if err := ws.WriteJSON(map[string]any{
+		"type": "control_response",
+		"response": map[string]any{
+			"subtype":    "success",
+			"request_id": maxTurnsRequestID,
+			"response": map[string]any{
+				"behavior": "max_turns",
+			},
+		},
+	}); err != nil {
+		t.Fatalf("write max-turns control response failed: %v", err)
+	}
+
+	var maxTurnsResult map[string]any
+	if err := ws.ReadJSON(&maxTurnsResult); err != nil {
+		t.Fatalf("read max-turns result event failed: %v", err)
+	}
+	if maxTurnsResult["type"] != "result" || strings.TrimSpace(asString(maxTurnsResult["subtype"])) != "error_max_turns" {
+		t.Fatalf("unexpected max-turns result event: %#v", maxTurnsResult)
+	}
+	if isError, ok := maxTurnsResult["is_error"].(bool); !ok || !isError {
+		t.Fatalf("expected max-turns result is_error=true, got %#v", maxTurnsResult)
+	}
+	if int(maxTurnsResult["num_turns"].(float64)) != 2 {
+		t.Fatalf("expected max-turns result num_turns=2, got %#v", maxTurnsResult)
+	}
+	if strings.TrimSpace(asString(maxTurnsResult["stop_reason"])) != "max_turns" {
+		t.Fatalf("unexpected max-turns stop_reason: %#v", maxTurnsResult)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
 		"request_id": "interrupt-1",
 		"request": map[string]any{

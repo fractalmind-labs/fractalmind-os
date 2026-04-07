@@ -63,6 +63,8 @@ type Result struct {
 	ResultEvent                         string
 	ResultErrorValidated                bool
 	ResultErrorEvent                    string
+	ResultErrorMaxTurnsValidated        bool
+	ResultErrorMaxTurnsEvent            string
 	ControlValidated                    bool
 	PermissionValidated                 bool
 	PermissionDeniedValidated           bool
@@ -262,6 +264,8 @@ func Run(args []string) (Result, error) {
 		ResultEvent:                         streamResult.ResultEvent,
 		ResultErrorValidated:                streamResult.ResultErrorValidated,
 		ResultErrorEvent:                    streamResult.ResultErrorEvent,
+		ResultErrorMaxTurnsValidated:        streamResult.ResultErrorMaxTurnsValidated,
+		ResultErrorMaxTurnsEvent:            streamResult.ResultErrorMaxTurnsEvent,
 		ControlValidated:                    streamResult.ControlValidated,
 		PermissionValidated:                 streamResult.PermissionValidated,
 		PermissionDeniedValidated:           streamResult.PermissionDeniedValidated,
@@ -691,6 +695,8 @@ type streamValidation struct {
 	ResultEvent                         string
 	ResultErrorValidated                bool
 	ResultErrorEvent                    string
+	ResultErrorMaxTurnsValidated        bool
+	ResultErrorMaxTurnsEvent            string
 	ControlValidated                    bool
 	PermissionValidated                 bool
 	PermissionDeniedValidated           bool
@@ -853,6 +859,10 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		{
 			prompt:   prompt + " [deny]",
 			behavior: "deny",
+		},
+		{
+			prompt:   prompt + " [max-turns]",
+			behavior: "max_turns",
 		},
 	}
 	for _, turn := range turns {
@@ -1406,7 +1416,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					result.ResultValidated = true
 					result.ResultEvent = "result:success"
-				} else {
+				} else if turn.behavior == "deny" {
 					if strings.TrimSpace(asString(incoming["subtype"])) != "error_during_execution" {
 						return streamValidation{}, fmt.Errorf("invalid deny result subtype: %s", asString(incoming["subtype"]))
 					}
@@ -1436,6 +1446,21 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					result.ResultErrorValidated = true
 					result.ResultErrorEvent = "result:error_during_execution"
+				} else {
+					if strings.TrimSpace(asString(incoming["subtype"])) != "error_max_turns" {
+						return streamValidation{}, fmt.Errorf("invalid max-turns result subtype: %s", asString(incoming["subtype"]))
+					}
+					if intFromAny(incoming["num_turns"]) != result.ValidatedTurns {
+						return streamValidation{}, fmt.Errorf("invalid max-turns result: expected num_turns=%d, got %d", result.ValidatedTurns, intFromAny(incoming["num_turns"]))
+					}
+					if isError, ok := incoming["is_error"].(bool); !ok || !isError {
+						return streamValidation{}, fmt.Errorf("invalid max-turns result: expected is_error=true")
+					}
+					if strings.TrimSpace(asString(incoming["stop_reason"])) != "max_turns" {
+						return streamValidation{}, fmt.Errorf("invalid max-turns result: expected stop_reason=max_turns, got %q", strings.TrimSpace(asString(incoming["stop_reason"])))
+					}
+					result.ResultErrorMaxTurnsValidated = true
+					result.ResultErrorMaxTurnsEvent = "result:error_max_turns"
 				}
 				resultValidated = true
 			}
@@ -1443,6 +1468,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
+				break
+			}
+			if turn.behavior == "max_turns" && resultValidated {
 				break
 			}
 		}
@@ -2659,6 +2687,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("result_event=%s\n", valueOrNone(r.ResultEvent)))
 	b.WriteString(fmt.Sprintf("result_error_validated=%t\n", r.ResultErrorValidated))
 	b.WriteString(fmt.Sprintf("result_error_event=%s\n", valueOrNone(r.ResultErrorEvent)))
+	b.WriteString(fmt.Sprintf("result_error_max_turns_validated=%t\n", r.ResultErrorMaxTurnsValidated))
+	b.WriteString(fmt.Sprintf("result_error_max_turns_event=%s\n", valueOrNone(r.ResultErrorMaxTurnsEvent)))
 	b.WriteString(fmt.Sprintf("control_validated=%t\n", r.ControlValidated))
 	b.WriteString(fmt.Sprintf("permission_validated=%t\n", r.PermissionValidated))
 	b.WriteString(fmt.Sprintf("permission_denied_validated=%t\n", r.PermissionDeniedValidated))
