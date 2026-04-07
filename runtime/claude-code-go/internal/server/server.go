@@ -66,6 +66,7 @@ type sessionInfo struct {
 	LastUserMessage string
 	LastToolUseID   string
 	LastToolResult  string
+	LastAssistant   string
 }
 
 type sessionStore struct {
@@ -329,6 +330,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					LastUserMessage: existing.LastUserMessage,
 					LastToolUseID:   existing.LastToolUseID,
 					LastToolResult:  existing.LastToolResult,
+					LastAssistant:   existing.LastAssistant,
 				})
 			} else if maxSessions > 0 && store.count() >= maxSessions {
 				http.Error(w, fmt.Sprintf("max sessions reached (%d/%d)", store.count(), maxSessions), http.StatusTooManyRequests)
@@ -622,6 +624,27 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				},
 			})
 		}
+		if strings.TrimSpace(session.LastAssistant) != "" {
+			replayUUID, err := generateRequestID()
+			if err != nil {
+				return
+			}
+			_ = conn.WriteJSON(map[string]any{
+				"type":               "assistant",
+				"uuid":               replayUUID,
+				"session_id":         session.ID,
+				"parent_tool_use_id": nil,
+				"message": map[string]any{
+					"role": "assistant",
+					"content": []map[string]any{
+						{
+							"type": "text",
+							"text": session.LastAssistant,
+						},
+					},
+				},
+			})
+		}
 		var (
 			pendingPrompt    string
 			pendingRequestID string
@@ -909,6 +932,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				}
 				session.LastToolUseID = pendingToolUseID
 				session.LastToolResult = responseText
+				session.LastAssistant = responseText
 				store.put(session)
 				_ = sessionIndex.setBackendSnapshot(sessionID, session.WorkDir, session.Backend.snapshot())
 				streamUUID, err := generateRequestID()

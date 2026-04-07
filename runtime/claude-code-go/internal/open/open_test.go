@@ -74,6 +74,7 @@ func TestRunOpenDefaults(t *testing.T) {
 		"status_compacting_lifecycle_validated=false",
 		"replayed_user_message_validated=false",
 		"replayed_tool_result_validated=false",
+		"replayed_assistant_message_validated=false",
 		"auth_validated=false",
 		"keep_alive_validated=false",
 		"update_environment_variables_validated=false",
@@ -221,7 +222,9 @@ func TestRunOpenSupportsResumePrintReplayValidation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resumed Run returned error: %v", err)
 	}
-	if !resumed.ReplayedUserMessageValidated || resumed.ReplayedUserMessageEvent != "user:isReplay" || !resumed.ReplayedToolResultValidated || resumed.ReplayedToolResultEvent != "user:tool_result:isReplay" {
+	if !resumed.ReplayedUserMessageValidated || resumed.ReplayedUserMessageEvent != "user:isReplay" ||
+		!resumed.ReplayedToolResultValidated || resumed.ReplayedToolResultEvent != "user:tool_result:isReplay" ||
+		!resumed.ReplayedAssistantMessageValidated || resumed.ReplayedAssistantMessageEvent != "assistant:replay" {
 		t.Fatalf("expected replay validation, got %#v", resumed)
 	}
 }
@@ -319,6 +322,7 @@ func newHTTPDirectConnectTestServer(t *testing.T, sessionID, workDir string, onS
 	replayedPrompt := ""
 	replayedToolUseID := ""
 	replayedToolResult := ""
+	replayedAssistant := ""
 	emitReplayOnAttach := false
 
 	mux.HandleFunc("/sessions", func(w http.ResponseWriter, r *http.Request) {
@@ -327,7 +331,7 @@ func newHTTPDirectConnectTestServer(t *testing.T, sessionID, workDir string, onS
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodGet {
-			emitReplayOnAttach = strings.TrimSpace(r.URL.Query().Get("resume")) != "" && replayedPrompt != "" && replayedToolUseID != "" && replayedToolResult != ""
+			emitReplayOnAttach = strings.TrimSpace(r.URL.Query().Get("resume")) != "" && replayedPrompt != "" && replayedToolUseID != "" && replayedToolResult != "" && replayedAssistant != ""
 			_ = json.NewEncoder(w).Encode(map[string]string{
 				"session_id": sessionID,
 				"ws_url":     wsBase + "/" + sessionID,
@@ -359,10 +363,11 @@ func newHTTPDirectConnectTestServer(t *testing.T, sessionID, workDir string, onS
 			return
 		}
 		defer conn.Close()
-		serveDirectConnectWS(t, conn, sessionID, workDir, "http", emitReplayOnAttach, replayedPrompt, replayedToolUseID, replayedToolResult, func(prompt, toolUseID, toolResult string) {
+		serveDirectConnectWS(t, conn, sessionID, workDir, "http", emitReplayOnAttach, replayedPrompt, replayedToolUseID, replayedToolResult, replayedAssistant, func(prompt, toolUseID, toolResult, assistant string) {
 			replayedPrompt = prompt
 			replayedToolUseID = toolUseID
 			replayedToolResult = toolResult
+			replayedAssistant = assistant
 		})
 		emitReplayOnAttach = false
 	})
@@ -386,12 +391,13 @@ func newUnixDirectConnectTestServer(t *testing.T, socketPath, sessionID, workDir
 	replayedPrompt := ""
 	replayedToolUseID := ""
 	replayedToolResult := ""
+	replayedAssistant := ""
 	emitReplayOnAttach := false
 
 	mux.HandleFunc("/sessions", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodGet {
-			emitReplayOnAttach = strings.TrimSpace(r.URL.Query().Get("resume")) != "" && replayedPrompt != "" && replayedToolUseID != "" && replayedToolResult != ""
+			emitReplayOnAttach = strings.TrimSpace(r.URL.Query().Get("resume")) != "" && replayedPrompt != "" && replayedToolUseID != "" && replayedToolResult != "" && replayedAssistant != ""
 			_ = json.NewEncoder(w).Encode(map[string]string{
 				"session_id": sessionID,
 				"ws_url":     wsURL,
@@ -423,10 +429,11 @@ func newUnixDirectConnectTestServer(t *testing.T, socketPath, sessionID, workDir
 			return
 		}
 		defer conn.Close()
-		serveDirectConnectWS(t, conn, sessionID, workDir, "unix", emitReplayOnAttach, replayedPrompt, replayedToolUseID, replayedToolResult, func(prompt, toolUseID, toolResult string) {
+		serveDirectConnectWS(t, conn, sessionID, workDir, "unix", emitReplayOnAttach, replayedPrompt, replayedToolUseID, replayedToolResult, replayedAssistant, func(prompt, toolUseID, toolResult, assistant string) {
 			replayedPrompt = prompt
 			replayedToolUseID = toolUseID
 			replayedToolResult = toolResult
+			replayedAssistant = assistant
 		})
 		emitReplayOnAttach = false
 	})
@@ -438,7 +445,7 @@ func newUnixDirectConnectTestServer(t *testing.T, socketPath, sessionID, workDir
 	return srv, nil
 }
 
-func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir, transport string, emitReplay bool, replayedPrompt, replayedToolUseID, replayedToolResult string, rememberReplay func(string, string, string)) {
+func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir, transport string, emitReplay bool, replayedPrompt, replayedToolUseID, replayedToolResult, replayedAssistant string, rememberReplay func(string, string, string, string)) {
 	t.Helper()
 	_ = conn.WriteJSON(map[string]string{
 		"type":       "session_ready",
@@ -518,6 +525,23 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 						"tool_use_id": replayedToolUseID,
 						"content":     replayedToolResult,
 						"is_error":    false,
+					},
+				},
+			},
+		})
+	}
+	if emitReplay && strings.TrimSpace(replayedAssistant) != "" {
+		_ = conn.WriteJSON(map[string]any{
+			"type":               "assistant",
+			"uuid":               "replayed-assistant-1",
+			"session_id":         sessionID,
+			"parent_tool_use_id": nil,
+			"message": map[string]any{
+				"role": "assistant",
+				"content": []map[string]any{
+					{
+						"type": "text",
+						"text": replayedAssistant,
 					},
 				},
 			},
@@ -684,7 +708,7 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 				}
 			}
 			if rememberReplay != nil {
-				rememberReplay(pendingPrompt, fmt.Sprintf("toolu-%d", requestCounter), "echo:"+toolText)
+				rememberReplay(pendingPrompt, fmt.Sprintf("toolu-%d", requestCounter), "echo:"+toolText, "echo:"+toolText)
 			}
 			_ = conn.WriteJSON(map[string]any{
 				"type":       "control_cancel_request",

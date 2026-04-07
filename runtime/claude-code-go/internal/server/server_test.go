@@ -2761,6 +2761,28 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	if strings.TrimSpace(asString(toolUseResult["tool_use_id"])) == "" || strings.TrimSpace(asString(toolUseResult["content"])) != "echo:resume replay seed [approved]" {
 		t.Fatalf("unexpected replayed tool_use_result payload: %#v", replayedToolResult)
 	}
+	var replayedAssistant map[string]any
+	if err := ws.ReadJSON(&replayedAssistant); err != nil {
+		t.Fatalf("read replayed assistant failed: %v", err)
+	}
+	if replayedAssistant["type"] != "assistant" || strings.TrimSpace(asString(replayedAssistant["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedAssistant["uuid"])) == "" {
+		t.Fatalf("unexpected replayed assistant payload: %#v", replayedAssistant)
+	}
+	if replayedAssistant["parent_tool_use_id"] != nil {
+		t.Fatalf("expected replayed assistant parent_tool_use_id=nil, got %#v", replayedAssistant)
+	}
+	assistantMessage, _ := replayedAssistant["message"].(map[string]any)
+	if strings.TrimSpace(asString(assistantMessage["role"])) != "assistant" {
+		t.Fatalf("unexpected replayed assistant message payload: %#v", replayedAssistant)
+	}
+	assistantContent, _ := assistantMessage["content"].([]any)
+	if len(assistantContent) == 0 {
+		t.Fatalf("missing replayed assistant content: %#v", replayedAssistant)
+	}
+	assistantBlock, _ := assistantContent[0].(map[string]any)
+	if strings.TrimSpace(asString(assistantBlock["type"])) != "text" || strings.TrimSpace(asString(assistantBlock["text"])) != "echo:resume replay seed [approved]" {
+		t.Fatalf("unexpected replayed assistant content payload: %#v", replayedAssistant)
+	}
 	resumedState := fetchSessionState(t, running.Result.SessionsEndpoint, created["session_id"], "demo-token")
 	if initialPID <= 0 || resumedState.BackendPID != initialPID || resumedState.BackendStatus != "running" {
 		t.Fatalf("expected same live backend across detach/resume, initial=%#v resumed=%#v", initialState, resumedState)

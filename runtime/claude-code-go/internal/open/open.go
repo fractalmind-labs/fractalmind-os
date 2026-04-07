@@ -57,6 +57,8 @@ type Result struct {
 	ReplayedUserMessageEvent                       string
 	ReplayedToolResultValidated                    bool
 	ReplayedToolResultEvent                        string
+	ReplayedAssistantMessageValidated              bool
+	ReplayedAssistantMessageEvent                  string
 	AuthValidated                                  bool
 	AuthEvent                                      string
 	KeepAliveValidated                             bool
@@ -278,6 +280,8 @@ func Run(args []string) (Result, error) {
 		ReplayedUserMessageEvent:            streamResult.ReplayedUserMessageEvent,
 		ReplayedToolResultValidated:         streamResult.ReplayedToolResultValidated,
 		ReplayedToolResultEvent:             streamResult.ReplayedToolResultEvent,
+		ReplayedAssistantMessageValidated:   streamResult.ReplayedAssistantMessageValidated,
+		ReplayedAssistantMessageEvent:       streamResult.ReplayedAssistantMessageEvent,
 		AuthValidated:                       streamResult.AuthValidated,
 		AuthEvent:                           streamResult.AuthEvent,
 		KeepAliveValidated:                  streamResult.KeepAliveValidated,
@@ -729,6 +733,8 @@ type streamValidation struct {
 	ReplayedUserMessageEvent                       string
 	ReplayedToolResultValidated                    bool
 	ReplayedToolResultEvent                        string
+	ReplayedAssistantMessageValidated              bool
+	ReplayedAssistantMessageEvent                  string
 	AuthValidated                                  bool
 	AuthEvent                                      string
 	KeepAliveValidated                             bool
@@ -1577,6 +1583,36 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				result.StreamlinedTextEvent = "streamlined_text"
 				streamlinedTextValidated = true
 			case "assistant":
+				if strings.TrimSpace(opts.ResumeSessionID) != "" && currentToolUseID == "" && !result.ReplayedAssistantMessageValidated {
+					if strings.TrimSpace(asString(incoming["uuid"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid replayed assistant message: missing uuid")
+					}
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid replayed assistant message: missing session_id")
+					}
+					if incoming["parent_tool_use_id"] != nil {
+						return streamValidation{}, fmt.Errorf("invalid replayed assistant message: expected parent_tool_use_id=null")
+					}
+					message, _ := incoming["message"].(map[string]any)
+					if strings.TrimSpace(asString(message["role"])) != "assistant" {
+						return streamValidation{}, fmt.Errorf("invalid replayed assistant message: missing role=assistant")
+					}
+					content, _ := message["content"].([]any)
+					foundReplayText := false
+					for _, item := range content {
+						block, _ := item.(map[string]any)
+						if strings.TrimSpace(asString(block["type"])) == "text" && strings.TrimSpace(asString(block["text"])) != "" {
+							foundReplayText = true
+							break
+						}
+					}
+					if !foundReplayText {
+						return streamValidation{}, fmt.Errorf("invalid replayed assistant message: missing text content")
+					}
+					result.ReplayedAssistantMessageValidated = true
+					result.ReplayedAssistantMessageEvent = "assistant:replay"
+					continue
+				}
 				if turn.behavior == "deny" {
 					return streamValidation{}, fmt.Errorf("unexpected assistant payload during deny turn")
 				}
@@ -1714,6 +1750,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedToolResultValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed tool_result message during resume validation")
+	}
+	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedAssistantMessageValidated {
+		return streamValidation{}, fmt.Errorf("missing replayed assistant message during resume validation")
 	}
 	result.MultiTurnValidated = result.ValidatedTurns >= 2
 
@@ -2939,6 +2978,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("replayed_user_message_event=%s\n", valueOrNone(r.ReplayedUserMessageEvent)))
 	b.WriteString(fmt.Sprintf("replayed_tool_result_validated=%t\n", r.ReplayedToolResultValidated))
 	b.WriteString(fmt.Sprintf("replayed_tool_result_event=%s\n", valueOrNone(r.ReplayedToolResultEvent)))
+	b.WriteString(fmt.Sprintf("replayed_assistant_message_validated=%t\n", r.ReplayedAssistantMessageValidated))
+	b.WriteString(fmt.Sprintf("replayed_assistant_message_event=%s\n", valueOrNone(r.ReplayedAssistantMessageEvent)))
 	b.WriteString(fmt.Sprintf("auth_validated=%t\n", r.AuthValidated))
 	b.WriteString(fmt.Sprintf("auth_event=%s\n", valueOrNone(r.AuthEvent)))
 	b.WriteString(fmt.Sprintf("keep_alive_validated=%t\n", r.KeepAliveValidated))
