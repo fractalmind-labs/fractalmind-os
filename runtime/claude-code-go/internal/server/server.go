@@ -581,6 +581,12 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 			}
 
 			switch strings.TrimSpace(asString(incoming["type"])) {
+			case "update_environment_variables":
+				variables, ok := incoming["variables"].(map[string]any)
+				if !ok {
+					continue
+				}
+				_ = variables
 			case "user":
 				_ = sessionIndex.setStatus(sessionID, session.WorkDir, "running")
 				runningStateUUID, err := generateRequestID()

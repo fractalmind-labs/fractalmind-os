@@ -182,6 +182,14 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 		t.Fatalf("unexpected keep_alive event: %#v", keepAlive)
 	}
 	if err := ws.WriteJSON(map[string]any{
+		"type": "update_environment_variables",
+		"variables": map[string]any{
+			"DIRECT_CONNECT_DEMO": "1",
+		},
+	}); err != nil {
+		t.Fatalf("write update_environment_variables failed: %v", err)
+	}
+	if err := ws.WriteJSON(map[string]any{
 		"type": "user",
 		"message": map[string]any{
 			"role":    "user",
