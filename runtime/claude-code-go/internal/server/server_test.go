@@ -866,6 +866,62 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 
 	if err := ws.WriteJSON(map[string]any{
+		"type": "user",
+		"message": map[string]any{
+			"role":    "user",
+			"content": []map[string]any{{"type": "text", "text": "hit max structured output retries"}},
+		},
+	}); err != nil {
+		t.Fatalf("write max-structured-output-retries user message failed: %v", err)
+	}
+
+	var maxStructuredRunningState map[string]any
+	if err := ws.ReadJSON(&maxStructuredRunningState); err != nil {
+		t.Fatalf("read max-structured-output-retries running session_state_changed failed: %v", err)
+	}
+	if maxStructuredRunningState["type"] != "system" || strings.TrimSpace(asString(maxStructuredRunningState["subtype"])) != "session_state_changed" || strings.TrimSpace(asString(maxStructuredRunningState["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(maxStructuredRunningState["state"])) != "running" {
+		t.Fatalf("unexpected max-structured-output-retries running session_state_changed payload: %#v", maxStructuredRunningState)
+	}
+
+	var maxStructuredControlReq map[string]any
+	if err := ws.ReadJSON(&maxStructuredControlReq); err != nil {
+		t.Fatalf("read max-structured-output-retries control request failed: %v", err)
+	}
+	if maxStructuredControlReq["type"] != "control_request" {
+		t.Fatalf("unexpected max-structured-output-retries control request: %#v", maxStructuredControlReq)
+	}
+	maxStructuredRequestID := maxStructuredControlReq["request_id"].(string)
+	if err := ws.WriteJSON(map[string]any{
+		"type": "control_response",
+		"response": map[string]any{
+			"subtype":    "success",
+			"request_id": maxStructuredRequestID,
+			"response": map[string]any{
+				"behavior": "max_structured_output_retries",
+			},
+		},
+	}); err != nil {
+		t.Fatalf("write max-structured-output-retries control response failed: %v", err)
+	}
+
+	var maxStructuredResult map[string]any
+	if err := ws.ReadJSON(&maxStructuredResult); err != nil {
+		t.Fatalf("read max-structured-output-retries result event failed: %v", err)
+	}
+	if maxStructuredResult["type"] != "result" || strings.TrimSpace(asString(maxStructuredResult["subtype"])) != "error_max_structured_output_retries" {
+		t.Fatalf("unexpected max-structured-output-retries result event: %#v", maxStructuredResult)
+	}
+	if isError, ok := maxStructuredResult["is_error"].(bool); !ok || !isError {
+		t.Fatalf("expected max-structured-output-retries result is_error=true, got %#v", maxStructuredResult)
+	}
+	if int(maxStructuredResult["num_turns"].(float64)) != 2 {
+		t.Fatalf("expected max-structured-output-retries result num_turns=2, got %#v", maxStructuredResult)
+	}
+	if strings.TrimSpace(asString(maxStructuredResult["stop_reason"])) != "max_structured_output_retries" {
+		t.Fatalf("unexpected max-structured-output-retries stop_reason: %#v", maxStructuredResult)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
 		"request_id": "interrupt-1",
 		"request": map[string]any{
