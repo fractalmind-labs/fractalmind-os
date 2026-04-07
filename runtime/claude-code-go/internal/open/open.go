@@ -43,6 +43,8 @@ type Result struct {
 	StreamEvent                                    string
 	StreamContentValidated                         bool
 	StreamContentEvent                             string
+	StreamlinedTextValidated                       bool
+	StreamlinedTextEvent                           string
 	SystemValidated                                bool
 	SystemEvent                                    string
 	StatusValidated                                bool
@@ -248,6 +250,8 @@ func Run(args []string) (Result, error) {
 		StreamEvent:                         streamResult.StreamEvent,
 		StreamContentValidated:              streamResult.StreamContentValidated,
 		StreamContentEvent:                  streamResult.StreamContentEvent,
+		StreamlinedTextValidated:            streamResult.StreamlinedTextValidated,
+		StreamlinedTextEvent:                streamResult.StreamlinedTextEvent,
 		SystemValidated:                     streamResult.SystemValidated,
 		SystemEvent:                         streamResult.SystemEvent,
 		StatusValidated:                     streamResult.StatusValidated,
@@ -683,6 +687,8 @@ type streamValidation struct {
 	StreamEvent                                    string
 	StreamContentValidated                         bool
 	StreamContentEvent                             string
+	StreamlinedTextValidated                       bool
+	StreamlinedTextEvent                           string
 	SystemValidated                                bool
 	SystemEvent                                    string
 	StatusValidated                                bool
@@ -922,6 +928,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		hookStartedValidated := false
 		hookProgressValidated := false
 		hookResponseValidated := false
+		streamlinedTextValidated := false
 		for {
 			var incoming map[string]any
 			if err := conn.ReadJSON(&incoming); err != nil {
@@ -1398,6 +1405,19 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				result.StreamContentValidated = true
 				result.StreamContentEvent = "stream_event:content_block_delta"
+			case "streamlined_text":
+				if turn.behavior == "deny" {
+					return streamValidation{}, fmt.Errorf("unexpected streamlined_text during deny turn")
+				}
+				if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+					return streamValidation{}, fmt.Errorf("invalid streamlined_text: missing session_id")
+				}
+				if strings.TrimSpace(asString(incoming["text"])) != turn.expectedResponse {
+					return streamValidation{}, fmt.Errorf("invalid streamlined_text text: expected %q, got %q", turn.expectedResponse, strings.TrimSpace(asString(incoming["text"])))
+				}
+				result.StreamlinedTextValidated = true
+				result.StreamlinedTextEvent = "streamlined_text"
+				streamlinedTextValidated = true
 			case "assistant":
 				if turn.behavior == "deny" {
 					return streamValidation{}, fmt.Errorf("unexpected assistant payload during deny turn")
@@ -1514,7 +1534,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && streamlinedTextValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -2723,6 +2743,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("stream_event=%s\n", valueOrNone(r.StreamEvent)))
 	b.WriteString(fmt.Sprintf("stream_content_validated=%t\n", r.StreamContentValidated))
 	b.WriteString(fmt.Sprintf("stream_content_event=%s\n", valueOrNone(r.StreamContentEvent)))
+	b.WriteString(fmt.Sprintf("streamlined_text_validated=%t\n", r.StreamlinedTextValidated))
+	b.WriteString(fmt.Sprintf("streamlined_text_event=%s\n", valueOrNone(r.StreamlinedTextEvent)))
 	b.WriteString(fmt.Sprintf("system_validated=%t\n", r.SystemValidated))
 	b.WriteString(fmt.Sprintf("system_event=%s\n", valueOrNone(r.SystemEvent)))
 	b.WriteString(fmt.Sprintf("status_validated=%t\n", r.StatusValidated))

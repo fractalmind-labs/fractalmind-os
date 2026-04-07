@@ -303,6 +303,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(streamPayload["type"])) != "content_block_delta" || strings.TrimSpace(asString(streamDelta["type"])) != "text_delta" || strings.TrimSpace(asString(streamDelta["text"])) != "echo:hello [approved]" {
 		t.Fatalf("unexpected stream event payload: %#v", streamEvent)
 	}
+	var streamlinedText map[string]any
+	if err := ws.ReadJSON(&streamlinedText); err != nil {
+		t.Fatalf("read streamlined_text failed: %v", err)
+	}
+	if streamlinedText["type"] != "streamlined_text" || strings.TrimSpace(asString(streamlinedText["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(streamlinedText["text"])) != "echo:hello [approved]" {
+		t.Fatalf("unexpected streamlined_text payload: %#v", streamlinedText)
+	}
 	var assistant map[string]any
 	if err := ws.ReadJSON(&assistant); err != nil {
 		t.Fatalf("read assistant event failed: %v", err)
@@ -545,6 +552,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondStreamDelta, _ := secondStreamPayload["delta"].(map[string]any)
 	if strings.TrimSpace(asString(secondStreamPayload["type"])) != "content_block_delta" || strings.TrimSpace(asString(secondStreamDelta["type"])) != "text_delta" || strings.TrimSpace(asString(secondStreamDelta["text"])) != "echo:hello again [approved]" {
 		t.Fatalf("unexpected second stream event payload: %#v", secondStreamEvent)
+	}
+	var secondStreamlinedText map[string]any
+	if err := ws.ReadJSON(&secondStreamlinedText); err != nil {
+		t.Fatalf("read second streamlined_text failed: %v", err)
+	}
+	if secondStreamlinedText["type"] != "streamlined_text" || strings.TrimSpace(asString(secondStreamlinedText["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(secondStreamlinedText["text"])) != "echo:hello again [approved]" {
+		t.Fatalf("unexpected second streamlined_text payload: %#v", secondStreamlinedText)
 	}
 	var secondAssistant map[string]any
 	if err := ws.ReadJSON(&secondAssistant); err != nil {

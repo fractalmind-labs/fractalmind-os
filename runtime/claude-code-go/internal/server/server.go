@@ -850,6 +850,16 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":               streamUUID,
 					"session_id":         session.ID,
 				})
+				streamlinedTextUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":       "streamlined_text",
+					"text":       responseText,
+					"uuid":       streamlinedTextUUID,
+					"session_id": session.ID,
+				})
 				_ = conn.WriteJSON(map[string]any{
 					"type": "assistant",
 					"message": map[string]any{
