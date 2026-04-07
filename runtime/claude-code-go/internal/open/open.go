@@ -79,6 +79,8 @@ type Result struct {
 	LocalCommandOutputEvent       string
 	ElicitationValidated          bool
 	ElicitationEvent              string
+	HookCallbackValidated         bool
+	HookCallbackEvent             string
 	ElicitationCompleteValidated  bool
 	ElicitationCompleteEvent      string
 	ToolProgressValidated         bool
@@ -268,6 +270,8 @@ func Run(args []string) (Result, error) {
 		LocalCommandOutputEvent:       streamResult.LocalCommandOutputEvent,
 		ElicitationValidated:          streamResult.ElicitationValidated,
 		ElicitationEvent:              streamResult.ElicitationEvent,
+		HookCallbackValidated:         streamResult.HookCallbackValidated,
+		HookCallbackEvent:             streamResult.HookCallbackEvent,
 		ElicitationCompleteValidated:  streamResult.ElicitationCompleteValidated,
 		ElicitationCompleteEvent:      streamResult.ElicitationCompleteEvent,
 		ToolProgressValidated:         streamResult.ToolProgressValidated,
@@ -687,6 +691,8 @@ type streamValidation struct {
 	LocalCommandOutputEvent       string
 	ElicitationValidated          bool
 	ElicitationEvent              string
+	HookCallbackValidated         bool
+	HookCallbackEvent             string
 	ElicitationCompleteValidated  bool
 	ElicitationCompleteEvent      string
 	ToolProgressValidated         bool
@@ -2113,6 +2119,44 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		result.ElicitationValidated = true
 		result.ElicitationEvent = "control_request:elicitation"
 	}
+	hookCallbackID := "hook-callback-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": hookCallbackID,
+		"request": map[string]any{
+			"subtype":     "hook_callback",
+			"callback_id": "cb-probe",
+			"tool_use_id": "tool-probe",
+			"input": map[string]any{
+				"session_id":        "hook-session",
+				"transcript_path":   "/tmp/direct-connect-transcript.jsonl",
+				"cwd":               "/tmp",
+				"hook_event_name":   "Notification",
+				"message":           "direct-connect hook callback",
+				"notification_type": "info",
+			},
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect hook_callback request: %w", err)
+	}
+	for !result.HookCallbackValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect hook_callback flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != hookCallbackID {
+			continue
+		}
+		if strings.TrimSpace(asString(response["subtype"])) != "success" {
+			return streamValidation{}, fmt.Errorf("invalid hook_callback response subtype: %s", asString(response["subtype"]))
+		}
+		result.HookCallbackValidated = true
+		result.HookCallbackEvent = "control_request:hook_callback"
+	}
 	setProactiveID := "set-proactive-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -2334,6 +2378,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("local_command_output_event=%s\n", valueOrNone(r.LocalCommandOutputEvent)))
 	b.WriteString(fmt.Sprintf("elicitation_validated=%t\n", r.ElicitationValidated))
 	b.WriteString(fmt.Sprintf("elicitation_event=%s\n", valueOrNone(r.ElicitationEvent)))
+	b.WriteString(fmt.Sprintf("hook_callback_validated=%t\n", r.HookCallbackValidated))
+	b.WriteString(fmt.Sprintf("hook_callback_event=%s\n", valueOrNone(r.HookCallbackEvent)))
 	b.WriteString(fmt.Sprintf("elicitation_complete_validated=%t\n", r.ElicitationCompleteValidated))
 	b.WriteString(fmt.Sprintf("elicitation_complete_event=%s\n", valueOrNone(r.ElicitationCompleteEvent)))
 	b.WriteString(fmt.Sprintf("tool_progress_validated=%t\n", r.ToolProgressValidated))

@@ -1320,6 +1320,40 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "hook-callback-1",
+		"request": map[string]any{
+			"subtype":     "hook_callback",
+			"callback_id": "cb-1",
+			"tool_use_id": "tool-1",
+			"input": map[string]any{
+				"session_id":        parsed["session_id"],
+				"transcript_path":   "/tmp/direct-connect-transcript.jsonl",
+				"cwd":               parsed["work_dir"],
+				"hook_event_name":   "Notification",
+				"message":           "direct-connect hook callback",
+				"notification_type": "info",
+			},
+		},
+	}); err != nil {
+		t.Fatalf("write hook_callback request failed: %v", err)
+	}
+	var hookCallbackResp map[string]any
+	if err := ws.ReadJSON(&hookCallbackResp); err != nil {
+		t.Fatalf("read hook_callback response failed: %v", err)
+	}
+	if hookCallbackResp["type"] != "control_response" {
+		t.Fatalf("unexpected hook_callback response: %#v", hookCallbackResp)
+	}
+	hookCallbackResponse, _ := hookCallbackResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(hookCallbackResponse["request_id"])) != "hook-callback-1" {
+		t.Fatalf("unexpected hook_callback request id: %#v", hookCallbackResp)
+	}
+	if strings.TrimSpace(asString(hookCallbackResponse["subtype"])) != "success" {
+		t.Fatalf("unexpected hook_callback response subtype: %#v", hookCallbackResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "set-proactive-1",
 		"request": map[string]any{
 			"subtype": "set_proactive",
