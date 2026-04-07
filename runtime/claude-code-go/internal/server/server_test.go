@@ -1354,6 +1354,35 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "channel-enable-1",
+		"request": map[string]any{
+			"subtype":    "channel_enable",
+			"serverName": "demo-mcp",
+		},
+	}); err != nil {
+		t.Fatalf("write channel_enable request failed: %v", err)
+	}
+	var channelEnableResp map[string]any
+	if err := ws.ReadJSON(&channelEnableResp); err != nil {
+		t.Fatalf("read channel_enable response failed: %v", err)
+	}
+	if channelEnableResp["type"] != "control_response" {
+		t.Fatalf("unexpected channel_enable response: %#v", channelEnableResp)
+	}
+	channelEnableResponse, _ := channelEnableResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(channelEnableResponse["request_id"])) != "channel-enable-1" {
+		t.Fatalf("unexpected channel_enable request id: %#v", channelEnableResp)
+	}
+	if strings.TrimSpace(asString(channelEnableResponse["subtype"])) != "success" {
+		t.Fatalf("unexpected channel_enable response subtype: %#v", channelEnableResp)
+	}
+	channelEnablePayload, _ := channelEnableResponse["response"].(map[string]any)
+	if strings.TrimSpace(asString(channelEnablePayload["serverName"])) != "demo-mcp" {
+		t.Fatalf("unexpected channel_enable payload: %#v", channelEnableResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "set-proactive-1",
 		"request": map[string]any{
 			"subtype": "set_proactive",
