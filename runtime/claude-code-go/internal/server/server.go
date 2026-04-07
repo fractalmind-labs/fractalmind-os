@@ -569,6 +569,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 			completedTurns   int
 			remoteControlOn  bool
 			activeOAuthFlows = map[string]bool{}
+			permissionMode   = "default"
 		)
 		for {
 			var incoming map[string]any
@@ -1123,6 +1124,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					responsePayload["serverName"] = strings.TrimSpace(asString(request["serverName"]))
 				case "set_model":
 				case "set_permission_mode":
+					permissionMode = firstNonEmpty(strings.TrimSpace(asString(request["mode"])), permissionMode)
 				case "set_max_thinking_tokens":
 				case "mcp_status":
 					responsePayload["mcpServers"] = []any{}
@@ -1259,6 +1261,20 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"type":     "control_response",
 					"response": responseEnvelope,
 				})
+				if subtype == "set_permission_mode" && responseSubtype == "success" {
+					statusUUID, err := generateRequestID()
+					if err != nil {
+						return
+					}
+					_ = conn.WriteJSON(map[string]any{
+						"type":           "system",
+						"subtype":        "status",
+						"status":         "running",
+						"permissionMode": permissionMode,
+						"uuid":           statusUUID,
+						"session_id":     session.ID,
+					})
+				}
 				if subtype == "end_session" {
 					return
 				}

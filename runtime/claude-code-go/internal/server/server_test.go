@@ -1064,6 +1064,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(setPermissionModeResponse["request_id"])) != "set-permission-mode-1" {
 		t.Fatalf("unexpected set_permission_mode request id: %#v", setPermissionModeResp)
 	}
+	var statusTransitionEvent map[string]any
+	if err := ws.ReadJSON(&statusTransitionEvent); err != nil {
+		t.Fatalf("read set_permission_mode status transition failed: %v", err)
+	}
+	if statusTransitionEvent["type"] != "system" ||
+		strings.TrimSpace(asString(statusTransitionEvent["subtype"])) != "status" ||
+		strings.TrimSpace(asString(statusTransitionEvent["session_id"])) == "" ||
+		strings.TrimSpace(asString(statusTransitionEvent["permissionMode"])) != "acceptEdits" ||
+		strings.TrimSpace(asString(statusTransitionEvent["status"])) != "running" {
+		t.Fatalf("unexpected set_permission_mode status transition: %#v", statusTransitionEvent)
+	}
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",

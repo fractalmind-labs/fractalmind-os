@@ -49,6 +49,8 @@ type Result struct {
 	SystemEvent                                    string
 	StatusValidated                                bool
 	StatusEvent                                    string
+	StatusTransitionValidated                      bool
+	StatusTransitionEvent                          string
 	AuthValidated                                  bool
 	AuthEvent                                      string
 	KeepAliveValidated                             bool
@@ -262,6 +264,8 @@ func Run(args []string) (Result, error) {
 		SystemEvent:                         streamResult.SystemEvent,
 		StatusValidated:                     streamResult.StatusValidated,
 		StatusEvent:                         streamResult.StatusEvent,
+		StatusTransitionValidated:           streamResult.StatusTransitionValidated,
+		StatusTransitionEvent:               streamResult.StatusTransitionEvent,
 		AuthValidated:                       streamResult.AuthValidated,
 		AuthEvent:                           streamResult.AuthEvent,
 		KeepAliveValidated:                  streamResult.KeepAliveValidated,
@@ -705,6 +709,8 @@ type streamValidation struct {
 	SystemEvent                                    string
 	StatusValidated                                bool
 	StatusEvent                                    string
+	StatusTransitionValidated                      bool
+	StatusTransitionEvent                          string
 	AuthValidated                                  bool
 	AuthEvent                                      string
 	KeepAliveValidated                             bool
@@ -1670,18 +1676,36 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	}); err != nil {
 		return streamValidation{}, fmt.Errorf("write direct-connect set_permission_mode request: %w", err)
 	}
-	for !result.SetPermissionModeValidated {
+	for !result.SetPermissionModeValidated || !result.StatusTransitionValidated {
 		var incoming map[string]any
 		if err := conn.ReadJSON(&incoming); err != nil {
 			return streamValidation{}, fmt.Errorf("read direct-connect set_permission_mode flow: %w", err)
 		}
-		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
-			continue
-		}
-		response, _ := incoming["response"].(map[string]any)
-		if strings.TrimSpace(asString(response["request_id"])) == setPermissionModeID {
-			result.SetPermissionModeValidated = true
-			result.SetPermissionModeEvent = "control_request:set_permission_mode"
+		switch strings.TrimSpace(asString(incoming["type"])) {
+		case "control_response":
+			response, _ := incoming["response"].(map[string]any)
+			if strings.TrimSpace(asString(response["request_id"])) == setPermissionModeID {
+				result.SetPermissionModeValidated = true
+				result.SetPermissionModeEvent = "control_request:set_permission_mode"
+			}
+		case "system":
+			if !result.SetPermissionModeValidated || strings.TrimSpace(asString(incoming["subtype"])) != "status" {
+				continue
+			}
+			if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+				return streamValidation{}, fmt.Errorf("invalid set_permission_mode status transition: missing session_id")
+			}
+			if strings.TrimSpace(asString(incoming["uuid"])) == "" {
+				return streamValidation{}, fmt.Errorf("invalid set_permission_mode status transition: missing uuid")
+			}
+			if strings.TrimSpace(asString(incoming["permissionMode"])) != "acceptEdits" {
+				return streamValidation{}, fmt.Errorf("invalid set_permission_mode status transition: expected permissionMode=%q, got %q", "acceptEdits", strings.TrimSpace(asString(incoming["permissionMode"])))
+			}
+			if strings.TrimSpace(asString(incoming["status"])) == "" {
+				return streamValidation{}, fmt.Errorf("invalid set_permission_mode status transition: missing status")
+			}
+			result.StatusTransitionValidated = true
+			result.StatusTransitionEvent = "system:status"
 		}
 	}
 	setMaxThinkingTokensID := "set-max-thinking-tokens-probe"
@@ -2807,6 +2831,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("system_event=%s\n", valueOrNone(r.SystemEvent)))
 	b.WriteString(fmt.Sprintf("status_validated=%t\n", r.StatusValidated))
 	b.WriteString(fmt.Sprintf("status_event=%s\n", valueOrNone(r.StatusEvent)))
+	b.WriteString(fmt.Sprintf("status_transition_validated=%t\n", r.StatusTransitionValidated))
+	b.WriteString(fmt.Sprintf("status_transition_event=%s\n", valueOrNone(r.StatusTransitionEvent)))
 	b.WriteString(fmt.Sprintf("auth_validated=%t\n", r.AuthValidated))
 	b.WriteString(fmt.Sprintf("auth_event=%s\n", valueOrNone(r.AuthEvent)))
 	b.WriteString(fmt.Sprintf("keep_alive_validated=%t\n", r.KeepAliveValidated))
