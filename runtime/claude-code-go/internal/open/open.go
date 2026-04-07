@@ -123,6 +123,8 @@ type Result struct {
 	ReloadPluginsEvent            string
 	MCPAuthenticateValidated      bool
 	MCPAuthenticateEvent          string
+	MCPOAuthCallbackURLValidated  bool
+	MCPOAuthCallbackURLEvent      string
 	MCPReconnectValidated         bool
 	MCPReconnectEvent             string
 	MCPToggleValidated            bool
@@ -318,6 +320,8 @@ func Run(args []string) (Result, error) {
 		ReloadPluginsEvent:            streamResult.ReloadPluginsEvent,
 		MCPAuthenticateValidated:      streamResult.MCPAuthenticateValidated,
 		MCPAuthenticateEvent:          streamResult.MCPAuthenticateEvent,
+		MCPOAuthCallbackURLValidated:  streamResult.MCPOAuthCallbackURLValidated,
+		MCPOAuthCallbackURLEvent:      streamResult.MCPOAuthCallbackURLEvent,
 		MCPReconnectValidated:         streamResult.MCPReconnectValidated,
 		MCPReconnectEvent:             streamResult.MCPReconnectEvent,
 		MCPToggleValidated:            streamResult.MCPToggleValidated,
@@ -743,6 +747,8 @@ type streamValidation struct {
 	ReloadPluginsEvent            string
 	MCPAuthenticateValidated      bool
 	MCPAuthenticateEvent          string
+	MCPOAuthCallbackURLValidated  bool
+	MCPOAuthCallbackURLEvent      string
 	MCPReconnectValidated         bool
 	MCPReconnectEvent             string
 	MCPToggleValidated            bool
@@ -1828,6 +1834,135 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		result.MCPAuthenticateValidated = true
 		result.MCPAuthenticateEvent = "control_request:mcp_authenticate"
 	}
+	mcpOAuthCallbackMissingFlowID := "mcp-oauth-callback-missing-flow-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": mcpOAuthCallbackMissingFlowID,
+		"request": map[string]any{
+			"subtype":     "mcp_oauth_callback_url",
+			"serverName":  "demo-sse-mcp",
+			"callbackUrl": "https://example.test/callback?code=demo-code",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect mcp_oauth_callback_url missing-flow request: %w", err)
+	}
+	mcpOAuthMissingFlowValidated := false
+	for !mcpOAuthMissingFlowValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect mcp_oauth_callback_url missing-flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != mcpOAuthCallbackMissingFlowID {
+			continue
+		}
+		if strings.TrimSpace(asString(response["subtype"])) != "error" {
+			return streamValidation{}, fmt.Errorf("invalid mcp_oauth_callback_url missing-flow response subtype: %s", asString(response["subtype"]))
+		}
+		if strings.TrimSpace(asString(response["error"])) != "No active OAuth flow for server: demo-sse-mcp" {
+			return streamValidation{}, fmt.Errorf("invalid mcp_oauth_callback_url missing-flow error: %s", asString(response["error"]))
+		}
+		mcpOAuthMissingFlowValidated = true
+	}
+	mcpAuthCallbackPrepID := "mcp-authenticate-callback-prep-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": mcpAuthCallbackPrepID,
+		"request": map[string]any{
+			"subtype":    "mcp_authenticate",
+			"serverName": "demo-sse-mcp",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect mcp_authenticate callback prep request: %w", err)
+	}
+	mcpAuthCallbackPrepValidated := false
+	for !mcpAuthCallbackPrepValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect mcp_authenticate callback prep flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != mcpAuthCallbackPrepID {
+			continue
+		}
+		if strings.TrimSpace(asString(response["subtype"])) != "success" {
+			return streamValidation{}, fmt.Errorf("invalid mcp_authenticate callback prep subtype: %s", asString(response["subtype"]))
+		}
+		mcpAuthCallbackPrepValidated = true
+	}
+	mcpOAuthCallbackInvalidID := "mcp-oauth-callback-invalid-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": mcpOAuthCallbackInvalidID,
+		"request": map[string]any{
+			"subtype":     "mcp_oauth_callback_url",
+			"serverName":  "demo-sse-mcp",
+			"callbackUrl": "https://example.test/callback?state=demo-state",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect mcp_oauth_callback_url invalid request: %w", err)
+	}
+	mcpOAuthInvalidValidated := false
+	for !mcpOAuthInvalidValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect mcp_oauth_callback_url invalid flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != mcpOAuthCallbackInvalidID {
+			continue
+		}
+		if strings.TrimSpace(asString(response["subtype"])) != "error" {
+			return streamValidation{}, fmt.Errorf("invalid mcp_oauth_callback_url invalid response subtype: %s", asString(response["subtype"]))
+		}
+		if strings.TrimSpace(asString(response["error"])) != "Invalid callback URL: missing authorization code. Please paste the full redirect URL including the code parameter." {
+			return streamValidation{}, fmt.Errorf("invalid mcp_oauth_callback_url invalid error: %s", asString(response["error"]))
+		}
+		mcpOAuthInvalidValidated = true
+	}
+	mcpOAuthCallbackSuccessID := "mcp-oauth-callback-success-probe"
+	if err := conn.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": mcpOAuthCallbackSuccessID,
+		"request": map[string]any{
+			"subtype":     "mcp_oauth_callback_url",
+			"serverName":  "demo-sse-mcp",
+			"callbackUrl": "https://example.test/callback?code=demo-code&state=demo-state",
+		},
+	}); err != nil {
+		return streamValidation{}, fmt.Errorf("write direct-connect mcp_oauth_callback_url success request: %w", err)
+	}
+	for !result.MCPOAuthCallbackURLValidated {
+		var incoming map[string]any
+		if err := conn.ReadJSON(&incoming); err != nil {
+			return streamValidation{}, fmt.Errorf("read direct-connect mcp_oauth_callback_url success flow: %w", err)
+		}
+		if strings.TrimSpace(asString(incoming["type"])) != "control_response" {
+			continue
+		}
+		response, _ := incoming["response"].(map[string]any)
+		if strings.TrimSpace(asString(response["request_id"])) != mcpOAuthCallbackSuccessID {
+			continue
+		}
+		if strings.TrimSpace(asString(response["subtype"])) != "success" {
+			return streamValidation{}, fmt.Errorf("invalid mcp_oauth_callback_url success response subtype: %s", asString(response["subtype"]))
+		}
+		responsePayload, _ := response["response"].(map[string]any)
+		if len(responsePayload) != 0 {
+			return streamValidation{}, fmt.Errorf("invalid mcp_oauth_callback_url success response: expected empty payload")
+		}
+		result.MCPOAuthCallbackURLValidated = true
+		result.MCPOAuthCallbackURLEvent = "control_request:mcp_oauth_callback_url"
+	}
 	mcpReconnectID := "mcp-reconnect-probe"
 	if err := conn.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -2568,6 +2703,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("reload_plugins_event=%s\n", valueOrNone(r.ReloadPluginsEvent)))
 	b.WriteString(fmt.Sprintf("mcp_authenticate_validated=%t\n", r.MCPAuthenticateValidated))
 	b.WriteString(fmt.Sprintf("mcp_authenticate_event=%s\n", valueOrNone(r.MCPAuthenticateEvent)))
+	b.WriteString(fmt.Sprintf("mcp_oauth_callback_url_validated=%t\n", r.MCPOAuthCallbackURLValidated))
+	b.WriteString(fmt.Sprintf("mcp_oauth_callback_url_event=%s\n", valueOrNone(r.MCPOAuthCallbackURLEvent)))
 	b.WriteString(fmt.Sprintf("mcp_reconnect_validated=%t\n", r.MCPReconnectValidated))
 	b.WriteString(fmt.Sprintf("mcp_reconnect_event=%s\n", valueOrNone(r.MCPReconnectEvent)))
 	b.WriteString(fmt.Sprintf("mcp_toggle_validated=%t\n", r.MCPToggleValidated))

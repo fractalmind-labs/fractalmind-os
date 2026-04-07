@@ -568,6 +568,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 			pendingToolUseID string
 			completedTurns   int
 			remoteControlOn  bool
+			activeOAuthFlows = map[string]bool{}
 		)
 		for {
 			var incoming map[string]any
@@ -1039,6 +1040,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					serverName := strings.TrimSpace(asString(request["serverName"]))
 					switch serverName {
 					case "demo-http-mcp", "demo-sse-mcp":
+						activeOAuthFlows[serverName] = true
 						responsePayload["requiresUserAction"] = true
 						responsePayload["authUrl"] = "https://example.test/oauth/" + serverName
 					case "demo-stdio-mcp":
@@ -1048,6 +1050,21 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						responseSubtype = "error"
 						responseError = "Server not found: " + serverName
 					}
+				case "mcp_oauth_callback_url":
+					serverName := strings.TrimSpace(asString(request["serverName"]))
+					callbackURL := strings.TrimSpace(asString(request["callbackUrl"]))
+					if !activeOAuthFlows[serverName] {
+						responseSubtype = "error"
+						responseError = "No active OAuth flow for server: " + serverName
+						break
+					}
+					parsed, err := url.Parse(callbackURL)
+					if err != nil || (!parsed.Query().Has("code") && !parsed.Query().Has("error")) {
+						responseSubtype = "error"
+						responseError = "Invalid callback URL: missing authorization code. Please paste the full redirect URL including the code parameter."
+						break
+					}
+					delete(activeOAuthFlows, serverName)
 				case "seed_read_state":
 					_ = responsePayload
 				case "rewind_files":

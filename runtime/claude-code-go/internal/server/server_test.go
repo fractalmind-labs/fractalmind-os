@@ -1471,6 +1471,113 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
+		"request_id": "mcp-oauth-callback-missing-flow-1",
+		"request": map[string]any{
+			"subtype":     "mcp_oauth_callback_url",
+			"serverName":  "demo-sse-mcp",
+			"callbackUrl": "https://example.test/callback?code=demo-code",
+		},
+	}); err != nil {
+		t.Fatalf("write mcp_oauth_callback_url missing-flow request failed: %v", err)
+	}
+	var mcpOAuthMissingFlowResp map[string]any
+	if err := ws.ReadJSON(&mcpOAuthMissingFlowResp); err != nil {
+		t.Fatalf("read mcp_oauth_callback_url missing-flow response failed: %v", err)
+	}
+	if mcpOAuthMissingFlowResp["type"] != "control_response" {
+		t.Fatalf("unexpected mcp_oauth_callback_url missing-flow response: %#v", mcpOAuthMissingFlowResp)
+	}
+	mcpOAuthMissingFlowResponse, _ := mcpOAuthMissingFlowResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(mcpOAuthMissingFlowResponse["request_id"])) != "mcp-oauth-callback-missing-flow-1" {
+		t.Fatalf("unexpected mcp_oauth_callback_url missing-flow request id: %#v", mcpOAuthMissingFlowResp)
+	}
+	if strings.TrimSpace(asString(mcpOAuthMissingFlowResponse["subtype"])) != "error" {
+		t.Fatalf("unexpected mcp_oauth_callback_url missing-flow subtype: %#v", mcpOAuthMissingFlowResp)
+	}
+	if strings.TrimSpace(asString(mcpOAuthMissingFlowResponse["error"])) != "No active OAuth flow for server: demo-sse-mcp" {
+		t.Fatalf("unexpected mcp_oauth_callback_url missing-flow error: %#v", mcpOAuthMissingFlowResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": "mcp-auth-callback-invalid-prep-1",
+		"request": map[string]any{
+			"subtype":    "mcp_authenticate",
+			"serverName": "demo-sse-mcp",
+		},
+	}); err != nil {
+		t.Fatalf("write mcp_authenticate callback-invalid prep request failed: %v", err)
+	}
+	var mcpAuthCallbackInvalidPrepResp map[string]any
+	if err := ws.ReadJSON(&mcpAuthCallbackInvalidPrepResp); err != nil {
+		t.Fatalf("read mcp_authenticate callback-invalid prep response failed: %v", err)
+	}
+	mcpAuthCallbackInvalidPrepResponse, _ := mcpAuthCallbackInvalidPrepResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(mcpAuthCallbackInvalidPrepResponse["subtype"])) != "success" {
+		t.Fatalf("unexpected mcp_authenticate callback-invalid prep response: %#v", mcpAuthCallbackInvalidPrepResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": "mcp-oauth-callback-invalid-1",
+		"request": map[string]any{
+			"subtype":     "mcp_oauth_callback_url",
+			"serverName":  "demo-sse-mcp",
+			"callbackUrl": "https://example.test/callback?state=demo-state",
+		},
+	}); err != nil {
+		t.Fatalf("write mcp_oauth_callback_url invalid request failed: %v", err)
+	}
+	var mcpOAuthInvalidResp map[string]any
+	if err := ws.ReadJSON(&mcpOAuthInvalidResp); err != nil {
+		t.Fatalf("read mcp_oauth_callback_url invalid response failed: %v", err)
+	}
+	if mcpOAuthInvalidResp["type"] != "control_response" {
+		t.Fatalf("unexpected mcp_oauth_callback_url invalid response: %#v", mcpOAuthInvalidResp)
+	}
+	mcpOAuthInvalidResponse, _ := mcpOAuthInvalidResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(mcpOAuthInvalidResponse["request_id"])) != "mcp-oauth-callback-invalid-1" {
+		t.Fatalf("unexpected mcp_oauth_callback_url invalid request id: %#v", mcpOAuthInvalidResp)
+	}
+	if strings.TrimSpace(asString(mcpOAuthInvalidResponse["subtype"])) != "error" {
+		t.Fatalf("unexpected mcp_oauth_callback_url invalid subtype: %#v", mcpOAuthInvalidResp)
+	}
+	if strings.TrimSpace(asString(mcpOAuthInvalidResponse["error"])) != "Invalid callback URL: missing authorization code. Please paste the full redirect URL including the code parameter." {
+		t.Fatalf("unexpected mcp_oauth_callback_url invalid error: %#v", mcpOAuthInvalidResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
+		"request_id": "mcp-oauth-callback-success-1",
+		"request": map[string]any{
+			"subtype":     "mcp_oauth_callback_url",
+			"serverName":  "demo-sse-mcp",
+			"callbackUrl": "https://example.test/callback?code=demo-code&state=demo-state",
+		},
+	}); err != nil {
+		t.Fatalf("write mcp_oauth_callback_url success request failed: %v", err)
+	}
+	var mcpOAuthSuccessResp map[string]any
+	if err := ws.ReadJSON(&mcpOAuthSuccessResp); err != nil {
+		t.Fatalf("read mcp_oauth_callback_url success response failed: %v", err)
+	}
+	if mcpOAuthSuccessResp["type"] != "control_response" {
+		t.Fatalf("unexpected mcp_oauth_callback_url success response: %#v", mcpOAuthSuccessResp)
+	}
+	mcpOAuthSuccessResponse, _ := mcpOAuthSuccessResp["response"].(map[string]any)
+	if strings.TrimSpace(asString(mcpOAuthSuccessResponse["request_id"])) != "mcp-oauth-callback-success-1" {
+		t.Fatalf("unexpected mcp_oauth_callback_url success request id: %#v", mcpOAuthSuccessResp)
+	}
+	if strings.TrimSpace(asString(mcpOAuthSuccessResponse["subtype"])) != "success" {
+		t.Fatalf("unexpected mcp_oauth_callback_url success subtype: %#v", mcpOAuthSuccessResp)
+	}
+	mcpOAuthSuccessPayload, _ := mcpOAuthSuccessResponse["response"].(map[string]any)
+	if len(mcpOAuthSuccessPayload) != 0 {
+		t.Fatalf("unexpected mcp_oauth_callback_url success payload: %#v", mcpOAuthSuccessResp)
+	}
+
+	if err := ws.WriteJSON(map[string]any{
+		"type":       "control_request",
 		"request_id": "set-proactive-1",
 		"request": map[string]any{
 			"subtype": "set_proactive",
