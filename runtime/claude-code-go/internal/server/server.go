@@ -917,6 +917,16 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":               resultUUID,
 					"session_id":         session.ID,
 				})
+				promptSuggestionUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":       "prompt_suggestion",
+					"suggestion": "Try asking for another echo example",
+					"uuid":       promptSuggestionUUID,
+					"session_id": session.ID,
+				})
 				taskNotificationUUID, err := generateRequestID()
 				if err != nil {
 					return

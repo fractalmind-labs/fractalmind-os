@@ -68,6 +68,7 @@ func TestRunOpenDefaults(t *testing.T) {
 		"stream_content_validated=false",
 		"streamlined_text_validated=false",
 		"streamlined_tool_use_summary_validated=false",
+		"prompt_suggestion_validated=false",
 		"tool_progress_validated=false",
 		"status_validated=false",
 		"auth_validated=false",
@@ -707,6 +708,12 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 				"permission_denials": []map[string]any{},
 				"uuid":               fmt.Sprintf("result-%d", requestCounter),
 				"session_id":         sessionID,
+			})
+			_ = conn.WriteJSON(map[string]any{
+				"type":       "prompt_suggestion",
+				"suggestion": "Try asking for another echo example",
+				"uuid":       fmt.Sprintf("prompt-suggestion-%d", requestCounter),
+				"session_id": sessionID,
 			})
 			completedTurns++
 			_ = conn.WriteJSON(map[string]any{

@@ -103,6 +103,8 @@ type Result struct {
 	ToolUseSummaryEvent                            string
 	StreamlinedToolUseSummaryValidated             bool
 	StreamlinedToolUseSummaryEvent                 string
+	PromptSuggestionValidated                      bool
+	PromptSuggestionEvent                          string
 	PostTurnSummaryValidated                       bool
 	PostTurnSummaryEvent                           string
 	CompactBoundaryValidated                       bool
@@ -312,6 +314,8 @@ func Run(args []string) (Result, error) {
 		ToolUseSummaryEvent:                streamResult.ToolUseSummaryEvent,
 		StreamlinedToolUseSummaryValidated: streamResult.StreamlinedToolUseSummaryValidated,
 		StreamlinedToolUseSummaryEvent:     streamResult.StreamlinedToolUseSummaryEvent,
+		PromptSuggestionValidated:          streamResult.PromptSuggestionValidated,
+		PromptSuggestionEvent:              streamResult.PromptSuggestionEvent,
 		PostTurnSummaryValidated:           streamResult.PostTurnSummaryValidated,
 		PostTurnSummaryEvent:               streamResult.PostTurnSummaryEvent,
 		CompactBoundaryValidated:           streamResult.CompactBoundaryValidated,
@@ -751,6 +755,8 @@ type streamValidation struct {
 	ToolUseSummaryEvent                            string
 	StreamlinedToolUseSummaryValidated             bool
 	StreamlinedToolUseSummaryEvent                 string
+	PromptSuggestionValidated                      bool
+	PromptSuggestionEvent                          string
 	PostTurnSummaryValidated                       bool
 	PostTurnSummaryEvent                           string
 	CompactBoundaryValidated                       bool
@@ -936,6 +942,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		hookResponseValidated := false
 		streamlinedTextValidated := false
 		streamlinedToolUseSummaryValidated := false
+		promptSuggestionValidated := false
 		for {
 			var incoming map[string]any
 			if err := conn.ReadJSON(&incoming); err != nil {
@@ -1405,6 +1412,19 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				result.StreamlinedToolUseSummaryValidated = true
 				result.StreamlinedToolUseSummaryEvent = "streamlined_tool_use_summary"
 				streamlinedToolUseSummaryValidated = true
+			case "prompt_suggestion":
+				if turn.behavior == "deny" {
+					return streamValidation{}, fmt.Errorf("unexpected prompt_suggestion during deny turn")
+				}
+				if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+					return streamValidation{}, fmt.Errorf("invalid prompt_suggestion: missing session_id")
+				}
+				if strings.TrimSpace(asString(incoming["suggestion"])) != "Try asking for another echo example" {
+					return streamValidation{}, fmt.Errorf("invalid prompt_suggestion suggestion: got %q", strings.TrimSpace(asString(incoming["suggestion"])))
+				}
+				result.PromptSuggestionValidated = true
+				result.PromptSuggestionEvent = "prompt_suggestion"
+				promptSuggestionValidated = true
 			case "stream_event":
 				if turn.behavior == "deny" {
 					return streamValidation{}, fmt.Errorf("unexpected stream_event during deny turn")
@@ -1554,7 +1574,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -2823,6 +2843,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("tool_use_summary_event=%s\n", valueOrNone(r.ToolUseSummaryEvent)))
 	b.WriteString(fmt.Sprintf("streamlined_tool_use_summary_validated=%t\n", r.StreamlinedToolUseSummaryValidated))
 	b.WriteString(fmt.Sprintf("streamlined_tool_use_summary_event=%s\n", valueOrNone(r.StreamlinedToolUseSummaryEvent)))
+	b.WriteString(fmt.Sprintf("prompt_suggestion_validated=%t\n", r.PromptSuggestionValidated))
+	b.WriteString(fmt.Sprintf("prompt_suggestion_event=%s\n", valueOrNone(r.PromptSuggestionEvent)))
 	b.WriteString(fmt.Sprintf("post_turn_summary_validated=%t\n", r.PostTurnSummaryValidated))
 	b.WriteString(fmt.Sprintf("post_turn_summary_event=%s\n", valueOrNone(r.PostTurnSummaryEvent)))
 	b.WriteString(fmt.Sprintf("compact_boundary_validated=%t\n", r.CompactBoundaryValidated))

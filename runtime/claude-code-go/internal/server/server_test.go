@@ -343,6 +343,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if result["type"] != "result" || strings.TrimSpace(asString(result["subtype"])) != "success" || strings.TrimSpace(asString(result["result"])) != "echo:hello [approved]" {
 		t.Fatalf("unexpected result event: %#v", result)
 	}
+	var promptSuggestion map[string]any
+	if err := ws.ReadJSON(&promptSuggestion); err != nil {
+		t.Fatalf("read prompt_suggestion failed: %v", err)
+	}
+	if promptSuggestion["type"] != "prompt_suggestion" || strings.TrimSpace(asString(promptSuggestion["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(promptSuggestion["suggestion"])) != "Try asking for another echo example" {
+		t.Fatalf("unexpected prompt_suggestion payload: %#v", promptSuggestion)
+	}
 	var taskNotification map[string]any
 	if err := ws.ReadJSON(&taskNotification); err != nil {
 		t.Fatalf("read task_notification failed: %v", err)
@@ -599,6 +606,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if secondResult["type"] != "result" || strings.TrimSpace(asString(secondResult["subtype"])) != "success" || strings.TrimSpace(asString(secondResult["result"])) != "echo:hello again [approved]" {
 		t.Fatalf("unexpected second result event: %#v", secondResult)
+	}
+	var secondPromptSuggestion map[string]any
+	if err := ws.ReadJSON(&secondPromptSuggestion); err != nil {
+		t.Fatalf("read second prompt_suggestion failed: %v", err)
+	}
+	if secondPromptSuggestion["type"] != "prompt_suggestion" || strings.TrimSpace(asString(secondPromptSuggestion["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(secondPromptSuggestion["suggestion"])) != "Try asking for another echo example" {
+		t.Fatalf("unexpected second prompt_suggestion payload: %#v", secondPromptSuggestion)
 	}
 	var secondTaskNotification map[string]any
 	if err := ws.ReadJSON(&secondTaskNotification); err != nil {
