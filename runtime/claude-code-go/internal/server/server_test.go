@@ -2783,6 +2783,17 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	if strings.TrimSpace(asString(assistantBlock["type"])) != "text" || strings.TrimSpace(asString(assistantBlock["text"])) != "echo:resume replay seed [approved]" {
 		t.Fatalf("unexpected replayed assistant content payload: %#v", replayedAssistant)
 	}
+	var replayedCompactBoundary map[string]any
+	if err := ws.ReadJSON(&replayedCompactBoundary); err != nil {
+		t.Fatalf("read replayed compact_boundary failed: %v", err)
+	}
+	if replayedCompactBoundary["type"] != "system" || strings.TrimSpace(asString(replayedCompactBoundary["subtype"])) != "compact_boundary" || strings.TrimSpace(asString(replayedCompactBoundary["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedCompactBoundary["uuid"])) == "" {
+		t.Fatalf("unexpected replayed compact_boundary payload: %#v", replayedCompactBoundary)
+	}
+	replayedCompactMetadata, _ := replayedCompactBoundary["compact_metadata"].(map[string]any)
+	if strings.TrimSpace(asString(replayedCompactMetadata["trigger"])) != "auto" || int(replayedCompactMetadata["pre_tokens"].(float64)) != 128 {
+		t.Fatalf("invalid replayed compact_boundary payload: %#v", replayedCompactBoundary)
+	}
 	resumedState := fetchSessionState(t, running.Result.SessionsEndpoint, created["session_id"], "demo-token")
 	if initialPID <= 0 || resumedState.BackendPID != initialPID || resumedState.BackendStatus != "running" {
 		t.Fatalf("expected same live backend across detach/resume, initial=%#v resumed=%#v", initialState, resumedState)

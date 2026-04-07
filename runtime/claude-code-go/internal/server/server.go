@@ -67,6 +67,7 @@ type sessionInfo struct {
 	LastToolUseID   string
 	LastToolResult  string
 	LastAssistant   string
+	LastCompactSeen bool
 }
 
 type sessionStore struct {
@@ -331,6 +332,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					LastToolUseID:   existing.LastToolUseID,
 					LastToolResult:  existing.LastToolResult,
 					LastAssistant:   existing.LastAssistant,
+					LastCompactSeen: existing.LastCompactSeen,
 				})
 			} else if maxSessions > 0 && store.count() >= maxSessions {
 				http.Error(w, fmt.Sprintf("max sessions reached (%d/%d)", store.count(), maxSessions), http.StatusTooManyRequests)
@@ -643,6 +645,22 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						},
 					},
 				},
+			})
+		}
+		if session.LastCompactSeen {
+			replayUUID, err := generateRequestID()
+			if err != nil {
+				return
+			}
+			_ = conn.WriteJSON(map[string]any{
+				"type":    "system",
+				"subtype": "compact_boundary",
+				"compact_metadata": map[string]any{
+					"trigger":    "auto",
+					"pre_tokens": 128,
+				},
+				"uuid":       replayUUID,
+				"session_id": session.ID,
 			})
 		}
 		var (
@@ -1122,6 +1140,8 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				if err != nil {
 					return
 				}
+				session.LastCompactSeen = true
+				store.put(session)
 				_ = conn.WriteJSON(map[string]any{
 					"type":    "system",
 					"subtype": "compact_boundary",

@@ -59,6 +59,8 @@ type Result struct {
 	ReplayedToolResultEvent                        string
 	ReplayedAssistantMessageValidated              bool
 	ReplayedAssistantMessageEvent                  string
+	ReplayedCompactBoundaryValidated               bool
+	ReplayedCompactBoundaryEvent                   string
 	AuthValidated                                  bool
 	AuthEvent                                      string
 	KeepAliveValidated                             bool
@@ -282,6 +284,8 @@ func Run(args []string) (Result, error) {
 		ReplayedToolResultEvent:             streamResult.ReplayedToolResultEvent,
 		ReplayedAssistantMessageValidated:   streamResult.ReplayedAssistantMessageValidated,
 		ReplayedAssistantMessageEvent:       streamResult.ReplayedAssistantMessageEvent,
+		ReplayedCompactBoundaryValidated:    streamResult.ReplayedCompactBoundaryValidated,
+		ReplayedCompactBoundaryEvent:        streamResult.ReplayedCompactBoundaryEvent,
 		AuthValidated:                       streamResult.AuthValidated,
 		AuthEvent:                           streamResult.AuthEvent,
 		KeepAliveValidated:                  streamResult.KeepAliveValidated,
@@ -735,6 +739,8 @@ type streamValidation struct {
 	ReplayedToolResultEvent                        string
 	ReplayedAssistantMessageValidated              bool
 	ReplayedAssistantMessageEvent                  string
+	ReplayedCompactBoundaryValidated               bool
+	ReplayedCompactBoundaryEvent                   string
 	AuthValidated                                  bool
 	AuthEvent                                      string
 	KeepAliveValidated                             bool
@@ -1272,6 +1278,24 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.ElicitationCompleteEvent = "system:elicitation_complete"
 					elicitationCompleteValidated = true
 				case "compact_boundary":
+					if strings.TrimSpace(opts.ResumeSessionID) != "" && currentToolUseID == "" && !result.ReplayedCompactBoundaryValidated {
+						if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+							return streamValidation{}, fmt.Errorf("invalid replayed compact_boundary: missing session_id")
+						}
+						if strings.TrimSpace(asString(incoming["uuid"])) == "" {
+							return streamValidation{}, fmt.Errorf("invalid replayed compact_boundary: missing uuid")
+						}
+						compactMetadata, _ := incoming["compact_metadata"].(map[string]any)
+						if strings.TrimSpace(asString(compactMetadata["trigger"])) == "" {
+							return streamValidation{}, fmt.Errorf("invalid replayed compact_boundary: missing compact_metadata.trigger")
+						}
+						if _, ok := compactMetadata["pre_tokens"]; !ok {
+							return streamValidation{}, fmt.Errorf("invalid replayed compact_boundary: missing compact_metadata.pre_tokens")
+						}
+						result.ReplayedCompactBoundaryValidated = true
+						result.ReplayedCompactBoundaryEvent = "system:compact_boundary:replay"
+						continue
+					}
 					if turn.behavior == "deny" {
 						return streamValidation{}, fmt.Errorf("unexpected compact_boundary during deny turn")
 					}
@@ -1753,6 +1777,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedAssistantMessageValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed assistant message during resume validation")
+	}
+	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedCompactBoundaryValidated {
+		return streamValidation{}, fmt.Errorf("missing replayed compact_boundary during resume validation")
 	}
 	result.MultiTurnValidated = result.ValidatedTurns >= 2
 
@@ -2980,6 +3007,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("replayed_tool_result_event=%s\n", valueOrNone(r.ReplayedToolResultEvent)))
 	b.WriteString(fmt.Sprintf("replayed_assistant_message_validated=%t\n", r.ReplayedAssistantMessageValidated))
 	b.WriteString(fmt.Sprintf("replayed_assistant_message_event=%s\n", valueOrNone(r.ReplayedAssistantMessageEvent)))
+	b.WriteString(fmt.Sprintf("replayed_compact_boundary_validated=%t\n", r.ReplayedCompactBoundaryValidated))
+	b.WriteString(fmt.Sprintf("replayed_compact_boundary_event=%s\n", valueOrNone(r.ReplayedCompactBoundaryEvent)))
 	b.WriteString(fmt.Sprintf("auth_validated=%t\n", r.AuthValidated))
 	b.WriteString(fmt.Sprintf("auth_event=%s\n", valueOrNone(r.AuthEvent)))
 	b.WriteString(fmt.Sprintf("keep_alive_validated=%t\n", r.KeepAliveValidated))
