@@ -1169,6 +1169,21 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":               toolUseStopUUID,
 					"session_id":         session.ID,
 				})
+				messageDeltaUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "stream_event",
+					"event": map[string]any{
+						"type":  "message_delta",
+						"delta": map[string]any{"stop_reason": "end_turn"},
+						"usage": minimalUsage(),
+					},
+					"parent_tool_use_id": nil,
+					"uuid":               messageDeltaUUID,
+					"session_id":         session.ID,
+				})
 				streamlinedTextUUID, err := generateRequestID()
 				if err != nil {
 					return
@@ -1180,7 +1195,9 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"session_id": session.ID,
 				})
 				_ = conn.WriteJSON(map[string]any{
-					"type": "assistant",
+					"type":        "assistant",
+					"stop_reason": "end_turn",
+					"usage":       minimalUsage(),
 					"message": map[string]any{
 						"role": "assistant",
 						"content": []map[string]any{

@@ -384,6 +384,19 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(toolUseStopPayload["type"])) != "content_block_stop" {
 		t.Fatalf("unexpected tool_use stop event payload: %#v", toolUseStopEvent)
 	}
+	var messageDeltaEvent map[string]any
+	if err := ws.ReadJSON(&messageDeltaEvent); err != nil {
+		t.Fatalf("read message_delta event failed: %v", err)
+	}
+	if messageDeltaEvent["type"] != "stream_event" {
+		t.Fatalf("unexpected message_delta event envelope: %#v", messageDeltaEvent)
+	}
+	messageDeltaPayload, _ := messageDeltaEvent["event"].(map[string]any)
+	messageDeltaDelta, _ := messageDeltaPayload["delta"].(map[string]any)
+	if strings.TrimSpace(asString(messageDeltaPayload["type"])) != "message_delta" || strings.TrimSpace(asString(messageDeltaDelta["stop_reason"])) != "end_turn" {
+		t.Fatalf("unexpected message_delta payload: %#v", messageDeltaEvent)
+	}
+	assertZeroUsageShape(t, messageDeltaPayload, "message_delta")
 	var streamlinedText map[string]any
 	if err := ws.ReadJSON(&streamlinedText); err != nil {
 		t.Fatalf("read streamlined_text failed: %v", err)
@@ -403,6 +416,10 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if len(content) < 3 {
 		t.Fatalf("unexpected assistant payload: %#v", assistant)
 	}
+	if strings.TrimSpace(asString(assistant["stop_reason"])) != "end_turn" {
+		t.Fatalf("unexpected assistant stop_reason: %#v", assistant)
+	}
+	assertZeroUsageShape(t, assistant, "assistant")
 	thinkingBlock, _ := content[0].(map[string]any)
 	toolUseBlock, _ := content[1].(map[string]any)
 	textBlock, _ := content[2].(map[string]any)
@@ -799,6 +816,19 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(secondToolUseStopPayload["type"])) != "content_block_stop" {
 		t.Fatalf("unexpected second tool_use stop event payload: %#v", secondToolUseStopEvent)
 	}
+	var secondMessageDeltaEvent map[string]any
+	if err := ws.ReadJSON(&secondMessageDeltaEvent); err != nil {
+		t.Fatalf("read second message_delta event failed: %v", err)
+	}
+	if secondMessageDeltaEvent["type"] != "stream_event" {
+		t.Fatalf("unexpected second message_delta event envelope: %#v", secondMessageDeltaEvent)
+	}
+	secondMessageDeltaPayload, _ := secondMessageDeltaEvent["event"].(map[string]any)
+	secondMessageDeltaDelta, _ := secondMessageDeltaPayload["delta"].(map[string]any)
+	if strings.TrimSpace(asString(secondMessageDeltaPayload["type"])) != "message_delta" || strings.TrimSpace(asString(secondMessageDeltaDelta["stop_reason"])) != "end_turn" {
+		t.Fatalf("unexpected second message_delta payload: %#v", secondMessageDeltaEvent)
+	}
+	assertZeroUsageShape(t, secondMessageDeltaPayload, "second message_delta")
 	var secondStreamlinedText map[string]any
 	if err := ws.ReadJSON(&secondStreamlinedText); err != nil {
 		t.Fatalf("read second streamlined_text failed: %v", err)
@@ -818,6 +848,10 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if len(secondContent) < 3 {
 		t.Fatalf("unexpected second assistant payload: %#v", secondAssistant)
 	}
+	if strings.TrimSpace(asString(secondAssistant["stop_reason"])) != "end_turn" {
+		t.Fatalf("unexpected second assistant stop_reason: %#v", secondAssistant)
+	}
+	assertZeroUsageShape(t, secondAssistant, "second assistant")
 	secondThinkingBlock, _ := secondContent[0].(map[string]any)
 	secondToolUseBlock, _ := secondContent[1].(map[string]any)
 	secondTextBlock, _ := secondContent[2].(map[string]any)
