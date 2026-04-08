@@ -123,6 +123,8 @@ type Result struct {
 	MultiTurnValidated                                           bool
 	ResultValidated                                              bool
 	ResultEvent                                                  string
+	ResultStructuredOutputValidated                              bool
+	ResultStructuredOutputEvent                                  string
 	ResultFastModeStateValidated                                 bool
 	ResultFastModeStateEvent                                     string
 	ResultErrorValidated                                         bool
@@ -412,6 +414,8 @@ func Run(args []string) (Result, error) {
 		MultiTurnValidated:                                           streamResult.MultiTurnValidated,
 		ResultValidated:                                              streamResult.ResultValidated,
 		ResultEvent:                                                  streamResult.ResultEvent,
+		ResultStructuredOutputValidated:                              streamResult.ResultStructuredOutputValidated,
+		ResultStructuredOutputEvent:                                  streamResult.ResultStructuredOutputEvent,
 		ResultFastModeStateValidated:                                 streamResult.ResultFastModeStateValidated,
 		ResultFastModeStateEvent:                                     streamResult.ResultFastModeStateEvent,
 		ResultErrorValidated:                                         streamResult.ResultErrorValidated,
@@ -931,6 +935,8 @@ type streamValidation struct {
 	MultiTurnValidated                                           bool
 	ResultValidated                                              bool
 	ResultEvent                                                  string
+	ResultStructuredOutputValidated                              bool
+	ResultStructuredOutputEvent                                  string
 	ResultFastModeStateValidated                                 bool
 	ResultFastModeStateEvent                                     string
 	ResultErrorValidated                                         bool
@@ -2063,8 +2069,17 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if strings.TrimSpace(asString(incoming["result"])) != turn.expectedResponse {
 						return streamValidation{}, fmt.Errorf("invalid result payload: expected result=%q, got %q", turn.expectedResponse, strings.TrimSpace(asString(incoming["result"])))
 					}
+					structuredOutput, _ := incoming["structured_output"].(map[string]any)
+					if len(structuredOutput) == 0 {
+						return streamValidation{}, fmt.Errorf("invalid result structured_output: missing object")
+					}
+					if strings.TrimSpace(asString(structuredOutput["text"])) != turn.expectedResponse {
+						return streamValidation{}, fmt.Errorf("invalid result structured_output.text: expected %q, got %q", turn.expectedResponse, strings.TrimSpace(asString(structuredOutput["text"])))
+					}
 					result.ResultValidated = true
 					result.ResultEvent = "result:success"
+					result.ResultStructuredOutputValidated = true
+					result.ResultStructuredOutputEvent = "result:success:structured_output"
 					result.ResultFastModeStateValidated = true
 					result.ResultFastModeStateEvent = "result:success:fast_mode_state"
 				} else if turn.behavior == "deny" {
@@ -3544,6 +3559,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("multi_turn_validated=%t\n", r.MultiTurnValidated))
 	b.WriteString(fmt.Sprintf("result_validated=%t\n", r.ResultValidated))
 	b.WriteString(fmt.Sprintf("result_event=%s\n", valueOrNone(r.ResultEvent)))
+	b.WriteString(fmt.Sprintf("result_structured_output_validated=%t\n", r.ResultStructuredOutputValidated))
+	b.WriteString(fmt.Sprintf("result_structured_output_event=%s\n", valueOrNone(r.ResultStructuredOutputEvent)))
 	b.WriteString(fmt.Sprintf("result_fast_mode_state_validated=%t\n", r.ResultFastModeStateValidated))
 	b.WriteString(fmt.Sprintf("result_fast_mode_state_event=%s\n", valueOrNone(r.ResultFastModeStateEvent)))
 	b.WriteString(fmt.Sprintf("result_error_validated=%t\n", r.ResultErrorValidated))

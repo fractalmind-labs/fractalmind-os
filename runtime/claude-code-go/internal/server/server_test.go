@@ -366,6 +366,10 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if result["type"] != "result" || strings.TrimSpace(asString(result["subtype"])) != "success" || strings.TrimSpace(asString(result["result"])) != "echo:hello [approved]" || strings.TrimSpace(asString(result["fast_mode_state"])) != "off" {
 		t.Fatalf("unexpected result event: %#v", result)
 	}
+	structuredOutput, _ := result["structured_output"].(map[string]any)
+	if strings.TrimSpace(asString(structuredOutput["text"])) != "echo:hello [approved]" {
+		t.Fatalf("unexpected result structured_output: %#v", result)
+	}
 	var promptSuggestion map[string]any
 	if err := ws.ReadJSON(&promptSuggestion); err != nil {
 		t.Fatalf("read prompt_suggestion failed: %v", err)
@@ -694,6 +698,10 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if secondResult["type"] != "result" || strings.TrimSpace(asString(secondResult["subtype"])) != "success" || strings.TrimSpace(asString(secondResult["result"])) != "echo:hello again [approved]" || strings.TrimSpace(asString(secondResult["fast_mode_state"])) != "off" {
 		t.Fatalf("unexpected second result event: %#v", secondResult)
+	}
+	secondStructuredOutput, _ := secondResult["structured_output"].(map[string]any)
+	if strings.TrimSpace(asString(secondStructuredOutput["text"])) != "echo:hello again [approved]" {
+		t.Fatalf("unexpected second result structured_output: %#v", secondResult)
 	}
 	var secondPromptSuggestion map[string]any
 	if err := ws.ReadJSON(&secondPromptSuggestion); err != nil {

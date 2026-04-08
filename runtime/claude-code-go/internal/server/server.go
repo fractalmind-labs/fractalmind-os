@@ -1131,6 +1131,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"is_error":           false,
 					"num_turns":          completedTurns,
 					"result":             responseText,
+					"structured_output":  map[string]any{"text": responseText},
 					"stop_reason":        nil,
 					"total_cost_usd":     0,
 					"usage":              map[string]any{},
