@@ -53,6 +53,8 @@ type Result struct {
 	StatusTransitionEvent                          string
 	StatusCompactingLifecycleValidated             bool
 	StatusCompactingLifecycleEvent                 string
+	CompactSummaryValidated                        bool
+	CompactSummaryEvent                            string
 	ReplayedUserMessageValidated                   bool
 	ReplayedUserMessageEvent                       string
 	ReplayedQueuedCommandValidated                 bool
@@ -284,6 +286,8 @@ func Run(args []string) (Result, error) {
 		StatusTransitionEvent:                   streamResult.StatusTransitionEvent,
 		StatusCompactingLifecycleValidated:      streamResult.StatusCompactingLifecycleValidated,
 		StatusCompactingLifecycleEvent:          streamResult.StatusCompactingLifecycleEvent,
+		CompactSummaryValidated:                 streamResult.CompactSummaryValidated,
+		CompactSummaryEvent:                     streamResult.CompactSummaryEvent,
 		ReplayedUserMessageValidated:            streamResult.ReplayedUserMessageValidated,
 		ReplayedUserMessageEvent:                streamResult.ReplayedUserMessageEvent,
 		ReplayedQueuedCommandValidated:          streamResult.ReplayedQueuedCommandValidated,
@@ -745,6 +749,8 @@ type streamValidation struct {
 	StatusTransitionEvent                          string
 	StatusCompactingLifecycleValidated             bool
 	StatusCompactingLifecycleEvent                 string
+	CompactSummaryValidated                        bool
+	CompactSummaryEvent                            string
 	ReplayedUserMessageValidated                   bool
 	ReplayedUserMessageEvent                       string
 	ReplayedQueuedCommandValidated                 bool
@@ -1014,19 +1020,31 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 
 			switch strings.TrimSpace(asString(incoming["type"])) {
 			case "user":
-				replayed, ok := incoming["isReplay"].(bool)
-				if !ok || !replayed {
-					return streamValidation{}, fmt.Errorf("invalid user replay event: missing isReplay=true")
-				}
 				if strings.TrimSpace(asString(incoming["uuid"])) == "" {
-					return streamValidation{}, fmt.Errorf("invalid user replay event: missing uuid")
+					return streamValidation{}, fmt.Errorf("invalid user event: missing uuid")
 				}
 				if strings.TrimSpace(asString(incoming["session_id"])) == "" {
-					return streamValidation{}, fmt.Errorf("invalid user replay event: missing session_id")
+					return streamValidation{}, fmt.Errorf("invalid user event: missing session_id")
 				}
 				message, _ := incoming["message"].(map[string]any)
 				if strings.TrimSpace(asString(message["role"])) != "user" {
-					return streamValidation{}, fmt.Errorf("invalid user replay event: missing role=user")
+					return streamValidation{}, fmt.Errorf("invalid user event: missing role=user")
+				}
+				replayed, ok := incoming["isReplay"].(bool)
+				if !ok {
+					return streamValidation{}, fmt.Errorf("invalid user event: missing isReplay")
+				}
+				if !replayed {
+					contentText, ok := message["content"].(string)
+					if !ok || strings.TrimSpace(contentText) == "" {
+						return streamValidation{}, fmt.Errorf("invalid compact summary user message: missing content")
+					}
+					if strings.TrimSpace(asString(incoming["timestamp"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid compact summary user message: missing timestamp")
+					}
+					result.CompactSummaryValidated = true
+					result.CompactSummaryEvent = "user:compact_summary"
+					continue
 				}
 				attachment, _ := message["attachment"].(map[string]any)
 				if strings.TrimSpace(asString(attachment["type"])) == "queued_command" {
@@ -1818,6 +1836,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedUserMessageValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed user message during resume validation")
+	}
+	if opts.PrintMode && !result.CompactSummaryValidated {
+		return streamValidation{}, fmt.Errorf("missing compact summary user message during print validation")
 	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedQueuedCommandValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed queued_command during resume validation")
@@ -3057,6 +3078,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("status_transition_event=%s\n", valueOrNone(r.StatusTransitionEvent)))
 	b.WriteString(fmt.Sprintf("status_compacting_lifecycle_validated=%t\n", r.StatusCompactingLifecycleValidated))
 	b.WriteString(fmt.Sprintf("status_compacting_lifecycle_event=%s\n", valueOrNone(r.StatusCompactingLifecycleEvent)))
+	b.WriteString(fmt.Sprintf("compact_summary_validated=%t\n", r.CompactSummaryValidated))
+	b.WriteString(fmt.Sprintf("compact_summary_event=%s\n", valueOrNone(r.CompactSummaryEvent)))
 	b.WriteString(fmt.Sprintf("replayed_user_message_validated=%t\n", r.ReplayedUserMessageValidated))
 	b.WriteString(fmt.Sprintf("replayed_user_message_event=%s\n", valueOrNone(r.ReplayedUserMessageEvent)))
 	b.WriteString(fmt.Sprintf("replayed_queued_command_validated=%t\n", r.ReplayedQueuedCommandValidated))

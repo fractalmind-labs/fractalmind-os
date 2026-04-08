@@ -1156,6 +1156,21 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       localCommandOutputUUID,
 					"session_id": session.ID,
 				})
+				compactSummaryUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":       "user",
+					"isReplay":   false,
+					"uuid":       compactSummaryUUID,
+					"session_id": session.ID,
+					"timestamp":  time.Now().UTC().Format(time.RFC3339Nano),
+					"message": map[string]any{
+						"role":    "user",
+						"content": "Compact summary: persisted local command output for direct-connect stub",
+					},
+				})
 				elicitationCompleteUUID, err := generateRequestID()
 				if err != nil {
 					return

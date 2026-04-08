@@ -393,6 +393,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(localCommandOutput["content"])) == "" {
 		t.Fatalf("invalid local_command_output payload: %#v", localCommandOutput)
 	}
+	var compactSummary map[string]any
+	if err := ws.ReadJSON(&compactSummary); err != nil {
+		t.Fatalf("read compact summary failed: %v", err)
+	}
+	if compactSummary["type"] != "user" || compactSummary["isReplay"] != false || strings.TrimSpace(asString(compactSummary["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(compactSummary["uuid"])) == "" || strings.TrimSpace(asString(compactSummary["timestamp"])) == "" {
+		t.Fatalf("unexpected compact summary payload: %#v", compactSummary)
+	}
+	compactSummaryMessage, _ := compactSummary["message"].(map[string]any)
+	if strings.TrimSpace(asString(compactSummaryMessage["role"])) != "user" || strings.TrimSpace(asString(compactSummaryMessage["content"])) == "" {
+		t.Fatalf("invalid compact summary message payload: %#v", compactSummary)
+	}
 	var elicitationComplete map[string]any
 	if err := ws.ReadJSON(&elicitationComplete); err != nil {
 		t.Fatalf("read elicitation_complete failed: %v", err)
@@ -680,6 +691,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if strings.TrimSpace(asString(secondLocalCommandOutput["content"])) == "" {
 		t.Fatalf("invalid second local_command_output payload: %#v", secondLocalCommandOutput)
+	}
+	var secondCompactSummary map[string]any
+	if err := ws.ReadJSON(&secondCompactSummary); err != nil {
+		t.Fatalf("read second compact summary failed: %v", err)
+	}
+	if secondCompactSummary["type"] != "user" || secondCompactSummary["isReplay"] != false || strings.TrimSpace(asString(secondCompactSummary["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(secondCompactSummary["uuid"])) == "" || strings.TrimSpace(asString(secondCompactSummary["timestamp"])) == "" {
+		t.Fatalf("unexpected second compact summary payload: %#v", secondCompactSummary)
+	}
+	secondCompactSummaryMessage, _ := secondCompactSummary["message"].(map[string]any)
+	if strings.TrimSpace(asString(secondCompactSummaryMessage["role"])) != "user" || strings.TrimSpace(asString(secondCompactSummaryMessage["content"])) == "" {
+		t.Fatalf("invalid second compact summary message payload: %#v", secondCompactSummary)
 	}
 	var secondElicitationComplete map[string]any
 	if err := ws.ReadJSON(&secondElicitationComplete); err != nil {
