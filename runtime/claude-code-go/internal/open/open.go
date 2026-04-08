@@ -61,6 +61,8 @@ type Result struct {
 	ReplayedAssistantMessageEvent                  string
 	ReplayedCompactBoundaryValidated               bool
 	ReplayedCompactBoundaryEvent                   string
+	ReplayedLocalCommandBreadcrumbValidated        bool
+	ReplayedLocalCommandBreadcrumbEvent            string
 	AuthValidated                                  bool
 	AuthEvent                                      string
 	KeepAliveValidated                             bool
@@ -251,61 +253,63 @@ func Run(args []string) (Result, error) {
 	}
 
 	return Result{
-		Status:                              "connected",
-		Action:                              actionForOptions(opts),
-		ConnectURL:                          opts.ConnectURL,
-		Transport:                           transport,
-		ServerURL:                           serverURL,
-		AuthToken:                           authToken,
-		PrintMode:                           opts.PrintMode,
-		PrintPrompt:                         opts.PrintPrompt,
-		OutputFormat:                        opts.OutputFormat,
-		RequestCWD:                          cwd,
-		SessionID:                           session.SessionID,
-		WSURL:                               session.WSURL,
-		WorkDir:                             session.WorkDir,
-		StreamValidated:                     true,
-		StreamEvent:                         streamResult.StreamEvent,
-		StreamContentValidated:              streamResult.StreamContentValidated,
-		StreamContentEvent:                  streamResult.StreamContentEvent,
-		StreamlinedTextValidated:            streamResult.StreamlinedTextValidated,
-		StreamlinedTextEvent:                streamResult.StreamlinedTextEvent,
-		SystemValidated:                     streamResult.SystemValidated,
-		SystemEvent:                         streamResult.SystemEvent,
-		StatusValidated:                     streamResult.StatusValidated,
-		StatusEvent:                         streamResult.StatusEvent,
-		StatusTransitionValidated:           streamResult.StatusTransitionValidated,
-		StatusTransitionEvent:               streamResult.StatusTransitionEvent,
-		StatusCompactingLifecycleValidated:  streamResult.StatusCompactingLifecycleValidated,
-		StatusCompactingLifecycleEvent:      streamResult.StatusCompactingLifecycleEvent,
-		ReplayedUserMessageValidated:        streamResult.ReplayedUserMessageValidated,
-		ReplayedUserMessageEvent:            streamResult.ReplayedUserMessageEvent,
-		ReplayedToolResultValidated:         streamResult.ReplayedToolResultValidated,
-		ReplayedToolResultEvent:             streamResult.ReplayedToolResultEvent,
-		ReplayedAssistantMessageValidated:   streamResult.ReplayedAssistantMessageValidated,
-		ReplayedAssistantMessageEvent:       streamResult.ReplayedAssistantMessageEvent,
-		ReplayedCompactBoundaryValidated:    streamResult.ReplayedCompactBoundaryValidated,
-		ReplayedCompactBoundaryEvent:        streamResult.ReplayedCompactBoundaryEvent,
-		AuthValidated:                       streamResult.AuthValidated,
-		AuthEvent:                           streamResult.AuthEvent,
-		KeepAliveValidated:                  streamResult.KeepAliveValidated,
-		KeepAliveEvent:                      streamResult.KeepAliveEvent,
-		UpdateEnvironmentVariablesValidated: streamResult.UpdateEnvironmentVariablesValidated,
-		UpdateEnvironmentVariablesEvent:     streamResult.UpdateEnvironmentVariablesEvent,
-		ControlCancelValidated:              streamResult.ControlCancelValidated,
-		ControlCancelEvent:                  streamResult.ControlCancelEvent,
-		MessageValidated:                    streamResult.MessageValidated,
-		MessageEvent:                        streamResult.MessageEvent,
-		ValidatedTurns:                      streamResult.ValidatedTurns,
-		MultiTurnValidated:                  streamResult.MultiTurnValidated,
-		ResultValidated:                     streamResult.ResultValidated,
-		ResultEvent:                         streamResult.ResultEvent,
-		ResultErrorValidated:                streamResult.ResultErrorValidated,
-		ResultErrorEvent:                    streamResult.ResultErrorEvent,
-		ResultErrorMaxTurnsValidated:        streamResult.ResultErrorMaxTurnsValidated,
-		ResultErrorMaxTurnsEvent:            streamResult.ResultErrorMaxTurnsEvent,
-		ResultErrorMaxBudgetUSDValidated:    streamResult.ResultErrorMaxBudgetUSDValidated,
-		ResultErrorMaxBudgetUSDEvent:        streamResult.ResultErrorMaxBudgetUSDEvent,
+		Status:                                  "connected",
+		Action:                                  actionForOptions(opts),
+		ConnectURL:                              opts.ConnectURL,
+		Transport:                               transport,
+		ServerURL:                               serverURL,
+		AuthToken:                               authToken,
+		PrintMode:                               opts.PrintMode,
+		PrintPrompt:                             opts.PrintPrompt,
+		OutputFormat:                            opts.OutputFormat,
+		RequestCWD:                              cwd,
+		SessionID:                               session.SessionID,
+		WSURL:                                   session.WSURL,
+		WorkDir:                                 session.WorkDir,
+		StreamValidated:                         true,
+		StreamEvent:                             streamResult.StreamEvent,
+		StreamContentValidated:                  streamResult.StreamContentValidated,
+		StreamContentEvent:                      streamResult.StreamContentEvent,
+		StreamlinedTextValidated:                streamResult.StreamlinedTextValidated,
+		StreamlinedTextEvent:                    streamResult.StreamlinedTextEvent,
+		SystemValidated:                         streamResult.SystemValidated,
+		SystemEvent:                             streamResult.SystemEvent,
+		StatusValidated:                         streamResult.StatusValidated,
+		StatusEvent:                             streamResult.StatusEvent,
+		StatusTransitionValidated:               streamResult.StatusTransitionValidated,
+		StatusTransitionEvent:                   streamResult.StatusTransitionEvent,
+		StatusCompactingLifecycleValidated:      streamResult.StatusCompactingLifecycleValidated,
+		StatusCompactingLifecycleEvent:          streamResult.StatusCompactingLifecycleEvent,
+		ReplayedUserMessageValidated:            streamResult.ReplayedUserMessageValidated,
+		ReplayedUserMessageEvent:                streamResult.ReplayedUserMessageEvent,
+		ReplayedToolResultValidated:             streamResult.ReplayedToolResultValidated,
+		ReplayedToolResultEvent:                 streamResult.ReplayedToolResultEvent,
+		ReplayedAssistantMessageValidated:       streamResult.ReplayedAssistantMessageValidated,
+		ReplayedAssistantMessageEvent:           streamResult.ReplayedAssistantMessageEvent,
+		ReplayedCompactBoundaryValidated:        streamResult.ReplayedCompactBoundaryValidated,
+		ReplayedCompactBoundaryEvent:            streamResult.ReplayedCompactBoundaryEvent,
+		ReplayedLocalCommandBreadcrumbValidated: streamResult.ReplayedLocalCommandBreadcrumbValidated,
+		ReplayedLocalCommandBreadcrumbEvent:     streamResult.ReplayedLocalCommandBreadcrumbEvent,
+		AuthValidated:                           streamResult.AuthValidated,
+		AuthEvent:                               streamResult.AuthEvent,
+		KeepAliveValidated:                      streamResult.KeepAliveValidated,
+		KeepAliveEvent:                          streamResult.KeepAliveEvent,
+		UpdateEnvironmentVariablesValidated:     streamResult.UpdateEnvironmentVariablesValidated,
+		UpdateEnvironmentVariablesEvent:         streamResult.UpdateEnvironmentVariablesEvent,
+		ControlCancelValidated:                  streamResult.ControlCancelValidated,
+		ControlCancelEvent:                      streamResult.ControlCancelEvent,
+		MessageValidated:                        streamResult.MessageValidated,
+		MessageEvent:                            streamResult.MessageEvent,
+		ValidatedTurns:                          streamResult.ValidatedTurns,
+		MultiTurnValidated:                      streamResult.MultiTurnValidated,
+		ResultValidated:                         streamResult.ResultValidated,
+		ResultEvent:                             streamResult.ResultEvent,
+		ResultErrorValidated:                    streamResult.ResultErrorValidated,
+		ResultErrorEvent:                        streamResult.ResultErrorEvent,
+		ResultErrorMaxTurnsValidated:            streamResult.ResultErrorMaxTurnsValidated,
+		ResultErrorMaxTurnsEvent:                streamResult.ResultErrorMaxTurnsEvent,
+		ResultErrorMaxBudgetUSDValidated:        streamResult.ResultErrorMaxBudgetUSDValidated,
+		ResultErrorMaxBudgetUSDEvent:            streamResult.ResultErrorMaxBudgetUSDEvent,
 		ResultErrorMaxStructuredOutputRetriesValidated: streamResult.ResultErrorMaxStructuredOutputRetriesValidated,
 		ResultErrorMaxStructuredOutputRetriesEvent:     streamResult.ResultErrorMaxStructuredOutputRetriesEvent,
 		ControlValidated:                    streamResult.ControlValidated,
@@ -741,6 +745,8 @@ type streamValidation struct {
 	ReplayedAssistantMessageEvent                  string
 	ReplayedCompactBoundaryValidated               bool
 	ReplayedCompactBoundaryEvent                   string
+	ReplayedLocalCommandBreadcrumbValidated        bool
+	ReplayedLocalCommandBreadcrumbEvent            string
 	AuthValidated                                  bool
 	AuthEvent                                      string
 	KeepAliveValidated                             bool
@@ -1009,6 +1015,13 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				message, _ := incoming["message"].(map[string]any)
 				if strings.TrimSpace(asString(message["role"])) != "user" {
 					return streamValidation{}, fmt.Errorf("invalid user replay event: missing role=user")
+				}
+				if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedLocalCommandBreadcrumbValidated {
+					if contentText, ok := message["content"].(string); ok && strings.Contains(contentText, "<local-command-stdout>") {
+						result.ReplayedLocalCommandBreadcrumbValidated = true
+						result.ReplayedLocalCommandBreadcrumbEvent = "user:local_command_stdout:isReplay"
+						continue
+					}
 				}
 				content, _ := message["content"].([]any)
 				isToolResult := false
@@ -1780,6 +1793,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedCompactBoundaryValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed compact_boundary during resume validation")
+	}
+	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedLocalCommandBreadcrumbValidated {
+		return streamValidation{}, fmt.Errorf("missing replayed local-command breadcrumb during resume validation")
 	}
 	result.MultiTurnValidated = result.ValidatedTurns >= 2
 
@@ -3009,6 +3025,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("replayed_assistant_message_event=%s\n", valueOrNone(r.ReplayedAssistantMessageEvent)))
 	b.WriteString(fmt.Sprintf("replayed_compact_boundary_validated=%t\n", r.ReplayedCompactBoundaryValidated))
 	b.WriteString(fmt.Sprintf("replayed_compact_boundary_event=%s\n", valueOrNone(r.ReplayedCompactBoundaryEvent)))
+	b.WriteString(fmt.Sprintf("replayed_local_command_breadcrumb_validated=%t\n", r.ReplayedLocalCommandBreadcrumbValidated))
+	b.WriteString(fmt.Sprintf("replayed_local_command_breadcrumb_event=%s\n", valueOrNone(r.ReplayedLocalCommandBreadcrumbEvent)))
 	b.WriteString(fmt.Sprintf("auth_validated=%t\n", r.AuthValidated))
 	b.WriteString(fmt.Sprintf("auth_event=%s\n", valueOrNone(r.AuthEvent)))
 	b.WriteString(fmt.Sprintf("keep_alive_validated=%t\n", r.KeepAliveValidated))

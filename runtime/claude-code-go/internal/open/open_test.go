@@ -76,6 +76,7 @@ func TestRunOpenDefaults(t *testing.T) {
 		"replayed_tool_result_validated=false",
 		"replayed_assistant_message_validated=false",
 		"replayed_compact_boundary_validated=false",
+		"replayed_local_command_breadcrumb_validated=false",
 		"auth_validated=false",
 		"keep_alive_validated=false",
 		"update_environment_variables_validated=false",
@@ -226,7 +227,8 @@ func TestRunOpenSupportsResumePrintReplayValidation(t *testing.T) {
 	if !resumed.ReplayedUserMessageValidated || resumed.ReplayedUserMessageEvent != "user:isReplay" ||
 		!resumed.ReplayedToolResultValidated || resumed.ReplayedToolResultEvent != "user:tool_result:isReplay" ||
 		!resumed.ReplayedAssistantMessageValidated || resumed.ReplayedAssistantMessageEvent != "assistant:replay" ||
-		!resumed.ReplayedCompactBoundaryValidated || resumed.ReplayedCompactBoundaryEvent != "system:compact_boundary:replay" {
+		!resumed.ReplayedCompactBoundaryValidated || resumed.ReplayedCompactBoundaryEvent != "system:compact_boundary:replay" ||
+		!resumed.ReplayedLocalCommandBreadcrumbValidated || resumed.ReplayedLocalCommandBreadcrumbEvent != "user:local_command_stdout:isReplay" {
 		t.Fatalf("expected replay validation, got %#v", resumed)
 	}
 }
@@ -326,6 +328,7 @@ func newHTTPDirectConnectTestServer(t *testing.T, sessionID, workDir string, onS
 	replayedToolResult := ""
 	replayedAssistant := ""
 	replayedCompactBoundary := false
+	replayedLocalCommandBreadcrumb := ""
 	emitReplayOnAttach := false
 
 	mux.HandleFunc("/sessions", func(w http.ResponseWriter, r *http.Request) {
@@ -334,7 +337,7 @@ func newHTTPDirectConnectTestServer(t *testing.T, sessionID, workDir string, onS
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodGet {
-			emitReplayOnAttach = strings.TrimSpace(r.URL.Query().Get("resume")) != "" && replayedPrompt != "" && replayedToolUseID != "" && replayedToolResult != "" && replayedAssistant != "" && replayedCompactBoundary
+			emitReplayOnAttach = strings.TrimSpace(r.URL.Query().Get("resume")) != "" && replayedPrompt != "" && replayedToolUseID != "" && replayedToolResult != "" && replayedAssistant != "" && replayedCompactBoundary && replayedLocalCommandBreadcrumb != ""
 			_ = json.NewEncoder(w).Encode(map[string]string{
 				"session_id": sessionID,
 				"ws_url":     wsBase + "/" + sessionID,
@@ -366,12 +369,13 @@ func newHTTPDirectConnectTestServer(t *testing.T, sessionID, workDir string, onS
 			return
 		}
 		defer conn.Close()
-		serveDirectConnectWS(t, conn, sessionID, workDir, "http", emitReplayOnAttach, replayedPrompt, replayedToolUseID, replayedToolResult, replayedAssistant, replayedCompactBoundary, func(prompt, toolUseID, toolResult, assistant string, compactBoundary bool) {
+		serveDirectConnectWS(t, conn, sessionID, workDir, "http", emitReplayOnAttach, replayedPrompt, replayedToolUseID, replayedToolResult, replayedAssistant, replayedCompactBoundary, replayedLocalCommandBreadcrumb, func(prompt, toolUseID, toolResult, assistant string, compactBoundary bool, localBreadcrumb string) {
 			replayedPrompt = prompt
 			replayedToolUseID = toolUseID
 			replayedToolResult = toolResult
 			replayedAssistant = assistant
 			replayedCompactBoundary = compactBoundary
+			replayedLocalCommandBreadcrumb = localBreadcrumb
 		})
 		emitReplayOnAttach = false
 	})
@@ -397,12 +401,13 @@ func newUnixDirectConnectTestServer(t *testing.T, socketPath, sessionID, workDir
 	replayedToolResult := ""
 	replayedAssistant := ""
 	replayedCompactBoundary := false
+	replayedLocalCommandBreadcrumb := ""
 	emitReplayOnAttach := false
 
 	mux.HandleFunc("/sessions", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodGet {
-			emitReplayOnAttach = strings.TrimSpace(r.URL.Query().Get("resume")) != "" && replayedPrompt != "" && replayedToolUseID != "" && replayedToolResult != "" && replayedAssistant != "" && replayedCompactBoundary
+			emitReplayOnAttach = strings.TrimSpace(r.URL.Query().Get("resume")) != "" && replayedPrompt != "" && replayedToolUseID != "" && replayedToolResult != "" && replayedAssistant != "" && replayedCompactBoundary && replayedLocalCommandBreadcrumb != ""
 			_ = json.NewEncoder(w).Encode(map[string]string{
 				"session_id": sessionID,
 				"ws_url":     wsURL,
@@ -434,12 +439,13 @@ func newUnixDirectConnectTestServer(t *testing.T, socketPath, sessionID, workDir
 			return
 		}
 		defer conn.Close()
-		serveDirectConnectWS(t, conn, sessionID, workDir, "unix", emitReplayOnAttach, replayedPrompt, replayedToolUseID, replayedToolResult, replayedAssistant, replayedCompactBoundary, func(prompt, toolUseID, toolResult, assistant string, compactBoundary bool) {
+		serveDirectConnectWS(t, conn, sessionID, workDir, "unix", emitReplayOnAttach, replayedPrompt, replayedToolUseID, replayedToolResult, replayedAssistant, replayedCompactBoundary, replayedLocalCommandBreadcrumb, func(prompt, toolUseID, toolResult, assistant string, compactBoundary bool, localBreadcrumb string) {
 			replayedPrompt = prompt
 			replayedToolUseID = toolUseID
 			replayedToolResult = toolResult
 			replayedAssistant = assistant
 			replayedCompactBoundary = compactBoundary
+			replayedLocalCommandBreadcrumb = localBreadcrumb
 		})
 		emitReplayOnAttach = false
 	})
@@ -451,7 +457,7 @@ func newUnixDirectConnectTestServer(t *testing.T, socketPath, sessionID, workDir
 	return srv, nil
 }
 
-func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir, transport string, emitReplay bool, replayedPrompt, replayedToolUseID, replayedToolResult, replayedAssistant string, replayedCompactBoundary bool, rememberReplay func(string, string, string, string, bool)) {
+func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir, transport string, emitReplay bool, replayedPrompt, replayedToolUseID, replayedToolResult, replayedAssistant string, replayedCompactBoundary bool, replayedLocalCommandBreadcrumb string, rememberReplay func(string, string, string, string, bool, string)) {
 	t.Helper()
 	_ = conn.WriteJSON(map[string]string{
 		"type":       "session_ready",
@@ -563,6 +569,18 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 			},
 			"uuid":       "replayed-compact-boundary-1",
 			"session_id": sessionID,
+		})
+	}
+	if emitReplay && strings.TrimSpace(replayedLocalCommandBreadcrumb) != "" {
+		_ = conn.WriteJSON(map[string]any{
+			"type":       "user",
+			"isReplay":   true,
+			"uuid":       "replayed-local-command-breadcrumb-1",
+			"session_id": sessionID,
+			"message": map[string]any{
+				"role":    "user",
+				"content": replayedLocalCommandBreadcrumb,
+			},
 		})
 	}
 
@@ -726,7 +744,7 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 				}
 			}
 			if rememberReplay != nil {
-				rememberReplay(pendingPrompt, fmt.Sprintf("toolu-%d", requestCounter), "echo:"+toolText, "echo:"+toolText, true)
+				rememberReplay(pendingPrompt, fmt.Sprintf("toolu-%d", requestCounter), "echo:"+toolText, "echo:"+toolText, true, "<local-command-stdout>local command output: persisted direct-connect artifacts</local-command-stdout>")
 			}
 			_ = conn.WriteJSON(map[string]any{
 				"type":       "control_cancel_request",
