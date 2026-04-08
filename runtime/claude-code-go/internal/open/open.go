@@ -79,6 +79,8 @@ type Result struct {
 	TodoReminderAttachmentEvent                                  string
 	CompactionReminderValidated                                  bool
 	CompactionReminderEvent                                      string
+	AutoModeExitValidated                                        bool
+	AutoModeExitEvent                                            string
 	StreamlinedTextValidated                                     bool
 	StreamlinedTextEvent                                         string
 	SystemValidated                                              bool
@@ -418,6 +420,8 @@ func Run(args []string) (Result, error) {
 		TodoReminderAttachmentEvent:                                  streamResult.TodoReminderAttachmentEvent,
 		CompactionReminderValidated:                                  streamResult.CompactionReminderValidated,
 		CompactionReminderEvent:                                      streamResult.CompactionReminderEvent,
+		AutoModeExitValidated:                                        streamResult.AutoModeExitValidated,
+		AutoModeExitEvent:                                            streamResult.AutoModeExitEvent,
 		StreamlinedTextValidated:                                     streamResult.StreamlinedTextValidated,
 		StreamlinedTextEvent:                                         streamResult.StreamlinedTextEvent,
 		SystemValidated:                                              streamResult.SystemValidated,
@@ -987,6 +991,8 @@ type streamValidation struct {
 	TodoReminderAttachmentEvent                                  string
 	CompactionReminderValidated                                  bool
 	CompactionReminderEvent                                      string
+	AutoModeExitValidated                                        bool
+	AutoModeExitEvent                                            string
 	StreamlinedTextValidated                                     bool
 	StreamlinedTextEvent                                         string
 	SystemValidated                                              bool
@@ -1344,6 +1350,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		maxTurnsReachedAttachmentValidated := false
 		taskReminderAttachmentValidated := false
 		compactionReminderValidated := false
+		autoModeExitValidated := false
 		streamlinedTextValidated := false
 		streamlinedToolUseSummaryValidated := false
 		promptSuggestionValidated := false
@@ -2220,6 +2227,13 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.CompactionReminderValidated = true
 					result.CompactionReminderEvent = "attachment:compaction_reminder"
 					compactionReminderValidated = true
+				case "auto_mode_exit":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected auto_mode_exit attachment during %s turn", turn.behavior)
+					}
+					result.AutoModeExitValidated = true
+					result.AutoModeExitEvent = "attachment:auto_mode_exit"
+					autoModeExitValidated = true
 				default:
 					return streamValidation{}, fmt.Errorf("invalid attachment type: %q", strings.TrimSpace(asString(attachment["type"])))
 				}
@@ -2656,7 +2670,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && autoModeExitValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4003,6 +4017,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("todo_reminder_attachment_event=%s\n", valueOrNone(r.TodoReminderAttachmentEvent)))
 	b.WriteString(fmt.Sprintf("compaction_reminder_validated=%t\n", r.CompactionReminderValidated))
 	b.WriteString(fmt.Sprintf("compaction_reminder_event=%s\n", valueOrNone(r.CompactionReminderEvent)))
+	b.WriteString(fmt.Sprintf("auto_mode_exit_validated=%t\n", r.AutoModeExitValidated))
+	b.WriteString(fmt.Sprintf("auto_mode_exit_event=%s\n", valueOrNone(r.AutoModeExitEvent)))
 	b.WriteString(fmt.Sprintf("streamlined_text_validated=%t\n", r.StreamlinedTextValidated))
 	b.WriteString(fmt.Sprintf("streamlined_text_event=%s\n", valueOrNone(r.StreamlinedTextEvent)))
 	b.WriteString(fmt.Sprintf("system_validated=%t\n", r.SystemValidated))

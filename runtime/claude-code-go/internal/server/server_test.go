@@ -653,6 +653,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(compactionReminderPayload["type"])) != "compaction_reminder" {
 		t.Fatalf("unexpected compaction_reminder attachment payload: %#v", compactionReminderAttachment)
 	}
+	var autoModeExitAttachment map[string]any
+	if err := ws.ReadJSON(&autoModeExitAttachment); err != nil {
+		t.Fatalf("read auto_mode_exit attachment failed: %v", err)
+	}
+	if autoModeExitAttachment["type"] != "attachment" || strings.TrimSpace(asString(autoModeExitAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected auto_mode_exit attachment envelope: %#v", autoModeExitAttachment)
+	}
+	autoModeExitPayload, _ := autoModeExitAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(autoModeExitPayload["type"])) != "auto_mode_exit" {
+		t.Fatalf("unexpected auto_mode_exit attachment payload: %#v", autoModeExitAttachment)
+	}
 	var compactingStatus map[string]any
 	if err := ws.ReadJSON(&compactingStatus); err != nil {
 		t.Fatalf("read compacting status failed: %v", err)
@@ -1168,6 +1179,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondCompactionReminderPayload, _ := secondCompactionReminderAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondCompactionReminderPayload["type"])) != "compaction_reminder" {
 		t.Fatalf("unexpected second compaction_reminder attachment payload: %#v", secondCompactionReminderAttachment)
+	}
+	var secondAutoModeExitAttachment map[string]any
+	if err := ws.ReadJSON(&secondAutoModeExitAttachment); err != nil {
+		t.Fatalf("read second auto_mode_exit attachment failed: %v", err)
+	}
+	if secondAutoModeExitAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondAutoModeExitAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second auto_mode_exit attachment envelope: %#v", secondAutoModeExitAttachment)
+	}
+	secondAutoModeExitPayload, _ := secondAutoModeExitAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondAutoModeExitPayload["type"])) != "auto_mode_exit" {
+		t.Fatalf("unexpected second auto_mode_exit attachment payload: %#v", secondAutoModeExitAttachment)
 	}
 	var secondCompactingStatus map[string]any
 	if err := ws.ReadJSON(&secondCompactingStatus); err != nil {
