@@ -370,6 +370,11 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(structuredOutput["text"])) != "echo:hello [approved]" {
 		t.Fatalf("unexpected result structured_output: %#v", result)
 	}
+	modelUsage, _ := result["modelUsage"].(map[string]any)
+	modelUsageEntry, _ := modelUsage["claude-sonnet-4-5"].(map[string]any)
+	if len(modelUsageEntry) == 0 || intFromAny(modelUsageEntry["inputTokens"]) != 0 || intFromAny(modelUsageEntry["outputTokens"]) != 0 || intFromAny(modelUsageEntry["cacheReadInputTokens"]) != 0 || intFromAny(modelUsageEntry["cacheCreationInputTokens"]) != 0 || intFromAny(modelUsageEntry["webSearchRequests"]) != 0 || intFromAny(modelUsageEntry["contextWindow"]) != 0 || float64FromAny(modelUsageEntry["costUSD"]) != 0 {
+		t.Fatalf("unexpected result modelUsage: %#v", result)
+	}
 	var promptSuggestion map[string]any
 	if err := ws.ReadJSON(&promptSuggestion); err != nil {
 		t.Fatalf("read prompt_suggestion failed: %v", err)
@@ -702,6 +707,11 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondStructuredOutput, _ := secondResult["structured_output"].(map[string]any)
 	if strings.TrimSpace(asString(secondStructuredOutput["text"])) != "echo:hello again [approved]" {
 		t.Fatalf("unexpected second result structured_output: %#v", secondResult)
+	}
+	secondModelUsage, _ := secondResult["modelUsage"].(map[string]any)
+	secondModelUsageEntry, _ := secondModelUsage["claude-sonnet-4-5"].(map[string]any)
+	if len(secondModelUsageEntry) == 0 || intFromAny(secondModelUsageEntry["inputTokens"]) != 0 || intFromAny(secondModelUsageEntry["outputTokens"]) != 0 || intFromAny(secondModelUsageEntry["cacheReadInputTokens"]) != 0 || intFromAny(secondModelUsageEntry["cacheCreationInputTokens"]) != 0 || intFromAny(secondModelUsageEntry["webSearchRequests"]) != 0 || intFromAny(secondModelUsageEntry["contextWindow"]) != 0 || float64FromAny(secondModelUsageEntry["costUSD"]) != 0 {
+		t.Fatalf("unexpected second result modelUsage: %#v", secondResult)
 	}
 	var secondPromptSuggestion map[string]any
 	if err := ws.ReadJSON(&secondPromptSuggestion); err != nil {
@@ -3026,4 +3036,36 @@ func fetchSessionState(t *testing.T, sessionsEndpoint, sessionID, authToken stri
 		t.Fatalf("decode session state response: %v", err)
 	}
 	return parsed
+}
+
+func intFromAny(v any) int {
+	switch n := v.(type) {
+	case int:
+		return n
+	case int32:
+		return int(n)
+	case int64:
+		return int(n)
+	case float64:
+		return int(n)
+	default:
+		return 0
+	}
+}
+
+func float64FromAny(v any) float64 {
+	switch n := v.(type) {
+	case float64:
+		return n
+	case float32:
+		return float64(n)
+	case int:
+		return float64(n)
+	case int32:
+		return float64(n)
+	case int64:
+		return float64(n)
+	default:
+		return 0
+	}
 }

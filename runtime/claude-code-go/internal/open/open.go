@@ -125,6 +125,8 @@ type Result struct {
 	ResultEvent                                                  string
 	ResultStructuredOutputValidated                              bool
 	ResultStructuredOutputEvent                                  string
+	ResultModelUsageValidated                                    bool
+	ResultModelUsageEvent                                        string
 	ResultFastModeStateValidated                                 bool
 	ResultFastModeStateEvent                                     string
 	ResultErrorValidated                                         bool
@@ -416,6 +418,8 @@ func Run(args []string) (Result, error) {
 		ResultEvent:                                                  streamResult.ResultEvent,
 		ResultStructuredOutputValidated:                              streamResult.ResultStructuredOutputValidated,
 		ResultStructuredOutputEvent:                                  streamResult.ResultStructuredOutputEvent,
+		ResultModelUsageValidated:                                    streamResult.ResultModelUsageValidated,
+		ResultModelUsageEvent:                                        streamResult.ResultModelUsageEvent,
 		ResultFastModeStateValidated:                                 streamResult.ResultFastModeStateValidated,
 		ResultFastModeStateEvent:                                     streamResult.ResultFastModeStateEvent,
 		ResultErrorValidated:                                         streamResult.ResultErrorValidated,
@@ -937,6 +941,8 @@ type streamValidation struct {
 	ResultEvent                                                  string
 	ResultStructuredOutputValidated                              bool
 	ResultStructuredOutputEvent                                  string
+	ResultModelUsageValidated                                    bool
+	ResultModelUsageEvent                                        string
 	ResultFastModeStateValidated                                 bool
 	ResultFastModeStateEvent                                     string
 	ResultErrorValidated                                         bool
@@ -2076,10 +2082,20 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if strings.TrimSpace(asString(structuredOutput["text"])) != turn.expectedResponse {
 						return streamValidation{}, fmt.Errorf("invalid result structured_output.text: expected %q, got %q", turn.expectedResponse, strings.TrimSpace(asString(structuredOutput["text"])))
 					}
+					modelUsage, _ := incoming["modelUsage"].(map[string]any)
+					modelUsageEntry, _ := modelUsage["claude-sonnet-4-5"].(map[string]any)
+					if len(modelUsageEntry) == 0 {
+						return streamValidation{}, fmt.Errorf("invalid result modelUsage: missing claude-sonnet-4-5 entry")
+					}
+					if intFromAny(modelUsageEntry["inputTokens"]) != 0 || intFromAny(modelUsageEntry["outputTokens"]) != 0 || intFromAny(modelUsageEntry["cacheReadInputTokens"]) != 0 || intFromAny(modelUsageEntry["cacheCreationInputTokens"]) != 0 || intFromAny(modelUsageEntry["webSearchRequests"]) != 0 || intFromAny(modelUsageEntry["contextWindow"]) != 0 || float64FromAny(modelUsageEntry["costUSD"]) != 0 {
+						return streamValidation{}, fmt.Errorf("invalid result modelUsage: unexpected claude-sonnet-4-5 payload")
+					}
 					result.ResultValidated = true
 					result.ResultEvent = "result:success"
 					result.ResultStructuredOutputValidated = true
 					result.ResultStructuredOutputEvent = "result:success:structured_output"
+					result.ResultModelUsageValidated = true
+					result.ResultModelUsageEvent = "result:success:modelUsage"
 					result.ResultFastModeStateValidated = true
 					result.ResultFastModeStateEvent = "result:success:fast_mode_state"
 				} else if turn.behavior == "deny" {
@@ -3561,6 +3577,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("result_event=%s\n", valueOrNone(r.ResultEvent)))
 	b.WriteString(fmt.Sprintf("result_structured_output_validated=%t\n", r.ResultStructuredOutputValidated))
 	b.WriteString(fmt.Sprintf("result_structured_output_event=%s\n", valueOrNone(r.ResultStructuredOutputEvent)))
+	b.WriteString(fmt.Sprintf("result_model_usage_validated=%t\n", r.ResultModelUsageValidated))
+	b.WriteString(fmt.Sprintf("result_model_usage_event=%s\n", valueOrNone(r.ResultModelUsageEvent)))
 	b.WriteString(fmt.Sprintf("result_fast_mode_state_validated=%t\n", r.ResultFastModeStateValidated))
 	b.WriteString(fmt.Sprintf("result_fast_mode_state_event=%s\n", valueOrNone(r.ResultFastModeStateEvent)))
 	b.WriteString(fmt.Sprintf("result_error_validated=%t\n", r.ResultErrorValidated))
@@ -3735,6 +3753,21 @@ func intFromAny(v any) int {
 		return int(typed)
 	case float64:
 		return int(typed)
+	default:
+		return 0
+	}
+}
+
+func float64FromAny(v any) float64 {
+	switch typed := v.(type) {
+	case float64:
+		return typed
+	case float32:
+		return float64(typed)
+	case int:
+		return float64(typed)
+	case int64:
+		return float64(typed)
 	default:
 		return 0
 	}
