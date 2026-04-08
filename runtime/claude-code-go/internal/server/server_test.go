@@ -1056,6 +1056,7 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(maxTurnsResult["fast_mode_state"])) != "off" {
 		t.Fatalf("unexpected max-turns fast_mode_state: %#v", maxTurnsResult)
 	}
+	assertEmptyPermissionDenials(t, maxTurnsResult, "max-turns result")
 	assertZeroUsageShape(t, maxTurnsResult, "max-turns result")
 
 	if err := ws.WriteJSON(map[string]any{
@@ -1123,6 +1124,7 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(maxBudgetResult["fast_mode_state"])) != "off" {
 		t.Fatalf("unexpected max-budget-usd fast_mode_state: %#v", maxBudgetResult)
 	}
+	assertEmptyPermissionDenials(t, maxBudgetResult, "max-budget-usd result")
 	assertZeroUsageShape(t, maxBudgetResult, "max-budget-usd result")
 
 	if err := ws.WriteJSON(map[string]any{
@@ -1190,6 +1192,7 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(maxStructuredResult["fast_mode_state"])) != "off" {
 		t.Fatalf("unexpected max-structured-output-retries fast_mode_state: %#v", maxStructuredResult)
 	}
+	assertEmptyPermissionDenials(t, maxStructuredResult, "max-structured-output-retries result")
 	assertZeroUsageShape(t, maxStructuredResult, "max-structured-output-retries result")
 
 	if err := ws.WriteJSON(map[string]any{
@@ -3072,6 +3075,14 @@ func assertZeroUsageShape(t *testing.T, payload map[string]any, label string) {
 	iterations, _ := usage["iterations"].([]any)
 	if intFromAny(usage["input_tokens"]) != 0 || intFromAny(usage["cache_creation_input_tokens"]) != 0 || intFromAny(usage["cache_read_input_tokens"]) != 0 || intFromAny(usage["output_tokens"]) != 0 || intFromAny(serverToolUse["web_search_requests"]) != 0 || intFromAny(serverToolUse["web_fetch_requests"]) != 0 || strings.TrimSpace(asString(usage["service_tier"])) != "standard" || intFromAny(cacheCreation["ephemeral_1h_input_tokens"]) != 0 || intFromAny(cacheCreation["ephemeral_5m_input_tokens"]) != 0 || strings.TrimSpace(asString(usage["inference_geo"])) != "" || len(iterations) != 0 || strings.TrimSpace(asString(usage["speed"])) != "standard" {
 		t.Fatalf("unexpected %s usage payload: %#v", label, payload)
+	}
+}
+
+func assertEmptyPermissionDenials(t *testing.T, payload map[string]any, label string) {
+	t.Helper()
+	permissionDenials, _ := payload["permission_denials"].([]any)
+	if len(permissionDenials) != 0 {
+		t.Fatalf("unexpected %s permission_denials payload: %#v", label, payload)
 	}
 }
 

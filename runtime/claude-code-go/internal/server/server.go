@@ -887,20 +887,21 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						return
 					}
 					_ = conn.WriteJSON(map[string]any{
-						"type":            "result",
-						"subtype":         "error_max_turns",
-						"duration_ms":     1,
-						"duration_api_ms": 0,
-						"is_error":        true,
-						"num_turns":       completedTurns,
-						"stop_reason":     "max_turns",
-						"total_cost_usd":  0,
-						"usage":           minimalUsage(),
-						"modelUsage":      map[string]any{"claude-sonnet-4-5": minimalModelUsage()},
-						"errors":          []string{"max turns reached in direct-connect stub"},
-						"fast_mode_state": "off",
-						"uuid":            resultUUID,
-						"session_id":      session.ID,
+						"type":               "result",
+						"subtype":            "error_max_turns",
+						"duration_ms":        1,
+						"duration_api_ms":    0,
+						"is_error":           true,
+						"num_turns":          completedTurns,
+						"stop_reason":        "max_turns",
+						"total_cost_usd":     0,
+						"usage":              minimalUsage(),
+						"modelUsage":         map[string]any{"claude-sonnet-4-5": minimalModelUsage()},
+						"permission_denials": []map[string]any{},
+						"errors":             []string{"max turns reached in direct-connect stub"},
+						"fast_mode_state":    "off",
+						"uuid":               resultUUID,
+						"session_id":         session.ID,
 					})
 					pendingPrompt = ""
 					pendingRequestID = ""
@@ -912,20 +913,21 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						return
 					}
 					_ = conn.WriteJSON(map[string]any{
-						"type":            "result",
-						"subtype":         "error_max_budget_usd",
-						"duration_ms":     1,
-						"duration_api_ms": 0,
-						"is_error":        true,
-						"num_turns":       completedTurns,
-						"stop_reason":     "max_budget_usd",
-						"total_cost_usd":  0,
-						"usage":           minimalUsage(),
-						"modelUsage":      map[string]any{"claude-sonnet-4-5": minimalModelUsage()},
-						"errors":          []string{"max budget usd reached in direct-connect stub"},
-						"fast_mode_state": "off",
-						"uuid":            resultUUID,
-						"session_id":      session.ID,
+						"type":               "result",
+						"subtype":            "error_max_budget_usd",
+						"duration_ms":        1,
+						"duration_api_ms":    0,
+						"is_error":           true,
+						"num_turns":          completedTurns,
+						"stop_reason":        "max_budget_usd",
+						"total_cost_usd":     0,
+						"usage":              minimalUsage(),
+						"modelUsage":         map[string]any{"claude-sonnet-4-5": minimalModelUsage()},
+						"permission_denials": []map[string]any{},
+						"errors":             []string{"max budget usd reached in direct-connect stub"},
+						"fast_mode_state":    "off",
+						"uuid":               resultUUID,
+						"session_id":         session.ID,
 					})
 					pendingPrompt = ""
 					pendingRequestID = ""
@@ -937,20 +939,21 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						return
 					}
 					_ = conn.WriteJSON(map[string]any{
-						"type":            "result",
-						"subtype":         "error_max_structured_output_retries",
-						"duration_ms":     1,
-						"duration_api_ms": 0,
-						"is_error":        true,
-						"num_turns":       completedTurns,
-						"stop_reason":     "max_structured_output_retries",
-						"total_cost_usd":  0,
-						"usage":           minimalUsage(),
-						"modelUsage":      map[string]any{"claude-sonnet-4-5": minimalModelUsage()},
-						"errors":          []string{"max structured output retries reached in direct-connect stub"},
-						"fast_mode_state": "off",
-						"uuid":            resultUUID,
-						"session_id":      session.ID,
+						"type":               "result",
+						"subtype":            "error_max_structured_output_retries",
+						"duration_ms":        1,
+						"duration_api_ms":    0,
+						"is_error":           true,
+						"num_turns":          completedTurns,
+						"stop_reason":        "max_structured_output_retries",
+						"total_cost_usd":     0,
+						"usage":              minimalUsage(),
+						"modelUsage":         map[string]any{"claude-sonnet-4-5": minimalModelUsage()},
+						"permission_denials": []map[string]any{},
+						"errors":             []string{"max structured output retries reached in direct-connect stub"},
+						"fast_mode_state":    "off",
+						"uuid":               resultUUID,
+						"session_id":         session.ID,
 					})
 					pendingPrompt = ""
 					pendingRequestID = ""

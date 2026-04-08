@@ -137,6 +137,8 @@ type Result struct {
 	ResultErrorEvent                                             string
 	ResultErrorUsageValidated                                    bool
 	ResultErrorUsageEvent                                        string
+	ResultErrorPermissionDenialsValidated                        bool
+	ResultErrorPermissionDenialsEvent                            string
 	ResultErrorFastModeStateValidated                            bool
 	ResultErrorFastModeStateEvent                                string
 	ResultErrorMaxTurnsValidated                                 bool
@@ -436,6 +438,8 @@ func Run(args []string) (Result, error) {
 		ResultErrorEvent:                                             streamResult.ResultErrorEvent,
 		ResultErrorUsageValidated:                                    streamResult.ResultErrorUsageValidated,
 		ResultErrorUsageEvent:                                        streamResult.ResultErrorUsageEvent,
+		ResultErrorPermissionDenialsValidated:                        streamResult.ResultErrorPermissionDenialsValidated,
+		ResultErrorPermissionDenialsEvent:                            streamResult.ResultErrorPermissionDenialsEvent,
 		ResultErrorFastModeStateValidated:                            streamResult.ResultErrorFastModeStateValidated,
 		ResultErrorFastModeStateEvent:                                streamResult.ResultErrorFastModeStateEvent,
 		ResultErrorMaxTurnsValidated:                                 streamResult.ResultErrorMaxTurnsValidated,
@@ -965,6 +969,8 @@ type streamValidation struct {
 	ResultErrorEvent                                             string
 	ResultErrorUsageValidated                                    bool
 	ResultErrorUsageEvent                                        string
+	ResultErrorPermissionDenialsValidated                        bool
+	ResultErrorPermissionDenialsEvent                            string
 	ResultErrorFastModeStateValidated                            bool
 	ResultErrorFastModeStateEvent                                string
 	ResultErrorMaxTurnsValidated                                 bool
@@ -2166,6 +2172,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.ResultErrorEvent = "result:error_during_execution"
 					result.ResultErrorUsageValidated = true
 					result.ResultErrorUsageEvent = "result:error:usage"
+					result.ResultErrorPermissionDenialsValidated = true
+					result.ResultErrorPermissionDenialsEvent = "result:error:permission_denials"
 					result.ResultErrorFastModeStateValidated = true
 					result.ResultErrorFastModeStateEvent = "result:error_during_execution:fast_mode_state"
 				} else if turn.behavior == "max_turns" {
@@ -2174,6 +2182,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					if err := validateZeroUsageShape(incoming["usage"]); err != nil {
 						return streamValidation{}, fmt.Errorf("invalid max-turns result usage: %w", err)
+					}
+					if permissionDenials, _ := incoming["permission_denials"].([]any); len(permissionDenials) != 0 {
+						return streamValidation{}, fmt.Errorf("invalid max-turns result permission_denials: expected empty array, got %d entries", len(permissionDenials))
 					}
 					if intFromAny(incoming["num_turns"]) != result.ValidatedTurns {
 						return streamValidation{}, fmt.Errorf("invalid max-turns result: expected num_turns=%d, got %d", result.ValidatedTurns, intFromAny(incoming["num_turns"]))
@@ -2186,6 +2197,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					result.ResultErrorUsageValidated = true
 					result.ResultErrorUsageEvent = "result:error:usage"
+					result.ResultErrorPermissionDenialsValidated = true
+					result.ResultErrorPermissionDenialsEvent = "result:error:permission_denials"
 					result.ResultErrorMaxTurnsValidated = true
 					result.ResultErrorMaxTurnsEvent = "result:error_max_turns"
 					result.ResultErrorMaxTurnsFastModeStateValidated = true
@@ -2196,6 +2209,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					if err := validateZeroUsageShape(incoming["usage"]); err != nil {
 						return streamValidation{}, fmt.Errorf("invalid max-budget-usd result usage: %w", err)
+					}
+					if permissionDenials, _ := incoming["permission_denials"].([]any); len(permissionDenials) != 0 {
+						return streamValidation{}, fmt.Errorf("invalid max-budget-usd result permission_denials: expected empty array, got %d entries", len(permissionDenials))
 					}
 					if intFromAny(incoming["num_turns"]) != result.ValidatedTurns {
 						return streamValidation{}, fmt.Errorf("invalid max-budget-usd result: expected num_turns=%d, got %d", result.ValidatedTurns, intFromAny(incoming["num_turns"]))
@@ -2208,6 +2224,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					result.ResultErrorUsageValidated = true
 					result.ResultErrorUsageEvent = "result:error:usage"
+					result.ResultErrorPermissionDenialsValidated = true
+					result.ResultErrorPermissionDenialsEvent = "result:error:permission_denials"
 					result.ResultErrorMaxBudgetUSDValidated = true
 					result.ResultErrorMaxBudgetUSDEvent = "result:error_max_budget_usd"
 					result.ResultErrorMaxBudgetUSDFastModeStateValidated = true
@@ -2218,6 +2236,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					if err := validateZeroUsageShape(incoming["usage"]); err != nil {
 						return streamValidation{}, fmt.Errorf("invalid max-structured-output-retries result usage: %w", err)
+					}
+					if permissionDenials, _ := incoming["permission_denials"].([]any); len(permissionDenials) != 0 {
+						return streamValidation{}, fmt.Errorf("invalid max-structured-output-retries result permission_denials: expected empty array, got %d entries", len(permissionDenials))
 					}
 					if intFromAny(incoming["num_turns"]) != result.ValidatedTurns {
 						return streamValidation{}, fmt.Errorf("invalid max-structured-output-retries result: expected num_turns=%d, got %d", result.ValidatedTurns, intFromAny(incoming["num_turns"]))
@@ -2230,6 +2251,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					result.ResultErrorUsageValidated = true
 					result.ResultErrorUsageEvent = "result:error:usage"
+					result.ResultErrorPermissionDenialsValidated = true
+					result.ResultErrorPermissionDenialsEvent = "result:error:permission_denials"
 					result.ResultErrorMaxStructuredOutputRetriesValidated = true
 					result.ResultErrorMaxStructuredOutputRetriesEvent = "result:error_max_structured_output_retries"
 					result.ResultErrorMaxStructuredOutputRetriesFastModeStateValidated = true
@@ -3642,6 +3665,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("result_error_event=%s\n", valueOrNone(r.ResultErrorEvent)))
 	b.WriteString(fmt.Sprintf("result_error_usage_validated=%t\n", r.ResultErrorUsageValidated))
 	b.WriteString(fmt.Sprintf("result_error_usage_event=%s\n", valueOrNone(r.ResultErrorUsageEvent)))
+	b.WriteString(fmt.Sprintf("result_error_permission_denials_validated=%t\n", r.ResultErrorPermissionDenialsValidated))
+	b.WriteString(fmt.Sprintf("result_error_permission_denials_event=%s\n", valueOrNone(r.ResultErrorPermissionDenialsEvent)))
 	b.WriteString(fmt.Sprintf("result_error_fast_mode_state_validated=%t\n", r.ResultErrorFastModeStateValidated))
 	b.WriteString(fmt.Sprintf("result_error_fast_mode_state_event=%s\n", valueOrNone(r.ResultErrorFastModeStateEvent)))
 	b.WriteString(fmt.Sprintf("result_error_max_turns_validated=%t\n", r.ResultErrorMaxTurnsValidated))

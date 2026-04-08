@@ -133,6 +133,7 @@ func TestRunOpenDefaults(t *testing.T) {
 		"result_permission_denials_validated=false",
 		"result_fast_mode_state_validated=false",
 		"result_error_usage_validated=false",
+		"result_error_permission_denials_validated=false",
 		"result_error_fast_mode_state_validated=false",
 		"result_error_max_turns_validated=false",
 		"result_error_max_turns_fast_mode_state_validated=false",
@@ -198,7 +199,7 @@ func TestRunOpenSupportsPrintModeAndPrompt(t *testing.T) {
 	if result.SessionID != "sess-456" || !result.StreamValidated || result.StreamEvent != "session_ready" {
 		t.Fatalf("expected session response, got %#v", result)
 	}
-	if !result.StreamContentValidated || result.StreamContentEvent != "stream_event:content_block_delta" || !result.StreamlinedTextValidated || result.StreamlinedTextEvent != "streamlined_text" || !result.SystemValidated || result.SystemEvent != "system:init" || !result.StatusValidated || result.StatusEvent != "system:status" || !result.StatusTransitionValidated || result.StatusTransitionEvent != "system:status" || !result.StatusCompactingLifecycleValidated || result.StatusCompactingLifecycleEvent != "system:status:compacting->null" || !result.CompactSummaryValidated || result.CompactSummaryEvent != "user:compact_summary" || !result.CompactSummarySyntheticValidated || result.CompactSummarySyntheticEvent != "user:compact_summary:isSynthetic" || !result.CompactSummaryTimestampValidated || result.CompactSummaryTimestampEvent != "user:compact_summary:timestamp" || !result.CompactSummaryParentToolUseIDValidated || result.CompactSummaryParentToolUseIDEvent != "user:compact_summary:parent_tool_use_id" || !result.AckedInitialUserReplayValidated || result.AckedInitialUserReplayEvent != "user:initial_ack:isReplay" || !result.AuthValidated || result.AuthEvent != "auth_status" || !result.KeepAliveValidated || result.KeepAliveEvent != "keep_alive" || !result.UpdateEnvironmentVariablesValidated || result.UpdateEnvironmentVariablesEvent != "update_environment_variables" || !result.ControlCancelValidated || result.ControlCancelEvent != "control_cancel_request" || !result.MessageValidated || result.MessageEvent != "assistant" || result.ValidatedTurns != 2 || !result.MultiTurnValidated || !result.ResultValidated || result.ResultEvent != "result:success" || !result.ResultStructuredOutputValidated || result.ResultStructuredOutputEvent != "result:success:structured_output" || !result.ResultUsageValidated || result.ResultUsageEvent != "result:success:usage" || !result.ResultModelUsageValidated || result.ResultModelUsageEvent != "result:success:modelUsage" || !result.ResultPermissionDenialsValidated || result.ResultPermissionDenialsEvent != "result:success:permission_denials" || !result.ResultFastModeStateValidated || result.ResultFastModeStateEvent != "result:success:fast_mode_state" || !result.ResultErrorValidated || result.ResultErrorEvent != "result:error_during_execution" || !result.ResultErrorUsageValidated || result.ResultErrorUsageEvent != "result:error:usage" || !result.ResultErrorFastModeStateValidated || result.ResultErrorFastModeStateEvent != "result:error_during_execution:fast_mode_state" || !result.ResultErrorMaxTurnsValidated || result.ResultErrorMaxTurnsEvent != "result:error_max_turns" || !result.ResultErrorMaxTurnsFastModeStateValidated || result.ResultErrorMaxTurnsFastModeStateEvent != "result:error_max_turns:fast_mode_state" || !result.ResultErrorMaxBudgetUSDValidated || result.ResultErrorMaxBudgetUSDEvent != "result:error_max_budget_usd" || !result.ResultErrorMaxBudgetUSDFastModeStateValidated || result.ResultErrorMaxBudgetUSDFastModeStateEvent != "result:error_max_budget_usd:fast_mode_state" || !result.ResultErrorMaxStructuredOutputRetriesValidated || result.ResultErrorMaxStructuredOutputRetriesEvent != "result:error_max_structured_output_retries" || !result.ResultErrorMaxStructuredOutputRetriesFastModeStateValidated || result.ResultErrorMaxStructuredOutputRetriesFastModeStateEvent != "result:error_max_structured_output_retries:fast_mode_state" || !result.ControlValidated || !result.PermissionValidated || !result.PermissionDeniedValidated || result.PermissionDeniedEvent != "permission_denial:echo" || !result.TaskStartedValidated || result.TaskStartedEvent != "system:task_started" || !result.TaskProgressValidated || result.TaskProgressEvent != "system:task_progress" || !result.TaskNotificationValidated || result.TaskNotificationEvent != "system:task_notification" || !result.FilesPersistedValidated || result.FilesPersistedEvent != "system:files_persisted" || !result.APIRetryValidated || result.APIRetryEvent != "system:api_retry" || !result.LocalCommandOutputValidated || result.LocalCommandOutputEvent != "system:local_command_output" || !result.LocalCommandOutputAssistantValidated || result.LocalCommandOutputAssistantEvent != "assistant:local_command_output" || !result.ElicitationValidated || result.ElicitationEvent != "control_request:elicitation" || !result.HookCallbackValidated || result.HookCallbackEvent != "control_request:hook_callback" || !result.ChannelEnableValidated || result.ChannelEnableEvent != "control_request:channel_enable" || !result.ElicitationCompleteValidated || result.ElicitationCompleteEvent != "system:elicitation_complete" || !result.ToolProgressValidated || result.ToolProgressEvent != "tool_progress" || !result.RateLimitValidated || result.RateLimitEvent != "rate_limit_event:default" || !result.ToolUseSummaryValidated || result.ToolUseSummaryEvent != "tool_use_summary" || !result.ToolUseSummaryShapeValidated || result.ToolUseSummaryShapeEvent != "tool_use_summary:shape" || !result.PostTurnSummaryValidated || result.PostTurnSummaryEvent != "system:post_turn_summary" || !result.CompactBoundaryValidated || result.CompactBoundaryEvent != "system:compact_boundary" || !result.CompactBoundaryPreservedSegmentValidated || result.CompactBoundaryPreservedSegmentEvent != "system:compact_boundary:preserved_segment" || !result.SessionStateChangedValidated || result.SessionStateChangedEvent != "system:session_state_changed:idle" || !result.SessionStateRequiresActionValidated || result.SessionStateRequiresActionEvent != "system:session_state_changed:requires_action" || !result.HookStartedValidated || result.HookStartedEvent != "system:hook_started" || !result.HookProgressValidated || result.HookProgressEvent != "system:hook_progress" || !result.HookResponseValidated || result.HookResponseEvent != "system:hook_response" || !result.ToolExecutionValidated || !result.InterruptValidated || !result.SetModelValidated || result.SetModelEvent != "control_request:set_model" || !result.SetPermissionModeValidated || result.SetPermissionModeEvent != "control_request:set_permission_mode" || !result.SetMaxThinkingTokensValidated || result.SetMaxThinkingTokensEvent != "control_request:set_max_thinking_tokens" || !result.MCPStatusValidated || result.MCPStatusEvent != "control_request:mcp_status" || !result.GetContextUsageValidated || result.GetContextUsageEvent != "control_request:get_context_usage" || !result.MCPMessageValidated || result.MCPMessageEvent != "control_request:mcp_message" || !result.MCPSetServersValidated || result.MCPSetServersEvent != "control_request:mcp_set_servers" || !result.ReloadPluginsValidated || result.ReloadPluginsEvent != "control_request:reload_plugins" || !result.MCPAuthenticateValidated || result.MCPAuthenticateEvent != "control_request:mcp_authenticate" || !result.MCPOAuthCallbackURLValidated || result.MCPOAuthCallbackURLEvent != "control_request:mcp_oauth_callback_url" || !result.MCPReconnectValidated || result.MCPReconnectEvent != "control_request:mcp_reconnect" || !result.MCPToggleValidated || result.MCPToggleEvent != "control_request:mcp_toggle" || !result.SeedReadStateValidated || result.SeedReadStateEvent != "control_request:seed_read_state" || !result.RewindFilesValidated || result.RewindFilesEvent != "control_request:rewind_files" || !result.RewindFilesCanRewind || result.RewindFilesFilesChanged != 1 || result.RewindFilesInsertions != 1 || result.RewindFilesDeletions != 0 || !result.CancelAsyncMessageValidated || result.CancelAsyncMessageEvent != "control_request:cancel_async_message" || !result.StopTaskValidated || result.StopTaskEvent != "control_request:stop_task" || !result.ApplyFlagSettingsValidated || result.ApplyFlagSettingsEvent != "control_request:apply_flag_settings" || !result.GetSettingsValidated || result.GetSettingsEvent != "control_request:get_settings" || !result.GenerateSessionTitleValidated || result.GenerateSessionTitleEvent != "control_request:generate_session_title" || !result.SideQuestionValidated || result.SideQuestionEvent != "control_request:side_question" || !result.InitializeValidated || result.InitializeEvent != "control_request:initialize" || !result.SetProactiveValidated || result.SetProactiveEvent != "control_request:set_proactive" || !result.BridgeStateValidated || result.BridgeStateEvent != "system:bridge_state:connected" || !result.RemoteControlValidated || result.RemoteControlEvent != "control_request:remote_control" || !result.EndSessionValidated || result.EndSessionEvent != "control_request:end_session" || !result.BackendValidated {
+	if !result.StreamContentValidated || result.StreamContentEvent != "stream_event:content_block_delta" || !result.StreamlinedTextValidated || result.StreamlinedTextEvent != "streamlined_text" || !result.SystemValidated || result.SystemEvent != "system:init" || !result.StatusValidated || result.StatusEvent != "system:status" || !result.StatusTransitionValidated || result.StatusTransitionEvent != "system:status" || !result.StatusCompactingLifecycleValidated || result.StatusCompactingLifecycleEvent != "system:status:compacting->null" || !result.CompactSummaryValidated || result.CompactSummaryEvent != "user:compact_summary" || !result.CompactSummarySyntheticValidated || result.CompactSummarySyntheticEvent != "user:compact_summary:isSynthetic" || !result.CompactSummaryTimestampValidated || result.CompactSummaryTimestampEvent != "user:compact_summary:timestamp" || !result.CompactSummaryParentToolUseIDValidated || result.CompactSummaryParentToolUseIDEvent != "user:compact_summary:parent_tool_use_id" || !result.AckedInitialUserReplayValidated || result.AckedInitialUserReplayEvent != "user:initial_ack:isReplay" || !result.AuthValidated || result.AuthEvent != "auth_status" || !result.KeepAliveValidated || result.KeepAliveEvent != "keep_alive" || !result.UpdateEnvironmentVariablesValidated || result.UpdateEnvironmentVariablesEvent != "update_environment_variables" || !result.ControlCancelValidated || result.ControlCancelEvent != "control_cancel_request" || !result.MessageValidated || result.MessageEvent != "assistant" || result.ValidatedTurns != 2 || !result.MultiTurnValidated || !result.ResultValidated || result.ResultEvent != "result:success" || !result.ResultStructuredOutputValidated || result.ResultStructuredOutputEvent != "result:success:structured_output" || !result.ResultUsageValidated || result.ResultUsageEvent != "result:success:usage" || !result.ResultModelUsageValidated || result.ResultModelUsageEvent != "result:success:modelUsage" || !result.ResultPermissionDenialsValidated || result.ResultPermissionDenialsEvent != "result:success:permission_denials" || !result.ResultFastModeStateValidated || result.ResultFastModeStateEvent != "result:success:fast_mode_state" || !result.ResultErrorValidated || result.ResultErrorEvent != "result:error_during_execution" || !result.ResultErrorUsageValidated || result.ResultErrorUsageEvent != "result:error:usage" || !result.ResultErrorPermissionDenialsValidated || result.ResultErrorPermissionDenialsEvent != "result:error:permission_denials" || !result.ResultErrorFastModeStateValidated || result.ResultErrorFastModeStateEvent != "result:error_during_execution:fast_mode_state" || !result.ResultErrorMaxTurnsValidated || result.ResultErrorMaxTurnsEvent != "result:error_max_turns" || !result.ResultErrorMaxTurnsFastModeStateValidated || result.ResultErrorMaxTurnsFastModeStateEvent != "result:error_max_turns:fast_mode_state" || !result.ResultErrorMaxBudgetUSDValidated || result.ResultErrorMaxBudgetUSDEvent != "result:error_max_budget_usd" || !result.ResultErrorMaxBudgetUSDFastModeStateValidated || result.ResultErrorMaxBudgetUSDFastModeStateEvent != "result:error_max_budget_usd:fast_mode_state" || !result.ResultErrorMaxStructuredOutputRetriesValidated || result.ResultErrorMaxStructuredOutputRetriesEvent != "result:error_max_structured_output_retries" || !result.ResultErrorMaxStructuredOutputRetriesFastModeStateValidated || result.ResultErrorMaxStructuredOutputRetriesFastModeStateEvent != "result:error_max_structured_output_retries:fast_mode_state" || !result.ControlValidated || !result.PermissionValidated || !result.PermissionDeniedValidated || result.PermissionDeniedEvent != "permission_denial:echo" || !result.TaskStartedValidated || result.TaskStartedEvent != "system:task_started" || !result.TaskProgressValidated || result.TaskProgressEvent != "system:task_progress" || !result.TaskNotificationValidated || result.TaskNotificationEvent != "system:task_notification" || !result.FilesPersistedValidated || result.FilesPersistedEvent != "system:files_persisted" || !result.APIRetryValidated || result.APIRetryEvent != "system:api_retry" || !result.LocalCommandOutputValidated || result.LocalCommandOutputEvent != "system:local_command_output" || !result.LocalCommandOutputAssistantValidated || result.LocalCommandOutputAssistantEvent != "assistant:local_command_output" || !result.ElicitationValidated || result.ElicitationEvent != "control_request:elicitation" || !result.HookCallbackValidated || result.HookCallbackEvent != "control_request:hook_callback" || !result.ChannelEnableValidated || result.ChannelEnableEvent != "control_request:channel_enable" || !result.ElicitationCompleteValidated || result.ElicitationCompleteEvent != "system:elicitation_complete" || !result.ToolProgressValidated || result.ToolProgressEvent != "tool_progress" || !result.RateLimitValidated || result.RateLimitEvent != "rate_limit_event:default" || !result.ToolUseSummaryValidated || result.ToolUseSummaryEvent != "tool_use_summary" || !result.ToolUseSummaryShapeValidated || result.ToolUseSummaryShapeEvent != "tool_use_summary:shape" || !result.PostTurnSummaryValidated || result.PostTurnSummaryEvent != "system:post_turn_summary" || !result.CompactBoundaryValidated || result.CompactBoundaryEvent != "system:compact_boundary" || !result.CompactBoundaryPreservedSegmentValidated || result.CompactBoundaryPreservedSegmentEvent != "system:compact_boundary:preserved_segment" || !result.SessionStateChangedValidated || result.SessionStateChangedEvent != "system:session_state_changed:idle" || !result.SessionStateRequiresActionValidated || result.SessionStateRequiresActionEvent != "system:session_state_changed:requires_action" || !result.HookStartedValidated || result.HookStartedEvent != "system:hook_started" || !result.HookProgressValidated || result.HookProgressEvent != "system:hook_progress" || !result.HookResponseValidated || result.HookResponseEvent != "system:hook_response" || !result.ToolExecutionValidated || !result.InterruptValidated || !result.SetModelValidated || result.SetModelEvent != "control_request:set_model" || !result.SetPermissionModeValidated || result.SetPermissionModeEvent != "control_request:set_permission_mode" || !result.SetMaxThinkingTokensValidated || result.SetMaxThinkingTokensEvent != "control_request:set_max_thinking_tokens" || !result.MCPStatusValidated || result.MCPStatusEvent != "control_request:mcp_status" || !result.GetContextUsageValidated || result.GetContextUsageEvent != "control_request:get_context_usage" || !result.MCPMessageValidated || result.MCPMessageEvent != "control_request:mcp_message" || !result.MCPSetServersValidated || result.MCPSetServersEvent != "control_request:mcp_set_servers" || !result.ReloadPluginsValidated || result.ReloadPluginsEvent != "control_request:reload_plugins" || !result.MCPAuthenticateValidated || result.MCPAuthenticateEvent != "control_request:mcp_authenticate" || !result.MCPOAuthCallbackURLValidated || result.MCPOAuthCallbackURLEvent != "control_request:mcp_oauth_callback_url" || !result.MCPReconnectValidated || result.MCPReconnectEvent != "control_request:mcp_reconnect" || !result.MCPToggleValidated || result.MCPToggleEvent != "control_request:mcp_toggle" || !result.SeedReadStateValidated || result.SeedReadStateEvent != "control_request:seed_read_state" || !result.RewindFilesValidated || result.RewindFilesEvent != "control_request:rewind_files" || !result.RewindFilesCanRewind || result.RewindFilesFilesChanged != 1 || result.RewindFilesInsertions != 1 || result.RewindFilesDeletions != 0 || !result.CancelAsyncMessageValidated || result.CancelAsyncMessageEvent != "control_request:cancel_async_message" || !result.StopTaskValidated || result.StopTaskEvent != "control_request:stop_task" || !result.ApplyFlagSettingsValidated || result.ApplyFlagSettingsEvent != "control_request:apply_flag_settings" || !result.GetSettingsValidated || result.GetSettingsEvent != "control_request:get_settings" || !result.GenerateSessionTitleValidated || result.GenerateSessionTitleEvent != "control_request:generate_session_title" || !result.SideQuestionValidated || result.SideQuestionEvent != "control_request:side_question" || !result.InitializeValidated || result.InitializeEvent != "control_request:initialize" || !result.SetProactiveValidated || result.SetProactiveEvent != "control_request:set_proactive" || !result.BridgeStateValidated || result.BridgeStateEvent != "system:bridge_state:connected" || !result.RemoteControlValidated || result.RemoteControlEvent != "control_request:remote_control" || !result.EndSessionValidated || result.EndSessionEvent != "control_request:end_session" || !result.BackendValidated {
 		t.Fatalf("expected session response, got %#v", result)
 	}
 }
@@ -803,60 +804,63 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 				continue
 			} else if strings.TrimSpace(asString(responsePayload["behavior"])) == "max_turns" {
 				_ = conn.WriteJSON(map[string]any{
-					"type":            "result",
-					"subtype":         "error_max_turns",
-					"duration_ms":     1,
-					"duration_api_ms": 0,
-					"is_error":        true,
-					"num_turns":       completedTurns,
-					"stop_reason":     "max_turns",
-					"total_cost_usd":  0,
-					"usage":           minimalUsageFixture(),
-					"modelUsage":      map[string]any{"claude-sonnet-4-5": minimalModelUsageFixture()},
-					"errors":          []string{"max turns reached in direct-connect stub"},
-					"fast_mode_state": "off",
-					"uuid":            fmt.Sprintf("result-max-turns-%d", requestCounter),
-					"session_id":      sessionID,
+					"type":               "result",
+					"subtype":            "error_max_turns",
+					"duration_ms":        1,
+					"duration_api_ms":    0,
+					"is_error":           true,
+					"num_turns":          completedTurns,
+					"stop_reason":        "max_turns",
+					"total_cost_usd":     0,
+					"usage":              minimalUsageFixture(),
+					"modelUsage":         map[string]any{"claude-sonnet-4-5": minimalModelUsageFixture()},
+					"permission_denials": []map[string]any{},
+					"errors":             []string{"max turns reached in direct-connect stub"},
+					"fast_mode_state":    "off",
+					"uuid":               fmt.Sprintf("result-max-turns-%d", requestCounter),
+					"session_id":         sessionID,
 				})
 				pendingRequestID = ""
 				pendingPrompt = ""
 				continue
 			} else if strings.TrimSpace(asString(responsePayload["behavior"])) == "max_budget_usd" {
 				_ = conn.WriteJSON(map[string]any{
-					"type":            "result",
-					"subtype":         "error_max_budget_usd",
-					"duration_ms":     1,
-					"duration_api_ms": 0,
-					"is_error":        true,
-					"num_turns":       completedTurns,
-					"stop_reason":     "max_budget_usd",
-					"total_cost_usd":  0,
-					"usage":           minimalUsageFixture(),
-					"modelUsage":      map[string]any{"claude-sonnet-4-5": minimalModelUsageFixture()},
-					"errors":          []string{"max budget usd reached in direct-connect stub"},
-					"fast_mode_state": "off",
-					"uuid":            fmt.Sprintf("result-max-budget-%d", requestCounter),
-					"session_id":      sessionID,
+					"type":               "result",
+					"subtype":            "error_max_budget_usd",
+					"duration_ms":        1,
+					"duration_api_ms":    0,
+					"is_error":           true,
+					"num_turns":          completedTurns,
+					"stop_reason":        "max_budget_usd",
+					"total_cost_usd":     0,
+					"usage":              minimalUsageFixture(),
+					"modelUsage":         map[string]any{"claude-sonnet-4-5": minimalModelUsageFixture()},
+					"permission_denials": []map[string]any{},
+					"errors":             []string{"max budget usd reached in direct-connect stub"},
+					"fast_mode_state":    "off",
+					"uuid":               fmt.Sprintf("result-max-budget-%d", requestCounter),
+					"session_id":         sessionID,
 				})
 				pendingRequestID = ""
 				pendingPrompt = ""
 				continue
 			} else if strings.TrimSpace(asString(responsePayload["behavior"])) == "max_structured_output_retries" {
 				_ = conn.WriteJSON(map[string]any{
-					"type":            "result",
-					"subtype":         "error_max_structured_output_retries",
-					"duration_ms":     1,
-					"duration_api_ms": 0,
-					"is_error":        true,
-					"num_turns":       completedTurns,
-					"stop_reason":     "max_structured_output_retries",
-					"total_cost_usd":  0,
-					"usage":           minimalUsageFixture(),
-					"modelUsage":      map[string]any{"claude-sonnet-4-5": minimalModelUsageFixture()},
-					"errors":          []string{"max structured output retries reached in direct-connect stub"},
-					"fast_mode_state": "off",
-					"uuid":            fmt.Sprintf("result-max-structured-output-retries-%d", requestCounter),
-					"session_id":      sessionID,
+					"type":               "result",
+					"subtype":            "error_max_structured_output_retries",
+					"duration_ms":        1,
+					"duration_api_ms":    0,
+					"is_error":           true,
+					"num_turns":          completedTurns,
+					"stop_reason":        "max_structured_output_retries",
+					"total_cost_usd":     0,
+					"usage":              minimalUsageFixture(),
+					"modelUsage":         map[string]any{"claude-sonnet-4-5": minimalModelUsageFixture()},
+					"permission_denials": []map[string]any{},
+					"errors":             []string{"max structured output retries reached in direct-connect stub"},
+					"fast_mode_state":    "off",
+					"uuid":               fmt.Sprintf("result-max-structured-output-retries-%d", requestCounter),
+					"session_id":         sessionID,
 				})
 				pendingRequestID = ""
 				pendingPrompt = ""
