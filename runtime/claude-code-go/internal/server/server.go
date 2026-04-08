@@ -1286,6 +1286,19 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"session_id":   session.ID,
 				})
 				completedTurns++
+				structuredOutputAttachmentUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type": "structured_output",
+						"data": map[string]any{"text": responseText},
+					},
+					"uuid":       structuredOutputAttachmentUUID,
+					"session_id": session.ID,
+				})
 				resultUUID, err := generateRequestID()
 				if err != nil {
 					return

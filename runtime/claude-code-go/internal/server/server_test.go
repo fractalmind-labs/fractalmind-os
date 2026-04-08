@@ -466,6 +466,18 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if streamlinedToolSummary["type"] != "streamlined_tool_use_summary" || strings.TrimSpace(asString(streamlinedToolSummary["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(streamlinedToolSummary["tool_summary"])) != "Used echo 1 time" {
 		t.Fatalf("unexpected streamlined_tool_use_summary payload: %#v", streamlinedToolSummary)
 	}
+	var structuredOutputAttachment map[string]any
+	if err := ws.ReadJSON(&structuredOutputAttachment); err != nil {
+		t.Fatalf("read structured_output attachment failed: %v", err)
+	}
+	if structuredOutputAttachment["type"] != "attachment" || strings.TrimSpace(asString(structuredOutputAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected structured_output attachment envelope: %#v", structuredOutputAttachment)
+	}
+	structuredOutputAttachmentPayload, _ := structuredOutputAttachment["attachment"].(map[string]any)
+	structuredOutputAttachmentData, _ := structuredOutputAttachmentPayload["data"].(map[string]any)
+	if strings.TrimSpace(asString(structuredOutputAttachmentPayload["type"])) != "structured_output" || strings.TrimSpace(asString(structuredOutputAttachmentData["text"])) != "echo:hello [approved]" {
+		t.Fatalf("unexpected structured_output attachment payload: %#v", structuredOutputAttachment)
+	}
 	var result map[string]any
 	if err := ws.ReadJSON(&result); err != nil {
 		t.Fatalf("read result event failed: %v", err)
@@ -921,6 +933,18 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if secondStreamlinedToolSummary["type"] != "streamlined_tool_use_summary" || strings.TrimSpace(asString(secondStreamlinedToolSummary["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(secondStreamlinedToolSummary["tool_summary"])) != "Used echo 1 time" {
 		t.Fatalf("unexpected second streamlined_tool_use_summary payload: %#v", secondStreamlinedToolSummary)
+	}
+	var secondStructuredOutputAttachment map[string]any
+	if err := ws.ReadJSON(&secondStructuredOutputAttachment); err != nil {
+		t.Fatalf("read second structured_output attachment failed: %v", err)
+	}
+	if secondStructuredOutputAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondStructuredOutputAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second structured_output attachment envelope: %#v", secondStructuredOutputAttachment)
+	}
+	secondStructuredOutputAttachmentPayload, _ := secondStructuredOutputAttachment["attachment"].(map[string]any)
+	secondStructuredOutputAttachmentData, _ := secondStructuredOutputAttachmentPayload["data"].(map[string]any)
+	if strings.TrimSpace(asString(secondStructuredOutputAttachmentPayload["type"])) != "structured_output" || strings.TrimSpace(asString(secondStructuredOutputAttachmentData["text"])) != "echo:hello again [approved]" {
+		t.Fatalf("unexpected second structured_output attachment payload: %#v", secondStructuredOutputAttachment)
 	}
 	var secondResult map[string]any
 	if err := ws.ReadJSON(&secondResult); err != nil {

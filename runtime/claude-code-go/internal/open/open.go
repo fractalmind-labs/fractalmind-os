@@ -67,6 +67,8 @@ type Result struct {
 	AssistantStopReasonEvent                                     string
 	AssistantUsageValidated                                      bool
 	AssistantUsageEvent                                          string
+	StructuredOutputAttachmentValidated                          bool
+	StructuredOutputAttachmentEvent                              string
 	StreamlinedTextValidated                                     bool
 	StreamlinedTextEvent                                         string
 	SystemValidated                                              bool
@@ -394,6 +396,8 @@ func Run(args []string) (Result, error) {
 		AssistantStopReasonEvent:                                     streamResult.AssistantStopReasonEvent,
 		AssistantUsageValidated:                                      streamResult.AssistantUsageValidated,
 		AssistantUsageEvent:                                          streamResult.AssistantUsageEvent,
+		StructuredOutputAttachmentValidated:                          streamResult.StructuredOutputAttachmentValidated,
+		StructuredOutputAttachmentEvent:                              streamResult.StructuredOutputAttachmentEvent,
 		StreamlinedTextValidated:                                     streamResult.StreamlinedTextValidated,
 		StreamlinedTextEvent:                                         streamResult.StreamlinedTextEvent,
 		SystemValidated:                                              streamResult.SystemValidated,
@@ -951,6 +955,8 @@ type streamValidation struct {
 	AssistantStopReasonEvent                                     string
 	AssistantUsageValidated                                      bool
 	AssistantUsageEvent                                          string
+	StructuredOutputAttachmentValidated                          bool
+	StructuredOutputAttachmentEvent                              string
 	StreamlinedTextValidated                                     bool
 	StreamlinedTextEvent                                         string
 	SystemValidated                                              bool
@@ -1303,6 +1309,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		assistantToolUseValidated := false
 		assistantStopReasonValidated := false
 		assistantUsageValidated := false
+		structuredOutputAttachmentValidated := false
 		streamlinedTextValidated := false
 		streamlinedToolUseSummaryValidated := false
 		promptSuggestionValidated := false
@@ -2063,6 +2070,27 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				result.PromptSuggestionValidated = true
 				result.PromptSuggestionEvent = "prompt_suggestion"
 				promptSuggestionValidated = true
+			case "attachment":
+				if turn.behavior == "deny" {
+					return streamValidation{}, fmt.Errorf("unexpected attachment during deny turn")
+				}
+				if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+					return streamValidation{}, fmt.Errorf("invalid attachment: missing session_id")
+				}
+				attachment, _ := incoming["attachment"].(map[string]any)
+				if strings.TrimSpace(asString(attachment["type"])) != "structured_output" {
+					return streamValidation{}, fmt.Errorf("invalid attachment type: expected structured_output, got %q", strings.TrimSpace(asString(attachment["type"])))
+				}
+				attachmentData, _ := attachment["data"].(map[string]any)
+				if len(attachmentData) == 0 {
+					return streamValidation{}, fmt.Errorf("invalid structured_output attachment: missing data object")
+				}
+				if strings.TrimSpace(asString(attachmentData["text"])) != turn.expectedResponse {
+					return streamValidation{}, fmt.Errorf("invalid structured_output attachment.text: expected %q, got %q", turn.expectedResponse, strings.TrimSpace(asString(attachmentData["text"])))
+				}
+				result.StructuredOutputAttachmentValidated = true
+				result.StructuredOutputAttachmentEvent = "attachment:structured_output"
+				structuredOutputAttachmentValidated = true
 			case "stream_event":
 				if turn.behavior == "deny" {
 					return streamValidation{}, fmt.Errorf("unexpected stream_event during deny turn")
@@ -2496,7 +2524,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -3831,6 +3859,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("assistant_stop_reason_event=%s\n", valueOrNone(r.AssistantStopReasonEvent)))
 	b.WriteString(fmt.Sprintf("assistant_usage_validated=%t\n", r.AssistantUsageValidated))
 	b.WriteString(fmt.Sprintf("assistant_usage_event=%s\n", valueOrNone(r.AssistantUsageEvent)))
+	b.WriteString(fmt.Sprintf("structured_output_attachment_validated=%t\n", r.StructuredOutputAttachmentValidated))
+	b.WriteString(fmt.Sprintf("structured_output_attachment_event=%s\n", valueOrNone(r.StructuredOutputAttachmentEvent)))
 	b.WriteString(fmt.Sprintf("streamlined_text_validated=%t\n", r.StreamlinedTextValidated))
 	b.WriteString(fmt.Sprintf("streamlined_text_event=%s\n", valueOrNone(r.StreamlinedTextEvent)))
 	b.WriteString(fmt.Sprintf("system_validated=%t\n", r.SystemValidated))
