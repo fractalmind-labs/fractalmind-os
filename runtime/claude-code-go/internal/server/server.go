@@ -1117,6 +1117,26 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":               signatureStreamUUID,
 					"session_id":         session.ID,
 				})
+				toolUseStartUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "stream_event",
+					"event": map[string]any{
+						"type":  "content_block_start",
+						"index": 1,
+						"content_block": map[string]any{
+							"type":  "tool_use",
+							"id":    pendingToolUseID,
+							"name":  directConnectEchoToolName,
+							"input": "",
+						},
+					},
+					"parent_tool_use_id": nil,
+					"uuid":               toolUseStartUUID,
+					"session_id":         session.ID,
+				})
 				toolUseStreamUUID, err := generateRequestID()
 				if err != nil {
 					return
@@ -1133,6 +1153,20 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					},
 					"parent_tool_use_id": nil,
 					"uuid":               toolUseStreamUUID,
+					"session_id":         session.ID,
+				})
+				toolUseStopUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "stream_event",
+					"event": map[string]any{
+						"type":  "content_block_stop",
+						"index": 1,
+					},
+					"parent_tool_use_id": nil,
+					"uuid":               toolUseStopUUID,
 					"session_id":         session.ID,
 				})
 				streamlinedTextUUID, err := generateRequestID()

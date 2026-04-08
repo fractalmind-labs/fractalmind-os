@@ -349,6 +349,18 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(signatureStreamPayload["type"])) != "content_block_delta" || strings.TrimSpace(asString(signatureStreamDelta["type"])) != "signature_delta" || strings.TrimSpace(asString(signatureStreamDelta["signature"])) != "sig-direct-connect-stub" {
 		t.Fatalf("unexpected signature stream event payload: %#v", signatureStreamEvent)
 	}
+	var toolUseStartEvent map[string]any
+	if err := ws.ReadJSON(&toolUseStartEvent); err != nil {
+		t.Fatalf("read tool_use start event failed: %v", err)
+	}
+	if toolUseStartEvent["type"] != "stream_event" {
+		t.Fatalf("unexpected tool_use start event envelope: %#v", toolUseStartEvent)
+	}
+	toolUseStartPayload, _ := toolUseStartEvent["event"].(map[string]any)
+	toolUseContentBlock, _ := toolUseStartPayload["content_block"].(map[string]any)
+	if strings.TrimSpace(asString(toolUseStartPayload["type"])) != "content_block_start" || strings.TrimSpace(asString(toolUseContentBlock["type"])) != "tool_use" || strings.TrimSpace(asString(toolUseContentBlock["id"])) != strings.TrimSpace(asString(request["tool_use_id"])) || strings.TrimSpace(asString(toolUseContentBlock["name"])) != directConnectEchoToolName || strings.TrimSpace(asString(toolUseContentBlock["input"])) != "" {
+		t.Fatalf("unexpected tool_use start event payload: %#v", toolUseStartEvent)
+	}
 	var toolUseStreamEvent map[string]any
 	if err := ws.ReadJSON(&toolUseStreamEvent); err != nil {
 		t.Fatalf("read tool_use stream event failed: %v", err)
@@ -360,6 +372,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	toolUseStreamDelta, _ := toolUseStreamPayload["delta"].(map[string]any)
 	if strings.TrimSpace(asString(toolUseStreamPayload["type"])) != "content_block_delta" || strings.TrimSpace(asString(toolUseStreamDelta["type"])) != "input_json_delta" || strings.TrimSpace(asString(toolUseStreamDelta["partial_json"])) != "{\"text\":\"hello [approved]\"}" {
 		t.Fatalf("unexpected tool_use stream event payload: %#v", toolUseStreamEvent)
+	}
+	var toolUseStopEvent map[string]any
+	if err := ws.ReadJSON(&toolUseStopEvent); err != nil {
+		t.Fatalf("read tool_use stop event failed: %v", err)
+	}
+	if toolUseStopEvent["type"] != "stream_event" {
+		t.Fatalf("unexpected tool_use stop event envelope: %#v", toolUseStopEvent)
+	}
+	toolUseStopPayload, _ := toolUseStopEvent["event"].(map[string]any)
+	if strings.TrimSpace(asString(toolUseStopPayload["type"])) != "content_block_stop" {
+		t.Fatalf("unexpected tool_use stop event payload: %#v", toolUseStopEvent)
 	}
 	var streamlinedText map[string]any
 	if err := ws.ReadJSON(&streamlinedText); err != nil {
@@ -741,6 +764,18 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(secondSignatureStreamPayload["type"])) != "content_block_delta" || strings.TrimSpace(asString(secondSignatureStreamDelta["type"])) != "signature_delta" || strings.TrimSpace(asString(secondSignatureStreamDelta["signature"])) != "sig-direct-connect-stub" {
 		t.Fatalf("unexpected second signature stream event payload: %#v", secondSignatureStreamEvent)
 	}
+	var secondToolUseStartEvent map[string]any
+	if err := ws.ReadJSON(&secondToolUseStartEvent); err != nil {
+		t.Fatalf("read second tool_use start event failed: %v", err)
+	}
+	if secondToolUseStartEvent["type"] != "stream_event" {
+		t.Fatalf("unexpected second tool_use start event envelope: %#v", secondToolUseStartEvent)
+	}
+	secondToolUseStartPayload, _ := secondToolUseStartEvent["event"].(map[string]any)
+	secondToolUseContentBlock, _ := secondToolUseStartPayload["content_block"].(map[string]any)
+	if strings.TrimSpace(asString(secondToolUseStartPayload["type"])) != "content_block_start" || strings.TrimSpace(asString(secondToolUseContentBlock["type"])) != "tool_use" || strings.TrimSpace(asString(secondToolUseContentBlock["id"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) || strings.TrimSpace(asString(secondToolUseContentBlock["name"])) != directConnectEchoToolName || strings.TrimSpace(asString(secondToolUseContentBlock["input"])) != "" {
+		t.Fatalf("unexpected second tool_use start event payload: %#v", secondToolUseStartEvent)
+	}
 	var secondToolUseStreamEvent map[string]any
 	if err := ws.ReadJSON(&secondToolUseStreamEvent); err != nil {
 		t.Fatalf("read second tool_use stream event failed: %v", err)
@@ -752,6 +787,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondToolUseStreamDelta, _ := secondToolUseStreamPayload["delta"].(map[string]any)
 	if strings.TrimSpace(asString(secondToolUseStreamPayload["type"])) != "content_block_delta" || strings.TrimSpace(asString(secondToolUseStreamDelta["type"])) != "input_json_delta" || strings.TrimSpace(asString(secondToolUseStreamDelta["partial_json"])) != "{\"text\":\"hello again [approved]\"}" {
 		t.Fatalf("unexpected second tool_use stream event payload: %#v", secondToolUseStreamEvent)
+	}
+	var secondToolUseStopEvent map[string]any
+	if err := ws.ReadJSON(&secondToolUseStopEvent); err != nil {
+		t.Fatalf("read second tool_use stop event failed: %v", err)
+	}
+	if secondToolUseStopEvent["type"] != "stream_event" {
+		t.Fatalf("unexpected second tool_use stop event envelope: %#v", secondToolUseStopEvent)
+	}
+	secondToolUseStopPayload, _ := secondToolUseStopEvent["event"].(map[string]any)
+	if strings.TrimSpace(asString(secondToolUseStopPayload["type"])) != "content_block_stop" {
+		t.Fatalf("unexpected second tool_use stop event payload: %#v", secondToolUseStopEvent)
 	}
 	var secondStreamlinedText map[string]any
 	if err := ws.ReadJSON(&secondStreamlinedText); err != nil {

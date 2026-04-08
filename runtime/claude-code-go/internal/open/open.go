@@ -49,6 +49,10 @@ type Result struct {
 	ThinkingSignatureEvent                                       string
 	ToolUseDeltaValidated                                        bool
 	ToolUseDeltaEvent                                            string
+	ToolUseBlockStartValidated                                   bool
+	ToolUseBlockStartEvent                                       string
+	ToolUseBlockStopValidated                                    bool
+	ToolUseBlockStopEvent                                        string
 	AssistantThinkingValidated                                   bool
 	AssistantThinkingEvent                                       string
 	AssistantToolUseValidated                                    bool
@@ -362,6 +366,10 @@ func Run(args []string) (Result, error) {
 		ThinkingSignatureEvent:                                       streamResult.ThinkingSignatureEvent,
 		ToolUseDeltaValidated:                                        streamResult.ToolUseDeltaValidated,
 		ToolUseDeltaEvent:                                            streamResult.ToolUseDeltaEvent,
+		ToolUseBlockStartValidated:                                   streamResult.ToolUseBlockStartValidated,
+		ToolUseBlockStartEvent:                                       streamResult.ToolUseBlockStartEvent,
+		ToolUseBlockStopValidated:                                    streamResult.ToolUseBlockStopValidated,
+		ToolUseBlockStopEvent:                                        streamResult.ToolUseBlockStopEvent,
 		AssistantThinkingValidated:                                   streamResult.AssistantThinkingValidated,
 		AssistantThinkingEvent:                                       streamResult.AssistantThinkingEvent,
 		AssistantToolUseValidated:                                    streamResult.AssistantToolUseValidated,
@@ -905,6 +913,10 @@ type streamValidation struct {
 	ThinkingSignatureEvent                                       string
 	ToolUseDeltaValidated                                        bool
 	ToolUseDeltaEvent                                            string
+	ToolUseBlockStartValidated                                   bool
+	ToolUseBlockStartEvent                                       string
+	ToolUseBlockStopValidated                                    bool
+	ToolUseBlockStopEvent                                        string
 	AssistantThinkingValidated                                   bool
 	AssistantThinkingEvent                                       string
 	AssistantToolUseValidated                                    bool
@@ -1252,6 +1264,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		thinkingDeltaValidated := false
 		thinkingSignatureValidated := false
 		toolUseDeltaValidated := false
+		toolUseBlockStartValidated := false
+		toolUseBlockStopValidated := false
 		assistantThinkingValidated := false
 		assistantToolUseValidated := false
 		streamlinedTextValidated := false
@@ -2022,40 +2036,63 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					return streamValidation{}, fmt.Errorf("invalid stream_event: missing session_id")
 				}
 				event, _ := incoming["event"].(map[string]any)
-				if strings.TrimSpace(asString(event["type"])) != "content_block_delta" {
-					return streamValidation{}, fmt.Errorf("invalid stream_event type: %s", asString(event["type"]))
-				}
-				delta, _ := event["delta"].(map[string]any)
-				switch strings.TrimSpace(asString(delta["type"])) {
-				case "text_delta":
-					if strings.TrimSpace(asString(delta["text"])) != turn.expectedResponse {
-						return streamValidation{}, fmt.Errorf("invalid stream_event delta text: expected %q, got %q", turn.expectedResponse, strings.TrimSpace(asString(delta["text"])))
+				switch strings.TrimSpace(asString(event["type"])) {
+				case "content_block_start":
+					contentBlock, _ := event["content_block"].(map[string]any)
+					if strings.TrimSpace(asString(contentBlock["type"])) != "tool_use" {
+						return streamValidation{}, fmt.Errorf("invalid content_block_start content_block.type: %q", strings.TrimSpace(asString(contentBlock["type"])))
 					}
-					result.StreamContentValidated = true
-					result.StreamContentEvent = "stream_event:content_block_delta"
-				case "thinking_delta":
-					if strings.TrimSpace(asString(delta["thinking"])) == "" {
-						return streamValidation{}, fmt.Errorf("invalid thinking_delta: missing thinking")
+					if strings.TrimSpace(asString(contentBlock["id"])) != currentToolUseID {
+						return streamValidation{}, fmt.Errorf("invalid content_block_start content_block.id: expected %q, got %q", currentToolUseID, strings.TrimSpace(asString(contentBlock["id"])))
 					}
-					result.ThinkingDeltaValidated = true
-					result.ThinkingDeltaEvent = "stream_event:thinking_delta"
-					thinkingDeltaValidated = true
-				case "signature_delta":
-					if strings.TrimSpace(asString(delta["signature"])) == "" {
-						return streamValidation{}, fmt.Errorf("invalid signature_delta: missing signature")
+					if strings.TrimSpace(asString(contentBlock["name"])) != "echo" {
+						return streamValidation{}, fmt.Errorf("invalid content_block_start content_block.name: %q", strings.TrimSpace(asString(contentBlock["name"])))
 					}
-					result.ThinkingSignatureValidated = true
-					result.ThinkingSignatureEvent = "stream_event:signature_delta"
-					thinkingSignatureValidated = true
-				case "input_json_delta":
-					if strings.TrimSpace(asString(delta["partial_json"])) == "" {
-						return streamValidation{}, fmt.Errorf("invalid input_json_delta: missing partial_json")
+					if strings.TrimSpace(asString(contentBlock["input"])) != "" {
+						return streamValidation{}, fmt.Errorf("invalid content_block_start content_block.input: expected empty placeholder")
 					}
-					result.ToolUseDeltaValidated = true
-					result.ToolUseDeltaEvent = "stream_event:input_json_delta"
-					toolUseDeltaValidated = true
+					result.ToolUseBlockStartValidated = true
+					result.ToolUseBlockStartEvent = "stream_event:content_block_start:tool_use"
+					toolUseBlockStartValidated = true
+				case "content_block_delta":
+					delta, _ := event["delta"].(map[string]any)
+					switch strings.TrimSpace(asString(delta["type"])) {
+					case "text_delta":
+						if strings.TrimSpace(asString(delta["text"])) != turn.expectedResponse {
+							return streamValidation{}, fmt.Errorf("invalid stream_event delta text: expected %q, got %q", turn.expectedResponse, strings.TrimSpace(asString(delta["text"])))
+						}
+						result.StreamContentValidated = true
+						result.StreamContentEvent = "stream_event:content_block_delta"
+					case "thinking_delta":
+						if strings.TrimSpace(asString(delta["thinking"])) == "" {
+							return streamValidation{}, fmt.Errorf("invalid thinking_delta: missing thinking")
+						}
+						result.ThinkingDeltaValidated = true
+						result.ThinkingDeltaEvent = "stream_event:thinking_delta"
+						thinkingDeltaValidated = true
+					case "signature_delta":
+						if strings.TrimSpace(asString(delta["signature"])) == "" {
+							return streamValidation{}, fmt.Errorf("invalid signature_delta: missing signature")
+						}
+						result.ThinkingSignatureValidated = true
+						result.ThinkingSignatureEvent = "stream_event:signature_delta"
+						thinkingSignatureValidated = true
+					case "input_json_delta":
+						if strings.TrimSpace(asString(delta["partial_json"])) == "" {
+							return streamValidation{}, fmt.Errorf("invalid input_json_delta: missing partial_json")
+						}
+						result.ToolUseDeltaValidated = true
+						result.ToolUseDeltaEvent = "stream_event:input_json_delta"
+						toolUseDeltaValidated = true
+					default:
+						return streamValidation{}, fmt.Errorf("invalid stream_event delta type: %s", asString(delta["type"]))
+					}
+				case "content_block_stop":
+					result.ToolUseBlockStopValidated = true
+					result.ToolUseBlockStopEvent = "stream_event:content_block_stop:tool_use"
+					toolUseBlockStopValidated = true
 				default:
-					return streamValidation{}, fmt.Errorf("invalid stream_event delta type: %s", asString(delta["type"]))
+					return streamValidation{}, fmt.Errorf("invalid stream_event type: %s", asString(event["type"]))
 				}
 			case "streamlined_text":
 				if turn.behavior == "deny" {
@@ -2377,7 +2414,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseDeltaValidated && assistantThinkingValidated && assistantToolUseValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantThinkingValidated && assistantToolUseValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -3694,6 +3731,10 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("thinking_signature_event=%s\n", valueOrNone(r.ThinkingSignatureEvent)))
 	b.WriteString(fmt.Sprintf("tool_use_delta_validated=%t\n", r.ToolUseDeltaValidated))
 	b.WriteString(fmt.Sprintf("tool_use_delta_event=%s\n", valueOrNone(r.ToolUseDeltaEvent)))
+	b.WriteString(fmt.Sprintf("tool_use_block_start_validated=%t\n", r.ToolUseBlockStartValidated))
+	b.WriteString(fmt.Sprintf("tool_use_block_start_event=%s\n", valueOrNone(r.ToolUseBlockStartEvent)))
+	b.WriteString(fmt.Sprintf("tool_use_block_stop_validated=%t\n", r.ToolUseBlockStopValidated))
+	b.WriteString(fmt.Sprintf("tool_use_block_stop_event=%s\n", valueOrNone(r.ToolUseBlockStopEvent)))
 	b.WriteString(fmt.Sprintf("assistant_thinking_validated=%t\n", r.AssistantThinkingValidated))
 	b.WriteString(fmt.Sprintf("assistant_thinking_event=%s\n", valueOrNone(r.AssistantThinkingEvent)))
 	b.WriteString(fmt.Sprintf("assistant_tool_use_validated=%t\n", r.AssistantToolUseValidated))
