@@ -375,6 +375,10 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if len(modelUsageEntry) == 0 || intFromAny(modelUsageEntry["inputTokens"]) != 0 || intFromAny(modelUsageEntry["outputTokens"]) != 0 || intFromAny(modelUsageEntry["cacheReadInputTokens"]) != 0 || intFromAny(modelUsageEntry["cacheCreationInputTokens"]) != 0 || intFromAny(modelUsageEntry["webSearchRequests"]) != 0 || intFromAny(modelUsageEntry["contextWindow"]) != 0 || float64FromAny(modelUsageEntry["costUSD"]) != 0 {
 		t.Fatalf("unexpected result modelUsage: %#v", result)
 	}
+	permissionDenials, _ := result["permission_denials"].([]any)
+	if len(permissionDenials) != 0 {
+		t.Fatalf("unexpected success result permission_denials: %#v", result)
+	}
 	var promptSuggestion map[string]any
 	if err := ws.ReadJSON(&promptSuggestion); err != nil {
 		t.Fatalf("read prompt_suggestion failed: %v", err)
@@ -713,6 +717,10 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if len(secondModelUsageEntry) == 0 || intFromAny(secondModelUsageEntry["inputTokens"]) != 0 || intFromAny(secondModelUsageEntry["outputTokens"]) != 0 || intFromAny(secondModelUsageEntry["cacheReadInputTokens"]) != 0 || intFromAny(secondModelUsageEntry["cacheCreationInputTokens"]) != 0 || intFromAny(secondModelUsageEntry["webSearchRequests"]) != 0 || intFromAny(secondModelUsageEntry["contextWindow"]) != 0 || float64FromAny(secondModelUsageEntry["costUSD"]) != 0 {
 		t.Fatalf("unexpected second result modelUsage: %#v", secondResult)
 	}
+	secondPermissionDenials, _ := secondResult["permission_denials"].([]any)
+	if len(secondPermissionDenials) != 0 {
+		t.Fatalf("unexpected second success result permission_denials: %#v", secondResult)
+	}
 	var secondPromptSuggestion map[string]any
 	if err := ws.ReadJSON(&secondPromptSuggestion); err != nil {
 		t.Fatalf("read second prompt_suggestion failed: %v", err)
@@ -948,11 +956,11 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if int(denyResult["num_turns"].(float64)) != 2 {
 		t.Fatalf("expected deny result num_turns=2, got %#v", denyResult)
 	}
-	permissionDenials, _ := denyResult["permission_denials"].([]any)
-	if len(permissionDenials) != 1 {
+	denyPermissionDenials, _ := denyResult["permission_denials"].([]any)
+	if len(denyPermissionDenials) != 1 {
 		t.Fatalf("expected single permission denial, got %#v", denyResult)
 	}
-	denial, _ := permissionDenials[0].(map[string]any)
+	denial, _ := denyPermissionDenials[0].(map[string]any)
 	if strings.TrimSpace(asString(denial["tool_name"])) != directConnectEchoToolName || strings.TrimSpace(asString(denial["tool_use_id"])) != denyToolUseID {
 		t.Fatalf("unexpected permission denial payload: %#v", denyResult)
 	}

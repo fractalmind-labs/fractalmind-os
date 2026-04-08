@@ -127,6 +127,8 @@ type Result struct {
 	ResultStructuredOutputEvent                                  string
 	ResultModelUsageValidated                                    bool
 	ResultModelUsageEvent                                        string
+	ResultPermissionDenialsValidated                             bool
+	ResultPermissionDenialsEvent                                 string
 	ResultFastModeStateValidated                                 bool
 	ResultFastModeStateEvent                                     string
 	ResultErrorValidated                                         bool
@@ -420,6 +422,8 @@ func Run(args []string) (Result, error) {
 		ResultStructuredOutputEvent:                                  streamResult.ResultStructuredOutputEvent,
 		ResultModelUsageValidated:                                    streamResult.ResultModelUsageValidated,
 		ResultModelUsageEvent:                                        streamResult.ResultModelUsageEvent,
+		ResultPermissionDenialsValidated:                             streamResult.ResultPermissionDenialsValidated,
+		ResultPermissionDenialsEvent:                                 streamResult.ResultPermissionDenialsEvent,
 		ResultFastModeStateValidated:                                 streamResult.ResultFastModeStateValidated,
 		ResultFastModeStateEvent:                                     streamResult.ResultFastModeStateEvent,
 		ResultErrorValidated:                                         streamResult.ResultErrorValidated,
@@ -943,6 +947,8 @@ type streamValidation struct {
 	ResultStructuredOutputEvent                                  string
 	ResultModelUsageValidated                                    bool
 	ResultModelUsageEvent                                        string
+	ResultPermissionDenialsValidated                             bool
+	ResultPermissionDenialsEvent                                 string
 	ResultFastModeStateValidated                                 bool
 	ResultFastModeStateEvent                                     string
 	ResultErrorValidated                                         bool
@@ -2090,12 +2096,18 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if intFromAny(modelUsageEntry["inputTokens"]) != 0 || intFromAny(modelUsageEntry["outputTokens"]) != 0 || intFromAny(modelUsageEntry["cacheReadInputTokens"]) != 0 || intFromAny(modelUsageEntry["cacheCreationInputTokens"]) != 0 || intFromAny(modelUsageEntry["webSearchRequests"]) != 0 || intFromAny(modelUsageEntry["contextWindow"]) != 0 || float64FromAny(modelUsageEntry["costUSD"]) != 0 {
 						return streamValidation{}, fmt.Errorf("invalid result modelUsage: unexpected claude-sonnet-4-5 payload")
 					}
+					permissionDenials, _ := incoming["permission_denials"].([]any)
+					if len(permissionDenials) != 0 {
+						return streamValidation{}, fmt.Errorf("invalid result permission_denials: expected empty array, got %d entries", len(permissionDenials))
+					}
 					result.ResultValidated = true
 					result.ResultEvent = "result:success"
 					result.ResultStructuredOutputValidated = true
 					result.ResultStructuredOutputEvent = "result:success:structured_output"
 					result.ResultModelUsageValidated = true
 					result.ResultModelUsageEvent = "result:success:modelUsage"
+					result.ResultPermissionDenialsValidated = true
+					result.ResultPermissionDenialsEvent = "result:success:permission_denials"
 					result.ResultFastModeStateValidated = true
 					result.ResultFastModeStateEvent = "result:success:fast_mode_state"
 				} else if turn.behavior == "deny" {
@@ -3579,6 +3591,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("result_structured_output_event=%s\n", valueOrNone(r.ResultStructuredOutputEvent)))
 	b.WriteString(fmt.Sprintf("result_model_usage_validated=%t\n", r.ResultModelUsageValidated))
 	b.WriteString(fmt.Sprintf("result_model_usage_event=%s\n", valueOrNone(r.ResultModelUsageEvent)))
+	b.WriteString(fmt.Sprintf("result_permission_denials_validated=%t\n", r.ResultPermissionDenialsValidated))
+	b.WriteString(fmt.Sprintf("result_permission_denials_event=%s\n", valueOrNone(r.ResultPermissionDenialsEvent)))
 	b.WriteString(fmt.Sprintf("result_fast_mode_state_validated=%t\n", r.ResultFastModeStateValidated))
 	b.WriteString(fmt.Sprintf("result_fast_mode_state_event=%s\n", valueOrNone(r.ResultFastModeStateEvent)))
 	b.WriteString(fmt.Sprintf("result_error_validated=%t\n", r.ResultErrorValidated))
