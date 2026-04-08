@@ -464,6 +464,10 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(compactMetadata["trigger"])) != "auto" || int(compactMetadata["pre_tokens"].(float64)) != 128 {
 		t.Fatalf("invalid compact_boundary payload: %#v", compactBoundary)
 	}
+	preservedSegment, _ := compactMetadata["preserved_segment"].(map[string]any)
+	if strings.TrimSpace(asString(preservedSegment["head_uuid"])) != "seg-head-stub" || strings.TrimSpace(asString(preservedSegment["anchor_uuid"])) != "seg-anchor-stub" || strings.TrimSpace(asString(preservedSegment["tail_uuid"])) != "seg-tail-stub" {
+		t.Fatalf("invalid compact_boundary preserved_segment payload: %#v", compactBoundary)
+	}
 	var idleState map[string]any
 	var compactionDoneStatus map[string]any
 	if err := ws.ReadJSON(&compactionDoneStatus); err != nil {
@@ -784,6 +788,10 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondCompactMetadata, _ := secondCompactBoundary["compact_metadata"].(map[string]any)
 	if strings.TrimSpace(asString(secondCompactMetadata["trigger"])) != "auto" || int(secondCompactMetadata["pre_tokens"].(float64)) != 128 {
 		t.Fatalf("invalid second compact_boundary payload: %#v", secondCompactBoundary)
+	}
+	secondPreservedSegment, _ := secondCompactMetadata["preserved_segment"].(map[string]any)
+	if strings.TrimSpace(asString(secondPreservedSegment["head_uuid"])) != "seg-head-stub" || strings.TrimSpace(asString(secondPreservedSegment["anchor_uuid"])) != "seg-anchor-stub" || strings.TrimSpace(asString(secondPreservedSegment["tail_uuid"])) != "seg-tail-stub" {
+		t.Fatalf("invalid second compact_boundary preserved_segment payload: %#v", secondCompactBoundary)
 	}
 	var secondCompactionDoneStatus map[string]any
 	if err := ws.ReadJSON(&secondCompactionDoneStatus); err != nil {
@@ -2859,6 +2867,10 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	replayedCompactMetadata, _ := replayedCompactBoundary["compact_metadata"].(map[string]any)
 	if strings.TrimSpace(asString(replayedCompactMetadata["trigger"])) != "auto" || int(replayedCompactMetadata["pre_tokens"].(float64)) != 128 {
 		t.Fatalf("invalid replayed compact_boundary payload: %#v", replayedCompactBoundary)
+	}
+	replayedPreservedSegment, _ := replayedCompactMetadata["preserved_segment"].(map[string]any)
+	if strings.TrimSpace(asString(replayedPreservedSegment["head_uuid"])) != "seg-head-stub" || strings.TrimSpace(asString(replayedPreservedSegment["anchor_uuid"])) != "seg-anchor-stub" || strings.TrimSpace(asString(replayedPreservedSegment["tail_uuid"])) != "seg-tail-stub" {
+		t.Fatalf("invalid replayed compact_boundary preserved_segment payload: %#v", replayedCompactBoundary)
 	}
 	var replayedLocalBreadcrumb map[string]any
 	if err := ws.ReadJSON(&replayedLocalBreadcrumb); err != nil {

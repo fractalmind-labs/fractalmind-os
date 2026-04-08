@@ -659,14 +659,11 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				return
 			}
 			_ = conn.WriteJSON(map[string]any{
-				"type":    "system",
-				"subtype": "compact_boundary",
-				"compact_metadata": map[string]any{
-					"trigger":    "auto",
-					"pre_tokens": 128,
-				},
-				"uuid":       replayUUID,
-				"session_id": session.ID,
+				"type":             "system",
+				"subtype":          "compact_boundary",
+				"compact_metadata": compactBoundaryMetadata(),
+				"uuid":             replayUUID,
+				"session_id":       session.ID,
 			})
 		}
 		if strings.TrimSpace(session.LastLocalBreadcrumb) != "" {
@@ -1240,14 +1237,11 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				session.LastCompactSeen = true
 				store.put(session)
 				_ = conn.WriteJSON(map[string]any{
-					"type":    "system",
-					"subtype": "compact_boundary",
-					"compact_metadata": map[string]any{
-						"trigger":    "auto",
-						"pre_tokens": 128,
-					},
-					"uuid":       compactBoundaryUUID,
-					"session_id": session.ID,
+					"type":             "system",
+					"subtype":          "compact_boundary",
+					"compact_metadata": compactBoundaryMetadata(),
+					"uuid":             compactBoundaryUUID,
+					"session_id":       session.ID,
 				})
 				compactionDoneStatusUUID, err := generateRequestID()
 				if err != nil {
@@ -1706,6 +1700,18 @@ func generateRequestID() (string, error) {
 		return "", err
 	}
 	return "req-" + hex.EncodeToString(buf), nil
+}
+
+func compactBoundaryMetadata() map[string]any {
+	return map[string]any{
+		"trigger":    "auto",
+		"pre_tokens": 128,
+		"preserved_segment": map[string]any{
+			"head_uuid":   "seg-head-stub",
+			"anchor_uuid": "seg-anchor-stub",
+			"tail_uuid":   "seg-tail-stub",
+		},
+	}
 }
 
 func asString(v any) string {
