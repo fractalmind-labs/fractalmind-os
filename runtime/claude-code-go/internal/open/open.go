@@ -57,24 +57,32 @@ type Result struct {
 	CompactSummaryEvent                                          string
 	CompactSummarySyntheticValidated                             bool
 	CompactSummarySyntheticEvent                                 string
+	CompactSummaryTimestampValidated                             bool
+	CompactSummaryTimestampEvent                                 string
 	CompactSummaryParentToolUseIDValidated                       bool
 	CompactSummaryParentToolUseIDEvent                           string
 	ReplayedUserMessageValidated                                 bool
 	ReplayedUserMessageEvent                                     string
 	ReplayedUserSyntheticValidated                               bool
 	ReplayedUserSyntheticEvent                                   string
+	ReplayedUserTimestampValidated                               bool
+	ReplayedUserTimestampEvent                                   string
 	ReplayedUserParentToolUseIDValidated                         bool
 	ReplayedUserParentToolUseIDEvent                             string
 	ReplayedQueuedCommandValidated                               bool
 	ReplayedQueuedCommandEvent                                   string
 	ReplayedQueuedCommandSyntheticValidated                      bool
 	ReplayedQueuedCommandSyntheticEvent                          string
+	ReplayedQueuedCommandTimestampValidated                      bool
+	ReplayedQueuedCommandTimestampEvent                          string
 	ReplayedQueuedCommandParentToolUseIDValidated                bool
 	ReplayedQueuedCommandParentToolUseIDEvent                    string
 	ReplayedToolResultValidated                                  bool
 	ReplayedToolResultEvent                                      string
 	ReplayedToolResultSyntheticValidated                         bool
 	ReplayedToolResultSyntheticEvent                             string
+	ReplayedToolResultTimestampValidated                         bool
+	ReplayedToolResultTimestampEvent                             string
 	ReplayedToolResultParentToolUseIDValidated                   bool
 	ReplayedToolResultParentToolUseIDEvent                       string
 	ReplayedAssistantMessageValidated                            bool
@@ -87,12 +95,16 @@ type Result struct {
 	ReplayedLocalCommandBreadcrumbEvent                          string
 	ReplayedLocalCommandBreadcrumbSyntheticValidated             bool
 	ReplayedLocalCommandBreadcrumbSyntheticEvent                 string
+	ReplayedLocalCommandBreadcrumbTimestampValidated             bool
+	ReplayedLocalCommandBreadcrumbTimestampEvent                 string
 	ReplayedLocalCommandBreadcrumbParentToolUseIDValidated       bool
 	ReplayedLocalCommandBreadcrumbParentToolUseIDEvent           string
 	ReplayedLocalCommandStderrBreadcrumbValidated                bool
 	ReplayedLocalCommandStderrBreadcrumbEvent                    string
 	ReplayedLocalCommandStderrBreadcrumbSyntheticValidated       bool
 	ReplayedLocalCommandStderrBreadcrumbSyntheticEvent           string
+	ReplayedLocalCommandStderrBreadcrumbTimestampValidated       bool
+	ReplayedLocalCommandStderrBreadcrumbTimestampEvent           string
 	ReplayedLocalCommandStderrBreadcrumbParentToolUseIDValidated bool
 	ReplayedLocalCommandStderrBreadcrumbParentToolUseIDEvent     string
 	AuthValidated                                                bool
@@ -289,55 +301,63 @@ func Run(args []string) (Result, error) {
 	}
 
 	return Result{
-		Status:                                  "connected",
-		Action:                                  actionForOptions(opts),
-		ConnectURL:                              opts.ConnectURL,
-		Transport:                               transport,
-		ServerURL:                               serverURL,
-		AuthToken:                               authToken,
-		PrintMode:                               opts.PrintMode,
-		PrintPrompt:                             opts.PrintPrompt,
-		OutputFormat:                            opts.OutputFormat,
-		RequestCWD:                              cwd,
-		SessionID:                               session.SessionID,
-		WSURL:                                   session.WSURL,
-		WorkDir:                                 session.WorkDir,
-		StreamValidated:                         true,
-		StreamEvent:                             streamResult.StreamEvent,
-		StreamContentValidated:                  streamResult.StreamContentValidated,
-		StreamContentEvent:                      streamResult.StreamContentEvent,
-		StreamlinedTextValidated:                streamResult.StreamlinedTextValidated,
-		StreamlinedTextEvent:                    streamResult.StreamlinedTextEvent,
-		SystemValidated:                         streamResult.SystemValidated,
-		SystemEvent:                             streamResult.SystemEvent,
-		StatusValidated:                         streamResult.StatusValidated,
-		StatusEvent:                             streamResult.StatusEvent,
-		StatusTransitionValidated:               streamResult.StatusTransitionValidated,
-		StatusTransitionEvent:                   streamResult.StatusTransitionEvent,
-		StatusCompactingLifecycleValidated:      streamResult.StatusCompactingLifecycleValidated,
-		StatusCompactingLifecycleEvent:          streamResult.StatusCompactingLifecycleEvent,
-		CompactSummaryValidated:                 streamResult.CompactSummaryValidated,
-		CompactSummaryEvent:                     streamResult.CompactSummaryEvent,
-		CompactSummarySyntheticValidated:        streamResult.CompactSummarySyntheticValidated,
-		CompactSummarySyntheticEvent:            streamResult.CompactSummarySyntheticEvent,
-		CompactSummaryParentToolUseIDValidated:  streamResult.CompactSummaryParentToolUseIDValidated,
-		CompactSummaryParentToolUseIDEvent:      streamResult.CompactSummaryParentToolUseIDEvent,
-		ReplayedUserMessageValidated:            streamResult.ReplayedUserMessageValidated,
-		ReplayedUserMessageEvent:                streamResult.ReplayedUserMessageEvent,
-		ReplayedUserSyntheticValidated:          streamResult.ReplayedUserSyntheticValidated,
-		ReplayedUserSyntheticEvent:              streamResult.ReplayedUserSyntheticEvent,
-		ReplayedUserParentToolUseIDValidated:    streamResult.ReplayedUserParentToolUseIDValidated,
-		ReplayedUserParentToolUseIDEvent:        streamResult.ReplayedUserParentToolUseIDEvent,
-		ReplayedQueuedCommandValidated:          streamResult.ReplayedQueuedCommandValidated,
-		ReplayedQueuedCommandEvent:              streamResult.ReplayedQueuedCommandEvent,
-		ReplayedQueuedCommandSyntheticValidated: streamResult.ReplayedQueuedCommandSyntheticValidated,
-		ReplayedQueuedCommandSyntheticEvent:     streamResult.ReplayedQueuedCommandSyntheticEvent,
+		Status:                                                       "connected",
+		Action:                                                       actionForOptions(opts),
+		ConnectURL:                                                   opts.ConnectURL,
+		Transport:                                                    transport,
+		ServerURL:                                                    serverURL,
+		AuthToken:                                                    authToken,
+		PrintMode:                                                    opts.PrintMode,
+		PrintPrompt:                                                  opts.PrintPrompt,
+		OutputFormat:                                                 opts.OutputFormat,
+		RequestCWD:                                                   cwd,
+		SessionID:                                                    session.SessionID,
+		WSURL:                                                        session.WSURL,
+		WorkDir:                                                      session.WorkDir,
+		StreamValidated:                                              true,
+		StreamEvent:                                                  streamResult.StreamEvent,
+		StreamContentValidated:                                       streamResult.StreamContentValidated,
+		StreamContentEvent:                                           streamResult.StreamContentEvent,
+		StreamlinedTextValidated:                                     streamResult.StreamlinedTextValidated,
+		StreamlinedTextEvent:                                         streamResult.StreamlinedTextEvent,
+		SystemValidated:                                              streamResult.SystemValidated,
+		SystemEvent:                                                  streamResult.SystemEvent,
+		StatusValidated:                                              streamResult.StatusValidated,
+		StatusEvent:                                                  streamResult.StatusEvent,
+		StatusTransitionValidated:                                    streamResult.StatusTransitionValidated,
+		StatusTransitionEvent:                                        streamResult.StatusTransitionEvent,
+		StatusCompactingLifecycleValidated:                           streamResult.StatusCompactingLifecycleValidated,
+		StatusCompactingLifecycleEvent:                               streamResult.StatusCompactingLifecycleEvent,
+		CompactSummaryValidated:                                      streamResult.CompactSummaryValidated,
+		CompactSummaryEvent:                                          streamResult.CompactSummaryEvent,
+		CompactSummarySyntheticValidated:                             streamResult.CompactSummarySyntheticValidated,
+		CompactSummarySyntheticEvent:                                 streamResult.CompactSummarySyntheticEvent,
+		CompactSummaryTimestampValidated:                             streamResult.CompactSummaryTimestampValidated,
+		CompactSummaryTimestampEvent:                                 streamResult.CompactSummaryTimestampEvent,
+		CompactSummaryParentToolUseIDValidated:                       streamResult.CompactSummaryParentToolUseIDValidated,
+		CompactSummaryParentToolUseIDEvent:                           streamResult.CompactSummaryParentToolUseIDEvent,
+		ReplayedUserMessageValidated:                                 streamResult.ReplayedUserMessageValidated,
+		ReplayedUserMessageEvent:                                     streamResult.ReplayedUserMessageEvent,
+		ReplayedUserSyntheticValidated:                               streamResult.ReplayedUserSyntheticValidated,
+		ReplayedUserSyntheticEvent:                                   streamResult.ReplayedUserSyntheticEvent,
+		ReplayedUserTimestampValidated:                               streamResult.ReplayedUserTimestampValidated,
+		ReplayedUserTimestampEvent:                                   streamResult.ReplayedUserTimestampEvent,
+		ReplayedUserParentToolUseIDValidated:                         streamResult.ReplayedUserParentToolUseIDValidated,
+		ReplayedUserParentToolUseIDEvent:                             streamResult.ReplayedUserParentToolUseIDEvent,
+		ReplayedQueuedCommandValidated:                               streamResult.ReplayedQueuedCommandValidated,
+		ReplayedQueuedCommandEvent:                                   streamResult.ReplayedQueuedCommandEvent,
+		ReplayedQueuedCommandSyntheticValidated:                      streamResult.ReplayedQueuedCommandSyntheticValidated,
+		ReplayedQueuedCommandSyntheticEvent:                          streamResult.ReplayedQueuedCommandSyntheticEvent,
+		ReplayedQueuedCommandTimestampValidated:                      streamResult.ReplayedQueuedCommandTimestampValidated,
+		ReplayedQueuedCommandTimestampEvent:                          streamResult.ReplayedQueuedCommandTimestampEvent,
 		ReplayedQueuedCommandParentToolUseIDValidated:                streamResult.ReplayedQueuedCommandParentToolUseIDValidated,
 		ReplayedQueuedCommandParentToolUseIDEvent:                    streamResult.ReplayedQueuedCommandParentToolUseIDEvent,
 		ReplayedToolResultValidated:                                  streamResult.ReplayedToolResultValidated,
 		ReplayedToolResultEvent:                                      streamResult.ReplayedToolResultEvent,
 		ReplayedToolResultSyntheticValidated:                         streamResult.ReplayedToolResultSyntheticValidated,
 		ReplayedToolResultSyntheticEvent:                             streamResult.ReplayedToolResultSyntheticEvent,
+		ReplayedToolResultTimestampValidated:                         streamResult.ReplayedToolResultTimestampValidated,
+		ReplayedToolResultTimestampEvent:                             streamResult.ReplayedToolResultTimestampEvent,
 		ReplayedToolResultParentToolUseIDValidated:                   streamResult.ReplayedToolResultParentToolUseIDValidated,
 		ReplayedToolResultParentToolUseIDEvent:                       streamResult.ReplayedToolResultParentToolUseIDEvent,
 		ReplayedAssistantMessageValidated:                            streamResult.ReplayedAssistantMessageValidated,
@@ -350,151 +370,155 @@ func Run(args []string) (Result, error) {
 		ReplayedLocalCommandBreadcrumbEvent:                          streamResult.ReplayedLocalCommandBreadcrumbEvent,
 		ReplayedLocalCommandBreadcrumbSyntheticValidated:             streamResult.ReplayedLocalCommandBreadcrumbSyntheticValidated,
 		ReplayedLocalCommandBreadcrumbSyntheticEvent:                 streamResult.ReplayedLocalCommandBreadcrumbSyntheticEvent,
+		ReplayedLocalCommandBreadcrumbTimestampValidated:             streamResult.ReplayedLocalCommandBreadcrumbTimestampValidated,
+		ReplayedLocalCommandBreadcrumbTimestampEvent:                 streamResult.ReplayedLocalCommandBreadcrumbTimestampEvent,
 		ReplayedLocalCommandBreadcrumbParentToolUseIDValidated:       streamResult.ReplayedLocalCommandBreadcrumbParentToolUseIDValidated,
 		ReplayedLocalCommandBreadcrumbParentToolUseIDEvent:           streamResult.ReplayedLocalCommandBreadcrumbParentToolUseIDEvent,
 		ReplayedLocalCommandStderrBreadcrumbValidated:                streamResult.ReplayedLocalCommandStderrBreadcrumbValidated,
 		ReplayedLocalCommandStderrBreadcrumbEvent:                    streamResult.ReplayedLocalCommandStderrBreadcrumbEvent,
 		ReplayedLocalCommandStderrBreadcrumbSyntheticValidated:       streamResult.ReplayedLocalCommandStderrBreadcrumbSyntheticValidated,
 		ReplayedLocalCommandStderrBreadcrumbSyntheticEvent:           streamResult.ReplayedLocalCommandStderrBreadcrumbSyntheticEvent,
+		ReplayedLocalCommandStderrBreadcrumbTimestampValidated:       streamResult.ReplayedLocalCommandStderrBreadcrumbTimestampValidated,
+		ReplayedLocalCommandStderrBreadcrumbTimestampEvent:           streamResult.ReplayedLocalCommandStderrBreadcrumbTimestampEvent,
 		ReplayedLocalCommandStderrBreadcrumbParentToolUseIDValidated: streamResult.ReplayedLocalCommandStderrBreadcrumbParentToolUseIDValidated,
 		ReplayedLocalCommandStderrBreadcrumbParentToolUseIDEvent:     streamResult.ReplayedLocalCommandStderrBreadcrumbParentToolUseIDEvent,
-		AuthValidated:                       streamResult.AuthValidated,
-		AuthEvent:                           streamResult.AuthEvent,
-		KeepAliveValidated:                  streamResult.KeepAliveValidated,
-		KeepAliveEvent:                      streamResult.KeepAliveEvent,
-		UpdateEnvironmentVariablesValidated: streamResult.UpdateEnvironmentVariablesValidated,
-		UpdateEnvironmentVariablesEvent:     streamResult.UpdateEnvironmentVariablesEvent,
-		ControlCancelValidated:              streamResult.ControlCancelValidated,
-		ControlCancelEvent:                  streamResult.ControlCancelEvent,
-		MessageValidated:                    streamResult.MessageValidated,
-		MessageEvent:                        streamResult.MessageEvent,
-		ValidatedTurns:                      streamResult.ValidatedTurns,
-		MultiTurnValidated:                  streamResult.MultiTurnValidated,
-		ResultValidated:                     streamResult.ResultValidated,
-		ResultEvent:                         streamResult.ResultEvent,
-		ResultErrorValidated:                streamResult.ResultErrorValidated,
-		ResultErrorEvent:                    streamResult.ResultErrorEvent,
-		ResultErrorMaxTurnsValidated:        streamResult.ResultErrorMaxTurnsValidated,
-		ResultErrorMaxTurnsEvent:            streamResult.ResultErrorMaxTurnsEvent,
-		ResultErrorMaxBudgetUSDValidated:    streamResult.ResultErrorMaxBudgetUSDValidated,
-		ResultErrorMaxBudgetUSDEvent:        streamResult.ResultErrorMaxBudgetUSDEvent,
-		ResultErrorMaxStructuredOutputRetriesValidated: streamResult.ResultErrorMaxStructuredOutputRetriesValidated,
-		ResultErrorMaxStructuredOutputRetriesEvent:     streamResult.ResultErrorMaxStructuredOutputRetriesEvent,
-		ControlValidated:                         streamResult.ControlValidated,
-		PermissionValidated:                      streamResult.PermissionValidated,
-		PermissionDeniedValidated:                streamResult.PermissionDeniedValidated,
-		PermissionDeniedEvent:                    streamResult.PermissionDeniedEvent,
-		TaskStartedValidated:                     streamResult.TaskStartedValidated,
-		TaskStartedEvent:                         streamResult.TaskStartedEvent,
-		TaskProgressValidated:                    streamResult.TaskProgressValidated,
-		TaskProgressEvent:                        streamResult.TaskProgressEvent,
-		TaskNotificationValidated:                streamResult.TaskNotificationValidated,
-		TaskNotificationEvent:                    streamResult.TaskNotificationEvent,
-		FilesPersistedValidated:                  streamResult.FilesPersistedValidated,
-		FilesPersistedEvent:                      streamResult.FilesPersistedEvent,
-		APIRetryValidated:                        streamResult.APIRetryValidated,
-		APIRetryEvent:                            streamResult.APIRetryEvent,
-		LocalCommandOutputValidated:              streamResult.LocalCommandOutputValidated,
-		LocalCommandOutputEvent:                  streamResult.LocalCommandOutputEvent,
-		LocalCommandOutputAssistantValidated:     streamResult.LocalCommandOutputAssistantValidated,
-		LocalCommandOutputAssistantEvent:         streamResult.LocalCommandOutputAssistantEvent,
-		ElicitationValidated:                     streamResult.ElicitationValidated,
-		ElicitationEvent:                         streamResult.ElicitationEvent,
-		HookCallbackValidated:                    streamResult.HookCallbackValidated,
-		HookCallbackEvent:                        streamResult.HookCallbackEvent,
-		ChannelEnableValidated:                   streamResult.ChannelEnableValidated,
-		ChannelEnableEvent:                       streamResult.ChannelEnableEvent,
-		ElicitationCompleteValidated:             streamResult.ElicitationCompleteValidated,
-		ElicitationCompleteEvent:                 streamResult.ElicitationCompleteEvent,
-		ToolProgressValidated:                    streamResult.ToolProgressValidated,
-		ToolProgressEvent:                        streamResult.ToolProgressEvent,
-		RateLimitValidated:                       streamResult.RateLimitValidated,
-		RateLimitEvent:                           streamResult.RateLimitEvent,
-		ToolUseSummaryValidated:                  streamResult.ToolUseSummaryValidated,
-		ToolUseSummaryEvent:                      streamResult.ToolUseSummaryEvent,
-		StreamlinedToolUseSummaryValidated:       streamResult.StreamlinedToolUseSummaryValidated,
-		StreamlinedToolUseSummaryEvent:           streamResult.StreamlinedToolUseSummaryEvent,
-		PromptSuggestionValidated:                streamResult.PromptSuggestionValidated,
-		PromptSuggestionEvent:                    streamResult.PromptSuggestionEvent,
-		PostTurnSummaryValidated:                 streamResult.PostTurnSummaryValidated,
-		PostTurnSummaryEvent:                     streamResult.PostTurnSummaryEvent,
-		CompactBoundaryValidated:                 streamResult.CompactBoundaryValidated,
-		CompactBoundaryEvent:                     streamResult.CompactBoundaryEvent,
-		CompactBoundaryPreservedSegmentValidated: streamResult.CompactBoundaryPreservedSegmentValidated,
-		CompactBoundaryPreservedSegmentEvent:     streamResult.CompactBoundaryPreservedSegmentEvent,
-		SessionStateChangedValidated:             streamResult.SessionStateChangedValidated,
-		SessionStateChangedEvent:                 streamResult.SessionStateChangedEvent,
-		SessionStateRequiresActionValidated:      streamResult.SessionStateRequiresActionValidated,
-		SessionStateRequiresActionEvent:          streamResult.SessionStateRequiresActionEvent,
-		HookStartedValidated:                     streamResult.HookStartedValidated,
-		HookStartedEvent:                         streamResult.HookStartedEvent,
-		HookProgressValidated:                    streamResult.HookProgressValidated,
-		HookProgressEvent:                        streamResult.HookProgressEvent,
-		HookResponseValidated:                    streamResult.HookResponseValidated,
-		HookResponseEvent:                        streamResult.HookResponseEvent,
-		ToolExecutionValidated:                   streamResult.ToolExecutionValidated,
-		InterruptValidated:                       streamResult.InterruptValidated,
-		SetModelValidated:                        streamResult.SetModelValidated,
-		SetModelEvent:                            streamResult.SetModelEvent,
-		SetPermissionModeValidated:               streamResult.SetPermissionModeValidated,
-		SetPermissionModeEvent:                   streamResult.SetPermissionModeEvent,
-		SetMaxThinkingTokensValidated:            streamResult.SetMaxThinkingTokensValidated,
-		SetMaxThinkingTokensEvent:                streamResult.SetMaxThinkingTokensEvent,
-		MCPStatusValidated:                       streamResult.MCPStatusValidated,
-		MCPStatusEvent:                           streamResult.MCPStatusEvent,
-		GetContextUsageValidated:                 streamResult.GetContextUsageValidated,
-		GetContextUsageEvent:                     streamResult.GetContextUsageEvent,
-		MCPMessageValidated:                      streamResult.MCPMessageValidated,
-		MCPMessageEvent:                          streamResult.MCPMessageEvent,
-		MCPSetServersValidated:                   streamResult.MCPSetServersValidated,
-		MCPSetServersEvent:                       streamResult.MCPSetServersEvent,
-		ReloadPluginsValidated:                   streamResult.ReloadPluginsValidated,
-		ReloadPluginsEvent:                       streamResult.ReloadPluginsEvent,
-		MCPAuthenticateValidated:                 streamResult.MCPAuthenticateValidated,
-		MCPAuthenticateEvent:                     streamResult.MCPAuthenticateEvent,
-		MCPOAuthCallbackURLValidated:             streamResult.MCPOAuthCallbackURLValidated,
-		MCPOAuthCallbackURLEvent:                 streamResult.MCPOAuthCallbackURLEvent,
-		MCPReconnectValidated:                    streamResult.MCPReconnectValidated,
-		MCPReconnectEvent:                        streamResult.MCPReconnectEvent,
-		MCPToggleValidated:                       streamResult.MCPToggleValidated,
-		MCPToggleEvent:                           streamResult.MCPToggleEvent,
-		SeedReadStateValidated:                   streamResult.SeedReadStateValidated,
-		SeedReadStateEvent:                       streamResult.SeedReadStateEvent,
-		RewindFilesValidated:                     streamResult.RewindFilesValidated,
-		RewindFilesEvent:                         streamResult.RewindFilesEvent,
-		RewindFilesCanRewind:                     streamResult.RewindFilesCanRewind,
-		RewindFilesFilesChanged:                  streamResult.RewindFilesFilesChanged,
-		RewindFilesInsertions:                    streamResult.RewindFilesInsertions,
-		RewindFilesDeletions:                     streamResult.RewindFilesDeletions,
-		RewindFilesError:                         streamResult.RewindFilesError,
-		CancelAsyncMessageValidated:              streamResult.CancelAsyncMessageValidated,
-		CancelAsyncMessageEvent:                  streamResult.CancelAsyncMessageEvent,
-		StopTaskValidated:                        streamResult.StopTaskValidated,
-		StopTaskEvent:                            streamResult.StopTaskEvent,
-		ApplyFlagSettingsValidated:               streamResult.ApplyFlagSettingsValidated,
-		ApplyFlagSettingsEvent:                   streamResult.ApplyFlagSettingsEvent,
-		GetSettingsValidated:                     streamResult.GetSettingsValidated,
-		GetSettingsEvent:                         streamResult.GetSettingsEvent,
-		GenerateSessionTitleValidated:            streamResult.GenerateSessionTitleValidated,
-		GenerateSessionTitleEvent:                streamResult.GenerateSessionTitleEvent,
-		SideQuestionValidated:                    streamResult.SideQuestionValidated,
-		SideQuestionEvent:                        streamResult.SideQuestionEvent,
-		InitializeValidated:                      streamResult.InitializeValidated,
-		InitializeEvent:                          streamResult.InitializeEvent,
-		SetProactiveValidated:                    streamResult.SetProactiveValidated,
-		SetProactiveEvent:                        streamResult.SetProactiveEvent,
-		BridgeStateValidated:                     streamResult.BridgeStateValidated,
-		BridgeStateEvent:                         streamResult.BridgeStateEvent,
-		RemoteControlValidated:                   streamResult.RemoteControlValidated,
-		RemoteControlEvent:                       streamResult.RemoteControlEvent,
-		EndSessionValidated:                      streamResult.EndSessionValidated,
-		EndSessionEvent:                          streamResult.EndSessionEvent,
-		BackendValidated:                         state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
-		BackendStatus:                            state.BackendStatus,
-		BackendPID:                               state.BackendPID,
-		BackendStartedAt:                         state.BackendStartedAt,
-		BackendStoppedAt:                         state.BackendStoppedAt,
-		BackendExitCode:                          state.BackendExitCode,
+		AuthValidated:                                                streamResult.AuthValidated,
+		AuthEvent:                                                    streamResult.AuthEvent,
+		KeepAliveValidated:                                           streamResult.KeepAliveValidated,
+		KeepAliveEvent:                                               streamResult.KeepAliveEvent,
+		UpdateEnvironmentVariablesValidated:                          streamResult.UpdateEnvironmentVariablesValidated,
+		UpdateEnvironmentVariablesEvent:                              streamResult.UpdateEnvironmentVariablesEvent,
+		ControlCancelValidated:                                       streamResult.ControlCancelValidated,
+		ControlCancelEvent:                                           streamResult.ControlCancelEvent,
+		MessageValidated:                                             streamResult.MessageValidated,
+		MessageEvent:                                                 streamResult.MessageEvent,
+		ValidatedTurns:                                               streamResult.ValidatedTurns,
+		MultiTurnValidated:                                           streamResult.MultiTurnValidated,
+		ResultValidated:                                              streamResult.ResultValidated,
+		ResultEvent:                                                  streamResult.ResultEvent,
+		ResultErrorValidated:                                         streamResult.ResultErrorValidated,
+		ResultErrorEvent:                                             streamResult.ResultErrorEvent,
+		ResultErrorMaxTurnsValidated:                                 streamResult.ResultErrorMaxTurnsValidated,
+		ResultErrorMaxTurnsEvent:                                     streamResult.ResultErrorMaxTurnsEvent,
+		ResultErrorMaxBudgetUSDValidated:                             streamResult.ResultErrorMaxBudgetUSDValidated,
+		ResultErrorMaxBudgetUSDEvent:                                 streamResult.ResultErrorMaxBudgetUSDEvent,
+		ResultErrorMaxStructuredOutputRetriesValidated:               streamResult.ResultErrorMaxStructuredOutputRetriesValidated,
+		ResultErrorMaxStructuredOutputRetriesEvent:                   streamResult.ResultErrorMaxStructuredOutputRetriesEvent,
+		ControlValidated:                                             streamResult.ControlValidated,
+		PermissionValidated:                                          streamResult.PermissionValidated,
+		PermissionDeniedValidated:                                    streamResult.PermissionDeniedValidated,
+		PermissionDeniedEvent:                                        streamResult.PermissionDeniedEvent,
+		TaskStartedValidated:                                         streamResult.TaskStartedValidated,
+		TaskStartedEvent:                                             streamResult.TaskStartedEvent,
+		TaskProgressValidated:                                        streamResult.TaskProgressValidated,
+		TaskProgressEvent:                                            streamResult.TaskProgressEvent,
+		TaskNotificationValidated:                                    streamResult.TaskNotificationValidated,
+		TaskNotificationEvent:                                        streamResult.TaskNotificationEvent,
+		FilesPersistedValidated:                                      streamResult.FilesPersistedValidated,
+		FilesPersistedEvent:                                          streamResult.FilesPersistedEvent,
+		APIRetryValidated:                                            streamResult.APIRetryValidated,
+		APIRetryEvent:                                                streamResult.APIRetryEvent,
+		LocalCommandOutputValidated:                                  streamResult.LocalCommandOutputValidated,
+		LocalCommandOutputEvent:                                      streamResult.LocalCommandOutputEvent,
+		LocalCommandOutputAssistantValidated:                         streamResult.LocalCommandOutputAssistantValidated,
+		LocalCommandOutputAssistantEvent:                             streamResult.LocalCommandOutputAssistantEvent,
+		ElicitationValidated:                                         streamResult.ElicitationValidated,
+		ElicitationEvent:                                             streamResult.ElicitationEvent,
+		HookCallbackValidated:                                        streamResult.HookCallbackValidated,
+		HookCallbackEvent:                                            streamResult.HookCallbackEvent,
+		ChannelEnableValidated:                                       streamResult.ChannelEnableValidated,
+		ChannelEnableEvent:                                           streamResult.ChannelEnableEvent,
+		ElicitationCompleteValidated:                                 streamResult.ElicitationCompleteValidated,
+		ElicitationCompleteEvent:                                     streamResult.ElicitationCompleteEvent,
+		ToolProgressValidated:                                        streamResult.ToolProgressValidated,
+		ToolProgressEvent:                                            streamResult.ToolProgressEvent,
+		RateLimitValidated:                                           streamResult.RateLimitValidated,
+		RateLimitEvent:                                               streamResult.RateLimitEvent,
+		ToolUseSummaryValidated:                                      streamResult.ToolUseSummaryValidated,
+		ToolUseSummaryEvent:                                          streamResult.ToolUseSummaryEvent,
+		StreamlinedToolUseSummaryValidated:                           streamResult.StreamlinedToolUseSummaryValidated,
+		StreamlinedToolUseSummaryEvent:                               streamResult.StreamlinedToolUseSummaryEvent,
+		PromptSuggestionValidated:                                    streamResult.PromptSuggestionValidated,
+		PromptSuggestionEvent:                                        streamResult.PromptSuggestionEvent,
+		PostTurnSummaryValidated:                                     streamResult.PostTurnSummaryValidated,
+		PostTurnSummaryEvent:                                         streamResult.PostTurnSummaryEvent,
+		CompactBoundaryValidated:                                     streamResult.CompactBoundaryValidated,
+		CompactBoundaryEvent:                                         streamResult.CompactBoundaryEvent,
+		CompactBoundaryPreservedSegmentValidated:                     streamResult.CompactBoundaryPreservedSegmentValidated,
+		CompactBoundaryPreservedSegmentEvent:                         streamResult.CompactBoundaryPreservedSegmentEvent,
+		SessionStateChangedValidated:                                 streamResult.SessionStateChangedValidated,
+		SessionStateChangedEvent:                                     streamResult.SessionStateChangedEvent,
+		SessionStateRequiresActionValidated:                          streamResult.SessionStateRequiresActionValidated,
+		SessionStateRequiresActionEvent:                              streamResult.SessionStateRequiresActionEvent,
+		HookStartedValidated:                                         streamResult.HookStartedValidated,
+		HookStartedEvent:                                             streamResult.HookStartedEvent,
+		HookProgressValidated:                                        streamResult.HookProgressValidated,
+		HookProgressEvent:                                            streamResult.HookProgressEvent,
+		HookResponseValidated:                                        streamResult.HookResponseValidated,
+		HookResponseEvent:                                            streamResult.HookResponseEvent,
+		ToolExecutionValidated:                                       streamResult.ToolExecutionValidated,
+		InterruptValidated:                                           streamResult.InterruptValidated,
+		SetModelValidated:                                            streamResult.SetModelValidated,
+		SetModelEvent:                                                streamResult.SetModelEvent,
+		SetPermissionModeValidated:                                   streamResult.SetPermissionModeValidated,
+		SetPermissionModeEvent:                                       streamResult.SetPermissionModeEvent,
+		SetMaxThinkingTokensValidated:                                streamResult.SetMaxThinkingTokensValidated,
+		SetMaxThinkingTokensEvent:                                    streamResult.SetMaxThinkingTokensEvent,
+		MCPStatusValidated:                                           streamResult.MCPStatusValidated,
+		MCPStatusEvent:                                               streamResult.MCPStatusEvent,
+		GetContextUsageValidated:                                     streamResult.GetContextUsageValidated,
+		GetContextUsageEvent:                                         streamResult.GetContextUsageEvent,
+		MCPMessageValidated:                                          streamResult.MCPMessageValidated,
+		MCPMessageEvent:                                              streamResult.MCPMessageEvent,
+		MCPSetServersValidated:                                       streamResult.MCPSetServersValidated,
+		MCPSetServersEvent:                                           streamResult.MCPSetServersEvent,
+		ReloadPluginsValidated:                                       streamResult.ReloadPluginsValidated,
+		ReloadPluginsEvent:                                           streamResult.ReloadPluginsEvent,
+		MCPAuthenticateValidated:                                     streamResult.MCPAuthenticateValidated,
+		MCPAuthenticateEvent:                                         streamResult.MCPAuthenticateEvent,
+		MCPOAuthCallbackURLValidated:                                 streamResult.MCPOAuthCallbackURLValidated,
+		MCPOAuthCallbackURLEvent:                                     streamResult.MCPOAuthCallbackURLEvent,
+		MCPReconnectValidated:                                        streamResult.MCPReconnectValidated,
+		MCPReconnectEvent:                                            streamResult.MCPReconnectEvent,
+		MCPToggleValidated:                                           streamResult.MCPToggleValidated,
+		MCPToggleEvent:                                               streamResult.MCPToggleEvent,
+		SeedReadStateValidated:                                       streamResult.SeedReadStateValidated,
+		SeedReadStateEvent:                                           streamResult.SeedReadStateEvent,
+		RewindFilesValidated:                                         streamResult.RewindFilesValidated,
+		RewindFilesEvent:                                             streamResult.RewindFilesEvent,
+		RewindFilesCanRewind:                                         streamResult.RewindFilesCanRewind,
+		RewindFilesFilesChanged:                                      streamResult.RewindFilesFilesChanged,
+		RewindFilesInsertions:                                        streamResult.RewindFilesInsertions,
+		RewindFilesDeletions:                                         streamResult.RewindFilesDeletions,
+		RewindFilesError:                                             streamResult.RewindFilesError,
+		CancelAsyncMessageValidated:                                  streamResult.CancelAsyncMessageValidated,
+		CancelAsyncMessageEvent:                                      streamResult.CancelAsyncMessageEvent,
+		StopTaskValidated:                                            streamResult.StopTaskValidated,
+		StopTaskEvent:                                                streamResult.StopTaskEvent,
+		ApplyFlagSettingsValidated:                                   streamResult.ApplyFlagSettingsValidated,
+		ApplyFlagSettingsEvent:                                       streamResult.ApplyFlagSettingsEvent,
+		GetSettingsValidated:                                         streamResult.GetSettingsValidated,
+		GetSettingsEvent:                                             streamResult.GetSettingsEvent,
+		GenerateSessionTitleValidated:                                streamResult.GenerateSessionTitleValidated,
+		GenerateSessionTitleEvent:                                    streamResult.GenerateSessionTitleEvent,
+		SideQuestionValidated:                                        streamResult.SideQuestionValidated,
+		SideQuestionEvent:                                            streamResult.SideQuestionEvent,
+		InitializeValidated:                                          streamResult.InitializeValidated,
+		InitializeEvent:                                              streamResult.InitializeEvent,
+		SetProactiveValidated:                                        streamResult.SetProactiveValidated,
+		SetProactiveEvent:                                            streamResult.SetProactiveEvent,
+		BridgeStateValidated:                                         streamResult.BridgeStateValidated,
+		BridgeStateEvent:                                             streamResult.BridgeStateEvent,
+		RemoteControlValidated:                                       streamResult.RemoteControlValidated,
+		RemoteControlEvent:                                           streamResult.RemoteControlEvent,
+		EndSessionValidated:                                          streamResult.EndSessionValidated,
+		EndSessionEvent:                                              streamResult.EndSessionEvent,
+		BackendValidated:                                             state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
+		BackendStatus:                                                state.BackendStatus,
+		BackendPID:                                                   state.BackendPID,
+		BackendStartedAt:                                             state.BackendStartedAt,
+		BackendStoppedAt:                                             state.BackendStoppedAt,
+		BackendExitCode:                                              state.BackendExitCode,
 	}, nil
 }
 
@@ -813,24 +837,32 @@ type streamValidation struct {
 	CompactSummaryEvent                                          string
 	CompactSummarySyntheticValidated                             bool
 	CompactSummarySyntheticEvent                                 string
+	CompactSummaryTimestampValidated                             bool
+	CompactSummaryTimestampEvent                                 string
 	CompactSummaryParentToolUseIDValidated                       bool
 	CompactSummaryParentToolUseIDEvent                           string
 	ReplayedUserMessageValidated                                 bool
 	ReplayedUserMessageEvent                                     string
 	ReplayedUserSyntheticValidated                               bool
 	ReplayedUserSyntheticEvent                                   string
+	ReplayedUserTimestampValidated                               bool
+	ReplayedUserTimestampEvent                                   string
 	ReplayedUserParentToolUseIDValidated                         bool
 	ReplayedUserParentToolUseIDEvent                             string
 	ReplayedQueuedCommandValidated                               bool
 	ReplayedQueuedCommandEvent                                   string
 	ReplayedQueuedCommandSyntheticValidated                      bool
 	ReplayedQueuedCommandSyntheticEvent                          string
+	ReplayedQueuedCommandTimestampValidated                      bool
+	ReplayedQueuedCommandTimestampEvent                          string
 	ReplayedQueuedCommandParentToolUseIDValidated                bool
 	ReplayedQueuedCommandParentToolUseIDEvent                    string
 	ReplayedToolResultValidated                                  bool
 	ReplayedToolResultEvent                                      string
 	ReplayedToolResultSyntheticValidated                         bool
 	ReplayedToolResultSyntheticEvent                             string
+	ReplayedToolResultTimestampValidated                         bool
+	ReplayedToolResultTimestampEvent                             string
 	ReplayedToolResultParentToolUseIDValidated                   bool
 	ReplayedToolResultParentToolUseIDEvent                       string
 	ReplayedAssistantMessageValidated                            bool
@@ -843,12 +875,16 @@ type streamValidation struct {
 	ReplayedLocalCommandBreadcrumbEvent                          string
 	ReplayedLocalCommandBreadcrumbSyntheticValidated             bool
 	ReplayedLocalCommandBreadcrumbSyntheticEvent                 string
+	ReplayedLocalCommandBreadcrumbTimestampValidated             bool
+	ReplayedLocalCommandBreadcrumbTimestampEvent                 string
 	ReplayedLocalCommandBreadcrumbParentToolUseIDValidated       bool
 	ReplayedLocalCommandBreadcrumbParentToolUseIDEvent           string
 	ReplayedLocalCommandStderrBreadcrumbValidated                bool
 	ReplayedLocalCommandStderrBreadcrumbEvent                    string
 	ReplayedLocalCommandStderrBreadcrumbSyntheticValidated       bool
 	ReplayedLocalCommandStderrBreadcrumbSyntheticEvent           string
+	ReplayedLocalCommandStderrBreadcrumbTimestampValidated       bool
+	ReplayedLocalCommandStderrBreadcrumbTimestampEvent           string
 	ReplayedLocalCommandStderrBreadcrumbParentToolUseIDValidated bool
 	ReplayedLocalCommandStderrBreadcrumbParentToolUseIDEvent     string
 	AuthValidated                                                bool
@@ -1146,6 +1182,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.CompactSummaryEvent = "user:compact_summary"
 					result.CompactSummarySyntheticValidated = true
 					result.CompactSummarySyntheticEvent = "user:compact_summary:isSynthetic"
+					result.CompactSummaryTimestampValidated = true
+					result.CompactSummaryTimestampEvent = "user:compact_summary:timestamp"
 					result.CompactSummaryParentToolUseIDValidated = true
 					result.CompactSummaryParentToolUseIDEvent = "user:compact_summary:parent_tool_use_id"
 					continue
@@ -1161,6 +1199,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if replayedPrompt == "" {
 						return streamValidation{}, fmt.Errorf("invalid replayed queued_command: missing prompt")
 					}
+					if strings.TrimSpace(asString(incoming["timestamp"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid replayed queued_command: missing timestamp")
+					}
 					if !synthetic {
 						return streamValidation{}, fmt.Errorf("invalid replayed queued_command: expected isSynthetic=true")
 					}
@@ -1171,6 +1212,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.ReplayedQueuedCommandEvent = "user:queued_command:isReplay"
 					result.ReplayedQueuedCommandSyntheticValidated = true
 					result.ReplayedQueuedCommandSyntheticEvent = "user:queued_command:isReplay:isSynthetic"
+					result.ReplayedQueuedCommandTimestampValidated = true
+					result.ReplayedQueuedCommandTimestampEvent = "user:queued_command:isReplay:timestamp"
 					result.ReplayedQueuedCommandParentToolUseIDValidated = true
 					result.ReplayedQueuedCommandParentToolUseIDEvent = "user:queued_command:isReplay:parent_tool_use_id"
 					continue
@@ -1178,6 +1221,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				if strings.TrimSpace(opts.ResumeSessionID) != "" {
 					if contentText, ok := message["content"].(string); ok {
 						if !result.ReplayedLocalCommandBreadcrumbValidated && strings.Contains(contentText, "<local-command-stdout>") {
+							if strings.TrimSpace(asString(incoming["timestamp"])) == "" {
+								return streamValidation{}, fmt.Errorf("invalid replayed local-command breadcrumb: missing timestamp")
+							}
 							if !synthetic {
 								return streamValidation{}, fmt.Errorf("invalid replayed local-command breadcrumb: expected isSynthetic=true")
 							}
@@ -1188,11 +1234,16 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 							result.ReplayedLocalCommandBreadcrumbEvent = "user:local_command_stdout:isReplay"
 							result.ReplayedLocalCommandBreadcrumbSyntheticValidated = true
 							result.ReplayedLocalCommandBreadcrumbSyntheticEvent = "user:local_command_stdout:isReplay:isSynthetic"
+							result.ReplayedLocalCommandBreadcrumbTimestampValidated = true
+							result.ReplayedLocalCommandBreadcrumbTimestampEvent = "user:local_command_stdout:isReplay:timestamp"
 							result.ReplayedLocalCommandBreadcrumbParentToolUseIDValidated = true
 							result.ReplayedLocalCommandBreadcrumbParentToolUseIDEvent = "user:local_command_stdout:isReplay:parent_tool_use_id"
 							continue
 						}
 						if !result.ReplayedLocalCommandStderrBreadcrumbValidated && strings.Contains(contentText, "<local-command-stderr>") {
+							if strings.TrimSpace(asString(incoming["timestamp"])) == "" {
+								return streamValidation{}, fmt.Errorf("invalid replayed local-command stderr breadcrumb: missing timestamp")
+							}
 							if !synthetic {
 								return streamValidation{}, fmt.Errorf("invalid replayed local-command stderr breadcrumb: expected isSynthetic=true")
 							}
@@ -1203,6 +1254,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 							result.ReplayedLocalCommandStderrBreadcrumbEvent = "user:local_command_stderr:isReplay"
 							result.ReplayedLocalCommandStderrBreadcrumbSyntheticValidated = true
 							result.ReplayedLocalCommandStderrBreadcrumbSyntheticEvent = "user:local_command_stderr:isReplay:isSynthetic"
+							result.ReplayedLocalCommandStderrBreadcrumbTimestampValidated = true
+							result.ReplayedLocalCommandStderrBreadcrumbTimestampEvent = "user:local_command_stderr:isReplay:timestamp"
 							result.ReplayedLocalCommandStderrBreadcrumbParentToolUseIDValidated = true
 							result.ReplayedLocalCommandStderrBreadcrumbParentToolUseIDEvent = "user:local_command_stderr:isReplay:parent_tool_use_id"
 							continue
@@ -1231,6 +1284,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if _, ok := toolUseResult["content"]; !ok {
 						return streamValidation{}, fmt.Errorf("invalid replayed tool_result: missing tool_use_result.content")
 					}
+					if strings.TrimSpace(asString(incoming["timestamp"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid replayed tool_result: missing timestamp")
+					}
 					if !synthetic {
 						return streamValidation{}, fmt.Errorf("invalid replayed tool_result: expected isSynthetic=true")
 					}
@@ -1241,6 +1297,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.ReplayedToolResultEvent = "user:tool_result:isReplay"
 					result.ReplayedToolResultSyntheticValidated = true
 					result.ReplayedToolResultSyntheticEvent = "user:tool_result:isReplay:isSynthetic"
+					result.ReplayedToolResultTimestampValidated = true
+					result.ReplayedToolResultTimestampEvent = "user:tool_result:isReplay:timestamp"
 					result.ReplayedToolResultParentToolUseIDValidated = true
 					result.ReplayedToolResultParentToolUseIDEvent = "user:tool_result:isReplay:parent_tool_use_id"
 					continue
@@ -1248,6 +1306,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				replayedPrompt := extractPromptText(map[string]any{"message": message})
 				if replayedPrompt == "" {
 					return streamValidation{}, fmt.Errorf("invalid user replay event: missing replayed text content")
+				}
+				if strings.TrimSpace(asString(incoming["timestamp"])) == "" {
+					return streamValidation{}, fmt.Errorf("invalid user replay event: missing timestamp")
 				}
 				if synthetic {
 					return streamValidation{}, fmt.Errorf("invalid user replay event: expected isSynthetic=false")
@@ -1259,6 +1320,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				result.ReplayedUserMessageEvent = "user:isReplay"
 				result.ReplayedUserSyntheticValidated = true
 				result.ReplayedUserSyntheticEvent = "user:isReplay:isSynthetic=false"
+				result.ReplayedUserTimestampValidated = true
+				result.ReplayedUserTimestampEvent = "user:isReplay:timestamp"
 				result.ReplayedUserParentToolUseIDValidated = true
 				result.ReplayedUserParentToolUseIDEvent = "user:isReplay:parent_tool_use_id"
 				continue
@@ -2031,8 +2094,14 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	if opts.PrintMode && !result.CompactSummarySyntheticValidated {
 		return streamValidation{}, fmt.Errorf("missing compact summary isSynthetic validation during print validation")
 	}
+	if opts.PrintMode && !result.CompactSummaryTimestampValidated {
+		return streamValidation{}, fmt.Errorf("missing compact summary timestamp validation during print validation")
+	}
 	if opts.PrintMode && !result.CompactSummaryParentToolUseIDValidated {
 		return streamValidation{}, fmt.Errorf("missing compact summary parent_tool_use_id validation during print validation")
+	}
+	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedUserTimestampValidated {
+		return streamValidation{}, fmt.Errorf("missing replayed user timestamp validation during resume validation")
 	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedUserParentToolUseIDValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed user parent_tool_use_id validation during resume validation")
@@ -2043,6 +2112,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedQueuedCommandSyntheticValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed queued_command isSynthetic validation during resume validation")
 	}
+	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedQueuedCommandTimestampValidated {
+		return streamValidation{}, fmt.Errorf("missing replayed queued_command timestamp validation during resume validation")
+	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedQueuedCommandParentToolUseIDValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed queued_command parent_tool_use_id validation during resume validation")
 	}
@@ -2051,6 +2123,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedToolResultSyntheticValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed tool_result isSynthetic validation during resume validation")
+	}
+	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedToolResultTimestampValidated {
+		return streamValidation{}, fmt.Errorf("missing replayed tool_result timestamp validation during resume validation")
 	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedToolResultParentToolUseIDValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed tool_result parent_tool_use_id validation during resume validation")
@@ -2073,6 +2148,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedLocalCommandBreadcrumbSyntheticValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed local-command breadcrumb isSynthetic validation during resume validation")
 	}
+	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedLocalCommandBreadcrumbTimestampValidated {
+		return streamValidation{}, fmt.Errorf("missing replayed local-command breadcrumb timestamp validation during resume validation")
+	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedLocalCommandBreadcrumbParentToolUseIDValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed local-command breadcrumb parent_tool_use_id validation during resume validation")
 	}
@@ -2081,6 +2159,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedLocalCommandStderrBreadcrumbSyntheticValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed local-command stderr breadcrumb isSynthetic validation during resume validation")
+	}
+	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedLocalCommandStderrBreadcrumbTimestampValidated {
+		return streamValidation{}, fmt.Errorf("missing replayed local-command stderr breadcrumb timestamp validation during resume validation")
 	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedLocalCommandStderrBreadcrumbParentToolUseIDValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed local-command stderr breadcrumb parent_tool_use_id validation during resume validation")
@@ -3309,24 +3390,32 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("compact_summary_event=%s\n", valueOrNone(r.CompactSummaryEvent)))
 	b.WriteString(fmt.Sprintf("compact_summary_synthetic_validated=%t\n", r.CompactSummarySyntheticValidated))
 	b.WriteString(fmt.Sprintf("compact_summary_synthetic_event=%s\n", valueOrNone(r.CompactSummarySyntheticEvent)))
+	b.WriteString(fmt.Sprintf("compact_summary_timestamp_validated=%t\n", r.CompactSummaryTimestampValidated))
+	b.WriteString(fmt.Sprintf("compact_summary_timestamp_event=%s\n", valueOrNone(r.CompactSummaryTimestampEvent)))
 	b.WriteString(fmt.Sprintf("compact_summary_parent_tool_use_id_validated=%t\n", r.CompactSummaryParentToolUseIDValidated))
 	b.WriteString(fmt.Sprintf("compact_summary_parent_tool_use_id_event=%s\n", valueOrNone(r.CompactSummaryParentToolUseIDEvent)))
 	b.WriteString(fmt.Sprintf("replayed_user_message_validated=%t\n", r.ReplayedUserMessageValidated))
 	b.WriteString(fmt.Sprintf("replayed_user_message_event=%s\n", valueOrNone(r.ReplayedUserMessageEvent)))
 	b.WriteString(fmt.Sprintf("replayed_user_synthetic_validated=%t\n", r.ReplayedUserSyntheticValidated))
 	b.WriteString(fmt.Sprintf("replayed_user_synthetic_event=%s\n", valueOrNone(r.ReplayedUserSyntheticEvent)))
+	b.WriteString(fmt.Sprintf("replayed_user_timestamp_validated=%t\n", r.ReplayedUserTimestampValidated))
+	b.WriteString(fmt.Sprintf("replayed_user_timestamp_event=%s\n", valueOrNone(r.ReplayedUserTimestampEvent)))
 	b.WriteString(fmt.Sprintf("replayed_user_parent_tool_use_id_validated=%t\n", r.ReplayedUserParentToolUseIDValidated))
 	b.WriteString(fmt.Sprintf("replayed_user_parent_tool_use_id_event=%s\n", valueOrNone(r.ReplayedUserParentToolUseIDEvent)))
 	b.WriteString(fmt.Sprintf("replayed_queued_command_validated=%t\n", r.ReplayedQueuedCommandValidated))
 	b.WriteString(fmt.Sprintf("replayed_queued_command_event=%s\n", valueOrNone(r.ReplayedQueuedCommandEvent)))
 	b.WriteString(fmt.Sprintf("replayed_queued_command_synthetic_validated=%t\n", r.ReplayedQueuedCommandSyntheticValidated))
 	b.WriteString(fmt.Sprintf("replayed_queued_command_synthetic_event=%s\n", valueOrNone(r.ReplayedQueuedCommandSyntheticEvent)))
+	b.WriteString(fmt.Sprintf("replayed_queued_command_timestamp_validated=%t\n", r.ReplayedQueuedCommandTimestampValidated))
+	b.WriteString(fmt.Sprintf("replayed_queued_command_timestamp_event=%s\n", valueOrNone(r.ReplayedQueuedCommandTimestampEvent)))
 	b.WriteString(fmt.Sprintf("replayed_queued_command_parent_tool_use_id_validated=%t\n", r.ReplayedQueuedCommandParentToolUseIDValidated))
 	b.WriteString(fmt.Sprintf("replayed_queued_command_parent_tool_use_id_event=%s\n", valueOrNone(r.ReplayedQueuedCommandParentToolUseIDEvent)))
 	b.WriteString(fmt.Sprintf("replayed_tool_result_validated=%t\n", r.ReplayedToolResultValidated))
 	b.WriteString(fmt.Sprintf("replayed_tool_result_event=%s\n", valueOrNone(r.ReplayedToolResultEvent)))
 	b.WriteString(fmt.Sprintf("replayed_tool_result_synthetic_validated=%t\n", r.ReplayedToolResultSyntheticValidated))
 	b.WriteString(fmt.Sprintf("replayed_tool_result_synthetic_event=%s\n", valueOrNone(r.ReplayedToolResultSyntheticEvent)))
+	b.WriteString(fmt.Sprintf("replayed_tool_result_timestamp_validated=%t\n", r.ReplayedToolResultTimestampValidated))
+	b.WriteString(fmt.Sprintf("replayed_tool_result_timestamp_event=%s\n", valueOrNone(r.ReplayedToolResultTimestampEvent)))
 	b.WriteString(fmt.Sprintf("replayed_tool_result_parent_tool_use_id_validated=%t\n", r.ReplayedToolResultParentToolUseIDValidated))
 	b.WriteString(fmt.Sprintf("replayed_tool_result_parent_tool_use_id_event=%s\n", valueOrNone(r.ReplayedToolResultParentToolUseIDEvent)))
 	b.WriteString(fmt.Sprintf("replayed_assistant_message_validated=%t\n", r.ReplayedAssistantMessageValidated))
@@ -3339,12 +3428,16 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("replayed_local_command_breadcrumb_event=%s\n", valueOrNone(r.ReplayedLocalCommandBreadcrumbEvent)))
 	b.WriteString(fmt.Sprintf("replayed_local_command_breadcrumb_synthetic_validated=%t\n", r.ReplayedLocalCommandBreadcrumbSyntheticValidated))
 	b.WriteString(fmt.Sprintf("replayed_local_command_breadcrumb_synthetic_event=%s\n", valueOrNone(r.ReplayedLocalCommandBreadcrumbSyntheticEvent)))
+	b.WriteString(fmt.Sprintf("replayed_local_command_breadcrumb_timestamp_validated=%t\n", r.ReplayedLocalCommandBreadcrumbTimestampValidated))
+	b.WriteString(fmt.Sprintf("replayed_local_command_breadcrumb_timestamp_event=%s\n", valueOrNone(r.ReplayedLocalCommandBreadcrumbTimestampEvent)))
 	b.WriteString(fmt.Sprintf("replayed_local_command_breadcrumb_parent_tool_use_id_validated=%t\n", r.ReplayedLocalCommandBreadcrumbParentToolUseIDValidated))
 	b.WriteString(fmt.Sprintf("replayed_local_command_breadcrumb_parent_tool_use_id_event=%s\n", valueOrNone(r.ReplayedLocalCommandBreadcrumbParentToolUseIDEvent)))
 	b.WriteString(fmt.Sprintf("replayed_local_command_stderr_breadcrumb_validated=%t\n", r.ReplayedLocalCommandStderrBreadcrumbValidated))
 	b.WriteString(fmt.Sprintf("replayed_local_command_stderr_breadcrumb_event=%s\n", valueOrNone(r.ReplayedLocalCommandStderrBreadcrumbEvent)))
 	b.WriteString(fmt.Sprintf("replayed_local_command_stderr_breadcrumb_synthetic_validated=%t\n", r.ReplayedLocalCommandStderrBreadcrumbSyntheticValidated))
 	b.WriteString(fmt.Sprintf("replayed_local_command_stderr_breadcrumb_synthetic_event=%s\n", valueOrNone(r.ReplayedLocalCommandStderrBreadcrumbSyntheticEvent)))
+	b.WriteString(fmt.Sprintf("replayed_local_command_stderr_breadcrumb_timestamp_validated=%t\n", r.ReplayedLocalCommandStderrBreadcrumbTimestampValidated))
+	b.WriteString(fmt.Sprintf("replayed_local_command_stderr_breadcrumb_timestamp_event=%s\n", valueOrNone(r.ReplayedLocalCommandStderrBreadcrumbTimestampEvent)))
 	b.WriteString(fmt.Sprintf("replayed_local_command_stderr_breadcrumb_parent_tool_use_id_validated=%t\n", r.ReplayedLocalCommandStderrBreadcrumbParentToolUseIDValidated))
 	b.WriteString(fmt.Sprintf("replayed_local_command_stderr_breadcrumb_parent_tool_use_id_event=%s\n", valueOrNone(r.ReplayedLocalCommandStderrBreadcrumbParentToolUseIDEvent)))
 	b.WriteString(fmt.Sprintf("auth_validated=%t\n", r.AuthValidated))

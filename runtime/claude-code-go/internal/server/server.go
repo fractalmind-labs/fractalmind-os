@@ -594,6 +594,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				"uuid":               replayUUID,
 				"session_id":         session.ID,
 				"parent_tool_use_id": nil,
+				"timestamp":          time.Now().UTC().Format(time.RFC3339Nano),
 				"message": map[string]any{
 					"role": "user",
 					"content": []map[string]any{
@@ -617,6 +618,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				"uuid":               replayUUID,
 				"session_id":         session.ID,
 				"parent_tool_use_id": nil,
+				"timestamp":          time.Now().UTC().Format(time.RFC3339Nano),
 				"tool_use_result": map[string]any{
 					"tool_use_id": session.LastToolUseID,
 					"content":     session.LastToolResult,
@@ -681,6 +683,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				"uuid":               replayUUID,
 				"session_id":         session.ID,
 				"parent_tool_use_id": nil,
+				"timestamp":          time.Now().UTC().Format(time.RFC3339Nano),
 				"message": map[string]any{
 					"role":    "user",
 					"content": session.LastLocalBreadcrumb,
@@ -699,6 +702,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				"uuid":               replayUUID,
 				"session_id":         session.ID,
 				"parent_tool_use_id": nil,
+				"timestamp":          time.Now().UTC().Format(time.RFC3339Nano),
 				"message": map[string]any{
 					"role":    "user",
 					"content": session.LastLocalErrBreadcrumb,
@@ -717,6 +721,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				"uuid":               replayUUID,
 				"session_id":         session.ID,
 				"parent_tool_use_id": nil,
+				"timestamp":          time.Now().UTC().Format(time.RFC3339Nano),
 				"message": map[string]any{
 					"role":    "user",
 					"content": session.LastQueuedCommand,

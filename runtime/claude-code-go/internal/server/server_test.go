@@ -2811,7 +2811,7 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	if err := ws.ReadJSON(&replayedUser); err != nil {
 		t.Fatalf("read replayed user failed: %v", err)
 	}
-	if replayedUser["type"] != "user" || replayedUser["isReplay"] != true || replayedUser["isSynthetic"] != false || strings.TrimSpace(asString(replayedUser["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedUser["uuid"])) == "" {
+	if replayedUser["type"] != "user" || replayedUser["isReplay"] != true || replayedUser["isSynthetic"] != false || strings.TrimSpace(asString(replayedUser["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedUser["uuid"])) == "" || strings.TrimSpace(asString(replayedUser["timestamp"])) == "" {
 		t.Fatalf("unexpected replayed user payload: %#v", replayedUser)
 	}
 	if replayedUser["parent_tool_use_id"] != nil {
@@ -2825,7 +2825,7 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	if err := ws.ReadJSON(&replayedToolResult); err != nil {
 		t.Fatalf("read replayed tool_result failed: %v", err)
 	}
-	if replayedToolResult["type"] != "user" || replayedToolResult["isReplay"] != true || replayedToolResult["isSynthetic"] != true || strings.TrimSpace(asString(replayedToolResult["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedToolResult["uuid"])) == "" {
+	if replayedToolResult["type"] != "user" || replayedToolResult["isReplay"] != true || replayedToolResult["isSynthetic"] != true || strings.TrimSpace(asString(replayedToolResult["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedToolResult["uuid"])) == "" || strings.TrimSpace(asString(replayedToolResult["timestamp"])) == "" {
 		t.Fatalf("unexpected replayed tool_result payload: %#v", replayedToolResult)
 	}
 	if replayedToolResult["parent_tool_use_id"] != nil {
@@ -2888,7 +2888,7 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	if err := ws.ReadJSON(&replayedLocalBreadcrumb); err != nil {
 		t.Fatalf("read replayed local-command breadcrumb failed: %v", err)
 	}
-	if replayedLocalBreadcrumb["type"] != "user" || replayedLocalBreadcrumb["isReplay"] != true || replayedLocalBreadcrumb["isSynthetic"] != true || strings.TrimSpace(asString(replayedLocalBreadcrumb["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedLocalBreadcrumb["uuid"])) == "" {
+	if replayedLocalBreadcrumb["type"] != "user" || replayedLocalBreadcrumb["isReplay"] != true || replayedLocalBreadcrumb["isSynthetic"] != true || strings.TrimSpace(asString(replayedLocalBreadcrumb["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedLocalBreadcrumb["uuid"])) == "" || strings.TrimSpace(asString(replayedLocalBreadcrumb["timestamp"])) == "" {
 		t.Fatalf("unexpected replayed local-command breadcrumb payload: %#v", replayedLocalBreadcrumb)
 	}
 	if replayedLocalBreadcrumb["parent_tool_use_id"] != nil {
@@ -2905,7 +2905,7 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	if err := ws.ReadJSON(&replayedLocalErrBreadcrumb); err != nil {
 		t.Fatalf("read replayed local-command stderr breadcrumb failed: %v", err)
 	}
-	if replayedLocalErrBreadcrumb["type"] != "user" || replayedLocalErrBreadcrumb["isReplay"] != true || replayedLocalErrBreadcrumb["isSynthetic"] != true || strings.TrimSpace(asString(replayedLocalErrBreadcrumb["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedLocalErrBreadcrumb["uuid"])) == "" {
+	if replayedLocalErrBreadcrumb["type"] != "user" || replayedLocalErrBreadcrumb["isReplay"] != true || replayedLocalErrBreadcrumb["isSynthetic"] != true || strings.TrimSpace(asString(replayedLocalErrBreadcrumb["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedLocalErrBreadcrumb["uuid"])) == "" || strings.TrimSpace(asString(replayedLocalErrBreadcrumb["timestamp"])) == "" {
 		t.Fatalf("unexpected replayed local-command stderr breadcrumb payload: %#v", replayedLocalErrBreadcrumb)
 	}
 	if replayedLocalErrBreadcrumb["parent_tool_use_id"] != nil {
@@ -2922,7 +2922,7 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	if err := ws.ReadJSON(&replayedQueuedCommand); err != nil {
 		t.Fatalf("read replayed queued_command failed: %v", err)
 	}
-	if replayedQueuedCommand["type"] != "user" || replayedQueuedCommand["isReplay"] != true || replayedQueuedCommand["isSynthetic"] != true || strings.TrimSpace(asString(replayedQueuedCommand["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedQueuedCommand["uuid"])) == "" {
+	if replayedQueuedCommand["type"] != "user" || replayedQueuedCommand["isReplay"] != true || replayedQueuedCommand["isSynthetic"] != true || strings.TrimSpace(asString(replayedQueuedCommand["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedQueuedCommand["uuid"])) == "" || strings.TrimSpace(asString(replayedQueuedCommand["timestamp"])) == "" {
 		t.Fatalf("unexpected replayed queued_command payload: %#v", replayedQueuedCommand)
 	}
 	if replayedQueuedCommand["parent_tool_use_id"] != nil {
