@@ -125,6 +125,8 @@ type Result struct {
 	ResultEvent                                                  string
 	ResultStructuredOutputValidated                              bool
 	ResultStructuredOutputEvent                                  string
+	ResultUsageValidated                                         bool
+	ResultUsageEvent                                             string
 	ResultModelUsageValidated                                    bool
 	ResultModelUsageEvent                                        string
 	ResultPermissionDenialsValidated                             bool
@@ -420,6 +422,8 @@ func Run(args []string) (Result, error) {
 		ResultEvent:                                                  streamResult.ResultEvent,
 		ResultStructuredOutputValidated:                              streamResult.ResultStructuredOutputValidated,
 		ResultStructuredOutputEvent:                                  streamResult.ResultStructuredOutputEvent,
+		ResultUsageValidated:                                         streamResult.ResultUsageValidated,
+		ResultUsageEvent:                                             streamResult.ResultUsageEvent,
 		ResultModelUsageValidated:                                    streamResult.ResultModelUsageValidated,
 		ResultModelUsageEvent:                                        streamResult.ResultModelUsageEvent,
 		ResultPermissionDenialsValidated:                             streamResult.ResultPermissionDenialsValidated,
@@ -945,6 +949,8 @@ type streamValidation struct {
 	ResultEvent                                                  string
 	ResultStructuredOutputValidated                              bool
 	ResultStructuredOutputEvent                                  string
+	ResultUsageValidated                                         bool
+	ResultUsageEvent                                             string
 	ResultModelUsageValidated                                    bool
 	ResultModelUsageEvent                                        string
 	ResultPermissionDenialsValidated                             bool
@@ -2088,6 +2094,13 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if strings.TrimSpace(asString(structuredOutput["text"])) != turn.expectedResponse {
 						return streamValidation{}, fmt.Errorf("invalid result structured_output.text: expected %q, got %q", turn.expectedResponse, strings.TrimSpace(asString(structuredOutput["text"])))
 					}
+					usage, _ := incoming["usage"].(map[string]any)
+					serverToolUse, _ := usage["server_tool_use"].(map[string]any)
+					cacheCreation, _ := usage["cache_creation"].(map[string]any)
+					iterations, _ := usage["iterations"].([]any)
+					if intFromAny(usage["input_tokens"]) != 0 || intFromAny(usage["cache_creation_input_tokens"]) != 0 || intFromAny(usage["cache_read_input_tokens"]) != 0 || intFromAny(usage["output_tokens"]) != 0 || intFromAny(serverToolUse["web_search_requests"]) != 0 || intFromAny(serverToolUse["web_fetch_requests"]) != 0 || strings.TrimSpace(asString(usage["service_tier"])) != "standard" || intFromAny(cacheCreation["ephemeral_1h_input_tokens"]) != 0 || intFromAny(cacheCreation["ephemeral_5m_input_tokens"]) != 0 || strings.TrimSpace(asString(usage["inference_geo"])) != "" || len(iterations) != 0 || strings.TrimSpace(asString(usage["speed"])) != "standard" {
+						return streamValidation{}, fmt.Errorf("invalid result usage: unexpected zero-value payload")
+					}
 					modelUsage, _ := incoming["modelUsage"].(map[string]any)
 					modelUsageEntry, _ := modelUsage["claude-sonnet-4-5"].(map[string]any)
 					if len(modelUsageEntry) == 0 {
@@ -2104,6 +2117,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.ResultEvent = "result:success"
 					result.ResultStructuredOutputValidated = true
 					result.ResultStructuredOutputEvent = "result:success:structured_output"
+					result.ResultUsageValidated = true
+					result.ResultUsageEvent = "result:success:usage"
 					result.ResultModelUsageValidated = true
 					result.ResultModelUsageEvent = "result:success:modelUsage"
 					result.ResultPermissionDenialsValidated = true
@@ -3589,6 +3604,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("result_event=%s\n", valueOrNone(r.ResultEvent)))
 	b.WriteString(fmt.Sprintf("result_structured_output_validated=%t\n", r.ResultStructuredOutputValidated))
 	b.WriteString(fmt.Sprintf("result_structured_output_event=%s\n", valueOrNone(r.ResultStructuredOutputEvent)))
+	b.WriteString(fmt.Sprintf("result_usage_validated=%t\n", r.ResultUsageValidated))
+	b.WriteString(fmt.Sprintf("result_usage_event=%s\n", valueOrNone(r.ResultUsageEvent)))
 	b.WriteString(fmt.Sprintf("result_model_usage_validated=%t\n", r.ResultModelUsageValidated))
 	b.WriteString(fmt.Sprintf("result_model_usage_event=%s\n", valueOrNone(r.ResultModelUsageEvent)))
 	b.WriteString(fmt.Sprintf("result_permission_denials_validated=%t\n", r.ResultPermissionDenialsValidated))

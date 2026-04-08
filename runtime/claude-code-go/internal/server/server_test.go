@@ -370,6 +370,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(structuredOutput["text"])) != "echo:hello [approved]" {
 		t.Fatalf("unexpected result structured_output: %#v", result)
 	}
+	usage, _ := result["usage"].(map[string]any)
+	serverToolUse, _ := usage["server_tool_use"].(map[string]any)
+	cacheCreation, _ := usage["cache_creation"].(map[string]any)
+	iterations, _ := usage["iterations"].([]any)
+	if intFromAny(usage["input_tokens"]) != 0 || intFromAny(usage["cache_creation_input_tokens"]) != 0 || intFromAny(usage["cache_read_input_tokens"]) != 0 || intFromAny(usage["output_tokens"]) != 0 || intFromAny(serverToolUse["web_search_requests"]) != 0 || intFromAny(serverToolUse["web_fetch_requests"]) != 0 || strings.TrimSpace(asString(usage["service_tier"])) != "standard" || intFromAny(cacheCreation["ephemeral_1h_input_tokens"]) != 0 || intFromAny(cacheCreation["ephemeral_5m_input_tokens"]) != 0 || strings.TrimSpace(asString(usage["inference_geo"])) != "" || len(iterations) != 0 || strings.TrimSpace(asString(usage["speed"])) != "standard" {
+		t.Fatalf("unexpected result usage: %#v", result)
+	}
 	modelUsage, _ := result["modelUsage"].(map[string]any)
 	modelUsageEntry, _ := modelUsage["claude-sonnet-4-5"].(map[string]any)
 	if len(modelUsageEntry) == 0 || intFromAny(modelUsageEntry["inputTokens"]) != 0 || intFromAny(modelUsageEntry["outputTokens"]) != 0 || intFromAny(modelUsageEntry["cacheReadInputTokens"]) != 0 || intFromAny(modelUsageEntry["cacheCreationInputTokens"]) != 0 || intFromAny(modelUsageEntry["webSearchRequests"]) != 0 || intFromAny(modelUsageEntry["contextWindow"]) != 0 || float64FromAny(modelUsageEntry["costUSD"]) != 0 {
@@ -711,6 +718,13 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondStructuredOutput, _ := secondResult["structured_output"].(map[string]any)
 	if strings.TrimSpace(asString(secondStructuredOutput["text"])) != "echo:hello again [approved]" {
 		t.Fatalf("unexpected second result structured_output: %#v", secondResult)
+	}
+	secondUsage, _ := secondResult["usage"].(map[string]any)
+	secondServerToolUse, _ := secondUsage["server_tool_use"].(map[string]any)
+	secondCacheCreation, _ := secondUsage["cache_creation"].(map[string]any)
+	secondIterations, _ := secondUsage["iterations"].([]any)
+	if intFromAny(secondUsage["input_tokens"]) != 0 || intFromAny(secondUsage["cache_creation_input_tokens"]) != 0 || intFromAny(secondUsage["cache_read_input_tokens"]) != 0 || intFromAny(secondUsage["output_tokens"]) != 0 || intFromAny(secondServerToolUse["web_search_requests"]) != 0 || intFromAny(secondServerToolUse["web_fetch_requests"]) != 0 || strings.TrimSpace(asString(secondUsage["service_tier"])) != "standard" || intFromAny(secondCacheCreation["ephemeral_1h_input_tokens"]) != 0 || intFromAny(secondCacheCreation["ephemeral_5m_input_tokens"]) != 0 || strings.TrimSpace(asString(secondUsage["inference_geo"])) != "" || len(secondIterations) != 0 || strings.TrimSpace(asString(secondUsage["speed"])) != "standard" {
+		t.Fatalf("unexpected second result usage: %#v", secondResult)
 	}
 	secondModelUsage, _ := secondResult["modelUsage"].(map[string]any)
 	secondModelUsageEntry, _ := secondModelUsage["claude-sonnet-4-5"].(map[string]any)

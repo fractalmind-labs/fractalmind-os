@@ -1134,7 +1134,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"structured_output":  map[string]any{"text": responseText},
 					"stop_reason":        nil,
 					"total_cost_usd":     0,
-					"usage":              map[string]any{},
+					"usage":              minimalUsage(),
 					"modelUsage":         map[string]any{"claude-sonnet-4-5": minimalModelUsage()},
 					"permission_denials": []map[string]any{},
 					"fast_mode_state":    "off",
@@ -1839,5 +1839,26 @@ func minimalModelUsage() map[string]any {
 		"webSearchRequests":        0,
 		"costUSD":                  0,
 		"contextWindow":            0,
+	}
+}
+
+func minimalUsage() map[string]any {
+	return map[string]any{
+		"input_tokens":                0,
+		"cache_creation_input_tokens": 0,
+		"cache_read_input_tokens":     0,
+		"output_tokens":               0,
+		"server_tool_use": map[string]any{
+			"web_search_requests": 0,
+			"web_fetch_requests":  0,
+		},
+		"service_tier": "standard",
+		"cache_creation": map[string]any{
+			"ephemeral_1h_input_tokens": 0,
+			"ephemeral_5m_input_tokens": 0,
+		},
+		"inference_geo": "",
+		"iterations":    []any{},
+		"speed":         "standard",
 	}
 }

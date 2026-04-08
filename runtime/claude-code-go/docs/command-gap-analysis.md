@@ -117,6 +117,7 @@
 - success `result` 本轮再补最小 official-compatible `structured_output` shape：server 固定返回 `structured_output:{text:<same result>}`，`open --print` 新增 `result_structured_output_validated=true / result_structured_output_event=result:success:structured_output`；该 path 只保证 shape 稳定、可验证，不实现上游完整 structured-output tool 语义、schema 驱动重试或 tool bridge。
 - success `result` 的 `modelUsage` 本轮也补最小 official-compatible shape 校验：server 固定返回 `modelUsage:{"claude-sonnet-4-5": {inputTokens, outputTokens, cacheReadInputTokens, cacheCreationInputTokens, webSearchRequests, costUSD, contextWindow}}` 的全 0 stub，`open --print` 新增 `result_model_usage_validated=true / result_model_usage_event=result:success:modelUsage`；该 path 只保证 shape 稳定、可验证，不实现上游完整 cost/model accounting 语义。
 - success `result` 的 `permission_denials` 本轮也补最小 official-compatible shape 校验：server 固定返回空数组 `permission_denials:[]`，`open --print` 新增 `result_permission_denials_validated=true / result_permission_denials_event=result:success:permission_denials`；该 path 只保证 shape 稳定、可验证，不实现上游完整 permission analytics 或 richer denial recovery 语义。
+- success `result` 的 `usage` 本轮也补最小 official-compatible shape 校验：server 不再返回空 map，而是固定返回与上游 `EMPTY_USAGE` 对齐的零值 usage object，`open --print` 新增 `result_usage_validated=true / result_usage_event=result:success:usage`；该 path 只保证 shape 稳定、可验证，不实现上游完整 token accounting、cost aggregation 或 iteration tracking 语义。
 - 更接近官方安装体验的远端版本清单 / release 元数据发现（当前最小实现仅支持显式 `--source-url`）
 
 这意味着当前 Go CLI 已具备“可启动 + 可鉴权 + 可发最小请求 + 最小安装/升级 + agents 配置枚举”的骨架，但距离完整官方体验仍有多块命令面差距。

@@ -99,6 +99,7 @@
 - 本轮额外补了 success `result` 的最小 official-compatible `structured_output` shape：server 现固定返回 `structured_output:{text:<same result>}`，`open --print` 会额外输出 `result_structured_output_validated=true` 与 `result_structured_output_event=result:success:structured_output`；该字段只保证 shape 稳定、可验证，不实现上游完整 structured-output tool 语义、schema 驱动重试或 tool bridge。
 - success `result` 的 `modelUsage` 本轮也收紧为显式校验路径：server 继续固定返回 `modelUsage:{"claude-sonnet-4-5": {inputTokens, outputTokens, cacheReadInputTokens, cacheCreationInputTokens, webSearchRequests, costUSD, contextWindow}}` 的全 0 stub，`open --print` 新增 `result_model_usage_validated=true` 与 `result_model_usage_event=result:success:modelUsage`；该字段只保证最小 official-compatible shape 稳定，不实现上游完整 cost/model accounting 语义。
 - success `result` 的 `permission_denials` 本轮也收紧为显式校验路径：server 继续固定返回空数组 `permission_denials:[]`，`open --print` 新增 `result_permission_denials_validated=true` 与 `result_permission_denials_event=result:success:permission_denials`；该字段只保证最小 official-compatible shape 稳定，不实现上游完整 permission analytics 或 richer denial recovery 语义。
+- success `result` 的 `usage` 本轮也收紧为显式校验路径：server 不再返回空 map，而是固定返回与上游 `EMPTY_USAGE` 对齐的零值对象，`open --print` 新增 `result_usage_validated=true` 与 `result_usage_event=result:success:usage`；该字段只保证最小 official-compatible shape 稳定，不实现上游完整 token accounting、cost aggregation 或 iteration tracking 语义。
 - `project settings` 故意不参与 `auto-mode config` 合并，跟随源仓库的安全边界
 - 默认规则集目前是 **最小兼容基线**，已对齐输出 JSON 形状与 section fallback 语义，但尚未逐字对齐官方模板文本
 
@@ -127,6 +128,7 @@ curl -H 'Authorization: Bearer demo-token' http://127.0.0.1:7777/sessions/<sessi
 # success `result` 现还会包含 `result_structured_output_validated=true` / `result_structured_output_event=result:success:structured_output`；server 对应字段 shape 固定为 `structured_output:{text:<same result>}`
 # success `result` 现还会包含 `result_model_usage_validated=true` / `result_model_usage_event=result:success:modelUsage`；server 对应字段 shape 固定为 `modelUsage:{"claude-sonnet-4-5": {all-zero counters}}`
 # success `result` 现还会包含 `result_permission_denials_validated=true` / `result_permission_denials_event=result:success:permission_denials`；server 对应字段 shape 固定为 `permission_denials:[]`
+# success `result` 现还会包含 `result_usage_validated=true` / `result_usage_event=result:success:usage`；server 对应字段 shape 固定为与上游 `EMPTY_USAGE` 对齐的零值 usage object
 # 其中 direct-connect user message 现额外校验最小 `timestamp` shape：`compact_summary_timestamp_validated=true` 以及 `replayed_{user|queued_command|tool_result|local_command_breadcrumb|local_command_stderr_breadcrumb}_timestamp_validated=true`；仅保证字段存在，不恢复真实 transcript timeline / ordering / provenance
 # fresh live direct-connect 首条 user turn 现额外校验最小 initial user ACK replay：`acked_initial_user_replay_validated=true` / `acked_initial_user_replay_event=user:initial_ack:isReplay`；该 ACK replay 仅补最近 1 条首条 user text 回放，不扩展为多条队列、完整 transcript rebuild 或 timeline 排序
 # `server` 输出会包含 `lockfile_path=...` / `session_index_path=...`
