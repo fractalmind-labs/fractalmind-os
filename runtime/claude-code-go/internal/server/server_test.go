@@ -523,6 +523,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(taskNotification["task_id"])) != strings.TrimSpace(asString(taskStarted["task_id"])) || strings.TrimSpace(asString(taskNotification["tool_use_id"])) != strings.TrimSpace(asString(request["tool_use_id"])) || strings.TrimSpace(asString(taskNotification["status"])) != "completed" || strings.TrimSpace(asString(taskNotification["output_file"])) == "" || strings.TrimSpace(asString(taskNotification["summary"])) != "echo:hello [approved]" || int(taskNotificationUsage["tool_uses"].(float64)) != 1 {
 		t.Fatalf("invalid task_notification payload: %#v", taskNotification)
 	}
+	var taskStatusAttachment map[string]any
+	if err := ws.ReadJSON(&taskStatusAttachment); err != nil {
+		t.Fatalf("read task_status attachment failed: %v", err)
+	}
+	if taskStatusAttachment["type"] != "attachment" || strings.TrimSpace(asString(taskStatusAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected task_status attachment envelope: %#v", taskStatusAttachment)
+	}
+	taskStatusPayload, _ := taskStatusAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(taskStatusPayload["type"])) != "task_status" || strings.TrimSpace(asString(taskStatusPayload["taskId"])) != strings.TrimSpace(asString(taskStarted["task_id"])) || strings.TrimSpace(asString(taskStatusPayload["taskType"])) != "local_bash" || strings.TrimSpace(asString(taskStatusPayload["status"])) != "completed" || strings.TrimSpace(asString(taskStatusPayload["description"])) != "direct-connect echo task" || strings.TrimSpace(asString(taskStatusPayload["deltaSummary"])) != "echo:hello [approved]" || strings.TrimSpace(asString(taskStatusPayload["outputFilePath"])) == "" {
+		t.Fatalf("unexpected task_status attachment payload: %#v", taskStatusAttachment)
+	}
 	var filesPersisted map[string]any
 	if err := ws.ReadJSON(&filesPersisted); err != nil {
 		t.Fatalf("read files_persisted failed: %v", err)
@@ -990,6 +1001,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondTaskNotificationUsage, _ := secondTaskNotification["usage"].(map[string]any)
 	if strings.TrimSpace(asString(secondTaskNotification["task_id"])) != strings.TrimSpace(asString(secondTaskStarted["task_id"])) || strings.TrimSpace(asString(secondTaskNotification["tool_use_id"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) || strings.TrimSpace(asString(secondTaskNotification["status"])) != "completed" || strings.TrimSpace(asString(secondTaskNotification["output_file"])) == "" || strings.TrimSpace(asString(secondTaskNotification["summary"])) != "echo:hello again [approved]" || int(secondTaskNotificationUsage["tool_uses"].(float64)) != 1 {
 		t.Fatalf("invalid second task_notification payload: %#v", secondTaskNotification)
+	}
+	var secondTaskStatusAttachment map[string]any
+	if err := ws.ReadJSON(&secondTaskStatusAttachment); err != nil {
+		t.Fatalf("read second task_status attachment failed: %v", err)
+	}
+	if secondTaskStatusAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondTaskStatusAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second task_status attachment envelope: %#v", secondTaskStatusAttachment)
+	}
+	secondTaskStatusPayload, _ := secondTaskStatusAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondTaskStatusPayload["type"])) != "task_status" || strings.TrimSpace(asString(secondTaskStatusPayload["taskId"])) != strings.TrimSpace(asString(secondTaskStarted["task_id"])) || strings.TrimSpace(asString(secondTaskStatusPayload["taskType"])) != "local_bash" || strings.TrimSpace(asString(secondTaskStatusPayload["status"])) != "completed" || strings.TrimSpace(asString(secondTaskStatusPayload["description"])) != "direct-connect echo task" || strings.TrimSpace(asString(secondTaskStatusPayload["deltaSummary"])) != "echo:hello again [approved]" || strings.TrimSpace(asString(secondTaskStatusPayload["outputFilePath"])) == "" {
+		t.Fatalf("unexpected second task_status attachment payload: %#v", secondTaskStatusAttachment)
 	}
 	var secondFilesPersisted map[string]any
 	if err := ws.ReadJSON(&secondFilesPersisted); err != nil {

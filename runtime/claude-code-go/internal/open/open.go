@@ -71,6 +71,8 @@ type Result struct {
 	StructuredOutputAttachmentEvent                              string
 	MaxTurnsReachedAttachmentValidated                           bool
 	MaxTurnsReachedAttachmentEvent                               string
+	TaskStatusAttachmentValidated                                bool
+	TaskStatusAttachmentEvent                                    string
 	StreamlinedTextValidated                                     bool
 	StreamlinedTextEvent                                         string
 	SystemValidated                                              bool
@@ -402,6 +404,8 @@ func Run(args []string) (Result, error) {
 		StructuredOutputAttachmentEvent:                              streamResult.StructuredOutputAttachmentEvent,
 		MaxTurnsReachedAttachmentValidated:                           streamResult.MaxTurnsReachedAttachmentValidated,
 		MaxTurnsReachedAttachmentEvent:                               streamResult.MaxTurnsReachedAttachmentEvent,
+		TaskStatusAttachmentValidated:                                streamResult.TaskStatusAttachmentValidated,
+		TaskStatusAttachmentEvent:                                    streamResult.TaskStatusAttachmentEvent,
 		StreamlinedTextValidated:                                     streamResult.StreamlinedTextValidated,
 		StreamlinedTextEvent:                                         streamResult.StreamlinedTextEvent,
 		SystemValidated:                                              streamResult.SystemValidated,
@@ -963,6 +967,8 @@ type streamValidation struct {
 	StructuredOutputAttachmentEvent                              string
 	MaxTurnsReachedAttachmentValidated                           bool
 	MaxTurnsReachedAttachmentEvent                               string
+	TaskStatusAttachmentValidated                                bool
+	TaskStatusAttachmentEvent                                    string
 	StreamlinedTextValidated                                     bool
 	StreamlinedTextEvent                                         string
 	SystemValidated                                              bool
@@ -1267,6 +1273,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		currentToolUseID := ""
 		currentRequestID := ""
 		currentTaskID := ""
+		currentTaskDescription := ""
 		if err := conn.WriteJSON(map[string]any{
 			"type": "user",
 			"message": map[string]any{
@@ -1607,6 +1614,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 						return streamValidation{}, fmt.Errorf("invalid task_started: expected prompt=%q, got %q", turn.approvedPrompt, strings.TrimSpace(asString(incoming["prompt"])))
 					}
 					currentTaskID = strings.TrimSpace(asString(incoming["task_id"]))
+					currentTaskDescription = strings.TrimSpace(asString(incoming["description"]))
 					result.TaskStartedValidated = true
 					result.TaskStartedEvent = "system:task_started"
 					taskStartedValidated = true
@@ -2110,6 +2118,34 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.MaxTurnsReachedAttachmentValidated = true
 					result.MaxTurnsReachedAttachmentEvent = "attachment:max_turns_reached"
 					maxTurnsReachedAttachmentValidated = true
+				case "task_status":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected task_status attachment during %s turn", turn.behavior)
+					}
+					if strings.TrimSpace(asString(attachment["taskId"])) != currentTaskID {
+						return streamValidation{}, fmt.Errorf("invalid task_status attachment.taskId: expected %q, got %q", currentTaskID, strings.TrimSpace(asString(attachment["taskId"])))
+					}
+					if strings.TrimSpace(asString(attachment["taskType"])) != "local_bash" {
+						return streamValidation{}, fmt.Errorf("invalid task_status attachment.taskType: expected %q, got %q", "local_bash", strings.TrimSpace(asString(attachment["taskType"])))
+					}
+					if strings.TrimSpace(asString(attachment["status"])) != "completed" {
+						return streamValidation{}, fmt.Errorf("invalid task_status attachment.status: expected %q, got %q", "completed", strings.TrimSpace(asString(attachment["status"])))
+					}
+					if strings.TrimSpace(asString(attachment["description"])) != currentTaskDescription {
+						return streamValidation{}, fmt.Errorf("invalid task_status attachment.description: expected %q, got %q", currentTaskDescription, strings.TrimSpace(asString(attachment["description"])))
+					}
+					deltaSummary, ok := attachment["deltaSummary"]
+					if !ok {
+						return streamValidation{}, fmt.Errorf("invalid task_status attachment: missing deltaSummary")
+					}
+					if strings.TrimSpace(asString(deltaSummary)) != turn.expectedResponse {
+						return streamValidation{}, fmt.Errorf("invalid task_status attachment.deltaSummary: expected %q, got %q", turn.expectedResponse, strings.TrimSpace(asString(deltaSummary)))
+					}
+					if strings.TrimSpace(asString(attachment["outputFilePath"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid task_status attachment: missing outputFilePath")
+					}
+					result.TaskStatusAttachmentValidated = true
+					result.TaskStatusAttachmentEvent = "attachment:task_status"
 				default:
 					return streamValidation{}, fmt.Errorf("invalid attachment type: %q", strings.TrimSpace(asString(attachment["type"])))
 				}
@@ -3885,6 +3921,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("structured_output_attachment_event=%s\n", valueOrNone(r.StructuredOutputAttachmentEvent)))
 	b.WriteString(fmt.Sprintf("max_turns_reached_attachment_validated=%t\n", r.MaxTurnsReachedAttachmentValidated))
 	b.WriteString(fmt.Sprintf("max_turns_reached_attachment_event=%s\n", valueOrNone(r.MaxTurnsReachedAttachmentEvent)))
+	b.WriteString(fmt.Sprintf("task_status_attachment_validated=%t\n", r.TaskStatusAttachmentValidated))
+	b.WriteString(fmt.Sprintf("task_status_attachment_event=%s\n", valueOrNone(r.TaskStatusAttachmentEvent)))
 	b.WriteString(fmt.Sprintf("streamlined_text_validated=%t\n", r.StreamlinedTextValidated))
 	b.WriteString(fmt.Sprintf("streamlined_text_event=%s\n", valueOrNone(r.StreamlinedTextEvent)))
 	b.WriteString(fmt.Sprintf("system_validated=%t\n", r.SystemValidated))
