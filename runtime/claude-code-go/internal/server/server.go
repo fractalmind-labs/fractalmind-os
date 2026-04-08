@@ -882,6 +882,20 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					pendingToolUseID = ""
 					continue
 				} else if behavior == "max_turns" {
+					attachmentUUID, err := generateRequestID()
+					if err != nil {
+						return
+					}
+					_ = conn.WriteJSON(map[string]any{
+						"type": "attachment",
+						"attachment": map[string]any{
+							"type":      "max_turns_reached",
+							"turnCount": completedTurns,
+							"maxTurns":  completedTurns,
+						},
+						"uuid":       attachmentUUID,
+						"session_id": session.ID,
+					})
 					resultUUID, err := generateRequestID()
 					if err != nil {
 						return

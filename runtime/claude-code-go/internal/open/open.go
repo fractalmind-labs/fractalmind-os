@@ -69,6 +69,8 @@ type Result struct {
 	AssistantUsageEvent                                          string
 	StructuredOutputAttachmentValidated                          bool
 	StructuredOutputAttachmentEvent                              string
+	MaxTurnsReachedAttachmentValidated                           bool
+	MaxTurnsReachedAttachmentEvent                               string
 	StreamlinedTextValidated                                     bool
 	StreamlinedTextEvent                                         string
 	SystemValidated                                              bool
@@ -398,6 +400,8 @@ func Run(args []string) (Result, error) {
 		AssistantUsageEvent:                                          streamResult.AssistantUsageEvent,
 		StructuredOutputAttachmentValidated:                          streamResult.StructuredOutputAttachmentValidated,
 		StructuredOutputAttachmentEvent:                              streamResult.StructuredOutputAttachmentEvent,
+		MaxTurnsReachedAttachmentValidated:                           streamResult.MaxTurnsReachedAttachmentValidated,
+		MaxTurnsReachedAttachmentEvent:                               streamResult.MaxTurnsReachedAttachmentEvent,
 		StreamlinedTextValidated:                                     streamResult.StreamlinedTextValidated,
 		StreamlinedTextEvent:                                         streamResult.StreamlinedTextEvent,
 		SystemValidated:                                              streamResult.SystemValidated,
@@ -957,6 +961,8 @@ type streamValidation struct {
 	AssistantUsageEvent                                          string
 	StructuredOutputAttachmentValidated                          bool
 	StructuredOutputAttachmentEvent                              string
+	MaxTurnsReachedAttachmentValidated                           bool
+	MaxTurnsReachedAttachmentEvent                               string
 	StreamlinedTextValidated                                     bool
 	StreamlinedTextEvent                                         string
 	SystemValidated                                              bool
@@ -1310,6 +1316,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		assistantStopReasonValidated := false
 		assistantUsageValidated := false
 		structuredOutputAttachmentValidated := false
+		maxTurnsReachedAttachmentValidated := false
 		streamlinedTextValidated := false
 		streamlinedToolUseSummaryValidated := false
 		promptSuggestionValidated := false
@@ -2078,19 +2085,34 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					return streamValidation{}, fmt.Errorf("invalid attachment: missing session_id")
 				}
 				attachment, _ := incoming["attachment"].(map[string]any)
-				if strings.TrimSpace(asString(attachment["type"])) != "structured_output" {
-					return streamValidation{}, fmt.Errorf("invalid attachment type: expected structured_output, got %q", strings.TrimSpace(asString(attachment["type"])))
+				switch strings.TrimSpace(asString(attachment["type"])) {
+				case "structured_output":
+					attachmentData, _ := attachment["data"].(map[string]any)
+					if len(attachmentData) == 0 {
+						return streamValidation{}, fmt.Errorf("invalid structured_output attachment: missing data object")
+					}
+					if strings.TrimSpace(asString(attachmentData["text"])) != turn.expectedResponse {
+						return streamValidation{}, fmt.Errorf("invalid structured_output attachment.text: expected %q, got %q", turn.expectedResponse, strings.TrimSpace(asString(attachmentData["text"])))
+					}
+					result.StructuredOutputAttachmentValidated = true
+					result.StructuredOutputAttachmentEvent = "attachment:structured_output"
+					structuredOutputAttachmentValidated = true
+				case "max_turns_reached":
+					if turn.behavior != "max_turns" {
+						return streamValidation{}, fmt.Errorf("unexpected max_turns_reached attachment during %s turn", turn.behavior)
+					}
+					if intFromAny(attachment["turnCount"]) != result.ValidatedTurns {
+						return streamValidation{}, fmt.Errorf("invalid max_turns_reached attachment.turnCount: expected %d, got %d", result.ValidatedTurns, intFromAny(attachment["turnCount"]))
+					}
+					if intFromAny(attachment["maxTurns"]) != result.ValidatedTurns {
+						return streamValidation{}, fmt.Errorf("invalid max_turns_reached attachment.maxTurns: expected %d, got %d", result.ValidatedTurns, intFromAny(attachment["maxTurns"]))
+					}
+					result.MaxTurnsReachedAttachmentValidated = true
+					result.MaxTurnsReachedAttachmentEvent = "attachment:max_turns_reached"
+					maxTurnsReachedAttachmentValidated = true
+				default:
+					return streamValidation{}, fmt.Errorf("invalid attachment type: %q", strings.TrimSpace(asString(attachment["type"])))
 				}
-				attachmentData, _ := attachment["data"].(map[string]any)
-				if len(attachmentData) == 0 {
-					return streamValidation{}, fmt.Errorf("invalid structured_output attachment: missing data object")
-				}
-				if strings.TrimSpace(asString(attachmentData["text"])) != turn.expectedResponse {
-					return streamValidation{}, fmt.Errorf("invalid structured_output attachment.text: expected %q, got %q", turn.expectedResponse, strings.TrimSpace(asString(attachmentData["text"])))
-				}
-				result.StructuredOutputAttachmentValidated = true
-				result.StructuredOutputAttachmentEvent = "attachment:structured_output"
-				structuredOutputAttachmentValidated = true
 			case "stream_event":
 				if turn.behavior == "deny" {
 					return streamValidation{}, fmt.Errorf("unexpected stream_event during deny turn")
@@ -2530,7 +2552,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 			if turn.behavior == "deny" && resultValidated {
 				break
 			}
-			if turn.behavior == "max_turns" && resultValidated {
+			if turn.behavior == "max_turns" && resultValidated && maxTurnsReachedAttachmentValidated {
 				break
 			}
 			if turn.behavior == "max_budget_usd" && resultValidated {
@@ -3861,6 +3883,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("assistant_usage_event=%s\n", valueOrNone(r.AssistantUsageEvent)))
 	b.WriteString(fmt.Sprintf("structured_output_attachment_validated=%t\n", r.StructuredOutputAttachmentValidated))
 	b.WriteString(fmt.Sprintf("structured_output_attachment_event=%s\n", valueOrNone(r.StructuredOutputAttachmentEvent)))
+	b.WriteString(fmt.Sprintf("max_turns_reached_attachment_validated=%t\n", r.MaxTurnsReachedAttachmentValidated))
+	b.WriteString(fmt.Sprintf("max_turns_reached_attachment_event=%s\n", valueOrNone(r.MaxTurnsReachedAttachmentEvent)))
 	b.WriteString(fmt.Sprintf("streamlined_text_validated=%t\n", r.StreamlinedTextValidated))
 	b.WriteString(fmt.Sprintf("streamlined_text_event=%s\n", valueOrNone(r.StreamlinedTextEvent)))
 	b.WriteString(fmt.Sprintf("system_validated=%t\n", r.SystemValidated))

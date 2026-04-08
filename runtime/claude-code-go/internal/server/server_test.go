@@ -1276,6 +1276,18 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 		t.Fatalf("write max-turns control response failed: %v", err)
 	}
 
+	var maxTurnsAttachment map[string]any
+	if err := ws.ReadJSON(&maxTurnsAttachment); err != nil {
+		t.Fatalf("read max-turns attachment failed: %v", err)
+	}
+	if maxTurnsAttachment["type"] != "attachment" {
+		t.Fatalf("unexpected max-turns attachment envelope: %#v", maxTurnsAttachment)
+	}
+	maxTurnsAttachmentPayload, _ := maxTurnsAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(maxTurnsAttachmentPayload["type"])) != "max_turns_reached" || intFromAny(maxTurnsAttachmentPayload["turnCount"]) != 2 || intFromAny(maxTurnsAttachmentPayload["maxTurns"]) != 2 {
+		t.Fatalf("unexpected max-turns attachment payload: %#v", maxTurnsAttachment)
+	}
+
 	var maxTurnsResult map[string]any
 	if err := ws.ReadJSON(&maxTurnsResult); err != nil {
 		t.Fatalf("read max-turns result event failed: %v", err)
