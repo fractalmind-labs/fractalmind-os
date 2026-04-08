@@ -1055,6 +1055,8 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				session.LastAssistant = responseText
 				store.put(session)
 				_ = sessionIndex.setBackendSnapshot(sessionID, session.WorkDir, session.Backend.snapshot())
+				thinkingText := "direct-connect stub thinking"
+				thinkingSignature := "sig-direct-connect-stub"
 				streamUUID, err := generateRequestID()
 				if err != nil {
 					return
@@ -1073,6 +1075,42 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":               streamUUID,
 					"session_id":         session.ID,
 				})
+				thinkingStreamUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "stream_event",
+					"event": map[string]any{
+						"type":  "content_block_delta",
+						"index": 0,
+						"delta": map[string]any{
+							"type":     "thinking_delta",
+							"thinking": thinkingText,
+						},
+					},
+					"parent_tool_use_id": nil,
+					"uuid":               thinkingStreamUUID,
+					"session_id":         session.ID,
+				})
+				signatureStreamUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "stream_event",
+					"event": map[string]any{
+						"type":  "content_block_delta",
+						"index": 0,
+						"delta": map[string]any{
+							"type":      "signature_delta",
+							"signature": thinkingSignature,
+						},
+					},
+					"parent_tool_use_id": nil,
+					"uuid":               signatureStreamUUID,
+					"session_id":         session.ID,
+				})
 				streamlinedTextUUID, err := generateRequestID()
 				if err != nil {
 					return
@@ -1088,6 +1126,11 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"message": map[string]any{
 						"role": "assistant",
 						"content": []map[string]any{
+							{
+								"type":      "thinking",
+								"thinking":  thinkingText,
+								"signature": thinkingSignature,
+							},
 							{
 								"type": "text",
 								"text": responseText,

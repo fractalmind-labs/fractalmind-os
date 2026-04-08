@@ -325,6 +325,30 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(streamPayload["type"])) != "content_block_delta" || strings.TrimSpace(asString(streamDelta["type"])) != "text_delta" || strings.TrimSpace(asString(streamDelta["text"])) != "echo:hello [approved]" {
 		t.Fatalf("unexpected stream event payload: %#v", streamEvent)
 	}
+	var thinkingStreamEvent map[string]any
+	if err := ws.ReadJSON(&thinkingStreamEvent); err != nil {
+		t.Fatalf("read thinking stream event failed: %v", err)
+	}
+	if thinkingStreamEvent["type"] != "stream_event" {
+		t.Fatalf("unexpected thinking stream event envelope: %#v", thinkingStreamEvent)
+	}
+	thinkingStreamPayload, _ := thinkingStreamEvent["event"].(map[string]any)
+	thinkingStreamDelta, _ := thinkingStreamPayload["delta"].(map[string]any)
+	if strings.TrimSpace(asString(thinkingStreamPayload["type"])) != "content_block_delta" || strings.TrimSpace(asString(thinkingStreamDelta["type"])) != "thinking_delta" || strings.TrimSpace(asString(thinkingStreamDelta["thinking"])) != "direct-connect stub thinking" {
+		t.Fatalf("unexpected thinking stream event payload: %#v", thinkingStreamEvent)
+	}
+	var signatureStreamEvent map[string]any
+	if err := ws.ReadJSON(&signatureStreamEvent); err != nil {
+		t.Fatalf("read signature stream event failed: %v", err)
+	}
+	if signatureStreamEvent["type"] != "stream_event" {
+		t.Fatalf("unexpected signature stream event envelope: %#v", signatureStreamEvent)
+	}
+	signatureStreamPayload, _ := signatureStreamEvent["event"].(map[string]any)
+	signatureStreamDelta, _ := signatureStreamPayload["delta"].(map[string]any)
+	if strings.TrimSpace(asString(signatureStreamPayload["type"])) != "content_block_delta" || strings.TrimSpace(asString(signatureStreamDelta["type"])) != "signature_delta" || strings.TrimSpace(asString(signatureStreamDelta["signature"])) != "sig-direct-connect-stub" {
+		t.Fatalf("unexpected signature stream event payload: %#v", signatureStreamEvent)
+	}
 	var streamlinedText map[string]any
 	if err := ws.ReadJSON(&streamlinedText); err != nil {
 		t.Fatalf("read streamlined_text failed: %v", err)
@@ -341,7 +365,12 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	message, _ := assistant["message"].(map[string]any)
 	content, _ := message["content"].([]any)
-	if len(content) == 0 || strings.TrimSpace(asString(content[0].(map[string]any)["text"])) != "echo:hello [approved]" {
+	if len(content) < 2 {
+		t.Fatalf("unexpected assistant payload: %#v", assistant)
+	}
+	thinkingBlock, _ := content[0].(map[string]any)
+	textBlock, _ := content[1].(map[string]any)
+	if strings.TrimSpace(asString(thinkingBlock["type"])) != "thinking" || strings.TrimSpace(asString(thinkingBlock["thinking"])) != "direct-connect stub thinking" || strings.TrimSpace(asString(thinkingBlock["signature"])) != "sig-direct-connect-stub" || strings.TrimSpace(asString(textBlock["type"])) != "text" || strings.TrimSpace(asString(textBlock["text"])) != "echo:hello [approved]" {
 		t.Fatalf("unexpected assistant payload: %#v", assistant)
 	}
 	var toolSummary map[string]any
@@ -674,6 +703,30 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(secondStreamPayload["type"])) != "content_block_delta" || strings.TrimSpace(asString(secondStreamDelta["type"])) != "text_delta" || strings.TrimSpace(asString(secondStreamDelta["text"])) != "echo:hello again [approved]" {
 		t.Fatalf("unexpected second stream event payload: %#v", secondStreamEvent)
 	}
+	var secondThinkingStreamEvent map[string]any
+	if err := ws.ReadJSON(&secondThinkingStreamEvent); err != nil {
+		t.Fatalf("read second thinking stream event failed: %v", err)
+	}
+	if secondThinkingStreamEvent["type"] != "stream_event" {
+		t.Fatalf("unexpected second thinking stream event envelope: %#v", secondThinkingStreamEvent)
+	}
+	secondThinkingStreamPayload, _ := secondThinkingStreamEvent["event"].(map[string]any)
+	secondThinkingStreamDelta, _ := secondThinkingStreamPayload["delta"].(map[string]any)
+	if strings.TrimSpace(asString(secondThinkingStreamPayload["type"])) != "content_block_delta" || strings.TrimSpace(asString(secondThinkingStreamDelta["type"])) != "thinking_delta" || strings.TrimSpace(asString(secondThinkingStreamDelta["thinking"])) != "direct-connect stub thinking" {
+		t.Fatalf("unexpected second thinking stream event payload: %#v", secondThinkingStreamEvent)
+	}
+	var secondSignatureStreamEvent map[string]any
+	if err := ws.ReadJSON(&secondSignatureStreamEvent); err != nil {
+		t.Fatalf("read second signature stream event failed: %v", err)
+	}
+	if secondSignatureStreamEvent["type"] != "stream_event" {
+		t.Fatalf("unexpected second signature stream event envelope: %#v", secondSignatureStreamEvent)
+	}
+	secondSignatureStreamPayload, _ := secondSignatureStreamEvent["event"].(map[string]any)
+	secondSignatureStreamDelta, _ := secondSignatureStreamPayload["delta"].(map[string]any)
+	if strings.TrimSpace(asString(secondSignatureStreamPayload["type"])) != "content_block_delta" || strings.TrimSpace(asString(secondSignatureStreamDelta["type"])) != "signature_delta" || strings.TrimSpace(asString(secondSignatureStreamDelta["signature"])) != "sig-direct-connect-stub" {
+		t.Fatalf("unexpected second signature stream event payload: %#v", secondSignatureStreamEvent)
+	}
 	var secondStreamlinedText map[string]any
 	if err := ws.ReadJSON(&secondStreamlinedText); err != nil {
 		t.Fatalf("read second streamlined_text failed: %v", err)
@@ -690,7 +743,12 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	secondMessage, _ := secondAssistant["message"].(map[string]any)
 	secondContent, _ := secondMessage["content"].([]any)
-	if len(secondContent) == 0 || strings.TrimSpace(asString(secondContent[0].(map[string]any)["text"])) != "echo:hello again [approved]" {
+	if len(secondContent) < 2 {
+		t.Fatalf("unexpected second assistant payload: %#v", secondAssistant)
+	}
+	secondThinkingBlock, _ := secondContent[0].(map[string]any)
+	secondTextBlock, _ := secondContent[1].(map[string]any)
+	if strings.TrimSpace(asString(secondThinkingBlock["type"])) != "thinking" || strings.TrimSpace(asString(secondThinkingBlock["thinking"])) != "direct-connect stub thinking" || strings.TrimSpace(asString(secondThinkingBlock["signature"])) != "sig-direct-connect-stub" || strings.TrimSpace(asString(secondTextBlock["type"])) != "text" || strings.TrimSpace(asString(secondTextBlock["text"])) != "echo:hello again [approved]" {
 		t.Fatalf("unexpected second assistant payload: %#v", secondAssistant)
 	}
 	var secondToolSummary map[string]any

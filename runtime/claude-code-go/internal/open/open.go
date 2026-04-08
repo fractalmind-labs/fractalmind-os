@@ -43,6 +43,12 @@ type Result struct {
 	StreamEvent                                                  string
 	StreamContentValidated                                       bool
 	StreamContentEvent                                           string
+	ThinkingDeltaValidated                                       bool
+	ThinkingDeltaEvent                                           string
+	ThinkingSignatureValidated                                   bool
+	ThinkingSignatureEvent                                       string
+	AssistantThinkingValidated                                   bool
+	AssistantThinkingEvent                                       string
 	StreamlinedTextValidated                                     bool
 	StreamlinedTextEvent                                         string
 	SystemValidated                                              bool
@@ -346,6 +352,12 @@ func Run(args []string) (Result, error) {
 		StreamEvent:                                                  streamResult.StreamEvent,
 		StreamContentValidated:                                       streamResult.StreamContentValidated,
 		StreamContentEvent:                                           streamResult.StreamContentEvent,
+		ThinkingDeltaValidated:                                       streamResult.ThinkingDeltaValidated,
+		ThinkingDeltaEvent:                                           streamResult.ThinkingDeltaEvent,
+		ThinkingSignatureValidated:                                   streamResult.ThinkingSignatureValidated,
+		ThinkingSignatureEvent:                                       streamResult.ThinkingSignatureEvent,
+		AssistantThinkingValidated:                                   streamResult.AssistantThinkingValidated,
+		AssistantThinkingEvent:                                       streamResult.AssistantThinkingEvent,
 		StreamlinedTextValidated:                                     streamResult.StreamlinedTextValidated,
 		StreamlinedTextEvent:                                         streamResult.StreamlinedTextEvent,
 		SystemValidated:                                              streamResult.SystemValidated,
@@ -879,6 +891,12 @@ type streamValidation struct {
 	StreamEvent                                                  string
 	StreamContentValidated                                       bool
 	StreamContentEvent                                           string
+	ThinkingDeltaValidated                                       bool
+	ThinkingDeltaEvent                                           string
+	ThinkingSignatureValidated                                   bool
+	ThinkingSignatureEvent                                       string
+	AssistantThinkingValidated                                   bool
+	AssistantThinkingEvent                                       string
 	StreamlinedTextValidated                                     bool
 	StreamlinedTextEvent                                         string
 	SystemValidated                                              bool
@@ -1219,6 +1237,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		hookStartedValidated := false
 		hookProgressValidated := false
 		hookResponseValidated := false
+		thinkingDeltaValidated := false
+		thinkingSignatureValidated := false
+		assistantThinkingValidated := false
 		streamlinedTextValidated := false
 		streamlinedToolUseSummaryValidated := false
 		promptSuggestionValidated := false
@@ -1991,14 +2012,30 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					return streamValidation{}, fmt.Errorf("invalid stream_event type: %s", asString(event["type"]))
 				}
 				delta, _ := event["delta"].(map[string]any)
-				if strings.TrimSpace(asString(delta["type"])) != "text_delta" {
+				switch strings.TrimSpace(asString(delta["type"])) {
+				case "text_delta":
+					if strings.TrimSpace(asString(delta["text"])) != turn.expectedResponse {
+						return streamValidation{}, fmt.Errorf("invalid stream_event delta text: expected %q, got %q", turn.expectedResponse, strings.TrimSpace(asString(delta["text"])))
+					}
+					result.StreamContentValidated = true
+					result.StreamContentEvent = "stream_event:content_block_delta"
+				case "thinking_delta":
+					if strings.TrimSpace(asString(delta["thinking"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid thinking_delta: missing thinking")
+					}
+					result.ThinkingDeltaValidated = true
+					result.ThinkingDeltaEvent = "stream_event:thinking_delta"
+					thinkingDeltaValidated = true
+				case "signature_delta":
+					if strings.TrimSpace(asString(delta["signature"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid signature_delta: missing signature")
+					}
+					result.ThinkingSignatureValidated = true
+					result.ThinkingSignatureEvent = "stream_event:signature_delta"
+					thinkingSignatureValidated = true
+				default:
 					return streamValidation{}, fmt.Errorf("invalid stream_event delta type: %s", asString(delta["type"]))
 				}
-				if strings.TrimSpace(asString(delta["text"])) != turn.expectedResponse {
-					return streamValidation{}, fmt.Errorf("invalid stream_event delta text: expected %q, got %q", turn.expectedResponse, strings.TrimSpace(asString(delta["text"])))
-				}
-				result.StreamContentValidated = true
-				result.StreamContentEvent = "stream_event:content_block_delta"
 			case "streamlined_text":
 				if turn.behavior == "deny" {
 					return streamValidation{}, fmt.Errorf("unexpected streamlined_text during deny turn")
@@ -2072,17 +2109,31 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				if turn.behavior == "deny" {
 					return streamValidation{}, fmt.Errorf("unexpected assistant payload during deny turn")
 				}
+				foundThinking := false
 				found := false
 				for _, item := range content {
 					block, _ := item.(map[string]any)
-					if strings.TrimSpace(asString(block["text"])) == turn.expectedResponse {
-						found = true
-						break
+					switch strings.TrimSpace(asString(block["type"])) {
+					case "thinking":
+						if strings.TrimSpace(asString(block["thinking"])) == "" || strings.TrimSpace(asString(block["signature"])) == "" {
+							return streamValidation{}, fmt.Errorf("invalid assistant thinking block: missing thinking or signature")
+						}
+						foundThinking = true
+					case "text":
+						if strings.TrimSpace(asString(block["text"])) == turn.expectedResponse {
+							found = true
+						}
 					}
+				}
+				if !foundThinking {
+					return streamValidation{}, fmt.Errorf("invalid assistant payload: missing thinking block")
 				}
 				if !found {
 					return streamValidation{}, fmt.Errorf("invalid assistant payload: missing echo for %q", turn.approvedPrompt)
 				}
+				result.AssistantThinkingValidated = true
+				result.AssistantThinkingEvent = "assistant:thinking"
+				assistantThinkingValidated = true
 				result.MessageValidated = true
 				result.MessageEvent = "assistant"
 				result.ToolExecutionValidated = true
@@ -2286,7 +2337,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && assistantThinkingValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -3597,6 +3648,12 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("stream_event=%s\n", valueOrNone(r.StreamEvent)))
 	b.WriteString(fmt.Sprintf("stream_content_validated=%t\n", r.StreamContentValidated))
 	b.WriteString(fmt.Sprintf("stream_content_event=%s\n", valueOrNone(r.StreamContentEvent)))
+	b.WriteString(fmt.Sprintf("thinking_delta_validated=%t\n", r.ThinkingDeltaValidated))
+	b.WriteString(fmt.Sprintf("thinking_delta_event=%s\n", valueOrNone(r.ThinkingDeltaEvent)))
+	b.WriteString(fmt.Sprintf("thinking_signature_validated=%t\n", r.ThinkingSignatureValidated))
+	b.WriteString(fmt.Sprintf("thinking_signature_event=%s\n", valueOrNone(r.ThinkingSignatureEvent)))
+	b.WriteString(fmt.Sprintf("assistant_thinking_validated=%t\n", r.AssistantThinkingValidated))
+	b.WriteString(fmt.Sprintf("assistant_thinking_event=%s\n", valueOrNone(r.AssistantThinkingEvent)))
 	b.WriteString(fmt.Sprintf("streamlined_text_validated=%t\n", r.StreamlinedTextValidated))
 	b.WriteString(fmt.Sprintf("streamlined_text_event=%s\n", valueOrNone(r.StreamlinedTextEvent)))
 	b.WriteString(fmt.Sprintf("system_validated=%t\n", r.SystemValidated))
