@@ -53,6 +53,8 @@ type Result struct {
 	ToolUseBlockStartEvent                                       string
 	ToolUseBlockStopValidated                                    bool
 	ToolUseBlockStopEvent                                        string
+	AssistantMessageStartValidated                               bool
+	AssistantMessageStartEvent                                   string
 	AssistantMessageDeltaValidated                               bool
 	AssistantMessageDeltaEvent                                   string
 	AssistantMessageStopValidated                                bool
@@ -378,6 +380,8 @@ func Run(args []string) (Result, error) {
 		ToolUseBlockStartEvent:                                       streamResult.ToolUseBlockStartEvent,
 		ToolUseBlockStopValidated:                                    streamResult.ToolUseBlockStopValidated,
 		ToolUseBlockStopEvent:                                        streamResult.ToolUseBlockStopEvent,
+		AssistantMessageStartValidated:                               streamResult.AssistantMessageStartValidated,
+		AssistantMessageStartEvent:                                   streamResult.AssistantMessageStartEvent,
 		AssistantMessageDeltaValidated:                               streamResult.AssistantMessageDeltaValidated,
 		AssistantMessageDeltaEvent:                                   streamResult.AssistantMessageDeltaEvent,
 		AssistantMessageStopValidated:                                streamResult.AssistantMessageStopValidated,
@@ -933,6 +937,8 @@ type streamValidation struct {
 	ToolUseBlockStartEvent                                       string
 	ToolUseBlockStopValidated                                    bool
 	ToolUseBlockStopEvent                                        string
+	AssistantMessageStartValidated                               bool
+	AssistantMessageStartEvent                                   string
 	AssistantMessageDeltaValidated                               bool
 	AssistantMessageDeltaEvent                                   string
 	AssistantMessageStopValidated                                bool
@@ -1290,6 +1296,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		toolUseDeltaValidated := false
 		toolUseBlockStartValidated := false
 		toolUseBlockStopValidated := false
+		assistantMessageStartValidated := false
 		assistantMessageDeltaValidated := false
 		assistantMessageStopValidated := false
 		assistantThinkingValidated := false
@@ -2065,6 +2072,26 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				event, _ := incoming["event"].(map[string]any)
 				switch strings.TrimSpace(asString(event["type"])) {
+				case "message_start":
+					message, _ := event["message"].(map[string]any)
+					if strings.TrimSpace(asString(message["id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid message_start message.id: missing id")
+					}
+					if strings.TrimSpace(asString(message["type"])) != "message" {
+						return streamValidation{}, fmt.Errorf("invalid message_start message.type: expected %q, got %q", "message", strings.TrimSpace(asString(message["type"])))
+					}
+					if strings.TrimSpace(asString(message["role"])) != "assistant" {
+						return streamValidation{}, fmt.Errorf("invalid message_start message.role: expected %q, got %q", "assistant", strings.TrimSpace(asString(message["role"])))
+					}
+					if strings.TrimSpace(asString(message["model"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid message_start message.model: missing model")
+					}
+					if err := validateZeroUsageShape(message["usage"]); err != nil {
+						return streamValidation{}, fmt.Errorf("invalid message_start usage: %w", err)
+					}
+					result.AssistantMessageStartValidated = true
+					result.AssistantMessageStartEvent = "stream_event:message_start"
+					assistantMessageStartValidated = true
 				case "content_block_start":
 					contentBlock, _ := event["content_block"].(map[string]any)
 					if strings.TrimSpace(asString(contentBlock["type"])) != "tool_use" {
@@ -2469,7 +2496,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -3790,6 +3817,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("tool_use_block_start_event=%s\n", valueOrNone(r.ToolUseBlockStartEvent)))
 	b.WriteString(fmt.Sprintf("tool_use_block_stop_validated=%t\n", r.ToolUseBlockStopValidated))
 	b.WriteString(fmt.Sprintf("tool_use_block_stop_event=%s\n", valueOrNone(r.ToolUseBlockStopEvent)))
+	b.WriteString(fmt.Sprintf("assistant_message_start_validated=%t\n", r.AssistantMessageStartValidated))
+	b.WriteString(fmt.Sprintf("assistant_message_start_event=%s\n", valueOrNone(r.AssistantMessageStartEvent)))
 	b.WriteString(fmt.Sprintf("assistant_message_delta_validated=%t\n", r.AssistantMessageDeltaValidated))
 	b.WriteString(fmt.Sprintf("assistant_message_delta_event=%s\n", valueOrNone(r.AssistantMessageDeltaEvent)))
 	b.WriteString(fmt.Sprintf("assistant_message_stop_validated=%t\n", r.AssistantMessageStopValidated))

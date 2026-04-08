@@ -313,6 +313,19 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if rateLimitEvent["type"] != "rate_limit_event" || strings.TrimSpace(asString(rateLimitEvent["bucket"])) != "default" || int(rateLimitEvent["limit"].(float64)) != 100 || int(rateLimitEvent["remaining"].(float64)) != 99 {
 		t.Fatalf("unexpected rate_limit_event payload: %#v", rateLimitEvent)
 	}
+	var messageStartEvent map[string]any
+	if err := ws.ReadJSON(&messageStartEvent); err != nil {
+		t.Fatalf("read message_start event failed: %v", err)
+	}
+	if messageStartEvent["type"] != "stream_event" {
+		t.Fatalf("unexpected message_start event envelope: %#v", messageStartEvent)
+	}
+	messageStartPayload, _ := messageStartEvent["event"].(map[string]any)
+	messageStartMessage, _ := messageStartPayload["message"].(map[string]any)
+	if strings.TrimSpace(asString(messageStartPayload["type"])) != "message_start" || strings.TrimSpace(asString(messageStartMessage["id"])) == "" || strings.TrimSpace(asString(messageStartMessage["type"])) != "message" || strings.TrimSpace(asString(messageStartMessage["role"])) != "assistant" || strings.TrimSpace(asString(messageStartMessage["model"])) != "claude-sonnet-4-5" {
+		t.Fatalf("unexpected message_start payload: %#v", messageStartEvent)
+	}
+	assertZeroUsageShape(t, messageStartMessage, "message_start")
 	var streamEvent map[string]any
 	if err := ws.ReadJSON(&streamEvent); err != nil {
 		t.Fatalf("read stream event failed: %v", err)
@@ -756,6 +769,19 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if secondRateLimitEvent["type"] != "rate_limit_event" || strings.TrimSpace(asString(secondRateLimitEvent["bucket"])) != "default" || int(secondRateLimitEvent["limit"].(float64)) != 100 || int(secondRateLimitEvent["remaining"].(float64)) != 99 {
 		t.Fatalf("unexpected second rate_limit_event payload: %#v", secondRateLimitEvent)
 	}
+	var secondMessageStartEvent map[string]any
+	if err := ws.ReadJSON(&secondMessageStartEvent); err != nil {
+		t.Fatalf("read second message_start event failed: %v", err)
+	}
+	if secondMessageStartEvent["type"] != "stream_event" {
+		t.Fatalf("unexpected second message_start event envelope: %#v", secondMessageStartEvent)
+	}
+	secondMessageStartPayload, _ := secondMessageStartEvent["event"].(map[string]any)
+	secondMessageStartMessage, _ := secondMessageStartPayload["message"].(map[string]any)
+	if strings.TrimSpace(asString(secondMessageStartPayload["type"])) != "message_start" || strings.TrimSpace(asString(secondMessageStartMessage["id"])) == "" || strings.TrimSpace(asString(secondMessageStartMessage["type"])) != "message" || strings.TrimSpace(asString(secondMessageStartMessage["role"])) != "assistant" || strings.TrimSpace(asString(secondMessageStartMessage["model"])) != "claude-sonnet-4-5" {
+		t.Fatalf("unexpected second message_start payload: %#v", secondMessageStartEvent)
+	}
+	assertZeroUsageShape(t, secondMessageStartMessage, "second message_start")
 	var secondStreamEvent map[string]any
 	if err := ws.ReadJSON(&secondStreamEvent); err != nil {
 		t.Fatalf("read second stream event failed: %v", err)

@@ -1063,6 +1063,33 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				if err != nil {
 					return
 				}
+				messageStartID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				messageStartUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "stream_event",
+					"event": map[string]any{
+						"type": "message_start",
+						"message": map[string]any{
+							"id":            messageStartID,
+							"type":          "message",
+							"role":          "assistant",
+							"content":       []any{},
+							"model":         "claude-sonnet-4-5",
+							"stop_reason":   nil,
+							"stop_sequence": nil,
+							"usage":         minimalUsage(),
+						},
+					},
+					"parent_tool_use_id": nil,
+					"uuid":               messageStartUUID,
+					"session_id":         session.ID,
+				})
 				streamUUID, err := generateRequestID()
 				if err != nil {
 					return
