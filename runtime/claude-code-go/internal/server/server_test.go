@@ -989,6 +989,7 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(denyResult["fast_mode_state"])) != "off" {
 		t.Fatalf("unexpected deny fast_mode_state: %#v", denyResult)
 	}
+	assertZeroModelUsageShape(t, denyResult, "deny result")
 	assertZeroUsageShape(t, denyResult, "deny result")
 
 	if err := ws.WriteJSON(map[string]any{
@@ -1056,6 +1057,7 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(maxTurnsResult["fast_mode_state"])) != "off" {
 		t.Fatalf("unexpected max-turns fast_mode_state: %#v", maxTurnsResult)
 	}
+	assertZeroModelUsageShape(t, maxTurnsResult, "max-turns result")
 	assertEmptyPermissionDenials(t, maxTurnsResult, "max-turns result")
 	assertZeroUsageShape(t, maxTurnsResult, "max-turns result")
 
@@ -1124,6 +1126,7 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(maxBudgetResult["fast_mode_state"])) != "off" {
 		t.Fatalf("unexpected max-budget-usd fast_mode_state: %#v", maxBudgetResult)
 	}
+	assertZeroModelUsageShape(t, maxBudgetResult, "max-budget-usd result")
 	assertEmptyPermissionDenials(t, maxBudgetResult, "max-budget-usd result")
 	assertZeroUsageShape(t, maxBudgetResult, "max-budget-usd result")
 
@@ -1192,6 +1195,7 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(maxStructuredResult["fast_mode_state"])) != "off" {
 		t.Fatalf("unexpected max-structured-output-retries fast_mode_state: %#v", maxStructuredResult)
 	}
+	assertZeroModelUsageShape(t, maxStructuredResult, "max-structured-output-retries result")
 	assertEmptyPermissionDenials(t, maxStructuredResult, "max-structured-output-retries result")
 	assertZeroUsageShape(t, maxStructuredResult, "max-structured-output-retries result")
 
@@ -3083,6 +3087,15 @@ func assertEmptyPermissionDenials(t *testing.T, payload map[string]any, label st
 	permissionDenials, _ := payload["permission_denials"].([]any)
 	if len(permissionDenials) != 0 {
 		t.Fatalf("unexpected %s permission_denials payload: %#v", label, payload)
+	}
+}
+
+func assertZeroModelUsageShape(t *testing.T, payload map[string]any, label string) {
+	t.Helper()
+	modelUsage, _ := payload["modelUsage"].(map[string]any)
+	modelUsageEntry, _ := modelUsage["claude-sonnet-4-5"].(map[string]any)
+	if len(modelUsageEntry) == 0 || intFromAny(modelUsageEntry["inputTokens"]) != 0 || intFromAny(modelUsageEntry["outputTokens"]) != 0 || intFromAny(modelUsageEntry["cacheReadInputTokens"]) != 0 || intFromAny(modelUsageEntry["cacheCreationInputTokens"]) != 0 || intFromAny(modelUsageEntry["webSearchRequests"]) != 0 || intFromAny(modelUsageEntry["contextWindow"]) != 0 || float64FromAny(modelUsageEntry["costUSD"]) != 0 {
+		t.Fatalf("unexpected %s modelUsage payload: %#v", label, payload)
 	}
 }
 
