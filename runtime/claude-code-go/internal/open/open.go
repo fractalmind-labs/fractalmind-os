@@ -123,14 +123,24 @@ type Result struct {
 	MultiTurnValidated                                           bool
 	ResultValidated                                              bool
 	ResultEvent                                                  string
+	ResultFastModeStateValidated                                 bool
+	ResultFastModeStateEvent                                     string
 	ResultErrorValidated                                         bool
 	ResultErrorEvent                                             string
+	ResultErrorFastModeStateValidated                            bool
+	ResultErrorFastModeStateEvent                                string
 	ResultErrorMaxTurnsValidated                                 bool
 	ResultErrorMaxTurnsEvent                                     string
+	ResultErrorMaxTurnsFastModeStateValidated                    bool
+	ResultErrorMaxTurnsFastModeStateEvent                        string
 	ResultErrorMaxBudgetUSDValidated                             bool
 	ResultErrorMaxBudgetUSDEvent                                 string
+	ResultErrorMaxBudgetUSDFastModeStateValidated                bool
+	ResultErrorMaxBudgetUSDFastModeStateEvent                    string
 	ResultErrorMaxStructuredOutputRetriesValidated               bool
 	ResultErrorMaxStructuredOutputRetriesEvent                   string
+	ResultErrorMaxStructuredOutputRetriesFastModeStateValidated  bool
+	ResultErrorMaxStructuredOutputRetriesFastModeStateEvent      string
 	ControlValidated                                             bool
 	PermissionValidated                                          bool
 	PermissionDeniedValidated                                    bool
@@ -402,14 +412,24 @@ func Run(args []string) (Result, error) {
 		MultiTurnValidated:                                           streamResult.MultiTurnValidated,
 		ResultValidated:                                              streamResult.ResultValidated,
 		ResultEvent:                                                  streamResult.ResultEvent,
+		ResultFastModeStateValidated:                                 streamResult.ResultFastModeStateValidated,
+		ResultFastModeStateEvent:                                     streamResult.ResultFastModeStateEvent,
 		ResultErrorValidated:                                         streamResult.ResultErrorValidated,
 		ResultErrorEvent:                                             streamResult.ResultErrorEvent,
+		ResultErrorFastModeStateValidated:                            streamResult.ResultErrorFastModeStateValidated,
+		ResultErrorFastModeStateEvent:                                streamResult.ResultErrorFastModeStateEvent,
 		ResultErrorMaxTurnsValidated:                                 streamResult.ResultErrorMaxTurnsValidated,
 		ResultErrorMaxTurnsEvent:                                     streamResult.ResultErrorMaxTurnsEvent,
+		ResultErrorMaxTurnsFastModeStateValidated:                    streamResult.ResultErrorMaxTurnsFastModeStateValidated,
+		ResultErrorMaxTurnsFastModeStateEvent:                        streamResult.ResultErrorMaxTurnsFastModeStateEvent,
 		ResultErrorMaxBudgetUSDValidated:                             streamResult.ResultErrorMaxBudgetUSDValidated,
 		ResultErrorMaxBudgetUSDEvent:                                 streamResult.ResultErrorMaxBudgetUSDEvent,
+		ResultErrorMaxBudgetUSDFastModeStateValidated:                streamResult.ResultErrorMaxBudgetUSDFastModeStateValidated,
+		ResultErrorMaxBudgetUSDFastModeStateEvent:                    streamResult.ResultErrorMaxBudgetUSDFastModeStateEvent,
 		ResultErrorMaxStructuredOutputRetriesValidated:               streamResult.ResultErrorMaxStructuredOutputRetriesValidated,
 		ResultErrorMaxStructuredOutputRetriesEvent:                   streamResult.ResultErrorMaxStructuredOutputRetriesEvent,
+		ResultErrorMaxStructuredOutputRetriesFastModeStateValidated:  streamResult.ResultErrorMaxStructuredOutputRetriesFastModeStateValidated,
+		ResultErrorMaxStructuredOutputRetriesFastModeStateEvent:      streamResult.ResultErrorMaxStructuredOutputRetriesFastModeStateEvent,
 		ControlValidated:                                             streamResult.ControlValidated,
 		PermissionValidated:                                          streamResult.PermissionValidated,
 		PermissionDeniedValidated:                                    streamResult.PermissionDeniedValidated,
@@ -911,14 +931,24 @@ type streamValidation struct {
 	MultiTurnValidated                                           bool
 	ResultValidated                                              bool
 	ResultEvent                                                  string
+	ResultFastModeStateValidated                                 bool
+	ResultFastModeStateEvent                                     string
 	ResultErrorValidated                                         bool
 	ResultErrorEvent                                             string
+	ResultErrorFastModeStateValidated                            bool
+	ResultErrorFastModeStateEvent                                string
 	ResultErrorMaxTurnsValidated                                 bool
 	ResultErrorMaxTurnsEvent                                     string
+	ResultErrorMaxTurnsFastModeStateValidated                    bool
+	ResultErrorMaxTurnsFastModeStateEvent                        string
 	ResultErrorMaxBudgetUSDValidated                             bool
 	ResultErrorMaxBudgetUSDEvent                                 string
+	ResultErrorMaxBudgetUSDFastModeStateValidated                bool
+	ResultErrorMaxBudgetUSDFastModeStateEvent                    string
 	ResultErrorMaxStructuredOutputRetriesValidated               bool
 	ResultErrorMaxStructuredOutputRetriesEvent                   string
+	ResultErrorMaxStructuredOutputRetriesFastModeStateValidated  bool
+	ResultErrorMaxStructuredOutputRetriesFastModeStateEvent      string
 	ControlValidated                                             bool
 	PermissionValidated                                          bool
 	PermissionDeniedValidated                                    bool
@@ -2020,6 +2050,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				if asString(incoming["session_id"]) == "" {
 					return streamValidation{}, fmt.Errorf("invalid result event: missing session_id")
 				}
+				if strings.TrimSpace(asString(incoming["fast_mode_state"])) != "off" {
+					return streamValidation{}, fmt.Errorf("invalid result fast_mode_state: expected %q, got %q", "off", strings.TrimSpace(asString(incoming["fast_mode_state"])))
+				}
 				if turn.behavior == "allow" {
 					if strings.TrimSpace(asString(incoming["subtype"])) != "success" {
 						return streamValidation{}, fmt.Errorf("invalid result event subtype: %s", asString(incoming["subtype"]))
@@ -2032,6 +2065,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					result.ResultValidated = true
 					result.ResultEvent = "result:success"
+					result.ResultFastModeStateValidated = true
+					result.ResultFastModeStateEvent = "result:success:fast_mode_state"
 				} else if turn.behavior == "deny" {
 					if strings.TrimSpace(asString(incoming["subtype"])) != "error_during_execution" {
 						return streamValidation{}, fmt.Errorf("invalid deny result subtype: %s", asString(incoming["subtype"]))
@@ -2062,6 +2097,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					result.ResultErrorValidated = true
 					result.ResultErrorEvent = "result:error_during_execution"
+					result.ResultErrorFastModeStateValidated = true
+					result.ResultErrorFastModeStateEvent = "result:error_during_execution:fast_mode_state"
 				} else if turn.behavior == "max_turns" {
 					if strings.TrimSpace(asString(incoming["subtype"])) != "error_max_turns" {
 						return streamValidation{}, fmt.Errorf("invalid max-turns result subtype: %s", asString(incoming["subtype"]))
@@ -2077,6 +2114,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					result.ResultErrorMaxTurnsValidated = true
 					result.ResultErrorMaxTurnsEvent = "result:error_max_turns"
+					result.ResultErrorMaxTurnsFastModeStateValidated = true
+					result.ResultErrorMaxTurnsFastModeStateEvent = "result:error_max_turns:fast_mode_state"
 				} else if turn.behavior == "max_budget_usd" {
 					if strings.TrimSpace(asString(incoming["subtype"])) != "error_max_budget_usd" {
 						return streamValidation{}, fmt.Errorf("invalid max-budget-usd result subtype: %s", asString(incoming["subtype"]))
@@ -2092,6 +2131,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					result.ResultErrorMaxBudgetUSDValidated = true
 					result.ResultErrorMaxBudgetUSDEvent = "result:error_max_budget_usd"
+					result.ResultErrorMaxBudgetUSDFastModeStateValidated = true
+					result.ResultErrorMaxBudgetUSDFastModeStateEvent = "result:error_max_budget_usd:fast_mode_state"
 				} else {
 					if strings.TrimSpace(asString(incoming["subtype"])) != "error_max_structured_output_retries" {
 						return streamValidation{}, fmt.Errorf("invalid max-structured-output-retries result subtype: %s", asString(incoming["subtype"]))
@@ -2107,6 +2148,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					result.ResultErrorMaxStructuredOutputRetriesValidated = true
 					result.ResultErrorMaxStructuredOutputRetriesEvent = "result:error_max_structured_output_retries"
+					result.ResultErrorMaxStructuredOutputRetriesFastModeStateValidated = true
+					result.ResultErrorMaxStructuredOutputRetriesFastModeStateEvent = "result:error_max_structured_output_retries:fast_mode_state"
 				}
 				resultValidated = true
 			}
@@ -3501,14 +3544,24 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("multi_turn_validated=%t\n", r.MultiTurnValidated))
 	b.WriteString(fmt.Sprintf("result_validated=%t\n", r.ResultValidated))
 	b.WriteString(fmt.Sprintf("result_event=%s\n", valueOrNone(r.ResultEvent)))
+	b.WriteString(fmt.Sprintf("result_fast_mode_state_validated=%t\n", r.ResultFastModeStateValidated))
+	b.WriteString(fmt.Sprintf("result_fast_mode_state_event=%s\n", valueOrNone(r.ResultFastModeStateEvent)))
 	b.WriteString(fmt.Sprintf("result_error_validated=%t\n", r.ResultErrorValidated))
 	b.WriteString(fmt.Sprintf("result_error_event=%s\n", valueOrNone(r.ResultErrorEvent)))
+	b.WriteString(fmt.Sprintf("result_error_fast_mode_state_validated=%t\n", r.ResultErrorFastModeStateValidated))
+	b.WriteString(fmt.Sprintf("result_error_fast_mode_state_event=%s\n", valueOrNone(r.ResultErrorFastModeStateEvent)))
 	b.WriteString(fmt.Sprintf("result_error_max_turns_validated=%t\n", r.ResultErrorMaxTurnsValidated))
 	b.WriteString(fmt.Sprintf("result_error_max_turns_event=%s\n", valueOrNone(r.ResultErrorMaxTurnsEvent)))
+	b.WriteString(fmt.Sprintf("result_error_max_turns_fast_mode_state_validated=%t\n", r.ResultErrorMaxTurnsFastModeStateValidated))
+	b.WriteString(fmt.Sprintf("result_error_max_turns_fast_mode_state_event=%s\n", valueOrNone(r.ResultErrorMaxTurnsFastModeStateEvent)))
 	b.WriteString(fmt.Sprintf("result_error_max_budget_usd_validated=%t\n", r.ResultErrorMaxBudgetUSDValidated))
 	b.WriteString(fmt.Sprintf("result_error_max_budget_usd_event=%s\n", valueOrNone(r.ResultErrorMaxBudgetUSDEvent)))
+	b.WriteString(fmt.Sprintf("result_error_max_budget_usd_fast_mode_state_validated=%t\n", r.ResultErrorMaxBudgetUSDFastModeStateValidated))
+	b.WriteString(fmt.Sprintf("result_error_max_budget_usd_fast_mode_state_event=%s\n", valueOrNone(r.ResultErrorMaxBudgetUSDFastModeStateEvent)))
 	b.WriteString(fmt.Sprintf("result_error_max_structured_output_retries_validated=%t\n", r.ResultErrorMaxStructuredOutputRetriesValidated))
 	b.WriteString(fmt.Sprintf("result_error_max_structured_output_retries_event=%s\n", valueOrNone(r.ResultErrorMaxStructuredOutputRetriesEvent)))
+	b.WriteString(fmt.Sprintf("result_error_max_structured_output_retries_fast_mode_state_validated=%t\n", r.ResultErrorMaxStructuredOutputRetriesFastModeStateValidated))
+	b.WriteString(fmt.Sprintf("result_error_max_structured_output_retries_fast_mode_state_event=%s\n", valueOrNone(r.ResultErrorMaxStructuredOutputRetriesFastModeStateEvent)))
 	b.WriteString(fmt.Sprintf("control_validated=%t\n", r.ControlValidated))
 	b.WriteString(fmt.Sprintf("permission_validated=%t\n", r.PermissionValidated))
 	b.WriteString(fmt.Sprintf("permission_denied_validated=%t\n", r.PermissionDeniedValidated))

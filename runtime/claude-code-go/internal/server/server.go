@@ -872,9 +872,10 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 								},
 							},
 						},
-						"errors":     []string{"permission denied for tool " + directConnectEchoToolName},
-						"uuid":       resultUUID,
-						"session_id": session.ID,
+						"errors":          []string{"permission denied for tool " + directConnectEchoToolName},
+						"fast_mode_state": "off",
+						"uuid":            resultUUID,
+						"session_id":      session.ID,
 					})
 					pendingPrompt = ""
 					pendingRequestID = ""
@@ -897,6 +898,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						"usage":           map[string]any{},
 						"modelUsage":      map[string]any{"claude-sonnet-4-5": minimalModelUsage()},
 						"errors":          []string{"max turns reached in direct-connect stub"},
+						"fast_mode_state": "off",
 						"uuid":            resultUUID,
 						"session_id":      session.ID,
 					})
@@ -921,6 +923,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						"usage":           map[string]any{},
 						"modelUsage":      map[string]any{"claude-sonnet-4-5": minimalModelUsage()},
 						"errors":          []string{"max budget usd reached in direct-connect stub"},
+						"fast_mode_state": "off",
 						"uuid":            resultUUID,
 						"session_id":      session.ID,
 					})
@@ -945,6 +948,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						"usage":           map[string]any{},
 						"modelUsage":      map[string]any{"claude-sonnet-4-5": minimalModelUsage()},
 						"errors":          []string{"max structured output retries reached in direct-connect stub"},
+						"fast_mode_state": "off",
 						"uuid":            resultUUID,
 						"session_id":      session.ID,
 					})
@@ -1132,6 +1136,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"usage":              map[string]any{},
 					"modelUsage":         map[string]any{"claude-sonnet-4-5": minimalModelUsage()},
 					"permission_denials": []map[string]any{},
+					"fast_mode_state":    "off",
 					"uuid":               resultUUID,
 					"session_id":         session.ID,
 				})

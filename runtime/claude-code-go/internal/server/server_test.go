@@ -363,7 +363,7 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if err := ws.ReadJSON(&result); err != nil {
 		t.Fatalf("read result event failed: %v", err)
 	}
-	if result["type"] != "result" || strings.TrimSpace(asString(result["subtype"])) != "success" || strings.TrimSpace(asString(result["result"])) != "echo:hello [approved]" {
+	if result["type"] != "result" || strings.TrimSpace(asString(result["subtype"])) != "success" || strings.TrimSpace(asString(result["result"])) != "echo:hello [approved]" || strings.TrimSpace(asString(result["fast_mode_state"])) != "off" {
 		t.Fatalf("unexpected result event: %#v", result)
 	}
 	var promptSuggestion map[string]any
@@ -692,7 +692,7 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if err := ws.ReadJSON(&secondResult); err != nil {
 		t.Fatalf("read second result event failed: %v", err)
 	}
-	if secondResult["type"] != "result" || strings.TrimSpace(asString(secondResult["subtype"])) != "success" || strings.TrimSpace(asString(secondResult["result"])) != "echo:hello again [approved]" {
+	if secondResult["type"] != "result" || strings.TrimSpace(asString(secondResult["subtype"])) != "success" || strings.TrimSpace(asString(secondResult["result"])) != "echo:hello again [approved]" || strings.TrimSpace(asString(secondResult["fast_mode_state"])) != "off" {
 		t.Fatalf("unexpected second result event: %#v", secondResult)
 	}
 	var secondPromptSuggestion map[string]any
@@ -946,6 +946,9 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if len(errorsList) == 0 || !strings.Contains(strings.TrimSpace(asString(errorsList[0])), "permission denied") {
 		t.Fatalf("unexpected deny errors payload: %#v", denyResult)
 	}
+	if strings.TrimSpace(asString(denyResult["fast_mode_state"])) != "off" {
+		t.Fatalf("unexpected deny fast_mode_state: %#v", denyResult)
+	}
 
 	if err := ws.WriteJSON(map[string]any{
 		"type": "user",
@@ -1008,6 +1011,9 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if strings.TrimSpace(asString(maxTurnsResult["stop_reason"])) != "max_turns" {
 		t.Fatalf("unexpected max-turns stop_reason: %#v", maxTurnsResult)
+	}
+	if strings.TrimSpace(asString(maxTurnsResult["fast_mode_state"])) != "off" {
+		t.Fatalf("unexpected max-turns fast_mode_state: %#v", maxTurnsResult)
 	}
 
 	if err := ws.WriteJSON(map[string]any{
@@ -1072,6 +1078,9 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(maxBudgetResult["stop_reason"])) != "max_budget_usd" {
 		t.Fatalf("unexpected max-budget-usd stop_reason: %#v", maxBudgetResult)
 	}
+	if strings.TrimSpace(asString(maxBudgetResult["fast_mode_state"])) != "off" {
+		t.Fatalf("unexpected max-budget-usd fast_mode_state: %#v", maxBudgetResult)
+	}
 
 	if err := ws.WriteJSON(map[string]any{
 		"type": "user",
@@ -1134,6 +1143,9 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if strings.TrimSpace(asString(maxStructuredResult["stop_reason"])) != "max_structured_output_retries" {
 		t.Fatalf("unexpected max-structured-output-retries stop_reason: %#v", maxStructuredResult)
+	}
+	if strings.TrimSpace(asString(maxStructuredResult["fast_mode_state"])) != "off" {
+		t.Fatalf("unexpected max-structured-output-retries fast_mode_state: %#v", maxStructuredResult)
 	}
 
 	if err := ws.WriteJSON(map[string]any{
