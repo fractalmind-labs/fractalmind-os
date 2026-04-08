@@ -642,6 +642,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(postTurnSummary["summarizes_uuid"])) == "" || strings.TrimSpace(asString(postTurnSummary["status_category"])) != "completed" || strings.TrimSpace(asString(postTurnSummary["title"])) == "" || strings.TrimSpace(asString(postTurnSummary["recent_action"])) == "" {
 		t.Fatalf("invalid post_turn_summary payload: %#v", postTurnSummary)
 	}
+	var compactionReminderAttachment map[string]any
+	if err := ws.ReadJSON(&compactionReminderAttachment); err != nil {
+		t.Fatalf("read compaction_reminder attachment failed: %v", err)
+	}
+	if compactionReminderAttachment["type"] != "attachment" || strings.TrimSpace(asString(compactionReminderAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected compaction_reminder attachment envelope: %#v", compactionReminderAttachment)
+	}
+	compactionReminderPayload, _ := compactionReminderAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(compactionReminderPayload["type"])) != "compaction_reminder" {
+		t.Fatalf("unexpected compaction_reminder attachment payload: %#v", compactionReminderAttachment)
+	}
 	var compactingStatus map[string]any
 	if err := ws.ReadJSON(&compactingStatus); err != nil {
 		t.Fatalf("read compacting status failed: %v", err)
@@ -1146,6 +1157,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if strings.TrimSpace(asString(secondPostTurnSummary["summarizes_uuid"])) == "" || strings.TrimSpace(asString(secondPostTurnSummary["status_category"])) != "completed" || strings.TrimSpace(asString(secondPostTurnSummary["title"])) == "" || strings.TrimSpace(asString(secondPostTurnSummary["recent_action"])) == "" {
 		t.Fatalf("invalid second post_turn_summary payload: %#v", secondPostTurnSummary)
+	}
+	var secondCompactionReminderAttachment map[string]any
+	if err := ws.ReadJSON(&secondCompactionReminderAttachment); err != nil {
+		t.Fatalf("read second compaction_reminder attachment failed: %v", err)
+	}
+	if secondCompactionReminderAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondCompactionReminderAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second compaction_reminder attachment envelope: %#v", secondCompactionReminderAttachment)
+	}
+	secondCompactionReminderPayload, _ := secondCompactionReminderAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondCompactionReminderPayload["type"])) != "compaction_reminder" {
+		t.Fatalf("unexpected second compaction_reminder attachment payload: %#v", secondCompactionReminderAttachment)
 	}
 	var secondCompactingStatus map[string]any
 	if err := ws.ReadJSON(&secondCompactingStatus); err != nil {
