@@ -393,6 +393,28 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(localCommandOutput["content"])) == "" {
 		t.Fatalf("invalid local_command_output payload: %#v", localCommandOutput)
 	}
+	var localCommandOutputAssistant map[string]any
+	if err := ws.ReadJSON(&localCommandOutputAssistant); err != nil {
+		t.Fatalf("read local_command_output assistant mirror failed: %v", err)
+	}
+	if localCommandOutputAssistant["type"] != "assistant" || strings.TrimSpace(asString(localCommandOutputAssistant["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(localCommandOutputAssistant["uuid"])) == "" {
+		t.Fatalf("unexpected local_command_output assistant mirror payload: %#v", localCommandOutputAssistant)
+	}
+	if localCommandOutputAssistant["parent_tool_use_id"] != nil {
+		t.Fatalf("expected local_command_output assistant mirror parent_tool_use_id=nil, got %#v", localCommandOutputAssistant)
+	}
+	localCommandOutputAssistantMessage, _ := localCommandOutputAssistant["message"].(map[string]any)
+	if strings.TrimSpace(asString(localCommandOutputAssistantMessage["role"])) != "assistant" {
+		t.Fatalf("invalid local_command_output assistant mirror message payload: %#v", localCommandOutputAssistant)
+	}
+	localCommandOutputAssistantContent, _ := localCommandOutputAssistantMessage["content"].([]any)
+	if len(localCommandOutputAssistantContent) == 0 {
+		t.Fatalf("missing local_command_output assistant mirror content: %#v", localCommandOutputAssistant)
+	}
+	localCommandOutputAssistantText, _ := localCommandOutputAssistantContent[0].(map[string]any)
+	if strings.TrimSpace(asString(localCommandOutputAssistantText["type"])) != "text" || strings.TrimSpace(asString(localCommandOutputAssistantText["text"])) != "local command output: persisted direct-connect artifacts" {
+		t.Fatalf("invalid local_command_output assistant mirror content payload: %#v", localCommandOutputAssistant)
+	}
 	var compactSummary map[string]any
 	if err := ws.ReadJSON(&compactSummary); err != nil {
 		t.Fatalf("read compact summary failed: %v", err)
@@ -691,6 +713,28 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if strings.TrimSpace(asString(secondLocalCommandOutput["content"])) == "" {
 		t.Fatalf("invalid second local_command_output payload: %#v", secondLocalCommandOutput)
+	}
+	var secondLocalCommandOutputAssistant map[string]any
+	if err := ws.ReadJSON(&secondLocalCommandOutputAssistant); err != nil {
+		t.Fatalf("read second local_command_output assistant mirror failed: %v", err)
+	}
+	if secondLocalCommandOutputAssistant["type"] != "assistant" || strings.TrimSpace(asString(secondLocalCommandOutputAssistant["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(secondLocalCommandOutputAssistant["uuid"])) == "" {
+		t.Fatalf("unexpected second local_command_output assistant mirror payload: %#v", secondLocalCommandOutputAssistant)
+	}
+	if secondLocalCommandOutputAssistant["parent_tool_use_id"] != nil {
+		t.Fatalf("expected second local_command_output assistant mirror parent_tool_use_id=nil, got %#v", secondLocalCommandOutputAssistant)
+	}
+	secondLocalCommandOutputAssistantMessage, _ := secondLocalCommandOutputAssistant["message"].(map[string]any)
+	if strings.TrimSpace(asString(secondLocalCommandOutputAssistantMessage["role"])) != "assistant" {
+		t.Fatalf("invalid second local_command_output assistant mirror message payload: %#v", secondLocalCommandOutputAssistant)
+	}
+	secondLocalCommandOutputAssistantContent, _ := secondLocalCommandOutputAssistantMessage["content"].([]any)
+	if len(secondLocalCommandOutputAssistantContent) == 0 {
+		t.Fatalf("missing second local_command_output assistant mirror content: %#v", secondLocalCommandOutputAssistant)
+	}
+	secondLocalCommandOutputAssistantText, _ := secondLocalCommandOutputAssistantContent[0].(map[string]any)
+	if strings.TrimSpace(asString(secondLocalCommandOutputAssistantText["type"])) != "text" || strings.TrimSpace(asString(secondLocalCommandOutputAssistantText["text"])) != "local command output: persisted direct-connect artifacts" {
+		t.Fatalf("invalid second local_command_output assistant mirror content payload: %#v", secondLocalCommandOutputAssistant)
 	}
 	var secondCompactSummary map[string]any
 	if err := ws.ReadJSON(&secondCompactSummary); err != nil {

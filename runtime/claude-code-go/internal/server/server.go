@@ -1156,6 +1156,25 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       localCommandOutputUUID,
 					"session_id": session.ID,
 				})
+				localCommandAssistantUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":               "assistant",
+					"uuid":               localCommandAssistantUUID,
+					"session_id":         session.ID,
+					"parent_tool_use_id": nil,
+					"message": map[string]any{
+						"role": "assistant",
+						"content": []map[string]any{
+							{
+								"type": "text",
+								"text": "local command output: persisted direct-connect artifacts",
+							},
+						},
+					},
+				})
 				compactSummaryUUID, err := generateRequestID()
 				if err != nil {
 					return

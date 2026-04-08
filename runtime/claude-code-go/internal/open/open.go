@@ -107,6 +107,8 @@ type Result struct {
 	APIRetryEvent                                  string
 	LocalCommandOutputValidated                    bool
 	LocalCommandOutputEvent                        string
+	LocalCommandOutputAssistantValidated           bool
+	LocalCommandOutputAssistantEvent               string
 	ElicitationValidated                           bool
 	ElicitationEvent                               string
 	HookCallbackValidated                          bool
@@ -324,117 +326,119 @@ func Run(args []string) (Result, error) {
 		ResultErrorMaxBudgetUSDEvent:        streamResult.ResultErrorMaxBudgetUSDEvent,
 		ResultErrorMaxStructuredOutputRetriesValidated: streamResult.ResultErrorMaxStructuredOutputRetriesValidated,
 		ResultErrorMaxStructuredOutputRetriesEvent:     streamResult.ResultErrorMaxStructuredOutputRetriesEvent,
-		ControlValidated:                    streamResult.ControlValidated,
-		PermissionValidated:                 streamResult.PermissionValidated,
-		PermissionDeniedValidated:           streamResult.PermissionDeniedValidated,
-		PermissionDeniedEvent:               streamResult.PermissionDeniedEvent,
-		TaskStartedValidated:                streamResult.TaskStartedValidated,
-		TaskStartedEvent:                    streamResult.TaskStartedEvent,
-		TaskProgressValidated:               streamResult.TaskProgressValidated,
-		TaskProgressEvent:                   streamResult.TaskProgressEvent,
-		TaskNotificationValidated:           streamResult.TaskNotificationValidated,
-		TaskNotificationEvent:               streamResult.TaskNotificationEvent,
-		FilesPersistedValidated:             streamResult.FilesPersistedValidated,
-		FilesPersistedEvent:                 streamResult.FilesPersistedEvent,
-		APIRetryValidated:                   streamResult.APIRetryValidated,
-		APIRetryEvent:                       streamResult.APIRetryEvent,
-		LocalCommandOutputValidated:         streamResult.LocalCommandOutputValidated,
-		LocalCommandOutputEvent:             streamResult.LocalCommandOutputEvent,
-		ElicitationValidated:                streamResult.ElicitationValidated,
-		ElicitationEvent:                    streamResult.ElicitationEvent,
-		HookCallbackValidated:               streamResult.HookCallbackValidated,
-		HookCallbackEvent:                   streamResult.HookCallbackEvent,
-		ChannelEnableValidated:              streamResult.ChannelEnableValidated,
-		ChannelEnableEvent:                  streamResult.ChannelEnableEvent,
-		ElicitationCompleteValidated:        streamResult.ElicitationCompleteValidated,
-		ElicitationCompleteEvent:            streamResult.ElicitationCompleteEvent,
-		ToolProgressValidated:               streamResult.ToolProgressValidated,
-		ToolProgressEvent:                   streamResult.ToolProgressEvent,
-		RateLimitValidated:                  streamResult.RateLimitValidated,
-		RateLimitEvent:                      streamResult.RateLimitEvent,
-		ToolUseSummaryValidated:             streamResult.ToolUseSummaryValidated,
-		ToolUseSummaryEvent:                 streamResult.ToolUseSummaryEvent,
-		StreamlinedToolUseSummaryValidated:  streamResult.StreamlinedToolUseSummaryValidated,
-		StreamlinedToolUseSummaryEvent:      streamResult.StreamlinedToolUseSummaryEvent,
-		PromptSuggestionValidated:           streamResult.PromptSuggestionValidated,
-		PromptSuggestionEvent:               streamResult.PromptSuggestionEvent,
-		PostTurnSummaryValidated:            streamResult.PostTurnSummaryValidated,
-		PostTurnSummaryEvent:                streamResult.PostTurnSummaryEvent,
-		CompactBoundaryValidated:            streamResult.CompactBoundaryValidated,
-		CompactBoundaryEvent:                streamResult.CompactBoundaryEvent,
-		SessionStateChangedValidated:        streamResult.SessionStateChangedValidated,
-		SessionStateChangedEvent:            streamResult.SessionStateChangedEvent,
-		SessionStateRequiresActionValidated: streamResult.SessionStateRequiresActionValidated,
-		SessionStateRequiresActionEvent:     streamResult.SessionStateRequiresActionEvent,
-		HookStartedValidated:                streamResult.HookStartedValidated,
-		HookStartedEvent:                    streamResult.HookStartedEvent,
-		HookProgressValidated:               streamResult.HookProgressValidated,
-		HookProgressEvent:                   streamResult.HookProgressEvent,
-		HookResponseValidated:               streamResult.HookResponseValidated,
-		HookResponseEvent:                   streamResult.HookResponseEvent,
-		ToolExecutionValidated:              streamResult.ToolExecutionValidated,
-		InterruptValidated:                  streamResult.InterruptValidated,
-		SetModelValidated:                   streamResult.SetModelValidated,
-		SetModelEvent:                       streamResult.SetModelEvent,
-		SetPermissionModeValidated:          streamResult.SetPermissionModeValidated,
-		SetPermissionModeEvent:              streamResult.SetPermissionModeEvent,
-		SetMaxThinkingTokensValidated:       streamResult.SetMaxThinkingTokensValidated,
-		SetMaxThinkingTokensEvent:           streamResult.SetMaxThinkingTokensEvent,
-		MCPStatusValidated:                  streamResult.MCPStatusValidated,
-		MCPStatusEvent:                      streamResult.MCPStatusEvent,
-		GetContextUsageValidated:            streamResult.GetContextUsageValidated,
-		GetContextUsageEvent:                streamResult.GetContextUsageEvent,
-		MCPMessageValidated:                 streamResult.MCPMessageValidated,
-		MCPMessageEvent:                     streamResult.MCPMessageEvent,
-		MCPSetServersValidated:              streamResult.MCPSetServersValidated,
-		MCPSetServersEvent:                  streamResult.MCPSetServersEvent,
-		ReloadPluginsValidated:              streamResult.ReloadPluginsValidated,
-		ReloadPluginsEvent:                  streamResult.ReloadPluginsEvent,
-		MCPAuthenticateValidated:            streamResult.MCPAuthenticateValidated,
-		MCPAuthenticateEvent:                streamResult.MCPAuthenticateEvent,
-		MCPOAuthCallbackURLValidated:        streamResult.MCPOAuthCallbackURLValidated,
-		MCPOAuthCallbackURLEvent:            streamResult.MCPOAuthCallbackURLEvent,
-		MCPReconnectValidated:               streamResult.MCPReconnectValidated,
-		MCPReconnectEvent:                   streamResult.MCPReconnectEvent,
-		MCPToggleValidated:                  streamResult.MCPToggleValidated,
-		MCPToggleEvent:                      streamResult.MCPToggleEvent,
-		SeedReadStateValidated:              streamResult.SeedReadStateValidated,
-		SeedReadStateEvent:                  streamResult.SeedReadStateEvent,
-		RewindFilesValidated:                streamResult.RewindFilesValidated,
-		RewindFilesEvent:                    streamResult.RewindFilesEvent,
-		RewindFilesCanRewind:                streamResult.RewindFilesCanRewind,
-		RewindFilesFilesChanged:             streamResult.RewindFilesFilesChanged,
-		RewindFilesInsertions:               streamResult.RewindFilesInsertions,
-		RewindFilesDeletions:                streamResult.RewindFilesDeletions,
-		RewindFilesError:                    streamResult.RewindFilesError,
-		CancelAsyncMessageValidated:         streamResult.CancelAsyncMessageValidated,
-		CancelAsyncMessageEvent:             streamResult.CancelAsyncMessageEvent,
-		StopTaskValidated:                   streamResult.StopTaskValidated,
-		StopTaskEvent:                       streamResult.StopTaskEvent,
-		ApplyFlagSettingsValidated:          streamResult.ApplyFlagSettingsValidated,
-		ApplyFlagSettingsEvent:              streamResult.ApplyFlagSettingsEvent,
-		GetSettingsValidated:                streamResult.GetSettingsValidated,
-		GetSettingsEvent:                    streamResult.GetSettingsEvent,
-		GenerateSessionTitleValidated:       streamResult.GenerateSessionTitleValidated,
-		GenerateSessionTitleEvent:           streamResult.GenerateSessionTitleEvent,
-		SideQuestionValidated:               streamResult.SideQuestionValidated,
-		SideQuestionEvent:                   streamResult.SideQuestionEvent,
-		InitializeValidated:                 streamResult.InitializeValidated,
-		InitializeEvent:                     streamResult.InitializeEvent,
-		SetProactiveValidated:               streamResult.SetProactiveValidated,
-		SetProactiveEvent:                   streamResult.SetProactiveEvent,
-		BridgeStateValidated:                streamResult.BridgeStateValidated,
-		BridgeStateEvent:                    streamResult.BridgeStateEvent,
-		RemoteControlValidated:              streamResult.RemoteControlValidated,
-		RemoteControlEvent:                  streamResult.RemoteControlEvent,
-		EndSessionValidated:                 streamResult.EndSessionValidated,
-		EndSessionEvent:                     streamResult.EndSessionEvent,
-		BackendValidated:                    state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
-		BackendStatus:                       state.BackendStatus,
-		BackendPID:                          state.BackendPID,
-		BackendStartedAt:                    state.BackendStartedAt,
-		BackendStoppedAt:                    state.BackendStoppedAt,
-		BackendExitCode:                     state.BackendExitCode,
+		ControlValidated:                     streamResult.ControlValidated,
+		PermissionValidated:                  streamResult.PermissionValidated,
+		PermissionDeniedValidated:            streamResult.PermissionDeniedValidated,
+		PermissionDeniedEvent:                streamResult.PermissionDeniedEvent,
+		TaskStartedValidated:                 streamResult.TaskStartedValidated,
+		TaskStartedEvent:                     streamResult.TaskStartedEvent,
+		TaskProgressValidated:                streamResult.TaskProgressValidated,
+		TaskProgressEvent:                    streamResult.TaskProgressEvent,
+		TaskNotificationValidated:            streamResult.TaskNotificationValidated,
+		TaskNotificationEvent:                streamResult.TaskNotificationEvent,
+		FilesPersistedValidated:              streamResult.FilesPersistedValidated,
+		FilesPersistedEvent:                  streamResult.FilesPersistedEvent,
+		APIRetryValidated:                    streamResult.APIRetryValidated,
+		APIRetryEvent:                        streamResult.APIRetryEvent,
+		LocalCommandOutputValidated:          streamResult.LocalCommandOutputValidated,
+		LocalCommandOutputEvent:              streamResult.LocalCommandOutputEvent,
+		LocalCommandOutputAssistantValidated: streamResult.LocalCommandOutputAssistantValidated,
+		LocalCommandOutputAssistantEvent:     streamResult.LocalCommandOutputAssistantEvent,
+		ElicitationValidated:                 streamResult.ElicitationValidated,
+		ElicitationEvent:                     streamResult.ElicitationEvent,
+		HookCallbackValidated:                streamResult.HookCallbackValidated,
+		HookCallbackEvent:                    streamResult.HookCallbackEvent,
+		ChannelEnableValidated:               streamResult.ChannelEnableValidated,
+		ChannelEnableEvent:                   streamResult.ChannelEnableEvent,
+		ElicitationCompleteValidated:         streamResult.ElicitationCompleteValidated,
+		ElicitationCompleteEvent:             streamResult.ElicitationCompleteEvent,
+		ToolProgressValidated:                streamResult.ToolProgressValidated,
+		ToolProgressEvent:                    streamResult.ToolProgressEvent,
+		RateLimitValidated:                   streamResult.RateLimitValidated,
+		RateLimitEvent:                       streamResult.RateLimitEvent,
+		ToolUseSummaryValidated:              streamResult.ToolUseSummaryValidated,
+		ToolUseSummaryEvent:                  streamResult.ToolUseSummaryEvent,
+		StreamlinedToolUseSummaryValidated:   streamResult.StreamlinedToolUseSummaryValidated,
+		StreamlinedToolUseSummaryEvent:       streamResult.StreamlinedToolUseSummaryEvent,
+		PromptSuggestionValidated:            streamResult.PromptSuggestionValidated,
+		PromptSuggestionEvent:                streamResult.PromptSuggestionEvent,
+		PostTurnSummaryValidated:             streamResult.PostTurnSummaryValidated,
+		PostTurnSummaryEvent:                 streamResult.PostTurnSummaryEvent,
+		CompactBoundaryValidated:             streamResult.CompactBoundaryValidated,
+		CompactBoundaryEvent:                 streamResult.CompactBoundaryEvent,
+		SessionStateChangedValidated:         streamResult.SessionStateChangedValidated,
+		SessionStateChangedEvent:             streamResult.SessionStateChangedEvent,
+		SessionStateRequiresActionValidated:  streamResult.SessionStateRequiresActionValidated,
+		SessionStateRequiresActionEvent:      streamResult.SessionStateRequiresActionEvent,
+		HookStartedValidated:                 streamResult.HookStartedValidated,
+		HookStartedEvent:                     streamResult.HookStartedEvent,
+		HookProgressValidated:                streamResult.HookProgressValidated,
+		HookProgressEvent:                    streamResult.HookProgressEvent,
+		HookResponseValidated:                streamResult.HookResponseValidated,
+		HookResponseEvent:                    streamResult.HookResponseEvent,
+		ToolExecutionValidated:               streamResult.ToolExecutionValidated,
+		InterruptValidated:                   streamResult.InterruptValidated,
+		SetModelValidated:                    streamResult.SetModelValidated,
+		SetModelEvent:                        streamResult.SetModelEvent,
+		SetPermissionModeValidated:           streamResult.SetPermissionModeValidated,
+		SetPermissionModeEvent:               streamResult.SetPermissionModeEvent,
+		SetMaxThinkingTokensValidated:        streamResult.SetMaxThinkingTokensValidated,
+		SetMaxThinkingTokensEvent:            streamResult.SetMaxThinkingTokensEvent,
+		MCPStatusValidated:                   streamResult.MCPStatusValidated,
+		MCPStatusEvent:                       streamResult.MCPStatusEvent,
+		GetContextUsageValidated:             streamResult.GetContextUsageValidated,
+		GetContextUsageEvent:                 streamResult.GetContextUsageEvent,
+		MCPMessageValidated:                  streamResult.MCPMessageValidated,
+		MCPMessageEvent:                      streamResult.MCPMessageEvent,
+		MCPSetServersValidated:               streamResult.MCPSetServersValidated,
+		MCPSetServersEvent:                   streamResult.MCPSetServersEvent,
+		ReloadPluginsValidated:               streamResult.ReloadPluginsValidated,
+		ReloadPluginsEvent:                   streamResult.ReloadPluginsEvent,
+		MCPAuthenticateValidated:             streamResult.MCPAuthenticateValidated,
+		MCPAuthenticateEvent:                 streamResult.MCPAuthenticateEvent,
+		MCPOAuthCallbackURLValidated:         streamResult.MCPOAuthCallbackURLValidated,
+		MCPOAuthCallbackURLEvent:             streamResult.MCPOAuthCallbackURLEvent,
+		MCPReconnectValidated:                streamResult.MCPReconnectValidated,
+		MCPReconnectEvent:                    streamResult.MCPReconnectEvent,
+		MCPToggleValidated:                   streamResult.MCPToggleValidated,
+		MCPToggleEvent:                       streamResult.MCPToggleEvent,
+		SeedReadStateValidated:               streamResult.SeedReadStateValidated,
+		SeedReadStateEvent:                   streamResult.SeedReadStateEvent,
+		RewindFilesValidated:                 streamResult.RewindFilesValidated,
+		RewindFilesEvent:                     streamResult.RewindFilesEvent,
+		RewindFilesCanRewind:                 streamResult.RewindFilesCanRewind,
+		RewindFilesFilesChanged:              streamResult.RewindFilesFilesChanged,
+		RewindFilesInsertions:                streamResult.RewindFilesInsertions,
+		RewindFilesDeletions:                 streamResult.RewindFilesDeletions,
+		RewindFilesError:                     streamResult.RewindFilesError,
+		CancelAsyncMessageValidated:          streamResult.CancelAsyncMessageValidated,
+		CancelAsyncMessageEvent:              streamResult.CancelAsyncMessageEvent,
+		StopTaskValidated:                    streamResult.StopTaskValidated,
+		StopTaskEvent:                        streamResult.StopTaskEvent,
+		ApplyFlagSettingsValidated:           streamResult.ApplyFlagSettingsValidated,
+		ApplyFlagSettingsEvent:               streamResult.ApplyFlagSettingsEvent,
+		GetSettingsValidated:                 streamResult.GetSettingsValidated,
+		GetSettingsEvent:                     streamResult.GetSettingsEvent,
+		GenerateSessionTitleValidated:        streamResult.GenerateSessionTitleValidated,
+		GenerateSessionTitleEvent:            streamResult.GenerateSessionTitleEvent,
+		SideQuestionValidated:                streamResult.SideQuestionValidated,
+		SideQuestionEvent:                    streamResult.SideQuestionEvent,
+		InitializeValidated:                  streamResult.InitializeValidated,
+		InitializeEvent:                      streamResult.InitializeEvent,
+		SetProactiveValidated:                streamResult.SetProactiveValidated,
+		SetProactiveEvent:                    streamResult.SetProactiveEvent,
+		BridgeStateValidated:                 streamResult.BridgeStateValidated,
+		BridgeStateEvent:                     streamResult.BridgeStateEvent,
+		RemoteControlValidated:               streamResult.RemoteControlValidated,
+		RemoteControlEvent:                   streamResult.RemoteControlEvent,
+		EndSessionValidated:                  streamResult.EndSessionValidated,
+		EndSessionEvent:                      streamResult.EndSessionEvent,
+		BackendValidated:                     state.BackendPID > 0 && strings.TrimSpace(state.BackendStatus) == "running",
+		BackendStatus:                        state.BackendStatus,
+		BackendPID:                           state.BackendPID,
+		BackendStartedAt:                     state.BackendStartedAt,
+		BackendStoppedAt:                     state.BackendStoppedAt,
+		BackendExitCode:                      state.BackendExitCode,
 	}, nil
 }
 
@@ -803,6 +807,8 @@ type streamValidation struct {
 	APIRetryEvent                                  string
 	LocalCommandOutputValidated                    bool
 	LocalCommandOutputEvent                        string
+	LocalCommandOutputAssistantValidated           bool
+	LocalCommandOutputAssistantEvent               string
 	ElicitationValidated                           bool
 	ElicitationEvent                               string
 	HookCallbackValidated                          bool
@@ -1702,11 +1708,35 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.ReplayedAssistantMessageEvent = "assistant:replay"
 					continue
 				}
+				message, _ := incoming["message"].(map[string]any)
+				content, _ := message["content"].([]any)
+				mirrorFound := false
+				for _, item := range content {
+					block, _ := item.(map[string]any)
+					if strings.TrimSpace(asString(block["type"])) == "text" && strings.TrimSpace(asString(block["text"])) == "local command output: persisted direct-connect artifacts" {
+						mirrorFound = true
+						break
+					}
+				}
+				if mirrorFound {
+					if strings.TrimSpace(asString(incoming["uuid"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid local_command_output assistant mirror: missing uuid")
+					}
+					if strings.TrimSpace(asString(incoming["session_id"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid local_command_output assistant mirror: missing session_id")
+					}
+					if strings.TrimSpace(asString(message["role"])) != "assistant" {
+						return streamValidation{}, fmt.Errorf("invalid local_command_output assistant mirror: missing role=assistant")
+					}
+					if !result.LocalCommandOutputAssistantValidated {
+						result.LocalCommandOutputAssistantValidated = true
+						result.LocalCommandOutputAssistantEvent = "assistant:local_command_output"
+					}
+					continue
+				}
 				if turn.behavior == "deny" {
 					return streamValidation{}, fmt.Errorf("unexpected assistant payload during deny turn")
 				}
-				message, _ := incoming["message"].(map[string]any)
-				content, _ := message["content"].([]any)
 				found := false
 				for _, item := range content {
 					block, _ := item.(map[string]any)
@@ -3132,6 +3162,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("api_retry_event=%s\n", valueOrNone(r.APIRetryEvent)))
 	b.WriteString(fmt.Sprintf("local_command_output_validated=%t\n", r.LocalCommandOutputValidated))
 	b.WriteString(fmt.Sprintf("local_command_output_event=%s\n", valueOrNone(r.LocalCommandOutputEvent)))
+	b.WriteString(fmt.Sprintf("local_command_output_assistant_validated=%t\n", r.LocalCommandOutputAssistantValidated))
+	b.WriteString(fmt.Sprintf("local_command_output_assistant_event=%s\n", valueOrNone(r.LocalCommandOutputAssistantEvent)))
 	b.WriteString(fmt.Sprintf("elicitation_validated=%t\n", r.ElicitationValidated))
 	b.WriteString(fmt.Sprintf("elicitation_event=%s\n", valueOrNone(r.ElicitationEvent)))
 	b.WriteString(fmt.Sprintf("hook_callback_validated=%t\n", r.HookCallbackValidated))
