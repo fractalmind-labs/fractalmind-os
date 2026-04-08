@@ -1557,6 +1557,19 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       planModeExitUUID,
 					"session_id": session.ID,
 				})
+				dateChangeUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":    "date_change",
+						"newDate": "2026-04-09",
+					},
+					"uuid":       dateChangeUUID,
+					"session_id": session.ID,
+				})
 				compactingStatusUUID, err := generateRequestID()
 				if err != nil {
 					return

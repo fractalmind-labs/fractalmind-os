@@ -83,6 +83,8 @@ type Result struct {
 	AutoModeExitEvent                                            string
 	PlanModeExitValidated                                        bool
 	PlanModeExitEvent                                            string
+	DateChangeValidated                                          bool
+	DateChangeEvent                                              string
 	StreamlinedTextValidated                                     bool
 	StreamlinedTextEvent                                         string
 	SystemValidated                                              bool
@@ -426,6 +428,8 @@ func Run(args []string) (Result, error) {
 		AutoModeExitEvent:                                            streamResult.AutoModeExitEvent,
 		PlanModeExitValidated:                                        streamResult.PlanModeExitValidated,
 		PlanModeExitEvent:                                            streamResult.PlanModeExitEvent,
+		DateChangeValidated:                                          streamResult.DateChangeValidated,
+		DateChangeEvent:                                              streamResult.DateChangeEvent,
 		StreamlinedTextValidated:                                     streamResult.StreamlinedTextValidated,
 		StreamlinedTextEvent:                                         streamResult.StreamlinedTextEvent,
 		SystemValidated:                                              streamResult.SystemValidated,
@@ -999,6 +1003,8 @@ type streamValidation struct {
 	AutoModeExitEvent                                            string
 	PlanModeExitValidated                                        bool
 	PlanModeExitEvent                                            string
+	DateChangeValidated                                          bool
+	DateChangeEvent                                              string
 	StreamlinedTextValidated                                     bool
 	StreamlinedTextEvent                                         string
 	SystemValidated                                              bool
@@ -1358,6 +1364,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		compactionReminderValidated := false
 		autoModeExitValidated := false
 		planModeExitValidated := false
+		dateChangeValidated := false
 		streamlinedTextValidated := false
 		streamlinedToolUseSummaryValidated := false
 		promptSuggestionValidated := false
@@ -2259,6 +2266,17 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.PlanModeExitValidated = true
 					result.PlanModeExitEvent = "attachment:plan_mode_exit"
 					planModeExitValidated = true
+				case "date_change":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected date_change attachment during %s turn", turn.behavior)
+					}
+					newDate := strings.TrimSpace(asString(attachment["newDate"]))
+					if newDate != "2026-04-09" {
+						return streamValidation{}, fmt.Errorf("invalid date_change attachment.newDate: %q", newDate)
+					}
+					result.DateChangeValidated = true
+					result.DateChangeEvent = "attachment:date_change"
+					dateChangeValidated = true
 				default:
 					return streamValidation{}, fmt.Errorf("invalid attachment type: %q", strings.TrimSpace(asString(attachment["type"])))
 				}
@@ -2695,7 +2713,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && autoModeExitValidated && planModeExitValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && autoModeExitValidated && planModeExitValidated && dateChangeValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4046,6 +4064,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("auto_mode_exit_event=%s\n", valueOrNone(r.AutoModeExitEvent)))
 	b.WriteString(fmt.Sprintf("plan_mode_exit_validated=%t\n", r.PlanModeExitValidated))
 	b.WriteString(fmt.Sprintf("plan_mode_exit_event=%s\n", valueOrNone(r.PlanModeExitEvent)))
+	b.WriteString(fmt.Sprintf("date_change_validated=%t\n", r.DateChangeValidated))
+	b.WriteString(fmt.Sprintf("date_change_event=%s\n", valueOrNone(r.DateChangeEvent)))
 	b.WriteString(fmt.Sprintf("streamlined_text_validated=%t\n", r.StreamlinedTextValidated))
 	b.WriteString(fmt.Sprintf("streamlined_text_event=%s\n", valueOrNone(r.StreamlinedTextEvent)))
 	b.WriteString(fmt.Sprintf("system_validated=%t\n", r.SystemValidated))

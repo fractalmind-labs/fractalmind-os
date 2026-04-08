@@ -678,6 +678,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if planExists, ok := planModeExitPayload["planExists"].(bool); !ok || planExists {
 		t.Fatalf("invalid plan_mode_exit attachment payload: %#v", planModeExitAttachment)
 	}
+	var dateChangeAttachment map[string]any
+	if err := ws.ReadJSON(&dateChangeAttachment); err != nil {
+		t.Fatalf("read date_change attachment failed: %v", err)
+	}
+	if dateChangeAttachment["type"] != "attachment" || strings.TrimSpace(asString(dateChangeAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected date_change attachment envelope: %#v", dateChangeAttachment)
+	}
+	dateChangePayload, _ := dateChangeAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(dateChangePayload["type"])) != "date_change" || strings.TrimSpace(asString(dateChangePayload["newDate"])) != "2026-04-09" {
+		t.Fatalf("unexpected date_change attachment payload: %#v", dateChangeAttachment)
+	}
 	var compactingStatus map[string]any
 	if err := ws.ReadJSON(&compactingStatus); err != nil {
 		t.Fatalf("read compacting status failed: %v", err)
@@ -1218,6 +1229,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if planExists, ok := secondPlanModeExitPayload["planExists"].(bool); !ok || planExists {
 		t.Fatalf("invalid second plan_mode_exit attachment payload: %#v", secondPlanModeExitAttachment)
+	}
+	var secondDateChangeAttachment map[string]any
+	if err := ws.ReadJSON(&secondDateChangeAttachment); err != nil {
+		t.Fatalf("read second date_change attachment failed: %v", err)
+	}
+	if secondDateChangeAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondDateChangeAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second date_change attachment envelope: %#v", secondDateChangeAttachment)
+	}
+	secondDateChangePayload, _ := secondDateChangeAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondDateChangePayload["type"])) != "date_change" || strings.TrimSpace(asString(secondDateChangePayload["newDate"])) != "2026-04-09" {
+		t.Fatalf("unexpected second date_change attachment payload: %#v", secondDateChangeAttachment)
 	}
 	var secondCompactingStatus map[string]any
 	if err := ws.ReadJSON(&secondCompactingStatus); err != nil {
