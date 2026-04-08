@@ -26,188 +26,200 @@ type Options struct {
 }
 
 type Result struct {
-	Status                                           string
-	Action                                           string
-	ConnectURL                                       string
-	Transport                                        string
-	ServerURL                                        string
-	AuthToken                                        string
-	PrintMode                                        bool
-	PrintPrompt                                      string
-	OutputFormat                                     string
-	RequestCWD                                       string
-	SessionID                                        string
-	WSURL                                            string
-	WorkDir                                          string
-	StreamValidated                                  bool
-	StreamEvent                                      string
-	StreamContentValidated                           bool
-	StreamContentEvent                               string
-	StreamlinedTextValidated                         bool
-	StreamlinedTextEvent                             string
-	SystemValidated                                  bool
-	SystemEvent                                      string
-	StatusValidated                                  bool
-	StatusEvent                                      string
-	StatusTransitionValidated                        bool
-	StatusTransitionEvent                            string
-	StatusCompactingLifecycleValidated               bool
-	StatusCompactingLifecycleEvent                   string
-	CompactSummaryValidated                          bool
-	CompactSummaryEvent                              string
-	ReplayedUserMessageValidated                     bool
-	ReplayedUserMessageEvent                         string
-	ReplayedQueuedCommandValidated                   bool
-	ReplayedQueuedCommandEvent                       string
-	ReplayedToolResultValidated                      bool
-	ReplayedToolResultEvent                          string
-	ReplayedAssistantMessageValidated                bool
-	ReplayedAssistantMessageEvent                    string
-	ReplayedCompactBoundaryValidated                 bool
-	ReplayedCompactBoundaryEvent                     string
-	ReplayedCompactBoundaryPreservedSegmentValidated bool
-	ReplayedCompactBoundaryPreservedSegmentEvent     string
-	ReplayedLocalCommandBreadcrumbValidated          bool
-	ReplayedLocalCommandBreadcrumbEvent              string
-	ReplayedLocalCommandStderrBreadcrumbValidated    bool
-	ReplayedLocalCommandStderrBreadcrumbEvent        string
-	AuthValidated                                    bool
-	AuthEvent                                        string
-	KeepAliveValidated                               bool
-	KeepAliveEvent                                   string
-	UpdateEnvironmentVariablesValidated              bool
-	UpdateEnvironmentVariablesEvent                  string
-	ControlCancelValidated                           bool
-	ControlCancelEvent                               string
-	MessageValidated                                 bool
-	MessageEvent                                     string
-	ValidatedTurns                                   int
-	MultiTurnValidated                               bool
-	ResultValidated                                  bool
-	ResultEvent                                      string
-	ResultErrorValidated                             bool
-	ResultErrorEvent                                 string
-	ResultErrorMaxTurnsValidated                     bool
-	ResultErrorMaxTurnsEvent                         string
-	ResultErrorMaxBudgetUSDValidated                 bool
-	ResultErrorMaxBudgetUSDEvent                     string
-	ResultErrorMaxStructuredOutputRetriesValidated   bool
-	ResultErrorMaxStructuredOutputRetriesEvent       string
-	ControlValidated                                 bool
-	PermissionValidated                              bool
-	PermissionDeniedValidated                        bool
-	PermissionDeniedEvent                            string
-	TaskStartedValidated                             bool
-	TaskStartedEvent                                 string
-	TaskProgressValidated                            bool
-	TaskProgressEvent                                string
-	TaskNotificationValidated                        bool
-	TaskNotificationEvent                            string
-	FilesPersistedValidated                          bool
-	FilesPersistedEvent                              string
-	APIRetryValidated                                bool
-	APIRetryEvent                                    string
-	LocalCommandOutputValidated                      bool
-	LocalCommandOutputEvent                          string
-	LocalCommandOutputAssistantValidated             bool
-	LocalCommandOutputAssistantEvent                 string
-	ElicitationValidated                             bool
-	ElicitationEvent                                 string
-	HookCallbackValidated                            bool
-	HookCallbackEvent                                string
-	ChannelEnableValidated                           bool
-	ChannelEnableEvent                               string
-	ElicitationCompleteValidated                     bool
-	ElicitationCompleteEvent                         string
-	ToolProgressValidated                            bool
-	ToolProgressEvent                                string
-	RateLimitValidated                               bool
-	RateLimitEvent                                   string
-	ToolUseSummaryValidated                          bool
-	ToolUseSummaryEvent                              string
-	StreamlinedToolUseSummaryValidated               bool
-	StreamlinedToolUseSummaryEvent                   string
-	PromptSuggestionValidated                        bool
-	PromptSuggestionEvent                            string
-	PostTurnSummaryValidated                         bool
-	PostTurnSummaryEvent                             string
-	CompactBoundaryValidated                         bool
-	CompactBoundaryEvent                             string
-	CompactBoundaryPreservedSegmentValidated         bool
-	CompactBoundaryPreservedSegmentEvent             string
-	SessionStateChangedValidated                     bool
-	SessionStateChangedEvent                         string
-	SessionStateRequiresActionValidated              bool
-	SessionStateRequiresActionEvent                  string
-	HookStartedValidated                             bool
-	HookStartedEvent                                 string
-	HookProgressValidated                            bool
-	HookProgressEvent                                string
-	HookResponseValidated                            bool
-	HookResponseEvent                                string
-	ToolExecutionValidated                           bool
-	InterruptValidated                               bool
-	SetModelValidated                                bool
-	SetModelEvent                                    string
-	SetPermissionModeValidated                       bool
-	SetPermissionModeEvent                           string
-	SetMaxThinkingTokensValidated                    bool
-	SetMaxThinkingTokensEvent                        string
-	MCPStatusValidated                               bool
-	MCPStatusEvent                                   string
-	GetContextUsageValidated                         bool
-	GetContextUsageEvent                             string
-	MCPMessageValidated                              bool
-	MCPMessageEvent                                  string
-	MCPSetServersValidated                           bool
-	MCPSetServersEvent                               string
-	ReloadPluginsValidated                           bool
-	ReloadPluginsEvent                               string
-	MCPAuthenticateValidated                         bool
-	MCPAuthenticateEvent                             string
-	MCPOAuthCallbackURLValidated                     bool
-	MCPOAuthCallbackURLEvent                         string
-	MCPReconnectValidated                            bool
-	MCPReconnectEvent                                string
-	MCPToggleValidated                               bool
-	MCPToggleEvent                                   string
-	SeedReadStateValidated                           bool
-	SeedReadStateEvent                               string
-	RewindFilesValidated                             bool
-	RewindFilesEvent                                 string
-	RewindFilesCanRewind                             bool
-	RewindFilesFilesChanged                          int
-	RewindFilesInsertions                            int
-	RewindFilesDeletions                             int
-	RewindFilesError                                 string
-	CancelAsyncMessageValidated                      bool
-	CancelAsyncMessageEvent                          string
-	StopTaskValidated                                bool
-	StopTaskEvent                                    string
-	ApplyFlagSettingsValidated                       bool
-	ApplyFlagSettingsEvent                           string
-	GetSettingsValidated                             bool
-	GetSettingsEvent                                 string
-	GenerateSessionTitleValidated                    bool
-	GenerateSessionTitleEvent                        string
-	SideQuestionValidated                            bool
-	SideQuestionEvent                                string
-	InitializeValidated                              bool
-	InitializeEvent                                  string
-	SetProactiveValidated                            bool
-	SetProactiveEvent                                string
-	BridgeStateValidated                             bool
-	BridgeStateEvent                                 string
-	RemoteControlValidated                           bool
-	RemoteControlEvent                               string
-	EndSessionValidated                              bool
-	EndSessionEvent                                  string
-	BackendValidated                                 bool
-	BackendStatus                                    string
-	BackendPID                                       int
-	BackendStartedAt                                 int64
-	BackendStoppedAt                                 int64
-	BackendExitCode                                  int
+	Status                                                 string
+	Action                                                 string
+	ConnectURL                                             string
+	Transport                                              string
+	ServerURL                                              string
+	AuthToken                                              string
+	PrintMode                                              bool
+	PrintPrompt                                            string
+	OutputFormat                                           string
+	RequestCWD                                             string
+	SessionID                                              string
+	WSURL                                                  string
+	WorkDir                                                string
+	StreamValidated                                        bool
+	StreamEvent                                            string
+	StreamContentValidated                                 bool
+	StreamContentEvent                                     string
+	StreamlinedTextValidated                               bool
+	StreamlinedTextEvent                                   string
+	SystemValidated                                        bool
+	SystemEvent                                            string
+	StatusValidated                                        bool
+	StatusEvent                                            string
+	StatusTransitionValidated                              bool
+	StatusTransitionEvent                                  string
+	StatusCompactingLifecycleValidated                     bool
+	StatusCompactingLifecycleEvent                         string
+	CompactSummaryValidated                                bool
+	CompactSummaryEvent                                    string
+	CompactSummarySyntheticValidated                       bool
+	CompactSummarySyntheticEvent                           string
+	ReplayedUserMessageValidated                           bool
+	ReplayedUserMessageEvent                               string
+	ReplayedUserSyntheticValidated                         bool
+	ReplayedUserSyntheticEvent                             string
+	ReplayedQueuedCommandValidated                         bool
+	ReplayedQueuedCommandEvent                             string
+	ReplayedQueuedCommandSyntheticValidated                bool
+	ReplayedQueuedCommandSyntheticEvent                    string
+	ReplayedToolResultValidated                            bool
+	ReplayedToolResultEvent                                string
+	ReplayedToolResultSyntheticValidated                   bool
+	ReplayedToolResultSyntheticEvent                       string
+	ReplayedAssistantMessageValidated                      bool
+	ReplayedAssistantMessageEvent                          string
+	ReplayedCompactBoundaryValidated                       bool
+	ReplayedCompactBoundaryEvent                           string
+	ReplayedCompactBoundaryPreservedSegmentValidated       bool
+	ReplayedCompactBoundaryPreservedSegmentEvent           string
+	ReplayedLocalCommandBreadcrumbValidated                bool
+	ReplayedLocalCommandBreadcrumbEvent                    string
+	ReplayedLocalCommandBreadcrumbSyntheticValidated       bool
+	ReplayedLocalCommandBreadcrumbSyntheticEvent           string
+	ReplayedLocalCommandStderrBreadcrumbValidated          bool
+	ReplayedLocalCommandStderrBreadcrumbEvent              string
+	ReplayedLocalCommandStderrBreadcrumbSyntheticValidated bool
+	ReplayedLocalCommandStderrBreadcrumbSyntheticEvent     string
+	AuthValidated                                          bool
+	AuthEvent                                              string
+	KeepAliveValidated                                     bool
+	KeepAliveEvent                                         string
+	UpdateEnvironmentVariablesValidated                    bool
+	UpdateEnvironmentVariablesEvent                        string
+	ControlCancelValidated                                 bool
+	ControlCancelEvent                                     string
+	MessageValidated                                       bool
+	MessageEvent                                           string
+	ValidatedTurns                                         int
+	MultiTurnValidated                                     bool
+	ResultValidated                                        bool
+	ResultEvent                                            string
+	ResultErrorValidated                                   bool
+	ResultErrorEvent                                       string
+	ResultErrorMaxTurnsValidated                           bool
+	ResultErrorMaxTurnsEvent                               string
+	ResultErrorMaxBudgetUSDValidated                       bool
+	ResultErrorMaxBudgetUSDEvent                           string
+	ResultErrorMaxStructuredOutputRetriesValidated         bool
+	ResultErrorMaxStructuredOutputRetriesEvent             string
+	ControlValidated                                       bool
+	PermissionValidated                                    bool
+	PermissionDeniedValidated                              bool
+	PermissionDeniedEvent                                  string
+	TaskStartedValidated                                   bool
+	TaskStartedEvent                                       string
+	TaskProgressValidated                                  bool
+	TaskProgressEvent                                      string
+	TaskNotificationValidated                              bool
+	TaskNotificationEvent                                  string
+	FilesPersistedValidated                                bool
+	FilesPersistedEvent                                    string
+	APIRetryValidated                                      bool
+	APIRetryEvent                                          string
+	LocalCommandOutputValidated                            bool
+	LocalCommandOutputEvent                                string
+	LocalCommandOutputAssistantValidated                   bool
+	LocalCommandOutputAssistantEvent                       string
+	ElicitationValidated                                   bool
+	ElicitationEvent                                       string
+	HookCallbackValidated                                  bool
+	HookCallbackEvent                                      string
+	ChannelEnableValidated                                 bool
+	ChannelEnableEvent                                     string
+	ElicitationCompleteValidated                           bool
+	ElicitationCompleteEvent                               string
+	ToolProgressValidated                                  bool
+	ToolProgressEvent                                      string
+	RateLimitValidated                                     bool
+	RateLimitEvent                                         string
+	ToolUseSummaryValidated                                bool
+	ToolUseSummaryEvent                                    string
+	StreamlinedToolUseSummaryValidated                     bool
+	StreamlinedToolUseSummaryEvent                         string
+	PromptSuggestionValidated                              bool
+	PromptSuggestionEvent                                  string
+	PostTurnSummaryValidated                               bool
+	PostTurnSummaryEvent                                   string
+	CompactBoundaryValidated                               bool
+	CompactBoundaryEvent                                   string
+	CompactBoundaryPreservedSegmentValidated               bool
+	CompactBoundaryPreservedSegmentEvent                   string
+	SessionStateChangedValidated                           bool
+	SessionStateChangedEvent                               string
+	SessionStateRequiresActionValidated                    bool
+	SessionStateRequiresActionEvent                        string
+	HookStartedValidated                                   bool
+	HookStartedEvent                                       string
+	HookProgressValidated                                  bool
+	HookProgressEvent                                      string
+	HookResponseValidated                                  bool
+	HookResponseEvent                                      string
+	ToolExecutionValidated                                 bool
+	InterruptValidated                                     bool
+	SetModelValidated                                      bool
+	SetModelEvent                                          string
+	SetPermissionModeValidated                             bool
+	SetPermissionModeEvent                                 string
+	SetMaxThinkingTokensValidated                          bool
+	SetMaxThinkingTokensEvent                              string
+	MCPStatusValidated                                     bool
+	MCPStatusEvent                                         string
+	GetContextUsageValidated                               bool
+	GetContextUsageEvent                                   string
+	MCPMessageValidated                                    bool
+	MCPMessageEvent                                        string
+	MCPSetServersValidated                                 bool
+	MCPSetServersEvent                                     string
+	ReloadPluginsValidated                                 bool
+	ReloadPluginsEvent                                     string
+	MCPAuthenticateValidated                               bool
+	MCPAuthenticateEvent                                   string
+	MCPOAuthCallbackURLValidated                           bool
+	MCPOAuthCallbackURLEvent                               string
+	MCPReconnectValidated                                  bool
+	MCPReconnectEvent                                      string
+	MCPToggleValidated                                     bool
+	MCPToggleEvent                                         string
+	SeedReadStateValidated                                 bool
+	SeedReadStateEvent                                     string
+	RewindFilesValidated                                   bool
+	RewindFilesEvent                                       string
+	RewindFilesCanRewind                                   bool
+	RewindFilesFilesChanged                                int
+	RewindFilesInsertions                                  int
+	RewindFilesDeletions                                   int
+	RewindFilesError                                       string
+	CancelAsyncMessageValidated                            bool
+	CancelAsyncMessageEvent                                string
+	StopTaskValidated                                      bool
+	StopTaskEvent                                          string
+	ApplyFlagSettingsValidated                             bool
+	ApplyFlagSettingsEvent                                 string
+	GetSettingsValidated                                   bool
+	GetSettingsEvent                                       string
+	GenerateSessionTitleValidated                          bool
+	GenerateSessionTitleEvent                              string
+	SideQuestionValidated                                  bool
+	SideQuestionEvent                                      string
+	InitializeValidated                                    bool
+	InitializeEvent                                        string
+	SetProactiveValidated                                  bool
+	SetProactiveEvent                                      string
+	BridgeStateValidated                                   bool
+	BridgeStateEvent                                       string
+	RemoteControlValidated                                 bool
+	RemoteControlEvent                                     string
+	EndSessionValidated                                    bool
+	EndSessionEvent                                        string
+	BackendValidated                                       bool
+	BackendStatus                                          string
+	BackendPID                                             int
+	BackendStartedAt                                       int64
+	BackendStoppedAt                                       int64
+	BackendExitCode                                        int
 }
 
 func Run(args []string) (Result, error) {
@@ -265,51 +277,63 @@ func Run(args []string) (Result, error) {
 	}
 
 	return Result{
-		Status:                             "connected",
-		Action:                             actionForOptions(opts),
-		ConnectURL:                         opts.ConnectURL,
-		Transport:                          transport,
-		ServerURL:                          serverURL,
-		AuthToken:                          authToken,
-		PrintMode:                          opts.PrintMode,
-		PrintPrompt:                        opts.PrintPrompt,
-		OutputFormat:                       opts.OutputFormat,
-		RequestCWD:                         cwd,
-		SessionID:                          session.SessionID,
-		WSURL:                              session.WSURL,
-		WorkDir:                            session.WorkDir,
-		StreamValidated:                    true,
-		StreamEvent:                        streamResult.StreamEvent,
-		StreamContentValidated:             streamResult.StreamContentValidated,
-		StreamContentEvent:                 streamResult.StreamContentEvent,
-		StreamlinedTextValidated:           streamResult.StreamlinedTextValidated,
-		StreamlinedTextEvent:               streamResult.StreamlinedTextEvent,
-		SystemValidated:                    streamResult.SystemValidated,
-		SystemEvent:                        streamResult.SystemEvent,
-		StatusValidated:                    streamResult.StatusValidated,
-		StatusEvent:                        streamResult.StatusEvent,
-		StatusTransitionValidated:          streamResult.StatusTransitionValidated,
-		StatusTransitionEvent:              streamResult.StatusTransitionEvent,
-		StatusCompactingLifecycleValidated: streamResult.StatusCompactingLifecycleValidated,
-		StatusCompactingLifecycleEvent:     streamResult.StatusCompactingLifecycleEvent,
-		CompactSummaryValidated:            streamResult.CompactSummaryValidated,
-		CompactSummaryEvent:                streamResult.CompactSummaryEvent,
-		ReplayedUserMessageValidated:       streamResult.ReplayedUserMessageValidated,
-		ReplayedUserMessageEvent:           streamResult.ReplayedUserMessageEvent,
-		ReplayedQueuedCommandValidated:     streamResult.ReplayedQueuedCommandValidated,
-		ReplayedQueuedCommandEvent:         streamResult.ReplayedQueuedCommandEvent,
-		ReplayedToolResultValidated:        streamResult.ReplayedToolResultValidated,
-		ReplayedToolResultEvent:            streamResult.ReplayedToolResultEvent,
-		ReplayedAssistantMessageValidated:  streamResult.ReplayedAssistantMessageValidated,
-		ReplayedAssistantMessageEvent:      streamResult.ReplayedAssistantMessageEvent,
-		ReplayedCompactBoundaryValidated:   streamResult.ReplayedCompactBoundaryValidated,
-		ReplayedCompactBoundaryEvent:       streamResult.ReplayedCompactBoundaryEvent,
-		ReplayedCompactBoundaryPreservedSegmentValidated: streamResult.ReplayedCompactBoundaryPreservedSegmentValidated,
-		ReplayedCompactBoundaryPreservedSegmentEvent:     streamResult.ReplayedCompactBoundaryPreservedSegmentEvent,
-		ReplayedLocalCommandBreadcrumbValidated:          streamResult.ReplayedLocalCommandBreadcrumbValidated,
-		ReplayedLocalCommandBreadcrumbEvent:              streamResult.ReplayedLocalCommandBreadcrumbEvent,
-		ReplayedLocalCommandStderrBreadcrumbValidated:    streamResult.ReplayedLocalCommandStderrBreadcrumbValidated,
-		ReplayedLocalCommandStderrBreadcrumbEvent:        streamResult.ReplayedLocalCommandStderrBreadcrumbEvent,
+		Status:                                  "connected",
+		Action:                                  actionForOptions(opts),
+		ConnectURL:                              opts.ConnectURL,
+		Transport:                               transport,
+		ServerURL:                               serverURL,
+		AuthToken:                               authToken,
+		PrintMode:                               opts.PrintMode,
+		PrintPrompt:                             opts.PrintPrompt,
+		OutputFormat:                            opts.OutputFormat,
+		RequestCWD:                              cwd,
+		SessionID:                               session.SessionID,
+		WSURL:                                   session.WSURL,
+		WorkDir:                                 session.WorkDir,
+		StreamValidated:                         true,
+		StreamEvent:                             streamResult.StreamEvent,
+		StreamContentValidated:                  streamResult.StreamContentValidated,
+		StreamContentEvent:                      streamResult.StreamContentEvent,
+		StreamlinedTextValidated:                streamResult.StreamlinedTextValidated,
+		StreamlinedTextEvent:                    streamResult.StreamlinedTextEvent,
+		SystemValidated:                         streamResult.SystemValidated,
+		SystemEvent:                             streamResult.SystemEvent,
+		StatusValidated:                         streamResult.StatusValidated,
+		StatusEvent:                             streamResult.StatusEvent,
+		StatusTransitionValidated:               streamResult.StatusTransitionValidated,
+		StatusTransitionEvent:                   streamResult.StatusTransitionEvent,
+		StatusCompactingLifecycleValidated:      streamResult.StatusCompactingLifecycleValidated,
+		StatusCompactingLifecycleEvent:          streamResult.StatusCompactingLifecycleEvent,
+		CompactSummaryValidated:                 streamResult.CompactSummaryValidated,
+		CompactSummaryEvent:                     streamResult.CompactSummaryEvent,
+		CompactSummarySyntheticValidated:        streamResult.CompactSummarySyntheticValidated,
+		CompactSummarySyntheticEvent:            streamResult.CompactSummarySyntheticEvent,
+		ReplayedUserMessageValidated:            streamResult.ReplayedUserMessageValidated,
+		ReplayedUserMessageEvent:                streamResult.ReplayedUserMessageEvent,
+		ReplayedUserSyntheticValidated:          streamResult.ReplayedUserSyntheticValidated,
+		ReplayedUserSyntheticEvent:              streamResult.ReplayedUserSyntheticEvent,
+		ReplayedQueuedCommandValidated:          streamResult.ReplayedQueuedCommandValidated,
+		ReplayedQueuedCommandEvent:              streamResult.ReplayedQueuedCommandEvent,
+		ReplayedQueuedCommandSyntheticValidated: streamResult.ReplayedQueuedCommandSyntheticValidated,
+		ReplayedQueuedCommandSyntheticEvent:     streamResult.ReplayedQueuedCommandSyntheticEvent,
+		ReplayedToolResultValidated:             streamResult.ReplayedToolResultValidated,
+		ReplayedToolResultEvent:                 streamResult.ReplayedToolResultEvent,
+		ReplayedToolResultSyntheticValidated:    streamResult.ReplayedToolResultSyntheticValidated,
+		ReplayedToolResultSyntheticEvent:        streamResult.ReplayedToolResultSyntheticEvent,
+		ReplayedAssistantMessageValidated:       streamResult.ReplayedAssistantMessageValidated,
+		ReplayedAssistantMessageEvent:           streamResult.ReplayedAssistantMessageEvent,
+		ReplayedCompactBoundaryValidated:        streamResult.ReplayedCompactBoundaryValidated,
+		ReplayedCompactBoundaryEvent:            streamResult.ReplayedCompactBoundaryEvent,
+		ReplayedCompactBoundaryPreservedSegmentValidated:       streamResult.ReplayedCompactBoundaryPreservedSegmentValidated,
+		ReplayedCompactBoundaryPreservedSegmentEvent:           streamResult.ReplayedCompactBoundaryPreservedSegmentEvent,
+		ReplayedLocalCommandBreadcrumbValidated:                streamResult.ReplayedLocalCommandBreadcrumbValidated,
+		ReplayedLocalCommandBreadcrumbEvent:                    streamResult.ReplayedLocalCommandBreadcrumbEvent,
+		ReplayedLocalCommandBreadcrumbSyntheticValidated:       streamResult.ReplayedLocalCommandBreadcrumbSyntheticValidated,
+		ReplayedLocalCommandBreadcrumbSyntheticEvent:           streamResult.ReplayedLocalCommandBreadcrumbSyntheticEvent,
+		ReplayedLocalCommandStderrBreadcrumbValidated:          streamResult.ReplayedLocalCommandStderrBreadcrumbValidated,
+		ReplayedLocalCommandStderrBreadcrumbEvent:              streamResult.ReplayedLocalCommandStderrBreadcrumbEvent,
+		ReplayedLocalCommandStderrBreadcrumbSyntheticValidated: streamResult.ReplayedLocalCommandStderrBreadcrumbSyntheticValidated,
+		ReplayedLocalCommandStderrBreadcrumbSyntheticEvent:     streamResult.ReplayedLocalCommandStderrBreadcrumbSyntheticEvent,
 		AuthValidated:                       streamResult.AuthValidated,
 		AuthEvent:                           streamResult.AuthEvent,
 		KeepAliveValidated:                  streamResult.KeepAliveValidated,
@@ -748,168 +772,180 @@ func stopSession(serverURL, transport, authToken, sessionID string) (sessionStat
 }
 
 type streamValidation struct {
-	StreamEvent                                      string
-	StreamContentValidated                           bool
-	StreamContentEvent                               string
-	StreamlinedTextValidated                         bool
-	StreamlinedTextEvent                             string
-	SystemValidated                                  bool
-	SystemEvent                                      string
-	StatusValidated                                  bool
-	StatusEvent                                      string
-	StatusTransitionValidated                        bool
-	StatusTransitionEvent                            string
-	StatusCompactingLifecycleValidated               bool
-	StatusCompactingLifecycleEvent                   string
-	CompactSummaryValidated                          bool
-	CompactSummaryEvent                              string
-	ReplayedUserMessageValidated                     bool
-	ReplayedUserMessageEvent                         string
-	ReplayedQueuedCommandValidated                   bool
-	ReplayedQueuedCommandEvent                       string
-	ReplayedToolResultValidated                      bool
-	ReplayedToolResultEvent                          string
-	ReplayedAssistantMessageValidated                bool
-	ReplayedAssistantMessageEvent                    string
-	ReplayedCompactBoundaryValidated                 bool
-	ReplayedCompactBoundaryEvent                     string
-	ReplayedCompactBoundaryPreservedSegmentValidated bool
-	ReplayedCompactBoundaryPreservedSegmentEvent     string
-	ReplayedLocalCommandBreadcrumbValidated          bool
-	ReplayedLocalCommandBreadcrumbEvent              string
-	ReplayedLocalCommandStderrBreadcrumbValidated    bool
-	ReplayedLocalCommandStderrBreadcrumbEvent        string
-	AuthValidated                                    bool
-	AuthEvent                                        string
-	KeepAliveValidated                               bool
-	KeepAliveEvent                                   string
-	UpdateEnvironmentVariablesValidated              bool
-	UpdateEnvironmentVariablesEvent                  string
-	ControlCancelValidated                           bool
-	ControlCancelEvent                               string
-	MessageValidated                                 bool
-	MessageEvent                                     string
-	ValidatedTurns                                   int
-	MultiTurnValidated                               bool
-	ResultValidated                                  bool
-	ResultEvent                                      string
-	ResultErrorValidated                             bool
-	ResultErrorEvent                                 string
-	ResultErrorMaxTurnsValidated                     bool
-	ResultErrorMaxTurnsEvent                         string
-	ResultErrorMaxBudgetUSDValidated                 bool
-	ResultErrorMaxBudgetUSDEvent                     string
-	ResultErrorMaxStructuredOutputRetriesValidated   bool
-	ResultErrorMaxStructuredOutputRetriesEvent       string
-	ControlValidated                                 bool
-	PermissionValidated                              bool
-	PermissionDeniedValidated                        bool
-	PermissionDeniedEvent                            string
-	TaskStartedValidated                             bool
-	TaskStartedEvent                                 string
-	TaskProgressValidated                            bool
-	TaskProgressEvent                                string
-	TaskNotificationValidated                        bool
-	TaskNotificationEvent                            string
-	FilesPersistedValidated                          bool
-	FilesPersistedEvent                              string
-	APIRetryValidated                                bool
-	APIRetryEvent                                    string
-	LocalCommandOutputValidated                      bool
-	LocalCommandOutputEvent                          string
-	LocalCommandOutputAssistantValidated             bool
-	LocalCommandOutputAssistantEvent                 string
-	ElicitationValidated                             bool
-	ElicitationEvent                                 string
-	HookCallbackValidated                            bool
-	HookCallbackEvent                                string
-	ChannelEnableValidated                           bool
-	ChannelEnableEvent                               string
-	ElicitationCompleteValidated                     bool
-	ElicitationCompleteEvent                         string
-	ToolProgressValidated                            bool
-	ToolProgressEvent                                string
-	RateLimitValidated                               bool
-	RateLimitEvent                                   string
-	ToolUseSummaryValidated                          bool
-	ToolUseSummaryEvent                              string
-	StreamlinedToolUseSummaryValidated               bool
-	StreamlinedToolUseSummaryEvent                   string
-	PromptSuggestionValidated                        bool
-	PromptSuggestionEvent                            string
-	PostTurnSummaryValidated                         bool
-	PostTurnSummaryEvent                             string
-	CompactBoundaryValidated                         bool
-	CompactBoundaryEvent                             string
-	CompactBoundaryPreservedSegmentValidated         bool
-	CompactBoundaryPreservedSegmentEvent             string
-	SessionStateChangedValidated                     bool
-	SessionStateChangedEvent                         string
-	SessionStateRequiresActionValidated              bool
-	SessionStateRequiresActionEvent                  string
-	HookStartedValidated                             bool
-	HookStartedEvent                                 string
-	HookProgressValidated                            bool
-	HookProgressEvent                                string
-	HookResponseValidated                            bool
-	HookResponseEvent                                string
-	ToolExecutionValidated                           bool
-	InterruptValidated                               bool
-	SetModelValidated                                bool
-	SetModelEvent                                    string
-	SetPermissionModeValidated                       bool
-	SetPermissionModeEvent                           string
-	SetMaxThinkingTokensValidated                    bool
-	SetMaxThinkingTokensEvent                        string
-	MCPStatusValidated                               bool
-	MCPStatusEvent                                   string
-	GetContextUsageValidated                         bool
-	GetContextUsageEvent                             string
-	MCPMessageValidated                              bool
-	MCPMessageEvent                                  string
-	MCPSetServersValidated                           bool
-	MCPSetServersEvent                               string
-	ReloadPluginsValidated                           bool
-	ReloadPluginsEvent                               string
-	MCPAuthenticateValidated                         bool
-	MCPAuthenticateEvent                             string
-	MCPOAuthCallbackURLValidated                     bool
-	MCPOAuthCallbackURLEvent                         string
-	MCPReconnectValidated                            bool
-	MCPReconnectEvent                                string
-	MCPToggleValidated                               bool
-	MCPToggleEvent                                   string
-	SeedReadStateValidated                           bool
-	SeedReadStateEvent                               string
-	RewindFilesValidated                             bool
-	RewindFilesEvent                                 string
-	RewindFilesCanRewind                             bool
-	RewindFilesFilesChanged                          int
-	RewindFilesInsertions                            int
-	RewindFilesDeletions                             int
-	RewindFilesError                                 string
-	CancelAsyncMessageValidated                      bool
-	CancelAsyncMessageEvent                          string
-	StopTaskValidated                                bool
-	StopTaskEvent                                    string
-	ApplyFlagSettingsValidated                       bool
-	ApplyFlagSettingsEvent                           string
-	GetSettingsValidated                             bool
-	GetSettingsEvent                                 string
-	GenerateSessionTitleValidated                    bool
-	GenerateSessionTitleEvent                        string
-	SideQuestionValidated                            bool
-	SideQuestionEvent                                string
-	InitializeValidated                              bool
-	InitializeEvent                                  string
-	SetProactiveValidated                            bool
-	SetProactiveEvent                                string
-	BridgeStateValidated                             bool
-	BridgeStateEvent                                 string
-	RemoteControlValidated                           bool
-	RemoteControlEvent                               string
-	EndSessionValidated                              bool
-	EndSessionEvent                                  string
+	StreamEvent                                            string
+	StreamContentValidated                                 bool
+	StreamContentEvent                                     string
+	StreamlinedTextValidated                               bool
+	StreamlinedTextEvent                                   string
+	SystemValidated                                        bool
+	SystemEvent                                            string
+	StatusValidated                                        bool
+	StatusEvent                                            string
+	StatusTransitionValidated                              bool
+	StatusTransitionEvent                                  string
+	StatusCompactingLifecycleValidated                     bool
+	StatusCompactingLifecycleEvent                         string
+	CompactSummaryValidated                                bool
+	CompactSummaryEvent                                    string
+	CompactSummarySyntheticValidated                       bool
+	CompactSummarySyntheticEvent                           string
+	ReplayedUserMessageValidated                           bool
+	ReplayedUserMessageEvent                               string
+	ReplayedUserSyntheticValidated                         bool
+	ReplayedUserSyntheticEvent                             string
+	ReplayedQueuedCommandValidated                         bool
+	ReplayedQueuedCommandEvent                             string
+	ReplayedQueuedCommandSyntheticValidated                bool
+	ReplayedQueuedCommandSyntheticEvent                    string
+	ReplayedToolResultValidated                            bool
+	ReplayedToolResultEvent                                string
+	ReplayedToolResultSyntheticValidated                   bool
+	ReplayedToolResultSyntheticEvent                       string
+	ReplayedAssistantMessageValidated                      bool
+	ReplayedAssistantMessageEvent                          string
+	ReplayedCompactBoundaryValidated                       bool
+	ReplayedCompactBoundaryEvent                           string
+	ReplayedCompactBoundaryPreservedSegmentValidated       bool
+	ReplayedCompactBoundaryPreservedSegmentEvent           string
+	ReplayedLocalCommandBreadcrumbValidated                bool
+	ReplayedLocalCommandBreadcrumbEvent                    string
+	ReplayedLocalCommandBreadcrumbSyntheticValidated       bool
+	ReplayedLocalCommandBreadcrumbSyntheticEvent           string
+	ReplayedLocalCommandStderrBreadcrumbValidated          bool
+	ReplayedLocalCommandStderrBreadcrumbEvent              string
+	ReplayedLocalCommandStderrBreadcrumbSyntheticValidated bool
+	ReplayedLocalCommandStderrBreadcrumbSyntheticEvent     string
+	AuthValidated                                          bool
+	AuthEvent                                              string
+	KeepAliveValidated                                     bool
+	KeepAliveEvent                                         string
+	UpdateEnvironmentVariablesValidated                    bool
+	UpdateEnvironmentVariablesEvent                        string
+	ControlCancelValidated                                 bool
+	ControlCancelEvent                                     string
+	MessageValidated                                       bool
+	MessageEvent                                           string
+	ValidatedTurns                                         int
+	MultiTurnValidated                                     bool
+	ResultValidated                                        bool
+	ResultEvent                                            string
+	ResultErrorValidated                                   bool
+	ResultErrorEvent                                       string
+	ResultErrorMaxTurnsValidated                           bool
+	ResultErrorMaxTurnsEvent                               string
+	ResultErrorMaxBudgetUSDValidated                       bool
+	ResultErrorMaxBudgetUSDEvent                           string
+	ResultErrorMaxStructuredOutputRetriesValidated         bool
+	ResultErrorMaxStructuredOutputRetriesEvent             string
+	ControlValidated                                       bool
+	PermissionValidated                                    bool
+	PermissionDeniedValidated                              bool
+	PermissionDeniedEvent                                  string
+	TaskStartedValidated                                   bool
+	TaskStartedEvent                                       string
+	TaskProgressValidated                                  bool
+	TaskProgressEvent                                      string
+	TaskNotificationValidated                              bool
+	TaskNotificationEvent                                  string
+	FilesPersistedValidated                                bool
+	FilesPersistedEvent                                    string
+	APIRetryValidated                                      bool
+	APIRetryEvent                                          string
+	LocalCommandOutputValidated                            bool
+	LocalCommandOutputEvent                                string
+	LocalCommandOutputAssistantValidated                   bool
+	LocalCommandOutputAssistantEvent                       string
+	ElicitationValidated                                   bool
+	ElicitationEvent                                       string
+	HookCallbackValidated                                  bool
+	HookCallbackEvent                                      string
+	ChannelEnableValidated                                 bool
+	ChannelEnableEvent                                     string
+	ElicitationCompleteValidated                           bool
+	ElicitationCompleteEvent                               string
+	ToolProgressValidated                                  bool
+	ToolProgressEvent                                      string
+	RateLimitValidated                                     bool
+	RateLimitEvent                                         string
+	ToolUseSummaryValidated                                bool
+	ToolUseSummaryEvent                                    string
+	StreamlinedToolUseSummaryValidated                     bool
+	StreamlinedToolUseSummaryEvent                         string
+	PromptSuggestionValidated                              bool
+	PromptSuggestionEvent                                  string
+	PostTurnSummaryValidated                               bool
+	PostTurnSummaryEvent                                   string
+	CompactBoundaryValidated                               bool
+	CompactBoundaryEvent                                   string
+	CompactBoundaryPreservedSegmentValidated               bool
+	CompactBoundaryPreservedSegmentEvent                   string
+	SessionStateChangedValidated                           bool
+	SessionStateChangedEvent                               string
+	SessionStateRequiresActionValidated                    bool
+	SessionStateRequiresActionEvent                        string
+	HookStartedValidated                                   bool
+	HookStartedEvent                                       string
+	HookProgressValidated                                  bool
+	HookProgressEvent                                      string
+	HookResponseValidated                                  bool
+	HookResponseEvent                                      string
+	ToolExecutionValidated                                 bool
+	InterruptValidated                                     bool
+	SetModelValidated                                      bool
+	SetModelEvent                                          string
+	SetPermissionModeValidated                             bool
+	SetPermissionModeEvent                                 string
+	SetMaxThinkingTokensValidated                          bool
+	SetMaxThinkingTokensEvent                              string
+	MCPStatusValidated                                     bool
+	MCPStatusEvent                                         string
+	GetContextUsageValidated                               bool
+	GetContextUsageEvent                                   string
+	MCPMessageValidated                                    bool
+	MCPMessageEvent                                        string
+	MCPSetServersValidated                                 bool
+	MCPSetServersEvent                                     string
+	ReloadPluginsValidated                                 bool
+	ReloadPluginsEvent                                     string
+	MCPAuthenticateValidated                               bool
+	MCPAuthenticateEvent                                   string
+	MCPOAuthCallbackURLValidated                           bool
+	MCPOAuthCallbackURLEvent                               string
+	MCPReconnectValidated                                  bool
+	MCPReconnectEvent                                      string
+	MCPToggleValidated                                     bool
+	MCPToggleEvent                                         string
+	SeedReadStateValidated                                 bool
+	SeedReadStateEvent                                     string
+	RewindFilesValidated                                   bool
+	RewindFilesEvent                                       string
+	RewindFilesCanRewind                                   bool
+	RewindFilesFilesChanged                                int
+	RewindFilesInsertions                                  int
+	RewindFilesDeletions                                   int
+	RewindFilesError                                       string
+	CancelAsyncMessageValidated                            bool
+	CancelAsyncMessageEvent                                string
+	StopTaskValidated                                      bool
+	StopTaskEvent                                          string
+	ApplyFlagSettingsValidated                             bool
+	ApplyFlagSettingsEvent                                 string
+	GetSettingsValidated                                   bool
+	GetSettingsEvent                                       string
+	GenerateSessionTitleValidated                          bool
+	GenerateSessionTitleEvent                              string
+	SideQuestionValidated                                  bool
+	SideQuestionEvent                                      string
+	InitializeValidated                                    bool
+	InitializeEvent                                        string
+	SetProactiveValidated                                  bool
+	SetProactiveEvent                                      string
+	BridgeStateValidated                                   bool
+	BridgeStateEvent                                       string
+	RemoteControlValidated                                 bool
+	RemoteControlEvent                                     string
+	EndSessionValidated                                    bool
+	EndSessionEvent                                        string
 }
 
 func validateStream(rawWSURL, authToken string, opts Options) (streamValidation, error) {
@@ -1052,6 +1088,10 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				if !ok {
 					return streamValidation{}, fmt.Errorf("invalid user event: missing isReplay")
 				}
+				synthetic, ok := incoming["isSynthetic"].(bool)
+				if !ok {
+					return streamValidation{}, fmt.Errorf("invalid user event: missing isSynthetic")
+				}
 				if !replayed {
 					contentText, ok := message["content"].(string)
 					if !ok || strings.TrimSpace(contentText) == "" {
@@ -1060,8 +1100,13 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if strings.TrimSpace(asString(incoming["timestamp"])) == "" {
 						return streamValidation{}, fmt.Errorf("invalid compact summary user message: missing timestamp")
 					}
+					if !synthetic {
+						return streamValidation{}, fmt.Errorf("invalid compact summary user message: expected isSynthetic=true")
+					}
 					result.CompactSummaryValidated = true
 					result.CompactSummaryEvent = "user:compact_summary"
+					result.CompactSummarySyntheticValidated = true
+					result.CompactSummarySyntheticEvent = "user:compact_summary:isSynthetic"
 					continue
 				}
 				attachment, _ := message["attachment"].(map[string]any)
@@ -1075,20 +1120,35 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if replayedPrompt == "" {
 						return streamValidation{}, fmt.Errorf("invalid replayed queued_command: missing prompt")
 					}
+					if !synthetic {
+						return streamValidation{}, fmt.Errorf("invalid replayed queued_command: expected isSynthetic=true")
+					}
 					result.ReplayedQueuedCommandValidated = true
 					result.ReplayedQueuedCommandEvent = "user:queued_command:isReplay"
+					result.ReplayedQueuedCommandSyntheticValidated = true
+					result.ReplayedQueuedCommandSyntheticEvent = "user:queued_command:isReplay:isSynthetic"
 					continue
 				}
 				if strings.TrimSpace(opts.ResumeSessionID) != "" {
 					if contentText, ok := message["content"].(string); ok {
 						if !result.ReplayedLocalCommandBreadcrumbValidated && strings.Contains(contentText, "<local-command-stdout>") {
+							if !synthetic {
+								return streamValidation{}, fmt.Errorf("invalid replayed local-command breadcrumb: expected isSynthetic=true")
+							}
 							result.ReplayedLocalCommandBreadcrumbValidated = true
 							result.ReplayedLocalCommandBreadcrumbEvent = "user:local_command_stdout:isReplay"
+							result.ReplayedLocalCommandBreadcrumbSyntheticValidated = true
+							result.ReplayedLocalCommandBreadcrumbSyntheticEvent = "user:local_command_stdout:isReplay:isSynthetic"
 							continue
 						}
 						if !result.ReplayedLocalCommandStderrBreadcrumbValidated && strings.Contains(contentText, "<local-command-stderr>") {
+							if !synthetic {
+								return streamValidation{}, fmt.Errorf("invalid replayed local-command stderr breadcrumb: expected isSynthetic=true")
+							}
 							result.ReplayedLocalCommandStderrBreadcrumbValidated = true
 							result.ReplayedLocalCommandStderrBreadcrumbEvent = "user:local_command_stderr:isReplay"
+							result.ReplayedLocalCommandStderrBreadcrumbSyntheticValidated = true
+							result.ReplayedLocalCommandStderrBreadcrumbSyntheticEvent = "user:local_command_stderr:isReplay:isSynthetic"
 							continue
 						}
 					}
@@ -1115,16 +1175,26 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if _, ok := toolUseResult["content"]; !ok {
 						return streamValidation{}, fmt.Errorf("invalid replayed tool_result: missing tool_use_result.content")
 					}
+					if !synthetic {
+						return streamValidation{}, fmt.Errorf("invalid replayed tool_result: expected isSynthetic=true")
+					}
 					result.ReplayedToolResultValidated = true
 					result.ReplayedToolResultEvent = "user:tool_result:isReplay"
+					result.ReplayedToolResultSyntheticValidated = true
+					result.ReplayedToolResultSyntheticEvent = "user:tool_result:isReplay:isSynthetic"
 					continue
 				}
 				replayedPrompt := extractPromptText(map[string]any{"message": message})
 				if replayedPrompt == "" {
 					return streamValidation{}, fmt.Errorf("invalid user replay event: missing replayed text content")
 				}
+				if synthetic {
+					return streamValidation{}, fmt.Errorf("invalid user replay event: expected isSynthetic=false")
+				}
 				result.ReplayedUserMessageValidated = true
 				result.ReplayedUserMessageEvent = "user:isReplay"
+				result.ReplayedUserSyntheticValidated = true
+				result.ReplayedUserSyntheticEvent = "user:isReplay:isSynthetic=false"
 				continue
 			case "system":
 				switch strings.TrimSpace(asString(incoming["subtype"])) {
@@ -1892,11 +1962,20 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	if opts.PrintMode && !result.CompactSummaryValidated {
 		return streamValidation{}, fmt.Errorf("missing compact summary user message during print validation")
 	}
+	if opts.PrintMode && !result.CompactSummarySyntheticValidated {
+		return streamValidation{}, fmt.Errorf("missing compact summary isSynthetic validation during print validation")
+	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedQueuedCommandValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed queued_command during resume validation")
 	}
+	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedQueuedCommandSyntheticValidated {
+		return streamValidation{}, fmt.Errorf("missing replayed queued_command isSynthetic validation during resume validation")
+	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedToolResultValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed tool_result message during resume validation")
+	}
+	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedToolResultSyntheticValidated {
+		return streamValidation{}, fmt.Errorf("missing replayed tool_result isSynthetic validation during resume validation")
 	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedAssistantMessageValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed assistant message during resume validation")
@@ -1907,11 +1986,20 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedCompactBoundaryPreservedSegmentValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed compact_boundary preserved_segment during resume validation")
 	}
+	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedUserSyntheticValidated {
+		return streamValidation{}, fmt.Errorf("missing replayed user isSynthetic validation during resume validation")
+	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedLocalCommandBreadcrumbValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed local-command breadcrumb during resume validation")
 	}
+	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedLocalCommandBreadcrumbSyntheticValidated {
+		return streamValidation{}, fmt.Errorf("missing replayed local-command breadcrumb isSynthetic validation during resume validation")
+	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedLocalCommandStderrBreadcrumbValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed local-command stderr breadcrumb during resume validation")
+	}
+	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedLocalCommandStderrBreadcrumbSyntheticValidated {
+		return streamValidation{}, fmt.Errorf("missing replayed local-command stderr breadcrumb isSynthetic validation during resume validation")
 	}
 	result.MultiTurnValidated = result.ValidatedTurns >= 2
 
@@ -3135,12 +3223,20 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("status_compacting_lifecycle_event=%s\n", valueOrNone(r.StatusCompactingLifecycleEvent)))
 	b.WriteString(fmt.Sprintf("compact_summary_validated=%t\n", r.CompactSummaryValidated))
 	b.WriteString(fmt.Sprintf("compact_summary_event=%s\n", valueOrNone(r.CompactSummaryEvent)))
+	b.WriteString(fmt.Sprintf("compact_summary_synthetic_validated=%t\n", r.CompactSummarySyntheticValidated))
+	b.WriteString(fmt.Sprintf("compact_summary_synthetic_event=%s\n", valueOrNone(r.CompactSummarySyntheticEvent)))
 	b.WriteString(fmt.Sprintf("replayed_user_message_validated=%t\n", r.ReplayedUserMessageValidated))
 	b.WriteString(fmt.Sprintf("replayed_user_message_event=%s\n", valueOrNone(r.ReplayedUserMessageEvent)))
+	b.WriteString(fmt.Sprintf("replayed_user_synthetic_validated=%t\n", r.ReplayedUserSyntheticValidated))
+	b.WriteString(fmt.Sprintf("replayed_user_synthetic_event=%s\n", valueOrNone(r.ReplayedUserSyntheticEvent)))
 	b.WriteString(fmt.Sprintf("replayed_queued_command_validated=%t\n", r.ReplayedQueuedCommandValidated))
 	b.WriteString(fmt.Sprintf("replayed_queued_command_event=%s\n", valueOrNone(r.ReplayedQueuedCommandEvent)))
+	b.WriteString(fmt.Sprintf("replayed_queued_command_synthetic_validated=%t\n", r.ReplayedQueuedCommandSyntheticValidated))
+	b.WriteString(fmt.Sprintf("replayed_queued_command_synthetic_event=%s\n", valueOrNone(r.ReplayedQueuedCommandSyntheticEvent)))
 	b.WriteString(fmt.Sprintf("replayed_tool_result_validated=%t\n", r.ReplayedToolResultValidated))
 	b.WriteString(fmt.Sprintf("replayed_tool_result_event=%s\n", valueOrNone(r.ReplayedToolResultEvent)))
+	b.WriteString(fmt.Sprintf("replayed_tool_result_synthetic_validated=%t\n", r.ReplayedToolResultSyntheticValidated))
+	b.WriteString(fmt.Sprintf("replayed_tool_result_synthetic_event=%s\n", valueOrNone(r.ReplayedToolResultSyntheticEvent)))
 	b.WriteString(fmt.Sprintf("replayed_assistant_message_validated=%t\n", r.ReplayedAssistantMessageValidated))
 	b.WriteString(fmt.Sprintf("replayed_assistant_message_event=%s\n", valueOrNone(r.ReplayedAssistantMessageEvent)))
 	b.WriteString(fmt.Sprintf("replayed_compact_boundary_validated=%t\n", r.ReplayedCompactBoundaryValidated))
@@ -3149,8 +3245,12 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("replayed_compact_boundary_preserved_segment_event=%s\n", valueOrNone(r.ReplayedCompactBoundaryPreservedSegmentEvent)))
 	b.WriteString(fmt.Sprintf("replayed_local_command_breadcrumb_validated=%t\n", r.ReplayedLocalCommandBreadcrumbValidated))
 	b.WriteString(fmt.Sprintf("replayed_local_command_breadcrumb_event=%s\n", valueOrNone(r.ReplayedLocalCommandBreadcrumbEvent)))
+	b.WriteString(fmt.Sprintf("replayed_local_command_breadcrumb_synthetic_validated=%t\n", r.ReplayedLocalCommandBreadcrumbSyntheticValidated))
+	b.WriteString(fmt.Sprintf("replayed_local_command_breadcrumb_synthetic_event=%s\n", valueOrNone(r.ReplayedLocalCommandBreadcrumbSyntheticEvent)))
 	b.WriteString(fmt.Sprintf("replayed_local_command_stderr_breadcrumb_validated=%t\n", r.ReplayedLocalCommandStderrBreadcrumbValidated))
 	b.WriteString(fmt.Sprintf("replayed_local_command_stderr_breadcrumb_event=%s\n", valueOrNone(r.ReplayedLocalCommandStderrBreadcrumbEvent)))
+	b.WriteString(fmt.Sprintf("replayed_local_command_stderr_breadcrumb_synthetic_validated=%t\n", r.ReplayedLocalCommandStderrBreadcrumbSyntheticValidated))
+	b.WriteString(fmt.Sprintf("replayed_local_command_stderr_breadcrumb_synthetic_event=%s\n", valueOrNone(r.ReplayedLocalCommandStderrBreadcrumbSyntheticEvent)))
 	b.WriteString(fmt.Sprintf("auth_validated=%t\n", r.AuthValidated))
 	b.WriteString(fmt.Sprintf("auth_event=%s\n", valueOrNone(r.AuthEvent)))
 	b.WriteString(fmt.Sprintf("keep_alive_validated=%t\n", r.KeepAliveValidated))
