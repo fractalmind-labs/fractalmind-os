@@ -135,6 +135,8 @@ type Result struct {
 	ResultFastModeStateEvent                                     string
 	ResultErrorValidated                                         bool
 	ResultErrorEvent                                             string
+	ResultErrorUsageValidated                                    bool
+	ResultErrorUsageEvent                                        string
 	ResultErrorFastModeStateValidated                            bool
 	ResultErrorFastModeStateEvent                                string
 	ResultErrorMaxTurnsValidated                                 bool
@@ -432,6 +434,8 @@ func Run(args []string) (Result, error) {
 		ResultFastModeStateEvent:                                     streamResult.ResultFastModeStateEvent,
 		ResultErrorValidated:                                         streamResult.ResultErrorValidated,
 		ResultErrorEvent:                                             streamResult.ResultErrorEvent,
+		ResultErrorUsageValidated:                                    streamResult.ResultErrorUsageValidated,
+		ResultErrorUsageEvent:                                        streamResult.ResultErrorUsageEvent,
 		ResultErrorFastModeStateValidated:                            streamResult.ResultErrorFastModeStateValidated,
 		ResultErrorFastModeStateEvent:                                streamResult.ResultErrorFastModeStateEvent,
 		ResultErrorMaxTurnsValidated:                                 streamResult.ResultErrorMaxTurnsValidated,
@@ -959,6 +963,8 @@ type streamValidation struct {
 	ResultFastModeStateEvent                                     string
 	ResultErrorValidated                                         bool
 	ResultErrorEvent                                             string
+	ResultErrorUsageValidated                                    bool
+	ResultErrorUsageEvent                                        string
 	ResultErrorFastModeStateValidated                            bool
 	ResultErrorFastModeStateEvent                                string
 	ResultErrorMaxTurnsValidated                                 bool
@@ -2129,6 +2135,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if strings.TrimSpace(asString(incoming["subtype"])) != "error_during_execution" {
 						return streamValidation{}, fmt.Errorf("invalid deny result subtype: %s", asString(incoming["subtype"]))
 					}
+					if err := validateZeroUsageShape(incoming["usage"]); err != nil {
+						return streamValidation{}, fmt.Errorf("invalid deny result usage: %w", err)
+					}
 					if permissionDenials, _ := incoming["permission_denials"].([]any); len(permissionDenials) == 0 {
 						return streamValidation{}, fmt.Errorf("invalid deny result: missing permission_denials")
 					} else {
@@ -2155,11 +2164,16 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					result.ResultErrorValidated = true
 					result.ResultErrorEvent = "result:error_during_execution"
+					result.ResultErrorUsageValidated = true
+					result.ResultErrorUsageEvent = "result:error:usage"
 					result.ResultErrorFastModeStateValidated = true
 					result.ResultErrorFastModeStateEvent = "result:error_during_execution:fast_mode_state"
 				} else if turn.behavior == "max_turns" {
 					if strings.TrimSpace(asString(incoming["subtype"])) != "error_max_turns" {
 						return streamValidation{}, fmt.Errorf("invalid max-turns result subtype: %s", asString(incoming["subtype"]))
+					}
+					if err := validateZeroUsageShape(incoming["usage"]); err != nil {
+						return streamValidation{}, fmt.Errorf("invalid max-turns result usage: %w", err)
 					}
 					if intFromAny(incoming["num_turns"]) != result.ValidatedTurns {
 						return streamValidation{}, fmt.Errorf("invalid max-turns result: expected num_turns=%d, got %d", result.ValidatedTurns, intFromAny(incoming["num_turns"]))
@@ -2170,6 +2184,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if strings.TrimSpace(asString(incoming["stop_reason"])) != "max_turns" {
 						return streamValidation{}, fmt.Errorf("invalid max-turns result: expected stop_reason=max_turns, got %q", strings.TrimSpace(asString(incoming["stop_reason"])))
 					}
+					result.ResultErrorUsageValidated = true
+					result.ResultErrorUsageEvent = "result:error:usage"
 					result.ResultErrorMaxTurnsValidated = true
 					result.ResultErrorMaxTurnsEvent = "result:error_max_turns"
 					result.ResultErrorMaxTurnsFastModeStateValidated = true
@@ -2177,6 +2193,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				} else if turn.behavior == "max_budget_usd" {
 					if strings.TrimSpace(asString(incoming["subtype"])) != "error_max_budget_usd" {
 						return streamValidation{}, fmt.Errorf("invalid max-budget-usd result subtype: %s", asString(incoming["subtype"]))
+					}
+					if err := validateZeroUsageShape(incoming["usage"]); err != nil {
+						return streamValidation{}, fmt.Errorf("invalid max-budget-usd result usage: %w", err)
 					}
 					if intFromAny(incoming["num_turns"]) != result.ValidatedTurns {
 						return streamValidation{}, fmt.Errorf("invalid max-budget-usd result: expected num_turns=%d, got %d", result.ValidatedTurns, intFromAny(incoming["num_turns"]))
@@ -2187,6 +2206,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if strings.TrimSpace(asString(incoming["stop_reason"])) != "max_budget_usd" {
 						return streamValidation{}, fmt.Errorf("invalid max-budget-usd result: expected stop_reason=max_budget_usd, got %q", strings.TrimSpace(asString(incoming["stop_reason"])))
 					}
+					result.ResultErrorUsageValidated = true
+					result.ResultErrorUsageEvent = "result:error:usage"
 					result.ResultErrorMaxBudgetUSDValidated = true
 					result.ResultErrorMaxBudgetUSDEvent = "result:error_max_budget_usd"
 					result.ResultErrorMaxBudgetUSDFastModeStateValidated = true
@@ -2194,6 +2215,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				} else {
 					if strings.TrimSpace(asString(incoming["subtype"])) != "error_max_structured_output_retries" {
 						return streamValidation{}, fmt.Errorf("invalid max-structured-output-retries result subtype: %s", asString(incoming["subtype"]))
+					}
+					if err := validateZeroUsageShape(incoming["usage"]); err != nil {
+						return streamValidation{}, fmt.Errorf("invalid max-structured-output-retries result usage: %w", err)
 					}
 					if intFromAny(incoming["num_turns"]) != result.ValidatedTurns {
 						return streamValidation{}, fmt.Errorf("invalid max-structured-output-retries result: expected num_turns=%d, got %d", result.ValidatedTurns, intFromAny(incoming["num_turns"]))
@@ -2204,6 +2228,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if strings.TrimSpace(asString(incoming["stop_reason"])) != "max_structured_output_retries" {
 						return streamValidation{}, fmt.Errorf("invalid max-structured-output-retries result: expected stop_reason=max_structured_output_retries, got %q", strings.TrimSpace(asString(incoming["stop_reason"])))
 					}
+					result.ResultErrorUsageValidated = true
+					result.ResultErrorUsageEvent = "result:error:usage"
 					result.ResultErrorMaxStructuredOutputRetriesValidated = true
 					result.ResultErrorMaxStructuredOutputRetriesEvent = "result:error_max_structured_output_retries"
 					result.ResultErrorMaxStructuredOutputRetriesFastModeStateValidated = true
@@ -3614,6 +3640,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("result_fast_mode_state_event=%s\n", valueOrNone(r.ResultFastModeStateEvent)))
 	b.WriteString(fmt.Sprintf("result_error_validated=%t\n", r.ResultErrorValidated))
 	b.WriteString(fmt.Sprintf("result_error_event=%s\n", valueOrNone(r.ResultErrorEvent)))
+	b.WriteString(fmt.Sprintf("result_error_usage_validated=%t\n", r.ResultErrorUsageValidated))
+	b.WriteString(fmt.Sprintf("result_error_usage_event=%s\n", valueOrNone(r.ResultErrorUsageEvent)))
 	b.WriteString(fmt.Sprintf("result_error_fast_mode_state_validated=%t\n", r.ResultErrorFastModeStateValidated))
 	b.WriteString(fmt.Sprintf("result_error_fast_mode_state_event=%s\n", valueOrNone(r.ResultErrorFastModeStateEvent)))
 	b.WriteString(fmt.Sprintf("result_error_max_turns_validated=%t\n", r.ResultErrorMaxTurnsValidated))
@@ -3772,6 +3800,17 @@ func validatePreservedSegment(compactMetadata map[string]any, prefix string) err
 func validateParentToolUseIDNull(incoming map[string]any, prefix string) error {
 	if incoming["parent_tool_use_id"] != nil {
 		return fmt.Errorf("%s: expected parent_tool_use_id=null", prefix)
+	}
+	return nil
+}
+
+func validateZeroUsageShape(raw any) error {
+	usage, _ := raw.(map[string]any)
+	serverToolUse, _ := usage["server_tool_use"].(map[string]any)
+	cacheCreation, _ := usage["cache_creation"].(map[string]any)
+	iterations, _ := usage["iterations"].([]any)
+	if intFromAny(usage["input_tokens"]) != 0 || intFromAny(usage["cache_creation_input_tokens"]) != 0 || intFromAny(usage["cache_read_input_tokens"]) != 0 || intFromAny(usage["output_tokens"]) != 0 || intFromAny(serverToolUse["web_search_requests"]) != 0 || intFromAny(serverToolUse["web_fetch_requests"]) != 0 || strings.TrimSpace(asString(usage["service_tier"])) != "standard" || intFromAny(cacheCreation["ephemeral_1h_input_tokens"]) != 0 || intFromAny(cacheCreation["ephemeral_5m_input_tokens"]) != 0 || strings.TrimSpace(asString(usage["inference_geo"])) != "" || len(iterations) != 0 || strings.TrimSpace(asString(usage["speed"])) != "standard" {
+		return fmt.Errorf("unexpected zero-value payload")
 	}
 	return nil
 }

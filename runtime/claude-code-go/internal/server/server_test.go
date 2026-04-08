@@ -989,6 +989,7 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(denyResult["fast_mode_state"])) != "off" {
 		t.Fatalf("unexpected deny fast_mode_state: %#v", denyResult)
 	}
+	assertZeroUsageShape(t, denyResult, "deny result")
 
 	if err := ws.WriteJSON(map[string]any{
 		"type": "user",
@@ -1055,6 +1056,7 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(maxTurnsResult["fast_mode_state"])) != "off" {
 		t.Fatalf("unexpected max-turns fast_mode_state: %#v", maxTurnsResult)
 	}
+	assertZeroUsageShape(t, maxTurnsResult, "max-turns result")
 
 	if err := ws.WriteJSON(map[string]any{
 		"type": "user",
@@ -1121,6 +1123,7 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(maxBudgetResult["fast_mode_state"])) != "off" {
 		t.Fatalf("unexpected max-budget-usd fast_mode_state: %#v", maxBudgetResult)
 	}
+	assertZeroUsageShape(t, maxBudgetResult, "max-budget-usd result")
 
 	if err := ws.WriteJSON(map[string]any{
 		"type": "user",
@@ -1187,6 +1190,7 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(maxStructuredResult["fast_mode_state"])) != "off" {
 		t.Fatalf("unexpected max-structured-output-retries fast_mode_state: %#v", maxStructuredResult)
 	}
+	assertZeroUsageShape(t, maxStructuredResult, "max-structured-output-retries result")
 
 	if err := ws.WriteJSON(map[string]any{
 		"type":       "control_request",
@@ -3058,6 +3062,17 @@ func fetchSessionState(t *testing.T, sessionsEndpoint, sessionID, authToken stri
 		t.Fatalf("decode session state response: %v", err)
 	}
 	return parsed
+}
+
+func assertZeroUsageShape(t *testing.T, payload map[string]any, label string) {
+	t.Helper()
+	usage, _ := payload["usage"].(map[string]any)
+	serverToolUse, _ := usage["server_tool_use"].(map[string]any)
+	cacheCreation, _ := usage["cache_creation"].(map[string]any)
+	iterations, _ := usage["iterations"].([]any)
+	if intFromAny(usage["input_tokens"]) != 0 || intFromAny(usage["cache_creation_input_tokens"]) != 0 || intFromAny(usage["cache_read_input_tokens"]) != 0 || intFromAny(usage["output_tokens"]) != 0 || intFromAny(serverToolUse["web_search_requests"]) != 0 || intFromAny(serverToolUse["web_fetch_requests"]) != 0 || strings.TrimSpace(asString(usage["service_tier"])) != "standard" || intFromAny(cacheCreation["ephemeral_1h_input_tokens"]) != 0 || intFromAny(cacheCreation["ephemeral_5m_input_tokens"]) != 0 || strings.TrimSpace(asString(usage["inference_geo"])) != "" || len(iterations) != 0 || strings.TrimSpace(asString(usage["speed"])) != "standard" {
+		t.Fatalf("unexpected %s usage payload: %#v", label, payload)
+	}
 }
 
 func intFromAny(v any) int {
