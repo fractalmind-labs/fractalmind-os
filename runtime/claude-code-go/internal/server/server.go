@@ -64,6 +64,7 @@ type sessionInfo struct {
 	WorkDir                string
 	Backend                *backendProcess
 	LastUserMessage        string
+	LastQueuedCommand      string
 	LastToolUseID          string
 	LastToolResult         string
 	LastAssistant          string
@@ -331,6 +332,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					WorkDir:                entry.CWD,
 					Backend:                existing.Backend,
 					LastUserMessage:        existing.LastUserMessage,
+					LastQueuedCommand:      existing.LastQueuedCommand,
 					LastToolUseID:          existing.LastToolUseID,
 					LastToolResult:         existing.LastToolResult,
 					LastAssistant:          existing.LastAssistant,
@@ -699,6 +701,27 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				},
 			})
 		}
+		if strings.TrimSpace(session.LastQueuedCommand) != "" {
+			replayUUID, err := generateRequestID()
+			if err != nil {
+				return
+			}
+			_ = conn.WriteJSON(map[string]any{
+				"type":               "user",
+				"isReplay":           true,
+				"uuid":               replayUUID,
+				"session_id":         session.ID,
+				"parent_tool_use_id": nil,
+				"message": map[string]any{
+					"role":    "user",
+					"content": session.LastQueuedCommand,
+					"attachment": map[string]any{
+						"type":   "queued_command",
+						"prompt": session.LastQueuedCommand,
+					},
+				},
+			})
+		}
 		var (
 			pendingPrompt    string
 			pendingRequestID string
@@ -729,6 +752,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				pendingPrompt = extractPromptText(incoming)
 				if pendingPrompt != "" {
 					session.LastUserMessage = pendingPrompt
+					session.LastQueuedCommand = pendingPrompt
 					store.put(session)
 				}
 				_ = sessionIndex.setStatus(sessionID, session.WorkDir, "running")

@@ -2822,6 +2822,21 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	if !strings.Contains(strings.TrimSpace(asString(errBreadcrumbMessage["content"])), "<local-command-stderr>") {
 		t.Fatalf("expected replayed local-command stderr breadcrumb stderr tag, got %#v", replayedLocalErrBreadcrumb)
 	}
+	var replayedQueuedCommand map[string]any
+	if err := ws.ReadJSON(&replayedQueuedCommand); err != nil {
+		t.Fatalf("read replayed queued_command failed: %v", err)
+	}
+	if replayedQueuedCommand["type"] != "user" || replayedQueuedCommand["isReplay"] != true || strings.TrimSpace(asString(replayedQueuedCommand["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedQueuedCommand["uuid"])) == "" {
+		t.Fatalf("unexpected replayed queued_command payload: %#v", replayedQueuedCommand)
+	}
+	queuedMessage, _ := replayedQueuedCommand["message"].(map[string]any)
+	if strings.TrimSpace(asString(queuedMessage["role"])) != "user" || strings.TrimSpace(asString(queuedMessage["content"])) != "resume replay seed" {
+		t.Fatalf("unexpected replayed queued_command message payload: %#v", replayedQueuedCommand)
+	}
+	attachment, _ := queuedMessage["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(attachment["type"])) != "queued_command" || strings.TrimSpace(asString(attachment["prompt"])) != "resume replay seed" {
+		t.Fatalf("unexpected replayed queued_command attachment payload: %#v", replayedQueuedCommand)
+	}
 	resumedState := fetchSessionState(t, running.Result.SessionsEndpoint, created["session_id"], "demo-token")
 	if initialPID <= 0 || resumedState.BackendPID != initialPID || resumedState.BackendStatus != "running" {
 		t.Fatalf("expected same live backend across detach/resume, initial=%#v resumed=%#v", initialState, resumedState)

@@ -55,6 +55,8 @@ type Result struct {
 	StatusCompactingLifecycleEvent                 string
 	ReplayedUserMessageValidated                   bool
 	ReplayedUserMessageEvent                       string
+	ReplayedQueuedCommandValidated                 bool
+	ReplayedQueuedCommandEvent                     string
 	ReplayedToolResultValidated                    bool
 	ReplayedToolResultEvent                        string
 	ReplayedAssistantMessageValidated              bool
@@ -284,6 +286,8 @@ func Run(args []string) (Result, error) {
 		StatusCompactingLifecycleEvent:          streamResult.StatusCompactingLifecycleEvent,
 		ReplayedUserMessageValidated:            streamResult.ReplayedUserMessageValidated,
 		ReplayedUserMessageEvent:                streamResult.ReplayedUserMessageEvent,
+		ReplayedQueuedCommandValidated:          streamResult.ReplayedQueuedCommandValidated,
+		ReplayedQueuedCommandEvent:              streamResult.ReplayedQueuedCommandEvent,
 		ReplayedToolResultValidated:             streamResult.ReplayedToolResultValidated,
 		ReplayedToolResultEvent:                 streamResult.ReplayedToolResultEvent,
 		ReplayedAssistantMessageValidated:       streamResult.ReplayedAssistantMessageValidated,
@@ -743,6 +747,8 @@ type streamValidation struct {
 	StatusCompactingLifecycleEvent                 string
 	ReplayedUserMessageValidated                   bool
 	ReplayedUserMessageEvent                       string
+	ReplayedQueuedCommandValidated                 bool
+	ReplayedQueuedCommandEvent                     string
 	ReplayedToolResultValidated                    bool
 	ReplayedToolResultEvent                        string
 	ReplayedAssistantMessageValidated              bool
@@ -1021,6 +1027,21 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				message, _ := incoming["message"].(map[string]any)
 				if strings.TrimSpace(asString(message["role"])) != "user" {
 					return streamValidation{}, fmt.Errorf("invalid user replay event: missing role=user")
+				}
+				attachment, _ := message["attachment"].(map[string]any)
+				if strings.TrimSpace(asString(attachment["type"])) == "queued_command" {
+					attachmentPrompt := extractPromptText(map[string]any{
+						"message": map[string]any{
+							"content": attachment["prompt"],
+						},
+					})
+					replayedPrompt := firstNonEmpty(attachmentPrompt, extractPromptText(map[string]any{"message": message}))
+					if replayedPrompt == "" {
+						return streamValidation{}, fmt.Errorf("invalid replayed queued_command: missing prompt")
+					}
+					result.ReplayedQueuedCommandValidated = true
+					result.ReplayedQueuedCommandEvent = "user:queued_command:isReplay"
+					continue
 				}
 				if strings.TrimSpace(opts.ResumeSessionID) != "" {
 					if contentText, ok := message["content"].(string); ok {
@@ -1797,6 +1818,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedUserMessageValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed user message during resume validation")
+	}
+	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedQueuedCommandValidated {
+		return streamValidation{}, fmt.Errorf("missing replayed queued_command during resume validation")
 	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedToolResultValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed tool_result message during resume validation")
@@ -3035,6 +3059,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("status_compacting_lifecycle_event=%s\n", valueOrNone(r.StatusCompactingLifecycleEvent)))
 	b.WriteString(fmt.Sprintf("replayed_user_message_validated=%t\n", r.ReplayedUserMessageValidated))
 	b.WriteString(fmt.Sprintf("replayed_user_message_event=%s\n", valueOrNone(r.ReplayedUserMessageEvent)))
+	b.WriteString(fmt.Sprintf("replayed_queued_command_validated=%t\n", r.ReplayedQueuedCommandValidated))
+	b.WriteString(fmt.Sprintf("replayed_queued_command_event=%s\n", valueOrNone(r.ReplayedQueuedCommandEvent)))
 	b.WriteString(fmt.Sprintf("replayed_tool_result_validated=%t\n", r.ReplayedToolResultValidated))
 	b.WriteString(fmt.Sprintf("replayed_tool_result_event=%s\n", valueOrNone(r.ReplayedToolResultEvent)))
 	b.WriteString(fmt.Sprintf("replayed_assistant_message_validated=%t\n", r.ReplayedAssistantMessageValidated))
