@@ -534,6 +534,19 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(taskStatusPayload["type"])) != "task_status" || strings.TrimSpace(asString(taskStatusPayload["taskId"])) != strings.TrimSpace(asString(taskStarted["task_id"])) || strings.TrimSpace(asString(taskStatusPayload["taskType"])) != "local_bash" || strings.TrimSpace(asString(taskStatusPayload["status"])) != "completed" || strings.TrimSpace(asString(taskStatusPayload["description"])) != "direct-connect echo task" || strings.TrimSpace(asString(taskStatusPayload["deltaSummary"])) != "echo:hello [approved]" || strings.TrimSpace(asString(taskStatusPayload["outputFilePath"])) == "" {
 		t.Fatalf("unexpected task_status attachment payload: %#v", taskStatusAttachment)
 	}
+	var taskReminderAttachment map[string]any
+	if err := ws.ReadJSON(&taskReminderAttachment); err != nil {
+		t.Fatalf("read task_reminder attachment failed: %v", err)
+	}
+	if taskReminderAttachment["type"] != "attachment" || strings.TrimSpace(asString(taskReminderAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected task_reminder attachment envelope: %#v", taskReminderAttachment)
+	}
+	taskReminderPayload, _ := taskReminderAttachment["attachment"].(map[string]any)
+	taskReminderContent, _ := taskReminderPayload["content"].([]any)
+	firstTaskReminder, _ := taskReminderContent[0].(map[string]any)
+	if strings.TrimSpace(asString(taskReminderPayload["type"])) != "task_reminder" || intFromAny(taskReminderPayload["itemCount"]) != 1 || len(taskReminderContent) != 1 || strings.TrimSpace(asString(firstTaskReminder["id"])) != strings.TrimSpace(asString(taskStarted["task_id"])) || strings.TrimSpace(asString(firstTaskReminder["status"])) != "completed" || strings.TrimSpace(asString(firstTaskReminder["subject"])) != "direct-connect echo task" {
+		t.Fatalf("unexpected task_reminder attachment payload: %#v", taskReminderAttachment)
+	}
 	var filesPersisted map[string]any
 	if err := ws.ReadJSON(&filesPersisted); err != nil {
 		t.Fatalf("read files_persisted failed: %v", err)
@@ -1012,6 +1025,19 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondTaskStatusPayload, _ := secondTaskStatusAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondTaskStatusPayload["type"])) != "task_status" || strings.TrimSpace(asString(secondTaskStatusPayload["taskId"])) != strings.TrimSpace(asString(secondTaskStarted["task_id"])) || strings.TrimSpace(asString(secondTaskStatusPayload["taskType"])) != "local_bash" || strings.TrimSpace(asString(secondTaskStatusPayload["status"])) != "completed" || strings.TrimSpace(asString(secondTaskStatusPayload["description"])) != "direct-connect echo task" || strings.TrimSpace(asString(secondTaskStatusPayload["deltaSummary"])) != "echo:hello again [approved]" || strings.TrimSpace(asString(secondTaskStatusPayload["outputFilePath"])) == "" {
 		t.Fatalf("unexpected second task_status attachment payload: %#v", secondTaskStatusAttachment)
+	}
+	var secondTaskReminderAttachment map[string]any
+	if err := ws.ReadJSON(&secondTaskReminderAttachment); err != nil {
+		t.Fatalf("read second task_reminder attachment failed: %v", err)
+	}
+	if secondTaskReminderAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondTaskReminderAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second task_reminder attachment envelope: %#v", secondTaskReminderAttachment)
+	}
+	secondTaskReminderPayload, _ := secondTaskReminderAttachment["attachment"].(map[string]any)
+	secondTaskReminderContent, _ := secondTaskReminderPayload["content"].([]any)
+	secondTaskReminder, _ := secondTaskReminderContent[0].(map[string]any)
+	if strings.TrimSpace(asString(secondTaskReminderPayload["type"])) != "task_reminder" || intFromAny(secondTaskReminderPayload["itemCount"]) != 1 || len(secondTaskReminderContent) != 1 || strings.TrimSpace(asString(secondTaskReminder["id"])) != strings.TrimSpace(asString(secondTaskStarted["task_id"])) || strings.TrimSpace(asString(secondTaskReminder["status"])) != "completed" || strings.TrimSpace(asString(secondTaskReminder["subject"])) != "direct-connect echo task" {
+		t.Fatalf("unexpected second task_reminder attachment payload: %#v", secondTaskReminderAttachment)
 	}
 	var secondFilesPersisted map[string]any
 	if err := ws.ReadJSON(&secondFilesPersisted); err != nil {
