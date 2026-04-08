@@ -664,6 +664,20 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(autoModeExitPayload["type"])) != "auto_mode_exit" {
 		t.Fatalf("unexpected auto_mode_exit attachment payload: %#v", autoModeExitAttachment)
 	}
+	var planModeExitAttachment map[string]any
+	if err := ws.ReadJSON(&planModeExitAttachment); err != nil {
+		t.Fatalf("read plan_mode_exit attachment failed: %v", err)
+	}
+	if planModeExitAttachment["type"] != "attachment" || strings.TrimSpace(asString(planModeExitAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected plan_mode_exit attachment envelope: %#v", planModeExitAttachment)
+	}
+	planModeExitPayload, _ := planModeExitAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(planModeExitPayload["type"])) != "plan_mode_exit" || strings.TrimSpace(asString(planModeExitPayload["planFilePath"])) == "" {
+		t.Fatalf("unexpected plan_mode_exit attachment payload: %#v", planModeExitAttachment)
+	}
+	if planExists, ok := planModeExitPayload["planExists"].(bool); !ok || planExists {
+		t.Fatalf("invalid plan_mode_exit attachment payload: %#v", planModeExitAttachment)
+	}
 	var compactingStatus map[string]any
 	if err := ws.ReadJSON(&compactingStatus); err != nil {
 		t.Fatalf("read compacting status failed: %v", err)
@@ -1190,6 +1204,20 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondAutoModeExitPayload, _ := secondAutoModeExitAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondAutoModeExitPayload["type"])) != "auto_mode_exit" {
 		t.Fatalf("unexpected second auto_mode_exit attachment payload: %#v", secondAutoModeExitAttachment)
+	}
+	var secondPlanModeExitAttachment map[string]any
+	if err := ws.ReadJSON(&secondPlanModeExitAttachment); err != nil {
+		t.Fatalf("read second plan_mode_exit attachment failed: %v", err)
+	}
+	if secondPlanModeExitAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondPlanModeExitAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second plan_mode_exit attachment envelope: %#v", secondPlanModeExitAttachment)
+	}
+	secondPlanModeExitPayload, _ := secondPlanModeExitAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondPlanModeExitPayload["type"])) != "plan_mode_exit" || strings.TrimSpace(asString(secondPlanModeExitPayload["planFilePath"])) == "" {
+		t.Fatalf("unexpected second plan_mode_exit attachment payload: %#v", secondPlanModeExitAttachment)
+	}
+	if planExists, ok := secondPlanModeExitPayload["planExists"].(bool); !ok || planExists {
+		t.Fatalf("invalid second plan_mode_exit attachment payload: %#v", secondPlanModeExitAttachment)
 	}
 	var secondCompactingStatus map[string]any
 	if err := ws.ReadJSON(&secondCompactingStatus); err != nil {

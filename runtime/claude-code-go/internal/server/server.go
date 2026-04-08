@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -1540,6 +1541,20 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						"type": "auto_mode_exit",
 					},
 					"uuid":       autoModeExitUUID,
+					"session_id": session.ID,
+				})
+				planModeExitUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":         "plan_mode_exit",
+						"planFilePath": filepath.Join(session.WorkDir, ".claude", "plan.md"),
+						"planExists":   false,
+					},
+					"uuid":       planModeExitUUID,
 					"session_id": session.ID,
 				})
 				compactingStatusUUID, err := generateRequestID()
