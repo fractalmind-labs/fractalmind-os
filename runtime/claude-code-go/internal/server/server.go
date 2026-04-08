@@ -737,6 +737,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 			pendingRequestID string
 			pendingToolUseID string
 			completedTurns   int
+			initialUserAcked bool
 			remoteControlOn  bool
 			activeOAuthFlows = map[string]bool{}
 			permissionMode   = "default"
@@ -764,6 +765,30 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					session.LastUserMessage = pendingPrompt
 					session.LastQueuedCommand = pendingPrompt
 					store.put(session)
+				}
+				if pendingPrompt != "" && !initialUserAcked {
+					initialUserAckUUID, err := generateRequestID()
+					if err != nil {
+						return
+					}
+					_ = conn.WriteJSON(map[string]any{
+						"type":               "user",
+						"isReplay":           true,
+						"uuid":               initialUserAckUUID,
+						"session_id":         session.ID,
+						"parent_tool_use_id": nil,
+						"timestamp":          time.Now().UTC().Format(time.RFC3339Nano),
+						"message": map[string]any{
+							"role": "user",
+							"content": []map[string]any{
+								{
+									"type": "text",
+									"text": pendingPrompt,
+								},
+							},
+						},
+					})
+					initialUserAcked = true
 				}
 				_ = sessionIndex.setStatus(sessionID, session.WorkDir, "running")
 				runningStateUUID, err := generateRequestID()

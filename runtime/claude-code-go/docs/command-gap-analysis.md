@@ -83,6 +83,8 @@
 
 - direct-connect user message 的 `timestamp` 当前只补最小稳定 shape：compact summary 与 replayed plain user / queued_command / tool_result / local-command stdout breadcrumb / local-command stderr breadcrumb 都要求非空 `timestamp`，并在 `open --print` 摘要中暴露对应 `*_timestamp_validated/event`；不扩展为真实 transcript timeline、ordering 或 provenance 还原
 
+- fresh live direct-connect 现额外补最小 initial user ACK replay：只对首条 live user text 发 1 条 `{type:"user", isReplay:true, parent_tool_use_id:null, uuid, timestamp, session_id, message}` ACK 回放，并在 `open --print` 摘要中暴露 `acked_initial_user_replay_validated/event`；不扩展为多条队列、完整 transcript rebuild 或 timeline 排序增强
+
 ## 3. 未实现但已识别的高优先级命令
 
 ### Wave 1：正在补齐

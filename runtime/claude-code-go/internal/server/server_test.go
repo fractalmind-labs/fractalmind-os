@@ -198,7 +198,23 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("write user message failed: %v", err)
 	}
-
+	var ackedInitialUser map[string]any
+	if err := ws.ReadJSON(&ackedInitialUser); err != nil {
+		t.Fatalf("read initial user ack replay failed: %v", err)
+	}
+	if ackedInitialUser["type"] != "user" || ackedInitialUser["isReplay"] != true || strings.TrimSpace(asString(ackedInitialUser["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(ackedInitialUser["uuid"])) == "" || strings.TrimSpace(asString(ackedInitialUser["timestamp"])) == "" {
+		t.Fatalf("unexpected initial user ack replay payload: %#v", ackedInitialUser)
+	}
+	if _, ok := ackedInitialUser["isSynthetic"]; ok {
+		t.Fatalf("expected initial user ack replay to omit isSynthetic, got %#v", ackedInitialUser)
+	}
+	if ackedInitialUser["parent_tool_use_id"] != nil {
+		t.Fatalf("expected initial user ack replay parent_tool_use_id=nil, got %#v", ackedInitialUser)
+	}
+	ackedInitialMessage, _ := ackedInitialUser["message"].(map[string]any)
+	if strings.TrimSpace(asString(ackedInitialMessage["role"])) != "user" || extractPromptText(ackedInitialUser) != "hello" {
+		t.Fatalf("unexpected initial user ack replay message payload: %#v", ackedInitialUser)
+	}
 	var runningState map[string]any
 	if err := ws.ReadJSON(&runningState); err != nil {
 		t.Fatalf("read running session_state_changed failed: %v", err)
@@ -2717,6 +2733,23 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 		},
 	}); err != nil {
 		t.Fatalf("write replay seed user failed: %v", err)
+	}
+	var ackedInitialUser map[string]any
+	if err := ws.ReadJSON(&ackedInitialUser); err != nil {
+		t.Fatalf("read seed initial user ack replay failed: %v", err)
+	}
+	if ackedInitialUser["type"] != "user" || ackedInitialUser["isReplay"] != true || strings.TrimSpace(asString(ackedInitialUser["session_id"])) != created["session_id"] || strings.TrimSpace(asString(ackedInitialUser["uuid"])) == "" || strings.TrimSpace(asString(ackedInitialUser["timestamp"])) == "" {
+		t.Fatalf("unexpected seed initial user ack replay payload: %#v", ackedInitialUser)
+	}
+	if _, ok := ackedInitialUser["isSynthetic"]; ok {
+		t.Fatalf("expected seed initial user ack replay to omit isSynthetic, got %#v", ackedInitialUser)
+	}
+	if ackedInitialUser["parent_tool_use_id"] != nil {
+		t.Fatalf("expected seed initial user ack replay parent_tool_use_id=nil, got %#v", ackedInitialUser)
+	}
+	ackedInitialMessage, _ := ackedInitialUser["message"].(map[string]any)
+	if strings.TrimSpace(asString(ackedInitialMessage["role"])) != "user" || extractPromptText(ackedInitialUser) != "resume replay seed" {
+		t.Fatalf("unexpected seed initial user ack replay message payload: %#v", ackedInitialUser)
 	}
 	var runningState map[string]any
 	if err := ws.ReadJSON(&runningState); err != nil {

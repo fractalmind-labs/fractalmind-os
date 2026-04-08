@@ -61,6 +61,8 @@ type Result struct {
 	CompactSummaryTimestampEvent                                 string
 	CompactSummaryParentToolUseIDValidated                       bool
 	CompactSummaryParentToolUseIDEvent                           string
+	AckedInitialUserReplayValidated                              bool
+	AckedInitialUserReplayEvent                                  string
 	ReplayedUserMessageValidated                                 bool
 	ReplayedUserMessageEvent                                     string
 	ReplayedUserSyntheticValidated                               bool
@@ -336,6 +338,8 @@ func Run(args []string) (Result, error) {
 		CompactSummaryTimestampEvent:                                 streamResult.CompactSummaryTimestampEvent,
 		CompactSummaryParentToolUseIDValidated:                       streamResult.CompactSummaryParentToolUseIDValidated,
 		CompactSummaryParentToolUseIDEvent:                           streamResult.CompactSummaryParentToolUseIDEvent,
+		AckedInitialUserReplayValidated:                              streamResult.AckedInitialUserReplayValidated,
+		AckedInitialUserReplayEvent:                                  streamResult.AckedInitialUserReplayEvent,
 		ReplayedUserMessageValidated:                                 streamResult.ReplayedUserMessageValidated,
 		ReplayedUserMessageEvent:                                     streamResult.ReplayedUserMessageEvent,
 		ReplayedUserSyntheticValidated:                               streamResult.ReplayedUserSyntheticValidated,
@@ -841,6 +845,8 @@ type streamValidation struct {
 	CompactSummaryTimestampEvent                                 string
 	CompactSummaryParentToolUseIDValidated                       bool
 	CompactSummaryParentToolUseIDEvent                           string
+	AckedInitialUserReplayValidated                              bool
+	AckedInitialUserReplayEvent                                  string
 	ReplayedUserMessageValidated                                 bool
 	ReplayedUserMessageEvent                                     string
 	ReplayedUserSyntheticValidated                               bool
@@ -1160,11 +1166,11 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				if !ok {
 					return streamValidation{}, fmt.Errorf("invalid user event: missing isReplay")
 				}
-				synthetic, ok := incoming["isSynthetic"].(bool)
-				if !ok {
-					return streamValidation{}, fmt.Errorf("invalid user event: missing isSynthetic")
-				}
 				if !replayed {
+					synthetic, ok := incoming["isSynthetic"].(bool)
+					if !ok {
+						return streamValidation{}, fmt.Errorf("invalid user event: missing isSynthetic")
+					}
 					contentText, ok := message["content"].(string)
 					if !ok || strings.TrimSpace(contentText) == "" {
 						return streamValidation{}, fmt.Errorf("invalid compact summary user message: missing content")
@@ -1188,6 +1194,25 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.CompactSummaryParentToolUseIDEvent = "user:compact_summary:parent_tool_use_id"
 					continue
 				}
+				replayedPrompt := extractPromptText(map[string]any{"message": message})
+				if strings.TrimSpace(opts.ResumeSessionID) == "" && !result.AckedInitialUserReplayValidated && replayedPrompt == turn.prompt {
+					if strings.TrimSpace(asString(incoming["timestamp"])) == "" {
+						return streamValidation{}, fmt.Errorf("invalid initial user ack replay: missing timestamp")
+					}
+					if isSynthetic, ok := incoming["isSynthetic"].(bool); ok && isSynthetic {
+						return streamValidation{}, fmt.Errorf("invalid initial user ack replay: expected isSynthetic to be absent or false")
+					}
+					if err := validateParentToolUseIDNull(incoming, "invalid initial user ack replay"); err != nil {
+						return streamValidation{}, err
+					}
+					result.AckedInitialUserReplayValidated = true
+					result.AckedInitialUserReplayEvent = "user:initial_ack:isReplay"
+					continue
+				}
+				synthetic, ok := incoming["isSynthetic"].(bool)
+				if !ok {
+					return streamValidation{}, fmt.Errorf("invalid user replay event: missing isSynthetic")
+				}
 				attachment, _ := message["attachment"].(map[string]any)
 				if strings.TrimSpace(asString(attachment["type"])) == "queued_command" {
 					attachmentPrompt := extractPromptText(map[string]any{
@@ -1195,8 +1220,8 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 							"content": attachment["prompt"],
 						},
 					})
-					replayedPrompt := firstNonEmpty(attachmentPrompt, extractPromptText(map[string]any{"message": message}))
-					if replayedPrompt == "" {
+					replayedAttachmentPrompt := firstNonEmpty(attachmentPrompt, replayedPrompt)
+					if replayedAttachmentPrompt == "" {
 						return streamValidation{}, fmt.Errorf("invalid replayed queued_command: missing prompt")
 					}
 					if strings.TrimSpace(asString(incoming["timestamp"])) == "" {
@@ -1303,7 +1328,6 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.ReplayedToolResultParentToolUseIDEvent = "user:tool_result:isReplay:parent_tool_use_id"
 					continue
 				}
-				replayedPrompt := extractPromptText(map[string]any{"message": message})
 				if replayedPrompt == "" {
 					return streamValidation{}, fmt.Errorf("invalid user replay event: missing replayed text content")
 				}
@@ -2099,6 +2123,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	}
 	if opts.PrintMode && !result.CompactSummaryParentToolUseIDValidated {
 		return streamValidation{}, fmt.Errorf("missing compact summary parent_tool_use_id validation during print validation")
+	}
+	if opts.PrintMode && strings.TrimSpace(opts.ResumeSessionID) == "" && !result.AckedInitialUserReplayValidated {
+		return streamValidation{}, fmt.Errorf("missing initial user ack replay during fresh print validation")
 	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedUserTimestampValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed user timestamp validation during resume validation")
@@ -3394,6 +3421,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("compact_summary_timestamp_event=%s\n", valueOrNone(r.CompactSummaryTimestampEvent)))
 	b.WriteString(fmt.Sprintf("compact_summary_parent_tool_use_id_validated=%t\n", r.CompactSummaryParentToolUseIDValidated))
 	b.WriteString(fmt.Sprintf("compact_summary_parent_tool_use_id_event=%s\n", valueOrNone(r.CompactSummaryParentToolUseIDEvent)))
+	b.WriteString(fmt.Sprintf("acked_initial_user_replay_validated=%t\n", r.AckedInitialUserReplayValidated))
+	b.WriteString(fmt.Sprintf("acked_initial_user_replay_event=%s\n", valueOrNone(r.AckedInitialUserReplayEvent)))
 	b.WriteString(fmt.Sprintf("replayed_user_message_validated=%t\n", r.ReplayedUserMessageValidated))
 	b.WriteString(fmt.Sprintf("replayed_user_message_event=%s\n", valueOrNone(r.ReplayedUserMessageEvent)))
 	b.WriteString(fmt.Sprintf("replayed_user_synthetic_validated=%t\n", r.ReplayedUserSyntheticValidated))
