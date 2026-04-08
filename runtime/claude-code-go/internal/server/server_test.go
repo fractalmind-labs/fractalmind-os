@@ -397,6 +397,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 		t.Fatalf("unexpected message_delta payload: %#v", messageDeltaEvent)
 	}
 	assertZeroUsageShape(t, messageDeltaPayload, "message_delta")
+	var messageStopEvent map[string]any
+	if err := ws.ReadJSON(&messageStopEvent); err != nil {
+		t.Fatalf("read message_stop event failed: %v", err)
+	}
+	if messageStopEvent["type"] != "stream_event" {
+		t.Fatalf("unexpected message_stop event envelope: %#v", messageStopEvent)
+	}
+	messageStopPayload, _ := messageStopEvent["event"].(map[string]any)
+	if strings.TrimSpace(asString(messageStopPayload["type"])) != "message_stop" {
+		t.Fatalf("unexpected message_stop payload: %#v", messageStopEvent)
+	}
 	var streamlinedText map[string]any
 	if err := ws.ReadJSON(&streamlinedText); err != nil {
 		t.Fatalf("read streamlined_text failed: %v", err)
@@ -829,6 +840,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 		t.Fatalf("unexpected second message_delta payload: %#v", secondMessageDeltaEvent)
 	}
 	assertZeroUsageShape(t, secondMessageDeltaPayload, "second message_delta")
+	var secondMessageStopEvent map[string]any
+	if err := ws.ReadJSON(&secondMessageStopEvent); err != nil {
+		t.Fatalf("read second message_stop event failed: %v", err)
+	}
+	if secondMessageStopEvent["type"] != "stream_event" {
+		t.Fatalf("unexpected second message_stop event envelope: %#v", secondMessageStopEvent)
+	}
+	secondMessageStopPayload, _ := secondMessageStopEvent["event"].(map[string]any)
+	if strings.TrimSpace(asString(secondMessageStopPayload["type"])) != "message_stop" {
+		t.Fatalf("unexpected second message_stop payload: %#v", secondMessageStopEvent)
+	}
 	var secondStreamlinedText map[string]any
 	if err := ws.ReadJSON(&secondStreamlinedText); err != nil {
 		t.Fatalf("read second streamlined_text failed: %v", err)

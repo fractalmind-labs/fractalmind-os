@@ -1184,6 +1184,19 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":               messageDeltaUUID,
 					"session_id":         session.ID,
 				})
+				messageStopUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "stream_event",
+					"event": map[string]any{
+						"type": "message_stop",
+					},
+					"parent_tool_use_id": nil,
+					"uuid":               messageStopUUID,
+					"session_id":         session.ID,
+				})
 				streamlinedTextUUID, err := generateRequestID()
 				if err != nil {
 					return

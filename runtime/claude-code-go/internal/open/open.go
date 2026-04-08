@@ -55,6 +55,8 @@ type Result struct {
 	ToolUseBlockStopEvent                                        string
 	AssistantMessageDeltaValidated                               bool
 	AssistantMessageDeltaEvent                                   string
+	AssistantMessageStopValidated                                bool
+	AssistantMessageStopEvent                                    string
 	AssistantThinkingValidated                                   bool
 	AssistantThinkingEvent                                       string
 	AssistantToolUseValidated                                    bool
@@ -378,6 +380,8 @@ func Run(args []string) (Result, error) {
 		ToolUseBlockStopEvent:                                        streamResult.ToolUseBlockStopEvent,
 		AssistantMessageDeltaValidated:                               streamResult.AssistantMessageDeltaValidated,
 		AssistantMessageDeltaEvent:                                   streamResult.AssistantMessageDeltaEvent,
+		AssistantMessageStopValidated:                                streamResult.AssistantMessageStopValidated,
+		AssistantMessageStopEvent:                                    streamResult.AssistantMessageStopEvent,
 		AssistantThinkingValidated:                                   streamResult.AssistantThinkingValidated,
 		AssistantThinkingEvent:                                       streamResult.AssistantThinkingEvent,
 		AssistantToolUseValidated:                                    streamResult.AssistantToolUseValidated,
@@ -931,6 +935,8 @@ type streamValidation struct {
 	ToolUseBlockStopEvent                                        string
 	AssistantMessageDeltaValidated                               bool
 	AssistantMessageDeltaEvent                                   string
+	AssistantMessageStopValidated                                bool
+	AssistantMessageStopEvent                                    string
 	AssistantThinkingValidated                                   bool
 	AssistantThinkingEvent                                       string
 	AssistantToolUseValidated                                    bool
@@ -1285,6 +1291,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		toolUseBlockStartValidated := false
 		toolUseBlockStopValidated := false
 		assistantMessageDeltaValidated := false
+		assistantMessageStopValidated := false
 		assistantThinkingValidated := false
 		assistantToolUseValidated := false
 		assistantStopReasonValidated := false
@@ -2123,6 +2130,10 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.AssistantMessageDeltaValidated = true
 					result.AssistantMessageDeltaEvent = "stream_event:message_delta"
 					assistantMessageDeltaValidated = true
+				case "message_stop":
+					result.AssistantMessageStopValidated = true
+					result.AssistantMessageStopEvent = "stream_event:message_stop"
+					assistantMessageStopValidated = true
 				default:
 					return streamValidation{}, fmt.Errorf("invalid stream_event type: %s", asString(event["type"]))
 				}
@@ -2458,7 +2469,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageDeltaValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -3781,6 +3792,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("tool_use_block_stop_event=%s\n", valueOrNone(r.ToolUseBlockStopEvent)))
 	b.WriteString(fmt.Sprintf("assistant_message_delta_validated=%t\n", r.AssistantMessageDeltaValidated))
 	b.WriteString(fmt.Sprintf("assistant_message_delta_event=%s\n", valueOrNone(r.AssistantMessageDeltaEvent)))
+	b.WriteString(fmt.Sprintf("assistant_message_stop_validated=%t\n", r.AssistantMessageStopValidated))
+	b.WriteString(fmt.Sprintf("assistant_message_stop_event=%s\n", valueOrNone(r.AssistantMessageStopEvent)))
 	b.WriteString(fmt.Sprintf("assistant_thinking_validated=%t\n", r.AssistantThinkingValidated))
 	b.WriteString(fmt.Sprintf("assistant_thinking_event=%s\n", valueOrNone(r.AssistantThinkingEvent)))
 	b.WriteString(fmt.Sprintf("assistant_tool_use_validated=%t\n", r.AssistantToolUseValidated))
