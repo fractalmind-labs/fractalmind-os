@@ -547,6 +547,19 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(taskReminderPayload["type"])) != "task_reminder" || intFromAny(taskReminderPayload["itemCount"]) != 1 || len(taskReminderContent) != 1 || strings.TrimSpace(asString(firstTaskReminder["id"])) != strings.TrimSpace(asString(taskStarted["task_id"])) || strings.TrimSpace(asString(firstTaskReminder["status"])) != "completed" || strings.TrimSpace(asString(firstTaskReminder["subject"])) != "direct-connect echo task" {
 		t.Fatalf("unexpected task_reminder attachment payload: %#v", taskReminderAttachment)
 	}
+	var todoReminderAttachment map[string]any
+	if err := ws.ReadJSON(&todoReminderAttachment); err != nil {
+		t.Fatalf("read todo_reminder attachment failed: %v", err)
+	}
+	if todoReminderAttachment["type"] != "attachment" || strings.TrimSpace(asString(todoReminderAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected todo_reminder attachment envelope: %#v", todoReminderAttachment)
+	}
+	todoReminderPayload, _ := todoReminderAttachment["attachment"].(map[string]any)
+	todoReminderContent, _ := todoReminderPayload["content"].([]any)
+	firstTodoReminder, _ := todoReminderContent[0].(map[string]any)
+	if strings.TrimSpace(asString(todoReminderPayload["type"])) != "todo_reminder" || intFromAny(todoReminderPayload["itemCount"]) != 1 || len(todoReminderContent) != 1 || strings.TrimSpace(asString(firstTodoReminder["content"])) != "direct-connect echo task" || strings.TrimSpace(asString(firstTodoReminder["status"])) != "completed" || strings.TrimSpace(asString(firstTodoReminder["activeForm"])) != "Completing direct-connect echo task" {
+		t.Fatalf("unexpected todo_reminder attachment payload: %#v", todoReminderAttachment)
+	}
 	var filesPersisted map[string]any
 	if err := ws.ReadJSON(&filesPersisted); err != nil {
 		t.Fatalf("read files_persisted failed: %v", err)
@@ -1038,6 +1051,19 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondTaskReminder, _ := secondTaskReminderContent[0].(map[string]any)
 	if strings.TrimSpace(asString(secondTaskReminderPayload["type"])) != "task_reminder" || intFromAny(secondTaskReminderPayload["itemCount"]) != 1 || len(secondTaskReminderContent) != 1 || strings.TrimSpace(asString(secondTaskReminder["id"])) != strings.TrimSpace(asString(secondTaskStarted["task_id"])) || strings.TrimSpace(asString(secondTaskReminder["status"])) != "completed" || strings.TrimSpace(asString(secondTaskReminder["subject"])) != "direct-connect echo task" {
 		t.Fatalf("unexpected second task_reminder attachment payload: %#v", secondTaskReminderAttachment)
+	}
+	var secondTodoReminderAttachment map[string]any
+	if err := ws.ReadJSON(&secondTodoReminderAttachment); err != nil {
+		t.Fatalf("read second todo_reminder attachment failed: %v", err)
+	}
+	if secondTodoReminderAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondTodoReminderAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second todo_reminder attachment envelope: %#v", secondTodoReminderAttachment)
+	}
+	secondTodoReminderPayload, _ := secondTodoReminderAttachment["attachment"].(map[string]any)
+	secondTodoReminderContent, _ := secondTodoReminderPayload["content"].([]any)
+	secondTodoReminder, _ := secondTodoReminderContent[0].(map[string]any)
+	if strings.TrimSpace(asString(secondTodoReminderPayload["type"])) != "todo_reminder" || intFromAny(secondTodoReminderPayload["itemCount"]) != 1 || len(secondTodoReminderContent) != 1 || strings.TrimSpace(asString(secondTodoReminder["content"])) != "direct-connect echo task" || strings.TrimSpace(asString(secondTodoReminder["status"])) != "completed" || strings.TrimSpace(asString(secondTodoReminder["activeForm"])) != "Completing direct-connect echo task" {
+		t.Fatalf("unexpected second todo_reminder attachment payload: %#v", secondTodoReminderAttachment)
 	}
 	var secondFilesPersisted map[string]any
 	if err := ws.ReadJSON(&secondFilesPersisted); err != nil {

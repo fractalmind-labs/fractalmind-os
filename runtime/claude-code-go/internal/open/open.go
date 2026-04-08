@@ -75,6 +75,8 @@ type Result struct {
 	TaskStatusAttachmentEvent                                    string
 	TaskReminderAttachmentValidated                              bool
 	TaskReminderAttachmentEvent                                  string
+	TodoReminderAttachmentValidated                              bool
+	TodoReminderAttachmentEvent                                  string
 	StreamlinedTextValidated                                     bool
 	StreamlinedTextEvent                                         string
 	SystemValidated                                              bool
@@ -410,6 +412,8 @@ func Run(args []string) (Result, error) {
 		TaskStatusAttachmentEvent:                                    streamResult.TaskStatusAttachmentEvent,
 		TaskReminderAttachmentValidated:                              streamResult.TaskReminderAttachmentValidated,
 		TaskReminderAttachmentEvent:                                  streamResult.TaskReminderAttachmentEvent,
+		TodoReminderAttachmentValidated:                              streamResult.TodoReminderAttachmentValidated,
+		TodoReminderAttachmentEvent:                                  streamResult.TodoReminderAttachmentEvent,
 		StreamlinedTextValidated:                                     streamResult.StreamlinedTextValidated,
 		StreamlinedTextEvent:                                         streamResult.StreamlinedTextEvent,
 		SystemValidated:                                              streamResult.SystemValidated,
@@ -975,6 +979,8 @@ type streamValidation struct {
 	TaskStatusAttachmentEvent                                    string
 	TaskReminderAttachmentValidated                              bool
 	TaskReminderAttachmentEvent                                  string
+	TodoReminderAttachmentValidated                              bool
+	TodoReminderAttachmentEvent                                  string
 	StreamlinedTextValidated                                     bool
 	StreamlinedTextEvent                                         string
 	SystemValidated                                              bool
@@ -2177,6 +2183,29 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.TaskReminderAttachmentValidated = true
 					result.TaskReminderAttachmentEvent = "attachment:task_reminder"
 					taskReminderAttachmentValidated = true
+				case "todo_reminder":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected todo_reminder attachment during %s turn", turn.behavior)
+					}
+					content, ok := attachment["content"].([]any)
+					if !ok || len(content) != 1 {
+						return streamValidation{}, fmt.Errorf("invalid todo_reminder attachment.content: expected 1 todo, got %#v", attachment["content"])
+					}
+					todo, _ := content[0].(map[string]any)
+					if strings.TrimSpace(asString(todo["content"])) != currentTaskDescription {
+						return streamValidation{}, fmt.Errorf("invalid todo_reminder attachment.content[0].content: expected %q, got %q", currentTaskDescription, strings.TrimSpace(asString(todo["content"])))
+					}
+					if strings.TrimSpace(asString(todo["status"])) != "completed" {
+						return streamValidation{}, fmt.Errorf("invalid todo_reminder attachment.content[0].status: expected %q, got %q", "completed", strings.TrimSpace(asString(todo["status"])))
+					}
+					if strings.TrimSpace(asString(todo["activeForm"])) != "Completing direct-connect echo task" {
+						return streamValidation{}, fmt.Errorf("invalid todo_reminder attachment.content[0].activeForm: expected %q, got %q", "Completing direct-connect echo task", strings.TrimSpace(asString(todo["activeForm"])))
+					}
+					if intFromAny(attachment["itemCount"]) != 1 {
+						return streamValidation{}, fmt.Errorf("invalid todo_reminder attachment.itemCount: expected 1, got %d", intFromAny(attachment["itemCount"]))
+					}
+					result.TodoReminderAttachmentValidated = true
+					result.TodoReminderAttachmentEvent = "attachment:todo_reminder"
 				default:
 					return streamValidation{}, fmt.Errorf("invalid attachment type: %q", strings.TrimSpace(asString(attachment["type"])))
 				}
@@ -3956,6 +3985,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("task_status_attachment_event=%s\n", valueOrNone(r.TaskStatusAttachmentEvent)))
 	b.WriteString(fmt.Sprintf("task_reminder_attachment_validated=%t\n", r.TaskReminderAttachmentValidated))
 	b.WriteString(fmt.Sprintf("task_reminder_attachment_event=%s\n", valueOrNone(r.TaskReminderAttachmentEvent)))
+	b.WriteString(fmt.Sprintf("todo_reminder_attachment_validated=%t\n", r.TodoReminderAttachmentValidated))
+	b.WriteString(fmt.Sprintf("todo_reminder_attachment_event=%s\n", valueOrNone(r.TodoReminderAttachmentEvent)))
 	b.WriteString(fmt.Sprintf("streamlined_text_validated=%t\n", r.StreamlinedTextValidated))
 	b.WriteString(fmt.Sprintf("streamlined_text_event=%s\n", valueOrNone(r.StreamlinedTextEvent)))
 	b.WriteString(fmt.Sprintf("system_validated=%t\n", r.SystemValidated))

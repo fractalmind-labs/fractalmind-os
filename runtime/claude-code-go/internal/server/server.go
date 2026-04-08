@@ -1399,6 +1399,26 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       taskReminderUUID,
 					"session_id": session.ID,
 				})
+				todoReminderUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type": "todo_reminder",
+						"content": []map[string]any{
+							{
+								"content":    taskDescription,
+								"status":     "completed",
+								"activeForm": "Completing direct-connect echo task",
+							},
+						},
+						"itemCount": 1,
+					},
+					"uuid":       todoReminderUUID,
+					"session_id": session.ID,
+				})
 				filesPersistedUUID, err := generateRequestID()
 				if err != nil {
 					return
