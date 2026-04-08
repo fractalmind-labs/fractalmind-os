@@ -60,15 +60,16 @@ type RunningServer struct {
 }
 
 type sessionInfo struct {
-	ID                  string
-	WorkDir             string
-	Backend             *backendProcess
-	LastUserMessage     string
-	LastToolUseID       string
-	LastToolResult      string
-	LastAssistant       string
-	LastCompactSeen     bool
-	LastLocalBreadcrumb string
+	ID                     string
+	WorkDir                string
+	Backend                *backendProcess
+	LastUserMessage        string
+	LastToolUseID          string
+	LastToolResult         string
+	LastAssistant          string
+	LastCompactSeen        bool
+	LastLocalBreadcrumb    string
+	LastLocalErrBreadcrumb string
 }
 
 type sessionStore struct {
@@ -326,15 +327,16 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 			}
 			if existing, ok := store.get(sessionID); ok {
 				store.put(sessionInfo{
-					ID:                  sessionID,
-					WorkDir:             entry.CWD,
-					Backend:             existing.Backend,
-					LastUserMessage:     existing.LastUserMessage,
-					LastToolUseID:       existing.LastToolUseID,
-					LastToolResult:      existing.LastToolResult,
-					LastAssistant:       existing.LastAssistant,
-					LastCompactSeen:     existing.LastCompactSeen,
-					LastLocalBreadcrumb: existing.LastLocalBreadcrumb,
+					ID:                     sessionID,
+					WorkDir:                entry.CWD,
+					Backend:                existing.Backend,
+					LastUserMessage:        existing.LastUserMessage,
+					LastToolUseID:          existing.LastToolUseID,
+					LastToolResult:         existing.LastToolResult,
+					LastAssistant:          existing.LastAssistant,
+					LastCompactSeen:        existing.LastCompactSeen,
+					LastLocalBreadcrumb:    existing.LastLocalBreadcrumb,
+					LastLocalErrBreadcrumb: existing.LastLocalErrBreadcrumb,
 				})
 			} else if maxSessions > 0 && store.count() >= maxSessions {
 				http.Error(w, fmt.Sprintf("max sessions reached (%d/%d)", store.count(), maxSessions), http.StatusTooManyRequests)
@@ -678,6 +680,22 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				"message": map[string]any{
 					"role":    "user",
 					"content": session.LastLocalBreadcrumb,
+				},
+			})
+		}
+		if strings.TrimSpace(session.LastLocalErrBreadcrumb) != "" {
+			replayUUID, err := generateRequestID()
+			if err != nil {
+				return
+			}
+			_ = conn.WriteJSON(map[string]any{
+				"type":       "user",
+				"isReplay":   true,
+				"uuid":       replayUUID,
+				"session_id": session.ID,
+				"message": map[string]any{
+					"role":    "user",
+					"content": session.LastLocalErrBreadcrumb,
 				},
 			})
 		}
@@ -1105,6 +1123,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					return
 				}
 				session.LastLocalBreadcrumb = "<local-command-stdout>local command output: persisted direct-connect artifacts</local-command-stdout>"
+				session.LastLocalErrBreadcrumb = "<local-command-stderr>local command stderr: persisted direct-connect artifacts</local-command-stderr>"
 				store.put(session)
 				_ = conn.WriteJSON(map[string]any{
 					"type":       "system",

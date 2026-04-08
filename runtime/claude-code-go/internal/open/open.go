@@ -63,6 +63,8 @@ type Result struct {
 	ReplayedCompactBoundaryEvent                   string
 	ReplayedLocalCommandBreadcrumbValidated        bool
 	ReplayedLocalCommandBreadcrumbEvent            string
+	ReplayedLocalCommandStderrBreadcrumbValidated  bool
+	ReplayedLocalCommandStderrBreadcrumbEvent      string
 	AuthValidated                                  bool
 	AuthEvent                                      string
 	KeepAliveValidated                             bool
@@ -290,26 +292,28 @@ func Run(args []string) (Result, error) {
 		ReplayedCompactBoundaryEvent:            streamResult.ReplayedCompactBoundaryEvent,
 		ReplayedLocalCommandBreadcrumbValidated: streamResult.ReplayedLocalCommandBreadcrumbValidated,
 		ReplayedLocalCommandBreadcrumbEvent:     streamResult.ReplayedLocalCommandBreadcrumbEvent,
-		AuthValidated:                           streamResult.AuthValidated,
-		AuthEvent:                               streamResult.AuthEvent,
-		KeepAliveValidated:                      streamResult.KeepAliveValidated,
-		KeepAliveEvent:                          streamResult.KeepAliveEvent,
-		UpdateEnvironmentVariablesValidated:     streamResult.UpdateEnvironmentVariablesValidated,
-		UpdateEnvironmentVariablesEvent:         streamResult.UpdateEnvironmentVariablesEvent,
-		ControlCancelValidated:                  streamResult.ControlCancelValidated,
-		ControlCancelEvent:                      streamResult.ControlCancelEvent,
-		MessageValidated:                        streamResult.MessageValidated,
-		MessageEvent:                            streamResult.MessageEvent,
-		ValidatedTurns:                          streamResult.ValidatedTurns,
-		MultiTurnValidated:                      streamResult.MultiTurnValidated,
-		ResultValidated:                         streamResult.ResultValidated,
-		ResultEvent:                             streamResult.ResultEvent,
-		ResultErrorValidated:                    streamResult.ResultErrorValidated,
-		ResultErrorEvent:                        streamResult.ResultErrorEvent,
-		ResultErrorMaxTurnsValidated:            streamResult.ResultErrorMaxTurnsValidated,
-		ResultErrorMaxTurnsEvent:                streamResult.ResultErrorMaxTurnsEvent,
-		ResultErrorMaxBudgetUSDValidated:        streamResult.ResultErrorMaxBudgetUSDValidated,
-		ResultErrorMaxBudgetUSDEvent:            streamResult.ResultErrorMaxBudgetUSDEvent,
+		ReplayedLocalCommandStderrBreadcrumbValidated: streamResult.ReplayedLocalCommandStderrBreadcrumbValidated,
+		ReplayedLocalCommandStderrBreadcrumbEvent:     streamResult.ReplayedLocalCommandStderrBreadcrumbEvent,
+		AuthValidated:                       streamResult.AuthValidated,
+		AuthEvent:                           streamResult.AuthEvent,
+		KeepAliveValidated:                  streamResult.KeepAliveValidated,
+		KeepAliveEvent:                      streamResult.KeepAliveEvent,
+		UpdateEnvironmentVariablesValidated: streamResult.UpdateEnvironmentVariablesValidated,
+		UpdateEnvironmentVariablesEvent:     streamResult.UpdateEnvironmentVariablesEvent,
+		ControlCancelValidated:              streamResult.ControlCancelValidated,
+		ControlCancelEvent:                  streamResult.ControlCancelEvent,
+		MessageValidated:                    streamResult.MessageValidated,
+		MessageEvent:                        streamResult.MessageEvent,
+		ValidatedTurns:                      streamResult.ValidatedTurns,
+		MultiTurnValidated:                  streamResult.MultiTurnValidated,
+		ResultValidated:                     streamResult.ResultValidated,
+		ResultEvent:                         streamResult.ResultEvent,
+		ResultErrorValidated:                streamResult.ResultErrorValidated,
+		ResultErrorEvent:                    streamResult.ResultErrorEvent,
+		ResultErrorMaxTurnsValidated:        streamResult.ResultErrorMaxTurnsValidated,
+		ResultErrorMaxTurnsEvent:            streamResult.ResultErrorMaxTurnsEvent,
+		ResultErrorMaxBudgetUSDValidated:    streamResult.ResultErrorMaxBudgetUSDValidated,
+		ResultErrorMaxBudgetUSDEvent:        streamResult.ResultErrorMaxBudgetUSDEvent,
 		ResultErrorMaxStructuredOutputRetriesValidated: streamResult.ResultErrorMaxStructuredOutputRetriesValidated,
 		ResultErrorMaxStructuredOutputRetriesEvent:     streamResult.ResultErrorMaxStructuredOutputRetriesEvent,
 		ControlValidated:                    streamResult.ControlValidated,
@@ -747,6 +751,8 @@ type streamValidation struct {
 	ReplayedCompactBoundaryEvent                   string
 	ReplayedLocalCommandBreadcrumbValidated        bool
 	ReplayedLocalCommandBreadcrumbEvent            string
+	ReplayedLocalCommandStderrBreadcrumbValidated  bool
+	ReplayedLocalCommandStderrBreadcrumbEvent      string
 	AuthValidated                                  bool
 	AuthEvent                                      string
 	KeepAliveValidated                             bool
@@ -1016,11 +1022,18 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				if strings.TrimSpace(asString(message["role"])) != "user" {
 					return streamValidation{}, fmt.Errorf("invalid user replay event: missing role=user")
 				}
-				if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedLocalCommandBreadcrumbValidated {
-					if contentText, ok := message["content"].(string); ok && strings.Contains(contentText, "<local-command-stdout>") {
-						result.ReplayedLocalCommandBreadcrumbValidated = true
-						result.ReplayedLocalCommandBreadcrumbEvent = "user:local_command_stdout:isReplay"
-						continue
+				if strings.TrimSpace(opts.ResumeSessionID) != "" {
+					if contentText, ok := message["content"].(string); ok {
+						if !result.ReplayedLocalCommandBreadcrumbValidated && strings.Contains(contentText, "<local-command-stdout>") {
+							result.ReplayedLocalCommandBreadcrumbValidated = true
+							result.ReplayedLocalCommandBreadcrumbEvent = "user:local_command_stdout:isReplay"
+							continue
+						}
+						if !result.ReplayedLocalCommandStderrBreadcrumbValidated && strings.Contains(contentText, "<local-command-stderr>") {
+							result.ReplayedLocalCommandStderrBreadcrumbValidated = true
+							result.ReplayedLocalCommandStderrBreadcrumbEvent = "user:local_command_stderr:isReplay"
+							continue
+						}
 					}
 				}
 				content, _ := message["content"].([]any)
@@ -1796,6 +1809,9 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 	}
 	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedLocalCommandBreadcrumbValidated {
 		return streamValidation{}, fmt.Errorf("missing replayed local-command breadcrumb during resume validation")
+	}
+	if strings.TrimSpace(opts.ResumeSessionID) != "" && !result.ReplayedLocalCommandStderrBreadcrumbValidated {
+		return streamValidation{}, fmt.Errorf("missing replayed local-command stderr breadcrumb during resume validation")
 	}
 	result.MultiTurnValidated = result.ValidatedTurns >= 2
 
@@ -3027,6 +3043,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("replayed_compact_boundary_event=%s\n", valueOrNone(r.ReplayedCompactBoundaryEvent)))
 	b.WriteString(fmt.Sprintf("replayed_local_command_breadcrumb_validated=%t\n", r.ReplayedLocalCommandBreadcrumbValidated))
 	b.WriteString(fmt.Sprintf("replayed_local_command_breadcrumb_event=%s\n", valueOrNone(r.ReplayedLocalCommandBreadcrumbEvent)))
+	b.WriteString(fmt.Sprintf("replayed_local_command_stderr_breadcrumb_validated=%t\n", r.ReplayedLocalCommandStderrBreadcrumbValidated))
+	b.WriteString(fmt.Sprintf("replayed_local_command_stderr_breadcrumb_event=%s\n", valueOrNone(r.ReplayedLocalCommandStderrBreadcrumbEvent)))
 	b.WriteString(fmt.Sprintf("auth_validated=%t\n", r.AuthValidated))
 	b.WriteString(fmt.Sprintf("auth_event=%s\n", valueOrNone(r.AuthEvent)))
 	b.WriteString(fmt.Sprintf("keep_alive_validated=%t\n", r.KeepAliveValidated))

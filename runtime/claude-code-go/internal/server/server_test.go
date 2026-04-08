@@ -2808,6 +2808,20 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	if !strings.Contains(strings.TrimSpace(asString(breadcrumbMessage["content"])), "<local-command-stdout>") {
 		t.Fatalf("expected replayed local-command breadcrumb stdout tag, got %#v", replayedLocalBreadcrumb)
 	}
+	var replayedLocalErrBreadcrumb map[string]any
+	if err := ws.ReadJSON(&replayedLocalErrBreadcrumb); err != nil {
+		t.Fatalf("read replayed local-command stderr breadcrumb failed: %v", err)
+	}
+	if replayedLocalErrBreadcrumb["type"] != "user" || replayedLocalErrBreadcrumb["isReplay"] != true || strings.TrimSpace(asString(replayedLocalErrBreadcrumb["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedLocalErrBreadcrumb["uuid"])) == "" {
+		t.Fatalf("unexpected replayed local-command stderr breadcrumb payload: %#v", replayedLocalErrBreadcrumb)
+	}
+	errBreadcrumbMessage, _ := replayedLocalErrBreadcrumb["message"].(map[string]any)
+	if strings.TrimSpace(asString(errBreadcrumbMessage["role"])) != "user" {
+		t.Fatalf("unexpected replayed local-command stderr breadcrumb message payload: %#v", replayedLocalErrBreadcrumb)
+	}
+	if !strings.Contains(strings.TrimSpace(asString(errBreadcrumbMessage["content"])), "<local-command-stderr>") {
+		t.Fatalf("expected replayed local-command stderr breadcrumb stderr tag, got %#v", replayedLocalErrBreadcrumb)
+	}
 	resumedState := fetchSessionState(t, running.Result.SessionsEndpoint, created["session_id"], "demo-token")
 	if initialPID <= 0 || resumedState.BackendPID != initialPID || resumedState.BackendStatus != "running" {
 		t.Fatalf("expected same live backend across detach/resume, initial=%#v resumed=%#v", initialState, resumedState)
