@@ -689,6 +689,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(dateChangePayload["type"])) != "date_change" || strings.TrimSpace(asString(dateChangePayload["newDate"])) != "2026-04-09" {
 		t.Fatalf("unexpected date_change attachment payload: %#v", dateChangeAttachment)
 	}
+	var verifyPlanReminderAttachment map[string]any
+	if err := ws.ReadJSON(&verifyPlanReminderAttachment); err != nil {
+		t.Fatalf("read verify_plan_reminder attachment failed: %v", err)
+	}
+	if verifyPlanReminderAttachment["type"] != "attachment" || strings.TrimSpace(asString(verifyPlanReminderAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected verify_plan_reminder attachment envelope: %#v", verifyPlanReminderAttachment)
+	}
+	verifyPlanReminderPayload, _ := verifyPlanReminderAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(verifyPlanReminderPayload["type"])) != "verify_plan_reminder" {
+		t.Fatalf("unexpected verify_plan_reminder attachment payload: %#v", verifyPlanReminderAttachment)
+	}
 	var compactingStatus map[string]any
 	if err := ws.ReadJSON(&compactingStatus); err != nil {
 		t.Fatalf("read compacting status failed: %v", err)
@@ -1240,6 +1251,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondDateChangePayload, _ := secondDateChangeAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondDateChangePayload["type"])) != "date_change" || strings.TrimSpace(asString(secondDateChangePayload["newDate"])) != "2026-04-09" {
 		t.Fatalf("unexpected second date_change attachment payload: %#v", secondDateChangeAttachment)
+	}
+	var secondVerifyPlanReminderAttachment map[string]any
+	if err := ws.ReadJSON(&secondVerifyPlanReminderAttachment); err != nil {
+		t.Fatalf("read second verify_plan_reminder attachment failed: %v", err)
+	}
+	if secondVerifyPlanReminderAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondVerifyPlanReminderAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second verify_plan_reminder attachment envelope: %#v", secondVerifyPlanReminderAttachment)
+	}
+	secondVerifyPlanReminderPayload, _ := secondVerifyPlanReminderAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondVerifyPlanReminderPayload["type"])) != "verify_plan_reminder" {
+		t.Fatalf("unexpected second verify_plan_reminder attachment payload: %#v", secondVerifyPlanReminderAttachment)
 	}
 	var secondCompactingStatus map[string]any
 	if err := ws.ReadJSON(&secondCompactingStatus); err != nil {

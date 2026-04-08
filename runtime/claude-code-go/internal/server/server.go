@@ -1570,6 +1570,18 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       dateChangeUUID,
 					"session_id": session.ID,
 				})
+				verifyPlanReminderUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type": "verify_plan_reminder",
+					},
+					"uuid":       verifyPlanReminderUUID,
+					"session_id": session.ID,
+				})
 				compactingStatusUUID, err := generateRequestID()
 				if err != nil {
 					return

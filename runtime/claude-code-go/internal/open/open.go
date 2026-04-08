@@ -85,6 +85,8 @@ type Result struct {
 	PlanModeExitEvent                                            string
 	DateChangeValidated                                          bool
 	DateChangeEvent                                              string
+	VerifyPlanReminderValidated                                  bool
+	VerifyPlanReminderEvent                                      string
 	StreamlinedTextValidated                                     bool
 	StreamlinedTextEvent                                         string
 	SystemValidated                                              bool
@@ -430,6 +432,8 @@ func Run(args []string) (Result, error) {
 		PlanModeExitEvent:                                            streamResult.PlanModeExitEvent,
 		DateChangeValidated:                                          streamResult.DateChangeValidated,
 		DateChangeEvent:                                              streamResult.DateChangeEvent,
+		VerifyPlanReminderValidated:                                  streamResult.VerifyPlanReminderValidated,
+		VerifyPlanReminderEvent:                                      streamResult.VerifyPlanReminderEvent,
 		StreamlinedTextValidated:                                     streamResult.StreamlinedTextValidated,
 		StreamlinedTextEvent:                                         streamResult.StreamlinedTextEvent,
 		SystemValidated:                                              streamResult.SystemValidated,
@@ -1005,6 +1009,8 @@ type streamValidation struct {
 	PlanModeExitEvent                                            string
 	DateChangeValidated                                          bool
 	DateChangeEvent                                              string
+	VerifyPlanReminderValidated                                  bool
+	VerifyPlanReminderEvent                                      string
 	StreamlinedTextValidated                                     bool
 	StreamlinedTextEvent                                         string
 	SystemValidated                                              bool
@@ -1365,6 +1371,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		autoModeExitValidated := false
 		planModeExitValidated := false
 		dateChangeValidated := false
+		verifyPlanReminderValidated := false
 		streamlinedTextValidated := false
 		streamlinedToolUseSummaryValidated := false
 		promptSuggestionValidated := false
@@ -2277,6 +2284,13 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.DateChangeValidated = true
 					result.DateChangeEvent = "attachment:date_change"
 					dateChangeValidated = true
+				case "verify_plan_reminder":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected verify_plan_reminder attachment during %s turn", turn.behavior)
+					}
+					result.VerifyPlanReminderValidated = true
+					result.VerifyPlanReminderEvent = "attachment:verify_plan_reminder"
+					verifyPlanReminderValidated = true
 				default:
 					return streamValidation{}, fmt.Errorf("invalid attachment type: %q", strings.TrimSpace(asString(attachment["type"])))
 				}
@@ -2713,7 +2727,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && autoModeExitValidated && planModeExitValidated && dateChangeValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && autoModeExitValidated && planModeExitValidated && dateChangeValidated && verifyPlanReminderValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4066,6 +4080,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("plan_mode_exit_event=%s\n", valueOrNone(r.PlanModeExitEvent)))
 	b.WriteString(fmt.Sprintf("date_change_validated=%t\n", r.DateChangeValidated))
 	b.WriteString(fmt.Sprintf("date_change_event=%s\n", valueOrNone(r.DateChangeEvent)))
+	b.WriteString(fmt.Sprintf("verify_plan_reminder_validated=%t\n", r.VerifyPlanReminderValidated))
+	b.WriteString(fmt.Sprintf("verify_plan_reminder_event=%s\n", valueOrNone(r.VerifyPlanReminderEvent)))
 	b.WriteString(fmt.Sprintf("streamlined_text_validated=%t\n", r.StreamlinedTextValidated))
 	b.WriteString(fmt.Sprintf("streamlined_text_event=%s\n", valueOrNone(r.StreamlinedTextEvent)))
 	b.WriteString(fmt.Sprintf("system_validated=%t\n", r.SystemValidated))
