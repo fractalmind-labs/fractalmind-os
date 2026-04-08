@@ -1057,6 +1057,12 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				_ = sessionIndex.setBackendSnapshot(sessionID, session.WorkDir, session.Backend.snapshot())
 				thinkingText := "direct-connect stub thinking"
 				thinkingSignature := "sig-direct-connect-stub"
+				toolUseInputJSON, err := json.Marshal(map[string]any{
+					"text": toolInputText,
+				})
+				if err != nil {
+					return
+				}
 				streamUUID, err := generateRequestID()
 				if err != nil {
 					return
@@ -1111,6 +1117,24 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":               signatureStreamUUID,
 					"session_id":         session.ID,
 				})
+				toolUseStreamUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "stream_event",
+					"event": map[string]any{
+						"type":  "content_block_delta",
+						"index": 1,
+						"delta": map[string]any{
+							"type":         "input_json_delta",
+							"partial_json": string(toolUseInputJSON),
+						},
+					},
+					"parent_tool_use_id": nil,
+					"uuid":               toolUseStreamUUID,
+					"session_id":         session.ID,
+				})
 				streamlinedTextUUID, err := generateRequestID()
 				if err != nil {
 					return
@@ -1130,6 +1154,12 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 								"type":      "thinking",
 								"thinking":  thinkingText,
 								"signature": thinkingSignature,
+							},
+							{
+								"type":  "tool_use",
+								"id":    pendingToolUseID,
+								"name":  directConnectEchoToolName,
+								"input": map[string]any{"text": toolInputText},
 							},
 							{
 								"type": "text",

@@ -349,6 +349,18 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(signatureStreamPayload["type"])) != "content_block_delta" || strings.TrimSpace(asString(signatureStreamDelta["type"])) != "signature_delta" || strings.TrimSpace(asString(signatureStreamDelta["signature"])) != "sig-direct-connect-stub" {
 		t.Fatalf("unexpected signature stream event payload: %#v", signatureStreamEvent)
 	}
+	var toolUseStreamEvent map[string]any
+	if err := ws.ReadJSON(&toolUseStreamEvent); err != nil {
+		t.Fatalf("read tool_use stream event failed: %v", err)
+	}
+	if toolUseStreamEvent["type"] != "stream_event" {
+		t.Fatalf("unexpected tool_use stream event envelope: %#v", toolUseStreamEvent)
+	}
+	toolUseStreamPayload, _ := toolUseStreamEvent["event"].(map[string]any)
+	toolUseStreamDelta, _ := toolUseStreamPayload["delta"].(map[string]any)
+	if strings.TrimSpace(asString(toolUseStreamPayload["type"])) != "content_block_delta" || strings.TrimSpace(asString(toolUseStreamDelta["type"])) != "input_json_delta" || strings.TrimSpace(asString(toolUseStreamDelta["partial_json"])) != "{\"text\":\"hello [approved]\"}" {
+		t.Fatalf("unexpected tool_use stream event payload: %#v", toolUseStreamEvent)
+	}
 	var streamlinedText map[string]any
 	if err := ws.ReadJSON(&streamlinedText); err != nil {
 		t.Fatalf("read streamlined_text failed: %v", err)
@@ -365,12 +377,14 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	message, _ := assistant["message"].(map[string]any)
 	content, _ := message["content"].([]any)
-	if len(content) < 2 {
+	if len(content) < 3 {
 		t.Fatalf("unexpected assistant payload: %#v", assistant)
 	}
 	thinkingBlock, _ := content[0].(map[string]any)
-	textBlock, _ := content[1].(map[string]any)
-	if strings.TrimSpace(asString(thinkingBlock["type"])) != "thinking" || strings.TrimSpace(asString(thinkingBlock["thinking"])) != "direct-connect stub thinking" || strings.TrimSpace(asString(thinkingBlock["signature"])) != "sig-direct-connect-stub" || strings.TrimSpace(asString(textBlock["type"])) != "text" || strings.TrimSpace(asString(textBlock["text"])) != "echo:hello [approved]" {
+	toolUseBlock, _ := content[1].(map[string]any)
+	textBlock, _ := content[2].(map[string]any)
+	toolUseInput, _ := toolUseBlock["input"].(map[string]any)
+	if strings.TrimSpace(asString(thinkingBlock["type"])) != "thinking" || strings.TrimSpace(asString(thinkingBlock["thinking"])) != "direct-connect stub thinking" || strings.TrimSpace(asString(thinkingBlock["signature"])) != "sig-direct-connect-stub" || strings.TrimSpace(asString(toolUseBlock["type"])) != "tool_use" || strings.TrimSpace(asString(toolUseBlock["id"])) != strings.TrimSpace(asString(request["tool_use_id"])) || strings.TrimSpace(asString(toolUseBlock["name"])) != directConnectEchoToolName || strings.TrimSpace(asString(toolUseInput["text"])) != "hello [approved]" || strings.TrimSpace(asString(textBlock["type"])) != "text" || strings.TrimSpace(asString(textBlock["text"])) != "echo:hello [approved]" {
 		t.Fatalf("unexpected assistant payload: %#v", assistant)
 	}
 	var toolSummary map[string]any
@@ -727,6 +741,18 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(secondSignatureStreamPayload["type"])) != "content_block_delta" || strings.TrimSpace(asString(secondSignatureStreamDelta["type"])) != "signature_delta" || strings.TrimSpace(asString(secondSignatureStreamDelta["signature"])) != "sig-direct-connect-stub" {
 		t.Fatalf("unexpected second signature stream event payload: %#v", secondSignatureStreamEvent)
 	}
+	var secondToolUseStreamEvent map[string]any
+	if err := ws.ReadJSON(&secondToolUseStreamEvent); err != nil {
+		t.Fatalf("read second tool_use stream event failed: %v", err)
+	}
+	if secondToolUseStreamEvent["type"] != "stream_event" {
+		t.Fatalf("unexpected second tool_use stream event envelope: %#v", secondToolUseStreamEvent)
+	}
+	secondToolUseStreamPayload, _ := secondToolUseStreamEvent["event"].(map[string]any)
+	secondToolUseStreamDelta, _ := secondToolUseStreamPayload["delta"].(map[string]any)
+	if strings.TrimSpace(asString(secondToolUseStreamPayload["type"])) != "content_block_delta" || strings.TrimSpace(asString(secondToolUseStreamDelta["type"])) != "input_json_delta" || strings.TrimSpace(asString(secondToolUseStreamDelta["partial_json"])) != "{\"text\":\"hello again [approved]\"}" {
+		t.Fatalf("unexpected second tool_use stream event payload: %#v", secondToolUseStreamEvent)
+	}
 	var secondStreamlinedText map[string]any
 	if err := ws.ReadJSON(&secondStreamlinedText); err != nil {
 		t.Fatalf("read second streamlined_text failed: %v", err)
@@ -743,12 +769,14 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	secondMessage, _ := secondAssistant["message"].(map[string]any)
 	secondContent, _ := secondMessage["content"].([]any)
-	if len(secondContent) < 2 {
+	if len(secondContent) < 3 {
 		t.Fatalf("unexpected second assistant payload: %#v", secondAssistant)
 	}
 	secondThinkingBlock, _ := secondContent[0].(map[string]any)
-	secondTextBlock, _ := secondContent[1].(map[string]any)
-	if strings.TrimSpace(asString(secondThinkingBlock["type"])) != "thinking" || strings.TrimSpace(asString(secondThinkingBlock["thinking"])) != "direct-connect stub thinking" || strings.TrimSpace(asString(secondThinkingBlock["signature"])) != "sig-direct-connect-stub" || strings.TrimSpace(asString(secondTextBlock["type"])) != "text" || strings.TrimSpace(asString(secondTextBlock["text"])) != "echo:hello again [approved]" {
+	secondToolUseBlock, _ := secondContent[1].(map[string]any)
+	secondTextBlock, _ := secondContent[2].(map[string]any)
+	secondToolUseInput, _ := secondToolUseBlock["input"].(map[string]any)
+	if strings.TrimSpace(asString(secondThinkingBlock["type"])) != "thinking" || strings.TrimSpace(asString(secondThinkingBlock["thinking"])) != "direct-connect stub thinking" || strings.TrimSpace(asString(secondThinkingBlock["signature"])) != "sig-direct-connect-stub" || strings.TrimSpace(asString(secondToolUseBlock["type"])) != "tool_use" || strings.TrimSpace(asString(secondToolUseBlock["id"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) || strings.TrimSpace(asString(secondToolUseBlock["name"])) != directConnectEchoToolName || strings.TrimSpace(asString(secondToolUseInput["text"])) != "hello again [approved]" || strings.TrimSpace(asString(secondTextBlock["type"])) != "text" || strings.TrimSpace(asString(secondTextBlock["text"])) != "echo:hello again [approved]" {
 		t.Fatalf("unexpected second assistant payload: %#v", secondAssistant)
 	}
 	var secondToolSummary map[string]any
