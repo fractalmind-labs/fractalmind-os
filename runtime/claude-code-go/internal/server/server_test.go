@@ -422,6 +422,9 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if compactSummary["type"] != "user" || compactSummary["isReplay"] != false || compactSummary["isSynthetic"] != true || strings.TrimSpace(asString(compactSummary["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(compactSummary["uuid"])) == "" || strings.TrimSpace(asString(compactSummary["timestamp"])) == "" {
 		t.Fatalf("unexpected compact summary payload: %#v", compactSummary)
 	}
+	if compactSummary["parent_tool_use_id"] != nil {
+		t.Fatalf("expected compact summary parent_tool_use_id=nil, got %#v", compactSummary)
+	}
 	compactSummaryMessage, _ := compactSummary["message"].(map[string]any)
 	if strings.TrimSpace(asString(compactSummaryMessage["role"])) != "user" || strings.TrimSpace(asString(compactSummaryMessage["content"])) == "" {
 		t.Fatalf("invalid compact summary message payload: %#v", compactSummary)
@@ -746,6 +749,9 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if secondCompactSummary["type"] != "user" || secondCompactSummary["isReplay"] != false || secondCompactSummary["isSynthetic"] != true || strings.TrimSpace(asString(secondCompactSummary["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(secondCompactSummary["uuid"])) == "" || strings.TrimSpace(asString(secondCompactSummary["timestamp"])) == "" {
 		t.Fatalf("unexpected second compact summary payload: %#v", secondCompactSummary)
+	}
+	if secondCompactSummary["parent_tool_use_id"] != nil {
+		t.Fatalf("expected second compact summary parent_tool_use_id=nil, got %#v", secondCompactSummary)
 	}
 	secondCompactSummaryMessage, _ := secondCompactSummary["message"].(map[string]any)
 	if strings.TrimSpace(asString(secondCompactSummaryMessage["role"])) != "user" || strings.TrimSpace(asString(secondCompactSummaryMessage["content"])) == "" {
@@ -2808,6 +2814,9 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	if replayedUser["type"] != "user" || replayedUser["isReplay"] != true || replayedUser["isSynthetic"] != false || strings.TrimSpace(asString(replayedUser["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedUser["uuid"])) == "" {
 		t.Fatalf("unexpected replayed user payload: %#v", replayedUser)
 	}
+	if replayedUser["parent_tool_use_id"] != nil {
+		t.Fatalf("expected replayed user parent_tool_use_id=nil, got %#v", replayedUser)
+	}
 	message, _ := replayedUser["message"].(map[string]any)
 	if strings.TrimSpace(asString(message["role"])) != "user" || extractPromptText(replayedUser) != "resume replay seed" {
 		t.Fatalf("unexpected replayed user message payload: %#v", replayedUser)
@@ -2818,6 +2827,9 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	}
 	if replayedToolResult["type"] != "user" || replayedToolResult["isReplay"] != true || replayedToolResult["isSynthetic"] != true || strings.TrimSpace(asString(replayedToolResult["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedToolResult["uuid"])) == "" {
 		t.Fatalf("unexpected replayed tool_result payload: %#v", replayedToolResult)
+	}
+	if replayedToolResult["parent_tool_use_id"] != nil {
+		t.Fatalf("expected replayed tool_result parent_tool_use_id=nil, got %#v", replayedToolResult)
 	}
 	toolResultMessage, _ := replayedToolResult["message"].(map[string]any)
 	if strings.TrimSpace(asString(toolResultMessage["role"])) != "user" {
@@ -2879,6 +2891,9 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	if replayedLocalBreadcrumb["type"] != "user" || replayedLocalBreadcrumb["isReplay"] != true || replayedLocalBreadcrumb["isSynthetic"] != true || strings.TrimSpace(asString(replayedLocalBreadcrumb["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedLocalBreadcrumb["uuid"])) == "" {
 		t.Fatalf("unexpected replayed local-command breadcrumb payload: %#v", replayedLocalBreadcrumb)
 	}
+	if replayedLocalBreadcrumb["parent_tool_use_id"] != nil {
+		t.Fatalf("expected replayed local-command breadcrumb parent_tool_use_id=nil, got %#v", replayedLocalBreadcrumb)
+	}
 	breadcrumbMessage, _ := replayedLocalBreadcrumb["message"].(map[string]any)
 	if strings.TrimSpace(asString(breadcrumbMessage["role"])) != "user" {
 		t.Fatalf("unexpected replayed local-command breadcrumb message payload: %#v", replayedLocalBreadcrumb)
@@ -2893,6 +2908,9 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	if replayedLocalErrBreadcrumb["type"] != "user" || replayedLocalErrBreadcrumb["isReplay"] != true || replayedLocalErrBreadcrumb["isSynthetic"] != true || strings.TrimSpace(asString(replayedLocalErrBreadcrumb["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedLocalErrBreadcrumb["uuid"])) == "" {
 		t.Fatalf("unexpected replayed local-command stderr breadcrumb payload: %#v", replayedLocalErrBreadcrumb)
 	}
+	if replayedLocalErrBreadcrumb["parent_tool_use_id"] != nil {
+		t.Fatalf("expected replayed local-command stderr breadcrumb parent_tool_use_id=nil, got %#v", replayedLocalErrBreadcrumb)
+	}
 	errBreadcrumbMessage, _ := replayedLocalErrBreadcrumb["message"].(map[string]any)
 	if strings.TrimSpace(asString(errBreadcrumbMessage["role"])) != "user" {
 		t.Fatalf("unexpected replayed local-command stderr breadcrumb message payload: %#v", replayedLocalErrBreadcrumb)
@@ -2906,6 +2924,9 @@ func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	}
 	if replayedQueuedCommand["type"] != "user" || replayedQueuedCommand["isReplay"] != true || replayedQueuedCommand["isSynthetic"] != true || strings.TrimSpace(asString(replayedQueuedCommand["session_id"])) != created["session_id"] || strings.TrimSpace(asString(replayedQueuedCommand["uuid"])) == "" {
 		t.Fatalf("unexpected replayed queued_command payload: %#v", replayedQueuedCommand)
+	}
+	if replayedQueuedCommand["parent_tool_use_id"] != nil {
+		t.Fatalf("expected replayed queued_command parent_tool_use_id=nil, got %#v", replayedQueuedCommand)
 	}
 	queuedMessage, _ := replayedQueuedCommand["message"].(map[string]any)
 	if strings.TrimSpace(asString(queuedMessage["role"])) != "user" || strings.TrimSpace(asString(queuedMessage["content"])) != "resume replay seed" {

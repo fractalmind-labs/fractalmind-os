@@ -588,11 +588,12 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				return
 			}
 			_ = conn.WriteJSON(map[string]any{
-				"type":        "user",
-				"isReplay":    true,
-				"isSynthetic": false,
-				"uuid":        replayUUID,
-				"session_id":  session.ID,
+				"type":               "user",
+				"isReplay":           true,
+				"isSynthetic":        false,
+				"uuid":               replayUUID,
+				"session_id":         session.ID,
+				"parent_tool_use_id": nil,
 				"message": map[string]any{
 					"role": "user",
 					"content": []map[string]any{
@@ -674,11 +675,12 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				return
 			}
 			_ = conn.WriteJSON(map[string]any{
-				"type":        "user",
-				"isReplay":    true,
-				"isSynthetic": true,
-				"uuid":        replayUUID,
-				"session_id":  session.ID,
+				"type":               "user",
+				"isReplay":           true,
+				"isSynthetic":        true,
+				"uuid":               replayUUID,
+				"session_id":         session.ID,
+				"parent_tool_use_id": nil,
 				"message": map[string]any{
 					"role":    "user",
 					"content": session.LastLocalBreadcrumb,
@@ -691,11 +693,12 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				return
 			}
 			_ = conn.WriteJSON(map[string]any{
-				"type":        "user",
-				"isReplay":    true,
-				"isSynthetic": true,
-				"uuid":        replayUUID,
-				"session_id":  session.ID,
+				"type":               "user",
+				"isReplay":           true,
+				"isSynthetic":        true,
+				"uuid":               replayUUID,
+				"session_id":         session.ID,
+				"parent_tool_use_id": nil,
 				"message": map[string]any{
 					"role":    "user",
 					"content": session.LastLocalErrBreadcrumb,
@@ -1182,12 +1185,13 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					return
 				}
 				_ = conn.WriteJSON(map[string]any{
-					"type":        "user",
-					"isReplay":    false,
-					"isSynthetic": true,
-					"uuid":        compactSummaryUUID,
-					"session_id":  session.ID,
-					"timestamp":   time.Now().UTC().Format(time.RFC3339Nano),
+					"type":               "user",
+					"isReplay":           false,
+					"isSynthetic":        true,
+					"uuid":               compactSummaryUUID,
+					"session_id":         session.ID,
+					"parent_tool_use_id": nil,
+					"timestamp":          time.Now().UTC().Format(time.RFC3339Nano),
 					"message": map[string]any{
 						"role":    "user",
 						"content": "Compact summary: persisted local command output for direct-connect stub",

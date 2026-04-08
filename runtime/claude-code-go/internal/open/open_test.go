@@ -74,19 +74,25 @@ func TestRunOpenDefaults(t *testing.T) {
 		"status_compacting_lifecycle_validated=false",
 		"compact_summary_validated=false",
 		"compact_summary_synthetic_validated=false",
+		"compact_summary_parent_tool_use_id_validated=false",
 		"replayed_user_message_validated=false",
 		"replayed_user_synthetic_validated=false",
+		"replayed_user_parent_tool_use_id_validated=false",
 		"replayed_queued_command_validated=false",
 		"replayed_queued_command_synthetic_validated=false",
+		"replayed_queued_command_parent_tool_use_id_validated=false",
 		"replayed_tool_result_validated=false",
 		"replayed_tool_result_synthetic_validated=false",
+		"replayed_tool_result_parent_tool_use_id_validated=false",
 		"replayed_assistant_message_validated=false",
 		"replayed_compact_boundary_validated=false",
 		"replayed_compact_boundary_preserved_segment_validated=false",
 		"replayed_local_command_breadcrumb_validated=false",
 		"replayed_local_command_breadcrumb_synthetic_validated=false",
+		"replayed_local_command_breadcrumb_parent_tool_use_id_validated=false",
 		"replayed_local_command_stderr_breadcrumb_validated=false",
 		"replayed_local_command_stderr_breadcrumb_synthetic_validated=false",
+		"replayed_local_command_stderr_breadcrumb_parent_tool_use_id_validated=false",
 		"auth_validated=false",
 		"keep_alive_validated=false",
 		"update_environment_variables_validated=false",
@@ -174,7 +180,7 @@ func TestRunOpenSupportsPrintModeAndPrompt(t *testing.T) {
 	if result.SessionID != "sess-456" || !result.StreamValidated || result.StreamEvent != "session_ready" {
 		t.Fatalf("expected session response, got %#v", result)
 	}
-	if !result.StreamContentValidated || result.StreamContentEvent != "stream_event:content_block_delta" || !result.StreamlinedTextValidated || result.StreamlinedTextEvent != "streamlined_text" || !result.SystemValidated || result.SystemEvent != "system:init" || !result.StatusValidated || result.StatusEvent != "system:status" || !result.StatusTransitionValidated || result.StatusTransitionEvent != "system:status" || !result.StatusCompactingLifecycleValidated || result.StatusCompactingLifecycleEvent != "system:status:compacting->null" || !result.CompactSummaryValidated || result.CompactSummaryEvent != "user:compact_summary" || !result.CompactSummarySyntheticValidated || result.CompactSummarySyntheticEvent != "user:compact_summary:isSynthetic" || !result.AuthValidated || result.AuthEvent != "auth_status" || !result.KeepAliveValidated || result.KeepAliveEvent != "keep_alive" || !result.UpdateEnvironmentVariablesValidated || result.UpdateEnvironmentVariablesEvent != "update_environment_variables" || !result.ControlCancelValidated || result.ControlCancelEvent != "control_cancel_request" || !result.MessageValidated || result.MessageEvent != "assistant" || result.ValidatedTurns != 2 || !result.MultiTurnValidated || !result.ResultValidated || result.ResultEvent != "result:success" || !result.ResultErrorValidated || result.ResultErrorEvent != "result:error_during_execution" || !result.ResultErrorMaxTurnsValidated || result.ResultErrorMaxTurnsEvent != "result:error_max_turns" || !result.ResultErrorMaxBudgetUSDValidated || result.ResultErrorMaxBudgetUSDEvent != "result:error_max_budget_usd" || !result.ResultErrorMaxStructuredOutputRetriesValidated || result.ResultErrorMaxStructuredOutputRetriesEvent != "result:error_max_structured_output_retries" || !result.ControlValidated || !result.PermissionValidated || !result.PermissionDeniedValidated || result.PermissionDeniedEvent != "permission_denial:echo" || !result.TaskStartedValidated || result.TaskStartedEvent != "system:task_started" || !result.TaskProgressValidated || result.TaskProgressEvent != "system:task_progress" || !result.TaskNotificationValidated || result.TaskNotificationEvent != "system:task_notification" || !result.FilesPersistedValidated || result.FilesPersistedEvent != "system:files_persisted" || !result.APIRetryValidated || result.APIRetryEvent != "system:api_retry" || !result.LocalCommandOutputValidated || result.LocalCommandOutputEvent != "system:local_command_output" || !result.LocalCommandOutputAssistantValidated || result.LocalCommandOutputAssistantEvent != "assistant:local_command_output" || !result.ElicitationValidated || result.ElicitationEvent != "control_request:elicitation" || !result.HookCallbackValidated || result.HookCallbackEvent != "control_request:hook_callback" || !result.ChannelEnableValidated || result.ChannelEnableEvent != "control_request:channel_enable" || !result.ElicitationCompleteValidated || result.ElicitationCompleteEvent != "system:elicitation_complete" || !result.ToolProgressValidated || result.ToolProgressEvent != "tool_progress" || !result.RateLimitValidated || result.RateLimitEvent != "rate_limit_event:default" || !result.ToolUseSummaryValidated || result.ToolUseSummaryEvent != "tool_use_summary" || !result.PostTurnSummaryValidated || result.PostTurnSummaryEvent != "system:post_turn_summary" || !result.CompactBoundaryValidated || result.CompactBoundaryEvent != "system:compact_boundary" || !result.CompactBoundaryPreservedSegmentValidated || result.CompactBoundaryPreservedSegmentEvent != "system:compact_boundary:preserved_segment" || !result.SessionStateChangedValidated || result.SessionStateChangedEvent != "system:session_state_changed:idle" || !result.SessionStateRequiresActionValidated || result.SessionStateRequiresActionEvent != "system:session_state_changed:requires_action" || !result.HookStartedValidated || result.HookStartedEvent != "system:hook_started" || !result.HookProgressValidated || result.HookProgressEvent != "system:hook_progress" || !result.HookResponseValidated || result.HookResponseEvent != "system:hook_response" || !result.ToolExecutionValidated || !result.InterruptValidated || !result.SetModelValidated || result.SetModelEvent != "control_request:set_model" || !result.SetPermissionModeValidated || result.SetPermissionModeEvent != "control_request:set_permission_mode" || !result.SetMaxThinkingTokensValidated || result.SetMaxThinkingTokensEvent != "control_request:set_max_thinking_tokens" || !result.MCPStatusValidated || result.MCPStatusEvent != "control_request:mcp_status" || !result.GetContextUsageValidated || result.GetContextUsageEvent != "control_request:get_context_usage" || !result.MCPMessageValidated || result.MCPMessageEvent != "control_request:mcp_message" || !result.MCPSetServersValidated || result.MCPSetServersEvent != "control_request:mcp_set_servers" || !result.ReloadPluginsValidated || result.ReloadPluginsEvent != "control_request:reload_plugins" || !result.MCPAuthenticateValidated || result.MCPAuthenticateEvent != "control_request:mcp_authenticate" || !result.MCPOAuthCallbackURLValidated || result.MCPOAuthCallbackURLEvent != "control_request:mcp_oauth_callback_url" || !result.MCPReconnectValidated || result.MCPReconnectEvent != "control_request:mcp_reconnect" || !result.MCPToggleValidated || result.MCPToggleEvent != "control_request:mcp_toggle" || !result.SeedReadStateValidated || result.SeedReadStateEvent != "control_request:seed_read_state" || !result.RewindFilesValidated || result.RewindFilesEvent != "control_request:rewind_files" || !result.RewindFilesCanRewind || result.RewindFilesFilesChanged != 1 || result.RewindFilesInsertions != 1 || result.RewindFilesDeletions != 0 || !result.CancelAsyncMessageValidated || result.CancelAsyncMessageEvent != "control_request:cancel_async_message" || !result.StopTaskValidated || result.StopTaskEvent != "control_request:stop_task" || !result.ApplyFlagSettingsValidated || result.ApplyFlagSettingsEvent != "control_request:apply_flag_settings" || !result.GetSettingsValidated || result.GetSettingsEvent != "control_request:get_settings" || !result.GenerateSessionTitleValidated || result.GenerateSessionTitleEvent != "control_request:generate_session_title" || !result.SideQuestionValidated || result.SideQuestionEvent != "control_request:side_question" || !result.InitializeValidated || result.InitializeEvent != "control_request:initialize" || !result.SetProactiveValidated || result.SetProactiveEvent != "control_request:set_proactive" || !result.BridgeStateValidated || result.BridgeStateEvent != "system:bridge_state:connected" || !result.RemoteControlValidated || result.RemoteControlEvent != "control_request:remote_control" || !result.EndSessionValidated || result.EndSessionEvent != "control_request:end_session" || !result.BackendValidated {
+	if !result.StreamContentValidated || result.StreamContentEvent != "stream_event:content_block_delta" || !result.StreamlinedTextValidated || result.StreamlinedTextEvent != "streamlined_text" || !result.SystemValidated || result.SystemEvent != "system:init" || !result.StatusValidated || result.StatusEvent != "system:status" || !result.StatusTransitionValidated || result.StatusTransitionEvent != "system:status" || !result.StatusCompactingLifecycleValidated || result.StatusCompactingLifecycleEvent != "system:status:compacting->null" || !result.CompactSummaryValidated || result.CompactSummaryEvent != "user:compact_summary" || !result.CompactSummarySyntheticValidated || result.CompactSummarySyntheticEvent != "user:compact_summary:isSynthetic" || !result.CompactSummaryParentToolUseIDValidated || result.CompactSummaryParentToolUseIDEvent != "user:compact_summary:parent_tool_use_id" || !result.AuthValidated || result.AuthEvent != "auth_status" || !result.KeepAliveValidated || result.KeepAliveEvent != "keep_alive" || !result.UpdateEnvironmentVariablesValidated || result.UpdateEnvironmentVariablesEvent != "update_environment_variables" || !result.ControlCancelValidated || result.ControlCancelEvent != "control_cancel_request" || !result.MessageValidated || result.MessageEvent != "assistant" || result.ValidatedTurns != 2 || !result.MultiTurnValidated || !result.ResultValidated || result.ResultEvent != "result:success" || !result.ResultErrorValidated || result.ResultErrorEvent != "result:error_during_execution" || !result.ResultErrorMaxTurnsValidated || result.ResultErrorMaxTurnsEvent != "result:error_max_turns" || !result.ResultErrorMaxBudgetUSDValidated || result.ResultErrorMaxBudgetUSDEvent != "result:error_max_budget_usd" || !result.ResultErrorMaxStructuredOutputRetriesValidated || result.ResultErrorMaxStructuredOutputRetriesEvent != "result:error_max_structured_output_retries" || !result.ControlValidated || !result.PermissionValidated || !result.PermissionDeniedValidated || result.PermissionDeniedEvent != "permission_denial:echo" || !result.TaskStartedValidated || result.TaskStartedEvent != "system:task_started" || !result.TaskProgressValidated || result.TaskProgressEvent != "system:task_progress" || !result.TaskNotificationValidated || result.TaskNotificationEvent != "system:task_notification" || !result.FilesPersistedValidated || result.FilesPersistedEvent != "system:files_persisted" || !result.APIRetryValidated || result.APIRetryEvent != "system:api_retry" || !result.LocalCommandOutputValidated || result.LocalCommandOutputEvent != "system:local_command_output" || !result.LocalCommandOutputAssistantValidated || result.LocalCommandOutputAssistantEvent != "assistant:local_command_output" || !result.ElicitationValidated || result.ElicitationEvent != "control_request:elicitation" || !result.HookCallbackValidated || result.HookCallbackEvent != "control_request:hook_callback" || !result.ChannelEnableValidated || result.ChannelEnableEvent != "control_request:channel_enable" || !result.ElicitationCompleteValidated || result.ElicitationCompleteEvent != "system:elicitation_complete" || !result.ToolProgressValidated || result.ToolProgressEvent != "tool_progress" || !result.RateLimitValidated || result.RateLimitEvent != "rate_limit_event:default" || !result.ToolUseSummaryValidated || result.ToolUseSummaryEvent != "tool_use_summary" || !result.PostTurnSummaryValidated || result.PostTurnSummaryEvent != "system:post_turn_summary" || !result.CompactBoundaryValidated || result.CompactBoundaryEvent != "system:compact_boundary" || !result.CompactBoundaryPreservedSegmentValidated || result.CompactBoundaryPreservedSegmentEvent != "system:compact_boundary:preserved_segment" || !result.SessionStateChangedValidated || result.SessionStateChangedEvent != "system:session_state_changed:idle" || !result.SessionStateRequiresActionValidated || result.SessionStateRequiresActionEvent != "system:session_state_changed:requires_action" || !result.HookStartedValidated || result.HookStartedEvent != "system:hook_started" || !result.HookProgressValidated || result.HookProgressEvent != "system:hook_progress" || !result.HookResponseValidated || result.HookResponseEvent != "system:hook_response" || !result.ToolExecutionValidated || !result.InterruptValidated || !result.SetModelValidated || result.SetModelEvent != "control_request:set_model" || !result.SetPermissionModeValidated || result.SetPermissionModeEvent != "control_request:set_permission_mode" || !result.SetMaxThinkingTokensValidated || result.SetMaxThinkingTokensEvent != "control_request:set_max_thinking_tokens" || !result.MCPStatusValidated || result.MCPStatusEvent != "control_request:mcp_status" || !result.GetContextUsageValidated || result.GetContextUsageEvent != "control_request:get_context_usage" || !result.MCPMessageValidated || result.MCPMessageEvent != "control_request:mcp_message" || !result.MCPSetServersValidated || result.MCPSetServersEvent != "control_request:mcp_set_servers" || !result.ReloadPluginsValidated || result.ReloadPluginsEvent != "control_request:reload_plugins" || !result.MCPAuthenticateValidated || result.MCPAuthenticateEvent != "control_request:mcp_authenticate" || !result.MCPOAuthCallbackURLValidated || result.MCPOAuthCallbackURLEvent != "control_request:mcp_oauth_callback_url" || !result.MCPReconnectValidated || result.MCPReconnectEvent != "control_request:mcp_reconnect" || !result.MCPToggleValidated || result.MCPToggleEvent != "control_request:mcp_toggle" || !result.SeedReadStateValidated || result.SeedReadStateEvent != "control_request:seed_read_state" || !result.RewindFilesValidated || result.RewindFilesEvent != "control_request:rewind_files" || !result.RewindFilesCanRewind || result.RewindFilesFilesChanged != 1 || result.RewindFilesInsertions != 1 || result.RewindFilesDeletions != 0 || !result.CancelAsyncMessageValidated || result.CancelAsyncMessageEvent != "control_request:cancel_async_message" || !result.StopTaskValidated || result.StopTaskEvent != "control_request:stop_task" || !result.ApplyFlagSettingsValidated || result.ApplyFlagSettingsEvent != "control_request:apply_flag_settings" || !result.GetSettingsValidated || result.GetSettingsEvent != "control_request:get_settings" || !result.GenerateSessionTitleValidated || result.GenerateSessionTitleEvent != "control_request:generate_session_title" || !result.SideQuestionValidated || result.SideQuestionEvent != "control_request:side_question" || !result.InitializeValidated || result.InitializeEvent != "control_request:initialize" || !result.SetProactiveValidated || result.SetProactiveEvent != "control_request:set_proactive" || !result.BridgeStateValidated || result.BridgeStateEvent != "system:bridge_state:connected" || !result.RemoteControlValidated || result.RemoteControlEvent != "control_request:remote_control" || !result.EndSessionValidated || result.EndSessionEvent != "control_request:end_session" || !result.BackendValidated {
 		t.Fatalf("expected session response, got %#v", result)
 	}
 }
@@ -238,19 +244,23 @@ func TestRunOpenSupportsResumePrintReplayValidation(t *testing.T) {
 	}
 	if !resumed.ReplayedUserMessageValidated || resumed.ReplayedUserMessageEvent != "user:isReplay" ||
 		!resumed.ReplayedUserSyntheticValidated || resumed.ReplayedUserSyntheticEvent != "user:isReplay:isSynthetic=false" ||
+		!resumed.ReplayedUserParentToolUseIDValidated || resumed.ReplayedUserParentToolUseIDEvent != "user:isReplay:parent_tool_use_id" ||
 		!resumed.ReplayedQueuedCommandValidated || resumed.ReplayedQueuedCommandEvent != "user:queued_command:isReplay" ||
 		!resumed.ReplayedQueuedCommandSyntheticValidated || resumed.ReplayedQueuedCommandSyntheticEvent != "user:queued_command:isReplay:isSynthetic" ||
+		!resumed.ReplayedQueuedCommandParentToolUseIDValidated || resumed.ReplayedQueuedCommandParentToolUseIDEvent != "user:queued_command:isReplay:parent_tool_use_id" ||
 		!resumed.ReplayedToolResultValidated || resumed.ReplayedToolResultEvent != "user:tool_result:isReplay" ||
 		!resumed.ReplayedToolResultSyntheticValidated || resumed.ReplayedToolResultSyntheticEvent != "user:tool_result:isReplay:isSynthetic" ||
+		!resumed.ReplayedToolResultParentToolUseIDValidated || resumed.ReplayedToolResultParentToolUseIDEvent != "user:tool_result:isReplay:parent_tool_use_id" ||
 		!resumed.ReplayedAssistantMessageValidated || resumed.ReplayedAssistantMessageEvent != "assistant:replay" ||
 		!resumed.ReplayedCompactBoundaryValidated || resumed.ReplayedCompactBoundaryEvent != "system:compact_boundary:replay" ||
 		!resumed.ReplayedCompactBoundaryPreservedSegmentValidated || resumed.ReplayedCompactBoundaryPreservedSegmentEvent != "system:compact_boundary:replay:preserved_segment" ||
 		!resumed.ReplayedLocalCommandBreadcrumbValidated || resumed.ReplayedLocalCommandBreadcrumbEvent != "user:local_command_stdout:isReplay" ||
 		!resumed.ReplayedLocalCommandBreadcrumbSyntheticValidated || resumed.ReplayedLocalCommandBreadcrumbSyntheticEvent != "user:local_command_stdout:isReplay:isSynthetic" ||
+		!resumed.ReplayedLocalCommandBreadcrumbParentToolUseIDValidated || resumed.ReplayedLocalCommandBreadcrumbParentToolUseIDEvent != "user:local_command_stdout:isReplay:parent_tool_use_id" ||
 		!resumed.ReplayedLocalCommandStderrBreadcrumbValidated || resumed.ReplayedLocalCommandStderrBreadcrumbEvent != "user:local_command_stderr:isReplay" {
 		t.Fatalf("expected replay validation, got %#v", resumed)
 	}
-	if !resumed.ReplayedLocalCommandStderrBreadcrumbSyntheticValidated || resumed.ReplayedLocalCommandStderrBreadcrumbSyntheticEvent != "user:local_command_stderr:isReplay:isSynthetic" {
+	if !resumed.ReplayedLocalCommandStderrBreadcrumbSyntheticValidated || resumed.ReplayedLocalCommandStderrBreadcrumbSyntheticEvent != "user:local_command_stderr:isReplay:isSynthetic" || !resumed.ReplayedLocalCommandStderrBreadcrumbParentToolUseIDValidated || resumed.ReplayedLocalCommandStderrBreadcrumbParentToolUseIDEvent != "user:local_command_stderr:isReplay:parent_tool_use_id" {
 		t.Fatalf("expected replay stderr synthetic validation, got %#v", resumed)
 	}
 }
@@ -532,11 +542,12 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 	})
 	if emitReplay && strings.TrimSpace(replayedPrompt) != "" {
 		_ = conn.WriteJSON(map[string]any{
-			"type":        "user",
-			"isReplay":    true,
-			"isSynthetic": false,
-			"uuid":        "replayed-user-1",
-			"session_id":  sessionID,
+			"type":               "user",
+			"isReplay":           true,
+			"isSynthetic":        false,
+			"uuid":               "replayed-user-1",
+			"session_id":         sessionID,
+			"parent_tool_use_id": nil,
 			"message": map[string]any{
 				"role": "user",
 				"content": []map[string]any{
@@ -610,11 +621,12 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 	}
 	if emitReplay && strings.TrimSpace(replayedLocalCommandBreadcrumb) != "" {
 		_ = conn.WriteJSON(map[string]any{
-			"type":        "user",
-			"isReplay":    true,
-			"isSynthetic": true,
-			"uuid":        "replayed-local-command-breadcrumb-1",
-			"session_id":  sessionID,
+			"type":               "user",
+			"isReplay":           true,
+			"isSynthetic":        true,
+			"uuid":               "replayed-local-command-breadcrumb-1",
+			"session_id":         sessionID,
+			"parent_tool_use_id": nil,
 			"message": map[string]any{
 				"role":    "user",
 				"content": replayedLocalCommandBreadcrumb,
@@ -623,11 +635,12 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 	}
 	if emitReplay && strings.TrimSpace(replayedLocalCommandErrBreadcrumb) != "" {
 		_ = conn.WriteJSON(map[string]any{
-			"type":        "user",
-			"isReplay":    true,
-			"isSynthetic": true,
-			"uuid":        "replayed-local-command-stderr-breadcrumb-1",
-			"session_id":  sessionID,
+			"type":               "user",
+			"isReplay":           true,
+			"isSynthetic":        true,
+			"uuid":               "replayed-local-command-stderr-breadcrumb-1",
+			"session_id":         sessionID,
+			"parent_tool_use_id": nil,
 			"message": map[string]any{
 				"role":    "user",
 				"content": replayedLocalCommandErrBreadcrumb,
@@ -993,12 +1006,13 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 				},
 			})
 			_ = conn.WriteJSON(map[string]any{
-				"type":        "user",
-				"isReplay":    false,
-				"isSynthetic": true,
-				"uuid":        fmt.Sprintf("compact-summary-%d", requestCounter),
-				"session_id":  sessionID,
-				"timestamp":   time.Now().UTC().Format(time.RFC3339Nano),
+				"type":               "user",
+				"isReplay":           false,
+				"isSynthetic":        true,
+				"uuid":               fmt.Sprintf("compact-summary-%d", requestCounter),
+				"session_id":         sessionID,
+				"parent_tool_use_id": nil,
+				"timestamp":          time.Now().UTC().Format(time.RFC3339Nano),
 				"message": map[string]any{
 					"role":    "user",
 					"content": "Compact summary: persisted local command output for direct-connect stub",
