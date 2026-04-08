@@ -348,7 +348,8 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if err := ws.ReadJSON(&toolSummary); err != nil {
 		t.Fatalf("read tool summary failed: %v", err)
 	}
-	if toolSummary["type"] != "tool_use_summary" || strings.TrimSpace(asString(toolSummary["tool_name"])) != directConnectEchoToolName || strings.TrimSpace(asString(toolSummary["tool_use_id"])) != strings.TrimSpace(asString(request["tool_use_id"])) || strings.TrimSpace(asString(toolSummary["output_preview"])) != "echo:hello [approved]" {
+	precedingToolUseIDs, _ := toolSummary["preceding_tool_use_ids"].([]any)
+	if toolSummary["type"] != "tool_use_summary" || strings.TrimSpace(asString(toolSummary["tool_name"])) != directConnectEchoToolName || strings.TrimSpace(asString(toolSummary["tool_use_id"])) != strings.TrimSpace(asString(request["tool_use_id"])) || strings.TrimSpace(asString(toolSummary["output_preview"])) != "echo:hello [approved]" || strings.TrimSpace(asString(toolSummary["summary"])) != "Used echo 1 time" || len(precedingToolUseIDs) == 0 || strings.TrimSpace(asString(precedingToolUseIDs[0])) != strings.TrimSpace(asString(request["tool_use_id"])) {
 		t.Fatalf("unexpected tool summary payload: %#v", toolSummary)
 	}
 	var streamlinedToolSummary map[string]any
@@ -676,7 +677,8 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if err := ws.ReadJSON(&secondToolSummary); err != nil {
 		t.Fatalf("read second tool summary failed: %v", err)
 	}
-	if secondToolSummary["type"] != "tool_use_summary" || strings.TrimSpace(asString(secondToolSummary["tool_name"])) != directConnectEchoToolName || strings.TrimSpace(asString(secondToolSummary["tool_use_id"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) || strings.TrimSpace(asString(secondToolSummary["output_preview"])) != "echo:hello again [approved]" {
+	secondPrecedingToolUseIDs, _ := secondToolSummary["preceding_tool_use_ids"].([]any)
+	if secondToolSummary["type"] != "tool_use_summary" || strings.TrimSpace(asString(secondToolSummary["tool_name"])) != directConnectEchoToolName || strings.TrimSpace(asString(secondToolSummary["tool_use_id"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) || strings.TrimSpace(asString(secondToolSummary["output_preview"])) != "echo:hello again [approved]" || strings.TrimSpace(asString(secondToolSummary["summary"])) != "Used echo 1 time" || len(secondPrecedingToolUseIDs) == 0 || strings.TrimSpace(asString(secondPrecedingToolUseIDs[0])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) {
 		t.Fatalf("unexpected second tool summary payload: %#v", secondToolSummary)
 	}
 	var secondStreamlinedToolSummary map[string]any

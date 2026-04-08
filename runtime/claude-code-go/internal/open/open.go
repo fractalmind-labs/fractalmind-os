@@ -163,6 +163,8 @@ type Result struct {
 	RateLimitEvent                                               string
 	ToolUseSummaryValidated                                      bool
 	ToolUseSummaryEvent                                          string
+	ToolUseSummaryShapeValidated                                 bool
+	ToolUseSummaryShapeEvent                                     string
 	StreamlinedToolUseSummaryValidated                           bool
 	StreamlinedToolUseSummaryEvent                               string
 	PromptSuggestionValidated                                    bool
@@ -440,6 +442,8 @@ func Run(args []string) (Result, error) {
 		RateLimitEvent:                                               streamResult.RateLimitEvent,
 		ToolUseSummaryValidated:                                      streamResult.ToolUseSummaryValidated,
 		ToolUseSummaryEvent:                                          streamResult.ToolUseSummaryEvent,
+		ToolUseSummaryShapeValidated:                                 streamResult.ToolUseSummaryShapeValidated,
+		ToolUseSummaryShapeEvent:                                     streamResult.ToolUseSummaryShapeEvent,
 		StreamlinedToolUseSummaryValidated:                           streamResult.StreamlinedToolUseSummaryValidated,
 		StreamlinedToolUseSummaryEvent:                               streamResult.StreamlinedToolUseSummaryEvent,
 		PromptSuggestionValidated:                                    streamResult.PromptSuggestionValidated,
@@ -947,6 +951,8 @@ type streamValidation struct {
 	RateLimitEvent                                               string
 	ToolUseSummaryValidated                                      bool
 	ToolUseSummaryEvent                                          string
+	ToolUseSummaryShapeValidated                                 bool
+	ToolUseSummaryShapeEvent                                     string
 	StreamlinedToolUseSummaryValidated                           bool
 	StreamlinedToolUseSummaryEvent                               string
 	PromptSuggestionValidated                                    bool
@@ -1861,8 +1867,20 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				if strings.TrimSpace(asString(incoming["output_preview"])) != turn.expectedResponse {
 					return streamValidation{}, fmt.Errorf("invalid tool_use_summary output_preview: expected %q, got %q", turn.expectedResponse, strings.TrimSpace(asString(incoming["output_preview"])))
 				}
+				if strings.TrimSpace(asString(incoming["summary"])) == "" {
+					return streamValidation{}, fmt.Errorf("invalid tool_use_summary: missing summary")
+				}
+				precedingToolUseIDs, ok := incoming["preceding_tool_use_ids"].([]any)
+				if !ok || len(precedingToolUseIDs) == 0 {
+					return streamValidation{}, fmt.Errorf("invalid tool_use_summary: missing preceding_tool_use_ids")
+				}
+				if strings.TrimSpace(asString(precedingToolUseIDs[0])) != currentToolUseID {
+					return streamValidation{}, fmt.Errorf("invalid tool_use_summary preceding_tool_use_ids: expected first=%q, got %q", currentToolUseID, strings.TrimSpace(asString(precedingToolUseIDs[0])))
+				}
 				result.ToolUseSummaryValidated = true
 				result.ToolUseSummaryEvent = "tool_use_summary"
+				result.ToolUseSummaryShapeValidated = true
+				result.ToolUseSummaryShapeEvent = "tool_use_summary:shape"
 			case "streamlined_tool_use_summary":
 				if turn.behavior == "deny" {
 					return streamValidation{}, fmt.Errorf("unexpected streamlined_tool_use_summary during deny turn")
@@ -3523,6 +3541,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("rate_limit_event=%s\n", valueOrNone(r.RateLimitEvent)))
 	b.WriteString(fmt.Sprintf("tool_use_summary_validated=%t\n", r.ToolUseSummaryValidated))
 	b.WriteString(fmt.Sprintf("tool_use_summary_event=%s\n", valueOrNone(r.ToolUseSummaryEvent)))
+	b.WriteString(fmt.Sprintf("tool_use_summary_shape_validated=%t\n", r.ToolUseSummaryShapeValidated))
+	b.WriteString(fmt.Sprintf("tool_use_summary_shape_event=%s\n", valueOrNone(r.ToolUseSummaryShapeEvent)))
 	b.WriteString(fmt.Sprintf("streamlined_tool_use_summary_validated=%t\n", r.StreamlinedToolUseSummaryValidated))
 	b.WriteString(fmt.Sprintf("streamlined_tool_use_summary_event=%s\n", valueOrNone(r.StreamlinedToolUseSummaryEvent)))
 	b.WriteString(fmt.Sprintf("prompt_suggestion_validated=%t\n", r.PromptSuggestionValidated))

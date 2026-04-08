@@ -1093,14 +1093,16 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					return
 				}
 				_ = conn.WriteJSON(map[string]any{
-					"type":           "tool_use_summary",
-					"tool_name":      directConnectEchoToolName,
-					"tool_use_id":    pendingToolUseID,
-					"duration_ms":    1,
-					"input_preview":  toolInputText,
-					"output_preview": responseText,
-					"uuid":           toolSummaryUUID,
-					"session_id":     session.ID,
+					"type":                   "tool_use_summary",
+					"tool_name":              directConnectEchoToolName,
+					"tool_use_id":            pendingToolUseID,
+					"duration_ms":            1,
+					"input_preview":          toolInputText,
+					"output_preview":         responseText,
+					"summary":                "Used echo 1 time",
+					"preceding_tool_use_ids": []any{pendingToolUseID},
+					"uuid":                   toolSummaryUUID,
+					"session_id":             session.ID,
 				})
 				streamlinedToolSummaryUUID, err := generateRequestID()
 				if err != nil {
