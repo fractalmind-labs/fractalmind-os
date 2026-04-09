@@ -1541,6 +1541,19 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":            postTurnUUID,
 					"session_id":      session.ID,
 				})
+				criticalSystemReminderUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":    "critical_system_reminder",
+						"content": "Critical system reminder: stay inside the local workspace and avoid destructive actions without explicit confirmation.",
+					},
+					"uuid":       criticalSystemReminderUUID,
+					"session_id": session.ID,
+				})
 				compactionReminderUUID, err := generateRequestID()
 				if err != nil {
 					return

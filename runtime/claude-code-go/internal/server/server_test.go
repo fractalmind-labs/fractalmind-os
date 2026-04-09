@@ -653,6 +653,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(postTurnSummary["summarizes_uuid"])) == "" || strings.TrimSpace(asString(postTurnSummary["status_category"])) != "completed" || strings.TrimSpace(asString(postTurnSummary["title"])) == "" || strings.TrimSpace(asString(postTurnSummary["recent_action"])) == "" {
 		t.Fatalf("invalid post_turn_summary payload: %#v", postTurnSummary)
 	}
+	var criticalSystemReminderAttachment map[string]any
+	if err := ws.ReadJSON(&criticalSystemReminderAttachment); err != nil {
+		t.Fatalf("read critical_system_reminder attachment failed: %v", err)
+	}
+	if criticalSystemReminderAttachment["type"] != "attachment" || strings.TrimSpace(asString(criticalSystemReminderAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected critical_system_reminder attachment envelope: %#v", criticalSystemReminderAttachment)
+	}
+	criticalSystemReminderPayload, _ := criticalSystemReminderAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(criticalSystemReminderPayload["type"])) != "critical_system_reminder" || strings.TrimSpace(asString(criticalSystemReminderPayload["content"])) != "Critical system reminder: stay inside the local workspace and avoid destructive actions without explicit confirmation." {
+		t.Fatalf("unexpected critical_system_reminder attachment payload: %#v", criticalSystemReminderAttachment)
+	}
 	var compactionReminderAttachment map[string]any
 	if err := ws.ReadJSON(&compactionReminderAttachment); err != nil {
 		t.Fatalf("read compaction_reminder attachment failed: %v", err)
@@ -1479,6 +1490,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if strings.TrimSpace(asString(secondPostTurnSummary["summarizes_uuid"])) == "" || strings.TrimSpace(asString(secondPostTurnSummary["status_category"])) != "completed" || strings.TrimSpace(asString(secondPostTurnSummary["title"])) == "" || strings.TrimSpace(asString(secondPostTurnSummary["recent_action"])) == "" {
 		t.Fatalf("invalid second post_turn_summary payload: %#v", secondPostTurnSummary)
+	}
+	var secondCriticalSystemReminderAttachment map[string]any
+	if err := ws.ReadJSON(&secondCriticalSystemReminderAttachment); err != nil {
+		t.Fatalf("read second critical_system_reminder attachment failed: %v", err)
+	}
+	if secondCriticalSystemReminderAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondCriticalSystemReminderAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second critical_system_reminder attachment envelope: %#v", secondCriticalSystemReminderAttachment)
+	}
+	secondCriticalSystemReminderPayload, _ := secondCriticalSystemReminderAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondCriticalSystemReminderPayload["type"])) != "critical_system_reminder" || strings.TrimSpace(asString(secondCriticalSystemReminderPayload["content"])) != "Critical system reminder: stay inside the local workspace and avoid destructive actions without explicit confirmation." {
+		t.Fatalf("unexpected second critical_system_reminder attachment payload: %#v", secondCriticalSystemReminderAttachment)
 	}
 	var secondCompactionReminderAttachment map[string]any
 	if err := ws.ReadJSON(&secondCompactionReminderAttachment); err != nil {

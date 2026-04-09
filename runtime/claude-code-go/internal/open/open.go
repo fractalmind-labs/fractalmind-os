@@ -79,6 +79,8 @@ type Result struct {
 	TaskReminderAttachmentEvent                                  string
 	TodoReminderAttachmentValidated                              bool
 	TodoReminderAttachmentEvent                                  string
+	CriticalSystemReminderValidated                              bool
+	CriticalSystemReminderEvent                                  string
 	CompactionReminderValidated                                  bool
 	CompactionReminderEvent                                      string
 	ContextEfficiencyValidated                                   bool
@@ -468,6 +470,8 @@ func Run(args []string) (Result, error) {
 		TaskReminderAttachmentEvent:                            streamResult.TaskReminderAttachmentEvent,
 		TodoReminderAttachmentValidated:                        streamResult.TodoReminderAttachmentValidated,
 		TodoReminderAttachmentEvent:                            streamResult.TodoReminderAttachmentEvent,
+		CriticalSystemReminderValidated:                        streamResult.CriticalSystemReminderValidated,
+		CriticalSystemReminderEvent:                            streamResult.CriticalSystemReminderEvent,
 		CompactionReminderValidated:                            streamResult.CompactionReminderValidated,
 		CompactionReminderEvent:                                streamResult.CompactionReminderEvent,
 		ContextEfficiencyValidated:                             streamResult.ContextEfficiencyValidated,
@@ -1087,6 +1091,8 @@ type streamValidation struct {
 	TaskReminderAttachmentEvent                                  string
 	TodoReminderAttachmentValidated                              bool
 	TodoReminderAttachmentEvent                                  string
+	CriticalSystemReminderValidated                              bool
+	CriticalSystemReminderEvent                                  string
 	CompactionReminderValidated                                  bool
 	CompactionReminderEvent                                      string
 	ContextEfficiencyValidated                                   bool
@@ -1495,6 +1501,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		structuredOutputAttachmentValidated := false
 		maxTurnsReachedAttachmentValidated := false
 		taskReminderAttachmentValidated := false
+		criticalSystemReminderValidated := false
 		compactionReminderValidated := false
 		contextEfficiencyValidated := false
 		autoModeValidated := false
@@ -2411,6 +2418,16 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					result.TodoReminderAttachmentValidated = true
 					result.TodoReminderAttachmentEvent = "attachment:todo_reminder"
+				case "critical_system_reminder":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected critical_system_reminder attachment during %s turn", turn.behavior)
+					}
+					if strings.TrimSpace(asString(attachment["content"])) != "Critical system reminder: stay inside the local workspace and avoid destructive actions without explicit confirmation." {
+						return streamValidation{}, fmt.Errorf("invalid critical_system_reminder attachment.content")
+					}
+					result.CriticalSystemReminderValidated = true
+					result.CriticalSystemReminderEvent = "attachment:critical_system_reminder"
+					criticalSystemReminderValidated = true
 				case "compaction_reminder":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected compaction_reminder attachment during %s turn", turn.behavior)
@@ -3272,7 +3289,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4619,6 +4636,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("task_reminder_attachment_event=%s\n", valueOrNone(r.TaskReminderAttachmentEvent)))
 	b.WriteString(fmt.Sprintf("todo_reminder_attachment_validated=%t\n", r.TodoReminderAttachmentValidated))
 	b.WriteString(fmt.Sprintf("todo_reminder_attachment_event=%s\n", valueOrNone(r.TodoReminderAttachmentEvent)))
+	b.WriteString(fmt.Sprintf("critical_system_reminder_validated=%t\n", r.CriticalSystemReminderValidated))
+	b.WriteString(fmt.Sprintf("critical_system_reminder_event=%s\n", valueOrNone(r.CriticalSystemReminderEvent)))
 	b.WriteString(fmt.Sprintf("compaction_reminder_validated=%t\n", r.CompactionReminderValidated))
 	b.WriteString(fmt.Sprintf("compaction_reminder_event=%s\n", valueOrNone(r.CompactionReminderEvent)))
 	b.WriteString(fmt.Sprintf("context_efficiency_validated=%t\n", r.ContextEfficiencyValidated))
