@@ -858,6 +858,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(teammateShutdownBatchPayload["type"])) != "teammate_shutdown_batch" || int(teammateShutdownBatchPayload["count"].(float64)) != 2 {
 		t.Fatalf("unexpected teammate_shutdown_batch attachment payload: %#v", teammateShutdownBatchAttachment)
 	}
+	var bagelConsoleAttachment map[string]any
+	if err := ws.ReadJSON(&bagelConsoleAttachment); err != nil {
+		t.Fatalf("read bagel_console attachment failed: %v", err)
+	}
+	if bagelConsoleAttachment["type"] != "attachment" || strings.TrimSpace(asString(bagelConsoleAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected bagel_console attachment envelope: %#v", bagelConsoleAttachment)
+	}
+	bagelConsolePayload, _ := bagelConsoleAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(bagelConsolePayload["type"])) != "bagel_console" || int(bagelConsolePayload["errorCount"].(float64)) != 1 || int(bagelConsolePayload["warningCount"].(float64)) != 2 || strings.TrimSpace(asString(bagelConsolePayload["sample"])) != "bagel: sample warning" {
+		t.Fatalf("unexpected bagel_console attachment payload: %#v", bagelConsoleAttachment)
+	}
 	var compactingStatus map[string]any
 	if err := ws.ReadJSON(&compactingStatus); err != nil {
 		t.Fatalf("read compacting status failed: %v", err)
@@ -1578,6 +1589,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondTeammateShutdownBatchPayload, _ := secondTeammateShutdownBatchAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondTeammateShutdownBatchPayload["type"])) != "teammate_shutdown_batch" || int(secondTeammateShutdownBatchPayload["count"].(float64)) != 2 {
 		t.Fatalf("unexpected second teammate_shutdown_batch attachment payload: %#v", secondTeammateShutdownBatchAttachment)
+	}
+	var secondBagelConsoleAttachment map[string]any
+	if err := ws.ReadJSON(&secondBagelConsoleAttachment); err != nil {
+		t.Fatalf("read second bagel_console attachment failed: %v", err)
+	}
+	if secondBagelConsoleAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondBagelConsoleAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second bagel_console attachment envelope: %#v", secondBagelConsoleAttachment)
+	}
+	secondBagelConsolePayload, _ := secondBagelConsoleAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondBagelConsolePayload["type"])) != "bagel_console" || int(secondBagelConsolePayload["errorCount"].(float64)) != 1 || int(secondBagelConsolePayload["warningCount"].(float64)) != 2 || strings.TrimSpace(asString(secondBagelConsolePayload["sample"])) != "bagel: sample warning" {
+		t.Fatalf("unexpected second bagel_console attachment payload: %#v", secondBagelConsoleAttachment)
 	}
 	var secondCompactingStatus map[string]any
 	if err := ws.ReadJSON(&secondCompactingStatus); err != nil {

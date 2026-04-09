@@ -1777,6 +1777,21 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       teammateShutdownBatchUUID,
 					"session_id": session.ID,
 				})
+				bagelConsoleUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":         "bagel_console",
+						"errorCount":   1,
+						"warningCount": 2,
+						"sample":       "bagel: sample warning",
+					},
+					"uuid":       bagelConsoleUUID,
+					"session_id": session.ID,
+				})
 				compactingStatusUUID, err := generateRequestID()
 				if err != nil {
 					return

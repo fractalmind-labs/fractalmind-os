@@ -111,6 +111,8 @@ type Result struct {
 	CurrentSessionMemoryEvent                                    string
 	TeammateShutdownBatchValidated                               bool
 	TeammateShutdownBatchEvent                                   string
+	BagelConsoleValidated                                        bool
+	BagelConsoleEvent                                            string
 	VerifyPlanReminderValidated                                  bool
 	VerifyPlanReminderEvent                                      string
 	StreamlinedTextValidated                                     bool
@@ -484,6 +486,8 @@ func Run(args []string) (Result, error) {
 		CurrentSessionMemoryEvent:                                    streamResult.CurrentSessionMemoryEvent,
 		TeammateShutdownBatchValidated:                               streamResult.TeammateShutdownBatchValidated,
 		TeammateShutdownBatchEvent:                                   streamResult.TeammateShutdownBatchEvent,
+		BagelConsoleValidated:                                        streamResult.BagelConsoleValidated,
+		BagelConsoleEvent:                                            streamResult.BagelConsoleEvent,
 		VerifyPlanReminderValidated:                                  streamResult.VerifyPlanReminderValidated,
 		VerifyPlanReminderEvent:                                      streamResult.VerifyPlanReminderEvent,
 		StreamlinedTextValidated:                                     streamResult.StreamlinedTextValidated,
@@ -1087,6 +1091,8 @@ type streamValidation struct {
 	CurrentSessionMemoryEvent                                    string
 	TeammateShutdownBatchValidated                               bool
 	TeammateShutdownBatchEvent                                   string
+	BagelConsoleValidated                                        bool
+	BagelConsoleEvent                                            string
 	VerifyPlanReminderValidated                                  bool
 	VerifyPlanReminderEvent                                      string
 	StreamlinedTextValidated                                     bool
@@ -1464,6 +1470,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		verifyPlanReminderValidated := false
 		currentSessionMemoryValidated := false
 		teammateShutdownBatchValidated := false
+		bagelConsoleValidated := false
 		streamlinedTextValidated := false
 		streamlinedToolUseSummaryValidated := false
 		promptSuggestionValidated := false
@@ -2596,6 +2603,24 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.TeammateShutdownBatchValidated = true
 					result.TeammateShutdownBatchEvent = "attachment:teammate_shutdown_batch"
 					teammateShutdownBatchValidated = true
+				case "bagel_console":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected bagel_console attachment during %s turn", turn.behavior)
+					}
+					errorCount, ok := attachment["errorCount"].(float64)
+					if !ok || int(errorCount) != 1 {
+						return streamValidation{}, fmt.Errorf("invalid bagel_console attachment.errorCount")
+					}
+					warningCount, ok := attachment["warningCount"].(float64)
+					if !ok || int(warningCount) != 2 {
+						return streamValidation{}, fmt.Errorf("invalid bagel_console attachment.warningCount")
+					}
+					if strings.TrimSpace(asString(attachment["sample"])) != "bagel: sample warning" {
+						return streamValidation{}, fmt.Errorf("invalid bagel_console attachment.sample")
+					}
+					result.BagelConsoleValidated = true
+					result.BagelConsoleEvent = "attachment:bagel_console"
+					bagelConsoleValidated = true
 				case "verify_plan_reminder":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected verify_plan_reminder attachment during %s turn", turn.behavior)
@@ -3039,7 +3064,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && teammateShutdownBatchValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4418,6 +4443,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("current_session_memory_event=%s\n", valueOrNone(r.CurrentSessionMemoryEvent)))
 	b.WriteString(fmt.Sprintf("teammate_shutdown_batch_validated=%t\n", r.TeammateShutdownBatchValidated))
 	b.WriteString(fmt.Sprintf("teammate_shutdown_batch_event=%s\n", valueOrNone(r.TeammateShutdownBatchEvent)))
+	b.WriteString(fmt.Sprintf("bagel_console_validated=%t\n", r.BagelConsoleValidated))
+	b.WriteString(fmt.Sprintf("bagel_console_event=%s\n", valueOrNone(r.BagelConsoleEvent)))
 	b.WriteString(fmt.Sprintf("verify_plan_reminder_validated=%t\n", r.VerifyPlanReminderValidated))
 	b.WriteString(fmt.Sprintf("verify_plan_reminder_event=%s\n", valueOrNone(r.VerifyPlanReminderEvent)))
 	b.WriteString(fmt.Sprintf("streamlined_text_validated=%t\n", r.StreamlinedTextValidated))
