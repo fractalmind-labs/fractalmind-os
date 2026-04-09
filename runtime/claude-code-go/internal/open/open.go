@@ -83,6 +83,8 @@ type Result struct {
 	AutoModeExitEvent                                            string
 	PlanModeExitValidated                                        bool
 	PlanModeExitEvent                                            string
+	PlanModeReentryValidated                                     bool
+	PlanModeReentryEvent                                         string
 	DateChangeValidated                                          bool
 	DateChangeEvent                                              string
 	VerifyPlanReminderValidated                                  bool
@@ -430,6 +432,8 @@ func Run(args []string) (Result, error) {
 		AutoModeExitEvent:                                            streamResult.AutoModeExitEvent,
 		PlanModeExitValidated:                                        streamResult.PlanModeExitValidated,
 		PlanModeExitEvent:                                            streamResult.PlanModeExitEvent,
+		PlanModeReentryValidated:                                     streamResult.PlanModeReentryValidated,
+		PlanModeReentryEvent:                                         streamResult.PlanModeReentryEvent,
 		DateChangeValidated:                                          streamResult.DateChangeValidated,
 		DateChangeEvent:                                              streamResult.DateChangeEvent,
 		VerifyPlanReminderValidated:                                  streamResult.VerifyPlanReminderValidated,
@@ -1007,6 +1011,8 @@ type streamValidation struct {
 	AutoModeExitEvent                                            string
 	PlanModeExitValidated                                        bool
 	PlanModeExitEvent                                            string
+	PlanModeReentryValidated                                     bool
+	PlanModeReentryEvent                                         string
 	DateChangeValidated                                          bool
 	DateChangeEvent                                              string
 	VerifyPlanReminderValidated                                  bool
@@ -1370,6 +1376,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		compactionReminderValidated := false
 		autoModeExitValidated := false
 		planModeExitValidated := false
+		planModeReentryValidated := false
 		dateChangeValidated := false
 		verifyPlanReminderValidated := false
 		streamlinedTextValidated := false
@@ -2273,6 +2280,20 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.PlanModeExitValidated = true
 					result.PlanModeExitEvent = "attachment:plan_mode_exit"
 					planModeExitValidated = true
+				case "plan_mode_reentry":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected plan_mode_reentry attachment during %s turn", turn.behavior)
+					}
+					planFilePath := strings.TrimSpace(asString(attachment["planFilePath"]))
+					if planFilePath == "" {
+						return streamValidation{}, fmt.Errorf("invalid plan_mode_reentry attachment: missing planFilePath")
+					}
+					if !strings.HasSuffix(strings.ReplaceAll(planFilePath, "\\", "/"), ".claude/plan.md") {
+						return streamValidation{}, fmt.Errorf("invalid plan_mode_reentry attachment.planFilePath: %q", planFilePath)
+					}
+					result.PlanModeReentryValidated = true
+					result.PlanModeReentryEvent = "attachment:plan_mode_reentry"
+					planModeReentryValidated = true
 				case "date_change":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected date_change attachment during %s turn", turn.behavior)
@@ -2727,7 +2748,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && autoModeExitValidated && planModeExitValidated && dateChangeValidated && verifyPlanReminderValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && autoModeExitValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && verifyPlanReminderValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4078,6 +4099,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("auto_mode_exit_event=%s\n", valueOrNone(r.AutoModeExitEvent)))
 	b.WriteString(fmt.Sprintf("plan_mode_exit_validated=%t\n", r.PlanModeExitValidated))
 	b.WriteString(fmt.Sprintf("plan_mode_exit_event=%s\n", valueOrNone(r.PlanModeExitEvent)))
+	b.WriteString(fmt.Sprintf("plan_mode_reentry_validated=%t\n", r.PlanModeReentryValidated))
+	b.WriteString(fmt.Sprintf("plan_mode_reentry_event=%s\n", valueOrNone(r.PlanModeReentryEvent)))
 	b.WriteString(fmt.Sprintf("date_change_validated=%t\n", r.DateChangeValidated))
 	b.WriteString(fmt.Sprintf("date_change_event=%s\n", valueOrNone(r.DateChangeEvent)))
 	b.WriteString(fmt.Sprintf("verify_plan_reminder_validated=%t\n", r.VerifyPlanReminderValidated))

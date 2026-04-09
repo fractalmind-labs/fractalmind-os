@@ -1557,6 +1557,19 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       planModeExitUUID,
 					"session_id": session.ID,
 				})
+				planModeReentryUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":         "plan_mode_reentry",
+						"planFilePath": filepath.Join(session.WorkDir, ".claude", "plan.md"),
+					},
+					"uuid":       planModeReentryUUID,
+					"session_id": session.ID,
+				})
 				dateChangeUUID, err := generateRequestID()
 				if err != nil {
 					return

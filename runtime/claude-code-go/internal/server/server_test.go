@@ -678,6 +678,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if planExists, ok := planModeExitPayload["planExists"].(bool); !ok || planExists {
 		t.Fatalf("invalid plan_mode_exit attachment payload: %#v", planModeExitAttachment)
 	}
+	var planModeReentryAttachment map[string]any
+	if err := ws.ReadJSON(&planModeReentryAttachment); err != nil {
+		t.Fatalf("read plan_mode_reentry attachment failed: %v", err)
+	}
+	if planModeReentryAttachment["type"] != "attachment" || strings.TrimSpace(asString(planModeReentryAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected plan_mode_reentry attachment envelope: %#v", planModeReentryAttachment)
+	}
+	planModeReentryPayload, _ := planModeReentryAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(planModeReentryPayload["type"])) != "plan_mode_reentry" || strings.TrimSpace(asString(planModeReentryPayload["planFilePath"])) == "" {
+		t.Fatalf("unexpected plan_mode_reentry attachment payload: %#v", planModeReentryAttachment)
+	}
 	var dateChangeAttachment map[string]any
 	if err := ws.ReadJSON(&dateChangeAttachment); err != nil {
 		t.Fatalf("read date_change attachment failed: %v", err)
@@ -1240,6 +1251,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if planExists, ok := secondPlanModeExitPayload["planExists"].(bool); !ok || planExists {
 		t.Fatalf("invalid second plan_mode_exit attachment payload: %#v", secondPlanModeExitAttachment)
+	}
+	var secondPlanModeReentryAttachment map[string]any
+	if err := ws.ReadJSON(&secondPlanModeReentryAttachment); err != nil {
+		t.Fatalf("read second plan_mode_reentry attachment failed: %v", err)
+	}
+	if secondPlanModeReentryAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondPlanModeReentryAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second plan_mode_reentry attachment envelope: %#v", secondPlanModeReentryAttachment)
+	}
+	secondPlanModeReentryPayload, _ := secondPlanModeReentryAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondPlanModeReentryPayload["type"])) != "plan_mode_reentry" || strings.TrimSpace(asString(secondPlanModeReentryPayload["planFilePath"])) == "" {
+		t.Fatalf("unexpected second plan_mode_reentry attachment payload: %#v", secondPlanModeReentryAttachment)
 	}
 	var secondDateChangeAttachment map[string]any
 	if err := ws.ReadJSON(&secondDateChangeAttachment); err != nil {
