@@ -778,6 +778,20 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(agentListingDeltaPayload["type"])) != "agent_listing_delta" || len(addedTypes) != 1 || strings.TrimSpace(asString(addedTypes[0])) != "explorer" || len(agentAddedLines) != 1 || strings.TrimSpace(asString(agentAddedLines[0])) != "- explorer: Fast codebase explorer for scoped questions" || len(removedTypes) != 0 || !agentListingDeltaPayload["isInitial"].(bool) || !agentListingDeltaPayload["showConcurrencyNote"].(bool) {
 		t.Fatalf("unexpected agent_listing_delta attachment payload: %#v", agentListingDeltaAttachment)
 	}
+	var mcpInstructionsDeltaAttachment map[string]any
+	if err := ws.ReadJSON(&mcpInstructionsDeltaAttachment); err != nil {
+		t.Fatalf("read mcp_instructions_delta attachment failed: %v", err)
+	}
+	if mcpInstructionsDeltaAttachment["type"] != "attachment" || strings.TrimSpace(asString(mcpInstructionsDeltaAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected mcp_instructions_delta attachment envelope: %#v", mcpInstructionsDeltaAttachment)
+	}
+	mcpInstructionsDeltaPayload, _ := mcpInstructionsDeltaAttachment["attachment"].(map[string]any)
+	mcpAddedNames, _ := mcpInstructionsDeltaPayload["addedNames"].([]any)
+	mcpAddedBlocks, _ := mcpInstructionsDeltaPayload["addedBlocks"].([]any)
+	mcpRemovedNames, _ := mcpInstructionsDeltaPayload["removedNames"].([]any)
+	if strings.TrimSpace(asString(mcpInstructionsDeltaPayload["type"])) != "mcp_instructions_delta" || len(mcpAddedNames) != 1 || strings.TrimSpace(asString(mcpAddedNames[0])) != "chrome" || len(mcpAddedBlocks) != 1 || strings.TrimSpace(asString(mcpAddedBlocks[0])) != "## chrome\nUse ToolSearch before browser actions." || len(mcpRemovedNames) != 0 {
+		t.Fatalf("unexpected mcp_instructions_delta attachment payload: %#v", mcpInstructionsDeltaAttachment)
+	}
 	var verifyPlanReminderAttachment map[string]any
 	if err := ws.ReadJSON(&verifyPlanReminderAttachment); err != nil {
 		t.Fatalf("read verify_plan_reminder attachment failed: %v", err)
@@ -1429,6 +1443,20 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondRemovedTypes, _ := secondAgentListingDeltaPayload["removedTypes"].([]any)
 	if strings.TrimSpace(asString(secondAgentListingDeltaPayload["type"])) != "agent_listing_delta" || len(secondAddedTypes) != 1 || strings.TrimSpace(asString(secondAddedTypes[0])) != "explorer" || len(secondAgentAddedLines) != 1 || strings.TrimSpace(asString(secondAgentAddedLines[0])) != "- explorer: Fast codebase explorer for scoped questions" || len(secondRemovedTypes) != 0 || !secondAgentListingDeltaPayload["isInitial"].(bool) || !secondAgentListingDeltaPayload["showConcurrencyNote"].(bool) {
 		t.Fatalf("unexpected second agent_listing_delta attachment payload: %#v", secondAgentListingDeltaAttachment)
+	}
+	var secondMCPInstructionsDeltaAttachment map[string]any
+	if err := ws.ReadJSON(&secondMCPInstructionsDeltaAttachment); err != nil {
+		t.Fatalf("read second mcp_instructions_delta attachment failed: %v", err)
+	}
+	if secondMCPInstructionsDeltaAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondMCPInstructionsDeltaAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second mcp_instructions_delta attachment envelope: %#v", secondMCPInstructionsDeltaAttachment)
+	}
+	secondMCPInstructionsDeltaPayload, _ := secondMCPInstructionsDeltaAttachment["attachment"].(map[string]any)
+	secondMCPAddedNames, _ := secondMCPInstructionsDeltaPayload["addedNames"].([]any)
+	secondMCPAddedBlocks, _ := secondMCPInstructionsDeltaPayload["addedBlocks"].([]any)
+	secondMCPRemovedNames, _ := secondMCPInstructionsDeltaPayload["removedNames"].([]any)
+	if strings.TrimSpace(asString(secondMCPInstructionsDeltaPayload["type"])) != "mcp_instructions_delta" || len(secondMCPAddedNames) != 1 || strings.TrimSpace(asString(secondMCPAddedNames[0])) != "chrome" || len(secondMCPAddedBlocks) != 1 || strings.TrimSpace(asString(secondMCPAddedBlocks[0])) != "## chrome\nUse ToolSearch before browser actions." || len(secondMCPRemovedNames) != 0 {
+		t.Fatalf("unexpected second mcp_instructions_delta attachment payload: %#v", secondMCPInstructionsDeltaAttachment)
 	}
 	var secondVerifyPlanReminderAttachment map[string]any
 	if err := ws.ReadJSON(&secondVerifyPlanReminderAttachment); err != nil {

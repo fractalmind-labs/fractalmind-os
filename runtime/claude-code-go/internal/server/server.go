@@ -1678,6 +1678,21 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       agentListingDeltaUUID,
 					"session_id": session.ID,
 				})
+				mcpInstructionsDeltaUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":         "mcp_instructions_delta",
+						"addedNames":   []string{"chrome"},
+						"addedBlocks":  []string{"## chrome\nUse ToolSearch before browser actions."},
+						"removedNames": []string{},
+					},
+					"uuid":       mcpInstructionsDeltaUUID,
+					"session_id": session.ID,
+				})
 				verifyPlanReminderUUID, err := generateRequestID()
 				if err != nil {
 					return
