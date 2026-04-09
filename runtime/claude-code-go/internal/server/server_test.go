@@ -764,6 +764,20 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(deferredToolsDeltaPayload["type"])) != "deferred_tools_delta" || len(addedNames) != 1 || strings.TrimSpace(asString(addedNames[0])) != "ToolSearch" || len(addedLines) != 1 || strings.TrimSpace(asString(addedLines[0])) != "- ToolSearch: Search deferred tools on demand" || len(removedNames) != 0 {
 		t.Fatalf("unexpected deferred_tools_delta attachment payload: %#v", deferredToolsDeltaAttachment)
 	}
+	var agentListingDeltaAttachment map[string]any
+	if err := ws.ReadJSON(&agentListingDeltaAttachment); err != nil {
+		t.Fatalf("read agent_listing_delta attachment failed: %v", err)
+	}
+	if agentListingDeltaAttachment["type"] != "attachment" || strings.TrimSpace(asString(agentListingDeltaAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected agent_listing_delta attachment envelope: %#v", agentListingDeltaAttachment)
+	}
+	agentListingDeltaPayload, _ := agentListingDeltaAttachment["attachment"].(map[string]any)
+	addedTypes, _ := agentListingDeltaPayload["addedTypes"].([]any)
+	agentAddedLines, _ := agentListingDeltaPayload["addedLines"].([]any)
+	removedTypes, _ := agentListingDeltaPayload["removedTypes"].([]any)
+	if strings.TrimSpace(asString(agentListingDeltaPayload["type"])) != "agent_listing_delta" || len(addedTypes) != 1 || strings.TrimSpace(asString(addedTypes[0])) != "explorer" || len(agentAddedLines) != 1 || strings.TrimSpace(asString(agentAddedLines[0])) != "- explorer: Fast codebase explorer for scoped questions" || len(removedTypes) != 0 || !agentListingDeltaPayload["isInitial"].(bool) || !agentListingDeltaPayload["showConcurrencyNote"].(bool) {
+		t.Fatalf("unexpected agent_listing_delta attachment payload: %#v", agentListingDeltaAttachment)
+	}
 	var verifyPlanReminderAttachment map[string]any
 	if err := ws.ReadJSON(&verifyPlanReminderAttachment); err != nil {
 		t.Fatalf("read verify_plan_reminder attachment failed: %v", err)
@@ -1401,6 +1415,20 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondRemovedNames, _ := secondDeferredToolsDeltaPayload["removedNames"].([]any)
 	if strings.TrimSpace(asString(secondDeferredToolsDeltaPayload["type"])) != "deferred_tools_delta" || len(secondAddedNames) != 1 || strings.TrimSpace(asString(secondAddedNames[0])) != "ToolSearch" || len(secondAddedLines) != 1 || strings.TrimSpace(asString(secondAddedLines[0])) != "- ToolSearch: Search deferred tools on demand" || len(secondRemovedNames) != 0 {
 		t.Fatalf("unexpected second deferred_tools_delta attachment payload: %#v", secondDeferredToolsDeltaAttachment)
+	}
+	var secondAgentListingDeltaAttachment map[string]any
+	if err := ws.ReadJSON(&secondAgentListingDeltaAttachment); err != nil {
+		t.Fatalf("read second agent_listing_delta attachment failed: %v", err)
+	}
+	if secondAgentListingDeltaAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondAgentListingDeltaAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second agent_listing_delta attachment envelope: %#v", secondAgentListingDeltaAttachment)
+	}
+	secondAgentListingDeltaPayload, _ := secondAgentListingDeltaAttachment["attachment"].(map[string]any)
+	secondAddedTypes, _ := secondAgentListingDeltaPayload["addedTypes"].([]any)
+	secondAgentAddedLines, _ := secondAgentListingDeltaPayload["addedLines"].([]any)
+	secondRemovedTypes, _ := secondAgentListingDeltaPayload["removedTypes"].([]any)
+	if strings.TrimSpace(asString(secondAgentListingDeltaPayload["type"])) != "agent_listing_delta" || len(secondAddedTypes) != 1 || strings.TrimSpace(asString(secondAddedTypes[0])) != "explorer" || len(secondAgentAddedLines) != 1 || strings.TrimSpace(asString(secondAgentAddedLines[0])) != "- explorer: Fast codebase explorer for scoped questions" || len(secondRemovedTypes) != 0 || !secondAgentListingDeltaPayload["isInitial"].(bool) || !secondAgentListingDeltaPayload["showConcurrencyNote"].(bool) {
+		t.Fatalf("unexpected second agent_listing_delta attachment payload: %#v", secondAgentListingDeltaAttachment)
 	}
 	var secondVerifyPlanReminderAttachment map[string]any
 	if err := ws.ReadJSON(&secondVerifyPlanReminderAttachment); err != nil {
