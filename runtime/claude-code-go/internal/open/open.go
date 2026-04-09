@@ -73,6 +73,8 @@ type Result struct {
 	MaxTurnsReachedAttachmentEvent                               string
 	TaskStatusAttachmentValidated                                bool
 	TaskStatusAttachmentEvent                                    string
+	QueuedCommandValidated                                       bool
+	QueuedCommandEvent                                           string
 	TaskReminderAttachmentValidated                              bool
 	TaskReminderAttachmentEvent                                  string
 	TodoReminderAttachmentValidated                              bool
@@ -422,6 +424,8 @@ func Run(args []string) (Result, error) {
 		MaxTurnsReachedAttachmentEvent:                               streamResult.MaxTurnsReachedAttachmentEvent,
 		TaskStatusAttachmentValidated:                                streamResult.TaskStatusAttachmentValidated,
 		TaskStatusAttachmentEvent:                                    streamResult.TaskStatusAttachmentEvent,
+		QueuedCommandValidated:                                       streamResult.QueuedCommandValidated,
+		QueuedCommandEvent:                                           streamResult.QueuedCommandEvent,
 		TaskReminderAttachmentValidated:                              streamResult.TaskReminderAttachmentValidated,
 		TaskReminderAttachmentEvent:                                  streamResult.TaskReminderAttachmentEvent,
 		TodoReminderAttachmentValidated:                              streamResult.TodoReminderAttachmentValidated,
@@ -1001,6 +1005,8 @@ type streamValidation struct {
 	MaxTurnsReachedAttachmentEvent                               string
 	TaskStatusAttachmentValidated                                bool
 	TaskStatusAttachmentEvent                                    string
+	QueuedCommandValidated                                       bool
+	QueuedCommandEvent                                           string
 	TaskReminderAttachmentValidated                              bool
 	TaskReminderAttachmentEvent                                  string
 	TodoReminderAttachmentValidated                              bool
@@ -1322,6 +1328,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		currentRequestID := ""
 		currentTaskID := ""
 		currentTaskDescription := ""
+		currentTaskOutputFile := ""
 		if err := conn.WriteJSON(map[string]any{
 			"type": "user",
 			"message": map[string]any{
@@ -1344,6 +1351,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		taskStartedValidated := false
 		taskProgressValidated := false
 		taskNotificationValidated := false
+		queuedCommandValidated := false
 		filesPersistedValidated := false
 		apiRetryValidated := false
 		localCommandOutputValidated := false
@@ -1724,6 +1732,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if strings.TrimSpace(asString(incoming["output_file"])) == "" {
 						return streamValidation{}, fmt.Errorf("invalid task_notification: missing output_file")
 					}
+					currentTaskOutputFile = strings.TrimSpace(asString(incoming["output_file"]))
 					if strings.TrimSpace(asString(incoming["summary"])) != turn.expectedResponse {
 						return streamValidation{}, fmt.Errorf("invalid task_notification: expected summary=%q, got %q", turn.expectedResponse, strings.TrimSpace(asString(incoming["summary"])))
 					}
@@ -2201,6 +2210,27 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					result.TaskStatusAttachmentValidated = true
 					result.TaskStatusAttachmentEvent = "attachment:task_status"
+				case "queued_command":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected queued_command attachment during %s turn", turn.behavior)
+					}
+					if strings.TrimSpace(asString(attachment["commandMode"])) != "task-notification" {
+						return streamValidation{}, fmt.Errorf("invalid queued_command attachment.commandMode: expected %q, got %q", "task-notification", strings.TrimSpace(asString(attachment["commandMode"])))
+					}
+					prompt := strings.TrimSpace(asString(attachment["prompt"]))
+					expectedPrompt := fmt.Sprintf(
+						"<task-notification>\n<task-id>%s</task-id>\n<tool-use-id>%s</tool-use-id>\n<task-type>local_bash</task-type>\n<output-file>%s</output-file>\n<status>completed</status>\n<summary>Task %q completed</summary>\n</task-notification>",
+						currentTaskID,
+						currentToolUseID,
+						currentTaskOutputFile,
+						currentTaskDescription,
+					)
+					if prompt != expectedPrompt {
+						return streamValidation{}, fmt.Errorf("invalid queued_command attachment.prompt: expected %q, got %q", expectedPrompt, prompt)
+					}
+					result.QueuedCommandValidated = true
+					result.QueuedCommandEvent = "attachment:queued_command"
+					queuedCommandValidated = true
 				case "task_reminder":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected task_reminder attachment during %s turn", turn.behavior)
@@ -2748,7 +2778,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && autoModeExitValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && verifyPlanReminderValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && autoModeExitValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && verifyPlanReminderValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4089,6 +4119,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("max_turns_reached_attachment_event=%s\n", valueOrNone(r.MaxTurnsReachedAttachmentEvent)))
 	b.WriteString(fmt.Sprintf("task_status_attachment_validated=%t\n", r.TaskStatusAttachmentValidated))
 	b.WriteString(fmt.Sprintf("task_status_attachment_event=%s\n", valueOrNone(r.TaskStatusAttachmentEvent)))
+	b.WriteString(fmt.Sprintf("queued_command_validated=%t\n", r.QueuedCommandValidated))
+	b.WriteString(fmt.Sprintf("queued_command_event=%s\n", valueOrNone(r.QueuedCommandEvent)))
 	b.WriteString(fmt.Sprintf("task_reminder_attachment_validated=%t\n", r.TaskReminderAttachmentValidated))
 	b.WriteString(fmt.Sprintf("task_reminder_attachment_event=%s\n", valueOrNone(r.TaskReminderAttachmentEvent)))
 	b.WriteString(fmt.Sprintf("todo_reminder_attachment_validated=%t\n", r.TodoReminderAttachmentValidated))

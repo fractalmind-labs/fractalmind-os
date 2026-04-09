@@ -1346,6 +1346,14 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       promptSuggestionUUID,
 					"session_id": session.ID,
 				})
+				taskOutputPath := session.WorkDir + "/.claude-code-go/tasks/" + taskID + ".log"
+				queuedCommandPrompt := fmt.Sprintf(
+					"<task-notification>\n<task-id>%s</task-id>\n<tool-use-id>%s</tool-use-id>\n<task-type>local_bash</task-type>\n<output-file>%s</output-file>\n<status>completed</status>\n<summary>Task %q completed</summary>\n</task-notification>",
+					taskID,
+					pendingToolUseID,
+					taskOutputPath,
+					taskDescription,
+				)
 				taskNotificationUUID, err := generateRequestID()
 				if err != nil {
 					return
@@ -1356,11 +1364,25 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"task_id":     taskID,
 					"tool_use_id": pendingToolUseID,
 					"status":      "completed",
-					"output_file": session.WorkDir + "/.claude-code-go/tasks/" + taskID + ".log",
+					"output_file": taskOutputPath,
 					"summary":     responseText,
 					"usage":       map[string]any{"total_tokens": 0, "tool_uses": 1, "duration_ms": 1},
 					"uuid":        taskNotificationUUID,
 					"session_id":  session.ID,
+				})
+				queuedCommandUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":        "queued_command",
+						"prompt":      queuedCommandPrompt,
+						"commandMode": "task-notification",
+					},
+					"uuid":       queuedCommandUUID,
+					"session_id": session.ID,
 				})
 				taskStatusUUID, err := generateRequestID()
 				if err != nil {
@@ -1375,7 +1397,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						"status":         "completed",
 						"description":    taskDescription,
 						"deltaSummary":   responseText,
-						"outputFilePath": session.WorkDir + "/.claude-code-go/tasks/" + taskID + ".log",
+						"outputFilePath": taskOutputPath,
 					},
 					"uuid":       taskStatusUUID,
 					"session_id": session.ID,
@@ -1429,7 +1451,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"subtype": "files_persisted",
 					"files": []map[string]any{
 						{
-							"filename": session.WorkDir + "/.claude-code-go/tasks/" + taskID + ".log",
+							"filename": taskOutputPath,
 							"file_id":  taskID + "-output",
 						},
 					},

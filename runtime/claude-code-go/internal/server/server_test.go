@@ -523,6 +523,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(taskNotification["task_id"])) != strings.TrimSpace(asString(taskStarted["task_id"])) || strings.TrimSpace(asString(taskNotification["tool_use_id"])) != strings.TrimSpace(asString(request["tool_use_id"])) || strings.TrimSpace(asString(taskNotification["status"])) != "completed" || strings.TrimSpace(asString(taskNotification["output_file"])) == "" || strings.TrimSpace(asString(taskNotification["summary"])) != "echo:hello [approved]" || int(taskNotificationUsage["tool_uses"].(float64)) != 1 {
 		t.Fatalf("invalid task_notification payload: %#v", taskNotification)
 	}
+	var queuedCommandAttachment map[string]any
+	if err := ws.ReadJSON(&queuedCommandAttachment); err != nil {
+		t.Fatalf("read queued_command attachment failed: %v", err)
+	}
+	if queuedCommandAttachment["type"] != "attachment" || strings.TrimSpace(asString(queuedCommandAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected queued_command attachment envelope: %#v", queuedCommandAttachment)
+	}
+	queuedCommandPayload, _ := queuedCommandAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(queuedCommandPayload["type"])) != "queued_command" || strings.TrimSpace(asString(queuedCommandPayload["commandMode"])) != "task-notification" || strings.TrimSpace(asString(queuedCommandPayload["prompt"])) == "" {
+		t.Fatalf("unexpected queued_command attachment payload: %#v", queuedCommandAttachment)
+	}
 	var taskStatusAttachment map[string]any
 	if err := ws.ReadJSON(&taskStatusAttachment); err != nil {
 		t.Fatalf("read task_status attachment failed: %v", err)
@@ -1096,6 +1107,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondTaskNotificationUsage, _ := secondTaskNotification["usage"].(map[string]any)
 	if strings.TrimSpace(asString(secondTaskNotification["task_id"])) != strings.TrimSpace(asString(secondTaskStarted["task_id"])) || strings.TrimSpace(asString(secondTaskNotification["tool_use_id"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) || strings.TrimSpace(asString(secondTaskNotification["status"])) != "completed" || strings.TrimSpace(asString(secondTaskNotification["output_file"])) == "" || strings.TrimSpace(asString(secondTaskNotification["summary"])) != "echo:hello again [approved]" || int(secondTaskNotificationUsage["tool_uses"].(float64)) != 1 {
 		t.Fatalf("invalid second task_notification payload: %#v", secondTaskNotification)
+	}
+	var secondQueuedCommandAttachment map[string]any
+	if err := ws.ReadJSON(&secondQueuedCommandAttachment); err != nil {
+		t.Fatalf("read second queued_command attachment failed: %v", err)
+	}
+	if secondQueuedCommandAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondQueuedCommandAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second queued_command attachment envelope: %#v", secondQueuedCommandAttachment)
+	}
+	secondQueuedCommandPayload, _ := secondQueuedCommandAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondQueuedCommandPayload["type"])) != "queued_command" || strings.TrimSpace(asString(secondQueuedCommandPayload["commandMode"])) != "task-notification" || strings.TrimSpace(asString(secondQueuedCommandPayload["prompt"])) == "" {
+		t.Fatalf("unexpected second queued_command attachment payload: %#v", secondQueuedCommandAttachment)
 	}
 	var secondTaskStatusAttachment map[string]any
 	if err := ws.ReadJSON(&secondTaskStatusAttachment); err != nil {
