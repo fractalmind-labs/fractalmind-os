@@ -119,6 +119,8 @@ type Result struct {
 	TeamContextEvent                                             string
 	SkillDiscoveryValidated                                      bool
 	SkillDiscoveryEvent                                          string
+	SkillListingValidated                                        bool
+	SkillListingEvent                                            string
 	VerifyPlanReminderValidated                                  bool
 	VerifyPlanReminderEvent                                      string
 	StreamlinedTextValidated                                     bool
@@ -500,6 +502,8 @@ func Run(args []string) (Result, error) {
 		TeamContextEvent:                                       streamResult.TeamContextEvent,
 		SkillDiscoveryValidated:                                streamResult.SkillDiscoveryValidated,
 		SkillDiscoveryEvent:                                    streamResult.SkillDiscoveryEvent,
+		SkillListingValidated:                                  streamResult.SkillListingValidated,
+		SkillListingEvent:                                      streamResult.SkillListingEvent,
 		VerifyPlanReminderValidated:                            streamResult.VerifyPlanReminderValidated,
 		VerifyPlanReminderEvent:                                streamResult.VerifyPlanReminderEvent,
 		StreamlinedTextValidated:                               streamResult.StreamlinedTextValidated,
@@ -1111,6 +1115,8 @@ type streamValidation struct {
 	TeamContextEvent                                             string
 	SkillDiscoveryValidated                                      bool
 	SkillDiscoveryEvent                                          string
+	SkillListingValidated                                        bool
+	SkillListingEvent                                            string
 	VerifyPlanReminderValidated                                  bool
 	VerifyPlanReminderEvent                                      string
 	StreamlinedTextValidated                                     bool
@@ -1492,6 +1498,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		teammateMailboxValidated := false
 		teamContextValidated := false
 		skillDiscoveryValidated := false
+		skillListingValidated := false
 		streamlinedTextValidated := false
 		streamlinedToolUseSummaryValidated := false
 		promptSuggestionValidated := false
@@ -2724,6 +2731,24 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.SkillDiscoveryValidated = true
 					result.SkillDiscoveryEvent = "attachment:skill_discovery"
 					skillDiscoveryValidated = true
+				case "skill_listing":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected skill_listing attachment during %s turn", turn.behavior)
+					}
+					if strings.TrimSpace(asString(attachment["content"])) != "agent-manager: Coordinate and track teammate work." {
+						return streamValidation{}, fmt.Errorf("invalid skill_listing attachment.content")
+					}
+					skillCount, ok := attachment["skillCount"].(float64)
+					if !ok || int(skillCount) != 1 {
+						return streamValidation{}, fmt.Errorf("invalid skill_listing attachment.skillCount")
+					}
+					isInitial, ok := attachment["isInitial"].(bool)
+					if !ok || !isInitial {
+						return streamValidation{}, fmt.Errorf("invalid skill_listing attachment.isInitial")
+					}
+					result.SkillListingValidated = true
+					result.SkillListingEvent = "attachment:skill_listing"
+					skillListingValidated = true
 				case "verify_plan_reminder":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected verify_plan_reminder attachment during %s turn", turn.behavior)
@@ -3167,7 +3192,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4554,6 +4579,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("team_context_event=%s\n", valueOrNone(r.TeamContextEvent)))
 	b.WriteString(fmt.Sprintf("skill_discovery_validated=%t\n", r.SkillDiscoveryValidated))
 	b.WriteString(fmt.Sprintf("skill_discovery_event=%s\n", valueOrNone(r.SkillDiscoveryEvent)))
+	b.WriteString(fmt.Sprintf("skill_listing_validated=%t\n", r.SkillListingValidated))
+	b.WriteString(fmt.Sprintf("skill_listing_event=%s\n", valueOrNone(r.SkillListingEvent)))
 	b.WriteString(fmt.Sprintf("verify_plan_reminder_validated=%t\n", r.VerifyPlanReminderValidated))
 	b.WriteString(fmt.Sprintf("verify_plan_reminder_event=%s\n", valueOrNone(r.VerifyPlanReminderEvent)))
 	b.WriteString(fmt.Sprintf("streamlined_text_validated=%t\n", r.StreamlinedTextValidated))

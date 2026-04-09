@@ -105,6 +105,7 @@ func TestRunOpenDefaults(t *testing.T) {
 		"teammate_mailbox_validated=false",
 		"team_context_validated=false",
 		"skill_discovery_validated=false",
+		"skill_listing_validated=false",
 		"streamlined_text_validated=false",
 		"tool_use_summary_shape_validated=false",
 		"streamlined_tool_use_summary_validated=false",
@@ -1550,6 +1551,17 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 					"source": "native",
 				},
 				"uuid":       fmt.Sprintf("skill-discovery-%d", requestCounter),
+				"session_id": sessionID,
+			})
+			_ = conn.WriteJSON(map[string]any{
+				"type": "attachment",
+				"attachment": map[string]any{
+					"type":       "skill_listing",
+					"content":    "agent-manager: Coordinate and track teammate work.",
+					"skillCount": 1,
+					"isInitial":  true,
+				},
+				"uuid":       fmt.Sprintf("skill-listing-%d", requestCounter),
 				"session_id": sessionID,
 			})
 			_ = conn.WriteJSON(map[string]any{
