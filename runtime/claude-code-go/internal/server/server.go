@@ -1567,6 +1567,42 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       outputStyleUUID,
 					"session_id": session.ID,
 				})
+				diagnosticsUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":  "diagnostics",
+						"isNew": true,
+						"files": []any{
+							map[string]any{
+								"uri": "file:///workspace/claude-code-go/internal/server/server.go",
+								"diagnostics": []any{
+									map[string]any{
+										"message":  "unused variable `staleBudget`",
+										"severity": "Warning",
+										"range": map[string]any{
+											"start": map[string]any{
+												"line":      12.0,
+												"character": 4.0,
+											},
+											"end": map[string]any{
+												"line":      12.0,
+												"character": 15.0,
+											},
+										},
+										"source": "gopls",
+										"code":   "unusedvar",
+									},
+								},
+							},
+						},
+					},
+					"uuid":       diagnosticsUUID,
+					"session_id": session.ID,
+				})
 				budgetUSDUUID, err := generateRequestID()
 				if err != nil {
 					return

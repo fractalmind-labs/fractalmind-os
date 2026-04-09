@@ -83,6 +83,8 @@ type Result struct {
 	CriticalSystemReminderEvent                                  string
 	OutputStyleValidated                                         bool
 	OutputStyleEvent                                             string
+	DiagnosticsValidated                                         bool
+	DiagnosticsEvent                                             string
 	CompactionReminderValidated                                  bool
 	CompactionReminderEvent                                      string
 	BudgetUSDValidated                                           bool
@@ -478,6 +480,8 @@ func Run(args []string) (Result, error) {
 		CriticalSystemReminderEvent:                            streamResult.CriticalSystemReminderEvent,
 		OutputStyleValidated:                                   streamResult.OutputStyleValidated,
 		OutputStyleEvent:                                       streamResult.OutputStyleEvent,
+		DiagnosticsValidated:                                   streamResult.DiagnosticsValidated,
+		DiagnosticsEvent:                                       streamResult.DiagnosticsEvent,
 		CompactionReminderValidated:                            streamResult.CompactionReminderValidated,
 		CompactionReminderEvent:                                streamResult.CompactionReminderEvent,
 		BudgetUSDValidated:                                     streamResult.BudgetUSDValidated,
@@ -1103,6 +1107,8 @@ type streamValidation struct {
 	CriticalSystemReminderEvent                                  string
 	OutputStyleValidated                                         bool
 	OutputStyleEvent                                             string
+	DiagnosticsValidated                                         bool
+	DiagnosticsEvent                                             string
 	CompactionReminderValidated                                  bool
 	CompactionReminderEvent                                      string
 	BudgetUSDValidated                                           bool
@@ -1515,6 +1521,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		taskReminderAttachmentValidated := false
 		criticalSystemReminderValidated := false
 		outputStyleValidated := false
+		diagnosticsValidated := false
 		compactionReminderValidated := false
 		budgetUSDValidated := false
 		contextEfficiencyValidated := false
@@ -2452,6 +2459,41 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.OutputStyleValidated = true
 					result.OutputStyleEvent = "attachment:output_style"
 					outputStyleValidated = true
+				case "diagnostics":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected diagnostics attachment during %s turn", turn.behavior)
+					}
+					if attachment["isNew"] != true {
+						return streamValidation{}, fmt.Errorf("invalid diagnostics attachment.isNew")
+					}
+					files, _ := attachment["files"].([]any)
+					if len(files) != 1 {
+						return streamValidation{}, fmt.Errorf("invalid diagnostics attachment.files length")
+					}
+					file, _ := files[0].(map[string]any)
+					if strings.TrimSpace(asString(file["uri"])) != "file:///workspace/claude-code-go/internal/server/server.go" {
+						return streamValidation{}, fmt.Errorf("invalid diagnostics attachment.files[0].uri")
+					}
+					diagnostics, _ := file["diagnostics"].([]any)
+					if len(diagnostics) != 1 {
+						return streamValidation{}, fmt.Errorf("invalid diagnostics attachment.files[0].diagnostics length")
+					}
+					diagnostic, _ := diagnostics[0].(map[string]any)
+					if strings.TrimSpace(asString(diagnostic["message"])) != "unused variable `staleBudget`" {
+						return streamValidation{}, fmt.Errorf("invalid diagnostics attachment.files[0].diagnostics[0].message")
+					}
+					if strings.TrimSpace(asString(diagnostic["severity"])) != "Warning" {
+						return streamValidation{}, fmt.Errorf("invalid diagnostics attachment.files[0].diagnostics[0].severity")
+					}
+					if strings.TrimSpace(asString(diagnostic["source"])) != "gopls" {
+						return streamValidation{}, fmt.Errorf("invalid diagnostics attachment.files[0].diagnostics[0].source")
+					}
+					if strings.TrimSpace(asString(diagnostic["code"])) != "unusedvar" {
+						return streamValidation{}, fmt.Errorf("invalid diagnostics attachment.files[0].diagnostics[0].code")
+					}
+					result.DiagnosticsValidated = true
+					result.DiagnosticsEvent = "attachment:diagnostics"
+					diagnosticsValidated = true
 				case "compaction_reminder":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected compaction_reminder attachment during %s turn", turn.behavior)
@@ -3332,7 +3374,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && diagnosticsValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4683,6 +4725,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("critical_system_reminder_event=%s\n", valueOrNone(r.CriticalSystemReminderEvent)))
 	b.WriteString(fmt.Sprintf("output_style_validated=%t\n", r.OutputStyleValidated))
 	b.WriteString(fmt.Sprintf("output_style_event=%s\n", valueOrNone(r.OutputStyleEvent)))
+	b.WriteString(fmt.Sprintf("diagnostics_validated=%t\n", r.DiagnosticsValidated))
+	b.WriteString(fmt.Sprintf("diagnostics_event=%s\n", valueOrNone(r.DiagnosticsEvent)))
 	b.WriteString(fmt.Sprintf("compaction_reminder_validated=%t\n", r.CompactionReminderValidated))
 	b.WriteString(fmt.Sprintf("compaction_reminder_event=%s\n", valueOrNone(r.CompactionReminderEvent)))
 	b.WriteString(fmt.Sprintf("budget_usd_validated=%t\n", r.BudgetUSDValidated))

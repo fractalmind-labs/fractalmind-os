@@ -675,6 +675,33 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(outputStylePayload["type"])) != "output_style" || strings.TrimSpace(asString(outputStylePayload["style"])) != "explanatory" {
 		t.Fatalf("unexpected output_style attachment payload: %#v", outputStyleAttachment)
 	}
+	var diagnosticsAttachment map[string]any
+	if err := ws.ReadJSON(&diagnosticsAttachment); err != nil {
+		t.Fatalf("read diagnostics attachment failed: %v", err)
+	}
+	if diagnosticsAttachment["type"] != "attachment" || strings.TrimSpace(asString(diagnosticsAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected diagnostics attachment envelope: %#v", diagnosticsAttachment)
+	}
+	diagnosticsPayload, _ := diagnosticsAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(diagnosticsPayload["type"])) != "diagnostics" || diagnosticsPayload["isNew"] != true {
+		t.Fatalf("unexpected diagnostics attachment payload: %#v", diagnosticsAttachment)
+	}
+	diagnosticFiles, _ := diagnosticsPayload["files"].([]any)
+	if len(diagnosticFiles) != 1 {
+		t.Fatalf("unexpected diagnostics file count: %#v", diagnosticsAttachment)
+	}
+	diagnosticFile, _ := diagnosticFiles[0].(map[string]any)
+	if strings.TrimSpace(asString(diagnosticFile["uri"])) != "file:///workspace/claude-code-go/internal/server/server.go" {
+		t.Fatalf("unexpected diagnostics uri: %#v", diagnosticsAttachment)
+	}
+	diagnosticsList, _ := diagnosticFile["diagnostics"].([]any)
+	if len(diagnosticsList) != 1 {
+		t.Fatalf("unexpected diagnostics list: %#v", diagnosticsAttachment)
+	}
+	diagnosticEntry, _ := diagnosticsList[0].(map[string]any)
+	if strings.TrimSpace(asString(diagnosticEntry["message"])) != "unused variable `staleBudget`" || strings.TrimSpace(asString(diagnosticEntry["severity"])) != "Warning" || strings.TrimSpace(asString(diagnosticEntry["source"])) != "gopls" || strings.TrimSpace(asString(diagnosticEntry["code"])) != "unusedvar" {
+		t.Fatalf("unexpected diagnostics entry: %#v", diagnosticsAttachment)
+	}
 	var budgetUSDAttachment map[string]any
 	if err := ws.ReadJSON(&budgetUSDAttachment); err != nil {
 		t.Fatalf("read budget_usd attachment failed: %v", err)
@@ -1534,6 +1561,33 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondOutputStylePayload, _ := secondOutputStyleAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondOutputStylePayload["type"])) != "output_style" || strings.TrimSpace(asString(secondOutputStylePayload["style"])) != "explanatory" {
 		t.Fatalf("unexpected second output_style attachment payload: %#v", secondOutputStyleAttachment)
+	}
+	var secondDiagnosticsAttachment map[string]any
+	if err := ws.ReadJSON(&secondDiagnosticsAttachment); err != nil {
+		t.Fatalf("read second diagnostics attachment failed: %v", err)
+	}
+	if secondDiagnosticsAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondDiagnosticsAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second diagnostics attachment envelope: %#v", secondDiagnosticsAttachment)
+	}
+	secondDiagnosticsPayload, _ := secondDiagnosticsAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondDiagnosticsPayload["type"])) != "diagnostics" || secondDiagnosticsPayload["isNew"] != true {
+		t.Fatalf("unexpected second diagnostics attachment payload: %#v", secondDiagnosticsAttachment)
+	}
+	secondDiagnosticFiles, _ := secondDiagnosticsPayload["files"].([]any)
+	if len(secondDiagnosticFiles) != 1 {
+		t.Fatalf("unexpected second diagnostics file count: %#v", secondDiagnosticsAttachment)
+	}
+	secondDiagnosticFile, _ := secondDiagnosticFiles[0].(map[string]any)
+	if strings.TrimSpace(asString(secondDiagnosticFile["uri"])) != "file:///workspace/claude-code-go/internal/server/server.go" {
+		t.Fatalf("unexpected second diagnostics uri: %#v", secondDiagnosticsAttachment)
+	}
+	secondDiagnosticsList, _ := secondDiagnosticFile["diagnostics"].([]any)
+	if len(secondDiagnosticsList) != 1 {
+		t.Fatalf("unexpected second diagnostics list: %#v", secondDiagnosticsAttachment)
+	}
+	secondDiagnosticEntry, _ := secondDiagnosticsList[0].(map[string]any)
+	if strings.TrimSpace(asString(secondDiagnosticEntry["message"])) != "unused variable `staleBudget`" || strings.TrimSpace(asString(secondDiagnosticEntry["severity"])) != "Warning" || strings.TrimSpace(asString(secondDiagnosticEntry["source"])) != "gopls" || strings.TrimSpace(asString(secondDiagnosticEntry["code"])) != "unusedvar" {
+		t.Fatalf("unexpected second diagnostics entry: %#v", secondDiagnosticsAttachment)
 	}
 	var secondBudgetUSDAttachment map[string]any
 	if err := ws.ReadJSON(&secondBudgetUSDAttachment); err != nil {
