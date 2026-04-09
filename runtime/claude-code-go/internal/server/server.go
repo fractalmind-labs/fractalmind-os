@@ -1565,6 +1565,19 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       contextEfficiencyUUID,
 					"session_id": session.ID,
 				})
+				autoModeUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":         "auto_mode",
+						"reminderType": "full",
+					},
+					"uuid":       autoModeUUID,
+					"session_id": session.ID,
+				})
 				autoModeExitUUID, err := generateRequestID()
 				if err != nil {
 					return

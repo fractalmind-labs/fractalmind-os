@@ -675,6 +675,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(contextEfficiencyPayload["type"])) != "context_efficiency" {
 		t.Fatalf("unexpected context_efficiency attachment payload: %#v", contextEfficiencyAttachment)
 	}
+	var autoModeAttachment map[string]any
+	if err := ws.ReadJSON(&autoModeAttachment); err != nil {
+		t.Fatalf("read auto_mode attachment failed: %v", err)
+	}
+	if autoModeAttachment["type"] != "attachment" || strings.TrimSpace(asString(autoModeAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected auto_mode attachment envelope: %#v", autoModeAttachment)
+	}
+	autoModePayload, _ := autoModeAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(autoModePayload["type"])) != "auto_mode" || strings.TrimSpace(asString(autoModePayload["reminderType"])) != "full" {
+		t.Fatalf("unexpected auto_mode attachment payload: %#v", autoModeAttachment)
+	}
 	var autoModeExitAttachment map[string]any
 	if err := ws.ReadJSON(&autoModeExitAttachment); err != nil {
 		t.Fatalf("read auto_mode_exit attachment failed: %v", err)
@@ -1490,6 +1501,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondContextEfficiencyPayload, _ := secondContextEfficiencyAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondContextEfficiencyPayload["type"])) != "context_efficiency" {
 		t.Fatalf("unexpected second context_efficiency attachment payload: %#v", secondContextEfficiencyAttachment)
+	}
+	var secondAutoModeAttachment map[string]any
+	if err := ws.ReadJSON(&secondAutoModeAttachment); err != nil {
+		t.Fatalf("read second auto_mode attachment failed: %v", err)
+	}
+	if secondAutoModeAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondAutoModeAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second auto_mode attachment envelope: %#v", secondAutoModeAttachment)
+	}
+	secondAutoModePayload, _ := secondAutoModeAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondAutoModePayload["type"])) != "auto_mode" || strings.TrimSpace(asString(secondAutoModePayload["reminderType"])) != "full" {
+		t.Fatalf("unexpected second auto_mode attachment payload: %#v", secondAutoModeAttachment)
 	}
 	var secondAutoModeExitAttachment map[string]any
 	if err := ws.ReadJSON(&secondAutoModeExitAttachment); err != nil {

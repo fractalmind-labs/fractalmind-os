@@ -83,6 +83,8 @@ type Result struct {
 	CompactionReminderEvent                                      string
 	ContextEfficiencyValidated                                   bool
 	ContextEfficiencyEvent                                       string
+	AutoModeValidated                                            bool
+	AutoModeEvent                                                string
 	AutoModeExitValidated                                        bool
 	AutoModeExitEvent                                            string
 	PlanModeValidated                                            bool
@@ -470,6 +472,8 @@ func Run(args []string) (Result, error) {
 		CompactionReminderEvent:                                streamResult.CompactionReminderEvent,
 		ContextEfficiencyValidated:                             streamResult.ContextEfficiencyValidated,
 		ContextEfficiencyEvent:                                 streamResult.ContextEfficiencyEvent,
+		AutoModeValidated:                                      streamResult.AutoModeValidated,
+		AutoModeEvent:                                          streamResult.AutoModeEvent,
 		AutoModeExitValidated:                                  streamResult.AutoModeExitValidated,
 		AutoModeExitEvent:                                      streamResult.AutoModeExitEvent,
 		PlanModeValidated:                                      streamResult.PlanModeValidated,
@@ -1087,6 +1091,8 @@ type streamValidation struct {
 	CompactionReminderEvent                                      string
 	ContextEfficiencyValidated                                   bool
 	ContextEfficiencyEvent                                       string
+	AutoModeValidated                                            bool
+	AutoModeEvent                                                string
 	AutoModeExitValidated                                        bool
 	AutoModeExitEvent                                            string
 	PlanModeValidated                                            bool
@@ -1491,6 +1497,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		taskReminderAttachmentValidated := false
 		compactionReminderValidated := false
 		contextEfficiencyValidated := false
+		autoModeValidated := false
 		autoModeExitValidated := false
 		planModeValidated := false
 		planModeExitValidated := false
@@ -2418,6 +2425,16 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.ContextEfficiencyValidated = true
 					result.ContextEfficiencyEvent = "attachment:context_efficiency"
 					contextEfficiencyValidated = true
+				case "auto_mode":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected auto_mode attachment during %s turn", turn.behavior)
+					}
+					if strings.TrimSpace(asString(attachment["reminderType"])) != "full" {
+						return streamValidation{}, fmt.Errorf("invalid auto_mode attachment.reminderType: expected %q, got %q", "full", strings.TrimSpace(asString(attachment["reminderType"])))
+					}
+					result.AutoModeValidated = true
+					result.AutoModeEvent = "attachment:auto_mode"
+					autoModeValidated = true
 				case "auto_mode_exit":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected auto_mode_exit attachment during %s turn", turn.behavior)
@@ -3255,7 +3272,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4606,6 +4623,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("compaction_reminder_event=%s\n", valueOrNone(r.CompactionReminderEvent)))
 	b.WriteString(fmt.Sprintf("context_efficiency_validated=%t\n", r.ContextEfficiencyValidated))
 	b.WriteString(fmt.Sprintf("context_efficiency_event=%s\n", valueOrNone(r.ContextEfficiencyEvent)))
+	b.WriteString(fmt.Sprintf("auto_mode_validated=%t\n", r.AutoModeValidated))
+	b.WriteString(fmt.Sprintf("auto_mode_event=%s\n", valueOrNone(r.AutoModeEvent)))
 	b.WriteString(fmt.Sprintf("auto_mode_exit_validated=%t\n", r.AutoModeExitValidated))
 	b.WriteString(fmt.Sprintf("auto_mode_exit_event=%s\n", valueOrNone(r.AutoModeExitEvent)))
 	b.WriteString(fmt.Sprintf("plan_mode_validated=%t\n", r.PlanModeValidated))
