@@ -1749,6 +1749,21 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       verifyPlanReminderUUID,
 					"session_id": session.ID,
 				})
+				currentSessionMemoryUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":       "current_session_memory",
+						"content":    "Remember: keep this session focused.",
+						"path":       "MEMORY.md",
+						"tokenCount": 7,
+					},
+					"uuid":       currentSessionMemoryUUID,
+					"session_id": session.ID,
+				})
 				compactingStatusUUID, err := generateRequestID()
 				if err != nil {
 					return

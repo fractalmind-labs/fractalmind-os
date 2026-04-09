@@ -836,6 +836,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(verifyPlanReminderPayload["type"])) != "verify_plan_reminder" {
 		t.Fatalf("unexpected verify_plan_reminder attachment payload: %#v", verifyPlanReminderAttachment)
 	}
+	var currentSessionMemoryAttachment map[string]any
+	if err := ws.ReadJSON(&currentSessionMemoryAttachment); err != nil {
+		t.Fatalf("read current_session_memory attachment failed: %v", err)
+	}
+	if currentSessionMemoryAttachment["type"] != "attachment" || strings.TrimSpace(asString(currentSessionMemoryAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected current_session_memory attachment envelope: %#v", currentSessionMemoryAttachment)
+	}
+	currentSessionMemoryPayload, _ := currentSessionMemoryAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(currentSessionMemoryPayload["type"])) != "current_session_memory" || strings.TrimSpace(asString(currentSessionMemoryPayload["content"])) != "Remember: keep this session focused." || strings.TrimSpace(asString(currentSessionMemoryPayload["path"])) != "MEMORY.md" || int(currentSessionMemoryPayload["tokenCount"].(float64)) != 7 {
+		t.Fatalf("unexpected current_session_memory attachment payload: %#v", currentSessionMemoryAttachment)
+	}
 	var compactingStatus map[string]any
 	if err := ws.ReadJSON(&compactingStatus); err != nil {
 		t.Fatalf("read compacting status failed: %v", err)
@@ -1534,6 +1545,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondVerifyPlanReminderPayload, _ := secondVerifyPlanReminderAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondVerifyPlanReminderPayload["type"])) != "verify_plan_reminder" {
 		t.Fatalf("unexpected second verify_plan_reminder attachment payload: %#v", secondVerifyPlanReminderAttachment)
+	}
+	var secondCurrentSessionMemoryAttachment map[string]any
+	if err := ws.ReadJSON(&secondCurrentSessionMemoryAttachment); err != nil {
+		t.Fatalf("read second current_session_memory attachment failed: %v", err)
+	}
+	if secondCurrentSessionMemoryAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondCurrentSessionMemoryAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second current_session_memory attachment envelope: %#v", secondCurrentSessionMemoryAttachment)
+	}
+	secondCurrentSessionMemoryPayload, _ := secondCurrentSessionMemoryAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondCurrentSessionMemoryPayload["type"])) != "current_session_memory" || strings.TrimSpace(asString(secondCurrentSessionMemoryPayload["content"])) != "Remember: keep this session focused." || strings.TrimSpace(asString(secondCurrentSessionMemoryPayload["path"])) != "MEMORY.md" || int(secondCurrentSessionMemoryPayload["tokenCount"].(float64)) != 7 {
+		t.Fatalf("unexpected second current_session_memory attachment payload: %#v", secondCurrentSessionMemoryAttachment)
 	}
 	var secondCompactingStatus map[string]any
 	if err := ws.ReadJSON(&secondCompactingStatus); err != nil {
