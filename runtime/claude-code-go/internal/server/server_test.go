@@ -847,6 +847,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(currentSessionMemoryPayload["type"])) != "current_session_memory" || strings.TrimSpace(asString(currentSessionMemoryPayload["content"])) != "Remember: keep this session focused." || strings.TrimSpace(asString(currentSessionMemoryPayload["path"])) != "MEMORY.md" || int(currentSessionMemoryPayload["tokenCount"].(float64)) != 7 {
 		t.Fatalf("unexpected current_session_memory attachment payload: %#v", currentSessionMemoryAttachment)
 	}
+	var teammateShutdownBatchAttachment map[string]any
+	if err := ws.ReadJSON(&teammateShutdownBatchAttachment); err != nil {
+		t.Fatalf("read teammate_shutdown_batch attachment failed: %v", err)
+	}
+	if teammateShutdownBatchAttachment["type"] != "attachment" || strings.TrimSpace(asString(teammateShutdownBatchAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected teammate_shutdown_batch attachment envelope: %#v", teammateShutdownBatchAttachment)
+	}
+	teammateShutdownBatchPayload, _ := teammateShutdownBatchAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(teammateShutdownBatchPayload["type"])) != "teammate_shutdown_batch" || int(teammateShutdownBatchPayload["count"].(float64)) != 2 {
+		t.Fatalf("unexpected teammate_shutdown_batch attachment payload: %#v", teammateShutdownBatchAttachment)
+	}
 	var compactingStatus map[string]any
 	if err := ws.ReadJSON(&compactingStatus); err != nil {
 		t.Fatalf("read compacting status failed: %v", err)
@@ -1556,6 +1567,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondCurrentSessionMemoryPayload, _ := secondCurrentSessionMemoryAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondCurrentSessionMemoryPayload["type"])) != "current_session_memory" || strings.TrimSpace(asString(secondCurrentSessionMemoryPayload["content"])) != "Remember: keep this session focused." || strings.TrimSpace(asString(secondCurrentSessionMemoryPayload["path"])) != "MEMORY.md" || int(secondCurrentSessionMemoryPayload["tokenCount"].(float64)) != 7 {
 		t.Fatalf("unexpected second current_session_memory attachment payload: %#v", secondCurrentSessionMemoryAttachment)
+	}
+	var secondTeammateShutdownBatchAttachment map[string]any
+	if err := ws.ReadJSON(&secondTeammateShutdownBatchAttachment); err != nil {
+		t.Fatalf("read second teammate_shutdown_batch attachment failed: %v", err)
+	}
+	if secondTeammateShutdownBatchAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondTeammateShutdownBatchAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second teammate_shutdown_batch attachment envelope: %#v", secondTeammateShutdownBatchAttachment)
+	}
+	secondTeammateShutdownBatchPayload, _ := secondTeammateShutdownBatchAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondTeammateShutdownBatchPayload["type"])) != "teammate_shutdown_batch" || int(secondTeammateShutdownBatchPayload["count"].(float64)) != 2 {
+		t.Fatalf("unexpected second teammate_shutdown_batch attachment payload: %#v", secondTeammateShutdownBatchAttachment)
 	}
 	var secondCompactingStatus map[string]any
 	if err := ws.ReadJSON(&secondCompactingStatus); err != nil {

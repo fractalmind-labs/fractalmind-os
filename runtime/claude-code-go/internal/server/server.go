@@ -1764,6 +1764,19 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       currentSessionMemoryUUID,
 					"session_id": session.ID,
 				})
+				teammateShutdownBatchUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":  "teammate_shutdown_batch",
+						"count": 2,
+					},
+					"uuid":       teammateShutdownBatchUUID,
+					"session_id": session.ID,
+				})
 				compactingStatusUUID, err := generateRequestID()
 				if err != nil {
 					return
