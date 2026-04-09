@@ -1603,6 +1603,31 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       diagnosticsUUID,
 					"session_id": session.ID,
 				})
+				mcpResourceUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":        "mcp_resource",
+						"server":      "demo-mcp",
+						"uri":         "resource://demo/readme",
+						"name":        "Demo README",
+						"description": "demo resource",
+						"content": map[string]any{
+							"contents": []any{
+								map[string]any{
+									"uri":      "resource://demo/readme",
+									"mimeType": "text/plain",
+									"text":     "Demo MCP resource contents.",
+								},
+							},
+						},
+					},
+					"uuid":       mcpResourceUUID,
+					"session_id": session.ID,
+				})
 				budgetUSDUUID, err := generateRequestID()
 				if err != nil {
 					return

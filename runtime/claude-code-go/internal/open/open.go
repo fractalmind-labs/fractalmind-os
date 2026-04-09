@@ -85,6 +85,8 @@ type Result struct {
 	OutputStyleEvent                                             string
 	DiagnosticsValidated                                         bool
 	DiagnosticsEvent                                             string
+	MCPResourceValidated                                         bool
+	MCPResourceEvent                                             string
 	CompactionReminderValidated                                  bool
 	CompactionReminderEvent                                      string
 	BudgetUSDValidated                                           bool
@@ -482,6 +484,8 @@ func Run(args []string) (Result, error) {
 		OutputStyleEvent:                                       streamResult.OutputStyleEvent,
 		DiagnosticsValidated:                                   streamResult.DiagnosticsValidated,
 		DiagnosticsEvent:                                       streamResult.DiagnosticsEvent,
+		MCPResourceValidated:                                   streamResult.MCPResourceValidated,
+		MCPResourceEvent:                                       streamResult.MCPResourceEvent,
 		CompactionReminderValidated:                            streamResult.CompactionReminderValidated,
 		CompactionReminderEvent:                                streamResult.CompactionReminderEvent,
 		BudgetUSDValidated:                                     streamResult.BudgetUSDValidated,
@@ -1109,6 +1113,8 @@ type streamValidation struct {
 	OutputStyleEvent                                             string
 	DiagnosticsValidated                                         bool
 	DiagnosticsEvent                                             string
+	MCPResourceValidated                                         bool
+	MCPResourceEvent                                             string
 	CompactionReminderValidated                                  bool
 	CompactionReminderEvent                                      string
 	BudgetUSDValidated                                           bool
@@ -1522,6 +1528,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		criticalSystemReminderValidated := false
 		outputStyleValidated := false
 		diagnosticsValidated := false
+		mcpResourceValidated := false
 		compactionReminderValidated := false
 		budgetUSDValidated := false
 		contextEfficiencyValidated := false
@@ -2494,6 +2501,40 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.DiagnosticsValidated = true
 					result.DiagnosticsEvent = "attachment:diagnostics"
 					diagnosticsValidated = true
+				case "mcp_resource":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected mcp_resource attachment during %s turn", turn.behavior)
+					}
+					if strings.TrimSpace(asString(attachment["server"])) != "demo-mcp" {
+						return streamValidation{}, fmt.Errorf("invalid mcp_resource attachment.server")
+					}
+					if strings.TrimSpace(asString(attachment["uri"])) != "resource://demo/readme" {
+						return streamValidation{}, fmt.Errorf("invalid mcp_resource attachment.uri")
+					}
+					if strings.TrimSpace(asString(attachment["name"])) != "Demo README" {
+						return streamValidation{}, fmt.Errorf("invalid mcp_resource attachment.name")
+					}
+					if strings.TrimSpace(asString(attachment["description"])) != "demo resource" {
+						return streamValidation{}, fmt.Errorf("invalid mcp_resource attachment.description")
+					}
+					content, _ := attachment["content"].(map[string]any)
+					contents, _ := content["contents"].([]any)
+					if len(contents) != 1 {
+						return streamValidation{}, fmt.Errorf("invalid mcp_resource attachment.content.contents length")
+					}
+					item, _ := contents[0].(map[string]any)
+					if strings.TrimSpace(asString(item["uri"])) != "resource://demo/readme" {
+						return streamValidation{}, fmt.Errorf("invalid mcp_resource attachment.content.contents[0].uri")
+					}
+					if strings.TrimSpace(asString(item["mimeType"])) != "text/plain" {
+						return streamValidation{}, fmt.Errorf("invalid mcp_resource attachment.content.contents[0].mimeType")
+					}
+					if strings.TrimSpace(asString(item["text"])) != "Demo MCP resource contents." {
+						return streamValidation{}, fmt.Errorf("invalid mcp_resource attachment.content.contents[0].text")
+					}
+					result.MCPResourceValidated = true
+					result.MCPResourceEvent = "attachment:mcp_resource"
+					mcpResourceValidated = true
 				case "compaction_reminder":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected compaction_reminder attachment during %s turn", turn.behavior)
@@ -3374,7 +3415,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && diagnosticsValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4727,6 +4768,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("output_style_event=%s\n", valueOrNone(r.OutputStyleEvent)))
 	b.WriteString(fmt.Sprintf("diagnostics_validated=%t\n", r.DiagnosticsValidated))
 	b.WriteString(fmt.Sprintf("diagnostics_event=%s\n", valueOrNone(r.DiagnosticsEvent)))
+	b.WriteString(fmt.Sprintf("mcp_resource_validated=%t\n", r.MCPResourceValidated))
+	b.WriteString(fmt.Sprintf("mcp_resource_event=%s\n", valueOrNone(r.MCPResourceEvent)))
 	b.WriteString(fmt.Sprintf("compaction_reminder_validated=%t\n", r.CompactionReminderValidated))
 	b.WriteString(fmt.Sprintf("compaction_reminder_event=%s\n", valueOrNone(r.CompactionReminderEvent)))
 	b.WriteString(fmt.Sprintf("budget_usd_validated=%t\n", r.BudgetUSDValidated))

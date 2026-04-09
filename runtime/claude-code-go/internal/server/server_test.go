@@ -702,6 +702,32 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(diagnosticEntry["message"])) != "unused variable `staleBudget`" || strings.TrimSpace(asString(diagnosticEntry["severity"])) != "Warning" || strings.TrimSpace(asString(diagnosticEntry["source"])) != "gopls" || strings.TrimSpace(asString(diagnosticEntry["code"])) != "unusedvar" {
 		t.Fatalf("unexpected diagnostics entry: %#v", diagnosticsAttachment)
 	}
+	var mcpResourceAttachment map[string]any
+	if err := ws.ReadJSON(&mcpResourceAttachment); err != nil {
+		t.Fatalf("read mcp_resource attachment failed: %v", err)
+	}
+	if mcpResourceAttachment["type"] != "attachment" || strings.TrimSpace(asString(mcpResourceAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected mcp_resource attachment envelope: %#v", mcpResourceAttachment)
+	}
+	mcpResourcePayload, _ := mcpResourceAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(mcpResourcePayload["type"])) != "mcp_resource" ||
+		strings.TrimSpace(asString(mcpResourcePayload["server"])) != "demo-mcp" ||
+		strings.TrimSpace(asString(mcpResourcePayload["uri"])) != "resource://demo/readme" ||
+		strings.TrimSpace(asString(mcpResourcePayload["name"])) != "Demo README" ||
+		strings.TrimSpace(asString(mcpResourcePayload["description"])) != "demo resource" {
+		t.Fatalf("unexpected mcp_resource attachment payload: %#v", mcpResourceAttachment)
+	}
+	mcpResourceContent, _ := mcpResourcePayload["content"].(map[string]any)
+	mcpResourceContents, _ := mcpResourceContent["contents"].([]any)
+	if len(mcpResourceContents) != 1 {
+		t.Fatalf("unexpected mcp_resource contents: %#v", mcpResourceAttachment)
+	}
+	mcpResourceItem, _ := mcpResourceContents[0].(map[string]any)
+	if strings.TrimSpace(asString(mcpResourceItem["uri"])) != "resource://demo/readme" ||
+		strings.TrimSpace(asString(mcpResourceItem["mimeType"])) != "text/plain" ||
+		strings.TrimSpace(asString(mcpResourceItem["text"])) != "Demo MCP resource contents." {
+		t.Fatalf("unexpected mcp_resource content item: %#v", mcpResourceAttachment)
+	}
 	var budgetUSDAttachment map[string]any
 	if err := ws.ReadJSON(&budgetUSDAttachment); err != nil {
 		t.Fatalf("read budget_usd attachment failed: %v", err)
@@ -1588,6 +1614,32 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondDiagnosticEntry, _ := secondDiagnosticsList[0].(map[string]any)
 	if strings.TrimSpace(asString(secondDiagnosticEntry["message"])) != "unused variable `staleBudget`" || strings.TrimSpace(asString(secondDiagnosticEntry["severity"])) != "Warning" || strings.TrimSpace(asString(secondDiagnosticEntry["source"])) != "gopls" || strings.TrimSpace(asString(secondDiagnosticEntry["code"])) != "unusedvar" {
 		t.Fatalf("unexpected second diagnostics entry: %#v", secondDiagnosticsAttachment)
+	}
+	var secondMCPResourceAttachment map[string]any
+	if err := ws.ReadJSON(&secondMCPResourceAttachment); err != nil {
+		t.Fatalf("read second mcp_resource attachment failed: %v", err)
+	}
+	if secondMCPResourceAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondMCPResourceAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second mcp_resource attachment envelope: %#v", secondMCPResourceAttachment)
+	}
+	secondMCPResourcePayload, _ := secondMCPResourceAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondMCPResourcePayload["type"])) != "mcp_resource" ||
+		strings.TrimSpace(asString(secondMCPResourcePayload["server"])) != "demo-mcp" ||
+		strings.TrimSpace(asString(secondMCPResourcePayload["uri"])) != "resource://demo/readme" ||
+		strings.TrimSpace(asString(secondMCPResourcePayload["name"])) != "Demo README" ||
+		strings.TrimSpace(asString(secondMCPResourcePayload["description"])) != "demo resource" {
+		t.Fatalf("unexpected second mcp_resource attachment payload: %#v", secondMCPResourceAttachment)
+	}
+	secondMCPResourceContent, _ := secondMCPResourcePayload["content"].(map[string]any)
+	secondMCPResourceContents, _ := secondMCPResourceContent["contents"].([]any)
+	if len(secondMCPResourceContents) != 1 {
+		t.Fatalf("unexpected second mcp_resource contents: %#v", secondMCPResourceAttachment)
+	}
+	secondMCPResourceItem, _ := secondMCPResourceContents[0].(map[string]any)
+	if strings.TrimSpace(asString(secondMCPResourceItem["uri"])) != "resource://demo/readme" ||
+		strings.TrimSpace(asString(secondMCPResourceItem["mimeType"])) != "text/plain" ||
+		strings.TrimSpace(asString(secondMCPResourceItem["text"])) != "Demo MCP resource contents." {
+		t.Fatalf("unexpected second mcp_resource content item: %#v", secondMCPResourceAttachment)
 	}
 	var secondBudgetUSDAttachment map[string]any
 	if err := ws.ReadJSON(&secondBudgetUSDAttachment); err != nil {
