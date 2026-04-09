@@ -1707,6 +1707,21 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       companionIntroUUID,
 					"session_id": session.ID,
 				})
+				tokenUsageUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":      "token_usage",
+						"used":      1024,
+						"total":     200000,
+						"remaining": 198976,
+					},
+					"uuid":       tokenUsageUUID,
+					"session_id": session.ID,
+				})
 				verifyPlanReminderUUID, err := generateRequestID()
 				if err != nil {
 					return

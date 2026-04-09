@@ -803,6 +803,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(companionIntroPayload["type"])) != "companion_intro" || strings.TrimSpace(asString(companionIntroPayload["name"])) != "Mochi" || strings.TrimSpace(asString(companionIntroPayload["species"])) != "otter" {
 		t.Fatalf("unexpected companion_intro attachment payload: %#v", companionIntroAttachment)
 	}
+	var tokenUsageAttachment map[string]any
+	if err := ws.ReadJSON(&tokenUsageAttachment); err != nil {
+		t.Fatalf("read token_usage attachment failed: %v", err)
+	}
+	if tokenUsageAttachment["type"] != "attachment" || strings.TrimSpace(asString(tokenUsageAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected token_usage attachment envelope: %#v", tokenUsageAttachment)
+	}
+	tokenUsagePayload, _ := tokenUsageAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(tokenUsagePayload["type"])) != "token_usage" || int(tokenUsagePayload["used"].(float64)) != 1024 || int(tokenUsagePayload["total"].(float64)) != 200000 || int(tokenUsagePayload["remaining"].(float64)) != 198976 {
+		t.Fatalf("unexpected token_usage attachment payload: %#v", tokenUsageAttachment)
+	}
 	var verifyPlanReminderAttachment map[string]any
 	if err := ws.ReadJSON(&verifyPlanReminderAttachment); err != nil {
 		t.Fatalf("read verify_plan_reminder attachment failed: %v", err)
@@ -1479,6 +1490,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondCompanionIntroPayload, _ := secondCompanionIntroAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondCompanionIntroPayload["type"])) != "companion_intro" || strings.TrimSpace(asString(secondCompanionIntroPayload["name"])) != "Mochi" || strings.TrimSpace(asString(secondCompanionIntroPayload["species"])) != "otter" {
 		t.Fatalf("unexpected second companion_intro attachment payload: %#v", secondCompanionIntroAttachment)
+	}
+	var secondTokenUsageAttachment map[string]any
+	if err := ws.ReadJSON(&secondTokenUsageAttachment); err != nil {
+		t.Fatalf("read second token_usage attachment failed: %v", err)
+	}
+	if secondTokenUsageAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondTokenUsageAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second token_usage attachment envelope: %#v", secondTokenUsageAttachment)
+	}
+	secondTokenUsagePayload, _ := secondTokenUsageAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondTokenUsagePayload["type"])) != "token_usage" || int(secondTokenUsagePayload["used"].(float64)) != 1024 || int(secondTokenUsagePayload["total"].(float64)) != 200000 || int(secondTokenUsagePayload["remaining"].(float64)) != 198976 {
+		t.Fatalf("unexpected second token_usage attachment payload: %#v", secondTokenUsageAttachment)
 	}
 	var secondVerifyPlanReminderAttachment map[string]any
 	if err := ws.ReadJSON(&secondVerifyPlanReminderAttachment); err != nil {
