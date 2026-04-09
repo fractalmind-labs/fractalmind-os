@@ -847,6 +847,21 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(currentSessionMemoryPayload["type"])) != "current_session_memory" || strings.TrimSpace(asString(currentSessionMemoryPayload["content"])) != "Remember: keep this session focused." || strings.TrimSpace(asString(currentSessionMemoryPayload["path"])) != "MEMORY.md" || int(currentSessionMemoryPayload["tokenCount"].(float64)) != 7 {
 		t.Fatalf("unexpected current_session_memory attachment payload: %#v", currentSessionMemoryAttachment)
 	}
+	var nestedMemoryAttachment map[string]any
+	if err := ws.ReadJSON(&nestedMemoryAttachment); err != nil {
+		t.Fatalf("read nested_memory attachment failed: %v", err)
+	}
+	if nestedMemoryAttachment["type"] != "attachment" || strings.TrimSpace(asString(nestedMemoryAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected nested_memory attachment envelope: %#v", nestedMemoryAttachment)
+	}
+	nestedMemoryPayload, _ := nestedMemoryAttachment["attachment"].(map[string]any)
+	nestedMemoryContent, _ := nestedMemoryPayload["content"].(map[string]any)
+	if strings.TrimSpace(asString(nestedMemoryPayload["type"])) != "nested_memory" || strings.TrimSpace(asString(nestedMemoryPayload["path"])) != "memory/project.md" || strings.TrimSpace(asString(nestedMemoryPayload["displayPath"])) != "memory/project.md" {
+		t.Fatalf("unexpected nested_memory attachment payload: %#v", nestedMemoryAttachment)
+	}
+	if strings.TrimSpace(asString(nestedMemoryContent["path"])) != "memory/project.md" || strings.TrimSpace(asString(nestedMemoryContent["type"])) != "memory_file" || strings.TrimSpace(asString(nestedMemoryContent["content"])) != "Project memory: keep nested context stable." {
+		t.Fatalf("unexpected nested_memory content payload: %#v", nestedMemoryAttachment)
+	}
 	var teammateShutdownBatchAttachment map[string]any
 	if err := ws.ReadJSON(&teammateShutdownBatchAttachment); err != nil {
 		t.Fatalf("read teammate_shutdown_batch attachment failed: %v", err)
@@ -1647,6 +1662,21 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondCurrentSessionMemoryPayload, _ := secondCurrentSessionMemoryAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondCurrentSessionMemoryPayload["type"])) != "current_session_memory" || strings.TrimSpace(asString(secondCurrentSessionMemoryPayload["content"])) != "Remember: keep this session focused." || strings.TrimSpace(asString(secondCurrentSessionMemoryPayload["path"])) != "MEMORY.md" || int(secondCurrentSessionMemoryPayload["tokenCount"].(float64)) != 7 {
 		t.Fatalf("unexpected second current_session_memory attachment payload: %#v", secondCurrentSessionMemoryAttachment)
+	}
+	var secondNestedMemoryAttachment map[string]any
+	if err := ws.ReadJSON(&secondNestedMemoryAttachment); err != nil {
+		t.Fatalf("read second nested_memory attachment failed: %v", err)
+	}
+	if secondNestedMemoryAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondNestedMemoryAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second nested_memory attachment envelope: %#v", secondNestedMemoryAttachment)
+	}
+	secondNestedMemoryPayload, _ := secondNestedMemoryAttachment["attachment"].(map[string]any)
+	secondNestedMemoryContent, _ := secondNestedMemoryPayload["content"].(map[string]any)
+	if strings.TrimSpace(asString(secondNestedMemoryPayload["type"])) != "nested_memory" || strings.TrimSpace(asString(secondNestedMemoryPayload["path"])) != "memory/project.md" || strings.TrimSpace(asString(secondNestedMemoryPayload["displayPath"])) != "memory/project.md" {
+		t.Fatalf("unexpected second nested_memory attachment payload: %#v", secondNestedMemoryAttachment)
+	}
+	if strings.TrimSpace(asString(secondNestedMemoryContent["path"])) != "memory/project.md" || strings.TrimSpace(asString(secondNestedMemoryContent["type"])) != "memory_file" || strings.TrimSpace(asString(secondNestedMemoryContent["content"])) != "Project memory: keep nested context stable." {
+		t.Fatalf("unexpected second nested_memory content payload: %#v", secondNestedMemoryAttachment)
 	}
 	var secondTeammateShutdownBatchAttachment map[string]any
 	if err := ws.ReadJSON(&secondTeammateShutdownBatchAttachment); err != nil {

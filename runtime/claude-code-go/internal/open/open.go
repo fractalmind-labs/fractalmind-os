@@ -109,6 +109,8 @@ type Result struct {
 	OutputTokenUsageEvent                                        string
 	CurrentSessionMemoryValidated                                bool
 	CurrentSessionMemoryEvent                                    string
+	NestedMemoryValidated                                        bool
+	NestedMemoryEvent                                            string
 	TeammateShutdownBatchValidated                               bool
 	TeammateShutdownBatchEvent                                   string
 	BagelConsoleValidated                                        bool
@@ -494,6 +496,8 @@ func Run(args []string) (Result, error) {
 		OutputTokenUsageEvent:                                  streamResult.OutputTokenUsageEvent,
 		CurrentSessionMemoryValidated:                          streamResult.CurrentSessionMemoryValidated,
 		CurrentSessionMemoryEvent:                              streamResult.CurrentSessionMemoryEvent,
+		NestedMemoryValidated:                                  streamResult.NestedMemoryValidated,
+		NestedMemoryEvent:                                      streamResult.NestedMemoryEvent,
 		TeammateShutdownBatchValidated:                         streamResult.TeammateShutdownBatchValidated,
 		TeammateShutdownBatchEvent:                             streamResult.TeammateShutdownBatchEvent,
 		BagelConsoleValidated:                                  streamResult.BagelConsoleValidated,
@@ -1109,6 +1113,8 @@ type streamValidation struct {
 	OutputTokenUsageEvent                                        string
 	CurrentSessionMemoryValidated                                bool
 	CurrentSessionMemoryEvent                                    string
+	NestedMemoryValidated                                        bool
+	NestedMemoryEvent                                            string
 	TeammateShutdownBatchValidated                               bool
 	TeammateShutdownBatchEvent                                   string
 	BagelConsoleValidated                                        bool
@@ -1499,6 +1505,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		outputTokenUsageValidated := false
 		verifyPlanReminderValidated := false
 		currentSessionMemoryValidated := false
+		nestedMemoryValidated := false
 		teammateShutdownBatchValidated := false
 		bagelConsoleValidated := false
 		teammateMailboxValidated := false
@@ -2627,6 +2634,32 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.CurrentSessionMemoryValidated = true
 					result.CurrentSessionMemoryEvent = "attachment:current_session_memory"
 					currentSessionMemoryValidated = true
+				case "nested_memory":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected nested_memory attachment during %s turn", turn.behavior)
+					}
+					if strings.TrimSpace(asString(attachment["path"])) != "memory/project.md" {
+						return streamValidation{}, fmt.Errorf("invalid nested_memory attachment.path")
+					}
+					if strings.TrimSpace(asString(attachment["displayPath"])) != "memory/project.md" {
+						return streamValidation{}, fmt.Errorf("invalid nested_memory attachment.displayPath")
+					}
+					content, ok := attachment["content"].(map[string]any)
+					if !ok {
+						return streamValidation{}, fmt.Errorf("invalid nested_memory attachment.content")
+					}
+					if strings.TrimSpace(asString(content["path"])) != "memory/project.md" {
+						return streamValidation{}, fmt.Errorf("invalid nested_memory attachment.content.path")
+					}
+					if strings.TrimSpace(asString(content["type"])) != "memory_file" {
+						return streamValidation{}, fmt.Errorf("invalid nested_memory attachment.content.type")
+					}
+					if strings.TrimSpace(asString(content["content"])) != "Project memory: keep nested context stable." {
+						return streamValidation{}, fmt.Errorf("invalid nested_memory attachment.content.content")
+					}
+					result.NestedMemoryValidated = true
+					result.NestedMemoryEvent = "attachment:nested_memory"
+					nestedMemoryValidated = true
 				case "teammate_shutdown_batch":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected teammate_shutdown_batch attachment during %s turn", turn.behavior)
@@ -3222,7 +3255,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4599,6 +4632,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("output_token_usage_event=%s\n", valueOrNone(r.OutputTokenUsageEvent)))
 	b.WriteString(fmt.Sprintf("current_session_memory_validated=%t\n", r.CurrentSessionMemoryValidated))
 	b.WriteString(fmt.Sprintf("current_session_memory_event=%s\n", valueOrNone(r.CurrentSessionMemoryEvent)))
+	b.WriteString(fmt.Sprintf("nested_memory_validated=%t\n", r.NestedMemoryValidated))
+	b.WriteString(fmt.Sprintf("nested_memory_event=%s\n", valueOrNone(r.NestedMemoryEvent)))
 	b.WriteString(fmt.Sprintf("teammate_shutdown_batch_validated=%t\n", r.TeammateShutdownBatchValidated))
 	b.WriteString(fmt.Sprintf("teammate_shutdown_batch_event=%s\n", valueOrNone(r.TeammateShutdownBatchEvent)))
 	b.WriteString(fmt.Sprintf("bagel_console_validated=%t\n", r.BagelConsoleValidated))
