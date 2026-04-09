@@ -1554,6 +1554,19 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       criticalSystemReminderUUID,
 					"session_id": session.ID,
 				})
+				outputStyleUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":  "output_style",
+						"style": "explanatory",
+					},
+					"uuid":       outputStyleUUID,
+					"session_id": session.ID,
+				})
 				compactionReminderUUID, err := generateRequestID()
 				if err != nil {
 					return

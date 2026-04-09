@@ -664,6 +664,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(criticalSystemReminderPayload["type"])) != "critical_system_reminder" || strings.TrimSpace(asString(criticalSystemReminderPayload["content"])) != "Critical system reminder: stay inside the local workspace and avoid destructive actions without explicit confirmation." {
 		t.Fatalf("unexpected critical_system_reminder attachment payload: %#v", criticalSystemReminderAttachment)
 	}
+	var outputStyleAttachment map[string]any
+	if err := ws.ReadJSON(&outputStyleAttachment); err != nil {
+		t.Fatalf("read output_style attachment failed: %v", err)
+	}
+	if outputStyleAttachment["type"] != "attachment" || strings.TrimSpace(asString(outputStyleAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected output_style attachment envelope: %#v", outputStyleAttachment)
+	}
+	outputStylePayload, _ := outputStyleAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(outputStylePayload["type"])) != "output_style" || strings.TrimSpace(asString(outputStylePayload["style"])) != "explanatory" {
+		t.Fatalf("unexpected output_style attachment payload: %#v", outputStyleAttachment)
+	}
 	var compactionReminderAttachment map[string]any
 	if err := ws.ReadJSON(&compactionReminderAttachment); err != nil {
 		t.Fatalf("read compaction_reminder attachment failed: %v", err)
@@ -1501,6 +1512,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondCriticalSystemReminderPayload, _ := secondCriticalSystemReminderAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondCriticalSystemReminderPayload["type"])) != "critical_system_reminder" || strings.TrimSpace(asString(secondCriticalSystemReminderPayload["content"])) != "Critical system reminder: stay inside the local workspace and avoid destructive actions without explicit confirmation." {
 		t.Fatalf("unexpected second critical_system_reminder attachment payload: %#v", secondCriticalSystemReminderAttachment)
+	}
+	var secondOutputStyleAttachment map[string]any
+	if err := ws.ReadJSON(&secondOutputStyleAttachment); err != nil {
+		t.Fatalf("read second output_style attachment failed: %v", err)
+	}
+	if secondOutputStyleAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondOutputStyleAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second output_style attachment envelope: %#v", secondOutputStyleAttachment)
+	}
+	secondOutputStylePayload, _ := secondOutputStyleAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondOutputStylePayload["type"])) != "output_style" || strings.TrimSpace(asString(secondOutputStylePayload["style"])) != "explanatory" {
+		t.Fatalf("unexpected second output_style attachment payload: %#v", secondOutputStyleAttachment)
 	}
 	var secondCompactionReminderAttachment map[string]any
 	if err := ws.ReadJSON(&secondCompactionReminderAttachment); err != nil {
