@@ -1830,6 +1830,27 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       teamContextUUID,
 					"session_id": session.ID,
 				})
+				skillDiscoveryUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type": "skill_discovery",
+						"skills": []map[string]any{
+							{
+								"name":        "agent-manager",
+								"description": "Coordinate and track teammate work.",
+								"shortId":     "am",
+							},
+						},
+						"signal": "user_input",
+						"source": "native",
+					},
+					"uuid":       skillDiscoveryUUID,
+					"session_id": session.ID,
+				})
 				compactingStatusUUID, err := generateRequestID()
 				if err != nil {
 					return

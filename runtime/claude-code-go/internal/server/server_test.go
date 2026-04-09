@@ -896,6 +896,22 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(teamContextPayload["type"])) != "team_context" || strings.TrimSpace(asString(teamContextPayload["agentId"])) != "agent-dev" || strings.TrimSpace(asString(teamContextPayload["agentName"])) != "dev" || strings.TrimSpace(asString(teamContextPayload["teamName"])) != "alpha" || strings.TrimSpace(asString(teamContextPayload["teamConfigPath"])) != ".claude/team.yaml" || strings.TrimSpace(asString(teamContextPayload["taskListPath"])) != ".claude/tasks.json" {
 		t.Fatalf("unexpected team_context attachment payload: %#v", teamContextAttachment)
 	}
+	var skillDiscoveryAttachment map[string]any
+	if err := ws.ReadJSON(&skillDiscoveryAttachment); err != nil {
+		t.Fatalf("read skill_discovery attachment failed: %v", err)
+	}
+	if skillDiscoveryAttachment["type"] != "attachment" || strings.TrimSpace(asString(skillDiscoveryAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected skill_discovery attachment envelope: %#v", skillDiscoveryAttachment)
+	}
+	skillDiscoveryPayload, _ := skillDiscoveryAttachment["attachment"].(map[string]any)
+	skillDiscoverySkills, _ := skillDiscoveryPayload["skills"].([]any)
+	if strings.TrimSpace(asString(skillDiscoveryPayload["type"])) != "skill_discovery" || strings.TrimSpace(asString(skillDiscoveryPayload["signal"])) != "user_input" || strings.TrimSpace(asString(skillDiscoveryPayload["source"])) != "native" || len(skillDiscoverySkills) != 1 {
+		t.Fatalf("unexpected skill_discovery attachment payload: %#v", skillDiscoveryAttachment)
+	}
+	skillDiscoverySkill, _ := skillDiscoverySkills[0].(map[string]any)
+	if strings.TrimSpace(asString(skillDiscoverySkill["name"])) != "agent-manager" || strings.TrimSpace(asString(skillDiscoverySkill["description"])) != "Coordinate and track teammate work." || strings.TrimSpace(asString(skillDiscoverySkill["shortId"])) != "am" {
+		t.Fatalf("unexpected skill_discovery skill payload: %#v", skillDiscoveryAttachment)
+	}
 	var compactingStatus map[string]any
 	if err := ws.ReadJSON(&compactingStatus); err != nil {
 		t.Fatalf("read compacting status failed: %v", err)
@@ -1654,6 +1670,22 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondTeamContextPayload, _ := secondTeamContextAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondTeamContextPayload["type"])) != "team_context" || strings.TrimSpace(asString(secondTeamContextPayload["agentId"])) != "agent-dev" || strings.TrimSpace(asString(secondTeamContextPayload["agentName"])) != "dev" || strings.TrimSpace(asString(secondTeamContextPayload["teamName"])) != "alpha" || strings.TrimSpace(asString(secondTeamContextPayload["teamConfigPath"])) != ".claude/team.yaml" || strings.TrimSpace(asString(secondTeamContextPayload["taskListPath"])) != ".claude/tasks.json" {
 		t.Fatalf("unexpected second team_context attachment payload: %#v", secondTeamContextAttachment)
+	}
+	var secondSkillDiscoveryAttachment map[string]any
+	if err := ws.ReadJSON(&secondSkillDiscoveryAttachment); err != nil {
+		t.Fatalf("read second skill_discovery attachment failed: %v", err)
+	}
+	if secondSkillDiscoveryAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondSkillDiscoveryAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second skill_discovery attachment envelope: %#v", secondSkillDiscoveryAttachment)
+	}
+	secondSkillDiscoveryPayload, _ := secondSkillDiscoveryAttachment["attachment"].(map[string]any)
+	secondSkillDiscoverySkills, _ := secondSkillDiscoveryPayload["skills"].([]any)
+	if strings.TrimSpace(asString(secondSkillDiscoveryPayload["type"])) != "skill_discovery" || strings.TrimSpace(asString(secondSkillDiscoveryPayload["signal"])) != "user_input" || strings.TrimSpace(asString(secondSkillDiscoveryPayload["source"])) != "native" || len(secondSkillDiscoverySkills) != 1 {
+		t.Fatalf("unexpected second skill_discovery attachment payload: %#v", secondSkillDiscoveryAttachment)
+	}
+	secondSkillDiscoverySkill, _ := secondSkillDiscoverySkills[0].(map[string]any)
+	if strings.TrimSpace(asString(secondSkillDiscoverySkill["name"])) != "agent-manager" || strings.TrimSpace(asString(secondSkillDiscoverySkill["description"])) != "Coordinate and track teammate work." || strings.TrimSpace(asString(secondSkillDiscoverySkill["shortId"])) != "am" {
+		t.Fatalf("unexpected second skill_discovery skill payload: %#v", secondSkillDiscoveryAttachment)
 	}
 	var secondCompactingStatus map[string]any
 	if err := ws.ReadJSON(&secondCompactingStatus); err != nil {
