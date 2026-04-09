@@ -814,6 +814,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(tokenUsagePayload["type"])) != "token_usage" || int(tokenUsagePayload["used"].(float64)) != 1024 || int(tokenUsagePayload["total"].(float64)) != 200000 || int(tokenUsagePayload["remaining"].(float64)) != 198976 {
 		t.Fatalf("unexpected token_usage attachment payload: %#v", tokenUsageAttachment)
 	}
+	var outputTokenUsageAttachment map[string]any
+	if err := ws.ReadJSON(&outputTokenUsageAttachment); err != nil {
+		t.Fatalf("read output_token_usage attachment failed: %v", err)
+	}
+	if outputTokenUsageAttachment["type"] != "attachment" || strings.TrimSpace(asString(outputTokenUsageAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected output_token_usage attachment envelope: %#v", outputTokenUsageAttachment)
+	}
+	outputTokenUsagePayload, _ := outputTokenUsageAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(outputTokenUsagePayload["type"])) != "output_token_usage" || int(outputTokenUsagePayload["turn"].(float64)) != 256 || int(outputTokenUsagePayload["session"].(float64)) != 512 || int(outputTokenUsagePayload["budget"].(float64)) != 1024 {
+		t.Fatalf("unexpected output_token_usage attachment payload: %#v", outputTokenUsageAttachment)
+	}
 	var verifyPlanReminderAttachment map[string]any
 	if err := ws.ReadJSON(&verifyPlanReminderAttachment); err != nil {
 		t.Fatalf("read verify_plan_reminder attachment failed: %v", err)
@@ -1501,6 +1512,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondTokenUsagePayload, _ := secondTokenUsageAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondTokenUsagePayload["type"])) != "token_usage" || int(secondTokenUsagePayload["used"].(float64)) != 1024 || int(secondTokenUsagePayload["total"].(float64)) != 200000 || int(secondTokenUsagePayload["remaining"].(float64)) != 198976 {
 		t.Fatalf("unexpected second token_usage attachment payload: %#v", secondTokenUsageAttachment)
+	}
+	var secondOutputTokenUsageAttachment map[string]any
+	if err := ws.ReadJSON(&secondOutputTokenUsageAttachment); err != nil {
+		t.Fatalf("read second output_token_usage attachment failed: %v", err)
+	}
+	if secondOutputTokenUsageAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondOutputTokenUsageAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second output_token_usage attachment envelope: %#v", secondOutputTokenUsageAttachment)
+	}
+	secondOutputTokenUsagePayload, _ := secondOutputTokenUsageAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondOutputTokenUsagePayload["type"])) != "output_token_usage" || int(secondOutputTokenUsagePayload["turn"].(float64)) != 256 || int(secondOutputTokenUsagePayload["session"].(float64)) != 512 || int(secondOutputTokenUsagePayload["budget"].(float64)) != 1024 {
+		t.Fatalf("unexpected second output_token_usage attachment payload: %#v", secondOutputTokenUsageAttachment)
 	}
 	var secondVerifyPlanReminderAttachment map[string]any
 	if err := ws.ReadJSON(&secondVerifyPlanReminderAttachment); err != nil {

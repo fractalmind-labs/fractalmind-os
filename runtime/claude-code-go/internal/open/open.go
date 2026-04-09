@@ -105,6 +105,8 @@ type Result struct {
 	CompanionIntroEvent                                          string
 	TokenUsageValidated                                          bool
 	TokenUsageEvent                                              string
+	OutputTokenUsageValidated                                    bool
+	OutputTokenUsageEvent                                        string
 	VerifyPlanReminderValidated                                  bool
 	VerifyPlanReminderEvent                                      string
 	StreamlinedTextValidated                                     bool
@@ -472,6 +474,8 @@ func Run(args []string) (Result, error) {
 		CompanionIntroEvent:                                          streamResult.CompanionIntroEvent,
 		TokenUsageValidated:                                          streamResult.TokenUsageValidated,
 		TokenUsageEvent:                                              streamResult.TokenUsageEvent,
+		OutputTokenUsageValidated:                                    streamResult.OutputTokenUsageValidated,
+		OutputTokenUsageEvent:                                        streamResult.OutputTokenUsageEvent,
 		VerifyPlanReminderValidated:                                  streamResult.VerifyPlanReminderValidated,
 		VerifyPlanReminderEvent:                                      streamResult.VerifyPlanReminderEvent,
 		StreamlinedTextValidated:                                     streamResult.StreamlinedTextValidated,
@@ -1069,6 +1073,8 @@ type streamValidation struct {
 	CompanionIntroEvent                                          string
 	TokenUsageValidated                                          bool
 	TokenUsageEvent                                              string
+	OutputTokenUsageValidated                                    bool
+	OutputTokenUsageEvent                                        string
 	VerifyPlanReminderValidated                                  bool
 	VerifyPlanReminderEvent                                      string
 	StreamlinedTextValidated                                     bool
@@ -1442,6 +1448,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		mcpInstructionsDeltaValidated := false
 		companionIntroValidated := false
 		tokenUsageValidated := false
+		outputTokenUsageValidated := false
 		verifyPlanReminderValidated := false
 		streamlinedTextValidated := false
 		streamlinedToolUseSummaryValidated := false
@@ -2528,6 +2535,25 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.TokenUsageValidated = true
 					result.TokenUsageEvent = "attachment:token_usage"
 					tokenUsageValidated = true
+				case "output_token_usage":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected output_token_usage attachment during %s turn", turn.behavior)
+					}
+					turnTokens, ok := attachment["turn"].(float64)
+					if !ok || int(turnTokens) != 256 {
+						return streamValidation{}, fmt.Errorf("invalid output_token_usage attachment.turn")
+					}
+					sessionTokens, ok := attachment["session"].(float64)
+					if !ok || int(sessionTokens) != 512 {
+						return streamValidation{}, fmt.Errorf("invalid output_token_usage attachment.session")
+					}
+					budget, ok := attachment["budget"].(float64)
+					if !ok || int(budget) != 1024 {
+						return streamValidation{}, fmt.Errorf("invalid output_token_usage attachment.budget")
+					}
+					result.OutputTokenUsageValidated = true
+					result.OutputTokenUsageEvent = "attachment:output_token_usage"
+					outputTokenUsageValidated = true
 				case "verify_plan_reminder":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected verify_plan_reminder attachment during %s turn", turn.behavior)
@@ -2971,7 +2997,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && verifyPlanReminderValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4344,6 +4370,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("companion_intro_event=%s\n", valueOrNone(r.CompanionIntroEvent)))
 	b.WriteString(fmt.Sprintf("token_usage_validated=%t\n", r.TokenUsageValidated))
 	b.WriteString(fmt.Sprintf("token_usage_event=%s\n", valueOrNone(r.TokenUsageEvent)))
+	b.WriteString(fmt.Sprintf("output_token_usage_validated=%t\n", r.OutputTokenUsageValidated))
+	b.WriteString(fmt.Sprintf("output_token_usage_event=%s\n", valueOrNone(r.OutputTokenUsageEvent)))
 	b.WriteString(fmt.Sprintf("verify_plan_reminder_validated=%t\n", r.VerifyPlanReminderValidated))
 	b.WriteString(fmt.Sprintf("verify_plan_reminder_event=%s\n", valueOrNone(r.VerifyPlanReminderEvent)))
 	b.WriteString(fmt.Sprintf("streamlined_text_validated=%t\n", r.StreamlinedTextValidated))
