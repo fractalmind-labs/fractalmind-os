@@ -1553,6 +1553,18 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       compactionReminderUUID,
 					"session_id": session.ID,
 				})
+				contextEfficiencyUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type": "context_efficiency",
+					},
+					"uuid":       contextEfficiencyUUID,
+					"session_id": session.ID,
+				})
 				autoModeExitUUID, err := generateRequestID()
 				if err != nil {
 					return

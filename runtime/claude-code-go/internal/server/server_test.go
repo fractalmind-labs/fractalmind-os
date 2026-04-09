@@ -664,6 +664,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(compactionReminderPayload["type"])) != "compaction_reminder" {
 		t.Fatalf("unexpected compaction_reminder attachment payload: %#v", compactionReminderAttachment)
 	}
+	var contextEfficiencyAttachment map[string]any
+	if err := ws.ReadJSON(&contextEfficiencyAttachment); err != nil {
+		t.Fatalf("read context_efficiency attachment failed: %v", err)
+	}
+	if contextEfficiencyAttachment["type"] != "attachment" || strings.TrimSpace(asString(contextEfficiencyAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected context_efficiency attachment envelope: %#v", contextEfficiencyAttachment)
+	}
+	contextEfficiencyPayload, _ := contextEfficiencyAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(contextEfficiencyPayload["type"])) != "context_efficiency" {
+		t.Fatalf("unexpected context_efficiency attachment payload: %#v", contextEfficiencyAttachment)
+	}
 	var autoModeExitAttachment map[string]any
 	if err := ws.ReadJSON(&autoModeExitAttachment); err != nil {
 		t.Fatalf("read auto_mode_exit attachment failed: %v", err)
@@ -1265,6 +1276,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondCompactionReminderPayload, _ := secondCompactionReminderAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondCompactionReminderPayload["type"])) != "compaction_reminder" {
 		t.Fatalf("unexpected second compaction_reminder attachment payload: %#v", secondCompactionReminderAttachment)
+	}
+	var secondContextEfficiencyAttachment map[string]any
+	if err := ws.ReadJSON(&secondContextEfficiencyAttachment); err != nil {
+		t.Fatalf("read second context_efficiency attachment failed: %v", err)
+	}
+	if secondContextEfficiencyAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondContextEfficiencyAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second context_efficiency attachment envelope: %#v", secondContextEfficiencyAttachment)
+	}
+	secondContextEfficiencyPayload, _ := secondContextEfficiencyAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondContextEfficiencyPayload["type"])) != "context_efficiency" {
+		t.Fatalf("unexpected second context_efficiency attachment payload: %#v", secondContextEfficiencyAttachment)
 	}
 	var secondAutoModeExitAttachment map[string]any
 	if err := ws.ReadJSON(&secondAutoModeExitAttachment); err != nil {
