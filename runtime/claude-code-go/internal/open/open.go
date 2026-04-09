@@ -113,6 +113,8 @@ type Result struct {
 	TeammateShutdownBatchEvent                                   string
 	BagelConsoleValidated                                        bool
 	BagelConsoleEvent                                            string
+	TeammateMailboxValidated                                     bool
+	TeammateMailboxEvent                                         string
 	TeamContextValidated                                         bool
 	TeamContextEvent                                             string
 	VerifyPlanReminderValidated                                  bool
@@ -490,6 +492,8 @@ func Run(args []string) (Result, error) {
 		TeammateShutdownBatchEvent:                                   streamResult.TeammateShutdownBatchEvent,
 		BagelConsoleValidated:                                        streamResult.BagelConsoleValidated,
 		BagelConsoleEvent:                                            streamResult.BagelConsoleEvent,
+		TeammateMailboxValidated:                                     streamResult.TeammateMailboxValidated,
+		TeammateMailboxEvent:                                         streamResult.TeammateMailboxEvent,
 		TeamContextValidated:                                         streamResult.TeamContextValidated,
 		TeamContextEvent:                                             streamResult.TeamContextEvent,
 		VerifyPlanReminderValidated:                                  streamResult.VerifyPlanReminderValidated,
@@ -1097,6 +1101,8 @@ type streamValidation struct {
 	TeammateShutdownBatchEvent                                   string
 	BagelConsoleValidated                                        bool
 	BagelConsoleEvent                                            string
+	TeammateMailboxValidated                                     bool
+	TeammateMailboxEvent                                         string
 	TeamContextValidated                                         bool
 	TeamContextEvent                                             string
 	VerifyPlanReminderValidated                                  bool
@@ -1477,6 +1483,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		currentSessionMemoryValidated := false
 		teammateShutdownBatchValidated := false
 		bagelConsoleValidated := false
+		teammateMailboxValidated := false
 		teamContextValidated := false
 		streamlinedTextValidated := false
 		streamlinedToolUseSummaryValidated := false
@@ -2628,6 +2635,36 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.BagelConsoleValidated = true
 					result.BagelConsoleEvent = "attachment:bagel_console"
 					bagelConsoleValidated = true
+				case "teammate_mailbox":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected teammate_mailbox attachment during %s turn", turn.behavior)
+					}
+					messages, ok := attachment["messages"].([]any)
+					if !ok || len(messages) != 1 {
+						return streamValidation{}, fmt.Errorf("invalid teammate_mailbox attachment.messages")
+					}
+					message, ok := messages[0].(map[string]any)
+					if !ok {
+						return streamValidation{}, fmt.Errorf("invalid teammate_mailbox attachment.messages[0]")
+					}
+					if strings.TrimSpace(asString(message["from"])) != "team-lead" {
+						return streamValidation{}, fmt.Errorf("invalid teammate_mailbox attachment.messages[0].from")
+					}
+					if strings.TrimSpace(asString(message["text"])) != "Please pick up the next task." {
+						return streamValidation{}, fmt.Errorf("invalid teammate_mailbox attachment.messages[0].text")
+					}
+					if strings.TrimSpace(asString(message["timestamp"])) != "2026-04-09T12:00:00Z" {
+						return streamValidation{}, fmt.Errorf("invalid teammate_mailbox attachment.messages[0].timestamp")
+					}
+					if strings.TrimSpace(asString(message["color"])) != "blue" {
+						return streamValidation{}, fmt.Errorf("invalid teammate_mailbox attachment.messages[0].color")
+					}
+					if strings.TrimSpace(asString(message["summary"])) != "next task" {
+						return streamValidation{}, fmt.Errorf("invalid teammate_mailbox attachment.messages[0].summary")
+					}
+					result.TeammateMailboxValidated = true
+					result.TeammateMailboxEvent = "attachment:teammate_mailbox"
+					teammateMailboxValidated = true
 				case "team_context":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected team_context attachment during %s turn", turn.behavior)
@@ -3093,7 +3130,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teamContextValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4474,6 +4511,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("teammate_shutdown_batch_event=%s\n", valueOrNone(r.TeammateShutdownBatchEvent)))
 	b.WriteString(fmt.Sprintf("bagel_console_validated=%t\n", r.BagelConsoleValidated))
 	b.WriteString(fmt.Sprintf("bagel_console_event=%s\n", valueOrNone(r.BagelConsoleEvent)))
+	b.WriteString(fmt.Sprintf("teammate_mailbox_validated=%t\n", r.TeammateMailboxValidated))
+	b.WriteString(fmt.Sprintf("teammate_mailbox_event=%s\n", valueOrNone(r.TeammateMailboxEvent)))
 	b.WriteString(fmt.Sprintf("team_context_validated=%t\n", r.TeamContextValidated))
 	b.WriteString(fmt.Sprintf("team_context_event=%s\n", valueOrNone(r.TeamContextEvent)))
 	b.WriteString(fmt.Sprintf("verify_plan_reminder_validated=%t\n", r.VerifyPlanReminderValidated))

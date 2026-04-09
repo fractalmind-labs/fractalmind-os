@@ -869,6 +869,22 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(bagelConsolePayload["type"])) != "bagel_console" || int(bagelConsolePayload["errorCount"].(float64)) != 1 || int(bagelConsolePayload["warningCount"].(float64)) != 2 || strings.TrimSpace(asString(bagelConsolePayload["sample"])) != "bagel: sample warning" {
 		t.Fatalf("unexpected bagel_console attachment payload: %#v", bagelConsoleAttachment)
 	}
+	var teammateMailboxAttachment map[string]any
+	if err := ws.ReadJSON(&teammateMailboxAttachment); err != nil {
+		t.Fatalf("read teammate_mailbox attachment failed: %v", err)
+	}
+	if teammateMailboxAttachment["type"] != "attachment" || strings.TrimSpace(asString(teammateMailboxAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected teammate_mailbox attachment envelope: %#v", teammateMailboxAttachment)
+	}
+	teammateMailboxPayload, _ := teammateMailboxAttachment["attachment"].(map[string]any)
+	teammateMailboxMessages, _ := teammateMailboxPayload["messages"].([]any)
+	if strings.TrimSpace(asString(teammateMailboxPayload["type"])) != "teammate_mailbox" || len(teammateMailboxMessages) != 1 {
+		t.Fatalf("unexpected teammate_mailbox attachment payload: %#v", teammateMailboxAttachment)
+	}
+	teammateMailboxMessage, _ := teammateMailboxMessages[0].(map[string]any)
+	if strings.TrimSpace(asString(teammateMailboxMessage["from"])) != "team-lead" || strings.TrimSpace(asString(teammateMailboxMessage["text"])) != "Please pick up the next task." || strings.TrimSpace(asString(teammateMailboxMessage["timestamp"])) != "2026-04-09T12:00:00Z" || strings.TrimSpace(asString(teammateMailboxMessage["color"])) != "blue" || strings.TrimSpace(asString(teammateMailboxMessage["summary"])) != "next task" {
+		t.Fatalf("unexpected teammate_mailbox message payload: %#v", teammateMailboxAttachment)
+	}
 	var teamContextAttachment map[string]any
 	if err := ws.ReadJSON(&teamContextAttachment); err != nil {
 		t.Fatalf("read team_context attachment failed: %v", err)
@@ -1611,6 +1627,22 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondBagelConsolePayload, _ := secondBagelConsoleAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondBagelConsolePayload["type"])) != "bagel_console" || int(secondBagelConsolePayload["errorCount"].(float64)) != 1 || int(secondBagelConsolePayload["warningCount"].(float64)) != 2 || strings.TrimSpace(asString(secondBagelConsolePayload["sample"])) != "bagel: sample warning" {
 		t.Fatalf("unexpected second bagel_console attachment payload: %#v", secondBagelConsoleAttachment)
+	}
+	var secondTeammateMailboxAttachment map[string]any
+	if err := ws.ReadJSON(&secondTeammateMailboxAttachment); err != nil {
+		t.Fatalf("read second teammate_mailbox attachment failed: %v", err)
+	}
+	if secondTeammateMailboxAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondTeammateMailboxAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second teammate_mailbox attachment envelope: %#v", secondTeammateMailboxAttachment)
+	}
+	secondTeammateMailboxPayload, _ := secondTeammateMailboxAttachment["attachment"].(map[string]any)
+	secondTeammateMailboxMessages, _ := secondTeammateMailboxPayload["messages"].([]any)
+	if strings.TrimSpace(asString(secondTeammateMailboxPayload["type"])) != "teammate_mailbox" || len(secondTeammateMailboxMessages) != 1 {
+		t.Fatalf("unexpected second teammate_mailbox attachment payload: %#v", secondTeammateMailboxAttachment)
+	}
+	secondTeammateMailboxMessage, _ := secondTeammateMailboxMessages[0].(map[string]any)
+	if strings.TrimSpace(asString(secondTeammateMailboxMessage["from"])) != "team-lead" || strings.TrimSpace(asString(secondTeammateMailboxMessage["text"])) != "Please pick up the next task." || strings.TrimSpace(asString(secondTeammateMailboxMessage["timestamp"])) != "2026-04-09T12:00:00Z" || strings.TrimSpace(asString(secondTeammateMailboxMessage["color"])) != "blue" || strings.TrimSpace(asString(secondTeammateMailboxMessage["summary"])) != "next task" {
+		t.Fatalf("unexpected second teammate_mailbox message payload: %#v", secondTeammateMailboxAttachment)
 	}
 	var secondTeamContextAttachment map[string]any
 	if err := ws.ReadJSON(&secondTeamContextAttachment); err != nil {

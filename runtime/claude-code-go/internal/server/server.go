@@ -1792,6 +1792,27 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       bagelConsoleUUID,
 					"session_id": session.ID,
 				})
+				teammateMailboxUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type": "teammate_mailbox",
+						"messages": []map[string]any{
+							{
+								"from":      "team-lead",
+								"text":      "Please pick up the next task.",
+								"timestamp": "2026-04-09T12:00:00Z",
+								"color":     "blue",
+								"summary":   "next task",
+							},
+						},
+					},
+					"uuid":       teammateMailboxUUID,
+					"session_id": session.ID,
+				})
 				teamContextUUID, err := generateRequestID()
 				if err != nil {
 					return
