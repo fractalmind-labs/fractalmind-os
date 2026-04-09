@@ -85,6 +85,8 @@ type Result struct {
 	OutputStyleEvent                                             string
 	CompactionReminderValidated                                  bool
 	CompactionReminderEvent                                      string
+	BudgetUSDValidated                                           bool
+	BudgetUSDEvent                                               string
 	ContextEfficiencyValidated                                   bool
 	ContextEfficiencyEvent                                       string
 	AutoModeValidated                                            bool
@@ -478,6 +480,8 @@ func Run(args []string) (Result, error) {
 		OutputStyleEvent:                                       streamResult.OutputStyleEvent,
 		CompactionReminderValidated:                            streamResult.CompactionReminderValidated,
 		CompactionReminderEvent:                                streamResult.CompactionReminderEvent,
+		BudgetUSDValidated:                                     streamResult.BudgetUSDValidated,
+		BudgetUSDEvent:                                         streamResult.BudgetUSDEvent,
 		ContextEfficiencyValidated:                             streamResult.ContextEfficiencyValidated,
 		ContextEfficiencyEvent:                                 streamResult.ContextEfficiencyEvent,
 		AutoModeValidated:                                      streamResult.AutoModeValidated,
@@ -1101,6 +1105,8 @@ type streamValidation struct {
 	OutputStyleEvent                                             string
 	CompactionReminderValidated                                  bool
 	CompactionReminderEvent                                      string
+	BudgetUSDValidated                                           bool
+	BudgetUSDEvent                                               string
 	ContextEfficiencyValidated                                   bool
 	ContextEfficiencyEvent                                       string
 	AutoModeValidated                                            bool
@@ -1510,6 +1516,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		criticalSystemReminderValidated := false
 		outputStyleValidated := false
 		compactionReminderValidated := false
+		budgetUSDValidated := false
 		contextEfficiencyValidated := false
 		autoModeValidated := false
 		autoModeExitValidated := false
@@ -2452,6 +2459,25 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.CompactionReminderValidated = true
 					result.CompactionReminderEvent = "attachment:compaction_reminder"
 					compactionReminderValidated = true
+				case "budget_usd":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected budget_usd attachment during %s turn", turn.behavior)
+					}
+					used, ok := attachment["used"].(float64)
+					if !ok || int(used) != 12 {
+						return streamValidation{}, fmt.Errorf("invalid budget_usd attachment.used")
+					}
+					total, ok := attachment["total"].(float64)
+					if !ok || int(total) != 20 {
+						return streamValidation{}, fmt.Errorf("invalid budget_usd attachment.total")
+					}
+					remaining, ok := attachment["remaining"].(float64)
+					if !ok || int(remaining) != 8 {
+						return streamValidation{}, fmt.Errorf("invalid budget_usd attachment.remaining")
+					}
+					result.BudgetUSDValidated = true
+					result.BudgetUSDEvent = "attachment:budget_usd"
+					budgetUSDValidated = true
 				case "context_efficiency":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected context_efficiency attachment during %s turn", turn.behavior)
@@ -3306,7 +3332,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4659,6 +4685,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("output_style_event=%s\n", valueOrNone(r.OutputStyleEvent)))
 	b.WriteString(fmt.Sprintf("compaction_reminder_validated=%t\n", r.CompactionReminderValidated))
 	b.WriteString(fmt.Sprintf("compaction_reminder_event=%s\n", valueOrNone(r.CompactionReminderEvent)))
+	b.WriteString(fmt.Sprintf("budget_usd_validated=%t\n", r.BudgetUSDValidated))
+	b.WriteString(fmt.Sprintf("budget_usd_event=%s\n", valueOrNone(r.BudgetUSDEvent)))
 	b.WriteString(fmt.Sprintf("context_efficiency_validated=%t\n", r.ContextEfficiencyValidated))
 	b.WriteString(fmt.Sprintf("context_efficiency_event=%s\n", valueOrNone(r.ContextEfficiencyEvent)))
 	b.WriteString(fmt.Sprintf("auto_mode_validated=%t\n", r.AutoModeValidated))

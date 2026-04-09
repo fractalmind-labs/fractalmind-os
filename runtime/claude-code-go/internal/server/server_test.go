@@ -675,6 +675,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(outputStylePayload["type"])) != "output_style" || strings.TrimSpace(asString(outputStylePayload["style"])) != "explanatory" {
 		t.Fatalf("unexpected output_style attachment payload: %#v", outputStyleAttachment)
 	}
+	var budgetUSDAttachment map[string]any
+	if err := ws.ReadJSON(&budgetUSDAttachment); err != nil {
+		t.Fatalf("read budget_usd attachment failed: %v", err)
+	}
+	if budgetUSDAttachment["type"] != "attachment" || strings.TrimSpace(asString(budgetUSDAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected budget_usd attachment envelope: %#v", budgetUSDAttachment)
+	}
+	budgetUSDPayload, _ := budgetUSDAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(budgetUSDPayload["type"])) != "budget_usd" || int(budgetUSDPayload["used"].(float64)) != 12 || int(budgetUSDPayload["total"].(float64)) != 20 || int(budgetUSDPayload["remaining"].(float64)) != 8 {
+		t.Fatalf("unexpected budget_usd attachment payload: %#v", budgetUSDAttachment)
+	}
 	var compactionReminderAttachment map[string]any
 	if err := ws.ReadJSON(&compactionReminderAttachment); err != nil {
 		t.Fatalf("read compaction_reminder attachment failed: %v", err)
@@ -1523,6 +1534,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondOutputStylePayload, _ := secondOutputStyleAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondOutputStylePayload["type"])) != "output_style" || strings.TrimSpace(asString(secondOutputStylePayload["style"])) != "explanatory" {
 		t.Fatalf("unexpected second output_style attachment payload: %#v", secondOutputStyleAttachment)
+	}
+	var secondBudgetUSDAttachment map[string]any
+	if err := ws.ReadJSON(&secondBudgetUSDAttachment); err != nil {
+		t.Fatalf("read second budget_usd attachment failed: %v", err)
+	}
+	if secondBudgetUSDAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondBudgetUSDAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second budget_usd attachment envelope: %#v", secondBudgetUSDAttachment)
+	}
+	secondBudgetUSDPayload, _ := secondBudgetUSDAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondBudgetUSDPayload["type"])) != "budget_usd" || int(secondBudgetUSDPayload["used"].(float64)) != 12 || int(secondBudgetUSDPayload["total"].(float64)) != 20 || int(secondBudgetUSDPayload["remaining"].(float64)) != 8 {
+		t.Fatalf("unexpected second budget_usd attachment payload: %#v", secondBudgetUSDAttachment)
 	}
 	var secondCompactionReminderAttachment map[string]any
 	if err := ws.ReadJSON(&secondCompactionReminderAttachment); err != nil {

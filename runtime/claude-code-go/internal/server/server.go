@@ -1567,6 +1567,21 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       outputStyleUUID,
 					"session_id": session.ID,
 				})
+				budgetUSDUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":      "budget_usd",
+						"used":      12.0,
+						"total":     20.0,
+						"remaining": 8.0,
+					},
+					"uuid":       budgetUSDUUID,
+					"session_id": session.ID,
+				})
 				compactionReminderUUID, err := generateRequestID()
 				if err != nil {
 					return
