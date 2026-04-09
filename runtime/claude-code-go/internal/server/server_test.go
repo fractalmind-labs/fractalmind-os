@@ -750,6 +750,20 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(ultrathinkEffortPayload["type"])) != "ultrathink_effort" || strings.TrimSpace(asString(ultrathinkEffortPayload["level"])) != "high" {
 		t.Fatalf("unexpected ultrathink_effort attachment payload: %#v", ultrathinkEffortAttachment)
 	}
+	var deferredToolsDeltaAttachment map[string]any
+	if err := ws.ReadJSON(&deferredToolsDeltaAttachment); err != nil {
+		t.Fatalf("read deferred_tools_delta attachment failed: %v", err)
+	}
+	if deferredToolsDeltaAttachment["type"] != "attachment" || strings.TrimSpace(asString(deferredToolsDeltaAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected deferred_tools_delta attachment envelope: %#v", deferredToolsDeltaAttachment)
+	}
+	deferredToolsDeltaPayload, _ := deferredToolsDeltaAttachment["attachment"].(map[string]any)
+	addedNames, _ := deferredToolsDeltaPayload["addedNames"].([]any)
+	addedLines, _ := deferredToolsDeltaPayload["addedLines"].([]any)
+	removedNames, _ := deferredToolsDeltaPayload["removedNames"].([]any)
+	if strings.TrimSpace(asString(deferredToolsDeltaPayload["type"])) != "deferred_tools_delta" || len(addedNames) != 1 || strings.TrimSpace(asString(addedNames[0])) != "ToolSearch" || len(addedLines) != 1 || strings.TrimSpace(asString(addedLines[0])) != "- ToolSearch: Search deferred tools on demand" || len(removedNames) != 0 {
+		t.Fatalf("unexpected deferred_tools_delta attachment payload: %#v", deferredToolsDeltaAttachment)
+	}
 	var verifyPlanReminderAttachment map[string]any
 	if err := ws.ReadJSON(&verifyPlanReminderAttachment); err != nil {
 		t.Fatalf("read verify_plan_reminder attachment failed: %v", err)
@@ -1373,6 +1387,20 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondUltrathinkEffortPayload, _ := secondUltrathinkEffortAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondUltrathinkEffortPayload["type"])) != "ultrathink_effort" || strings.TrimSpace(asString(secondUltrathinkEffortPayload["level"])) != "high" {
 		t.Fatalf("unexpected second ultrathink_effort attachment payload: %#v", secondUltrathinkEffortAttachment)
+	}
+	var secondDeferredToolsDeltaAttachment map[string]any
+	if err := ws.ReadJSON(&secondDeferredToolsDeltaAttachment); err != nil {
+		t.Fatalf("read second deferred_tools_delta attachment failed: %v", err)
+	}
+	if secondDeferredToolsDeltaAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondDeferredToolsDeltaAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second deferred_tools_delta attachment envelope: %#v", secondDeferredToolsDeltaAttachment)
+	}
+	secondDeferredToolsDeltaPayload, _ := secondDeferredToolsDeltaAttachment["attachment"].(map[string]any)
+	secondAddedNames, _ := secondDeferredToolsDeltaPayload["addedNames"].([]any)
+	secondAddedLines, _ := secondDeferredToolsDeltaPayload["addedLines"].([]any)
+	secondRemovedNames, _ := secondDeferredToolsDeltaPayload["removedNames"].([]any)
+	if strings.TrimSpace(asString(secondDeferredToolsDeltaPayload["type"])) != "deferred_tools_delta" || len(secondAddedNames) != 1 || strings.TrimSpace(asString(secondAddedNames[0])) != "ToolSearch" || len(secondAddedLines) != 1 || strings.TrimSpace(asString(secondAddedLines[0])) != "- ToolSearch: Search deferred tools on demand" || len(secondRemovedNames) != 0 {
+		t.Fatalf("unexpected second deferred_tools_delta attachment payload: %#v", secondDeferredToolsDeltaAttachment)
 	}
 	var secondVerifyPlanReminderAttachment map[string]any
 	if err := ws.ReadJSON(&secondVerifyPlanReminderAttachment); err != nil {

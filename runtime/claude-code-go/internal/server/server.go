@@ -1646,6 +1646,21 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       ultrathinkEffortUUID,
 					"session_id": session.ID,
 				})
+				deferredToolsDeltaUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":         "deferred_tools_delta",
+						"addedNames":   []string{"ToolSearch"},
+						"addedLines":   []string{"- ToolSearch: Search deferred tools on demand"},
+						"removedNames": []string{},
+					},
+					"uuid":       deferredToolsDeltaUUID,
+					"session_id": session.ID,
+				})
 				verifyPlanReminderUUID, err := generateRequestID()
 				if err != nil {
 					return

@@ -95,6 +95,8 @@ type Result struct {
 	DateChangeEvent                                              string
 	UltrathinkEffortValidated                                    bool
 	UltrathinkEffortEvent                                        string
+	DeferredToolsDeltaValidated                                  bool
+	DeferredToolsDeltaEvent                                      string
 	VerifyPlanReminderValidated                                  bool
 	VerifyPlanReminderEvent                                      string
 	StreamlinedTextValidated                                     bool
@@ -452,6 +454,8 @@ func Run(args []string) (Result, error) {
 		DateChangeEvent:                                              streamResult.DateChangeEvent,
 		UltrathinkEffortValidated:                                    streamResult.UltrathinkEffortValidated,
 		UltrathinkEffortEvent:                                        streamResult.UltrathinkEffortEvent,
+		DeferredToolsDeltaValidated:                                  streamResult.DeferredToolsDeltaValidated,
+		DeferredToolsDeltaEvent:                                      streamResult.DeferredToolsDeltaEvent,
 		VerifyPlanReminderValidated:                                  streamResult.VerifyPlanReminderValidated,
 		VerifyPlanReminderEvent:                                      streamResult.VerifyPlanReminderEvent,
 		StreamlinedTextValidated:                                     streamResult.StreamlinedTextValidated,
@@ -1039,6 +1043,8 @@ type streamValidation struct {
 	DateChangeEvent                                              string
 	UltrathinkEffortValidated                                    bool
 	UltrathinkEffortEvent                                        string
+	DeferredToolsDeltaValidated                                  bool
+	DeferredToolsDeltaEvent                                      string
 	VerifyPlanReminderValidated                                  bool
 	VerifyPlanReminderEvent                                      string
 	StreamlinedTextValidated                                     bool
@@ -1407,6 +1413,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		planModeReentryValidated := false
 		dateChangeValidated := false
 		ultrathinkEffortValidated := false
+		deferredToolsDeltaValidated := false
 		verifyPlanReminderValidated := false
 		streamlinedTextValidated := false
 		streamlinedToolUseSummaryValidated := false
@@ -2398,6 +2405,25 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.UltrathinkEffortValidated = true
 					result.UltrathinkEffortEvent = "attachment:ultrathink_effort"
 					ultrathinkEffortValidated = true
+				case "deferred_tools_delta":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected deferred_tools_delta attachment during %s turn", turn.behavior)
+					}
+					addedNames, ok := attachment["addedNames"].([]any)
+					if !ok || len(addedNames) != 1 || strings.TrimSpace(asString(addedNames[0])) != "ToolSearch" {
+						return streamValidation{}, fmt.Errorf("invalid deferred_tools_delta attachment.addedNames")
+					}
+					addedLines, ok := attachment["addedLines"].([]any)
+					if !ok || len(addedLines) != 1 || strings.TrimSpace(asString(addedLines[0])) != "- ToolSearch: Search deferred tools on demand" {
+						return streamValidation{}, fmt.Errorf("invalid deferred_tools_delta attachment.addedLines")
+					}
+					removedNames, ok := attachment["removedNames"].([]any)
+					if !ok || len(removedNames) != 0 {
+						return streamValidation{}, fmt.Errorf("invalid deferred_tools_delta attachment.removedNames")
+					}
+					result.DeferredToolsDeltaValidated = true
+					result.DeferredToolsDeltaEvent = "attachment:deferred_tools_delta"
+					deferredToolsDeltaValidated = true
 				case "verify_plan_reminder":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected verify_plan_reminder attachment during %s turn", turn.behavior)
@@ -2841,7 +2867,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && verifyPlanReminderValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && verifyPlanReminderValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4204,6 +4230,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("date_change_event=%s\n", valueOrNone(r.DateChangeEvent)))
 	b.WriteString(fmt.Sprintf("ultrathink_effort_validated=%t\n", r.UltrathinkEffortValidated))
 	b.WriteString(fmt.Sprintf("ultrathink_effort_event=%s\n", valueOrNone(r.UltrathinkEffortEvent)))
+	b.WriteString(fmt.Sprintf("deferred_tools_delta_validated=%t\n", r.DeferredToolsDeltaValidated))
+	b.WriteString(fmt.Sprintf("deferred_tools_delta_event=%s\n", valueOrNone(r.DeferredToolsDeltaEvent)))
 	b.WriteString(fmt.Sprintf("verify_plan_reminder_validated=%t\n", r.VerifyPlanReminderValidated))
 	b.WriteString(fmt.Sprintf("verify_plan_reminder_event=%s\n", valueOrNone(r.VerifyPlanReminderEvent)))
 	b.WriteString(fmt.Sprintf("streamlined_text_validated=%t\n", r.StreamlinedTextValidated))
