@@ -1851,6 +1851,21 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       skillDiscoveryUUID,
 					"session_id": session.ID,
 				})
+				dynamicSkillUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":        "dynamic_skill",
+						"skillDir":    ".codex/skills/agent-manager",
+						"skillNames":  []string{"agent-manager", "use-fractalbot"},
+						"displayPath": ".codex/skills",
+					},
+					"uuid":       dynamicSkillUUID,
+					"session_id": session.ID,
+				})
 				skillListingUUID, err := generateRequestID()
 				if err != nil {
 					return

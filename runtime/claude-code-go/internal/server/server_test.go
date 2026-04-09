@@ -912,6 +912,21 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(skillDiscoverySkill["name"])) != "agent-manager" || strings.TrimSpace(asString(skillDiscoverySkill["description"])) != "Coordinate and track teammate work." || strings.TrimSpace(asString(skillDiscoverySkill["shortId"])) != "am" {
 		t.Fatalf("unexpected skill_discovery skill payload: %#v", skillDiscoveryAttachment)
 	}
+	var dynamicSkillAttachment map[string]any
+	if err := ws.ReadJSON(&dynamicSkillAttachment); err != nil {
+		t.Fatalf("read dynamic_skill attachment failed: %v", err)
+	}
+	if dynamicSkillAttachment["type"] != "attachment" || strings.TrimSpace(asString(dynamicSkillAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected dynamic_skill attachment envelope: %#v", dynamicSkillAttachment)
+	}
+	dynamicSkillPayload, _ := dynamicSkillAttachment["attachment"].(map[string]any)
+	dynamicSkillNames, _ := dynamicSkillPayload["skillNames"].([]any)
+	if strings.TrimSpace(asString(dynamicSkillPayload["type"])) != "dynamic_skill" || strings.TrimSpace(asString(dynamicSkillPayload["skillDir"])) != ".codex/skills/agent-manager" || strings.TrimSpace(asString(dynamicSkillPayload["displayPath"])) != ".codex/skills" || len(dynamicSkillNames) != 2 {
+		t.Fatalf("unexpected dynamic_skill attachment payload: %#v", dynamicSkillAttachment)
+	}
+	if strings.TrimSpace(asString(dynamicSkillNames[0])) != "agent-manager" || strings.TrimSpace(asString(dynamicSkillNames[1])) != "use-fractalbot" {
+		t.Fatalf("unexpected dynamic_skill skillNames payload: %#v", dynamicSkillAttachment)
+	}
 	var skillListingAttachment map[string]any
 	if err := ws.ReadJSON(&skillListingAttachment); err != nil {
 		t.Fatalf("read skill_listing attachment failed: %v", err)
@@ -1697,6 +1712,21 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondSkillDiscoverySkill, _ := secondSkillDiscoverySkills[0].(map[string]any)
 	if strings.TrimSpace(asString(secondSkillDiscoverySkill["name"])) != "agent-manager" || strings.TrimSpace(asString(secondSkillDiscoverySkill["description"])) != "Coordinate and track teammate work." || strings.TrimSpace(asString(secondSkillDiscoverySkill["shortId"])) != "am" {
 		t.Fatalf("unexpected second skill_discovery skill payload: %#v", secondSkillDiscoveryAttachment)
+	}
+	var secondDynamicSkillAttachment map[string]any
+	if err := ws.ReadJSON(&secondDynamicSkillAttachment); err != nil {
+		t.Fatalf("read second dynamic_skill attachment failed: %v", err)
+	}
+	if secondDynamicSkillAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondDynamicSkillAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second dynamic_skill attachment envelope: %#v", secondDynamicSkillAttachment)
+	}
+	secondDynamicSkillPayload, _ := secondDynamicSkillAttachment["attachment"].(map[string]any)
+	secondDynamicSkillNames, _ := secondDynamicSkillPayload["skillNames"].([]any)
+	if strings.TrimSpace(asString(secondDynamicSkillPayload["type"])) != "dynamic_skill" || strings.TrimSpace(asString(secondDynamicSkillPayload["skillDir"])) != ".codex/skills/agent-manager" || strings.TrimSpace(asString(secondDynamicSkillPayload["displayPath"])) != ".codex/skills" || len(secondDynamicSkillNames) != 2 {
+		t.Fatalf("unexpected second dynamic_skill attachment payload: %#v", secondDynamicSkillAttachment)
+	}
+	if strings.TrimSpace(asString(secondDynamicSkillNames[0])) != "agent-manager" || strings.TrimSpace(asString(secondDynamicSkillNames[1])) != "use-fractalbot" {
+		t.Fatalf("unexpected second dynamic_skill skillNames payload: %#v", secondDynamicSkillAttachment)
 	}
 	var secondSkillListingAttachment map[string]any
 	if err := ws.ReadJSON(&secondSkillListingAttachment); err != nil {
