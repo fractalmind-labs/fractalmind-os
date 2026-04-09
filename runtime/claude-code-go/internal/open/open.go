@@ -93,6 +93,8 @@ type Result struct {
 	PlanModeReentryEvent                                         string
 	DateChangeValidated                                          bool
 	DateChangeEvent                                              string
+	UltrathinkEffortValidated                                    bool
+	UltrathinkEffortEvent                                        string
 	VerifyPlanReminderValidated                                  bool
 	VerifyPlanReminderEvent                                      string
 	StreamlinedTextValidated                                     bool
@@ -448,6 +450,8 @@ func Run(args []string) (Result, error) {
 		PlanModeReentryEvent:                                         streamResult.PlanModeReentryEvent,
 		DateChangeValidated:                                          streamResult.DateChangeValidated,
 		DateChangeEvent:                                              streamResult.DateChangeEvent,
+		UltrathinkEffortValidated:                                    streamResult.UltrathinkEffortValidated,
+		UltrathinkEffortEvent:                                        streamResult.UltrathinkEffortEvent,
 		VerifyPlanReminderValidated:                                  streamResult.VerifyPlanReminderValidated,
 		VerifyPlanReminderEvent:                                      streamResult.VerifyPlanReminderEvent,
 		StreamlinedTextValidated:                                     streamResult.StreamlinedTextValidated,
@@ -1033,6 +1037,8 @@ type streamValidation struct {
 	PlanModeReentryEvent                                         string
 	DateChangeValidated                                          bool
 	DateChangeEvent                                              string
+	UltrathinkEffortValidated                                    bool
+	UltrathinkEffortEvent                                        string
 	VerifyPlanReminderValidated                                  bool
 	VerifyPlanReminderEvent                                      string
 	StreamlinedTextValidated                                     bool
@@ -1400,6 +1406,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		planModeExitValidated := false
 		planModeReentryValidated := false
 		dateChangeValidated := false
+		ultrathinkEffortValidated := false
 		verifyPlanReminderValidated := false
 		streamlinedTextValidated := false
 		streamlinedToolUseSummaryValidated := false
@@ -2381,6 +2388,16 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.DateChangeValidated = true
 					result.DateChangeEvent = "attachment:date_change"
 					dateChangeValidated = true
+				case "ultrathink_effort":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected ultrathink_effort attachment during %s turn", turn.behavior)
+					}
+					if strings.TrimSpace(asString(attachment["level"])) != "high" {
+						return streamValidation{}, fmt.Errorf("invalid ultrathink_effort attachment.level: expected %q, got %q", "high", strings.TrimSpace(asString(attachment["level"])))
+					}
+					result.UltrathinkEffortValidated = true
+					result.UltrathinkEffortEvent = "attachment:ultrathink_effort"
+					ultrathinkEffortValidated = true
 				case "verify_plan_reminder":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected verify_plan_reminder attachment during %s turn", turn.behavior)
@@ -2824,7 +2841,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && verifyPlanReminderValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && verifyPlanReminderValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4185,6 +4202,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("plan_mode_reentry_event=%s\n", valueOrNone(r.PlanModeReentryEvent)))
 	b.WriteString(fmt.Sprintf("date_change_validated=%t\n", r.DateChangeValidated))
 	b.WriteString(fmt.Sprintf("date_change_event=%s\n", valueOrNone(r.DateChangeEvent)))
+	b.WriteString(fmt.Sprintf("ultrathink_effort_validated=%t\n", r.UltrathinkEffortValidated))
+	b.WriteString(fmt.Sprintf("ultrathink_effort_event=%s\n", valueOrNone(r.UltrathinkEffortEvent)))
 	b.WriteString(fmt.Sprintf("verify_plan_reminder_validated=%t\n", r.VerifyPlanReminderValidated))
 	b.WriteString(fmt.Sprintf("verify_plan_reminder_event=%s\n", valueOrNone(r.VerifyPlanReminderEvent)))
 	b.WriteString(fmt.Sprintf("streamlined_text_validated=%t\n", r.StreamlinedTextValidated))

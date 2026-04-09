@@ -739,6 +739,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(dateChangePayload["type"])) != "date_change" || strings.TrimSpace(asString(dateChangePayload["newDate"])) != "2026-04-09" {
 		t.Fatalf("unexpected date_change attachment payload: %#v", dateChangeAttachment)
 	}
+	var ultrathinkEffortAttachment map[string]any
+	if err := ws.ReadJSON(&ultrathinkEffortAttachment); err != nil {
+		t.Fatalf("read ultrathink_effort attachment failed: %v", err)
+	}
+	if ultrathinkEffortAttachment["type"] != "attachment" || strings.TrimSpace(asString(ultrathinkEffortAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected ultrathink_effort attachment envelope: %#v", ultrathinkEffortAttachment)
+	}
+	ultrathinkEffortPayload, _ := ultrathinkEffortAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(ultrathinkEffortPayload["type"])) != "ultrathink_effort" || strings.TrimSpace(asString(ultrathinkEffortPayload["level"])) != "high" {
+		t.Fatalf("unexpected ultrathink_effort attachment payload: %#v", ultrathinkEffortAttachment)
+	}
 	var verifyPlanReminderAttachment map[string]any
 	if err := ws.ReadJSON(&verifyPlanReminderAttachment); err != nil {
 		t.Fatalf("read verify_plan_reminder attachment failed: %v", err)
@@ -1351,6 +1362,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondDateChangePayload, _ := secondDateChangeAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondDateChangePayload["type"])) != "date_change" || strings.TrimSpace(asString(secondDateChangePayload["newDate"])) != "2026-04-09" {
 		t.Fatalf("unexpected second date_change attachment payload: %#v", secondDateChangeAttachment)
+	}
+	var secondUltrathinkEffortAttachment map[string]any
+	if err := ws.ReadJSON(&secondUltrathinkEffortAttachment); err != nil {
+		t.Fatalf("read second ultrathink_effort attachment failed: %v", err)
+	}
+	if secondUltrathinkEffortAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondUltrathinkEffortAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second ultrathink_effort attachment envelope: %#v", secondUltrathinkEffortAttachment)
+	}
+	secondUltrathinkEffortPayload, _ := secondUltrathinkEffortAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondUltrathinkEffortPayload["type"])) != "ultrathink_effort" || strings.TrimSpace(asString(secondUltrathinkEffortPayload["level"])) != "high" {
+		t.Fatalf("unexpected second ultrathink_effort attachment payload: %#v", secondUltrathinkEffortAttachment)
 	}
 	var secondVerifyPlanReminderAttachment map[string]any
 	if err := ws.ReadJSON(&secondVerifyPlanReminderAttachment); err != nil {

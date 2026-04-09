@@ -1633,6 +1633,19 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       dateChangeUUID,
 					"session_id": session.ID,
 				})
+				ultrathinkEffortUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":  "ultrathink_effort",
+						"level": "high",
+					},
+					"uuid":       ultrathinkEffortUUID,
+					"session_id": session.ID,
+				})
 				verifyPlanReminderUUID, err := generateRequestID()
 				if err != nil {
 					return
