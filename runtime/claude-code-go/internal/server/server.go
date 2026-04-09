@@ -1792,6 +1792,23 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       bagelConsoleUUID,
 					"session_id": session.ID,
 				})
+				teamContextUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":           "team_context",
+						"agentId":        "agent-dev",
+						"agentName":      "dev",
+						"teamName":       "alpha",
+						"teamConfigPath": ".claude/team.yaml",
+						"taskListPath":   ".claude/tasks.json",
+					},
+					"uuid":       teamContextUUID,
+					"session_id": session.ID,
+				})
 				compactingStatusUUID, err := generateRequestID()
 				if err != nil {
 					return

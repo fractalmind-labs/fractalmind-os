@@ -869,6 +869,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(bagelConsolePayload["type"])) != "bagel_console" || int(bagelConsolePayload["errorCount"].(float64)) != 1 || int(bagelConsolePayload["warningCount"].(float64)) != 2 || strings.TrimSpace(asString(bagelConsolePayload["sample"])) != "bagel: sample warning" {
 		t.Fatalf("unexpected bagel_console attachment payload: %#v", bagelConsoleAttachment)
 	}
+	var teamContextAttachment map[string]any
+	if err := ws.ReadJSON(&teamContextAttachment); err != nil {
+		t.Fatalf("read team_context attachment failed: %v", err)
+	}
+	if teamContextAttachment["type"] != "attachment" || strings.TrimSpace(asString(teamContextAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected team_context attachment envelope: %#v", teamContextAttachment)
+	}
+	teamContextPayload, _ := teamContextAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(teamContextPayload["type"])) != "team_context" || strings.TrimSpace(asString(teamContextPayload["agentId"])) != "agent-dev" || strings.TrimSpace(asString(teamContextPayload["agentName"])) != "dev" || strings.TrimSpace(asString(teamContextPayload["teamName"])) != "alpha" || strings.TrimSpace(asString(teamContextPayload["teamConfigPath"])) != ".claude/team.yaml" || strings.TrimSpace(asString(teamContextPayload["taskListPath"])) != ".claude/tasks.json" {
+		t.Fatalf("unexpected team_context attachment payload: %#v", teamContextAttachment)
+	}
 	var compactingStatus map[string]any
 	if err := ws.ReadJSON(&compactingStatus); err != nil {
 		t.Fatalf("read compacting status failed: %v", err)
@@ -1600,6 +1611,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondBagelConsolePayload, _ := secondBagelConsoleAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondBagelConsolePayload["type"])) != "bagel_console" || int(secondBagelConsolePayload["errorCount"].(float64)) != 1 || int(secondBagelConsolePayload["warningCount"].(float64)) != 2 || strings.TrimSpace(asString(secondBagelConsolePayload["sample"])) != "bagel: sample warning" {
 		t.Fatalf("unexpected second bagel_console attachment payload: %#v", secondBagelConsoleAttachment)
+	}
+	var secondTeamContextAttachment map[string]any
+	if err := ws.ReadJSON(&secondTeamContextAttachment); err != nil {
+		t.Fatalf("read second team_context attachment failed: %v", err)
+	}
+	if secondTeamContextAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondTeamContextAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second team_context attachment envelope: %#v", secondTeamContextAttachment)
+	}
+	secondTeamContextPayload, _ := secondTeamContextAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondTeamContextPayload["type"])) != "team_context" || strings.TrimSpace(asString(secondTeamContextPayload["agentId"])) != "agent-dev" || strings.TrimSpace(asString(secondTeamContextPayload["agentName"])) != "dev" || strings.TrimSpace(asString(secondTeamContextPayload["teamName"])) != "alpha" || strings.TrimSpace(asString(secondTeamContextPayload["teamConfigPath"])) != ".claude/team.yaml" || strings.TrimSpace(asString(secondTeamContextPayload["taskListPath"])) != ".claude/tasks.json" {
+		t.Fatalf("unexpected second team_context attachment payload: %#v", secondTeamContextAttachment)
 	}
 	var secondCompactingStatus map[string]any
 	if err := ws.ReadJSON(&secondCompactingStatus); err != nil {
