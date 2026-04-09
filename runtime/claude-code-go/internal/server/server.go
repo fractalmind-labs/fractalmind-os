@@ -1693,6 +1693,20 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       mcpInstructionsDeltaUUID,
 					"session_id": session.ID,
 				})
+				companionIntroUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":    "companion_intro",
+						"name":    "Mochi",
+						"species": "otter",
+					},
+					"uuid":       companionIntroUUID,
+					"session_id": session.ID,
+				})
 				verifyPlanReminderUUID, err := generateRequestID()
 				if err != nil {
 					return

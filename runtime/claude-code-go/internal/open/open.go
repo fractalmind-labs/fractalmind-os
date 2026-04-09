@@ -101,6 +101,8 @@ type Result struct {
 	AgentListingDeltaEvent                                       string
 	MCPInstructionsDeltaValidated                                bool
 	MCPInstructionsDeltaEvent                                    string
+	CompanionIntroValidated                                      bool
+	CompanionIntroEvent                                          string
 	VerifyPlanReminderValidated                                  bool
 	VerifyPlanReminderEvent                                      string
 	StreamlinedTextValidated                                     bool
@@ -464,6 +466,8 @@ func Run(args []string) (Result, error) {
 		AgentListingDeltaEvent:                                       streamResult.AgentListingDeltaEvent,
 		MCPInstructionsDeltaValidated:                                streamResult.MCPInstructionsDeltaValidated,
 		MCPInstructionsDeltaEvent:                                    streamResult.MCPInstructionsDeltaEvent,
+		CompanionIntroValidated:                                      streamResult.CompanionIntroValidated,
+		CompanionIntroEvent:                                          streamResult.CompanionIntroEvent,
 		VerifyPlanReminderValidated:                                  streamResult.VerifyPlanReminderValidated,
 		VerifyPlanReminderEvent:                                      streamResult.VerifyPlanReminderEvent,
 		StreamlinedTextValidated:                                     streamResult.StreamlinedTextValidated,
@@ -1057,6 +1061,8 @@ type streamValidation struct {
 	AgentListingDeltaEvent                                       string
 	MCPInstructionsDeltaValidated                                bool
 	MCPInstructionsDeltaEvent                                    string
+	CompanionIntroValidated                                      bool
+	CompanionIntroEvent                                          string
 	VerifyPlanReminderValidated                                  bool
 	VerifyPlanReminderEvent                                      string
 	StreamlinedTextValidated                                     bool
@@ -1428,6 +1434,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		deferredToolsDeltaValidated := false
 		agentListingDeltaValidated := false
 		mcpInstructionsDeltaValidated := false
+		companionIntroValidated := false
 		verifyPlanReminderValidated := false
 		streamlinedTextValidated := false
 		streamlinedToolUseSummaryValidated := false
@@ -2482,6 +2489,19 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.MCPInstructionsDeltaValidated = true
 					result.MCPInstructionsDeltaEvent = "attachment:mcp_instructions_delta"
 					mcpInstructionsDeltaValidated = true
+				case "companion_intro":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected companion_intro attachment during %s turn", turn.behavior)
+					}
+					if strings.TrimSpace(asString(attachment["name"])) != "Mochi" {
+						return streamValidation{}, fmt.Errorf("invalid companion_intro attachment.name: expected %q, got %q", "Mochi", strings.TrimSpace(asString(attachment["name"])))
+					}
+					if strings.TrimSpace(asString(attachment["species"])) != "otter" {
+						return streamValidation{}, fmt.Errorf("invalid companion_intro attachment.species: expected %q, got %q", "otter", strings.TrimSpace(asString(attachment["species"])))
+					}
+					result.CompanionIntroValidated = true
+					result.CompanionIntroEvent = "attachment:companion_intro"
+					companionIntroValidated = true
 				case "verify_plan_reminder":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected verify_plan_reminder attachment during %s turn", turn.behavior)
@@ -2925,7 +2945,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && verifyPlanReminderValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && contextEfficiencyValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && verifyPlanReminderValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4294,6 +4314,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("agent_listing_delta_event=%s\n", valueOrNone(r.AgentListingDeltaEvent)))
 	b.WriteString(fmt.Sprintf("mcp_instructions_delta_validated=%t\n", r.MCPInstructionsDeltaValidated))
 	b.WriteString(fmt.Sprintf("mcp_instructions_delta_event=%s\n", valueOrNone(r.MCPInstructionsDeltaEvent)))
+	b.WriteString(fmt.Sprintf("companion_intro_validated=%t\n", r.CompanionIntroValidated))
+	b.WriteString(fmt.Sprintf("companion_intro_event=%s\n", valueOrNone(r.CompanionIntroEvent)))
 	b.WriteString(fmt.Sprintf("verify_plan_reminder_validated=%t\n", r.VerifyPlanReminderValidated))
 	b.WriteString(fmt.Sprintf("verify_plan_reminder_event=%s\n", valueOrNone(r.VerifyPlanReminderEvent)))
 	b.WriteString(fmt.Sprintf("streamlined_text_validated=%t\n", r.StreamlinedTextValidated))

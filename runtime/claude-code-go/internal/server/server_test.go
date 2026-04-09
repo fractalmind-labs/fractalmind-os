@@ -792,6 +792,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(mcpInstructionsDeltaPayload["type"])) != "mcp_instructions_delta" || len(mcpAddedNames) != 1 || strings.TrimSpace(asString(mcpAddedNames[0])) != "chrome" || len(mcpAddedBlocks) != 1 || strings.TrimSpace(asString(mcpAddedBlocks[0])) != "## chrome\nUse ToolSearch before browser actions." || len(mcpRemovedNames) != 0 {
 		t.Fatalf("unexpected mcp_instructions_delta attachment payload: %#v", mcpInstructionsDeltaAttachment)
 	}
+	var companionIntroAttachment map[string]any
+	if err := ws.ReadJSON(&companionIntroAttachment); err != nil {
+		t.Fatalf("read companion_intro attachment failed: %v", err)
+	}
+	if companionIntroAttachment["type"] != "attachment" || strings.TrimSpace(asString(companionIntroAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected companion_intro attachment envelope: %#v", companionIntroAttachment)
+	}
+	companionIntroPayload, _ := companionIntroAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(companionIntroPayload["type"])) != "companion_intro" || strings.TrimSpace(asString(companionIntroPayload["name"])) != "Mochi" || strings.TrimSpace(asString(companionIntroPayload["species"])) != "otter" {
+		t.Fatalf("unexpected companion_intro attachment payload: %#v", companionIntroAttachment)
+	}
 	var verifyPlanReminderAttachment map[string]any
 	if err := ws.ReadJSON(&verifyPlanReminderAttachment); err != nil {
 		t.Fatalf("read verify_plan_reminder attachment failed: %v", err)
@@ -1457,6 +1468,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondMCPRemovedNames, _ := secondMCPInstructionsDeltaPayload["removedNames"].([]any)
 	if strings.TrimSpace(asString(secondMCPInstructionsDeltaPayload["type"])) != "mcp_instructions_delta" || len(secondMCPAddedNames) != 1 || strings.TrimSpace(asString(secondMCPAddedNames[0])) != "chrome" || len(secondMCPAddedBlocks) != 1 || strings.TrimSpace(asString(secondMCPAddedBlocks[0])) != "## chrome\nUse ToolSearch before browser actions." || len(secondMCPRemovedNames) != 0 {
 		t.Fatalf("unexpected second mcp_instructions_delta attachment payload: %#v", secondMCPInstructionsDeltaAttachment)
+	}
+	var secondCompanionIntroAttachment map[string]any
+	if err := ws.ReadJSON(&secondCompanionIntroAttachment); err != nil {
+		t.Fatalf("read second companion_intro attachment failed: %v", err)
+	}
+	if secondCompanionIntroAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondCompanionIntroAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second companion_intro attachment envelope: %#v", secondCompanionIntroAttachment)
+	}
+	secondCompanionIntroPayload, _ := secondCompanionIntroAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondCompanionIntroPayload["type"])) != "companion_intro" || strings.TrimSpace(asString(secondCompanionIntroPayload["name"])) != "Mochi" || strings.TrimSpace(asString(secondCompanionIntroPayload["species"])) != "otter" {
+		t.Fatalf("unexpected second companion_intro attachment payload: %#v", secondCompanionIntroAttachment)
 	}
 	var secondVerifyPlanReminderAttachment map[string]any
 	if err := ws.ReadJSON(&secondVerifyPlanReminderAttachment); err != nil {
