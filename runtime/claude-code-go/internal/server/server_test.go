@@ -675,6 +675,23 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(autoModeExitPayload["type"])) != "auto_mode_exit" {
 		t.Fatalf("unexpected auto_mode_exit attachment payload: %#v", autoModeExitAttachment)
 	}
+	var planModeAttachment map[string]any
+	if err := ws.ReadJSON(&planModeAttachment); err != nil {
+		t.Fatalf("read plan_mode attachment failed: %v", err)
+	}
+	if planModeAttachment["type"] != "attachment" || strings.TrimSpace(asString(planModeAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected plan_mode attachment envelope: %#v", planModeAttachment)
+	}
+	planModePayload, _ := planModeAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(planModePayload["type"])) != "plan_mode" || strings.TrimSpace(asString(planModePayload["reminderType"])) != "full" || strings.TrimSpace(asString(planModePayload["planFilePath"])) == "" {
+		t.Fatalf("unexpected plan_mode attachment payload: %#v", planModeAttachment)
+	}
+	if planExists, ok := planModePayload["planExists"].(bool); !ok || planExists {
+		t.Fatalf("invalid plan_mode attachment payload: %#v", planModeAttachment)
+	}
+	if isSubAgent, ok := planModePayload["isSubAgent"].(bool); !ok || isSubAgent {
+		t.Fatalf("invalid plan_mode attachment payload: %#v", planModeAttachment)
+	}
 	var planModeExitAttachment map[string]any
 	if err := ws.ReadJSON(&planModeExitAttachment); err != nil {
 		t.Fatalf("read plan_mode_exit attachment failed: %v", err)
@@ -1259,6 +1276,23 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondAutoModeExitPayload, _ := secondAutoModeExitAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondAutoModeExitPayload["type"])) != "auto_mode_exit" {
 		t.Fatalf("unexpected second auto_mode_exit attachment payload: %#v", secondAutoModeExitAttachment)
+	}
+	var secondPlanModeAttachment map[string]any
+	if err := ws.ReadJSON(&secondPlanModeAttachment); err != nil {
+		t.Fatalf("read second plan_mode attachment failed: %v", err)
+	}
+	if secondPlanModeAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondPlanModeAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second plan_mode attachment envelope: %#v", secondPlanModeAttachment)
+	}
+	secondPlanModePayload, _ := secondPlanModeAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondPlanModePayload["type"])) != "plan_mode" || strings.TrimSpace(asString(secondPlanModePayload["reminderType"])) != "full" || strings.TrimSpace(asString(secondPlanModePayload["planFilePath"])) == "" {
+		t.Fatalf("unexpected second plan_mode attachment payload: %#v", secondPlanModeAttachment)
+	}
+	if planExists, ok := secondPlanModePayload["planExists"].(bool); !ok || planExists {
+		t.Fatalf("invalid second plan_mode attachment payload: %#v", secondPlanModeAttachment)
+	}
+	if isSubAgent, ok := secondPlanModePayload["isSubAgent"].(bool); !ok || isSubAgent {
+		t.Fatalf("invalid second plan_mode attachment payload: %#v", secondPlanModeAttachment)
 	}
 	var secondPlanModeExitAttachment map[string]any
 	if err := ws.ReadJSON(&secondPlanModeExitAttachment); err != nil {

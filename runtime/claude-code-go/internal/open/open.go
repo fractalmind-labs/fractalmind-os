@@ -83,6 +83,8 @@ type Result struct {
 	CompactionReminderEvent                                      string
 	AutoModeExitValidated                                        bool
 	AutoModeExitEvent                                            string
+	PlanModeValidated                                            bool
+	PlanModeEvent                                                string
 	PlanModeExitValidated                                        bool
 	PlanModeExitEvent                                            string
 	PlanModeReentryValidated                                     bool
@@ -434,6 +436,8 @@ func Run(args []string) (Result, error) {
 		CompactionReminderEvent:                                      streamResult.CompactionReminderEvent,
 		AutoModeExitValidated:                                        streamResult.AutoModeExitValidated,
 		AutoModeExitEvent:                                            streamResult.AutoModeExitEvent,
+		PlanModeValidated:                                            streamResult.PlanModeValidated,
+		PlanModeEvent:                                                streamResult.PlanModeEvent,
 		PlanModeExitValidated:                                        streamResult.PlanModeExitValidated,
 		PlanModeExitEvent:                                            streamResult.PlanModeExitEvent,
 		PlanModeReentryValidated:                                     streamResult.PlanModeReentryValidated,
@@ -1015,6 +1019,8 @@ type streamValidation struct {
 	CompactionReminderEvent                                      string
 	AutoModeExitValidated                                        bool
 	AutoModeExitEvent                                            string
+	PlanModeValidated                                            bool
+	PlanModeEvent                                                string
 	PlanModeExitValidated                                        bool
 	PlanModeExitEvent                                            string
 	PlanModeReentryValidated                                     bool
@@ -1383,6 +1389,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		taskReminderAttachmentValidated := false
 		compactionReminderValidated := false
 		autoModeExitValidated := false
+		planModeValidated := false
 		planModeExitValidated := false
 		planModeReentryValidated := false
 		dateChangeValidated := false
@@ -2292,6 +2299,31 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.AutoModeExitValidated = true
 					result.AutoModeExitEvent = "attachment:auto_mode_exit"
 					autoModeExitValidated = true
+				case "plan_mode":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected plan_mode attachment during %s turn", turn.behavior)
+					}
+					if strings.TrimSpace(asString(attachment["reminderType"])) != "full" {
+						return streamValidation{}, fmt.Errorf("invalid plan_mode attachment.reminderType: expected %q, got %q", "full", strings.TrimSpace(asString(attachment["reminderType"])))
+					}
+					planFilePath := strings.TrimSpace(asString(attachment["planFilePath"]))
+					if planFilePath == "" {
+						return streamValidation{}, fmt.Errorf("invalid plan_mode attachment: missing planFilePath")
+					}
+					if !strings.HasSuffix(strings.ReplaceAll(planFilePath, "\\", "/"), ".claude/plan.md") {
+						return streamValidation{}, fmt.Errorf("invalid plan_mode attachment.planFilePath: %q", planFilePath)
+					}
+					planExists, ok := attachment["planExists"].(bool)
+					if !ok || planExists {
+						return streamValidation{}, fmt.Errorf("invalid plan_mode attachment.planExists: expected false")
+					}
+					isSubAgent, ok := attachment["isSubAgent"].(bool)
+					if !ok || isSubAgent {
+						return streamValidation{}, fmt.Errorf("invalid plan_mode attachment.isSubAgent: expected false")
+					}
+					result.PlanModeValidated = true
+					result.PlanModeEvent = "attachment:plan_mode"
+					planModeValidated = true
 				case "plan_mode_exit":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected plan_mode_exit attachment during %s turn", turn.behavior)
@@ -2778,7 +2810,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && autoModeExitValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && verifyPlanReminderValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && compactionReminderValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && verifyPlanReminderValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4129,6 +4161,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("compaction_reminder_event=%s\n", valueOrNone(r.CompactionReminderEvent)))
 	b.WriteString(fmt.Sprintf("auto_mode_exit_validated=%t\n", r.AutoModeExitValidated))
 	b.WriteString(fmt.Sprintf("auto_mode_exit_event=%s\n", valueOrNone(r.AutoModeExitEvent)))
+	b.WriteString(fmt.Sprintf("plan_mode_validated=%t\n", r.PlanModeValidated))
+	b.WriteString(fmt.Sprintf("plan_mode_event=%s\n", valueOrNone(r.PlanModeEvent)))
 	b.WriteString(fmt.Sprintf("plan_mode_exit_validated=%t\n", r.PlanModeExitValidated))
 	b.WriteString(fmt.Sprintf("plan_mode_exit_event=%s\n", valueOrNone(r.PlanModeExitEvent)))
 	b.WriteString(fmt.Sprintf("plan_mode_reentry_validated=%t\n", r.PlanModeReentryValidated))
