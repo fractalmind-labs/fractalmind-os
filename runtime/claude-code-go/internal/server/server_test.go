@@ -534,17 +534,7 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(queuedCommandPayload["type"])) != "queued_command" || strings.TrimSpace(asString(queuedCommandPayload["commandMode"])) != "task-notification" || strings.TrimSpace(asString(queuedCommandPayload["prompt"])) == "" {
 		t.Fatalf("unexpected queued_command attachment payload: %#v", queuedCommandAttachment)
 	}
-	var taskStatusAttachment map[string]any
-	if err := ws.ReadJSON(&taskStatusAttachment); err != nil {
-		t.Fatalf("read task_status attachment failed: %v", err)
-	}
-	if taskStatusAttachment["type"] != "attachment" || strings.TrimSpace(asString(taskStatusAttachment["session_id"])) != parsed["session_id"] {
-		t.Fatalf("unexpected task_status attachment envelope: %#v", taskStatusAttachment)
-	}
-	taskStatusPayload, _ := taskStatusAttachment["attachment"].(map[string]any)
-	if strings.TrimSpace(asString(taskStatusPayload["type"])) != "task_status" || strings.TrimSpace(asString(taskStatusPayload["taskId"])) != strings.TrimSpace(asString(taskStarted["task_id"])) || strings.TrimSpace(asString(taskStatusPayload["taskType"])) != "local_bash" || strings.TrimSpace(asString(taskStatusPayload["status"])) != "completed" || strings.TrimSpace(asString(taskStatusPayload["description"])) != "direct-connect echo task" || strings.TrimSpace(asString(taskStatusPayload["deltaSummary"])) != "echo:hello [approved]" || strings.TrimSpace(asString(taskStatusPayload["outputFilePath"])) == "" {
-		t.Fatalf("unexpected task_status attachment payload: %#v", taskStatusAttachment)
-	}
+	assertTaskStatusAttachment(t, ws, parsed["session_id"], strings.TrimSpace(asString(taskStarted["task_id"])), "direct-connect echo task", "echo:hello [approved]", "task_notification")
 	var taskReminderAttachment map[string]any
 	if err := ws.ReadJSON(&taskReminderAttachment); err != nil {
 		t.Fatalf("read task_reminder attachment failed: %v", err)
@@ -705,6 +695,7 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	assertDiagnosticsAttachment(t, ws, parsed["session_id"], "diagnostics")
 	assertDiagnosticsAttachment(t, ws, parsed["session_id"], "lsp_diagnostics")
+	assertTaskStatusAttachment(t, ws, parsed["session_id"], strings.TrimSpace(asString(taskStarted["task_id"])), "direct-connect echo task", "echo:hello [approved]", "unified_tasks")
 	var mcpResourceAttachment map[string]any
 	if err := ws.ReadJSON(&mcpResourceAttachment); err != nil {
 		t.Fatalf("read mcp_resource attachment failed: %v", err)
@@ -1489,17 +1480,7 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(secondQueuedCommandPayload["type"])) != "queued_command" || strings.TrimSpace(asString(secondQueuedCommandPayload["commandMode"])) != "task-notification" || strings.TrimSpace(asString(secondQueuedCommandPayload["prompt"])) == "" {
 		t.Fatalf("unexpected second queued_command attachment payload: %#v", secondQueuedCommandAttachment)
 	}
-	var secondTaskStatusAttachment map[string]any
-	if err := ws.ReadJSON(&secondTaskStatusAttachment); err != nil {
-		t.Fatalf("read second task_status attachment failed: %v", err)
-	}
-	if secondTaskStatusAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondTaskStatusAttachment["session_id"])) != parsed["session_id"] {
-		t.Fatalf("unexpected second task_status attachment envelope: %#v", secondTaskStatusAttachment)
-	}
-	secondTaskStatusPayload, _ := secondTaskStatusAttachment["attachment"].(map[string]any)
-	if strings.TrimSpace(asString(secondTaskStatusPayload["type"])) != "task_status" || strings.TrimSpace(asString(secondTaskStatusPayload["taskId"])) != strings.TrimSpace(asString(secondTaskStarted["task_id"])) || strings.TrimSpace(asString(secondTaskStatusPayload["taskType"])) != "local_bash" || strings.TrimSpace(asString(secondTaskStatusPayload["status"])) != "completed" || strings.TrimSpace(asString(secondTaskStatusPayload["description"])) != "direct-connect echo task" || strings.TrimSpace(asString(secondTaskStatusPayload["deltaSummary"])) != "echo:hello again [approved]" || strings.TrimSpace(asString(secondTaskStatusPayload["outputFilePath"])) == "" {
-		t.Fatalf("unexpected second task_status attachment payload: %#v", secondTaskStatusAttachment)
-	}
+	assertTaskStatusAttachment(t, ws, parsed["session_id"], strings.TrimSpace(asString(secondTaskStarted["task_id"])), "direct-connect echo task", "echo:hello again [approved]", "second task_notification")
 	var secondTaskReminderAttachment map[string]any
 	if err := ws.ReadJSON(&secondTaskReminderAttachment); err != nil {
 		t.Fatalf("read second task_reminder attachment failed: %v", err)
@@ -1660,6 +1641,7 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	assertDiagnosticsAttachment(t, ws, parsed["session_id"], "second diagnostics")
 	assertDiagnosticsAttachment(t, ws, parsed["session_id"], "second lsp_diagnostics")
+	assertTaskStatusAttachment(t, ws, parsed["session_id"], strings.TrimSpace(asString(secondTaskStarted["task_id"])), "direct-connect echo task", "echo:hello again [approved]", "second unified_tasks")
 	var secondMCPResourceAttachment map[string]any
 	if err := ws.ReadJSON(&secondMCPResourceAttachment); err != nil {
 		t.Fatalf("read second mcp_resource attachment failed: %v", err)
@@ -4280,6 +4262,14 @@ func TestDiagnosticsAttachmentFromProducerSupportsLSPDiagnostics(t *testing.T) {
 	assertDiagnosticsAttachmentPayload(t, attachment, "lsp_diagnostics payload")
 }
 
+func TestTaskStatusAttachmentFromProducerSupportsUnifiedTasks(t *testing.T) {
+	attachment, err := taskStatusAttachmentFromProducer("unified_tasks", "task-unified", "direct-connect echo task", "echo:unified", "/tmp/task.log")
+	if err != nil {
+		t.Fatalf("taskStatusAttachmentFromProducer returned error: %v", err)
+	}
+	assertTaskStatusAttachmentPayload(t, attachment, "task-unified", "direct-connect echo task", "echo:unified", "unified_tasks payload")
+}
+
 func fetchSessionState(t *testing.T, sessionsEndpoint, sessionID, authToken string) sessionStateResponse {
 	t.Helper()
 	stateURL := strings.TrimRight(sessionsEndpoint, "/") + "/" + sessionID
@@ -4341,6 +4331,34 @@ func assertDiagnosticsAttachmentPayload(t *testing.T, payload map[string]any, la
 		strings.TrimSpace(asString(diagnosticEntry["source"])) != "gopls" ||
 		strings.TrimSpace(asString(diagnosticEntry["code"])) != "unusedvar" {
 		t.Fatalf("unexpected %s diagnostics entry: %#v", label, payload)
+	}
+}
+
+func assertTaskStatusAttachment(t *testing.T, ws *websocket.Conn, sessionID, taskID, taskDescription, deltaSummary, label string) {
+	t.Helper()
+
+	var taskStatusAttachment map[string]any
+	if err := ws.ReadJSON(&taskStatusAttachment); err != nil {
+		t.Fatalf("read %s task_status attachment failed: %v", label, err)
+	}
+	if taskStatusAttachment["type"] != "attachment" || strings.TrimSpace(asString(taskStatusAttachment["session_id"])) != sessionID {
+		t.Fatalf("unexpected %s task_status attachment envelope: %#v", label, taskStatusAttachment)
+	}
+	payload, _ := taskStatusAttachment["attachment"].(map[string]any)
+	assertTaskStatusAttachmentPayload(t, payload, taskID, taskDescription, deltaSummary, label)
+}
+
+func assertTaskStatusAttachmentPayload(t *testing.T, payload map[string]any, taskID, taskDescription, deltaSummary, label string) {
+	t.Helper()
+
+	if strings.TrimSpace(asString(payload["type"])) != "task_status" ||
+		strings.TrimSpace(asString(payload["taskId"])) != taskID ||
+		strings.TrimSpace(asString(payload["taskType"])) != "local_bash" ||
+		strings.TrimSpace(asString(payload["status"])) != "completed" ||
+		strings.TrimSpace(asString(payload["description"])) != taskDescription ||
+		strings.TrimSpace(asString(payload["deltaSummary"])) != deltaSummary ||
+		strings.TrimSpace(asString(payload["outputFilePath"])) == "" {
+		t.Fatalf("unexpected %s task_status attachment payload: %#v", label, payload)
 	}
 }
 

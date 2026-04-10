@@ -1389,6 +1389,12 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 				})
 			}
 			_ = conn.WriteJSON(map[string]any{
+				"type":       "attachment",
+				"attachment": testTaskStatusAttachmentPayload(taskID, "direct-connect echo task", "echo:"+toolText, filepath.Join(workDir, ".claude-code-go", "tasks", taskID+".log")),
+				"uuid":       fmt.Sprintf("unified-task-status-%d", requestCounter),
+				"session_id": sessionID,
+			})
+			_ = conn.WriteJSON(map[string]any{
 				"type": "attachment",
 				"attachment": map[string]any{
 					"type":        "mcp_resource",
@@ -2011,6 +2017,18 @@ func testDiagnosticsAttachmentPayload() map[string]any {
 				},
 			},
 		},
+	}
+}
+
+func testTaskStatusAttachmentPayload(taskID, taskDescription, deltaSummary, outputFilePath string) map[string]any {
+	return map[string]any{
+		"type":           "task_status",
+		"taskId":         taskID,
+		"taskType":       "local_bash",
+		"status":         "completed",
+		"description":    taskDescription,
+		"deltaSummary":   deltaSummary,
+		"outputFilePath": outputFilePath,
 	}
 }
 

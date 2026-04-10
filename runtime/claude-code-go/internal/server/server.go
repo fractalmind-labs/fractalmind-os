@@ -1384,21 +1384,17 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       queuedCommandUUID,
 					"session_id": session.ID,
 				})
+				taskStatusAttachment, err := taskStatusAttachmentFromProducer("task_notification", taskID, taskDescription, responseText, taskOutputPath)
+				if err != nil {
+					return
+				}
 				taskStatusUUID, err := generateRequestID()
 				if err != nil {
 					return
 				}
 				_ = conn.WriteJSON(map[string]any{
-					"type": "attachment",
-					"attachment": map[string]any{
-						"type":           "task_status",
-						"taskId":         taskID,
-						"taskType":       "local_bash",
-						"status":         "completed",
-						"description":    taskDescription,
-						"deltaSummary":   responseText,
-						"outputFilePath": taskOutputPath,
-					},
+					"type":       "attachment",
+					"attachment": taskStatusAttachment,
 					"uuid":       taskStatusUUID,
 					"session_id": session.ID,
 				})
@@ -1614,6 +1610,20 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						"session_id": session.ID,
 					})
 				}
+				unifiedTaskStatusAttachment, err := taskStatusAttachmentFromProducer("unified_tasks", taskID, taskDescription, responseText, taskOutputPath)
+				if err != nil {
+					return
+				}
+				unifiedTaskStatusUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":       "attachment",
+					"attachment": unifiedTaskStatusAttachment,
+					"uuid":       unifiedTaskStatusUUID,
+					"session_id": session.ID,
+				})
 				mcpResourceUUID, err := generateRequestID()
 				if err != nil {
 					return
@@ -2579,6 +2589,23 @@ func diagnosticsAttachmentFromProducer(producer string) (map[string]any, error) 
 		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported diagnostics producer %q", producer)
+	}
+}
+
+func taskStatusAttachmentFromProducer(producer, taskID, taskDescription, deltaSummary, outputFilePath string) (map[string]any, error) {
+	switch producer {
+	case "task_notification", "unified_tasks":
+		return map[string]any{
+			"type":           "task_status",
+			"taskId":         taskID,
+			"taskType":       "local_bash",
+			"status":         "completed",
+			"description":    taskDescription,
+			"deltaSummary":   deltaSummary,
+			"outputFilePath": outputFilePath,
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported task_status producer %q", producer)
 	}
 }
 
