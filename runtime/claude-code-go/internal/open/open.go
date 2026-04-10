@@ -119,6 +119,8 @@ type Result struct {
 	MCPInstructionsDeltaEvent                                    string
 	CompanionIntroValidated                                      bool
 	CompanionIntroEvent                                          string
+	AsyncHookResponseValidated                                   bool
+	AsyncHookResponseEvent                                       string
 	TokenUsageValidated                                          bool
 	TokenUsageEvent                                              string
 	OutputTokenUsageValidated                                    bool
@@ -524,6 +526,8 @@ func Run(args []string) (Result, error) {
 		MCPInstructionsDeltaEvent:                              streamResult.MCPInstructionsDeltaEvent,
 		CompanionIntroValidated:                                streamResult.CompanionIntroValidated,
 		CompanionIntroEvent:                                    streamResult.CompanionIntroEvent,
+		AsyncHookResponseValidated:                             streamResult.AsyncHookResponseValidated,
+		AsyncHookResponseEvent:                                 streamResult.AsyncHookResponseEvent,
 		TokenUsageValidated:                                    streamResult.TokenUsageValidated,
 		TokenUsageEvent:                                        streamResult.TokenUsageEvent,
 		OutputTokenUsageValidated:                              streamResult.OutputTokenUsageValidated,
@@ -1159,6 +1163,8 @@ type streamValidation struct {
 	MCPInstructionsDeltaEvent                                    string
 	CompanionIntroValidated                                      bool
 	CompanionIntroEvent                                          string
+	AsyncHookResponseValidated                                   bool
+	AsyncHookResponseEvent                                       string
 	TokenUsageValidated                                          bool
 	TokenUsageEvent                                              string
 	OutputTokenUsageValidated                                    bool
@@ -1563,6 +1569,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		agentListingDeltaValidated := false
 		mcpInstructionsDeltaValidated := false
 		companionIntroValidated := false
+		asyncHookResponseValidated := false
 		tokenUsageValidated := false
 		outputTokenUsageValidated := false
 		verifyPlanReminderValidated := false
@@ -2795,6 +2802,25 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.CompanionIntroValidated = true
 					result.CompanionIntroEvent = "attachment:companion_intro"
 					companionIntroValidated = true
+				case "async_hook_response":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected async_hook_response attachment during %s turn", turn.behavior)
+					}
+					if strings.TrimSpace(asString(attachment["hookName"])) != "PostToolUse" {
+						return streamValidation{}, fmt.Errorf("invalid async_hook_response attachment.hookName")
+					}
+					if strings.TrimSpace(asString(attachment["sessionId"])) != strings.TrimSpace(asString(incoming["session_id"])) {
+						return streamValidation{}, fmt.Errorf("invalid async_hook_response attachment.sessionId")
+					}
+					if strings.TrimSpace(asString(attachment["toolUseID"])) != "toolu_demo_async_hook" {
+						return streamValidation{}, fmt.Errorf("invalid async_hook_response attachment.toolUseID")
+					}
+					if strings.TrimSpace(asString(attachment["content"])) != "Async hook completed: captured post-tool summary." {
+						return streamValidation{}, fmt.Errorf("invalid async_hook_response attachment.content")
+					}
+					result.AsyncHookResponseValidated = true
+					result.AsyncHookResponseEvent = "attachment:async_hook_response"
+					asyncHookResponseValidated = true
 				case "token_usage":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected token_usage attachment during %s turn", turn.behavior)
@@ -3500,7 +3526,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && selectedLinesInIDEValidated && openedFileInIDEValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && relevantMemoriesValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && selectedLinesInIDEValidated && openedFileInIDEValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && asyncHookResponseValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && relevantMemoriesValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4887,6 +4913,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("mcp_instructions_delta_event=%s\n", valueOrNone(r.MCPInstructionsDeltaEvent)))
 	b.WriteString(fmt.Sprintf("companion_intro_validated=%t\n", r.CompanionIntroValidated))
 	b.WriteString(fmt.Sprintf("companion_intro_event=%s\n", valueOrNone(r.CompanionIntroEvent)))
+	b.WriteString(fmt.Sprintf("async_hook_response_validated=%t\n", r.AsyncHookResponseValidated))
+	b.WriteString(fmt.Sprintf("async_hook_response_event=%s\n", valueOrNone(r.AsyncHookResponseEvent)))
 	b.WriteString(fmt.Sprintf("token_usage_validated=%t\n", r.TokenUsageValidated))
 	b.WriteString(fmt.Sprintf("token_usage_event=%s\n", valueOrNone(r.TokenUsageEvent)))
 	b.WriteString(fmt.Sprintf("output_token_usage_validated=%t\n", r.OutputTokenUsageValidated))

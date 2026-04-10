@@ -1853,6 +1853,22 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       companionIntroUUID,
 					"session_id": session.ID,
 				})
+				asyncHookResponseUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":      "async_hook_response",
+						"hookName":  "PostToolUse",
+						"sessionId": session.ID,
+						"toolUseID": "toolu_demo_async_hook",
+						"content":   "Async hook completed: captured post-tool summary.",
+					},
+					"uuid":       asyncHookResponseUUID,
+					"session_id": session.ID,
+				})
 				tokenUsageUUID, err := generateRequestID()
 				if err != nil {
 					return

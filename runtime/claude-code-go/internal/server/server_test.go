@@ -928,6 +928,21 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(companionIntroPayload["type"])) != "companion_intro" || strings.TrimSpace(asString(companionIntroPayload["name"])) != "Mochi" || strings.TrimSpace(asString(companionIntroPayload["species"])) != "otter" {
 		t.Fatalf("unexpected companion_intro attachment payload: %#v", companionIntroAttachment)
 	}
+	var asyncHookResponseAttachment map[string]any
+	if err := ws.ReadJSON(&asyncHookResponseAttachment); err != nil {
+		t.Fatalf("read async_hook_response attachment failed: %v", err)
+	}
+	if asyncHookResponseAttachment["type"] != "attachment" || strings.TrimSpace(asString(asyncHookResponseAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected async_hook_response attachment envelope: %#v", asyncHookResponseAttachment)
+	}
+	asyncHookResponsePayload, _ := asyncHookResponseAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(asyncHookResponsePayload["type"])) != "async_hook_response" ||
+		strings.TrimSpace(asString(asyncHookResponsePayload["hookName"])) != "PostToolUse" ||
+		strings.TrimSpace(asString(asyncHookResponsePayload["sessionId"])) != parsed["session_id"] ||
+		strings.TrimSpace(asString(asyncHookResponsePayload["toolUseID"])) != "toolu_demo_async_hook" ||
+		strings.TrimSpace(asString(asyncHookResponsePayload["content"])) != "Async hook completed: captured post-tool summary." {
+		t.Fatalf("unexpected async_hook_response attachment payload: %#v", asyncHookResponseAttachment)
+	}
 	var tokenUsageAttachment map[string]any
 	if err := ws.ReadJSON(&tokenUsageAttachment); err != nil {
 		t.Fatalf("read token_usage attachment failed: %v", err)
@@ -1892,6 +1907,21 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondCompanionIntroPayload, _ := secondCompanionIntroAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondCompanionIntroPayload["type"])) != "companion_intro" || strings.TrimSpace(asString(secondCompanionIntroPayload["name"])) != "Mochi" || strings.TrimSpace(asString(secondCompanionIntroPayload["species"])) != "otter" {
 		t.Fatalf("unexpected second companion_intro attachment payload: %#v", secondCompanionIntroAttachment)
+	}
+	var secondAsyncHookResponseAttachment map[string]any
+	if err := ws.ReadJSON(&secondAsyncHookResponseAttachment); err != nil {
+		t.Fatalf("read second async_hook_response attachment failed: %v", err)
+	}
+	if secondAsyncHookResponseAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondAsyncHookResponseAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second async_hook_response attachment envelope: %#v", secondAsyncHookResponseAttachment)
+	}
+	secondAsyncHookResponsePayload, _ := secondAsyncHookResponseAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondAsyncHookResponsePayload["type"])) != "async_hook_response" ||
+		strings.TrimSpace(asString(secondAsyncHookResponsePayload["hookName"])) != "PostToolUse" ||
+		strings.TrimSpace(asString(secondAsyncHookResponsePayload["sessionId"])) != parsed["session_id"] ||
+		strings.TrimSpace(asString(secondAsyncHookResponsePayload["toolUseID"])) != "toolu_demo_async_hook" ||
+		strings.TrimSpace(asString(secondAsyncHookResponsePayload["content"])) != "Async hook completed: captured post-tool summary." {
+		t.Fatalf("unexpected second async_hook_response attachment payload: %#v", secondAsyncHookResponseAttachment)
 	}
 	var secondTokenUsageAttachment map[string]any
 	if err := ws.ReadJSON(&secondTokenUsageAttachment); err != nil {
