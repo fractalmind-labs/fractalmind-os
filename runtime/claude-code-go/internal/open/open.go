@@ -19,6 +19,9 @@ import (
 const (
 	planAttachmentPathSuffix     = ".claude/plan.md"
 	stubPlanFileReferenceContent = "Plan:\n1. Keep compact preserve path stable.\n2. Continue direct-connect validation."
+	stubInvokedSkillName         = "agent-manager"
+	stubInvokedSkillPath         = ".codex/skills/agent-manager/SKILL.md"
+	stubInvokedSkillContent      = "Use agent-manager to coordinate teammate work.\nConfirm receipts before execution."
 )
 
 type Options struct {
@@ -114,6 +117,8 @@ type Result struct {
 	PlanModeReentryEvent                                         string
 	PlanFileReferenceValidated                                   bool
 	PlanFileReferenceEvent                                       string
+	InvokedSkillsValidated                                       bool
+	InvokedSkillsEvent                                           string
 	DateChangeValidated                                          bool
 	DateChangeEvent                                              string
 	UltrathinkEffortValidated                                    bool
@@ -523,6 +528,8 @@ func Run(args []string) (Result, error) {
 		PlanModeReentryEvent:                                   streamResult.PlanModeReentryEvent,
 		PlanFileReferenceValidated:                             streamResult.PlanFileReferenceValidated,
 		PlanFileReferenceEvent:                                 streamResult.PlanFileReferenceEvent,
+		InvokedSkillsValidated:                                 streamResult.InvokedSkillsValidated,
+		InvokedSkillsEvent:                                     streamResult.InvokedSkillsEvent,
 		DateChangeValidated:                                    streamResult.DateChangeValidated,
 		DateChangeEvent:                                        streamResult.DateChangeEvent,
 		UltrathinkEffortValidated:                              streamResult.UltrathinkEffortValidated,
@@ -1162,6 +1169,8 @@ type streamValidation struct {
 	PlanModeReentryEvent                                         string
 	PlanFileReferenceValidated                                   bool
 	PlanFileReferenceEvent                                       string
+	InvokedSkillsValidated                                       bool
+	InvokedSkillsEvent                                           string
 	DateChangeValidated                                          bool
 	DateChangeEvent                                              string
 	UltrathinkEffortValidated                                    bool
@@ -1575,6 +1584,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		planModeExitValidated := false
 		planModeReentryValidated := false
 		planFileReferenceValidated := false
+		invokedSkillsValidated := false
 		dateChangeValidated := false
 		ultrathinkEffortValidated := false
 		deferredToolsDeltaValidated := false
@@ -2734,6 +2744,30 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.PlanFileReferenceValidated = true
 					result.PlanFileReferenceEvent = "attachment:plan_file_reference"
 					planFileReferenceValidated = true
+				case "invoked_skills":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected invoked_skills attachment during %s turn", turn.behavior)
+					}
+					skills, ok := attachment["skills"].([]any)
+					if !ok || len(skills) == 0 {
+						return streamValidation{}, fmt.Errorf("invalid invoked_skills attachment.skills")
+					}
+					firstSkill, ok := skills[0].(map[string]any)
+					if !ok {
+						return streamValidation{}, fmt.Errorf("invalid invoked_skills attachment.skills[0]")
+					}
+					if strings.TrimSpace(asString(firstSkill["name"])) != stubInvokedSkillName {
+						return streamValidation{}, fmt.Errorf("invalid invoked_skills attachment.skills[0].name")
+					}
+					if strings.TrimSpace(asString(firstSkill["path"])) != stubInvokedSkillPath {
+						return streamValidation{}, fmt.Errorf("invalid invoked_skills attachment.skills[0].path")
+					}
+					if strings.TrimSpace(asString(firstSkill["content"])) != stubInvokedSkillContent {
+						return streamValidation{}, fmt.Errorf("invalid invoked_skills attachment.skills[0].content")
+					}
+					result.InvokedSkillsValidated = true
+					result.InvokedSkillsEvent = "attachment:invoked_skills"
+					invokedSkillsValidated = true
 				case "date_change":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected date_change attachment during %s turn", turn.behavior)
@@ -3555,7 +3589,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && selectedLinesInIDEValidated && openedFileInIDEValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && planFileReferenceValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && asyncHookResponseValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && relevantMemoriesValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && selectedLinesInIDEValidated && openedFileInIDEValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && planFileReferenceValidated && invokedSkillsValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && asyncHookResponseValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && relevantMemoriesValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4932,6 +4966,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("plan_mode_reentry_event=%s\n", valueOrNone(r.PlanModeReentryEvent)))
 	b.WriteString(fmt.Sprintf("plan_file_reference_validated=%t\n", r.PlanFileReferenceValidated))
 	b.WriteString(fmt.Sprintf("plan_file_reference_event=%s\n", valueOrNone(r.PlanFileReferenceEvent)))
+	b.WriteString(fmt.Sprintf("invoked_skills_validated=%t\n", r.InvokedSkillsValidated))
+	b.WriteString(fmt.Sprintf("invoked_skills_event=%s\n", valueOrNone(r.InvokedSkillsEvent)))
 	b.WriteString(fmt.Sprintf("date_change_validated=%t\n", r.DateChangeValidated))
 	b.WriteString(fmt.Sprintf("date_change_event=%s\n", valueOrNone(r.DateChangeEvent)))
 	b.WriteString(fmt.Sprintf("ultrathink_effort_validated=%t\n", r.UltrathinkEffortValidated))

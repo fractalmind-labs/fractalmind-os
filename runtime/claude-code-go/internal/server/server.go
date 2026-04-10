@@ -23,7 +23,12 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const stubPlanFileReferenceContent = "Plan:\n1. Keep compact preserve path stable.\n2. Continue direct-connect validation."
+const (
+	stubPlanFileReferenceContent = "Plan:\n1. Keep compact preserve path stable.\n2. Continue direct-connect validation."
+	stubInvokedSkillName         = "agent-manager"
+	stubInvokedSkillPath         = ".codex/skills/agent-manager/SKILL.md"
+	stubInvokedSkillContent      = "Use agent-manager to coordinate teammate work.\nConfirm receipts before execution."
+)
 
 type Options struct {
 	Port          int
@@ -1771,6 +1776,25 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						"planContent":  stubPlanFileReferenceContent,
 					},
 					"uuid":       planFileReferenceUUID,
+					"session_id": session.ID,
+				})
+				invokedSkillsUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type": "invoked_skills",
+						"skills": []map[string]any{
+							{
+								"name":    stubInvokedSkillName,
+								"path":    stubInvokedSkillPath,
+								"content": stubInvokedSkillContent,
+							},
+						},
+					},
+					"uuid":       invokedSkillsUUID,
 					"session_id": session.ID,
 				})
 				dateChangeUUID, err := generateRequestID()

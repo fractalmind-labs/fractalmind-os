@@ -833,6 +833,25 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(planFileReferencePayload["planContent"])) != stubPlanFileReferenceContent {
 		t.Fatalf("invalid plan_file_reference attachment payload: %#v", planFileReferenceAttachment)
 	}
+	var invokedSkillsAttachment map[string]any
+	if err := ws.ReadJSON(&invokedSkillsAttachment); err != nil {
+		t.Fatalf("read invoked_skills attachment failed: %v", err)
+	}
+	if invokedSkillsAttachment["type"] != "attachment" || strings.TrimSpace(asString(invokedSkillsAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected invoked_skills attachment envelope: %#v", invokedSkillsAttachment)
+	}
+	invokedSkillsPayload, _ := invokedSkillsAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(invokedSkillsPayload["type"])) != "invoked_skills" {
+		t.Fatalf("unexpected invoked_skills attachment payload: %#v", invokedSkillsAttachment)
+	}
+	skills, _ := invokedSkillsPayload["skills"].([]any)
+	if len(skills) != 1 {
+		t.Fatalf("invalid invoked_skills attachment payload: %#v", invokedSkillsAttachment)
+	}
+	firstSkill, _ := skills[0].(map[string]any)
+	if strings.TrimSpace(asString(firstSkill["name"])) != stubInvokedSkillName || strings.TrimSpace(asString(firstSkill["path"])) != stubInvokedSkillPath || strings.TrimSpace(asString(firstSkill["content"])) != stubInvokedSkillContent {
+		t.Fatalf("invalid invoked_skills attachment payload: %#v", invokedSkillsAttachment)
+	}
 	var dateChangeAttachment map[string]any
 	if err := ws.ReadJSON(&dateChangeAttachment); err != nil {
 		t.Fatalf("read date_change attachment failed: %v", err)
@@ -1792,6 +1811,25 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if strings.TrimSpace(asString(secondPlanFileReferencePayload["planContent"])) != stubPlanFileReferenceContent {
 		t.Fatalf("invalid second plan_file_reference attachment payload: %#v", secondPlanFileReferenceAttachment)
+	}
+	var secondInvokedSkillsAttachment map[string]any
+	if err := ws.ReadJSON(&secondInvokedSkillsAttachment); err != nil {
+		t.Fatalf("read second invoked_skills attachment failed: %v", err)
+	}
+	if secondInvokedSkillsAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondInvokedSkillsAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second invoked_skills attachment envelope: %#v", secondInvokedSkillsAttachment)
+	}
+	secondInvokedSkillsPayload, _ := secondInvokedSkillsAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondInvokedSkillsPayload["type"])) != "invoked_skills" {
+		t.Fatalf("unexpected second invoked_skills attachment payload: %#v", secondInvokedSkillsAttachment)
+	}
+	secondSkills, _ := secondInvokedSkillsPayload["skills"].([]any)
+	if len(secondSkills) != 1 {
+		t.Fatalf("invalid second invoked_skills attachment payload: %#v", secondInvokedSkillsAttachment)
+	}
+	secondFirstSkill, _ := secondSkills[0].(map[string]any)
+	if strings.TrimSpace(asString(secondFirstSkill["name"])) != stubInvokedSkillName || strings.TrimSpace(asString(secondFirstSkill["path"])) != stubInvokedSkillPath || strings.TrimSpace(asString(secondFirstSkill["content"])) != stubInvokedSkillContent {
+		t.Fatalf("invalid second invoked_skills attachment payload: %#v", secondInvokedSkillsAttachment)
 	}
 	var secondDateChangeAttachment map[string]any
 	if err := ws.ReadJSON(&secondDateChangeAttachment); err != nil {
