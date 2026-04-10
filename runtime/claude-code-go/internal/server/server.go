@@ -2224,6 +2224,22 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       hookResponseUUID,
 					"session_id": session.ID,
 				})
+				hookAdditionalContextUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":      "hook_additional_context",
+						"content":   []string{"Hook context: preserve the direct-connect stop-hook summary."},
+						"hookName":  "DirectConnectEchoHook",
+						"toolUseID": pendingToolUseID,
+						"hookEvent": "Stop",
+					},
+					"uuid":       hookAdditionalContextUUID,
+					"session_id": session.ID,
+				})
 				pendingPrompt = ""
 				pendingRequestID = ""
 				pendingToolUseID = ""

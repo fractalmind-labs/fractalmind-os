@@ -1196,6 +1196,23 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(hookResponse["hook_id"])) == "" || strings.TrimSpace(asString(hookResponse["hook_name"])) == "" || strings.TrimSpace(asString(hookResponse["hook_event"])) != "Stop" || strings.TrimSpace(asString(hookResponse["outcome"])) != "success" {
 		t.Fatalf("invalid hook_response payload: %#v", hookResponse)
 	}
+	var hookAdditionalContextAttachment map[string]any
+	if err := ws.ReadJSON(&hookAdditionalContextAttachment); err != nil {
+		t.Fatalf("read hook_additional_context attachment failed: %v", err)
+	}
+	if hookAdditionalContextAttachment["type"] != "attachment" || strings.TrimSpace(asString(hookAdditionalContextAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected hook_additional_context attachment envelope: %#v", hookAdditionalContextAttachment)
+	}
+	hookAdditionalContextPayload, _ := hookAdditionalContextAttachment["attachment"].(map[string]any)
+	hookAdditionalContextContent, _ := hookAdditionalContextPayload["content"].([]any)
+	if strings.TrimSpace(asString(hookAdditionalContextPayload["type"])) != "hook_additional_context" ||
+		len(hookAdditionalContextContent) != 1 ||
+		strings.TrimSpace(asString(hookAdditionalContextContent[0])) != "Hook context: preserve the direct-connect stop-hook summary." ||
+		strings.TrimSpace(asString(hookAdditionalContextPayload["hookName"])) != "DirectConnectEchoHook" ||
+		strings.TrimSpace(asString(hookAdditionalContextPayload["toolUseID"])) != strings.TrimSpace(asString(request["tool_use_id"])) ||
+		strings.TrimSpace(asString(hookAdditionalContextPayload["hookEvent"])) != "Stop" {
+		t.Fatalf("unexpected hook_additional_context attachment payload: %#v", hookAdditionalContextAttachment)
+	}
 
 	if err := ws.WriteJSON(map[string]any{
 		"type": "user",
@@ -2185,6 +2202,23 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if strings.TrimSpace(asString(secondHookResponse["hook_id"])) == "" || strings.TrimSpace(asString(secondHookResponse["hook_name"])) == "" || strings.TrimSpace(asString(secondHookResponse["hook_event"])) != "Stop" || strings.TrimSpace(asString(secondHookResponse["outcome"])) != "success" {
 		t.Fatalf("invalid second hook_response payload: %#v", secondHookResponse)
+	}
+	var secondHookAdditionalContextAttachment map[string]any
+	if err := ws.ReadJSON(&secondHookAdditionalContextAttachment); err != nil {
+		t.Fatalf("read second hook_additional_context attachment failed: %v", err)
+	}
+	if secondHookAdditionalContextAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondHookAdditionalContextAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second hook_additional_context attachment envelope: %#v", secondHookAdditionalContextAttachment)
+	}
+	secondHookAdditionalContextPayload, _ := secondHookAdditionalContextAttachment["attachment"].(map[string]any)
+	secondHookAdditionalContextContent, _ := secondHookAdditionalContextPayload["content"].([]any)
+	if strings.TrimSpace(asString(secondHookAdditionalContextPayload["type"])) != "hook_additional_context" ||
+		len(secondHookAdditionalContextContent) != 1 ||
+		strings.TrimSpace(asString(secondHookAdditionalContextContent[0])) != "Hook context: preserve the direct-connect stop-hook summary." ||
+		strings.TrimSpace(asString(secondHookAdditionalContextPayload["hookName"])) != "DirectConnectEchoHook" ||
+		strings.TrimSpace(asString(secondHookAdditionalContextPayload["toolUseID"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) ||
+		strings.TrimSpace(asString(secondHookAdditionalContextPayload["hookEvent"])) != "Stop" {
+		t.Fatalf("unexpected second hook_additional_context attachment payload: %#v", secondHookAdditionalContextAttachment)
 	}
 
 	if err := ws.WriteJSON(map[string]any{

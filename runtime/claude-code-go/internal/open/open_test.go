@@ -107,6 +107,7 @@ func TestRunOpenDefaults(t *testing.T) {
 		"agent_listing_delta_validated=false",
 		"mcp_instructions_delta_validated=false",
 		"companion_intro_validated=false",
+		"hook_additional_context_validated=false",
 		"async_hook_response_validated=false",
 		"token_usage_validated=false",
 		"output_token_usage_validated=false",
@@ -1836,6 +1837,18 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 				"exit_code":  0,
 				"outcome":    "success",
 				"uuid":       fmt.Sprintf("hook-response-%d", requestCounter),
+				"session_id": sessionID,
+			})
+			_ = conn.WriteJSON(map[string]any{
+				"type": "attachment",
+				"attachment": map[string]any{
+					"type":      "hook_additional_context",
+					"content":   []string{"Hook context: preserve the direct-connect stop-hook summary."},
+					"hookName":  "DirectConnectEchoHook",
+					"toolUseID": fmt.Sprintf("toolu-%d", requestCounter),
+					"hookEvent": "Stop",
+				},
+				"uuid":       fmt.Sprintf("hook-additional-context-%d", requestCounter),
 				"session_id": sessionID,
 			})
 			pendingRequestID = ""
