@@ -1598,42 +1598,22 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       openedFileInIDEUUID,
 					"session_id": session.ID,
 				})
-				diagnosticsUUID, err := generateRequestID()
-				if err != nil {
-					return
+				for _, diagnosticsProducer := range []string{"diagnostics", "lsp_diagnostics"} {
+					diagnosticsAttachment, err := diagnosticsAttachmentFromProducer(diagnosticsProducer)
+					if err != nil {
+						return
+					}
+					diagnosticsUUID, err := generateRequestID()
+					if err != nil {
+						return
+					}
+					_ = conn.WriteJSON(map[string]any{
+						"type":       "attachment",
+						"attachment": diagnosticsAttachment,
+						"uuid":       diagnosticsUUID,
+						"session_id": session.ID,
+					})
 				}
-				_ = conn.WriteJSON(map[string]any{
-					"type": "attachment",
-					"attachment": map[string]any{
-						"type":  "diagnostics",
-						"isNew": true,
-						"files": []any{
-							map[string]any{
-								"uri": "file:///workspace/claude-code-go/internal/server/server.go",
-								"diagnostics": []any{
-									map[string]any{
-										"message":  "unused variable `staleBudget`",
-										"severity": "Warning",
-										"range": map[string]any{
-											"start": map[string]any{
-												"line":      12.0,
-												"character": 4.0,
-											},
-											"end": map[string]any{
-												"line":      12.0,
-												"character": 15.0,
-											},
-										},
-										"source": "gopls",
-										"code":   "unusedvar",
-									},
-								},
-							},
-						},
-					},
-					"uuid":       diagnosticsUUID,
-					"session_id": session.ID,
-				})
 				mcpResourceUUID, err := generateRequestID()
 				if err != nil {
 					return
@@ -2565,6 +2545,41 @@ func generateRequestID() (string, error) {
 		return "", err
 	}
 	return "req-" + hex.EncodeToString(buf), nil
+}
+
+func diagnosticsAttachmentFromProducer(producer string) (map[string]any, error) {
+	switch producer {
+	case "diagnostics", "lsp_diagnostics":
+		return map[string]any{
+			"type":  "diagnostics",
+			"isNew": true,
+			"files": []any{
+				map[string]any{
+					"uri": "file:///workspace/claude-code-go/internal/server/server.go",
+					"diagnostics": []any{
+						map[string]any{
+							"message":  "unused variable `staleBudget`",
+							"severity": "Warning",
+							"range": map[string]any{
+								"start": map[string]any{
+									"line":      12.0,
+									"character": 4.0,
+								},
+								"end": map[string]any{
+									"line":      12.0,
+									"character": 15.0,
+								},
+							},
+							"source": "gopls",
+							"code":   "unusedvar",
+						},
+					},
+				},
+			},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported diagnostics producer %q", producer)
+	}
 }
 
 func compactBoundaryMetadata() map[string]any {

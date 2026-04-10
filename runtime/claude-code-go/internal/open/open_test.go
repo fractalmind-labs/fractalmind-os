@@ -1380,38 +1380,14 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 				"uuid":       fmt.Sprintf("opened-file-in-ide-%d", requestCounter),
 				"session_id": sessionID,
 			})
-			_ = conn.WriteJSON(map[string]any{
-				"type": "attachment",
-				"attachment": map[string]any{
-					"type":  "diagnostics",
-					"isNew": true,
-					"files": []any{
-						map[string]any{
-							"uri": "file:///workspace/claude-code-go/internal/server/server.go",
-							"diagnostics": []any{
-								map[string]any{
-									"message":  "unused variable `staleBudget`",
-									"severity": "Warning",
-									"range": map[string]any{
-										"start": map[string]any{
-											"line":      12.0,
-											"character": 4.0,
-										},
-										"end": map[string]any{
-											"line":      12.0,
-											"character": 15.0,
-										},
-									},
-									"source": "gopls",
-									"code":   "unusedvar",
-								},
-							},
-						},
-					},
-				},
-				"uuid":       fmt.Sprintf("diagnostics-%d", requestCounter),
-				"session_id": sessionID,
-			})
+			for _, diagnosticsProducer := range []string{"diagnostics", "lsp_diagnostics"} {
+				_ = conn.WriteJSON(map[string]any{
+					"type":       "attachment",
+					"attachment": testDiagnosticsAttachmentPayload(),
+					"uuid":       fmt.Sprintf("%s-%d", strings.ReplaceAll(diagnosticsProducer, "_", "-"), requestCounter),
+					"session_id": sessionID,
+				})
+			}
 			_ = conn.WriteJSON(map[string]any{
 				"type": "attachment",
 				"attachment": map[string]any{
@@ -2005,6 +1981,36 @@ func serveDirectConnectWS(t *testing.T, conn *websocket.Conn, sessionID, workDir
 				return
 			}
 		}
+	}
+}
+
+func testDiagnosticsAttachmentPayload() map[string]any {
+	return map[string]any{
+		"type":  "diagnostics",
+		"isNew": true,
+		"files": []any{
+			map[string]any{
+				"uri": "file:///workspace/claude-code-go/internal/server/server.go",
+				"diagnostics": []any{
+					map[string]any{
+						"message":  "unused variable `staleBudget`",
+						"severity": "Warning",
+						"range": map[string]any{
+							"start": map[string]any{
+								"line":      12.0,
+								"character": 4.0,
+							},
+							"end": map[string]any{
+								"line":      12.0,
+								"character": 15.0,
+							},
+						},
+						"source": "gopls",
+						"code":   "unusedvar",
+					},
+				},
+			},
+		},
 	}
 }
 

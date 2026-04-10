@@ -703,33 +703,8 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(openedFileInIDEPayload["type"])) != "opened_file_in_ide" || strings.TrimSpace(asString(openedFileInIDEPayload["filename"])) != "internal/server/server.go" {
 		t.Fatalf("unexpected opened_file_in_ide attachment payload: %#v", openedFileInIDEAttachment)
 	}
-	var diagnosticsAttachment map[string]any
-	if err := ws.ReadJSON(&diagnosticsAttachment); err != nil {
-		t.Fatalf("read diagnostics attachment failed: %v", err)
-	}
-	if diagnosticsAttachment["type"] != "attachment" || strings.TrimSpace(asString(diagnosticsAttachment["session_id"])) != parsed["session_id"] {
-		t.Fatalf("unexpected diagnostics attachment envelope: %#v", diagnosticsAttachment)
-	}
-	diagnosticsPayload, _ := diagnosticsAttachment["attachment"].(map[string]any)
-	if strings.TrimSpace(asString(diagnosticsPayload["type"])) != "diagnostics" || diagnosticsPayload["isNew"] != true {
-		t.Fatalf("unexpected diagnostics attachment payload: %#v", diagnosticsAttachment)
-	}
-	diagnosticFiles, _ := diagnosticsPayload["files"].([]any)
-	if len(diagnosticFiles) != 1 {
-		t.Fatalf("unexpected diagnostics file count: %#v", diagnosticsAttachment)
-	}
-	diagnosticFile, _ := diagnosticFiles[0].(map[string]any)
-	if strings.TrimSpace(asString(diagnosticFile["uri"])) != "file:///workspace/claude-code-go/internal/server/server.go" {
-		t.Fatalf("unexpected diagnostics uri: %#v", diagnosticsAttachment)
-	}
-	diagnosticsList, _ := diagnosticFile["diagnostics"].([]any)
-	if len(diagnosticsList) != 1 {
-		t.Fatalf("unexpected diagnostics list: %#v", diagnosticsAttachment)
-	}
-	diagnosticEntry, _ := diagnosticsList[0].(map[string]any)
-	if strings.TrimSpace(asString(diagnosticEntry["message"])) != "unused variable `staleBudget`" || strings.TrimSpace(asString(diagnosticEntry["severity"])) != "Warning" || strings.TrimSpace(asString(diagnosticEntry["source"])) != "gopls" || strings.TrimSpace(asString(diagnosticEntry["code"])) != "unusedvar" {
-		t.Fatalf("unexpected diagnostics entry: %#v", diagnosticsAttachment)
-	}
+	assertDiagnosticsAttachment(t, ws, parsed["session_id"], "diagnostics")
+	assertDiagnosticsAttachment(t, ws, parsed["session_id"], "lsp_diagnostics")
 	var mcpResourceAttachment map[string]any
 	if err := ws.ReadJSON(&mcpResourceAttachment); err != nil {
 		t.Fatalf("read mcp_resource attachment failed: %v", err)
@@ -1683,33 +1658,8 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(secondOpenedFileInIDEPayload["type"])) != "opened_file_in_ide" || strings.TrimSpace(asString(secondOpenedFileInIDEPayload["filename"])) != "internal/server/server.go" {
 		t.Fatalf("unexpected second opened_file_in_ide attachment payload: %#v", secondOpenedFileInIDEAttachment)
 	}
-	var secondDiagnosticsAttachment map[string]any
-	if err := ws.ReadJSON(&secondDiagnosticsAttachment); err != nil {
-		t.Fatalf("read second diagnostics attachment failed: %v", err)
-	}
-	if secondDiagnosticsAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondDiagnosticsAttachment["session_id"])) != parsed["session_id"] {
-		t.Fatalf("unexpected second diagnostics attachment envelope: %#v", secondDiagnosticsAttachment)
-	}
-	secondDiagnosticsPayload, _ := secondDiagnosticsAttachment["attachment"].(map[string]any)
-	if strings.TrimSpace(asString(secondDiagnosticsPayload["type"])) != "diagnostics" || secondDiagnosticsPayload["isNew"] != true {
-		t.Fatalf("unexpected second diagnostics attachment payload: %#v", secondDiagnosticsAttachment)
-	}
-	secondDiagnosticFiles, _ := secondDiagnosticsPayload["files"].([]any)
-	if len(secondDiagnosticFiles) != 1 {
-		t.Fatalf("unexpected second diagnostics file count: %#v", secondDiagnosticsAttachment)
-	}
-	secondDiagnosticFile, _ := secondDiagnosticFiles[0].(map[string]any)
-	if strings.TrimSpace(asString(secondDiagnosticFile["uri"])) != "file:///workspace/claude-code-go/internal/server/server.go" {
-		t.Fatalf("unexpected second diagnostics uri: %#v", secondDiagnosticsAttachment)
-	}
-	secondDiagnosticsList, _ := secondDiagnosticFile["diagnostics"].([]any)
-	if len(secondDiagnosticsList) != 1 {
-		t.Fatalf("unexpected second diagnostics list: %#v", secondDiagnosticsAttachment)
-	}
-	secondDiagnosticEntry, _ := secondDiagnosticsList[0].(map[string]any)
-	if strings.TrimSpace(asString(secondDiagnosticEntry["message"])) != "unused variable `staleBudget`" || strings.TrimSpace(asString(secondDiagnosticEntry["severity"])) != "Warning" || strings.TrimSpace(asString(secondDiagnosticEntry["source"])) != "gopls" || strings.TrimSpace(asString(secondDiagnosticEntry["code"])) != "unusedvar" {
-		t.Fatalf("unexpected second diagnostics entry: %#v", secondDiagnosticsAttachment)
-	}
+	assertDiagnosticsAttachment(t, ws, parsed["session_id"], "second diagnostics")
+	assertDiagnosticsAttachment(t, ws, parsed["session_id"], "second lsp_diagnostics")
 	var secondMCPResourceAttachment map[string]any
 	if err := ws.ReadJSON(&secondMCPResourceAttachment); err != nil {
 		t.Fatalf("read second mcp_resource attachment failed: %v", err)
@@ -4322,6 +4272,14 @@ func TestRunServerRejectsInvalidArgs(t *testing.T) {
 	}
 }
 
+func TestDiagnosticsAttachmentFromProducerSupportsLSPDiagnostics(t *testing.T) {
+	attachment, err := diagnosticsAttachmentFromProducer("lsp_diagnostics")
+	if err != nil {
+		t.Fatalf("diagnosticsAttachmentFromProducer returned error: %v", err)
+	}
+	assertDiagnosticsAttachmentPayload(t, attachment, "lsp_diagnostics payload")
+}
+
 func fetchSessionState(t *testing.T, sessionsEndpoint, sessionID, authToken string) sessionStateResponse {
 	t.Helper()
 	stateURL := strings.TrimRight(sessionsEndpoint, "/") + "/" + sessionID
@@ -4343,6 +4301,47 @@ func fetchSessionState(t *testing.T, sessionsEndpoint, sessionID, authToken stri
 		t.Fatalf("decode session state response: %v", err)
 	}
 	return parsed
+}
+
+func assertDiagnosticsAttachment(t *testing.T, ws *websocket.Conn, sessionID, label string) {
+	t.Helper()
+
+	var diagnosticsAttachment map[string]any
+	if err := ws.ReadJSON(&diagnosticsAttachment); err != nil {
+		t.Fatalf("read %s attachment failed: %v", label, err)
+	}
+	if diagnosticsAttachment["type"] != "attachment" || strings.TrimSpace(asString(diagnosticsAttachment["session_id"])) != sessionID {
+		t.Fatalf("unexpected %s attachment envelope: %#v", label, diagnosticsAttachment)
+	}
+	payload, _ := diagnosticsAttachment["attachment"].(map[string]any)
+	assertDiagnosticsAttachmentPayload(t, payload, label)
+}
+
+func assertDiagnosticsAttachmentPayload(t *testing.T, payload map[string]any, label string) {
+	t.Helper()
+
+	if strings.TrimSpace(asString(payload["type"])) != "diagnostics" || payload["isNew"] != true {
+		t.Fatalf("unexpected %s attachment payload: %#v", label, payload)
+	}
+	diagnosticFiles, _ := payload["files"].([]any)
+	if len(diagnosticFiles) != 1 {
+		t.Fatalf("unexpected %s file count: %#v", label, payload)
+	}
+	diagnosticFile, _ := diagnosticFiles[0].(map[string]any)
+	if strings.TrimSpace(asString(diagnosticFile["uri"])) != "file:///workspace/claude-code-go/internal/server/server.go" {
+		t.Fatalf("unexpected %s uri: %#v", label, payload)
+	}
+	diagnosticsList, _ := diagnosticFile["diagnostics"].([]any)
+	if len(diagnosticsList) != 1 {
+		t.Fatalf("unexpected %s diagnostics list: %#v", label, payload)
+	}
+	diagnosticEntry, _ := diagnosticsList[0].(map[string]any)
+	if strings.TrimSpace(asString(diagnosticEntry["message"])) != "unused variable `staleBudget`" ||
+		strings.TrimSpace(asString(diagnosticEntry["severity"])) != "Warning" ||
+		strings.TrimSpace(asString(diagnosticEntry["source"])) != "gopls" ||
+		strings.TrimSpace(asString(diagnosticEntry["code"])) != "unusedvar" {
+		t.Fatalf("unexpected %s diagnostics entry: %#v", label, payload)
+	}
 }
 
 func assertZeroUsageShape(t *testing.T, payload map[string]any, label string) {
