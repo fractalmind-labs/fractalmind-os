@@ -2232,6 +2232,10 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				if err != nil {
 					return
 				}
+				hookSystemMessageUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
 				_ = conn.WriteJSON(map[string]any{
 					"type": "attachment",
 					"attachment": map[string]any{
@@ -2242,6 +2246,18 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						"hookEvent": "Stop",
 					},
 					"uuid":       hookStoppedContinuationUUID,
+					"session_id": session.ID,
+				})
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":      "hook_system_message",
+						"content":   "Direct-connect echo stop hook acknowledged.",
+						"hookName":  "DirectConnectEchoHook",
+						"toolUseID": pendingToolUseID,
+						"hookEvent": "Stop",
+					},
+					"uuid":       hookSystemMessageUUID,
 					"session_id": session.ID,
 				})
 				_ = conn.WriteJSON(map[string]any{

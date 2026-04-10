@@ -1211,6 +1211,21 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 		strings.TrimSpace(asString(hookStoppedContinuationPayload["hookEvent"])) != "Stop" {
 		t.Fatalf("unexpected hook_stopped_continuation attachment payload: %#v", hookStoppedContinuationAttachment)
 	}
+	var hookSystemMessageAttachment map[string]any
+	if err := ws.ReadJSON(&hookSystemMessageAttachment); err != nil {
+		t.Fatalf("read hook_system_message attachment failed: %v", err)
+	}
+	if hookSystemMessageAttachment["type"] != "attachment" || strings.TrimSpace(asString(hookSystemMessageAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected hook_system_message attachment envelope: %#v", hookSystemMessageAttachment)
+	}
+	hookSystemMessagePayload, _ := hookSystemMessageAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(hookSystemMessagePayload["type"])) != "hook_system_message" ||
+		strings.TrimSpace(asString(hookSystemMessagePayload["content"])) != "Direct-connect echo stop hook acknowledged." ||
+		strings.TrimSpace(asString(hookSystemMessagePayload["hookName"])) != "DirectConnectEchoHook" ||
+		strings.TrimSpace(asString(hookSystemMessagePayload["toolUseID"])) != strings.TrimSpace(asString(request["tool_use_id"])) ||
+		strings.TrimSpace(asString(hookSystemMessagePayload["hookEvent"])) != "Stop" {
+		t.Fatalf("unexpected hook_system_message attachment payload: %#v", hookSystemMessageAttachment)
+	}
 	var hookAdditionalContextAttachment map[string]any
 	if err := ws.ReadJSON(&hookAdditionalContextAttachment); err != nil {
 		t.Fatalf("read hook_additional_context attachment failed: %v", err)
@@ -2232,6 +2247,21 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 		strings.TrimSpace(asString(secondHookStoppedContinuationPayload["toolUseID"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) ||
 		strings.TrimSpace(asString(secondHookStoppedContinuationPayload["hookEvent"])) != "Stop" {
 		t.Fatalf("unexpected second hook_stopped_continuation attachment payload: %#v", secondHookStoppedContinuationAttachment)
+	}
+	var secondHookSystemMessageAttachment map[string]any
+	if err := ws.ReadJSON(&secondHookSystemMessageAttachment); err != nil {
+		t.Fatalf("read second hook_system_message attachment failed: %v", err)
+	}
+	if secondHookSystemMessageAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondHookSystemMessageAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second hook_system_message attachment envelope: %#v", secondHookSystemMessageAttachment)
+	}
+	secondHookSystemMessagePayload, _ := secondHookSystemMessageAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondHookSystemMessagePayload["type"])) != "hook_system_message" ||
+		strings.TrimSpace(asString(secondHookSystemMessagePayload["content"])) != "Direct-connect echo stop hook acknowledged." ||
+		strings.TrimSpace(asString(secondHookSystemMessagePayload["hookName"])) != "DirectConnectEchoHook" ||
+		strings.TrimSpace(asString(secondHookSystemMessagePayload["toolUseID"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) ||
+		strings.TrimSpace(asString(secondHookSystemMessagePayload["hookEvent"])) != "Stop" {
+		t.Fatalf("unexpected second hook_system_message attachment payload: %#v", secondHookSystemMessageAttachment)
 	}
 	var secondHookAdditionalContextAttachment map[string]any
 	if err := ws.ReadJSON(&secondHookAdditionalContextAttachment); err != nil {
