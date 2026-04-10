@@ -1879,6 +1879,27 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       currentSessionMemoryUUID,
 					"session_id": session.ID,
 				})
+				relevantMemoriesUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type": "relevant_memories",
+						"memories": []any{
+							map[string]any{
+								"path":    "memory/project.md",
+								"content": "Project memory: keep nested context stable.",
+								"mtimeMs": 1712700000000.0,
+								"header":  "## memory/project.md",
+								"limit":   1.0,
+							},
+						},
+					},
+					"uuid":       relevantMemoriesUUID,
+					"session_id": session.ID,
+				})
 				nestedMemoryUUID, err := generateRequestID()
 				if err != nil {
 					return

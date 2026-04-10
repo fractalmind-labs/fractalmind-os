@@ -944,6 +944,30 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(currentSessionMemoryPayload["type"])) != "current_session_memory" || strings.TrimSpace(asString(currentSessionMemoryPayload["content"])) != "Remember: keep this session focused." || strings.TrimSpace(asString(currentSessionMemoryPayload["path"])) != "MEMORY.md" || int(currentSessionMemoryPayload["tokenCount"].(float64)) != 7 {
 		t.Fatalf("unexpected current_session_memory attachment payload: %#v", currentSessionMemoryAttachment)
 	}
+	var relevantMemoriesAttachment map[string]any
+	if err := ws.ReadJSON(&relevantMemoriesAttachment); err != nil {
+		t.Fatalf("read relevant_memories attachment failed: %v", err)
+	}
+	if relevantMemoriesAttachment["type"] != "attachment" || strings.TrimSpace(asString(relevantMemoriesAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected relevant_memories attachment envelope: %#v", relevantMemoriesAttachment)
+	}
+	relevantMemoriesPayload, _ := relevantMemoriesAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(relevantMemoriesPayload["type"])) != "relevant_memories" {
+		t.Fatalf("unexpected relevant_memories attachment payload: %#v", relevantMemoriesAttachment)
+	}
+	relevantMemoriesList, _ := relevantMemoriesPayload["memories"].([]any)
+	if len(relevantMemoriesList) != 1 {
+		t.Fatalf("unexpected relevant_memories list: %#v", relevantMemoriesAttachment)
+	}
+	relevantMemory, _ := relevantMemoriesList[0].(map[string]any)
+	mtimeMs, ok := relevantMemory["mtimeMs"].(float64)
+	if strings.TrimSpace(asString(relevantMemory["path"])) != "memory/project.md" ||
+		strings.TrimSpace(asString(relevantMemory["content"])) != "Project memory: keep nested context stable." ||
+		!ok || int64(mtimeMs) != 1712700000000 ||
+		strings.TrimSpace(asString(relevantMemory["header"])) != "## memory/project.md" ||
+		int(relevantMemory["limit"].(float64)) != 1 {
+		t.Fatalf("unexpected relevant_memories entry: %#v", relevantMemoriesAttachment)
+	}
 	var nestedMemoryAttachment map[string]any
 	if err := ws.ReadJSON(&nestedMemoryAttachment); err != nil {
 		t.Fatalf("read nested_memory attachment failed: %v", err)
@@ -1856,6 +1880,30 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondCurrentSessionMemoryPayload, _ := secondCurrentSessionMemoryAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondCurrentSessionMemoryPayload["type"])) != "current_session_memory" || strings.TrimSpace(asString(secondCurrentSessionMemoryPayload["content"])) != "Remember: keep this session focused." || strings.TrimSpace(asString(secondCurrentSessionMemoryPayload["path"])) != "MEMORY.md" || int(secondCurrentSessionMemoryPayload["tokenCount"].(float64)) != 7 {
 		t.Fatalf("unexpected second current_session_memory attachment payload: %#v", secondCurrentSessionMemoryAttachment)
+	}
+	var secondRelevantMemoriesAttachment map[string]any
+	if err := ws.ReadJSON(&secondRelevantMemoriesAttachment); err != nil {
+		t.Fatalf("read second relevant_memories attachment failed: %v", err)
+	}
+	if secondRelevantMemoriesAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondRelevantMemoriesAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second relevant_memories attachment envelope: %#v", secondRelevantMemoriesAttachment)
+	}
+	secondRelevantMemoriesPayload, _ := secondRelevantMemoriesAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondRelevantMemoriesPayload["type"])) != "relevant_memories" {
+		t.Fatalf("unexpected second relevant_memories attachment payload: %#v", secondRelevantMemoriesAttachment)
+	}
+	secondRelevantMemoriesList, _ := secondRelevantMemoriesPayload["memories"].([]any)
+	if len(secondRelevantMemoriesList) != 1 {
+		t.Fatalf("unexpected second relevant_memories list: %#v", secondRelevantMemoriesAttachment)
+	}
+	secondRelevantMemory, _ := secondRelevantMemoriesList[0].(map[string]any)
+	secondMtimeMs, ok := secondRelevantMemory["mtimeMs"].(float64)
+	if strings.TrimSpace(asString(secondRelevantMemory["path"])) != "memory/project.md" ||
+		strings.TrimSpace(asString(secondRelevantMemory["content"])) != "Project memory: keep nested context stable." ||
+		!ok || int64(secondMtimeMs) != 1712700000000 ||
+		strings.TrimSpace(asString(secondRelevantMemory["header"])) != "## memory/project.md" ||
+		int(secondRelevantMemory["limit"].(float64)) != 1 {
+		t.Fatalf("unexpected second relevant_memories entry: %#v", secondRelevantMemoriesAttachment)
 	}
 	var secondNestedMemoryAttachment map[string]any
 	if err := ws.ReadJSON(&secondNestedMemoryAttachment); err != nil {

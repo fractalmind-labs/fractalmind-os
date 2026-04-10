@@ -121,6 +121,8 @@ type Result struct {
 	OutputTokenUsageEvent                                        string
 	CurrentSessionMemoryValidated                                bool
 	CurrentSessionMemoryEvent                                    string
+	RelevantMemoriesValidated                                    bool
+	RelevantMemoriesEvent                                        string
 	NestedMemoryValidated                                        bool
 	NestedMemoryEvent                                            string
 	TeammateShutdownBatchValidated                               bool
@@ -520,6 +522,8 @@ func Run(args []string) (Result, error) {
 		OutputTokenUsageEvent:                                  streamResult.OutputTokenUsageEvent,
 		CurrentSessionMemoryValidated:                          streamResult.CurrentSessionMemoryValidated,
 		CurrentSessionMemoryEvent:                              streamResult.CurrentSessionMemoryEvent,
+		RelevantMemoriesValidated:                              streamResult.RelevantMemoriesValidated,
+		RelevantMemoriesEvent:                                  streamResult.RelevantMemoriesEvent,
 		NestedMemoryValidated:                                  streamResult.NestedMemoryValidated,
 		NestedMemoryEvent:                                      streamResult.NestedMemoryEvent,
 		TeammateShutdownBatchValidated:                         streamResult.TeammateShutdownBatchValidated,
@@ -1149,6 +1153,8 @@ type streamValidation struct {
 	OutputTokenUsageEvent                                        string
 	CurrentSessionMemoryValidated                                bool
 	CurrentSessionMemoryEvent                                    string
+	RelevantMemoriesValidated                                    bool
+	RelevantMemoriesEvent                                        string
 	NestedMemoryValidated                                        bool
 	NestedMemoryEvent                                            string
 	TeammateShutdownBatchValidated                               bool
@@ -1547,6 +1553,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		outputTokenUsageValidated := false
 		verifyPlanReminderValidated := false
 		currentSessionMemoryValidated := false
+		relevantMemoriesValidated := false
 		nestedMemoryValidated := false
 		teammateShutdownBatchValidated := false
 		bagelConsoleValidated := false
@@ -2794,6 +2801,35 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.CurrentSessionMemoryValidated = true
 					result.CurrentSessionMemoryEvent = "attachment:current_session_memory"
 					currentSessionMemoryValidated = true
+				case "relevant_memories":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected relevant_memories attachment during %s turn", turn.behavior)
+					}
+					memories, _ := attachment["memories"].([]any)
+					if len(memories) != 1 {
+						return streamValidation{}, fmt.Errorf("invalid relevant_memories attachment.memories length")
+					}
+					memory, _ := memories[0].(map[string]any)
+					if strings.TrimSpace(asString(memory["path"])) != "memory/project.md" {
+						return streamValidation{}, fmt.Errorf("invalid relevant_memories attachment.memories[0].path")
+					}
+					if strings.TrimSpace(asString(memory["content"])) != "Project memory: keep nested context stable." {
+						return streamValidation{}, fmt.Errorf("invalid relevant_memories attachment.memories[0].content")
+					}
+					mtimeMs, ok := memory["mtimeMs"].(float64)
+					if !ok || int64(mtimeMs) != 1712700000000 {
+						return streamValidation{}, fmt.Errorf("invalid relevant_memories attachment.memories[0].mtimeMs")
+					}
+					if strings.TrimSpace(asString(memory["header"])) != "## memory/project.md" {
+						return streamValidation{}, fmt.Errorf("invalid relevant_memories attachment.memories[0].header")
+					}
+					limit, ok := memory["limit"].(float64)
+					if !ok || int(limit) != 1 {
+						return streamValidation{}, fmt.Errorf("invalid relevant_memories attachment.memories[0].limit")
+					}
+					result.RelevantMemoriesValidated = true
+					result.RelevantMemoriesEvent = "attachment:relevant_memories"
+					relevantMemoriesValidated = true
 				case "nested_memory":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected nested_memory attachment during %s turn", turn.behavior)
@@ -3415,7 +3451,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && relevantMemoriesValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4804,6 +4840,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("output_token_usage_event=%s\n", valueOrNone(r.OutputTokenUsageEvent)))
 	b.WriteString(fmt.Sprintf("current_session_memory_validated=%t\n", r.CurrentSessionMemoryValidated))
 	b.WriteString(fmt.Sprintf("current_session_memory_event=%s\n", valueOrNone(r.CurrentSessionMemoryEvent)))
+	b.WriteString(fmt.Sprintf("relevant_memories_validated=%t\n", r.RelevantMemoriesValidated))
+	b.WriteString(fmt.Sprintf("relevant_memories_event=%s\n", valueOrNone(r.RelevantMemoriesEvent)))
 	b.WriteString(fmt.Sprintf("nested_memory_validated=%t\n", r.NestedMemoryValidated))
 	b.WriteString(fmt.Sprintf("nested_memory_event=%s\n", valueOrNone(r.NestedMemoryEvent)))
 	b.WriteString(fmt.Sprintf("teammate_shutdown_batch_validated=%t\n", r.TeammateShutdownBatchValidated))
