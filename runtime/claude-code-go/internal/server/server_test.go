@@ -1196,6 +1196,21 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(hookResponse["hook_id"])) == "" || strings.TrimSpace(asString(hookResponse["hook_name"])) == "" || strings.TrimSpace(asString(hookResponse["hook_event"])) != "Stop" || strings.TrimSpace(asString(hookResponse["outcome"])) != "success" {
 		t.Fatalf("invalid hook_response payload: %#v", hookResponse)
 	}
+	var hookStoppedContinuationAttachment map[string]any
+	if err := ws.ReadJSON(&hookStoppedContinuationAttachment); err != nil {
+		t.Fatalf("read hook_stopped_continuation attachment failed: %v", err)
+	}
+	if hookStoppedContinuationAttachment["type"] != "attachment" || strings.TrimSpace(asString(hookStoppedContinuationAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected hook_stopped_continuation attachment envelope: %#v", hookStoppedContinuationAttachment)
+	}
+	hookStoppedContinuationPayload, _ := hookStoppedContinuationAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(hookStoppedContinuationPayload["type"])) != "hook_stopped_continuation" ||
+		strings.TrimSpace(asString(hookStoppedContinuationPayload["message"])) != "Execution stopped by DirectConnectEchoHook." ||
+		strings.TrimSpace(asString(hookStoppedContinuationPayload["hookName"])) != "DirectConnectEchoHook" ||
+		strings.TrimSpace(asString(hookStoppedContinuationPayload["toolUseID"])) != strings.TrimSpace(asString(request["tool_use_id"])) ||
+		strings.TrimSpace(asString(hookStoppedContinuationPayload["hookEvent"])) != "Stop" {
+		t.Fatalf("unexpected hook_stopped_continuation attachment payload: %#v", hookStoppedContinuationAttachment)
+	}
 	var hookAdditionalContextAttachment map[string]any
 	if err := ws.ReadJSON(&hookAdditionalContextAttachment); err != nil {
 		t.Fatalf("read hook_additional_context attachment failed: %v", err)
@@ -2202,6 +2217,21 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if strings.TrimSpace(asString(secondHookResponse["hook_id"])) == "" || strings.TrimSpace(asString(secondHookResponse["hook_name"])) == "" || strings.TrimSpace(asString(secondHookResponse["hook_event"])) != "Stop" || strings.TrimSpace(asString(secondHookResponse["outcome"])) != "success" {
 		t.Fatalf("invalid second hook_response payload: %#v", secondHookResponse)
+	}
+	var secondHookStoppedContinuationAttachment map[string]any
+	if err := ws.ReadJSON(&secondHookStoppedContinuationAttachment); err != nil {
+		t.Fatalf("read second hook_stopped_continuation attachment failed: %v", err)
+	}
+	if secondHookStoppedContinuationAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondHookStoppedContinuationAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second hook_stopped_continuation attachment envelope: %#v", secondHookStoppedContinuationAttachment)
+	}
+	secondHookStoppedContinuationPayload, _ := secondHookStoppedContinuationAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondHookStoppedContinuationPayload["type"])) != "hook_stopped_continuation" ||
+		strings.TrimSpace(asString(secondHookStoppedContinuationPayload["message"])) != "Execution stopped by DirectConnectEchoHook." ||
+		strings.TrimSpace(asString(secondHookStoppedContinuationPayload["hookName"])) != "DirectConnectEchoHook" ||
+		strings.TrimSpace(asString(secondHookStoppedContinuationPayload["toolUseID"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) ||
+		strings.TrimSpace(asString(secondHookStoppedContinuationPayload["hookEvent"])) != "Stop" {
+		t.Fatalf("unexpected second hook_stopped_continuation attachment payload: %#v", secondHookStoppedContinuationAttachment)
 	}
 	var secondHookAdditionalContextAttachment map[string]any
 	if err := ws.ReadJSON(&secondHookAdditionalContextAttachment); err != nil {
