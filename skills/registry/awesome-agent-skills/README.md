@@ -1,5 +1,6 @@
+
 <a href="https://github.com/VoltAgent/voltagent">
-     <img width="1500" height="801" alt="claude-skills" src="https://github.com/user-attachments/assets/3a9d4cb3-04bd-4fb1-9146-fd3b53d26961" />
+     <img width="1500" height="801" alt="claude-skills" src="https://github.com/user-attachments/assets/0db54cfc-f3dd-4683-abbb-e4c01d9dfb5d" />
 </a>
 
 
