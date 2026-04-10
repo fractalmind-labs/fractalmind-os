@@ -83,6 +83,8 @@ type Result struct {
 	CriticalSystemReminderEvent                                  string
 	OutputStyleValidated                                         bool
 	OutputStyleEvent                                             string
+	SelectedLinesInIDEValidated                                  bool
+	SelectedLinesInIDEEvent                                      string
 	OpenedFileInIDEValidated                                     bool
 	OpenedFileInIDEEvent                                         string
 	DiagnosticsValidated                                         bool
@@ -486,6 +488,8 @@ func Run(args []string) (Result, error) {
 		CriticalSystemReminderEvent:                            streamResult.CriticalSystemReminderEvent,
 		OutputStyleValidated:                                   streamResult.OutputStyleValidated,
 		OutputStyleEvent:                                       streamResult.OutputStyleEvent,
+		SelectedLinesInIDEValidated:                            streamResult.SelectedLinesInIDEValidated,
+		SelectedLinesInIDEEvent:                                streamResult.SelectedLinesInIDEEvent,
 		OpenedFileInIDEValidated:                               streamResult.OpenedFileInIDEValidated,
 		OpenedFileInIDEEvent:                                   streamResult.OpenedFileInIDEEvent,
 		DiagnosticsValidated:                                   streamResult.DiagnosticsValidated,
@@ -1119,6 +1123,8 @@ type streamValidation struct {
 	CriticalSystemReminderEvent                                  string
 	OutputStyleValidated                                         bool
 	OutputStyleEvent                                             string
+	SelectedLinesInIDEValidated                                  bool
+	SelectedLinesInIDEEvent                                      string
 	OpenedFileInIDEValidated                                     bool
 	OpenedFileInIDEEvent                                         string
 	DiagnosticsValidated                                         bool
@@ -1539,6 +1545,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		taskReminderAttachmentValidated := false
 		criticalSystemReminderValidated := false
 		outputStyleValidated := false
+		selectedLinesInIDEValidated := false
 		openedFileInIDEValidated := false
 		diagnosticsValidated := false
 		mcpResourceValidated := false
@@ -2480,6 +2487,31 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.OutputStyleValidated = true
 					result.OutputStyleEvent = "attachment:output_style"
 					outputStyleValidated = true
+				case "selected_lines_in_ide":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected selected_lines_in_ide attachment during %s turn", turn.behavior)
+					}
+					if strings.TrimSpace(asString(attachment["ideName"])) != "VS Code" {
+						return streamValidation{}, fmt.Errorf("invalid selected_lines_in_ide attachment.ideName")
+					}
+					if intFromAny(attachment["lineStart"]) != 12 {
+						return streamValidation{}, fmt.Errorf("invalid selected_lines_in_ide attachment.lineStart")
+					}
+					if intFromAny(attachment["lineEnd"]) != 14 {
+						return streamValidation{}, fmt.Errorf("invalid selected_lines_in_ide attachment.lineEnd")
+					}
+					if strings.TrimSpace(asString(attachment["filename"])) != "internal/server/server.go" {
+						return streamValidation{}, fmt.Errorf("invalid selected_lines_in_ide attachment.filename")
+					}
+					if asString(attachment["content"]) != "func streamReply() {\n\twriteAttachment(\"selected_lines_in_ide\")\n}\n" {
+						return streamValidation{}, fmt.Errorf("invalid selected_lines_in_ide attachment.content")
+					}
+					if strings.TrimSpace(asString(attachment["displayPath"])) != "internal/server/server.go" {
+						return streamValidation{}, fmt.Errorf("invalid selected_lines_in_ide attachment.displayPath")
+					}
+					result.SelectedLinesInIDEValidated = true
+					result.SelectedLinesInIDEEvent = "attachment:selected_lines_in_ide"
+					selectedLinesInIDEValidated = true
 				case "opened_file_in_ide":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected opened_file_in_ide attachment during %s turn", turn.behavior)
@@ -3468,7 +3500,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && openedFileInIDEValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && relevantMemoriesValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && selectedLinesInIDEValidated && openedFileInIDEValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && relevantMemoriesValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4819,6 +4851,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("critical_system_reminder_event=%s\n", valueOrNone(r.CriticalSystemReminderEvent)))
 	b.WriteString(fmt.Sprintf("output_style_validated=%t\n", r.OutputStyleValidated))
 	b.WriteString(fmt.Sprintf("output_style_event=%s\n", valueOrNone(r.OutputStyleEvent)))
+	b.WriteString(fmt.Sprintf("selected_lines_in_ide_validated=%t\n", r.SelectedLinesInIDEValidated))
+	b.WriteString(fmt.Sprintf("selected_lines_in_ide_event=%s\n", valueOrNone(r.SelectedLinesInIDEEvent)))
 	b.WriteString(fmt.Sprintf("opened_file_in_ide_validated=%t\n", r.OpenedFileInIDEValidated))
 	b.WriteString(fmt.Sprintf("opened_file_in_ide_event=%s\n", valueOrNone(r.OpenedFileInIDEEvent)))
 	b.WriteString(fmt.Sprintf("diagnostics_validated=%t\n", r.DiagnosticsValidated))

@@ -119,7 +119,9 @@
 - 有本地凭证持久化闭环
 
 ### 仍缺的关键用户向命令
-- 本轮继续补了最小 `attachment:opened_file_in_ide`：server 在 `attachment:output_style` 后、`attachment:diagnostics` 前发出 `attachment{type:"opened_file_in_ide",filename}`；`open --print` 新增 `opened_file_in_ide_validated=true / opened_file_in_ide_event=attachment:opened_file_in_ide`，并要求该 attachment 与其它 allow-turn attachment 同时命中。
+- 本轮继续补了最小 `attachment:selected_lines_in_ide`：server 在 `attachment:output_style` 后、`attachment:opened_file_in_ide` 前发出 `attachment{type:"selected_lines_in_ide",ideName,lineStart,lineEnd,filename,content,displayPath}`；`open --print` 新增 `selected_lines_in_ide_validated=true / selected_lines_in_ide_event=attachment:selected_lines_in_ide`，并要求该 attachment 与其它 allow-turn attachment 同时命中。
+- `selected_lines_in_ide` 当前只保证固定 `VS Code / 12-14 / internal/server/server.go` 与稳定 selection content 的最小 envelope，不实现真实 IDE 选区读取、selection tracking、截断策略或 richer UI 行为。
+- 本轮继续补了最小 `attachment:opened_file_in_ide`：server 在 `attachment:selected_lines_in_ide` 后、`attachment:diagnostics` 前发出 `attachment{type:"opened_file_in_ide",filename}`；`open --print` 新增 `opened_file_in_ide_validated=true / opened_file_in_ide_event=attachment:opened_file_in_ide`，并要求该 attachment 与其它 allow-turn attachment 同时命中。
 - `opened_file_in_ide` 当前只保证固定 `filename="internal/server/server.go"` 的最小 envelope，不实现真实 IDE 打开文件检测、editor sync 或 richer UI 行为。
 - 本轮继续补了最小 `attachment:team_context`：server 在 `attachment:bagel_console` 后、`system:compact_boundary` 前发出 `attachment{type:"team_context",agentId,agentName,teamName,teamConfigPath,taskListPath}`；`open --print` 新增 `team_context_validated=true / team_context_event=attachment:team_context`，并要求该 attachment 与其它 allow-turn attachment 同时命中。
 - `team_context` 当前只保证固定 `agentId="agent-dev"`、`agentName="dev"`、`teamName="alpha"`、`teamConfigPath=".claude/team.yaml"`、`taskListPath=".claude/tasks.json"` 的最小 envelope，不实现真实 team coordination、mailbox 聚合、任务分发或 UI 渲染策略。

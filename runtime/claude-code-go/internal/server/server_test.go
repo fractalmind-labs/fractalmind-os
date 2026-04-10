@@ -675,6 +675,23 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(outputStylePayload["type"])) != "output_style" || strings.TrimSpace(asString(outputStylePayload["style"])) != "explanatory" {
 		t.Fatalf("unexpected output_style attachment payload: %#v", outputStyleAttachment)
 	}
+	var selectedLinesInIDEAttachment map[string]any
+	if err := ws.ReadJSON(&selectedLinesInIDEAttachment); err != nil {
+		t.Fatalf("read selected_lines_in_ide attachment failed: %v", err)
+	}
+	if selectedLinesInIDEAttachment["type"] != "attachment" || strings.TrimSpace(asString(selectedLinesInIDEAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected selected_lines_in_ide attachment envelope: %#v", selectedLinesInIDEAttachment)
+	}
+	selectedLinesInIDEPayload, _ := selectedLinesInIDEAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(selectedLinesInIDEPayload["type"])) != "selected_lines_in_ide" ||
+		strings.TrimSpace(asString(selectedLinesInIDEPayload["ideName"])) != "VS Code" ||
+		intFromAny(selectedLinesInIDEPayload["lineStart"]) != 12 ||
+		intFromAny(selectedLinesInIDEPayload["lineEnd"]) != 14 ||
+		strings.TrimSpace(asString(selectedLinesInIDEPayload["filename"])) != "internal/server/server.go" ||
+		asString(selectedLinesInIDEPayload["content"]) != "func streamReply() {\n\twriteAttachment(\"selected_lines_in_ide\")\n}\n" ||
+		strings.TrimSpace(asString(selectedLinesInIDEPayload["displayPath"])) != "internal/server/server.go" {
+		t.Fatalf("unexpected selected_lines_in_ide attachment payload: %#v", selectedLinesInIDEAttachment)
+	}
 	var openedFileInIDEAttachment map[string]any
 	if err := ws.ReadJSON(&openedFileInIDEAttachment); err != nil {
 		t.Fatalf("read opened_file_in_ide attachment failed: %v", err)
@@ -1622,6 +1639,23 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondOutputStylePayload, _ := secondOutputStyleAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondOutputStylePayload["type"])) != "output_style" || strings.TrimSpace(asString(secondOutputStylePayload["style"])) != "explanatory" {
 		t.Fatalf("unexpected second output_style attachment payload: %#v", secondOutputStyleAttachment)
+	}
+	var secondSelectedLinesInIDEAttachment map[string]any
+	if err := ws.ReadJSON(&secondSelectedLinesInIDEAttachment); err != nil {
+		t.Fatalf("read second selected_lines_in_ide attachment failed: %v", err)
+	}
+	if secondSelectedLinesInIDEAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondSelectedLinesInIDEAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second selected_lines_in_ide attachment envelope: %#v", secondSelectedLinesInIDEAttachment)
+	}
+	secondSelectedLinesInIDEPayload, _ := secondSelectedLinesInIDEAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondSelectedLinesInIDEPayload["type"])) != "selected_lines_in_ide" ||
+		strings.TrimSpace(asString(secondSelectedLinesInIDEPayload["ideName"])) != "VS Code" ||
+		intFromAny(secondSelectedLinesInIDEPayload["lineStart"]) != 12 ||
+		intFromAny(secondSelectedLinesInIDEPayload["lineEnd"]) != 14 ||
+		strings.TrimSpace(asString(secondSelectedLinesInIDEPayload["filename"])) != "internal/server/server.go" ||
+		asString(secondSelectedLinesInIDEPayload["content"]) != "func streamReply() {\n\twriteAttachment(\"selected_lines_in_ide\")\n}\n" ||
+		strings.TrimSpace(asString(secondSelectedLinesInIDEPayload["displayPath"])) != "internal/server/server.go" {
+		t.Fatalf("unexpected second selected_lines_in_ide attachment payload: %#v", secondSelectedLinesInIDEAttachment)
 	}
 	var secondOpenedFileInIDEAttachment map[string]any
 	if err := ws.ReadJSON(&secondOpenedFileInIDEAttachment); err != nil {

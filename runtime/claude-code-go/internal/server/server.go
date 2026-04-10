@@ -1567,6 +1567,24 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       outputStyleUUID,
 					"session_id": session.ID,
 				})
+				selectedLinesInIDEUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":        "selected_lines_in_ide",
+						"ideName":     "VS Code",
+						"lineStart":   12,
+						"lineEnd":     14,
+						"filename":    "internal/server/server.go",
+						"content":     "func streamReply() {\n\twriteAttachment(\"selected_lines_in_ide\")\n}\n",
+						"displayPath": "internal/server/server.go",
+					},
+					"uuid":       selectedLinesInIDEUUID,
+					"session_id": session.ID,
+				})
 				openedFileInIDEUUID, err := generateRequestID()
 				if err != nil {
 					return
