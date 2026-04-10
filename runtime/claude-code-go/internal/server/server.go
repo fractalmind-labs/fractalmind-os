@@ -23,6 +23,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+const stubPlanFileReferenceContent = "Plan:\n1. Keep compact preserve path stable.\n2. Continue direct-connect validation."
+
 type Options struct {
 	Port          int
 	Host          string
@@ -1713,6 +1715,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       autoModeExitUUID,
 					"session_id": session.ID,
 				})
+				planFilePath := filepath.Join(session.WorkDir, ".claude", "plan.md")
 				planModeUUID, err := generateRequestID()
 				if err != nil {
 					return
@@ -1722,7 +1725,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"attachment": map[string]any{
 						"type":         "plan_mode",
 						"reminderType": "full",
-						"planFilePath": filepath.Join(session.WorkDir, ".claude", "plan.md"),
+						"planFilePath": planFilePath,
 						"planExists":   false,
 						"isSubAgent":   false,
 					},
@@ -1737,7 +1740,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"type": "attachment",
 					"attachment": map[string]any{
 						"type":         "plan_mode_exit",
-						"planFilePath": filepath.Join(session.WorkDir, ".claude", "plan.md"),
+						"planFilePath": planFilePath,
 						"planExists":   false,
 					},
 					"uuid":       planModeExitUUID,
@@ -1751,9 +1754,23 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"type": "attachment",
 					"attachment": map[string]any{
 						"type":         "plan_mode_reentry",
-						"planFilePath": filepath.Join(session.WorkDir, ".claude", "plan.md"),
+						"planFilePath": planFilePath,
 					},
 					"uuid":       planModeReentryUUID,
+					"session_id": session.ID,
+				})
+				planFileReferenceUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":         "plan_file_reference",
+						"planFilePath": planFilePath,
+						"planContent":  stubPlanFileReferenceContent,
+					},
+					"uuid":       planFileReferenceUUID,
 					"session_id": session.ID,
 				})
 				dateChangeUUID, err := generateRequestID()

@@ -819,6 +819,20 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(planModeReentryPayload["type"])) != "plan_mode_reentry" || strings.TrimSpace(asString(planModeReentryPayload["planFilePath"])) == "" {
 		t.Fatalf("unexpected plan_mode_reentry attachment payload: %#v", planModeReentryAttachment)
 	}
+	var planFileReferenceAttachment map[string]any
+	if err := ws.ReadJSON(&planFileReferenceAttachment); err != nil {
+		t.Fatalf("read plan_file_reference attachment failed: %v", err)
+	}
+	if planFileReferenceAttachment["type"] != "attachment" || strings.TrimSpace(asString(planFileReferenceAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected plan_file_reference attachment envelope: %#v", planFileReferenceAttachment)
+	}
+	planFileReferencePayload, _ := planFileReferenceAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(planFileReferencePayload["type"])) != "plan_file_reference" || strings.TrimSpace(asString(planFileReferencePayload["planFilePath"])) == "" {
+		t.Fatalf("unexpected plan_file_reference attachment payload: %#v", planFileReferenceAttachment)
+	}
+	if strings.TrimSpace(asString(planFileReferencePayload["planContent"])) != stubPlanFileReferenceContent {
+		t.Fatalf("invalid plan_file_reference attachment payload: %#v", planFileReferenceAttachment)
+	}
 	var dateChangeAttachment map[string]any
 	if err := ws.ReadJSON(&dateChangeAttachment); err != nil {
 		t.Fatalf("read date_change attachment failed: %v", err)
@@ -1764,6 +1778,20 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondPlanModeReentryPayload, _ := secondPlanModeReentryAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondPlanModeReentryPayload["type"])) != "plan_mode_reentry" || strings.TrimSpace(asString(secondPlanModeReentryPayload["planFilePath"])) == "" {
 		t.Fatalf("unexpected second plan_mode_reentry attachment payload: %#v", secondPlanModeReentryAttachment)
+	}
+	var secondPlanFileReferenceAttachment map[string]any
+	if err := ws.ReadJSON(&secondPlanFileReferenceAttachment); err != nil {
+		t.Fatalf("read second plan_file_reference attachment failed: %v", err)
+	}
+	if secondPlanFileReferenceAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondPlanFileReferenceAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second plan_file_reference attachment envelope: %#v", secondPlanFileReferenceAttachment)
+	}
+	secondPlanFileReferencePayload, _ := secondPlanFileReferenceAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondPlanFileReferencePayload["type"])) != "plan_file_reference" || strings.TrimSpace(asString(secondPlanFileReferencePayload["planFilePath"])) == "" {
+		t.Fatalf("unexpected second plan_file_reference attachment payload: %#v", secondPlanFileReferenceAttachment)
+	}
+	if strings.TrimSpace(asString(secondPlanFileReferencePayload["planContent"])) != stubPlanFileReferenceContent {
+		t.Fatalf("invalid second plan_file_reference attachment payload: %#v", secondPlanFileReferenceAttachment)
 	}
 	var secondDateChangeAttachment map[string]any
 	if err := ws.ReadJSON(&secondDateChangeAttachment); err != nil {

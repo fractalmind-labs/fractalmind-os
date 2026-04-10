@@ -16,6 +16,11 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+const (
+	planAttachmentPathSuffix     = ".claude/plan.md"
+	stubPlanFileReferenceContent = "Plan:\n1. Keep compact preserve path stable.\n2. Continue direct-connect validation."
+)
+
 type Options struct {
 	ConnectURL      string
 	PrintMode       bool
@@ -107,6 +112,8 @@ type Result struct {
 	PlanModeExitEvent                                            string
 	PlanModeReentryValidated                                     bool
 	PlanModeReentryEvent                                         string
+	PlanFileReferenceValidated                                   bool
+	PlanFileReferenceEvent                                       string
 	DateChangeValidated                                          bool
 	DateChangeEvent                                              string
 	UltrathinkEffortValidated                                    bool
@@ -514,6 +521,8 @@ func Run(args []string) (Result, error) {
 		PlanModeExitEvent:                                      streamResult.PlanModeExitEvent,
 		PlanModeReentryValidated:                               streamResult.PlanModeReentryValidated,
 		PlanModeReentryEvent:                                   streamResult.PlanModeReentryEvent,
+		PlanFileReferenceValidated:                             streamResult.PlanFileReferenceValidated,
+		PlanFileReferenceEvent:                                 streamResult.PlanFileReferenceEvent,
 		DateChangeValidated:                                    streamResult.DateChangeValidated,
 		DateChangeEvent:                                        streamResult.DateChangeEvent,
 		UltrathinkEffortValidated:                              streamResult.UltrathinkEffortValidated,
@@ -1151,6 +1160,8 @@ type streamValidation struct {
 	PlanModeExitEvent                                            string
 	PlanModeReentryValidated                                     bool
 	PlanModeReentryEvent                                         string
+	PlanFileReferenceValidated                                   bool
+	PlanFileReferenceEvent                                       string
 	DateChangeValidated                                          bool
 	DateChangeEvent                                              string
 	UltrathinkEffortValidated                                    bool
@@ -1563,6 +1574,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		planModeValidated := false
 		planModeExitValidated := false
 		planModeReentryValidated := false
+		planFileReferenceValidated := false
 		dateChangeValidated := false
 		ultrathinkEffortValidated := false
 		deferredToolsDeltaValidated := false
@@ -2659,7 +2671,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if planFilePath == "" {
 						return streamValidation{}, fmt.Errorf("invalid plan_mode attachment: missing planFilePath")
 					}
-					if !strings.HasSuffix(strings.ReplaceAll(planFilePath, "\\", "/"), ".claude/plan.md") {
+					if !strings.HasSuffix(strings.ReplaceAll(planFilePath, "\\", "/"), planAttachmentPathSuffix) {
 						return streamValidation{}, fmt.Errorf("invalid plan_mode attachment.planFilePath: %q", planFilePath)
 					}
 					planExists, ok := attachment["planExists"].(bool)
@@ -2681,7 +2693,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if planFilePath == "" {
 						return streamValidation{}, fmt.Errorf("invalid plan_mode_exit attachment: missing planFilePath")
 					}
-					if !strings.HasSuffix(strings.ReplaceAll(planFilePath, "\\", "/"), ".claude/plan.md") {
+					if !strings.HasSuffix(strings.ReplaceAll(planFilePath, "\\", "/"), planAttachmentPathSuffix) {
 						return streamValidation{}, fmt.Errorf("invalid plan_mode_exit attachment.planFilePath: %q", planFilePath)
 					}
 					planExists, ok := attachment["planExists"].(bool)
@@ -2699,12 +2711,29 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					if planFilePath == "" {
 						return streamValidation{}, fmt.Errorf("invalid plan_mode_reentry attachment: missing planFilePath")
 					}
-					if !strings.HasSuffix(strings.ReplaceAll(planFilePath, "\\", "/"), ".claude/plan.md") {
+					if !strings.HasSuffix(strings.ReplaceAll(planFilePath, "\\", "/"), planAttachmentPathSuffix) {
 						return streamValidation{}, fmt.Errorf("invalid plan_mode_reentry attachment.planFilePath: %q", planFilePath)
 					}
 					result.PlanModeReentryValidated = true
 					result.PlanModeReentryEvent = "attachment:plan_mode_reentry"
 					planModeReentryValidated = true
+				case "plan_file_reference":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected plan_file_reference attachment during %s turn", turn.behavior)
+					}
+					planFilePath := strings.TrimSpace(asString(attachment["planFilePath"]))
+					if planFilePath == "" {
+						return streamValidation{}, fmt.Errorf("invalid plan_file_reference attachment: missing planFilePath")
+					}
+					if !strings.HasSuffix(strings.ReplaceAll(planFilePath, "\\", "/"), planAttachmentPathSuffix) {
+						return streamValidation{}, fmt.Errorf("invalid plan_file_reference attachment.planFilePath: %q", planFilePath)
+					}
+					if strings.TrimSpace(asString(attachment["planContent"])) != stubPlanFileReferenceContent {
+						return streamValidation{}, fmt.Errorf("invalid plan_file_reference attachment.planContent")
+					}
+					result.PlanFileReferenceValidated = true
+					result.PlanFileReferenceEvent = "attachment:plan_file_reference"
+					planFileReferenceValidated = true
 				case "date_change":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected date_change attachment during %s turn", turn.behavior)
@@ -3526,7 +3555,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && selectedLinesInIDEValidated && openedFileInIDEValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && asyncHookResponseValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && relevantMemoriesValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && selectedLinesInIDEValidated && openedFileInIDEValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && planFileReferenceValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && asyncHookResponseValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && relevantMemoriesValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4901,6 +4930,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("plan_mode_exit_event=%s\n", valueOrNone(r.PlanModeExitEvent)))
 	b.WriteString(fmt.Sprintf("plan_mode_reentry_validated=%t\n", r.PlanModeReentryValidated))
 	b.WriteString(fmt.Sprintf("plan_mode_reentry_event=%s\n", valueOrNone(r.PlanModeReentryEvent)))
+	b.WriteString(fmt.Sprintf("plan_file_reference_validated=%t\n", r.PlanFileReferenceValidated))
+	b.WriteString(fmt.Sprintf("plan_file_reference_event=%s\n", valueOrNone(r.PlanFileReferenceEvent)))
 	b.WriteString(fmt.Sprintf("date_change_validated=%t\n", r.DateChangeValidated))
 	b.WriteString(fmt.Sprintf("date_change_event=%s\n", valueOrNone(r.DateChangeEvent)))
 	b.WriteString(fmt.Sprintf("ultrathink_effort_validated=%t\n", r.UltrathinkEffortValidated))
