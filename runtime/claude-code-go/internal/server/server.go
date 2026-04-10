@@ -1567,6 +1567,19 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       outputStyleUUID,
 					"session_id": session.ID,
 				})
+				openedFileInIDEUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":     "opened_file_in_ide",
+						"filename": "internal/server/server.go",
+					},
+					"uuid":       openedFileInIDEUUID,
+					"session_id": session.ID,
+				})
 				diagnosticsUUID, err := generateRequestID()
 				if err != nil {
 					return

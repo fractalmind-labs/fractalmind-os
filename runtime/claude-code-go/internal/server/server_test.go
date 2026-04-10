@@ -675,6 +675,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(outputStylePayload["type"])) != "output_style" || strings.TrimSpace(asString(outputStylePayload["style"])) != "explanatory" {
 		t.Fatalf("unexpected output_style attachment payload: %#v", outputStyleAttachment)
 	}
+	var openedFileInIDEAttachment map[string]any
+	if err := ws.ReadJSON(&openedFileInIDEAttachment); err != nil {
+		t.Fatalf("read opened_file_in_ide attachment failed: %v", err)
+	}
+	if openedFileInIDEAttachment["type"] != "attachment" || strings.TrimSpace(asString(openedFileInIDEAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected opened_file_in_ide attachment envelope: %#v", openedFileInIDEAttachment)
+	}
+	openedFileInIDEPayload, _ := openedFileInIDEAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(openedFileInIDEPayload["type"])) != "opened_file_in_ide" || strings.TrimSpace(asString(openedFileInIDEPayload["filename"])) != "internal/server/server.go" {
+		t.Fatalf("unexpected opened_file_in_ide attachment payload: %#v", openedFileInIDEAttachment)
+	}
 	var diagnosticsAttachment map[string]any
 	if err := ws.ReadJSON(&diagnosticsAttachment); err != nil {
 		t.Fatalf("read diagnostics attachment failed: %v", err)
@@ -1611,6 +1622,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondOutputStylePayload, _ := secondOutputStyleAttachment["attachment"].(map[string]any)
 	if strings.TrimSpace(asString(secondOutputStylePayload["type"])) != "output_style" || strings.TrimSpace(asString(secondOutputStylePayload["style"])) != "explanatory" {
 		t.Fatalf("unexpected second output_style attachment payload: %#v", secondOutputStyleAttachment)
+	}
+	var secondOpenedFileInIDEAttachment map[string]any
+	if err := ws.ReadJSON(&secondOpenedFileInIDEAttachment); err != nil {
+		t.Fatalf("read second opened_file_in_ide attachment failed: %v", err)
+	}
+	if secondOpenedFileInIDEAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondOpenedFileInIDEAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second opened_file_in_ide attachment envelope: %#v", secondOpenedFileInIDEAttachment)
+	}
+	secondOpenedFileInIDEPayload, _ := secondOpenedFileInIDEAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondOpenedFileInIDEPayload["type"])) != "opened_file_in_ide" || strings.TrimSpace(asString(secondOpenedFileInIDEPayload["filename"])) != "internal/server/server.go" {
+		t.Fatalf("unexpected second opened_file_in_ide attachment payload: %#v", secondOpenedFileInIDEAttachment)
 	}
 	var secondDiagnosticsAttachment map[string]any
 	if err := ws.ReadJSON(&secondDiagnosticsAttachment); err != nil {
