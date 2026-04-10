@@ -22,6 +22,7 @@ const (
 	stubInvokedSkillName         = "agent-manager"
 	stubInvokedSkillPath         = ".codex/skills/agent-manager/SKILL.md"
 	stubInvokedSkillContent      = "Use agent-manager to coordinate teammate work.\nConfirm receipts before execution."
+	stubAgentMentionType         = "explorer"
 )
 
 type Options struct {
@@ -87,6 +88,8 @@ type Result struct {
 	TaskReminderAttachmentEvent                                  string
 	TodoReminderAttachmentValidated                              bool
 	TodoReminderAttachmentEvent                                  string
+	AgentMentionValidated                                        bool
+	AgentMentionEvent                                            string
 	CriticalSystemReminderValidated                              bool
 	CriticalSystemReminderEvent                                  string
 	OutputStyleValidated                                         bool
@@ -498,6 +501,8 @@ func Run(args []string) (Result, error) {
 		TaskReminderAttachmentEvent:                            streamResult.TaskReminderAttachmentEvent,
 		TodoReminderAttachmentValidated:                        streamResult.TodoReminderAttachmentValidated,
 		TodoReminderAttachmentEvent:                            streamResult.TodoReminderAttachmentEvent,
+		AgentMentionValidated:                                  streamResult.AgentMentionValidated,
+		AgentMentionEvent:                                      streamResult.AgentMentionEvent,
 		CriticalSystemReminderValidated:                        streamResult.CriticalSystemReminderValidated,
 		CriticalSystemReminderEvent:                            streamResult.CriticalSystemReminderEvent,
 		OutputStyleValidated:                                   streamResult.OutputStyleValidated,
@@ -1139,6 +1144,8 @@ type streamValidation struct {
 	TaskReminderAttachmentEvent                                  string
 	TodoReminderAttachmentValidated                              bool
 	TodoReminderAttachmentEvent                                  string
+	AgentMentionValidated                                        bool
+	AgentMentionEvent                                            string
 	CriticalSystemReminderValidated                              bool
 	CriticalSystemReminderEvent                                  string
 	OutputStyleValidated                                         bool
@@ -1569,6 +1576,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		structuredOutputAttachmentValidated := false
 		maxTurnsReachedAttachmentValidated := false
 		taskReminderAttachmentValidated := false
+		agentMentionValidated := false
 		criticalSystemReminderValidated := false
 		outputStyleValidated := false
 		selectedLinesInIDEValidated := false
@@ -2496,6 +2504,16 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					}
 					result.TodoReminderAttachmentValidated = true
 					result.TodoReminderAttachmentEvent = "attachment:todo_reminder"
+				case "agent_mention":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected agent_mention attachment during %s turn", turn.behavior)
+					}
+					if strings.TrimSpace(asString(attachment["agentType"])) != stubAgentMentionType {
+						return streamValidation{}, fmt.Errorf("invalid agent_mention attachment.agentType: expected %q, got %q", stubAgentMentionType, strings.TrimSpace(asString(attachment["agentType"])))
+					}
+					result.AgentMentionValidated = true
+					result.AgentMentionEvent = "attachment:agent_mention"
+					agentMentionValidated = true
 				case "critical_system_reminder":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected critical_system_reminder attachment during %s turn", turn.behavior)
@@ -3589,7 +3607,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && selectedLinesInIDEValidated && openedFileInIDEValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && planFileReferenceValidated && invokedSkillsValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && asyncHookResponseValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && relevantMemoriesValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && selectedLinesInIDEValidated && openedFileInIDEValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && planFileReferenceValidated && invokedSkillsValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && asyncHookResponseValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && relevantMemoriesValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && agentMentionValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -4936,6 +4954,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("task_reminder_attachment_event=%s\n", valueOrNone(r.TaskReminderAttachmentEvent)))
 	b.WriteString(fmt.Sprintf("todo_reminder_attachment_validated=%t\n", r.TodoReminderAttachmentValidated))
 	b.WriteString(fmt.Sprintf("todo_reminder_attachment_event=%s\n", valueOrNone(r.TodoReminderAttachmentEvent)))
+	b.WriteString(fmt.Sprintf("agent_mention_validated=%t\n", r.AgentMentionValidated))
+	b.WriteString(fmt.Sprintf("agent_mention_event=%s\n", valueOrNone(r.AgentMentionEvent)))
 	b.WriteString(fmt.Sprintf("critical_system_reminder_validated=%t\n", r.CriticalSystemReminderValidated))
 	b.WriteString(fmt.Sprintf("critical_system_reminder_event=%s\n", valueOrNone(r.CriticalSystemReminderEvent)))
 	b.WriteString(fmt.Sprintf("output_style_validated=%t\n", r.OutputStyleValidated))

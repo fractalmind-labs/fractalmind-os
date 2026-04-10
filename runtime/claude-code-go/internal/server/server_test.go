@@ -561,6 +561,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(todoReminderPayload["type"])) != "todo_reminder" || intFromAny(todoReminderPayload["itemCount"]) != 1 || len(todoReminderContent) != 1 || strings.TrimSpace(asString(firstTodoReminder["content"])) != "direct-connect echo task" || strings.TrimSpace(asString(firstTodoReminder["status"])) != "completed" || strings.TrimSpace(asString(firstTodoReminder["activeForm"])) != "Completing direct-connect echo task" {
 		t.Fatalf("unexpected todo_reminder attachment payload: %#v", todoReminderAttachment)
 	}
+	var agentMentionAttachment map[string]any
+	if err := ws.ReadJSON(&agentMentionAttachment); err != nil {
+		t.Fatalf("read agent_mention attachment failed: %v", err)
+	}
+	if agentMentionAttachment["type"] != "attachment" || strings.TrimSpace(asString(agentMentionAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected agent_mention attachment envelope: %#v", agentMentionAttachment)
+	}
+	agentMentionPayload, _ := agentMentionAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(agentMentionPayload["type"])) != "agent_mention" || strings.TrimSpace(asString(agentMentionPayload["agentType"])) != stubAgentMentionType {
+		t.Fatalf("unexpected agent_mention attachment payload: %#v", agentMentionAttachment)
+	}
 	var filesPersisted map[string]any
 	if err := ws.ReadJSON(&filesPersisted); err != nil {
 		t.Fatalf("read files_persisted failed: %v", err)
@@ -1539,6 +1550,17 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	secondTodoReminder, _ := secondTodoReminderContent[0].(map[string]any)
 	if strings.TrimSpace(asString(secondTodoReminderPayload["type"])) != "todo_reminder" || intFromAny(secondTodoReminderPayload["itemCount"]) != 1 || len(secondTodoReminderContent) != 1 || strings.TrimSpace(asString(secondTodoReminder["content"])) != "direct-connect echo task" || strings.TrimSpace(asString(secondTodoReminder["status"])) != "completed" || strings.TrimSpace(asString(secondTodoReminder["activeForm"])) != "Completing direct-connect echo task" {
 		t.Fatalf("unexpected second todo_reminder attachment payload: %#v", secondTodoReminderAttachment)
+	}
+	var secondAgentMentionAttachment map[string]any
+	if err := ws.ReadJSON(&secondAgentMentionAttachment); err != nil {
+		t.Fatalf("read second agent_mention attachment failed: %v", err)
+	}
+	if secondAgentMentionAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondAgentMentionAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second agent_mention attachment envelope: %#v", secondAgentMentionAttachment)
+	}
+	secondAgentMentionPayload, _ := secondAgentMentionAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondAgentMentionPayload["type"])) != "agent_mention" || strings.TrimSpace(asString(secondAgentMentionPayload["agentType"])) != stubAgentMentionType {
+		t.Fatalf("unexpected second agent_mention attachment payload: %#v", secondAgentMentionAttachment)
 	}
 	var secondFilesPersisted map[string]any
 	if err := ws.ReadJSON(&secondFilesPersisted); err != nil {

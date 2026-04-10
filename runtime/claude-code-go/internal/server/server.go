@@ -28,6 +28,7 @@ const (
 	stubInvokedSkillName         = "agent-manager"
 	stubInvokedSkillPath         = ".codex/skills/agent-manager/SKILL.md"
 	stubInvokedSkillContent      = "Use agent-manager to coordinate teammate work.\nConfirm receipts before execution."
+	stubAgentMentionType         = "explorer"
 )
 
 type Options struct {
@@ -1443,6 +1444,19 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						"itemCount": 1,
 					},
 					"uuid":       todoReminderUUID,
+					"session_id": session.ID,
+				})
+				agentMentionUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":      "agent_mention",
+						"agentType": stubAgentMentionType,
+					},
+					"uuid":       agentMentionUUID,
 					"session_id": session.ID,
 				})
 				filesPersistedUUID, err := generateRequestID()
