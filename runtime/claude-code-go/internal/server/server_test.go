@@ -1210,6 +1210,21 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(hookResponse["hook_id"])) == "" || strings.TrimSpace(asString(hookResponse["hook_name"])) == "" || strings.TrimSpace(asString(hookResponse["hook_event"])) != "Stop" || strings.TrimSpace(asString(hookResponse["outcome"])) != "success" {
 		t.Fatalf("invalid hook_response payload: %#v", hookResponse)
 	}
+	var hookSuccessAttachment map[string]any
+	if err := ws.ReadJSON(&hookSuccessAttachment); err != nil {
+		t.Fatalf("read hook_success attachment failed: %v", err)
+	}
+	if hookSuccessAttachment["type"] != "attachment" || strings.TrimSpace(asString(hookSuccessAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected hook_success attachment envelope: %#v", hookSuccessAttachment)
+	}
+	hookSuccessPayload, _ := hookSuccessAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(hookSuccessPayload["type"])) != "hook_success" ||
+		strings.TrimSpace(asString(hookSuccessPayload["content"])) != "echo:hello [approved]" ||
+		strings.TrimSpace(asString(hookSuccessPayload["hookName"])) != "DirectConnectEchoHook" ||
+		strings.TrimSpace(asString(hookSuccessPayload["toolUseID"])) != strings.TrimSpace(asString(request["tool_use_id"])) ||
+		strings.TrimSpace(asString(hookSuccessPayload["hookEvent"])) != "Stop" {
+		t.Fatalf("unexpected hook_success attachment payload: %#v", hookSuccessAttachment)
+	}
 	var hookStoppedContinuationAttachment map[string]any
 	if err := ws.ReadJSON(&hookStoppedContinuationAttachment); err != nil {
 		t.Fatalf("read hook_stopped_continuation attachment failed: %v", err)
@@ -2260,6 +2275,21 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if strings.TrimSpace(asString(secondHookResponse["hook_id"])) == "" || strings.TrimSpace(asString(secondHookResponse["hook_name"])) == "" || strings.TrimSpace(asString(secondHookResponse["hook_event"])) != "Stop" || strings.TrimSpace(asString(secondHookResponse["outcome"])) != "success" {
 		t.Fatalf("invalid second hook_response payload: %#v", secondHookResponse)
+	}
+	var secondHookSuccessAttachment map[string]any
+	if err := ws.ReadJSON(&secondHookSuccessAttachment); err != nil {
+		t.Fatalf("read second hook_success attachment failed: %v", err)
+	}
+	if secondHookSuccessAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondHookSuccessAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second hook_success attachment envelope: %#v", secondHookSuccessAttachment)
+	}
+	secondHookSuccessPayload, _ := secondHookSuccessAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondHookSuccessPayload["type"])) != "hook_success" ||
+		strings.TrimSpace(asString(secondHookSuccessPayload["content"])) != "echo:hello again [approved]" ||
+		strings.TrimSpace(asString(secondHookSuccessPayload["hookName"])) != "DirectConnectEchoHook" ||
+		strings.TrimSpace(asString(secondHookSuccessPayload["toolUseID"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) ||
+		strings.TrimSpace(asString(secondHookSuccessPayload["hookEvent"])) != "Stop" {
+		t.Fatalf("unexpected second hook_success attachment payload: %#v", secondHookSuccessAttachment)
 	}
 	var secondHookStoppedContinuationAttachment map[string]any
 	if err := ws.ReadJSON(&secondHookStoppedContinuationAttachment); err != nil {

@@ -2258,6 +2258,10 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				if err != nil {
 					return
 				}
+				hookSuccessUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
 				hookStoppedContinuationUUID, err := generateRequestID()
 				if err != nil {
 					return
@@ -2266,6 +2270,18 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				if err != nil {
 					return
 				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":      "hook_success",
+						"content":   responseText,
+						"hookName":  "DirectConnectEchoHook",
+						"toolUseID": pendingToolUseID,
+						"hookEvent": "Stop",
+					},
+					"uuid":       hookSuccessUUID,
+					"session_id": session.ID,
+				})
 				_ = conn.WriteJSON(map[string]any{
 					"type": "attachment",
 					"attachment": map[string]any{
