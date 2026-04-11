@@ -260,6 +260,20 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("write control response failed: %v", err)
 	}
+	var hookPermissionDecisionAttachment map[string]any
+	if err := ws.ReadJSON(&hookPermissionDecisionAttachment); err != nil {
+		t.Fatalf("read hook_permission_decision attachment failed: %v", err)
+	}
+	if hookPermissionDecisionAttachment["type"] != "attachment" || strings.TrimSpace(asString(hookPermissionDecisionAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected hook_permission_decision attachment envelope: %#v", hookPermissionDecisionAttachment)
+	}
+	hookPermissionDecisionPayload, _ := hookPermissionDecisionAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(hookPermissionDecisionPayload["type"])) != "hook_permission_decision" ||
+		strings.TrimSpace(asString(hookPermissionDecisionPayload["decision"])) != "allow" ||
+		strings.TrimSpace(asString(hookPermissionDecisionPayload["toolUseID"])) != strings.TrimSpace(asString(request["tool_use_id"])) ||
+		strings.TrimSpace(asString(hookPermissionDecisionPayload["hookEvent"])) != "PermissionRequest" {
+		t.Fatalf("unexpected hook_permission_decision attachment payload: %#v", hookPermissionDecisionAttachment)
+	}
 	var controlCancel map[string]any
 	if err := ws.ReadJSON(&controlCancel); err != nil {
 		t.Fatalf("read control cancel failed: %v", err)
@@ -1297,6 +1311,20 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("write second control response failed: %v", err)
 	}
+	var secondHookPermissionDecisionAttachment map[string]any
+	if err := ws.ReadJSON(&secondHookPermissionDecisionAttachment); err != nil {
+		t.Fatalf("read second hook_permission_decision attachment failed: %v", err)
+	}
+	if secondHookPermissionDecisionAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondHookPermissionDecisionAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second hook_permission_decision attachment envelope: %#v", secondHookPermissionDecisionAttachment)
+	}
+	secondHookPermissionDecisionPayload, _ := secondHookPermissionDecisionAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondHookPermissionDecisionPayload["type"])) != "hook_permission_decision" ||
+		strings.TrimSpace(asString(secondHookPermissionDecisionPayload["decision"])) != "allow" ||
+		strings.TrimSpace(asString(secondHookPermissionDecisionPayload["toolUseID"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) ||
+		strings.TrimSpace(asString(secondHookPermissionDecisionPayload["hookEvent"])) != "PermissionRequest" {
+		t.Fatalf("unexpected second hook_permission_decision attachment payload: %#v", secondHookPermissionDecisionAttachment)
+	}
 	var secondControlCancel map[string]any
 	if err := ws.ReadJSON(&secondControlCancel); err != nil {
 		t.Fatalf("read second control cancel failed: %v", err)
@@ -2331,6 +2359,20 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 		},
 	}); err != nil {
 		t.Fatalf("write deny control response failed: %v", err)
+	}
+	var denyHookPermissionDecisionAttachment map[string]any
+	if err := ws.ReadJSON(&denyHookPermissionDecisionAttachment); err != nil {
+		t.Fatalf("read deny hook_permission_decision attachment failed: %v", err)
+	}
+	if denyHookPermissionDecisionAttachment["type"] != "attachment" || strings.TrimSpace(asString(denyHookPermissionDecisionAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected deny hook_permission_decision attachment envelope: %#v", denyHookPermissionDecisionAttachment)
+	}
+	denyHookPermissionDecisionPayload, _ := denyHookPermissionDecisionAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(denyHookPermissionDecisionPayload["type"])) != "hook_permission_decision" ||
+		strings.TrimSpace(asString(denyHookPermissionDecisionPayload["decision"])) != "deny" ||
+		strings.TrimSpace(asString(denyHookPermissionDecisionPayload["toolUseID"])) != denyToolUseID ||
+		strings.TrimSpace(asString(denyHookPermissionDecisionPayload["hookEvent"])) != "PermissionRequest" {
+		t.Fatalf("unexpected deny hook_permission_decision attachment payload: %#v", denyHookPermissionDecisionAttachment)
 	}
 
 	var denyResult map[string]any

@@ -857,6 +857,21 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				}
 				responsePayload, _ := responseEnvelope["response"].(map[string]any)
 				if behavior := strings.TrimSpace(asString(responsePayload["behavior"])); behavior == "deny" {
+					attachmentUUID, err := generateRequestID()
+					if err != nil {
+						return
+					}
+					_ = conn.WriteJSON(map[string]any{
+						"type": "attachment",
+						"attachment": map[string]any{
+							"type":      "hook_permission_decision",
+							"decision":  "deny",
+							"toolUseID": pendingToolUseID,
+							"hookEvent": "PermissionRequest",
+						},
+						"uuid":       attachmentUUID,
+						"session_id": session.ID,
+					})
 					resultUUID, err := generateRequestID()
 					if err != nil {
 						return
@@ -989,6 +1004,21 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						toolInputText = updatedText
 					}
 				}
+				hookPermissionDecisionUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":      "hook_permission_decision",
+						"decision":  "allow",
+						"toolUseID": pendingToolUseID,
+						"hookEvent": "PermissionRequest",
+					},
+					"uuid":       hookPermissionDecisionUUID,
+					"session_id": session.ID,
+				})
 				_ = sessionIndex.setStatus(sessionID, session.WorkDir, "running")
 				_ = conn.WriteJSON(map[string]any{
 					"type":       "control_cancel_request",
