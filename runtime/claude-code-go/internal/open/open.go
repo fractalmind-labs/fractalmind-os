@@ -200,6 +200,8 @@ type Result struct {
 	CompactSummaryParentToolUseIDEvent                           string
 	AckedInitialUserReplayValidated                              bool
 	AckedInitialUserReplayEvent                                  string
+	LiveToolResultValidated                                      bool
+	LiveToolResultEvent                                          string
 	ReplayedUserMessageValidated                                 bool
 	ReplayedUserMessageEvent                                     string
 	ReplayedUserSyntheticValidated                               bool
@@ -629,6 +631,8 @@ func Run(args []string) (Result, error) {
 		CompactSummaryTimestampEvent:                           streamResult.CompactSummaryTimestampEvent,
 		CompactSummaryParentToolUseIDValidated:                 streamResult.CompactSummaryParentToolUseIDValidated,
 		CompactSummaryParentToolUseIDEvent:                     streamResult.CompactSummaryParentToolUseIDEvent,
+		LiveToolResultValidated:                                streamResult.LiveToolResultValidated,
+		LiveToolResultEvent:                                    streamResult.LiveToolResultEvent,
 		AckedInitialUserReplayValidated:                        streamResult.AckedInitialUserReplayValidated,
 		AckedInitialUserReplayEvent:                            streamResult.AckedInitialUserReplayEvent,
 		ReplayedUserMessageValidated:                           streamResult.ReplayedUserMessageValidated,
@@ -1292,6 +1296,8 @@ type streamValidation struct {
 	CompactSummaryParentToolUseIDEvent                           string
 	AckedInitialUserReplayValidated                              bool
 	AckedInitialUserReplayEvent                                  string
+	LiveToolResultValidated                                      bool
+	LiveToolResultEvent                                          string
 	ReplayedUserMessageValidated                                 bool
 	ReplayedUserMessageEvent                                     string
 	ReplayedUserSyntheticValidated                               bool
@@ -1679,6 +1685,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		streamlinedTextValidated := false
 		streamlinedToolUseSummaryValidated := false
 		promptSuggestionValidated := false
+		liveToolResultValidated := false
 		for {
 			var incoming map[string]any
 			if err := conn.ReadJSON(&incoming); err != nil {
@@ -1705,6 +1712,34 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					synthetic, ok := incoming["isSynthetic"].(bool)
 					if !ok {
 						return streamValidation{}, fmt.Errorf("invalid user event: missing isSynthetic")
+					}
+					content, _ := message["content"].([]any)
+					if len(content) > 0 {
+						firstBlock, _ := content[0].(map[string]any)
+						if strings.TrimSpace(asString(firstBlock["type"])) == "tool_result" {
+							if strings.TrimSpace(asString(incoming["timestamp"])) == "" {
+								return streamValidation{}, fmt.Errorf("invalid live tool_result: missing timestamp")
+							}
+							if synthetic {
+								return streamValidation{}, fmt.Errorf("invalid live tool_result: expected isSynthetic=false")
+							}
+							if err := validateParentToolUseIDNull(incoming, "invalid live tool_result"); err != nil {
+								return streamValidation{}, err
+							}
+							if strings.TrimSpace(asString(firstBlock["tool_use_id"])) != currentToolUseID {
+								return streamValidation{}, fmt.Errorf("invalid live tool_result: expected tool_use_id=%q, got %q", currentToolUseID, strings.TrimSpace(asString(firstBlock["tool_use_id"])))
+							}
+							if strings.TrimSpace(asString(firstBlock["content"])) != turn.expectedResponse {
+								return streamValidation{}, fmt.Errorf("invalid live tool_result: expected content=%q, got %q", turn.expectedResponse, strings.TrimSpace(asString(firstBlock["content"])))
+							}
+							if isError, ok := firstBlock["is_error"].(bool); ok && isError {
+								return streamValidation{}, fmt.Errorf("invalid live tool_result: expected is_error to be absent or false")
+							}
+							result.LiveToolResultValidated = true
+							result.LiveToolResultEvent = "user:tool_result"
+							liveToolResultValidated = true
+							continue
+						}
 					}
 					contentText, ok := message["content"].(string)
 					if !ok || strings.TrimSpace(contentText) == "" {
@@ -3848,7 +3883,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && selectedLinesInIDEValidated && openedFileInIDEValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && planFileReferenceValidated && invokedSkillsValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && hookBlockingErrorValidated && hookErrorDuringExecutionValidated && hookNonBlockingErrorValidated && hookCancelledValidated && hookSuccessValidated && hookPermissionDecisionValidated && hookStoppedContinuationValidated && hookSystemMessageValidated && hookAdditionalContextValidated && asyncHookResponseValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && relevantMemoriesValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && agentMentionValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && selectedLinesInIDEValidated && openedFileInIDEValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && planFileReferenceValidated && invokedSkillsValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && hookBlockingErrorValidated && hookErrorDuringExecutionValidated && hookNonBlockingErrorValidated && hookCancelledValidated && hookSuccessValidated && hookPermissionDecisionValidated && hookStoppedContinuationValidated && hookSystemMessageValidated && hookAdditionalContextValidated && asyncHookResponseValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && relevantMemoriesValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && agentMentionValidated && streamlinedTextValidated && liveToolResultValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -5305,6 +5340,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("compact_summary_timestamp_event=%s\n", valueOrNone(r.CompactSummaryTimestampEvent)))
 	b.WriteString(fmt.Sprintf("compact_summary_parent_tool_use_id_validated=%t\n", r.CompactSummaryParentToolUseIDValidated))
 	b.WriteString(fmt.Sprintf("compact_summary_parent_tool_use_id_event=%s\n", valueOrNone(r.CompactSummaryParentToolUseIDEvent)))
+	b.WriteString(fmt.Sprintf("live_tool_result_validated=%t\n", r.LiveToolResultValidated))
+	b.WriteString(fmt.Sprintf("live_tool_result_event=%s\n", valueOrNone(r.LiveToolResultEvent)))
 	b.WriteString(fmt.Sprintf("acked_initial_user_replay_validated=%t\n", r.AckedInitialUserReplayValidated))
 	b.WriteString(fmt.Sprintf("acked_initial_user_replay_event=%s\n", valueOrNone(r.AckedInitialUserReplayEvent)))
 	b.WriteString(fmt.Sprintf("replayed_user_message_validated=%t\n", r.ReplayedUserMessageValidated))

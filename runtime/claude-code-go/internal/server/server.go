@@ -1287,6 +1287,30 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 					"uuid":       streamlinedTextUUID,
 					"session_id": session.ID,
 				})
+				liveToolResultUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
+				_ = conn.WriteJSON(map[string]any{
+					"type":               "user",
+					"isReplay":           false,
+					"isSynthetic":        false,
+					"uuid":               liveToolResultUUID,
+					"session_id":         session.ID,
+					"parent_tool_use_id": nil,
+					"timestamp":          time.Now().UTC().Format(time.RFC3339Nano),
+					"message": map[string]any{
+						"role": "user",
+						"content": []map[string]any{
+							{
+								"type":        "tool_result",
+								"tool_use_id": pendingToolUseID,
+								"content":     responseText,
+								"is_error":    false,
+							},
+						},
+					},
+				})
 				_ = conn.WriteJSON(map[string]any{
 					"type":        "assistant",
 					"stop_reason": "end_turn",

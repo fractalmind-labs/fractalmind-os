@@ -442,6 +442,28 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if streamlinedText["type"] != "streamlined_text" || strings.TrimSpace(asString(streamlinedText["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(streamlinedText["text"])) != "echo:hello [approved]" {
 		t.Fatalf("unexpected streamlined_text payload: %#v", streamlinedText)
 	}
+	var liveToolResult map[string]any
+	if err := ws.ReadJSON(&liveToolResult); err != nil {
+		t.Fatalf("read live tool_result failed: %v", err)
+	}
+	if liveToolResult["type"] != "user" || liveToolResult["isReplay"] != false || liveToolResult["isSynthetic"] != false || strings.TrimSpace(asString(liveToolResult["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(liveToolResult["uuid"])) == "" || strings.TrimSpace(asString(liveToolResult["timestamp"])) == "" {
+		t.Fatalf("unexpected live tool_result payload: %#v", liveToolResult)
+	}
+	if liveToolResult["parent_tool_use_id"] != nil {
+		t.Fatalf("expected live tool_result parent_tool_use_id=nil, got %#v", liveToolResult)
+	}
+	liveToolResultMessage, _ := liveToolResult["message"].(map[string]any)
+	if strings.TrimSpace(asString(liveToolResultMessage["role"])) != "user" {
+		t.Fatalf("unexpected live tool_result message payload: %#v", liveToolResult)
+	}
+	liveToolResultContent, _ := liveToolResultMessage["content"].([]any)
+	if len(liveToolResultContent) == 0 {
+		t.Fatalf("missing live tool_result content: %#v", liveToolResult)
+	}
+	liveToolResultBlock, _ := liveToolResultContent[0].(map[string]any)
+	if strings.TrimSpace(asString(liveToolResultBlock["type"])) != "tool_result" || strings.TrimSpace(asString(liveToolResultBlock["tool_use_id"])) != strings.TrimSpace(asString(request["tool_use_id"])) || strings.TrimSpace(asString(liveToolResultBlock["content"])) != "echo:hello [approved]" {
+		t.Fatalf("unexpected live tool_result content payload: %#v", liveToolResult)
+	}
 	var assistant map[string]any
 	if err := ws.ReadJSON(&assistant); err != nil {
 		t.Fatalf("read assistant event failed: %v", err)
@@ -1570,6 +1592,28 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if secondStreamlinedText["type"] != "streamlined_text" || strings.TrimSpace(asString(secondStreamlinedText["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(secondStreamlinedText["text"])) != "echo:hello again [approved]" {
 		t.Fatalf("unexpected second streamlined_text payload: %#v", secondStreamlinedText)
+	}
+	var secondLiveToolResult map[string]any
+	if err := ws.ReadJSON(&secondLiveToolResult); err != nil {
+		t.Fatalf("read second live tool_result failed: %v", err)
+	}
+	if secondLiveToolResult["type"] != "user" || secondLiveToolResult["isReplay"] != false || secondLiveToolResult["isSynthetic"] != false || strings.TrimSpace(asString(secondLiveToolResult["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(secondLiveToolResult["uuid"])) == "" || strings.TrimSpace(asString(secondLiveToolResult["timestamp"])) == "" {
+		t.Fatalf("unexpected second live tool_result payload: %#v", secondLiveToolResult)
+	}
+	if secondLiveToolResult["parent_tool_use_id"] != nil {
+		t.Fatalf("expected second live tool_result parent_tool_use_id=nil, got %#v", secondLiveToolResult)
+	}
+	secondLiveToolResultMessage, _ := secondLiveToolResult["message"].(map[string]any)
+	if strings.TrimSpace(asString(secondLiveToolResultMessage["role"])) != "user" {
+		t.Fatalf("unexpected second live tool_result message payload: %#v", secondLiveToolResult)
+	}
+	secondLiveToolResultContent, _ := secondLiveToolResultMessage["content"].([]any)
+	if len(secondLiveToolResultContent) == 0 {
+		t.Fatalf("missing second live tool_result content: %#v", secondLiveToolResult)
+	}
+	secondLiveToolResultBlock, _ := secondLiveToolResultContent[0].(map[string]any)
+	if strings.TrimSpace(asString(secondLiveToolResultBlock["type"])) != "tool_result" || strings.TrimSpace(asString(secondLiveToolResultBlock["tool_use_id"])) == "" || strings.TrimSpace(asString(secondLiveToolResultBlock["content"])) != "echo:hello again [approved]" {
+		t.Fatalf("unexpected second live tool_result content payload: %#v", secondLiveToolResult)
 	}
 	var secondAssistant map[string]any
 	if err := ws.ReadJSON(&secondAssistant); err != nil {
