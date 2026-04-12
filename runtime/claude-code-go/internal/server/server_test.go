@@ -1211,6 +1211,23 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 		t.Fatalf("invalid hook_response payload: %#v", hookResponse)
 	}
 	var hookErrorDuringExecutionAttachment map[string]any
+	var hookBlockingErrorAttachment map[string]any
+	if err := ws.ReadJSON(&hookBlockingErrorAttachment); err != nil {
+		t.Fatalf("read hook_blocking_error attachment failed: %v", err)
+	}
+	if hookBlockingErrorAttachment["type"] != "attachment" || strings.TrimSpace(asString(hookBlockingErrorAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected hook_blocking_error attachment envelope: %#v", hookBlockingErrorAttachment)
+	}
+	hookBlockingErrorPayload, _ := hookBlockingErrorAttachment["attachment"].(map[string]any)
+	hookBlockingErrorDetail, _ := hookBlockingErrorPayload["blockingError"].(map[string]any)
+	if strings.TrimSpace(asString(hookBlockingErrorPayload["type"])) != "hook_blocking_error" ||
+		strings.TrimSpace(asString(hookBlockingErrorPayload["hookName"])) != "DirectConnectEchoHook" ||
+		strings.TrimSpace(asString(hookBlockingErrorPayload["toolUseID"])) != strings.TrimSpace(asString(request["tool_use_id"])) ||
+		strings.TrimSpace(asString(hookBlockingErrorPayload["hookEvent"])) != "Stop" ||
+		strings.TrimSpace(asString(hookBlockingErrorDetail["blockingError"])) != "Direct-connect demo hook blocked execution." ||
+		strings.TrimSpace(asString(hookBlockingErrorDetail["command"])) != "direct-connect-demo-hook" {
+		t.Fatalf("unexpected hook_blocking_error attachment payload: %#v", hookBlockingErrorAttachment)
+	}
 	if err := ws.ReadJSON(&hookErrorDuringExecutionAttachment); err != nil {
 		t.Fatalf("read hook_error_during_execution attachment failed: %v", err)
 	}
@@ -2321,6 +2338,23 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if strings.TrimSpace(asString(secondHookResponse["hook_id"])) == "" || strings.TrimSpace(asString(secondHookResponse["hook_name"])) == "" || strings.TrimSpace(asString(secondHookResponse["hook_event"])) != "Stop" || strings.TrimSpace(asString(secondHookResponse["outcome"])) != "success" {
 		t.Fatalf("invalid second hook_response payload: %#v", secondHookResponse)
+	}
+	var secondHookBlockingErrorAttachment map[string]any
+	if err := ws.ReadJSON(&secondHookBlockingErrorAttachment); err != nil {
+		t.Fatalf("read second hook_blocking_error attachment failed: %v", err)
+	}
+	if secondHookBlockingErrorAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondHookBlockingErrorAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second hook_blocking_error attachment envelope: %#v", secondHookBlockingErrorAttachment)
+	}
+	secondHookBlockingErrorPayload, _ := secondHookBlockingErrorAttachment["attachment"].(map[string]any)
+	secondHookBlockingErrorDetail, _ := secondHookBlockingErrorPayload["blockingError"].(map[string]any)
+	if strings.TrimSpace(asString(secondHookBlockingErrorPayload["type"])) != "hook_blocking_error" ||
+		strings.TrimSpace(asString(secondHookBlockingErrorPayload["hookName"])) != "DirectConnectEchoHook" ||
+		strings.TrimSpace(asString(secondHookBlockingErrorPayload["toolUseID"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) ||
+		strings.TrimSpace(asString(secondHookBlockingErrorPayload["hookEvent"])) != "Stop" ||
+		strings.TrimSpace(asString(secondHookBlockingErrorDetail["blockingError"])) != "Direct-connect demo hook blocked execution." ||
+		strings.TrimSpace(asString(secondHookBlockingErrorDetail["command"])) != "direct-connect-demo-hook" {
+		t.Fatalf("unexpected second hook_blocking_error attachment payload: %#v", secondHookBlockingErrorAttachment)
 	}
 	var secondHookErrorDuringExecutionAttachment map[string]any
 	if err := ws.ReadJSON(&secondHookErrorDuringExecutionAttachment); err != nil {

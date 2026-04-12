@@ -2266,6 +2266,10 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				if err != nil {
 					return
 				}
+				hookBlockingErrorUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
 				hookErrorDuringExecutionUUID, err := generateRequestID()
 				if err != nil {
 					return
@@ -2282,6 +2286,21 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				if err != nil {
 					return
 				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type": "hook_blocking_error",
+						"blockingError": map[string]any{
+							"blockingError": "Direct-connect demo hook blocked execution.",
+							"command":       "direct-connect-demo-hook",
+						},
+						"hookName":  "DirectConnectEchoHook",
+						"toolUseID": pendingToolUseID,
+						"hookEvent": "Stop",
+					},
+					"uuid":       hookBlockingErrorUUID,
+					"session_id": session.ID,
+				})
 				_ = conn.WriteJSON(map[string]any{
 					"type": "attachment",
 					"attachment": map[string]any{
