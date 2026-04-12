@@ -2266,6 +2266,10 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				if err != nil {
 					return
 				}
+				hookErrorDuringExecutionUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
 				hookSuccessUUID, err := generateRequestID()
 				if err != nil {
 					return
@@ -2278,6 +2282,18 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				if err != nil {
 					return
 				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":      "hook_error_during_execution",
+						"content":   "Direct-connect demo hook failed before completing execution.",
+						"hookName":  "DirectConnectEchoHook",
+						"toolUseID": pendingToolUseID,
+						"hookEvent": "Stop",
+					},
+					"uuid":       hookErrorDuringExecutionUUID,
+					"session_id": session.ID,
+				})
 				_ = conn.WriteJSON(map[string]any{
 					"type": "attachment",
 					"attachment": map[string]any{
