@@ -198,10 +198,12 @@ type Result struct {
 	CompactSummaryTimestampEvent                                 string
 	CompactSummaryParentToolUseIDValidated                       bool
 	CompactSummaryParentToolUseIDEvent                           string
-	AckedInitialUserReplayValidated                              bool
-	AckedInitialUserReplayEvent                                  string
 	LiveToolResultValidated                                      bool
 	LiveToolResultEvent                                          string
+	LiveToolResultErrorValidated                                 bool
+	LiveToolResultErrorEvent                                     string
+	AckedInitialUserReplayValidated                              bool
+	AckedInitialUserReplayEvent                                  string
 	ReplayedUserMessageValidated                                 bool
 	ReplayedUserMessageEvent                                     string
 	ReplayedUserSyntheticValidated                               bool
@@ -633,6 +635,8 @@ func Run(args []string) (Result, error) {
 		CompactSummaryParentToolUseIDEvent:                     streamResult.CompactSummaryParentToolUseIDEvent,
 		LiveToolResultValidated:                                streamResult.LiveToolResultValidated,
 		LiveToolResultEvent:                                    streamResult.LiveToolResultEvent,
+		LiveToolResultErrorValidated:                           streamResult.LiveToolResultErrorValidated,
+		LiveToolResultErrorEvent:                               streamResult.LiveToolResultErrorEvent,
 		AckedInitialUserReplayValidated:                        streamResult.AckedInitialUserReplayValidated,
 		AckedInitialUserReplayEvent:                            streamResult.AckedInitialUserReplayEvent,
 		ReplayedUserMessageValidated:                           streamResult.ReplayedUserMessageValidated,
@@ -1294,10 +1298,12 @@ type streamValidation struct {
 	CompactSummaryTimestampEvent                                 string
 	CompactSummaryParentToolUseIDValidated                       bool
 	CompactSummaryParentToolUseIDEvent                           string
-	AckedInitialUserReplayValidated                              bool
-	AckedInitialUserReplayEvent                                  string
 	LiveToolResultValidated                                      bool
 	LiveToolResultEvent                                          string
+	LiveToolResultErrorValidated                                 bool
+	LiveToolResultErrorEvent                                     string
+	AckedInitialUserReplayValidated                              bool
+	AckedInitialUserReplayEvent                                  string
 	ReplayedUserMessageValidated                                 bool
 	ReplayedUserMessageEvent                                     string
 	ReplayedUserSyntheticValidated                               bool
@@ -1686,6 +1692,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		streamlinedToolUseSummaryValidated := false
 		promptSuggestionValidated := false
 		liveToolResultValidated := false
+		liveToolResultErrorValidated := false
 		for {
 			var incoming map[string]any
 			if err := conn.ReadJSON(&incoming); err != nil {
@@ -1729,11 +1736,21 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 							if strings.TrimSpace(asString(firstBlock["tool_use_id"])) != currentToolUseID {
 								return streamValidation{}, fmt.Errorf("invalid live tool_result: expected tool_use_id=%q, got %q", currentToolUseID, strings.TrimSpace(asString(firstBlock["tool_use_id"])))
 							}
-							if strings.TrimSpace(asString(firstBlock["content"])) != turn.expectedResponse {
-								return streamValidation{}, fmt.Errorf("invalid live tool_result: expected content=%q, got %q", turn.expectedResponse, strings.TrimSpace(asString(firstBlock["content"])))
-							}
+							contentText := strings.TrimSpace(asString(firstBlock["content"]))
 							if isError, ok := firstBlock["is_error"].(bool); ok && isError {
-								return streamValidation{}, fmt.Errorf("invalid live tool_result: expected is_error to be absent or false")
+								if turn.behavior != "deny" {
+									return streamValidation{}, fmt.Errorf("invalid live tool_result: unexpected is_error=true during %s turn", turn.behavior)
+								}
+								if contentText == "" {
+									return streamValidation{}, fmt.Errorf("invalid live tool_result error: missing content")
+								}
+								result.LiveToolResultErrorValidated = true
+								result.LiveToolResultErrorEvent = "user:tool_result:is_error"
+								liveToolResultErrorValidated = true
+								continue
+							}
+							if contentText != turn.expectedResponse {
+								return streamValidation{}, fmt.Errorf("invalid live tool_result: expected content=%q, got %q", turn.expectedResponse, contentText)
 							}
 							result.LiveToolResultValidated = true
 							result.LiveToolResultEvent = "user:tool_result"
@@ -3886,7 +3903,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && selectedLinesInIDEValidated && openedFileInIDEValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && planFileReferenceValidated && invokedSkillsValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && hookBlockingErrorValidated && hookErrorDuringExecutionValidated && hookNonBlockingErrorValidated && hookCancelledValidated && hookSuccessValidated && hookPermissionDecisionValidated && hookStoppedContinuationValidated && hookSystemMessageValidated && hookAdditionalContextValidated && asyncHookResponseValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && relevantMemoriesValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && agentMentionValidated && streamlinedTextValidated && liveToolResultValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
-			if turn.behavior == "deny" && resultValidated {
+			if turn.behavior == "deny" && resultValidated && liveToolResultErrorValidated {
 				break
 			}
 			if turn.behavior == "max_turns" && resultValidated && maxTurnsReachedAttachmentValidated {
@@ -5342,6 +5359,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("compact_summary_parent_tool_use_id_event=%s\n", valueOrNone(r.CompactSummaryParentToolUseIDEvent)))
 	b.WriteString(fmt.Sprintf("live_tool_result_validated=%t\n", r.LiveToolResultValidated))
 	b.WriteString(fmt.Sprintf("live_tool_result_event=%s\n", valueOrNone(r.LiveToolResultEvent)))
+	b.WriteString(fmt.Sprintf("live_tool_result_error_validated=%t\n", r.LiveToolResultErrorValidated))
+	b.WriteString(fmt.Sprintf("live_tool_result_error_event=%s\n", valueOrNone(r.LiveToolResultErrorEvent)))
 	b.WriteString(fmt.Sprintf("acked_initial_user_replay_validated=%t\n", r.AckedInitialUserReplayValidated))
 	b.WriteString(fmt.Sprintf("acked_initial_user_replay_event=%s\n", valueOrNone(r.AckedInitialUserReplayEvent)))
 	b.WriteString(fmt.Sprintf("replayed_user_message_validated=%t\n", r.ReplayedUserMessageValidated))

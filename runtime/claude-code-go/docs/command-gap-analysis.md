@@ -88,6 +88,7 @@
 - 本轮 `open --print` 还新增了统一 `result_error_usage_validated/result_error_usage_event` 摘要位，只验证四类 error result 的 `usage` 是否保持 `EMPTY_USAGE` 同形零值 shape，不扩展真实 token/cost/iterations 统计。
 
 - direct-connect user message 的 `timestamp` 当前只补最小稳定 shape：compact summary、live `user:tool_result` 与 replayed plain user / queued_command / tool_result / local-command stdout breadcrumb / local-command stderr breadcrumb 都要求非空 `timestamp`，并在 `open --print` 摘要中暴露对应 `*_validated/event`；不扩展为真实 transcript timeline、ordering 或 provenance 还原
+- 本轮额外补了最小 `live user:tool_result:is_error`：deny turn 现在会在 `result:error_during_execution` 前额外发 1 条 top-level `user{message.content[0]={type:"tool_result",tool_use_id,content,is_error:true}}`，`open --print` 新增 `live_tool_result_error_validated=true / live_tool_result_error_event=user:tool_result:is_error`；当前只覆盖最小 permission-denied error 文本，不扩展到并发取消、streaming fallback、图片块或其它 richer tool-result error family
 
 - fresh live direct-connect 现额外补最小 initial user ACK replay：只对首条 live user text 发 1 条 `{type:"user", isReplay:true, parent_tool_use_id:null, uuid, timestamp, session_id, message}` ACK 回放，并在 `open --print` 摘要中暴露 `acked_initial_user_replay_validated/event`；不扩展为多条队列、完整 transcript rebuild 或 timeline 排序增强
 

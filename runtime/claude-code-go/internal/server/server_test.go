@@ -2574,6 +2574,28 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 		strings.TrimSpace(asString(denyHookPermissionDecisionPayload["hookEvent"])) != "PermissionRequest" {
 		t.Fatalf("unexpected deny hook_permission_decision attachment payload: %#v", denyHookPermissionDecisionAttachment)
 	}
+	var denyLiveToolResult map[string]any
+	if err := ws.ReadJSON(&denyLiveToolResult); err != nil {
+		t.Fatalf("read deny live tool_result failed: %v", err)
+	}
+	if denyLiveToolResult["type"] != "user" || denyLiveToolResult["isReplay"] != false || denyLiveToolResult["isSynthetic"] != false || strings.TrimSpace(asString(denyLiveToolResult["session_id"])) != parsed["session_id"] || strings.TrimSpace(asString(denyLiveToolResult["uuid"])) == "" || strings.TrimSpace(asString(denyLiveToolResult["timestamp"])) == "" {
+		t.Fatalf("unexpected deny live tool_result payload: %#v", denyLiveToolResult)
+	}
+	if denyLiveToolResult["parent_tool_use_id"] != nil {
+		t.Fatalf("expected deny live tool_result parent_tool_use_id=nil, got %#v", denyLiveToolResult)
+	}
+	denyLiveToolResultMessage, _ := denyLiveToolResult["message"].(map[string]any)
+	denyLiveToolResultContent, _ := denyLiveToolResultMessage["content"].([]any)
+	if strings.TrimSpace(asString(denyLiveToolResultMessage["role"])) != "user" || len(denyLiveToolResultContent) == 0 {
+		t.Fatalf("unexpected deny live tool_result message payload: %#v", denyLiveToolResult)
+	}
+	denyLiveToolResultBlock, _ := denyLiveToolResultContent[0].(map[string]any)
+	if strings.TrimSpace(asString(denyLiveToolResultBlock["type"])) != "tool_result" || strings.TrimSpace(asString(denyLiveToolResultBlock["tool_use_id"])) != denyToolUseID || strings.TrimSpace(asString(denyLiveToolResultBlock["content"])) != "permission denied for tool echo" {
+		t.Fatalf("unexpected deny live tool_result content payload: %#v", denyLiveToolResult)
+	}
+	if isError, ok := denyLiveToolResultBlock["is_error"].(bool); !ok || !isError {
+		t.Fatalf("expected deny live tool_result is_error=true, got %#v", denyLiveToolResult)
+	}
 
 	var denyResult map[string]any
 	if err := ws.ReadJSON(&denyResult); err != nil {

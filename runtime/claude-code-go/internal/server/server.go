@@ -872,6 +872,31 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 						"uuid":       attachmentUUID,
 						"session_id": session.ID,
 					})
+					errorToolResultText := "permission denied for tool " + directConnectEchoToolName
+					errorToolResultUUID, err := generateRequestID()
+					if err != nil {
+						return
+					}
+					_ = conn.WriteJSON(map[string]any{
+						"type":               "user",
+						"isReplay":           false,
+						"isSynthetic":        false,
+						"uuid":               errorToolResultUUID,
+						"session_id":         session.ID,
+						"parent_tool_use_id": nil,
+						"timestamp":          time.Now().UTC().Format(time.RFC3339Nano),
+						"message": map[string]any{
+							"role": "user",
+							"content": []map[string]any{
+								{
+									"type":        "tool_result",
+									"tool_use_id": pendingToolUseID,
+									"content":     errorToolResultText,
+									"is_error":    true,
+								},
+							},
+						},
+					})
 					resultUUID, err := generateRequestID()
 					if err != nil {
 						return
@@ -896,7 +921,7 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 								},
 							},
 						},
-						"errors":          []string{"permission denied for tool " + directConnectEchoToolName},
+						"errors":          []string{errorToolResultText},
 						"fast_mode_state": "off",
 						"uuid":            resultUUID,
 						"session_id":      session.ID,
