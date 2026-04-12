@@ -15,6 +15,8 @@ AI Agent OS 的 ROM / distribution 层仓库初始化文件（v1 草案）。
 - `roms/manager-heavy-core/manifest.yaml`
 - `roms/manager-heavy-core/release-notes.md`
 - `roms/manager-heavy-core/templates/README.md`
+- `roms/mentor-coordinator-core/*`
+- `roms/trinity/*`
 - `examples/manifest-minimal/manifest.yaml`
 
 ## Relationship to agent-os-spec
