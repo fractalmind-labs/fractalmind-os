@@ -1210,6 +1210,23 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	if strings.TrimSpace(asString(hookResponse["hook_id"])) == "" || strings.TrimSpace(asString(hookResponse["hook_name"])) == "" || strings.TrimSpace(asString(hookResponse["hook_event"])) != "Stop" || strings.TrimSpace(asString(hookResponse["outcome"])) != "success" {
 		t.Fatalf("invalid hook_response payload: %#v", hookResponse)
 	}
+	var hookNonBlockingErrorAttachment map[string]any
+	if err := ws.ReadJSON(&hookNonBlockingErrorAttachment); err != nil {
+		t.Fatalf("read hook_non_blocking_error attachment failed: %v", err)
+	}
+	if hookNonBlockingErrorAttachment["type"] != "attachment" || strings.TrimSpace(asString(hookNonBlockingErrorAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected hook_non_blocking_error attachment envelope: %#v", hookNonBlockingErrorAttachment)
+	}
+	hookNonBlockingErrorPayload, _ := hookNonBlockingErrorAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(hookNonBlockingErrorPayload["type"])) != "hook_non_blocking_error" ||
+		strings.TrimSpace(asString(hookNonBlockingErrorPayload["hookName"])) != "DirectConnectEchoHook" ||
+		strings.TrimSpace(asString(hookNonBlockingErrorPayload["stderr"])) != "Direct-connect demo hook reported a recoverable issue." ||
+		strings.TrimSpace(asString(hookNonBlockingErrorPayload["stdout"])) != "echo:hello [approved]" ||
+		fmt.Sprint(hookNonBlockingErrorPayload["exitCode"]) != "1" ||
+		strings.TrimSpace(asString(hookNonBlockingErrorPayload["toolUseID"])) != strings.TrimSpace(asString(request["tool_use_id"])) ||
+		strings.TrimSpace(asString(hookNonBlockingErrorPayload["hookEvent"])) != "Stop" {
+		t.Fatalf("unexpected hook_non_blocking_error attachment payload: %#v", hookNonBlockingErrorAttachment)
+	}
 	var hookCancelledAttachment map[string]any
 	if err := ws.ReadJSON(&hookCancelledAttachment); err != nil {
 		t.Fatalf("read hook_cancelled attachment failed: %v", err)
@@ -2289,6 +2306,23 @@ func TestStartHTTPServerRespondsToSessions(t *testing.T) {
 	}
 	if strings.TrimSpace(asString(secondHookResponse["hook_id"])) == "" || strings.TrimSpace(asString(secondHookResponse["hook_name"])) == "" || strings.TrimSpace(asString(secondHookResponse["hook_event"])) != "Stop" || strings.TrimSpace(asString(secondHookResponse["outcome"])) != "success" {
 		t.Fatalf("invalid second hook_response payload: %#v", secondHookResponse)
+	}
+	var secondHookNonBlockingErrorAttachment map[string]any
+	if err := ws.ReadJSON(&secondHookNonBlockingErrorAttachment); err != nil {
+		t.Fatalf("read second hook_non_blocking_error attachment failed: %v", err)
+	}
+	if secondHookNonBlockingErrorAttachment["type"] != "attachment" || strings.TrimSpace(asString(secondHookNonBlockingErrorAttachment["session_id"])) != parsed["session_id"] {
+		t.Fatalf("unexpected second hook_non_blocking_error attachment envelope: %#v", secondHookNonBlockingErrorAttachment)
+	}
+	secondHookNonBlockingErrorPayload, _ := secondHookNonBlockingErrorAttachment["attachment"].(map[string]any)
+	if strings.TrimSpace(asString(secondHookNonBlockingErrorPayload["type"])) != "hook_non_blocking_error" ||
+		strings.TrimSpace(asString(secondHookNonBlockingErrorPayload["hookName"])) != "DirectConnectEchoHook" ||
+		strings.TrimSpace(asString(secondHookNonBlockingErrorPayload["stderr"])) != "Direct-connect demo hook reported a recoverable issue." ||
+		strings.TrimSpace(asString(secondHookNonBlockingErrorPayload["stdout"])) != "echo:hello again [approved]" ||
+		fmt.Sprint(secondHookNonBlockingErrorPayload["exitCode"]) != "1" ||
+		strings.TrimSpace(asString(secondHookNonBlockingErrorPayload["toolUseID"])) != strings.TrimSpace(asString(secondRequest["tool_use_id"])) ||
+		strings.TrimSpace(asString(secondHookNonBlockingErrorPayload["hookEvent"])) != "Stop" {
+		t.Fatalf("unexpected second hook_non_blocking_error attachment payload: %#v", secondHookNonBlockingErrorAttachment)
 	}
 	var secondHookCancelledAttachment map[string]any
 	if err := ws.ReadJSON(&secondHookCancelledAttachment); err != nil {

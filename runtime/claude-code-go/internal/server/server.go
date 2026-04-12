@@ -2262,6 +2262,10 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				if err != nil {
 					return
 				}
+				hookNonBlockingErrorUUID, err := generateRequestID()
+				if err != nil {
+					return
+				}
 				hookSuccessUUID, err := generateRequestID()
 				if err != nil {
 					return
@@ -2274,6 +2278,20 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				if err != nil {
 					return
 				}
+				_ = conn.WriteJSON(map[string]any{
+					"type": "attachment",
+					"attachment": map[string]any{
+						"type":      "hook_non_blocking_error",
+						"hookName":  "DirectConnectEchoHook",
+						"stderr":    "Direct-connect demo hook reported a recoverable issue.",
+						"stdout":    responseText,
+						"exitCode":  1,
+						"toolUseID": pendingToolUseID,
+						"hookEvent": "Stop",
+					},
+					"uuid":       hookNonBlockingErrorUUID,
+					"session_id": session.ID,
+				})
 				_ = conn.WriteJSON(map[string]any{
 					"type": "attachment",
 					"attachment": map[string]any{

@@ -134,6 +134,8 @@ type Result struct {
 	MCPInstructionsDeltaEvent                                    string
 	CompanionIntroValidated                                      bool
 	CompanionIntroEvent                                          string
+	HookNonBlockingErrorValidated                                bool
+	HookNonBlockingErrorEvent                                    string
 	HookCancelledValidated                                       bool
 	HookCancelledEvent                                           string
 	HookSuccessValidated                                         bool
@@ -559,6 +561,8 @@ func Run(args []string) (Result, error) {
 		MCPInstructionsDeltaEvent:                              streamResult.MCPInstructionsDeltaEvent,
 		CompanionIntroValidated:                                streamResult.CompanionIntroValidated,
 		CompanionIntroEvent:                                    streamResult.CompanionIntroEvent,
+		HookNonBlockingErrorValidated:                          streamResult.HookNonBlockingErrorValidated,
+		HookNonBlockingErrorEvent:                              streamResult.HookNonBlockingErrorEvent,
 		HookCancelledValidated:                                 streamResult.HookCancelledValidated,
 		HookCancelledEvent:                                     streamResult.HookCancelledEvent,
 		HookSuccessValidated:                                   streamResult.HookSuccessValidated,
@@ -1214,6 +1218,8 @@ type streamValidation struct {
 	MCPInstructionsDeltaEvent                                    string
 	CompanionIntroValidated                                      bool
 	CompanionIntroEvent                                          string
+	HookNonBlockingErrorValidated                                bool
+	HookNonBlockingErrorEvent                                    string
 	HookCancelledValidated                                       bool
 	HookCancelledEvent                                           string
 	HookSuccessValidated                                         bool
@@ -1635,6 +1641,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 		agentListingDeltaValidated := false
 		mcpInstructionsDeltaValidated := false
 		companionIntroValidated := false
+		hookNonBlockingErrorValidated := false
 		hookCancelledValidated := false
 		hookSuccessValidated := false
 		hookStoppedContinuationValidated := false
@@ -2943,6 +2950,31 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 					result.HookPermissionDecisionValidated = true
 					result.HookPermissionDecisionEvent = "attachment:hook_permission_decision"
 					hookPermissionDecisionValidated = true
+				case "hook_non_blocking_error":
+					if turn.behavior != "allow" {
+						return streamValidation{}, fmt.Errorf("unexpected hook_non_blocking_error attachment during %s turn", turn.behavior)
+					}
+					if strings.TrimSpace(asString(attachment["hookName"])) != "DirectConnectEchoHook" {
+						return streamValidation{}, fmt.Errorf("invalid hook_non_blocking_error attachment.hookName")
+					}
+					if strings.TrimSpace(asString(attachment["stderr"])) != "Direct-connect demo hook reported a recoverable issue." {
+						return streamValidation{}, fmt.Errorf("invalid hook_non_blocking_error attachment.stderr")
+					}
+					if strings.TrimSpace(asString(attachment["stdout"])) != turn.expectedResponse {
+						return streamValidation{}, fmt.Errorf("invalid hook_non_blocking_error attachment.stdout")
+					}
+					if fmt.Sprint(attachment["exitCode"]) != "1" {
+						return streamValidation{}, fmt.Errorf("invalid hook_non_blocking_error attachment.exitCode")
+					}
+					if strings.TrimSpace(asString(attachment["toolUseID"])) != currentToolUseID {
+						return streamValidation{}, fmt.Errorf("invalid hook_non_blocking_error attachment.toolUseID")
+					}
+					if strings.TrimSpace(asString(attachment["hookEvent"])) != "Stop" {
+						return streamValidation{}, fmt.Errorf("invalid hook_non_blocking_error attachment.hookEvent")
+					}
+					result.HookNonBlockingErrorValidated = true
+					result.HookNonBlockingErrorEvent = "attachment:hook_non_blocking_error"
+					hookNonBlockingErrorValidated = true
 				case "hook_cancelled":
 					if turn.behavior != "allow" {
 						return streamValidation{}, fmt.Errorf("unexpected hook_cancelled attachment during %s turn", turn.behavior)
@@ -3760,7 +3792,7 @@ func validateStream(rawWSURL, authToken string, opts Options) (streamValidation,
 				}
 				resultValidated = true
 			}
-			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && selectedLinesInIDEValidated && openedFileInIDEValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && planFileReferenceValidated && invokedSkillsValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && hookCancelledValidated && hookSuccessValidated && hookPermissionDecisionValidated && hookStoppedContinuationValidated && hookSystemMessageValidated && hookAdditionalContextValidated && asyncHookResponseValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && relevantMemoriesValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && agentMentionValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
+			if turn.behavior == "allow" && assistantValidated && resultValidated && taskStartedValidated && taskProgressValidated && taskNotificationValidated && queuedCommandValidated && filesPersistedValidated && apiRetryValidated && localCommandOutputValidated && elicitationCompleteValidated && postTurnSummaryValidated && criticalSystemReminderValidated && outputStyleValidated && selectedLinesInIDEValidated && openedFileInIDEValidated && diagnosticsValidated && mcpResourceValidated && compactionReminderValidated && budgetUSDValidated && contextEfficiencyValidated && autoModeValidated && autoModeExitValidated && planModeValidated && planModeExitValidated && planModeReentryValidated && planFileReferenceValidated && invokedSkillsValidated && dateChangeValidated && ultrathinkEffortValidated && deferredToolsDeltaValidated && agentListingDeltaValidated && mcpInstructionsDeltaValidated && companionIntroValidated && hookNonBlockingErrorValidated && hookCancelledValidated && hookSuccessValidated && hookPermissionDecisionValidated && hookStoppedContinuationValidated && hookSystemMessageValidated && hookAdditionalContextValidated && asyncHookResponseValidated && tokenUsageValidated && outputTokenUsageValidated && verifyPlanReminderValidated && currentSessionMemoryValidated && relevantMemoriesValidated && nestedMemoryValidated && teammateShutdownBatchValidated && bagelConsoleValidated && teammateMailboxValidated && teamContextValidated && skillDiscoveryValidated && dynamicSkillValidated && skillListingValidated && compactBoundaryValidated && statusCompactingValidated && statusClearedValidated && sessionStateIdleValidated && hookStartedValidated && hookProgressValidated && hookResponseValidated && thinkingDeltaValidated && thinkingSignatureValidated && toolUseBlockStartValidated && toolUseDeltaValidated && toolUseBlockStopValidated && assistantMessageStartValidated && assistantMessageDeltaValidated && assistantMessageStopValidated && assistantThinkingValidated && assistantToolUseValidated && assistantStopReasonValidated && assistantUsageValidated && structuredOutputAttachmentValidated && taskReminderAttachmentValidated && agentMentionValidated && streamlinedTextValidated && streamlinedToolUseSummaryValidated && promptSuggestionValidated {
 				break
 			}
 			if turn.behavior == "deny" && resultValidated {
@@ -5153,6 +5185,8 @@ func (r Result) String() string {
 	b.WriteString(fmt.Sprintf("mcp_instructions_delta_event=%s\n", valueOrNone(r.MCPInstructionsDeltaEvent)))
 	b.WriteString(fmt.Sprintf("companion_intro_validated=%t\n", r.CompanionIntroValidated))
 	b.WriteString(fmt.Sprintf("companion_intro_event=%s\n", valueOrNone(r.CompanionIntroEvent)))
+	b.WriteString(fmt.Sprintf("hook_non_blocking_error_validated=%t\n", r.HookNonBlockingErrorValidated))
+	b.WriteString(fmt.Sprintf("hook_non_blocking_error_event=%s\n", valueOrNone(r.HookNonBlockingErrorEvent)))
 	b.WriteString(fmt.Sprintf("hook_cancelled_validated=%t\n", r.HookCancelledValidated))
 	b.WriteString(fmt.Sprintf("hook_cancelled_event=%s\n", valueOrNone(r.HookCancelledEvent)))
 	b.WriteString(fmt.Sprintf("hook_success_validated=%t\n", r.HookSuccessValidated))
