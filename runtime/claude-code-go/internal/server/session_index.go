@@ -166,6 +166,9 @@ func (s *sessionIndexStore) setAllStatuses(status string) error {
 	now := time.Now().UnixMilli()
 	for sessionKey, entry := range index {
 		entry.Status = status
+		if status == "stopped" {
+			entry.BackendStatus = "stopped"
+		}
 		entry.LastActiveAt = now
 		index[sessionKey] = entry
 	}

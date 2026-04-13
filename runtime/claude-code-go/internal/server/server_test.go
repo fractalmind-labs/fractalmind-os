@@ -4378,6 +4378,54 @@ func TestCloseMarksPersistedSessionsStopped(t *testing.T) {
 	}
 }
 
+func TestCloseMarksNeverAttachedSessionsStopped(t *testing.T) {
+	lockfile := filepath.Join(t.TempDir(), "server.lock.json")
+	sessionIndex := filepath.Join(t.TempDir(), "sessions.json")
+	t.Setenv("CLAUDE_CODE_GO_SERVER_LOCKFILE", lockfile)
+	t.Setenv("CLAUDE_CODE_GO_SERVER_SESSION_INDEX", sessionIndex)
+
+	running, err := Start([]string{"--host", "127.0.0.1", "--port", "0", "--auth-token", "demo-token"})
+	if err != nil {
+		t.Fatalf("Start returned error: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, running.Result.SessionsEndpoint, bytes.NewBufferString(`{"cwd":"/tmp/no-attach-work"}`))
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer demo-token")
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("create session failed: %v", err)
+	}
+	defer resp.Body.Close()
+	var created map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&created); err != nil {
+		t.Fatalf("decode create response: %v", err)
+	}
+
+	if err := running.Close(); err != nil {
+		t.Fatalf("Close returned error: %v", err)
+	}
+
+	data, err := os.ReadFile(sessionIndex)
+	if err != nil {
+		t.Fatalf("read session index: %v", err)
+	}
+	var index map[string]map[string]any
+	if err := json.Unmarshal(data, &index); err != nil {
+		t.Fatalf("parse session index: %v", err)
+	}
+	entry := index[created["session_id"]]
+	if entry["status"] != "stopped" {
+		t.Fatalf("expected stopped status, got %#v", entry)
+	}
+	if entry["backendStatus"] != "stopped" {
+		t.Fatalf("expected stopped backend status, got %#v", entry)
+	}
+}
+
 func TestResumeSessionKeepsBackendAliveAcrossDetach(t *testing.T) {
 	lockfile := filepath.Join(t.TempDir(), "server.lock.json")
 	sessionIndex := filepath.Join(t.TempDir(), "sessions.json")
