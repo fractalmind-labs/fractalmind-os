@@ -4254,6 +4254,85 @@ func TestResumeSessionFromPersistedSessionIndex(t *testing.T) {
 	}
 }
 
+func TestResumeStoppedSessionReturnsConflict(t *testing.T) {
+	lockfile := filepath.Join(t.TempDir(), "server.lock.json")
+	sessionIndex := filepath.Join(t.TempDir(), "sessions.json")
+	t.Setenv("CLAUDE_CODE_GO_SERVER_LOCKFILE", lockfile)
+	t.Setenv("CLAUDE_CODE_GO_SERVER_SESSION_INDEX", sessionIndex)
+
+	running, err := Start([]string{"--host", "127.0.0.1", "--port", "0", "--auth-token", "demo-token"})
+	if err != nil {
+		t.Fatalf("Start returned error: %v", err)
+	}
+	defer func() {
+		if err := running.Close(); err != nil {
+			t.Fatalf("Close returned error: %v", err)
+		}
+	}()
+
+	req, err := http.NewRequest(http.MethodPost, running.Result.SessionsEndpoint, bytes.NewBufferString(`{"cwd":"/tmp/stopped-resume-work"}`))
+	if err != nil {
+		t.Fatalf("NewRequest returned error: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer demo-token")
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("create session failed: %v", err)
+	}
+	defer resp.Body.Close()
+	var created map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&created); err != nil {
+		t.Fatalf("decode create session response: %v", err)
+	}
+
+	deleteReq, err := http.NewRequest(http.MethodDelete, running.Result.SessionsEndpoint+"/"+created["session_id"], nil)
+	if err != nil {
+		t.Fatalf("build delete request failed: %v", err)
+	}
+	deleteReq.Header.Set("Authorization", "Bearer demo-token")
+	deleteResp, err := http.DefaultClient.Do(deleteReq)
+	if err != nil {
+		t.Fatalf("delete session failed: %v", err)
+	}
+	defer deleteResp.Body.Close()
+	if deleteResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected delete OK, got %s", deleteResp.Status)
+	}
+	data, err := os.ReadFile(sessionIndex)
+	if err != nil {
+		t.Fatalf("read session index: %v", err)
+	}
+	var index map[string]map[string]any
+	if err := json.Unmarshal(data, &index); err != nil {
+		t.Fatalf("parse session index: %v", err)
+	}
+	if index[created["session_id"]]["terminal"] != true {
+		t.Fatalf("expected terminal stopped entry after delete, got %#v", index[created["session_id"]])
+	}
+
+	resumeReq, err := http.NewRequest(http.MethodGet, running.Result.SessionsEndpoint+"?resume="+created["session_id"], nil)
+	if err != nil {
+		t.Fatalf("resume request build failed: %v", err)
+	}
+	resumeReq.Header.Set("Authorization", "Bearer demo-token")
+	resumeResp, err := http.DefaultClient.Do(resumeReq)
+	if err != nil {
+		t.Fatalf("resume session failed: %v", err)
+	}
+	defer resumeResp.Body.Close()
+	if resumeResp.StatusCode != http.StatusConflict {
+		t.Fatalf("expected stopped resume conflict, got %s", resumeResp.Status)
+	}
+	body, err := io.ReadAll(resumeResp.Body)
+	if err != nil {
+		t.Fatalf("read resume response failed: %v", err)
+	}
+	if strings.TrimSpace(string(body)) != "session is stopped" {
+		t.Fatalf("unexpected stopped resume body: %q", body)
+	}
+}
+
 func TestWebsocketCloseMarksSessionDetached(t *testing.T) {
 	lockfile := filepath.Join(t.TempDir(), "server.lock.json")
 	sessionIndex := filepath.Join(t.TempDir(), "sessions.json")

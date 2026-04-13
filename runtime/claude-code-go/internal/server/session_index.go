@@ -15,6 +15,7 @@ type sessionIndexEntry struct {
 	TranscriptSessionID string `json:"transcriptSessionId"`
 	CWD                 string `json:"cwd"`
 	Status              string `json:"status"`
+	Terminal            bool   `json:"terminal,omitempty"`
 	BackendStatus       string `json:"backendStatus,omitempty"`
 	BackendPID          int    `json:"backendPid,omitempty"`
 	BackendStartedAt    int64  `json:"backendStartedAt,omitempty"`
@@ -104,6 +105,27 @@ func (s *sessionIndexStore) setStatus(sessionKey, cwd, status string) error {
 	if strings.TrimSpace(status) != "" {
 		entry.Status = status
 	}
+	entry.LastActiveAt = time.Now().UnixMilli()
+	index[sessionKey] = entry
+	return s.writeLocked(index)
+}
+
+func (s *sessionIndexStore) setTerminal(sessionKey string, terminal bool) error {
+	if s == nil || strings.TrimSpace(s.path) == "" || strings.TrimSpace(sessionKey) == "" {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	index, err := s.readLocked()
+	if err != nil {
+		return err
+	}
+	entry, ok := index[sessionKey]
+	if !ok {
+		return nil
+	}
+	entry.Terminal = terminal
 	entry.LastActiveAt = time.Now().UnixMilli()
 	index[sessionKey] = entry
 	return s.writeLocked(index)

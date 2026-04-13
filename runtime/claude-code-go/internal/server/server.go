@@ -335,6 +335,10 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				http.Error(w, "session not found", http.StatusNotFound)
 				return
 			}
+			if entry.Terminal {
+				http.Error(w, "session is stopped", http.StatusConflict)
+				return
+			}
 			if existing, ok := store.get(sessionID); ok {
 				store.put(sessionInfo{
 					ID:                     sessionID,
@@ -449,6 +453,10 @@ func buildMux(defaultWorkspace, authToken, transport, wsBase string, store *sess
 				}
 			}
 			if err := sessionIndex.setStatus(sessionID, workDir, "stopped"); err != nil {
+				http.Error(w, "failed to persist session state", http.StatusInternalServerError)
+				return
+			}
+			if err := sessionIndex.setTerminal(sessionID, true); err != nil {
 				http.Error(w, "failed to persist session state", http.StatusInternalServerError)
 				return
 			}
