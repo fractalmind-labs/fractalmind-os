@@ -1,6 +1,32 @@
 # claude-code-go
 
-本地 Go CLI 重写实现，当前已具备最小可运行入口、鉴权持久化、Anthropic 兼容请求链路，并开始按源仓库命令面持续补齐功能。
+本地 Go CLI 重写实现。当前分支已经积累了比首轮评审更大的实验面，但 PR #1 的恢复目标不是继续放大全量功能，而是先把第一张可审切片收紧为 `bootstrap + CI`。
+
+## PR #1 可审入口
+
+首轮建议只审 Slice 1：
+
+- CLI bootstrap：`cmd/claude-code-go/main.go`
+- bootstrap 能力：`internal/auth/*`、`internal/config/*`、`internal/install/*`、`internal/update/*`
+- 文档：`README.md`、`docs/command-gap-analysis.md`、`docs/pr1-recovery-plan.md`
+- CI：`.github/workflows/ci.yml`
+
+这张切片的目标不是宣称整个分支已经“可合并”，而是先恢复 3 件事：
+
+1. PR 上有可见的自动检查
+2. reviewer 能先围绕 bootstrap/auth/config/doctor/install/update 形成第一轮审阅闭环
+3. direct-connect / server / open / plugin / mcp 等更大面，后续按独立 slice 继续拆
+
+当前推荐的基础验证命令：
+
+```bash
+gofmt -w $(git ls-files '*.go')
+git diff --check
+go test ./...
+go build ./...
+```
+
+后续拆分和主控口径见 [docs/pr1-recovery-plan.md](docs/pr1-recovery-plan.md)。
 
 ## 当前已实现
 

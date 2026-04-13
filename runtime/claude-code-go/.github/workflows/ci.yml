@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - feat/bootstrap-cli-skeleton
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Verify gofmt and worktree cleanliness
+        run: |
+          git ls-files '*.go' | xargs gofmt -w
+          git diff --exit-code
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build
+        run: go build ./...

@@ -1,7 +1,41 @@
 # claude-code → claude-code-go 命令面对照（v0.4）
 
-更新时间：2026-04-06 CST  
-当前分支：`feat/bootstrap-cli-skeleton` / `工作区未提交实现中`
+更新时间：2026-04-13 CST
+当前分支：`feat/bootstrap-cli-skeleton`
+
+## 0. PR #1 Recovery / Slice 1 Boundary
+
+当前分支相对 `origin/main` 已累计大体量实验改动，不适合作为“一个 reviewer 一次性全审完”的 PR 来看。
+
+为恢复主路径，本轮先把 **可审入口** 收紧到 Slice 1：
+
+- `cmd/claude-code-go/main.go`
+- `internal/auth/*`
+- `internal/config/*`
+- `internal/install/*`
+- `internal/update/*`
+- `README.md`
+- `docs/command-gap-analysis.md`
+- `.github/workflows/ci.yml`
+
+本轮 reviewer 只需要先回答两个问题：
+
+1. bootstrap/CLI skeleton + auth/config/doctor/install/update 这条最小主路径是否成立
+2. CI 是否能稳定暴露 `gofmt` / `go test ./...` / `go build ./...`
+
+明显超出 Slice 1 的部分目前仍在分支上，但应作为 **后续独立 slice** 继续审，不应阻塞首轮 bootstrap + CI 闭环：
+
+- direct-connect `server/open`
+- streaming / control parity
+- attachment / tool-result parity
+- `plugin` / `mcp` / `assistant` / `ssh` / `auto-mode` 等扩展面
+
+最小后续拆分建议：
+
+1. Slice 2：`server/open` session lifecycle baseline
+2. Slice 3：streaming / control parity
+3. Slice 4：attachment / tool-result parity
+4. Slice 5：其它命令面（`plugin` / `mcp` / `assistant` / `ssh` / `auto-mode`）
 
 ## 1. 对照口径
 

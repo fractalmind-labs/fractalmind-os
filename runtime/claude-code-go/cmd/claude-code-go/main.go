@@ -867,17 +867,25 @@ func parseMCPRemoveArgs(args []string) (mcp.RemoveOptions, error) {
 func printHelp() {
 	fmt.Println(`claude-code-go
 
-Usage:
-  claude-code-go auth login --api-key <token>
-  claude-code-go auth status
-  claude-code-go auth logout
-  claude-code-go config show
-  claude-code-go doctor
-  claude-code-go auto-mode defaults
-  claude-code-go auto-mode config
-  claude-code-go assistant [sessionId]
-  claude-code-go server [--port <number>] [--host <string>] [--auth-token <token>] [--unix <path>] [--workspace <dir>] [--idle-timeout <ms>] [--max-sessions <n>]
-  claude-code-go ssh <host> [dir] [--permission-mode <mode>] [--dangerously-skip-permissions] [--local]
+	Usage:
+	  # Slice 1 bootstrap / config / install
+	  claude-code-go auth login --api-key <token>
+	  claude-code-go auth status
+	  claude-code-go auth logout
+	  claude-code-go config show
+	  claude-code-go doctor
+	  claude-code-go install [target] --dry-run
+	  claude-code-go install <target> --apply
+	  claude-code-go update [target] (--source-binary <path> | --source-url <url>) [--apply]
+	  claude-code-go api payload [--api-base <url>] [--model <name>] [--max-tokens <n>]
+	  claude-code-go api ping [--api-base <url>] [--model <name>] [--max-tokens <n>]
+
+	  # Later slices already present on this branch
+	  claude-code-go auto-mode defaults
+	  claude-code-go auto-mode config
+	  claude-code-go assistant [sessionId]
+	  claude-code-go server [--port <number>] [--host <string>] [--auth-token <token>] [--unix <path>] [--workspace <dir>] [--idle-timeout <ms>] [--max-sessions <n>]
+	  claude-code-go ssh <host> [dir] [--permission-mode <mode>] [--dangerously-skip-permissions] [--local]
   claude-code-go open <cc-url> [-p|--print [prompt]] [--output-format <format>] [--resume-session <sessionId>] [--stop-session <sessionId>]
   claude-code-go setup-token [--token <token>] [--write-env-file <path>]
   claude-code-go mcp list
@@ -887,15 +895,12 @@ Usage:
   claude-code-go plugin marketplace add <source> [--scope <user|project|local>]
   claude-code-go plugin marketplace list
   claude-code-go plugin marketplace remove <name>
-  claude-code-go mcp get <name>
-  claude-code-go mcp add [--scope <scope>] [--transport <stdio|http|sse>] [--env KEY=value] [--header 'Key: value'] <name> <command-or-url> [args...]
-  claude-code-go mcp remove <name> [--scope <scope>]
-  claude-code-go agents [--setting-sources <sources>]
-  claude-code-go install [target] --dry-run
-  claude-code-go install <target> --apply
-  claude-code-go update [target] (--source-binary <path> | --source-url <url>) [--apply]
-  claude-code-go api payload [--api-base <url>] [--model <name>] [--max-tokens <n>]
-  claude-code-go api ping [--api-base <url>] [--model <name>] [--max-tokens <n>]`)
+	  claude-code-go mcp get <name>
+	  claude-code-go mcp add [--scope <scope>] [--transport <stdio|http|sse>] [--env KEY=value] [--header 'Key: value'] <name> <command-or-url> [args...]
+	  claude-code-go mcp remove <name> [--scope <scope>]
+	  claude-code-go agents [--setting-sources <sources>]
+
+	  See docs/pr1-recovery-plan.md for the current review boundary.`)
 }
 
 func valueOrNone(v string) string {
