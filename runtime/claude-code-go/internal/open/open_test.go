@@ -411,6 +411,35 @@ func TestRunOpenSurfacesMaxSessionsGuard(t *testing.T) {
 	}
 }
 
+func TestRunOpenSurfacesStoppedResumeConflict(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/sessions", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Fatalf("expected GET, got %s", r.Method)
+		}
+		if got := r.Header.Get("Authorization"); got != "Bearer demo-token" {
+			t.Fatalf("expected auth header, got %q", got)
+		}
+		if got := r.URL.Query().Get("resume"); got != "sess-stopped" {
+			t.Fatalf("expected resume query, got %q", got)
+		}
+		http.Error(w, "session is stopped", http.StatusConflict)
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	_, err := Run([]string{
+		"cc://" + strings.TrimPrefix(srv.URL, "http://") + "?authToken=demo-token",
+		"--resume-session", "sess-stopped",
+	})
+	if err == nil {
+		t.Fatalf("expected stopped resume error")
+	}
+	if !strings.Contains(err.Error(), "409 Conflict") || !strings.Contains(err.Error(), "session is stopped") {
+		t.Fatalf("unexpected stopped resume error: %v", err)
+	}
+}
+
 func TestRunOpenRejectsMissingURL(t *testing.T) {
 	_, err := Run(nil)
 	if err == nil || !strings.Contains(err.Error(), "usage: claude-code-go open <cc-url>") {
