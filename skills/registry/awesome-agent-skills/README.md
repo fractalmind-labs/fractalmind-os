@@ -1038,8 +1038,9 @@ Official skills from the Flutter team covering layouts, state, navigation, nativ
 <details>
 <summary><h3 style="display:inline">Skills by MiniMax Team</h3></summary>
 
-10 development and document generation skills from the MiniMax AI team. Covers frontend, fullstack, mobile, shader development, and document creation (PDF, DOCX, XLSX, PPTX) with MiniMax API integration.
+11 development and document generation skills from the MiniMax AI team. Covers frontend, fullstack, mobile, shader development, document creation (PDF, DOCX, XLSX, PPTX), and the MiniMax AI CLI with MiniMax API integration.
 
+- **[MiniMax-AI/cli](https://officialskills.sh/MiniMax-AI/skills/cli)** - Generate text, image, video, speech, and music via MiniMax AI
 - **[MiniMax-AI/frontend-dev](https://officialskills.sh/MiniMax-AI/skills/frontend-dev)** - Full-stack frontend with cinematic animations, AI-generated media via MiniMax API, and generative art
 - **[MiniMax-AI/fullstack-dev](https://officialskills.sh/MiniMax-AI/skills/fullstack-dev)** - Backend architecture with REST API design, auth flows, real-time features, and database integration
 - **[MiniMax-AI/android-native-dev](https://officialskills.sh/MiniMax-AI/skills/android-native-dev)** - Android native development with Kotlin/Jetpack Compose, Material Design 3, and accessibility
