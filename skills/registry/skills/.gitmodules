@@ -1,0 +1,30 @@
+[submodule "coordination/agent-manager"]
+	path = coordination/agent-manager
+	url = git@github.com:fractalmind-ai/agent-manager-skill.git
+[submodule "coordination/team-manager"]
+	path = coordination/team-manager
+	url = git@github.com:fractalmind-ai/team-manager-skill.git
+[submodule "coordination/okr-manager"]
+	path = coordination/okr-manager
+	url = git@github.com:fractalmind-ai/okr-manager-skill.git
+[submodule "coordination/five-step-workflow"]
+	path = coordination/five-step-workflow
+	url = git@github.com:fractalmind-ai/five-step-workflow-skill.git
+[submodule "coordination/turbo-frequency"]
+	path = coordination/turbo-frequency
+	url = git@github.com:fractalmind-ai/turbo-frequency-skill.git
+[submodule "interfaces/agent-browser"]
+	path = interfaces/agent-browser
+	url = git@github.com:fractalmind-ai/agent-browser-skill.git
+[submodule "interfaces/team-chat"]
+	path = interfaces/team-chat
+	url = git@github.com:fractalmind-ai/team-chat-skill.git
+[submodule "interfaces/use-fractalbot"]
+	path = interfaces/use-fractalbot
+	url = git@github.com:fractalmind-ai/use-fractalbot-skill.git
+[submodule "interfaces/use-phone"]
+	path = interfaces/use-phone
+	url = git@github.com:fractalmind-ai/use-phone-skill.git
+[submodule "validation/custodial-wallet-e2e"]
+	path = validation/custodial-wallet-e2e
+	url = git@github.com:fractalmind-ai/custodial-wallet-e2e-skill.git
