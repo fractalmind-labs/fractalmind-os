@@ -1,9 +1,29 @@
 # manager-heavy-core templates
 
-这里保留 manager-heavy-core 的最小模板占位说明。
+Complete template set for bootstrapping a coordination-first AI employee workspace.
 
-当前阶段只验证：
-- ROM 仓是否需要 `templates/` 路径
-- manifest 与模板目录之间的引用关系是否清晰
+## Contents
 
-当前不放真实模板内容，避免在第一轮验证里把 review 面做得过大。
+| File | Purpose |
+|------|---------|
+| `SYSTEM.md` | Kernel contract — role, manager principles, operating rules, structure invariants |
+| `SOUL.md` | Identity + 40+ battle-tested operating principles across 11 categories |
+| `AGENTS.md` | Session bootstrap sequence, memory rules, communication guidelines, heartbeat discipline |
+| `HEARTBEAT.md` | TODO-first execution surface with 3-gate HEARTBEAT_OK criteria |
+| `USER.md` | Operator profile — name, channels, timezone, preferences |
+| `OKR.md` | Active OKR control plane (max 3 concurrent) |
+| `TODO.md` | High-priority temporary work tracker (cleared before OKR work) |
+| `MEMORY.md` | Long-term curated memory (main session only) |
+| `TOOLS.md` | Local tools, services, and environment notes |
+| `memory/index.md` | Topic navigation index for daily notes |
+| `okrs/Candidate.md` | Non-active OKR parking lot with lifecycle rules |
+
+## Installation
+
+Copy all template files to your workspace root, preserving directory structure:
+
+```bash
+cp -r templates/* /path/to/your/workspace/
+```
+
+Then fill in `USER.md` with your operator details and customize `AGENTS.md` frontmatter (launcher, skills, heartbeat cron).

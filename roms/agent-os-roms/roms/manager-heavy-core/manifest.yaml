@@ -1,7 +1,10 @@
 rom_name: manager-heavy-core
 rom_family: manager-heavy
-rom_version: 0.1.0
-description: Manager-first AI Agent OS distribution for coordination-heavy workspaces.
+rom_version: 0.2.0
+description: >-
+  Manager-first AI Agent OS distribution for coordination-heavy workspaces.
+  Full template set with battle-tested principles, escalation templates,
+  OKR control plane, TODO-first heartbeat, and file-backed memory system.
 
 spec_version: 1.0.0
 requires_spec: ">=1.0.0"
@@ -13,21 +16,18 @@ included_skills:
   - team-manager
   - agent-calendar
   - notifier
-  - use-fractalbot
 
 template_set:
   - workspace-root
   - memory-pack
   - heartbeat-pack
+  - todo-pack
 
 assets:
   install:
-    - install.sh
     - templates/
   upgrade:
-    - upgrade.sh
-  rollback:
-    - rollback.sh
+    - templates/
 
 install_boundary:
   creates_files:
@@ -37,28 +37,43 @@ install_boundary:
     - USER.md
     - HEARTBEAT.md
     - OKR.md
+    - TODO.md
+    - MEMORY.md
+    - TOOLS.md
+    - okrs/Candidate.md
+    - memory/index.md
   creates_directories:
     - memory/
     - okrs/
-  bootstrap_entrypoint: install.sh
+  bootstrap_entrypoint: manual-bootstrap
   post_install_expectations:
     - heartbeat control plane exists
+    - TODO control plane exists
     - active OKR control plane exists
     - memory daily note path is writable
+    - operator can configure messaging and agent dispatch
 
 upgrade_boundary:
   upgrade_strategy: overlay-with-preserve
   mutable_paths:
     - HEARTBEAT.md
-    - .agent/skills/
+    - SYSTEM.md
+    - SOUL.md
+    - AGENTS.md
     - templates/
   preserved_local_overrides:
     - USER.md
     - MEMORY.md
     - TOOLS.md
-  rollback_hint: restore last ROM release snapshot before overlay
+    - OKR.md
+    - TODO.md
+    - okrs/Candidate.md
+    - memory/
+  rollback_hint: restore previous ROM snapshot before overlay
   breaking_changes:
-    - heartbeat rule rename may require manual merge
+    - heartbeat rule renames may require manual merge
+    - SOUL.md principle numbering changes may require operator review
+    - TODO control-plane addition may require heartbeat re-read
 
 defaults:
   default_persona: coordinator-first
@@ -66,5 +81,11 @@ defaults:
   recommended_use_cases:
     - multi-agent management
     - OKR-driven execution
+    - delegation-first coordination
+    - GitHub-centric development workflows
   operator_notes:
     - optimized for owner-side coordination and active OKR control planes
+    - expects TODO-first heartbeat discipline
+    - expects file-backed memory with daily notes and topic index
+    - includes battle-tested escalation templates (approval + blocker)
+    - includes 40+ operating principles distilled from production experience

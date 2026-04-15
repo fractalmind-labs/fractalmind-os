@@ -1,18 +1,42 @@
 # manager-heavy-core release notes
 
-版本：0.1.0
-日期：2026-03-26 17:06 CST
-状态：bootstrap draft
+## v0.2.0
+Date: 2026-04-15
+Status: production-ready
 
-## 本版内容
-- 第一份 `manager-heavy-core` manifest 草案已落地
-- 第一版目标是验证 spec ↔ ROM 的最小分层是否足够支撑新仓初始化
+### What's new
+- **Full template set**: 11 files across workspace root, memory, and OKR subsystems
+  - `SYSTEM.md` — kernel contract with manager principles and operating rules
+  - `SOUL.md` — 40+ battle-tested operating principles across 11 categories (work philosophy, role, safety, autonomy, escalation, quality, patrol, communication, anti-drift, templates, OKR completion)
+  - `AGENTS.md` — session bootstrap, memory rules, structure invariants, communication guidelines, heartbeat discipline
+  - `HEARTBEAT.md` — TODO-first execution surface with 3-gate HEARTBEAT_OK criteria
+  - `USER.md` — operator profile template with collaboration notes
+  - `OKR.md` — active OKR control plane (max 3)
+  - `TODO.md` — high-priority temporary work tracker
+  - `MEMORY.md` — long-term curated memory
+  - `TOOLS.md` — local tools and environment notes
+  - `memory/index.md` — topic navigation index
+  - `okrs/Candidate.md` — non-active OKR parking lot with lifecycle rules
+- **Manifest updated** to reflect all created files and directories
+- **TODO-first heartbeat** discipline: temporary urgent work is resolved before OKR progression
+- **Escalation templates**: standardized approval request and blocker report formats
+- **OKR completion guidelines**: 8 rules for evidence-based closure
 
-## 当前范围
-- 仅包含 manifest / init-file 级草案
-- 不包含完整 installer
-- 不包含真实 upgrade / rollback 脚本实现
+### Breaking changes from v0.1.0
+- `install_boundary.creates_files` expanded (added TODO.md, MEMORY.md, TOOLS.md, okrs/Candidate.md, memory/index.md)
+- `bootstrap_entrypoint` changed from `install.sh` to `manual-bootstrap`
+- `included_skills` removed `use-fractalbot` (operator-specific, should be added per workspace)
 
-## 下一步
-- 对齐 `agent-os-spec` 的最小初始化文件
-- 决定是否补 `templates/` 下的最小占位内容
+### Migration from v0.1.0
+Since v0.1.0 had no real templates, this is effectively a fresh install. Copy templates/ contents to your workspace root.
+
+---
+
+## v0.1.0
+Date: 2026-03-26
+Status: bootstrap draft
+
+### What was included
+- First `manager-heavy-core` manifest draft
+- Placeholder templates directory (README only)
+- Goal was to validate spec <-> ROM minimal layering
