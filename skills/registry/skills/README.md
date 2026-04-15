@@ -23,7 +23,7 @@ skills/
     use-phone/
   validation/
     DESCRIPTION.md
-    custodial-wallet-e2e/
+    wallet-mock/
   development/
     DESCRIPTION.md
     predict-contracts/
@@ -64,7 +64,7 @@ git submodule update --init --recursive
 - `interfaces/use-phone` -> `fractalmind-ai/use-phone-skill`
 
 ### validation
-- `validation/custodial-wallet-e2e` -> `fractalmind-ai/custodial-wallet-e2e-skill`
+- `validation/wallet-mock` -> `fractalmind-ai/wallet-mock-skill`
 
 ### development
 - `development/predict-contracts` -> `fractalmind-ai/predict-contracts-skill`

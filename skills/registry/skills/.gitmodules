@@ -25,12 +25,12 @@
 [submodule "interfaces/use-phone"]
 	path = interfaces/use-phone
 	url = git@github.com:fractalmind-ai/use-phone-skill.git
-[submodule "validation/custodial-wallet-e2e"]
-	path = validation/custodial-wallet-e2e
-	url = git@github.com:fractalmind-ai/custodial-wallet-e2e-skill.git
 [submodule "development/predict-contracts"]
 	path = development/predict-contracts
 	url = git@github.com:fractalmind-ai/predict-contracts-skill.git
 [submodule "development/golang-web3-service"]
 	path = development/golang-web3-service
 	url = git@github.com:fractalmind-ai/golang-web3-service-skill.git
+[submodule "validation/wallet-mock"]
+	path = validation/wallet-mock
+	url = git@github.com:fractalmind-ai/wallet-mock-skill.git
