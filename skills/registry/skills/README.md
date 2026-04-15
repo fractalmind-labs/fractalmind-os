@@ -24,6 +24,10 @@ skills/
   validation/
     DESCRIPTION.md
     custodial-wallet-e2e/
+  development/
+    DESCRIPTION.md
+    predict-contracts/
+    custodial-wallet-service/
 ```
 
 每个 category 目录下都有一个 `DESCRIPTION.md`，用于说明这一类 skill 的用途边界与适用场景。
@@ -61,6 +65,10 @@ git submodule update --init --recursive
 
 ### validation
 - `validation/custodial-wallet-e2e` -> `fractalmind-ai/custodial-wallet-e2e-skill`
+
+### development
+- `development/predict-contracts` -> `fractalmind-ai/predict-contracts-skill`
+- `development/custodial-wallet-service` -> `fractalmind-ai/custodial-wallet-service-skill`
 
 ## 如何新增一个 skill
 
