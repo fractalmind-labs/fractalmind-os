@@ -31,6 +31,6 @@
 [submodule "development/predict-contracts"]
 	path = development/predict-contracts
 	url = git@github.com:fractalmind-ai/predict-contracts-skill.git
-[submodule "development/custodial-wallet-service"]
-	path = development/custodial-wallet-service
-	url = git@github.com:fractalmind-ai/custodial-wallet-service-skill.git
+[submodule "development/golang-web3-service"]
+	path = development/golang-web3-service
+	url = git@github.com:fractalmind-ai/golang-web3-service-skill.git

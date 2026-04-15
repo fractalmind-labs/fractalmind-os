@@ -27,7 +27,7 @@ skills/
   development/
     DESCRIPTION.md
     predict-contracts/
-    custodial-wallet-service/
+    golang-web3-service/
 ```
 
 每个 category 目录下都有一个 `DESCRIPTION.md`，用于说明这一类 skill 的用途边界与适用场景。
@@ -68,7 +68,7 @@ git submodule update --init --recursive
 
 ### development
 - `development/predict-contracts` -> `fractalmind-ai/predict-contracts-skill`
-- `development/custodial-wallet-service` -> `fractalmind-ai/custodial-wallet-service-skill`
+- `development/golang-web3-service` -> `fractalmind-ai/golang-web3-service-skill`
 
 ## 如何新增一个 skill
 
