@@ -20,19 +20,27 @@ html {
   scroll-behavior: smooth;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 /* Hide VitePress default footer when brand pages are shown */
-.brand-home ~ .VPFooter,
-.VPPage:has(.brand-home) + .VPFooter,
-.why-page ~ .VPFooter,
-.VPPage:has(.why-page) + .VPFooter {
+.Layout:has(.brand-home) .VPFooter,
+.Layout:has(.why-page) .VPFooter {
   display: none;
 }
 
 /* Remove VitePress content padding on brand pages */
+.VPContent:has(.brand-home),
+.VPContent:has(.why-page),
 .VPPage:has(.brand-home),
 .VPPage:has(.why-page) {
   padding: 0 !important;
 }
+.VPContent:has(.brand-home) > div,
+.VPContent:has(.why-page) > div,
 .VPPage:has(.brand-home) > div,
 .VPPage:has(.why-page) > div {
   padding: 0;

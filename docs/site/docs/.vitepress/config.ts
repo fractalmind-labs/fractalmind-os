@@ -14,10 +14,11 @@ export default defineConfig({
     nav: [
       { text: 'Why FractalMind', link: '/why' },
       {
-        text: 'Docs',
+        text: 'Start Here',
         items: [
           { text: 'What is FractalMind?', link: '/guide/what-is-fractalmind' },
           { text: 'Quick Start', link: '/guide/quick-start' },
+          { text: 'Architecture Overview', link: '/architecture/overview' },
           { text: 'Core Principles', link: '/guide/principles' },
         ],
       },

@@ -54,7 +54,7 @@ The important shift is that **FractalMind is now OS-first, not only protocol-fir
 
 As of the current public org state:
 
-- FractalMind AI spans **18 public repositories**
+- FractalMind AI spans **24 public repositories**
 - The heartbeat-driven OS loop is running in `oh-my-code`
 - Candidate OKR sync is active through `fractalmind-okrs`
 - The protocol remains live on **SUI Testnet** as an optional trust layer

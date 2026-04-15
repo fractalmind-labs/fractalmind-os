@@ -1,94 +1,80 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-
-const products = [
-  {
-    name: 'oh-my-code',
-    description: 'Reference workspace where the heartbeat-driven FractalMind OS runs: memory, OKRs, governance, dispatch, and outcomes.',
-    icon: '&#x267b;',
-    color: '#4DA2FF',
-    link: 'https://github.com/fractalmind-ai/oh-my-code',
-  },
-  {
-    name: 'fractalmind-okrs',
-    description: 'Shared publication surface for candidate OKRs, portfolio review, and durable strategic memory.',
-    icon: '&#x1f4ca;',
-    color: '#e94560',
-    link: 'https://github.com/fractalmind-ai/fractalmind-okrs',
-  },
-  {
-    name: 'fractalbot',
-    description: 'Multi-channel messaging bridge that routes humans and agents across Slack, Telegram, Discord, Feishu, and more.',
-    icon: '&#x1f4e1;',
-    color: '#4ecdc4',
-    link: '/components/fractalbot',
-  },
-  {
-    name: 'agent-manager',
-    description: 'Execution plane for tmux-based agents with lifecycle management, monitoring, and dispatch support.',
-    icon: '&#x1f916;',
-    color: '#4ecdc4',
-    link: '/components/agent-manager',
-  },
-  {
-    name: 'fractalmind-protocol',
-    description: 'Optional trust layer on SUI for identity, governance, and organization primitives when on-chain guarantees matter.',
-    icon: '&#x26d3;',
-    color: '#4DA2FF',
-    link: '/components/protocol',
-  },
-  {
-    name: 'fractalmind-envd',
-    description: 'Go runtime for remote and distributed execution beyond a single machine.',
-    icon: '&#x1f310;',
-    color: '#4ecdc4',
-    link: '/components/envd',
-  },
-  {
-    name: 'explorer',
-    description: 'Public visualization surface for organizations, components, and trust-critical state.',
-    icon: '&#x1f50d;',
-    color: '#e94560',
-    link: 'https://fractalmind-ai.github.io/explorer',
-  },
-]
-
-const stats = [
-  { value: '18', label: 'Public Repositories' },
-  { value: '14', label: 'Local Checkouts' },
-  { value: '100%', label: 'Closed-Loop Delivery' },
-  { value: 'Live', label: 'Heartbeat Control Loop' },
-]
-
-const milestones = [
-  { date: '2025 Q4', title: 'Protocol trust layer validated', description: 'fractalmind-protocol shipped to SUI Testnet as the optional trust surface.' },
-  { date: '2026 Q1', title: 'FractalMind OS control loop aligned', description: 'SOUL, HEARTBEAT, runtime memory, and heartbeat execution now share one operating model.' },
-  { date: '2026 Q1', title: 'Candidate OKR sync live', description: 'Strategic candidates now publish through fractalmind-okrs instead of staying trapped in one terminal.' },
-  { date: '2026 Q1', title: 'Multi-channel execution running', description: 'fractalbot + agent-manager route humans to agents and keep delivery observable.' },
-  { date: '2026 Q1', title: 'Public surfaces being re-aligned', description: 'Docs and GitHub are being updated from a protocol-first story to the current OS-first reality.' },
-]
-
-const githubLinks = [
-  {
-    label: '18 Repositories',
-    description: 'Browse the full OS kernel, execution surfaces, protocol, and application repos.',
-    url: 'https://github.com/fractalmind-ai',
-  },
-  {
-    label: 'Candidate OKR Portfolio',
-    description: 'See the shared strategy surface in fractalmind-okrs.',
-    url: 'https://github.com/fractalmind-ai/fractalmind-okrs',
-  },
-  {
-    label: 'Live Explorer',
-    description: 'Inspect the public visualization / trust surface.',
-    url: 'https://fractalmind-ai.github.io/explorer',
-  },
-]
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { collectSectionMeasurements, resolveActiveSectionHref } from '../utils/homepageScrollSpy'
+import {
+  audiences,
+  decisionPaths,
+  githubLinks,
+  milestones,
+  products,
+  proofSurfaces,
+  sectionNav,
+  startHere,
+  stats,
+} from '../utils/homepageContent'
 
 const visible = ref(false)
+const activeSection = ref(sectionNav[0]?.href ?? '#snapshot')
+
+let cleanupScrollSpy = () => {}
+
 onMounted(() => {
   visible.value = true
+
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return
+  }
+
+  let rafId = 0
+  let initialSyncTimeout: number | undefined
+
+  const updateActiveSection = () => {
+    const scrollY = window.scrollY || window.pageYOffset || 0
+    const measurements = collectSectionMeasurements(sectionNav, document, scrollY)
+
+    activeSection.value = resolveActiveSectionHref(
+      measurements,
+      scrollY,
+      220,
+      sectionNav[0]?.href ?? '#snapshot',
+    )
+  }
+
+  const scheduleUpdate = () => {
+    if (rafId) {
+      window.cancelAnimationFrame(rafId)
+    }
+
+    rafId = window.requestAnimationFrame(() => {
+      updateActiveSection()
+      rafId = 0
+    })
+  }
+
+  scheduleUpdate()
+  initialSyncTimeout = window.setTimeout(scheduleUpdate, 120)
+
+  window.addEventListener('scroll', scheduleUpdate, { passive: true })
+  window.addEventListener('resize', scheduleUpdate)
+  window.addEventListener('hashchange', scheduleUpdate)
+
+  cleanupScrollSpy = () => {
+    if (rafId) {
+      window.cancelAnimationFrame(rafId)
+    }
+
+    if (initialSyncTimeout !== undefined) {
+      window.clearTimeout(initialSyncTimeout)
+    }
+
+    window.removeEventListener('scroll', scheduleUpdate)
+    window.removeEventListener('resize', scheduleUpdate)
+    window.removeEventListener('hashchange', scheduleUpdate)
+  }
+})
+
+onBeforeUnmount(() => {
+  cleanupScrollSpy()
 })
 </script>
 
@@ -110,65 +96,184 @@ onMounted(() => {
             <path d="M50 30L70 70H30L50 30Z" stroke="currentColor" stroke-width="1" opacity="0.1" />
           </svg>
         </div>
+        <div class="hero-orb hero-orb-a"></div>
+        <div class="hero-orb hero-orb-b"></div>
       </div>
-      <div class="hero-content">
-        <div class="hero-logo">
-          <svg width="80" height="80" viewBox="0 0 32 32" fill="none">
-            <path d="M16 4L28 26H4L16 4Z" fill="#4DA2FF" opacity="0.9" />
-            <path d="M16 10L22 22H10L16 10Z" fill="#1a1a2e" />
-            <path d="M16 14L19 20H13L16 14Z" fill="#4DA2FF" opacity="0.7" />
-          </svg>
-        </div>
-        <h1 class="hero-title">
-          <span class="title-main">FractalMind AI</span>
-          <span class="title-sub">Heartbeat-driven operating system for AI agent teams</span>
-        </h1>
-        <p class="hero-description">
-          Open-source operating system for governed autonomy, structured memory,
-          multi-channel execution, and optional on-chain trust surfaces.
-        </p>
-        <div class="hero-selling-points">
-          <div class="selling-point">
-            <span class="sp-icon">&#x1f465;</span>
-            <div>
-              <strong>Heartbeat-driven execution</strong>
-              <p>Run delivery through a repeatable loop: signal, memory, candidate OKR, governance, execution, and outcome.</p>
-            </div>
+      <div class="section-container hero-shell">
+        <div class="hero-copy">
+          <div class="hero-kicker-row">
+            <span class="hero-kicker">OS-first AI operations</span>
+            <span class="hero-inline-proof">Heartbeat / Memory / Governance / Dispatch</span>
           </div>
-          <div class="selling-point">
-            <span class="sp-icon">&#x1f9e9;</span>
-            <div>
-              <strong>Governed autonomy</strong>
-              <p>Low-risk work can move automatically, while production, money, and public actions stay behind human approval.</p>
-            </div>
-          </div>
-          <div class="selling-point">
-            <span class="sp-icon">&#x1f50d;</span>
-            <div>
-              <strong>Protocol when trust matters</strong>
-              <p>Use SUI and public visualization surfaces when identity, governance, or trust-critical proof is required — without making that the whole story.</p>
-            </div>
-          </div>
-        </div>
-        <div class="hero-actions">
-          <a href="/guide/quick-start" class="btn btn-primary">Quick Start</a>
-          <a href="https://fractalmind-ai.github.io/explorer" class="btn btn-secondary" target="_blank" rel="noopener">Live Explorer</a>
-          <a href="https://github.com/fractalmind-ai" class="btn btn-ghost" target="_blank" rel="noopener">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+
+          <div class="hero-logo">
+            <svg width="72" height="72" viewBox="0 0 32 32" fill="none">
+              <path d="M16 4L28 26H4L16 4Z" fill="#00d992" opacity="0.92" />
+              <path d="M16 10L22 22H10L16 10Z" fill="#050507" />
+              <path d="M16 14L19 20H13L16 14Z" fill="#4DA2FF" opacity="0.9" />
             </svg>
-            GitHub
-          </a>
+          </div>
+
+          <h1 class="hero-title">
+            <span class="title-main">FractalMind AI</span>
+            <span class="title-sub">Operating system for AI agent teams that need structure, speed, and human control.</span>
+          </h1>
+
+          <p class="hero-description">
+            Open-source runtime for governed autonomy, structured memory, multi-channel execution,
+            and optional on-chain trust surfaces — designed to move real work instead of stopping at demos.
+          </p>
+
+          <div class="hero-selling-points">
+            <div class="selling-point">
+              <span class="sp-icon">&#x1f49a;</span>
+              <div>
+                <strong>Repeatable operating loop</strong>
+                <p>Run delivery through one visible control system: signal, memory, candidate OKR, governance, execution, and outcome.</p>
+              </div>
+            </div>
+            <div class="selling-point">
+              <span class="sp-icon">&#x2699;&#xfe0f;</span>
+              <div>
+                <strong>Governed autonomy by default</strong>
+                <p>Low-risk work can move automatically while production, money, and public actions stay behind human approval.</p>
+              </div>
+            </div>
+            <div class="selling-point">
+              <span class="sp-icon">&#x1f5a7;&#xfe0f;</span>
+              <div>
+                <strong>Trust surfaces when they matter</strong>
+                <p>Use docs, GitHub, explorer, and SUI primitives as verification layers — without forcing the whole product into a protocol-only story.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-actions">
+            <a href="/guide/quick-start" class="btn btn-primary">Quick Start</a>
+            <a href="https://fractalmind-ai.github.io/explorer" class="btn btn-secondary" target="_blank" rel="noopener">Live Explorer</a>
+            <a href="https://github.com/fractalmind-ai" class="btn btn-ghost" target="_blank" rel="noopener">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+              </svg>
+              GitHub
+            </a>
+          </div>
+
+          <div class="hero-paths">
+            <div class="hero-paths-header">
+              <span class="hero-paths-eyebrow">Choose your fastest path</span>
+              <p>Pick the lens that matches your job-to-be-done and jump straight to the right next proof.</p>
+            </div>
+            <div class="hero-path-grid">
+              <a
+                v-for="path in decisionPaths"
+                :key="path.audience"
+                :href="path.link"
+                class="hero-path-card"
+                :target="path.link.startsWith('http') ? '_blank' : undefined"
+                :rel="path.link.startsWith('http') ? 'noopener' : undefined"
+              >
+                <span class="hero-path-audience">{{ path.audience }}</span>
+                <strong>{{ path.title }}</strong>
+                <p>{{ path.description }}</p>
+                <span class="hero-path-proof">{{ path.proof }}</span>
+                <span class="hero-path-cta">{{ path.cta }} &rarr;</span>
+              </a>
+            </div>
+          </div>
+
+          <nav class="section-nav" aria-label="Homepage sections">
+            <a
+              v-for="item in sectionNav"
+              :key="item.href"
+              :href="item.href"
+              :class="['section-nav-link', { 'is-active': activeSection === item.href }]"
+              :aria-current="activeSection === item.href ? 'location' : undefined"
+              @click="activeSection = item.href"
+            >
+              {{ item.label }}
+            </a>
+          </nav>
+        </div>
+
+        <div class="hero-panel">
+          <div class="hero-panel-top">
+            <span class="panel-pill">Current public story</span>
+            <span class="panel-status">OS-first refresh</span>
+          </div>
+
+          <div class="hero-command">
+            <span class="command-label">control loop</span>
+            <code>signal → memory → candidate OKR → governance → execution → outcome</code>
+          </div>
+
+          <div class="hero-panel-grid">
+            <div class="panel-metric panel-metric-accent">
+              <span class="panel-metric-label">Operating model</span>
+              <strong>Heartbeat runtime</strong>
+              <p>Teams, agents, and delivery stay on one repeatable system.</p>
+            </div>
+            <div class="panel-metric">
+              <span class="panel-metric-label">Human control</span>
+              <strong>Approval stays in the loop</strong>
+              <p>High-risk execution remains explicitly governed instead of hidden in prompts.</p>
+            </div>
+            <div class="panel-metric panel-metric-wide">
+              <span class="panel-metric-label">Public verification</span>
+              <strong>Docs, GitHub, explorer, protocol</strong>
+              <p>Trust-critical proof can stay inspectable through open repos, live surfaces, and optional SUI primitives.</p>
+            </div>
+          </div>
+
+          <div class="hero-chip-row">
+            <span class="hero-chip">Open source</span>
+            <span class="hero-chip">Multi-channel</span>
+            <span class="hero-chip">Structured memory</span>
+            <span class="hero-chip">Governed autonomy</span>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- Stats Bar -->
-    <section class="stats-section">
-      <div class="stats-container">
-        <div v-for="stat in stats" :key="stat.label" class="stat-item">
-          <span class="stat-value">{{ stat.value }}</span>
-          <span class="stat-label">{{ stat.label }}</span>
+    <section id="snapshot" class="stats-section">
+      <div class="section-container">
+        <div class="stats-shell">
+          <div class="stats-intro">
+            <span class="stats-eyebrow">Public operating snapshot</span>
+            <h2>What is live right now</h2>
+            <p>The homepage now leads with the runtime reality: an operating system story, then the public trust surfaces around it.</p>
+          </div>
+          <div class="stats-container">
+            <div v-for="stat in stats" :key="stat.label" class="stat-item">
+              <span class="stat-value">{{ stat.value }}</span>
+              <span class="stat-label">{{ stat.label }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Start Here -->
+    <section id="start-here" class="start-here-section">
+      <div class="section-container">
+        <div class="start-here-header">
+          <div class="stage-badge">Start Here</div>
+          <h2 class="section-title">The fastest way into FractalMind</h2>
+          <p class="section-subtitle">
+            New to the project? Start with the model, then the quick start, then the component map.
+          </p>
+        </div>
+        <div class="start-here-grid">
+          <a v-for="(item, index) in startHere" :key="item.title" :href="item.link" class="start-card">
+            <div class="start-card-top">
+              <span class="start-step">0{{ index + 1 }}</span>
+              <span class="start-card-arrow">&rarr;</span>
+            </div>
+            <h3>{{ item.title }}</h3>
+            <p>{{ item.description }}</p>
+            <span class="start-card-link">{{ item.cta }}</span>
+          </a>
         </div>
       </div>
     </section>
@@ -198,23 +303,54 @@ onMounted(() => {
       </div>
     </section>
 
+    <!-- Audience Fit -->
+    <section id="fit" class="audience-section">
+      <div class="section-container">
+        <h2 class="section-title">Who FractalMind Fits</h2>
+        <p class="section-subtitle">
+          Different buyers need different proof. The OS story now makes that fit explicit instead of forcing everyone through the same protocol-first path.
+        </p>
+        <div class="audience-grid">
+          <article
+            v-for="audience in audiences"
+            :key="audience.title"
+            class="audience-card"
+          >
+            <span class="audience-eyebrow">{{ audience.eyebrow }}</span>
+            <h3>{{ audience.title }}</h3>
+            <p>{{ audience.description }}</p>
+            <ul class="audience-points">
+              <li v-for="point in audience.points" :key="point">{{ point }}</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
     <!-- Product Matrix -->
-    <section class="products-section">
+    <section id="operating-surfaces" class="products-section">
       <div class="section-container">
         <h2 class="section-title">Core Operating Surfaces</h2>
         <p class="section-subtitle">The current system is OS-first: communication, execution, governance, and trust surfaces.</p>
         <div class="products-grid">
           <a
-            v-for="product in products"
+            v-for="(product, index) in products"
             :key="product.name"
             :href="product.link"
             class="product-card"
           >
-            <div class="product-icon" :style="{ color: product.color }">
-              <span v-html="product.icon"></span>
+            <div class="product-card-head">
+              <span class="product-tag">Surface 0{{ index + 1 }}</span>
+              <div class="product-icon" :style="{ color: product.color }">
+                <span v-html="product.icon"></span>
+              </div>
             </div>
             <h3 class="product-name">{{ product.name }}</h3>
             <p class="product-description">{{ product.description }}</p>
+            <div class="product-footer">
+              <span class="product-link-label">Inspect surface</span>
+              <span class="product-link-arrow">&rarr;</span>
+            </div>
             <div class="product-accent" :style="{ backgroundColor: product.color }"></div>
           </a>
         </div>
@@ -222,7 +358,7 @@ onMounted(() => {
     </section>
 
     <!-- Architecture Diagram -->
-    <section class="architecture-section">
+    <section id="operating-stack" class="architecture-section">
       <div class="section-container">
         <h2 class="section-title">Current Operating Stack</h2>
         <p class="section-subtitle">Heartbeat-driven coordination with optional on-chain trust layers.</p>
@@ -310,10 +446,28 @@ onMounted(() => {
     </section>
 
     <!-- Live Demo -->
-    <section class="demo-section">
+    <section id="public-surfaces" class="demo-section">
       <div class="section-container">
         <h2 class="section-title">Public Surfaces</h2>
         <p class="section-subtitle">Docs, GitHub, and Explorer show the public side of the system.</p>
+        <div class="proof-grid">
+          <a
+            v-for="surface in proofSurfaces"
+            :key="surface.title"
+            :href="surface.link"
+            class="proof-card"
+            :target="surface.external ? '_blank' : undefined"
+            :rel="surface.external ? 'noopener' : undefined"
+          >
+            <span class="proof-label">{{ surface.label }}</span>
+            <h3>{{ surface.title }}</h3>
+            <p>{{ surface.description }}</p>
+            <span class="proof-cta">
+              {{ surface.cta }}
+              <span aria-hidden="true">&rarr;</span>
+            </span>
+          </a>
+        </div>
         <div class="demo-card">
           <div class="demo-preview">
             <svg viewBox="0 0 600 300" fill="none" class="demo-svg">
@@ -397,7 +551,7 @@ onMounted(() => {
     </section>
 
     <!-- Trust & Transparency -->
-    <section class="trust-section">
+    <section id="trust" class="trust-section">
       <div class="section-container">
         <div class="trust-header">
           <div class="stage-badge">OS v1.0</div>
@@ -430,8 +584,8 @@ onMounted(() => {
                 :key="link.label"
                 :href="link.url"
                 class="verify-link"
-                target="_blank"
-                rel="noopener"
+                :target="link.external ? '_blank' : undefined"
+                :rel="link.external ? 'noopener' : undefined"
               >
                 <strong>{{ link.label }}</strong>
                 <p>{{ link.description }}</p>
@@ -440,7 +594,7 @@ onMounted(() => {
             </div>
 
             <div class="stage-info">
-              <h4>Project Stage: Operating-system rollout</h4>
+              <h4>Project Stage: OS-first documentation refresh</h4>
               <p>
                 FractalMind is actively shifting from a protocol-first public story to the
                 current OS-first reality: heartbeat, structured memory, candidate OKRs,
@@ -454,24 +608,37 @@ onMounted(() => {
     </section>
 
     <!-- CTA Section -->
-    <section class="cta-section">
+    <section id="next-step" class="cta-section">
       <div class="section-container">
-        <div class="cta-content">
-          <h2>Ready to run agent teams?</h2>
-          <p>Start with the docs, inspect the public repos, and follow the operating model all the way down.</p>
-          <div class="cta-actions">
-            <a href="/guide/quick-start" class="btn btn-primary">
-              Quick Start Guide
-            </a>
-            <a href="/components/overview" class="btn btn-secondary">
-              Browse Components
-            </a>
-            <a href="https://github.com/fractalmind-ai" class="btn btn-ghost" target="_blank" rel="noopener">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-              </svg>
-              View on GitHub
-            </a>
+        <div class="cta-shell">
+          <div class="cta-copy">
+            <div class="stage-badge">Next step</div>
+            <h2>Start with the operating model</h2>
+            <p>Get the framing first, then the workflow, then the component map. The protocol and explorer still matter — they just fit inside a broader operating system narrative now.</p>
+            <ul class="cta-list">
+              <li>Understand the OS-first model</li>
+              <li>Open the practical quick-start path</li>
+              <li>Inspect components and trust surfaces</li>
+            </ul>
+          </div>
+          <div class="cta-actions-panel">
+            <div class="cta-actions">
+              <a href="/guide/what-is-fractalmind" class="btn btn-primary">
+                What is FractalMind?
+              </a>
+              <a href="/guide/quick-start" class="btn btn-primary">
+                Quick Start Guide
+              </a>
+              <a href="/components/overview" class="btn btn-secondary">
+                Browse Components
+              </a>
+              <a href="https://github.com/fractalmind-ai" class="btn btn-ghost" target="_blank" rel="noopener">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                </svg>
+                View on GitHub
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -543,40 +710,62 @@ onMounted(() => {
 <style scoped>
 /* ===== Layout ===== */
 .brand-home {
+  --bg: #050507;
+  --surface: #101010;
+  --surface-alt: #151517;
+  --surface-soft: #0b100f;
+  --border: #3d3a39;
+  --border-soft: rgba(184, 179, 176, 0.16);
+  --accent: #00d992;
+  --accent-soft: rgba(0, 217, 146, 0.12);
+  --accent-blue: #4da2ff;
+  --text: #f2f2f2;
+  --muted: #b8b3b0;
+  --subtle: #8b949e;
+  --shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   opacity: 0;
   transition: opacity 0.6s ease;
+  background: var(--bg);
+  color: var(--text);
 }
 .brand-home.visible {
   opacity: 1;
 }
 .section-container {
-  max-width: 1152px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 24px;
 }
+.brand-home :is(section[id]) {
+  scroll-margin-top: 88px;
+}
 .section-title {
   text-align: center;
-  font-size: 2rem;
-  font-weight: 700;
-  color: #e2e8f0;
-  margin-bottom: 8px;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 650;
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+  color: var(--text);
+  margin-bottom: 12px;
 }
 .section-subtitle {
+  max-width: 760px;
+  margin: 0 auto 48px;
   text-align: center;
-  color: #8892b0;
-  font-size: 1.1rem;
-  margin-bottom: 48px;
+  color: var(--subtle);
+  font-size: 1.05rem;
+  line-height: 1.7;
 }
 
 /* ===== Hero ===== */
 .hero-section {
   position: relative;
-  min-height: 90vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: hidden;
-  background: #1a1a2e;
+  background:
+    radial-gradient(circle at top left, rgba(77, 162, 255, 0.12), transparent 32%),
+    radial-gradient(circle at 80% 15%, rgba(0, 217, 146, 0.12), transparent 26%),
+    linear-gradient(180deg, rgba(5, 5, 7, 0.96), rgba(7, 8, 10, 1));
+  padding: 120px 0 72px;
 }
 .hero-bg {
   position: absolute;
@@ -589,166 +778,577 @@ onMounted(() => {
 }
 .fractal-triangle {
   position: absolute;
-  color: #4ecdc4;
+  color: var(--accent);
 }
-.ft-1 { width: 300px; top: 5%; left: 5%; animation: float 20s ease-in-out infinite; }
-.ft-2 { width: 200px; top: 15%; right: 10%; color: #4DA2FF; animation: float 25s ease-in-out infinite reverse; }
-.ft-3 { width: 250px; bottom: 10%; left: 15%; color: #e94560; animation: float 22s ease-in-out infinite; }
-.ft-4 { width: 180px; bottom: 20%; right: 5%; animation: float 18s ease-in-out infinite reverse; }
-.ft-5 { width: 150px; top: 50%; left: 50%; color: #4DA2FF; animation: float 30s ease-in-out infinite; }
-.ft-6 { width: 220px; top: 60%; right: 25%; color: #e94560; animation: float 24s ease-in-out infinite reverse; }
-
+.ft-1 { width: 300px; top: 4%; left: 4%; animation: float 20s ease-in-out infinite; }
+.ft-2 { width: 220px; top: 14%; right: 8%; color: var(--accent-blue); animation: float 25s ease-in-out infinite reverse; }
+.ft-3 { width: 240px; bottom: 11%; left: 14%; color: rgba(0, 217, 146, 0.65); animation: float 22s ease-in-out infinite; }
+.ft-4 { width: 180px; bottom: 18%; right: 6%; color: rgba(77, 162, 255, 0.7); animation: float 18s ease-in-out infinite reverse; }
+.ft-5 { width: 150px; top: 50%; left: 52%; color: rgba(0, 217, 146, 0.4); animation: float 30s ease-in-out infinite; }
+.ft-6 { width: 220px; top: 62%; right: 22%; color: rgba(77, 162, 255, 0.5); animation: float 24s ease-in-out infinite reverse; }
+.hero-orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(80px);
+  opacity: 0.35;
+}
+.hero-orb-a {
+  width: 260px;
+  height: 260px;
+  right: 8%;
+  top: 10%;
+  background: rgba(0, 217, 146, 0.22);
+}
+.hero-orb-b {
+  width: 320px;
+  height: 320px;
+  left: -4%;
+  bottom: -8%;
+  background: rgba(77, 162, 255, 0.14);
+}
 @keyframes float {
   0%, 100% { transform: translateY(0) rotate(0deg); }
   33% { transform: translateY(-20px) rotate(2deg); }
   66% { transform: translateY(10px) rotate(-1deg); }
 }
-
-.hero-content {
+.hero-shell {
   position: relative;
-  text-align: center;
-  padding: 40px 24px;
   z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+  gap: 28px;
+  align-items: stretch;
 }
-.hero-logo {
+.hero-copy,
+.hero-panel {
+  position: relative;
+  border-radius: 28px;
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(180deg, rgba(16, 16, 16, 0.94), rgba(10, 10, 10, 0.98));
+  box-shadow: var(--shadow);
+}
+.hero-copy {
+  padding: 40px;
+}
+.hero-panel {
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.hero-kicker-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-bottom: 24px;
 }
+.hero-kicker,
+.hero-inline-proof,
+.panel-pill,
+.hero-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  border-radius: 999px;
+  padding: 0 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.hero-kicker,
+.panel-pill {
+  color: var(--accent);
+  background: rgba(0, 217, 146, 0.08);
+  border: 1px solid rgba(0, 217, 146, 0.22);
+}
+.hero-inline-proof {
+  color: var(--subtle);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.hero-logo {
+  margin-bottom: 28px;
+}
 .hero-logo svg {
-  filter: drop-shadow(0 0 30px rgba(77, 162, 255, 0.3));
+  filter: drop-shadow(0 0 18px rgba(0, 217, 146, 0.22));
 }
 .hero-title {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 .title-main {
   display: block;
-  font-size: 3.5rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #4DA2FF, #4ecdc4);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  line-height: 1.1;
+  font-size: clamp(3.6rem, 9vw, 6rem);
+  line-height: 0.96;
+  letter-spacing: -0.065em;
+  font-weight: 650;
+  color: var(--text);
 }
 .title-sub {
   display: block;
-  font-size: 1.5rem;
-  font-weight: 400;
-  color: #e2e8f0;
-  margin-top: 12px;
+  margin-top: 18px;
+  max-width: 14ch;
+  font-size: clamp(1.28rem, 2.8vw, 1.95rem);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  font-weight: 420;
+  color: var(--muted);
 }
 .hero-description {
-  max-width: 640px;
-  margin: 0 auto 36px;
-  color: #8892b0;
-  font-size: 1.15rem;
-  line-height: 1.6;
+  max-width: 680px;
+  margin: 0 0 32px;
+  color: var(--subtle);
+  font-size: 1.05rem;
+  line-height: 1.75;
 }
 .hero-selling-points {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-width: 560px;
-  margin: 0 auto 36px;
-  text-align: left;
+  display: grid;
+  gap: 14px;
+  margin-bottom: 32px;
 }
 .selling-point {
-  display: flex;
+  display: grid;
+  grid-template-columns: 20px 1fr;
   gap: 14px;
-  align-items: flex-start;
+  align-items: start;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
 }
 .sp-icon {
-  font-size: 1.5rem;
-  flex-shrink: 0;
-  margin-top: 2px;
+  font-size: 1rem;
+  line-height: 1.4;
+  color: var(--accent);
 }
 .selling-point strong {
   display: block;
-  color: #e2e8f0;
-  font-size: 1rem;
-  margin-bottom: 2px;
+  color: var(--text);
+  font-size: 0.98rem;
+  margin-bottom: 4px;
 }
 .selling-point p {
-  color: #8892b0;
-  font-size: 0.95rem;
-  line-height: 1.5;
+  color: var(--subtle);
+  font-size: 0.93rem;
+  line-height: 1.65;
   margin: 0;
 }
 .hero-actions {
   display: flex;
   gap: 12px;
-  justify-content: center;
   flex-wrap: wrap;
+}
+.hero-paths {
+  display: grid;
+  gap: 16px;
+  margin-top: 24px;
+}
+.hero-paths-header {
+  display: grid;
+  gap: 8px;
+}
+.hero-paths-header p {
+  margin: 0;
+  color: var(--subtle);
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+.hero-paths-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 0 12px;
+  border: 1px solid rgba(77, 162, 255, 0.22);
+  background: rgba(77, 162, 255, 0.08);
+  color: var(--accent-blue);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.hero-path-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.hero-path-card {
+  display: grid;
+  gap: 10px;
+  min-height: 100%;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015));
+  text-decoration: none;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+.hero-path-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(0, 217, 146, 0.24);
+  background: linear-gradient(180deg, rgba(0, 217, 146, 0.08), rgba(77, 162, 255, 0.05));
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.18);
+}
+.hero-path-card strong {
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.4;
+}
+.hero-path-card p {
+  margin: 0;
+  color: var(--subtle);
+  font-size: 0.92rem;
+  line-height: 1.68;
+}
+.hero-path-audience,
+.hero-path-proof,
+.hero-path-cta {
+  display: inline-flex;
+  align-items: center;
+}
+.hero-path-audience {
+  color: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.hero-path-proof {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.hero-path-cta {
+  margin-top: auto;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.section-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.section-nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  transition: transform 0.2s ease, border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+.section-nav-link:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0, 217, 146, 0.26);
+  color: var(--text);
+  background: rgba(0, 217, 146, 0.08);
+}
+.section-nav-link.is-active {
+  border-color: rgba(0, 217, 146, 0.38);
+  color: var(--text);
+  background: linear-gradient(180deg, rgba(0, 217, 146, 0.18), rgba(77, 162, 255, 0.12));
+  box-shadow: 0 0 0 1px rgba(0, 217, 146, 0.1) inset;
+}
+.section-nav-link:focus-visible {
+  outline: 2px solid rgba(0, 217, 146, 0.5);
+  outline-offset: 2px;
+  border-color: rgba(0, 217, 146, 0.32);
+  color: var(--text);
+}
+.hero-panel-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.panel-status {
+  color: var(--subtle);
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+}
+.hero-command {
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 217, 146, 0.18);
+  background: linear-gradient(180deg, rgba(0, 217, 146, 0.08), rgba(16, 16, 16, 0.92));
+}
+.command-label {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--subtle);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.hero-command code {
+  display: block;
+  color: var(--text);
+  font-size: 0.98rem;
+  line-height: 1.7;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+.hero-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.panel-metric {
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
+}
+.panel-metric-accent {
+  border-color: rgba(0, 217, 146, 0.22);
+  background: linear-gradient(180deg, rgba(0, 217, 146, 0.08), rgba(255, 255, 255, 0.02));
+}
+.panel-metric-wide {
+  grid-column: 1 / -1;
+}
+.panel-metric-label {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--subtle);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.panel-metric strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-size: 1.02rem;
+  line-height: 1.35;
+}
+.panel-metric p {
+  margin: 0;
+  color: var(--subtle);
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+.hero-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.hero-chip {
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* ===== Buttons ===== */
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 1rem;
+  min-height: 48px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 0.96rem;
   font-weight: 600;
   text-decoration: none;
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+.btn:hover {
+  transform: translateY(-2px);
+}
+.btn:focus-visible,
+.start-card:focus-visible,
+.product-card:focus-visible,
+.verify-link:focus-visible,
+.hero-path-card:focus-visible {
+  outline: 2px solid rgba(0, 217, 146, 0.46);
+  outline-offset: 3px;
 }
 .btn-primary {
-  background: linear-gradient(135deg, #e94560, #c73a54);
-  color: #fff;
+  color: #2fd6a1;
+  border-color: rgba(0, 217, 146, 0.28);
+  background: linear-gradient(180deg, rgba(16, 16, 16, 0.96), rgba(11, 16, 15, 0.98));
+  box-shadow: inset 0 0 0 1px rgba(0, 217, 146, 0.06);
 }
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(233, 69, 96, 0.3);
+  box-shadow: 0 18px 36px rgba(0, 217, 146, 0.12);
+  background: linear-gradient(180deg, rgba(13, 23, 20, 0.98), rgba(9, 14, 13, 1));
 }
 .btn-secondary {
-  background: transparent;
-  color: #4ecdc4;
-  border-color: #4ecdc4;
+  background: rgba(255, 255, 255, 0.01);
+  color: var(--text);
+  border-color: rgba(184, 179, 176, 0.18);
 }
 .btn-secondary:hover {
-  background: rgba(78, 205, 196, 0.1);
-  transform: translateY(-2px);
+  border-color: rgba(0, 217, 146, 0.24);
+  background: rgba(255, 255, 255, 0.03);
 }
 .btn-ghost {
   background: transparent;
-  color: #8892b0;
-  border-color: #8892b033;
+  color: var(--subtle);
+  border-color: rgba(184, 179, 176, 0.16);
 }
 .btn-ghost:hover {
-  color: #e2e8f0;
-  border-color: #e2e8f0;
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 /* ===== Stats ===== */
 .stats-section {
-  background: #0f3460;
-  padding: 32px 24px;
+  background: var(--bg);
+  padding: 0 0 88px;
+  margin-top: -12px;
+  position: relative;
+  z-index: 2;
+}
+.stats-shell {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+  gap: 20px;
+  padding: 28px;
+  border-radius: 28px;
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(180deg, rgba(16, 16, 16, 0.96), rgba(8, 8, 9, 0.98));
+  box-shadow: var(--shadow);
+}
+.stats-intro {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.stats-eyebrow {
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  margin-bottom: 14px;
+}
+.stats-intro h2 {
+  color: var(--text);
+  font-size: clamp(1.7rem, 3vw, 2.35rem);
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+  margin-bottom: 12px;
+}
+.stats-intro p {
+  margin: 0;
+  color: var(--subtle);
+  line-height: 1.7;
 }
 .stats-container {
-  max-width: 900px;
-  margin: 0 auto;
-  display: flex;
-  justify-content: space-around;
-  flex-wrap: wrap;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
 }
 .stat-item {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 144px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.01));
 }
 .stat-value {
   display: block;
-  font-size: 2.2rem;
-  font-weight: 800;
-  color: #4ecdc4;
+  font-size: clamp(1.45rem, 2.6vw, 2.35rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+  font-weight: 650;
+  color: var(--text);
 }
 .stat-label {
   display: block;
-  font-size: 0.9rem;
-  color: #8892b0;
-  margin-top: 4px;
+  margin-top: 18px;
+  font-size: 0.82rem;
+  color: var(--subtle);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
+  line-height: 1.55;
+}
+
+/* ===== Start Here ===== */
+.start-here-section {
+  background: linear-gradient(180deg, rgba(16, 16, 16, 0.98), rgba(5, 5, 7, 1));
+  padding: 88px 0;
+  border-top: 1px solid rgba(184, 179, 176, 0.08);
+  border-bottom: 1px solid rgba(184, 179, 176, 0.08);
+}
+.start-here-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.start-here-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.start-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 260px;
+  padding: 26px;
+  border-radius: 22px;
+  text-decoration: none;
+  background: linear-gradient(180deg, rgba(16, 16, 16, 0.96), rgba(11, 11, 12, 0.98));
+  border: 1px solid var(--border-soft);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+}
+.start-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 217, 146, 0.25);
+  background: linear-gradient(180deg, rgba(16, 16, 16, 0.98), rgba(8, 14, 12, 0.98));
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.38);
+}
+.start-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.start-step {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.start-card-arrow {
+  color: var(--subtle);
+  font-size: 1.1rem;
+}
+.start-card h3 {
+  color: var(--text);
+  font-size: 1.2rem;
+  line-height: 1.2;
+  font-weight: 650;
+  margin-bottom: 12px;
+}
+.start-card p {
+  color: var(--subtle);
+  line-height: 1.7;
+  margin: 0 0 20px;
+}
+.start-card-link {
+  margin-top: auto;
+  color: #2fd6a1;
+  font-size: 0.92rem;
+  font-weight: 600;
 }
 
 /* ===== Problem / Solution ===== */
@@ -781,58 +1381,167 @@ onMounted(() => {
 .ps-card.solution h3 { color: #4ecdc4; }
 .ps-card.solution strong { color: #e2e8f0; }
 
+/* ===== Audience Fit ===== */
+.audience-section {
+  background: linear-gradient(180deg, rgba(10, 10, 14, 1), rgba(7, 9, 10, 1));
+  padding: 80px 0 96px;
+}
+.audience-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.audience-card {
+  padding: 28px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(16, 16, 16, 0.96), rgba(10, 10, 10, 0.98));
+  border: 1px solid var(--border-soft);
+  box-shadow: 0 14px 42px rgba(0, 0, 0, 0.26);
+}
+.audience-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  margin-bottom: 18px;
+  color: var(--accent);
+  background: rgba(0, 217, 146, 0.08);
+  border: 1px solid rgba(0, 217, 146, 0.18);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.audience-card h3 {
+  margin-bottom: 12px;
+  color: var(--text);
+  font-size: 1.24rem;
+  line-height: 1.2;
+}
+.audience-card p {
+  margin-bottom: 18px;
+  color: var(--subtle);
+  line-height: 1.7;
+}
+.audience-points {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+.audience-points li {
+  position: relative;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.audience-points li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--accent-blue);
+  box-shadow: 0 0 0 4px rgba(77, 162, 255, 0.12);
+}
+
 /* ===== Products ===== */
 .products-section {
-  background: #16162a;
-  padding: 80px 0;
+  background: var(--bg);
+  padding: 0 0 96px;
 }
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
 }
 .product-card {
   position: relative;
-  padding: 28px;
-  border-radius: 12px;
-  background: #1a1a2e;
-  border: 1px solid #2a2a4e;
+  display: flex;
+  flex-direction: column;
+  min-height: 280px;
+  padding: 24px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(16, 16, 16, 0.98), rgba(9, 9, 10, 0.98));
+  border: 1px solid var(--border-soft);
   text-decoration: none;
-  transition: all 0.25s ease;
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
   overflow: hidden;
+  box-shadow: 0 14px 42px rgba(0, 0, 0, 0.3);
 }
 .product-card:hover {
-  border-color: #4ecdc444;
+  border-color: rgba(0, 217, 146, 0.24);
   transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(180deg, rgba(16, 16, 16, 0.99), rgba(8, 13, 12, 0.98));
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.38);
+}
+.product-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.product-tag {
+  color: var(--subtle);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 .product-icon {
-  font-size: 2rem;
-  margin-bottom: 16px;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  font-size: 1.4rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 .product-name {
-  font-size: 1.1rem;
+  font-size: 1.14rem;
   font-weight: 700;
-  color: #e2e8f0;
-  margin-bottom: 8px;
+  color: var(--text);
+  margin-bottom: 10px;
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
 }
 .product-description {
-  color: #8892b0;
+  color: var(--subtle);
   font-size: 0.95rem;
-  line-height: 1.6;
+  line-height: 1.7;
+}
+.product-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 20px;
+  color: #2fd6a1;
+}
+.product-link-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.product-link-arrow {
+  font-size: 1.1rem;
+  transition: transform 0.2s ease;
+}
+.product-card:hover .product-link-arrow {
+  transform: translateX(4px);
 }
 .product-accent {
   position: absolute;
-  bottom: 0;
   left: 0;
   right: 0;
+  bottom: 0;
   height: 3px;
-  opacity: 0;
-  transition: opacity 0.25s ease;
-}
-.product-card:hover .product-accent {
-  opacity: 1;
+  opacity: 0.9;
 }
 
 /* ===== Architecture ===== */
@@ -865,6 +1574,63 @@ onMounted(() => {
 .demo-section {
   background: #16162a;
   padding: 80px 0;
+}
+.proof-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-bottom: 28px;
+}
+.proof-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 232px;
+  padding: 24px;
+  border-radius: 18px;
+  text-decoration: none;
+  background: linear-gradient(180deg, rgba(20, 22, 34, 0.96), rgba(14, 16, 28, 0.98));
+  border: 1px solid #2a2a4e;
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+}
+.proof-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(78, 205, 196, 0.4);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+}
+.proof-label {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+  color: #4ecdc4;
+  background: rgba(78, 205, 196, 0.08);
+  border: 1px solid rgba(78, 205, 196, 0.18);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.proof-card h3 {
+  margin-bottom: 10px;
+  color: #e2e8f0;
+  font-size: 1.12rem;
+  line-height: 1.25;
+}
+.proof-card p {
+  color: #8892b0;
+  line-height: 1.65;
+}
+.proof-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 20px;
+  color: #4DA2FF;
+  font-weight: 600;
 }
 .demo-card {
   display: grid;
@@ -937,17 +1703,19 @@ onMounted(() => {
   margin-bottom: 48px;
 }
 .stage-badge {
-  display: inline-block;
-  background: rgba(78, 205, 196, 0.15);
-  color: #4ecdc4;
-  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(0, 217, 146, 0.08);
+  color: #2fd6a1;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  padding: 6px 16px;
-  border-radius: 20px;
-  border: 1px solid rgba(78, 205, 196, 0.3);
-  margin-bottom: 16px;
+  letter-spacing: 0.16em;
+  border: 1px solid rgba(0, 217, 146, 0.22);
+  margin-bottom: 18px;
 }
 .trust-grid {
   display: grid;
@@ -1095,27 +1863,66 @@ onMounted(() => {
 
 /* ===== CTA ===== */
 .cta-section {
-  background: linear-gradient(135deg, #0f3460, #1a1a2e);
-  padding: 80px 0;
+  background: linear-gradient(180deg, rgba(5, 5, 7, 1), rgba(8, 13, 12, 1));
+  padding: 20px 0 96px;
 }
-.cta-content {
-  text-align: center;
+.cta-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr);
+  gap: 24px;
+  padding: 34px;
+  border-radius: 28px;
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(180deg, rgba(16, 16, 16, 0.98), rgba(9, 10, 10, 1));
+  box-shadow: var(--shadow);
 }
-.cta-content h2 {
-  font-size: 2rem;
-  color: #e2e8f0;
-  margin-bottom: 12px;
+.cta-copy h2 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+  color: var(--text);
+  margin-bottom: 14px;
 }
-.cta-content p {
-  color: #8892b0;
-  font-size: 1.1rem;
-  margin-bottom: 32px;
+.cta-copy p {
+  color: var(--subtle);
+  font-size: 1.02rem;
+  line-height: 1.75;
+  margin-bottom: 24px;
+}
+.cta-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+.cta-list li {
+  position: relative;
+  padding-left: 20px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.cta-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px rgba(0, 217, 146, 0.12);
+}
+.cta-actions-panel {
+  display: flex;
+  align-items: stretch;
 }
 .cta-actions {
-  display: flex;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
+  align-content: start;
 }
 
 /* ===== Footer ===== */
@@ -1184,83 +1991,169 @@ onMounted(() => {
   font-size: 0.85rem;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .brand-home *,
+  .brand-home *::before,
+  .brand-home *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .feature-card:hover,
+  .product-card:hover,
+  .trust-card:hover,
+  .section-nav-link:hover,
+  .btn:hover,
+  .panel-metric:hover,
+  .start-card:hover,
+  .ps-card:hover {
+    transform: none;
+  }
+}
+
 /* ===== Responsive ===== */
-@media (max-width: 768px) {
-  .title-main {
-    font-size: 2.4rem;
-  }
-  .title-sub {
-    font-size: 1.1rem;
-  }
-  .ps-grid {
+@media (max-width: 1024px) {
+  .hero-shell,
+  .stats-shell,
+  .cta-shell {
     grid-template-columns: 1fr;
   }
-  .products-grid {
-    grid-template-columns: 1fr;
+
+  .hero-copy,
+  .hero-panel,
+  .cta-shell {
+    padding: 28px;
   }
+
   .stats-container {
-    gap: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .stat-value {
-    font-size: 1.6rem;
+
+  .hero-panel-grid {
+    grid-template-columns: 1fr;
   }
+
+  .hero-path-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-metric-wide {
+    grid-column: auto;
+  }
+
+  .products-grid,
+  .proof-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .audience-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .section-title {
+    font-size: 2rem;
+  }
+
+  .section-subtitle {
+    font-size: 1rem;
+    margin-bottom: 36px;
+  }
+
   .hero-section {
-    min-height: 80vh;
+    padding: 104px 0 64px;
   }
-  .ft-1, .ft-2, .ft-3, .ft-4, .ft-5, .ft-6 {
-    width: 100px;
-  }
-  .arch-diagram {
-    overflow-x: auto;
-  }
-  .demo-card {
-    grid-template-columns: 1fr;
-  }
-  .demo-info {
-    padding: 24px;
-  }
-  .trust-grid {
-    grid-template-columns: 1fr;
-  }
+
+  .hero-copy,
+  .hero-panel,
+  .stats-shell,
+  .cta-shell,
   .trust-card {
     padding: 24px;
   }
+
+  .title-main {
+    font-size: 3rem;
+  }
+
+  .title-sub {
+    max-width: none;
+    font-size: 1.25rem;
+  }
+
+  .start-here-grid,
+  .products-grid,
+  .ps-grid,
+  .trust-grid,
+  .proof-grid,
+  .demo-card {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-container {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ft-1, .ft-2, .ft-3, .ft-4, .ft-5, .ft-6 {
+    width: 110px;
+  }
+
+  .arch-diagram {
+    overflow-x: auto;
+  }
+
+  .demo-info {
+    padding: 24px;
+  }
+
   .footer-grid {
     grid-template-columns: 1fr 1fr;
     gap: 24px;
   }
+
   .footer-brand {
     grid-column: 1 / -1;
     padding-right: 0;
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 560px) {
+  .section-container {
+    padding: 0 18px;
+  }
+
   .title-main {
-    font-size: 2rem;
+    font-size: 2.45rem;
   }
+
   .title-sub {
-    font-size: 1rem;
+    font-size: 1.08rem;
   }
-  .selling-point {
-    gap: 10px;
-  }
-  .sp-icon {
-    font-size: 1.2rem;
-  }
-  .hero-actions {
-    flex-direction: column;
-    align-items: center;
-  }
+
+  .hero-actions,
   .cta-actions {
-    flex-direction: column;
-    align-items: center;
+    grid-template-columns: 1fr;
+    display: grid;
   }
+
+  .stats-container {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-panel-top,
+  .hero-kicker-row,
+  .hero-paths-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .btn {
     width: 100%;
-    justify-content: center;
-    max-width: 280px;
   }
+
   .footer-grid {
     grid-template-columns: 1fr;
   }

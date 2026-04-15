@@ -1,6 +1,6 @@
 # Components Overview
 
-FractalMind AI currently spans **18 repositories** organized into four operating surfaces.
+FractalMind AI currently spans **24 public repositories**. This page highlights 18 core repositories organized into four operating surfaces.
 
 ## 1. OS Kernel & Governance
 
