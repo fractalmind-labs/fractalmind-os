@@ -37,3 +37,6 @@
 [submodule "coordination/agent-calendar"]
 	path = coordination/agent-calendar
 	url = git@github.com:fractalmind-ai/agent-calendar-skill.git
+[submodule "development/plan-dog"]
+	path = development/plan-dog
+	url = git@github.com:fractalmind-ai/plan-dog-skill.git
