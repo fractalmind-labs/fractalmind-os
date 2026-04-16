@@ -24,6 +24,7 @@ export default defineConfig({
       { text: 'Architecture', link: '/architecture/overview' },
       { text: 'Components', link: '/components/overview' },
       { text: 'Protocol', link: '/protocol/overview' },
+      { text: 'Agent OS', link: '/agent-os/' },
       { text: 'Roadmap', link: '/roadmap/' },
       {
         text: 'Explorer',
@@ -84,6 +85,23 @@ export default defineConfig({
             { text: 'Overview', link: '/protocol/overview' },
             { text: 'TypeScript SDK', link: '/protocol/sdk' },
             { text: 'Testnet Deployment', link: '/protocol/testnet' },
+          ],
+        },
+      ],
+      '/agent-os/': [
+        {
+          text: 'Agent OS',
+          items: [
+            { text: 'ROM Catalog', link: '/agent-os/' },
+            { text: 'Installation Guide', link: '/agent-os/install' },
+          ],
+        },
+        {
+          text: 'Available ROMs',
+          items: [
+            { text: 'manager-heavy-core', link: '/agent-os/roms/manager-heavy-core' },
+            { text: 'trinity', link: '/agent-os/roms/trinity' },
+            { text: 'mentor-coordinator-core', link: '/agent-os/roms/mentor-coordinator-core' },
           ],
         },
       ],
