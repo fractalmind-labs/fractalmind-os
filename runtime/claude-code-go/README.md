@@ -1,1 +1,250 @@
 # claude-code-go
+
+本地 Go CLI 重写实现。当前分支已经积累了比首轮评审更大的实验面，但 PR #1 的恢复目标不是继续放大全量功能，而是先把第一张可审切片收紧为 `bootstrap + CI`。
+
+## PR #1 可审入口
+
+首轮建议只审 Slice 1：
+
+- CLI bootstrap：`cmd/claude-code-go/main.go`
+- bootstrap 能力：`internal/auth/*`、`internal/config/*`、`internal/install/*`、`internal/update/*`
+- 文档：`README.md`、`docs/command-gap-analysis.md`、`docs/pr1-recovery-plan.md`
+- CI：`.github/workflows/ci.yml`
+
+这张切片的目标不是宣称整个分支已经“可合并”，而是先恢复 3 件事：
+
+1. PR 上有可见的自动检查
+2. reviewer 能先围绕 bootstrap/auth/config/doctor/install/update 形成第一轮审阅闭环
+3. direct-connect / server / open / plugin / mcp 等更大面，后续按独立 slice 继续拆
+
+当前推荐的基础验证命令：
+
+```bash
+gofmt -w $(git ls-files '*.go')
+git diff --check
+go test ./...
+go build ./...
+```
+
+后续拆分和主控口径见 [docs/pr1-recovery-plan.md](docs/pr1-recovery-plan.md)。
+
+## 当前已实现
+
+- `auth login --api-key <token>`：写入本地 `auth.json`
+- `auth status`：展示当前登录态、auth 文件路径、API base、token 来源
+- `auth logout`：删除本地 `auth.json`
+- `config show`：打印当前配置解析结果（含 `model/max_tokens`）
+- `doctor`：打印配置目录、auth 文件、token 来源、API base、`model/max_tokens` 与网络 reachability
+- `auto-mode defaults`：打印最小兼容版 auto-mode 默认规则 JSON
+- `auto-mode config`：打印有效 auto-mode 配置 JSON（读取 trusted settings，按 section 级 fallback 回默认值）
+- `assistant [sessionId]`：提供最小 assistant 入口兼容面；无参数时输出 `discover-sessions`，传 `sessionId` 时输出 `attach-session`
+- `server [--port <number>] [--host <string>] [--auth-token <token>] [--unix <path>] [--workspace <dir>] [--idle-timeout <ms>] [--max-sessions <n>]`：提供最小 direct-connect server 入口，真实监听 HTTP / Unix socket，响应最小 `POST /sessions`、`GET /sessions?resume=<sessionId>`、`GET /sessions/{sessionId}`、`DELETE /sessions/{sessionId}` 与 `/ws/{sessionId}` ready/control/message stream，并维护单实例 lockfile + session index
+- `ssh <host> [dir] [--permission-mode <mode>] [--dangerously-skip-permissions] [--local]`：提供最小 ssh 入口兼容面，解析 host/dir 与官方参数并输出规范化后的连接摘要
+- `open <cc-url> [-p|--print [prompt]] [--output-format <format>] [--resume-session <sessionId>] [--stop-session <sessionId>]`：提供最小 direct-connect 入口兼容面，解析 `cc://` / `cc+unix://` URL；默认发起最小 `POST /sessions` 会话创建请求，也支持基于已持久化 session index 的 `--resume-session` reconnect 与 `--stop-session` 单 session stop/cleanup；随后校验 ready/control/message websocket 流，`--print` 会先发送 1 条最小 `update_environment_variables{variables}`，再在同一 websocket 上连续完成 2 轮最小消息/工具执行闭环，并额外校验最小 `system:init`、`system:task_started`、`system:task_progress`、`system:api_retry`、`tool_progress`、`stream_event(message_start)`、`stream_event(content_block_start/tool_use)`、`stream_event(content_block_delta/text_delta)`、`stream_event(content_block_delta/thinking_delta)`、`stream_event(content_block_delta/signature_delta)`、`stream_event(content_block_delta/input_json_delta)`、`stream_event(content_block_stop/tool_use)`、`stream_event(message_delta)`、`stream_event(message_stop)`、top-level `attachment:structured_output`、assistant `thinking` block、assistant `tool_use` block、assistant `stop_reason/usage`、`result:success`、`system:task_notification`、`system:files_persisted`、`system:local_command_output`、`control_request:elicitation`、`control_request:hook_callback`、`control_request:channel_enable`、`system:elicitation_complete`、`system:post_turn_summary`、`system:compact_boundary`、`system:session_state_changed(running/requires_action/idle)`、`system:hook_started` 与 `system:hook_progress` / `system:hook_response` 事件，再输出规范化后的连接/会话摘要
+- `setup-token [--token <token>] [--write-env-file <path>]`：输出 long-lived token 的最小兼容接线结果，可直接生成 `CLAUDE_CODE_OAUTH_TOKEN` 的 shell env 文件
+- `mcp list`：按 `user/project/local` 三层来源汇总已配置 MCP servers，并打印 scope/type/基础连接字段
+- `mcp get <name>`：查看指定 MCP server 的最小只读详情（scope/type/source/command|url/headers|oauth）
+- `mcp add [--scope <scope>] [--transport <stdio|http|sse>] <name> <command-or-url> [args...]`：向 `local/user/project` 对应配置文件写入最小 MCP server 配置
+- `mcp remove <name> [--scope <scope>]`：从可见配置源删除指定 MCP server；若同名 server 同时存在于多个 scope，会提示显式传 `--scope`
+- `plugin list`：读取 `installed_plugins.json`，打印已安装 plugin 的 `id/scope/version/install_path` 与可见时间戳字段
+- `plugin install <plugin> [--scope <user|project|local>] [--version <version>]`：向 `installed_plugins.json` 写入最小安装记录，并创建版本化 cache 目录与安装元数据文件
+- `plugin uninstall <plugin> [--scope <user|project|local>]`：按 scope 删除安装记录并移除对应版本化 cache 目录
+- `plugin marketplace add <source> [--scope <user|project|local>]`：解析 GitHub shorthand / URL / 本地路径来源，向对应 settings 的 `extraKnownMarketplaces` 写入 marketplace 声明，并同步 `known_marketplaces.json` 与最小 cache 目录
+- `plugin marketplace list`：读取 `known_marketplaces.json`，打印已声明 marketplace 的 `name/source/install_path` 与来源字段
+- `plugin marketplace remove <name>`：删除 `known_marketplaces.json` 中的 marketplace，并清理可见 settings 里的 `extraKnownMarketplaces` 声明与对应 cache 目录
+- `agents [--setting-sources <sources>]`：列出已配置 agents，支持 `user,project,local` 三层来源合并
+- `install [target] --dry-run`：打印当前平台、目标安装路径与覆盖保护提示，不执行真实写盘
+- `install <target> --apply`：把当前 CLI 二进制复制到显式目标路径；若目标已存在，先生成时间戳备份再覆盖
+- `update [target] (--source-binary <path> | --source-url <url>) [--apply]`：比较目标安装路径与候选二进制的摘要；支持从本地路径或远端 URL 下载候选二进制，若需要更新，可直接替换并复用 install 的备份保护
+- `api payload`：打印最小 `/v1/messages` 请求模板
+- `api ping`：向配置的 Anthropic 兼容接口发起最小真实请求
+
+## 当前 token 解析优先级
+
+1. `CLAUDE_CODE_API_KEY`
+2. `ANTHROPIC_API_KEY`
+3. `ANTHROPIC_AUTH_TOKEN`
+4. `CLAUDE_CODE_OAUTH_TOKEN`
+5. `auth.json`（默认位于 `~/Library/Application Support/claude-code-go/auth.json`）
+
+## 当前请求参数配置方式
+
+默认值：
+- `api_base=https://api.anthropic.com`
+- `model=claude-sonnet-4-5`
+- `max_tokens=32`
+
+可通过两种方式覆盖：
+
+1. 环境变量
+   - `CLAUDE_CODE_API_BASE`
+   - `ANTHROPIC_BASE_URL`
+   - `CLAUDE_CODE_MODEL`
+   - `CLAUDE_CODE_MAX_TOKENS`
+2. 命令参数
+   - `--api-base`
+   - `--model`
+   - `--max-tokens`
+
+## 当前 auto-mode 配置来源
+
+- `~/.claude/settings.json`
+- `./.claude/settings.local.json`
+- 可选：`CLAUDE_CODE_GO_FLAG_SETTINGS_PATH`
+- 可选：`CLAUDE_CODE_GO_POLICY_SETTINGS_PATH`
+
+## 当前 plugin 配置来源
+
+- `CLAUDE_CODE_PLUGIN_CACHE_DIR/installed_plugins.json`（显式覆盖）
+- `CLAUDE_CONFIG_DIR/{plugins|cowork_plugins}/installed_plugins.json`
+- 默认：`~/.claude/{plugins|cowork_plugins}/installed_plugins.json`
+
+补充：
+- `CLAUDE_CODE_USE_COWORK_PLUGINS=true` 时会切到 `cowork_plugins`
+- 当前 `plugin list/install/uninstall/marketplace add/list/remove` 只实现最小读写基线；`plugin install` 会在 cache 目录下创建版本化占位安装目录与 `.claude-code-go-plugin-install.json` 元数据文件，`plugin uninstall` 会删除对应 scope 安装记录与该版本目录，`plugin marketplace add` 会写入 settings + `known_marketplaces.json` 并创建最小 marketplace 目录，`plugin marketplace list` 会读取并格式化当前 materialized marketplace 状态，`plugin marketplace remove` 会清理 visible settings 声明、`known_marketplaces.json` 与 marketplace cache 目录
+- 尚未覆盖 `plugin marketplace update`、`--json`、`--available`、enabled 状态判定、真实 marketplace 下载与完整 marketplace 管理
+
+## 当前 MCP 配置来源
+
+- `~/.claude/settings.json`（user scope）
+- 从仓库根到当前目录逐级查找的 `.mcp.json`（project scope，越近优先级越高）
+- `./.claude/settings.local.json`（local scope）
+
+补充：
+- `mcp list/get` 的 project scope 会读取从仓库根到当前目录的可见 `.mcp.json` 链路
+- `mcp add --scope project` / `mcp remove --scope project` 当前会直接写当前工作目录下的 `.mcp.json`
+
+说明：
+- 当前 `auto-mode` 只实现 `defaults/config` 两个只读子命令
+- 当前 `setup-token` 只实现最小兼容接线路径：接收现成 token、打印 export 指令、可选写入 env 文件；尚未实现浏览器 OAuth 取 token
+- 当前 `mcp` 仅实现 `list/get/add/remove` 的最小兼容路径，尚未覆盖 health check、desktop import、auth secret 存储等官方增强行为
+- 当前 `assistant` 只实现最小入口与参数兼容面，尚未接入真实 session discovery、远端 attach、REPL viewer 或 daemon/bridge 行为
+- 当前 `server` 已实现最小监听、`POST /sessions`、`GET /sessions?resume=`、`GET /sessions/{sessionId}`、`DELETE /sessions/{sessionId}`、`/ws/{sessionId}` ready/control/message stream，以及单实例 lockfile（启动写入、重复启动拦截、退出清理）+ session index 持久化；当前最小 lifecycle 状态已覆盖 `starting -> running -> detached -> stopped`，并补齐了最小 backend process lifecycle：session 首次 attach 会拉起真实 backend 子进程、detach/resume 期间保持存活、shutdown 后写回 `backend_status=stopped`；同时已补最小 tool execution / permission bridge，并可在同一 websocket 上连续完成 2 轮 `user -> system(session_state_changed:running) -> system(session_state_changed:requires_action) -> can_use_tool(control_request) -> control_response(updatedInput) -> control_cancel_request -> system(task_started) -> system(task_progress) -> system(api_retry) -> tool_progress -> rate_limit_event -> stream_event(message_start) -> stream_event(content_block_delta/text_delta) -> stream_event(content_block_delta/thinking_delta) -> stream_event(content_block_delta/signature_delta) -> stream_event(content_block_start/tool_use) -> stream_event(content_block_delta/input_json_delta) -> stream_event(content_block_stop/tool_use) -> stream_event(message_delta) -> stream_event(message_stop) -> streamlined_text -> assistant(thinking+tool_use+text+stop_reason+usage) -> tool_use_summary -> streamlined_tool_use_summary -> attachment(structured_output) -> result(success) -> prompt_suggestion -> system(task_notification) -> attachment(queued_command) -> attachment(task_status) -> attachment(task_reminder) -> attachment(todo_reminder) -> attachment(agent_mention) -> system(files_persisted) -> system(local_command_output) -> system(elicitation_complete) -> system(post_turn_summary) -> attachment(critical_system_reminder) -> attachment(output_style) -> attachment(selected_lines_in_ide) -> attachment(opened_file_in_ide) -> attachment(diagnostics) -> attachment(diagnostics) -> attachment(task_status) -> attachment(mcp_resource) -> attachment(compaction_reminder) -> attachment(context_efficiency) -> attachment(auto_mode) -> attachment(auto_mode_exit) -> attachment(plan_mode) -> attachment(plan_mode_exit) -> attachment(plan_mode_reentry) -> attachment(plan_file_reference) -> attachment(invoked_skills) -> attachment(date_change) -> attachment(ultrathink_effort) -> attachment(deferred_tools_delta) -> attachment(agent_listing_delta) -> attachment(mcp_instructions_delta) -> attachment(companion_intro) -> attachment(hook_blocking_error) -> attachment(hook_error_during_execution) -> attachment(hook_non_blocking_error) -> attachment(hook_cancelled) -> attachment(hook_success) -> attachment(hook_stopped_continuation) -> attachment(hook_system_message) -> attachment(hook_additional_context) -> attachment(async_hook_response) -> attachment(token_usage) -> attachment(output_token_usage) -> attachment(verify_plan_reminder) -> attachment(current_session_memory) -> attachment(relevant_memories) -> attachment(nested_memory) -> attachment(teammate_shutdown_batch) -> attachment(bagel_console) -> system(compact_boundary) -> system(session_state_changed:idle) -> system(hook_started) -> system(hook_progress) -> system(hook_response)` 闭环，且额外覆盖 1 轮 `behavior=deny -> result(error_during_execution)`、1 轮 `behavior=max_turns -> result(error_max_turns)`、1 轮 `behavior=max_budget_usd -> result(error_max_budget_usd)` 与 1 轮 `behavior=max_structured_output_retries -> result(error_max_structured_output_retries)` 的最小 result:error 分支；这些 result envelope 现在都额外带最小官方兼容 `fast_mode_state:"off"`。其中 raw success path 现在会在 `result` 前额外发出 1 条 top-level `attachment{type:"structured_output",data:{text:<same result>}}`，并在 `system(task_notification)` 后补 1 条最小 `attachment{type:"queued_command",prompt,commandMode:"task-notification"}`、1 条最小 `attachment{type:"task_status",taskId,taskType,status,description,deltaSummary,outputFilePath}`、1 条最小 `attachment{type:"task_reminder",content:[{id,status,subject}],itemCount}`、1 条最小 `attachment{type:"todo_reminder",content:[{content,status,activeForm}],itemCount}` 与 1 条最小 `attachment{type:"agent_mention",agentType}`，该 `agent_mention` 只代表用户输入里的最小 `@agent` 路径，不引入新的 agent family；以及在 `system(post_turn_summary)` 后依次补 1 条最小 `attachment{type:"critical_system_reminder",content}`、1 条最小 `attachment{type:"output_style",style}`、1 条最小 `attachment{type:"selected_lines_in_ide",ideName,lineStart,lineEnd,filename,content,displayPath}`、1 条最小 `attachment{type:"opened_file_in_ide",filename}`、2 条最小 `attachment{type:"diagnostics",files,isNew}`（分别对应 `diagnostics` 与 `lsp_diagnostics` producer）、1 条最小 `attachment{type:"task_status",taskId,taskType,status,description,deltaSummary,outputFilePath}`（对应 `unified_tasks` producer）、1 条最小 `attachment{type:"mcp_resource",server,uri,name,description,content}`、1 条最小 `attachment{type:"compaction_reminder"}`、1 条最小 `attachment{type:"context_efficiency"}`、1 条最小 `attachment{type:"auto_mode",reminderType:"full"}`、1 条最小 `attachment{type:"auto_mode_exit"}`、1 条最小 `attachment{type:"plan_mode",reminderType:"full",planFilePath,planExists:false,isSubAgent:false}`、1 条最小 `attachment{type:"plan_mode_exit",planFilePath,planExists:false}`、1 条最小 `attachment{type:"plan_mode_reentry",planFilePath}`、1 条最小 compact-preserve `attachment{type:"plan_file_reference",planFilePath,planContent}` 与 1 条最小 compact-preserve `attachment{type:"invoked_skills",skills:[{name,path,content}]}`、1 条最小 `attachment{type:"date_change",newDate:"2026-04-09"}`、1 条最小 `attachment{type:"ultrathink_effort",level:"high"}`、1 条最小 `attachment{type:"deferred_tools_delta",addedNames,addedLines,removedNames}`、1 条最小 `attachment{type:"agent_listing_delta",addedTypes,addedLines,removedTypes,isInitial,showConcurrencyNote}`、1 条最小 `attachment{type:"mcp_instructions_delta",addedNames,addedBlocks,removedNames}`、1 条最小 `attachment{type:"companion_intro",name,species}`、1 条最小 `attachment{type:"hook_blocking_error",blockingError,hookName,toolUseID,hookEvent}`、1 条最小 `attachment{type:"hook_error_during_execution",content,hookName,toolUseID,hookEvent}`、1 条最小 `attachment{type:"hook_non_blocking_error",hookName,stderr,stdout,exitCode,toolUseID,hookEvent}`、1 条最小 `attachment{type:"hook_cancelled",hookName,toolUseID,hookEvent}`、1 条最小 `attachment{type:"hook_success",content,hookName,toolUseID,hookEvent}`、1 条最小 `attachment{type:"hook_stopped_continuation",message,hookName,toolUseID,hookEvent}`、1 条最小 `attachment{type:"hook_system_message",content,hookName,toolUseID,hookEvent}`、1 条最小 `attachment{type:"async_hook_response",hookName,sessionId,toolUseID,content}`、1 条最小 `attachment{type:"token_usage",used,total,remaining}`、1 条最小 `attachment{type:"output_token_usage",turn,session,budget}`、1 条最小 `attachment{type:"verify_plan_reminder"}`、1 条最小 `attachment{type:"current_session_memory",content,path,tokenCount}`、1 条最小 `attachment{type:"relevant_memories",memories}`、1 条最小 `attachment{type:"nested_memory",path,content,displayPath}`、1 条最小 `attachment{type:"teammate_shutdown_batch",count}` 与 1 条最小 `attachment{type:"bagel_console",errorCount,warningCount,sample}`；当前仍不实现真实 token accounting、完整多 block transcript rebuild、真实 MCP server 读取、真实 memory prefetch/readFileState/dedupe、planner 或 richer TUI render。
+- 本轮额外补了 `behavior=max_turns` 的 top-level `attachment:max_turns_reached`：server 现在会先发 `attachment{type:"max_turns_reached",turnCount,maxTurns}`，再发既有 `result{subtype:"error_max_turns"}`；该 path 只保证最小 official-compatible envelope 与字段 shape，对齐 QueryEngine/attachments 的消费口径，不实现更丰富的 turn-budget 管理语义。
+- 本轮额外收紧 error `result` 的 `usage`：`error_during_execution` / `error_max_turns` / `error_max_budget_usd` / `error_max_structured_output_retries` 现在都返回与上游 `EMPTY_USAGE` 对齐的零值 object，而不是空 map；这只保证 `usage` shape 稳定，不实现真实 token accounting、cost aggregation 或 iteration tracking。
+- 本轮额外收紧 error `result` 的 `permission_denials`：deny 分支继续返回非空 denial entry，其余 `error_max_turns` / `error_max_budget_usd` / `error_max_structured_output_retries` 统一返回空数组 `[]`；这只保证 `permission_denials` shape 稳定，不实现真实 permission analytics 或 richer denial recovery。
+- 本轮额外收紧 error `result` 的 `modelUsage`：四类 error result 统一返回 `modelUsage:{"claude-sonnet-4-5": {inputTokens, outputTokens, cacheReadInputTokens, cacheCreationInputTokens, webSearchRequests, costUSD, contextWindow}}` 的全 0 stub；这只保证 `modelUsage` shape 稳定，不实现真实 cost/model accounting。
+- 当前 `ssh` 只实现最小入口与参数兼容面，尚未接入真实远端 probe/deploy、SSH 隧道、auth proxy 或 remote session lifecycle
+- 当前 `open` 已实现最小 `POST /sessions` + `GET /sessions?resume=` reconnect + `DELETE /sessions/{sessionId}` stop/cleanup + websocket ready/control/message 校验链路，`--print` 会先发送并校验 1 条最小 `update_environment_variables{variables}`，再在同一 websocket 上连续验证 2 轮 `user -> system(session_state_changed:running) -> system(session_state_changed:requires_action) -> can_use_tool -> control_response(updatedInput) -> control_cancel_request -> system(task_started) -> system(task_progress) -> system(api_retry) -> tool_progress -> rate_limit_event -> stream_event(message_start) -> stream_event(content_block_delta/text_delta) -> stream_event(content_block_delta/thinking_delta) -> stream_event(content_block_delta/signature_delta) -> stream_event(content_block_start/tool_use) -> stream_event(content_block_delta/input_json_delta) -> stream_event(content_block_stop/tool_use) -> stream_event(message_delta) -> stream_event(message_stop) -> streamlined_text -> assistant(thinking+tool_use+text+stop_reason+usage) -> tool_use_summary -> streamlined_tool_use_summary -> attachment(structured_output) -> result(success) -> prompt_suggestion -> system(task_notification) -> system(files_persisted) -> system(local_command_output) -> system(elicitation_complete) -> system(post_turn_summary) -> system(compact_boundary) -> system(session_state_changed:idle) -> system(hook_started) -> system(hook_progress) -> system(hook_response)`。输出摘要新增 `assistant_message_start_validated=true` / `assistant_message_start_event=stream_event:message_start`、`assistant_message_delta_validated=true` / `assistant_message_delta_event=stream_event:message_delta`、`assistant_message_stop_validated=true` / `assistant_message_stop_event=stream_event:message_stop`、`assistant_stop_reason_validated=true` / `assistant_stop_reason_event=assistant:stop_reason` / `assistant_usage_validated=true` / `assistant_usage_event=assistant:usage`、`structured_output_attachment_validated=true` / `structured_output_attachment_event=attachment:structured_output`；该 path 只保证最小 official-compatible assistant finalize 与 structured-output attachment 对齐，不实现真实 JSON delta 拼接、真实 token accounting、完整 transcript rebuild 或 richer render，且 `streamlined_text` 仍只校验纯文本。
+- 本轮额外新增 `max_turns_reached_attachment_validated=true` / `max_turns_reached_attachment_event=attachment:max_turns_reached`：`open --print` 现在要求在 `behavior=max_turns` turn 中同时看到该 attachment 与既有 `result_error_max_turns_validated=true`，才视为 max-turns 子路径验收通过。
+- 本轮额外新增 `task_status_attachment_validated=true` / `task_status_attachment_event=attachment:task_status`：`open --print` 现在要求在 allow turn 中同时看到 `system(task_notification)` 与最小 official-compatible `attachment{type:"task_status",taskId,taskType,status,description,deltaSummary,outputFilePath}`，才视为 task-status 子路径验收通过；当前仅补固定 `taskType=local_bash`、`status=completed` 的最小闭环，不实现更丰富 task lifecycle。
+- 本轮继续沿用既有 `task_status_attachment_validated=true` / `task_status_attachment_event=attachment:task_status` 验收口径，但将 producer 扩到 `task_notification` + `unified_tasks` 两条路径：server 现在会在 main-thread attachment 段额外发出第 2 条最小 `attachment{type:"task_status",taskId,taskType,status,description,deltaSummary,outputFilePath}`，用于代表 official `unified_tasks -> task_status` 映射；不新增 attachment family，也不实现真实 unified task framework、task offset eviction 或 richer background-agent lifecycle。
+- 本轮额外新增 `task_reminder_attachment_validated=true` / `task_reminder_attachment_event=attachment:task_reminder`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"task_reminder",content:[{id,status,subject}],itemCount}`；当前仅补单项 reminder 列表、固定 `status=completed` 的最小 shape，不实现 task list 管理、reminder 触发策略或更多字段。
+- 本轮额外新增 `todo_reminder_attachment_validated=true` / `todo_reminder_attachment_event=attachment:todo_reminder`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"todo_reminder",content:[{content,status,activeForm}],itemCount}`；当前仅补单项 reminder 列表、固定 `status=completed` 与稳定 `activeForm` 的最小 shape，不实现真实 todo 管理、reminder 触发策略或更多字段。
+- 本轮额外新增 `agent_mention_validated=true` / `agent_mention_event=attachment:agent_mention`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"agent_mention",agentType}`；当前仅补固定 `agentType="explorer"` 的最小用户输入 `@agent` 路径，不实现真实 `@mention` 解析、agent dispatch、tool permission scope、swarm runtime 或更大的 agent family。
+- 本轮额外新增 `critical_system_reminder_validated=true` / `critical_system_reminder_event=attachment:critical_system_reminder`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"critical_system_reminder",content}`；当前仅补固定 reminder 文案的最小 stub，不实现真实 reminder 来源、动态注入策略、feature gate 或 richer render 语义。
+- 本轮额外新增 `output_style_validated=true` / `output_style_event=attachment:output_style`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"output_style",style}`；当前仅补固定非默认 `style="explanatory"` 的最小 stub，不实现真实 settings 读取、default suppression、OUTPUT_STYLE_CONFIG 渲染、feature gate 或 richer UI 语义。
+- 本轮额外新增 `selected_lines_in_ide_validated=true` / `selected_lines_in_ide_event=attachment:selected_lines_in_ide`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"selected_lines_in_ide",ideName,lineStart,lineEnd,filename,content,displayPath}`；当前仅补固定 `VS Code / 12-14 / internal/server/server.go` 的最小 stub，不实现真实 IDE 选区读取、selection tracking、截断策略或 richer UI 行为。
+- 本轮额外新增 `opened_file_in_ide_validated=true` / `opened_file_in_ide_event=attachment:opened_file_in_ide`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"opened_file_in_ide",filename}`；当前仅补固定 `filename="internal/server/server.go"` 的最小 stub，不实现真实 IDE 状态读取、opened-file 跟踪或 richer UI 行为。
+- 本轮继续沿用既有 `diagnostics_validated=true` / `diagnostics_event=attachment:diagnostics` 验收口径，但将 producer 扩到 `diagnostics` + `lsp_diagnostics` 两条 main-thread 路径：server 现在会连续发出两条最小 `attachment{type:"diagnostics",files,isNew}`，其中第二条明确代表 official `lsp_diagnostics -> diagnostics` 映射；不新增 attachment family，也不实现真实 LSP server 生命周期、增量同步或 editor state 对接。
+- 本轮额外新增 `hook_stopped_continuation_validated=true` / `hook_stopped_continuation_event=attachment:hook_stopped_continuation`：`open --print` 现在要求在 allow turn 中同时看到最小 `attachment{type:"hook_stopped_continuation",message,hookName,toolUseID,hookEvent}`；当前仅补固定 `message="Execution stopped by DirectConnectEchoHook."`、`hookName="DirectConnectEchoHook"`、`hookEvent="Stop"` 且 `toolUseID` 复用当前 stop-hook tool use 的最小 stub，不实现真实 hook engine 的继续/终止策略、stdout/stderr richer 分支或 transcript render。
+- 本轮额外新增 `hook_cancelled_validated=true` / `hook_cancelled_event=attachment:hook_cancelled`：`open --print` 现在要求在 allow turn 中同时看到最小 `attachment{type:"hook_cancelled",hookName,toolUseID,hookEvent}`；当前仅补 `hookName="DirectConnectEchoHook"`、`hookEvent="Stop"` 且 `toolUseID` 复用当前 stop-hook tool use 的最小 stub，位置固定在 `system:hook_response` 之后、`hook_success` 之前，不实现真实 hook cancellation engine、`command` / `durationMs`、stdout/stderr richer 分支或 transcript render。
+- 本轮额外新增 `hook_non_blocking_error_validated=true` / `hook_non_blocking_error_event=attachment:hook_non_blocking_error`：`open --print` 现在要求在 allow turn 中同时看到最小 `attachment{type:"hook_non_blocking_error",hookName,stderr,stdout,exitCode,toolUseID,hookEvent}`；当前仅补固定 `hookName="DirectConnectEchoHook"`、`stderr="Direct-connect demo hook reported a recoverable issue."`、`stdout=<same echo result>`、`exitCode=1`、`hookEvent="Stop"` 且 `toolUseID` 复用当前 stop-hook tool use 的最小 stub，位置固定在 `system:hook_response` 之后、`hook_cancelled` 之前，不实现真实 recoverable error 聚合、`command` / `durationMs`、stdout/stderr richer 分支或 transcript render。
+- 本轮额外新增 `hook_blocking_error_validated=true` / `hook_blocking_error_event=attachment:hook_blocking_error`：`open --print` 现在要求在 allow turn 中同时看到最小 `attachment{type:"hook_blocking_error",blockingError:{blockingError,command},hookName,toolUseID,hookEvent}`；当前仅补固定 `blockingError.blockingError="Direct-connect demo hook blocked execution."`、`blockingError.command="direct-connect-demo-hook"`、`hookName="DirectConnectEchoHook"`、`hookEvent="Stop"` 且 `toolUseID` 复用当前 stop-hook tool use 的最小 stub，不实现真实 blocking hook routing、command/duration 注入或 richer transcript render。
+- 本轮额外新增 `hook_error_during_execution_validated=true` / `hook_error_during_execution_event=attachment:hook_error_during_execution`：`open --print` 现在要求在 allow turn 中同时看到最小 `attachment{type:"hook_error_during_execution",content,hookName,toolUseID,hookEvent}`；当前仅补固定 `content="Direct-connect demo hook failed before completing execution."`、`hookName="DirectConnectEchoHook"`、`hookEvent="Stop"` 且 `toolUseID` 复用当前 stop-hook tool use 的最小 stub，位置固定在 `system:hook_response` 之后、`hook_non_blocking_error` 之前，不实现真实 pre-exec input failure、`command` / `durationMs` 注入或 richer transcript render。
+- 本轮额外新增 `hook_success_validated=true` / `hook_success_event=attachment:hook_success`：`open --print` 现在要求在 allow turn 中同时看到最小 `attachment{type:"hook_success",content,hookName,toolUseID,hookEvent}`；当前仅补 `content=<same echo result>`、`hookName="DirectConnectEchoHook"`、`hookEvent="Stop"` 且 `toolUseID` 复用当前 stop-hook tool use 的最小 stub，不实现真实 hook engine、stdout/stderr 回填、duration/command 统计或 richer transcript render。
+- 本轮额外新增 `hook_permission_decision_validated=true` / `hook_permission_decision_event=attachment:hook_permission_decision`：`open --print` 现在要求在 permission request 做出非 `ask` 决策后看到最小 `attachment{type:"hook_permission_decision",decision,toolUseID,hookEvent}`；当前仅补 `decision="allow"|"deny"`、`hookEvent="PermissionRequest"` 且 `toolUseID` 复用当前 permission request tool use 的最小 stub，不实现真实 hook reason / richer permission transcript / UI render。
+- 本轮额外新增 `hook_system_message_validated=true` / `hook_system_message_event=attachment:hook_system_message`：`open --print` 现在要求在 allow turn 中同时看到最小 `attachment{type:"hook_system_message",content,hookName,toolUseID,hookEvent}`；当前仅补固定 `content="Direct-connect echo stop hook acknowledged."`、`hookName="DirectConnectEchoHook"`、`hookEvent="Stop"` 且 `toolUseID` 复用当前 stop-hook tool use 的最小 stub，不实现真实 hook engine systemMessage 聚合、额外权限链路或 richer transcript render。
+- 本轮额外新增 `hook_additional_context_validated=true` / `hook_additional_context_event=attachment:hook_additional_context`：`open --print` 现在要求在 allow turn 中同时看到最小 `attachment{type:"hook_additional_context",content,hookName,toolUseID,hookEvent}`；当前仅补固定单条 `content=["Hook context: preserve the direct-connect stop-hook summary."]`、`hookName="DirectConnectEchoHook"`、`hookEvent="Stop"` 且 `toolUseID` 复用当前 stop-hook tool use 的最小 stub，不实现真实 hook registry、动态 additional-context 聚合、hook 错误族或 richer transcript/render。
+- 本轮额外新增 `async_hook_response_validated=true` / `async_hook_response_event=attachment:async_hook_response`：`open --print` 现在要求在 allow turn 中同时看到最小 `attachment{type:"async_hook_response",hookName,sessionId,toolUseID,content}`；当前仅补固定 `PostToolUse / <current session> / toolu_demo_async_hook` 与稳定文本内容的最小 stub，不实现真实 async hook registry、hook 生命周期、回调恢复或 richer transcript render。
+- 本轮额外新增 `mcp_resource_validated=true` / `mcp_resource_event=attachment:mcp_resource`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"mcp_resource",server,uri,name,description,content}`；当前仅补固定 `demo-mcp` / `resource://demo/readme` 及单条 text content 的最小 stub，不接真实 MCP server、资源发现或二次读取策略。
+- 本轮额外新增 `compaction_reminder_validated=true` / `compaction_reminder_event=attachment:compaction_reminder`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"compaction_reminder"}`；当前仅补最小 envelope-compatible type，不实现真实 auto-compact 触发阈值、context-window 计算或 token-aware 策略。
+- 本轮额外新增 `context_efficiency_validated=true` / `context_efficiency_event=attachment:context_efficiency`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"context_efficiency"}`；当前仅补最小 envelope-compatible type，不实现真实 snip pacing、token growth heuristic 或 richer reminder text 语义。
+- 本轮额外新增 `auto_mode_exit_validated=true` / `auto_mode_exit_event=attachment:auto_mode_exit`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"auto_mode_exit"}`；当前仅补最小 envelope-compatible type，不实现真实 auto-mode classifier、mode 切换状态机或退出判定。
+- 本轮额外新增 `plan_mode_validated=true` / `plan_mode_event=attachment:plan_mode`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"plan_mode",reminderType:"full",planFilePath,planExists:false,isSubAgent:false}`；当前固定返回稳定的 `.claude/plan.md` 路径、`reminderType="full"`、`planExists=false` 与 `isSubAgent=false`，不实现真实 plan reminder 调度、plan 文件生命周期或 sub-agent plan orchestration。
+- 本轮额外新增 `plan_mode_exit_validated=true` / `plan_mode_exit_event=attachment:plan_mode_exit`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"plan_mode_exit",planFilePath,planExists}`；当前固定返回稳定的 `.claude/plan.md` 路径与 `planExists=false`，不实现真实 plan mode 切换状态机或 plan 文件生命周期。
+- 本轮额外新增 `plan_mode_reentry_validated=true` / `plan_mode_reentry_event=attachment:plan_mode_reentry`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"plan_mode_reentry",planFilePath}`；当前固定返回稳定的 `.claude/plan.md` 路径，不实现真实 plan re-entry 状态机或 plan 文件恢复逻辑。
+- 本轮额外新增 `plan_file_reference_validated=true` / `plan_file_reference_event=attachment:plan_file_reference`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible compact-preserve `attachment{type:"plan_file_reference",planFilePath,planContent}`；当前固定返回稳定的 `.claude/plan.md` 路径与稳定 plan stub 文本，仅用于保留 plan mode 产物引用，不实现真实 plan 文件读写、plan scheduler 或更大的 plan family。
+- 本轮额外新增 `invoked_skills_validated=true` / `invoked_skills_event=attachment:invoked_skills`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible compact-preserve `attachment{type:"invoked_skills",skills:[{name,path,content}]}`；当前固定返回单条 `agent-manager` skill stub，仅用于保留已调用 skill 的内容引用，不实现真实 skill discovery、skill loader、compact preserve 全量重建或更大的 skill family。
+- 本轮额外新增 `queued_command_validated=true` / `queued_command_event=attachment:queued_command`：`open --print` 现在要求在 allow turn 的 `system:task_notification` 之后同时看到最小 official-compatible `attachment{type:"queued_command",prompt,commandMode:"task-notification"}`；当前固定返回 task-notification XML 风格 prompt，不实现真实 queued-command 队列管理、去重或 richer REPL 行为。
+- 本轮额外新增 `date_change_validated=true` / `date_change_event=attachment:date_change`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"date_change",newDate}`；当前固定返回稳定 `newDate="2026-04-09"`，不实现真实跨午夜检测或 transcript flush。
+- 本轮额外新增 `ultrathink_effort_validated=true` / `ultrathink_effort_event=attachment:ultrathink_effort`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"ultrathink_effort",level:"high"}`；当前仅补最小 envelope-compatible shape，不实现真实关键词触发、思考预算切换或 richer 提示语义。
+- 本轮额外新增 `deferred_tools_delta_validated=true` / `deferred_tools_delta_event=attachment:deferred_tools_delta`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"deferred_tools_delta",addedNames,addedLines,removedNames}`；当前仅补固定示例值的最小稳定 shape，不实现真实 tools diff、scan context 或 dynamic discovery 语义。
+- 本轮额外新增 `agent_listing_delta_validated=true` / `agent_listing_delta_event=attachment:agent_listing_delta`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"agent_listing_delta",addedTypes,addedLines,removedTypes,isInitial,showConcurrencyNote}`；当前仅补固定 `addedTypes=["explorer"]`、稳定单行 `addedLines`、`removedTypes=[]`、`isInitial=true` 与 `showConcurrencyNote=true` 的最小 stub，不扩展真实 agent pool、动态过滤或订阅态判断。
+- 本轮额外新增 `mcp_instructions_delta_validated=true` / `mcp_instructions_delta_event=attachment:mcp_instructions_delta`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"mcp_instructions_delta",addedNames,addedBlocks,removedNames}`；当前仅补固定 `addedNames=["chrome"]`、`addedBlocks=["## chrome\\nUse ToolSearch before browser actions."]` 与 `removedNames=[]` 的最小 stub，不扩展真实 MCP 连接池、动态 instructions 合并、断连回收或 model/tool gate。
+- 本轮额外新增 `companion_intro_validated=true` / `companion_intro_event=attachment:companion_intro`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"companion_intro",name,species}`；当前仅补固定 `name="Mochi"`、`species="otter"` 的最小 stub，不扩展真实 companion 开关、历史去重、气泡文案或 user-addressed 行为。
+- 本轮额外新增 `token_usage_validated=true` / `token_usage_event=attachment:token_usage`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"token_usage",used,total,remaining}`；当前仅补固定 `used=1024`、`total=200000`、`remaining=198976` 的最小 stub，不扩展真实 token accounting、model-specific context window、env gate 或动态 remaining 计算。
+- 本轮额外新增 `output_token_usage_validated=true` / `output_token_usage_event=attachment:output_token_usage`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"output_token_usage",turn,session,budget}`；当前仅补固定 `turn=256`、`session=512`、`budget=1024` 的最小 stub，不扩展真实 turn/session token accounting、feature gate、`budget=null` 分支或动态预算计算。
+- 本轮额外新增 `current_session_memory_validated=true` / `current_session_memory_event=attachment:current_session_memory`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"current_session_memory",content,path,tokenCount}`；当前仅补固定 `content="Remember: keep this session focused."`、`path="MEMORY.md"`、`tokenCount=7` 的最小 stub，不扩展真实 memory 文件读取、动态 tokenCount 统计或个性化记忆注入。
+- 本轮额外新增 `relevant_memories_validated=true` / `relevant_memories_event=attachment:relevant_memories`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"relevant_memories",memories:[{path,content,mtimeMs,header?,limit?}]}`；当前仅补固定单条 `memory/project.md` memory 的最小 stub，不实现真实 async prefetch、readFileState 过滤、去重或 session-byte throttle。
+- 本轮额外新增 `nested_memory_validated=true` / `nested_memory_event=attachment:nested_memory`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"nested_memory",path,content,displayPath}`；当前仅补固定 `path="memory/project.md"`、`displayPath="memory/project.md"` 与最小 `content={path:"memory/project.md",type:"memory_file",content:"Project memory: keep nested context stable."}` 的 stub，不扩展真实 memory 文件扫描、include 解析、LRU dedup 或 richer UI 行为。
+- 本轮额外新增 `teammate_shutdown_batch_validated=true` / `teammate_shutdown_batch_event=attachment:teammate_shutdown_batch`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"teammate_shutdown_batch",count}`；当前仅补固定 `count=2` 的最小 stub，不扩展真实 task_status 折叠、multi-message collapse 或 UI 渲染策略。
+- 本轮额外新增 `bagel_console_validated=true` / `bagel_console_event=attachment:bagel_console`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"bagel_console",errorCount,warningCount,sample}`；当前仅补固定 `errorCount=1`、`warningCount=2`、`sample="bagel: sample warning"` 的最小 stub，不扩展真实 bagel console 聚合、日志采样或 UI 渲染策略。
+- 本轮额外新增 `team_context_validated=true` / `team_context_event=attachment:team_context`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"team_context",agentId,agentName,teamName,teamConfigPath,taskListPath}`；当前仅补固定 `agentId="agent-dev"`、`agentName="dev"`、`teamName="alpha"`、`teamConfigPath=".claude/team.yaml"`、`taskListPath=".claude/tasks.json"` 的最小 stub，不扩展真实 team coordination、mailbox 聚合、任务分发或 UI 渲染策略。
+- 本轮额外新增 `teammate_mailbox_validated=true` / `teammate_mailbox_event=attachment:teammate_mailbox`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"teammate_mailbox",messages:[{from,text,timestamp,color?,summary?}]}`；当前仅补固定单条 `team-lead` 消息的最小 stub，不扩展真实 mailbox 聚合、格式化、消息去重或 UI 渲染策略。
+- 本轮额外新增 `skill_discovery_validated=true` / `skill_discovery_event=attachment:skill_discovery`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"skill_discovery",skills:[{name,description,shortId?}],signal,source}`；当前仅补固定单条 skill `agent-manager` 与固定 `signal="user_input"`、`source="native"` 的最小 stub，不扩展真实 native/AKI skill search、prefetch、write-pivot detection、ranking 或 feature gate plumbing。
+- 本轮额外新增 `dynamic_skill_validated=true` / `dynamic_skill_event=attachment:dynamic_skill`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"dynamic_skill",skillDir,skillNames,displayPath}`；当前仅补固定 `skillDir=".codex/skills/agent-manager"`、`skillNames=["agent-manager","use-fractalbot"]`、`displayPath=".codex/skills"` 的最小 stub，不扩展真实动态技能扫描、skill tool 加载或 richer UI 行为。
+- 本轮额外新增 `skill_listing_validated=true` / `skill_listing_event=attachment:skill_listing`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"skill_listing",content,skillCount,isInitial}`；当前仅补固定 `content="agent-manager: Coordinate and track teammate work."`、`skillCount=1`、`isInitial=true` 的最小 stub，不扩展真实 skill catalog 枚举、动态发现、resume suppression 或 richer formatting。
+- 本轮额外新增 `verify_plan_reminder_validated=true` / `verify_plan_reminder_event=attachment:verify_plan_reminder`：`open --print` 现在要求在 allow turn 中同时看到最小 official-compatible `attachment{type:"verify_plan_reminder"}`；当前仅补最小 envelope-compatible type，不实现真实 verify-plan 触发策略。
+- 本轮额外新增统一 error-result `permission_denials` 校验位：`open --print` 现在会输出 `result_error_permission_denials_validated=true` 与 `result_error_permission_denials_event=result:error:permission_denials`，只验证四类 error result 的 `permission_denials` shape 是否稳定。
+- 本轮额外新增统一 error-result `modelUsage` 校验位：`open --print` 现在会输出 `result_error_model_usage_validated=true` 与 `result_error_model_usage_event=result:error:modelUsage`，只验证四类 error result 的 `modelUsage` shape 是否稳定。
+- 本轮额外新增统一 error-result `usage` 校验位：`open --print` 现在会输出 `result_error_usage_validated=true` 与 `result_error_usage_event=result:error:usage`，只验证四类 error result 的 `usage` 是否保持 `EMPTY_USAGE` 同形零值 shape。
+- 本轮额外补了 success `result` 的最小 official-compatible `structured_output` shape：server 现固定返回 `structured_output:{text:<same result>}`，`open --print` 会额外输出 `result_structured_output_validated=true` 与 `result_structured_output_event=result:success:structured_output`；该字段只保证 shape 稳定、可验证，不实现上游完整 structured-output tool 语义、schema 驱动重试或 tool bridge。
+- success `result` 的 `modelUsage` 本轮也收紧为显式校验路径：server 继续固定返回 `modelUsage:{"claude-sonnet-4-5": {inputTokens, outputTokens, cacheReadInputTokens, cacheCreationInputTokens, webSearchRequests, costUSD, contextWindow}}` 的全 0 stub，`open --print` 新增 `result_model_usage_validated=true` 与 `result_model_usage_event=result:success:modelUsage`；该字段只保证最小 official-compatible shape 稳定，不实现上游完整 cost/model accounting 语义。
+- success `result` 的 `permission_denials` 本轮也收紧为显式校验路径：server 继续固定返回空数组 `permission_denials:[]`，`open --print` 新增 `result_permission_denials_validated=true` 与 `result_permission_denials_event=result:success:permission_denials`；该字段只保证最小 official-compatible shape 稳定，不实现上游完整 permission analytics 或 richer denial recovery 语义。
+- success `result` 的 `usage` 本轮也收紧为显式校验路径：server 不再返回空 map，而是固定返回与上游 `EMPTY_USAGE` 对齐的零值对象，`open --print` 新增 `result_usage_validated=true` 与 `result_usage_event=result:success:usage`；该字段只保证最小 official-compatible shape 稳定，不实现上游完整 token accounting、cost aggregation 或 iteration tracking 语义。
+- `project settings` 故意不参与 `auto-mode config` 合并，跟随源仓库的安全边界
+- 默认规则集目前是 **最小兼容基线**，已对齐输出 JSON 形状与 section fallback 语义，但尚未逐字对齐官方模板文本
+
+## 本地验证样例
+
+```bash
+go build ./cmd/claude-code-go
+./claude-code-go auth login --api-key 'sk-ant-demo-1234567890'
+./claude-code-go auth status
+./claude-code-go doctor
+./claude-code-go auto-mode defaults
+./claude-code-go auto-mode config
+./claude-code-go assistant
+./claude-code-go assistant sess-123
+./claude-code-go server --port 7777 --host 127.0.0.1 --auth-token demo-token --workspace /tmp/workspace --idle-timeout 0 --max-sessions 8
+./claude-code-go open 'cc://127.0.0.1:7777?authToken=demo-token'
+curl -H 'Authorization: Bearer demo-token' http://127.0.0.1:7777/sessions/<session-id>
+./claude-code-go open 'cc://127.0.0.1:7777?authToken=demo-token' --resume-session sess-123
+./claude-code-go open 'cc://127.0.0.1:7777?authToken=demo-token' --stop-session sess-123
+./claude-code-go server --unix /tmp/claude.sock --auth-token demo-token
+./claude-code-go open 'cc+unix://%2Ftmp%2Fclaude.sock?token=demo-token'
+./claude-code-go open 'cc+unix://%2Ftmp%2Fclaude.sock?token=demo-token' --resume-session sess-123
+./claude-code-go open 'cc+unix://%2Ftmp%2Fclaude.sock?token=demo-token' --stop-session sess-123
+# `open` 输出会包含 `stream_validated=true` / `stream_event=session_ready` / `backend_validated=true`
+# `open --print` 还会包含 `system_validated=true` / `auth_validated=true` / `status_validated=true` / `status_transition_validated=true` / `status_compacting_lifecycle_validated=true` / `compact_summary_validated=true` / `compact_summary_synthetic_validated=true` / `compact_summary_parent_tool_use_id_validated=true` / `replayed_user_message_validated=true` / `replayed_user_synthetic_validated=true` / `replayed_user_parent_tool_use_id_validated=true` / `replayed_queued_command_validated=true` / `replayed_queued_command_synthetic_validated=true` / `replayed_queued_command_parent_tool_use_id_validated=true` / `replayed_tool_result_validated=true` / `replayed_tool_result_synthetic_validated=true` / `replayed_tool_result_parent_tool_use_id_validated=true` / `replayed_assistant_message_validated=true` / `replayed_compact_boundary_validated=true` / `replayed_compact_boundary_preserved_segment_validated=true` / `replayed_local_command_breadcrumb_validated=true` / `replayed_local_command_breadcrumb_synthetic_validated=true` / `replayed_local_command_breadcrumb_parent_tool_use_id_validated=true` / `replayed_local_command_stderr_breadcrumb_validated=true` / `replayed_local_command_stderr_breadcrumb_synthetic_validated=true` / `replayed_local_command_stderr_breadcrumb_parent_tool_use_id_validated=true`（其中 replay 十八者仅 `--resume-session --print`）/ `live_tool_result_validated=true` / `live_tool_result_event=user:tool_result` / `live_tool_result_error_validated=true` / `live_tool_result_error_event=user:tool_result:is_error` / `keep_alive_validated=true` / `update_environment_variables_validated=true` / `control_cancel_validated=true` / `task_started_validated=true` / `task_progress_validated=true` / `task_notification_validated=true` / `task_status_attachment_validated=true` / `task_reminder_attachment_validated=true` / `files_persisted_validated=true` / `api_retry_validated=true` / `local_command_output_validated=true` / `local_command_output_assistant_validated=true` / `elicitation_validated=true` / `hook_callback_validated=true` / `channel_enable_validated=true` / `elicitation_complete_validated=true` / `stream_content_validated=true` / `thinking_delta_validated=true` / `thinking_signature_validated=true` / `tool_use_block_start_validated=true` / `tool_use_delta_validated=true` / `tool_use_block_stop_validated=true` / `assistant_message_start_validated=true` / `assistant_message_start_event=stream_event:message_start` / `assistant_message_delta_validated=true` / `assistant_message_delta_event=stream_event:message_delta` / `assistant_message_stop_validated=true` / `assistant_message_stop_event=stream_event:message_stop` / `assistant_thinking_validated=true` / `assistant_tool_use_validated=true` / `assistant_stop_reason_validated=true` / `assistant_stop_reason_event=assistant:stop_reason` / `assistant_usage_validated=true` / `assistant_usage_event=assistant:usage` / `structured_output_attachment_validated=true` / `structured_output_attachment_event=attachment:structured_output` / `streamlined_text_validated=true` / `streamlined_text_event=streamlined_text` / `streamlined_tool_use_summary_validated=true` / `streamlined_tool_use_summary_event=streamlined_tool_use_summary` / `prompt_suggestion_validated=true` / `prompt_suggestion_event=prompt_suggestion` / `tool_progress_validated=true` / `rate_limit_validated=true` / `tool_use_summary_validated=true` / `tool_use_summary_shape_validated=true` / `tool_use_summary_shape_event=tool_use_summary:shape` / `message_validated=true` / `validated_turns=2` / `multi_turn_validated=true` / `result_validated=true` / `result_fast_mode_state_validated=true` / `result_error_validated=true` / `result_error_permission_denials_validated=true` / `result_error_model_usage_validated=true` / `result_error_fast_mode_state_validated=true` / `result_error_max_turns_validated=true` / `result_error_max_turns_fast_mode_state_validated=true` / `result_error_max_budget_usd_validated=true` / `result_error_max_budget_usd_fast_mode_state_validated=true` / `result_error_max_structured_output_retries_validated=true` / `result_error_max_structured_output_retries_fast_mode_state_validated=true` / `control_validated=true` / `permission_validated=true` / `permission_denied_validated=true` / `session_state_changed_validated=true` / `session_state_requires_action_validated=true` / `tool_execution_validated=true` / `interrupt_validated=true` / `initialize_validated=true` / `set_model_validated=true` / `set_permission_mode_validated=true` / `set_max_thinking_tokens_validated=true` / `mcp_status_validated=true` / `get_context_usage_validated=true` / `mcp_message_validated=true` / `mcp_set_servers_validated=true` / `reload_plugins_validated=true` / `mcp_authenticate_validated=true` / `mcp_oauth_callback_url_validated=true` / `mcp_reconnect_validated=true` / `mcp_toggle_validated=true` / `seed_read_state_validated=true` / `rewind_files_validated=true` / `rewind_files_can_rewind=true` / `cancel_async_message_validated=true` / `stop_task_validated=true` / `apply_flag_settings_validated=true` / `get_settings_validated=true` / `generate_session_title_validated=true` / `side_question_validated=true` / `set_proactive_validated=true` / `bridge_state_validated=true` / `remote_control_validated=true` / `end_session_validated=true` / `compact_boundary_preserved_segment_validated=true`
+# success path 现同时包含 `structured_output_attachment_validated=true` / `structured_output_attachment_event=attachment:structured_output` 与 `result_structured_output_validated=true` / `result_structured_output_event=result:success:structured_output`；server 对应 payload 固定为 `attachment:{type:"structured_output",data:{text:<same result>}}` 与 `structured_output:{text:<same result>}`
+# max-turns error path 现同时包含 `max_turns_reached_attachment_validated=true` / `max_turns_reached_attachment_event=attachment:max_turns_reached` 与 `result_error_max_turns_validated=true` / `result_error_max_turns_event=result:error_max_turns`；server 对应 payload 固定为 `attachment:{type:"max_turns_reached",turnCount,maxTurns}`
+# success `result` 现还会包含 `result_model_usage_validated=true` / `result_model_usage_event=result:success:modelUsage`；server 对应字段 shape 固定为 `modelUsage:{"claude-sonnet-4-5": {all-zero counters}}`
+# success `result` 现还会包含 `result_permission_denials_validated=true` / `result_permission_denials_event=result:success:permission_denials`；server 对应字段 shape 固定为 `permission_denials:[]`
+# success `result` 现还会包含 `result_usage_validated=true` / `result_usage_event=result:success:usage`；server 对应字段 shape 固定为与上游 `EMPTY_USAGE` 对齐的零值 usage object
+# 其中 direct-connect user message 现额外校验最小 `timestamp` shape：`compact_summary_timestamp_validated=true`、`live_tool_result_validated=true` 对应的 `timestamp` 非空，以及 `replayed_{user|queued_command|tool_result|local_command_breadcrumb|local_command_stderr_breadcrumb}_timestamp_validated=true`；仅保证字段存在，不恢复真实 transcript timeline / ordering / provenance
+# fresh live direct-connect 首条 user turn 现额外校验最小 initial user ACK replay：`acked_initial_user_replay_validated=true` / `acked_initial_user_replay_event=user:initial_ack:isReplay`；该 ACK replay 仅补最近 1 条首条 user text 回放，不扩展为多条队列、完整 transcript rebuild 或 timeline 排序
+# `server` 输出会包含 `lockfile_path=...` / `session_index_path=...`
+# `GET /sessions/<session-id>` 可直接查看 `status=starting|running|detached|stopped` 与 `backend_status/backend_pid`
+./claude-code-go ssh demo-host
+./claude-code-go ssh demo-host /tmp/work --permission-mode auto --dangerously-skip-permissions --local
+./claude-code-go open 'cc://127.0.0.1:7777?authToken=demo-token' --print 'hello world' --output-format json
+./claude-code-go setup-token
+./claude-code-go setup-token --token tok-demo-1234567890 --write-env-file ~/.config/claude-code-go/oauth-token.env
+./claude-code-go mcp list
+./claude-code-go mcp get github
+./claude-code-go mcp add --scope local demo -- npx -y demo-mcp
+./claude-code-go mcp add --scope user --transport http --header "Authorization: Bearer demo" sentry https://mcp.sentry.dev/mcp
+./claude-code-go mcp remove demo --scope local
+./claude-code-go plugin install demo@market --scope project --version 2.3.4
+./claude-code-go plugin uninstall demo@market --scope project
+./claude-code-go plugin list
+./claude-code-go plugin marketplace add demo-owner/demo-market --scope user
+./claude-code-go plugin marketplace list
+./claude-code-go plugin marketplace remove demo-market
+./claude-code-go agents
+./claude-code-go install --dry-run
+./claude-code-go install ./dist/claude-code-go --apply
+./claude-code-go update ./dist/claude-code-go --source-binary ./claude-code-go
+./claude-code-go update ./dist/claude-code-go --source-binary ./claude-code-go --apply
+./claude-code-go update ./dist/claude-code-go --source-url http://127.0.0.1:18080/claude-code-go
+./claude-code-go update ./dist/claude-code-go --source-url http://127.0.0.1:18080/claude-code-go --apply
+./claude-code-go api payload --model claude-3-5-haiku-latest --max-tokens 8
+./claude-code-go auth logout
+```
+
+## 当前限制
+
+- 仍未接入完整 `claude-code` 命令面，当前正按 `agents -> auto-mode -> setup-token -> mcp -> plugin -> assistant -> server -> ssh -> open -> direct-connect session stop / cleanup path -> ...` 的顺序持续补齐；其中 `assistant` / `server` / `ssh` / `open` / `auto-mode` / `setup-token` / `mcp list|get|add|remove` / `plugin list|install|uninstall|marketplace add|list|remove` 均为最小兼容面
+- `api ping` 目前只验证最小请求链路，不代表完整业务行为已对齐
