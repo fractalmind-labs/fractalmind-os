@@ -6,7 +6,7 @@ AI Agent OS 的标准层仓库初始化文件（v1 草案）。
 
 ## This repo defines
 - file contract
-- skill contract
+- skill contract（package minimum + source）
 - runtime contract
 - packaging contract
 - compatibility contract
@@ -24,4 +24,6 @@ AI Agent OS 的标准层仓库初始化文件（v1 草案）。
 1. 先读 `docs/glossary.md`
 2. 再读 `contracts/files/core-files.md`
 3. 再读 `contracts/runtime/heartbeat.md`
-4. 最后对照 `contracts/packaging/rom-manifest-minimum.md` 准备 ROM manifest
+4. 再读 `contracts/skills/skill-package-minimum.md` 和 `contracts/skills/skill-source.md`
+5. 再读 `contracts/compatibility/spec-rom-compatibility.md`
+6. 最后对照 `contracts/packaging/rom-manifest-minimum.md` 准备 ROM manifest
