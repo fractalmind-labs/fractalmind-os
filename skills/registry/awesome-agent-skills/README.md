@@ -79,8 +79,8 @@ The most contributed Agent Skills repository, built and maintained together with
 | [Notion](#skills-by-notion) | [Resend](#skills-by-resend) | [Addy Osmani (Web Quality)](#skills-by-addy-osmani-web-quality) | [MongoDB](#skills-by-mongodb) |
 | [Kim Barrett (Advertising)](#advertising-skills-by-kim-barrett) | [Apollo GraphQL](#skills-by-apollo-graphql) | [Auth0](#skills-by-auth0) | [Brave](#skills-by-brave) |
 | [Browserbase](#skills-by-browserbase) | [CodeRabbit](#skills-by-coderabbit) | [Coinbase](#skills-by-coinbase) | [Datadog Labs](#skills-by-datadog-labs) |
-| [Firebase](#skills-by-firebase) | [Flutter](#skills-by-flutter) | [Baoyu (JimLiu)](#skills-by-baoyu-jimliu) | [Community](#community-skills) |
-| [Quality Standards](#skill-quality-standards) | | | |
+| [Firebase](#skills-by-firebase) | [Flutter](#skills-by-flutter) | [Baoyu (JimLiu)](#skills-by-baoyu-jimliu) | [Hermes Agent (NousResearch)](#skills-by-hermes-agent-nousresearch) |
+| [Community](#community-skills) | [Quality Standards](#skill-quality-standards) | | |
 
 
 
@@ -1209,6 +1209,40 @@ Official MongoDB Agent Skills for agentic workflows — connection management, s
 - **[baoyu/baoyu-article-illustrator](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-article-illustrator)** - Auto-illustrate articles with relevant images
 - **[baoyu/baoyu-danger-gemini-web](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-danger-gemini-web)** - Web search powered by Gemini
 - **[baoyu/baoyu-danger-x-to-markdown](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-danger-x-to-markdown)** - Convert X/Twitter threads to Markdown
+
+</details>
+
+<details>
+<summary><h3 style="display:inline">Skills by Hermes Agent (NousResearch)</h3></summary>
+
+26 skills spanning development, productivity, DevOps, research, and more. [GitHub](https://github.com/NousResearch/hermes-agent)
+
+- **[hermes/apple](https://github.com/NousResearch/hermes-agent/tree/main/skills/apple)** - macOS automation — iMessage, Reminders, Notes, FindMy
+- **[hermes/autonomous-ai-agents](https://github.com/NousResearch/hermes-agent/tree/main/skills/autonomous-ai-agents)** - Spawn and orchestrate autonomous AI coding agents
+- **[hermes/creative](https://github.com/NousResearch/hermes-agent/tree/main/skills/creative)** - Creative content — ASCII art, hand-drawn diagrams, design
+- **[hermes/data-science](https://github.com/NousResearch/hermes-agent/tree/main/skills/data-science)** - Data science workflows with Jupyter and visualization
+- **[hermes/devops](https://github.com/NousResearch/hermes-agent/tree/main/skills/devops)** - Infrastructure automation, CI/CD, and operations
+- **[hermes/diagramming](https://github.com/NousResearch/hermes-agent/tree/main/skills/diagramming)** - Visual diagrams, flowcharts, and architecture diagrams
+- **[hermes/dogfood](https://github.com/NousResearch/hermes-agent/tree/main/skills/dogfood)** - Systematic exploratory QA testing of web applications
+- **[hermes/domain](https://github.com/NousResearch/hermes-agent/tree/main/skills/domain)** - Domain intelligence and reconnaissance
+- **[hermes/email](https://github.com/NousResearch/hermes-agent/tree/main/skills/email)** - Send, receive, search, and manage email from terminal
+- **[hermes/feeds](https://github.com/NousResearch/hermes-agent/tree/main/skills/feeds)** - Monitor and process RSS feeds and web content
+- **[hermes/gaming](https://github.com/NousResearch/hermes-agent/tree/main/skills/gaming)** - Set up and manage game servers and infrastructure
+- **[hermes/gifs](https://github.com/NousResearch/hermes-agent/tree/main/skills/gifs)** - Search, download, and work with GIFs
+- **[hermes/github](https://github.com/NousResearch/hermes-agent/tree/main/skills/github)** - GitHub workflows — repos, PRs, reviews, issues, CI/CD
+- **[hermes/index-cache](https://github.com/NousResearch/hermes-agent/tree/main/skills/index-cache)** - Skill discovery and marketplace integration cache
+- **[hermes/inference-sh](https://github.com/NousResearch/hermes-agent/tree/main/skills/inference-sh)** - Remote inference and model execution via inference.sh
+- **[hermes/leisure](https://github.com/NousResearch/hermes-agent/tree/main/skills/leisure)** - Find nearby activities and recreational opportunities
+- **[hermes/mcp](https://github.com/NousResearch/hermes-agent/tree/main/skills/mcp)** - Work with MCP servers, tools, and integrations
+- **[hermes/media](https://github.com/NousResearch/hermes-agent/tree/main/skills/media)** - YouTube transcripts, music generation, audio visualization
+- **[hermes/mlops](https://github.com/NousResearch/hermes-agent/tree/main/skills/mlops)** - ML operations — training, fine-tuning, deployment
+- **[hermes/note-taking](https://github.com/NousResearch/hermes-agent/tree/main/skills/note-taking)** - Save information, assist research, collaborative planning
+- **[hermes/productivity](https://github.com/NousResearch/hermes-agent/tree/main/skills/productivity)** - Documents, presentations, spreadsheets, and workflows
+- **[hermes/red-teaming](https://github.com/NousResearch/hermes-agent/tree/main/skills/red-teaming)** - Adversarial testing for security and robustness
+- **[hermes/research](https://github.com/NousResearch/hermes-agent/tree/main/skills/research)** - Academic research, paper discovery, literature review
+- **[hermes/smart-home](https://github.com/NousResearch/hermes-agent/tree/main/skills/smart-home)** - Control smart home devices — lights, switches, sensors
+- **[hermes/social-media](https://github.com/NousResearch/hermes-agent/tree/main/skills/social-media)** - Post, read, and monitor social platforms
+- **[hermes/software-development](https://github.com/NousResearch/hermes-agent/tree/main/skills/software-development)** - Code planning, review, debugging, TDD workflows
 
 </details>
 
