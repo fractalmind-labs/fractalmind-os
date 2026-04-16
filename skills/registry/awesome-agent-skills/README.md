@@ -79,7 +79,8 @@ The most contributed Agent Skills repository, built and maintained together with
 | [Notion](#skills-by-notion) | [Resend](#skills-by-resend) | [Addy Osmani (Web Quality)](#skills-by-addy-osmani-web-quality) | [MongoDB](#skills-by-mongodb) |
 | [Kim Barrett (Advertising)](#advertising-skills-by-kim-barrett) | [Apollo GraphQL](#skills-by-apollo-graphql) | [Auth0](#skills-by-auth0) | [Brave](#skills-by-brave) |
 | [Browserbase](#skills-by-browserbase) | [CodeRabbit](#skills-by-coderabbit) | [Coinbase](#skills-by-coinbase) | [Datadog Labs](#skills-by-datadog-labs) |
-| [Firebase](#skills-by-firebase) | [Flutter](#skills-by-flutter) | [Community](#community-skills) | [Quality Standards](#skill-quality-standards) |
+| [Firebase](#skills-by-firebase) | [Flutter](#skills-by-flutter) | [Baoyu (JimLiu)](#skills-by-baoyu-jimliu) | [Community](#community-skills) |
+| [Quality Standards](#skill-quality-standards) | | | |
 
 
 
@@ -1179,6 +1180,35 @@ Official MongoDB Agent Skills for agentic workflows — connection management, s
 - **[mongodb/mongodb-natural-language-querying](https://officialskills.sh/mongodb/skills/mongodb-natural-language-querying)** - Translate natural language into MongoDB queries and aggregation pipelines
 - **[mongodb/mongodb-query-optimizer](https://officialskills.sh/mongodb/skills/mongodb-query-optimizer)** - Analyze and optimize query performance using Atlas Performance Advisor
 - **[mongodb/mongodb-search-and-ai](https://officialskills.sh/mongodb/skills/mongodb-search-and-ai)** - Implement Atlas Search and AI-powered recommendations with vector search
+
+</details>
+
+<details>
+<summary><h3 style="display:inline">Skills by Baoyu (JimLiu)</h3></summary>
+
+21 content creation, translation, and publishing skills. [GitHub](https://github.com/JimLiu/baoyu-skills)
+
+- **[baoyu/baoyu-translate](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-translate)** - Translate text between languages with context-aware accuracy
+- **[baoyu/baoyu-image-gen](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-image-gen)** - Generate images from text descriptions
+- **[baoyu/baoyu-diagram](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-diagram)** - Create diagrams and visual explanations
+- **[baoyu/baoyu-slide-deck](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-slide-deck)** - Generate presentation slide decks
+- **[baoyu/baoyu-comic](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-comic)** - Create comic strips and visual stories
+- **[baoyu/baoyu-infographic](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-infographic)** - Design data-driven infographics
+- **[baoyu/baoyu-url-to-markdown](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-url-to-markdown)** - Convert web pages to clean Markdown
+- **[baoyu/baoyu-youtube-transcript](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-youtube-transcript)** - Extract and format YouTube video transcripts
+- **[baoyu/baoyu-post-to-x](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-post-to-x)** - Publish posts to X/Twitter
+- **[baoyu/baoyu-post-to-wechat](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-post-to-wechat)** - Publish articles to WeChat
+- **[baoyu/baoyu-post-to-weibo](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-post-to-weibo)** - Publish posts to Weibo
+- **[baoyu/baoyu-xhs-images](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-xhs-images)** - Create Xiaohongshu-style image posts
+- **[baoyu/baoyu-format-markdown](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-format-markdown)** - Format and beautify Markdown documents
+- **[baoyu/baoyu-markdown-to-html](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-markdown-to-html)** - Convert Markdown to styled HTML
+- **[baoyu/baoyu-compress-image](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-compress-image)** - Compress and optimize images
+- **[baoyu/baoyu-cover-image](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-cover-image)** - Generate article cover images
+- **[baoyu/baoyu-image-cards](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-image-cards)** - Create visual image card layouts
+- **[baoyu/baoyu-imagine](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-imagine)** - Creative image generation and ideation
+- **[baoyu/baoyu-article-illustrator](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-article-illustrator)** - Auto-illustrate articles with relevant images
+- **[baoyu/baoyu-danger-gemini-web](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-danger-gemini-web)** - Web search powered by Gemini
+- **[baoyu/baoyu-danger-x-to-markdown](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-danger-x-to-markdown)** - Convert X/Twitter threads to Markdown
 
 </details>
 
