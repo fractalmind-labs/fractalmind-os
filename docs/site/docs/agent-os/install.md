@@ -44,7 +44,11 @@ cp -r roms/$ROM/templates/* $WORKSPACE/
 mkdir -p $WORKSPACE/memory $WORKSPACE/okrs
 ```
 
-This installs the files listed in the ROM's `install_boundary.creates_files`.
+This copies the ROM's bundled template files. Some ROMs (like `manager-heavy-core`) include all workspace files as templates; others (like `mentor-coordinator-core`) only include core templates and expect the installer to create remaining files listed in `install_boundary.creates_files` as empty or bootstrapped files.
+
+::: tip
+Check each ROM's detail page to see which files are included as templates vs. which need to be created by the installer.
+:::
 
 ## Step 4: Install required skills
 

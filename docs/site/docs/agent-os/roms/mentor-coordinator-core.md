@@ -36,22 +36,27 @@ A mentor-led variant of the manager-heavy family. Optimized for owner-side coord
 
 ## Workspace Files
 
-After installation, your workspace will contain:
+### Included templates (5 files)
 
-### Core OS files
+These files are bundled in the ROM and copied during installation:
+
 | File | Purpose |
 |------|---------|
 | `SYSTEM.md` | Kernel contract |
 | `SOUL.md` | Operating principles |
 | `AGENTS.md` | Session bootstrap and rules |
-| `USER.md` | Operator profile |
 | `HEARTBEAT.md` | TODO-first execution surface |
-| `OKR.md` | Active OKR control plane |
-| `TODO.md` | Temporary work tracker |
+| `README.md` | Workspace overview |
 
-### Directories
+### Created by installer (empty / bootstrapped)
+
+The manifest expects these files and directories to exist. The installer should create them as empty or with minimal bootstrapped content:
+
 | Path | Purpose |
 |------|---------|
+| `USER.md` | Operator profile (customize after install) |
+| `OKR.md` | Active OKR control plane |
+| `TODO.md` | Temporary work tracker |
 | `memory/` | Daily notes storage |
 | `okrs/` | OKR artifacts |
 
