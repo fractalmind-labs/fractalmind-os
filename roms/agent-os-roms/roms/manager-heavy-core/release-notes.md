@@ -1,5 +1,22 @@
 # manager-heavy-core release notes
 
+## v0.4.0
+Date: 2026-04-16
+Status: production-ready
+
+### What's new
+- **Embedded skills bundled in templates**: `agent-calendar` and `notifier` skill files are now included in `templates/.agent/skills/`, so other hosts installing this ROM can find and use these skills without external fetching
+  - `agent-calendar`: SKILL.md + 3 scripts (main.py, status_detector.py, quota_tracker.py) + 3 reference docs
+  - `notifier`: SKILL.md + 1 script (notify.py)
+
+### Breaking changes from v0.3.0
+- None. Additive change only — new files in `templates/.agent/skills/`
+
+### Migration from v0.3.0
+Copy `templates/.agent/skills/` to your workspace. Existing installations that already have these skills locally are unaffected.
+
+---
+
 ## v0.3.0
 Date: 2026-04-16
 Status: production-ready

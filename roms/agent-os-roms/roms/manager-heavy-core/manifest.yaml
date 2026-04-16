@@ -1,6 +1,6 @@
 rom_name: manager-heavy-core
 rom_family: manager-heavy
-rom_version: 0.3.0
+rom_version: 0.4.0
 description: >-
   Manager-first AI Agent OS distribution for coordination-heavy workspaces.
   Full template set with battle-tested principles, escalation templates,
@@ -58,9 +58,20 @@ install_boundary:
     - TOOLS.md
     - okrs/Candidate.md
     - memory/index.md
+    - .agent/skills/agent-calendar/SKILL.md
+    - .agent/skills/agent-calendar/scripts/main.py
+    - .agent/skills/agent-calendar/scripts/status_detector.py
+    - .agent/skills/agent-calendar/scripts/quota_tracker.py
+    - .agent/skills/agent-calendar/references/DETECTION_MECHANISM.md
+    - .agent/skills/agent-calendar/references/QUICKSTART.md
+    - .agent/skills/agent-calendar/references/QUOTA_ESTIMATION.md
+    - .agent/skills/notifier/SKILL.md
+    - .agent/skills/notifier/scripts/notify.py
   creates_directories:
     - memory/
     - okrs/
+    - .agent/skills/agent-calendar/
+    - .agent/skills/notifier/
   bootstrap_entrypoint: manual-bootstrap
   post_install_expectations:
     - heartbeat control plane exists
