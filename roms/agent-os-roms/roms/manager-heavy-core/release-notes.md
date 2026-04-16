@@ -1,5 +1,23 @@
 # manager-heavy-core release notes
 
+## v0.5.0
+Date: 2026-04-16
+Status: production-ready
+
+### What's new
+- **agent-calendar open-sourced**: `agent-calendar` is now a standalone public repo at `fractalmind-ai/agent-calendar-skill`, referenced via git source instead of embedded
+- Embedded `agent-calendar` files removed from `templates/.agent/skills/agent-calendar/`
+
+### Breaking changes from v0.4.0
+- `agent-calendar` source changed from `embedded` to `git` — installers that handle embedded sources for agent-calendar must now support git clone/checkout
+- `templates/.agent/skills/agent-calendar/` directory removed
+
+### Migration from v0.4.0
+- Installers already supporting `git` source type (for agent-manager/team-manager) need no changes
+- agent-calendar content is fetched from `https://github.com/fractalmind-ai/agent-calendar-skill.git` at tag `v0.1.0`
+
+---
+
 ## v0.4.0
 Date: 2026-04-16
 Status: production-ready
