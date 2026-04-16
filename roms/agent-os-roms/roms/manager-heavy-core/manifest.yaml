@@ -1,6 +1,6 @@
 rom_name: manager-heavy-core
 rom_family: manager-heavy
-rom_version: 0.3.0
+rom_version: 0.5.0
 description: >-
   Manager-first AI Agent OS distribution for coordination-heavy workspaces.
   Full template set with battle-tested principles, escalation templates,
@@ -24,14 +24,20 @@ included_skills:
       repo: https://github.com/fractalmind-ai/team-manager-skill.git
       ref: main
       path: team-manager
+
+optional_skills:
   - name: agent-calendar
     source:
-      type: embedded
-      path: .agent/skills/agent-calendar
+      type: git
+      repo: https://github.com/fractalmind-ai/agent-calendar-skill.git
+      ref: v0.1.0
+      path: agent-calendar
+    description: Agent availability calendar for multi-agent scheduling
   - name: notifier
     source:
       type: embedded
       path: .agent/skills/notifier
+    description: Multi-channel notification system (Feishu/Slack/Telegram)
 
 template_set:
   - workspace-root

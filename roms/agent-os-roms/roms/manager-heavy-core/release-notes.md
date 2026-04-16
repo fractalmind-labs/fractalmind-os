@@ -1,5 +1,44 @@
 # manager-heavy-core release notes
 
+## v0.5.0
+Date: 2026-04-16
+Status: production-ready
+
+### What's new
+- **agent-calendar open-sourced**: `agent-calendar` is now a standalone public repo at `fractalmind-ai/agent-calendar-skill`, referenced via git source instead of embedded
+- Embedded `agent-calendar` files removed from `templates/.agent/skills/agent-calendar/`
+
+### Breaking changes from v0.4.0
+- `agent-calendar` source changed from `embedded` to `git` — installers that handle embedded sources for agent-calendar must now support git clone/checkout
+- `templates/.agent/skills/agent-calendar/` directory removed
+
+### Migration from v0.4.0
+- Installers already supporting `git` source type (for agent-manager/team-manager) need no changes
+- agent-calendar content is fetched from `https://github.com/fractalmind-ai/agent-calendar-skill.git` at tag `v0.1.0`
+
+---
+
+## v0.4.0
+Date: 2026-04-16
+Status: production-ready
+
+### What's new
+- **Embedded skills bundled in templates**: `agent-calendar` and `notifier` skill files are now included in `templates/.agent/skills/`, so other hosts installing this ROM can find and use these skills without external fetching
+  - `agent-calendar`: SKILL.md + 3 scripts (main.py, status_detector.py, quota_tracker.py) + 3 reference docs
+  - `notifier`: SKILL.md + 1 script (notify.py)
+- **Skill classification**: `agent-calendar` and `notifier` moved from `included_skills` to `optional_skills` — they are useful but not required for the OS to function
+- **install_boundary separation of concerns**: `install_boundary.creates_files` now only lists OS core workspace files; skill installation is driven by `included_skills` / `optional_skills` source declarations, not by install_boundary
+
+### Breaking changes from v0.3.0
+- `included_skills` reduced to 2 (agent-manager, team-manager); agent-calendar and notifier moved to new `optional_skills` section
+- `install_boundary.creates_files` no longer lists skill files
+
+### Migration from v0.3.0
+- If your installer reads `included_skills` for agent-calendar/notifier, update to also check `optional_skills`
+- Skill files are still in `templates/.agent/skills/` — installer should use `source.path` to locate them
+
+---
+
 ## v0.3.0
 Date: 2026-04-16
 Status: production-ready
