@@ -24,14 +24,18 @@ included_skills:
       repo: https://github.com/fractalmind-ai/team-manager-skill.git
       ref: main
       path: team-manager
+
+optional_skills:
   - name: agent-calendar
     source:
       type: embedded
       path: .agent/skills/agent-calendar
+    description: Agent availability calendar for multi-agent scheduling
   - name: notifier
     source:
       type: embedded
       path: .agent/skills/notifier
+    description: Multi-channel notification system (Feishu/Slack/Telegram)
 
 template_set:
   - workspace-root
@@ -58,20 +62,9 @@ install_boundary:
     - TOOLS.md
     - okrs/Candidate.md
     - memory/index.md
-    - .agent/skills/agent-calendar/SKILL.md
-    - .agent/skills/agent-calendar/scripts/main.py
-    - .agent/skills/agent-calendar/scripts/status_detector.py
-    - .agent/skills/agent-calendar/scripts/quota_tracker.py
-    - .agent/skills/agent-calendar/references/DETECTION_MECHANISM.md
-    - .agent/skills/agent-calendar/references/QUICKSTART.md
-    - .agent/skills/agent-calendar/references/QUOTA_ESTIMATION.md
-    - .agent/skills/notifier/SKILL.md
-    - .agent/skills/notifier/scripts/notify.py
   creates_directories:
     - memory/
     - okrs/
-    - .agent/skills/agent-calendar/
-    - .agent/skills/notifier/
   bootstrap_entrypoint: manual-bootstrap
   post_install_expectations:
     - heartbeat control plane exists

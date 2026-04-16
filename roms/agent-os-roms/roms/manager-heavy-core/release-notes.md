@@ -8,12 +8,16 @@ Status: production-ready
 - **Embedded skills bundled in templates**: `agent-calendar` and `notifier` skill files are now included in `templates/.agent/skills/`, so other hosts installing this ROM can find and use these skills without external fetching
   - `agent-calendar`: SKILL.md + 3 scripts (main.py, status_detector.py, quota_tracker.py) + 3 reference docs
   - `notifier`: SKILL.md + 1 script (notify.py)
+- **Skill classification**: `agent-calendar` and `notifier` moved from `included_skills` to `optional_skills` — they are useful but not required for the OS to function
+- **install_boundary separation of concerns**: `install_boundary.creates_files` now only lists OS core workspace files; skill installation is driven by `included_skills` / `optional_skills` source declarations, not by install_boundary
 
 ### Breaking changes from v0.3.0
-- None. Additive change only — new files in `templates/.agent/skills/`
+- `included_skills` reduced to 2 (agent-manager, team-manager); agent-calendar and notifier moved to new `optional_skills` section
+- `install_boundary.creates_files` no longer lists skill files
 
 ### Migration from v0.3.0
-Copy `templates/.agent/skills/` to your workspace. Existing installations that already have these skills locally are unaffected.
+- If your installer reads `included_skills` for agent-calendar/notifier, update to also check `optional_skills`
+- Skill files are still in `templates/.agent/skills/` — installer should use `source.path` to locate them
 
 ---
 
