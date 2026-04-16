@@ -36,23 +36,24 @@ Copy the template files from the ROM into your workspace:
 ```bash
 # Set your workspace path
 WORKSPACE=~/my-agent-workspace
+MANIFEST=roms/$ROM/manifest.yaml
 
 # Copy all template files
 cp -r roms/$ROM/templates/* $WORKSPACE/
 
-# Create required directories
-mkdir -p $WORKSPACE/memory $WORKSPACE/okrs
+# Create directories declared in install_boundary.creates_directories
+sed -n '/^ *creates_directories:$/,/^ *[^ -]/{s/^ *- //p}' "$MANIFEST" \
+  | while IFS= read -r d; do mkdir -p "$WORKSPACE/$d"; done
 
-# Create any missing files declared in install_boundary but not bundled as templates.
-# Check the manifest's install_boundary.creates_files and touch any that don't exist yet.
-# For example, mentor-coordinator-core bundles 5 templates but declares 7 files:
-for f in $(grep -A 20 'creates_files:' roms/$ROM/manifest.yaml \
-  | grep '^ *- ' | sed 's/^ *- //'); do
-  [ -e "$WORKSPACE/$f" ] || touch "$WORKSPACE/$f"
+# Create any missing files declared in install_boundary.creates_files
+# (e.g. mentor-coordinator-core bundles 5 templates but declares 7 files)
+sed -n '/^ *creates_files:$/,/^ *[^ -]/{s/^ *- //p}' "$MANIFEST" \
+  | while IFS= read -r f; do
+  [ -e "$WORKSPACE/$f" ] || { mkdir -p "$WORKSPACE/$(dirname "$f")"; touch "$WORKSPACE/$f"; }
 done
 ```
 
-This copies the ROM's bundled template files, then creates any remaining files declared in the manifest as empty bootstrapped files. Some ROMs (like `manager-heavy-core`) include all workspace files as templates; others (like `mentor-coordinator-core`) only include core templates — the loop above handles both cases.
+This copies the ROM's bundled template files, creates declared directories, then bootstraps any missing files as empty. The `sed` commands read only the scoped YAML block (`creates_files` or `creates_directories`), stopping at the next non-list key. Some ROMs (like `manager-heavy-core`) include all workspace files as templates; others (like `mentor-coordinator-core`) only include core templates — the loop handles both cases.
 
 ## Step 4: Install required skills
 
