@@ -34,3 +34,6 @@
 [submodule "validation/wallet-mock"]
 	path = validation/wallet-mock
 	url = git@github.com:fractalmind-ai/wallet-mock-skill.git
+[submodule "coordination/agent-calendar"]
+	path = coordination/agent-calendar
+	url = git@github.com:fractalmind-ai/agent-calendar-skill.git
