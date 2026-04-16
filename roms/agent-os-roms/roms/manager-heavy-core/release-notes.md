@@ -1,5 +1,25 @@
 # manager-heavy-core release notes
 
+## v0.3.0
+Date: 2026-04-16
+Status: production-ready
+
+### What's new
+- **Skill source declarations**: `included_skills` upgraded from plain name list to structured source definitions per `skill-source` contract
+  - `agent-manager` — git source from `fractalmind-ai/agent-manager-skill`
+  - `team-manager` — git source from `fractalmind-ai/team-manager-skill`
+  - `agent-calendar` — embedded (bundled in workspace)
+  - `notifier` — embedded (bundled in workspace)
+
+### Breaking changes from v0.2.0
+- `included_skills` format changed from string list to object list with `name` + `source` fields
+- Installers that parse `included_skills` as a flat list must be updated
+
+### Migration from v0.2.0
+Update any tooling that reads `included_skills` to expect objects with `name` and `source` keys instead of plain strings.
+
+---
+
 ## v0.2.0
 Date: 2026-04-15
 Status: production-ready
