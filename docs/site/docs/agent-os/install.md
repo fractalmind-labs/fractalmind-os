@@ -42,13 +42,17 @@ cp -r roms/$ROM/templates/* $WORKSPACE/
 
 # Create required directories
 mkdir -p $WORKSPACE/memory $WORKSPACE/okrs
+
+# Create any missing files declared in install_boundary but not bundled as templates.
+# Check the manifest's install_boundary.creates_files and touch any that don't exist yet.
+# For example, mentor-coordinator-core bundles 5 templates but declares 7 files:
+for f in $(grep -A 20 'creates_files:' roms/$ROM/manifest.yaml \
+  | grep '^ *- ' | sed 's/^ *- //'); do
+  [ -e "$WORKSPACE/$f" ] || touch "$WORKSPACE/$f"
+done
 ```
 
-This copies the ROM's bundled template files. Some ROMs (like `manager-heavy-core`) include all workspace files as templates; others (like `mentor-coordinator-core`) only include core templates and expect the installer to create remaining files listed in `install_boundary.creates_files` as empty or bootstrapped files.
-
-::: tip
-Check each ROM's detail page to see which files are included as templates vs. which need to be created by the installer.
-:::
+This copies the ROM's bundled template files, then creates any remaining files declared in the manifest as empty bootstrapped files. Some ROMs (like `manager-heavy-core`) include all workspace files as templates; others (like `mentor-coordinator-core`) only include core templates — the loop above handles both cases.
 
 ## Step 4: Install required skills
 
