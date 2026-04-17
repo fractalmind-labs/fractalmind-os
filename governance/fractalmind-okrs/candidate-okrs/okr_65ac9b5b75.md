@@ -3,7 +3,7 @@
 - Candidate ID: `okr_65ac9b5b75`
 - Objective: Bring `fractalmind-ai/predict-contracts-skill` into local discovery coverage and capture whether it contributes a reusable predictive-contract packet or another execution-planning primitive heartbeat should absorb next, so the final remaining blind spot does not leave the candidate layer at zero.
 - Governance: `L0`
-- Status: `proposed`
+- Status: `resolved`
 - Score: `2.28`
 
 ## Sync Contract
