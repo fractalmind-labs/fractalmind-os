@@ -1,0 +1,87 @@
+rom_name: hermes-agent
+rom_family: personal-home
+rom_version: 0.1.0
+description: >-
+  Hermes Agent ROM — a warm, tool-driven personal/household AI operator OS with
+  file-backed continuity, heartbeat + dream maintenance loops, and strict
+  act-don't-ask execution discipline.
+
+spec_version: 1.0.0
+requires_spec: ">=1.0.0"
+compatible_spec_range: ">=1.0.0 <2.0.0"
+compatibility_status: fully-compatible
+
+template_set:
+  - workspace-root
+  - memory-pack
+  - heartbeat-pack
+  - todo-pack
+  - dream-pack
+
+assets:
+  install:
+    - templates/
+  upgrade:
+    - templates/
+
+install_boundary:
+  creates_files:
+    - SYSTEM.md
+    - SOUL.md
+    - AGENTS.md
+    - USER.md
+    - HEARTBEAT.md
+    - DREAM.md
+    - OKR.md
+    - TODO.md
+    - MEMORY.md
+    - TOOLS.md
+    - IDENTITY.md
+    - okrs/Candidate.md
+    - memory/index.md
+  creates_directories:
+    - memory/
+    - okrs/
+  bootstrap_entrypoint: manual-bootstrap
+  post_install_expectations:
+    - heartbeat control plane exists
+    - dream maintenance control plane exists
+    - active OKR control plane exists
+    - memory daily-note path is writable
+    - operator can attach messaging / calendar / smart-home capabilities through host tools or skills
+
+upgrade_boundary:
+  upgrade_strategy: overlay-with-preserve
+  mutable_paths:
+    - SYSTEM.md
+    - SOUL.md
+    - AGENTS.md
+    - HEARTBEAT.md
+    - DREAM.md
+    - templates/
+  preserved_local_overrides:
+    - USER.md
+    - MEMORY.md
+    - TOOLS.md
+    - IDENTITY.md
+    - OKR.md
+    - TODO.md
+    - okrs/Candidate.md
+    - memory/
+  rollback_hint: restore previous ROM snapshot before overlay
+  breaking_changes:
+    - bootstrap-order changes may require manual merge into AGENTS.md
+    - heartbeat / dream rule rewrites may require operator review
+    - persona or tool-discipline changes may require local style review
+
+defaults:
+  default_persona: warm-household-operator
+  default_heartbeat_mode: proactive
+  recommended_use_cases:
+    - personal assistant workspaces
+    - household operator / home manager agents
+    - tool-rich local agent environments with background heartbeats
+  operator_notes:
+    - optimized for agents that should feel like a trusted operator, not a sterile chatbot
+    - expects act-dont-ask execution discipline with real tool use and verification
+    - supports heartbeat for proactive checks and dream mode for low-risk internal maintenance
