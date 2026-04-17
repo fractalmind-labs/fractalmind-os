@@ -3,7 +3,7 @@
 - Candidate ID: `okr_b2f8e4ab11`
 - Objective: Bring `fractalmind-ai/agent-calendar-skill` into local discovery coverage and capture whether it contributes a reusable scheduling/availability packet or another coordination primitive heartbeat should absorb next, so the remaining blind spots do not leave the candidate layer at zero.
 - Governance: `L0`
-- Status: `in_progress`
+- Status: `resolved`
 - Score: `2.37`
 
 ## Sync Contract
