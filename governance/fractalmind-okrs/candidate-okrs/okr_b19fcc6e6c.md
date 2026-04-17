@@ -3,7 +3,7 @@
 - Candidate ID: `okr_b19fcc6e6c`
 - Objective: Bring `fractalmind-ai/wallet-mock-skill` into local discovery coverage and capture whether it contributes a reusable wallet-simulation packet or another execution-safety primitive heartbeat should absorb next, so the remaining blind spots do not leave the candidate layer at zero.
 - Governance: `L0`
-- Status: `proposed`
+- Status: `resolved`
 - Score: `2.34`
 
 ## Sync Contract
