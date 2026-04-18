@@ -1,0 +1,4 @@
+interface:
+  display_name: "Go Integration Test"
+  short_description: "Build Go integration tests with Testcontainers, mock, and live modes."
+  default_prompt: "Use $golang-integration-test to design or refine Go integration tests with Testcontainers-managed MySQL/Redis, deterministic mock mode, and opt-in live mode."
