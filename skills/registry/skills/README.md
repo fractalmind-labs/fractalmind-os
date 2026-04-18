@@ -28,6 +28,7 @@ skills/
     DESCRIPTION.md
     predict-contracts/
     golang-web3-service/
+    golang-integration-test/
 ```
 
 每个 category 目录下都有一个 `DESCRIPTION.md`，用于说明这一类 skill 的用途边界与适用场景。
@@ -69,6 +70,7 @@ git submodule update --init --recursive
 ### development
 - `development/predict-contracts` -> `fractalmind-ai/predict-contracts-skill`
 - `development/golang-web3-service` -> `fractalmind-ai/golang-web3-service-skill`
+- `development/golang-integration-test` -> `fractalmind-ai/golang-integration-test-skill`
 
 ## 如何新增一个 skill
 

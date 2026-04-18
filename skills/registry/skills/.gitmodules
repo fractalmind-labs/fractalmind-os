@@ -40,3 +40,6 @@
 [submodule "development/plan-dog"]
 	path = development/plan-dog
 	url = git@github.com:fractalmind-ai/plan-dog-skill.git
+[submodule "development/golang-integration-test"]
+	path = development/golang-integration-test
+	url = git@github.com:fractalmind-ai/golang-integration-test-skill.git
