@@ -23,7 +23,7 @@ skills/
     use-phone/
   validation/
     DESCRIPTION.md
-    wallet-mock/
+    web3-wallet-mock-skill/
   development/
     DESCRIPTION.md
     plan-dog/
@@ -67,7 +67,7 @@ git submodule update --init --recursive
 - `interfaces/use-phone` -> `fractalmind-ai/use-phone-skill`
 
 ### validation
-- `validation/wallet-mock` -> `fractalmind-ai/wallet-mock-skill`
+- `validation/web3-wallet-mock-skill` -> `fractalmind-ai/web3-wallet-mock-skill`
 
 ### development
 - `development/plan-dog` -> `fractalmind-ai/plan-dog-skill`
