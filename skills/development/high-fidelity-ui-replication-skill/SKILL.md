@@ -8,38 +8,45 @@ license: MIT
 
 Use this skill when “close enough” is not enough and the target is a near-match to a reference surface.
 
-## Quick Start
+---
 
-**For first-time users**: Jump straight to a working example:
-1. Read `examples/polymarket-btc-replication.md` for a complete end-to-end case study
-2. Follow the 5-phase workflow: Reconnaissance → Architecture → Static → Animation → QA
-3. Use the validation workflow at the end to compare your result
+## 30-Second Quick Start
 
-**Minimum viable workflow**:
+**Minimum inputs:**
+- Target URL or video/screenshots of reference UI
+- Viewport size (e.g., 1920x1080 desktop, 375x667 mobile)
+
+**Minimum outputs:**
+- ✅ Working code (HTML/CSS/JS or React/Vue component)
+- ✅ Side-by-side comparison screenshots
+- ✅ Comparison video showing identical interactions
+
+**Shortest workflow:**
 ```bash
-# 1. Capture reference (10-15s video)
-npx @playwright/cli@latest open <target-url>
+# 1. Capture (10-15s video)
+npx @playwright/cli@latest open https://example.com/target-page
 npx @playwright/cli@latest video-start recording.webm
-# ... interact with the UI ...
+# ... interact with UI (hover, click, scroll) ...
 npx @playwright/cli@latest video-stop
 
-# 2. Extract frames for analysis
-ffmpeg -i recording.webm -vf “select=not(mod(n\,10))” frame_%03d.jpg
+# 2. Extract frames
+ffmpeg -i recording.webm -vf “select=not(mod(n\,10))” -vsync vfr frame_%03d.jpg
 
-# 3. Build your replication (see Phase 2-4 below)
+# 3. Implement (see 5-phase workflow below)
 
-# 4. Validate with side-by-side comparison
+# 4. Validate
 npx @playwright/cli@latest goto http://localhost:5173
 npx @playwright/cli@latest video-start clone.webm
-# ... same interactions ...
+# ... repeat same interactions ...
 npx @playwright/cli@latest video-stop
 ```
 
-**Required outputs for acceptance**:
-- ✅ Side-by-side screenshots (idle + hover states)
-- ✅ Comparison video (original vs clone, same interactions)
-- ✅ Frame checkpoints (key animation moments)
-- ✅ Gap report (remaining deltas with measurements)
+**What to read next:**
+- First time? → Read `examples/polymarket-btc-replication.md` for complete walkthrough
+- Need design system support? → See “DESIGN.md Integration” section below
+- Deep dive? → Continue reading sections below (all optional reference material)
+
+---
 
 ## What This Skill Optimizes For
 
@@ -205,10 +212,10 @@ If the ask is specifically about animation, do **not** treat a single screenshot
 ```bash
 # Check if project has DESIGN.md
 if [ -f "DESIGN.md" ]; then
-  echo "✅ Found DESIGN.md - will respect project design system"
+  echo "Found DESIGN.md - will respect project design system"
   # Read and parse constraints before proceeding
 else
-  echo "ℹ️  No DESIGN.md found - will extract design system from original"
+  echo "No DESIGN.md found - will extract design system from original"
 fi
 ```
 
@@ -238,16 +245,20 @@ fi
 
 **Critical: For animation-heavy UIs, record video first**
 ```bash
-# Open target page
-npx @playwright/cli@latest open <URL>
+# Open target page (replace TARGET_URL with actual URL)
+npx @playwright/cli@latest open TARGET_URL
 
-# Close any popups/modals that block the view
-npx @playwright/cli@latest press Escape
-
-# Record 10-15 seconds of interaction
+# Start recording
 npx @playwright/cli@latest video-start recording.webm
-# Wait for animations to play...
+
+# Interact with UI: hover buttons, click elements, scroll
+# ... perform interactions for 10-15 seconds ...
+
+# Stop recording
 npx @playwright/cli@latest video-stop
+
+# Extract frames for analysis (every 10th frame)
+ffmpeg -i recording.webm -vf "select=not(mod(n\,10))" -vsync vfr frame_%03d.jpg
 ```
 
 ### Phase 2: Architecture Setup

@@ -22,7 +22,20 @@ npx openskills install fractalmind-ai/high-fidelity-ui-replication-skill
 
 ## Included files
 
-- `SKILL.md`
-- `references/replication-spec-template.md`
-- `references/acceptance-checklist.md`
-- `examples/chart-motion.md`
+**Core documentation:**
+- `SKILL.md` - Complete skill guide with 5-phase workflow and DESIGN.md integration
+- `LICENSE` - MIT license
+- `README.md` - This file
+
+**Examples (end-to-end case studies):**
+- `examples/polymarket-btc-replication.md` - Complete Polymarket Bitcoin market replication walkthrough
+- `examples/polymarket-DESIGN.md` - Real-world design system extracted from Polymarket
+- `examples/chart-motion.md` - Chart animation replication patterns
+
+**References (reusable templates):**
+- `references/design-md-template.md` - Template for generating design system documentation
+- `references/replication-spec-template.md` - Template for replication specifications
+- `references/acceptance-checklist.md` - QA validation checklist
+
+**Agent configurations:**
+- `agents/openai.yaml` - OpenAI agent configuration example
