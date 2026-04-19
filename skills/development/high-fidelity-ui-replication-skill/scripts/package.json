@@ -1,0 +1,12 @@
+{
+  "name": "ui-replication-tools",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Video analysis tools for high-fidelity UI replication",
+  "scripts": {
+    "analyze": "node qwen-analyze-video.js"
+  },
+  "dependencies": {
+    "openai": "^4.77.0"
+  }
+}
