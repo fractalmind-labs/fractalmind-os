@@ -31,9 +31,9 @@
 [submodule "development/golang-web3-service"]
 	path = development/golang-web3-service
 	url = git@github.com:fractalmind-ai/golang-web3-service-skill.git
-[submodule "validation/wallet-mock"]
-	path = validation/wallet-mock
-	url = git@github.com:fractalmind-ai/wallet-mock-skill.git
+[submodule "validation/web3-wallet-mock-skill"]
+	path = validation/web3-wallet-mock-skill
+	url = git@github.com:fractalmind-ai/web3-wallet-mock-skill.git
 [submodule "coordination/agent-calendar"]
 	path = coordination/agent-calendar
 	url = git@github.com:fractalmind-ai/agent-calendar-skill.git

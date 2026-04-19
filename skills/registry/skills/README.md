@@ -23,7 +23,7 @@ skills/
     use-phone/
   validation/
     DESCRIPTION.md
-    wallet-mock/
+    web3-wallet-mock-skill/
   development/
     DESCRIPTION.md
     plan-dog/
@@ -54,27 +54,27 @@ git submodule update --init --recursive
 ## 当前收录清单
 
 ### coordination
-- `coordination/agent-manager` -> `fractalmind-ai/agent-manager-skill`
-- `coordination/team-manager` -> `fractalmind-ai/team-manager-skill`
-- `coordination/okr-manager` -> `fractalmind-ai/okr-manager-skill`
-- `coordination/five-step-workflow` -> `fractalmind-ai/five-step-workflow-skill`
-- `coordination/turbo-frequency` -> `fractalmind-ai/turbo-frequency-skill`
+- `coordination/agent-manager` -> [`fractalmind-ai/agent-manager-skill`](https://github.com/fractalmind-ai/agent-manager-skill)
+- `coordination/team-manager` -> [`fractalmind-ai/team-manager-skill`](https://github.com/fractalmind-ai/team-manager-skill)
+- `coordination/okr-manager` -> [`fractalmind-ai/okr-manager-skill`](https://github.com/fractalmind-ai/okr-manager-skill)
+- `coordination/five-step-workflow` -> [`fractalmind-ai/five-step-workflow-skill`](https://github.com/fractalmind-ai/five-step-workflow-skill)
+- `coordination/turbo-frequency` -> [`fractalmind-ai/turbo-frequency-skill`](https://github.com/fractalmind-ai/turbo-frequency-skill)
 
 ### interfaces
-- `interfaces/agent-browser` -> `fractalmind-ai/agent-browser-skill`
-- `interfaces/team-chat` -> `fractalmind-ai/team-chat-skill`
-- `interfaces/use-fractalbot` -> `fractalmind-ai/use-fractalbot-skill`
-- `interfaces/use-phone` -> `fractalmind-ai/use-phone-skill`
+- `interfaces/agent-browser` -> [`fractalmind-ai/agent-browser-skill`](https://github.com/fractalmind-ai/agent-browser-skill)
+- `interfaces/team-chat` -> [`fractalmind-ai/team-chat-skill`](https://github.com/fractalmind-ai/team-chat-skill)
+- `interfaces/use-fractalbot` -> [`fractalmind-ai/use-fractalbot-skill`](https://github.com/fractalmind-ai/use-fractalbot-skill)
+- `interfaces/use-phone` -> [`fractalmind-ai/use-phone-skill`](https://github.com/fractalmind-ai/use-phone-skill)
 
 ### validation
-- `validation/wallet-mock` -> `fractalmind-ai/wallet-mock-skill`
+- `validation/web3-wallet-mock-skill` -> [`fractalmind-ai/web3-wallet-mock-skill`](https://github.com/fractalmind-ai/web3-wallet-mock-skill)
 
 ### development
-- `development/plan-dog` -> `fractalmind-ai/plan-dog-skill`
-- `development/predict-contracts` -> `fractalmind-ai/predict-contracts-skill`
-- `development/golang-web3-service` -> `fractalmind-ai/golang-web3-service-skill`
-- `development/golang-integration-test` -> `fractalmind-ai/golang-integration-test-skill`
-- `development/react-frontend-dev` -> `fractalmind-ai/react-frontend-dev-skill`
+- `development/plan-dog` -> [`fractalmind-ai/plan-dog-skill`](https://github.com/fractalmind-ai/plan-dog-skill)
+- `development/predict-contracts` -> [`fractalmind-ai/predict-contracts-skill`](https://github.com/fractalmind-ai/predict-contracts-skill)
+- `development/golang-web3-service` -> [`fractalmind-ai/golang-web3-service-skill`](https://github.com/fractalmind-ai/golang-web3-service-skill)
+- `development/golang-integration-test` -> [`fractalmind-ai/golang-integration-test-skill`](https://github.com/fractalmind-ai/golang-integration-test-skill)
+- `development/react-frontend-dev` -> [`fractalmind-ai/react-frontend-dev-skill`](https://github.com/fractalmind-ai/react-frontend-dev-skill)
 
 ## 如何新增一个 skill
 
