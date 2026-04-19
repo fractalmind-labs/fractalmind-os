@@ -66,7 +66,7 @@ For each animated element, provide:
 Format your response as structured JSON with precise measurements. Be extremely detailed - every pixel and millisecond matters for pixel-perfect replication."""
 
 
-def analyze_video(video_path: str, api_key: str) -> dict:
+def analyze_video(video_path: str, api_key: str, region: str = 'cn') -> dict:
     """Analyze video using Qwen VL Plus model"""
 
     video_file = Path(video_path)
@@ -81,10 +81,18 @@ def analyze_video(video_path: str, api_key: str) -> dict:
     video_size_mb = len(video_data) / 1024 / 1024
     print(f"📦 Video size: {video_size_mb:.2f} MB")
 
+    # Region-specific endpoints
+    endpoints = {
+        'cn': 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+        'intl': 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
+        'us': 'https://dashscope-us.aliyuncs.com/compatible-mode/v1'
+    }
+
     client = OpenAI(
         api_key=api_key,
-        base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+        base_url=endpoints.get(region, endpoints['cn'])
     )
+    print(f"🌍 Using {region} region: {endpoints.get(region, endpoints['cn'])}")
 
     print('🚀 Sending to Qwen VL Plus...')
     start_time = time.time()
