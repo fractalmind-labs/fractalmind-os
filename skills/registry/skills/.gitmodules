@@ -46,3 +46,6 @@
 [submodule "development/react-frontend-dev"]
 	path = development/react-frontend-dev
 	url = git@github.com:fractalmind-ai/react-frontend-dev-skill.git
+[submodule "development/high-fidelity-ui-replication"]
+	path = development/high-fidelity-ui-replication
+	url = git@github.com:rosexrwa/high-fidelity-ui-replication-skill.git

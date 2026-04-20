@@ -31,6 +31,7 @@ skills/
     golang-web3-service/
     golang-integration-test/
     react-frontend-dev/
+    high-fidelity-ui-replication/
 ```
 
 每个 category 目录下都有一个 `DESCRIPTION.md`，用于说明这一类 skill 的用途边界与适用场景。
@@ -75,6 +76,7 @@ git submodule update --init --recursive
 - `development/golang-web3-service` -> [`fractalmind-ai/golang-web3-service-skill`](https://github.com/fractalmind-ai/golang-web3-service-skill)
 - `development/golang-integration-test` -> [`fractalmind-ai/golang-integration-test-skill`](https://github.com/fractalmind-ai/golang-integration-test-skill)
 - `development/react-frontend-dev` -> [`fractalmind-ai/react-frontend-dev-skill`](https://github.com/fractalmind-ai/react-frontend-dev-skill)
+- `development/high-fidelity-ui-replication` -> [`rosexrwa/high-fidelity-ui-replication-skill`](https://github.com/rosexrwa/high-fidelity-ui-replication-skill)
 
 ## 如何新增一个 skill
 
@@ -97,6 +99,6 @@ git submodule update --init --recursive
 
 ## 当前边界
 
-- 当前只纳入 `fractalmind-ai` 组织内 public `*-skill` 仓库
+- 当前以 `fractalmind-ai` 组织内 public `*-skill` 仓库为主；当 org write 不可用时，可先挂个人 public incubating skill，再在后续迁回组织
 - 当前采用 category + `DESCRIPTION.md` 的组织形式
 - 当前仍保留每个 skill 仓库独立维护；本仓库只做聚合入口，不改写各 skill 内部结构
