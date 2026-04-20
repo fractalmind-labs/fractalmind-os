@@ -1,6 +1,6 @@
-# wallet-mock-skill
+# web3-wallet-mock-skill
 
-Mock browser wallets (MetaMask, WalletConnect, etc.) for AI Agent E2E testing.
+Mock Web3 browser wallets (MetaMask, WalletConnect, etc.) for AI Agent E2E testing.
 
 Covers:
 - EIP-1193 provider injection for Playwright/Puppeteer

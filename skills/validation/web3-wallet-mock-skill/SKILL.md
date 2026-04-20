@@ -1,9 +1,9 @@
 ---
-name: wallet-mock
+name: web3-wallet-mock-skill
 description: Mock browser wallets (MetaMask, WalletConnect, etc.) for AI Agent E2E testing. Use when building automated tests that need to simulate wallet connect, transaction signing, network switching, and token approvals without a real browser extension.
 ---
 
-# wallet-mock
+# web3-wallet-mock-skill
 
 ## When to use
 
@@ -14,7 +14,7 @@ Use this skill when you need to:
 - build AI agent workflows that test dApp frontends end-to-end
 - validate dApp behavior across different wallet states (connected, disconnected, wrong network, insufficient funds)
 
-## Wallet mock strategies
+## Web3 wallet mock strategies
 
 ### Strategy 1: Provider injection (recommended for most cases)
 
