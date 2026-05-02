@@ -1,10 +1,11 @@
 rom_name: manager-heavy-core
 rom_family: manager-heavy
-rom_version: 0.5.0
+rom_version: 0.6.0
 description: >-
   Manager-first AI Agent OS distribution for coordination-heavy workspaces.
   Full template set with battle-tested principles, escalation templates,
-  OKR control plane, TODO-first heartbeat, and file-backed memory system.
+  OKR control plane, TODO-first heartbeat, dream maintenance boundaries,
+  turbo-frequency heartbeat discipline, and file-backed memory system.
 
 spec_version: 1.0.0
 requires_spec: ">=1.0.0"
@@ -33,6 +34,13 @@ optional_skills:
       ref: v0.1.0
       path: agent-calendar
     description: Agent availability calendar for multi-agent scheduling
+  - name: turbo-frequency
+    source:
+      type: git
+      repo: https://github.com/fractalmind-ai/turbo-frequency-skill.git
+      ref: main
+      path: turbo-frequency
+    description: Dynamic heartbeat frequency and one-shot follow-up policy
   - name: notifier
     source:
       type: embedded
@@ -43,6 +51,7 @@ template_set:
   - workspace-root
   - memory-pack
   - heartbeat-pack
+  - dream-pack
   - todo-pack
 
 assets:
@@ -58,6 +67,7 @@ install_boundary:
     - AGENTS.md
     - USER.md
     - HEARTBEAT.md
+    - DREAM.md
     - OKR.md
     - TODO.md
     - MEMORY.md
@@ -70,6 +80,7 @@ install_boundary:
   bootstrap_entrypoint: manual-bootstrap
   post_install_expectations:
     - heartbeat control plane exists
+    - dream maintenance boundary exists
     - TODO control plane exists
     - active OKR control plane exists
     - memory daily note path is writable
@@ -79,6 +90,7 @@ upgrade_boundary:
   upgrade_strategy: overlay-with-preserve
   mutable_paths:
     - HEARTBEAT.md
+    - DREAM.md
     - SYSTEM.md
     - SOUL.md
     - AGENTS.md
@@ -94,8 +106,9 @@ upgrade_boundary:
   rollback_hint: restore previous ROM snapshot before overlay
   breaking_changes:
     - heartbeat rule renames may require manual merge
+    - DREAM.md introduces a stricter maintenance boundary
     - SOUL.md principle numbering changes may require operator review
-    - TODO control-plane addition may require heartbeat re-read
+    - TODO control-plane additions may require heartbeat re-read
 
 defaults:
   default_persona: coordinator-first
@@ -105,9 +118,11 @@ defaults:
     - OKR-driven execution
     - delegation-first coordination
     - GitHub-centric development workflows
+    - long-running heartbeat/dream maintenance loops
   operator_notes:
     - optimized for owner-side coordination and active OKR control planes
     - expects TODO-first heartbeat discipline
     - expects file-backed memory with daily notes and topic index
+    - includes stable dream maintenance boundaries to prevent control-plane drift
     - includes battle-tested escalation templates (approval + blocker)
-    - includes 40+ operating principles distilled from production experience
+    - includes 45+ operating principles distilled from production experience

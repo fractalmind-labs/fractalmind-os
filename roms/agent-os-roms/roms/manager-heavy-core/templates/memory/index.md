@@ -1,5 +1,10 @@
 # memory/index.md
 
-Topic navigation across daily notes. Keep short — links first, not narratives.
+Topic navigation across daily notes. Keep it short — links first, not narratives.
 
-- (example) topic-name -> `memory/YYYY-MM-DD.md` / issue link / PR link
+Format:
+- topic-name -> `memory/YYYY-MM-DD.md` / issue link / PR link / artifact path
+
+Examples:
+- heartbeat-discipline -> `memory/YYYY-MM-DD.md`
+- release-process -> issue/PR tracker link
