@@ -7,13 +7,14 @@ Complete template set for bootstrapping a coordination-first AI employee workspa
 | File | Purpose |
 |------|---------|
 | `SYSTEM.md` | Kernel contract — role, manager principles, operating rules, structure invariants |
-| `SOUL.md` | Identity + 40+ battle-tested operating principles across 11 categories |
-| `AGENTS.md` | Session bootstrap sequence, memory rules, communication guidelines, heartbeat discipline |
-| `HEARTBEAT.md` | TODO-first execution surface with 3-gate HEARTBEAT_OK criteria |
-| `USER.md` | Operator profile — name, channels, timezone, preferences |
+| `SOUL.md` | Identity + operating principles for manager-heavy agents |
+| `AGENTS.md` | Session bootstrap sequence, memory rules, communication guidelines, heartbeat/dream discipline |
+| `HEARTBEAT.md` | TODO-first execution surface with `HEARTBEAT_OK` gate, escalation templates, and verification discipline |
+| `DREAM.md` | Safe idle-maintenance boundary: memory/skill hygiene only, no uncontrolled OS rewrites |
+| `USER.md` | Operator profile template with timezone/language/approval boundaries |
 | `OKR.md` | Active OKR control plane (max 3 concurrent) |
-| `TODO.md` | High-priority temporary work tracker (cleared before OKR work) |
-| `MEMORY.md` | Long-term curated memory (main session only) |
+| `TODO.md` | Current high-priority execution tracker |
+| `MEMORY.md` | Long-term curated memory (main/private session only) |
 | `TOOLS.md` | Local tools, services, and environment notes |
 | `memory/index.md` | Topic navigation index for daily notes |
 | `okrs/Candidate.md` | Non-active OKR parking lot with lifecycle rules |
@@ -26,4 +27,8 @@ Copy all template files to your workspace root, preserving directory structure:
 cp -r templates/* /path/to/your/workspace/
 ```
 
-Then fill in `USER.md` with your operator details and customize `AGENTS.md` frontmatter (launcher, skills, heartbeat cron).
+Then:
+1. Fill in `USER.md` with operator details.
+2. Customize `AGENTS.md` frontmatter (launcher, model, skills, heartbeat cron).
+3. Install required skills from `manifest.yaml` (`included_skills`; optionally `optional_skills`).
+4. Keep private workspace details in `USER.md`, `MEMORY.md`, and `TOOLS.md`; do not upstream them.

@@ -1,5 +1,31 @@
 # manager-heavy-core release notes
 
+## v0.6.0
+Date: 2026-05-02
+Status: production-ready
+
+### What's new
+- **Current manager OS refresh** based on the latest production main-session operating rules before OS upgrade.
+- **DREAM.md added** as an explicit idle-maintenance boundary: dream tasks may organize memory and improve skills, but must not rewrite OS/control-plane/runtime files without explicit operator approval.
+- **Heartbeat discipline updated** with the current TODO-first workflow, `HEARTBEAT_OK` three-gate check, fresh evidence requirements, dual `formal blocker` / `execution stalled` reporting, and turbo-frequency evaluation handoff.
+- **SOUL/SYSTEM principles refreshed** with current manager lessons: formal blocker semantics, QA gate discipline, repo-backed decisions, no direct AI-worker DMs, surgical changes, explicit assumptions, and verifiable completion criteria.
+- **AGENTS bootstrap refreshed** with provider-history reconciliation in main sessions and dream maintenance references.
+- **turbo-frequency skill declared** as an optional git-sourced skill.
+
+### Breaking changes from v0.5.0
+- `install_boundary.creates_files` now includes `DREAM.md`.
+- `upgrade_boundary.mutable_paths` now includes `DREAM.md`.
+- `optional_skills` now includes `turbo-frequency` from `fractalmind-ai/turbo-frequency-skill`.
+- Templates are more conservative about exposing operator-private data; `USER.md`, `MEMORY.md`, and `TOOLS.md` remain placeholders and should not be copied from a real workspace into a ROM.
+
+### Migration from v0.5.0
+- Add `DREAM.md` to existing workspaces before enabling dream/idle maintenance.
+- If `turbo-frequency` is installed, keep repeated heartbeat-frequency rules under `.agent/skills/turbo-frequency/rules/heartbeat.md`; otherwise use HEARTBEAT's manual frequency note.
+- Reconcile local `HEARTBEAT.md` and `TODO.md` manually to avoid losing active execution state.
+
+---
+
+
 ## v0.5.0
 Date: 2026-04-16
 Status: production-ready

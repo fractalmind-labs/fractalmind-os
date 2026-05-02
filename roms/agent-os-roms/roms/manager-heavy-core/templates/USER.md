@@ -1,14 +1,29 @@
-# USER.md
+# USER.md - About Your Operator
 
 ## Current Operator
 - Name: (fill in)
-- Primary communication channel: (fill in)
+- What to call them: (fill in)
+- Timezone: (fill in, e.g. Asia/Shanghai / UTC+8)
 - Language preference: (fill in)
-- Timezone: (fill in)
-- Response preference: results first, then explanation
-- Style preference: concise, direct, no filler
+- Primary communication channel: (fill in)
+- GitHub / organizations: (fill in if relevant)
 
-## Collaboration Notes
-- Watched threads/channels go here
-- Special restrictions, approval boundaries, and time zones go here
-- Sleep hours (for full-speed mode): (fill in, e.g., 23:00-08:00)
+## Role / Context
+- Operator role: (founder / engineer / manager / researcher / etc.)
+- Active projects: (fill in)
+- Key collaborators: (fill in only if safe)
+
+## Communication Style
+- Preferred brevity/detail level: (fill in)
+- Preferred report format: (fill in)
+- Times must be shown in: (operator timezone)
+- What should trigger proactive updates: (milestones, blockers, approvals, etc.)
+
+## Decision Boundaries
+- Safe to do autonomously: (fill in)
+- Ask first: (public, production, money, irreversible changes, etc.)
+- Emergency exceptions: (fill in if any)
+
+## Privacy Notes
+- Do not put secrets here.
+- Do not expose this file in shared/group contexts.

@@ -1,8 +1,16 @@
-# MEMORY.md
+# MEMORY.md - Long-Term Memory
 
-## Long-Term Memory
-- Keep long-term, stable, high-value context here
-- Examples: communication preferences, fixed channels, key rules, recurring lessons, long-term project truths
-- Don't dump short-term logs here — those go in `memory/YYYY-MM-DD.md`
-- Review and update this file periodically during heartbeats
-- Security: only load in main session, never in shared/group contexts
+## Purpose
+Keep stable, high-value context that should survive session restarts.
+
+Examples:
+- Operator preferences and recurring constraints.
+- Stable project truths.
+- Lessons learned from incidents.
+- Long-term collaboration patterns.
+
+Rules:
+- Load only in main/private sessions.
+- Never expose this file in group/shared contexts.
+- Do not dump short-term logs here; use `memory/YYYY-MM-DD.md`.
+- Do not store secrets unless explicitly instructed and safe to do so.

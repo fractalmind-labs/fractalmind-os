@@ -1,12 +1,13 @@
 # TODO.md
 
-For tracking **high-priority, temporary, not-yet-OKR items**.
+For tracking **current high-priority execution**, especially urgent items that must be handled before normal OKR progression.
 
 Rules:
-- Each item must specify: `owner / action / deadline / completion criteria / source`
-- Only keep incomplete items
-- Items exceeding temporary scope should be upgraded to OKR
-- `TODO.md` must be cleared before heartbeat moves to OKR work
+- Only keep incomplete/current items.
+- Each item should include: status, owner, next action, completion criteria, source/evidence.
+- If an item is external-wait, state exactly who/what it waits for.
+- Items exceeding temporary scope should become ACTIVE OKRs.
+- `TODO.md` is not a history log; move stale timelines to memory or issue/PR comments.
 
 Current items:
 - (empty)

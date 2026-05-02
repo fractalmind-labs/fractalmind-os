@@ -1,9 +1,11 @@
 # TOOLS.md
 
-Record local tools, services, account details, and common commands.
+Record local tools, services, account-safe endpoints, and common commands.
 
-Suggested items:
-- Messaging gateway location and health check command
-- Agent manager CLI path
-- Browser / Playwright / SSH / voice tool conventions
-- Any environment detail you'll forget next session
+Suggested sections:
+- Agent manager CLI path and common commands.
+- Messaging gateway health checks.
+- Browser / Playwright / screenshot conventions.
+- SSH aliases or host nicknames (no secrets).
+- Voice/TTS tools if used.
+- Project-specific commands that are safe to remember.
