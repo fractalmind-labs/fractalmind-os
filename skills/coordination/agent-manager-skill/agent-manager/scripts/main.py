@@ -8,6 +8,7 @@ Sessions are named: agent-{agent_id} where agent_id is file_id in lowercase (e.g
 
 from __future__ import annotations
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -1535,49 +1536,103 @@ def _maybe_trigger_dream_from_heartbeat(
         next_state['triggered_for_window'] = True
         next_state['triggered_at'] = heartbeat_timestamp
         next_state['triggered_by_hb_id'] = heartbeat_id
+        window_id = str(next_state.get('window_id') or '')
         if not dream_file or not dream_file.exists():
             append_dream_audit_event(
                 repo_root,
                 agent_id=agent_id,
                 event='trigger_skipped_no_dream_file',
-                window_id=str(next_state.get('window_id') or ''),
+                window_id=window_id,
                 hb_id=heartbeat_id,
                 reason_code='DREAM_NO_FILE',
                 detail=str(dream_file or ''),
                 effective_idle_elapsed=effective_idle_elapsed,
             )
-        else:
-            timer_rc = _schedule_dream_run(
-                agent_file_id=agent_file_id,
-                window_id=str(next_state.get('window_id') or ''),
-                trigger_hb_id=heartbeat_id,
-                timeout_text=str(policy.get('max_runtime') or ''),
+        elif has_pending_inbound_messages(repo_root, agent_id=agent_id):
+            next_state['triggered_for_window'] = False
+            next_state['triggered_at'] = ''
+            next_state['triggered_by_hb_id'] = ''
+            append_dream_audit_event(
+                repo_root,
+                agent_id=agent_id,
+                event='run_stale',
+                window_id=window_id,
+                hb_id=heartbeat_id,
+                reason_code='DREAM_USER_QUEUE_PENDING',
+                detail='pending_inbound_messages',
+                effective_idle_elapsed=effective_idle_elapsed,
             )
-            if timer_rc == 0:
+        else:
+            # Run dream directly — no timer, no preflight.
+            # The heartbeat already confirmed the agent is idle
+            # (it returned HEARTBEAT_OK), so we can execute immediately.
+            launcher = resolve_launcher_command(agent_config.get('launcher', ''))
+            agent_name = agent_config.get('name', agent_id)
+            timeout_text = str(policy.get('max_runtime') or '').strip()
+            timeout_seconds = parse_duration(timeout_text) if timeout_text else int(dream_policy.get('max_runtime_seconds') or 900)
+            if not timeout_seconds:
+                timeout_seconds = 900
+            dream_id = time.strftime('%Y%m%d-%H%M%S')
+            dream_message = _build_dream_prompt(dream_id=dream_id, trigger_hb_id=heartbeat_id)
+
+            append_dream_audit_event(
+                repo_root,
+                agent_id=agent_id,
+                event='run_started',
+                window_id=window_id,
+                hb_id=heartbeat_id,
+                dream_id=dream_id,
+                reason_code='DREAM_RUN_STARTED',
+                detail='direct_trigger',
+                effective_idle_elapsed=effective_idle_elapsed,
+            )
+
+            result = _run_dream_attempt(
+                repo_root=repo_root,
+                agent_id=agent_id,
+                agent_name=agent_name,
+                launcher=launcher,
+                dream_message=dream_message,
+                timeout_seconds=timeout_seconds,
+                is_codex='codex' in launcher.lower(),
+                dream_id=dream_id,
+            )
+
+            send_status = str(result.get('send_status', 'fail'))
+            ack_status = str(result.get('ack_status', 'not_checked'))
+            failure_type = str(result.get('failure_type', ''))
+            if send_status == 'ok' and ack_status in {'ack', 'not_checked'} and not failure_type:
                 append_dream_audit_event(
                     repo_root,
                     agent_id=agent_id,
-                    event='trigger_scheduled',
-                    window_id=str(next_state.get('window_id') or ''),
+                    event='run_ok',
+                    window_id=window_id,
                     hb_id=heartbeat_id,
-                    reason_code='DREAM_TRIGGER_SCHEDULED',
-                    detail=f"idle_after={policy['idle_after']}",
+                    dream_id=dream_id,
+                    reason_code='DREAM_RUN_OK',
+                    detail=f'{send_status}:{ack_status}',
                     effective_idle_elapsed=effective_idle_elapsed,
                 )
+                print(f"✅ Dream completed (dream_id={dream_id})")
             else:
-                next_state['triggered_for_window'] = False
-                next_state['triggered_at'] = ''
-                next_state['triggered_by_hb_id'] = ''
                 append_dream_audit_event(
                     repo_root,
                     agent_id=agent_id,
                     event='run_failed',
-                    window_id=str(next_state.get('window_id') or ''),
+                    window_id=window_id,
                     hb_id=heartbeat_id,
-                    reason_code='DREAM_TRIGGER_SCHEDULE_FAILED',
-                    detail='timer_command_failed',
+                    dream_id=dream_id,
+                    reason_code='DREAM_RUN_FAILED',
+                    detail=f'{send_status}:{ack_status}:{failure_type}',
                     effective_idle_elapsed=effective_idle_elapsed,
                 )
+                print(f"❌ Dream failed (send={send_status}, ack={ack_status}, failure={failure_type or 'unknown'})")
+
+            # Reset window after dream completes so next idle period starts fresh
+            next_state['window_id'] = ''
+            next_state['window_started_at'] = ''
+            next_state['window_started_by_hb_id'] = ''
+            next_state['triggered_for_window'] = False
 
     save_dream_state(repo_root, agent_id, next_state)
 
@@ -1595,7 +1650,7 @@ def _run_dream_attempt(
 ) -> dict:
     started = time.time()
     baseline_output = capture_output(agent_id, lines=60) or ''
-    baseline_hash = _tail_hash(baseline_output)
+    baseline_hash = hashlib.sha1(baseline_output.encode('utf-8')).hexdigest()
 
     if not send_keys(
         agent_id,
@@ -1637,7 +1692,7 @@ def _run_dream_attempt(
                 activated = True
                 last_state = 'idle'
                 break
-            if last_state != 'idle' or _tail_hash(current_output) != baseline_hash:
+            if last_state != 'idle' or hashlib.sha1(current_output.encode('utf-8')).hexdigest() != baseline_hash:
                 activated = True
                 break
             time.sleep(2)
@@ -2319,11 +2374,12 @@ def cmd_dream_run(args):
         return 0
 
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
-    preflight_state, preflight_reason = _heartbeat_preflight_runtime_state(
-        repo_root=repo_root,
-        agent_id=agent_id,
-        launcher=launcher,
-    )
+    # Dream uses lightweight preflight: only check session existence,
+    # not pane-content sampling.  The 30-minute idle window already
+    # guarantees the agent is not actively processing user work.
+    runtime = get_agent_runtime_state(agent_id, launcher=launcher)
+    preflight_state = str(runtime.get('state', 'unknown'))
+    preflight_reason = str(runtime.get('reason', 'unknown'))
     if preflight_state != 'idle':
         append_dream_audit_event(
             repo_root,
