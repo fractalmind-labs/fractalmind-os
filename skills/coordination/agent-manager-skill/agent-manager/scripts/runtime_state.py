@@ -77,10 +77,23 @@ def parse_elapsed_seconds(output: str) -> Optional[int]:
     return None
 
 
+_ERROR_SCAN_TAIL_LINES = 30
+
+
 def detect_error_reason(output: str) -> Optional[str]:
-    """Best-effort detect a terminal/tool error in recent agent output."""
+    """Best-effort detect a terminal/tool error in recent agent output.
+
+    Only scans the last _ERROR_SCAN_TAIL_LINES lines to avoid false positives
+    from stale error text that scrolled up while the agent has since recovered.
+    """
     if not output:
         return None
+
+    # Narrow the scan window to the tail of the output so historical errors
+    # that the agent has already recovered from don't persist forever.
+    lines = output.splitlines()
+    if len(lines) > _ERROR_SCAN_TAIL_LINES:
+        output = '\n'.join(lines[-_ERROR_SCAN_TAIL_LINES:])
 
     lowered = output.lower()
 

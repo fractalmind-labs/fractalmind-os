@@ -94,6 +94,7 @@ from services.dream_state import (
     save_dream_state,
 )
 from services.heartbeat_service import (
+    _tail_hash as service_tail_hash,
     notify_heartbeat_failure as service_notify_heartbeat_failure,
     parse_heartbeat_recovery_policy as service_parse_heartbeat_recovery_policy,
     restart_heartbeat_session_fresh as service_restart_heartbeat_session_fresh,
@@ -1478,7 +1479,7 @@ def _schedule_dream_run(
         command_args.extend(['--timeout', timeout_text])
     timer_args = argparse.Namespace(
         timer_command='command',
-        delay='1s',
+        delay='15s',
         command_args=command_args,
     )
     return cmd_timer(timer_args)
@@ -1595,7 +1596,7 @@ def _run_dream_attempt(
 ) -> dict:
     started = time.time()
     baseline_output = capture_output(agent_id, lines=60) or ''
-    baseline_hash = _tail_hash(baseline_output)
+    baseline_hash = service_tail_hash(baseline_output)
 
     if not send_keys(
         agent_id,
@@ -1637,7 +1638,7 @@ def _run_dream_attempt(
                 activated = True
                 last_state = 'idle'
                 break
-            if last_state != 'idle' or _tail_hash(current_output) != baseline_hash:
+            if last_state != 'idle' or service_tail_hash(current_output) != baseline_hash:
                 activated = True
                 break
             time.sleep(2)
@@ -2085,7 +2086,7 @@ def cleanup_old_logs(repo_root: Path, days: int = 7) -> int:
 def build_start_command(working_dir: str, launcher: str, launcher_args: list[str]) -> str:
     # Cron/tmux often runs with a minimal PATH; include common user-local bin dirs so
     # launchers like `ccc` can find `claude` (usually installed under ~/.local/bin).
-    env_part = 'export PATH="$HOME/.local/bin:$HOME/bin:$PATH"'
+    env_part = 'unset CLAUDECODE; export PATH="$HOME/.local/bin:$HOME/bin:$PATH"'
     cd_part = f"cd {shlex.quote(working_dir)}"
     cmd_parts = [launcher] + list(launcher_args or [])
     exec_part = " ".join(shlex.quote(str(part)) for part in cmd_parts if part is not None and str(part) != "")
@@ -2319,23 +2320,28 @@ def cmd_dream_run(args):
         return 0
 
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
-    preflight_state, preflight_reason = _heartbeat_preflight_runtime_state(
-        repo_root=repo_root,
-        agent_id=agent_id,
-        launcher=launcher,
-    )
-    if preflight_state != 'idle':
-        append_dream_audit_event(
-            repo_root,
+    # When triggered by heartbeat (trigger_hb_id is set), the heartbeat already
+    # confirmed the agent was idle. Skip the pane-change preflight to avoid the
+    # race condition where residual heartbeat output causes a false "busy" read.
+    skip_preflight = bool(trigger_hb_id)
+    if not skip_preflight:
+        preflight_state, preflight_reason = _heartbeat_preflight_runtime_state(
+            repo_root=repo_root,
             agent_id=agent_id,
-            event='run_stale',
-            window_id=active_window_id,
-            hb_id=trigger_hb_id,
-            reason_code='DREAM_AGENT_NOT_IDLE',
-            detail=f'{preflight_state}:{preflight_reason}',
+            launcher=launcher,
         )
-        print(f"⏭️  Agent is not idle (state={preflight_state}, reason={preflight_reason}) - skipping dream")
-        return 0
+        if preflight_state != 'idle':
+            append_dream_audit_event(
+                repo_root,
+                agent_id=agent_id,
+                event='run_stale',
+                window_id=active_window_id,
+                hb_id=trigger_hb_id,
+                reason_code='DREAM_AGENT_NOT_IDLE',
+                detail=f'{preflight_state}:{preflight_reason}',
+            )
+            print(f"⏭️  Agent is not idle (state={preflight_state}, reason={preflight_reason}) - skipping dream")
+            return 0
 
     timeout_text = str(getattr(args, 'timeout', '') or dream_policy.get('max_runtime') or '').strip()
     timeout_seconds = parse_duration(timeout_text) if timeout_text else int(dream_policy.get('max_runtime_seconds') or 900)
