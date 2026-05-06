@@ -999,6 +999,7 @@ def list_all_heartbeats(agents_dir: Optional[Path] = None) -> List[Dict[str, Any
             'mode': heartbeat.get('mode', 'normal'),
             'enabled': heartbeat.get('enabled', True),
             'schedule': heartbeat.get('schedule'),
+            'dream': heartbeat.get('dream'),
         })
 
     return all_heartbeats

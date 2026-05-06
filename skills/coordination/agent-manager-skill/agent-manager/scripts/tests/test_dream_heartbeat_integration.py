@@ -86,6 +86,88 @@ class DreamHeartbeatIntegrationTests(unittest.TestCase):
         payload = json.loads(state_file.read_text(encoding='utf-8'))
         self.assertTrue(payload['triggered_for_window'])
 
+    def test_fixed_dream_window_replaces_heartbeat_dispatch(self):
+        temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-fixed-dream-heartbeat-'))
+        work_dir = temp_root / 'workspace'
+        work_dir.mkdir(parents=True, exist_ok=True)
+        (work_dir / 'DREAM.md').write_text('follow dream\n', encoding='utf-8')
+        agent_config = {
+            'name': 'main',
+            'file_id': 'main',
+            'working_directory': str(work_dir),
+            'launcher': 'codex',
+            'heartbeat': {
+                'enabled': True,
+                'cron': '*/10 * * * *',
+                'max_runtime': '8m',
+                'session_mode': 'auto',
+                'schedule': {
+                    'timezone': 'Asia/Shanghai',
+                    'work_days': [1],
+                    'work_hours': {'start': '09:00', 'end': '10:00'},
+                },
+                'dream': {
+                    'enabled': True,
+                    'idle_after': '1h',
+                    'max_runtime': '30m',
+                    'fixed_windows': [
+                        {'timezone': 'Asia/Shanghai', 'start': '23:00', 'end': '08:00'},
+                    ],
+                },
+            },
+            'enabled': True,
+        }
+
+        out = io.StringIO()
+        with redirect_stdout(out), \
+                patch('main.check_tmux', return_value=True), \
+                patch('main.resolve_agent', return_value=agent_config), \
+                patch('main.get_agent_id', return_value='main'), \
+                patch('main.session_exists', return_value=True), \
+                patch('main.resolve_launcher_command', return_value='codex'), \
+                patch('main.get_repo_root', return_value=temp_root), \
+                patch('main._detect_agent_context_left_percent', return_value=None), \
+                patch('main._maybe_rollover_heartbeat_session', return_value=None), \
+                patch('main._maybe_run_main_inbound_heartbeat_sweep', return_value=False), \
+                patch('main.has_pending_inbound_messages', return_value=False), \
+                patch('main._heartbeat_preflight_runtime_state', return_value=('idle', 'ready')), \
+                patch('main.resolve_active_dream_window', return_value={
+                    'active': True,
+                    'window_id': 'fixed-window-1',
+                    'summary': 'Asia/Shanghai 23:00-08:00 Mon-Sun',
+                }), \
+                patch('main._run_heartbeat_attempt') as mock_heartbeat_attempt, \
+                patch('main._run_dream_attempt', return_value={
+                    'send_status': 'ok',
+                    'ack_status': 'ack',
+                    'ack_evidence': 'direct_dream_ok',
+                    'failure_type': '',
+                    'reason_code': 'DREAM_ACK_OK',
+                    'duration_ms': 1000,
+                }) as mock_dream_attempt, \
+                patch('main.cmd_timer') as mock_cmd_timer:
+            rc = main.cmd_heartbeat_run(
+                argparse.Namespace(
+                    agent='main',
+                    timeout=None,
+                    retry=None,
+                    backoff_seconds=None,
+                    fallback_mode=None,
+                    notify_on_failure=False,
+                    notifier_channel=None,
+                )
+            )
+
+        self.assertEqual(rc, 0)
+        mock_heartbeat_attempt.assert_not_called()
+        mock_cmd_timer.assert_not_called()
+        mock_dream_attempt.assert_called_once()
+        self.assertEqual(mock_dream_attempt.call_args.kwargs['timeout_seconds'], 30 * 60)
+        sent_message = mock_dream_attempt.call_args.kwargs['dream_message']
+        self.assertIn('Read DREAM.md', sent_message)
+        self.assertIn('[TRIGGER_HB_ID:', sent_message)
+        self.assertIn('Heartbeat completed via fixed Dream window', out.getvalue())
+
 
 if __name__ == '__main__':
     unittest.main()

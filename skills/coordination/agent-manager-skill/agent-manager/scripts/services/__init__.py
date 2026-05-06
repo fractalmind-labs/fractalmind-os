@@ -21,6 +21,10 @@ from .dream_state import (
     process_heartbeat_for_dream,
     save_dream_state,
 )
+from .dream_window import (
+    normalize_dream_fixed_windows,
+    resolve_active_dream_window,
+)
 from .work_schedule import (
     format_schedule_summary,
     is_within_work_schedule,
@@ -40,6 +44,8 @@ __all__ = [
     'append_dream_audit_event',
     'process_heartbeat_for_dream',
     'parse_iso8601_utc',
+    'normalize_dream_fixed_windows',
+    'resolve_active_dream_window',
     'format_schedule_summary',
     'is_within_work_schedule',
 ]
