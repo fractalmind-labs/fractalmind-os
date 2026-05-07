@@ -8,6 +8,7 @@ Sessions are named: agent-{agent_id} where agent_id is file_id in lowercase (e.g
 
 from __future__ import annotations
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -1456,6 +1457,10 @@ def _has_direct_dream_ack(output: str, dream_id: str) -> bool:
         if 'DREAM_OK' in line and marker in line:
             return True
     return False
+
+
+def _tail_hash(output: str) -> str:
+    return hashlib.sha1(str(output or '').encode('utf-8')).hexdigest()
 
 
 def _build_dream_prompt(*, dream_id: str, trigger_hb_id: str) -> str:

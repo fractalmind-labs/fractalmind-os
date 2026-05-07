@@ -168,6 +168,34 @@ class DreamHeartbeatIntegrationTests(unittest.TestCase):
         self.assertIn('[TRIGGER_HB_ID:', sent_message)
         self.assertIn('Heartbeat completed via fixed Dream window', out.getvalue())
 
+    def test_dream_attempt_hashes_tail_and_detects_direct_ack(self):
+        temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-dream-attempt-'))
+        dream_id = 'DREAM-123'
+
+        with patch('main.capture_output', side_effect=[
+            'baseline output',
+            f'baseline output\n• DREAM_OK [DREAM_ID:{dream_id}]',
+        ]), \
+                patch('main.send_keys', return_value=True) as mock_send_keys, \
+                patch('main.has_pending_inbound_messages', return_value=False), \
+                patch('main.get_agent_runtime_state', return_value={'state': 'idle'}), \
+                patch('main.time.sleep', return_value=None):
+            result = main._run_dream_attempt(
+                repo_root=temp_root,
+                agent_id='main',
+                agent_name='main',
+                launcher='codex',
+                dream_message='Read DREAM.md',
+                timeout_seconds=5,
+                is_codex=True,
+                dream_id=dream_id,
+            )
+
+        self.assertEqual(result['send_status'], 'ok')
+        self.assertEqual(result['ack_status'], 'ack')
+        self.assertEqual(result['ack_evidence'], 'direct_dream_ok')
+        mock_send_keys.assert_called_once()
+
 
 if __name__ == '__main__':
     unittest.main()
