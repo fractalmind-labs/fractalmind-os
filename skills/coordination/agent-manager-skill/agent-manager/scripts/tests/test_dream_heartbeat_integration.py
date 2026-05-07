@@ -141,6 +141,7 @@ class DreamHeartbeatIntegrationTests(unittest.TestCase):
                     'send_status': 'ok',
                     'ack_status': 'ack',
                     'ack_evidence': 'direct_dream_ok',
+                    'completion_evidence': 'direct_dream_ok:tail_sha1=abc123',
                     'failure_type': '',
                     'reason_code': 'DREAM_ACK_OK',
                     'duration_ms': 1000,
@@ -167,6 +168,26 @@ class DreamHeartbeatIntegrationTests(unittest.TestCase):
         self.assertIn('Read DREAM.md', sent_message)
         self.assertIn('[TRIGGER_HB_ID:', sent_message)
         self.assertIn('Heartbeat completed via fixed Dream window', out.getvalue())
+        audit_file = temp_root / '.claude' / 'state' / 'agent-manager' / 'dream-audit' / 'main.jsonl'
+        audit_events = [
+            json.loads(line)
+            for line in audit_file.read_text(encoding='utf-8').splitlines()
+        ]
+        completed = [event for event in audit_events if event.get('event') == 'run_completed']
+        self.assertEqual(len(completed), 1)
+        self.assertIn('completion=direct_dream_ok:tail_sha1=abc123', completed[0]['detail'])
+
+    def test_direct_dream_ack_ignores_prompt_echo(self):
+        dream_id = 'DREAM-123'
+        prompt_echo = (
+            "› Read DREAM.md if it exists. "
+            "If nothing worth doing emerges, reply DREAM_OK. "
+            f"[DREAM_ID:{dream_id}]"
+        )
+        final_reply = f"• DREAM_OK [DREAM_ID:{dream_id}]"
+
+        self.assertFalse(main._has_direct_dream_ack(prompt_echo, dream_id))
+        self.assertTrue(main._has_direct_dream_ack(final_reply, dream_id))
 
     def test_dream_attempt_hashes_tail_and_detects_direct_ack(self):
         temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-dream-attempt-'))
@@ -194,6 +215,7 @@ class DreamHeartbeatIntegrationTests(unittest.TestCase):
         self.assertEqual(result['send_status'], 'ok')
         self.assertEqual(result['ack_status'], 'ack')
         self.assertEqual(result['ack_evidence'], 'direct_dream_ok')
+        self.assertTrue(result['completion_evidence'].startswith('direct_dream_ok:tail_sha1='))
         mock_send_keys.assert_called_once()
 
 

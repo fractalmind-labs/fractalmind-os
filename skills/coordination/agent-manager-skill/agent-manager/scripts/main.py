@@ -1454,13 +1454,29 @@ def _has_direct_dream_ack(output: str, dream_id: str) -> bool:
         return False
     marker = f"[DREAM_ID:{dream_id}]"
     for line in str(output or '').splitlines():
-        if 'DREAM_OK' in line and marker in line:
+        normalized = line.strip()
+        if 'DREAM_OK' not in normalized or marker not in normalized:
+            continue
+        lower = normalized.lower()
+        if 'reply dream_ok' in lower or 'read dream.md' in lower or 'if nothing worth doing' in lower:
+            continue
+        if re.search(r'(?:^|[\s•\-])DREAM_OK(?:[\s.!?]+|\s*)' + re.escape(marker), normalized):
             return True
     return False
 
 
 def _tail_hash(output: str) -> str:
     return hashlib.sha1(str(output or '').encode('utf-8')).hexdigest()
+
+
+def _dream_completion_evidence(output: str, *, dream_id: str, baseline_hash: str) -> str:
+    tail_hash = _tail_hash(output)
+    tail_short = tail_hash[:12]
+    if _has_direct_dream_ack(output, dream_id):
+        return f'direct_dream_ok:tail_sha1={tail_short}'
+    if tail_hash != baseline_hash:
+        return f'pane_tail_changed:tail_sha1={tail_short}'
+    return f'pane_tail_unchanged:tail_sha1={tail_short}'
 
 
 def _build_dream_prompt(*, dream_id: str, trigger_hb_id: str) -> str:
@@ -1625,6 +1641,7 @@ def _run_dream_attempt(
     started = time.time()
     baseline_output = capture_output(agent_id, lines=60) or ''
     baseline_hash = _tail_hash(baseline_output)
+    final_output = baseline_output
 
     if not send_keys(
         agent_id,
@@ -1674,6 +1691,7 @@ def _run_dream_attempt(
             runtime = get_agent_runtime_state(agent_id, launcher=launcher)
             last_state = str(runtime.get('state', 'unknown'))
             current_output = capture_output(agent_id, lines=60) or ''
+            final_output = current_output
             if _has_direct_dream_ack(current_output, dream_id):
                 direct_ack = True
                 activated = True
@@ -1689,6 +1707,7 @@ def _run_dream_attempt(
                 runtime = get_agent_runtime_state(agent_id, launcher=launcher)
                 last_state = str(runtime.get('state', 'unknown'))
                 current_output = capture_output(agent_id, lines=60) or ''
+                final_output = current_output
                 if _has_direct_dream_ack(current_output, dream_id):
                     direct_ack = True
                     last_state = 'idle'
@@ -1722,10 +1741,19 @@ def _run_dream_attempt(
         ack_evidence = 'none'
         failure_type = ''
 
+    completion_evidence = _dream_completion_evidence(
+        final_output,
+        dream_id=dream_id,
+        baseline_hash=baseline_hash,
+    )
+    if ack_status == 'ack' and ack_evidence == 'idle_only' and completion_evidence.startswith('pane_tail_changed:'):
+        ack_evidence = 'idle_after_output_change'
+
     return {
         'send_status': 'ok',
         'ack_status': ack_status,
         'ack_evidence': ack_evidence,
+        'completion_evidence': completion_evidence,
         'failure_type': failure_type,
         'reason_code': _dream_reason_code(
             send_status='ok',
@@ -1840,6 +1868,7 @@ def _run_fixed_dream_heartbeat(
     send_status = str(result.get('send_status', 'fail'))
     ack_status = str(result.get('ack_status', 'not_checked'))
     ack_evidence = str(result.get('ack_evidence', 'none'))
+    completion_evidence = str(result.get('completion_evidence', 'none'))
     failure_type = str(result.get('failure_type', ''))
     reason_code = str(result.get('reason_code') or _dream_reason_code(
         send_status=send_status,
@@ -1860,6 +1889,7 @@ def _run_fixed_dream_heartbeat(
             hb_id=heartbeat_id,
             dream_id=dream_id,
             reason_code='DREAM_FIXED_WINDOW_OK',
+            detail=f'ack={ack_status}:{ack_evidence}; completion={completion_evidence}',
         )
         print("✅ Dream completed successfully (fixed heartbeat window)")
         result['completed'] = True
@@ -1879,6 +1909,7 @@ def _run_fixed_dream_heartbeat(
 
     result.update({
         'ack_evidence': ack_evidence,
+        'completion_evidence': completion_evidence,
         'reason_code': reason_code,
         'duration_ms': duration_ms,
         'dream_id': dream_id,
