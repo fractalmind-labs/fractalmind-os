@@ -8,6 +8,7 @@ Sessions are named: agent-{agent_id} where agent_id is file_id in lowercase (e.g
 
 from __future__ import annotations
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -93,6 +94,7 @@ from services.dream_state import (
     process_heartbeat_for_dream,
     save_dream_state,
 )
+from services.dream_window import normalize_dream_fixed_windows, resolve_active_dream_window
 from services.heartbeat_service import (
     notify_heartbeat_failure as service_notify_heartbeat_failure,
     parse_heartbeat_recovery_policy as service_parse_heartbeat_recovery_policy,
@@ -1400,6 +1402,7 @@ def _parse_dream_policy(heartbeat: dict) -> dict:
         'idle_after_seconds': 3600,
         'max_runtime': '',
         'max_runtime_seconds': None,
+        'fixed_windows': [],
     }
     raw = heartbeat.get('dream') if isinstance(heartbeat, dict) else {}
     if not isinstance(raw, dict):
@@ -1409,12 +1412,14 @@ def _parse_dream_policy(heartbeat: dict) -> dict:
     idle_after_seconds = parse_duration(idle_after_text) or defaults['idle_after_seconds']
     max_runtime_text = str(raw.get('max_runtime', defaults['max_runtime']) or '').strip()
     max_runtime_seconds = parse_duration(max_runtime_text) if max_runtime_text else None
+    fixed_windows = normalize_dream_fixed_windows(raw)
     return {
         'enabled': bool(raw.get('enabled', defaults['enabled'])),
         'idle_after': idle_after_text,
         'idle_after_seconds': int(idle_after_seconds),
         'max_runtime': max_runtime_text,
         'max_runtime_seconds': max_runtime_seconds,
+        'fixed_windows': fixed_windows,
     }
 
 
@@ -1449,9 +1454,29 @@ def _has_direct_dream_ack(output: str, dream_id: str) -> bool:
         return False
     marker = f"[DREAM_ID:{dream_id}]"
     for line in str(output or '').splitlines():
-        if 'DREAM_OK' in line and marker in line:
+        normalized = line.strip()
+        if 'DREAM_OK' not in normalized or marker not in normalized:
+            continue
+        lower = normalized.lower()
+        if 'reply dream_ok' in lower or 'read dream.md' in lower or 'if nothing worth doing' in lower:
+            continue
+        if re.search(r'(?:^|[\s•\-])DREAM_OK(?:[\s.!?]+|\s*)' + re.escape(marker), normalized):
             return True
     return False
+
+
+def _tail_hash(output: str) -> str:
+    return hashlib.sha1(str(output or '').encode('utf-8')).hexdigest()
+
+
+def _dream_completion_evidence(output: str, *, dream_id: str, baseline_hash: str) -> str:
+    tail_hash = _tail_hash(output)
+    tail_short = tail_hash[:12]
+    if _has_direct_dream_ack(output, dream_id):
+        return f'direct_dream_ok:tail_sha1={tail_short}'
+    if tail_hash != baseline_hash:
+        return f'pane_tail_changed:tail_sha1={tail_short}'
+    return f'pane_tail_unchanged:tail_sha1={tail_short}'
 
 
 def _build_dream_prompt(*, dream_id: str, trigger_hb_id: str) -> str:
@@ -1464,6 +1489,23 @@ def _build_dream_prompt(*, dream_id: str, trigger_hb_id: str) -> str:
     if trigger_hb_id:
         prompt += f" [TRIGGER_HB_ID:{trigger_hb_id}]"
     return prompt
+
+
+def _dream_reason_code(*, send_status: str, ack_status: str, failure_type: str) -> str:
+    if str(send_status or '') != 'ok':
+        return 'DREAM_SEND_FAILED'
+    if str(ack_status or '') == 'ack':
+        return 'DREAM_ACK_OK'
+    if str(ack_status or '') == 'not_checked':
+        return 'DREAM_NOT_CHECKED'
+    failure = str(failure_type or '').strip()
+    if failure == 'timeout':
+        return 'DREAM_TIMEOUT'
+    if failure == 'user_queue_yield':
+        return 'DREAM_USER_QUEUE_YIELD'
+    if failure:
+        return f"DREAM_{failure.upper()}"
+    return 'DREAM_NO_ACK'
 
 
 def _schedule_dream_run(
@@ -1499,6 +1541,9 @@ def _maybe_trigger_dream_from_heartbeat(
 ) -> None:
     policy = _parse_dream_policy(heartbeat)
     if not policy['enabled']:
+        return
+    fixed_window = resolve_active_dream_window(policy)
+    if fixed_window.get('active'):
         return
 
     state = load_dream_state(repo_root, agent_id)
@@ -1596,6 +1641,7 @@ def _run_dream_attempt(
     started = time.time()
     baseline_output = capture_output(agent_id, lines=60) or ''
     baseline_hash = _tail_hash(baseline_output)
+    final_output = baseline_output
 
     if not send_keys(
         agent_id,
@@ -1605,10 +1651,17 @@ def _run_dream_attempt(
         escape_first=is_codex,
         enter_via_key=is_codex,
     ):
+        failure_type = 'send_fail'
         return {
             'send_status': 'fail',
             'ack_status': 'not_checked',
+            'ack_evidence': 'none',
             'failure_type': 'send_fail',
+            'reason_code': _dream_reason_code(
+                send_status='fail',
+                ack_status='not_checked',
+                failure_type=failure_type,
+            ),
             'duration_ms': int((time.time() - started) * 1000),
         }
 
@@ -1626,12 +1679,19 @@ def _run_dream_attempt(
                 return {
                     'send_status': 'ok',
                     'ack_status': 'yielded',
+                    'ack_evidence': 'yielded',
                     'failure_type': 'user_queue_yield',
+                    'reason_code': _dream_reason_code(
+                        send_status='ok',
+                        ack_status='yielded',
+                        failure_type='user_queue_yield',
+                    ),
                     'duration_ms': int((time.time() - started) * 1000),
                 }
             runtime = get_agent_runtime_state(agent_id, launcher=launcher)
             last_state = str(runtime.get('state', 'unknown'))
             current_output = capture_output(agent_id, lines=60) or ''
+            final_output = current_output
             if _has_direct_dream_ack(current_output, dream_id):
                 direct_ack = True
                 activated = True
@@ -1647,6 +1707,7 @@ def _run_dream_attempt(
                 runtime = get_agent_runtime_state(agent_id, launcher=launcher)
                 last_state = str(runtime.get('state', 'unknown'))
                 current_output = capture_output(agent_id, lines=60) or ''
+                final_output = current_output
                 if _has_direct_dream_ack(current_output, dream_id):
                     direct_ack = True
                     last_state = 'idle'
@@ -1661,26 +1722,201 @@ def _run_dream_attempt(
 
     if direct_ack:
         ack_status = 'ack'
+        ack_evidence = 'direct_dream_ok'
         failure_type = ''
     elif waited_for_ack and timed_out:
         ack_status = 'timeout'
+        ack_evidence = 'none'
         failure_type = 'timeout'
     elif waited_for_ack and last_state == 'idle':
         ack_status = 'ack'
+        ack_evidence = 'idle_only'
         failure_type = ''
     elif waited_for_ack:
         ack_status = 'no_ack'
+        ack_evidence = 'none'
         failure_type = 'no_ack'
     else:
         ack_status = 'not_checked'
+        ack_evidence = 'none'
         failure_type = ''
+
+    completion_evidence = _dream_completion_evidence(
+        final_output,
+        dream_id=dream_id,
+        baseline_hash=baseline_hash,
+    )
+    if ack_status == 'ack' and ack_evidence == 'idle_only' and completion_evidence.startswith('pane_tail_changed:'):
+        ack_evidence = 'idle_after_output_change'
 
     return {
         'send_status': 'ok',
         'ack_status': ack_status,
+        'ack_evidence': ack_evidence,
+        'completion_evidence': completion_evidence,
         'failure_type': failure_type,
+        'reason_code': _dream_reason_code(
+            send_status='ok',
+            ack_status=ack_status,
+            failure_type=failure_type,
+        ),
         'duration_ms': int((time.time() - started) * 1000),
     }
+
+
+def _run_fixed_dream_heartbeat(
+    *,
+    repo_root: Path,
+    agent_config: dict,
+    agent_id: str,
+    agent_name: str,
+    dream_policy: dict,
+    heartbeat_id: str,
+    rollover_handoff_file: Optional[Path],
+    fixed_window: dict,
+    fallback_timeout_seconds: Optional[int] = None,
+) -> dict:
+    """Dispatch a Dream task from a heartbeat fixed window."""
+    fixed_window_id = str(fixed_window.get('window_id') or f'fixed-window-{heartbeat_id}')
+    fixed_window_summary = str(fixed_window.get('summary') or '')
+
+    working_dir = _normalize_path(agent_config.get('working_directory') or '')
+    dream_file = Path(working_dir) / 'DREAM.md' if working_dir else None
+    if not dream_file or not dream_file.exists():
+        append_dream_audit_event(
+            repo_root,
+            agent_id=agent_id,
+            event='run_stale',
+            window_id=fixed_window_id,
+            hb_id=heartbeat_id,
+            reason_code='DREAM_NO_FILE',
+            detail=str(dream_file or ''),
+        )
+        print("⏭️  DREAM.md not found - skipping fixed Dream window")
+        return {
+            'send_status': 'skip',
+            'ack_status': 'skipped',
+            'ack_evidence': 'none',
+            'failure_type': 'dream_no_file',
+            'reason_code': 'DREAM_NO_FILE',
+            'duration_ms': 0,
+            'dream_id': '',
+            'window_id': fixed_window_id,
+            'ran': False,
+        }
+
+    if has_pending_inbound_messages(repo_root, agent_id=agent_id):
+        append_dream_audit_event(
+            repo_root,
+            agent_id=agent_id,
+            event='run_stale',
+            window_id=fixed_window_id,
+            hb_id=heartbeat_id,
+            reason_code='DREAM_USER_QUEUE_PENDING',
+            detail='pending_inbound_messages',
+        )
+        print("⏭️  Pending inbound user work detected - skipping fixed Dream window")
+        return {
+            'send_status': 'ok',
+            'ack_status': 'yielded',
+            'ack_evidence': 'yielded',
+            'failure_type': 'user_queue_yield',
+            'reason_code': 'DREAM_USER_QUEUE_PENDING',
+            'duration_ms': 0,
+            'dream_id': '',
+            'window_id': fixed_window_id,
+            'ran': False,
+        }
+
+    launcher = resolve_launcher_command(agent_config.get('launcher', ''))
+    timeout_text = str(dream_policy.get('max_runtime') or '').strip()
+    timeout_seconds = (
+        parse_duration(timeout_text)
+        if timeout_text
+        else int(dream_policy.get('max_runtime_seconds') or fallback_timeout_seconds or 900)
+    )
+    if timeout_seconds is None:
+        timeout_seconds = 900
+
+    dream_id = time.strftime('%Y%m%d-%H%M%S')
+    dream_message = _build_dream_prompt(dream_id=dream_id, trigger_hb_id=heartbeat_id)
+    if rollover_handoff_file is not None:
+        dream_message = f"First read rollover handoff file: {rollover_handoff_file}.\n" + dream_message
+
+    append_dream_audit_event(
+        repo_root,
+        agent_id=agent_id,
+        event='run_started',
+        window_id=fixed_window_id,
+        hb_id=heartbeat_id,
+        dream_id=dream_id,
+        reason_code='DREAM_FIXED_WINDOW_STARTED',
+        detail=fixed_window_summary,
+    )
+
+    result = _run_dream_attempt(
+        repo_root=repo_root,
+        agent_id=agent_id,
+        agent_name=agent_name,
+        launcher=launcher,
+        dream_message=dream_message,
+        timeout_seconds=timeout_seconds,
+        is_codex='codex' in launcher.lower(),
+        dream_id=dream_id,
+    )
+
+    send_status = str(result.get('send_status', 'fail'))
+    ack_status = str(result.get('ack_status', 'not_checked'))
+    ack_evidence = str(result.get('ack_evidence', 'none'))
+    completion_evidence = str(result.get('completion_evidence', 'none'))
+    failure_type = str(result.get('failure_type', ''))
+    reason_code = str(result.get('reason_code') or _dream_reason_code(
+        send_status=send_status,
+        ack_status=ack_status,
+        failure_type=failure_type,
+    ))
+    duration_ms = int(result.get('duration_ms', 0) or 0)
+
+    if send_status == 'ok' and ack_status in {'ack', 'not_checked'} and not failure_type:
+        state = load_dream_state(repo_root, agent_id)
+        state['last_dream_id'] = dream_id
+        save_dream_state(repo_root, agent_id, state)
+        append_dream_audit_event(
+            repo_root,
+            agent_id=agent_id,
+            event='run_completed',
+            window_id=fixed_window_id,
+            hb_id=heartbeat_id,
+            dream_id=dream_id,
+            reason_code='DREAM_FIXED_WINDOW_OK',
+            detail=f'ack={ack_status}:{ack_evidence}; completion={completion_evidence}',
+        )
+        print("✅ Dream completed successfully (fixed heartbeat window)")
+        result['completed'] = True
+    else:
+        append_dream_audit_event(
+            repo_root,
+            agent_id=agent_id,
+            event='run_failed',
+            window_id=fixed_window_id,
+            hb_id=heartbeat_id,
+            dream_id=dream_id,
+            reason_code='DREAM_FIXED_WINDOW_FAILED',
+            detail=f'{send_status}:{ack_status}:{failure_type}',
+        )
+        print(f"❌ Dream failed (send={send_status}, ack={ack_status}, failure={failure_type or 'unknown'})")
+        result['completed'] = False
+
+    result.update({
+        'ack_evidence': ack_evidence,
+        'completion_evidence': completion_evidence,
+        'reason_code': reason_code,
+        'duration_ms': duration_ms,
+        'dream_id': dream_id,
+        'window_id': fixed_window_id,
+        'ran': True,
+    })
+    return result
 
 
 def _is_auto_preflight_skip_event(event: dict) -> bool:
@@ -2487,6 +2723,13 @@ def cmd_heartbeat_run(args):
         print(f"⏭️  Heartbeat is disabled for agent '{agent_name}'")
         return 0
 
+    dream_policy = _parse_dream_policy(heartbeat)
+    fixed_dream_window = (
+        resolve_active_dream_window(dream_policy)
+        if dream_policy.get('enabled')
+        else {'active': False, 'reason': 'dream_disabled', 'windows': []}
+    )
+
     # Heartbeats only check running agents - don't start if not running
     if not session_exists(agent_id):
         print(f"⏭️  Agent '{agent_name}' is not running - skipping heartbeat")
@@ -2494,7 +2737,7 @@ def cmd_heartbeat_run(args):
 
     # Check work schedule
     schedule_config = heartbeat.get('schedule')
-    if schedule_config:
+    if schedule_config and not fixed_dream_window.get('active'):
         from services.work_schedule import is_within_work_schedule
         is_active, skip_reason = is_within_work_schedule(schedule_config)
         if not is_active:
@@ -2531,6 +2774,11 @@ def cmd_heartbeat_run(args):
         f"fallback={recovery_policy['fallback_mode']} "
         f"notify={recovery_policy['notify_on_failure']}"
     )
+    if fixed_dream_window.get('active'):
+        window_summary = str(fixed_dream_window.get('summary') or fixed_dream_window.get('window_id') or 'active')
+        print(f"   Dream window: {window_summary}")
+    elif dream_policy.get('fixed_windows'):
+        print(f"   Dream window: inactive ({fixed_dream_window.get('reason')})")
 
     # Standard heartbeat message (with traceable id for delivery debugging)
     heartbeat_id = _generate_heartbeat_id()
@@ -2726,6 +2974,55 @@ def cmd_heartbeat_run(args):
         heartbeat_id=heartbeat_id,
         session_mode=session_mode,
     )
+
+    if fixed_dream_window.get('active'):
+        dream_result = _run_fixed_dream_heartbeat(
+            repo_root=repo_root,
+            agent_config=agent_config,
+            agent_id=agent_id,
+            agent_name=agent_name,
+            dream_policy=dream_policy,
+            heartbeat_id=heartbeat_id,
+            rollover_handoff_file=rollover_handoff_file,
+            fixed_window=fixed_dream_window,
+            fallback_timeout_seconds=timeout_seconds,
+        )
+        if not dream_result.get('ran'):
+            return 0
+
+        send_status = str(dream_result.get('send_status', 'fail'))
+        ack_status = str(dream_result.get('ack_status', 'not_checked'))
+        ack_evidence = str(dream_result.get('ack_evidence', 'none'))
+        failure_type = str(dream_result.get('failure_type', ''))
+        reason_code = str(dream_result.get('reason_code', ''))
+        duration_ms = int(dream_result.get('duration_ms', 0) or 0)
+
+        _append_heartbeat_audit_event(
+            repo_root,
+            agent_id=agent_id,
+            heartbeat_id=heartbeat_id,
+            send_status=send_status,
+            ack_status=ack_status,
+            duration_ms=duration_ms,
+            context_left=context_left_percent,
+            failure_type=failure_type,
+            session_mode=session_mode,
+            phase='attempt',
+            attempt=1,
+            recovery_action='dream_window',
+            reason_code=reason_code,
+            ack_evidence=ack_evidence,
+        )
+
+        if send_status == 'ok' and ack_status in {'ack', 'not_checked'} and not failure_type:
+            print("✅ Heartbeat completed via fixed Dream window")
+            return 0
+
+        print(
+            "❌ Fixed Dream window failed "
+            f"(send={send_status}, ack={ack_status}, failure={failure_type or 'unknown'})"
+        )
+        return 1
 
     heartbeat_message = (
         "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. "

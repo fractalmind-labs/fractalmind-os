@@ -416,6 +416,14 @@ heartbeat:
   max_runtime: 5m
   session_mode: auto     # restore | auto | fresh
   mode: normal           # normal (use `timer` for delayed rescue; `full_speed` is legacy)
+  dream:
+    enabled: true
+    idle_after: 1h       # Optional idle-window trigger after normal HEARTBEAT_OK cycles
+    max_runtime: 30m
+    fixed_windows:       # During these windows heartbeat dispatch sends DREAM.md tasks
+      - timezone: Asia/Shanghai
+        start: "23:00"
+        end: "08:00"
   enabled: true
 ---
 ```
@@ -429,9 +437,25 @@ heartbeat:
 | `session_mode` | string | | Session policy: `restore` (default), `auto` (rollover when context <25%), `fresh` (always rollover after handoff) |
 | `mode` | string | | Heartbeat trigger mode. `normal` is the only active path. `full_speed` is a deprecated compatibility value that only preserves legacy Codex hook cleanup/readback during `start`; timer-driven follow-up is the supported replacement. |
 | `auto_starvation_skip_threshold` | int | | `auto` mode only. Default `3`; set `0` to disable the forced-dispatch starvation bypass after consecutive preflight skips |
+| `dream` | dict | | Optional Dream mode policy. `idle_after` preserves the existing post-heartbeat Dream timer behavior; `fixed_windows` switches heartbeat dispatch to a Dream task while any configured window is active. |
 | `enabled` | bool | | Default: `true` |
 
 `full_speed` should now be treated as a legacy compatibility marker, not a canonical execution path. If an older Codex Stop hook is still present, `start` will clean it up; new delayed follow-up / rescue flows should use `timer`.
+
+### Fixed Dream Windows
+
+When `heartbeat.dream.enabled` is true and the current wall-clock time is inside
+any `heartbeat.dream.fixed_windows` rule, `heartbeat run` sends the standard
+Dream prompt instead of the standard heartbeat prompt:
+
+```
+Read DREAM.md if it exists ... If nothing worth doing emerges, reply DREAM_OK.
+```
+
+Fixed windows support `timezone`, `start`, `end`, `work_days`, `holidays`,
+`extra_workdays`, and `when`. Overnight ranges are supported (`23:00` →
+`08:00`). If `work_days` is omitted, fixed Dream windows default to all seven
+days. Multiple windows are OR rules: the first active window wins.
 
 ### Heartbeat vs Schedules
 

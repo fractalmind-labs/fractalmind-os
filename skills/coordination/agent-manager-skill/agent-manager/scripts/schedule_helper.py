@@ -364,6 +364,13 @@ def list_heartbeats_formatted() -> str:
             if sched_summary:
                 details.append(f"sched:{sched_summary}")
 
+        dream = hb.get('dream')
+        if isinstance(dream, dict) and dream.get('enabled', False):
+            from services.dream_window import normalize_dream_fixed_windows
+            fixed_windows = normalize_dream_fixed_windows(dream)
+            if fixed_windows:
+                details.append(f"dream:{len(fixed_windows)}fixed")
+
         runtime_str = f"({' '.join(details)})" if details else ""
 
         lines.append(f"  {status} heartbeat           {cron:20} {runtime_str}")
