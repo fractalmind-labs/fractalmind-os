@@ -22,3 +22,23 @@ const (
 	PeerStatusOnline  uint8 = 0
 	PeerStatusOffline uint8 = 1
 )
+
+// PolicyInput describes a bounded action policy to create on-chain.
+type PolicyInput struct {
+	AgentAddress  string
+	AllowedAction string
+	TargetScope   string
+	MaxUses       uint64
+	ExpiresAtMS   uint64
+	MaxGasBudget  uint64
+}
+
+// ActionEvidence describes one policy-bound action execution to record.
+type ActionEvidence struct {
+	PolicyID    string
+	ActionKind  string
+	TargetScope string
+	IntentHash  []byte
+	ResultHash  []byte
+	GasBudget   uint64
+}

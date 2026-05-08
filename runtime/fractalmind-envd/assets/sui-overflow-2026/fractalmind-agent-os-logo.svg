@@ -1,0 +1,27 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">FractalMind Agent OS on Sui logo</title>
+  <desc id="desc">Abstract neural agent node inside a bounded capability frame with cyan blue accents.</desc>
+  <rect width="1024" height="1024" rx="192" fill="#05070D"/>
+  <circle cx="512" cy="512" r="354" fill="url(#halo)" opacity="0.72"/>
+  <path d="M512 151C629 284 719 400 719 525C719 650 626 750 512 750C398 750 305 650 305 525C305 400 395 284 512 151Z" stroke="url(#drop)" stroke-width="34" stroke-linejoin="round" opacity="0.92"/>
+  <rect x="278" y="305" width="468" height="438" rx="92" stroke="#6EE7FF" stroke-width="20" opacity="0.52"/>
+  <path d="M364 621L443 542L512 612L622 502L681 561" stroke="#DDFBFF" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="443" cy="542" r="38" fill="#12C8FF"/>
+  <circle cx="512" cy="612" r="34" fill="#8CF3FF"/>
+  <circle cx="622" cy="502" r="42" fill="#4A7DFF"/>
+  <circle cx="681" cy="561" r="30" fill="#B8F7FF"/>
+  <path d="M512 268V360M512 664V756M310 512H400M624 512H714" stroke="#3B82F6" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
+  <path d="M322 315L405 398M702 315L619 398M322 709L405 626M702 709L619 626" stroke="#1EA7FF" stroke-width="14" stroke-linecap="round" opacity="0.58"/>
+  <defs>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(512 512) rotate(90) scale(354)">
+      <stop stop-color="#133BFF" stop-opacity="0.55"/>
+      <stop offset="0.58" stop-color="#00D1FF" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#05070D" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="drop" x1="305" y1="151" x2="719" y2="750" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B8F7FF"/>
+      <stop offset="0.52" stop-color="#28C9FF"/>
+      <stop offset="1" stop-color="#526CFF"/>
+    </linearGradient>
+  </defs>
+</svg>

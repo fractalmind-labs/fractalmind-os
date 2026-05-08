@@ -18,11 +18,11 @@ import (
 
 // mockRPC implements RPCClient for testing.
 type mockRPC struct {
-	moveCallFn      func(ctx context.Context, req models.MoveCallRequest) (models.TxnMetaData, error)
-	signExecFn      func(ctx context.Context, req models.SignAndExecuteTransactionBlockRequest) (models.SuiTransactionBlockResponse, error)
-	execFn          func(ctx context.Context, req models.SuiExecuteTransactionBlockRequest) (models.SuiTransactionBlockResponse, error)
-	queryEventsFn   func(ctx context.Context, req models.SuiXQueryEventsRequest) (models.PaginatedEventsResponse, error)
-	ownedObjectsFn  func(ctx context.Context, req models.SuiXGetOwnedObjectsRequest) (models.PaginatedObjectsResponse, error)
+	moveCallFn     func(ctx context.Context, req models.MoveCallRequest) (models.TxnMetaData, error)
+	signExecFn     func(ctx context.Context, req models.SignAndExecuteTransactionBlockRequest) (models.SuiTransactionBlockResponse, error)
+	execFn         func(ctx context.Context, req models.SuiExecuteTransactionBlockRequest) (models.SuiTransactionBlockResponse, error)
+	queryEventsFn  func(ctx context.Context, req models.SuiXQueryEventsRequest) (models.PaginatedEventsResponse, error)
+	ownedObjectsFn func(ctx context.Context, req models.SuiXGetOwnedObjectsRequest) (models.PaginatedObjectsResponse, error)
 }
 
 func (m *mockRPC) MoveCall(ctx context.Context, req models.MoveCallRequest) (models.TxnMetaData, error) {
@@ -155,6 +155,97 @@ func TestGoOffline(t *testing.T) {
 
 	if calledFunction != "go_offline" {
 		t.Errorf("expected go_offline, got %s", calledFunction)
+	}
+}
+
+func TestCreatePolicy(t *testing.T) {
+	kp := testKeypair(t)
+	var calledModule, calledFunction string
+	var capturedArgs []interface{}
+
+	mock := &mockRPC{
+		moveCallFn: func(_ context.Context, req models.MoveCallRequest) (models.TxnMetaData, error) {
+			calledModule = req.Module
+			calledFunction = req.Function
+			capturedArgs = req.Arguments
+			return models.TxnMetaData{}, nil
+		},
+	}
+
+	client := newClientWithRPC(mock, kp, "0xpkg", "0xproto", "0xreg", "0xorg", "0xcert")
+
+	err := client.CreatePolicy(context.Background(), PolicyInput{
+		AgentAddress:  "0xagent",
+		AllowedAction: "shell_exec",
+		TargetScope:   "host:worker-1",
+		MaxUses:       2,
+		ExpiresAtMS:   123456,
+		MaxGasBudget:  1000,
+	})
+	if err != nil {
+		t.Fatalf("CreatePolicy: %v", err)
+	}
+
+	if calledModule != "policy" || calledFunction != "create_policy" {
+		t.Fatalf("expected policy.create_policy, got %s.%s", calledModule, calledFunction)
+	}
+
+	if len(capturedArgs) != 7 {
+		t.Fatalf("expected 7 args, got %d", len(capturedArgs))
+	}
+	if capturedArgs[0] != "0xorg" || capturedArgs[1] != "0xagent" {
+		t.Fatalf("unexpected object/address args: %#v", capturedArgs[:2])
+	}
+	if capturedArgs[4] != "2" || capturedArgs[5] != "123456" || capturedArgs[6] != "1000" {
+		t.Fatalf("unexpected numeric encoding: %#v", capturedArgs[4:])
+	}
+}
+
+func TestExecuteAction(t *testing.T) {
+	kp := testKeypair(t)
+	var calledModule, calledFunction string
+	var capturedArgs []interface{}
+
+	mock := &mockRPC{
+		moveCallFn: func(_ context.Context, req models.MoveCallRequest) (models.TxnMetaData, error) {
+			calledModule = req.Module
+			calledFunction = req.Function
+			capturedArgs = req.Arguments
+			return models.TxnMetaData{}, nil
+		},
+	}
+
+	client := newClientWithRPC(mock, kp, "0xpkg", "0xproto", "0xreg", "0xorg", "0xcert")
+	intentHash := []byte("01234567890123456789012345678901")
+	resultHash := []byte("abcdefghijabcdefghijabcdefghijab")
+
+	err := client.ExecuteAction(context.Background(), ActionEvidence{
+		PolicyID:    "0xpolicy",
+		ActionKind:  "shell_exec",
+		TargetScope: "host:worker-1",
+		IntentHash:  intentHash,
+		ResultHash:  resultHash,
+		GasBudget:   1000,
+	})
+	if err != nil {
+		t.Fatalf("ExecuteAction: %v", err)
+	}
+
+	if calledModule != "policy" || calledFunction != "execute_action" {
+		t.Fatalf("expected policy.execute_action, got %s.%s", calledModule, calledFunction)
+	}
+
+	if len(capturedArgs) != 8 {
+		t.Fatalf("expected 8 args, got %d", len(capturedArgs))
+	}
+
+	wantIntent := "0x" + hex.EncodeToString(intentHash)
+	wantResult := "0x" + hex.EncodeToString(resultHash)
+	if capturedArgs[5] != wantIntent || capturedArgs[6] != wantResult {
+		t.Fatalf("unexpected hash encoding: got %v %v", capturedArgs[5], capturedArgs[6])
+	}
+	if capturedArgs[7] != "1000" {
+		t.Fatalf("unexpected gas budget encoding: %v", capturedArgs[7])
 	}
 }
 

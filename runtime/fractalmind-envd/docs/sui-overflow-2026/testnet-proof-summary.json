@@ -1,0 +1,60 @@
+{
+  "createdAt": "2026-05-08T16:12:00+08:00",
+  "network": "sui-testnet",
+  "sender": "0xeedfe046af0c10613356dea725fbe22af969a58077f27622936a6c4d9ec2fce3",
+  "packageId": "0x6766c03da91b2579f05be82c2f149a28363fd8cdee052afd41eddf0fd3093fce",
+  "peerRegistryId": "0x5c765b77b3a9448aea24c200f65ee247ee8e6aaaa4548587d7bee99f6d372cc8",
+  "sponsorRegistryId": "0xf39f66b4dfd75aade7ea68f9d974dcf7e2df1f1fa2c16c204326426a8ef01636",
+  "orgId": "0x50f8a78c1d16c32b3ddf7228a2b810b7102c961525993e4fe65c2d71366bd899",
+  "orgTx": "8Ac3DWoTSbtrmUfBFK6KwPqEGk3MXpXY9xwAdJc8b65H",
+  "agentCertId": "0x5033263fa038e991b384b78bcdafa2db4c1c81c082a7304c98a3f717d5749d6d",
+  "agentTx": "5T3u2ZHRoyEySAyL4jS3a8T8ZPML2ZHzwyn8EM82JDAh",
+  "policyId": "0x2a7e2efc42937c8d0ddb3d39170faefaa543b9d4e79520c803a65bf9710f6843",
+  "policyCreateTx": "9w4etM4iyN9hayhNVkqV9jHArXJXY9m73fGzsQPsL7re",
+  "executeActionTx": "7m4uyLa7sSYvJr2S6javDGBfbL4NrC6EQ2Da7raniccc",
+  "executeActionEvent": {
+    "action_kind": "shell_exec",
+    "agent": "0xeedfe046af0c10613356dea725fbe22af969a58077f27622936a6c4d9ec2fce3",
+    "gas_budget": "5000",
+    "intent_hash": "FtoUChdA+Q4d77rbalQffJBbSrCGY+MHChIkqwc1WdE=",
+    "org_id": "0x50f8a78c1d16c32b3ddf7228a2b810b7102c961525993e4fe65c2d71366bd899",
+    "policy_id": "0x2a7e2efc42937c8d0ddb3d39170faefaa543b9d4e79520c803a65bf9710f6843",
+    "result_hash": "Awnf0q633Ck3neffunDUfs4K3LEOWKInPmwON97gmxo=",
+    "target_scope": "host:worker-1",
+    "uses_consumed": "1"
+  },
+  "revokeTx": "E8zrPEHzMEJyWKfsTqiEdED9yJVVdr2N179TpEw1hQp6",
+  "revokeEvent": {
+    "org_id": "0x50f8a78c1d16c32b3ddf7228a2b810b7102c961525993e4fe65c2d71366bd899",
+    "policy_id": "0x2a7e2efc42937c8d0ddb3d39170faefaa543b9d4e79520c803a65bf9710f6843",
+    "revoked_by": "0xeedfe046af0c10613356dea725fbe22af969a58077f27622936a6c4d9ec2fce3"
+  },
+  "postRevokeFailure": {
+    "artifact": "envd-policy-testnet-post-revoke-failure-2026-05-08-1611-cst.txt",
+    "expectedAbortCode": 8204,
+    "validated": true,
+    "excerpt": [
+      "COMMAND: sui client call policy::execute_action after revoke (expected failure E_POLICY_REVOKED=8204)",
+      "Error executing transaction '2wE6zoKbbd6rcRdQiQHASvbjvWDHNZ6RoK1gfmhVU8tY': 1st command aborted within function '0x6766c03da91b2579f05be82c2f149a28363fd8cdee052afd41eddf0fd3093fce::policy::execute_action' at instruction 97 with code 8204",
+      "EXIT_CODE=1"
+    ]
+  },
+  "artifacts": {
+    "publish": "envd-policy-testnet-publish-2026-05-08-1605-cst.json",
+    "create_org": "envd-policy-testnet-create-org-2026-05-08-1606-cst.json",
+    "register_agent": "envd-policy-testnet-register-agent-2026-05-08-1607-cst.json",
+    "create_policy": "envd-policy-testnet-create-policy-2026-05-08-1608-cst.json",
+    "execute_action": "envd-policy-testnet-execute-action-2026-05-08-1609-cst.json",
+    "revoke_policy": "envd-policy-testnet-revoke-policy-2026-05-08-1610-cst.json",
+    "post_revoke_failure": "envd-policy-testnet-post-revoke-failure-2026-05-08-1611-cst.txt",
+    "local_evidence": "envd-policy-demo-local-evidence-2026-05-08-1503-cst.json",
+    "timeline": "policy-demo-timeline-2026-05-08-1505-cst.html"
+  },
+  "verification": {
+    "goTest": "PASS (`go test ./...`)",
+    "moveTest": "PASS (`cd contracts/envd && sui move test`)",
+    "moveBuild": "PASS (`cd contracts/envd && sui move build`)",
+    "localEvidenceHashLens": "PASS intent_hash_len=32 result_hash_len=32"
+  },
+  "boundary": "Sui testnet only; no mainnet, funds, official submission, public GitHub PR/release, or external community contact."
+}
