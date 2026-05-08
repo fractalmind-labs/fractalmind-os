@@ -189,6 +189,65 @@ func (c *Client) UpdateUptimeScore(ctx context.Context, score uint64) error {
 	return nil
 }
 
+// CreatePolicy creates a bounded shared policy for one agent.
+// TODO: Return the created policy object ID once tx effect plumbing exists.
+func (c *Client) CreatePolicy(ctx context.Context, input PolicyInput) error {
+	err := c.executeMoveCall(ctx, "policy", "create_policy", []interface{}{
+		c.orgID,
+		input.AgentAddress,
+		input.AllowedAction,
+		input.TargetScope,
+		fmt.Sprintf("%d", input.MaxUses),
+		fmt.Sprintf("%d", input.ExpiresAtMS),
+		fmt.Sprintf("%d", input.MaxGasBudget),
+	})
+	if err != nil {
+		return fmt.Errorf("create policy: %w", err)
+	}
+	log.Printf("[sui] created bounded policy for agent %s", input.AgentAddress)
+	return nil
+}
+
+// RevokePolicy revokes a previously created policy.
+func (c *Client) RevokePolicy(ctx context.Context, policyID string) error {
+	err := c.executeMoveCall(ctx, "policy", "revoke_policy", []interface{}{
+		policyID,
+		c.orgID,
+	})
+	if err != nil {
+		return fmt.Errorf("revoke policy: %w", err)
+	}
+	log.Printf("[sui] revoked policy %s", policyID)
+	return nil
+}
+
+// ExecuteAction records one authorized action execution under a bounded policy.
+func (c *Client) ExecuteAction(ctx context.Context, evidence ActionEvidence) error {
+	if c.certID == "" {
+		certID, err := c.ensureAgentCert(ctx)
+		if err != nil {
+			return fmt.Errorf("ensure agent cert: %w", err)
+		}
+		c.certID = certID
+	}
+
+	err := c.executeMoveCall(ctx, "policy", "execute_action", []interface{}{
+		evidence.PolicyID,
+		c.orgID,
+		c.certID,
+		evidence.ActionKind,
+		evidence.TargetScope,
+		hexBytesArg(evidence.IntentHash),
+		hexBytesArg(evidence.ResultHash),
+		fmt.Sprintf("%d", evidence.GasBudget),
+	})
+	if err != nil {
+		return fmt.Errorf("execute action: %w", err)
+	}
+	log.Printf("[sui] recorded action evidence for policy %s", evidence.PolicyID)
+	return nil
+}
+
 // QueryPeers fetches all PeerRegistered events and overlays status/endpoint
 // updates to build the current peer state.
 func (c *Client) QueryPeers(ctx context.Context) ([]PeerInfo, error) {
@@ -629,4 +688,8 @@ func applyRelayRegistered(data map[string]interface{}, peers map[string]*PeerInf
 		p.RelayCapacity = uint64(capacity)
 	}
 	p.UptimeScore = 100 // default from contract
+}
+
+func hexBytesArg(data []byte) string {
+	return "0x" + hex.EncodeToString(data)
 }

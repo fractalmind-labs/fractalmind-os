@@ -167,3 +167,9 @@ fractalbot              ← Multi-channel messaging
 ## License
 
 MIT
+
+## Sui Overflow 2026 demo
+
+This repo includes the Sui Overflow 2026 Agentic Web demo package: [FractalMind Agent OS on Sui](docs/sui-overflow-2026/README.md).
+
+The demo adds a Sui Move `AgentPolicy` object, deterministic action-evidence hashing, a local CLI runner, and a Sui testnet proof-pack showing policy creation, action evidence, revocation, and post-revoke failure.
