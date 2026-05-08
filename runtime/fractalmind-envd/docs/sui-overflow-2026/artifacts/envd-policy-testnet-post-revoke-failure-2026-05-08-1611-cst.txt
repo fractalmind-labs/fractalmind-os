@@ -1,0 +1,3 @@
+COMMAND: sui client call policy::execute_action after revoke (expected failure E_POLICY_REVOKED=8204)
+Error executing transaction '2wE6zoKbbd6rcRdQiQHASvbjvWDHNZ6RoK1gfmhVU8tY': 1st command aborted within function '0x6766c03da91b2579f05be82c2f149a28363fd8cdee052afd41eddf0fd3093fce::policy::execute_action' at instruction 97 with code 8204
+EXIT_CODE=1

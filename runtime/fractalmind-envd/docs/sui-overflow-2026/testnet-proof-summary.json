@@ -40,15 +40,15 @@
     ]
   },
   "artifacts": {
-    "publish": "envd-policy-testnet-publish-2026-05-08-1605-cst.json",
-    "create_org": "envd-policy-testnet-create-org-2026-05-08-1606-cst.json",
-    "register_agent": "envd-policy-testnet-register-agent-2026-05-08-1607-cst.json",
-    "create_policy": "envd-policy-testnet-create-policy-2026-05-08-1608-cst.json",
-    "execute_action": "envd-policy-testnet-execute-action-2026-05-08-1609-cst.json",
-    "revoke_policy": "envd-policy-testnet-revoke-policy-2026-05-08-1610-cst.json",
-    "post_revoke_failure": "envd-policy-testnet-post-revoke-failure-2026-05-08-1611-cst.txt",
-    "local_evidence": "envd-policy-demo-local-evidence-2026-05-08-1503-cst.json",
-    "timeline": "policy-demo-timeline-2026-05-08-1505-cst.html"
+    "publish": "artifacts/envd-policy-testnet-publish-2026-05-08-1605-cst.json",
+    "create_org": "artifacts/envd-policy-testnet-create-org-2026-05-08-1606-cst.json",
+    "register_agent": "artifacts/envd-policy-testnet-register-agent-2026-05-08-1607-cst.json",
+    "create_policy": "artifacts/envd-policy-testnet-create-policy-2026-05-08-1608-cst.json",
+    "execute_action": "artifacts/envd-policy-testnet-execute-action-2026-05-08-1609-cst.json",
+    "revoke_policy": "artifacts/envd-policy-testnet-revoke-policy-2026-05-08-1610-cst.json",
+    "post_revoke_failure": "artifacts/envd-policy-testnet-post-revoke-failure-2026-05-08-1611-cst.txt",
+    "local_evidence": "artifacts/envd-policy-demo-local-evidence-2026-05-08-1503-cst.json",
+    "timeline": "artifacts/policy-demo-timeline-2026-05-08-1505-cst.html"
   },
   "verification": {
     "goTest": "PASS (`go test ./...`)",
@@ -56,5 +56,5 @@
     "moveBuild": "PASS (`cd contracts/envd && sui move build`)",
     "localEvidenceHashLens": "PASS intent_hash_len=32 result_hash_len=32"
   },
-  "boundary": "Sui testnet only; no mainnet, funds, official submission, public GitHub PR/release, or external community contact."
+  "boundary": "Sui testnet only; no mainnet, funds, official DeepSurge submission, external community contact, or public release without separate approval. Public packaging PR/docs/assets were approved by Elliot on 2026-05-08 CST."
 }
