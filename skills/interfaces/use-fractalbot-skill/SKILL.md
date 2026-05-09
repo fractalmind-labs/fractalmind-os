@@ -1,6 +1,6 @@
 ---
 name: use-fractalbot
-description: Send outbound messages with fractalbot CLI (Telegram, iMessage, Slack, etc.) through the local gateway/user service. Use when the user asks to test or send a message.
+description: Send outbound messages with fractalbot CLI (Telegram, iMessage, Slack, Feishu, Discord, etc.) through the local gateway/user service. Use when the user asks to test or send a message, or when an inbound task includes FractalBot routing context such as channel/chat_id/thread_ts and needs a reply.
 ---
 
 # use-fractalbot
@@ -9,6 +9,7 @@ description: Send outbound messages with fractalbot CLI (Telegram, iMessage, Sla
 
 Use this skill when you need to:
 - send a message via any channel (Telegram, iMessage, Slack, Feishu, Discord)
+- reply to a FractalBot-routed inbound message that includes `Inbound routing context`
 - verify fractalbot service is running and healthy
 - diagnose send failures (`connection refused`, channel errors, invalid target)
 
@@ -60,12 +61,42 @@ systemctl --user start fractalbot
 
 ## Send message
 
+### Reply from inbound routing context
+
+When the current task includes `Inbound routing context`, use those fields instead of guessing the recipient:
+
+- `channel` -> pass to `--channel`
+- `chat_id` -> default recipient for `--to`
+- `thread_ts` -> pass to `--thread-ts` for Slack threaded replies
+- `selected_agent` is informational only; do not use it as the recipient
+- If `chat_id` is missing, use the channel-specific user ID only when the context clearly provides one
+
+```bash
+fractalbot --config "${FRACTALBOT_CONFIG}" message send \
+  --channel "${CHANNEL_FROM_CONTEXT}" \
+  --to "${CHAT_ID_FROM_CONTEXT}" \
+  --text "<reply>"
+```
+
+For Slack threads:
+
+```bash
+fractalbot --config "${FRACTALBOT_CONFIG}" message send \
+  --channel slack \
+  --to "${CHAT_ID_FROM_CONTEXT}" \
+  --thread-ts "${THREAD_TS_FROM_CONTEXT}" \
+  --text "<reply>"
+```
+
+For Feishu/Lark, prefer the `chat_id` from context (usually `oc_...`) so the reply goes back to the same chat. Use an `open_id` (`ou_...`) only when `chat_id` is absent and the task is clearly a direct-user reply.
+
 ### Basic syntax
 
 ```bash
 fractalbot --config "${FRACTALBOT_CONFIG}" message send \
   --channel <channel> \
   --to <recipient> \
+  [--thread-ts <slack_thread_ts>] \
   --text "<message>"
 ```
 
@@ -99,6 +130,10 @@ fractalbot --config "${FRACTALBOT_CONFIG}" message send \
   --channel slack --to "U12345678" --text "..."
 
 # Feishu
+fractalbot --config "${FRACTALBOT_CONFIG}" message send \
+  --channel feishu --to "oc_xxxxx" --text "..."
+
+# Feishu direct-user fallback, only when no chat_id is available
 fractalbot --config "${FRACTALBOT_CONFIG}" message send \
   --channel feishu --to "ou_xxxxx" --text "..."
 
@@ -147,5 +182,6 @@ Send failed?
 
 - Never print or paste bot tokens in chat output
 - Read recipient IDs from config, don't guess
+- For inbound replies, prefer `chat_id` from routing context over user IDs
 - Use explicit `--channel` in automation
 - iMessage requires Full Disk Access for `/Library/Messages`
