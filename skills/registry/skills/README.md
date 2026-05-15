@@ -19,6 +19,7 @@ skills/
     DESCRIPTION.md
     agent-browser/
     team-chat/
+    use-codex-app/
     use-fractalbot/
     use-phone/
   validation/
@@ -64,6 +65,7 @@ git submodule update --init --recursive
 ### interfaces
 - `interfaces/agent-browser` -> [`fractalmind-ai/agent-browser-skill`](https://github.com/fractalmind-ai/agent-browser-skill)
 - `interfaces/team-chat` -> [`fractalmind-ai/team-chat-skill`](https://github.com/fractalmind-ai/team-chat-skill)
+- `interfaces/use-codex-app` -> [`fractalmind-ai/use-codex-app-skill`](https://github.com/fractalmind-ai/use-codex-app-skill)
 - `interfaces/use-fractalbot` -> [`fractalmind-ai/use-fractalbot-skill`](https://github.com/fractalmind-ai/use-fractalbot-skill)
 - `interfaces/use-phone` -> [`fractalmind-ai/use-phone-skill`](https://github.com/fractalmind-ai/use-phone-skill)
 
