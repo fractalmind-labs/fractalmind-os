@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub OKR"
+  short_description: "Run OKRs with GitHub Issues and Projects"
+  default_prompt: "Use $use-github-okr to create or update an OKR cycle in GitHub with Objective and KR issues, a milestone, labels, and a GitHub Project."
