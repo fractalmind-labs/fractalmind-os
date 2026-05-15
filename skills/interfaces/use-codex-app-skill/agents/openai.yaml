@@ -1,0 +1,6 @@
+interface:
+  display_name: "Use Codex App"
+  short_description: "List and message local Codex App agents"
+  default_prompt: "Use $use-codex-app to list running Codex App agents, resolve a named session, or deliver a message through the current Codex App CDP renderer bridge or an explicit app-server WebSocket."
+policy:
+  allow_implicit_invocation: false
