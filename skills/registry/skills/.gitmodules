@@ -49,3 +49,6 @@
 [submodule "development/high-fidelity-ui-replication"]
 	path = development/high-fidelity-ui-replication
 	url = git@github.com:rosexrwa/high-fidelity-ui-replication-skill.git
+[submodule "interfaces/use-codex-app"]
+	path = interfaces/use-codex-app
+	url = git@github.com:fractalmind-ai/use-codex-app-skill.git
