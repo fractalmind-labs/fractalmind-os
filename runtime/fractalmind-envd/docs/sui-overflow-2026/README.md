@@ -2,7 +2,7 @@
 
 Sui Overflow 2026 track: **The Agentic Web**
 
-FractalMind Agent OS on Sui lets a human grant an AI agent bounded, revocable authority through a Sui Move policy object, then verify the agent's action evidence on-chain.
+FractalMind Agent OS on Sui turns Sui into a trust layer for autonomous agents: bounded authority, verifiable action, and instant revocation. A human grants an AI agent narrow authority through a Sui Move policy object, verifies the agent's action evidence on-chain, and can revoke the policy to prove human override.
 
 ![FractalMind Agent OS on Sui logo](../../assets/sui-overflow-2026/fractalmind-agent-os-logo.svg)
 
@@ -44,6 +44,7 @@ Proof artifacts in this repo:
 - [`testnet-proof-summary.json`](./testnet-proof-summary.json)
 - [`local-evidence.json`](./local-evidence.json)
 - [`policy-demo-timeline.html`](./policy-demo-timeline.html)
+- [`live-judge-mode.html`](./live-judge-mode.html) — 12/10 judge mode: click through Grant → Execute → Revoke with the real testnet proof IDs.
 
 ## Run tests
 
@@ -70,7 +71,17 @@ go run ./cmd/envd-policy-demo \
 
 ## Prior-work / originality disclosure
 
-FractalMind builds on existing `fractalmind-ai` agent runtime and Sui identity work. The bounded `AgentPolicy` / `ActionExecuted` MVP, deterministic evidence runner, CLI demo, Sui testnet proof-pack, revocation demonstration, and submission materials were built during the Sui Overflow 2026 sprint. Existing code is disclosed as foundation/runtime context; the submitted differentiator is the new Sui-native bounded agent policy and verifiable remote-action proof.
+FractalMind had existing agent runtime and Sui identity foundations before Sui Overflow 2026. The hackathon submission focuses on the new Sui-native bounded-agent trust loop built and packaged during this sprint: `AgentPolicy`, `ActionExecuted` proof semantics, deterministic evidence runner/CLI, Sui testnet proof pack, revocation failure proof, public packaging PR #44, demo video assets, and Live Judge Mode. Existing code is disclosed as the runtime foundation; the submitted differentiator is the new verifiable agent authorization and revocation layer on Sui.
+
+## Mainnet deployment plan
+
+No mainnet deployment or funds are required for the current testnet proof. If selected / awarded, the proposed mainnet path is:
+
+1. **Week 1 — security and scope freeze**: freeze the `AgentPolicy` API and threat model; add branch coverage for expiry, max-use, gas limit, hash-length, org mismatch, and inactive certificate cases; run independent QA and public-boundary review.
+2. **Week 2 — limited mainnet pilot**: deploy the policy package to Sui mainnet with no custody of user funds; enable only low-risk action evidence and revocation flows; publish owner revoke / emergency-disable runbooks.
+3. **Post-pilot — composable agent actions**: add human-readable PTB preview and guardian risk checks; consider DeepBook/Walrus only after no-funds/testnet validation and explicit approval.
+
+Risk boundary: no real-funds autonomous action until policy enforcement, guardian checks, revoke path, and audit logging are independently verified.
 
 ## Safety boundaries
 
