@@ -120,6 +120,61 @@ module fractalmind_protocol::agent_policy_tests {
     }
 
     #[test]
+    #[expected_failure(abort_code = 8204, location = fractalmind_protocol::agent_policy)]
+    fun test_execute_action_rejects_revoked_policy() {
+        let mut scenario = ts::begin(ADMIN);
+        setup_org_with_agent(&mut scenario);
+
+        ts::next_tx(&mut scenario, ADMIN);
+        {
+            let org = ts::take_shared<Organization>(&scenario);
+            agent_policy::create_policy(
+                &org,
+                AGENT1,
+                string::utf8(b"shell_exec"),
+                string::utf8(b"host:worker-1"),
+                1,
+                1_000_000,
+                10_000_000,
+                ts::ctx(&mut scenario),
+            );
+            ts::return_shared(org);
+        };
+
+        ts::next_tx(&mut scenario, ADMIN);
+        {
+            let org = ts::take_shared<Organization>(&scenario);
+            let mut policy_obj = ts::take_shared<AgentPolicy>(&scenario);
+            agent_policy::revoke_policy(&mut policy_obj, &org, ts::ctx(&mut scenario));
+            ts::return_shared(org);
+            ts::return_shared(policy_obj);
+        };
+
+        ts::next_tx(&mut scenario, AGENT1);
+        {
+            let cert = ts::take_from_sender<AgentCertificate>(&scenario);
+            let org = ts::take_shared<Organization>(&scenario);
+            let mut policy_obj = ts::take_shared<AgentPolicy>(&scenario);
+            agent_policy::execute_action(
+                &mut policy_obj,
+                &org,
+                &cert,
+                string::utf8(b"shell_exec"),
+                string::utf8(b"host:worker-1"),
+                b"01234567890123456789012345678901",
+                b"abcdefghijabcdefghijabcdefghijab",
+                1000,
+                ts::ctx(&mut scenario),
+            );
+            ts::return_shared(org);
+            ts::return_shared(policy_obj);
+            ts::return_to_sender(&scenario, cert);
+        };
+
+        ts::end(scenario);
+    }
+
+    #[test]
     #[expected_failure(abort_code = 8207, location = fractalmind_protocol::agent_policy)]
     fun test_execute_action_rejects_wrong_action_kind() {
         let mut scenario = ts::begin(ADMIN);
