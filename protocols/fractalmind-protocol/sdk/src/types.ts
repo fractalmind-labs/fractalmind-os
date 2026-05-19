@@ -7,6 +7,7 @@ export type U64 = bigint;
 
 export type NetworkName = 'mainnet' | 'testnet' | 'devnet' | 'localnet';
 export type VoteOption = 1 | 2 | 3;
+export type KeyResultVerdict = 1 | 2 | 3;
 
 export interface FractalMindClientOptions {
   packageId: string;
@@ -64,6 +65,8 @@ export interface AgentPolicyData {
   expiresAtMs: U64;
   maxGasBudget: U64;
   revoked: boolean;
+  objectiveId: ObjectId | null;
+  keyResultId: ObjectId | null;
 }
 
 export interface TaskData {
@@ -75,6 +78,45 @@ export interface TaskData {
   description: string;
   status: number;
   assignee: Address | null;
+  keyResultId: ObjectId | null;
+}
+
+
+export interface ObjectiveData {
+  objectId: ObjectId;
+  type: string;
+  orgId: ObjectId;
+  owner: Address;
+  title: string;
+  descriptionHash: number[];
+  status: number;
+  deadlineMs: U64;
+  keyResultCount: U64;
+  closedAtMs: U64 | null;
+}
+
+export interface KeyResultData {
+  objectId: ObjectId;
+  type: string;
+  orgId: ObjectId;
+  objectiveId: ObjectId;
+  title: string;
+  targetHash: number[];
+  status: number;
+  taskCount: U64;
+  reviewCount: U64;
+  acceptedAtMs: U64 | null;
+}
+
+export interface KRReviewData {
+  objectId: ObjectId;
+  type: string;
+  orgId: ObjectId;
+  objectiveId: ObjectId;
+  keyResultId: ObjectId;
+  reviewer: Address;
+  verdict: KeyResultVerdict;
+  evidenceHash: number[];
 }
 
 export interface ProposalData {
@@ -90,6 +132,42 @@ export interface ProposalData {
   forVotes: U64;
   againstVotes: U64;
   abstainVotes: U64;
+}
+
+
+export interface CreateObjectiveInput extends TxBuildOptions {
+  adminCapId: ObjectId;
+  organizationId: ObjectId;
+  title: string;
+  descriptionHash: number[];
+  deadlineMs: bigint | number | string;
+}
+
+export interface CreateKeyResultInput extends TxBuildOptions {
+  adminCapId: ObjectId;
+  objectiveId: ObjectId;
+  title: string;
+  targetHash: number[];
+}
+
+export interface ReviewKeyResultInput extends TxBuildOptions {
+  adminCapId: ObjectId;
+  objectiveId: ObjectId;
+  keyResultId: ObjectId;
+  verdict: KeyResultVerdict;
+  evidenceHash: number[];
+}
+
+export interface AcceptKeyResultInput extends TxBuildOptions {
+  adminCapId: ObjectId;
+  objectiveId: ObjectId;
+  keyResultId: ObjectId;
+  evidenceHash: number[];
+}
+
+export interface CloseObjectiveInput extends TxBuildOptions {
+  adminCapId: ObjectId;
+  objectiveId: ObjectId;
 }
 
 export interface CreateOrganizationInput extends TxBuildOptions {
@@ -135,6 +213,16 @@ export interface CreateAgentPolicyInput extends TxBuildOptions {
   maxGasBudget: bigint | number | string;
 }
 
+
+export interface CreateAgentPolicyForObjectiveInput extends CreateAgentPolicyInput {
+  objectiveId: ObjectId;
+}
+
+export interface CreateAgentPolicyForKeyResultInput extends CreateAgentPolicyInput {
+  objectiveId: ObjectId;
+  keyResultId: ObjectId;
+}
+
 export interface RevokeAgentPolicyInput extends TxBuildOptions {
   policyId: ObjectId;
   organizationId: ObjectId;
@@ -156,6 +244,12 @@ export interface CreateTaskInput extends TxBuildOptions {
   creatorCertId: ObjectId;
   title: string;
   description: string;
+}
+
+
+export interface CreateTaskForKeyResultInput extends CreateTaskInput {
+  objectiveId: ObjectId;
+  keyResultId: ObjectId;
 }
 
 export interface AssignTaskInput extends TxBuildOptions {

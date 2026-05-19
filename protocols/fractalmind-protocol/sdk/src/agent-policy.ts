@@ -5,11 +5,14 @@ import {
   readAddress,
   readBigInt,
   readBoolean,
+  readOptionId,
   readString,
   toBigInt,
 } from './client';
 import type {
   AgentPolicyData,
+  CreateAgentPolicyForKeyResultInput,
+  CreateAgentPolicyForObjectiveInput,
   CreateAgentPolicyInput,
   ExecuteAgentActionInput,
   ObjectId,
@@ -26,6 +29,49 @@ export class AgentPolicyApi {
       target: this.fm.target('create_agent_policy'),
       arguments: [
         tx.object(input.organizationId),
+        tx.pure.address(input.agent),
+        tx.pure.string(input.allowedAction),
+        tx.pure.string(input.targetScope),
+        tx.pure.u64(toBigInt(input.maxUses)),
+        tx.pure.u64(toBigInt(input.expiresAtMs)),
+        tx.pure.u64(toBigInt(input.maxGasBudget)),
+      ],
+    });
+
+    return tx;
+  }
+
+
+
+  createPolicyForObjective(input: CreateAgentPolicyForObjectiveInput): Transaction {
+    const tx = this.fm.useTransaction(input.tx);
+
+    tx.moveCall({
+      target: this.fm.target('create_agent_policy_for_objective'),
+      arguments: [
+        tx.object(input.organizationId),
+        tx.object(input.objectiveId),
+        tx.pure.address(input.agent),
+        tx.pure.string(input.allowedAction),
+        tx.pure.string(input.targetScope),
+        tx.pure.u64(toBigInt(input.maxUses)),
+        tx.pure.u64(toBigInt(input.expiresAtMs)),
+        tx.pure.u64(toBigInt(input.maxGasBudget)),
+      ],
+    });
+
+    return tx;
+  }
+
+  createPolicyForKeyResult(input: CreateAgentPolicyForKeyResultInput): Transaction {
+    const tx = this.fm.useTransaction(input.tx);
+
+    tx.moveCall({
+      target: this.fm.target('create_agent_policy_for_key_result'),
+      arguments: [
+        tx.object(input.organizationId),
+        tx.object(input.objectiveId),
+        tx.object(input.keyResultId),
         tx.pure.address(input.agent),
         tx.pure.string(input.allowedAction),
         tx.pure.string(input.targetScope),
@@ -92,6 +138,8 @@ export class AgentPolicyApi {
       expiresAtMs: readBigInt(obj.fields, 'expires_at_ms'),
       maxGasBudget: readBigInt(obj.fields, 'max_gas_budget'),
       revoked: readBoolean(obj.fields, 'revoked'),
+      objectiveId: readOptionId(obj.fields, 'objective_id'),
+      keyResultId: readOptionId(obj.fields, 'key_result_id'),
     };
   }
 }

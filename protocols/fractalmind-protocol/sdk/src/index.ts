@@ -3,6 +3,7 @@ import { AgentPolicyApi } from './agent-policy';
 import { FractalMindClient } from './client';
 import { FractalApi } from './fractal';
 import { GovernanceApi } from './governance';
+import { ObjectiveApi } from './objective';
 import { OrganizationApi } from './organization';
 import { TaskApi } from './task';
 import type { FractalMindClientOptions } from './types';
@@ -10,6 +11,7 @@ import type { FractalMindClientOptions } from './types';
 export class FractalMindSDK {
   public readonly client: FractalMindClient;
   public readonly organization: OrganizationApi;
+  public readonly objective: ObjectiveApi;
   public readonly agent: AgentApi;
   public readonly agentPolicy: AgentPolicyApi;
   public readonly task: TaskApi;
@@ -19,6 +21,7 @@ export class FractalMindSDK {
   constructor(options: FractalMindClientOptions) {
     this.client = new FractalMindClient(options);
     this.organization = new OrganizationApi(this.client);
+    this.objective = new ObjectiveApi(this.client);
     this.agent = new AgentApi(this.client);
     this.agentPolicy = new AgentPolicyApi(this.client);
     this.task = new TaskApi(this.client);
@@ -28,6 +31,7 @@ export class FractalMindSDK {
 }
 
 export { FractalMindClient } from './client';
+export { ObjectiveApi } from './objective';
 export { OrganizationApi } from './organization';
 export { AgentApi } from './agent';
 export { AgentPolicyApi } from './agent-policy';
@@ -38,16 +42,23 @@ export { GovernanceApi } from './governance';
 export type {
   Address,
   AgentCertificateData,
+  AcceptKeyResultInput,
   AgentPolicyData,
   AssignTaskInput,
   CastVoteInput,
+  CloseObjectiveInput,
   CloseProposalVotingInput,
+  CreateAgentPolicyForKeyResultInput,
+  CreateAgentPolicyForObjectiveInput,
   CreateAgentPolicyInput,
   CompleteTaskInput,
   CreateGovernanceInput,
+  CreateKeyResultInput,
+  CreateObjectiveInput,
   CreateOrganizationInput,
   CreateProposalInput,
   CreateSubOrganizationInput,
+  CreateTaskForKeyResultInput,
   CreateTaskInput,
   DetachSubOrganizationInput,
   ExecuteAgentActionInput,
@@ -55,12 +66,17 @@ export type {
   FinalizeProposalVotingInput,
   FractalMindClientOptions,
   GetAgentCertificateInput,
+  KeyResultData,
+  KeyResultVerdict,
+  KRReviewData,
   MoveObjectData,
   NetworkName,
   ObjectId,
+  ObjectiveData,
   OrganizationData,
   ProposalData,
   RejectTaskInput,
+  ReviewKeyResultInput,
   RegisterAgentInput,
   RevokeAgentPolicyInput,
   StartProposalVotingInput,

@@ -15,6 +15,7 @@ module fractalmind_protocol::entry {
     use fractalmind_protocol::review::{Self, Review};
     use fractalmind_protocol::profile;
     use fractalmind_protocol::agent_policy::{Self, AgentPolicy};
+    use fractalmind_protocol::objective::{Self, Objective, KeyResult};
 
     // ===== Organization Entry Points =====
 
@@ -96,6 +97,59 @@ module fractalmind_protocol::entry {
         agent::update_capabilities(cert, new_tags, ctx);
     }
 
+
+    // ===== Objective / OKR Entry Points =====
+
+    public entry fun create_objective(
+        admin_cap: &OrgAdminCap,
+        org: &Organization,
+        title: String,
+        description_hash: vector<u8>,
+        deadline_ms: u64,
+        ctx: &mut TxContext,
+    ) {
+        objective::create_objective(admin_cap, org, title, description_hash, deadline_ms, ctx);
+    }
+
+    public entry fun create_key_result(
+        admin_cap: &OrgAdminCap,
+        objective_obj: &mut Objective,
+        title: String,
+        target_hash: vector<u8>,
+        ctx: &mut TxContext,
+    ) {
+        objective::create_key_result(admin_cap, objective_obj, title, target_hash, ctx);
+    }
+
+    public entry fun review_key_result(
+        admin_cap: &OrgAdminCap,
+        objective_obj: &Objective,
+        key_result: &mut KeyResult,
+        verdict: u8,
+        evidence_hash: vector<u8>,
+        ctx: &mut TxContext,
+    ) {
+        objective::review_key_result(admin_cap, objective_obj, key_result, verdict, evidence_hash, ctx);
+    }
+
+    public entry fun accept_key_result(
+        admin_cap: &OrgAdminCap,
+        objective_obj: &Objective,
+        key_result: &mut KeyResult,
+        evidence_hash: vector<u8>,
+        ctx: &mut TxContext,
+    ) {
+        objective::accept_key_result(admin_cap, objective_obj, key_result, evidence_hash, ctx);
+    }
+
+    public entry fun close_objective(
+        admin_cap: &OrgAdminCap,
+        objective_obj: &mut Objective,
+        ctx: &TxContext,
+    ) {
+        objective::close_objective(admin_cap, objective_obj, ctx);
+    }
+
     // ===== Agent Policy Entry Points =====
 
     public entry fun create_agent_policy(
@@ -152,6 +206,58 @@ module fractalmind_protocol::entry {
         );
     }
 
+
+
+    public entry fun create_agent_policy_for_objective(
+        org: &Organization,
+        objective_obj: &Objective,
+        agent_addr: address,
+        allowed_action: String,
+        target_scope: String,
+        max_uses: u64,
+        expires_at_ms: u64,
+        max_gas_budget: u64,
+        ctx: &mut TxContext,
+    ) {
+        agent_policy::create_policy_for_objective(
+            org,
+            objective_obj,
+            agent_addr,
+            allowed_action,
+            target_scope,
+            max_uses,
+            expires_at_ms,
+            max_gas_budget,
+            ctx,
+        );
+    }
+
+    public entry fun create_agent_policy_for_key_result(
+        org: &Organization,
+        objective_obj: &Objective,
+        key_result: &KeyResult,
+        agent_addr: address,
+        allowed_action: String,
+        target_scope: String,
+        max_uses: u64,
+        expires_at_ms: u64,
+        max_gas_budget: u64,
+        ctx: &mut TxContext,
+    ) {
+        agent_policy::create_policy_for_key_result(
+            org,
+            objective_obj,
+            key_result,
+            agent_addr,
+            allowed_action,
+            target_scope,
+            max_uses,
+            expires_at_ms,
+            max_gas_budget,
+            ctx,
+        );
+    }
+
     // ===== Task Entry Points =====
 
     public entry fun create_task(
@@ -162,6 +268,20 @@ module fractalmind_protocol::entry {
         ctx: &mut TxContext,
     ) {
         task::create_task(org, cert, title, description, ctx);
+    }
+
+
+
+    public entry fun create_task_for_key_result(
+        org: &mut Organization,
+        objective_obj: &Objective,
+        key_result: &mut KeyResult,
+        cert: &AgentCertificate,
+        title: String,
+        description: String,
+        ctx: &mut TxContext,
+    ) {
+        task::create_task_for_key_result(org, objective_obj, key_result, cert, title, description, ctx);
     }
 
     public entry fun assign_task(
