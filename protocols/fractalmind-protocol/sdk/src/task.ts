@@ -10,6 +10,7 @@ import {
 import type {
   AssignTaskInput,
   CompleteTaskInput,
+  CreateTaskForKeyResultInput,
   CreateTaskInput,
   ObjectId,
   RejectTaskInput,
@@ -28,6 +29,26 @@ export class TaskApi {
       target: this.fm.target('create_task'),
       arguments: [
         tx.object(input.organizationId),
+        tx.object(input.creatorCertId),
+        tx.pure.string(input.title),
+        tx.pure.string(input.description),
+      ],
+    });
+
+    return tx;
+  }
+
+
+
+  createTaskForKeyResult(input: CreateTaskForKeyResultInput): Transaction {
+    const tx = this.fm.useTransaction(input.tx);
+
+    tx.moveCall({
+      target: this.fm.target('create_task_for_key_result'),
+      arguments: [
+        tx.object(input.organizationId),
+        tx.object(input.objectiveId),
+        tx.object(input.keyResultId),
         tx.object(input.creatorCertId),
         tx.pure.string(input.title),
         tx.pure.string(input.description),
@@ -127,6 +148,7 @@ export class TaskApi {
       description: readString(obj.fields, 'description'),
       status: readNumber(obj.fields, 'status'),
       assignee: readOptionId(obj.fields, 'assignee'),
+      keyResultId: readOptionId(obj.fields, 'key_result_id'),
     };
   }
 }

@@ -126,6 +126,62 @@ const moveCallCases: Array<{
         newTags: ['ops'],
       }),
   },
+
+  {
+    name: 'objective.createObjective',
+    expectedFunction: 'create_objective',
+    build: (sdk) =>
+      sdk.objective.createObjective({
+        adminCapId: '0x61',
+        organizationId: '0x62',
+        title: 'Ship OKR control plane',
+        descriptionHash: Array.from({ length: 32 }, (_, i) => i),
+        deadlineMs: 1_000_000n,
+      }),
+  },
+  {
+    name: 'objective.createKeyResult',
+    expectedFunction: 'create_key_result',
+    build: (sdk) =>
+      sdk.objective.createKeyResult({
+        adminCapId: '0x61',
+        objectiveId: '0x63',
+        title: 'KR title',
+        targetHash: Array.from({ length: 32 }, (_, i) => 31 - i),
+      }),
+  },
+  {
+    name: 'objective.reviewKeyResult',
+    expectedFunction: 'review_key_result',
+    build: (sdk) =>
+      sdk.objective.reviewKeyResult({
+        adminCapId: '0x61',
+        objectiveId: '0x63',
+        keyResultId: '0x64',
+        verdict: 1,
+        evidenceHash: Array.from({ length: 32 }, (_, i) => i),
+      }),
+  },
+  {
+    name: 'objective.acceptKeyResult',
+    expectedFunction: 'accept_key_result',
+    build: (sdk) =>
+      sdk.objective.acceptKeyResult({
+        adminCapId: '0x61',
+        objectiveId: '0x63',
+        keyResultId: '0x64',
+        evidenceHash: Array.from({ length: 32 }, (_, i) => i),
+      }),
+  },
+  {
+    name: 'objective.closeObjective',
+    expectedFunction: 'close_objective',
+    build: (sdk) =>
+      sdk.objective.closeObjective({
+        adminCapId: '0x61',
+        objectiveId: '0x63',
+      }),
+  },
   {
     name: 'agentPolicy.createPolicy',
     expectedFunction: 'create_agent_policy',
@@ -135,6 +191,38 @@ const moveCallCases: Array<{
         agent: '0x24',
         allowedAction: 'shell_exec',
         targetScope: 'host:worker-1',
+        maxUses: 2n,
+        expiresAtMs: 1_000_000n,
+        maxGasBudget: 10_000_000n,
+      }),
+  },
+
+  {
+    name: 'agentPolicy.createPolicyForObjective',
+    expectedFunction: 'create_agent_policy_for_objective',
+    build: (sdk) =>
+      sdk.agentPolicy.createPolicyForObjective({
+        organizationId: '0x23',
+        objectiveId: '0x63',
+        agent: '0x24',
+        allowedAction: 'shell_exec',
+        targetScope: 'objective:sui-overflow',
+        maxUses: 2n,
+        expiresAtMs: 1_000_000n,
+        maxGasBudget: 10_000_000n,
+      }),
+  },
+  {
+    name: 'agentPolicy.createPolicyForKeyResult',
+    expectedFunction: 'create_agent_policy_for_key_result',
+    build: (sdk) =>
+      sdk.agentPolicy.createPolicyForKeyResult({
+        organizationId: '0x23',
+        objectiveId: '0x63',
+        keyResultId: '0x64',
+        agent: '0x24',
+        allowedAction: 'shell_exec',
+        targetScope: 'kr:sui-overflow',
         maxUses: 2n,
         expiresAtMs: 1_000_000n,
         maxGasBudget: 10_000_000n,
@@ -173,6 +261,20 @@ const moveCallCases: Array<{
         creatorCertId: '0x32',
         title: 'Task title',
         description: 'Task description',
+      }),
+  },
+
+  {
+    name: 'task.createTaskForKeyResult',
+    expectedFunction: 'create_task_for_key_result',
+    build: (sdk) =>
+      sdk.task.createTaskForKeyResult({
+        organizationId: '0x31',
+        objectiveId: '0x63',
+        keyResultId: '0x64',
+        creatorCertId: '0x32',
+        title: 'KR task title',
+        description: 'KR task description',
       }),
   },
   {

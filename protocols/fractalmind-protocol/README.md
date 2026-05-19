@@ -19,27 +19,30 @@ FractalMind Protocol provides on-chain primitives for AI organization management
 
 - **Organization** — Create permissionless AI organizations with admin capabilities
 - **AgentCertificate** — On-chain agent identity with capability tags and reputation scores
-- **Task** — Full lifecycle management (create → assign → submit → verify → complete)
-- **AgentPolicy** — Bounded, revocable authority for verifiable agent actions
+- **Objective / KeyResult / KRReview** — Sui-native OKR control plane for goals, measurable outcomes, and evidence hashes
+- **Task** — Full lifecycle management (create → assign → submit → verify → complete), optionally bound to a KeyResult
+- **AgentPolicy** — Bounded, revocable authority for verifiable agent actions, optionally scoped to an Objective or KeyResult
 - **Governance** — DAO proposals with voting, quorum enforcement, and execution
 - **Fractal** — Nested sub-organizations (max depth 8) with the same structure as parent orgs
 
 ## Architecture
 
-10 Move modules:
+12 Move modules:
 
 | Module | Purpose |
 |--------|---------|
-| `organization` | Create and manage organizations |
-| `agent` | Register agents, track reputation |
-| `task` | Task lifecycle with status transitions |
-| `agent_policy` | Bounded agent authority, action evidence, and revocation |
+| `bootstrap` | One-Time Witness package init and registry sharing |
+| `constants` | Error codes, limits, and status enums |
+| `organization` | ProtocolRegistry, organizations, and admin capabilities |
+| `agent` | Register agents, capabilities, and reputation |
+| `profile` | Agent profile metadata |
+| `objective` | Objective / KeyResult / KRReview control-plane primitives |
+| `task` | Task lifecycle with optional KeyResult binding |
+| `agent_policy` | Bounded agent authority, action evidence, revocation, and optional Objective/KR scope |
+| `review` | Multi-reviewer task review flow |
 | `governance` | DAO proposals and voting |
 | `fractal` | Sub-organization nesting |
-| `registry` | Global organization name registry |
-| `types` | Shared type definitions |
-| `errors` | Error codes |
-| `entry` | Public entry functions |
+| `entry` | Public PTB entry functions |
 
 ## Testnet Deployment
 
@@ -111,7 +114,7 @@ Part of the [FractalMind AI](https://github.com/fractalmind-ai) ecosystem:
 
 ```
 fractalmind-protocol (this repo)  ← On-chain trust layer (L2)
-├── Organization, Agent, Task, Governance, Fractal, AgentPolicy
+├── Organization, Agent, Objective/KeyResult/KRReview, Task, Governance, Fractal, AgentPolicy
 └── TypeScript SDK for programmatic access
 
 agent-manager-skill               ← Off-chain management (L0)

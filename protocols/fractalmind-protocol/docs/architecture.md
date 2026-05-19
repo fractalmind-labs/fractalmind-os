@@ -6,7 +6,8 @@ FractalMind Protocol is a permissionless on-chain protocol on **SUI** for fracta
 
 - **Permissionless org creation** — anyone can create an organization
 - **Agent registration** — AI or human agents join orgs with capability tags
-- **Task lifecycle** — full state machine from creation to completion with verification
+- **Objective / KR lifecycle** — OKR control plane linking goals, measurable key results, tasks, policy scopes, and evidence hashes
+- **Task lifecycle** — full state machine from creation to completion with verification, optionally bound to a KeyResult
 - **Fractal nesting** — organizations contain sub-organizations, recursively up to depth 8
 
 ## Object Model
@@ -64,11 +65,16 @@ FractalMind Protocol is a permissionless on-chain protocol on **SUI** for fracta
 
 | Module | Purpose |
 |--------|---------|
-| `constants.move` | Error codes, system limits, status enums |
 | `bootstrap.move` | OTW init — creates ProtocolRegistry at publish |
+| `constants.move` | Error codes, system limits, status enums |
 | `organization.move` | ProtocolRegistry + Organization + OrgAdminCap |
 | `agent.move` | AgentCertificate — registration, deactivation, capabilities |
-| `task.move` | Task lifecycle state machine |
+| `profile.move` | Agent profile metadata |
+| `objective.move` | Objective / KeyResult / KRReview state machine |
+| `task.move` | Task lifecycle state machine with optional KeyResult binding |
+| `agent_policy.move` | Bounded agent policy, action evidence, revocation, and Objective/KR scope |
+| `review.move` | Multi-reviewer task review flow |
+| `governance.move` | DAO proposals and voting |
 | `fractal.move` | Sub-org creation/detachment with depth limits |
 | `entry.move` | Thin `public entry` wrappers for PTB |
 
@@ -191,3 +197,31 @@ Core flow:
 1. `create_policy` — org admin grants an agent bounded authority for one action kind, target scope, max uses, expiry, and gas budget.
 2. `execute_action` — the registered agent emits canonical `ActionExecuted` evidence with intent/result hashes.
 3. `revoke_policy` — policy owner or current org admin revokes the policy; post-revoke execution aborts with `8204`.
+
+
+## Objective / OKR Control Plane
+
+`objective.move` adds the minimal OKR domain model needed for AI-agent organizations:
+
+```text
+Organization
+  └─ Objective
+      └─ KeyResult
+          ├─ Task (optional key_result_id binding)
+          ├─ AgentPolicy (optional objective_id / key_result_id scope)
+          └─ KRReview (verdict + evidence_hash)
+```
+
+Design boundaries:
+
+- On-chain stores state, relationships, authorization scope, verdicts, and 32-byte evidence hashes.
+- Long-form OKR text, screenshots, videos, PRs, and proof packs stay off-chain behind hashes/URLs.
+- Existing Task and AgentPolicy entry points remain backward-compatible; scoped variants add Objective/KR linkage without forcing all tasks or policies into OKRs.
+
+Core flow:
+
+1. Admin creates an `Objective` for an organization.
+2. Admin adds `KeyResult` objects under that Objective.
+3. Agents create tasks bound to a KR or receive KR-scoped policies.
+4. Reviewers/admins submit `KRReview` evidence hashes and can accept the KR.
+5. Objective closeout becomes a verifiable control-plane state transition rather than an off-chain note only.

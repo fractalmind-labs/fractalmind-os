@@ -12,6 +12,7 @@ module fractalmind_protocol::task {
     use fractalmind_protocol::constants;
     use fractalmind_protocol::organization::{Self, Organization, OrgAdminCap};
     use fractalmind_protocol::agent::{Self, AgentCertificate};
+    use fractalmind_protocol::objective::{Self, Objective, KeyResult};
 
     // ===== Structs =====
 
@@ -24,6 +25,7 @@ module fractalmind_protocol::task {
         description: String,
         status: u8,
         assignee: Option<address>,
+        key_result_id: Option<ID>,
         submission: Option<String>,
         verifier: Option<address>,
         created_at: u64,
@@ -102,6 +104,7 @@ module fractalmind_protocol::task {
             description,
             status: constants::task_status_created(),
             assignee: option::none(),
+            key_result_id: option::none(),
             submission: option::none(),
             verifier: option::none(),
             created_at,
@@ -118,6 +121,61 @@ module fractalmind_protocol::task {
             org_id,
             creator: sender,
             title,
+        });
+
+        transfer::share_object(task);
+    }
+
+
+    /// Create a task bound to a KeyResult. Caller must be an active org member.
+    public fun create_task_for_key_result(
+        org: &mut Organization,
+        objective_obj: &Objective,
+        key_result: &mut KeyResult,
+        cert: &AgentCertificate,
+        title: String,
+        description: String,
+        ctx: &mut TxContext,
+    ) {
+        let sender = tx_context::sender(ctx);
+        let org_id = organization::org_id(org);
+
+        assert!(objective::objective_org_id(objective_obj) == org_id, constants::e_unauthorized());
+        assert!(objective::objective_status(objective_obj) == objective::objective_status_open(), constants::e_invalid_state());
+        assert!(objective::key_result_org_id(key_result) == org_id, constants::e_unauthorized());
+        assert!(objective::key_result_objective_id(key_result) == objective::objective_id(objective_obj), constants::e_unauthorized());
+        assert!(organization::is_active(org), constants::e_org_not_active());
+        assert!(agent::cert_org_id(cert) == org_id, constants::e_unauthorized());
+        assert!(agent::cert_agent(cert) == sender, constants::e_unauthorized());
+        assert!(agent::cert_status(cert) == constants::agent_status_active(), constants::e_agent_not_active());
+        assert!(std::string::length(&title) > 0, constants::e_task_empty_title());
+
+        let task = Task {
+            id: object::new(ctx),
+            org_id,
+            creator: sender,
+            title,
+            description,
+            status: constants::task_status_created(),
+            assignee: option::none(),
+            key_result_id: option::some(objective::key_result_id(key_result)),
+            submission: option::none(),
+            verifier: option::none(),
+            created_at: tx_context::epoch_timestamp_ms(ctx),
+            assigned_at: option::none(),
+            submitted_at: option::none(),
+            completed_at: option::none(),
+        };
+        let task_id = object::id(&task);
+
+        organization::add_task(org, task_id);
+        objective::increment_key_result_task_count(key_result);
+
+        event::emit(TaskCreated {
+            task_id,
+            org_id,
+            creator: sender,
+            title: task.title,
         });
 
         transfer::share_object(task);
@@ -279,6 +337,7 @@ module fractalmind_protocol::task {
     public fun task_description(task: &Task): String { task.description }
     public fun task_status(task: &Task): u8 { task.status }
     public fun task_assignee(task: &Task): Option<address> { task.assignee }
+    public fun task_key_result_id(task: &Task): Option<ID> { task.key_result_id }
     public fun task_submission(task: &Task): Option<String> { task.submission }
     public fun task_verifier(task: &Task): Option<address> { task.verifier }
 }

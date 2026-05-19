@@ -196,6 +196,22 @@ export function readBigInt(fields: Record<string, unknown>, key: string): bigint
   throw new Error(`Expected bigint-like field '${key}'.`);
 }
 
+export function readNumberVector(fields: Record<string, unknown>, key: string): number[] {
+  const value = fields[key];
+  if (!Array.isArray(value)) {
+    throw new Error(`Expected array field '${key}'.`);
+  }
+  return value.map((item) => {
+    if (typeof item === 'number') {
+      return item;
+    }
+    if (typeof item === 'string') {
+      return Number.parseInt(item, 10);
+    }
+    throw new Error(`Expected numeric element in '${key}'.`);
+  });
+}
+
 export function readStringVector(fields: Record<string, unknown>, key: string): string[] {
   const value = fields[key];
   if (!Array.isArray(value)) {
@@ -223,6 +239,31 @@ export function readOptionId(fields: Record<string, unknown>, key: string): Obje
   const first = vec[0];
   if (typeof first === 'string') {
     return normalizeSuiAddress(first);
+  }
+
+  return null;
+}
+
+export function readOptionBigInt(fields: Record<string, unknown>, key: string): bigint | null {
+  const value = fields[key];
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const vec = (value as { vec?: unknown }).vec;
+  if (!Array.isArray(vec) || vec.length === 0) {
+    return null;
+  }
+
+  const first = vec[0];
+  if (typeof first === 'bigint') {
+    return first;
+  }
+  if (typeof first === 'number') {
+    return BigInt(first);
+  }
+  if (typeof first === 'string') {
+    return BigInt(first);
   }
 
   return null;
