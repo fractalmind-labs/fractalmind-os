@@ -175,3 +175,19 @@ sui move test --gas-limit 100000000
 ```
 
 The `bootstrap.move` module's `init` function runs automatically on publish, creating the shared `ProtocolRegistry`.
+
+### Agent Policy (Bounded Remote Action)
+
+`agent_policy` is the protocol-level primitive for bounded autonomous-agent authority.
+It grants one registered agent scoped permission to record a verifiable action,
+then lets the policy owner or organization admin revoke that permission.
+
+This keeps reusable trust semantics in `fractalmind-protocol`; runtime-specific
+clients such as `fractalmind-envd` should only call these protocol functions and
+keep demo runners, networking, and operator UX outside the protocol package.
+
+Core flow:
+
+1. `create_policy` — org admin grants an agent bounded authority for one action kind, target scope, max uses, expiry, and gas budget.
+2. `execute_action` — the registered agent emits canonical `ActionExecuted` evidence with intent/result hashes.
+3. `revoke_policy` — policy owner or current org admin revokes the policy; post-revoke execution aborts with `8204`.

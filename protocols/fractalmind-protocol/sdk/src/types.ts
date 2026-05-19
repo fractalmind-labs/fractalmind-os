@@ -51,6 +51,21 @@ export interface AgentCertificateData {
   reputationScore: U64;
 }
 
+export interface AgentPolicyData {
+  objectId: ObjectId;
+  type: string;
+  orgId: ObjectId;
+  owner: Address;
+  agent: Address;
+  allowedAction: string;
+  targetScope: string;
+  maxUses: U64;
+  usesConsumed: U64;
+  expiresAtMs: U64;
+  maxGasBudget: U64;
+  revoked: boolean;
+}
+
 export interface TaskData {
   objectId: ObjectId;
   type: string;
@@ -108,6 +123,32 @@ export type GetAgentCertificateInput = GetAgentCertificateById | GetAgentCertifi
 export interface UpdateCapabilitiesInput extends TxBuildOptions {
   certificateId: ObjectId;
   newTags: string[];
+}
+
+export interface CreateAgentPolicyInput extends TxBuildOptions {
+  organizationId: ObjectId;
+  agent: Address;
+  allowedAction: string;
+  targetScope: string;
+  maxUses: bigint | number | string;
+  expiresAtMs: bigint | number | string;
+  maxGasBudget: bigint | number | string;
+}
+
+export interface RevokeAgentPolicyInput extends TxBuildOptions {
+  policyId: ObjectId;
+  organizationId: ObjectId;
+}
+
+export interface ExecuteAgentActionInput extends TxBuildOptions {
+  policyId: ObjectId;
+  organizationId: ObjectId;
+  certificateId: ObjectId;
+  actionKind: string;
+  targetScope: string;
+  intentHash: number[];
+  resultHash: number[];
+  gasBudget: bigint | number | string;
 }
 
 export interface CreateTaskInput extends TxBuildOptions {
