@@ -20,18 +20,20 @@ FractalMind Protocol provides on-chain primitives for AI organization management
 - **Organization** — Create permissionless AI organizations with admin capabilities
 - **AgentCertificate** — On-chain agent identity with capability tags and reputation scores
 - **Task** — Full lifecycle management (create → assign → submit → verify → complete)
+- **AgentPolicy** — Bounded, revocable authority for verifiable agent actions
 - **Governance** — DAO proposals with voting, quorum enforcement, and execution
 - **Fractal** — Nested sub-organizations (max depth 8) with the same structure as parent orgs
 
 ## Architecture
 
-9 Move modules:
+10 Move modules:
 
 | Module | Purpose |
 |--------|---------|
 | `organization` | Create and manage organizations |
 | `agent` | Register agents, track reputation |
 | `task` | Task lifecycle with status transitions |
+| `agent_policy` | Bounded agent authority, action evidence, and revocation |
 | `governance` | DAO proposals and voting |
 | `fractal` | Sub-organization nesting |
 | `registry` | Global organization name registry |
@@ -109,7 +111,7 @@ Part of the [FractalMind AI](https://github.com/fractalmind-ai) ecosystem:
 
 ```
 fractalmind-protocol (this repo)  ← On-chain trust layer (L2)
-├── Organization, Agent, Task, Governance, Fractal
+├── Organization, Agent, Task, Governance, Fractal, AgentPolicy
 └── TypeScript SDK for programmatic access
 
 agent-manager-skill               ← Off-chain management (L0)
