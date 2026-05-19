@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FractalMind Agent OS on Sui — Live Judge Mode</title>
+<style>
+:root{color-scheme:dark;--bg:#050814;--panel:#0d1424;--panel2:#111b31;--line:#26344f;--text:#eef6ff;--muted:#9fb0c7;--cyan:#22d3ee;--green:#34d399;--amber:#fbbf24;--red:#fb7185;--purple:#a78bfa}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at top left,#17345c 0,#08111f 35%,#050814 72%);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}main{max-width:1280px;margin:0 auto;padding:36px}.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:22px;align-items:stretch}.card{background:rgba(13,20,36,.9);border:1px solid rgba(159,176,199,.16);border-radius:24px;padding:26px;box-shadow:0 24px 100px rgba(0,0,0,.35)}.pill{display:inline-flex;gap:8px;align-items:center;border:1px solid rgba(34,211,238,.4);background:rgba(34,211,238,.12);color:#a5f3fc;border-radius:999px;padding:8px 12px;font-weight:800;font-size:13px;margin-bottom:18px}h1{font-size:48px;line-height:1.02;margin:0 0 14px;letter-spacing:-.04em}h2{font-size:22px;margin:0 0 16px}.subtitle{font-size:19px;line-height:1.55;color:var(--muted);max-width:780px}.thesis{margin-top:20px;padding:18px 20px;border-radius:18px;background:linear-gradient(135deg,rgba(34,211,238,.12),rgba(167,139,250,.12));border:1px solid rgba(34,211,238,.18);font-size:18px;line-height:1.45}.controls{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0}.controls button{cursor:pointer;border:1px solid rgba(159,176,199,.25);border-radius:18px;padding:18px 14px;background:#0b1220;color:var(--text);font-weight:900;font-size:16px;transition:.18s transform,.18s border,.18s background}.controls button:hover{transform:translateY(-2px);border-color:var(--cyan)}.controls button.active{background:linear-gradient(135deg,rgba(34,211,238,.2),rgba(52,211,153,.14));border-color:var(--cyan);box-shadow:0 0 0 4px rgba(34,211,238,.08)}.stage{display:grid;grid-template-columns:.86fr 1.14fr;gap:18px;margin-top:18px}.stepList{display:grid;gap:12px}.step{display:grid;grid-template-columns:42px 1fr;gap:12px;align-items:start;padding:16px;border:1px solid rgba(159,176,199,.14);border-radius:18px;background:#0b1220}.num{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:rgba(159,176,199,.12);font-weight:900}.step.done .num{background:rgba(52,211,153,.18);color:#bbf7d0}.step.active .num{background:rgba(34,211,238,.18);color:#a5f3fc}.step.fail .num{background:rgba(251,113,133,.18);color:#fecdd3}.step b{display:block;margin-bottom:6px}.step p{margin:0;color:var(--muted);line-height:1.42}.proof{min-height:434px;background:#060b15;border:1px solid rgba(159,176,199,.14);border-radius:22px;padding:20px}.proofHeader{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:16px}.status{font-weight:900;border-radius:999px;padding:7px 11px;background:rgba(251,191,36,.14);color:#fde68a;border:1px solid rgba(251,191,36,.25)}.status.green{background:rgba(52,211,153,.14);color:#bbf7d0;border-color:rgba(52,211,153,.25)}.status.red{background:rgba(251,113,133,.14);color:#fecdd3;border-color:rgba(251,113,133,.25)}pre{white-space:pre-wrap;word-break:break-word;margin:0;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;color:#c7d2fe}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:22px}.metric{background:#0b1220;border:1px solid rgba(159,176,199,.13);border-radius:18px;padding:15px}.metric b{display:block;font-size:24px}.metric span{color:var(--muted);font-size:13px}.why{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}.why div{padding:16px;border-radius:18px;background:#0b1220;border:1px solid rgba(159,176,199,.13)}.why b{color:#f8fafc}.why p{color:var(--muted);margin:8px 0 0;line-height:1.45}.object{padding:14px;border-radius:16px;background:#0b1220;border:1px solid rgba(159,176,199,.13);margin-bottom:10px}.object strong{display:block}.object code{font-size:12px;color:#bae6fd;word-break:break-all}.footer{margin-top:18px;color:var(--muted);font-size:13px;line-height:1.4}@media(max-width:980px){.hero,.stage,.grid,.why{grid-template-columns:1fr}h1{font-size:36px}main{padding:20px}.controls{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <div class="card">
+      <div class="pill">Sui Overflow 2026 · Agentic Web · 12/10 Live Judge Mode</div>
+      <h1>Sui turns autonomous agents into bounded, verifiable actors.</h1>
+      <p class="subtitle">FractalMind Agent OS proves the missing trust layer for AI agents: bounded authority, on-chain action evidence, and instant human revocation.</p>
+      <div class="thesis"><b>Judge hook:</b> AI agent 最大问题不是会不会做事，而是凭什么被信任。Sui solves that with Move objects, verifiable events, and revocation.</div>
+      <div class="grid">
+        <div class="metric"><b>1</b><span>AgentPolicy object</span></div>
+        <div class="metric"><b>2</b><span>testnet tx proofs</span></div>
+        <div class="metric"><b>8204</b><span>post-revoke abort</span></div>
+        <div class="metric"><b>0</b><span>mainnet / funds touched</span></div>
+      </div>
+    </div>
+    <aside class="card">
+      <h2>Proof Objects</h2>
+      <div class="object"><strong>Package</strong><code>0x6766c03da91b2579f05be82c2f149a28363fd8cdee052afd41eddf0fd3093fce</code></div>
+      <div class="object"><strong>Policy</strong><code>0x2a7e2efc42937c8d0ddb3d39170faefaa543b9d4e79520c803a65bf9710f6843</code></div>
+      <div class="object"><strong>Execute tx</strong><code>7m4uyLa7sSYvJr2S6javDGBfbL4NrC6EQ2Da7raniccc</code></div>
+      <div class="object"><strong>Revoke tx</strong><code>E8zrPEHzMEJyWKfsTqiEdED9yJVVdr2N179TpEw1hQp6</code></div>
+      <p class="footer">Static private artifact generated from the existing Sui testnet proof pack. No network calls, secrets, mainnet, funds, public upload, or official submission.</p>
+    </aside>
+  </section>
+
+  <section class="card" style="margin-top:22px">
+    <h2>Live Judge Flow</h2>
+    <div class="controls">
+      <button id="grantBtn" class="active" onclick="showStep('grant')">1 · Grant bounded authority</button>
+      <button id="executeBtn" onclick="showStep('execute')">2 · Execute verifiable action</button>
+      <button id="revokeBtn" onclick="showStep('revoke')">3 · Revoke and prove override</button>
+    </div>
+    <div class="stage">
+      <div class="stepList">
+        <div id="grantStep" class="step active"><div class="num">1</div><div><b>Grant</b><p>Owner creates a bounded policy for <code>shell_exec</code> scoped to <code>host:worker-1</code>, with use and budget limits.</p></div></div>
+        <div id="executeStep" class="step"><div class="num">2</div><div><b>Execute</b><p>Agent action is recorded as an <code>ActionExecuted</code> event with canonical intent/result hashes.</p></div></div>
+        <div id="revokeStep" class="step"><div class="num">3</div><div><b>Revoke</b><p>Owner revokes the policy; a later action attempt aborts with code <code>8204</code>, proving human override.</p></div></div>
+      </div>
+      <div class="proof">
+        <div class="proofHeader"><h2 id="proofTitle">Grant proof</h2><div id="proofStatus" class="status">POLICY CREATED</div></div>
+        <pre id="proofText"></pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="why">
+    <div><b>Why Sui</b><p>Move objects make agent authority explicit, ownable, and revocable rather than hidden in an off-chain prompt.</p></div>
+    <div><b>Why Agentic Web</b><p>The agent can act, but every action is bounded by policy and leaves an audit trail.</p></div>
+    <div><b>Why 12/10</b><p>Judges can click the trust loop directly: grant, execute, revoke — then see the proof.</p></div>
+  </section>
+</main>
+<script>
+const proofs = {
+  grant: {
+    title: 'Grant proof', status: 'POLICY CREATED', cls: '', btn: 'grantBtn', step: 'grantStep',
+    text: `Network: sui-testnet
+Policy object: 0x2a7e2efc42937c8d0ddb3d39170faefaa543b9d4e79520c803a65bf9710f6843
+Create policy tx: 9w4etM4iyN9hayhNVkqV9jHArXJXY9m73fGzsQPsL7re
+Action kind: shell_exec
+Target scope: host:worker-1
+Gas budget: 5000
+Why it matters: the agent receives explicit bounded authority, not a blank-check wallet.`
+  },
+  execute: {
+    title: 'Execute proof', status: 'ACTION VERIFIED', cls: 'green', btn: 'executeBtn', step: 'executeStep',
+    text: `Execute tx: 7m4uyLa7sSYvJr2S6javDGBfbL4NrC6EQ2Da7raniccc
+ActionExecuted event:
+  action_kind: shell_exec
+  target_scope: host:worker-1
+  uses_consumed: 1
+  intent_hash: FtoUChdA+Q4d77rbalQffJBbSrCGY+MHChIkqwc1WdE=
+  result_hash: Awnf0q633Ck3neffunDUfs4K3LEOWKInPmwON97gmxo=
+Local evidence:
+  command: echo demo-safe
+  target_host: worker-1
+Why it matters: off-chain agent action now has on-chain, judge-verifiable evidence.`
+  },
+  revoke: {
+    title: 'Revocation proof', status: 'OVERRIDE PROVEN', cls: 'red', btn: 'revokeBtn', step: 'revokeStep',
+    text: `Revoke tx: E8zrPEHzMEJyWKfsTqiEdED9yJVVdr2N179TpEw1hQp6
+Post-revoke retry: expected failure captured
+Abort code: 8204 (E_POLICY_REVOKED)
+Validation: true
+Why it matters: the owner can stop an agent after delegation. The trust loop has a hard safety boundary.`
+  }
+};
+function showStep(name){
+  for (const key of Object.keys(proofs)) {
+    document.getElementById(proofs[key].btn).classList.toggle('active', key === name);
+    const el = document.getElementById(proofs[key].step);
+    el.className = 'step' + (key === name ? ' active' : '') + ((name === 'revoke' && key === 'revoke') ? ' fail' : '') + ((name !== 'grant' && key === 'grant') || (name === 'revoke' && key === 'execute') ? ' done' : '');
+  }
+  const p = proofs[name];
+  document.getElementById('proofTitle').textContent = p.title;
+  document.getElementById('proofStatus').textContent = p.status;
+  document.getElementById('proofStatus').className = 'status ' + p.cls;
+  document.getElementById('proofText').textContent = p.text;
+}
+showStep('grant');
+</script>
+</body>
+</html>
