@@ -189,10 +189,12 @@ func (c *Client) UpdateUptimeScore(ctx context.Context, score uint64) error {
 	return nil
 }
 
-// CreatePolicy creates a bounded shared policy for one agent.
+// CreatePolicy creates a bounded shared policy for one agent through the
+// protocol package. envd intentionally consumes the canonical protocol module
+// instead of carrying an envd-local policy implementation.
 // TODO: Return the created policy object ID once tx effect plumbing exists.
 func (c *Client) CreatePolicy(ctx context.Context, input PolicyInput) error {
-	err := c.executeMoveCall(ctx, "policy", "create_policy", []interface{}{
+	err := c.executeProtocolCall(ctx, "entry", "create_agent_policy", []interface{}{
 		c.orgID,
 		input.AgentAddress,
 		input.AllowedAction,
@@ -210,7 +212,7 @@ func (c *Client) CreatePolicy(ctx context.Context, input PolicyInput) error {
 
 // RevokePolicy revokes a previously created policy.
 func (c *Client) RevokePolicy(ctx context.Context, policyID string) error {
-	err := c.executeMoveCall(ctx, "policy", "revoke_policy", []interface{}{
+	err := c.executeProtocolCall(ctx, "entry", "revoke_agent_policy", []interface{}{
 		policyID,
 		c.orgID,
 	})
@@ -231,7 +233,7 @@ func (c *Client) ExecuteAction(ctx context.Context, evidence ActionEvidence) err
 		c.certID = certID
 	}
 
-	err := c.executeMoveCall(ctx, "policy", "execute_action", []interface{}{
+	err := c.executeProtocolCall(ctx, "entry", "execute_agent_action", []interface{}{
 		evidence.PolicyID,
 		c.orgID,
 		c.certID,
@@ -524,6 +526,10 @@ func (c *Client) ensureAgentCert(ctx context.Context) (string, error) {
 
 // executeProtocolCall builds, signs, and executes a Move call on the protocol package.
 func (c *Client) executeProtocolCall(ctx context.Context, module, function string, args []interface{}) error {
+	if c.protocolPackageID == "" {
+		return fmt.Errorf("protocol_package_id not configured; required for protocol call %s::%s", module, function)
+	}
+
 	if c.sponsor != nil {
 		req := SponsorRequest{
 			Sender:    c.keypair.Address(),

@@ -16,7 +16,7 @@ This MVP makes agent authority explicit as Sui objects:
 
 1. A human creates an organization and registers an agent identity.
 2. The human creates an `AgentPolicy` object that limits one agent by action kind, target scope, max uses, expiry, and gas budget.
-3. The agent emits canonical intent/result hashes through `policy::execute_action`.
+3. The agent emits canonical intent/result hashes through the shared protocol package (`fractalmind_protocol::entry::execute_agent_action`, backed by `agent_policy::execute_action`).
 4. The action becomes an `ActionExecuted` event tied to the policy, org, agent, target, and hashes.
 5. The human revokes the policy; post-revocation execution fails on-chain with abort code `8204`.
 
@@ -71,7 +71,7 @@ go run ./cmd/envd-policy-demo \
 
 ## Prior-work / originality disclosure
 
-FractalMind had existing agent runtime and Sui identity foundations before Sui Overflow 2026. The hackathon submission focuses on the new Sui-native bounded-agent trust loop built and packaged during this sprint: `AgentPolicy`, `ActionExecuted` proof semantics, deterministic evidence runner/CLI, Sui testnet proof pack, revocation failure proof, public packaging PR #44, demo video assets, and Live Judge Mode. Existing code is disclosed as the runtime foundation; the submitted differentiator is the new verifiable agent authorization and revocation layer on Sui.
+FractalMind had existing agent runtime and Sui identity foundations before Sui Overflow 2026. The hackathon submission focuses on the new Sui-native bounded-agent trust loop built and packaged during this sprint: `AgentPolicy`, `ActionExecuted` proof semantics, deterministic evidence runner/CLI, Sui testnet proof pack, revocation failure proof, public packaging PR #44, demo video assets, Live Judge Mode, and the protocol-first refactor that moved the policy primitive into `fractalmind-protocol`. Existing code is disclosed as the runtime foundation; the submitted differentiator is the new verifiable agent authorization and revocation layer on Sui.
 
 ## Mainnet deployment plan
 

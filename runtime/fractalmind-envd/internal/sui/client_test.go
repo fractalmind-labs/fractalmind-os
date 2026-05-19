@@ -160,11 +160,12 @@ func TestGoOffline(t *testing.T) {
 
 func TestCreatePolicy(t *testing.T) {
 	kp := testKeypair(t)
-	var calledModule, calledFunction string
+	var calledPackage, calledModule, calledFunction string
 	var capturedArgs []interface{}
 
 	mock := &mockRPC{
 		moveCallFn: func(_ context.Context, req models.MoveCallRequest) (models.TxnMetaData, error) {
+			calledPackage = req.PackageObjectId
 			calledModule = req.Module
 			calledFunction = req.Function
 			capturedArgs = req.Arguments
@@ -186,8 +187,8 @@ func TestCreatePolicy(t *testing.T) {
 		t.Fatalf("CreatePolicy: %v", err)
 	}
 
-	if calledModule != "policy" || calledFunction != "create_policy" {
-		t.Fatalf("expected policy.create_policy, got %s.%s", calledModule, calledFunction)
+	if calledPackage != "0xproto" || calledModule != "entry" || calledFunction != "create_agent_policy" {
+		t.Fatalf("expected 0xproto::entry::create_agent_policy, got %s::%s::%s", calledPackage, calledModule, calledFunction)
 	}
 
 	if len(capturedArgs) != 7 {
@@ -203,11 +204,12 @@ func TestCreatePolicy(t *testing.T) {
 
 func TestExecuteAction(t *testing.T) {
 	kp := testKeypair(t)
-	var calledModule, calledFunction string
+	var calledPackage, calledModule, calledFunction string
 	var capturedArgs []interface{}
 
 	mock := &mockRPC{
 		moveCallFn: func(_ context.Context, req models.MoveCallRequest) (models.TxnMetaData, error) {
+			calledPackage = req.PackageObjectId
 			calledModule = req.Module
 			calledFunction = req.Function
 			capturedArgs = req.Arguments
@@ -231,8 +233,8 @@ func TestExecuteAction(t *testing.T) {
 		t.Fatalf("ExecuteAction: %v", err)
 	}
 
-	if calledModule != "policy" || calledFunction != "execute_action" {
-		t.Fatalf("expected policy.execute_action, got %s.%s", calledModule, calledFunction)
+	if calledPackage != "0xproto" || calledModule != "entry" || calledFunction != "execute_agent_action" {
+		t.Fatalf("expected 0xproto::entry::execute_agent_action, got %s::%s::%s", calledPackage, calledModule, calledFunction)
 	}
 
 	if len(capturedArgs) != 8 {
