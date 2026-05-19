@@ -202,6 +202,39 @@ func TestCreatePolicy(t *testing.T) {
 	}
 }
 
+func TestRevokePolicy(t *testing.T) {
+	kp := testKeypair(t)
+	var calledPackage, calledModule, calledFunction string
+	var capturedArgs []interface{}
+
+	mock := &mockRPC{
+		moveCallFn: func(_ context.Context, req models.MoveCallRequest) (models.TxnMetaData, error) {
+			calledPackage = req.PackageObjectId
+			calledModule = req.Module
+			calledFunction = req.Function
+			capturedArgs = req.Arguments
+			return models.TxnMetaData{}, nil
+		},
+	}
+
+	client := newClientWithRPC(mock, kp, "0xpkg", "0xproto", "0xreg", "0xorg", "0xcert")
+
+	if err := client.RevokePolicy(context.Background(), "0xpolicy"); err != nil {
+		t.Fatalf("RevokePolicy: %v", err)
+	}
+
+	if calledPackage != "0xproto" || calledModule != "entry" || calledFunction != "revoke_agent_policy" {
+		t.Fatalf("expected 0xproto::entry::revoke_agent_policy, got %s::%s::%s", calledPackage, calledModule, calledFunction)
+	}
+
+	if len(capturedArgs) != 2 {
+		t.Fatalf("expected 2 args, got %d", len(capturedArgs))
+	}
+	if capturedArgs[0] != "0xpolicy" || capturedArgs[1] != "0xorg" {
+		t.Fatalf("unexpected revoke args: %#v", capturedArgs)
+	}
+}
+
 func TestExecuteAction(t *testing.T) {
 	kp := testKeypair(t)
 	var calledPackage, calledModule, calledFunction string
