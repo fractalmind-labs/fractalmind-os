@@ -127,6 +127,44 @@ const moveCallCases: Array<{
       }),
   },
   {
+    name: 'agentPolicy.createPolicy',
+    expectedFunction: 'create_agent_policy',
+    build: (sdk) =>
+      sdk.agentPolicy.createPolicy({
+        organizationId: '0x23',
+        agent: '0x24',
+        allowedAction: 'shell_exec',
+        targetScope: 'host:worker-1',
+        maxUses: 2n,
+        expiresAtMs: 1_000_000n,
+        maxGasBudget: 10_000_000n,
+      }),
+  },
+  {
+    name: 'agentPolicy.revokePolicy',
+    expectedFunction: 'revoke_agent_policy',
+    build: (sdk) =>
+      sdk.agentPolicy.revokePolicy({
+        policyId: '0x25',
+        organizationId: '0x23',
+      }),
+  },
+  {
+    name: 'agentPolicy.executeAction',
+    expectedFunction: 'execute_agent_action',
+    build: (sdk) =>
+      sdk.agentPolicy.executeAction({
+        policyId: '0x25',
+        organizationId: '0x23',
+        certificateId: '0x22',
+        actionKind: 'shell_exec',
+        targetScope: 'host:worker-1',
+        intentHash: Array.from({ length: 32 }, (_, i) => i),
+        resultHash: Array.from({ length: 32 }, (_, i) => 31 - i),
+        gasBudget: 1000n,
+      }),
+  },
+  {
     name: 'task.createTask',
     expectedFunction: 'create_task',
     build: (sdk) =>
@@ -440,4 +478,44 @@ test('agent.getAgentCertificate resolves by owner and org id', async () => {
   assert.ok(cert);
   assert.equal(cert.objectId, '0x00000000000000000000000000000000000000000000000000000000000000c2');
   assert.deepEqual(cert.capabilityTags, ['qa']);
+});
+
+test('agentPolicy.getPolicy parses move object fields', async () => {
+  const mockClient = new MockSuiClient({
+    '0x400': {
+      data: {
+        objectId: '0x400',
+        type: '0x123::agent_policy::AgentPolicy',
+        content: {
+          dataType: 'moveObject',
+          fields: {
+            org_id: '0xaaa',
+            owner: '0xbbb',
+            agent: '0xccc',
+            allowed_action: 'shell_exec',
+            target_scope: 'host:worker-1',
+            max_uses: '2',
+            uses_consumed: '1',
+            expires_at_ms: '1000000',
+            max_gas_budget: '10000000',
+            revoked: false,
+          },
+        },
+      },
+    },
+  });
+
+  const sdk = newSdk(mockClient);
+  const policy = await sdk.agentPolicy.getPolicy('0x400');
+
+  assert.equal(policy.orgId, '0x0000000000000000000000000000000000000000000000000000000000000aaa');
+  assert.equal(policy.owner, '0x0000000000000000000000000000000000000000000000000000000000000bbb');
+  assert.equal(policy.agent, '0x0000000000000000000000000000000000000000000000000000000000000ccc');
+  assert.equal(policy.allowedAction, 'shell_exec');
+  assert.equal(policy.targetScope, 'host:worker-1');
+  assert.equal(policy.maxUses, 2n);
+  assert.equal(policy.usesConsumed, 1n);
+  assert.equal(policy.expiresAtMs, 1_000_000n);
+  assert.equal(policy.maxGasBudget, 10_000_000n);
+  assert.equal(policy.revoked, false);
 });

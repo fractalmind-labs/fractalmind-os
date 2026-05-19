@@ -1,4 +1,5 @@
 import { AgentApi } from './agent';
+import { AgentPolicyApi } from './agent-policy';
 import { FractalMindClient } from './client';
 import { FractalApi } from './fractal';
 import { GovernanceApi } from './governance';
@@ -10,6 +11,7 @@ export class FractalMindSDK {
   public readonly client: FractalMindClient;
   public readonly organization: OrganizationApi;
   public readonly agent: AgentApi;
+  public readonly agentPolicy: AgentPolicyApi;
   public readonly task: TaskApi;
   public readonly fractal: FractalApi;
   public readonly governance: GovernanceApi;
@@ -18,6 +20,7 @@ export class FractalMindSDK {
     this.client = new FractalMindClient(options);
     this.organization = new OrganizationApi(this.client);
     this.agent = new AgentApi(this.client);
+    this.agentPolicy = new AgentPolicyApi(this.client);
     this.task = new TaskApi(this.client);
     this.fractal = new FractalApi(this.client);
     this.governance = new GovernanceApi(this.client);
@@ -27,6 +30,7 @@ export class FractalMindSDK {
 export { FractalMindClient } from './client';
 export { OrganizationApi } from './organization';
 export { AgentApi } from './agent';
+export { AgentPolicyApi } from './agent-policy';
 export { TaskApi } from './task';
 export { FractalApi } from './fractal';
 export { GovernanceApi } from './governance';
@@ -34,9 +38,11 @@ export { GovernanceApi } from './governance';
 export type {
   Address,
   AgentCertificateData,
+  AgentPolicyData,
   AssignTaskInput,
   CastVoteInput,
   CloseProposalVotingInput,
+  CreateAgentPolicyInput,
   CompleteTaskInput,
   CreateGovernanceInput,
   CreateOrganizationInput,
@@ -44,6 +50,7 @@ export type {
   CreateSubOrganizationInput,
   CreateTaskInput,
   DetachSubOrganizationInput,
+  ExecuteAgentActionInput,
   ExecuteProposalInput,
   FinalizeProposalVotingInput,
   FractalMindClientOptions,
@@ -55,6 +62,7 @@ export type {
   ProposalData,
   RejectTaskInput,
   RegisterAgentInput,
+  RevokeAgentPolicyInput,
   StartProposalVotingInput,
   SubmitTaskInput,
   TaskData,

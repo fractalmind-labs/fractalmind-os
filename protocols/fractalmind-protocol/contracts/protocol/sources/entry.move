@@ -14,6 +14,7 @@ module fractalmind_protocol::entry {
     use fractalmind_protocol::governance::{Self, Governance, Proposal};
     use fractalmind_protocol::review::{Self, Review};
     use fractalmind_protocol::profile;
+    use fractalmind_protocol::agent_policy::{Self, AgentPolicy};
 
     // ===== Organization Entry Points =====
 
@@ -93,6 +94,62 @@ module fractalmind_protocol::entry {
         ctx: &TxContext,
     ) {
         agent::update_capabilities(cert, new_tags, ctx);
+    }
+
+    // ===== Agent Policy Entry Points =====
+
+    public entry fun create_agent_policy(
+        org: &Organization,
+        agent_addr: address,
+        allowed_action: String,
+        target_scope: String,
+        max_uses: u64,
+        expires_at_ms: u64,
+        max_gas_budget: u64,
+        ctx: &mut TxContext,
+    ) {
+        agent_policy::create_policy(
+            org,
+            agent_addr,
+            allowed_action,
+            target_scope,
+            max_uses,
+            expires_at_ms,
+            max_gas_budget,
+            ctx,
+        );
+    }
+
+    public entry fun revoke_agent_policy(
+        policy: &mut AgentPolicy,
+        org: &Organization,
+        ctx: &TxContext,
+    ) {
+        agent_policy::revoke_policy(policy, org, ctx);
+    }
+
+    public entry fun execute_agent_action(
+        policy: &mut AgentPolicy,
+        org: &Organization,
+        cert: &AgentCertificate,
+        action_kind: String,
+        target_scope: String,
+        intent_hash: vector<u8>,
+        result_hash: vector<u8>,
+        gas_budget: u64,
+        ctx: &TxContext,
+    ) {
+        agent_policy::execute_action(
+            policy,
+            org,
+            cert,
+            action_kind,
+            target_scope,
+            intent_hash,
+            result_hash,
+            gas_budget,
+            ctx,
+        );
     }
 
     // ===== Task Entry Points =====
