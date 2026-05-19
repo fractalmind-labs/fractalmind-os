@@ -9,7 +9,9 @@ subdir = "crates/sui-framework/packages/sui-framework"
 rev = "framework/testnet"
 
 [dependencies.fractalmind_protocol]
-local = "../../../fractalmind-protocol/contracts/protocol"
+git = "https://github.com/fractalmind-ai/fractalmind-protocol.git"
+subdir = "contracts/protocol"
+rev = "f3a4f611d30313f021e5db85a2aa52481a416570"
 addr_subst = { "fractalmind_protocol" = "0x685d6fb6ed8b0e679bb467ea73111819ec6ff68b1466d24ca26b400095dcdf24" }
 
 [addresses]
