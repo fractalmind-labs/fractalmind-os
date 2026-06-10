@@ -186,6 +186,13 @@ PROVIDERS: Dict[str, Dict] = {
             'mode': 'cli_append',
             'flag': '--append-system-prompt',
         },
+        'agents_md': {
+            # Claude Code reads AGENTS.md from the working directory natively,
+            # so skip injecting it via `--append-system-prompt`. Large appended
+            # system prompts also flip subscription (OAuth) sessions into
+            # third-party-app billing (API 400 when extra usage is disabled).
+            'mode': 'cwd',
+        },
         'mcp_config': {
             'mode': 'cli_json',
             'flag': '--mcp-config',
