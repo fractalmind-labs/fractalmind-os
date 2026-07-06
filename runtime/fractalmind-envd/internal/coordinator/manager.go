@@ -11,6 +11,7 @@ import (
 	"github.com/fractalmind-ai/fractalmind-envd/internal/agent"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/heartbeat"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/ws"
+	"github.com/fractalmind-ai/fractalmind-envd/internal/wsauth"
 	"github.com/gorilla/websocket"
 )
 
@@ -77,6 +78,15 @@ type Manager struct {
 	commandTimeout  time.Duration
 	nextTempID      uint64
 	nextCommandID   uint64
+
+	// Control-channel authentication. When signer is set, every worker must
+	// complete the mutual challenge-response in HandleConnection before any
+	// message is processed. allowedSigners, when non-empty, restricts which
+	// verified SUI identities may register (authorization); empty means any
+	// authenticated identity is accepted.
+	signer           wsauth.Signer
+	allowedSigners   []string
+	handshakeTimeout time.Duration
 }
 
 func NewManager(commandTimeout time.Duration) *Manager {
@@ -85,10 +95,18 @@ func NewManager(commandTimeout time.Duration) *Manager {
 	}
 
 	return &Manager{
-		nodes:           make(map[string]*connectedNode),
-		pendingCommands: make(map[string]*pendingCommand),
-		commandTimeout:  commandTimeout,
+		nodes:            make(map[string]*connectedNode),
+		pendingCommands:  make(map[string]*pendingCommand),
+		commandTimeout:   commandTimeout,
+		handshakeTimeout: 15 * time.Second,
 	}
+}
+
+// SetAuth enables control-channel authentication with the coordinator's SUI
+// keypair and an optional worker allowlist.
+func (m *Manager) SetAuth(signer wsauth.Signer, allowedSigners []string) {
+	m.signer = signer
+	m.allowedSigners = allowedSigners
 }
 
 func (m *Manager) tempID() string {
@@ -100,9 +118,21 @@ func (m *Manager) commandID() string {
 }
 
 func (m *Manager) HandleConnection(conn *websocket.Conn) {
-	client := &nodeConn{ws: conn}
 	nodeID := m.tempID()
 
+	if m.signer != nil {
+		addr, err := m.authenticate(conn)
+		if err != nil {
+			log.Printf("[coordinator] worker %s auth rejected: %v", nodeID, err)
+			conn.Close()
+			return
+		}
+		log.Printf("[coordinator] worker %s authenticated as %s", nodeID, addr)
+	} else {
+		log.Printf("[coordinator] WARNING: worker %s connected without control-channel auth (no signer configured)", nodeID)
+	}
+
+	client := &nodeConn{ws: conn}
 	log.Printf("[coordinator] new worker connection: %s", nodeID)
 
 	for {
@@ -120,6 +150,82 @@ func (m *Manager) HandleConnection(conn *websocket.Conn) {
 		}
 		nodeID = nextID
 	}
+}
+
+// authenticate runs the coordinator side of the mutual challenge-response. It
+// proves the coordinator's identity over the worker-issued nonce, then verifies
+// the worker's proof over a coordinator-issued nonce and checks the allowlist.
+// It returns the verified worker SUI address on success.
+func (m *Manager) authenticate(conn *websocket.Conn) (string, error) {
+	deadline := time.Now().Add(m.handshakeTimeout)
+	_ = conn.SetReadDeadline(deadline)
+	_ = conn.SetWriteDeadline(deadline)
+	defer func() {
+		_ = conn.SetReadDeadline(time.Time{})
+		_ = conn.SetWriteDeadline(time.Time{})
+	}()
+
+	// Step 1: receive the worker's challenge nonce.
+	var init wsauth.InitPayload
+	if err := readTyped(conn, wsauth.MsgAuthInit, &init); err != nil {
+		return "", fmt.Errorf("read auth_init: %w", err)
+	}
+	clientNonce, err := wsauth.DecodeNonce(init.ClientNonce)
+	if err != nil {
+		return "", fmt.Errorf("bad client nonce: %w", err)
+	}
+
+	// Step 2: prove our identity over the worker nonce and issue our own.
+	serverNonce, serverNonceHex, err := wsauth.NewNonce()
+	if err != nil {
+		return "", err
+	}
+	challenge := wsauth.ChallengePayload{
+		ServerNonce: serverNonceHex,
+		Proof:       wsauth.Prove(m.signer, clientNonce),
+	}
+	if err := writeTyped(conn, wsauth.MsgAuthChallenge, challenge); err != nil {
+		return "", fmt.Errorf("send auth_challenge: %w", err)
+	}
+
+	// Step 3: verify the worker's proof over our nonce.
+	var resp wsauth.ResponsePayload
+	if err := readTyped(conn, wsauth.MsgAuthResponse, &resp); err != nil {
+		return "", fmt.Errorf("read auth_response: %w", err)
+	}
+	addr, err := wsauth.VerifyProof(resp.Proof, serverNonce)
+	if err != nil {
+		_ = writeTyped(conn, wsauth.MsgAuthError, wsauth.ErrorPayload{Reason: "invalid worker proof"})
+		return "", fmt.Errorf("worker identity invalid: %w", err)
+	}
+	if !wsauth.AddressAllowed(addr, m.allowedSigners) {
+		_ = writeTyped(conn, wsauth.MsgAuthError, wsauth.ErrorPayload{Reason: "worker not authorized"})
+		return "", fmt.Errorf("worker %s not in allowed_signers", addr)
+	}
+
+	if err := writeTyped(conn, wsauth.MsgAuthOK, struct{}{}); err != nil {
+		return "", fmt.Errorf("send auth_ok: %w", err)
+	}
+	return addr, nil
+}
+
+func writeTyped(conn *websocket.Conn, msgType string, payload interface{}) error {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	return conn.WriteJSON(ws.Message{Type: msgType, Payload: data})
+}
+
+func readTyped(conn *websocket.Conn, wantType string, out interface{}) error {
+	var raw ws.Message
+	if err := conn.ReadJSON(&raw); err != nil {
+		return err
+	}
+	if raw.Type != wantType {
+		return fmt.Errorf("expected %q, got %q", wantType, raw.Type)
+	}
+	return json.Unmarshal(raw.Payload, out)
 }
 
 func (m *Manager) handleMessage(currentID string, conn *nodeConn, msg ws.Message) (string, error) {

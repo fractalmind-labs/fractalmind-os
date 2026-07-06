@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/fractalmind-ai/fractalmind-envd/internal/heartbeat"
+	"github.com/fractalmind-ai/fractalmind-envd/internal/wsauth"
 	"github.com/gorilla/websocket"
 )
 
@@ -60,6 +61,12 @@ func NewServer(addr string, commandTimeout time.Duration, apiToken string) *Serv
 		pingInterval: 30 * time.Second,
 		done:         make(chan struct{}),
 	}
+}
+
+// SetAuth enables control-channel authentication on the worker /ws endpoint,
+// using the coordinator's SUI keypair and an optional worker allowlist.
+func (s *Server) SetAuth(signer wsauth.Signer, allowedSigners []string) {
+	s.manager.SetAuth(signer, allowedSigners)
 }
 
 func (s *Server) Start() error {

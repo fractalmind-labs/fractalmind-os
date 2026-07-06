@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -91,6 +92,19 @@ func main() {
 	// Initialize components
 	scanner := agent.NewScanner(cfg.Agents.ScanMethod)
 	wsClient := ws.NewClient(cfg.Gateway.URL, reconnectWait)
+
+	// Control-channel identity: load (or generate) this node's SUI keypair so the
+	// coordinator<->worker channel is mutually authenticated. Loaded independently
+	// of the full SUI role so control-channel auth works even when on-chain
+	// features are disabled.
+	var ctrlKey *sui.Keypair
+	if kp, kerr := sui.LoadOrGenerateKeypair(cfg.SUI.KeypairPath); kerr != nil {
+		log.Printf("[auth] WARNING: could not load control-channel keypair (%v); control channel will be UNAUTHENTICATED", kerr)
+	} else {
+		ctrlKey = kp
+		wsClient.SetAuth(ctrlKey, cfg.Gateway.CoordinatorAddress)
+		log.Printf("[auth] control channel enabled, node identity=%s", ctrlKey.Address())
+	}
 
 	// Track agents and restart counts
 	restartCounts := make(map[string]int)
@@ -277,6 +291,12 @@ func main() {
 
 	if activeRoles.Coordinator {
 		coordinatorServer = coordinator.NewServer(cfg.Coordinator.ListenAddr, 30*time.Second, cfg.Coordinator.APIToken)
+		if ctrlKey != nil {
+			coordinatorServer.SetAuth(ctrlKey, cfg.Coordinator.AllowedSigners)
+			log.Printf("[coordinator] control-channel auth enabled (allowed_signers=%d)", len(cfg.Coordinator.AllowedSigners))
+		} else {
+			log.Printf("[coordinator] WARNING: control-channel auth NOT enabled (no keypair); /ws accepts unauthenticated workers")
+		}
 		if err := coordinatorServer.Start(); err != nil {
 			log.Fatalf("[coordinator] failed to start server on %s: %v", cfg.Coordinator.ListenAddr, err)
 		}
@@ -580,9 +600,21 @@ func handleCommand(cmd ws.CommandPayload, scanner *agent.Scanner, cfg *config.Co
 		result["message"] = fmt.Sprintf("agent %s killed", cmd.AgentID)
 
 	case "shell":
+		if !cfg.Agents.AllowShell {
+			result["success"] = false
+			result["error"] = "shell command disabled (set agents.allow_shell=true to enable)"
+			log.Printf("[cmd] rejected shell: agents.allow_shell is false")
+			return result
+		}
 		if cmd.Args == "" {
 			result["success"] = false
 			result["error"] = "args required (shell command)"
+			return result
+		}
+		if !shellCommandAllowed(cmd.Args, cfg.Agents.ShellAllowlist) {
+			result["success"] = false
+			result["error"] = "shell command not in agents.shell_allowlist"
+			log.Printf("[cmd] rejected shell: command not in allowlist")
 			return result
 		}
 		out, err := exec.Command("bash", "-c", cmd.Args).CombinedOutput()
@@ -601,6 +633,27 @@ func handleCommand(cmd ws.CommandPayload, scanner *agent.Scanner, cfg *config.Co
 
 	log.Printf("[cmd] %s result: success=%v", cmd.Command, result["success"])
 	return result
+}
+
+// shellCommandAllowed reports whether a shell command line is permitted by the
+// allowlist. An empty allowlist permits any command (AllowShell must still be
+// true). A non-empty allowlist matches argv[0] (the first whitespace-separated
+// token) against the listed program names.
+func shellCommandAllowed(cmdLine string, allowlist []string) bool {
+	if len(allowlist) == 0 {
+		return true
+	}
+	fields := strings.Fields(cmdLine)
+	if len(fields) == 0 {
+		return false
+	}
+	prog := fields[0]
+	for _, a := range allowlist {
+		if a == prog {
+			return true
+		}
+	}
+	return false
 }
 
 // syncPeers syncs WireGuard peers, routing through WSS relay when active.

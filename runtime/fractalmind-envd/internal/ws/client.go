@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fractalmind-ai/fractalmind-envd/internal/wsauth"
 	"github.com/gorilla/websocket"
 )
 
@@ -32,15 +33,33 @@ type Client struct {
 	mu            sync.Mutex
 	done          chan struct{}
 	onCommand     func(CommandPayload)
+
+	// Control-channel authentication. signer proves this worker's SUI
+	// identity to the coordinator; expectedCoordAddr, when non-empty, pins the
+	// coordinator's SUI address so a spoofed gateway cannot drive this worker.
+	signer            wsauth.Signer
+	expectedCoordAddr string
+	handshakeTimeout  time.Duration
 }
 
 // NewClient creates a WebSocket client.
 func NewClient(url string, reconnectWait time.Duration) *Client {
 	return &Client{
-		url:           url,
-		reconnectWait: reconnectWait,
-		done:          make(chan struct{}),
+		url:              url,
+		reconnectWait:    reconnectWait,
+		done:             make(chan struct{}),
+		handshakeTimeout: 15 * time.Second,
 	}
+}
+
+// SetAuth enables control-channel authentication. signer is this worker's SUI
+// keypair. expectedCoordAddr, if non-empty, is the coordinator SUI address this
+// worker will accept; an empty value authenticates the coordinator's identity
+// but does not pin it (a WARNING is logged, since that leaves the MITM path
+// open).
+func (c *Client) SetAuth(signer wsauth.Signer, expectedCoordAddr string) {
+	c.signer = signer
+	c.expectedCoordAddr = expectedCoordAddr
 }
 
 // OnCommand sets the handler for incoming commands.
@@ -69,6 +88,18 @@ func (c *Client) Connect() {
 
 		log.Printf("[ws] connected to %s", c.url)
 
+		if c.signer != nil {
+			if err := c.authenticate(conn); err != nil {
+				log.Printf("[ws] control-channel auth failed: %v, retrying in %s", err, c.reconnectWait)
+				conn.Close()
+				time.Sleep(c.reconnectWait)
+				continue
+			}
+			log.Printf("[ws] control-channel authenticated (coordinator verified)")
+		} else {
+			log.Printf("[ws] WARNING: control-channel auth disabled (no signer) — commands are unauthenticated")
+		}
+
 		c.mu.Lock()
 		c.conn = conn
 		c.mu.Unlock()
@@ -82,6 +113,89 @@ func (c *Client) Connect() {
 		log.Printf("[ws] disconnected, reconnecting in %s", c.reconnectWait)
 		time.Sleep(c.reconnectWait)
 	}
+}
+
+// authenticate runs the mutual challenge-response handshake before any command
+// traffic. It verifies the coordinator's identity (and pins it when configured)
+// and proves this worker's identity to the coordinator.
+func (c *Client) authenticate(conn *websocket.Conn) error {
+	deadline := time.Now().Add(c.handshakeTimeout)
+	_ = conn.SetReadDeadline(deadline)
+	_ = conn.SetWriteDeadline(deadline)
+	defer func() {
+		_ = conn.SetReadDeadline(time.Time{})
+		_ = conn.SetWriteDeadline(time.Time{})
+	}()
+
+	// Step 1: send our challenge nonce.
+	clientNonce, clientNonceHex, err := wsauth.NewNonce()
+	if err != nil {
+		return err
+	}
+	if err := writeMsg(conn, wsauth.MsgAuthInit, wsauth.InitPayload{ClientNonce: clientNonceHex}); err != nil {
+		return fmt.Errorf("send auth_init: %w", err)
+	}
+
+	// Step 2: receive the coordinator's proof (over our nonce) and its nonce.
+	var challenge wsauth.ChallengePayload
+	if err := readMsg(conn, wsauth.MsgAuthChallenge, &challenge); err != nil {
+		return fmt.Errorf("read auth_challenge: %w", err)
+	}
+	coordAddr, err := wsauth.VerifyProof(challenge.Proof, clientNonce)
+	if err != nil {
+		return fmt.Errorf("coordinator identity invalid: %w", err)
+	}
+	if c.expectedCoordAddr != "" {
+		if coordAddr != c.expectedCoordAddr {
+			return fmt.Errorf("coordinator address %s does not match pinned %s", coordAddr, c.expectedCoordAddr)
+		}
+	} else {
+		log.Printf("[ws] WARNING: coordinator_address not pinned; accepting coordinator %s on first sight (MITM not fully closed)", coordAddr)
+	}
+
+	// Step 3: prove our identity over the coordinator's nonce.
+	serverNonce, err := wsauth.DecodeNonce(challenge.ServerNonce)
+	if err != nil {
+		return fmt.Errorf("bad server nonce: %w", err)
+	}
+	if err := writeMsg(conn, wsauth.MsgAuthResponse, wsauth.ResponsePayload{Proof: wsauth.Prove(c.signer, serverNonce)}); err != nil {
+		return fmt.Errorf("send auth_response: %w", err)
+	}
+
+	// Step 4: await acceptance.
+	var raw Message
+	if err := conn.ReadJSON(&raw); err != nil {
+		return fmt.Errorf("read auth result: %w", err)
+	}
+	switch raw.Type {
+	case wsauth.MsgAuthOK:
+		return nil
+	case wsauth.MsgAuthError:
+		var ep wsauth.ErrorPayload
+		_ = json.Unmarshal(raw.Payload, &ep)
+		return fmt.Errorf("coordinator rejected auth: %s", ep.Reason)
+	default:
+		return fmt.Errorf("unexpected auth result type %q", raw.Type)
+	}
+}
+
+func writeMsg(conn *websocket.Conn, msgType string, payload interface{}) error {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	return conn.WriteJSON(Message{Type: msgType, Payload: data})
+}
+
+func readMsg(conn *websocket.Conn, wantType string, out interface{}) error {
+	var raw Message
+	if err := conn.ReadJSON(&raw); err != nil {
+		return err
+	}
+	if raw.Type != wantType {
+		return fmt.Errorf("expected %q, got %q", wantType, raw.Type)
+	}
+	return json.Unmarshal(raw.Payload, out)
 }
 
 // Send sends a message to Gateway.
