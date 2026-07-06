@@ -22,14 +22,15 @@ type ServerConfig struct {
 // Session is a single browser peer connection streaming the desktop and
 // receiving input.
 type Session struct {
-	cfg      ServerConfig
-	pc       *webrtc.PeerConnection
-	track    *webrtc.TrackLocalStaticSample
-	injector Injector
-	capture  *Capture
-	cancel   context.CancelFunc
-	closed   chan struct{}
-	once     sync.Once
+	cfg       ServerConfig
+	pc        *webrtc.PeerConnection
+	track     *webrtc.TrackLocalStaticSample
+	injector  Injector
+	capture   *Capture
+	cancel    context.CancelFunc
+	closed    chan struct{}
+	once      sync.Once // guards startStreaming
+	closeOnce sync.Once // guards teardown; Close is called from several goroutines
 }
 
 // NewSession builds a peer connection with a single H.264 video track (sendonly)
@@ -177,20 +178,20 @@ func (s *Session) startStreaming(ctx context.Context) {
 	})
 }
 
-// Close tears down the session.
+// Close tears down the session. It is safe to call concurrently and more than
+// once — Close is invoked from the HTTP session-replace path, the ICE state
+// callback, and the streaming goroutine, which can overlap.
 func (s *Session) Close() {
-	s.cancel()
-	select {
-	case <-s.closed:
-	default:
+	s.closeOnce.Do(func() {
+		s.cancel()
 		close(s.closed)
-	}
-	if s.injector != nil {
-		_ = s.injector.Close()
-	}
-	if s.pc != nil {
-		_ = s.pc.Close()
-	}
+		if s.injector != nil {
+			_ = s.injector.Close()
+		}
+		if s.pc != nil {
+			_ = s.pc.Close()
+		}
+	})
 }
 
 // Done returns a channel closed when the session ends.
