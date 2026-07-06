@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>envd desktop</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: -apple-system, system-ui, sans-serif; }
+  #video { width: 100vw; height: 100vh; object-fit: contain; background: #000; touch-action: none; }
+  #bar { position: fixed; top: 0; left: 0; right: 0; display: flex; gap: 8px; align-items: center;
+         padding: 6px 10px; background: rgba(0,0,0,.55); color: #ddd; font-size: 13px; z-index: 10; }
+  #bar.hide { display: none; }
+  button, input { font-size: 14px; padding: 6px 10px; border-radius: 6px; border: 1px solid #555; background: #222; color: #eee; }
+  #status { margin-left: auto; }
+  #kbd { position: fixed; opacity: 0; pointer-events: none; height: 0; }
+</style>
+</head>
+<body>
+  <div id="bar">
+    <button id="connect">Connect</button>
+    <button id="kbdBtn">⌨︎ Keyboard</button>
+    <button id="hideBtn">Hide bar</button>
+    <span id="status">idle</span>
+  </div>
+  <video id="video" autoplay playsinline muted></video>
+  <input id="kbd" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+<script>
+const video = document.getElementById('video');
+const statusEl = document.getElementById('status');
+const bar = document.getElementById('bar');
+const kbd = document.getElementById('kbd');
+let pc = null, input = null;
+
+function setStatus(s) { statusEl.textContent = s; }
+function token() { return new URLSearchParams(location.search).get('token') || ''; }
+
+function send(ev) {
+  if (input && input.readyState === 'open') { try { input.send(JSON.stringify(ev)); } catch (e) {} }
+}
+
+// Map a pointer/touch event on the <video> element to normalized [0,1] coords
+// within the actual displayed frame (object-fit: contain letterboxes).
+function norm(clientX, clientY) {
+  const r = video.getBoundingClientRect();
+  const vw = video.videoWidth || r.width, vh = video.videoHeight || r.height;
+  const scale = Math.min(r.width / vw, r.height / vh);
+  const dispW = vw * scale, dispH = vh * scale;
+  const offX = r.left + (r.width - dispW) / 2, offY = r.top + (r.height - dispH) / 2;
+  let x = (clientX - offX) / dispW, y = (clientY - offY) / dispH;
+  return { x: Math.max(0, Math.min(1, x)), y: Math.max(0, Math.min(1, y)) };
+}
+
+async function connect() {
+  setStatus('connecting…');
+  pc = new RTCPeerConnection({ iceServers: window.__ICE__ || [{ urls: 'stun:stun.l.google.com:19302' }] });
+  pc.addTransceiver('video', { direction: 'recvonly' });
+  input = pc.createDataChannel('input', { ordered: true });
+  input.onopen = () => setStatus('connected');
+
+  pc.ontrack = (e) => { video.srcObject = e.streams[0]; };
+  pc.oniceconnectionstatechange = () => setStatus(pc.iceConnectionState);
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  await new Promise(res => {
+    if (pc.iceGatheringState === 'complete') return res();
+    const check = () => { if (pc.iceGatheringState === 'complete') { pc.removeEventListener('icegatheringstatechange', check); res(); } };
+    pc.addEventListener('icegatheringstatechange', check);
+    setTimeout(res, 4000);
+  });
+
+  const headers = { 'Content-Type': 'application/json' };
+  const t = token(); if (t) headers['Authorization'] = 'Bearer ' + t;
+  const resp = await fetch('/offer' + (t ? ('?token=' + encodeURIComponent(t)) : ''), {
+    method: 'POST', headers, body: JSON.stringify({ offer: pc.localDescription })
+  });
+  if (!resp.ok) { setStatus('signal failed: ' + resp.status); return; }
+  const { answer } = await resp.json();
+  await pc.setRemoteDescription(answer);
+}
+
+// Pointer input (covers mouse + touch via Pointer Events).
+let down = false;
+video.addEventListener('pointerdown', (e) => { e.preventDefault(); const p = norm(e.clientX, e.clientY); send({ t: 'move', x: p.x, y: p.y }); send({ t: 'down', b: e.button || 0 }); down = true; });
+video.addEventListener('pointermove', (e) => { if (!down && e.pointerType === 'touch') return; const p = norm(e.clientX, e.clientY); send({ t: 'move', x: p.x, y: p.y }); });
+video.addEventListener('pointerup', (e) => { e.preventDefault(); send({ t: 'up', b: e.button || 0 }); down = false; });
+video.addEventListener('contextmenu', (e) => e.preventDefault());
+video.addEventListener('wheel', (e) => { e.preventDefault(); send({ t: 'scroll', dy: e.deltaY }); }, { passive: false });
+
+// Keyboard via a hidden input that holds focus on mobile.
+kbd.addEventListener('keydown', (e) => { e.preventDefault(); send({ t: 'key', k: e.key, down: true }); });
+document.getElementById('kbdBtn').addEventListener('click', () => kbd.focus());
+document.getElementById('hideBtn').addEventListener('click', () => bar.classList.toggle('hide'));
+document.getElementById('connect').addEventListener('click', connect);
+</script>
+</body>
+</html>
