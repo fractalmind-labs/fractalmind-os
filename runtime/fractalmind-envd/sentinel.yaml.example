@@ -16,12 +16,24 @@ roles:
 coordinator:
   listen_addr: ":8080" # Bind address for the embedded coordinator API when roles.coordinator=true
   api_token: ""        # Optional: set bearer token to protect /api/* endpoints (Authorization: Bearer <token>)
+  # The worker /ws control channel is authenticated by mutual Ed25519
+  # challenge-response tied to each node's SUI identity (uses sui.keypair_path).
+  # allowed_signers restricts which verified worker SUI addresses may register.
+  # Empty = any authenticated identity is accepted (still no anonymous access).
+  allowed_signers: []
+  # - "0x<worker-sui-address>"
 
 agents:
   scan_method: tmux    # tmux | systemd | docker
   scan_interval: 10s
   auto_restart: true
   max_restart_attempts: 3
+  # Remote arbitrary shell (bash -c) is OFF by default. Enable deliberately.
+  allow_shell: false
+  # Optional: restrict shell to these argv[0] program names (empty = any when allow_shell=true).
+  shell_allowlist: []
+  # - "tmux"
+  # - "systemctl"
 
 heartbeat:
   interval: 30s        # Relay nodes include relay_load in P2P heartbeat
@@ -90,3 +102,8 @@ relay:
 gateway:
   url: ws://localhost:8080/ws
   reconnect_interval: 5s
+  # Pin the coordinator's SUI address the worker will accept on the control
+  # channel. Strongly recommended: without it a spoofed gateway is authenticated
+  # on first sight (the worker still verifies the coordinator proves an identity,
+  # but cannot tell it is the *right* one). Derive from the coordinator's sui key.
+  coordinator_address: "" # "0x<coordinator-sui-address>"

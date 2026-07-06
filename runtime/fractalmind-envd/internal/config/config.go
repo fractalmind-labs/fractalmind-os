@@ -36,11 +36,20 @@ type RolesConfig struct {
 type CoordinatorConfig struct {
 	ListenAddr string `yaml:"listen_addr"`
 	APIToken   string `yaml:"api_token"`
+	// AllowedSigners, when non-empty, restricts which verified worker SUI
+	// addresses may register on the control channel. Empty = any authenticated
+	// identity accepted.
+	AllowedSigners []string `yaml:"allowed_signers"`
 }
 
 type GatewayConfig struct {
 	URL               string `yaml:"url"`
 	ReconnectInterval string `yaml:"reconnect_interval"`
+	// CoordinatorAddress pins the coordinator's SUI address the worker will
+	// accept on the control channel. Strongly recommended: without it a spoofed
+	// gateway can still be accepted (MITM), though it is authenticated on first
+	// sight.
+	CoordinatorAddress string `yaml:"coordinator_address"`
 }
 
 type IdentityConfig struct {
@@ -53,6 +62,12 @@ type AgentsConfig struct {
 	ScanInterval       string `yaml:"scan_interval"`
 	AutoRestart        bool   `yaml:"auto_restart"`
 	MaxRestartAttempts int    `yaml:"max_restart_attempts"`
+	// AllowShell gates the arbitrary `shell` command (bash -c). Default false:
+	// the worker refuses remote shell unless an operator opts in.
+	AllowShell bool `yaml:"allow_shell"`
+	// ShellAllowlist, when non-empty, restricts `shell` to commands whose first
+	// token (argv[0]) is listed. Empty with AllowShell=true means any command.
+	ShellAllowlist []string `yaml:"shell_allowlist"`
 }
 
 type HeartbeatConfig struct {
