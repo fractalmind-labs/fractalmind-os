@@ -150,9 +150,31 @@ func (s *Session) startStreaming(ctx context.Context) {
 				s.Close()
 				return
 			}
-			frameDur := time.Second / time.Duration(max(1, s.cfg.Capture.FPS))
-			if s.cfg.Capture.FPS == 0 {
-				frameDur = time.Second / 25
+			fps := s.cfg.Capture.FPS
+			if fps <= 0 {
+				fps = 25
+			}
+			frameDur := time.Second / time.Duration(fps)
+
+			// Assemble NAL units into access units (frames) and write ONE sample
+			// per frame. A keyframe is SPS+PPS+IDR — three separate NALs that
+			// belong to the same picture and must share one RTP timestamp. Writing
+			// each NAL as its own sample (with a frame's Duration) mis-times the
+			// timestamps so a real decoder cannot reassemble the access unit and
+			// renders green. We flush the buffered AU when a new picture starts
+			// (a VCL NAL after we already hold a VCL NAL) or on an access-unit
+			// delimiter, and prepend Annex-B start codes for the H264 payloader.
+			startCode := []byte{0x00, 0x00, 0x00, 0x01}
+			var au []byte
+			haveVCL := false
+			writeAU := func() error {
+				if len(au) == 0 {
+					return nil
+				}
+				err := s.track.WriteSample(media.Sample{Data: au, Duration: frameDur})
+				au = au[:0]
+				haveVCL = false
+				return err
 			}
 			for {
 				select {
@@ -164,14 +186,28 @@ func (s *Session) startStreaming(ctx context.Context) {
 				}
 				nal, err := reader.NextNAL()
 				if err != nil {
+					_ = writeAU() // flush any trailing frame
 					log.Printf("[desktop] stream ended: %v", err)
 					s.Close()
 					return
 				}
-				if err := s.track.WriteSample(media.Sample{Data: nal.Data, Duration: frameDur}); err != nil {
-					log.Printf("[desktop] write sample: %v", err)
-					s.Close()
-					return
+				if len(nal.Data) == 0 {
+					continue
+				}
+				nalType := nal.Data[0] & 0x1f
+				isVCL := nalType >= 1 && nalType <= 5
+				// Boundary: a new picture's first VCL slice, or an AU delimiter (9).
+				if (isVCL && haveVCL) || nalType == 9 {
+					if err := writeAU(); err != nil {
+						log.Printf("[desktop] write sample: %v", err)
+						s.Close()
+						return
+					}
+				}
+				au = append(au, startCode...)
+				au = append(au, nal.Data...)
+				if isVCL {
+					haveVCL = true
 				}
 			}
 		}()
