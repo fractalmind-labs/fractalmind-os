@@ -34,12 +34,32 @@ func Handler(cfg HTTPConfig) http.Handler {
 	sub, _ := fs.Sub(webFS, "web")
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /offer", h.handleOffer)
+	mux.HandleFunc("GET /ice", h.handleICE)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
 	mux.Handle("GET /", http.FileServer(http.FS(sub)))
 	return mux
+}
+
+type iceServerJSON struct {
+	URLs       []string `json:"urls"`
+	Username   string   `json:"username,omitempty"`
+	Credential string   `json:"credential,omitempty"`
+}
+
+// handleICE returns the server's ICE servers so the browser peer uses the same
+// STUN/TURN as the pion side. Without this the client only has STUN and cannot
+// traverse symmetric (cellular CGNAT) NATs even when the server has TURN.
+func (h *httpHandler) handleICE(w http.ResponseWriter, _ *http.Request) {
+	out := make([]iceServerJSON, 0, len(h.cfg.Server.ICEServers))
+	for _, s := range h.cfg.Server.ICEServers {
+		cred, _ := s.Credential.(string)
+		out = append(out, iceServerJSON{URLs: s.URLs, Username: s.Username, Credential: cred})
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"iceServers": out})
 }
 
 type httpHandler struct {
