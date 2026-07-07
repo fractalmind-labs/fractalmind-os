@@ -52,7 +52,14 @@ type iceServerJSON struct {
 // handleICE returns the server's ICE servers so the browser peer uses the same
 // STUN/TURN as the pion side. Without this the client only has STUN and cannot
 // traverse symmetric (cellular CGNAT) NATs even when the server has TURN.
-func (h *httpHandler) handleICE(w http.ResponseWriter, _ *http.Request) {
+// It is token-gated like /offer: the response can carry TURN credentials, so an
+// unauthenticated caller must not be able to read them (TURN relay abuse).
+func (h *httpHandler) handleICE(w http.ResponseWriter, r *http.Request) {
+	if !h.authOK(r) {
+		w.Header().Set("WWW-Authenticate", "Bearer")
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
 	out := make([]iceServerJSON, 0, len(h.cfg.Server.ICEServers))
 	for _, s := range h.cfg.Server.ICEServers {
 		cred, _ := s.Credential.(string)

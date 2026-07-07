@@ -81,3 +81,25 @@ func TestBearerParse(t *testing.T) {
 		t.Fatal("empty should be empty")
 	}
 }
+
+func TestICERequiresAuth(t *testing.T) {
+	h := Handler(HTTPConfig{Token: "secret"})
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+	// No token -> 401 (ICE response can carry TURN credentials).
+	resp, err := http.Get(srv.URL + "/ice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("/ice without token: got %d, want 401", resp.StatusCode)
+	}
+	// With token -> 200.
+	resp, err = http.Get(srv.URL + "/ice?token=secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("/ice with token: got %d, want 200", resp.StatusCode)
+	}
+}
