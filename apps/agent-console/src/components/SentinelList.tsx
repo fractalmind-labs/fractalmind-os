@@ -1,23 +1,46 @@
 import { useState } from "react";
 import { CoordinatorClient, type CommandResult, type Sentinel } from "../lib/coordinator";
+import { RemoteDesktop } from "./RemoteDesktop";
 
 // The remote commands the envd worker understands (see handleCommand).
 const COMMANDS = ["status", "logs", "restart", "kill", "shell"] as const;
 
+interface DesktopSession {
+  url: string;
+  token: string;
+}
+
 export function SentinelList({
   client,
   sentinels,
+  defaultToken,
 }: {
   client: CoordinatorClient;
   sentinels: Sentinel[];
+  defaultToken: string;
 }) {
+  const [desktop, setDesktop] = useState<DesktopSession | null>(null);
+
+  if (desktop) {
+    return (
+      <RemoteDesktop url={desktop.url} token={desktop.token} onClose={() => setDesktop(null)} />
+    );
+  }
+
+  const openDesktop = () => {
+    const url = window.prompt("Remote desktop URL (envd-desktop server)", "https://");
+    if (!url) return;
+    const token = window.prompt("Desktop token", defaultToken) ?? "";
+    setDesktop({ url, token });
+  };
+
   if (sentinels.length === 0) {
     return <div className="empty muted">No nodes registered on this coordinator yet.</div>;
   }
   return (
     <div className="list">
       {sentinels.map((s) => (
-        <SentinelCard key={s.id} client={client} sentinel={s} />
+        <SentinelCard key={s.id} client={client} sentinel={s} onDesktop={openDesktop} />
       ))}
     </div>
   );
@@ -29,7 +52,15 @@ function ageSeconds(iso: string | null): number | null {
   return Number.isNaN(t) ? null : Math.max(0, Math.round((Date.now() - t) / 1000));
 }
 
-function SentinelCard({ client, sentinel: s }: { client: CoordinatorClient; sentinel: Sentinel }) {
+function SentinelCard({
+  client,
+  sentinel: s,
+  onDesktop,
+}: {
+  client: CoordinatorClient;
+  sentinel: Sentinel;
+  onDesktop: () => void;
+}) {
   const [cmd, setCmd] = useState<(typeof COMMANDS)[number]>("status");
   const [agentId, setAgentId] = useState("");
   const [args, setArgs] = useState("");
@@ -88,6 +119,9 @@ function SentinelCard({ client, sentinel: s }: { client: CoordinatorClient; sent
         )}
         <button onClick={run} disabled={busy}>
           {busy ? "…" : "Run"}
+        </button>
+        <button onClick={onDesktop} title="Open WebRTC remote desktop">
+          🖥 Desktop
         </button>
       </div>
       {result && (
