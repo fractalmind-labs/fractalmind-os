@@ -29,6 +29,10 @@ type CaptureConfig struct {
 	Bitrate string
 	// FFmpegPath overrides the ffmpeg binary (default "ffmpeg").
 	FFmpegPath string
+	// PixelFormat, when set, pins the capture-input pixel format (e.g. macOS
+	// avfoundation screen capture is typically "uyvy422"). Passed as ffmpeg
+	// -pixel_format before -i so the decoder does not misread the raw buffer.
+	PixelFormat string
 }
 
 func (c CaptureConfig) withDefaults() CaptureConfig {
@@ -73,36 +77,46 @@ func FFmpegArgs(cfg CaptureConfig, goos string) []string {
 	switch goos {
 	case "darwin":
 		// Capture native (no -video_size); "<screen-index>:none" = video, no audio.
-		args = append(args,
-			"-f", "avfoundation",
-			"-capture_cursor", "1",
-			"-framerate", strconv.Itoa(cfg.FPS),
-			"-i", cfg.Display+":none",
-		)
+		args = append(args, "-f", "avfoundation", "-capture_cursor", "1", "-framerate", strconv.Itoa(cfg.FPS))
+		// avfoundation screen capture delivers packed uyvy422; pinning the input
+		// pixel format stops ffmpeg misreading the raw buffer (a cause of green
+		// frames). It also reports a bogus ~1000k-fps timebase, so we normalize
+		// the output rate below.
+		if cfg.PixelFormat != "" {
+			args = append(args, "-pixel_format", cfg.PixelFormat)
+		}
+		args = append(args, "-i", cfg.Display+":none")
 	default: // linux / x11
+		if cfg.PixelFormat != "" {
+			args = append(args, "-pixel_format", cfg.PixelFormat)
+		}
 		args = append(args, "-f", "x11grab", "-framerate", strconv.Itoa(cfg.FPS), "-i", cfg.Display)
 	}
 
-	// Downscale the encode to keep the stream within the advertised H.264 level
-	// (baseline 3.1 → 720p). Width/Height describe the *real* screen (used for
-	// input coordinate mapping), so the encode height is capped independently and
-	// never upscales a smaller display. Aspect ratio is preserved (-2 = even
-	// auto width), so the browser's normalized coordinates still map 1:1 onto the
-	// real screen.
+	// Convert to planar yuv420p FIRST (before scaling), then downscale. Scaling a
+	// packed 4:2:2 buffer before the pixel-format conversion is what turns the
+	// picture green on the avfoundation path; converting first is safe for any
+	// input. Encode height is capped to keep the stream within the advertised
+	// H.264 level (baseline 3.1 → 720p); Width/Height describe the *real* screen
+	// (used only for input coordinate mapping) and never upscale a smaller one.
+	// Aspect ratio is preserved (-2 = even auto width), so normalized pointer
+	// coordinates still map 1:1 onto the real screen.
 	encodeH := 720
 	if cfg.Height > 0 && cfg.Height < encodeH {
 		encodeH = cfg.Height
 	}
-	vf := fmt.Sprintf("scale=-2:%d:flags=bicubic,format=yuv420p", encodeH)
+	vf := fmt.Sprintf("format=yuv420p,scale=-2:%d", encodeH)
 
 	// Low-latency H.264. Constrained baseline + no B-frames decodes on mobile
 	// browsers; repeat-headers puts SPS/PPS before every keyframe so a client
 	// joining mid-stream gets a decodable IDR (otherwise it renders green until
 	// the next parameter sets arrive). No h264_mp4toannexb: libx264 -f h264 is
 	// already Annex-B, and re-applying the mp4->annexb bitstream filter corrupts
-	// the elementary stream.
+	// the elementary stream. -r + cfr normalize the bogus avfoundation timebase.
 	args = append(args,
 		"-vf", vf,
+		"-r", strconv.Itoa(cfg.FPS),
+		"-vsync", "cfr",
 		"-c:v", "libx264",
 		"-preset", "ultrafast",
 		"-tune", "zerolatency",
