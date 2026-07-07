@@ -24,9 +24,10 @@ import (
 func main() {
 	var (
 		bind     = flag.String("bind", ":8090", "HTTP listen address")
-		display  = flag.String("display", "", "capture source (Linux X display e.g. :0 ; macOS avfoundation index e.g. 1)")
-		width    = flag.Int("width", 1280, "capture width (also maps pointer coords)")
-		height   = flag.Int("height", 720, "capture height")
+		display  = flag.String("display", "", "capture source (Linux X display e.g. :0 ; macOS avfoundation index e.g. 0)")
+		width    = flag.Int("width", 1280, "real screen width (maps pointer coords)")
+		height   = flag.Int("height", 720, "real screen height (maps pointer coords)")
+		pixFmt   = flag.String("pixel-format", "", "capture input pixel format (macOS avfoundation is usually uyvy422)")
 		fps      = flag.Int("fps", 25, "capture frame rate")
 		bitrate  = flag.String("bitrate", "4M", "H.264 target bitrate")
 		token    = flag.String("token", os.Getenv("ENVD_DESKTOP_TOKEN"), "signaling bearer token (empty disables auth)")
@@ -62,11 +63,12 @@ func main() {
 		Server: desktop.ServerConfig{
 			ICEServers: ice,
 			Capture: desktop.CaptureConfig{
-				Display: *display,
-				Width:   *width,
-				Height:  *height,
-				FPS:     *fps,
-				Bitrate: *bitrate,
+				Display:     *display,
+				Width:       *width,
+				Height:      *height,
+				FPS:         *fps,
+				Bitrate:     *bitrate,
+				PixelFormat: *pixFmt,
 			},
 		},
 	})

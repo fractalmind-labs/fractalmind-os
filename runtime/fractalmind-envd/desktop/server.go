@@ -10,7 +10,7 @@ import (
 
 	"github.com/pion/webrtc/v4"
 	"github.com/pion/webrtc/v4/pkg/media"
-	"github.com/pion/webrtc/v4/pkg/media/h264reader"
+	"github.com/pion/webrtc/v4/pkg/media/ivfreader"
 )
 
 // ServerConfig configures a desktop WebRTC session.
@@ -33,19 +33,19 @@ type Session struct {
 	closeOnce sync.Once // guards teardown; Close is called from several goroutines
 }
 
-// NewSession builds a peer connection with a single H.264 video track (sendonly)
+// NewSession builds a peer connection with a single VP8 video track (sendonly)
 // and an input data channel handler, applies the browser's SDP offer, and
 // returns the local SDP answer to send back. Media begins flowing once ICE
-// connects.
+// connects. VP8 is used because browsers decode it in software, avoiding the
+// macOS hardware H.264 decoder that renders our stream green.
 func NewSession(ctx context.Context, cfg ServerConfig, offer webrtc.SessionDescription) (*Session, *webrtc.SessionDescription, error) {
 	me := &webrtc.MediaEngine{}
 	if err := me.RegisterCodec(webrtc.RTPCodecParameters{
 		RTPCodecCapability: webrtc.RTPCodecCapability{
-			MimeType:    webrtc.MimeTypeH264,
-			ClockRate:   90000,
-			SDPFmtpLine: "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f",
+			MimeType:  webrtc.MimeTypeVP8,
+			ClockRate: 90000,
 		},
-		PayloadType: 102,
+		PayloadType: 96,
 	}, webrtc.RTPCodecTypeVideo); err != nil {
 		return nil, nil, fmt.Errorf("register codec: %w", err)
 	}
@@ -57,7 +57,7 @@ func NewSession(ctx context.Context, cfg ServerConfig, offer webrtc.SessionDescr
 	}
 
 	track, err := webrtc.NewTrackLocalStaticSample(
-		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeH264},
+		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeVP8},
 		"video", "envd-desktop",
 	)
 	if err != nil {
@@ -144,16 +144,20 @@ func (s *Session) startStreaming(ctx context.Context) {
 			s.capture = cap
 			defer cap.Stop()
 
-			reader, err := h264reader.NewReader(cap.Stdout())
+			reader, _, err := ivfreader.NewWith(cap.Stdout())
 			if err != nil {
-				log.Printf("[desktop] h264 reader: %v", err)
+				log.Printf("[desktop] ivf reader: %v", err)
 				s.Close()
 				return
 			}
-			frameDur := time.Second / time.Duration(max(1, s.cfg.Capture.FPS))
-			if s.cfg.Capture.FPS == 0 {
-				frameDur = time.Second / 25
+			fps := s.cfg.Capture.FPS
+			if fps <= 0 {
+				fps = 25
 			}
+			frameDur := time.Second / time.Duration(fps)
+
+			// VP8: each IVF frame is a self-contained picture, so we write one
+			// sample per frame directly — no NAL/access-unit assembly needed.
 			for {
 				select {
 				case <-ctx.Done():
@@ -162,13 +166,13 @@ func (s *Session) startStreaming(ctx context.Context) {
 					return
 				default:
 				}
-				nal, err := reader.NextNAL()
+				frame, _, err := reader.ParseNextFrame()
 				if err != nil {
 					log.Printf("[desktop] stream ended: %v", err)
 					s.Close()
 					return
 				}
-				if err := s.track.WriteSample(media.Sample{Data: nal.Data, Duration: frameDur}); err != nil {
+				if err := s.track.WriteSample(media.Sample{Data: frame, Duration: frameDur}); err != nil {
 					log.Printf("[desktop] write sample: %v", err)
 					s.Close()
 					return

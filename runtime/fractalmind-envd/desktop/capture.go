@@ -29,6 +29,10 @@ type CaptureConfig struct {
 	Bitrate string
 	// FFmpegPath overrides the ffmpeg binary (default "ffmpeg").
 	FFmpegPath string
+	// PixelFormat, when set, pins the capture-input pixel format (e.g. macOS
+	// avfoundation screen capture is typically "uyvy422"). Passed as ffmpeg
+	// -pixel_format before -i so the decoder does not misread the raw buffer.
+	PixelFormat string
 }
 
 func (c CaptureConfig) withDefaults() CaptureConfig {
@@ -44,17 +48,25 @@ func (c CaptureConfig) withDefaults() CaptureConfig {
 	return c
 }
 
-// defaultDisplay returns the platform default capture source for goos.
+// defaultDisplay returns the platform default capture source for goos. On macOS
+// the avfoundation screen device is index 0 ("Capture screen 0"); on Linux it
+// is X display ":0".
 func defaultDisplay(goos string) string {
 	if goos == "darwin" {
-		return "1"
+		return "0"
 	}
 	return ":0"
 }
 
 // FFmpegArgs builds the ffmpeg argument vector that grabs the screen and emits
-// a low-latency Annex-B H.264 elementary stream on stdout. It is split from
-// execution so the arguments can be unit-tested per platform.
+// a low-latency VP8/IVF stream on stdout. It is split from execution so the
+// arguments can be unit-tested per platform.
+//
+// Sizing is done with a scale filter, NOT the input -video_size. On macOS,
+// forcing avfoundation to a size other than the display's native resolution
+// makes ffmpeg misread the raw capture buffer and emit corrupt (green) frames;
+// x11grab on Linux would also rather capture the real geometry. So we always
+// capture native and downscale in the filter graph when Width/Height are set.
 func FFmpegArgs(cfg CaptureConfig, goos string) []string {
 	cfg = cfg.withDefaults()
 	if cfg.Display == "" {
@@ -64,33 +76,58 @@ func FFmpegArgs(cfg CaptureConfig, goos string) []string {
 
 	switch goos {
 	case "darwin":
-		args = append(args, "-f", "avfoundation", "-framerate", strconv.Itoa(cfg.FPS))
-		if cfg.Width > 0 && cfg.Height > 0 {
-			args = append(args, "-video_size", fmt.Sprintf("%dx%d", cfg.Width, cfg.Height))
+		// Capture native (no -video_size); "<screen-index>:none" = video, no audio.
+		args = append(args, "-f", "avfoundation", "-capture_cursor", "1", "-framerate", strconv.Itoa(cfg.FPS))
+		// avfoundation screen capture delivers packed uyvy422; pinning the input
+		// pixel format stops ffmpeg misreading the raw buffer (a cause of green
+		// frames). It also reports a bogus ~1000k-fps timebase, so we normalize
+		// the output rate below.
+		if cfg.PixelFormat != "" {
+			args = append(args, "-pixel_format", cfg.PixelFormat)
 		}
-		// avfoundation screen input is "<screen-index>:none" (no audio).
 		args = append(args, "-i", cfg.Display+":none")
 	default: // linux / x11
-		args = append(args, "-f", "x11grab", "-framerate", strconv.Itoa(cfg.FPS))
-		if cfg.Width > 0 && cfg.Height > 0 {
-			args = append(args, "-video_size", fmt.Sprintf("%dx%d", cfg.Width, cfg.Height))
+		if cfg.PixelFormat != "" {
+			args = append(args, "-pixel_format", cfg.PixelFormat)
 		}
-		args = append(args, "-i", cfg.Display)
+		args = append(args, "-f", "x11grab", "-framerate", strconv.Itoa(cfg.FPS), "-i", cfg.Display)
 	}
 
-	// Low-latency H.264 encode. baseline + no B-frames keeps decode simple for
-	// mobile browsers; annexb + aud so the pion h264reader can frame NAL units.
+	// Convert to planar yuv420p FIRST (before scaling), then downscale. Scaling a
+	// packed 4:2:2 buffer before the pixel-format conversion is what turns the
+	// picture green on the avfoundation path; converting first is safe for any
+	// input. Encode height is capped to keep the stream within the advertised
+	// H.264 level (baseline 3.1 → 720p); Width/Height describe the *real* screen
+	// (used only for input coordinate mapping) and never upscale a smaller one.
+	// Aspect ratio is preserved (-2 = even auto width), so normalized pointer
+	// coordinates still map 1:1 onto the real screen.
+	encodeH := 720
+	if cfg.Height > 0 && cfg.Height < encodeH {
+		encodeH = cfg.Height
+	}
+	vf := fmt.Sprintf("format=yuv420p,scale=-2:%d", encodeH)
+
+	// Low-latency VP8 in an IVF stream. VP8 is used instead of H.264 because
+	// browsers decode it in software (WebRTC baseline), avoiding the macOS
+	// VideoToolbox hardware H.264 decoder that renders our libx264 stream green
+	// even though it decodes cleanly in software. VP8 frames are self-contained
+	// (one IVF frame per picture), so there is no NAL/access-unit assembly. -r +
+	// cfr normalize the bogus avfoundation timebase; error-resilient + no alt-ref
+	// keep a client that joins mid-stream decodable.
 	args = append(args,
-		"-c:v", "libx264",
-		"-preset", "ultrafast",
-		"-tune", "zerolatency",
-		"-profile:v", "baseline",
-		"-pix_fmt", "yuv420p",
-		"-g", strconv.Itoa(cfg.FPS*2),
+		"-vf", vf,
+		"-r", strconv.Itoa(cfg.FPS),
+		"-vsync", "cfr",
+		"-c:v", "libvpx",
+		"-deadline", "realtime",
+		"-cpu-used", "8",
 		"-b:v", cfg.Bitrate,
-		"-bf", "0",
-		"-bsf:v", "h264_mp4toannexb",
-		"-f", "h264",
+		"-g", strconv.Itoa(cfg.FPS*2),
+		"-keyint_min", strconv.Itoa(cfg.FPS),
+		"-auto-alt-ref", "0",
+		"-lag-in-frames", "0",
+		"-error-resilient", "1",
+		"-f", "ivf",
 		"-",
 	)
 	return args
