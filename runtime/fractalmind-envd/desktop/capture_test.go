@@ -10,7 +10,7 @@ func joined(args []string) string { return strings.Join(args, " ") }
 func TestFFmpegArgsLinux(t *testing.T) {
 	args := FFmpegArgs(CaptureConfig{Display: ":0", Height: 720, FPS: 30, Bitrate: "3M"}, "linux")
 	s := joined(args)
-	for _, want := range []string{"-f x11grab", "-framerate 30", "-i :0", "format=yuv420p,scale=-2:720", "libx264", "-tune zerolatency", "-f h264", "-b:v 3M"} {
+	for _, want := range []string{"-f x11grab", "-framerate 30", "-i :0", "format=yuv420p,scale=-2:720", "libvpx", "-deadline realtime", "-f ivf", "-b:v 3M"} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("linux args missing %q in: %s", want, s)
 		}
@@ -33,7 +33,7 @@ func TestFFmpegArgsDarwin(t *testing.T) {
 	// 720p to stay within baseline level 3.1. Pixel format is pinned to uyvy422.
 	args := FFmpegArgs(CaptureConfig{Display: "0", Width: 1920, Height: 1080, FPS: 25, PixelFormat: "uyvy422"}, "darwin")
 	s := joined(args)
-	for _, want := range []string{"-f avfoundation", "-capture_cursor 1", "-pixel_format uyvy422", "-i 0:none", "format=yuv420p,scale=-2:720", "-vsync cfr", "libx264", "-f h264"} {
+	for _, want := range []string{"-f avfoundation", "-capture_cursor 1", "-pixel_format uyvy422", "-i 0:none", "format=yuv420p,scale=-2:720", "-vsync cfr", "libvpx", "-f ivf"} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("darwin args missing %q in: %s", want, s)
 		}

@@ -59,8 +59,8 @@ func defaultDisplay(goos string) string {
 }
 
 // FFmpegArgs builds the ffmpeg argument vector that grabs the screen and emits
-// a low-latency Annex-B H.264 elementary stream on stdout. It is split from
-// execution so the arguments can be unit-tested per platform.
+// a low-latency VP8/IVF stream on stdout. It is split from execution so the
+// arguments can be unit-tested per platform.
 //
 // Sizing is done with a scale filter, NOT the input -video_size. On macOS,
 // forcing avfoundation to a size other than the display's native resolution
@@ -107,28 +107,27 @@ func FFmpegArgs(cfg CaptureConfig, goos string) []string {
 	}
 	vf := fmt.Sprintf("format=yuv420p,scale=-2:%d", encodeH)
 
-	// Low-latency H.264. Constrained baseline + no B-frames decodes on mobile
-	// browsers; repeat-headers puts SPS/PPS before every keyframe so a client
-	// joining mid-stream gets a decodable IDR (otherwise it renders green until
-	// the next parameter sets arrive). No h264_mp4toannexb: libx264 -f h264 is
-	// already Annex-B, and re-applying the mp4->annexb bitstream filter corrupts
-	// the elementary stream. -r + cfr normalize the bogus avfoundation timebase.
+	// Low-latency VP8 in an IVF stream. VP8 is used instead of H.264 because
+	// browsers decode it in software (WebRTC baseline), avoiding the macOS
+	// VideoToolbox hardware H.264 decoder that renders our libx264 stream green
+	// even though it decodes cleanly in software. VP8 frames are self-contained
+	// (one IVF frame per picture), so there is no NAL/access-unit assembly. -r +
+	// cfr normalize the bogus avfoundation timebase; error-resilient + no alt-ref
+	// keep a client that joins mid-stream decodable.
 	args = append(args,
 		"-vf", vf,
 		"-r", strconv.Itoa(cfg.FPS),
 		"-vsync", "cfr",
-		"-c:v", "libx264",
-		"-preset", "ultrafast",
-		"-tune", "zerolatency",
-		"-profile:v", "baseline",
-		"-level", "3.1",
+		"-c:v", "libvpx",
+		"-deadline", "realtime",
+		"-cpu-used", "8",
+		"-b:v", cfg.Bitrate,
 		"-g", strconv.Itoa(cfg.FPS*2),
 		"-keyint_min", strconv.Itoa(cfg.FPS),
-		"-sc_threshold", "0",
-		"-b:v", cfg.Bitrate,
-		"-bf", "0",
-		"-x264-params", "repeat-headers=1",
-		"-f", "h264",
+		"-auto-alt-ref", "0",
+		"-lag-in-frames", "0",
+		"-error-resilient", "1",
+		"-f", "ivf",
 		"-",
 	)
 	return args
