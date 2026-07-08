@@ -373,18 +373,22 @@ func main() {
 		})
 	})
 
-	// Start WebSocket connection in background
-	go wsClient.Connect()
-
-	// Register with Gateway
-	go func() {
-		time.Sleep(2 * time.Second) // Wait for connection
-		wsClient.Send("register", map[string]string{
+	// Register with Gateway on every (re)connect, once the control-channel
+	// handshake has completed. A fixed post-connect delay loses the race on
+	// high-latency links, and a one-shot register leaves reconnected workers
+	// invisible (the coordinator drops heartbeats from unregistered nodes).
+	wsClient.OnConnect(func() {
+		if err := wsClient.Send("register", map[string]string{
 			"host_id":  cfg.Identity.HostID,
 			"hostname": cfg.Identity.Hostname,
 			"version":  version,
-		})
-	}()
+		}); err != nil {
+			log.Printf("[ws] register send failed: %v", err)
+		}
+	})
+
+	// Start WebSocket connection in background
+	go wsClient.Connect()
 
 	// Heartbeat + scan loop
 	heartbeatTicker := time.NewTicker(heartbeatInterval)
