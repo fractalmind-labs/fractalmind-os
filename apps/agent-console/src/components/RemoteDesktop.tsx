@@ -53,7 +53,7 @@ export function RemoteDesktop({ url, token, onClose }: Props) {
       pc.addTransceiver("video", { direction: "recvonly" });
       const dc = pc.createDataChannel("input", { ordered: true });
       dcRef.current = dc;
-      dc.onopen = () => setStatus("connected");
+      dc.onopen = () => setStatus("connected · 端到端加密 (DTLS-SRTP) 已建立");
       pc.ontrack = (e) => {
         if (videoRef.current) {
           videoRef.current.srcObject = e.streams[0];
