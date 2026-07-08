@@ -15,7 +15,8 @@
         "title": "Agent Console",
         "width": 960,
         "height": 720,
-        "resizable": true
+        "resizable": true,
+        "devtools": true
       }
     ],
     "security": {
