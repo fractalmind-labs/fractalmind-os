@@ -33,6 +33,7 @@ type Client struct {
 	mu            sync.Mutex
 	done          chan struct{}
 	onCommand     func(CommandPayload)
+	onConnect     func()
 
 	// Control-channel authentication. signer proves this worker's SUI
 	// identity to the coordinator; expectedCoordAddr, when non-empty, pins the
@@ -65,6 +66,15 @@ func (c *Client) SetAuth(signer wsauth.Signer, expectedCoordAddr string) {
 // OnCommand sets the handler for incoming commands.
 func (c *Client) OnCommand(handler func(CommandPayload)) {
 	c.onCommand = handler
+}
+
+// OnConnect sets a handler invoked after every successful connection, once the
+// control-channel handshake (when enabled) has completed and Send is usable.
+// Registration must happen here rather than on a timer: over high-latency
+// links the handshake can outlast any fixed delay, and reconnects need to
+// re-register or the coordinator ignores subsequent heartbeats.
+func (c *Client) OnConnect(handler func()) {
+	c.onConnect = handler
 }
 
 // Connect establishes and maintains the WebSocket connection.
@@ -103,6 +113,10 @@ func (c *Client) Connect() {
 		c.mu.Lock()
 		c.conn = conn
 		c.mu.Unlock()
+
+		if c.onConnect != nil {
+			c.onConnect()
+		}
 
 		c.readLoop(conn)
 
