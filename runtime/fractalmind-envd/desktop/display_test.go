@@ -44,3 +44,19 @@ func TestParseMacDesktopBounds(t *testing.T) {
 		}
 	}
 }
+
+func TestParseSystemProfiler(t *testing.T) {
+	out := `Graphics/Displays:
+    Apple M2:
+      Displays:
+        Color LCD:
+          Resolution: 1920 x 1080
+          Main Display: Yes`
+	w, h, ok := parseSystemProfiler(out)
+	if !ok || w != 1920 || h != 1080 {
+		t.Fatalf("got %d,%d,%v want 1920,1080,true", w, h, ok)
+	}
+	if _, _, ok := parseSystemProfiler("no resolution here"); ok {
+		t.Fatal("expected no match")
+	}
+}
