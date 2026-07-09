@@ -105,6 +105,60 @@ func TestCoordinatorAdvertisesDesktopURL(t *testing.T) {
 	}
 }
 
+func TestCoordinatorDesktopSignalRelay(t *testing.T) {
+	server := NewServer(":0", 2*time.Second, "")
+	testServer := httptest.NewServer(server.Handler())
+	defer testServer.Close()
+
+	conn := dialTestWebSocket(t, testServer.URL)
+	defer conn.Close()
+
+	registerWorker(t, conn, "node-sig", "worker-sig", "dev", heartbeat.Payload{})
+
+	// Worker side: answer one desktop_signal by echoing a canned SDP answer.
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		var msg ws.Message
+		if err := conn.ReadJSON(&msg); err != nil {
+			t.Errorf("read desktop_signal: %v", err)
+			return
+		}
+		if msg.Type != "desktop_signal" {
+			t.Errorf("message type = %q, want desktop_signal", msg.Type)
+			return
+		}
+		var sig ws.DesktopSignalPayload
+		if err := json.Unmarshal(msg.Payload, &sig); err != nil {
+			t.Errorf("decode desktop_signal: %v", err)
+			return
+		}
+		if sig.Method != http.MethodPost || sig.Path != "/offer" {
+			t.Errorf("got %s %s, want POST /offer", sig.Method, sig.Path)
+		}
+		sendWSMessage(t, conn, ws.Message{
+			Type: "desktop_signal_result",
+			Payload: mustRawJSON(desktopSignalResult{
+				RequestID: sig.RequestID,
+				Status:    http.StatusOK,
+				Body:      json.RawMessage(`{"answer":"ok"}`),
+			}),
+		})
+	}()
+
+	waitForSentinel(t, testServer.URL, "node-sig", nil)
+
+	status, body := httpPostRaw(t, testServer.URL+"/api/sentinels/node-sig/desktop/offer", []byte(`{"offer":"sdp"}`))
+	<-done
+
+	if status != http.StatusOK {
+		t.Fatalf("relay status = %d, want 200 (body=%s)", status, body)
+	}
+	if !strings.Contains(string(body), `"answer":"ok"`) {
+		t.Fatalf("relay body = %s, want answer echoed", body)
+	}
+}
+
 func TestCoordinatorShellCommandProxy(t *testing.T) {
 	server := NewServer(":0", 2*time.Second, "")
 	testServer := httptest.NewServer(server.Handler())
@@ -413,6 +467,18 @@ func httpPostJSON(t *testing.T, url string, payload interface{}) []byte {
 		t.Fatalf("read POST response: %v", err)
 	}
 	return body
+}
+
+func httpPostRaw(t *testing.T, url string, data []byte) (int, []byte) {
+	t.Helper()
+
+	resp, err := http.Post(url, "application/json", bytes.NewReader(data))
+	if err != nil {
+		t.Fatalf("POST %s: %v", url, err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	return resp.StatusCode, body
 }
 
 func httpGetWithHeaders(t *testing.T, url string, headers map[string]string) (int, []byte) {

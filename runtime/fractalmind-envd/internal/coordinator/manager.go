@@ -52,6 +52,18 @@ type pendingCommand struct {
 	resultCh chan map[string]interface{}
 }
 
+// desktopSignalResult mirrors ws.DesktopSignalResult for the coordinator side.
+type desktopSignalResult struct {
+	RequestID string          `json:"request_id"`
+	Status    int             `json:"status"`
+	Body      json.RawMessage `json:"body,omitempty"`
+	Error     string          `json:"error,omitempty"`
+}
+
+type pendingSignal struct {
+	resultCh chan desktopSignalResult
+}
+
 type nodeConn struct {
 	ws      *websocket.Conn
 	writeMu sync.Mutex
@@ -77,6 +89,7 @@ type Manager struct {
 	mu              sync.RWMutex
 	nodes           map[string]*connectedNode
 	pendingCommands map[string]*pendingCommand
+	pendingSignals  map[string]*pendingSignal
 	commandTimeout  time.Duration
 	nextTempID      uint64
 	nextCommandID   uint64
@@ -99,6 +112,7 @@ func NewManager(commandTimeout time.Duration) *Manager {
 	return &Manager{
 		nodes:            make(map[string]*connectedNode),
 		pendingCommands:  make(map[string]*pendingCommand),
+		pendingSignals:   make(map[string]*pendingSignal),
 		commandTimeout:   commandTimeout,
 		handshakeTimeout: 15 * time.Second,
 	}
@@ -315,6 +329,25 @@ func (m *Manager) handleMessage(currentID string, conn *nodeConn, msg ws.Message
 
 		return currentID, nil
 
+	case "desktop_signal_result":
+		var payload desktopSignalResult
+		if err := json.Unmarshal(msg.Payload, &payload); err != nil {
+			return currentID, fmt.Errorf("decode desktop_signal_result payload: %w", err)
+		}
+
+		m.mu.Lock()
+		pending, ok := m.pendingSignals[payload.RequestID]
+		if ok {
+			delete(m.pendingSignals, payload.RequestID)
+		}
+		m.mu.Unlock()
+
+		if ok {
+			pending.resultCh <- payload
+		}
+
+		return currentID, nil
+
 	case "alert":
 		var payload alertPayload
 		if err := json.Unmarshal(msg.Payload, &payload); err != nil {
@@ -370,20 +403,23 @@ func (m *Manager) FindNode(id string) (nodeSnapshot, bool) {
 	return nodeSnapshot{}, false
 }
 
-func (m *Manager) SendCommand(nodeID, command, agentID, args string) (map[string]interface{}, error) {
+// lookupNode finds a connected node by ID or, failing that, by hostname.
+func (m *Manager) lookupNode(nodeID string) (*connectedNode, bool) {
 	m.mu.RLock()
-	node, ok := m.nodes[nodeID]
-	if !ok {
-		for _, candidate := range m.nodes {
-			if candidate.Hostname == nodeID {
-				node = candidate
-				ok = true
-				break
-			}
+	defer m.mu.RUnlock()
+	if node, ok := m.nodes[nodeID]; ok {
+		return node, true
+	}
+	for _, candidate := range m.nodes {
+		if candidate.Hostname == nodeID {
+			return candidate, true
 		}
 	}
-	m.mu.RUnlock()
+	return nil, false
+}
 
+func (m *Manager) SendCommand(nodeID, command, agentID, args string) (map[string]interface{}, error) {
+	node, ok := m.lookupNode(nodeID)
 	if !ok {
 		return nil, fmt.Errorf("worker %s not found", nodeID)
 	}
@@ -420,6 +456,53 @@ func (m *Manager) SendCommand(nodeID, command, agentID, args string) (map[string
 		delete(m.pendingCommands, requestID)
 		m.mu.Unlock()
 		return nil, fmt.Errorf("command timed out after %s", m.commandTimeout)
+	}
+}
+
+// SendDesktopSignal relays a remote-desktop signaling request (method+path with
+// an optional JSON body) to the target worker over the control channel and
+// returns the envd-desktop server's status code and response body.
+func (m *Manager) SendDesktopSignal(nodeID, method, path string, body []byte) (int, []byte, error) {
+	node, ok := m.lookupNode(nodeID)
+	if !ok {
+		return 0, nil, fmt.Errorf("worker %s not found", nodeID)
+	}
+
+	requestID := m.commandID()
+	pending := &pendingSignal{resultCh: make(chan desktopSignalResult, 1)}
+
+	m.mu.Lock()
+	m.pendingSignals[requestID] = pending
+	m.mu.Unlock()
+
+	envelope := ws.Message{
+		Type: "desktop_signal",
+		Payload: mustRawJSON(map[string]interface{}{
+			"request_id": requestID,
+			"method":     method,
+			"path":       path,
+			"body":       json.RawMessage(body),
+		}),
+	}
+
+	if err := node.conn.WriteJSON(envelope); err != nil {
+		m.mu.Lock()
+		delete(m.pendingSignals, requestID)
+		m.mu.Unlock()
+		return 0, nil, fmt.Errorf("send desktop signal: %w", err)
+	}
+
+	select {
+	case res := <-pending.resultCh:
+		if res.Error != "" {
+			return res.Status, res.Body, fmt.Errorf("%s", res.Error)
+		}
+		return res.Status, res.Body, nil
+	case <-time.After(m.commandTimeout):
+		m.mu.Lock()
+		delete(m.pendingSignals, requestID)
+		m.mu.Unlock()
+		return 0, nil, fmt.Errorf("desktop signal timed out after %s", m.commandTimeout)
 	}
 }
 

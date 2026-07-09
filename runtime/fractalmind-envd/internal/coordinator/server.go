@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -100,6 +101,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/sentinels/{id}", s.handleGetSentinel)
 	mux.HandleFunc("GET /api/sentinels/{id}/agents", s.handleGetAgents)
 	mux.HandleFunc("POST /api/sentinels/{id}/command", s.handleCommand)
+	mux.HandleFunc("GET /api/sentinels/{id}/desktop/ice", s.handleDesktopICE)
+	mux.HandleFunc("POST /api/sentinels/{id}/desktop/offer", s.handleDesktopOffer)
 	mux.HandleFunc("GET /ws", s.handleWebSocket)
 	return s.withAPITokenAuth(mux)
 }
@@ -204,6 +207,41 @@ func (s *Server) handleCommand(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, result)
+}
+
+// handleDesktopICE relays a GET /ice to the target node's envd-desktop server.
+func (s *Server) handleDesktopICE(w http.ResponseWriter, r *http.Request) {
+	s.relayDesktop(w, r, http.MethodGet, "/ice", nil)
+}
+
+// handleDesktopOffer relays a POST /offer (SDP) to the target node.
+func (s *Server) handleDesktopOffer(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+	s.relayDesktop(w, r, http.MethodPost, "/offer", body)
+}
+
+func (s *Server) relayDesktop(w http.ResponseWriter, r *http.Request, method, path string, body []byte) {
+	status, respBody, err := s.manager.SendDesktopSignal(r.PathValue("id"), method, path, body)
+	if err != nil {
+		httpStatus := http.StatusBadGateway
+		if strings.Contains(err.Error(), "not found") {
+			httpStatus = http.StatusNotFound
+		} else if strings.Contains(err.Error(), "timed out") {
+			httpStatus = http.StatusGatewayTimeout
+		}
+		writeJSON(w, httpStatus, map[string]string{"error": err.Error()})
+		return
+	}
+	if status == 0 {
+		status = http.StatusBadGateway
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = w.Write(respBody)
 }
 
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
