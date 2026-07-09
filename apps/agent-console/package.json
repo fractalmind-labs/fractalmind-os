@@ -9,7 +9,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "cap": "cap"
+    "cap": "cap",
+    "selftest:rd": "node scripts/rd-selftest.mjs dist"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -24,6 +25,7 @@
     "typescript": "^5.6.3",
     "vite": "^5.4.11",
     "@tauri-apps/cli": "^2.1.0",
-    "@capacitor/cli": "^6.2.0"
+    "@capacitor/cli": "^6.2.0",
+    "playwright": "^1.61.1"
   }
 }
