@@ -50,9 +50,10 @@ button:disabled { opacity: 0.5; }
   justify-content: space-between; gap: 10px;
   padding: calc(6px + env(safe-area-inset-top)) 12px 6px; background: rgba(0,0,0,.55);
   z-index: 3; backdrop-filter: blur(6px); }
-.rd-bar-actions { display: flex; gap: 6px; }
+.rd-bar-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .rd-status { flex: 1; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rd-video { flex: 1; width: 100%; height: 100%; object-fit: contain; background: #000; touch-action: none; }
+.rd-viewport { flex: 1; min-height: 0; width: 100%; height: 100%; overflow: hidden; touch-action: none; }
+.rd-video { width: 100%; height: 100%; object-fit: contain; background: #000; touch-action: none; transform-origin: center center; will-change: transform; }
 /* On-screen key row: modifiers (sticky) + special keys, overlaid at the bottom. */
 .rd-keys { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
   display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
@@ -60,4 +61,12 @@ button:disabled { opacity: 0.5; }
   backdrop-filter: blur(6px); }
 .rd-keys button { min-width: 44px; padding: 8px 10px; }
 .rd-keys button.on, .rd-bar button.on { background: #2f6feb; color: #fff; border-color: #2f6feb; }
+.rd-view-hint { position: absolute; left: 50%; bottom: calc(64px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 3; padding: 4px 8px; border-radius: 999px; background: rgba(0,0,0,.55); backdrop-filter: blur(6px); pointer-events: none; white-space: nowrap; }
 .rd-kbd { position: fixed; opacity: 0; height: 0; width: 0; pointer-events: none; }
+
+@media (max-width: 720px) {
+  .rd-bar { align-items: flex-start; }
+  .rd-bar-actions button { padding: 7px 8px; }
+  .rd-status { order: 3; flex-basis: 100%; }
+  .rd-keys { max-height: 34vh; overflow-y: auto; }
+}
