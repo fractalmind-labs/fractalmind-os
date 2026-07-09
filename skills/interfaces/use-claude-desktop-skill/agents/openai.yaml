@@ -1,0 +1,4 @@
+interface:
+  display_name: "Use Claude Desktop"
+  short_description: "Route messages into Claude Desktop safely"
+  default_prompt: "Use $use-claude-desktop to inspect Claude Desktop CDP status and deliver an inbound FractalBot message."
