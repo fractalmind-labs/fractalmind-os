@@ -1,35 +1,78 @@
 package desktop
 
 import (
+	"context"
 	"os/exec"
 	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
+
+// detectTimeout bounds each detection command. A background/SSH-launched service
+// must never hang on startup — the macOS Finder AppleScript in particular can
+// block on a TCC automation prompt that no one can answer. On timeout we fall
+// back so the operator can still pass -width/-height explicitly.
+const detectTimeout = 2 * time.Second
+
+// runOut runs argv with a hard timeout, returning its stdout.
+func runOut(argv ...string) (string, bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), detectTimeout)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, argv[0], argv[1:]...).Output()
+	if err != nil {
+		return "", false
+	}
+	return string(out), true
+}
 
 // DetectDisplaySize returns the host's logical display size — the coordinate
 // space the input injector operates in (X screen pixels for xdotool, points for
-// cliclick). It lets a node map pointer coordinates correctly without an
-// operator passing -width/-height, and keeps Retina/scaled displays accurate
-// (macOS reports points, not backing pixels). ok is false if detection fails,
-// in which case the caller keeps its configured/default size.
+// cliclick). It lets a node map pointer coordinates without an operator passing
+// -width/-height. Every probe is timeout-guarded so it can never hang startup;
+// ok is false if detection fails, and the caller keeps its configured/default
+// size. Explicit -width/-height always wins upstream and stays the reliable
+// path on hosts where automation-based detection is unavailable.
 func DetectDisplaySize() (w, h int, ok bool) {
 	switch runtime.GOOS {
 	case "darwin":
-		out, err := exec.Command("osascript", "-e",
-			`tell application "Finder" to get bounds of window of desktop`).Output()
-		if err != nil {
-			return 0, 0, false
+		// Finder desktop bounds give logical points, but need Automation (TCC)
+		// permission and can hang headless — try it (guarded), then fall back to
+		// system_profiler which needs no automation permission.
+		if out, ok := runOut("osascript", "-e",
+			`tell application "Finder" to get bounds of window of desktop`); ok {
+			if w, h, ok := parseMacDesktopBounds(out); ok {
+				return w, h, true
+			}
 		}
-		return parseMacDesktopBounds(string(out))
+		if out, ok := runOut("system_profiler", "SPDisplaysDataType"); ok {
+			return parseSystemProfiler(out)
+		}
+		return 0, 0, false
 	default:
-		out, err := exec.Command("xdotool", "getdisplaygeometry").Output()
-		if err != nil {
-			return 0, 0, false
+		if out, ok := runOut("xdotool", "getdisplaygeometry"); ok {
+			return parseXdotoolGeometry(out)
 		}
-		return parseXdotoolGeometry(string(out))
+		return 0, 0, false
 	}
+}
+
+var spResolutionRe = regexp.MustCompile(`Resolution:\s*(\d+)\s*x\s*(\d+)`)
+
+// parseSystemProfiler pulls the first "Resolution: W x H" from
+// `system_profiler SPDisplaysDataType`. It needs no automation permission.
+func parseSystemProfiler(out string) (int, int, bool) {
+	m := spResolutionRe.FindStringSubmatch(out)
+	if m == nil {
+		return 0, 0, false
+	}
+	w, _ := strconv.Atoi(m[1])
+	h, _ := strconv.Atoi(m[2])
+	if w <= 0 || h <= 0 {
+		return 0, 0, false
+	}
+	return w, h, true
 }
 
 // parseXdotoolGeometry parses `xdotool getdisplaygeometry` output ("1920 1080").
