@@ -55,3 +55,6 @@
 [submodule "coordination/use-github-okr"]
 	path = coordination/use-github-okr
 	url = git@github.com:fractalmind-ai/use-github-okr-skill.git
+[submodule "interfaces/use-claude-desktop"]
+	path = interfaces/use-claude-desktop
+	url = git@github.com:fractalmind-ai/use-claude-desktop-skill.git
