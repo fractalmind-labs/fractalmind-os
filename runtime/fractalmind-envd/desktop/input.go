@@ -123,6 +123,8 @@ func (in *cmdInjector) darwinCommands(ev Event) ([][]string, bool) {
 			verb = "ru"
 		}
 		return [][]string{{"cliclick", fmt.Sprintf("%s:%d,%d", verb, x, y)}}, true
+	case "scroll":
+		return [][]string{{"cliclick", fmt.Sprintf("w:0,%d", scrollClicks(ev.DY))}}, true
 	case "text":
 		if ev.Text == "" {
 			return nil, false
@@ -193,6 +195,13 @@ func (in *cmdInjector) Handle(ev Event) error {
 
 func (in *cmdInjector) Close() error { return nil }
 
+func scrollClicks(dy float64) int {
+	if dy < 0 {
+		return 1
+	}
+	return -1
+}
+
 func xdotoolButton(b int) int {
 	switch b {
 	case 1:
@@ -245,7 +254,7 @@ func xdotoolKeysym(key string) string {
 	switch key {
 	case "":
 		return ""
-	case "Enter":
+	case "Enter", "Return", "NumpadEnter":
 		return "Return"
 	case "Backspace":
 		return "BackSpace"
@@ -282,7 +291,7 @@ func cliclickKey(key string) string {
 	switch key {
 	case "":
 		return ""
-	case "Enter":
+	case "Enter", "Return", "NumpadEnter":
 		return "kp:return"
 	case "Backspace":
 		return "kp:delete"
