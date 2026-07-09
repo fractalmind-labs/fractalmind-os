@@ -113,3 +113,51 @@ func TestHandleRunsCommands(t *testing.T) {
 		t.Fatalf("unknown event should not run a command, ran=%v", ran)
 	}
 }
+
+func TestLinuxTextAndCombo(t *testing.T) {
+	in := linuxInjector(1, 1)
+
+	got, ok := in.commands(Event{Type: "text", Text: "héllo"})
+	if !ok || !reflect.DeepEqual(got, [][]string{{"xdotool", "type", "--clearmodifiers", "héllo"}}) {
+		t.Fatalf("text: got %v ok=%v", got, ok)
+	}
+
+	got, ok = in.commands(Event{Type: "key", Down: true, Key: "c", Mods: []string{"ctrl"}})
+	if !ok || !reflect.DeepEqual(got, [][]string{{"xdotool", "key", "--clearmodifiers", "ctrl+c"}}) {
+		t.Fatalf("ctrl+c: got %v ok=%v", got, ok)
+	}
+
+	got, _ = in.commands(Event{Type: "key", Down: true, Key: "Delete", Mods: []string{"ctrl", "alt"}})
+	if got[0][3] != "ctrl+alt+Delete" {
+		t.Fatalf("ctrl+alt+del: got %v", got)
+	}
+
+	// cmd maps to super on Linux.
+	got, _ = in.commands(Event{Type: "key", Down: true, Key: " ", Mods: []string{"cmd"}})
+	if got[0][3] != "super+space" {
+		t.Fatalf("super+space: got %v", got)
+	}
+}
+
+func TestDarwinTextAndCombo(t *testing.T) {
+	in := darwinInjector(1, 1)
+
+	got, ok := in.commands(Event{Type: "text", Text: "hi 世界"})
+	if !ok || !reflect.DeepEqual(got, [][]string{{"cliclick", "t:hi 世界"}}) {
+		t.Fatalf("text: got %v ok=%v", got, ok)
+	}
+
+	// A modified printable char uses AppleScript keystroke — cliclick t: would
+	// ignore the held modifier and type a literal char.
+	got, ok = in.commands(Event{Type: "key", Down: true, Key: "c", Mods: []string{"cmd"}})
+	want := [][]string{{"osascript", "-e", `tell application "System Events" to keystroke "c" using {command down}`}}
+	if !ok || !reflect.DeepEqual(got, want) {
+		t.Fatalf("cmd+c: got %v ok=%v", got, ok)
+	}
+
+	// A modified named key is a real keypress that combines with kd:/ku:.
+	got, _ = in.commands(Event{Type: "key", Down: true, Key: " ", Mods: []string{"cmd"}})
+	if !reflect.DeepEqual(got, [][]string{{"cliclick", "kd:cmd", "kp:space", "ku:cmd"}}) {
+		t.Fatalf("cmd+space: got %v", got)
+	}
+}
