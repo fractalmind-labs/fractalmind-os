@@ -5,50 +5,22 @@ import { RemoteDesktop } from "./RemoteDesktop";
 // The remote commands the envd worker understands (see handleCommand).
 const COMMANDS = ["status", "logs", "restart", "kill", "shell"] as const;
 
-interface DesktopSession {
-  url: string;
-  token: string;
-}
-
 export function SentinelList({
   client,
   sentinels,
-  defaultToken,
 }: {
   client: CoordinatorClient;
   sentinels: Sentinel[];
-  defaultToken: string;
 }) {
-  const [desktop, setDesktop] = useState<DesktopSession | null>(null);
+  // Desktop signaling is relayed through the coordinator, so opening a node's
+  // desktop needs only its id — no URL, no token, no prompt.
+  const [desktopNode, setDesktopNode] = useState<string | null>(null);
 
-  if (desktop) {
+  if (desktopNode) {
     return (
-      <RemoteDesktop url={desktop.url} token={desktop.token} onClose={() => setDesktop(null)} />
+      <RemoteDesktop client={client} nodeId={desktopNode} onClose={() => setDesktopNode(null)} />
     );
   }
-
-  // Open the desktop viewer for a node. Priority for the endpoint:
-  //   1. desktop_url advertised by the node itself (no prompt) — the goal state,
-  //      set once on the worker instead of typed by every viewer;
-  //   2. the URL/token this client last used for this node (remembered), so a
-  //      manual entry is a one-time cost per node, not per session.
-  const openDesktop = (s: Sentinel) => {
-    const remembered = loadDesktop(s.id);
-    if (s.desktop_url) {
-      // Advertised URL may embed the desktop token as ?token=..., so the node
-      // can carry everything in one field; split it back out for the viewer.
-      setDesktop(splitDesktopUrl(s.desktop_url, remembered?.token ?? defaultToken));
-      return;
-    }
-    const url = window.prompt(
-      "Remote desktop URL (envd-desktop server)",
-      remembered?.url ?? "https://",
-    );
-    if (!url) return;
-    const token = window.prompt("Desktop token", remembered?.token ?? defaultToken) ?? "";
-    saveDesktop(s.id, { url, token });
-    setDesktop({ url, token });
-  };
 
   if (sentinels.length === 0) {
     return <div className="empty muted">No nodes registered on this coordinator yet.</div>;
@@ -56,43 +28,10 @@ export function SentinelList({
   return (
     <div className="list">
       {sentinels.map((s) => (
-        <SentinelCard key={s.id} client={client} sentinel={s} onDesktop={() => openDesktop(s)} />
+        <SentinelCard key={s.id} client={client} sentinel={s} onDesktop={() => setDesktopNode(s.id)} />
       ))}
     </div>
   );
-}
-
-// Split an advertised desktop URL into { url, token }, pulling a ?token= query
-// out so the viewer (which sends the token separately) works from one field.
-function splitDesktopUrl(advertised: string, fallbackToken: string): DesktopSession {
-  try {
-    const u = new URL(advertised);
-    const tok = u.searchParams.get("token");
-    u.searchParams.delete("token");
-    const base = (u.origin + u.pathname).replace(/\/+$/, "");
-    return { url: base, token: tok ?? fallbackToken };
-  } catch {
-    return { url: advertised, token: fallbackToken };
-  }
-}
-
-const DESKTOP_KEY = (id: string) => `agent-console.desktop.${id}`;
-
-function loadDesktop(id: string): DesktopSession | null {
-  try {
-    const raw = localStorage.getItem(DESKTOP_KEY(id));
-    return raw ? (JSON.parse(raw) as DesktopSession) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveDesktop(id: string, s: DesktopSession) {
-  try {
-    localStorage.setItem(DESKTOP_KEY(id), JSON.stringify(s));
-  } catch {
-    /* storage unavailable: fall back to per-session entry */
-  }
 }
 
 function ageSeconds(iso: string | null): number | null {

@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
+import type { CoordinatorClient } from "../lib/coordinator";
 
-// WebRTC remote-desktop viewer. Ports the proven envd-desktop web client into a
-// React component: recvonly VP8 video + an "input" data channel for pointer and
-// keyboard, negotiated against the target's envd-desktop server
-// (GET /ice, POST /offer). Both the pion server side and this client use the
-// server-provided ICE servers (STUN/TURN) so cellular CGNAT is traversable.
+// WebRTC remote-desktop viewer. recvonly VP8 video + an "input" data channel for
+// pointer and keyboard. Signaling (ICE + offer/answer) is relayed through the
+// coordinator to the node's envd-desktop server, so there is no direct tunnel to
+// the desktop; media (SRTP) still flows peer-to-peer or via the server-provided
+// TURN so cellular CGNAT is traversable.
 
 interface Props {
-  /** Base URL of the target's envd-desktop server (e.g. https://host or a tunnel). */
-  url: string;
-  token: string;
+  client: CoordinatorClient;
+  nodeId: string;
   onClose: () => void;
 }
 
@@ -23,24 +23,19 @@ interface InputEvent {
   dy?: number;
 }
 
-export function RemoteDesktop({ url, token, onClose }: Props) {
+export function RemoteDesktop({ client, nodeId, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
   const [status, setStatus] = useState("connecting…");
-  const base = url.replace(/\/+$/, "");
-  const q = token ? `?token=${encodeURIComponent(token)}` : "";
 
   useEffect(() => {
     let closed = false;
 
     async function iceServers(): Promise<RTCIceServer[]> {
       try {
-        const r = await fetch(`${base}/ice${q}`);
-        if (r.ok) {
-          const j = await r.json();
-          if (j.iceServers?.length) return j.iceServers as RTCIceServer[];
-        }
+        const j = await client.desktopICE(nodeId);
+        if (j.iceServers?.length) return j.iceServers;
       } catch {
         /* fall back */
       }
@@ -76,16 +71,7 @@ export function RemoteDesktop({ url, token, onClose }: Props) {
         setTimeout(res, 4000);
       });
 
-      const resp = await fetch(`${base}/offer${q}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ offer: pc.localDescription }),
-      });
-      if (!resp.ok) {
-        setStatus(`signal failed: ${resp.status}`);
-        return;
-      }
-      const { answer } = await resp.json();
+      const { answer } = await client.desktopOffer(nodeId, pc.localDescription!);
       await pc.setRemoteDescription(answer);
     }
 
@@ -95,7 +81,7 @@ export function RemoteDesktop({ url, token, onClose }: Props) {
       dcRef.current?.close();
       pcRef.current?.close();
     };
-  }, [base, q]);
+  }, [client, nodeId]);
 
   const send = (ev: InputEvent) => {
     const dc = dcRef.current;

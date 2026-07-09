@@ -112,4 +112,24 @@ export class CoordinatorClient {
       body: JSON.stringify({ command, agent_id: agentId, args }),
     });
   }
+
+  /**
+   * Remote-desktop signaling relayed through the coordinator to the node's
+   * envd-desktop server. The console never talks to the desktop directly, so
+   * there is no tunnel, no cross-origin fetch, and no desktop URL/token to
+   * configure — the coordinator bearer token authorizes everything.
+   */
+  desktopICE(id: string): Promise<{ iceServers: RTCIceServer[] }> {
+    return this.req(`/api/sentinels/${encodeURIComponent(id)}/desktop/ice`);
+  }
+
+  desktopOffer(
+    id: string,
+    offer: RTCSessionDescriptionInit,
+  ): Promise<{ answer: RTCSessionDescriptionInit }> {
+    return this.req(`/api/sentinels/${encodeURIComponent(id)}/desktop/offer`, {
+      method: "POST",
+      body: JSON.stringify({ offer }),
+    });
+  }
 }

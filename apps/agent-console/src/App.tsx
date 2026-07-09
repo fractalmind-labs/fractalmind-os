@@ -104,7 +104,7 @@ export function App() {
           </button>
         </div>
       </header>
-      {client && <SentinelList client={client} sentinels={sentinels} defaultToken={conn.token} />}
+      {client && <SentinelList client={client} sentinels={sentinels} />}
     </div>
   );
 }
