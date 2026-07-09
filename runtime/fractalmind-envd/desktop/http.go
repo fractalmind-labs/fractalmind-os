@@ -40,7 +40,25 @@ func Handler(cfg HTTPConfig) http.Handler {
 		_, _ = w.Write([]byte("ok"))
 	})
 	mux.Handle("GET /", http.FileServer(http.FS(sub)))
-	return mux
+	return corsMiddleware(mux)
+}
+
+// corsMiddleware allows a browser served from a different origin (e.g. an
+// Agent Console web build on another host) to call the signaling endpoints.
+// Auth is the bearer/query token, not the origin, so allowing any origin is
+// safe here; the OPTIONS preflight must be answered before the method-based
+// mux, which would otherwise 405 it.
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 type iceServerJSON struct {

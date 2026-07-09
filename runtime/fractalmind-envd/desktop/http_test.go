@@ -70,6 +70,37 @@ func TestHealthAndClientServed(t *testing.T) {
 	}
 }
 
+func TestCORSHeadersAndPreflight(t *testing.T) {
+	h := Handler(HTTPConfig{})
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	// A cross-origin browser fetch must see an allow-origin header.
+	resp, err := http.Get(srv.URL + "/healthz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := resp.Header.Get("Access-Control-Allow-Origin"); got != "*" {
+		t.Fatalf("allow-origin = %q, want *", got)
+	}
+
+	// The POST /offer preflight (OPTIONS) must be answered, not 405'd by the
+	// method-based mux.
+	req, _ := http.NewRequest(http.MethodOptions, srv.URL+"/offer", nil)
+	req.Header.Set("Origin", "https://console.example.com")
+	req.Header.Set("Access-Control-Request-Method", "POST")
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("preflight status = %d, want 204", resp.StatusCode)
+	}
+	if got := resp.Header.Get("Access-Control-Allow-Origin"); got != "*" {
+		t.Fatalf("preflight allow-origin = %q, want *", got)
+	}
+}
+
 func TestBearerParse(t *testing.T) {
 	if bearer("Bearer abc") != "abc" {
 		t.Fatal("bearer parse failed")
