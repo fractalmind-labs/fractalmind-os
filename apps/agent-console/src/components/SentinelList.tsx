@@ -35,7 +35,9 @@ export function SentinelList({
   const openDesktop = (s: Sentinel) => {
     const remembered = loadDesktop(s.id);
     if (s.desktop_url) {
-      setDesktop({ url: s.desktop_url, token: remembered?.token ?? defaultToken });
+      // Advertised URL may embed the desktop token as ?token=..., so the node
+      // can carry everything in one field; split it back out for the viewer.
+      setDesktop(splitDesktopUrl(s.desktop_url, remembered?.token ?? defaultToken));
       return;
     }
     const url = window.prompt(
@@ -58,6 +60,20 @@ export function SentinelList({
       ))}
     </div>
   );
+}
+
+// Split an advertised desktop URL into { url, token }, pulling a ?token= query
+// out so the viewer (which sends the token separately) works from one field.
+function splitDesktopUrl(advertised: string, fallbackToken: string): DesktopSession {
+  try {
+    const u = new URL(advertised);
+    const tok = u.searchParams.get("token");
+    u.searchParams.delete("token");
+    const base = (u.origin + u.pathname).replace(/\/+$/, "");
+    return { url: base, token: tok ?? fallbackToken };
+  } catch {
+    return { url: advertised, token: fallbackToken };
+  }
 }
 
 const DESKTOP_KEY = (id: string) => `agent-console.desktop.${id}`;
