@@ -147,11 +147,15 @@ func TestDarwinTextAndCombo(t *testing.T) {
 		t.Fatalf("text: got %v ok=%v", got, ok)
 	}
 
+	// A modified printable char uses AppleScript keystroke — cliclick t: would
+	// ignore the held modifier and type a literal char.
 	got, ok = in.commands(Event{Type: "key", Down: true, Key: "c", Mods: []string{"cmd"}})
-	if !ok || !reflect.DeepEqual(got, [][]string{{"cliclick", "kd:cmd", "t:c", "ku:cmd"}}) {
+	want := [][]string{{"osascript", "-e", `tell application "System Events" to keystroke "c" using {command down}`}}
+	if !ok || !reflect.DeepEqual(got, want) {
 		t.Fatalf("cmd+c: got %v ok=%v", got, ok)
 	}
 
+	// A modified named key is a real keypress that combines with kd:/ku:.
 	got, _ = in.commands(Event{Type: "key", Down: true, Key: " ", Mods: []string{"cmd"}})
 	if !reflect.DeepEqual(got, [][]string{{"cliclick", "kd:cmd", "kp:space", "ku:cmd"}}) {
 		t.Fatalf("cmd+space: got %v", got)

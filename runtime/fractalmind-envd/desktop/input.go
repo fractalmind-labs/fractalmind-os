@@ -136,13 +136,45 @@ func (in *cmdInjector) darwinCommands(ev Event) ([][]string, bool) {
 		if kp == "" {
 			return nil, false
 		}
-		// With modifiers, hold them (kd:) around the keypress, then release (ku:).
 		if mods := cliclickMods(ev.Mods); mods != "" {
+			// A single printable char with modifiers (Cmd+C, Ctrl+A, ...) must be
+			// a real modified keystroke. cliclick's t: types unicode text and
+			// ignores held modifier flags, so it would insert a literal char;
+			// use AppleScript keystroke, which honors the modifier set. Named
+			// keys (kp:arrow-up, kp:space, ...) are real key presses that do
+			// combine with cliclick's kd:/ku:.
+			if strings.HasPrefix(kp, "t:") {
+				return [][]string{osascriptKeystroke(strings.TrimPrefix(kp, "t:"), ev.Mods)}, true
+			}
 			return [][]string{{"cliclick", "kd:" + mods, kp, "ku:" + mods}}, true
 		}
 		return [][]string{{"cliclick", kp}}, true
 	}
 	return nil, false
+}
+
+// osascriptKeystroke builds an AppleScript that presses a printable key with
+// modifiers held (e.g. Cmd+C), the reliable macOS primitive for modified
+// keystrokes.
+func osascriptKeystroke(char string, mods []string) []string {
+	parts := make([]string, 0, len(mods))
+	for _, m := range mods {
+		switch strings.ToLower(m) {
+		case "cmd", "meta", "super", "win":
+			parts = append(parts, "command down")
+		case "ctrl", "control":
+			parts = append(parts, "control down")
+		case "alt", "option":
+			parts = append(parts, "option down")
+		case "shift":
+			parts = append(parts, "shift down")
+		}
+	}
+	// AppleScript string literal: escape backslash and quote.
+	esc := strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(char)
+	script := fmt.Sprintf(`tell application "System Events" to keystroke "%s" using {%s}`,
+		esc, strings.Join(parts, ", "))
+	return []string{"osascript", "-e", script}
 }
 
 // Handle applies an event on the host.
