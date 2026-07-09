@@ -37,6 +37,9 @@ export interface Sentinel {
   agent_count: number;
   uptime_seconds: number;
   system?: SystemInfo | null;
+  // Optional public URL of this node's envd-desktop server, advertised by the
+  // worker. When present the App opens the desktop viewer without prompting.
+  desktop_url?: string | null;
 }
 
 export interface CommandResult {

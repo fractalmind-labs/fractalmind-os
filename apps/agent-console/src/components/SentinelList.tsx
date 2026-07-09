@@ -27,10 +27,24 @@ export function SentinelList({
     );
   }
 
-  const openDesktop = () => {
-    const url = window.prompt("Remote desktop URL (envd-desktop server)", "https://");
+  // Open the desktop viewer for a node. Priority for the endpoint:
+  //   1. desktop_url advertised by the node itself (no prompt) — the goal state,
+  //      set once on the worker instead of typed by every viewer;
+  //   2. the URL/token this client last used for this node (remembered), so a
+  //      manual entry is a one-time cost per node, not per session.
+  const openDesktop = (s: Sentinel) => {
+    const remembered = loadDesktop(s.id);
+    if (s.desktop_url) {
+      setDesktop({ url: s.desktop_url, token: remembered?.token ?? defaultToken });
+      return;
+    }
+    const url = window.prompt(
+      "Remote desktop URL (envd-desktop server)",
+      remembered?.url ?? "https://",
+    );
     if (!url) return;
-    const token = window.prompt("Desktop token", defaultToken) ?? "";
+    const token = window.prompt("Desktop token", remembered?.token ?? defaultToken) ?? "";
+    saveDesktop(s.id, { url, token });
     setDesktop({ url, token });
   };
 
@@ -40,10 +54,29 @@ export function SentinelList({
   return (
     <div className="list">
       {sentinels.map((s) => (
-        <SentinelCard key={s.id} client={client} sentinel={s} onDesktop={openDesktop} />
+        <SentinelCard key={s.id} client={client} sentinel={s} onDesktop={() => openDesktop(s)} />
       ))}
     </div>
   );
+}
+
+const DESKTOP_KEY = (id: string) => `agent-console.desktop.${id}`;
+
+function loadDesktop(id: string): DesktopSession | null {
+  try {
+    const raw = localStorage.getItem(DESKTOP_KEY(id));
+    return raw ? (JSON.parse(raw) as DesktopSession) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveDesktop(id: string, s: DesktopSession) {
+  try {
+    localStorage.setItem(DESKTOP_KEY(id), JSON.stringify(s));
+  } catch {
+    /* storage unavailable: fall back to per-session entry */
+  }
 }
 
 function ageSeconds(iso: string | null): number | null {
