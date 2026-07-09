@@ -52,11 +52,13 @@ func TestLinuxScrollDirection(t *testing.T) {
 func TestLinuxKeyMapping(t *testing.T) {
 	in := linuxInjector(1, 1)
 	cases := map[string]string{
-		"Enter":     "Return",
-		"Backspace": "BackSpace",
-		" ":         "space",
-		"ArrowLeft": "Left",
-		"a":         "a",
+		"Enter":       "Return",
+		"Return":      "Return",
+		"NumpadEnter": "Return",
+		"Backspace":   "BackSpace",
+		" ":           "space",
+		"ArrowLeft":   "Left",
+		"a":           "a",
 	}
 	for key, sym := range cases {
 		got, ok := in.commands(Event{Type: "key", Key: key, Down: true})
@@ -90,6 +92,22 @@ func TestDarwinPointerAndKey(t *testing.T) {
 	got, ok = in.commands(Event{Type: "key", Key: "Enter", Down: true})
 	if !ok || got[0][1] != "kp:return" {
 		t.Fatalf("darwin key: got %v", got)
+	}
+	got, ok = in.commands(Event{Type: "key", Key: "Return", Down: true})
+	if !ok || got[0][1] != "kp:return" {
+		t.Fatalf("darwin return alias: got %v", got)
+	}
+}
+
+func TestDarwinScroll(t *testing.T) {
+	in := darwinInjector(1440, 900)
+	up, ok := in.commands(Event{Type: "scroll", DY: -12})
+	if !ok || !reflect.DeepEqual(up, [][]string{{"cliclick", "w:0,1"}}) {
+		t.Fatalf("darwin scroll up: got %v ok=%v", up, ok)
+	}
+	down, ok := in.commands(Event{Type: "scroll", DY: 12})
+	if !ok || !reflect.DeepEqual(down, [][]string{{"cliclick", "w:0,-1"}}) {
+		t.Fatalf("darwin scroll down: got %v ok=%v", down, ok)
 	}
 }
 
