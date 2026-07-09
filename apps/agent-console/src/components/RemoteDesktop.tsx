@@ -181,10 +181,11 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
         pc.addEventListener("icegatheringstatechange", check);
         setTimeout(res, 4000);
       });
-      if (closed) return;
+      // Bail if unmounted or superseded by a newer connect() (which closed pc).
+      if (closed || pcRef.current !== pc) return;
 
       const { answer } = await client.desktopOffer(nodeId, pc.localDescription!);
-      if (closed) return;
+      if (closed || pcRef.current !== pc) return;
       await pc.setRemoteDescription(answer);
     }
 

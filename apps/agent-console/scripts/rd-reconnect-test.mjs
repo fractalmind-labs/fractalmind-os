@@ -74,3 +74,5 @@ try {
 console.log(JSON.stringify(out, null, 2));
 await browser.close();
 server.close();
+
+process.exit(out.reconnected && !out.error ? 0 : 1);
