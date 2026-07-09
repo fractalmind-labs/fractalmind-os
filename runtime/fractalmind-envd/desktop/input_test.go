@@ -97,6 +97,16 @@ func TestDarwinPointerAndKey(t *testing.T) {
 	if !ok || got[0][1] != "kp:return" {
 		t.Fatalf("darwin return alias: got %v", got)
 	}
+	got, ok = in.commands(Event{Type: "key", Key: "Backspace", Down: true})
+	want := [][]string{{"osascript", "-e", `tell application "System Events" to key code 51`}}
+	if !ok || !reflect.DeepEqual(got, want) {
+		t.Fatalf("darwin backspace: got %v ok=%v", got, ok)
+	}
+	got, ok = in.commands(Event{Type: "key", Key: "Delete", Down: true})
+	want = [][]string{{"osascript", "-e", `tell application "System Events" to key code 117`}}
+	if !ok || !reflect.DeepEqual(got, want) {
+		t.Fatalf("darwin forward delete: got %v ok=%v", got, ok)
+	}
 }
 
 func TestDarwinScroll(t *testing.T) {

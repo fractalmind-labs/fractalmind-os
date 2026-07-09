@@ -134,6 +134,9 @@ func (in *cmdInjector) darwinCommands(ev Event) ([][]string, bool) {
 		if !ev.Down {
 			return nil, false
 		}
+		if code, ok := darwinKeyCode(ev.Key); ok {
+			return [][]string{osascriptKeyCode(code, ev.Mods)}, true
+		}
 		kp := cliclickKey(ev.Key)
 		if kp == "" {
 			return nil, false
@@ -153,6 +156,40 @@ func (in *cmdInjector) darwinCommands(ev Event) ([][]string, bool) {
 		return [][]string{{"cliclick", kp}}, true
 	}
 	return nil, false
+}
+
+// osascriptKeyCode builds an AppleScript key-code press. Some special keys are
+// not reliable through cliclick kp:* on macOS login/password fields; Backspace in
+// particular must be the physical Delete key (key code 51), not forward delete.
+func osascriptKeyCode(code int, mods []string) []string {
+	parts := make([]string, 0, len(mods))
+	for _, m := range mods {
+		switch strings.ToLower(m) {
+		case "cmd", "meta", "super", "win":
+			parts = append(parts, "command down")
+		case "ctrl", "control":
+			parts = append(parts, "control down")
+		case "alt", "option":
+			parts = append(parts, "option down")
+		case "shift":
+			parts = append(parts, "shift down")
+		}
+	}
+	script := fmt.Sprintf(`tell application "System Events" to key code %d`, code)
+	if len(parts) > 0 {
+		script += fmt.Sprintf(` using {%s}`, strings.Join(parts, ", "))
+	}
+	return []string{"osascript", "-e", script}
+}
+
+func darwinKeyCode(key string) (int, bool) {
+	switch key {
+	case "Backspace":
+		return 51, true // physical Delete / backspace key
+	case "Delete":
+		return 117, true // forward delete
+	}
+	return 0, false
 }
 
 // osascriptKeystroke builds an AppleScript that presses a printable key with
