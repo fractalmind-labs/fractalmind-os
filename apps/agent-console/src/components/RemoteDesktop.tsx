@@ -28,6 +28,10 @@ interface InputEvent {
 // Sticky modifiers a user can arm from the on-screen bar; they apply to the
 // next key/combo and then clear (like ToDesk's modifier row).
 type Mod = "ctrl" | "alt" | "shift" | "cmd";
+
+// Filler kept in the hidden capture input so the soft keyboard backspace
+// always has content to delete and thus fires a delete event.
+const KBD_FILLER = "   ";
 type TouchMode = "direct" | "touchpad";
 
 const MIN_ZOOM = 0.5;
@@ -480,46 +484,49 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
         </div>
       )}
 
-      {/* Hidden field: mobile IME commits go through onInput (reliable for
-          composed/CJK text); Enter/Backspace/etc. come through onKeyDown. */}
+      {/* Hidden capture field. Kept filled with a filler buffer, not empty: on
+          an empty field the mobile soft keyboard's backspace deletes nothing
+          and fires no event (so delete "didn't work" and password entry broke).
+          With filler, every backspace deletes a filler char and reliably fires
+          deleteContentBackward; the buffer is reset after each event so no typed
+          text (e.g. a password) lingers in the field. */}
       <input
         ref={kbdRef}
         className="rd-kbd"
+        type="text"
+        inputMode="text"
         autoComplete="off"
-        autoCapitalize="off"
+        autoCapitalize="none"
         autoCorrect="off"
         spellCheck={false}
-        value=""
-        onChange={() => {}}
+        defaultValue={KBD_FILLER}
         onInput={(e) => {
-          // On mobile the return key may arrive as an inputType with no
-          // key event, or as literal newline data from the IME. Map both to
-          // remote Enter and only type real text data.
+          const el = e.currentTarget;
           const ne = e.nativeEvent as unknown as { data?: string; inputType?: string };
-          if (ne.inputType === "insertLineBreak" || ne.inputType === "insertParagraph") {
+          const it = ne.inputType || "";
+          if (it === "insertLineBreak" || it === "insertParagraph") {
             sendKey("Enter");
-            return;
-          }
-          if (ne.inputType === "deleteContentBackward") {
+          } else if (it.startsWith("delete")) {
             sendKey("Backspace");
-            return;
+          } else if (ne.data) {
+            for (const chunk of ne.data.split(/(\r\n|\n|\r)/)) {
+              if (!chunk) continue;
+              if (chunk === "\n" || chunk === "\r" || chunk === "\r\n") sendKey("Enter");
+              else send({ t: "text", text: chunk });
+            }
           }
-          if (!ne.data) return;
-          for (const chunk of ne.data.split(/(\r\n|\n|\r)/)) {
-            if (!chunk) continue;
-            if (chunk === "\n" || chunk === "\r" || chunk === "\r\n") sendKey("Enter");
-            else send({ t: "text", text: chunk });
-          }
+          // Restore the filler buffer with the caret at the end.
+          el.value = KBD_FILLER;
+          el.setSelectionRange(KBD_FILLER.length, KBD_FILLER.length);
         }}
         onKeyDown={(e) => {
-          // Printable single chars are handled by onInput to keep IME intact;
-          // forward control/navigation keys and modified chords here.
+          // Physical keyboards: printable chars go through onInput (IME-safe);
+          // forward control/navigation keys and armed-modifier chords here.
           const m = modsRef.current;
-          const isChar = e.key.length === 1 && m.length === 0;
-          if (isChar) return;
-          e.preventDefault();
+          if (e.key.length === 1 && m.length === 0) return;
           if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta")
             return;
+          e.preventDefault();
           sendKey(e.key);
         }}
       />
