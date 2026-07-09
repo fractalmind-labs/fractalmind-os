@@ -29,6 +29,14 @@ interface InputEvent {
 // next key/combo and then clear (like ToDesk's modifier row).
 type Mod = "ctrl" | "alt" | "shift" | "cmd";
 
+// Live connection stats surfaced in the overlay.
+interface RtcStats {
+  rttMs: number | null;
+  kbps: number | null;
+  fps: number | null;
+  lossPct: number | null;
+}
+
 // Filler kept in the hidden capture input so the soft keyboard backspace
 // always has content to delete and thus fires a delete event.
 const KBD_FILLER = "   ";
@@ -48,6 +56,10 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
   const dcRef = useRef<RTCDataChannel | null>(null);
   const kbdRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState("connecting…");
+  // WebRTC live stats (ToDesk-style overlay): RTT, bitrate, FPS, loss.
+  const [stats, setStats] = useState<RtcStats | null>(null);
+  const [showStats, setShowStats] = useState(false);
+  const statsPrevRef = useRef<{ ts: number; bytes: number; frames: number } | null>(null);
   // Controlling = input is forwarded to the host. When released, the stream
   // keeps playing but pointer/keyboard do nothing (so the user can look/scroll
   // the page without driving the remote machine).
@@ -139,8 +151,53 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
     }
 
     connect().catch((e) => setStatus("error: " + (e as Error).message));
+
+    // Poll WebRTC stats once a second for the overlay. Bitrate/FPS are computed
+    // from deltas of the inbound video report; RTT comes from the active
+    // candidate pair; loss from cumulative packetsLost/received.
+    const statsTimer = window.setInterval(async () => {
+      const pc = pcRef.current;
+      if (!pc) return;
+      try {
+        const report = await pc.getStats();
+        let rttMs: number | null = null;
+        let bytes = 0;
+        let frames = 0;
+        let fps: number | null = null;
+        let lost = 0;
+        let recv = 0;
+        report.forEach((r) => {
+          if (r.type === "candidate-pair" && (r.nominated || r.state === "succeeded") && r.currentRoundTripTime != null)
+            rttMs = Math.round(r.currentRoundTripTime * 1000);
+          if (r.type === "inbound-rtp" && r.kind === "video") {
+            bytes = r.bytesReceived || 0;
+            frames = r.framesDecoded || 0;
+            if (r.framesPerSecond != null) fps = Math.round(r.framesPerSecond);
+            lost = r.packetsLost || 0;
+            recv = r.packetsReceived || 0;
+          }
+        });
+        const now = performance.now();
+        const prev = statsPrevRef.current;
+        let kbps: number | null = null;
+        if (prev) {
+          const dt = (now - prev.ts) / 1000;
+          if (dt > 0) {
+            kbps = Math.round(((bytes - prev.bytes) * 8) / dt / 1000);
+            if (fps == null) fps = Math.round((frames - prev.frames) / dt);
+          }
+        }
+        statsPrevRef.current = { ts: now, bytes, frames };
+        const lossPct = lost + recv > 0 ? Math.round((lost / (lost + recv)) * 1000) / 10 : null;
+        if (!closed) setStats({ rttMs, kbps, fps, lossPct });
+      } catch {
+        /* stats unavailable this tick */
+      }
+    }, 1000);
+
     return () => {
       closed = true;
+      window.clearInterval(statsTimer);
       dcRef.current?.close();
       pcRef.current?.close();
     };
@@ -414,8 +471,24 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
           <button onClick={focusKeyboard} title="Show keyboard">
             ⌨︎
           </button>
+          <button
+            className={showStats ? "on" : ""}
+            onClick={() => setShowStats((s) => !s)}
+            title="Connection stats"
+          >
+            📊
+          </button>
         </div>
       </div>
+
+      {showStats && (
+        <div className="rd-stats small">
+          <span>RTT {stats?.rttMs != null ? `${stats.rttMs}ms` : "–"}</span>
+          <span>{stats?.kbps != null ? `${stats.kbps} kbps` : "– kbps"}</span>
+          <span>{stats?.fps != null ? `${stats.fps} fps` : "– fps"}</span>
+          <span>loss {stats?.lossPct != null ? `${stats.lossPct}%` : "–"}</span>
+        </div>
+      )}
 
       <div
         ref={viewportRef}
