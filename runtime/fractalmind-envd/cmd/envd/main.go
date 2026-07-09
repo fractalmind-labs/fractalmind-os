@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -373,15 +376,24 @@ func main() {
 		})
 	})
 
+	// Relay remote-desktop signaling from the coordinator to the local
+	// envd-desktop server, so the console reaches the desktop over the
+	// authenticated control channel instead of a public tunnel.
+	wsClient.OnDesktopSignal(func(sig ws.DesktopSignalPayload) {
+		res := proxyDesktopSignal(cfg.Desktop, sig)
+		wsClient.Send("desktop_signal_result", res)
+	})
+
 	// Register with Gateway on every (re)connect, once the control-channel
 	// handshake has completed. A fixed post-connect delay loses the race on
 	// high-latency links, and a one-shot register leaves reconnected workers
 	// invisible (the coordinator drops heartbeats from unregistered nodes).
 	wsClient.OnConnect(func() {
 		if err := wsClient.Send("register", map[string]string{
-			"host_id":  cfg.Identity.HostID,
-			"hostname": cfg.Identity.Hostname,
-			"version":  version,
+			"host_id":     cfg.Identity.HostID,
+			"hostname":    cfg.Identity.Hostname,
+			"version":     version,
+			"desktop_url": cfg.Identity.DesktopURL,
 		}); err != nil {
 			log.Printf("[ws] register send failed: %v", err)
 		}
@@ -541,6 +553,58 @@ func detectAndRestart(prev, curr []agent.Agent, scanner *agent.Scanner, restartC
 			restartCounts[a.Session] = count + 1
 		}
 	}
+}
+
+// proxyDesktopSignal forwards a relayed signaling request to the local
+// envd-desktop server and returns its response for the coordinator. Only the
+// two signaling paths are allowed, and the desktop token is injected here so
+// the console never has to hold it.
+func proxyDesktopSignal(cfg config.DesktopConfig, sig ws.DesktopSignalPayload) ws.DesktopSignalResult {
+	res := ws.DesktopSignalResult{RequestID: sig.RequestID}
+	if cfg.LocalAddr == "" {
+		res.Status = http.StatusServiceUnavailable
+		res.Error = "desktop relay not configured on this node"
+		return res
+	}
+	if sig.Path != "/offer" && sig.Path != "/ice" {
+		res.Status = http.StatusBadRequest
+		res.Error = "unsupported desktop path"
+		return res
+	}
+
+	method := sig.Method
+	if method == "" {
+		method = http.MethodGet
+	}
+	var body io.Reader
+	if len(sig.Body) > 0 {
+		body = bytes.NewReader(sig.Body)
+	}
+	req, err := http.NewRequest(method, strings.TrimRight(cfg.LocalAddr, "/")+sig.Path, body)
+	if err != nil {
+		res.Status = http.StatusInternalServerError
+		res.Error = err.Error()
+		return res
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if cfg.Token != "" {
+		req.Header.Set("Authorization", "Bearer "+cfg.Token)
+	}
+
+	resp, err := (&http.Client{Timeout: 15 * time.Second}).Do(req)
+	if err != nil {
+		res.Status = http.StatusBadGateway
+		res.Error = err.Error()
+		return res
+	}
+	defer resp.Body.Close()
+
+	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	res.Status = resp.StatusCode
+	if len(raw) > 0 {
+		res.Body = json.RawMessage(raw)
+	}
+	return res
 }
 
 // handleCommand processes a command from Gateway.

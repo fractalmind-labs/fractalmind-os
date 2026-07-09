@@ -25,15 +25,35 @@ type CommandPayload struct {
 	RequestID string `json:"request_id"` // for response correlation
 }
 
+// DesktopSignalPayload is a remote-desktop signaling request relayed from the
+// coordinator (originating in a console). The worker forwards it to its local
+// envd-desktop server and returns the response, so the desktop signaling reuses
+// the authenticated control channel instead of a public tunnel.
+type DesktopSignalPayload struct {
+	RequestID string          `json:"request_id"`
+	Method    string          `json:"method"` // GET or POST
+	Path      string          `json:"path"`   // /offer or /ice
+	Body      json.RawMessage `json:"body,omitempty"`
+}
+
+// DesktopSignalResult is the worker's reply for a DesktopSignalPayload.
+type DesktopSignalResult struct {
+	RequestID string          `json:"request_id"`
+	Status    int             `json:"status"`
+	Body      json.RawMessage `json:"body,omitempty"`
+	Error     string          `json:"error,omitempty"`
+}
+
 // Client manages the WebSocket connection to Gateway.
 type Client struct {
-	url           string
-	reconnectWait time.Duration
-	conn          *websocket.Conn
-	mu            sync.Mutex
-	done          chan struct{}
-	onCommand     func(CommandPayload)
-	onConnect     func()
+	url             string
+	reconnectWait   time.Duration
+	conn            *websocket.Conn
+	mu              sync.Mutex
+	done            chan struct{}
+	onCommand       func(CommandPayload)
+	onConnect       func()
+	onDesktopSignal func(DesktopSignalPayload)
 
 	// Control-channel authentication. signer proves this worker's SUI
 	// identity to the coordinator; expectedCoordAddr, when non-empty, pins the
@@ -66,6 +86,11 @@ func (c *Client) SetAuth(signer wsauth.Signer, expectedCoordAddr string) {
 // OnCommand sets the handler for incoming commands.
 func (c *Client) OnCommand(handler func(CommandPayload)) {
 	c.onCommand = handler
+}
+
+// OnDesktopSignal sets the handler for relayed remote-desktop signaling.
+func (c *Client) OnDesktopSignal(handler func(DesktopSignalPayload)) {
+	c.onDesktopSignal = handler
 }
 
 // OnConnect sets a handler invoked after every successful connection, once the
@@ -266,6 +291,15 @@ func (c *Client) readLoop(conn *websocket.Conn) {
 					continue
 				}
 				c.onCommand(cmd)
+			}
+		case "desktop_signal":
+			if c.onDesktopSignal != nil {
+				var sig DesktopSignalPayload
+				if err := json.Unmarshal(msg.Payload, &sig); err != nil {
+					log.Printf("[ws] invalid desktop_signal payload: %v", err)
+					continue
+				}
+				c.onDesktopSignal(sig)
 			}
 		case "ping":
 			c.Send("pong", nil)

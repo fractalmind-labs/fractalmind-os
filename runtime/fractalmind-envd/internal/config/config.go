@@ -18,10 +18,23 @@ type Config struct {
 	STUN        STUNConfig        `yaml:"stun"`
 	Sponsor     SponsorConfig     `yaml:"sponsor"`
 	Relay       RelayConfig       `yaml:"relay"`
+	Desktop     DesktopConfig     `yaml:"desktop"`
 
 	// Gateway config is the worker-side transport target.
 	// Workers connect to the coordinator envd WebSocket at this URL.
 	Gateway GatewayConfig `yaml:"gateway"`
+}
+
+// DesktopConfig points the worker at its local envd-desktop server so the
+// coordinator can relay remote-desktop signaling over the control channel,
+// removing the need for a public tunnel to the desktop server.
+type DesktopConfig struct {
+	// LocalAddr is the base URL of the local envd-desktop server, e.g.
+	// http://127.0.0.1:8090. Empty disables desktop signaling relay.
+	LocalAddr string `yaml:"local_addr"`
+	// Token is the envd-desktop server's bearer token, injected by the worker
+	// so the console never needs it.
+	Token string `yaml:"token"`
 }
 
 // RolesConfig controls which roles this envd node enables.
@@ -55,6 +68,10 @@ type GatewayConfig struct {
 type IdentityConfig struct {
 	HostID   string `yaml:"host_id"`
 	Hostname string `yaml:"hostname"`
+	// DesktopURL is the public URL of this node's envd-desktop server (e.g. a
+	// tunnel). When set, the worker advertises it on register so a console can
+	// open the remote desktop without the operator pasting the URL.
+	DesktopURL string `yaml:"desktop_url"`
 }
 
 type AgentsConfig struct {
