@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "cap": "cap",
-    "selftest:rd": "node scripts/rd-selftest.mjs dist"
+    "selftest:rd": "node scripts/rd-selftest.mjs dist",
+    "selftest:reconnect": "node scripts/rd-reconnect-test.mjs dist"
   },
   "dependencies": {
     "react": "^18.3.1",

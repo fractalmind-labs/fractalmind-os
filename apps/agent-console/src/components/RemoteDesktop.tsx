@@ -60,6 +60,10 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
   const [stats, setStats] = useState<RtcStats | null>(null);
   const [showStats, setShowStats] = useState(false);
   const statsPrevRef = useRef<{ ts: number; bytes: number; frames: number } | null>(null);
+  // Session reliability: auto-reconnect on ICE failure/drop (network switch,
+  // tab sleep, host restart). reconnectRef lets the toolbar trigger it manually.
+  const [reconnecting, setReconnecting] = useState(false);
+  const reconnectRef = useRef<(() => void) | null>(null);
   // Controlling = input is forwarded to the host. When released, the stream
   // keeps playing but pointer/keyboard do nothing (so the user can look/scroll
   // the page without driving the remote machine).
@@ -117,20 +121,52 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
       return [{ urls: "stun:stun.l.google.com:19302" }];
     }
 
+    let attempts = 0;
+    let retryTimer: number | undefined;
+    let dropTimer: number | undefined;
+
     async function connect() {
+      pcRef.current?.close();
       const pc = new RTCPeerConnection({ iceServers: await iceServers() });
+      if (closed) {
+        pc.close();
+        return;
+      }
       pcRef.current = pc;
       pc.addTransceiver("video", { direction: "recvonly" });
       const dc = pc.createDataChannel("input", { ordered: true });
       dcRef.current = dc;
-      dc.onopen = () => setStatus("connected · 端到端加密 (DTLS-SRTP) 已建立");
+      dc.onopen = () => {
+        if (closed) return;
+        attempts = 0;
+        setReconnecting(false);
+        setStatus("connected · 端到端加密 (DTLS-SRTP) 已建立");
+      };
       pc.ontrack = (e) => {
         if (videoRef.current) {
           videoRef.current.srcObject = e.streams[0];
           videoRef.current.play().catch(() => {});
         }
       };
-      pc.oniceconnectionstatechange = () => !closed && setStatus(pc.iceConnectionState);
+      pc.oniceconnectionstatechange = () => {
+        if (closed) return;
+        const st = pc.iceConnectionState;
+        setStatus(st);
+        if (st === "connected" || st === "completed") {
+          window.clearTimeout(dropTimer);
+          attempts = 0;
+          setReconnecting(false);
+        } else if (st === "failed") {
+          scheduleReconnect();
+        } else if (st === "disconnected") {
+          // A brief disconnect often self-heals; only reconnect if it persists.
+          window.clearTimeout(dropTimer);
+          dropTimer = window.setTimeout(() => {
+            if (!closed && pcRef.current === pc && pc.iceConnectionState === "disconnected")
+              scheduleReconnect();
+          }, 4000);
+        }
+      };
 
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
@@ -145,12 +181,44 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
         pc.addEventListener("icegatheringstatechange", check);
         setTimeout(res, 4000);
       });
+      if (closed) return;
 
       const { answer } = await client.desktopOffer(nodeId, pc.localDescription!);
+      if (closed) return;
       await pc.setRemoteDescription(answer);
     }
 
-    connect().catch((e) => setStatus("error: " + (e as Error).message));
+    function scheduleReconnect() {
+      if (closed) return;
+      window.clearTimeout(retryTimer);
+      if (attempts >= 8) {
+        setReconnecting(false);
+        setStatus("disconnected — tap Reconnect");
+        return;
+      }
+      const delay = Math.min(1000 * 2 ** attempts, 15000);
+      attempts += 1;
+      setReconnecting(true);
+      setStatus(`reconnecting… (${attempts})`);
+      retryTimer = window.setTimeout(() => {
+        connect().catch((e) => setStatus("error: " + (e as Error).message));
+      }, delay);
+    }
+
+    // Manual reconnect from the toolbar: reset backoff and retry now.
+    reconnectRef.current = () => {
+      window.clearTimeout(retryTimer);
+      window.clearTimeout(dropTimer);
+      attempts = 0;
+      setReconnecting(true);
+      setStatus("reconnecting…");
+      connect().catch((e) => setStatus("error: " + (e as Error).message));
+    };
+
+    connect().catch((e) => {
+      setStatus("error: " + (e as Error).message);
+      scheduleReconnect();
+    });
 
     // Poll WebRTC stats once a second for the overlay. Bitrate/FPS are computed
     // from deltas of the inbound video report; RTT comes from the active
@@ -198,6 +266,9 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
     return () => {
       closed = true;
       window.clearInterval(statsTimer);
+      window.clearTimeout(retryTimer);
+      window.clearTimeout(dropTimer);
+      reconnectRef.current = null;
       dcRef.current?.close();
       pcRef.current?.close();
     };
@@ -444,8 +515,16 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
     <div className="rd">
       <div className="rd-bar">
         <button onClick={onClose}>← Exit</button>
-        <span className="muted small rd-status">{status}</span>
+        <span className="muted small rd-status">
+          {reconnecting ? "🔄 " : ""}
+          {status}
+        </span>
         <div className="rd-bar-actions">
+          {(reconnecting || status.startsWith("disconnected") || status.startsWith("failed")) && (
+            <button onClick={() => reconnectRef.current?.()} title="Reconnect now">
+              🔄 Reconnect
+            </button>
+          )}
           <button onClick={() => setZoom(zoomRef.current - 0.25)} title="Zoom out">−</button>
           <button onClick={resetView} title="Fit to screen">Fit</button>
           <button onClick={actualSize} title="Actual size">1:1</button>
