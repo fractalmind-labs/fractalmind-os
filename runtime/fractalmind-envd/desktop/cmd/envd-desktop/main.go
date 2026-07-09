@@ -25,8 +25,8 @@ func main() {
 	var (
 		bind     = flag.String("bind", ":8090", "HTTP listen address")
 		display  = flag.String("display", "", "capture source (Linux X display e.g. :0 ; macOS avfoundation index e.g. 0)")
-		width    = flag.Int("width", 1280, "real screen width (maps pointer coords)")
-		height   = flag.Int("height", 720, "real screen height (maps pointer coords)")
+		width    = flag.Int("width", 0, "real screen width for pointer mapping (0 = auto-detect)")
+		height   = flag.Int("height", 0, "real screen height for pointer mapping (0 = auto-detect)")
 		pixFmt   = flag.String("pixel-format", "", "capture input pixel format (macOS avfoundation is usually uyvy422)")
 		fps      = flag.Int("fps", 25, "capture frame rate")
 		bitrate  = flag.String("bitrate", "4M", "H.264 target bitrate")
@@ -58,14 +58,28 @@ func main() {
 		log.Printf("[desktop] WARNING: signaling auth DISABLED (-token empty); anyone who can reach %s can control this host", *bind)
 	}
 
+	// Resolve the pointer-mapping screen size. Explicit flags win; otherwise
+	// auto-detect the host's logical display so clicks land correctly (incl.
+	// Retina) without an operator passing -width/-height.
+	sw, sh := *width, *height
+	if sw <= 0 || sh <= 0 {
+		if dw, dh, ok := desktop.DetectDisplaySize(); ok {
+			sw, sh = dw, dh
+			log.Printf("[desktop] auto-detected display %dx%d for pointer mapping", sw, sh)
+		} else {
+			sw, sh = 1280, 720
+			log.Printf("[desktop] display auto-detect failed; falling back to %dx%d (pass -width/-height to override)", sw, sh)
+		}
+	}
+
 	h := desktop.Handler(desktop.HTTPConfig{
 		Token: *token,
 		Server: desktop.ServerConfig{
 			ICEServers: ice,
 			Capture: desktop.CaptureConfig{
 				Display:     *display,
-				Width:       *width,
-				Height:      *height,
+				Width:       sw,
+				Height:      sh,
 				FPS:         *fps,
 				Bitrate:     *bitrate,
 				PixelFormat: *pixFmt,
