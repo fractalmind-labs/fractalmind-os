@@ -14,20 +14,34 @@ interface Props {
 }
 
 interface InputEvent {
-  t: "move" | "down" | "up" | "key" | "scroll";
+  t: "move" | "down" | "up" | "key" | "text" | "scroll";
   x?: number;
   y?: number;
   b?: number;
   k?: string;
   down?: boolean;
   dy?: number;
+  text?: string;
+  mods?: string[];
 }
+
+// Sticky modifiers a user can arm from the on-screen bar; they apply to the
+// next key/combo and then clear (like ToDesk's modifier row).
+type Mod = "ctrl" | "alt" | "shift" | "cmd";
 
 export function RemoteDesktop({ client, nodeId, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
+  const kbdRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState("connecting…");
+  // Controlling = input is forwarded to the host. When released, the stream
+  // keeps playing but pointer/keyboard do nothing (so the user can look/scroll
+  // the page without driving the remote machine).
+  const [controlling, setControlling] = useState(true);
+  const [mods, setMods] = useState<Mod[]>([]);
+  const modsRef = useRef<Mod[]>([]);
+  modsRef.current = mods;
 
   useEffect(() => {
     let closed = false;
@@ -84,6 +98,7 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
   }, [client, nodeId]);
 
   const send = (ev: InputEvent) => {
+    if (!controlling) return;
     const dc = dcRef.current;
     if (dc && dc.readyState === "open") {
       try {
@@ -93,6 +108,18 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
       }
     }
   };
+
+  // Send a key with the currently armed modifiers, then disarm them.
+  const sendKey = (k: string) => {
+    const m = modsRef.current;
+    send({ t: "key", k, down: true, mods: m.length ? m : undefined });
+    if (m.length) setMods([]);
+  };
+
+  const toggleMod = (m: Mod) =>
+    setMods((cur) => (cur.includes(m) ? cur.filter((x) => x !== m) : [...cur, m]));
+
+  const focusKeyboard = () => kbdRef.current?.focus();
 
   // Map a pointer position on the (object-fit: contain) video to normalized [0,1].
   const norm = (clientX: number, clientY: number) => {
@@ -112,21 +139,35 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
   };
 
   const down = useRef(false);
+  const SPECIAL: { label: string; k: string }[] = [
+    { label: "Esc", k: "Escape" },
+    { label: "Tab", k: "Tab" },
+    { label: "←", k: "ArrowLeft" },
+    { label: "↑", k: "ArrowUp" },
+    { label: "↓", k: "ArrowDown" },
+    { label: "→", k: "ArrowRight" },
+  ];
+  const MODS: Mod[] = ["ctrl", "alt", "shift", "cmd"];
 
   return (
     <div className="rd">
       <div className="rd-bar">
-        <button onClick={onClose}>← Back</button>
-        <span className="muted small">{status}</span>
-        <button
-          onClick={() => {
-            const el = document.querySelector<HTMLInputElement>("#rd-kbd");
-            el?.focus();
-          }}
-        >
-          ⌨︎
-        </button>
+        <button onClick={onClose}>← Exit</button>
+        <span className="muted small rd-status">{status}</span>
+        <div className="rd-bar-actions">
+          <button
+            className={controlling ? "on" : ""}
+            onClick={() => setControlling((c) => !c)}
+            title="Toggle whether input drives the remote machine"
+          >
+            {controlling ? "🎮 Control" : "🔒 Released"}
+          </button>
+          <button onClick={focusKeyboard} title="Show keyboard">
+            ⌨︎
+          </button>
+        </div>
       </div>
+
       <video
         ref={videoRef}
         className="rd-video"
@@ -153,13 +194,56 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
         onContextMenu={(e) => e.preventDefault()}
         onWheel={(e) => send({ t: "scroll", dy: e.deltaY })}
       />
+
+      {controlling && (
+        // preventDefault on pointer-down keeps the hidden input focused, so the
+        // keyboard stays up while arming a modifier for a combo (e.g. ctrl + c).
+        <div className="rd-keys" onPointerDown={(e) => e.preventDefault()}>
+          {MODS.map((m) => (
+            <button
+              key={m}
+              className={mods.includes(m) ? "on" : ""}
+              onClick={() => toggleMod(m)}
+            >
+              {m}
+            </button>
+          ))}
+          {SPECIAL.map((s) => (
+            <button key={s.k} onClick={() => sendKey(s.k)}>
+              {s.label}
+            </button>
+          ))}
+          <button onClick={focusKeyboard} title="Type">
+            abc⌨︎
+          </button>
+        </div>
+      )}
+
+      {/* Hidden field: mobile IME commits go through onInput (reliable for
+          composed/CJK text); Enter/Backspace/etc. come through onKeyDown. */}
       <input
-        id="rd-kbd"
+        ref={kbdRef}
         className="rd-kbd"
         autoComplete="off"
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellCheck={false}
+        value=""
+        onChange={() => {}}
+        onInput={(e) => {
+          const data = (e.nativeEvent as unknown as { data?: string }).data;
+          if (data) send({ t: "text", text: data });
+        }}
         onKeyDown={(e) => {
+          // Printable single chars are handled by onInput to keep IME intact;
+          // forward control/navigation keys and modified chords here.
+          const m = modsRef.current;
+          const isChar = e.key.length === 1 && m.length === 0;
+          if (isChar) return;
           e.preventDefault();
-          send({ t: "key", k: e.key, down: true });
+          if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta")
+            return;
+          sendKey(e.key);
         }}
       />
     </div>

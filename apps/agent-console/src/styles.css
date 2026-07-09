@@ -46,7 +46,18 @@ button:disabled { opacity: 0.5; }
 
 /* Remote desktop viewer */
 .rd { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; }
-.rd-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: calc(8px + env(safe-area-inset-top)) 12px 8px; background: rgba(0,0,0,.6); z-index: 2; }
+.rd-bar { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center;
+  justify-content: space-between; gap: 10px;
+  padding: calc(6px + env(safe-area-inset-top)) 12px 6px; background: rgba(0,0,0,.55);
+  z-index: 3; backdrop-filter: blur(6px); }
+.rd-bar-actions { display: flex; gap: 6px; }
+.rd-status { flex: 1; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rd-video { flex: 1; width: 100%; height: 100%; object-fit: contain; background: #000; touch-action: none; }
-.rd-kbd { position: fixed; opacity: 0; height: 0; pointer-events: none; }
+/* On-screen key row: modifiers (sticky) + special keys, overlaid at the bottom. */
+.rd-keys { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+  display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); background: rgba(0,0,0,.55);
+  backdrop-filter: blur(6px); }
+.rd-keys button { min-width: 44px; padding: 8px 10px; }
+.rd-keys button.on, .rd-bar button.on { background: #2f6feb; color: #fff; border-color: #2f6feb; }
+.rd-kbd { position: fixed; opacity: 0; height: 0; width: 0; pointer-events: none; }
