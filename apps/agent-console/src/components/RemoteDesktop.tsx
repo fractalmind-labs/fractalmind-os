@@ -468,17 +468,40 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
             <button
               key={m}
               className={mods.includes(m) ? "on" : ""}
-              onClick={() => toggleMod(m)}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleMod(m);
+                focusKeyboard();
+              }}
+              onClick={(e) => e.preventDefault()}
             >
               {m}
             </button>
           ))}
           {SPECIAL.map((s) => (
-            <button key={s.k} onClick={() => sendKey(s.k)}>
+            <button
+              key={s.k}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                sendKey(s.k);
+                focusKeyboard();
+              }}
+              onClick={(e) => e.preventDefault()}
+            >
               {s.label}
             </button>
           ))}
-          <button onClick={focusKeyboard} title="Type">
+          <button
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              focusKeyboard();
+            }}
+            onClick={(e) => e.preventDefault()}
+            title="Type"
+          >
             abc⌨︎
           </button>
         </div>
