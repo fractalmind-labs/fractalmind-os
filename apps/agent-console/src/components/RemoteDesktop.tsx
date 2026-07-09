@@ -142,6 +142,8 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
   const SPECIAL: { label: string; k: string }[] = [
     { label: "Esc", k: "Escape" },
     { label: "Tab", k: "Tab" },
+    { label: "⏎", k: "Enter" },
+    { label: "⌫", k: "Backspace" },
     { label: "←", k: "ArrowLeft" },
     { label: "↑", k: "ArrowUp" },
     { label: "↓", k: "ArrowDown" },
@@ -231,8 +233,18 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
         value=""
         onChange={() => {}}
         onInput={(e) => {
-          const data = (e.nativeEvent as unknown as { data?: string }).data;
-          if (data) send({ t: "text", text: data });
+          // On mobile the return key arrives here as insertLineBreak with no
+          // key event, so map input types to keys and only type real data.
+          const ne = e.nativeEvent as unknown as { data?: string; inputType?: string };
+          if (ne.inputType === "insertLineBreak" || ne.inputType === "insertParagraph") {
+            sendKey("Enter");
+            return;
+          }
+          if (ne.inputType === "deleteContentBackward") {
+            sendKey("Backspace");
+            return;
+          }
+          if (ne.data) send({ t: "text", text: ne.data });
         }}
         onKeyDown={(e) => {
           // Printable single chars are handled by onInput to keep IME intact;
