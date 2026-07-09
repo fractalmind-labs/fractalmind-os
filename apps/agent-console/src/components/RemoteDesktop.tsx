@@ -168,8 +168,12 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
   const sendClick = (x: number, y: number, b = 0) => {
     const p = norm(x, y);
     send({ t: "move", x: p.x, y: p.y });
-    send({ t: "down", b });
-    send({ t: "up", b });
+    // Darwin/cliclick button down/up commands are coordinate-bearing
+    // (`dd:x,y` / `du:x,y`). Include the same normalized point on the button
+    // events, not just the preceding move, otherwise the host may click at the
+    // injector default (0,0) even though the cursor was moved correctly.
+    send({ t: "down", x: p.x, y: p.y, b });
+    send({ t: "up", x: p.x, y: p.y, b });
   };
 
   const toggleMod = (m: Mod) =>
@@ -237,7 +241,8 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
         // Direct-touch may already be holding the remote button for a drag;
         // release it before switching into pinch/scroll handling so the host
         // never gets stuck with the mouse button held down.
-        send({ t: "up", b: 0 });
+        const p = norm(touchRef.current.lastX, touchRef.current.lastY);
+        send({ t: "up", x: p.x, y: p.y, b: 0 });
       }
       const mid = touchMid(e.touches);
       touchRef.current = {
@@ -274,7 +279,7 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
     if (touchModeRef.current === "direct") {
       const p = norm(t.clientX, t.clientY);
       send({ t: "move", x: p.x, y: p.y });
-      send({ t: "down", b: 0 });
+      send({ t: "down", x: p.x, y: p.y, b: 0 });
       touchRef.current.remoteDown = true;
     } else {
       touchRef.current.longPressTimer = window.setTimeout(() => {
@@ -343,7 +348,10 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
     e.preventDefault();
     clearLongPress();
     const state = touchRef.current;
-    if (state.remoteDown) send({ t: "up", b: 0 });
+    if (state.remoteDown) {
+      const p = norm(state.lastX, state.lastY);
+      send({ t: "up", x: p.x, y: p.y, b: 0 });
+    }
     const elapsed = Date.now() - state.startTime;
     const isTap = !state.moved && elapsed <= TAP_MS;
     if (controllingRef.current && touchModeRef.current === "touchpad" && isTap) {
@@ -421,7 +429,7 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
           e.preventDefault();
           const p = norm(e.clientX, e.clientY);
           send({ t: "move", x: p.x, y: p.y });
-          send({ t: "down", b: e.button || 0 });
+          send({ t: "down", x: p.x, y: p.y, b: e.button || 0 });
           down.current = true;
         }}
         onPointerMove={(e) => {
@@ -433,7 +441,8 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
         onPointerUp={(e) => {
           if (e.pointerType === "touch") return;
           e.preventDefault();
-          send({ t: "up", b: e.button || 0 });
+          const p = norm(e.clientX, e.clientY);
+          send({ t: "up", x: p.x, y: p.y, b: e.button || 0 });
           down.current = false;
         }}
         onContextMenu={(e) => e.preventDefault()}
