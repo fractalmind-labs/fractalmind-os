@@ -379,9 +379,10 @@ func main() {
 	// invisible (the coordinator drops heartbeats from unregistered nodes).
 	wsClient.OnConnect(func() {
 		if err := wsClient.Send("register", map[string]string{
-			"host_id":  cfg.Identity.HostID,
-			"hostname": cfg.Identity.Hostname,
-			"version":  version,
+			"host_id":     cfg.Identity.HostID,
+			"hostname":    cfg.Identity.Hostname,
+			"version":     version,
+			"desktop_url": cfg.Identity.DesktopURL,
 		}); err != nil {
 			log.Printf("[ws] register send failed: %v", err)
 		}

@@ -55,6 +55,10 @@ type GatewayConfig struct {
 type IdentityConfig struct {
 	HostID   string `yaml:"host_id"`
 	Hostname string `yaml:"hostname"`
+	// DesktopURL is the public URL of this node's envd-desktop server (e.g. a
+	// tunnel). When set, the worker advertises it on register so a console can
+	// open the remote desktop without the operator pasting the URL.
+	DesktopURL string `yaml:"desktop_url"`
 }
 
 type AgentsConfig struct {

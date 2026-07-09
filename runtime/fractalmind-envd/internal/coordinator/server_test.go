@@ -79,6 +79,32 @@ func TestCoordinatorListsRegisteredWorkers(t *testing.T) {
 	}
 }
 
+func TestCoordinatorAdvertisesDesktopURL(t *testing.T) {
+	server := NewServer(":0", time.Second, "")
+	testServer := httptest.NewServer(server.Handler())
+	defer testServer.Close()
+
+	conn := dialTestWebSocket(t, testServer.URL)
+	defer conn.Close()
+
+	const want = "https://desk.example.com"
+	registerWorkerWithDesktop(t, conn, "node-d", "worker-d", "dev", want, heartbeat.Payload{})
+	waitForSentinel(t, testServer.URL, "node-d", nil)
+
+	body := httpGet(t, testServer.URL+"/api/sentinels")
+	var resp struct {
+		Sentinels []sentinelSummary `json:"sentinels"`
+	}
+	decodeJSON(t, body, &resp)
+
+	if len(resp.Sentinels) != 1 {
+		t.Fatalf("len(sentinels) = %d, want 1", len(resp.Sentinels))
+	}
+	if resp.Sentinels[0].DesktopURL != want {
+		t.Fatalf("desktop_url = %q, want %q", resp.Sentinels[0].DesktopURL, want)
+	}
+}
+
 func TestCoordinatorShellCommandProxy(t *testing.T) {
 	server := NewServer(":0", 2*time.Second, "")
 	testServer := httptest.NewServer(server.Handler())
@@ -297,13 +323,19 @@ func waitForSentinel(t *testing.T, baseURL, id string, headers map[string]string
 
 func registerWorker(t *testing.T, conn *websocket.Conn, hostID, hostname, version string, hb heartbeat.Payload) {
 	t.Helper()
+	registerWorkerWithDesktop(t, conn, hostID, hostname, version, "", hb)
+}
+
+func registerWorkerWithDesktop(t *testing.T, conn *websocket.Conn, hostID, hostname, version, desktopURL string, hb heartbeat.Payload) {
+	t.Helper()
 
 	sendWSMessage(t, conn, ws.Message{
 		Type: "register",
 		Payload: mustRawJSON(registerPayload{
-			HostID:   hostID,
-			Hostname: hostname,
-			Version:  version,
+			HostID:     hostID,
+			Hostname:   hostname,
+			Version:    version,
+			DesktopURL: desktopURL,
 		}),
 	})
 

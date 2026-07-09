@@ -26,12 +26,14 @@ type nodeSnapshot struct {
 	System        *heartbeat.SystemInfo    `json:"system"`
 	UptimeSeconds int64                    `json:"uptime_seconds"`
 	RelayLoad     *heartbeat.RelayLoadInfo `json:"relay_load,omitempty"`
+	DesktopURL    string                   `json:"desktop_url,omitempty"`
 }
 
 type registerPayload struct {
-	HostID   string `json:"host_id"`
-	Hostname string `json:"hostname"`
-	Version  string `json:"version"`
+	HostID     string `json:"host_id"`
+	Hostname   string `json:"hostname"`
+	Version    string `json:"version"`
+	DesktopURL string `json:"desktop_url"`
 }
 
 type commandResultPayload struct {
@@ -251,6 +253,7 @@ func (m *Manager) handleMessage(currentID string, conn *nodeConn, msg ws.Message
 				HostID:      payload.HostID,
 				Hostname:    payload.Hostname,
 				Version:     payload.Version,
+				DesktopURL:  payload.DesktopURL,
 				ConnectedAt: now,
 				Agents:      []agent.Agent{},
 			},

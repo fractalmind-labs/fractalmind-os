@@ -32,6 +32,7 @@ type sentinelSummary struct {
 	AgentCount    int                   `json:"agent_count"`
 	UptimeSeconds int64                 `json:"uptime_seconds"`
 	System        *heartbeat.SystemInfo `json:"system"`
+	DesktopURL    string                `json:"desktop_url,omitempty"`
 }
 
 // Server exposes the embedded coordinator REST and WebSocket API.
@@ -147,6 +148,7 @@ func (s *Server) handleListSentinels(w http.ResponseWriter, _ *http.Request) {
 			AgentCount:    len(node.Agents),
 			UptimeSeconds: node.UptimeSeconds,
 			System:        node.System,
+			DesktopURL:    node.DesktopURL,
 		})
 	}
 
