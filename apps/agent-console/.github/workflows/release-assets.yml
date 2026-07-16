@@ -57,16 +57,23 @@ jobs:
         run: |
           set -euo pipefail
           files=()
-          while IFS= read -r -d '' file; do
-            files+=("$file")
-          done < <(find src-tauri/target -type f \( \
-            -name '*.dmg' -o \
-            -name '*.deb' -o \
-            -name '*.AppImage' -o \
-            -name '*.rpm' -o \
-            -name '*.msi' -o \
-            -name '*.exe' \
-          \) -print0)
+          bundle_roots=(
+            src-tauri/target/release/bundle
+            src-tauri/target/universal-apple-darwin/release/bundle
+          )
+          for root in "${bundle_roots[@]}"; do
+            [ -d "$root" ] || continue
+            while IFS= read -r -d '' file; do
+              files+=("$file")
+            done < <(find "$root" -type f \( \
+              -name '*.dmg' -o \
+              -name '*.deb' -o \
+              -name '*.AppImage' -o \
+              -name '*.rpm' -o \
+              -name '*.msi' -o \
+              -name '*.exe' \
+            \) -print0)
+          done
           if [ "${#files[@]}" -eq 0 ]; then
             echo "No desktop installer files found" >&2
             exit 1
