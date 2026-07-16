@@ -90,15 +90,26 @@ func TestDarwinPointerAndKey(t *testing.T) {
 		t.Fatalf("darwin right-down: got %v", got)
 	}
 	got, ok = in.commands(Event{Type: "key", Key: "Enter", Down: true})
-	if !ok || got[0][1] != "kp:return" {
-		t.Fatalf("darwin key: got %v", got)
+	want := [][]string{{"osascript", "-e", `tell application "System Events" to key code 36`}}
+	if !ok || !reflect.DeepEqual(got, want) {
+		t.Fatalf("darwin enter: got %v ok=%v", got, ok)
 	}
 	got, ok = in.commands(Event{Type: "key", Key: "Return", Down: true})
-	if !ok || got[0][1] != "kp:return" {
-		t.Fatalf("darwin return alias: got %v", got)
+	if !ok || !reflect.DeepEqual(got, want) {
+		t.Fatalf("darwin return alias: got %v ok=%v", got, ok)
+	}
+	got, ok = in.commands(Event{Type: "key", Key: "ArrowUp", Down: true})
+	want = [][]string{{"osascript", "-e", `tell application "System Events" to key code 126`}}
+	if !ok || !reflect.DeepEqual(got, want) {
+		t.Fatalf("darwin arrow up: got %v ok=%v", got, ok)
+	}
+	got, ok = in.commands(Event{Type: "key", Key: "ArrowDown", Down: true})
+	want = [][]string{{"osascript", "-e", `tell application "System Events" to key code 125`}}
+	if !ok || !reflect.DeepEqual(got, want) {
+		t.Fatalf("darwin arrow down: got %v ok=%v", got, ok)
 	}
 	got, ok = in.commands(Event{Type: "key", Key: "Backspace", Down: true})
-	want := [][]string{{"osascript", "-e", `tell application "System Events" to key code 51`}}
+	want = [][]string{{"osascript", "-e", `tell application "System Events" to key code 51`}}
 	if !ok || !reflect.DeepEqual(got, want) {
 		t.Fatalf("darwin backspace: got %v ok=%v", got, ok)
 	}
@@ -183,9 +194,11 @@ func TestDarwinTextAndCombo(t *testing.T) {
 		t.Fatalf("cmd+c: got %v ok=%v", got, ok)
 	}
 
-	// A modified named key is a real keypress that combines with kd:/ku:.
+	// A modified named key uses AppleScript physical key codes, which are more
+	// reliable for macOS Terminal/control-key contexts than cliclick kp:*.
 	got, _ = in.commands(Event{Type: "key", Down: true, Key: " ", Mods: []string{"cmd"}})
-	if !reflect.DeepEqual(got, [][]string{{"cliclick", "kd:cmd", "kp:space", "ku:cmd"}}) {
+	want = [][]string{{"osascript", "-e", `tell application "System Events" to key code 49 using {command down}`}}
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("cmd+space: got %v", got)
 	}
 }

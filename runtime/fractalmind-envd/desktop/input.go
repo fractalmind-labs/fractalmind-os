@@ -184,10 +184,34 @@ func osascriptKeyCode(code int, mods []string) []string {
 
 func darwinKeyCode(key string) (int, bool) {
 	switch key {
+	case "Enter", "Return", "NumpadEnter":
+		return 36, true // Return
+	case "Tab":
+		return 48, true
+	case "Escape":
+		return 53, true
+	case " ", "Spacebar":
+		return 49, true
 	case "Backspace":
 		return 51, true // physical Delete / backspace key
 	case "Delete":
 		return 117, true // forward delete
+	case "Home":
+		return 115, true
+	case "End":
+		return 119, true
+	case "PageUp":
+		return 116, true
+	case "PageDown":
+		return 121, true
+	case "ArrowLeft":
+		return 123, true
+	case "ArrowRight":
+		return 124, true
+	case "ArrowDown":
+		return 125, true
+	case "ArrowUp":
+		return 126, true
 	}
 	return 0, false
 }
