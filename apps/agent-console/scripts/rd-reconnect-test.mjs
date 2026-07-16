@@ -18,7 +18,7 @@ const server = createServer((req, res) => {
 await new Promise((r) => server.listen(PORT, r));
 
 const init = () => {
-  window.__offers = 0;
+  window.__offers = [];
   window.__pcs = [];
   class MockPC {
     constructor() { window.__pcs.push(this); this.iceConnectionState = "new"; this.oniceconnectionstatechange = null; }
@@ -41,7 +41,10 @@ const init = () => {
   window.fetch = async (url, opt) => {
     const u = String(url);
     if (u.includes("/desktop/ice")) return new Response(JSON.stringify({ iceServers: [] }), { status: 200 });
-    if (u.includes("/desktop/offer")) { window.__offers++; return new Response(JSON.stringify({ answer: { type: "answer", sdp: "" } }), { status: 200 }); }
+    if (u.includes("/desktop/offer")) {
+      window.__offers.push(JSON.parse(opt?.body || "{}"));
+      return new Response(JSON.stringify({ answer: { type: "answer", sdp: "" } }), { status: 200 });
+    }
     if (u.endsWith("/api/sentinels")) return new Response(JSON.stringify({ count: 1, sentinels: [{ id: "testnode", host_id: "", hostname: "testnode", version: "dev", connected_at: new Date().toISOString(), last_heartbeat: new Date().toISOString(), agent_count: 0, uptime_seconds: 10, system: { os: "linux", arch: "amd64" } }] }), { status: 200 });
     return realFetch(url, opt);
   };
@@ -60,13 +63,15 @@ try {
   await page.click('button:has-text("Desktop")');
   await page.waitForSelector(".rd-keys", { timeout: 5000 });
   await page.waitForTimeout(200);
-  out.offersAfterConnect = await page.evaluate(() => window.__offers);
+  out.offersAfterConnect = await page.evaluate(() => window.__offers.length);
+  out.initialQuality = await page.evaluate(() => window.__offers[0]?.quality);
   // Fire an ICE failure on the active pc.
   await page.evaluate(() => window.__pcs[window.__pcs.length - 1].__setIce("failed"));
   // Reconnecting UI should appear.
   out.reconnectUI = await page.locator('.rd-status', { hasText: "reconnecting" }).count().catch(() => 0);
   await page.waitForTimeout(1600); // first backoff is ~1000ms
-  out.offersAfterFailure = await page.evaluate(() => window.__offers);
+  out.offersAfterFailure = await page.evaluate(() => window.__offers.length);
+  out.reconnectQuality = await page.evaluate(() => window.__offers.at(-1)?.quality);
   out.reconnected = out.offersAfterFailure > out.offersAfterConnect;
 } catch (e) {
   out.error = String(e);
@@ -75,4 +80,11 @@ console.log(JSON.stringify(out, null, 2));
 await browser.close();
 server.close();
 
-process.exit(out.reconnected && !out.error ? 0 : 1);
+const qualityOK =
+  out.initialQuality?.encode_height === 1080 &&
+  out.initialQuality?.bitrate === "8M" &&
+  out.initialQuality?.fps === 30 &&
+  out.reconnectQuality?.encode_height === 1080 &&
+  out.reconnectQuality?.bitrate === "8M" &&
+  out.reconnectQuality?.fps === 30;
+process.exit(out.reconnected && qualityOK && !out.error ? 0 : 1);

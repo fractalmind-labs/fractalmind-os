@@ -24,6 +24,7 @@ await new Promise((r) => server.listen(PORT, r));
 
 const init = () => {
   window.__sent = [];
+  window.__offers = [];
   Object.defineProperty(HTMLVideoElement.prototype, "videoWidth", { configurable: true, get: () => 1920 });
   Object.defineProperty(HTMLVideoElement.prototype, "videoHeight", { configurable: true, get: () => 1080 });
   HTMLMediaElement.prototype.play = () => Promise.resolve();
@@ -53,8 +54,10 @@ const init = () => {
     const u = String(url);
     if (u.includes("/api/sentinels/") && u.includes("/desktop/ice"))
       return new Response(JSON.stringify({ iceServers: [] }), { status: 200 });
-    if (u.includes("/desktop/offer"))
+    if (u.includes("/desktop/offer")) {
+      window.__offers.push(JSON.parse(opt?.body || "{}"));
       return new Response(JSON.stringify({ answer: { type: "answer", sdp: "" } }), { status: 200 });
+    }
     if (u.endsWith("/api/sentinels"))
       return new Response(JSON.stringify({ count: 1, sentinels: [
         { id: "testnode", host_id: "", hostname: "testnode", version: "dev",
@@ -98,6 +101,12 @@ try {
   await page.waitForSelector(".rd-keys", { timeout: 5000 });
   results.viewerOpened = true;
   await page.waitForTimeout(100); // let mock dc open
+  results.initialQuality = await page.evaluate(() => window.__offers[0]?.quality);
+  results.qualityReconnect = await (async () => {
+    await page.selectOption(".rd-quality select", "ultra");
+    await page.waitForTimeout(100);
+    return page.evaluate(() => ({ count: window.__offers.length, quality: window.__offers.at(-1)?.quality }));
+  })();
 
   const sentAfter = async (fn) => {
     await page.evaluate(() => (window.__sent = []));
@@ -189,6 +198,13 @@ console.log(JSON.stringify(results, null, 2));
 const ok =
   results.nodeListed &&
   results.viewerOpened &&
+  results.initialQuality?.encode_height === 1080 &&
+  results.initialQuality?.bitrate === "8M" &&
+  results.initialQuality?.fps === 30 &&
+  results.qualityReconnect?.count >= 2 &&
+  results.qualityReconnect?.quality?.encode_height === 1440 &&
+  results.qualityReconnect?.quality?.bitrate === "14M" &&
+  results.qualityReconnect?.quality?.fps === 30 &&
   has(results.backspaceBtn, (m) => m.t === "key" && m.k === "Backspace") &&
   has(results.enterBtn, (m) => m.t === "key" && m.k === "Enter") &&
   has(results.escBtn, (m) => m.t === "key" && m.k === "Escape") &&

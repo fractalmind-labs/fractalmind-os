@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { CoordinatorClient } from "../lib/coordinator";
+import type { CoordinatorClient, DesktopQuality } from "../lib/coordinator";
 
 // WebRTC remote-desktop viewer. recvonly VP8 video + an "input" data channel for
 // pointer and keyboard. Signaling (ICE + offer/answer) is relayed through the
@@ -41,6 +41,13 @@ interface RtcStats {
 // always has content to delete and thus fires a delete event.
 const KBD_FILLER = "   ";
 type TouchMode = "direct" | "touchpad";
+type QualityKey = "smooth" | "clear" | "ultra";
+
+const QUALITY_PRESETS: Record<QualityKey, { label: string; hint: string; quality: DesktopQuality }> = {
+  smooth: { label: "Smooth", hint: "720p · 4M · 25fps", quality: { encode_height: 720, bitrate: "4M", fps: 25 } },
+  clear: { label: "Clear", hint: "1080p · 8M · 30fps", quality: { encode_height: 1080, bitrate: "8M", fps: 30 } },
+  ultra: { label: "Ultra", hint: "1440p · 14M · 30fps", quality: { encode_height: 1440, bitrate: "14M", fps: 30 } },
+};
 
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 4;
@@ -64,6 +71,8 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
   // tab sleep, host restart). reconnectRef lets the toolbar trigger it manually.
   const [reconnecting, setReconnecting] = useState(false);
   const reconnectRef = useRef<(() => void) | null>(null);
+  const [qualityKey, setQualityKey] = useState<QualityKey>("clear");
+  const qualityRef = useRef<QualityKey>("clear");
   // Controlling = input is forwarded to the host. When released, the stream
   // keeps playing but pointer/keyboard do nothing (so the user can look/scroll
   // the page without driving the remote machine).
@@ -95,6 +104,12 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
   modsRef.current = mods;
   controllingRef.current = controlling;
   touchModeRef.current = touchMode;
+
+  const applyQualityKey = (next: QualityKey) => {
+    qualityRef.current = next;
+    setQualityKey(next);
+    if (pcRef.current) reconnectRef.current?.();
+  };
 
   const clampZoom = (v: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, v));
   const setZoom = (next: number) => {
@@ -184,7 +199,11 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
       // Bail if unmounted or superseded by a newer connect() (which closed pc).
       if (closed || pcRef.current !== pc) return;
 
-      const { answer } = await client.desktopOffer(nodeId, pc.localDescription!);
+      const { answer } = await client.desktopOffer(
+        nodeId,
+        pc.localDescription!,
+        QUALITY_PRESETS[qualityRef.current].quality,
+      );
       if (closed || pcRef.current !== pc) return;
       await pc.setRemoteDescription(answer);
     }
@@ -540,6 +559,19 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
           <button onClick={resetView} title="Fit to screen">Fit</button>
           <button onClick={actualSize} title="Actual size">1:1</button>
           <button onClick={() => setZoom(zoomRef.current + 0.25)} title="Zoom in">＋</button>
+          <label className="rd-quality" title={`Stream quality: ${QUALITY_PRESETS[qualityKey].hint}`}>
+            <span>Quality</span>
+            <select
+              value={qualityKey}
+              onChange={(e) => applyQualityKey(e.currentTarget.value as QualityKey)}
+            >
+              {(Object.keys(QUALITY_PRESETS) as QualityKey[]).map((key) => (
+                <option key={key} value={key}>
+                  {QUALITY_PRESETS[key].label}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             className={touchMode === "touchpad" ? "on" : ""}
             onClick={() => {
@@ -629,7 +661,7 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
       </div>
 
       <div className="rd-view-hint small muted">
-        {Math.round(zoom * 100)}% · {touchMode === "touchpad" ? "触控板：点按/双击/长按/拖动光标" : "直触：按下即远端点击/拖拽"}
+        {Math.round(zoom * 100)}% · {QUALITY_PRESETS[qualityKey].hint} · {touchMode === "touchpad" ? "触控板：点按/双击/长按/拖动光标" : "直触：按下即远端点击/拖拽"}
       </div>
 
       {controlling && (

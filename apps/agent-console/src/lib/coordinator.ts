@@ -52,6 +52,12 @@ export interface CommandResult {
   [k: string]: unknown;
 }
 
+export interface DesktopQuality {
+  encode_height: number;
+  bitrate: string;
+  fps: number;
+}
+
 export class CoordinatorClient {
   constructor(
     private baseURL: string,
@@ -126,10 +132,11 @@ export class CoordinatorClient {
   desktopOffer(
     id: string,
     offer: RTCSessionDescriptionInit,
+    quality?: DesktopQuality,
   ): Promise<{ answer: RTCSessionDescriptionInit }> {
     return this.req(`/api/sentinels/${encodeURIComponent(id)}/desktop/offer`, {
       method: "POST",
-      body: JSON.stringify({ offer }),
+      body: JSON.stringify({ offer, quality }),
     });
   }
 }
