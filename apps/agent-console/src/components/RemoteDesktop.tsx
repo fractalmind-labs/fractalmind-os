@@ -500,6 +500,7 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
   };
 
   const down = useRef(false);
+  const onScreenActionRef = useRef<{ id: string; at: number; source: "pointer" | "click" } | null>(null);
   const SPECIAL: { label: string; k: string }[] = [
     { label: "Esc", k: "Escape" },
     { label: "Tab", k: "Tab" },
@@ -511,6 +512,15 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
     { label: "→", k: "ArrowRight" },
   ];
   const MODS: Mod[] = ["ctrl", "alt", "shift", "cmd"];
+
+  const markOnScreenAction = (id: string, source: "pointer" | "click") => {
+    onScreenActionRef.current = { id, at: Date.now(), source };
+  };
+
+  const shouldSkipClickFallback = (id: string) => {
+    const last = onScreenActionRef.current;
+    return !!last && last.source === "pointer" && last.id === id && Date.now() - last.at < 700;
+  };
 
   return (
     <div className="rd">
@@ -626,42 +636,71 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
         // preventDefault on pointer-down keeps the hidden input focused, so the
         // keyboard stays up while arming a modifier for a combo (e.g. ctrl + c).
         <div className="rd-keys" onPointerDown={(e) => e.preventDefault()}>
-          {MODS.map((m) => (
-            <button
-              key={m}
-              className={mods.includes(m) ? "on" : ""}
-              onPointerDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                toggleMod(m);
-                focusKeyboard();
-              }}
-              onClick={(e) => e.preventDefault()}
-            >
-              {m}
-            </button>
-          ))}
-          {SPECIAL.map((s) => (
-            <button
-              key={s.k}
-              onPointerDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                sendKey(s.k);
-                focusKeyboard();
-              }}
-              onClick={(e) => e.preventDefault()}
-            >
-              {s.label}
-            </button>
-          ))}
+          {MODS.map((m) => {
+            const actionId = `mod:${m}`;
+            return (
+              <button
+                key={m}
+                className={mods.includes(m) ? "on" : ""}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  markOnScreenAction(actionId, "pointer");
+                  toggleMod(m);
+                  focusKeyboard();
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (shouldSkipClickFallback(actionId)) return;
+                  markOnScreenAction(actionId, "click");
+                  toggleMod(m);
+                  focusKeyboard();
+                }}
+              >
+                {m}
+              </button>
+            );
+          })}
+          {SPECIAL.map((s) => {
+            const actionId = `key:${s.k}`;
+            return (
+              <button
+                key={s.k}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  markOnScreenAction(actionId, "pointer");
+                  sendKey(s.k);
+                  focusKeyboard();
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (shouldSkipClickFallback(actionId)) return;
+                  markOnScreenAction(actionId, "click");
+                  sendKey(s.k);
+                  focusKeyboard();
+                }}
+              >
+                {s.label}
+              </button>
+            );
+          })}
           <button
             onPointerDown={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              markOnScreenAction("type", "pointer");
               focusKeyboard();
             }}
-            onClick={(e) => e.preventDefault()}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (shouldSkipClickFallback("type")) return;
+              markOnScreenAction("type", "click");
+              focusKeyboard();
+            }}
             title="Type"
           >
             abc⌨︎

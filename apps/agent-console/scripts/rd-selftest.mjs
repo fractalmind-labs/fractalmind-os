@@ -115,6 +115,23 @@ try {
       if (!btn) throw new Error("no button " + lbl);
       btn.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
     }, label);
+  const clickKey = (label) =>
+    page.evaluate((lbl) => {
+      const btn = [...document.querySelectorAll(".rd-keys button")].find(
+        (b) => b.textContent.trim() === lbl,
+      );
+      if (!btn) throw new Error("no button " + lbl);
+      btn.click();
+    }, label);
+  const activateKey = (label) =>
+    page.evaluate((lbl) => {
+      const btn = [...document.querySelectorAll(".rd-keys button")].find(
+        (b) => b.textContent.trim() === lbl,
+      );
+      if (!btn) throw new Error("no button " + lbl);
+      btn.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+      btn.click();
+    }, label);
   const pointForNorm = async (x, y) =>
     page.locator("video.rd-video").evaluate((video, target) => {
       const r = video.getBoundingClientRect();
@@ -131,6 +148,8 @@ try {
   results.backspaceBtn = await sentAfter(() => tapKey("⌫"));
   results.enterBtn = await sentAfter(() => tapKey("Enter"));
   results.escBtn = await sentAfter(() => tapKey("Esc"));
+  results.arrowUpBtn = await sentAfter(() => clickKey("↑"));
+  results.arrowDownActivation = await sentAfter(() => activateKey("↓"));
   // Combo: arm ctrl (on-screen) then type c in hidden field
   results.comboCtrlC = await sentAfter(async () => {
     await tapKey("ctrl");
@@ -173,6 +192,8 @@ const ok =
   has(results.backspaceBtn, (m) => m.t === "key" && m.k === "Backspace") &&
   has(results.enterBtn, (m) => m.t === "key" && m.k === "Enter") &&
   has(results.escBtn, (m) => m.t === "key" && m.k === "Escape") &&
+  has(results.arrowUpBtn, (m) => m.t === "key" && m.k === "ArrowUp") &&
+  results.arrowDownActivation?.filter((m) => m.t === "key" && m.k === "ArrowDown").length === 1 &&
   has(results.comboCtrlC, (m) => m.t === "key" && m.k === "c" && m.mods?.includes("ctrl")) &&
   has(results.typing, (m) => m.t === "text" && m.text === "a") &&
   has(results.typing, (m) => m.t === "text" && m.text === "b") &&
