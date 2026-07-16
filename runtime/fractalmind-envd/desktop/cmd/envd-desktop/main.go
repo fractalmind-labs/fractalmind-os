@@ -29,7 +29,8 @@ func main() {
 		height   = flag.Int("height", 0, "real screen height for pointer mapping (0 = auto-detect)")
 		pixFmt   = flag.String("pixel-format", "", "capture input pixel format (macOS avfoundation is usually uyvy422)")
 		fps      = flag.Int("fps", 25, "capture frame rate")
-		bitrate  = flag.String("bitrate", "4M", "H.264 target bitrate")
+		bitrate  = flag.String("bitrate", "4M", "VP8 target bitrate")
+		encH     = flag.Int("encode-height", 720, "encoded video height (720/1080/1440; capped to screen height)")
 		token    = flag.String("token", os.Getenv("ENVD_DESKTOP_TOKEN"), "signaling bearer token (empty disables auth)")
 		stunURLs = flag.String("stun", "stun:stun.l.google.com:19302", "comma-separated STUN/TURN urls")
 		turnURL  = flag.String("turn", "", "optional TURN url (e.g. turn:host:3478)")
@@ -77,12 +78,13 @@ func main() {
 		Server: desktop.ServerConfig{
 			ICEServers: ice,
 			Capture: desktop.CaptureConfig{
-				Display:     *display,
-				Width:       sw,
-				Height:      sh,
-				FPS:         *fps,
-				Bitrate:     *bitrate,
-				PixelFormat: *pixFmt,
+				Display:      *display,
+				Width:        sw,
+				Height:       sh,
+				FPS:          *fps,
+				Bitrate:      *bitrate,
+				EncodeHeight: *encH,
+				PixelFormat:  *pixFmt,
 			},
 		},
 	})
@@ -94,9 +96,9 @@ func main() {
 	}
 
 	if *certFile != "" && *keyFile != "" {
-		log.Printf("[desktop] listening on %s (HTTPS), capture %dx%d@%dfps display=%q", *bind, *width, *height, *fps, *display)
+		log.Printf("[desktop] listening on %s (HTTPS), capture %dx%d@%dfps encode_height=%d bitrate=%s display=%q", *bind, sw, sh, *fps, *encH, *bitrate, *display)
 		log.Fatal(srv.ListenAndServeTLS(*certFile, *keyFile))
 	}
-	log.Printf("[desktop] listening on %s (HTTP), capture %dx%d@%dfps display=%q", *bind, *width, *height, *fps, *display)
+	log.Printf("[desktop] listening on %s (HTTP), capture %dx%d@%dfps encode_height=%d bitrate=%s display=%q", *bind, sw, sh, *fps, *encH, *bitrate, *display)
 	log.Fatal(srv.ListenAndServe())
 }

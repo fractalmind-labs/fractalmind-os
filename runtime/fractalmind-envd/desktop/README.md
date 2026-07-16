@@ -15,7 +15,7 @@ go build ./cmd/envd-desktop
 ```
 
 Runtime deps on the host being controlled:
-- `ffmpeg` (screen capture + H.264 encode)
+- `ffmpeg` (screen capture + VP8 encode)
 - Linux: `xdotool` (input injection), an X display (`:0`, or `Xvfb`)
 - macOS: `cliclick` (input injection); grant the process **Screen Recording**
   and **Accessibility** permissions in System Settings (TCC — must be done
@@ -28,11 +28,37 @@ Runtime deps on the host being controlled:
 ENVD_DESKTOP_TOKEN=$(openssl rand -hex 16) \
   ./envd-desktop -bind :8090 -display :0 -width 1280 -height 720
 
-# macOS (avfoundation screen index 1)
+# macOS (avfoundation screen index 1), balanced quality (default 720p / 4M / 25fps)
 ENVD_DESKTOP_TOKEN=... ./envd-desktop -display 1 -width 1440 -height 900
+
+# Clear quality preset (1080p / 8M / 30fps)
+ENVD_DESKTOP_TOKEN=... ./envd-desktop -display 1 -encode-height 1080 -bitrate 8M -fps 30
+
+# Ultra quality preset (1440p / 14M / 30fps; capped to source height)
+ENVD_DESKTOP_TOKEN=... ./envd-desktop -display 1 -encode-height 1440 -bitrate 14M -fps 30
 ```
 
 Then open `https://<host>/?token=<token>` on the phone and tap **Connect**.
+
+## Quality controls
+
+`envd-desktop` always captures the native screen for correct pointer mapping, then scales the outgoing WebRTC stream. Quality can be set at startup and can also be overridden per `/offer` by newer Agent Console clients.
+
+Recommended presets:
+
+| Preset | Encode height | Bitrate | FPS | Use case |
+| --- | ---: | ---: | ---: | --- |
+| Smooth | 720 | 4M | 25 | slower networks / lowest CPU |
+| Clear | 1080 | 8M | 30 | default recommended desktop control |
+| Ultra | 1440 | 14M | 30 | local/LAN or strong uplink |
+
+Startup flags:
+
+```bash
+./envd-desktop -encode-height 1080 -bitrate 8M -fps 30
+```
+
+The requested encode height is capped to the source screen height, so a 900px-tall display will not be upscaled to 1080p.
 
 ## Security
 

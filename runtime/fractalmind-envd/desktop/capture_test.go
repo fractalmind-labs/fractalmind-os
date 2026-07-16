@@ -29,8 +29,8 @@ func TestFFmpegArgsLinux(t *testing.T) {
 }
 
 func TestFFmpegArgsDarwin(t *testing.T) {
-	// A 1080p screen (Height set for input mapping) must still encode capped at
-	// 720p to stay within baseline level 3.1. Pixel format is pinned to uyvy422.
+	// A 1080p screen (Height set for input mapping) defaults to a 720p encoded
+	// stream. Pixel format is pinned to uyvy422.
 	args := FFmpegArgs(CaptureConfig{Display: "0", Width: 1920, Height: 1080, FPS: 25, PixelFormat: "uyvy422"}, "darwin")
 	s := joined(args)
 	for _, want := range []string{"-f avfoundation", "-capture_cursor 1", "-pixel_format uyvy422", "-i 0:none", "format=yuv420p,scale=-2:720", "-vsync cfr", "libvpx", "-f ivf"} {
@@ -61,5 +61,23 @@ func TestFFmpegArgsDefaults(t *testing.T) {
 	// No size set → default 720p cap, format before scale.
 	if !strings.Contains(dar, "format=yuv420p,scale=-2:720") {
 		t.Fatalf("default should convert then cap height to 720: %s", dar)
+	}
+}
+
+func TestFFmpegArgsEncodeHeight(t *testing.T) {
+	args := FFmpegArgs(CaptureConfig{Display: "0", Width: 2560, Height: 1440, FPS: 30, Bitrate: "10M", EncodeHeight: 1080}, "darwin")
+	s := joined(args)
+	for _, want := range []string{"format=yuv420p,scale=-2:1080", "-r 30", "-b:v 10M"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("quality args missing %q in: %s", want, s)
+		}
+	}
+}
+
+func TestFFmpegArgsDoesNotUpscaleSmallSource(t *testing.T) {
+	args := FFmpegArgs(CaptureConfig{Display: ":0", Width: 1024, Height: 600, EncodeHeight: 1080}, "linux")
+	s := joined(args)
+	if !strings.Contains(s, "format=yuv420p,scale=-2:600") {
+		t.Fatalf("encode height should cap to source height: %s", s)
 	}
 }

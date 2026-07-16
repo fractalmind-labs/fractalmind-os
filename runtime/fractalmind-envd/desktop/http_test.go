@@ -134,3 +134,19 @@ func TestICERequiresAuth(t *testing.T) {
 		t.Fatalf("/ice with token: got %d, want 200", resp.StatusCode)
 	}
 }
+
+func TestApplyDesktopQuality(t *testing.T) {
+	cfg := CaptureConfig{FPS: 25, Bitrate: "4M", EncodeHeight: 720}
+	got := applyDesktopQuality(cfg, desktopQuality{EncodeHeight: 1080, FPS: 30, Bitrate: "10M"})
+	if got.EncodeHeight != 1080 || got.FPS != 30 || got.Bitrate != "10M" {
+		t.Fatalf("quality override = %+v", got)
+	}
+	got = applyDesktopQuality(cfg, desktopQuality{EncodeHeight: 9999, FPS: 999, Bitrate: "12M"})
+	if got.EncodeHeight != 2160 || got.FPS != 60 || got.Bitrate != "12M" {
+		t.Fatalf("quality clamp = %+v", got)
+	}
+	got = applyDesktopQuality(cfg, desktopQuality{EncodeHeight: 1, FPS: 1})
+	if got.EncodeHeight != 360 || got.FPS != 10 {
+		t.Fatalf("quality lower clamp = %+v", got)
+	}
+}

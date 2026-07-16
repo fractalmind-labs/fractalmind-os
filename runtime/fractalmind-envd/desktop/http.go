@@ -93,8 +93,15 @@ type httpHandler struct {
 	current *Session
 }
 
+type desktopQuality struct {
+	EncodeHeight int    `json:"encode_height,omitempty"`
+	FPS          int    `json:"fps,omitempty"`
+	Bitrate      string `json:"bitrate,omitempty"`
+}
+
 type offerRequest struct {
-	Offer webrtc.SessionDescription `json:"offer"`
+	Offer   webrtc.SessionDescription `json:"offer"`
+	Quality *desktopQuality           `json:"quality,omitempty"`
 }
 
 type answerResponse struct {
@@ -147,7 +154,11 @@ func (h *httpHandler) handleOffer(w http.ResponseWriter, r *http.Request) {
 	}
 	h.mu.Unlock()
 
-	sess, answer, err := NewSession(context.Background(), h.cfg.Server, req.Offer)
+	srvCfg := h.cfg.Server
+	if req.Quality != nil {
+		srvCfg.Capture = applyDesktopQuality(srvCfg.Capture, *req.Quality)
+	}
+	sess, answer, err := NewSession(context.Background(), srvCfg, req.Offer)
 	if err != nil {
 		log.Printf("[desktop] session setup failed: %v", err)
 		http.Error(w, "session setup failed", http.StatusInternalServerError)
@@ -167,4 +178,27 @@ func (h *httpHandler) handleOffer(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(answerResponse{Answer: *answer})
+}
+
+func applyDesktopQuality(cfg CaptureConfig, q desktopQuality) CaptureConfig {
+	if q.EncodeHeight > 0 {
+		cfg.EncodeHeight = clampInt(q.EncodeHeight, 360, 2160)
+	}
+	if q.FPS > 0 {
+		cfg.FPS = clampInt(q.FPS, 10, 60)
+	}
+	if q.Bitrate != "" {
+		cfg.Bitrate = q.Bitrate
+	}
+	return cfg
+}
+
+func clampInt(v, lo, hi int) int {
+	if v < lo {
+		return lo
+	}
+	if v > hi {
+		return hi
+	}
+	return v
 }

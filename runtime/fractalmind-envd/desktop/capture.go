@@ -25,8 +25,12 @@ type CaptureConfig struct {
 	Height int
 	// FPS is the capture frame rate.
 	FPS int
-	// Bitrate is the target H.264 bitrate, e.g. "4M".
+	// Bitrate is the target VP8 bitrate, e.g. "4M".
 	Bitrate string
+	// EncodeHeight is the encoded video height. The native screen is still
+	// captured and pointer mapping still uses Width/Height; this only controls
+	// the outgoing stream resolution. 0 = default 720p.
+	EncodeHeight int
 	// FFmpegPath overrides the ffmpeg binary (default "ffmpeg").
 	FFmpegPath string
 	// PixelFormat, when set, pins the capture-input pixel format (e.g. macOS
@@ -96,12 +100,15 @@ func FFmpegArgs(cfg CaptureConfig, goos string) []string {
 	// Convert to planar yuv420p FIRST (before scaling), then downscale. Scaling a
 	// packed 4:2:2 buffer before the pixel-format conversion is what turns the
 	// picture green on the avfoundation path; converting first is safe for any
-	// input. Encode height is capped to keep the stream within the advertised
-	// H.264 level (baseline 3.1 → 720p); Width/Height describe the *real* screen
-	// (used only for input coordinate mapping) and never upscale a smaller one.
+	// input. Encode height is configurable; Width/Height describe the *real*
+	// screen (used only for input coordinate mapping), and we never upscale a
+	// smaller source.
 	// Aspect ratio is preserved (-2 = even auto width), so normalized pointer
 	// coordinates still map 1:1 onto the real screen.
-	encodeH := 720
+	encodeH := cfg.EncodeHeight
+	if encodeH <= 0 {
+		encodeH = 720
+	}
 	if cfg.Height > 0 && cfg.Height < encodeH {
 		encodeH = cfg.Height
 	}
