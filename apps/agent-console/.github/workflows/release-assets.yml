@@ -1,0 +1,115 @@
+name: release-assets
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build and upload assets for"
+        required: true
+        default: "v0.1.1"
+
+permissions:
+  contents: write
+
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-22.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Install Linux deps
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: Install JS deps
+        run: pnpm install
+      - name: Generate Tauri icons
+        run: pnpm tauri icon src-tauri/icons/icon.png
+      - name: Add macOS universal targets
+        if: matrix.os == 'macos-latest'
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - name: Build desktop app
+        run: pnpm tauri build ${{ matrix.os == 'macos-latest' && '--target universal-apple-darwin' || '' }}
+      - name: Upload desktop installers to release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          files=()
+          while IFS= read -r -d '' file; do
+            files+=("$file")
+          done < <(find src-tauri/target -type f \( \
+            -name '*.dmg' -o \
+            -name '*.deb' -o \
+            -name '*.AppImage' -o \
+            -name '*.rpm' -o \
+            -name '*.msi' -o \
+            -name '*.exe' \
+          \) -print0)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No desktop installer files found" >&2
+            exit 1
+          fi
+          gh release upload "$TAG_NAME" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Install deps
+        run: pnpm install
+      - name: Build web
+        run: pnpm build
+      - name: Add & sync Android (Capacitor)
+        run: |
+          pnpm exec cap add android
+          pnpm exec cap sync android
+      - name: Assemble debug APK
+        run: cd android && ./gradlew assembleDebug --no-daemon
+      - name: Upload Android APK to release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          mapfile -d '' files < <(find android/app/build/outputs/apk/debug -type f -name '*.apk' -print0)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No APK files found" >&2
+            exit 1
+          fi
+          gh release upload "$TAG_NAME" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
