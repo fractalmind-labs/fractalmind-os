@@ -136,21 +136,11 @@ fractalbot --config "${FRACTALBOT_CONFIG}" message send \
 
 The single-quoted `<<'EOF'` delimiter also prevents backticks, `$()`, and variables inside the message from being evaluated by the shell.
 
-### Short trusted literals
-
-ANSI-C quoting is acceptable only for short, locally authored text where every escape is intentional:
-
-```bash
-fractalbot --config "${FRACTALBOT_CONFIG}" message send \
-  --channel slack \
-  --to "${CHAT_ID_FROM_CONTEXT}" \
-  --text $'第一行\n\n- 第二行\n- 第三行'
-```
-
 Rule of thumb:
 
 - **Long, structured, generated, or multi-paragraph text** -> mandatory file workflow
-- **Short trusted literal** -> `$'...'` is acceptable
+- **Any text containing a line break** -> mandatory file workflow, without exceptions
+- **Single-line text** -> the basic `--text` form is acceptable
 - **Raw `"...\n..."` or JSON-escaped content** -> forbidden for outbound messages
 - **Backticks or shell syntax in the message** -> mandatory single-quoted heredoc workflow
 
