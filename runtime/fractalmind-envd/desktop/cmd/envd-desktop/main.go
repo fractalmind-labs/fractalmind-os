@@ -10,10 +10,12 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -23,21 +25,22 @@ import (
 
 func main() {
 	var (
-		bind     = flag.String("bind", ":8090", "HTTP listen address")
-		display  = flag.String("display", "", "capture source (Linux X display e.g. :0 ; macOS avfoundation index e.g. 0)")
-		width    = flag.Int("width", 0, "real screen width for pointer mapping (0 = auto-detect)")
-		height   = flag.Int("height", 0, "real screen height for pointer mapping (0 = auto-detect)")
-		pixFmt   = flag.String("pixel-format", "", "capture input pixel format (macOS avfoundation is usually uyvy422)")
-		fps      = flag.Int("fps", 25, "capture frame rate")
-		bitrate  = flag.String("bitrate", "4M", "VP8 target bitrate")
-		encH     = flag.Int("encode-height", 720, "encoded video height (720/1080/1440; capped to screen height)")
-		token    = flag.String("token", os.Getenv("ENVD_DESKTOP_TOKEN"), "signaling bearer token (empty disables auth)")
-		stunURLs = flag.String("stun", "stun:stun.l.google.com:19302", "comma-separated STUN/TURN urls")
-		turnURL  = flag.String("turn", "", "optional TURN url (e.g. turn:host:3478)")
-		turnUser = flag.String("turn-user", "", "TURN username")
-		turnPass = flag.String("turn-pass", "", "TURN credential")
-		certFile = flag.String("cert", "", "TLS certificate file (enables HTTPS)")
-		keyFile  = flag.String("key", "", "TLS key file")
+		bind      = flag.String("bind", ":8090", "HTTP listen address")
+		display   = flag.String("display", "", "capture source (Linux X display e.g. :0 ; macOS avfoundation index e.g. 0)")
+		width     = flag.Int("width", 0, "real screen width for pointer mapping (0 = auto-detect)")
+		height    = flag.Int("height", 0, "real screen height for pointer mapping (0 = auto-detect)")
+		pixFmt    = flag.String("pixel-format", "", "capture input pixel format (macOS avfoundation is usually uyvy422)")
+		fps       = flag.Int("fps", 25, "capture frame rate")
+		bitrate   = flag.String("bitrate", "4M", "VP8 target bitrate")
+		encH      = flag.Int("encode-height", 720, "encoded video height (720/1080/1440; capped to screen height)")
+		token     = flag.String("token", os.Getenv("ENVD_DESKTOP_TOKEN"), "signaling bearer token (empty disables auth)")
+		stunURLs  = flag.String("stun", "stun:stun.l.google.com:19302", "comma-separated STUN/TURN urls")
+		turnURL   = flag.String("turn", "", "optional TURN url (e.g. turn:host:3478)")
+		turnUser  = flag.String("turn-user", "", "TURN username")
+		turnPass  = flag.String("turn-pass", "", "TURN credential")
+		certFile  = flag.String("cert", "", "TLS certificate file (enables HTTPS)")
+		keyFile   = flag.String("key", "", "TLS key file")
+		keepAwake = flag.Bool("keep-awake", runtime.GOOS == "darwin", "keep the desktop display/system awake while running (macOS uses caffeinate)")
 	)
 	flag.Parse()
 
@@ -57,6 +60,18 @@ func main() {
 
 	if *token == "" {
 		log.Printf("[desktop] WARNING: signaling auth DISABLED (-token empty); anyone who can reach %s can control this host", *bind)
+	}
+
+	if *keepAwake {
+		guard, err := desktop.NewAwakeGuard(context.Background(), runtime.GOOS)
+		if err != nil {
+			log.Printf("[desktop] keep-awake unavailable: %v", err)
+		} else {
+			defer guard.Stop()
+			if runtime.GOOS == "darwin" {
+				log.Printf("[desktop] macOS keep-awake enabled (caffeinate -dims -w)")
+			}
+		}
 	}
 
 	// Resolve the pointer-mapping screen size. Explicit flags win; otherwise
@@ -85,6 +100,7 @@ func main() {
 				Bitrate:      *bitrate,
 				EncodeHeight: *encH,
 				PixelFormat:  *pixFmt,
+				WakeDisplay:  *keepAwake,
 			},
 		},
 	})
