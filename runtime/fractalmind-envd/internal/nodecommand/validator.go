@@ -13,10 +13,6 @@ type SignatureVerifier interface {
 	Verify(ctx context.Context, signer string, payload []byte, signature string) error
 }
 
-type CapabilityResolver interface {
-	Resolve(ctx context.Context, ref CapabilityRef) (CapabilityState, error)
-}
-
 // CapabilityState is an authority-plane projection. Implementations may load
 // it from SUI RPC, an indexer, or a bounded local cache.
 type CapabilityState struct {
@@ -29,6 +25,8 @@ type CapabilityState struct {
 	Revoked                bool
 	RevocationVersion      uint64
 	CheckpointObservedAtMS int64
+	RemainingUses          *uint64
+	RemainingBudget        *BudgetClaim
 }
 
 type ValidatorOptions struct {
@@ -40,6 +38,7 @@ type ValidatorOptions struct {
 	MaxHighRiskCheckpointAge time.Duration
 	LowRiskActions           map[string]struct{}
 	HighRiskActions          map[string]struct{}
+	BudgetedActions          map[string]struct{}
 }
 
 type ValidationResult struct {
@@ -49,12 +48,11 @@ type ValidationResult struct {
 
 type Validator struct {
 	signatures SignatureVerifier
-	authority  CapabilityResolver
-	replay     ReplayGuard
+	authority  AuthorityStore
 	options    ValidatorOptions
 }
 
-func NewValidator(signatures SignatureVerifier, authority CapabilityResolver, replay ReplayGuard, options ValidatorOptions) *Validator {
+func NewValidator(signatures SignatureVerifier, authority AuthorityStore, options ValidatorOptions) *Validator {
 	if options.Now == nil {
 		options.Now = time.Now
 	}
@@ -70,10 +68,7 @@ func NewValidator(signatures SignatureVerifier, authority CapabilityResolver, re
 	if options.MaxHighRiskCheckpointAge <= 0 {
 		options.MaxHighRiskCheckpointAge = 2 * time.Minute
 	}
-	if replay == nil {
-		replay = NewMemoryReplayGuard()
-	}
-	return &Validator{signatures: signatures, authority: authority, replay: replay, options: options}
+	return &Validator{signatures: signatures, authority: authority, options: options}
 }
 
 func (v *Validator) Validate(ctx context.Context, command NodeCommand) (ValidationResult, error) {
@@ -91,9 +86,24 @@ func (v *Validator) Validate(ctx context.Context, command NodeCommand) (Validati
 	if err := v.signatures.Verify(ctx, command.Signer, signingBytes, command.Signature); err != nil {
 		return ValidationResult{}, reject(CodeSignatureInvalid, "signature verification failed", err)
 	}
+	fingerprint := hashBytes(signingBytes)
+	reservation := Reservation{
+		CapabilityID:   command.Capability.ID,
+		Signer:         command.Signer,
+		CommandID:      command.CommandID,
+		Nonce:          command.Nonce,
+		IdempotencyKey: command.IdempotencyKey,
+		Fingerprint:    fingerprint,
+		Budget:         command.Budget,
+	}
 
 	if v.authority == nil {
 		return ValidationResult{}, reject(CodeUnauthorized, "capability resolver is not configured", nil)
+	}
+	if result, found, err := v.authority.Inspect(ctx, reservation); err != nil {
+		return ValidationResult{}, err
+	} else if found {
+		return ValidationResult{Duplicate: true, AuthorityCheckpoint: result.AuthorityCheckpoint}, nil
 	}
 	state, err := v.authority.Resolve(ctx, command.Capability)
 	if err != nil {
@@ -103,12 +113,15 @@ func (v *Validator) Validate(ctx context.Context, command NodeCommand) (Validati
 		return ValidationResult{}, err
 	}
 
-	fingerprint := hashBytes(signingBytes)
-	duplicate, err := v.replay.CheckAndRecord(command.CommandID, command.Nonce, command.IdempotencyKey, fingerprint)
+	reservation.ExpectedRevocationVersion = state.RevocationVersion
+	result, err := v.authority.Reserve(ctx, reservation)
 	if err != nil {
-		return ValidationResult{}, err
+		if CodeOf(err) != "" {
+			return ValidationResult{}, err
+		}
+		return ValidationResult{}, reject(CodeUnauthorized, "reserve capability", err)
 	}
-	return ValidationResult{Duplicate: duplicate, AuthorityCheckpoint: state.RevocationVersion}, nil
+	return ValidationResult{Duplicate: result.Duplicate, AuthorityCheckpoint: result.AuthorityCheckpoint}, nil
 }
 
 func (v *Validator) validateEnvelope(command NodeCommand) error {
@@ -130,6 +143,9 @@ func (v *Validator) validateEnvelope(command NodeCommand) error {
 	}
 	if len(command.Payload) > 0 && !json.Valid(command.Payload) {
 		return reject(CodeInvalidEnvelope, "payload must be valid JSON", nil)
+	}
+	if err := validateSigningTokens(command); err != nil {
+		return err
 	}
 
 	nowMS := v.options.Now().UnixMilli()
@@ -166,11 +182,14 @@ func (v *Validator) validateAuthority(command NodeCommand, state CapabilityState
 	if !contains(state.AuthorizedSigners, command.Signer) {
 		return reject(CodeUnauthorized, "signer is not authorized by capability", nil)
 	}
-	if state.ExpiresAtMS > 0 && (state.ExpiresAtMS <= nowMS || command.ExpiresAtMS > state.ExpiresAtMS) {
+	if state.ExpiresAtMS <= nowMS || command.ExpiresAtMS > state.ExpiresAtMS {
 		return reject(CodeExpired, "command exceeds capability expiry", nil)
 	}
-	if strings.TrimSpace(state.Target.OrganizationID) == "" || strings.TrimSpace(state.Target.NodeID) == "" {
+	if strings.TrimSpace(state.Target.OrganizationID) == "" {
 		return reject(CodeUnauthorized, "capability target is incomplete", nil)
+	}
+	if state.Target.NodeID == "" && state.Target.AgentID != "" {
+		return reject(CodeUnauthorized, "agent-scoped capability must include a node target", nil)
 	}
 	if !targetContains(state.Target, command.Target) {
 		return reject(CodeWrongTarget, "capability target does not match command target", nil)
@@ -190,11 +209,68 @@ func (v *Validator) validateAuthority(command NodeCommand, state CapabilityState
 	} else if _, lowRisk := v.options.LowRiskActions[command.Action]; !lowRisk {
 		return reject(CodeRiskUnclassified, "action has no explicit risk classification", nil)
 	}
+	_, budgeted := v.options.BudgetedActions[command.Action]
+	if budgeted && command.Budget == nil {
+		return reject(CodeBudgetExceeded, "action requires an explicit budget claim", nil)
+	}
+	if !budgeted && command.Budget != nil {
+		return reject(CodeInvalidEnvelope, "action does not consume authority budget", nil)
+	}
+	if command.Budget != nil {
+		if state.RemainingBudget == nil || state.RemainingBudget.Asset != command.Budget.Asset ||
+			state.RemainingBudget.Amount < command.Budget.Amount {
+			return reject(CodeBudgetExceeded, "capability budget is insufficient", nil)
+		}
+	}
+	if state.RemainingUses == nil && command.Budget == nil {
+		return reject(CodeUnauthorized, "capability has no use or budget bound", nil)
+	}
+	if state.RemainingUses != nil && *state.RemainingUses == 0 {
+		return reject(CodeCapabilityExhausted, "capability has no remaining uses", nil)
+	}
 	if state.CheckpointObservedAtMS <= 0 || state.CheckpointObservedAtMS > nowMS+v.options.MaxClockSkew.Milliseconds() ||
 		nowMS-state.CheckpointObservedAtMS > maxCheckpointAge.Milliseconds() {
 		return reject(CodeAuthorityStale, "capability revocation checkpoint is outside the action freshness window", nil)
 	}
 	return nil
+}
+
+func validateSigningTokens(command NodeCommand) error {
+	values := []string{
+		command.CommandID,
+		command.Signer,
+		command.Target.OrganizationID,
+		command.Target.NodeID,
+		command.Target.AgentID,
+		command.Action,
+		command.Scope,
+		command.Capability.ID,
+		command.Nonce,
+		command.IdempotencyKey,
+	}
+	for _, value := range values {
+		if value != "" && !validSigningToken(value) {
+			return reject(CodeInvalidEnvelope, "signed identifiers must use the canonical ASCII token alphabet", nil)
+		}
+	}
+	if command.Budget != nil {
+		if !validSigningToken(command.Budget.Asset) || command.Budget.Amount == 0 {
+			return reject(CodeInvalidEnvelope, "budget asset or amount is invalid", nil)
+		}
+	}
+	return nil
+}
+
+func validSigningToken(value string) bool {
+	for i := 0; i < len(value); i++ {
+		c := value[i]
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+			strings.ContainsRune("-._:/@+", rune(c)) {
+			continue
+		}
+		return false
+	}
+	return value != ""
 }
 
 func validHash(value string) bool {

@@ -6,7 +6,10 @@ import (
 	"encoding/json"
 )
 
-const ProtocolVersion = "1"
+const (
+	ProtocolVersion = "1"
+	SignatureDomain = "fractalmind.node-command.v1"
+)
 
 // Target identifies the organization, node, and optional local agent that a
 // command is allowed to affect.
@@ -23,6 +26,13 @@ type CapabilityRef struct {
 	RevocationVersion uint64 `json:"revocation_version"`
 }
 
+// BudgetClaim declares the maximum authority-plane budget this command may
+// consume, expressed in the asset's smallest integer unit.
+type BudgetClaim struct {
+	Asset  string `json:"asset"`
+	Amount uint64 `json:"amount"`
+}
+
 // NodeCommand is the versioned privileged-command envelope transported by
 // coordinators or relays and finally authorized by the target envd.
 type NodeCommand struct {
@@ -37,6 +47,7 @@ type NodeCommand struct {
 	IssuedAtMS     int64           `json:"issued_at_ms"`
 	ExpiresAtMS    int64           `json:"expires_at_ms"`
 	IdempotencyKey string          `json:"idempotency_key"`
+	Budget         *BudgetClaim    `json:"budget,omitempty"`
 	Payload        json.RawMessage `json:"payload,omitempty"`
 	PayloadHash    string          `json:"payload_hash"`
 	Signature      string          `json:"signature"`
@@ -62,6 +73,7 @@ func (e NodeEvent) CanonicalBytes() ([]byte, error) {
 }
 
 type signingEnvelope struct {
+	Domain         string        `json:"domain"`
 	Version        string        `json:"version"`
 	CommandID      string        `json:"command_id"`
 	Signer         string        `json:"signer"`
@@ -73,6 +85,7 @@ type signingEnvelope struct {
 	IssuedAtMS     int64         `json:"issued_at_ms"`
 	ExpiresAtMS    int64         `json:"expires_at_ms"`
 	IdempotencyKey string        `json:"idempotency_key"`
+	Budget         *BudgetClaim  `json:"budget,omitempty"`
 	PayloadHash    string        `json:"payload_hash"`
 }
 
@@ -80,6 +93,7 @@ type signingEnvelope struct {
 // bytes are represented only by PayloadHash to keep serialization stable.
 func (c NodeCommand) SigningBytes() ([]byte, error) {
 	return json.Marshal(signingEnvelope{
+		Domain:         SignatureDomain,
 		Version:        c.Version,
 		CommandID:      c.CommandID,
 		Signer:         c.Signer,
@@ -91,6 +105,7 @@ func (c NodeCommand) SigningBytes() ([]byte, error) {
 		IssuedAtMS:     c.IssuedAtMS,
 		ExpiresAtMS:    c.ExpiresAtMS,
 		IdempotencyKey: c.IdempotencyKey,
+		Budget:         c.Budget,
 		PayloadHash:    c.PayloadHash,
 	})
 }

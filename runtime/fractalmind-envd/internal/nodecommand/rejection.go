@@ -19,6 +19,8 @@ const (
 	CodeUnauthorized        RejectionCode = "unauthorized"
 	CodeRevoked             RejectionCode = "revoked"
 	CodeAuthorityStale      RejectionCode = "authority_stale"
+	CodeCapabilityExhausted RejectionCode = "capability_exhausted"
+	CodeBudgetExceeded      RejectionCode = "budget_exceeded"
 	CodeRiskUnclassified    RejectionCode = "risk_unclassified"
 	CodeSignatureInvalid    RejectionCode = "signature_invalid"
 	CodeReplay              RejectionCode = "replay"

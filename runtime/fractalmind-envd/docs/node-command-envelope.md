@@ -12,8 +12,9 @@ The coordinator or relay transports commands. It does not grant authority. The
 target envd validates the signed command before invoking any local runtime
 adapter.
 
-Phase 0 adds an isolated `internal/nodecommand` contract and validation core. It
-does not replace the existing REST/WebSocket command path yet.
+Phase 0 adds an isolated `internal/nodecommand` contract, validation core, and
+in-memory reference authority store. It does not replace the existing
+REST/WebSocket command path or complete issue #64 yet.
 
 ## Signed Envelope
 
@@ -25,11 +26,20 @@ does not replace the existing REST/WebSocket command path yet.
 - action and scope
 - SUI authority-plane capability reference and revocation version
 - nonce, issued time, and expiry
+- optional budget asset plus integer amount in the asset's smallest unit
 - payload plus SHA-256 payload hash
 
-The signature covers canonical JSON with fixed field order. Raw payload bytes
-are represented by `payload_hash`, which avoids signing ambiguous JSON object
-ordering.
+The signature covers compact JSON with fixed field order and the domain
+`fractalmind.node-command.v1`. All signed identifiers use the ASCII alphabet
+`A-Z a-z 0-9 - . _ : / @ +`, eliminating Unicode normalization and JSON string
+escaping differences. Raw payload bytes are represented only by
+`payload_hash`, which avoids signing ambiguous JSON object ordering.
+
+The cross-repository fixture is
+`internal/nodecommand/testdata/v1-golden.json`. It contains the complete command
+fields, exact payload bytes, exact signing bytes, and exact event bytes as hex.
+Protocol SDK and Agent Console implementations should consume the same fixture
+before this contract is frozen.
 
 ## Target Validation Order
 
@@ -42,7 +52,8 @@ ordering.
    expiry, revocation, and checkpoint.
 7. Require a fresh checkpoint for configured high-risk actions.
 8. Reject actions without an explicit low-risk or high-risk classification.
-9. Record command ID, nonce, and idempotency key before execution.
+9. Atomically reserve one capability use and any declared budget together with
+   command ID, signer-scoped nonce, and idempotency key.
 
 Stable rejection codes let REST, WebSocket, Console, and channel adapters expose
 the same result without becoming authorization owners.
@@ -59,14 +70,27 @@ maximums that deployments can tighten. Unclassified actions fail closed.
 
 The target must have a configured organization and node identity. Commands have
 a five-minute default maximum TTL. A node-scoped capability may authorize an
-agent below that node, while an agent-scoped capability only authorizes that
-exact agent.
+agent below that node, an organization-scoped capability may authorize nodes
+and agents below that organization, and an agent-scoped capability only
+authorizes that exact agent.
+
+Each capability must have a remaining-use bound, or the command must declare a
+budget for an explicitly configured budgeted action. `AuthorityStore.Reserve`
+is the atomic boundary: it makes exact retries idempotent, rejects command ID,
+nonce, and idempotency conflicts, consumes at most one use per unique command,
+and consumes budget only once. The in-memory implementation proves concurrency
+semantics; production integration must replace it with durable target-local
+storage backed by protocol #17 authority state.
 
 ## Follow-up Integration
 
-- protocol #17 implements the production `CapabilityResolver`.
+- protocol #17 implements the production `AuthorityStore` resolver/reservation
+  adapter and consumes the shared fixture.
 - envd command handlers wrap current REST/WS payloads into `NodeCommand` during
   the compatibility period.
 - issue #65 provides the local runtime adapter called only after validation.
-- durable replay/idempotency storage replaces the in-memory Phase 0 guard.
+- durable replay/use/budget reservation storage replaces the in-memory Phase 0
+  authority store.
 - Agent Console supplies wallet/passkey signatures and shared golden vectors.
+- rejected/executed command handlers emit `NodeEvent` audit envelopes once the
+  REST/WS compatibility adapter is wired.

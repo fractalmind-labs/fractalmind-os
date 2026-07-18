@@ -2,8 +2,11 @@ package nodecommand
 
 import (
 	"context"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -15,49 +18,70 @@ func (f signatureVerifierFunc) Verify(ctx context.Context, signer string, payloa
 	return f(ctx, signer, payload, signature)
 }
 
-type capabilityResolverFunc func(context.Context, CapabilityRef) (CapabilityState, error)
-
-func (f capabilityResolverFunc) Resolve(ctx context.Context, ref CapabilityRef) (CapabilityState, error) {
-	return f(ctx, ref)
-}
-
 func TestSigningBytesGoldenVector(t *testing.T) {
-	command := validCommand(fixedNow())
-	got, err := command.SigningBytes()
+	fixture := loadGoldenFixture(t)
+	payload, err := hex.DecodeString(fixture.PayloadHex)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"version":"1","command_id":"cmd-1","signer":"0xcontroller","target":{"organization_id":"org-1","node_id":"node-1","agent_id":"agent-1"},"action":"status","scope":"lifecycle","capability":{"id":"cap-1","revocation_version":7},"nonce":"nonce-1","issued_at_ms":1784394000000,"expires_at_ms":1784394060000,"idempotency_key":"idem-1","payload_hash":"b9171daa13c67874a6500ad8e992d5d3c109d91b4dc9edc1a0a9e9209a18b44d"}`
-	if string(got) != want {
+	fixture.Command.Payload = payload
+	got, err := fixture.Command.SigningBytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := hex.DecodeString(fixture.SigningBytesHex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(want) {
 		t.Fatalf("signing bytes mismatch\n got: %s\nwant: %s", got, want)
+	}
+	if HashPayload(payload) != fixture.Command.PayloadHash {
+		t.Fatal("fixture payload hash does not match payload bytes")
 	}
 }
 
 func TestNodeEventGoldenVector(t *testing.T) {
-	event := NodeEvent{
-		Version:      ProtocolVersion,
-		EventID:      "evt-1",
-		CommandID:    "cmd-1",
-		Target:       Target{OrganizationID: "org-1", NodeID: "node-1", AgentID: "agent-1"},
-		Type:         "completed",
-		ResultCode:   "ok",
-		ResultHash:   "result-hash",
-		EvidenceHash: "evidence-hash",
-		OccurredAtMS: fixedNow().UnixMilli(),
-	}
-	got, err := event.CanonicalBytes()
+	fixture := loadGoldenFixture(t)
+	got, err := fixture.Event.CanonicalBytes()
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"version":"1","event_id":"evt-1","command_id":"cmd-1","target":{"organization_id":"org-1","node_id":"node-1","agent_id":"agent-1"},"type":"completed","result_code":"ok","result_hash":"result-hash","evidence_hash":"evidence-hash","occurred_at_ms":1784394000000}`
-	if string(got) != want {
+	want, err := hex.DecodeString(fixture.EventBytesHex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(want) {
 		t.Fatalf("event bytes mismatch\n got: %s\nwant: %s", got, want)
 	}
 }
 
+type goldenFixture struct {
+	Command         NodeCommand `json:"command"`
+	PayloadHex      string      `json:"payload_hex"`
+	SigningBytesHex string      `json:"signing_bytes_hex"`
+	Event           NodeEvent   `json:"event"`
+	EventBytesHex   string      `json:"event_bytes_hex"`
+}
+
+func loadGoldenFixture(t *testing.T) goldenFixture {
+	t.Helper()
+	data, err := os.ReadFile("testdata/v1-golden.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fixture goldenFixture
+	if err := json.Unmarshal(data, &fixture); err != nil {
+		t.Fatal(err)
+	}
+	return fixture
+}
+
 func TestValidatorAcceptsValidAndDuplicateCommand(t *testing.T) {
 	now := fixedNow()
-	validator := newTestValidator(now, CapabilityState{})
+	state := validState(now)
+	state.RemainingUses = uint64Pointer(1)
+	validator := newTestValidator(now, state)
 	command := validCommand(now)
 
 	result, err := validator.Validate(context.Background(), command)
@@ -135,6 +159,10 @@ func TestValidatorRejectionMatrix(t *testing.T) {
 		}, CodeTTLExceeded, false},
 		{"wrong target", func(c *NodeCommand, _ *CapabilityState) { c.Target.NodeID = "node-2" }, CodeWrongTarget, false},
 		{"unauthorized signer", func(_ *NodeCommand, s *CapabilityState) { s.AuthorizedSigners = []string{"0xother"} }, CodeUnauthorized, false},
+		{"non canonical token", func(c *NodeCommand, _ *CapabilityState) { c.CommandID = "cmd 1" }, CodeInvalidEnvelope, false},
+		{"invalid capability hierarchy", func(_ *NodeCommand, s *CapabilityState) { s.Target.NodeID = "" }, CodeUnauthorized, false},
+		{"unbounded capability", func(_ *NodeCommand, s *CapabilityState) { s.RemainingUses = nil }, CodeUnauthorized, false},
+		{"exhausted capability", func(_ *NodeCommand, s *CapabilityState) { s.RemainingUses = uint64Pointer(0) }, CodeCapabilityExhausted, false},
 		{"wrong scope", func(_ *NodeCommand, s *CapabilityState) { s.Scopes = []string{"logs"} }, CodeWrongScope, false},
 		{"unclassified risk", func(c *NodeCommand, s *CapabilityState) {
 			c.Action = "unknown"
@@ -151,6 +179,11 @@ func TestValidatorRejectionMatrix(t *testing.T) {
 			s.Actions = []string{"shell"}
 			s.CheckpointObservedAtMS = now.Add(time.Minute).UnixMilli()
 		}, CodeAuthorityStale, false},
+		{"missing required budget", func(c *NodeCommand, s *CapabilityState) {
+			c.Action = "deploy"
+			s.Actions = []string{"deploy"}
+			s.RemainingBudget = &BudgetClaim{Asset: "MIST", Amount: 100}
+		}, CodeBudgetExceeded, false},
 		{"invalid signature", func(_ *NodeCommand, _ *CapabilityState) {}, CodeSignatureInvalid, true},
 	}
 
@@ -181,6 +214,17 @@ func TestValidatorAllowsNodeScopedCapabilityForAgentTarget(t *testing.T) {
 	validator := newTestValidator(now, state)
 	if _, err := validator.Validate(context.Background(), validCommand(now)); err != nil {
 		t.Fatalf("node-scoped capability rejected agent target: %v", err)
+	}
+}
+
+func TestValidatorAllowsOrganizationScopedCapabilityForNodeTarget(t *testing.T) {
+	now := fixedNow()
+	state := validState(now)
+	state.Target.NodeID = ""
+	state.Target.AgentID = ""
+	validator := newTestValidator(now, state)
+	if _, err := validator.Validate(context.Background(), validCommand(now)); err != nil {
+		t.Fatalf("organization-scoped capability rejected node target: %v", err)
 	}
 }
 
@@ -225,6 +269,76 @@ func TestValidatorRejectsReplayAndIdempotencyConflict(t *testing.T) {
 	}
 }
 
+func TestValidatorAtomicallyEnforcesRemainingUses(t *testing.T) {
+	now := fixedNow()
+	state := validState(now)
+	state.RemainingUses = uint64Pointer(1)
+	validator := newTestValidator(now, state)
+
+	commands := []NodeCommand{validCommand(now), validCommand(now)}
+	commands[1].CommandID = "cmd-2"
+	commands[1].Nonce = "nonce-2"
+	commands[1].IdempotencyKey = "idem-2"
+
+	var wg sync.WaitGroup
+	errs := make(chan error, len(commands))
+	for _, command := range commands {
+		wg.Add(1)
+		go func(command NodeCommand) {
+			defer wg.Done()
+			_, err := validator.Validate(context.Background(), command)
+			errs <- err
+		}(command)
+	}
+	wg.Wait()
+	close(errs)
+
+	successes := 0
+	exhausted := 0
+	for err := range errs {
+		switch CodeOf(err) {
+		case "":
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			successes++
+		case CodeCapabilityExhausted:
+			exhausted++
+		default:
+			t.Fatalf("unexpected rejection: %v", err)
+		}
+	}
+	if successes != 1 || exhausted != 1 {
+		t.Fatalf("successes=%d exhausted=%d, want 1/1", successes, exhausted)
+	}
+}
+
+func TestValidatorAtomicallyEnforcesBudget(t *testing.T) {
+	now := fixedNow()
+	state := validState(now)
+	state.Actions = append(state.Actions, "deploy")
+	state.RemainingUses = nil
+	state.RemainingBudget = &BudgetClaim{Asset: "MIST", Amount: 100}
+	validator := newTestValidator(now, state)
+
+	first := validCommand(now)
+	first.Action = "deploy"
+	first.Budget = &BudgetClaim{Asset: "MIST", Amount: 60}
+	if _, err := validator.Validate(context.Background(), first); err != nil {
+		t.Fatalf("first budget reservation failed: %v", err)
+	}
+
+	second := validCommand(now)
+	second.CommandID = "cmd-2"
+	second.Nonce = "nonce-2"
+	second.IdempotencyKey = "idem-2"
+	second.Action = "deploy"
+	second.Budget = &BudgetClaim{Asset: "MIST", Amount: 50}
+	if _, err := validator.Validate(context.Background(), second); CodeOf(err) != CodeBudgetExceeded {
+		t.Fatalf("code = %q, err=%v", CodeOf(err), err)
+	}
+}
+
 func TestValidatorAllowsStaleCheckpointForLowRiskCommand(t *testing.T) {
 	now := fixedNow()
 	state := validState(now)
@@ -257,13 +371,7 @@ func newTestValidator(now time.Time, override CapabilityState) *Validator {
 			}
 			return nil
 		}),
-		capabilityResolverFunc(func(_ context.Context, ref CapabilityRef) (CapabilityState, error) {
-			if ref.ID != "cap-1" {
-				return CapabilityState{}, errors.New("unknown capability")
-			}
-			return state, nil
-		}),
-		NewMemoryReplayGuard(),
+		NewMemoryAuthorityStore(state),
 		ValidatorOptions{
 			Now:                      func() time.Time { return now },
 			LocalTarget:              Target{OrganizationID: "org-1", NodeID: "node-1"},
@@ -272,6 +380,7 @@ func newTestValidator(now time.Time, override CapabilityState) *Validator {
 			MaxHighRiskCheckpointAge: 2 * time.Minute,
 			LowRiskActions:           map[string]struct{}{"status": {}, "logs": {}},
 			HighRiskActions:          map[string]struct{}{"shell": {}, "deploy": {}},
+			BudgetedActions:          map[string]struct{}{"deploy": {}},
 		},
 	)
 }
@@ -306,8 +415,11 @@ func validState(now time.Time) CapabilityState {
 		ExpiresAtMS:            now.Add(5 * time.Minute).UnixMilli(),
 		RevocationVersion:      7,
 		CheckpointObservedAtMS: now.UnixMilli(),
+		RemainingUses:          uint64Pointer(10),
 	}
 }
+
+func uint64Pointer(value uint64) *uint64 { return &value }
 
 func fixedNow() time.Time {
 	return time.UnixMilli(1784394000000).UTC()
