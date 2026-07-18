@@ -19,7 +19,8 @@ Runtime deps on the host being controlled:
 - Linux: `xdotool` (input injection), an X display (`:0`, or `Xvfb`)
 - macOS: `cliclick` (input injection); grant the process **Screen Recording**
   and **Accessibility** permissions in System Settings (TCC — must be done
-  interactively on the machine)
+  interactively on the machine). The user must be logged in; `envd-desktop`
+  cannot unlock the login window or bypass TCC prompts.
 
 ## Run
 
@@ -39,6 +40,15 @@ ENVD_DESKTOP_TOKEN=... ./envd-desktop -display 1 -encode-height 1440 -bitrate 14
 ```
 
 Then open `https://<host>/?token=<token>` on the phone and tap **Connect**.
+
+On macOS, `-keep-awake` is enabled by default. It starts `caffeinate -dims -w`
+bound to the `envd-desktop` process and nudges user activity before each screen
+capture, which prevents the display idle path that can make avfoundation stop
+advancing frames. To disable it explicitly:
+
+```bash
+ENVD_DESKTOP_TOKEN=... ./envd-desktop -keep-awake=false
+```
 
 ## Quality controls
 

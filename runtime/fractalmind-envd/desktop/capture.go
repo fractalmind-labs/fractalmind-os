@@ -37,6 +37,10 @@ type CaptureConfig struct {
 	// avfoundation screen capture is typically "uyvy422"). Passed as ffmpeg
 	// -pixel_format before -i so the decoder does not misread the raw buffer.
 	PixelFormat string
+	// WakeDisplay nudges macOS display activity before starting capture. This is
+	// useful for unattended hosts where avfoundation can freeze when the display
+	// has idled, while remaining a no-op on other platforms.
+	WakeDisplay bool
 }
 
 func (c CaptureConfig) withDefaults() CaptureConfig {
@@ -152,6 +156,9 @@ func Start(ctx context.Context, cfg CaptureConfig) (*Capture, error) {
 	cfg = cfg.withDefaults()
 	if cfg.Display == "" {
 		cfg.Display = defaultDisplay(runtime.GOOS)
+	}
+	if cfg.WakeDisplay {
+		_ = NudgeUserActive(ctx, runtime.GOOS)
 	}
 	cmd := exec.CommandContext(ctx, cfg.FFmpegPath, FFmpegArgs(cfg, runtime.GOOS)...)
 	stdout, err := cmd.StdoutPipe()
