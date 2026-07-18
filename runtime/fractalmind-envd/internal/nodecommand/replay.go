@@ -113,6 +113,9 @@ func (s *MemoryAuthorityStore) Reserve(_ context.Context, reservation Reservatio
 	if !s.Supports(reservation.Scope) {
 		return ReservationResult{}, reject(CodeUnauthorized, "authority store does not support reservation scope", nil)
 	}
+	if state.RemainingUses == nil && reservation.Budget == nil {
+		return ReservationResult{}, reject(CodeUnauthorized, "capability has no reservable use or budget bound", nil)
+	}
 	if state.RemainingUses != nil {
 		if *state.RemainingUses == 0 {
 			return ReservationResult{}, reject(CodeCapabilityExhausted, "capability has no remaining uses", nil)

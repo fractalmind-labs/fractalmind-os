@@ -85,7 +85,9 @@ is the atomic boundary: it makes exact retries idempotent, rejects command ID,
 nonce, and idempotency conflicts, consumes at most one use per unique command,
 and consumes budget only once. It also compares a canonical hash of signer,
 target, actions, scopes, expiry, revocation, freshness checkpoint, and
-reservation scope, so a same-version authority mutation cannot race validation.
+reservation scope, plus use/budget bound presence and budget asset identity, so
+a same-version authority or bound-shape mutation cannot race validation. Mutable
+remaining amounts are checked and consumed inside the same reservation action.
 
 Node- and agent-scoped capabilities may use target-node reservation storage.
 Organization-scoped capabilities require `reservation_scope=authority` and a

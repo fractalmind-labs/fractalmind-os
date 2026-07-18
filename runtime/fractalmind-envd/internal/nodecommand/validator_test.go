@@ -321,6 +321,18 @@ func TestValidatorRejectsAuthoritySnapshotRace(t *testing.T) {
 	}
 }
 
+func TestValidatorRejectsAuthorityBoundPresenceRace(t *testing.T) {
+	now := fixedNow()
+	state := validState(now)
+	mutated := validState(now)
+	mutated.RemainingUses = nil
+	store := &mutateOnReserveStore{MemoryAuthorityStore: NewMemoryAuthorityStore(state), mutated: mutated}
+	validator := newTestValidatorWithStore(now, store, Target{OrganizationID: "org-1", NodeID: "node-1"})
+	if _, err := validator.Validate(context.Background(), validCommand(now)); CodeOf(err) != CodeAuthorityStale {
+		t.Fatalf("code = %q, err=%v", CodeOf(err), err)
+	}
+}
+
 func TestValidatorRejectsUnconfiguredLocalTarget(t *testing.T) {
 	now := fixedNow()
 	validator := newTestValidator(now, CapabilityState{})

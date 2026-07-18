@@ -268,6 +268,12 @@ func (state CapabilityState) SnapshotHash() string {
 	sort.Strings(signers)
 	sort.Strings(actions)
 	sort.Strings(scopes)
+	hasUseBound := state.RemainingUses != nil
+	hasBudgetBound := state.RemainingBudget != nil
+	budgetAsset := ""
+	if state.RemainingBudget != nil {
+		budgetAsset = state.RemainingBudget.Asset
+	}
 	payload, _ := json.Marshal(struct {
 		ID                     string           `json:"id"`
 		Target                 Target           `json:"target"`
@@ -279,6 +285,9 @@ func (state CapabilityState) SnapshotHash() string {
 		RevocationVersion      string           `json:"revocation_version"`
 		CheckpointObservedAtMS string           `json:"checkpoint_observed_at_ms"`
 		ReservationScope       ReservationScope `json:"reservation_scope"`
+		HasUseBound            bool             `json:"has_use_bound"`
+		HasBudgetBound         bool             `json:"has_budget_bound"`
+		BudgetAsset            string           `json:"budget_asset,omitempty"`
 	}{
 		ID:                     state.ID,
 		Target:                 state.Target,
@@ -290,6 +299,9 @@ func (state CapabilityState) SnapshotHash() string {
 		RevocationVersion:      strconv.FormatUint(state.RevocationVersion, 10),
 		CheckpointObservedAtMS: strconv.FormatInt(state.CheckpointObservedAtMS, 10),
 		ReservationScope:       state.ReservationScope,
+		HasUseBound:            hasUseBound,
+		HasBudgetBound:         hasBudgetBound,
+		BudgetAsset:            budgetAsset,
 	})
 	return hashBytes(payload)
 }
