@@ -2,6 +2,8 @@
 
 The fractal model is the core architectural idea behind FractalMind AI.
 
+> The L0-L3 labels on this page describe organizational nesting. They are not infrastructure planes. Remote control separately follows the Control / Authority, P2P Data / Execution, and Application planes described in the [Architecture Overview](/architecture/overview).
+
 ## What Makes It Fractal?
 
 A fractal is a structure where each part is a scaled copy of the whole. In FractalMind:

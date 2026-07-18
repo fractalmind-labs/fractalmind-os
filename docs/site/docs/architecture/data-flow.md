@@ -1,107 +1,95 @@
 # Data Flow
 
-How information moves through the FractalMind stack.
+This page traces data through the three-plane architecture. The key rule is that transport delivers a request, while the target independently verifies authority before execution.
 
-## Human → Agent (Inbound)
+## Privileged Command Lifecycle
 
-```
-Human message (Telegram/Slack/Discord)
-    │
-    ▼
-fractalbot (gateway)
-    │  Parse channel, extract context
-    ▼
-agent-manager (route to target agent)
-    │  Inject into tmux session
-    ▼
-Agent (Claude Code / Codex / custom)
-    │  Process message, execute task
-    ▼
-Result
-```
-
-## Agent → Human (Outbound)
-
-```
-Agent completes task
-    │
-    ▼
-use-fractalbot-skill
-    │  Format message for channel
-    ▼
-fractalbot (gateway)
-    │  Route to correct channel
-    ▼
-Human receives response (Telegram/Slack/Discord)
+```text
+1. Capability grant
+   SUI contract creates target-scoped, bounded authority
+          |
+2. Signed intent
+   Application signs action + scope + target + command metadata
+          |
+3. Transport
+   Direct P2P or relay delivers the envelope to target envd
+          |
+4. Target verification
+   envd resolves authority, checks signature/freshness/revocation/replay/budget
+          |
+5. Durable reservation
+   target records pending command before local execution
+          |
+6. Local execution
+   envd invokes a typed agent-manager/system adapter
+          |
+7. Durable result
+   target records completed/result; exact retry returns the same result
+          |
+8. Optional evidence anchor
+   a digest may be committed on-chain when audit policy requires it
 ```
 
-## Agent ↔ Agent (Team Communication)
+The signed intent binds the action, scope, target, command ID, nonce, idempotency key, budget, and canonical payload hash. A relay cannot edit those fields without invalidating verification.
 
-```
-Agent A (team member)
-    │
-    ▼
-team-chat-skill (write to inbox)
-    │  Append-only JSONL file
-    ▼
-Agent B (lead or peer)
-    │  Read from inbox, acknowledge
-    ▼
-team-chat-skill (ack + respond)
-```
+## Human and Channel Inbound
 
-## On-chain Flow (Future)
-
-```
-Agent completes task
-    │
-    ▼
-[future] envd daemon
-    │  Serialize task completion proof
-    ▼
-[future] Gateway Service
-    │  Submit transaction to SUI
-    ▼
-fractalmind-protocol (on-chain)
-    │  Record: task status, reputation update
-    ▼
-Other agents/orgs can verify on-chain
+```text
+Human -> Slack/Telegram/etc. -> fractalbot -> application or agent
+                                             |
+                                             v
+                                  create signed privileged intent
+                                             |
+                                             v
+                                         target envd
 ```
 
-## Heartbeat Flow
+fractalbot supplies channel and thread context. Channel identity may inform application policy, but it is not sufficient authority for target mutation.
 
-```
-cron trigger (every N minutes)
-    │
-    ▼
-Agent wakes up
-    │  Read HEARTBEAT.md
-    │  Check: emails, calendar, agent status, OKRs
-    ▼
-turbo-frequency evaluation
-    │  Score busyness (0-100)
-    │  Adjust next heartbeat interval
-    ▼
-HEARTBEAT_OK (nothing to do)
-    — or —
-Action taken (notify human, fix issue, etc.)
+## Results and Outbound Messages
+
+```text
+target envd -> durable result -> requesting application/agent
+                                      |
+                                      v
+                              use-fractalbot skill
+                                      |
+                                      v
+                               human channel
 ```
 
-## File-First Data Model
+Applications should distinguish `pending`, `completed`, and `result unavailable`. A restart must not turn an unproven pending command into a successful duplicate.
 
-FractalMind deliberately avoids databases for most operations:
+## Agent-to-Agent Collaboration
 
-| Data | Format | Location |
-|------|--------|----------|
-| Agent config | YAML | `agents/*.yml` |
-| Team config | YAML | `teams/*.yml` |
-| OKR tracking | Markdown | `OKR.md` |
-| Team messages | JSONL | `team-chat/<agent>/inbox.jsonl` |
-| Agent memory | Markdown | `memory/YYYY-MM-DD.md` |
-| Heartbeat state | JSON | `memory/heartbeat-state.json` |
+Local team coordination may use file-backed `team-chat` inboxes and agent-manager sessions. This collaboration state is operational data, not remote node authority.
 
-Only **trust-critical** data goes on-chain (SUI):
-- Organization registration
-- Agent identity and reputation
-- Task completion proofs
-- Governance decisions
+## On-Chain vs Off-Chain
+
+| On-chain | Off-chain |
+|----------|-----------|
+| Organization and agent identity | Raw logs and files |
+| Capability, delegation, revocation | Screen/video/audio and input events |
+| Bounded use and budget metadata | High-frequency heartbeats and presence |
+| Optional evidence digest | Relay load, latency, and routing telemetry |
+
+Putting raw operational streams on-chain would leak private data, increase cost, and make high-frequency control impractical.
+
+## Failure Behavior
+
+- **Stale or unavailable revocation state:** mutating commands fail closed.
+- **Duplicate exact command:** return the durable prior result without consuming quota again.
+- **Conflicting command metadata:** reject, even when one identifier matches.
+- **Relay unavailable:** try another route or direct P2P; do not weaken authorization.
+- **Target restart with pending/no result:** fail closed until durable state can prove the outcome.
+- **Read-only discovery cache:** may be served only where policy explicitly accepts staleness.
+
+## Local Heartbeat Flow
+
+Workspace heartbeats remain a local governance loop:
+
+```text
+cron -> read current state -> verify evidence -> take owner action -> record result
+```
+
+They are not SUI transactions and do not grant remote authority.

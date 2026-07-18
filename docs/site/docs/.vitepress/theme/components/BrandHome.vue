@@ -18,28 +18,28 @@ const products = [
   },
   {
     name: 'fractalbot',
-    description: 'Multi-channel messaging bridge that routes humans and agents across Slack, Telegram, Discord, Feishu, and more.',
+    description: 'Application-plane channel adapter for Slack, Telegram, Discord, Feishu, and more; it does not grant node authority.',
     icon: '&#x1f4e1;',
     color: '#4ecdc4',
     link: '/components/fractalbot',
   },
   {
     name: 'agent-manager',
-    description: 'Execution plane for tmux-based agents with lifecycle management, monitoring, and dispatch support.',
+    description: 'Typed local tmux lifecycle adapter invoked behind target envd policy for remote privileged actions.',
     icon: '&#x1f916;',
     color: '#4ecdc4',
     link: '/components/agent-manager',
   },
   {
     name: 'fractalmind-protocol',
-    description: 'Optional trust layer on SUI for identity, governance, and organization primitives when on-chain guarantees matter.',
+    description: 'Control / Authority Plane on SUI for identity, capabilities, delegation, revocation, and bounded control.',
     icon: '&#x26d3;',
     color: '#4DA2FF',
     link: '/components/protocol',
   },
   {
     name: 'fractalmind-envd',
-    description: 'Go runtime for remote and distributed execution beyond a single machine.',
+    description: 'Target-side P2P Data / Execution Plane for verification, replay protection, local execution, and durable results.',
     icon: '&#x1f310;',
     color: '#4ecdc4',
     link: '/components/envd',
@@ -61,7 +61,7 @@ const stats = [
 ]
 
 const milestones = [
-  { date: '2025 Q4', title: 'Protocol trust layer validated', description: 'fractalmind-protocol shipped to SUI Testnet as the optional trust surface.' },
+  { date: '2025 Q4', title: 'Protocol primitives validated', description: 'Organization, identity, task, and governance primitives shipped to SUI Testnet.' },
   { date: '2026 Q1', title: 'FractalMind OS control loop aligned', description: 'SOUL, HEARTBEAT, runtime memory, and heartbeat execution now share one operating model.' },
   { date: '2026 Q1', title: 'Candidate OKR sync live', description: 'Strategic candidates now publish through fractalmind-okrs instead of staying trapped in one terminal.' },
   { date: '2026 Q1', title: 'Multi-channel execution running', description: 'fractalbot + agent-manager route humans to agents and keep delivery observable.' },
@@ -121,11 +121,11 @@ onMounted(() => {
         </div>
         <h1 class="hero-title">
           <span class="title-main">FractalMind AI</span>
-          <span class="title-sub">Heartbeat-driven operating system for AI agent teams</span>
+          <span class="title-sub">Three-plane infrastructure for governed AI agent teams</span>
         </h1>
         <p class="hero-description">
-          Open-source operating system for governed autonomy, structured memory,
-          multi-channel execution, and optional on-chain trust surfaces.
+          SUI authority, target-side P2P execution, user-facing applications,
+          and a heartbeat-driven local operating loop.
         </p>
         <div class="hero-selling-points">
           <div class="selling-point">
@@ -145,8 +145,8 @@ onMounted(() => {
           <div class="selling-point">
             <span class="sp-icon">&#x1f50d;</span>
             <div>
-              <strong>Protocol when trust matters</strong>
-              <p>Use SUI and public visualization surfaces when identity, governance, or trust-critical proof is required — without making that the whole story.</p>
+              <strong>Authority without relay sovereignty</strong>
+              <p>SUI capabilities define bounded authority; target envd verifies every privileged action before local execution.</p>
             </div>
           </div>
         </div>
@@ -188,10 +188,9 @@ onMounted(() => {
           <div class="ps-card solution">
             <h3>The Solution</h3>
             <p>
-              FractalMind now centers on a <strong>heartbeat-driven OS</strong>: structured memory,
-              candidate OKRs, governed autonomy, agent dispatch, and outcome tracking. The
-              protocol and explorer remain valuable trust surfaces, but the daily system runs
-              through an OS-first control loop instead of a protocol-only story.
+              FractalMind combines a <strong>heartbeat-driven local OS</strong> with three remote-control planes:
+              SUI authority, target-side P2P execution, and user-facing applications. Relays,
+              channels, and local adapters support the flow without becoming authority owners.
             </p>
           </div>
         </div>
@@ -201,8 +200,8 @@ onMounted(() => {
     <!-- Product Matrix -->
     <section class="products-section">
       <div class="section-container">
-        <h2 class="section-title">Core Operating Surfaces</h2>
-        <p class="section-subtitle">The current system is OS-first: communication, execution, governance, and trust surfaces.</p>
+        <h2 class="section-title">Three Planes and Supporting Components</h2>
+        <p class="section-subtitle">Authority, transport/execution, and applications have explicit boundaries.</p>
         <div class="products-grid">
           <a
             v-for="product in products"
@@ -224,8 +223,8 @@ onMounted(() => {
     <!-- Architecture Diagram -->
     <section class="architecture-section">
       <div class="section-container">
-        <h2 class="section-title">Current Operating Stack</h2>
-        <p class="section-subtitle">Heartbeat-driven coordination with optional on-chain trust layers.</p>
+        <h2 class="section-title">Three-Plane Architecture</h2>
+        <p class="section-subtitle">SUI grants authority; target envd verifies and executes; applications request and display.</p>
         <div class="arch-diagram">
           <svg viewBox="0 0 800 420" fill="none" class="arch-svg">
             <!-- Background grid dots -->
@@ -234,9 +233,9 @@ onMounted(() => {
             </pattern>
             <rect width="800" height="420" fill="url(#grid)" />
 
-            <!-- L3: Organization -->
+            <!-- Control / Authority Plane -->
             <rect x="250" y="20" width="300" height="60" rx="8" fill="#0f3460" stroke="#4DA2FF" stroke-width="1.5" />
-            <text x="400" y="45" text-anchor="middle" fill="#4DA2FF" font-size="11" font-weight="600">L3: Organization (On-Chain)</text>
+            <text x="400" y="45" text-anchor="middle" fill="#4DA2FF" font-size="11" font-weight="600">Control / Authority Plane</text>
             <text x="400" y="62" text-anchor="middle" fill="#8892b0" font-size="10">fractalmind-protocol on SUI</text>
 
             <!-- Lines from L3 to L2 -->
@@ -246,16 +245,16 @@ onMounted(() => {
 
             <!-- L2: Teams -->
             <rect x="100" y="130" width="200" height="55" rx="8" fill="#0f3460" stroke="#4ecdc4" stroke-width="1.5" />
-            <text x="200" y="155" text-anchor="middle" fill="#4ecdc4" font-size="11" font-weight="600">L2: Team A</text>
-            <text x="200" y="172" text-anchor="middle" fill="#8892b0" font-size="10">team-manager</text>
+            <text x="200" y="155" text-anchor="middle" fill="#4ecdc4" font-size="11" font-weight="600">Agent Console</text>
+            <text x="200" y="172" text-anchor="middle" fill="#8892b0" font-size="10">Application Plane</text>
 
             <rect x="300" y="130" width="200" height="55" rx="8" fill="#0f3460" stroke="#4ecdc4" stroke-width="1.5" />
-            <text x="400" y="155" text-anchor="middle" fill="#4ecdc4" font-size="11" font-weight="600">L2: Team B</text>
-            <text x="400" y="172" text-anchor="middle" fill="#8892b0" font-size="10">team-manager</text>
+            <text x="400" y="155" text-anchor="middle" fill="#4ecdc4" font-size="11" font-weight="600">envd-desktop</text>
+            <text x="400" y="172" text-anchor="middle" fill="#8892b0" font-size="10">Application Plane</text>
 
             <rect x="500" y="130" width="200" height="55" rx="8" fill="#0f3460" stroke="#4ecdc4" stroke-width="1.5" />
-            <text x="600" y="155" text-anchor="middle" fill="#4ecdc4" font-size="11" font-weight="600">L2: Team C</text>
-            <text x="600" y="172" text-anchor="middle" fill="#8892b0" font-size="10">team-manager</text>
+            <text x="600" y="155" text-anchor="middle" fill="#4ecdc4" font-size="11" font-weight="600">Channel Clients</text>
+            <text x="600" y="172" text-anchor="middle" fill="#8892b0" font-size="10">Application Plane</text>
 
             <!-- Lines from L2 to L1 -->
             <line x1="150" y1="185" x2="120" y2="230" stroke="#4ecdc4" stroke-width="1" opacity="0.4" />
@@ -267,28 +266,28 @@ onMounted(() => {
 
             <!-- L1: Agents -->
             <rect x="60" y="230" width="120" height="50" rx="6" fill="#1a1a2e" stroke="#e94560" stroke-width="1.5" />
-            <text x="120" y="252" text-anchor="middle" fill="#e94560" font-size="10" font-weight="600">Agent</text>
-            <text x="120" y="268" text-anchor="middle" fill="#8892b0" font-size="9">agent-manager</text>
+            <text x="120" y="252" text-anchor="middle" fill="#e94560" font-size="10" font-weight="600">Target envd</text>
+            <text x="120" y="268" text-anchor="middle" fill="#8892b0" font-size="9">verify + execute</text>
 
             <rect x="220" y="230" width="120" height="50" rx="6" fill="#1a1a2e" stroke="#e94560" stroke-width="1.5" />
-            <text x="280" y="252" text-anchor="middle" fill="#e94560" font-size="10" font-weight="600">Agent</text>
-            <text x="280" y="268" text-anchor="middle" fill="#8892b0" font-size="9">agent-manager</text>
+            <text x="280" y="252" text-anchor="middle" fill="#e94560" font-size="10" font-weight="600">Target envd</text>
+            <text x="280" y="268" text-anchor="middle" fill="#8892b0" font-size="9">verify + execute</text>
 
             <rect x="340" y="230" width="120" height="50" rx="6" fill="#1a1a2e" stroke="#e94560" stroke-width="1.5" />
-            <text x="400" y="252" text-anchor="middle" fill="#e94560" font-size="10" font-weight="600">Lead Agent</text>
-            <text x="400" y="268" text-anchor="middle" fill="#8892b0" font-size="9">agent-manager</text>
+            <text x="400" y="252" text-anchor="middle" fill="#e94560" font-size="10" font-weight="600">Target envd</text>
+            <text x="400" y="268" text-anchor="middle" fill="#8892b0" font-size="9">durable result</text>
 
             <rect x="480" y="230" width="120" height="50" rx="6" fill="#1a1a2e" stroke="#e94560" stroke-width="1.5" />
-            <text x="540" y="252" text-anchor="middle" fill="#e94560" font-size="10" font-weight="600">Agent</text>
-            <text x="540" y="268" text-anchor="middle" fill="#8892b0" font-size="9">agent-manager</text>
+            <text x="540" y="252" text-anchor="middle" fill="#e94560" font-size="10" font-weight="600">Target envd</text>
+            <text x="540" y="268" text-anchor="middle" fill="#8892b0" font-size="9">verify + execute</text>
 
             <rect x="620" y="230" width="120" height="50" rx="6" fill="#1a1a2e" stroke="#e94560" stroke-width="1.5" />
-            <text x="680" y="252" text-anchor="middle" fill="#e94560" font-size="10" font-weight="600">Agent</text>
-            <text x="680" y="268" text-anchor="middle" fill="#8892b0" font-size="9">agent-manager</text>
+            <text x="680" y="252" text-anchor="middle" fill="#e94560" font-size="10" font-weight="600">Target envd</text>
+            <text x="680" y="268" text-anchor="middle" fill="#8892b0" font-size="9">verify + execute</text>
 
-            <!-- L0: Infrastructure -->
+            <!-- Supporting roles -->
             <rect x="50" y="320" width="700" height="80" rx="8" fill="#0f3460" stroke="#8892b0" stroke-width="1" stroke-dasharray="4" />
-            <text x="400" y="345" text-anchor="middle" fill="#8892b0" font-size="11" font-weight="600">L0: Infrastructure Layer</text>
+            <text x="400" y="345" text-anchor="middle" fill="#8892b0" font-size="11" font-weight="600">Adapters and Support Roles (No Authority Sovereignty)</text>
 
             <rect x="80" y="355" width="130" height="34" rx="4" fill="#1a1a2e" stroke="#4ecdc4" stroke-width="1" />
             <text x="145" y="376" text-anchor="middle" fill="#4ecdc4" font-size="9">fractalbot</text>
@@ -440,12 +439,10 @@ onMounted(() => {
             </div>
 
             <div class="stage-info">
-              <h4>Project Stage: Operating-system rollout</h4>
+              <h4>Project Stage: Three-plane migration</h4>
               <p>
-                FractalMind is actively shifting from a protocol-first public story to the
-                current OS-first reality: heartbeat, structured memory, candidate OKRs,
-                governed execution, and observable outcomes. The protocol is still live on
-                SUI Testnet — it is now one important surface inside a broader operating system.
+                The existing protocol package remains live on SUI Testnet, while remote capability,
+                target enforcement, application migration, and legacy retirement remain tracker-backed work.
               </p>
             </div>
           </div>

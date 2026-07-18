@@ -1,6 +1,8 @@
 # Tool Skills
 
-Optional skills that extend AI agent capabilities.
+Installable distribution packages that extend AI agent capabilities.
+
+Skills package bounded tools and workflows. Installing a skill does not grant remote node authority; privileged remote operations still follow signed-intent and target-verification policy.
 
 ## use-fractalbot-skill
 

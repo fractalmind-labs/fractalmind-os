@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'FractalMind AI',
-  description: 'Heartbeat-driven operating system for AI agent teams.',
+  description: 'SUI authority, target-side P2P execution, applications, and governed AI agent operations.',
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
   ],
@@ -54,7 +54,7 @@ export default defineConfig({
         {
           text: 'Architecture',
           items: [
-            { text: 'Overview', link: '/architecture/overview' },
+            { text: 'Three-Plane Overview', link: '/architecture/overview' },
             { text: 'Fractal Model', link: '/architecture/fractal-model' },
             { text: 'Data Flow', link: '/architecture/data-flow' },
             { text: 'Design Decisions', link: '/architecture/design-decisions' },
@@ -65,7 +65,7 @@ export default defineConfig({
         {
           text: 'Components',
           items: [
-            { text: 'Overview', link: '/components/overview' },
+            { text: 'Plane Classification', link: '/components/overview' },
             { text: 'fractalmind-protocol', link: '/components/protocol' },
             { text: 'fractalmind-envd', link: '/components/envd' },
             { text: 'fractalbot', link: '/components/fractalbot' },

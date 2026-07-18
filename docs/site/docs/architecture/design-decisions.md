@@ -2,6 +2,32 @@
 
 Key technical choices and the reasoning behind them.
 
+## Why Separate Authority from Transport?
+
+**Decision**: SUI capabilities define authority; target envd verifies and executes; relays and coordinators only support availability.
+
+**Rationale**:
+- relay compromise must not become node compromise
+- applications and channels should not hold permanent bearer authority
+- target-side verification keeps action, scope, target, freshness, replay, use, and budget enforcement together
+- transport can evolve without changing the trust root
+
+## Why Keep Bulk Operational Data Off-chain?
+
+**Decision**: Store capability, delegation, revocation, bounded claim state, and optional evidence hashes on-chain; keep logs, media, input, payloads, results, heartbeats, and relay telemetry off-chain.
+
+**Rationale**:
+- protects private operational data
+- avoids gas and latency for high-frequency streams
+- lets encrypted P2P paths carry large payloads
+- preserves verifiability through bounded authority and optional digests
+
+## Why Different Freshness Rules by Risk?
+
+**Decision**: Low-risk reads may use bounded-staleness trusted caches; high-risk or mutating actions fail closed when authority, revocation, replay, or durable result state cannot be proven fresh.
+
+**Rationale**: Availability optimizations must not silently weaken authorization.
+
 ## Why SUI?
 
 **Decision**: Use SUI blockchain for the protocol layer.
@@ -64,7 +90,7 @@ Key technical choices and the reasoning behind them.
 | **No SaaS platform** | We provide tools, users deploy themselves. |
 | **No agent runtime** | Agents run in the user's environment (tmux/Docker/systemd). |
 | **No monolith framework** | Every component installs independently. |
-| **No GUI requirement** | All operations work via CLI. GUI is optional. |
+| **No GUI dependency** | Core contracts and runtimes remain client-agnostic; Agent Console and envd-desktop are first-class Application Plane clients. |
 
 ## Technology Stack
 

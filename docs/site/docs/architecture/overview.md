@@ -1,107 +1,85 @@
 # Architecture Overview
 
-FractalMind AI is currently best understood as a **heartbeat-driven operating system for AI agent teams**, with optional on-chain trust surfaces.
+FractalMind uses a canonical **three-plane architecture** for remote agent control. The model separates authority, transport/execution, and user-facing applications so that no relay, gateway, or bearer token becomes the trust root.
 
-## Current Operating Stack
+> Migration status: this is the target architecture tracked in [Discussion #5](https://github.com/orgs/fractalmind-ai/discussions/5) and the [cross-repository tracker](https://github.com/fractalmind-ai/.github/issues/6). Some repositories still contain compatibility paths while the migration is in progress.
 
-```
-                   ┌──────────────────────────────┐
-                   │    Humans / External Tools   │
-                   │   Slack · Telegram · CLI     │
-                   └──────────────┬───────────────┘
-                                  │
-                        ┌─────────▼─────────┐
-                        │    fractalbot     │  Communication surface
-                        │ routing + context │
-                        └─────────┬─────────┘
-                                  │
-               ┌──────────────────▼──────────────────┐
-               │         FractalMind OS core         │
-               │   oh-my-code + heartbeat control    │
-               │ signal -> memory -> OKR -> outcome  │
-               └───────┬───────────────┬─────────────┘
-                       │               │
-          ┌────────────▼───────┐   ┌───▼──────────────────┐
-          │   structured state │   │  fractalmind-okrs    │
-          │ memory/*.json*     │   │ candidate publication │
-          └────────────┬───────┘   └──────────────────────┘
-                       │
-               ┌───────▼────────┐
-               │ agent-manager  │  Execution plane
-               │ tmux lifecycle │
-               └───────┬────────┘
-                       │
-               ┌───────▼────────┐
-               │  Agent sessions │
-               │ main / coder-*  │
-               └─────────────────┘
+## The Three Planes
 
-      Optional trust / distribution surfaces:
-      fractalmind-protocol · fractalmind-envd · explorer · openclaw-gateway-app
+```text
+Applications
+Agent Console | envd-desktop | channel and automation clients
+                         |
+                         | signed intent + capability reference
+                         v
+Control / Authority Plane
+SUI contracts: organization, identity, capability, delegation,
+revocation checkpoint, bounded use and budget
+                         |
+                         | verifiable authority state
+                         v
+P2P Data / Execution Plane
+target envd: verify -> reserve -> execute through local adapter -> result
+                         ^
+                         |
+relay / rendezvous / cache: availability support only
 ```
 
-## Layer Responsibilities
+### Control / Authority Plane
 
-### Communication Surface — `fractalbot`
+`fractalmind-protocol` is the canonical authority source for privileged remote actions. It defines:
 
-Routes humans and agents across channels, injects routing context, and acts as the boundary between outside requests and the internal operating loop.
+- organization and agent identity
+- target-scoped capabilities
+- bounded delegation
+- revocation checkpoints
+- action, scope, command, nonce, idempotency, use, and budget constraints
+- optional evidence anchors for durable audit
 
-### Operating System Core — `oh-my-code` + heartbeat
+Authority is decided by the capability and signed intent, not by a relay, coordinator, application session, or bearer token.
 
-The current center of gravity. This is where the system:
+### P2P Data / Execution Plane
 
-- records signals
-- reduces state into priorities
-- manages candidate OKRs
-- governs actions by risk level
-- dispatches work to agents
-- records outcomes and evolution
+`fractalmind-envd` runs on the target node. It owns the final authorization and execution boundary:
 
-### Execution Plane — `agent-manager`
+1. resolve the authority reference
+2. verify the signed intent and target
+3. enforce freshness, replay, use, and budget constraints
+4. reserve execution in durable local state
+5. invoke a typed local adapter
+6. persist and return the result
 
-Runs agents in tmux sessions, handles lifecycle management, and provides the actual execution plane for work chosen by the heartbeat.
+`agent-manager` is the local tmux execution adapter. It is not a remote authority service. Relay, rendezvous, coordinator, and index-cache services may improve reachability and discovery, but they cannot grant node control or bypass target verification.
 
-### Shared Governance Surface — `fractalmind-okrs`
+### Application Plane
 
-Stores exported candidate OKRs so strategy stays visible, reviewable, and durable beyond a single terminal session.
+Agent Console, envd-desktop, and other clients present user workflows. For privileged actions they create or relay signed intents; they do not become the authority source themselves.
 
-### Trust & Distribution Surfaces — `fractalmind-protocol`, `fractalmind-envd`, `explorer`
+`fractalbot` is a channel adapter. It preserves routing context between Slack, Telegram, Discord, Feishu, iMessage, and agents, but target envd still decides whether a privileged command is authorized.
 
-These remain important, but they are now part of a broader system story:
+## Data Placement
 
-- **`fractalmind-protocol`** — optional on-chain identity / governance / trust layer on SUI
-- **`fractalmind-envd`** — remote execution and distributed runtime direction
-- **`explorer`** — public visualization surface
+Only authority-critical and low-frequency audit state belongs on-chain. High-volume or private operational data remains off-chain.
 
-## Dependency Shape
+| Data | Placement |
+|------|-----------|
+| Organization, agent identity, capabilities, delegation, revocation | SUI authority plane |
+| Signed command envelope and target-side reservation/result | P2P plus durable target-local state |
+| Raw logs, screen media, input events, files | Off-chain P2P only |
+| High-frequency heartbeats, latency, relay load | Off-chain |
+| Optional completion/evidence digest | On-chain anchor when required |
 
-```
-fractalmind-protocol (optional trust layer)
-    │
-    ├──▸ explorer
-    └──▸ [future] envd / gateway integration
+## Availability Is Not Authority
 
-fractalbot
-    │
-    └──▸ oh-my-code heartbeat
-             │
-             ├──▸ memory/*.json*
-             ├──▸ fractalmind-okrs
-             └──▸ agent-manager
-                      │
-                      ├──▸ team-manager
-                      ├──▸ okr-manager
-                      └──▸ team-chat / tool skills
-```
+- Low-risk read-only operations may use cached discovery data when policy permits.
+- High-risk or mutating operations fail closed when authority freshness, revocation state, target verification, or durable replay evidence is unavailable.
+- A compromised relay may delay, drop, duplicate, or replay transport packets, but it must not gain the ability to authorize or execute a node command.
 
-## The Architectural Shift
+## Supporting Components
 
-The older public framing emphasized **protocol-first infrastructure on SUI**.
+- `oh-my-code`, heartbeat, memory, and OKR tooling govern local work and delivery.
+- `team-manager`, `okr-manager`, and `team-chat` coordinate local agent teams.
+- skills are distribution packages that expose bounded tools and workflows.
+- explorer and documentation surfaces visualize verifiable state; they do not decide authority.
 
-The current reality is broader:
-
-- the protocol is still real and valuable
-- but the system that runs every day is a **governed execution OS**
-- heartbeat, memory, OKRs, routing, and outcomes are now the main operational story
-
-That is the architecture the public docs should describe.
+See [Data Flow](/architecture/data-flow) for the privileged-command lifecycle.

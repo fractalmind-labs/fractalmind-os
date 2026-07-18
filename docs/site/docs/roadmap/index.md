@@ -1,80 +1,61 @@
 # Roadmap
 
-FractalMind AI has moved from **protocol validation** into **operating-system operationalization**.
+FractalMind is migrating to a three-plane architecture with explicit authority, execution, and application boundaries.
 
-## Current Track: FractalMind OS v1.0
+## Current Program: Three-Plane Migration
 
-The active work now centers on making the heartbeat-driven operating loop reliable in practice:
+The canonical tracker is [fractalmind-ai/.github#6](https://github.com/fractalmind-ai/.github/issues/6), derived from [Architecture RFC Discussion #5](https://github.com/orgs/fractalmind-ai/discussions/5).
 
-| Focus | Why it matters |
-|------|-----------------|
-| **Heartbeat control loop** | Keep discovery, governance, dispatch, and follow-through running without heroics |
-| **Structured memory** | Make state durable across sessions and agents |
-| **Candidate OKR governance** | Turn raw signals into reviewable, measurable work |
-| **Observability & evidence** | Require logs, QA evidence, sync state, and outcome records |
-| **Distribution surfaces** | Prepare the system to run beyond one workspace or machine |
+```text
+Phase 0 contracts
+    -> Authority Plane and Data/Execution Plane
+    -> Applications
+    -> legacy and duplicate-path retirement
+    -> cross-repository closeout
+```
 
-## Phase 1: Validation — Complete
+## Phase 0: Contracts and Boundaries
 
-**Goal**: prove the stack can exist end-to-end.
+- versioned signed-command and event contract
+- target-scoped capability, delegation, revocation, replay, use, and budget semantics
+- typed local agent-manager adapter
+- canonical public terminology
 
-| Milestone | Status |
-|-----------|--------|
-| `fractalmind-protocol` live on SUI Testnet | **Complete** |
-| First organization instance on-chain | **Complete** |
-| Core management skills working together | **Complete** |
-| Public docs + GitHub organization surfaces online | **Complete** |
+Phase 0 is complete only after exact-head CI, independent QA, formal review, and merge. Draft or unmerged capability code is not a published package.
 
-## Phase 2: Operating System — Current
+## Authority Plane
 
-**Goal**: make FractalMind usable as a governed AI operating system, not just a protocol demo.
+- make SUI capabilities the single remote authority source
+- enforce target, action, scope, expiry, revocation, use, and budget bounds
+- publish shared golden and rejection vectors across protocol and consumers
+- keep high-volume/private operational data off-chain
 
-| Milestone | Description |
-|-----------|-------------|
-| **Heartbeat OS loop** | `signal -> memory -> candidate OKR -> governance -> execution -> outcome -> evolution` runs as the default operating model |
-| **Shared strategic memory** | Durable state, postmortems, and runtime memory stay coherent across sessions |
-| **Governed autonomy** | Low-risk work can move automatically while high-risk actions stop at clear human boundaries |
-| **Reviewable delivery** | QA evidence, reviewable change sets, and sync state become standard, not optional |
-| **Public narrative alignment** | Website, GitHub, and docs describe the real OS-first system instead of an older protocol-only framing |
+## Data / Execution Plane
 
-## Phase 3: Distribution
+- require target envd verification before local mutation
+- deliver durable pending/completed/result semantics across restart
+- prove duplicate delivery and conflicting metadata fail safely
+- make relay compromise incapable of obtaining node control
+- keep agent-manager as a typed local adapter
 
-**Goal**: let the OS run across machines and environments.
+## Applications
 
-| Milestone | Description |
-|-----------|-------------|
-| **fractalmind-envd MVP** | Distributed runtime for remote agent execution |
-| **Gateway / bridge services** | Stronger handoff between trust surfaces and off-chain execution |
-| **Deployment automation** | One-command bootstrap of the core operating stack |
-| **Remote observability** | Health, routing, and state remain inspectable outside one machine |
+- migrate Agent Console and automation clients to signed intents
+- separate envd-desktop view and control scopes
+- classify fractalbot as channel ingress/egress, not authority
+- remove privileged direct-local paths after parity and rollback evidence
 
-## Phase 4: Federation
+## Simplification and Closeout
 
-**Goal**: multiple FractalMind systems coordinate as a larger organism.
+- retire duplicate coordinator, gateway, sponsor, and legacy authority paths
+- define canonical skill sources and distribution mirrors
+- align website, repository descriptions, diagrams, and runtime readback
+- close all linked issues with CI, QA, migration, and rollback evidence
 
-| Milestone | Description |
-|-----------|-------------|
-| **DAO → execution link** | Governance decisions can safely drive remote changes |
-| **Sub-org autonomy** | Independent sub-systems operate under parent oversight |
-| **Inter-org federation** | Multiple organizations collaborate through shared trust and protocol surfaces |
-| **Operator-grade clients** | Better public and internal interfaces for humans steering the system |
+## Stable Local Operating Loop
 
-## Known Gaps
+Heartbeat, memory, OKR, team, and skill tooling remain the local governed operating system. They coordinate delivery but do not replace the remote authority contract.
 
-| Gap | Impact | Priority |
-|-----|--------|----------|
-| Reviewable delivery still uneven across projects | Changes exist but are not always packaged as clean evidence-backed submissions | P0 |
-| Shared memory depth is still shallow | State is persistent, but cross-project learning remains immature | P1 |
-| Fine-grained capability / security controls | Needed before higher autonomy levels | P1 |
-| Distribution bootstrap remains manual | Slows scaling beyond one primary workspace | P1 |
-| Public narrative lag | Website and org surfaces can drift behind the real operating model | P1 |
+## Safety Gates
 
-## Contributing
-
-The best contributions now are the ones that improve **operability**:
-
-- make the control loop more reliable
-- improve observability
-- reduce manual coordination
-- produce stronger QA evidence
-- align public docs with the system that actually runs
+Package publication, mainnet mutation, production credential migration, destructive legacy removal, and public production deployment require explicit approval and separate readback. Architecture documentation must not imply those steps occurred before their evidence exists.
