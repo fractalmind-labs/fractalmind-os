@@ -92,6 +92,8 @@ For Feishu/Lark, prefer the `chat_id` from context (usually `oc_...`) so the rep
 
 ### Basic syntax
 
+Use this form for single-line messages only:
+
 ```bash
 fractalbot --config "${FRACTALBOT_CONFIG}" message send \
   --channel <channel> \
@@ -102,40 +104,45 @@ fractalbot --config "${FRACTALBOT_CONFIG}" message send \
 
 ## Multi-line and file-backed message safety
 
-For Slack / Telegram / Feishu / Discord multi-line messages, **do not** inline escaped `\n` inside a double-quoted shell argument and assume the receiver will render line breaks. In some shells or wrappers this arrives as literal backslash-n text.
+For Slack / Telegram / Feishu / Discord, treat formatting as data, not shell escaping.
 
-Prefer one of these patterns instead:
+**Mandatory rule:** if the intended message contains any line break, build it in a file with a single-quoted heredoc and send the file contents. Never pass raw `"...\n..."`, a JSON-escaped string, or any other text containing literal backslash-n sequences to `--text`.
 
-### Pattern A: write the message to a temp file, then `cat`
+### Required multi-line workflow
 
 ```bash
-cat >/tmp/fractalbot-message.txt <<'EOF'
+MESSAGE_FILE="$(mktemp /tmp/fractalbot-message.XXXXXX.txt)"
+cat >"${MESSAGE_FILE}" <<'EOF'
 第一行
 
 - 第二行
 - 第三行
 EOF
 
+# Must print no matches. A match means the message contains literal \n text.
+if grep -Fn '\n' "${MESSAGE_FILE}"; then
+  echo "Refusing to send: replace literal \\n with real line breaks" >&2
+  exit 1
+fi
+
+# Each real line is displayed separately and ends with `$`.
+sed -n 'l' "${MESSAGE_FILE}"
+
 fractalbot --config "${FRACTALBOT_CONFIG}" message send \
   --channel slack \
   --to "${CHAT_ID_FROM_CONTEXT}" \
-  --text "$(cat /tmp/fractalbot-message.txt)"
+  --text "$(cat "${MESSAGE_FILE}")"
 ```
 
-### Pattern B: use bash ANSI-C quoting only for short one-liners
-
-```bash
-fractalbot --config "${FRACTALBOT_CONFIG}" message send \
-  --channel slack \
-  --to "${CHAT_ID_FROM_CONTEXT}" \
-  --text $'第一行\n\n- 第二行\n- 第三行'
-```
+The single-quoted `<<'EOF'` delimiter also prevents backticks, `$()`, and variables inside the message from being evaluated by the shell.
 
 Rule of thumb:
 
-- **Long / structured / multi-paragraph** messages → use temp file + `cat`
-- **Short** messages → `$'...'` is acceptable
-- Avoid raw `"...\n..."` for outbound production messages
+- **Long, structured, generated, or multi-paragraph text** -> mandatory file workflow
+- **Any text containing a line break** -> mandatory file workflow, without exceptions
+- **Single-line text** -> the basic `--text` form is acceptable
+- **Raw `"...\n..."` or JSON-escaped content** -> forbidden for outbound messages
+- **Backticks or shell syntax in the message** -> mandatory single-quoted heredoc workflow
 
 ### Local files are not expanded by `--text`
 
@@ -150,10 +157,10 @@ fractalbot --config "${FRACTALBOT_CONFIG}" message send \
   --text "$(cat /tmp/message.txt)"
 ```
 
-Before sending an important multi-line update, visually inspect the final file content:
+Before sending any important multi-line update, inspect the final file with the literal-aware view:
 
 ```bash
-sed -n '1,120p' /tmp/message.txt
+sed -n 'l' /tmp/message.txt
 ```
 
 ### iMessage (macOS only)
