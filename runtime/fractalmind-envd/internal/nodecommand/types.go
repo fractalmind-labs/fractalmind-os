@@ -4,6 +4,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"strconv"
 )
 
 const (
@@ -22,15 +24,36 @@ type Target struct {
 // CapabilityRef points to the authority-plane object used for authorization.
 // RevocationVersion is the latest checkpoint known when the intent was signed.
 type CapabilityRef struct {
-	ID                string `json:"id"`
-	RevocationVersion uint64 `json:"revocation_version"`
+	ID                string       `json:"id"`
+	RevocationVersion Uint64String `json:"revocation_version"`
+}
+
+// Uint64String keeps authority counters lossless across JavaScript and other
+// JSON implementations that cannot represent every uint64 as a number.
+type Uint64String uint64
+
+func (u Uint64String) MarshalJSON() ([]byte, error) {
+	return json.Marshal(strconv.FormatUint(uint64(u), 10))
+}
+
+func (u *Uint64String) UnmarshalJSON(data []byte) error {
+	var value string
+	if err := json.Unmarshal(data, &value); err != nil {
+		return fmt.Errorf("uint64 value must be a decimal string: %w", err)
+	}
+	parsed, err := strconv.ParseUint(value, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid uint64 decimal string: %w", err)
+	}
+	*u = Uint64String(parsed)
+	return nil
 }
 
 // BudgetClaim declares the maximum authority-plane budget this command may
 // consume, expressed in the asset's smallest integer unit.
 type BudgetClaim struct {
-	Asset  string `json:"asset"`
-	Amount uint64 `json:"amount"`
+	Asset  string       `json:"asset"`
+	Amount Uint64String `json:"amount"`
 }
 
 // NodeCommand is the versioned privileged-command envelope transported by

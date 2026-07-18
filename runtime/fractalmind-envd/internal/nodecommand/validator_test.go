@@ -1,6 +1,7 @@
 package nodecommand
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -38,6 +39,29 @@ func TestSigningBytesGoldenVector(t *testing.T) {
 	}
 	if HashPayload(payload) != fixture.Command.PayloadHash {
 		t.Fatal("fixture payload hash does not match payload bytes")
+	}
+}
+
+func TestSigningBytesPreserveUint64AboveJavaScriptSafeInteger(t *testing.T) {
+	command := validCommand(fixedNow())
+	command.Capability.RevocationVersion = Uint64String(^uint64(0))
+	command.Budget = &BudgetClaim{Asset: "MIST", Amount: Uint64String(^uint64(0))}
+	got, err := command.SigningBytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range [][]byte{
+		[]byte(`"revocation_version":"18446744073709551615"`),
+		[]byte(`"amount":"18446744073709551615"`),
+	} {
+		if !bytes.Contains(got, want) {
+			t.Fatalf("signing bytes %s do not contain %s", got, want)
+		}
+	}
+
+	var ref CapabilityRef
+	if err := json.Unmarshal([]byte(`{"id":"cap-1","revocation_version":7}`), &ref); err == nil {
+		t.Fatal("numeric uint64 JSON must be rejected")
 	}
 }
 
@@ -222,9 +246,78 @@ func TestValidatorAllowsOrganizationScopedCapabilityForNodeTarget(t *testing.T) 
 	state := validState(now)
 	state.Target.NodeID = ""
 	state.Target.AgentID = ""
+	state.ReservationScope = ReservationScopeAuthority
 	validator := newTestValidator(now, state)
 	if _, err := validator.Validate(context.Background(), validCommand(now)); err != nil {
 		t.Fatalf("organization-scoped capability rejected node target: %v", err)
+	}
+}
+
+func TestOrganizationScopedCapabilityUsesAuthorityWideReservation(t *testing.T) {
+	now := fixedNow()
+	state := validState(now)
+	state.Target = Target{OrganizationID: "org-1"}
+	state.ReservationScope = ReservationScopeAuthority
+	state.RemainingUses = uint64Pointer(1)
+	store := NewMemoryAuthorityStore(state)
+	validators := []*Validator{
+		newTestValidatorWithStore(now, store, Target{OrganizationID: "org-1", NodeID: "node-1"}),
+		newTestValidatorWithStore(now, store, Target{OrganizationID: "org-1", NodeID: "node-2"}),
+	}
+	commands := []NodeCommand{validCommand(now), validCommand(now)}
+	commands[1].CommandID = "cmd-2"
+	commands[1].Nonce = "nonce-2"
+	commands[1].IdempotencyKey = "idem-2"
+	commands[1].Target.NodeID = "node-2"
+
+	var wg sync.WaitGroup
+	errs := make(chan error, 2)
+	for i := range validators {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			_, err := validators[i].Validate(context.Background(), commands[i])
+			errs <- err
+		}(i)
+	}
+	wg.Wait()
+	close(errs)
+
+	successes := 0
+	exhausted := 0
+	for err := range errs {
+		if err == nil {
+			successes++
+		} else if CodeOf(err) == CodeCapabilityExhausted {
+			exhausted++
+		} else {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	}
+	if successes != 1 || exhausted != 1 {
+		t.Fatalf("successes=%d exhausted=%d, want 1/1", successes, exhausted)
+	}
+}
+
+type mutateOnReserveStore struct {
+	*MemoryAuthorityStore
+	mutated CapabilityState
+}
+
+func (s *mutateOnReserveStore) Reserve(ctx context.Context, reservation Reservation) (ReservationResult, error) {
+	s.SetState(s.mutated)
+	return s.MemoryAuthorityStore.Reserve(ctx, reservation)
+}
+
+func TestValidatorRejectsAuthoritySnapshotRace(t *testing.T) {
+	now := fixedNow()
+	state := validState(now)
+	mutated := validState(now)
+	mutated.Actions = []string{"logs"}
+	store := &mutateOnReserveStore{MemoryAuthorityStore: NewMemoryAuthorityStore(state), mutated: mutated}
+	validator := newTestValidatorWithStore(now, store, Target{OrganizationID: "org-1", NodeID: "node-1"})
+	if _, err := validator.Validate(context.Background(), validCommand(now)); CodeOf(err) != CodeAuthorityStale {
+		t.Fatalf("code = %q, err=%v", CodeOf(err), err)
 	}
 }
 
@@ -364,6 +457,10 @@ func newTestValidator(now time.Time, override CapabilityState) *Validator {
 	if state.ID == "" {
 		state = validState(now)
 	}
+	return newTestValidatorWithStore(now, NewMemoryAuthorityStore(state), Target{OrganizationID: "org-1", NodeID: "node-1"})
+}
+
+func newTestValidatorWithStore(now time.Time, store AuthorityStore, localTarget Target) *Validator {
 	return NewValidator(
 		signatureVerifierFunc(func(_ context.Context, signer string, payload []byte, signature string) error {
 			if signer != "0xcontroller" || len(payload) == 0 || signature != "signature-1" {
@@ -371,10 +468,10 @@ func newTestValidator(now time.Time, override CapabilityState) *Validator {
 			}
 			return nil
 		}),
-		NewMemoryAuthorityStore(state),
+		store,
 		ValidatorOptions{
 			Now:                      func() time.Time { return now },
-			LocalTarget:              Target{OrganizationID: "org-1", NodeID: "node-1"},
+			LocalTarget:              localTarget,
 			MaxCommandTTL:            5 * time.Minute,
 			MaxLowRiskCheckpointAge:  24 * time.Hour,
 			MaxHighRiskCheckpointAge: 2 * time.Minute,
@@ -415,6 +512,7 @@ func validState(now time.Time) CapabilityState {
 		ExpiresAtMS:            now.Add(5 * time.Minute).UnixMilli(),
 		RevocationVersion:      7,
 		CheckpointObservedAtMS: now.UnixMilli(),
+		ReservationScope:       ReservationScopeNode,
 		RemainingUses:          uint64Pointer(10),
 	}
 }

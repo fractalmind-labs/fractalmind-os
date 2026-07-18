@@ -35,6 +35,10 @@ The signature covers compact JSON with fixed field order and the domain
 escaping differences. Raw payload bytes are represented only by
 `payload_hash`, which avoids signing ambiguous JSON object ordering.
 
+All uint64 authority values, including revocation versions and budget amounts,
+are JSON decimal strings. This avoids precision loss in JavaScript, where JSON
+numbers above `2^53-1` cannot round-trip exactly.
+
 The cross-repository fixture is
 `internal/nodecommand/testdata/v1-golden.json`. It contains the complete command
 fields, exact payload bytes, exact signing bytes, and exact event bytes as hex.
@@ -52,8 +56,9 @@ before this contract is frozen.
    expiry, revocation, and checkpoint.
 7. Require a fresh checkpoint for configured high-risk actions.
 8. Reject actions without an explicit low-risk or high-risk classification.
-9. Atomically reserve one capability use and any declared budget together with
-   command ID, signer-scoped nonce, and idempotency key.
+9. Atomically compare the complete validated authority snapshot and reserve one
+   capability use plus any declared budget together with command ID,
+   signer-scoped nonce, and idempotency key.
 
 Stable rejection codes let REST, WebSocket, Console, and channel adapters expose
 the same result without becoming authorization owners.
@@ -78,9 +83,17 @@ Each capability must have a remaining-use bound, or the command must declare a
 budget for an explicitly configured budgeted action. `AuthorityStore.Reserve`
 is the atomic boundary: it makes exact retries idempotent, rejects command ID,
 nonce, and idempotency conflicts, consumes at most one use per unique command,
-and consumes budget only once. The in-memory implementation proves concurrency
-semantics; production integration must replace it with durable target-local
-storage backed by protocol #17 authority state.
+and consumes budget only once. It also compares a canonical hash of signer,
+target, actions, scopes, expiry, revocation, freshness checkpoint, and
+reservation scope, so a same-version authority mutation cannot race validation.
+
+Node- and agent-scoped capabilities may use target-node reservation storage.
+Organization-scoped capabilities require `reservation_scope=authority` and a
+single authority-wide store shared across target nodes; offline target-local
+counters must fail closed for that scope. The in-memory implementation proves
+cross-node concurrency only when the same store instance is shared. Production
+integration must use durable protocol #17 / authority-plane reservation for
+organization scope and durable target-local storage for node scope.
 
 ## Follow-up Integration
 

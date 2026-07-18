@@ -14,7 +14,9 @@ type Reservation struct {
 	Nonce                     string
 	IdempotencyKey            string
 	Fingerprint               string
+	ExpectedAuthorityHash     string
 	ExpectedRevocationVersion uint64
+	Scope                     ReservationScope
 	Budget                    *BudgetClaim
 }
 
@@ -26,6 +28,7 @@ type ReservationResult struct {
 // AuthorityStore resolves authority state and atomically reserves one use plus
 // any declared budget. Production implementations should persist reservations.
 type AuthorityStore interface {
+	Supports(scope ReservationScope) bool
 	Inspect(ctx context.Context, reservation Reservation) (ReservationResult, bool, error)
 	Resolve(ctx context.Context, ref CapabilityRef) (CapabilityState, error)
 	Reserve(ctx context.Context, reservation Reservation) (ReservationResult, error)
@@ -70,6 +73,19 @@ func (s *MemoryAuthorityStore) Resolve(_ context.Context, ref CapabilityRef) (Ca
 	return cloneCapabilityState(state), nil
 }
 
+// Supports reports both scopes because this reference store can be shared by
+// multiple validators. A target-local production store must return false for
+// ReservationScopeAuthority.
+func (s *MemoryAuthorityStore) Supports(scope ReservationScope) bool {
+	return scope == ReservationScopeNode || scope == ReservationScopeAuthority
+}
+
+func (s *MemoryAuthorityStore) SetState(state CapabilityState) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.states[state.ID] = cloneCapabilityState(state)
+}
+
 func (s *MemoryAuthorityStore) Inspect(_ context.Context, reservation Reservation) (ReservationResult, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -90,6 +106,12 @@ func (s *MemoryAuthorityStore) Reserve(_ context.Context, reservation Reservatio
 	}
 	if state.Revoked || state.RevocationVersion != reservation.ExpectedRevocationVersion {
 		return ReservationResult{}, reject(CodeAuthorityStale, "capability changed before reservation", nil)
+	}
+	if state.ReservationScope != reservation.Scope || state.SnapshotHash() != reservation.ExpectedAuthorityHash {
+		return ReservationResult{}, reject(CodeAuthorityStale, "authority snapshot changed before reservation", nil)
+	}
+	if !s.Supports(reservation.Scope) {
+		return ReservationResult{}, reject(CodeUnauthorized, "authority store does not support reservation scope", nil)
 	}
 	if state.RemainingUses != nil {
 		if *state.RemainingUses == 0 {

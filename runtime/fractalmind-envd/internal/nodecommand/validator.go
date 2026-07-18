@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -25,9 +27,17 @@ type CapabilityState struct {
 	Revoked                bool
 	RevocationVersion      uint64
 	CheckpointObservedAtMS int64
+	ReservationScope       ReservationScope
 	RemainingUses          *uint64
 	RemainingBudget        *BudgetClaim
 }
+
+type ReservationScope string
+
+const (
+	ReservationScopeNode      ReservationScope = "node"
+	ReservationScopeAuthority ReservationScope = "authority"
+)
 
 type ValidatorOptions struct {
 	Now                      func() time.Time
@@ -113,6 +123,11 @@ func (v *Validator) Validate(ctx context.Context, command NodeCommand) (Validati
 		return ValidationResult{}, err
 	}
 
+	if !v.authority.Supports(state.ReservationScope) {
+		return ValidationResult{}, reject(CodeUnauthorized, "authority store does not support capability reservation scope", nil)
+	}
+	reservation.Scope = state.ReservationScope
+	reservation.ExpectedAuthorityHash = state.SnapshotHash()
 	reservation.ExpectedRevocationVersion = state.RevocationVersion
 	result, err := v.authority.Reserve(ctx, reservation)
 	if err != nil {
@@ -191,6 +206,15 @@ func (v *Validator) validateAuthority(command NodeCommand, state CapabilityState
 	if state.Target.NodeID == "" && state.Target.AgentID != "" {
 		return reject(CodeUnauthorized, "agent-scoped capability must include a node target", nil)
 	}
+	switch state.ReservationScope {
+	case ReservationScopeAuthority:
+	case ReservationScopeNode:
+		if state.Target.NodeID == "" {
+			return reject(CodeUnauthorized, "organization-scoped capability requires authority-wide reservations", nil)
+		}
+	default:
+		return reject(CodeUnauthorized, "capability reservation scope is invalid", nil)
+	}
 	if !targetContains(state.Target, command.Target) {
 		return reject(CodeWrongTarget, "capability target does not match command target", nil)
 	}
@@ -200,7 +224,7 @@ func (v *Validator) validateAuthority(command NodeCommand, state CapabilityState
 	if !contains(state.Scopes, command.Scope) {
 		return reject(CodeWrongScope, "scope is not allowed by capability", nil)
 	}
-	if state.RevocationVersion < command.Capability.RevocationVersion {
+	if state.RevocationVersion < uint64(command.Capability.RevocationVersion) {
 		return reject(CodeAuthorityStale, "resolved revocation version is older than the signed reference", nil)
 	}
 	maxCheckpointAge := v.options.MaxLowRiskCheckpointAge
@@ -233,6 +257,41 @@ func (v *Validator) validateAuthority(command NodeCommand, state CapabilityState
 		return reject(CodeAuthorityStale, "capability revocation checkpoint is outside the action freshness window", nil)
 	}
 	return nil
+}
+
+// SnapshotHash covers every validated authority field except mutable remaining
+// counters, which Reserve checks and consumes atomically.
+func (state CapabilityState) SnapshotHash() string {
+	signers := append([]string(nil), state.AuthorizedSigners...)
+	actions := append([]string(nil), state.Actions...)
+	scopes := append([]string(nil), state.Scopes...)
+	sort.Strings(signers)
+	sort.Strings(actions)
+	sort.Strings(scopes)
+	payload, _ := json.Marshal(struct {
+		ID                     string           `json:"id"`
+		Target                 Target           `json:"target"`
+		AuthorizedSigners      []string         `json:"authorized_signers"`
+		Actions                []string         `json:"actions"`
+		Scopes                 []string         `json:"scopes"`
+		ExpiresAtMS            string           `json:"expires_at_ms"`
+		Revoked                bool             `json:"revoked"`
+		RevocationVersion      string           `json:"revocation_version"`
+		CheckpointObservedAtMS string           `json:"checkpoint_observed_at_ms"`
+		ReservationScope       ReservationScope `json:"reservation_scope"`
+	}{
+		ID:                     state.ID,
+		Target:                 state.Target,
+		AuthorizedSigners:      signers,
+		Actions:                actions,
+		Scopes:                 scopes,
+		ExpiresAtMS:            strconv.FormatInt(state.ExpiresAtMS, 10),
+		Revoked:                state.Revoked,
+		RevocationVersion:      strconv.FormatUint(state.RevocationVersion, 10),
+		CheckpointObservedAtMS: strconv.FormatInt(state.CheckpointObservedAtMS, 10),
+		ReservationScope:       state.ReservationScope,
+	})
+	return hashBytes(payload)
 }
 
 func validateSigningTokens(command NodeCommand) error {
