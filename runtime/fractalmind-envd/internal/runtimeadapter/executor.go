@@ -109,7 +109,11 @@ func (e *Executor) Execute(ctx context.Context, command nodecommand.NodeCommand)
 		}
 		validation, err := e.validator.Validate(ctx, command)
 		if err != nil {
-			return Response{}, nodecommand.NodeEvent{}, err
+			event, eventErr := e.commandRejectedEvent(command, err)
+			if eventErr != nil {
+				return Response{}, nodecommand.NodeEvent{}, eventErr
+			}
+			return Response{}, event, err
 		}
 		if !validation.Duplicate {
 			result := e.executeReserved(ctx, command, key)
@@ -135,7 +139,11 @@ func (e *Executor) Execute(ctx context.Context, command nodecommand.NodeCommand)
 func (e *Executor) executeFirst(ctx context.Context, command nodecommand.NodeCommand, key string) execution {
 	validation, err := e.validator.Validate(ctx, command)
 	if err != nil {
-		return execution{err: err}
+		event, eventErr := e.commandRejectedEvent(command, err)
+		if eventErr != nil {
+			return execution{err: eventErr}
+		}
+		return execution{event: event, err: err}
 	}
 	if validation.Duplicate {
 		record, ok, loadErr := e.store.Load(ctx, key)
@@ -158,26 +166,26 @@ func (e *Executor) executeFirst(ctx context.Context, command nodecommand.NodeCom
 func (e *Executor) executeReserved(ctx context.Context, command nodecommand.NodeCommand, key string) execution {
 	operation, ok := actionOperations[command.Action]
 	if !ok {
-		return execution{err: fmt.Errorf("action %q has no runtime adapter mapping", command.Action)}
+		return e.runtimeRejectedExecution(ctx, key, command, "", "unsupported_operation", fmt.Errorf("action %q has no runtime adapter mapping", command.Action))
 	}
 	var input payload
 	if len(command.Payload) > 0 {
 		decoder := json.NewDecoder(bytes.NewReader(command.Payload))
 		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&input); err != nil {
-			return execution{err: fmt.Errorf("decode runtime adapter payload: %w", err)}
+			return e.runtimeRejectedExecution(ctx, key, command, operation, "malformed_input", fmt.Errorf("decode runtime adapter payload: %w", err))
 		}
 		var trailing any
 		if err := decoder.Decode(&trailing); err != io.EOF {
 			if err == nil {
 				err = fmt.Errorf("trailing JSON value")
 			}
-			return execution{err: fmt.Errorf("decode runtime adapter payload: %w", err)}
+			return e.runtimeRejectedExecution(ctx, key, command, operation, "malformed_input", fmt.Errorf("decode runtime adapter payload: %w", err))
 		}
 	}
 	params, err := operationParams(operation, input)
 	if err != nil {
-		return execution{err: err}
+		return e.runtimeRejectedExecution(ctx, key, command, operation, "malformed_input", err)
 	}
 	request := Request{
 		SchemaVersion:  SchemaVersion,
@@ -190,7 +198,7 @@ func (e *Executor) executeReserved(ctx context.Context, command nodecommand.Node
 		Params:         params,
 	}
 	if err := request.Validate(); err != nil {
-		return execution{err: err}
+		return e.runtimeRejectedExecution(ctx, key, command, operation, "malformed_input", err)
 	}
 
 	response, err := e.adapter.run(ctx, request)
@@ -221,6 +229,28 @@ func (e *Executor) executeReserved(ctx context.Context, command nodecommand.Node
 	result := execution{response: response, event: event}
 	if err := e.store.Save(ctx, key, recordFromExecution(result)); err != nil {
 		result.err = fmt.Errorf("persist runtime result: %w", err)
+	}
+	return result
+}
+
+func (e *Executor) runtimeRejectedExecution(ctx context.Context, key string, command nodecommand.NodeCommand, operation Operation, code string, err error) execution {
+	resultErr := runError(code, err)
+	response := Response{
+		SchemaVersion: SchemaVersion,
+		Adapter:       AdapterName,
+		CommandID:     command.CommandID,
+		Operation:     operation,
+		OK:            false,
+		ObservedAt:    e.now().UTC().Format(time.RFC3339Nano),
+		Error:         &Error{Code: code, Message: err.Error()},
+	}
+	event, eventErr := e.runtimeRejectedEvent(command, operation, code)
+	if eventErr != nil {
+		return execution{err: eventErr}
+	}
+	result := execution{response: response, event: event, err: resultErr}
+	if storeErr := e.store.Save(ctx, key, recordFromExecution(result)); storeErr != nil {
+		result.err = errors.Join(resultErr, fmt.Errorf("persist runtime result: %w", storeErr))
 	}
 	return result
 }
@@ -278,6 +308,64 @@ func (e *Executor) event(command nodecommand.NodeCommand, response Response) (no
 		Target:       command.Target,
 		Type:         "runtime_result",
 		ResultCode:   ResultCode(response),
+		ResultHash:   hash,
+		EvidenceHash: hash,
+		OccurredAtMS: e.now().UnixMilli(),
+	}, nil
+}
+
+func (e *Executor) commandRejectedEvent(command nodecommand.NodeCommand, err error) (nodecommand.NodeEvent, error) {
+	code := nodecommand.CodeOf(err)
+	if code == "" {
+		code = nodecommand.CodeUnauthorized
+	}
+	return e.rejectionEvent(command, "command_rejected", string(code), string(code), "")
+}
+
+func (e *Executor) runtimeRejectedEvent(command nodecommand.NodeCommand, operation Operation, code string) (nodecommand.NodeEvent, error) {
+	return e.rejectionEvent(command, "runtime_rejected", "runtime_"+code, code, string(operation))
+}
+
+func (e *Executor) rejectionEvent(command nodecommand.NodeCommand, eventType, resultCode, evidenceCode, operation string) (nodecommand.NodeEvent, error) {
+	evidence := struct {
+		SchemaVersion     string                   `json:"schema_version"`
+		CommandID         string                   `json:"command_id"`
+		Target            nodecommand.Target       `json:"target"`
+		Action            string                   `json:"action"`
+		Scope             string                   `json:"scope"`
+		CapabilityID      string                   `json:"capability_id"`
+		RevocationVersion nodecommand.Uint64String `json:"revocation_version"`
+		PayloadHash       string                   `json:"payload_hash"`
+		EventType         string                   `json:"event_type"`
+		ResultCode        string                   `json:"result_code"`
+		Operation         string                   `json:"operation,omitempty"`
+	}{
+		SchemaVersion:     SchemaVersion,
+		CommandID:         command.CommandID,
+		Target:            command.Target,
+		Action:            command.Action,
+		Scope:             command.Scope,
+		CapabilityID:      command.Capability.ID,
+		RevocationVersion: command.Capability.RevocationVersion,
+		PayloadHash:       command.PayloadHash,
+		EventType:         eventType,
+		ResultCode:        evidenceCode,
+		Operation:         operation,
+	}
+	data, err := json.Marshal(evidence)
+	if err != nil {
+		return nodecommand.NodeEvent{}, fmt.Errorf("marshal rejection evidence: %w", err)
+	}
+	sum := sha256.Sum256(data)
+	hash := hex.EncodeToString(sum[:])
+	commandHash := sha256.Sum256([]byte(executionKey(command)))
+	return nodecommand.NodeEvent{
+		Version:      nodecommand.ProtocolVersion,
+		EventID:      "runtime-" + hex.EncodeToString(commandHash[:12]),
+		CommandID:    command.CommandID,
+		Target:       command.Target,
+		Type:         eventType,
+		ResultCode:   resultCode,
 		ResultHash:   hash,
 		EvidenceHash: hash,
 		OccurredAtMS: e.now().UnixMilli(),
