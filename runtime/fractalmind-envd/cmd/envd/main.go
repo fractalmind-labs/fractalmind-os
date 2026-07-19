@@ -24,6 +24,7 @@ import (
 	"github.com/fractalmind-ai/fractalmind-envd/internal/relay"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/relaypicker"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/roles"
+	"github.com/fractalmind-ai/fractalmind-envd/internal/runtimeadapter"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/sponsor"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/sui"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/wg"
@@ -58,6 +59,15 @@ func main() {
 	}
 
 	log.Printf("starting fractalmind-envd %s (host=%s)", version, cfg.Identity.Hostname)
+
+	runtimeStateDir := strings.TrimSpace(os.Getenv("FRACTALMIND_RUNTIME_STATE_DIR"))
+	if runtimeStateDir != "" {
+		runtimeExecutor, err := runtimeadapter.NewExecutorWithStateDir(nil, nil, runtimeStateDir)
+		if err != nil {
+			log.Fatalf("[runtimeadapter] failed to initialize persistent execution store: %v", err)
+		}
+		log.Printf("[runtimeadapter] persistent execution store enabled at %s (executor=%T)", runtimeStateDir, runtimeExecutor)
+	}
 
 	// Parse durations
 	reconnectWait, _ := time.ParseDuration(cfg.Gateway.ReconnectInterval)

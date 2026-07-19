@@ -60,6 +60,17 @@ func NewExecutor(validator *nodecommand.Validator, adapter Adapter) *Executor {
 	return NewExecutorWithStore(validator, adapter, newMemoryExecutionStore())
 }
 
+// NewExecutorWithStateDir persists execution results under stateDir so a
+// restarted envd instance can replay the prior signed-command result without
+// invoking the adapter again.
+func NewExecutorWithStateDir(validator *nodecommand.Validator, adapter Adapter, stateDir string) (*Executor, error) {
+	store, err := NewFileExecutionStore(stateDir)
+	if err != nil {
+		return nil, err
+	}
+	return NewExecutorWithStore(validator, adapter, store), nil
+}
+
 func NewExecutorWithStore(validator *nodecommand.Validator, adapter Adapter, store ExecutionStore) *Executor {
 	if store == nil {
 		store = newMemoryExecutionStore()
