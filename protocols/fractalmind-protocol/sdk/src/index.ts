@@ -5,6 +5,7 @@ import { FractalApi } from './fractal';
 import { GovernanceApi } from './governance';
 import { ObjectiveApi } from './objective';
 import { OrganizationApi } from './organization';
+import { RemoteAuthorityApi } from './remote-authority';
 import { TaskApi } from './task';
 import type { FractalMindClientOptions } from './types';
 
@@ -17,6 +18,7 @@ export class FractalMindSDK {
   public readonly task: TaskApi;
   public readonly fractal: FractalApi;
   public readonly governance: GovernanceApi;
+  public readonly remoteAuthority: RemoteAuthorityApi;
 
   constructor(options: FractalMindClientOptions) {
     this.client = new FractalMindClient(options);
@@ -27,6 +29,7 @@ export class FractalMindSDK {
     this.task = new TaskApi(this.client);
     this.fractal = new FractalApi(this.client);
     this.governance = new GovernanceApi(this.client);
+    this.remoteAuthority = new RemoteAuthorityApi(this.client);
   }
 }
 
@@ -38,6 +41,17 @@ export { AgentPolicyApi } from './agent-policy';
 export { TaskApi } from './task';
 export { FractalApi } from './fractal';
 export { GovernanceApi } from './governance';
+export {
+  RemoteAuthorityApi,
+  capabilityReference,
+  projectEnvdCapabilityState,
+  verifyParentCheckpoint,
+} from './remote-authority';
+export {
+  NODE_COMMAND_SIGNATURE_DOMAIN,
+  canonicalNodeCommandSigningBytes,
+  capabilityReferenceWire,
+} from './node-command';
 
 export type {
   Address,
@@ -46,6 +60,10 @@ export type {
   AgentPolicyData,
   AssignTaskInput,
   CastVoteInput,
+  CapabilityProjectionOptions,
+  CapabilityReference,
+  CapabilityTarget,
+  ClaimRemoteAuthorityUseInput,
   CloseObjectiveInput,
   CloseProposalVotingInput,
   CreateAgentPolicyForKeyResultInput,
@@ -57,10 +75,14 @@ export type {
   CreateObjectiveInput,
   CreateOrganizationInput,
   CreateProposalInput,
+  CreateRemoteCapabilityInput,
   CreateSubOrganizationInput,
   CreateTaskForKeyResultInput,
   CreateTaskInput,
   DetachSubOrganizationInput,
+  DelegateRemoteCapabilityInput,
+  EnvdBudgetClaim,
+  EnvdCapabilityState,
   ExecuteAgentActionInput,
   ExecuteProposalInput,
   FinalizeProposalVotingInput,
@@ -71,19 +93,25 @@ export type {
   KRReviewData,
   MoveObjectData,
   NetworkName,
+  NodeCommandSigningInput,
   ObjectId,
   ObjectiveData,
   OrganizationData,
   ProposalData,
+  RemoteCapabilityData,
+  RemoteReservationScope,
+  RemoteTargetKind,
   RejectTaskInput,
   ReviewKeyResultInput,
   RegisterAgentInput,
   RevokeAgentPolicyInput,
+  RevokeRemoteCapabilityInput,
   StartProposalVotingInput,
   SubmitTaskInput,
   TaskData,
   TxBuildOptions,
   U64,
+  U64Input,
   UpdateCapabilitiesInput,
   UpdateDescriptionInput,
   VerifyTaskInput,

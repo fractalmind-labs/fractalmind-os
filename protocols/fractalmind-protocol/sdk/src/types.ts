@@ -340,3 +340,129 @@ export interface ExecuteProposalInput extends TxBuildOptions {
   governanceId: ObjectId;
   proposalId: ObjectId;
 }
+
+export type RemoteTargetKind = 1 | 2 | 3;
+export type RemoteReservationScope = 'authority' | 'node';
+export type U64Input = bigint | number | string;
+
+export interface RemoteCapabilityData {
+  objectId: ObjectId;
+  type: string;
+  schemaVersion: number;
+  orgId: ObjectId;
+  issuer: Address;
+  delegate: Address;
+  parentId: ObjectId | null;
+  parentRevocationVersion: U64;
+  reservationScope: RemoteReservationScope;
+  targetKind: RemoteTargetKind;
+  nodeId: string;
+  agentId: string;
+  actions: string[];
+  scope: string;
+  maxUses: U64;
+  usesClaimed: U64;
+  usesDelegated: U64;
+  budgetAsset: string;
+  maxBudget: U64;
+  budgetClaimed: U64;
+  budgetDelegated: U64;
+  expiresAtMs: U64;
+  revocationVersion: U64;
+  revoked: boolean;
+}
+
+export interface RemoteCapabilityShape extends TxBuildOptions {
+  delegate: Address;
+  targetKind: RemoteTargetKind;
+  nodeId: string;
+  agentId: string;
+  actions: string[];
+  scope: string;
+  maxUses: U64Input;
+  budgetAsset: string;
+  maxBudget: U64Input;
+  expiresAtMs: U64Input;
+}
+
+export interface CreateRemoteCapabilityInput extends RemoteCapabilityShape {
+  organizationId: ObjectId;
+}
+
+export interface DelegateRemoteCapabilityInput extends RemoteCapabilityShape {
+  parentCapabilityId: ObjectId;
+  organizationId: ObjectId;
+}
+
+export interface RevokeRemoteCapabilityInput extends TxBuildOptions {
+  capabilityId: ObjectId;
+  organizationId: ObjectId;
+}
+
+export interface ClaimRemoteAuthorityUseInput extends TxBuildOptions {
+  capabilityId: ObjectId;
+  action: string;
+  scope: string;
+  targetKind: RemoteTargetKind;
+  nodeId: string;
+  agentId: string;
+  commandId: string;
+  nonce: string;
+  idempotencyKey: string;
+  budgetAsset: string;
+  budgetAmount: U64Input;
+  intentHash: number[];
+}
+
+export interface CapabilityReference {
+  id: ObjectId;
+  revocationVersion: U64;
+}
+
+export interface CapabilityTarget {
+  organizationId: ObjectId;
+  nodeId: string;
+  agentId: string;
+}
+
+export interface EnvdBudgetClaim {
+  asset: string;
+  amount: U64;
+}
+
+export interface EnvdCapabilityState {
+  id: ObjectId;
+  target: CapabilityTarget;
+  authorizedSigners: Address[];
+  actions: string[];
+  scopes: string[];
+  expiresAtMs: U64;
+  revoked: boolean;
+  revocationVersion: U64;
+  checkpointObservedAtMs: U64;
+  reservationScope: RemoteReservationScope;
+  remainingUses: U64 | null;
+  remainingBudget: EnvdBudgetClaim | null;
+}
+
+export interface CapabilityProjectionOptions {
+  checkpointObservedAtMs: U64Input;
+  nowMs?: U64Input;
+  parent?: RemoteCapabilityData;
+}
+
+export interface NodeCommandSigningInput {
+  version: string;
+  commandId: string;
+  signer: string;
+  target: CapabilityTarget;
+  action: string;
+  scope: string;
+  capability: CapabilityReference;
+  nonce: string;
+  issuedAtMs: number;
+  expiresAtMs: number;
+  idempotencyKey: string;
+  budget?: EnvdBudgetClaim;
+  payloadHash: string;
+}

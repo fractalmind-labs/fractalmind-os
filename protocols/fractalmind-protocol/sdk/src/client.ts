@@ -11,6 +11,7 @@ import type {
 } from './types';
 
 const DEFAULT_NETWORK: NetworkName = 'testnet';
+const MAX_U64 = (1n << 64n) - 1n;
 
 export class FractalMindClient {
   public readonly client: SuiClient;
@@ -184,14 +185,8 @@ export function readNumber(fields: Record<string, unknown>, key: string): number
 
 export function readBigInt(fields: Record<string, unknown>, key: string): bigint {
   const value = fields[key];
-  if (typeof value === 'bigint') {
-    return value;
-  }
-  if (typeof value === 'number') {
-    return BigInt(value);
-  }
-  if (typeof value === 'string') {
-    return BigInt(value);
+  if (typeof value === 'bigint' || typeof value === 'number' || typeof value === 'string') {
+    return toBigInt(value);
   }
   throw new Error(`Expected bigint-like field '${key}'.`);
 }
@@ -256,25 +251,31 @@ export function readOptionBigInt(fields: Record<string, unknown>, key: string): 
   }
 
   const first = vec[0];
-  if (typeof first === 'bigint') {
-    return first;
-  }
-  if (typeof first === 'number') {
-    return BigInt(first);
-  }
-  if (typeof first === 'string') {
-    return BigInt(first);
+  if (typeof first === 'bigint' || typeof first === 'number' || typeof first === 'string') {
+    return toBigInt(first);
   }
 
   return null;
 }
 
 export function toBigInt(value: bigint | number | string): bigint {
-  if (typeof value === 'bigint') {
-    return value;
-  }
+  let parsed: bigint;
   if (typeof value === 'number') {
-    return BigInt(value);
+    if (!Number.isSafeInteger(value)) {
+      throw new Error('u64 number inputs must be safe integers; use bigint or a decimal string.');
+    }
+    parsed = BigInt(value);
+  } else if (typeof value === 'string') {
+    if (!/^(0|[1-9][0-9]*)$/.test(value)) {
+      throw new Error('u64 string inputs must be unsigned decimal integers.');
+    }
+    parsed = BigInt(value);
+  } else {
+    parsed = value;
   }
-  return BigInt(value);
+
+  if (parsed < 0n || parsed > MAX_U64) {
+    throw new Error('u64 input is outside the range 0..18446744073709551615.');
+  }
+  return parsed;
 }

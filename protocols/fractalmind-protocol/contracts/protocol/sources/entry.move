@@ -16,6 +16,7 @@ module fractalmind_protocol::entry {
     use fractalmind_protocol::profile;
     use fractalmind_protocol::agent_policy::{Self, AgentPolicy};
     use fractalmind_protocol::objective::{Self, Objective, KeyResult};
+    use fractalmind_protocol::remote_authority::{Self, RemoteCapability};
 
     // ===== Organization Entry Points =====
 
@@ -255,6 +256,79 @@ module fractalmind_protocol::entry {
             expires_at_ms,
             max_gas_budget,
             ctx,
+        );
+    }
+
+    // ===== Remote Authority Entry Points =====
+
+    public entry fun create_remote_capability(
+        org: &Organization,
+        delegate: address,
+        target_kind: u8,
+        node_id: String,
+        agent_id: String,
+        actions: vector<String>,
+        scope: String,
+        max_uses: u64,
+        budget_asset: String,
+        max_budget: u64,
+        expires_at_ms: u64,
+        ctx: &mut TxContext,
+    ) {
+        remote_authority::create_capability(
+            org, delegate, target_kind, node_id, agent_id, actions, scope,
+            max_uses, budget_asset, max_budget, expires_at_ms, ctx,
+        );
+    }
+
+    public entry fun delegate_remote_capability(
+        parent: &mut RemoteCapability,
+        org: &Organization,
+        delegate: address,
+        target_kind: u8,
+        node_id: String,
+        agent_id: String,
+        actions: vector<String>,
+        scope: String,
+        max_uses: u64,
+        budget_asset: String,
+        max_budget: u64,
+        expires_at_ms: u64,
+        ctx: &mut TxContext,
+    ) {
+        let _child_id = remote_authority::delegate_capability(
+            parent, org, delegate, target_kind, node_id, agent_id, actions, scope,
+            max_uses, budget_asset, max_budget, expires_at_ms, ctx,
+        );
+    }
+
+    public entry fun revoke_remote_capability(
+        capability: &mut RemoteCapability,
+        org: &Organization,
+        ctx: &TxContext,
+    ) {
+        remote_authority::revoke_capability(capability, org, ctx);
+    }
+
+    public entry fun claim_remote_authority_use(
+        capability: &mut RemoteCapability,
+        action: String,
+        scope: String,
+        target_kind: u8,
+        node_id: String,
+        agent_id: String,
+        command_id: String,
+        nonce: String,
+        idempotency_key: String,
+        budget_asset: String,
+        budget_amount: u64,
+        intent_hash: vector<u8>,
+        ctx: &TxContext,
+    ) {
+        remote_authority::claim_authority_use(
+            capability, action, scope, target_kind, node_id, agent_id,
+            command_id, nonce, idempotency_key, budget_asset, budget_amount,
+            intent_hash, ctx,
         );
     }
 
