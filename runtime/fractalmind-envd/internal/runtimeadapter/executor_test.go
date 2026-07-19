@@ -78,6 +78,59 @@ func TestExecutorMapsAuthorizedCommandAndCachesDuplicate(t *testing.T) {
 	}
 }
 
+func TestExecutorReturnsPersistedDuplicateAfterRestart(t *testing.T) {
+	store, err := NewFileExecutionStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner := &fakeRunner{response: Response{
+		SchemaVersion: SchemaVersion,
+		Adapter:       AdapterName,
+		OK:            true,
+		ObservedAt:    "2026-07-19T00:00:00Z",
+		Result:        json.RawMessage(`{"ok":true}`),
+	}}
+	validator := testValidator()
+	command := runtimeCommand("status", "lifecycle", `{}`)
+
+	firstResponse, firstEvent, err := NewExecutorWithStore(validator, runner, store).Execute(context.Background(), command)
+	if err != nil || !firstResponse.OK {
+		t.Fatalf("first Execute: response=%+v err=%v", firstResponse, err)
+	}
+	secondResponse, secondEvent, err := NewExecutorWithStore(validator, runner, store).Execute(context.Background(), command)
+	if err != nil {
+		t.Fatalf("restart duplicate Execute: %v", err)
+	}
+	if runner.callCount() != 1 || !secondResponse.Duplicate {
+		t.Fatalf("restart duplicate executed again: calls=%d response=%+v", runner.callCount(), secondResponse)
+	}
+	if secondEvent != firstEvent {
+		t.Fatalf("persisted event changed: first=%+v second=%+v", firstEvent, secondEvent)
+	}
+}
+
+func TestFileExecutionStoreRestoresAdapterFailure(t *testing.T) {
+	store, err := NewFileExecutionStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner := &fakeRunner{err: runError("timeout", context.DeadlineExceeded)}
+	validator := testValidator()
+	command := runtimeCommand("status", "lifecycle", `{}`)
+
+	_, firstEvent, firstErr := NewExecutorWithStore(validator, runner, store).Execute(context.Background(), command)
+	if RunErrorCode(firstErr) != "timeout" {
+		t.Fatalf("first error code=%q err=%v", RunErrorCode(firstErr), firstErr)
+	}
+	response, event, secondErr := NewExecutorWithStore(validator, runner, store).Execute(context.Background(), command)
+	if RunErrorCode(secondErr) != "timeout" || runner.callCount() != 1 || !response.Duplicate {
+		t.Fatalf("restored failure: code=%q calls=%d response=%+v err=%v", RunErrorCode(secondErr), runner.callCount(), response, secondErr)
+	}
+	if event != firstEvent {
+		t.Fatalf("persisted failure event changed: first=%+v second=%+v", firstEvent, event)
+	}
+}
+
 func TestExecutorValidatesBeforeRunning(t *testing.T) {
 	runner := &fakeRunner{}
 	executor := NewExecutor(testValidator(), runner)
