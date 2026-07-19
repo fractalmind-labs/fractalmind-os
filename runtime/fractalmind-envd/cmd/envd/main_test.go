@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,15 +12,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fractalmind-ai/fractalmind-envd/internal/config"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/nodecommand"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/runtimeadapter"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/ws"
+	"github.com/fractalmind-ai/fractalmind-envd/internal/wsauth"
 )
 
 func TestSignedCommandWithoutStateDirExecutorFailsClosed(t *testing.T) {
 	t.Setenv("FRACTALMIND_RUNTIME_STATE_DIR", "")
 
-	executor, err := newRuntimeCommandExecutorFromEnv()
+	executor, err := newRuntimeCommandExecutorFromEnv(testRuntimeConfig())
 	if err != nil {
 		t.Fatalf("newRuntimeCommandExecutorFromEnv: %v", err)
 	}
@@ -44,8 +49,16 @@ func TestRuntimeCommandExecutorRejectsUnusableStateDir(t *testing.T) {
 	}
 	t.Setenv("FRACTALMIND_RUNTIME_STATE_DIR", blockingFile)
 
-	if _, err := newRuntimeCommandExecutorFromEnv(); err == nil {
+	if _, err := newRuntimeCommandExecutorFromEnv(testRuntimeConfig()); err == nil {
 		t.Fatal("unusable FRACTALMIND_RUNTIME_STATE_DIR was accepted")
+	}
+}
+
+func TestRuntimeCommandExecutorRequiresAuthorityFile(t *testing.T) {
+	t.Setenv("FRACTALMIND_RUNTIME_STATE_DIR", t.TempDir())
+
+	if _, err := newRuntimeCommandExecutorFromEnv(testRuntimeConfig()); err == nil {
+		t.Fatal("missing authority state file was accepted")
 	}
 }
 
@@ -53,11 +66,12 @@ func TestHandleCommandSignedCommandReusesPriorSuccessAfterRestart(t *testing.T) 
 	stateDir := t.TempDir()
 	callCount := stateDir + "/calls"
 	now := fixedRuntimeNow()
-	authority := nodecommand.NewMemoryAuthorityStore(validRuntimeState(now))
-	command := validRuntimeCommand(now, "cmd-success", "nonce-success", "idem-success")
+	identity := newRuntimeSigningIdentity(t)
+	writeRuntimeAuthorityFile(t, stateDir, validRuntimeState(now, identity.signer))
+	command := identity.sign(validRuntimeCommand(now, "cmd-success", "nonce-success", "idem-success"))
 	rawCommand := mustJSON(t, command)
 
-	firstExecutor := newTestPersistentRuntimeExecutor(t, stateDir, authority, "success", callCount, now)
+	firstExecutor := newTestPersistentRuntimeExecutor(t, stateDir, "success", callCount)
 	first := handleCommand(ws.CommandPayload{Command: "signed-command", Args: rawCommand}, nil, nil, firstExecutor)
 	if first["success"] != true {
 		t.Fatalf("first success = %v, result=%+v", first["success"], first)
@@ -66,7 +80,7 @@ func TestHandleCommandSignedCommandReusesPriorSuccessAfterRestart(t *testing.T) 
 		t.Fatalf("adapter calls after first execution = %d, want 1", countRuntimeAdapterCalls(t, callCount))
 	}
 
-	restartedExecutor := newTestPersistentRuntimeExecutor(t, stateDir, authority, "unexpected-success", callCount, now)
+	restartedExecutor := newTestPersistentRuntimeExecutor(t, stateDir, "unexpected-success", callCount)
 	second := handleCommand(ws.CommandPayload{Command: "signed_command", Args: rawCommand}, nil, nil, restartedExecutor)
 	if second["success"] != true {
 		t.Fatalf("second success = %v, result=%+v", second["success"], second)
@@ -87,11 +101,12 @@ func TestHandleCommandSignedCommandReusesPriorFailureAfterRestart(t *testing.T) 
 	stateDir := t.TempDir()
 	callCount := stateDir + "/calls"
 	now := fixedRuntimeNow()
-	authority := nodecommand.NewMemoryAuthorityStore(validRuntimeState(now))
-	command := validRuntimeCommand(now, "cmd-failure", "nonce-failure", "idem-failure")
+	identity := newRuntimeSigningIdentity(t)
+	writeRuntimeAuthorityFile(t, stateDir, validRuntimeState(now, identity.signer))
+	command := identity.sign(validRuntimeCommand(now, "cmd-failure", "nonce-failure", "idem-failure"))
 	rawCommand := mustJSON(t, command)
 
-	firstExecutor := newTestPersistentRuntimeExecutor(t, stateDir, authority, "fail", callCount, now)
+	firstExecutor := newTestPersistentRuntimeExecutor(t, stateDir, "fail", callCount)
 	first := handleCommand(ws.CommandPayload{Command: "node_command", Args: rawCommand}, nil, nil, firstExecutor)
 	if first["success"] != false {
 		t.Fatalf("first success = %v, want false: %+v", first["success"], first)
@@ -103,7 +118,7 @@ func TestHandleCommandSignedCommandReusesPriorFailureAfterRestart(t *testing.T) 
 		t.Fatalf("adapter calls after first failure = %d, want 1", countRuntimeAdapterCalls(t, callCount))
 	}
 
-	restartedExecutor := newTestPersistentRuntimeExecutor(t, stateDir, authority, "unexpected-success", callCount, now)
+	restartedExecutor := newTestPersistentRuntimeExecutor(t, stateDir, "unexpected-success", callCount)
 	second := handleCommand(ws.CommandPayload{Command: "signed_command", Args: rawCommand}, nil, nil, restartedExecutor)
 	if second["success"] != false {
 		t.Fatalf("second success = %v, want false: %+v", second["success"], second)
@@ -123,22 +138,49 @@ func TestHandleCommandSignedCommandReusesPriorFailureAfterRestart(t *testing.T) 
 	}
 }
 
+func TestShippedSignedCommandConstructorRejectsInvalidCommandBeforeAdapter(t *testing.T) {
+	stateDir := t.TempDir()
+	callCount := stateDir + "/calls"
+	now := fixedRuntimeNow()
+	identity := newRuntimeSigningIdentity(t)
+	writeRuntimeAuthorityFile(t, stateDir, validRuntimeState(now, identity.signer))
+	command := identity.sign(validRuntimeCommand(now, "cmd-invalid", "nonce-invalid", "idem-invalid"))
+	command.Target.NodeID = "wrong-node"
+	rawCommand := mustJSON(t, command)
+
+	executor := newTestPersistentRuntimeExecutor(t, stateDir, "success", callCount)
+	result := handleCommand(ws.CommandPayload{Command: "signed_command", Args: rawCommand}, nil, nil, executor)
+	if result["success"] != false {
+		t.Fatalf("invalid command success = %v, want false: %+v", result["success"], result)
+	}
+	if result["error_code"] != nodecommand.CodeWrongTarget {
+		t.Fatalf("error_code = %v, want %s", result["error_code"], nodecommand.CodeWrongTarget)
+	}
+	if countRuntimeAdapterCalls(t, callCount) != 0 {
+		t.Fatalf("invalid command reached adapter: calls=%d", countRuntimeAdapterCalls(t, callCount))
+	}
+}
+
 func newTestPersistentRuntimeExecutor(
 	t *testing.T,
 	stateDir string,
-	authority *nodecommand.MemoryAuthorityStore,
 	helperMode string,
 	callCount string,
-	now time.Time,
-) *runtimeadapter.Executor {
+) runtimeCommandExecutor {
 	t.Helper()
 	t.Setenv("ENVD_RUNTIME_ADAPTER_HELPER", "1")
 	t.Setenv("ENVD_RUNTIME_ADAPTER_HELPER_MODE", helperMode)
 	t.Setenv("ENVD_RUNTIME_ADAPTER_CALL_COUNT", callCount)
-	adapter := runtimeadapter.AgentManager(os.Args[0], "-test.run=TestEnvdRuntimeAdapterHelperProcess", "--")
-	executor, err := runtimeadapter.NewExecutorWithStateDir(testRuntimeValidator(authority, now), adapter, stateDir)
+	t.Setenv("FRACTALMIND_RUNTIME_STATE_DIR", stateDir)
+	t.Setenv("FRACTALMIND_AGENT_MANAGER_COMMAND", os.Args[0])
+	t.Setenv("FRACTALMIND_AGENT_MANAGER_ARGS", "-test.run=TestEnvdRuntimeAdapterHelperProcess --")
+
+	executor, err := newRuntimeCommandExecutorFromEnv(testRuntimeConfig())
 	if err != nil {
-		t.Fatalf("NewExecutorWithStateDir: %v", err)
+		t.Fatalf("newRuntimeCommandExecutorFromEnv: %v", err)
+	}
+	if executor == nil {
+		t.Fatal("executor is nil")
 	}
 	return executor
 }
@@ -188,30 +230,12 @@ func TestEnvdRuntimeAdapterHelperProcess(t *testing.T) {
 	}
 }
 
-func testRuntimeValidator(authority *nodecommand.MemoryAuthorityStore, now time.Time) *nodecommand.Validator {
-	return nodecommand.NewValidator(
-		allowAllRuntimeVerifier{},
-		authority,
-		nodecommand.ValidatorOptions{
-			Now:                      func() time.Time { return now },
-			LocalTarget:              nodecommand.Target{OrganizationID: "org-1", NodeID: "node-1"},
-			LowRiskActions:           map[string]struct{}{"status": {}},
-			HighRiskActions:          map[string]struct{}{},
-			BudgetedActions:          map[string]struct{}{},
-			MaxClockSkew:             time.Second,
-			MaxCommandTTL:            time.Minute,
-			MaxLowRiskCheckpointAge:  time.Minute,
-			MaxHighRiskCheckpointAge: time.Second,
-		},
-	)
-}
-
 func validRuntimeCommand(now time.Time, commandID, nonce, idempotencyKey string) nodecommand.NodeCommand {
 	payload := []byte(`{}`)
 	return nodecommand.NodeCommand{
 		Version:        nodecommand.ProtocolVersion,
 		CommandID:      commandID,
-		Signer:         "signer-1",
+		Signer:         "",
 		Target:         nodecommand.Target{OrganizationID: "org-1", NodeID: "node-1", AgentID: "agent-1"},
 		Action:         "status",
 		Scope:          "lifecycle",
@@ -222,16 +246,16 @@ func validRuntimeCommand(now time.Time, commandID, nonce, idempotencyKey string)
 		IdempotencyKey: idempotencyKey,
 		Payload:        payload,
 		PayloadHash:    nodecommand.HashPayload(payload),
-		Signature:      "signature-1",
+		Signature:      "",
 	}
 }
 
-func validRuntimeState(now time.Time) nodecommand.CapabilityState {
+func validRuntimeState(now time.Time, signer string) nodecommand.CapabilityState {
 	remainingUses := uint64(1)
 	return nodecommand.CapabilityState{
 		ID:                     "cap-1",
 		Target:                 nodecommand.Target{OrganizationID: "org-1", NodeID: "node-1", AgentID: "agent-1"},
-		AuthorizedSigners:      []string{"signer-1"},
+		AuthorizedSigners:      []string{signer},
 		Actions:                []string{"status"},
 		Scopes:                 []string{"lifecycle"},
 		ExpiresAtMS:            now.Add(5 * time.Minute).UnixMilli(),
@@ -242,8 +266,60 @@ func validRuntimeState(now time.Time) nodecommand.CapabilityState {
 	}
 }
 
+func testRuntimeConfig() *config.Config {
+	cfg := config.DefaultConfig()
+	cfg.Identity.HostID = "node-1"
+	cfg.Identity.Hostname = "node-1"
+	cfg.SUI.OrgID = "org-1"
+	return cfg
+}
+
+func writeRuntimeAuthorityFile(t *testing.T, stateDir string, state nodecommand.CapabilityState) {
+	t.Helper()
+	raw, err := json.Marshal(struct {
+		Capabilities []nodecommand.CapabilityState `json:"capabilities"`
+	}{Capabilities: []nodecommand.CapabilityState{state}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(stateDir+"/authority.json", raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+type runtimeSigningIdentity struct {
+	private ed25519.PrivateKey
+	public  ed25519.PublicKey
+	signer  string
+}
+
+func newRuntimeSigningIdentity(t *testing.T) runtimeSigningIdentity {
+	t.Helper()
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return runtimeSigningIdentity{
+		private: priv,
+		public:  pub,
+		signer:  wsauth.DeriveAddress(pub),
+	}
+}
+
+func (i runtimeSigningIdentity) sign(command nodecommand.NodeCommand) nodecommand.NodeCommand {
+	command.Signer = i.signer
+	command.Signature = ""
+	signingBytes, err := command.SigningBytes()
+	if err != nil {
+		panic(err)
+	}
+	signature := ed25519.Sign(i.private, signingBytes)
+	command.Signature = "ed25519:" + hex.EncodeToString(i.public) + ":" + hex.EncodeToString(signature)
+	return command
+}
+
 func fixedRuntimeNow() time.Time {
-	return time.UnixMilli(1784394000000).UTC()
+	return time.Now().UTC()
 }
 
 func mustJSON(t *testing.T, value interface{}) string {
@@ -272,7 +348,3 @@ func countRuntimeAdapterCalls(t *testing.T, path string) int {
 	}
 	return count
 }
-
-type allowAllRuntimeVerifier struct{}
-
-func (allowAllRuntimeVerifier) Verify(context.Context, string, []byte, string) error { return nil }

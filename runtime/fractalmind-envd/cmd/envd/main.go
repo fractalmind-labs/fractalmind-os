@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -65,7 +66,7 @@ func main() {
 
 	log.Printf("starting fractalmind-envd %s (host=%s)", version, cfg.Identity.Hostname)
 
-	runtimeExecutor, err := newRuntimeCommandExecutorFromEnv()
+	runtimeExecutor, err := newRuntimeCommandExecutorFromEnv(cfg)
 	if err != nil {
 		log.Fatalf("[runtimeadapter] failed to initialize persistent signed-command runtime: %v", err)
 	}
@@ -539,11 +540,47 @@ func main() {
 	}
 }
 
-func newRuntimeCommandExecutorFromEnv() (runtimeCommandExecutor, error) {
+func newRuntimeCommandExecutorFromEnv(cfg *config.Config) (runtimeCommandExecutor, error) {
 	runtimeStateDir := strings.TrimSpace(os.Getenv("FRACTALMIND_RUNTIME_STATE_DIR"))
 	if runtimeStateDir == "" {
 		return nil, nil
 	}
+	if cfg == nil {
+		return nil, fmt.Errorf("config is required")
+	}
+
+	localTarget := nodecommand.Target{
+		OrganizationID: strings.TrimSpace(cfg.SUI.OrgID),
+		NodeID:         strings.TrimSpace(cfg.Identity.HostID),
+	}
+	if localTarget.NodeID == "" {
+		localTarget.NodeID = strings.TrimSpace(cfg.Identity.Hostname)
+	}
+	if localTarget.OrganizationID == "" || localTarget.NodeID == "" {
+		return nil, fmt.Errorf("sui.org_id and identity.host_id or identity.hostname are required for signed-command validation")
+	}
+
+	authorityFile := strings.TrimSpace(os.Getenv("FRACTALMIND_NODE_COMMAND_AUTHORITY_FILE"))
+	if authorityFile == "" {
+		authorityFile = filepath.Join(runtimeStateDir, "authority.json")
+	}
+	authorityStore, err := nodecommand.NewFileAuthorityStore(authorityFile, filepath.Join(runtimeStateDir, "authority-reservations"))
+	if err != nil {
+		return nil, err
+	}
+	validator := nodecommand.NewValidator(
+		nodecommand.Ed25519Verifier{},
+		authorityStore,
+		nodecommand.ValidatorOptions{
+			LocalTarget:              localTarget,
+			LowRiskActions:           signedCommandLowRiskActions(),
+			HighRiskActions:          signedCommandHighRiskActions(),
+			BudgetedActions:          map[string]struct{}{},
+			MaxCommandTTL:            5 * time.Minute,
+			MaxLowRiskCheckpointAge:  24 * time.Hour,
+			MaxHighRiskCheckpointAge: 2 * time.Minute,
+		},
+	)
 
 	adapterCommand := strings.TrimSpace(os.Getenv("FRACTALMIND_AGENT_MANAGER_COMMAND"))
 	adapterArgs := splitRuntimeAdapterArgs(os.Getenv("FRACTALMIND_AGENT_MANAGER_ARGS"))
@@ -556,11 +593,30 @@ func newRuntimeCommandExecutorFromEnv() (runtimeCommandExecutor, error) {
 		}
 	}
 
-	executor, err := runtimeadapter.NewExecutorWithStateDir(nil, runtimeadapter.AgentManager(adapterCommand, adapterArgs...), runtimeStateDir)
+	executor, err := runtimeadapter.NewExecutorWithStateDir(validator, runtimeadapter.AgentManager(adapterCommand, adapterArgs...), runtimeStateDir)
 	if err != nil {
 		return nil, err
 	}
 	return executor, nil
+}
+
+func signedCommandLowRiskActions() map[string]struct{} {
+	return map[string]struct{}{
+		"inventory":    {},
+		"status":       {},
+		"monitor":      {},
+		"logs":         {},
+		"health":       {},
+		"availability": {},
+	}
+}
+
+func signedCommandHighRiskActions() map[string]struct{} {
+	return map[string]struct{}{
+		"start":  {},
+		"stop":   {},
+		"assign": {},
+	}
 }
 
 func splitRuntimeAdapterArgs(raw string) []string {

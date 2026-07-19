@@ -18,18 +18,18 @@ type SignatureVerifier interface {
 // CapabilityState is an authority-plane projection. Implementations may load
 // it from SUI RPC, an indexer, or a bounded local cache.
 type CapabilityState struct {
-	ID                     string
-	Target                 Target
-	AuthorizedSigners      []string
-	Actions                []string
-	Scopes                 []string
-	ExpiresAtMS            int64
-	Revoked                bool
-	RevocationVersion      uint64
-	CheckpointObservedAtMS int64
-	ReservationScope       ReservationScope
-	RemainingUses          *uint64
-	RemainingBudget        *BudgetClaim
+	ID                     string           `json:"id"`
+	Target                 Target           `json:"target"`
+	AuthorizedSigners      []string         `json:"authorized_signers"`
+	Actions                []string         `json:"actions"`
+	Scopes                 []string         `json:"scopes"`
+	ExpiresAtMS            int64            `json:"expires_at_ms"`
+	Revoked                bool             `json:"revoked"`
+	RevocationVersion      uint64           `json:"revocation_version"`
+	CheckpointObservedAtMS int64            `json:"checkpoint_observed_at_ms"`
+	ReservationScope       ReservationScope `json:"reservation_scope"`
+	RemainingUses          *uint64          `json:"remaining_uses,omitempty"`
+	RemainingBudget        *BudgetClaim     `json:"remaining_budget,omitempty"`
 }
 
 type ReservationScope string
