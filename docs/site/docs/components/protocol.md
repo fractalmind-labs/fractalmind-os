@@ -1,6 +1,6 @@
 # fractalmind-protocol
 
-> Permissionless on-chain protocol for fractal AI organizations on SUI.
+> Control and authority plane for fractal AI organizations on SUI.
 
 **Repo**: [fractalmind-ai/fractalmind-protocol](https://github.com/fractalmind-ai/fractalmind-protocol)
 **Language**: Move (contracts) + TypeScript (SDK)
@@ -15,6 +15,7 @@ The protocol provides on-chain primitives for AI organization management:
 - **Task**: Full lifecycle management (create → assign → submit → verify → complete)
 - **Governance**: DAO proposals with voting, quorum enforcement, and execution
 - **Fractal**: Nested sub-organizations (max depth 8) with the same structure as parent orgs
+- **Remote capability migration**: Target-scoped, bounded authority with delegation, revocation, replay metadata, use limits, and budget limits
 
 ## Architecture
 
@@ -123,9 +124,18 @@ See the [full SDK documentation](/protocol/sdk) for all available methods.
 
 ## Where It Fits
 
-The protocol is the **trust layer** (L2) of the FractalMind stack. While daily operations happen off-chain via management skills, the protocol provides:
+The protocol is the canonical **Control / Authority Plane**. It defines authority for privileged remote actions while operational data and execution remain off-chain.
+
+It provides:
 
 - **Verifiable identity**: Agent certificates prove organizational membership
 - **Auditable work**: Task completions are permanently recorded
 - **Decentralized governance**: No single point of control
 - **Fractal structure**: Sub-organizations compose recursively
+- **Bounded remote authority**: Capabilities bind action, scope, target, delegation, revocation, use, and budget constraints
+
+Applications sign intents; target envd verifies them and performs durable replay/result handling. Relays, coordinators, bearer tokens, and application sessions do not replace protocol authority or target-side verification.
+
+Raw logs, desktop media/input, files, and high-frequency heartbeats are explicitly off-chain. An optional digest may be anchored on-chain when audit policy requires it.
+
+The remote-capability work is currently in migration and is not a statement that an unpublished package is live. Follow [tracker #6](https://github.com/fractalmind-ai/.github/issues/6) for exact implementation and release status.

@@ -2,6 +2,8 @@
 
 This guide walks you through installing and running `fractalmind-envd` on a machine hosting AI agents.
 
+> Migration note: examples on this page may describe legacy compatibility configuration. The canonical remote privileged path requires a signed intent, target-side envd verification, durable replay/result state, and typed local adapters. Relay, coordinator, sponsor, and channel services are not authority owners.
+
 ## Prerequisites
 
 | Requirement | Version | Notes |
@@ -172,7 +174,7 @@ Only needed when `roles.sponsor: true`. The sponsor node receives partial-signed
 
 ## Deployment
 
-envd runs as a fully decentralized P2P system — SUI for peer discovery, WireGuard for direct communication. No central server required.
+envd supports direct and relay-assisted P2P operation. Availability services may be centralized or distributed without changing the authority source: the target still verifies SUI-backed capability and signed-intent state.
 
 ```yaml
 # sentinel.yaml
@@ -217,7 +219,7 @@ stun:
 - Peers are discovered via SUI Events and WireGuard tunnels are established
 - Heartbeats flow P2P (no on-chain cost)
 
-**Pros:** Fully decentralized, no single point of failure, on-chain auditability, zero separate components.
+**Pros:** Direct P2P when available, replaceable discovery/relay services, target-side enforcement, and optional on-chain authority/audit state.
 **Cons:** Requires SUI keypair, AgentCertificate, and WireGuard setup.
 
 ## Remote Commands
@@ -263,9 +265,9 @@ Stop an agent's tmux session.
 ← { "message": "agent agent-001 killed" }
 ```
 
-### shell
+### shell (legacy compatibility)
 
-Execute an arbitrary shell command on the host.
+Legacy builds may expose arbitrary shell execution. It is outside the canonical remote-control contract and must not be enabled as a privileged bypass. The target architecture uses typed, bounded operations behind signed-intent verification.
 
 ```
 → shell "df -h"

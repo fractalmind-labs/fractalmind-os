@@ -1,40 +1,31 @@
 # Applications
 
-End-user products built on the FractalMind stack.
+Applications are user-facing clients of the authority and execution planes. They present workflows, create signed intents, and display durable results. They do not become the authority source themselves.
+
+## Agent Console
+
+Agent Console is the operator application for discovering nodes and agents, viewing state, and requesting bounded privileged actions. The target architecture replaces bearer/direct-local control with short-lived signed intents that name the action, target, scope, command identity, and limits.
+
+## envd-desktop
+
+envd-desktop provides remote desktop media and input workflows. View and control are separate scopes with explicit expiry and revocation behavior.
+
+Screen frames, audio, clipboard contents, and input events stay off-chain and flow through encrypted data paths. The chain carries authority state, not media streams.
+
+## Channel and Automation Clients
+
+fractalbot-backed agents, CLIs, and domain applications can use the same signed-intent contract. A Slack or Telegram identity may identify the requester to an application, but the target still verifies the resulting authority envelope.
 
 ## oh-my-code
 
-**Repo**: [fractalmind-ai/oh-my-code](https://github.com/fractalmind-ai/oh-my-code)
-**Status**: Active
+[oh-my-code](https://github.com/fractalmind-ai/oh-my-code) is the reference local workspace for heartbeat, memory, OKR, and team coordination. Its local governance loop is separate from remote node authority.
 
-A **reference implementation** showing how to set up a complete AI agent workspace using the FractalMind stack. Includes:
+## Application Rules
 
-- Agent configuration (YAML)
-- Heartbeat setup with turbo-frequency
-- OKR management integration
-- Team coordination patterns
-- Memory system (daily notes + long-term memory)
+1. Never treat a relay, bearer token, or channel session as sovereign authority.
+2. Show the target, action, scope, expiry, and material limits before signing.
+3. Distinguish pending, completed, rejected, and result-unavailable states.
+4. Fail closed for high-risk actions when freshness or durable replay evidence is unavailable.
+5. Keep raw logs, files, media, input, and high-frequency telemetry off-chain.
 
-Use oh-my-code as a starting point for your own AI agent workspace.
-
-## typemind-android
-
-**Repo**: [fractalmind-ai/typemind-android](https://github.com/fractalmind-ai/typemind-android)
-**Status**: Work in progress
-
-An Android input method (keyboard) with AI agent integration. Type naturally and let AI assist with:
-
-- Text completion and editing
-- Translation
-- Context-aware suggestions
-- Agent command execution
-
-## Building on FractalMind
-
-To build your own application on the FractalMind stack:
-
-1. **Start with oh-my-code** as a reference
-2. **Install the skills you need** via openskills
-3. **Configure agents** in YAML files
-4. **Set up fractalbot** for human communication
-5. **Optionally** integrate with the on-chain protocol for trust and governance
+See [Data Flow](/architecture/data-flow) for the full command lifecycle.

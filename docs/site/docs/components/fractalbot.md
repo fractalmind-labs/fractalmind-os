@@ -1,6 +1,6 @@
 # fractalbot
 
-> Multi-channel messaging gateway for AI agent communication.
+> Multi-channel application adapter for AI agent communication.
 
 **Repo**: [fractalmind-ai/fractalbot](https://github.com/fractalmind-ai/fractalbot)
 **Language**: Go
@@ -8,7 +8,7 @@
 
 ## What It Does
 
-fractalbot is the **communication layer** of the FractalMind stack. It routes messages between humans and AI agents across multiple channels:
+fractalbot is a **channel adapter** in the Application Plane. It routes messages between humans and AI agents across multiple channels:
 
 - Telegram
 - Slack
@@ -47,11 +47,12 @@ fractalbot message send --channel telegram --to <chat_id> --text "Hello from fra
 ```
 Telegram API ──┐
 Slack API    ──┤
-Discord API  ──┼──▸ fractalbot (Go) ──▸ agent-manager ──▸ Agent (tmux)
+Discord API  ──┼──▸ fractalbot (Go) ──▸ application / agent
 Feishu API   ──┤         │
 iMessage     ──┘         │
+                         ├── signed privileged intent ──▸ target envd ──▸ local adapter
                          ▼
-                    Agent response
+                    Agent / envd result
                          │
                          ▼
                     fractalbot ──▸ Channel API ──▸ Human
@@ -61,10 +62,12 @@ iMessage     ──┘         │
 
 fractalbot is the **entry point** for human ↔ agent communication:
 
-- **Inbound**: Human sends message → fractalbot routes to agent-manager → agent receives in tmux
+- **Inbound**: Human sends message → fractalbot preserves routing context → application or agent receives it
 - **Outbound**: Agent uses `use-fractalbot-skill` → fractalbot sends to correct channel
 
 It does **not** handle agent-to-agent communication — that's `team-chat-skill`.
+
+It also does not grant remote node authority. Channel identity and routing context may feed application policy, but privileged actions still require a signed intent and target-side envd verification. Compromising fractalbot must not grant direct agent-manager or node control.
 
 ## Related Components
 

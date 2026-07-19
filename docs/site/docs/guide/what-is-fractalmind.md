@@ -15,12 +15,12 @@ But real delivery needs the whole loop: shared state, priorities, governance, ex
 
 ## The Current Answer
 
-FractalMind combines four surfaces into one operating model:
+FractalMind combines a local governed operating loop with three remote-control planes:
 
-- **Communication** — `fractalbot` routes humans and agents across Slack, Telegram, Discord, Feishu, and more
-- **Execution** — `agent-manager` runs tmux-based agents and lets the system dispatch work reliably
-- **Operating system loop** — heartbeat, structured memory, candidate OKRs, governance, outcomes, and evolution
-- **Trust surfaces** — `fractalmind-protocol`, `explorer`, and `fractalmind-envd` extend the system when on-chain identity or distributed execution matters
+- **Control / Authority Plane** — SUI contracts define target-scoped capability, delegation, revocation, use, and budget bounds.
+- **P2P Data / Execution Plane** — target envd verifies signed intents, protects replay state, and invokes typed local adapters.
+- **Application Plane** — Agent Console, envd-desktop, channel adapters, and automation clients create requests and display results.
+- **Local operating loop** — heartbeat, structured memory, candidate OKRs, governance, evidence, and outcomes coordinate delivery.
 
 The control loop is explicit:
 
@@ -30,14 +30,16 @@ signal -> memory -> candidate OKR -> governance -> execution -> outcome -> evolu
 
 ## How It Works Today
 
-```
-L3  Trust & Distribution    protocol / envd / explorer    Optional trust and remote execution
-L2  Operating System        heartbeat + memory + OKRs     Governed coordination and delivery
-L1  Teams & Workflows       team-manager / okr-manager    Team-level planning and tracking
-L0  Single Agent Execution  agent-manager                 Lifecycle, dispatch, and local work
+The three-plane architecture is the migration target. Existing repositories still contain compatibility paths, so public docs distinguish current implementation from target behavior.
+
+For remote privileged actions:
+
+```text
+capability -> signed intent -> P2P/relay -> target envd verify
+           -> durable reservation -> local adapter -> durable result
 ```
 
-The important shift is that **FractalMind is now OS-first, not only protocol-first**.
+Relay, coordinator, channel identity, and bearer tokens are not authority sources. Raw logs, media, input, files, and frequent heartbeats remain off-chain.
 
 - The daily running core lives in `oh-my-code`
 - Shared candidate OKRs land in `fractalmind-okrs`
@@ -57,7 +59,8 @@ As of the current public org state:
 - FractalMind AI spans **18 public repositories**
 - The heartbeat-driven OS loop is running in `oh-my-code`
 - Candidate OKR sync is active through `fractalmind-okrs`
-- The protocol remains live on **SUI Testnet** as an optional trust layer
-- Current work focuses on observability, governed delivery, memory, and distribution — not just proving the protocol exists
+- The existing protocol package remains live on **SUI Testnet** for identity, tasks, and governance
+- Remote capability and target-enforcement work remains a tracked migration until reviewed, merged, and published
+- Current migration status is tracked in [fractalmind-ai/.github#6](https://github.com/fractalmind-ai/.github/issues/6)
 
 See the [Architecture Overview](/architecture/overview) and [Roadmap](/roadmap/) for the latest framing.
