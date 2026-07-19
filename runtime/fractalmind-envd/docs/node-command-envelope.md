@@ -12,9 +12,9 @@ The coordinator or relay transports commands. It does not grant authority. The
 target envd validates the signed command before invoking any local runtime
 adapter.
 
-Phase 0 adds an isolated `internal/nodecommand` contract, validation core, and
-in-memory reference authority store. It does not replace the existing
-REST/WebSocket command path or complete issue #64 yet.
+Phase 0 adds an isolated `internal/nodecommand` contract, validation core,
+in-memory reference authority store, and signed-command runtime audit envelopes
+for decoded commands.
 
 ## Signed Envelope
 
@@ -61,7 +61,20 @@ before this contract is frozen.
    signer-scoped nonce, and idempotency key.
 
 Stable rejection codes let REST, WebSocket, Console, and channel adapters expose
-the same result without becoming authorization owners.
+the same result without becoming authorization owners. Once a transport payload
+successfully decodes into a `NodeCommand`, envd emits a bounded `NodeEvent` for
+both validator rejections and runtime-adapter results. Validator rejections use
+`type=command_rejected` and `result_code=<nodecommand.CodeOf(err)>`, for
+example `expired`, `revoked`, `wrong_target`, or `signature_invalid`.
+Pre-adapter runtime mapping and typed-payload failures use
+`type=runtime_rejected` with stable `runtime_*` result codes such as
+`runtime_unsupported_operation` or `runtime_malformed_input`.
+
+Malformed JSON, unknown top-level fields, trailing JSON values, and other
+inputs that cannot be decoded into one well-formed `NodeCommand` remain outside
+the audit-envelope boundary. They fail closed as `invalid_envelope` and do not
+produce a `NodeEvent`, because there is no trustworthy command ID, target, or
+payload hash to bind.
 
 ## Availability Policy
 
@@ -107,5 +120,6 @@ organization scope and durable target-local storage for node scope.
 - durable replay/use/budget reservation storage replaces the in-memory Phase 0
   authority store.
 - Agent Console supplies wallet/passkey signatures and shared golden vectors.
-- rejected/executed command handlers emit `NodeEvent` audit envelopes once the
-  REST/WS compatibility adapter is wired.
+- command handlers emit `NodeEvent` audit envelopes for decoded rejected and
+  executed commands; malformed JSON remains a fail-closed transport parse error
+  with no event.

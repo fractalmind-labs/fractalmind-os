@@ -137,8 +137,13 @@ func TestExecutorValidatesBeforeRunning(t *testing.T) {
 	command := runtimeCommand("status", "lifecycle", `{}`)
 	command.Signer = "unauthorized-signer"
 
-	if _, _, err := executor.Execute(context.Background(), command); nodecommand.CodeOf(err) != nodecommand.CodeUnauthorized {
+	_, event, err := executor.Execute(context.Background(), command)
+	if nodecommand.CodeOf(err) != nodecommand.CodeUnauthorized {
 		t.Fatalf("code=%q err=%v", nodecommand.CodeOf(err), err)
+	}
+	if event.CommandID != command.CommandID || event.Type != "command_rejected" || event.ResultCode != string(nodecommand.CodeUnauthorized) ||
+		event.ResultHash == "" || event.EvidenceHash == "" {
+		t.Fatalf("unexpected rejection event: %+v", event)
 	}
 	if runner.callCount() != 0 {
 		t.Fatalf("unauthorized command reached runner: %d", runner.callCount())
@@ -274,6 +279,132 @@ func TestExecutorDoesNotWidenScopeOrAction(t *testing.T) {
 	}
 }
 
+func TestExecutorEmitsRejectedEventsForValidatorFailures(t *testing.T) {
+	now := testNow()
+	tests := []struct {
+		name     string
+		mutate   func(*nodecommand.NodeCommand, *nodecommand.CapabilityState)
+		badSig   bool
+		wantCode nodecommand.RejectionCode
+	}{
+		{
+			name: "expired",
+			mutate: func(command *nodecommand.NodeCommand, _ *nodecommand.CapabilityState) {
+				command.IssuedAtMS = now.Add(-2 * time.Minute).UnixMilli()
+				command.ExpiresAtMS = now.Add(-time.Minute).UnixMilli()
+			},
+			wantCode: nodecommand.CodeExpired,
+		},
+		{
+			name: "revoked",
+			mutate: func(_ *nodecommand.NodeCommand, state *nodecommand.CapabilityState) {
+				state.Revoked = true
+			},
+			wantCode: nodecommand.CodeRevoked,
+		},
+		{
+			name: "wrong-target",
+			mutate: func(command *nodecommand.NodeCommand, _ *nodecommand.CapabilityState) {
+				command.Target.NodeID = "node-2"
+			},
+			wantCode: nodecommand.CodeWrongTarget,
+		},
+		{
+			name:     "signature-invalid",
+			mutate:   func(*nodecommand.NodeCommand, *nodecommand.CapabilityState) {},
+			badSig:   true,
+			wantCode: nodecommand.CodeSignatureInvalid,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			command := runtimeCommand("status", "lifecycle", `{}`)
+			state := runtimeCapabilityState(now, "status")
+			tt.mutate(&command, &state)
+			command.PayloadHash = nodecommand.HashPayload(command.Payload)
+			validator := validatorForState(now, state, "status")
+			if tt.badSig {
+				validator = validatorForStateWithVerifier(now, state, signatureVerifierFunc(func(context.Context, string, []byte, string) error {
+					return errors.New("bad signature")
+				}), "status")
+			}
+			runner := &fakeRunner{}
+			_, event, err := NewExecutor(validator, runner).Execute(context.Background(), command)
+			if nodecommand.CodeOf(err) != tt.wantCode {
+				t.Fatalf("code=%q err=%v, want %q", nodecommand.CodeOf(err), err, tt.wantCode)
+			}
+			if runner.callCount() != 0 {
+				t.Fatalf("validator rejection reached adapter: calls=%d", runner.callCount())
+			}
+			assertRejectionEvent(t, event, command, "command_rejected", string(tt.wantCode))
+		})
+	}
+}
+
+func TestExecutorEmitsAndPersistsRuntimeRejectedEvents(t *testing.T) {
+	now := testNow()
+	tests := []struct {
+		name       string
+		command    nodecommand.NodeCommand
+		actions    []string
+		resultCode string
+	}{
+		{
+			name:       "unknown action",
+			command:    runtimeCommand("shell", "lifecycle", `{}`),
+			actions:    []string{"shell"},
+			resultCode: "runtime_unsupported_operation",
+		},
+		{
+			name:       "invalid typed payload",
+			command:    runtimeCommand("assign", "lifecycle", `{}`),
+			actions:    []string{"assign"},
+			resultCode: "runtime_malformed_input",
+		},
+		{
+			name:       "unknown payload field",
+			command:    runtimeCommand("status", "lifecycle", `{"secret":"do-not-hash-raw"}`),
+			actions:    []string{"status"},
+			resultCode: "runtime_malformed_input",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runner := &fakeRunner{}
+			executor := NewExecutor(validatorForState(now, runtimeCapabilityState(now, tt.actions...), tt.actions...), runner)
+			executor.now = func() time.Time { return time.UnixMilli(1234) }
+
+			response, event, err := executor.Execute(context.Background(), tt.command)
+			if err == nil {
+				t.Fatal("Execute returned nil error")
+			}
+			if response.CommandID != tt.command.CommandID || response.OK || response.Error == nil {
+				t.Fatalf("unexpected runtime rejection response: %+v", response)
+			}
+			if runner.callCount() != 0 {
+				t.Fatalf("runtime rejection reached adapter: calls=%d", runner.callCount())
+			}
+			assertRejectionEvent(t, event, tt.command, "runtime_rejected", tt.resultCode)
+
+			duplicate, duplicateEvent, duplicateErr := executor.Execute(context.Background(), tt.command)
+			if duplicateErr == nil {
+				t.Fatal("duplicate Execute returned nil error")
+			}
+			if !duplicate.Duplicate {
+				t.Fatalf("duplicate rejection did not replay prior response: %+v", duplicate)
+			}
+			if duplicateEvent != event {
+				t.Fatalf("duplicate rejection event changed: first=%+v second=%+v", event, duplicateEvent)
+			}
+			if runner.callCount() != 0 {
+				t.Fatalf("duplicate runtime rejection reached adapter: calls=%d", runner.callCount())
+			}
+		})
+	}
+}
+
 type requestCapturingRunner struct {
 	request Request
 }
@@ -340,6 +471,16 @@ func TestExecutorEmitsStableEventForTransportFailure(t *testing.T) {
 	}
 }
 
+func assertRejectionEvent(t *testing.T, event nodecommand.NodeEvent, command nodecommand.NodeCommand, eventType, resultCode string) {
+	t.Helper()
+	if event.CommandID != command.CommandID || event.Target != command.Target || event.Type != eventType || event.ResultCode != resultCode {
+		t.Fatalf("unexpected rejection event: got=%+v command=%+v type=%q result=%q", event, command, eventType, resultCode)
+	}
+	if event.ResultHash == "" || event.EvidenceHash == "" || event.ResultHash != event.EvidenceHash {
+		t.Fatalf("rejection event missing bounded hashes: %+v", event)
+	}
+}
+
 func runtimeCommand(action, scope, rawPayload string) nodecommand.NodeCommand {
 	payload := json.RawMessage(rawPayload)
 	now := testNow()
@@ -369,14 +510,16 @@ func (f signatureVerifierFunc) Verify(ctx context.Context, signer string, payloa
 
 func testValidator() *nodecommand.Validator {
 	now := testNow()
-	remaining := uint64(1000)
 	actions := make([]string, 0, len(actionOperations))
-	lowRisk := make(map[string]struct{}, len(actionOperations))
 	for action := range actionOperations {
 		actions = append(actions, action)
-		lowRisk[action] = struct{}{}
 	}
-	state := nodecommand.CapabilityState{
+	return validatorForState(now, runtimeCapabilityState(now, actions...), actions...)
+}
+
+func runtimeCapabilityState(now time.Time, actions ...string) nodecommand.CapabilityState {
+	remaining := uint64(1000)
+	return nodecommand.CapabilityState{
 		ID:                     "cap-1",
 		Target:                 nodecommand.Target{OrganizationID: "org-1", NodeID: "node-1"},
 		AuthorizedSigners:      []string{"signer-1", "signer-2"},
@@ -388,17 +531,28 @@ func testValidator() *nodecommand.Validator {
 		ReservationScope:       nodecommand.ReservationScopeNode,
 		RemainingUses:          &remaining,
 	}
+}
+
+func validatorForState(now time.Time, state nodecommand.CapabilityState, lowRiskActions ...string) *nodecommand.Validator {
+	return validatorForStateWithVerifier(now, state, signatureVerifierFunc(func(_ context.Context, _ string, payload []byte, signature string) error {
+		if len(payload) == 0 || signature != "signature-1" {
+			return errors.New("invalid signature")
+		}
+		return nil
+	}), lowRiskActions...)
+}
+
+func validatorForStateWithVerifier(now time.Time, state nodecommand.CapabilityState, verifier nodecommand.SignatureVerifier, lowRiskActions ...string) *nodecommand.Validator {
+	lowRisk := make(map[string]struct{}, len(lowRiskActions))
+	for _, action := range lowRiskActions {
+		lowRisk[action] = struct{}{}
+	}
 	secondState := state
 	secondRemaining := uint64(1000)
 	secondState.ID = "cap-2"
 	secondState.RemainingUses = &secondRemaining
 	return nodecommand.NewValidator(
-		signatureVerifierFunc(func(_ context.Context, _ string, payload []byte, signature string) error {
-			if len(payload) == 0 || signature != "signature-1" {
-				return errors.New("invalid signature")
-			}
-			return nil
-		}),
+		verifier,
 		nodecommand.NewMemoryAuthorityStore(state, secondState),
 		nodecommand.ValidatorOptions{
 			Now:                     func() time.Time { return now },

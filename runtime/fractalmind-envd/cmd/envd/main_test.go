@@ -156,9 +156,36 @@ func TestShippedSignedCommandConstructorRejectsInvalidCommandBeforeAdapter(t *te
 	if result["error_code"] != nodecommand.CodeWrongTarget {
 		t.Fatalf("error_code = %v, want %s", result["error_code"], nodecommand.CodeWrongTarget)
 	}
+	event, ok := result["event"].(nodecommand.NodeEvent)
+	if !ok {
+		t.Fatalf("result event type = %T, want NodeEvent: %+v", result["event"], result)
+	}
+	if event.CommandID != command.CommandID || event.Type != "command_rejected" || event.ResultCode != string(nodecommand.CodeWrongTarget) ||
+		event.ResultHash == "" || event.EvidenceHash == "" {
+		t.Fatalf("unexpected rejection event: %+v", event)
+	}
 	if countRuntimeAdapterCalls(t, callCount) != 0 {
 		t.Fatalf("invalid command reached adapter: calls=%d", countRuntimeAdapterCalls(t, callCount))
 	}
+}
+
+func TestHandleSignedCommandMalformedJSONHasNoNodeEvent(t *testing.T) {
+	result := handleSignedCommand(context.Background(), `{"command_id":`, runtimeCommandExecutorFunc(func(context.Context, nodecommand.NodeCommand) (runtimeadapter.Response, nodecommand.NodeEvent, error) {
+		t.Fatal("executor must not be called for malformed JSON")
+		return runtimeadapter.Response{}, nodecommand.NodeEvent{}, nil
+	}))
+	if result["success"] != false || result["error_code"] != "invalid_envelope" {
+		t.Fatalf("unexpected malformed JSON result: %+v", result)
+	}
+	if _, ok := result["event"]; ok {
+		t.Fatalf("malformed JSON result included NodeEvent: %+v", result)
+	}
+}
+
+type runtimeCommandExecutorFunc func(context.Context, nodecommand.NodeCommand) (runtimeadapter.Response, nodecommand.NodeEvent, error)
+
+func (f runtimeCommandExecutorFunc) Execute(ctx context.Context, command nodecommand.NodeCommand) (runtimeadapter.Response, nodecommand.NodeEvent, error) {
+	return f(ctx, command)
 }
 
 func newTestPersistentRuntimeExecutor(
