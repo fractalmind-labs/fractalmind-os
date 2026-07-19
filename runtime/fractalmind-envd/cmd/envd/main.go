@@ -21,6 +21,7 @@ import (
 	"github.com/fractalmind-ai/fractalmind-envd/internal/config"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/coordinator"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/heartbeat"
+	"github.com/fractalmind-ai/fractalmind-envd/internal/nodecommand"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/relay"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/relaypicker"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/roles"
@@ -39,6 +40,10 @@ var (
 	// relayPeers tracks SUI address → relay peer ID for WSS fallback cleanup.
 	relayPeers = make(map[string]uint16)
 )
+
+type runtimeCommandExecutor interface {
+	Execute(context.Context, nodecommand.NodeCommand) (runtimeadapter.Response, nodecommand.NodeEvent, error)
+}
 
 func main() {
 	configPath := flag.String("config", "sentinel.yaml", "path to config file")
@@ -60,13 +65,12 @@ func main() {
 
 	log.Printf("starting fractalmind-envd %s (host=%s)", version, cfg.Identity.Hostname)
 
-	runtimeStateDir := strings.TrimSpace(os.Getenv("FRACTALMIND_RUNTIME_STATE_DIR"))
-	if runtimeStateDir != "" {
-		runtimeExecutor, err := runtimeadapter.NewExecutorWithStateDir(nil, nil, runtimeStateDir)
-		if err != nil {
-			log.Fatalf("[runtimeadapter] failed to initialize persistent execution store: %v", err)
-		}
-		log.Printf("[runtimeadapter] persistent execution store enabled at %s (executor=%T)", runtimeStateDir, runtimeExecutor)
+	runtimeExecutor, err := newRuntimeCommandExecutorFromEnv()
+	if err != nil {
+		log.Fatalf("[runtimeadapter] failed to initialize persistent signed-command runtime: %v", err)
+	}
+	if runtimeExecutor != nil {
+		log.Printf("[runtimeadapter] persistent signed-command runtime enabled (executor=%T)", runtimeExecutor)
 	}
 
 	// Parse durations
@@ -379,7 +383,7 @@ func main() {
 	// Handle commands from Gateway
 	wsClient.OnCommand(func(cmd ws.CommandPayload) {
 		log.Printf("[cmd] received: %s agent=%s", cmd.Command, cmd.AgentID)
-		result := handleCommand(cmd, scanner, cfg)
+		result := handleCommand(cmd, scanner, cfg, runtimeExecutor)
 		wsClient.Send("command_result", map[string]interface{}{
 			"request_id": cmd.RequestID,
 			"result":     result,
@@ -535,6 +539,37 @@ func main() {
 	}
 }
 
+func newRuntimeCommandExecutorFromEnv() (runtimeCommandExecutor, error) {
+	runtimeStateDir := strings.TrimSpace(os.Getenv("FRACTALMIND_RUNTIME_STATE_DIR"))
+	if runtimeStateDir == "" {
+		return nil, nil
+	}
+
+	adapterCommand := strings.TrimSpace(os.Getenv("FRACTALMIND_AGENT_MANAGER_COMMAND"))
+	adapterArgs := splitRuntimeAdapterArgs(os.Getenv("FRACTALMIND_AGENT_MANAGER_ARGS"))
+	if adapterCommand == "" {
+		if mainPath := strings.TrimSpace(os.Getenv("FRACTALMIND_AGENT_MANAGER_MAIN")); mainPath != "" {
+			adapterCommand = "python3"
+			adapterArgs = append([]string{mainPath}, adapterArgs...)
+		} else {
+			adapterCommand = "agent-manager"
+		}
+	}
+
+	executor, err := runtimeadapter.NewExecutorWithStateDir(nil, runtimeadapter.AgentManager(adapterCommand, adapterArgs...), runtimeStateDir)
+	if err != nil {
+		return nil, err
+	}
+	return executor, nil
+}
+
+func splitRuntimeAdapterArgs(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	return strings.Fields(raw)
+}
+
 // detectAndRestart checks for crashed agents and restarts them.
 func detectAndRestart(prev, curr []agent.Agent, scanner *agent.Scanner, restartCounts map[string]int, maxAttempts int, wsClient *ws.Client) {
 	currentSet := make(map[string]bool)
@@ -618,12 +653,15 @@ func proxyDesktopSignal(cfg config.DesktopConfig, sig ws.DesktopSignalPayload) w
 }
 
 // handleCommand processes a command from Gateway.
-func handleCommand(cmd ws.CommandPayload, scanner *agent.Scanner, cfg *config.Config) map[string]interface{} {
+func handleCommand(cmd ws.CommandPayload, scanner *agent.Scanner, cfg *config.Config, runtimeExecutor runtimeCommandExecutor) map[string]interface{} {
 	result := map[string]interface{}{
 		"success": true,
 	}
 
 	switch cmd.Command {
+	case "signed_command", "signed-command", "node_command":
+		return handleSignedCommand(context.Background(), cmd.Args, runtimeExecutor)
+
 	case "status":
 		agents, err := scanner.Scan()
 		if err != nil {
@@ -710,6 +748,63 @@ func handleCommand(cmd ws.CommandPayload, scanner *agent.Scanner, cfg *config.Co
 	}
 
 	log.Printf("[cmd] %s result: success=%v", cmd.Command, result["success"])
+	return result
+}
+
+func handleSignedCommand(ctx context.Context, rawCommand string, runtimeExecutor runtimeCommandExecutor) map[string]interface{} {
+	result := map[string]interface{}{
+		"success": false,
+	}
+	if runtimeExecutor == nil {
+		result["error_code"] = "runtime_state_dir_required"
+		result["error"] = "signed-command runtime requires FRACTALMIND_RUNTIME_STATE_DIR-backed persistent executor"
+		return result
+	}
+	if strings.TrimSpace(rawCommand) == "" {
+		result["error_code"] = "invalid_envelope"
+		result["error"] = "signed command JSON is required in args"
+		return result
+	}
+
+	var command nodecommand.NodeCommand
+	decoder := json.NewDecoder(strings.NewReader(rawCommand))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&command); err != nil {
+		result["error_code"] = "invalid_envelope"
+		result["error"] = err.Error()
+		return result
+	}
+	var trailing interface{}
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		if err == nil {
+			err = fmt.Errorf("trailing JSON value")
+		}
+		result["error_code"] = "invalid_envelope"
+		result["error"] = err.Error()
+		return result
+	}
+
+	response, event, err := runtimeExecutor.Execute(ctx, command)
+	if len(response.CommandID) > 0 {
+		result["response"] = response
+	}
+	if event.CommandID != "" {
+		result["event"] = event
+	}
+	if err != nil {
+		result["error"] = err.Error()
+		if code := nodecommand.CodeOf(err); code != "" {
+			result["error_code"] = code
+		} else {
+			result["error_code"] = runtimeadapter.RunErrorCode(err)
+		}
+		return result
+	}
+	if response.Error != nil {
+		result["error_code"] = response.Error.Code
+		result["error"] = response.Error.Message
+	}
+	result["success"] = response.OK
 	return result
 }
 
