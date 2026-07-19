@@ -64,3 +64,8 @@ Production wiring must pair durable authority reservations with a durable result
 store/agent-manager ledger before treating restart replay as recoverable. Until
 then, a duplicate whose authorized result is absent fails closed and is not
 executed again.
+
+For restart-safe deployments, initialize the executor with a file-backed state
+directory via `runtimeadapter.NewExecutorWithStateDir(...)` and set
+`FRACTALMIND_RUNTIME_STATE_DIR` in the envd process. This keeps prior results on
+disk instead of in the process-local memory store.

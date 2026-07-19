@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -21,9 +22,11 @@ import (
 	"github.com/fractalmind-ai/fractalmind-envd/internal/config"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/coordinator"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/heartbeat"
+	"github.com/fractalmind-ai/fractalmind-envd/internal/nodecommand"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/relay"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/relaypicker"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/roles"
+	"github.com/fractalmind-ai/fractalmind-envd/internal/runtimeadapter"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/sponsor"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/sui"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/wg"
@@ -38,6 +41,10 @@ var (
 	// relayPeers tracks SUI address → relay peer ID for WSS fallback cleanup.
 	relayPeers = make(map[string]uint16)
 )
+
+type runtimeCommandExecutor interface {
+	Execute(context.Context, nodecommand.NodeCommand) (runtimeadapter.Response, nodecommand.NodeEvent, error)
+}
 
 func main() {
 	configPath := flag.String("config", "sentinel.yaml", "path to config file")
@@ -58,6 +65,14 @@ func main() {
 	}
 
 	log.Printf("starting fractalmind-envd %s (host=%s)", version, cfg.Identity.Hostname)
+
+	runtimeExecutor, err := newRuntimeCommandExecutorFromEnv(cfg)
+	if err != nil {
+		log.Fatalf("[runtimeadapter] failed to initialize persistent signed-command runtime: %v", err)
+	}
+	if runtimeExecutor != nil {
+		log.Printf("[runtimeadapter] persistent signed-command runtime enabled (executor=%T)", runtimeExecutor)
+	}
 
 	// Parse durations
 	reconnectWait, _ := time.ParseDuration(cfg.Gateway.ReconnectInterval)
@@ -369,7 +384,7 @@ func main() {
 	// Handle commands from Gateway
 	wsClient.OnCommand(func(cmd ws.CommandPayload) {
 		log.Printf("[cmd] received: %s agent=%s", cmd.Command, cmd.AgentID)
-		result := handleCommand(cmd, scanner, cfg)
+		result := handleCommand(cmd, scanner, cfg, runtimeExecutor)
 		wsClient.Send("command_result", map[string]interface{}{
 			"request_id": cmd.RequestID,
 			"result":     result,
@@ -525,6 +540,92 @@ func main() {
 	}
 }
 
+func newRuntimeCommandExecutorFromEnv(cfg *config.Config) (runtimeCommandExecutor, error) {
+	runtimeStateDir := strings.TrimSpace(os.Getenv("FRACTALMIND_RUNTIME_STATE_DIR"))
+	if runtimeStateDir == "" {
+		return nil, nil
+	}
+	if cfg == nil {
+		return nil, fmt.Errorf("config is required")
+	}
+
+	localTarget := nodecommand.Target{
+		OrganizationID: strings.TrimSpace(cfg.SUI.OrgID),
+		NodeID:         strings.TrimSpace(cfg.Identity.HostID),
+	}
+	if localTarget.NodeID == "" {
+		localTarget.NodeID = strings.TrimSpace(cfg.Identity.Hostname)
+	}
+	if localTarget.OrganizationID == "" || localTarget.NodeID == "" {
+		return nil, fmt.Errorf("sui.org_id and identity.host_id or identity.hostname are required for signed-command validation")
+	}
+
+	authorityFile := strings.TrimSpace(os.Getenv("FRACTALMIND_NODE_COMMAND_AUTHORITY_FILE"))
+	if authorityFile == "" {
+		authorityFile = filepath.Join(runtimeStateDir, "authority.json")
+	}
+	authorityStore, err := nodecommand.NewFileAuthorityStore(authorityFile, filepath.Join(runtimeStateDir, "authority-reservations"))
+	if err != nil {
+		return nil, err
+	}
+	validator := nodecommand.NewValidator(
+		nodecommand.Ed25519Verifier{},
+		authorityStore,
+		nodecommand.ValidatorOptions{
+			LocalTarget:              localTarget,
+			LowRiskActions:           signedCommandLowRiskActions(),
+			HighRiskActions:          signedCommandHighRiskActions(),
+			BudgetedActions:          map[string]struct{}{},
+			MaxCommandTTL:            5 * time.Minute,
+			MaxLowRiskCheckpointAge:  24 * time.Hour,
+			MaxHighRiskCheckpointAge: 2 * time.Minute,
+		},
+	)
+
+	adapterCommand := strings.TrimSpace(os.Getenv("FRACTALMIND_AGENT_MANAGER_COMMAND"))
+	adapterArgs := splitRuntimeAdapterArgs(os.Getenv("FRACTALMIND_AGENT_MANAGER_ARGS"))
+	if adapterCommand == "" {
+		if mainPath := strings.TrimSpace(os.Getenv("FRACTALMIND_AGENT_MANAGER_MAIN")); mainPath != "" {
+			adapterCommand = "python3"
+			adapterArgs = append([]string{mainPath}, adapterArgs...)
+		} else {
+			adapterCommand = "agent-manager"
+		}
+	}
+
+	executor, err := runtimeadapter.NewExecutorWithStateDir(validator, runtimeadapter.AgentManager(adapterCommand, adapterArgs...), runtimeStateDir)
+	if err != nil {
+		return nil, err
+	}
+	return executor, nil
+}
+
+func signedCommandLowRiskActions() map[string]struct{} {
+	return map[string]struct{}{
+		"inventory":    {},
+		"status":       {},
+		"monitor":      {},
+		"logs":         {},
+		"health":       {},
+		"availability": {},
+	}
+}
+
+func signedCommandHighRiskActions() map[string]struct{} {
+	return map[string]struct{}{
+		"start":  {},
+		"stop":   {},
+		"assign": {},
+	}
+}
+
+func splitRuntimeAdapterArgs(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	return strings.Fields(raw)
+}
+
 // detectAndRestart checks for crashed agents and restarts them.
 func detectAndRestart(prev, curr []agent.Agent, scanner *agent.Scanner, restartCounts map[string]int, maxAttempts int, wsClient *ws.Client) {
 	currentSet := make(map[string]bool)
@@ -608,12 +709,15 @@ func proxyDesktopSignal(cfg config.DesktopConfig, sig ws.DesktopSignalPayload) w
 }
 
 // handleCommand processes a command from Gateway.
-func handleCommand(cmd ws.CommandPayload, scanner *agent.Scanner, cfg *config.Config) map[string]interface{} {
+func handleCommand(cmd ws.CommandPayload, scanner *agent.Scanner, cfg *config.Config, runtimeExecutor runtimeCommandExecutor) map[string]interface{} {
 	result := map[string]interface{}{
 		"success": true,
 	}
 
 	switch cmd.Command {
+	case "signed_command", "signed-command", "node_command":
+		return handleSignedCommand(context.Background(), cmd.Args, runtimeExecutor)
+
 	case "status":
 		agents, err := scanner.Scan()
 		if err != nil {
@@ -700,6 +804,63 @@ func handleCommand(cmd ws.CommandPayload, scanner *agent.Scanner, cfg *config.Co
 	}
 
 	log.Printf("[cmd] %s result: success=%v", cmd.Command, result["success"])
+	return result
+}
+
+func handleSignedCommand(ctx context.Context, rawCommand string, runtimeExecutor runtimeCommandExecutor) map[string]interface{} {
+	result := map[string]interface{}{
+		"success": false,
+	}
+	if runtimeExecutor == nil {
+		result["error_code"] = "runtime_state_dir_required"
+		result["error"] = "signed-command runtime requires FRACTALMIND_RUNTIME_STATE_DIR-backed persistent executor"
+		return result
+	}
+	if strings.TrimSpace(rawCommand) == "" {
+		result["error_code"] = "invalid_envelope"
+		result["error"] = "signed command JSON is required in args"
+		return result
+	}
+
+	var command nodecommand.NodeCommand
+	decoder := json.NewDecoder(strings.NewReader(rawCommand))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&command); err != nil {
+		result["error_code"] = "invalid_envelope"
+		result["error"] = err.Error()
+		return result
+	}
+	var trailing interface{}
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		if err == nil {
+			err = fmt.Errorf("trailing JSON value")
+		}
+		result["error_code"] = "invalid_envelope"
+		result["error"] = err.Error()
+		return result
+	}
+
+	response, event, err := runtimeExecutor.Execute(ctx, command)
+	if len(response.CommandID) > 0 {
+		result["response"] = response
+	}
+	if event.CommandID != "" {
+		result["event"] = event
+	}
+	if err != nil {
+		result["error"] = err.Error()
+		if code := nodecommand.CodeOf(err); code != "" {
+			result["error_code"] = code
+		} else {
+			result["error_code"] = runtimeadapter.RunErrorCode(err)
+		}
+		return result
+	}
+	if response.Error != nil {
+		result["error_code"] = response.Error.Code
+		result["error"] = response.Error.Message
+	}
+	result["success"] = response.OK
 	return result
 }
 

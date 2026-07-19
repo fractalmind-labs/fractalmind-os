@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -30,9 +31,9 @@ type Executor struct {
 	validator *nodecommand.Validator
 	adapter   Adapter
 	now       func() time.Time
+	store     ExecutionStore
 
 	mu       sync.Mutex
-	cache    map[string]execution
 	inflight map[string]*flight
 }
 
@@ -56,11 +57,29 @@ type payload struct {
 }
 
 func NewExecutor(validator *nodecommand.Validator, adapter Adapter) *Executor {
+	return NewExecutorWithStore(validator, adapter, newMemoryExecutionStore())
+}
+
+// NewExecutorWithStateDir persists execution results under stateDir so a
+// restarted envd instance can replay the prior signed-command result without
+// invoking the adapter again.
+func NewExecutorWithStateDir(validator *nodecommand.Validator, adapter Adapter, stateDir string) (*Executor, error) {
+	store, err := NewFileExecutionStore(stateDir)
+	if err != nil {
+		return nil, err
+	}
+	return NewExecutorWithStore(validator, adapter, store), nil
+}
+
+func NewExecutorWithStore(validator *nodecommand.Validator, adapter Adapter, store ExecutionStore) *Executor {
+	if store == nil {
+		store = newMemoryExecutionStore()
+	}
 	return &Executor{
 		validator: validator,
 		adapter:   adapter,
 		now:       time.Now,
-		cache:     make(map[string]execution),
+		store:     store,
 		inflight:  make(map[string]*flight),
 	}
 }
@@ -119,11 +138,16 @@ func (e *Executor) executeFirst(ctx context.Context, command nodecommand.NodeCom
 		return execution{err: err}
 	}
 	if validation.Duplicate {
-		e.mu.Lock()
-		cached, ok := e.cache[key]
-		e.mu.Unlock()
+		record, ok, loadErr := e.store.Load(ctx, key)
+		if loadErr != nil {
+			return execution{err: fmt.Errorf("load prior runtime result: %w", loadErr)}
+		}
 		if !ok {
 			return execution{err: fmt.Errorf("authorized duplicate command result is unavailable")}
+		}
+		cached, loadErr := record.execution()
+		if loadErr != nil {
+			return execution{err: fmt.Errorf("decode prior runtime result: %w", loadErr)}
 		}
 		cached.response.Duplicate = true
 		return cached
@@ -185,7 +209,9 @@ func (e *Executor) executeReserved(ctx context.Context, command nodecommand.Node
 			return execution{err: eventErr}
 		}
 		result := execution{response: response, event: event, err: err}
-		e.store(key, result)
+		if storeErr := e.store.Save(ctx, key, recordFromExecution(result)); storeErr != nil {
+			result.err = errors.Join(err, fmt.Errorf("persist runtime result: %w", storeErr))
+		}
 		return result
 	}
 	event, err := e.event(command, response)
@@ -193,14 +219,10 @@ func (e *Executor) executeReserved(ctx context.Context, command nodecommand.Node
 		return execution{err: err}
 	}
 	result := execution{response: response, event: event}
-	e.store(key, result)
+	if err := e.store.Save(ctx, key, recordFromExecution(result)); err != nil {
+		result.err = fmt.Errorf("persist runtime result: %w", err)
+	}
 	return result
-}
-
-func (e *Executor) store(key string, result execution) {
-	e.mu.Lock()
-	e.cache[key] = result
-	e.mu.Unlock()
 }
 
 func operationParams(operation Operation, input payload) (*OperationParams, error) {
