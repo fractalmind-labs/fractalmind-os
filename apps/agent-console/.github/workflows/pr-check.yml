@@ -18,5 +18,7 @@ jobs:
           cache: pnpm
       - name: Install deps
         run: pnpm install
+      - name: NodeCommand contract fixture parity
+        run: pnpm test:node-command
       - name: Build (typecheck + bundle)
         run: pnpm build
