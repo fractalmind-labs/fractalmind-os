@@ -58,6 +58,27 @@ export interface DesktopQuality {
   fps: number;
 }
 
+export interface DesktopStatus {
+  ok: boolean;
+  turn_enabled: boolean;
+  ice_servers: number;
+  session?: {
+    active: boolean;
+    ice_state: string;
+    streaming: boolean;
+    frames_sent: number;
+    bytes_sent: number;
+    connected_at?: string;
+    started_at?: string;
+    last_frame_at?: string;
+    last_error?: string;
+    capture_width: number;
+    capture_height: number;
+    encode_height: number;
+    fps: number;
+  };
+}
+
 export class CoordinatorClient {
   constructor(
     private baseURL: string,
@@ -127,6 +148,10 @@ export class CoordinatorClient {
    */
   desktopICE(id: string): Promise<{ iceServers: RTCIceServer[] }> {
     return this.req(`/api/sentinels/${encodeURIComponent(id)}/desktop/ice`);
+  }
+
+  desktopStatus(id: string): Promise<DesktopStatus> {
+    return this.req(`/api/sentinels/${encodeURIComponent(id)}/desktop/status`);
   }
 
   desktopOffer(

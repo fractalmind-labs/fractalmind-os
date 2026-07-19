@@ -11,6 +11,7 @@
     "tauri": "tauri",
     "cap": "cap",
     "selftest:rd": "node scripts/rd-selftest.mjs dist",
+    "selftest:media-health": "node scripts/rd-media-health-test.mjs dist",
     "selftest:reconnect": "node scripts/rd-reconnect-test.mjs dist"
   },
   "dependencies": {

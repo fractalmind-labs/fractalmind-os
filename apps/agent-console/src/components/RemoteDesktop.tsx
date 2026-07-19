@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { CoordinatorClient, DesktopQuality } from "../lib/coordinator";
+import type { CoordinatorClient, DesktopQuality, DesktopStatus } from "../lib/coordinator";
 
 // WebRTC remote-desktop viewer. recvonly VP8 video + an "input" data channel for
 // pointer and keyboard. Signaling (ICE + offer/answer) is relayed through the
@@ -63,10 +63,15 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
   const dcRef = useRef<RTCDataChannel | null>(null);
   const kbdRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState("connecting…");
+  const [mediaWarning, setMediaWarning] = useState("");
+  const [desktopStatus, setDesktopStatus] = useState<DesktopStatus | null>(null);
+  const desktopStatusRef = useRef<DesktopStatus | null>(null);
   // WebRTC live stats (ToDesk-style overlay): RTT, bitrate, FPS, loss.
   const [stats, setStats] = useState<RtcStats | null>(null);
   const [showStats, setShowStats] = useState(false);
   const statsPrevRef = useRef<{ ts: number; bytes: number; frames: number } | null>(null);
+  const connectedAtRef = useRef<number | null>(null);
+  const lastMediaAtRef = useRef<number | null>(null);
   // Session reliability: auto-reconnect on ICE failure/drop (network switch,
   // tab sleep, host restart). reconnectRef lets the toolbar trigger it manually.
   const [reconnecting, setReconnecting] = useState(false);
@@ -142,6 +147,9 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
 
     async function connect() {
       pcRef.current?.close();
+      connectedAtRef.current = null;
+      lastMediaAtRef.current = null;
+      setMediaWarning("");
       const pc = new RTCPeerConnection({ iceServers: await iceServers() });
       if (closed) {
         pc.close();
@@ -158,6 +166,7 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
         setStatus("connected · 端到端加密 (DTLS-SRTP) 已建立");
       };
       pc.ontrack = (e) => {
+        lastMediaAtRef.current = performance.now();
         if (videoRef.current) {
           videoRef.current.srcObject = e.streams[0];
           videoRef.current.play().catch(() => {});
@@ -168,6 +177,7 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
         const st = pc.iceConnectionState;
         setStatus(st);
         if (st === "connected" || st === "completed") {
+          connectedAtRef.current = performance.now();
           window.clearTimeout(dropTimer);
           attempts = 0;
           setReconnecting(false);
@@ -268,6 +278,9 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
         const now = performance.now();
         const prev = statsPrevRef.current;
         let kbps: number | null = null;
+        if (!prev ? bytes > 0 || frames > 0 : bytes > prev.bytes || frames > prev.frames) {
+          lastMediaAtRef.current = now;
+        }
         if (prev) {
           const dt = (now - prev.ts) / 1000;
           if (dt > 0) {
@@ -283,9 +296,52 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
       }
     }, 1000);
 
+    const statusTimer = window.setInterval(async () => {
+      try {
+        const next = await client.desktopStatus(nodeId);
+        if (!closed) {
+          desktopStatusRef.current = next;
+          setDesktopStatus(next);
+        }
+      } catch {
+        if (!closed) {
+          desktopStatusRef.current = null;
+          setDesktopStatus(null);
+        }
+      }
+    }, 2000);
+
+    const mediaTimer = window.setInterval(() => {
+      if (closed) return;
+      const pc = pcRef.current;
+      const state = pc?.iceConnectionState;
+      if (state !== "connected" && state !== "completed") {
+        setMediaWarning("");
+        return;
+      }
+      const now = performance.now();
+      const connectedFor = connectedAtRef.current == null ? 0 : now - connectedAtRef.current;
+      const mediaAge = lastMediaAtRef.current == null ? Infinity : now - lastMediaAtRef.current;
+      const currentDesktopStatus = desktopStatusRef.current;
+      const serverFrames = currentDesktopStatus?.session?.frames_sent ?? 0;
+      const serverErr = currentDesktopStatus?.session?.last_error;
+      if (connectedFor > 6000 && mediaAge > 6000) {
+        const hint = serverErr
+          ? `Host media error: ${serverErr}`
+          : serverFrames === 0
+            ? "Connected, but no desktop frames are arriving from the host."
+            : "Connected, but no video frames are reaching this device.";
+        setMediaWarning(hint);
+      } else {
+        setMediaWarning("");
+      }
+    }, 1000);
+
     return () => {
       closed = true;
       window.clearInterval(statsTimer);
+      window.clearInterval(statusTimer);
+      window.clearInterval(mediaTimer);
       window.clearTimeout(retryTimer);
       window.clearTimeout(dropTimer);
       reconnectRef.current = null;
@@ -657,8 +713,21 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
           autoPlay
           playsInline
           muted
+          onLoadedData={() => {
+            lastMediaAtRef.current = performance.now();
+          }}
+          onTimeUpdate={() => {
+            lastMediaAtRef.current = performance.now();
+          }}
         />
       </div>
+
+      {mediaWarning && (
+        <div className="rd-warning small">
+          {mediaWarning}
+          {desktopStatus?.turn_enabled ? " TURN is enabled on the host; try STUN-only to isolate relay issues." : ""}
+        </div>
+      )}
 
       <div className="rd-view-hint small muted">
         {Math.round(zoom * 100)}% · {QUALITY_PRESETS[qualityKey].hint} · {touchMode === "touchpad" ? "触控板：点按/双击/长按/拖动光标" : "直触：按下即远端点击/拖拽"}
