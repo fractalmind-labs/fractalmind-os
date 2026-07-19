@@ -159,6 +159,50 @@ func TestCoordinatorDesktopSignalRelay(t *testing.T) {
 	}
 }
 
+func TestCoordinatorDesktopStatusRelay(t *testing.T) {
+	server := NewServer(":0", 2*time.Second, "")
+	testServer := httptest.NewServer(server.Handler())
+	defer testServer.Close()
+
+	conn := dialTestWebSocket(t, testServer.URL)
+	defer conn.Close()
+
+	registerWorker(t, conn, "node-status", "worker-status", "dev", heartbeat.Payload{})
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		var msg ws.Message
+		if err := conn.ReadJSON(&msg); err != nil {
+			t.Errorf("read desktop_signal: %v", err)
+			return
+		}
+		var sig ws.DesktopSignalPayload
+		if err := json.Unmarshal(msg.Payload, &sig); err != nil {
+			t.Errorf("decode desktop_signal: %v", err)
+			return
+		}
+		if sig.Method != http.MethodGet || sig.Path != "/status" {
+			t.Errorf("got %s %s, want GET /status", sig.Method, sig.Path)
+		}
+		sendWSMessage(t, conn, ws.Message{
+			Type: "desktop_signal_result",
+			Payload: mustRawJSON(desktopSignalResult{
+				RequestID: sig.RequestID,
+				Status:    http.StatusOK,
+				Body:      json.RawMessage(`{"ok":true,"turn_enabled":true}`),
+			}),
+		})
+	}()
+
+	waitForSentinel(t, testServer.URL, "node-status", nil)
+	body := httpGet(t, testServer.URL+"/api/sentinels/node-status/desktop/status")
+	<-done
+	if !strings.Contains(string(body), `"turn_enabled":true`) {
+		t.Fatalf("status body = %s, want turn_enabled", body)
+	}
+}
+
 func TestCoordinatorShellCommandProxy(t *testing.T) {
 	server := NewServer(":0", 2*time.Second, "")
 	testServer := httptest.NewServer(server.Handler())

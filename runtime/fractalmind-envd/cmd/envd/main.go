@@ -557,8 +557,8 @@ func detectAndRestart(prev, curr []agent.Agent, scanner *agent.Scanner, restartC
 
 // proxyDesktopSignal forwards a relayed signaling request to the local
 // envd-desktop server and returns its response for the coordinator. Only the
-// two signaling paths are allowed, and the desktop token is injected here so
-// the console never has to hold it.
+// desktop signaling/status paths are allowed, and the desktop token is injected
+// here so the console never has to hold it.
 func proxyDesktopSignal(cfg config.DesktopConfig, sig ws.DesktopSignalPayload) ws.DesktopSignalResult {
 	res := ws.DesktopSignalResult{RequestID: sig.RequestID}
 	if cfg.LocalAddr == "" {
@@ -566,7 +566,7 @@ func proxyDesktopSignal(cfg config.DesktopConfig, sig ws.DesktopSignalPayload) w
 		res.Error = "desktop relay not configured on this node"
 		return res
 	}
-	if sig.Path != "/offer" && sig.Path != "/ice" {
+	if sig.Path != "/offer" && sig.Path != "/ice" && sig.Path != "/status" {
 		res.Status = http.StatusBadRequest
 		res.Error = "unsupported desktop path"
 		return res

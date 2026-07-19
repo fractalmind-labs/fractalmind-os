@@ -135,6 +135,69 @@ func TestICERequiresAuth(t *testing.T) {
 	}
 }
 
+func TestStatusRequiresAuthAndReportsIdle(t *testing.T) {
+	h := Handler(HTTPConfig{
+		Token: "secret",
+		Server: ServerConfig{
+			ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}, {URLs: []string{"turn:example.com:3478"}}},
+		},
+	})
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/status")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("/status without token: got %d, want 401", resp.StatusCode)
+	}
+
+	resp, err = http.Get(srv.URL + "/status?token=secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("/status with token: got %d, want 200", resp.StatusCode)
+	}
+	var got desktopStatusResponse
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if !got.OK || !got.TURNEnabled || got.ICEServers != 2 {
+		t.Fatalf("status = %+v, want ok+turn+2 ice servers", got)
+	}
+	if got.Session != nil {
+		t.Fatalf("idle session = %+v, want nil", got.Session)
+	}
+}
+
+func TestStatusReportsLastClosedSession(t *testing.T) {
+	h := &httpHandler{
+		cfg: HTTPConfig{},
+		last: &SessionStatus{
+			Active:    false,
+			ICEState:  "connected",
+			LastError: "capture_start_failed: screen recording denied",
+		},
+	}
+	rr := httptest.NewRecorder()
+	h.handleStatus(rr, httptest.NewRequest(http.MethodGet, "/status", nil))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("/status code = %d, want 200", rr.Code)
+	}
+	var got desktopStatusResponse
+	if err := json.NewDecoder(rr.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Session == nil {
+		t.Fatal("status session = nil, want last closed session")
+	}
+	if got.Session.Active || got.Session.LastError != "capture_start_failed: screen recording denied" {
+		t.Fatalf("status session = %+v, want inactive capture error", got.Session)
+	}
+}
+
 func TestApplyDesktopQuality(t *testing.T) {
 	cfg := CaptureConfig{FPS: 25, Bitrate: "4M", EncodeHeight: 720}
 	got := applyDesktopQuality(cfg, desktopQuality{EncodeHeight: 1080, FPS: 30, Bitrate: "10M"})

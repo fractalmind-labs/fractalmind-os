@@ -102,6 +102,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/sentinels/{id}/agents", s.handleGetAgents)
 	mux.HandleFunc("POST /api/sentinels/{id}/command", s.handleCommand)
 	mux.HandleFunc("GET /api/sentinels/{id}/desktop/ice", s.handleDesktopICE)
+	mux.HandleFunc("GET /api/sentinels/{id}/desktop/status", s.handleDesktopStatus)
 	mux.HandleFunc("POST /api/sentinels/{id}/desktop/offer", s.handleDesktopOffer)
 	mux.HandleFunc("GET /ws", s.handleWebSocket)
 	return s.withAPITokenAuth(mux)
@@ -212,6 +213,11 @@ func (s *Server) handleCommand(w http.ResponseWriter, r *http.Request) {
 // handleDesktopICE relays a GET /ice to the target node's envd-desktop server.
 func (s *Server) handleDesktopICE(w http.ResponseWriter, r *http.Request) {
 	s.relayDesktop(w, r, http.MethodGet, "/ice", nil)
+}
+
+// handleDesktopStatus relays a GET /status to the target node's envd-desktop server.
+func (s *Server) handleDesktopStatus(w http.ResponseWriter, r *http.Request) {
+	s.relayDesktop(w, r, http.MethodGet, "/status", nil)
 }
 
 // handleDesktopOffer relays a POST /offer (SDP) to the target node.

@@ -80,11 +80,41 @@ The requested encode height is capped to the source screen height, so a 900px-ta
 - Behind NAT, provide a STUN and/or TURN server (`-stun`, `-turn`); envd's relay
   can serve as TURN.
 
+## Black-screen troubleshooting
+
+`ICE connected` only means WebRTC found a network path. It does not prove that
+macOS capture is authorized or that video frames are arriving.
+
+For macOS hosts:
+
+1. Confirm Screen Recording (or Screen & System Audio Recording) is enabled for
+   the exact launch subject: `envd` / `envd-desktop`, and also Terminal/iTerm or
+   the wrapper app if they start the tmux session. Restart `envd-desktop` after
+   changing TCC permissions.
+2. Check `GET /status` through the coordinator or local desktop server. A healthy
+   viewer should show `session.streaming=true`, increasing `frames_sent`, and a
+   fresh `last_frame_at`.
+3. If capture is active but the viewer is black and logs show
+   `turnc ... CreatePermission error 400`, run a short A/B by starting without
+   `-turn/-turn-user/-turn-pass` (STUN-only). If STUN-only works, fix the TURN
+   service before re-enabling relay mode.
+
+For coturn-based TURN:
+
+- Avoid tiny relay pools. A small range such as `49160-49200` can exhaust during
+  reconnect storms and produce `create_relay_ioa_sockets: no available ports`.
+- Ensure the whole relay range is open in the cloud firewall/security group and
+  local firewall, not only the listening port.
+- When using `external-ip=<public-ip>` on a host with a private NIC, verify that
+  coturn can bind relay sockets on the private address and advertise the public
+  address consistently.
+
 ## Endpoints
 
 - `GET /` — mobile web client (embedded)
 - `POST /offer` — SDP offer → answer (bearer/`?token=` auth)
 - `GET /healthz`
+- `GET /status` — token-gated desktop/session/media health
 
 ## Layout
 
