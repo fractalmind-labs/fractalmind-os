@@ -66,7 +66,18 @@ byte-for-byte copy of protocol SDK
 `internal/nodecommand/testdata/v1-golden.json` at
 `2569137f44bff86f482df6560df556c7f8df44d5`. Run
 `pnpm test:node-command` to verify fixture hash, signing bytes, payload-hash
-binding, uint64 max handling, and deterministic field omission/order.
+binding, uint64 max handling, and deterministic field omission/order. This
+offline test is intentionally self-contained so local codec work does not
+depend on live network availability.
+
+Run `pnpm test:node-command:canonical` to compare the local fixture bytes with
+the independently versioned protocol fixture at the pinned commit above. A byte
+mismatch exits `1` and is a real parity failure. An unavailable canonical source
+exits `2` with `CANONICAL_SOURCE_UNAVAILABLE`, which distinguishes network or
+GitHub availability from fixture drift; CI still fails rather than silently
+skipping the check. `pnpm test:node-command:canonical:selftest` mutates the
+local fixture in memory and proves the canonical-source comparison catches the
+change even if a local expected hash were recomputed.
 
 This slice intentionally stops at codec and fixture parity. Wallet/passkey
 collection, signature prompts, network dispatch, and migration away from the
