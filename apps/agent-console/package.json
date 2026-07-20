@@ -9,6 +9,7 @@
     "build": "tsc -b && vite build",
     "test:node-command": "node --test scripts/node-command-contract-test.mjs",
     "test:node-command:canonical": "node scripts/verify-node-command-canonical-source.mjs",
+    "test:node-command:canonical-unavailable": "node --test scripts/verify-node-command-canonical-source.test.mjs",
     "test:node-command:canonical:selftest": "node scripts/verify-node-command-canonical-source.mjs --self-test-local-hash-bypass",
     "preview": "vite preview",
     "tauri": "tauri",

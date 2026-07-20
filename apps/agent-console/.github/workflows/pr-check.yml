@@ -20,6 +20,8 @@ jobs:
         run: pnpm install
       - name: NodeCommand offline contract tests
         run: pnpm test:node-command
+      - name: NodeCommand canonical unavailable regression
+        run: pnpm test:node-command:canonical-unavailable
       - name: NodeCommand canonical-source parity
         run: pnpm test:node-command:canonical
       - name: Build (typecheck + bundle)
