@@ -1,0 +1,31 @@
+name: Validate skill inventory
+
+on:
+  pull_request:
+    paths:
+      - .gitmodules
+      - inventory/skills.json
+      - scripts/validate_inventory.py
+      - .github/workflows/validate-inventory.yml
+  push:
+    branches:
+      - main
+    paths:
+      - .gitmodules
+      - inventory/skills.json
+      - scripts/validate_inventory.py
+      - .github/workflows/validate-inventory.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate inventory against submodule gitlinks
+        run: python3 scripts/validate_inventory.py

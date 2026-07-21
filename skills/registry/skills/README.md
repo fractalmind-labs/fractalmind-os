@@ -84,6 +84,25 @@ git submodule update --init --recursive
 - `development/react-frontend-dev` -> [`fractalmind-ai/react-frontend-dev-skill`](https://github.com/fractalmind-ai/react-frontend-dev-skill)
 - `development/high-fidelity-ui-replication` -> [`rosexrwa/high-fidelity-ui-replication-skill`](https://github.com/rosexrwa/high-fidelity-ui-replication-skill)
 
+## Canonical source inventory
+
+`inventory/skills.json` is the machine-readable catalog contract. Each active
+entry records the standalone canonical repository, owner, category, catalog
+submodule path, exact pinned commit, source policy, and distribution target.
+
+The catalog does not become a second editable source. Skill changes are made in
+the canonical standalone repository, then distributed here by updating the
+submodule gitlink and regenerating the inventory:
+
+```bash
+python3 scripts/validate_inventory.py --write
+python3 scripts/validate_inventory.py
+```
+
+CI rejects missing categories, unsupported repository URLs, non-gitlink paths,
+and inventory drift. Mirror, compatibility, or archive policies require an
+explicit inventory policy change and their own consumer/migration evidence.
+
 ## 如何新增一个 skill
 
 1. 先判断该 skill 的主用途，选择合适的 category
@@ -105,6 +124,6 @@ git submodule update --init --recursive
 
 ## 当前边界
 
-- 当前以 `fractalmind-ai` 组织内 public `*-skill` 仓库为主；当 org write 不可用时，可先挂个人 public incubating skill，再在后续迁回组织
+- 当前以 public standalone skill 仓库为 canonical source；例外 owner 必须在 machine-readable inventory 中显式记录
 - 当前采用 category + `DESCRIPTION.md` 的组织形式
 - 当前仍保留每个 skill 仓库独立维护；本仓库只做聚合入口，不改写各 skill 内部结构
