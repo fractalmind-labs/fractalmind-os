@@ -1,0 +1,50 @@
+name: Verify representative release
+
+on:
+  pull_request:
+    paths:
+      - "interfaces/use-fractalbot"
+      - "inventory/skills.json"
+      - "releases/use-fractalbot/**"
+      - "scripts/verify_representative_release.py"
+      - ".github/workflows/verify-representative-release.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "interfaces/use-fractalbot"
+      - "inventory/skills.json"
+      - "releases/use-fractalbot/**"
+      - "scripts/verify_representative_release.py"
+      - ".github/workflows/verify-representative-release.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch immutable-manifest comparison ref
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git fetch --no-tags --depth=1 origin "${{ github.base_ref }}"
+            echo "RELEASE_BASE_REF=origin/${{ github.base_ref }}" >> "$GITHUB_ENV"
+          else
+            echo "RELEASE_BASE_REF=HEAD^" >> "$GITHUB_ENV"
+          fi
+      - name: Validate catalog inventory
+        run: python3 scripts/validate_inventory.py
+      - name: Install and read back representative release
+        run: >-
+          python3 scripts/verify_representative_release.py
+          --immutable-against "$RELEASE_BASE_REF"

@@ -103,6 +103,28 @@ CI rejects missing categories, unsupported repository URLs, non-gitlink paths,
 and inventory drift. Mirror, compatibility, or archive policies require an
 explicit inventory policy change and their own consumer/migration evidence.
 
+### Representative release and install readback
+
+Catalog releases are immutable manifests over a canonical source commit and
+the matching catalog gitlink. They do not make this repository an editable
+second source and do not require a GitHub Release. The representative
+`use-fractalbot` flow is recorded in
+`releases/use-fractalbot/v0.1.0.json` and verified end to end with:
+
+```bash
+git submodule update --init interfaces/use-fractalbot
+python3 scripts/verify_representative_release.py
+```
+
+The verifier checks the canonical commit and tree, inventory and gitlink pin,
+installs the catalog snapshot into an isolated consumer with pinned
+`openskills`, reads the installed skill back, and verifies the installed Git
+commit, tree, and `SKILL.md` checksum. CI also validates the manifest schema,
+semantic version, timezone-aware release timestamp, and immutability against
+the target branch. A new standalone source revision must be mirrored by
+updating the gitlink, regenerating the inventory, and adding a new immutable
+release manifest instead of editing an existing version.
+
 ## 如何新增一个 skill
 
 1. 先判断该 skill 的主用途，选择合适的 category

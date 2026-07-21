@@ -301,7 +301,7 @@
       "category": "interfaces",
       "distribution_targets": [
         {
-          "commit": "ac273cfe9d16b67e4ab6f6883e9082e082c83043",
+          "commit": "349d1aa4c75f3222fac38c4c5e1c17cfc610ee02",
           "path": "interfaces/use-fractalbot",
           "repository": "https://github.com/fractalmind-ai/skills",
           "type": "git_submodule"

@@ -1,0 +1,17 @@
+{
+  "catalog_path": "interfaces/use-fractalbot",
+  "install": {
+    "directory": "use-fractalbot",
+    "openskills_version": "1.5.0"
+  },
+  "name": "use-fractalbot",
+  "released_at": "2026-07-22T04:47:55+08:00",
+  "schema_version": 1,
+  "source": {
+    "commit": "349d1aa4c75f3222fac38c4c5e1c17cfc610ee02",
+    "repository": "https://github.com/fractalmind-ai/use-fractalbot-skill",
+    "skill_sha256": "94f2f8382deee53b795ec3f78618526612ff33950e51c0074b73fe717dcaf1e6",
+    "tree": "e75630b4766223c67183d4826232abb27e35bde5"
+  },
+  "version": "0.1.0"
+}
