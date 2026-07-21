@@ -27,6 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 2
           submodules: true
       - uses: actions/setup-node@v4
         with:
