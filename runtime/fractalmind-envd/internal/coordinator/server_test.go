@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -272,6 +273,140 @@ func TestCoordinatorShellCommandProxy(t *testing.T) {
 	}
 	if resp.Output != "hello\n" {
 		t.Fatalf("output = %q, want hello\\n", resp.Output)
+	}
+}
+
+func TestCoordinatorNodeCommandProxy(t *testing.T) {
+	server := NewServer(":0", 2*time.Second, "")
+	testServer := httptest.NewServer(server.Handler())
+	defer testServer.Close()
+
+	conn := dialTestWebSocket(t, testServer.URL)
+	defer conn.Close()
+
+	registerWorker(t, conn, "node-signed", "worker-signed", "dev", heartbeat.Payload{})
+
+	rawCommand := json.RawMessage(`{"version":"1","command_id":"cmd-1","target":{"node_id":"node-signed"}}`)
+	commandDone := make(chan struct{})
+	go func() {
+		defer close(commandDone)
+
+		var msg ws.Message
+		if err := conn.ReadJSON(&msg); err != nil {
+			t.Errorf("read command: %v", err)
+			return
+		}
+
+		var payload ws.CommandPayload
+		if err := json.Unmarshal(msg.Payload, &payload); err != nil {
+			t.Errorf("decode command payload: %v", err)
+			return
+		}
+		if payload.Command != "signed_command" {
+			t.Errorf("command = %q, want signed_command", payload.Command)
+		}
+		if payload.AgentID != "" {
+			t.Errorf("agent_id = %q, want empty", payload.AgentID)
+		}
+
+		var got, want interface{}
+		if err := json.Unmarshal([]byte(payload.Args), &got); err != nil {
+			t.Errorf("decode proxied node command: %v", err)
+			return
+		}
+		if err := json.Unmarshal(rawCommand, &want); err != nil {
+			t.Errorf("decode test node command: %v", err)
+			return
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("proxied node command = %#v, want %#v", got, want)
+		}
+
+		sendWSMessage(t, conn, ws.Message{
+			Type: "command_result",
+			Payload: mustRawJSON(commandResultPayload{
+				RequestID: payload.RequestID,
+				Result: map[string]interface{}{
+					"success": true,
+				},
+			}),
+		})
+	}()
+
+	waitForSentinel(t, testServer.URL, "node-signed", nil)
+	body := httpPostJSON(t, testServer.URL+"/api/sentinels/node-signed/command", commandRequest{
+		NodeCommand: rawCommand,
+	})
+	<-commandDone
+
+	var resp struct {
+		Success bool `json:"success"`
+	}
+	decodeJSON(t, body, &resp)
+	if !resp.Success {
+		t.Fatal("expected success=true")
+	}
+}
+
+func TestCoordinatorRejectsMixedNodeCommandAndLegacyFields(t *testing.T) {
+	server := NewServer(":0", time.Second, "")
+	testServer := httptest.NewServer(server.Handler())
+	defer testServer.Close()
+
+	status, body := httpPostJSONWithHeaders(t, testServer.URL+"/api/sentinels/node-signed/command", commandRequest{
+		Command:     "status",
+		NodeCommand: json.RawMessage(`{"version":"1"}`),
+	}, nil)
+	if status != http.StatusBadRequest {
+		t.Fatalf("mixed command status = %d, want %d, body=%s", status, http.StatusBadRequest, body)
+	}
+	if !strings.Contains(string(body), "cannot be combined") {
+		t.Fatalf("mixed command body = %s, want conflict error", body)
+	}
+}
+
+func TestCoordinatorNodeCommandBoundaryRejectsAmbiguousJSON(t *testing.T) {
+	server := NewServer(":0", time.Second, "")
+	testServer := httptest.NewServer(server.Handler())
+	defer testServer.Close()
+
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{
+			name: "present empty legacy field",
+			body: `{"node_command":{},"command":""}`,
+			want: "cannot be combined",
+		},
+		{
+			name: "null node command",
+			body: `{"node_command":null,"command":"status"}`,
+			want: "must be a JSON object",
+		},
+		{
+			name: "trailing top level value",
+			body: `{"command":"status"}{"command":"status"}`,
+			want: "invalid request body",
+		},
+		{
+			name: "unknown field",
+			body: `{"command":"status","future":true}`,
+			want: "invalid request body",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			status, body := httpPostRaw(t, testServer.URL+"/api/sentinels/node-boundary/command", []byte(tt.body))
+			if status != http.StatusBadRequest {
+				t.Fatalf("status = %d, want %d, body=%s", status, http.StatusBadRequest, body)
+			}
+			if !strings.Contains(string(body), tt.want) {
+				t.Fatalf("body = %s, want %q", body, tt.want)
+			}
+		})
 	}
 }
 

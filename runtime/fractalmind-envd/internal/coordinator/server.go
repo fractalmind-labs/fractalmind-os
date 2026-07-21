@@ -1,6 +1,7 @@
 package coordinator
 
 import (
+	"bytes"
 	"context"
 	"crypto/subtle"
 	"encoding/json"
@@ -18,9 +19,10 @@ import (
 )
 
 type commandRequest struct {
-	Command string `json:"command"`
-	AgentID string `json:"agent_id"`
-	Args    string `json:"args"`
+	Command     string          `json:"command,omitempty"`
+	AgentID     string          `json:"agent_id,omitempty"`
+	Args        string          `json:"args,omitempty"`
+	NodeCommand json.RawMessage `json:"node_command,omitempty"`
 }
 
 type sentinelSummary struct {
@@ -186,14 +188,55 @@ func (s *Server) handleGetAgents(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCommand(w http.ResponseWriter, r *http.Request) {
-	var req commandRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	const maxCommandRequestBytes = 1 << 20
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxCommandRequestBytes+1))
+	if err != nil || len(body) > maxCommandRequestBytes {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
 
+	var req commandRequest
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(body, &fields); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	if _, present := fields["node_command"]; present {
+		rawNodeCommand := bytes.TrimSpace(req.NodeCommand)
+		if len(rawNodeCommand) == 0 || bytes.Equal(rawNodeCommand, []byte("null")) || rawNodeCommand[0] != '{' {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "node_command must be a JSON object"})
+			return
+		}
+		if _, present := fields["command"]; present {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "node_command cannot be combined with legacy command fields"})
+			return
+		}
+		if _, present := fields["agent_id"]; present {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "node_command cannot be combined with legacy command fields"})
+			return
+		}
+		if _, present := fields["args"]; present {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "node_command cannot be combined with legacy command fields"})
+			return
+		}
+		req.Command = "signed_command"
+		req.Args = string(rawNodeCommand)
+	}
+
 	if req.Command == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "command is required"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "command or node_command is required"})
 		return
 	}
 

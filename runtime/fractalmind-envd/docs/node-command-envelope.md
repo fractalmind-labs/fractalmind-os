@@ -123,3 +123,35 @@ organization scope and durable target-local storage for node scope.
 - command handlers emit `NodeEvent` audit envelopes for decoded rejected and
   executed commands; malformed JSON remains a fail-closed transport parse error
   with no event.
+
+## REST / WebSocket Migration
+
+The existing coordinator endpoint remains available during migration:
+
+```text
+POST /api/sentinels/{id}/command
+```
+
+Signed clients should send the complete envelope as the `node_command` JSON
+field:
+
+```json
+{
+  "node_command": {
+    "version": "1",
+    "command_id": "cmd-123",
+    "...": "the remaining signed NodeCommand fields"
+  }
+}
+```
+
+The coordinator does not parse capability or authorization semantics. It
+transports the raw JSON over the existing worker WebSocket as
+`command=signed_command`; the target envd performs strict decoding, signature
+verification, authority resolution, replay reservation, and runtime dispatch.
+
+Legacy clients may continue sending `command`, `agent_id`, and `args` during
+the compatibility period. A request cannot combine `node_command` with those
+legacy fields, which prevents an ambiguous signed-versus-legacy execution
+path. Removing the legacy shape requires separate parity, migration, rollback,
+and production approval evidence.
