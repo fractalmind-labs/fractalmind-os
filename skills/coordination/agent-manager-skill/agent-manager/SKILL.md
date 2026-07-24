@@ -243,8 +243,14 @@ $CLI message compose --from EMP_0001 --to EMP_0017 --body "Review PR #123."
 # Send a protocol message through tmux
 $CLI message send EMP_0017 --from EMP_0001 --body "Review PR #123." --footer "Reply with QA Verdict: PASS/FAIL."
 
+# Send from a non-agent session by making the reply target explicit
+$CLI message send EMP_0017 --from codex-current --reply-endpoint "tty:/dev/pts/6" --body "Report status."
+
 # Send a protocol reply
 $CLI message reply --from EMP_0017 --to EMP_0001 --reply-to msg_20260724_153012_ab12cd34 --body "QA Verdict: PASS"
+
+# Reply to an explicit endpoint instead of an agent
+$CLI message reply --from EMP_0017 --to-endpoint "tty:/dev/pts/6" --reply-to msg_20260724_153012_ab12cd34 --body "QA Verdict: PASS"
 ```
 
 When sending to an agent that may not have this protocol installed, keep `Footer`
@@ -258,6 +264,7 @@ id: msg_20260724_153012_ab12cd34
 type: message
 from: EMP_0001
 to: EMP_0017
+reply_endpoint: agent:EMP_0001
 
 --- Body ---
 Review PR #123.
@@ -267,15 +274,27 @@ Reply with QA Verdict: PASS/FAIL.
 ```
 
 `Meta` is deliberately minimal: `id`, `type` (`message` or `reply`), `from`, `to`,
-and optional `reply_to` for replies. `Body` is plain text and may be multiline.
+optional `reply_to` for replies, and optional `reply_endpoint` when the sender
+is not itself a resolvable agent. `Body` is plain text and may be multiline.
 `Footer` is optional, plain text only, and should be used only for reply hints.
 For cross-agent compatibility, prefer a one-sentence `Footer` that points the
 receiver to the agent-manager skill instead of embedding a protocol tutorial.
 
+`reply_endpoint` is only needed when `from` is not an agent-manager-resolvable
+agent. Supported endpoint forms are:
+
+- `agent:<name-or-id>`: send through agent-manager to a running tmux agent
+- `tmux:<target>`: paste to an explicit tmux target
+- `tty:/dev/pts/<n>` or `tty:/dev/tty`: write to a terminal display
+- `stdout`: print the reply envelope to stdout
+
+If `--from` is not resolvable and `--reply-endpoint` is omitted, `message send`
+fails fast because the receiver has no reliable way to reply.
+
 This protocol is stateless: it does not create inbox/outbox files, acknowledgements,
 retries, replay records, or thread logs. Command success only means the tmux send
-operation succeeded; the sending side remains responsible for confirming delivery
-and processing.
+operation or explicit endpoint write succeeded; the sending side remains responsible
+for confirming delivery and processing.
 
 ### `assign` - Assign Task to Agent
 
