@@ -93,6 +93,7 @@ Examples:
     message_compose_parser.add_argument('--to', dest='to_agent', required=True, help='Receiver agent ID/name')
     message_compose_parser.add_argument('--body', required=True, help='Message body text')
     message_compose_parser.add_argument('--footer', help='Optional plain-text reply hint')
+    message_compose_parser.add_argument('--reply-endpoint', help='Optional explicit endpoint for replies')
     message_compose_parser.add_argument('--id', help='Override generated message id')
 
     message_send_parser = message_subparsers.add_parser('send', help='Send a protocol message to an agent')
@@ -100,14 +101,18 @@ Examples:
     message_send_parser.add_argument('--from', dest='from_agent', required=True, help='Sender agent ID/name')
     message_send_parser.add_argument('--body', required=True, help='Message body text')
     message_send_parser.add_argument('--footer', help='Optional plain-text reply hint')
+    message_send_parser.add_argument('--reply-endpoint', help='Optional explicit endpoint for replies')
     message_send_parser.add_argument('--id', help='Override generated message id')
 
     message_reply_parser = message_subparsers.add_parser('reply', help='Send a protocol reply to an agent')
     message_reply_parser.add_argument('--from', dest='from_agent', required=True, help='Sender agent ID/name')
-    message_reply_parser.add_argument('--to', dest='to_agent', required=True, help='Receiver agent name or file ID')
+    message_reply_target_group = message_reply_parser.add_mutually_exclusive_group(required=True)
+    message_reply_target_group.add_argument('--to', dest='to_agent', help='Receiver agent name or file ID')
+    message_reply_target_group.add_argument('--to-endpoint', dest='to_endpoint', help='Receiver endpoint: stdout, agent:<id>, tmux:<target>, or tty:/dev/pts/<n>')
     message_reply_parser.add_argument('--reply-to', required=True, help='Message id being replied to')
     message_reply_parser.add_argument('--body', required=True, help='Reply body text')
     message_reply_parser.add_argument('--footer', help='Optional plain-text reply hint')
+    message_reply_parser.add_argument('--reply-endpoint', help='Optional explicit endpoint for replies to this reply')
     message_reply_parser.add_argument('--id', help='Override generated message id')
 
     assign_parser = subparsers.add_parser('assign', help='Assign task to agent')

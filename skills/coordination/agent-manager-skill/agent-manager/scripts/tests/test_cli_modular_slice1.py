@@ -31,7 +31,7 @@ class CliModularSlice1Tests(unittest.TestCase):
 
     def test_message_send_flags(self):
         args = create_parser().parse_args(
-            ['message', 'send', 'dev', '--from', 'EMP_0001', '--body', 'hello', '--footer', 'reply please']
+            ['message', 'send', 'dev', '--from', 'EMP_0001', '--body', 'hello', '--footer', 'reply please', '--reply-endpoint', 'tty:/dev/pts/6']
         )
         self.assertEqual(args.command, 'message')
         self.assertEqual(args.message_command, 'send')
@@ -39,6 +39,7 @@ class CliModularSlice1Tests(unittest.TestCase):
         self.assertEqual(args.from_agent, 'EMP_0001')
         self.assertEqual(args.body, 'hello')
         self.assertEqual(args.footer, 'reply please')
+        self.assertEqual(args.reply_endpoint, 'tty:/dev/pts/6')
 
     def test_message_reply_flags(self):
         args = create_parser().parse_args(
@@ -50,6 +51,15 @@ class CliModularSlice1Tests(unittest.TestCase):
         self.assertEqual(args.to_agent, 'EMP_0001')
         self.assertEqual(args.reply_to, 'msg_1')
         self.assertEqual(args.body, 'ok')
+
+    def test_message_reply_endpoint_flags(self):
+        args = create_parser().parse_args(
+            ['message', 'reply', '--from', 'EMP_0017', '--to-endpoint', 'stdout', '--reply-to', 'msg_1', '--body', 'ok']
+        )
+        self.assertEqual(args.command, 'message')
+        self.assertEqual(args.message_command, 'reply')
+        self.assertEqual(args.to_endpoint, 'stdout')
+        self.assertEqual(args.reply_to, 'msg_1')
 
     def test_assign_task_file_default_preserved(self):
         args = create_parser().parse_args(['assign', 'dev'])

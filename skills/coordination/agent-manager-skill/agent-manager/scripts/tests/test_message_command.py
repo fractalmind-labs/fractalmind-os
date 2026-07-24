@@ -35,10 +35,19 @@ class _DatetimeModule:
 
 def _deps(**overrides):
     target = {'name': 'qa', 'file_id': 'EMP_0017', 'launcher': 'codex'}
+    sender = {'name': 'main-supervisor', 'file_id': 'EMP_0001', 'launcher': 'codex'}
+
+    def resolve_agent(value):
+        if value in {'qa', 'EMP_0017'}:
+            return target
+        if value in {'main-supervisor', 'EMP_0001'}:
+            return sender
+        return None
+
     values = {
         'datetime': _DatetimeModule,
         'uuid': _UuidModule,
-        'resolve_agent': lambda value: target if value in {'qa', 'EMP_0017'} else None,
+        'resolve_agent': resolve_agent,
         'get_agent_id': lambda config: config.get('file_id', '').lower().replace('_', '-'),
         'check_tmux': lambda: True,
         'session_exists': lambda _agent_id: True,
@@ -110,6 +119,20 @@ class MessageCommandTests(unittest.TestCase):
         self.assertIn('type: reply', envelope)
         self.assertIn('reply_to: msg_parent', envelope)
 
+    def test_message_includes_reply_endpoint_when_provided(self):
+        envelope, _message_id, error = build_envelope(
+            deps=_deps(),
+            message_type='message',
+            from_agent='external-codex',
+            to_agent='EMP_0017',
+            reply_endpoint='tty:/dev/pts/6',
+            body='Please reply here.',
+            message_id='msg_fixed',
+        )
+
+        self.assertEqual(error, '')
+        self.assertIn('reply_endpoint: tty:/dev/pts/6', envelope)
+
     def test_reply_requires_reply_to(self):
         envelope, message_id, error = build_envelope(
             deps=_deps(),
@@ -168,6 +191,73 @@ class MessageCommandTests(unittest.TestCase):
         self.assertTrue(send_kwargs['clear_input'])
         self.assertIn('tmux accepted', output.getvalue())
 
+    def test_send_rejects_unaddressable_sender_without_reply_endpoint(self):
+        args = argparse.Namespace(
+            message_command='send',
+            agent='qa',
+            from_agent='codex-current',
+            body='Please test.',
+            footer=None,
+            reply_endpoint=None,
+            id='msg_fixed',
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            rc = cmd_message(args, deps=_deps())
+
+        self.assertEqual(rc, 1)
+        self.assertIn('Sender is not reply-addressable', output.getvalue())
+
+    def test_send_allows_external_sender_with_reply_endpoint(self):
+        calls = []
+
+        def send_keys(*args, **kwargs):
+            calls.append((args, kwargs))
+            return True
+
+        args = argparse.Namespace(
+            message_command='send',
+            agent='qa',
+            from_agent='codex-current',
+            body='Please test.',
+            footer=None,
+            reply_endpoint='tty:/dev/pts/6',
+            id='msg_fixed',
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            rc = cmd_message(args, deps=_deps(send_keys=send_keys))
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(calls), 1)
+        self.assertIn('reply_endpoint: tty:/dev/pts/6', calls[0][0][1])
+
+    def test_reply_to_stdout_endpoint_does_not_resolve_agent(self):
+        args = argparse.Namespace(
+            message_command='reply',
+            from_agent='qa',
+            to_agent=None,
+            to_endpoint='stdout',
+            reply_to='msg_parent',
+            body='QA Verdict: PASS',
+            footer=None,
+            reply_endpoint=None,
+            id='msg_reply',
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            rc = cmd_message(args, deps=_deps(resolve_agent=lambda _value: None))
+
+        self.assertEqual(rc, 0)
+        text = output.getvalue()
+        self.assertIn('type: reply', text)
+        self.assertIn('to: stdout', text)
+        self.assertIn('reply_to: msg_parent', text)
+        self.assertIn('QA Verdict: PASS', text)
+
     def test_send_returns_nonzero_when_tmux_send_fails(self):
         args = argparse.Namespace(
             message_command='send',
@@ -175,6 +265,7 @@ class MessageCommandTests(unittest.TestCase):
             from_agent='EMP_0001',
             body='Please test.',
             footer=None,
+            reply_endpoint=None,
             id='msg_fixed',
         )
 
