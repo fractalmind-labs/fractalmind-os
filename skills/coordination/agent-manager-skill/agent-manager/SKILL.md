@@ -247,6 +247,21 @@ $CLI message send EMP_0017 --from EMP_0001 --body "Review PR #123." --footer "Re
 $CLI message reply --from EMP_0017 --to EMP_0001 --reply-to msg_20260724_153012_ab12cd34 --body "QA Verdict: PASS"
 ```
 
+When sending to an agent that may not have this protocol installed, include a
+short reply tutorial in `Footer`. Keep it plain text and actionable:
+
+```text
+To reply, send a message in this format:
+--- Meta ---
+type: reply
+from: <your agent id>
+to: EMP_0001
+reply_to: msg_20260724_153012_ab12cd34
+
+--- Body ---
+<your response>
+```
+
 Envelope format:
 
 ```text
@@ -266,6 +281,8 @@ Reply with QA Verdict: PASS/FAIL.
 `Meta` is deliberately minimal: `id`, `type` (`message` or `reply`), `from`, `to`,
 and optional `reply_to` for replies. `Body` is plain text and may be multiline.
 `Footer` is optional, plain text only, and should be used only for reply hints.
+For cross-agent compatibility, prefer including the short reply tutorial above
+whenever the receiver may not already know this protocol.
 
 This protocol is stateless: it does not create inbox/outbox files, acknowledgements,
 retries, replay records, or thread logs. Command success only means the tmux send
