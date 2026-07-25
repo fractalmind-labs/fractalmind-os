@@ -91,38 +91,37 @@ stun:
 - **VPN conflict:** If a VPN is active, STUN may bind to the VPN tunnel address and time out. Set `stun.bind_address` to your physical interface IP (e.g., `192.168.1.100`).
 - **Graceful degradation:** If WireGuard fails (no root, interface creation error), envd continues with SUI registration + agent scanning. WireGuard features are disabled but everything else works.
 
-**Running with launchd (recommended for macOS):**
+**Running with launchd (recommended for macOS worker + desktop nodes):**
 
 ```bash
-sudo tee /Library/LaunchDaemons/ai.fractalmind.envd.plist << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>ai.fractalmind.envd</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/usr/local/bin/envd</string>
-        <string>--config</string>
-        <string>/etc/envd/sentinel.yaml</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <true/>
-    <key>StandardOutPath</key>
-    <string>/var/log/envd.log</string>
-    <key>StandardErrorPath</key>
-    <string>/var/log/envd.log</string>
-</dict>
-</plist>
-EOF
-
-sudo cp bin/envd /usr/local/bin/envd
-sudo mkdir -p /etc/envd && sudo cp sentinel.yaml /etc/envd/sentinel.yaml
-sudo launchctl load /Library/LaunchDaemons/ai.fractalmind.envd.plist
+python3 scripts/macos_launchagent.py install \
+  --binary /usr/local/bin/envd \
+  --config "$HOME/.config/fractalmind-envd/sentinel.yaml"
 ```
+
+The installer creates a per-user `LaunchAgent` with `RunAtLoad=true` and
+`KeepAlive=true`, then bootstraps it into the current Aqua login session. This
+is required for screen capture and input permissions; a system LaunchDaemon
+runs outside the GUI session and cannot provide a usable remote desktop.
+
+For fully unattended recovery:
+
+- launchd restarts the worker after a crash and after the user logs in following
+  a reboot;
+- the worker retries the coordinator connection forever using
+  `gateway.reconnect_interval` (default `5s`), so a network outage needs no
+  operator action;
+- set `desktop.command` to make the worker supervise `envd-desktop`, including
+  restart after exit or repeated `/healthz` failures; the worker also passes a
+  parent PID watchdog so a hard worker crash cannot leave an orphan desktop
+  process holding port 8090;
+- keep both binaries at stable absolute paths. Sign production binaries with a
+  stable Apple signing identity before upgrades so Screen Recording and
+  Accessibility grants remain attached to the same designated requirement.
+
+macOS cannot capture or inject input before an Aqua user session exists. After
+a cold reboot, recovery therefore completes at user login. Automatic login is
+an OS security decision and is not enabled by this installer.
 
 ## Configuration
 

@@ -182,6 +182,32 @@ func TestHandleSignedCommandMalformedJSONHasNoNodeEvent(t *testing.T) {
 	}
 }
 
+func TestHandleCommandShellTimesOutAndReleasesHandler(t *testing.T) {
+	cfg := &config.Config{Agents: config.AgentsConfig{
+		AllowShell:   true,
+		ShellTimeout: "50ms",
+	}}
+
+	started := time.Now()
+	result := handleCommand(ws.CommandPayload{
+		Command: "shell",
+		Args:    "printf started; sleep 30",
+	}, nil, cfg, nil)
+
+	if result["success"] != false {
+		t.Fatalf("success = %v, want false: %+v", result["success"], result)
+	}
+	if !strings.Contains(fmt.Sprint(result["error"]), "timed out after 50ms") {
+		t.Fatalf("error = %v, want timeout", result["error"])
+	}
+	if result["output"] != "started" {
+		t.Fatalf("output = %q, want started", result["output"])
+	}
+	if elapsed := time.Since(started); elapsed > 2*time.Second {
+		t.Fatalf("shell timeout took %s, handler remained blocked", elapsed)
+	}
+}
+
 type runtimeCommandExecutorFunc func(context.Context, nodecommand.NodeCommand) (runtimeadapter.Response, nodecommand.NodeEvent, error)
 
 func (f runtimeCommandExecutorFunc) Execute(ctx context.Context, command nodecommand.NodeCommand) (runtimeadapter.Response, nodecommand.NodeEvent, error) {
@@ -374,4 +400,29 @@ func countRuntimeAdapterCalls(t *testing.T, path string) int {
 		}
 	}
 	return count
+}
+
+func TestParseSupervisorDuration(t *testing.T) {
+	fallback := 7 * time.Second
+	if got, err := parseSupervisorDuration("", fallback); err != nil || got != fallback {
+		t.Fatalf("empty duration = %v, %v; want %v, nil", got, err, fallback)
+	}
+	if got, err := parseSupervisorDuration("250ms", fallback); err != nil || got != 250*time.Millisecond {
+		t.Fatalf("parsed duration = %v, %v; want 250ms, nil", got, err)
+	}
+	for _, raw := range []string{"invalid", "0s", "-1s"} {
+		if _, err := parseSupervisorDuration(raw, fallback); err == nil {
+			t.Fatalf("parseSupervisorDuration(%q) succeeded, want error", raw)
+		}
+	}
+}
+
+func TestDefaultDesktopSupervisorSettings(t *testing.T) {
+	desktop := config.DefaultConfig().Desktop
+	if desktop.RestartDelay != "2s" || desktop.HealthCheckInterval != "10s" || desktop.HealthCheckTimeout != "3s" {
+		t.Fatalf("desktop supervisor defaults = %#v", desktop)
+	}
+	if desktop.UnhealthyThreshold != 3 {
+		t.Fatalf("unhealthy threshold = %d, want 3", desktop.UnhealthyThreshold)
+	}
 }

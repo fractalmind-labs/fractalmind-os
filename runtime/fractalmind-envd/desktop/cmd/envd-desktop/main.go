@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -41,8 +42,19 @@ func main() {
 		certFile  = flag.String("cert", "", "TLS certificate file (enables HTTPS)")
 		keyFile   = flag.String("key", "", "TLS key file")
 		keepAwake = flag.Bool("keep-awake", runtime.GOOS == "darwin", "keep the desktop display/system awake while running (macOS uses caffeinate)")
+		parentPID = flag.Int("parent-pid", envInt("FRACTALMIND_SUPERVISOR_PID"), "exit when the supervising parent process disappears")
 	)
 	flag.Parse()
+	if *parentPID > 0 {
+		if err := desktop.EnsureOwnProcessGroup(); err != nil {
+			log.Printf("[desktop] process-group isolation unavailable: %v", err)
+		}
+		go func() {
+			<-desktop.ParentExited(context.Background(), *parentPID, time.Second)
+			log.Printf("[desktop] supervising parent pid=%d exited; stopping", *parentPID)
+			desktop.ExitProcessGroup()
+		}()
+	}
 
 	var ice []webrtc.ICEServer
 	for _, u := range strings.Split(*stunURLs, ",") {
@@ -117,4 +129,12 @@ func main() {
 	}
 	log.Printf("[desktop] listening on %s (HTTP), capture %dx%d@%dfps encode_height=%d bitrate=%s display=%q", *bind, sw, sh, *fps, *encH, *bitrate, *display)
 	log.Fatal(srv.ListenAndServe())
+}
+
+func envInt(name string) int {
+	value, err := strconv.Atoi(os.Getenv(name))
+	if err != nil || value <= 0 {
+		return 0
+	}
+	return value
 }
