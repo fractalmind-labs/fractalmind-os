@@ -789,7 +789,7 @@ func handleCommand(cmd ws.CommandPayload, scanner *agent.Scanner, cfg *config.Co
 			log.Printf("[cmd] rejected shell: command not in allowlist")
 			return result
 		}
-		out, err := exec.Command("bash", "-c", cmd.Args).CombinedOutput()
+		out, err := runShellCommand(cmd.Args, parseShellTimeout(cfg.Agents.ShellTimeout))
 		if err != nil {
 			result["success"] = false
 			result["error"] = err.Error()
@@ -805,6 +805,20 @@ func handleCommand(cmd ws.CommandPayload, scanner *agent.Scanner, cfg *config.Co
 
 	log.Printf("[cmd] %s result: success=%v", cmd.Command, result["success"])
 	return result
+}
+
+func parseShellTimeout(raw string) time.Duration {
+	const defaultTimeout = 15 * time.Second
+
+	if strings.TrimSpace(raw) == "" {
+		return defaultTimeout
+	}
+	timeout, err := time.ParseDuration(raw)
+	if err != nil || timeout <= 0 {
+		log.Printf("[cmd] invalid agents.shell_timeout %q; using %s", raw, defaultTimeout)
+		return defaultTimeout
+	}
+	return timeout
 }
 
 func handleSignedCommand(ctx context.Context, rawCommand string, runtimeExecutor runtimeCommandExecutor) map[string]interface{} {

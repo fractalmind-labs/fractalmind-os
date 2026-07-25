@@ -85,6 +85,9 @@ type AgentsConfig struct {
 	// ShellAllowlist, when non-empty, restricts `shell` to commands whose first
 	// token (argv[0]) is listed. Empty with AllowShell=true means any command.
 	ShellAllowlist []string `yaml:"shell_allowlist"`
+	// ShellTimeout bounds remote shell execution so a stuck child process cannot
+	// block the worker command channel indefinitely. Default: 15s.
+	ShellTimeout string `yaml:"shell_timeout"`
 }
 
 type HeartbeatConfig struct {
