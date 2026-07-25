@@ -35,6 +35,17 @@ type DesktopConfig struct {
 	// Token is the envd-desktop server's bearer token, injected by the worker
 	// so the console never needs it.
 	Token string `yaml:"token"`
+	// Command, when set, makes the worker supervise envd-desktop as a direct
+	// child. This preserves the worker's macOS launch identity and removes the
+	// need for an AI/operator to restart the desktop process.
+	Command string   `yaml:"command"`
+	Args    []string `yaml:"args"`
+	// RestartDelay controls how quickly an exited or unhealthy desktop is
+	// relaunched. Health checks use LocalAddr + /healthz.
+	RestartDelay        string `yaml:"restart_delay"`
+	HealthCheckInterval string `yaml:"health_check_interval"`
+	HealthCheckTimeout  string `yaml:"health_check_timeout"`
+	UnhealthyThreshold  int    `yaml:"unhealthy_threshold"`
 }
 
 // RolesConfig controls which roles this envd node enables.
@@ -178,6 +189,12 @@ func DefaultConfig() *Config {
 		},
 		Heartbeat: HeartbeatConfig{
 			Interval: "30s",
+		},
+		Desktop: DesktopConfig{
+			RestartDelay:        "2s",
+			HealthCheckInterval: "10s",
+			HealthCheckTimeout:  "3s",
+			UnhealthyThreshold:  3,
 		},
 		SUI: SUIConfig{
 			Enabled:      false,

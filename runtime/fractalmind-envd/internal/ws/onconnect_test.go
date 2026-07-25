@@ -1,15 +1,61 @@
 package ws
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/fractalmind-ai/fractalmind-envd/internal/wsauth"
 	"github.com/gorilla/websocket"
 )
+
+func TestClientReconnectsAndRegistersAgain(t *testing.T) {
+	registrations := make(chan int, 2)
+	up := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
+	var connection int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := up.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		current := atomic.AddInt32(&connection, 1)
+		var msg Message
+		if err := conn.ReadJSON(&msg); err != nil || msg.Type != "register" {
+			return
+		}
+		var payload map[string]string
+		if err := json.Unmarshal(msg.Payload, &payload); err != nil || payload["hostname"] != "test" {
+			return
+		}
+		registrations <- int(current)
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient("ws"+strings.TrimPrefix(srv.URL, "http"), 10*time.Millisecond)
+	c.OnConnect(func() {
+		if err := c.Send("register", map[string]string{"hostname": "test"}); err != nil {
+			t.Errorf("register after connect: %v", err)
+		}
+	})
+	t.Cleanup(c.Close)
+	go c.Connect()
+
+	for want := 1; want <= 2; want++ {
+		select {
+		case got := <-registrations:
+			if got != want {
+				t.Fatalf("connection = %d, want %d", got, want)
+			}
+		case <-time.After(3 * time.Second):
+			t.Fatalf("registration %d not observed", want)
+		}
+	}
+}
 
 // TestOnConnectRegistersAfterSlowAuth runs the full Connect loop against a
 // coordinator whose handshake is slower than any fixed post-connect delay

@@ -23,6 +23,7 @@ import (
 	"github.com/fractalmind-ai/fractalmind-envd/internal/coordinator"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/heartbeat"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/nodecommand"
+	"github.com/fractalmind-ai/fractalmind-envd/internal/processsupervisor"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/relay"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/relaypicker"
 	"github.com/fractalmind-ai/fractalmind-envd/internal/roles"
@@ -110,6 +111,21 @@ func main() {
 	// Initialize components
 	scanner := agent.NewScanner(cfg.Agents.ScanMethod)
 	wsClient := ws.NewClient(cfg.Gateway.URL, reconnectWait)
+
+	var desktopCancel context.CancelFunc
+	var desktopDone <-chan error
+	if strings.TrimSpace(cfg.Desktop.Command) != "" {
+		supervisor, serr := newDesktopSupervisor(cfg.Desktop)
+		if serr != nil {
+			log.Fatalf("[desktop-supervisor] invalid configuration: %v", serr)
+		}
+		desktopCtx, cancel := context.WithCancel(context.Background())
+		done := make(chan error, 1)
+		desktopCancel = cancel
+		desktopDone = done
+		go func() { done <- supervisor.Run(desktopCtx) }()
+		log.Printf("[desktop-supervisor] enabled command=%s", cfg.Desktop.Command)
+	}
 
 	// Control-channel identity: load (or generate) this node's SUI keypair so the
 	// coordinator<->worker channel is mutually authenticated. Loaded independently
@@ -496,6 +512,18 @@ func main() {
 		case sig := <-sigCh:
 			log.Printf("received signal %s, shutting down", sig)
 
+			if desktopCancel != nil {
+				desktopCancel()
+				select {
+				case err := <-desktopDone:
+					if err != nil {
+						log.Printf("[desktop-supervisor] shutdown failed: %v", err)
+					}
+				case <-time.After(6 * time.Second):
+					log.Printf("[desktop-supervisor] shutdown timed out")
+				}
+			}
+
 			// Graceful WSS relay shutdown
 			if wssClient != nil {
 				if err := wssClient.Close(); err != nil {
@@ -538,6 +566,55 @@ func main() {
 			os.Exit(0)
 		}
 	}
+}
+
+func newDesktopSupervisor(cfg config.DesktopConfig) (*processsupervisor.Supervisor, error) {
+	restartDelay, err := parseSupervisorDuration(cfg.RestartDelay, 2*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf("restart_delay: %w", err)
+	}
+	healthInterval, err := parseSupervisorDuration(cfg.HealthCheckInterval, 10*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf("health_check_interval: %w", err)
+	}
+	healthTimeout, err := parseSupervisorDuration(cfg.HealthCheckTimeout, 3*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf("health_check_timeout: %w", err)
+	}
+
+	healthURL := ""
+	if localAddr := strings.TrimRight(strings.TrimSpace(cfg.LocalAddr), "/"); localAddr != "" {
+		healthURL = localAddr + "/healthz"
+	}
+	env := []string{}
+	if cfg.Token != "" {
+		env = append(env, "ENVD_DESKTOP_TOKEN="+cfg.Token)
+	}
+	return processsupervisor.New(processsupervisor.Config{
+		Name:               "envd-desktop",
+		Command:            strings.TrimSpace(cfg.Command),
+		Args:               append([]string(nil), cfg.Args...),
+		Env:                env,
+		HealthURL:          healthURL,
+		RestartDelay:       restartDelay,
+		HealthInterval:     healthInterval,
+		HealthTimeout:      healthTimeout,
+		UnhealthyThreshold: cfg.UnhealthyThreshold,
+	})
+}
+
+func parseSupervisorDuration(raw string, fallback time.Duration) (time.Duration, error) {
+	if strings.TrimSpace(raw) == "" {
+		return fallback, nil
+	}
+	value, err := time.ParseDuration(raw)
+	if err != nil {
+		return 0, err
+	}
+	if value <= 0 {
+		return 0, fmt.Errorf("must be positive")
+	}
+	return value, nil
 }
 
 func newRuntimeCommandExecutorFromEnv(cfg *config.Config) (runtimeCommandExecutor, error) {

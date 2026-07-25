@@ -38,6 +38,29 @@ agents:
 heartbeat:
   interval: 30s        # Relay nodes include relay_load in P2P heartbeat
 
+# Optional local remote-desktop relay and self-healing supervision. When
+# command is set, envd starts envd-desktop as its direct child, restarts it on
+# exit or repeated /healthz failures, and supplies token via the environment.
+desktop:
+  local_addr: http://127.0.0.1:8090
+  token: ""
+  command: "" # e.g. /usr/local/bin/envd-desktop; empty disables supervision
+  args:
+    - -bind
+    - 127.0.0.1:8090
+    - -display
+    - "1"
+    - -encode-height
+    - "720"
+    - -bitrate
+    - 4M
+    - -fps
+    - "24"
+  restart_delay: 2s
+  health_check_interval: 10s
+  health_check_timeout: 3s
+  unhealthy_threshold: 3
+
 # SUI blockchain control plane (peer discovery, identity, ACL)
 sui:
   enabled: false

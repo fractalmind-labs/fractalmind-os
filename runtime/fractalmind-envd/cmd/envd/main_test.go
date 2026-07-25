@@ -401,3 +401,28 @@ func countRuntimeAdapterCalls(t *testing.T, path string) int {
 	}
 	return count
 }
+
+func TestParseSupervisorDuration(t *testing.T) {
+	fallback := 7 * time.Second
+	if got, err := parseSupervisorDuration("", fallback); err != nil || got != fallback {
+		t.Fatalf("empty duration = %v, %v; want %v, nil", got, err, fallback)
+	}
+	if got, err := parseSupervisorDuration("250ms", fallback); err != nil || got != 250*time.Millisecond {
+		t.Fatalf("parsed duration = %v, %v; want 250ms, nil", got, err)
+	}
+	for _, raw := range []string{"invalid", "0s", "-1s"} {
+		if _, err := parseSupervisorDuration(raw, fallback); err == nil {
+			t.Fatalf("parseSupervisorDuration(%q) succeeded, want error", raw)
+		}
+	}
+}
+
+func TestDefaultDesktopSupervisorSettings(t *testing.T) {
+	desktop := config.DefaultConfig().Desktop
+	if desktop.RestartDelay != "2s" || desktop.HealthCheckInterval != "10s" || desktop.HealthCheckTimeout != "3s" {
+		t.Fatalf("desktop supervisor defaults = %#v", desktop)
+	}
+	if desktop.UnhealthyThreshold != 3 {
+		t.Fatalf("unhealthy threshold = %d, want 3", desktop.UnhealthyThreshold)
+	}
+}
