@@ -112,7 +112,9 @@ For fully unattended recovery:
   `gateway.reconnect_interval` (default `5s`), so a network outage needs no
   operator action;
 - set `desktop.command` to make the worker supervise `envd-desktop`, including
-  restart after exit or repeated `/healthz` failures;
+  restart after exit or repeated `/healthz` failures; the worker also passes a
+  parent PID watchdog so a hard worker crash cannot leave an orphan desktop
+  process holding port 8090;
 - keep both binaries at stable absolute paths. Sign production binaries with a
   stable Apple signing identity before upgrades so Screen Recording and
   Accessibility grants remain attached to the same designated requirement.

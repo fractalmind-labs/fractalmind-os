@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -586,7 +587,7 @@ func newDesktopSupervisor(cfg config.DesktopConfig) (*processsupervisor.Supervis
 	if localAddr := strings.TrimRight(strings.TrimSpace(cfg.LocalAddr), "/"); localAddr != "" {
 		healthURL = localAddr + "/healthz"
 	}
-	env := []string{}
+	env := []string{"FRACTALMIND_SUPERVISOR_PID=" + strconv.Itoa(os.Getpid())}
 	if cfg.Token != "" {
 		env = append(env, "ENVD_DESKTOP_TOKEN="+cfg.Token)
 	}
