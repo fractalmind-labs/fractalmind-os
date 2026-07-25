@@ -46,6 +46,9 @@ func main() {
 	)
 	flag.Parse()
 	if *parentPID > 0 {
+		if err := desktop.EnsureOwnProcessGroup(); err != nil {
+			log.Printf("[desktop] process-group isolation unavailable: %v", err)
+		}
 		go func() {
 			<-desktop.ParentExited(context.Background(), *parentPID, time.Second)
 			log.Printf("[desktop] supervising parent pid=%d exited; stopping", *parentPID)
