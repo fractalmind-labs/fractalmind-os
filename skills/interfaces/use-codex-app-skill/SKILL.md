@@ -78,6 +78,51 @@ bash .codex/skills/use-codex-app/scripts/send-codex-app-agent-message.sh \
   --dry-run --json
 ```
 
+### Replyable assignments
+
+When the receiver should actively report completion back to the sender, use the stateless message envelope. This follows the agent-manager message protocol shape while using a Codex/ChatGPT App thread as the reply endpoint:
+
+```bash
+bash .codex/skills/use-codex-app/scripts/send-codex-app-agent-message.sh \
+  --agent PM \
+  --cwd CloudBank \
+  --protocol-envelope \
+  --from main \
+  --reply-to-thread-id <main-thread-id> \
+  --message-file /tmp/task.md
+```
+
+The sender renders:
+
+```text
+--- Meta ---
+id: msg_...
+type: message
+from: main
+to: PM
+reply_endpoint: codex-app:thread:<main-thread-id>
+
+--- Body ---
+...
+
+--- Footer ---
+When complete, reply to codex-app:thread:<main-thread-id> ...
+```
+
+For completion reports, the receiving Agent should send a reply envelope to the provided endpoint:
+
+```bash
+bash .codex/skills/use-codex-app/scripts/send-codex-app-agent-message.sh \
+  --thread-id <main-thread-id> \
+  --protocol-envelope \
+  --message-type reply \
+  --from PM \
+  --reply-to <original-message-id> \
+  --message-file /tmp/pm-report.md
+```
+
+This is still a stateless protocol. The skill does not create an inbox, outbox, retry queue, or delivery log; active replies work because the receiving Agent is explicitly instructed where and how to send the reply.
+
 Sender behavior:
 
 - Resolves named targets from the current Codex/ChatGPT App sidebar through CDP first, then uses `~/.codex/state_*.sqlite` as read-only fallback evidence.
