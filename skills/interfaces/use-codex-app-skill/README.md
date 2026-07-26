@@ -24,6 +24,12 @@ Operate local Codex App or upgraded ChatGPT App agents from a same-machine envir
 bash .codex/skills/use-codex-app/scripts/list-codex-app-agents.sh --cwd MyProject --json
 bash .codex/skills/use-codex-app/scripts/send-codex-app-agent-message.sh --thread-id <id> --message 'hello'
 bash .codex/skills/use-codex-app/scripts/send-codex-app-agent-message.sh --agent main --cwd CloudBank --message 'status?'
+bash .codex/skills/use-codex-app/scripts/send-codex-app-agent-message.sh \
+  --agent PM --cwd CloudBank \
+  --protocol-envelope \
+  --from main \
+  --reply-to-thread-id <main-thread-id> \
+  --message 'Please validate the live release and reply when complete.'
 ```
 
 `list-codex-app-agents.sh` reports three evidence layers:
@@ -31,3 +37,13 @@ bash .codex/skills/use-codex-app/scripts/send-codex-app-agent-message.sh --agent
 - `sidebar_agents`: names currently visible in the Codex/ChatGPT App sidebar.
 - `threads`: state database rows, including newer `name`, `preview`, `agent_nickname`, `agent_role`, and `agent_path` columns when present.
 - `agent_jobs`: active batch jobs when the local app schema still has `agent_jobs`; newer schemas without that table return an empty list instead of failing.
+
+## Replyable agent assignments
+
+Use `--protocol-envelope` when the receiving sidebar Agent should actively reply after finishing the task. The script wraps the message in a small stateless envelope inspired by the agent-manager message protocol:
+
+- `Meta`: `id`, `type`, `from`, `to`, optional `reply_to`, and optional `reply_endpoint`.
+- `Body`: the original task text.
+- `Footer`: a plain-text reply hint when `reply_endpoint` is provided.
+
+For Codex/ChatGPT App threads, use `--reply-to-thread-id <id>`. It renders `reply_endpoint: codex-app:thread:<id>` and tells the receiver how to reply with `--message-type reply --reply-to <message-id>`.

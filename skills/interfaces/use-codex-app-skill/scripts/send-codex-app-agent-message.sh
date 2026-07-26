@@ -25,6 +25,13 @@ INCLUDE_ARCHIVED="0"
 DRY_RUN="0"
 JSON_OUTPUT="0"
 TIMEOUT_MS="${CODEX_APP_SERVER_TIMEOUT_MS:-20000}"
+PROTOCOL_ENVELOPE="0"
+PROTOCOL_TYPE="message"
+FROM_AGENT="${CODEX_APP_AGENT_FROM:-main}"
+MESSAGE_ID=""
+REPLY_TO=""
+REPLY_ENDPOINT=""
+REPLY_TO_THREAD_ID=""
 
 usage() {
   cat <<'EOF'
@@ -43,6 +50,15 @@ Targeting:
 Message:
   --message TEXT          Message text to deliver.
   --message-file PATH     Read message text from a file. Use "-" for stdin.
+
+Agent message protocol:
+  --protocol-envelope     Wrap the message in Meta/Body/Footer sections.
+  --from NAME             Sender name/id for protocol Meta. Defaults to CODEX_APP_AGENT_FROM or main.
+  --message-id ID         Protocol message id. Defaults to msg_<timestamp>_<pid>.
+  --message-type TYPE     Protocol type: message or reply. Defaults to message.
+  --reply-to ID           Protocol reply_to id, normally used with --message-type reply.
+  --reply-endpoint VALUE  Protocol reply_endpoint, such as codex-app:thread:<id>.
+  --reply-to-thread-id ID Shortcut for --reply-endpoint codex-app:thread:<id>.
 
 Transport:
   --ws-url URL            App-server WebSocket URL, for example ws://127.0.0.1:17890.
@@ -93,6 +109,34 @@ while [[ $# -gt 0 ]]; do
       ;;
     --message-file)
       MESSAGE_FILE="${2:-}"
+      shift 2
+      ;;
+    --protocol-envelope)
+      PROTOCOL_ENVELOPE="1"
+      shift
+      ;;
+    --from)
+      FROM_AGENT="${2:-}"
+      shift 2
+      ;;
+    --message-id)
+      MESSAGE_ID="${2:-}"
+      shift 2
+      ;;
+    --message-type|--type)
+      PROTOCOL_TYPE="${2:-}"
+      shift 2
+      ;;
+    --reply-to)
+      REPLY_TO="${2:-}"
+      shift 2
+      ;;
+    --reply-endpoint)
+      REPLY_ENDPOINT="${2:-}"
+      shift 2
+      ;;
+    --reply-to-thread-id)
+      REPLY_TO_THREAD_ID="${2:-}"
       shift 2
       ;;
     --ws-url)
@@ -201,6 +245,22 @@ if [[ -z "$MESSAGE" ]]; then
   exit 2
 fi
 
+case "$PROTOCOL_TYPE" in
+  message|reply) ;;
+  *)
+    echo "--message-type must be one of: message, reply" >&2
+    exit 2
+    ;;
+esac
+
+if [[ -n "$REPLY_TO_THREAD_ID" ]]; then
+  if [[ -n "$REPLY_ENDPOINT" ]]; then
+    echo "pass only one of --reply-endpoint or --reply-to-thread-id" >&2
+    exit 2
+  fi
+  REPLY_ENDPOINT="codex-app:thread:${REPLY_TO_THREAD_ID}"
+fi
+
 if ! command -v node >/dev/null 2>&1; then
   echo "node is required for app-server or CDP delivery" >&2
   exit 2
@@ -253,13 +313,13 @@ tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 targets_json="$tmpdir/targets.json"
 message_path="$tmpdir/message.txt"
-printf '%s' "$MESSAGE" > "$message_path"
 
 resolved_from_sidebar="0"
-if [[ -n "$AGENT" && -n "$CDP_ENDPOINT" && "$TRANSPORT" != "ws" ]]; then
-  if CDP_ENDPOINT="$CDP_ENDPOINT" CDP_SELECTOR="$CDP_SELECTOR" AGENT="$AGENT" CWD_FILTER="$CWD_FILTER" TIMEOUT_MS="$TIMEOUT_MS" node > "$targets_json" <<'NODE'
+if [[ -n "$CDP_ENDPOINT" && "$TRANSPORT" != "ws" && ( -n "$AGENT" || -n "$THREAD_ID" ) ]]; then
+  if CDP_ENDPOINT="$CDP_ENDPOINT" CDP_SELECTOR="$CDP_SELECTOR" THREAD_ID="$THREAD_ID" AGENT="$AGENT" CWD_FILTER="$CWD_FILTER" TIMEOUT_MS="$TIMEOUT_MS" node > "$targets_json" <<'NODE'
 const endpoint = (process.env.CDP_ENDPOINT || "").replace(/\/+$/, "");
 const selector = process.env.CDP_SELECTOR || "";
+const threadId = process.env.THREAD_ID || "";
 const agent = process.env.AGENT || "";
 const cwdFilter = process.env.CWD_FILTER || "";
 const timeoutMs = Number(process.env.TIMEOUT_MS || 20000);
@@ -382,12 +442,17 @@ async function main() {
   return result;
 })()`);
 
-  const exactName = rows.filter((row) => normalize(row.agent) === normalize(agent) || normalize(row.title) === normalize(agent));
-  let matches = exactName;
-  if (cwdFilter) {
+  let matches;
+  if (threadId) {
+    matches = rows.filter((row) => row.id === threadId);
+  } else {
+    const exactName = rows.filter((row) => normalize(row.agent) === normalize(agent) || normalize(row.title) === normalize(agent));
+    matches = exactName;
+    if (cwdFilter) {
     const cwdNeedle = normalize(cwdFilter);
     const cwdMatches = exactName.filter((row) => normalize(row.match_text).includes(cwdNeedle));
     matches = cwdMatches.length > 0 ? cwdMatches : (exactName.length === 1 ? exactName : []);
+    }
   }
   process.stdout.write(JSON.stringify(matches));
 }
@@ -486,6 +551,41 @@ const fs = require("node:fs");
 const rows = JSON.parse(fs.readFileSync(process.argv[2], "utf8") || "[]");
 process.stdout.write(JSON.stringify(rows[0]));
 NODE
+
+target_to="$(
+  node - "$target_json" <<'NODE'
+const fs = require("node:fs");
+const target = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+process.stdout.write(String(target.agent || target.title || target.id || "unknown"));
+NODE
+)"
+
+if [[ "$PROTOCOL_ENVELOPE" == "1" ]]; then
+  if [[ -z "$MESSAGE_ID" ]]; then
+    MESSAGE_ID="msg_$(date -u +%Y%m%dT%H%M%SZ)_$$"
+  fi
+  {
+    printf '%s\n' '--- Meta ---'
+    printf 'id: %s\n' "$MESSAGE_ID"
+    printf 'type: %s\n' "$PROTOCOL_TYPE"
+    printf 'from: %s\n' "$FROM_AGENT"
+    printf 'to: %s\n' "$target_to"
+    if [[ -n "$REPLY_TO" ]]; then
+      printf 'reply_to: %s\n' "$REPLY_TO"
+    fi
+    if [[ -n "$REPLY_ENDPOINT" ]]; then
+      printf 'reply_endpoint: %s\n' "$REPLY_ENDPOINT"
+    fi
+    printf '\n%s\n' '--- Body ---'
+    printf '%s\n' "$MESSAGE"
+    if [[ -n "$REPLY_ENDPOINT" ]]; then
+      printf '\n%s\n' '--- Footer ---'
+      printf '%s\n' "When complete, reply to ${REPLY_ENDPOINT} using this skill's message protocol. For codex-app:thread:<id>, run send-codex-app-agent-message.sh --thread-id <id> --protocol-envelope --message-type reply --from '${target_to}' --reply-to '${MESSAGE_ID}' --message-file <report-file>."
+    fi
+  } > "$message_path"
+else
+  printf '%s' "$MESSAGE" > "$message_path"
+fi
 
 if [[ -z "$WS_URL" && "$TRANSPORT" == "ws" ]]; then
   discovered_ws_urls=()
