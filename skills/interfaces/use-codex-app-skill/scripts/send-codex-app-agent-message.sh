@@ -1020,6 +1020,36 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
     });
   }
 
+  function dispatchPointerMouseSequence(node) {
+    node.scrollIntoView?.({ block: "center", inline: "center" });
+    node.focus?.();
+    const eventInit = { bubbles: true, cancelable: true, view: window, composed: true };
+    const pointerInit = { ...eventInit, pointerId: 1, pointerType: "mouse", isPrimary: true, buttons: 1 };
+    for (const type of ["pointerover", "pointerenter", "mouseover", "mouseenter"]) {
+      try {
+        node.dispatchEvent(typeof PointerEvent === "function" ? new PointerEvent(type, pointerInit) : new MouseEvent(type.replace(/^pointer/, "mouse"), eventInit));
+      } catch (_) {}
+    }
+    for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"]) {
+      try {
+        if (type.startsWith("pointer") && typeof PointerEvent === "function") {
+          node.dispatchEvent(new PointerEvent(type, pointerInit));
+        } else {
+          node.dispatchEvent(new MouseEvent(type, eventInit));
+        }
+      } catch (_) {}
+    }
+    node.click?.();
+  }
+
+  async function waitForSubmitted(composer, needle, timeoutMs = 8000) {
+    return await waitFor(() => {
+      const composerText = composer.textContent || composer.value || "";
+      const composerCleared = composerText.length < Math.min(100, payload.prompt.length);
+      return composerCleared && (document.body.innerText.includes(needle) || !hasQueuedMessageControls());
+    }, timeoutMs);
+  }
+
   async function submitViaVisibleComposer() {
     const navigation = await navigateToConversation(conversationId);
     const verificationNeedle = payload.prompt.slice(0, Math.min(120, payload.prompt.length));
@@ -1030,20 +1060,28 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
     await new Promise((resolve) => setTimeout(resolve, 300));
     let strategy = "visible-composer-keyboard";
     if (button) {
-      button.click();
+      dispatchPointerMouseSequence(button);
       strategy = "visible-composer-button";
     } else {
       composer.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, metaKey: true }));
       composer.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, metaKey: true }));
     }
-    await waitFor(() => {
-      const composerText = composer.textContent || composer.value || "";
-      return document.body.innerText.includes(verificationNeedle) && composerText.length < Math.min(100, payload.prompt.length);
-    }, 15000);
+    try {
+      await waitForSubmitted(composer, verificationNeedle, 8000);
+    } catch (error) {
+      composer.focus();
+      composer.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, metaKey: true }));
+      composer.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, metaKey: true }));
+      composer.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, ctrlKey: true }));
+      composer.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, ctrlKey: true }));
+      if (button) dispatchPointerMouseSequence(button);
+      await waitForSubmitted(composer, verificationNeedle, 10000);
+      strategy = strategy + "-retry";
+    }
     let queuedSteer = false;
     const steerButton = findQueuedSteerButton();
     if (steerButton && hasQueuedMessageControls()) {
-      steerButton.click();
+      dispatchPointerMouseSequence(steerButton);
       queuedSteer = true;
       await waitFor(() => !hasQueuedMessageControls(), 10000);
     }
