@@ -30,6 +30,13 @@ describe("host status helpers", () => {
     expect(hostVerified(status, fallbackPermissions())).toBe(false);
   });
 
+  it("offers install only when the native helper source check passes", () => {
+    const status = fallbackHostStatus();
+    status.helperSource = { state: "pass", message: "verified bundled helper" };
+
+    expect(helperInstallAvailable(status)).toBe(true);
+  });
+
   it("maps status states to compact readback labels", () => {
     expect(checkLabel("pass")).toBe("PASS");
     expect(checkLabel("fail")).toBe("FAIL");

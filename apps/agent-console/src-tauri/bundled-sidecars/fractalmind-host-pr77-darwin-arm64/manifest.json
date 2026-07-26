@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "version": "pr77-46d03eb-darwin-arm64",
+  "platform": "darwin-arm64",
+  "sourceRepo": "fractalmind-ai/fractalmind-envd",
+  "sourceSha": "46d03eb9aa3f02cde7b82a9bc1829661b7e498d7",
+  "sourceRef": "PR #77 merge",
+  "buildToolchain": "go version go1.25.6 linux/arm64",
+  "buildCommands": [
+    "GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags='-buildid=' -o <out>/envd ./cmd/envd",
+    "cd desktop && GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags='-buildid=' -o <out>/envd-desktop ./cmd/envd-desktop"
+  ],
+  "envdSha256": "69567766184162e6966ab624c61c725634b5bd87a3996454ed351ac2558168b0",
+  "envdDesktopSha256": "da4b6ec8040475766909b72be4452a78615990e0ce849cdb43d6d3066975721b",
+  "repeatBuildVerified": true,
+  "historicalDeployedDesktopSha256": "a5c1dff7a1b34ef8999cae70c26c8daac3f9113a60396c1f0d32cbd341340f9d",
+  "rollbackIdentity": "known-good deployed PR #77 desktop artifact a5c1dff7a1b34ef8999cae70c26c8daac3f9113a60396c1f0d32cbd341340f9d; local bundle uses reproducible rebuild SHA above",
+  "excludedDefaultSources": [
+    "PR #80/beta.2 was not bundled because the real-host gate failed after rollback: ICE connected, frames_sent=0, bytes_sent=0."
+  ]
+}

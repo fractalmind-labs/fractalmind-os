@@ -106,7 +106,7 @@ export function ThisMac() {
             </div>
             {!installAvailable && (
               <p className="muted small">
-                Install is intentionally disabled until the app bundle contains deterministic signed helper assets and
+                Install is intentionally disabled until the app bundle contains deterministic helper assets and
                 a SHA256 manifest. The app will not download or execute an unverified helper.
               </p>
             )}
