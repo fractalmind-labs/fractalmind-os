@@ -940,18 +940,48 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
       node.dispatchEvent(new Event("change", { bubbles: true }));
       return;
     }
-    node.textContent = text;
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    range.deleteContents();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    if (!document.execCommand("insertText", false, text)) {
+      node.textContent = text;
+    }
     node.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: text }));
+    node.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
   function findSendButton(composer) {
-    const root =
-      composer.closest("form") ||
-      composer.closest("[data-testid='composer']") ||
-      composer.closest("[role='form']") ||
-      composer.parentElement ||
-      document;
-    const buttons = Array.from(root.querySelectorAll("button"));
+    const roots = [];
+    for (let node = composer; node && roots.length < 12; node = node.parentElement) {
+      roots.push(node);
+      const className = String(node.className || "");
+      if (
+        node.tagName === "FORM" ||
+        node.getAttribute("data-testid") === "composer" ||
+        node.getAttribute("role") === "form" ||
+        className.includes("composer-surface")
+      ) {
+        break;
+      }
+    }
+    if (roots.length === 0) roots.push(document);
+
+    const seen = new Set();
+    const buttons = roots.flatMap((root) => Array.from(root.querySelectorAll("button"))).filter((button) => {
+      if (seen.has(button)) return false;
+      seen.add(button);
+      const rect = button.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    });
+    const composerButton = buttons.find((button) => {
+      if (button.disabled || button.getAttribute("aria-disabled") === "true") return false;
+      const className = String(button.className || "");
+      return className.includes("size-token-button-composer") && button.querySelector("svg");
+    });
+    if (composerButton) return composerButton;
     return buttons.find((button) => {
       const label = [
         button.getAttribute("aria-label"),
@@ -959,23 +989,65 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
         button.textContent,
       ].filter(Boolean).join(" ").toLowerCase();
       if (button.disabled || button.getAttribute("aria-disabled") === "true") return false;
-      return /send|submit|发送|提交/.test(label) || button.querySelector("svg");
+      return /send|submit|发送|提交/.test(label);
     }) || null;
+  }
+
+  function findQueuedSteerButton() {
+    return Array.from(document.querySelectorAll("button")).find((button) => {
+      const rect = button.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return false;
+      if (button.disabled || button.getAttribute("aria-disabled") === "true") return false;
+      const label = [
+        button.getAttribute("aria-label"),
+        button.getAttribute("title"),
+        button.textContent,
+      ].filter(Boolean).join(" ").trim();
+      return /\\bSteer\\b/i.test(label);
+    }) || null;
+  }
+
+  function hasQueuedMessageControls() {
+    const text = document.body.innerText || "";
+    if (text.includes("Delete queued message") || text.includes("Queued message actions")) return true;
+    return Array.from(document.querySelectorAll("button")).some((button) => {
+      const label = [
+        button.getAttribute("aria-label"),
+        button.getAttribute("title"),
+        button.textContent,
+      ].filter(Boolean).join(" ");
+      return /Delete queued message|Queued message actions/i.test(label);
+    });
   }
 
   async function submitViaVisibleComposer() {
     const navigation = await navigateToConversation(conversationId);
+    const verificationNeedle = payload.prompt.slice(0, Math.min(120, payload.prompt.length));
     const composer = await waitFor(() => findComposer(), 12000);
     setComposerText(composer, payload.prompt);
-    await new Promise((resolve) => setTimeout(resolve, 150));
-    const button = findSendButton(composer);
+    await waitFor(() => (composer.textContent || composer.value || "").includes(verificationNeedle.slice(0, 40)), 5000);
+    const button = await waitFor(() => findSendButton(composer), 10000);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    let strategy = "visible-composer-keyboard";
     if (button) {
       button.click();
-      return { ok: true, strategy: "visible-composer-button", navigation };
+      strategy = "visible-composer-button";
+    } else {
+      composer.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, metaKey: true }));
+      composer.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, metaKey: true }));
     }
-    composer.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, metaKey: true }));
-    composer.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, metaKey: true }));
-    return { ok: true, strategy: "visible-composer-keyboard", navigation };
+    await waitFor(() => {
+      const composerText = composer.textContent || composer.value || "";
+      return document.body.innerText.includes(verificationNeedle) && composerText.length < Math.min(100, payload.prompt.length);
+    }, 15000);
+    let queuedSteer = false;
+    const steerButton = findQueuedSteerButton();
+    if (steerButton && hasQueuedMessageControls()) {
+      steerButton.click();
+      queuedSteer = true;
+      await waitFor(() => !hasQueuedMessageControls(), 10000);
+    }
+    return { ok: true, strategy, navigation, verified: queuedSteer ? "body-readback-steered" : "body-readback", queuedSteer };
   }
 
   const resources = performance.getEntriesByType("resource").map((entry) => entry.name);
