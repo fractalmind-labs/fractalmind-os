@@ -143,6 +143,8 @@ enum RuntimeProbe {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct InstallDeps {
+    os: &'static str,
+    arch: &'static str,
     fail_replacement_after_backup: bool,
     update_probe: RuntimeProbe,
     rollback_probe: RuntimeProbe,
@@ -215,6 +217,8 @@ pub fn host_install_for_home(
     host_install_for_home_with_deps(
         home,
         InstallDeps {
+            os: std::env::consts::OS,
+            arch: std::env::consts::ARCH,
             fail_replacement_after_backup: false,
             update_probe: probe.clone(),
             rollback_probe: probe,
@@ -235,7 +239,7 @@ fn host_install_for_home_with_deps(
             );
         }
     };
-    if let Err(err) = bundled_helper_supported_on(std::env::consts::OS, std::env::consts::ARCH) {
+    if let Err(err) = bundled_helper_supported_on(deps.os, deps.arch) {
         return fail_result("helper_bundle_unsupported", &err);
     }
     let paths = expected_paths(home);
@@ -340,6 +344,10 @@ fn home_dir() -> Option<PathBuf> {
 }
 
 fn helper_source_status() -> Check {
+    helper_source_status_for_platform(std::env::consts::OS, std::env::consts::ARCH)
+}
+
+fn helper_source_status_for_platform(os: &str, arch: &str) -> Check {
     let manifest = match bundled_helper_manifest() {
         Ok(manifest) => manifest,
         Err(err) => {
@@ -352,11 +360,10 @@ fn helper_source_status() -> Check {
             };
         }
     };
-    if let Err(err) = bundled_helper_supported_on(std::env::consts::OS, std::env::consts::ARCH) {
+    if let Err(err) = bundled_helper_supported_on(os, arch) {
         return Check {
             state: CheckState::Unsupported,
-            message: "Bundled helper source is not available for this Mac architecture."
-                .to_string(),
+            message: "Bundled helper source is only available for macOS arm64.".to_string(),
             detail: Some(err),
         };
     }
@@ -377,21 +384,22 @@ fn helper_source_status() -> Check {
 }
 
 fn bundled_helper_supported_on(os: &str, arch: &str) -> Result<(), String> {
-    if os == "macos" && arch != "aarch64" {
+    if BUNDLED_PLATFORM != "darwin-arm64" {
+        return Err(format!(
+            "bundled helper platform {BUNDLED_PLATFORM} is not supported by this build"
+        ));
+    }
+    if os != "macos" {
+        return Err(format!(
+            "bundled helper platform {BUNDLED_PLATFORM} cannot run on {os}/{arch}"
+        ));
+    }
+    if arch != "aarch64" {
         return Err(format!(
             "bundled helper platform {BUNDLED_PLATFORM} cannot run on macOS {arch}"
         ));
     }
-    if os != "macos" {
-        return Ok(());
-    }
-    if BUNDLED_PLATFORM == "darwin-arm64" {
-        Ok(())
-    } else {
-        Err(format!(
-            "bundled helper platform {BUNDLED_PLATFORM} is not supported by this build"
-        ))
-    }
+    Ok(())
 }
 
 fn bundled_helper_manifest() -> Result<HelperManifest, String> {
@@ -1241,13 +1249,11 @@ mod tests {
     }
 
     #[test]
-    fn status_reports_verified_bundled_helper_source_without_install() {
-        let home = unique_temp_dir("fractalmind-host-missing");
-        let status = host_status_for_home(Some(home));
-        assert_eq!(status.product_name, "FractalMind");
-        assert_eq!(status.bundle_id, "ai.fractalmind.app");
-        assert_eq!(status.helper_source.state, CheckState::Pass);
-        assert_eq!(status.helper_installed.state, CheckState::Fail);
+    fn helper_source_reports_unsupported_on_non_macos() {
+        let status = helper_source_status_for_platform("linux", "x86_64");
+
+        assert_eq!(status.state, CheckState::Unsupported);
+        assert!(status.message.contains("macOS arm64"));
     }
 
     #[test]
@@ -1268,13 +1274,31 @@ mod tests {
     }
 
     #[test]
-    fn bundled_helper_source_rejects_wrong_macos_architecture() {
+    fn bundled_helper_source_platform_matrix_is_fail_closed() {
         assert!(bundled_helper_supported_on("macos", "aarch64").is_ok());
-        assert!(bundled_helper_supported_on("linux", "x86_64").is_ok());
 
-        let err = bundled_helper_supported_on("macos", "x86_64").unwrap_err();
+        for (os, arch) in [
+            ("linux", "x86_64"),
+            ("linux", "aarch64"),
+            ("windows", "x86_64"),
+            ("macos", "x86_64"),
+            ("freebsd", "aarch64"),
+        ] {
+            let err = bundled_helper_supported_on(os, arch).unwrap_err();
+            assert!(
+                err.contains(BUNDLED_PLATFORM),
+                "missing platform in error for {os}/{arch}: {err}"
+            );
+        }
 
-        assert!(err.contains("darwin-arm64"));
+        assert_eq!(
+            helper_source_status_for_platform("macos", "aarch64").state,
+            CheckState::Pass
+        );
+        assert_eq!(
+            helper_source_status_for_platform("linux", "x86_64").state,
+            CheckState::Unsupported
+        );
     }
 
     #[test]
@@ -1292,7 +1316,7 @@ mod tests {
         let home = unique_temp_dir("fractalmind-host-install");
         let paths = expected_paths(Some(home.clone()));
 
-        let result = host_install_for_home(Some(home), false);
+        let result = host_install_supported(Some(home));
 
         assert!(result.success, "{result:?}");
         assert_eq!(result.code, "installed");
@@ -1302,6 +1326,41 @@ mod tests {
             read_manifest(&Path::new(&paths.app_support_dir).join(INSTALLED_MANIFEST)).unwrap();
         assert_eq!(manifest.version, BUNDLED_VERSION);
         assert_eq!(manifest.source_sha, BUNDLED_SOURCE_SHA);
+    }
+
+    #[test]
+    fn unsupported_platform_install_rejects_before_filesystem_mutation() {
+        for (os, arch) in [("linux", "x86_64"), ("windows", "x86_64")] {
+            let home = unique_temp_dir(&format!("fractalmind-host-unsupported-{os}"));
+            let paths = expected_paths(Some(home.clone()));
+
+            let result = host_install_for_home_with_deps(
+                Some(home),
+                InstallDeps {
+                    os,
+                    arch,
+                    fail_replacement_after_backup: false,
+                    update_probe: RuntimeProbe::Skip,
+                    rollback_probe: RuntimeProbe::Skip,
+                },
+            );
+
+            assert!(!result.success, "{os}/{arch}: {result:?}");
+            assert_eq!(result.code, "helper_bundle_unsupported");
+            assert!(!Path::new(&paths.helper_dir).exists(), "{os}/{arch}");
+            assert!(!Path::new(&paths.rollback_dir).exists(), "{os}/{arch}");
+            assert!(
+                !Path::new(&paths.app_support_dir)
+                    .join(INSTALLED_MANIFEST)
+                    .exists(),
+                "{os}/{arch}"
+            );
+            assert!(
+                !Path::new(&paths.helper_dir).join(RETAINED_MARKER).exists(),
+                "{os}/{arch}"
+            );
+            assert!(!Path::new(&paths.launch_agent_path).exists(), "{os}/{arch}");
+        }
     }
 
     #[test]
@@ -1316,7 +1375,7 @@ mod tests {
         );
         write_launch_agent(&paths);
 
-        let result = host_install_for_home(Some(home), false);
+        let result = host_install_supported(Some(home));
 
         assert!(result.success, "{result:?}");
         assert_eq!(result.code, "updated");
@@ -1352,6 +1411,8 @@ mod tests {
         let result = host_install_for_home_with_deps(
             Some(home),
             InstallDeps {
+                os: "macos",
+                arch: "aarch64",
                 fail_replacement_after_backup: true,
                 update_probe: RuntimeProbe::Skip,
                 rollback_probe: RuntimeProbe::Skip,
@@ -1382,6 +1443,8 @@ mod tests {
         let result = host_install_for_home_with_deps(
             Some(home),
             InstallDeps {
+                os: "macos",
+                arch: "aarch64",
                 fail_replacement_after_backup: false,
                 update_probe: RuntimeProbe::Fail("desktop health failed after update"),
                 rollback_probe: RuntimeProbe::Pass("rollback launch injected"),
@@ -1415,6 +1478,8 @@ mod tests {
         let result = host_install_for_home_with_deps(
             Some(home),
             InstallDeps {
+                os: "macos",
+                arch: "aarch64",
                 fail_replacement_after_backup: false,
                 update_probe: RuntimeProbe::Fail("desktop health failed after update"),
                 rollback_probe: RuntimeProbe::Fail("rollback health failed"),
@@ -1443,7 +1508,7 @@ mod tests {
         )
         .unwrap();
 
-        let result = host_install_for_home(Some(home), false);
+        let result = host_install_supported(Some(home));
 
         assert!(!result.success);
         assert_eq!(result.code, "install_failed");
@@ -1501,7 +1566,7 @@ mod tests {
             b"old-envd",
             b"old-desktop",
         );
-        assert!(host_install_for_home(Some(home.clone()), false).success);
+        assert!(host_install_supported(Some(home.clone())).success);
         write(
             Path::new(&paths.app_support_dir).join(ENVD_BIN),
             b"broken-current",
@@ -1601,6 +1666,19 @@ mod tests {
 
     fn write_verified_helper(paths: &HostPaths) {
         write_test_helper_dir(Path::new(&paths.helper_dir), "test", b"envd", b"desktop");
+    }
+
+    fn host_install_supported(home: Option<PathBuf>) -> HostOperationResult {
+        host_install_for_home_with_deps(
+            home,
+            InstallDeps {
+                os: "macos",
+                arch: "aarch64",
+                fail_replacement_after_backup: false,
+                update_probe: RuntimeProbe::Skip,
+                rollback_probe: RuntimeProbe::Skip,
+            },
+        )
     }
 
     fn write_test_helper_dir(dir: &Path, version: &str, envd: &[u8], desktop: &[u8]) {
