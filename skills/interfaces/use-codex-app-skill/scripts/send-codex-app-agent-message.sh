@@ -786,14 +786,24 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
     );
   }
 
+  function isActiveSidebarRow(id) {
+    const row = findSidebarRow(id);
+    if (!row) return false;
+    return (
+      row.getAttribute("data-app-action-sidebar-thread-active") === "true" ||
+      row.getAttribute("aria-current") === "page" ||
+      row.getAttribute("aria-selected") === "true"
+    );
+  }
+
   async function navigateToConversation(id) {
-    if (location.pathname.includes(\`/local/\${encodeURIComponent(id)}\`) || location.pathname.includes(\`/local/\${id}\`)) {
+    if (isActiveSidebarRow(id) || location.pathname.includes(\`/local/\${encodeURIComponent(id)}\`) || location.pathname.includes(\`/local/\${id}\`)) {
       return "already-active";
     }
     const row = findSidebarRow(id);
     if (row) {
       row.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
-      await waitFor(() => location.pathname.includes(\`/local/\${encodeURIComponent(id)}\`) || location.pathname.includes(\`/local/\${id}\`), 10000);
+      await waitFor(() => isActiveSidebarRow(id) || location.pathname.includes(\`/local/\${encodeURIComponent(id)}\`) || location.pathname.includes(\`/local/\${id}\`), 10000);
       return "sidebar-click";
     }
     history.pushState({}, "", \`/local/\${encodeURIComponent(id)}\`);
