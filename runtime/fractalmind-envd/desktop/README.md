@@ -109,6 +109,78 @@ For coturn-based TURN:
   coturn can bind relay sockets on the private address and advertise the public
   address consistently.
 
+### Exact-artifact macOS runtime probe
+
+Use this checklist for black-screen regressions that only appear on a supervised
+macOS host. Unit tests can prove teardown sequencing and codec sanity, but they
+do not prove a normal-session screen-capture regression is fixed.
+
+1. Record the exact binaries before launch:
+
+   ```bash
+   shasum -a 256 ./envd ./envd-desktop
+   git rev-parse HEAD
+   ```
+
+2. Start the worker through the same LaunchAgent or GUI-session supervisor used
+   in production. Do not run `envd-desktop` from an SSH-only session for this
+   probe.
+
+3. Confirm desktop health and capture status before connecting a viewer:
+
+   ```bash
+   curl -fsS -H "Authorization: Bearer $ENVD_DESKTOP_TOKEN" \
+     http://127.0.0.1:8090/healthz
+   curl -fsS -H "Authorization: Bearer $ENVD_DESKTOP_TOKEN" \
+     http://127.0.0.1:8090/status
+   ```
+
+4. Connect from the real browser client and wait for `ICE connected`. Poll
+   `/status` twice at least five seconds apart and require `streaming=true`,
+   increasing `frames_sent`, increasing `bytes_sent`, and fresh `last_frame_at`:
+
+   ```bash
+   curl -fsS -H "Authorization: Bearer $ENVD_DESKTOP_TOKEN" \
+     http://127.0.0.1:8090/status > /tmp/envd-desktop-status-1.json
+   sleep 5
+   curl -fsS -H "Authorization: Bearer $ENVD_DESKTOP_TOKEN" \
+     http://127.0.0.1:8090/status > /tmp/envd-desktop-status-2.json
+   ```
+
+5. In the connected browser, sample actual rendered video pixels from the
+   `<video>` element. This measures the viewer-visible non-black condition; it
+   is not replaced by `/status` counters.
+
+   ```js
+   const video = document.querySelector('video');
+   const canvas = document.createElement('canvas');
+   canvas.width = video.videoWidth;
+   canvas.height = video.videoHeight;
+   const ctx = canvas.getContext('2d', { willReadFrequently: true });
+   ctx.drawImage(video, 0, 0);
+   const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+   let nonBlack = 0;
+   for (let i = 0; i < data.length; i += 4) {
+     if (data[i] > 8 || data[i + 1] > 8 || data[i + 2] > 8) nonBlack++;
+   }
+   console.log({ width: canvas.width, height: canvas.height, nonBlack });
+   ```
+
+6. Exercise bounded recovery: hard-kill the supervised worker, wait for the
+   LaunchAgent/supervisor restart, reconnect the browser, and repeat the
+   `/healthz`, `/status`, and browser pixel checks. Then verify stale capture
+   children were reaped:
+
+   ```bash
+   pgrep -fl envd-desktop
+   pgrep -fl ffmpeg
+   ps -axo pid,ppid,pgid,comm | egrep 'envd-desktop|ffmpeg'
+   ```
+
+The Issue #79 acceptance claim requires this real-host probe to pass with the
+exact Darwin arm64 artifact. The synthetic IVF codec sanity test only verifies
+that generated VP8/IVF frames decode to advancing non-black RGB frames.
+
 ## Endpoints
 
 - `GET /` — mobile web client (embedded)
