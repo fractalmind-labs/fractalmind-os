@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Agent Console",
+  "productName": "FractalMind",
   "version": "0.1.3",
-  "identifier": "ai.fractalmind.agentconsole",
+  "identifier": "ai.fractalmind.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Agent Console",
+        "title": "FractalMind",
         "width": 960,
         "height": 720,
         "resizable": true,

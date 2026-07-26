@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CoordinatorClient, type Sentinel } from "./lib/coordinator";
 import { SentinelList } from "./components/SentinelList";
+import { ThisMac } from "./components/ThisMac";
 
 interface Conn {
   url: string;
@@ -8,6 +9,7 @@ interface Conn {
 }
 
 const STORE_KEY = "agent-console.conn";
+type Surface = "console" | "this-mac";
 
 // Users paste bare hosts ("host.example.com"); default them to https so the
 // stored URL is always parseable. A stored unparseable URL used to throw in
@@ -53,6 +55,7 @@ export function App() {
   const [sentinels, setSentinels] = useState<Sentinel[]>([]);
   const [status, setStatus] = useState<string>("");
   const [connected, setConnected] = useState(false);
+  const [surface, setSurface] = useState<Surface>("console");
 
   // Build the client whenever the connection changes.
   useEffect(() => {
@@ -81,30 +84,46 @@ export function App() {
     return () => clearInterval(t);
   }, [client, refresh]);
 
-  if (!conn) return <ConnectForm onConnect={setConn} />;
-
   return (
     <div className="app">
       <header className="bar">
         <div>
-          <strong>Agent Console</strong>{" "}
-          <span className={connected ? "dot ok" : "dot bad"} />
-          <span className="muted"> {hostOf(conn.url)}</span>
+          <strong>FractalMind</strong>{" "}
+          {conn && (
+            <>
+              <span className={connected ? "dot ok" : "dot bad"} />
+              <span className="muted"> {hostOf(conn.url)}</span>
+            </>
+          )}
         </div>
-        <div className="muted small">{status}</div>
-        <div>
-          <button onClick={refresh}>Refresh</button>{" "}
-          <button
-            onClick={() => {
-              localStorage.removeItem(STORE_KEY);
-              setConn(null);
-            }}
-          >
-            Disconnect
+        <nav className="tabs" aria-label="FractalMind surfaces">
+          <button className={surface === "console" ? "on" : ""} onClick={() => setSurface("console")}>
+            Console
           </button>
+          <button className={surface === "this-mac" ? "on" : ""} onClick={() => setSurface("this-mac")}>
+            This Mac
+          </button>
+        </nav>
+        <div className="muted small">{conn ? status : "not connected"}</div>
+        <div>
+          {surface === "console" && conn && <button onClick={refresh}>Refresh</button>}{" "}
+          {conn && (
+            <button
+              onClick={() => {
+                localStorage.removeItem(STORE_KEY);
+                setConn(null);
+              }}
+            >
+              Disconnect
+            </button>
+          )}
         </div>
       </header>
-      {client && <SentinelList client={client} sentinels={sentinels} />}
+      {surface === "console" ? (
+        conn && client ? <SentinelList client={client} sentinels={sentinels} /> : <ConnectForm onConnect={setConn} />
+      ) : (
+        <ThisMac />
+      )}
     </div>
   );
 }
@@ -116,7 +135,7 @@ function ConnectForm({ onConnect }: { onConnect: (c: Conn) => void }) {
 
   return (
     <div className="connect">
-      <h1>Agent Console</h1>
+      <h1>Console</h1>
       <p className="muted">Connect to an envd coordinator to manage its agents.</p>
       <form
         onSubmit={(e) => {

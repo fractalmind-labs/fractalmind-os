@@ -2,5 +2,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
+    #[cfg(feature = "tauri-runtime")]
     agent_console_lib::run()
 }

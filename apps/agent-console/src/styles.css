@@ -8,6 +8,7 @@
   --muted: #9aa3b2;
   --ok: #37c871;
   --bad: #e5484d;
+  --warn: #f59e0b;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg); }
@@ -20,21 +21,25 @@ button:disabled { opacity: 0.5; }
 .muted { color: var(--muted); }
 .small { font-size: 12px; }
 
-.connect { max-width: 420px; margin: 12vh auto; padding: 0 20px; }
+.connect { max-width: 420px; margin: 8vh auto; padding: 0 20px; }
 .connect form { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
 .connect label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
 
-.app { max-width: 900px; margin: 0 auto; padding: env(safe-area-inset-top) 12px 12px; }
+.app { max-width: 980px; margin: 0 auto; padding: env(safe-area-inset-top) 12px 12px; }
 .bar {
   position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between;
   gap: 10px; padding: 12px 4px; background: var(--bg); border-bottom: 1px solid var(--line); flex-wrap: wrap;
 }
+.tabs { display: inline-flex; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 8px; background: #12161f; }
+.tabs button { padding: 6px 10px; border-color: transparent; background: transparent; }
+.tabs button.on { background: #2f6feb; color: #fff; }
 .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; vertical-align: middle; }
 .dot.ok { background: var(--ok); }
 .dot.bad { background: var(--bad); }
 
 .list { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.card.compact { min-height: 126px; display: flex; flex-direction: column; gap: 8px; }
 .card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .sys { margin-top: 4px; }
 .cmd { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
@@ -43,6 +48,28 @@ button:disabled { opacity: 0.5; }
   white-space: pre-wrap; word-break: break-word; max-height: 320px; overflow: auto; font-size: 12px; }
 .result.bad { color: var(--bad); }
 .empty { padding: 40px 0; text-align: center; }
+
+.surface { padding: 14px 0 28px; }
+.section { padding: 16px 0; border-bottom: 1px solid var(--line); }
+.section h2, .section h3, .connect h1 { margin: 0 0 8px; }
+.section p { margin: 6px 0; }
+.section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.grid { display: grid; gap: 12px; margin-top: 10px; }
+.grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.status-strip { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.status-strip.ok { border-color: rgba(55,200,113,.6); background: rgba(55,200,113,.12); }
+.status-strip.bad { border-color: rgba(229,72,77,.6); background: rgba(229,72,77,.12); }
+.pill { display: inline-block; min-width: 72px; border-radius: 999px; padding: 3px 8px; text-align: center;
+  font-size: 11px; font-weight: 700; letter-spacing: 0; border: 1px solid var(--line); }
+.pill.pass { color: var(--ok); border-color: rgba(55,200,113,.6); background: rgba(55,200,113,.12); }
+.pill.fail { color: var(--bad); border-color: rgba(229,72,77,.6); background: rgba(229,72,77,.12); }
+.pill.unknown { color: var(--warn); border-color: rgba(245,158,11,.6); background: rgba(245,158,11,.12); }
+.pill.unsupported { color: var(--muted); background: rgba(154,163,178,.1); }
+.path { display: block; width: 100%; overflow-wrap: anywhere; padding: 6px 8px; border-radius: 6px;
+  background: #10131a; border: 1px solid var(--line); color: #cbd5e1; font-size: 12px; }
+.host-actions { margin: 14px 0 8px; }
+.paths { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.paths > div { min-width: 0; }
 
 /* Remote desktop viewer */
 .rd { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; }
@@ -71,6 +98,9 @@ button:disabled { opacity: 0.5; }
 .rd-kbd { position: fixed; opacity: 0; height: 0; width: 0; pointer-events: none; }
 
 @media (max-width: 720px) {
+  .grid.two, .paths { grid-template-columns: 1fr; }
+  .tabs { order: 4; width: 100%; }
+  .tabs button { flex: 1; }
   .rd-bar { align-items: flex-start; }
   .rd-bar-actions button { padding: 7px 8px; }
   .rd-status { order: 3; flex-basis: 100%; }
