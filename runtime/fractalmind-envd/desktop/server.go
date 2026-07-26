@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"sync"
 	"time"
@@ -26,7 +27,7 @@ type Session struct {
 	pc        *webrtc.PeerConnection
 	track     *webrtc.TrackLocalStaticSample
 	injector  Injector
-	capture   *Capture
+	capture   captureProcess
 	cancel    context.CancelFunc
 	closed    chan struct{}
 	once      sync.Once // guards startStreaming
@@ -49,6 +50,15 @@ type SessionStatus struct {
 	CaptureHeight int        `json:"capture_height"`
 	EncodeHeight  int        `json:"encode_height"`
 	FPS           int        `json:"fps"`
+}
+
+type captureProcess interface {
+	Stdout() io.Reader
+	Stop() error
+}
+
+var startCapture = func(ctx context.Context, cfg CaptureConfig) (captureProcess, error) {
+	return Start(ctx, cfg)
 }
 
 // NewSession builds a peer connection with a single VP8 video track (sendonly)
@@ -168,7 +178,7 @@ func NewSession(ctx context.Context, cfg ServerConfig, offer webrtc.SessionDescr
 func (s *Session) startStreaming(ctx context.Context) {
 	s.once.Do(func() {
 		go func() {
-			cap, err := Start(ctx, s.cfg.Capture)
+			cap, err := startCapture(ctx, s.cfg.Capture)
 			if err != nil {
 				log.Printf("[desktop] capture start failed: %v", err)
 				s.setLastError("capture_start_failed: " + err.Error())
@@ -179,7 +189,6 @@ func (s *Session) startStreaming(ctx context.Context) {
 			s.updateStatus(func(st *SessionStatus) {
 				now := time.Now()
 				st.StartedAt = &now
-				st.Streaming = true
 				st.LastError = ""
 			})
 			defer cap.Stop()
@@ -222,6 +231,7 @@ func (s *Session) startStreaming(ctx context.Context) {
 				}
 				s.updateStatus(func(st *SessionStatus) {
 					now := time.Now()
+					st.Streaming = true
 					st.FramesSent++
 					st.BytesSent += uint64(len(frame))
 					st.LastFrameAt = &now
