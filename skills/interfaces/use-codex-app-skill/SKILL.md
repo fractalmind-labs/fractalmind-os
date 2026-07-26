@@ -1,26 +1,26 @@
 ---
 name: use-codex-app
-description: Use when operating the local Codex App itself, especially to list running Codex App agents, discover named Codex App sessions or threads, and deliver messages to them through the current Codex App Chrome DevTools Protocol renderer bridge or an explicitly selected app-server WebSocket. Prefer app-owned protocol delivery over UI typing and verify the exact target thread before sending.
+description: Use when operating the local Codex App or upgraded ChatGPT App itself, especially to list sidebar-named Codex/ChatGPT App agents, discover named sessions or threads, and deliver messages to them through the current app CDP renderer bridge, guarded visible-composer fallback, or an explicitly selected app-server WebSocket. Verify the exact target thread before sending.
 ---
 
 # Use Codex App
 
-Use this skill only for the local Codex App running on the same machine.
+Use this skill only for the local Codex App or upgraded ChatGPT App running on the same machine.
 
-The goal is to inspect local Codex App runtime state or deliver a user message to a named Codex App session or thread. For message delivery, prefer the current Codex App renderer through CDP so the turn is routed through the visible app UI. Use an app-server WebSocket only when the user passes an explicit `--ws-url` or a currently running listener is intentionally selected; never start a detached app-server as a fallback.
+The goal is to inspect local Codex/ChatGPT App runtime state or deliver a user message to a named app session or thread. For message delivery, prefer the current app renderer through CDP so the turn is routed through the visible app UI. Use an app-server WebSocket only when the user passes an explicit `--ws-url` or a currently running listener is intentionally selected; never start a detached app-server as a fallback.
 
 ## Safety Rules
 
 - Never send to a fuzzy or ambiguous target. Resolve exactly one thread by `threadId`, `name`, title, `cwd`, or source metadata first.
 - Report the exact target before or after delivery: `threadId`, `name` or title, `cwd`, `status`, and transport used.
-- Do not use DOM typing/clicking as the first option. Use the protocol handler or an app-provided renderer bridge.
+- Do not use DOM typing/clicking as the first option. Use the protocol handler or an app-provided renderer bridge when exposed. On upgraded ChatGPT App builds where the legacy bridge bundle is absent, the bundled sender may use its guarded visible-composer fallback after exact target resolution and CDP readback.
 - Do not use `thread/inject_items` as a substitute for a live user turn. It appends model-visible history; it does not start agent work.
 - Do not start `codex app-server`, `codex app-server proxy`, or a temporary `--listen` process as an automatic fallback. If CDP is not available, stop and report that the current Codex App renderer cannot be reached.
-- If endpoint discovery, auth, socket connection, or method validation fails, stop and report the failure. Do not claim delivery.
+- If endpoint discovery, auth, socket connection, target resolution, or method validation fails, stop and report the failure. Do not claim delivery.
 
 ## List Running Agents
 
-When the user asks which Codex App agents are running, list live local evidence instead of relying on memory. Use the bundled script first:
+When the user asks which Codex/ChatGPT App agents are running, list live local evidence instead of relying on memory. Use the bundled script first:
 
 ```bash
 bash .codex/skills/use-codex-app/scripts/list-codex-app-agents.sh
@@ -41,10 +41,11 @@ bash .codex/skills/use-codex-app/scripts/list-codex-app-agents.sh --cwd MyProjec
 
 Interpretation:
 
-- `Codex App Processes` shows Electron app instances and app-server processes. More than one `MacOS/Codex` process can mean multiple app instances.
+- `Codex App Processes` shows Electron app instances and app-server processes. It detects both `/Applications/ChatGPT.app` and `/Applications/Codex.app`.
 - `CDP Targets` shows renderer targets reachable through DevTools. This confirms inspectability; it is not the full agent list.
-- `Codex App Threads` lists state DB threads. For Codex App sessions without `agent_nickname`, use the title as the display name and include `threadId`, `cwd`, `model`, `source`, `updated_at`, and `archived`.
-- `Agent Jobs` lists active/busy Codex App batch jobs when present.
+- `Sidebar Named Agents` / JSON `sidebar_agents` lists names currently visible in the app sidebar. This is the best evidence for user-renamed agents after the ChatGPT App upgrade.
+- `Codex App Threads` lists state DB threads. Newer schemas may include `name`, `preview`, `agent_nickname`, `agent_role`, and `agent_path`; the script uses them when present and falls back to title.
+- `Agent Jobs` lists active/busy batch jobs when the local app schema still has `agent_jobs`. Newer schemas may not have that table; this is reported as unavailable rather than an error.
 - Use the `id` from `Codex App Threads` as the `--thread-id` target for message delivery.
 
 Report the source of truth and uncertainty. If a thread is unarchived but has not updated recently, call it "available/unarchived" rather than definitely active. If a process exists but no matching thread can be read, report it as an unmatched process.
@@ -79,16 +80,17 @@ bash .codex/skills/use-codex-app/scripts/send-codex-app-agent-message.sh \
 
 Sender behavior:
 
-- Resolves named targets from the current Codex App sidebar through CDP first, then uses `~/.codex/state_*.sqlite` as read-only fallback evidence.
-- Defaults to CDP delivery through the Codex renderer bridge so the message appears in the normal app conversation surface.
+- Resolves named targets from the current Codex/ChatGPT App sidebar through CDP first, then uses `~/.codex/state_*.sqlite` as read-only fallback evidence.
+- Defaults to CDP delivery through the app renderer so the message appears in the normal app conversation surface.
 - Uses app-server JSON-RPC only with an explicit `--ws-url` or `--transport ws` against a listener that is already running.
 - For app-server JSON-RPC, `turn/start` is used for idle or not-loaded threads; active threads are refused unless `--steer` is passed.
-- For CDP, the script uses the Codex renderer bridge borrowed from the FractalBot approach: `Runtime.evaluate` locates the `app-server-manager-signals` bundle and calls the app-owned `start-turn-for-host` request. CDP delivery does not support `--steer`.
+- For older Codex App CDP builds, the script locates the `app-server-manager-signals` bundle and calls the app-owned `start-turn-for-host` request.
+- For upgraded ChatGPT App CDP builds where that legacy bundle is absent, the script uses a guarded visible-composer fallback: exact sidebar/thread resolution, route to `/local/<threadId>`, set the app composer, and submit through the visible app UI. CDP delivery does not support `--steer`; use explicit WebSocket for `turn/steer`.
 - `--dry-run` verifies the selected target and app-server/CDP bridge readback without sending the message.
 
 ## Keep CDP Enabled
 
-If Codex App is running but the CDP endpoint is not reachable, install the bundled LaunchAgent monitor. It checks every 60 seconds and starts Codex App with `--remote-debugging-port=9222` when CDP is down:
+If Codex/ChatGPT App is running but the CDP endpoint is not reachable, install the bundled LaunchAgent monitor. It checks every 60 seconds and starts ChatGPT.app when present, otherwise Codex.app, with `--remote-debugging-port=9222` when CDP is down:
 
 ```bash
 bash .codex/skills/use-codex-app/scripts/install-codex-cdp-monitor.sh --install
@@ -107,15 +109,15 @@ bash .codex/skills/use-codex-app/scripts/install-codex-cdp-monitor.sh --status
 bash .codex/skills/use-codex-app/scripts/install-codex-cdp-monitor.sh --uninstall
 ```
 
-The monitor log is `~/.codex/log/codex-cdp-monitor.log`. The LaunchAgent plist is `~/Library/LaunchAgents/ai.fractalmind.codex-cdp-monitor.plist`.
+The monitor log is `~/.codex/log/codex-cdp-monitor.log`. The LaunchAgent plist is `~/Library/LaunchAgents/ai.fractalmind.codex-cdp-monitor.plist`. Override the app with `CODEX_APP_PATH` or `CHATGPT_APP_PATH` when needed.
 
 ## Transport Order
 
 ### 1. Codex App CDP renderer bridge
 
-Use CDP as the default delivery path. It talks to the current Codex App renderer and calls the app-owned `start-turn-for-host` bridge, so accepted turns are visible in the message UI. Prefer the bundled sender's default `auto` path or explicit `--transport cdp` instead of hand-writing CDP calls.
+Use CDP as the default delivery path. It talks to the current Codex/ChatGPT App renderer and routes accepted turns through the visible app surface. Prefer the bundled sender's default `auto` path or explicit `--transport cdp` instead of hand-writing CDP calls.
 
-Discover the DevTools endpoint from the Codex user-data directory:
+Discover the DevTools endpoint from Codex or ChatGPT user-data directories:
 
 ```bash
 devtools_file="$HOME/Library/Application Support/Codex/DevToolsActivePort"
@@ -125,6 +127,14 @@ curl -fsS "http://127.0.0.1:${port}/json/version"
 curl -fsS "http://127.0.0.1:${port}/json/list"
 ```
 
+The bundled scripts also check:
+
+```bash
+"$HOME/Library/Application Support/ChatGPT/DevToolsActivePort"
+"$HOME/Library/Application Support/OpenAI/ChatGPT/DevToolsActivePort"
+http://127.0.0.1:9222/json/list
+```
+
 If both probes fail, install or check the CDP monitor. Do not start a separate app-server listener for fallback delivery:
 
 ```bash
@@ -132,7 +142,7 @@ bash .codex/skills/use-codex-app/scripts/install-codex-cdp-monitor.sh --status
 bash .codex/skills/use-codex-app/scripts/install-codex-cdp-monitor.sh --install
 ```
 
-Use the page `webSocketDebuggerUrl` with a CDP client. The known stable bridge is the renderer's `app-server-manager-signals` bundle; call its request function (`Kn` or `rn`) with `start-turn-for-host`, `hostId`, `conversationId`, and text input. Prefer evaluating this app-owned bridge over synthetic keyboard input. If no stable bridge or handler can be found in the renderer, stop and report that CDP inspection worked but no safe delivery path was exposed.
+Use the page `webSocketDebuggerUrl` with a CDP client. Older Codex builds expose the renderer's `app-server-manager-signals` bundle; call its request function (`Kn` or `rn`) with `start-turn-for-host`, `hostId`, `conversationId`, and text input. Upgraded ChatGPT App builds may instead expose only the main renderer bundle and sidebar/composer UI; in that case use the bundled sender's guarded visible-composer fallback rather than ad hoc DOM scripting.
 
 CDP validation expectations:
 

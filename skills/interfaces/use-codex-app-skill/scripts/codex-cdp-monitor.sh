@@ -2,7 +2,11 @@
 set -euo pipefail
 
 PORT="${CODEX_CDP_PORT:-9222}"
-APP_PATH="${CODEX_APP_PATH:-/Applications/Codex.app}"
+DEFAULT_APP_PATH="/Applications/Codex.app"
+if [[ -d "/Applications/ChatGPT.app" ]]; then
+  DEFAULT_APP_PATH="/Applications/ChatGPT.app"
+fi
+APP_PATH="${CODEX_APP_PATH:-${CHATGPT_APP_PATH:-$DEFAULT_APP_PATH}}"
 MODE="${CODEX_CDP_MONITOR_MODE:-relaunch}"
 COOLDOWN_SECONDS="${CODEX_CDP_MONITOR_COOLDOWN_SECONDS:-90}"
 LOG_FILE="${CODEX_CDP_MONITOR_LOG:-$HOME/.codex/log/codex-cdp-monitor.log}"
@@ -12,8 +16,8 @@ usage() {
   cat <<'EOF'
 Usage: codex-cdp-monitor.sh [--port PORT] [--app PATH] [--mode relaunch|new-instance] [--status]
 
-Checks whether the local Codex App Chrome DevTools Protocol endpoint is reachable.
-If it is not reachable, starts Codex App with --remote-debugging-port=PORT.
+Checks whether the local Codex/ChatGPT App Chrome DevTools Protocol endpoint is reachable.
+If it is not reachable, starts ChatGPT.app or Codex.app with --remote-debugging-port=PORT.
 
 Modes:
   relaunch      Gracefully quit existing Codex App processes, then start one CDP-enabled instance.
@@ -21,7 +25,7 @@ Modes:
 
 Environment:
   CODEX_CDP_PORT                       Default: 9222
-  CODEX_APP_PATH                       Default: /Applications/Codex.app
+  CODEX_APP_PATH / CHATGPT_APP_PATH    Default: /Applications/ChatGPT.app when present, else /Applications/Codex.app
   CODEX_CDP_MONITOR_MODE               Default: relaunch
   CODEX_CDP_MONITOR_COOLDOWN_SECONDS   Default: 90
   CODEX_CDP_MONITOR_LOG                Default: ~/.codex/log/codex-cdp-monitor.log
@@ -86,13 +90,15 @@ cdp_up() {
 }
 
 codex_pids() {
+  local exe="$APP_PATH/Contents/MacOS/$(basename "$APP_PATH" .app)"
   ps -axo pid=,command= |
-    awk -v app="$APP_PATH/Contents/MacOS/Codex" 'index($0, app) {print $1}'
+    awk -v app="$exe" 'index($0, app) {print $1}'
 }
 
 codex_cdp_pids() {
+  local exe="$APP_PATH/Contents/MacOS/$(basename "$APP_PATH" .app)"
   ps -axo pid=,command= |
-    awk -v app="$APP_PATH/Contents/MacOS/Codex" -v port="--remote-debugging-port=${PORT}" 'index($0, app) && index($0, port) {print $1}'
+    awk -v app="$exe" -v port="--remote-debugging-port=${PORT}" 'index($0, app) && index($0, port) {print $1}'
 }
 
 recent_start() {
@@ -124,15 +130,16 @@ start_cdp_instance() {
   fi
 
   echo "$(date +%s)" >"$STAMP_FILE"
-  log "starting Codex App with CDP on port ${PORT}; mode=${MODE}"
+  log "starting $(basename "$APP_PATH") with CDP on port ${PORT}; mode=${MODE}"
   open -na "$APP_PATH" --args "--remote-debugging-port=${PORT}"
 }
 
 relaunch_with_cdp() {
   existing="$(codex_pids | xargs echo)"
   if [[ -n "$existing" ]]; then
-    log "quitting existing Codex App pids before CDP relaunch: $existing"
-    osascript -e 'tell application "Codex" to quit' >/dev/null 2>&1 || true
+    app_name="$(basename "$APP_PATH" .app)"
+    log "quitting existing ${app_name} pids before CDP relaunch: $existing"
+    osascript -e "tell application \"${app_name}\" to quit" >/dev/null 2>&1 || true
     for _ in {1..20}; do
       [[ -z "$(codex_pids | xargs echo)" ]] && break
       sleep 0.5

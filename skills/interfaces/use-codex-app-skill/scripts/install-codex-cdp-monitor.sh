@@ -3,7 +3,11 @@ set -euo pipefail
 
 LABEL="${CODEX_CDP_MONITOR_LABEL:-ai.fractalmind.codex-cdp-monitor}"
 PORT="${CODEX_CDP_PORT:-9222}"
-APP_PATH="${CODEX_APP_PATH:-/Applications/Codex.app}"
+DEFAULT_APP_PATH="/Applications/Codex.app"
+if [[ -d "/Applications/ChatGPT.app" ]]; then
+  DEFAULT_APP_PATH="/Applications/ChatGPT.app"
+fi
+APP_PATH="${CODEX_APP_PATH:-${CHATGPT_APP_PATH:-$DEFAULT_APP_PATH}}"
 MODE="${CODEX_CDP_MONITOR_MODE:-relaunch}"
 INTERVAL="${CODEX_CDP_MONITOR_INTERVAL:-60}"
 RUN_AT_LOAD="${CODEX_CDP_MONITOR_RUN_AT_LOAD:-false}"
@@ -18,8 +22,9 @@ Usage: install-codex-cdp-monitor.sh [--install] [--uninstall] [--status]
                                     [--port PORT] [--mode relaunch|new-instance]
                                     [--interval SECONDS] [--run-at-load]
 
-Installs a per-user macOS LaunchAgent that checks the Codex App CDP endpoint every
-60 seconds by default and starts Codex with --remote-debugging-port when CDP is down.
+Installs a per-user macOS LaunchAgent that checks the Codex/ChatGPT App CDP endpoint
+every 60 seconds by default and starts ChatGPT.app or Codex.app with
+--remote-debugging-port when CDP is down.
 
 Options:
   --install              Install or update the LaunchAgent. Default action.
@@ -31,8 +36,8 @@ Options:
   --run-at-load          Also run once immediately when the LaunchAgent is loaded.
 
 Notes:
-  relaunch mode is the most reliable way to make the active Codex App expose CDP,
-  but it can close currently open Codex windows when the monitor repairs CDP.
+  relaunch mode is the most reliable way to make the active Codex/ChatGPT App expose CDP,
+  but it can close currently open app windows when the monitor repairs CDP.
   new-instance mode avoids quitting existing windows, but can leave multiple app
   instances running.
 EOF
