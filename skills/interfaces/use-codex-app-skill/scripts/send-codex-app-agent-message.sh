@@ -30,7 +30,7 @@ usage() {
   cat <<'EOF'
 Usage: send-codex-app-agent-message.sh (--thread-id ID | --agent NAME [--cwd TEXT]) --message TEXT [options]
 
-Sends a user message to a Codex App agent/thread returned by list-codex-app-agents.sh.
+Sends a user message to a Codex/ChatGPT App agent/thread returned by list-codex-app-agents.sh.
 Prefer --thread-id copied from the list output. Name-based targeting must resolve to exactly one thread.
 
 Targeting:
@@ -215,14 +215,38 @@ if [[ -z "$STATE_DB" || ! -f "$STATE_DB" ]]; then
   exit 1
 fi
 
-if [[ -z "$CDP_ENDPOINT" && "$TRANSPORT" != "ws" ]]; then
-  devtools_file="$HOME/Library/Application Support/Codex/DevToolsActivePort"
-  if [[ -f "$devtools_file" ]]; then
-    cdp_port="$(sed -n '1p' "$devtools_file" 2>/dev/null || true)"
-    [[ -n "$cdp_port" ]] && CDP_ENDPOINT="http://127.0.0.1:${cdp_port}"
-  elif command -v curl >/dev/null 2>&1 && curl -fsS --max-time 2 "http://127.0.0.1:9222/json/list" >/dev/null 2>&1; then
-    CDP_ENDPOINT="http://127.0.0.1:9222"
+discover_cdp_endpoint() {
+  local port
+  for devtools_file in \
+    "$HOME/Library/Application Support/Codex/DevToolsActivePort" \
+    "$HOME/Library/Application Support/ChatGPT/DevToolsActivePort" \
+    "$HOME/Library/Application Support/OpenAI/ChatGPT/DevToolsActivePort"
+  do
+    if [[ -f "$devtools_file" ]]; then
+      port="$(sed -n '1p' "$devtools_file" 2>/dev/null || true)"
+      if [[ -n "$port" ]] && command -v curl >/dev/null 2>&1 && curl -fsS --max-time 2 "http://127.0.0.1:${port}/json/list" >/dev/null 2>&1; then
+        printf 'http://127.0.0.1:%s\n' "$port"
+        return 0
+      fi
+    fi
+  done
+  if command -v curl >/dev/null 2>&1 && curl -fsS --max-time 2 "http://127.0.0.1:9222/json/list" >/dev/null 2>&1; then
+    printf 'http://127.0.0.1:9222\n'
+    return 0
   fi
+  return 1
+}
+
+sqlite_has_column() {
+  local db="$1"
+  local table="$2"
+  local column="$3"
+  [[ -n "$db" && -f "$db" ]] || return 1
+  sqlite3 "$db" "pragma table_info($table);" 2>/dev/null | awk -F'|' '{print $2}' | grep -Fxq "$column"
+}
+
+if [[ -z "$CDP_ENDPOINT" && "$TRANSPORT" != "ws" ]]; then
+  CDP_ENDPOINT="$(discover_cdp_endpoint || true)"
 fi
 
 tmpdir="$(mktemp -d)"
@@ -317,11 +341,19 @@ async function main() {
 
   const rows = await cdpEvaluate(target.webSocketDebuggerUrl, `(() => {
   const result = [];
-  const sidebarRows = Array.from(document.querySelectorAll("[data-app-action-sidebar-thread-row]"));
+  const sidebarRows = Array.from(document.querySelectorAll("[data-app-action-sidebar-thread-row], [data-testid*='sidebar'] a, nav a[href*='/local/'], a[href*='/local/']"));
   for (const row of sidebarRows) {
-    const rawId = row.getAttribute("data-app-action-sidebar-thread-id") || "";
-    const id = rawId.replace(/^local:/, "");
-    const title = row.getAttribute("data-app-action-sidebar-thread-title") || "";
+    const rawId =
+      row.getAttribute("data-app-action-sidebar-thread-id") ||
+      row.getAttribute("data-thread-id") ||
+      ((row.getAttribute("href") || "").match(/\\/local\\/([^/?#]+)/) || [])[1] ||
+      "";
+    const id = decodeURIComponent(rawId).replace(/^local:/, "");
+    const title =
+      row.getAttribute("data-app-action-sidebar-thread-title") ||
+      row.getAttribute("aria-label") ||
+      row.getAttribute("title") ||
+      (row.textContent || "").trim();
     if (!id || !title) continue;
     const labels = [];
     for (let el = row; el && labels.length < 20; el = el.parentElement) {
@@ -336,7 +368,7 @@ async function main() {
       agent: title,
       title,
       agent_nickname: title,
-      role: null,
+      role: row.getAttribute("data-agent-role") || null,
       cwd: labels.find((label) => label !== title && !label.startsWith("local:")) || null,
       model: null,
       reasoning_effort: null,
@@ -378,6 +410,15 @@ NODE
 fi
 
 if [[ "$resolved_from_sidebar" != "1" ]]; then
+  has_name="0"; sqlite_has_column "$STATE_DB" threads name && has_name="1"
+  has_preview="0"; sqlite_has_column "$STATE_DB" threads preview && has_preview="1"
+  has_agent_path="0"; sqlite_has_column "$STATE_DB" threads agent_path && has_agent_path="1"
+  name_expr="null"
+  preview_expr="null"
+  agent_path_expr="null"
+  [[ "$has_name" == "1" ]] && name_expr="nullif(name, '')"
+  [[ "$has_preview" == "1" ]] && preview_expr="nullif(preview, '')"
+  [[ "$has_agent_path" == "1" ]] && agent_path_expr="nullif(agent_path, '')"
   sqlite3 -json "$STATE_DB" > "$targets_json" <<SQL
 .parameter init
 .parameter set :thread_id "$THREAD_ID"
@@ -386,32 +427,32 @@ if [[ "$resolved_from_sidebar" != "1" ]]; then
 .parameter set :include_archived $INCLUDE_ARCHIVED
 select
   id,
-  case
-    when nullif(agent_nickname, '') is not null then agent_nickname
-    else title
-  end as agent,
+  coalesce(nullif(agent_nickname, ''), $name_expr, nullif(title, '')) as agent,
   title,
   nullif(agent_nickname, '') as agent_nickname,
   nullif(agent_role, '') as role,
+  $agent_path_expr as agent_path,
+  $name_expr as name,
+  $preview_expr as preview,
   cwd,
   model,
   reasoning_effort,
   source,
-  datetime(updated_at, 'unixepoch') as updated_at,
+  datetime(coalesce(updated_at_ms / 1000, updated_at), 'unixepoch') as updated_at,
   archived
 from threads
 where (:include_archived = 1 or archived = 0)
   and (:thread_id = '' or id = :thread_id)
   and (
     :agent = ''
-    or (case
-          when nullif(agent_nickname, '') is not null then agent_nickname
-          else title
-        end) = :agent
+    or coalesce(nullif(agent_nickname, ''), $name_expr, nullif(title, '')) = :agent
     or agent_nickname = :agent
+    or title = :agent
+    or $name_expr = :agent
+    or $preview_expr = :agent
   )
   and (:cwd_filter = '' or cwd like '%' || :cwd_filter || '%')
-order by updated_at desc;
+order by coalesce(updated_at_ms, updated_at * 1000) desc;
 SQL
 fi
 
@@ -705,6 +746,128 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
     throw new Error("No target Codex App conversation id was provided and no /local/<conversationId> route is active.");
   }
 
+  async function waitFor(predicate, timeoutMs = 12000) {
+    const start = Date.now();
+    let lastError;
+    while (Date.now() - start < timeoutMs) {
+      try {
+        const value = await predicate();
+        if (value) return value;
+      } catch (error) {
+        lastError = error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    if (lastError) throw lastError;
+    throw new Error("Timed out waiting for Codex/ChatGPT App UI state.");
+  }
+
+  function findSidebarRow(id) {
+    const rows = Array.from(document.querySelectorAll("[data-app-action-sidebar-thread-row], [data-testid*='sidebar'] a, nav a[href*='/local/'], a[href*='/local/']"));
+    return rows.find((row) => {
+      const rawId =
+        row.getAttribute("data-app-action-sidebar-thread-id") ||
+        row.getAttribute("data-thread-id") ||
+        ((row.getAttribute("href") || "").match(/\\/local\\/([^/?#]+)/) || [])[1] ||
+        "";
+      return decodeURIComponent(rawId).replace(/^local:/, "") === id;
+    }) || null;
+  }
+
+  function readSidebarName(id) {
+    const row = findSidebarRow(id);
+    if (!row) return null;
+    return (
+      row.getAttribute("data-app-action-sidebar-thread-title") ||
+      row.getAttribute("aria-label") ||
+      row.getAttribute("title") ||
+      (row.textContent || "").trim() ||
+      null
+    );
+  }
+
+  async function navigateToConversation(id) {
+    if (location.pathname.includes(\`/local/\${encodeURIComponent(id)}\`) || location.pathname.includes(\`/local/\${id}\`)) {
+      return "already-active";
+    }
+    const row = findSidebarRow(id);
+    if (row) {
+      row.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
+      await waitFor(() => location.pathname.includes(\`/local/\${encodeURIComponent(id)}\`) || location.pathname.includes(\`/local/\${id}\`), 10000);
+      return "sidebar-click";
+    }
+    history.pushState({}, "", \`/local/\${encodeURIComponent(id)}\`);
+    window.dispatchEvent(new PopStateEvent("popstate", { state: history.state }));
+    await waitFor(() => document.body.innerText.includes("You said:") || document.body.innerText.includes("ChatGPT said:"), 10000);
+    return "history-push";
+  }
+
+  function findComposer() {
+    const selectors = [
+      "textarea:not([disabled])",
+      "[contenteditable='true'][role='textbox']",
+      "[contenteditable='true']",
+      "[data-testid='composer'] textarea",
+      "[data-testid='composer'] [contenteditable='true']",
+      "form textarea",
+    ];
+    for (const selector of selectors) {
+      const node = Array.from(document.querySelectorAll(selector)).find((el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 20 && rect.height > 10 && !el.closest("[aria-hidden='true']");
+      });
+      if (node) return node;
+    }
+    return null;
+  }
+
+  function setComposerText(node, text) {
+    node.focus();
+    if (node instanceof HTMLTextAreaElement || node instanceof HTMLInputElement) {
+      const descriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(node), "value");
+      descriptor?.set?.call(node, text);
+      node.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: text }));
+      node.dispatchEvent(new Event("change", { bubbles: true }));
+      return;
+    }
+    node.textContent = text;
+    node.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: text }));
+  }
+
+  function findSendButton(composer) {
+    const root =
+      composer.closest("form") ||
+      composer.closest("[data-testid='composer']") ||
+      composer.closest("[role='form']") ||
+      composer.parentElement ||
+      document;
+    const buttons = Array.from(root.querySelectorAll("button"));
+    return buttons.find((button) => {
+      const label = [
+        button.getAttribute("aria-label"),
+        button.getAttribute("title"),
+        button.textContent,
+      ].filter(Boolean).join(" ").toLowerCase();
+      if (button.disabled || button.getAttribute("aria-disabled") === "true") return false;
+      return /send|submit|发送|提交/.test(label) || button.querySelector("svg");
+    }) || null;
+  }
+
+  async function submitViaVisibleComposer() {
+    const navigation = await navigateToConversation(conversationId);
+    const composer = await waitFor(() => findComposer(), 12000);
+    setComposerText(composer, payload.prompt);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const button = findSendButton(composer);
+    if (button) {
+      button.click();
+      return { ok: true, strategy: "visible-composer-button", navigation };
+    }
+    composer.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, metaKey: true }));
+    composer.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, metaKey: true }));
+    return { ok: true, strategy: "visible-composer-keyboard", navigation };
+  }
+
   const resources = performance.getEntriesByType("resource").map((entry) => entry.name);
   let signalsUrl = resources.find((name) => /app-server-manager-signals-[^/]+\\.js$/.test(name));
   if (!signalsUrl) {
@@ -722,7 +885,26 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
     }
   }
   if (!signalsUrl) {
-    throw new Error("Unable to locate Codex App app-server-manager-signals bundle.");
+    if (payload.dryRun) {
+      return {
+        ok: true,
+        dryRun: true,
+        conversationId,
+        sidebarName: readSidebarName(conversationId),
+        bridge: null,
+        fallback: "visible-composer",
+      };
+    }
+    const fallbackResult = await submitViaVisibleComposer();
+    return {
+      ok: true,
+      dryRun: false,
+      conversationId,
+      sidebarName: readSidebarName(conversationId),
+      bridge: null,
+      fallback: fallbackResult.strategy,
+      navigation: fallbackResult.navigation,
+    };
   }
 
   const signals = await import(signalsUrl);
@@ -775,7 +957,9 @@ async function deliverViaCdp() {
     turn_id: null,
     conversation_id: value?.conversationId || conversationId,
     message_bytes: Buffer.byteLength(message, "utf8"),
-    bridge: value?.bridge || "start-turn-for-host",
+    bridge: value?.bridge || null,
+    fallback: value?.fallback || null,
+    navigation: value?.navigation || null,
   };
 }
 
@@ -913,6 +1097,7 @@ console.log(`target=${report.target.threadId} agent=${report.target.agent || ""}
 console.log(`cwd=${report.target.cwd || ""}`);
 console.log(`previous_status=${report.before_status} resumed=${report.resumed}`);
 console.log(`method=${report.method} turn_id=${report.turn_id || ""}`);
+if (report.fallback) console.log(`fallback=${report.fallback}${report.navigation ? ` navigation=${report.navigation}` : ""}`);
 console.log(report.dry_run ? "dry_run=ok (message not sent)" : "delivery=ok");
 NODE
 fi
