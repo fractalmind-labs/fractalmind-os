@@ -993,6 +993,33 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
     }) || null;
   }
 
+  function findQueuedSteerButton() {
+    return Array.from(document.querySelectorAll("button")).find((button) => {
+      const rect = button.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return false;
+      if (button.disabled || button.getAttribute("aria-disabled") === "true") return false;
+      const label = [
+        button.getAttribute("aria-label"),
+        button.getAttribute("title"),
+        button.textContent,
+      ].filter(Boolean).join(" ").trim();
+      return /\\bSteer\\b/i.test(label);
+    }) || null;
+  }
+
+  function hasQueuedMessageControls() {
+    const text = document.body.innerText || "";
+    if (text.includes("Delete queued message") || text.includes("Queued message actions")) return true;
+    return Array.from(document.querySelectorAll("button")).some((button) => {
+      const label = [
+        button.getAttribute("aria-label"),
+        button.getAttribute("title"),
+        button.textContent,
+      ].filter(Boolean).join(" ");
+      return /Delete queued message|Queued message actions/i.test(label);
+    });
+  }
+
   async function submitViaVisibleComposer() {
     const navigation = await navigateToConversation(conversationId);
     const verificationNeedle = payload.prompt.slice(0, Math.min(120, payload.prompt.length));
@@ -1013,7 +1040,14 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
       const composerText = composer.textContent || composer.value || "";
       return document.body.innerText.includes(verificationNeedle) && composerText.length < Math.min(100, payload.prompt.length);
     }, 15000);
-    return { ok: true, strategy, navigation, verified: "body-readback" };
+    let queuedSteer = false;
+    const steerButton = findQueuedSteerButton();
+    if (steerButton && hasQueuedMessageControls()) {
+      steerButton.click();
+      queuedSteer = true;
+      await waitFor(() => !hasQueuedMessageControls(), 10000);
+    }
+    return { ok: true, strategy, navigation, verified: queuedSteer ? "body-readback-steered" : "body-readback", queuedSteer };
   }
 
   const resources = performance.getEntriesByType("resource").map((entry) => entry.name);
