@@ -16,7 +16,8 @@ The goal is to inspect local Codex/ChatGPT App runtime state or deliver a user m
 - Do not use DOM typing/clicking as the first option. Use the protocol handler or an app-provided renderer bridge when exposed. On upgraded ChatGPT App builds where the legacy bridge bundle is absent, the bundled sender may use its guarded visible-composer fallback after exact target resolution and CDP readback.
 - Do not use `thread/inject_items` as a substitute for a live user turn. It appends model-visible history; it does not start agent work.
 - Do not start `codex app-server`, `codex app-server proxy`, or a temporary `--listen` process as an automatic fallback. If CDP is not available, stop and report that the current Codex App renderer cannot be reached.
-- If endpoint discovery, auth, socket connection, target resolution, or method validation fails, stop and report the failure. Do not claim delivery.
+- A protocol reply is delivered only after target-thread readback: the target App thread must visibly contain the reply message id or another unique message needle, and the same text must not be left in the composer or queued-message controls.
+- If endpoint discovery, auth, socket connection, target resolution, method validation, or target-thread readback fails, stop and report the failure. Do not claim delivery.
 
 ## List Running Agents
 
@@ -112,7 +113,7 @@ reply_endpoint: codex-app:thread:<main-thread-id>
 When complete, reply to codex-app:thread:<main-thread-id> ...
 ```
 
-`--title` is optional. When present, it is rendered as the first line of the envelope as Markdown H1 before `--- Meta ---`. It is normalized to one line and is for human scanning only; it does not participate in routing, deduplication, or reply matching. If empty, the envelope starts with `--- Meta ---` as before.
+`--title` is required whenever `--protocol-envelope` is used. It is rendered as the first line of the envelope as Markdown H1 before `--- Meta ---`, normalized to one line, and used for human scanning only; it does not participate in routing, deduplication, or reply matching. The sender must reject an empty or omitted protocol title.
 
 For completion reports, the receiving Agent should send a reply envelope to the provided endpoint:
 
@@ -127,7 +128,9 @@ bash .codex/skills/use-codex-app/scripts/send-codex-app-agent-message.sh \
   --message-file /tmp/pm-report.md
 ```
 
-This is still a stateless protocol. The skill does not create an inbox, outbox, retry queue, or delivery log; active replies work because the receiving Agent is explicitly instructed where and how to send the reply.
+This is still a stateless protocol. The skill does not create an inbox, outbox, retry queue, or delivery log; active replies work because the receiving Agent is explicitly instructed where and how to send the reply. Every assignment and reply envelope must include a concise `--title`.
+
+The receiving Agent must not start a temporary `codex app-server --listen ...` just to return a reply. Use the current Codex/ChatGPT App CDP delivery path by default. If an explicit app-server WebSocket is intentionally used, the sender still verifies the current App target thread through CDP before returning success.
 
 Sender behavior:
 
@@ -135,8 +138,9 @@ Sender behavior:
 - Defaults to CDP delivery through the app renderer so the message appears in the normal app conversation surface.
 - Uses app-server JSON-RPC only with an explicit `--ws-url` or `--transport ws` against a listener that is already running.
 - For app-server JSON-RPC, `turn/start` is used for idle or not-loaded threads; active threads are refused unless `--steer` is passed.
+- For non-dry-run app-server JSON-RPC, success requires a follow-up CDP readback from the current App target thread. A JSON-RPC `turn/start` response alone is not enough.
 - For older Codex App CDP builds, the script locates the `app-server-manager-signals` bundle and calls the app-owned `start-turn-for-host` request.
-- For upgraded ChatGPT App CDP builds where that legacy bundle is absent, the script uses a guarded visible-composer fallback: exact sidebar/thread resolution, route to `/local/<threadId>`, set the app composer, and submit through the visible app UI. CDP delivery does not support `--steer`; use explicit WebSocket for `turn/steer`.
+- For upgraded ChatGPT App CDP builds where that legacy bundle is absent, the script uses a guarded visible-composer fallback: exact sidebar/thread resolution, route to `/local/<threadId>`, set the app composer, submit through the visible app UI, and confirm target-thread readback. CDP delivery does not support `--steer`; use explicit WebSocket for `turn/steer`.
 - `--dry-run` verifies the selected target and app-server/CDP bridge readback without sending the message.
 
 ## Keep CDP Enabled

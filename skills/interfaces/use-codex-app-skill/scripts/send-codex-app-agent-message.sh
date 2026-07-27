@@ -51,7 +51,7 @@ Targeting:
 Message:
   --message TEXT          Message text to deliver.
   --message-file PATH     Read message text from a file. Use "-" for stdin.
-  --title TEXT            Optional one-line envelope title rendered before --- Meta ---.
+  --title TEXT            Required with --protocol-envelope. Rendered before --- Meta ---.
 
 Agent message protocol:
   --protocol-envelope     Wrap the message in Meta/Body/Footer sections.
@@ -258,6 +258,16 @@ case "$PROTOCOL_TYPE" in
     exit 2
     ;;
 esac
+
+normalized_title="$(
+  printf '%s' "$MESSAGE_TITLE" \
+    | tr '\r\n' '  ' \
+    | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//'
+)"
+if [[ "$PROTOCOL_ENVELOPE" == "1" && -z "$normalized_title" ]]; then
+  echo "--title is required with --protocol-envelope" >&2
+  exit 2
+fi
 
 if [[ -n "$REPLY_TO_THREAD_ID" ]]; then
   if [[ -n "$REPLY_ENDPOINT" ]]; then
@@ -570,15 +580,8 @@ if [[ "$PROTOCOL_ENVELOPE" == "1" ]]; then
   if [[ -z "$MESSAGE_ID" ]]; then
     MESSAGE_ID="msg_$(date -u +%Y%m%dT%H%M%SZ)_$$"
   fi
-  normalized_title="$(
-    printf '%s' "$MESSAGE_TITLE" \
-      | tr '\r\n' '  ' \
-      | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//'
-  )"
   {
-    if [[ -n "$normalized_title" ]]; then
-      printf '# %s\n\n' "$normalized_title"
-    fi
+    printf '# %s\n\n' "$normalized_title"
     printf '%s\n' '--- Meta ---'
     printf 'id: %s\n' "$MESSAGE_ID"
     printf 'type: %s\n' "$PROTOCOL_TYPE"
@@ -594,7 +597,7 @@ if [[ "$PROTOCOL_ENVELOPE" == "1" ]]; then
     printf '%s\n' "$MESSAGE"
     if [[ -n "$REPLY_ENDPOINT" ]]; then
       printf '\n%s\n' '--- Footer ---'
-      printf '%s\n' "When complete, reply to ${REPLY_ENDPOINT} using this skill's message protocol. For codex-app:thread:<id>, run send-codex-app-agent-message.sh --thread-id <id> --protocol-envelope --message-type reply --from '${target_to}' --reply-to '${MESSAGE_ID}' --message-file <report-file>."
+      printf '%s\n' "When complete, reply to ${REPLY_ENDPOINT} using this skill's message protocol. For codex-app:thread:<id>, run send-codex-app-agent-message.sh --thread-id <id> --protocol-envelope --message-type reply --from '${target_to}' --reply-to '${MESSAGE_ID}' --title '<reply-title>' --message-file <report-file>."
     fi
   } > "$message_path"
 else
@@ -665,6 +668,14 @@ const conversationId = process.env.CONVERSATION_ID || target.id;
 const dryRun = process.env.DRY_RUN === "1";
 let mode = process.env.MODE || "auto";
 let expectedTurnId = process.env.EXPECTED_TURN_ID || "";
+
+function verificationNeedleFor(text) {
+  const idMatch = String(text || "").match(/^id:\s*([^\s]+)/m);
+  if (idMatch) return idMatch[1];
+  const replyMatch = String(text || "").match(/^reply_to:\s*([^\s]+)/m);
+  if (replyMatch) return replyMatch[1];
+  return String(text || "").slice(0, Math.min(120, String(text || "").length));
+}
 
 class RpcClient {
   constructor(kind, sendRaw, closeFn) {
@@ -848,6 +859,7 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
     hostId,
     conversationId,
     prompt: message,
+    verificationNeedle: verificationNeedleFor(message),
     dryRun: dryRunOnly,
   };
   return `(async () => {
@@ -911,7 +923,7 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
   }
 
   async function navigateToConversation(id) {
-    if (isActiveSidebarRow(id) || location.pathname.includes(\`/local/\${encodeURIComponent(id)}\`) || location.pathname.includes(\`/local/\${id}\`)) {
+    if (location.pathname.includes(\`/local/\${encodeURIComponent(id)}\`) || location.pathname.includes(\`/local/\${id}\`)) {
       return "already-active";
     }
     const row = findSidebarRow(id);
@@ -967,6 +979,12 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
     node.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
+  function currentComposerText() {
+    const composer = findComposer();
+    if (!composer) return "";
+    return (composer.textContent || composer.value || "").trim();
+  }
+
   function findSendButton(composer) {
     const roots = [];
     for (let node = composer; node && roots.length < 12; node = node.parentElement) {
@@ -1012,26 +1030,54 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
       const rect = button.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) return false;
       if (button.disabled || button.getAttribute("aria-disabled") === "true") return false;
-      const label = [
+      const accessibleLabel = [
         button.getAttribute("aria-label"),
         button.getAttribute("title"),
-        button.textContent,
       ].filter(Boolean).join(" ").trim();
-      return /\\bSteer\\b/i.test(label);
+      const visibleLabel = (button.textContent || "").trim();
+      return /\\bSteer\\b/i.test(accessibleLabel) || /^Steer$/i.test(visibleLabel);
     }) || null;
   }
 
   function hasQueuedMessageControls() {
-    const text = document.body.innerText || "";
-    if (text.includes("Delete queued message") || text.includes("Queued message actions")) return true;
     return Array.from(document.querySelectorAll("button")).some((button) => {
-      const label = [
+      const rect = button.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return false;
+      const accessibleLabel = [
         button.getAttribute("aria-label"),
         button.getAttribute("title"),
-        button.textContent,
-      ].filter(Boolean).join(" ");
-      return /Delete queued message|Queued message actions/i.test(label);
+      ].filter(Boolean).join(" ").trim();
+      const visibleLabel = (button.textContent || "").trim();
+      return /Delete queued message|Queued message actions/i.test(accessibleLabel) ||
+        /^(Delete queued message|Queued message actions)$/i.test(visibleLabel);
     });
+  }
+
+  function composerContainsNeedle(needle) {
+    const composer = findComposer();
+    if (!composer) return false;
+    return (composer.textContent || composer.value || "").includes(needle);
+  }
+
+  function hasDeliveredMessage(needle) {
+    const selectors = [
+      "[data-user-message-bubble='true']",
+      "[data-message-author-role='user']",
+      "[data-testid*='user-message']",
+    ];
+    const messages = selectors.flatMap((selector) => Array.from(document.querySelectorAll(selector)));
+    return messages.some((node) => (node.innerText || node.textContent || "").includes(needle));
+  }
+
+  async function verifyDeliveryReadback(needle) {
+    const isDelivered = () =>
+      hasDeliveredMessage(needle) && !composerContainsNeedle(needle) && !hasQueuedMessageControls();
+    try {
+      return await waitFor(isDelivered, 5000);
+    } catch (_) {
+      await navigateToConversation(conversationId);
+      return await waitFor(isDelivered, 20000);
+    }
   }
 
   function dispatchPointerMouseSequence(node) {
@@ -1059,17 +1105,20 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
   async function waitForSubmitted(composer, needle, timeoutMs = 8000) {
     return await waitFor(() => {
       const composerText = composer.textContent || composer.value || "";
-      const composerCleared = composerText.length < Math.min(100, payload.prompt.length);
-      return composerCleared && (document.body.innerText.includes(needle) || !hasQueuedMessageControls());
+      return !composerText.includes(needle);
     }, timeoutMs);
   }
 
   async function submitViaVisibleComposer() {
     const navigation = await navigateToConversation(conversationId);
-    const verificationNeedle = payload.prompt.slice(0, Math.min(120, payload.prompt.length));
+    const verificationNeedle = payload.verificationNeedle;
     const composer = await waitFor(() => findComposer(), 12000);
+    const existingDraft = currentComposerText();
+    if (existingDraft && !existingDraft.includes(verificationNeedle)) {
+      throw new Error("Target App composer already contains an unsent draft; refusing to overwrite it.");
+    }
     setComposerText(composer, payload.prompt);
-    await waitFor(() => (composer.textContent || composer.value || "").includes(verificationNeedle.slice(0, 40)), 5000);
+    await waitFor(() => (composer.textContent || composer.value || "").includes(verificationNeedle), 5000);
     const button = await waitFor(() => findSendButton(composer), 10000);
     await new Promise((resolve) => setTimeout(resolve, 300));
     let strategy = "visible-composer-keyboard";
@@ -1093,16 +1142,18 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
       strategy = strategy + "-retry";
     }
     let queuedSteer = false;
-    const steerButton = findQueuedSteerButton();
-    if (steerButton && hasQueuedMessageControls()) {
+    if (hasQueuedMessageControls()) {
+      const steerButton = await waitFor(() => findQueuedSteerButton(), 10000);
       dispatchPointerMouseSequence(steerButton);
       queuedSteer = true;
       await waitFor(() => !hasQueuedMessageControls(), 10000);
     }
-    return { ok: true, strategy, navigation, verified: queuedSteer ? "body-readback-steered" : "body-readback", queuedSteer };
+    await verifyDeliveryReadback(verificationNeedle);
+    return { ok: true, strategy, navigation, verified: queuedSteer ? "target-thread-readback-steered" : "target-thread-readback", queuedSteer };
   }
 
   const resources = performance.getEntriesByType("resource").map((entry) => entry.name);
+  const verificationNeedle = payload.verificationNeedle;
   let signalsUrl = resources.find((name) => /app-server-manager-signals-[^/]+\\.js$/.test(name));
   if (!signalsUrl) {
     const scripts = Array.from(document.querySelectorAll("script[src]")).map((script) => script.src);
@@ -1138,6 +1189,7 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
       bridge: null,
       fallback: fallbackResult.strategy,
       navigation: fallbackResult.navigation,
+      verified: fallbackResult.verified,
     };
   }
 
@@ -1157,7 +1209,129 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
     conversationId,
     params: { input }
   });
-  return { ok: true, dryRun: false, conversationId, signalsUrl, result };
+  await verifyDeliveryReadback(verificationNeedle);
+  return { ok: true, dryRun: false, conversationId, signalsUrl, result, verified: "target-thread-readback" };
+})()`;
+}
+
+function buildCdpReadbackScript(needle) {
+  const payload = {
+    conversationId,
+    verificationNeedle: needle,
+  };
+  return `(async () => {
+  const payload = ${JSON.stringify(payload)};
+  const conversationId = payload.conversationId;
+  const needle = payload.verificationNeedle;
+
+  async function waitFor(predicate, timeoutMs = 20000) {
+    const start = Date.now();
+    let lastError;
+    while (Date.now() - start < timeoutMs) {
+      try {
+        const value = await predicate();
+        if (value) return value;
+      } catch (error) {
+        lastError = error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    if (lastError) throw lastError;
+    throw new Error("Timed out waiting for target thread readback.");
+  }
+
+  function findSidebarRow(id) {
+    const rows = Array.from(document.querySelectorAll("[data-app-action-sidebar-thread-row], [data-testid*='sidebar'] a, nav a[href*='/local/'], a[href*='/local/']"));
+    return rows.find((row) => {
+      const rawId =
+        row.getAttribute("data-app-action-sidebar-thread-id") ||
+        row.getAttribute("data-thread-id") ||
+        ((row.getAttribute("href") || "").match(/\\/local\\/([^/?#]+)/) || [])[1] ||
+        "";
+      return decodeURIComponent(rawId).replace(/^local:/, "") === id;
+    }) || null;
+  }
+
+  function isActiveSidebarRow(id) {
+    const row = findSidebarRow(id);
+    if (!row) return false;
+    return (
+      row.getAttribute("data-app-action-sidebar-thread-active") === "true" ||
+      row.getAttribute("aria-current") === "page" ||
+      row.getAttribute("aria-selected") === "true"
+    );
+  }
+
+  async function navigateToConversation(id) {
+    if (location.pathname.includes(\`/local/\${encodeURIComponent(id)}\`) || location.pathname.includes(\`/local/\${id}\`)) {
+      return "already-active";
+    }
+    const row = findSidebarRow(id);
+    if (row) {
+      row.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window }));
+      await waitFor(() => isActiveSidebarRow(id) || location.pathname.includes(\`/local/\${encodeURIComponent(id)}\`) || location.pathname.includes(\`/local/\${id}\`), 10000);
+      return "sidebar-click";
+    }
+    history.pushState({}, "", \`/local/\${encodeURIComponent(id)}\`);
+    window.dispatchEvent(new PopStateEvent("popstate", { state: history.state }));
+    await waitFor(() => location.pathname.includes(\`/local/\${encodeURIComponent(id)}\`) || location.pathname.includes(\`/local/\${id}\`), 10000);
+    return "history-push";
+  }
+
+  function findComposer() {
+    const selectors = [
+      "textarea:not([disabled])",
+      "[contenteditable='true'][role='textbox']",
+      "[contenteditable='true']",
+      "[data-testid='composer'] textarea",
+      "[data-testid='composer'] [contenteditable='true']",
+      "form textarea",
+    ];
+    for (const selector of selectors) {
+      const node = Array.from(document.querySelectorAll(selector)).find((el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 20 && rect.height > 10 && !el.closest("[aria-hidden='true']");
+      });
+      if (node) return node;
+    }
+    return null;
+  }
+
+  function hasQueuedMessageControls() {
+    return Array.from(document.querySelectorAll("button")).some((button) => {
+      const rect = button.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return false;
+      const accessibleLabel = [
+        button.getAttribute("aria-label"),
+        button.getAttribute("title"),
+      ].filter(Boolean).join(" ").trim();
+      const visibleLabel = (button.textContent || "").trim();
+      return /Delete queued message|Queued message actions/i.test(accessibleLabel) ||
+        /^(Delete queued message|Queued message actions)$/i.test(visibleLabel);
+    });
+  }
+
+  function composerContainsNeedle(value) {
+    const composer = findComposer();
+    if (!composer) return false;
+    return (composer.textContent || composer.value || "").includes(value);
+  }
+
+  function hasDeliveredMessage(value) {
+    const selectors = [
+      "[data-user-message-bubble='true']",
+      "[data-message-author-role='user']",
+      "[data-testid*='user-message']",
+    ];
+    const messages = selectors.flatMap((selector) => Array.from(document.querySelectorAll(selector)));
+    return messages.some((node) => (node.innerText || node.textContent || "").includes(value));
+  }
+
+  const navigation = await navigateToConversation(conversationId);
+  await waitFor(() => {
+    return hasDeliveredMessage(needle) && !composerContainsNeedle(needle) && !hasQueuedMessageControls();
+  }, 20000);
+  return { ok: true, conversationId, navigation, verified: "target-thread-readback" };
 })()`;
 }
 
@@ -1194,6 +1368,23 @@ async function deliverViaCdp() {
     bridge: value?.bridge || null,
     fallback: value?.fallback || null,
     navigation: value?.navigation || null,
+    verified: value?.verified || (dryRun ? null : "target-thread-readback"),
+  };
+}
+
+async function verifyReadbackViaCdp() {
+  if (!cdpEndpoint) {
+    throw new Error("Delivery returned from app-server, but no current Codex App CDP endpoint is available for target-thread readback verification.");
+  }
+  const targetPage = await selectCdpTarget(cdpEndpoint, cdpSelector);
+  const value = await cdpEvaluate(targetPage.webSocketDebuggerUrl, buildCdpReadbackScript(verificationNeedleFor(message)));
+  return {
+    cdp_target: {
+      type: targetPage.type || null,
+      title: targetPage.title || null,
+      url: targetPage.url || null,
+    },
+    readback: value || null,
   };
 }
 
@@ -1286,13 +1477,15 @@ async function main() {
       response = await client.request(method, params);
     }
 
+    const readbackVerification = !dryRun ? await verifyReadbackViaCdp() : null;
+
     const report = {
       ok: true,
       dry_run: dryRun,
       transport: client.kind,
       ws_url: client.kind === "ws" ? wsUrl : null,
       cdp_endpoint: null,
-      cdp_target: null,
+      cdp_target: readbackVerification?.cdp_target || null,
       target: {
         threadId: target.id,
         agent: target.agent || target.title || null,
@@ -1307,6 +1500,8 @@ async function main() {
       turn_id: response?.turn?.id || response?.turnId || expectedTurnId || null,
       conversation_id: target.id,
       message_bytes: Buffer.byteLength(message, "utf8"),
+      verified: readbackVerification?.readback?.verified || null,
+      readback_navigation: readbackVerification?.readback?.navigation || null,
     };
     console.log(JSON.stringify(report));
   } finally {
@@ -1332,6 +1527,7 @@ console.log(`cwd=${report.target.cwd || ""}`);
 console.log(`previous_status=${report.before_status} resumed=${report.resumed}`);
 console.log(`method=${report.method} turn_id=${report.turn_id || ""}`);
 if (report.fallback) console.log(`fallback=${report.fallback}${report.navigation ? ` navigation=${report.navigation}` : ""}`);
+if (report.verified) console.log(`verified=${report.verified}${report.readback_navigation ? ` navigation=${report.readback_navigation}` : ""}`);
 console.log(report.dry_run ? "dry_run=ok (message not sent)" : "delivery=ok");
 NODE
 fi
