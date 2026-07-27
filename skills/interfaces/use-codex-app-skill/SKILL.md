@@ -88,6 +88,7 @@ bash .codex/skills/use-codex-app/scripts/send-codex-app-agent-message.sh \
   --cwd CloudBank \
   --protocol-envelope \
   --from main \
+  --title "Validate live release" \
   --reply-to-thread-id <main-thread-id> \
   --message-file /tmp/task.md
 ```
@@ -95,6 +96,8 @@ bash .codex/skills/use-codex-app/scripts/send-codex-app-agent-message.sh \
 The sender renders:
 
 ```text
+# Validate live release
+
 --- Meta ---
 id: msg_...
 type: message
@@ -109,6 +112,8 @@ reply_endpoint: codex-app:thread:<main-thread-id>
 When complete, reply to codex-app:thread:<main-thread-id> ...
 ```
 
+`--title` is optional. When present, it is rendered as the first line of the envelope as Markdown H1 before `--- Meta ---`. It is normalized to one line and is for human scanning only; it does not participate in routing, deduplication, or reply matching. If empty, the envelope starts with `--- Meta ---` as before.
+
 For completion reports, the receiving Agent should send a reply envelope to the provided endpoint:
 
 ```bash
@@ -118,6 +123,7 @@ bash .codex/skills/use-codex-app/scripts/send-codex-app-agent-message.sh \
   --message-type reply \
   --from PM \
   --reply-to <original-message-id> \
+  --title "Reply: live release validation" \
   --message-file /tmp/pm-report.md
 ```
 
