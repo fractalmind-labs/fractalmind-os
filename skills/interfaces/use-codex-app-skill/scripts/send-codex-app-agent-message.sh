@@ -8,6 +8,7 @@ AGENT=""
 CWD_FILTER=""
 MESSAGE=""
 MESSAGE_FILE=""
+MESSAGE_TITLE=""
 WS_URL="${CODEX_APP_SERVER_WS_URL:-}"
 WS_URL_EXPLICIT="0"
 if [[ -n "$WS_URL" ]]; then
@@ -50,6 +51,7 @@ Targeting:
 Message:
   --message TEXT          Message text to deliver.
   --message-file PATH     Read message text from a file. Use "-" for stdin.
+  --title TEXT            Optional one-line envelope title rendered before --- Meta ---.
 
 Agent message protocol:
   --protocol-envelope     Wrap the message in Meta/Body/Footer sections.
@@ -109,6 +111,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --message-file)
       MESSAGE_FILE="${2:-}"
+      shift 2
+      ;;
+    --title)
+      MESSAGE_TITLE="${2:-}"
       shift 2
       ;;
     --protocol-envelope)
@@ -564,7 +570,15 @@ if [[ "$PROTOCOL_ENVELOPE" == "1" ]]; then
   if [[ -z "$MESSAGE_ID" ]]; then
     MESSAGE_ID="msg_$(date -u +%Y%m%dT%H%M%SZ)_$$"
   fi
+  normalized_title="$(
+    printf '%s' "$MESSAGE_TITLE" \
+      | tr '\r\n' '  ' \
+      | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//'
+  )"
   {
+    if [[ -n "$normalized_title" ]]; then
+      printf '# %s\n\n' "$normalized_title"
+    fi
     printf '%s\n' '--- Meta ---'
     printf 'id: %s\n' "$MESSAGE_ID"
     printf 'type: %s\n' "$PROTOCOL_TYPE"

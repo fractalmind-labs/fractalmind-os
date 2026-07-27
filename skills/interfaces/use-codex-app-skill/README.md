@@ -28,6 +28,7 @@ bash .codex/skills/use-codex-app/scripts/send-codex-app-agent-message.sh \
   --agent PM --cwd CloudBank \
   --protocol-envelope \
   --from main \
+  --title 'Validate live release' \
   --reply-to-thread-id <main-thread-id> \
   --message 'Please validate the live release and reply when complete.'
 ```
@@ -42,8 +43,11 @@ bash .codex/skills/use-codex-app/scripts/send-codex-app-agent-message.sh \
 
 Use `--protocol-envelope` when the receiving sidebar Agent should actively reply after finishing the task. The script wraps the message in a small stateless envelope inspired by the agent-manager message protocol:
 
+- `Title`: optional first line rendered as Markdown H1 before `--- Meta ---`; use `--title`.
 - `Meta`: `id`, `type`, `from`, `to`, optional `reply_to`, and optional `reply_endpoint`.
 - `Body`: the original task text.
 - `Footer`: a plain-text reply hint when `reply_endpoint` is provided.
 
 For Codex/ChatGPT App threads, use `--reply-to-thread-id <id>`. It renders `reply_endpoint: codex-app:thread:<id>` and tells the receiver how to reply with `--message-type reply --reply-to <message-id>`.
+
+The title is for human scanning only. It is normalized to one line, does not participate in routing, and is omitted when empty.
