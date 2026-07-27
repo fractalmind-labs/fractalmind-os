@@ -1060,7 +1060,7 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
     await new Promise((resolve) => setTimeout(resolve, 300));
     let strategy = "visible-composer-keyboard";
     if (button) {
-      dispatchPointerMouseSequence(button);
+      button.click();
       strategy = "visible-composer-button";
     } else {
       composer.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, metaKey: true }));
