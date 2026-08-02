@@ -2,18 +2,23 @@ name: desktop
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-console-desktop-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, ubuntu-22.04, windows-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: [self-hosted, macOS, ARM64, rosex-host, agent-console]
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
         with:
           version: 9
@@ -22,38 +27,29 @@ jobs:
           node-version: 20
           cache: pnpm
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-      - name: Install Linux deps
-        if: matrix.os == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       - name: Install JS deps
-        run: pnpm install
-      - name: Generate Tauri icons
-        run: pnpm tauri icon src-tauri/icons/icon.png
-      - name: Add macOS universal targets
-        if: matrix.os == 'macos-latest'
-        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
-      - name: Build desktop app
-        # macOS: universal binary (Intel + Apple Silicon) with ad-hoc signing
-        # (bundle.macOS.signingIdentity "-"), so the .dmg opens on either chip
-        # without manual quarantine removal.
-        run: pnpm tauri build ${{ matrix.os == 'macos-latest' && '--target universal-apple-darwin' || '' }}
-      - name: Upload installers
+        run: pnpm install --frozen-lockfile
+      - name: Build Apple Silicon app bundle
+        run: pnpm tauri build --target aarch64-apple-darwin --bundles app
+      - name: Package app bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          app=$(find src-tauri/target/aarch64-apple-darwin/release/bundle/macos -maxdepth 1 -type d -name '*.app' -print -quit)
+          test -n "$app"
+          mkdir -p dist-desktop
+          ditto -c -k --sequesterRsrc --keepParent "$app" "dist-desktop/$(basename "$app").zip"
+          shasum -a 256 dist-desktop/*.zip | tee dist-desktop/SHA256SUMS
+      - name: Upload Apple Silicon app
         uses: actions/upload-artifact@v4
         with:
-          name: agent-console-${{ matrix.os }}
-          if-no-files-found: warn
+          name: agent-console-macos-arm64
+          if-no-files-found: error
           path: |
-            src-tauri/target/release/bundle/**/*.dmg
-            src-tauri/target/release/bundle/**/*.app
-            src-tauri/target/universal-apple-darwin/release/bundle/**/*.dmg
-            src-tauri/target/universal-apple-darwin/release/bundle/**/*.app
-            src-tauri/target/release/bundle/**/*.deb
-            src-tauri/target/release/bundle/**/*.AppImage
-            src-tauri/target/release/bundle/**/*.rpm
-            src-tauri/target/release/bundle/**/*.msi
-            src-tauri/target/release/bundle/**/*.exe
+            dist-desktop/*.app.zip
+            dist-desktop/SHA256SUMS

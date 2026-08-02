@@ -4,11 +4,23 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-console-pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    # Never execute fork-authored code on the persistent RoseX Host runner.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, macOS, ARM64, rosex-host, agent-console]
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
         with:
           version: 9
@@ -16,7 +28,17 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
       - name: Build (typecheck + bundle)
         run: pnpm build
+      - name: Run repository tests when present
+        run: pnpm run --if-present test
+      - name: Build Apple Silicon app bundle
+        run: pnpm tauri build --target aarch64-apple-darwin --bundles app
