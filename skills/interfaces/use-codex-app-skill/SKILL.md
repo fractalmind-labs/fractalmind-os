@@ -13,7 +13,7 @@ The goal is to inspect local Codex/ChatGPT App runtime state or deliver a user m
 
 - Never send to a fuzzy or ambiguous target. Resolve exactly one thread by `threadId`, `name`, title, `cwd`, or source metadata first.
 - Report the exact target before or after delivery: `threadId`, `name` or title, `cwd`, `status`, and transport used.
-- Do not use DOM typing/clicking as the first option. Use the protocol handler or an app-provided renderer bridge when exposed. On upgraded ChatGPT App builds where the legacy bridge bundle is absent, the bundled sender may use its guarded visible-composer fallback after exact target resolution and CDP readback.
+- Do not use DOM typing/clicking as the first option. Use the protocol handler or an app-provided renderer bridge when exposed. On upgraded ChatGPT App builds where the legacy bridge is absent or rejects `start-turn-for-host` before accepting it, the bundled sender may use its guarded visible-composer fallback after exact target resolution and CDP readback.
 - Do not use `thread/inject_items` as a substitute for a live user turn. It appends model-visible history; it does not start agent work.
 - Do not start `codex app-server`, `codex app-server proxy`, or a temporary `--listen` process as an automatic fallback. If CDP is not available, stop and report that the current Codex App renderer cannot be reached.
 - A protocol reply is delivered only after target-thread readback: the target App thread must visibly contain the reply message id or another unique message needle, and the same text must not be left in the composer or queued-message controls.
@@ -140,7 +140,7 @@ Sender behavior:
 - For app-server JSON-RPC, `turn/start` is used for idle or not-loaded threads; active threads are refused unless `--steer` is passed.
 - For non-dry-run app-server JSON-RPC, success requires a follow-up CDP readback from the current App target thread. A JSON-RPC `turn/start` response alone is not enough.
 - For older Codex App CDP builds, the script locates the `app-server-manager-signals` bundle and calls the app-owned `start-turn-for-host` request.
-- For upgraded ChatGPT App CDP builds where that legacy bundle is absent, the script uses a guarded visible-composer fallback: exact sidebar/thread resolution, route to `/local/<threadId>`, set the app composer, submit through the visible app UI, and confirm target-thread readback. CDP delivery does not support `--steer`; use explicit WebSocket for `turn/steer`.
+- For upgraded ChatGPT App CDP builds where that legacy bundle is absent, its request export cannot be found, or `start-turn-for-host` rejects before accepting the message, the script uses a guarded visible-composer fallback: exact sidebar/thread resolution, route to `/local/<threadId>`, set the app composer, submit through the visible app UI, and confirm target-thread readback. It does not fall back after an accepted bridge request whose readback fails, preventing duplicate delivery. CDP delivery does not support `--steer`; use explicit WebSocket for `turn/steer`.
 - `--dry-run` verifies the selected target and app-server/CDP bridge readback without sending the message.
 
 ## Keep CDP Enabled
@@ -197,7 +197,7 @@ bash .codex/skills/use-codex-app/scripts/install-codex-cdp-monitor.sh --status
 bash .codex/skills/use-codex-app/scripts/install-codex-cdp-monitor.sh --install
 ```
 
-Use the page `webSocketDebuggerUrl` with a CDP client. Older Codex builds expose the renderer's `app-server-manager-signals` bundle; call its request function (`Kn` or `rn`) with `start-turn-for-host`, `hostId`, `conversationId`, and text input. Upgraded ChatGPT App builds may instead expose only the main renderer bundle and sidebar/composer UI; in that case use the bundled sender's guarded visible-composer fallback rather than ad hoc DOM scripting.
+Use the page `webSocketDebuggerUrl` with a CDP client. Older Codex builds expose the renderer's `app-server-manager-signals` bundle; its request export may be `bc`, `Kn`, or `rn`. Call it with `start-turn-for-host`, `hostId`, `conversationId`, and text input. Upgraded ChatGPT App builds may instead expose only the main renderer bundle and sidebar/composer UI, or reject this request despite exposing the bundle; in either case use the bundled sender's guarded visible-composer fallback rather than ad hoc DOM scripting.
 
 CDP validation expectations:
 
