@@ -1152,8 +1152,44 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
     return { ok: true, strategy, navigation, verified: queuedSteer ? "target-thread-readback-steered" : "target-thread-readback", queuedSteer };
   }
 
+  function bridgeRejectionDetail(value) {
+    if (!value || typeof value !== "object") return "";
+    const status = typeof value.status === "string" ? value.status.toLowerCase() : "";
+    const rejected = value.ok === false || value.success === false || value.error || value.errorMessage || ["error", "failed", "failure", "rejected"].includes(status);
+    if (!rejected) return "";
+    const detail = value.error?.message || value.error || value.errorMessage || value.message || value.reason || status;
+    if (typeof detail === "string" && detail.trim()) return detail.trim();
+    try { return JSON.stringify(detail || value); } catch (_) { return "Codex App bridge rejected the request."; }
+  }
+
+  async function submitFallback(bridge, bridgeError) {
+    const bridgeErrorText = bridgeError ? String(bridgeError?.message || bridgeError) : null;
+    if (payload.dryRun) {
+      return {
+        ok: true,
+        dryRun: true,
+        conversationId,
+        sidebarName: readSidebarName(conversationId),
+        bridge: bridge || null,
+        bridgeError: bridgeErrorText,
+        fallback: "visible-composer",
+      };
+    }
+    const fallbackResult = await submitViaVisibleComposer();
+    return {
+      ok: true,
+      dryRun: false,
+      conversationId,
+      sidebarName: readSidebarName(conversationId),
+      bridge: bridge || null,
+      bridgeError: bridgeErrorText,
+      fallback: fallbackResult.strategy,
+      navigation: fallbackResult.navigation,
+      verified: fallbackResult.verified,
+    };
+  }
+
   const resources = performance.getEntriesByType("resource").map((entry) => entry.name);
-  const verificationNeedle = payload.verificationNeedle;
   let signalsUrl = resources.find((name) => /app-server-manager-signals-[^/]+\\.js$/.test(name));
   if (!signalsUrl) {
     const scripts = Array.from(document.querySelectorAll("script[src]")).map((script) => script.src);
@@ -1170,47 +1206,36 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
     }
   }
   if (!signalsUrl) {
-    if (payload.dryRun) {
-      return {
-        ok: true,
-        dryRun: true,
-        conversationId,
-        sidebarName: readSidebarName(conversationId),
-        bridge: null,
-        fallback: "visible-composer",
-      };
+    return await submitFallback(null, null);
+  }
+
+  let bridge = null;
+  let result;
+  try {
+    const signals = await import(signalsUrl);
+    const candidates = [["bc", signals.bc], ["Kn", signals.Kn], ["rn", signals.rn]];
+    const candidate = candidates.find(([, fn]) => typeof fn === "function");
+    const sendRequest = candidate ? candidate[1] : null;
+    bridge = candidate ? candidate[0] : null;
+    if (typeof sendRequest !== "function") {
+      throw new Error("Codex App app-server request bridge is unavailable.");
     }
-    const fallbackResult = await submitViaVisibleComposer();
-    return {
-      ok: true,
-      dryRun: false,
+    if (payload.dryRun) {
+      return { ok: true, dryRun: true, conversationId, signalsUrl, bridge: "start-turn-for-host:" + bridge };
+    }
+    const input = [{ type: "text", text: payload.prompt, text_elements: [] }];
+    result = await sendRequest("start-turn-for-host", {
+      hostId: payload.hostId || "local",
       conversationId,
-      sidebarName: readSidebarName(conversationId),
-      bridge: null,
-      fallback: fallbackResult.strategy,
-      navigation: fallbackResult.navigation,
-      verified: fallbackResult.verified,
-    };
+      params: { input }
+    });
+    const rejection = bridgeRejectionDetail(result);
+    if (rejection) throw new Error("Codex App start-turn-for-host rejected the request: " + rejection);
+  } catch (bridgeError) {
+    return await submitFallback(bridge || "start-turn-for-host", bridgeError);
   }
-
-  const signals = await import(signalsUrl);
-  const sendRequest = typeof signals.Kn === "function" ? signals.Kn : (typeof signals.rn === "function" ? signals.rn : null);
-  if (typeof sendRequest !== "function") {
-    throw new Error("Codex App app-server request bridge is unavailable.");
-  }
-
-  if (payload.dryRun) {
-    return { ok: true, dryRun: true, conversationId, signalsUrl, bridge: "start-turn-for-host" };
-  }
-
-  const input = [{ type: "text", text: payload.prompt, text_elements: [] }];
-  const result = await sendRequest("start-turn-for-host", {
-    hostId: payload.hostId || "local",
-    conversationId,
-    params: { input }
-  });
-  await verifyDeliveryReadback(verificationNeedle);
-  return { ok: true, dryRun: false, conversationId, signalsUrl, result, verified: "target-thread-readback" };
+  await verifyDeliveryReadback(payload.verificationNeedle);
+  return { ok: true, dryRun: false, conversationId, signalsUrl, result, bridge, verified: "target-thread-readback" };
 })()`;
 }
 
@@ -1366,6 +1391,7 @@ async function deliverViaCdp() {
     conversation_id: value?.conversationId || conversationId,
     message_bytes: Buffer.byteLength(message, "utf8"),
     bridge: value?.bridge || null,
+    bridge_error: value?.bridgeError || null,
     fallback: value?.fallback || null,
     navigation: value?.navigation || null,
     verified: value?.verified || (dryRun ? null : "target-thread-readback"),
