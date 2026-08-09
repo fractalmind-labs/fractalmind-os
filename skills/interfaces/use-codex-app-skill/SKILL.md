@@ -16,6 +16,7 @@ The goal is to inspect local Codex/ChatGPT App runtime state or deliver a user m
 - Do not use DOM typing/clicking as the first option. Use the protocol handler or an app-provided renderer bridge when exposed. On upgraded ChatGPT App builds where the legacy bridge is absent or rejects `start-turn-for-host` before accepting it, the bundled sender may use its guarded visible-composer fallback after exact target resolution and CDP readback.
 - Do not use `thread/inject_items` as a substitute for a live user turn. It appends model-visible history; it does not start agent work.
 - Do not start `codex app-server`, `codex app-server proxy`, or a temporary `--listen` process as an automatic fallback. If CDP is not available, stop and report that the current Codex App renderer cannot be reached.
+- When `/json/list` exposes duplicate local URLs, use the exact `--cdp-target-id` from the CDP target readback; do not rely on list order or a broad title/URL selector.
 - A protocol reply is delivered only after target-thread readback: the target App thread must visibly contain the reply message id or another unique message needle, and the same text must not be left in the composer or queued-message controls.
 - If endpoint discovery, auth, socket connection, target resolution, method validation, or target-thread readback fails, stop and report the failure. Do not claim delivery.
 
@@ -44,7 +45,7 @@ Interpretation:
 
 - `Codex App Processes` shows Electron app instances and app-server processes. It detects both `/Applications/ChatGPT.app` and `/Applications/Codex.app`.
 - `CDP Targets` shows renderer targets reachable through DevTools. This confirms inspectability; it is not the full agent list.
-- `Sidebar Named Agents` / JSON `sidebar_agents` lists names currently visible in the app sidebar. This is the best evidence for user-renamed agents after the ChatGPT App upgrade.
+- `Sidebar Named Agents` / JSON `sidebar_agents` lists thread rows currently visible in the active renderer, including their nearest project context when available. The lister probes CDP targets until it finds a renderer with readable sidebar rows; an empty list is not proof that the visual sidebar is empty and must be cross-checked against active-renderer DOM when duplicate/blank targets exist.
 - `Codex App Threads` lists state DB threads. Newer schemas may include `name`, `preview`, `agent_nickname`, `agent_role`, and `agent_path`; the script uses them when present and falls back to title.
 - `Agent Jobs` lists active/busy batch jobs when the local app schema still has `agent_jobs`. Newer schemas may not have that table; this is reported as unavailable rather than an error.
 - Use the `id` from `Codex App Threads` as the `--thread-id` target for message delivery.
@@ -81,7 +82,7 @@ bash .codex/skills/use-codex-app/scripts/send-codex-app-agent-message.sh \
 
 ### Replyable assignments
 
-When the receiver should actively report completion back to the sender, use the stateless message envelope. This follows the agent-manager message protocol shape while using a Codex/ChatGPT App thread as the reply endpoint:
+When dispatching a task that requires a completion report, use the stateless message envelope. Task envelopes are replyable by design: the sender rejects a `type: message` envelope unless it includes `--reply-to-thread-id` or `--reply-endpoint`. This follows the agent-manager message protocol shape while using a Codex/ChatGPT App thread as the reply endpoint:
 
 ```bash
 bash .codex/skills/use-codex-app/scripts/send-codex-app-agent-message.sh \
@@ -130,6 +131,8 @@ bash .codex/skills/use-codex-app/scripts/send-codex-app-agent-message.sh \
 
 This is still a stateless protocol. The skill does not create an inbox, outbox, retry queue, or delivery log; active replies work because the receiving Agent is explicitly instructed where and how to send the reply. Every assignment and reply envelope must include a concise `--title`.
 
+Every task envelope footer includes the reply endpoint, required reply envelope fields, and minimum report content: final status/verdict, exact evidence and artifact paths, verified scope, blocker when applicable, and next action. A plain narrative or silent completion is not a valid task completion. For notifications that intentionally do not need a reply, send a non-envelope message instead of bypassing the task reply requirement.
+
 The receiving Agent must not start a temporary `codex app-server --listen ...` just to return a reply. Use the current Codex/ChatGPT App CDP delivery path by default. If an explicit app-server WebSocket is intentionally used, the sender still verifies the current App target thread through CDP before returning success.
 
 Sender behavior:
@@ -171,6 +174,8 @@ The monitor log is `~/.codex/log/codex-cdp-monitor.log`. The LaunchAgent plist i
 ### 1. Codex App CDP renderer bridge
 
 Use CDP as the default delivery path. It talks to the current Codex/ChatGPT App renderer and routes accepted turns through the visible app surface. Prefer the bundled sender's default `auto` path or explicit `--transport cdp` instead of hand-writing CDP calls.
+
+If multiple CDP page targets share the same local thread URL, pass `--cdp-target-id <id>` from `/json/list` to select the active renderer deterministically. A target with an empty document/body is not evidence of a usable app surface.
 
 Discover the DevTools endpoint from Codex or ChatGPT user-data directories:
 

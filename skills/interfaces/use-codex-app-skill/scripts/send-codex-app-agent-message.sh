@@ -17,6 +17,7 @@ fi
 SOCK="${CODEX_APP_SERVER_SOCK:-}"
 CDP_ENDPOINT="${CODEX_APP_CDP_ENDPOINT:-}"
 CDP_SELECTOR="${CODEX_APP_CDP_SELECTOR:-}"
+CDP_TARGET_ID="${CODEX_APP_CDP_TARGET_ID:-}"
 HOST_ID="${CODEX_APP_HOST_ID:-local}"
 CONVERSATION_ID="${CODEX_APP_CONVERSATION_ID:-}"
 TRANSPORT="${CODEX_APP_SERVER_TRANSPORT:-auto}"
@@ -67,6 +68,7 @@ Transport:
   --transport auto|ws|cdp
   --cdp-endpoint URL      CDP HTTP endpoint, for example http://127.0.0.1:9222.
   --cdp-selector TEXT     Optional CDP target selector matched against page title or URL.
+  --cdp-target-id ID      Exact CDP target id from /json/list; useful when duplicate local URLs exist.
   --host-id ID            Codex App host id for CDP renderer bridge. Defaults to local.
   --conversation-id ID    Codex App conversation id for CDP bridge. Defaults to --thread-id.
   --timeout-ms N          Per-request timeout in milliseconds.
@@ -164,6 +166,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --cdp-selector)
       CDP_SELECTOR="${2:-}"
+      shift 2
+      ;;
+    --cdp-target-id)
+      CDP_TARGET_ID="${2:-}"
       shift 2
       ;;
     --host-id)
@@ -277,6 +283,11 @@ if [[ -n "$REPLY_TO_THREAD_ID" ]]; then
   REPLY_ENDPOINT="codex-app:thread:${REPLY_TO_THREAD_ID}"
 fi
 
+if [[ "$PROTOCOL_ENVELOPE" == "1" && "$PROTOCOL_TYPE" == "message" && -z "$REPLY_ENDPOINT" ]]; then
+  echo "task protocol envelopes require --reply-to-thread-id or --reply-endpoint so the receiver has an explicit reply path" >&2
+  exit 2
+fi
+
 if ! command -v node >/dev/null 2>&1; then
   echo "node is required for app-server or CDP delivery" >&2
   exit 2
@@ -332,9 +343,10 @@ message_path="$tmpdir/message.txt"
 
 resolved_from_sidebar="0"
 if [[ -n "$CDP_ENDPOINT" && "$TRANSPORT" != "ws" && ( -n "$AGENT" || -n "$THREAD_ID" ) ]]; then
-  if CDP_ENDPOINT="$CDP_ENDPOINT" CDP_SELECTOR="$CDP_SELECTOR" THREAD_ID="$THREAD_ID" AGENT="$AGENT" CWD_FILTER="$CWD_FILTER" TIMEOUT_MS="$TIMEOUT_MS" node > "$targets_json" <<'NODE'
+  if CDP_ENDPOINT="$CDP_ENDPOINT" CDP_SELECTOR="$CDP_SELECTOR" CDP_TARGET_ID="$CDP_TARGET_ID" THREAD_ID="$THREAD_ID" AGENT="$AGENT" CWD_FILTER="$CWD_FILTER" TIMEOUT_MS="$TIMEOUT_MS" node > "$targets_json" <<'NODE'
 const endpoint = (process.env.CDP_ENDPOINT || "").replace(/\/+$/, "");
 const selector = process.env.CDP_SELECTOR || "";
+const targetId = process.env.CDP_TARGET_ID || "";
 const threadId = process.env.THREAD_ID || "";
 const agent = process.env.AGENT || "";
 const cwdFilter = process.env.CWD_FILTER || "";
@@ -350,6 +362,7 @@ async function selectCdpTarget() {
     const targets = await response.json();
     for (const candidate of targets) {
       if (!candidate.webSocketDebuggerUrl) continue;
+      if (targetId && candidate.id !== targetId) continue;
       if (!selector && ["page", "webview", "other"].includes(candidate.type)) return candidate;
       if (selector && (`${candidate.title || ""}\n${candidate.url || ""}`).includes(selector)) return candidate;
     }
@@ -597,7 +610,10 @@ if [[ "$PROTOCOL_ENVELOPE" == "1" ]]; then
     printf '%s\n' "$MESSAGE"
     if [[ -n "$REPLY_ENDPOINT" ]]; then
       printf '\n%s\n' '--- Footer ---'
-      printf '%s\n' "When complete, reply to ${REPLY_ENDPOINT} using this skill's message protocol. For codex-app:thread:<id>, run send-codex-app-agent-message.sh --thread-id <id> --protocol-envelope --message-type reply --from '${target_to}' --reply-to '${MESSAGE_ID}' --title '<reply-title>' --message-file <report-file>."
+      printf '%s\n' "When complete, send a protocol reply to ${REPLY_ENDPOINT} using this skill."
+      printf '%s\n' "Reply envelope: type=reply; from=${target_to}; reply_to=${MESSAGE_ID}; title=Reply: ${normalized_title}."
+      printf '%s\n' "Reply body must state the final status/verdict, exact evidence and artifact paths, verified scope, blocker (if any), and next action. Do not silently complete or send a plain narrative."
+      printf '%s\n' "For codex-app:thread:<id>, use send-codex-app-agent-message.sh --thread-id <id> --protocol-envelope --message-type reply --from '${target_to}' --reply-to '${MESSAGE_ID}' --title 'Reply: ${normalized_title}' --message-file <report-file>."
     fi
   } > "$message_path"
 else
@@ -626,6 +642,20 @@ if [[ -z "$CONVERSATION_ID" ]]; then
   CONVERSATION_ID="$THREAD_ID"
 fi
 
+# Sidebar rows on newer ChatGPT App builds can expose a synthetic
+# client-new-thread id while the renderer route and state DB retain the
+# durable UUID. Use the unique persisted thread for the app bridge payload.
+if [[ "$CONVERSATION_ID" == client-new-thread:* ]]; then
+  durable_conversation_id=""
+  durable_match_count="0"
+  target_to_sql="$(printf '%s' "$target_to" | sed "s/'/''/g")"
+  durable_conversation_id="$(sqlite3 "$STATE_DB" "select id from threads where archived = 0 and (title = '$target_to_sql' or agent_nickname = '$target_to_sql') order by coalesce(updated_at_ms, updated_at * 1000) desc;" 2>/dev/null || true)"
+  durable_match_count="$(printf '%s\n' "$durable_conversation_id" | awk 'NF { count++ } END { print count + 0 }')"
+  if [[ "$durable_match_count" == "1" ]]; then
+    CONVERSATION_ID="$(printf '%s\n' "$durable_conversation_id" | sed -n '1p')"
+  fi
+fi
+
 if [[ -z "$WS_URL" && "$TRANSPORT" == "auto" && -z "$CDP_ENDPOINT" ]]; then
   echo "No current Codex App CDP endpoint or explicit --ws-url found." >&2
   echo "This script does not start codex app-server automatically. Enable Codex App CDP, then retry:" >&2
@@ -645,6 +675,7 @@ node_report="$(
   SOCK="$SOCK" \
   CDP_ENDPOINT="$CDP_ENDPOINT" \
   CDP_SELECTOR="$CDP_SELECTOR" \
+  CDP_TARGET_ID="$CDP_TARGET_ID" \
   HOST_ID="$HOST_ID" \
   CONVERSATION_ID="$CONVERSATION_ID" \
   TRANSPORT="$TRANSPORT" \
@@ -663,6 +694,7 @@ const wsUrl = process.env.WS_URL || "";
 const sock = process.env.SOCK || "";
 const cdpEndpoint = (process.env.CDP_ENDPOINT || "").replace(/\/+$/, "");
 const cdpSelector = process.env.CDP_SELECTOR || "";
+const cdpTargetId = process.env.CDP_TARGET_ID || "";
 const hostId = process.env.HOST_ID || "local";
 const conversationId = process.env.CONVERSATION_ID || target.id;
 const dryRun = process.env.DRY_RUN === "1";
@@ -789,6 +821,7 @@ async function selectCdpTarget(endpoint, selector) {
     const targets = await response.json();
     for (const candidate of targets) {
       if (!candidate.webSocketDebuggerUrl) continue;
+      if (cdpTargetId && candidate.id !== cdpTargetId) continue;
       if (!selector && ["page", "webview", "other"].includes(candidate.type)) return candidate;
       if (selector && (`${candidate.title || ""}\n${candidate.url || ""}`).includes(selector)) return candidate;
     }
@@ -1110,16 +1143,35 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
   }
 
   async function submitViaVisibleComposer() {
-    const navigation = await navigateToConversation(conversationId);
+    let navigation;
+    try {
+      navigation = await navigateToConversation(conversationId);
+    } catch (error) {
+      throw new Error("visible-composer navigation: " + (error.message || error));
+    }
     const verificationNeedle = payload.verificationNeedle;
-    const composer = await waitFor(() => findComposer(), 12000);
+    let composer;
+    try {
+      composer = await waitFor(() => findComposer(), 12000);
+    } catch (error) {
+      throw new Error("visible-composer composer: " + (error.message || error));
+    }
     const existingDraft = currentComposerText();
     if (existingDraft && !existingDraft.includes(verificationNeedle)) {
       throw new Error("Target App composer already contains an unsent draft; refusing to overwrite it.");
     }
     setComposerText(composer, payload.prompt);
-    await waitFor(() => (composer.textContent || composer.value || "").includes(verificationNeedle), 5000);
-    const button = await waitFor(() => findSendButton(composer), 10000);
+    try {
+      await waitFor(() => (composer.textContent || composer.value || "").includes(verificationNeedle), 5000);
+    } catch (error) {
+      throw new Error("visible-composer input: " + (error.message || error));
+    }
+    let button;
+    try {
+      button = await waitFor(() => findSendButton(composer), 10000);
+    } catch (error) {
+      throw new Error("visible-composer send-control: " + (error.message || error));
+    }
     await new Promise((resolve) => setTimeout(resolve, 300));
     let strategy = "visible-composer-keyboard";
     if (button) {
@@ -1148,7 +1200,11 @@ function buildCdpDeliveryScript({ dryRunOnly }) {
       queuedSteer = true;
       await waitFor(() => !hasQueuedMessageControls(), 10000);
     }
-    await verifyDeliveryReadback(verificationNeedle);
+    try {
+      await verifyDeliveryReadback(verificationNeedle);
+    } catch (error) {
+      throw new Error("visible-composer readback: " + (error.message || error));
+    }
     return { ok: true, strategy, navigation, verified: queuedSteer ? "target-thread-readback-steered" : "target-thread-readback", queuedSteer };
   }
 

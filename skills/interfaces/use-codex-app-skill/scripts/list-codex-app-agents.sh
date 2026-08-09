@@ -279,21 +279,26 @@ if [[ "$JSON_OUTPUT" == "1" ]]; then
     fi
   done
 
-  first_target_json="$(node - "$tmpdir/cdp-targets.jsonl" <<'NODE'
+  printf '[]\n' > "$tmpdir/sidebar-agents.json"
+  while IFS= read -r target_line; do
+    [[ -n "$target_line" ]] || continue
+    printf '%s' "$target_line" > "$tmpdir/sidebar-target.json"
+    node - "$tmpdir/sidebar-target.json" 8000 > "$tmpdir/sidebar-candidate.json" <<<"$(sidebar_eval_node)" || continue
+    candidate_count="$(node - "$tmpdir/sidebar-candidate.json" <<'NODE'
 const fs = require("node:fs");
-const path = process.argv[2];
-const lines = fs.existsSync(path) ? fs.readFileSync(path, "utf8").split(/\r?\n/).filter(Boolean) : [];
-const targets = lines.map((line) => JSON.parse(line));
-const target = targets.find((item) => ["page", "webview", "other"].includes(item.type)) || targets[0];
-process.stdout.write(target ? JSON.stringify(target) : "");
+try {
+  const rows = JSON.parse(fs.readFileSync(process.argv[2], "utf8") || "[]");
+  process.stdout.write(String(Array.isArray(rows) ? rows.length : 0));
+} catch {
+  process.stdout.write("0");
+}
 NODE
 )"
-  if [[ -n "$first_target_json" ]]; then
-    printf '%s' "$first_target_json" > "$tmpdir/sidebar-target.json"
-    node - "$tmpdir/sidebar-target.json" 8000 > "$tmpdir/sidebar-agents.json" <<<"$(sidebar_eval_node)" || printf '[]\n' > "$tmpdir/sidebar-agents.json"
-  else
-    printf '[]\n' > "$tmpdir/sidebar-agents.json"
-  fi
+    if [[ "$candidate_count" =~ ^[1-9][0-9]*$ ]]; then
+      cp "$tmpdir/sidebar-candidate.json" "$tmpdir/sidebar-agents.json"
+      break
+    fi
+  done < "$tmpdir/cdp-targets.jsonl"
 
   if [[ -n "$STATE_DB" && -f "$STATE_DB" ]]; then
     has_name="0"; sqlite_has_column "$STATE_DB" threads name && has_name="1"
