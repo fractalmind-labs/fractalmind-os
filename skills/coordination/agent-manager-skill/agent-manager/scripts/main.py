@@ -8,6 +8,8 @@ Sessions are named: agent-{agent_id} where agent_id is file_id in lowercase (e.g
 
 from __future__ import annotations
 import argparse
+import contextlib
+import fcntl
 import hashlib
 import json
 import os
@@ -1244,6 +1246,71 @@ def _heartbeat_already_acknowledged(repo_root: Path, *, agent_id: str, heartbeat
     return False
 
 
+@contextlib.contextmanager
+def _heartbeat_rescue_lock(repo_root: Path):
+    """Serialize the final rescue check with other rescue/audit writers."""
+    lock_path = repo_root / '.claude' / 'state' / 'agent-manager' / 'heartbeat-rescue.lock'
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open('a+', encoding='utf-8') as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def _heartbeat_rescue_revalidation(
+    repo_root: Path,
+    *,
+    agent_id: str,
+    launcher: str,
+    heartbeat_id: str,
+    baseline_pane_hash: str = '',
+) -> tuple[bool, str]:
+    """Final, serialized guard immediately before a pending-heartbeat rescue stop."""
+    hb_id = str(heartbeat_id or '').strip()
+    if not hb_id:
+        return True, 'manual_rescue'
+
+    events = _read_heartbeat_audit_events(repo_root, agent_id=agent_id, heartbeat_id=hb_id, limit=100)
+    origin = next(
+        (
+            event for event in events
+            if str(event.get('send_status', '')) == 'ok'
+            and str(event.get('ack_status', '')) == 'not_checked'
+            and str(event.get('phase', '')) != 'preflight'
+        ),
+        None,
+    )
+    if origin is None:
+        return False, 'origin_missing_or_superseded'
+    if any(str(event.get('ack_status', '')) in {'ack', 'yielded'} for event in events):
+        return False, 'origin_acknowledged'
+
+    origin_ts = str(origin.get('timestamp', ''))
+    newer = _read_heartbeat_audit_events(repo_root, agent_id=agent_id, limit=100)
+    for event in newer:
+        if str(event.get('hb_id', '')) == hb_id:
+            continue
+        if str(event.get('timestamp', '')) <= origin_ts:
+            continue
+        if str(event.get('send_status', '')) == 'ok' and str(event.get('ack_status', '')) in {'ack', 'yielded'}:
+            return False, 'newer_heartbeat_progress'
+
+    if not session_exists(agent_id):
+        return False, 'session_missing'
+    runtime = get_agent_runtime_state(agent_id, launcher=launcher)
+    if str(runtime.get('state', 'unknown')) != 'idle':
+        return False, f"fresh_runtime:{runtime.get('state', 'unknown')}"
+    if baseline_pane_hash:
+        current_output = capture_output(agent_id, lines=120) or ''
+        if _tail_hash(current_output) != baseline_pane_hash:
+            return False, 'fresh_pane_progress'
+    if has_pending_inbound_messages(repo_root, agent_id=agent_id):
+        return False, 'fresh_inbound_progress'
+    return True, 'exact_pending_stale'
+
+
 def _heartbeat_preflight_runtime_state(
     *,
     repo_root: Optional[Path] = None,
@@ -1392,6 +1459,7 @@ def _append_heartbeat_audit_event(
     reason_code: str = "",
     ack_evidence: str = "",
     timestamp: Optional[str] = None,
+    lock: bool = True,
 ) -> Path:
     audit_file = _heartbeat_audit_file(repo_root, agent_id)
     audit_file.parent.mkdir(parents=True, exist_ok=True)
@@ -1417,8 +1485,15 @@ def _append_heartbeat_audit_event(
         'ack_evidence': str(ack_evidence or ''),
     }
 
-    with audit_file.open('a', encoding='utf-8') as fp:
-        fp.write(json.dumps(event, ensure_ascii=False) + "\n")
+    def write_event() -> None:
+        with audit_file.open('a', encoding='utf-8') as fp:
+            fp.write(json.dumps(event, ensure_ascii=False) + "\n")
+
+    if lock:
+        with _heartbeat_rescue_lock(repo_root):
+            write_event()
+    else:
+        write_event()
     return audit_file
 
 
@@ -2221,6 +2296,9 @@ def _schedule_pending_heartbeat_rescue_timer(
 ) -> bool:
     delay = max(_HEARTBEAT_PENDING_RESCUE_MIN_DELAY_SECONDS, int(delay_seconds or 0))
     dedupe_key = f"pending-rescue:{str(agent_file_id or '').strip().lower()}:{pending_heartbeat_id}"
+    agent_config = resolve_agent(agent_file_id) or {}
+    agent_runtime_id = get_agent_id(agent_config) if agent_config else str(agent_file_id)
+    pane_hash = _tail_hash(capture_output(agent_runtime_id, lines=120) or '')
     args = argparse.Namespace(
         timer_command='rescue',
         agent=agent_file_id,
@@ -2230,14 +2308,55 @@ def _schedule_pending_heartbeat_rescue_timer(
         no_prime=False,
         fresh=False,
         heartbeat_id=pending_heartbeat_id,
+        pane_hash=pane_hash,
         dedupe_key=dedupe_key,
     )
     return cmd_timer(args) == 0
 
 
-def _restart_heartbeat_session_restore(agent_file_id: str, agent_name: str, agent_id: str) -> bool:
+def _restart_heartbeat_session_restore(
+    agent_file_id: str,
+    agent_name: str,
+    agent_id: str,
+    *,
+    repo_root: Optional[Path] = None,
+    launcher: str = 'codex',
+    heartbeat_id: str = '',
+    baseline_pane_hash: str = '',
+) -> bool:
     print(f"♻️  Restarting '{agent_name}' in restore mode")
-    if session_exists(agent_id):
+    if repo_root is not None:
+        with _heartbeat_rescue_lock(repo_root):
+            ok, reason = _heartbeat_rescue_revalidation(
+                repo_root,
+                agent_id=agent_id,
+                launcher=launcher,
+                heartbeat_id=heartbeat_id,
+                baseline_pane_hash=baseline_pane_hash,
+            )
+            if not ok:
+                print(f"⏭️  Pending heartbeat rescue skipped: {reason}")
+                if heartbeat_id:
+                    _append_heartbeat_audit_event(
+                        repo_root,
+                        agent_id=agent_id,
+                        heartbeat_id=heartbeat_id,
+                        send_status='skip',
+                        ack_status='not_checked',
+                        duration_ms=0,
+                        context_left=None,
+                        failure_type='stale_rescue_skip',
+                        phase='rescue',
+                        recovery_action='skip_stale_rescue',
+                        reason_code='HB_RESCUE_STALE_SKIP',
+                        ack_evidence=reason,
+                        lock=False,
+                    )
+                return False
+            if session_exists(agent_id):
+                stop_session(agent_id)
+                time.sleep(1)
+    elif session_exists(agent_id):
         stop_session(agent_id)
         time.sleep(1)
 
@@ -2740,6 +2859,13 @@ def cmd_heartbeat_rescue(args):
     reason = str(getattr(args, 'reason', '') or '').strip()
     prime = not bool(getattr(args, 'no_prime', False))
     use_fresh = bool(getattr(args, 'fresh', False))
+    repo_root = get_repo_root()
+    launcher = resolve_launcher_command(agent_config.get('launcher', ''))
+    heartbeat_id = str(getattr(args, 'heartbeat_id', '') or '').strip()
+    if not heartbeat_id:
+        match = re.search(r'(?:^|\s)hb_id=([0-9]{8}-[0-9]{6})(?:\s|$)', reason)
+        heartbeat_id = match.group(1) if match else ''
+    baseline_pane_hash = str(getattr(args, 'pane_hash', '') or '').strip()
 
     print(f"🛟 Heartbeat rescue: {agent_name}")
     if reason:
@@ -2755,8 +2881,21 @@ def cmd_heartbeat_rescue(args):
             deps=_lifecycle_deps_module(),
         )
     else:
-        restarted = _restart_heartbeat_session_restore(agent_file_id, agent_name, agent_id)
+        restarted = _restart_heartbeat_session_restore(
+            agent_file_id,
+            agent_name,
+            agent_id,
+            repo_root=repo_root,
+            launcher=launcher,
+            heartbeat_id=heartbeat_id,
+            baseline_pane_hash=baseline_pane_hash,
+        )
     if not restarted:
+        if heartbeat_id and any(
+            str(event.get('reason_code', '')) == 'HB_RESCUE_STALE_SKIP'
+            for event in _read_heartbeat_audit_events(repo_root, agent_id=agent_id, heartbeat_id=heartbeat_id, limit=5)
+        ):
+            return 0
         return 1
 
     if not prime:
@@ -2973,7 +3112,14 @@ def cmd_heartbeat_run(args):
                         f"(hb_id={pending_hb_id or 'unknown'}, age={age_desc}, "
                         f"consecutive_pending_skips={pending_skip_count})"
                     )
-                    if not _restart_heartbeat_session_restore(agent_file_id, agent_name, agent_id):
+                    if not _restart_heartbeat_session_restore(
+                        agent_file_id,
+                        agent_name,
+                        agent_id,
+                        repo_root=repo_root,
+                        launcher=launcher,
+                        heartbeat_id=pending_hb_id,
+                    ):
                         print("⚠️  Pending heartbeat rescue failed; falling back to skip")
                     else:
                         recovery_action = 'auto_pending_rescue'
