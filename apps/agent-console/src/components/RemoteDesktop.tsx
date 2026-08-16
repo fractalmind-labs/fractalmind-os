@@ -14,10 +14,11 @@ interface Props {
 }
 
 interface InputEvent {
-  t: "move" | "down" | "up" | "key" | "text" | "scroll";
+  t: "move" | "down" | "up" | "click" | "key" | "text" | "scroll";
   x?: number;
   y?: number;
   b?: number;
+  c?: 1 | 2;
   k?: string;
   down?: boolean;
   dy?: number;
@@ -99,13 +100,28 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
     startTime: number;
     moved: boolean;
     remoteDown: boolean;
-    lastTapTime: number;
     longPressTimer?: number;
     pinchStartDist?: number;
     pinchStartZoom?: number;
     pinchStartPan?: { x: number; y: number };
     pinchMid?: { x: number; y: number };
-  }>({ startX: 0, startY: 0, lastX: 0, lastY: 0, startTime: 0, moved: false, remoteDown: false, lastTapTime: 0 });
+  }>({ startX: 0, startY: 0, lastX: 0, lastY: 0, startTime: 0, moved: false, remoteDown: false });
+  const pendingClickRef = useRef<{
+    source: "mouse" | "touch";
+    at: number;
+    clientX: number;
+    clientY: number;
+    x: number;
+    y: number;
+    timer: number;
+  } | null>(null);
+  const pointerRef = useRef<{
+    id: number;
+    button: number;
+    startX: number;
+    startY: number;
+    dragging: boolean;
+  } | null>(null);
   modsRef.current = mods;
   controllingRef.current = controlling;
   touchModeRef.current = touchMode;
@@ -239,6 +255,8 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
     reconnectRef.current = () => {
       window.clearTimeout(retryTimer);
       window.clearTimeout(dropTimer);
+      if (pendingClickRef.current) window.clearTimeout(pendingClickRef.current.timer);
+      pendingClickRef.current = null;
       attempts = 0;
       setReconnecting(true);
       setStatus("reconnecting…");
@@ -344,6 +362,8 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
       window.clearInterval(mediaTimer);
       window.clearTimeout(retryTimer);
       window.clearTimeout(dropTimer);
+      if (pendingClickRef.current) window.clearTimeout(pendingClickRef.current.timer);
+      pendingClickRef.current = null;
       reconnectRef.current = null;
       dcRef.current?.close();
       pcRef.current?.close();
@@ -369,15 +389,58 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
     if (m.length) setMods([]);
   };
 
-  const sendClick = (x: number, y: number, b = 0) => {
+  const sendAtomicClick = (x: number, y: number, b: 0 | 2, c: 1 | 2) => {
     const p = norm(x, y);
-    send({ t: "move", x: p.x, y: p.y });
-    // Darwin/cliclick button down/up commands are coordinate-bearing
-    // (`dd:x,y` / `du:x,y`). Include the same normalized point on the button
-    // events, not just the preceding move, otherwise the host may click at the
-    // injector default (0,0) even though the cursor was moved correctly.
-    send({ t: "down", x: p.x, y: p.y, b });
-    send({ t: "up", x: p.x, y: p.y, b });
+    send({ t: "click", x: p.x, y: p.y, b, c });
+  };
+
+  const flushPendingClick = () => {
+    const pending = pendingClickRef.current;
+    if (!pending) return;
+    window.clearTimeout(pending.timer);
+    pendingClickRef.current = null;
+    send({ t: "click", x: pending.x, y: pending.y, b: 0, c: 1 });
+  };
+
+  const queueClick = (source: "mouse" | "touch", x: number, y: number, button: number) => {
+    if (button === 2) {
+      flushPendingClick();
+      sendAtomicClick(x, y, 2, 1);
+      return;
+    }
+    if (button !== 0) return;
+
+    const now = Date.now();
+    const pending = pendingClickRef.current;
+    if (
+      pending &&
+      pending.source === source &&
+      now - pending.at <= DOUBLE_TAP_MS &&
+      Math.hypot(x - pending.clientX, y - pending.clientY) <= TAP_MOVE_PX
+    ) {
+      window.clearTimeout(pending.timer);
+      pendingClickRef.current = null;
+      sendAtomicClick(x, y, 0, 2);
+      return;
+    }
+
+    flushPendingClick();
+    const p = norm(x, y);
+    const next = {
+      source,
+      at: now,
+      clientX: x,
+      clientY: y,
+      x: p.x,
+      y: p.y,
+      timer: 0,
+    };
+    next.timer = window.setTimeout(() => {
+      if (pendingClickRef.current !== next) return;
+      pendingClickRef.current = null;
+      send({ t: "click", x: next.x, y: next.y, b: 0, c: 1 });
+    }, DOUBLE_TAP_MS);
+    pendingClickRef.current = next;
   };
 
   const toggleMod = (m: Mod) =>
@@ -475,7 +538,6 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
       startTime: now,
       moved: false,
       remoteDown: false,
-      lastTapTime: touchRef.current.lastTapTime,
     };
 
     if (!controllingRef.current) return;
@@ -487,7 +549,7 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
       touchRef.current.remoteDown = true;
     } else {
       touchRef.current.longPressTimer = window.setTimeout(() => {
-        sendClick(t.clientX, t.clientY, 2);
+        queueClick("touch", t.clientX, t.clientY, 2);
         touchRef.current.moved = true;
       }, LONG_PRESS_MS);
     }
@@ -552,20 +614,15 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
     e.preventDefault();
     clearLongPress();
     const state = touchRef.current;
+    const wasPinching = state.pinchStartDist !== undefined;
     if (state.remoteDown) {
       const p = norm(state.lastX, state.lastY);
       send({ t: "up", x: p.x, y: p.y, b: 0 });
     }
     const elapsed = Date.now() - state.startTime;
     const isTap = !state.moved && elapsed <= TAP_MS;
-    if (controllingRef.current && touchModeRef.current === "touchpad" && isTap) {
-      const isDouble = Date.now() - state.lastTapTime <= DOUBLE_TAP_MS;
-      // First tap sends one click; the second tap sends one more click, which
-      // is the browser/OS-standard double-click sequence. Do not send an extra
-      // third click on the second tap.
-      sendClick(state.startX, state.startY, 0);
-      state.lastTapTime = Date.now();
-      if (isDouble) state.moved = true;
+    if (controllingRef.current && touchModeRef.current === "touchpad" && isTap && !wasPinching) {
+      queueClick("touch", state.startX, state.startY, 0);
     }
     state.remoteDown = false;
     state.pinchStartDist = undefined;
@@ -574,7 +631,54 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
     state.pinchMid = undefined;
   };
 
-  const down = useRef(false);
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "touch") return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    pointerRef.current = {
+      id: e.pointerId,
+      button: e.button,
+      startX: e.clientX,
+      startY: e.clientY,
+      dragging: e.button === 1,
+    };
+    const p = norm(e.clientX, e.clientY);
+    send({ t: "move", x: p.x, y: p.y });
+    if (e.button === 1) send({ t: "down", x: p.x, y: p.y, b: e.button });
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "touch") return;
+    const state = pointerRef.current;
+    const p = norm(e.clientX, e.clientY);
+    if (state?.id === e.pointerId && !state.dragging) {
+      const distance = Math.hypot(e.clientX - state.startX, e.clientY - state.startY);
+      if (distance > TAP_MOVE_PX) {
+        flushPendingClick();
+        const start = norm(state.startX, state.startY);
+        send({ t: "move", x: start.x, y: start.y });
+        send({ t: "down", x: start.x, y: start.y, b: state.button });
+        state.dragging = true;
+      }
+    }
+    send({ t: "move", x: p.x, y: p.y });
+  };
+
+  const finishPointer = (e: React.PointerEvent<HTMLDivElement>, cancelled = false) => {
+    if (e.pointerType === "touch") return;
+    const state = pointerRef.current;
+    if (!state || state.id !== e.pointerId) return;
+    e.preventDefault();
+    const p = norm(e.clientX, e.clientY);
+    if (state.dragging) {
+      send({ t: "up", x: p.x, y: p.y, b: state.button });
+    } else if (!cancelled) {
+      queueClick("mouse", e.clientX, e.clientY, state.button);
+    }
+    pointerRef.current = null;
+    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+
   const onScreenActionRef = useRef<{ id: string; at: number; source: "pointer" | "click" } | null>(null);
   const SPECIAL: { label: string; k: string }[] = [
     { label: "Esc", k: "Escape" },
@@ -675,27 +779,10 @@ export function RemoteDesktop({ client, nodeId, onClose }: Props) {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
-        onPointerDown={(e) => {
-          if (e.pointerType === "touch") return;
-          e.preventDefault();
-          const p = norm(e.clientX, e.clientY);
-          send({ t: "move", x: p.x, y: p.y });
-          send({ t: "down", x: p.x, y: p.y, b: e.button || 0 });
-          down.current = true;
-        }}
-        onPointerMove={(e) => {
-          if (e.pointerType === "touch") return;
-          if (!down.current && e.pointerType !== "mouse") return;
-          const p = norm(e.clientX, e.clientY);
-          send({ t: "move", x: p.x, y: p.y });
-        }}
-        onPointerUp={(e) => {
-          if (e.pointerType === "touch") return;
-          e.preventDefault();
-          const p = norm(e.clientX, e.clientY);
-          send({ t: "up", x: p.x, y: p.y, b: e.button || 0 });
-          down.current = false;
-        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={finishPointer}
+        onPointerCancel={(e) => finishPointer(e, true)}
         onContextMenu={(e) => e.preventDefault()}
         onWheel={(e) => {
           if (e.ctrlKey || !controllingRef.current) {

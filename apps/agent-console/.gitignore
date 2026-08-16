@@ -7,3 +7,4 @@ src-tauri/gen/
 android/
 ios/
 .env
+.playwright-mcp/
