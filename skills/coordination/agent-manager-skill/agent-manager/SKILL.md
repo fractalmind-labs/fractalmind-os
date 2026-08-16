@@ -160,8 +160,7 @@ launcher: cursor
 launcher_args:
   - --model
   - gpt-5.6-sol-medium
-  - --mode
-  - ask
+  - --yolo
   # Only use --trust for a workspace that has been explicitly approved.
   - --trust
 ```
