@@ -133,7 +133,8 @@ jobs:
               echo "Expected exactly one macOS DMG, found ${#dmg_files[@]}" >&2
               exit 1
             fi
-            /usr/bin/shasum -a 256 "${dmg_files[0]}" | /usr/bin/sed "s#${dmg_files[0]}#$(basename "${dmg_files[0]}")#" > SHA256SUMS-macos
+            asset_name="$(basename "${dmg_files[0]}" | /usr/bin/tr ' ' '.')"
+            /usr/bin/shasum -a 256 "${dmg_files[0]}" | /usr/bin/sed "s#${dmg_files[0]}#$asset_name#" > SHA256SUMS-macos
             files+=(SHA256SUMS-macos)
           fi
           gh release upload "$TAG_NAME" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
