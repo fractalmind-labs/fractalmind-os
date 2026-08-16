@@ -8,8 +8,6 @@ Sessions are named: agent-{agent_id} where agent_id is file_id in lowercase (e.g
 
 from __future__ import annotations
 import argparse
-import contextlib
-import fcntl
 import hashlib
 import json
 import os
@@ -110,6 +108,7 @@ from services.inbound_queue import (
     append_inbound_message_event,
     enqueue_inbound_message,
     has_pending_inbound_messages,
+    inbound_rescue_lock as _heartbeat_rescue_lock,
     load_pending_inbound_messages,
     load_replayable_inbound_messages,
     mark_inbound_message_state,
@@ -1246,19 +1245,6 @@ def _heartbeat_already_acknowledged(repo_root: Path, *, agent_id: str, heartbeat
     return False
 
 
-@contextlib.contextmanager
-def _heartbeat_rescue_lock(repo_root: Path):
-    """Serialize the final rescue check with other rescue/audit writers."""
-    lock_path = repo_root / '.claude' / 'state' / 'agent-manager' / 'heartbeat-rescue.lock'
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    with lock_path.open('a+', encoding='utf-8') as handle:
-        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
-        try:
-            yield
-        finally:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
-
-
 def _heartbeat_rescue_revalidation(
     repo_root: Path,
     *,
@@ -1302,10 +1288,13 @@ def _heartbeat_rescue_revalidation(
     runtime = get_agent_runtime_state(agent_id, launcher=launcher)
     if str(runtime.get('state', 'unknown')) != 'idle':
         return False, f"fresh_runtime:{runtime.get('state', 'unknown')}"
-    if baseline_pane_hash:
-        current_output = capture_output(agent_id, lines=120) or ''
-        if _tail_hash(current_output) != baseline_pane_hash:
-            return False, 'fresh_pane_progress'
+    if not baseline_pane_hash:
+        return False, 'pane_baseline_missing'
+    current_output = capture_output(agent_id, lines=120)
+    if current_output is None:
+        return False, 'pane_capture_unavailable'
+    if _tail_hash(current_output) != baseline_pane_hash:
+        return False, 'fresh_pane_progress'
     if has_pending_inbound_messages(repo_root, agent_id=agent_id):
         return False, 'fresh_inbound_progress'
     return True, 'exact_pending_stale'
@@ -2298,7 +2287,11 @@ def _schedule_pending_heartbeat_rescue_timer(
     dedupe_key = f"pending-rescue:{str(agent_file_id or '').strip().lower()}:{pending_heartbeat_id}"
     agent_config = resolve_agent(agent_file_id) or {}
     agent_runtime_id = get_agent_id(agent_config) if agent_config else str(agent_file_id)
-    pane_hash = _tail_hash(capture_output(agent_runtime_id, lines=120) or '')
+    pane_output = capture_output(agent_runtime_id, lines=120)
+    if pane_output is None:
+        print("⏭️  Pending heartbeat rescue timer not scheduled: pane capture unavailable")
+        return False
+    pane_hash = _tail_hash(pane_output)
     args = argparse.Namespace(
         timer_command='rescue',
         agent=agent_file_id,
@@ -3112,6 +3105,8 @@ def cmd_heartbeat_run(args):
                         f"(hb_id={pending_hb_id or 'unknown'}, age={age_desc}, "
                         f"consecutive_pending_skips={pending_skip_count})"
                     )
+                    pane_output = capture_output(agent_id, lines=120)
+                    baseline_pane_hash = _tail_hash(pane_output) if pane_output is not None else ''
                     if not _restart_heartbeat_session_restore(
                         agent_file_id,
                         agent_name,
@@ -3119,6 +3114,7 @@ def cmd_heartbeat_run(args):
                         repo_root=repo_root,
                         launcher=launcher,
                         heartbeat_id=pending_hb_id,
+                        baseline_pane_hash=baseline_pane_hash,
                     ):
                         print("⚠️  Pending heartbeat rescue failed; falling back to skip")
                     else:
