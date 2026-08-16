@@ -519,6 +519,14 @@ func feishuInstanceChannelName(name string) string {
 }
 
 func activeChannelAgentConfig(cfg *config.AgentsConfig) (string, []string, string) {
+	defaultAgent, allowed, source := baseChannelAgentConfig(cfg)
+	if cfg == nil {
+		return defaultAgent, allowed, source
+	}
+	return defaultAgent, mergeUniqueAgents(allowed, cfg.AgentRouterNames()), source
+}
+
+func baseChannelAgentConfig(cfg *config.AgentsConfig) (string, []string, string) {
 	if cfg == nil {
 		return "", nil, "agents.ohMyCode"
 	}
@@ -553,6 +561,26 @@ func feishuChannelAgentConfig(cfg *config.AgentsConfig, appID string) (string, [
 		return target.DefaultAgent, target.AllowedAgents, fmt.Sprintf("agents.ohMyCode.targets[%q]", name)
 	}
 	return defaultAgent, allowedAgents, configName
+}
+
+func mergeUniqueAgents(base []string, extras []string) []string {
+	if len(extras) == 0 {
+		return base
+	}
+	seen := make(map[string]struct{}, len(base)+len(extras))
+	out := make([]string, 0, len(base)+len(extras))
+	for _, item := range append(append([]string{}, base...), extras...) {
+		name := strings.TrimSpace(item)
+		if name == "" {
+			continue
+		}
+		if _, exists := seen[name]; exists {
+			continue
+		}
+		seen[name] = struct{}{}
+		out = append(out, name)
+	}
+	return out
 }
 
 func validateOhMyCodeAgentConfig(defaultAgent string, allowedAgents []string) error {
