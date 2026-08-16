@@ -133,8 +133,29 @@ jobs:
               echo "Expected exactly one macOS DMG, found ${#dmg_files[@]}" >&2
               exit 1
             fi
-            asset_name="$(basename "${dmg_files[0]}" | /usr/bin/tr ' ' '.')"
-            /usr/bin/shasum -a 256 "${dmg_files[0]}" | /usr/bin/sed "s#${dmg_files[0]}#$asset_name#" > SHA256SUMS-macos
+            dmg_file="${dmg_files[0]}"
+            {
+              # BEGIN MACOS_CHECKSUM_WRITER
+              asset_name="${dmg_file##*/}"
+              asset_name="${asset_name// /.}"
+              if [[ "$asset_name" == *$'\n'* || "$asset_name" == *$'\r'* ]]; then
+                echo "DMG filename contains an unsupported line break" >&2
+                exit 2
+              fi
+              checksum="$(/usr/bin/shasum -a 256 <"$dmg_file")"
+              digest="${checksum%%[[:space:]]*}"
+              if [[ ! "$digest" =~ ^[0-9a-f]{64}$ ]]; then
+                echo "Invalid SHA-256 output" >&2
+                exit 1
+              fi
+              if [[ "$asset_name" == *\\* ]]; then
+                escaped_name="${asset_name//\\/\\\\}"
+                printf '\\%s  %s\n' "$digest" "$escaped_name"
+              else
+                printf '%s  %s\n' "$digest" "$asset_name"
+              fi
+              # END MACOS_CHECKSUM_WRITER
+            } > SHA256SUMS-macos
             files+=(SHA256SUMS-macos)
           fi
           gh release upload "$TAG_NAME" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
