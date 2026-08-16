@@ -16,6 +16,8 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
+      - name: Test macOS checksum filenames
+        run: bash scripts/test-release-macos-checksum.sh
       - name: Install deps
         run: pnpm install
       - name: Build (typecheck + bundle)
