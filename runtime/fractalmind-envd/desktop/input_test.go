@@ -49,6 +49,30 @@ func TestLinuxScrollDirection(t *testing.T) {
 	}
 }
 
+func TestLinuxAtomicMouseClicks(t *testing.T) {
+	in := linuxInjector(1000, 800)
+	cases := []struct {
+		name string
+		ev   Event
+		want [][]string
+	}{
+		{"single", Event{Type: "click", X: 0.25, Y: 0.5, Button: 0, Count: 1}, [][]string{{"xdotool", "mousemove", "250", "400", "click", "1"}}},
+		{"double", Event{Type: "click", X: 0.25, Y: 0.5, Button: 0, Count: 2}, [][]string{{"xdotool", "mousemove", "250", "400", "click", "--repeat", "2", "--delay", "200", "1"}}},
+		{"right", Event{Type: "click", X: 0.25, Y: 0.5, Button: 2, Count: 1}, [][]string{{"xdotool", "mousemove", "250", "400", "click", "3"}}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := in.commands(tc.ev)
+			if !ok || !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("got %v ok=%v, want %v", got, ok, tc.want)
+			}
+			if len(got) != 1 {
+				t.Fatalf("click must be one xdotool process, got %d commands: %v", len(got), got)
+			}
+		})
+	}
+}
+
 func TestLinuxKeyMapping(t *testing.T) {
 	in := linuxInjector(1, 1)
 	cases := map[string]string{
@@ -129,6 +153,43 @@ func TestDarwinScroll(t *testing.T) {
 	down, ok := in.commands(Event{Type: "scroll", DY: 12})
 	if !ok || !reflect.DeepEqual(down, [][]string{{"cliclick", "w:0,-1"}}) {
 		t.Fatalf("darwin scroll down: got %v ok=%v", down, ok)
+	}
+}
+
+func TestDarwinAtomicMouseClicks(t *testing.T) {
+	in := darwinInjector(1440, 900)
+	cases := []struct {
+		name string
+		ev   Event
+		want [][]string
+	}{
+		{"single", Event{Type: "click", X: 0.25, Y: 0.5, Button: 0, Count: 1}, [][]string{{"cliclick", "c:360,450"}}},
+		{"double", Event{Type: "click", X: 0.25, Y: 0.5, Button: 0, Count: 2}, [][]string{{"cliclick", "dc:360,450"}}},
+		{"right", Event{Type: "click", X: 0.25, Y: 0.5, Button: 2, Count: 1}, [][]string{{"cliclick", "rc:360,450"}}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := in.commands(tc.ev)
+			if !ok || !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("got %v ok=%v, want %v", got, ok, tc.want)
+			}
+		})
+	}
+}
+
+func TestAtomicMouseClicksRejectAmbiguousShapes(t *testing.T) {
+	for _, in := range []*cmdInjector{linuxInjector(100, 100), darwinInjector(100, 100)} {
+		for _, ev := range []Event{
+			{Type: "click", Button: 0, Count: 0},
+			{Type: "click", Button: 0, Count: -1},
+			{Type: "click", Button: 0, Count: 3},
+			{Type: "click", Button: 1, Count: 1},
+			{Type: "click", Button: 2, Count: 2},
+		} {
+			if got, ok := in.commands(ev); ok || got != nil {
+				t.Fatalf("ambiguous click should be ignored: ev=%+v got=%v ok=%v", ev, got, ok)
+			}
+		}
 	}
 }
 

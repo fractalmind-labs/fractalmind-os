@@ -12,10 +12,11 @@ import (
 // coordinates X/Y are normalized to [0,1] relative to the streamed frame so the
 // client does not need to know the host resolution.
 type Event struct {
-	Type   string   `json:"t"`              // "move","down","up","key","text","scroll"
+	Type   string   `json:"t"`              // "move","down","up","click","key","text","scroll"
 	X      float64  `json:"x,omitempty"`    // normalized 0..1
 	Y      float64  `json:"y,omitempty"`    // normalized 0..1
 	Button int      `json:"b,omitempty"`    // 0=left,1=middle,2=right
+	Count  int      `json:"c,omitempty"`    // for "click": 1=single,2=double
 	Key    string   `json:"k,omitempty"`    // browser KeyboardEvent.key
 	Down   bool     `json:"down,omitempty"` // for "key": press vs release
 	DY     float64  `json:"dy,omitempty"`   // scroll delta
@@ -76,6 +77,22 @@ func (in *cmdInjector) linuxCommands(ev Event) ([][]string, bool) {
 		return [][]string{{"xdotool", "mousedown", strconv.Itoa(xdotoolButton(ev.Button))}}, true
 	case "up":
 		return [][]string{{"xdotool", "mouseup", strconv.Itoa(xdotoolButton(ev.Button))}}, true
+	case "click":
+		count, ok := clickCount(ev)
+		if !ok {
+			return nil, false
+		}
+		x, y := in.px(ev.X, ev.Y)
+		button := strconv.Itoa(xdotoolButton(ev.Button))
+		if count == 2 {
+			return [][]string{{
+				"xdotool", "mousemove", strconv.Itoa(x), strconv.Itoa(y),
+				"click", "--repeat", "2", "--delay", "200", button,
+			}}, true
+		}
+		return [][]string{{
+			"xdotool", "mousemove", strconv.Itoa(x), strconv.Itoa(y), "click", button,
+		}}, true
 	case "scroll":
 		btn := 4 // wheel up
 		if ev.DY > 0 {
@@ -121,6 +138,19 @@ func (in *cmdInjector) darwinCommands(ev Event) ([][]string, bool) {
 		verb := "du"
 		if ev.Button == 2 {
 			verb = "ru"
+		}
+		return [][]string{{"cliclick", fmt.Sprintf("%s:%d,%d", verb, x, y)}}, true
+	case "click":
+		count, ok := clickCount(ev)
+		if !ok {
+			return nil, false
+		}
+		x, y := in.px(ev.X, ev.Y)
+		verb := "c"
+		if ev.Button == 2 {
+			verb = "rc"
+		} else if count == 2 {
+			verb = "dc"
 		}
 		return [][]string{{"cliclick", fmt.Sprintf("%s:%d,%d", verb, x, y)}}, true
 	case "scroll":
@@ -261,6 +291,16 @@ func scrollClicks(dy float64) int {
 		return 1
 	}
 	return -1
+}
+
+func clickCount(ev Event) (int, bool) {
+	if ev.Button != 0 && ev.Button != 2 {
+		return 0, false
+	}
+	if ev.Count != 1 && !(ev.Count == 2 && ev.Button == 0) {
+		return 0, false
+	}
+	return ev.Count, true
 }
 
 func xdotoolButton(b int) int {
