@@ -85,15 +85,14 @@ func (in *cmdInjector) linuxCommands(ev Event) ([][]string, bool) {
 		x, y := in.px(ev.X, ev.Y)
 		button := strconv.Itoa(xdotoolButton(ev.Button))
 		if count == 2 {
-			return [][]string{
-				{"xdotool", "mousemove", strconv.Itoa(x), strconv.Itoa(y)},
-				{"xdotool", "click", "--repeat", "2", "--delay", "200", button},
-			}, true
+			return [][]string{{
+				"xdotool", "mousemove", strconv.Itoa(x), strconv.Itoa(y),
+				"click", "--repeat", "2", "--delay", "200", button,
+			}}, true
 		}
-		return [][]string{
-			{"xdotool", "mousemove", strconv.Itoa(x), strconv.Itoa(y)},
-			{"xdotool", "click", button},
-		}, true
+		return [][]string{{
+			"xdotool", "mousemove", strconv.Itoa(x), strconv.Itoa(y), "click", button,
+		}}, true
 	case "scroll":
 		btn := 4 // wheel up
 		if ev.DY > 0 {

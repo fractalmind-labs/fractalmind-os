@@ -56,15 +56,18 @@ func TestLinuxAtomicMouseClicks(t *testing.T) {
 		ev   Event
 		want [][]string
 	}{
-		{"single", Event{Type: "click", X: 0.25, Y: 0.5, Button: 0, Count: 1}, [][]string{{"xdotool", "mousemove", "250", "400"}, {"xdotool", "click", "1"}}},
-		{"double", Event{Type: "click", X: 0.25, Y: 0.5, Button: 0, Count: 2}, [][]string{{"xdotool", "mousemove", "250", "400"}, {"xdotool", "click", "--repeat", "2", "--delay", "200", "1"}}},
-		{"right", Event{Type: "click", X: 0.25, Y: 0.5, Button: 2, Count: 1}, [][]string{{"xdotool", "mousemove", "250", "400"}, {"xdotool", "click", "3"}}},
+		{"single", Event{Type: "click", X: 0.25, Y: 0.5, Button: 0, Count: 1}, [][]string{{"xdotool", "mousemove", "250", "400", "click", "1"}}},
+		{"double", Event{Type: "click", X: 0.25, Y: 0.5, Button: 0, Count: 2}, [][]string{{"xdotool", "mousemove", "250", "400", "click", "--repeat", "2", "--delay", "200", "1"}}},
+		{"right", Event{Type: "click", X: 0.25, Y: 0.5, Button: 2, Count: 1}, [][]string{{"xdotool", "mousemove", "250", "400", "click", "3"}}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got, ok := in.commands(tc.ev)
 			if !ok || !reflect.DeepEqual(got, tc.want) {
 				t.Fatalf("got %v ok=%v, want %v", got, ok, tc.want)
+			}
+			if len(got) != 1 {
+				t.Fatalf("click must be one xdotool process, got %d commands: %v", len(got), got)
 			}
 		})
 	}
