@@ -1,29 +1,75 @@
 name: release-assets
 
 on:
-  push:
-    tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
         description: "Release tag to build and upload assets for"
         required: true
-        default: "v0.1.1"
+        default: "v0.1.4"
+      platform:
+        description: "Release assets to build"
+        required: true
+        type: choice
+        options:
+          - macos
+          - all
+        default: macos
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-assets-${{ inputs.tag }}
+  cancel-in-progress: false
+
 jobs:
+  release-preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - name: Verify public release and exact tag checkout
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          [[ "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "Release tag must be an exact vMAJOR.MINOR.PATCH tag" >&2
+            exit 1
+          }
+          release_json="$(gh release view "$TAG_NAME" --repo "$GITHUB_REPOSITORY" \
+            --json tagName,isDraft,isPrerelease)"
+          jq -e --arg tag "$TAG_NAME" '
+            .tagName == $tag and .isDraft == false and .isPrerelease == false
+          ' <<<"$release_json" >/dev/null
+          tag_sha="$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG_NAME" --jq .sha)"
+          head_sha="$(git rev-parse HEAD)"
+          [[ "$head_sha" = "$tag_sha" ]] || {
+            echo "Checked-out commit does not match release tag" >&2
+            exit 1
+          }
+          app_version="$(jq -er .version src-tauri/tauri.conf.json)"
+          [[ "v$app_version" = "$TAG_NAME" ]] || {
+            echo "Tauri version does not match release tag" >&2
+            exit 1
+          }
+          printf 'release_tag=%s\nrelease_sha=%s\n' "$TAG_NAME" "$tag_sha"
+
   desktop:
+    needs: release-preflight
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-22.04, windows-latest]
+        os: ${{ fromJSON(inputs.platform == 'all' && '["macos-latest","ubuntu-22.04","windows-latest"]' || '["macos-latest"]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref_name }}
+          ref: ${{ inputs.tag }}
       - uses: pnpm/action-setup@v4
         with:
           version: 9
@@ -53,7 +99,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG_NAME: ${{ inputs.tag || github.ref_name }}
+          TAG_NAME: ${{ inputs.tag }}
         run: |
           set -euo pipefail
           files=()
@@ -78,14 +124,28 @@ jobs:
             echo "No desktop installer files found" >&2
             exit 1
           fi
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            dmg_files=()
+            for file in "${files[@]}"; do
+              [[ "$file" = *.dmg ]] && dmg_files+=("$file")
+            done
+            if [ "${#dmg_files[@]}" -ne 1 ]; then
+              echo "Expected exactly one macOS DMG, found ${#dmg_files[@]}" >&2
+              exit 1
+            fi
+            /usr/bin/shasum -a 256 "${dmg_files[0]}" | /usr/bin/sed "s#${dmg_files[0]}#$(basename "${dmg_files[0]}")#" > SHA256SUMS-macos
+            files+=(SHA256SUMS-macos)
+          fi
           gh release upload "$TAG_NAME" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
 
   android:
+    needs: release-preflight
+    if: inputs.platform == 'all'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref_name }}
+          ref: ${{ inputs.tag }}
       - uses: pnpm/action-setup@v4
         with:
           version: 9
@@ -111,7 +171,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG_NAME: ${{ inputs.tag || github.ref_name }}
+          TAG_NAME: ${{ inputs.tag }}
         run: |
           set -euo pipefail
           mapfile -d '' files < <(find android/app/build/outputs/apk/debug -type f -name '*.apk' -print0)
