@@ -53,6 +53,28 @@ class CursorProviderTests(unittest.TestCase):
         self.assertIn('--model', command)
         self.assertNotIn('CURSOR_API_KEY', command)
 
+    def test_cursor_prefers_documented_cursor_bin_and_never_generic_agent(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            home = Path(tmpdir)
+            cursor_agent = home / '.cursor' / 'bin' / 'cursor-agent'
+            generic_agent = home / '.local' / 'bin' / 'agent'
+            cursor_agent.parent.mkdir(parents=True)
+            generic_agent.parent.mkdir(parents=True)
+            cursor_agent.touch()
+            generic_agent.touch()
+            with patch.dict(os.environ, {'HOME': str(home)}):
+                resolved = resolve_launcher_command('cursor')
+            self.assertEqual(resolved, str(cursor_agent))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            home = Path(tmpdir)
+            generic_agent = home / '.local' / 'bin' / 'agent'
+            generic_agent.parent.mkdir(parents=True)
+            generic_agent.touch()
+            with patch.dict(os.environ, {'HOME': str(home)}):
+                resolved = resolve_launcher_command('cursor')
+            self.assertEqual(resolved, 'cursor-agent')
+
     def test_cursor_runtime_avoids_idle_false_positive(self):
         busy_patterns = get_runtime_config('cursor').get('busy_patterns', [])
         self.assertIn('Thinking', busy_patterns)

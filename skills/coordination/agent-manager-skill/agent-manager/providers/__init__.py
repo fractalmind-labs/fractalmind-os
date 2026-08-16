@@ -470,14 +470,11 @@ def resolve_launcher_command(launcher: str) -> str:
 
     if launcher.lower() in {"cursor", "cursor-cli", "cursor-agent"}:
         candidates = [
+            Path(os.path.expanduser("~")) / ".cursor" / "bin" / "cursor-agent",
             Path(os.path.expanduser("~")) / ".local" / "bin" / "cursor-agent",
-            Path(os.path.expanduser("~")) / ".local" / "bin" / "agent",
             Path(os.path.expanduser("~")) / "bin" / "cursor-agent",
-            Path(os.path.expanduser("~")) / "bin" / "agent",
             Path("/usr/local/bin/cursor-agent"),
-            Path("/usr/local/bin/agent"),
             Path("/usr/bin/cursor-agent"),
-            Path("/usr/bin/agent"),
         ]
         for candidate in candidates:
             if candidate.exists():

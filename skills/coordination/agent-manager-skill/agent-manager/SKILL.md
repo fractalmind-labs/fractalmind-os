@@ -166,7 +166,7 @@ launcher_args:
   - --trust
 ```
 
-The `cursor` provider resolves the installed `cursor-agent`/`agent` executable from common user-local and system paths. Cursor CLI is a full-screen TUI, so agent-manager treats process startup as readiness and uses tmux paste for the injected system prompt. Authentication is inherited from the managed shell (for example `CURSOR_API_KEY`); credentials are never placed in launcher arguments or generated command files. Provider-specific model and execution options belong in `launcher_args`. `--trust` is intentionally not added automatically; configure it only for an explicitly approved workspace.
+The `cursor` provider resolves the provider-unique `cursor-agent` executable from `$HOME/.cursor/bin`, common user-local paths, and system paths. Cursor CLI is a full-screen TUI, so agent-manager treats process startup as readiness and uses tmux paste for the injected system prompt. Authentication is inherited from the managed shell (for example `CURSOR_API_KEY`); credentials are never placed in launcher arguments or generated command files. Provider-specific model and execution options belong in `launcher_args`. `--trust` is intentionally not added automatically; configure it only for an explicitly approved workspace.
 
 Reserved `main` agents default to the bundled skill prompt at `agent-manager/.codex/main-codex-model.md` when `launcher: codex` is used and no explicit `launcher_config.model_instructions_file` override is provided in the workspace agent config.
 
