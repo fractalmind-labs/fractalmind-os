@@ -14,10 +14,21 @@ if str(SCRIPTS_DIR.parent) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR.parent))
 
 import main  # noqa: E402
-from providers import get_session_restore_flag, get_session_restore_mode  # noqa: E402
+from providers import (  # noqa: E402
+    get_agents_md_mode,
+    get_session_restore_flag,
+    get_session_restore_mode,
+)
 
 
 class ProviderRestoreTests(unittest.TestCase):
+    def test_claude_provider_skips_system_prompt_when_agents_md_in_cwd(self):
+        self.assertEqual(get_agents_md_mode("claude"), "cwd")
+        # EMP agents use claude-code / ccc; their role prompt is not the
+        # target repo AGENTS.md, so injection stays enabled.
+        self.assertEqual(get_agents_md_mode("claude-code"), "disabled")
+        self.assertEqual(get_agents_md_mode("ccc"), "disabled")
+
     def test_codex_provider_restore_config(self):
         self.assertEqual(get_session_restore_mode("codex"), "cli_optional_arg")
         self.assertEqual(get_session_restore_flag("codex"), "resume")
