@@ -3001,6 +3001,138 @@ def cmd_heartbeat_rescue(args):
     return prime_result
 
 
+_START_IF_MISSING_COOLDOWN_SECONDS = 90
+
+
+def _coerce_bool_flag(value, *, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return bool(value)
+    text = str(value).strip().lower()
+    if text in {'1', 'true', 'yes', 'on'}:
+        return True
+    if text in {'0', 'false', 'no', 'off', ''}:
+        return False
+    return default
+
+
+def _heartbeat_start_if_missing_enabled(heartbeat) -> bool:
+    if not isinstance(heartbeat, dict):
+        return False
+    return _coerce_bool_flag(heartbeat.get('start_if_missing'), default=False)
+
+
+def _start_if_missing_state_path(repo_root: Path, agent_id: str) -> Path:
+    safe_agent_id = str(agent_id or 'unknown').strip().lower() or 'unknown'
+    safe_agent_id = re.sub(r'[^a-z0-9_-]+', '-', safe_agent_id)
+    return (
+        Path(repo_root)
+        / '.claude'
+        / 'state'
+        / 'agent-manager'
+        / 'heartbeat-start-if-missing'
+        / f'{safe_agent_id}.json'
+    )
+
+
+def _start_if_missing_cooldown_active(
+    repo_root: Path,
+    agent_id: str,
+    *,
+    now: Optional[float] = None,
+    cooldown_seconds: int = _START_IF_MISSING_COOLDOWN_SECONDS,
+) -> bool:
+    path = _start_if_missing_state_path(repo_root, agent_id)
+    try:
+        payload = json.loads(path.read_text(encoding='utf-8'))
+    except Exception:
+        return False
+    if not isinstance(payload, dict):
+        return False
+    if str(payload.get('status') or '').strip().lower() != 'failed':
+        return False
+    try:
+        attempted_at = float(payload.get('attempted_at') or 0)
+    except (TypeError, ValueError):
+        return False
+    if attempted_at <= 0:
+        return False
+    current = time.time() if now is None else float(now)
+    return (current - attempted_at) < max(0, int(cooldown_seconds))
+
+
+def _mark_start_if_missing_attempt(
+    repo_root: Path,
+    agent_id: str,
+    *,
+    status: str,
+    now: Optional[float] = None,
+) -> None:
+    path = _start_if_missing_state_path(repo_root, agent_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        'agent_id': agent_id,
+        'status': str(status or '').strip().lower() or 'unknown',
+        'attempted_at': time.time() if now is None else float(now),
+        'updated_at': _utc_now_iso(),
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False) + '\n', encoding='utf-8')
+
+
+def _maybe_start_missing_heartbeat_session(
+    *,
+    agent_name: str,
+    agent_id: str,
+    agent_file_id: str,
+    heartbeat: dict,
+    repo_root: Path,
+    start_handler=None,
+) -> bool:
+    """Return True when heartbeat dispatch should continue.
+
+    Default remains skip-if-not-running. `heartbeat.start_if_missing: true`
+    starts a missing tmux session once, then continues this tick if start
+    left the session running. Failed starts enter a short cooldown.
+    """
+    if session_exists(agent_id):
+        return True
+    if not _heartbeat_start_if_missing_enabled(heartbeat):
+        print(f"⏭️  Agent '{agent_name}' is not running - skipping heartbeat")
+        return False
+    if _start_if_missing_cooldown_active(repo_root, agent_id):
+        print(
+            f"⏭️  Agent '{agent_name}' is not running - "
+            "start_if_missing cooldown active, skipping heartbeat"
+        )
+        return False
+
+    print(f"⚠️  Agent '{agent_name}' is not running. start_if_missing=true, starting...")
+    start_args = argparse.Namespace(
+        agent=agent_file_id,
+        working_dir=None,
+        restore=True,
+        tmux_layout='sessions',
+    )
+    handler = start_handler or cmd_start
+    try:
+        start_rc = handler(start_args)
+    except Exception as exc:
+        _mark_start_if_missing_attempt(repo_root, agent_id, status='failed')
+        print(f"⏭️  Agent '{agent_name}' start_if_missing raised {exc!r} - skipping heartbeat")
+        return False
+    if start_rc != 0 or not session_exists(agent_id):
+        _mark_start_if_missing_attempt(repo_root, agent_id, status='failed')
+        print(f"⏭️  Agent '{agent_name}' start_if_missing did not leave a running session - skipping heartbeat")
+        return False
+
+    _mark_start_if_missing_attempt(repo_root, agent_id, status='started')
+    print(f"✅ Agent '{agent_name}' started for heartbeat; continuing this tick")
+    return True
+
+
 def cmd_heartbeat_run(args):
     """Run a heartbeat check for an agent."""
     if not check_tmux():
@@ -3042,10 +3174,16 @@ def cmd_heartbeat_run(args):
         else {'active': False, 'reason': 'dream_disabled', 'windows': []}
     )
 
-    # Heartbeats only check running agents - don't start if not running
+    # Missing tmux: default skip. start_if_missing=true may start once, then continue.
     if not session_exists(agent_id):
-        print(f"⏭️  Agent '{agent_name}' is not running - skipping heartbeat")
-        return 0
+        if not _maybe_start_missing_heartbeat_session(
+            agent_name=agent_name,
+            agent_id=agent_id,
+            agent_file_id=agent_file_id,
+            heartbeat=heartbeat,
+            repo_root=get_repo_root(),
+        ):
+            return 0
 
     # Check work schedule
     schedule_config = heartbeat.get('schedule')
