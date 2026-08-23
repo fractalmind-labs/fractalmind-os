@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Task Protocol"
+  short_description: "Portable agent tasks with active reply routing"
+  default_prompt: "Use $use-agent-task-protocol to compose a self-contained agent task with an executable return route."
