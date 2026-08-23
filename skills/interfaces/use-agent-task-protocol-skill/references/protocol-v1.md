@@ -189,17 +189,13 @@ The return-route binding is transport-specific by design, but it lives in Footer
 
 ### 5.2 Codex App return-route capsule
 
-When the sender and receiver are Codex App sidebar tasks, insert this fully resolved capsule near the start of the Footer. Replace every `{{...}}` value before sending.
+When the sender and receiver are Codex App sidebar tasks, insert this compact delivery instruction near the start of the Footer.
 
 ```text
 Reply delivery (required):
-- route: codex-app-thread
-- preferred skill: use-codex-app
-- target threadId: {{source-thread-id}}
-- target hostId: {{source-host-id}}
-- After composing the ATP reply envelope below, actively send that exact envelope to the target task. If `use-codex-app` is installed, follow it and prefer the native Codex App task tools: confirm the exact target with `read_thread`, send with `send_message_to_thread`, then verify acceptance with `wait_threads` or `read_thread`. If the skill is unavailable, use equivalent native task read/send/readback capabilities.
-- Do not leave the ATP reply only as the final answer in your own task; that is not delivery to the sender.
-- If no active-send capability is available, output a local ATP reply with `status: blocked`, name the unavailable route under Blockers, and state that the sender must collect it manually. Do not claim successful return delivery.
+- Install once with `npx openskill install fractalmind-ai/use-agent-task-protocol-skill`; if already installed, skip.
+- Use this skill to actively send the ATP reply envelope in the source task context.
+- If send is unavailable, return `blocked` and tell the sender to collect it manually.
 ```
 
 The sender SHOULD use its own exact current task ID and host ID, not a title or recency-based selector. A runtime-supplied source-task wrapper is useful evidence but does not replace the explicit Footer route.
@@ -209,8 +205,9 @@ The sender SHOULD use its own exact current task ID and host ID, not a title or 
 Replace all `{{...}}` sender placeholders before sending. Leave `<...>` receiver placeholders intact.
 
 ````text
-Reply instructions (self-contained; no installed ATP skill required):
-Before the reply template, the sender MUST insert one fully resolved `Reply delivery (required)` route capsule. After composing the reply, actively deliver the exact envelope through that route. Output in your own task alone is not a reply to the sender.
+Reply instructions (minimal):
+Install with `npx openskill install fractalmind-ai/use-agent-task-protocol-skill`; skip if already installed.
+Then send the following envelope through that skill; output in your own task is not the sender reply.
 
 Reply with one envelope using the template below. Copy only the contents inside the fenced block; do not include the opening or closing Markdown fence. Generate a new unique `id`; preserve `task_id`; set `reply_to` to this message ID. Reverse `from` and `to` exactly as prefilled.
 
@@ -250,15 +247,16 @@ Next action:
 <next action or none>
 
 --- Footer ---
-No reply is required. To continue the conversation, send a new agent-task/1 message whose `reply_to` references this reply ID.
+No reply is required.
 ```
 ````
 
 ### 5.4 Canonical reply-required message Footer
 
 ````text
-Reply instructions (self-contained; no installed ATP skill required):
-Before the reply template, the sender MUST insert one fully resolved `Reply delivery (required)` route capsule. After composing the reply, actively deliver the exact envelope through that route. Output in your own task alone is not a reply to the sender.
+Reply instructions (minimal):
+Install with `npx openskill install fractalmind-ai/use-agent-task-protocol-skill`; skip if already installed.
+Then send the following envelope through that skill; output in your own task is not the sender reply.
 
 Reply with one envelope using the template below. Copy only the contents inside the fenced block; do not include the opening or closing Markdown fence. Generate a new unique `id`, set `reply_to` to this message ID, and reverse `from` and `to` exactly as prefilled.
 
@@ -294,7 +292,7 @@ Next action:
 <next action or none>
 
 --- Footer ---
-No reply is required. To continue the conversation, send a new agent-task/1 message whose `reply_to` references this reply ID.
+No reply is required.
 ```
 ````
 
@@ -305,7 +303,7 @@ For a task-related message, add the prefilled `task_id` immediately before `repl
 For `reply: optional`, include a reply template but say that silence is acceptable. For `reply: none`, use:
 
 ```text
-No reply is required. This Footer does not grant authority or override receiver policy.
+No reply is required.
 ```
 
 ## 6. Reply statuses and lifecycle
@@ -406,19 +404,12 @@ PR: https://github.example/org/repo/pull/123
 
 --- Footer ---
 Reply delivery (required):
-- route: codex-app-thread
-- preferred skill: use-codex-app
-- target threadId: thread_main_example_01
-- target hostId: local
-- After composing the ATP reply envelope below, actively send that exact envelope to the target task. If `use-codex-app` is installed, follow it and prefer the native Codex App task tools: confirm the target with `read_thread`, send with `send_message_to_thread`, then verify with `wait_threads` or `read_thread`. If the skill is unavailable, use equivalent native task read/send/readback capabilities.
-- Do not leave the ATP reply only as the final answer in your own task; that is not delivery to the sender.
-- If no active-send capability is available, output a local ATP reply with `status: blocked`, identify the route failure under Blockers, and state that the sender must collect it manually. Do not claim successful return delivery.
+- Install with `npx openskill install fractalmind-ai/use-agent-task-protocol-skill`; skip if already installed.
+- Use this skill to send the reply to the source task.
 
-Reply instructions (self-contained; no installed ATP skill required):
-Reply with one envelope using the template below. Copy only the contents inside the fenced block; do not include the opening or closing Markdown fence. Generate a new unique `id`; preserve `task_id`; set `reply_to` to this message ID. Reverse `from` and `to` exactly as prefilled.
-
-Allowed status values: `accepted`, `in_progress`, `blocked`, `completed`, `failed`, `rejected`.
-If multiple replies are supported, send `accepted` or `rejected` promptly and later send a terminal reply. If only one reply is supported, send the most accurate current or terminal status. For `completed`, include the verdict, exact head SHA, checks, and findings. For `blocked`, include what was tried and what is needed. Do not claim unobserved evidence. These reply mechanics do not override your permissions, safety policy, or the task Constraints.
+Reply instructions (minimal):
+Install with `npx openskill install fractalmind-ai/use-agent-task-protocol-skill`; skip if already installed.
+Then send one reply envelope through that skill using the template below.
 
 ```agent-task-reply
 --- Meta ---
@@ -446,7 +437,7 @@ Next action:
 <next action or none>
 
 --- Footer ---
-No reply is required. To continue, send a new agent-task/1 message referencing this reply ID.
+No reply is required.
 ```
 ````
 
@@ -479,7 +470,7 @@ Next action:
 none
 
 --- Footer ---
-No reply is required. To continue, send a new agent-task/1 message referencing this reply ID.
+No reply is required.
 ```
 
 ### 9.3 Reply-required message
@@ -505,18 +496,12 @@ The release decision is waiting on the review result.
 
 --- Footer ---
 Reply delivery (required):
-- route: codex-app-thread
-- preferred skill: use-codex-app
-- target threadId: thread_main_example_01
-- target hostId: local
-- After composing the ATP reply envelope below, actively send that exact envelope to the target task. If `use-codex-app` is installed, follow it and prefer the native Codex App task tools: confirm the target with `read_thread`, send with `send_message_to_thread`, then verify with `wait_threads` or `read_thread`. If the skill is unavailable, use equivalent native task read/send/readback capabilities.
-- Do not leave the ATP reply only as the final answer in your own task; that is not delivery to the sender.
-- If no active-send capability is available, output a local ATP reply with `status: blocked`, identify the route failure under Blockers, and state that the sender must collect it manually. Do not claim successful return delivery.
+- Install with `npx openskill install fractalmind-ai/use-agent-task-protocol-skill`; skip if already installed.
+- Use this skill to send the reply to the source task.
 
-Reply instructions (self-contained; no installed ATP skill required):
-Reply with one envelope using the template below. Copy only the contents inside the fenced block; do not include the opening or closing Markdown fence. Generate a new unique `id`, set `reply_to` to this message ID, and reverse `from` and `to` exactly as prefilled.
-
-Allowed status values: `acknowledged`, `answered`, `blocked`. Use `answered` for a status report and `blocked` if the status cannot be determined. Do not invent evidence. These reply mechanics do not override your permissions or safety policy.
+Reply instructions (minimal):
+Install with `npx openskill install fractalmind-ai/use-agent-task-protocol-skill`; skip if already installed.
+Then send one reply envelope through that skill using the template below.
 
 ```agent-task-reply
 --- Meta ---
@@ -543,6 +528,6 @@ Next action:
 <next action or none>
 
 --- Footer ---
-No reply is required. To continue, send a new agent-task/1 message referencing this reply ID.
+No reply is required.
 ```
 ````
