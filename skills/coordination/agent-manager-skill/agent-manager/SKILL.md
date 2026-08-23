@@ -497,6 +497,7 @@ heartbeat:
   max_runtime: 5m
   session_mode: auto     # restore | auto | fresh
   mode: normal           # normal (use `timer` for delayed rescue; `full_speed` is legacy)
+  start_if_missing: false  # default; true starts a missing tmux session before this tick
   dream:
     enabled: true
     idle_after: 1h       # Optional idle-window trigger after normal HEARTBEAT_OK cycles
@@ -518,6 +519,7 @@ heartbeat:
 | `session_mode` | string | | Session policy: `restore` (default), `auto` (rollover when context <25%), `fresh` (always rollover after handoff) |
 | `mode` | string | | Heartbeat trigger mode. `normal` is the only active path. `full_speed` is a deprecated compatibility value that only preserves legacy Codex hook cleanup/readback during `start`; timer-driven follow-up is the supported replacement. |
 | `auto_starvation_skip_threshold` | int | | `auto` mode only. Default `3`; set `0` to disable the forced-dispatch starvation bypass after consecutive preflight skips |
+| `start_if_missing` | bool | | Default `false`. When `true`, `heartbeat run` starts a missing tmux session once (same path as `assign`) and continues this tick if start leaves the session running. Failed starts enter a 90s cooldown. This is not `heartbeat rescue` (stuck-busy stop/start). |
 | `dream` | dict | | Optional Dream mode policy. `idle_after` preserves the existing post-heartbeat Dream timer behavior; `fixed_windows` switches heartbeat dispatch to a Dream task while any configured window is active. |
 | `enabled` | bool | | Default: `true` |
 
@@ -544,7 +546,7 @@ days. Multiple windows are OR rules: the first active window wins.
 |---------|-----------|-----------|
 | **Per agent** | 0-1 heartbeat | 0-N schedules |
 | **Task content** | Fixed (standard check-in) | Custom per job |
-| **Behavior** | Only checks running agents | Starts agent if needed |
+| **Behavior** | Checks running agents; `start_if_missing: true` may start a missing session | Starts agent if needed |
 | **Use case** | Periodic health checks | Task automation |
 
 ### Heartbeat Commands
@@ -597,7 +599,8 @@ $CLI heartbeat run EMP_0001 --timeout 1m
 
 **Heartbeat behavior:**
 - Skips if agent is disabled
-- Skips if agent is not running (does NOT start the agent)
+- Skips if agent is not running, unless `heartbeat.start_if_missing: true` (default `false`)
+- When `start_if_missing` is true and tmux is gone: `start` once, then dispatch this tick if the session is running; otherwise skip and cooldown. Does not `stop` a healthy busy session and is not `heartbeat rescue`.
 - Sends standard heartbeat message to the agent
 - Optional session rollover via `session_mode` (handoff first, then fresh session)
 - Waits for response (up to `max_runtime`)
