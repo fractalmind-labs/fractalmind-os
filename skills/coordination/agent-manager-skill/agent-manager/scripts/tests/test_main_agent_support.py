@@ -76,6 +76,81 @@ class MainAgentTmuxNamingTests(unittest.TestCase):
 
 
 class MainAgentLifecycleTests(unittest.TestCase):
+    def test_assign_main_preempts_cursor_for_non_heartbeat_assignment(self):
+        calls = []
+        interrupts = []
+        temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-main-cursor-preempt-'))
+
+        deps = SimpleNamespace(
+            __file__='main.py',
+            resolve_agent=lambda _agent: {'name': 'main', 'file_id': 'main', 'launcher': 'cursor'},
+            get_agent_id=lambda config: config.get('file_id', '').lower(),
+            check_tmux=lambda: True,
+            session_exists=lambda agent_id: agent_id == 'main',
+            argparse=argparse,
+            time=SimpleNamespace(sleep=lambda _s: None),
+            resolve_launcher_command=lambda launcher: '/home/test/.cursor/bin/cursor-agent',
+            _should_use_codex_file_pointer=lambda _msg: False,
+            get_repo_root=lambda: temp_root,
+            write_codex_message_file=lambda *_args, **_kwargs: Path('/tmp/assign.md'),
+            interrupt_agent=lambda agent_id: interrupts.append(agent_id) or True,
+            send_keys=lambda agent_id, message, **kwargs: calls.append((agent_id, message, kwargs)) or True,
+            Path=Path,
+            sys=SimpleNamespace(stdin=io.StringIO('urgent admin message')),
+            enqueue_inbound_message=enqueue_inbound_message,
+            mark_inbound_message_state=mark_inbound_message_state,
+            was_message_yielded=was_message_yielded,
+            append_inbound_message_event=append_inbound_message_event,
+        )
+
+        with redirect_stdout(io.StringIO()):
+            rc = cmd_assign(
+                argparse.Namespace(agent='main', task_file=None),
+                deps=deps,
+                start_handler=lambda _args: 0,
+            )
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(interrupts, ['main'])
+        self.assertEqual(calls[0][0], 'main')
+
+    def test_assign_main_does_not_preempt_cursor_for_heartbeat(self):
+        interrupts = []
+        temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-main-cursor-heartbeat-'))
+        heartbeat = '# FractalBot Heartbeat\n\nHEARTBEAT_OK'
+
+        deps = SimpleNamespace(
+            __file__='main.py',
+            resolve_agent=lambda _agent: {'name': 'main', 'file_id': 'main', 'launcher': 'cursor'},
+            get_agent_id=lambda config: config.get('file_id', '').lower(),
+            check_tmux=lambda: True,
+            session_exists=lambda agent_id: agent_id == 'main',
+            argparse=argparse,
+            time=SimpleNamespace(sleep=lambda _s: None),
+            resolve_launcher_command=lambda launcher: '/home/test/.cursor/bin/cursor-agent',
+            _should_use_codex_file_pointer=lambda _msg: False,
+            get_repo_root=lambda: temp_root,
+            write_codex_message_file=lambda *_args, **_kwargs: Path('/tmp/assign.md'),
+            interrupt_agent=lambda agent_id: interrupts.append(agent_id) or True,
+            send_keys=lambda *_args, **_kwargs: True,
+            Path=Path,
+            sys=SimpleNamespace(stdin=io.StringIO(heartbeat)),
+            enqueue_inbound_message=enqueue_inbound_message,
+            mark_inbound_message_state=mark_inbound_message_state,
+            was_message_yielded=was_message_yielded,
+            append_inbound_message_event=append_inbound_message_event,
+        )
+
+        with redirect_stdout(io.StringIO()):
+            rc = cmd_assign(
+                argparse.Namespace(agent='main', task_file=None),
+                deps=deps,
+                start_handler=lambda _args: 0,
+            )
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(interrupts, [])
+
     def test_send_main_routes_message_to_main_agent_id(self):
         calls = []
         temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-main-send-queue-'))

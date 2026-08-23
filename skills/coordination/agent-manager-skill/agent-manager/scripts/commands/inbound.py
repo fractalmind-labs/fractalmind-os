@@ -139,6 +139,8 @@ def drain_main_inbound_once(
 
     launcher = deps.resolve_launcher_command(agent_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
+    interrupt_agent = getattr(deps, 'interrupt_agent', None)
+    cursor_preempted = False
     claim_owner = f"inbound-drain:{trigger}"
     now = _utc_now()
     summary = {'rc': 0, 'drained': 0, 'skipped': 0, 'failed': 0, 'dead_lettered': 0}
@@ -226,6 +228,26 @@ def drain_main_inbound_once(
             payload=payload,
             is_codex=is_codex,
         )
+        should_preempt = (
+            agent_id == 'main'
+            and 'cursor' in launcher.lower()
+            and not str(payload.get('message') or '').lstrip().startswith('# FractalBot Heartbeat')
+        )
+        if should_preempt and not cursor_preempted and callable(interrupt_agent):
+            if not interrupt_agent(agent_id):
+                deps.mark_inbound_message_state(
+                    repo_root,
+                    agent_id=agent_id,
+                    message_id=message_id,
+                    state='failed',
+                    detail='inbound_drain_cursor_interrupt_failed',
+                    attempt_count=next_attempt,
+                    claim_owner=claim_owner,
+                )
+                summary['failed'] += 1
+                summary['rc'] = 1
+                continue
+            cursor_preempted = True
         ok = deps.send_keys(
             agent_id,
             replay_message,

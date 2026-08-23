@@ -717,6 +717,7 @@ def cmd_send(args, *, deps: Any):
     get_repo_root = deps.get_repo_root
     write_codex_message_file = deps.write_codex_message_file
     send_keys = deps.send_keys
+    interrupt_agent = getattr(deps, 'interrupt_agent', None)
 
     agent_config = resolve_agent(args.agent)
     if not agent_config:
@@ -744,6 +745,22 @@ def cmd_send(args, *, deps: Any):
 
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
+    should_preempt = (
+        agent_id == 'main'
+        and 'cursor' in launcher.lower()
+        and not str(args.message).lstrip().startswith('# FractalBot Heartbeat')
+    )
+    if should_preempt and callable(interrupt_agent) and not interrupt_agent(agent_id):
+        _mark_main_inbound_state(
+            deps,
+            queue_repo_root,
+            agent_id=agent_id,
+            message_id=queue_message_id,
+            state='failed',
+            detail='cursor_interrupt_failed',
+        )
+        print(f"❌ Failed to interrupt Cursor Agent '{agent_name}'")
+        return 1
     runtime_snapshot = _probe_runtime_state(deps, agent_id=agent_id, launcher=launcher)
     if runtime_snapshot is not None:
         runtime_state, runtime_reason = runtime_snapshot
@@ -865,6 +882,7 @@ def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
     get_repo_root = deps.get_repo_root
     write_codex_message_file = deps.write_codex_message_file
     send_keys = deps.send_keys
+    interrupt_agent = getattr(deps, 'interrupt_agent', None)
     Path = deps.Path
     sys = deps.sys
 
@@ -922,6 +940,22 @@ def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
 
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
+    should_preempt = (
+        agent_id == 'main'
+        and 'cursor' in launcher.lower()
+        and not str(task).lstrip().startswith('# FractalBot Heartbeat')
+    )
+    if should_preempt and callable(interrupt_agent) and not interrupt_agent(agent_id):
+        _mark_main_inbound_state(
+            deps,
+            queue_repo_root,
+            agent_id=agent_id,
+            message_id=queue_message_id,
+            state='failed',
+            detail='cursor_interrupt_failed',
+        )
+        print(f"❌ Failed to interrupt Cursor Agent '{agent_name}'")
+        return 1
     runtime_snapshot = _probe_runtime_state(deps, agent_id=agent_id, launcher=launcher)
     if runtime_snapshot is not None:
         runtime_state, runtime_reason = runtime_snapshot

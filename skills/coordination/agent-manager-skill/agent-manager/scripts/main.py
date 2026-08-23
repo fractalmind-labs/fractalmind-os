@@ -47,6 +47,7 @@ from tmux_helper import (
     stop_session,
     capture_output,
     send_keys,
+    interrupt_agent,
     get_session_info,
     wait_for_prompt,
     inject_system_prompt,

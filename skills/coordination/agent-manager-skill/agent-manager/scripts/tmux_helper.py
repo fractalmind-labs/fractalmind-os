@@ -668,6 +668,31 @@ def send_keys(
     return True
 
 
+def interrupt_agent(agent_id: str) -> bool:
+    """Interrupt an in-flight TUI turn without terminating the tmux session.
+
+    Cursor Agent handles a tmux ``C-c`` as its documented in-turn interrupt.
+    Keep this separate from ``send_keys`` so normal agent-to-agent delivery is
+    unchanged and callers can make preemption an explicit routing decision.
+    """
+    if not session_exists(agent_id):
+        return False
+
+    target = _agent_pane_target(agent_id)
+    if not target:
+        return False
+
+    result = subprocess.run(
+        ['tmux', 'send-keys', '-t', target, 'C-c'],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return False
+    time.sleep(0.25)
+    return True
+
+
 def _is_codex_model_choice_prompt(output: str) -> bool:
     """Detect Codex first-run/upgrade model selection prompt (non-interactive blocker)."""
     if not output:
