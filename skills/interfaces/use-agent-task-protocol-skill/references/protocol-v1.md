@@ -193,9 +193,12 @@ When the sender and receiver are Codex App sidebar tasks, insert this compact de
 
 ```text
 Reply delivery (required):
-- Install once with `npx openskill install fractalmind-ai/use-agent-task-protocol-skill`; if already installed, skip.
-- Use this skill to actively send the ATP reply envelope in the source task context.
-- If send is unavailable, return `blocked` and tell the sender to collect it manually.
+- transport: openskill
+- skill: use-agent-task-protocol
+- install: npx openskill install fractalmind-ai/use-agent-task-protocol-skill (skip if already installed)
+- action: invoke the installed skill with the reply envelope below as payload
+- target: source task context (task_id={{source-task-id}}, thread_id={{source-thread-id}}, host_id={{source-host-id}})
+- if transport fails, output local `blocked` reply and ask sender to collect manually.
 ```
 
 The sender SHOULD use its own exact current task ID and host ID, not a title or recency-based selector. A runtime-supplied source-task wrapper is useful evidence but does not replace the explicit Footer route.
@@ -205,9 +208,12 @@ The sender SHOULD use its own exact current task ID and host ID, not a title or 
 Replace all `{{...}}` sender placeholders before sending. Leave `<...>` receiver placeholders intact.
 
 ````text
-Reply instructions (minimal):
-Install with `npx openskill install fractalmind-ai/use-agent-task-protocol-skill`; skip if already installed.
-Then send the following envelope through that skill; output in your own task is not the sender reply.
+Reply instructions (minimal executable):
+- transport: openskill
+- install: npx openskill install fractalmind-ai/use-agent-task-protocol-skill (skip if already installed)
+- action: invoke installed `use-agent-task-protocol` skill with the envelope below as payload
+- target: source task context described by the footer route capsule.
+- if the transport call fails, return local `blocked` with the exact failure reason.
 
 Reply with one envelope using the template below. Copy only the contents inside the fenced block; do not include the opening or closing Markdown fence. Generate a new unique `id`; preserve `task_id`; set `reply_to` to this message ID. Reverse `from` and `to` exactly as prefilled.
 
@@ -254,9 +260,12 @@ No reply is required.
 ### 5.4 Canonical reply-required message Footer
 
 ````text
-Reply instructions (minimal):
-Install with `npx openskill install fractalmind-ai/use-agent-task-protocol-skill`; skip if already installed.
-Then send the following envelope through that skill; output in your own task is not the sender reply.
+Reply instructions (minimal executable):
+- transport: openskill
+- install: npx openskill install fractalmind-ai/use-agent-task-protocol-skill (skip if already installed)
+- action: invoke installed `use-agent-task-protocol` skill with the envelope below as payload
+- target: source task context described by the footer route capsule.
+- if the transport call fails, return local `blocked` with the exact failure reason.
 
 Reply with one envelope using the template below. Copy only the contents inside the fenced block; do not include the opening or closing Markdown fence. Generate a new unique `id`, set `reply_to` to this message ID, and reverse `from` and `to` exactly as prefilled.
 
@@ -404,12 +413,17 @@ PR: https://github.example/org/repo/pull/123
 
 --- Footer ---
 Reply delivery (required):
-- Install with `npx openskill install fractalmind-ai/use-agent-task-protocol-skill`; skip if already installed.
-- Use this skill to send the reply to the source task.
+- transport: openskill
+- skill: use-agent-task-protocol
+- install: npx openskill install fractalmind-ai/use-agent-task-protocol-skill (skip if already installed)
+- action: send the following reply envelope back to thread `thread_main_example_01` on host `local`.
+- if transport fails, return local `blocked` and ask sender to collect it manually.
 
-Reply instructions (minimal):
-Install with `npx openskill install fractalmind-ai/use-agent-task-protocol-skill`; skip if already installed.
-Then send one reply envelope through that skill using the template below.
+Reply instructions (minimal executable):
+- transport: openskill
+- install: npx openskill install fractalmind-ai/use-agent-task-protocol-skill (skip if already installed)
+- action: send the reply envelope below through the installed skill
+- if transport fails, return local `blocked` and ask sender to collect manually.
 
 ```agent-task-reply
 --- Meta ---
@@ -496,12 +510,17 @@ The release decision is waiting on the review result.
 
 --- Footer ---
 Reply delivery (required):
-- Install with `npx openskill install fractalmind-ai/use-agent-task-protocol-skill`; skip if already installed.
-- Use this skill to send the reply to the source task.
+- transport: openskill
+- skill: use-agent-task-protocol
+- install: npx openskill install fractalmind-ai/use-agent-task-protocol-skill (skip if already installed)
+- action: send the following reply envelope back to thread `thread_main_example_01` on host `local`.
+- if transport fails, return local `blocked` and ask sender to collect it manually.
 
-Reply instructions (minimal):
-Install with `npx openskill install fractalmind-ai/use-agent-task-protocol-skill`; skip if already installed.
-Then send one reply envelope through that skill using the template below.
+Reply instructions (minimal executable):
+- transport: openskill
+- install: npx openskill install fractalmind-ai/use-agent-task-protocol-skill (skip if already installed)
+- action: send the reply envelope below through the installed skill
+- if transport fails, return local `blocked` and ask sender to collect manually.
 
 ```agent-task-reply
 --- Meta ---
