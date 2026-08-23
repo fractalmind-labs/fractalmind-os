@@ -126,6 +126,23 @@
       "status": "active"
     },
     {
+      "canonical_repository": "https://github.com/fractalmind-ai/use-agent-task-protocol-skill",
+      "catalog_path": "coordination/use-agent-task-protocol",
+      "category": "coordination",
+      "distribution_targets": [
+        {
+          "commit": "509cf23e16f4ef5f6a6d2530d1a0915860630f7a",
+          "path": "coordination/use-agent-task-protocol",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "use-agent-task-protocol",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
       "canonical_repository": "https://github.com/fractalmind-ai/golang-integration-test-skill",
       "catalog_path": "development/golang-integration-test",
       "category": "development",
