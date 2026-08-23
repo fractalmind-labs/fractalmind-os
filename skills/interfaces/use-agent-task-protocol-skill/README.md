@@ -1,22 +1,22 @@
 # use-agent-task-protocol-skill
 
 Runtime-neutral protocol for exchanging agent tasks, messages, and replies with
-portable envelope semantics and explicit reply routes.
+portable envelope semantics and skill-managed reply delivery.
 
 ## What this skill does
 
 - Define portable `agent-task/1` envelopes for work assignments and responses.
 - Keep protocol fields (meta/body/footer semantics) separated from transport routing.
-- Include self-contained reply capsules so a receiver can respond without reading
-  external docs.
+- Use a one-sentence Footer that bootstraps the skill when needed.
+- Keep reply templates, statuses, routing, readback, and failure fallback in the
+  skill instead of repeating them in every envelope.
 - Support both one-time information updates and task lifecycle replies.
 
 ## Use this skill when
 
 - You need stable task handoff between agents or runtimes.
-- Receivers may not have a shared ATP parser installed.
-- You need explicit, operationally actionable return routes in every
-  reply-required envelope.
+- Receivers may need to install the ATP skill before replying.
+- The delivery runtime preserves an exact source context for active return.
 
 ## Repository layout
 
@@ -27,5 +27,6 @@ portable envelope semantics and explicit reply routes.
 ## Quick usage
 
 Include `--- Meta ---`, `--- Body ---`, `--- Footer ---` sections in that order.
-Use the template from `SKILL.md` / `references/protocol-v1.md` and always require
-an executable reply route for tasks and `reply: required` messages.
+For tasks and `reply: required` messages, use the canonical one-sentence Footer
+from `SKILL.md`; the skill composes and actively returns the reply through the
+runtime-provided source context.

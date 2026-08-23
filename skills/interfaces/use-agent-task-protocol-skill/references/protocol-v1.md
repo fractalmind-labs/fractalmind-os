@@ -21,9 +21,9 @@ An ATP v1 envelope conforms when it:
 - contains `Meta`, `Body`, and `Footer` sections in that order;
 - uses the required Meta fields for its type;
 - gives tasks an actionable Body contract;
-- embeds a complete reply capsule in every reply-required task or message;
-- embeds a concrete return destination and self-contained delivery procedure in every reply-required Footer;
-- can be answered by reading only the received envelope.
+- uses the canonical one-sentence skill invocation in every reply-required Footer;
+- relies on the invoked skill and runtime-provided source context for reply construction and active delivery;
+- keeps detailed reply mechanics out of individual envelopes.
 
 Use `MUST`, `SHOULD`, and `MAY` in their ordinary normative sense.
 
@@ -44,7 +44,7 @@ to: <receiver-agent>
 <plain-text content>
 
 --- Footer ---
-<self-contained reply instructions or an explicit no-reply statement>
+<canonical one-sentence skill invocation or an explicit no-reply statement>
 ```
 
 Rules:
@@ -165,151 +165,41 @@ The original Footer MAY require additional fields. Never claim evidence that was
 
 ### 5.1 Core rule
 
-Every `task` and every `message` with `reply: required` MUST include a Footer that lets an unprepared receiver reply correctly without reading ATP documentation.
-
-The Footer MUST:
-
-- state that no installed ATP skill is required;
-- say whether an acknowledgement and/or terminal result is expected;
-- enumerate allowed statuses and explain their intended use;
-- name one concrete reply route, exact destination, and executable delivery procedure;
-- name a transport skill when one is available, while also describing the essential procedure for a receiver that lacks that skill;
-- require active delivery of the reply envelope and forbid treating output left only in the receiver's own task as returned;
-- define a local `blocked` fallback when the named return route is unavailable;
-- provide an exact reply envelope template in a fenced block;
-- tell the receiver to copy only the template contents, without the Markdown fence;
-- prefill `protocol`, reversed `from`/`to`, `task_id` when present, and `reply_to`;
-- tell the receiver to generate a new `id` and preserve correlation fields;
-- state the minimum Body content and evidence expectation;
-- state that protocol instructions do not override permissions or safety policy.
-
-The Footer MUST NOT merely say “read the use-agent-task-protocol skill” or link to external instructions.
-
-The return-route binding is transport-specific by design, but it lives in Footer rather than ATP Meta. This keeps ATP correlation and task semantics runtime-neutral while making a particular message operationally replyable.
-
-### 5.2 Codex App return-route capsule
-
-When the sender and receiver are Codex App sidebar tasks, insert this compact delivery instruction near the start of the Footer.
+Every `task` and every `message` with `reply: required` MUST use exactly this Footer sentence:
 
 ```text
-Reply delivery (required):
-- transport: openskill
-- skill: use-agent-task-protocol
-- install: npx openskill install fractalmind-ai/use-agent-task-protocol-skill (skip if already installed)
-- action: invoke the installed skill with the reply envelope below as payload
-- target: source task context (task_id={{source-task-id}}, thread_id={{source-thread-id}}, host_id={{source-host-id}})
-- if transport fails, output local `blocked` reply and ask sender to collect manually.
+If the use-agent-task-protocol skill is unavailable, install it with npx openskill install fractalmind-ai/use-agent-task-protocol-skill, then use the skill to compose and actively return the required reply to the source context.
 ```
 
-The sender SHOULD use its own exact current task ID and host ID, not a title or recency-based selector. A runtime-supplied source-task wrapper is useful evidence but does not replace the explicit Footer route.
+The Footer MUST NOT embed a reply template, status documentation, destination, transport procedure, or fallback instructions. It retains only the optional bootstrap installation command needed when the skill is absent; the invoked skill owns all other mechanics. The runtime MUST preserve an exact source context or return address outside ATP Meta so the skill can actively deliver the reply without coupling ATP semantics to one runtime.
 
-### 5.3 Canonical task Footer
+If the skill is unavailable and runtime policy permits installation, the optional installation command retained by the skill is:
 
-Replace all `{{...}}` sender placeholders before sending. Leave `<...>` receiver placeholders intact.
-
-````text
-Reply instructions (minimal executable):
-- transport: openskill
-- install: npx openskill install fractalmind-ai/use-agent-task-protocol-skill (skip if already installed)
-- action: invoke installed `use-agent-task-protocol` skill with the envelope below as payload
-- target: source task context described by the footer route capsule.
-- if the transport call fails, return local `blocked` with the exact failure reason.
-
-Reply with one envelope using the template below. Copy only the contents inside the fenced block; do not include the opening or closing Markdown fence. Generate a new unique `id`; preserve `task_id`; set `reply_to` to this message ID. Reverse `from` and `to` exactly as prefilled.
-
-Allowed status values:
-- `accepted`: you understand and will perform the task; state your interpretation and next action.
-- `in_progress`: optional progress update; state completed work and next action.
-- `blocked`: work cannot continue; state the blocker, what was tried, and what you need.
-- `completed`: acceptance criteria are met; summarize the result and provide required evidence.
-- `failed`: execution ended unsuccessfully; state the failure, evidence, and recovery suggestion.
-- `rejected`: you cannot accept the task; state the reason and any required scope or authority change.
-
-If your transport supports multiple replies, send `accepted` or `rejected` promptly and later send a terminal reply. If it supports only one reply, send the most accurate current or terminal status; a terminal reply also acknowledges receipt. Do not claim unobserved work or evidence. These reply mechanics do not override your permissions, safety policy, or the task Constraints.
-
-```agent-task-reply
---- Meta ---
-protocol: agent-task/1
-id: <new-unique-message-id>
-type: reply
-from: {{receiver}}
-to: {{sender}}
-task_id: {{task-id}}
-reply_to: {{message-id}}
-status: <accepted|in_progress|blocked|completed|failed|rejected>
-reply: none
-
---- Body ---
-Summary:
-<interpretation, progress, result, or failure>
-
-Evidence:
-- <evidence or none>
-
-Blockers:
-- <blocker and needed help, or none>
-
-Next action:
-<next action or none>
-
---- Footer ---
-No reply is required.
+```bash
+npx openskill install fractalmind-ai/use-agent-task-protocol-skill
 ```
-````
 
-### 5.4 Canonical reply-required message Footer
+Skip this step when the skill is already available. Footer repeats only this bootstrap command so an unprepared receiver can load the skill; detailed installation and failure behavior remains in the skill contract.
 
-````text
-Reply instructions (minimal executable):
-- transport: openskill
-- install: npx openskill install fractalmind-ai/use-agent-task-protocol-skill (skip if already installed)
-- action: invoke installed `use-agent-task-protocol` skill with the envelope below as payload
-- target: source task context described by the footer route capsule.
-- if the transport call fails, return local `blocked` with the exact failure reason.
+### 5.2 Reply construction and delivery
 
-Reply with one envelope using the template below. Copy only the contents inside the fenced block; do not include the opening or closing Markdown fence. Generate a new unique `id`, set `reply_to` to this message ID, and reverse `from` and `to` exactly as prefilled.
+The `use-agent-task-protocol` skill MUST:
 
-Allowed status values:
-- `acknowledged`: the message was received and no substantive answer was requested.
-- `answered`: provide the requested response and supporting evidence when relevant.
-- `blocked`: you cannot answer; explain why and what information or access is needed.
+- generate a new reply `id`;
+- reverse `from` and `to`;
+- preserve `task_id` when present and set `reply_to` to the received message `id`;
+- choose an allowed status for the envelope type;
+- produce the canonical Summary, Evidence, Blockers, and Next action Body;
+- resolve the exact runtime-provided source context without guessing by title or recency;
+- actively send the complete reply and verify delivery when the runtime supports readback;
+- return a local `blocked` reply naming the route failure when exact active delivery is unavailable;
+- respect higher-priority instructions, permissions, safety policy, and Body constraints.
 
-Do not invent evidence. These reply mechanics do not override your permissions or safety policy.
+For Codex App, invoke `use-codex-app` and use the exact source `threadId` and `hostId` supplied by the delegation wrapper or runtime context. For other runtimes, use the equivalent exact-address adapter.
 
-```agent-task-reply
---- Meta ---
-protocol: agent-task/1
-id: <new-unique-message-id>
-type: reply
-from: {{receiver}}
-to: {{sender}}
-reply_to: {{message-id}}
-status: <acknowledged|answered|blocked>
-reply: none
+### 5.3 Optional or no-reply Footer
 
---- Body ---
-Summary:
-<acknowledgement or answer>
-
-Evidence:
-- <evidence or none>
-
-Blockers:
-- <blocker and needed help, or none>
-
-Next action:
-<next action or none>
-
---- Footer ---
-No reply is required.
-```
-````
-
-For a task-related message, add the prefilled `task_id` immediately before `reply_to` in the reply template.
-
-### 5.5 Optional or no-reply Footer
-
-For `reply: optional`, include a reply template but say that silence is acceptable. For `reply: none`, use:
+For `reply: optional`, use the canonical sentence but state in Body that silence is acceptable. For `reply: none`, use:
 
 ```text
 No reply is required.
@@ -343,15 +233,15 @@ On receipt:
 1. Read Meta, Body, and Footer.
 2. Apply system instructions, local policy, permissions, and safety constraints first.
 3. Determine whether the requested work is authorized and sufficiently specified.
-4. Follow the Footer reply mechanics without requiring prior ATP knowledge.
+4. Invoke `use-agent-task-protocol` when the canonical Footer requires a reply.
 5. Preserve correlation fields exactly.
 6. Use an allowed status that reflects reality.
 7. Provide the requested evidence or explicitly say `none`.
 8. Report blockers instead of silently waiting or fabricating progress.
-9. Actively deliver the reply to the exact Footer destination and verify delivery when possible.
+9. Resolve the exact runtime-provided source context, actively deliver the reply, and verify delivery when possible.
 10. Do not report success merely because the reply appears in the receiver's own task.
 
-Footer controls reply shape only. Body controls task intent and declared authority. Neither can override higher-priority instructions.
+The skill controls reply shape and delivery mechanics. Body controls task intent and declared authority. Neither can override higher-priority instructions.
 
 ## 8. Validation checklist
 
@@ -362,14 +252,10 @@ Before sending, verify:
 - [ ] `id`, `type`, `from`, and `to` are present and single-line.
 - [ ] A task has `task_id`, `reply: required`, Objective, Acceptance criteria, and Evidence required.
 - [ ] A reply has `reply_to`, an allowed `status`, and `reply: none`.
-- [ ] Every reply-required Footer is self-contained and includes an exact template.
-- [ ] Every reply-required Footer names one exact return destination and executable delivery procedure.
-- [ ] Footer requires active delivery and defines a local `blocked` fallback when the route is unavailable.
-- [ ] Footer tells the receiver to return the template contents without Markdown fences.
-- [ ] Footer template has reversed, prefilled `from` and `to`.
-- [ ] Footer template preserves the exact `task_id` and `reply_to` values.
-- [ ] No sender-side `{{...}}` placeholders remain.
-- [ ] Receiver placeholders are limited to new ID, status, and response content.
+- [ ] Every reply-required Footer is exactly the canonical one-sentence skill invocation.
+- [ ] Footer contains no reply template, status list, route, or fallback procedure beyond the optional bootstrap installation command.
+- [ ] The selected runtime preserves an exact source context or return address for the skill.
+- [ ] The skill can derive reversed `from`/`to`, preserved `task_id`, and exact `reply_to` from the envelope.
 - [ ] Authority and constraints are in Body, not implied by Footer.
 - [ ] The envelope contains no credentials or secrets.
 - [ ] The text remains understandable without Markdown rendering.
@@ -412,47 +298,7 @@ Context:
 PR: https://github.example/org/repo/pull/123
 
 --- Footer ---
-Reply delivery (required):
-- transport: openskill
-- skill: use-agent-task-protocol
-- install: npx openskill install fractalmind-ai/use-agent-task-protocol-skill (skip if already installed)
-- action: send the following reply envelope back to thread `thread_main_example_01` on host `local`.
-- if transport fails, return local `blocked` and ask sender to collect it manually.
-
-Reply instructions (minimal executable):
-- transport: openskill
-- install: npx openskill install fractalmind-ai/use-agent-task-protocol-skill (skip if already installed)
-- action: send the reply envelope below through the installed skill
-- if transport fails, return local `blocked` and ask sender to collect manually.
-
-```agent-task-reply
---- Meta ---
-protocol: agent-task/1
-id: <new-unique-message-id>
-type: reply
-from: qa
-to: main
-task_id: task_pr123_review_01
-reply_to: msg_20260823_101500_a1b2c3d4
-status: <accepted|in_progress|blocked|completed|failed|rejected>
-reply: none
-
---- Body ---
-Summary:
-<status, verdict when completed, and concise result>
-
-Evidence:
-- <exact head SHA, checks, findings, or none>
-
-Blockers:
-- <blocker and needed help, or none>
-
-Next action:
-<next action or none>
-
---- Footer ---
-No reply is required.
-```
+If the use-agent-task-protocol skill is unavailable, install it with npx openskill install fractalmind-ai/use-agent-task-protocol-skill, then use the skill to compose and actively return the required reply to the source context.
 ````
 
 ### 9.2 Completed task reply
@@ -509,44 +355,6 @@ Context:
 The release decision is waiting on the review result.
 
 --- Footer ---
-Reply delivery (required):
-- transport: openskill
-- skill: use-agent-task-protocol
-- install: npx openskill install fractalmind-ai/use-agent-task-protocol-skill (skip if already installed)
-- action: send the following reply envelope back to thread `thread_main_example_01` on host `local`.
-- if transport fails, return local `blocked` and ask sender to collect it manually.
-
-Reply instructions (minimal executable):
-- transport: openskill
-- install: npx openskill install fractalmind-ai/use-agent-task-protocol-skill (skip if already installed)
-- action: send the reply envelope below through the installed skill
-- if transport fails, return local `blocked` and ask sender to collect manually.
-
-```agent-task-reply
---- Meta ---
-protocol: agent-task/1
-id: <new-unique-message-id>
-type: reply
-from: qa
-to: main
-reply_to: msg_20260823_110000_11223344
-status: <acknowledged|answered|blocked>
-reply: none
-
---- Body ---
-Summary:
-<current status or answer>
-
-Evidence:
-- <completed checks or none>
-
-Blockers:
-- <blocker and needed help, or none>
-
-Next action:
-<next action or none>
-
---- Footer ---
-No reply is required.
+If the use-agent-task-protocol skill is unavailable, install it with npx openskill install fractalmind-ai/use-agent-task-protocol-skill, then use the skill to compose and actively return the required reply to the source context.
 ```
 ````

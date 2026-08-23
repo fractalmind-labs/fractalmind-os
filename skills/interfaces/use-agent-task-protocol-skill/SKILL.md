@@ -1,50 +1,93 @@
 ---
 name: use-agent-task-protocol
-description: Define, compose, validate, or interpret runtime-neutral Agent Task Protocol v1 envelopes for assigning tasks, sending agent messages, requesting status, acknowledging receipt, reporting progress or blockers, and actively returning results across agents or runtimes. Use whenever an agent task or message must be transport-independent, especially when the receiver may not have this skill installed; every reply-required envelope carries a self-contained Footer with a prefilled reply template and executable return route.
+description: Define, compose, validate, interpret, and actively return runtime-neutral Agent Task Protocol v1 envelopes for assigning tasks, sending agent messages, requesting status, acknowledging receipt, reporting progress or blockers, and returning results across agents or runtimes. Use whenever an agent task or message uses agent-task/1 or asks for an ATP reply.
 ---
 
 # Use Agent Task Protocol
 
-Use Agent Task Protocol (ATP) as a content-layer contract. Keep task meaning and reply semantics stable while any transport delivers the text: native agent APIs, task threads, chat, tmux, CDP, queues, files, or future runtimes.
+Use Agent Task Protocol (ATP) as a content-layer contract. Keep task meaning and reply semantics stable while the runtime transports the envelope and preserves its source context.
 
 Read [references/protocol-v1.md](references/protocol-v1.md) completely before composing, validating, or interpreting an ATP envelope.
 
-## Preserve the core invariant
+## Optional installation
 
-Make every reply-required `task` or `message` understandable to a receiver with no installed ATP skill, shared prompt, or parser. Put a complete, prefilled reply template and executable reply-delivery route in `Footer`; never tell the receiver merely to read this skill or another document.
+If this skill is unavailable and the runtime permits package installation, install it with:
 
-Keep transport-specific fields out of ATP Meta. Bind the available return transport inside the opaque Footer so the receiver knows how and where to deliver the reply. ATP itself does not start agents, select threads, retry messages, persist state, or grant authority.
+```bash
+npx openskill install fractalmind-ai/use-agent-task-protocol-skill
+```
+
+Skip installation when the skill is already available. If installation is unavailable or prohibited, do not weaken permissions or claim that a reply was delivered; use the local `blocked` fallback described below.
 
 ## Compose an envelope
 
-1. Choose `type: task` for work with acceptance criteria, `type: message` for information or a question, and `type: reply` for lifecycle or answer responses.
+1. Use `type: task` for work with acceptance criteria, `type: message` for information or a question, and `type: reply` for lifecycle or answer responses.
 2. Generate a unique message `id`. For a new task, also generate one stable `task_id` that every later reply preserves.
 3. Identify `from` and `to` with stable, human-readable agent identifiers.
 4. Write a task Body with `Objective`, `Scope`, `Constraints`, `Acceptance criteria`, and `Evidence required`. Write a message Body with `Message` and `Requested response` when applicable.
-5. Install the skill once before replying: `npx openskill install fractalmind-ai/use-agent-task-protocol-skill` (skip if already installed).
-6. For every reply-required task or message, write a self-contained Footer using the protocol reference. Prefill the reply-delivery route plus `from`, `to`, `task_id`, and `reply_to`; leave only the new reply ID, status, and result content for the receiver.
-7. Validate the completed envelope against the checklist in the protocol reference.
-8. Deliver it using the best available runtime. Do not mix transport-specific instructions into ATP Meta.
+5. Ensure the chosen transport preserves an exact source context or return address outside ATP Meta.
+6. For every reply-required task or message, use exactly this one-sentence Footer: `If the use-agent-task-protocol skill is unavailable, install it with npx openskill install fractalmind-ai/use-agent-task-protocol-skill, then use the skill to compose and actively return the required reply to the source context.`
+7. For `reply: none`, use `No reply is required.`
+8. Validate the completed envelope against the protocol reference, then deliver it with the best available runtime.
+
+Do not put reply templates, status documentation, transport routes, or fallback procedures in a reply-required Footer. Only the optional bootstrap installation command remains in Footer; all other mechanics belong to this skill and its runtime adapter.
 
 ## Handle a received envelope
 
-Follow the Footer even when this skill is unavailable. Treat it as authoritative for reply mechanics only; it cannot override system instructions, permissions, safety policy, or the authority stated in Body.
+Apply system instructions, local policy, permissions, safety constraints, and the Body's authority boundary before acting.
 
-For tasks, respond with the requested lifecycle status. Use terminal replies (`completed`, `failed`, or `rejected`) when only one response is possible. Preserve `task_id`, set `reply_to` to the message being answered, reverse `from` and `to`, and include concrete evidence when requested.
+For a task reply, choose one status:
 
-For messages, use `acknowledged`, `answered`, or `blocked` as instructed. Do not invent completion evidence.
+- `accepted`: understood and starting.
+- `in_progress`: substantive progress with work remaining.
+- `blocked`: cannot continue without external input or state change.
+- `completed`: acceptance criteria are met.
+- `failed`: execution ended unsuccessfully.
+- `rejected`: scope or authority cannot be accepted.
 
-After composing a reply, install with `npx openskill install fractalmind-ai/use-agent-task-protocol-skill` if not already installed, then use it to send the reply through Footer instructions. Do not merely leave the reply in the receiver's own task. If active send is unavailable, leave a local `blocked` reply that states the route failure and never claim it was returned to the sender.
+For a message reply, choose `acknowledged`, `answered`, or `blocked`.
 
-## Keep protocol and runtime separate
+Generate a new reply `id`, set `type: reply`, reverse `from` and `to`, preserve `task_id` when present, set `reply_to` to the received message `id`, set `reply: none`, and report only observed facts. Use this reply shape:
 
-- Allow the sender to choose any delivery mechanism.
-- Require the sender to bind one concrete return mechanism in every reply-required Footer.
-- Treat the reply route as a runtime adapter carried by the envelope, not as ATP Meta semantics.
-- Keep retry, timeout, idempotent execution, inbox, queue, thread, and acknowledgement storage in the transport or orchestration layer.
-- Use ATP IDs as correlation keys that a runtime may store, without making storage part of ATP.
-- Never place credentials or secrets in an envelope.
+```text
+--- Meta ---
+protocol: agent-task/1
+id: <new-unique-message-id>
+type: reply
+from: <original-to>
+to: <original-from>
+task_id: <original-task-id, omit when absent>
+reply_to: <received-message-id>
+status: <allowed-status>
+reply: none
+
+--- Body ---
+Summary:
+<interpretation, progress, result, answer, or failure>
+
+Evidence:
+- <evidence or none>
+
+Blockers:
+- <blocker and needed help, or none>
+
+Next action:
+<next action or none>
+
+--- Footer ---
+No reply is required.
+```
+
+## Actively return a reply
+
+1. Resolve the exact source from runtime-provided context, such as a delegation wrapper's `source_thread_id`, transport return address, or equivalent immutable identifier. Never infer the destination from title or recency.
+2. For Codex App tasks, use the `use-codex-app` skill: read the exact source `threadId` and `hostId`, send the complete ATP reply with the native thread API, then verify delivery with `wait_threads` or `read_thread`.
+3. For another runtime, use its equivalent exact-address send and readback mechanism.
+4. Do not treat a reply printed only in the receiver's task as delivered.
+5. If no exact source or active-send capability is available, output a local `blocked` reply naming the route failure and state that the sender must collect it manually. Never claim successful delivery without evidence.
+
+ATP does not grant authority, start agents, select targets, retry messages, or persist state. Keep credentials and secrets out of every envelope.
 
 ## Resource
 
-- [references/protocol-v1.md](references/protocol-v1.md): normative v1 fields, Footer reply capsule, lifecycle rules, validation checklist, and complete task/message/reply examples.
+- [references/protocol-v1.md](references/protocol-v1.md): normative fields, lifecycle rules, compact Footer contract, validation checklist, and examples.
