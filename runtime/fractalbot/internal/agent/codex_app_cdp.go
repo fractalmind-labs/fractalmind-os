@@ -1161,6 +1161,12 @@ func validateCodexAppDeliveryValue(value interface{}, expectedConversationID str
 	if bridgeResultHasError(result["result"]) {
 		return fmt.Errorf("Codex App start-turn-for-host failed: %s", codexAppBridgeErrorDetail(result["result"]))
 	}
+	if fallback, _ := result["fallback"].(string); strings.TrimSpace(fallback) != "" {
+		verified, _ := result["verified"].(string)
+		if strings.TrimSpace(verified) != "target-thread-readback" {
+			return errors.New("Codex App visible composer delivery was not confirmed by target-thread readback")
+		}
+	}
 	return nil
 }
 
@@ -1456,10 +1462,15 @@ func buildCodexAppVisibleComposerDeliveryScript(cfg *config.CodexAppCDPConfig, e
 	if cfg != nil {
 		conversationID = strings.TrimSpace(cfg.ConversationID)
 	}
+	verificationNeedle := "- envelope_id: " + strings.TrimSpace(envelope.ID)
+	fallbackPrompt := strings.TrimRight(prompt, "\n")
+	if !strings.Contains(fallbackPrompt, verificationNeedle) {
+		fallbackPrompt += "\n\n" + verificationNeedle
+	}
 	payload := map[string]string{
 		"conversationId":     conversationID,
-		"prompt":             prompt,
-		"verificationNeedle": "- envelope_id: " + strings.TrimSpace(envelope.ID),
+		"prompt":             fallbackPrompt,
+		"verificationNeedle": verificationNeedle,
 	}
 	encoded, _ := json.Marshal(payload)
 	return fmt.Sprintf(`(async () => {
@@ -1586,7 +1597,7 @@ func buildCodexAppVisibleComposerDeliveryScript(cfg *config.CodexAppCDPConfig, e
     node.focus?.();
     const eventInit = { bubbles: true, cancelable: true, view: window, composed: true };
     const pointerInit = { ...eventInit, pointerId: 1, pointerType: "mouse", isPrimary: true, buttons: 1 };
-    for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"]) {
+    for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup"]) {
       try {
         node.dispatchEvent(type.startsWith("pointer") && typeof PointerEvent === "function" ? new PointerEvent(type, pointerInit) : new MouseEvent(type.replace(/^pointer/, "mouse"), eventInit));
       } catch (_) {}
@@ -1634,33 +1645,41 @@ func buildCodexAppVisibleComposerDeliveryScript(cfg *config.CodexAppCDPConfig, e
     throw new Error("Target App composer already contains an unsent draft; refusing to overwrite it.");
   }
   setComposerText(composer, payload.prompt);
-  await waitFor(() => composerText(composer).includes(payload.verificationNeedle), 4000);
-  const button = await waitFor(() => findSendButton(composer), 6000).catch(() => null);
-  await sleep(250);
-  let strategy = "visible-composer-keyboard";
-  if (button) {
-    dispatchClick(button);
-    strategy = "visible-composer-button";
-  } else {
-    composer.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, metaKey: true }));
-    composer.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, metaKey: true }));
-  }
   try {
-    await waitFor(() => !composerText(composer).includes(payload.verificationNeedle), 6000);
-  } catch (_) {
-    composer.focus();
-    composer.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, metaKey: true }));
-    composer.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, metaKey: true }));
-    if (button) dispatchClick(button);
-    await waitFor(() => !composerText(composer).includes(payload.verificationNeedle), 6000);
-    strategy += "-retry";
+    await waitFor(() => composerText(composer).includes(payload.verificationNeedle), 4000);
+    let strategy = "visible-composer";
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      const button = findSendButton(composer);
+      await sleep(250);
+      if (button) {
+        dispatchClick(button);
+        strategy = "visible-composer-button-attempt-" + attempt;
+      } else {
+        composer.focus();
+        composer.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, metaKey: true }));
+        composer.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, metaKey: true }));
+        strategy = "visible-composer-keyboard-attempt-" + attempt;
+      }
+      await waitFor(() => !composerText(composer).includes(payload.verificationNeedle), 2000).catch(() => null);
+      if (!composerText(composer).includes(payload.verificationNeedle)) break;
+      if (attempt < 3) await sleep(350);
+    }
+    if (composerText(composer).includes(payload.verificationNeedle)) {
+      throw new Error("Visible composer submission was not accepted after 3 confirmed attempts.");
+    }
+    if (hasQueuedMessageControls()) {
+      dispatchClick(await waitFor(findQueuedSteerButton, 6000));
+      await waitFor(() => !hasQueuedMessageControls(), 6000);
+      strategy += "-steer";
+    }
+    await verifyDelivery(composer, payload.verificationNeedle);
+    return { ok: true, conversationId, fallback: strategy, navigation, verified: "target-thread-readback" };
+  } catch (error) {
+    if (composerText(composer).includes(payload.verificationNeedle)) {
+      setComposerText(composer, "");
+      await waitFor(() => !composerText(composer).includes(payload.verificationNeedle), 2000).catch(() => null);
+    }
+    throw error;
   }
-  if (hasQueuedMessageControls()) {
-    dispatchClick(await waitFor(findQueuedSteerButton, 6000));
-    await waitFor(() => !hasQueuedMessageControls(), 6000);
-    strategy += "-steer";
-  }
-  await verifyDelivery(composer, payload.verificationNeedle);
-  return { ok: true, conversationId, fallback: strategy, navigation, verified: "target-thread-readback" };
 })()`, string(encoded))
 }

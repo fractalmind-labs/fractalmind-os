@@ -1325,14 +1325,31 @@ func TestHandleIncomingCodexAppCDPBridgeRejectionUsesVisibleComposerFallback(t *
 		"visible-composer-button",
 		"target-thread-readback",
 		"- envelope_id:",
+		"setComposerText(composer, \"\")",
+		"attempt <= 3",
+		"not accepted after 3 confirmed attempts",
 	} {
 		if !strings.Contains(expressions[1], expected) {
 			t.Fatalf("visible composer fallback missing %q:\n%s", expected, expressions[1])
 		}
 	}
+	if count := strings.Count(expressions[1], "- envelope_id:"); count < 2 {
+		t.Fatalf("visible composer prompt does not contain its verification marker: count=%d", count)
+	}
 	telemetry := manager.LastRoutingOutcome()
 	if telemetry == nil || telemetry.Status != "delivered" || telemetry.InboxPath != "" {
 		t.Fatalf("expected delivered telemetry without inbox fallback, got %#v", telemetry)
+	}
+}
+
+func TestValidateCodexAppDeliveryValueRejectsUnconfirmedVisibleComposerFallback(t *testing.T) {
+	err := validateCodexAppDeliveryValue(map[string]interface{}{
+		"ok":             true,
+		"conversationId": "thread-123",
+		"fallback":       "visible-composer-button",
+	}, "thread-123")
+	if err == nil || !strings.Contains(err.Error(), "was not confirmed by target-thread readback") {
+		t.Fatalf("expected unconfirmed visible composer delivery error, got %v", err)
 	}
 }
 
