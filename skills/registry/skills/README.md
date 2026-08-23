@@ -10,12 +10,14 @@
 skills/
   coordination/
     DESCRIPTION.md
+    agent-calendar/
     agent-manager/
+    five-step-workflow/
     team-manager/
     okr-manager/
-    use-github-okr/
-    five-step-workflow/
     turbo-frequency/
+    use-agent-task-protocol/
+    use-github-okr/
   interfaces/
     DESCRIPTION.md
     agent-browser/
@@ -62,6 +64,7 @@ git submodule update --init --recursive
 - `coordination/team-manager` -> [`fractalmind-ai/team-manager-skill`](https://github.com/fractalmind-ai/team-manager-skill)
 - `coordination/okr-manager` -> [`fractalmind-ai/okr-manager-skill`](https://github.com/fractalmind-ai/okr-manager-skill)
 - `coordination/use-github-okr` -> [`fractalmind-ai/use-github-okr-skill`](https://github.com/fractalmind-ai/use-github-okr-skill)
+- `coordination/use-agent-task-protocol` -> [`fractalmind-ai/use-agent-task-protocol-skill`](https://github.com/fractalmind-ai/use-agent-task-protocol-skill)
 - `coordination/five-step-workflow` -> [`fractalmind-ai/five-step-workflow-skill`](https://github.com/fractalmind-ai/five-step-workflow-skill)
 - `coordination/turbo-frequency` -> [`fractalmind-ai/turbo-frequency-skill`](https://github.com/fractalmind-ai/turbo-frequency-skill)
 
