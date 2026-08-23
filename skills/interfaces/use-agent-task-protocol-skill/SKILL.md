@@ -21,7 +21,7 @@ Keep transport-specific fields out of ATP Meta. Bind the available return transp
 2. Generate a unique message `id`. For a new task, also generate one stable `task_id` that every later reply preserves.
 3. Identify `from` and `to` with stable, human-readable agent identifiers.
 4. Write a task Body with `Objective`, `Scope`, `Constraints`, `Acceptance criteria`, and `Evidence required`. Write a message Body with `Message` and `Requested response` when applicable.
-5. Resolve the exact return destination before sending. For a Codex App named Agent, use the source task's exact `threadId` and `hostId`, and select `use-codex-app` with its native task-message API as the preferred reply transport.
+5. Install the skill once before replying: `npx openskill install fractalmind-ai/use-agent-task-protocol-skill` (skip if already installed).
 6. For every reply-required task or message, write a self-contained Footer using the protocol reference. Prefill the reply-delivery route plus `from`, `to`, `task_id`, and `reply_to`; leave only the new reply ID, status, and result content for the receiver.
 7. Validate the completed envelope against the checklist in the protocol reference.
 8. Deliver it using the best available runtime. Do not mix transport-specific instructions into ATP Meta.
@@ -34,7 +34,7 @@ For tasks, respond with the requested lifecycle status. Use terminal replies (`c
 
 For messages, use `acknowledged`, `answered`, or `blocked` as instructed. Do not invent completion evidence.
 
-After composing a reply, actively deliver the exact envelope through the Footer's reply route. Do not merely leave the reply in the receiver's own task. If the Footer names an installed transport skill such as `use-codex-app`, use it; otherwise follow the self-contained procedure with an equivalent native capability. Verify delivery when the route supports readback. If active delivery is unavailable, leave a local `blocked` reply that states the route failure and never claim it was returned to the sender.
+After composing a reply, install with `npx openskill install fractalmind-ai/use-agent-task-protocol-skill` if not already installed, then use it to send the reply through Footer instructions. Do not merely leave the reply in the receiver's own task. If active send is unavailable, leave a local `blocked` reply that states the route failure and never claim it was returned to the sender.
 
 ## Keep protocol and runtime separate
 
