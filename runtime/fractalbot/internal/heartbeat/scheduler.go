@@ -49,6 +49,9 @@ type JobStatus struct {
 	LastScheduledAt       string `json:"last_scheduled_at,omitempty"`
 	LastDispatchAt        string `json:"last_dispatch_at,omitempty"`
 	LastDispatchStatus    string `json:"last_dispatch_status,omitempty"`
+	LastDispatchKind      string `json:"last_dispatch_kind,omitempty"`
+	LastDreamWindowID     string `json:"last_dream_window_id,omitempty"`
+	DreamEnabled          bool   `json:"dream_enabled,omitempty"`
 	LastDispatchError     string `json:"last_dispatch_error,omitempty"`
 	LastEnvelopeID        string `json:"last_envelope_id,omitempty"`
 	LastInboxPath         string `json:"last_inbox_path,omitempty"`
@@ -305,16 +308,20 @@ func (s *Scheduler) ResetForInbound(runtimeName, agentName string) {
 	now := s.now()
 	previous := make(map[string]persistedJobState)
 	for id, job := range s.jobs {
-		if !job.config.ResetCronOnInbound || job.config.Runtime != runtimeName || job.config.Agent != agentName || job.state.EffectiveProfile == "" {
+		if job.config.Runtime != runtimeName || job.config.Agent != agentName {
 			continue
 		}
 		previous[id] = job.state
+		job.state.LastInboundAt = now
+		changed = true
+		if !job.config.ResetCronOnInbound || job.state.EffectiveProfile == "" {
+			continue
+		}
 		job.state.EffectiveProfile = ""
 		job.state.ScheduleReason = "normal inbound activity"
 		job.state.ScheduleUpdatedBy = "gateway"
 		job.state.ScheduleUpdatedAt = now
 		job.state.NextRunAt = job.defaultSchedule.Next(now)
-		changed = true
 	}
 	if changed {
 		if err := s.saveStateLocked(); err != nil {
@@ -380,17 +387,23 @@ func (s *Scheduler) runDue(now time.Time) {
 			for profile := range job.profileSchedules {
 				profiles = append(profiles, profile)
 			}
+			decision := decideDream(job.config, now, job.state.LastInboundAt, job.state.LastDispatchAt, false)
+			job.state.LastDispatchKind = decision.Kind
+			job.state.LastDreamWindowID = decision.WindowID
 			due = append(due, dueDispatch{
 				jobID: id,
 				request: agentruntime.DispatchRequest{
 					Runtime:      job.config.Runtime,
 					Agent:        job.config.Agent,
-					Text:         job.config.Text,
+					Text:         decision.Text,
 					Source:       "heartbeat",
+					Kind:         decision.Kind,
+					DreamWindow:  decision.WindowID,
 					JobID:        id,
 					RunID:        runID,
 					ScheduledAt:  scheduledAt,
 					ExpiresAt:    job.state.NextRunAt,
+					Timeout:      decision.Timeout,
 					CoalesceKey:  "heartbeat:" + id,
 					CronProfiles: profiles,
 				},
@@ -416,6 +429,11 @@ func (s *Scheduler) runDue(now time.Time) {
 func (s *Scheduler) dispatch(ctx context.Context, jobID string, request agentruntime.DispatchRequest) {
 	defer s.dispatchWg.Done()
 	defer func() { <-s.semaphore }()
+	if request.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, request.Timeout)
+		defer cancel()
+	}
 	result := agentruntime.DispatchResult{Status: "error", Error: "heartbeat dispatch did not run"}
 	for attempt := 1; attempt <= maxDispatchAttempts; attempt++ {
 		result = s.dispatcher.DispatchRuntime(ctx, request)
@@ -493,6 +511,9 @@ func (s *Scheduler) jobStatusLocked(job *compiledJob) JobStatus {
 		LastScheduledAt:       formatTime(job.state.LastScheduledAt),
 		LastDispatchAt:        formatTime(job.state.LastDispatchAt),
 		LastDispatchStatus:    job.state.LastDispatchStatus,
+		LastDispatchKind:      job.state.LastDispatchKind,
+		LastDreamWindowID:     job.state.LastDreamWindowID,
+		DreamEnabled:          job.config.Dream != nil && job.config.Dream.Enabled,
 		LastDispatchError:     job.state.LastDispatchError,
 		LastEnvelopeID:        job.state.LastEnvelopeID,
 		LastInboxPath:         job.state.LastInboxPath,

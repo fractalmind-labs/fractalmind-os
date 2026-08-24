@@ -221,6 +221,8 @@ func TestNormalizeUserReplyMarkers(t *testing.T) {
 	}{
 		{name: "heartbeat", reply: markerHeartbeatOK, want: ""},
 		{name: "heartbeat-whitespace", reply: "  HEARTBEAT_OK  \n", want: ""},
+		{name: "dream", reply: markerDreamOK, want: ""},
+		{name: "dream-whitespace", reply: "  DREAM_OK  \n", want: ""},
 		{name: "no-reply", reply: markerNoReply, want: ""},
 		{name: "no-reply-whitespace", reply: "\nNO_REPLY\n", want: ""},
 		{name: "normal-text", reply: "ok", want: "ok"},

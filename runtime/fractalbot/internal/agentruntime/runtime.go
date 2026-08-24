@@ -20,10 +20,13 @@ type DispatchRequest struct {
 	Agent        string
 	Text         string
 	Source       string
+	Kind         string
+	DreamWindow  string
 	JobID        string
 	RunID        string
 	ScheduledAt  time.Time
 	ExpiresAt    time.Time
+	Timeout      time.Duration
 	CoalesceKey  string
 	CronProfiles []string
 }

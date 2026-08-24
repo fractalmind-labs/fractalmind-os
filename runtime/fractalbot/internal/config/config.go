@@ -295,14 +295,32 @@ type HeartbeatConfig struct {
 
 // HeartbeatJobConfig targets one Agent Runtime and agent on a cron schedule.
 type HeartbeatJobConfig struct {
-	ID                 string            `yaml:"id"`
-	Runtime            string            `yaml:"runtime"`
-	Agent              string            `yaml:"agent"`
-	Text               string            `yaml:"text"`
-	Cron               string            `yaml:"cron"`
-	Timezone           string            `yaml:"timezone"`
-	AgentCronProfiles  map[string]string `yaml:"agentCronProfiles,omitempty"`
-	ResetCronOnInbound bool              `yaml:"resetCronOnInbound,omitempty"`
+	ID                 string                `yaml:"id"`
+	Runtime            string                `yaml:"runtime"`
+	Agent              string                `yaml:"agent"`
+	Text               string                `yaml:"text"`
+	Cron               string                `yaml:"cron"`
+	Timezone           string                `yaml:"timezone"`
+	AgentCronProfiles  map[string]string     `yaml:"agentCronProfiles,omitempty"`
+	ResetCronOnInbound bool                  `yaml:"resetCronOnInbound,omitempty"`
+	Dream              *HeartbeatDreamConfig `yaml:"dream,omitempty"`
+}
+
+// HeartbeatDreamConfig optionally switches a heartbeat job to a Dream wakeup.
+type HeartbeatDreamConfig struct {
+	Enabled      bool                   `yaml:"enabled,omitempty"`
+	Text         string                 `yaml:"text,omitempty"`
+	IdleAfter    string                 `yaml:"idleAfter,omitempty"`
+	MaxRuntime   string                 `yaml:"maxRuntime,omitempty"`
+	FixedWindows []HeartbeatDreamWindow `yaml:"fixedWindows,omitempty"`
+}
+
+// HeartbeatDreamWindow is a wall-clock interval in an IANA timezone.
+// Overnight ranges are supported when Start is later than End.
+type HeartbeatDreamWindow struct {
+	Timezone string `yaml:"timezone,omitempty"`
+	Start    string `yaml:"start"`
+	End      string `yaml:"end"`
 }
 
 // AgentsConfig contains gateway-side agent routing settings.
@@ -526,8 +544,69 @@ func validateHeartbeatConfig(cfg *Config) error {
 			normalizedProfiles[profile] = expression
 		}
 		job.AgentCronProfiles = normalizedProfiles
+		if err := validateHeartbeatDream(job, prefix); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+func validateHeartbeatDream(job *HeartbeatJobConfig, prefix string) error {
+	if job == nil || job.Dream == nil {
+		return nil
+	}
+	dream := job.Dream
+	dream.Text = strings.TrimSpace(dream.Text)
+	dream.IdleAfter = strings.TrimSpace(dream.IdleAfter)
+	dream.MaxRuntime = strings.TrimSpace(dream.MaxRuntime)
+	if dream.IdleAfter != "" {
+		if _, err := time.ParseDuration(dream.IdleAfter); err != nil {
+			return fmt.Errorf("%s.dream.idleAfter: %w", prefix, err)
+		}
+	}
+	if dream.MaxRuntime != "" {
+		duration, err := time.ParseDuration(dream.MaxRuntime)
+		if err != nil {
+			return fmt.Errorf("%s.dream.maxRuntime: %w", prefix, err)
+		}
+		if duration <= 0 {
+			return fmt.Errorf("%s.dream.maxRuntime: must be > 0", prefix)
+		}
+	}
+	for idx := range dream.FixedWindows {
+		windowPrefix := fmt.Sprintf("%s.dream.fixedWindows[%d]", prefix, idx)
+		window := &dream.FixedWindows[idx]
+		window.Timezone = strings.TrimSpace(window.Timezone)
+		window.Start = strings.TrimSpace(window.Start)
+		window.End = strings.TrimSpace(window.End)
+		timezone := window.Timezone
+		if timezone == "" {
+			timezone = job.Timezone
+		}
+		if _, err := time.LoadLocation(timezone); err != nil {
+			return fmt.Errorf("%s.timezone: %w", windowPrefix, err)
+		}
+		if _, _, _, err := ParseClock(window.Start); err != nil {
+			return fmt.Errorf("%s.start: %w", windowPrefix, err)
+		}
+		if _, _, _, err := ParseClock(window.End); err != nil {
+			return fmt.Errorf("%s.end: %w", windowPrefix, err)
+		}
+	}
+	return nil
+}
+
+// ParseClock parses an HH:MM or HH:MM:SS wall-clock value.
+func ParseClock(value string) (hour, minute, second int, err error) {
+	value = strings.TrimSpace(value)
+	for _, layout := range []string{"15:04", "15:04:05"} {
+		parsed, parseErr := time.Parse(layout, value)
+		if parseErr != nil {
+			continue
+		}
+		return parsed.Hour(), parsed.Minute(), parsed.Second(), nil
+	}
+	return 0, 0, 0, fmt.Errorf("invalid clock %q", value)
 }
 
 func parseHeartbeatCron(expression, timezone string) (cron.Schedule, error) {

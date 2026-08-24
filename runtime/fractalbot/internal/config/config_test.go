@@ -485,6 +485,51 @@ func TestLoadConfigAcceptsHeartbeatJobs(t *testing.T) {
 	}
 }
 
+func TestLoadConfigAcceptsHeartbeatDreamWindows(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	content := []byte(`agents:
+  workspace: ./workspace
+  ohMyCode:
+    enabled: true
+    workspace: /tmp/oh-my-code
+    defaultAgent: main
+    allowedAgents: [main]
+  heartbeat:
+    enabled: true
+    jobs:
+      - id: main
+        runtime: ohMyCode
+        agent: main
+        text: "Read HEARTBEAT.md"
+        cron: "*/5 * * * *"
+        timezone: Asia/Shanghai
+        dream:
+          enabled: true
+          idleAfter: 1h
+          maxRuntime: 30m
+          fixedWindows:
+            - start: "13:00"
+              end: "13:30"
+            - timezone: " Asia/Shanghai "
+              start: " 02:00 "
+              end: " 04:00 "
+`)
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	dream := cfg.Agents.Heartbeat.Jobs[0].Dream
+	if dream == nil || !dream.Enabled || dream.IdleAfter != "1h" || dream.MaxRuntime != "30m" {
+		t.Fatalf("dream not normalized: %#v", dream)
+	}
+	if len(dream.FixedWindows) != 2 || dream.FixedWindows[1].Timezone != "Asia/Shanghai" || dream.FixedWindows[1].Start != "02:00" {
+		t.Fatalf("windows=%#v", dream.FixedWindows)
+	}
+}
+
 func TestValidateHeartbeatConfigRejectsInvalidJobs(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -560,6 +605,23 @@ func TestValidateHeartbeatConfigRejectsInvalidJobs(t *testing.T) {
 				cfg.Agents.Heartbeat.Jobs[0].AgentCronProfiles[" idle "] = "0 */2 * * *"
 			},
 			wantError: "duplicate profile",
+		},
+		{
+			name: "invalid dream clock",
+			mutate: func(cfg *Config) {
+				cfg.Agents.Heartbeat.Jobs[0].Dream = &HeartbeatDreamConfig{
+					Enabled:      true,
+					FixedWindows: []HeartbeatDreamWindow{{Start: "25:00", End: "13:30"}},
+				}
+			},
+			wantError: "dream.fixedWindows[0].start",
+		},
+		{
+			name: "invalid dream idleAfter",
+			mutate: func(cfg *Config) {
+				cfg.Agents.Heartbeat.Jobs[0].Dream = &HeartbeatDreamConfig{Enabled: true, IdleAfter: "one hour"}
+			},
+			wantError: "dream.idleAfter",
 		},
 	}
 

@@ -31,6 +31,33 @@ agents:
 
 The configured `cron` remains the default. `agentCronProfiles` contains the only alternative schedules an Agent may select; arbitrary Agent-provided cron expressions are rejected.
 
+## Dream windows
+
+An optional `dream` block switches the same job to a Dream instruction during configured wall-clock windows, or after `idleAfter` with no inbound activity. Dream is still a runtime-neutral wakeup. The Agent should reply `DREAM_OK` when nothing worth reducing remains; FractalBot treats that marker like `HEARTBEAT_OK` and does not send it to a channel.
+
+```yaml
+        dream:
+          enabled: true
+          text: "Read DREAM.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing worth doing emerges, reply DREAM_OK."
+          idleAfter: 1h
+          maxRuntime: 30m
+          fixedWindows:
+            - timezone: Asia/Shanghai
+              start: "13:00"
+              end: "13:30"
+            - start: "02:00"
+              end: "04:00"
+```
+
+- `enabled: false` or an omitted `dream` block keeps current heartbeat behavior.
+- `text` is inline only. When omitted, FractalBot uses the default Dream instruction above.
+- `fixedWindows` are OR rules; the first match wins. A window without `timezone` inherits the job timezone. Overnight ranges such as `23:00` → `08:00` are supported. The start is inclusive and the end is exclusive.
+- `idleAfter` may dispatch Dream outside a window when the same Runtime/Agent has had no inbound message (or, if none was recorded, no dispatch) for that duration and the job is not already in flight.
+- `maxRuntime` optionally overrides the dispatch wait for Dream ticks only.
+- `/status` reports `dream_enabled`, `last_dispatch_kind` (`heartbeat` or `dream`), and `last_dream_window_id` without the instruction text.
+
+Do not use Dream windows to replace `agentCronProfiles`. Frequency remains the cron/profile problem; Dream only changes which instruction a due tick carries.
+
 ## Schedule adjustment
 
 A normal heartbeat requires no callback. Only when the Agent determines that there is no actionable work should it reduce the frequency:

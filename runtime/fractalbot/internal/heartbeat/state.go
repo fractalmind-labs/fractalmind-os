@@ -23,9 +23,12 @@ type persistedJobState struct {
 	LastScheduledAt    time.Time `json:"last_scheduled_at,omitempty"`
 	LastDispatchAt     time.Time `json:"last_dispatch_at,omitempty"`
 	LastDispatchStatus string    `json:"last_dispatch_status,omitempty"`
+	LastDispatchKind   string    `json:"last_dispatch_kind,omitempty"`
+	LastDreamWindowID  string    `json:"last_dream_window_id,omitempty"`
 	LastDispatchError  string    `json:"last_dispatch_error,omitempty"`
 	LastEnvelopeID     string    `json:"last_envelope_id,omitempty"`
 	LastInboxPath      string    `json:"last_inbox_path,omitempty"`
+	LastInboundAt      time.Time `json:"last_inbound_at,omitempty"`
 	ScheduleReason     string    `json:"schedule_reason,omitempty"`
 	ScheduleUpdatedBy  string    `json:"schedule_updated_by,omitempty"`
 	ScheduleUpdatedAt  time.Time `json:"schedule_updated_at,omitempty"`

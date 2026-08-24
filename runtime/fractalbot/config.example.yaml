@@ -246,3 +246,15 @@ agents:
   #         idle: "0 * * * *"
   #         deep-idle: "0 */6 * * *"
   #       resetCronOnInbound: true
+  #       # Optional. When enabled, due ticks inside a window (or after idleAfter)
+  #       # carry a Dream instruction instead of text. DREAM_OK is a no-reply marker.
+  #       dream:
+  #         enabled: true
+  #         idleAfter: 1h
+  #         maxRuntime: 30m
+  #         fixedWindows:
+  #           - timezone: Asia/Shanghai
+  #             start: "13:00"
+  #             end: "13:30"
+  #           - start: "02:00"
+  #             end: "04:00"
