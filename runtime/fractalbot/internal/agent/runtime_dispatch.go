@@ -60,11 +60,87 @@ func (m *Manager) dispatchOhMyCodeRuntime(ctx context.Context, request agentrunt
 		dispatchCtx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
 	}
+	if request.StartIfMissing {
+		if err := m.ensureOhMyCodeAgentRunning(dispatchCtx, name); err != nil {
+			return runtimeDispatchError(result, err)
+		}
+	}
 	if _, err := runOhMyCodeAgentManager(dispatchCtx, workspace, script, buildRuntimePrompt(request), "assign", name); err != nil {
 		return runtimeDispatchError(result, err)
 	}
 	result.Status = "assigned"
 	return result
+}
+
+const ohMyCodeStartIfMissingCooldown = 90 * time.Second
+
+func ohMyCodeStatusRunning(output string) bool {
+	for _, line := range strings.Split(output, "\n") {
+		trimmed := strings.ToLower(strings.TrimSpace(line))
+		if strings.HasPrefix(trimmed, "running:") && strings.Contains(trimmed, "yes") {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *Manager) startIfMissingCooldownActive(agentName string) bool {
+	if m == nil {
+		return false
+	}
+	m.startIfMissingMu.Lock()
+	defer m.startIfMissingMu.Unlock()
+	if m.startIfMissingFailAt == nil {
+		return false
+	}
+	failedAt, ok := m.startIfMissingFailAt[agentName]
+	if !ok {
+		return false
+	}
+	return time.Since(failedAt) < ohMyCodeStartIfMissingCooldown
+}
+
+func (m *Manager) markStartIfMissingFailed(agentName string) {
+	if m == nil {
+		return
+	}
+	m.startIfMissingMu.Lock()
+	defer m.startIfMissingMu.Unlock()
+	if m.startIfMissingFailAt == nil {
+		m.startIfMissingFailAt = make(map[string]time.Time)
+	}
+	m.startIfMissingFailAt[agentName] = time.Now()
+}
+
+func (m *Manager) ensureOhMyCodeAgentRunning(ctx context.Context, agentName string) error {
+	if m.startIfMissingCooldownActive(agentName) {
+		return fmt.Errorf("ohMyCode agent %q start_if_missing cooldown active", agentName)
+	}
+	workspace, script, err := m.resolveOhMyCodeWorkspaceAndScript()
+	if err != nil {
+		return err
+	}
+	statusCtx, cancel := context.WithTimeout(ctx, defaultOhMyCodeLifecycleTimeout)
+	defer cancel()
+	statusOut, statusErr := runOhMyCodeAgentManager(statusCtx, workspace, script, "", "status", agentName)
+	if statusErr == nil && ohMyCodeStatusRunning(statusOut) {
+		return nil
+	}
+	if _, err := m.StartAgent(ctx, agentName); err != nil {
+		m.markStartIfMissingFailed(agentName)
+		return fmt.Errorf("start_if_missing start %q: %w", agentName, err)
+	}
+	verifyCtx, verifyCancel := context.WithTimeout(ctx, defaultOhMyCodeLifecycleTimeout)
+	defer verifyCancel()
+	statusOut, statusErr = runOhMyCodeAgentManager(verifyCtx, workspace, script, "", "status", agentName)
+	if statusErr != nil || !ohMyCodeStatusRunning(statusOut) {
+		m.markStartIfMissingFailed(agentName)
+		if statusErr != nil {
+			return fmt.Errorf("start_if_missing status %q after start: %w", agentName, statusErr)
+		}
+		return fmt.Errorf("ohMyCode agent %q did not report Running: yes after start", agentName)
+	}
+	return nil
 }
 
 func (m *Manager) dispatchCodexAppRuntime(ctx context.Context, request agentruntime.DispatchRequest) agentruntime.DispatchResult {

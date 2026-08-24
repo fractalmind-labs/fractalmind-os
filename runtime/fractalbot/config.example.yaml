@@ -246,3 +246,6 @@ agents:
   #         idle: "0 * * * *"
   #         deep-idle: "0 */6 * * *"
   #       resetCronOnInbound: true
+  #       # ohMyCode only. Default false. Start a missing tmux session
+  #       # before this heartbeat tick; failed starts cooldown for 90s.
+  #       startIfMissing: false

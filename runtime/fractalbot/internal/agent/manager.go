@@ -53,6 +53,9 @@ type Manager struct {
 	cdpResolvedTarget   *CodexAppCDPResolvedConversationStatus
 	inboundHookMu       sync.RWMutex
 	inboundRoutedHook   func(runtimeName, agentName string)
+
+	startIfMissingMu     sync.Mutex
+	startIfMissingFailAt map[string]time.Time
 }
 
 type RoutingOutcome struct {

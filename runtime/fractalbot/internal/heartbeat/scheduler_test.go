@@ -123,6 +123,34 @@ func TestSchedulerCalculatesTimezoneAndDispatchesRuntimeEnvelope(t *testing.T) {
 	if len(request.CronProfiles) != 1 || request.CronProfiles[0] != "idle" {
 		t.Fatalf("cron profiles=%v", request.CronProfiles)
 	}
+	if request.StartIfMissing {
+		t.Fatalf("default job should not set start_if_missing: %#v", request)
+	}
+}
+
+func TestSchedulerPassesStartIfMissingToDispatchRequest(t *testing.T) {
+	base := time.Date(2026, 7, 26, 1, 55, 0, 0, time.UTC)
+	clock := &testClock{now: base}
+	dispatcher := &recordingDispatcher{result: agentruntime.DispatchResult{Status: "assigned"}}
+	cfg := heartbeatTestConfig("")
+	cfg.Jobs[0].Runtime = agentruntime.OhMyCode
+	cfg.Jobs[0].StartIfMissing = true
+	scheduler, err := newScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
+	if err != nil {
+		t.Fatalf("newScheduler: %v", err)
+	}
+	due := time.Date(2026, 7, 26, 2, 0, 0, 0, time.UTC)
+	clock.Set(due)
+	scheduler.runDue(due)
+	waitForScheduler(t, scheduler, func(job JobStatus) bool { return job.LastDispatchStatus == "assigned" })
+	requests := dispatcher.Requests()
+	if len(requests) != 1 || !requests[0].StartIfMissing {
+		t.Fatalf("expected start_if_missing dispatch, got %#v", requests)
+	}
+	status := scheduler.Status()
+	if len(status.Jobs) != 1 || !status.Jobs[0].StartIfMissing {
+		t.Fatalf("status missing start_if_missing: %#v", status)
+	}
 }
 
 func TestSchedulerProfileIsIdempotentPersistsAndSkipsMissedRuns(t *testing.T) {

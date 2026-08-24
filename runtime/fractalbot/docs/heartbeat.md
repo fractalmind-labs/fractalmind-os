@@ -25,9 +25,14 @@ agents:
           idle: "0 * * * *"
           deep-idle: "0 */6 * * *"
         resetCronOnInbound: true
+        # ohMyCode only. Default false. When true, FractalBot starts a missing
+        # tmux session before dispatching this heartbeat tick.
+        startIfMissing: false
 ```
 
 `text` is the complete inline instruction. Heartbeat prompt files are not supported. Cron expressions use the standard five-field format, and every job requires an IANA timezone.
+
+`startIfMissing` is off by default. When it is true and the job targets `ohMyCode`, FractalBot checks `agent-manager status` and, if the session is not running, calls `start` before dispatch. Failed starts enter a 90s cooldown. This is not `heartbeat rescue` and does not apply to Codex App or Claude Desktop jobs.
 
 The configured `cron` remains the default. `agentCronProfiles` contains the only alternative schedules an Agent may select; arbitrary Agent-provided cron expressions are rejected.
 
@@ -71,6 +76,7 @@ When `resetCronOnInbound` is true, a normal user message successfully routed to 
 - Restart preserves the effective profile but calculates the next future occurrence. Missed heartbeats are never replayed.
 - Codex App and Claude Desktop inbox fallback uses a stable key per job. A newer queued heartbeat replaces the older unconsumed heartbeat.
 - Runtime delivery errors receive a bounded exponential-backoff retry. The final failure is recorded without changing the Agent-selected schedule.
+- `startIfMissing: true` on an `ohMyCode` job starts a missing tmux session before dispatch. Default remains no extra start.
 
 ## Status
 

@@ -303,6 +303,10 @@ type HeartbeatJobConfig struct {
 	Timezone           string            `yaml:"timezone"`
 	AgentCronProfiles  map[string]string `yaml:"agentCronProfiles,omitempty"`
 	ResetCronOnInbound bool              `yaml:"resetCronOnInbound,omitempty"`
+	// StartIfMissing starts an ohMyCode tmux session before heartbeat
+	// dispatch when agent-manager status reports it is not running.
+	// Default false preserves skip/assign-as-today. Other runtimes ignore it.
+	StartIfMissing bool `yaml:"startIfMissing,omitempty"`
 }
 
 // AgentsConfig contains gateway-side agent routing settings.

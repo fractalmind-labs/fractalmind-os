@@ -16,16 +16,17 @@ const (
 // DispatchRequest is an internal agent wakeup that is not associated with a
 // messaging channel.
 type DispatchRequest struct {
-	Runtime      string
-	Agent        string
-	Text         string
-	Source       string
-	JobID        string
-	RunID        string
-	ScheduledAt  time.Time
-	ExpiresAt    time.Time
-	CoalesceKey  string
-	CronProfiles []string
+	Runtime        string
+	Agent          string
+	Text           string
+	Source         string
+	JobID          string
+	RunID          string
+	ScheduledAt    time.Time
+	ExpiresAt      time.Time
+	CoalesceKey    string
+	CronProfiles   []string
+	StartIfMissing bool
 }
 
 // DispatchResult reports whether a runtime accepted, queued, or rejected a

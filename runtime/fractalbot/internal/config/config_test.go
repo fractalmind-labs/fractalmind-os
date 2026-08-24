@@ -465,6 +465,7 @@ func TestLoadConfigAcceptsHeartbeatJobs(t *testing.T) {
         agentCronProfiles:
           " idle ": " 0 * * * * "
         resetCronOnInbound: true
+        startIfMissing: true
 `)
 	if err := os.WriteFile(path, content, 0644); err != nil {
 		t.Fatal(err)
@@ -482,6 +483,9 @@ func TestLoadConfigAcceptsHeartbeatJobs(t *testing.T) {
 	}
 	if got := job.AgentCronProfiles["idle"]; got != "0 * * * *" || len(job.AgentCronProfiles) != 1 {
 		t.Fatalf("profiles=%#v", job.AgentCronProfiles)
+	}
+	if !job.StartIfMissing {
+		t.Fatalf("startIfMissing was not parsed: %#v", job)
 	}
 }
 
