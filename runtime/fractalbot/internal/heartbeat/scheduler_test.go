@@ -347,6 +347,100 @@ func TestSchedulerStopCancelsRetryBackoff(t *testing.T) {
 	}
 }
 
+func TestSchedulerDispatchesDreamTextInsideWindow(t *testing.T) {
+	shanghai := time.FixedZone("CST", 8*3600)
+	base := time.Date(2026, 8, 24, 12, 50, 0, 0, shanghai).UTC()
+	clock := &testClock{now: base}
+	dispatcher := &recordingDispatcher{result: agentruntime.DispatchResult{Status: "assigned"}}
+	cfg := heartbeatTestConfig("")
+	cfg.Jobs[0].Cron = "*/5 * * * *"
+	cfg.Jobs[0].Dream = &config.HeartbeatDreamConfig{
+		Enabled: true,
+		Text:    "secret dream instruction",
+		FixedWindows: []config.HeartbeatDreamWindow{
+			{Start: "13:00", End: "13:30"},
+		},
+	}
+	scheduler, err := newScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
+	if err != nil {
+		t.Fatalf("newScheduler: %v", err)
+	}
+
+	outside := time.Date(2026, 8, 24, 12, 55, 0, 0, shanghai).UTC()
+	clock.Set(outside)
+	scheduler.runDue(outside)
+	waitForScheduler(t, scheduler, func(job JobStatus) bool { return job.LastDispatchStatus == "assigned" })
+	if got := dispatcher.Requests()[0].Text; got != "secret operator instruction" {
+		t.Fatalf("outside window text=%q", got)
+	}
+	if got := scheduler.Status().Jobs[0]; got.LastDispatchKind != dispatchKindHeartbeat || got.LastDreamWindowID != "" || !got.DreamEnabled {
+		t.Fatalf("outside window status: %#v", got)
+	}
+
+	inside := time.Date(2026, 8, 24, 13, 5, 0, 0, shanghai).UTC()
+	clock.Set(inside)
+	scheduler.runDue(inside)
+	waitForScheduler(t, scheduler, func(job JobStatus) bool {
+		return job.LastDispatchKind == dispatchKindDream && job.LastDreamWindowID == "13:00-13:30" && job.LastDispatchAt == inside.UTC().Format(time.RFC3339Nano)
+	})
+	requests := dispatcher.Requests()
+	if len(requests) != 2 || requests[1].Text != "secret dream instruction" || requests[1].Kind != dispatchKindDream || requests[1].DreamWindow != "13:00-13:30" {
+		t.Fatalf("inside window requests=%#v", requests)
+	}
+
+	encoded, err := json.Marshal(scheduler.Status())
+	if err != nil {
+		t.Fatalf("marshal status: %v", err)
+	}
+	if strings.Contains(string(encoded), "secret dream instruction") || strings.Contains(string(encoded), "secret operator instruction") {
+		t.Fatalf("status leaked instruction: %s", encoded)
+	}
+}
+
+func TestSchedulerIdleAfterDreamAndInboundReset(t *testing.T) {
+	base := time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
+	clock := &testClock{now: base}
+	dispatcher := &recordingDispatcher{result: agentruntime.DispatchResult{Status: "assigned"}}
+	cfg := heartbeatTestConfig("")
+	cfg.Jobs[0].Cron = "0 * * * *"
+	cfg.Jobs[0].Timezone = "UTC"
+	cfg.Jobs[0].Dream = &config.HeartbeatDreamConfig{Enabled: true, IdleAfter: "1h"}
+	scheduler, err := newScheduler(cfg, t.TempDir(), dispatcher, clock.Now, time.Hour)
+	if err != nil {
+		t.Fatalf("newScheduler: %v", err)
+	}
+
+	due := time.Date(2026, 8, 24, 13, 0, 0, 0, time.UTC)
+	clock.Set(due)
+	scheduler.runDue(due)
+	waitForScheduler(t, scheduler, func(job JobStatus) bool { return job.LastDispatchStatus == "assigned" })
+	if dispatcher.Requests()[0].Kind != dispatchKindHeartbeat {
+		t.Fatalf("first tick should be heartbeat: %#v", dispatcher.Requests()[0])
+	}
+
+	later := time.Date(2026, 8, 24, 14, 0, 0, 0, time.UTC)
+	clock.Set(later)
+	scheduler.runDue(later)
+	waitForScheduler(t, scheduler, func(job JobStatus) bool {
+		return job.LastDispatchKind == dispatchKindDream && job.LastDispatchAt == later.UTC().Format(time.RFC3339Nano)
+	})
+	if got := dispatcher.Requests()[1]; got.Kind != dispatchKindDream || got.DreamWindow != dreamWindowIdleAfter || got.Text != defaultDreamInstruction {
+		t.Fatalf("idleAfter dispatch: %#v", got)
+	}
+
+	clock.Set(later.Add(time.Minute))
+	scheduler.ResetForInbound(agentruntime.CodexAppCDP, "main")
+	next := time.Date(2026, 8, 24, 15, 0, 0, 0, time.UTC)
+	clock.Set(next)
+	scheduler.runDue(next)
+	waitForScheduler(t, scheduler, func(job JobStatus) bool {
+		return job.LastDispatchKind == dispatchKindHeartbeat && job.LastDispatchAt == next.UTC().Format(time.RFC3339Nano)
+	})
+	if got := dispatcher.Requests()[2].Kind; got != dispatchKindHeartbeat {
+		t.Fatalf("inbound should clear idleAfter, got %s", got)
+	}
+}
+
 func waitForScheduler(t *testing.T, scheduler *Scheduler, predicate func(JobStatus) bool) {
 	t.Helper()
 	deadline := time.Now().Add(2 * time.Second)
