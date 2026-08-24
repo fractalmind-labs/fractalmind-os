@@ -38,6 +38,125 @@ print("assigned")
 	}
 }
 
+func writeOhMyCodeLifecycleScript(t *testing.T, workspace string) string {
+	t.Helper()
+	script := filepath.Join(workspace, "agent_manager.py")
+	scriptBody := `import pathlib, sys
+log = pathlib.Path("commands.log")
+with log.open("a", encoding="utf-8") as handle:
+    handle.write(" ".join(sys.argv[1:]) + "\n")
+args = sys.argv[1:]
+state = pathlib.Path("running.flag")
+fail = pathlib.Path("fail_start.flag")
+if args and args[0] == "status":
+    print("   Running: yes" if state.exists() else "   Running: no")
+    raise SystemExit(0)
+if args and args[0] == "start":
+    if fail.exists():
+        raise SystemExit("start failed")
+    state.write_text("1", encoding="utf-8")
+    print("started")
+    raise SystemExit(0)
+prompt = sys.stdin.read()
+if "# FractalBot Heartbeat" not in prompt or "job_id: job-1" not in prompt:
+    raise SystemExit("missing heartbeat context")
+print("assigned")
+`
+	if err := os.WriteFile(script, []byte(scriptBody), 0700); err != nil {
+		t.Fatalf("write lifecycle agent manager: %v", err)
+	}
+	return script
+}
+
+func newOhMyCodeTestManager(workspace, script string) *Manager {
+	return NewManager(&config.AgentsConfig{OhMyCode: &config.OhMyCodeConfig{
+		Enabled:            true,
+		Workspace:          workspace,
+		AgentManagerScript: script,
+		DefaultAgent:       "main",
+		AllowedAgents:      []string{"main"},
+	}})
+}
+
+func TestDispatchRuntimeStartIfMissingStartsStoppedOhMyCodeAgent(t *testing.T) {
+	workspace := t.TempDir()
+	script := writeOhMyCodeLifecycleScript(t, workspace)
+	manager := newOhMyCodeTestManager(workspace, script)
+	request := runtimeTestRequest(agentruntime.OhMyCode, "run-1")
+	request.StartIfMissing = true
+	result := manager.DispatchRuntime(context.Background(), request)
+	if result.Status != "assigned" || result.Error != "" {
+		t.Fatalf("unexpected result: %#v", result)
+	}
+	got := strings.TrimSpace(string(mustReadFile(t, filepath.Join(workspace, "commands.log"))))
+	if !strings.Contains(got, "status main") || !strings.Contains(got, "start main") || !strings.Contains(got, "assign main") {
+		t.Fatalf("expected status/start/assign, got %q", got)
+	}
+}
+
+func TestDispatchRuntimeStartIfMissingSkipsStartWhenAlreadyRunning(t *testing.T) {
+	workspace := t.TempDir()
+	script := writeOhMyCodeLifecycleScript(t, workspace)
+	if err := os.WriteFile(filepath.Join(workspace, "running.flag"), []byte("1"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	manager := newOhMyCodeTestManager(workspace, script)
+	request := runtimeTestRequest(agentruntime.OhMyCode, "run-1")
+	request.StartIfMissing = true
+	result := manager.DispatchRuntime(context.Background(), request)
+	if result.Status != "assigned" || result.Error != "" {
+		t.Fatalf("unexpected result: %#v", result)
+	}
+	got := strings.TrimSpace(string(mustReadFile(t, filepath.Join(workspace, "commands.log"))))
+	if strings.Contains(got, "start main") {
+		t.Fatalf("started a running agent: %q", got)
+	}
+	if !strings.Contains(got, "status main") || !strings.Contains(got, "assign main") {
+		t.Fatalf("expected status then assign, got %q", got)
+	}
+}
+
+func TestDispatchRuntimeStartIfMissingCooldownAfterFailedStart(t *testing.T) {
+	workspace := t.TempDir()
+	script := writeOhMyCodeLifecycleScript(t, workspace)
+	if err := os.WriteFile(filepath.Join(workspace, "fail_start.flag"), []byte("1"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	manager := newOhMyCodeTestManager(workspace, script)
+	request := runtimeTestRequest(agentruntime.OhMyCode, "run-1")
+	request.StartIfMissing = true
+	first := manager.DispatchRuntime(context.Background(), request)
+	if first.Status != "error" || !strings.Contains(first.Error, "start_if_missing") {
+		t.Fatalf("unexpected first result: %#v", first)
+	}
+	second := manager.DispatchRuntime(context.Background(), request)
+	if second.Status != "error" || !strings.Contains(second.Error, "cooldown") {
+		t.Fatalf("unexpected second result: %#v", second)
+	}
+	got := strings.TrimSpace(string(mustReadFile(t, filepath.Join(workspace, "commands.log"))))
+	if strings.Count(got, "start main") != 1 {
+		t.Fatalf("cooldown should prevent a second start, got %q", got)
+	}
+}
+
+func TestOhMyCodeStatusRunning(t *testing.T) {
+	if !ohMyCodeStatusRunning("📌 Status: main\n   Running: yes\n") {
+		t.Fatal("expected running yes")
+	}
+	if ohMyCodeStatusRunning("   Running: no\n") {
+		t.Fatal("did not expect running no")
+	}
+}
+
+func mustReadFile(t *testing.T, path string) []byte {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	return data
+}
+
 func TestDispatchRuntimeCoalescesCodexAppHeartbeatInbox(t *testing.T) {
 	inbox := filepath.Join(t.TempDir(), "codex-inbox")
 	manager := NewManager(&config.AgentsConfig{CodexAppCDP: &config.CodexAppCDPConfig{

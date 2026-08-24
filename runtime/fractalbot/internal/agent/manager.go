@@ -69,6 +69,9 @@ type Manager struct {
 	// redeliveries cannot produce duplicate 处理中 acks or duplicate assigns.
 	seenMu  sync.Mutex
 	seenMsg map[string]time.Time
+
+	startIfMissingMu     sync.Mutex
+	startIfMissingFailAt map[string]time.Time
 }
 
 type RoutingOutcome struct {
