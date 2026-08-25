@@ -5,7 +5,13 @@ from pathlib import Path
 import shlex
 from typing import Any, Callable, Dict, Optional
 
-from .lifecycle import _confirm_delivery_after_send
+from .lifecycle import (
+    _confirm_delivery_after_send,
+    _probe_runtime_state,
+    complete_grok_send_now,
+    preempt_main_delivery,
+    should_preempt_main_delivery,
+)
 from services.inbound_queue import (
     classify_inbound_replay_state,
     inbound_message_attempt_count,
@@ -139,6 +145,7 @@ def drain_main_inbound_once(
 
     launcher = deps.resolve_launcher_command(agent_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
+    tui_preempted = False
     claim_owner = f"inbound-drain:{trigger}"
     now = _utc_now()
     summary = {'rc': 0, 'drained': 0, 'skipped': 0, 'failed': 0, 'dead_lettered': 0}
@@ -226,6 +233,28 @@ def drain_main_inbound_once(
             payload=payload,
             is_codex=is_codex,
         )
+        original_message = str(payload.get('message') or '')
+        if should_preempt_main_delivery(agent_id, launcher, original_message) and not tui_preempted:
+            if not preempt_main_delivery(
+                deps,
+                agent_id=agent_id,
+                launcher=launcher,
+                message=original_message,
+            ):
+                deps.mark_inbound_message_state(
+                    repo_root,
+                    agent_id=agent_id,
+                    message_id=message_id,
+                    state='failed',
+                    detail='inbound_drain_interrupt_failed',
+                    attempt_count=next_attempt,
+                    claim_owner=claim_owner,
+                )
+                summary['failed'] += 1
+                summary['rc'] = 1
+                continue
+            tui_preempted = True
+        runtime_snapshot = _probe_runtime_state(deps, agent_id=agent_id, launcher=launcher)
         ok = deps.send_keys(
             agent_id,
             replay_message,
@@ -261,6 +290,14 @@ def drain_main_inbound_once(
                 summary['failed'] += 1
             summary['rc'] = 1
             continue
+        complete_grok_send_now(
+            deps,
+            agent_id=agent_id,
+            launcher=launcher,
+            message=original_message,
+            send_enter=True,
+            runtime_snapshot=runtime_snapshot,
+        )
 
         deps.mark_inbound_message_state(
             repo_root,

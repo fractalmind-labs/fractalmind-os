@@ -117,5 +117,32 @@ class SendKeysTests(unittest.TestCase):
         self.assertTrue(any(cmd[:5] == ['tmux', 'paste-buffer', '-d', '-b', 'enter-key'] for cmd in commands))
 
 
+class InterruptAgentTests(unittest.TestCase):
+    def test_interrupt_key_for_launcher(self):
+        self.assertEqual(tmux_helper.interrupt_key_for_launcher('/home/test/.local/bin/grok'), 'Escape')
+        self.assertEqual(tmux_helper.interrupt_key_for_launcher('grok'), 'Escape')
+        self.assertEqual(
+            tmux_helper.interrupt_key_for_launcher('/home/test/.cursor/bin/cursor-agent'),
+            'C-c',
+        )
+        self.assertEqual(tmux_helper.interrupt_key_for_launcher('codex'), 'C-c')
+
+    @patch('tmux_helper.time.sleep', return_value=None)
+    @patch('tmux_helper._tmux_send_key', return_value=True)
+    def test_interrupt_agent_sends_escape_for_grok(self, mock_send_key, mock_sleep):
+        ok = tmux_helper.interrupt_agent('main', launcher='/home/test/.local/bin/grok')
+        self.assertTrue(ok)
+        mock_send_key.assert_called_once_with('main', 'Escape')
+        mock_sleep.assert_called_once_with(0.5)
+
+    @patch('tmux_helper.time.sleep', return_value=None)
+    @patch('tmux_helper._tmux_send_key', return_value=True)
+    def test_interrupt_agent_sends_ctrl_c_for_cursor(self, mock_send_key, mock_sleep):
+        ok = tmux_helper.interrupt_agent('main', launcher='/home/test/.cursor/bin/cursor-agent')
+        self.assertTrue(ok)
+        mock_send_key.assert_called_once_with('main', 'C-c')
+        mock_sleep.assert_called_once_with(0.25)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -695,6 +695,31 @@ def _tmux_send_key(agent_id: str, key: str) -> bool:
     return result.returncode == 0
 
 
+def interrupt_key_for_launcher(launcher: str = '') -> str:
+    """Return the tmux key that cancels an in-flight TUI turn for this launcher.
+
+    Cursor Agent documents ``C-c`` as its in-turn interrupt. Grok CLI documents
+    ``Escape`` as cancel-immediately; ``C-c`` first clears a non-empty draft and
+    only cancels on a second press. Default to ``C-c`` for unknown launchers.
+    """
+    if 'grok' in (launcher or '').lower():
+        return 'Escape'
+    return 'C-c'
+
+
+def interrupt_agent(agent_id: str, launcher: str = '') -> bool:
+    """Interrupt an in-flight TUI turn without terminating the tmux session.
+
+    Keep this separate from ``send_keys`` so normal agent-to-agent delivery is
+    unchanged and callers can make preemption an explicit routing decision.
+    """
+    key = interrupt_key_for_launcher(launcher)
+    if not _tmux_send_key(agent_id, key):
+        return False
+    time.sleep(0.5 if key == 'Escape' else 0.25)
+    return True
+
+
 def _dismiss_codex_model_choice_prompt(agent_id: str) -> bool:
     """Best-effort dismissal of Codex model selection prompt."""
     if not session_exists(agent_id):

@@ -2,6 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from .lifecycle import (
+    _probe_runtime_state,
+    complete_grok_send_now,
+    preempt_main_delivery,
+)
+
 
 META_SECTION = "--- Meta ---"
 BODY_SECTION = "--- Body ---"
@@ -139,6 +145,15 @@ def _send_envelope(args: Any, deps: Any, *, target_config: dict, envelope: str) 
 
     launcher = resolve_launcher_command(target_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
+    if not preempt_main_delivery(
+        deps,
+        agent_id=agent_id,
+        launcher=launcher,
+        message=envelope,
+    ):
+        print(f"❌ Failed to interrupt Agent '{agent_name}'")
+        return 1
+    runtime_snapshot = _probe_runtime_state(deps, agent_id=agent_id, launcher=launcher)
     if not send_keys(
         agent_id,
         envelope,
@@ -149,6 +164,14 @@ def _send_envelope(args: Any, deps: Any, *, target_config: dict, envelope: str) 
     ):
         print(f"❌ Failed to send protocol message to {agent_name}")
         return 1
+    complete_grok_send_now(
+        deps,
+        agent_id=agent_id,
+        launcher=launcher,
+        message=envelope,
+        send_enter=True,
+        runtime_snapshot=runtime_snapshot,
+    )
 
     print(f"✅ Protocol message sent to {agent_name}")
     print("   Note: delivery success only means tmux accepted the send operation.")
