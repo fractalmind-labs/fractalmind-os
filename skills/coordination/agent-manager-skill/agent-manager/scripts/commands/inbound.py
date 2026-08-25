@@ -11,6 +11,7 @@ from .lifecycle import (
     complete_grok_send_now,
     preempt_main_delivery,
     should_preempt_main_delivery,
+    uses_native_enter,
 )
 from services.inbound_queue import (
     classify_inbound_replay_state,
@@ -145,6 +146,7 @@ def drain_main_inbound_once(
 
     launcher = deps.resolve_launcher_command(agent_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
+    native_enter = uses_native_enter(launcher)
     tui_preempted = False
     claim_owner = f"inbound-drain:{trigger}"
     now = _utc_now()
@@ -261,7 +263,7 @@ def drain_main_inbound_once(
             send_enter=True,
             clear_input=is_codex,
             escape_first=is_codex,
-            enter_via_key=is_codex,
+            enter_via_key=native_enter,
         )
         if not ok:
             if next_attempt >= _MAX_REPLAY_ATTEMPTS:

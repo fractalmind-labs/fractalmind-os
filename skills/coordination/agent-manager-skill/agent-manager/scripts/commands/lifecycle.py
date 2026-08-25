@@ -164,6 +164,17 @@ def preempt_main_delivery(deps: Any, *, agent_id: str, launcher: str, message: s
         return bool(interrupt_agent(agent_id))
 
 
+def uses_native_enter(launcher: str) -> bool:
+    """Grok and Codex need a real Enter key; a pasted newline does not submit.
+
+    Grok turns tmux paste-buffer payloads into composer paste chips. The
+    send_keys newline fallback then looks successful (the chip UI changed)
+    without submitting the turn. Codex has the same native-Enter requirement.
+    """
+    lowered = (launcher or '').lower()
+    return 'codex' in lowered or 'grok' in lowered
+
+
 def complete_grok_send_now(
     deps: Any,
     *,
@@ -173,20 +184,20 @@ def complete_grok_send_now(
     send_enter: bool,
     runtime_snapshot: Optional[Tuple[str, str]],
 ) -> None:
-    """Best-effort Grok send-now after a queued busy Enter.
+    """Best-effort Grok send-now after the first Enter.
 
     Grok's default mid-turn Enter queues a follow-up. An empty native Enter
-    then send-nows the top queued row (cancel-and-send). Skip when the pane
-    was already idle, when Enter was not requested, or for non-Grok launchers.
-    Failure is ignored: the first send already landed in tmux.
+    then send-nows the top queued row (cancel-and-send). Always send that
+    follow-up Enter for preempting Grok delivery: if Escape already idled the
+    pane, the first send_keys path may have left paste chips unsent, and the
+    extra native Enter is what actually submits. Skip only when Enter was not
+    requested or the launcher is not Grok. Failure is ignored.
     """
     if not send_enter:
         return
     if not should_preempt_main_delivery(agent_id, launcher, message):
         return
     if 'grok' not in (launcher or '').lower():
-        return
-    if runtime_snapshot is not None and runtime_snapshot[0] == 'idle':
         return
     send_keys = getattr(deps, 'send_keys', None)
     if not callable(send_keys):
@@ -811,6 +822,7 @@ def cmd_send(args, *, deps: Any):
 
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
+    native_enter = uses_native_enter(launcher)
     if not preempt_main_delivery(
         deps,
         agent_id=agent_id,
@@ -869,7 +881,7 @@ def cmd_send(args, *, deps: Any):
         send_enter=args.send_enter,
         clear_input=is_codex,
         escape_first=is_codex,
-        enter_via_key=is_codex,
+        enter_via_key=native_enter,
     ):
         _mark_main_inbound_state(
             deps,
@@ -1015,6 +1027,7 @@ def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
 
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
+    native_enter = uses_native_enter(launcher)
     if not preempt_main_delivery(
         deps,
         agent_id=agent_id,
@@ -1073,7 +1086,7 @@ def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
         send_enter=True,
         clear_input=is_codex,
         escape_first=is_codex,
-        enter_via_key=is_codex,
+        enter_via_key=native_enter,
     ):
         _mark_main_inbound_state(
             deps,

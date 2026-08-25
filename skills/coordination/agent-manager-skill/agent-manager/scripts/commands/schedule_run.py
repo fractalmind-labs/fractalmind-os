@@ -222,13 +222,14 @@ def cmd_schedule_run(args, *, deps: Any, start_handler: Callable):
     )
 
     is_codex = provider_key == 'codex'
+    native_enter = is_codex or provider_key == 'grok'
     if not deps.send_keys(
         agent_id,
         task_message,
         send_enter=True,
         clear_input=is_codex,
         escape_first=is_codex,
-        enter_via_key=is_codex,
+        enter_via_key=native_enter,
     ):
         print("❌ Failed to send task to agent")
         return 1

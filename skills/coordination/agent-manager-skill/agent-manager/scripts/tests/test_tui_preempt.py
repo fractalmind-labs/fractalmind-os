@@ -19,6 +19,7 @@ from commands.lifecycle import (  # noqa: E402
     cmd_assign,
     cmd_send,
     should_preempt_main_delivery,
+    uses_native_enter,
 )
 from services.inbound_queue import append_inbound_message_event  # noqa: E402
 from services.inbound_queue import enqueue_inbound_message  # noqa: E402
@@ -83,6 +84,12 @@ class ShouldPreemptMainDeliveryTests(unittest.TestCase):
         self.assertFalse(should_preempt_main_delivery('emp-0002', 'grok', owner))
         self.assertFalse(should_preempt_main_delivery('EMP_0002', '/usr/bin/grok', owner))
 
+    def test_uses_native_enter(self):
+        self.assertTrue(uses_native_enter('/home/test/.local/bin/grok'))
+        self.assertTrue(uses_native_enter('codex'))
+        self.assertFalse(uses_native_enter('/home/test/.cursor/bin/cursor-agent'))
+        self.assertFalse(uses_native_enter('droid'))
+
 
 class MainTuiPreemptLifecycleTests(unittest.TestCase):
     def test_assign_main_preempts_grok_and_send_nows_when_busy(self):
@@ -108,11 +115,12 @@ class MainTuiPreemptLifecycleTests(unittest.TestCase):
         self.assertEqual(interrupts, [('main', '/home/test/.local/bin/grok')])
         self.assertEqual(len(sends), 2)
         self.assertIn('# Task Assignment', sends[0][1])
+        self.assertTrue(sends[0][2].get('enter_via_key'))
         self.assertEqual(sends[1][1], '')
         self.assertTrue(sends[1][2].get('enter_via_key'))
         self.assertTrue(sends[1][2].get('send_enter'))
 
-    def test_assign_main_skips_grok_send_now_when_idle(self):
+    def test_assign_main_grok_idle_still_sends_native_follow_up_enter(self):
         interrupts = []
         sends = []
         temp_root = Path(tempfile.mkdtemp(prefix='agent-manager-grok-idle-'))
@@ -133,8 +141,11 @@ class MainTuiPreemptLifecycleTests(unittest.TestCase):
 
         self.assertEqual(rc, 0)
         self.assertEqual(len(interrupts), 1)
-        self.assertEqual(len(sends), 1)
+        self.assertEqual(len(sends), 2)
         self.assertIn('# Task Assignment', sends[0][1])
+        self.assertTrue(sends[0][2].get('enter_via_key'))
+        self.assertEqual(sends[1][1], '')
+        self.assertTrue(sends[1][2].get('enter_via_key'))
 
     def test_assign_main_does_not_preempt_grok_heartbeat(self):
         interrupts = []

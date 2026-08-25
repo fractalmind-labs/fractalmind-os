@@ -6,6 +6,7 @@ from .lifecycle import (
     _probe_runtime_state,
     complete_grok_send_now,
     preempt_main_delivery,
+    uses_native_enter,
 )
 
 
@@ -145,6 +146,7 @@ def _send_envelope(args: Any, deps: Any, *, target_config: dict, envelope: str) 
 
     launcher = resolve_launcher_command(target_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
+    native_enter = uses_native_enter(launcher)
     if not preempt_main_delivery(
         deps,
         agent_id=agent_id,
@@ -160,7 +162,7 @@ def _send_envelope(args: Any, deps: Any, *, target_config: dict, envelope: str) 
         send_enter=True,
         clear_input=is_codex,
         escape_first=is_codex,
-        enter_via_key=is_codex,
+        enter_via_key=native_enter,
     ):
         print(f"❌ Failed to send protocol message to {agent_name}")
         return 1
