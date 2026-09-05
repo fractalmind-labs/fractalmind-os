@@ -167,6 +167,20 @@ launcher_args:
 
 The `cursor` provider resolves the provider-unique `cursor-agent` executable from `$HOME/.cursor/bin`, common user-local paths, and system paths. Cursor CLI is a full-screen TUI, so agent-manager treats process startup as readiness and uses tmux paste for the injected system prompt. Authentication is inherited from the managed shell (for example `CURSOR_API_KEY`); credentials are never placed in launcher arguments or generated command files. Provider-specific model and execution options belong in `launcher_args`. `--trust` is intentionally not added automatically; configure it only for an explicitly approved workspace.
 
+**Grok CLI provider** (xAI Grok Build `grok`, not Grok Bot.app):
+
+```yaml
+launcher: grok
+launcher_args:
+  - --model
+  - grok-4
+  - --yolo
+```
+
+The `grok` provider (aliases: `grok-cli`, `grok-build`) resolves the `grok` executable from `$HOME/.local/bin`, `$HOME/.grok/bin`, common user-local paths, and system paths. Model and execution options belong in `launcher_args` (`-m`/`--model`, `--always-approve`/`--yolo`). Grok CLI is a full-screen TUI, so `start` treats process startup as readiness (empty `prompt_patterns`, like cursor/kimi) rather than waiting for a bare `❯` line. System prompt injection uses `--append-system-prompt` unless `AGENTS.md` is already in the working directory. Session restore uses `--resume <id>` when a stored session id exists under `~/.grok/sessions/<urlencoded-cwd>/<id>/`. MCP servers are managed with `grok mcp`, not a launch-time JSON flag. Authentication is inherited from the managed shell (`grok login`, or a shell env such as `XAI_API_KEY`); credentials must never appear in `launcher_args`, agent YAML, pane captures, logs, or error messages. If the CLI is missing, `start` fails with an install/`grok login` hint and does not create a tmux session. Unauthenticated 1.0.4 device-code copy (`Approve in your browser` / `Waiting for approval`) is treated as `blocked`.
+
+Reserved `main` delivery on Cursor or Grok preempts an in-flight TUI turn before `send`, `assign`, `message send`, or inbound drain. Cursor uses tmux `C-c`. Grok uses `Escape` (cancel immediately; a bare Enter while busy only queues a follow-up), submits with a native Enter key (a pasted newline only creates paste chips), then sends an empty native Enter to send-now. Messages that start with `# FractalBot Heartbeat` are not preempted. Employee agents are unchanged. Grok heartbeat/dream/assign also use native Enter so idle delivery actually submits.
+
 Reserved `main` agents default to the bundled skill prompt at `agent-manager/.codex/main-codex-model.md` when `launcher: codex` is used and no explicit `launcher_config.model_instructions_file` override is provided in the workspace agent config.
 
 Note: For scheduled jobs, `agent-manager` will best-effort auto-dismiss Codex's first-run/upgrade model selection prompt to keep cron runs non-interactive.
@@ -254,6 +268,10 @@ $CLI send dev --no-enter "Draft message only"
 By default, `send` submits the message immediately (Enter is sent automatically).
 Use `--no-enter` to type without submitting.
 
+On reserved `main` with Cursor or Grok, non-heartbeat `send` interrupts the
+current TUI turn first so owner/inbound text is not left in Grok's follow-up
+queue. See the Grok CLI provider notes above.
+
 ### `message` - Agent-to-Agent Protocol Messages
 
 Compose or send a minimal Agent-to-Agent protocol envelope with three sections:
@@ -320,6 +338,10 @@ $CLI assign dev --task-file task.md
 ```
 
 `assign` submits automatically (Enter is sent by default), so no manual tmux Enter step is required.
+
+On reserved `main` with Cursor or Grok, non-heartbeat `assign` interrupts the
+current TUI turn first. FractalBot heartbeat/dream envelopes that start with
+`# FractalBot Heartbeat` still deliver without preemption.
 
 ## Disabling Agents
 
@@ -485,6 +507,7 @@ heartbeat:
   max_runtime: 5m
   session_mode: auto     # restore | auto | fresh
   mode: normal           # normal (use `timer` for delayed rescue; `full_speed` is legacy)
+  start_if_missing: false  # default; true starts a missing tmux session before this tick
   dream:
     enabled: true
     idle_after: 1h       # Optional idle-window trigger after normal HEARTBEAT_OK cycles
@@ -506,6 +529,7 @@ heartbeat:
 | `session_mode` | string | | Session policy: `restore` (default), `auto` (rollover when context <25%), `fresh` (always rollover after handoff) |
 | `mode` | string | | Heartbeat trigger mode. `normal` is the only active path. `full_speed` is a deprecated compatibility value that only preserves legacy Codex hook cleanup/readback during `start`; timer-driven follow-up is the supported replacement. |
 | `auto_starvation_skip_threshold` | int | | `auto` mode only. Default `3`; set `0` to disable the forced-dispatch starvation bypass after consecutive preflight skips |
+| `start_if_missing` | bool | | Default `false`. When `true`, `heartbeat run` starts a missing tmux session once (same path as `assign`) and continues this tick if start leaves the session running. Failed starts enter a 90s cooldown. This is not `heartbeat rescue` (stuck-busy stop/start). |
 | `dream` | dict | | Optional Dream mode policy. `idle_after` preserves the existing post-heartbeat Dream timer behavior; `fixed_windows` switches heartbeat dispatch to a Dream task while any configured window is active. |
 | `enabled` | bool | | Default: `true` |
 
@@ -532,7 +556,7 @@ days. Multiple windows are OR rules: the first active window wins.
 |---------|-----------|-----------|
 | **Per agent** | 0-1 heartbeat | 0-N schedules |
 | **Task content** | Fixed (standard check-in) | Custom per job |
-| **Behavior** | Only checks running agents | Starts agent if needed |
+| **Behavior** | Checks running agents; `start_if_missing: true` may start a missing session | Starts agent if needed |
 | **Use case** | Periodic health checks | Task automation |
 
 ### Heartbeat Commands
@@ -585,7 +609,8 @@ $CLI heartbeat run EMP_0001 --timeout 1m
 
 **Heartbeat behavior:**
 - Skips if agent is disabled
-- Skips if agent is not running (does NOT start the agent)
+- Skips if agent is not running, unless `heartbeat.start_if_missing: true` (default `false`)
+- When `start_if_missing` is true and tmux is gone: `start` once, then dispatch this tick if the session is running; otherwise skip and cooldown. Does not `stop` a healthy busy session and is not `heartbeat rescue`.
 - Sends standard heartbeat message to the agent
 - Optional session rollover via `session_mode` (handoff first, then fresh session)
 - Waits for response (up to `max_runtime`)

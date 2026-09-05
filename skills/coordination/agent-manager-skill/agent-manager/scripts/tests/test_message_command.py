@@ -168,6 +168,51 @@ class MessageCommandTests(unittest.TestCase):
         self.assertTrue(send_kwargs['clear_input'])
         self.assertIn('tmux accepted', output.getvalue())
 
+    def test_send_preempts_grok_main_and_send_nows_when_busy(self):
+        interrupts = []
+        calls = []
+
+        def interrupt_agent(agent_id, launcher=''):
+            interrupts.append((agent_id, launcher))
+            return True
+
+        def send_keys(*args, **kwargs):
+            calls.append((args, kwargs))
+            return True
+
+        target = {'name': 'main', 'file_id': 'main', 'launcher': 'grok'}
+        deps = _deps(
+            resolve_agent=lambda value: target if value == 'main' else None,
+            get_agent_id=lambda config: 'main',
+            resolve_launcher_command=lambda _launcher: '/home/test/.local/bin/grok',
+            interrupt_agent=interrupt_agent,
+            send_keys=send_keys,
+            get_agent_runtime_state=lambda _agent_id, launcher='': {
+                'state': 'busy',
+                'reason': 'busy_pattern:Thinking…',
+            },
+        )
+        args = argparse.Namespace(
+            message_command='send',
+            agent='main',
+            from_agent='EMP_0002',
+            body='Owner inbound via protocol.',
+            footer=None,
+            id='msg_fixed',
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            rc = cmd_message(args, deps=deps)
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(interrupts, [('main', '/home/test/.local/bin/grok')])
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(calls[0][0][0], 'main')
+        self.assertIn('Owner inbound via protocol.', calls[0][0][1])
+        self.assertEqual(calls[1][0][1], '')
+        self.assertTrue(calls[1][1].get('enter_via_key'))
+
     def test_send_returns_nonzero_when_tmux_send_fails(self):
         args = argparse.Namespace(
             message_command='send',
@@ -184,6 +229,50 @@ class MessageCommandTests(unittest.TestCase):
 
         self.assertEqual(rc, 1)
         self.assertIn('Failed to send protocol message', output.getvalue())
+
+    def test_send_reports_delivery_confirmation_when_agent_activates(self):
+        args = argparse.Namespace(
+            message_command='send',
+            agent='qa',
+            from_agent='EMP_0001',
+            body='Please test.',
+            footer=None,
+            id='msg_fixed',
+        )
+        deps = _deps(
+            get_agent_runtime_state=lambda agent_id, launcher='': {
+                'state': 'working', 'reason': 'pane_cursor',
+            },
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            rc = cmd_message(args, deps=deps)
+
+        self.assertEqual(rc, 0)
+        self.assertIn('Delivery confirmed', output.getvalue())
+
+    def test_send_warns_when_agent_remains_idle_after_send(self):
+        args = argparse.Namespace(
+            message_command='send',
+            agent='qa',
+            from_agent='EMP_0001',
+            body='Please test.',
+            footer=None,
+            id='msg_fixed',
+        )
+        deps = _deps(
+            get_agent_runtime_state=lambda agent_id, launcher='': {
+                'state': 'idle', 'reason': 'pane_idle',
+            },
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            rc = cmd_message(args, deps=deps)
+
+        self.assertEqual(rc, 0)
+        self.assertIn('Delivery unconfirmed', output.getvalue())
 
 
 if __name__ == '__main__':

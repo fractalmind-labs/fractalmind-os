@@ -20,6 +20,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import quote
 
 # Add scripts directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
@@ -46,6 +47,7 @@ from tmux_helper import (
     stop_session,
     capture_output,
     send_keys,
+    interrupt_agent,
     get_session_info,
     wait_for_prompt,
     inject_system_prompt,
@@ -69,6 +71,8 @@ from providers import (
     get_mcp_config_flag,
     resolve_launcher_command,
     get_provider_key,
+    launcher_binary_exists,
+    missing_launcher_help,
     get_session_restore_mode,
     get_session_restore_flag,
     get_context_left_patterns,
@@ -628,6 +632,87 @@ def _find_new_kimi_code_session_id_with_retry(cwd: str, *, before_session_ids: s
         time.sleep(0.2)
 
 
+_GROK_SESSION_ID_RE = re.compile(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+)
+
+
+def _grok_sessions_root() -> Path:
+    return Path.home() / '.grok' / 'sessions'
+
+
+def _grok_encode_cwd(cwd: str) -> str:
+    return quote(_normalize_path(cwd), safe='')
+
+
+def _is_grok_session_id(session_id: str) -> bool:
+    return bool(session_id and _GROK_SESSION_ID_RE.fullmatch(str(session_id).strip()))
+
+
+def _grok_cwd_session_dir(cwd: str) -> Path:
+    return _grok_sessions_root() / _grok_encode_cwd(cwd)
+
+
+def _read_grok_session_ids(cwd: str) -> list[str]:
+    session_dir = _grok_cwd_session_dir(cwd)
+    if not session_dir.is_dir():
+        return []
+    ids: list[str] = []
+    try:
+        for child in session_dir.iterdir():
+            if child.is_dir() and _is_grok_session_id(child.name):
+                ids.append(child.name)
+    except Exception:
+        return []
+    return ids
+
+
+def _grok_session_exists(cwd: str, session_id: str) -> bool:
+    if not _is_grok_session_id(session_id):
+        return False
+    path = _grok_cwd_session_dir(cwd) / str(session_id).strip()
+    return path.is_dir()
+
+
+def _snapshot_grok_sessions(cwd: str) -> set[str]:
+    return set(_read_grok_session_ids(cwd))
+
+
+def _find_new_grok_session_id(cwd: str, *, before_session_ids: set[str]) -> str:
+    session_dir = _grok_cwd_session_dir(cwd)
+    if not session_dir.is_dir():
+        return ""
+    candidates: list[tuple[float, str]] = []
+    try:
+        for child in session_dir.iterdir():
+            if not child.is_dir() or not _is_grok_session_id(child.name):
+                continue
+            if child.name in before_session_ids:
+                continue
+            try:
+                mtime = child.stat().st_mtime
+            except Exception:
+                mtime = 0.0
+            candidates.append((mtime, child.name))
+    except Exception:
+        return ""
+    if not candidates:
+        return ""
+    candidates.sort(reverse=True)
+    return candidates[0][1]
+
+
+def _find_new_grok_session_id_with_retry(cwd: str, *, before_session_ids: set[str], timeout_s: float = 2.0) -> str:
+    deadline = time.time() + max(0.0, float(timeout_s))
+    while True:
+        session_id = _find_new_grok_session_id(cwd, before_session_ids=before_session_ids)
+        if session_id:
+            return session_id
+        if time.time() >= deadline:
+            return ""
+        time.sleep(0.2)
+
+
 def _provider_session_exists(provider_key: str, cwd: str, session_id: str, *, agent_id: str = '') -> bool:
     if provider_key == 'droid':
         return _droid_session_exists(cwd, session_id)
@@ -639,6 +724,8 @@ def _provider_session_exists(provider_key: str, cwd: str, session_id: str, *, ag
         return _opencode_session_exists(cwd, session_id)
     if provider_key == 'kimi-code':
         return _kimi_code_session_exists(cwd, session_id)
+    if provider_key == 'grok':
+        return _grok_session_exists(cwd, session_id)
     return False
 
 
@@ -653,6 +740,8 @@ def _snapshot_provider_sessions(provider_key: str, cwd: str) -> set[str]:
         return _snapshot_opencode_sessions(cwd)
     if provider_key == 'kimi-code':
         return _snapshot_kimi_code_sessions(cwd)
+    if provider_key == 'grok':
+        return _snapshot_grok_sessions(cwd)
     return set()
 
 
@@ -679,6 +768,8 @@ def _find_new_provider_session_id_with_retry(
         return _find_new_opencode_session_id_with_retry(cwd, before_json_paths=before_paths, timeout_s=timeout_s)
     if provider_key == 'kimi-code':
         return _find_new_kimi_code_session_id_with_retry(cwd, before_session_ids=before_paths, timeout_s=timeout_s)
+    if provider_key == 'grok':
+        return _find_new_grok_session_id_with_retry(cwd, before_session_ids=before_paths, timeout_s=timeout_s)
     return ""
 
 
@@ -778,11 +869,28 @@ def write_scheduled_task_file(repo_root: Path, agent_id: str, job: str, task: st
     return task_file
 
 
+def _codex_file_pointer_threshold(env_name: str, default: int) -> int:
+    raw = (os.environ.get(env_name) or '').strip()
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
 def _should_use_codex_file_pointer(message: str) -> bool:
+    # Multi-line delivery pastes atomically via a tmux buffer, so moderate
+    # messages are safe to deliver inline; file-ize only oversized payloads
+    # that would bloat the TUI input. Override via AGENT_MANAGER_CODEX_FILE_POINTER_MAX_LINES
+    # / AGENT_MANAGER_CODEX_FILE_POINTER_MAX_CHARS.
     if not message:
         return False
     line_count = message.count("\n") + 1
-    return line_count >= 12 or len(message) >= 1800
+    max_lines = _codex_file_pointer_threshold('AGENT_MANAGER_CODEX_FILE_POINTER_MAX_LINES', 40)
+    max_chars = _codex_file_pointer_threshold('AGENT_MANAGER_CODEX_FILE_POINTER_MAX_CHARS', 6000)
+    return line_count >= max_lines or len(message) >= max_chars
 
 
 def write_codex_message_file(repo_root: Path, agent_id: str, purpose: str, message: str) -> Path:
@@ -1792,13 +1900,14 @@ def _run_dream_attempt(
     baseline_hash = _tail_hash(baseline_output)
     final_output = baseline_output
 
+    native_enter = is_codex or 'grok' in (launcher or '').lower()
     if not send_keys(
         agent_id,
         dream_message,
         send_enter=True,
         clear_input=is_codex,
         escape_first=is_codex,
-        enter_via_key=is_codex,
+        enter_via_key=native_enter,
     ):
         failure_type = 'send_fail'
         return {
@@ -2424,13 +2533,14 @@ def _maybe_rollover_heartbeat_session(
     handoff_file = _write_heartbeat_handoff_template(repo_root, agent_id, heartbeat_id)
     handoff_prompt = _build_heartbeat_handoff_prompt(handoff_file, heartbeat_id)
 
+    native_enter = is_codex or 'grok' in (launcher or '').lower()
     if not send_keys(
         agent_id,
         handoff_prompt,
         send_enter=True,
         clear_input=is_codex,
         escape_first=is_codex,
-        enter_via_key=is_codex,
+        enter_via_key=native_enter,
     ):
         print("⚠️  Failed to send handoff prompt; skip rollover")
         return None
@@ -2911,6 +3021,138 @@ def cmd_heartbeat_rescue(args):
     return prime_result
 
 
+_START_IF_MISSING_COOLDOWN_SECONDS = 90
+
+
+def _coerce_bool_flag(value, *, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return bool(value)
+    text = str(value).strip().lower()
+    if text in {'1', 'true', 'yes', 'on'}:
+        return True
+    if text in {'0', 'false', 'no', 'off', ''}:
+        return False
+    return default
+
+
+def _heartbeat_start_if_missing_enabled(heartbeat) -> bool:
+    if not isinstance(heartbeat, dict):
+        return False
+    return _coerce_bool_flag(heartbeat.get('start_if_missing'), default=False)
+
+
+def _start_if_missing_state_path(repo_root: Path, agent_id: str) -> Path:
+    safe_agent_id = str(agent_id or 'unknown').strip().lower() or 'unknown'
+    safe_agent_id = re.sub(r'[^a-z0-9_-]+', '-', safe_agent_id)
+    return (
+        Path(repo_root)
+        / '.claude'
+        / 'state'
+        / 'agent-manager'
+        / 'heartbeat-start-if-missing'
+        / f'{safe_agent_id}.json'
+    )
+
+
+def _start_if_missing_cooldown_active(
+    repo_root: Path,
+    agent_id: str,
+    *,
+    now: Optional[float] = None,
+    cooldown_seconds: int = _START_IF_MISSING_COOLDOWN_SECONDS,
+) -> bool:
+    path = _start_if_missing_state_path(repo_root, agent_id)
+    try:
+        payload = json.loads(path.read_text(encoding='utf-8'))
+    except Exception:
+        return False
+    if not isinstance(payload, dict):
+        return False
+    if str(payload.get('status') or '').strip().lower() != 'failed':
+        return False
+    try:
+        attempted_at = float(payload.get('attempted_at') or 0)
+    except (TypeError, ValueError):
+        return False
+    if attempted_at <= 0:
+        return False
+    current = time.time() if now is None else float(now)
+    return (current - attempted_at) < max(0, int(cooldown_seconds))
+
+
+def _mark_start_if_missing_attempt(
+    repo_root: Path,
+    agent_id: str,
+    *,
+    status: str,
+    now: Optional[float] = None,
+) -> None:
+    path = _start_if_missing_state_path(repo_root, agent_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        'agent_id': agent_id,
+        'status': str(status or '').strip().lower() or 'unknown',
+        'attempted_at': time.time() if now is None else float(now),
+        'updated_at': _utc_now_iso(),
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False) + '\n', encoding='utf-8')
+
+
+def _maybe_start_missing_heartbeat_session(
+    *,
+    agent_name: str,
+    agent_id: str,
+    agent_file_id: str,
+    heartbeat: dict,
+    repo_root: Path,
+    start_handler=None,
+) -> bool:
+    """Return True when heartbeat dispatch should continue.
+
+    Default remains skip-if-not-running. `heartbeat.start_if_missing: true`
+    starts a missing tmux session once, then continues this tick if start
+    left the session running. Failed starts enter a short cooldown.
+    """
+    if session_exists(agent_id):
+        return True
+    if not _heartbeat_start_if_missing_enabled(heartbeat):
+        print(f"⏭️  Agent '{agent_name}' is not running - skipping heartbeat")
+        return False
+    if _start_if_missing_cooldown_active(repo_root, agent_id):
+        print(
+            f"⏭️  Agent '{agent_name}' is not running - "
+            "start_if_missing cooldown active, skipping heartbeat"
+        )
+        return False
+
+    print(f"⚠️  Agent '{agent_name}' is not running. start_if_missing=true, starting...")
+    start_args = argparse.Namespace(
+        agent=agent_file_id,
+        working_dir=None,
+        restore=True,
+        tmux_layout='sessions',
+    )
+    handler = start_handler or cmd_start
+    try:
+        start_rc = handler(start_args)
+    except Exception as exc:
+        _mark_start_if_missing_attempt(repo_root, agent_id, status='failed')
+        print(f"⏭️  Agent '{agent_name}' start_if_missing raised {exc!r} - skipping heartbeat")
+        return False
+    if start_rc != 0 or not session_exists(agent_id):
+        _mark_start_if_missing_attempt(repo_root, agent_id, status='failed')
+        print(f"⏭️  Agent '{agent_name}' start_if_missing did not leave a running session - skipping heartbeat")
+        return False
+
+    _mark_start_if_missing_attempt(repo_root, agent_id, status='started')
+    print(f"✅ Agent '{agent_name}' started for heartbeat; continuing this tick")
+    return True
+
+
 def cmd_heartbeat_run(args):
     """Run a heartbeat check for an agent."""
     if not check_tmux():
@@ -2952,10 +3194,16 @@ def cmd_heartbeat_run(args):
         else {'active': False, 'reason': 'dream_disabled', 'windows': []}
     )
 
-    # Heartbeats only check running agents - don't start if not running
+    # Missing tmux: default skip. start_if_missing=true may start once, then continue.
     if not session_exists(agent_id):
-        print(f"⏭️  Agent '{agent_name}' is not running - skipping heartbeat")
-        return 0
+        if not _maybe_start_missing_heartbeat_session(
+            agent_name=agent_name,
+            agent_id=agent_id,
+            agent_file_id=agent_file_id,
+            heartbeat=heartbeat,
+            repo_root=get_repo_root(),
+        ):
+            return 0
 
     # Check work schedule
     schedule_config = heartbeat.get('schedule')

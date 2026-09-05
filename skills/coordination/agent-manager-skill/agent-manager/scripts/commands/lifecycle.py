@@ -130,6 +130,84 @@ def _mark_main_inbound_replied(
     )
 
 
+_FRACTALBOT_HEARTBEAT_PREFIX = '# FractalBot Heartbeat'
+
+
+def should_preempt_main_delivery(agent_id: str, launcher: str, message: str) -> bool:
+    """True when main Cursor/Grok delivery must interrupt an in-flight TUI turn.
+
+    FractalBot heartbeat/dream envelopes stay non-preempting so a product turn
+    is not cancelled by the periodic check-in. Employee agents are unchanged.
+    """
+    if str(agent_id or '').strip().lower() != 'main':
+        return False
+    if str(message or '').lstrip().startswith(_FRACTALBOT_HEARTBEAT_PREFIX):
+        return False
+    lowered = (launcher or '').lower()
+    return 'cursor' in lowered or 'grok' in lowered
+
+
+def preempt_main_delivery(deps: Any, *, agent_id: str, launcher: str, message: str) -> bool:
+    """Interrupt a busy Cursor/Grok main TUI before owner/inbound delivery.
+
+    Returns True when delivery may continue. Missing interrupt helpers are a
+    no-op so unit tests without tmux still pass.
+    """
+    if not should_preempt_main_delivery(agent_id, launcher, message):
+        return True
+    interrupt_agent = getattr(deps, 'interrupt_agent', None)
+    if not callable(interrupt_agent):
+        return True
+    try:
+        return bool(interrupt_agent(agent_id, launcher=launcher))
+    except TypeError:
+        return bool(interrupt_agent(agent_id))
+
+
+def uses_native_enter(launcher: str) -> bool:
+    """Grok and Codex need a real Enter key; a pasted newline does not submit.
+
+    Grok turns tmux paste-buffer payloads into composer paste chips. The
+    send_keys newline fallback then looks successful (the chip UI changed)
+    without submitting the turn. Codex has the same native-Enter requirement.
+    """
+    lowered = (launcher or '').lower()
+    return 'codex' in lowered or 'grok' in lowered
+
+
+def complete_grok_send_now(
+    deps: Any,
+    *,
+    agent_id: str,
+    launcher: str,
+    message: str,
+    send_enter: bool,
+    runtime_snapshot: Optional[Tuple[str, str]],
+) -> None:
+    """Best-effort Grok send-now after the first Enter.
+
+    Grok's default mid-turn Enter queues a follow-up. An empty native Enter
+    then send-nows the top queued row (cancel-and-send). Always send that
+    follow-up Enter for preempting Grok delivery: if Escape already idled the
+    pane, the first send_keys path may have left paste chips unsent, and the
+    extra native Enter is what actually submits. Skip only when Enter was not
+    requested or the launcher is not Grok. Failure is ignored.
+    """
+    if not send_enter:
+        return
+    if not should_preempt_main_delivery(agent_id, launcher, message):
+        return
+    if 'grok' not in (launcher or '').lower():
+        return
+    send_keys = getattr(deps, 'send_keys', None)
+    if not callable(send_keys):
+        return
+    try:
+        send_keys(agent_id, '', send_enter=True, enter_via_key=True)
+    except TypeError:
+        send_keys(agent_id, '', send_enter=True)
+
+
 def _probe_runtime_state(deps: Any, *, agent_id: str, launcher: str) -> Optional[Tuple[str, str]]:
     get_agent_runtime_state = getattr(deps, 'get_agent_runtime_state', None)
     if not callable(get_agent_runtime_state):
@@ -345,10 +423,28 @@ def cmd_start(args, *, deps: Any):
     launcher_args = list(agent_config.get('launcher_args', []) or [])
 
     provider_key = get_provider_key(launcher)
+    launcher_exists = getattr(deps, 'launcher_binary_exists', None)
+    if provider_key == 'grok':
+        exists = True
+        if callable(launcher_exists):
+            exists = bool(launcher_exists(launcher))
+        else:
+            from providers import launcher_binary_exists as _launcher_binary_exists
+            exists = _launcher_binary_exists(launcher)
+        if not exists:
+            help_fn = getattr(deps, 'missing_launcher_help', None)
+            if callable(help_fn):
+                print(help_fn('grok'))
+            else:
+                from providers import missing_launcher_help as _missing_launcher_help
+                print(_missing_launcher_help('grok'))
+            return 1
     did_provider_restore = False
     provider_before_sessions: set[str] = set()
 
-    track_provider_session = provider_key in {'droid', 'claude', 'claude-code', 'codex', 'opencode', 'kimi-code'}
+    track_provider_session = provider_key in {
+        'droid', 'claude', 'claude-code', 'codex', 'opencode', 'kimi-code', 'grok',
+    }
     if provider_key == 'droid' and 'exec' in launcher_args:
         track_provider_session = False
 
@@ -726,10 +822,29 @@ def cmd_send(args, *, deps: Any):
 
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
+    native_enter = uses_native_enter(launcher)
+    if not preempt_main_delivery(
+        deps,
+        agent_id=agent_id,
+        launcher=launcher,
+        message=str(args.message),
+    ):
+        _mark_main_inbound_state(
+            deps,
+            queue_repo_root,
+            agent_id=agent_id,
+            message_id=queue_message_id,
+            state='failed',
+            detail='tui_interrupt_failed',
+        )
+        print(f"❌ Failed to interrupt Agent '{agent_name}'")
+        return 1
     runtime_snapshot = _probe_runtime_state(deps, agent_id=agent_id, launcher=launcher)
     if runtime_snapshot is not None:
         runtime_state, runtime_reason = runtime_snapshot
-        if runtime_state != 'idle':
+        if runtime_state != 'idle' and not should_preempt_main_delivery(
+            agent_id, launcher, str(args.message)
+        ):
             print(
                 f"⚠️  Agent '{agent_name}' runtime is {runtime_state} ({runtime_reason}); "
                 "message may be delayed or ignored"
@@ -766,7 +881,7 @@ def cmd_send(args, *, deps: Any):
         send_enter=args.send_enter,
         clear_input=is_codex,
         escape_first=is_codex,
-        enter_via_key=is_codex,
+        enter_via_key=native_enter,
     ):
         _mark_main_inbound_state(
             deps,
@@ -778,6 +893,14 @@ def cmd_send(args, *, deps: Any):
         )
         print(f"❌ Failed to send message to {agent_name}")
         return 1
+    complete_grok_send_now(
+        deps,
+        agent_id=agent_id,
+        launcher=launcher,
+        message=str(args.message),
+        send_enter=bool(getattr(args, 'send_enter', True)),
+        runtime_snapshot=runtime_snapshot,
+    )
 
     _mark_main_inbound_state(
         deps,
@@ -904,10 +1027,29 @@ def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
 
     launcher = resolve_launcher_command(agent_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
+    native_enter = uses_native_enter(launcher)
+    if not preempt_main_delivery(
+        deps,
+        agent_id=agent_id,
+        launcher=launcher,
+        message=str(task),
+    ):
+        _mark_main_inbound_state(
+            deps,
+            queue_repo_root,
+            agent_id=agent_id,
+            message_id=queue_message_id,
+            state='failed',
+            detail='tui_interrupt_failed',
+        )
+        print(f"❌ Failed to interrupt Agent '{agent_name}'")
+        return 1
     runtime_snapshot = _probe_runtime_state(deps, agent_id=agent_id, launcher=launcher)
     if runtime_snapshot is not None:
         runtime_state, runtime_reason = runtime_snapshot
-        if runtime_state != 'idle':
+        if runtime_state != 'idle' and not should_preempt_main_delivery(
+            agent_id, launcher, str(task)
+        ):
             print(
                 f"⚠️  Agent '{agent_name}' runtime is {runtime_state} ({runtime_reason}); "
                 "assignment may be delayed or ignored"
@@ -944,7 +1086,7 @@ def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
         send_enter=True,
         clear_input=is_codex,
         escape_first=is_codex,
-        enter_via_key=is_codex,
+        enter_via_key=native_enter,
     ):
         _mark_main_inbound_state(
             deps,
@@ -956,6 +1098,14 @@ def cmd_assign(args, *, deps: Any, start_handler: Optional[Callable] = None):
         )
         print(f"❌ Failed to assign task to {agent_name}")
         return 1
+    complete_grok_send_now(
+        deps,
+        agent_id=agent_id,
+        launcher=launcher,
+        message=str(task),
+        send_enter=True,
+        runtime_snapshot=runtime_snapshot,
+    )
 
     _mark_main_inbound_state(
         deps,
