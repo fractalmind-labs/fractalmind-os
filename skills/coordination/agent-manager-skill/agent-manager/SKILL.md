@@ -35,6 +35,8 @@ python3 .agent/skills/agent-manager/scripts/main.py stop dev
 
 ### Command Path Parity (Docs Baseline)
 
+For live workspace delivery, use `$REPO_ROOT/.agent/skills/agent-manager/scripts/main.py`. The CLI redirects `send`, `assign`, `message`, and `inbound` from a stale checkout to that active installation when it exists, preserving arguments and stdin. The active script does not redirect to itself; lifecycle and other development commands remain local.
+
 For consistency with `README.md` and runbook examples, define one CLI alias and reuse it in your session:
 
 ```bash
@@ -265,6 +267,8 @@ $CLI send dev --no-enter "Draft message only"
 
 By default, `send` submits the message immediately (Enter is sent automatically).
 Use `--no-enter` to type without submitting.
+
+For native-Enter TUIs such as Codex and Grok, multiline messages use `tmux paste-buffer -p` before the separate Enter key. Native-key delivery retries Enter without falling back to a pasted newline, which can leave the message in the composer. Confirm actual agent output, not just a pane redraw or transport success.
 
 ### `message` - Agent-to-Agent Protocol Messages
 

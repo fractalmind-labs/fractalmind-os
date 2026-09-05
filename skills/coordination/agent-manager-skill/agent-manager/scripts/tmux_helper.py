@@ -569,7 +569,6 @@ def send_keys(
     def _send_enter() -> bool:
         # Some TUIs (notably Codex) require a real Enter keypress to confirm submit.
         # Try native key first when requested, and verify pane output changes.
-        # If output does not change, fall back to newline paste to avoid idle stalls.
         def _capture_tail(lines: int = 30) -> Optional[str]:
             result = subprocess.run(
                 ['tmux', 'capture-pane', '-p', '-t', target, f'-S-{max(1, int(lines))}'],
@@ -591,10 +590,13 @@ def send_keys(
             return False
 
         if enter_via_key:
-            before = _capture_tail()
-            if _send_tmux_key('C-m') or _send_tmux_key('Enter'):
-                if _pane_changed(before):
+            for _ in range(2):
+                before = _capture_tail()
+                if (_send_tmux_key('C-m') or _send_tmux_key('Enter')) and _pane_changed(
+                    before, attempts=10, interval=0.2,
+                ):
                     return True
+            return False
 
         # Fallback: paste a newline for TUIs where keypress Enter is unreliable.
         fallback_before = _capture_tail()
@@ -637,8 +639,11 @@ def send_keys(
                 capture_output=True,
                 check=True,
             )
+            paste_command = ['tmux', 'paste-buffer', '-d', '-b', 'agent-send', '-t', target]
+            if enter_via_key:
+                paste_command.append('-p')
             subprocess.run(
-                ['tmux', 'paste-buffer', '-d', '-b', 'agent-send', '-t', target],
+                paste_command,
                 capture_output=True,
                 check=True,
             )

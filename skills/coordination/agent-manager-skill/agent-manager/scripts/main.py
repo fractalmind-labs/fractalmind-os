@@ -3759,6 +3759,20 @@ def cmd_adapter(args):
     """Run the local JSON runtime adapter."""
     return adapter_cmd_adapter(args, deps=_lifecycle_deps_module())
 
+def _delegate_workspace_delivery() -> None:
+    """Use the active workspace installation for live delivery commands."""
+    if len(sys.argv) < 2 or sys.argv[1] not in {'send', 'assign', 'message', 'inbound'}:
+        return
+    active_script = get_repo_root() / '.agent' / 'skills' / 'agent-manager' / 'scripts' / 'main.py'
+    if not active_script.is_file():
+        return
+    active_script = active_script.resolve()
+    if active_script == Path(__file__).resolve():
+        return
+    print(f"ℹ️  Using workspace agent-manager: {active_script}", file=sys.stderr, flush=True)
+    os.execv(sys.executable, [sys.executable, str(active_script), *sys.argv[1:]])
+
+
 def main():
     parser = create_parser()
     args = parser.parse_args()
@@ -3794,6 +3808,7 @@ def main():
 
 if __name__ == '__main__':
     try:
+        _delegate_workspace_delivery()
         sys.exit(main())
     except BrokenPipeError:
         # Allow piping to tools like `head` without dumping a stack trace.

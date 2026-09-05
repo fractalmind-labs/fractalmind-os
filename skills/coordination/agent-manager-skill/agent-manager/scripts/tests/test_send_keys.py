@@ -18,6 +18,55 @@ class SendKeysTests(unittest.TestCase):
     @patch('tmux_helper.session_exists', return_value=True)
     @patch('tmux_helper.time.sleep', return_value=None)
     @patch('tmux_helper.subprocess.run')
+    def test_multiline_paste_preserves_native_submit_boundaries(
+        self, mock_run, _mock_sleep, _mock_session_exists, _mock_target,
+    ):
+        message = '# Task Assignment\n\n中文入站消息\n' + 'context\n' * 32
+        for native_enter in (True, False):
+            for send_enter in (True, False):
+                with self.subTest(native_enter=native_enter, send_enter=send_enter):
+                    commands = []
+                    captures = iter(['composer\n', 'submitted\n'])
+                    payloads = []
+
+                    def fake_run(arguments, *positional, **kwargs):
+                        commands.append(arguments)
+                        if arguments[:4] == ['tmux', 'load-buffer', '-b', 'agent-send']:
+                            payloads.append(Path(arguments[-1]).read_text())
+                        if arguments[:2] == ['tmux', 'capture-pane']:
+                            return subprocess.CompletedProcess(arguments, 0, stdout=next(captures))
+                        return subprocess.CompletedProcess(arguments, 0, stdout='')
+
+                    mock_run.side_effect = fake_run
+                    result = tmux_helper.send_keys(
+                        'main', message, send_enter=send_enter, enter_via_key=native_enter,
+                    )
+
+                    self.assertTrue(result)
+                    self.assertEqual(payloads, [message])
+                    paste = next(
+                        command for command in commands
+                        if command[:5] == ['tmux', 'paste-buffer', '-d', '-b', 'agent-send']
+                    )
+                    self.assertEqual('-p' in paste, native_enter)
+                    enter_keys = [
+                        command for command in commands
+                        if command[:2] == ['tmux', 'send-keys']
+                        and command[-1] in ('C-m', 'Enter')
+                    ]
+                    self.assertEqual(len(enter_keys), int(native_enter and send_enter))
+                    newline_pastes = [
+                        command for command in commands
+                        if command[:5] == ['tmux', 'paste-buffer', '-d', '-b', 'enter-key']
+                    ]
+                    self.assertEqual(len(newline_pastes), int(not native_enter and send_enter))
+                    if enter_keys:
+                        self.assertLess(commands.index(paste), commands.index(enter_keys[0]))
+
+    @patch('tmux_helper._agent_pane_target', return_value='%1')
+    @patch('tmux_helper.session_exists', return_value=True)
+    @patch('tmux_helper.time.sleep', return_value=None)
+    @patch('tmux_helper.subprocess.run')
     def test_enter_via_key_uses_native_enter_first(self, mock_run, _mock_sleep, _mock_session_exists, _mock_target):
         commands = []
         capture_index = {'count': 0}
@@ -47,7 +96,7 @@ class SendKeysTests(unittest.TestCase):
     @patch('tmux_helper.session_exists', return_value=True)
     @patch('tmux_helper.time.sleep', return_value=None)
     @patch('tmux_helper.subprocess.run')
-    def test_enter_via_key_returns_false_when_native_and_fallback_do_not_change_pane(
+    def test_enter_via_key_returns_false_without_pasting_newline(
         self,
         mock_run,
         _mock_sleep,
@@ -73,14 +122,19 @@ class SendKeysTests(unittest.TestCase):
 
         self.assertFalse(ok)
         self.assertTrue(any(cmd[:4] == ['tmux', 'send-keys', '-t', '%1'] and cmd[-1] == 'C-m' for cmd in commands))
-        self.assertTrue(any(cmd[:4] == ['tmux', 'load-buffer', '-b', 'enter-key'] for cmd in commands))
-        self.assertTrue(any(cmd[:5] == ['tmux', 'paste-buffer', '-d', '-b', 'enter-key'] for cmd in commands))
+        native_enters = [
+            command for command in commands
+            if command[:4] == ['tmux', 'send-keys', '-t', '%1'] and command[-1] == 'C-m'
+        ]
+        self.assertEqual(len(native_enters), 2)
+        self.assertFalse(any(cmd[:4] == ['tmux', 'load-buffer', '-b', 'enter-key'] for cmd in commands))
+        self.assertFalse(any(cmd[:5] == ['tmux', 'paste-buffer', '-d', '-b', 'enter-key'] for cmd in commands))
 
     @patch('tmux_helper._agent_pane_target', return_value='%1')
     @patch('tmux_helper.session_exists', return_value=True)
     @patch('tmux_helper.time.sleep', return_value=None)
     @patch('tmux_helper.subprocess.run')
-    def test_enter_via_key_fallback_succeeds_when_pane_changes_after_newline(
+    def test_enter_via_key_retries_without_pasting_newline(
         self,
         mock_run,
         _mock_sleep,
@@ -88,14 +142,7 @@ class SendKeysTests(unittest.TestCase):
         _mock_target,
     ):
         commands = []
-        capture_outputs = iter([
-            'unchanged\n',  # native before
-            'unchanged\n',  # native probe-1
-            'unchanged\n',  # native probe-2
-            'unchanged\n',  # native probe-3
-            'unchanged\n',  # fallback before
-            'changed\n',    # fallback probe-1
-        ])
+        capture_outputs = iter(['unchanged\n'] * 12 + ['changed\n'])
 
         def fake_run(args, *pargs, **kwargs):
             commands.append(args)
@@ -113,8 +160,13 @@ class SendKeysTests(unittest.TestCase):
         )
 
         self.assertTrue(ok)
-        self.assertTrue(any(cmd[:4] == ['tmux', 'load-buffer', '-b', 'enter-key'] for cmd in commands))
-        self.assertTrue(any(cmd[:5] == ['tmux', 'paste-buffer', '-d', '-b', 'enter-key'] for cmd in commands))
+        native_enters = [
+            command for command in commands
+            if command[:4] == ['tmux', 'send-keys', '-t', '%1'] and command[-1] == 'C-m'
+        ]
+        self.assertEqual(len(native_enters), 2)
+        self.assertFalse(any(cmd[:4] == ['tmux', 'load-buffer', '-b', 'enter-key'] for cmd in commands))
+        self.assertFalse(any(cmd[:5] == ['tmux', 'paste-buffer', '-d', '-b', 'enter-key'] for cmd in commands))
 
 
 if __name__ == '__main__':
