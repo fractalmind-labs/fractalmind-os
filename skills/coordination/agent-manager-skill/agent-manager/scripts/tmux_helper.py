@@ -641,8 +641,11 @@ def send_keys(
                 capture_output=True,
                 check=True,
             )
+            paste_command = ['tmux', 'paste-buffer', '-d', '-b', 'agent-send', '-t', target]
+            if enter_via_key:
+                paste_command.append('-p')
             subprocess.run(
-                ['tmux', 'paste-buffer', '-d', '-b', 'agent-send', '-t', target],
+                paste_command,
                 capture_output=True,
                 check=True,
             )
