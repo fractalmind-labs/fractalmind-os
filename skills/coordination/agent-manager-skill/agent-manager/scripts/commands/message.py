@@ -2,6 +2,14 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from .lifecycle import (
+    _confirm_delivery_after_send,
+    _probe_runtime_state,
+    complete_grok_send_now,
+    preempt_main_delivery,
+    uses_native_enter,
+)
+
 
 META_SECTION = "--- Meta ---"
 BODY_SECTION = "--- Body ---"
@@ -139,18 +147,49 @@ def _send_envelope(args: Any, deps: Any, *, target_config: dict, envelope: str) 
 
     launcher = resolve_launcher_command(target_config.get('launcher', ''))
     is_codex = 'codex' in launcher.lower()
+    native_enter = uses_native_enter(launcher)
+    if not preempt_main_delivery(
+        deps,
+        agent_id=agent_id,
+        launcher=launcher,
+        message=envelope,
+    ):
+        print(f"❌ Failed to interrupt Agent '{agent_name}'")
+        return 1
+    runtime_snapshot = _probe_runtime_state(deps, agent_id=agent_id, launcher=launcher)
     if not send_keys(
         agent_id,
         envelope,
         send_enter=True,
         clear_input=is_codex,
         escape_first=is_codex,
-        enter_via_key=is_codex,
+        enter_via_key=native_enter,
     ):
         print(f"❌ Failed to send protocol message to {agent_name}")
         return 1
+    complete_grok_send_now(
+        deps,
+        agent_id=agent_id,
+        launcher=launcher,
+        message=envelope,
+        send_enter=True,
+        runtime_snapshot=runtime_snapshot,
+    )
 
     print(f"✅ Protocol message sent to {agent_name}")
+    delivery_confirmed, observed_state, observed_reason = _confirm_delivery_after_send(
+        deps,
+        agent_id=agent_id,
+        launcher=launcher,
+    )
+    if delivery_confirmed:
+        if observed_reason != 'runtime_probe_unavailable':
+            print(f"   Delivery confirmed (state={observed_state}, reason={observed_reason})")
+    else:
+        print(
+            f"⚠️  Delivery unconfirmed: agent remained idle after send "
+            f"(state={observed_state}, reason={observed_reason})"
+        )
     print("   Note: delivery success only means tmux accepted the send operation.")
     return 0
 

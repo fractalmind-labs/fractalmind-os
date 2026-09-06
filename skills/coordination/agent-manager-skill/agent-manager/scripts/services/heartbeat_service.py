@@ -226,13 +226,14 @@ def run_heartbeat_attempt(
     baseline_output = deps.capture_output(agent_id, lines=50) or ""
     baseline_hash = _tail_hash(baseline_output)
 
+    native_enter = is_codex or 'grok' in (launcher or '').lower()
     if not deps.send_keys(
         agent_id,
         heartbeat_message,
         send_enter=True,
         clear_input=is_codex,
         escape_first=is_codex,
-        enter_via_key=is_codex,
+        enter_via_key=native_enter,
     ):
         failure_type = 'send_fail'
         return {

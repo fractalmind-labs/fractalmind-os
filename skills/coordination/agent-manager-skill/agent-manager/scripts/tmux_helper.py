@@ -569,7 +569,10 @@ def send_keys(
     def _send_enter() -> bool:
         # Some TUIs (notably Codex) require a real Enter keypress to confirm submit.
         # Try native key first when requested, and verify pane output changes.
-        # If output does not change, fall back to newline paste to avoid idle stalls.
+        # For native-Enter TUIs (Codex/Grok) a pasted newline cannot submit the
+        # turn — it only inserts a paste chip, which changes pane output and used
+        # to fake success while the message stayed in the composer. Retry the
+        # native key with a generous pane-change window instead of falling back.
         def _capture_tail(lines: int = 30) -> Optional[str]:
             result = subprocess.run(
                 ['tmux', 'capture-pane', '-p', '-t', target, f'-S-{max(1, int(lines))}'],
@@ -580,7 +583,7 @@ def send_keys(
                 return None
             return result.stdout
 
-        def _pane_changed(reference: Optional[str], *, attempts: int = 3, interval: float = 0.1) -> bool:
+        def _pane_changed(reference: Optional[str], *, attempts: int = 10, interval: float = 0.2) -> bool:
             if reference is None:
                 return False
             for _ in range(max(1, attempts)):
@@ -591,10 +594,11 @@ def send_keys(
             return False
 
         if enter_via_key:
-            before = _capture_tail()
-            if _send_tmux_key('C-m') or _send_tmux_key('Enter'):
-                if _pane_changed(before):
+            for _ in range(2):
+                before = _capture_tail()
+                if (_send_tmux_key('C-m') or _send_tmux_key('Enter')) and _pane_changed(before):
                     return True
+            return False
 
         # Fallback: paste a newline for TUIs where keypress Enter is unreliable.
         fallback_before = _capture_tail()
@@ -637,8 +641,11 @@ def send_keys(
                 capture_output=True,
                 check=True,
             )
+            paste_command = ['tmux', 'paste-buffer', '-d', '-b', 'agent-send', '-t', target]
+            if enter_via_key:
+                paste_command.append('-p')
             subprocess.run(
-                ['tmux', 'paste-buffer', '-d', '-b', 'agent-send', '-t', target],
+                paste_command,
                 capture_output=True,
                 check=True,
             )
@@ -693,6 +700,31 @@ def _tmux_send_key(agent_id: str, key: str) -> bool:
         text=True,
     )
     return result.returncode == 0
+
+
+def interrupt_key_for_launcher(launcher: str = '') -> str:
+    """Return the tmux key that cancels an in-flight TUI turn for this launcher.
+
+    Cursor Agent documents ``C-c`` as its in-turn interrupt. Grok CLI documents
+    ``Escape`` as cancel-immediately; ``C-c`` first clears a non-empty draft and
+    only cancels on a second press. Default to ``C-c`` for unknown launchers.
+    """
+    if 'grok' in (launcher or '').lower():
+        return 'Escape'
+    return 'C-c'
+
+
+def interrupt_agent(agent_id: str, launcher: str = '') -> bool:
+    """Interrupt an in-flight TUI turn without terminating the tmux session.
+
+    Keep this separate from ``send_keys`` so normal agent-to-agent delivery is
+    unchanged and callers can make preemption an explicit routing decision.
+    """
+    key = interrupt_key_for_launcher(launcher)
+    if not _tmux_send_key(agent_id, key):
+        return False
+    time.sleep(0.5 if key == 'Escape' else 0.25)
+    return True
 
 
 def _dismiss_codex_model_choice_prompt(agent_id: str) -> bool:

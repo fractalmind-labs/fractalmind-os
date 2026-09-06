@@ -138,7 +138,7 @@ class CliIntegrationFlowTests(unittest.TestCase):
             )
             self.assertIn('Last 20 lines', monitor_out, msg='[stage:monitor] expected snapshot header')
 
-            long_message = '\n'.join([f'line-{index}' for index in range(20)])
+            long_message = '\n'.join([f'line-{index}' for index in range(50)])
             self._run_stage_ok(
                 'send',
                 main.cmd_send,
@@ -149,7 +149,7 @@ class CliIntegrationFlowTests(unittest.TestCase):
             send_file = Path(send_payload.split('file:', 1)[1].splitlines()[0].strip())
             self.assertTrue(send_file.exists(), msg='[stage:send] expected generated send file to exist')
 
-            long_assignment = '\n'.join([f'task-{index}' for index in range(24)])
+            long_assignment = '\n'.join([f'task-{index}' for index in range(50)])
             self._run_stage_ok(
                 'assign',
                 main.cmd_assign,
