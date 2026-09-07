@@ -87,6 +87,39 @@ func TestValidateOhMyCodeAgentInvalidName(t *testing.T) {
 	}
 }
 
+func TestNormalizeOhMyCodeAgentNameStripsNamespaceFromReservedMain(t *testing.T) {
+	tests := map[string]string{
+		"main":           "main",
+		"xiaoyi--main":   "main",
+		"team-a--main":   "main",
+		"worker--main-2": "worker--main-2",
+		"worker":         "worker",
+	}
+	for input, expected := range tests {
+		if got := normalizeOhMyCodeAgentName(input); got != expected {
+			t.Errorf("normalizeOhMyCodeAgentName(%q) = %q, want %q", input, got, expected)
+		}
+	}
+}
+
+func TestValidateOhMyCodeAgentAcceptsNamespacedReservedMain(t *testing.T) {
+	manager := NewManager(&config.AgentsConfig{
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled:      true,
+			Workspace:    "/tmp",
+			DefaultAgent: "main",
+		},
+	})
+
+	got, err := manager.validateOhMyCodeAgent("xiaoyi--main")
+	if err != nil {
+		t.Fatalf("expected namespaced main to be accepted: %v", err)
+	}
+	if got != "main" {
+		t.Fatalf("validateOhMyCodeAgent returned %q, want main", got)
+	}
+}
+
 func TestBuildOhMyCodeTaskPromptIncludesTelegramContextAndSkillHint(t *testing.T) {
 	out := buildOhMyCodeTaskPrompt("hello world", "main", map[string]interface{}{
 		"channel":   "telegram",

@@ -8,6 +8,11 @@ Generic Agent Router ingress currently accepts Telegram, Feishu/Lark, Slack, Dis
 
 Send `/agent <name> <task>` (or `/to <name> <task>`) to select an allowed agent. Use `/admin <text>` to send recovery or management text to the reserved `admin` agent. Messages without an explicit selection use the active router's `defaultAgent`.
 
+Agent names are logical IDs. For an agent-manager workspace with a tmux
+namespace, address the reserved main agent as `main`; do not configure the
+physical session name (for example, `xiaoyi--main`). FractalBot also accepts a
+namespace-qualified `--main` value and normalizes it to `main` for compatibility.
+
 When `allowedAgents` is set, only listed names are accepted, so add `admin` before enabling `/admin`. `/agents` shows the available names. Routed envelopes include the available source context (`channel`, chat/thread/user/message IDs, original text, and timestamp) plus `selected_agent` so the target can reply through the correct channel.
 
 Common commands:

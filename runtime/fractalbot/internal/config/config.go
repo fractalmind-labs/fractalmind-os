@@ -165,8 +165,10 @@ type OhMyCodeConfig struct {
 	// Default: ".claude/skills/agent-manager/scripts/main.py".
 	AgentManagerScript string `yaml:"agentManagerScript,omitempty"`
 
-	// DefaultAgent is the agent name to assign tasks to when a Telegram message is received.
-	// Example: "qa-1".
+	// DefaultAgent is the logical agent name to assign tasks to when a channel
+	// message is received. This is not a physical tmux session name; for
+	// example, a namespaced agent-manager session "xiaoyi--main" is addressed
+	// as "main" here.
 	DefaultAgent string `yaml:"defaultAgent,omitempty"`
 
 	// AllowedAgents restricts which agents can be targeted by Telegram messages.

@@ -138,6 +138,10 @@ func (m *Manager) HandleIncoming(ctx context.Context, msg *protocol.Message) (st
 	}
 
 	agentOverride, _ := data["agent"].(string)
+	if normalized := normalizeOhMyCodeAgentName(agentOverride); normalized != strings.TrimSpace(agentOverride) {
+		data["agent"] = normalized
+		agentOverride = normalized
+	}
 	if strings.TrimSpace(agentOverride) == "" {
 		if selection, ok, err := channels.ParseAdminSelection(text); ok {
 			if err != nil {
@@ -460,7 +464,7 @@ func (m *Manager) resolveOhMyCodeWorkspaceAndScript() (string, string, error) {
 }
 
 func (m *Manager) validateOhMyCodeAgent(agentName string) (string, error) {
-	name := strings.TrimSpace(agentName)
+	name := normalizeOhMyCodeAgentName(agentName)
 	if name == "" {
 		return "", errors.New("agent name is required")
 	}
@@ -472,6 +476,23 @@ func (m *Manager) validateOhMyCodeAgent(agentName string) (string, error) {
 		return "", m.agentAllowedError(err)
 	}
 	return name, nil
+}
+
+// normalizeOhMyCodeAgentName keeps the router API in terms of logical agent
+// names. agent-manager may expose a namespace-qualified tmux name such as
+// "xiaoyi--main", but the reserved agent is still addressed as "main" by
+// FractalBot. Accepting the physical spelling here prevents a namespace from
+// leaking into validation, allowlists, prompts, and lifecycle commands.
+func normalizeOhMyCodeAgentName(agentName string) string {
+	name := strings.TrimSpace(agentName)
+	if strings.EqualFold(name, "main") {
+		return "main"
+	}
+	if separator := strings.LastIndex(name, "--"); separator >= 0 &&
+		strings.EqualFold(strings.TrimSpace(name[separator+2:]), "main") {
+		return "main"
+	}
+	return name
 }
 
 func (m *Manager) agentAllowedError(err error) error {
