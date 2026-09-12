@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/fractalmind-ai/fractalbot/internal/config"
 )
 
 type fakeChannel struct {
@@ -47,6 +49,45 @@ func (f *fakeChannel) Send(ctx context.Context, msg OutboundMessage) (*SendResul
 func (f *fakeChannel) IsRunning() bool { return f.running }
 
 func (f *fakeChannel) IsAllowed(senderID string) bool { return true }
+
+func TestFeishuChannelAgentConfigUsesMatchedReceiverTarget(t *testing.T) {
+	cfg := &config.AgentsConfig{
+		Router: "ohMyCode",
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled:       true,
+			Workspace:     "/workspace/default",
+			DefaultAgent:  "legacy-main",
+			AllowedAgents: []string{"legacy-main"},
+			Targets: map[string]config.OhMyCodeTargetConfig{
+				"support": {
+					ReceiverIDs:  []string{"cli_support"},
+					Workspace:    "/workspace/support",
+					DefaultAgent: "support-main",
+					AllowedAgents: []string{
+						"support-main",
+						"admin",
+					},
+				},
+			},
+		},
+	}
+
+	defaultAgent, allowedAgents, configName := feishuChannelAgentConfig(cfg, "cli_support")
+	if defaultAgent != "support-main" || configName != `agents.ohMyCode.targets["support"]` {
+		t.Fatalf("unexpected matched config: default=%q name=%q", defaultAgent, configName)
+	}
+	if len(allowedAgents) != 2 || allowedAgents[0] != "support-main" || allowedAgents[1] != "admin" {
+		t.Fatalf("unexpected matched allowed agents: %#v", allowedAgents)
+	}
+
+	defaultAgent, allowedAgents, configName = feishuChannelAgentConfig(cfg, "cli_unmatched")
+	if defaultAgent != "legacy-main" || configName != "agents.ohMyCode" {
+		t.Fatalf("unexpected fallback config: default=%q name=%q", defaultAgent, configName)
+	}
+	if len(allowedAgents) != 1 || allowedAgents[0] != "legacy-main" {
+		t.Fatalf("unexpected fallback allowed agents: %#v", allowedAgents)
+	}
+}
 
 func TestManagerStartStop(t *testing.T) {
 	manager := NewManager(nil, nil)

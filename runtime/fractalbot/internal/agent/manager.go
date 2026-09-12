@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -57,6 +58,7 @@ type Manager struct {
 
 type RoutingOutcome struct {
 	Backend       string
+	Target        string
 	SelectedAgent string
 	Channel       string
 	ChatID        string
@@ -67,6 +69,18 @@ type RoutingOutcome struct {
 	EnvelopeID    string
 	InboxPath     string
 	RecordedAt    time.Time
+}
+
+// ohMyCodeRoute is the resolved runtime configuration for one inbound
+// assignment. Target is empty when the legacy top-level configuration handled
+// the message.
+type ohMyCodeRoute struct {
+	Target               string
+	Workspace            string
+	AgentManagerScript   string
+	DefaultAgent         string
+	AllowedAgents        []string
+	AssignTimeoutSeconds int
 }
 
 type OhMyCodeRoutingOutcome = RoutingOutcome
@@ -153,6 +167,7 @@ func (m *Manager) HandleIncoming(ctx context.Context, msg *protocol.Message) (st
 			text = strings.TrimSpace(selection.Task)
 			data["text"] = text
 			data["agent"] = selection.Agent
+			data["agent_specified"] = true
 		}
 	}
 
@@ -319,33 +334,40 @@ func (m *Manager) isOhMyCodeEnabled() bool {
 	if !m.config.OhMyCode.Enabled {
 		return false
 	}
-	return strings.TrimSpace(m.config.OhMyCode.Workspace) != ""
+	return strings.TrimSpace(m.config.OhMyCode.Workspace) != "" || len(m.config.OhMyCode.Targets) > 0
 }
 
 func (m *Manager) assignOhMyCode(ctx context.Context, userText, agentOverride string, inboundData map[string]interface{}) (string, error) {
-	workspace, script, err := m.resolveOhMyCodeWorkspaceAndScript()
+	route, err := m.resolveOhMyCodeRoute(inboundData)
 	if err != nil {
 		m.recordRoutingOutcome(inboundData, "", "error", err)
 		return "", err
 	}
 
+	// Channel adapters that support receiver-aware routing mark whether the
+	// inbound user explicitly selected an agent. A named target owns the
+	// default only for implicit selections; explicit selections remain subject
+	// to the target allowlist below.
+	if route.Target != "" && inboundAgentSelectionIsImplicit(inboundData) {
+		agentOverride = ""
+	}
 	agentName := strings.TrimSpace(agentOverride)
 	if agentName == "" {
-		agentName = strings.TrimSpace(m.config.OhMyCode.DefaultAgent)
+		agentName = strings.TrimSpace(route.DefaultAgent)
 		if agentName == "" {
 			agentName = defaultOhMyCodeDefaultAgent
 		}
 	}
-	validatedName, err := m.validateOhMyCodeAgent(agentName)
+	validatedName, err := m.validateOhMyCodeRouteAgent(route, agentName)
 	if err != nil {
-		m.recordRoutingOutcome(inboundData, agentName, "error", err)
+		m.recordOhMyCodeRoutingOutcome(inboundData, route.Target, agentName, "error", err)
 		return "", err
 	}
 	name := validatedName
 
 	timeout := defaultOhMyCodeAssignTimeout
-	if m.config.OhMyCode.AssignTimeoutSeconds > 0 {
-		timeout = time.Duration(m.config.OhMyCode.AssignTimeoutSeconds) * time.Second
+	if route.AssignTimeoutSeconds > 0 {
+		timeout = time.Duration(route.AssignTimeoutSeconds) * time.Second
 	}
 
 	assignCtx := ctx
@@ -356,13 +378,86 @@ func (m *Manager) assignOhMyCode(ctx context.Context, userText, agentOverride st
 	}
 
 	prompt := buildOhMyCodeTaskPrompt(userText, name, inboundData)
+	workspace, script, err := resolveOhMyCodeWorkspaceAndScript(route.Workspace, route.AgentManagerScript)
+	if err != nil {
+		m.recordOhMyCodeRoutingOutcome(inboundData, route.Target, name, "error", err)
+		return "", err
+	}
 	if _, err := runOhMyCodeAgentManager(assignCtx, workspace, script, prompt, "assign", name); err != nil {
-		m.recordRoutingOutcome(inboundData, name, "error", err)
+		m.recordOhMyCodeRoutingOutcome(inboundData, route.Target, name, "error", err)
 		return "", err
 	}
 
-	m.recordRoutingOutcome(inboundData, name, "assigned", nil)
+	m.recordOhMyCodeRoutingOutcome(inboundData, route.Target, name, "assigned", nil)
 	return ohMyCodeAssignAckMessage, nil
+}
+
+func inboundAgentSelectionIsImplicit(inboundData map[string]interface{}) bool {
+	if len(inboundData) == 0 {
+		return true
+	}
+	specified, ok := inboundData["agent_specified"].(bool)
+	return !ok || !specified
+}
+
+func (m *Manager) resolveOhMyCodeRoute(inboundData map[string]interface{}) (ohMyCodeRoute, error) {
+	if m.config == nil || m.config.OhMyCode == nil || !m.config.OhMyCode.Enabled {
+		return ohMyCodeRoute{}, errors.New("agents.ohMyCode is disabled")
+	}
+
+	ohMyCode := m.config.OhMyCode
+	receiverID := promptContextValue(inboundData, "receiver_id")
+	if receiverID != "" && len(ohMyCode.Targets) > 0 {
+		targetNames := make([]string, 0, len(ohMyCode.Targets))
+		for name := range ohMyCode.Targets {
+			targetNames = append(targetNames, name)
+		}
+		sort.Strings(targetNames)
+		for _, name := range targetNames {
+			target := ohMyCode.Targets[name]
+			for _, configuredID := range target.ReceiverIDs {
+				if receiverID == strings.TrimSpace(configuredID) {
+					return ohMyCodeRoute{
+						Target:               name,
+						Workspace:            target.Workspace,
+						AgentManagerScript:   target.AgentManagerScript,
+						DefaultAgent:         target.DefaultAgent,
+						AllowedAgents:        append([]string(nil), target.AllowedAgents...),
+						AssignTimeoutSeconds: target.AssignTimeoutSeconds,
+					}, nil
+				}
+			}
+		}
+	}
+
+	if strings.TrimSpace(ohMyCode.Workspace) != "" {
+		return ohMyCodeRoute{
+			Workspace:            ohMyCode.Workspace,
+			AgentManagerScript:   ohMyCode.AgentManagerScript,
+			DefaultAgent:         ohMyCode.DefaultAgent,
+			AllowedAgents:        append([]string(nil), ohMyCode.AllowedAgents...),
+			AssignTimeoutSeconds: ohMyCode.AssignTimeoutSeconds,
+		}, nil
+	}
+
+	// Do not include the received identity in this error: receiver identities
+	// can be account-specific and diagnostics must not turn them into logs.
+	return ohMyCodeRoute{}, errors.New("no configured ohMyCode target matched the inbound receiver identity and no legacy fallback is configured")
+}
+
+func (m *Manager) validateOhMyCodeRouteAgent(route ohMyCodeRoute, agentName string) (string, error) {
+	name := normalizeOhMyCodeAgentName(agentName)
+	if name == "" {
+		return "", errors.New("agent name is required")
+	}
+	if err := channels.ValidateAgentName(name); err != nil {
+		return "", err
+	}
+	allowlist := channels.NewAgentAllowlist(route.AllowedAgents)
+	if err := allowlist.Validate(name, route.DefaultAgent); err != nil {
+		return "", m.agentAllowedError(err)
+	}
+	return name, nil
 }
 
 // MonitorAgent returns the latest agent-manager monitor output.
@@ -447,12 +542,16 @@ func (m *Manager) resolveOhMyCodeWorkspaceAndScript() (string, string, error) {
 		return "", "", errors.New("agents.ohMyCode is disabled")
 	}
 
-	workspace := strings.TrimSpace(m.config.OhMyCode.Workspace)
+	return resolveOhMyCodeWorkspaceAndScript(m.config.OhMyCode.Workspace, m.config.OhMyCode.AgentManagerScript)
+}
+
+func resolveOhMyCodeWorkspaceAndScript(rawWorkspace, rawScript string) (string, string, error) {
+	workspace := strings.TrimSpace(rawWorkspace)
 	if workspace == "" {
 		return "", "", errors.New("agents.ohMyCode.workspace is required")
 	}
 
-	script := strings.TrimSpace(m.config.OhMyCode.AgentManagerScript)
+	script := strings.TrimSpace(rawScript)
 	if script == "" {
 		script = defaultOhMyCodeAgentManagerScript
 	}
@@ -661,9 +760,18 @@ func (m *Manager) recordRoutingOutcome(inboundData map[string]interface{}, selec
 	m.recordRoutingOutcomeForBackend("ohMyCode", inboundData, selectedAgent, status, "", "", err)
 }
 
+func (m *Manager) recordOhMyCodeRoutingOutcome(inboundData map[string]interface{}, target, selectedAgent, status string, err error) {
+	m.recordRoutingOutcomeForBackendAndTarget("ohMyCode", target, inboundData, selectedAgent, status, "", "", err)
+}
+
 func (m *Manager) recordRoutingOutcomeForBackend(backend string, inboundData map[string]interface{}, selectedAgent, status, envelopeID, inboxPath string, err error) {
+	m.recordRoutingOutcomeForBackendAndTarget(backend, "", inboundData, selectedAgent, status, envelopeID, inboxPath, err)
+}
+
+func (m *Manager) recordRoutingOutcomeForBackendAndTarget(backend, target string, inboundData map[string]interface{}, selectedAgent, status, envelopeID, inboxPath string, err error) {
 	outcome := &RoutingOutcome{
 		Backend:       strings.TrimSpace(backend),
+		Target:        strings.TrimSpace(target),
 		SelectedAgent: strings.TrimSpace(selectedAgent),
 		Channel:       promptContextValue(inboundData, "channel"),
 		ChatID:        firstContextValue(inboundData, "chat_id", "chatID"),

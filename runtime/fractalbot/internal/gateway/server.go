@@ -562,6 +562,7 @@ type agentStatus struct {
 
 type agentRoutingStatus struct {
 	Backend       string `json:"backend,omitempty"`
+	Target        string `json:"target,omitempty"`
 	SelectedAgent string `json:"selected_agent,omitempty"`
 	Channel       string `json:"channel,omitempty"`
 	ChatID        string `json:"chat_id,omitempty"`
@@ -958,6 +959,7 @@ func routingStatusFromOutcome(routing *agent.RoutingOutcome) *agentRoutingStatus
 	}
 	return &agentRoutingStatus{
 		Backend:       routing.Backend,
+		Target:        routing.Target,
 		SelectedAgent: routing.SelectedAgent,
 		Channel:       routing.Channel,
 		ChatID:        routing.ChatID,

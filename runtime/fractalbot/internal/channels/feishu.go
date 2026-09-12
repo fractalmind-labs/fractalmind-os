@@ -478,6 +478,7 @@ func (b *FeishuBot) handleMessageEvent(ctx context.Context, event *larkim.P2Mess
 	}
 
 	if b.handler != nil {
+		msg.agentSpecified = selection.Specified
 		replyText, err := b.handler.HandleIncoming(ctx, b.toProtocolMessage(msg, selection.Task, selection.Agent))
 		if err != nil {
 			b.markError()
@@ -610,34 +611,37 @@ func (b *FeishuBot) toProtocolMessage(msg *feishuInboundMessage, text, agent str
 		Kind:   protocol.MessageKindChannel,
 		Action: protocol.ActionCreate,
 		Data: map[string]interface{}{
-			"channel":    "feishu",
-			"text":       text,
-			"raw_text":   msg.text,
-			"agent":      agent,
-			"chat_id":    msg.chatID,
-			"open_id":    msg.openID,
-			"user_id":    msg.userID,
-			"message":    msg.messageID,
-			"message_id": msg.messageID,
-			"thread_id":  msg.threadID,
-			"chatType":   msg.chatType,
-			"timestamp":  timestamp,
+			"channel":         "feishu",
+			"text":            text,
+			"raw_text":        msg.text,
+			"agent":           agent,
+			"agent_specified": msg.agentSpecified,
+			"receiver_id":     b.appID,
+			"chat_id":         msg.chatID,
+			"open_id":         msg.openID,
+			"user_id":         msg.userID,
+			"message":         msg.messageID,
+			"message_id":      msg.messageID,
+			"thread_id":       msg.threadID,
+			"chatType":        msg.chatType,
+			"timestamp":       timestamp,
 		},
 	}
 }
 
 type feishuInboundMessage struct {
-	text        string
-	openID      string
-	userID      string
-	senderType  string
-	chatID      string
-	chatType    string
-	messageID   string
-	threadID    string
-	timestamp   string
-	replyIDType string
-	replyID     string
+	text           string
+	openID         string
+	userID         string
+	agentSpecified bool
+	senderType     string
+	chatID         string
+	chatType       string
+	messageID      string
+	threadID       string
+	timestamp      string
+	replyIDType    string
+	replyID        string
 }
 
 type feishuTextContent struct {

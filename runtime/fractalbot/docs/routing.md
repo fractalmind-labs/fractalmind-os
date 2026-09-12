@@ -51,6 +51,46 @@ agents:
 
 The workspace requires Python, tmux, and agent-manager. If routed agents need to send channel replies, make the `use-fractalbot` skill available in that workspace.
 
+### Receiver-specific targets
+
+One gateway can route different bot/receiver identities to separate named
+oh-my-code workspaces. `receiverIds` is deliberately channel-agnostic: a
+channel adapter normalizes its recipient identity into `receiver_id`, and the
+Agent Router performs an exact match without inspecting the channel name.
+
+Feishu is the first adapter that supplies this value. It uses the configured
+Feishu App ID as the receiver identity; it does **not** use a sender or chat
+ID. Other current or future adapters can use the same configuration once they
+supply `receiver_id` in their normalized inbound context.
+
+```yaml
+agents:
+  router: "ohMyCode"
+  ohMyCode:
+    enabled: true
+
+    # Existing single-workspace configuration remains the fallback for an
+    # unmatched or unavailable receiver identity.
+    workspace: "/path/to/default-workspace"
+    defaultAgent: "main"
+    allowedAgents: ["main"]
+
+    targets:
+      support:
+        receiverIds: ["cli_support_bot"]
+        workspace: "/path/to/support-workspace"
+        agentManagerScript: ".claude/skills/agent-manager/scripts/main.py"
+        defaultAgent: "support-main"
+        allowedAgents: ["support-main", "admin"]
+        assignTimeoutSeconds: 90
+```
+
+Each receiver identity must be unique across targets; invalid or duplicate
+routes fail configuration validation. A named target owns the default agent for
+messages without an explicit `/agent` or `/to` selection. Explicit selections
+are checked again against the chosen target's `allowedAgents`. Status
+diagnostics record the named target but never the raw receiver identity.
+
 ## ChatGPT / Codex App
 
 The `codexAppCDP` router delivers into a project conversation managed by the ChatGPT/Codex desktop app. The configuration key keeps its historical `codexAppCDP` name. Delivery first uses the running renderer's in-process `start-turn-for-host` bridge through CDP. If an upgraded App no longer exposes that handler, FractalBot uses a guarded visible-composer fallback in the exact resolved thread, protects an unrelated draft, and requires target-thread readback. It does not start a separate `codex app-server --listen` backend.

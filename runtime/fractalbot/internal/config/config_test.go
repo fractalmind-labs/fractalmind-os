@@ -119,6 +119,61 @@ func TestLoadConfigAcceptsOhMyCodeEnabledWithWorkspaceAndDefaultScript(t *testin
 	}
 }
 
+func TestLoadConfigAcceptsReceiverTargetsWithLegacyFallback(t *testing.T) {
+	legacyWorkspace := t.TempDir()
+	targetWorkspace := t.TempDir()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	content := []byte("agents:\n  ohMyCode:\n    enabled: true\n    workspace: \"" + legacyWorkspace + "\"\n    defaultAgent: legacy-main\n    allowedAgents: [legacy-main]\n    targets:\n      support:\n        receiverIds: [cli_support]\n        workspace: \"" + targetWorkspace + "\"\n        defaultAgent: support-main\n        allowedAgents: [support-main]\n")
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if cfg.Agents.OhMyCode.DefaultAgent != "legacy-main" {
+		t.Fatalf("legacy default agent=%q", cfg.Agents.OhMyCode.DefaultAgent)
+	}
+	target, ok := cfg.Agents.OhMyCode.Targets["support"]
+	if !ok || len(target.ReceiverIDs) != 1 || target.ReceiverIDs[0] != "cli_support" || target.DefaultAgent != "support-main" {
+		t.Fatalf("unexpected target config: %#v", target)
+	}
+}
+
+func TestLoadConfigAcceptsReceiverTargetWithoutLegacyFallback(t *testing.T) {
+	targetWorkspace := t.TempDir()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	content := []byte("agents:\n  ohMyCode:\n    enabled: true\n    targets:\n      support:\n        receiverIds: [cli_support]\n        workspace: \"" + targetWorkspace + "\"\n        defaultAgent: support-main\n        allowedAgents: [support-main]\n")
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if cfg.Agents.OhMyCode.Workspace != "" || cfg.Agents.OhMyCode.Targets["support"].Workspace != targetWorkspace {
+		t.Fatalf("unexpected target-only config: %#v", cfg.Agents.OhMyCode)
+	}
+}
+
+func TestLoadConfigRejectsDuplicateReceiverTargets(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	content := []byte("agents:\n  ohMyCode:\n    enabled: true\n    targets:\n      support:\n        receiverIds: [cli_shared]\n        workspace: /workspace/support\n        defaultAgent: main\n      sales:\n        receiverIds: [cli_shared]\n        workspace: /workspace/sales\n        defaultAgent: main\n")
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	_, err := LoadConfig(path)
+	if err == nil {
+		t.Fatal("expected duplicate receiver identity validation error")
+	}
+	if !strings.Contains(err.Error(), "receiverIds") || !strings.Contains(err.Error(), "already configured") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestLoadConfigRejectsOhMyCodeAbsoluteScriptOutsideWorkspace(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(t.TempDir(), "config.yaml")
