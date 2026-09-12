@@ -161,7 +161,23 @@ agents:
     #   use-fractalbot -> .claude/skills/use-fractalbot/SKILL.md
     # How long to wait for agent-manager output
     assignTimeoutSeconds: 90
-    # Telegram lifecycle commands:
+
+    # Optional receiver-specific destinations. receiverIds match the
+    # channel-normalized inbound receiver_id (Feishu uses this App ID); the
+    # top-level workspace above remains the fallback for unmatched messages.
+    # targets:
+    #   support:
+    #     receiverIds:
+    #       - "cli_support_bot"
+    #     workspace: "/path/to/support-oh-my-code"
+    #     agentManagerScript: ".claude/skills/agent-manager/scripts/main.py"
+    #     defaultAgent: "support-main"
+    #     allowedAgents:
+    #       - "support-main"
+    #       - "admin"
+    #     assignTimeoutSeconds: 90
+
+    # Channel lifecycle commands:
     # - /agents (list allowed agent names)
     # - /monitor <name> [lines] (show recent output, capped at 200 lines)
     # - /startagent <name> (admin only)

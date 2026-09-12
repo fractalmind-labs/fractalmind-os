@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -153,7 +154,8 @@ type DemailConfig struct {
 }
 
 // OhMyCodeConfig contains integration settings for the oh-my-code workspace.
-// This is a minimal bridge to route Telegram messages to the oh-my-code agent-manager.
+// The top-level workspace settings remain the legacy fallback for inbound
+// messages that do not match a named receiver target.
 type OhMyCodeConfig struct {
 	Enabled bool `yaml:"enabled,omitempty"`
 
@@ -176,6 +178,37 @@ type OhMyCodeConfig struct {
 	AllowedAgents []string `yaml:"allowedAgents,omitempty"`
 
 	// AssignTimeoutSeconds limits how long we wait for agent-manager output.
+	AssignTimeoutSeconds int `yaml:"assignTimeoutSeconds,omitempty"`
+
+	// Targets maps a stable, operator-chosen target name to a receiver-aware
+	// oh-my-code destination. A channel adapter supplies the normalized
+	// receiver_id; the router selects a target by exact receiverIds match before
+	// falling back to the legacy top-level settings above.
+	Targets map[string]OhMyCodeTargetConfig `yaml:"targets,omitempty"`
+}
+
+// OhMyCodeTargetConfig describes one receiver-identity destination. It is
+// intentionally channel-agnostic: channel adapters normalize their local bot
+// or recipient identity into receiver_id, and this configuration only matches
+// that opaque value.
+type OhMyCodeTargetConfig struct {
+	// ReceiverIDs are the inbound receiver identities that route to this target.
+	// Each non-empty identity may appear in only one target.
+	ReceiverIDs []string `yaml:"receiverIds,omitempty"`
+
+	// Workspace is the path to the target oh-my-code repository.
+	Workspace string `yaml:"workspace,omitempty"`
+
+	// AgentManagerScript is relative to Workspace or absolute within it.
+	// Empty uses the standard agent-manager entrypoint.
+	AgentManagerScript string `yaml:"agentManagerScript,omitempty"`
+
+	// DefaultAgent is used when the inbound channel did not explicitly select an
+	// agent. AllowedAgents, when non-empty, restricts explicit selections.
+	DefaultAgent  string   `yaml:"defaultAgent,omitempty"`
+	AllowedAgents []string `yaml:"allowedAgents,omitempty"`
+
+	// AssignTimeoutSeconds limits the target-specific assignment wait.
 	AssignTimeoutSeconds int `yaml:"assignTimeoutSeconds,omitempty"`
 }
 
@@ -586,21 +619,81 @@ func validateOhMyCodeConfig(cfg *Config) error {
 		return nil
 	}
 
-	workspace := strings.TrimSpace(ohMyCode.Workspace)
-	if workspace == "" {
+	legacyWorkspace := strings.TrimSpace(ohMyCode.Workspace)
+	if legacyWorkspace == "" && len(ohMyCode.Targets) == 0 {
 		return fmt.Errorf("agents.ohMyCode.workspace: required when agents.ohMyCode.enabled is true")
 	}
+	if legacyWorkspace == "" && strings.TrimSpace(ohMyCode.AgentManagerScript) != "" {
+		return fmt.Errorf("agents.ohMyCode.agentManagerScript: requires agents.ohMyCode.workspace")
+	}
+	if legacyWorkspace != "" {
+		if err := validateOhMyCodeWorkspaceAndScript("agents.ohMyCode", legacyWorkspace, ohMyCode.AgentManagerScript); err != nil {
+			return err
+		}
+	}
 
-	script := strings.TrimSpace(ohMyCode.AgentManagerScript)
+	if len(ohMyCode.Targets) == 0 {
+		return nil
+	}
+
+	targetNames := make([]string, 0, len(ohMyCode.Targets))
+	for name := range ohMyCode.Targets {
+		targetNames = append(targetNames, name)
+	}
+	sort.Strings(targetNames)
+
+	receiverOwners := make(map[string]string)
+	for _, name := range targetNames {
+		if strings.TrimSpace(name) != name || name == "" {
+			return fmt.Errorf("agents.ohMyCode.targets: target name is required and must not contain surrounding whitespace")
+		}
+		if err := validateAgentName(name); err != nil {
+			return fmt.Errorf("agents.ohMyCode.targets[%q]: %w", name, err)
+		}
+
+		target := ohMyCode.Targets[name]
+		prefix := fmt.Sprintf("agents.ohMyCode.targets[%q]", name)
+		if len(target.ReceiverIDs) == 0 {
+			return fmt.Errorf("%s.receiverIds: at least one receiver identity is required", prefix)
+		}
+		for idx, rawReceiverID := range target.ReceiverIDs {
+			receiverID := strings.TrimSpace(rawReceiverID)
+			if receiverID == "" {
+				return fmt.Errorf("%s.receiverIds[%d]: receiver identity is required", prefix, idx)
+			}
+			if owner, exists := receiverOwners[receiverID]; exists {
+				return fmt.Errorf("%s.receiverIds[%d]: receiver identity is already configured by target %q", prefix, idx, owner)
+			}
+			receiverOwners[receiverID] = name
+		}
+
+		if err := validateRoutingAgents(prefix, target.DefaultAgent, target.AllowedAgents); err != nil {
+			return err
+		}
+		if err := validateOhMyCodeWorkspaceAndScript(prefix, target.Workspace, target.AgentManagerScript); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateOhMyCodeWorkspaceAndScript(prefix, workspace, script string) error {
+	workspace = strings.TrimSpace(workspace)
+	if workspace == "" {
+		return fmt.Errorf("%s.workspace: required when agents.ohMyCode.enabled is true", prefix)
+	}
+
+	script = strings.TrimSpace(script)
 	if script == "" {
 		return nil
 	}
 	if !filepath.IsAbs(workspace) {
 		if filepath.IsAbs(script) {
-			return fmt.Errorf("agents.ohMyCode.agentManagerScript: must be relative when agents.ohMyCode.workspace is relative")
+			return fmt.Errorf("%s.agentManagerScript: must be relative when %s.workspace is relative", prefix, prefix)
 		}
 		if rel := filepath.Clean(script); rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-			return fmt.Errorf("agents.ohMyCode.agentManagerScript: must not escape agents.ohMyCode.workspace")
+			return fmt.Errorf("%s.agentManagerScript: must not escape %s.workspace", prefix, prefix)
 		}
 		return nil
 	}
@@ -611,11 +704,11 @@ func validateOhMyCodeConfig(cfg *Config) error {
 	}
 	rel, err := filepath.Rel(workspace, resolvedScript)
 	if err != nil {
-		return fmt.Errorf("agents.ohMyCode.agentManagerScript: must be within agents.ohMyCode.workspace")
+		return fmt.Errorf("%s.agentManagerScript: must be within %s.workspace", prefix, prefix)
 	}
 	rel = filepath.Clean(rel)
 	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return fmt.Errorf("agents.ohMyCode.agentManagerScript: must be within agents.ohMyCode.workspace")
+		return fmt.Errorf("%s.agentManagerScript: must be within %s.workspace", prefix, prefix)
 	}
 
 	return nil

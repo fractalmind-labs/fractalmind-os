@@ -428,6 +428,35 @@ func TestFeishuAgentCommandRoutes(t *testing.T) {
 		t.Fatalf("expected reply ok, got %q", sent.text)
 	}
 }
+
+func TestFeishuProtocolMessageIncludesReceiverIdentity(t *testing.T) {
+	bot, err := NewFeishuBot("cli_support", "secret", "feishu", []string{"ou_allowed"}, "main", []string{"main"})
+	if err != nil {
+		t.Fatalf("NewFeishuBot: %v", err)
+	}
+
+	msg := &feishuInboundMessage{
+		text:           "hello",
+		openID:         "ou_allowed",
+		userID:         "u1",
+		chatID:         "oc1",
+		chatType:       "p2p",
+		messageID:      "om1",
+		agentSpecified: true,
+	}
+	protocolMessage := bot.toProtocolMessage(msg, "hello", "main")
+	data, ok := protocolMessage.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected message data map, got %T", protocolMessage.Data)
+	}
+	if data["receiver_id"] != "cli_support" {
+		t.Fatalf("receiver_id=%v", data["receiver_id"])
+	}
+	if data["agent_specified"] != true {
+		t.Fatalf("agent_specified=%v", data["agent_specified"])
+	}
+}
+
 func TestFeishuReplyTruncation(t *testing.T) {
 	bot, err := NewFeishuBot("app", "secret", "feishu", []string{"ou_1"}, "", nil)
 	if err != nil {

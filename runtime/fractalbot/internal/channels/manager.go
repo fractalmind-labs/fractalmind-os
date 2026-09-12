@@ -261,7 +261,7 @@ func (m *Manager) registerConfiguredChannels() error {
 			return errors.New("channels.feishu.appId and channels.feishu.appSecret are required when feishu is enabled")
 		}
 
-		defaultAgent, allowedAgents, agentConfigName := activeChannelAgentConfig(m.agentsCfg)
+		defaultAgent, allowedAgents, agentConfigName := feishuChannelAgentConfig(m.agentsCfg, m.cfg.Feishu.AppID)
 		if err := validateOhMyCodeAgentConfig(defaultAgent, allowedAgents); err != nil {
 			return fmt.Errorf("invalid %s config: %w", agentConfigName, err)
 		}
@@ -416,6 +416,40 @@ func activeChannelAgentConfig(cfg *config.AgentsConfig) (string, []string, strin
 		return cfg.OhMyCode.DefaultAgent, cfg.OhMyCode.AllowedAgents, "agents.ohMyCode"
 	}
 	return "", nil, "agents.ohMyCode"
+}
+
+// feishuChannelAgentConfig preserves explicit Feishu /agent selections until
+// the Agent Router performs the final, channel-agnostic receiver route. It is
+// deliberately limited to local command validation: the router itself never
+// branches on a channel name and remains reusable by every adapter that emits
+// receiver_id.
+func feishuChannelAgentConfig(cfg *config.AgentsConfig, appID string) (string, []string, string) {
+	defaultAgent, allowedAgents, configName := activeChannelAgentConfig(cfg)
+	if cfg == nil || cfg.OhMyCode == nil || !cfg.OhMyCode.Enabled {
+		return defaultAgent, allowedAgents, configName
+	}
+	if router := strings.TrimSpace(cfg.Router); router != "" && router != "ohMyCode" {
+		return defaultAgent, allowedAgents, configName
+	}
+
+	receiverID := strings.TrimSpace(appID)
+	if receiverID == "" {
+		return defaultAgent, allowedAgents, configName
+	}
+	targetNames := make([]string, 0, len(cfg.OhMyCode.Targets))
+	for name := range cfg.OhMyCode.Targets {
+		targetNames = append(targetNames, name)
+	}
+	sort.Strings(targetNames)
+	for _, name := range targetNames {
+		target := cfg.OhMyCode.Targets[name]
+		for _, configuredID := range target.ReceiverIDs {
+			if receiverID == strings.TrimSpace(configuredID) {
+				return target.DefaultAgent, target.AllowedAgents, fmt.Sprintf("agents.ohMyCode.targets[%q]", name)
+			}
+		}
+	}
+	return defaultAgent, allowedAgents, configName
 }
 
 func validateOhMyCodeAgentConfig(defaultAgent string, allowedAgents []string) error {

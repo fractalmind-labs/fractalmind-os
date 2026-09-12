@@ -33,6 +33,30 @@ func boolPtr(value bool) *bool {
 	return &value
 }
 
+func writeRecordingOhMyCodeScript(t *testing.T, workspace string) (string, string) {
+	t.Helper()
+	scriptPath := filepath.Join(workspace, "agent_manager_recorder.py")
+	logPath := filepath.Join(workspace, "calls.log")
+	script := `import pathlib
+import sys
+
+base = pathlib.Path(sys.argv[0]).parent
+with (base / "calls.log").open("a", encoding="utf-8") as f:
+    f.write(" ".join(sys.argv[1:]) + "\n")
+
+if len(sys.argv) >= 2 and sys.argv[1] == "assign":
+    print("assign ok")
+    sys.exit(0)
+
+print("unexpected command", file=sys.stderr)
+sys.exit(1)
+`
+	if err := os.WriteFile(scriptPath, []byte(script), 0644); err != nil {
+		t.Fatalf("write agent-manager recorder: %v", err)
+	}
+	return scriptPath, logPath
+}
+
 func TestValidateOhMyCodeAgentDefaultOnly(t *testing.T) {
 	manager := NewManager(&config.AgentsConfig{
 		OhMyCode: &config.OhMyCodeConfig{
@@ -473,6 +497,190 @@ sys.exit(1)
 	}
 	if lines[0] != "assign qa-1" {
 		t.Fatalf("expected assign call, got %q", lines[0])
+	}
+}
+
+func TestHandleIncomingRoutesFeishuReceiverToNamedOhMyCodeTarget(t *testing.T) {
+	legacyWorkspace := t.TempDir()
+	legacyScript, legacyLog := writeRecordingOhMyCodeScript(t, legacyWorkspace)
+	targetWorkspace := t.TempDir()
+	targetScript, targetLog := writeRecordingOhMyCodeScript(t, targetWorkspace)
+
+	manager := NewManager(&config.AgentsConfig{
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled:            true,
+			Workspace:          legacyWorkspace,
+			AgentManagerScript: legacyScript,
+			DefaultAgent:       "legacy-main",
+			AllowedAgents:      []string{"legacy-main"},
+			Targets: map[string]config.OhMyCodeTargetConfig{
+				"support": {
+					ReceiverIDs:        []string{"cli_support"},
+					Workspace:          targetWorkspace,
+					AgentManagerScript: targetScript,
+					DefaultAgent:       "support-main",
+					AllowedAgents:      []string{"support-main"},
+				},
+			},
+		},
+	})
+
+	out, err := manager.HandleIncoming(context.Background(), &protocol.Message{
+		Kind:   protocol.MessageKindChannel,
+		Action: protocol.ActionCreate,
+		Data: map[string]interface{}{
+			"channel":         "feishu",
+			"text":            "help me",
+			"raw_text":        "help me",
+			"agent":           "legacy-main",
+			"agent_specified": false,
+			"receiver_id":     "cli_support",
+		},
+	})
+	if err != nil {
+		t.Fatalf("HandleIncoming: %v", err)
+	}
+	if out != ohMyCodeAssignAckMessage {
+		t.Fatalf("reply=%q want %q", out, ohMyCodeAssignAckMessage)
+	}
+
+	targetCalls, err := os.ReadFile(targetLog)
+	if err != nil {
+		t.Fatalf("read target calls: %v", err)
+	}
+	if got := strings.TrimSpace(string(targetCalls)); got != "assign support-main" {
+		t.Fatalf("target calls=%q", got)
+	}
+	if _, err := os.Stat(legacyLog); !os.IsNotExist(err) {
+		t.Fatalf("legacy target should not receive named route, stat err=%v", err)
+	}
+
+	routing := manager.LastRoutingOutcome()
+	if routing == nil || routing.Target != "support" || routing.SelectedAgent != "support-main" || routing.Status != "assigned" {
+		t.Fatalf("unexpected route telemetry: %#v", routing)
+	}
+}
+
+func TestOhMyCodeReceiverTargetLookupIsChannelAgnostic(t *testing.T) {
+	workspace := t.TempDir()
+	script, logPath := writeRecordingOhMyCodeScript(t, workspace)
+	manager := NewManager(&config.AgentsConfig{
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled: true,
+			Targets: map[string]config.OhMyCodeTargetConfig{
+				"operations": {
+					ReceiverIDs:        []string{"bot_receiver_1"},
+					Workspace:          workspace,
+					AgentManagerScript: script,
+					DefaultAgent:       "main",
+				},
+			},
+		},
+	})
+
+	out, err := manager.HandleIncoming(context.Background(), &protocol.Message{
+		Kind:   protocol.MessageKindChannel,
+		Action: protocol.ActionCreate,
+		Data: map[string]interface{}{
+			"channel":     "slack",
+			"text":        "check queues",
+			"raw_text":    "check queues",
+			"receiver_id": "bot_receiver_1",
+		},
+	})
+	if err != nil {
+		t.Fatalf("HandleIncoming: %v", err)
+	}
+	if out != ohMyCodeAssignAckMessage {
+		t.Fatalf("reply=%q want %q", out, ohMyCodeAssignAckMessage)
+	}
+	calls, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read calls: %v", err)
+	}
+	if got := strings.TrimSpace(string(calls)); got != "assign main" {
+		t.Fatalf("calls=%q", got)
+	}
+}
+
+func TestHandleIncomingUsesLegacyFallbackForUnmatchedReceiver(t *testing.T) {
+	legacyWorkspace := t.TempDir()
+	legacyScript, legacyLog := writeRecordingOhMyCodeScript(t, legacyWorkspace)
+	targetWorkspace := t.TempDir()
+	targetScript, _ := writeRecordingOhMyCodeScript(t, targetWorkspace)
+
+	manager := NewManager(&config.AgentsConfig{
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled:            true,
+			Workspace:          legacyWorkspace,
+			AgentManagerScript: legacyScript,
+			DefaultAgent:       "legacy-main",
+			AllowedAgents:      []string{"legacy-main"},
+			Targets: map[string]config.OhMyCodeTargetConfig{
+				"support": {
+					ReceiverIDs:        []string{"cli_support"},
+					Workspace:          targetWorkspace,
+					AgentManagerScript: targetScript,
+					DefaultAgent:       "support-main",
+					AllowedAgents:      []string{"support-main"},
+				},
+			},
+		},
+	})
+
+	out, err := manager.HandleIncoming(context.Background(), &protocol.Message{
+		Kind:   protocol.MessageKindChannel,
+		Action: protocol.ActionCreate,
+		Data: map[string]interface{}{
+			"channel":         "feishu",
+			"text":            "legacy request",
+			"raw_text":        "legacy request",
+			"agent":           "legacy-main",
+			"agent_specified": false,
+			"receiver_id":     "cli_unmatched",
+		},
+	})
+	if err != nil {
+		t.Fatalf("HandleIncoming: %v", err)
+	}
+	if out != ohMyCodeAssignAckMessage {
+		t.Fatalf("reply=%q want %q", out, ohMyCodeAssignAckMessage)
+	}
+
+	legacyCalls, err := os.ReadFile(legacyLog)
+	if err != nil {
+		t.Fatalf("read legacy calls: %v", err)
+	}
+	if got := strings.TrimSpace(string(legacyCalls)); got != "assign legacy-main" {
+		t.Fatalf("legacy calls=%q", got)
+	}
+	routing := manager.LastRoutingOutcome()
+	if routing == nil || routing.Target != "" || routing.SelectedAgent != "legacy-main" || routing.Status != "assigned" {
+		t.Fatalf("unexpected fallback telemetry: %#v", routing)
+	}
+}
+
+func TestOhMyCodeUnmatchedReceiverDiagnosticDoesNotExposeIdentity(t *testing.T) {
+	manager := NewManager(&config.AgentsConfig{
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled: true,
+			Targets: map[string]config.OhMyCodeTargetConfig{
+				"support": {
+					ReceiverIDs:  []string{"cli_support"},
+					Workspace:    "/workspace/support",
+					DefaultAgent: "main",
+				},
+			},
+		},
+	})
+
+	const receiverID = "cli_private_receiver"
+	_, err := manager.resolveOhMyCodeRoute(map[string]interface{}{"receiver_id": receiverID})
+	if err == nil {
+		t.Fatal("expected unmatched receiver error without legacy fallback")
+	}
+	if strings.Contains(err.Error(), receiverID) {
+		t.Fatalf("receiver identity leaked in diagnostic: %v", err)
 	}
 }
 
