@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan Dog"
+  short_description: "Build or refresh PRD, tech docs, and split execution plans."
+  default_prompt: "Use this skill to build or refresh a structured planning package by updating PRD content, updating technical docs, and creating split execution plans."
