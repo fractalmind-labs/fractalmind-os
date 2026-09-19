@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* ── Dark theme (default) ─────────────────────────── */
+  :root,
+  [data-theme="dark"] {
+    --color-bg: #030712;
+    --color-surface: #111827;
+    --color-surface-alt: rgba(17, 24, 39, 0.5);
+    --color-hover: rgba(31, 41, 55, 1);
+    --color-border: #1f2937;
+    --color-border-hover: #374151;
+    --color-primary: #f3f4f6;
+    --color-secondary: #9ca3af;
+    --color-muted: #6b7280;
+    --color-skeleton: rgba(55, 65, 81, 0.5);
+    --color-graph-line: #374151;
+    --color-graph-label: #9ca3af;
+  }
+
+  /* ── Light theme ──────────────────────────────────── */
+  [data-theme="light"] {
+    --color-bg: #f9fafb;
+    --color-surface: #ffffff;
+    --color-surface-alt: rgba(255, 255, 255, 0.7);
+    --color-hover: rgba(243, 244, 246, 1);
+    --color-border: #e5e7eb;
+    --color-border-hover: #d1d5db;
+    --color-primary: #111827;
+    --color-secondary: #4b5563;
+    --color-muted: #9ca3af;
+    --color-skeleton: rgba(209, 213, 219, 0.5);
+    --color-graph-line: #d1d5db;
+    --color-graph-label: #6b7280;
+  }
+}
+
+body {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-primary);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-muted);
+  border-radius: 3px;
+}
+
+/* Pulse animation for live status */
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+.animate-pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Slide-in animation */
+@keyframes flow-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.animate-flow-in {
+  animation: flow-in 0.25s ease-out forwards;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Prevent page scroll when interacting with 3D/2D canvas on touch devices */
+canvas {
+  touch-action: none;
+}
+svg {
+  touch-action: pan-x pan-y;
+}
