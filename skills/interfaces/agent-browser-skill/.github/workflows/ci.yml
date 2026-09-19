@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required files exist
+        run: |
+          for f in SKILL.md README.md LICENSE; do
+            if [ ! -f "$f" ]; then
+              echo "ERROR: Missing required file: $f"
+              exit 1
+            fi
+          done
+          echo "All required files present"
+
+      - name: Validate SKILL.md frontmatter
+        run: |
+          head -1 SKILL.md | grep -q '^---' || { echo "ERROR: SKILL.md missing frontmatter"; exit 1; }
+          grep -q '^name:' SKILL.md || { echo "ERROR: SKILL.md missing 'name' field"; exit 1; }
+          grep -q '^description:' SKILL.md || { echo "ERROR: SKILL.md missing 'description' field"; exit 1; }
+          echo "SKILL.md frontmatter valid"
+
+      - name: Check for broken internal links
+        run: |
+          ERRORS=0
+          for f in $(find . -name '*.md' -not -path './.git/*'); do
+            # Check relative markdown links like [text](path.md)
+            grep -oP '\]\((?!https?://|#|mailto:)([^)]+)\)' "$f" | sed 's/\](\(.*\))/\1/' | while read -r link; do
+              # Strip anchor
+              target=$(echo "$link" | sed 's/#.*//')
+              if [ -n "$target" ] && [ ! -f "$target" ] && [ ! -f "$(dirname "$f")/$target" ]; then
+                echo "WARN: Broken link in $f: $link"
+              fi
+            done
+          done
+          echo "Link check complete"
+
+      - name: Check no secrets or tokens
+        run: |
+          if grep -rn 'sk-[a-zA-Z0-9]\{20,\}\|ghp_[a-zA-Z0-9]\{36\}\|xox[bpoas]-[a-zA-Z0-9-]\{10,\}' --include='*.md' .; then
+            echo "ERROR: Possible secret/token found in files"
+            exit 1
+          fi
+          echo "No secrets detected"
