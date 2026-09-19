@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Validate skill structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required files exist
+        run: |
+          echo "Checking required files..."
+          test -f turbo-frequency/SKILL.md || (echo "SKILL.md missing" && exit 1)
+          test -f README.md || (echo "README.md missing" && exit 1)
+          test -f LICENSE || (echo "LICENSE missing" && exit 1)
+          echo "All required files present."
+
+      - name: Validate SKILL.md frontmatter
+        run: |
+          echo "Checking SKILL.md frontmatter..."
+          head -1 turbo-frequency/SKILL.md | grep -q '^---' || (echo "Missing frontmatter" && exit 1)
+          grep -q '^name:' turbo-frequency/SKILL.md || (echo "Missing name field" && exit 1)
+          grep -q '^description:' turbo-frequency/SKILL.md || (echo "Missing description field" && exit 1)
+          echo "Frontmatter valid."
+
+      - name: Check for required sections
+        run: |
+          echo "Checking SKILL.md sections..."
+          grep -q '## Frequency Tiers' turbo-frequency/SKILL.md || (echo "Missing Frequency Tiers section" && exit 1)
+          grep -q '## Signal Evaluation' turbo-frequency/SKILL.md || (echo "Missing Signal Evaluation section" && exit 1)
+          grep -q '## Execution Steps' turbo-frequency/SKILL.md || (echo "Missing Execution Steps section" && exit 1)
+          echo "All required sections present."
