@@ -1,0 +1,169 @@
+version: 1
+source_org: fractalmind-ai
+destination_org: fractalmind-labs
+public_monorepo: fractalmind-os
+
+repositories:
+  - source: .github
+    destination: .github
+    category: organization-metadata
+    status: imported
+  - source: oh-my-code
+    destination: workspace/oh-my-code
+    category: workspace
+    status: imported
+  - source: fractalmind-okrs
+    destination: governance/fractalmind-okrs
+    category: governance
+    status: imported
+  - source: agent-os-spec
+    destination: spec/agent-os-spec
+    category: standards
+    status: imported
+  - source: agent-os-roms
+    destination: roms/agent-os-roms
+    category: distribution
+    status: imported
+  - source: fractalmind-protocol
+    destination: protocols/fractalmind-protocol
+    category: authority
+    status: imported
+  - source: fractal-demail
+    destination: protocols/fractal-demail
+    category: communication
+    status: imported
+  - source: fractalmind-envd
+    destination: runtime/fractalmind-envd
+    category: execution
+    status: imported
+  - source: fractalbot
+    destination: runtime/fractalbot
+    category: execution
+    status: imported
+  - source: claude-code-go
+    destination: runtime/claude-code-go
+    category: execution
+    status: imported
+  - source: explorer
+    destination: apps/explorer
+    category: application
+    status: imported
+  - source: typemind-android
+    destination: apps/typemind-android
+    category: application
+    status: imported
+  - source: openclaw-gateway-app
+    destination: apps/openclaw-gateway-app
+    category: application
+    status: imported
+  - source: agent-manager-skill
+    destination: skills/coordination/agent-manager-skill
+    category: skill
+    status: imported
+  - source: team-manager-skill
+    destination: skills/coordination/team-manager-skill
+    category: skill
+    status: imported
+  - source: okr-manager-skill
+    destination: skills/coordination/okr-manager-skill
+    category: skill
+    status: imported
+  - source: agent-calendar-skill
+    destination: skills/coordination/agent-calendar-skill
+    category: skill
+    status: imported
+  - source: five-step-workflow-skill
+    destination: skills/coordination/five-step-workflow-skill
+    category: skill
+    status: imported
+  - source: turbo-frequency-skill
+    destination: skills/coordination/turbo-frequency-skill
+    category: skill
+    status: imported
+  - source: use-github-okr-skill
+    destination: skills/coordination/use-github-okr-skill
+    category: skill
+    status: imported
+  - source: agent-browser-skill
+    destination: skills/interfaces/agent-browser-skill
+    category: skill
+    status: imported
+  - source: team-chat-skill
+    destination: skills/interfaces/team-chat-skill
+    category: skill
+    status: imported
+  - source: use-fractalbot-skill
+    destination: skills/interfaces/use-fractalbot-skill
+    category: skill
+    status: imported
+  - source: use-phone-skill
+    destination: skills/interfaces/use-phone-skill
+    category: skill
+    status: imported
+  - source: use-codex-app-skill
+    destination: skills/interfaces/use-codex-app-skill
+    category: skill
+    status: imported
+  - source: use-claude-desktop-skill
+    destination: skills/interfaces/use-claude-desktop-skill
+    category: skill
+    status: imported
+  - source: use-agent-task-protocol-skill
+    destination: skills/interfaces/use-agent-task-protocol-skill
+    category: skill
+    status: imported
+  - source: plan-dog-skill
+    destination: skills/development/plan-dog-skill
+    category: skill
+    status: imported
+  - source: predict-contracts-skill
+    destination: skills/development/predict-contracts-skill
+    category: skill
+    status: imported
+  - source: golang-web3-service-skill
+    destination: skills/development/golang-web3-service-skill
+    category: skill
+    status: imported
+  - source: golang-integration-test-skill
+    destination: skills/development/golang-integration-test-skill
+    category: skill
+    status: imported
+  - source: react-frontend-dev-skill
+    destination: skills/development/react-frontend-dev-skill
+    category: skill
+    status: imported
+  - source: high-fidelity-ui-replication-skill
+    destination: skills/development/high-fidelity-ui-replication-skill
+    category: skill
+    status: imported
+  - source: web3-wallet-mock-skill
+    destination: skills/validation/web3-wallet-mock-skill
+    category: skill
+    status: imported
+  - source: skills
+    destination: skills/registry/skills
+    category: registry
+    status: imported-with-submodules
+  - source: awesome-agent-skills
+    destination: skills/registry/awesome-agent-skills
+    category: registry
+    status: imported
+  - source: fractalmind-ai.github.io
+    destination: docs/site
+    category: documentation
+    status: imported
+  - source: feishu-onboarding-worker
+    destination: experimental/feishu-onboarding-worker
+    category: experimental
+    status: empty-source-repository
+
+private_external_repositories:
+  - source: agent-console
+    destination: fractalmind-labs/agent-console
+    status: mirrored-name-preserved
+  - source: fractalmind-gateway
+    destination: fractalmind-labs/fractalmind-gateway
+    status: mirrored-name-preserved-archived
+  - source: fractalmind-memory
+    destination: fractalmind-labs/fractalmind-memory
+    status: mirrored-name-preserved
