@@ -1,0 +1,4 @@
+interface:
+  display_name: "High-Fidelity UI Replication"
+  short_description: "Replicate UI and motion with artifact-based precision"
+  default_prompt: "Use $high-fidelity-ui-replication to break down this reference UI into a high-fidelity replication spec and acceptance plan."
