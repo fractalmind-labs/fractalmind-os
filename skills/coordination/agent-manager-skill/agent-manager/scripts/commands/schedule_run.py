@@ -4,6 +4,8 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+from .lifecycle import uses_native_enter
+
 
 def _resolve_schedule_task_path(schedule: dict, repo_root: Path, *, expand_env_vars: Callable[[str], str]) -> Optional[Path]:
     if str(schedule.get('task') or '').strip():
@@ -222,7 +224,7 @@ def cmd_schedule_run(args, *, deps: Any, start_handler: Callable):
     )
 
     is_codex = provider_key == 'codex'
-    native_enter = is_codex or provider_key == 'grok'
+    native_enter = uses_native_enter(launcher)
     if not deps.send_keys(
         agent_id,
         task_message,

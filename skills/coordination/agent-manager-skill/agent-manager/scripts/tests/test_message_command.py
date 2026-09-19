@@ -213,6 +213,53 @@ class MessageCommandTests(unittest.TestCase):
         self.assertEqual(calls[1][0][1], '')
         self.assertTrue(calls[1][1].get('enter_via_key'))
 
+    def test_send_preempts_cursor_main_uses_native_enter_without_send_now(self):
+        interrupts = []
+        calls = []
+
+        def interrupt_agent(agent_id, launcher=''):
+            interrupts.append((agent_id, launcher))
+            return True
+
+        def send_keys(*args, **kwargs):
+            calls.append((args, kwargs))
+            return True
+
+        target = {'name': 'main', 'file_id': 'main', 'launcher': 'cursor'}
+        deps = _deps(
+            resolve_agent=lambda value: target if value == 'main' else None,
+            get_agent_id=lambda config: 'main',
+            resolve_launcher_command=lambda _launcher: '/home/test/.cursor/bin/cursor-agent',
+            interrupt_agent=interrupt_agent,
+            send_keys=send_keys,
+            get_agent_runtime_state=lambda _agent_id, launcher='': {
+                'state': 'busy',
+                'reason': 'busy_pattern:Working',
+            },
+        )
+        args = argparse.Namespace(
+            message_command='send',
+            agent='main',
+            from_agent='EMP_0025',
+            body='QA Verdict: PASS',
+            footer=None,
+            id='msg_fixed',
+        )
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            rc = cmd_message(args, deps=deps)
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(interrupts, [('main', '/home/test/.cursor/bin/cursor-agent')])
+        self.assertEqual(len(calls), 1)
+        send_args, send_kwargs = calls[0]
+        self.assertEqual(send_args[0], 'main')
+        self.assertIn('QA Verdict: PASS', send_args[1])
+        self.assertTrue(send_kwargs['send_enter'])
+        self.assertTrue(send_kwargs.get('enter_via_key'))
+        self.assertFalse(send_kwargs.get('escape_first'))
+
     def test_send_returns_nonzero_when_tmux_send_fails(self):
         args = argparse.Namespace(
             message_command='send',
