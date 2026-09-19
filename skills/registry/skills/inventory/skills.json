@@ -1,0 +1,350 @@
+{
+  "catalog_repository": "https://github.com/fractalmind-ai/skills",
+  "generated_from": [
+    ".gitmodules",
+    "HEAD gitlinks"
+  ],
+  "schema_version": 1,
+  "skills": [
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/agent-calendar-skill",
+      "catalog_path": "coordination/agent-calendar",
+      "category": "coordination",
+      "distribution_targets": [
+        {
+          "commit": "f8601487f38a3f39f5c285fb22e0c13e62d4e5fe",
+          "path": "coordination/agent-calendar",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "agent-calendar",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/agent-manager-skill",
+      "catalog_path": "coordination/agent-manager",
+      "category": "coordination",
+      "distribution_targets": [
+        {
+          "commit": "5ec5f61fd6c14eaf0c785165cc4f7387842878d8",
+          "path": "coordination/agent-manager",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "agent-manager",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/five-step-workflow-skill",
+      "catalog_path": "coordination/five-step-workflow",
+      "category": "coordination",
+      "distribution_targets": [
+        {
+          "commit": "82aa6b93688f2465b3a9cfdf0e0192f1c6722306",
+          "path": "coordination/five-step-workflow",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "five-step-workflow",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/okr-manager-skill",
+      "catalog_path": "coordination/okr-manager",
+      "category": "coordination",
+      "distribution_targets": [
+        {
+          "commit": "d40b6a0d71e1bc2b0ef9b108c14136933a2e1f57",
+          "path": "coordination/okr-manager",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "okr-manager",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/team-manager-skill",
+      "catalog_path": "coordination/team-manager",
+      "category": "coordination",
+      "distribution_targets": [
+        {
+          "commit": "afdd4ef6f2e99165f1e22e8eaa0f02f3b7b62815",
+          "path": "coordination/team-manager",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "team-manager",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/turbo-frequency-skill",
+      "catalog_path": "coordination/turbo-frequency",
+      "category": "coordination",
+      "distribution_targets": [
+        {
+          "commit": "80c063e606383273e2df69f1e4baff0288d8b015",
+          "path": "coordination/turbo-frequency",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "turbo-frequency",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/use-github-okr-skill",
+      "catalog_path": "coordination/use-github-okr",
+      "category": "coordination",
+      "distribution_targets": [
+        {
+          "commit": "ce12085fadb8038eba27e802db3b81f5cefde450",
+          "path": "coordination/use-github-okr",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "use-github-okr",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/golang-integration-test-skill",
+      "catalog_path": "development/golang-integration-test",
+      "category": "development",
+      "distribution_targets": [
+        {
+          "commit": "3f99732fcd286e22253f67d070c4de7ab9e059cb",
+          "path": "development/golang-integration-test",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "golang-integration-test",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/golang-web3-service-skill",
+      "catalog_path": "development/golang-web3-service",
+      "category": "development",
+      "distribution_targets": [
+        {
+          "commit": "173a9391097d322a716aea08c1d99bd40e0fc9c5",
+          "path": "development/golang-web3-service",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "golang-web3-service",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/rosexrwa/high-fidelity-ui-replication-skill",
+      "catalog_path": "development/high-fidelity-ui-replication",
+      "category": "development",
+      "distribution_targets": [
+        {
+          "commit": "b7ea06fc81121bc181feab2f673ef85ba9de6218",
+          "path": "development/high-fidelity-ui-replication",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "high-fidelity-ui-replication",
+      "owner": "rosexrwa",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/plan-dog-skill",
+      "catalog_path": "development/plan-dog",
+      "category": "development",
+      "distribution_targets": [
+        {
+          "commit": "a6d37593e0ba3589024b97dec05e5a1c3ed24d48",
+          "path": "development/plan-dog",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "plan-dog",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/predict-contracts-skill",
+      "catalog_path": "development/predict-contracts",
+      "category": "development",
+      "distribution_targets": [
+        {
+          "commit": "1f6819baede384eb3520d29aabce6aa93e51d1ec",
+          "path": "development/predict-contracts",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "predict-contracts",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/react-frontend-dev-skill",
+      "catalog_path": "development/react-frontend-dev",
+      "category": "development",
+      "distribution_targets": [
+        {
+          "commit": "e97e74b6e9f7284fe3020813797463dc5cbaec83",
+          "path": "development/react-frontend-dev",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "react-frontend-dev",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/agent-browser-skill",
+      "catalog_path": "interfaces/agent-browser",
+      "category": "interfaces",
+      "distribution_targets": [
+        {
+          "commit": "4945074b8e507fd6d5ed4ac8ca4c785e6a45dd01",
+          "path": "interfaces/agent-browser",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "agent-browser",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/team-chat-skill",
+      "catalog_path": "interfaces/team-chat",
+      "category": "interfaces",
+      "distribution_targets": [
+        {
+          "commit": "66b1f00eac442a2831ec96d1a0581fd58240cd12",
+          "path": "interfaces/team-chat",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "team-chat",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/use-claude-desktop-skill",
+      "catalog_path": "interfaces/use-claude-desktop",
+      "category": "interfaces",
+      "distribution_targets": [
+        {
+          "commit": "524449e9774f1ec72fef079e89cb8c5b575cdf1b",
+          "path": "interfaces/use-claude-desktop",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "use-claude-desktop",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/use-codex-app-skill",
+      "catalog_path": "interfaces/use-codex-app",
+      "category": "interfaces",
+      "distribution_targets": [
+        {
+          "commit": "18b24ea0623e907199d89b9f3d8c2b84fb663350",
+          "path": "interfaces/use-codex-app",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "use-codex-app",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/use-fractalbot-skill",
+      "catalog_path": "interfaces/use-fractalbot",
+      "category": "interfaces",
+      "distribution_targets": [
+        {
+          "commit": "349d1aa4c75f3222fac38c4c5e1c17cfc610ee02",
+          "path": "interfaces/use-fractalbot",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "use-fractalbot",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/use-phone-skill",
+      "catalog_path": "interfaces/use-phone",
+      "category": "interfaces",
+      "distribution_targets": [
+        {
+          "commit": "a000e695c73b14c9938f31ed60307934c7884dc6",
+          "path": "interfaces/use-phone",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "use-phone",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    },
+    {
+      "canonical_repository": "https://github.com/fractalmind-ai/web3-wallet-mock-skill",
+      "catalog_path": "validation/web3-wallet-mock-skill",
+      "category": "validation",
+      "distribution_targets": [
+        {
+          "commit": "16a27e8d176a4ae65374d776984c627a5d29fe8b",
+          "path": "validation/web3-wallet-mock-skill",
+          "repository": "https://github.com/fractalmind-ai/skills",
+          "type": "git_submodule"
+        }
+      ],
+      "name": "web3-wallet-mock-skill",
+      "owner": "fractalmind-ai",
+      "source_policy": "canonical_source",
+      "status": "active"
+    }
+  ]
+}

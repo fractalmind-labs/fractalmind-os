@@ -1,0 +1,60 @@
+[submodule "coordination/agent-manager"]
+	path = coordination/agent-manager
+	url = git@github.com:fractalmind-ai/agent-manager-skill.git
+[submodule "coordination/team-manager"]
+	path = coordination/team-manager
+	url = git@github.com:fractalmind-ai/team-manager-skill.git
+[submodule "coordination/okr-manager"]
+	path = coordination/okr-manager
+	url = git@github.com:fractalmind-ai/okr-manager-skill.git
+[submodule "coordination/five-step-workflow"]
+	path = coordination/five-step-workflow
+	url = git@github.com:fractalmind-ai/five-step-workflow-skill.git
+[submodule "coordination/turbo-frequency"]
+	path = coordination/turbo-frequency
+	url = git@github.com:fractalmind-ai/turbo-frequency-skill.git
+[submodule "interfaces/agent-browser"]
+	path = interfaces/agent-browser
+	url = git@github.com:fractalmind-ai/agent-browser-skill.git
+[submodule "interfaces/team-chat"]
+	path = interfaces/team-chat
+	url = git@github.com:fractalmind-ai/team-chat-skill.git
+[submodule "interfaces/use-fractalbot"]
+	path = interfaces/use-fractalbot
+	url = git@github.com:fractalmind-ai/use-fractalbot-skill.git
+[submodule "interfaces/use-phone"]
+	path = interfaces/use-phone
+	url = git@github.com:fractalmind-ai/use-phone-skill.git
+[submodule "development/predict-contracts"]
+	path = development/predict-contracts
+	url = git@github.com:fractalmind-ai/predict-contracts-skill.git
+[submodule "development/golang-web3-service"]
+	path = development/golang-web3-service
+	url = git@github.com:fractalmind-ai/golang-web3-service-skill.git
+[submodule "validation/web3-wallet-mock-skill"]
+	path = validation/web3-wallet-mock-skill
+	url = git@github.com:fractalmind-ai/web3-wallet-mock-skill.git
+[submodule "coordination/agent-calendar"]
+	path = coordination/agent-calendar
+	url = git@github.com:fractalmind-ai/agent-calendar-skill.git
+[submodule "development/plan-dog"]
+	path = development/plan-dog
+	url = git@github.com:fractalmind-ai/plan-dog-skill.git
+[submodule "development/golang-integration-test"]
+	path = development/golang-integration-test
+	url = git@github.com:fractalmind-ai/golang-integration-test-skill.git
+[submodule "development/react-frontend-dev"]
+	path = development/react-frontend-dev
+	url = git@github.com:fractalmind-ai/react-frontend-dev-skill.git
+[submodule "development/high-fidelity-ui-replication"]
+	path = development/high-fidelity-ui-replication
+	url = git@github.com:rosexrwa/high-fidelity-ui-replication-skill.git
+[submodule "interfaces/use-codex-app"]
+	path = interfaces/use-codex-app
+	url = git@github.com:fractalmind-ai/use-codex-app-skill.git
+[submodule "coordination/use-github-okr"]
+	path = coordination/use-github-okr
+	url = git@github.com:fractalmind-ai/use-github-okr-skill.git
+[submodule "interfaces/use-claude-desktop"]
+	path = interfaces/use-claude-desktop
+	url = git@github.com:fractalmind-ai/use-claude-desktop-skill.git
