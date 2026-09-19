@@ -1,0 +1,227 @@
+# FractalMind Protocol — Architecture
+
+## Overview
+
+FractalMind Protocol is a permissionless on-chain protocol on **SUI** for fractal AI organizations. It enables:
+
+- **Permissionless org creation** — anyone can create an organization
+- **Agent registration** — AI or human agents join orgs with capability tags
+- **Objective / KR lifecycle** — OKR control plane linking goals, measurable key results, tasks, policy scopes, and evidence hashes
+- **Task lifecycle** — full state machine from creation to completion with verification, optionally bound to a KeyResult
+- **Fractal nesting** — organizations contain sub-organizations, recursively up to depth 8
+
+## Object Model
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  ProtocolRegistry                     │
+│                  (Shared Singleton)                   │
+│  ┌──────────────────┐  ┌──────────────────────────┐  │
+│  │ organizations:   │  │ name_registry:           │  │
+│  │ Table<ID, bool>  │  │ Table<String, ID>        │  │
+│  └──────────────────┘  └──────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
+                          │
+                          │ tracks
+                          ▼
+┌─────────────────────────────────────────────────────┐
+│                    Organization                       │
+│                    (Shared Object)                    │
+│                                                       │
+│  name, description, admin, is_active                 │
+│  ┌────────────────┐ ┌────────────────┐               │
+│  │ agents:        │ │ tasks:         │               │
+│  │ Table<addr,    │ │ Table<ID,      │               │
+│  │       bool>    │ │       bool>    │               │
+│  └────────────────┘ └────────────────┘               │
+│  ┌────────────────┐                                   │
+│  │ child_orgs:    │  parent_org: Option<ID>          │
+│  │ Table<ID,bool> │  depth: u64                      │
+│  └────────────────┘                                   │
+└─────────────────────────────────────────────────────┘
+        │                         │
+        │ admin holds             │ agents hold
+        ▼                         ▼
+┌──────────────────┐    ┌──────────────────────────┐
+│   OrgAdminCap    │    │   AgentCertificate       │
+│   (Owned)        │    │   (Owned)                │
+│                  │    │                          │
+│  org_id: ID      │    │  org_id, agent, status   │
+└──────────────────┘    │  capability_tags         │
+                        │  tasks_completed         │
+                        └──────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│                      Task                             │
+│                 (Shared Object)                       │
+│                                                       │
+│  org_id, creator, title, description                 │
+│  status (state machine), assignee, submission        │
+│  verifier, timestamps                                │
+└─────────────────────────────────────────────────────┘
+```
+
+## Modules
+
+| Module | Purpose |
+|--------|---------|
+| `bootstrap.move` | OTW init — creates ProtocolRegistry at publish |
+| `constants.move` | Error codes, system limits, status enums |
+| `organization.move` | ProtocolRegistry + Organization + OrgAdminCap |
+| `agent.move` | AgentCertificate — registration, deactivation, capabilities |
+| `profile.move` | Agent profile metadata |
+| `objective.move` | Objective / KeyResult / KRReview state machine |
+| `task.move` | Task lifecycle state machine with optional KeyResult binding |
+| `agent_policy.move` | Bounded agent policy, action evidence, revocation, and Objective/KR scope |
+| `review.move` | Multi-reviewer task review flow |
+| `governance.move` | DAO proposals and voting |
+| `fractal.move` | Sub-org creation/detachment with depth limits |
+| `entry.move` | Thin `public entry` wrappers for PTB |
+
+## Task State Machine
+
+```
+Created ──→ Assigned ──→ Submitted ──→ Verified ──→ Completed
+                 ↑                         │
+                 └──── Rejected ◄──────────┘
+```
+
+| Transition | Who | Condition |
+|------------|-----|-----------|
+| Created → Assigned | Agent (self-claim) | Agent is active member of org |
+| Assigned → Submitted | Assignee only | Must be the assigned agent |
+| Submitted → Verified | Admin only | OrgAdminCap required |
+| Verified → Completed | Admin only | Increments agent's `tasks_completed` |
+| Submitted → Rejected | Admin only | Task returns to rejectable state |
+| Rejected → Assigned | Agent (re-claim) | Any active agent can pick up |
+
+## Access Control Matrix
+
+| Action | Permissionless | Agent (self) | Admin (OrgAdminCap) |
+|--------|:-:|:-:|:-:|
+| Create organization | ✓ | | |
+| Register as agent | ✓ | | |
+| Create task | | ✓ | |
+| Self-claim task | | ✓ | |
+| Submit task | | ✓ (assignee) | |
+| Update own capabilities | | ✓ | |
+| Deactivate self | | ✓ | |
+| Verify task | | | ✓ |
+| Complete task | | | ✓ |
+| Reject task | | | ✓ |
+| Remove agent | | | ✓ |
+| Deactivate org | | | ✓ |
+| Update org description | | | ✓ |
+| Transfer admin | | | ✓ |
+| Create sub-org | | | ✓ (parent admin) |
+| Detach sub-org | | | ✓ (parent + child admin) |
+
+## Fractal Nesting
+
+Organizations are self-similar. A child org is a full `Organization` with its own admin, agents, and tasks. Key constraints:
+
+- **MAX_FRACTAL_DEPTH = 8** — prevents unbounded nesting
+- **Unique names** — enforced globally via `ProtocolRegistry.name_registry`
+- **Detachment** requires both parent and child admin caps
+- Child org retains all its agents/tasks after detachment
+
+```
+RootOrg (depth=0)
+├── Engineering (depth=1)
+│   ├── Frontend (depth=2)
+│   └── Backend (depth=2)
+│       └── Database (depth=3)
+└── Research (depth=1)
+    └── AI-Safety (depth=2)
+```
+
+## Event Flow
+
+Every state change emits an event for off-chain indexing:
+
+```
+OrgCreated           → org created
+OrgDeactivated       → org deactivated
+OrgDescriptionUpdated → description changed
+OrgAdminTransferred  → admin ownership transferred
+AgentRegistered      → agent joined org
+AgentDeactivated     → agent self-deactivated
+AgentRemoved         → agent removed by admin
+AgentCapabilityUpdated → capability tags changed
+TaskCreated          → task created
+TaskAssigned         → task assigned to agent
+TaskSubmitted        → work submitted
+TaskVerified         → submission verified
+TaskCompleted        → task completed
+TaskRejected         → submission rejected
+SubOrgCreated        → child org created
+SubOrgDetached       → child org detached from parent
+```
+
+## Design Patterns
+
+1. **Capability pattern** — `OrgAdminCap has key, store`, passed by reference for authorization
+2. **Registry pattern** — Shared singleton with `Table<K,V>` for global state
+3. **Event pattern** — All events have `has copy, drop`, emitted on every state change
+4. **Error pattern** — Private constants + public accessor functions (DeepBookV3 style)
+5. **OTW pattern** — One-Time Witness for init in `bootstrap.move`
+6. **Shared vs Owned** — Organizations and Tasks are shared (multi-party access); AdminCap and AgentCertificate are owned (single-party authority)
+
+## Deployment
+
+```bash
+# Build
+sui move build --silence-warnings
+
+# Test
+sui move test --gas-limit 100000000
+
+# Deploy to testnet
+./scripts/deploy.sh testnet
+```
+
+The `bootstrap.move` module's `init` function runs automatically on publish, creating the shared `ProtocolRegistry`.
+
+### Agent Policy (Bounded Remote Action)
+
+`agent_policy` is the protocol-level primitive for bounded autonomous-agent authority.
+It grants one registered agent scoped permission to record a verifiable action,
+then lets the policy owner or organization admin revoke that permission.
+
+This keeps reusable trust semantics in `fractalmind-protocol`; runtime-specific
+clients such as `fractalmind-envd` should only call these protocol functions and
+keep demo runners, networking, and operator UX outside the protocol package.
+
+Core flow:
+
+1. `create_policy` — org admin grants an agent bounded authority for one action kind, target scope, max uses, expiry, and gas budget.
+2. `execute_action` — the registered agent emits canonical `ActionExecuted` evidence with intent/result hashes.
+3. `revoke_policy` — policy owner or current org admin revokes the policy; post-revoke execution aborts with `8204`.
+
+
+## Objective / OKR Control Plane
+
+`objective.move` adds the minimal OKR domain model needed for AI-agent organizations:
+
+```text
+Organization
+  └─ Objective
+      └─ KeyResult
+          ├─ Task (optional key_result_id binding)
+          ├─ AgentPolicy (optional objective_id / key_result_id scope)
+          └─ KRReview (verdict + evidence_hash)
+```
+
+Design boundaries:
+
+- On-chain stores state, relationships, authorization scope, verdicts, and 32-byte evidence hashes.
+- Long-form OKR text, screenshots, videos, PRs, and proof packs stay off-chain behind hashes/URLs.
+- Existing Task and AgentPolicy entry points remain backward-compatible; scoped variants add Objective/KR linkage without forcing all tasks or policies into OKRs.
+
+Core flow:
+
+1. Admin creates an `Objective` for an organization.
+2. Admin adds `KeyResult` objects under that Objective.
+3. Agents create tasks bound to a KR or receive KR-scoped policies.
+4. Reviewers/admins submit `KRReview` evidence hashes and can accept the KR.
+5. Objective closeout becomes a verifiable control-plane state transition rather than an off-chain note only.

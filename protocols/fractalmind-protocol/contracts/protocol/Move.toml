@@ -1,0 +1,16 @@
+[package]
+name = "fractalmind_protocol"
+version = "0.0.1"
+edition = "2024.beta"
+published-at = "0x6ac36fed2e6692c62aaa54cdaf7485bbcab88eb8993d43ba19d5cfc2748046a3"
+
+[dependencies.Sui]
+git = "https://github.com/MystenLabs/sui.git"
+subdir = "crates/sui-framework/packages/sui-framework"
+rev = "framework/testnet"
+
+[addresses]
+fractalmind_protocol = "0x685d6fb6ed8b0e679bb467ea73111819ec6ff68b1466d24ca26b400095dcdf24"
+
+[environments]
+testnet = "4c78adac"

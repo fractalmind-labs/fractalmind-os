@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SUI CLI
+        run: |
+          set -euo pipefail
+          SUI_VERSION="testnet-v1.67.1"
+          ARCHIVE="sui-${SUI_VERSION}-ubuntu-x86_64.tgz"
+          curl -fsSL "https://github.com/MystenLabs/sui/releases/download/${SUI_VERSION}/${ARCHIVE}" -o sui.tgz
+          tar -xzf sui.tgz
+          SUI_BIN=$(find . -type f -name sui -perm -111 | head -1)
+          test -n "$SUI_BIN"
+          sudo install -m 0755 "$SUI_BIN" /usr/local/bin/sui
+          sui --version
+
+      - name: Build
+        run: make build
+
+      - name: Test
+        run: make test

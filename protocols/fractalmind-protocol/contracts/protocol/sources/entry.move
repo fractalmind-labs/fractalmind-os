@@ -1,0 +1,556 @@
+/// FractalMind Protocol — Entry
+/// Thin `entry` wrappers for PTB (Programmable Transaction Block) usage.
+#[allow(lint(public_entry))]
+module fractalmind_protocol::entry {
+    use sui::tx_context::TxContext;
+    use std::string::String;
+
+    use fractalmind_protocol::organization::{
+        Self, Organization, OrgAdminCap, ProtocolRegistry,
+    };
+    use fractalmind_protocol::agent::{Self, AgentCertificate};
+    use fractalmind_protocol::task::{Self, Task};
+    use fractalmind_protocol::fractal;
+    use fractalmind_protocol::governance::{Self, Governance, Proposal};
+    use fractalmind_protocol::review::{Self, Review};
+    use fractalmind_protocol::profile;
+    use fractalmind_protocol::agent_policy::{Self, AgentPolicy};
+    use fractalmind_protocol::objective::{Self, Objective, KeyResult};
+    use fractalmind_protocol::remote_authority::{Self, RemoteCapability};
+
+    // ===== Organization Entry Points =====
+
+    public entry fun create_organization(
+        registry: &mut ProtocolRegistry,
+        name: String,
+        description: String,
+        ctx: &mut TxContext,
+    ) {
+        organization::create_organization(registry, name, description, ctx);
+    }
+
+    public entry fun deactivate_organization(
+        admin_cap: &OrgAdminCap,
+        org: &mut Organization,
+        ctx: &TxContext,
+    ) {
+        organization::deactivate_organization(admin_cap, org, ctx);
+    }
+
+    public entry fun update_org_description(
+        admin_cap: &OrgAdminCap,
+        org: &mut Organization,
+        new_description: String,
+    ) {
+        organization::update_description(admin_cap, org, new_description);
+    }
+
+    public entry fun transfer_org_admin(
+        admin_cap: OrgAdminCap,
+        org: &mut Organization,
+        new_admin: address,
+        ctx: &mut TxContext,
+    ) {
+        organization::transfer_admin(admin_cap, org, new_admin, ctx);
+    }
+
+    public entry fun rename_organization(
+        admin_cap: &OrgAdminCap,
+        registry: &mut ProtocolRegistry,
+        org: &mut Organization,
+        new_name: String,
+    ) {
+        organization::rename_organization(admin_cap, registry, org, new_name);
+    }
+
+    // ===== Agent Entry Points =====
+
+    public entry fun register_agent(
+        org: &mut Organization,
+        capability_tags: vector<String>,
+        ctx: &mut TxContext,
+    ) {
+        agent::register_agent(org, capability_tags, ctx);
+    }
+
+    public entry fun deactivate_agent(
+        cert: &mut AgentCertificate,
+        org: &mut Organization,
+        ctx: &TxContext,
+    ) {
+        agent::deactivate_agent(cert, org, ctx);
+    }
+
+    public entry fun remove_agent(
+        admin_cap: &OrgAdminCap,
+        cert: &mut AgentCertificate,
+        org: &mut Organization,
+        ctx: &TxContext,
+    ) {
+        agent::remove_agent(admin_cap, cert, org, ctx);
+    }
+
+    public entry fun update_agent_capabilities(
+        cert: &mut AgentCertificate,
+        new_tags: vector<String>,
+        ctx: &TxContext,
+    ) {
+        agent::update_capabilities(cert, new_tags, ctx);
+    }
+
+
+    // ===== Objective / OKR Entry Points =====
+
+    public entry fun create_objective(
+        admin_cap: &OrgAdminCap,
+        org: &Organization,
+        title: String,
+        description_hash: vector<u8>,
+        deadline_ms: u64,
+        ctx: &mut TxContext,
+    ) {
+        objective::create_objective(admin_cap, org, title, description_hash, deadline_ms, ctx);
+    }
+
+    public entry fun create_key_result(
+        admin_cap: &OrgAdminCap,
+        objective_obj: &mut Objective,
+        title: String,
+        target_hash: vector<u8>,
+        ctx: &mut TxContext,
+    ) {
+        objective::create_key_result(admin_cap, objective_obj, title, target_hash, ctx);
+    }
+
+    public entry fun review_key_result(
+        admin_cap: &OrgAdminCap,
+        objective_obj: &Objective,
+        key_result: &mut KeyResult,
+        verdict: u8,
+        evidence_hash: vector<u8>,
+        ctx: &mut TxContext,
+    ) {
+        objective::review_key_result(admin_cap, objective_obj, key_result, verdict, evidence_hash, ctx);
+    }
+
+    public entry fun accept_key_result(
+        admin_cap: &OrgAdminCap,
+        objective_obj: &Objective,
+        key_result: &mut KeyResult,
+        evidence_hash: vector<u8>,
+        ctx: &mut TxContext,
+    ) {
+        objective::accept_key_result(admin_cap, objective_obj, key_result, evidence_hash, ctx);
+    }
+
+    public entry fun close_objective(
+        admin_cap: &OrgAdminCap,
+        objective_obj: &mut Objective,
+        ctx: &TxContext,
+    ) {
+        objective::close_objective(admin_cap, objective_obj, ctx);
+    }
+
+    // ===== Agent Policy Entry Points =====
+
+    public entry fun create_agent_policy(
+        org: &Organization,
+        agent_addr: address,
+        allowed_action: String,
+        target_scope: String,
+        max_uses: u64,
+        expires_at_ms: u64,
+        max_gas_budget: u64,
+        ctx: &mut TxContext,
+    ) {
+        agent_policy::create_policy(
+            org,
+            agent_addr,
+            allowed_action,
+            target_scope,
+            max_uses,
+            expires_at_ms,
+            max_gas_budget,
+            ctx,
+        );
+    }
+
+    public entry fun revoke_agent_policy(
+        policy: &mut AgentPolicy,
+        org: &Organization,
+        ctx: &TxContext,
+    ) {
+        agent_policy::revoke_policy(policy, org, ctx);
+    }
+
+    public entry fun execute_agent_action(
+        policy: &mut AgentPolicy,
+        org: &Organization,
+        cert: &AgentCertificate,
+        action_kind: String,
+        target_scope: String,
+        intent_hash: vector<u8>,
+        result_hash: vector<u8>,
+        gas_budget: u64,
+        ctx: &TxContext,
+    ) {
+        agent_policy::execute_action(
+            policy,
+            org,
+            cert,
+            action_kind,
+            target_scope,
+            intent_hash,
+            result_hash,
+            gas_budget,
+            ctx,
+        );
+    }
+
+
+
+    public entry fun create_agent_policy_for_objective(
+        org: &Organization,
+        objective_obj: &Objective,
+        agent_addr: address,
+        allowed_action: String,
+        target_scope: String,
+        max_uses: u64,
+        expires_at_ms: u64,
+        max_gas_budget: u64,
+        ctx: &mut TxContext,
+    ) {
+        agent_policy::create_policy_for_objective(
+            org,
+            objective_obj,
+            agent_addr,
+            allowed_action,
+            target_scope,
+            max_uses,
+            expires_at_ms,
+            max_gas_budget,
+            ctx,
+        );
+    }
+
+    public entry fun create_agent_policy_for_key_result(
+        org: &Organization,
+        objective_obj: &Objective,
+        key_result: &KeyResult,
+        agent_addr: address,
+        allowed_action: String,
+        target_scope: String,
+        max_uses: u64,
+        expires_at_ms: u64,
+        max_gas_budget: u64,
+        ctx: &mut TxContext,
+    ) {
+        agent_policy::create_policy_for_key_result(
+            org,
+            objective_obj,
+            key_result,
+            agent_addr,
+            allowed_action,
+            target_scope,
+            max_uses,
+            expires_at_ms,
+            max_gas_budget,
+            ctx,
+        );
+    }
+
+    // ===== Remote Authority Entry Points =====
+
+    public entry fun create_remote_capability(
+        org: &Organization,
+        delegate: address,
+        target_kind: u8,
+        node_id: String,
+        agent_id: String,
+        actions: vector<String>,
+        scope: String,
+        max_uses: u64,
+        budget_asset: String,
+        max_budget: u64,
+        expires_at_ms: u64,
+        ctx: &mut TxContext,
+    ) {
+        remote_authority::create_capability(
+            org, delegate, target_kind, node_id, agent_id, actions, scope,
+            max_uses, budget_asset, max_budget, expires_at_ms, ctx,
+        );
+    }
+
+    public entry fun delegate_remote_capability(
+        parent: &mut RemoteCapability,
+        org: &Organization,
+        delegate: address,
+        target_kind: u8,
+        node_id: String,
+        agent_id: String,
+        actions: vector<String>,
+        scope: String,
+        max_uses: u64,
+        budget_asset: String,
+        max_budget: u64,
+        expires_at_ms: u64,
+        ctx: &mut TxContext,
+    ) {
+        let _child_id = remote_authority::delegate_capability(
+            parent, org, delegate, target_kind, node_id, agent_id, actions, scope,
+            max_uses, budget_asset, max_budget, expires_at_ms, ctx,
+        );
+    }
+
+    public entry fun revoke_remote_capability(
+        capability: &mut RemoteCapability,
+        org: &Organization,
+        ctx: &TxContext,
+    ) {
+        remote_authority::revoke_capability(capability, org, ctx);
+    }
+
+    public entry fun claim_remote_authority_use(
+        capability: &mut RemoteCapability,
+        action: String,
+        scope: String,
+        target_kind: u8,
+        node_id: String,
+        agent_id: String,
+        command_id: String,
+        nonce: String,
+        idempotency_key: String,
+        budget_asset: String,
+        budget_amount: u64,
+        intent_hash: vector<u8>,
+        ctx: &TxContext,
+    ) {
+        remote_authority::claim_authority_use(
+            capability, action, scope, target_kind, node_id, agent_id,
+            command_id, nonce, idempotency_key, budget_asset, budget_amount,
+            intent_hash, ctx,
+        );
+    }
+
+    // ===== Task Entry Points =====
+
+    public entry fun create_task(
+        org: &mut Organization,
+        cert: &AgentCertificate,
+        title: String,
+        description: String,
+        ctx: &mut TxContext,
+    ) {
+        task::create_task(org, cert, title, description, ctx);
+    }
+
+
+
+    public entry fun create_task_for_key_result(
+        org: &mut Organization,
+        objective_obj: &Objective,
+        key_result: &mut KeyResult,
+        cert: &AgentCertificate,
+        title: String,
+        description: String,
+        ctx: &mut TxContext,
+    ) {
+        task::create_task_for_key_result(org, objective_obj, key_result, cert, title, description, ctx);
+    }
+
+    public entry fun assign_task(
+        task: &mut Task,
+        org: &Organization,
+        cert: &AgentCertificate,
+        ctx: &mut TxContext,
+    ) {
+        task::assign_task(task, org, cert, ctx);
+    }
+
+    public entry fun submit_task(
+        task: &mut Task,
+        submission: String,
+        ctx: &mut TxContext,
+    ) {
+        task::submit_task(task, submission, ctx);
+    }
+
+    public entry fun verify_task(
+        admin_cap: &OrgAdminCap,
+        task: &mut Task,
+        ctx: &TxContext,
+    ) {
+        task::verify_task(admin_cap, task, ctx);
+    }
+
+    public entry fun complete_task(
+        admin_cap: &OrgAdminCap,
+        task: &mut Task,
+        assignee_cert: &mut AgentCertificate,
+        ctx: &mut TxContext,
+    ) {
+        task::complete_task(admin_cap, task, assignee_cert, ctx);
+    }
+
+    public entry fun reject_task(
+        admin_cap: &OrgAdminCap,
+        task: &mut Task,
+        assignee_cert: &mut AgentCertificate,
+        reason: String,
+        ctx: &TxContext,
+    ) {
+        task::reject_task(admin_cap, task, assignee_cert, reason, ctx);
+    }
+
+    // ===== Fractal Entry Points =====
+
+    public entry fun create_sub_organization(
+        admin_cap: &OrgAdminCap,
+        registry: &mut ProtocolRegistry,
+        parent_org: &mut Organization,
+        name: String,
+        description: String,
+        ctx: &mut TxContext,
+    ) {
+        fractal::create_sub_organization(admin_cap, registry, parent_org, name, description, ctx);
+    }
+
+    public entry fun detach_sub_organization(
+        parent_admin_cap: &OrgAdminCap,
+        child_admin_cap: &OrgAdminCap,
+        parent_org: &mut Organization,
+        child_org: &mut Organization,
+    ) {
+        fractal::detach_sub_organization(parent_admin_cap, child_admin_cap, parent_org, child_org);
+    }
+
+    // ===== Governance Entry Points =====
+
+    public entry fun create_governance(
+        admin_cap: &OrgAdminCap,
+        org: &Organization,
+        ctx: &mut TxContext,
+    ) {
+        governance::create_governance(admin_cap, org, ctx);
+    }
+
+    public entry fun create_proposal(
+        governance_obj: &mut Governance,
+        org: &Organization,
+        proposer_cert: &AgentCertificate,
+        title: String,
+        description: String,
+        voting_deadline: u64,
+        execution_payload: vector<u8>,
+        ctx: &mut TxContext,
+    ) {
+        governance::create_proposal(
+            governance_obj,
+            org,
+            proposer_cert,
+            title,
+            description,
+            voting_deadline,
+            execution_payload,
+            ctx,
+        );
+    }
+
+    public entry fun start_proposal_voting(
+        admin_cap: &OrgAdminCap,
+        governance_obj: &Governance,
+        proposal: &mut Proposal,
+        ctx: &TxContext,
+    ) {
+        governance::start_voting(admin_cap, governance_obj, proposal, ctx);
+    }
+
+    public entry fun cast_proposal_vote(
+        proposal: &mut Proposal,
+        voter_cert: &AgentCertificate,
+        vote: u8,
+        ctx: &TxContext,
+    ) {
+        governance::cast_vote(proposal, voter_cert, vote, ctx);
+    }
+
+    public entry fun finalize_proposal_voting(
+        admin_cap: &OrgAdminCap,
+        governance_obj: &Governance,
+        proposal: &mut Proposal,
+        ctx: &TxContext,
+    ) {
+        governance::finalize_voting(admin_cap, governance_obj, proposal, ctx);
+    }
+
+    public entry fun close_proposal_voting(
+        admin_cap: &OrgAdminCap,
+        governance_obj: &Governance,
+        proposal: &mut Proposal,
+        ctx: &TxContext,
+    ) {
+        governance::close_voting(admin_cap, governance_obj, proposal, ctx);
+    }
+
+    public entry fun execute_proposal(
+        admin_cap: &OrgAdminCap,
+        governance_obj: &Governance,
+        proposal: &mut Proposal,
+        ctx: &TxContext,
+    ) {
+        governance::execute_proposal(admin_cap, governance_obj, proposal, ctx);
+    }
+
+    // ===== Review Entry Points =====
+
+    public entry fun create_review(
+        admin_cap: &OrgAdminCap,
+        task: &Task,
+        reviewers: vector<address>,
+        required_approvals: u64,
+        ctx: &mut TxContext,
+    ) {
+        review::create_review(admin_cap, task, reviewers, required_approvals, ctx);
+    }
+
+    public entry fun submit_review(
+        review_obj: &mut Review,
+        reviewer_cert: &AgentCertificate,
+        decision: u8,
+        ctx: &TxContext,
+    ) {
+        review::submit_review(review_obj, reviewer_cert, decision, ctx);
+    }
+
+    public entry fun finalize_review(
+        admin_cap: &OrgAdminCap,
+        review_obj: &mut Review,
+        assignee_cert: &mut AgentCertificate,
+        ctx: &TxContext,
+    ) {
+        review::finalize_review(admin_cap, review_obj, assignee_cert, ctx);
+    }
+
+    // ===== Profile Entry Points =====
+
+    public entry fun set_agent_profile(
+        org: &mut Organization,
+        cert: &AgentCertificate,
+        name: String,
+        avatar_url: String,
+        ctx: &mut TxContext,
+    ) {
+        profile::set_profile(org, cert, name, avatar_url, ctx);
+    }
+
+    public entry fun admin_set_agent_profile(
+        admin_cap: &OrgAdminCap,
+        org: &mut Organization,
+        agent: address,
+        name: String,
+        avatar_url: String,
+        ctx: &mut TxContext,
+    ) {
+        profile::admin_set_profile(admin_cap, org, agent, name, avatar_url, ctx);
+    }
+}
