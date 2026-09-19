@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Task Protocol"
+  short_description: "Portable agent tasks with skill-managed replies"
+  default_prompt: "Use $use-agent-task-protocol to compose a portable ATP envelope with a compact bootstrap Footer and actively return replies."
