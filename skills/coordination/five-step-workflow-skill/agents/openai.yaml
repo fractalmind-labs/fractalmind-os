@@ -1,0 +1,4 @@
+interface:
+  display_name: "Five-Step Workflow"
+  short_description: "Rethink then optimize any workflow."
+  default_prompt: "Use this skill to apply first-principles thinking and then optimize a workflow with the five-step method."
