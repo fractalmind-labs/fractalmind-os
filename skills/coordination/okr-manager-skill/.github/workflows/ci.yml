@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check SKILL.md exists
+        run: test -f SKILL.md
+
+      - name: Check README.md exists
+        run: test -f README.md
+
+      - name: Check examples exist
+        run: |
+          test -f examples/okr-template-en.md
+          test -f examples/okr-template-zh.md
+          test -f examples/heartbeat-integration.md
+
+      - name: Validate SKILL.md frontmatter
+        run: |
+          head -1 SKILL.md | grep -q "^---$"
+          grep -q "^name:" SKILL.md
+          grep -q "^description:" SKILL.md
+
+      - name: Check for broken internal links
+        run: |
+          # Extract markdown links and verify referenced files exist
+          grep -oP '\[.*?\]\(((?!http)[^)]+)\)' README.md | \
+            grep -oP '\(([^)]+)\)' | tr -d '()' | \
+            while read -r link; do
+              if [ ! -f "$link" ] && [ ! -d "$link" ]; then
+                echo "Broken link: $link"
+                exit 1
+              fi
+            done
+          echo "All internal links valid"
