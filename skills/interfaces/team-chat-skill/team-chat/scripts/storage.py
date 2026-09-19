@@ -1,0 +1,819 @@
+"""Durable file-backed storage helpers for team-chat."""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import time
+from contextlib import contextmanager
+from copy import deepcopy
+from hashlib import sha1
+from pathlib import Path
+from typing import Any, Iterator
+from uuid import uuid4
+
+import fcntl
+
+from protocol import parse_iso_utc, validate_identifier
+
+
+DEFAULT_ACK_POLICY: dict[str, dict[str, int]] = {
+    "default": {"ack_timeout_seconds": 60, "max_retries": 2},
+    "decision_required": {"ack_timeout_seconds": 180, "max_retries": 3},
+    "shutdown_request": {"ack_timeout_seconds": 180, "max_retries": 2},
+}
+
+
+class TeamStore:
+    def __init__(self, base_dir: Path, team: str):
+        self.base_dir = Path(base_dir)
+        self.team = validate_identifier(team, field_name="team")
+        self.team_dir = self.base_dir / "teams" / self.team
+        self.inboxes_dir = self.team_dir / "inboxes"
+        self.events_dir = self.team_dir / "events"
+        self.tasks_dir = self.team_dir / "tasks"
+        self.state_dir = self.team_dir / "state"
+        self.dead_letter_dir = self.team_dir / "dead-letter"
+        self.locks_dir = self.team_dir / "locks"
+        self.config_path = self.team_dir / "config.json"
+        self.team_meta_path = self.team_dir / "team.json"
+
+        self.message_index_path = self.state_dir / "message-index.json"
+        self.event_index_path = self.state_dir / "event-index.json"
+        self.ack_index_path = self.state_dir / "ack-index.json"
+        self.nudge_index_path = self.state_dir / "nudge-index.json"
+        self.malformed_jsonl_path = self.state_dir / "malformed-jsonl.json"
+        self.message_index_shards_dir = self.state_dir / "message-index-shards"
+        self.event_index_shards_dir = self.state_dir / "event-index-shards"
+
+    def ensure_layout(self) -> None:
+        for directory in (
+            self.team_dir,
+            self.inboxes_dir,
+            self.events_dir,
+            self.tasks_dir,
+            self.state_dir,
+            self.dead_letter_dir,
+            self.locks_dir,
+            self.message_index_shards_dir,
+            self.event_index_shards_dir,
+        ):
+            directory.mkdir(parents=True, exist_ok=True)
+
+    def _index_shard_path(self, shard_dir: Path, key: str) -> Path:
+        digest = sha1(key.encode("utf-8")).hexdigest()[:2]
+        return shard_dir / f"{digest}.json"
+
+    def _to_relative_path(self, path: Path) -> str:
+        try:
+            return str(path.relative_to(self.base_dir))
+        except ValueError:
+            return str(path)
+
+    def _warn_malformed_enabled(self) -> bool:
+        return str(os.getenv("TEAM_CHAT_WARN_MALFORMED", "")).lower() in {"1", "true", "yes", "on"}
+
+    def _record_malformed_jsonl(
+        self,
+        *,
+        path: Path,
+        raw_line: str,
+        reason: str,
+        line_number: int | None = None,
+    ) -> None:
+        relative_path = self._to_relative_path(path)
+        raw_hash = sha1(raw_line.encode("utf-8", errors="replace")).hexdigest()
+        fingerprint = f"{line_number}:{raw_hash}" if line_number is not None else raw_hash
+        now = int(time.time())
+        sample = raw_line.strip()
+        if len(sample) > 120:
+            sample = sample[:117] + "..."
+
+        is_new = False
+        with self.lock("malformed-jsonl"):
+            state = self.read_json(self.malformed_jsonl_path, {"total": 0, "by_file": {}})
+            if not isinstance(state, dict):
+                state = {"total": 0, "by_file": {}}
+            by_file = state.get("by_file")
+            if not isinstance(by_file, dict):
+                by_file = {}
+
+            file_entry = by_file.get(relative_path)
+            if not isinstance(file_entry, dict):
+                file_entry = {"count": 0, "items": {}}
+
+            items = file_entry.get("items")
+            if not isinstance(items, dict):
+                items = {}
+
+            if fingerprint not in items:
+                is_new = True
+                items[fingerprint] = {
+                    "line": line_number,
+                    "reason": reason,
+                    "sample": sample,
+                    "first_seen_ts": now,
+                    "last_seen_ts": now,
+                }
+            else:
+                existing = items.get(fingerprint)
+                if not isinstance(existing, dict):
+                    existing = {}
+                existing["line"] = line_number
+                existing["reason"] = reason
+                existing["sample"] = sample
+                existing["last_seen_ts"] = now
+                existing.setdefault("first_seen_ts", now)
+                items[fingerprint] = existing
+
+            file_entry["items"] = items
+            file_entry["count"] = len(items)
+            file_entry["last_seen_ts"] = now
+            file_entry["last_line"] = line_number
+            file_entry["last_reason"] = reason
+            by_file[relative_path] = file_entry
+
+            total = 0
+            for entry in by_file.values():
+                if isinstance(entry, dict):
+                    total += int(entry.get("count", 0))
+            state["total"] = total
+            state["by_file"] = by_file
+            self.write_json_atomic(self.malformed_jsonl_path, state)
+
+        if is_new and self._warn_malformed_enabled():
+            location = f"{relative_path}:{line_number}" if line_number is not None else relative_path
+            print(
+                f"warning: malformed jsonl skipped at {location} ({reason})",
+                file=sys.stderr,
+            )
+
+    def malformed_jsonl_diagnostics(self) -> dict[str, Any]:
+        state = self.read_json(self.malformed_jsonl_path, {"total": 0, "by_file": {}})
+        if not isinstance(state, dict):
+            return {"total": 0, "files": []}
+        by_file = state.get("by_file")
+        if not isinstance(by_file, dict):
+            by_file = {}
+
+        files: list[dict[str, Any]] = []
+        total = 0
+        for path, entry in by_file.items():
+            if not isinstance(path, str) or not isinstance(entry, dict):
+                continue
+            count = int(entry.get("count", 0))
+            total += count
+            files.append(
+                {
+                    "path": path,
+                    "count": count,
+                    "last_line": entry.get("last_line"),
+                    "last_reason": entry.get("last_reason"),
+                    "last_seen_ts": entry.get("last_seen_ts"),
+                }
+            )
+        files.sort(key=lambda item: (item.get("path", "")))
+        return {"total": total, "files": files}
+
+    def _index_migration_marker(self, shard_dir: Path) -> Path:
+        return shard_dir / ".migrated"
+
+    def _mark_index_migrated(self, shard_dir: Path) -> None:
+        marker = self._index_migration_marker(shard_dir)
+        marker.write_text("1\n", encoding="utf-8")
+
+    def _load_index_entry(
+        self,
+        *,
+        legacy_path: Path,
+        shard_dir: Path,
+        item_id: str,
+    ) -> dict[str, Any] | None:
+        shard_path = self._index_shard_path(shard_dir, item_id)
+        shard_index = self.read_json(shard_path, {})
+        if isinstance(shard_index, dict):
+            entry = shard_index.get(item_id)
+            if isinstance(entry, dict):
+                return entry
+
+        if self._index_migration_marker(shard_dir).exists():
+            return None
+
+        legacy_index = self.read_json(legacy_path, {})
+        if not isinstance(legacy_index, dict):
+            return None
+        entry = legacy_index.get(item_id)
+        return entry if isinstance(entry, dict) else None
+
+    def _ensure_index_migrated_locked(self, *, legacy_path: Path, shard_dir: Path) -> None:
+        marker = self._index_migration_marker(shard_dir)
+        if marker.exists():
+            return
+
+        legacy_index = self.read_json(legacy_path, {})
+        if isinstance(legacy_index, dict) and legacy_index:
+            shard_buckets: dict[Path, dict[str, Any]] = {}
+            for key, payload in legacy_index.items():
+                if not isinstance(key, str) or not isinstance(payload, dict):
+                    continue
+                shard_path = self._index_shard_path(shard_dir, key)
+                bucket = shard_buckets.setdefault(shard_path, {})
+                bucket[key] = payload
+            for shard_path, bucket in shard_buckets.items():
+                existing = self.read_json(shard_path, {})
+                if isinstance(existing, dict) and existing:
+                    merged = dict(existing)
+                    merged.update(bucket)
+                    bucket = merged
+                self.write_json_atomic(shard_path, bucket)
+
+        self._mark_index_migrated(shard_dir)
+
+    def _iter_message_index_entries(self) -> Iterator[tuple[str, dict[str, Any]]]:
+        marker = self._index_migration_marker(self.message_index_shards_dir)
+        if marker.exists():
+            for shard in sorted(self.message_index_shards_dir.glob("*.json")):
+                index = self.read_json(shard, {})
+                if not isinstance(index, dict):
+                    continue
+                for message_id, info in index.items():
+                    if isinstance(message_id, str) and isinstance(info, dict):
+                        yield message_id, info
+            return
+
+        legacy = self.read_json(self.message_index_path, {})
+        if isinstance(legacy, dict) and legacy:
+            for message_id, info in legacy.items():
+                if isinstance(message_id, str) and isinstance(info, dict):
+                    yield message_id, info
+            return
+
+        # Fallback for partially migrated state where marker is absent but shards exist.
+        for shard in sorted(self.message_index_shards_dir.glob("*.json")):
+            index = self.read_json(shard, {})
+            if not isinstance(index, dict):
+                continue
+            for message_id, info in index.items():
+                if isinstance(message_id, str) and isinstance(info, dict):
+                    yield message_id, info
+
+    def _replace_index_shards_locked(self, *, shard_dir: Path, index: dict[str, Any]) -> None:
+        for existing in shard_dir.glob("*.json"):
+            existing.unlink()
+
+        shard_buckets: dict[Path, dict[str, Any]] = {}
+        for key, payload in index.items():
+            if not isinstance(key, str) or not isinstance(payload, dict):
+                continue
+            shard_path = self._index_shard_path(shard_dir, key)
+            bucket = shard_buckets.setdefault(shard_path, {})
+            bucket[key] = payload
+
+        for shard_path, bucket in shard_buckets.items():
+            self.write_json_atomic(shard_path, bucket)
+
+        self._mark_index_migrated(shard_dir)
+
+    @contextmanager
+    def lock(self, lock_name: str) -> Iterator[None]:
+        self.ensure_layout()
+        path = self.locks_dir / f"{lock_name}.lock"
+        with path.open("a+", encoding="utf-8") as handle:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+    def read_json(self, path: Path, default: Any) -> Any:
+        if not path.exists():
+            return deepcopy(default)
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return deepcopy(default)
+
+    def write_json_atomic(self, path: Path, payload: Any) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = path.with_name(f"{path.name}.tmp.{os.getpid()}.{uuid4().hex}")
+        body = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+        temp_path.write_text(body, encoding="utf-8")
+        os.replace(temp_path, path)
+
+    def append_jsonl(self, path: Path, record: dict[str, Any]) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        line = json.dumps(record, ensure_ascii=False, sort_keys=True)
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(line + "\n")
+
+    def _read_jsonl_record_at_offset(self, path: Path, offset: int) -> dict[str, Any] | None:
+        if offset < 0 or not path.exists():
+            return None
+        try:
+            with path.open("rb") as handle:
+                handle.seek(offset)
+                raw = handle.readline()
+        except Exception:
+            return None
+        if not raw:
+            return None
+        try:
+            payload = json.loads(raw.decode("utf-8").strip())
+        except Exception as exc:
+            self._record_malformed_jsonl(
+                path=path,
+                raw_line=raw.decode("utf-8", errors="replace"),
+                reason=str(exc),
+                line_number=None,
+            )
+            return None
+        if not isinstance(payload, dict):
+            self._record_malformed_jsonl(
+                path=path,
+                raw_line=raw.decode("utf-8", errors="replace"),
+                reason="jsonl record is not an object",
+                line_number=None,
+            )
+            return None
+        return payload
+
+    def read_jsonl(self, path: Path) -> list[dict[str, Any]]:
+        if not path.exists():
+            return []
+        records: list[dict[str, Any]] = []
+        for line_number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            stripped = raw.strip()
+            if not stripped:
+                continue
+            try:
+                payload = json.loads(stripped)
+            except Exception as exc:
+                self._record_malformed_jsonl(
+                    path=path,
+                    raw_line=raw,
+                    reason=str(exc),
+                    line_number=line_number,
+                )
+                continue
+            if isinstance(payload, dict):
+                records.append(payload)
+                continue
+            self._record_malformed_jsonl(
+                path=path,
+                raw_line=raw,
+                reason="jsonl record is not an object",
+                line_number=line_number,
+            )
+        return records
+
+    def load_ack_policy(self) -> dict[str, dict[str, int]]:
+        config = self.read_json(self.config_path, {})
+        policy = config.get("ack_policy") if isinstance(config, dict) else None
+        merged = deepcopy(DEFAULT_ACK_POLICY)
+        if isinstance(policy, dict):
+            for key, value in policy.items():
+                if not isinstance(value, dict):
+                    continue
+                timeout = value.get("ack_timeout_seconds")
+                retries = value.get("max_retries")
+                merged[key] = {
+                    "ack_timeout_seconds": int(timeout) if isinstance(timeout, int) else merged.get(key, merged["default"])["ack_timeout_seconds"],
+                    "max_retries": int(retries) if isinstance(retries, int) else merged.get(key, merged["default"])["max_retries"],
+                }
+        return merged
+
+    def ack_policy_for_type(self, message_type: str) -> dict[str, int]:
+        policy = self.load_ack_policy()
+        default = policy["default"]
+        specific = policy.get(message_type, {})
+        return {
+            "ack_timeout_seconds": int(specific.get("ack_timeout_seconds", default["ack_timeout_seconds"])),
+            "max_retries": int(specific.get("max_retries", default["max_retries"])),
+        }
+
+    def _inbox_path(self, agent: str) -> Path:
+        safe_agent = validate_identifier(agent, field_name="agent")
+        return self.inboxes_dir / f"{safe_agent}.jsonl"
+
+    def upsert_message(self, message: dict[str, Any]) -> bool:
+        self.ensure_layout()
+        message_id = str(message["id"])
+        agent = str(message["to"])
+        inbox_path = self._inbox_path(agent)
+
+        with self.lock("messages"):
+            self._ensure_index_migrated_locked(
+                legacy_path=self.message_index_path,
+                shard_dir=self.message_index_shards_dir,
+            )
+            shard_path = self._index_shard_path(self.message_index_shards_dir, message_id)
+            index = self.read_json(shard_path, {})
+            if not isinstance(index, dict):
+                index = {}
+            if message_id in index:
+                return False
+
+            inbox_path.parent.mkdir(parents=True, exist_ok=True)
+            line = (json.dumps(message, ensure_ascii=False, sort_keys=True) + "\n").encode("utf-8")
+            with inbox_path.open("ab") as handle:
+                offset = int(handle.tell())
+                handle.write(line)
+            index[message_id] = {
+                "inbox": inbox_path.name,
+                "created_at": message.get("created_at"),
+                "to": agent,
+                "type": message.get("type"),
+                "offset": offset,
+            }
+            self.write_json_atomic(shard_path, index)
+            return True
+
+    def get_message(self, message_id: str) -> dict[str, Any] | None:
+        info = self._load_index_entry(
+            legacy_path=self.message_index_path,
+            shard_dir=self.message_index_shards_dir,
+            item_id=message_id,
+        )
+        if not info:
+            return None
+
+        inbox_name = info.get("inbox")
+        if not isinstance(inbox_name, str):
+            return None
+
+        inbox_path = self.inboxes_dir / inbox_name
+        offset = info.get("offset")
+        if isinstance(offset, int):
+            record = self._read_jsonl_record_at_offset(inbox_path, offset)
+            if record and record.get("id") == message_id:
+                return record
+
+        records = self.read_jsonl(inbox_path)
+        for record in records:
+            if record.get("id") == message_id:
+                return record
+        return None
+
+    def list_agents(self) -> list[str]:
+        self.ensure_layout()
+        agents = [path.stem for path in sorted(self.inboxes_dir.glob("*.jsonl"))]
+        return agents
+
+    def list_messages_for_agent(self, agent: str, *, unread_only: bool = False, limit: int = 100) -> list[dict[str, Any]]:
+        messages = self.read_jsonl(self._inbox_path(agent))
+        ack_index = self.read_json(self.ack_index_path, {})
+
+        if unread_only:
+            messages = [msg for msg in messages if str(msg.get("id")) not in ack_index]
+
+        if limit > 0:
+            messages = messages[-limit:]
+        return messages
+
+    def _iter_jsonl_reverse(self, path: Path, *, chunk_size: int = 64 * 1024) -> Iterator[dict[str, Any]]:
+        if not path.exists():
+            return
+
+        with path.open("rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            position = handle.tell()
+            buffer = b""
+
+            while position > 0:
+                read_size = min(chunk_size, position)
+                position -= read_size
+                handle.seek(position)
+                chunk = handle.read(read_size)
+                buffer = chunk + buffer
+                lines = buffer.split(b"\n")
+                buffer = lines[0]
+                for raw in reversed(lines[1:]):
+                    stripped = raw.strip()
+                    if not stripped:
+                        continue
+                    try:
+                        payload = json.loads(stripped.decode("utf-8"))
+                    except Exception as exc:
+                        self._record_malformed_jsonl(
+                            path=path,
+                            raw_line=stripped.decode("utf-8", errors="replace"),
+                            reason=str(exc),
+                            line_number=None,
+                        )
+                        continue
+                    if isinstance(payload, dict):
+                        yield payload
+                        continue
+                    self._record_malformed_jsonl(
+                        path=path,
+                        raw_line=stripped.decode("utf-8", errors="replace"),
+                        reason="jsonl record is not an object",
+                        line_number=None,
+                    )
+
+            stripped = buffer.strip()
+            if stripped:
+                try:
+                    payload = json.loads(stripped.decode("utf-8"))
+                except Exception as exc:
+                    self._record_malformed_jsonl(
+                        path=path,
+                        raw_line=stripped.decode("utf-8", errors="replace"),
+                        reason=str(exc),
+                        line_number=None,
+                    )
+                    payload = None
+                if isinstance(payload, dict):
+                    yield payload
+                elif payload is not None:
+                    self._record_malformed_jsonl(
+                        path=path,
+                        raw_line=stripped.decode("utf-8", errors="replace"),
+                        reason="jsonl record is not an object",
+                        line_number=None,
+                    )
+
+    def list_messages_window_for_agent(
+        self,
+        agent: str,
+        *,
+        unread_only: bool = False,
+        limit: int = 100,
+        cursor: str | None = None,
+    ) -> tuple[list[dict[str, Any]], str | None]:
+        safe_agent = validate_identifier(agent, field_name="agent")
+        inbox_path = self._inbox_path(safe_agent)
+        clamped_limit = max(0, int(limit))
+        ack_ids: set[str] = set()
+        if unread_only:
+            ack_index = self.read_json(self.ack_index_path, {})
+            ack_ids = {str(message_id) for message_id in ack_index.keys()}
+
+        started = cursor is None
+        cursor_found = cursor is None
+        collected: list[dict[str, Any]] = []
+        target = clamped_limit + 1 if clamped_limit > 0 else None
+
+        for message in self._iter_jsonl_reverse(inbox_path):
+            message_id = message.get("id")
+            if not isinstance(message_id, str):
+                continue
+
+            if not started:
+                if message_id == cursor:
+                    started = True
+                    cursor_found = True
+                continue
+
+            if unread_only and message_id in ack_ids:
+                continue
+
+            collected.append(message)
+            if target is not None and len(collected) >= target:
+                break
+
+        if cursor is not None and not cursor_found:
+            return [], None
+
+        if clamped_limit <= 0:
+            page_reverse = collected
+            has_more = False
+        else:
+            page_reverse = collected[:clamped_limit]
+            has_more = len(collected) > clamped_limit
+
+        page = list(reversed(page_reverse))
+        next_cursor = None
+        if has_more and page:
+            oldest = page[0].get("id")
+            if isinstance(oldest, str):
+                next_cursor = oldest
+        return page, next_cursor
+
+    def record_ack(self, message_id: str, *, agent: str, acked_at: str, delivery_id: str | None = None) -> bool:
+        with self.lock("acks"):
+            index = self.read_json(self.ack_index_path, {})
+            if message_id in index:
+                return False
+            entry: dict[str, Any] = {
+                "message_id": message_id,
+                "agent": agent,
+                "acked_at": acked_at,
+            }
+            if delivery_id:
+                entry["delivery_id"] = delivery_id
+            index[message_id] = entry
+            self.write_json_atomic(self.ack_index_path, index)
+            return True
+
+    def get_ack(self, message_id: str) -> dict[str, Any] | None:
+        index = self.read_json(self.ack_index_path, {})
+        ack = index.get(message_id)
+        return ack if isinstance(ack, dict) else None
+
+    def append_event(self, event: dict[str, Any]) -> bool:
+        self.ensure_layout()
+        event_id = str(event["id"])
+        created_at = str(event.get("created_at", ""))
+        date_part = created_at[:10] if len(created_at) >= 10 else "unknown"
+        event_path = self.events_dir / f"{date_part}.jsonl"
+
+        with self.lock("events"):
+            self._ensure_index_migrated_locked(
+                legacy_path=self.event_index_path,
+                shard_dir=self.event_index_shards_dir,
+            )
+            shard_path = self._index_shard_path(self.event_index_shards_dir, event_id)
+            index = self.read_json(shard_path, {})
+            if not isinstance(index, dict):
+                index = {}
+            if event_id in index:
+                return False
+
+            self.append_jsonl(event_path, event)
+            index[event_id] = {"file": event_path.name, "created_at": created_at}
+            self.write_json_atomic(shard_path, index)
+            return True
+
+    def iter_events(self) -> list[dict[str, Any]]:
+        events: list[dict[str, Any]] = []
+        for path in sorted(self.events_dir.glob("*.jsonl")):
+            events.extend(self.read_jsonl(path))
+        events.sort(key=lambda item: (item.get("created_at", ""), item.get("id", "")))
+        return events
+
+    def iter_events_reverse(self) -> Iterator[dict[str, Any]]:
+        for path in sorted(self.events_dir.glob("*.jsonl"), reverse=True):
+            for event in self._iter_jsonl_reverse(path):
+                yield event
+
+    def write_dead_letter(self, entry: dict[str, Any]) -> None:
+        created_at = str(entry.get("created_at", ""))
+        date_part = created_at[:10] if len(created_at) >= 10 else "unknown"
+        path = self.dead_letter_dir / f"{date_part}.jsonl"
+        with self.lock("dead-letter"):
+            self.append_jsonl(path, entry)
+
+    def list_dead_letters(self) -> list[dict[str, Any]]:
+        records: list[dict[str, Any]] = []
+        for path in sorted(self.dead_letter_dir.glob("*.jsonl")):
+            records.extend(self.read_jsonl(path))
+        records.sort(key=lambda item: (item.get("created_at", ""), item.get("id", "")))
+        return records
+
+    def write_task_snapshot(self, task_id: str, payload: dict[str, Any]) -> None:
+        safe_task_id = validate_identifier(task_id, field_name="task_id")
+        path = self.tasks_dir / f"{safe_task_id}.json"
+        self.write_json_atomic(path, payload)
+
+    def read_task_snapshot(self, task_id: str) -> dict[str, Any] | None:
+        safe_task_id = validate_identifier(task_id, field_name="task_id")
+        path = self.tasks_dir / f"{safe_task_id}.json"
+        if not path.exists():
+            return None
+        snapshot = self.read_json(path, None)
+        return snapshot if isinstance(snapshot, dict) else None
+
+    def list_task_snapshots(self) -> list[dict[str, Any]]:
+        snapshots: list[dict[str, Any]] = []
+        for path in sorted(self.tasks_dir.glob("*.json")):
+            payload = self.read_json(path, None)
+            if isinstance(payload, dict):
+                snapshots.append(payload)
+        snapshots.sort(key=lambda item: (item.get("updated_at", ""), item.get("task_id", "")))
+        return snapshots
+
+    def check_and_record_cooldown(self, key: str, cooldown_seconds: int) -> int:
+        if cooldown_seconds <= 0:
+            return 0
+        now = int(time.time())
+        with self.lock("nudge-cooldown"):
+            state = self.read_json(self.nudge_index_path, {})
+            last_sent = state.get(key)
+            if isinstance(last_sent, int):
+                elapsed = now - last_sent
+                if elapsed < cooldown_seconds:
+                    return cooldown_seconds - elapsed
+            state[key] = now
+            self.write_json_atomic(self.nudge_index_path, state)
+            return 0
+
+    def unread_count(self, agent: str) -> int:
+        return len(self.list_messages_for_agent(agent, unread_only=True, limit=0))
+
+    def stale_unread_messages(self, older_than_seconds: int) -> list[dict[str, Any]]:
+        stale: list[dict[str, Any]] = []
+        if older_than_seconds <= 0:
+            return stale
+        now = time.time()
+        for agent in self.list_agents():
+            for message in self.list_messages_for_agent(agent, unread_only=True, limit=0):
+                created_at = message.get("created_at")
+                if not isinstance(created_at, str):
+                    continue
+                try:
+                    age = now - parse_iso_utc(created_at).timestamp()
+                except Exception:
+                    continue
+                if age >= older_than_seconds:
+                    stale.append(message)
+        stale.sort(key=lambda item: (item.get("created_at", ""), item.get("id", "")))
+        return stale
+
+    def status_unread_and_stale(self, *, older_than_seconds: int) -> tuple[dict[str, int], list[dict[str, Any]]]:
+        ack_index = self.read_json(self.ack_index_path, {})
+        ack_ids = (
+            {str(message_id) for message_id in ack_index.keys()}
+            if isinstance(ack_index, dict)
+            else set()
+        )
+
+        unread_counts: dict[str, int] = {}
+        stale_messages: list[dict[str, Any]] = []
+        index_seen = False
+        cutoff = time.time() - older_than_seconds if older_than_seconds > 0 else None
+
+        for message_id, info in self._iter_message_index_entries():
+            index_seen = True
+            if message_id in ack_ids:
+                continue
+
+            agent = info.get("to")
+            if isinstance(agent, str) and agent:
+                unread_counts[agent] = unread_counts.get(agent, 0) + 1
+
+            if cutoff is None:
+                continue
+
+            created_at = info.get("created_at")
+            if not isinstance(created_at, str):
+                continue
+            try:
+                created_ts = parse_iso_utc(created_at).timestamp()
+            except Exception:
+                continue
+            if created_ts > cutoff:
+                continue
+
+            stale_message: dict[str, Any] = {
+                "id": message_id,
+                "to": agent,
+                "created_at": created_at,
+                "type": info.get("type"),
+            }
+            # Keep backward compatibility with richer stale message payload when needed.
+            if not isinstance(stale_message.get("type"), str):
+                loaded = self.get_message(message_id)
+                if isinstance(loaded, dict):
+                    stale_message = loaded
+            stale_messages.append(stale_message)
+
+        if not index_seen:
+            # Compatibility fallback for legacy/out-of-band states with no message index.
+            for agent in self.list_agents():
+                unread = self.list_messages_for_agent(agent, unread_only=True, limit=0)
+                unread_counts[agent] = len(unread)
+                if cutoff is None:
+                    continue
+                for message in unread:
+                    created_at = message.get("created_at")
+                    if not isinstance(created_at, str):
+                        continue
+                    try:
+                        created_ts = parse_iso_utc(created_at).timestamp()
+                    except Exception:
+                        continue
+                    if created_ts <= cutoff:
+                        stale_messages.append(message)
+
+        stale_messages.sort(key=lambda item: (item.get("created_at", ""), item.get("id", "")))
+        return unread_counts, stale_messages
+
+    def replace_state_indexes(
+        self,
+        *,
+        message_index: dict[str, Any],
+        event_index: dict[str, Any],
+        ack_index: dict[str, Any],
+    ) -> None:
+        with self.lock("state-rehydrate"):
+            self.write_json_atomic(self.message_index_path, message_index)
+            self.write_json_atomic(self.event_index_path, event_index)
+            self.write_json_atomic(self.ack_index_path, ack_index)
+            self._replace_index_shards_locked(
+                shard_dir=self.message_index_shards_dir,
+                index=message_index,
+            )
+            self._replace_index_shards_locked(
+                shard_dir=self.event_index_shards_dir,
+                index=event_index,
+            )
+
+    def replace_task_snapshots(self, snapshots: dict[str, dict[str, Any]]) -> None:
+        self.ensure_layout()
+        for existing in self.tasks_dir.glob("*.json"):
+            if existing.stem not in snapshots:
+                existing.unlink()
+        for task_id, snapshot in snapshots.items():
+            self.write_task_snapshot(task_id, snapshot)
