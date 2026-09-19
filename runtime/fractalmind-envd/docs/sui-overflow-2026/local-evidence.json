@@ -1,0 +1,26 @@
+{
+  "schema_version": "envd-policy-demo/v1",
+  "intent": {
+    "ActionKind": "shell_exec",
+    "TargetScope": "host:worker-1",
+    "Command": "echo demo-safe",
+    "TargetHost": "worker-1"
+  },
+  "result": {
+    "Status": "simulated_success",
+    "ExitCode": 0,
+    "OutputPreview": "demo accepted command \"echo demo-safe\" for host worker-1",
+    "ExecutedCommand": "echo demo-safe",
+    "TargetHost": "worker-1"
+  },
+  "evidence": {
+    "policy_id": "0xpolicy_demo_local_20260508",
+    "action_kind": "shell_exec",
+    "target_scope": "host:worker-1",
+    "intent_hash_hex": "0x16da140a1740f90e1defbadb6a541f7c905b4ab08663e3070a1224ab073559d1",
+    "result_hash_hex": "0x0309dfd2aeb7dc29379de7dfba70d47ece0adcb10e58a2273e6c0e37dee09b1a",
+    "intent_hash_len": 32,
+    "result_hash_len": 32,
+    "gas_budget": 5000
+  }
+}

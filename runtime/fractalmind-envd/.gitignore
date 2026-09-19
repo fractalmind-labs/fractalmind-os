@@ -1,0 +1,39 @@
+# Binaries
+/envd
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# Build output
+/bin/
+/dist/
+gateway/dist/
+contracts/envd/build/
+
+# Test
+*.test
+*.out
+coverage.txt
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config (local)
+sentinel.yaml
+*.local.yaml
+
+# Worktrees
+.worktrees/

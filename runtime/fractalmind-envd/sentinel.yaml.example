@@ -1,0 +1,132 @@
+# sentinel.yaml.example — fractalmind-envd v3 configuration
+# Copy to sentinel.yaml and edit for your environment.
+
+identity:
+  host_id: ""          # auto-generated if empty
+  hostname: ""         # defaults to os.Hostname()
+
+# Roles control which capabilities this node provides.
+# relay + stun_server auto-enable when a public IP is detected (via STUN probe).
+roles:
+  coordinator: false   # Embedded REST + WebSocket control plane
+  sponsor: false       # Org-level gas sponsorship (requires sponsor.org_wallet_path)
+  # relay: null        # Auto-detect (public IP → true). Set true/false to override.
+  # stun_server: null  # Auto-detect (public IP → true). Set true/false to override.
+
+coordinator:
+  listen_addr: ":8080" # Bind address for the embedded coordinator API when roles.coordinator=true
+  api_token: ""        # Optional: set bearer token to protect /api/* endpoints (Authorization: Bearer <token>)
+  # The worker /ws control channel is authenticated by mutual Ed25519
+  # challenge-response tied to each node's SUI identity (uses sui.keypair_path).
+  # allowed_signers restricts which verified worker SUI addresses may register.
+  # Empty = any authenticated identity is accepted (still no anonymous access).
+  allowed_signers: []
+  # - "0x<worker-sui-address>"
+
+agents:
+  scan_method: tmux    # tmux | systemd | docker
+  scan_interval: 10s
+  auto_restart: true
+  max_restart_attempts: 3
+  # Remote arbitrary shell (bash -c) is OFF by default. Enable deliberately.
+  allow_shell: false
+  # Optional: restrict shell to these argv[0] program names (empty = any when allow_shell=true).
+  shell_allowlist: []
+  # - "tmux"
+  # - "systemctl"
+
+heartbeat:
+  interval: 30s        # Relay nodes include relay_load in P2P heartbeat
+
+# Optional local remote-desktop relay and self-healing supervision. When
+# command is set, envd starts envd-desktop as its direct child, restarts it on
+# exit or repeated /healthz failures, and supplies token via the environment.
+desktop:
+  local_addr: http://127.0.0.1:8090
+  token: ""
+  command: "" # e.g. /usr/local/bin/envd-desktop; empty disables supervision
+  args:
+    - -bind
+    - 127.0.0.1:8090
+    - -display
+    - "1"
+    - -encode-height
+    - "720"
+    - -bitrate
+    - 4M
+    - -fps
+    - "24"
+  restart_delay: 2s
+  health_check_interval: 10s
+  health_check_timeout: 3s
+  unhealthy_threshold: 3
+
+# SUI blockchain control plane (peer discovery, identity, ACL)
+sui:
+  enabled: false
+  rpc: https://fullnode.testnet.sui.io:443
+  keypair_path: ~/.sui/envd.key       # Ed25519 keypair (auto-generated if missing)
+  package_id: "0x..."                 # fractalmind_envd package on SUI
+  protocol_package_id: "0x..."       # fractalmind_protocol package (for auto agent cert discovery)
+  registry_id: "0x..."                # PeerRegistry shared object ID
+  org_id: "0x..."                     # Organization object ID
+  cert_id: ""                         # AgentCertificate object ID (auto-discovered if empty)
+  poll_interval: 30s                  # How often to poll for new peer events
+
+# WireGuard P2P data plane
+wireguard:
+  enabled: false
+  interface_name: wg0                    # Linux: any name. macOS: must be utun[0-9]* (e.g. utun99)
+  listen_port: 51820
+  keypair_path: ~/.wireguard/envd.key # Curve25519 keypair (auto-generated if missing)
+  # address: 10.100.X.Y/32            # Auto-assigned from SUI address hash if empty
+
+# STUN client — NAT type detection + endpoint discovery.
+# Also used for role auto-detection: public IP → auto-enable relay + stun_server.
+stun:
+  enabled: true                        # Recommended: always enable for NAT detection
+  bind_address: ""                     # Optional: bind STUN probes to this local IP (useful when VPN is active)
+  servers:                             # Public STUN fallback (org/shared STUN discovered on-chain)
+    - stun:stun.l.google.com:19302
+    - stun:stun1.l.google.com:19302
+
+# Sponsor role config — org-level gas sponsorship.
+# Only used when roles.sponsor=true. Worker nodes' chain TXs are co-signed
+# by this node using the org wallet, so workers don't need to hold SUI.
+sponsor:
+  org_wallet_path: ""                  # Path to org wallet Ed25519 keypair
+  max_gas_per_tx: 10000000             # Max gas per TX in MIST (0.01 SUI)
+  daily_gas_limit: 100000000           # Daily gas budget in MIST (0.1 SUI)
+  allowed_packages:                    # Contract allowlist (only these packages can be sponsored)
+    - "0x..."                          # fractalmind_envd package
+
+# Relay server config — WireGuard packet forwarding + STUN server.
+# Auto-enabled when public IP is detected (or roles.relay=true).
+relay:
+  listen_port: 3478                    # UDP port for STUN + Relay (shared)
+  max_connections: 100                 # Max simultaneous relay connections
+  bandwidth_limit: ""                  # Optional bandwidth cap (e.g. "100mbps")
+  region: ""                           # Geographic region (e.g. "cn-east", "us-west")
+  isp: ""                              # Network provider (e.g. "aliyun", "aws")
+
+  # TCP fallback: WSS relay for UDP-restricted networks (Issue #8).
+  # When STUN fails and UDP is completely blocked (e.g., corporate firewall),
+  # envd auto-activates WSS fallback to relay WireGuard traffic over TCP/443.
+  tcp_fallback: false                  # Set true to enable WSS fallback detection
+  relay_url: ""                        # WSS relay endpoint (e.g., "wss://relay.example.com/wg-relay")
+  wss_listen_port: 443                 # WSS server port (relay nodes only)
+  wss_cert_file: ""                    # TLS cert file for direct TLS (optional: can use reverse proxy instead)
+  wss_key_file: ""                     # TLS key file for direct TLS (optional: can use reverse proxy instead)
+  wss_port_min: 51900                  # UDP port pool start for WSS relay allocations
+  wss_port_max: 51999                  # UDP port pool end for WSS relay allocations
+
+# Worker-side coordinator target.
+# Non-coordinator nodes connect here for heartbeat + remote commands.
+gateway:
+  url: ws://localhost:8080/ws
+  reconnect_interval: 5s
+  # Pin the coordinator's SUI address the worker will accept on the control
+  # channel. Strongly recommended: without it a spoofed gateway is authenticated
+  # on first sight (the worker still verifies the coordinator proves an identity,
+  # but cannot tell it is the *right* one). Derive from the coordinator's sui key.
+  coordinator_address: "" # "0x<coordinator-sui-address>"
