@@ -1,0 +1,45 @@
+package channels
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestTelegramHelpTextIncludesAgentInfo(t *testing.T) {
+	bot, err := NewTelegramBot("token", nil, 0, "qa-1", []string{"qa-1", "coder-a"})
+	if err != nil {
+		t.Fatalf("NewTelegramBot: %v", err)
+	}
+
+	text := bot.helpText()
+	if !strings.Contains(text, "/agent <name> <task") {
+		t.Fatalf("expected help text to include /agent usage")
+	}
+	if !strings.Contains(text, "/to <name> <task") {
+		t.Fatalf("expected help text to include /to usage")
+	}
+	if !strings.Contains(text, "allowlist") {
+		t.Fatalf("expected help text to mention allowlist")
+	}
+	if !strings.Contains(text, "/whoami") {
+		t.Fatalf("expected help text to include /whoami command")
+	}
+	if !strings.Contains(text, "/agents") {
+		t.Fatalf("expected help text to include /agents command")
+	}
+	if !strings.Contains(text, "/monitor <name>") {
+		t.Fatalf("expected help text to include /monitor command")
+	}
+	if !strings.Contains(text, "/tools") {
+		t.Fatalf("expected help text to include /tools usage")
+	}
+	if !strings.Contains(text, "intentionally unavailable") {
+		t.Fatalf("expected help text to mark /tool and /tools unavailable")
+	}
+	if !strings.Contains(text, "Default agent: qa-1") {
+		t.Fatalf("expected help text to include default agent")
+	}
+	if !strings.Contains(text, "coder-a") {
+		t.Fatalf("expected help text to include allowed agent")
+	}
+}

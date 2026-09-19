@@ -1,0 +1,249 @@
+# FractalBot Configuration Example
+# Copy this to config.yaml and customize for your setup
+
+gateway:
+  # Port for WebSocket server
+  port: 18789
+  # Bind address (127.0.0.1 for local only)
+  bind: 127.0.0.1
+  # Optional: restrict allowed WebSocket origins (scheme + host + optional port)
+  # allowedOrigins:
+  #   - "http://localhost:3000"
+
+channels:
+  # Telegram channel configuration
+  telegram:
+    enabled: true
+    # Telegram is DM-only; non-private chats are ignored.
+    # Get from @BotFather on Telegram
+    botToken: "your_bot_token_here"
+    # Admin Telegram User ID (required for /adduser, /removeuser, /listusers)
+    adminID: 5088760910
+    # List of Telegram User IDs allowed to interact (admin will be auto-added)
+    allowedUsers:
+      - 1234567890
+    # Optional: restrict to specific chat IDs (DM-only; non-private chats ignored)
+    # allowedChats:
+    #   - 1234567890
+
+    # Mode controls how FractalBot receives Telegram updates.
+    # - polling: long polling via getUpdates (recommended for local/dev)
+    # - webhook: Telegram calls your HTTPS endpoint
+    # If empty, FractalBot auto-selects (webhook if webhook* configured, else polling).
+    mode: "polling"
+
+    # Long polling settings (only used in mode: polling)
+    pollingTimeoutSeconds: 25
+    pollingLimit: 100
+    # Persist next update offset (UpdateID+1) to avoid re-processing after restart
+    pollingOffsetFile: "./workspace/telegram.offset"
+
+    # Webhook server (local) (only used in mode: webhook)
+    # If empty, webhook server will not start.
+    webhookListenAddr: ""
+    webhookPath: "/telegram/webhook"
+
+    # Webhook registration (Telegram) (only used in mode: webhook)
+    # Must be publicly reachable HTTPS URL.
+    webhookPublicURL: ""
+    # Verified via header: X-Telegram-Bot-Api-Secret-Token
+    webhookSecretToken: ""
+    # If true, FractalBot will call Telegram setWebhook() on startup.
+    webhookRegisterOnStart: false
+    # If true, FractalBot will call Telegram deleteWebhook() on shutdown.
+    webhookDeleteOnStop: false
+
+  # Slack channel configuration (optional)
+  slack:
+    enabled: false
+    # Socket Mode (no public ports). Requires Slack App-Level token (xapp-).
+    botToken: "xoxb-your-bot-token"
+    appToken: "xapp-your-app-token"
+    # Allowed Slack user IDs (DM-only; empty means deny all)
+    allowedUsers:
+      - "U12345678"
+
+  # Feishu/Lark channel configuration (optional)
+  feishu:
+    enabled: false
+    # App ID from Feishu/Lark developer console
+    appId: "cli_xxx"
+    # App Secret from Feishu/Lark developer console
+    appSecret: "your_app_secret"
+    # Domain: "feishu" (China) or "lark" (International)
+    domain: "feishu"
+    # Allowed Feishu open_id/user_id values
+    allowedUsers:
+      - "ou_xxxxx"
+
+  # Discord channel configuration (optional)
+  discord:
+    enabled: false
+    # Uses the Discord gateway websocket (no public ports).
+    # Get from Discord Developer Portal
+    token: "your-bot-token"
+    # Allowed Discord user IDs (DM-only; empty means deny all)
+    allowedUsers:
+      - "123456789012345678"
+
+  # demail channel configuration (optional)
+  # On-chain agent mail via fractal-demail (Sui). Inbound messages are polled
+  # from MessageSent events and decrypted with this node's identity key;
+  # outbound sends are sponsored transactions signed via the local sui CLI.
+  # demail:
+  #   enabled: true
+  #   # Sui JSON-RPC endpoint
+  #   rpcUrl: "https://fullnode.testnet.sui.io:443"
+  #   # fractal-demail Move package id
+  #   packageId: "0x<package-id>"
+  #   # This node's Sui address (inbound recipient / outbound sender)
+  #   address: "0x<our-address>"
+  #   # File containing this node's base64 Ed25519 private key
+  #   # (32-byte seed or 64-byte key). Read at start; never logged.
+  #   identityKeyFile: "~/.config/fractalbot/demail-identity.key"
+  #   # Gas sponsor Sui address and sponsor-owned gas coin object id (outbound).
+  #   # sponsorAddress may equal address: that is a supported self-sponsored
+  #   # route where this node pays its own gas and sends a single signature.
+  #   sponsorAddress: "0x<sponsor-address>"
+  #   gasCoin: "0x<gas-coin-object-id>"
+  #   # Inbound event poll interval (seconds). Default: 2.
+  #   pollIntervalSeconds: 2
+  #   # Processed Message object id journal; prevents historical replay on restart.
+  #   cursorFile: "~/.local/state/fractalbot/demail-processed.log"
+  #   # Allowed sender Sui addresses (empty means deny all)
+  #   allowedSenders:
+  #     - "0x<peer-address>"
+  #   # Recipient Sui address -> base64 Ed25519 public key.
+  #   # Required per outbound recipient (a pubkey cannot be derived from an address).
+  #   peers:
+  #     "0x<peer-address>": "<base64-ed25519-public-key>"
+
+  # iMessage channel configuration (macOS only, optional)
+  imessage:
+    enabled: true
+    recipient: "+1234567890"
+    pollingEnabled: true
+    pollingIntervalSeconds: 5
+    pollingLimit: 20
+
+agents:
+  # Workspace directory for agent sessions
+  workspace: ./workspace
+  # Maximum concurrent agent sessions
+  maxConcurrent: 4
+
+  # Select the inbound agent runtime. Empty preserves legacy auto-selection.
+  # Supported values: "ohMyCode", "codexAppCDP", "claudeDesktop".
+  router: "ohMyCode"
+
+  # Optional: oh-my-code integration (legacy tmux/agent-manager route)
+  ohMyCode:
+    # Set true for local demo (requires python3 + tmux + agent-manager in that workspace)
+    enabled: false
+    # Path to the oh-my-code repository
+    workspace: "/home/elliot245/workspace/elliot245/oh-my-code"
+    # Optional override (relative to workspace or absolute)
+    agentManagerScript: ".claude/skills/agent-manager/scripts/main.py"
+    # Which logical agent receives channel messages by default. Use agent IDs
+    # such as "main", not a namespace-qualified tmux name like "xiaoyi--main".
+    defaultAgent: "qa-1"
+    # Optional allowlist for explicit routing (defaults to only defaultAgent).
+    # Include "admin" to enable /admin <text>.
+    allowedAgents:
+      - "qa-1"
+      - "admin"
+      - "coder-a"
+    # Inbound channel context (channel/chat_id/user_id/username + selected_agent) is
+    # injected into assign prompts. For Telegram outbound intent, FractalBot instructs
+    # the agent to prefer the use-fractalbot skill and default recipient to current chat_id
+    # when omitted.
+    # Keep skill naming/path consistent in your agent workspace:
+    #   use-fractalbot -> .claude/skills/use-fractalbot/SKILL.md
+    # How long to wait for agent-manager output
+    assignTimeoutSeconds: 90
+    # Telegram lifecycle commands:
+    # - /agents (list allowed agent names)
+    # - /monitor <name> [lines] (show recent output, capped at 200 lines)
+    # - /startagent <name> (admin only)
+    # - /stopagent <name> (admin only)
+    # - /doctor (admin only)
+    # - /whoami (show your Telegram IDs)
+    # - /ping (simple health check)
+
+  # Optional: Codex App integration (route messages to a Codex App-managed main session)
+  codexAppCDP:
+    enabled: false
+    # Launch Codex App with CDP enabled, for example:
+    # open -na /Applications/Codex.app --args --remote-debugging-port=9222
+    cdpEndpoint: "http://127.0.0.1:9222"
+    # Match the Codex App renderer target title or URL from /json/list.
+    targetSelector: "Codex"
+    # Codex App local host id. Defaults to "local".
+    hostId: "local"
+    # Recommended: resolve the current target thread by project + named session.
+    targetProject:
+      name: "CloudBank"
+      cwd: "/Users/you/Develop/SuLabsOrg/CloudBank"
+      session: "main"
+      # Optional: pin state DB lookup. Empty uses newest ~/.codex/state_*.sqlite.
+      # stateDb: "/Users/you/.codex/state_5.sqlite"
+    # Advanced override: pin to a specific /local/<conversationId>.
+    # Empty uses targetProject when configured, then the active Codex App thread.
+    conversationId: ""
+    # Durable queue when both the CDP renderer bridge and guarded visible-composer
+    # fallback cannot complete with target-thread readback.
+    inboxPath: "/Users/you/Develop/SuLabsOrg/CloudBank/.fractalbot/inbox"
+    fallbackToInbox: true
+    # CDP readiness policy:
+    # - off: do not check or repair CDP.
+    # - status-only: check and report only.
+    # - new-instance: launch a new Codex App instance with --remote-debugging-port when CDP is down.
+    # - relaunch: quit Codex App and relaunch it with --remote-debugging-port when CDP is down.
+    # Empty defaults to "relaunch"; watch.enabled defaults to true when codexAppCDP is enabled.
+    repairPolicy: "relaunch"
+    checkOnIncomingMessage: true
+    watch:
+      enabled: true
+      intervalSeconds: 60
+      cooldownSeconds: 90
+    defaultAgent: "main"
+    allowedAgents:
+      - "main"
+    deliveryTimeoutSeconds: 20
+
+  # Optional: route channel messages into an already-authenticated Claude
+  # Desktop chat target exposed by CDP. FractalBot does not launch, patch, or
+  # bypass Claude Desktop's CDP auth guard. Failed delivery is queued to inbox.
+  claudeDesktop:
+    enabled: false
+    cdpEndpoint: "http://127.0.0.1:19334"
+    # Optional title or URL match. Empty selects the first authenticated chat page.
+    targetSelector: ""
+    inboxPath: "/Users/you/.fractalbot/claude-desktop-inbox"
+    fallbackToInbox: true
+    defaultAgent: "main"
+    allowedAgents:
+      - "main"
+    deliveryTimeoutSeconds: 20
+
+  # Optional: cron-based autonomous wakeups. Each job explicitly targets one
+  # enabled runtime and an agent allowed by that runtime. Heartbeats do not use
+  # agents.router and do not impersonate a messaging channel.
+  # heartbeat:
+  #   enabled: true
+  #   statePath: "./workspace/heartbeat-state.json"
+  #   maxConcurrent: 2
+  #   jobs:
+  #     - id: "cloudbank-main"
+  #       runtime: "codexAppCDP"
+  #       agent: "main"
+  #       # Inline text only; file-backed instructions are not supported.
+  #       text: "Inspect the current project and continue any actionable work."
+  #       cron: "*/10 * * * *"
+  #       timezone: "Asia/Shanghai"
+  #       # The Agent may select only these operator-approved schedules, and
+  #       # only when it determines that there is no actionable work.
+  #       agentCronProfiles:
+  #         idle: "0 * * * *"
+  #         deep-idle: "0 */6 * * *"
+  #       resetCronOnInbound: true

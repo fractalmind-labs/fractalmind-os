@@ -1,0 +1,164 @@
+package channels
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestTelegramAgentsIncludesDefault(t *testing.T) {
+	bot, err := NewTelegramBot("token", nil, 123, "qa-1", []string{"qa-1", "coder-a"})
+	if err != nil {
+		t.Fatalf("NewTelegramBot: %v", err)
+	}
+
+	var payload sendMessagePayload
+	bot.httpClient = captureHTTPClient(t, &payload)
+
+	msg := &TelegramMessage{
+		Text: "/agents",
+		From: &TelegramUser{ID: 123},
+		Chat: &TelegramChat{ID: 99},
+	}
+
+	handled, err := bot.handleCommand(msg)
+	if !handled {
+		t.Fatalf("expected handled")
+	}
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(payload.Text, "Default agent: qa-1") {
+		t.Fatalf("expected default agent line, got %q", payload.Text)
+	}
+	if strings.Count(payload.Text, "qa-1") != 1 {
+		t.Fatalf("expected default agent listed once, got %q", payload.Text)
+	}
+}
+
+func TestTelegramAgentsAllowlistUnset(t *testing.T) {
+	bot, err := NewTelegramBot("token", nil, 123, "qa-1", nil)
+	if err != nil {
+		t.Fatalf("NewTelegramBot: %v", err)
+	}
+
+	var payload sendMessagePayload
+	bot.httpClient = captureHTTPClient(t, &payload)
+
+	msg := &TelegramMessage{
+		Text: "/agents",
+		From: &TelegramUser{ID: 123},
+		Chat: &TelegramChat{ID: 99},
+	}
+
+	handled, err := bot.handleCommand(msg)
+	if !handled {
+		t.Fatalf("expected handled")
+	}
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if strings.Contains(payload.Text, "No agents configured") {
+		t.Fatalf("unexpected empty agents reply: %q", payload.Text)
+	}
+	if !strings.Contains(payload.Text, "Default agent: qa-1") {
+		t.Fatalf("expected default agent line, got %q", payload.Text)
+	}
+	if strings.Count(payload.Text, "qa-1") != 1 {
+		t.Fatalf("expected default agent listed once, got %q", payload.Text)
+	}
+}
+
+func TestTelegramAgentsEmptyConfigHint(t *testing.T) {
+	bot, err := NewTelegramBot("token", nil, 123, "", nil)
+	if err != nil {
+		t.Fatalf("NewTelegramBot: %v", err)
+	}
+
+	var payload sendMessagePayload
+	bot.httpClient = captureHTTPClient(t, &payload)
+
+	msg := &TelegramMessage{
+		Text: "/agents",
+		From: &TelegramUser{ID: 123},
+		Chat: &TelegramChat{ID: 99},
+	}
+
+	handled, err := bot.handleCommand(msg)
+	if !handled {
+		t.Fatalf("expected handled")
+	}
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(payload.Text, "agents.ohMyCode.defaultAgent") {
+		t.Fatalf("expected defaultAgent hint, got %q", payload.Text)
+	}
+	if !strings.Contains(payload.Text, "agents.ohMyCode.allowedAgents") {
+		t.Fatalf("expected allowedAgents hint, got %q", payload.Text)
+	}
+	if !strings.Contains(payload.Text, "/agent <name> <task>") {
+		t.Fatalf("expected /agent hint, got %q", payload.Text)
+	}
+	if !strings.Contains(payload.Text, "/to <name> <task>") {
+		t.Fatalf("expected /to hint, got %q", payload.Text)
+	}
+}
+
+func TestTelegramAgentSelectionErrorIncludesHint(t *testing.T) {
+	bot, err := NewTelegramBot("token", nil, 123, "qa-1", []string{"qa-1"})
+	if err != nil {
+		t.Fatalf("NewTelegramBot: %v", err)
+	}
+
+	var payload sendMessagePayload
+	bot.httpClient = captureHTTPClient(t, &payload)
+
+	for _, input := range []string{"/agent hacker do stuff", "/to hacker do stuff"} {
+		payload.Text = ""
+		msg := &TelegramMessage{
+			Text: input,
+			From: &TelegramUser{ID: 123},
+			Chat: &TelegramChat{ID: 99},
+		}
+
+		bot.handleIncomingMessage(msg)
+
+		if !strings.Contains(payload.Text, "agents.ohMyCode.allowedAgents") {
+			t.Fatalf("expected allowedAgents hint for %q, got %q", input, payload.Text)
+		}
+		if !strings.Contains(payload.Text, "/agents") {
+			t.Fatalf("expected /agents hint for %q, got %q", input, payload.Text)
+		}
+	}
+}
+
+func TestTelegramAgentNotAllowedDefaultOnly(t *testing.T) {
+	bot, err := NewTelegramBot("token", nil, 123, "qa-1", nil)
+	if err != nil {
+		t.Fatalf("NewTelegramBot: %v", err)
+	}
+
+	var payload sendMessagePayload
+	bot.httpClient = captureHTTPClient(t, &payload)
+
+	for _, input := range []string{"/agent hacker do stuff", "/to hacker do stuff"} {
+		payload.Text = ""
+		msg := &TelegramMessage{
+			Text: input,
+			From: &TelegramUser{ID: 123},
+			Chat: &TelegramChat{ID: 99},
+		}
+
+		bot.handleIncomingMessage(msg)
+
+		if !strings.Contains(payload.Text, "Only the default agent is enabled") {
+			t.Fatalf("expected default-only hint for %q, got %q", input, payload.Text)
+		}
+		if !strings.Contains(payload.Text, "agents.ohMyCode.allowedAgents") {
+			t.Fatalf("expected allowedAgents hint for %q, got %q", input, payload.Text)
+		}
+		if !strings.Contains(payload.Text, "/agents") {
+			t.Fatalf("expected /agents hint for %q, got %q", input, payload.Text)
+		}
+	}
+}

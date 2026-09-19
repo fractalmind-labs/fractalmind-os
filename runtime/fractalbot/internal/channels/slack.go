@@ -1,0 +1,1514 @@
+package channels
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"regexp"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/slack-go/slack"
+	"github.com/slack-go/slack/slackevents"
+	"github.com/slack-go/slack/socketmode"
+
+	"github.com/fractalmind-ai/fractalbot/pkg/protocol"
+)
+
+const (
+	defaultSlackReconnectBackoffMin = 1 * time.Second
+	defaultSlackReconnectBackoffMax = 1 * time.Minute
+)
+
+// SlackBot implements a minimal Slack channel skeleton.
+type SlackBot struct {
+	botToken string
+	appToken string
+
+	allowlist        SlackAllowlist
+	channelAllowlist SlackAllowlist
+	defaultAgent     string
+	agentAllow       AgentAllowlist
+
+	handler IncomingMessageHandler
+
+	apiClient    *slack.Client
+	socketClient *socketmode.Client
+	ackFn        func(req socketmode.Request, payload ...interface{})
+
+	startFn                  func(ctx context.Context) error
+	stopFn                   func() error
+	sendMessageFn            func(ctx context.Context, channelID, text string) (*SendResult, error)
+	sendMessageWithOptionsFn func(ctx context.Context, channelID, text, threadTS string) (*SendResult, error)
+	fetchHistoryFn           func(ctx context.Context, channelID string, limit int) ([]map[string]interface{}, error)
+	fetchMessageFilesFn      func(ctx context.Context, channelID, threadTS, ts string) ([]slack.File, error)
+
+	socketClientFactoryFn func(apiClient *slack.Client) *socketmode.Client
+	runSocketModeFn       func(ctx context.Context, socketClient *socketmode.Client) error
+	waitReconnectFn       func(ctx context.Context, backoff time.Duration) bool
+
+	runningMu sync.RWMutex
+	running   bool
+
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	telemetryMu  sync.RWMutex
+	lastActivity time.Time
+	lastError    time.Time
+
+	userDirMu      sync.RWMutex
+	userDir        map[string]string // lowercase name → user ID
+	userDirUpdated time.Time
+	resolveUsersFn func(ctx context.Context) ([]slack.User, error)
+
+	chanInfoMu      sync.RWMutex
+	chanInfoCache   map[string]*slackChannelInfo // channelID → info
+	chanInfoUpdated map[string]time.Time
+	getConvInfoFn   func(ctx context.Context, channelID string) (*slack.Channel, error)
+}
+
+// slackChannelInfo caches display-relevant channel metadata.
+type slackChannelInfo struct {
+	Name             string // e.g. "general"
+	ConversationType string // "channel", "im", "mpim", "group"
+}
+
+func NewSlackBot(botToken, appToken string, allowedUsers []string, allowedChannels []string, defaultAgent string, allowedAgents []string) (*SlackBot, error) {
+	trimmedBot := strings.TrimSpace(botToken)
+	trimmedApp := strings.TrimSpace(appToken)
+	if trimmedBot == "" || trimmedApp == "" {
+		return nil, errors.New("slack botToken and appToken are required")
+	}
+
+	return &SlackBot{
+		botToken:         trimmedBot,
+		appToken:         trimmedApp,
+		allowlist:        NewSlackAllowlist(allowedUsers),
+		channelAllowlist: NewSlackAllowlist(allowedChannels),
+		defaultAgent:     strings.TrimSpace(defaultAgent),
+		agentAllow:       NewAgentAllowlist(allowedAgents),
+		ctx:              context.Background(),
+	}, nil
+}
+
+func (b *SlackBot) Name() string {
+	return "slack"
+}
+
+func (b *SlackBot) SetHandler(handler IncomingMessageHandler) {
+	b.handler = handler
+}
+
+func (b *SlackBot) IsRunning() bool {
+	b.runningMu.RLock()
+	defer b.runningMu.RUnlock()
+	return b.running
+}
+
+// LastActivity reports the last time the bot saw a message or successfully sent one.
+func (b *SlackBot) LastActivity() time.Time {
+	b.telemetryMu.RLock()
+	defer b.telemetryMu.RUnlock()
+	return b.lastActivity
+}
+
+// LastError reports the last time the bot encountered a channel error.
+func (b *SlackBot) LastError() time.Time {
+	b.telemetryMu.RLock()
+	defer b.telemetryMu.RUnlock()
+	return b.lastError
+}
+
+func (b *SlackBot) markActivity() {
+	b.telemetryMu.Lock()
+	b.lastActivity = time.Now().UTC()
+	b.telemetryMu.Unlock()
+}
+
+func (b *SlackBot) markError() {
+	b.telemetryMu.Lock()
+	b.lastError = time.Now().UTC()
+	b.telemetryMu.Unlock()
+}
+
+func (b *SlackBot) setRunning(running bool) {
+	b.runningMu.Lock()
+	b.running = running
+	b.runningMu.Unlock()
+}
+
+func (b *SlackBot) Start(ctx context.Context) error {
+	b.ctx, b.cancel = context.WithCancel(ctx)
+
+	if b.startFn == nil {
+		b.initClients()
+	}
+
+	if b.startFn == nil {
+		return errors.New("slack start function not configured")
+	}
+
+	if err := b.startFn(b.ctx); err != nil {
+		return err
+	}
+
+	b.setRunning(true)
+	return nil
+}
+
+func (b *SlackBot) Stop(ctx context.Context) error {
+	_ = ctx
+	if b.cancel != nil {
+		b.cancel()
+	}
+	if b.stopFn != nil {
+		if err := b.stopFn(); err != nil {
+			return err
+		}
+	}
+	b.setRunning(false)
+	return nil
+}
+
+func (b *SlackBot) Send(ctx context.Context, msg OutboundMessage) (*SendResult, error) {
+	if strings.TrimSpace(msg.To) == "" {
+		return nil, errors.New("slack channel ID is required")
+	}
+	if b.sendMessageWithOptionsFn != nil {
+		result, err := b.sendMessageWithOptionsFn(ctx, msg.To, msg.Text, msg.ThreadTS)
+		if err != nil {
+			b.markError()
+			return nil, err
+		}
+		b.markActivity()
+		return result, nil
+	}
+	if strings.TrimSpace(msg.ThreadTS) != "" {
+		return nil, errors.New("slack threaded sender not configured")
+	}
+	if b.sendMessageFn == nil {
+		return nil, errors.New("slack sender not configured")
+	}
+	result, err := b.sendMessageFn(ctx, msg.To, msg.Text)
+	if err != nil {
+		b.markError()
+		return nil, err
+	}
+	b.markActivity()
+	return result, nil
+}
+
+// IsAllowed reports whether senderID is on the allowlist.
+func (b *SlackBot) IsAllowed(senderID string) bool {
+	return b.allowlist.Allowed(senderID) || b.channelAllowlist.Allowed(senderID)
+}
+
+func (b *SlackBot) initClients() {
+	if b.sendMessageFn != nil && b.startFn != nil {
+		return
+	}
+	if b.botToken == "" || b.appToken == "" {
+		return
+	}
+	b.apiClient = slack.New(b.botToken, slack.OptionAppLevelToken(b.appToken))
+	if b.socketClientFactoryFn == nil {
+		b.socketClientFactoryFn = func(apiClient *slack.Client) *socketmode.Client {
+			return socketmode.New(apiClient)
+		}
+	}
+	if b.runSocketModeFn == nil {
+		b.runSocketModeFn = func(ctx context.Context, socketClient *socketmode.Client) error {
+			return socketClient.RunContext(ctx)
+		}
+	}
+	if b.waitReconnectFn == nil {
+		b.waitReconnectFn = waitForReconnect
+	}
+	b.sendMessageWithOptionsFn = b.sendTextWithOptions
+	b.sendMessageFn = b.sendText
+	b.startFn = b.startSocketMode
+}
+
+func (b *SlackBot) startSocketMode(ctx context.Context) error {
+	if b.apiClient == nil {
+		return errors.New("slack api client not initialized")
+	}
+	if b.socketClientFactoryFn == nil {
+		return errors.New("slack socket mode client factory not configured")
+	}
+	if b.runSocketModeFn == nil {
+		return errors.New("slack socket mode runner not configured")
+	}
+	if b.waitReconnectFn == nil {
+		b.waitReconnectFn = waitForReconnect
+	}
+	go b.runSocketModeLoop(ctx)
+	return nil
+}
+
+func (b *SlackBot) runSocketModeLoop(ctx context.Context) {
+	backoff := defaultSlackReconnectBackoffMin
+	for {
+		err := b.runSocketModeSession(ctx)
+		if ctx.Err() != nil {
+			return
+		}
+		if err != nil {
+			b.markError()
+			log.Printf("slack socket mode error: %v (retry in %s)", err, backoff)
+		} else {
+			log.Printf("slack socket mode disconnected (retry in %s)", backoff)
+		}
+		if !b.waitReconnectFn(ctx, backoff) {
+			return
+		}
+		backoff = nextSlackReconnectBackoff(backoff)
+	}
+}
+
+func (b *SlackBot) runSocketModeSession(ctx context.Context) error {
+	socketClient, err := b.newSocketClient()
+	if err != nil {
+		return err
+	}
+	b.socketClient = socketClient
+
+	ackFn := b.ack
+	if b.ackFn == nil {
+		ackFn = socketClient.Ack
+	}
+
+	sessionCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	go b.consumeSocketEvents(sessionCtx, socketClient, ackFn)
+	return b.runSocketModeFn(sessionCtx, socketClient)
+}
+
+func (b *SlackBot) newSocketClient() (*socketmode.Client, error) {
+	if b.socketClientFactoryFn == nil {
+		return nil, errors.New("slack socket mode client factory not configured")
+	}
+	socketClient := b.socketClientFactoryFn(b.apiClient)
+	if socketClient == nil {
+		return nil, errors.New("slack socket mode client not initialized")
+	}
+	return socketClient, nil
+}
+
+func (b *SlackBot) consumeSocketEvents(ctx context.Context, socketClient *socketmode.Client, ackFn func(req socketmode.Request, payload ...interface{})) {
+	if socketClient == nil {
+		return
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case event, ok := <-socketClient.Events:
+			if !ok {
+				return
+			}
+			b.handleSocketEventWithAck(ctx, event, ackFn)
+		}
+	}
+}
+
+func (b *SlackBot) handleSocketEvent(ctx context.Context, event socketmode.Event) {
+	b.handleSocketEventWithAck(ctx, event, b.ack)
+}
+
+func (b *SlackBot) handleSocketEventWithAck(ctx context.Context, event socketmode.Event, ackFn func(req socketmode.Request, payload ...interface{})) {
+	if event.Type == socketmode.EventTypeSlashCommand {
+		b.handleSlashCommandEventWithAck(ctx, event, ackFn)
+		return
+	}
+	if event.Request != nil && ackFn != nil && event.Request.EnvelopeID != "" {
+		ackFn(*event.Request)
+	}
+
+	if event.Type != socketmode.EventTypeEventsAPI {
+		return
+	}
+	eventsAPIEvent, ok := event.Data.(slackevents.EventsAPIEvent)
+	if !ok {
+		return
+	}
+	b.handleEventsAPIEvent(ctx, eventsAPIEvent)
+}
+
+func (b *SlackBot) handleSlashCommandEvent(ctx context.Context, event socketmode.Event) {
+	b.handleSlashCommandEventWithAck(ctx, event, b.ack)
+}
+
+func (b *SlackBot) handleSlashCommandEventWithAck(ctx context.Context, event socketmode.Event, ackFn func(req socketmode.Request, payload ...interface{})) {
+	if event.Request == nil {
+		return
+	}
+	cmd, ok := event.Data.(slack.SlashCommand)
+	if !ok {
+		if ackFn != nil {
+			ackFn(*event.Request, map[string]string{"text": "❌ Invalid slash command payload."})
+		}
+		return
+	}
+	text := strings.TrimSpace(cmd.Command)
+	if extra := strings.TrimSpace(cmd.Text); extra != "" {
+		text = fmt.Sprintf("%s %s", text, extra)
+	}
+	msg := &slackInboundMessage{
+		text:        text,
+		rawText:     text,
+		userID:      cmd.UserID,
+		channelID:   cmd.ChannelID,
+		channelType: "slash",
+	}
+	replyText := b.slashCommandReply(ctx, msg)
+	if ackFn != nil {
+		ackFn(*event.Request, map[string]string{"text": replyText})
+	}
+}
+
+func nextSlackReconnectBackoff(current time.Duration) time.Duration {
+	if current < defaultSlackReconnectBackoffMin {
+		return defaultSlackReconnectBackoffMin
+	}
+	next := current * 2
+	if next > defaultSlackReconnectBackoffMax {
+		return defaultSlackReconnectBackoffMax
+	}
+	return next
+}
+
+func waitForReconnect(ctx context.Context, backoff time.Duration) bool {
+	if backoff <= 0 {
+		return true
+	}
+	timer := time.NewTimer(backoff)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-timer.C:
+		return true
+	}
+}
+
+func (b *SlackBot) handleEventsAPIEvent(ctx context.Context, event slackevents.EventsAPIEvent) {
+	if event.Type != slackevents.CallbackEvent {
+		return
+	}
+	switch ev := event.InnerEvent.Data.(type) {
+	case *slackevents.MessageEvent:
+		fixupSlackMessageEventFiles(ev, event)
+		msg := slackMessageFromEvent(ev)
+		if msg == nil {
+			return
+		}
+		b.handleMessageEvent(ctx, msg)
+	case *slackevents.AppMentionEvent:
+		msg := slackMessageFromAppMentionEvent(ev)
+		if msg == nil {
+			return
+		}
+		msg.attachments = b.appMentionAttachments(ctx, ev, event)
+		replyText := b.slashCommandReply(ctx, msg)
+		if strings.TrimSpace(replyText) == "" {
+			return
+		}
+		_ = b.reply(ctx, msg, replyText)
+	}
+}
+
+func (b *SlackBot) slashCommandReply(ctx context.Context, msg *slackInboundMessage) string {
+	if msg == nil {
+		return ""
+	}
+
+	b.markActivity()
+
+	trustLevel := b.authorize(msg)
+	if trustLevel == "" {
+		return fmt.Sprintf("❌ Unauthorized. Ask an admin to add your Slack user ID to channels.slack.allowedUsers.\nUser ID: %s", msg.userID)
+	}
+
+	if isIncompleteSlackAgentCommand(msg.text) {
+		command := agentCommandName(msg.text)
+		return fmt.Sprintf("❌ %s\nTip: use /agents to see allowed agents.", agentCommandUsage(command))
+	}
+
+	if handled, replyText, cmdErr := b.commandResponse(ctx, msg); handled {
+		if cmdErr != nil {
+			return b.formatCommandError(cmdErr)
+		}
+		return replyText
+	}
+
+	selection, err := ParseAgentSelection(msg.text)
+	if err != nil {
+		return b.formatCommandError(err)
+	}
+
+	if strings.TrimSpace(selection.Task) == "" {
+		return ""
+	}
+
+	enforceSelection := selection.Specified || b.defaultAgent != "" || b.agentAllow.configured
+	if enforceSelection {
+		selection, err = ResolveAgentSelection(selection, b.defaultAgent, b.agentAllow)
+		if err != nil {
+			if isDefaultAgentMissingError(err) && !selection.Specified && b.agentAllow.configured {
+				return "❌ Default agent is missing or invalid.\nSet agents.ohMyCode.defaultAgent or use /agent <name> <task> (or /to <name> <task>).\nTip: use /agents to see allowed agents."
+			}
+			return b.formatCommandError(err)
+		}
+	}
+
+	if b.handler != nil {
+		recentMessages := b.fetchRecentMessages(ctx, msg.channelID, 5)
+		replyText, err := b.handler.HandleIncoming(ctx, b.toProtocolMessage(msg, selection.Task, selection.Agent, trustLevel, recentMessages))
+		if err != nil {
+			log.Printf("slack handler error: %v", err)
+			replyText = "❌ Something went wrong. Please try again."
+		}
+		return strings.TrimSpace(replyText)
+	}
+
+	if selection.Task != "" {
+		return fmt.Sprintf("echo: %s", selection.Task)
+	}
+	return ""
+}
+
+func (b *SlackBot) authorize(msg *slackInboundMessage) string {
+	if b.allowlist.Allowed(msg.userID) {
+		return "full"
+	}
+	if b.channelAllowlist.Allowed(msg.channelID) {
+		return "channel"
+	}
+	return ""
+}
+
+func (b *SlackBot) handleMessageEvent(ctx context.Context, msg *slackInboundMessage) {
+	if msg == nil {
+		return
+	}
+	if msg.channelType != "im" {
+		return
+	}
+
+	b.markActivity()
+
+	trustLevel := b.authorize(msg)
+	if trustLevel == "" {
+		if msg.channelType == "im" {
+			_ = b.reply(ctx, msg, fmt.Sprintf("❌ Unauthorized. Ask an admin to add your Slack user ID to channels.slack.allowedUsers.\nUser ID: %s", msg.userID))
+		}
+		return
+	}
+	log.Printf("slack: authorized user=%s trust=%s, routing message", msg.userID, trustLevel)
+
+	if isSlackSafeCommand(msg.text) {
+		if handled, cmdErr := b.handleCommand(ctx, msg); handled {
+			if cmdErr != nil {
+				_ = b.reply(ctx, msg, fmt.Sprintf("❌ %v", cmdErr))
+			}
+			return
+		}
+	}
+
+	if isIncompleteSlackAgentCommand(msg.text) {
+		command := agentCommandName(msg.text)
+		_ = b.reply(ctx, msg, fmt.Sprintf("❌ %s\nTip: use /agents to see allowed agents.", agentCommandUsage(command)))
+		return
+	}
+
+	if handled, cmdErr := b.handleCommand(ctx, msg); handled {
+		if cmdErr != nil {
+			reply := fmt.Sprintf("❌ %v", cmdErr)
+			if isAgentNotAllowedError(cmdErr) {
+				reply = agentNotAllowedMessage(cmdErr, b.defaultAgent, b.agentAllow)
+			} else if isAgentAllowlistError(cmdErr) {
+				reply = fmt.Sprintf("%s\nTip: use /agents to see allowed agents.", reply)
+			}
+			_ = b.reply(ctx, msg, reply)
+		}
+		return
+	}
+
+	selection, err := ParseAgentSelection(msg.text)
+	if err != nil {
+		reply := fmt.Sprintf("❌ %v", err)
+		if isAgentNotAllowedError(err) {
+			reply = agentNotAllowedMessage(err, b.defaultAgent, b.agentAllow)
+		} else if isAgentAllowlistError(err) {
+			reply = fmt.Sprintf("%s\nTip: use /agents to see allowed agents.", reply)
+		}
+		_ = b.reply(ctx, msg, reply)
+		return
+	}
+
+	if strings.TrimSpace(selection.Task) == "" {
+		return
+	}
+
+	enforceSelection := selection.Specified || b.defaultAgent != "" || b.agentAllow.configured
+	if enforceSelection {
+		selection, err = ResolveAgentSelection(selection, b.defaultAgent, b.agentAllow)
+		if err != nil {
+			reply := fmt.Sprintf("❌ %v", err)
+			if isDefaultAgentMissingError(err) && !selection.Specified && b.agentAllow.configured {
+				reply = "❌ Default agent is missing or invalid.\nSet agents.ohMyCode.defaultAgent or use /agent <name> <task> (or /to <name> <task>).\nTip: use /agents to see allowed agents."
+			} else if isAgentNotAllowedError(err) {
+				reply = agentNotAllowedMessage(err, b.defaultAgent, b.agentAllow)
+			} else if isAgentAllowlistError(err) {
+				reply = fmt.Sprintf("%s\nTip: use /agents to see allowed agents.", reply)
+			}
+			_ = b.reply(ctx, msg, reply)
+			return
+		}
+	}
+
+	if b.handler != nil {
+		recentMessages := b.fetchRecentMessages(ctx, msg.channelID, 5)
+		replyText, err := b.handler.HandleIncoming(ctx, b.toProtocolMessage(msg, selection.Task, selection.Agent, trustLevel, recentMessages))
+		if err != nil {
+			log.Printf("slack handler error: %v", err)
+			replyText = "❌ Something went wrong. Please try again."
+		}
+		if strings.TrimSpace(replyText) != "" {
+			_ = b.reply(ctx, msg, replyText)
+		}
+		return
+	}
+
+	if selection.Task != "" {
+		_ = b.reply(ctx, msg, fmt.Sprintf("echo: %s", selection.Task))
+	}
+}
+
+func (b *SlackBot) handleCommand(ctx context.Context, msg *slackInboundMessage) (bool, error) {
+	handled, replyText, cmdErr := b.commandResponse(ctx, msg)
+	if !handled {
+		return false, nil
+	}
+	if cmdErr != nil {
+		return true, cmdErr
+	}
+	if strings.TrimSpace(replyText) == "" {
+		return true, nil
+	}
+	return true, b.reply(ctx, msg, replyText)
+}
+
+func (b *SlackBot) commandResponse(ctx context.Context, msg *slackInboundMessage) (bool, string, error) {
+	text := strings.TrimSpace(msg.text)
+	if text == "" || !strings.HasPrefix(text, "/") {
+		return false, "", nil
+	}
+
+	fields := strings.Fields(text)
+	if len(fields) == 0 {
+		return true, "", nil
+	}
+
+	command := fields[0]
+	if idx := strings.IndexByte(command, '@'); idx != -1 {
+		command = command[:idx]
+	}
+	if command == "/agent" || command == "/to" || command == "/admin" {
+		return false, "", nil
+	}
+	if command == "/tool" || strings.HasPrefix(command, "/tool:") {
+		if b.handler == nil {
+			return true, "⚠️ /tool and /tools are not available in gateway mode.", nil
+		}
+		replyText, err := b.handler.HandleIncoming(ctx, b.toProtocolMessage(msg, msg.text, "", b.authorize(msg), nil))
+		if err != nil {
+			return true, "", err
+		}
+		return true, strings.TrimSpace(replyText), nil
+	}
+
+	switch command {
+	case "/help", "/start":
+		return true, b.helpText(), nil
+	case "/status":
+		return true, b.statusText(), nil
+	case "/tools":
+		if b.handler == nil {
+			return true, "⚠️ /tool and /tools are not available in gateway mode.", nil
+		}
+		replyText, err := b.handler.HandleIncoming(ctx, b.toProtocolMessage(msg, "/tools", "", b.authorize(msg), nil))
+		if err != nil {
+			return true, "", err
+		}
+		return true, strings.TrimSpace(replyText), nil
+	case "/agents":
+		names := b.agentAllow.Names()
+		defaultName := strings.TrimSpace(b.defaultAgent)
+		if b.agentAllow.configured && defaultName != "" {
+			names = filterOutAgentName(names, defaultName)
+		}
+		if len(names) == 0 {
+			if defaultName == "" {
+				return true, noAgentsConfiguredMessage, nil
+			}
+			if !b.agentAllow.configured {
+				names = []string{defaultName}
+			}
+		}
+		var sb strings.Builder
+		sb.WriteString("Allowed agents:\n")
+		if defaultName != "" {
+			sb.WriteString(fmt.Sprintf("Default agent: %s\n", defaultName))
+		}
+		for _, name := range names {
+			sb.WriteString(fmt.Sprintf("  - %s\n", name))
+		}
+		return true, strings.TrimSpace(sb.String()), nil
+	case "/monitor":
+		agentName, lines, err := parseMonitorArgs(fields)
+		if err != nil {
+			return true, "", err
+		}
+		if err := validateAgentCommandName(agentName, b.defaultAgent, b.agentAllow); err != nil {
+			return true, "", err
+		}
+		lifecycle, ok := b.handler.(AgentLifecycle)
+		if !ok || lifecycle == nil {
+			return true, "", errors.New("agent-manager is not available (set agents.ohMyCode.enabled)")
+		}
+		out, err := lifecycle.MonitorAgent(b.ctx, agentName, lines)
+		if err != nil {
+			return true, "", b.sanitizeLifecycleError(command, err)
+		}
+		if strings.TrimSpace(out) == "" {
+			out = "No output from agent-monitor."
+		}
+		return true, out, nil
+	case "/startagent":
+		if len(fields) != 2 {
+			return true, "", fmt.Errorf("usage: /startagent <name>")
+		}
+		agentName := strings.TrimSpace(fields[1])
+		if err := validateAgentCommandName(agentName, b.defaultAgent, b.agentAllow); err != nil {
+			return true, "", err
+		}
+		lifecycle, ok := b.handler.(AgentLifecycle)
+		if !ok || lifecycle == nil {
+			return true, "", errors.New("agent-manager is not available (set agents.ohMyCode.enabled)")
+		}
+		out, err := lifecycle.StartAgent(b.ctx, agentName)
+		if err != nil {
+			return true, "", b.sanitizeLifecycleError(command, err)
+		}
+		if strings.TrimSpace(out) == "" {
+			out = fmt.Sprintf("✅ Started agent %s", agentName)
+		}
+		return true, out, nil
+	case "/stopagent":
+		if len(fields) != 2 {
+			return true, "", fmt.Errorf("usage: /stopagent <name>")
+		}
+		agentName := strings.TrimSpace(fields[1])
+		if err := validateAgentCommandName(agentName, b.defaultAgent, b.agentAllow); err != nil {
+			return true, "", err
+		}
+		lifecycle, ok := b.handler.(AgentLifecycle)
+		if !ok || lifecycle == nil {
+			return true, "", errors.New("agent-manager is not available (set agents.ohMyCode.enabled)")
+		}
+		out, err := lifecycle.StopAgent(b.ctx, agentName)
+		if err != nil {
+			return true, "", b.sanitizeLifecycleError(command, err)
+		}
+		if strings.TrimSpace(out) == "" {
+			out = fmt.Sprintf("✅ Stopped agent %s", agentName)
+		}
+		return true, out, nil
+	case "/doctor":
+		lifecycle, ok := b.handler.(AgentLifecycle)
+		if !ok || lifecycle == nil {
+			return true, "", errors.New("agent-manager is not available (set agents.ohMyCode.enabled)")
+		}
+		out, err := lifecycle.Doctor(b.ctx)
+		if err != nil {
+			return true, "", b.sanitizeLifecycleError(command, err)
+		}
+		if strings.TrimSpace(out) == "" {
+			out = "✅ agent-manager doctor completed"
+		}
+		return true, out, nil
+	case "/whoami":
+		reply := fmt.Sprintf("user_id: %s\nchannel_id: %s", msg.userID, msg.channelID)
+		return true, reply, nil
+	default:
+		return true, "", fmt.Errorf("unknown command: %s", command)
+	}
+}
+
+func (b *SlackBot) sanitizeLifecycleError(command string, err error) error {
+	log.Printf("Slack command %s failed: %v", command, err)
+	return errors.New("agent-manager error; please check server logs")
+}
+
+func (b *SlackBot) formatCommandError(err error) string {
+	reply := fmt.Sprintf("❌ %v", err)
+	if isAgentNotAllowedError(err) {
+		return agentNotAllowedMessage(err, b.defaultAgent, b.agentAllow)
+	}
+	if isAgentAllowlistError(err) {
+		return fmt.Sprintf("%s\nTip: use /agents to see allowed agents.", reply)
+	}
+	return reply
+}
+
+func (b *SlackBot) helpText() string {
+	lines := []string{
+		"FractalBot Slack Help",
+		"",
+		"Note: DM-only; channel messages are ignored.",
+		"",
+		"Commands:",
+		"  /help - show this help",
+		"  /status - bot status",
+		"  /agents - list allowed agents",
+		"  /whoami - show your Slack IDs",
+		"",
+		"Agent routing:",
+		"  /agent <name> <task...>",
+		"  /to <name> <task...> (alias of /agent)",
+		"  /admin <text...> - route to admin agent",
+		"  /agents - see available agents",
+		"  Note: if an allowlist is configured, only allowlisted agents can be used.",
+		"",
+		"Gateway mode:",
+		"  /tools and /tool are intentionally unavailable.",
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (b *SlackBot) statusText() string {
+	lastActivity := "never"
+	if ts := b.LastActivity(); !ts.IsZero() {
+		lastActivity = ts.UTC().Format(time.RFC3339)
+	}
+	lastError := "none"
+	if ts := b.LastError(); !ts.IsZero() {
+		lastError = ts.UTC().Format(time.RFC3339)
+	}
+	defaultAgent := strings.TrimSpace(b.defaultAgent)
+	if defaultAgent == "" {
+		defaultAgent = "(none)"
+	}
+	allowlistConfigured := b.agentAllow.configured
+	return strings.Join([]string{
+		"Bot Status",
+		fmt.Sprintf("running: %t", b.IsRunning()),
+		fmt.Sprintf("last_activity: %s", lastActivity),
+		fmt.Sprintf("last_error: %s", lastError),
+		fmt.Sprintf("default_agent: %s", defaultAgent),
+		fmt.Sprintf("allowed_agents_configured: %t", allowlistConfigured),
+	}, "\n")
+}
+
+func isSlackSafeCommand(text string) bool {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" || !strings.HasPrefix(trimmed, "/") {
+		return false
+	}
+	fields := strings.Fields(trimmed)
+	if len(fields) == 0 {
+		return false
+	}
+	command := fields[0]
+	if idx := strings.IndexByte(command, '@'); idx != -1 {
+		command = command[:idx]
+	}
+	switch command {
+	case "/help", "/start", "/whoami", "/status", "/agents", "/tools":
+		return true
+	default:
+		return false
+	}
+}
+
+func isIncompleteSlackAgentCommand(text string) bool {
+	return isIncompleteAgentCommand(text)
+}
+
+func (b *SlackBot) ack(req socketmode.Request, payload ...interface{}) {
+	if b.ackFn != nil {
+		b.ackFn(req, payload...)
+		return
+	}
+	if b.socketClient != nil {
+		b.socketClient.Ack(req, payload...)
+	}
+}
+
+func (b *SlackBot) reply(ctx context.Context, msg *slackInboundMessage, text string) error {
+	_, err := b.Send(ctx, OutboundMessage{
+		To:       msg.channelID,
+		Text:     TruncateSlackReply(text),
+		ThreadTS: msg.threadTS,
+	})
+	return err
+}
+
+func (b *SlackBot) sendText(ctx context.Context, channelID, text string) (*SendResult, error) {
+	return b.sendTextWithOptions(ctx, channelID, text, "")
+}
+
+func (b *SlackBot) sendTextWithOptions(ctx context.Context, channelID, text, threadTS string) (*SendResult, error) {
+	if b.apiClient == nil {
+		b.markError()
+		return nil, errors.New("slack api client not initialized")
+	}
+	if strings.TrimSpace(channelID) == "" {
+		b.markError()
+		return nil, errors.New("slack channel ID is required")
+	}
+	resolved := b.resolveSlackMentions(ctx, text)
+	msgOptions := []slack.MsgOption{
+		slack.MsgOptionText(resolved, false),
+	}
+	if strings.TrimSpace(threadTS) != "" {
+		msgOptions = append(msgOptions, slack.MsgOptionTS(strings.TrimSpace(threadTS)))
+	}
+	respChannel, respTS, err := b.apiClient.PostMessageContext(ctx, channelID, msgOptions...)
+	if err != nil {
+		b.markError()
+		return nil, err
+	}
+	result := &SendResult{
+		ChannelID: respChannel,
+		MessageTS: respTS,
+		ThreadTS:  strings.TrimSpace(threadTS),
+	}
+	// Best-effort: enrich with channel_name from cache
+	if info := b.resolveChannelInfo(ctx, respChannel); info != nil && info.Name != "" {
+		result.ChannelName = info.Name
+	}
+	return result, nil
+}
+
+func (b *SlackBot) fetchRecentMessages(ctx context.Context, channelID string, limit int) []map[string]interface{} {
+	fetchFn := b.fetchHistoryFn
+	if fetchFn == nil {
+		fetchFn = b.defaultFetchHistory
+	}
+	messages, err := fetchFn(ctx, channelID, limit)
+	if err != nil {
+		log.Printf("slack: failed to fetch recent messages for channel %s: %v", channelID, err)
+		return nil
+	}
+	return messages
+}
+
+func (b *SlackBot) defaultFetchHistory(ctx context.Context, channelID string, limit int) ([]map[string]interface{}, error) {
+	if b.apiClient == nil {
+		return nil, errors.New("slack api client not initialized")
+	}
+	resp, err := b.apiClient.GetConversationHistoryContext(ctx, &slack.GetConversationHistoryParameters{
+		ChannelID: channelID,
+		Limit:     limit + 1,
+	})
+	if err != nil {
+		return nil, err
+	}
+	msgs := resp.Messages
+	// Slack returns newest-first; reverse to chronological order.
+	for i, j := 0, len(msgs)-1; i < j; i, j = i+1, j-1 {
+		msgs[i], msgs[j] = msgs[j], msgs[i]
+	}
+	// Drop the last message (the trigger message itself).
+	if len(msgs) > 0 {
+		msgs = msgs[:len(msgs)-1]
+	}
+	// Take last `limit` messages.
+	if len(msgs) > limit {
+		msgs = msgs[len(msgs)-limit:]
+	}
+	result := make([]map[string]interface{}, 0, len(msgs))
+	for _, m := range msgs {
+		result = append(result, map[string]interface{}{
+			"user": m.User,
+			"text": m.Text,
+		})
+	}
+	return result, nil
+}
+
+func (b *SlackBot) toProtocolMessage(msg *slackInboundMessage, text, agent, trustLevel string, recentMessages []map[string]interface{}) *protocol.Message {
+	convType := msg.channelType
+	channelName := ""
+
+	// Resolve human-readable channel metadata via API cache
+	if info := b.resolveChannelInfo(b.ctx, msg.channelID); info != nil {
+		if info.Name != "" {
+			channelName = info.Name
+		}
+		if info.ConversationType != "" {
+			convType = info.ConversationType
+		}
+	}
+
+	timestamp := strings.TrimSpace(msg.timestamp)
+	if timestamp == "" {
+		timestamp = time.Now().UTC().Format(time.RFC3339)
+	}
+	rawText := strings.TrimSpace(msg.rawText)
+	if rawText == "" {
+		rawText = msg.text
+	}
+	data := map[string]interface{}{
+		"channel":           "slack",
+		"text":              text,
+		"raw_text":          rawText,
+		"agent":             agent,
+		"user_id":           msg.userID,
+		"chat_id":           msg.channelID,
+		"conversation_type": convType,
+		"trust_level":       trustLevel,
+		"thread_ts":         msg.threadTS,
+		"timestamp":         timestamp,
+	}
+	if channelName != "" {
+		data["channel_name"] = channelName
+	}
+	if len(msg.attachments) > 0 {
+		data["attachments"] = msg.attachments
+	}
+	if len(recentMessages) > 0 {
+		data["recent_messages"] = recentMessages
+	}
+	return &protocol.Message{
+		Kind:        protocol.MessageKindChannel,
+		Action:      protocol.ActionCreate,
+		Data:        data,
+		Attachments: msg.attachments,
+	}
+}
+
+type slackInboundMessage struct {
+	text        string
+	rawText     string
+	userID      string
+	channelID   string
+	channelType string
+	threadTS    string
+	timestamp   string
+	attachments []protocol.Attachment
+}
+
+func slackMessageFromEvent(event *slackevents.MessageEvent) *slackInboundMessage {
+	if event == nil {
+		return nil
+	}
+	if event.SubType != "" && event.SubType != "file_share" {
+		return nil
+	}
+	if event.BotID != "" {
+		return nil
+	}
+	if strings.TrimSpace(event.User) == "" || strings.TrimSpace(event.Channel) == "" {
+		return nil
+	}
+	return &slackInboundMessage{
+		text:        event.Text,
+		rawText:     event.Text,
+		userID:      event.User,
+		channelID:   event.Channel,
+		channelType: event.ChannelType,
+		threadTS:    event.ThreadTimeStamp,
+		timestamp:   event.TimeStamp,
+		attachments: slackAttachmentsFromEvent(event),
+	}
+}
+
+func slackMessageFromAppMentionEvent(event *slackevents.AppMentionEvent) *slackInboundMessage {
+	if event == nil {
+		return nil
+	}
+	if strings.TrimSpace(event.User) == "" || strings.TrimSpace(event.Channel) == "" {
+		return nil
+	}
+	trimmed := stripLeadingSlackMentions(event.Text)
+	if trimmed == "" {
+		trimmed = "/help"
+	}
+	return &slackInboundMessage{
+		text:        trimmed,
+		rawText:     event.Text,
+		userID:      event.User,
+		channelID:   event.Channel,
+		channelType: "app_mention",
+		threadTS:    event.ThreadTimeStamp,
+		timestamp:   event.TimeStamp,
+	}
+}
+
+// fixupSlackMessageEventFiles works around a bug in the slack-go library's
+// custom UnmarshalJSON for MessageEvent. When Slack sends a message event with
+// files at the top level AND a "message" key (even if empty), the custom
+// unmarshaller sees Message != nil and skips populating Files from the top
+// level. This function re-parses files from the raw inner event JSON when
+// Message.Files is empty.
+func fixupSlackMessageEventFiles(ev *slackevents.MessageEvent, apiEvent slackevents.EventsAPIEvent) {
+	if ev == nil || ev.Message == nil {
+		return
+	}
+	if len(ev.Message.Files) > 0 || len(ev.Message.Attachments) > 0 {
+		return // already has file data
+	}
+
+	cbEvent, ok := apiEvent.Data.(*slackevents.EventsAPICallbackEvent)
+	if !ok || cbEvent == nil || cbEvent.InnerEvent == nil {
+		return
+	}
+
+	var msg slack.Msg
+	if err := json.Unmarshal(*cbEvent.InnerEvent, &msg); err != nil {
+		return
+	}
+	if len(msg.Files) > 0 {
+		ev.Message.Files = msg.Files
+	}
+	if len(msg.Attachments) > 0 {
+		ev.Message.Attachments = msg.Attachments
+	}
+}
+
+func slackAttachmentsFromEvent(event *slackevents.MessageEvent) []protocol.Attachment {
+	if event == nil || event.Message == nil {
+		return nil
+	}
+	return slackAttachmentsFromFiles(event.Message.Files, event.Message.Attachments)
+}
+
+// appMentionAttachments extracts file attachments for a channel app_mention.
+// The slack-go AppMentionEvent struct does not expose the "files" array that
+// Slack includes when the mentioning message carries attachments, so the raw
+// inner event JSON is re-parsed. If the payload has no files (Slack does not
+// guarantee them on app_mention), fall back to fetching the message itself
+// from the conversation history.
+func (b *SlackBot) appMentionAttachments(ctx context.Context, ev *slackevents.AppMentionEvent, apiEvent slackevents.EventsAPIEvent) []protocol.Attachment {
+	if attachments := slackAttachmentsFromCallbackEvent(apiEvent); len(attachments) > 0 {
+		return attachments
+	}
+	files, err := b.fetchMessageFiles(ctx, ev.Channel, ev.ThreadTimeStamp, ev.TimeStamp)
+	if err != nil {
+		log.Printf("slack: failed to fetch files for mention in %s at %s: %v", ev.Channel, ev.TimeStamp, err)
+		return nil
+	}
+	return slackAttachmentsFromFiles(files, nil)
+}
+
+// slackAttachmentsFromCallbackEvent re-parses the raw inner event JSON of an
+// Events API callback into a slack.Msg to recover the files/attachments
+// arrays that typed event structs may not expose.
+func slackAttachmentsFromCallbackEvent(apiEvent slackevents.EventsAPIEvent) []protocol.Attachment {
+	cbEvent, ok := apiEvent.Data.(*slackevents.EventsAPICallbackEvent)
+	if !ok || cbEvent == nil || cbEvent.InnerEvent == nil {
+		return nil
+	}
+	var msg slack.Msg
+	if err := json.Unmarshal(*cbEvent.InnerEvent, &msg); err != nil {
+		return nil
+	}
+	return slackAttachmentsFromFiles(msg.Files, msg.Attachments)
+}
+
+func (b *SlackBot) fetchMessageFiles(ctx context.Context, channelID, threadTS, ts string) ([]slack.File, error) {
+	fetchFn := b.fetchMessageFilesFn
+	if fetchFn == nil {
+		fetchFn = b.defaultFetchMessageFiles
+	}
+	return fetchFn(ctx, channelID, threadTS, ts)
+}
+
+func (b *SlackBot) defaultFetchMessageFiles(ctx context.Context, channelID, threadTS, ts string) ([]slack.File, error) {
+	if strings.TrimSpace(ts) == "" {
+		return nil, nil
+	}
+	if b.apiClient == nil {
+		return nil, errors.New("slack api client not initialized")
+	}
+	var messages []slack.Message
+	if strings.TrimSpace(threadTS) != "" {
+		msgs, _, _, err := b.apiClient.GetConversationRepliesContext(ctx, &slack.GetConversationRepliesParameters{
+			ChannelID: channelID,
+			Timestamp: threadTS,
+			Latest:    ts,
+			Oldest:    ts,
+			Inclusive: true,
+			Limit:     1,
+		})
+		if err != nil {
+			return nil, err
+		}
+		messages = msgs
+	} else {
+		resp, err := b.apiClient.GetConversationHistoryContext(ctx, &slack.GetConversationHistoryParameters{
+			ChannelID: channelID,
+			Latest:    ts,
+			Oldest:    ts,
+			Inclusive: true,
+			Limit:     1,
+		})
+		if err != nil {
+			return nil, err
+		}
+		messages = resp.Messages
+	}
+	for _, m := range messages {
+		if m.Timestamp == ts {
+			return m.Files, nil
+		}
+	}
+	return nil, nil
+}
+
+func slackAttachmentsFromFiles(files []slack.File, legacy []slack.Attachment) []protocol.Attachment {
+	attachments := make([]protocol.Attachment, 0, len(files)+len(legacy))
+	seenURL := make(map[string]struct{})
+	appendAttachment := func(attachment protocol.Attachment) {
+		if attachment.URL == "" {
+			return
+		}
+		if _, exists := seenURL[attachment.URL]; exists {
+			return
+		}
+		seenURL[attachment.URL] = struct{}{}
+		attachments = append(attachments, attachment)
+	}
+
+	for _, file := range files {
+		url := strings.TrimSpace(file.URLPrivate)
+		if url == "" {
+			url = strings.TrimSpace(file.URLPrivateDownload)
+		}
+		if url == "" {
+			continue
+		}
+		filename := strings.TrimSpace(file.Name)
+		if filename == "" {
+			filename = strings.TrimSpace(file.Title)
+		}
+		if filename == "" {
+			filename = strings.TrimSpace(file.ID)
+		}
+		appendAttachment(protocol.Attachment{
+			Type:     slackAttachmentType(file.Mimetype, file.Filetype),
+			Filename: filename,
+			URL:      url,
+			Channel:  "slack",
+			MimeType: strings.TrimSpace(file.Mimetype),
+		})
+	}
+
+	for _, legacyAttachment := range legacy {
+		url := slackLegacyAttachmentURL(legacyAttachment)
+		if url == "" {
+			continue
+		}
+		filename := strings.TrimSpace(legacyAttachment.Title)
+		if filename == "" {
+			filename = slackFilenameFromURL(url)
+		}
+		appendAttachment(protocol.Attachment{
+			Type:     slackAttachmentType("", slackFileTypeFromFilename(filename)),
+			Filename: filename,
+			URL:      url,
+			Channel:  "slack",
+		})
+	}
+
+	if len(attachments) == 0 {
+		return nil
+	}
+	return attachments
+}
+
+func slackLegacyAttachmentURL(attachment slack.Attachment) string {
+	candidates := []string{
+		attachment.TitleLink,
+		attachment.OriginalURL,
+		attachment.FromURL,
+		attachment.ImageURL,
+		attachment.ThumbURL,
+	}
+	for _, candidate := range candidates {
+		if value := strings.TrimSpace(candidate); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func slackFilenameFromURL(rawURL string) string {
+	trimmed := strings.TrimSpace(rawURL)
+	if trimmed == "" {
+		return ""
+	}
+	if idx := strings.Index(trimmed, "?"); idx >= 0 {
+		trimmed = trimmed[:idx]
+	}
+	trimmed = strings.TrimSuffix(trimmed, "/")
+	if trimmed == "" {
+		return ""
+	}
+	slash := strings.LastIndex(trimmed, "/")
+	if slash < 0 || slash == len(trimmed)-1 {
+		return ""
+	}
+	return strings.TrimSpace(trimmed[slash+1:])
+}
+
+func slackFileTypeFromFilename(filename string) string {
+	trimmed := strings.TrimSpace(filename)
+	if trimmed == "" {
+		return ""
+	}
+	dot := strings.LastIndex(trimmed, ".")
+	if dot < 0 || dot == len(trimmed)-1 {
+		return ""
+	}
+	return strings.ToLower(strings.TrimSpace(trimmed[dot+1:]))
+}
+
+func slackAttachmentType(mimeType, fileType string) string {
+	mime := strings.ToLower(strings.TrimSpace(mimeType))
+	switch {
+	case strings.HasPrefix(mime, "image/"):
+		return "image"
+	case strings.HasPrefix(mime, "video/"):
+		return "video"
+	case strings.HasPrefix(mime, "audio/"):
+		return "audio"
+	}
+
+	kind := strings.ToLower(strings.TrimSpace(fileType))
+	switch kind {
+	case "png", "jpg", "jpeg", "gif", "bmp", "webp", "svg":
+		return "image"
+	case "mp4", "mov", "avi", "mkv", "webm":
+		return "video"
+	case "mp3", "wav", "ogg", "m4a", "flac", "aac":
+		return "audio"
+	default:
+		return "file"
+	}
+}
+
+// slackMentionRe matches @username patterns that are NOT already inside <@...>
+// brackets and NOT part of an email address (preceded by a non-whitespace char).
+var slackMentionRe = regexp.MustCompile(`(^|[\s(])@(\w[\w.-]*)`)
+
+const userDirTTL = 30 * time.Minute
+
+// refreshUserDirectory populates the user directory cache from the Slack API.
+func (b *SlackBot) refreshUserDirectory(ctx context.Context) {
+	fetchFn := b.resolveUsersFn
+	if fetchFn == nil {
+		if b.apiClient == nil {
+			return
+		}
+		fetchFn = func(ctx context.Context) ([]slack.User, error) {
+			return b.apiClient.GetUsersContext(ctx)
+		}
+	}
+
+	users, err := fetchFn(ctx)
+	if err != nil {
+		log.Printf("slack: failed to fetch user directory: %v", err)
+		return
+	}
+
+	dir := make(map[string]string, len(users))
+	for _, u := range users {
+		if u.Deleted || u.IsBot {
+			continue
+		}
+		id := u.ID
+		if name := strings.ToLower(strings.TrimSpace(u.Name)); name != "" {
+			dir[name] = id
+		}
+		if dn := strings.ToLower(strings.TrimSpace(u.Profile.DisplayName)); dn != "" {
+			dir[dn] = id
+		}
+		if dn := strings.ToLower(strings.TrimSpace(u.Profile.DisplayNameNormalized)); dn != "" {
+			dir[dn] = id
+		}
+		if rn := strings.ToLower(strings.TrimSpace(u.RealName)); rn != "" {
+			dir[rn] = id
+		}
+	}
+
+	b.userDirMu.Lock()
+	b.userDir = dir
+	b.userDirUpdated = time.Now()
+	b.userDirMu.Unlock()
+}
+
+// lookupUserID returns the Slack user ID for a given name, if cached.
+func (b *SlackBot) lookupUserID(name string) (string, bool) {
+	b.userDirMu.RLock()
+	defer b.userDirMu.RUnlock()
+	id, ok := b.userDir[strings.ToLower(name)]
+	return id, ok
+}
+
+// userDirStale returns true if the user directory needs refreshing.
+func (b *SlackBot) userDirStale() bool {
+	b.userDirMu.RLock()
+	defer b.userDirMu.RUnlock()
+	return b.userDir == nil || time.Since(b.userDirUpdated) > userDirTTL
+}
+
+const chanInfoTTL = 30 * time.Minute
+
+// resolveChannelInfo returns cached channel metadata, fetching from the API if stale.
+func (b *SlackBot) resolveChannelInfo(ctx context.Context, channelID string) *slackChannelInfo {
+	if strings.TrimSpace(channelID) == "" {
+		return nil
+	}
+
+	b.chanInfoMu.RLock()
+	info, cached := b.chanInfoCache[channelID]
+	updated := b.chanInfoUpdated[channelID]
+	b.chanInfoMu.RUnlock()
+
+	if cached && time.Since(updated) < chanInfoTTL {
+		return info
+	}
+
+	fetchFn := b.getConvInfoFn
+	if fetchFn == nil {
+		if b.apiClient == nil {
+			return nil
+		}
+		fetchFn = func(ctx context.Context, channelID string) (*slack.Channel, error) {
+			return b.apiClient.GetConversationInfoContext(ctx, &slack.GetConversationInfoInput{
+				ChannelID: channelID,
+			})
+		}
+	}
+
+	ch, err := fetchFn(ctx, channelID)
+	if err != nil {
+		log.Printf("slack: failed to resolve channel info for %s: %v", channelID, err)
+		return nil
+	}
+
+	resolved := &slackChannelInfo{
+		Name:             ch.Name,
+		ConversationType: slackConversationType(ch),
+	}
+
+	b.chanInfoMu.Lock()
+	if b.chanInfoCache == nil {
+		b.chanInfoCache = make(map[string]*slackChannelInfo)
+		b.chanInfoUpdated = make(map[string]time.Time)
+	}
+	b.chanInfoCache[channelID] = resolved
+	b.chanInfoUpdated[channelID] = time.Now()
+	b.chanInfoMu.Unlock()
+
+	return resolved
+}
+
+// slackConversationType maps Slack channel properties to a human-readable type.
+func slackConversationType(ch *slack.Channel) string {
+	if ch == nil {
+		return ""
+	}
+	if ch.IsIM {
+		return "im"
+	}
+	if ch.IsMpIM {
+		return "mpim"
+	}
+	if ch.IsGroup {
+		return "group"
+	}
+	return "channel"
+}
+
+// resolveSlackMentions converts @name patterns in outbound text to <@USERID> format.
+func (b *SlackBot) resolveSlackMentions(ctx context.Context, text string) string {
+	if !strings.Contains(text, "@") {
+		return text
+	}
+
+	if b.userDirStale() {
+		b.refreshUserDirectory(ctx)
+	}
+
+	return slackMentionRe.ReplaceAllStringFunc(text, func(match string) string {
+		sub := slackMentionRe.FindStringSubmatch(match)
+		if len(sub) < 3 {
+			return match
+		}
+		prefix := sub[1]
+		name := sub[2]
+
+		id, ok := b.lookupUserID(name)
+		if !ok {
+			return match
+		}
+		return prefix + "<@" + id + ">"
+	})
+}
+
+func stripLeadingSlackMentions(text string) string {
+	out := strings.TrimSpace(text)
+	for {
+		if !strings.HasPrefix(out, "<@") {
+			break
+		}
+		end := strings.Index(out, ">")
+		if end == -1 {
+			break
+		}
+		out = strings.TrimSpace(out[end+1:])
+		if strings.HasPrefix(out, ":") {
+			out = strings.TrimSpace(out[1:])
+		}
+	}
+	return out
+}
+
+type SlackAllowlist struct {
+	configured bool
+	allowed    map[string]struct{}
+}
+
+func NewSlackAllowlist(values []string) SlackAllowlist {
+	allowed := make(map[string]struct{})
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		allowed[trimmed] = struct{}{}
+	}
+	return SlackAllowlist{configured: len(allowed) > 0, allowed: allowed}
+}
+
+func (a SlackAllowlist) Allowed(userID string) bool {
+	if !a.configured {
+		return false
+	}
+	if userID == "" {
+		return false
+	}
+	_, ok := a.allowed[userID]
+	return ok
+}

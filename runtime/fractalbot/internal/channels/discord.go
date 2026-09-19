@@ -1,0 +1,648 @@
+package channels
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/bwmarrin/discordgo"
+
+	"github.com/fractalmind-ai/fractalbot/pkg/protocol"
+)
+
+// DiscordBot implements a minimal Discord channel skeleton.
+type DiscordBot struct {
+	token string
+
+	allowlist    DiscordAllowlist
+	defaultAgent string
+	agentAllow   AgentAllowlist
+
+	handler IncomingMessageHandler
+
+	session *discordgo.Session
+
+	startFn       func(ctx context.Context) error
+	stopFn        func() error
+	sendMessageFn func(ctx context.Context, channelID, text string) error
+
+	runningMu sync.RWMutex
+	running   bool
+
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	telemetryMu  sync.RWMutex
+	lastActivity time.Time
+	lastError    time.Time
+}
+
+func NewDiscordBot(token string, allowedUsers []string, defaultAgent string, allowedAgents []string) (*DiscordBot, error) {
+	trimmed := strings.TrimSpace(token)
+	if trimmed == "" {
+		return nil, errors.New("discord token is required")
+	}
+
+	return &DiscordBot{
+		token:        trimmed,
+		allowlist:    NewDiscordAllowlist(allowedUsers),
+		defaultAgent: strings.TrimSpace(defaultAgent),
+		agentAllow:   NewAgentAllowlist(allowedAgents),
+		ctx:          context.Background(),
+	}, nil
+}
+
+func (b *DiscordBot) Name() string {
+	return "discord"
+}
+
+func (b *DiscordBot) SetHandler(handler IncomingMessageHandler) {
+	b.handler = handler
+}
+
+func (b *DiscordBot) IsRunning() bool {
+	b.runningMu.RLock()
+	defer b.runningMu.RUnlock()
+	return b.running
+}
+
+// LastActivity reports the last time the bot saw a message or successfully sent one.
+func (b *DiscordBot) LastActivity() time.Time {
+	b.telemetryMu.RLock()
+	defer b.telemetryMu.RUnlock()
+	return b.lastActivity
+}
+
+// LastError reports the last time the bot encountered a channel error.
+func (b *DiscordBot) LastError() time.Time {
+	b.telemetryMu.RLock()
+	defer b.telemetryMu.RUnlock()
+	return b.lastError
+}
+
+func (b *DiscordBot) markActivity() {
+	b.telemetryMu.Lock()
+	b.lastActivity = time.Now().UTC()
+	b.telemetryMu.Unlock()
+}
+
+func (b *DiscordBot) markError() {
+	b.telemetryMu.Lock()
+	b.lastError = time.Now().UTC()
+	b.telemetryMu.Unlock()
+}
+
+func (b *DiscordBot) setRunning(running bool) {
+	b.runningMu.Lock()
+	b.running = running
+	b.runningMu.Unlock()
+}
+
+func (b *DiscordBot) Start(ctx context.Context) error {
+	b.ctx, b.cancel = context.WithCancel(ctx)
+
+	if b.startFn == nil {
+		if err := b.initClients(); err != nil {
+			return err
+		}
+	}
+
+	if b.startFn == nil {
+		return errors.New("discord start function not configured")
+	}
+
+	if err := b.startFn(b.ctx); err != nil {
+		return err
+	}
+
+	b.setRunning(true)
+	return nil
+}
+
+func (b *DiscordBot) Stop(ctx context.Context) error {
+	_ = ctx
+	if b.cancel != nil {
+		b.cancel()
+	}
+	if b.stopFn != nil {
+		if err := b.stopFn(); err != nil {
+			return err
+		}
+	}
+	b.setRunning(false)
+	return nil
+}
+
+func (b *DiscordBot) Send(ctx context.Context, msg OutboundMessage) (*SendResult, error) {
+	if b.sendMessageFn == nil {
+		return nil, errors.New("discord sender not configured")
+	}
+	if strings.TrimSpace(msg.To) == "" {
+		return nil, errors.New("discord channel ID is required")
+	}
+	if err := b.sendMessageFn(ctx, msg.To, msg.Text); err != nil {
+		b.markError()
+		return nil, err
+	}
+	b.markActivity()
+	return &SendResult{ChannelID: msg.To}, nil
+}
+
+// IsAllowed reports whether senderID is on the allowlist.
+func (b *DiscordBot) IsAllowed(senderID string) bool {
+	return b.allowlist.Allowed(senderID)
+}
+
+func (b *DiscordBot) initClients() error {
+	if b.sendMessageFn != nil && b.startFn != nil {
+		return nil
+	}
+	if strings.TrimSpace(b.token) == "" {
+		return errors.New("discord token is required")
+	}
+
+	session, err := discordgo.New("Bot " + b.token)
+	if err != nil {
+		return err
+	}
+	session.Identify.Intents = discordgo.IntentsDirectMessages | discordgo.IntentsMessageContent
+
+	session.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
+		msg := discordMessageFromEvent(m)
+		if msg == nil {
+			return
+		}
+		ctx := b.ctx
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		b.handleMessageEvent(ctx, msg)
+	})
+
+	b.session = session
+	b.sendMessageFn = b.sendText
+	b.startFn = b.startGateway
+	b.stopFn = b.stopGateway
+	return nil
+}
+
+func (b *DiscordBot) startGateway(ctx context.Context) error {
+	if b.session == nil {
+		return errors.New("discord session not initialized")
+	}
+	go func() {
+		<-ctx.Done()
+		_ = b.session.Close()
+	}()
+	return b.session.Open()
+}
+
+func (b *DiscordBot) stopGateway() error {
+	if b.session != nil {
+		return b.session.Close()
+	}
+	return nil
+}
+
+func (b *DiscordBot) handleMessageEvent(ctx context.Context, msg *discordInboundMessage) {
+	if msg == nil {
+		return
+	}
+	if msg.channelType != "dm" {
+		return
+	}
+
+	b.markActivity()
+
+	if isDiscordSafeCommand(msg.text) {
+		if handled, cmdErr := b.handleCommand(ctx, msg); handled {
+			if cmdErr != nil {
+				_ = b.reply(ctx, msg, fmt.Sprintf("❌ %v", cmdErr))
+			}
+			return
+		}
+	}
+
+	if isIncompleteDiscordAgentCommand(msg.text) {
+		command := agentCommandName(msg.text)
+		_ = b.reply(ctx, msg, fmt.Sprintf("❌ %s\nTip: use /agents to see allowed agents.", agentCommandUsage(command)))
+		return
+	}
+
+	if !b.allowlist.Allowed(msg.userID) {
+		_ = b.reply(ctx, msg, fmt.Sprintf("❌ Unauthorized. Ask an admin to add your Discord user ID to channels.discord.allowedUsers.\nUser ID: %s", msg.userID))
+		return
+	}
+
+	if handled, cmdErr := b.handleCommand(ctx, msg); handled {
+		if cmdErr != nil {
+			reply := fmt.Sprintf("❌ %v", cmdErr)
+			if isAgentNotAllowedError(cmdErr) {
+				reply = agentNotAllowedMessage(cmdErr, b.defaultAgent, b.agentAllow)
+			} else if isAgentAllowlistError(cmdErr) {
+				reply = fmt.Sprintf("%s\nTip: use /agents to see allowed agents.", reply)
+			}
+			_ = b.reply(ctx, msg, reply)
+		}
+		return
+	}
+
+	selection, err := ParseAgentSelection(msg.text)
+	if err != nil {
+		reply := fmt.Sprintf("❌ %v", err)
+		if isAgentNotAllowedError(err) {
+			reply = agentNotAllowedMessage(err, b.defaultAgent, b.agentAllow)
+		} else if isAgentAllowlistError(err) {
+			reply = fmt.Sprintf("%s\nTip: use /agents to see allowed agents.", reply)
+		}
+		_ = b.reply(ctx, msg, reply)
+		return
+	}
+
+	if strings.TrimSpace(selection.Task) == "" {
+		return
+	}
+
+	enforceSelection := selection.Specified || b.defaultAgent != "" || b.agentAllow.configured
+	if enforceSelection {
+		selection, err = ResolveAgentSelection(selection, b.defaultAgent, b.agentAllow)
+		if err != nil {
+			reply := fmt.Sprintf("❌ %v", err)
+			if isDefaultAgentMissingError(err) && !selection.Specified && b.agentAllow.configured {
+				reply = "❌ Default agent is missing or invalid.\nSet agents.ohMyCode.defaultAgent or use /agent <name> <task> (or /to <name> <task>).\nTip: use /agents to see allowed agents."
+			} else if isAgentNotAllowedError(err) {
+				reply = agentNotAllowedMessage(err, b.defaultAgent, b.agentAllow)
+			} else if isAgentAllowlistError(err) {
+				reply = fmt.Sprintf("%s\nTip: use /agents to see allowed agents.", reply)
+			}
+			_ = b.reply(ctx, msg, reply)
+			return
+		}
+	}
+
+	if b.handler != nil {
+		replyText, err := b.handler.HandleIncoming(ctx, b.toProtocolMessage(msg, selection.Task, selection.Agent))
+		if err != nil {
+			log.Printf("discord handler error: %v", err)
+			replyText = "❌ Something went wrong. Please try again."
+		}
+		if strings.TrimSpace(replyText) != "" {
+			_ = b.reply(ctx, msg, replyText)
+		}
+		return
+	}
+
+	if selection.Task != "" {
+		_ = b.reply(ctx, msg, fmt.Sprintf("echo: %s", selection.Task))
+	}
+}
+
+func (b *DiscordBot) handleCommand(ctx context.Context, msg *discordInboundMessage) (bool, error) {
+	text := strings.TrimSpace(msg.text)
+	if text == "" || !strings.HasPrefix(text, "/") {
+		return false, nil
+	}
+
+	fields := strings.Fields(text)
+	if len(fields) == 0 {
+		return true, nil
+	}
+
+	command := fields[0]
+	if idx := strings.IndexByte(command, '@'); idx != -1 {
+		command = command[:idx]
+	}
+	if command == "/agent" || command == "/to" || command == "/admin" {
+		return false, nil
+	}
+	if command == "/tool" || strings.HasPrefix(command, "/tool:") {
+		if b.handler == nil {
+			return true, b.reply(ctx, msg, "⚠️ /tool and /tools are not available in gateway mode.")
+		}
+		replyText, err := b.handler.HandleIncoming(ctx, b.toProtocolMessage(msg, msg.text, ""))
+		if err != nil {
+			return true, err
+		}
+		if strings.TrimSpace(replyText) == "" {
+			return true, nil
+		}
+		return true, b.reply(ctx, msg, replyText)
+	}
+
+	switch command {
+	case "/help", "/start":
+		return true, b.reply(ctx, msg, b.helpText())
+	case "/status":
+		return true, b.reply(ctx, msg, b.statusText())
+	case "/tools":
+		if b.handler == nil {
+			return true, b.reply(ctx, msg, "⚠️ /tool and /tools are not available in gateway mode.")
+		}
+		replyText, err := b.handler.HandleIncoming(ctx, b.toProtocolMessage(msg, "/tools", ""))
+		if err != nil {
+			return true, err
+		}
+		if strings.TrimSpace(replyText) == "" {
+			return true, nil
+		}
+		return true, b.reply(ctx, msg, replyText)
+	case "/agents":
+		names := b.agentAllow.Names()
+		defaultName := strings.TrimSpace(b.defaultAgent)
+		if b.agentAllow.configured && defaultName != "" {
+			names = filterOutAgentName(names, defaultName)
+		}
+		if len(names) == 0 {
+			if defaultName == "" {
+				return true, b.reply(ctx, msg, noAgentsConfiguredMessage)
+			}
+			if !b.agentAllow.configured {
+				names = []string{defaultName}
+			}
+		}
+		var sb strings.Builder
+		sb.WriteString("Allowed agents:\n")
+		if defaultName != "" {
+			sb.WriteString(fmt.Sprintf("Default agent: %s\n", defaultName))
+		}
+		for _, name := range names {
+			sb.WriteString(fmt.Sprintf("  - %s\n", name))
+		}
+		return true, b.reply(ctx, msg, strings.TrimSpace(sb.String()))
+	case "/monitor":
+		agentName, lines, err := parseMonitorArgs(fields)
+		if err != nil {
+			return true, err
+		}
+		if err := validateAgentCommandName(agentName, b.defaultAgent, b.agentAllow); err != nil {
+			return true, err
+		}
+		lifecycle, ok := b.handler.(AgentLifecycle)
+		if !ok || lifecycle == nil {
+			return true, errors.New("agent-manager is not available (set agents.ohMyCode.enabled)")
+		}
+		out, err := lifecycle.MonitorAgent(b.ctx, agentName, lines)
+		if err != nil {
+			return true, b.sanitizeLifecycleError(command, err)
+		}
+		if strings.TrimSpace(out) == "" {
+			out = "No output from agent-monitor."
+		}
+		return true, b.reply(ctx, msg, out)
+	case "/startagent":
+		if len(fields) != 2 {
+			return true, fmt.Errorf("usage: /startagent <name>")
+		}
+		agentName := strings.TrimSpace(fields[1])
+		if err := validateAgentCommandName(agentName, b.defaultAgent, b.agentAllow); err != nil {
+			return true, err
+		}
+		lifecycle, ok := b.handler.(AgentLifecycle)
+		if !ok || lifecycle == nil {
+			return true, errors.New("agent-manager is not available (set agents.ohMyCode.enabled)")
+		}
+		out, err := lifecycle.StartAgent(b.ctx, agentName)
+		if err != nil {
+			return true, b.sanitizeLifecycleError(command, err)
+		}
+		if strings.TrimSpace(out) == "" {
+			out = fmt.Sprintf("✅ Started agent %s", agentName)
+		}
+		return true, b.reply(ctx, msg, out)
+	case "/stopagent":
+		if len(fields) != 2 {
+			return true, fmt.Errorf("usage: /stopagent <name>")
+		}
+		agentName := strings.TrimSpace(fields[1])
+		if err := validateAgentCommandName(agentName, b.defaultAgent, b.agentAllow); err != nil {
+			return true, err
+		}
+		lifecycle, ok := b.handler.(AgentLifecycle)
+		if !ok || lifecycle == nil {
+			return true, errors.New("agent-manager is not available (set agents.ohMyCode.enabled)")
+		}
+		out, err := lifecycle.StopAgent(b.ctx, agentName)
+		if err != nil {
+			return true, b.sanitizeLifecycleError(command, err)
+		}
+		if strings.TrimSpace(out) == "" {
+			out = fmt.Sprintf("✅ Stopped agent %s", agentName)
+		}
+		return true, b.reply(ctx, msg, out)
+	case "/doctor":
+		lifecycle, ok := b.handler.(AgentLifecycle)
+		if !ok || lifecycle == nil {
+			return true, errors.New("agent-manager is not available (set agents.ohMyCode.enabled)")
+		}
+		out, err := lifecycle.Doctor(b.ctx)
+		if err != nil {
+			return true, b.sanitizeLifecycleError(command, err)
+		}
+		if strings.TrimSpace(out) == "" {
+			out = "✅ agent-manager doctor completed"
+		}
+		return true, b.reply(ctx, msg, out)
+	case "/whoami":
+		reply := fmt.Sprintf("user_id: %s\nchannel_id: %s", msg.userID, msg.channelID)
+		return true, b.reply(ctx, msg, reply)
+	default:
+		return true, fmt.Errorf("unknown command: %s", command)
+	}
+}
+
+func (b *DiscordBot) sanitizeLifecycleError(command string, err error) error {
+	log.Printf("Discord command %s failed: %v", command, err)
+	return errors.New("agent-manager error; please check server logs")
+}
+
+func (b *DiscordBot) helpText() string {
+	lines := []string{
+		"FractalBot Discord Help",
+		"",
+		"Note: DM-only; channel messages are ignored.",
+		"",
+		"Commands:",
+		"  /help - show this help",
+		"  /status - bot status",
+		"  /agents - list allowed agents",
+		"  /whoami - show your Discord IDs",
+		"",
+		"Agent routing:",
+		"  /agent <name> <task...>",
+		"  /to <name> <task...> (alias of /agent)",
+		"  /admin <text...> - route to admin agent",
+		"  /agents - see available agents",
+		"  Note: if an allowlist is configured, only allowlisted agents can be used.",
+		"",
+		"Gateway mode:",
+		"  /tools and /tool are intentionally unavailable.",
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (b *DiscordBot) statusText() string {
+	lastActivity := "never"
+	if ts := b.LastActivity(); !ts.IsZero() {
+		lastActivity = ts.UTC().Format(time.RFC3339)
+	}
+	lastError := "none"
+	if ts := b.LastError(); !ts.IsZero() {
+		lastError = ts.UTC().Format(time.RFC3339)
+	}
+	defaultAgent := strings.TrimSpace(b.defaultAgent)
+	if defaultAgent == "" {
+		defaultAgent = "(none)"
+	}
+	allowlistConfigured := b.agentAllow.configured
+	return strings.Join([]string{
+		"Bot Status",
+		fmt.Sprintf("running: %t", b.IsRunning()),
+		fmt.Sprintf("last_activity: %s", lastActivity),
+		fmt.Sprintf("last_error: %s", lastError),
+		fmt.Sprintf("default_agent: %s", defaultAgent),
+		fmt.Sprintf("allowed_agents_configured: %t", allowlistConfigured),
+	}, "\n")
+}
+
+func isDiscordSafeCommand(text string) bool {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" || !strings.HasPrefix(trimmed, "/") {
+		return false
+	}
+	fields := strings.Fields(trimmed)
+	if len(fields) == 0 {
+		return false
+	}
+	command := fields[0]
+	if idx := strings.IndexByte(command, '@'); idx != -1 {
+		command = command[:idx]
+	}
+	switch command {
+	case "/help", "/start", "/whoami", "/status", "/agents", "/tools":
+		return true
+	default:
+		return false
+	}
+}
+
+func isIncompleteDiscordAgentCommand(text string) bool {
+	return isIncompleteAgentCommand(text)
+}
+
+func (b *DiscordBot) reply(ctx context.Context, msg *discordInboundMessage, text string) error {
+	if b.sendMessageFn == nil {
+		return errors.New("discord sender not configured")
+	}
+	if err := b.sendMessageFn(ctx, msg.channelID, TruncateDiscordReply(text)); err != nil {
+		b.markError()
+		return err
+	}
+	b.markActivity()
+	return nil
+}
+
+func (b *DiscordBot) sendText(ctx context.Context, channelID, text string) error {
+	if b.session == nil {
+		b.markError()
+		return errors.New("discord session not initialized")
+	}
+	if strings.TrimSpace(channelID) == "" {
+		b.markError()
+		return errors.New("discord channel ID is required")
+	}
+	_, err := b.session.ChannelMessageSend(channelID, text)
+	if err != nil {
+		b.markError()
+		return err
+	}
+	_ = ctx
+	return nil
+}
+
+func (b *DiscordBot) toProtocolMessage(msg *discordInboundMessage, text, agent string) *protocol.Message {
+	timestamp := msg.timestamp
+	if timestamp.IsZero() {
+		timestamp = time.Now().UTC()
+	}
+	return &protocol.Message{
+		Kind:   protocol.MessageKindChannel,
+		Action: protocol.ActionCreate,
+		Data: map[string]interface{}{
+			"channel":    "discord",
+			"text":       text,
+			"raw_text":   msg.text,
+			"agent":      agent,
+			"user_id":    msg.userID,
+			"chat_id":    msg.channelID,
+			"channel_id": msg.channelID,
+			"message_id": msg.messageID,
+			"chatType":   msg.channelType,
+			"timestamp":  timestamp.UTC().Format(time.RFC3339),
+		},
+	}
+}
+
+type discordInboundMessage struct {
+	text        string
+	userID      string
+	channelID   string
+	channelType string
+	messageID   string
+	timestamp   time.Time
+}
+
+func discordMessageFromEvent(event *discordgo.MessageCreate) *discordInboundMessage {
+	if event == nil || event.Author == nil || event.Message == nil {
+		return nil
+	}
+	if event.Author.Bot {
+		return nil
+	}
+	channelType := "dm"
+	if strings.TrimSpace(event.GuildID) != "" {
+		channelType = "guild"
+	}
+	if strings.TrimSpace(event.ChannelID) == "" || strings.TrimSpace(event.Author.ID) == "" {
+		return nil
+	}
+	return &discordInboundMessage{
+		text:        event.Content,
+		userID:      event.Author.ID,
+		channelID:   event.ChannelID,
+		channelType: channelType,
+		messageID:   event.ID,
+		timestamp:   event.Timestamp,
+	}
+}
+
+type DiscordAllowlist struct {
+	configured bool
+	allowed    map[string]struct{}
+}
+
+func NewDiscordAllowlist(values []string) DiscordAllowlist {
+	allowed := make(map[string]struct{})
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		allowed[trimmed] = struct{}{}
+	}
+	return DiscordAllowlist{configured: len(allowed) > 0, allowed: allowed}
+}
+
+func (a DiscordAllowlist) Allowed(userID string) bool {
+	if !a.configured {
+		return false
+	}
+	if userID == "" {
+		return false
+	}
+	_, ok := a.allowed[userID]
+	return ok
+}

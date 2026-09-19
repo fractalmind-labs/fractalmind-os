@@ -1,0 +1,816 @@
+package channels
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"os"
+	"strings"
+	"sync"
+	"time"
+
+	lark "github.com/larksuite/oapi-sdk-go/v3"
+	"github.com/larksuite/oapi-sdk-go/v3/event/dispatcher"
+	larkim "github.com/larksuite/oapi-sdk-go/v3/service/im/v1"
+	"github.com/larksuite/oapi-sdk-go/v3/ws"
+
+	"github.com/fractalmind-ai/fractalbot/pkg/protocol"
+)
+
+const (
+	feishuDomainFeishu = "feishu"
+	feishuDomainLark   = "lark"
+
+	// feishuImageMaxBytes mirrors the im/v1/images upload limit (10MB).
+	feishuImageMaxBytes = 10 * 1024 * 1024
+)
+
+type FeishuBot struct {
+	appID        string
+	appSecret    string
+	domain       string
+	allowlist    FeishuAllowlist
+	defaultAgent string
+	agentAllow   AgentAllowlist
+
+	handler IncomingMessageHandler
+
+	apiClient *lark.Client
+	wsClient  *ws.Client
+
+	startFn       func(ctx context.Context) error
+	stopFn        func() error
+	sendMessageFn func(ctx context.Context, receiveIDType, receiveID, text string) error
+	uploadImageFn func(ctx context.Context, imagePath string) (string, error)
+	sendImageFn   func(ctx context.Context, receiveIDType, receiveID, imageKey string) error
+
+	runningMu sync.RWMutex
+	running   bool
+
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	telemetryMu  sync.RWMutex
+	lastActivity time.Time
+	lastError    time.Time
+
+	seenMu      sync.Mutex
+	seenMsg     map[string]time.Time
+	seenContent map[string]time.Time
+}
+
+func NewFeishuBot(appID, appSecret, domain string, allowedUsers []string, defaultAgent string, allowedAgents []string) (*FeishuBot, error) {
+	trimmedID := strings.TrimSpace(appID)
+	trimmedSecret := strings.TrimSpace(appSecret)
+	if trimmedID == "" || trimmedSecret == "" {
+		return nil, errors.New("feishu appId/appSecret are required")
+	}
+
+	resolvedDomain := strings.ToLower(strings.TrimSpace(domain))
+	if resolvedDomain == "" {
+		resolvedDomain = feishuDomainFeishu
+	}
+	if resolvedDomain != feishuDomainFeishu && resolvedDomain != feishuDomainLark {
+		return nil, fmt.Errorf("invalid feishu domain: %q", domain)
+	}
+
+	return &FeishuBot{
+		appID:        trimmedID,
+		appSecret:    trimmedSecret,
+		domain:       resolvedDomain,
+		allowlist:    NewFeishuAllowlist(allowedUsers),
+		defaultAgent: strings.TrimSpace(defaultAgent),
+		agentAllow:   NewAgentAllowlist(allowedAgents),
+		ctx:          context.Background(),
+		seenMsg:      make(map[string]time.Time),
+		seenContent:  make(map[string]time.Time),
+	}, nil
+}
+
+func (b *FeishuBot) Name() string {
+	return "feishu"
+}
+
+func (b *FeishuBot) SetHandler(handler IncomingMessageHandler) {
+	b.handler = handler
+}
+
+func (b *FeishuBot) IsRunning() bool {
+	b.runningMu.RLock()
+	defer b.runningMu.RUnlock()
+	return b.running
+}
+
+// LastActivity reports the last time the bot saw a message or successfully sent one.
+func (b *FeishuBot) LastActivity() time.Time {
+	b.telemetryMu.RLock()
+	defer b.telemetryMu.RUnlock()
+	return b.lastActivity
+}
+
+// LastError reports the last time the bot encountered a channel error.
+func (b *FeishuBot) LastError() time.Time {
+	b.telemetryMu.RLock()
+	defer b.telemetryMu.RUnlock()
+	return b.lastError
+}
+
+func (b *FeishuBot) markActivity() {
+	b.telemetryMu.Lock()
+	b.lastActivity = time.Now().UTC()
+	b.telemetryMu.Unlock()
+}
+
+func (b *FeishuBot) markError() {
+	b.telemetryMu.Lock()
+	b.lastError = time.Now().UTC()
+	b.telemetryMu.Unlock()
+}
+
+func (b *FeishuBot) setRunning(running bool) {
+	b.runningMu.Lock()
+	b.running = running
+	b.runningMu.Unlock()
+}
+
+func (b *FeishuBot) Start(ctx context.Context) error {
+	b.ctx, b.cancel = context.WithCancel(ctx)
+
+	if b.startFn == nil {
+		b.initClients()
+	}
+
+	if b.startFn == nil {
+		return errors.New("feishu start function not configured")
+	}
+
+	if err := b.startFn(b.ctx); err != nil {
+		return err
+	}
+
+	b.setRunning(true)
+	return nil
+}
+
+func (b *FeishuBot) Stop(ctx context.Context) error {
+	_ = ctx
+	if b.cancel != nil {
+		b.cancel()
+	}
+	if b.stopFn != nil {
+		if err := b.stopFn(); err != nil {
+			return err
+		}
+	}
+	b.setRunning(false)
+	return nil
+}
+
+func (b *FeishuBot) Send(ctx context.Context, msg OutboundMessage) (*SendResult, error) {
+	if b.sendMessageFn == nil {
+		return nil, errors.New("feishu sender not configured")
+	}
+	if len(msg.Images) > 0 && (b.uploadImageFn == nil || b.sendImageFn == nil) {
+		return nil, errors.New("feishu image sender not configured")
+	}
+	if strings.TrimSpace(msg.To) == "" {
+		return nil, errors.New("feishu receive_id is required")
+	}
+	receiveIDType := "open_id"
+	if strings.HasPrefix(msg.To, "oc_") {
+		receiveIDType = "chat_id"
+	}
+
+	// Preflight every image before any chat-side send: an upload failure must
+	// leave zero delivered messages so a retry cannot duplicate the caption or
+	// earlier attachments (QA P1).
+	imageKeys := make([]string, 0, len(msg.Images))
+	for _, imagePath := range msg.Images {
+		imageKey, err := b.uploadImageFn(ctx, imagePath)
+		if err != nil {
+			b.markError()
+			return nil, err
+		}
+		imageKeys = append(imageKeys, imageKey)
+	}
+
+	if text := strings.TrimSpace(msg.Text); text != "" {
+		if err := b.sendMessageFn(ctx, receiveIDType, msg.To, text); err != nil {
+			b.markError()
+			return nil, err
+		}
+	}
+	for _, imageKey := range imageKeys {
+		if err := b.sendImageFn(ctx, receiveIDType, msg.To, imageKey); err != nil {
+			b.markError()
+			return nil, err
+		}
+	}
+	b.markActivity()
+	return &SendResult{ChannelID: msg.To}, nil
+}
+
+// IsAllowed reports whether senderID is on the allowlist.
+func (b *FeishuBot) IsAllowed(senderID string) bool {
+	return b.allowlist.Allowed(senderID, senderID)
+}
+
+func (b *FeishuBot) initClients() {
+	if b.sendMessageFn != nil && b.startFn != nil {
+		return
+	}
+
+	domainURL := resolveFeishuDomain(b.domain)
+	b.apiClient = lark.NewClient(b.appID, b.appSecret, lark.WithOpenBaseUrl(domainURL))
+
+	dispatcher := dispatcher.NewEventDispatcher("", "")
+	dispatcher.OnP2MessageReceiveV1(func(ctx context.Context, event *larkim.P2MessageReceiveV1) error {
+		return b.handleMessageEvent(ctx, event)
+	})
+
+	b.wsClient = ws.NewClient(
+		b.appID,
+		b.appSecret,
+		ws.WithDomain(domainURL),
+		ws.WithEventHandler(dispatcher),
+	)
+
+	b.sendMessageFn = b.sendText
+	b.uploadImageFn = b.uploadImage
+	b.sendImageFn = b.sendImage
+	b.startFn = b.startLongConnection
+}
+
+func (b *FeishuBot) startLongConnection(ctx context.Context) error {
+	if b.wsClient == nil {
+		return errors.New("feishu websocket client not initialized")
+	}
+
+	go func() {
+		if err := b.wsClient.Start(ctx); err != nil {
+			log.Printf("feishu websocket error: %v", err)
+		}
+	}()
+	return nil
+}
+
+func (b *FeishuBot) sendText(ctx context.Context, receiveIDType, receiveID, text string) error {
+	if b.apiClient == nil {
+		b.markError()
+		return errors.New("feishu api client not initialized")
+	}
+	if strings.TrimSpace(receiveID) == "" {
+		b.markError()
+		return errors.New("feishu receive_id is required")
+	}
+
+	payload, err := json.Marshal(map[string]string{"text": text})
+	if err != nil {
+		b.markError()
+		return fmt.Errorf("failed to marshal feishu content: %w", err)
+	}
+
+	req := larkim.NewCreateMessageReqBuilder().
+		ReceiveIdType(receiveIDType).
+		Body(larkim.NewCreateMessageReqBodyBuilder().
+			ReceiveId(receiveID).
+			MsgType("text").
+			Content(string(payload)).
+			Build()).
+		Build()
+
+	resp, err := b.apiClient.Im.V1.Message.Create(ctx, req)
+	if err != nil {
+		b.markError()
+		if isFeishuTokenError(err) {
+			log.Printf("feishu: token error, refreshing API client: %v", err)
+			b.refreshAPIClient()
+		}
+		return err
+	}
+	if !resp.Success() {
+		b.markError()
+		sendErr := fmt.Errorf("feishu send failed: code=%d msg=%s", resp.Code, resp.Msg)
+		if isFeishuTokenError(sendErr) {
+			log.Printf("feishu: token error in response, refreshing API client: %v", sendErr)
+			b.refreshAPIClient()
+		}
+		return sendErr
+	}
+	b.markActivity()
+	return nil
+}
+
+// uploadImage uploads a local image via im/v1/images and returns its image_key.
+// It validates the file exists and fits within the API's 10MB limit before
+// reading it, so bad paths fail fast instead of hanging the send.
+func (b *FeishuBot) uploadImage(ctx context.Context, imagePath string) (string, error) {
+	if b.apiClient == nil {
+		return "", errors.New("feishu api client not initialized")
+	}
+	info, err := os.Stat(imagePath)
+	if err != nil {
+		return "", fmt.Errorf("feishu image %s: %w", imagePath, err)
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("feishu image %s: path is a directory, not a file", imagePath)
+	}
+	if info.Size() == 0 {
+		return "", fmt.Errorf("feishu image %s: file is empty", imagePath)
+	}
+	if info.Size() > feishuImageMaxBytes {
+		return "", fmt.Errorf("feishu image %s: size %d exceeds 10MB upload limit", imagePath, info.Size())
+	}
+
+	body, err := larkim.NewCreateImagePathReqBodyBuilder().
+		ImageType(larkim.ImageTypeMessage).
+		ImagePath(imagePath).
+		Build()
+	if err != nil {
+		return "", fmt.Errorf("feishu build image upload request: %w", err)
+	}
+	req := larkim.NewCreateImageReqBuilder().Body(body).Build()
+
+	resp, err := b.apiClient.Im.V1.Image.Create(ctx, req)
+	if err != nil {
+		if isFeishuTokenError(err) {
+			log.Printf("feishu: token error, refreshing API client: %v", err)
+			b.refreshAPIClient()
+		}
+		return "", fmt.Errorf("feishu image upload %s: %w", imagePath, err)
+	}
+	if !resp.Success() {
+		sendErr := fmt.Errorf("feishu image upload failed: code=%d msg=%s", resp.Code, resp.Msg)
+		if isFeishuTokenError(sendErr) {
+			log.Printf("feishu: token error in response, refreshing API client: %v", sendErr)
+			b.refreshAPIClient()
+		}
+		return "", sendErr
+	}
+	if resp.Data == nil || resp.Data.ImageKey == nil || *resp.Data.ImageKey == "" {
+		return "", fmt.Errorf("feishu image upload %s: empty image_key in response", imagePath)
+	}
+	return *resp.Data.ImageKey, nil
+}
+
+func (b *FeishuBot) sendImage(ctx context.Context, receiveIDType, receiveID, imageKey string) error {
+	if b.apiClient == nil {
+		return errors.New("feishu api client not initialized")
+	}
+	if strings.TrimSpace(receiveID) == "" {
+		return errors.New("feishu receive_id is required")
+	}
+
+	payload, err := json.Marshal(map[string]string{"image_key": imageKey})
+	if err != nil {
+		return fmt.Errorf("failed to marshal feishu image content: %w", err)
+	}
+
+	req := larkim.NewCreateMessageReqBuilder().
+		ReceiveIdType(receiveIDType).
+		Body(larkim.NewCreateMessageReqBodyBuilder().
+			ReceiveId(receiveID).
+			MsgType("image").
+			Content(string(payload)).
+			Build()).
+		Build()
+
+	resp, err := b.apiClient.Im.V1.Message.Create(ctx, req)
+	if err != nil {
+		if isFeishuTokenError(err) {
+			log.Printf("feishu: token error, refreshing API client: %v", err)
+			b.refreshAPIClient()
+		}
+		return err
+	}
+	if !resp.Success() {
+		sendErr := fmt.Errorf("feishu send image failed: code=%d msg=%s", resp.Code, resp.Msg)
+		if isFeishuTokenError(sendErr) {
+			log.Printf("feishu: token error in response, refreshing API client: %v", sendErr)
+			b.refreshAPIClient()
+		}
+		return sendErr
+	}
+	return nil
+}
+
+func (b *FeishuBot) handleMessageEvent(ctx context.Context, event *larkim.P2MessageReceiveV1) error {
+	msg, err := parseFeishuInbound(event)
+	if err != nil {
+		b.markError()
+		log.Printf("feishu parse error: %v", err)
+		return nil
+	}
+	if msg == nil {
+		return nil
+	}
+	// Drop app-sent messages explicitly. Without this, anything the bot (or
+	// another app in the chat) sends can re-enter as agent input whenever the
+	// sender happens to pass the allowlist, producing echo/self-reply loops.
+	if msg.senderType == "app" {
+		return nil
+	}
+	if b.isContentDuplicate(msg.openID, msg.text) {
+		return nil
+	}
+	if msg.chatType != "p2p" {
+		return nil
+	}
+	b.markActivity()
+
+	if handled, cmdErr := b.handleCommand(ctx, msg); handled {
+		if cmdErr != nil {
+			_ = b.reply(ctx, msg, fmt.Sprintf("❌ %v", cmdErr))
+		}
+		return nil
+	}
+
+	if !b.allowlist.Allowed(msg.openID, msg.userID) {
+		_ = b.reply(ctx, msg, fmt.Sprintf("❌ Unauthorized. open_id: %s, user_id: %s. Ask an admin to add your IDs to channels.feishu.allowedUsers.\nTip: use /whoami to get your IDs.", msg.openID, msg.userID))
+		return nil
+	}
+
+	if isIncompleteFeishuAgentCommand(msg.text) {
+		command := agentCommandName(msg.text)
+		usage := agentCommandUsage(command)
+		if command != "/admin" {
+			if command == "" {
+				command = "/agent"
+			}
+			usage = fmt.Sprintf("usage: %s <name> <task>", command)
+		}
+		_ = b.reply(ctx, msg, fmt.Sprintf("❌ %s\nTip: use /agents to see allowed agents.", usage))
+		return nil
+	}
+
+	selection, err := ParseAgentSelection(msg.text)
+	if err != nil {
+		reply := fmt.Sprintf("❌ %v", err)
+		if isAgentNotAllowedError(err) {
+			reply = agentNotAllowedMessage(err, b.defaultAgent, b.agentAllow)
+		} else if isAgentAllowlistError(err) {
+			reply = fmt.Sprintf("%s\nTip: use /agents to see allowed agents.", reply)
+		}
+		_ = b.reply(ctx, msg, reply)
+		return nil
+	}
+	if strings.TrimSpace(selection.Task) == "" {
+		return nil
+	}
+
+	enforceSelection := selection.Specified || b.defaultAgent != "" || b.agentAllow.configured
+	if enforceSelection {
+		selection, err = ResolveAgentSelection(selection, b.defaultAgent, b.agentAllow)
+		if err != nil {
+			reply := fmt.Sprintf("❌ %v", err)
+			if !selection.Specified && (isDefaultAgentMissingError(err) || isInvalidAgentNameError(err)) {
+				reply = "❌ Default agent is missing or invalid.\nSet agents.ohMyCode.defaultAgent or use /agent <name> <task> (or /to <name> <task>).\nTip: use /agents to see allowed agents."
+			} else if isAgentNotAllowedError(err) {
+				reply = agentNotAllowedMessage(err, b.defaultAgent, b.agentAllow)
+			} else if isAgentAllowlistError(err) {
+				reply = fmt.Sprintf("%s\nTip: use /agents to see allowed agents.", reply)
+			}
+			_ = b.reply(ctx, msg, reply)
+			return nil
+		}
+	}
+
+	if b.handler != nil {
+		replyText, err := b.handler.HandleIncoming(ctx, b.toProtocolMessage(msg, selection.Task, selection.Agent))
+		if err != nil {
+			b.markError()
+			log.Printf("feishu handler error: %v", err)
+			replyText = "❌ Something went wrong. Please try again."
+		}
+		if strings.TrimSpace(replyText) != "" {
+			_ = b.reply(ctx, msg, replyText)
+		}
+		return nil
+	}
+
+	_ = b.reply(ctx, msg, fmt.Sprintf("echo: %s", selection.Task))
+	return nil
+}
+
+func (b *FeishuBot) handleCommand(ctx context.Context, msg *feishuInboundMessage) (bool, error) {
+	text := strings.TrimSpace(msg.text)
+	if text == "" || !strings.HasPrefix(text, "/") {
+		return false, nil
+	}
+
+	parts := strings.Fields(text)
+	if len(parts) == 0 {
+		return true, nil
+	}
+
+	command := parts[0]
+	if idx := strings.IndexByte(command, '@'); idx != -1 {
+		command = command[:idx]
+	}
+	if command == "/agent" || command == "/to" || command == "/admin" {
+		return false, nil
+	}
+
+	switch command {
+	case "/help", "/start":
+		return true, b.reply(ctx, msg, b.helpText())
+	case "/status":
+		return true, b.reply(ctx, msg, b.statusText())
+	case "/agents":
+		names := b.agentAllow.Names()
+		defaultName := strings.TrimSpace(b.defaultAgent)
+		if len(names) > 0 && defaultName != "" {
+			names = filterOutAgentName(names, defaultName)
+		}
+		if len(names) == 0 && defaultName == "" {
+			return true, b.reply(ctx, msg, noAgentsConfiguredMessage)
+		}
+		var sb strings.Builder
+		sb.WriteString("Allowed agents:\n")
+		if defaultName != "" {
+			sb.WriteString(fmt.Sprintf("Default agent: %s\n", defaultName))
+		}
+		for _, name := range names {
+			sb.WriteString(fmt.Sprintf("  - %s\n", name))
+		}
+		return true, b.reply(ctx, msg, strings.TrimSpace(sb.String()))
+	case "/whoami":
+		reply := fmt.Sprintf("open_id: %s\nuser_id: %s\nchat_id: %s", msg.openID, msg.userID, msg.chatID)
+		return true, b.reply(ctx, msg, reply)
+	default:
+		return true, fmt.Errorf("unknown command: %s", command)
+	}
+}
+
+func (b *FeishuBot) helpText() string {
+	lines := []string{
+		"FractalBot Feishu Help",
+		"",
+		"Commands:",
+		"  /help - show this help",
+		"  /status - bot status",
+		"  /agents - list allowed agents",
+		"  /whoami - show your Feishu IDs",
+		"",
+		"Agent routing:",
+		"  /agent <name> <task...>",
+		"  /to <name> <task...> (alias of /agent)",
+		"  /admin <text...> - route to admin agent",
+		"  /agents - see available agents",
+		"  Note: if an allowlist is configured, only allowlisted agents can be used.",
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (b *FeishuBot) statusText() string {
+	lastActivity := "never"
+	if ts := b.LastActivity(); !ts.IsZero() {
+		lastActivity = ts.UTC().Format(time.RFC3339)
+	}
+	lastError := "none"
+	if ts := b.LastError(); !ts.IsZero() {
+		lastError = ts.UTC().Format(time.RFC3339)
+	}
+	defaultAgent := strings.TrimSpace(b.defaultAgent)
+	if defaultAgent == "" {
+		defaultAgent = "(none)"
+	}
+	allowlistConfigured := b.agentAllow.configured
+	return strings.Join([]string{
+		"Bot Status",
+		"bot: feishu",
+		fmt.Sprintf("running: %t", b.IsRunning()),
+		fmt.Sprintf("last_activity: %s", lastActivity),
+		fmt.Sprintf("last_error: %s", lastError),
+		fmt.Sprintf("default_agent: %s", defaultAgent),
+		fmt.Sprintf("allowed_agents_configured: %t", allowlistConfigured),
+	}, "\n")
+}
+
+func (b *FeishuBot) reply(ctx context.Context, msg *feishuInboundMessage, text string) error {
+	if b.sendMessageFn == nil {
+		return errors.New("feishu sender not configured")
+	}
+	if err := b.sendMessageFn(ctx, msg.replyIDType, msg.replyID, TruncateFeishuReply(text)); err != nil {
+		b.markError()
+		return err
+	}
+	b.markActivity()
+	return nil
+}
+
+func (b *FeishuBot) toProtocolMessage(msg *feishuInboundMessage, text, agent string) *protocol.Message {
+	timestamp := strings.TrimSpace(msg.timestamp)
+	if timestamp == "" {
+		timestamp = time.Now().UTC().Format(time.RFC3339)
+	}
+	return &protocol.Message{
+		Kind:   protocol.MessageKindChannel,
+		Action: protocol.ActionCreate,
+		Data: map[string]interface{}{
+			"channel":    "feishu",
+			"text":       text,
+			"raw_text":   msg.text,
+			"agent":      agent,
+			"chat_id":    msg.chatID,
+			"open_id":    msg.openID,
+			"user_id":    msg.userID,
+			"message":    msg.messageID,
+			"message_id": msg.messageID,
+			"thread_id":  msg.threadID,
+			"chatType":   msg.chatType,
+			"timestamp":  timestamp,
+		},
+	}
+}
+
+type feishuInboundMessage struct {
+	text        string
+	openID      string
+	userID      string
+	senderType  string
+	chatID      string
+	chatType    string
+	messageID   string
+	threadID    string
+	timestamp   string
+	replyIDType string
+	replyID     string
+}
+
+type feishuTextContent struct {
+	Text string `json:"text"`
+}
+
+func parseFeishuInbound(event *larkim.P2MessageReceiveV1) (*feishuInboundMessage, error) {
+	if event == nil || event.Event == nil || event.Event.Message == nil || event.Event.Sender == nil || event.Event.Sender.SenderId == nil {
+		return nil, nil
+	}
+	msg := event.Event.Message
+	if msg.MessageType == nil || *msg.MessageType != "text" {
+		return nil, nil
+	}
+	if msg.Content == nil {
+		return nil, nil
+	}
+
+	var content feishuTextContent
+	if err := json.Unmarshal([]byte(*msg.Content), &content); err != nil {
+		return nil, err
+	}
+
+	text := strings.TrimSpace(content.Text)
+	if text == "" {
+		return nil, nil
+	}
+
+	openID := derefString(event.Event.Sender.SenderId.OpenId)
+	userID := derefString(event.Event.Sender.SenderId.UserId)
+	senderType := derefString(event.Event.Sender.SenderType)
+	chatID := derefString(msg.ChatId)
+	chatType := derefString(msg.ChatType)
+	messageID := derefString(msg.MessageId)
+	threadID := derefString(msg.ThreadId)
+	timestamp := derefString(msg.CreateTime)
+
+	replyIDType := "chat_id"
+	replyID := chatID
+	if replyID == "" {
+		replyIDType = "open_id"
+		replyID = openID
+	}
+
+	return &feishuInboundMessage{
+		text:        text,
+		openID:      openID,
+		userID:      userID,
+		senderType:  senderType,
+		chatID:      chatID,
+		chatType:    chatType,
+		messageID:   messageID,
+		threadID:    threadID,
+		timestamp:   timestamp,
+		replyIDType: replyIDType,
+		replyID:     replyID,
+	}, nil
+}
+
+func (b *FeishuBot) isDuplicate(messageID string) bool {
+	if messageID == "" {
+		return false
+	}
+	b.seenMu.Lock()
+	defer b.seenMu.Unlock()
+	if _, ok := b.seenMsg[messageID]; ok {
+		return true
+	}
+	now := time.Now()
+	b.seenMsg[messageID] = now
+	// Lazy cleanup: if map grows too large, evict entries older than 5 minutes.
+	if len(b.seenMsg) > 1000 {
+		cutoff := now.Add(-5 * time.Minute)
+		for id, t := range b.seenMsg {
+			if t.Before(cutoff) {
+				delete(b.seenMsg, id)
+			}
+		}
+	}
+	return false
+}
+
+func (b *FeishuBot) isContentDuplicate(senderID, text string) bool {
+	if senderID == "" || text == "" {
+		return false
+	}
+	key := senderID + "\x00" + text
+	b.seenMu.Lock()
+	defer b.seenMu.Unlock()
+	now := time.Now()
+	if t, ok := b.seenContent[key]; ok && now.Sub(t) < 60*time.Second {
+		return true
+	}
+	b.seenContent[key] = now
+	if len(b.seenContent) > 1000 {
+		cutoff := now.Add(-5 * time.Minute)
+		for k, t := range b.seenContent {
+			if t.Before(cutoff) {
+				delete(b.seenContent, k)
+			}
+		}
+	}
+	return false
+}
+
+func derefString(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+func isIncompleteFeishuAgentCommand(text string) bool {
+	return isIncompleteAgentCommand(text)
+}
+
+func resolveFeishuDomain(domain string) string {
+	switch strings.ToLower(strings.TrimSpace(domain)) {
+	case feishuDomainLark:
+		return lark.LarkBaseUrl
+	default:
+		return lark.FeishuBaseUrl
+	}
+}
+
+type FeishuAllowlist struct {
+	configured bool
+	allowed    map[string]struct{}
+}
+
+func NewFeishuAllowlist(values []string) FeishuAllowlist {
+	allowed := make(map[string]struct{})
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		allowed[trimmed] = struct{}{}
+	}
+	return FeishuAllowlist{configured: len(allowed) > 0, allowed: allowed}
+}
+
+func (a FeishuAllowlist) Allowed(openID, userID string) bool {
+	if !a.configured {
+		return false
+	}
+	if openID != "" {
+		if _, ok := a.allowed[openID]; ok {
+			return true
+		}
+	}
+	if userID != "" {
+		if _, ok := a.allowed[userID]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func isFeishuTokenError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	for _, pattern := range []string{"access token", "99991663", "99991664", "99991671"} {
+		if containsLower(msg, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+func (b *FeishuBot) refreshAPIClient() {
+	domainURL := resolveFeishuDomain(b.domain)
+	b.apiClient = lark.NewClient(b.appID, b.appSecret, lark.WithOpenBaseUrl(domainURL))
+}
