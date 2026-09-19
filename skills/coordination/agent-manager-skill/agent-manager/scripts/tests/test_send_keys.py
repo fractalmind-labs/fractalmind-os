@@ -122,7 +122,7 @@ class SendKeysTests(unittest.TestCase):
 
         self.assertFalse(ok)
         # Native Enter is retried; a newline paste must NOT be used as a fallback
-        # for native-Enter TUIs (Codex/Grok) — it only inserts a paste chip and
+        # for native-Enter TUIs (Cursor/Codex/Grok) — it only inserts a paste chip and
         # cannot submit the turn.
         c_m_count = sum(1 for cmd in commands if cmd[:4] == ['tmux', 'send-keys', '-t', '%1'] and cmd[-1] == 'C-m')
         self.assertEqual(c_m_count, 2)

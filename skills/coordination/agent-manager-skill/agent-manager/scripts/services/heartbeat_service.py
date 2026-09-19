@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from .heartbeat_state_machine import classify_heartbeat_ack, failure_reason_code
+from commands.lifecycle import uses_native_enter
 
 _HEARTBEAT_ID_PATTERN = re.compile(r"\[HB_ID:([^\]\s]+)\]")
 
@@ -226,7 +227,7 @@ def run_heartbeat_attempt(
     baseline_output = deps.capture_output(agent_id, lines=50) or ""
     baseline_hash = _tail_hash(baseline_output)
 
-    native_enter = is_codex or 'grok' in (launcher or '').lower()
+    native_enter = uses_native_enter(launcher)
     if not deps.send_keys(
         agent_id,
         heartbeat_message,

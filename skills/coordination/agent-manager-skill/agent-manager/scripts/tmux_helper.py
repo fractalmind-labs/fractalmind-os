@@ -569,7 +569,7 @@ def send_keys(
     def _send_enter() -> bool:
         # Some TUIs (notably Codex) require a real Enter keypress to confirm submit.
         # Try native key first when requested, and verify pane output changes.
-        # For native-Enter TUIs (Codex/Grok) a pasted newline cannot submit the
+        # For native-Enter TUIs (Cursor/Codex/Grok) a pasted newline cannot submit the
         # turn — it only inserts a paste chip, which changes pane output and used
         # to fake success while the message stayed in the composer. Retry the
         # native key with a generous pane-change window instead of falling back.

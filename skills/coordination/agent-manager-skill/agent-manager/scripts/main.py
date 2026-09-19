@@ -86,6 +86,7 @@ from commands.lifecycle import (
     cmd_monitor as lifecycle_cmd_monitor,
     cmd_send as lifecycle_cmd_send,
     cmd_assign as lifecycle_cmd_assign,
+    uses_native_enter,
 )
 from commands.inbound import (
     cmd_inbound as inbound_cmd_inbound,
@@ -1900,7 +1901,7 @@ def _run_dream_attempt(
     baseline_hash = _tail_hash(baseline_output)
     final_output = baseline_output
 
-    native_enter = is_codex or 'grok' in (launcher or '').lower()
+    native_enter = uses_native_enter(launcher)
     if not send_keys(
         agent_id,
         dream_message,
@@ -2533,7 +2534,7 @@ def _maybe_rollover_heartbeat_session(
     handoff_file = _write_heartbeat_handoff_template(repo_root, agent_id, heartbeat_id)
     handoff_prompt = _build_heartbeat_handoff_prompt(handoff_file, heartbeat_id)
 
-    native_enter = is_codex or 'grok' in (launcher or '').lower()
+    native_enter = uses_native_enter(launcher)
     if not send_keys(
         agent_id,
         handoff_prompt,

@@ -87,7 +87,8 @@ class ShouldPreemptMainDeliveryTests(unittest.TestCase):
     def test_uses_native_enter(self):
         self.assertTrue(uses_native_enter('/home/test/.local/bin/grok'))
         self.assertTrue(uses_native_enter('codex'))
-        self.assertFalse(uses_native_enter('/home/test/.cursor/bin/cursor-agent'))
+        self.assertTrue(uses_native_enter('/home/test/.cursor/bin/cursor-agent'))
+        self.assertTrue(uses_native_enter('cursor'))
         self.assertFalse(uses_native_enter('droid'))
 
 
@@ -195,6 +196,8 @@ class MainTuiPreemptLifecycleTests(unittest.TestCase):
         self.assertEqual(interrupts, [('main', '/home/test/.cursor/bin/cursor-agent')])
         self.assertEqual(len(sends), 1)
         self.assertIn('# Task Assignment', sends[0][1])
+        self.assertTrue(sends[0][2].get('enter_via_key'))
+        self.assertFalse(sends[0][2].get('escape_first'))
 
     def test_assign_employee_grok_does_not_preempt(self):
         interrupts = []

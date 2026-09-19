@@ -165,14 +165,16 @@ def preempt_main_delivery(deps: Any, *, agent_id: str, launcher: str, message: s
 
 
 def uses_native_enter(launcher: str) -> bool:
-    """Grok and Codex need a real Enter key; a pasted newline does not submit.
+    """Cursor, Grok, and Codex need a real Enter key; a pasted newline does not submit.
 
-    Grok turns tmux paste-buffer payloads into composer paste chips. The
+    These TUIs turn tmux paste-buffer payloads into composer paste chips. The
     send_keys newline fallback then looks successful (the chip UI changed)
-    without submitting the turn. Codex has the same native-Enter requirement.
+    without submitting the turn. Cursor Agent has the same native-Enter
+    requirement as Codex/Grok: a pasted newline stays in the composer until
+    a real keypress Enter submits.
     """
     lowered = (launcher or '').lower()
-    return 'codex' in lowered or 'grok' in lowered
+    return 'codex' in lowered or 'grok' in lowered or 'cursor' in lowered
 
 
 def complete_grok_send_now(
