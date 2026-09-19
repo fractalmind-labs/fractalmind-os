@@ -1,0 +1,36 @@
+# Scenario: Monitoring and Alert Agent
+# Goal: Watch service health signals and create actionable incident summaries.
+
+name: monitoring-guard
+description: Monitors system health and sends alert triage reports
+enabled: true
+working_directory: ${REPO_ROOT}
+launcher: codex
+launcher_args:
+  - --model=gpt-5.3-codex
+  - --dangerously-bypass-approvals-and-sandbox
+
+skills:
+  - observability
+  - alert-triage
+  - notifier
+
+schedules:
+  - name: error-budget-check
+    cron: "0 */2 * * *"
+    task: |
+      Pull the latest SLO/error-budget metrics.
+      If any service is below threshold, draft an incident summary and escalation steps.
+    max_runtime: 30m
+
+  - name: oncall-handshake
+    cron: "0 9 * * 1-5"
+    task_file: ${REPO_ROOT}/tasks/ops/oncall-handshake.md
+    max_runtime: 20m
+
+# Heartbeat runs only when this agent session is already running.
+heartbeat:
+  cron: "*/15 * * * *"
+  max_runtime: 5m
+  session_mode: auto
+  enabled: true

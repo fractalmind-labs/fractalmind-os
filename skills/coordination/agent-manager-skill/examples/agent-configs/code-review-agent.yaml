@@ -1,0 +1,43 @@
+# Scenario: Code Review Agent
+# Goal: Review pull requests, flag risky changes, and post actionable feedback.
+
+# Unique agent name (used for tmux session name: agent-{name})
+name: pr-reviewer
+
+# Human-readable description shown by `agent-manager list`
+description: Pull request code review specialist
+
+# Optional switch to disable starts/schedules without deleting the file
+enabled: true
+
+# Default runtime working directory (${REPO_ROOT} is resolved by agent-manager)
+working_directory: ${REPO_ROOT}
+
+# Launcher can be a provider name (codex/droid/...) or absolute executable path
+launcher: codex
+launcher_args:
+  - --model=gpt-5.3-codex
+  - --dangerously-bypass-approvals-and-sandbox
+
+# Skills injected into the system prompt at startup
+skills:
+  - review-pr
+  - development-workflow-standards
+
+# Optional tmux pane layout for side-by-side review (code + logs)
+tmux:
+  layout:
+    split: h
+    panes:
+      - {}
+      - {}
+  target_pane: "0"
+
+# Optional scheduled jobs (cron + task or task_file)
+schedules:
+  - name: morning-triage
+    cron: "0 9 * * 1-5"
+    task: |
+      Check new pull requests opened in the last 24 hours.
+      Prioritize high-risk changes and produce a review checklist.
+    max_runtime: 45m
