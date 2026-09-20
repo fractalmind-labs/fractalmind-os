@@ -112,6 +112,10 @@ repositories:
     destination: skills/interfaces/use-agent-task-protocol-skill
     category: skill
     status: imported
+  - source: twitter-x-scraper-skill
+    destination: skills/interfaces/twitter-x-scraper-skill
+    category: skill
+    status: contributed
   - source: plan-dog-skill
     destination: skills/development/plan-dog-skill
     category: skill

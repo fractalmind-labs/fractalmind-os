@@ -1,0 +1,4 @@
+interface:
+  display_name: "Twitter/X Scraper"
+  short_description: "Fetch single posts and timelines from X, preferring the public page scraper and falling back to twitterapi.io."
+  default_prompt: "Use $twitter-x-scraper to fetch and verify recent Twitter/X posts about this topic."
