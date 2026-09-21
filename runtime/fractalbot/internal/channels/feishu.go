@@ -28,6 +28,7 @@ const (
 )
 
 type FeishuBot struct {
+	name         string
 	appID        string
 	appSecret    string
 	domain       string
@@ -62,6 +63,21 @@ type FeishuBot struct {
 }
 
 func NewFeishuBot(appID, appSecret, domain string, allowedUsers []string, defaultAgent string, allowedAgents []string) (*FeishuBot, error) {
+	return newFeishuBot("feishu", appID, appSecret, domain, allowedUsers, defaultAgent, allowedAgents)
+}
+
+// NewNamedFeishuBot creates an additional Feishu bot instance. The local name
+// is used only by the channel manager; AppID remains the platform receiver
+// identity and is never replaced by the local instance name.
+func NewNamedFeishuBot(instanceName, appID, appSecret, domain string, allowedUsers []string, defaultAgent string, allowedAgents []string) (*FeishuBot, error) {
+	instanceName = strings.TrimSpace(instanceName)
+	if instanceName == "" {
+		return nil, errors.New("feishu instance name is required")
+	}
+	return newFeishuBot("feishu/"+instanceName, appID, appSecret, domain, allowedUsers, defaultAgent, allowedAgents)
+}
+
+func newFeishuBot(name, appID, appSecret, domain string, allowedUsers []string, defaultAgent string, allowedAgents []string) (*FeishuBot, error) {
 	trimmedID := strings.TrimSpace(appID)
 	trimmedSecret := strings.TrimSpace(appSecret)
 	if trimmedID == "" || trimmedSecret == "" {
@@ -77,6 +93,7 @@ func NewFeishuBot(appID, appSecret, domain string, allowedUsers []string, defaul
 	}
 
 	return &FeishuBot{
+		name:         name,
 		appID:        trimmedID,
 		appSecret:    trimmedSecret,
 		domain:       resolvedDomain,
@@ -90,7 +107,7 @@ func NewFeishuBot(appID, appSecret, domain string, allowedUsers []string, defaul
 }
 
 func (b *FeishuBot) Name() string {
-	return "feishu"
+	return b.name
 }
 
 func (b *FeishuBot) SetHandler(handler IncomingMessageHandler) {

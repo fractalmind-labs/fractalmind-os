@@ -105,6 +105,38 @@ func TestGatewayEchoAndStatus(t *testing.T) {
 	}
 }
 
+func TestChannelStatusReportsNamedFeishuBots(t *testing.T) {
+	server, err := NewServer(&config.Config{
+		Gateway: &config.GatewayConfig{Bind: "127.0.0.1", Port: 0},
+		Channels: &config.ChannelsConfig{Feishu: &config.FeishuConfig{
+			Enabled: true,
+			Bots: map[string]config.FeishuBotConfig{
+				"sales":   {AppID: "cli_sales", AppSecret: "sales-secret"},
+				"support": {AppID: "cli_support", AppSecret: "support-secret"},
+			},
+		}},
+		Agents: &config.AgentsConfig{},
+	})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+	for _, name := range []string{"feishu/sales", "feishu/support"} {
+		if err := server.agentManager.ChannelManager.Register(&fakeSendChannel{name: name}); err != nil {
+			t.Fatalf("register %s: %v", name, err)
+		}
+	}
+
+	statuses := server.channelStatus()
+	if len(statuses) != 2 || statuses[0].Name != "feishu/sales" || statuses[1].Name != "feishu/support" {
+		t.Fatalf("unexpected named Feishu statuses: %#v", statuses)
+	}
+	for _, status := range statuses {
+		if !status.Enabled {
+			t.Fatalf("expected enabled status: %#v", status)
+		}
+	}
+}
+
 type statusPayload struct {
 	Status        string `json:"status"`
 	ActiveClients int    `json:"active_clients"`

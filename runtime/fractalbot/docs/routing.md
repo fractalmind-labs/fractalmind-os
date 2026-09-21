@@ -54,14 +54,19 @@ The workspace requires Python, tmux, and agent-manager. If routed agents need to
 ### Receiver-specific targets
 
 One gateway can route different bot/receiver identities to separate named
-oh-my-code workspaces. `receiverIds` is deliberately channel-agnostic: a
-channel adapter normalizes its recipient identity into `receiver_id`, and the
-Agent Router performs an exact match without inspecting the channel name.
+oh-my-code workspaces. Prefer `receivers`, which binds both the normalized
+`channel` and `receiverId`. That pairing prevents a receiver identity shared
+by two different channel types from selecting the wrong workspace.
 
-Feishu is the first adapter that supplies this value. It uses the configured
-Feishu App ID as the receiver identity; it does **not** use a sender or chat
-ID. Other current or future adapters can use the same configuration once they
-supply `receiver_id` in their normalized inbound context.
+`receiverIds` remains supported for existing deployments, but is
+channel-agnostic and must be globally unique. New configurations should use
+`receivers`.
+
+Feishu uses the configured App ID as `receiver_id`; it does **not** use a
+sender or chat ID. A gateway may run the legacy singleton Feishu bot plus any
+number of named `channels.feishu.bots` instances. Each named instance opens
+its own connection, receives with its own App ID, and replies through that same
+identity. The same chat can therefore be safely served by multiple bots.
 
 ```yaml
 agents:
@@ -77,7 +82,9 @@ agents:
 
     targets:
       support:
-        receiverIds: ["cli_support_bot"]
+        receivers:
+          - channel: feishu
+            receiverId: "cli_support_bot"
         workspace: "/path/to/support-workspace"
         agentManagerScript: ".claude/skills/agent-manager/scripts/main.py"
         defaultAgent: "support-main"
@@ -85,8 +92,35 @@ agents:
         assignTimeoutSeconds: 90
 ```
 
-Each receiver identity must be unique across targets; invalid or duplicate
-routes fail configuration validation. A named target owns the default agent for
+For two Feishu bots without a legacy singleton, configure the bot instances
+alongside those receiver targets:
+
+```yaml
+channels:
+  feishu:
+    enabled: true
+    bots:
+      support:
+        appId: "cli_support_bot"
+        appSecret: "..."
+      sales:
+        appId: "cli_sales_bot"
+        appSecret: "..."
+```
+
+The inbound assignment includes `receiver_id` for Feishu. When an agent sends
+a later outbound reply through the CLI, preserve that identity explicitly:
+
+```bash
+fractalbot message send --channel feishu --receiver-id cli_support_bot --to <chat_id> --text "reply"
+```
+
+With named multi-bot configuration, an outbound Feishu send without
+`--receiver-id` is rejected rather than guessing a bot. Existing singleton
+configuration continues to work without this flag.
+
+Each scoped channel/receiver pair must be unique across targets; invalid or
+duplicate routes fail configuration validation. A named target owns the default agent for
 messages without an explicit `/agent` or `/to` selection. Explicit selections
 are checked again against the chosen target's `allowedAgents`. Status
 diagnostics record the named target but never the raw receiver identity.

@@ -66,6 +66,8 @@ channels:
   # Feishu/Lark channel configuration (optional)
   feishu:
     enabled: false
+    # Legacy singleton bot. This remains supported and is the default sender
+    # for `message send --channel feishu` calls without --receiver-id.
     # App ID from Feishu/Lark developer console
     appId: "cli_xxx"
     # App Secret from Feishu/Lark developer console
@@ -75,6 +77,20 @@ channels:
     # Allowed Feishu open_id/user_id values
     allowedUsers:
       - "ou_xxxxx"
+    # Optional additional bot identities. Each key is a local instance name;
+    # App IDs (not these names) are used as inbound/outbound receiver IDs.
+    # When only bots are configured, omit the singleton appId/appSecret above.
+    # bots:
+    #   support:
+    #     appId: "cli_support_bot"
+    #     appSecret: "support_app_secret"
+    #     domain: "feishu"
+    #     allowedUsers: ["ou_support_user"]
+    #   sales:
+    #     appId: "cli_sales_bot"
+    #     appSecret: "sales_app_secret"
+    #     domain: "feishu"
+    #     allowedUsers: ["ou_sales_user"]
 
   # Discord channel configuration (optional)
   discord:
@@ -162,13 +178,15 @@ agents:
     # How long to wait for agent-manager output
     assignTimeoutSeconds: 90
 
-    # Optional receiver-specific destinations. receiverIds match the
-    # channel-normalized inbound receiver_id (Feishu uses this App ID); the
-    # top-level workspace above remains the fallback for unmatched messages.
+    # Optional receiver-specific destinations. `receivers` binds a normalized
+    # channel + receiver ID pair (Feishu uses this App ID), preventing
+    # cross-channel receiver-ID collisions. The top-level workspace above
+    # remains the fallback for unmatched messages.
     # targets:
     #   support:
-    #     receiverIds:
-    #       - "cli_support_bot"
+    #     receivers:
+    #       - channel: "feishu"
+    #         receiverId: "cli_support_bot"
     #     workspace: "/path/to/support-oh-my-code"
     #     agentManagerScript: ".claude/skills/agent-manager/scripts/main.py"
     #     defaultAgent: "support-main"
@@ -176,6 +194,10 @@ agents:
     #       - "support-main"
     #       - "admin"
     #     assignTimeoutSeconds: 90
+    #   # Legacy compatibility: receiverIds remains channel-agnostic. Do not
+    #   # use it for a receiver identity that appears on another channel.
+    #   # legacy:
+    #   #   receiverIds: ["legacy_receiver"]
 
     # Channel lifecycle commands:
     # - /agents (list allowed agent names)

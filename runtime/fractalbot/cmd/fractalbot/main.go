@@ -24,6 +24,7 @@ import (
 )
 
 var messageSendFn = sendMessageViaGatewayAPI
+var messageSendWithReceiverFn = sendMessageWithReceiverViaGatewayAPI
 var fileDownloadFn = downloadFileViaHTTP
 var heartbeatCronSetFn = setHeartbeatCronViaGatewayAPI
 var heartbeatCronResetFn = resetHeartbeatCronViaGatewayAPI
@@ -268,6 +269,7 @@ func runMessageCommand(ctx context.Context, cfg *config.Config, args []string, o
 	to := sendFS.String("to", "", "target chat ID")
 	text := sendFS.String("text", "", "message text")
 	threadTS := sendFS.String("thread-ts", "", "optional Slack thread timestamp for threaded reply")
+	receiverID := sendFS.String("receiver-id", "", "receiving bot identity for multi-instance Feishu replies")
 	var imagePaths stringSliceFlag
 	sendFS.Var(&imagePaths, "image", "local image path to attach (repeatable; issue #374)")
 
@@ -301,8 +303,15 @@ func runMessageCommand(ctx context.Context, cfg *config.Config, args []string, o
 	}
 
 	threadTSValue := strings.TrimSpace(*threadTS)
+	receiverIDValue := strings.TrimSpace(*receiverID)
 
-	if err := messageSendFn(ctx, cfg, channelName, toValue, messageText, threadTSValue, imageValues); err != nil {
+	var err error
+	if receiverIDValue != "" {
+		err = messageSendWithReceiverFn(ctx, cfg, channelName, toValue, messageText, threadTSValue, imageValues, receiverIDValue)
+	} else {
+		err = messageSendFn(ctx, cfg, channelName, toValue, messageText, threadTSValue, imageValues)
+	}
+	if err != nil {
 		logger.Printf("failed to send message: %v", err)
 		return 1
 	}
@@ -359,12 +368,17 @@ func runFileCommand(ctx context.Context, cfg *config.Config, args []string, out 
 }
 
 func sendMessageViaGatewayAPI(ctx context.Context, cfg *config.Config, channel string, to string, text string, threadTS string, images []string) error {
+	return sendMessageWithReceiverViaGatewayAPI(ctx, cfg, channel, to, text, threadTS, images, "")
+}
+
+func sendMessageWithReceiverViaGatewayAPI(ctx context.Context, cfg *config.Config, channel string, to string, text string, threadTS string, images []string, receiverID string) error {
 	type requestPayload struct {
-		Channel  string   `json:"channel"`
-		To       string   `json:"to"`
-		Text     string   `json:"text"`
-		ThreadTS string   `json:"thread_ts,omitempty"`
-		Images   []string `json:"images,omitempty"`
+		Channel    string   `json:"channel"`
+		To         string   `json:"to"`
+		Text       string   `json:"text"`
+		ThreadTS   string   `json:"thread_ts,omitempty"`
+		Images     []string `json:"images,omitempty"`
+		ReceiverID string   `json:"receiver_id,omitempty"`
 	}
 
 	type responsePayload struct {
@@ -373,11 +387,12 @@ func sendMessageViaGatewayAPI(ctx context.Context, cfg *config.Config, channel s
 	}
 
 	requestBody, err := json.Marshal(requestPayload{
-		Channel:  channel,
-		To:       to,
-		Text:     text,
-		ThreadTS: threadTS,
-		Images:   images,
+		Channel:    channel,
+		To:         to,
+		Text:       text,
+		ThreadTS:   threadTS,
+		Images:     images,
+		ReceiverID: receiverID,
 	})
 	if err != nil {
 		return fmt.Errorf("marshal request: %w", err)

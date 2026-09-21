@@ -38,6 +38,43 @@ type ChannelsConfig struct {
 	Discord  *DiscordConfig  `yaml:"discord,omitempty"`
 	IMessage *IMessageConfig `yaml:"imessage,omitempty"`
 	Demail   *DemailConfig   `yaml:"demail,omitempty"`
+	// Inbound controls gateway-level inbound message behavior shared across
+	// every channel: acknowledgment before processing and milestone progress
+	// reporting back through the inbound channel.
+	Inbound *InboundConfig `yaml:"inbound,omitempty"`
+}
+
+// InboundConfig controls gateway-level inbound behavior that applies to all
+// channels regardless of the agent runtime: send an acknowledgment before
+// dispatching to an agent, and optionally stream milestone progress updates
+// back through the inbound channel during processing.
+type InboundConfig struct {
+	// AckEnabled controls whether the gateway sends an acknowledgment back
+	// through the inbound channel before dispatching to an agent runtime. A
+	// nil value defaults to true so the behavior is on by default.
+	AckEnabled *bool `yaml:"ackEnabled,omitempty"`
+	// AckMessage is the acknowledgment text sent before processing. An empty
+	// value lets the agent runtime supply its own default (typically
+	// "处理中…").
+	AckMessage string `yaml:"ackMessage,omitempty"`
+}
+
+// ackEnabled reports whether acknowledgment is enabled. A nil config or nil
+// flag defaults to enabled so the behavior stays on by default.
+func (c *InboundConfig) ackEnabled() bool {
+	if c == nil || c.AckEnabled == nil {
+		return true
+	}
+	return *c.AckEnabled
+}
+
+// ackMessage returns the configured acknowledgment text, or "" when unset so
+// the caller can apply its own default.
+func (c *InboundConfig) ackMessage() string {
+	if c == nil {
+		return ""
+	}
+	return strings.TrimSpace(c.AckMessage)
 }
 
 // TelegramConfig contains Telegram channel settings.
@@ -86,6 +123,27 @@ type FeishuConfig struct {
 	// Supported values: "feishu", "lark". Defaults to "feishu".
 	Domain string `yaml:"domain,omitempty"`
 	// AllowedUsers is an allowlist of open_id or user_id values.
+	AllowedUsers []string `yaml:"allowedUsers,omitempty"`
+	// Bots configures additional Feishu application identities. Each entry is
+	// an independently connected bot; the map key is an operator-chosen local
+	// instance name, not a Feishu credential or recipient identity. The
+	// top-level fields above remain the legacy singleton configuration.
+	Bots map[string]FeishuBotConfig `yaml:"bots,omitempty"`
+}
+
+// FeishuBotConfig contains the credentials and local policy for one additional
+// Feishu bot. Entries in FeishuConfig.Bots are enabled whenever the parent
+// FeishuConfig is enabled.
+type FeishuBotConfig struct {
+	// AppID from Feishu/Lark developer console. It is also the normalized
+	// inbound receiver_id for this bot.
+	AppID string `yaml:"appId,omitempty"`
+	// AppSecret from Feishu/Lark developer console.
+	AppSecret string `yaml:"appSecret,omitempty"`
+	// Domain selects Feishu (China) or Lark (International). Empty defaults to
+	// "feishu".
+	Domain string `yaml:"domain,omitempty"`
+	// AllowedUsers is an allowlist of open_id or user_id values for this bot.
 	AllowedUsers []string `yaml:"allowedUsers,omitempty"`
 }
 
@@ -181,20 +239,22 @@ type OhMyCodeConfig struct {
 	AssignTimeoutSeconds int `yaml:"assignTimeoutSeconds,omitempty"`
 
 	// Targets maps a stable, operator-chosen target name to a receiver-aware
-	// oh-my-code destination. A channel adapter supplies the normalized
-	// receiver_id; the router selects a target by exact receiverIds match before
-	// falling back to the legacy top-level settings above.
+	// oh-my-code destination. A channel adapter supplies the normalized channel
+	// and receiver_id; scoped receiver matches take precedence over the legacy
+	// channel-agnostic receiverIds matches before the top-level fallback is used.
 	Targets map[string]OhMyCodeTargetConfig `yaml:"targets,omitempty"`
 }
 
-// OhMyCodeTargetConfig describes one receiver-identity destination. It is
-// intentionally channel-agnostic: channel adapters normalize their local bot
-// or recipient identity into receiver_id, and this configuration only matches
-// that opaque value.
+// OhMyCodeTargetConfig describes one receiver-identity destination.
 type OhMyCodeTargetConfig struct {
-	// ReceiverIDs are the inbound receiver identities that route to this target.
-	// Each non-empty identity may appear in only one target.
+	// ReceiverIDs are legacy, channel-agnostic inbound receiver identities.
+	// They remain supported for backward compatibility, but receivers should be
+	// used for new configurations so an identity shared by two channel types
+	// cannot collide.
 	ReceiverIDs []string `yaml:"receiverIds,omitempty"`
+	// Receivers are channel-scoped inbound receiver identities. The pair of
+	// channel and receiverId uniquely selects this target.
+	Receivers []ReceiverTargetConfig `yaml:"receivers,omitempty"`
 
 	// Workspace is the path to the target oh-my-code repository.
 	Workspace string `yaml:"workspace,omitempty"`
@@ -210,6 +270,14 @@ type OhMyCodeTargetConfig struct {
 
 	// AssignTimeoutSeconds limits the target-specific assignment wait.
 	AssignTimeoutSeconds int `yaml:"assignTimeoutSeconds,omitempty"`
+}
+
+// ReceiverTargetConfig binds one normalized channel + receiver identity pair
+// to an OhMyCode target. Both values are opaque identifiers supplied by the
+// corresponding channel adapter.
+type ReceiverTargetConfig struct {
+	Channel    string `yaml:"channel,omitempty"`
+	ReceiverID string `yaml:"receiverId,omitempty"`
 }
 
 // CodexAppCDPConfig contains routing settings for a Codex App-managed agent.
@@ -428,6 +496,9 @@ func DefaultConfig() *Config {
 }
 
 func validateConfig(cfg *Config) error {
+	if err := validateFeishuConfig(cfg); err != nil {
+		return err
+	}
 	if err := validateRouterConfig(cfg); err != nil {
 		return err
 	}
@@ -444,6 +515,73 @@ func validateConfig(cfg *Config) error {
 		return err
 	}
 	return nil
+}
+
+func validateFeishuConfig(cfg *Config) error {
+	if cfg == nil || cfg.Channels == nil || cfg.Channels.Feishu == nil {
+		return nil
+	}
+	feishu := cfg.Channels.Feishu
+	if !feishu.Enabled {
+		return nil
+	}
+
+	legacyAppID := strings.TrimSpace(feishu.AppID)
+	legacySecret := strings.TrimSpace(feishu.AppSecret)
+	if (legacyAppID == "") != (legacySecret == "") {
+		return fmt.Errorf("channels.feishu.appId and channels.feishu.appSecret must be configured together")
+	}
+	if legacyAppID == "" && len(feishu.Bots) == 0 {
+		return fmt.Errorf("channels.feishu.appId and channels.feishu.appSecret are required when feishu is enabled unless channels.feishu.bots is configured")
+	}
+
+	seenAppIDs := make(map[string]string)
+	if legacyAppID != "" {
+		if err := validateFeishuDomain(feishu.Domain); err != nil {
+			return fmt.Errorf("channels.feishu.domain: %w", err)
+		}
+		seenAppIDs[legacyAppID] = "channels.feishu"
+	}
+
+	botNames := make([]string, 0, len(feishu.Bots))
+	for name := range feishu.Bots {
+		botNames = append(botNames, name)
+	}
+	sort.Strings(botNames)
+	for _, name := range botNames {
+		if strings.TrimSpace(name) != name || name == "" {
+			return fmt.Errorf("channels.feishu.bots: bot name is required and must not contain surrounding whitespace")
+		}
+		if err := validateAgentName(name); err != nil {
+			return fmt.Errorf("channels.feishu.bots[%q]: %w", name, err)
+		}
+
+		bot := feishu.Bots[name]
+		appID := strings.TrimSpace(bot.AppID)
+		if appID == "" {
+			return fmt.Errorf("channels.feishu.bots[%q].appId: required", name)
+		}
+		if strings.TrimSpace(bot.AppSecret) == "" {
+			return fmt.Errorf("channels.feishu.bots[%q].appSecret: required", name)
+		}
+		if owner, exists := seenAppIDs[appID]; exists {
+			return fmt.Errorf("channels.feishu.bots[%q].appId: app ID is already configured by %s", name, owner)
+		}
+		if err := validateFeishuDomain(bot.Domain); err != nil {
+			return fmt.Errorf("channels.feishu.bots[%q].domain: %w", name, err)
+		}
+		seenAppIDs[appID] = fmt.Sprintf("channels.feishu.bots[%q]", name)
+	}
+	return nil
+}
+
+func validateFeishuDomain(raw string) error {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "", "feishu", "lark":
+		return nil
+	default:
+		return fmt.Errorf("unsupported domain %q", raw)
+	}
 }
 
 func validateRouterConfig(cfg *Config) error {
@@ -642,7 +780,8 @@ func validateOhMyCodeConfig(cfg *Config) error {
 	}
 	sort.Strings(targetNames)
 
-	receiverOwners := make(map[string]string)
+	legacyReceiverOwners := make(map[string]string)
+	scopedReceiverOwners := make(map[string]string)
 	for _, name := range targetNames {
 		if strings.TrimSpace(name) != name || name == "" {
 			return fmt.Errorf("agents.ohMyCode.targets: target name is required and must not contain surrounding whitespace")
@@ -653,18 +792,40 @@ func validateOhMyCodeConfig(cfg *Config) error {
 
 		target := ohMyCode.Targets[name]
 		prefix := fmt.Sprintf("agents.ohMyCode.targets[%q]", name)
-		if len(target.ReceiverIDs) == 0 {
-			return fmt.Errorf("%s.receiverIds: at least one receiver identity is required", prefix)
+		if len(target.ReceiverIDs) == 0 && len(target.Receivers) == 0 {
+			return fmt.Errorf("%s.receiverIds or %s.receivers: at least one receiver identity is required", prefix, prefix)
 		}
 		for idx, rawReceiverID := range target.ReceiverIDs {
 			receiverID := strings.TrimSpace(rawReceiverID)
 			if receiverID == "" {
 				return fmt.Errorf("%s.receiverIds[%d]: receiver identity is required", prefix, idx)
 			}
-			if owner, exists := receiverOwners[receiverID]; exists {
+			if owner, exists := legacyReceiverOwners[receiverID]; exists {
 				return fmt.Errorf("%s.receiverIds[%d]: receiver identity is already configured by target %q", prefix, idx, owner)
 			}
-			receiverOwners[receiverID] = name
+			if owner, exists := scopedReceiverOwnerForID(scopedReceiverOwners, receiverID); exists {
+				return fmt.Errorf("%s.receiverIds[%d]: receiver identity conflicts with channel-scoped receiver configured by target %q", prefix, idx, owner)
+			}
+			legacyReceiverOwners[receiverID] = name
+		}
+
+		for idx, receiver := range target.Receivers {
+			channel := normalizeReceiverChannel(receiver.Channel)
+			receiverID := strings.TrimSpace(receiver.ReceiverID)
+			if channel == "" {
+				return fmt.Errorf("%s.receivers[%d].channel: required", prefix, idx)
+			}
+			if receiverID == "" {
+				return fmt.Errorf("%s.receivers[%d].receiverId: required", prefix, idx)
+			}
+			if owner, exists := legacyReceiverOwners[receiverID]; exists {
+				return fmt.Errorf("%s.receivers[%d].receiverId: receiver identity conflicts with legacy receiverIds configured by target %q", prefix, idx, owner)
+			}
+			key := scopedReceiverKey(channel, receiverID)
+			if owner, exists := scopedReceiverOwners[key]; exists {
+				return fmt.Errorf("%s.receivers[%d]: channel and receiver identity are already configured by target %q", prefix, idx, owner)
+			}
+			scopedReceiverOwners[key] = name
 		}
 
 		if err := validateRoutingAgents(prefix, target.DefaultAgent, target.AllowedAgents); err != nil {
@@ -676,6 +837,68 @@ func validateOhMyCodeConfig(cfg *Config) error {
 	}
 
 	return nil
+}
+
+// FindOhMyCodeTarget resolves a receiver destination deterministically. New
+// channel-scoped receiver bindings are preferred, while receiverIds continues
+// to provide the original channel-agnostic compatibility behavior.
+func FindOhMyCodeTarget(ohMyCode *OhMyCodeConfig, channel, receiverID string) (string, OhMyCodeTargetConfig, bool) {
+	if ohMyCode == nil {
+		return "", OhMyCodeTargetConfig{}, false
+	}
+	receiverID = strings.TrimSpace(receiverID)
+	if receiverID == "" || len(ohMyCode.Targets) == 0 {
+		return "", OhMyCodeTargetConfig{}, false
+	}
+	channel = normalizeReceiverChannel(channel)
+	targetNames := sortedOhMyCodeTargetNames(ohMyCode.Targets)
+
+	if channel != "" {
+		for _, name := range targetNames {
+			target := ohMyCode.Targets[name]
+			for _, receiver := range target.Receivers {
+				if channel == normalizeReceiverChannel(receiver.Channel) && receiverID == strings.TrimSpace(receiver.ReceiverID) {
+					return name, target, true
+				}
+			}
+		}
+	}
+
+	for _, name := range targetNames {
+		target := ohMyCode.Targets[name]
+		for _, configuredID := range target.ReceiverIDs {
+			if receiverID == strings.TrimSpace(configuredID) {
+				return name, target, true
+			}
+		}
+	}
+	return "", OhMyCodeTargetConfig{}, false
+}
+
+func sortedOhMyCodeTargetNames(targets map[string]OhMyCodeTargetConfig) []string {
+	targetNames := make([]string, 0, len(targets))
+	for name := range targets {
+		targetNames = append(targetNames, name)
+	}
+	sort.Strings(targetNames)
+	return targetNames
+}
+
+func normalizeReceiverChannel(channel string) string {
+	return strings.ToLower(strings.TrimSpace(channel))
+}
+
+func scopedReceiverKey(channel, receiverID string) string {
+	return channel + "\x00" + receiverID
+}
+
+func scopedReceiverOwnerForID(owners map[string]string, receiverID string) (string, bool) {
+	for key, owner := range owners {
+		if strings.HasSuffix(key, "\x00"+receiverID) {
+			return owner, true
+		}
+	}
+	return "", false
 }
 
 func validateOhMyCodeWorkspaceAndScript(prefix, workspace, script string) error {

@@ -196,6 +196,20 @@ func TestBuildOhMyCodeTaskPromptIncludesResolvedTargetContract(t *testing.T) {
 	}
 }
 
+func TestBuildOhMyCodeTaskPromptPreservesFeishuReceiverForOutboundReplies(t *testing.T) {
+	out := buildOhMyCodeTaskPrompt("reply please", "support-main", map[string]interface{}{
+		"channel": "feishu", "receiver_id": "cli_support", "chat_id": "oc_shared",
+	})
+	for _, want := range []string{
+		"- receiver_id: cli_support",
+		"include `--receiver-id` with the current receiver_id",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("expected %q in prompt, got %q", want, out)
+		}
+	}
+}
+
 func TestBuildOhMyCodeTaskPromptOmitsThreadTSWhenMissing(t *testing.T) {
 	out := buildOhMyCodeTaskPrompt("send a message", "qa-1", map[string]interface{}{
 		"channel": "slack",
@@ -558,6 +572,105 @@ func TestHandleIncomingRoutesFeishuReceiverToNamedOhMyCodeTarget(t *testing.T) {
 	routing := manager.LastRoutingOutcome()
 	if routing == nil || routing.Target != "support" || routing.SelectedAgent != "support-main" || routing.Status != "assigned" {
 		t.Fatalf("unexpected route telemetry: %#v", routing)
+	}
+}
+
+func TestHandleIncomingRoutesTwoFeishuBotsInSameChatToSeparateMainAgents(t *testing.T) {
+	supportWorkspace := t.TempDir()
+	supportScript, supportLog := writeRecordingOhMyCodeScript(t, supportWorkspace)
+	salesWorkspace := t.TempDir()
+	salesScript, salesLog := writeRecordingOhMyCodeScript(t, salesWorkspace)
+
+	manager := NewManager(&config.AgentsConfig{
+		Router: "ohMyCode",
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled: true,
+			Targets: map[string]config.OhMyCodeTargetConfig{
+				"support": {
+					Receivers: []config.ReceiverTargetConfig{{Channel: "feishu", ReceiverID: "cli_support"}},
+					Workspace: supportWorkspace, AgentManagerScript: supportScript,
+					DefaultAgent: "support-main", AllowedAgents: []string{"support-main"},
+				},
+				"sales": {
+					Receivers: []config.ReceiverTargetConfig{{Channel: "feishu", ReceiverID: "cli_sales"}},
+					Workspace: salesWorkspace, AgentManagerScript: salesScript,
+					DefaultAgent: "sales-main", AllowedAgents: []string{"sales-main"},
+				},
+			},
+		},
+	})
+
+	for _, testCase := range []struct {
+		name     string
+		receiver string
+		wantLog  string
+	}{
+		{name: "support bot", receiver: "cli_support", wantLog: supportLog},
+		{name: "sales bot", receiver: "cli_sales", wantLog: salesLog},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			out, err := manager.HandleIncoming(context.Background(), &protocol.Message{
+				Kind: protocol.MessageKindChannel, Action: protocol.ActionCreate,
+				Data: map[string]interface{}{
+					"channel": "feishu", "chat_id": "oc_shared_chat", "text": "same chat request",
+					"raw_text": "same chat request", "agent": "legacy-main", "agent_specified": false,
+					"receiver_id": testCase.receiver,
+				},
+			})
+			if err != nil || out != ohMyCodeAssignAckMessage {
+				t.Fatalf("HandleIncoming reply=%q err=%v", out, err)
+			}
+			calls, err := os.ReadFile(testCase.wantLog)
+			if err != nil {
+				t.Fatalf("read recording: %v", err)
+			}
+			if strings.TrimSpace(string(calls)) == "" {
+				t.Fatalf("expected assignment for receiver %q", testCase.receiver)
+			}
+		})
+	}
+
+	supportCalls, err := os.ReadFile(supportLog)
+	if err != nil || strings.TrimSpace(string(supportCalls)) != "assign support-main" {
+		t.Fatalf("support calls=%q err=%v", supportCalls, err)
+	}
+	salesCalls, err := os.ReadFile(salesLog)
+	if err != nil || strings.TrimSpace(string(salesCalls)) != "assign sales-main" {
+		t.Fatalf("sales calls=%q err=%v", salesCalls, err)
+	}
+}
+
+func TestHandleIncomingScopesSharedReceiverIdentityByChannel(t *testing.T) {
+	feishuWorkspace := t.TempDir()
+	feishuScript, feishuLog := writeRecordingOhMyCodeScript(t, feishuWorkspace)
+	slackWorkspace := t.TempDir()
+	slackScript, slackLog := writeRecordingOhMyCodeScript(t, slackWorkspace)
+	manager := NewManager(&config.AgentsConfig{OhMyCode: &config.OhMyCodeConfig{
+		Enabled: true,
+		Targets: map[string]config.OhMyCodeTargetConfig{
+			"feishu": {Receivers: []config.ReceiverTargetConfig{{Channel: "feishu", ReceiverID: "shared"}}, Workspace: feishuWorkspace, AgentManagerScript: feishuScript, DefaultAgent: "feishu-main"},
+			"slack":  {Receivers: []config.ReceiverTargetConfig{{Channel: "slack", ReceiverID: "shared"}}, Workspace: slackWorkspace, AgentManagerScript: slackScript, DefaultAgent: "slack-main"},
+		},
+	}})
+
+	for _, testCase := range []struct {
+		channel string
+		wantLog string
+		want    string
+	}{
+		{channel: "feishu", wantLog: feishuLog, want: "assign feishu-main"},
+		{channel: "slack", wantLog: slackLog, want: "assign slack-main"},
+	} {
+		out, err := manager.HandleIncoming(context.Background(), &protocol.Message{Kind: protocol.MessageKindChannel, Action: protocol.ActionCreate, Data: map[string]interface{}{
+			"channel": testCase.channel, "text": "route me", "receiver_id": "shared",
+		}})
+		if err != nil || out != ohMyCodeAssignAckMessage {
+			t.Fatalf("channel %s reply=%q err=%v", testCase.channel, out, err)
+		}
+		calls, err := os.ReadFile(testCase.wantLog)
+		if err != nil || strings.TrimSpace(string(calls)) != testCase.want {
+			t.Fatalf("channel %s calls=%q err=%v", testCase.channel, calls, err)
+		}
 	}
 }
 
@@ -2042,5 +2155,65 @@ func TestBuildCodexAppPromptIncludesUseFractalbotReplyHint(t *testing.T) {
 		if !strings.Contains(prompt, part) {
 			t.Fatalf("expected %q in prompt, got %q", part, prompt)
 		}
+	}
+}
+
+// recordingReplySink records the ack and progress text sent through a
+// channels.ReplySink so tests can assert what was delivered to the bus.
+type recordingReplySink struct {
+	acks     []string
+	progress []string
+}
+
+func (s *recordingReplySink) Ack(text string) {
+	s.acks = append(s.acks, text)
+}
+
+func (s *recordingReplySink) Progress(text string) {
+	s.progress = append(s.progress, text)
+}
+
+// TestStreamingAckDoesNotDuplicateFinalReply verifies that when streaming ack
+// is enabled, the acknowledgment sent through the sink is not also returned as
+// the final reply (which would resend "处理中…" a second time).
+func TestStreamingAckDoesNotDuplicateFinalReply(t *testing.T) {
+	workspace := t.TempDir()
+	scriptPath, _ := writeRecordingOhMyCodeScript(t, workspace)
+
+	manager := NewManager(&config.AgentsConfig{
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled:            true,
+			Workspace:          workspace,
+			AgentManagerScript: scriptPath,
+			DefaultAgent:       "qa-1",
+		},
+	})
+	manager.SetInboundConfig(&config.InboundConfig{
+		AckEnabled: boolPtr(true),
+		AckMessage: ohMyCodeAssignAckMessage,
+	})
+
+	sink := &recordingReplySink{}
+	out, err := manager.HandleIncomingStream(context.Background(), &protocol.Message{
+		Kind:   protocol.MessageKindChannel,
+		Action: protocol.ActionCreate,
+		Data: map[string]interface{}{
+			"channel": "feishu",
+			"text":    "hello world",
+		},
+	}, sink)
+	if err != nil {
+		t.Fatalf("HandleIncomingStream: %v", err)
+	}
+	if len(sink.acks) != 1 {
+		t.Fatalf("expected exactly 1 ack through sink, got %d", len(sink.acks))
+	}
+	if sink.acks[0] != ohMyCodeAssignAckMessage {
+		t.Fatalf("ack text = %q, want %q", sink.acks[0], ohMyCodeAssignAckMessage)
+	}
+	// The final reply must be empty so the channel adapter does not resend the
+	// ack a second time.
+	if out != "" {
+		t.Fatalf("expected empty final reply to avoid duplicate ack, got %q", out)
 	}
 }

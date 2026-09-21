@@ -174,6 +174,93 @@ func TestLoadConfigRejectsDuplicateReceiverTargets(t *testing.T) {
 	}
 }
 
+func TestLoadConfigAcceptsChannelScopedReceiverTargetsWithSharedIdentity(t *testing.T) {
+	feishuWorkspace := t.TempDir()
+	slackWorkspace := t.TempDir()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	content := []byte("agents:\n  ohMyCode:\n    enabled: true\n    targets:\n      feishu-main:\n        receivers:\n          - channel: feishu\n            receiverId: shared-bot\n        workspace: \"" + feishuWorkspace + "\"\n        defaultAgent: feishu-main\n      slack-main:\n        receivers:\n          - channel: slack\n            receiverId: shared-bot\n        workspace: \"" + slackWorkspace + "\"\n        defaultAgent: slack-main\n")
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	name, target, ok := FindOhMyCodeTarget(cfg.Agents.OhMyCode, "feishu", "shared-bot")
+	if !ok || name != "feishu-main" || target.Workspace != feishuWorkspace {
+		t.Fatalf("unexpected Feishu route: name=%q target=%#v matched=%t", name, target, ok)
+	}
+	name, target, ok = FindOhMyCodeTarget(cfg.Agents.OhMyCode, "SLACK", "shared-bot")
+	if !ok || name != "slack-main" || target.Workspace != slackWorkspace {
+		t.Fatalf("unexpected Slack route: name=%q target=%#v matched=%t", name, target, ok)
+	}
+}
+
+func TestLoadConfigRejectsDuplicateChannelScopedReceiverTarget(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	content := []byte("agents:\n  ohMyCode:\n    enabled: true\n    targets:\n      one:\n        receivers:\n          - channel: feishu\n            receiverId: cli_shared\n        workspace: /workspace/one\n        defaultAgent: main\n      two:\n        receivers:\n          - channel: feishu\n            receiverId: cli_shared\n        workspace: /workspace/two\n        defaultAgent: main\n")
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	_, err := LoadConfig(path)
+	if err == nil {
+		t.Fatal("expected duplicate channel-scoped receiver error")
+	}
+	if !strings.Contains(err.Error(), "receivers") || !strings.Contains(err.Error(), "already configured") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestLoadConfigAcceptsMultipleFeishuBotsWithoutLegacySingleton(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	content := []byte("channels:\n  feishu:\n    enabled: true\n    bots:\n      support:\n        appId: cli_support\n        appSecret: support-secret\n      sales:\n        appId: cli_sales\n        appSecret: sales-secret\n        domain: lark\n")
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if cfg.Channels.Feishu.AppID != "" || len(cfg.Channels.Feishu.Bots) != 2 {
+		t.Fatalf("unexpected Feishu config: %#v", cfg.Channels.Feishu)
+	}
+}
+
+func TestLoadConfigAcceptsLegacySingletonFeishu(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	content := []byte("channels:\n  feishu:\n    enabled: true\n    appId: cli_legacy\n    appSecret: legacy-secret\n    domain: feishu\n")
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if cfg.Channels.Feishu.AppID != "cli_legacy" || len(cfg.Channels.Feishu.Bots) != 0 {
+		t.Fatalf("unexpected legacy Feishu config: %#v", cfg.Channels.Feishu)
+	}
+}
+
+func TestLoadConfigRejectsDuplicateFeishuBotAppID(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	content := []byte("channels:\n  feishu:\n    enabled: true\n    appId: cli_shared\n    appSecret: legacy-secret\n    bots:\n      support:\n        appId: cli_shared\n        appSecret: support-secret\n")
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	_, err := LoadConfig(path)
+	if err == nil {
+		t.Fatal("expected duplicate Feishu app ID error")
+	}
+	if !strings.Contains(err.Error(), "app ID is already configured") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestLoadConfigRejectsOhMyCodeAbsoluteScriptOutsideWorkspace(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(t.TempDir(), "config.yaml")

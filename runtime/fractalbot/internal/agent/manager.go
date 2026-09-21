@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,6 +40,10 @@ const (
 // Manager is a minimal stub for agent lifecycle management.
 type Manager struct {
 	config              *config.AgentsConfig
+	// inboundCfg holds the optional channels.inbound policy (acknowledgment
+	// before processing and milestone progress). It is nil unless wired via
+	// SetInboundConfig, in which case acknowledgment defaults to enabled.
+	inboundCfg          *config.InboundConfig
 	ChannelManager      *channels.Manager
 	mu                  sync.RWMutex
 	agents              map[string]protocol.AgentInfo
@@ -93,6 +96,13 @@ func NewManager(cfg *config.AgentsConfig) *Manager {
 	}
 }
 
+// SetInboundConfig attaches the optional channels.inbound policy used to
+// resolve acknowledgment-before-processing behavior. A nil value leaves the
+// default (ack enabled, default ack message) in effect.
+func (m *Manager) SetInboundConfig(inbound *config.InboundConfig) {
+	m.inboundCfg = inbound
+}
+
 // Start initializes resources required by the manager.
 func (m *Manager) Start(ctx context.Context) error {
 	if m.config != nil && m.config.CodexAppCDP != nil && m.config.CodexAppCDP.Enabled {
@@ -131,6 +141,46 @@ func (m *Manager) LastRoutingOutcome() *RoutingOutcome {
 
 // HandleIncoming implements channels.IncomingMessageHandler.
 func (m *Manager) HandleIncoming(ctx context.Context, msg *protocol.Message) (string, error) {
+	return m.processInbound(ctx, msg)
+}
+
+// HandleIncomingStream implements channels.StreamingHandler. It acknowledges an
+// inbound message through the inbound channel before dispatching to an agent
+// runtime, then returns the final reply. The acknowledgment exits through the
+// same channel the message arrived on, so the user sees "received/processing"
+// immediately while the task is dispatched. Handlers may stream milestone
+// progress updates by calling ReplyProgress on the provided sink.
+func (m *Manager) HandleIncomingStream(ctx context.Context, msg *protocol.Message, sink channels.ReplySink) (string, error) {
+	if msg == nil {
+		return "", nil
+	}
+	ackSent := false
+	if sink != nil && m.inboundAckEnabled() {
+		if channel := inboundChannelName(msg); channel != "" {
+			if ack := m.inboundAckMessage(); ack != "" {
+				sink.Ack(ack)
+				ackSent = true
+			}
+		}
+	}
+	out, err := m.processInbound(ctx, msg)
+	if err != nil {
+		return out, err
+	}
+	// The acknowledgment was already delivered through the sink, so the
+	// routing reply must not resend it. Return an empty reply so the channel
+	// adapter does not emit a duplicate "processing" message.
+	if ackSent && strings.TrimSpace(out) == strings.TrimSpace(m.inboundAckMessage()) {
+		return "", nil
+	}
+	return out, nil
+}
+
+// processInbound routes a validated inbound message to the active agent runtime
+// and returns the final reply. It holds the shared logic used by both
+// HandleIncoming and HandleIncomingStream.
+func (m *Manager) processInbound(ctx context.Context, msg *protocol.Message) (string, error) {
+
 	if msg == nil {
 		return "", nil
 	}
@@ -238,6 +288,41 @@ func (m *Manager) HandleIncoming(ctx context.Context, msg *protocol.Message) (st
 	}
 
 	return fmt.Sprintf("echo: %s", text), nil
+
+}
+
+// inboundAckEnabled reports whether gateway-level acknowledgment is enabled. It
+// defaults to true when no inbound config is present.
+func (m *Manager) inboundAckEnabled() bool {
+	if m.inboundCfg == nil {
+		return true
+	}
+	return m.inboundCfg.AckEnabled == nil || *m.inboundCfg.AckEnabled
+}
+
+// inboundAckMessage returns the configured acknowledgment text, falling back to
+// the ohMyCode assign default ("处理中…") when unset.
+func (m *Manager) inboundAckMessage() string {
+	if m.inboundCfg != nil {
+		if msg := strings.TrimSpace(m.inboundCfg.AckMessage); msg != "" {
+			return msg
+		}
+	}
+	return ohMyCodeAssignAckMessage
+}
+
+// inboundChannelName extracts the channel field from an inbound message, or
+// "" when absent.
+func inboundChannelName(msg *protocol.Message) string {
+	if msg == nil {
+		return ""
+	}
+	data, ok := msg.Data.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+	channel, _ := data["channel"].(string)
+	return channel
 }
 
 // SetInboundRoutedHook registers a callback invoked after a normal channel
@@ -406,28 +491,17 @@ func (m *Manager) resolveOhMyCodeRoute(inboundData map[string]interface{}) (ohMy
 	}
 
 	ohMyCode := m.config.OhMyCode
+	channel := promptContextValue(inboundData, "channel")
 	receiverID := promptContextValue(inboundData, "receiver_id")
-	if receiverID != "" && len(ohMyCode.Targets) > 0 {
-		targetNames := make([]string, 0, len(ohMyCode.Targets))
-		for name := range ohMyCode.Targets {
-			targetNames = append(targetNames, name)
-		}
-		sort.Strings(targetNames)
-		for _, name := range targetNames {
-			target := ohMyCode.Targets[name]
-			for _, configuredID := range target.ReceiverIDs {
-				if receiverID == strings.TrimSpace(configuredID) {
-					return ohMyCodeRoute{
-						Target:               name,
-						Workspace:            target.Workspace,
-						AgentManagerScript:   target.AgentManagerScript,
-						DefaultAgent:         target.DefaultAgent,
-						AllowedAgents:        append([]string(nil), target.AllowedAgents...),
-						AssignTimeoutSeconds: target.AssignTimeoutSeconds,
-					}, nil
-				}
-			}
-		}
+	if name, target, matched := config.FindOhMyCodeTarget(ohMyCode, channel, receiverID); matched {
+		return ohMyCodeRoute{
+			Target:               name,
+			Workspace:            target.Workspace,
+			AgentManagerScript:   target.AgentManagerScript,
+			DefaultAgent:         target.DefaultAgent,
+			AllowedAgents:        append([]string(nil), target.AllowedAgents...),
+			AssignTimeoutSeconds: target.AssignTimeoutSeconds,
+		}, nil
 	}
 
 	if strings.TrimSpace(ohMyCode.Workspace) != "" {
@@ -637,6 +711,7 @@ func runOhMyCodeAgentManager(ctx context.Context, workspace, script, stdin strin
 
 func buildOhMyCodeTaskPrompt(userText, selectedAgent string, inboundData map[string]interface{}) string {
 	channel := promptContextValue(inboundData, "channel")
+	receiverID := promptContextValue(inboundData, "receiver_id")
 	chatID := promptContextValue(inboundData, "chat_id")
 	userID := promptContextValue(inboundData, "user_id")
 	username := promptContextValue(inboundData, "username")
@@ -653,6 +728,9 @@ func buildOhMyCodeTaskPrompt(userText, selectedAgent string, inboundData map[str
 	sb.WriteString("# Task Assignment\n\n")
 	sb.WriteString("Inbound routing context:\n")
 	sb.WriteString(fmt.Sprintf("- channel: %s\n", defaultPromptContextValue(channel)))
+	if receiverID != "" {
+		sb.WriteString(fmt.Sprintf("- receiver_id: %s\n", receiverID))
+	}
 	sb.WriteString(fmt.Sprintf("- chat_id: %s\n", defaultPromptContextValue(chatID)))
 	sb.WriteString(fmt.Sprintf("- user_id: %s\n", defaultPromptContextValue(userID)))
 	sb.WriteString(fmt.Sprintf("- username: %s\n", defaultPromptContextValue(username)))
@@ -683,6 +761,9 @@ func buildOhMyCodeTaskPrompt(userText, selectedAgent string, inboundData map[str
 	sb.WriteString("- selected_agent is the final routing target after default/allowlist resolution.\n")
 	sb.WriteString("- If thread_ts is present, reply in the same thread using `--thread-ts` flag.\n")
 	sb.WriteString("- For outbound messaging intent, prefer `use-fractalbot` skill.\n")
+	if channel == "feishu" && receiverID != "" {
+		sb.WriteString("- For outbound Feishu replies, include `--receiver-id` with the current receiver_id so the message is sent by the receiving bot identity.\n")
+	}
 	sb.WriteString("- Effective available skills:\n")
 	sb.WriteString("  - use-fractalbot (.claude/skills/use-fractalbot/SKILL.md)\n")
 	sb.WriteString("- If channel=telegram and recipient is omitted, default to current chat_id.\n")
