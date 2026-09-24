@@ -461,6 +461,7 @@ func (m *Manager) registerConfiguredFeishuBots() error {
 		if err != nil {
 			return fmt.Errorf("failed to init feishu bot: %w", err)
 		}
+		bot.ConfigureDedupe(feishu.DedupeFile)
 		if err := m.Register(bot); err != nil {
 			return fmt.Errorf("failed to register feishu bot: %w", err)
 		}
@@ -491,6 +492,7 @@ func (m *Manager) registerConfiguredFeishuBots() error {
 		if err != nil {
 			return fmt.Errorf("failed to init feishu bot %q: %w", name, err)
 		}
+		bot.ConfigureDedupe(botConfig.DedupeFile)
 		if err := m.Register(bot); err != nil {
 			return fmt.Errorf("failed to register feishu bot %q: %w", name, err)
 		}

@@ -124,6 +124,12 @@ type FeishuConfig struct {
 	Domain string `yaml:"domain,omitempty"`
 	// AllowedUsers is an allowlist of open_id or user_id values.
 	AllowedUsers []string `yaml:"allowedUsers,omitempty"`
+	// DedupeFile is an optional durable file backing inbound message-ID
+	// deduplication for the legacy singleton Feishu bot. Persisting seen
+	// message IDs across restarts prevents long-delayed redeliveries (which
+	// can arrive minutes to hours after the original) from being processed
+	// more than once. If empty, dedup is memory-only.
+	DedupeFile string `yaml:"dedupeFile,omitempty"`
 	// Bots configures additional Feishu application identities. Each entry is
 	// an independently connected bot; the map key is an operator-chosen local
 	// instance name, not a Feishu credential or recipient identity. The
@@ -145,6 +151,11 @@ type FeishuBotConfig struct {
 	Domain string `yaml:"domain,omitempty"`
 	// AllowedUsers is an allowlist of open_id or user_id values for this bot.
 	AllowedUsers []string `yaml:"allowedUsers,omitempty"`
+	// DedupeFile is an optional durable file backing inbound message-ID
+	// deduplication for this bot. Persisting seen message IDs across restarts
+	// prevents long-delayed redeliveries (minutes to hours later) from being
+	// processed more than once. If empty, dedup is memory-only.
+	DedupeFile string `yaml:"dedupeFile,omitempty"`
 }
 
 // SlackConfig contains Slack channel settings.

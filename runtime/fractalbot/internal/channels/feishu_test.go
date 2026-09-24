@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -20,6 +21,15 @@ type fakeFeishuHandler struct {
 	reply  string
 	err    error
 	last   *protocol.Message
+}
+
+// nextTestMsgID returns a unique message ID for each test event so message-ID
+// deduplication does not collapse distinct events in the same test bot.
+var testMsgCounter int
+
+func nextTestMsgID() string {
+	testMsgCounter++
+	return "msg_" + strconv.Itoa(testMsgCounter)
 }
 
 func (f *fakeFeishuHandler) HandleIncoming(ctx context.Context, msg *protocol.Message) (string, error) {
@@ -153,6 +163,98 @@ func TestFeishuAllowlist(t *testing.T) {
 	if !strings.Contains(sent.text, "u2") {
 		t.Fatalf("expected user_id in reply, got %q", sent.text)
 	}
+}
+
+func TestFeishuMessageIDDedup(t *testing.T) {
+	bot, err := NewFeishuBot("app", "secret", "feishu", []string{"ou_allowed"}, "", nil)
+	if err != nil {
+		t.Fatalf("NewFeishuBot: %v", err)
+	}
+	var calls int
+	bot.SetHandler(&fakeFeishuHandler{reply: "ok"})
+	bot.sendMessageFn = func(ctx context.Context, receiveIDType, receiveID, text string) error {
+		return nil
+	}
+
+	// Use the same message ID twice with a unique text so content dedup cannot
+	// be the reason the second is dropped.
+	text := "dedup regression " + nextTestMsgID()
+	bot.handler = p2pHandlerCallCounter{bot: bot, count: &calls}
+
+	ev := buildFeishuEventWithMsgID(text, "p2p", "ou_allowed", "u1", "chat1", "msg_dedup_regression")
+	if err := bot.handleMessageEvent(context.Background(), ev); err != nil {
+		t.Fatalf("first handle: %v", err)
+	}
+	if calls != 1 {
+		t.Fatalf("expected 1 handler call, got %d", calls)
+	}
+	if err := bot.handleMessageEvent(context.Background(), ev); err != nil {
+		t.Fatalf("second handle: %v", err)
+	}
+	if calls != 1 {
+		t.Fatalf("expected still 1 handler call after redelivery, got %d", calls)
+	}
+
+	// A different message ID (with distinct text so content dedup does not
+	// interfere) must still be processed; only same-ID redelivery is deduped.
+	ev2 := buildFeishuEventWithMsgID("distinct text "+nextTestMsgID(), "p2p", "ou_allowed", "u1", "chat1", nextTestMsgID())
+	if err := bot.handleMessageEvent(context.Background(), ev2); err != nil {
+		t.Fatalf("distinct id handle: %v", err)
+	}
+	if calls != 2 {
+		t.Fatalf("expected 2 handler calls after distinct id, got %d", calls)
+	}
+}
+
+func TestFeishuMessageIDDedupPersists(t *testing.T) {
+	dir := t.TempDir()
+	dupFile := filepath.Join(dir, "seen.json")
+
+	newBot := func() *FeishuBot {
+		bot, err := NewFeishuBot("app", "secret", "feishu", []string{"ou_allowed"}, "", nil)
+		if err != nil {
+			t.Fatalf("NewFeishuBot: %v", err)
+		}
+		bot.ConfigureDedupe(dupFile)
+		bot.sendMessageFn = func(ctx context.Context, receiveIDType, receiveID, text string) error {
+			return nil
+		}
+		if err := bot.Start(context.Background()); err != nil {
+			t.Fatalf("start: %v", err)
+		}
+		return bot
+	}
+
+	var calls int
+	text := "persist regression " + nextTestMsgID()
+	msgID := "msg_persist_regression"
+
+	bot1 := newBot()
+	bot1.handler = p2pHandlerCallCounter{bot: bot1, count: &calls}
+	_ = bot1.handleMessageEvent(context.Background(), buildFeishuEventWithMsgID(text, "p2p", "ou_allowed", "u1", "chat1", msgID))
+	if calls != 1 {
+		t.Fatalf("expected 1 call in first bot, got %d", calls)
+	}
+	_ = bot1.Stop(context.Background())
+
+	// A fresh bot reading the same dedupe file must reject the same message ID.
+	bot2 := newBot()
+	bot2.handler = p2pHandlerCallCounter{bot: bot2, count: &calls}
+	_ = bot2.handleMessageEvent(context.Background(), buildFeishuEventWithMsgID(text, "p2p", "ou_allowed", "u1", "chat1", msgID))
+	if calls != 1 {
+		t.Fatalf("expected still 1 call after restart, got %d", calls)
+	}
+	_ = bot2.Stop(context.Background())
+}
+
+type p2pHandlerCallCounter struct {
+	bot   *FeishuBot
+	count *int
+}
+
+func (h p2pHandlerCallCounter) HandleIncoming(ctx context.Context, msg *protocol.Message) (string, error) {
+	*h.count++
+	return "ok", nil
 }
 
 func TestFeishuWhoamiCommand(t *testing.T) {
@@ -488,6 +590,14 @@ func buildFeishuEvent(text, chatType, openID, userID, chatID string) *larkim.P2M
 }
 
 func buildFeishuEventWithSenderType(text, chatType, openID, userID, chatID, senderType string) *larkim.P2MessageReceiveV1 {
+	return buildFeishuEventFull(text, chatType, openID, userID, chatID, senderType, nextTestMsgID())
+}
+
+func buildFeishuEventWithMsgID(text, chatType, openID, userID, chatID, msgID string) *larkim.P2MessageReceiveV1 {
+	return buildFeishuEventFull(text, chatType, openID, userID, chatID, "user", msgID)
+}
+
+func buildFeishuEventFull(text, chatType, openID, userID, chatID, senderType, msgID string) *larkim.P2MessageReceiveV1 {
 	content := fmt.Sprintf(`{"text":%q}`, text)
 	return &larkim.P2MessageReceiveV1{
 		Event: &larkim.P2MessageReceiveV1Data{
@@ -499,7 +609,7 @@ func buildFeishuEventWithSenderType(text, chatType, openID, userID, chatID, send
 				SenderType: strPtr(senderType),
 			},
 			Message: &larkim.EventMessage{
-				MessageId:   strPtr("msg_1"),
+				MessageId:   strPtr(msgID),
 				ChatId:      strPtr(chatID),
 				ChatType:    strPtr(chatType),
 				MessageType: strPtr("text"),
