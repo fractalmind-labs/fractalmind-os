@@ -2217,3 +2217,128 @@ func TestStreamingAckDoesNotDuplicateFinalReply(t *testing.T) {
 		t.Fatalf("expected empty final reply to avoid duplicate ack, got %q", out)
 	}
 }
+
+// TestManagerDedupStreamingAckByMessageID verifies that a Feishu redelivery of
+// the same message (identical message_id, minutes to hours later) is dropped at
+// the manager boundary *before* the ack is sent, so the user never sees a
+// duplicate "处理中…".
+func TestManagerDedupStreamingAckByMessageID(t *testing.T) {
+	workspace := t.TempDir()
+	scriptPath, logPath := writeRecordingOhMyCodeScript(t, workspace)
+
+	manager := NewManager(&config.AgentsConfig{
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled:            true,
+			Workspace:          workspace,
+			AgentManagerScript: scriptPath,
+			DefaultAgent:       "qa-1",
+		},
+	})
+	manager.SetInboundConfig(&config.InboundConfig{
+		AckEnabled: boolPtr(true),
+		AckMessage: ohMyCodeAssignAckMessage,
+	})
+
+	makeMsg := func() *protocol.Message {
+		return &protocol.Message{
+			Kind:   protocol.MessageKindChannel,
+			Action: protocol.ActionCreate,
+			Data: map[string]interface{}{
+				"channel":    "feishu",
+				"message_id": "om_x100b6466d84e74a4dda6855d9352e69",
+				"text":       "hello world",
+			},
+		}
+	}
+
+	sink := &recordingReplySink{}
+	out, err := manager.HandleIncomingStream(context.Background(), makeMsg(), sink)
+	if err != nil {
+		t.Fatalf("first HandleIncomingStream: %v", err)
+	}
+	if len(sink.acks) != 1 {
+		t.Fatalf("expected 1 ack on first delivery, got %d", len(sink.acks))
+	}
+	if out != "" {
+		t.Fatalf("expected empty final reply on first delivery, got %q", out)
+	}
+
+	// Redelivery of the identical message_id must be dropped entirely: no ack,
+	// no dispatch, empty reply.
+	sink2 := &recordingReplySink{}
+	out2, err := manager.HandleIncomingStream(context.Background(), makeMsg(), sink2)
+	if err != nil {
+		t.Fatalf("second HandleIncomingStream: %v", err)
+	}
+	if len(sink2.acks) != 0 {
+		t.Fatalf("duplicate delivery must not ack, got %d acks", len(sink2.acks))
+	}
+	if out2 != "" {
+		t.Fatalf("duplicate delivery must return empty reply, got %q", out2)
+	}
+
+	logRaw, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read calls log: %v", err)
+	}
+	if lines := strings.Split(strings.TrimSpace(string(logRaw)), "\n"); len(lines) != 1 {
+		t.Fatalf("agent-manager must be called exactly once, got %d calls", len(lines))
+	}
+}
+
+// TestManagerDedupDispatchByMessageID verifies the non-streaming HandleIncoming
+// path also drops redeliveries of the same message_id so the agent is not
+// assigned twice.
+func TestManagerDedupDispatchByMessageID(t *testing.T) {
+	workspace := t.TempDir()
+	scriptPath, logPath := writeRecordingOhMyCodeScript(t, workspace)
+
+	manager := NewManager(&config.AgentsConfig{
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled:            true,
+			Workspace:          workspace,
+			AgentManagerScript: scriptPath,
+			DefaultAgent:       "qa-1",
+		},
+	})
+
+	first, err := manager.HandleIncoming(context.Background(), &protocol.Message{
+		Kind:   protocol.MessageKindChannel,
+		Action: protocol.ActionCreate,
+		Data: map[string]interface{}{
+			"channel":    "feishu",
+			"message_id": "om_duplicate_dispatch_test",
+			"text":       "hello world",
+		},
+	})
+	if err != nil {
+		t.Fatalf("first HandleIncoming: %v", err)
+	}
+	if first != ohMyCodeAssignAckMessage {
+		t.Fatalf("first reply=%q want %q", first, ohMyCodeAssignAckMessage)
+	}
+
+	second, err := manager.HandleIncoming(context.Background(), &protocol.Message{
+		Kind:   protocol.MessageKindChannel,
+		Action: protocol.ActionCreate,
+		Data: map[string]interface{}{
+			"channel":    "feishu",
+			"message_id": "om_duplicate_dispatch_test",
+			"text":       "hello world",
+		},
+	})
+	if err != nil {
+		t.Fatalf("second HandleIncoming: %v", err)
+	}
+	if second != "" {
+		t.Fatalf("duplicate dispatch must return empty reply, got %q", second)
+	}
+
+	logRaw, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read calls log: %v", err)
+	}
+	if lines := strings.Split(strings.TrimSpace(string(logRaw)), "\n"); len(lines) != 1 {
+		t.Fatalf("agent-manager must be called exactly once, got %d calls", len(lines))
+	}
+}

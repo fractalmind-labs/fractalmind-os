@@ -35,6 +35,12 @@ const (
 	gatewayToolCommandsUnavailableMessage = "⚠️ /tool and /tools are not available in gateway mode."
 	markerHeartbeatOK                     = "HEARTBEAT_OK"
 	markerNoReply                         = "NO_REPLY"
+
+	// managerSeenMsgMax caps retained inbound message IDs before eviction;
+	// managerSeenMsgRetention is how long a dispatched message ID stays seen so
+	// Feishu redeliveries minutes to hours (even days) later are still caught.
+	managerSeenMsgMax       = 100000
+	managerSeenMsgRetention = 30 * 24 * time.Hour
 )
 
 // Manager is a minimal stub for agent lifecycle management.
@@ -57,6 +63,12 @@ type Manager struct {
 	cdpResolvedTarget   *CodexAppCDPResolvedConversationStatus
 	inboundHookMu       sync.RWMutex
 	inboundRoutedHook   func(runtimeName, agentName string)
+
+	// seenMu and seenMsg de-duplicate inbound messages by message ID at the
+	// manager convergence point (before the acknowledgment is emitted), so
+	// redeliveries cannot produce duplicate 处理中 acks or duplicate assigns.
+	seenMu   sync.Mutex
+	seenMsg  map[string]time.Time
 }
 
 type RoutingOutcome struct {
@@ -91,8 +103,9 @@ type OhMyCodeRoutingOutcome = RoutingOutcome
 // NewManager creates a new agent manager.
 func NewManager(cfg *config.AgentsConfig) *Manager {
 	return &Manager{
-		config: cfg,
-		agents: make(map[string]protocol.AgentInfo),
+		config:  cfg,
+		agents:  make(map[string]protocol.AgentInfo),
+		seenMsg: make(map[string]time.Time),
 	}
 }
 
@@ -139,8 +152,56 @@ func (m *Manager) LastRoutingOutcome() *RoutingOutcome {
 	return &outcome
 }
 
+// inboundMessageID extracts a stable unique message ID from an inbound message
+// for deduplication. Feishu messages carry the platform om_* ID; channels that
+// do not provide one return "" (no dedup applied).
+func inboundMessageID(msg *protocol.Message) string {
+	if msg == nil || msg.Data == nil {
+		return ""
+	}
+	data, ok := msg.Data.(map[string]interface{})
+	if !ok || data == nil {
+		return ""
+	}
+	id, _ := data["message_id"].(string)
+	if id == "" {
+		id, _ = data["message"].(string)
+	}
+	return strings.TrimSpace(id)
+}
+
+// isDuplicateMessage reports (and records) whether an inbound message was
+// already processed. It is the manager-level idempotency guard that runs before
+// any acknowledgment or dispatch, so Feishu redeliveries of the same message —
+// minutes to hours later — cannot produce duplicate 处理中 acks or duplicate
+// assigns even when the channel adapter does not de-duplicate them.
+func (m *Manager) isDuplicateMessage(messageID string) bool {
+	if messageID == "" {
+		return false
+	}
+	m.seenMu.Lock()
+	defer m.seenMu.Unlock()
+	if _, ok := m.seenMsg[messageID]; ok {
+		return true
+	}
+	now := time.Now()
+	m.seenMsg[messageID] = now
+	if len(m.seenMsg) > managerSeenMsgMax {
+		cutoff := now.Add(-managerSeenMsgRetention)
+		for id, t := range m.seenMsg {
+			if t.Before(cutoff) {
+				delete(m.seenMsg, id)
+			}
+		}
+	}
+	return false
+}
+
 // HandleIncoming implements channels.IncomingMessageHandler.
 func (m *Manager) HandleIncoming(ctx context.Context, msg *protocol.Message) (string, error) {
+	if m.isDuplicateMessage(inboundMessageID(msg)) {
+		return "", nil
+	}
 	return m.processInbound(ctx, msg)
 }
 
@@ -152,6 +213,9 @@ func (m *Manager) HandleIncoming(ctx context.Context, msg *protocol.Message) (st
 // progress updates by calling ReplyProgress on the provided sink.
 func (m *Manager) HandleIncomingStream(ctx context.Context, msg *protocol.Message, sink channels.ReplySink) (string, error) {
 	if msg == nil {
+		return "", nil
+	}
+	if m.isDuplicateMessage(inboundMessageID(msg)) {
 		return "", nil
 	}
 	ackSent := false
