@@ -10,3 +10,4 @@ Covers:
 - Error simulation (user rejection, wrong network, disconnected)
 - CI integration patterns
 - Proof artifact collection for AI agent workflows
+- Optional broadcast mode: sign with a test private key in the Playwright process and send the transaction to a testnet RPC. The default remains a local mock hash. Mainnet chain IDs 1 and 999 are refused unless explicitly allowed.

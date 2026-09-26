@@ -112,12 +112,31 @@ interface WalletMock {
 ### 2. Transaction signing
 
 ```typescript
-// Auto-approve transactions and return a mock tx hash
+// Default: auto-approve and return a local mock tx hash. Nothing is broadcast.
 function mockSendTransaction(tx: EthTransaction): string {
   const txHash = '0x' + randomBytes(32).toString('hex');
   // Store for later verification
   sentTransactions.push({ ...tx, hash: txHash });
   return txHash;
+}
+
+// Broadcast mode: sign with the configured test key and send to rpcUrl.
+// The key stays in the Playwright process. Do not put it in page JavaScript.
+// Chain 1 and chain 999 are refused unless allowMainnet is true.
+async function broadcastSendTransaction(tx: EthTransaction, config: BroadcastConfig): Promise<string> {
+  const chainId = parseInt(config.chainId, 16);
+  if (!config.allowMainnet && (chainId === 1 || chainId === 999)) {
+    throw new Error('broadcast refuses Ethereum mainnet and HyperEVM mainnet');
+  }
+  const provider = new ethers.JsonRpcProvider(config.rpcUrl, chainId);
+  const wallet = new ethers.Wallet(config.privateKey, provider);
+  const sent = await wallet.sendTransaction({
+    to: tx.to,
+    data: tx.data,
+    value: tx.value ? BigInt(tx.value) : undefined,
+  });
+  sentTransactions.push({ ...tx, hash: sent.hash, broadcast: true });
+  return sent.hash;
 }
 
 // For personal_sign / eth_sign / signTypedData
@@ -278,6 +297,18 @@ errors: {none|list}
 4. **Event ordering**: Emit `accountsChanged` before `connect` events. Some dApps depend on this ordering.
 
 5. **Multiple wallet detection**: If the dApp shows a wallet selector, make sure only your mock provider is present. Override any real `window.ethereum` that extensions may inject.
+
+## Broadcast mode
+
+The default mock never reaches a chain. Use broadcast mode only when the test must prove a real transaction, such as a testnet deposit whose receipt and balance change are checked afterwards.
+
+- Set `broadcast: true`, `rpcUrl`, and `privateKey`.
+- Keep the private key in the Playwright process. The page calls `window.__walletMockSend`, which is a Node function registered with `page.exposeFunction`.
+- Proxy reads (`eth_call`, balances, receipts) through `window.__walletMockRpc` so the page sees the real chain.
+- Refuse chain ID `1` and `999` unless `allowMainnet: true`. HyperEVM testnet is chain ID `998` (`0x3e6`).
+- A mock hash does not change vault balances. Do not treat it as proof of a deposit or redeem.
+
+The Playwright wiring is in `references/playwright-wallet-mock.md`.
 
 ## Reference implementations
 
