@@ -35,11 +35,21 @@ const (
 	gatewayToolCommandsUnavailableMessage = "⚠️ /tool and /tools are not available in gateway mode."
 	markerHeartbeatOK                     = "HEARTBEAT_OK"
 	markerNoReply                         = "NO_REPLY"
+
+	// managerSeenMsgMax caps retained inbound message IDs before eviction;
+	// managerSeenMsgRetention is how long a dispatched message ID stays seen so
+	// Feishu redeliveries minutes to hours (even days) later are still caught.
+	managerSeenMsgMax       = 100000
+	managerSeenMsgRetention = 30 * 24 * time.Hour
 )
 
 // Manager is a minimal stub for agent lifecycle management.
 type Manager struct {
 	config              *config.AgentsConfig
+	// inboundCfg holds the optional channels.inbound policy (acknowledgment
+	// before processing and milestone progress). It is nil unless wired via
+	// SetInboundConfig, in which case acknowledgment defaults to enabled.
+	inboundCfg          *config.InboundConfig
 	ChannelManager      *channels.Manager
 	mu                  sync.RWMutex
 	agents              map[string]protocol.AgentInfo
@@ -53,10 +63,17 @@ type Manager struct {
 	cdpResolvedTarget   *CodexAppCDPResolvedConversationStatus
 	inboundHookMu       sync.RWMutex
 	inboundRoutedHook   func(runtimeName, agentName string)
+
+	// seenMu and seenMsg de-duplicate inbound messages by message ID at the
+	// manager convergence point (before the acknowledgment is emitted), so
+	// redeliveries cannot produce duplicate 处理中 acks or duplicate assigns.
+	seenMu   sync.Mutex
+	seenMsg  map[string]time.Time
 }
 
 type RoutingOutcome struct {
 	Backend       string
+	Target        string
 	SelectedAgent string
 	Channel       string
 	ChatID        string
@@ -69,14 +86,34 @@ type RoutingOutcome struct {
 	RecordedAt    time.Time
 }
 
+// ohMyCodeRoute is the resolved runtime configuration for one inbound
+// assignment. Target is empty when the legacy top-level configuration handled
+// the message.
+type ohMyCodeRoute struct {
+	Target               string
+	Workspace            string
+	AgentManagerScript   string
+	DefaultAgent         string
+	AllowedAgents        []string
+	AssignTimeoutSeconds int
+}
+
 type OhMyCodeRoutingOutcome = RoutingOutcome
 
 // NewManager creates a new agent manager.
 func NewManager(cfg *config.AgentsConfig) *Manager {
 	return &Manager{
-		config: cfg,
-		agents: make(map[string]protocol.AgentInfo),
+		config:  cfg,
+		agents:  make(map[string]protocol.AgentInfo),
+		seenMsg: make(map[string]time.Time),
 	}
+}
+
+// SetInboundConfig attaches the optional channels.inbound policy used to
+// resolve acknowledgment-before-processing behavior. A nil value leaves the
+// default (ack enabled, default ack message) in effect.
+func (m *Manager) SetInboundConfig(inbound *config.InboundConfig) {
+	m.inboundCfg = inbound
 }
 
 // Start initializes resources required by the manager.
@@ -115,8 +152,99 @@ func (m *Manager) LastRoutingOutcome() *RoutingOutcome {
 	return &outcome
 }
 
+// inboundMessageID extracts a stable unique message ID from an inbound message
+// for deduplication. Feishu messages carry the platform om_* ID; channels that
+// do not provide one return "" (no dedup applied).
+func inboundMessageID(msg *protocol.Message) string {
+	if msg == nil || msg.Data == nil {
+		return ""
+	}
+	data, ok := msg.Data.(map[string]interface{})
+	if !ok || data == nil {
+		return ""
+	}
+	id, _ := data["message_id"].(string)
+	if id == "" {
+		id, _ = data["message"].(string)
+	}
+	return strings.TrimSpace(id)
+}
+
+// isDuplicateMessage reports (and records) whether an inbound message was
+// already processed. It is the manager-level idempotency guard that runs before
+// any acknowledgment or dispatch, so Feishu redeliveries of the same message —
+// minutes to hours later — cannot produce duplicate 处理中 acks or duplicate
+// assigns even when the channel adapter does not de-duplicate them.
+func (m *Manager) isDuplicateMessage(messageID string) bool {
+	if messageID == "" {
+		return false
+	}
+	m.seenMu.Lock()
+	defer m.seenMu.Unlock()
+	if _, ok := m.seenMsg[messageID]; ok {
+		return true
+	}
+	now := time.Now()
+	m.seenMsg[messageID] = now
+	if len(m.seenMsg) > managerSeenMsgMax {
+		cutoff := now.Add(-managerSeenMsgRetention)
+		for id, t := range m.seenMsg {
+			if t.Before(cutoff) {
+				delete(m.seenMsg, id)
+			}
+		}
+	}
+	return false
+}
+
 // HandleIncoming implements channels.IncomingMessageHandler.
 func (m *Manager) HandleIncoming(ctx context.Context, msg *protocol.Message) (string, error) {
+	if m.isDuplicateMessage(inboundMessageID(msg)) {
+		return "", nil
+	}
+	return m.processInbound(ctx, msg)
+}
+
+// HandleIncomingStream implements channels.StreamingHandler. It acknowledges an
+// inbound message through the inbound channel before dispatching to an agent
+// runtime, then returns the final reply. The acknowledgment exits through the
+// same channel the message arrived on, so the user sees "received/processing"
+// immediately while the task is dispatched. Handlers may stream milestone
+// progress updates by calling ReplyProgress on the provided sink.
+func (m *Manager) HandleIncomingStream(ctx context.Context, msg *protocol.Message, sink channels.ReplySink) (string, error) {
+	if msg == nil {
+		return "", nil
+	}
+	if m.isDuplicateMessage(inboundMessageID(msg)) {
+		return "", nil
+	}
+	ackSent := false
+	if sink != nil && m.inboundAckEnabled() {
+		if channel := inboundChannelName(msg); channel != "" {
+			if ack := m.inboundAckMessage(); ack != "" {
+				sink.Ack(ack)
+				ackSent = true
+			}
+		}
+	}
+	out, err := m.processInbound(ctx, msg)
+	if err != nil {
+		return out, err
+	}
+	// The acknowledgment was already delivered through the sink, so the
+	// routing reply must not resend it. Return an empty reply so the channel
+	// adapter does not emit a duplicate "processing" message.
+	if ackSent && strings.TrimSpace(out) == strings.TrimSpace(m.inboundAckMessage()) {
+		return "", nil
+	}
+	return out, nil
+}
+
+// processInbound routes a validated inbound message to the active agent runtime
+// and returns the final reply. It holds the shared logic used by both
+// HandleIncoming and HandleIncomingStream.
+func (m *Manager) processInbound(ctx context.Context, msg *protocol.Message) (string, error) {
+
 	if msg == nil {
 		return "", nil
 	}
@@ -153,6 +281,7 @@ func (m *Manager) HandleIncoming(ctx context.Context, msg *protocol.Message) (st
 			text = strings.TrimSpace(selection.Task)
 			data["text"] = text
 			data["agent"] = selection.Agent
+			data["agent_specified"] = true
 		}
 	}
 
@@ -223,6 +352,41 @@ func (m *Manager) HandleIncoming(ctx context.Context, msg *protocol.Message) (st
 	}
 
 	return fmt.Sprintf("echo: %s", text), nil
+
+}
+
+// inboundAckEnabled reports whether gateway-level acknowledgment is enabled. It
+// defaults to true when no inbound config is present.
+func (m *Manager) inboundAckEnabled() bool {
+	if m.inboundCfg == nil {
+		return true
+	}
+	return m.inboundCfg.AckEnabled == nil || *m.inboundCfg.AckEnabled
+}
+
+// inboundAckMessage returns the configured acknowledgment text, falling back to
+// the ohMyCode assign default ("处理中…") when unset.
+func (m *Manager) inboundAckMessage() string {
+	if m.inboundCfg != nil {
+		if msg := strings.TrimSpace(m.inboundCfg.AckMessage); msg != "" {
+			return msg
+		}
+	}
+	return ohMyCodeAssignAckMessage
+}
+
+// inboundChannelName extracts the channel field from an inbound message, or
+// "" when absent.
+func inboundChannelName(msg *protocol.Message) string {
+	if msg == nil {
+		return ""
+	}
+	data, ok := msg.Data.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+	channel, _ := data["channel"].(string)
+	return channel
 }
 
 // SetInboundRoutedHook registers a callback invoked after a normal channel
@@ -319,33 +483,40 @@ func (m *Manager) isOhMyCodeEnabled() bool {
 	if !m.config.OhMyCode.Enabled {
 		return false
 	}
-	return strings.TrimSpace(m.config.OhMyCode.Workspace) != ""
+	return strings.TrimSpace(m.config.OhMyCode.Workspace) != "" || len(m.config.OhMyCode.Targets) > 0
 }
 
 func (m *Manager) assignOhMyCode(ctx context.Context, userText, agentOverride string, inboundData map[string]interface{}) (string, error) {
-	workspace, script, err := m.resolveOhMyCodeWorkspaceAndScript()
+	route, err := m.resolveOhMyCodeRoute(inboundData)
 	if err != nil {
 		m.recordRoutingOutcome(inboundData, "", "error", err)
 		return "", err
 	}
 
+	// Channel adapters that support receiver-aware routing mark whether the
+	// inbound user explicitly selected an agent. A named target owns the
+	// default only for implicit selections; explicit selections remain subject
+	// to the target allowlist below.
+	if route.Target != "" && inboundAgentSelectionIsImplicit(inboundData) {
+		agentOverride = ""
+	}
 	agentName := strings.TrimSpace(agentOverride)
 	if agentName == "" {
-		agentName = strings.TrimSpace(m.config.OhMyCode.DefaultAgent)
+		agentName = strings.TrimSpace(route.DefaultAgent)
 		if agentName == "" {
 			agentName = defaultOhMyCodeDefaultAgent
 		}
 	}
-	validatedName, err := m.validateOhMyCodeAgent(agentName)
+	validatedName, err := m.validateOhMyCodeRouteAgent(route, agentName)
 	if err != nil {
-		m.recordRoutingOutcome(inboundData, agentName, "error", err)
+		m.recordOhMyCodeRoutingOutcome(inboundData, route.Target, agentName, "error", err)
 		return "", err
 	}
 	name := validatedName
 
 	timeout := defaultOhMyCodeAssignTimeout
-	if m.config.OhMyCode.AssignTimeoutSeconds > 0 {
-		timeout = time.Duration(m.config.OhMyCode.AssignTimeoutSeconds) * time.Second
+	if route.AssignTimeoutSeconds > 0 {
+		timeout = time.Duration(route.AssignTimeoutSeconds) * time.Second
 	}
 
 	assignCtx := ctx
@@ -356,13 +527,75 @@ func (m *Manager) assignOhMyCode(ctx context.Context, userText, agentOverride st
 	}
 
 	prompt := buildOhMyCodeTaskPrompt(userText, name, inboundData)
+	workspace, script, err := resolveOhMyCodeWorkspaceAndScript(route.Workspace, route.AgentManagerScript)
+	if err != nil {
+		m.recordOhMyCodeRoutingOutcome(inboundData, route.Target, name, "error", err)
+		return "", err
+	}
 	if _, err := runOhMyCodeAgentManager(assignCtx, workspace, script, prompt, "assign", name); err != nil {
-		m.recordRoutingOutcome(inboundData, name, "error", err)
+		m.recordOhMyCodeRoutingOutcome(inboundData, route.Target, name, "error", err)
 		return "", err
 	}
 
-	m.recordRoutingOutcome(inboundData, name, "assigned", nil)
+	m.recordOhMyCodeRoutingOutcome(inboundData, route.Target, name, "assigned", nil)
 	return ohMyCodeAssignAckMessage, nil
+}
+
+func inboundAgentSelectionIsImplicit(inboundData map[string]interface{}) bool {
+	if len(inboundData) == 0 {
+		return true
+	}
+	specified, ok := inboundData["agent_specified"].(bool)
+	return !ok || !specified
+}
+
+func (m *Manager) resolveOhMyCodeRoute(inboundData map[string]interface{}) (ohMyCodeRoute, error) {
+	if m.config == nil || m.config.OhMyCode == nil || !m.config.OhMyCode.Enabled {
+		return ohMyCodeRoute{}, errors.New("agents.ohMyCode is disabled")
+	}
+
+	ohMyCode := m.config.OhMyCode
+	channel := promptContextValue(inboundData, "channel")
+	receiverID := promptContextValue(inboundData, "receiver_id")
+	if name, target, matched := config.FindOhMyCodeTarget(ohMyCode, channel, receiverID); matched {
+		return ohMyCodeRoute{
+			Target:               name,
+			Workspace:            target.Workspace,
+			AgentManagerScript:   target.AgentManagerScript,
+			DefaultAgent:         target.DefaultAgent,
+			AllowedAgents:        append([]string(nil), target.AllowedAgents...),
+			AssignTimeoutSeconds: target.AssignTimeoutSeconds,
+		}, nil
+	}
+
+	if strings.TrimSpace(ohMyCode.Workspace) != "" {
+		return ohMyCodeRoute{
+			Workspace:            ohMyCode.Workspace,
+			AgentManagerScript:   ohMyCode.AgentManagerScript,
+			DefaultAgent:         ohMyCode.DefaultAgent,
+			AllowedAgents:        append([]string(nil), ohMyCode.AllowedAgents...),
+			AssignTimeoutSeconds: ohMyCode.AssignTimeoutSeconds,
+		}, nil
+	}
+
+	// Do not include the received identity in this error: receiver identities
+	// can be account-specific and diagnostics must not turn them into logs.
+	return ohMyCodeRoute{}, errors.New("no configured ohMyCode target matched the inbound receiver identity and no legacy fallback is configured")
+}
+
+func (m *Manager) validateOhMyCodeRouteAgent(route ohMyCodeRoute, agentName string) (string, error) {
+	name := normalizeOhMyCodeAgentName(agentName)
+	if name == "" {
+		return "", errors.New("agent name is required")
+	}
+	if err := channels.ValidateAgentName(name); err != nil {
+		return "", err
+	}
+	allowlist := channels.NewAgentAllowlist(route.AllowedAgents)
+	if err := allowlist.Validate(name, route.DefaultAgent); err != nil {
+		return "", m.agentAllowedError(err)
+	}
+	return name, nil
 }
 
 // MonitorAgent returns the latest agent-manager monitor output.
@@ -447,12 +680,16 @@ func (m *Manager) resolveOhMyCodeWorkspaceAndScript() (string, string, error) {
 		return "", "", errors.New("agents.ohMyCode is disabled")
 	}
 
-	workspace := strings.TrimSpace(m.config.OhMyCode.Workspace)
+	return resolveOhMyCodeWorkspaceAndScript(m.config.OhMyCode.Workspace, m.config.OhMyCode.AgentManagerScript)
+}
+
+func resolveOhMyCodeWorkspaceAndScript(rawWorkspace, rawScript string) (string, string, error) {
+	workspace := strings.TrimSpace(rawWorkspace)
 	if workspace == "" {
 		return "", "", errors.New("agents.ohMyCode.workspace is required")
 	}
 
-	script := strings.TrimSpace(m.config.OhMyCode.AgentManagerScript)
+	script := strings.TrimSpace(rawScript)
 	if script == "" {
 		script = defaultOhMyCodeAgentManagerScript
 	}
@@ -538,6 +775,7 @@ func runOhMyCodeAgentManager(ctx context.Context, workspace, script, stdin strin
 
 func buildOhMyCodeTaskPrompt(userText, selectedAgent string, inboundData map[string]interface{}) string {
 	channel := promptContextValue(inboundData, "channel")
+	receiverID := promptContextValue(inboundData, "receiver_id")
 	chatID := promptContextValue(inboundData, "chat_id")
 	userID := promptContextValue(inboundData, "user_id")
 	username := promptContextValue(inboundData, "username")
@@ -554,6 +792,9 @@ func buildOhMyCodeTaskPrompt(userText, selectedAgent string, inboundData map[str
 	sb.WriteString("# Task Assignment\n\n")
 	sb.WriteString("Inbound routing context:\n")
 	sb.WriteString(fmt.Sprintf("- channel: %s\n", defaultPromptContextValue(channel)))
+	if receiverID != "" {
+		sb.WriteString(fmt.Sprintf("- receiver_id: %s\n", receiverID))
+	}
 	sb.WriteString(fmt.Sprintf("- chat_id: %s\n", defaultPromptContextValue(chatID)))
 	sb.WriteString(fmt.Sprintf("- user_id: %s\n", defaultPromptContextValue(userID)))
 	sb.WriteString(fmt.Sprintf("- username: %s\n", defaultPromptContextValue(username)))
@@ -584,6 +825,9 @@ func buildOhMyCodeTaskPrompt(userText, selectedAgent string, inboundData map[str
 	sb.WriteString("- selected_agent is the final routing target after default/allowlist resolution.\n")
 	sb.WriteString("- If thread_ts is present, reply in the same thread using `--thread-ts` flag.\n")
 	sb.WriteString("- For outbound messaging intent, prefer `use-fractalbot` skill.\n")
+	if channel == "feishu" && receiverID != "" {
+		sb.WriteString("- For outbound Feishu replies, include `--receiver-id` with the current receiver_id so the message is sent by the receiving bot identity.\n")
+	}
 	sb.WriteString("- Effective available skills:\n")
 	sb.WriteString("  - use-fractalbot (.claude/skills/use-fractalbot/SKILL.md)\n")
 	sb.WriteString("- If channel=telegram and recipient is omitted, default to current chat_id.\n")
@@ -661,9 +905,18 @@ func (m *Manager) recordRoutingOutcome(inboundData map[string]interface{}, selec
 	m.recordRoutingOutcomeForBackend("ohMyCode", inboundData, selectedAgent, status, "", "", err)
 }
 
+func (m *Manager) recordOhMyCodeRoutingOutcome(inboundData map[string]interface{}, target, selectedAgent, status string, err error) {
+	m.recordRoutingOutcomeForBackendAndTarget("ohMyCode", target, inboundData, selectedAgent, status, "", "", err)
+}
+
 func (m *Manager) recordRoutingOutcomeForBackend(backend string, inboundData map[string]interface{}, selectedAgent, status, envelopeID, inboxPath string, err error) {
+	m.recordRoutingOutcomeForBackendAndTarget(backend, "", inboundData, selectedAgent, status, envelopeID, inboxPath, err)
+}
+
+func (m *Manager) recordRoutingOutcomeForBackendAndTarget(backend, target string, inboundData map[string]interface{}, selectedAgent, status, envelopeID, inboxPath string, err error) {
 	outcome := &RoutingOutcome{
 		Backend:       strings.TrimSpace(backend),
+		Target:        strings.TrimSpace(target),
 		SelectedAgent: strings.TrimSpace(selectedAgent),
 		Channel:       promptContextValue(inboundData, "channel"),
 		ChatID:        firstContextValue(inboundData, "chat_id", "chatID"),

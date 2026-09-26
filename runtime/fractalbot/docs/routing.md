@@ -51,6 +51,80 @@ agents:
 
 The workspace requires Python, tmux, and agent-manager. If routed agents need to send channel replies, make the `use-fractalbot` skill available in that workspace.
 
+### Receiver-specific targets
+
+One gateway can route different bot/receiver identities to separate named
+oh-my-code workspaces. Prefer `receivers`, which binds both the normalized
+`channel` and `receiverId`. That pairing prevents a receiver identity shared
+by two different channel types from selecting the wrong workspace.
+
+`receiverIds` remains supported for existing deployments, but is
+channel-agnostic and must be globally unique. New configurations should use
+`receivers`.
+
+Feishu uses the configured App ID as `receiver_id`; it does **not** use a
+sender or chat ID. A gateway may run the legacy singleton Feishu bot plus any
+number of named `channels.feishu.bots` instances. Each named instance opens
+its own connection, receives with its own App ID, and replies through that same
+identity. The same chat can therefore be safely served by multiple bots.
+
+```yaml
+agents:
+  router: "ohMyCode"
+  ohMyCode:
+    enabled: true
+
+    # Existing single-workspace configuration remains the fallback for an
+    # unmatched or unavailable receiver identity.
+    workspace: "/path/to/default-workspace"
+    defaultAgent: "main"
+    allowedAgents: ["main"]
+
+    targets:
+      support:
+        receivers:
+          - channel: feishu
+            receiverId: "cli_support_bot"
+        workspace: "/path/to/support-workspace"
+        agentManagerScript: ".claude/skills/agent-manager/scripts/main.py"
+        defaultAgent: "support-main"
+        allowedAgents: ["support-main", "admin"]
+        assignTimeoutSeconds: 90
+```
+
+For two Feishu bots without a legacy singleton, configure the bot instances
+alongside those receiver targets:
+
+```yaml
+channels:
+  feishu:
+    enabled: true
+    bots:
+      support:
+        appId: "cli_support_bot"
+        appSecret: "..."
+      sales:
+        appId: "cli_sales_bot"
+        appSecret: "..."
+```
+
+The inbound assignment includes `receiver_id` for Feishu. When an agent sends
+a later outbound reply through the CLI, preserve that identity explicitly:
+
+```bash
+fractalbot message send --channel feishu --receiver-id cli_support_bot --to <chat_id> --text "reply"
+```
+
+With named multi-bot configuration, an outbound Feishu send without
+`--receiver-id` is rejected rather than guessing a bot. Existing singleton
+configuration continues to work without this flag.
+
+Each scoped channel/receiver pair must be unique across targets; invalid or
+duplicate routes fail configuration validation. A named target owns the default agent for
+messages without an explicit `/agent` or `/to` selection. Explicit selections
+are checked again against the chosen target's `allowedAgents`. Status
+diagnostics record the named target but never the raw receiver identity.
+
 ## ChatGPT / Codex App
 
 The `codexAppCDP` router delivers into a project conversation managed by the ChatGPT/Codex desktop app. The configuration key keeps its historical `codexAppCDP` name. Delivery first uses the running renderer's in-process `start-turn-for-host` bridge through CDP. If an upgraded App no longer exposes that handler, FractalBot uses a guarded visible-composer fallback in the exact resolved thread, protects an unrelated draft, and requires target-thread readback. It does not start a separate `codex app-server --listen` backend.

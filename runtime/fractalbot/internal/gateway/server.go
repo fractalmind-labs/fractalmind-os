@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -48,6 +49,11 @@ func NewServer(cfg *config.Config) (*Server, error) {
 	// Initialize agent manager
 	agentManager := agent.NewManager(cfg.Agents)
 	agentManager.ChannelManager = channelManager
+	// Wire the optional channels.inbound policy so the manager can acknowledge
+	// inbound messages before processing, when configured.
+	if cfg.Channels != nil {
+		agentManager.SetInboundConfig(cfg.Channels.Inbound)
+	}
 
 	var heartbeatConfig *config.HeartbeatConfig
 	var workspace string
@@ -331,11 +337,12 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 type messageSendRequest struct {
-	Channel  string   `json:"channel"`
-	To       string   `json:"to"`
-	Text     string   `json:"text"`
-	ThreadTS string   `json:"thread_ts,omitempty"`
-	Images   []string `json:"images,omitempty"`
+	Channel    string   `json:"channel"`
+	To         string   `json:"to"`
+	Text       string   `json:"text"`
+	ThreadTS   string   `json:"thread_ts,omitempty"`
+	Images     []string `json:"images,omitempty"`
+	ReceiverID string   `json:"receiver_id,omitempty"`
 }
 
 type messageSendResponse struct {
@@ -368,6 +375,7 @@ func (s *Server) handleMessageSend(w http.ResponseWriter, r *http.Request) {
 	request.To = strings.TrimSpace(request.To)
 	request.Text = strings.TrimSpace(request.Text)
 	request.ThreadTS = strings.TrimSpace(request.ThreadTS)
+	request.ReceiverID = strings.TrimSpace(request.ReceiverID)
 	trimmedImages := make([]string, 0, len(request.Images))
 	for _, path := range request.Images {
 		if trimmed := strings.TrimSpace(path); trimmed != "" {
@@ -402,10 +410,11 @@ func (s *Server) handleMessageSend(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := s.messageBus.PublishOutbound(r.Context(), request.Channel, channels.OutboundMessage{
-		To:       request.To,
-		Text:     request.Text,
-		ThreadTS: request.ThreadTS,
-		Images:   request.Images,
+		To:         request.To,
+		Text:       request.Text,
+		ThreadTS:   request.ThreadTS,
+		Images:     request.Images,
+		ReceiverID: request.ReceiverID,
 	})
 	if err != nil {
 		status := http.StatusBadGateway
@@ -562,6 +571,7 @@ type agentStatus struct {
 
 type agentRoutingStatus struct {
 	Backend       string `json:"backend,omitempty"`
+	Target        string `json:"target,omitempty"`
 	SelectedAgent string `json:"selected_agent,omitempty"`
 	Channel       string `json:"channel,omitempty"`
 	ChatID        string `json:"chat_id,omitempty"`
@@ -711,15 +721,27 @@ func (s *Server) channelStatus() []channelStatus {
 		})
 	}
 	if s.config.Channels.Feishu != nil {
-		ch := getChannel("feishu")
-		lastError, lastActivity := telemetry(ch)
-		statuses = append(statuses, channelStatus{
-			Name:         "feishu",
-			Enabled:      s.config.Channels.Feishu.Enabled,
-			Running:      isRunning(ch),
-			LastError:    lastError,
-			LastActivity: lastActivity,
-		})
+		feishu := s.config.Channels.Feishu
+		if strings.TrimSpace(feishu.AppID) != "" || len(feishu.Bots) == 0 {
+			ch := getChannel("feishu")
+			lastError, lastActivity := telemetry(ch)
+			statuses = append(statuses, channelStatus{
+				Name: "feishu", Enabled: feishu.Enabled, Running: isRunning(ch), LastError: lastError, LastActivity: lastActivity,
+			})
+		}
+		botNames := make([]string, 0, len(feishu.Bots))
+		for name := range feishu.Bots {
+			botNames = append(botNames, name)
+		}
+		sort.Strings(botNames)
+		for _, name := range botNames {
+			channelName := "feishu/" + name
+			ch := getChannel(channelName)
+			lastError, lastActivity := telemetry(ch)
+			statuses = append(statuses, channelStatus{
+				Name: channelName, Enabled: feishu.Enabled, Running: isRunning(ch), LastError: lastError, LastActivity: lastActivity,
+			})
+		}
 	}
 	if s.config.Channels.Discord != nil {
 		ch := getChannel("discord")
@@ -958,6 +980,7 @@ func routingStatusFromOutcome(routing *agent.RoutingOutcome) *agentRoutingStatus
 	}
 	return &agentRoutingStatus{
 		Backend:       routing.Backend,
+		Target:        routing.Target,
 		SelectedAgent: routing.SelectedAgent,
 		Channel:       routing.Channel,
 		ChatID:        routing.ChatID,

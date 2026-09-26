@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -25,9 +26,17 @@ const (
 
 	// feishuImageMaxBytes mirrors the im/v1/images upload limit (10MB).
 	feishuImageMaxBytes = 10 * 1024 * 1024
+
+	// feishuSeenMsgMax is the maximum number of seen message IDs retained in
+	// memory before older entries are evicted.
+	feishuSeenMsgMax = 100000
+	// feishuSeenMsgRetention is how long seen message IDs are retained so
+	// long-delayed redeliveries are still caught.
+	feishuSeenMsgRetention = 30 * 24 * time.Hour
 )
 
 type FeishuBot struct {
+	name         string
 	appID        string
 	appSecret    string
 	domain       string
@@ -59,9 +68,26 @@ type FeishuBot struct {
 	seenMu      sync.Mutex
 	seenMsg     map[string]time.Time
 	seenContent map[string]time.Time
+
+	dedupeFile string
 }
 
 func NewFeishuBot(appID, appSecret, domain string, allowedUsers []string, defaultAgent string, allowedAgents []string) (*FeishuBot, error) {
+	return newFeishuBot("feishu", appID, appSecret, domain, allowedUsers, defaultAgent, allowedAgents)
+}
+
+// NewNamedFeishuBot creates an additional Feishu bot instance. The local name
+// is used only by the channel manager; AppID remains the platform receiver
+// identity and is never replaced by the local instance name.
+func NewNamedFeishuBot(instanceName, appID, appSecret, domain string, allowedUsers []string, defaultAgent string, allowedAgents []string) (*FeishuBot, error) {
+	instanceName = strings.TrimSpace(instanceName)
+	if instanceName == "" {
+		return nil, errors.New("feishu instance name is required")
+	}
+	return newFeishuBot("feishu/"+instanceName, appID, appSecret, domain, allowedUsers, defaultAgent, allowedAgents)
+}
+
+func newFeishuBot(name, appID, appSecret, domain string, allowedUsers []string, defaultAgent string, allowedAgents []string) (*FeishuBot, error) {
 	trimmedID := strings.TrimSpace(appID)
 	trimmedSecret := strings.TrimSpace(appSecret)
 	if trimmedID == "" || trimmedSecret == "" {
@@ -77,6 +103,7 @@ func NewFeishuBot(appID, appSecret, domain string, allowedUsers []string, defaul
 	}
 
 	return &FeishuBot{
+		name:         name,
 		appID:        trimmedID,
 		appSecret:    trimmedSecret,
 		domain:       resolvedDomain,
@@ -90,11 +117,21 @@ func NewFeishuBot(appID, appSecret, domain string, allowedUsers []string, defaul
 }
 
 func (b *FeishuBot) Name() string {
-	return "feishu"
+	return b.name
 }
 
 func (b *FeishuBot) SetHandler(handler IncomingMessageHandler) {
 	b.handler = handler
+}
+
+// ConfigureDedupe sets an optional durable file that backs inbound message-ID
+// deduplication. When set, seen message IDs are loaded on Start and persisted
+// after each new one, so long-delayed redeliveries (minutes to hours later)
+// and restarts cannot cause a message to be processed more than once.
+func (b *FeishuBot) ConfigureDedupe(file string) {
+	if file != "" {
+		b.dedupeFile = strings.TrimSpace(file)
+	}
 }
 
 func (b *FeishuBot) IsRunning() bool {
@@ -137,6 +174,10 @@ func (b *FeishuBot) setRunning(running bool) {
 
 func (b *FeishuBot) Start(ctx context.Context) error {
 	b.ctx, b.cancel = context.WithCancel(ctx)
+
+	if err := b.loadSeenMessages(); err != nil {
+		log.Printf("feishu: failed to load dedupe state: %v", err)
+	}
 
 	if b.startFn == nil {
 		b.initClients()
@@ -412,6 +453,9 @@ func (b *FeishuBot) handleMessageEvent(ctx context.Context, event *larkim.P2Mess
 	if msg.senderType == "app" {
 		return nil
 	}
+	if b.isDuplicate(msg.messageID) {
+		return nil
+	}
 	if b.isContentDuplicate(msg.openID, msg.text) {
 		return nil
 	}
@@ -478,6 +522,7 @@ func (b *FeishuBot) handleMessageEvent(ctx context.Context, event *larkim.P2Mess
 	}
 
 	if b.handler != nil {
+		msg.agentSpecified = selection.Specified
 		replyText, err := b.handler.HandleIncoming(ctx, b.toProtocolMessage(msg, selection.Task, selection.Agent))
 		if err != nil {
 			b.markError()
@@ -610,34 +655,37 @@ func (b *FeishuBot) toProtocolMessage(msg *feishuInboundMessage, text, agent str
 		Kind:   protocol.MessageKindChannel,
 		Action: protocol.ActionCreate,
 		Data: map[string]interface{}{
-			"channel":    "feishu",
-			"text":       text,
-			"raw_text":   msg.text,
-			"agent":      agent,
-			"chat_id":    msg.chatID,
-			"open_id":    msg.openID,
-			"user_id":    msg.userID,
-			"message":    msg.messageID,
-			"message_id": msg.messageID,
-			"thread_id":  msg.threadID,
-			"chatType":   msg.chatType,
-			"timestamp":  timestamp,
+			"channel":         "feishu",
+			"text":            text,
+			"raw_text":        msg.text,
+			"agent":           agent,
+			"agent_specified": msg.agentSpecified,
+			"receiver_id":     b.appID,
+			"chat_id":         msg.chatID,
+			"open_id":         msg.openID,
+			"user_id":         msg.userID,
+			"message":         msg.messageID,
+			"message_id":      msg.messageID,
+			"thread_id":       msg.threadID,
+			"chatType":        msg.chatType,
+			"timestamp":       timestamp,
 		},
 	}
 }
 
 type feishuInboundMessage struct {
-	text        string
-	openID      string
-	userID      string
-	senderType  string
-	chatID      string
-	chatType    string
-	messageID   string
-	threadID    string
-	timestamp   string
-	replyIDType string
-	replyID     string
+	text           string
+	openID         string
+	userID         string
+	agentSpecified bool
+	senderType     string
+	chatID         string
+	chatType       string
+	messageID      string
+	threadID       string
+	timestamp      string
+	replyIDType    string
+	replyID        string
 }
 
 type feishuTextContent struct {
@@ -708,14 +756,19 @@ func (b *FeishuBot) isDuplicate(messageID string) bool {
 	}
 	now := time.Now()
 	b.seenMsg[messageID] = now
-	// Lazy cleanup: if map grows too large, evict entries older than 5 minutes.
-	if len(b.seenMsg) > 1000 {
-		cutoff := now.Add(-5 * time.Minute)
+	// Redeliveries of the same message ID can arrive minutes to hours (or
+	// days) after the original, so retain seen IDs for a long window and only
+	// evict when the map grows too large.
+	if len(b.seenMsg) > feishuSeenMsgMax {
+		cutoff := now.Add(-feishuSeenMsgRetention)
 		for id, t := range b.seenMsg {
 			if t.Before(cutoff) {
 				delete(b.seenMsg, id)
 			}
 		}
+	}
+	if b.dedupeFile != "" {
+		_ = b.persistSeenMessages()
 	}
 	return false
 }
@@ -741,6 +794,75 @@ func (b *FeishuBot) isContentDuplicate(senderID, text string) bool {
 		}
 	}
 	return false
+}
+
+// loadSeenMessages loads persisted seen message IDs into the in-memory map.
+// It is called once on Start when a dedupe file is configured.
+func (b *FeishuBot) loadSeenMessages() error {
+	if b.dedupeFile == "" {
+		return nil
+	}
+	data, err := os.ReadFile(b.dedupeFile)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return fmt.Errorf("failed to read feishu dedupe file %s: %w", b.dedupeFile, err)
+	}
+	var ids []string
+	if err := json.Unmarshal(data, &ids); err != nil {
+		return fmt.Errorf("failed to parse feishu dedupe file %s: %w", b.dedupeFile, err)
+	}
+	b.seenMu.Lock()
+	defer b.seenMu.Unlock()
+	now := time.Now()
+	for _, id := range ids {
+		if id != "" {
+			b.seenMsg[id] = now
+		}
+	}
+	return nil
+}
+
+// persistSeenMessages writes the seen message IDs to the dedupe file using an
+// atomic write. The caller must hold b.seenMu.
+func (b *FeishuBot) persistSeenMessages() error {
+	if b.dedupeFile == "" {
+		return nil
+	}
+	ids := make([]string, 0, len(b.seenMsg))
+	for id := range b.seenMsg {
+		ids = append(ids, id)
+	}
+	data, err := json.Marshal(ids)
+	if err != nil {
+		return err
+	}
+
+	dir := filepath.Dir(b.dedupeFile)
+	if dir != "." {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create feishu dedupe dir: %w", err)
+		}
+	}
+	tmp, err := os.CreateTemp(dir, ".feishu-seen-*")
+	if err != nil {
+		return fmt.Errorf("failed to create feishu dedupe temp file: %w", err)
+	}
+	defer func() {
+		_ = os.Remove(tmp.Name())
+	}()
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("failed to write feishu dedupe temp file: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("failed to close feishu dedupe temp file: %w", err)
+	}
+	if err := os.Rename(tmp.Name(), b.dedupeFile); err != nil {
+		return fmt.Errorf("failed to rename feishu dedupe file: %w", err)
+	}
+	return nil
 }
 
 func derefString(value *string) string {

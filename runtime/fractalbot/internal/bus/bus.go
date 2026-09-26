@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -212,9 +214,100 @@ func (b *MessageBus) Stats() Stats {
 func (b *MessageBus) consumeInbound() {
 	defer b.wg.Done()
 	for msg := range b.inbound {
-		text, err := b.handler.HandleIncoming(msg.Ctx, msg.Message)
+		var text string
+		var err error
+		// When the handler supports streaming, hand it a ReplySink so it can
+		// acknowledge the inbound message and milestone progress updates through
+		// the same channel they arrived on before returning the final reply.
+		// Handlers that only implement the single-reply contract keep working
+		// unchanged.
+		if sh, ok := b.handler.(channels.StreamingHandler); ok && sh != nil {
+			sink := b.newReplySink(msg)
+			text, err = sh.HandleIncomingStream(msg.Ctx, msg.Message, sink)
+		} else {
+			text, err = b.handler.HandleIncoming(msg.Ctx, msg.Message)
+		}
 		msg.replyCh <- inboundReply{Text: text, Err: err}
 		b.inboundProcessed.Add(1)
+	}
+}
+
+// replySink delivers acknowledgment and milestone progress updates through the
+// bus's sender, using the inbound message's channel/recipient metadata so
+// updates exit through the same channel they arrived on. Sends are best-effort:
+// a failure is logged but never aborts processing.
+type replySink struct {
+	ctx     context.Context
+	sender  ChannelSender
+	channel string
+	msg     channels.OutboundMessage
+}
+
+// newReplySink builds a ReplySink for an inbound message that sends ack and
+// progress updates through the same channel they arrived on.
+func (b *MessageBus) newReplySink(inMsg *InboundMessage) channels.ReplySink {
+	channel, outMsg := b.outboundTarget(inMsg.Message)
+	return &replySink{
+		ctx:     inMsg.Ctx,
+		sender:  b.sender,
+		channel: channel,
+		msg:     outMsg,
+	}
+}
+
+// outboundTarget extracts the channel name and recipient metadata from a
+// protocol message so ack/progress updates can be routed through the same
+// channel they arrived on. Unknown fields default to empty strings; the
+// channel defaults to "feishu" so a sender can still resolve a recipient.
+func (b *MessageBus) outboundTarget(msg *protocol.Message) (string, channels.OutboundMessage) {
+	data, _ := msg.Data.(map[string]interface{})
+	channel := ""
+	chatID := ""
+	receiverID := ""
+	threadTS := ""
+	if data != nil {
+		channel, _ = data["channel"].(string)
+		chatID, _ = data["chat_id"].(string)
+		if strings.TrimSpace(chatID) == "" {
+			chatID, _ = data["chatID"].(string)
+		}
+		receiverID, _ = data["receiver_id"].(string)
+		if strings.TrimSpace(receiverID) == "" {
+			receiverID, _ = data["receiverId"].(string)
+		}
+		threadTS, _ = data["thread_ts"].(string)
+		if strings.TrimSpace(threadTS) == "" {
+			threadTS, _ = data["threadTS"].(string)
+		}
+	}
+	if strings.TrimSpace(channel) == "" {
+		channel = "feishu"
+	}
+	return channel, channels.OutboundMessage{
+		To:         chatID,
+		Text:       "",
+		ThreadTS:   threadTS,
+		ReceiverID: receiverID,
+	}
+}
+
+func (s *replySink) Ack(text string) {
+	if strings.TrimSpace(text) == "" {
+		return
+	}
+	s.msg.Text = text
+	if _, err := s.sender.Send(s.ctx, s.channel, s.msg); err != nil {
+		log.Printf("[bus] replySink ack send failed: %v", err)
+	}
+}
+
+func (s *replySink) Progress(text string) {
+	if strings.TrimSpace(text) == "" {
+		return
+	}
+	s.msg.Text = text
+	if _, err := s.sender.Send(s.ctx, s.channel, s.msg); err != nil {
+		log.Printf("[bus] replySink progress send failed: %v", err)
 	}
 }
 

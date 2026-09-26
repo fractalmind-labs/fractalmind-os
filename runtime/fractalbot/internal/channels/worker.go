@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"strings"
 	"sync"
 	"time"
 
@@ -126,7 +127,7 @@ const (
 // newChannelWorker creates a worker for the given channel.
 // The rate limit is selected by channel name; unknown channels get 1 msg/s.
 func newChannelWorker(ch Channel) *channelWorker {
-	rl, ok := platformRateLimits[ch.Name()]
+	rl, ok := platformRateLimits[channelPlatformName(ch.Name())]
 	if !ok {
 		rl = 1
 	}
@@ -137,6 +138,13 @@ func newChannelWorker(ch Channel) *channelWorker {
 		done:         make(chan struct{}),
 		placeholders: make(map[string]*placeholderState),
 	}
+}
+
+func channelPlatformName(name string) string {
+	if strings.HasPrefix(name, "feishu/") {
+		return "feishu"
+	}
+	return name
 }
 
 // start begins the worker goroutine and TTL janitor.

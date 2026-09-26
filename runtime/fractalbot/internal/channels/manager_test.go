@@ -3,8 +3,12 @@ package channels
 import (
 	"context"
 	"errors"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/fractalmind-ai/fractalbot/internal/config"
 )
 
 type fakeChannel struct {
@@ -47,6 +51,261 @@ func (f *fakeChannel) Send(ctx context.Context, msg OutboundMessage) (*SendResul
 func (f *fakeChannel) IsRunning() bool { return f.running }
 
 func (f *fakeChannel) IsAllowed(senderID string) bool { return true }
+
+func TestFeishuChannelAgentConfigUsesMatchedReceiverTarget(t *testing.T) {
+	cfg := &config.AgentsConfig{
+		Router: "ohMyCode",
+		OhMyCode: &config.OhMyCodeConfig{
+			Enabled:       true,
+			Workspace:     "/workspace/default",
+			DefaultAgent:  "legacy-main",
+			AllowedAgents: []string{"legacy-main"},
+			Targets: map[string]config.OhMyCodeTargetConfig{
+				"support": {
+					ReceiverIDs:  []string{"cli_support"},
+					Workspace:    "/workspace/support",
+					DefaultAgent: "support-main",
+					AllowedAgents: []string{
+						"support-main",
+						"admin",
+					},
+				},
+			},
+		},
+	}
+
+	defaultAgent, allowedAgents, configName := feishuChannelAgentConfig(cfg, "cli_support")
+	if defaultAgent != "support-main" || configName != `agents.ohMyCode.targets["support"]` {
+		t.Fatalf("unexpected matched config: default=%q name=%q", defaultAgent, configName)
+	}
+	if len(allowedAgents) != 2 || allowedAgents[0] != "support-main" || allowedAgents[1] != "admin" {
+		t.Fatalf("unexpected matched allowed agents: %#v", allowedAgents)
+	}
+
+	defaultAgent, allowedAgents, configName = feishuChannelAgentConfig(cfg, "cli_unmatched")
+	if defaultAgent != "legacy-main" || configName != "agents.ohMyCode" {
+		t.Fatalf("unexpected fallback config: default=%q name=%q", defaultAgent, configName)
+	}
+	if len(allowedAgents) != 1 || allowedAgents[0] != "legacy-main" {
+		t.Fatalf("unexpected fallback allowed agents: %#v", allowedAgents)
+	}
+}
+
+func TestManagerRegistersMultipleFeishuBotsWithReplyIdentityIsolation(t *testing.T) {
+	manager := NewManager(&config.ChannelsConfig{Feishu: &config.FeishuConfig{
+		Enabled: true,
+		Bots: map[string]config.FeishuBotConfig{
+			"support": {AppID: "cli_support", AppSecret: "support-secret", AllowedUsers: []string{"ou_allowed"}},
+			"sales":   {AppID: "cli_sales", AppSecret: "sales-secret", AllowedUsers: []string{"ou_allowed"}},
+		},
+	}}, &config.AgentsConfig{Router: "ohMyCode", OhMyCode: &config.OhMyCodeConfig{
+		Enabled: true,
+		Targets: map[string]config.OhMyCodeTargetConfig{
+			"support": {Receivers: []config.ReceiverTargetConfig{{Channel: "feishu", ReceiverID: "cli_support"}}, Workspace: "/workspace/support", DefaultAgent: "support-main", AllowedAgents: []string{"support-main"}},
+			"sales":   {Receivers: []config.ReceiverTargetConfig{{Channel: "feishu", ReceiverID: "cli_sales"}}, Workspace: "/workspace/sales", DefaultAgent: "sales-main", AllowedAgents: []string{"sales-main"}},
+		},
+	}})
+
+	if err := manager.registerConfiguredChannels(); err != nil {
+		t.Fatalf("registerConfiguredChannels: %v", err)
+	}
+	support, ok := manager.Get("feishu/support").(*FeishuBot)
+	if !ok {
+		t.Fatalf("support bot=%T", manager.Get("feishu/support"))
+	}
+	sales, ok := manager.Get("feishu/sales").(*FeishuBot)
+	if !ok {
+		t.Fatalf("sales bot=%T", manager.Get("feishu/sales"))
+	}
+	if manager.Get("feishu") != nil {
+		t.Fatal("unexpected legacy singleton for bots-only configuration")
+	}
+	if support.defaultAgent != "support-main" || sales.defaultAgent != "sales-main" {
+		t.Fatalf("unexpected per-bot defaults: support=%q sales=%q", support.defaultAgent, sales.defaultAgent)
+	}
+
+	type sentReply struct{ receiveIDType, receiveID, text string }
+	var supportReplies, salesReplies []sentReply
+	support.sendMessageFn = func(_ context.Context, receiveIDType, receiveID, text string) error {
+		supportReplies = append(supportReplies, sentReply{receiveIDType, receiveID, text})
+		return nil
+	}
+	sales.sendMessageFn = func(_ context.Context, receiveIDType, receiveID, text string) error {
+		salesReplies = append(salesReplies, sentReply{receiveIDType, receiveID, text})
+		return nil
+	}
+	supportHandler := &fakeFeishuHandler{reply: "support reply"}
+	salesHandler := &fakeFeishuHandler{reply: "sales reply"}
+	support.SetHandler(supportHandler)
+	sales.SetHandler(salesHandler)
+
+	// Both inbound events intentionally use the same chat. The receiving AppID,
+	// rather than chat ID, must decide which bot handles and sends the reply.
+	support.handleMessageEvent(context.Background(), buildFeishuEvent("support request", "p2p", "ou_allowed", "u1", "oc_shared"))
+	sales.handleMessageEvent(context.Background(), buildFeishuEvent("sales request", "p2p", "ou_allowed", "u1", "oc_shared"))
+
+	if len(supportReplies) != 1 || supportReplies[0].text != "support reply" {
+		t.Fatalf("support replies=%#v", supportReplies)
+	}
+	if len(salesReplies) != 1 || salesReplies[0].text != "sales reply" {
+		t.Fatalf("sales replies=%#v", salesReplies)
+	}
+	for _, check := range []struct {
+		name    string
+		handler *fakeFeishuHandler
+		appID   string
+	}{
+		{name: "support", handler: supportHandler, appID: "cli_support"},
+		{name: "sales", handler: salesHandler, appID: "cli_sales"},
+	} {
+		data, ok := check.handler.last.Data.(map[string]interface{})
+		if !ok || data["receiver_id"] != check.appID || data["chat_id"] != "oc_shared" {
+			t.Fatalf("%s inbound context=%#v", check.name, data)
+		}
+	}
+
+	// Agent-initiated outbound sends use receiver_id to select the same bot
+	// identity, even when the target chat is identical.
+	if _, err := manager.Send(context.Background(), "feishu", OutboundMessage{To: "oc_shared", Text: "follow-up", ReceiverID: "cli_support"}); err != nil {
+		t.Fatalf("send via support receiver: %v", err)
+	}
+	if len(supportReplies) != 2 || supportReplies[1].text != "follow-up" || supportReplies[1].receiveIDType != "chat_id" {
+		t.Fatalf("support outbound=%#v", supportReplies)
+	}
+	if len(salesReplies) != 1 {
+		t.Fatalf("sales bot should not send support follow-up: %#v", salesReplies)
+	}
+	if _, err := manager.Send(context.Background(), "feishu", OutboundMessage{To: "oc_shared", Text: "ambiguous"}); err == nil || !strings.Contains(err.Error(), "receiver_id is required") {
+		t.Fatalf("expected missing receiver_id isolation error, got %v", err)
+	}
+	if _, err := manager.Send(context.Background(), "feishu/support", OutboundMessage{To: "oc_shared", Text: "missing named receiver"}); err == nil || !strings.Contains(err.Error(), "receiver_id is required") {
+		t.Fatalf("expected named-bot receiver_id error, got %v", err)
+	}
+	if _, err := manager.Send(context.Background(), "feishu/support", OutboundMessage{To: "oc_shared", Text: "wrong named receiver", ReceiverID: "cli_sales"}); err == nil || !strings.Contains(err.Error(), "does not match") {
+		t.Fatalf("expected named-bot receiver mismatch error, got %v", err)
+	}
+	if _, err := manager.Send(context.Background(), "feishu", OutboundMessage{To: "oc_shared", Text: "unknown receiver", ReceiverID: "cli_private_unconfigured"}); err == nil || strings.Contains(err.Error(), "cli_private_unconfigured") {
+		t.Fatalf("expected non-leaking unknown receiver error, got %v", err)
+	}
+	if len(supportReplies) != 2 || len(salesReplies) != 1 {
+		t.Fatalf("invalid named sends must not reach either bot: support=%#v sales=%#v", supportReplies, salesReplies)
+	}
+	if _, err := manager.Send(context.Background(), "FEISHU/SUPPORT", OutboundMessage{To: "oc_shared", Text: "explicit support", ReceiverID: "cli_support"}); err != nil {
+		t.Fatalf("explicit support receiver send: %v", err)
+	}
+	if len(supportReplies) != 3 || supportReplies[2].text != "explicit support" || len(salesReplies) != 1 {
+		t.Fatalf("explicit named send identity isolation failed: support=%#v sales=%#v", supportReplies, salesReplies)
+	}
+}
+
+func TestManagerPreservesLegacySingletonFeishuOutboundFallback(t *testing.T) {
+	manager := NewManager(&config.ChannelsConfig{Feishu: &config.FeishuConfig{
+		Enabled: true, AppID: "cli_legacy", AppSecret: "legacy-secret",
+	}}, &config.AgentsConfig{})
+	if err := manager.registerConfiguredChannels(); err != nil {
+		t.Fatalf("registerConfiguredChannels: %v", err)
+	}
+	legacy, ok := manager.Get("feishu").(*FeishuBot)
+	if !ok || manager.Get("feishu/legacy") != nil {
+		t.Fatalf("legacy channel registration failed: %T", manager.Get("feishu"))
+	}
+	var sent []string
+	legacy.sendMessageFn = func(_ context.Context, receiveIDType, receiveID, text string) error {
+		sent = append(sent, receiveIDType+":"+receiveID+":"+text)
+		return nil
+	}
+	if _, err := manager.Send(context.Background(), "feishu", OutboundMessage{To: "oc_legacy", Text: "legacy reply"}); err != nil {
+		t.Fatalf("legacy implicit send: %v", err)
+	}
+	if len(sent) != 1 || sent[0] != "chat_id:oc_legacy:legacy reply" {
+		t.Fatalf("legacy send=%#v", sent)
+	}
+	if _, err := manager.Send(context.Background(), "feishu", OutboundMessage{To: "oc_legacy", Text: "explicit legacy", ReceiverID: "cli_legacy"}); err != nil {
+		t.Fatalf("legacy explicit send: %v", err)
+	}
+	if len(sent) != 2 || !strings.HasSuffix(sent[1], ":explicit legacy") {
+		t.Fatalf("legacy explicit send=%#v", sent)
+	}
+}
+
+func TestManagerRequiresReceiverWhenLegacyAndNamedFeishuBotsCoexist(t *testing.T) {
+	manager := NewManager(&config.ChannelsConfig{Feishu: &config.FeishuConfig{
+		Enabled: true, AppID: "cli_legacy", AppSecret: "legacy-secret",
+		Bots: map[string]config.FeishuBotConfig{
+			"support": {AppID: "cli_support", AppSecret: "support-secret"},
+		},
+	}}, nil)
+	if err := manager.registerConfiguredChannels(); err != nil {
+		t.Fatalf("registerConfiguredChannels: %v", err)
+	}
+	legacy, ok := manager.Get("feishu").(*FeishuBot)
+	if !ok {
+		t.Fatalf("legacy bot=%T", manager.Get("feishu"))
+	}
+	support, ok := manager.Get("feishu/support").(*FeishuBot)
+	if !ok {
+		t.Fatalf("support bot=%T", manager.Get("feishu/support"))
+	}
+	var legacySends, supportSends int
+	legacy.sendMessageFn = func(context.Context, string, string, string) error { legacySends++; return nil }
+	support.sendMessageFn = func(context.Context, string, string, string) error { supportSends++; return nil }
+
+	if _, err := manager.Send(context.Background(), "feishu", OutboundMessage{To: "oc_shared", Text: "ambiguous"}); err == nil || !strings.Contains(err.Error(), "receiver_id is required") {
+		t.Fatalf("expected mixed-config receiver_id error, got %v", err)
+	}
+	if legacySends != 0 || supportSends != 0 {
+		t.Fatalf("ambiguous send reached a bot: legacy=%d support=%d", legacySends, supportSends)
+	}
+	if _, err := manager.Send(context.Background(), "feishu", OutboundMessage{To: "oc_shared", Text: "legacy", ReceiverID: "cli_legacy"}); err != nil {
+		t.Fatalf("explicit legacy receiver send: %v", err)
+	}
+	if _, err := manager.Send(context.Background(), "feishu", OutboundMessage{To: "oc_shared", Text: "support", ReceiverID: "cli_support"}); err != nil {
+		t.Fatalf("explicit named receiver send: %v", err)
+	}
+	if legacySends != 1 || supportSends != 1 {
+		t.Fatalf("explicit receiver sends did not preserve identity: legacy=%d support=%d", legacySends, supportSends)
+	}
+}
+
+func TestManagerStartsAndStopsEachConfiguredFeishuBot(t *testing.T) {
+	manager := NewManager(&config.ChannelsConfig{Feishu: &config.FeishuConfig{
+		Enabled: true,
+		Bots: map[string]config.FeishuBotConfig{
+			"support": {AppID: "cli_support", AppSecret: "support-secret"},
+			"sales":   {AppID: "cli_sales", AppSecret: "sales-secret"},
+		},
+	}}, nil)
+	if err := manager.registerConfiguredChannels(); err != nil {
+		t.Fatalf("registerConfiguredChannels: %v", err)
+	}
+	support, ok := manager.Get("feishu/support").(*FeishuBot)
+	if !ok {
+		t.Fatalf("support bot=%T", manager.Get("feishu/support"))
+	}
+	sales, ok := manager.Get("feishu/sales").(*FeishuBot)
+	if !ok {
+		t.Fatalf("sales bot=%T", manager.Get("feishu/sales"))
+	}
+
+	var supportStarts, salesStarts, supportStops, salesStops atomic.Int32
+	support.startFn = func(context.Context) error { supportStarts.Add(1); return nil }
+	sales.startFn = func(context.Context) error { salesStarts.Add(1); return nil }
+	support.stopFn = func() error { supportStops.Add(1); return nil }
+	sales.stopFn = func() error { salesStops.Add(1); return nil }
+
+	if err := manager.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	waitForCondition(t, time.Second, func() bool {
+		return support.IsRunning() && sales.IsRunning() && supportStarts.Load() == 1 && salesStarts.Load() == 1
+	})
+	if err := manager.Stop(); err != nil {
+		t.Fatalf("Stop: %v", err)
+	}
+	if support.IsRunning() || sales.IsRunning() || supportStops.Load() != 1 || salesStops.Load() != 1 {
+		t.Fatalf("both configured bots must stop independently: support running=%t starts=%d stops=%d; sales running=%t starts=%d stops=%d", support.IsRunning(), supportStarts.Load(), supportStops.Load(), sales.IsRunning(), salesStarts.Load(), salesStops.Load())
+	}
+}
 
 func TestManagerStartStop(t *testing.T) {
 	manager := NewManager(nil, nil)
@@ -324,4 +583,23 @@ func (p *panickingChannel) IsRunning() bool                { return false }
 func (p *panickingChannel) IsAllowed(senderID string) bool { return true }
 func (p *panickingChannel) Send(ctx context.Context, msg OutboundMessage) (*SendResult, error) {
 	return nil, nil
+}
+
+func TestManagerRejectsDuplicateFeishuAppIDAcrossBots(t *testing.T) {
+	// Two named bots that declare the same Feishu App ID resolve to the same
+	// inbound receiver identity. Registration must fail rather than let the
+	// second bot silently claim the identity, which would defeat #387's
+	// reply-isolation guarantee (the outbound reply could then route to
+	// whichever bot happened to register last).
+	manager := NewManager(&config.ChannelsConfig{Feishu: &config.FeishuConfig{
+		Enabled: true,
+		Bots: map[string]config.FeishuBotConfig{
+			"support": {AppID: "cli_shared", AppSecret: "support-secret", AllowedUsers: []string{"ou_a"}},
+			"sales":   {AppID: "cli_shared", AppSecret: "sales-secret", AllowedUsers: []string{"ou_b"}},
+		},
+	}}, &config.AgentsConfig{Router: "ohMyCode", OhMyCode: &config.OhMyCodeConfig{Enabled: true}})
+
+	if err := manager.registerConfiguredChannels(); err == nil || !strings.Contains(err.Error(), "feishu app ID is configured by more than one bot") {
+		t.Fatalf("expected duplicate-appID collision error, got %v", err)
+	}
 }

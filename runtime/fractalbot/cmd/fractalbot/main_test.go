@@ -56,7 +56,11 @@ func TestRunMinimalConfigExitsOnCancel(t *testing.T) {
 func TestRunMessageSend(t *testing.T) {
 	configPath := writeMinimalConfig(t)
 	original := messageSendFn
-	t.Cleanup(func() { messageSendFn = original })
+	originalWithReceiver := messageSendWithReceiverFn
+	t.Cleanup(func() {
+		messageSendFn = original
+		messageSendWithReceiverFn = originalWithReceiver
+	})
 
 	t.Run("success", func(t *testing.T) {
 		called := false
@@ -135,6 +139,35 @@ func TestRunMessageSend(t *testing.T) {
 		}
 		if !called {
 			t.Fatalf("expected message send function to be called")
+		}
+	})
+
+	t.Run("success with Feishu receiver identity", func(t *testing.T) {
+		called := false
+		messageSendWithReceiverFn = func(ctx context.Context, cfg *config.Config, channel string, to string, text string, threadTS string, images []string, receiverID string) error {
+			_ = ctx
+			_ = cfg
+			called = true
+			if channel != "feishu" || to != "oc_shared" || text != "reply from receiving bot" || receiverID != "cli_support" {
+				t.Fatalf("unexpected receiver-aware arguments: channel=%q to=%q text=%q receiver=%q", channel, to, text, receiverID)
+			}
+			if threadTS != "" || len(images) != 0 {
+				t.Fatalf("unexpected extras: thread=%q images=%v", threadTS, images)
+			}
+			return nil
+		}
+
+		var buf bytes.Buffer
+		code := runWithContext(context.Background(), []string{
+			"--config", configPath,
+			"message", "send",
+			"--channel", "feishu",
+			"--receiver-id", "cli_support",
+			"--to", "oc_shared",
+			"--text", "reply from receiving bot",
+		}, &buf)
+		if code != 0 || !called {
+			t.Fatalf("code=%d called=%t output=%q", code, called, buf.String())
 		}
 	})
 
@@ -311,6 +344,43 @@ func TestRunMessageSend(t *testing.T) {
 			t.Fatalf("unexpected output: %q", buf.String())
 		}
 	})
+}
+
+func TestSendMessageWithReceiverViaGatewayAPIForwardsReceiverIdentity(t *testing.T) {
+	type requestPayload struct {
+		Channel    string `json:"channel"`
+		To         string `json:"to"`
+		Text       string `json:"text"`
+		ReceiverID string `json:"receiver_id"`
+	}
+	seen := requestPayload{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/v1/message/send" {
+			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&seen); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	}))
+	defer server.Close()
+
+	host, portText, err := net.SplitHostPort(strings.TrimPrefix(server.URL, "http://"))
+	if err != nil {
+		t.Fatalf("split test server address: %v", err)
+	}
+	port, err := strconv.Atoi(portText)
+	if err != nil {
+		t.Fatalf("parse test server port: %v", err)
+	}
+	cfg := &config.Config{Gateway: &config.GatewayConfig{Bind: host, Port: port}}
+	if err := sendMessageWithReceiverViaGatewayAPI(context.Background(), cfg, "feishu", "oc_shared", "reply", "", nil, "cli_support"); err != nil {
+		t.Fatalf("sendMessageWithReceiverViaGatewayAPI: %v", err)
+	}
+	if seen.Channel != "feishu" || seen.To != "oc_shared" || seen.Text != "reply" || seen.ReceiverID != "cli_support" {
+		t.Fatalf("unexpected forwarded request: %#v", seen)
+	}
 }
 
 func TestRunFileDownload(t *testing.T) {

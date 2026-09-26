@@ -26,10 +26,11 @@ type SendResult struct {
 
 // OutboundMessage carries all data needed to send a message through a channel.
 type OutboundMessage struct {
-	To       string
-	Text     string
-	ThreadTS string   // thread/reply context (Slack threads, etc.)
-	Images   []string // local file paths to attach as image messages (issue #374)
+	To         string
+	Text       string
+	ThreadTS   string   // thread/reply context (Slack threads, etc.)
+	Images     []string // local file paths to attach as image messages (issue #374)
+	ReceiverID string   // receiving bot identity for multi-instance channels (currently Feishu)
 }
 
 // MediaPart represents a single media attachment for outbound messages.
