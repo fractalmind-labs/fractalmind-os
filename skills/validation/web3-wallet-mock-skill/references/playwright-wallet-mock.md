@@ -55,37 +55,35 @@ export function createMockProviderScript(config: WalletMockConfig): string {
               return chainId;
             case 'net_version':
               return String(parseInt(chainId, 16));
-            case 'eth_getBalance':
-              return balance;
-            case 'eth_blockNumber':
-              return '0x100';
-            case 'eth_estimateGas':
-              return '0x5208';
-            case 'eth_gasPrice':
-              return '0x3B9ACA00'; // 1 gwei
-            case 'eth_getTransactionCount':
-              return '0x' + (txCount).toString(16);
             case 'eth_call':
-              // Return mock ERC-20 balance / allowance
-              return '0x' + '0'.repeat(64);
+            case 'eth_getBalance':
+            case 'eth_blockNumber':
+            case 'eth_estimateGas':
+            case 'eth_gasPrice':
+            case 'eth_getTransactionCount':
+            case 'eth_getTransactionReceipt':
+              if (typeof window.__walletMockRpc === 'function') {
+                return window.__walletMockRpc(method, params || []);
+              }
+              if (method === 'eth_call') return '0x' + '0'.repeat(64);
+              if (method === 'eth_getBalance') return balance;
+              if (method === 'eth_blockNumber') return '0x100';
+              if (method === 'eth_estimateGas') return '0x5208';
+              if (method === 'eth_gasPrice') return '0x3B9ACA00';
+              return '0x' + txCount.toString(16);
             case 'eth_sendTransaction': {
               if (!autoApprove) throw { code: 4001, message: 'User rejected' };
+              if (typeof window.__walletMockSend === 'function') {
+                const hash = await window.__walletMockSend(params[0]);
+                txCount++;
+                window.ethereum._sentTxs.push({ ...params[0], hash, broadcast: true });
+                return hash;
+              }
               const hash = '0x' + Array.from({length: 64}, () =>
                 Math.floor(Math.random()*16).toString(16)).join('');
               txCount++;
               window.ethereum._sentTxs.push({ ...params[0], hash });
               return hash;
-            }
-            case 'eth_getTransactionReceipt': {
-              const tx = window.ethereum._sentTxs.find(t => t.hash === params[0]);
-              if (!tx) return null;
-              return {
-                transactionHash: tx.hash,
-                blockNumber: '0x100',
-                blockHash: '0x' + '1'.repeat(64),
-                status: '0x1',
-                gasUsed: '0x5208',
-              };
             }
             case 'personal_sign':
               // Return a dummy valid-length signature
@@ -247,6 +245,49 @@ test('app triggers network switch to Polygon', async ({ page }) => {
   expect(newChain).toBe('0x89'); // Polygon
 });
 ```
+
+## Broadcast to a testnet
+
+Use this when the dApp transaction must exist on a chain. The default mock above still returns a random hash when `__walletMockSend` is absent.
+
+```typescript
+import { ethers } from 'ethers';
+import { createMockProviderScript } from './wallet-mock';
+
+export async function setupBroadcastWallet(page, config: {
+  rpcUrl: string;
+  privateKey: string;
+  chainId: string; // hex, 998 is 0x3e6
+  allowMainnet?: boolean;
+}) {
+  const chainId = parseInt(config.chainId, 16);
+  if (!config.allowMainnet && (chainId === 1 || chainId === 999)) {
+    throw new Error('broadcast refuses Ethereum mainnet and HyperEVM mainnet');
+  }
+  const provider = new ethers.JsonRpcProvider(config.rpcUrl, chainId);
+  const wallet = new ethers.Wallet(config.privateKey, provider);
+  const address = await wallet.getAddress();
+
+  await page.exposeFunction('__walletMockRpc', (method: string, params: unknown[]) =>
+    provider.send(method, params));
+  await page.exposeFunction('__walletMockSend', async (tx: { to: string; data?: string; value?: string }) => {
+    const sent = await wallet.sendTransaction({
+      to: tx.to,
+      data: tx.data,
+      value: tx.value ? BigInt(tx.value) : undefined,
+    });
+    return sent.hash;
+  });
+  await page.addInitScript(createMockProviderScript({
+    accounts: [address],
+    privateKey: config.privateKey,
+    chainId: config.chainId,
+    autoApprove: true,
+  }));
+}
+```
+
+Call `setupBroadcastWallet` before `page.goto`. The private key stays in Node. HyperEVM testnet uses chain ID `998` (`0x3e6`). Do not set `allowMainnet` for a test.
 
 ## CI integration
 
