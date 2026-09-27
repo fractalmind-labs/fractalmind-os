@@ -12,7 +12,7 @@ A clear description of what's broken.
 
 ## Page URL
 
-Link to the affected page (e.g., https://fractalmind-ai.github.io/guide/quick-start).
+Link to the affected page (e.g., https://fractalmind-labs.github.io/fractalmind-os/guide/quick-start).
 
 ## Expected Behavior
 

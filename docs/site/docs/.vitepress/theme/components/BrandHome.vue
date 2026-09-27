@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { withBase } from 'vitepress'
 
 const products = [
   {
@@ -21,35 +22,35 @@ const products = [
     description: 'Application-plane channel adapter for Slack, Telegram, Discord, Feishu, and more; it does not grant node authority.',
     icon: '&#x1f4e1;',
     color: '#4ecdc4',
-    link: '/components/fractalbot',
+    link: withBase('/components/fractalbot'),
   },
   {
     name: 'agent-manager',
     description: 'Typed local tmux lifecycle adapter invoked behind target envd policy for remote privileged actions.',
     icon: '&#x1f916;',
     color: '#4ecdc4',
-    link: '/components/agent-manager',
+    link: withBase('/components/agent-manager'),
   },
   {
     name: 'fractalmind-protocol',
     description: 'Control / Authority Plane on SUI for identity, capabilities, delegation, revocation, and bounded control.',
     icon: '&#x26d3;',
     color: '#4DA2FF',
-    link: '/components/protocol',
+    link: withBase('/components/protocol'),
   },
   {
     name: 'fractalmind-envd',
     description: 'Target-side P2P Data / Execution Plane for verification, replay protection, local execution, and durable results.',
     icon: '&#x1f310;',
     color: '#4ecdc4',
-    link: '/components/envd',
+    link: withBase('/components/envd'),
   },
   {
     name: 'explorer',
     description: 'Public visualization surface for organizations, components, and trust-critical state.',
     icon: '&#x1f50d;',
     color: '#e94560',
-    link: 'https://fractalmind-ai.github.io/explorer',
+    link: 'https://fractalmind-labs.github.io/fractalmind-os/explorer/',
   },
 ]
 
@@ -82,7 +83,7 @@ const githubLinks = [
   {
     label: 'Live Explorer',
     description: 'Inspect the public visualization / trust surface.',
-    url: 'https://fractalmind-ai.github.io/explorer',
+    url: 'https://fractalmind-labs.github.io/fractalmind-os/explorer/',
   },
 ]
 
@@ -151,8 +152,8 @@ onMounted(() => {
           </div>
         </div>
         <div class="hero-actions">
-          <a href="/guide/quick-start" class="btn btn-primary">Quick Start</a>
-          <a href="https://fractalmind-ai.github.io/explorer" class="btn btn-secondary" target="_blank" rel="noopener">Live Explorer</a>
+          <a :href="withBase('/guide/quick-start')" class="btn btn-primary">Quick Start</a>
+          <a href="https://fractalmind-labs.github.io/fractalmind-os/explorer/" class="btn btn-secondary" target="_blank" rel="noopener">Live Explorer</a>
           <a href="https://github.com/fractalmind-labs" class="btn btn-ghost" target="_blank" rel="noopener">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
@@ -303,7 +304,7 @@ onMounted(() => {
           </svg>
         </div>
         <div class="arch-cta">
-          <a href="/architecture/overview" class="btn btn-secondary">Explore Architecture</a>
+          <a :href="withBase('/architecture/overview')" class="btn btn-secondary">Explore Architecture</a>
         </div>
       </div>
     </section>
@@ -387,7 +388,7 @@ onMounted(() => {
               <li>Browse org hierarchy, agents, and tasks</li>
               <li>View on-chain certificates and governance</li>
             </ul>
-            <a href="https://fractalmind-ai.github.io/explorer" class="btn btn-primary" target="_blank" rel="noopener">
+            <a href="https://fractalmind-labs.github.io/fractalmind-os/explorer/" class="btn btn-primary" target="_blank" rel="noopener">
               Launch Explorer
             </a>
           </div>
@@ -457,10 +458,10 @@ onMounted(() => {
           <h2>Ready to run agent teams?</h2>
           <p>Start with the docs, inspect the public repos, and follow the operating model all the way down.</p>
           <div class="cta-actions">
-            <a href="/guide/quick-start" class="btn btn-primary">
+            <a :href="withBase('/guide/quick-start')" class="btn btn-primary">
               Quick Start Guide
             </a>
-            <a href="/components/overview" class="btn btn-secondary">
+            <a :href="withBase('/components/overview')" class="btn btn-secondary">
               Browse Components
             </a>
             <a href="https://github.com/fractalmind-labs" class="btn btn-ghost" target="_blank" rel="noopener">
@@ -492,19 +493,19 @@ onMounted(() => {
           <div class="footer-links">
             <h4>Documentation</h4>
             <ul>
-              <li><a href="/guide/what-is-fractalmind">What is FractalMind?</a></li>
-              <li><a href="/guide/quick-start">Quick Start</a></li>
-              <li><a href="/architecture/overview">Architecture</a></li>
-              <li><a href="/protocol/overview">Protocol</a></li>
+              <li><a :href="withBase('/guide/what-is-fractalmind')">What is FractalMind?</a></li>
+              <li><a :href="withBase('/guide/quick-start')">Quick Start</a></li>
+              <li><a :href="withBase('/architecture/overview')">Architecture</a></li>
+              <li><a :href="withBase('/protocol/overview')">Protocol</a></li>
             </ul>
           </div>
           <div class="footer-links">
             <h4>Components</h4>
             <ul>
-              <li><a href="/components/protocol">fractalmind-protocol</a></li>
-              <li><a href="/components/fractalbot">fractalbot</a></li>
-              <li><a href="/components/agent-manager">agent-manager</a></li>
-              <li><a href="/components/team-manager">team-manager</a></li>
+              <li><a :href="withBase('/components/protocol')">fractalmind-protocol</a></li>
+              <li><a :href="withBase('/components/fractalbot')">fractalbot</a></li>
+              <li><a :href="withBase('/components/agent-manager')">agent-manager</a></li>
+              <li><a :href="withBase('/components/team-manager')">team-manager</a></li>
             </ul>
           </div>
           <div class="footer-links">
@@ -516,7 +517,7 @@ onMounted(() => {
                 </a>
               </li>
               <li>
-                <a href="https://fractalmind-ai.github.io/explorer" target="_blank" rel="noopener">
+                <a href="https://fractalmind-labs.github.io/fractalmind-os/explorer/" target="_blank" rel="noopener">
                   Explorer (Live Demo)
                 </a>
               </li>
@@ -525,7 +526,7 @@ onMounted(() => {
                   Docs Source
                 </a>
               </li>
-              <li><a href="/roadmap/">Roadmap</a></li>
+              <li><a :href="withBase('/roadmap/')">Roadmap</a></li>
             </ul>
           </div>
         </div>

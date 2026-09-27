@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { withBase } from 'vitepress'
 
 const useCases = [
   {
@@ -132,9 +133,9 @@ onMounted(() => {
           <h2>Ready to try it?</h2>
           <p>Get a working agent team running in under 5 minutes.</p>
           <div class="cta-actions">
-            <a href="/guide/quick-start" class="btn btn-primary">Quick Start</a>
-            <a href="https://fractalmind-ai.github.io/explorer" class="btn btn-secondary" target="_blank" rel="noopener">Live Explorer</a>
-            <a href="/architecture/overview" class="btn btn-ghost">Architecture</a>
+            <a :href="withBase('/guide/quick-start')" class="btn btn-primary">Quick Start</a>
+            <a href="https://fractalmind-labs.github.io/fractalmind-os/explorer/" class="btn btn-secondary" target="_blank" rel="noopener">Live Explorer</a>
+            <a :href="withBase('/architecture/overview')" class="btn btn-ghost">Architecture</a>
           </div>
         </div>
       </div>

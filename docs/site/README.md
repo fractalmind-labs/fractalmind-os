@@ -6,7 +6,7 @@
 
 *SUI authority, target-side P2P execution, user-facing applications, and a heartbeat-driven local operating loop.*
 
-[![Docs](https://img.shields.io/badge/docs-fractalmind--ai.github.io-4DA2FF)](https://fractalmind-ai.github.io)
+[![Docs](https://img.shields.io/badge/docs-fractalmind--labs.github.io%2Ffractalmind--os-4DA2FF)](https://fractalmind-labs.github.io/fractalmind-os)
 [![GitHub Org](https://img.shields.io/badge/GitHub-fractalmind--labs-181717?logo=github)](https://github.com/fractalmind-labs)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![VitePress](https://img.shields.io/badge/VitePress-1.6-646CFF?logo=vite)](https://vitepress.dev)
@@ -51,9 +51,9 @@ FractalMind has moved beyond a pure **protocol-first** story. The current focus 
 
 | Surface | URL | Purpose |
 |--------|-----|---------|
-| Documentation | https://fractalmind-ai.github.io | Public docs for the stack and operating model |
+| Documentation | https://fractalmind-labs.github.io/fractalmind-os | Public docs for the stack and operating model |
 | Source | https://github.com/fractalmind-labs/fractalmind-os | Public monorepo for all FractalMind components |
-| Explorer | https://fractalmind-ai.github.io/explorer | Visualization / trust surface |
+| Explorer | https://fractalmind-labs.github.io/fractalmind-os/explorer/ | Visualization / trust surface |
 | Candidate OKRs | https://github.com/fractalmind-labs/fractalmind-os/tree/main/governance/fractalmind-okrs | Shared publication surface for candidate OKRs |
 | Protocol (SUI Testnet) | `0x685d6fb6ed8b0e679bb467ea73111819ec6ff68b1466d24ca26b400095dcdf24` | Existing identity/task/governance package; remote-capability migration is not yet published |
 

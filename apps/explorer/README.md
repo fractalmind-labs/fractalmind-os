@@ -31,4 +31,5 @@ npm run preview
 
 ## Deployment
 
-- GitHub Pages deployment is handled by `.github/workflows/deploy.yml`.
+- GitHub Pages deployment is handled by the repository's `.github/workflows/pages.yml`, which publishes
+  the explorer under `/explorer/` of the docs site: https://fractalmind-labs.github.io/fractalmind-os/explorer/

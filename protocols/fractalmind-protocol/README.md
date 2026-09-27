@@ -125,7 +125,7 @@ fractalbot                        ← Multi-channel messaging
 ## Documentation
 
 - [Architecture](docs/architecture.md) — Detailed protocol design
-- [Full Documentation](https://fractalmind-ai.github.io/protocol/overview) — Complete docs site
+- [Full Documentation](https://fractalmind-labs.github.io/fractalmind-os/protocol/overview) — Complete docs site
 
 ## License
 

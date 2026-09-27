@@ -1,6 +1,6 @@
 # Contributing to FractalMind AI Docs
 
-Thanks for your interest in contributing! This repo powers the documentation site at https://fractalmind-ai.github.io.
+Thanks for your interest in contributing! This directory powers the documentation site at https://fractalmind-labs.github.io/fractalmind-os.
 
 ## Getting Started
 
