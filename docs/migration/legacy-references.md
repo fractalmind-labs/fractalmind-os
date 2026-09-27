@@ -35,20 +35,16 @@ These describe what happened before the migration and stay verbatim:
 
 ## Names that are not repository references
 
-- The documentation domain `fractalmind-ai.github.io`. It changes when the site
-  deployment moves to this repository ([fractalmind-os#6](https://github.com/fractalmind-labs/fractalmind-os/issues/6)).
 - The team name `fractalmind-ai` and the `projects/fractalmind-ai/...` workspace
   layout used by agent-manager and team-chat examples and by
   `skills/interfaces/team-chat-skill/team-chat/scripts/unread_notifier.py`.
 - `workspace/oh-my-code/.claude/skills/agent-manager/.openskills.json`, the
   install record of the vendored copy. Reinstalling with `npx skills` replaces it.
 
-## Deferred build dependencies
+## Deferred build dependency
 
-- `runtime/fractalmind-envd/contracts/envd/Move.toml` and `Move.lock` depend on
-  `fractalmind-ai/fractalmind-protocol` at a pinned revision. Switching to the
-  in-repo package changes how the published envd contract resolves its
-  dependency, so it is left for a separate change.
-- `runtime/fractalmind-envd/.github/workflows/deploy-contracts.yml` checks out
-  `fractalmind-ai/fractalmind-protocol`. Nested workflows do not run; it is
-  migrated together with the other workflows in [fractalmind-os#6](https://github.com/fractalmind-labs/fractalmind-os/issues/6).
+`runtime/fractalmind-envd/contracts/envd/Move.toml` and `Move.lock` depend on
+`fractalmind-ai/fractalmind-protocol` at a pinned revision. The
+`envd: Deploy contracts` workflow already rewrites that dependency to the
+in-repo package before publishing; only local builds still use the pinned git
+dependency. Switching the committed manifest is left for a separate change.

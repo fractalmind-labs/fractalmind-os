@@ -45,7 +45,7 @@ const (
 
 // Manager is a minimal stub for agent lifecycle management.
 type Manager struct {
-	config              *config.AgentsConfig
+	config *config.AgentsConfig
 	// inboundCfg holds the optional channels.inbound policy (acknowledgment
 	// before processing and milestone progress). It is nil unless wired via
 	// SetInboundConfig, in which case acknowledgment defaults to enabled.
@@ -67,8 +67,8 @@ type Manager struct {
 	// seenMu and seenMsg de-duplicate inbound messages by message ID at the
 	// manager convergence point (before the acknowledgment is emitted), so
 	// redeliveries cannot produce duplicate 处理中 acks or duplicate assigns.
-	seenMu   sync.Mutex
-	seenMsg  map[string]time.Time
+	seenMu  sync.Mutex
+	seenMsg map[string]time.Time
 }
 
 type RoutingOutcome struct {

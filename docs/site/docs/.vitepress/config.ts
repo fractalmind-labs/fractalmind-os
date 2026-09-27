@@ -1,10 +1,11 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
+  base: '/fractalmind-os/',
   title: 'FractalMind AI',
   description: 'SUI authority, target-side P2P execution, applications, and governed AI agent operations.',
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/fractalmind-os/logo.svg' }],
   ],
 
   themeConfig: {
@@ -28,7 +29,7 @@ export default defineConfig({
       { text: 'Roadmap', link: '/roadmap/' },
       {
         text: 'Explorer',
-        link: 'https://fractalmind-ai.github.io/explorer',
+        link: 'https://fractalmind-labs.github.io/fractalmind-os/explorer/',
         target: '_blank',
       },
     ],

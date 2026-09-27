@@ -1,4 +1,4 @@
-name: KR4 Verification — SuLabs Instance
+name: "Protocol: KR4 verification (SuLabs instance)"
 
 on:
   workflow_dispatch:
@@ -15,6 +15,10 @@ jobs:
   verify:
     name: KR4 Verification on ${{ inputs.network }}
     runs-on: ubuntu-latest
+    environment: sui-testnet
+    defaults:
+      run:
+        working-directory: protocols/fractalmind-protocol
     env:
       SUI_NETWORK: ${{ inputs.network }}
 
@@ -39,7 +43,7 @@ jobs:
 
       - name: Run KR4 verification
         env:
-          SUI_MNEMONICS: ${{ secrets.TESTNET_SUI_MNEMONICS }}
+          SUI_MNEMONICS: ${{ secrets.SUI_MNEMONICS }}
         run: |
           cd sdk
           npx tsx scripts/kr4-verify.ts 2>&1 | tee kr4-output.txt
@@ -84,5 +88,5 @@ jobs:
         with:
           name: kr4-verification-${{ github.run_id }}
           path: |
-            sdk/kr4-output.txt
-            sdk/kr4-summary.json
+            protocols/fractalmind-protocol/sdk/kr4-output.txt
+            protocols/fractalmind-protocol/sdk/kr4-summary.json

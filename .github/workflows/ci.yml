@@ -1,0 +1,468 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      go: ${{ steps.go.outputs.changes }}
+      python: ${{ steps.python.outputs.changes }}
+      node: ${{ steps.node.outputs.changes }}
+      move: ${{ steps.move.outputs.changes }}
+      other: ${{ steps.other.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Filter names are the directories the matching jobs run in, so the
+      # outputs can drive job matrices directly.
+      - uses: dorny/paths-filter@v3
+        id: go
+        with:
+          filters: |
+            runtime/fractalbot:
+              - .github/workflows/ci.yml
+              - runtime/fractalbot/**
+              - protocols/fractal-demail/client-go/**
+              - protocols/fractal-demail/gas-station-adapter/**
+            runtime/fractalmind-envd:
+              - .github/workflows/ci.yml
+              - runtime/fractalmind-envd/**
+            runtime/fractalmind-envd/desktop:
+              - .github/workflows/ci.yml
+              - runtime/fractalmind-envd/desktop/**
+            runtime/claude-code-go:
+              - .github/workflows/ci.yml
+              - runtime/claude-code-go/**
+            protocols/fractal-demail/client-go:
+              - .github/workflows/ci.yml
+              - protocols/fractal-demail/client-go/**
+            protocols/fractal-demail/gas-station-adapter:
+              - .github/workflows/ci.yml
+              - protocols/fractal-demail/gas-station-adapter/**
+            protocols/fractal-demail/bridge:
+              - .github/workflows/ci.yml
+              - protocols/fractal-demail/bridge/**
+              - protocols/fractal-demail/client-go/**
+              - protocols/fractal-demail/gas-station-adapter/**
+
+      - uses: dorny/paths-filter@v3
+        id: python
+        with:
+          filters: |
+            agent-manager:
+              - .github/workflows/ci.yml
+              - skills/coordination/agent-manager-skill/**
+            team-manager:
+              - .github/workflows/ci.yml
+              - skills/coordination/team-manager-skill/**
+            team-chat:
+              - .github/workflows/ci.yml
+              - skills/interfaces/team-chat-skill/**
+            skills-layout:
+              - .github/workflows/ci.yml
+              - skills/tests/**
+              - skills/coordination/agent-manager-skill/agent-manager/scripts/repo_root.py
+              - skills/coordination/team-manager-skill/team-manager/scripts/repo_root.py
+
+      - uses: dorny/paths-filter@v3
+        id: node
+        with:
+          filters: |
+            apps/explorer:
+              - .github/workflows/ci.yml
+              - apps/explorer/**
+            docs/site:
+              - .github/workflows/ci.yml
+              - docs/site/**
+            protocols/fractalmind-protocol/sdk:
+              - .github/workflows/ci.yml
+              - protocols/fractalmind-protocol/sdk/**
+
+      - uses: dorny/paths-filter@v3
+        id: move
+        with:
+          filters: |
+            protocols/fractalmind-protocol/contracts/protocol:
+              - .github/workflows/ci.yml
+              - protocols/fractalmind-protocol/contracts/**
+            protocols/fractal-demail/sui-contracts:
+              - .github/workflows/ci.yml
+              - protocols/fractal-demail/sui-contracts/**
+
+      - uses: dorny/paths-filter@v3
+        id: other
+        with:
+          filters: |
+            skills:
+              - .github/workflows/ci.yml
+              - skills/**
+            android:
+              - .github/workflows/ci.yml
+              - apps/typemind-android/**
+            openclaw:
+              - .github/workflows/ci.yml
+              - apps/openclaw-gateway-app/**
+
+  go:
+    name: Go (${{ matrix.module }})
+    needs: changes
+    if: needs.changes.outputs.go != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJSON(needs.changes.outputs.go) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.module }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ matrix.module }}/go.mod
+          cache-dependency-path: ${{ matrix.module }}/go.*
+      - name: Check formatting
+        if: matrix.module == 'runtime/fractalbot' || matrix.module == 'runtime/claude-code-go'
+        run: |
+          files=$(gofmt -l .)
+          if [ -n "$files" ]; then
+            echo "gofmt needed on:"
+            echo "$files"
+            exit 1
+          fi
+      - run: go build ./...
+      - run: go vet ./...
+      - name: go test
+        run: go test ${{ matrix.module == 'protocols/fractal-demail/bridge' && '-race' || '' }} ./...
+
+  agent-manager:
+    name: agent-manager (Python ${{ matrix.python-version }})
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.python), 'agent-manager')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    defaults:
+      run:
+        working-directory: skills/coordination/agent-manager-skill
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python3 -m pip install pyyaml
+      - name: Static compile sanity
+        run: python3 -m compileall -q agent-manager
+      - name: Test basic CLI commands
+        run: |
+          mkdir -p agents
+          python3 agent-manager/scripts/main.py doctor || true
+          python3 agent-manager/scripts/main.py list
+          python3 agent-manager/scripts/main.py status --help
+          python3 agent-manager/scripts/main.py --help
+      - name: Unit tests
+        run: python3 -m unittest discover -s agent-manager/scripts/tests -p 'test_*.py' -v
+
+  agent-manager-quality:
+    name: agent-manager quality gates
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.python), 'agent-manager')
+    runs-on: ubuntu-latest
+    env:
+      QUALITY_COVERAGE_MIN: ${{ vars.QUALITY_COVERAGE_MIN || '45' }}
+    defaults:
+      run:
+        working-directory: skills/coordination/agent-manager-skill
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python3 -m pip install pyyaml coverage
+      - name: Coverage gate
+        run: |
+          python3 -m coverage run -m unittest discover -s agent-manager/scripts/tests -p 'test_*.py'
+          python3 -m coverage report --show-missing --fail-under="$QUALITY_COVERAGE_MIN"
+      - name: Integration suite with retry
+        run: |
+          python3 agent-manager/scripts/tests/run_integration_suite.py \
+            --attempts 2 \
+            --pattern 'test_integration_*.py' \
+            --artifact-dir .artifacts/integration
+      - name: Upload integration artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-manager-integration-${{ github.run_id }}-${{ github.run_attempt }}
+          path: skills/coordination/agent-manager-skill/.artifacts/integration
+          if-no-files-found: warn
+
+  team-manager:
+    name: team-manager (Python ${{ matrix.python-version }})
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.python), 'team-manager')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    defaults:
+      run:
+        working-directory: skills/coordination/team-manager-skill
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python3 -m pip install pyyaml
+      - run: python3 -m compileall -q team-manager/scripts
+      - run: python3 -m unittest discover -s team-manager/tests -p 'test_*.py'
+
+  team-chat:
+    name: team-chat
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.python), 'team-chat')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: skills/interfaces/team-chat-skill
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python3 -m unittest discover -s tests -v
+
+  skills-layout:
+    name: Skills CLI layout
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.python), 'skills-layout')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python3 -m unittest discover -s skills/tests -p 'test_*.py' -v
+
+  skills-structure:
+    name: Skill structure
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.other), 'skills')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every skill declares name and description
+        run: |
+          status=0
+          while IFS= read -r skill; do
+            if ! head -n 1 "$skill" | grep -q '^---$' \
+              || ! grep -q '^name:' "$skill" \
+              || ! grep -q '^description:' "$skill"; then
+              echo "::error file=$skill::SKILL.md needs front matter with name and description"
+              status=1
+            fi
+          done < <(git ls-files 'skills/**/SKILL.md')
+          exit "$status"
+      - name: five-step-workflow files
+        working-directory: skills/coordination/five-step-workflow-skill
+        run: test -f README.md && test -f agents/openai.yaml
+      - name: okr-manager examples and links
+        working-directory: skills/coordination/okr-manager-skill
+        run: |
+          test -f examples/okr-template-en.md
+          test -f examples/okr-template-zh.md
+          test -f examples/heartbeat-integration.md
+          grep -oP '\[.*?\]\(((?!http)[^)]+)\)' README.md | \
+            grep -oP '\(([^)]+)\)' | tr -d '()' | \
+            while read -r link; do
+              if [ ! -f "$link" ] && [ ! -d "$link" ]; then
+                echo "Broken link: $link"
+                exit 1
+              fi
+            done
+      - name: turbo-frequency sections
+        working-directory: skills/coordination/turbo-frequency-skill
+        run: |
+          test -f README.md && test -f LICENSE
+          for section in '## Frequency Tiers' '## Signal Evaluation' '## Execution Steps'; do
+            grep -q "$section" turbo-frequency/SKILL.md || { echo "Missing section: $section"; exit 1; }
+          done
+      - name: use-phone scripts
+        working-directory: skills/interfaces/use-phone-skill
+        run: test -f README.md && test -d scripts
+      - name: agent-browser has no tokens
+        working-directory: skills/interfaces/agent-browser-skill
+        run: |
+          test -f README.md && test -f LICENSE
+          if grep -rn 'sk-[a-zA-Z0-9]\{20,\}\|ghp_[a-zA-Z0-9]\{36\}\|xox[bpoas]-[a-zA-Z0-9-]\{10,\}' --include='*.md' .; then
+            echo "Possible secret or token found"
+            exit 1
+          fi
+
+  explorer:
+    name: Explorer
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.node), 'apps/explorer')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/explorer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/explorer/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  docs:
+    name: Docs site
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.node), 'docs/site')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs/site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: docs/site/package-lock.json
+      - run: npm ci
+      - run: npm run docs:build
+
+  sdk:
+    name: Protocol SDK
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.node), 'protocols/fractalmind-protocol/sdk')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: protocols/fractalmind-protocol/sdk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: protocols/fractalmind-protocol/sdk/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  move:
+    name: Move (${{ matrix.package }})
+    needs: changes
+    if: needs.changes.outputs.move != '[]'
+    runs-on: ubuntu-latest
+    env:
+      SUI_VERSION: testnet-v1.67.1
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.changes.outputs.move) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Sui CLI (${{ env.SUI_VERSION }})
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://github.com/MystenLabs/sui/releases/download/${SUI_VERSION}/sui-${SUI_VERSION}-ubuntu-x86_64.tgz" -o "$RUNNER_TEMP/sui.tgz"
+          mkdir -p "$RUNNER_TEMP/sui"
+          tar -xzf "$RUNNER_TEMP/sui.tgz" -C "$RUNNER_TEMP/sui"
+          sui_bin=$(find "$RUNNER_TEMP/sui" -type f -name sui -perm -111 | head -1)
+          test -n "$sui_bin"
+          sudo install -m 0755 "$sui_bin" /usr/local/bin/sui
+          sui --version
+      - run: sui move build --path "${{ matrix.package }}" --silence-warnings
+      - run: sui move test --path "${{ matrix.package }}" --gas-limit 100000000
+
+  android:
+    name: TypeMind Android
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.other), 'android')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/typemind-android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      # v3 still installs the removed "tools" package and fails.
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools platforms;android-34 build-tools;34.0.0
+      - run: ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: typemind-debug-apk
+          path: apps/typemind-android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+  openclaw:
+    name: OpenClaw gateway app
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.other), 'openclaw')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/openclaw-gateway-app
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate app bundle and installer
+        run: |
+          test -f OpenClaw.app/Contents/Info.plist
+          test -f OpenClaw.app/Contents/MacOS/OpenClaw
+          test -f scripts/install-to-applications.sh
+          grep -q "set -euo pipefail" scripts/install-to-applications.sh
+          grep -q "Darwin" scripts/install-to-applications.sh
+
+  ci-result:
+    name: CI result
+    needs:
+      - changes
+      - go
+      - agent-manager
+      - agent-manager-quality
+      - team-manager
+      - team-chat
+      - skills-layout
+      - skills-structure
+      - explorer
+      - docs
+      - sdk
+      - move
+      - android
+      - openclaw
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

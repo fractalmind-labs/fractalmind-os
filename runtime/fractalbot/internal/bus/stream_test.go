@@ -13,13 +13,13 @@ import (
 // recordingSender captures the ordered sequence of sent messages so tests can
 // assert ack/progress ordering and recipient metadata.
 type recordingSender struct {
-	mu    sync.Mutex
+	mu      sync.Mutex
 	records []struct {
-		channel string
-		text    string
-		to      string
+		channel    string
+		text       string
+		to         string
 		receiverID string
-		threadTS string
+		threadTS   string
 	}
 	err error
 }

@@ -6,7 +6,7 @@
 
 *FractalMind AI is building a heartbeat-driven operating system for governed autonomy, structured memory, multi-channel execution, and optional on-chain trust surfaces.*
 
-[![Docs](https://img.shields.io/badge/docs-fractalmind--ai.github.io-4DA2FF)](https://fractalmind-ai.github.io)
+[![Docs](https://img.shields.io/badge/docs-fractalmind--labs.github.io%2Ffractalmind--os-4DA2FF)](https://fractalmind-labs.github.io/fractalmind-os)
 [![Monorepo](https://img.shields.io/badge/monorepo-fractalmind--os-181717?logo=github)](https://github.com/fractalmind-labs/fractalmind-os)
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/fractalmind-labs)
 
@@ -67,7 +67,7 @@ FractalMind AI currently spans **18 public repositories** across four surfaces:
 1. **OS kernel & governance** — `oh-my-code`, `fractalmind-okrs`, `.github`, `agent-manager-skill`, `team-manager-skill`, `okr-manager-skill`
 2. **Execution & collaboration** — `fractalbot`, `team-chat-skill`, `use-fractalbot-skill`, `agent-browser-skill`, `use-phone-skill`, `turbo-frequency-skill`
 3. **Protocol & runtime** — `fractalmind-protocol`, `fractalmind-envd`, `explorer`, `openclaw-gateway-app`
-4. **Applications & distribution** — `fractalmind-ai.github.io`, `typemind-android`
+4. **Applications & distribution** — `docs/site`, `typemind-android`
 
 ## Current Direction
 
@@ -82,8 +82,8 @@ The protocol still matters. It is now one trust surface inside the larger Fracta
 
 ## Start Here
 
-- **Docs**: https://fractalmind-ai.github.io
+- **Docs**: https://fractalmind-labs.github.io/fractalmind-os
 - **GitHub Org**: https://github.com/fractalmind-labs
 - **Candidate OKRs**: https://github.com/fractalmind-labs/fractalmind-os/tree/main/governance/fractalmind-okrs
-- **Explorer**: https://fractalmind-ai.github.io/explorer
+- **Explorer**: https://fractalmind-labs.github.io/fractalmind-os/explorer/
 - **Protocol (SUI Testnet)**: https://github.com/fractalmind-labs/fractalmind-os/tree/main/protocols/fractalmind-protocol

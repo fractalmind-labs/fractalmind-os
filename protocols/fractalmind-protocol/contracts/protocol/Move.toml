@@ -7,7 +7,8 @@ published-at = "0x6ac36fed2e6692c62aaa54cdaf7485bbcab88eb8993d43ba19d5cfc2748046
 [dependencies.Sui]
 git = "https://github.com/MystenLabs/sui.git"
 subdir = "crates/sui-framework/packages/sui-framework"
-rev = "framework/testnet"
+# Framework rev matching sui CLI testnet-v1.67.1, the version CI and deploys install
+rev = "4e8aa9ee8b307b294cc85baf7d08af1f432e3d93"
 
 [addresses]
 fractalmind_protocol = "0x685d6fb6ed8b0e679bb467ea73111819ec6ff68b1466d24ca26b400095dcdf24"
