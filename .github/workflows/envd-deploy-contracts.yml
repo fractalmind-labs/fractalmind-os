@@ -89,7 +89,7 @@ jobs:
 
       - name: Import deployment wallet
         env:
-          SUI_MNEMONICS: ${{ inputs.network == 'testnet' && secrets.TESTNET_SUI_MNEMONICS || secrets.MAINNET_SUI_MNEMONICS }}
+          SUI_MNEMONICS: ${{ secrets.SUI_MNEMONICS }}
         run: |
           set -euo pipefail
           echo "Importing deployment wallet"

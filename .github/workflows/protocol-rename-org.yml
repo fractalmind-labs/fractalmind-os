@@ -41,7 +41,7 @@ jobs:
 
       - name: Import wallet
         env:
-          SUI_MNEMONICS: ${{ secrets.TESTNET_SUI_MNEMONICS }}
+          SUI_MNEMONICS: ${{ secrets.SUI_MNEMONICS }}
         run: |
           set -euo pipefail
           DERIVATION_PATH="m/44'/784'/0'/0'/0'"

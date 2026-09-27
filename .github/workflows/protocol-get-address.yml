@@ -27,7 +27,7 @@ jobs:
 
       - name: Derive address from mnemonic
         env:
-          MNEMONICS: ${{ inputs.network == 'testnet' && secrets.TESTNET_SUI_MNEMONICS || secrets.MAINNET_SUI_MNEMONICS }}
+          MNEMONICS: ${{ secrets.SUI_MNEMONICS }}
         run: |
           # Initialize SUI client config (required before keytool import)
           mkdir -p ~/.sui/sui_config

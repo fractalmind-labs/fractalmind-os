@@ -43,7 +43,7 @@ jobs:
 
       - name: Run KR4 verification
         env:
-          SUI_MNEMONICS: ${{ secrets.TESTNET_SUI_MNEMONICS }}
+          SUI_MNEMONICS: ${{ secrets.SUI_MNEMONICS }}
         run: |
           cd sdk
           npx tsx scripts/kr4-verify.ts 2>&1 | tee kr4-output.txt
