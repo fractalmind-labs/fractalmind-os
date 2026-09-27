@@ -18,7 +18,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fractalmind-ai/fractal-demail/bridge"
+	"github.com/fractalmind-labs/fractalmind-os/protocols/fractal-demail/bridge"
 )
 
 func main() {

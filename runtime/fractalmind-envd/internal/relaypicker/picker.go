@@ -9,7 +9,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/fractalmind-ai/fractalmind-envd/internal/sui"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui"
 )
 
 // Weights for relay scoring

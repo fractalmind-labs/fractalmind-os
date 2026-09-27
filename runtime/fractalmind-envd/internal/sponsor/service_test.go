@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	internalSui "github.com/fractalmind-ai/fractalmind-envd/internal/sui"
+	internalSui "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui"
 )
 
 func TestIsPackageAllowed_EmptyWhitelist(t *testing.T) {

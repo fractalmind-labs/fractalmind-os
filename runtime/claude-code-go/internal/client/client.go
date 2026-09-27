@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fractalmind-ai/claude-code-go/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/claude-code-go/internal/config"
 )
 
 type Provider interface {

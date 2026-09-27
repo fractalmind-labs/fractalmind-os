@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fractalmind-ai/fractalbot/internal/channels"
-	"github.com/fractalmind-ai/fractalbot/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/channels"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
 )
 
 const (

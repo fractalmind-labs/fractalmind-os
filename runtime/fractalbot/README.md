@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Go Version](https://img.shields.io/badge/go-%3E%201.23-00ADD8E.svg)](https://go.dev/)
-[![Stars](https://img.shields.io/github/stars/fractalmind-ai/fractalbot?style=social)](https://github.com/fractalmind-ai/fractalbot/stargazers)
+[![Stars](https://img.shields.io/github/stars/fractalmind-labs/fractalmind-os?style=social)](https://github.com/fractalmind-labs/fractalmind-os/stargazers)
 
 FractalBot is a local-first Go messaging gateway that connects chat channels to external agent runtimes through HTTP, CLI, and WebSocket interfaces.
 
@@ -81,8 +81,8 @@ The Gateway Server wires channel adapters, the buffered Message Bus, and the sel
 Requires Go 1.23 or newer.
 
 ```bash
-git clone git@github.com:fractalmind-ai/fractalbot.git
-cd fractalbot
+git clone https://github.com/fractalmind-labs/fractalmind-os.git
+cd fractalmind-os/runtime/fractalbot
 cp config.example.yaml config.yaml
 
 # Edit config.yaml to enable and configure a channel and router.

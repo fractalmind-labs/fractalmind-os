@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fractalmind-ai/fractalmind-envd/internal/demoagent"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/demoagent"
 )
 
 type output struct {

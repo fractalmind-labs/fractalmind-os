@@ -1,6 +1,6 @@
 package channels
 
-import "github.com/fractalmind-ai/fractalbot/pkg/protocol"
+import "github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/pkg/protocol"
 
 // MessageManager is a minimal stub for channel message routing.
 type MessageManager struct{}

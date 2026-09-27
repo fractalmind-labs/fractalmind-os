@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fractalmind-ai/fractalmind-envd/internal/config"
-	"github.com/fractalmind-ai/fractalmind-envd/internal/sui"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 

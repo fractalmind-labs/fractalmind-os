@@ -27,7 +27,7 @@ build Message  ──sponsored tx──▶  mint Message object            fract
 | Path | Contents | Status |
 |------|----------|--------|
 | `sui-contracts/` | Move package: `Mailbox` / `Message` objects, send/process/burn, events | Phase 1, active |
-| `client-go/` | Go client used by [fractalbot](https://github.com/fractalmind-ai/fractalbot): event listener, payload codec | Phase 1, upcoming |
+| `client-go/` | Go client used by [fractalbot](https://github.com/fractalmind-labs/fractalmind-os/tree/main/runtime/fractalbot): event listener, payload codec | Phase 1, upcoming |
 | `gas-station-adapter/` | Outbound co-signing relay against a self-hosted gas pool or sponsored RPC providers | Phase 1, upcoming |
 | `docs/` | Design docs | — |
 

@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	gasstation "github.com/fractalmind-ai/fractal-demail/gas-station-adapter"
+	gasstation "github.com/fractalmind-labs/fractalmind-os/protocols/fractal-demail/gas-station-adapter"
 )
 
 // CLIChainSender is the production ChainSender: it mints a demail Message via

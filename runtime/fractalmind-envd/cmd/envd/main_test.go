@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fractalmind-ai/fractalmind-envd/internal/config"
-	"github.com/fractalmind-ai/fractalmind-envd/internal/nodecommand"
-	"github.com/fractalmind-ai/fractalmind-envd/internal/runtimeadapter"
-	"github.com/fractalmind-ai/fractalmind-envd/internal/ws"
-	"github.com/fractalmind-ai/fractalmind-envd/internal/wsauth"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/ws"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/wsauth"
 )
 
 func TestSignedCommandWithoutStateDirExecutorFailsClosed(t *testing.T) {

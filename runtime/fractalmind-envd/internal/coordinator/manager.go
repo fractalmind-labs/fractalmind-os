@@ -8,10 +8,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/fractalmind-ai/fractalmind-envd/internal/agent"
-	"github.com/fractalmind-ai/fractalmind-envd/internal/heartbeat"
-	"github.com/fractalmind-ai/fractalmind-envd/internal/ws"
-	"github.com/fractalmind-ai/fractalmind-envd/internal/wsauth"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/agent"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/heartbeat"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/ws"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/wsauth"
 	"github.com/gorilla/websocket"
 )
 

@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python 3](https://img.shields.io/badge/python-3-blue.svg)](https://www.python.org/downloads/release/python-38/)
-[![Stars](https://img.shields.io/github/stars/fractalmind-ai/team-manager-skill?style=social)](https://github.com/fractalmind-ai/team-manager-skill/stargazers)
+[![Stars](https://img.shields.io/github/stars/fractalmind-labs/fractalmind-os?style=social)](https://github.com/fractalmind-labs/fractalmind-os/stargazers)
 
 Team orchestration system for managing multi-agent teams with lead-based coordination.
 
@@ -78,6 +78,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔗 Links
 
-- [FractalMind AI](https://github.com/fractalmind-ai)
-- [Agent Manager](https://github.com/fractalmind-ai/agent-manager-skill)
-- [oh-my-code](https://github.com/fractalmind-ai/oh-my-code)
+- [FractalMind AI](https://github.com/fractalmind-labs)
+- [Agent Manager](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill)
+- [oh-my-code](https://github.com/fractalmind-labs/fractalmind-os/tree/main/workspace/oh-my-code)

@@ -5,7 +5,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/fractalmind-ai/fractalmind-envd/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/config"
 )
 
 func boolPtr(v bool) *bool { return &v }

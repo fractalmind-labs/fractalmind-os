@@ -102,4 +102,4 @@ This project follows FractalMind AI's philosophy:
 - [Go Documentation](https://go.dev/doc/)
 - [Effective Go](https://go.dev/doc/effective_go)
 - [Clawdbot](https://github.com/clawdbot/clawdbot) - Inspiration source
-- [FractalMind AI](https://github.com/fractalmind-ai) - Organization
+- [FractalMind AI](https://github.com/fractalmind-labs) - Organization

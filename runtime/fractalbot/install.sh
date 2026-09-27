@@ -46,7 +46,8 @@ config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/fractalbot"
 config_path="${config_dir}/config.yaml"
 data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/fractalbot"
 workspace_dir="${data_dir}/workspace"
-default_ref="cb052356b79b4e679efb03a93210ab4628590076"
+# fractalmind-os commit that carries the originally pinned fractalbot installer release.
+default_ref="4cf2350574da7b58240eb16b3b5ee7df220606ac"
 
 repo_root=""
 cleanup=""
@@ -66,14 +67,19 @@ else
     exit 1
   fi
   ref="${FRACTALBOT_REF:-${FRACTALBOT_VERSION:-${default_ref}}}"
+  case "${ref}" in
+    # Release tags from the standalone repository were imported under this prefix.
+    v[0-9]*) ref="import/fractalbot/${ref}" ;;
+  esac
   tmp_dir="$(mktemp -d)"
   cleanup="${tmp_dir}"
   log "Cloning fractalbot (${ref}) into ${tmp_dir}..."
   git -C "${tmp_dir}" init -q
-  git -C "${tmp_dir}" remote add origin https://github.com/fractalmind-ai/fractalbot.git
-  git -C "${tmp_dir}" fetch --depth 1 origin "${ref}" >/dev/null 2>&1
+  git -C "${tmp_dir}" remote add origin https://github.com/fractalmind-labs/fractalmind-os.git
+  git -C "${tmp_dir}" sparse-checkout set runtime/fractalbot protocols/fractal-demail
+  git -C "${tmp_dir}" fetch --depth 1 --filter=blob:none origin "${ref}" >/dev/null 2>&1
   git -C "${tmp_dir}" checkout -q FETCH_HEAD
-  repo_root="${tmp_dir}"
+  repo_root="${tmp_dir}/runtime/fractalbot"
 fi
 
 if [ ! -f "${repo_root}/go.mod" ]; then

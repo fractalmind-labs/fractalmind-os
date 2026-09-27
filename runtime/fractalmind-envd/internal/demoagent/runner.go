@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/fractalmind-ai/fractalmind-envd/internal/sui"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui"
 )
 
 const schemaVersion = "envd-policy-demo/v1"

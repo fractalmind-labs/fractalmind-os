@@ -16,11 +16,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fractalmind-ai/fractalbot/internal/agent"
-	"github.com/fractalmind-ai/fractalbot/internal/bus"
-	"github.com/fractalmind-ai/fractalbot/internal/channels"
-	"github.com/fractalmind-ai/fractalbot/internal/config"
-	"github.com/fractalmind-ai/fractalbot/internal/heartbeat"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/agent"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/bus"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/channels"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/heartbeat"
 	"github.com/gorilla/websocket"
 )
 

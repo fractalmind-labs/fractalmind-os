@@ -48,7 +48,7 @@ The CloudBank Team sub-organization demonstrates the fractal nesting capability.
 ## Connecting to Testnet
 
 ```typescript
-import { FractalMindSDK } from '@anthropic-ai/fractalmind-sdk';
+import { FractalMindSDK } from '@fractalmind-labs/fractalmind-sdk';
 import { SuiClient } from '@mysten/sui/client';
 
 const client = new SuiClient({ url: 'https://fullnode.testnet.sui.io:443' });

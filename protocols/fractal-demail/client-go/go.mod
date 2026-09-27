@@ -1,4 +1,4 @@
-module github.com/fractalmind-ai/fractal-demail/client-go
+module github.com/fractalmind-labs/fractalmind-os/protocols/fractal-demail/client-go
 
 go 1.24
 

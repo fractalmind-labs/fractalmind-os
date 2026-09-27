@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fractalmind-ai/fractalmind-envd/internal/nodecommand"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 )
 
 var actionOperations = map[string]Operation{

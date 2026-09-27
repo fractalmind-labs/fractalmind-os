@@ -6,21 +6,21 @@ This skill is designed to be installable via OpenSkills into arbitrary locations
 
 ## Installation
 
-### via openskills (recommended)
+### via skills CLI (recommended)
 
 ```bash
 # Project installation
-openskills install fractalmind-ai/agent-manager-skill
+npx skills add fractalmind-labs/fractalmind-os --skill agent-manager
 
 # Global installation
-openskills install fractalmind-ai/agent-manager-skill --global
+npx skills add fractalmind-labs/fractalmind-os --skill agent-manager -g
 ```
 
 ### Manual installation
 
 ```bash
-git clone https://github.com/fractalmind-ai/agent-manager-skill.git
-cp -r agent-manager-skill ~/.claude/skills/agent-manager
+git clone https://github.com/fractalmind-labs/fractalmind-os.git
+cp -r fractalmind-os/skills/coordination/agent-manager-skill/agent-manager ~/.claude/skills/agent-manager
 ```
 
 ## Usage

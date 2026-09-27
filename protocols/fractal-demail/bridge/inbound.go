@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fractalmind-ai/fractal-demail/client-go/envelope"
-	"github.com/fractalmind-ai/fractal-demail/client-go/schema"
+	"github.com/fractalmind-labs/fractalmind-os/protocols/fractal-demail/client-go/envelope"
+	"github.com/fractalmind-labs/fractalmind-os/protocols/fractal-demail/client-go/schema"
 )
 
 // InboundEmail is a Web2 message extracted from a verified provider webhook.

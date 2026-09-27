@@ -16,12 +16,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fractalmind-ai/fractal-demail/client-go/envelope"
-	"github.com/fractalmind-ai/fractal-demail/client-go/listener"
-	"github.com/fractalmind-ai/fractal-demail/client-go/schema"
-	gasstation "github.com/fractalmind-ai/fractal-demail/gas-station-adapter"
+	"github.com/fractalmind-labs/fractalmind-os/protocols/fractal-demail/client-go/envelope"
+	"github.com/fractalmind-labs/fractalmind-os/protocols/fractal-demail/client-go/listener"
+	"github.com/fractalmind-labs/fractalmind-os/protocols/fractal-demail/client-go/schema"
+	gasstation "github.com/fractalmind-labs/fractalmind-os/protocols/fractal-demail/gas-station-adapter"
 
-	"github.com/fractalmind-ai/fractalbot/pkg/protocol"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/pkg/protocol"
 )
 
 const (

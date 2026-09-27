@@ -18,12 +18,12 @@ ROM manifest 或 workspace 在引用 skill 时，必须声明 source type。
 示例：
 ```yaml
 skills:
-  - name: agent-manager
+  - name: agent-calendar
     source:
       type: git
-      repo: https://github.com/fractalmind-ai/agent-manager-skill.git
-      ref: v1.0.0
-      path: agent-manager
+      repo: https://github.com/fractalmind-labs/fractalmind-os.git
+      ref: import/agent-calendar-skill/v0.1.0
+      path: skills/coordination/agent-calendar-skill/agent-calendar
 ```
 
 ### embedded

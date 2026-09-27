@@ -1,5 +1,10 @@
 # Branch Protection & Required CI Gates Rollout (Issue #49)
 
+> Historical record: this rollout targeted the standalone `fractalmind-ai/agent-manager-skill`
+> repository before it moved into `fractalmind-labs/fractalmind-os`. Do not apply these commands
+> to the monorepo as written; its required checks are tracked in
+> [fractalmind-labs/fractalmind-os#6](https://github.com/fractalmind-labs/fractalmind-os/issues/6).
+
 This document defines a safe, auditable rollout to enforce CI + review governance on `main`.
 
 ## Scope

@@ -11,7 +11,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
-	"github.com/fractalmind-ai/fractalbot/pkg/protocol"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/pkg/protocol"
 )
 
 // DiscordBot implements a minimal Discord channel skeleton.

@@ -9,7 +9,7 @@ import (
 
 	"github.com/block-vision/sui-go-sdk/models"
 	suisdk "github.com/block-vision/sui-go-sdk/sui"
-	"github.com/fractalmind-ai/fractalmind-envd/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/config"
 )
 
 // RPCClient abstracts the SUI RPC methods we use, for testability.

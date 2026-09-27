@@ -6,8 +6,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/fractalmind-ai/fractalbot/internal/channels"
-	"github.com/fractalmind-ai/fractalbot/pkg/protocol"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/channels"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/pkg/protocol"
 )
 
 // recordingSender captures the ordered sequence of sent messages so tests can

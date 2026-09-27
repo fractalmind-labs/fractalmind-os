@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fractalmind-ai/fractal-demail/client-go/envelope"
-	"github.com/fractalmind-ai/fractal-demail/client-go/schema"
+	"github.com/fractalmind-labs/fractalmind-os/protocols/fractal-demail/client-go/envelope"
+	"github.com/fractalmind-labs/fractalmind-os/protocols/fractal-demail/client-go/schema"
 )
 
 const (

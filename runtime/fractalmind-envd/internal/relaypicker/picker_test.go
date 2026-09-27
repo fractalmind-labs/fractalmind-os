@@ -3,7 +3,7 @@ package relaypicker
 import (
 	"testing"
 
-	"github.com/fractalmind-ai/fractalmind-envd/internal/sui"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui"
 )
 
 func TestSelectBest_OrgMatchPrioritized(t *testing.T) {

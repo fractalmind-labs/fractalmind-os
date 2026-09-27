@@ -110,7 +110,7 @@ sui client publish --gas-budget 100000000
 
 ## Where It Fits
 
-Part of the [FractalMind AI](https://github.com/fractalmind-ai) ecosystem:
+Part of the [FractalMind AI](https://github.com/fractalmind-labs) ecosystem:
 
 ```
 fractalmind-protocol (this repo)  ← On-chain trust layer (L2)

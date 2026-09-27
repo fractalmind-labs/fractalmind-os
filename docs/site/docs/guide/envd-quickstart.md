@@ -18,8 +18,8 @@ This guide walks you through installing and running `fractalmind-envd` on a mach
 ### 1. Clone and Build
 
 ```bash
-git clone https://github.com/fractalmind-ai/fractalmind-envd.git
-cd fractalmind-envd
+git clone https://github.com/fractalmind-labs/fractalmind-os.git
+cd fractalmind-os/runtime/fractalmind-envd
 make build
 ```
 
@@ -292,7 +292,7 @@ mkdir -p ~/.sui
 Your org admin needs to register your agent on-chain using the [fractalmind-protocol SDK](/protocol/sdk):
 
 ```typescript
-import { FractalMindSDK } from '@anthropic-ai/fractalmind-sdk'
+import { FractalMindSDK } from '@fractalmind-labs/fractalmind-sdk'
 
 const sdk = new FractalMindSDK({ network: 'testnet' })
 const cert = await sdk.registerAgent(orgId, {

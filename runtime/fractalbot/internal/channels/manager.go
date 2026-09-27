@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fractalmind-ai/fractalbot/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
 )
 
 // Manager starts and stops configured channels.

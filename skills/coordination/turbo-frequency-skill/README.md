@@ -40,8 +40,8 @@ No external dependencies. No background process. Just a skill your agent invokes
 npx skills add fractalmind-labs/fractalmind-os --skill turbo-frequency
 
 # Manual
-git clone https://github.com/fractalmind-ai/turbo-frequency-skill.git
-cp -r turbo-frequency-skill/turbo-frequency ~/.claude/skills/turbo-frequency
+git clone https://github.com/fractalmind-labs/fractalmind-os.git
+cp -r fractalmind-os/skills/coordination/turbo-frequency-skill/turbo-frequency ~/.claude/skills/turbo-frequency
 ```
 
 ## Quick Start

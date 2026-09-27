@@ -15,7 +15,7 @@ npx -y openskills@latest update agent-manager
 
 If `agent-manager` is not installed yet in this repo, install once:
 ```bash
-npx -y openskills@latest install fractalmind-ai/agent-manager-skill -y
+npx -y skills@latest add fractalmind-labs/fractalmind-os --skill agent-manager -y
 ```
 
 ## Verify

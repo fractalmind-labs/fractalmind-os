@@ -1,6 +1,6 @@
 # client-go
 
-Go client for fractal-demail, consumed by [fractalbot](https://github.com/fractalmind-ai/fractalbot).
+Go client for fractal-demail, consumed by [fractalbot](https://github.com/fractalmind-labs/fractalmind-os/tree/main/runtime/fractalbot).
 
 Implemented:
 

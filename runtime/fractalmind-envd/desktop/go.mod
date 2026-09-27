@@ -1,4 +1,4 @@
-module github.com/fractalmind-ai/envd-desktop
+module github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/desktop
 
 go 1.24.0
 

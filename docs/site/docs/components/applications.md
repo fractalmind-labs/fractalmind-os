@@ -18,7 +18,7 @@ fractalbot-backed agents, CLIs, and domain applications can use the same signed-
 
 ## oh-my-code
 
-[oh-my-code](https://github.com/fractalmind-ai/oh-my-code) is the reference local workspace for heartbeat, memory, OKR, and team coordination. Its local governance loop is separate from remote node authority.
+[oh-my-code](https://github.com/fractalmind-labs/fractalmind-os/tree/main/workspace/oh-my-code) is the reference local workspace for heartbeat, memory, OKR, and team coordination. Its local governance loop is separate from remote node authority.
 
 ## Application Rules
 

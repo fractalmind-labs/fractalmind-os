@@ -12,8 +12,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/fractalmind-ai/fractalmind-envd/internal/config"
-	"github.com/fractalmind-ai/fractalmind-envd/internal/stun"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/stun"
 )
 
 // NATType describes the NAT environment of this node.

@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fractalmind-ai/fractalmind-envd/internal/agent"
-	"github.com/fractalmind-ai/fractalmind-envd/internal/heartbeat"
-	"github.com/fractalmind-ai/fractalmind-envd/internal/ws"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/agent"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/heartbeat"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/ws"
 	"github.com/gorilla/websocket"
 )
 

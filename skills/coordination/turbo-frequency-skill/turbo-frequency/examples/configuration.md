@@ -87,7 +87,7 @@ Then in your heartbeat handler, add scoring logic:
 
 ## Integration with agent-manager
 
-If you use [agent-manager-skill](https://github.com/fractalmind-ai/agent-manager-skill) for cron management, the sync step is:
+If you use [agent-manager-skill](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill) for cron management, the sync step is:
 
 ```bash
 python3 .agents/skills/agent-manager/scripts/main.py heartbeat sync
