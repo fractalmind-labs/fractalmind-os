@@ -1,5 +1,5 @@
 {
-  "name": "@fractalmind-ai/fractalmind-sdk",
+  "name": "@fractalmind-labs/fractalmind-sdk",
   "version": "0.1.0",
   "description": "TypeScript SDK for FractalMind Protocol on Sui",
   "license": "MIT",

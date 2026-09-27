@@ -11,7 +11,7 @@ Agent availability calendar system — like Google Calendar for your AI agents.
 
 ## Installation
 
-This skill follows the [agent-os-spec](https://github.com/fractalmind-ai/agent-os-spec) skill contract.
+This skill follows the [agent-os-spec](https://github.com/fractalmind-labs/fractalmind-os/tree/main/spec/agent-os-spec) skill contract.
 
 From the workspace where your agent will use it:
 
@@ -31,9 +31,9 @@ skills:
   - name: agent-calendar
     source:
       type: git
-      repo: https://github.com/fractalmind-ai/agent-calendar-skill.git
-      ref: v0.1.0
-      path: agent-calendar
+      repo: https://github.com/fractalmind-labs/fractalmind-os.git
+      ref: import/agent-calendar-skill/v0.1.0
+      path: skills/coordination/agent-calendar-skill/agent-calendar
 ```
 
 ### Manual installation

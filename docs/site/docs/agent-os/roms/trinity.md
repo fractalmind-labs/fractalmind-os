@@ -74,7 +74,7 @@ After installation, your workspace will contain:
 |---------|------|------------|
 | v0.1.0 | 2026-04-12 | Initial draft — AI employee OS with watched thread discipline |
 
-[View full release notes on GitHub](https://github.com/fractalmind-ai/agent-os-roms/blob/main/roms/trinity/release-notes.md)
+[View full release notes on GitHub](https://github.com/fractalmind-labs/fractalmind-os/blob/main/roms/agent-os-roms/roms/trinity/release-notes.md)
 
 ## Install
 

@@ -20,18 +20,13 @@ plan-dog/
 
 ## Installation
 
-Install the skill into your Codex global skills directory:
+Install the skill for Codex at the user level:
 
 ```bash
-mkdir -p ~/.codex/skills
-git clone git@github.com:fractalmind-ai/plan-dog.git ~/.codex/skills/plan-dog
+npx skills add fractalmind-labs/fractalmind-os --skill plan-dog -a codex -g
 ```
 
-If the directory already exists, update it in place:
-
-```bash
-git -C ~/.codex/skills/plan-dog pull
-```
+Run the same command again to update an existing installation.
 
 ## Usage
 

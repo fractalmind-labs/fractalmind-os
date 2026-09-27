@@ -2,8 +2,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python 3](https://img.shields.io/badge/python-3-blue.svg)](https://www.python.org/downloads/release/python-38/)
-[![Stars](https://img.shields.io/github/stars/fractalmind-ai/oh-my-code?style=social)](https://github.com/fractalmind-ai/oh-my-code/stargazers)
-[![Forks](https://img.shields.io/github/forks/fractalmind-ai/oh-my-code?style=social)](https://github.com/fractalmind-ai/oh-my-code/network/members)
+[![Stars](https://img.shields.io/github/stars/fractalmind-labs/fractalmind-os?style=social)](https://github.com/fractalmind-labs/fractalmind-os/stargazers)
+[![Forks](https://img.shields.io/github/forks/fractalmind-labs/fractalmind-os?style=social)](https://github.com/fractalmind-labs/fractalmind-os/network/members)
 
 `oh-my-code` is a turnkey, process-oriented multi-agent setup for automated development workflows.
 
@@ -134,6 +134,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔗 Links
 
-- [FractalMind AI](https://github.com/fractalmind-ai)
-- [Agent Manager](https://github.com/fractalmind-ai/agent-manager-skill)
-- [Team Manager](https://github.com/fractalmind-ai/team-manager-skill)
+- [FractalMind AI](https://github.com/fractalmind-labs)
+- [Agent Manager](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill)
+- [Team Manager](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/team-manager-skill)

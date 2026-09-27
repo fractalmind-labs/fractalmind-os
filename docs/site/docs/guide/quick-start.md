@@ -150,11 +150,11 @@ npx skills add fractalmind-labs/fractalmind-os --skill team-chat
 For on-chain organization management on SUI:
 
 ```bash
-npm install @anthropic-ai/fractalmind-sdk
+npm install @fractalmind-labs/fractalmind-sdk
 ```
 
 ```typescript
-import { FractalMindSDK } from '@anthropic-ai/fractalmind-sdk'
+import { FractalMindSDK } from '@fractalmind-labs/fractalmind-sdk'
 import { SuiClient } from '@mysten/sui/client'
 
 const client = new SuiClient({ url: 'https://fullnode.testnet.sui.io:443' })

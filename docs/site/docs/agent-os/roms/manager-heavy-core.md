@@ -28,14 +28,14 @@ Full template set with battle-tested principles, escalation templates, OKR contr
 
 | Skill | Source | Description |
 |-------|--------|-------------|
-| [agent-manager](https://github.com/fractalmind-ai/agent-manager-skill) | git | Employee agent lifecycle management — start, stop, monitor, assign tasks |
-| [team-manager](https://github.com/fractalmind-ai/team-manager-skill) | git | Team orchestration — create teams, assign tasks, monitor progress |
+| [agent-manager](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill) | git | Employee agent lifecycle management — start, stop, monitor, assign tasks |
+| [team-manager](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/team-manager-skill) | git | Team orchestration — create teams, assign tasks, monitor progress |
 
 ### Optional (optional_skills)
 
 | Skill | Source | Description |
 |-------|--------|-------------|
-| [agent-calendar](https://github.com/fractalmind-ai/agent-calendar-skill) | git (v0.1.0) | Agent availability calendar — track free/busy/unavailable states, monitor quotas |
+| [agent-calendar](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-calendar-skill) | git (v0.1.0) | Agent availability calendar — track free/busy/unavailable states, monitor quotas |
 | notifier | embedded | Multi-channel notifications — Feishu, Slack, Telegram, email |
 
 ## Workspace Files
@@ -85,7 +85,7 @@ After installation, your workspace will contain:
 | v0.2.0 | 2026-04-15 | Full 11-file template set, TODO-first heartbeat |
 | v0.1.0 | 2026-03-26 | Bootstrap draft |
 
-[View full release notes on GitHub](https://github.com/fractalmind-ai/agent-os-roms/blob/main/roms/manager-heavy-core/release-notes.md)
+[View full release notes on GitHub](https://github.com/fractalmind-labs/fractalmind-os/blob/main/roms/agent-os-roms/roms/manager-heavy-core/release-notes.md)
 
 ## Install
 

@@ -76,24 +76,24 @@ sudo apt update && sudo apt install -y golang git python3 tmux
 ### 方式一：一键脚本（推荐）
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/fractalmind-ai/fractalbot/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/fractalmind-labs/fractalmind-os/main/runtime/fractalbot/install.sh | bash
 ```
 
 安装完成后，二进制文件位于 `~/.local/bin/fractalbot`，默认配置在 `~/.config/fractalbot/config.yaml`。
 
-> 如需指定版本：`FRACTALBOT_REF=v0.2.1 curl -fsSL .../install.sh | bash`
+> 如需指定版本：`curl -fsSL .../install.sh | FRACTALBOT_REF=v0.2.0 bash`
 
 Linux 用户可追加 `--systemd-user` 自动注册为 systemd 用户服务：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/fractalmind-ai/fractalbot/main/install.sh | bash -s -- --systemd-user
+curl -fsSL https://raw.githubusercontent.com/fractalmind-labs/fractalmind-os/main/runtime/fractalbot/install.sh | bash -s -- --systemd-user
 ```
 
 ### 方式二：手动编译
 
 ```bash
-git clone https://github.com/fractalmind-ai/fractalbot.git
-cd fractalbot
+git clone https://github.com/fractalmind-labs/fractalmind-os.git
+cd fractalmind-os/runtime/fractalbot
 go build -o fractalbot ./cmd/fractalbot
 ./fractalbot --help   # 验证安装成功
 ```
@@ -355,7 +355,7 @@ channels:
 
 > 已通过快速入门跑通单 Agent？本节介绍完整的多 Agent 架构。
 
-FractalBot 通过 `agents.ohMyCode` 配置将消息路由到 [agent-manager](https://github.com/fractalmind-ai/agent-manager-skill)（基于 tmux + Claude Code 的 Agent 管理系统）。每个 Agent 跑在独立的 tmux session 里。
+FractalBot 通过 `agents.ohMyCode` 配置将消息路由到 [agent-manager](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill)（基于 tmux + Claude Code 的 Agent 管理系统）。每个 Agent 跑在独立的 tmux session 里。
 
 ### 1. 配置 AGENTS.md
 
@@ -656,9 +656,9 @@ Slack 渠道未在配置中启用。确认 `channels.slack.enabled: true`，且 
 
 ## 更多资源
 
-- [GitHub 仓库](https://github.com/fractalmind-ai/fractalbot)
-- [config.example.yaml](https://github.com/fractalmind-ai/fractalbot/blob/main/config.example.yaml) — 完整配置参考
-- [agent-manager skill](https://github.com/fractalmind-ai/agent-manager-skill) — Agent 生命周期管理
-- [use-fractalbot skill](https://github.com/fractalmind-ai/use-fractalbot-skill) — Agent 回复消息的 skill
-- [ROADMAP.md](https://github.com/fractalmind-ai/fractalbot/blob/main/ROADMAP.md) — 开发路线图
-- [CONTRIBUTING.md](https://github.com/fractalmind-ai/fractalbot/blob/main/CONTRIBUTING.md) — 贡献指南
+- [GitHub 仓库](https://github.com/fractalmind-labs/fractalmind-os/tree/main/runtime/fractalbot)
+- [config.example.yaml](https://github.com/fractalmind-labs/fractalmind-os/blob/main/runtime/fractalbot/config.example.yaml) — 完整配置参考
+- [agent-manager skill](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill) — Agent 生命周期管理
+- [use-fractalbot skill](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/use-fractalbot-skill) — Agent 回复消息的 skill
+- [ROADMAP.md](https://github.com/fractalmind-labs/fractalmind-os/blob/main/runtime/fractalbot/ROADMAP.md) — 开发路线图
+- [CONTRIBUTING.md](https://github.com/fractalmind-labs/fractalmind-os/blob/main/runtime/fractalbot/CONTRIBUTING.md) — 贡献指南

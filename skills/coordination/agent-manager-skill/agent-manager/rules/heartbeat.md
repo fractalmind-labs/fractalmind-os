@@ -3,14 +3,15 @@
 仅在当前 heartbeat 需要推进 `agent-manager-skill` 相关 OKR 时读取本文件。
 
 ## 目标范围
-- `fractalmind-ai/agent-manager-skill` 的 Phase 2 / inbound queue / replay / rescue-sweep / heartbeat 相关工作
+- `fractalmind-labs/fractalmind-os` 中 `skills/coordination/agent-manager-skill` 的 Phase 2 / inbound queue / replay / rescue-sweep / heartbeat 相关工作
 - 只补 skill-specific 规则；全局升级、审批、静默窗口仍以根级 `HEARTBEAT.md` 为准
 
 ## 心跳执行规则
-1. 先 `cd projects/fractalmind-ai/agent-manager-skill`
+1. 先 `cd projects/fractalmind-labs/fractalmind-os/skills/coordination/agent-manager-skill`
 2. 先核对 **当前 canonical tracker**，不要直接复用旧 issue 编号：
-   - `gh issue list -R fractalmind-ai/agent-manager-skill --state open`
-   - `gh pr list -R fractalmind-ai/agent-manager-skill --state open`
+   - `gh issue list -R fractalmind-labs/fractalmind-os --state open --search agent-manager`
+   - `gh pr list -R fractalmind-labs/fractalmind-os --state open --search agent-manager`
+   - 迁移前的历史 issue/PR 仍在 `fractalmind-ai/agent-manager-skill`
 3. `#138 / #141 / PR #142` 现在都只算**历史证据**；若 heartbeat 里仍把它们写成当前 tracker，必须先纠偏再汇报
 4. 若现有 Phase 2 切片都已 merge/closed，则先判断：
    - 是 Phase 2 已实质收口，可转 COMPLETE / observe

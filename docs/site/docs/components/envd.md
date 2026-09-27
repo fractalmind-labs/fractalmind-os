@@ -2,7 +2,7 @@
 
 `fractalmind-envd` is the target-side P2P data and execution runtime for remote agent control.
 
-**Repo**: [fractalmind-ai/fractalmind-envd](https://github.com/fractalmind-ai/fractalmind-envd)
+**Repo**: [runtime/fractalmind-envd](https://github.com/fractalmind-labs/fractalmind-os/tree/main/runtime/fractalmind-envd)
 
 **Language**: Go
 

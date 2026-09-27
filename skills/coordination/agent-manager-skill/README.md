@@ -43,8 +43,8 @@ npx skills add fractalmind-labs/fractalmind-os --skill agent-manager
 ### Manual installation
 
 ```bash
-git clone https://github.com/fractalmind-ai/agent-manager-skill.git
-cd agent-manager-skill
+git clone https://github.com/fractalmind-labs/fractalmind-os.git
+cd fractalmind-os/skills/coordination/agent-manager-skill
 cp -r agent-manager ~/.claude/skills/agent-manager
 ```
 

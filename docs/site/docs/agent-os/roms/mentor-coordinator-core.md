@@ -74,7 +74,7 @@ The manifest expects these files and directories to exist. The installer should 
 |---------|------|------------|
 | v0.1.0 | 2026-03-29 | Bootstrap draft with coordination-type contracts |
 
-[View full release notes on GitHub](https://github.com/fractalmind-ai/agent-os-roms/blob/main/roms/mentor-coordinator-core/release-notes.md)
+[View full release notes on GitHub](https://github.com/fractalmind-labs/fractalmind-os/blob/main/roms/agent-os-roms/roms/mentor-coordinator-core/release-notes.md)
 
 ## Install
 

@@ -5,8 +5,8 @@ Thanks for your interest in contributing! This repo powers the documentation sit
 ## Getting Started
 
 ```bash
-git clone https://github.com/fractalmind-ai/fractalmind-ai.github.io.git
-cd fractalmind-ai.github.io
+git clone https://github.com/fractalmind-labs/fractalmind-os.git
+cd fractalmind-os/docs/site
 npm ci
 npm run docs:dev
 ```
@@ -53,7 +53,7 @@ The site uses a custom VitePress theme located in `docs/.vitepress/theme/`. If y
 
 ## Reporting Issues
 
-Use [GitHub Issues](https://github.com/fractalmind-ai/fractalmind-ai.github.io/issues) with the appropriate template:
+Use [GitHub Issues](https://github.com/fractalmind-labs/fractalmind-os/issues) with the appropriate template:
 - **Bug Report** — for broken pages, links, or rendering issues
 - **Feature Request** — for new content or site improvements
 

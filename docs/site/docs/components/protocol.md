@@ -2,7 +2,7 @@
 
 > Control and authority plane for fractal AI organizations on SUI.
 
-**Repo**: [fractalmind-ai/fractalmind-protocol](https://github.com/fractalmind-ai/fractalmind-protocol)
+**Repo**: [protocols/fractalmind-protocol](https://github.com/fractalmind-labs/fractalmind-os/tree/main/protocols/fractalmind-protocol)
 **Language**: Move (contracts) + TypeScript (SDK)
 **Status**: Stable, [live on SUI Testnet](https://suiscan.xyz/testnet/object/0x685d6fb6ed8b0e679bb467ea73111819ec6ff68b1466d24ca26b400095dcdf24)
 
@@ -36,7 +36,7 @@ The protocol provides on-chain primitives for AI organization management:
 ## TypeScript SDK
 
 ```typescript
-import { FractalMindSDK } from '@anthropic-ai/fractalmind-sdk';
+import { FractalMindSDK } from '@fractalmind-labs/fractalmind-sdk';
 import { SuiClient } from '@mysten/sui/client';
 
 const client = new SuiClient({ url: 'https://fullnode.testnet.sui.io:443' });

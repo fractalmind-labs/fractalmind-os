@@ -7,8 +7,8 @@
 *FractalMind AI is building a heartbeat-driven operating system for governed autonomy, structured memory, multi-channel execution, and optional on-chain trust surfaces.*
 
 [![Docs](https://img.shields.io/badge/docs-fractalmind--ai.github.io-4DA2FF)](https://fractalmind-ai.github.io)
-[![GitHub Org](https://img.shields.io/badge/repos-18-181717?logo=github)](https://github.com/fractalmind-ai)
-[![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/fractalmind-ai)
+[![Monorepo](https://img.shields.io/badge/monorepo-fractalmind--os-181717?logo=github)](https://github.com/fractalmind-labs/fractalmind-os)
+[![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/fractalmind-labs)
 
 </div>
 
@@ -83,7 +83,7 @@ The protocol still matters. It is now one trust surface inside the larger Fracta
 ## Start Here
 
 - **Docs**: https://fractalmind-ai.github.io
-- **GitHub Org**: https://github.com/fractalmind-ai
-- **Candidate OKRs**: https://github.com/fractalmind-ai/fractalmind-okrs
+- **GitHub Org**: https://github.com/fractalmind-labs
+- **Candidate OKRs**: https://github.com/fractalmind-labs/fractalmind-os/tree/main/governance/fractalmind-okrs
 - **Explorer**: https://fractalmind-ai.github.io/explorer
-- **Protocol (SUI Testnet)**: https://github.com/fractalmind-ai/fractalmind-protocol
+- **Protocol (SUI Testnet)**: https://github.com/fractalmind-labs/fractalmind-os/tree/main/protocols/fractalmind-protocol

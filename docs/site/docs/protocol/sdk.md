@@ -5,13 +5,13 @@ The FractalMind SDK provides a TypeScript interface for interacting with the on-
 ## Installation
 
 ```bash
-npm install @anthropic-ai/fractalmind-sdk
+npm install @fractalmind-labs/fractalmind-sdk
 ```
 
 ## Setup
 
 ```typescript
-import { FractalMindSDK } from '@anthropic-ai/fractalmind-sdk';
+import { FractalMindSDK } from '@fractalmind-labs/fractalmind-sdk';
 import { SuiClient } from '@mysten/sui/client';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 
@@ -190,4 +190,4 @@ const created = result.objectChanges?.filter(c => c.type === 'created');
 
 ## Source Code
 
-Full SDK source: [fractalmind-ai/fractalmind-protocol/sdk](https://github.com/fractalmind-ai/fractalmind-protocol/tree/main/sdk)
+Full SDK source: [protocols/fractalmind-protocol/sdk](https://github.com/fractalmind-labs/fractalmind-os/tree/main/protocols/fractalmind-protocol/sdk)

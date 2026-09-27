@@ -32,23 +32,18 @@ Install with the Codex skill installer:
 
 ```bash
 python ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
-  --repo fractalmind-ai/react-frontend-dev-skill \
-  --path . \
+  --repo fractalmind-labs/fractalmind-os \
+  --path skills/development/react-frontend-dev-skill \
   --name react-frontend-dev
 ```
 
-Manual install also works:
+The skills CLI also works:
 
 ```bash
-mkdir -p ~/.codex/skills
-git clone git@github.com:fractalmind-ai/react-frontend-dev-skill.git ~/.codex/skills/react-frontend-dev
+npx skills add fractalmind-labs/fractalmind-os --skill react-frontend-dev -a codex -g
 ```
 
-If the directory already exists, update it in place:
-
-```bash
-git -C ~/.codex/skills/react-frontend-dev pull
-```
+Run the same command again to update an existing installation.
 
 Restart Codex after installation so the new skill is picked up.
 

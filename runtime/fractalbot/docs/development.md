@@ -3,8 +3,8 @@
 ## Setup
 
 ```bash
-git clone git@github.com:fractalmind-ai/fractalbot.git
-cd fractalbot
+git clone https://github.com/fractalmind-labs/fractalmind-os.git
+cd fractalmind-os/runtime/fractalbot
 go mod download
 cp config.example.yaml config.yaml
 ```

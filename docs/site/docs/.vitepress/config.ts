@@ -116,7 +116,7 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/fractalmind-ai' },
+      { icon: 'github', link: 'https://github.com/fractalmind-labs' },
     ],
 
     footer: {
@@ -129,7 +129,7 @@ export default defineConfig({
     },
 
     editLink: {
-      pattern: 'https://github.com/fractalmind-ai/fractalmind-ai.github.io/edit/main/docs/:path',
+      pattern: 'https://github.com/fractalmind-labs/fractalmind-os/edit/main/docs/site/docs/:path',
       text: 'Edit this page on GitHub',
     },
   },

@@ -2,7 +2,7 @@
 
 > Multi-channel application adapter for AI agent communication.
 
-**Repo**: [fractalmind-ai/fractalbot](https://github.com/fractalmind-ai/fractalbot)
+**Repo**: [runtime/fractalbot](https://github.com/fractalmind-labs/fractalmind-os/tree/main/runtime/fractalbot)
 **Language**: Go
 **Status**: Active development
 
@@ -30,7 +30,7 @@ One gateway, all channels.
 
 ```bash
 # Install
-go install github.com/fractalmind-ai/fractalbot@latest
+curl -fsSL https://raw.githubusercontent.com/fractalmind-labs/fractalmind-os/main/runtime/fractalbot/install.sh | bash
 
 # Configure (create config file)
 fractalbot init
