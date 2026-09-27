@@ -139,7 +139,7 @@ new_string: '  cron: "*/30 * * * *"'
 If your workspace uses agent-manager for cron sync:
 
 ```bash
-python3 .agent/skills/agent-manager/scripts/main.py heartbeat sync
+python3 .agents/skills/agent-manager/scripts/main.py heartbeat sync
 ```
 
 Or use your own crontab sync mechanism.

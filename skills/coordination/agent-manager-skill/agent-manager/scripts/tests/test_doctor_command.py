@@ -40,7 +40,7 @@ class DoctorCommandTests(unittest.TestCase):
 
     def test_doctor_happy_path(self):
         (self.temp_root / 'agents').mkdir(parents=True, exist_ok=True)
-        (self.temp_root / '.agent' / 'skills').mkdir(parents=True, exist_ok=True)
+        (self.temp_root / '.agents' / 'skills').mkdir(parents=True, exist_ok=True)
         (self.temp_root / '.claude').mkdir(parents=True, exist_ok=True)
 
         class Deps:
@@ -78,6 +78,7 @@ class DoctorCommandTests(unittest.TestCase):
 
         text = out.getvalue()
         self.assertEqual(code, 0)
+        self.assertIn('✅ .agents/skills/: found', text)
         self.assertIn('✅ Doctor checks passed', text)
 
     def test_doctor_reports_missing_tmux_and_crontab(self):

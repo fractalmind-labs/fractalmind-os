@@ -31,17 +31,13 @@ Managing multiple AI agents is deceptively complex:
 
 ## Installation
 
-### via openskills (recommended)
+### Via skills CLI (recommended)
 
 ```bash
-# Project installation (works even when `openskills` is not globally installed)
-npx --yes openskills install fractalmind-ai/agent-manager-skill
+# Run from the project where your agent will use the skill
+npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill --skill agent-manager -a codex -y
 
-# Global installation
-npx --yes openskills install fractalmind-ai/agent-manager-skill --global
-
-# If you already have a global openskills binary, this also works:
-# openskills install fractalmind-ai/agent-manager-skill
+# Add -g for a user-level install, or replace codex with claude-code
 ```
 
 ### Manual installation
@@ -54,21 +50,14 @@ cp -r agent-manager ~/.claude/skills/agent-manager
 
 ## Usage
 
-After installation, read the skill documentation:
+After installation, restart your agent session and ask it to use `agent-manager`.
+To inspect the installed skill directly:
 
 ```bash
-# Preferred (portable)
-npx --yes openskills read agent-manager
-
-# Optional when openskills is globally installed:
-# openskills read agent-manager
+cat .agents/skills/agent-manager/SKILL.md
 ```
 
-Or view directly:
-
-```bash
-cat ~/.claude/skills/agent-manager/SKILL.md
-```
+The legacy `.agent/skills/` and `.claude/skills/` locations remain supported.
 
 ## Quick Start
 
@@ -76,9 +65,10 @@ cat ~/.claude/skills/agent-manager/SKILL.md
 # From your repository root (where `agents/` lives)
 cd your-project
 
-# If installed (project-local; path varies by tool):
+# If installed with npx skills:
+python3 .agents/skills/agent-manager/scripts/main.py list
+# Legacy installations:
 python3 .agent/skills/agent-manager/scripts/main.py list
-# (or, if you use `.claude/skills/` instead of `.agent/skills/`)
 python3 .claude/skills/agent-manager/scripts/main.py list
 
 # If installed (global):
@@ -87,18 +77,16 @@ python3 ~/.claude/skills/agent-manager/scripts/main.py list
 python3 ~/.agent/skills/agent-manager/scripts/main.py list
 
 # Sanity check your setup
-# (use the same install path as above; replace `.agent/skills/` with `.claude/skills/` if needed)
-python3 .agent/skills/agent-manager/scripts/main.py doctor
+python3 .agents/skills/agent-manager/scripts/main.py doctor
 
 # Start / monitor / stop
-# (same note: replace `.agent/skills/` with `.claude/skills/` if needed)
-python3 .agent/skills/agent-manager/scripts/main.py start EMP_0001
-python3 .agent/skills/agent-manager/scripts/main.py status EMP_0001
-python3 .agent/skills/agent-manager/scripts/main.py monitor EMP_0001 --follow
-python3 .agent/skills/agent-manager/scripts/main.py stop EMP_0001
+python3 .agents/skills/agent-manager/scripts/main.py start EMP_0001
+python3 .agents/skills/agent-manager/scripts/main.py status EMP_0001
+python3 .agents/skills/agent-manager/scripts/main.py monitor EMP_0001 --follow
+python3 .agents/skills/agent-manager/scripts/main.py stop EMP_0001
 
 # Optional: keep all agents in one shared tmux session (tabs/windows)
-python3 .agent/skills/agent-manager/scripts/main.py start EMP_0001 --tmux-layout windows
+python3 .agents/skills/agent-manager/scripts/main.py start EMP_0001 --tmux-layout windows
 tmux attach -t agent-manager
 # (Optional) Customize the shared session name via: $AGENT_MANAGER_TMUX_GROUP_SESSION
 
@@ -112,7 +100,7 @@ To avoid path drift across docs and runbooks, define one CLI alias and reuse it:
 
 ```bash
 # Installed skill path (pick one that exists in your environment)
-CLI="python3 .agent/skills/agent-manager/scripts/main.py"
+CLI="python3 .agents/skills/agent-manager/scripts/main.py"
 # CLI="python3 .claude/skills/agent-manager/scripts/main.py"
 
 # If running from a cloned repo (not installed):
@@ -159,10 +147,12 @@ Want an animated GIF instead? You can record it with tools like `termttogif` (or
 
 When injecting agent skills into the system prompt, `agent-manager` searches for `SKILL.md` in the following locations (first match wins):
 
-1) `<repo>/.agent/skills/<skill>/SKILL.md`
-2) `~/.agent/skills/<skill>/SKILL.md`
+1) `<repo>/.agents/skills/<skill>/SKILL.md`
+2) `<repo>/.agent/skills/<skill>/SKILL.md`
 3) `<repo>/.claude/skills/<skill>/SKILL.md`
-4) `~/.claude/skills/<skill>/SKILL.md`
+4) `~/.agents/skills/<skill>/SKILL.md`
+5) `~/.agent/skills/<skill>/SKILL.md`
+6) `~/.claude/skills/<skill>/SKILL.md`
 
 ## Documentation
 

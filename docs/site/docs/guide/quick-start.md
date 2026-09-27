@@ -11,6 +11,9 @@ Get a working AI agent team running in under 5 minutes.
 | tmux | any | `tmux -V` |
 | AI API key | — | Claude, OpenAI, or similar |
 
+The commands below install skills for Codex in the current project. For Claude
+Code, replace `-a codex` with `-a claude-code`.
+
 ::: tip Don't have tmux?
 ```bash
 # macOS
@@ -24,24 +27,16 @@ sudo apt install tmux
 ## Step 1: Install Agent Manager
 
 ```bash
-npx openskills install fractalmind-ai/agent-manager-skill
+npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill --skill agent-manager -a codex -y
 ```
 
-Expected output:
-
-```
-✓ Installed agent-manager-skill v1.2.0
-  → ~/.openskills/fractalmind-ai/agent-manager-skill/
-```
+Check the installation with `npx skills list`. Project skills are installed
+under `.agents/skills/`.
 
 ## Step 2: Start Your First Agent
 
-Load the skill into your AI agent's session, then tell it to start a worker:
-
-```bash
-# Load the skill
-npx openskills read agent-manager
-```
+Start or restart your AI agent's session so it discovers the installed skill,
+then tell it to start a worker:
 
 Now your agent can manage other agents. Ask it to start one:
 
@@ -71,21 +66,15 @@ researcher: 1 windows (created Sat Mar  8 14:30:22 2026)
 ## Step 3: Install Team Manager
 
 ```bash
-npx openskills install fractalmind-ai/team-manager-skill
+npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/team-manager-skill --skill team-manager -a codex -y
 ```
 
-```
-✓ Installed team-manager-skill v1.1.0
-  → ~/.openskills/fractalmind-ai/team-manager-skill/
-```
+Restart your agent session after installing the new skill.
 
 ## Step 4: Create a Team
 
-Load the skill and create a team with your agent as lead:
-
-```bash
-npx openskills read team-manager
-```
+Ask your agent to use the installed team-manager skill and create a team with
+your agent as lead:
 
 ```
 > Create a team called "code-review" with researcher as a member
@@ -146,13 +135,13 @@ Check agent heartbeat:
 
 ```bash
 # OKR tracking for goal management
-npx openskills install fractalmind-ai/okr-manager-skill
+npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/okr-manager-skill --skill okr-manager -a codex -y
 
 # Multi-channel messaging (Telegram, Slack, etc.)
-npx openskills install fractalmind-ai/use-fractalbot-skill
+npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/use-fractalbot-skill --skill use-fractalbot -a codex -y
 
 # File-backed team chat
-npx openskills install fractalmind-ai/team-chat-skill
+npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/team-chat-skill --skill team-chat -a codex -y
 ```
 
 ## Optional: On-Chain Protocol
@@ -190,7 +179,7 @@ See the [Protocol SDK docs](/protocol/sdk) for the complete API reference.
 
 ## Troubleshooting
 
-### `npx openskills` command not found
+### `npx skills` command fails
 
 Make sure Node.js 18+ is installed and `npx` is in your PATH:
 
@@ -213,7 +202,7 @@ tmux kill-session -t name  # Kill conflicting session
 
 - Check the agent's tmux session: `tmux attach -t researcher`
 - Verify the API key is set in the agent's environment
-- Check logs: the agent-manager writes to `~/.openskills/logs/`
+- Check the agent-manager output and its installed `SKILL.md` under `.agents/skills/agent-manager/`
 
 ### Team manager can't find agents
 

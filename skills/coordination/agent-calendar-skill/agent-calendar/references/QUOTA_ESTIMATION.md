@@ -100,7 +100,7 @@ else:
 
 ### 已创建的模块
 
-**文件**：`.agent/skills/agent-calendar/scripts/quota_tracker.py`
+**文件**：`.agents/skills/agent-calendar/scripts/quota_tracker.py`
 
 **功能**：
 1. **记录事件**：每次检测到 429 时自动记录
@@ -173,7 +173,7 @@ print(format_quota_status(status))
 ### 场景 1：Agent 刚达到额度
 
 ```bash
-$ python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0007
+$ python3 .agents/skills/agent-calendar/scripts/main.py show EMP_0007
 ```
 
 **输出**：
@@ -191,7 +191,7 @@ Quota Details:
 ### 场景 2：Agent 使用一半额度
 
 ```bash
-$ python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0004
+$ python3 .agents/skills/agent-calendar/scripts/main.py show EMP_0004
 ```
 
 **输出**：
@@ -211,7 +211,7 @@ Quota Details:
 ### 场景 3：无可用的历史数据
 
 ```bash
-$ python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0010
+$ python3 .agents/skills/agent-calendar/scripts/main.py show EMP_0010
 ```
 
 **输出**：
@@ -402,13 +402,13 @@ Agent → Local Proxy → Anthropic API
 
 ```bash
 # 等待积累一些历史数据后
-python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0007
+python3 .agents/skills/agent-calendar/scripts/main.py show EMP_0007
 ```
 
 ### 3. 手动测试 quota_tracker
 
 ```bash
-cd .agent/skills/agent-calendar/scripts
+cd .agents/skills/agent-calendar/scripts
 python3 quota_tracker.py
 ```
 

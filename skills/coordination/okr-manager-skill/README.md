@@ -4,17 +4,14 @@ OKR lifecycle management skill for AI agents. Install it so your AI employees ca
 
 ## Install
 
-### Claude Code (openskills)
+### Skills CLI
 
 ```bash
-npx openskills install fractalmind-ai/okr-manager-skill
+npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/okr-manager-skill --skill okr-manager -a codex -y
 ```
 
-Then invoke in your agent:
-
-```bash
-npx openskills read okr-manager
-```
+Restart your agent session, then ask it to use `okr-manager`. Replace `codex`
+with `claude-code` when installing for Claude Code.
 
 ### Manual
 

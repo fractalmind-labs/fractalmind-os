@@ -49,8 +49,8 @@ FractalMind components are classified by the three-plane architecture and by sup
 
 The target model is being delivered incrementally. Compatibility paths may remain until parity, rollback evidence, and consumer migration are complete. Track current work in [fractalmind-ai/.github#6](https://github.com/fractalmind-ai/.github/issues/6).
 
-Skills remain installable through openskills:
+Install a skill from its source directory with the skills CLI:
 
 ```bash
-npx openskills install fractalmind-ai/<skill-name>
+npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill --skill agent-manager -a codex -y
 ```

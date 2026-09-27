@@ -160,7 +160,7 @@ Rate limit exceeded. Please try again later.
 ### 场景 1：Agent 刚刚达到限制
 
 ```bash
-$ python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0006
+$ python3 .agents/skills/agent-calendar/scripts/main.py show EMP_0006
 ```
 
 **输出**：
@@ -184,7 +184,7 @@ Quota Details:
 
 **30 分钟后再次运行**：
 ```bash
-$ python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0006
+$ python3 .agents/skills/agent-calendar/scripts/main.py show EMP_0006
 ```
 
 **输出**：
@@ -206,7 +206,7 @@ Quota Details:
 
 **超过重置时间后运行**：
 ```bash
-$ python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0006
+$ python3 .agents/skills/agent-calendar/scripts/main.py show EMP_0006
 ```
 
 **可能的结果**：
@@ -226,7 +226,7 @@ Current Status: ⚠️ Quota Exhausted
 
 **建议**：发送测试请求确认额度恢复
 ```bash
-python3 .agent/skills/agent-manager/scripts/main.py send EMP_0006 "ping"
+python3 .agents/skills/agent-manager/scripts/main.py send EMP_0006 "ping"
 tmux send-keys -t agent-emp-0006 Enter
 ```
 
@@ -238,7 +238,7 @@ tmux send-keys -t agent-emp-0006 Enter
 
 ```bash
 # 运行 calendar 查看
-python3 .agent/skills/agent-calendar/scripts/main.py calendar --state quota-exhausted
+python3 .agents/skills/agent-calendar/scripts/main.py calendar --state quota-exhausted
 ```
 
 **预期**：如果该 Agent 不再出现在列表中，说明额度已恢复
@@ -247,12 +247,12 @@ python3 .agent/skills/agent-calendar/scripts/main.py calendar --state quota-exha
 
 ```bash
 # 发送简单测试消息
-python3 .agent/skills/agent-manager/scripts/main.py send EMP_0006 "test"
+python3 .agents/skills/agent-manager/scripts/main.py send EMP_0006 "test"
 tmux send-keys -t agent-emp-0006 Enter
 
 # 等待几秒后检查
 sleep 5
-python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0006
+python3 .agents/skills/agent-calendar/scripts/main.py show EMP_0006
 ```
 
 **预期**：如果返回 `✅ Working` 而非 `⚠️ Quota Exhausted`，说明已恢复
@@ -261,13 +261,13 @@ python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0006
 
 ```bash
 # 停止 agent
-python3 .agent/skills/agent-manager/scripts/main.py stop EMP_0006
+python3 .agents/skills/agent-manager/scripts/main.py stop EMP_0006
 
 # 启动 agent
-python3 .agent/skills/agent-manager/scripts/main.py start EMP_0006
+python3 .agents/skills/agent-manager/scripts/main.py start EMP_0006
 
 # 检查状态
-python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0006
+python3 .agents/skills/agent-calendar/scripts/main.py show EMP_0006
 ```
 
 ---

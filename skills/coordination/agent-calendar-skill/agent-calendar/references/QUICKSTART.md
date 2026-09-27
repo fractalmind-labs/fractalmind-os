@@ -6,7 +6,7 @@
 
 ```bash
 # View all agents like an employee calendar
-python3 .agent/skills/agent-calendar/scripts/main.py calendar
+python3 .agents/skills/agent-calendar/scripts/main.py calendar
 ```
 
 **Sample Output:**
@@ -44,7 +44,7 @@ Recommendation: Assign tasks to EMP_0005, EMP_0008
 
 ```bash
 # Get AI-powered recommendations
-python3 .agent/skills/agent-calendar/scripts/main.py suggest --task-type development
+python3 .agents/skills/agent-calendar/scripts/main.py suggest --task-type development
 ```
 
 **Sample Output:**
@@ -69,7 +69,7 @@ Top Recommendations:
   • EMP_0006, EMP_0007 - Quota exhausted (~3h)
 
 💡 Assignment Command:
-   python3 .agent/skills/agent-manager/scripts/main.py assign EMP_0005 <<EOF
+   python3 .agents/skills/agent-manager/scripts/main.py assign EMP_0005 <<EOF
    Implement feature X...
    EOF
 ```
@@ -80,7 +80,7 @@ Top Recommendations:
 
 ```bash
 # Check if team can take more work
-python3 .agent/skills/agent-calendar/scripts/main.py team polymarket-quant
+python3 .agents/skills/agent-calendar/scripts/main.py team polymarket-quant
 ```
 
 **Sample Output:**
@@ -114,7 +114,7 @@ python3 .agent/skills/agent-calendar/scripts/main.py team polymarket-quant
 
 ```bash
 # Check specific agent before assigning
-python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0007
+python3 .agents/skills/agent-calendar/scripts/main.py show EMP_0007
 ```
 
 **Sample Output:**
@@ -142,13 +142,13 @@ Recommendations:
 
 ```bash
 # Show only available agents
-python3 .agent/skills/agent-calendar/scripts/main.py calendar --state idle
+python3 .agents/skills/agent-calendar/scripts/main.py calendar --state idle
 
 # Show only quota-exhausted agents
-python3 .agent/skills/agent-calendar/scripts/main.py calendar --state quota-exhausted
+python3 .agents/skills/agent-calendar/scripts/main.py calendar --state quota-exhausted
 
 # Show only working agents
-python3 .agent/skills/agent-calendar/scripts/main.py calendar --state working
+python3 .agents/skills/agent-calendar/scripts/main.py calendar --state working
 ```
 
 ---
@@ -159,27 +159,27 @@ python3 .agent/skills/agent-calendar/scripts/main.py calendar --state working
 
 ```bash
 # 1. Check overall attendance
-python3 .agent/skills/agent-calendar/scripts/main.py calendar
+python3 .agents/skills/agent-calendar/scripts/main.py calendar
 
 # 2. Check quota issues
-python3 .agent/skills/agent-calendar/scripts/main.py calendar --state quota-exhausted
+python3 .agents/skills/agent-calendar/scripts/main.py calendar --state quota-exhausted
 
 # 3. Check team capacity
-python3 .agent/skills/agent-calendar/scripts/main.py team polymarket-quant
-python3 .agent/skills/agent-calendar/scripts/main.py team destiny
+python3 .agents/skills/agent-calendar/scripts/main.py team polymarket-quant
+python3 .agents/skills/agent-calendar/scripts/main.py team destiny
 ```
 
 ### 📋 Before Assigning Tasks
 
 ```bash
 # 1. Get recommendations
-python3 .agent/skills/agent-calendar/scripts/main.py suggest --task-type development
+python3 .agents/skills/agent-calendar/scripts/main.py suggest --task-type development
 
 # 2. Verify top candidate
-python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0005
+python3 .agents/skills/agent-calendar/scripts/main.py show EMP_0005
 
 # 3. Assign task
-python3 .agent/skills/agent-manager/scripts/main.py assign EMP_0005 <<EOF
+python3 .agents/skills/agent-manager/scripts/main.py assign EMP_0005 <<EOF
 Your task here...
 EOF
 ```
@@ -188,13 +188,13 @@ EOF
 
 ```bash
 # 1. Check who's down
-python3 .agent/skills/agent-calendar/scripts/main.py calendar --state error
+python3 .agents/skills/agent-calendar/scripts/main.py calendar --state error
 
 # 2. Check quota issues
-python3 .agent/skills/agent-calendar/scripts/main.py calendar --state quota-exhausted
+python3 .agents/skills/agent-calendar/scripts/main.py calendar --state quota-exhausted
 
 # 3. Get details on problematic agents
-python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0007
+python3 .agents/skills/agent-calendar/scripts/main.py show EMP_0007
 ```
 
 ---
@@ -205,25 +205,25 @@ python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0007
 
 ```bash
 # Check status first
-python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0005
+python3 .agents/skills/agent-calendar/scripts/main.py show EMP_0005
 
 # Then assign if available
-python3 .agent/skills/agent-manager/scripts/main.py assign EMP_0005 <<EOF
+python3 .agents/skills/agent-manager/scripts/main.py assign EMP_0005 <<EOF
 Task details...
 EOF
 
 # Send follow-up message
-python3 .agent/skills/agent-manager/scripts/main.py send EMP_0005 "Please add error handling"
+python3 .agents/skills/agent-manager/scripts/main.py send EMP_0005 "Please add error handling"
 ```
 
 ### With team-manager
 
 ```bash
 # Check team capacity
-python3 .agent/skills/agent-calendar/scripts/main.py team polymarket-quant
+python3 .agents/skills/agent-calendar/scripts/main.py team polymarket-quant
 
 # Assign to team if capacity available
-python3 .agent/skills/team-manager/scripts/main.py assign polymarket-quant <<EOF
+python3 .agents/skills/team-manager/scripts/main.py assign polymarket-quant <<EOF
 Team task...
 EOF
 ```
@@ -258,11 +258,11 @@ These commands are planned but not yet implemented:
 
 ```bash
 # Watch status changes in real-time
-python3 .agent/skills/agent-calendar/scripts/main.py watch --follow
+python3 .agents/skills/agent-calendar/scripts/main.py watch --follow
 
 # View historical data
-python3 .agent/skills/agent-calendar/scripts/main.py history EMP_0007 --days 7
+python3 .agents/skills/agent-calendar/scripts/main.py history EMP_0007 --days 7
 
 # Generate weekly report
-python3 .agent/skills/agent-calendar/scripts/main.py report --week
+python3 .agents/skills/agent-calendar/scripts/main.py report --week
 ```

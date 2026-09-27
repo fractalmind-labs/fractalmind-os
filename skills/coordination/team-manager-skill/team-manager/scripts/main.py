@@ -695,14 +695,14 @@ graph TD
 
 Assign task to this team:
 ```bash
-python3 .agent/skills/team-manager/scripts/main.py assign {args.name} <<EOF
+python3 .agents/skills/team-manager/scripts/main.py assign {args.name} <<EOF
 Your task description here...
 EOF
 ```
 
 Monitor team progress:
 ```bash
-python3 .agent/skills/team-manager/scripts/main.py monitor {args.name} --follow
+python3 .agents/skills/team-manager/scripts/main.py monitor {args.name} --follow
 ```
 """
 

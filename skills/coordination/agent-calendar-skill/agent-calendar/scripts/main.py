@@ -230,7 +230,7 @@ def cmd_show(args):
         print("  ⚠️ Currently working - assign with caution")
     elif state_info['state'] == AgentState.STOPPED:
         print("  🚦 Start agent before assigning tasks:")
-        print(f"     python3 .agent/skills/agent-manager/scripts/main.py start {emp_id}")
+        print(f"     python3 .agents/skills/agent-manager/scripts/main.py start {emp_id}")
     elif state_info['state'] == AgentState.ERROR:
         print("  🔍 Check agent logs for details:")
         print(f"     tmux attach -t {state_info.get('session_name')}")
@@ -428,7 +428,7 @@ def cmd_suggest(args):
     if available:
         top_agent = available[0][0]
         print(f"💡 Assignment Command:")
-        print(f"   python3 .agent/skills/agent-manager/scripts/main.py assign {top_agent} <<EOF")
+        print(f"   python3 .agents/skills/agent-manager/scripts/main.py assign {top_agent} <<EOF")
         print(f"   Your task here...")
         print(f"   EOF")
 

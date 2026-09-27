@@ -5,7 +5,7 @@ Install an AI Agent OS ROM into your workspace in a few steps.
 ## Prerequisites
 
 - A workspace directory for your AI agent
-- Git (for fetching skills with `git` source type)
+- Git and Node.js (for installing git-sourced skills with `npx skills`)
 - An AI agent runtime (e.g., Claude Code, Codex, or any LLM-based agent)
 
 ## Step 1: Choose a ROM
@@ -21,9 +21,9 @@ Browse the [ROM catalog](/agent-os/) and pick the ROM that matches your use case
 ## Step 2: Clone the ROM templates
 
 ```bash
-# Clone the ROMs repository
-git clone https://github.com/fractalmind-ai/agent-os-roms.git
-cd agent-os-roms
+# Clone the monorepo and enter its ROM subtree
+git clone https://github.com/fractalmind-labs/fractalmind-os.git
+cd fractalmind-os/roms/agent-os-roms
 
 # Choose your ROM (example: manager-heavy-core)
 ROM=manager-heavy-core
@@ -39,7 +39,8 @@ WORKSPACE=~/my-agent-workspace
 MANIFEST=roms/$ROM/manifest.yaml
 
 # Copy all template files
-cp -r roms/$ROM/templates/* $WORKSPACE/
+mkdir -p "$WORKSPACE"
+cp -R "roms/$ROM/templates/." "$WORKSPACE/"
 
 # Create directories declared in install_boundary.creates_directories
 sed -n '/^ *creates_directories:$/,/^ *[^ -]/{s/^ *- //p}' "$MANIFEST" \
@@ -53,7 +54,7 @@ sed -n '/^ *creates_files:$/,/^ *[^ -]/{s/^ *- //p}' "$MANIFEST" \
 done
 ```
 
-This copies the ROM's bundled template files, creates declared directories, then bootstraps any missing files as empty. The `sed` commands read only the scoped YAML block (`creates_files` or `creates_directories`), stopping at the next non-list key. Some ROMs (like `manager-heavy-core`) include all workspace files as templates; others (like `mentor-coordinator-core`) only include core templates — the loop handles both cases.
+This copies the ROM's bundled template files, including hidden directories, creates declared directories, then bootstraps any missing files as empty. The `sed` commands read only the scoped YAML block (`creates_files` or `creates_directories`), stopping at the next non-list key. Some ROMs (like `manager-heavy-core`) include all workspace files as templates; others (like `mentor-coordinator-core`) only include core templates — the loop handles both cases.
 
 ## Step 4: Install required skills
 
@@ -62,14 +63,9 @@ Check the ROM's `included_skills` in `manifest.yaml` and install each one:
 ### Git-sourced skills
 
 ```bash
-# Create skills directory
-mkdir -p $WORKSPACE/.agent/skills
-
-# Example: install agent-manager skill
-git clone https://github.com/fractalmind-ai/agent-manager-skill.git \
-  /tmp/agent-manager-skill
-cp -r /tmp/agent-manager-skill/agent-manager \
-  $WORKSPACE/.agent/skills/agent-manager
+# Run from the target workspace; choose the agent you use.
+cd "$WORKSPACE"
+npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill --skill agent-manager -a codex -y
 ```
 
 ### Embedded skills
@@ -82,11 +78,8 @@ Check `optional_skills` in the manifest and install any that you need:
 
 ```bash
 # Example: install agent-calendar
-git clone --branch v0.1.0 \
-  https://github.com/fractalmind-ai/agent-calendar-skill.git \
-  /tmp/agent-calendar-skill
-cp -r /tmp/agent-calendar-skill/agent-calendar \
-  $WORKSPACE/.agent/skills/agent-calendar
+cd "$WORKSPACE"
+npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-calendar-skill --skill agent-calendar -a codex -y
 ```
 
 ## Step 6: Customize
@@ -112,7 +105,7 @@ After installation, verify that:
 
 - [ ] All files listed in `install_boundary.creates_files` exist
 - [ ] `memory/` and `okrs/` directories are writable
-- [ ] Each skill in `included_skills` has a `SKILL.md` in `.agent/skills/<name>/`
+- [ ] Each skill in `included_skills` has a `SKILL.md` in `.agents/skills/<name>/` (or the legacy `.agent/skills/<name>/`)
 - [ ] Your agent can read and follow `AGENTS.md`
 
 ## Skill Directory Structure
@@ -120,7 +113,7 @@ After installation, verify that:
 Each installed skill follows this structure:
 
 ```
-.agent/skills/<skill-name>/
+.agents/skills/<skill-name>/
 ├── SKILL.md          # Entry point — read this to use the skill
 ├── scripts/          # Executable scripts
 ├── references/       # Reference documentation
@@ -137,7 +130,7 @@ Each installed skill follows this structure:
 ## Troubleshooting
 
 **Skill not found after install?**
-Verify the skill directory exists at `.agent/skills/<name>/SKILL.md`. Check that the `source.path` in the manifest matches the directory structure in the git repo.
+Run `npx skills list` and verify `.agents/skills/<name>/SKILL.md` exists. Check that the selected `--skill` name matches the skill's frontmatter.
 
 **Agent doesn't follow OS rules?**
 Ensure `AGENTS.md` is in the workspace root and your agent is configured to read it on session start.

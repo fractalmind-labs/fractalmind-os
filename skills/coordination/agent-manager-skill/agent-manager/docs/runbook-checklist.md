@@ -8,7 +8,7 @@ Use this exact sequence from repo root (choose one CLI path first):
 
 ```bash
 # Installed skill path (pick one that exists in your environment)
-CLI="python3 .agent/skills/agent-manager/scripts/main.py"
+CLI="python3 .agents/skills/agent-manager/scripts/main.py"
 # CLI="python3 .claude/skills/agent-manager/scripts/main.py"
 
 # If running directly from a cloned repo (not installed skill):

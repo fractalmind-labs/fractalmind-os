@@ -68,12 +68,12 @@ sequenceDiagram
 
 Assign task to this team:
 ```bash
-python3 .agent/skills/team-manager/scripts/main.py assign backend <<EOF
+python3 .agents/skills/team-manager/scripts/main.py assign backend <<EOF
 Implement user profile API endpoint
 EOF
 ```
 
 Monitor team progress:
 ```bash
-python3 .agent/skills/team-manager/scripts/main.py monitor backend --follow
+python3 .agents/skills/team-manager/scripts/main.py monitor backend --follow
 ```

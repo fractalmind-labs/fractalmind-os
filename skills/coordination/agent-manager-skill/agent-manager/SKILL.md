@@ -12,25 +12,25 @@ Employee agent orchestration system for managing AI agents in tmux sessions. A s
 ## Quick Start
 
 ```bash
-# Project-local install path varies by tool. If `.agent/skills/` doesn't exist, try `.claude/skills/`.
+# Project-local install path varies by tool. If `.agents/skills/` doesn't exist, try `.claude/skills/`.
 # List all agents
-python3 .agent/skills/agent-manager/scripts/main.py list
+python3 .agents/skills/agent-manager/scripts/main.py list
 python3 .claude/skills/agent-manager/scripts/main.py list
 
 # (use the same path you chose above for the remaining commands)
 # Start dev agent
-python3 .agent/skills/agent-manager/scripts/main.py start dev
+python3 .agents/skills/agent-manager/scripts/main.py start dev
 
 # Monitor output (live)
-python3 .agent/skills/agent-manager/scripts/main.py monitor dev --follow
+python3 .agents/skills/agent-manager/scripts/main.py monitor dev --follow
 
 # Assign task
-python3 .agent/skills/agent-manager/scripts/main.py assign dev <<EOF
+python3 .agents/skills/agent-manager/scripts/main.py assign dev <<EOF
 Fix the login bug in the auth module
 EOF
 
 # Stop agent
-python3 .agent/skills/agent-manager/scripts/main.py stop dev
+python3 .agents/skills/agent-manager/scripts/main.py stop dev
 ```
 
 ### Command Path Parity (Docs Baseline)
@@ -39,7 +39,7 @@ For consistency with `README.md` and runbook examples, define one CLI alias and 
 
 ```bash
 # Installed skill path (pick one that exists)
-CLI="python3 .agent/skills/agent-manager/scripts/main.py"
+CLI="python3 .agents/skills/agent-manager/scripts/main.py"
 # CLI="python3 .claude/skills/agent-manager/scripts/main.py"
 
 # If operating from a cloned repo instead of installed skill:
@@ -84,7 +84,7 @@ You are the Dev Agent...
 - `launcher`: Full path OR provider name
 - `launcher_args`: Arguments for launcher
 - `launcher_config`: Optional launcher/provider-specific startup config
-- `skills`: Array of skill names from `.agent/skills/` (optional, injected at start)
+- `skills`: Array of skill names from `.agents/skills/` (optional, injected at start)
 - `schedules`: Array of scheduled jobs (optional, see Scheduling section)
 - `tmux`: Optional tmux layout metadata (layout + target pane)
 
@@ -720,7 +720,7 @@ Agents should respond with `HEARTBEAT_OK` if nothing needs attention, or take ac
 
 ## Skills Integration
 
-Agents can reference skills from `.agent/skills/`:
+Agents can reference skills from `.agents/skills/`:
 
 ```yaml
 skills:
@@ -751,7 +751,7 @@ Comprehensive BSC smart contract development expertise...
 ## Architecture
 
 ```
-.agent/skills/agent-manager/
+.agents/skills/agent-manager/
 ├── SKILL.md                    # This file
 ├── scripts/
 │   ├── main.py                 # CLI entry point

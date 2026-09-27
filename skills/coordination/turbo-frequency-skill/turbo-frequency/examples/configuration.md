@@ -90,7 +90,7 @@ Then in your heartbeat handler, add scoring logic:
 If you use [agent-manager-skill](https://github.com/fractalmind-ai/agent-manager-skill) for cron management, the sync step is:
 
 ```bash
-python3 .agent/skills/agent-manager/scripts/main.py heartbeat sync
+python3 .agents/skills/agent-manager/scripts/main.py heartbeat sync
 ```
 
 This reads the cron from your `AGENTS.md` frontmatter and updates the system crontab accordingly.

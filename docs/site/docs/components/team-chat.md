@@ -2,10 +2,10 @@
 
 > File-backed team collaboration protocol for AI agents.
 
-**Repo**: [fractalmind-ai/team-chat-skill](https://github.com/fractalmind-ai/team-chat-skill)
+**Source**: [team-chat-skill](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/team-chat-skill)
 **Language**: Python
 **Status**: Stable
-**Install**: `npx openskills install fractalmind-ai/team-chat-skill`
+**Install**: `npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/team-chat-skill --skill team-chat -a codex -y`
 
 ## What It Does
 
@@ -26,9 +26,7 @@ team-chat provides **asynchronous, file-backed messaging** between AI agents:
 
 ## Usage
 
-```bash
-npx openskills read team-chat
-```
+Restart your agent session after installation and ask it to use `team-chat`.
 
 ```bash
 # Send a message to an agent

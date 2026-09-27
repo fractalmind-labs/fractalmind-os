@@ -10,7 +10,7 @@ It helps agents turn a vague "make ours look like that" request into:
 ## Install
 
 ```bash
-npx openskills install fractalmind-ai/high-fidelity-ui-replication-skill
+npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/development/high-fidelity-ui-replication-skill --skill high-fidelity-ui-replication -a codex -y
 ```
 
 ## Best for

@@ -168,7 +168,7 @@ The original Footer MAY require additional fields. Never claim evidence that was
 Every `task` and every `message` with `reply: required` MUST use exactly this Footer sentence:
 
 ```text
-If the use-agent-task-protocol skill is unavailable, install it with npx openskill install fractalmind-ai/use-agent-task-protocol-skill, then use the skill to compose and actively return the required reply to the source context.
+If the use-agent-task-protocol skill is unavailable, install it with npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/use-agent-task-protocol-skill --skill use-agent-task-protocol -y, then use the skill to compose and actively return the required reply to the source context.
 ```
 
 The Footer MUST NOT embed a reply template, status documentation, destination, transport procedure, or fallback instructions. It retains only the optional bootstrap installation command needed when the skill is absent; the invoked skill owns all other mechanics. The runtime MUST preserve an exact source context or return address outside ATP Meta so the skill can actively deliver the reply without coupling ATP semantics to one runtime.
@@ -176,7 +176,7 @@ The Footer MUST NOT embed a reply template, status documentation, destination, t
 If the skill is unavailable and runtime policy permits installation, the optional installation command retained by the skill is:
 
 ```bash
-npx openskill install fractalmind-ai/use-agent-task-protocol-skill
+npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/use-agent-task-protocol-skill --skill use-agent-task-protocol -y
 ```
 
 Skip this step when the skill is already available. Footer repeats only this bootstrap command so an unprepared receiver can load the skill; detailed installation and failure behavior remains in the skill contract.
@@ -298,7 +298,7 @@ Context:
 PR: https://github.example/org/repo/pull/123
 
 --- Footer ---
-If the use-agent-task-protocol skill is unavailable, install it with npx openskill install fractalmind-ai/use-agent-task-protocol-skill, then use the skill to compose and actively return the required reply to the source context.
+If the use-agent-task-protocol skill is unavailable, install it with npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/use-agent-task-protocol-skill --skill use-agent-task-protocol -y, then use the skill to compose and actively return the required reply to the source context.
 ````
 
 ### 9.2 Completed task reply
@@ -355,6 +355,6 @@ Context:
 The release decision is waiting on the review result.
 
 --- Footer ---
-If the use-agent-task-protocol skill is unavailable, install it with npx openskill install fractalmind-ai/use-agent-task-protocol-skill, then use the skill to compose and actively return the required reply to the source context.
+If the use-agent-task-protocol skill is unavailable, install it with npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/use-agent-task-protocol-skill --skill use-agent-task-protocol -y, then use the skill to compose and actively return the required reply to the source context.
 ```
 ````

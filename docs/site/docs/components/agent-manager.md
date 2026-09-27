@@ -2,10 +2,10 @@
 
 > Local agent lifecycle adapter via tmux + Python.
 
-**Repo**: [fractalmind-ai/agent-manager-skill](https://github.com/fractalmind-ai/agent-manager-skill)
+**Source**: [agent-manager-skill](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill)
 **Language**: Python
 **Status**: Stable
-**Install**: `npx openskills install fractalmind-ai/agent-manager-skill`
+**Install**: `npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill --skill agent-manager -a codex -y`
 
 ## What It Does
 
@@ -26,11 +26,7 @@ agent-manager is the local execution adapter for individual AI agents:
 
 ## Usage
 
-Load the skill in your AI agent:
-
-```bash
-npx openskills read agent-manager
-```
+Restart your AI agent session after installation and ask it to use `agent-manager`.
 
 Then your agent can manage other agents:
 

@@ -2,10 +2,10 @@
 
 > OKR lifecycle management for AI agents.
 
-**Repo**: [fractalmind-ai/okr-manager-skill](https://github.com/fractalmind-ai/okr-manager-skill)
+**Source**: [okr-manager-skill](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/okr-manager-skill)
 **Language**: Skill (Markdown-based)
 **Status**: Stable
-**Install**: `npx openskills install fractalmind-ai/okr-manager-skill`
+**Install**: `npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/okr-manager-skill --skill okr-manager -a codex -y`
 
 ## What It Does
 
@@ -29,9 +29,7 @@ Every OKR must pass quality checks before creation:
 
 ## Usage
 
-```bash
-npx openskills read okr-manager
-```
+Restart your agent session after installation and ask it to use `okr-manager`.
 
 The skill guides the agent through OKR operations:
 

@@ -1,13 +1,13 @@
 """Repository root + skill location helpers.
 
-This skill is intended to be installable via OpenSkills into arbitrary locations
+This skill is intended to be installable via skills CLI or OpenSkills into arbitrary locations
 (e.g. ~/.claude/skills/team-manager). Therefore we must not assume any particular
 filesystem layout under <repo>/.agent/skills.
 
 Repo root resolution priority:
 1) $REPO_ROOT (if set)
 2) git (superproject if in submodule, else toplevel)
-3) walk up from cwd looking for .agent/ and teams/
+3) walk up from cwd looking for a skills directory and teams/
 4) fall back to cwd
 """
 
@@ -56,7 +56,9 @@ def find_repo_root(start: Path) -> Path:
         return Path(toplevel)
 
     for candidate in _walk_parents(start_dir):
-        if (candidate / ".agent").is_dir() and (candidate / "teams").is_dir():
+        if (candidate / "teams").is_dir() and any(
+            (candidate / directory).is_dir() for directory in (".agents", ".agent", ".claude")
+        ):
             return candidate
 
     return start_dir
@@ -71,11 +73,11 @@ def get_skill_search_dirs(repo_root: Optional[Path]) -> list[Path]:
     roots: list[Path] = []
 
     if repo_root is not None:
+        roots.append(repo_root / ".agents" / "skills")
         roots.append(repo_root / ".agent" / "skills")
-    roots.append(home / ".agent" / "skills")
-
-    if repo_root is not None:
         roots.append(repo_root / ".claude" / "skills")
+    roots.append(home / ".agents" / "skills")
+    roots.append(home / ".agent" / "skills")
     roots.append(home / ".claude" / "skills")
 
     return roots

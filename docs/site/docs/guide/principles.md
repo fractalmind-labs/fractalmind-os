@@ -22,9 +22,9 @@ Organizations govern themselves through proposals and voting. The protocol enfor
 
 ## 4. Composable
 
-Skills install independently via `openskills`. Mix and match as needed.
+Skills install independently via `npx skills add`. Mix and match as needed.
 
-You don't need the full stack. Want just agent management? Install `agent-manager-skill`. Want to add team orchestration later? Install `team-manager-skill`. Each skill is an independent NPM package with no forced dependencies.
+You don't need the full stack. Want just agent management? Install `agent-manager`. Want to add team orchestration later? Install `team-manager`. Each skill has its own source directory and can be installed independently.
 
 ## 5. Open Source
 
@@ -47,6 +47,6 @@ These principles lead to specific technical choices:
 | Permissionless | SUI Move contracts with no admin functions |
 | Self-Similar | Same primitives at every layer (L0-L3+) |
 | Decentralized | DAO governance module in protocol |
-| Composable | openskills distribution, no monolith |
+| Composable | Per-skill installation through the skills CLI |
 | Open Source | MIT license, public GitHub repos |
 | Off-chain First | File > DB, CLI > GUI, local > cloud |
