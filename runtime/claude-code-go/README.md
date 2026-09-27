@@ -9,7 +9,7 @@
 - CLI bootstrap：`cmd/claude-code-go/main.go`
 - bootstrap 能力：`internal/auth/*`、`internal/config/*`、`internal/install/*`、`internal/update/*`
 - 文档：`README.md`、`docs/command-gap-analysis.md`、`docs/pr1-recovery-plan.md`
-- CI：`.github/workflows/ci.yml`
+- CI：仓库根目录的 `.github/workflows/ci.yml`（`Go (runtime/claude-code-go)` 任务）
 
 这张切片的目标不是宣称整个分支已经“可合并”，而是先恢复 3 件事：
 

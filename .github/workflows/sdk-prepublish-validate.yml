@@ -1,4 +1,4 @@
-name: SDK Publish
+name: "SDK: Pre-publish validation"
 
 on:
   workflow_dispatch:
@@ -7,12 +7,13 @@ permissions:
   contents: read
 
 jobs:
-  publish-sdk:
-    name: Publish SDK to npm
+  validate-sdk-prepublish:
+    name: Validate npm pre-publish chain (no publish)
     runs-on: ubuntu-latest
+    environment: npm
     defaults:
       run:
-        working-directory: sdk
+        working-directory: protocols/fractalmind-protocol/sdk
 
     steps:
       - name: Checkout repository
@@ -24,7 +25,7 @@ jobs:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
           cache: "npm"
-          cache-dependency-path: sdk/package-lock.json
+          cache-dependency-path: protocols/fractalmind-protocol/sdk/package-lock.json
 
       - name: Resolve npm auth token
         id: npm-token
@@ -69,6 +70,13 @@ jobs:
           fi
           echo "org_role=${ORG_ROLE}" >> "$GITHUB_OUTPUT"
 
+      - name: Optional scope package visibility probe
+        id: scope-probe
+        continue-on-error: true
+        env:
+          NODE_AUTH_TOKEN: ${{ env.NODE_AUTH_TOKEN }}
+        run: npm access list packages @fractalmind-labs --json > scope-packages.json
+
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
@@ -81,28 +89,31 @@ jobs:
       - name: Pack
         run: npm pack --json | tee pack-result.json
 
-      - name: Publish
+      - name: Pre-publish dry run
         env:
           NODE_AUTH_TOKEN: ${{ env.NODE_AUTH_TOKEN }}
-        run: npm publish --access public
+        run: npm publish --dry-run --access public
 
-      - name: Upload publish artifacts
+      - name: Upload prepublish artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: sdk-publish-${{ github.run_id }}
+          name: sdk-prepublish-validation-${{ github.run_id }}
           path: |
-            sdk/pack-result.json
-            sdk/*.tgz
+            protocols/fractalmind-protocol/sdk/pack-result.json
+            protocols/fractalmind-protocol/sdk/*.tgz
 
       - name: Summary
         run: |
-          cat <<EOF_SUMMARY >> "$GITHUB_STEP_SUMMARY"
-          # SDK Publish
+          cat <<EOF >> "$GITHUB_STEP_SUMMARY"
+          # SDK Pre-publish Validation (No Real Publish)
 
-          Publish completed.
-          - Trigger mode: `workflow_dispatch`
-          - Token source: `${{ steps.npm-token.outputs.token_source }}`
-          - npm user: `${{ steps.npm-auth.outputs.npm_username }}`
-          - @fractalmind-labs role: `${{ steps.npm-org.outputs.org_role }}`
-          - Commands: `npm ci`, `npm run build`, `npm test`, `npm pack`, `npm publish --access public`
-          EOF_SUMMARY
+          This workflow only validates the npm pre-publish chain.
+          - Trigger mode: \`workflow_dispatch\`
+          - Token source: \`${{ steps.npm-token.outputs.token_source }}\`
+          - npm user: \`${{ steps.npm-auth.outputs.npm_username }}\`
+          - @fractalmind-labs role: \`${{ steps.npm-org.outputs.org_role }}\`
+          - Optional scope probe: \`${{ steps.scope-probe.outcome }}\` (non-blocking; may fail under limited npm role)
+          - Commands: \`npm ci\`, \`npm run build\`, \`npm test\`, \`npm pack\`, \`npm publish --dry-run --access public\`
+          - \`npm whoami\` + org membership check are hard gates to avoid dry-run false positives.
+          - No real publish is executed in this workflow.
+          EOF

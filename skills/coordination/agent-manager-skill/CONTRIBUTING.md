@@ -68,7 +68,8 @@ Before submitting a PR, ensure:
 
 ### Reproduce CI checks locally
 
-Use the same commands as GitHub Actions `pr-quality` workflow:
+Run these from `skills/coordination/agent-manager-skill`. They match the `agent-manager` jobs in the
+repository's root `.github/workflows/ci.yml`:
 
 ```bash
 # Install dependencies used by tests/coverage gate (if not already installed)

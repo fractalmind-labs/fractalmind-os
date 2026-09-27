@@ -1,4 +1,4 @@
-name: Set Agent Profile
+name: "Protocol: Rename organization"
 
 on:
   workflow_dispatch:
@@ -9,21 +9,15 @@ on:
       admin_cap_id:
         description: 'OrgAdminCap object ID'
         required: true
-      agent_address:
-        description: 'Agent address to set profile for'
+      new_name:
+        description: 'New organization name'
         required: true
-      name:
-        description: 'Agent display name'
-        required: true
-      avatar_url:
-        description: 'Agent avatar URL (can be empty)'
-        required: false
-        default: ''
 
 jobs:
-  set-profile:
-    name: Set agent profile on Testnet
+  rename:
+    name: Rename org on Testnet
     runs-on: ubuntu-latest
+    environment: sui-testnet
 
     steps:
       - name: Install Sui CLI
@@ -57,30 +51,27 @@ jobs:
           sui client switch --address "$WALLET_ADDRESS"
           echo "Wallet: $WALLET_ADDRESS"
 
-      - name: Set agent profile
+      - name: Rename organization
         run: |
           set -euo pipefail
-          # NOTE: Update PACKAGE_ID after upgrade deployment
           PACKAGE_ID="0x6ac36fed2e6692c62aaa54cdaf7485bbcab88eb8993d43ba19d5cfc2748046a3"
+          REGISTRY_ID="0xfb8611bf2eb94b950e4ad47a76adeaab8ddda23e602c77e7464cc20572a547e3"
 
-          echo "Setting profile for agent ${{ inputs.agent_address }} in org ${{ inputs.org_id }}"
-          echo "Name: ${{ inputs.name }}"
-          echo "Avatar: ${{ inputs.avatar_url }}"
+          echo "Renaming org ${{ inputs.org_id }} to '${{ inputs.new_name }}'"
 
           sui client call \
             --package "$PACKAGE_ID" \
             --module entry \
-            --function admin_set_agent_profile \
+            --function rename_organization \
             --args \
               "${{ inputs.admin_cap_id }}" \
+              "$REGISTRY_ID" \
               "${{ inputs.org_id }}" \
-              "${{ inputs.agent_address }}" \
-              "${{ inputs.name }}" \
-              "${{ inputs.avatar_url }}" \
+              "${{ inputs.new_name }}" \
             --gas-budget 50000000 \
             --json
 
-          echo "Done! Agent profile set."
+          echo "Done! Organization renamed."
 
       - name: Cleanup
         if: always()

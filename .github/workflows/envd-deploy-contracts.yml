@@ -1,4 +1,4 @@
-name: Deploy FractalMind Protocol
+name: "envd: Deploy contracts"
 
 on:
   workflow_dispatch:
@@ -11,34 +11,22 @@ on:
           - testnet
           - mainnet
         default: testnet
-      action:
-        description: 'Deploy action'
-        required: true
-        type: choice
-        options:
-          - publish
-          - upgrade
-        default: publish
-      upgrade_cap:
-        description: 'UpgradeCap object ID (required for upgrade)'
-        required: false
-        default: ''
-      ref:
-        description: 'Branch, tag, or commit to deploy'
-        required: false
-        default: ''
 
 jobs:
   deploy:
     name: Deploy to ${{ inputs.network }}
     runs-on: ubuntu-latest
+    environment: sui-${{ inputs.network }}
+    defaults:
+      run:
+        working-directory: runtime/fractalmind-envd
     env:
       SUI_NETWORK: ${{ inputs.network }}
-      DEPLOY_REF: ${{ inputs.ref || github.ref }}
 
     outputs:
       package_id: ${{ steps.publish.outputs.package_id }}
-      registry_id: ${{ steps.publish.outputs.registry_id }}
+      peer_registry_id: ${{ steps.publish.outputs.peer_registry_id }}
+      sponsor_registry_id: ${{ steps.publish.outputs.sponsor_registry_id }}
       tx_digest: ${{ steps.publish.outputs.tx_digest }}
 
     steps:
@@ -47,8 +35,6 @@ jobs:
       # ============================================
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ env.DEPLOY_REF }}
 
       - name: Select Sui CLI version
         run: |
@@ -127,26 +113,48 @@ jobs:
           echo "WALLET_ADDRESS=$WALLET_ADDRESS" >> $GITHUB_ENV
           echo "::notice title=Deployment Wallet::$WALLET_ADDRESS"
 
+      - name: Request testnet gas (testnet only)
+        if: inputs.network == 'testnet'
+        run: |
+          set -euo pipefail
+          echo "Requesting testnet gas for $WALLET_ADDRESS"
+
+          # Check if we already have gas
+          BALANCE=$(sui client gas --json 2>/dev/null | jq length 2>/dev/null || echo "0")
+          if [ "$BALANCE" -gt 0 ]; then
+            echo "Already have gas coins, skipping faucet"
+            sui client balance
+            exit 0
+          fi
+
+          # Try faucet with retries
+          for i in 1 2 3; do
+            RESULT=$(curl -s -X POST 'https://faucet.testnet.sui.io/v2/gas' \
+              -H 'Content-Type: application/json' \
+              -d "{\"FixedAmountRequest\":{\"recipient\":\"$WALLET_ADDRESS\"}}" 2>&1)
+            echo "Faucet attempt $i: $RESULT"
+            if echo "$RESULT" | jq -e '.task' > /dev/null 2>&1; then
+              echo "Faucet request submitted successfully"
+              sleep 5
+              break
+            fi
+            sleep 10
+          done
+
+          sui client balance
+
       - name: Show wallet balance
         run: |
           set -euo pipefail
           echo "Current balance for $WALLET_ADDRESS"
           sui client balance
 
-          BALANCE_OUTPUT=$(sui client balance || true)
-          AVAILABLE=$(echo "$BALANCE_OUTPUT" | awk '/SUI/ {print $3; exit}' || echo "0")
-
-          if ! awk -v bal="$AVAILABLE" 'BEGIN {exit !(bal >= 0.3)}'; then
-            echo "::error::Wallet balance (${AVAILABLE} SUI) is below minimum (0.3 SUI)"
-            exit 1
-          fi
-
       - name: Merge gas coins
         run: |
           set -euo pipefail
-          echo "Merging SUI coins for sufficient gas budget"
           COINS=$(sui client gas --json | jq length)
           if [ "$COINS" -gt 1 ]; then
+            echo "Merging $COINS gas coins"
             sui client merge-coin \
               --coin-to-merge $(sui client gas --json | jq -r '.[0].gasCoinId') \
               --primary-coin $(sui client gas --json | jq -r '.[1].gasCoinId') || true
@@ -154,51 +162,91 @@ jobs:
           sui client balance
 
       # ============================================
-      # Build & Publish
+      # Prepare Dependencies
       # ============================================
-      - name: Build protocol package
+      - name: Setup Move.toml for CI
+        env:
+          PROTOCOL_PACKAGE_ID: '0x685d6fb6ed8b0e679bb467ea73111819ec6ff68b1466d24ca26b400095dcdf24'
         run: |
           set -euo pipefail
-          cd contracts/protocol
-          echo "=== Move.toml ==="
+
+          # === 1. Patch protocol Move.toml to mark as published ===
+          PROTOCOL_TOML="../../protocols/fractalmind-protocol/contracts/protocol/Move.toml"
+          echo "=== Original Protocol Move.toml ==="
+          cat "$PROTOCOL_TOML"
+
+          # Add published-at field if not already present, and fix address
+          if ! grep -q '^published-at' "$PROTOCOL_TOML"; then
+            sed -i "s|^edition = \"2024.beta\"|edition = \"2024.beta\"\npublished-at = \"${PROTOCOL_PACKAGE_ID}\"|" "$PROTOCOL_TOML"
+          fi
+          sed -i "s|^fractalmind_protocol = \"0x0\"|fractalmind_protocol = \"${PROTOCOL_PACKAGE_ID}\"|" "$PROTOCOL_TOML"
+
+          echo "=== Patched Protocol Move.toml ==="
+          cat "$PROTOCOL_TOML"
+
+          # === 2. Write envd Move.toml with correct dependency ===
+          cd contracts/envd
+
+          cat > Move.toml <<TOML
+          [package]
+          name = "fractalmind_envd"
+          version = "0.0.1"
+          edition = "2024.beta"
+
+          [dependencies.Sui]
+          git = "https://github.com/MystenLabs/sui.git"
+          subdir = "crates/sui-framework/packages/sui-framework"
+          rev = "framework/testnet"
+
+          [dependencies.fractalmind_protocol]
+          local = "../../../../protocols/fractalmind-protocol/contracts/protocol"
+
+          [addresses]
+          fractalmind_envd = "0x0"
+          TOML
+
+          # Remove leading whitespace from heredoc
+          sed -i 's/^          //' Move.toml
+
+          echo "=== envd Move.toml ==="
           cat Move.toml
+          echo "=== Verifying dependency path ==="
+          ls -la ../../../../protocols/fractalmind-protocol/contracts/protocol/ || echo "WARNING: dependency path not found"
           echo "================="
+
+      # ============================================
+      # Build & Publish
+      # ============================================
+      - name: Build envd contracts
+        run: |
+          set -euo pipefail
+          cd contracts/envd
           sui move build --path . --silence-warnings
 
-      - name: Publish protocol package
+      - name: Publish envd contracts
         id: publish
         run: |
           set -euo pipefail
-          cd contracts/protocol
+          cd contracts/envd
 
           GAS_BUDGET=500000000
-          ACTION="${{ inputs.action }}"
-          UPGRADE_CAP="${{ inputs.upgrade_cap }}"
+          echo "Publishing fractalmind_envd with gas budget $GAS_BUDGET"
 
-          if [ "$ACTION" = "upgrade" ]; then
-            if [ -z "$UPGRADE_CAP" ]; then
-              echo "::error::UpgradeCap object ID is required for upgrade"
-              exit 1
-            fi
-            echo "Upgrading fractalmind_protocol with UpgradeCap $UPGRADE_CAP"
-            set +e
-            DEPLOY_OUTPUT=$(sui client upgrade --gas-budget "$GAS_BUDGET" --upgrade-capability "$UPGRADE_CAP" --silence-warnings --json 2>&1)
-            EXIT_CODE=$?
-            set -e
-          else
-            echo "Publishing fractalmind_protocol with gas budget $GAS_BUDGET"
-            set +e
-            DEPLOY_OUTPUT=$(sui client publish --gas-budget "$GAS_BUDGET" --silence-warnings --json 2>&1)
-            EXIT_CODE=$?
-            set -e
-          fi
+          # Verify protocol dependency has published-at set
+          echo "=== Protocol Move.toml ==="
+          cat ../../../../protocols/fractalmind-protocol/contracts/protocol/Move.toml
+          echo "=========================="
+
+          set +e
+          DEPLOY_OUTPUT=$(sui client publish --gas-budget "$GAS_BUDGET" --silence-warnings --json 2>&1)
+          EXIT_CODE=$?
+          set -e
 
           echo "$DEPLOY_OUTPUT" > deploy_output.json
           echo "=== Publish output ==="
           echo "$DEPLOY_OUTPUT"
           echo "======================"
 
-          # Extract JSON (skip any non-JSON prefix lines)
           JSON_OUTPUT=$(echo "$DEPLOY_OUTPUT" | sed -n '/^[[:space:]]*{/,$p')
 
           if [[ $EXIT_CODE -ne 0 ]]; then
@@ -214,29 +262,39 @@ jobs:
           # Extract package ID
           PACKAGE_ID=$(echo "$JSON_OUTPUT" | jq -r '.objectChanges[] | select(.type == "published") | .packageId')
 
-          # Extract ProtocolRegistry object ID (shared object created by bootstrap::init)
-          REGISTRY_ID=$(echo "$JSON_OUTPUT" | jq -r '
+          # Extract PeerRegistry object ID
+          PEER_REGISTRY_ID=$(echo "$JSON_OUTPUT" | jq -r '
             .objectChanges[]
             | select(.type == "created")
-            | select(.objectType | contains("ProtocolRegistry"))
+            | select(.objectType | contains("PeerRegistry"))
+            | .objectId
+          ')
+
+          # Extract SponsorRegistry object ID
+          SPONSOR_REGISTRY_ID=$(echo "$JSON_OUTPUT" | jq -r '
+            .objectChanges[]
+            | select(.type == "created")
+            | select(.objectType | contains("SponsorRegistry"))
             | .objectId
           ')
 
           TX_DIGEST=$(echo "$JSON_OUTPUT" | jq -r '.digest')
 
-          # Save created objects for reference
           echo "$JSON_OUTPUT" | jq '.objectChanges[] | select(.type == "created")' > created_objects.json
 
           echo "package_id=$PACKAGE_ID" >> $GITHUB_OUTPUT
-          echo "registry_id=$REGISTRY_ID" >> $GITHUB_OUTPUT
+          echo "peer_registry_id=$PEER_REGISTRY_ID" >> $GITHUB_OUTPUT
+          echo "sponsor_registry_id=$SPONSOR_REGISTRY_ID" >> $GITHUB_OUTPUT
           echo "tx_digest=$TX_DIGEST" >> $GITHUB_OUTPUT
 
           echo "PACKAGE_ID=$PACKAGE_ID" >> $GITHUB_ENV
-          echo "REGISTRY_ID=$REGISTRY_ID" >> $GITHUB_ENV
+          echo "PEER_REGISTRY_ID=$PEER_REGISTRY_ID" >> $GITHUB_ENV
+          echo "SPONSOR_REGISTRY_ID=$SPONSOR_REGISTRY_ID" >> $GITHUB_ENV
           echo "TX_DIGEST=$TX_DIGEST" >> $GITHUB_ENV
 
           echo "::notice title=Package ID::$PACKAGE_ID"
-          echo "::notice title=Registry ID::$REGISTRY_ID"
+          echo "::notice title=PeerRegistry ID::$PEER_REGISTRY_ID"
+          echo "::notice title=SponsorRegistry ID::$SPONSOR_REGISTRY_ID"
           echo "::notice title=Tx Digest::$TX_DIGEST"
 
       # ============================================
@@ -246,11 +304,10 @@ jobs:
         run: |
           set -euo pipefail
           cat <<EOF >> $GITHUB_STEP_SUMMARY
-          # FractalMind Protocol Deployment
+          # fractalmind-envd Contract Deployment
 
           ## Environment
           - **Network**: ${SUI_NETWORK}
-          - **Ref**: ${DEPLOY_REF}
           - **Timestamp**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
           - **Deployer**: ${WALLET_ADDRESS}
 
@@ -258,36 +315,37 @@ jobs:
           | Object | ID |
           |--------|-----|
           | **Package** | \`${PACKAGE_ID}\` |
-          | **ProtocolRegistry** | \`${REGISTRY_ID}\` |
+          | **PeerRegistry** | \`${PEER_REGISTRY_ID}\` |
+          | **SponsorRegistry** | \`${SPONSOR_REGISTRY_ID}\` |
           | **Transaction** | \`${TX_DIGEST}\` |
 
           ## Explorer Links
           - [Package on SuiScan](https://suiscan.xyz/${SUI_NETWORK}/object/${PACKAGE_ID})
-          - [Registry on SuiScan](https://suiscan.xyz/${SUI_NETWORK}/object/${REGISTRY_ID})
+          - [PeerRegistry on SuiScan](https://suiscan.xyz/${SUI_NETWORK}/object/${PEER_REGISTRY_ID})
+          - [SponsorRegistry on SuiScan](https://suiscan.xyz/${SUI_NETWORK}/object/${SPONSOR_REGISTRY_ID})
           - [Transaction on SuiScan](https://suiscan.xyz/${SUI_NETWORK}/tx/${TX_DIGEST})
 
-          ## SDK Configuration
-          \`\`\`typescript
-          const sdk = new FractalMindSDK({
-            packageId: '${PACKAGE_ID}',
-            registryId: '${REGISTRY_ID}',
-            network: '${SUI_NETWORK}',
-          });
-          \`\`\`
+          ## Dependencies
+          - **fractalmind_protocol**: \`0x685d6fb6ed8b0e679bb467ea73111819ec6ff68b1466d24ca26b400095dcdf24\`
 
-          ## Next Steps
-          1. Create SuLabs organization
-          2. Register AI agents
-          3. Complete task lifecycle test
+          ## envd Configuration
+          \`\`\`yaml
+          sui:
+            rpc: https://fullnode.${SUI_NETWORK}.sui.io:443
+            package_id: '${PACKAGE_ID}'
+            peer_registry_id: '${PEER_REGISTRY_ID}'
+            sponsor_registry_id: '${SPONSOR_REGISTRY_ID}'
+            protocol_package_id: '0x685d6fb6ed8b0e679bb467ea73111819ec6ff68b1466d24ca26b400095dcdf24'
+          \`\`\`
           EOF
 
       - name: Upload deployment artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: fractalmind-${{ inputs.network }}-deployment-${{ github.run_id }}
+          name: fractalmind-envd-${{ inputs.network }}-deployment-${{ github.run_id }}
           path: |
-            contracts/protocol/deploy_output.json
-            contracts/protocol/created_objects.json
+            runtime/fractalmind-envd/contracts/envd/deploy_output.json
+            runtime/fractalmind-envd/contracts/envd/created_objects.json
 
       - name: Cleanup keystore
         if: always()

@@ -28,6 +28,8 @@ npx skills add fractalmind-labs/fractalmind-os --skill agent-manager
 See the [skill installation guide](skills/README.md) for other skills, agents,
 and installation scopes.
 
+CI, Pages and release workflows are described in [`docs/ci.md`](docs/ci.md).
+
 Private repositories remain separate in the `fractalmind-labs` organization:
 
 - [`agent-console`](https://github.com/fractalmind-labs/agent-console)

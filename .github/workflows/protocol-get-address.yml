@@ -1,4 +1,4 @@
-name: Get SUI Address
+name: "Protocol: Get Sui address"
 
 on:
   workflow_dispatch:
@@ -15,6 +15,7 @@ on:
 jobs:
   get-address:
     runs-on: ubuntu-latest
+    environment: sui-${{ inputs.network }}
     steps:
       - name: Install SUI CLI
         run: |
