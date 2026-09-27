@@ -7,7 +7,7 @@ This document describes heartbeat audit fields, trace queries, and SLO summary m
 Define one CLI alias first (same baseline as README/SKILL/runbook docs):
 
 ```bash
-CLI="python3 .agent/skills/agent-manager/scripts/main.py"
+CLI="python3 .agents/skills/agent-manager/scripts/main.py"
 # CLI="python3 .claude/skills/agent-manager/scripts/main.py"
 # CLI="python3 agent-manager/scripts/main.py"  # cloned repo mode
 ```

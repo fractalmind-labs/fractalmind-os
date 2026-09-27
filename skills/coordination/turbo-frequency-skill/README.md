@@ -7,7 +7,7 @@
 *Like CPU turbo boost — speeds up when busy, slows down when idle.*
 
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![openskills](https://img.shields.io/badge/openskills-compatible-blue.svg)](https://github.com/nichochar/open-skills)
+[![skills CLI](https://img.shields.io/badge/skills-CLI-blue.svg)](https://github.com/vercel-labs/skills)
 
 </div>
 
@@ -36,8 +36,8 @@ No external dependencies. No background process. Just a skill your agent invokes
 ## Installation
 
 ```bash
-# Via openskills (recommended)
-npx openskills install fractalmind-ai/turbo-frequency-skill
+# Via skills CLI (recommended)
+npx skills add fractalmind-labs/fractalmind-os --skill turbo-frequency
 
 # Manual
 git clone https://github.com/fractalmind-ai/turbo-frequency-skill.git
@@ -49,7 +49,7 @@ cp -r turbo-frequency-skill/turbo-frequency ~/.claude/skills/turbo-frequency
 ### 1. Install & register the skill
 
 ```bash
-npx openskills install fractalmind-ai/turbo-frequency-skill
+npx skills add fractalmind-labs/fractalmind-os --skill turbo-frequency
 ```
 
 Then add `turbo-frequency` to your `AGENTS.md` frontmatter **and** enable heartbeat:
@@ -90,7 +90,7 @@ Create (or update) `memory/heartbeat-state.json` in your workspace root:
 At the **end** of your heartbeat handler (after all checks are done), load the skill:
 
 ```bash
-npx openskills read turbo-frequency
+cat .agents/skills/turbo-frequency/SKILL.md
 ```
 
 The skill output guides your agent to:

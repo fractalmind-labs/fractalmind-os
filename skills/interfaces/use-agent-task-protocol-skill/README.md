@@ -18,6 +18,17 @@ portable envelope semantics and skill-managed reply delivery.
 - Receivers may need to install the ATP skill before replying.
 - The delivery runtime preserves an exact source context for active return.
 
+## Install
+
+Run from the project where the receiving agent works:
+
+```bash
+npx skills add fractalmind-labs/fractalmind-os --skill use-agent-task-protocol
+```
+
+The canonical reply-required Footer now uses this command. Update senders and
+receivers together if they validate the Footer as exact text.
+
 ## Repository layout
 
 - `SKILL.md`: canonical protocol instructions and send/receive workflow.

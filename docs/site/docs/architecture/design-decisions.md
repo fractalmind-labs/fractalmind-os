@@ -62,9 +62,9 @@ Key technical choices and the reasoning behind them.
 - **No server**: No database process to manage, backup, or migrate
 - **Composable**: Different tools can read the same files without API integration
 
-## Why openskills (not a monolith)?
+## Why skills CLI?
 
-**Decision**: Distribute skills as independent packages via `npx openskills install`.
+**Decision**: Install individual skills from their monorepo source directories with `npx skills add`.
 
 **Rationale**:
 - **No lock-in**: Install only what you need

@@ -47,7 +47,7 @@ You are responsible for code review quality...
 
 ```bash
 # From your workspace root
-CLI="python3 .agent/skills/agent-manager/scripts/main.py"
+CLI="python3 .agents/skills/agent-manager/scripts/main.py"
 
 $CLI doctor
 $CLI list

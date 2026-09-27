@@ -13,6 +13,15 @@ Agent availability calendar system — like Google Calendar for your AI agents.
 
 This skill follows the [agent-os-spec](https://github.com/fractalmind-ai/agent-os-spec) skill contract.
 
+From the workspace where your agent will use it:
+
+```bash
+npx skills add fractalmind-labs/fractalmind-os --skill agent-calendar
+```
+
+The project installation lives in `.agents/skills/agent-calendar/`. Replace
+`codex` with `claude-code` for Claude Code.
+
 ### As a git-sourced skill
 
 In your ROM manifest:

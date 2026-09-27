@@ -742,11 +742,11 @@ def load_skills(
     skills_dir: Optional[Path] = None,
 ) -> str:
     """
-    Load skill contents from .agent/skills/ and format as system prompt.
+    Load installed skill descriptions and format them as a system prompt.
 
     Args:
         config: Agent configuration (must have 'skills' key)
-        skills_dir: Directory containing skills (default: cwd/.agent/skills/)
+        skills_dir: Optional override; otherwise search supported install locations.
 
     Returns:
         Formatted string with all skills as system prompt
@@ -802,7 +802,7 @@ def build_system_prompt(
 
     Args:
         config: Agent configuration (with 'role_definition' and 'skills' keys)
-        skills_dir: Directory containing skills (default: cwd/.agent/skills/)
+        skills_dir: Optional override; otherwise search supported install locations.
 
     Returns:
         Complete system prompt string
@@ -821,7 +821,7 @@ def build_system_prompt(
 
         parts.append(
             "## Workspace Preflight\n\n"
-            "If `openskills` can't find skills when you're working inside a subdirectory or git submodule, "
+            "If installed skills are missing when you're working inside a subdirectory or git submodule, "
             "first `cd` to the superproject (repo root) and retry:\n\n"
             "```bash\n"
             "cd \"$(git rev-parse --show-superproject-working-tree 2>/dev/null || git rev-parse --show-toplevel 2>/dev/null)\"\n"

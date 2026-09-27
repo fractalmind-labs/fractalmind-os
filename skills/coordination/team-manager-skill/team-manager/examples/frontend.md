@@ -55,12 +55,12 @@ graph TD
 
 Assign task to this team:
 ```bash
-python3 .agent/skills/team-manager/scripts/main.py assign frontend <<EOF
+python3 .agents/skills/team-manager/scripts/main.py assign frontend <<EOF
 Implement user login form with validation
 EOF
 ```
 
 Monitor team progress:
 ```bash
-python3 .agent/skills/team-manager/scripts/main.py monitor frontend --follow
+python3 .agents/skills/team-manager/scripts/main.py monitor frontend --follow
 ```

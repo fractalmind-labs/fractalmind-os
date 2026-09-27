@@ -57,7 +57,7 @@ from tmux_helper import (
     stabilize_codex_session,
 )
 
-# Import provider system (lives at .agent/skills/agent-manager/providers)
+# Import provider system (lives at .agents/skills/agent-manager/providers)
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from providers import (
     get_system_prompt_mode,

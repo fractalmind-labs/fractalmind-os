@@ -25,10 +25,10 @@ Team orchestration system for managing multi-agent teams with lead-based coordin
 
 ## 📦 Installation
 
-### via openskills (recommended)
+### Via skills CLI (recommended)
 
 ```bash
-openskills install fractalmind-ai/team-manager-skill
+npx skills add fractalmind-labs/fractalmind-os --skill team-manager
 ```
 
 ### Requirements
@@ -36,7 +36,7 @@ openskills install fractalmind-ai/team-manager-skill
 This skill depends on **agent-manager**:
 
 ```bash
-openskills install fractalmind-ai/agent-manager-skill
+npx skills add fractalmind-labs/fractalmind-os --skill agent-manager
 ```
 
 Python dependency:

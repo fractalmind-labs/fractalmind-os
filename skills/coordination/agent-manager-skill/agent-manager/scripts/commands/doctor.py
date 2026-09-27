@@ -15,7 +15,7 @@ def cmd_doctor(args, *, deps: Any):
 
     repo_root = get_repo_root()
     agents_dir = repo_root / 'agents'
-    skills_dir = repo_root / '.agent' / 'skills'
+    skills_dirs = [repo_root / '.agents' / 'skills', repo_root / '.agent' / 'skills']
     claude_dir = repo_root / '.claude'
 
     problems = 0
@@ -42,11 +42,12 @@ def cmd_doctor(args, *, deps: Any):
         print("❌ agents/: missing")
         print(f"   Expected at: {agents_dir}")
 
-    if skills_dir.exists() and skills_dir.is_dir():
-        print("✅ .agent/skills/: found")
+    existing_skills_dir = next((path for path in skills_dirs if path.is_dir()), None)
+    if existing_skills_dir:
+        print(f"✅ {existing_skills_dir.relative_to(repo_root)}/: found")
     else:
-        print("⚠️  .agent/skills/: missing")
-        print(f"   Expected at: {skills_dir}")
+        print("⚠️  skills directory: missing")
+        print(f"   Expected at: {skills_dirs[0]} or {skills_dirs[1]}")
 
     if claude_dir.exists() and claude_dir.is_dir():
         print("✅ .claude/: found")

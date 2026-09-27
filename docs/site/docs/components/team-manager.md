@@ -2,10 +2,10 @@
 
 > Multi-agent team orchestration with lead-based coordination.
 
-**Repo**: [fractalmind-ai/team-manager-skill](https://github.com/fractalmind-ai/team-manager-skill)
+**Source**: [team-manager-skill](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/team-manager-skill)
 **Language**: Python
 **Status**: Stable
-**Install**: `npx openskills install fractalmind-ai/team-manager-skill`
+**Install**: `npx skills add fractalmind-labs/fractalmind-os --skill team-manager`
 
 ## What It Does
 
@@ -26,9 +26,7 @@ team-manager is the **L1 management layer** — it coordinates multiple agents w
 
 ## Usage
 
-```bash
-npx openskills read team-manager
-```
+Restart your agent session after installation and ask it to use `team-manager`.
 
 ```bash
 # Create a team

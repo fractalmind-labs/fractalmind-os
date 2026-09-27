@@ -13,22 +13,22 @@ Team orchestration system for managing multi-agent teams with lead-based coordin
 
 ```bash
 # List all teams
-python3 .agent/skills/team-manager/scripts/main.py list
+python3 .agents/skills/team-manager/scripts/main.py list
 
 # Show team details (including workflow)
-python3 .agent/skills/team-manager/scripts/main.py show frontend
+python3 .agents/skills/team-manager/scripts/main.py show frontend
 
 # Assign task to team
-python3 .agent/skills/team-manager/scripts/main.py assign frontend <<EOF
+python3 .agents/skills/team-manager/scripts/main.py assign frontend <<EOF
 Implement user authentication feature
 EOF
 # ⚠️ Important: tmux send-keys -t agent-EMP_0001 Enter
 
 # Monitor team progress (live)
-python3 .agent/skills/team-manager/scripts/main.py monitor frontend --follow
+python3 .agents/skills/team-manager/scripts/main.py monitor frontend --follow
 
 # Create a new team
-python3 .agent/skills/team-manager/scripts/main.py create backend \\
+python3 .agents/skills/team-manager/scripts/main.py create backend \\
     --lead EMP_0001 --members EMP_0001 EMP_0002 \\
     --description "Backend Development Team"
 ```
@@ -163,7 +163,7 @@ The lead agent uses agent-manager to interact with member agents.
 Show all configured teams.
 
 ```bash
-python3 .agent/skills/team-manager/scripts/main.py list
+python3 .agents/skills/team-manager/scripts/main.py list
 ```
 
 Output:
@@ -186,7 +186,7 @@ Output:
 Display detailed information about a specific team, including workflow.
 
 ```bash
-python3 .agent/skills/team-manager/scripts/main.py show frontend
+python3 .agents/skills/team-manager/scripts/main.py show frontend
 ```
 
 Shows:
@@ -200,7 +200,7 @@ Shows:
 Show running/stopped status of all team members.
 
 ```bash
-python3 .agent/skills/team-manager/scripts/main.py status frontend
+python3 .agents/skills/team-manager/scripts/main.py status frontend
 ```
 
 Output:
@@ -218,7 +218,7 @@ Assign a task to a team's lead agent for coordination.
 
 ```bash
 # From stdin
-python3 .agent/skills/team-manager/scripts/main.py assign frontend <<EOF
+python3 .agents/skills/team-manager/scripts/main.py assign frontend <<EOF
 🎯 Task: Implement user authentication
 
 1. Login page with form validation
@@ -230,7 +230,7 @@ EOF
 # Note: team-manager assigns via agent-manager and submits automatically (no manual ENTER needed).
 
 # From file
-python3 .agent/skills/team-manager/scripts/main.py assign frontend --task-file task.md
+python3 .agents/skills/team-manager/scripts/main.py assign frontend --task-file task.md
 ```
 
 **Restore Behavior:**
@@ -257,13 +257,13 @@ View output from all team members.
 
 ```bash
 # Snapshot (last 50 lines per agent)
-python3 .agent/skills/team-manager/scripts/main.py monitor frontend
+python3 .agents/skills/team-manager/scripts/main.py monitor frontend
 
 # Live monitoring (Ctrl+C to stop)
-python3 .agent/skills/team-manager/scripts/main.py monitor frontend --follow
+python3 .agents/skills/team-manager/scripts/main.py monitor frontend --follow
 
 # Specify line count
-python3 .agent/skills/team-manager/scripts/main.py monitor frontend -n 100
+python3 .agents/skills/team-manager/scripts/main.py monitor frontend -n 100
 ```
 
 ### `create` - Create New Team
@@ -271,7 +271,7 @@ python3 .agent/skills/team-manager/scripts/main.py monitor frontend -n 100
 Create a new team configuration file with a default mermaid workflow.
 
 ```bash
-python3 .agent/skills/team-manager/scripts/main.py create backend \\
+python3 .agents/skills/team-manager/scripts/main.py create backend \\
     --lead EMP_0001 \\
     --members EMP_0001 EMP_0002 EMP_0003 \\
     --description "Backend API Development Team"
@@ -288,7 +288,7 @@ Use `--force` to overwrite existing team file.
 ## Architecture
 
 ```
-.agent/skills/team-manager/
+.agents/skills/team-manager/
 ├── SKILL.md                    # This file
 ├── scripts/
 │   ├── main.py                 # CLI entry point
@@ -340,21 +340,21 @@ Example workflow updates:
 
 ```bash
 # 1. Check team status
-python3 .agent/skills/team-manager/scripts/main.py status frontend
+python3 .agents/skills/team-manager/scripts/main.py status frontend
 
 # 2. Review workflow if needed
-python3 .agent/skills/team-manager/scripts/main.py show frontend
+python3 .agents/skills/team-manager/scripts/main.py show frontend
 
 # 3. Assign task (auto-starts lead agent if needed)
-python3 .agent/skills/team-manager/scripts/main.py assign frontend <<EOF
+python3 .agents/skills/team-manager/scripts/main.py assign frontend <<EOF
 Implement the feature...
 EOF
 
 # 4. Monitor progress
-python3 .agent/skills/team-manager/scripts/main.py monitor frontend --follow
+python3 .agents/skills/team-manager/scripts/main.py monitor frontend --follow
 
 # 5. Send clarifications if needed
-python3 .agent/skills/agent-manager/scripts/main.py send EMP_0001 "Please add error handling"
+python3 .agents/skills/agent-manager/scripts/main.py send EMP_0001 "Please add error handling"
 ```
 
 ## Workflow Examples

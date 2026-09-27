@@ -17,6 +17,17 @@ The source-to-destination mapping is recorded in [`repository-map.yaml`](reposit
 - `skills/` — installable agent skills and skill registries
 - `docs/` — public documentation site and architecture notes
 
+## Install a skill
+
+From the project where your agent will use it:
+
+```bash
+npx skills add fractalmind-labs/fractalmind-os --skill agent-manager
+```
+
+See the [skill installation guide](skills/README.md) for other skills, agents,
+and installation scopes.
+
 Private repositories remain separate in the `fractalmind-labs` organization:
 
 - [`agent-console`](https://github.com/fractalmind-labs/agent-console)

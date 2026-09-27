@@ -6,7 +6,7 @@ Token-efficient web browsing, screenshots, form filling, and UI auditing for AI 
 
 ## What is this?
 
-An [openskills](https://github.com/nicepkg/openskills)-compatible skill that teaches AI agents how to use `agent-browser` — a fast headless browser CLI optimized for AI agent usage.
+An Agent Skills-compatible skill that teaches AI agents how to use `agent-browser` — a fast headless browser CLI optimized for AI agent usage.
 
 **Key features:**
 - **Token-efficient**: Accessibility-tree snapshots produce 200-400 tokens vs 3,000-5,000 for raw HTML
@@ -19,10 +19,10 @@ An [openskills](https://github.com/nicepkg/openskills)-compatible skill that tea
 ### Install the skill
 
 ```bash
-npx openskills install fractalmind-ai/agent-browser-skill
+npx skills add fractalmind-labs/fractalmind-os --skill use-agent-browser
 ```
 
-Or manually copy `SKILL.md` into your `.agent/skills/use-agent-browser/` or `.claude/skills/use-agent-browser/` directory.
+Or manually copy `SKILL.md` into your `.agents/skills/use-agent-browser/` or `.claude/skills/use-agent-browser/` directory.
 
 ### Install browser dependencies (one-time)
 

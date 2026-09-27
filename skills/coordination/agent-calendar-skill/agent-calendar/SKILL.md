@@ -13,19 +13,19 @@ Agent availability calendar system for managing multi-agent teams. Think of it a
 
 ```bash
 # View all agents in calendar format (like employee attendance)
-python3 .agent/skills/agent-calendar/scripts/main.py calendar
+python3 .agents/skills/agent-calendar/scripts/main.py calendar
 
 # Check team availability
-python3 .agent/skills/agent-calendar/scripts/main.py team polymarket-quant
+python3 .agents/skills/agent-calendar/scripts/main.py team polymarket-quant
 
 # Get detailed status of a specific agent
-python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0007
+python3 .agents/skills/agent-calendar/scripts/main.py show EMP_0007
 
 # Get task assignment suggestions
-python3 .agent/skills/agent-calendar/scripts/main.py suggest --task-type development
+python3 .agents/skills/agent-calendar/scripts/main.py suggest --task-type development
 
 # Watch status changes in real-time
-python3 .agent/skills/agent-calendar/scripts/main.py watch --follow
+python3 .agents/skills/agent-calendar/scripts/main.py watch --follow
 ```
 
 ## Core Concepts
@@ -72,7 +72,7 @@ Detects agent idle time from Claude's prompt timer:
 Display all agents in a calendar-like format showing availability.
 
 ```bash
-python3 .agent/skills/agent-calendar/scripts/main.py calendar
+python3 .agents/skills/agent-calendar/scripts/main.py calendar
 ```
 
 Output:
@@ -101,11 +101,11 @@ Recommendation: Assign tasks to EMP_0005, EMP_0008, or polymarket team
 **Options:**
 ```bash
 # Show only running agents
-python3 .agent/skills/agent-calendar/scripts/main.py calendar --running
+python3 .agents/skills/agent-calendar/scripts/main.py calendar --running
 
 # Filter by state
-python3 .agent/skills/agent-calendar/scripts/main.py calendar --state idle
-python3 .agent/skills/agent-calendar/scripts/main.py calendar --state quota-exhausted
+python3 .agents/skills/agent-calendar/scripts/main.py calendar --state idle
+python3 .agents/skills/agent-calendar/scripts/main.py calendar --state quota-exhausted
 ```
 
 ### `team` - Team Availability Report
@@ -113,7 +113,7 @@ python3 .agent/skills/agent-calendar/scripts/main.py calendar --state quota-exha
 Show availability status for a specific team.
 
 ```bash
-python3 .agent/skills/agent-calendar/scripts/main.py team polymarket-quant
+python3 .agents/skills/agent-calendar/scripts/main.py team polymarket-quant
 ```
 
 Output:
@@ -142,7 +142,7 @@ Output:
 Get comprehensive status report for a single agent.
 
 ```bash
-python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0007
+python3 .agents/skills/agent-calendar/scripts/main.py show EMP_0007
 ```
 
 Output:
@@ -186,7 +186,7 @@ Recommendations:
 Get AI-powered recommendations for task assignment.
 
 ```bash
-python3 .agent/skills/agent-calendar/scripts/main.py suggest --task-type development
+python3 .agents/skills/agent-calendar/scripts/main.py suggest --task-type development
 ```
 
 Output:
@@ -220,7 +220,7 @@ Top Recommendations:
   • EMP_0007 (director) - Quota exhausted until ~07:12
 
 💡 Assignment Command:
-  python3 .agent/skills/agent-manager/scripts/main.py assign EMP_0005 <<EOF
+  python3 .agents/skills/agent-manager/scripts/main.py assign EMP_0005 <<EOF
   Your task here...
   EOF
 ```
@@ -237,7 +237,7 @@ Top Recommendations:
 Monitor agent status changes in real-time.
 
 ```bash
-python3 .agent/skills/agent-calendar/scripts/main.py watch --follow
+python3 .agents/skills/agent-calendar/scripts/main.py watch --follow
 ```
 
 Output (live updates):
@@ -255,10 +255,10 @@ Output (live updates):
 **Options:**
 ```bash
 # Watch specific agents
-python3 .agent/skills/agent-calendar/scripts/main.py watch EMP_0007 EMP_0008 --follow
+python3 .agents/skills/agent-calendar/scripts/main.py watch EMP_0007 EMP_0008 --follow
 
 # Set refresh interval (default 30s)
-python3 .agent/skills/agent-calendar/scripts/main.py watch --interval 60
+python3 .agents/skills/agent-calendar/scripts/main.py watch --interval 60
 ```
 
 ### `history` - Agent Calendar History
@@ -266,7 +266,7 @@ python3 .agent/skills/agent-calendar/scripts/main.py watch --interval 60
 View historical status data for an agent.
 
 ```bash
-python3 .agent/skills/agent-calendar/scripts/main.py history EMP_0007 --days 7
+python3 .agents/skills/agent-calendar/scripts/main.py history EMP_0007 --days 7
 ```
 
 Output:
@@ -365,8 +365,8 @@ Status history stored in `~/.agent/state/agent-calendar/`:
 ### With agent-manager
 ```bash
 # Check availability before assigning
-python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0005
-python3 .agent/skills/agent-manager/scripts/main.py assign EMP_0005 <<EOF
+python3 .agents/skills/agent-calendar/scripts/main.py show EMP_0005
+python3 .agents/skills/agent-manager/scripts/main.py assign EMP_0005 <<EOF
 ...
 EOF
 ```
@@ -374,8 +374,8 @@ EOF
 ### With team-manager
 ```bash
 # Check team capacity before assigning
-python3 .agent/skills/agent-calendar/scripts/main.py team polymarket-quant
-python3 .agent/skills/team-manager/scripts/main.py assign polymarket-quant <<EOF
+python3 .agents/skills/agent-calendar/scripts/main.py team polymarket-quant
+python3 .agents/skills/team-manager/scripts/main.py assign polymarket-quant <<EOF
 ...
 EOF
 ```
@@ -385,7 +385,7 @@ EOF
 ### 1. Morning Standup
 ```bash
 # Check daily attendance
-python3 .agent/skills/agent-calendar/scripts/main.py calendar
+python3 .agents/skills/agent-calendar/scripts/main.py calendar
 
 # Output informs daily planning:
 # - Who's available today?
@@ -396,16 +396,16 @@ python3 .agent/skills/agent-calendar/scripts/main.py calendar
 ### 2. Pre-Task Assignment
 ```bash
 # Find best candidate for urgent task
-python3 .agent/skills/agent-calendar/scripts/main.py suggest --task-type review
+python3 .agents/skills/agent-calendar/scripts/main.py suggest --task-type review
 
 # Get detailed view before assigning
-python3 .agent/skills/agent-calendar/scripts/main.py show EMP_0005
+python3 .agents/skills/agent-calendar/scripts/main.py show EMP_0005
 ```
 
 ### 3. Capacity Planning
 ```bash
 # Check team bandwidth
-python3 .agent/skills/agent-calendar/scripts/main.py team polymarket-quant
+python3 .agents/skills/agent-calendar/scripts/main.py team polymarket-quant
 
 # Output shows:
 # - Can team take 2 more tasks?
@@ -416,7 +416,7 @@ python3 .agent/skills/agent-calendar/scripts/main.py team polymarket-quant
 ### 4. Incident Response
 ```bash
 # Monitor quota issues in real-time
-python3 .agent/skills/agent-calendar/scripts/main.py watch --follow
+python3 .agents/skills/agent-calendar/scripts/main.py watch --follow
 
 # Alert when quota resets
 # Restart agents automatically
