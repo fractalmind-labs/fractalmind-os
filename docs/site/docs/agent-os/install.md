@@ -125,7 +125,7 @@ Each installed skill follows this structure:
 - Configure your agent's heartbeat schedule
 - Set up your first OKR in `OKR.md`
 - Add tasks to `TODO.md` for immediate work
-- Explore the [Skills catalog](https://github.com/fractalmind-ai/skills) for additional capabilities
+- Explore the [Skills catalog](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills) for additional capabilities
 
 ## Troubleshooting
 

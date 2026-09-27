@@ -72,9 +72,9 @@ Ready to install? See the [Installation Guide](/agent-os/install).
 
 ## Learn More
 
-- [agent-os-spec](https://github.com/fractalmind-ai/agent-os-spec) — the contract layer that defines what every OS must satisfy
-- [agent-os-roms](https://github.com/fractalmind-ai/agent-os-roms) — ROM manifests, templates, and release notes
-- [Skills catalog](https://github.com/fractalmind-ai/skills) — all available skills organized by category
+- [agent-os-spec](https://github.com/fractalmind-labs/fractalmind-os/tree/main/spec/agent-os-spec) — the contract layer that defines what every OS must satisfy
+- [agent-os-roms](https://github.com/fractalmind-labs/fractalmind-os/tree/main/roms/agent-os-roms) — ROM manifests, templates, and release notes
+- [Skills catalog](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills) — all available skills organized by category
 
 <style>
 .rom-grid h3 a {
