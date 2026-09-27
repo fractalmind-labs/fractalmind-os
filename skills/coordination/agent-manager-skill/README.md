@@ -35,7 +35,7 @@ Managing multiple AI agents is deceptively complex:
 
 ```bash
 # Run from the project where your agent will use the skill
-npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill --skill agent-manager -a codex -y
+npx skills add fractalmind-labs/fractalmind-os --skill agent-manager
 
 # Add -g for a user-level install, or replace codex with claude-code
 ```

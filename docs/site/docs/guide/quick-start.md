@@ -11,8 +11,9 @@ Get a working AI agent team running in under 5 minutes.
 | tmux | any | `tmux -V` |
 | AI API key | — | Claude, OpenAI, or similar |
 
-The commands below install skills for Codex in the current project. For Claude
-Code, replace `-a codex` with `-a claude-code`.
+The commands below install skills in the current project. The CLI detects the
+available agent automatically; add `-a codex` or `-a claude-code` only when you
+want to choose a specific target.
 
 ::: tip Don't have tmux?
 ```bash
@@ -27,7 +28,7 @@ sudo apt install tmux
 ## Step 1: Install Agent Manager
 
 ```bash
-npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill --skill agent-manager -a codex -y
+npx skills add fractalmind-labs/fractalmind-os --skill agent-manager
 ```
 
 Check the installation with `npx skills list`. Project skills are installed
@@ -66,7 +67,7 @@ researcher: 1 windows (created Sat Mar  8 14:30:22 2026)
 ## Step 3: Install Team Manager
 
 ```bash
-npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/team-manager-skill --skill team-manager -a codex -y
+npx skills add fractalmind-labs/fractalmind-os --skill team-manager
 ```
 
 Restart your agent session after installing the new skill.
@@ -135,13 +136,13 @@ Check agent heartbeat:
 
 ```bash
 # OKR tracking for goal management
-npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/okr-manager-skill --skill okr-manager -a codex -y
+npx skills add fractalmind-labs/fractalmind-os --skill okr-manager
 
 # Multi-channel messaging (Telegram, Slack, etc.)
-npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/use-fractalbot-skill --skill use-fractalbot -a codex -y
+npx skills add fractalmind-labs/fractalmind-os --skill use-fractalbot
 
 # File-backed team chat
-npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/team-chat-skill --skill team-chat -a codex -y
+npx skills add fractalmind-labs/fractalmind-os --skill team-chat
 ```
 
 ## Optional: On-Chain Protocol

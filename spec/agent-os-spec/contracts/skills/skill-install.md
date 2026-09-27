@@ -19,14 +19,14 @@
 - `source.type: embedded` → 安装器从 ROM templates 中复制 `source.path` 指定的目录
 
 公开 monorepo 中的 git 技能也可由 `npx skills add` 安装。使用指向单个技能
-source 目录的 GitHub tree URL，并用 `--skill <SKILL.md 中的 name>` 指定技能，
-例如：
+source 目录的 GitHub tree URL；当该目录只包含一个技能时，不需要额外参数：
 
 ```bash
-npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill --skill agent-manager -a codex -y
+npx skills add fractalmind-labs/fractalmind-os --skill agent-manager
 ```
 
-此命令从目标 workspace 运行；`-a` 指定 agent，`-g` 可选用于全局安装。
+此命令从目标 workspace 运行。多技能仓库可用 `--skill <name>` 选择技能，
+`-a` 指定 agent，`-g` 可选用于全局安装，`-y` 用于 CI 非交互安装。
 ROM 的 `source.type: git` 声明继续作为安装来源记录，`npx skills` 是安装器
 可选的获取与安装方式。
 

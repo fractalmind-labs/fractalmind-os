@@ -5,7 +5,7 @@
 **Source**: [agent-manager-skill](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill)
 **Language**: Python
 **Status**: Stable
-**Install**: `npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill --skill agent-manager -a codex -y`
+**Install**: `npx skills add fractalmind-labs/fractalmind-os --skill agent-manager`
 
 ## What It Does
 

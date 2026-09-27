@@ -22,7 +22,7 @@ The source-to-destination mapping is recorded in [`repository-map.yaml`](reposit
 From the project where your agent will use it:
 
 ```bash
-npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill --skill agent-manager -a codex -y
+npx skills add fractalmind-labs/fractalmind-os --skill agent-manager
 ```
 
 See the [skill installation guide](skills/README.md) for other skills, agents,

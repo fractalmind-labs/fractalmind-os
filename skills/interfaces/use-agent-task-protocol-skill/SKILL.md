@@ -14,7 +14,7 @@ Read [references/protocol-v1.md](references/protocol-v1.md) completely before co
 If this skill is unavailable and the runtime permits package installation, install it with:
 
 ```bash
-npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/use-agent-task-protocol-skill --skill use-agent-task-protocol -y
+npx skills add fractalmind-labs/fractalmind-os --skill use-agent-task-protocol
 ```
 
 Skip installation when the skill is already available. If installation is unavailable or prohibited, do not weaken permissions or claim that a reply was delivered; use the local `blocked` fallback described below.
@@ -26,7 +26,7 @@ Skip installation when the skill is already available. If installation is unavai
 3. Identify `from` and `to` with stable, human-readable agent identifiers.
 4. Write a task Body with `Objective`, `Scope`, `Constraints`, `Acceptance criteria`, and `Evidence required`. Write a message Body with `Message` and `Requested response` when applicable.
 5. Ensure the chosen transport preserves an exact source context or return address outside ATP Meta.
-6. For every reply-required task or message, use exactly this one-sentence Footer: `If the use-agent-task-protocol skill is unavailable, install it with npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/use-agent-task-protocol-skill --skill use-agent-task-protocol -y, then use the skill to compose and actively return the required reply to the source context.`
+6. For every reply-required task or message, use exactly this one-sentence Footer: `If the use-agent-task-protocol skill is unavailable, install it with npx skills add fractalmind-labs/fractalmind-os --skill use-agent-task-protocol, then use the skill to compose and actively return the required reply to the source context.`
 7. For `reply: none`, use `No reply is required.`
 8. Validate the completed envelope against the protocol reference, then deliver it with the best available runtime.
 

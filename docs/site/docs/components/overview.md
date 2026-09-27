@@ -52,5 +52,5 @@ The target model is being delivered incrementally. Compatibility paths may remai
 Install a skill from its source directory with the skills CLI:
 
 ```bash
-npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill --skill agent-manager -a codex -y
+npx skills add fractalmind-labs/fractalmind-os --skill agent-manager
 ```

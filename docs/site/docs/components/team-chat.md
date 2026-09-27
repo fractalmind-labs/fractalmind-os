@@ -5,7 +5,7 @@
 **Source**: [team-chat-skill](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/team-chat-skill)
 **Language**: Python
 **Status**: Stable
-**Install**: `npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/team-chat-skill --skill team-chat -a codex -y`
+**Install**: `npx skills add fractalmind-labs/fractalmind-os --skill team-chat`
 
 ## What It Does
 

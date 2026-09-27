@@ -5,19 +5,19 @@ this monorepo into a project. Run the command from the project where your agent
 will use the skill:
 
 ```bash
-npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill --skill agent-manager -a codex -y
+npx skills add fractalmind-labs/fractalmind-os --skill agent-manager
 npx skills list
 ```
 
-Replace `codex` with `claude-code` for Claude Code. Omit `-a codex` to let the
-CLI detect supported agents, or omit `-y` to use prompts in an interactive
-terminal. Add `-g` for a user-level installation.
+The CLI detects supported agents automatically. Use `-a claude-code` or
+`-a codex` only when you want to select a specific target, `-g` for a user-level
+installation, and `-y` for non-interactive CI installs.
 The CLI installs project skills under `.agents/skills/`; agent-specific links may
 also be created. Restart an already-running agent session so it discovers the
 new skill. There is no `skills read` command: ask the agent to use the installed
 skill or open its `SKILL.md` directly.
 
-The URL should point to a single skill source directory. For example:
+The repository shorthand points to this monorepo; `--skill` selects one skill:
 
 | Skill | Source path | CLI skill name |
 | --- | --- | --- |
@@ -28,9 +28,8 @@ The URL should point to a single skill source directory. For example:
 | FractalBot | `skills/interfaces/use-fractalbot-skill` | `use-fractalbot` |
 | Browser | `skills/interfaces/agent-browser-skill` | `use-agent-browser` |
 
-For another skill, replace the path after `/tree/main/` with its source directory
-under this repository's `skills/` tree. Check its `SKILL.md` frontmatter for the
-CLI skill name. Preview discovery without installing:
+For a direct source URL, point at one skill directory and omit `--skill` because
+each directory here contains one skill. Preview discovery without installing:
 
 ```bash
 npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/agent-browser-skill --list

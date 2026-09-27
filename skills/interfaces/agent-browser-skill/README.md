@@ -19,7 +19,7 @@ An Agent Skills-compatible skill that teaches AI agents how to use `agent-browse
 ### Install the skill
 
 ```bash
-npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/agent-browser-skill --skill use-agent-browser -a codex -y
+npx skills add fractalmind-labs/fractalmind-os --skill use-agent-browser
 ```
 
 Or manually copy `SKILL.md` into your `.agents/skills/use-agent-browser/` or `.claude/skills/use-agent-browser/` directory.

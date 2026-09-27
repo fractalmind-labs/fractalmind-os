@@ -65,7 +65,7 @@ Check the ROM's `included_skills` in `manifest.yaml` and install each one:
 ```bash
 # Run from the target workspace; choose the agent you use.
 cd "$WORKSPACE"
-npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill --skill agent-manager -a codex -y
+npx skills add fractalmind-labs/fractalmind-os --skill agent-manager
 ```
 
 ### Embedded skills
@@ -79,7 +79,7 @@ Check `optional_skills` in the manifest and install any that you need:
 ```bash
 # Example: install agent-calendar
 cd "$WORKSPACE"
-npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-calendar-skill --skill agent-calendar -a codex -y
+npx skills add fractalmind-labs/fractalmind-os --skill agent-calendar
 ```
 
 ## Step 6: Customize
@@ -130,7 +130,9 @@ Each installed skill follows this structure:
 ## Troubleshooting
 
 **Skill not found after install?**
-Run `npx skills list` and verify `.agents/skills/<name>/SKILL.md` exists. Check that the selected `--skill` name matches the skill's frontmatter.
+Run `npx skills list` and verify `.agents/skills/<name>/SKILL.md` exists. For
+repositories containing multiple skills, pass `--skill <name>` and match the
+skill's frontmatter.
 
 **Agent doesn't follow OS rules?**
 Ensure `AGENTS.md` is in the workspace root and your agent is configured to read it on session start.

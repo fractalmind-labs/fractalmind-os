@@ -16,7 +16,7 @@ This skill follows the [agent-os-spec](https://github.com/fractalmind-ai/agent-o
 From the workspace where your agent will use it:
 
 ```bash
-npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-calendar-skill --skill agent-calendar -a codex -y
+npx skills add fractalmind-labs/fractalmind-os --skill agent-calendar
 ```
 
 The project installation lives in `.agents/skills/agent-calendar/`. Replace

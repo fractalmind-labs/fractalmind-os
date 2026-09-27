@@ -5,7 +5,7 @@
 **Source**: [okr-manager-skill](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/okr-manager-skill)
 **Language**: Skill (Markdown-based)
 **Status**: Stable
-**Install**: `npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/okr-manager-skill --skill okr-manager -a codex -y`
+**Install**: `npx skills add fractalmind-labs/fractalmind-os --skill okr-manager`
 
 ## What It Does
 

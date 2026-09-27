@@ -7,7 +7,7 @@ OKR lifecycle management skill for AI agents. Install it so your AI employees ca
 ### Skills CLI
 
 ```bash
-npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/okr-manager-skill --skill okr-manager -a codex -y
+npx skills add fractalmind-labs/fractalmind-os --skill okr-manager
 ```
 
 Restart your agent session, then ask it to use `okr-manager`. Replace `codex`

@@ -5,7 +5,7 @@
 **Source**: [team-manager-skill](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/team-manager-skill)
 **Language**: Python
 **Status**: Stable
-**Install**: `npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/team-manager-skill --skill team-manager -a codex -y`
+**Install**: `npx skills add fractalmind-labs/fractalmind-os --skill team-manager`
 
 ## What It Does
 

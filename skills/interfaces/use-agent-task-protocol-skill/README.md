@@ -23,7 +23,7 @@ portable envelope semantics and skill-managed reply delivery.
 Run from the project where the receiving agent works:
 
 ```bash
-npx skills add https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/interfaces/use-agent-task-protocol-skill --skill use-agent-task-protocol -y
+npx skills add fractalmind-labs/fractalmind-os --skill use-agent-task-protocol
 ```
 
 The canonical reply-required Footer now uses this command. Update senders and
