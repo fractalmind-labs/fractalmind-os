@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/fractalmind-ai/fractal-demail/client-go/schema"
+	"github.com/fractalmind-labs/fractalmind-os/protocols/fractal-demail/client-go/schema"
 )
 
 // SMTPClient delivers a plaintext email out to Web2. Implemented over a real

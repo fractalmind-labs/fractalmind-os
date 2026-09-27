@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/fractalmind-ai/fractalmind-envd/internal/agent"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/agent"
 )
 
 // Payload is the heartbeat message sent via P2P (WireGuard).

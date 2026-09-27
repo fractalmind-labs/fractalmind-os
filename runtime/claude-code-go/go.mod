@@ -1,4 +1,4 @@
-module github.com/fractalmind-ai/claude-code-go
+module github.com/fractalmind-labs/fractalmind-os/runtime/claude-code-go
 
 go 1.26.0
 

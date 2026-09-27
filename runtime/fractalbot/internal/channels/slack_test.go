@@ -15,7 +15,7 @@ import (
 	"github.com/slack-go/slack/slackevents"
 	"github.com/slack-go/slack/socketmode"
 
-	"github.com/fractalmind-ai/fractalbot/pkg/protocol"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/pkg/protocol"
 )
 
 type fakeSlackHandler struct {

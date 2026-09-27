@@ -19,8 +19,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fractalmind-ai/fractalbot/internal/config"
-	"github.com/fractalmind-ai/fractalbot/internal/gateway"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/gateway"
 )
 
 var messageSendFn = sendMessageViaGatewayAPI

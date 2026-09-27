@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fractalmind-ai/fractalbot/internal/agentruntime"
-	"github.com/fractalmind-ai/fractalbot/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/agentruntime"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
 	"github.com/robfig/cron/v3"
 )
 

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fractalmind-ai/fractalbot/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
 )
 
 func TestManagerRegistersDemailChannel(t *testing.T) {

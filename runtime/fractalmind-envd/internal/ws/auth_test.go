@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fractalmind-ai/fractalmind-envd/internal/wsauth"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/wsauth"
 	"github.com/gorilla/websocket"
 )
 

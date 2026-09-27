@@ -9,8 +9,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/fractalmind-ai/fractalbot/internal/channels"
-	"github.com/fractalmind-ai/fractalbot/pkg/protocol"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/channels"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/pkg/protocol"
 )
 
 // ChannelSender routes outbound messages to the correct channel.

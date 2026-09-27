@@ -15,7 +15,7 @@ import (
 
 	"github.com/block-vision/sui-go-sdk/models"
 	suisdk "github.com/block-vision/sui-go-sdk/sui"
-	internalSui "github.com/fractalmind-ai/fractalmind-envd/internal/sui"
+	internalSui "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui"
 )
 
 // Service is the built-in sponsor service running inside envd.

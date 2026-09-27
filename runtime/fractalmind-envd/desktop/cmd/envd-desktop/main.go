@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	desktop "github.com/fractalmind-ai/envd-desktop"
+	desktop "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/desktop"
 	"github.com/pion/webrtc/v4"
 )
 

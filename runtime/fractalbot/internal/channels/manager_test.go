@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fractalmind-ai/fractalbot/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/config"
 )
 
 type fakeChannel struct {

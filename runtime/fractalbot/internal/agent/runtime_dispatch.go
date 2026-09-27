@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fractalmind-ai/fractalbot/internal/agentruntime"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/internal/agentruntime"
 )
 
 // DispatchRuntime delivers a non-channel wakeup to an explicitly selected

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fractalmind-ai/fractalbot/pkg/protocol"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalbot/pkg/protocol"
 )
 
 type fakeIMessageHandler struct {

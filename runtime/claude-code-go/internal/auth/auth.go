@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/fractalmind-ai/claude-code-go/internal/client"
-	"github.com/fractalmind-ai/claude-code-go/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/claude-code-go/internal/client"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/claude-code-go/internal/config"
 )
 
 type StoredAuth struct {

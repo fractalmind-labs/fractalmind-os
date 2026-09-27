@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fractalmind-ai/fractal-demail/client-go/schema"
+	"github.com/fractalmind-labs/fractalmind-os/protocols/fractal-demail/client-go/schema"
 )
 
 type mockSMTP struct {

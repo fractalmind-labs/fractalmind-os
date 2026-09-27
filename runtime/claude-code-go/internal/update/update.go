@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/fractalmind-ai/claude-code-go/internal/install"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/claude-code-go/internal/install"
 )
 
 type Options struct {
