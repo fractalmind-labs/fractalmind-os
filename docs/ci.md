@@ -41,9 +41,9 @@ GitHub environment, so secrets and approval rules can be scoped per target:
 
 | Workflow | Environment | Secrets |
 | --- | --- | --- |
-| `Protocol: Deploy contracts` | `sui-testnet` / `sui-mainnet` | `TESTNET_SUI_MNEMONICS`, `MAINNET_SUI_MNEMONICS` |
+| `Protocol: Deploy contracts` | `sui-testnet` / `sui-mainnet` | `SUI_MNEMONICS` |
 | `Protocol: Get Sui address` | `sui-testnet` / `sui-mainnet` | same |
-| `Protocol: Rename organization`, `Protocol: Set agent profile`, `Protocol: KR4 verification` | `sui-testnet` | `TESTNET_SUI_MNEMONICS` |
+| `Protocol: Rename organization`, `Protocol: Set agent profile`, `Protocol: KR4 verification` | `sui-testnet` | `SUI_MNEMONICS` |
 | `envd: Deploy contracts` | `sui-testnet` / `sui-mainnet` | same as protocol deploys |
 | `envd: Deploy` | `envd-deploy` | `SHARED_RELAY_HOST`, `SHARED_RELAY_USER`, `SHARED_RELAY_SSH_KEY`, `SULABS_ORG_HOST`, `SULABS_ORG_USER`, `SULABS_ORG_SSH_KEY` |
 | `SDK: Publish`, `SDK: Pre-publish validation` | `npm` | `NPMJS_ACCESS_TOKEN` |
@@ -54,6 +54,9 @@ These settings are not stored in the repository:
 
 1. **Pages:** Settings → Pages → Source: GitHub Actions.
 2. **Environments:** create `sui-testnet`, `sui-mainnet`, `envd-deploy` and
-   `npm`, and add the secrets above to each one. Add required reviewers to
-   `sui-mainnet` (and to `npm` and `envd-deploy` if desired).
+   `npm`, and add the secrets above to each one. `sui-testnet` and
+   `sui-mainnet` each hold their own `SUI_MNEMONICS` value under the same
+   name; jobs read the right one because they select the environment that
+   matches the network. Add required reviewers to `sui-mainnet` (and to
+   `npm` and `envd-deploy` if desired).
 3. **Branch protection:** require the `CI result` check on `main`.
