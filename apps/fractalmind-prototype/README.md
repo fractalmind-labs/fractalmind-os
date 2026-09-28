@@ -79,6 +79,34 @@ time estimates, or probability of success.
   previous metrics and evidence. **正常推进** clears the injected scenario, while
   actual budget, deadline, dependency and authorization checks still apply.
 
+## Unified host console review paths
+
+Open `http://127.0.0.1:4173/?prototype=hosts` or **主机与算力** in desktop/mobile
+navigation. The initial fleet has four local hosts, two cloud hosts, nine Agent
+instances and two simulated Coordinator connections.
+
+1. Filter local/cloud, search name/location/system, or select **需要关注**. Offline
+   metrics are unknown, with the last observation retained.
+2. Open **Mac mini M4 → 远程控制台** to try status, logs, restart, kill and shell.
+   Mutations confirm their target. Stopping an instance pauses only its assigned
+   OKRs; restarting it retains results and requires explicit continuation.
+3. Open **远程桌面**, start/release simulated control, adjust quality/zoom/stats,
+   choose the mobile input mode and send example text. This is an HTML illustration,
+   not a real stream. Headless cloud hosts report no desktop capability.
+4. **接入主机** creates a pending record; **模拟主机上线** makes it available.
+   **管理连接** supports multiple named endpoints and isolated disconnect/reconnect.
+   No token is collected and no network request is sent.
+5. From an OKR, open its host chip or **选择执行主机**. Assignment checks availability,
+   admission, workspace and the responsible Agent. It pauses the old loop and retains
+   metrics/evidence. An unreachable source must reconnect before reassignment.
+6. **模拟失联** on the assigned host makes that OKR's map unknown; other hosts keep
+   their own state. **暂停接收新任务** prevents new assignments while current work stays.
+
+These flows adapt the capabilities and labels from `apps/agent-console` into the
+unified product prototype. The original React client and real coordinator/runtime
+are not replaced or connected. Host data is initialized lazily inside v2 demo state;
+existing OKR measurements and evidence survive the upgrade.
+
 ## Data and limitations
 
 The review bar labels the entire prototype as demo data. All measurements, evidence,
