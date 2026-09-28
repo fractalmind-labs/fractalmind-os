@@ -46,6 +46,22 @@ operations. Reconnection requires explicit resume. Reloading pauses demo loops.
 
 ## Navigation review paths
 
+The default navigation view is an interactive schematic map. The blue arrow locates
+execution, green checkpoints indicate verified results, dashed lines show the plan,
+orange branches show drift/loops, and red hatched areas represent unauthorized
+operations. Direction and authorization are reported separately. **全图 / 定位**
+changes the map view; checkpoints open KR evidence and the destination opens the
+OKR acceptance criteria. Positions are mapped from metrics, not physical distance,
+time estimates, or probability of success.
+
+- **注入演示场景 → 目标偏航**: inject two actions unrelated to any KR. The arrow leaves
+  the planned route while remaining inside the authorized workspace. **纠偏并继续**
+  replans under the same constraints; simulated heartbeats move the arrow, then
+  verification lights the checkpoints. Unrelated retries cannot spend or advance.
+- A metric at target does not light an unverified checkpoint. The destination is
+  reached only after the entire OKR passes verification. Unknown observations retain
+  the last location (including an off-route location) and gray out the map.
+
 - **注入演示场景 → 疑似空转**: three equivalent unsuccessful attempts are recorded;
   a heartbeat keeps the metric and budget unchanged. Inspect **查看判断依据**, then
   **重新规划并推进** to test route B under the existing scope and verification rules.
