@@ -64,7 +64,7 @@ Agent、启用工具和连接服务。macOS、Windows、Ubuntu 提供执行能�
 Android 提供配对、对话、任务查看、审批和结果浏览。
 
 首个价值流程：安装 → 创建个人空间 → 选择项目 → 配置模型/运行时 →
-确定目标 → 发起任务 → 验收成果 → 沉淀记忆。
+确认 OKR 与约束 → Agent 自主规划和执行 → 验证关键结果 → 复核成功标准 → 沉淀记忆。
 第二个流程：手机扫码配对 → 查看桌面任务 → 审批一次操作 → 桌面继续执行。
 组织入口从首版出现在空间切换与公开网络浏览中；创建链上组织和参与治理
 随其真实能力逐步开放，清楚展示测试网络和功能状态。
@@ -155,10 +155,16 @@ FractalMind Core 是逻辑层，优先扩展 envd 的入口和包。默认运行
 
 ### 3.3 统一领域和 API
 
-先约定：Space、Workspace、Organization、Team、Membership、Goal/OKR、Device、
+先约定：Space、Workspace、Organization、Team、Membership、OKR、KeyResult、ExecutionConstraints、Device、
 Agent、Conversation、Task、Run、Approval、Proposal、Capability、Evidence、Memory、
 Tool、Connector、Artifact。`Space` 是导航与授权范围，个人工作区不能自动等同于
 已注册链上组织；两者可以经显式注册流程关联。一次 Task 可包含多个 Run。
+
+OKR 语义与验收以 PRD 第 8.1 节及 `okr-manager` 技能为准。新增指标采样、
+验证记录、约束版本、预算预留、heartbeat 决策和升级请求契约；Task 必须
+关联 KR。调度器在每个动作前检查约束及执行权限，验证器记录证据和规则版本。
+进度由指标加权计算；验证完成独立记录。成功标准的自由文本需要先转为
+经用户确认的可验证规则，不能直接用模型的“完成”声明驱动 ACHIEVED。
 
 Agent、团队和组织对外共用工作单元约定：身份、目标、任务收发、状态/心跳、
 产物/证据和授权范围。基础 Task 生命周期遵循现有模型：Created → Assigned →
@@ -168,7 +174,8 @@ Submitted → Verified → Completed；执行成功只代表 Run 成功，仍需
 新业务接口建议使用 `/api/v1`，定义 OpenAPI 与事件 schema，并保留现有 envd
 端点供旧客户端使用。事件包含 `event_id`、`device_id`、`run_id`、序号和时间。
 
-- API 覆盖 capabilities、任务创建/取消、事件订阅、审批、产物索引与下载。
+- API 覆盖 capabilities、OKR/候选/约束确认、KR 测量与验证、任务创建/取消、
+  heartbeat/升级事件、审批、产物索引与下载。保持既有权限权威与文件契约。
 - 能力协商返回 OS、运行时版本和可用操作；UI 据此展示能力与安装入口。
 - 保留 `SYSTEM.md`、`SOUL.md`、`AGENTS.md`、`USER.md`、`HEARTBEAT.md`、
   `OKR.md`、`okrs/Candidate.md` 和 `memory/` 等既有工作区契约；UI 通过
@@ -222,7 +229,7 @@ App 引导身份注册、赞助交易和授权，分别展示配对成功与授�
 | 模块 | 用户主要操作 | 首版范围 |
 | --- | --- | --- |
 | 工作台 | 确定目标、查看待办、继续对话与审批 | 默认首页；首个目标、运行状态、成果验收和错误恢复 |
-| 目标与任务 | 查看优先级、队列、运行、审批与历史 | Goal → Task → Run → Evidence；取消、重试、产物 |
+| OKR | 确认目标与约束、查看关键结果/趋势/依赖/证据、处理越界 | OKR → KR → Task → Run → Evidence；Agent 自主推进，按已授权规则验证 |
 | 团队与 Agents | 创建 Agent、选择模型/模板、组建团队 | 一个默认 Agent、已有 Agent 接入、基本生命周期；后续 Lead/成员分工 |
 | 记忆与成果 | 查看任务证据、决策、复用经验 | 个人任务完成记录和本地记忆；公开分享在后续显式启用 |
 | 治理 | 查看成员、提案、委托、预算和撤销 | 首版提供权限与审批；组织治理随链上能力分阶段开放 |
