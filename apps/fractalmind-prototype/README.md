@@ -19,7 +19,7 @@ availability for `file:` URLs may vary.
 
 ## Language and appearance
 
-The top bar and **空间设置 → 语言与外观 / Space settings → Language & appearance**
+The top bar and **组织设置 → 语言与外观 / Organization settings → Language & appearance**
 provide Simplified Chinese / English and **Light / Dark / System** appearance.
 System is the default and follows `prefers-color-scheme`, including changes while
 this page is open. Explicit light or dark mode overrides the system choice.
@@ -69,7 +69,7 @@ usable. The pre-paint theme initialization avoids a bright flash on dark startup
 8. Use **手机** in the review bar to inspect mobile status, evidence and decisions.
    **查看推进记录** and **查看约定** expose details on small screens.
 
-Other flows remain available: onboarding, spaces, Agent details, task evidence,
+Other flows remain available: onboarding, organizations, Agent details, task evidence,
 memory, simulated phone pairing with separate read/operate scopes, and organization
 browsing. **模拟设备离线** in settings pauses autonomous execution and disables remote
 operations. Reconnection requires explicit resume. Reloading pauses demo loops.
@@ -159,9 +159,10 @@ instances and two simulated Coordinator connections.
 3. Open **远程桌面**, start/release simulated control, adjust quality/zoom/stats,
    choose the mobile input mode and send example text. This is an HTML illustration,
    not a real stream. Headless cloud hosts report no desktop capability.
-4. **接入主机** creates a pending record; **模拟主机上线** makes it available.
-   **管理连接** supports multiple named endpoints and isolated disconnect/reconnect.
-   No token is collected and no network request is sent.
+4. **Host 接入指导** walks through device request, chain confirmation, administrator
+   approval, a separate execution grant and the first authenticated heartbeat. See
+   the organization enrollment review below. **管理连接** lists existing organization
+   bindings with isolated disconnect/reconnect; arbitrary URLs cannot grant membership.
 5. From the workbench, open its host chip or **选择执行主机**. Assignment checks availability,
    admission, workspace and the responsible Agent. It pauses the old loop and retains
    metrics/evidence. An unreachable source must reconnect before reassignment.
@@ -191,7 +192,60 @@ Changes persist in `fractalmind.product-prototype.v2` local storage. The earlier
 entry is left untouched; this demo does not migrate it. **重置演示** restores sample
 OKRs and stops all pending simulation timers. **导出演示数据** downloads the complete
 v2 state as JSON. The prototype does not implement the PRD's native platform,
-security, localization, file synchronization, background runtime or protocol features.
+security, complete native localization, file synchronization, background runtime or protocol features.
 
 Navigation state and its event history are stored within the existing v2 demo state.
 Older v2 entries initialize navigation lazily; no user metrics are reset on reload.
+
+## Organization and Host enrollment (PRD v0.7)
+
+Production uses **Organization** as the boundary, including personal use. All durable
+product state is authoritative on Sui; there is no business backend/database. App
+signs with the relevant identity, Sui validates persistent decisions, Coordinator
+reconstructs discovery/routing state, and envd verifies authority before execution.
+Private keys remain device secrets; liveness/CPU/WebRTC are transient observations.
+The HTML's localStorage is a **simulation cache**, not this production architecture.
+
+1. Open the top-left organization switcher. Existing v2 OKRs, evidence, conversations,
+   memories and six host fixtures migrate to **Yubing / DEMO-ORG-YUBING**. **FractalMind
+   Labs / DEMO-ORG-LABS** starts without goals or hosts. Search, workbench, OKRs, memories,
+   hosts and grants follow the selection; switching back preserves earlier work.
+   The demo pauses active timers on switch with a notice; it does not revoke grants.
+2. Open **主机与算力 → Host 接入指导**. The organization entry is a public locator with
+   demo network/package/organization IDs. It is not a password or bearer invitation.
+   Select a bound Coordinator and host platform, and confirm consent on the device.
+   Desktop/App and headless/envd installation guidance are shown without inventing
+   a released installer or enrollment CLI.
+3. **模拟 envd 生成设备身份 → 模拟设备签名并提交**. Before **模拟链上确认**, the
+   request has no confirmed membership. Try **模拟交易失败**, then resubmit/confirm.
+   Requests expire after 24 hours; device keys are only represented by demo labels.
+4. **切换普通成员评审** disables approval; restore the administrator. Confirm the
+   matching device fingerprint, sign approval, then simulate confirmation. The host
+   now appears as pending connection and **cannot execute** without a grant.
+5. Confirm the fixed execution bundle (project scope, Builder, commands), optionally
+   desktop access, sign and confirm the separate seven-day grant. **模拟认证连接与首次心跳**
+   is a separate action. Only now is the host online with an available Builder.
+6. Close and resume pending enrollment from Host management or Governance. Turn off
+   the relevant Coordinator from **管理连接**: chain approval still works, but connection
+   cannot complete. **模拟 Sui 不可用** separately disables chain confirmations.
+7. In the new host's overview choose **查看接入与撤销 → 撤销组织资格**. The pending
+   transaction does not change authority; after confirmation, new commands/desktop
+   access and OKR execution are blocked even if the transport remains connected.
+8. Review Chinese/English, light/dark and mobile layouts. Reset restores fixture data;
+   reload retains requests, transactions, membership and grants without duplicating
+   them. No workflow submits real transactions, creates keys or installs services.
+
+Original fixture hosts have explicitly simulated confirmed membership and grants.
+Older user-added hosts receive no implicit authority and must use the new flow.
+Actual Organization creation, Sui contracts, encrypted payload persistence, chain
+reconstruction, identity binding and live authority resolution remain implementation
+work identified in PRD §8.4–8.5. A personal organization is not itself encryption or
+proof of restricted membership. UI deletion cannot erase public chain history.
+
+Run the simulation's organization/admission regression checks with:
+
+```sh
+node apps/fractalmind-prototype/verify.cjs
+```
+
+These checks validate the embedded state machine, not deployed contract security.
