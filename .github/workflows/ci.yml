@@ -92,6 +92,9 @@ jobs:
             protocols/fractalmind-protocol/sdk:
               - .github/workflows/ci.yml
               - protocols/fractalmind-protocol/sdk/**
+            apps/agent-console:
+              - .github/workflows/ci.yml
+              - apps/agent-console/**
 
       - uses: dorny/paths-filter@v3
         id: move
@@ -307,6 +310,30 @@ jobs:
             echo "Possible secret or token found"
             exit 1
           fi
+
+  agent-console:
+    name: Agent Console
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.node), 'apps/agent-console')
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: apps/agent-console
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/agent-console/pnpm-lock.yaml
+      - run: pnpm install
+      - name: Test macOS checksum filenames
+        run: bash scripts/test-release-macos-checksum.sh
+      - name: Build (typecheck + bundle)
+        run: pnpm build
 
   explorer:
     name: Explorer

@@ -1,0 +1,33 @@
+{
+  "name": "agent-console",
+  "version": "0.1.4",
+  "private": true,
+  "description": "Cross-platform app to manage envd-coordinated agents (Tauri desktop + Capacitor mobile).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "cap": "cap",
+    "selftest:rd": "node scripts/rd-selftest.mjs dist",
+    "selftest:media-health": "node scripts/rd-media-health-test.mjs dist",
+    "selftest:reconnect": "node scripts/rd-reconnect-test.mjs dist"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/android": "^6.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "@tauri-apps/cli": "^2.1.0",
+    "@capacitor/cli": "^6.2.0",
+    "playwright": "^1.61.1"
+  }
+}
