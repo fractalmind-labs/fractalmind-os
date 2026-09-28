@@ -472,6 +472,7 @@ jobs:
       - team-chat
       - skills-layout
       - skills-structure
+      - agent-console
       - explorer
       - docs
       - sdk
