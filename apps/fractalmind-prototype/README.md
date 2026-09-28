@@ -109,6 +109,42 @@ time estimates, or probability of success.
   previous metrics and evidence. **正常推进** clears the injected scenario, while
   actual budget, deadline, dependency and authorization checks still apply.
 
+## Run conversations and interventions
+
+From **工作台 → 运行导航**, open **与 Agent 沟通 / Talk to agent** beside the map's
+next action, or use the conversation card. Each OKR has its own conversation and
+saved draft. Messages capture the responsible Agent, host/instance, KR, simulated
+run, last verified checkpoint, recent evidence, and the current execution agreement.
+Historical snapshots remain attached to their messages; sending a message does not
+refresh the last telemetry timestamp.
+
+1. Inject **目标偏航** or **疑似空转**, open the conversation, choose **询问原因**, and
+   send. The demo reply explains the recorded reason and next step without advancing
+   measurements or changing execution. Expand the attached snapshot for evidence.
+2. **补充信息** records your direction against the current run. **请求新方案** pauses
+   the current attempt and proposes a fixed local alternative with steps, expected
+   next-step cost, and preserved constraints. Quick prompts fill the draft; press
+   **发送消息** to send it.
+3. **采用方案并继续** validates the current state, updates the map to route B and
+   resumes the existing simulator. Measurements and independent verification still
+   determine progress. An abandoned external request is superseded, never approved.
+4. **暂停等待** stops the selected OKR's loop and retains checkpoints. New direction
+   supersedes an unadopted proposal. Changes to the run, metrics or agreement make
+   older proposals stale; they cannot resume execution.
+5. Offline hosts, stopped Agents and read-only phones cannot send or acknowledge
+   messages. Drafts remain local and are not automatically sent on reconnection.
+   Missing observations, dependencies, insufficient budget and expired deadlines
+   block plan execution. Reopen the conversation after restoring availability.
+6. Switch Chinese/English and light/dark themes; check the drawer on mobile. Authored
+   text stays in its original language. Reload and reopen the same OKR to inspect
+   its saved history and draft. The header is a linked snapshot; new messages capture
+   the latest available context at send time.
+
+Replies, delivery receipts and plan proposals are explicit local demonstrations;
+there is no LLM connection or natural-language execution. Custom instructions are
+recorded but do not drive the fixed simulator. Chat cannot rewrite success criteria,
+permissions or budgets; use the existing agreement/approval flows for such changes.
+
 ## Unified host console review paths
 
 Open `http://127.0.0.1:4173/?prototype=hosts` or **主机与算力** in desktop/mobile

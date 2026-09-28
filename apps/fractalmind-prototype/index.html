@@ -76,11 +76,18 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 @container(max-width:1100px){.search-trigger .kbd{display:none}.topbar{padding-left:22px;padding-right:22px}}
 @container(max-width:760px){.topbar{padding:0 16px;gap:6px}.topbar>.row{gap:5px}.topbar .presentation-controls{gap:5px;margin:0}.presentation-picker{padding:4px;gap:3px}.presentation-picker .icon{display:none}.presentation-picker select{font-size:10px;max-width:90px}.topbar-user{display:none}.breadcrumb{gap:5px;font-size:10px}.breadcrumb>button,.breadcrumb>.icon{display:none}:root[lang="en"] .map-guidance h3{font-size:15px}:root[lang="en"] .map-guidance .grow{min-width:0}:root[lang="en"] .map-region{font-size:8px;max-width:49%}:root[lang="en"] .map-destination strong{white-space:normal;max-width:65px;text-align:center}:root[lang="en"] .map-camera button{font-size:9px}:root[lang="en"] .map-restriction{max-width:36%;font-size:8px}:root[lang="en"] .nav-select-row>.btn{font-size:9px}:root[lang="en"] .bottom-nav button{font-size:8px}.review-brand{min-width:0}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+/* Run conversations share the map's goal, evidence and execution boundaries. */
+.map-run-actions{display:flex;gap:8px;flex-shrink:0}.map-run-actions .btn{white-space:normal}.run-chat-card h3{display:flex;align-items:center;gap:7px;font-size:13px}.run-chat-card h3 .icon{width:16px}.run-chat-card strong{font-size:12px}.run-chat-card p{font-size:12px;color:var(--muted);margin:12px 0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.run-chat-card>.btn{width:100%}.run-chat-card>small{display:block;font-size:10px;margin-top:10px;text-align:center}
+.drawer.run-dialog{width:min(650px,100%);display:flex;flex-direction:column;padding:0;overflow:hidden;background:var(--panel)}.run-dialog-head{padding:22px 24px 16px;border-bottom:1px solid var(--line);flex-shrink:0}.run-dialog-head h2{font-size:18px}.run-dialog-head small{color:var(--muted);font-size:11px}.run-dialog-head>p{font-size:10px;color:var(--muted);margin-top:10px}.run-chat-objective{margin-top:17px}.run-chat-objective>strong{font-size:13px;font-weight:550;line-height:1.65;display:block;overflow-wrap:anywhere}.run-chat-objective>.row{margin-top:8px;gap:7px}.run-dialog-body{flex:1;min-height:80px;overflow-y:auto;padding:20px 24px;overscroll-behavior:contain}.run-chat-welcome{padding:5px 0}.run-chat-welcome h3{font-size:15px}.run-chat-welcome p{font-size:12px;margin-top:12px}.run-message{padding:15px;border:1px solid var(--line);border-radius:12px;margin-bottom:16px;overflow-wrap:anywhere}.run-message:last-child{margin-bottom:0}.run-message.user{background:var(--soft);margin-left:28px}.run-message.agent{margin-right:16px}.run-message-meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:10px;color:var(--muted);margin-bottom:10px}.run-message-meta strong{color:var(--ink);font-size:12px}.run-message-meta time{margin-left:auto;font-size:9px}.run-message>p{font-size:12px;white-space:pre-wrap}.run-chat-snapshot{margin-top:13px;border-top:1px solid var(--line);padding-top:10px}.run-chat-snapshot summary{cursor:pointer;color:var(--muted);font-size:10px;line-height:1.8}.run-chat-snapshot summary .mono{font-size:9px;margin-left:5px}.run-chat-snapshot-body{padding-top:9px}.run-chat-snapshot-body p{font-size:11px;margin:4px 0 10px}.run-chat-snapshot-body small{font-size:10px;color:var(--muted)}.run-chat-snapshot-body .row{font-size:10px}.run-chat-source{border-left:2px solid var(--line);padding-left:10px}.run-chat-source small{display:block;margin-top:5px}.run-explanation{margin-top:12px;padding:12px;border-radius:8px;background:var(--soft);font-size:12px}.run-explanation p{font-size:11px;margin:7px 0}.run-explanation small{font-size:10px;color:var(--muted)}.run-proposal{margin-top:14px;background:var(--soft);border-radius:9px;padding:15px}.run-proposal h3{font-size:13px}.run-proposal>p{font-size:11px;margin:10px 0}.run-proposal>small{font-size:10px;color:var(--muted)}.run-proposal blockquote{font-size:11px;line-height:1.7;margin:7px 0 12px;padding-left:10px;border-left:2px solid var(--line);white-space:pre-wrap}.run-proposal ol{padding-left:20px;margin:12px 0;font-size:12px;line-height:1.8}.run-proposal li{padding:3px 0}.run-plan-budget{display:flex;align-items:center;flex-wrap:wrap;gap:8px;border-top:1px solid var(--line);padding-top:12px;font-size:11px}.run-plan-budget>span:last-child{flex-basis:100%;font-size:10px;color:var(--muted)}.run-proposal>.btn{width:100%;white-space:normal;margin-top:14px}
+.run-chat-composer{padding:16px 24px 20px;border-top:1px solid var(--line);background:var(--panel);flex-shrink:0}.run-chat-prompts{display:flex;flex-wrap:wrap;gap:7px}.run-intent-label{display:flex;align-items:center;gap:12px;margin:12px 0 9px;font-size:11px;color:var(--muted)}.run-intent-label select{color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:11px;min-height:30px}.run-chat-composer textarea{width:100%;height:76px;min-height:58px;max-height:140px;resize:vertical;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:11px;font-size:12px;line-height:1.65}.run-chat-composer textarea::placeholder{color:var(--muted)}.run-chat-help{font-size:10px;color:var(--muted);margin:7px 0 12px}.run-chat-composer>.notice{font-size:11px;margin:8px 0}.run-chat-composer>.row>small{font-size:10px;color:var(--muted);max-width:60%}
+@container(max-width:1100px){.map-run-actions{flex-direction:column}.map-run-actions .btn{font-size:11px}}
+@container(max-width:760px){.map-run-actions{display:grid;grid-template-columns:1fr 1fr;width:100%;gap:8px}.map-run-actions .btn{min-height:40px}.run-chat-card{order:-1}.run-dialog-head{padding:16px}.run-dialog-head h2{font-size:16px}.run-chat-objective{margin-top:12px}.run-dialog-body{padding:16px}.run-chat-composer{padding:12px 16px 16px}.run-chat-prompts{display:grid;grid-template-columns:1fr 1fr}.run-chat-prompts .btn{white-space:normal;min-height:33px}.run-message.user{margin-left:16px}.run-message.agent{margin-right:0}.run-message{padding:12px}.run-proposal{padding:12px}.run-chat-composer textarea{height:64px}.run-chat-help{line-height:1.5}}
 </style>
 </head>
 <body>
 <div class="review-bar">
-  <div class="review-brand"><strong>FRACTALMIND <span class="mobile-demo-label">· 演示</span></strong><span style="opacity:.35">/</span><span>产品原型 07 · 语言与外观 · 所有数据与执行均为演示</span></div>
+  <div class="review-brand"><strong>FRACTALMIND <span class="mobile-demo-label">· 演示</span></strong><span style="opacity:.35">/</span><span>产品原型 08 · 运行对话 · 所有数据与执行均为演示</span></div>
   <div class="review-actions"><div class="view-switch" aria-label="预览尺寸"><button id="desktop-preview" class="active" data-action="desktop">桌面</button><button id="mobile-preview" data-action="mobile">手机</button></div><button data-action="onboarding">首次使用</button><button data-action="reset">重置演示</button></div>
 </div>
 <div class="app-viewport" id="app-viewport">
@@ -121,7 +128,7 @@ const EN={
   "通知": "Notifications",
   "台连接可用": "hosts connected",
   "本地与云端": "Local & cloud",
-  "产品原型 07 · 语言与外观": "Prototype 07 · Language & appearance",
+  "产品原型 08 · 运行对话": "Prototype 08 · Run conversations",
   "所有数据与执行均为演示": "All data and execution are simulated",
   "预览尺寸": "Preview size",
   "桌面": "Desktop",
@@ -726,7 +733,7 @@ const EN={
   "尚无已完成": "None completed",
   "当前尚无新增运行记录。": "No new run events yet.",
   "当前状态未知，下面保留最后观测；不会把断线当成任务失败。": "Current state is unknown. The last observation is retained; disconnecting does not mean failure.",
-  "预算、权限及成功标准保持原约定。": "Budget, permissions and success criteria remain unchanged.",
+  "预算、权限及成功标准保持原约定。": "Budget, permissions and success criteria retain the original agreement.",
   "备选路线": "Alternative route",
   "验证替代路线": "Verify alternative route",
   "已重新规划": "Replanned",
@@ -946,8 +953,8 @@ const EN={
   "仅授权此 KR 的真机验证": "Authorize device verification for this KR only",
   "保留的限制": "Retained boundaries",
   "总预算": "Total budget",
-  "费用与期限": "Cost & deadline",
-  "下一步预计": "Next step estimate",
+  "费用与期限": "Budget and deadline",
+  "下一步预计": "Estimated next step",
   "执行约定": "Execution agreement",
   "查看待出发位置": "View starting position",
   "已抵达": "Arrived",
@@ -1095,7 +1102,74 @@ const EN={
   "暂停接收新 OKR": "Stop accepting new OKRs",
   "已暂停接单": "Not accepting work",
   "等待分配 OKR": "Waiting for an OKR assignment",
-  "仅表示指标达标": "Only means the metric target is met"
+  "仅表示指标达标": "Only means the metric target is met",
+  "与 Agent 沟通": "Talk to agent",
+  "询问原因": "Ask why",
+  "补充信息": "Add context",
+  "请求新方案": "Request a plan",
+  "暂停等待": "Pause and wait",
+  "请解释当前为什么偏航或卡住，并指出判断依据。": "Please explain why this run is drifting or stuck, and show the evidence.",
+  "优先完成当前 KR 的可验证结果。我补充的背景是：": "Prioritize a verifiable result for the current KR. Additional context: ",
+  "请停止无效尝试，在现有目标、预算和权限内提出新方案。": "Please stop unproductive attempts and propose a plan within the current goal, budget and permissions.",
+  "请先暂停推进，保留检查点，等我补充信息后再继续。": "Please pause, preserve checkpoints, and wait for my additional context.",
+  "执行主机离线，消息未发送；草稿已保留。": "The execution host is offline. Your message was not sent; the draft is saved.",
+  "负责的 Agent 不可用，消息未发送；草稿已保留。": "The assigned agent is unavailable. Your message was not sent; the draft is saved.",
+  "只有进行中的 OKR 可以采用执行方案。": "Only active OKRs can adopt an execution plan.",
+  "剩余预算不足以执行本地方案，请先调整约定。": "The local plan exceeds the remaining budget. Review the agreement first.",
+  "执行已暂停，检查点与已有证据已保留。补充信息后，你可以请求新方案。": "Execution is paused. Checkpoints and evidence are preserved. You can request a plan after adding context.",
+  "当前 OKR 没有活动执行，已有结果保持不变。": "This OKR has no active execution. Existing results are preserved.",
+  "已收到调整请求，但当前还不能启动新方案。请先处理下面的阻塞条件。": "Your request was received, but a new plan cannot start yet. Resolve the blocker below first.",
+  "已停止当前尝试，提出一条本地替代方案。请确认下面的步骤，再继续执行。": "The current attempt is paused. Review the proposed local alternative below before continuing.",
+  "保留已验证检查点，停止与当前 KR 无关或重复的动作。": "Preserve verified checkpoints and stop unrelated or repetitive actions.",
+  "改用工作区内的本地分析与验证，验证方式保持不变。": "Use local analysis and checks within the workspace, retaining the agreed verification method.",
+  "采集新的结果证据；通过验证后再推进下游 KR。": "Collect new result evidence and verify it before advancing dependent KRs.",
+  "已把补充信息附加到这个 OKR 的运行记录。需要改变执行路线时，请请求新方案；目标与边界保持当前约定。": "Your context is attached to this OKR’s run record. Request a plan to change the route; the current goal and boundaries still apply.",
+  "下面是这次运行快照中的原因、证据和下一步建议。询问原因不会改变执行状态。": "Below are the cause, evidence and suggested next step from this run snapshot. Asking why leaves execution unchanged.",
+  "已通过运行对话请求新方案，等待后续确认。": "A new plan was requested in the run conversation; further confirmation is required.",
+  "已通过运行对话请求暂停，保留既有结果。": "A pause was requested in the run conversation; existing results are preserved.",
+  "已记录一条运行对话，消息与运行快照已关联。": "A message was recorded and linked to its run snapshot.",
+  "运行或约定已变化，请重新请求方案。": "The run or agreement has changed. Request a fresh plan.",
+  "你采纳了沟通中的本地方案，按原有边界继续执行。": "You adopted the proposed local plan. Execution continues within the original boundaries.",
+  "方案已采纳，路线已更新。后续进展以地图上的测量和验证证据为准。": "The plan is adopted and the route updated. Follow measurements and verification evidence on the map for progress.",
+  " 条消息": " messages",
+  "携带当前目标、异常依据和执行边界": "Includes the goal, issue evidence and boundaries",
+  "偏航或卡住时，直接询问原因、补充方向或请求新方案。": "When a run drifts or stalls, ask why, provide direction or request a plan.",
+  "继续运行对话": "Continue conversation",
+  "开始运行对话": "Start conversation",
+  "演示对话 · 未连接真实 Agent": "Demo conversation · No live agent connected",
+  "随消息附带的运行快照": "Run snapshot attached to the message",
+  "最后已验证检查点": "Last verified checkpoint",
+  "待你确认": "Awaiting your confirmation",
+  "已采纳": "Adopted",
+  "先处理阻塞": "Resolve blocker first",
+  "方案已过期": "Plan is stale",
+  "已有更新的方向": "Direction updated",
+  "Agent 建议方案": "Agent’s proposed plan",
+  "收到的方向补充": "Your requested direction",
+  "采用方案并继续": "Adopt plan and continue",
+  "基于最新状态请求方案": "Request a plan for the latest state",
+  "已送达 · 演示": "Delivered · Demo",
+  "已回应 · 演示": "Replied · Demo",
+  "下一步建议": "Suggested next step",
+  "发送后暂停当前尝试，生成方案；采用方案后才继续。": "Sending pauses the current attempt and proposes a plan. Execution resumes only after adoption.",
+  "发送后暂停当前 OKR 的自主循环，保留已有结果。": "Sending pauses this OKR’s autonomous loop and preserves existing results.",
+  "发送消息会保留当前执行状态。聊天不修改目标、预算或权限。": "Sending leaves execution unchanged. Chat does not change goals, budgets or permissions.",
+  "关闭运行对话": "Close run conversation",
+  "执行已暂停": "Execution paused",
+  "演示回复与固定方案 · 未连接真实 Agent": "Demo replies and fixed plans · No live agent connected",
+  "运行对话记录": "Run conversation history",
+  "从当前问题开始沟通": "Start with the current issue",
+  "消息会附带 OKR、当前 KR、执行主机、检查点和边界，无需重新描述整个任务。": "Messages include the OKR, current KR, execution host, checkpoints and boundaries, so you can focus on the issue.",
+  "沟通目的": "Message intent",
+  "给 Agent 的运行消息": "Run message to agent",
+  "补充方向、提供线索，或告诉 Agent 你希望它解释什么…": "Add direction, share a clue, or tell the agent what you want explained…",
+  "上下文随消息发送 · 草稿自动保存": "Context attached · Draft saved automatically",
+  "发送消息": "Send message",
+  "沟通": "Conversation",
+  "你": "You",
+  "工作区内的替代方案": "Alternative within the workspace",
+  "换路": "Reroute",
+  "关联快照": "Linked snapshot"
 };
 // Presentation preferences are separate from the demo's goals, permissions and runs.
 const UI_KEY='fractalmind.presentation.v1';
@@ -1218,10 +1292,10 @@ function orgCard(o){return `<article class="card org-card"><div class="org-art" 
 function organizationsPage(){return `${pageHeading('YOUR ORGANIZATIONS','共同的目标，连接彼此。','保留自己的空间，也成为更大协作的一部分。',`<button class="btn" data-page="network">${icon('globe')}发现组织</button>`)}<section class="organization-cover"><div class="row"><span class="avatar large">△</span><span class="badge green">成员 · 演示身份</span><span class="spacer"></span><span class="tag">Sui Testnet</span></div><h1>FractalMind Labs</h1><p>通过自相似的 Agent 团队与组织，共同建设开放智能的基础设施。</p><div class="row wrap" style="margin-top:21px"><button class="btn primary" data-action="enter-org">进入组织空间 ${icon('arrow')}</button><button class="btn" data-action="organization" data-id="labs">查看组织规则</button><span class="muted" style="font-size:10px">12 位成员 · 3 个公开目标 · 演示</span></div></section><div class="section-head"><h2>从个人，到共同建设</h2><span class="badge">组织功能概念预览</span></div><div class="agent-grid">${[['target','共同的目标','把愿景拆成可交付的任务，每个人都知道自己的责任。'],['org','清楚的分工','Lead 协调 Agent 与成员，让子任务的成果能够组合。'],['shield','可核查的治理','通过提案、授权与成果证据，让每一次决定都有依据。']].map(([ic,title,desc])=>`<div class="card"><span class="avatar large">${icon(ic)}</span><h3 style="margin:18px 0 9px">${title}</h3><p class="muted" style="font-size:11px">${desc}</p></div>`).join('')}</div><div class="notice" style="margin-top:24px">${icon('info')}这里展示组织阶段的交互概念。进入组织不会公开个人项目，也不会发起链上交易。</div>`;}
 function mapArt(){return `<svg class="network-map" viewBox="0 0 380 240" fill="none" aria-label="个人、团队、组织构成的开放网络"><g stroke="var(--tone-becdad, #becdad)" stroke-width="1"><path d="m180 113-76-67 166-8-90 75 120 45-155 56 35-101-124 47 48-114m166-8 30 120-50-68-105 124M56 160l89 54m35-101 70-23M104 46l-64 1m230-9 61-15m-31 135 47 44M145 214l-35 20"/><circle cx="180" cy="113" r="50" stroke-dasharray="2 5"/><circle cx="180" cy="113" r="102" stroke="var(--tone-dbe3cf, #dbe3cf)" stroke-dasharray="3 5"/></g><g fill="var(--tone-e3ecd6, #e3ecd6)" stroke="var(--tone-b4c69c, #b4c69c)"><circle cx="104" cy="46" r="19"/><circle cx="270" cy="38" r="14"/><circle cx="300" cy="158" r="19"/><circle cx="145" cy="214" r="13"/><circle cx="56" cy="160" r="14"/><circle cx="250" cy="90" r="7"/></g><circle cx="180" cy="113" r="31" fill="var(--tone-e8eedf, #e8eedf)" stroke="var(--tone-9fb68a, #9fb68a)"/><path d="m180 93 20 34h-40Z" fill="var(--tone-7f9b67, #7f9b67)"/><path d="m180 103 10 18h-20Z" fill="var(--tone-e8eedf, #e8eedf)"/><g fill="var(--tone-9caf84, #9caf84)"><circle cx="40" cy="47" r="4"/><circle cx="331" cy="23" r="4"/><circle cx="347" cy="202" r="4"/><circle cx="110" cy="234" r="4"/></g><g fill="var(--tone-8a9d74, #8a9d74)" font-family="inherit" font-size="9"><text x="77" y="81">你的空间</text><text x="278" y="191">组织</text><text x="232" y="20">Agent 团队</text><text x="162" y="166">FractalMind</text></g></svg>`;}
 function networkPage(){return `${pageHeading('THE OPEN NETWORK','智能，因连接而生长。','发现共同的目标，找到值得一起完成的事。')}<section class="network-hero"><div><span class="eyebrow">ASI THAT NO ONE OWNS</span><h1>由每一个你，<br>共同建设的智能。</h1><p>从一个 Agent 到一个团队，从一个组织到开放网络。能力可以组合，成果可以延续。</p><span class="pill">${icon('globe')}无需许可参与 · 自主选择协作</span></div>${mapArt()}</section><div class="toolbar"><h2 style="font-size:15px">发现组织</h2><div class="inline-search">${icon('search')}<input id="org-search" class="search-field" placeholder="按名称查找组织…" aria-label="查找组织"></div></div><div class="org-grid" id="org-results">${organizations.map(orgCard).join('')}</div><div class="footer-note"><span class="row">${icon('info')}本页为演示组织与数据，不代表实时链上状态。</span><span>TESTNET · CONCEPT PREVIEW</span></div>`;}
-function settingsPage(){return `${pageHeading('SPACE SETTINGS','属于你的空间，由你掌控。','连接设备、管理工具，让工作以你习惯的方式发生。')}<div class="settings-grid"><div class="stack">${appearanceControls()}<div class="card"><div class="row between"><h3>执行与协作设备</h3><button class="link-btn" data-action="pair">${icon('plus')}配对手机</button></div><button class="choice-card" data-page="hosts">${icon('org')}<span class="grow"><strong>管理本地与云端主机</strong><small>${fleet().hosts.length} 台执行主机 · 节点、Agent、命令与桌面</small></span>${icon('arrow')}</button><div class="device-card"><span class="device-icon">${icon('laptop')}</span><div class="grow"><strong>MacBook Pro <span class="badge">本机</span></strong><small>macOS · Apple Silicon · 演示设备</small></div><span class="badge ${state.offline?'':'green'}">${state.offline?'离线':'在线'}</span></div>${state.phonePaired?`<div class="device-card"><span class="device-icon">${icon('phone')}</span><div class="grow"><strong>我的 iPhone <span class="badge green">已授权</span></strong><small>${state.phoneAccess?.operate?'查看任务 · 发起任务 · 操作审批':'查看任务与成果 · 只读'}</small></div><button class="btn small danger" data-action="revoke">撤销</button></div>`:`<div class="device-card"><span class="device-icon">${icon('phone')}</span><div class="grow"><strong>让手机接上你的工作</strong><small>离开电脑，也能查看结果和处理审批。</small></div></div>`}<div class="notice" style="font-size:10px;margin-top:14px">${icon('lock')}配对与授权分别确认。原型不会访问相机或创建真实凭据。</div></div><div class="card"><h3>模型与工具</h3>${[['spark','模型连接','Claude / GPT · 演示配置','已配置'],['folder','工作区访问','fractalmind-os · 仅当前项目','已授权'],['code','命令执行','遵守 OKR 范围与预算','约定内自主'],['book','内置技能','文件分析 · 代码检查 · 研究整理','3 项启用']].map(([ic,title,sub,label])=>`<div class="setting-row"><div class="row">${icon(ic)}<div><p>${title}</p><small>${sub}</small></div></div><button class="badge green" data-action="tool" data-id="${esc(title)}">${label}${icon('chevron')}</button></div>`).join('')}</div></div><div class="stack"><div class="card"><h3>工作偏好</h3><div class="setting-row"><div><p>需要决定时通知我</p><small>待审批、待验收和执行失败</small></div><button class="switch ${state.notifications?'on':''}" role="switch" aria-checked="${state.notifications}" aria-label="需要决定时通知我" data-action="toggle-notifications"></button></div><div class="setting-row"><div><p>关闭窗口后继续执行</p><small>保持本机核心服务运行</small></div><button class="switch ${state.background?'on':''}" role="switch" aria-checked="${state.background}" aria-label="关闭窗口后继续执行" data-action="toggle-background"></button></div></div><div class="card"><h3>数据与诊断</h3><p class="muted" style="font-size:11px;margin:10px 0 18px">工作区默认私密。演示修改仅保存在当前浏览器。</p><div class="stack" style="gap:9px"><button class="btn" data-action="export">${icon('download')}导出演示数据</button><button class="btn" data-action="diagnostic">${icon('info')}查看服务诊断</button><button class="btn" data-action="${state.offline?'online':'offline'}">${icon('wifi')}${state.offline?'恢复设备连接':'模拟设备离线'}</button></div></div><div class="notice">FractalMind · 产品原型 07 · 语言与外观<br>所有操作均为本地交互演示，无真实执行。</div></div></div>`;}
+function settingsPage(){return `${pageHeading('SPACE SETTINGS','属于你的空间，由你掌控。','连接设备、管理工具，让工作以你习惯的方式发生。')}<div class="settings-grid"><div class="stack">${appearanceControls()}<div class="card"><div class="row between"><h3>执行与协作设备</h3><button class="link-btn" data-action="pair">${icon('plus')}配对手机</button></div><button class="choice-card" data-page="hosts">${icon('org')}<span class="grow"><strong>管理本地与云端主机</strong><small>${fleet().hosts.length} 台执行主机 · 节点、Agent、命令与桌面</small></span>${icon('arrow')}</button><div class="device-card"><span class="device-icon">${icon('laptop')}</span><div class="grow"><strong>MacBook Pro <span class="badge">本机</span></strong><small>macOS · Apple Silicon · 演示设备</small></div><span class="badge ${state.offline?'':'green'}">${state.offline?'离线':'在线'}</span></div>${state.phonePaired?`<div class="device-card"><span class="device-icon">${icon('phone')}</span><div class="grow"><strong>我的 iPhone <span class="badge green">已授权</span></strong><small>${state.phoneAccess?.operate?'查看任务 · 发起任务 · 操作审批':'查看任务与成果 · 只读'}</small></div><button class="btn small danger" data-action="revoke">撤销</button></div>`:`<div class="device-card"><span class="device-icon">${icon('phone')}</span><div class="grow"><strong>让手机接上你的工作</strong><small>离开电脑，也能查看结果和处理审批。</small></div></div>`}<div class="notice" style="font-size:10px;margin-top:14px">${icon('lock')}配对与授权分别确认。原型不会访问相机或创建真实凭据。</div></div><div class="card"><h3>模型与工具</h3>${[['spark','模型连接','Claude / GPT · 演示配置','已配置'],['folder','工作区访问','fractalmind-os · 仅当前项目','已授权'],['code','命令执行','遵守 OKR 范围与预算','约定内自主'],['book','内置技能','文件分析 · 代码检查 · 研究整理','3 项启用']].map(([ic,title,sub,label])=>`<div class="setting-row"><div class="row">${icon(ic)}<div><p>${title}</p><small>${sub}</small></div></div><button class="badge green" data-action="tool" data-id="${esc(title)}">${label}${icon('chevron')}</button></div>`).join('')}</div></div><div class="stack"><div class="card"><h3>工作偏好</h3><div class="setting-row"><div><p>需要决定时通知我</p><small>待审批、待验收和执行失败</small></div><button class="switch ${state.notifications?'on':''}" role="switch" aria-checked="${state.notifications}" aria-label="需要决定时通知我" data-action="toggle-notifications"></button></div><div class="setting-row"><div><p>关闭窗口后继续执行</p><small>保持本机核心服务运行</small></div><button class="switch ${state.background?'on':''}" role="switch" aria-checked="${state.background}" aria-label="关闭窗口后继续执行" data-action="toggle-background"></button></div></div><div class="card"><h3>数据与诊断</h3><p class="muted" style="font-size:11px;margin:10px 0 18px">工作区默认私密。演示修改仅保存在当前浏览器。</p><div class="stack" style="gap:9px"><button class="btn" data-action="export">${icon('download')}导出演示数据</button><button class="btn" data-action="diagnostic">${icon('info')}查看服务诊断</button><button class="btn" data-action="${state.offline?'online':'offline'}">${icon('wifi')}${state.offline?'恢复设备连接':'模拟设备离线'}</button></div></div><div class="notice">FractalMind · 产品原型 08 · 运行对话<br>所有操作均为本地交互演示，无真实执行。</div></div></div>`;}
 function go(id,goalId=null){if(state.space==='labs'&&!['organizations','network'].includes(id))state.space='personal';if(id==='tasks')selectedOKR=goalId;page=id;closeOverlay();render();$('#content').scrollTop=0;}
-function openOverlay(html,kind='dialog'){overlayReturn=document.activeElement;$('#overlay').classList.add('open');$('#overlay').innerHTML=`<div class="backdrop" data-action="close"></div>${kind==='drawer'?html:`<div class="dialog-wrap">${html}</div>`}`;translateDOM($('#overlay'));requestAnimationFrame(()=>{const focus=$('#overlay input:not([type="checkbox"]),#overlay textarea,#overlay button');focus?.focus();});}
-function closeOverlay(){const wasOpen=$('#overlay').classList.contains('open');$('#overlay').innerHTML='';$('#overlay').classList.remove('open');activeTask=null;if(wasOpen&&overlayReturn?.isConnected)overlayReturn.focus();}
+function openOverlay(html,kind='dialog'){activeConversation=null;overlayReturn=document.activeElement;$('#overlay').classList.add('open');$('#overlay').innerHTML=`<div class="backdrop" data-action="close"></div>${kind==='drawer'?html:`<div class="dialog-wrap">${html}</div>`}`;translateDOM($('#overlay'));requestAnimationFrame(()=>{const focus=$('#run-chat-input')||$('#overlay input:not([type="checkbox"]),#overlay textarea,#overlay button');focus?.focus();});}
+function closeOverlay(){activeConversation=null;const wasOpen=$('#overlay').classList.contains('open');$('#overlay').innerHTML='';$('#overlay').classList.remove('open');activeTask=null;if(wasOpen&&overlayReturn?.isConnected)overlayReturn.focus();}
 function dialogHeader(title,desc,ico='spark'){return `<div class="row between"><span class="avatar">${icon(ico)}</span><button class="icon-btn" data-action="close" aria-label="关闭对话框">${icon('close')}</button></div><h2 id="dialog-title">${title}</h2><p>${desc}</p>`;}
 function openTask(id,tab='overview'){const t=state.tasks.find(x=>x.id===id);if(!t)return;activeTask=id;detailTab=tab;drawTask();}
 function drawTask(){const t=state.tasks.find(x=>x.id===activeTask);if(!t)return;const a=agentFor(t.agent);const html=`<section class="drawer" role="dialog" aria-modal="true" aria-labelledby="task-dialog-title"><div class="drawer-head"><div class="row">${badge(t.status)}<span class="mono muted">TASK / ${t.id.toUpperCase().slice(-8)}</span><span class="spacer"></span><button class="icon-btn" data-action="close" aria-label="关闭任务详情">${icon('close')}</button></div><h2 id="task-dialog-title" data-i18n-content>${esc(t.name)}</h2><div class="row" style="font-size:10px;color:var(--tone-98a187, #98a187)">${icon('target')}${esc(state.goals.find(g=>g.id===t.goal)?.name||'个人目标')}</div><div class="tabs" role="tablist">${[['overview','任务概览'],['evidence','成果与证据'],['activity','活动记录']].map(([id,title])=>`<button class="tab ${detailTab===id?'active':''}" role="tab" aria-selected="${detailTab===id}" data-detail-tab="${id}">${title}</button>`).join('')}</div></div><div class="drawer-content">${mobileReadOnly()?'<div class="notice amber" style="margin-bottom:18px">此手机只有查看权限。审批和任务操作需要桌面授予相应权限。</div>':''}${detailTab==='activity'?taskActivity(t):`${detailTab==='overview'?`<div class="detail-grid"><div><small>责任 Agent</small><div class="row">${ava(a.id,'tiny')}${a.name} · ${a.role}</div></div><div><small>执行设备</small><div class="row">${icon('laptop')}MacBook Pro ${state.offline?'<span class="badge">离线</span>':'<span class="dot"></span>'}</div></div><div><small>空间与工作区</small><div class="row">${icon('lock')}个人空间 / fractalmind-os</div></div><div><small>交付状态</small><span>${t.status==='done'?'已验收并完成':t.status==='review'?'已提交，等待你的验收':'任务已指派，正在推进'}</span></div></div><h3>目标与验收条件</h3><p style="font-size:12px;color:var(--tone-8b967d, #8b967d)" data-i18n-content>${esc(t.detail)}</p>`:''}${taskActionBox(t)}${detailTab==='overview'?`<h3 style="margin-top:24px">继续对话</h3>${t.messages.map(m=>`<div class="chat-message">${esc(m)}</div>`).join('')}<form class="chat-input" id="chat-form"><textarea name="message" aria-label="任务补充说明" placeholder="补充背景，或给 Agent 新的反馈…" required maxlength="1000"></textarea><button class="btn primary" type="submit" aria-label="发送任务反馈">${icon('arrowUp')}</button></form>`:''}`}</div></section>`;openOverlay(html,'drawer');activeTask=t.id;}
@@ -1472,7 +1546,7 @@ function navigationMap(g){
   const dir=Math.atan2(next.y-marker.y,next.x-marker.x)*180/Math.PI+90;
   const actionable=canOperate()||(a.action==='nav-reconnect'&&!mobileReadOnly());
   return `<section class="route-atlas ${status[0]}" aria-label="OKR 地图导航">
-  <div class="map-guidance"><div class="map-turn">${icon(a.id==='drift'||a.id==='loop'?'refresh':unknown?'wifi':done?'checkCircle':danger?'stop':'arrowUp')}</div><div class="grow"><h3 role="status">${status[1]}</h3><p>${esc(status[2])}</p></div><button class="btn primary" data-action="${a.action}" data-id="${g.id}" ${!actionable?'disabled':''}>${a.button}</button></div>
+  <div class="map-guidance"><div class="map-turn">${icon(a.id==='drift'||a.id==='loop'?'refresh':unknown?'wifi':done?'checkCircle':danger?'stop':'arrowUp')}</div><div class="grow"><h3 role="status">${status[1]}</h3><p>${esc(status[2])}</p></div><div class="map-run-actions"><button class="btn primary" data-action="${a.action}" data-id="${g.id}" ${!actionable?'disabled':''}>${a.button}</button><button class="btn" data-action="run-chat" data-id="${g.id}">${icon('message')}与 Agent 沟通</button></div></div>
   <div class="map-canvas ${g.auto?'is-moving':''}" data-map-state="${status[0]}">
   <svg class="map-drawing" viewBox="${camera.x} ${camera.y} ${camera.w} ${camera.h}" preserveAspectRatio="none" aria-hidden="true">
     <defs><pattern id="map-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 H 0 V 40" fill="none" stroke="var(--tone-cdd7c7, #cdd7c7)" stroke-width=".7" opacity=".4"/></pattern><pattern id="map-restricted" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><line y2="9" stroke="var(--tone-d38b75, #d38b75)" stroke-width="2" opacity=".19"/></pattern></defs>
@@ -1517,8 +1591,8 @@ function navigationPage(g){
   ${['drift','loop','blocked','approval','budget'].includes(a.id)?`<div class="nav-detour"><span class="detour-line"></span><div><strong>备选路线 ${n.route==='A'?'B':'B · 新尝试'}</strong><p>调整假设与执行步骤，使用已授权的本地工具；验证方式保持一致。</p></div><button class="btn small" data-action="nav-replan" data-id="${g.id}" ${!can?'disabled':''}>验证替代路线 ${icon('arrow')}</button></div>`:''}
   <div class="nav-location-proof"><span>${icon('checkCircle')}最后有效验证：${verified?`${verified.id.toUpperCase()} · ${verified.current} / ${verified.target} ${esc(verified.unit)}`:'尚无已完成 KR'}</span><button class="link-btn" data-action="nav-evidence" data-id="${g.id}">查看判断依据 ${icon('arrow')}</button></div></section>
   <div class="nav-telemetry"><section class="card"><div class="eyebrow">DISTANCE TO RESULT</div><div class="row between"><h3>${unknown?'上次':'最新'}测量</h3><span class="badge ${krComplete(k)?'green':''}">${krComplete(k)?'验证通过':'待独立验证'}</span></div><div class="nav-measure"><strong>${k.current}</strong><span>${esc(k.unit)} / 目标 ${k.target}</span></div><div class="progress"><i style="width:${krProgress(k)}%"></i></div><p>${unknown?'当前差距未知；上次差距 '+delta+' '+esc(k.unit==='%'?'个百分点':k.unit):krComplete(k)?'已达到目标并验证通过':metricMet(k)?'指标已达标，等待证据验证':'还需'+(k.target>k.baseline?'提升':'降低')+' '+delta+' '+esc(k.unit==='%'?'个百分点':k.unit)}</p><small>基线 ${k.baseline} · ${esc(lastSample?.at||k.updated||'尚未采样')} · 演示</small></section><section class="card"><div class="eyebrow">BOUNDARY & RESERVE</div><div class="row between"><h3>${unknown?'上次记录':'费用与边界'}</h3><span class="badge ${a.color}">${a.boundary}</span></div><div class="nav-measure"><strong>$${g.spent.toFixed(2)}</strong><span>/ 上限 $${g.budget}</span></div><div class="progress"><i style="width:${Math.min(100,g.spent/g.budget*100)}%"></i></div><p>${unknown?'当前用量未知':`剩余 $${Math.max(0,g.budget-g.spent).toFixed(2)} · ${a.id==='achieved'?'执行已结束':a.id==='candidate'?'激活后评估下一动作':`下一动作 $${nextCost(g).toFixed(2)}`}`}</p><small>截止 ${esc(g.deadline)} · ${esc(g.scope)}</small></section></div>
-  <section class="card nav-recent"><div class="row between"><h3>执行足迹</h3><button class="link-btn" data-action="nav-evidence" data-id="${g.id}">全部记录 ${icon('arrow')}</button></div>${n.events.length?n.events.slice(-4).reverse().map(e=>`<div class="nav-event"><span class="badge ${e.kind==='verified'?'green':e.kind==='blocked'?'amber':''}">${esc(e.kind==='verified'?'已验证':e.kind==='measurement'?'测量':e.kind==='replan'?'换路':e.kind==='deviation'?'偏航':e.kind==='assignment'?'改派':'检查')}</span><div><p>${esc(e.message)}</p><small>${esc(e.at)} · ${esc(e.run)} · ${e.kr.toUpperCase()} · 路线 ${e.route}${e.hostId?' · '+esc(hostById(e.hostId)?.name||e.hostId):''}</small></div></div>`).join(''):'<p class="muted" style="margin-top:16px">点击“演示自主推进”，这里会记录每次测量、验证和换路的依据。</p>'}</section></div>
-  <aside class="stack">${hostExecutionCard(g)}<section class="card nav-next"><div class="eyebrow">NEXT MOVE</div><h3>下一步，怎么走？</h3><p role="status">${esc(a.next)}</p><button class="btn primary" data-action="${a.action}" data-id="${g.id}" ${!actionEnabled?'disabled':''}>${icon(a.action==='okr-auto'&&g.auto?'pause':a.action==='nav-replan'?'refresh':'arrow')}${a.button}</button>${!terminal?`<button class="btn" data-action="okr-tick" data-id="${g.id}" ${!can||g.auto?'disabled':''}>模拟一次 heartbeat</button>`:''}<small>${unknown?'观测已中断 · 最后观测 ':'最近观测 '}${new Date(n.observedAt).toLocaleString(preferences.locale,{hour12:false})} · 演示</small></section>
+  <section class="card nav-recent"><div class="row between"><h3>执行足迹</h3><button class="link-btn" data-action="nav-evidence" data-id="${g.id}">全部记录 ${icon('arrow')}</button></div>${n.events.length?n.events.slice(-4).reverse().map(e=>`<div class="nav-event"><span class="badge ${e.kind==='verified'?'green':e.kind==='blocked'?'amber':''}">${esc(e.kind==='verified'?'已验证':e.kind==='measurement'?'测量':e.kind==='replan'?'换路':e.kind==='deviation'?'偏航':e.kind==='assignment'?'改派':e.kind==='communication'?'沟通':'检查')}</span><div><p>${esc(e.message)}</p><small>${esc(e.at)} · ${esc(e.run)} · ${e.kr.toUpperCase()} · 路线 ${e.route}${e.hostId?' · '+esc(hostById(e.hostId)?.name||e.hostId):''}</small></div></div>`).join(''):'<p class="muted" style="margin-top:16px">点击“演示自主推进”，这里会记录每次测量、验证和换路的依据。</p>'}</section></div>
+  <aside class="stack">${communicationCard(g)}${hostExecutionCard(g)}<section class="card nav-next"><div class="eyebrow">NEXT MOVE</div><h3>下一步，怎么走？</h3><p role="status">${esc(a.next)}</p><button class="btn primary" data-action="${a.action}" data-id="${g.id}" ${!actionEnabled?'disabled':''}>${icon(a.action==='okr-auto'&&g.auto?'pause':a.action==='nav-replan'?'refresh':'arrow')}${a.button}</button>${!terminal?`<button class="btn" data-action="okr-tick" data-id="${g.id}" ${!can||g.auto?'disabled':''}>模拟一次 heartbeat</button>`:''}<small>${unknown?'观测已中断 · 最后观测 ':'最近观测 '}${new Date(n.observedAt).toLocaleString(preferences.locale,{hour12:false})} · 演示</small></section>
   <section class="card nav-guardrails"><h3>${icon('shield')} 本次执行边界</h3><div><small>工作范围</small><p data-i18n-content>${esc(g.scope)}</p></div><div><small>自主允许</small><p data-i18n-content>${esc(g.allowed)}</p></div><div><small>需要你的决定</small><p data-i18n-content>${esc(g.escalate)}</p></div><div><small>验证约定</small><p data-i18n-content>${esc(k.verification)}</p></div><button class="link-btn" data-action="okr-contract" data-id="${g.id}">查看与调整约定 ${icon('arrow')}</button></section><div class="notice">导航由当前 OKR 的指标、约束与执行记录驱动。所有运行和判断仍为演示。</div></aside></div></section>`;
 }
 function showNavigationEvidence(g){const n=navigation(g),a=navAssessment(g),k=currentKR(g);openOverlay(`<section class="dialog wide" role="dialog" aria-modal="true" aria-labelledby="dialog-title">${dialogHeader('这次导航判断，从哪里来？',a.label+' · '+k.id.toUpperCase()+' · 路线 '+n.route,'target')}<div class="notice" style="margin:20px 0">${esc(a.reason)}<br>下一步：${esc(a.next)}</div><h3>判定规则与证据</h3><div class="okr-boundary"><small>位置</small><p>当前 ${k.id.toUpperCase()} / SIM-${g.id.toUpperCase()}-${String(n.seq).padStart(2,'0')}；测量 ${k.current} ${esc(k.unit)}，${krComplete(k)?'验证通过':'尚未独立验证'}。</p><small>偏航</small><p>示例规则：连续 2 次动作无法关联任何 KR，且缺少推进目标的证据。探索活动在已声明假设和探索额度内，不仅因短期指标不变就判为偏航。</p><small>空转</small><p>示例规则：观察窗内同输入、同错误和同策略连续 3 次，且无结果改善或新信息。正常等待窗口内不判为空转。</p><small>死胡同</small><p>必要条件被硬约束排除时，仅将当前路线标为不可行；替代路线仍需验证，不推断整个目标不可达。</p><small>边界检查</small><p data-i18n-content>${esc(g.scope)}；费用 $${g.spent.toFixed(2)} / $${g.budget}；期限 ${esc(g.deadline)}。失去观测时仅保留历史快照。</p></div><h3>执行记录 · 演示事件</h3>${n.events.length?n.events.slice().reverse().map(e=>`<div class="nav-event"><span class="badge">${esc(e.kind)}</span><div><p>${esc(e.message)}</p><small>${esc(e.at)} · ${esc(e.run)} · ${e.kr.toUpperCase()} · 路线 ${e.route} · 测量 ${e.value} ${esc(e.unit)}${e.hostId?' · '+esc(hostById(e.hostId)?.name||e.hostId)+' / '+esc(e.instanceId||''):' · 历史记录未标注主机'}</small></div></div>`).join(''):'<p class="muted" style="margin-top:15px">当前尚无新增运行记录。</p>'}<div class="dialog-footer"><button class="btn" data-action="kr-detail" data-id="${g.id}" data-kr="${k.id}">查看 KR 原始证据</button><button class="btn primary" data-action="close">返回导航</button></div></section>`);}
@@ -1549,6 +1623,91 @@ function heartbeat(g){
   refreshOKR();return proceed;
 }
 
+// Conversations attach to an OKR and capture the run they refer to. Replies are local demonstrations.
+let activeConversation=null;
+const communicationIntents={explain:'询问原因',context:'补充信息',replan:'请求新方案',pause:'暂停等待'};
+const communicationPrompts={explain:'请解释当前为什么偏航或卡住，并指出判断依据。',context:'优先完成当前 KR 的可验证结果。我补充的背景是：',replan:'请停止无效尝试，在现有目标、预算和权限内提出新方案。',pause:'请先暂停推进，保留检查点，等我补充信息后再继续。'};
+function communication(g){return g.communication??={messages:[],draft:'',intent:'explain',sequence:0};}
+function communicationContext(g){
+  const n=navigation(g),k=currentKR(g),a=navAssessment(g),h=goalHost(g),verified=g.krs.filter(krComplete).at(-1);
+  return {goalId:g.id,objective:g.name,owner:g.owner,kr:k.id,krTitle:k.title,run:'SIM-'+g.id.toUpperCase()+'-'+String(n.seq).padStart(2,'0'),hostId:h?.id||'',hostName:h?.name||'未分配主机',instanceId:assignedInstance(g)?.id||'',route:n.route,assessment:a.id,label:a.label,reason:a.reason,next:a.next,scope:g.scope,allowed:g.allowed,escalate:g.escalate,criteria:g.criteria,spent:g.spent,budget:g.budget,deadline:g.deadline,verification:k.verification,checkpoint:verified?.id||null,observedAt:n.observedAt,value:k.current,target:k.target,unit:k.unit,evidence:n.events.filter(e=>e.kind!=='communication').slice(-3).map(e=>({at:e.at,kind:e.kind,message:e.message,run:e.run,hostId:e.hostId,kr:e.kr})),capturedAt:Date.now()};
+}
+function communicationFingerprint(g){const n=navigation(g);return JSON.stringify({lifecycle:g.lifecycle,owner:g.owner,host:g.hostId,scope:g.scope,allowed:g.allowed,escalate:g.escalate,criteria:g.criteria,budget:g.budget,spent:g.spent,deadline:g.deadline,request:g.request,mode:n.mode,route:n.route,quote:n.quote,seq:n.seq,tick:g.tick,auto:g.auto,epoch:g.autoEpoch,krs:g.krs.map(k=>({id:k.id,current:k.current,target:k.target,baseline:k.baseline,weight:k.weight,verified:k.verified,status:k.status,depends:k.depends,verification:k.verification,evidence:k.evidence}))});}
+function communicationUnavailable(g){
+  if(!canOperate())return blockedMessage();
+  if(!hostReachable(goalHost(g)))return '执行主机离线，消息未发送；草稿已保留。';
+  if(!assignedInstance(g)||assignedInstance(g).status==='stopped'||state.paused.includes(g.owner))return '负责的 Agent 不可用，消息未发送；草稿已保留。';
+  return '';
+}
+function pauseForCommunication(g){g.auto=false;g.autoEpoch=(g.autoEpoch||0)+1;g.manualPause=true;}
+function communicationEvent(g,message,context){
+  // A human message is not new telemetry. Keep the last observation timestamp intact.
+  navigation(g).events.push({kind:'communication',message,at:new Date().toLocaleTimeString(preferences.locale,{hour12:false}),hostId:context.hostId,instanceId:context.instanceId,kr:context.kr,run:context.run,route:context.route,value:context.value,unit:context.unit});
+  logOKR(g,message);
+}
+function communicationPlanBlocker(g){
+  if(g.lifecycle!=='ACTIVE')return '只有进行中的 OKR 可以采用执行方案。';
+  const unavailable=communicationUnavailable(g);if(unavailable)return unavailable;
+  const a=navAssessment(g);
+  if(['unknown','waiting','dependency','agent-paused','host-scope','deadline'].includes(a.id))return a.next;
+  if(g.budget-g.spent<1.5)return '剩余预算不足以执行本地方案，请先调整约定。';
+  return '';
+}
+function sendCommunication(g,message,intent){
+  const c=communication(g),text=String(message||'').trim();
+  if(!text||text.length>2000||!Object.hasOwn(communicationIntents,intent))return false;
+  c.draft=text;c.intent=intent;const unavailable=communicationUnavailable(g);
+  if(unavailable){save();toast(unavailable);return false;}
+  const context=communicationContext(g),id='chat-'+Date.now()+'-'+(++c.sequence);
+  if(['context','replan','pause'].includes(intent))c.messages.forEach(m=>{if(m.proposal?.status==='proposed')m.proposal.status='superseded';});
+  c.messages.push({id,role:'user',text,intent,context,at:Date.now(),status:'delivered'});
+  let reply,proposal;
+  if(intent==='pause'){
+    if(g.lifecycle==='ACTIVE'){pauseForCommunication(g);reply='执行已暂停，检查点与已有证据已保留。补充信息后，你可以请求新方案。';}
+    else reply='当前 OKR 没有活动执行，已有结果保持不变。';
+  }else if(intent==='replan'){
+    if(g.lifecycle==='ACTIVE')pauseForCommunication(g);
+    const reason=communicationPlanBlocker(g);
+    if(reason)reply='已收到调整请求，但当前还不能启动新方案。请先处理下面的阻塞条件。';
+    else reply='已停止当前尝试，提出一条本地替代方案。请确认下面的步骤，再继续执行。';
+    proposal={id:id+'-plan',status:reason?'blocked':'proposed',reason,context,brief:text,fingerprint:communicationFingerprint(g),nextCost:1.5,steps:['保留已验证检查点，停止与当前 KR 无关或重复的动作。','改用工作区内的本地分析与验证，验证方式保持不变。','采集新的结果证据；通过验证后再推进下游 KR。']};
+  }else if(intent==='context')reply='已把补充信息附加到这个 OKR 的运行记录。需要改变执行路线时，请请求新方案；目标与边界保持当前约定。';
+  else reply='下面是这次运行快照中的原因、证据和下一步建议。询问原因不会改变执行状态。';
+  c.messages.push({id:id+'-reply',role:'agent',text:reply,intent,context,at:Date.now(),replyTo:id,proposal});
+  c.draft='';communicationEvent(g,intent==='replan'?'已通过运行对话请求新方案，等待后续确认。':intent==='pause'?'已通过运行对话请求暂停，保留既有结果。':'已记录一条运行对话，消息与运行快照已关联。',context);
+  save();refreshOKR();return true;
+}
+function applyCommunicationPlan(g,proposalId){
+  const p=communication(g).messages.find(m=>m.proposal?.id===proposalId)?.proposal;
+  if(!p||p.status!=='proposed')return false;
+  const unavailable=communicationUnavailable(g);if(unavailable){toast(unavailable);return false;}
+  if(p.fingerprint!==communicationFingerprint(g)){p.status='stale';save();toast('运行或约定已变化，请重新请求方案。');return false;}
+  const blocker=communicationPlanBlocker(g);if(blocker){p.status='blocked';p.reason=blocker;save();toast(blocker);return false;}
+  p.status='applied';p.appliedAt=Date.now();
+  communicationEvent(g,'你采纳了沟通中的本地方案，按原有边界继续执行。',communicationContext(g));
+  replanNavigation(g);
+  communication(g).messages.push({id:p.id+'-applied',role:'agent',intent:'applied',text:'方案已采纳，路线已更新。后续进展以地图上的测量和验证证据为准。',context:communicationContext(g),at:Date.now()});
+  save();return true;
+}
+function communicationCard(g){const c=communication(g),last=c.messages.filter(m=>m.role==='agent').at(-1);return `<section class="card run-chat-card"><div class="row between"><h3>${icon('message')}与 Agent 沟通</h3><span class="badge">${c.messages.filter(m=>m.role==='user').length} 条消息</span></div><div class="row" style="margin:14px 0">${ava(g.owner)}<div><strong>${agentFor(g.owner).name}</strong><small class="muted" style="display:block;margin-top:4px">携带当前目标、异常依据和执行边界</small></div></div><p>${last?esc(last.text):'偏航或卡住时，直接询问原因、补充方向或请求新方案。'}</p><button class="btn soft" data-action="run-chat" data-id="${g.id}">${icon('message')}${last?'继续运行对话':'开始运行对话'}</button><small class="muted">演示对话 · 未连接真实 Agent</small></section>`;}
+function communicationSnapshot(context){return `<details class="run-chat-snapshot"><summary>随消息附带的运行快照 <span class="mono">${esc(context.run)}</span></summary><div class="run-chat-snapshot-body"><p data-i18n-content>${esc(context.objective)}</p><div class="row wrap"><span class="badge">${esc(context.kr.toUpperCase())}</span><span>${esc(context.hostName)}</span><span>路线 ${esc(context.route)}</span></div><p>${esc(context.reason)}</p><small>工作范围</small><p data-i18n-content>${esc(context.scope)}</p><small>自主允许</small><p data-i18n-content>${esc(context.allowed)}</p><small>成功标准</small><p data-i18n-content>${esc(context.criteria)}</p><small>Agent 实例</small><p class="mono">${esc(context.instanceId)}</p><small>费用与期限</small><p>$${context.spent.toFixed(2)} / $${context.budget} · ${esc(context.deadline)}</p><small>最后已验证检查点</small><p>${context.checkpoint?esc(context.checkpoint.toUpperCase()):'尚无已完成 KR'}</p><small>需要你的决定</small><p data-i18n-content>${esc(context.escalate)}</p><small>验证约定</small><p data-i18n-content>${esc(context.verification)}</p><small>最近观测</small><p>${new Date(context.observedAt).toLocaleString(preferences.locale)}</p>${context.evidence.map(e=>`<p class="run-chat-source">${esc(e.message)}<small>${esc(e.at)} · ${esc(e.run)}</small></p>`).join('')}</div></details>`;}
+function communicationProposal(g,p){
+  const stale=p.status==='proposed'&&p.fingerprint!==communicationFingerprint(g);
+  const status=stale?'stale':p.status,labels={proposed:'待你确认',applied:'已采纳',blocked:'先处理阻塞',stale:'方案已过期',superseded:'已有更新的方向'};
+  return `<section class="run-proposal"><div class="row between wrap"><h3>Agent 建议方案</h3><span class="badge ${status==='applied'?'green':'amber'}">${labels[status]}</span></div><p><strong>${esc(p.context.kr.toUpperCase())}</strong> · <span data-i18n-content>${esc(p.context.krTitle)}</span></p><small>收到的方向补充</small><blockquote translate="no">${esc(p.brief)}</blockquote><ol>${p.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol><div class="run-plan-budget"><span>下一步预计</span><strong>$${p.nextCost.toFixed(2)}</strong><span>预算、权限及成功标准保持原约定。</span></div>${status==='blocked'?`<p class="notice amber">${esc(p.reason)}</p>`:''}${status==='stale'?'<p class="notice amber">运行或约定已变化，请重新请求方案。</p>':''}${status==='proposed'?`<button class="btn primary" data-action="run-plan-apply" data-id="${g.id}" data-proposal="${p.id}" ${communicationUnavailable(g)?'disabled':''}>${icon('play')}采用方案并继续</button>`:['blocked','stale','superseded'].includes(status)?`<button class="btn" data-action="run-chat-prompt" data-id="${g.id}" data-intent="replan">基于最新状态请求方案</button>`:''}</section>`;
+}
+function communicationMessage(g,m){return `<article class="run-message ${m.role}"><div class="run-message-meta"><strong>${m.role==='user'?'你':agentFor(m.context.owner).name}</strong><span>${m.role==='user'?'已送达 · 演示':'已回应 · 演示'}</span><time>${new Date(m.at).toLocaleTimeString(preferences.locale,{hour12:false})}</time></div><p ${m.role==='user'?'translate="no"':''}>${esc(m.text)}</p>${m.role==='agent'&&m.intent==='explain'?`<div class="run-explanation"><strong>${esc(m.context.label)}</strong><p>${esc(m.context.reason)}</p><small>下一步建议</small><p>${esc(m.context.next)}</p></div>`:''}${m.proposal?communicationProposal(g,m.proposal):''}${m.role==='user'?communicationSnapshot(m.context):''}</article>`;}
+function communicationHelp(intent){return intent==='replan'?'发送后暂停当前尝试，生成方案；采用方案后才继续。':intent==='pause'?'发送后暂停当前 OKR 的自主循环，保留已有结果。':'发送消息会保留当前执行状态。聊天不修改目标、预算或权限。';}
+function openCommunication(g){
+  const c=communication(g),context=communicationContext(g),unavailable=communicationUnavailable(g);
+  openOverlay(`<section class="drawer run-dialog" role="dialog" aria-modal="true" aria-labelledby="run-dialog-title"><header class="run-dialog-head"><div class="row">${ava(g.owner)}<div class="grow"><h2 id="run-dialog-title">与 Agent 沟通</h2><small>${agentFor(g.owner).name} · ${esc(context.hostName)}</small></div><button class="icon-btn" data-action="close" aria-label="关闭运行对话">${icon('close')}</button></div><div class="run-chat-objective"><strong data-i18n-content>${esc(g.name)}</strong><div class="row wrap"><span class="badge ${navAssessment(g).color}">${context.label}</span><span class="mono"><span>关联快照</span> · ${esc(context.kr.toUpperCase())} · ${esc(context.run)}</span>${g.manualPause?'<span class="badge">执行已暂停</span>':''}</div></div><p>演示回复与固定方案 · 未连接真实 Agent</p></header><div class="run-dialog-body" id="run-chat-history" role="log" aria-label="运行对话记录" aria-live="polite">${c.messages.length?c.messages.map(m=>communicationMessage(g,m)).join(''):`<div class="run-chat-welcome"><h3>从当前问题开始沟通</h3><p>${esc(context.reason)}</p><p class="muted">消息会附带 OKR、当前 KR、执行主机、检查点和边界，无需重新描述整个任务。</p>${communicationSnapshot(context)}</div>`}</div><form id="run-chat-form" class="run-chat-composer" data-id="${g.id}"><div class="run-chat-prompts">${Object.entries(communicationIntents).map(([id,label])=>`<button class="btn small" type="button" data-action="run-chat-prompt" data-id="${g.id}" data-intent="${id}">${label}</button>`).join('')}</div><label class="run-intent-label">沟通目的<select id="run-chat-intent" name="intent" aria-label="沟通目的">${Object.entries(communicationIntents).map(([id,label])=>`<option value="${id}" ${c.intent===id?'selected':''}>${label}</option>`).join('')}</select></label><textarea id="run-chat-input" name="message" required maxlength="2000" aria-label="给 Agent 的运行消息" placeholder="补充方向、提供线索，或告诉 Agent 你希望它解释什么…">${esc(c.draft)}</textarea><p class="run-chat-help" id="run-chat-help">${communicationHelp(c.intent)}</p>${unavailable?`<div class="notice amber">${esc(unavailable)}</div>`:''}<div class="row between"><small>上下文随消息发送 · 草稿自动保存</small><button class="btn primary" type="submit" ${unavailable?'disabled':''}>${icon('send')}发送消息</button></div></form></section>`,'drawer');
+  activeConversation=g.id;save();const history=$('#run-chat-history');history.scrollTop=history.scrollHeight;
+}
+function promptCommunication(g,intent){if(!Object.hasOwn(communicationIntents,intent))return;const c=communication(g);c.intent=intent;c.draft=localizedText(communicationPrompts[intent]);if(activeConversation!==g.id)openCommunication(g);else{$('#run-chat-intent').value=intent;$('#run-chat-input').value=c.draft;$('#run-chat-help').textContent=communicationHelp(intent);translateDOM($('#run-chat-form'));}save();$('#run-chat-input').focus();}
+document.addEventListener('submit',e=>{if(e.target.id!=='run-chat-form')return;e.preventDefault();const g=state.goals.find(g=>g.id===e.target.dataset.id);if(!g)return;const data=new FormData(e.target);if(sendCommunication(g,data.get('message'),data.get('intent')))openCommunication(g);});
+document.addEventListener('input',e=>{if(e.target.id!=='run-chat-input')return;const g=state.goals.find(g=>g.id===e.target.form.dataset.id);if(g){communication(g).draft=e.target.value;save();}});
+document.addEventListener('change',e=>{if(e.target.id!=='run-chat-intent')return;const g=state.goals.find(g=>g.id===e.target.form.dataset.id);if(g&&Object.hasOwn(communicationIntents,e.target.value)){communication(g).intent=e.target.value;$('#run-chat-help').textContent=communicationHelp(e.target.value);translateDOM($('#run-chat-form'));save();}});
+
 function tasksPage(){
   const g=state.goals.find(g=>g.id===selectedOKR);
   if(!g)return resultsPage();
@@ -1564,6 +1723,9 @@ if(['new-goal','approve','reject','finish-demo','accept-task','return-task','can
 switch(action){
 case 'watch-okr':if(okr){watchedOKR=id;go('home');}break;
 case 'workbench-attention':$('#workbench-attention')?.scrollIntoView({behavior:'smooth',block:'start'});break;
+case 'run-chat':if(okr)openCommunication(okr);break;
+case 'run-chat-prompt':if(okr)promptCommunication(okr,el.dataset.intent);break;
+case 'run-plan-apply':if(okr){applyCommunicationPlan(okr,el.dataset.proposal);openCommunication(okr);}break;
 case 'nav-evidence':showNavigationEvidence(okr);break;
 case 'map-view':mapView=id==='follow'?'follow':'all';refreshOKR();break;
 case 'map-goal':openSimple('抵达终点，需要哪些证据？',esc(okr.name),`<div class="notice" style="margin:18px 0" data-i18n-content>${esc(okr.criteria)}</div><div class="stack">${okr.krs.map(k=>`<button class="btn text-left" style="white-space:normal;justify-content:flex-start" data-action="kr-detail" data-id="${okr.id}" data-kr="${k.id}">${icon(krComplete(k)?'checkCircle':'circle')}${k.id.toUpperCase()} · ${esc(k.title)} · ${krComplete(k)?'已验证':'待验证'}</button>`).join('')}</div><p class="muted" style="font-size:12px;margin-top:18px">全部 KR 通过后复核整体成功标准；仅指标达标不会直接标为已抵达。</p>`,'target');break;
