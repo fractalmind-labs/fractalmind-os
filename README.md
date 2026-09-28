@@ -27,6 +27,18 @@ The source-to-destination mapping is recorded in [`repository-map.yaml`](reposit
 - `skills/` — installable agent skills and skill registries
 - `docs/` — public documentation site and architecture notes
 
+## FractalMind App
+
+The proposed FractalMind App is the unified entry point to personal agent
+workspaces, teams, organizations, and the open network. Its first release targets
+local execution on macOS, Windows, and Ubuntu, with companion workflows on iOS
+and Android.
+
+See the [product requirements](docs/product/fractalmind-app-prd.md) for scope,
+user journeys, and acceptance criteria, and the
+[engineering plan](docs/fractalmind-app-plan.md) for implementation options.
+These documents describe planned capabilities, not a released application.
+
 ## Building and testing
 
 Prerequisites: Go 1.24+ (workspace mode auto-downloads the exact toolchain
