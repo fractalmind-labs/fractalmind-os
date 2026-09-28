@@ -1,0 +1,18 @@
+go 1.26.0
+
+// runtime/fractalmind-envd/desktop is intentionally not a workspace member.
+// It requires github.com/pion/ice/v4 v4.0.10, which still imports
+// pion/transport/v3, while runtime/fractalmind-envd directly requires
+// github.com/pion/turn/v4 v4.1.4, which has moved to pion/transport/v4.
+// Go workspaces select one version per module path across every member, so
+// including desktop here forces turn to v4.1.4 for it too and its build
+// fails with a type mismatch between transport/v3.Net and transport/v4.Net.
+// Both modules build fine on their own; see docs/go-workspace.md.
+use (
+	./protocols/fractal-demail/bridge
+	./protocols/fractal-demail/client-go
+	./protocols/fractal-demail/gas-station-adapter
+	./runtime/claude-code-go
+	./runtime/fractalbot
+	./runtime/fractalmind-envd
+)

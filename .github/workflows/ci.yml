@@ -127,28 +127,19 @@ jobs:
       fail-fast: false
       matrix:
         module: ${{ fromJSON(needs.changes.outputs.go) }}
-    defaults:
-      run:
-        working-directory: ${{ matrix.module }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: ${{ matrix.module }}/go.mod
           cache-dependency-path: ${{ matrix.module }}/go.*
+      # These call the root Makefile (see docs/go-workspace.md), so local
+      # runs and CI run the exact same commands.
       - name: Check formatting
         if: matrix.module == 'runtime/fractalbot' || matrix.module == 'runtime/claude-code-go'
-        run: |
-          files=$(gofmt -l .)
-          if [ -n "$files" ]; then
-            echo "gofmt needed on:"
-            echo "$files"
-            exit 1
-          fi
-      - run: go build ./...
-      - run: go vet ./...
-      - name: go test
-        run: go test ${{ matrix.module == 'protocols/fractal-demail/bridge' && '-race' || '' }} ./...
+        run: make fmt-check MODULE=${{ matrix.module }}
+      - name: Build, vet and test
+        run: make test-go MODULE=${{ matrix.module }}
 
   agent-manager:
     name: agent-manager (Python ${{ matrix.python-version }})

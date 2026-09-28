@@ -17,6 +17,27 @@ The source-to-destination mapping is recorded in [`repository-map.yaml`](reposit
 - `skills/` — installable agent skills and skill registries
 - `docs/` — public documentation site and architecture notes
 
+## Building and testing
+
+Prerequisites: Go 1.24+ (workspace mode auto-downloads the exact toolchain
+each module needs), Node.js 20, Python 3.9+, and `npm`.
+
+```bash
+make test          # everything: Go, Python, Node
+make test-go        # every Go module (MODULE=<path> for one)
+make test-python    # every Python project (MODULE=<path> for one)
+make test-node      # every Node project (MODULE=<path> for one)
+make vet             # go vet in every Go module
+make lint            # gofmt (fractalbot, claude-code-go) + SDK typecheck
+make help            # full target list
+```
+
+The Go modules are wired together with a root [`go.work`](go.work); see
+[`docs/go-workspace.md`](docs/go-workspace.md) for what it covers, the one
+module it deliberately excludes and why, and how to run a single module's
+`go build`/`vet`/`test` directly. CI runs the same commands per project; see
+[`docs/ci.md`](docs/ci.md).
+
 ## Install a skill
 
 From the project where your agent will use it:
