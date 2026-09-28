@@ -1,6 +1,6 @@
 # Agent Console
 
-Cross-platform app to manage [envd](https://github.com/fractalmind-ai/fractalmind-envd)-coordinated agents from anywhere: view node/agent status, run remote control commands, and (WIP) open a WebRTC remote desktop.
+Cross-platform app to manage [envd](https://github.com/fractalmind-labs/fractalmind-os/tree/main/runtime/fractalmind-envd)-coordinated agents from anywhere: view node/agent status, run remote control commands, and (WIP) open a WebRTC remote desktop.
 
 - **Shared UI**: a Vite + React + TypeScript web app (`src/`) that talks to the envd coordinator REST API.
 - **Desktop**: [Tauri](https://tauri.app) v2 wraps the web app (macOS / Windows / Linux) — `src-tauri/`.

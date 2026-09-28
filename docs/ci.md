@@ -15,7 +15,7 @@ with each repository were moved here or removed.
 | `agent-manager quality gates` | same | coverage gate (`QUALITY_COVERAGE_MIN`, default 45) and integration suite |
 | `team-manager`, `team-chat`, `Skills CLI layout` | Python skills | unit tests |
 | `Skill structure` | `skills/` | `SKILL.md` front matter and per-skill file checks |
-| `Explorer`, `Docs site`, `Protocol SDK` | Node projects | install, test or typecheck, build |
+| `Explorer`, `Agent Console`, `Docs site`, `Protocol SDK` | Node projects | install, test or typecheck, build |
 | `Move (<package>)` | protocol and demail contracts | `sui move build` and `sui move test` |
 | `TypeMind Android` | `apps/typemind-android` | debug APK build |
 | `OpenClaw gateway app` | `apps/openclaw-gateway-app` | bundle and installer checks |
@@ -33,6 +33,23 @@ pushes to `main` that touch either project:
 
 The docs use the VitePress base `/fractalmind-os/`; links in custom theme
 components must go through `withBase()`.
+
+## Agent Console native builds
+
+`agent-console-desktop.yml` and `agent-console-android.yml` build the Tauri
+desktop app and the Capacitor Android APK on every push to `main` that touches
+`apps/agent-console/**` (and from the Actions tab), uploading the build as a
+workflow artifact. Neither needs a secret or an environment.
+
+`agent-console-release-assets.yml` (Actions tab only) builds the desktop
+and/or Android release for a given tag and uploads the assets to that tag's
+GitHub Release; it also needs no secret beyond the default `GITHUB_TOKEN`.
+Its `tag` input must be a bare `vMAJOR.MINOR.PATCH` tag on this repo — that
+scheme doesn't scope to agent-console, so it will collide if another
+component in the monorepo also releases under bare `v*` tags. It was carried
+over as-is from the standalone repository; give it a per-component tag
+convention (e.g. `apps/agent-console/vX.Y.Z`) before using it for the next
+release.
 
 ## Manual workflows
 

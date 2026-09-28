@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# This script lives at apps/agent-console/scripts/; the workflow it checks
+# was moved to the repo root when agent-console was imported into fractalmind-os.
 root="$(cd "$(dirname "$0")/.." && pwd)"
+repo_root="$(cd "$root/../.." && pwd)"
+release_workflow="$repo_root/.github/workflows/agent-console-release-assets.yml"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf -- "$tmp_dir"' EXIT
 snippet="$tmp_dir/checksum-writer.sh"
@@ -9,10 +13,10 @@ awk '
   /# BEGIN MACOS_CHECKSUM_WRITER/ { capture=1; next }
   /# END MACOS_CHECKSUM_WRITER/ { capture=0 }
   capture { sub(/^              /, ""); print }
-' "$root/.github/workflows/release-assets.yml" >"$snippet"
+' "$release_workflow" >"$snippet"
 grep -Fq 'checksum="$(/usr/bin/shasum -a 256 <"$dmg_file")"' "$snippet"
 grep -Fq "printf '\\\\%s  %s\\n'" "$snippet"
-grep -Fq 'if [ "${#dmg_files[@]}" -ne 1 ]; then' "$root/.github/workflows/release-assets.yml"
+grep -Fq 'if [ "${#dmg_files[@]}" -ne 1 ]; then' "$release_workflow"
 if grep -Fq '/usr/bin/sed' "$snippet"; then
   echo "checksum writer must not interpolate filenames into sed" >&2
   exit 1

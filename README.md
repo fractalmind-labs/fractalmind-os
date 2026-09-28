@@ -30,7 +30,8 @@ The source-to-destination mapping is recorded in [`repository-map.yaml`](reposit
 ## Building and testing
 
 Prerequisites: Go 1.24+ (workspace mode auto-downloads the exact toolchain
-each module needs), Node.js 20, Python 3.9+, and `npm`.
+each module needs), Node.js 20, Python 3.9+, `npm`, and `pnpm` (for
+`apps/agent-console`).
 
 ```bash
 make test          # everything: Go, Python, Node
@@ -63,7 +64,6 @@ CI, Pages and release workflows are described in [`docs/ci.md`](docs/ci.md).
 
 Private repositories remain separate in the `fractalmind-labs` organization:
 
-- [`agent-console`](https://github.com/fractalmind-labs/agent-console)
 - [`fractalmind-gateway`](https://github.com/fractalmind-labs/fractalmind-gateway)
 - [`fractalmind-memory`](https://github.com/fractalmind-labs/fractalmind-memory)
 

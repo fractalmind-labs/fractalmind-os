@@ -32,6 +32,7 @@ PYTHON_PROJECTS := \
 
 NODE_PROJECTS := \
 	apps/explorer \
+	apps/agent-console \
 	docs/site \
 	protocols/fractalmind-protocol/sdk
 
@@ -146,6 +147,9 @@ test-node:
 			apps/explorer) \
 				echo "==> explorer test + build"; \
 				(cd "$$m" && npm ci && npm test && npm run build) || exit 1 ;; \
+			apps/agent-console) \
+				echo "==> agent-console checksum test + build"; \
+				(cd "$$m" && pnpm install && bash scripts/test-release-macos-checksum.sh && pnpm build) || exit 1 ;; \
 			docs/site) \
 				echo "==> docs site build"; \
 				(cd "$$m" && npm ci && npm run docs:build) || exit 1 ;; \
