@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Agent Console</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // Surface fatal startup errors on-screen: a failed React mount otherwise
+      // leaves only the dark body background (indistinguishable from a hang).
+      (function () {
+        function show(msg) {
+          var el = document.createElement("pre");
+          el.style.cssText =
+            "color:#ff8a8a;background:#1a1d24;padding:16px;margin:16px;white-space:pre-wrap;font-size:13px;border-radius:8px";
+          el.textContent = "Startup error:\n" + msg;
+          document.body.appendChild(el);
+        }
+        window.addEventListener("error", function (e) {
+          show((e.error && e.error.stack) || e.message || String(e));
+        });
+        window.addEventListener("unhandledrejection", function (e) {
+          show("Unhandled rejection: " + ((e.reason && e.reason.stack) || e.reason));
+        });
+        setTimeout(function () {
+          var root = document.getElementById("root");
+          if (root && !root.hasChildNodes()) {
+            show("UI did not mount within 5s and no error event fired (module script may not have executed).");
+          }
+        }, 5000);
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

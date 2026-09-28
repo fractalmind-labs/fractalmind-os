@@ -1,0 +1,6 @@
+{
+  "appId": "ai.fractalmind.agentconsole",
+  "appName": "Agent Console",
+  "webDir": "dist",
+  "server": { "androidScheme": "https" }
+}
