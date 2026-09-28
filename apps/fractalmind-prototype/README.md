@@ -16,8 +16,10 @@ availability for `file:` URLs may vary.
 
 ## OKR review paths
 
-1. **OKR** → inspect the objective, weighted metric progress, trend, KR dependencies,
-   result evidence and Agent's supporting task plan. **查看计算方式** explains the score.
+1. **OKR** opens **运行导航**: inspect the current KR / simulated run, route, last
+   verified checkpoint, metric gap, budget, constraints and next action. Switch to
+   **关键结果与计划** for weighted progress, trend, dependencies and the supporting
+   task plan. **查看计算方式** explains the score.
 2. **查看约定** → inspect or change scope, allowed actions, escalation rules, deadline
    and budget. The user confirms these boundaries and the verification method.
 3. **演示自主推进** → the Agent advances KR2, records measurements, verifies evidence,
@@ -42,6 +44,25 @@ memory, simulated phone pairing with separate read/operate scopes, and organizat
 browsing. **模拟设备离线** in settings pauses autonomous execution and disables remote
 operations. Reconnection requires explicit resume. Reloading pauses demo loops.
 
+## Navigation review paths
+
+- **注入演示场景 → 疑似空转**: three equivalent unsuccessful attempts are recorded;
+  a heartbeat keeps the metric and budget unchanged. Inspect **查看判断依据**, then
+  **重新规划并推进** to test route B under the existing scope and verification rules.
+- **路径阻断**: route A is stopped by a simulated code-upload restriction. **切换本地路线 B**
+  abandons the external operation; it does not approve the original external request.
+- **临近边界**: inject a next-action estimate that exceeds the remaining budget. No
+  spend or metric change occurs; review the contract or choose a cheaper local route.
+- **等待依赖**: a live test within its expected wait window is shown separately from
+  a loop. **模拟依赖返回** resumes after constraints are checked.
+- **失去观测**: location and spend are marked as historical/unknown. **恢复观测（演示）**
+  reconciles the snapshot and leaves execution paused for explicit resumption.
+- Navigation and results use the same OKRs, measurements and simulator. Only verified
+  KRs unlock downstream work; sampling alone is not labeled as a verified checkpoint.
+- Scenarios pause the selected OKR and inject labeled demo observations. They retain
+  previous metrics and evidence. **正常推进** clears the injected scenario, while
+  actual budget, deadline, dependency and authorization checks still apply.
+
 ## Data and limitations
 
 The review bar labels the entire prototype as demo data. All measurements, evidence,
@@ -58,3 +79,6 @@ entry is left untouched; this demo does not migrate it. **重置演示** restore
 OKRs and stops all pending simulation timers. **导出演示数据** downloads the complete
 v2 state as JSON. The prototype does not implement the PRD's native platform,
 security, localization, file synchronization, background runtime or protocol features.
+
+Navigation state and its event history are stored within the existing v2 demo state.
+Older v2 entries initialize navigation lazily; no user metrics are reset on reload.
