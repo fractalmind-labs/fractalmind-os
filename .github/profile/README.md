@@ -54,20 +54,30 @@ Today, the live implementation is an **OS-first stack** for running AI agent tea
 
 That loop currently runs through:
 
-- **`oh-my-code`** — the reference workspace and heartbeat-driven OS core
-- **`agent-manager`** — tmux-based execution plane for agents
-- **`fractalbot`** — multi-channel routing between humans and agents
-- **`fractalmind-okrs`** — candidate OKR publication surface
-- **`fractalmind-protocol`** — optional SUI trust layer when on-chain guarantees matter
+- **[`workspace/oh-my-code`](https://github.com/fractalmind-labs/fractalmind-os/tree/main/workspace/oh-my-code)** — the reference workspace and heartbeat-driven OS core
+- **[`skills/coordination/agent-manager-skill`](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills/coordination/agent-manager-skill)** — tmux-based execution plane for agents
+- **[`runtime/fractalbot`](https://github.com/fractalmind-labs/fractalmind-os/tree/main/runtime/fractalbot)** — multi-channel routing between humans and agents
+- **[`governance/fractalmind-okrs`](https://github.com/fractalmind-labs/fractalmind-os/tree/main/governance/fractalmind-okrs)** — candidate OKR publication surface
+- **[`protocols/fractalmind-protocol`](https://github.com/fractalmind-labs/fractalmind-os/tree/main/protocols/fractalmind-protocol)** — optional SUI trust layer when on-chain guarantees matter
 
 ## Repository Surfaces
 
-FractalMind AI currently spans **18 public repositories** across four surfaces:
+FractalMind AI is one public monorepo,
+[`fractalmind-os`](https://github.com/fractalmind-labs/fractalmind-os):
 
-1. **OS kernel & governance** — `oh-my-code`, `fractalmind-okrs`, `.github`, `agent-manager-skill`, `team-manager-skill`, `okr-manager-skill`
-2. **Execution & collaboration** — `fractalbot`, `team-chat-skill`, `use-fractalbot-skill`, `agent-browser-skill`, `use-phone-skill`, `turbo-frequency-skill`
-3. **Protocol & runtime** — `fractalmind-protocol`, `fractalmind-envd`, `explorer`, `openclaw-gateway-app`
-4. **Applications & distribution** — `docs/site`, `typemind-android`
+- [`workspace/`](https://github.com/fractalmind-labs/fractalmind-os/tree/main/workspace) — reference operating workspace and agent control loop
+- [`governance/`](https://github.com/fractalmind-labs/fractalmind-os/tree/main/governance) — OKR and governance surfaces
+- [`spec/`](https://github.com/fractalmind-labs/fractalmind-os/tree/main/spec) and [`roms/`](https://github.com/fractalmind-labs/fractalmind-os/tree/main/roms) — Agent OS contracts and distribution manifests
+- [`protocols/`](https://github.com/fractalmind-labs/fractalmind-os/tree/main/protocols) — SUI and agent communication protocols
+- [`runtime/`](https://github.com/fractalmind-labs/fractalmind-os/tree/main/runtime) — daemons, gateways, and local runtimes
+- [`apps/`](https://github.com/fractalmind-labs/fractalmind-os/tree/main/apps) — user-facing applications and explorers
+- [`skills/`](https://github.com/fractalmind-labs/fractalmind-os/tree/main/skills) — installable agent skills and skill registries
+- [`docs/`](https://github.com/fractalmind-labs/fractalmind-os/tree/main/docs) — public documentation site and architecture notes
+
+Private repositories remain separate:
+[`agent-console`](https://github.com/fractalmind-labs/agent-console),
+[`fractalmind-gateway`](https://github.com/fractalmind-labs/fractalmind-gateway),
+[`fractalmind-memory`](https://github.com/fractalmind-labs/fractalmind-memory).
 
 ## Current Direction
 
