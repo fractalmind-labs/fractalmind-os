@@ -25,9 +25,18 @@ npm run preview
 
 ## Sui SDK Notes
 
-- This project uses `@mysten/sui` for chain reads.
-- Keep SDK version in `package.json` aligned with the lockfile and protocol SDK expectations.
-- After SDK updates, verify object query and parsing behavior in `src/sui/queries.ts`.
+- Chain reads go through Sui's **GraphQL RPC** (`src/sui/graphql.ts`), not the
+  deprecated public-fullnode JSON-RPC — see
+  [`docs/sui-graphql-migration.md`](../../docs/sui-graphql-migration.md) for
+  why, and `src/sui/bcs.ts` for the BCS schemas that decode object content
+  (GraphQL returns raw BCS bytes, not JSON-RPC's decoded fields).
+- This project uses `@mysten/sui` and `@mysten/bcs` for chain reads and BCS decoding.
+- Keep SDK versions in `package.json` aligned with the lockfile and protocol SDK expectations.
+- After SDK or contract updates, re-verify the BCS schemas in `src/sui/bcs.ts` against
+  live objects — see the migration doc's verification method. A contract upgrade that
+  changes a struct's on-chain layout (rare — Sui forbids it for existing instances,
+  but new structs or dynamic fields can still shift what a query needs to select)
+  will not surface as a type error, only as wrong or missing data at runtime.
 
 ## Deployment
 

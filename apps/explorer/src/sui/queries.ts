@@ -1,5 +1,22 @@
-import { SuiClient, SuiObjectResponse } from "@mysten/sui/client";
+import { fromBase64 } from "@mysten/bcs";
 import { SUI_CONFIG } from "./config.ts";
+import {
+  Address,
+  AgentCertificate as AgentCertificateBcs,
+  AgentProfile as AgentProfileBcs,
+  Organization as OrganizationBcs,
+  PeerNode as PeerNodeBcs,
+  PeerRegistry as PeerRegistryBcs,
+  ProtocolRegistry,
+  Task as TaskBcs,
+} from "./bcs.ts";
+import {
+  getAllDynamicFields,
+  getObjectContents,
+  getOwnedObjectsByType,
+  multiGetObjectContents,
+  type MoveContents,
+} from "./graphql.ts";
 import type {
   Organization,
   AgentCertificate,
@@ -8,215 +25,23 @@ import type {
 } from "./types.ts";
 import { TASK_STATUS_MAP, AGENT_STATUS_MAP } from "./types.ts";
 
-const client = new SuiClient({ url: SUI_CONFIG.rpcUrl });
+const GRAPHQL_URL = SUI_CONFIG.graphqlUrl;
 
-// ── Low-level helpers ──────────────────────────────────────────────
-
-function extractFields(
-  resp: SuiObjectResponse,
-): Record<string, unknown> | null {
-  const data = resp.data;
-  if (!data?.content || data.content.dataType !== "moveObject") return null;
-  return (data.content as { fields: Record<string, unknown> }).fields ?? null;
+function decode(bcs: MoveContents["bcs"]): Uint8Array {
+  return fromBase64(bcs);
 }
 
-async function getObject(objectId: string): Promise<SuiObjectResponse> {
-  return client.getObject({
-    id: objectId,
-    options: { showContent: true, showType: true, showOwner: true },
-  });
-}
-
-async function multiGetObjects(ids: string[]): Promise<SuiObjectResponse[]> {
-  if (ids.length === 0) return [];
-  const results: SuiObjectResponse[] = [];
-  for (let i = 0; i < ids.length; i += 50) {
-    const batch = ids.slice(i, i + 50);
-    const resp = await client.multiGetObjects({
-      ids: batch,
-      options: { showContent: true, showType: true, showOwner: true },
-    });
-    results.push(...resp);
-  }
-  return results;
-}
+// ── Table traversal ────────────────────────────────────────────────
 
 /**
- * Traverse all keys from a SUI Table via getDynamicFields.
- * Tables store entries as dynamic fields on the table's UID.
+ * Keys of a `Table<address | ID, _>` (every table this app reads uses one
+ * of those two 32-byte key types). Dynamic field names come back with the
+ * key's raw BCS bytes directly, so no extra object fetch is needed just to
+ * list keys.
  */
 async function getTableKeys(tableId: string): Promise<string[]> {
-  const keys: string[] = [];
-  let cursor: string | null = null;
-  let hasNext = true;
-
-  while (hasNext) {
-    const page = await client.getDynamicFields({
-      parentId: tableId,
-      cursor: cursor ?? undefined,
-      limit: 50,
-    });
-    for (const entry of page.data) {
-      keys.push(String(entry.name.value));
-    }
-    cursor = page.nextCursor ?? null;
-    hasNext = page.hasNextPage;
-  }
-
-  return keys;
-}
-
-/**
- * Get dynamic field objects from a Table (for Tables with non-bool values).
- */
-async function getTableDynamicFieldObjects(
-  tableId: string,
-): Promise<SuiObjectResponse[]> {
-  const objectIds: string[] = [];
-  let cursor: string | null = null;
-  let hasNext = true;
-
-  while (hasNext) {
-    const page = await client.getDynamicFields({
-      parentId: tableId,
-      cursor: cursor ?? undefined,
-      limit: 50,
-    });
-    for (const entry of page.data) {
-      objectIds.push(entry.objectId);
-    }
-    cursor = page.nextCursor ?? null;
-    hasNext = page.hasNextPage;
-  }
-
-  return multiGetObjects(objectIds);
-}
-
-// ── Field helpers ──────────────────────────────────────────────────
-
-function getString(fields: Record<string, unknown>, key: string): string {
-  return String(fields[key] ?? "");
-}
-
-function getOptionalString(
-  fields: Record<string, unknown>,
-  key: string,
-): string | null {
-  const val = fields[key];
-  if (val === null || val === undefined) return null;
-  return String(val);
-}
-
-function getNumber(fields: Record<string, unknown>, key: string): number {
-  return Number(fields[key] ?? 0);
-}
-
-function getStringArray(
-  fields: Record<string, unknown>,
-  key: string,
-): string[] {
-  const val = fields[key];
-  if (Array.isArray(val)) return val.map(String);
-  return [];
-}
-
-/** Extract the inner UID from a Table field */
-function getTableId(
-  fields: Record<string, unknown>,
-  key: string,
-): string | null {
-  const table = fields[key];
-  if (!table || typeof table !== "object") return null;
-  const tableObj = table as {
-    fields?: { id?: { id?: string }; size?: string };
-  };
-  return tableObj.fields?.id?.id ?? null;
-}
-
-function getTableSize(fields: Record<string, unknown>, key: string): number {
-  const table = fields[key];
-  if (!table || typeof table !== "object") return 0;
-  const tableObj = table as { fields?: { size?: string } };
-  return Number(tableObj.fields?.size ?? 0);
-}
-
-// ── Parse functions ────────────────────────────────────────────────
-
-function parseOrganization(
-  id: string,
-  fields: Record<string, unknown>,
-): Organization {
-  return {
-    id,
-    name: getString(fields, "name"),
-    description: getString(fields, "description"),
-    admin: getString(fields, "admin"),
-    depth: getNumber(fields, "depth"),
-    is_active: fields["is_active"] === true,
-    parent_org: getOptionalString(fields, "parent_org"),
-    agent_count: getTableSize(fields, "agents"),
-    task_count: getTableSize(fields, "tasks"),
-    child_org_count: getTableSize(fields, "child_orgs"),
-    agent_addresses: [],
-    task_ids: [],
-    child_org_ids: [],
-    created_at: getString(fields, "created_at"),
-  };
-}
-
-function parseAgentCertificate(
-  id: string,
-  fields: Record<string, unknown>,
-): AgentCertificate {
-  const statusNum = getNumber(fields, "status");
-  return {
-    id,
-    agent: getString(fields, "agent"),
-    org_id: getString(fields, "org_id"),
-    capability_tags: getStringArray(fields, "capability_tags"),
-    reputation_score: getNumber(fields, "reputation_score"),
-    status: AGENT_STATUS_MAP[statusNum] ?? "idle",
-    tasks_completed: getNumber(fields, "tasks_completed"),
-  };
-}
-
-function parseTask(id: string, fields: Record<string, unknown>): Task {
-  const statusNum = getNumber(fields, "status");
-  return {
-    id,
-    title: getString(fields, "title"),
-    description: getString(fields, "description"),
-    status: TASK_STATUS_MAP[statusNum] ?? "created",
-    org_id: getString(fields, "org_id"),
-    assignee: getOptionalString(fields, "assignee"),
-    creator: getString(fields, "creator"),
-    verifier: getOptionalString(fields, "verifier"),
-    submission: getOptionalString(fields, "submission"),
-    created_at: getString(fields, "created_at"),
-    assigned_at: getOptionalString(fields, "assigned_at"),
-    submitted_at: getOptionalString(fields, "submitted_at"),
-    completed_at: getOptionalString(fields, "completed_at"),
-  };
-}
-
-function parsePeerNode(
-  id: string,
-  fields: Record<string, unknown>,
-): PeerNode {
-  const statusRaw = getString(fields, "status").toLowerCase();
-  const status = (
-    ["online", "offline", "syncing"].includes(statusRaw)
-      ? statusRaw
-      : "offline"
-  ) as PeerNode["status"];
-  return {
-    id,
-    node_id: getString(fields, "node_id"),
-    endpoint: getString(fields, "endpoint"),
-    status,
-    last_heartbeat: getString(fields, "last_heartbeat"),
-    capabilities: getStringArray(fields, "capabilities"),
-  };
+  const nodes = await getAllDynamicFields(GRAPHQL_URL, tableId);
+  return nodes.map((node) => Address.parse(decode(node.name.bcs)));
 }
 
 // ── Public query API ───────────────────────────────────────────────
@@ -231,38 +56,18 @@ async function fetchAgentProfiles(
   const profileMap = new Map<string, { name: string; avatar_url: string }>();
 
   try {
-    let cursor: string | null = null;
-    let hasNext = true;
+    const nodes = await getAllDynamicFields(GRAPHQL_URL, orgId);
+    for (const node of nodes) {
+      if (!node.name.type.repr.includes("::profile::ProfileKey")) continue;
+      if (node.value.__typename !== "MoveObject") continue;
 
-    while (hasNext) {
-      const page = await client.getDynamicFields({
-        parentId: orgId,
-        cursor: cursor ?? undefined,
-        limit: 50,
-      });
-
-      for (const entry of page.data) {
-        if (
-          entry.type === "DynamicObject" &&
-          typeof entry.name.type === "string" &&
-          entry.name.type.includes("::profile::ProfileKey")
-        ) {
-          const profileResp = await getObject(entry.objectId);
-          const fields = extractFields(profileResp);
-          if (!fields) continue;
-
-          const agentAddr = getString(fields, "agent");
-          const name = getString(fields, "name");
-          const avatarUrl = getString(fields, "avatar_url");
-
-          if (agentAddr) {
-            profileMap.set(agentAddr, { name, avatar_url: avatarUrl });
-          }
-        }
+      const profile = AgentProfileBcs.parse(decode(node.value.contents.bcs));
+      if (profile.agent) {
+        profileMap.set(profile.agent, {
+          name: profile.name,
+          avatar_url: profile.avatar_url,
+        });
       }
-
-      cursor = page.nextCursor ?? null;
-      hasNext = page.hasNextPage;
     }
   } catch (error) {
     console.error(`Failed to fetch AgentProfiles for org ${orgId}:`, error);
@@ -272,42 +77,48 @@ async function fetchAgentProfiles(
 }
 
 async function fetchOrgIdsFromRegistry(): Promise<string[]> {
-  const resp = await getObject(SUI_CONFIG.registry);
-  const fields = extractFields(resp);
-  if (!fields) return [];
+  const contents = await getObjectContents(GRAPHQL_URL, SUI_CONFIG.registry);
+  if (!contents) return [];
 
-  const orgsTableId = getTableId(fields, "organizations");
-  if (!orgsTableId) return [];
-
-  return getTableKeys(orgsTableId);
+  const registry = ProtocolRegistry.parse(decode(contents.bcs));
+  return getTableKeys(registry.organizations.id);
 }
 
 async function fetchOrganizationsWithTables(
   orgIds: string[],
 ): Promise<Organization[]> {
-  const responses = await multiGetObjects(orgIds);
+  const contentsList = await multiGetObjectContents(GRAPHQL_URL, orgIds);
   const orgs: Organization[] = [];
 
-  for (const r of responses) {
-    const id = r.data?.objectId;
-    const fields = extractFields(r);
-    if (!id || !fields) continue;
+  for (const contents of contentsList) {
+    if (!contents) continue;
+    const raw = OrganizationBcs.parse(decode(contents.bcs));
 
-    const org = parseOrganization(id, fields);
+    const org: Organization = {
+      id: raw.id,
+      name: raw.name,
+      description: raw.description,
+      admin: raw.admin,
+      depth: Number(raw.depth),
+      is_active: raw.is_active,
+      parent_org: raw.parent_org,
+      agent_count: Number(raw.agent_count),
+      task_count: Number(raw.task_count),
+      child_org_count: Number(raw.child_org_count),
+      agent_addresses: [],
+      task_ids: [],
+      child_org_ids: [],
+      created_at: raw.created_at,
+    };
 
-    const agentsTableId = getTableId(fields, "agents");
-    if (agentsTableId && org.agent_count > 0) {
-      org.agent_addresses = await getTableKeys(agentsTableId);
+    if (org.agent_count > 0) {
+      org.agent_addresses = await getTableKeys(raw.agents.id);
     }
-
-    const tasksTableId = getTableId(fields, "tasks");
-    if (tasksTableId && org.task_count > 0) {
-      org.task_ids = await getTableKeys(tasksTableId);
+    if (org.task_count > 0) {
+      org.task_ids = await getTableKeys(raw.tasks.id);
     }
-
-    const childOrgsTableId = getTableId(fields, "child_orgs");
-    if (childOrgsTableId && org.child_org_count > 0) {
-      org.child_org_ids = await getTableKeys(childOrgsTableId);
+    if (org.child_org_count > 0) {
+      org.child_org_ids = await getTableKeys(raw.child_orgs.id);
     }
 
     orgs.push(org);
@@ -321,40 +132,28 @@ async function fetchAgentCertificates(
   profilesByAgent: Map<string, { name: string; avatar_url: string }>,
 ): Promise<AgentCertificate[]> {
   const certs: AgentCertificate[] = [];
-  const seen = new Set<string>();
+  const structType = `${SUI_CONFIG.protocolPackage}::agent::AgentCertificate`;
 
   for (const addr of agentAddresses) {
-    let cursor: string | null = null;
-    let hasNext = true;
+    const owned = await getOwnedObjectsByType(GRAPHQL_URL, addr, structType);
 
-    while (hasNext) {
-      const page = await client.getOwnedObjects({
-        owner: addr,
-        filter: {
-          StructType: `${SUI_CONFIG.protocolPackage}::agent::AgentCertificate`,
-        },
-        options: { showContent: true, showType: true },
-        cursor: cursor ?? undefined,
-        limit: 50,
-      });
-
-      for (const item of page.data) {
-        const id = item.data?.objectId;
-        if (!id || seen.has(id)) continue;
-        seen.add(id);
-        const fields = extractFields(item);
-        if (!fields) continue;
-        const cert = parseAgentCertificate(id, fields);
-        const profile = profilesByAgent.get(cert.agent);
-        if (profile) {
-          cert.profile_name = profile.name;
-          cert.profile_avatar_url = profile.avatar_url || undefined;
-        }
-        certs.push(cert);
+    for (const { contents } of owned) {
+      const raw = AgentCertificateBcs.parse(decode(contents.bcs));
+      const cert: AgentCertificate = {
+        id: raw.id,
+        agent: raw.agent,
+        org_id: raw.org_id,
+        capability_tags: raw.capability_tags,
+        reputation_score: Number(raw.reputation_score),
+        status: AGENT_STATUS_MAP[raw.status] ?? "idle",
+        tasks_completed: Number(raw.tasks_completed),
+      };
+      const profile = profilesByAgent.get(cert.agent);
+      if (profile) {
+        cert.profile_name = profile.name;
+        cert.profile_avatar_url = profile.avatar_url || undefined;
       }
-
-      cursor = page.nextCursor ?? null;
-      hasNext = page.hasNextPage;
+      certs.push(cert);
     }
   }
 
@@ -362,39 +161,72 @@ async function fetchAgentCertificates(
 }
 
 async function fetchTasks(taskIds: string[]): Promise<Task[]> {
-  const responses = await multiGetObjects(taskIds);
-  return responses
-    .map((r) => {
-      const id = r.data?.objectId;
-      const fields = extractFields(r);
-      if (!id || !fields) return null;
-      return parseTask(id, fields);
+  const contentsList = await multiGetObjectContents(GRAPHQL_URL, taskIds);
+
+  return contentsList
+    .map((contents) => {
+      if (!contents) return null;
+      const raw = TaskBcs.parse(decode(contents.bcs));
+      const task: Task = {
+        id: raw.id,
+        title: raw.title,
+        description: raw.description,
+        status: TASK_STATUS_MAP[raw.status] ?? "created",
+        org_id: raw.org_id,
+        assignee: raw.assignee,
+        creator: raw.creator,
+        verifier: raw.verifier,
+        submission: raw.submission,
+        created_at: raw.created_at,
+        assigned_at: raw.assigned_at,
+        submitted_at: raw.submitted_at,
+        completed_at: raw.completed_at,
+      };
+      return task;
     })
     .filter((t): t is Task => t !== null);
 }
 
+/**
+ * `PeerRegistry.peers` is a `Table<address, PeerNode>`. `PeerNode` has
+ * `store, drop` (not `key`), so its Table entries are plain dynamic field
+ * *values*, not separate objects — no per-entry object fetch is needed.
+ *
+ * No peer has ever registered on testnet (`peer_count` is 0), so unlike the
+ * other decoders in this file, this one hasn't been checked against a real
+ * on-chain `PeerNode`. `PeerNode`'s own fields also don't line up one-to-one
+ * with this app's `PeerNode` UI type (there is no on-chain `node_id` or
+ * `last_heartbeat`, and no "syncing" status); the mapping below is the
+ * closest reasonable match, not a verified one.
+ */
 async function fetchPeerNodes(): Promise<PeerNode[]> {
-  const resp = await getObject(SUI_CONFIG.peerRegistry);
-  const fields = extractFields(resp);
-  if (!fields) return [];
+  const contents = await getObjectContents(
+    GRAPHQL_URL,
+    SUI_CONFIG.peerRegistry,
+  );
+  if (!contents) return [];
 
-  const peersTableId = getTableId(fields, "peers");
-  const peerCount = getTableSize(fields, "peers");
-  if (!peersTableId || peerCount === 0) return [];
+  const registry = PeerRegistryBcs.parse(decode(contents.bcs));
+  if (Number(registry.peer_count) === 0) return [];
 
-  const dfObjects = await getTableDynamicFieldObjects(peersTableId);
+  const nodes = await getAllDynamicFields(GRAPHQL_URL, registry.peers.id);
   const peers: PeerNode[] = [];
 
-  for (const obj of dfObjects) {
-    const objFields = extractFields(obj);
-    if (!objFields) continue;
-    const valueObj = objFields["value"];
-    if (!valueObj || typeof valueObj !== "object") continue;
-    const peerFields = (valueObj as { fields?: Record<string, unknown> })
-      .fields;
-    if (!peerFields) continue;
-    const id = obj.data?.objectId ?? "";
-    peers.push(parsePeerNode(id, peerFields));
+  for (const node of nodes) {
+    if (node.value.__typename !== "MoveValue") continue;
+    try {
+      const raw = PeerNodeBcs.parse(decode(node.value.bcs));
+      peers.push({
+        id: Address.parse(decode(node.name.bcs)),
+        node_id: raw.hostname,
+        endpoint: raw.endpoints[0] ?? "",
+        status: raw.status === 0 ? "online" : "offline",
+        last_heartbeat: raw.last_updated,
+        capabilities: raw.endpoints,
+      });
+    } catch (error) {
+      console.error("Failed to decode PeerNode:", error);
+    }
   }
 
   return peers;
