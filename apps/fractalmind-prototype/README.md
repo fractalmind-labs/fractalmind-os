@@ -11,27 +11,33 @@ From the repository root:
 python3 -m http.server 4173 --bind 127.0.0.1 --directory apps/fractalmind-prototype
 ```
 
-Open <http://127.0.0.1:4173>. The HTML can also be opened directly; browser storage
+Open <http://127.0.0.1:4173> for the workbench. Direct review entries:
+`?prototype=workbench` (or the existing `?prototype=navigation`) opens the workbench,
+`?prototype=okr` opens the OKR list, and `?prototype=hosts` opens host management.
+The HTML can also be opened directly; browser storage
 availability for `file:` URLs may vary.
 
 ## OKR review paths
 
-1. **OKR** opens **运行导航**: inspect the current KR / simulated run, route, last
-   verified checkpoint, metric gap, budget, constraints and next action. Switch to
-   **关键结果与计划** for weighted progress, trend, dependencies and the supporting
-   task plan. **查看计算方式** explains the score.
+1. **工作台** is the default entry: inspect the navigation map, current KR / simulated
+   run, last verified checkpoint, metric gap, budget, constraints and next action.
+   **查看 OKR** opens the selected objective's details. **OKR** in the sidebar opens
+   only the goal list with lifecycle filters; click a card for weighted progress,
+   trends, dependencies, evidence and the Agent's plan. **在工作台查看运行** returns to
+   that same OKR's map. **返回 OKR 列表** preserves the lifecycle filter.
 2. **查看约定** → inspect or change scope, allowed actions, escalation rules, deadline
    and budget. The user confirms these boundaries and the verification method.
-3. **演示自主推进** → the Agent advances KR2, records measurements, verifies evidence,
+3. In **工作台**, **演示自主推进** → the Agent advances KR2, records measurements, verifies evidence,
    then pauses before KR3's external service request. **审阅越界请求** → approve only
    this KR's verification, or reject and keep execution paused. After approval, the
    Agent continues autonomously through verification and final ACHIEVED status.
-4. **模拟一次 heartbeat** advances one step for close inspection. A target measurement
+4. In **工作台**, **模拟一次 heartbeat** advances one step for close inspection. A target measurement
    without verified evidence does not complete a KR. Task completion does not change
    the OKR score. Decreasing metrics use the same baseline-to-target calculation.
 5. **新建 OKR** → define an objective, quantified success criteria, 1–3 result-oriented
    KRs, metrics, weights, dependencies, deliverables, verification and constraints.
-   Confirm to activate or save in **候选**. At most three OKRs can be ACTIVE.
+   Confirm to activate and open its workbench, or save in **候选** and inspect its
+   details before activation. At most three OKRs can be ACTIVE.
 6. **查看约定** → set the budget to the amount already spent → advance a heartbeat
    to see the budget blocker. Increase the limit and confirm before resuming.
 7. **导出 OKR.md** downloads only ACTIVE OKRs using the skill's Markdown structure.
@@ -46,7 +52,7 @@ operations. Reconnection requires explicit resume. Reloading pauses demo loops.
 
 ## Navigation review paths
 
-The default navigation view is an interactive schematic map. The blue arrow locates
+The **工作台 → 运行导航** view is an interactive schematic map. The blue arrow locates
 execution, green checkpoints indicate verified results, dashed lines show the plan,
 orange branches show drift/loops, and red hatched areas represent unauthorized
 operations. Direction and authorization are reported separately. **全图 / 定位**
@@ -73,7 +79,7 @@ time estimates, or probability of success.
   a loop. **模拟依赖返回** resumes after constraints are checked.
 - **失去观测**: location and spend are marked as historical/unknown. **恢复观测（演示）**
   reconciles the snapshot and leaves execution paused for explicit resumption.
-- Navigation and results use the same OKRs, measurements and simulator. Only verified
+- Workbench navigation and OKR details use the same OKRs, measurements and simulator. Only verified
   KRs unlock downstream work; sampling alone is not labeled as a verified checkpoint.
 - Scenarios pause the selected OKR and inject labeled demo observations. They retain
   previous metrics and evidence. **正常推进** clears the injected scenario, while
@@ -96,11 +102,14 @@ instances and two simulated Coordinator connections.
 4. **接入主机** creates a pending record; **模拟主机上线** makes it available.
    **管理连接** supports multiple named endpoints and isolated disconnect/reconnect.
    No token is collected and no network request is sent.
-5. From an OKR, open its host chip or **选择执行主机**. Assignment checks availability,
+5. From the workbench, open its host chip or **选择执行主机**. Assignment checks availability,
    admission, workspace and the responsible Agent. It pauses the old loop and retains
    metrics/evidence. An unreachable source must reconnect before reassignment.
 6. **模拟失联** on the assigned host makes that OKR's map unknown; other hosts keep
    their own state. **暂停接收新任务** prevents new assignments while current work stays.
+
+Host running-OKR links and runtime notifications open the corresponding OKR on the
+workbench; list and search results open its definition and evidence.
 
 These flows adapt the capabilities and labels from `apps/agent-console` into the
 unified product prototype. The original React client and real coordinator/runtime
