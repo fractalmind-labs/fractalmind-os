@@ -1,6 +1,9 @@
 /** Known on-chain object IDs from FractalMind testnet deployment */
 export const SUI_CONFIG = {
-  rpcUrl: "https://fullnode.testnet.sui.io:443",
+  // Sui decommissioned public-fullnode JSON-RPC (mainnet: July 2026, full
+  // removal: October 2026); this app reads Move object state as raw BCS
+  // over GraphQL instead. See docs/sui-graphql-migration.md.
+  graphqlUrl: "https://graphql.testnet.sui.io/graphql",
   explorerBase: "https://suiscan.xyz/testnet",
 
   /** fractalmind_protocol package */
