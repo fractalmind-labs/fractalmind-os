@@ -196,7 +196,7 @@ jobs:
           [dependencies.Sui]
           git = "https://github.com/MystenLabs/sui.git"
           subdir = "crates/sui-framework/packages/sui-framework"
-          rev = "framework/testnet"
+          rev = "4e8aa9ee8b307b294cc85baf7d08af1f432e3d93"
 
           [dependencies.fractalmind_protocol]
           local = "../../../../protocols/fractalmind-protocol/contracts/protocol"

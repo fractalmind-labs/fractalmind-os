@@ -138,6 +138,7 @@ jobs:
             runtime/fractalmind-envd/contracts/envd:
               - .github/workflows/ci.yml
               - runtime/fractalmind-envd/contracts/**
+              - protocols/fractalmind-protocol/contracts/**
             protocols/fractal-demail/sui-contracts:
               - .github/workflows/ci.yml
               - protocols/fractal-demail/sui-contracts/**
