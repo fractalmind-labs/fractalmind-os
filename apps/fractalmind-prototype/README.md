@@ -17,6 +17,30 @@ Open <http://127.0.0.1:4173> for the workbench. Direct review entries:
 The HTML can also be opened directly; browser storage
 availability for `file:` URLs may vary.
 
+## Language and appearance
+
+The top bar and **空间设置 → 语言与外观 / Space settings → Language & appearance**
+provide Simplified Chinese / English and **Light / Dark / System** appearance.
+System is the default and follows `prefers-color-scheme`, including changes while
+this page is open. Explicit light or dark mode overrides the system choice.
+
+Review both languages on the workbench map, OKR list/details, host console, settings
+and dialogs, then use the mobile preview. Switch language/theme while composing a
+host console command: its selected operation and draft remain intact. Reload to
+check preference persistence. Resetting demo data leaves these preferences intact.
+
+The dark palette covers surfaces, controls, SVG maps and status colors, with soft
+backgrounds and restrained highlights. Reduced-motion preferences are respected.
+The language catalog is embedded in the HTML; no translation service is called.
+Interface text and known sample content are localized. Authored goals, agreements,
+notes, form values and raw command output retain their source language; unmapped
+content falls back to its original text. Exports preserve original records.
+Presentation changes do not rebuild forms or alter execution/authorization state.
+
+Preferences use `fractalmind.presentation.v1`, separately from the v2 execution
+state. Storage failures fall back to in-memory preferences; the prototype remains
+usable. The pre-paint theme initialization avoids a bright flash on dark startup.
+
 ## OKR review paths
 
 1. **工作台** is the default entry: inspect the navigation map, current KR / simulated
