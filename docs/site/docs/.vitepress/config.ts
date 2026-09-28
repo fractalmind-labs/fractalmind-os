@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   base: '/fractalmind-os/',
   title: 'FractalMind AI',
-  description: 'SUI authority, target-side P2P execution, applications, and governed AI agent operations.',
+  description: 'ASI that no one owns — permissionless, decentralized infrastructure where intelligence grows through self-similar organizations of agents.',
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/fractalmind-os/logo.svg' }],
   ],

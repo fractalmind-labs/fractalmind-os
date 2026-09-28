@@ -122,11 +122,13 @@ onMounted(() => {
         </div>
         <h1 class="hero-title">
           <span class="title-main">FractalMind AI</span>
-          <span class="title-sub">Three-plane infrastructure for governed AI agent teams</span>
+          <span class="title-sub">ASI that no one owns</span>
         </h1>
         <p class="hero-description">
-          SUI authority, target-side P2P execution, user-facing applications,
-          and a heartbeat-driven local operating loop.
+          ASI as permissionless, decentralized public infrastructure — not the
+          private asset of a few companies. Anyone can create an organization and
+          join in; intelligence grows through self-similar organizations of agents,
+          and governance happens openly on-chain.
         </p>
         <div class="hero-selling-points">
           <div class="selling-point">
@@ -488,7 +490,7 @@ onMounted(() => {
               </svg>
               <span>FractalMind AI</span>
             </div>
-            <p class="footer-tagline">Governed autonomy for AI agent teams</p>
+            <p class="footer-tagline">ASI that no one owns.</p>
           </div>
           <div class="footer-links">
             <h4>Documentation</h4>

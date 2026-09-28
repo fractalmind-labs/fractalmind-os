@@ -2,9 +2,9 @@
 
 # FractalMind AI
 
-**Open-source infrastructure for long-term human–AI co-creation toward ASI / superintelligence.**
+**ASI that no one owns.**
 
-*FractalMind AI is building a heartbeat-driven operating system for governed autonomy, structured memory, multi-channel execution, and optional on-chain trust surfaces.*
+*FractalMind AI is building ASI as permissionless, decentralized public infrastructure — intelligence that grows through self-similar organizations of agents, with governance that happens openly on-chain.*
 
 [![Docs](https://img.shields.io/badge/docs-fractalmind--labs.github.io%2Ffractalmind--os-4DA2FF)](https://fractalmind-labs.github.io/fractalmind-os)
 [![Monorepo](https://img.shields.io/badge/monorepo-fractalmind--os-181717?logo=github)](https://github.com/fractalmind-labs/fractalmind-os)
@@ -17,10 +17,10 @@
 ## Mission / Vision / Values
 
 ### Mission
-Turn requests, signals, and opportunities into execution that expands shared intelligence, durable progress, and long-term flourishing.
+Reach ASI through fractal, self-similar organizations of AI agents — the same primitives repeating from a single agent to teams, organizations, and federations, so capability composes upward instead of depending on any single model.
 
 ### Vision
-Build a continuously improving operating system where humans and AI co-create the future together — deepening understanding of humanity, life, nature, and the wider universe while growing freedom, wisdom, and abundance.
+ASI that no one owns: permissionless, decentralized public infrastructure rather than the private asset of a few companies. Anyone can create an organization and join in, and governance happens openly on-chain.
 
 ### Phase 1 Objective
 The phase-1 objective is explicit: **move toward ASI / superintelligence** through a governed operating system where humans and AI can co-create capability, memory, execution, and trust without losing alignment, transparency, or human veto.

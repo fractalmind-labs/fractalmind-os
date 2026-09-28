@@ -2,9 +2,9 @@
 
 # FractalMind AI — Documentation Site
 
-**Three-plane infrastructure for governed AI agent teams.**
+**ASI that no one owns.**
 
-*SUI authority, target-side P2P execution, user-facing applications, and a heartbeat-driven local operating loop.*
+*ASI as permissionless, decentralized public infrastructure — not the private asset of a few companies. Intelligence grows through self-similar organizations of agents, and governance happens openly on-chain.*
 
 [![Docs](https://img.shields.io/badge/docs-fractalmind--labs.github.io%2Ffractalmind--os-4DA2FF)](https://fractalmind-labs.github.io/fractalmind-os)
 [![GitHub Org](https://img.shields.io/badge/GitHub-fractalmind--labs-181717?logo=github)](https://github.com/fractalmind-labs)

@@ -1,5 +1,15 @@
 # FractalMind OS
 
+**ASI that no one owns.**
+
+FractalMind is building ASI as permissionless, decentralized public
+infrastructure — not the private asset of a few companies. Anyone can create an
+organization and join in; intelligence grows through self-similar organizations
+of agents — the same primitives from a single agent up to federations of
+organizations — and governance happens openly on-chain.
+See [What is FractalMind?](https://fractalmind-labs.github.io/fractalmind-os/guide/what-is-fractalmind)
+for the mission, the fractal model, and where the project stands today.
+
 FractalMind OS is the consolidated public monorepo for FractalMind AI.
 
 The repository keeps each source repository in a stable, named subtree so that
