@@ -9,7 +9,7 @@ import {
   readOptionBigInt,
   readString,
   toBigInt,
-} from './client';
+} from './client.js';
 import type {
   AcceptKeyResultInput,
   CloseObjectiveInput,
@@ -21,7 +21,7 @@ import type {
   ObjectId,
   ObjectiveData,
   ReviewKeyResultInput,
-} from './types';
+} from './types.js';
 
 export class ObjectiveApi {
   constructor(private readonly fm: FractalMindClient) {}

@@ -35,7 +35,9 @@ Phase 1 scope decisions (standalone repo, pure on-chain loop first, bridge/zkLog
 
 ## Development
 
-Requires the [Sui CLI](https://docs.sui.io/guides/developer/getting-started/sui-install).
+Requires the gRPC-capable [Sui CLI](https://docs.sui.io/guides/developer/getting-started/sui-install)
+1.80.1 or newer for chain operations. Inbound Go listeners use GraphQL; see the
+[RPC migration guide](../../docs/sui-rpc-migration.md) for endpoint and cursor upgrades.
 
 ```bash
 cd sui-contracts

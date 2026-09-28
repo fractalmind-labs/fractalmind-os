@@ -22,6 +22,19 @@ type fakeChannel struct {
 	lastText string
 }
 
+func TestManagerRegistersDemailWithGraphQLOnly(t *testing.T) {
+	manager := NewManager(&config.ChannelsConfig{Demail: &config.DemailConfig{
+		Enabled: true, GraphQLURL: "https://graphql.testnet.sui.io/graphql", PackageID: demailTestPackageID, Address: demailTestAddress,
+	}}, nil)
+	if err := manager.registerConfiguredChannels(); err != nil {
+		t.Fatal(err)
+	}
+	channel, ok := manager.Get("demail").(*DemailChannel)
+	if !ok || channel.graphqlURL != "https://graphql.testnet.sui.io/graphql" || channel.rpcURL != "" {
+		t.Fatal("GraphQL-only configuration not preserved")
+	}
+}
+
 func (f *fakeChannel) Name() string { return f.name }
 
 func (f *fakeChannel) Start(ctx context.Context) error {

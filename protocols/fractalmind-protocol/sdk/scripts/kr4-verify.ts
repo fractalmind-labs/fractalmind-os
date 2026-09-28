@@ -12,9 +12,9 @@
  */
 
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
-import { SuiClient } from '@mysten/sui/client';
+import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { Transaction } from '@mysten/sui/transactions';
-import { FractalMindSDK } from '../src';
+import { FractalMindSDK } from '../src/index.js';
 
 const PACKAGE_ID = '0x685d6fb6ed8b0e679bb467ea73111819ec6ff68b1466d24ca26b400095dcdf24';
 const REGISTRY_ID = '0xfb8611bf2eb94b950e4ad47a76adeaab8ddda23e602c77e7464cc20572a547e3';
@@ -36,7 +36,7 @@ async function main() {
   const address = keypair.getPublicKey().toSuiAddress();
   const keypair2 = Ed25519Keypair.deriveKeypair(mnemonic, "m/44'/784'/1'/0'/0'");
   const address2 = keypair2.getPublicKey().toSuiAddress();
-  const client = new SuiClient({ url: 'https://fullnode.testnet.sui.io:443' });
+  const client = new SuiGrpcClient({ baseUrl: 'https://fullnode.testnet.sui.io:443', network: 'testnet' });
 
   console.log('=== FractalMind Protocol KR4 Verification ===');
   console.log(`Wallet 1 (Admin/OpenClaw): ${address}`);
@@ -46,14 +46,14 @@ async function main() {
   console.log();
 
   const balance = await client.getBalance({ owner: address });
-  console.log(`Balance (wallet 1): ${Number(balance.totalBalance) / 1e9} SUI`);
-  if (Number(balance.totalBalance) < 100_000_000) {
+  console.log(`Balance (wallet 1): ${Number(balance.balance.balance) / 1e9} SUI`);
+  if (Number(balance.balance.balance) < 100_000_000) {
     throw new Error('Insufficient balance (need ≥0.1 SUI)');
   }
 
   // Fund wallet 2 for gas
   const balance2 = await client.getBalance({ owner: address2 });
-  if (Number(balance2.totalBalance) < 50_000_000) {
+  if (Number(balance2.balance.balance) < 50_000_000) {
     console.log('Funding wallet 2 with 0.2 SUI...');
     const fundTx = new Transaction();
     const [coin] = fundTx.splitCoins(fundTx.gas, [200_000_000]);
@@ -61,13 +61,15 @@ async function main() {
     const fundResult = await client.signAndExecuteTransaction({
       signer: keypair,
       transaction: fundTx,
-      options: { showEffects: true },
+      include: { effects: true },
     });
-    await client.waitForTransaction({ digest: fundResult.digest });
-    console.log(`  Funded wallet 2: ${fundResult.digest}`);
+    const funded = fundResult.Transaction ?? fundResult.FailedTransaction;
+    if (!funded.status.success) throw new Error(`Funding failed: ${funded.status.error.message}`);
+    await client.waitForTransaction({ digest: funded.digest });
+    console.log(`  Funded wallet 2: ${(fundResult.Transaction ?? fundResult.FailedTransaction).digest}`);
   }
   const bal2After = await client.getBalance({ owner: address2 });
-  console.log(`Balance (wallet 2): ${Number(bal2After.totalBalance) / 1e9} SUI`);
+  console.log(`Balance (wallet 2): ${Number(bal2After.balance.balance) / 1e9} SUI`);
   console.log();
 
   const sdk = new FractalMindSDK({
@@ -82,33 +84,23 @@ async function main() {
     const result = await client.signAndExecuteTransaction({
       signer,
       transaction: tx,
-      options: { showObjectChanges: true, showEffects: true },
+      include: { effects: true, objectTypes: true },
     });
 
-    // Wait for finality
-    await client.waitForTransaction({ digest: result.digest });
-
-    const effects = result.effects;
-    if (effects && typeof effects === 'object' && 'status' in effects) {
-      const status = (effects as { status: { status: string } }).status;
-      if (status.status !== 'success') {
-        throw new Error(`Transaction failed: ${JSON.stringify(status)}`);
-      }
+    const executed = result.Transaction ?? result.FailedTransaction;
+    if (!executed.status.success) {
+      throw new Error(`Transaction failed: ${executed.status.error.message}`);
     }
-
+    await client.waitForTransaction({ digest: executed.digest });
     const created: CreatedObject[] = [];
-    if (result.objectChanges) {
-      for (const change of result.objectChanges) {
-        if (change.type === 'created') {
-          created.push({
-            type: (change as { objectType: string }).objectType,
-            objectId: (change as { objectId: string }).objectId,
-            owner: (change as { owner?: unknown }).owner,
-          });
-        }
+    for (const change of executed.effects?.changedObjects ?? []) {
+      if (change.idOperation === 'Created' && change.outputState === 'ObjectWrite') {
+        const type = executed.objectTypes?.[change.objectId];
+        if (!type) throw new Error(`Missing created object type: ${change.objectId}`);
+        created.push({ type, objectId: change.objectId, owner: change.outputOwner });
       }
     }
-    console.log(`  ✅ Digest: ${result.digest}`);
+    console.log(`  ✅ Digest: ${executed.digest}`);
     console.log(`  Created: ${created.length} objects`);
     for (const obj of created) {
       const shortType = obj.type.split('::').slice(-1)[0];

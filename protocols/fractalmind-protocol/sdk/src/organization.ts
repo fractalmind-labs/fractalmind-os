@@ -7,13 +7,13 @@ import {
   readBoolean,
   readOptionId,
   readString,
-} from './client';
+} from './client.js';
 import type {
   CreateOrganizationInput,
   ObjectId,
   OrganizationData,
   UpdateDescriptionInput,
-} from './types';
+} from './types.js';
 
 export class OrganizationApi {
   constructor(private readonly fm: FractalMindClient) {}

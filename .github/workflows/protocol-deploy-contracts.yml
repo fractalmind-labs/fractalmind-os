@@ -59,17 +59,17 @@ jobs:
           set -euo pipefail
           case "$SUI_NETWORK" in
             testnet)
-              echo "SUI_VERSION=testnet-v1.67.1" >> $GITHUB_ENV
+              echo "SUI_VERSION=testnet-v1.80.1" >> $GITHUB_ENV
               ;;
             mainnet)
-              echo "SUI_VERSION=mainnet-v1.67.1" >> $GITHUB_ENV
+              echo "SUI_VERSION=mainnet-v1.80.1" >> $GITHUB_ENV
               ;;
           esac
 
-      - name: Install Sui CLI (${{ env.SUI_VERSION || 'testnet-v1.67.1' }})
+      - name: Install Sui CLI (${{ env.SUI_VERSION || 'testnet-v1.80.1' }})
         run: |
           set -euo pipefail
-          SUI_VERSION="${SUI_VERSION:-testnet-v1.67.1}"
+          SUI_VERSION="${SUI_VERSION:-testnet-v1.80.1}"
           echo "Installing Sui CLI version $SUI_VERSION"
           ARCHIVE="sui-${SUI_VERSION}-ubuntu-x86_64.tgz"
           curl -fsSL "https://github.com/MystenLabs/sui/releases/download/${SUI_VERSION}/${ARCHIVE}" -o sui.tgz

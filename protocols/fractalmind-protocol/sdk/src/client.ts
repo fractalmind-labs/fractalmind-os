@@ -1,4 +1,5 @@
-import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
+import type { ClientWithCoreApi, SuiClientTypes } from '@mysten/sui/client';
+import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { Transaction } from '@mysten/sui/transactions';
 import { normalizeSuiAddress } from '@mysten/sui/utils';
 
@@ -8,13 +9,13 @@ import type {
   MoveObjectData,
   NetworkName,
   ObjectId,
-} from './types';
+} from './types.js';
 
 const DEFAULT_NETWORK: NetworkName = 'testnet';
 const MAX_U64 = (1n << 64n) - 1n;
 
 export class FractalMindClient {
-  public readonly client: SuiClient;
+  public readonly client: ClientWithCoreApi;
   public readonly packageId: ObjectId;
   public readonly registryId?: ObjectId;
 
@@ -28,8 +29,8 @@ export class FractalMindClient {
     }
 
     const network = options.network ?? DEFAULT_NETWORK;
-    const url = options.fullnodeUrl ?? getFullnodeUrl(network);
-    this.client = new SuiClient({ url });
+    const url = options.fullnodeUrl ?? (network === 'localnet' ? 'http://127.0.0.1:9000' : `https://fullnode.${network}.sui.io:443`);
+    this.client = new SuiGrpcClient({ baseUrl: url, network });
   }
 
   newTransaction(): Transaction {
@@ -55,12 +56,9 @@ export class FractalMindClient {
   }
 
   async getMoveObject(objectId: ObjectId): Promise<MoveObjectData> {
-    const response = await this.client.getObject({
-      id: objectId,
-      options: {
-        showContent: true,
-        showType: true,
-      },
+    const response = await this.client.core.getObject({
+      objectId,
+      include: { json: true },
     });
 
     const parsed = parseMoveObject(response);
@@ -75,32 +73,32 @@ export class FractalMindClient {
     const data: MoveObjectData[] = [];
 
     do {
-      const page = await this.client.getOwnedObjects({
+      const page: SuiClientTypes.ListOwnedObjectsResponse<{ json: true }> = await this.client.core.listOwnedObjects({
         owner: normalizeSuiAddress(owner),
-        filter: { StructType: structType },
-        options: {
-          showContent: true,
-          showType: true,
-        },
+        type: structType,
+        include: { json: true },
         cursor,
       });
 
-      for (const item of page.data) {
-        const parsed = parseMoveObject(item);
+      for (const item of page.objects) {
+        const parsed = parseMoveObject({ object: item });
         if (parsed) {
           data.push(parsed);
         }
       }
 
-      cursor = page.hasNextPage ? page.nextCursor : null;
+      if (page.hasNextPage && (!page.cursor || page.cursor === cursor)) {
+        throw new Error("Owned-object pagination returned a missing or repeated cursor.");
+      }
+      cursor = page.hasNextPage ? page.cursor : null;
     } while (cursor);
 
     return data;
   }
 
   async signAndExecuteTransaction(
-    params: Parameters<SuiClient['signAndExecuteTransaction']>[0],
-  ): Promise<Awaited<ReturnType<SuiClient['signAndExecuteTransaction']>>> {
+    params: SuiClientTypes.SignAndExecuteTransactionOptions<SuiClientTypes.TransactionInclude>,
+  ): Promise<SuiClientTypes.TransactionResult<SuiClientTypes.TransactionInclude>> {
     const { signer, transaction } = params as {
       signer?: { getPublicKey?: () => { toSuiAddress: () => string } };
       transaction?: Transaction;
@@ -114,40 +112,21 @@ export class FractalMindClient {
       }
     }
 
-    return this.client.signAndExecuteTransaction(params);
+    return this.client.core.signAndExecuteTransaction(params);
   }
 }
 
 function parseMoveObject(response: unknown): MoveObjectData | null {
-  const maybeResponse = response as {
-    data?: {
-      objectId?: string;
-      type?: string;
-      content?: {
-        dataType?: string;
-        type?: string;
-        fields?: Record<string, unknown>;
-      };
-    };
+  const { object } = response as {
+    object?: { objectId: string; type: string; json?: Record<string, unknown> | null };
   };
-
-  const data = maybeResponse.data;
-  if (!data || !data.content || data.content.dataType !== 'moveObject') {
+  if (!object?.objectId || !object.type || !object.json || object.type === 'package') {
     return null;
   }
-
-  const objectId = data.objectId;
-  const type = data.type ?? data.content.type;
-  const fields = data.content.fields;
-
-  if (!objectId || !type || !fields) {
-    return null;
-  }
-
   return {
-    objectId: normalizeSuiAddress(objectId),
-    type,
-    fields,
+    objectId: normalizeSuiAddress(object.objectId),
+    type: object.type,
+    fields: object.json,
   };
 }
 
@@ -220,42 +199,27 @@ export function readStringVector(fields: Record<string, unknown>, key: string): 
   });
 }
 
+// gRPC/GraphQL render Option as a scalar/null or a vector. Also accept the
+// older { vec } rendering for callers using their own Core API adapter.
+function optionValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value[0] ?? null;
+  if (value && typeof value === 'object' && 'vec' in value) {
+    const vec = (value as { vec: unknown }).vec;
+    return Array.isArray(vec) ? vec[0] ?? null : null;
+  }
+  return value ?? null;
+}
+
 export function readOptionId(fields: Record<string, unknown>, key: string): ObjectId | null {
-  const value = fields[key];
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-
-  const vec = (value as { vec?: unknown }).vec;
-  if (!Array.isArray(vec) || vec.length === 0) {
-    return null;
-  }
-
-  const first = vec[0];
-  if (typeof first === 'string') {
-    return normalizeSuiAddress(first);
-  }
-
-  return null;
+  const value = optionValue(fields[key]);
+  return typeof value === 'string' ? normalizeSuiAddress(value) : null;
 }
 
 export function readOptionBigInt(fields: Record<string, unknown>, key: string): bigint | null {
-  const value = fields[key];
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-
-  const vec = (value as { vec?: unknown }).vec;
-  if (!Array.isArray(vec) || vec.length === 0) {
-    return null;
-  }
-
-  const first = vec[0];
-  if (typeof first === 'bigint' || typeof first === 'number' || typeof first === 'string') {
-    return toBigInt(first);
-  }
-
-  return null;
+  const value = optionValue(fields[key]);
+  return typeof value === 'bigint' || typeof value === 'number' || typeof value === 'string'
+    ? toBigInt(value)
+    : null;
 }
 
 export function toBigInt(value: bigint | number | string): bigint {

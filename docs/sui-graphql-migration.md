@@ -88,3 +88,6 @@ either too many or too few bytes), decode field-by-field from the start of the
 struct to find exactly where the byte offset stops matching the schema — that
 is almost always evidence of a field the deployed contract doesn't have (or
 has in a different position), not a bug in the BCS library.
+
+For the migration of the SDK, envd, sponsor services and demail, see the
+[project-wide RPC migration guide](sui-rpc-migration.md).

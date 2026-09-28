@@ -8,7 +8,7 @@ import {
   readOptionId,
   readString,
   toBigInt,
-} from './client';
+} from './client.js';
 import type {
   AgentPolicyData,
   CreateAgentPolicyForKeyResultInput,
@@ -17,7 +17,7 @@ import type {
   ExecuteAgentActionInput,
   ObjectId,
   RevokeAgentPolicyInput,
-} from './types';
+} from './types.js';
 
 export class AgentPolicyApi {
   constructor(private readonly fm: FractalMindClient) {}

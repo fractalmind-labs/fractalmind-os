@@ -26,7 +26,7 @@ const (
 	messageID     = "0x038dc21988cb6c41d467ccdebab81b1a7a3597bd7d7336fce52d518eea9aae9e"
 )
 
-// mockRPC serves suix_queryEvents (one MessageSent event) and sui_getObject
+// mockRPC serves MessageEvents (one MessageSent event) and MessageObject
 // (the sealed envelope payload).
 func mockRPC(t *testing.T, payloadB64 string) *httptest.Server {
 	t.Helper()
@@ -37,7 +37,7 @@ func mockRPCWithKind(t *testing.T, payloadB64 string, payloadKindJSON string) *h
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Method string `json:"method"`
+			Method string `json:"operationName"`
 			ID     int    `json:"id"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -45,7 +45,7 @@ func mockRPCWithKind(t *testing.T, payloadB64 string, payloadKindJSON string) *h
 		}
 		var result string
 		switch req.Method {
-		case "suix_queryEvents":
+		case "MessageEvents":
 			result = fmt.Sprintf(`{
 				"data": [{
 					"id": {"txDigest": "abc", "eventSeq": "0"},
@@ -60,13 +60,35 @@ func mockRPCWithKind(t *testing.T, payloadB64 string, payloadKindJSON string) *h
 				"nextCursor": {"txDigest": "abc", "eventSeq": "0"},
 				"hasNextPage": false
 			}`, messageID, senderAddr, recipientAddr, payloadKindJSON)
-		case "sui_getObject":
+		case "MessageObject":
 			result = fmt.Sprintf(`{"data": {"content": {"fields": {"payload": %q}}}}`, payloadB64)
 		default:
 			t.Errorf("unexpected rpc method %s", req.Method)
 		}
-		fmt.Fprintf(w, `{"jsonrpc":"2.0","id":%d,"result":%s}`, req.ID, result)
+		writeGraphQLResponse(w, req.Method, result)
 	}))
+}
+
+// Translate the existing business fixtures into actual GraphQL response shapes.
+func writeGraphQLResponse(w http.ResponseWriter, operation, fixture string) {
+	var legacy map[string]any
+	_ = json.Unmarshal([]byte(fixture), &legacy)
+	var data any
+	if operation == "MessageEvents" {
+		edges := []any{}
+		var last any
+		for _, item := range legacy["data"].([]any) {
+			evt := item.(map[string]any)
+			id := evt["id"].(map[string]any)
+			last = id["txDigest"].(string) + ":" + id["eventSeq"].(string)
+			edges = append(edges, map[string]any{"cursor": last, "node": map[string]any{"contents": map[string]any{"json": evt["parsedJson"]}}})
+		}
+		data = map[string]any{"events": map[string]any{"edges": edges, "pageInfo": map[string]any{"endCursor": last, "hasNextPage": legacy["hasNextPage"]}}}
+	} else {
+		fields := legacy["data"].(map[string]any)["content"].(map[string]any)["fields"]
+		data = map[string]any{"object": map[string]any{"asMoveObject": map[string]any{"contents": map[string]any{"json": fields}}}}
+	}
+	_ = json.NewEncoder(w).Encode(map[string]any{"data": data})
 }
 
 func sealedPayload(t *testing.T, recipientPub ed25519.PublicKey, body string) string {
@@ -225,7 +247,7 @@ func TestPollOnceRetriesMessageAfterTransientFetchError(t *testing.T) {
 	failNext := true
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Method string `json:"method"`
+			Method string `json:"operationName"`
 			ID     int    `json:"id"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -233,7 +255,7 @@ func TestPollOnceRetriesMessageAfterTransientFetchError(t *testing.T) {
 		}
 		var result string
 		switch req.Method {
-		case "suix_queryEvents":
+		case "MessageEvents":
 			result = fmt.Sprintf(`{
 				"data": [{
 					"id": {"txDigest": "abc", "eventSeq": "0"},
@@ -249,7 +271,7 @@ func TestPollOnceRetriesMessageAfterTransientFetchError(t *testing.T) {
 				"hasNextPage": false
 			}`, messageID, senderAddr, recipientAddr,
 				base64.StdEncoding.EncodeToString([]byte("inline")))
-		case "sui_getObject":
+		case "MessageObject":
 			if failNext {
 				failNext = false
 				w.WriteHeader(http.StatusInternalServerError)
@@ -259,7 +281,7 @@ func TestPollOnceRetriesMessageAfterTransientFetchError(t *testing.T) {
 		default:
 			t.Errorf("unexpected rpc method %s", req.Method)
 		}
-		fmt.Fprintf(w, `{"jsonrpc":"2.0","id":%d,"result":%s}`, req.ID, result)
+		writeGraphQLResponse(w, req.Method, result)
 	}))
 	defer srv.Close()
 
@@ -277,7 +299,7 @@ func TestPollOnceRetriesMessageAfterTransientFetchError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// First poll: transient 500 on sui_getObject — must surface an error and
+	// First poll: transient 500 on MessageObject — must surface an error and
 	// must NOT advance the cursor past the valid message.
 	if err := l.PollOnce(context.Background()); err == nil {
 		t.Fatal("expected transient error from first poll")
@@ -361,7 +383,7 @@ func TestCursorPersistedAndReloaded(t *testing.T) {
 	defer srv.Close()
 
 	cursorFile := t.TempDir() + "/cursor.json"
-	if err := os.WriteFile(cursorFile, []byte(`{"txDigest":"seed","eventSeq":"0"}`), 0o600); err != nil {
+	if err := os.WriteFile(cursorFile, []byte(`"seed:0"`), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	l, err := New(Config{
@@ -377,7 +399,7 @@ func TestCursorPersistedAndReloaded(t *testing.T) {
 	if l.needsInit {
 		t.Fatal("valid cursor file must not trigger init-from-latest")
 	}
-	if string(l.cursor) != `{"txDigest":"seed","eventSeq":"0"}` {
+	if string(l.cursor) != `"seed:0"` {
 		t.Fatalf("cursor not loaded from file: %s", l.cursor)
 	}
 	if err := l.PollOnce(context.Background()); err != nil {
@@ -387,7 +409,7 @@ func TestCursorPersistedAndReloaded(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !json.Valid(data) || string(data) == `{"txDigest":"seed","eventSeq":"0"}` {
+	if !json.Valid(data) || string(data) == `"seed:0"` {
 		t.Fatalf("cursor file not advanced after poll: %s", data)
 	}
 }
@@ -402,17 +424,19 @@ func TestFreshCursorFileSkipsHistory(t *testing.T) {
 	var descendingCalls, ascendingCalls int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Method string            `json:"method"`
-			ID     int               `json:"id"`
-			Params []json.RawMessage `json:"params"`
+			Method    string `json:"operationName"`
+			ID        int    `json:"id"`
+			Variables struct {
+				Last *int `json:"last"`
+			} `json:"variables"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			t.Errorf("bad rpc request: %v", err)
 		}
 		var result string
 		switch req.Method {
-		case "suix_queryEvents":
-			descending := len(req.Params) == 4 && string(req.Params[3]) == "true"
+		case "MessageEvents":
+			descending := req.Variables.Last != nil
 			if descending {
 				descendingCalls++
 				// Newest historical event.
@@ -432,12 +456,12 @@ func TestFreshCursorFileSkipsHistory(t *testing.T) {
 				// Nothing new after the latest cursor.
 				result = `{"data": [], "nextCursor": null, "hasNextPage": false}`
 			}
-		case "sui_getObject":
+		case "MessageObject":
 			result = fmt.Sprintf(`{"data": {"content": {"fields": {"payload": %q}}}}`, payload)
 		default:
 			t.Errorf("unexpected rpc method %s", req.Method)
 		}
-		fmt.Fprintf(w, `{"jsonrpc":"2.0","id":%d,"result":%s}`, req.ID, result)
+		writeGraphQLResponse(w, req.Method, result)
 	}))
 	defer srv.Close()
 
@@ -463,7 +487,7 @@ func TestFreshCursorFileSkipsHistory(t *testing.T) {
 	if descendingCalls != 1 {
 		t.Fatalf("expected one descending init query, got %d", descendingCalls)
 	}
-	if string(l.cursor) != `{"txDigest": "latest", "eventSeq": "7"}` {
+	if string(l.cursor) != `"latest:7"` {
 		t.Fatalf("cursor not initialized from latest: %s", l.cursor)
 	}
 	// Second poll is a normal ascending query from that cursor.
@@ -539,10 +563,10 @@ func TestStuckCursorEscalatesOnceAndRecovers(t *testing.T) {
 			return
 		}
 		var req struct {
-			ID int `json:"id"`
+			Method string `json:"operationName"`
 		}
 		_ = json.NewDecoder(r.Body).Decode(&req)
-		fmt.Fprintf(w, `{"jsonrpc":"2.0","id":%d,"result":{"data":[],"nextCursor":null,"hasNextPage":false}}`, req.ID)
+		writeGraphQLResponse(w, req.Method, `{"data":[],"nextCursor":null,"hasNextPage":false}`)
 	}))
 	defer srv.Close()
 

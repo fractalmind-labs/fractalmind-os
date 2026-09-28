@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Install SUI CLI
         run: |
-          SUI_VERSION="v1.67.1"
+          SUI_VERSION="v1.80.1"
           curl -fsSL "https://github.com/MystenLabs/sui/releases/download/testnet-${SUI_VERSION}/sui-testnet-${SUI_VERSION}-ubuntu-x86_64.tgz" -o sui.tgz
           tar -xzf sui.tgz
           sudo mv sui sui-faucet sui-node sui-tool sui-bridge /usr/local/bin/ 2>/dev/null || sudo mv sui /usr/local/bin/

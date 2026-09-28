@@ -196,7 +196,9 @@ type IMessageConfig struct {
 // DemailConfig contains fractal-demail (on-chain agent mail on Sui) settings.
 type DemailConfig struct {
 	Enabled bool `yaml:"enabled,omitempty"`
-	// RPCURL is the Sui JSON-RPC endpoint (e.g. https://fullnode.testnet.sui.io:443).
+	// GraphQLURL is the Sui indexed GraphQL endpoint.
+	GraphQLURL string `yaml:"graphqlUrl,omitempty"`
+	// RPCURL is a deprecated alias for GraphQLURL; it must now point to GraphQL.
 	RPCURL string `yaml:"rpcUrl,omitempty"`
 	// PackageID is the fractal-demail Move package id.
 	PackageID string `yaml:"packageId,omitempty"`

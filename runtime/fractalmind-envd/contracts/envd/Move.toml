@@ -6,13 +6,11 @@ edition = "2024.beta"
 [dependencies.Sui]
 git = "https://github.com/MystenLabs/sui.git"
 subdir = "crates/sui-framework/packages/sui-framework"
-rev = "framework/testnet"
+# Use the same pinned framework as the local protocol dependency.
+rev = "4e8aa9ee8b307b294cc85baf7d08af1f432e3d93"
 
 [dependencies.fractalmind_protocol]
-git = "https://github.com/fractalmind-ai/fractalmind-protocol.git"
-subdir = "contracts/protocol"
-rev = "f3a4f611d30313f021e5db85a2aa52481a416570"
-addr_subst = { "fractalmind_protocol" = "0x685d6fb6ed8b0e679bb467ea73111819ec6ff68b1466d24ca26b400095dcdf24" }
+local = "../../../../protocols/fractalmind-protocol/contracts/protocol"
 
 [addresses]
 fractalmind_envd = "0x0"

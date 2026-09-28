@@ -16,7 +16,8 @@ with each repository were moved here or removed.
 | `team-manager`, `team-chat`, `Skills CLI layout` | Python skills | unit tests |
 | `Skill structure` | `skills/` | `SKILL.md` front matter and per-skill file checks |
 | `Explorer`, `Agent Console`, `Docs site`, `Protocol SDK` | Node projects | install, test or typecheck, build |
-| `Move (<package>)` | protocol and demail contracts | `sui move build` and `sui move test` |
+| `Sui transport migration` | active Sui consumers | `make check-sui-rpc` (always runs) |
+| `Move (<package>)` | protocol, envd and demail contracts | `sui move build` and `sui move test` |
 | `TypeMind Android` | `apps/typemind-android` | debug APK build |
 | `OpenClaw gateway app` | `apps/openclaw-gateway-app` | bundle and installer checks |
 
@@ -77,3 +78,11 @@ These settings are not stored in the repository:
    matches the network. Add required reviewers to `sui-mainnet` (and to
    `npm` and `envd-deploy` if desired).
 3. **Branch protection:** require the `CI result` check on `main`.
+
+## Sui transport migration
+
+CI always runs `make check-sui-rpc` to reject deprecated Sui JSON-RPC transports.
+The protocol SDK uses Node.js 22 and checks source plus verification scripts.
+Move jobs and deployment workflows use the gRPC-capable Sui CLI 1.80.1.
+Go jobs also run when the root Makefile or Go workspace dependencies change.
+See [the migration guide](sui-rpc-migration.md) for configuration and smoke checks.

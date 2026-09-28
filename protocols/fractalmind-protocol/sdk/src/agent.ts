@@ -7,14 +7,14 @@ import {
   readBigInt,
   readNumber,
   readStringVector,
-} from './client';
+} from './client.js';
 import type {
   AgentCertificateData,
   GetAgentCertificateInput,
   ObjectId,
   RegisterAgentInput,
   UpdateCapabilitiesInput,
-} from './types';
+} from './types.js';
 
 export class AgentApi {
   constructor(private readonly fm: FractalMindClient) {}

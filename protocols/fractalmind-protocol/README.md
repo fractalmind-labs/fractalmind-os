@@ -60,9 +60,9 @@ cd sdk && npm install
 
 ```typescript
 import { FractalMindSDK } from './src';
-import { SuiClient } from '@mysten/sui/client';
+import { SuiGrpcClient } from '@mysten/sui/grpc';
 
-const client = new SuiClient({ url: 'https://fullnode.testnet.sui.io:443' });
+const client = new SuiGrpcClient({ baseUrl: 'https://fullnode.testnet.sui.io:443', network: 'testnet' });
 
 const sdk = new FractalMindSDK({
   packageId: '0x685d6fb6ed8b0e679bb467ea73111819ec6ff68b1466d24ca26b400095dcdf24',

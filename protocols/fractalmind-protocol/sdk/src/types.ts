@@ -1,4 +1,4 @@
-import type { SuiClient } from '@mysten/sui/client';
+import type { ClientWithCoreApi } from '@mysten/sui/client';
 import type { Transaction } from '@mysten/sui/transactions';
 
 export type ObjectId = string;
@@ -13,8 +13,9 @@ export interface FractalMindClientOptions {
   packageId: string;
   registryId?: ObjectId;
   network?: NetworkName;
+  /** gRPC endpoint; the existing fullnode host can be reused. */
   fullnodeUrl?: string;
-  client?: SuiClient;
+  client?: ClientWithCoreApi;
 }
 
 export interface MoveObjectData {

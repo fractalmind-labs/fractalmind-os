@@ -106,6 +106,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("[sponsor] failed to start: %v", err)
 		}
+		defer sponsorSvc.Close()
 		log.Printf("[sponsor] sponsor role enabled (wallet=%s, address=%s)", cfg.Sponsor.OrgWalletPath, sponsorSvc.Address())
 	}
 
@@ -189,6 +190,8 @@ func main() {
 		if err != nil {
 			log.Fatalf("failed to create sui client: %v", err)
 		}
+
+		defer suiClient.Close()
 
 		// Assign deterministic VPN IP to WireGuard interface
 		if wgManager != nil {

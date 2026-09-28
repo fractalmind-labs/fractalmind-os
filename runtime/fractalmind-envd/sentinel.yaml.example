@@ -64,7 +64,8 @@ desktop:
 # SUI blockchain control plane (peer discovery, identity, ACL)
 sui:
   enabled: false
-  rpc: https://fullnode.testnet.sui.io:443
+  rpc: https://fullnode.testnet.sui.io:443 # gRPC (the fullnode host is unchanged)
+  graphql_url: https://graphql.testnet.sui.io/graphql # indexed event history
   keypair_path: ~/.sui/envd.key       # Ed25519 keypair (auto-generated if missing)
   package_id: "0x..."                 # fractalmind_envd package on SUI
   protocol_package_id: "0x..."       # fractalmind_protocol package (for auto agent cert discovery)
