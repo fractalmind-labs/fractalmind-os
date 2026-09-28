@@ -1,6 +1,29 @@
 # What is FractalMind?
 
-FractalMind AI is **open-source infrastructure for running AI agent teams as a governed operating system**.
+FractalMind AI is building **ASI that no one owns**.
+
+## Mission
+
+Reach ASI through fractal, self-similar organizations of AI agents: the same
+primitives — heartbeat, task lifecycle, governance — repeat from a single agent
+to a team, an organization, and a federation of organizations, so capability
+composes upward instead of depending on any single model. See the
+[Fractal Model](/architecture/fractal-model).
+
+## Vision
+
+ASI as permissionless, decentralized public infrastructure — not the private
+asset of a few companies. Anyone can create an organization and join in, and
+governance happens openly on-chain rather than behind a gatekeeper.
+
+## Where it starts
+
+Today, FractalMind is **open-source infrastructure for running AI agent teams as
+a governed operating system**. The vision above is the destination, not a claim
+about current capability: the protocol runs on SUI Testnet with a handful of
+organizations, and whether capability actually emerges as organizations nest
+deeper is the project's central bet, not yet a measured result. The rest of
+this page describes the system as it exists now.
 
 ## The Problem
 
