@@ -7,7 +7,7 @@ import {
   readNumber,
   readString,
   toBigInt,
-} from './client';
+} from './client.js';
 import type {
   CastVoteInput,
   CloseProposalVotingInput,
@@ -18,7 +18,7 @@ import type {
   ObjectId,
   ProposalData,
   StartProposalVotingInput,
-} from './types';
+} from './types.js';
 
 export class GovernanceApi {
   constructor(private readonly fm: FractalMindClient) {}

@@ -6,7 +6,7 @@ import {
   readNumber,
   readOptionId,
   readString,
-} from './client';
+} from './client.js';
 import type {
   AssignTaskInput,
   CompleteTaskInput,
@@ -17,7 +17,7 @@ import type {
   SubmitTaskInput,
   TaskData,
   VerifyTaskInput,
-} from './types';
+} from './types.js';
 
 export class TaskApi {
   constructor(private readonly fm: FractalMindClient) {}

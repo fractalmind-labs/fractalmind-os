@@ -432,7 +432,7 @@ func TestDemailSendCLISequence(t *testing.T) {
 			}
 			return []byte(`{"suiSignature":"sig-sponsor"}`), nil
 		case len(args) > 1 && args[0] == "client" && args[1] == "execute-signed-tx":
-			return []byte(`{"digest":"DIGEST123"}`), nil
+			return []byte(`{"digest":"DIGEST123","effects":{"status":{"status":"success"}}}`), nil
 		default:
 			return nil, errors.New("unexpected command")
 		}
@@ -574,7 +574,7 @@ func TestDemailSendSelfSponsoredSingleSignature(t *testing.T) {
 		case len(args) > 1 && args[0] == "keytool" && args[1] == "sign":
 			return []byte(`{"suiSignature":"sig-sender"}`), nil
 		case len(args) > 1 && args[0] == "client" && args[1] == "execute-signed-tx":
-			return []byte(`{"digest":"DIGEST456"}`), nil
+			return []byte(`{"digest":"DIGEST456","effects":{"status":{"status":"success"}}}`), nil
 		default:
 			return nil, errors.New("unexpected command")
 		}
@@ -692,5 +692,15 @@ func TestDemailSendFailures(t *testing.T) {
 				t.Fatalf("expected error containing %q, got %v", tt.wantErr, err)
 			}
 		})
+	}
+}
+
+func TestDemailCLITransportRejectsExecutionFailure(t *testing.T) {
+	transport := &demailCLITransport{execFn: func(context.Context, string, ...string) ([]byte, error) {
+		return []byte(`{"digest":"failed-digest","effects":{"status":{"status":"failure","error":"MoveAbort"}}}`), nil
+	}}
+	err := transport.Relay(context.Background(), gasstation.RelayRequest{UnsignedTx: []byte("tx"), SenderSignature: []byte("sig")})
+	if err == nil || transport.digest != "" {
+		t.Fatal("failed transaction reported as delivered")
 	}
 }

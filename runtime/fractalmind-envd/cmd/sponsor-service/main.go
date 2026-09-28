@@ -13,16 +13,15 @@ import (
 	"strings"
 
 	"github.com/block-vision/sui-go-sdk/models"
-	suisdk "github.com/block-vision/sui-go-sdk/sui"
 	internalSui "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui"
 	"gopkg.in/yaml.v3"
 )
 
 // ServiceConfig is the sponsor-service.yaml configuration.
 type ServiceConfig struct {
-	Listen string    `yaml:"listen"`
-	SUI    SUICfg    `yaml:"sui"`
-	MaxGas uint64    `yaml:"max_gas_per_tx"`
+	Listen string `yaml:"listen"`
+	SUI    SUICfg `yaml:"sui"`
+	MaxGas uint64 `yaml:"max_gas_per_tx"`
 }
 
 type SUICfg struct {
@@ -34,7 +33,7 @@ type SUICfg struct {
 
 // SponsorHandler handles POST /sponsor requests.
 type SponsorHandler struct {
-	rpc       suisdk.ISuiAPI
+	rpc       *internalSui.GRPCClient
 	keypair   *internalSui.Keypair
 	packageID string
 	maxGas    uint64
@@ -57,7 +56,11 @@ func main() {
 		log.Fatalf("load keypair: %v", err)
 	}
 
-	rpc := suisdk.NewSuiClient(cfg.SUI.RPC)
+	rpc, err := internalSui.NewGRPCClient(cfg.SUI.RPC, "")
+	if err != nil {
+		log.Fatalf("create Sui gRPC client: %v", err)
+	}
+	defer rpc.Close()
 
 	handler := &SponsorHandler{
 		rpc:       rpc,
@@ -84,7 +87,9 @@ func main() {
 
 func (h *SponsorHandler) handleSponsor(w http.ResponseWriter, r *http.Request) {
 	var req internalSui.SponsorRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	decoder.UseNumber()
+	if err := decoder.Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}

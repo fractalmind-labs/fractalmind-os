@@ -14,14 +14,13 @@ import (
 	"time"
 
 	"github.com/block-vision/sui-go-sdk/models"
-	suisdk "github.com/block-vision/sui-go-sdk/sui"
 	internalSui "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui"
 )
 
 // Service is the built-in sponsor service running inside envd.
 type Service struct {
 	mu              sync.Mutex
-	rpc             suisdk.ISuiAPI
+	rpc             *internalSui.GRPCClient
 	keypair         *internalSui.Keypair
 	allowedPackages map[string]bool
 	maxGasPerTx     uint64
@@ -46,7 +45,10 @@ func NewService(cfg Config) (*Service, error) {
 		return nil, fmt.Errorf("load org wallet keypair: %w", err)
 	}
 
-	rpc := suisdk.NewSuiClient(cfg.SUI_RPC)
+	rpc, err := internalSui.NewGRPCClient(cfg.SUI_RPC, "")
+	if err != nil {
+		return nil, err
+	}
 
 	allowed := make(map[string]bool)
 	for _, pkg := range cfg.AllowedPackages {
@@ -219,3 +221,6 @@ func truncate(s string, n int) string {
 	}
 	return s[:n]
 }
+
+// Close releases the gRPC connection.
+func (s *Service) Close() error { return s.rpc.Close() }

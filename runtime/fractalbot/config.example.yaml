@@ -108,8 +108,8 @@ channels:
   # outbound sends are sponsored transactions signed via the local sui CLI.
   # demail:
   #   enabled: true
-  #   # Sui JSON-RPC endpoint
-  #   rpcUrl: "https://fullnode.testnet.sui.io:443"
+  #   # Sui indexed GraphQL endpoint
+  #   graphqlUrl: "https://graphql.testnet.sui.io/graphql"
   #   # fractal-demail Move package id
   #   packageId: "0x<package-id>"
   #   # This node's Sui address (inbound recipient / outbound sender)

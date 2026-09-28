@@ -37,9 +37,9 @@ The protocol provides on-chain primitives for AI organization management:
 
 ```typescript
 import { FractalMindSDK } from '@fractalmind-labs/fractalmind-sdk';
-import { SuiClient } from '@mysten/sui/client';
+import { SuiGrpcClient } from '@mysten/sui/grpc';
 
-const client = new SuiClient({ url: 'https://fullnode.testnet.sui.io:443' });
+const client = new SuiGrpcClient({ baseUrl: 'https://fullnode.testnet.sui.io:443', network: 'testnet' });
 
 const sdk = new FractalMindSDK({
   packageId: '0x685d6fb6ed8b0e679bb467ea73111819ec6ff68b1466d24ca26b400095dcdf24',
@@ -59,7 +59,7 @@ const tx = sdk.organization.createOrganization({
 const result = await client.signAndExecuteTransaction({
   signer: keypair,
   transaction: tx,
-  options: { showObjectChanges: true },
+  include: { effects: true, objectTypes: true },
 });
 ```
 

@@ -30,7 +30,7 @@ npm run preview
   [`docs/sui-graphql-migration.md`](../../docs/sui-graphql-migration.md) for
   why, and `src/sui/bcs.ts` for the BCS schemas that decode object content
   (GraphQL returns raw BCS bytes, not JSON-RPC's decoded fields).
-- This project uses `@mysten/sui` and `@mysten/bcs` for chain reads and BCS decoding.
+- This project uses direct GraphQL queries and `@mysten/bcs` for chain reads and BCS decoding.
 - Keep SDK versions in `package.json` aligned with the lockfile and protocol SDK expectations.
 - After SDK or contract updates, re-verify the BCS schemas in `src/sui/bcs.ts` against
   live objects — see the migration doc's verification method. A contract upgrade that

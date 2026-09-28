@@ -7,7 +7,7 @@ published-at = "0x6ac36fed2e6692c62aaa54cdaf7485bbcab88eb8993d43ba19d5cfc2748046
 [dependencies.Sui]
 git = "https://github.com/MystenLabs/sui.git"
 subdir = "crates/sui-framework/packages/sui-framework"
-# Framework rev matching sui CLI testnet-v1.67.1, the version CI and deploys install
+# Framework source pinned independently of the gRPC-capable Sui CLI used in CI
 rev = "4e8aa9ee8b307b294cc85baf7d08af1f432e3d93"
 
 [addresses]

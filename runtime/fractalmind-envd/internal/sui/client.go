@@ -2,13 +2,15 @@ package sui
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
 	"github.com/block-vision/sui-go-sdk/models"
-	suisdk "github.com/block-vision/sui-go-sdk/sui"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/config"
 )
 
@@ -40,7 +42,10 @@ func NewClient(cfg config.SUIConfig) (*Client, error) {
 		return nil, fmt.Errorf("load sui keypair: %w", err)
 	}
 
-	rpc := suisdk.NewSuiClient(cfg.RPC)
+	rpc, err := NewGRPCClient(cfg.RPC, cfg.GraphQLURL)
+	if err != nil {
+		return nil, err
+	}
 
 	log.Printf("[sui] address=%s", kp.Address())
 
@@ -99,13 +104,13 @@ func (c *Client) RegisterPeer(ctx context.Context, wgPubKey []byte, endpoints []
 		c.certID = certID
 	}
 
-	pubKeyHex := "0x" + hex.EncodeToString(wgPubKey)
+	pubKey := byteVector(wgPubKey)
 
 	err := c.executeMoveCall(ctx, "peer", "register_peer", []interface{}{
 		c.registryID,
 		c.orgID,
 		c.certID,
-		pubKeyHex,
+		pubKey,
 		endpoints,
 		hostname,
 	})
@@ -239,8 +244,8 @@ func (c *Client) ExecuteAction(ctx context.Context, evidence ActionEvidence) err
 		c.certID,
 		evidence.ActionKind,
 		evidence.TargetScope,
-		hexBytesArg(evidence.IntentHash),
-		hexBytesArg(evidence.ResultHash),
+		byteVector(evidence.IntentHash),
+		byteVector(evidence.ResultHash),
 		fmt.Sprintf("%d", evidence.GasBudget),
 	})
 	if err != nil {
@@ -300,7 +305,16 @@ func (c *Client) QueryPeers(ctx context.Context) ([]PeerInfo, error) {
 // PollNewEvents fetches events since the given cursor and returns updated peers.
 func (c *Client) PollNewEvents(ctx context.Context, cursor interface{}) ([]PeerInfo, interface{}, error) {
 	peers := make(map[string]*PeerInfo)
-	newCursor := cursor
+	cursors := map[string]models.EventId{}
+	if cursor != nil {
+		prior, ok := cursor.(map[string]models.EventId)
+		if !ok {
+			return nil, cursor, fmt.Errorf("event cursor must be scoped by event type")
+		}
+		for key, value := range prior {
+			cursors[key] = value
+		}
+	}
 
 	// Poll all event types with the cursor
 	eventTypes := []string{
@@ -320,24 +334,33 @@ func (c *Client) PollNewEvents(ctx context.Context, cursor interface{}) ([]PeerI
 	}
 
 	for i, eventType := range eventTypes {
-		resp, err := c.rpc.SuiXQueryEvents(ctx, models.SuiXQueryEventsRequest{
-			SuiEventFilter: models.EventFilterByMoveEventType{
-				MoveEventType: eventType,
-			},
-			Cursor: cursor,
-			Limit:  50,
-		})
-		if err != nil {
-			return nil, cursor, fmt.Errorf("poll events %s: %w", eventType, err)
+		var eventCursor any
+		if prior, ok := cursors[eventType]; ok {
+			eventCursor = prior
 		}
-
-		for _, evt := range resp.Data {
-			appliers[i](evt.ParsedJson, peers)
+		for {
+			resp, err := c.rpc.SuiXQueryEvents(ctx, models.SuiXQueryEventsRequest{SuiEventFilter: models.EventFilterByMoveEventType{MoveEventType: eventType}, Cursor: eventCursor, Limit: 50})
+			if err != nil {
+				return nil, cursor, fmt.Errorf("poll events %s: %w", eventType, err)
+			}
+			for _, evt := range resp.Data {
+				appliers[i](evt.ParsedJson, peers)
+			}
+			if resp.HasNextPage && (resp.NextCursor.TxDigest == "" || resp.NextCursor == eventCursor) {
+				return nil, cursor, fmt.Errorf("event pagination did not advance for %s", eventType)
+			}
+			if resp.NextCursor.TxDigest != "" {
+				cursors[eventType] = resp.NextCursor
+			}
+			if !resp.HasNextPage {
+				break
+			}
+			eventCursor = resp.NextCursor
 		}
-
-		if resp.NextCursor.TxDigest != "" {
-			newCursor = resp.NextCursor
-		}
+	}
+	var newCursor any
+	if len(cursors) > 0 {
+		newCursor = cursors
 	}
 
 	var result []PeerInfo
@@ -455,6 +478,9 @@ func (c *Client) fetchAllEvents(
 
 		if !resp.HasNextPage {
 			break
+		}
+		if resp.NextCursor.TxDigest == "" || resp.NextCursor == cursor {
+			return fmt.Errorf("event pagination did not advance")
 		}
 		cursor = resp.NextCursor
 	}
@@ -603,6 +629,20 @@ func applyPeerRegistered(data map[string]interface{}, peers map[string]*PeerInfo
 	var wgPubKey []byte
 	if keyHex, ok := data["wireguard_pubkey"].(string); ok {
 		wgPubKey, _ = hex.DecodeString(strings.TrimPrefix(keyHex, "0x"))
+		if len(wgPubKey) == 0 {
+			wgPubKey, _ = base64.StdEncoding.DecodeString(keyHex)
+		}
+	}
+
+	if values, ok := data["wireguard_pubkey"].([]any); ok {
+		for _, value := range values {
+			n, valid := eventUint64(value)
+			if !valid || n > 255 {
+				wgPubKey = nil
+				break
+			}
+			wgPubKey = append(wgPubKey, byte(n))
+		}
 	}
 
 	var endpoints []string
@@ -656,7 +696,7 @@ func applyPeerStatusChanged(data map[string]interface{}, peers map[string]*PeerI
 		return
 	}
 
-	if status, ok := data["new_status"].(float64); ok {
+	if status, ok := eventUint64(data["new_status"]); ok && status <= 255 {
 		p.Status = uint8(status)
 	}
 }
@@ -690,12 +730,41 @@ func applyRelayRegistered(data map[string]interface{}, peers map[string]*PeerInf
 	if isp, ok := data["isp"].(string); ok {
 		p.ISP = isp
 	}
-	if capacity, ok := data["relay_capacity"].(float64); ok {
-		p.RelayCapacity = uint64(capacity)
+	if capacity, ok := eventUint64(data["relay_capacity"]); ok {
+		p.RelayCapacity = capacity
 	}
 	p.UptimeScore = 100 // default from contract
 }
 
-func hexBytesArg(data []byte) string {
-	return "0x" + hex.EncodeToString(data)
+func byteVector(data []byte) []any {
+	result := make([]any, len(data))
+	for i, b := range data {
+		result[i] = uint32(b)
+	}
+	return result
+}
+
+func eventUint64(value any) (uint64, bool) {
+	switch v := value.(type) {
+	case string:
+		n, err := strconv.ParseUint(v, 10, 64)
+		return n, err == nil
+	case json.Number:
+		n, err := strconv.ParseUint(v.String(), 10, 64)
+		return n, err == nil
+	case float64:
+		if v < 0 || v > 9007199254740991 || v != float64(uint64(v)) {
+			return 0, false
+		}
+		return uint64(v), true
+	default:
+		return 0, false
+	}
+}
+
+func (c *Client) Close() error {
+	if closer, ok := c.rpc.(interface{ Close() error }); ok {
+		return closer.Close()
+	}
+	return nil
 }

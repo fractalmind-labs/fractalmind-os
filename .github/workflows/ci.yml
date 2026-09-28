@@ -13,6 +13,16 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  sui-transports:
+    name: Sui transport migration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: make check-sui-rpc
+
   changes:
     name: Detect changes
     runs-on: ubuntu-latest
@@ -36,26 +46,47 @@ jobs:
           filters: |
             runtime/fractalbot:
               - .github/workflows/ci.yml
+              - Makefile
+              - go.work
+              - go.work.sum
               - runtime/fractalbot/**
               - protocols/fractal-demail/client-go/**
               - protocols/fractal-demail/gas-station-adapter/**
             runtime/fractalmind-envd:
               - .github/workflows/ci.yml
+              - Makefile
+              - go.work
+              - go.work.sum
               - runtime/fractalmind-envd/**
             runtime/fractalmind-envd/desktop:
               - .github/workflows/ci.yml
+              - Makefile
+              - go.work
+              - go.work.sum
               - runtime/fractalmind-envd/desktop/**
             runtime/claude-code-go:
               - .github/workflows/ci.yml
+              - Makefile
+              - go.work
+              - go.work.sum
               - runtime/claude-code-go/**
             protocols/fractal-demail/client-go:
               - .github/workflows/ci.yml
+              - Makefile
+              - go.work
+              - go.work.sum
               - protocols/fractal-demail/client-go/**
             protocols/fractal-demail/gas-station-adapter:
               - .github/workflows/ci.yml
+              - Makefile
+              - go.work
+              - go.work.sum
               - protocols/fractal-demail/gas-station-adapter/**
             protocols/fractal-demail/bridge:
               - .github/workflows/ci.yml
+              - Makefile
+              - go.work
+              - go.work.sum
               - protocols/fractal-demail/bridge/**
               - protocols/fractal-demail/client-go/**
               - protocols/fractal-demail/gas-station-adapter/**
@@ -92,6 +123,7 @@ jobs:
             protocols/fractalmind-protocol/sdk:
               - .github/workflows/ci.yml
               - protocols/fractalmind-protocol/sdk/**
+              - protocols/fractalmind-protocol/fixtures/**
             apps/agent-console:
               - .github/workflows/ci.yml
               - apps/agent-console/**
@@ -103,6 +135,9 @@ jobs:
             protocols/fractalmind-protocol/contracts/protocol:
               - .github/workflows/ci.yml
               - protocols/fractalmind-protocol/contracts/**
+            runtime/fractalmind-envd/contracts/envd:
+              - .github/workflows/ci.yml
+              - runtime/fractalmind-envd/contracts/**
             protocols/fractal-demail/sui-contracts:
               - .github/workflows/ci.yml
               - protocols/fractal-demail/sui-contracts/**
@@ -384,7 +419,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: protocols/fractalmind-protocol/sdk/package-lock.json
       - run: npm ci
@@ -398,7 +433,7 @@ jobs:
     if: needs.changes.outputs.move != '[]'
     runs-on: ubuntu-latest
     env:
-      SUI_VERSION: testnet-v1.67.1
+      SUI_VERSION: testnet-v1.80.1
     strategy:
       fail-fast: false
       matrix:
@@ -465,6 +500,7 @@ jobs:
     name: CI result
     needs:
       - changes
+      - sui-transports
       - go
       - agent-manager
       - agent-manager-quality

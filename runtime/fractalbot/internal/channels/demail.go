@@ -32,7 +32,9 @@ const (
 
 // DemailOptions configures the demail channel.
 type DemailOptions struct {
-	// RPCURL is the Sui JSON-RPC endpoint polled for MessageSent events.
+	// GraphQLURL is the indexed endpoint polled for MessageSent events.
+	GraphQLURL string
+	// RPCURL is a deprecated alias for GraphQLURL.
 	RPCURL string
 	// PackageID is the fractal-demail Move package id.
 	PackageID string
@@ -73,6 +75,7 @@ type DemailOptions struct {
 // channels.
 type DemailChannel struct {
 	rpcURL          string
+	graphqlURL      string
 	packageID       string
 	address         string
 	identityKeyFile string
@@ -113,8 +116,8 @@ type DemailChannel struct {
 
 // NewDemailChannel validates options and returns a demail channel.
 func NewDemailChannel(opts DemailOptions) (*DemailChannel, error) {
-	if strings.TrimSpace(opts.RPCURL) == "" {
-		return nil, errors.New("demail rpcUrl is required")
+	if strings.TrimSpace(opts.GraphQLURL) == "" && strings.TrimSpace(opts.RPCURL) == "" {
+		return nil, errors.New("demail graphqlUrl (formerly rpcUrl) is required")
 	}
 	if strings.TrimSpace(opts.PackageID) == "" {
 		return nil, errors.New("demail packageId is required")
@@ -174,6 +177,7 @@ func NewDemailChannel(opts DemailOptions) (*DemailChannel, error) {
 
 	channel := &DemailChannel{
 		rpcURL:            strings.TrimSpace(opts.RPCURL),
+		graphqlURL:        strings.TrimSpace(opts.GraphQLURL),
 		packageID:         strings.TrimSpace(opts.PackageID),
 		address:           address,
 		identityKeyFile:   strings.TrimSpace(opts.IdentityKeyFile),
@@ -270,6 +274,7 @@ func (b *DemailChannel) Start(ctx context.Context) error {
 			listenerCursorFile = b.cursorFile + ".cursor"
 		}
 		inbound, err := listener.New(listener.Config{
+			GraphQLURL:   b.graphqlURL,
 			RPCURL:       b.rpcURL,
 			PackageID:    b.packageID,
 			Recipient:    b.address,
@@ -634,13 +639,25 @@ func (t *demailCLITransport) Relay(ctx context.Context, req gasstation.RelayRequ
 		return fmt.Errorf("sui execute-signed-tx failed: %w", err)
 	}
 	var result struct {
-		Digest string `json:"digest"`
+		Digest  string `json:"digest"`
+		Effects *struct {
+			Status struct {
+				Status string `json:"status"`
+				Error  string `json:"error"`
+			} `json:"status"`
+		} `json:"effects"`
 	}
 	if err := unmarshalDemailCLIJSON(output, &result); err != nil {
 		return fmt.Errorf("sui execute-signed-tx returned invalid json: %w", err)
 	}
 	if strings.TrimSpace(result.Digest) == "" {
 		return errors.New("sui execute-signed-tx returned no digest")
+	}
+	if result.Effects == nil {
+		return fmt.Errorf("Sui execution response is missing effects status")
+	}
+	if result.Effects.Status.Status != "success" {
+		return fmt.Errorf("Sui execution failed: %s", result.Effects.Status.Error)
 	}
 	t.digest = strings.TrimSpace(result.Digest)
 	return nil

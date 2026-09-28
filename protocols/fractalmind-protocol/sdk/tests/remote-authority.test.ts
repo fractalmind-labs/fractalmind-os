@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 import {
@@ -10,24 +10,30 @@ import {
   capabilityReferenceWire,
   projectEnvdCapabilityState,
   verifyParentCheckpoint,
-} from '../src';
-import { toBigInt } from '../src/client';
-import type { NodeCommandSigningInput, RemoteCapabilityData } from '../src';
+} from '../src/index.js';
+import { toBigInt } from '../src/client.js';
+import type { NodeCommandSigningInput, RemoteCapabilityData } from '../src/index.js';
 
 const PACKAGE_ID = '0x123';
 const ENTRY_PREFIX =
   '0x0000000000000000000000000000000000000000000000000000000000000123::entry::';
 const MAX_U64 = 18_446_744_073_709_551_615n;
 
-class MockSuiClient {
+function coreObject(value: unknown): { object: unknown } {
+  const fixture = value as { data?: { objectId: string; type: string; content?: { fields: Record<string, unknown> } } } | undefined;
+  return { object: fixture?.data ? { objectId: fixture.data.objectId, type: fixture.data.type, json: fixture.data.content?.fields } : null };
+}
+
+class MockCoreClient {
+  core = this;
   constructor(private readonly objectMap: Record<string, unknown> = {}) {}
 
-  async getObject(params: { id: string }): Promise<unknown> {
-    return this.objectMap[params.id] ?? { data: null };
+  async getObject(params: { objectId: string }): Promise<unknown> {
+    return coreObject(this.objectMap[params.objectId]);
   }
 }
 
-function sdk(client: MockSuiClient = new MockSuiClient()): FractalMindSDK {
+function sdk(client: MockCoreClient = new MockCoreClient()): FractalMindSDK {
   return new FractalMindSDK({ packageId: PACKAGE_ID, client: client as never });
 }
 
@@ -85,7 +91,7 @@ test('remote authority builders target the Phase 0 entry wrappers', () => {
 });
 
 test('getCapability parses max-u64 fields and delegated parent option', async () => {
-  const client = new MockSuiClient({
+  const client = new MockCoreClient({
     '0x400': {
       data: {
         objectId: '0x400',
@@ -130,7 +136,7 @@ test('getCapability parses max-u64 fields and delegated parent option', async ()
 });
 
 test('getCapability rejects unknown schema versions', async () => {
-  const client = new MockSuiClient({
+  const client = new MockCoreClient({
     '0x401': {
       data: {
         objectId: '0x401',
@@ -308,7 +314,7 @@ test('u64 conversion preserves max-u64 and rejects unsafe or noncanonical inputs
 
 test('canonical signing bytes exactly match the envd v1 golden fixture', () => {
   const golden = JSON.parse(readFileSync(
-    join(__dirname, '..', '..', 'fixtures', 'node-command', 'v1-golden.json'),
+    fileURLToPath(new URL('../../fixtures/node-command/v1-golden.json', import.meta.url)),
     'utf8',
   )) as {
     command: Record<string, any>;

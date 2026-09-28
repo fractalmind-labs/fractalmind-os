@@ -1,10 +1,10 @@
 import type { Transaction } from '@mysten/sui/transactions';
 
-import { FractalMindClient } from './client';
+import { FractalMindClient } from './client.js';
 import type {
   CreateSubOrganizationInput,
   DetachSubOrganizationInput,
-} from './types';
+} from './types.js';
 
 export class FractalApi {
   constructor(private readonly fm: FractalMindClient) {}

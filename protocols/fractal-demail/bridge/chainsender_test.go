@@ -28,7 +28,7 @@ func (s *scriptedExec) run(_ context.Context, name string, args ...string) ([]by
 	case len(args) >= 3 && args[0] == "keytool" && args[1] == "sign":
 		return []byte(`{"suiSignature":"SIG_` + args[3] + `"}`), nil
 	case len(args) >= 2 && args[0] == "client" && args[1] == "execute-signed-tx":
-		return []byte(`{"digest":"0xDIGEST"}`), nil
+		return []byte(`{"digest":"0xDIGEST","effects":{"status":{"status":"success"}}}`), nil
 	}
 	return nil, errors.New("unexpected exec: " + strings.Join(args, " "))
 }
@@ -150,5 +150,19 @@ func TestNewCLIChainSenderValidation(t *testing.T) {
 	}
 	if c.sponsor != csSender {
 		t.Fatalf("sponsor should default to sender, got %q", c.sponsor)
+	}
+}
+
+func TestCLIChainSenderRefusesFailedTransaction(t *testing.T) {
+	ex := &scriptedExec{}
+	c := newCS(t, csSponsor, func(ctx context.Context, name string, args ...string) ([]byte, error) {
+		if len(args) > 1 && args[1] == "execute-signed-tx" {
+			return []byte(`{"digest":"failed-digest","effects":{"status":{"status":"failure","error":"MoveAbort"}}}`), nil
+		}
+		return ex.run(ctx, name, args...)
+	})
+	digest, err := c.Send(context.Background(), csRecip, []byte("PAYLOAD_B64"))
+	if err == nil || digest != "" {
+		t.Fatalf("failed transaction reported as delivery: %q %v", digest, err)
 	}
 }

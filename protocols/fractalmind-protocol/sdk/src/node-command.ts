@@ -1,5 +1,5 @@
-import { toBigInt } from './client';
-import type { CapabilityReference, NodeCommandSigningInput } from './types';
+import { toBigInt } from './client.js';
+import type { CapabilityReference, NodeCommandSigningInput } from './types.js';
 
 export const NODE_COMMAND_SIGNATURE_DOMAIN = 'fractalmind.node-command.v1';
 

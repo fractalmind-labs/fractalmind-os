@@ -1,13 +1,13 @@
-import { AgentApi } from './agent';
-import { AgentPolicyApi } from './agent-policy';
-import { FractalMindClient } from './client';
-import { FractalApi } from './fractal';
-import { GovernanceApi } from './governance';
-import { ObjectiveApi } from './objective';
-import { OrganizationApi } from './organization';
-import { RemoteAuthorityApi } from './remote-authority';
-import { TaskApi } from './task';
-import type { FractalMindClientOptions } from './types';
+import { AgentApi } from './agent.js';
+import { AgentPolicyApi } from './agent-policy.js';
+import { FractalMindClient } from './client.js';
+import { FractalApi } from './fractal.js';
+import { GovernanceApi } from './governance.js';
+import { ObjectiveApi } from './objective.js';
+import { OrganizationApi } from './organization.js';
+import { RemoteAuthorityApi } from './remote-authority.js';
+import { TaskApi } from './task.js';
+import type { FractalMindClientOptions } from './types.js';
 
 export class FractalMindSDK {
   public readonly client: FractalMindClient;
@@ -33,25 +33,25 @@ export class FractalMindSDK {
   }
 }
 
-export { FractalMindClient } from './client';
-export { ObjectiveApi } from './objective';
-export { OrganizationApi } from './organization';
-export { AgentApi } from './agent';
-export { AgentPolicyApi } from './agent-policy';
-export { TaskApi } from './task';
-export { FractalApi } from './fractal';
-export { GovernanceApi } from './governance';
+export { FractalMindClient } from './client.js';
+export { ObjectiveApi } from './objective.js';
+export { OrganizationApi } from './organization.js';
+export { AgentApi } from './agent.js';
+export { AgentPolicyApi } from './agent-policy.js';
+export { TaskApi } from './task.js';
+export { FractalApi } from './fractal.js';
+export { GovernanceApi } from './governance.js';
 export {
   RemoteAuthorityApi,
   capabilityReference,
   projectEnvdCapabilityState,
   verifyParentCheckpoint,
-} from './remote-authority';
+} from './remote-authority.js';
 export {
   NODE_COMMAND_SIGNATURE_DOMAIN,
   canonicalNodeCommandSigningBytes,
   capabilityReferenceWire,
-} from './node-command';
+} from './node-command.js';
 
 export type {
   Address,
@@ -116,4 +116,4 @@ export type {
   UpdateDescriptionInput,
   VerifyTaskInput,
   VoteOption,
-} from './types';
+} from './types.js';

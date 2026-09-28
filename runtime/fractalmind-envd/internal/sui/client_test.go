@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/block-vision/sui-go-sdk/models"
@@ -274,9 +275,9 @@ func TestExecuteAction(t *testing.T) {
 		t.Fatalf("expected 8 args, got %d", len(capturedArgs))
 	}
 
-	wantIntent := "0x" + hex.EncodeToString(intentHash)
-	wantResult := "0x" + hex.EncodeToString(resultHash)
-	if capturedArgs[5] != wantIntent || capturedArgs[6] != wantResult {
+	wantIntent := byteVector(intentHash)
+	wantResult := byteVector(resultHash)
+	if !reflect.DeepEqual(capturedArgs[5], wantIntent) || !reflect.DeepEqual(capturedArgs[6], wantResult) {
 		t.Fatalf("unexpected hash encoding: got %v %v", capturedArgs[5], capturedArgs[6])
 	}
 	if capturedArgs[7] != "1000" {
@@ -515,7 +516,7 @@ func hasPrefix(s, prefix string) bool {
 	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
 }
 
-func TestRegisterPeerPubKeyPrefix(t *testing.T) {
+func TestRegisterPeerByteVector(t *testing.T) {
 	kp := testKeypair(t)
 	var capturedArgs []interface{}
 
@@ -539,18 +540,10 @@ func TestRegisterPeerPubKeyPrefix(t *testing.T) {
 	if len(capturedArgs) < 4 {
 		t.Fatalf("expected at least 4 args, got %d", len(capturedArgs))
 	}
-	pubKeyHex, ok := capturedArgs[3].(string)
-	if !ok {
-		t.Fatalf("arg[3] should be string, got %T", capturedArgs[3])
+	if !reflect.DeepEqual(capturedArgs[3], byteVector(wgKey)) {
+		t.Fatalf("public key must be a literal byte vector: %v", capturedArgs[3])
 	}
-	if !hasPrefix(pubKeyHex, "0x") {
-		t.Errorf("pubKeyHex should start with 0x, got %s", pubKeyHex)
-	}
-	// Verify the hex content after prefix
-	expectedHex := "0x" + hex.EncodeToString(wgKey)
-	if pubKeyHex != expectedHex {
-		t.Errorf("pubKeyHex = %s, want %s", pubKeyHex, expectedHex)
-	}
+
 }
 
 func TestEnsureAgentCertExisting(t *testing.T) {

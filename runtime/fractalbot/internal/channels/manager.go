@@ -413,12 +413,13 @@ func (m *Manager) registerConfiguredChannels() error {
 		if m.Get("demail") != nil {
 			return nil
 		}
-		if strings.TrimSpace(m.cfg.Demail.RPCURL) == "" || strings.TrimSpace(m.cfg.Demail.PackageID) == "" || strings.TrimSpace(m.cfg.Demail.Address) == "" {
-			return errors.New("channels.demail.rpcUrl, channels.demail.packageId and channels.demail.address are required when demail is enabled")
+		if (strings.TrimSpace(m.cfg.Demail.GraphQLURL) == "" && strings.TrimSpace(m.cfg.Demail.RPCURL) == "") || strings.TrimSpace(m.cfg.Demail.PackageID) == "" || strings.TrimSpace(m.cfg.Demail.Address) == "" {
+			return errors.New("channels.demail.graphqlUrl (formerly rpcUrl), channels.demail.packageId and channels.demail.address are required when demail is enabled")
 		}
 
 		channel, err := NewDemailChannel(DemailOptions{
 			RPCURL:          m.cfg.Demail.RPCURL,
+			GraphQLURL:      m.cfg.Demail.GraphQLURL,
 			PackageID:       m.cfg.Demail.PackageID,
 			Address:         m.cfg.Demail.Address,
 			IdentityKeyFile: m.cfg.Demail.IdentityKeyFile,

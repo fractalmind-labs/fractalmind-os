@@ -14,6 +14,9 @@ All write methods return a `Transaction` so you can compose multi-step PTBs.
 
 ## Install
 
+Requires **Node.js 22+** and ESM. The default transport is gRPC through
+`@mysten/sui` 2.33.1. Custom clients must implement `ClientWithCoreApi`.
+
 ```bash
 cd sdk
 npm install
@@ -35,8 +38,14 @@ const tx = sdk.organization.createOrganization({
   description: 'Fractal root organization',
 });
 
-// client.signAndExecuteTransaction example:
-// await sdk.client.signAndExecuteTransaction({ signer, transaction: tx });
+const result = await sdk.client.signAndExecuteTransaction({
+  signer, // Your Sui keypair
+  transaction: tx,
+  include: { effects: true, objectTypes: true },
+});
+const executed = result.Transaction ?? result.FailedTransaction;
+if (!executed.status.success) throw new Error(executed.status.error.message);
+await sdk.client.client.core.waitForTransaction({ digest: executed.digest });
 ```
 
 ## API Notes
@@ -55,4 +64,14 @@ cd sdk
 npm run typecheck
 npm run build
 npm test
+# Optional public testnet read; requires no wallet
+npm run smoke:rpc
 ```
+
+## Migrating from JSON-RPC
+
+Use `include` instead of `options.show*`, inspect the nested transaction status,
+and read created IDs from `effects.changedObjects` with types from `objectTypes`.
+Object reads use native Move JSON; options may be scalar/null rather than `{ vec }`.
+This package emits ESM; replace CommonJS `require` with `import` (or dynamic import).
+See [the project migration guide](../../../docs/sui-rpc-migration.md).

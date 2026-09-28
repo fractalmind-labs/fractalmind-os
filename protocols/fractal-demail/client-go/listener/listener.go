@@ -1,4 +1,4 @@
-// Package listener polls Sui JSON-RPC for fractal-demail MessageSent events
+// Package listener polls Sui GraphQL for fractal-demail MessageSent events
 // addressed to this node, fetches the Message object payload, decrypts the
 // envelope, and hands sanitized plaintext to a handler — the inbound half of
 // the fractalbot gateway integration.
@@ -30,6 +30,9 @@ type Handler func(messageID string, msg *schema.Plaintext)
 
 // Config for a Listener.
 type Config struct {
+	// GraphQLURL is the indexed Sui GraphQL endpoint.
+	GraphQLURL string
+	// RPCURL is a deprecated alias for GraphQLURL.
 	RPCURL    string
 	PackageID string
 	// Recipient is this node's Sui address; events routed elsewhere are ignored.
@@ -55,12 +58,13 @@ type Config struct {
 	CursorFile string
 }
 
-// Listener polls suix_queryEvents with a cursor and processes new events.
+// Listener polls GraphQL events with a cursor and processes new events.
 type Listener struct {
-	cfg       Config
-	handler   Handler
-	cursor    json.RawMessage
-	needsInit bool
+	cfg          Config
+	handler      Handler
+	cursor       json.RawMessage
+	needsInit    bool
+	legacyCursor json.RawMessage
 
 	statsMu   sync.Mutex
 	stats     Stats
@@ -68,8 +72,16 @@ type Listener struct {
 }
 
 func New(cfg Config, handler Handler) (*Listener, error) {
-	if cfg.RPCURL == "" || cfg.PackageID == "" || cfg.Recipient == "" {
-		return nil, fmt.Errorf("RPCURL, PackageID and Recipient are required")
+	if cfg.GraphQLURL == "" {
+		cfg.GraphQLURL = cfg.RPCURL
+		for _, network := range []string{"testnet", "mainnet"} {
+			if strings.TrimRight(cfg.RPCURL, "/") == "https://fullnode."+network+".sui.io:443" || strings.TrimRight(cfg.RPCURL, "/") == "https://fullnode."+network+".sui.io" {
+				cfg.GraphQLURL = "https://graphql." + network + ".sui.io/graphql"
+			}
+		}
+	}
+	if cfg.GraphQLURL == "" || cfg.PackageID == "" || cfg.Recipient == "" {
+		return nil, fmt.Errorf("GraphQLURL, PackageID and Recipient are required")
 	}
 	if _, err := decodeAddress(cfg.Recipient); err != nil {
 		return nil, fmt.Errorf("invalid Recipient: %w", err)
@@ -98,7 +110,19 @@ func New(cfg Config, handler Handler) (*Listener, error) {
 		data, err := os.ReadFile(cfg.CursorFile)
 		switch {
 		case err == nil && json.Valid(data) && string(data) != "null":
-			l.cursor = json.RawMessage(data)
+			var cursor string
+			if err := json.Unmarshal(data, &cursor); err == nil && cursor != "" {
+				l.cursor = json.RawMessage(data)
+			} else {
+				var legacy struct {
+					TxDigest string `json:"txDigest"`
+					EventSeq string `json:"eventSeq"`
+				}
+				if err := json.Unmarshal(data, &legacy); err != nil || legacy.TxDigest == "" || legacy.EventSeq == "" {
+					return nil, fmt.Errorf("cursor file has an incompatible checkpoint")
+				}
+				l.legacyCursor = json.RawMessage(data)
+			}
 		case err == nil:
 			// Corrupt/empty checkpoint: safer to skip history than replay it.
 			l.needsInit = true
@@ -137,14 +161,11 @@ func (l *Listener) setCursor(cursor json.RawMessage) {
 // initCursorFromLatest positions a brand-new listener at the newest existing
 // event so history is not replayed through the handler.
 func (l *Listener) initCursorFromLatest(ctx context.Context) error {
-	filter := map[string]any{
-		"MoveEventType": l.cfg.PackageID + "::demail::MessageSent",
-	}
-	var res queryEventsResult
-	// descending_order=true: first page starts at the newest event.
-	if err := l.call(ctx, "suix_queryEvents", []any{filter, nil, 1, true}, &res); err != nil {
+	res, err := l.events(ctx, true)
+	if err != nil {
 		return err
 	}
+
 	if len(res.Data) > 0 {
 		l.setCursor(res.Data[0].ID)
 	}
@@ -221,27 +242,14 @@ func (l *Listener) recordPoll(err error) int {
 	return l.stats.ConsecutivePollFailures
 }
 
-type rpcRequest struct {
-	JSONRPC string `json:"jsonrpc"`
-	ID      int    `json:"id"`
-	Method  string `json:"method"`
-	Params  []any  `json:"params"`
-}
-
-type rpcResponse struct {
-	Result json.RawMessage `json:"result"`
-	Error  *struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-	} `json:"error"`
-}
-
-func (l *Listener) call(ctx context.Context, method string, params []any, out any) error {
-	body, err := json.Marshal(rpcRequest{JSONRPC: "2.0", ID: 1, Method: method, Params: params})
+// query rejects GraphQL errors even when HTTP returns 200, before advancing
+// any checkpoint. A partial result is unsafe for a durable event consumer.
+func (l *Listener) query(ctx context.Context, operation, query string, variables map[string]any, out any) error {
+	body, err := json.Marshal(map[string]any{"operationName": operation, "query": query, "variables": variables})
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, l.cfg.RPCURL, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, l.cfg.GraphQLURL, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
@@ -252,16 +260,80 @@ func (l *Listener) call(ctx context.Context, method string, params []any, out an
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%s: http %d", method, resp.StatusCode)
+		return fmt.Errorf("%s: http %d", operation, resp.StatusCode)
 	}
-	var rpc rpcResponse
-	if err := json.NewDecoder(resp.Body).Decode(&rpc); err != nil {
-		return fmt.Errorf("%s: decode: %w", method, err)
+	var result struct {
+		Data   json.RawMessage `json:"data"`
+		Errors []struct {
+			Message string `json:"message"`
+		} `json:"errors"`
 	}
-	if rpc.Error != nil {
-		return fmt.Errorf("%s: rpc error %d: %s", method, rpc.Error.Code, rpc.Error.Message)
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return err
 	}
-	return json.Unmarshal(rpc.Result, out)
+	if len(result.Errors) > 0 {
+		return fmt.Errorf("%s: GraphQL: %s", operation, result.Errors[0].Message)
+	}
+	if len(result.Data) == 0 || string(result.Data) == "null" {
+		return fmt.Errorf("%s: missing GraphQL data", operation)
+	}
+	return json.Unmarshal(result.Data, out)
+}
+
+func (l *Listener) events(ctx context.Context, latest bool) (queryEventsResult, error) {
+	variables := map[string]any{"type": l.cfg.PackageID + "::demail::MessageSent"}
+	if latest {
+		variables["last"] = 1
+	} else {
+		variables["first"] = 50
+		if l.cursor != nil {
+			var cursor string
+			if err := json.Unmarshal(l.cursor, &cursor); err != nil {
+				return queryEventsResult{}, err
+			}
+			variables["after"] = cursor
+		}
+	}
+	var data struct {
+		Events struct {
+			Edges []struct {
+				Cursor string `json:"cursor"`
+				Node   struct {
+					Contents struct {
+						JSON json.RawMessage `json:"json"`
+					} `json:"contents"`
+				} `json:"node"`
+			} `json:"edges"`
+			PageInfo struct {
+				EndCursor   *string `json:"endCursor"`
+				HasNextPage bool    `json:"hasNextPage"`
+			} `json:"pageInfo"`
+		} `json:"events"`
+	}
+	err := l.query(ctx, "MessageEvents", `query MessageEvents($type: String!, $first: Int, $last: Int, $after: String) {
+      events(first: $first, last: $last, after: $after, filter: {type: $type}) {
+        edges { cursor node { contents { json } } }
+        pageInfo { endCursor hasNextPage }
+      }
+    }`, variables, &data)
+	if err != nil {
+		return queryEventsResult{}, err
+	}
+	if data.Events.PageInfo.HasNextPage && (len(data.Events.Edges) == 0 || data.Events.PageInfo.EndCursor == nil || *data.Events.PageInfo.EndCursor == "") {
+		return queryEventsResult{}, fmt.Errorf("GraphQL pagination returned no progress")
+	}
+	result := queryEventsResult{HasNextPage: data.Events.PageInfo.HasNextPage}
+	for _, edge := range data.Events.Edges {
+		if edge.Cursor == "" || string(l.cursor) == strconv.Quote(edge.Cursor) {
+			return queryEventsResult{}, fmt.Errorf("GraphQL event cursor did not advance")
+		}
+		cursor, _ := json.Marshal(edge.Cursor)
+		result.Data = append(result.Data, event{ID: cursor, ParsedJSON: edge.Node.Contents.JSON})
+	}
+	if data.Events.PageInfo.EndCursor != nil {
+		result.NextCursor, _ = json.Marshal(*data.Events.PageInfo.EndCursor)
+	}
+	return result, nil
 }
 
 type messageSentEvent struct {
@@ -272,34 +344,34 @@ type messageSentEvent struct {
 	CreatedAtMs string          `json:"created_at_ms"`
 }
 
+type event struct {
+	ID         json.RawMessage
+	ParsedJSON json.RawMessage
+}
 type queryEventsResult struct {
-	Data []struct {
-		ID         json.RawMessage `json:"id"`
-		ParsedJSON json.RawMessage `json:"parsedJson"`
-	} `json:"data"`
+	Data        []event
 	NextCursor  json.RawMessage `json:"nextCursor"`
 	HasNextPage bool            `json:"hasNextPage"`
 }
 
 // PollOnce fetches and processes one page of new events.
 func (l *Listener) PollOnce(ctx context.Context) error {
+	if l.legacyCursor != nil {
+		if err := l.migrateLegacyCursor(ctx); err != nil {
+			return fmt.Errorf("migrate event checkpoint: %w", err)
+		}
+	}
 	if l.needsInit {
 		if err := l.initCursorFromLatest(ctx); err != nil {
 			return fmt.Errorf("init cursor from latest: %w", err)
 		}
 		return nil
 	}
-	filter := map[string]any{
-		"MoveEventType": l.cfg.PackageID + "::demail::MessageSent",
-	}
-	var cursor any
-	if l.cursor != nil {
-		cursor = json.RawMessage(l.cursor)
-	}
-	var res queryEventsResult
-	if err := l.call(ctx, "suix_queryEvents", []any{filter, cursor, 50, false}, &res); err != nil {
+	res, err := l.events(ctx, false)
+	if err != nil {
 		return err
 	}
+
 	for _, ev := range res.Data {
 		var parsed messageSentEvent
 		if err := json.Unmarshal(ev.ParsedJSON, &parsed); err != nil {
@@ -376,27 +448,28 @@ func (l *Listener) process(ctx context.Context, ev *messageSentEvent) error {
 	return nil
 }
 
-type getObjectResult struct {
-	Data struct {
-		Content struct {
-			Fields struct {
-				Payload json.RawMessage `json:"payload"`
-			} `json:"fields"`
-		} `json:"content"`
-	} `json:"data"`
-}
-
 func (l *Listener) fetchPayload(ctx context.Context, messageID string) ([]byte, error) {
-	var res getObjectResult
-	params := []any{messageID, map[string]any{"showContent": true}}
-	if err := l.call(ctx, "sui_getObject", params, &res); err != nil {
-		// RPC/network failure: the message may be perfectly valid.
+	var data struct {
+		Object *struct {
+			AsMoveObject *struct {
+				Contents struct {
+					JSON struct {
+						Payload json.RawMessage `json:"payload"`
+					} `json:"json"`
+				} `json:"contents"`
+			} `json:"asMoveObject"`
+		} `json:"object"`
+	}
+	err := l.query(ctx, "MessageObject", `query MessageObject($id: SuiAddress!) {
+        object(address: $id) { asMoveObject { contents { json } } }
+    }`, map[string]any{"id": messageID}, &data)
+	if err != nil {
 		return nil, &transientError{err}
 	}
-	if res.Data.Content.Fields.Payload == nil {
+	if data.Object == nil || data.Object.AsMoveObject == nil || data.Object.AsMoveObject.Contents.JSON.Payload == nil {
 		return nil, fmt.Errorf("message object %s has no payload (deleted?)", messageID)
 	}
-	return decodeVectorU8(res.Data.Content.Fields.Payload)
+	return decodeVectorU8(data.Object.AsMoveObject.Contents.JSON.Payload)
 }
 
 // decodeInlinePayload returns the envelope JSON bytes for an inline payload.

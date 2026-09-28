@@ -10,7 +10,7 @@ import {
   readString,
   readStringVector,
   toBigInt,
-} from './client';
+} from './client.js';
 import type {
   CapabilityProjectionOptions,
   CapabilityReference,
@@ -23,7 +23,7 @@ import type {
   RemoteReservationScope,
   RemoteTargetKind,
   RevokeRemoteCapabilityInput,
-} from './types';
+} from './types.js';
 
 const TARGET_ORGANIZATION = 1;
 const TARGET_NODE = 2;

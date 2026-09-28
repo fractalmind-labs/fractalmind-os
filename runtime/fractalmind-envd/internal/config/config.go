@@ -107,7 +107,8 @@ type HeartbeatConfig struct {
 
 type SUIConfig struct {
 	Enabled           bool   `yaml:"enabled"`
-	RPC               string `yaml:"rpc"`
+	RPC               string `yaml:"rpc"` // gRPC fullnode endpoint
+	GraphQLURL        string `yaml:"graphql_url"`
 	KeypairPath       string `yaml:"keypair_path"`
 	PackageID         string `yaml:"package_id"`
 	ProtocolPackageID string `yaml:"protocol_package_id"`
@@ -199,6 +200,7 @@ func DefaultConfig() *Config {
 		SUI: SUIConfig{
 			Enabled:      false,
 			RPC:          "https://fullnode.testnet.sui.io:443",
+			GraphQLURL:   "", // inferred for official fullnodes; set explicitly for custom nodes
 			KeypairPath:  "~/.sui/envd.key",
 			PollInterval: "30s",
 		},

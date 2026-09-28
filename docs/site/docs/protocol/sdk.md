@@ -2,6 +2,8 @@
 
 The FractalMind SDK provides a TypeScript interface for interacting with the on-chain protocol.
 
+Requires Node.js 22+ and ESM. The default client uses gRPC.
+
 ## Installation
 
 ```bash
@@ -12,10 +14,10 @@ npm install @fractalmind-labs/fractalmind-sdk
 
 ```typescript
 import { FractalMindSDK } from '@fractalmind-labs/fractalmind-sdk';
-import { SuiClient } from '@mysten/sui/client';
+import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 
-const client = new SuiClient({ url: 'https://fullnode.testnet.sui.io:443' });
+const client = new SuiGrpcClient({ baseUrl: 'https://fullnode.testnet.sui.io:443', network: 'testnet' });
 const keypair = Ed25519Keypair.deriveKeypair(mnemonic);
 
 const sdk = new FractalMindSDK({
@@ -168,14 +170,16 @@ const tx = sdk.organization.createOrganization({ name: 'MyOrg', description: '..
 const result = await client.signAndExecuteTransaction({
   signer: keypair,
   transaction: tx,
-  options: { showObjectChanges: true, showEffects: true },
+  include: { effects: true, objectTypes: true },
 });
 
-// Wait for finality
-await client.waitForTransaction({ digest: result.digest });
+const executed = result.Transaction ?? result.FailedTransaction;
+if (!executed.status.success) throw new Error(executed.status.error.message);
+await client.waitForTransaction({ digest: executed.digest });
 
-// Extract created objects from result.objectChanges
-const created = result.objectChanges?.filter(c => c.type === 'created');
+const created = executed.effects?.changedObjects
+  .filter(c => c.idOperation === 'Created' && c.outputState === 'ObjectWrite')
+  .map(c => ({ objectId: c.objectId, type: executed.objectTypes?.[c.objectId] }));
 ```
 
 ## Error Codes

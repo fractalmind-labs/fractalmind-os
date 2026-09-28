@@ -6,7 +6,7 @@ Get a working AI agent team running in under 5 minutes.
 
 | Tool | Version | Check |
 |------|---------|-------|
-| Node.js | 18+ | `node -v` |
+| Node.js | 22+ | `node -v` |
 | Python | 3.8+ | `python3 --version` |
 | tmux | any | `tmux -V` |
 | AI API key | — | Claude, OpenAI, or similar |
@@ -155,9 +155,9 @@ npm install @fractalmind-labs/fractalmind-sdk
 
 ```typescript
 import { FractalMindSDK } from '@fractalmind-labs/fractalmind-sdk'
-import { SuiClient } from '@mysten/sui/client'
+import { SuiGrpcClient } from '@mysten/sui/grpc'
 
-const client = new SuiClient({ url: 'https://fullnode.testnet.sui.io:443' })
+const client = new SuiGrpcClient({ baseUrl: 'https://fullnode.testnet.sui.io:443', network: 'testnet' })
 const sdk = new FractalMindSDK({
   packageId: '0x685d6fb6ed8b0e679bb467ea73111819ec6ff68b1466d24ca26b400095dcdf24',
   registryId: '0xfb8611bf2eb94b950e4ad47a76adeaab8ddda23e602c77e7464cc20572a547e3',
@@ -182,7 +182,7 @@ See the [Protocol SDK docs](/protocol/sdk) for the complete API reference.
 
 ### `npx skills` command fails
 
-Make sure Node.js 18+ is installed and `npx` is in your PATH:
+Make sure Node.js 22+ is installed and `npx` is in your PATH:
 
 ```bash
 node -v    # Should show v18.x or higher

@@ -184,13 +184,25 @@ func (t *cliChainTransport) Relay(ctx context.Context, req gasstation.RelayReque
 		return fmt.Errorf("execute-signed-tx: %w", err)
 	}
 	var res struct {
-		Digest string `json:"digest"`
+		Digest  string `json:"digest"`
+		Effects *struct {
+			Status struct {
+				Status string `json:"status"`
+				Error  string `json:"error"`
+			} `json:"status"`
+		} `json:"effects"`
 	}
 	if err := unmarshalLastJSON(out, &res); err != nil {
 		return fmt.Errorf("execute-signed-tx json: %w", err)
 	}
 	if strings.TrimSpace(res.Digest) == "" {
 		return fmt.Errorf("execute-signed-tx returned no digest")
+	}
+	if res.Effects == nil {
+		return fmt.Errorf("Sui execution response is missing effects status")
+	}
+	if res.Effects.Status.Status != "success" {
+		return fmt.Errorf("Sui execution failed: %s", res.Effects.Status.Error)
 	}
 	t.digest = strings.TrimSpace(res.Digest)
 	return nil

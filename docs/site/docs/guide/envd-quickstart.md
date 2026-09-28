@@ -119,7 +119,8 @@ Heartbeat is sent directly via WireGuard P2P (no on-chain cost). Relay nodes inc
 ```yaml
 sui:
   enabled: true
-  rpc: https://fullnode.testnet.sui.io:443
+  rpc: https://fullnode.testnet.sui.io:443 # gRPC
+  graphql_url: https://graphql.testnet.sui.io/graphql
   keypair_path: ~/.sui/envd.key       # Ed25519 keypair (auto-generated if missing)
   package_id: "0x74aef8ff3bb0da5d5626780e6c0e5f1f36308a40580e519920fdc9204e73d958"
   registry_id: "0xe557465293df033fd6ba1347706d7e9db2a35de4667a3b6a2e20252587b6e505"
@@ -195,7 +196,8 @@ heartbeat:
 
 sui:
   enabled: true
-  rpc: https://fullnode.testnet.sui.io:443
+  rpc: https://fullnode.testnet.sui.io:443 # gRPC
+  graphql_url: https://graphql.testnet.sui.io/graphql
   keypair_path: ~/.sui/envd.key
   package_id: "0x74aef8ff3bb0da5d5626780e6c0e5f1f36308a40580e519920fdc9204e73d958"
   registry_id: "0xe557465293df033fd6ba1347706d7e9db2a35de4667a3b6a2e20252587b6e505"
@@ -330,14 +332,9 @@ Check that envd registered on-chain:
 
 ```bash
 # Query PeerRegistry for your node
-curl -s https://fullnode.testnet.sui.io:443 \
+curl -s https://graphql.testnet.sui.io/graphql \
   -H 'Content-Type: application/json' \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "suix_queryEvents",
-    "params": [{"MoveEventType": "0x74aef8ff3bb0da5d5626780e6c0e5f1f36308a40580e519920fdc9204e73d958::peer::PeerRegistered"}],
-    "id": 1
-  }' | jq '.result.data'
+  --data '{"query":"query($type: String!) { events(first: 10, filter: {type: $type}) { nodes { contents { json } } pageInfo { endCursor hasNextPage } } }", "variables":{"type":"YOUR_ENVD_PACKAGE_ID::peer::PeerRegistered"}}'
 ```
 
 ## Troubleshooting

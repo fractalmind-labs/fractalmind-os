@@ -23,7 +23,7 @@ jobs:
       - name: Install Sui CLI
         run: |
           set -euo pipefail
-          SUI_VERSION="testnet-v1.67.1"
+          SUI_VERSION="testnet-v1.80.1"
           ARCHIVE="sui-${SUI_VERSION}-ubuntu-x86_64.tgz"
           curl -fsSL "https://github.com/MystenLabs/sui/releases/download/${SUI_VERSION}/${ARCHIVE}" -o sui.tgz
           tar -xzf sui.tgz

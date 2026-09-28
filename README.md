@@ -30,7 +30,7 @@ The source-to-destination mapping is recorded in [`repository-map.yaml`](reposit
 ## Building and testing
 
 Prerequisites: Go 1.24+ (workspace mode auto-downloads the exact toolchain
-each module needs), Node.js 20, Python 3.9+, `npm`, and `pnpm` (for
+each module needs), Node.js 22 (SDK), Python 3.9+, `npm`, and `pnpm` (for
 `apps/agent-console`).
 
 ```bash

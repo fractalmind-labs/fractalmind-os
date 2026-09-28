@@ -47,6 +47,7 @@ help:
 	@echo "  lint          gofmt -l (fractalbot, claude-code-go) + SDK typecheck"
 	@echo "  fmt-check     gofmt -l only (MODULE= for one; used by CI per module)"
 	@echo "  build-go      go build ./... in each Go module (MODULE= for one)"
+	@echo "  check-sui-rpc Reject deprecated Sui JSON-RPC consumers"
 	@echo "  work-sync     go work sync, then go mod tidy in every Go module"
 	@echo ""
 	@echo "See docs/go-workspace.md and docs/ci.md for details."
@@ -172,3 +173,7 @@ work-sync:
 		echo "==> go mod tidy ($$m)"; \
 		(cd "$$m" && go mod tidy) || exit 1; \
 	done
+
+.PHONY: check-sui-rpc
+check-sui-rpc:
+	python3 scripts/check-sui-rpc-migration.py

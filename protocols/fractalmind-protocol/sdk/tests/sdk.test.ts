@@ -1,28 +1,34 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { FractalMindSDK } from '../src';
+import { FractalMindSDK } from '../src/index.js';
 
 const PACKAGE_ID = '0x123';
 const REGISTRY_ID = '0x456';
 const TARGET_PREFIX =
   '0x0000000000000000000000000000000000000000000000000000000000000123::entry::';
 
-class MockSuiClient {
+function coreObject(value: unknown): { object: unknown } {
+  const fixture = value as { data?: { objectId: string; type: string; content?: { fields: Record<string, unknown> } } } | undefined;
+  return { object: fixture?.data ? { objectId: fixture.data.objectId, type: fixture.data.type, json: fixture.data.content?.fields } : null };
+}
+
+class MockCoreClient {
+  core = this;
   constructor(
     private readonly objectMap: Record<string, unknown> = {},
     private readonly ownedObjects: unknown[] = [],
   ) {}
 
-  async getObject(params: { id: string }): Promise<unknown> {
-    return this.objectMap[params.id] ?? { data: null };
+  async getObject(params: { objectId: string }): Promise<unknown> {
+    return coreObject(this.objectMap[params.objectId]);
   }
 
-  async getOwnedObjects(): Promise<unknown> {
+  async listOwnedObjects(): Promise<unknown> {
     return {
-      data: this.ownedObjects,
+      objects: this.ownedObjects.map((item) => coreObject(item).object),
       hasNextPage: false,
-      nextCursor: null,
+      cursor: null,
     };
   }
 
@@ -31,7 +37,7 @@ class MockSuiClient {
   }
 }
 
-function newSdk(client: MockSuiClient = new MockSuiClient()): FractalMindSDK {
+function newSdk(client: MockCoreClient = new MockCoreClient()): FractalMindSDK {
   return new FractalMindSDK({
     packageId: PACKAGE_ID,
     registryId: REGISTRY_ID,
@@ -432,7 +438,7 @@ for (const c of moveCallCases) {
 }
 
 test('organization.getOrganization parses move object fields', async () => {
-  const mockClient = new MockSuiClient({
+  const mockClient = new MockCoreClient({
     '0x100': {
       data: {
         objectId: '0x100',
@@ -466,7 +472,7 @@ test('organization.getOrganization parses move object fields', async () => {
 });
 
 test('task.getTask parses move object fields', async () => {
-  const mockClient = new MockSuiClient({
+  const mockClient = new MockCoreClient({
     '0x200': {
       data: {
         objectId: '0x200',
@@ -496,7 +502,7 @@ test('task.getTask parses move object fields', async () => {
 });
 
 test('governance.getProposal parses move object fields', async () => {
-  const mockClient = new MockSuiClient({
+  const mockClient = new MockCoreClient({
     '0x300': {
       data: {
         objectId: '0x300',
@@ -531,7 +537,7 @@ test('governance.getProposal parses move object fields', async () => {
 });
 
 test('agent.getAgentCertificate resolves by owner and org id', async () => {
-  const mockClient = new MockSuiClient(
+  const mockClient = new MockCoreClient(
     {},
     [
       {
@@ -583,7 +589,7 @@ test('agent.getAgentCertificate resolves by owner and org id', async () => {
 });
 
 test('agentPolicy.getPolicy parses move object fields', async () => {
-  const mockClient = new MockSuiClient({
+  const mockClient = new MockCoreClient({
     '0x400': {
       data: {
         objectId: '0x400',

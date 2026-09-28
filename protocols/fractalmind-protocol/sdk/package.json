@@ -8,7 +8,7 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "require": "./dist/index.js",
+      "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
@@ -21,20 +21,22 @@
     "access": "public"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rm -rf dist",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx --test tests/*.test.ts"
+    "typecheck": "tsc -p tsconfig.check.json",
+    "test": "tsx --test tests/*.test.ts",
+    "smoke:rpc": "tsx scripts/rpc-smoke.ts"
   },
   "dependencies": {
-    "@mysten/sui": "^1.38.0"
+    "@mysten/sui": "2.33.1"
   },
   "devDependencies": {
     "@types/node": "^20.17.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.2"
-  }
+  },
+  "type": "module"
 }
