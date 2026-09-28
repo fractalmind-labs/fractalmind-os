@@ -1,6 +1,6 @@
 module github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/block-vision/sui-go-sdk v1.1.4
@@ -36,6 +36,6 @@ require (
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
-	golang.org/x/time v0.10.0 // indirect
+	golang.org/x/time v0.15.0 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173 // indirect
 )
