@@ -161,3 +161,44 @@ m.locked=true;assert(!identityAllowed('operate'));assert(!identityDataReady());m
 state=defaults();state.phonePaired=true;delete state.phoneAccess;identityModel();identityModel();assert.equal(identityModel().devices.length,2);assert.equal(identityModel().devices[1].operate,false);
 console.log('PASS: identity migration, device grants, pending/failure/retry, read-only and organization scopes, independent data sync, expiry, revocation, recovery secrecy, reload, rotation and preserved work');
 })()`, identityCtx).catch(error=>{console.error(error);process.exitCode=1;});
+
+// New installs start without an authenticated Human; profile data stays isolated.
+const entryStorage = new Map();
+const entryCtx = vm.createContext({
+  console, assert, crypto: webcrypto, Date, Blob, URL, URLSearchParams, TextEncoder, atob, btoa,
+  location: { search: '' }, setTimeout: () => 0, clearTimeout() {},
+  document: { addEventListener() {} },
+  localStorage: { getItem: k => entryStorage.get(k) || null, setItem: (k,v) => entryStorage.set(k,v) },
+});
+vm.runInContext(source, entryCtx);
+vm.runInContext(`(async()=>{
+assert(state.entry.signedOut);assert(state.entry.fresh);assert.equal(identityModel().id,'');assert(!state.identityDemo);
+assert(!identityAllowed('operate'));assert(!identityAllowed('manage'));assert(!identityDataReady());
+assert.throws(()=>entryPairStart('iOS','Phone'),/恢复包/);
+// Preserve the previously reviewed profile while a different Human is created.
+state=defaults();ensureOrganizationModel();identityModel();state.goals[0].description='preserved review';state.entry={signedOut:true};save();
+const original=JSON.stringify([state.goals,state.tasks,state.memories,state.organizationRegistry,state.identityDemo]);
+let registration=entryCreate('New Human','Ubuntu','system');assert.equal(identityModel().id,'DEMO-HUMAN-YUBING');assert(!identityAllowed('manage'));
+chainDemo().rpc=false;assert(!entryConfirmCreation());assert.equal(registration.status,'pending');chainDemo().rpc=true;
+assert(!entryConfirmCreation(false));assert.equal(registration.status,'failed');assert(!entryConfirmCreation());
+registration=entryCreate('New Human','Ubuntu','system');assert(entryConfirmCreation());assert(!entryConfirmCreation());
+const archived=JSON.parse(localStorage.getItem(KEY));
+assert.equal(JSON.stringify([archived.goals,archived.tasks,archived.memories,archived.organizationRegistry,archived.identityDemo]),original);
+assert.notEqual(profileKey,KEY);assert.equal(identityModel().id,registration.id);assert.equal(state.organizationRegistry.length,0);assert.equal(state.orgId,'');
+assert.equal(state.goals.length,0);assert.equal(state.tasks.length,0);assert.equal(state.memories.length,0);assert.equal(fleet().hosts.length,0);assert.equal(fleet().coordinators.length,0);
+assert(identityAllowed('manage'));assert(!identityAllowed('operate'));
+const kit=await identityCreateKit();identityModel().recovery.saved=true;assert(!JSON.stringify(state).includes(kit));
+const org=entryCreateOrganization('New organization');assert(identityAllowed('operate'));assert.equal(state.organizationRegistry.length,1);assert.throws(()=>entryCreateOrganization('Duplicate'),/权限/);
+state.entry={signedOut:true};assert(!identityAllowed('read'));assert(!identityDataReady());
+let request=entryPairStart('Android','Readonly phone');assert(state.entry.signedOut);assert.equal(identityModel().devices.length,1);
+request.expires=Date.now()-1;assert.throws(()=>entryPairApprove(),/过期/);assert(state.entry.signedOut);
+request=entryPairStart('Android','Readonly phone');entryPairApprove(false);assert(state.entry.signedOut);assert(!identityAllowed('read'));
+const added=identityModel().devices.find(d=>d.id===request.deviceId);assert(!added.manage);assert(!added.operate);assert.deepEqual(added.orgs,[org.id]);assert.equal(added.dataOrgs.length,0);
+entryPairFinish();assert(identityDataReady());assert(identityAllowed('read'));assert(!identityAllowed('operate'));assert(!identityAllowed('manage'));
+state.entry={signedOut:true};await assert.rejects(()=>identityRecover('DEMO-RECOVERY-wrong'));assert(state.entry.signedOut);
+await identityRecover(kit);assert(state.entry.signedOut,'recovery domain does not silently log in the session');state.entry.signedOut=false;
+assert(identityAllowed('manage'));assert(!identityDataReady());assert(identityRestoreData());assert(identityDataReady());
+assert.equal(state.organizationRegistry[0].id,org.id);assert.equal(identityModel().id,registration.id);
+entryLoadDemo();assert(state.entry.signedOut);assert.equal(identityModel().id,'DEMO-HUMAN-YUBING');assert.equal(state.goals[0].description,'preserved review');
+console.log('PASS: unauthenticated fresh install, pending/failed registration, isolated new identity and organization, preserved profile, trusted-device pairing, read-only access and signed-out recovery');
+})()`,entryCtx).catch(error=>{console.error(error);process.exitCode=1;});

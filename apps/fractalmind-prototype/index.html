@@ -104,11 +104,15 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 @media(max-width:540px){.identity-hero{align-items:flex-start;flex-direction:column}.identity-hero-status{align-items:center;flex-direction:row;flex-wrap:wrap}.identity-pair-grid{grid-template-columns:1fr;gap:15px;text-align:center}.identity-scan{width:180px;justify-self:center}.identity-dialog .dialog-footer{flex-wrap:wrap}.identity-state-row{align-items:flex-start;flex-wrap:wrap}.identity-org{flex-wrap:wrap}}
 @container(max-width:540px){.identity-hero{align-items:flex-start;flex-direction:column}.identity-hero-status{align-items:center;flex-direction:row;flex-wrap:wrap}.identity-org{flex-wrap:wrap}}
 
+
+.entry-shell{grid-column:1/-1;min-height:100%;width:100%;background:var(--bg);overflow:auto}.entry-header{display:flex;align-items:center;justify-content:space-between;padding:24px 34px;border-bottom:1px solid var(--line);gap:16px}.entry-header .brand{padding:0}.entry-layout{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 1.05fr;gap:70px;padding:76px 36px 42px}.entry-story h1{font-size:48px;line-height:1.2;letter-spacing:-2px;margin:22px 0}.entry-story>p{color:var(--muted);font-size:15px;line-height:1.9}.entry-orbit{margin:35px 0;padding:26px 0;display:flex;align-items:center;gap:14px;flex-wrap:wrap}.entry-orbit .avatar{width:52px;height:52px}.entry-orbit span:not(.avatar){color:var(--muted)}.entry-card{padding:30px;border:1px solid var(--line);background:var(--panel);border-radius:22px}.entry-card h2{font-size:25px;margin:12px 0}.entry-card>p{color:var(--muted);font-size:12px;line-height:1.8}.entry-card .choice-card{width:100%;text-align:left;gap:14px;margin-top:14px;white-space:normal}.entry-card .choice-card small{line-height:1.6}.entry-card .field{margin-top:18px}.entry-card .btn{white-space:normal}.entry-footer{max-width:1028px;margin:0 auto;padding:0 36px 35px;display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;font-size:11px;color:var(--muted)}.entry-card .identity-scan{max-width:180px;margin:20px auto}.entry-error{color:var(--red,#dd7979);font-size:12px;min-height:20px}.entry-progress{display:flex;gap:8px;margin-bottom:22px}.entry-progress i{height:3px;flex:1;background:var(--line)}.entry-progress i.active{background:var(--green)}
+@container(max-width:800px){.entry-layout{grid-template-columns:1fr;gap:24px;padding:28px 20px}.entry-story h1{font-size:34px;letter-spacing:-1px}.entry-orbit{display:none}.entry-header{padding:16px 20px;flex-wrap:wrap}.entry-card{padding:22px}.entry-footer{padding:0 20px 25px}}
+@media(max-width:800px){.entry-layout{grid-template-columns:1fr;gap:24px;padding:28px 20px}.entry-story h1{font-size:34px;letter-spacing:-1px}.entry-orbit{display:none}.entry-story>p{font-size:13px}.entry-header{padding:16px 20px;flex-wrap:wrap}.entry-card{padding:22px}.entry-footer{padding:0 20px 25px}.entry-story .eyebrow{font-size:10px}}
 </style>
 </head>
 <body>
 <div class="review-bar">
-  <div class="review-brand"><strong>FRACTALMIND <span class="mobile-demo-label">· 演示</span></strong><span style="opacity:.35">/</span><span>产品原型 11 · 我的身份与多设备 · 所有数据与执行均为演示</span></div>
+  <div class="review-brand"><strong>FRACTALMIND <span class="mobile-demo-label">· 演示</span></strong><span style="opacity:.35">/</span><span>产品原型 12 · 首次使用与身份接入 · 所有数据与执行均为演示</span></div>
   <div class="review-actions"><div class="view-switch" aria-label="预览尺寸"><button id="desktop-preview" class="active" data-action="desktop">桌面</button><button id="mobile-preview" data-action="mobile">手机</button></div><button data-action="onboarding">首次使用</button><button data-action="reset">重置演示</button></div>
 </div>
 <div class="app-viewport" id="app-viewport">
@@ -149,7 +153,7 @@ const EN={
   "通知": "Notifications",
   "台连接可用": "hosts connected",
   "本地与云端": "Local & cloud",
-  "产品原型 11 · 我的身份与多设备": "Prototype 08 · Run conversations",
+  "产品原型 12 · 首次使用与身份接入": "Prototype 08 · Run conversations",
   "所有数据与执行均为演示": "All data and execution are simulated",
   "预览尺寸": "Preview size",
   "桌面": "Desktop",
@@ -1199,7 +1203,7 @@ let preferences={locale:'zh-CN',theme:'system'};
 try{const p=JSON.parse(localStorage.getItem(UI_KEY)||'null');if(p){if(['zh-CN','en'].includes(p.locale))preferences.locale=p.locale;if(['light','dark','system'].includes(p.theme))preferences.theme=p.theme;}}catch{}
 const textSources=new WeakMap(),attributeSources=new WeakMap();
 Object.assign(EN,{
-  "产品原型 11 · 我的身份与多设备": "Prototype 09 · Organizations & host enrollment",
+  "产品原型 12 · 首次使用与身份接入": "Prototype 09 · Organizations & host enrollment",
   "已切换组织；演示循环暂停，授权保持原状": "Organization switched; demo loops paused, grants unchanged",
   "主机组织资格已撤销，新的执行已拦截": "Host membership revoked; new execution blocked",
   "设备身份、组织资格与执行授权已核验；收到首次演示心跳。": "Device identity, membership and execution grant verified; first demo heartbeat received.",
@@ -1315,7 +1319,7 @@ Object.assign(EN,{
 });
 Object.assign(EN,{"刚刚上线 · 演示": "Just connected · Demo", "尚未分配进行中的 OKR。可在工作台运行导航中选择执行主机。": "No active OKRs assigned. Select an execution host from the workbench navigation.", "执行未授权": "Execution not authorized", "全部接入记录": "All enrollment records", "组织导航": "Organization navigation", "我的组织": "My organizations", "家中工作区": "Home Coordinator", "云端工作区": "Cloud Coordinator", "尚未上线": "Not connected yet", "待确认": "Pending confirmation", "个人组织的默认规则": "Current organization rules", "当前组织 / 我的组织 / 开放网络": "Current organization / My organizations / Open network"});
 Object.assign(EN,{
-  "产品原型 11 · 我的身份与多设备": "Prototype 11 · Identity & devices",
+  "产品原型 12 · 首次使用与身份接入": "Prototype 11 · Identity & devices",
   "创建邀请码 → 新主机输入 → 自动连接": "Create invitation → Enter on host → Auto-connect",
   "邀请码无效，请检查完整内容": "Invalid invitation code; check the complete code",
   "未找到邀请；演示码仅适用于此浏览器中的模拟链": "Invitation not found; demo codes use this browser's simulated chain",
@@ -1577,6 +1581,87 @@ Object.assign(EN,{
   "演示身份已载入，继续设置设备与恢复包": "Demo identity loaded. Set up devices and a recovery kit."
 });
 Object.assign(EN,{"已撤销":"Revoked","已过期":"Expired"});
+Object.assign(EN,{
+  "产品原型 12 · 首次使用与身份接入": "Prototype 12 · First use and identity",
+  "继续设备接入": "Continue device setup",
+  "尚未连接身份": "No identity connected",
+  "欢迎来到 FractalMind": "Welcome to FractalMind",
+  "让你的 Agent 围绕共同目标，自主协作。": "Let your agents work autonomously toward shared goals.",
+  "创建我的身份": "Create my identity",
+  "第一次使用，从一个属于你的身份开始": "New here? Start with an identity of your own.",
+  "我已有身份": "I already have an identity",
+  "使用已登录的设备，连接这台新设备": "Connect this device using one you already trust.",
+  "使用恢复包找回": "Recover with a kit",
+  "没有可用设备？使用离线保存的恢复包": "No device available? Use your offline recovery kit.",
+  "Host 邀请码用于接入执行主机，不能用于登录个人身份。": "Host invitations enroll execution hosts; they cannot sign in to a personal identity.",
+  "你的身份。": "Your identity.",
+  "你的智能组织。": "Your intelligent organization.",
+  "一个入口，连接你的设备、Agent 与组织。": "One app for your devices, agents and organizations.",
+  "你定义目标与边界，Agent 自主推进。": "You define goals and boundaries. Your agents move the work forward.",
+  "身份由你掌握，组织关系随你延续。": "Your identity stays with you, along with your organizations.",
+  "身份会随你延续，每台设备独立授权。": "One lasting identity, with independent authorization for each device.",
+  "如何称呼你": "What should we call you?",
+  "你的名字": "Your name",
+  "当前设备平台": "This device’s platform",
+  "本机解锁方式": "Unlock this device",
+  "不收集真实密码，不创建真实钱包。身份登记与设备授权在此模拟确认。": "No real passwords or wallets. Identity registration and device authorization are simulated.",
+  "创建身份（演示）": "Create identity (demo)",
+  "身份尚未生效": "Identity not active yet",
+  "确认身份登记": "Confirm identity registration",
+  "等待登记与本机授权一起确认。确认前不会进入组织。": "Registration and device authorization must both be confirmed before entering an organization.",
+  "登记失败，尚未创建身份。请重试。": "Registration failed. No identity was created. Try again.",
+  "模拟确认成功": "Simulate confirmation",
+  "模拟确认失败": "Simulate failure",
+  "重新填写": "Start over",
+  "继续确认身份登记": "Continue registration",
+  "身份已就绪": "Identity ready",
+  "先保护身份，再开始协作": "Protect your identity before you begin",
+  "将恢复包离线保存。即使所有设备丢失，也能找回你的身份。": "Save your recovery kit offline so you can recover even if you lose every device.",
+  "你的组织，从这里开始": "Your organization starts here",
+  "还没有组织、OKR 或主机。创建个人组织后再逐步连接。": "No organizations, OKRs or hosts yet. Create your personal organization to begin.",
+  "组织名称": "Organization name",
+  "我的个人组织": "My personal organization",
+  "确认创建组织（模拟链上交易）": "Confirm organization creation (simulated transaction)",
+  "创建组织并进入": "Create organization and enter",
+  "组织成员邀请与 Host 邀请分开。现有合约尚无 Human 成员邀请，本页暂不提供兑换入口。": "Member invitations are separate from Host invitations. Human member invitations require a contract extension and are not redeemable here.",
+  "连接已有身份": "Connect an existing identity",
+  "在已登录的管理设备上打开「我的身份 → 添加设备」，扫描此设备的配对请求。": "On a trusted management device, open My identity → Add device and scan this device’s request.",
+  "当前演示尚无已有身份记录。可先创建身份，或载入已有身份演示。": "There is no existing identity in this demo yet. Create one or load the existing identity demo.",
+  "载入已有身份演示": "Load existing identity demo",
+  "显示配对请求": "Show pairing request",
+  "例如：我的新手机": "For example: my new phone",
+  "没有可用的旧设备？": "No trusted device available?",
+  "用你的已登录设备扫码": "Scan with your trusted device",
+  "评审模式：下一步切换到旧设备视角，模拟核对与批准。": "Review mode: next, switch to the trusted device to simulate verification and approval.",
+  "模拟旧设备扫码": "Simulate scan on trusted device",
+  "旧设备视角 · 演示": "Trusted device view · Demo",
+  "默认只读，仅授权此组织。不会继承管理设备权限。": "Read-only by default, scoped to this organization. Management permissions are not inherited.",
+  "批准这台新设备（演示）": "Approve new device (demo)",
+  "设备授权已确认": "Device authorization confirmed",
+  "欢迎回来": "Welcome back",
+  "你的身份保持不变。接下来同步已授权组织的数据。": "Your identity is unchanged. Next, sync data for the authorized organization.",
+  "操作授权已就绪，加密数据尚未同步。": "Device authorization is ready. Encrypted data has not synced yet.",
+  "由旧设备向新设备同步加密数据访问；Coordinator 无法解密。": "Your trusted device transfers encrypted data access. The Coordinator cannot decrypt it.",
+  "同步数据并进入": "Sync data and enter",
+  "找回同一个身份。恢复确认后，旧设备授权全部失效。": "Recover the same identity. Confirmation revokes all previous device authorizations.",
+  "此原型只查找本浏览器的模拟链记录。请先载入已有身份演示，再使用对应恢复包。": "This prototype uses simulated chain records in this browser. Load the identity demo before using its recovery kit.",
+  "身份 ID": "Identity ID",
+  "身份 ID 或恢复包不匹配": "Identity ID or recovery kit does not match",
+  "没有恢复包且所有设备丢失时，无法由服务端重置。不要输入真实私钥或密码。": "Without a kit or any trusted device, there is no server-side reset. Do not enter real private keys or passwords.",
+  "交互演示 · 无真实链上交易": "Interactive demo · No real chain transactions",
+  "原型评审工具": "Prototype review tools",
+  "模拟返回原设备": "Simulate returning to original device",
+  "回到未连接身份": "Return to disconnected state",
+  "已有评审数据独立保留，创建新身份不会继承它。": "Existing review data is kept separately. New identities do not inherit it.",
+  "退出此设备": "Sign out of this device",
+  "请输入身份名称": "Enter an identity name",
+  "请输入组织名称": "Enter an organization name",
+  "请从首次使用页开始": "Start from the welcome page",
+  "没有可用的管理设备，请使用恢复包": "No management device is available. Use your recovery kit.",
+  "请先载入已有身份演示，再使用对应恢复包": "Load the existing identity demo, then use its recovery kit",
+  "身份创建已确认": "Identity creation confirmed",
+  "个人组织创建已确认": "Personal organization creation confirmed"
+});
 const localeWords=Object.keys(EN).sort((a,b)=>b.length-a.length);
 const localePattern=new RegExp(localeWords.map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'g');
 const seededText=new Set();
@@ -1644,11 +1729,12 @@ const presentationObserver=new MutationObserver(records=>{
 function observePresentation(){presentationObserver.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['placeholder','aria-label','title']});}
 
 const KEY='fractalmind.product-prototype.v2';
+let profileKey=localStorage.getItem(KEY+'.active')||KEY;
 // Organization is the product boundary. Demo IDs never refer to deployed Sui objects.
 function ensureOrganizationModel(){
   state.organizationRegistry??=[{id:'DEMO-ORG-YUBING',name:'Yubing',kind:'personal',role:'admin'},{id:'DEMO-ORG-LABS',name:'FractalMind Labs',kind:'team',role:'admin'}];
   state.orgId??=state.space==='labs'?'DEMO-ORG-LABS':'DEMO-ORG-YUBING';
-  if(!state.organizationRegistry.some(o=>o.id===state.orgId))state.orgId='DEMO-ORG-YUBING';
+  if(!state.organizationRegistry.some(o=>o.id===state.orgId))state.orgId=state.organizationRegistry[0]?.id||'';
   for(const list of [state.goals,state.tasks,state.memories])for(const item of list)item.orgId??='DEMO-ORG-YUBING';
   state.orgRuntime??={'DEMO-ORG-YUBING':{paused:state.paused||[]}};
   for(const org of state.organizationRegistry)state.orgRuntime[org.id]??={paused:[]};
@@ -1673,7 +1759,7 @@ function switchOrganization(id){
 function chainDemo(){ensureOrganizationModel();return state.chainDemo;}
 function demoId(prefix){return 'DEMO-'+prefix+'-'+crypto.randomUUID().slice(0,8).toUpperCase();}
 function seedHostAuthority(){
-  const ledger=chainDemo();
+  const ledger=chainDemo();if(state.newIdentity)return;
   for(const c of state.fleet.coordinators)c.orgId??='DEMO-ORG-YUBING';
   if(!state.fleet.coordinators.some(c=>c.id==='labs'))state.fleet.coordinators.push({id:'labs',orgId:'DEMO-ORG-LABS',name:'Labs Coordinator',url:'https://labs.example.invalid',connected:true});
   for(const c of state.fleet.coordinators)c.binding??='confirmed';
@@ -1953,6 +2039,7 @@ function identityContent(fn){
 const recoverySecrets = new Map();
 let identityView = null;
 function identityModel() {
+  if(state.entry?.fresh&&!state.identityDemo)return {id:'',name:'',devices:[],requests:[],transactions:[],events:[],generation:0,keyVersion:0};
   ensureOrganizationModel();
   if (!state.identityDemo) {
     const orgs=state.organizationRegistry.map(o=>o.id);
@@ -1967,9 +2054,9 @@ function identityDevice(){const m=identityModel();return m.devices.find(d=>d.id=
 function identityDeviceActive(d){const m=identityModel();return !!d&&d.status==='active'&&d.generation===m.generation&&(!d.expires||d.expires>Date.now());}
 function identityAllowed(action='operate',orgId=state.orgId){
   const m=identityModel(),d=identityDevice();
-  return !m.locked&&!m.lost&&chainDemo().rpc&&identityDeviceActive(d)&&d.orgs.includes(orgId)&&(action==='read'||(action==='manage'?d.manage:d.operate));
+  return !state.entry?.signedOut&&!m.locked&&!m.lost&&chainDemo().rpc&&identityDeviceActive(d)&&(d.orgs.includes(orgId)||(!orgId&&action==='manage'&&d.manage))&&(action==='read'||(action==='manage'?d.manage:d.operate));
 }
-function identityDataReady(orgId=state.orgId){const m=identityModel(),d=identityDevice();return !m.locked&&!m.lost&&identityDeviceActive(d)&&d.dataOrgs.includes(orgId)&&d.keyVersion===m.keyVersion;}
+function identityDataReady(orgId=state.orgId){const m=identityModel(),d=identityDevice();return !state.entry?.signedOut&&!m.locked&&!m.lost&&identityDeviceActive(d)&&d.dataOrgs.includes(orgId)&&d.keyVersion===m.keyVersion;}
 function identityEvent(text,deviceId=''){const m=identityModel();m.events.unshift({id:demoId('IDENTITY-EVENT'),text,deviceId,at:new Date().toISOString()});save();}
 function identityRequest(platform,name){
   if(!identityAllowed('manage'))throw new Error('当前设备没有身份管理权限');
@@ -2045,7 +2132,7 @@ function identityPage(){
   <aside class="stack"><section class="card identity-recovery"><span class="avatar sand">${icon('shield')}</span><h3>身份恢复包</h3><p class="identity-help">所有设备都丢失时，找回同一个身份和加密数据。</p><span class="badge ${kit?'green':'amber'}">${kit?'已确认离线保存':'尚未完成备份'}</span><div class="stack" style="margin-top:18px">${identityButton('kit',kit?'查看与更新恢复包':'设置恢复包',manager?'':'disabled',kit?'':'primary')}${identityButton('recover','使用恢复包找回身份')}</div><small>恢复秘密只由你持有。Coordinator 无法替你重置。</small></section>
   <section class="card"><h3>解锁与敏感操作</h3><p class="identity-help">本机解锁保护设备凭据。新设备授权与组织操作分别确认。</p><label class="field">解锁方式<select id="identity-unlock-method" ${manager?'':'disabled'}><option value="system" ${m.unlock==='system'?'selected':''}>系统解锁 · 演示</option><option value="password" ${m.unlock==='password'?'selected':''}>本地密码 · 演示</option><option value="passkey" ${m.unlock==='passkey'?'selected':''}>Passkey · 概念演示</option></select></label><small>不调用生物识别，不收集真实密码。五平台兼容性需真机验证。</small></section>
   <section class="card"><h3>最近的身份记录</h3>${m.events.slice(0,4).map(e=>`<div class="identity-event"><p>${esc(e.text)}</p><small>${new Date(e.at).toLocaleString(preferences.locale)}</small></div>`).join('')||'<p class="identity-help">演示身份已载入，现有组织与 OKR 已保留。</p>'}</section></aside></div>
-  <details class="card identity-review"><summary>评审场景与实现边界</summary><p class="identity-help">本页模拟链上授权与密钥同步。未创建真实身份、钱包或加密备份，二维码仅为交互示意。</p><div class="row wrap">${identityButton('lost','模拟所有设备丢失',kit?'':'disabled')}${identityButton('rpc',chainDemo().rpc?'模拟 Sui 不可用':'恢复 Sui 连接')}${identityButton('rotate','轮换后续数据密钥',manager?'':'disabled')}</div><p class="identity-help">撤销阻止新的受保护操作；已获得的旧密钥和历史明文无法收回。轮换只保护后续数据。</p>${m.transactions.filter(t=>t.status==='pending').map(t=>`<div class="notice amber"><span>交易待确认</span> · <span class="mono">${t.id}</span>${identityButton('query','查询交易结果',`data-id="${t.id}"`)}</div>`).join('')}<p class="identity-help">Host 邀请码只授予执行资格，不能登录你的身份。恢复包不包含在普通数据导出中。</p></details>`;
+  <details class="card identity-review"><summary>评审场景与实现边界</summary><p class="identity-help">本页模拟链上授权与密钥同步。未创建真实身份、钱包或加密备份，二维码仅为交互示意。</p><div class="row wrap">${entryButton('out','退出此设备')}${identityButton('lost','模拟所有设备丢失',kit?'':'disabled')}${identityButton('rpc',chainDemo().rpc?'模拟 Sui 不可用':'恢复 Sui 连接')}${identityButton('rotate','轮换后续数据密钥',manager?'':'disabled')}</div><p class="identity-help">撤销阻止新的受保护操作；已获得的旧密钥和历史明文无法收回。轮换只保护后续数据。</p>${m.transactions.filter(t=>t.status==='pending').map(t=>`<div class="notice amber"><span>交易待确认</span> · <span class="mono">${t.id}</span>${identityButton('query','查询交易结果',`data-id="${t.id}"`)}</div>`).join('')}<p class="identity-help">Host 邀请码只授予执行资格，不能登录你的身份。恢复包不包含在普通数据导出中。</p></details>`;
 }
 function identityDialog(title,description,body,footer=''){openOverlay(`<section class="dialog wide identity-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">${dialogHeader(title,description,'shield')}<div class="identity-dialog-body">${body}</div>${footer?`<div class="dialog-footer">${footer}</div>`:''}</section>`);}
 function pairingIllustration(){return `<div class="identity-scan" aria-label="配对二维码示意，不能实际扫码"><svg viewBox="0 0 100 100" aria-hidden="true">${[[8,8],[60,8],[8,60]].map(([x,y])=>`<rect x="${x}" y="${y}" width="30" height="30" rx="3" fill="none" stroke="currentColor" stroke-width="5"/><rect x="${x+8}" y="${y+8}" width="14" height="14" rx="1" fill="currentColor"/>`).join('')}<path d="M49 45h13v12H49zm21 0h18v9H70zM47 66h11v24H47zm19-3h11v12H66zm14 17h10v10H80zM64 81h9v9h-9z" fill="currentColor"/></svg><small>二维码示意 · 不能实际扫码</small></div>`;}
@@ -2066,7 +2153,7 @@ document.addEventListener('submit',async e=>{
   try{
     if(form.id==='identity-add-form')showIdentityPair(identityRequest(String(data.get('platform')),String(data.get('name'))));
     if(form.id==='identity-approve-form'){if(!data.get('verified'))return;const tx=identityBegin('add',form.dataset.id,{operate:!!data.get('operate'),shareData:!!data.get('shareData'),days:data.get('days')});tx.failDemo=!!data.get('fail');identitySchedule(tx);}
-    if(form.id==='identity-recover-form'){const view=identityView;await identityRecover(String(data.get('code')));identityRefresh();if(identityView===view)showIdentityRecovered();}
+    if(form.id==='identity-recover-form'){const view=identityView;if(state.entry?.fresh)throw new Error('请先载入已有身份演示，再使用对应恢复包');await identityRecover(String(data.get('code')));state.entry={signedOut:false};identityRefresh();if(identityView===view)showIdentityRecovered();}
   }catch(error){if(form.id==='identity-recover-form'&&form.isConnected){$('#identity-recovery-error').textContent=localizedText(error.message);}else toast(error.message);}
 });
 document.addEventListener('click',async e=>{
@@ -2099,15 +2186,108 @@ document.addEventListener('click',async e=>{
 });
 document.addEventListener('change',e=>{if(e.target.id==='identity-unlock-method'&&identityAllowed('manage')){identityModel().unlock=e.target.value;save();}});
 
+
+// First-use session: profiles keep previous review data separate from new identities.
+let entryScreen='welcome';
+function entryButton(action,label,extra='',style=''){return `<button class="btn ${style}" type="button" data-entry="${action}" ${extra}>${label}</button>`;}
+function entrySignOut(){
+  for(const g of state.goals){g.auto=false;g.autoEpoch=(g.autoEpoch||0)+1;}
+  state.entry={...state.entry,signedOut:true};entryScreen='welcome';closeOverlay();save();render();
+}
+function entryCreate(name,platform,unlock){
+  name=String(name).trim();if(!name||name.length>60)throw new Error('请输入身份名称');
+  if(!state.entry?.signedOut)throw new Error('请从首次使用页开始');
+  if(!['macOS','Windows','Ubuntu','iOS','Android'].includes(platform))throw new Error('请选择支持的平台');
+  state.entry.registration={id:demoId('HUMAN'),deviceId:demoId('APP'),name,platform,unlock,status:'pending'};save();return state.entry.registration;
+}
+function entryConfirmCreation(success=true){
+  const r=state.entry?.registration;if(!state.entry?.signedOut||r?.status!=='pending')return false;
+  if(!chainDemo().rpc)return false;
+  if(!success){r.status='failed';save();return false;}
+  r.status='confirmed';const record={...r};save();
+  profileKey=KEY+'.profile.'+r.id;
+  state={...legacyDefaults(),newIdentity:true,entry:{signedOut:false},goals:[],tasks:[],memories:[],organizationRegistry:[],orgId:'',orgRuntime:{},fleet:{hosts:[],instances:[],coordinators:[]},
+    identityDemo:{id:record.id,name:record.name,generation:1,currentDevice:record.deviceId,locked:false,lost:false,devices:[{id:record.deviceId,name:record.platform+' App',platform:record.platform,status:'active',orgs:[],operate:true,manage:true,expires:0,generation:1,dataOrgs:[],keyVersion:1}],requests:[],transactions:[],events:[],keyVersion:1,recovery:null,unlock:record.unlock}};
+  ensureOrganizationModel();identityEvent('身份创建已确认');save();return true;
+}
+function entryCreateOrganization(name){
+  if(!state.newIdentity||state.organizationRegistry.length||!identityAllowed('manage'))throw new Error('当前设备没有身份管理权限');
+  name=String(name).trim();if(!name||name.length>60)throw new Error('请输入组织名称');
+  const o={id:demoId('ORG'),name,kind:'personal',role:'admin'};state.organizationRegistry.push(o);state.orgId=o.id;state.orgRuntime[o.id]={paused:[]};
+  const d=identityDevice();d.orgs.push(o.id);d.dataOrgs.push(o.id);if(identityModel().recovery)identityModel().recovery.orgs.push(o.id);
+  identityEvent('个人组织创建已确认');save();return o;
+}
+// Explicitly simulate the already trusted device, never give the new device its authority.
+function entryOnTrustedDevice(fn){
+  const m=identityModel(),issuer=m.devices.find(d=>identityDeviceActive(d)&&d.manage&&d.orgs.includes(state.orgId));
+  if(state.entry?.fresh||m.lost||!issuer)throw new Error('没有可用的管理设备，请使用恢复包');
+  const previous=m.currentDevice,locked=m.locked,signedOut=state.entry?.signedOut;
+  m.currentDevice=issuer.id;m.locked=false;state.entry??={};state.entry.signedOut=false;
+  try{return fn();}finally{m.currentDevice=previous;m.locked=locked;state.entry.signedOut=signedOut;save();}
+}
+function entryPairStart(platform,name){
+  if(!state.entry?.signedOut)throw new Error('请从首次使用页开始');
+  const r=entryOnTrustedDevice(()=>identityRequest(platform,name));state.entry.pairId=r.id;save();return r;
+}
+function entryPairApprove(operate=false){
+  if(!chainDemo().rpc)throw new Error('Sui 暂不可用，新的授权暂停');
+  const r=identityModel().requests.find(r=>r.id===state.entry?.pairId);
+  if(!state.entry?.signedOut||!r||r.expires<=Date.now()||r.status!=='pairing')throw new Error('配对已过期或上下文已变化，请重新开始');
+  return entryOnTrustedDevice(()=>{r.status='scanned';const tx=identityBegin('add',r.id,{operate,shareData:true,days:7});identitySettle(tx.id);if(tx.status!=='confirmed'){r.status='pairing';throw new Error('Sui 暂不可用，新的授权暂停');}return r;});
+}
+function entryPairFinish(){
+  const r=identityModel().requests.find(r=>r.id===state.entry?.pairId);
+  if(!state.entry?.signedOut||r?.status!=='authorized'||!entryOnTrustedDevice(()=>identitySyncData(r.deviceId)))throw new Error('当前设备无法同步此组织的数据密钥');
+  const m=identityModel();m.currentDevice=r.deviceId;m.locked=false;state.entry={signedOut:false};save();return r;
+}
+function entryLoadDemo(){
+  save();const saved=localStorage.getItem(KEY);state=saved?JSON.parse(saved):defaults();profileKey=KEY;
+  state.entry={signedOut:true,fresh:false};ensureOrganizationModel();identityModel();save();entryScreen='welcome';
+}
+function renderEntry(screen=entryScreen){
+  entryScreen=screen;const e=state.entry||{},r=identityModel().requests.find(r=>r.id===e.pairId);
+  let body='';
+  if(screen==='welcome')body=`<span class="badge">尚未连接身份</span><h2>欢迎来到 FractalMind</h2><p>让你的 Agent 围绕共同目标，自主协作。</p>
+  <button class="choice-card selected" data-entry="create"><span class="avatar">${icon('spark')}</span><span class="grow"><strong>创建我的身份</strong><small>第一次使用，从一个属于你的身份开始</small></span>${icon('arrow')}</button>
+  <button class="choice-card" data-entry="pair"><span class="avatar blue">${icon('phone')}</span><span class="grow"><strong>我已有身份</strong><small>使用已登录的设备，连接这台新设备</small></span>${icon('arrow')}</button>
+  <button class="choice-card" data-entry="recover"><span class="avatar sand">${icon('shield')}</span><span class="grow"><strong>使用恢复包找回</strong><small>没有可用设备？使用离线保存的恢复包</small></span>${icon('arrow')}</button>${e.registration?.status==='pending'?entryButton('pending','继续确认身份登记'):''}${r&&['pairing','authorized'].includes(r.status)?entryButton(r.status==='authorized'?'paired':'scan','继续设备接入'):''}<p style="margin-top:22px">Host 邀请码用于接入执行主机，不能用于登录个人身份。</p>`;
+  if(screen==='create')body=`${entryButton('welcome','返回')}<h2>创建我的身份</h2><p>身份会随你延续，每台设备独立授权。</p><div class="entry-progress"><i class="active"></i><i></i><i></i></div><form id="entry-create"><label class="field">如何称呼你<input name="name" required maxlength="60" autocomplete="nickname" placeholder="你的名字"></label><label class="field">当前设备平台<select name="platform"><option>macOS</option><option>Windows</option><option>Ubuntu</option><option>iOS</option><option>Android</option></select></label><label class="field">本机解锁方式<select name="unlock"><option value="system">系统解锁 · 演示</option><option value="password">本地密码 · 演示</option></select></label><p class="identity-help">不收集真实密码，不创建真实钱包。身份登记与设备授权在此模拟确认。</p><button class="btn primary" type="submit">创建身份（演示）</button></form>`;
+  if(screen==='pending')body=`<span class="badge amber">身份尚未生效</span><h2>确认身份登记</h2><p>等待登记与本机授权一起确认。确认前不会进入组织。</p><div class="choice-card"><span class="avatar">${icon('shield')}</span><span><strong translate="no">${esc(e.registration?.name||'')}</strong><small>${esc(e.registration?.platform||'')}</small></span></div><p class="entry-error">${e.registration?.status==='failed'?'登记失败，尚未创建身份。请重试。':''}</p><div class="row wrap">${entryButton('confirm','模拟确认成功','','primary')}${entryButton('fail','模拟确认失败')}${entryButton('create','重新填写')}</div>`;
+  if(screen==='organization')body=`<span class="badge green">身份已就绪</span><h2 translate="no">${esc(identityModel().name)}</h2><p class="mono">${esc(identityModel().id)}</p><div class="entry-progress"><i class="active"></i><i class="active"></i><i></i></div><h3>先保护身份，再开始协作</h3><p>将恢复包离线保存。即使所有设备丢失，也能找回你的身份。</p><div class="row wrap">${identityButton('kit',identityModel().recovery?.saved?'查看与更新恢复包':'设置恢复包','','primary')}<span class="badge ${identityModel().recovery?.saved?'green':'amber'}">${identityModel().recovery?.saved?'已确认离线保存':'尚未完成备份'}</span></div><hr style="border:0;border-top:1px solid var(--line);margin:25px 0"><h3>你的组织，从这里开始</h3><p>还没有组织、OKR 或主机。创建个人组织后再逐步连接。</p><form id="entry-organization"><label class="field">组织名称<input name="name" required maxlength="60" placeholder="我的个人组织"></label><label class="check-row"><input type="checkbox" required>确认创建组织（模拟链上交易）</label><button class="btn primary" type="submit">创建组织并进入</button></form><p class="identity-help">组织成员邀请与 Host 邀请分开。现有合约尚无 Human 成员邀请，本页暂不提供兑换入口。</p>`;
+  if(screen==='pair')body=`${entryButton('welcome','返回')}<h2>连接已有身份</h2><p>在已登录的管理设备上打开「我的身份 → 添加设备」，扫描此设备的配对请求。</p>${e.fresh?`<div class="notice">当前演示尚无已有身份记录。可先创建身份，或载入已有身份演示。</div>${entryButton('sample','载入已有身份演示','','primary')}`:`<form id="entry-pair"><label class="field">当前设备平台<select name="platform"><option>iOS</option><option>Android</option><option>macOS</option><option>Windows</option><option>Ubuntu</option></select></label><label class="field">设备名称<input name="name" required maxlength="60" placeholder="例如：我的新手机"></label><button class="btn primary" type="submit">显示配对请求</button></form>`}<p class="identity-help">没有可用的旧设备？</p>${entryButton('recover','使用恢复包找回')}`;
+  if(screen==='scan')body=`${entryButton('pair','返回')}<span class="badge amber">等待已有设备确认</span><h2>用你的已登录设备扫码</h2>${pairingIllustration()}<p translate="no">${esc(r?.name||'')} · ${esc(r?.platform||'')}</p><p class="mono">${esc(r?.deviceId||'')}</p><p>配对请求 5 分钟有效，仅绑定这台新设备。</p><div class="notice">评审模式：下一步切换到旧设备视角，模拟核对与批准。</div><div style="margin-top:18px">${entryButton('approval','模拟旧设备扫码','','primary')}</div>`;
+  if(screen==='approval')body=`${entryButton('scan','返回')}<span class="badge blue">旧设备视角 · 演示</span><h2>允许这台设备代表你吗？</h2><p translate="no">${esc(r?.name||'')} · ${esc(r?.platform||'')}</p><p class="mono">${esc(r?.deviceId||'')}</p><p>${esc(currentOrg()?.name||'')} · <span>7 天</span></p><form id="entry-approval"><label class="check-row"><input type="checkbox" name="operate">允许发起任务与审批具体操作</label><label class="check-row"><input type="checkbox" required>我已核对新设备和组织</label><div class="notice">默认只读，仅授权此组织。不会继承管理设备权限。</div><button class="btn primary" type="submit" style="margin-top:20px">批准这台新设备（演示）</button></form>`;
+  if(screen==='paired')body=`<span class="badge green">设备授权已确认</span><h2>欢迎回来</h2><p>你的身份保持不变。接下来同步已授权组织的数据。</p><div class="notice">操作授权已就绪，加密数据尚未同步。</div><p class="identity-help">由旧设备向新设备同步加密数据访问；Coordinator 无法解密。</p>${entryButton('finish-pair','同步数据并进入','','primary')}`;
+  if(screen==='recover')body=`${entryButton('welcome','返回')}<h2>使用恢复包找回</h2><p>找回同一个身份。恢复确认后，旧设备授权全部失效。</p>${e.fresh?`<div class="notice">此原型只查找本浏览器的模拟链记录。请先载入已有身份演示，再使用对应恢复包。</div>${entryButton('sample','载入已有身份演示','','primary')}`:`<form id="entry-recover"><label class="field">身份 ID<input name="identity" required autocomplete="off" placeholder="DEMO-HUMAN-…"></label><label class="field">演示恢复码<textarea name="code" required autocomplete="off" placeholder="DEMO-RECOVERY-…"></textarea></label><label class="check-row"><input type="checkbox" required>确认撤销旧设备并授权当前新设备</label><button class="btn primary" type="submit">验证恢复包（演示）</button></form>`}<p class="identity-help">没有恢复包且所有设备丢失时，无法由服务端重置。不要输入真实私钥或密码。</p>`;
+  $('#shell').innerHTML=`<section class="entry-shell"><header class="entry-header"><div class="brand">${logo()}FractalMind</div>${presentationControls()}</header><div class="entry-layout"><div class="entry-story"><div class="eyebrow">INTELLIGENCE GROWS TOGETHER</div><h1>你的身份。<br>你的智能组织。</h1><p>一个入口，连接你的设备、Agent 与组织。<br>你定义目标与边界，Agent 自主推进。</p><div class="entry-orbit"><span class="avatar">${icon('shield')}</span><span>→</span><span class="avatar blue">${icon('org')}</span><span>→</span><span class="avatar sand">${icon('agents')}</span></div><p>身份由你掌握，组织关系随你延续。</p></div><section class="entry-card">${body}<p id="entry-error" class="entry-error" role="alert"></p></section></div><footer class="entry-footer"><span>macOS · Windows · Ubuntu · iOS · Android</span><span>交互演示 · 无真实链上交易</span><details><summary>原型评审工具</summary><div class="row wrap" style="margin-top:12px">${entryButton('sample','载入已有身份演示')}${!e.fresh?entryButton('resume','模拟返回原设备'):''}${entryButton('out','回到未连接身份')}</div><p>已有评审数据独立保留，创建新身份不会继承它。</p></details></footer></section>`;
+  applyTheme();translateDOM();save();
+}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-entry]');if(!el||el.disabled)return;const a=el.dataset.entry;try{
+  if(a==='out')return entrySignOut();
+  if(a==='sample'){entryLoadDemo();return renderEntry();}
+  if(a==='resume'){if(state.entry?.fresh)return;state.entry.signedOut=false;page='identity';return render();}
+  if(a==='confirm'||a==='fail'){if(state.entry.registration?.status==='failed')state.entry.registration.status='pending';if(entryConfirmCreation(a==='confirm'))return render();return renderEntry('pending');}
+  if(a==='finish-pair'){entryPairFinish();page='home';return render();}
+  renderEntry(a);
+}catch(error){$('#entry-error').textContent=localizedText(error.message);}});
+document.addEventListener('submit',async e=>{const form=e.target;if(!form.id.startsWith('entry-'))return;e.preventDefault();const data=new FormData(form);try{
+  if(form.id==='entry-create'){entryCreate(data.get('name'),data.get('platform'),data.get('unlock'));renderEntry('pending');}
+  if(form.id==='entry-organization'){entryCreateOrganization(data.get('name'));page='home';render();}
+  if(form.id==='entry-pair'){entryPairStart(data.get('platform'),data.get('name'));renderEntry('scan');}
+  if(form.id==='entry-approval'){entryPairApprove(data.has('operate'));renderEntry('paired');}
+  if(form.id==='entry-recover'){if(state.entry?.fresh||String(data.get('identity')).trim()!==identityModel().id)throw new Error('身份 ID 或恢复包不匹配');await identityRecover(String(data.get('code')));state.entry={signedOut:false};page='identity';render();showIdentityRecovered();}
+}catch(error){if(form.isConnected)$('#entry-error').textContent=localizedText(error.message);else toast(error.message);}});
+
 const agents=[{id:'builder',name:'Builder',role:'开发与实现',color:'',symbol:'code',model:'Claude · 演示配置',desc:'把明确的目标变成可运行的代码，逐步验证每一次修改。'},{id:'researcher',name:'Researcher',role:'研究与验证',color:'blue',symbol:'flask',model:'GPT · 演示配置',desc:'寻找可靠证据，整理可复用的研究结论，帮助团队做出判断。'},{id:'designer',name:'Designer',role:'体验与设计',color:'sand',symbol:'grid',model:'Claude · 演示配置',desc:'从用户的真实目标出发，构建连贯、清晰的产品体验。'}];
 function legacyDefaults(){return{space:'personal',offline:false,phonePaired:false,notifications:true,background:true,paused:[],goals:[{id:'app',name:'发布 FractalMind 的第一个公开版本',description:'让每个人从一个入口，开始与自己的 Agent 协作。',label:'产品构建',color:'green'},{id:'network',name:'探索开放组织的协作方式',description:'从个人的成果，走向共同建设的智能。',label:'开放研究',color:'blue'}],tasks:[{id:'t1',goal:'app',name:'搭建统一 App 的导航与组织切换',agent:'builder',status:'approval',detail:'实现「当前组织 / 我的组织 / 开放网络」三个入口，并保持任务上下文一致。',history:[],messages:[]},{id:'t2',goal:'app',name:'完成首次上手体验设计',agent:'designer',status:'review',detail:'梳理新用户从创建个人组织，到完成第一个真实目标的完整路径。',history:[],messages:[]},{id:'t3',goal:'app',name:'验证五平台运行时兼容性',agent:'researcher',status:'running',detail:'检查 macOS、Windows、Ubuntu、iOS 和 Android 的运行边界与依赖。',history:[],messages:[]},{id:'t4',goal:'app',name:'梳理产品使命与信息架构',agent:'designer',status:'done',detail:'明确从个人组织到组织联邦的产品成长路径。',history:[],messages:[]},{id:'t5',goal:'app',name:'确认OKR的状态约定',agent:'builder',status:'done',detail:'区分运行完成、成果提交和验收通过。',history:[],messages:[]},{id:'t6',goal:'network',name:'研究组织成员的授权与撤销机制',agent:'researcher',status:'queued',detail:'整理可验证授权、成员角色和撤销后的执行边界。',history:[],messages:[]},{id:'t7',goal:'network',name:'建立公开协作的研究目录',agent:'researcher',status:'done',detail:'建立可引用的公开组织研究资料。',history:[],messages:[]}],memories:[{id:'m1',title:'成果提交与任务验收，应该分开',body:'Agent 完成执行后提交成果，由人或已授权的验收者确认。保留过程中的证据，让完成状态有据可查。',type:'产品决策',source:'确认OKR的状态约定',date:'今天'},{id:'m2',title:'个人组织是开放网络的起点',body:'保留本地优先、模型可选和数据可导出的能力，让用户自主决定如何参与团队与组织。',type:'设计原则',source:'梳理产品使命与信息架构',date:'昨天'},{id:'m3',title:'用相同的原语，组织不同尺度的协作',body:'目标、任务、身份、权限、状态和证据，在 Agent、团队与组织之间保持一致。',type:'研究笔记',source:'建立公开协作的研究目录',date:'9 月 26 日'}]};}
-let state;try{const saved=JSON.parse(localStorage.getItem(KEY));state=saved&&Array.isArray(saved.tasks)&&Array.isArray(saved.goals)&&Array.isArray(saved.memories)?saved:defaults();}catch{state=defaults();}
+let state;try{const saved=JSON.parse(localStorage.getItem(profileKey));state=saved&&Array.isArray(saved.tasks)&&Array.isArray(saved.goals)&&Array.isArray(saved.memories)?saved:{...defaults(),entry:{signedOut:true,fresh:true}};}catch{state={...defaults(),entry:{signedOut:true,fresh:true}};}
+if(new URLSearchParams(location.search).get('prototype')==='welcome')state.entry={...state.entry,signedOut:true};
 ensureOrganizationModel();state.goals.forEach(g=>{if(g.auto)g.manualPause=true;g.auto=false;});
 let selectedOKR=null,watchedOKR='app',okrFilter='all';
 const entryPage=new URLSearchParams(location.search).get('prototype');
 let page=entryPage==='identity'?'identity':entryPage==='hosts'?'hosts':entryPage==='okr'?'tasks':'home',filter='all',taskQuery='',activeTask=null,detailTab='overview',onboardStep=0,overlayReturn=null,toastTimer=null,activeTimers=new Set();
 const $=s=>document.querySelector(s);
-function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch{}}
+function save(){try{localStorage.setItem(profileKey,JSON.stringify(state));localStorage.setItem(KEY+'.active',profileKey);}catch{}}
 function mobileReadOnly(){return !identityAllowed('operate');}
 function canOperate(){return !state.offline&&!mobileReadOnly()&&identityAllowed('operate');}
 function blockedMessage(){return state.offline?'执行设备离线，恢复连接后可以继续':'当前设备没有此组织的操作权限，请在我的身份中检查授权';}
@@ -2120,8 +2300,8 @@ function stats(){return{running:new Set(orgTasks().filter(t=>t.status==='running
 function pageHeading(eyebrow,title,desc,action=''){return `<div class="page-heading"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1><p>${desc}</p></div>${action}</div>`;}
 function toast(message){clearTimeout(toastTimer);$('#toast-area').innerHTML=`<div class="toast">${icon('checkCircle')}${esc(message)}</div>`;toastTimer=setTimeout(()=>$('#toast-area').innerHTML='',3500);}
 function nav(id,label,ico,count=''){return `<button class="nav-item ${page===id?'active':''}" data-page="${id}" ${page===id?'aria-current="page"':''}>${icon(ico)}${label}${count!==''?`<span class="nav-count ${id==='governance'?'alert':''}">${count}</span>`:''}</button>`;}
-function render(){fleet();identityModel();const s=stats();const names={home:'工作台',tasks:'OKR',hosts:'主机与算力',agents:'团队与 Agents',memory:'记忆与成果',governance:'治理与审批',organizations:'我的组织',network:'开放网络',settings:'组织设置',identity:'我的身份'};$('#shell').innerHTML=`
-<aside class="sidebar"><button class="brand" data-page="home" aria-label="FractalMind 工作台">${logo()}FractalMind</button><button class="space-switch" data-action="spaces"><span class="avatar">${currentOrg().kind==='personal'?'Y':'F'}</span><span class="grow"><strong>${esc(currentOrg().name)}</strong><small>${currentOrg().kind==='personal'?'个人组织 · 演示':'团队组织 · 演示'}</small></span>${icon('down')}</button><div class="nav-label">你的组织</div><nav class="nav-list" aria-label="组织导航">${nav('home','工作台','home')}${nav('tasks','OKR','target',activeOKRs().length)}${nav('hosts','主机与算力','laptop',fleet().hosts.length)}${nav('agents','团队与 Agents','agents')}${nav('memory','记忆与成果','book')}${nav('governance','治理与审批','shield',s.approval+orgGoals().filter(g=>g.blocker).length||'')}</nav><div class="nav-divider"></div><div class="nav-label">连接更大的智能</div><nav class="nav-list" aria-label="网络导航">${nav('organizations','我的组织','org')}${nav('network','开放网络','globe')}</nav><div class="sidebar-footer">${nav('identity','我的身份','shield')}${nav('settings','组织设置','settings')}<div class="sidebar-mission">Intelligence grows together.<br>ASI that no one owns.</div></div></aside>
+function render(){if(state.entry?.signedOut)return renderEntry();if(state.newIdentity&&!state.organizationRegistry.length)return renderEntry('organization');fleet();identityModel();const s=stats();const names={home:'工作台',tasks:'OKR',hosts:'主机与算力',agents:'团队与 Agents',memory:'记忆与成果',governance:'治理与审批',organizations:'我的组织',network:'开放网络',settings:'组织设置',identity:'我的身份'};$('#shell').innerHTML=`
+<aside class="sidebar"><button class="brand" data-page="home" aria-label="FractalMind 工作台">${logo()}FractalMind</button><button class="space-switch" data-action="spaces"><span class="avatar">${esc(currentOrg().name.slice(0,1).toUpperCase())}</span><span class="grow"><strong>${esc(currentOrg().name)}</strong><small>${currentOrg().kind==='personal'?'个人组织 · 演示':'团队组织 · 演示'}</small></span>${icon('down')}</button><div class="nav-label">你的组织</div><nav class="nav-list" aria-label="组织导航">${nav('home','工作台','home')}${nav('tasks','OKR','target',activeOKRs().length)}${nav('hosts','主机与算力','laptop',fleet().hosts.length)}${nav('agents','团队与 Agents','agents')}${nav('memory','记忆与成果','book')}${nav('governance','治理与审批','shield',s.approval+orgGoals().filter(g=>g.blocker).length||'')}</nav><div class="nav-divider"></div><div class="nav-label">连接更大的智能</div><nav class="nav-list" aria-label="网络导航">${nav('organizations','我的组织','org')}${nav('network','开放网络','globe')}</nav><div class="sidebar-footer">${nav('identity','我的身份','shield')}${nav('settings','组织设置','settings')}<div class="sidebar-mission">Intelligence grows together.<br>ASI that no one owns.</div></div></aside>
 <div class="main-wrap"><header class="topbar"><div class="breadcrumb"><button data-action="spaces">${esc(currentOrg().name)}</button>${icon('chevron')}<strong>${names[page]}</strong></div><div class="row">${presentationControls()}<button class="search-trigger" data-action="search">${icon('search')}搜索任何内容 <span class="kbd">⌘ K</span></button><button class="icon-btn notification" data-action="notifications" aria-label="通知">${icon('bell')}</button><button class="avatar topbar-user" data-page="identity" aria-label="我的身份">${esc(identityModel().name.slice(0,1))}</button></div></header>${state.offline?`<div class="banner">${icon('wifi')}执行设备离线 · 显示最后同步的数据<button class="link-btn" data-action="online" style="margin-left:auto">重新连接</button></div>`:''}${mobileReadOnly()?`<div class="banner">${icon('lock')}当前设备的操作权限不可用 <button class="link-btn" data-page="identity">查看我的身份</button></div>`:''}<main class="content" id="content"><div class="page-inner ${page==='tasks'?'okr-page':page==='hosts'?'hosts-page':page==='home'?'workbench-page':''}">${identityContent(({home:homePage,tasks:tasksPage,hosts:hostsPage,agents:agentsPage,memory:memoryPage,governance:governancePage,organizations:organizationsPage,network:networkPage,settings:settingsPage,identity:identityPage})[page])}</div></main><nav class="bottom-nav" aria-label="手机导航">${[['home','home','工作台'],['tasks','target','OKR'],['hosts','laptop','主机'],['organizations','org','组织'],['settings','settings','设置']].map(([id,ic,label])=>`<button class="${page===id?'active':''}" data-page="${id}">${icon(ic)}${label}</button>`).join('')}</nav></div>`;applyTheme();translateDOM();save();}
 
 function decision(t){return `<div class="decision-card ${t.status==='review'?'review-card':''}"><div class="row">${badge(t.status)}<span class="spacer"></span><span class="muted" style="font-size:9px">${t.status==='approval'?'刚刚':'12 分钟前'}</span></div><h3>${t.status==='approval'?'允许 '+agentFor(t.agent).name+' 修改项目文件？':esc(t.name)}</h3><p>${t.status==='approval'?'范围已限定为当前项目，确认后继续执行。':'成果已提交。检查证据，给这项工作一个确定的结果。'}</p><button class="btn" data-action="task" data-id="${t.id}">${t.status==='approval'?'查看并审批':'查看成果'}${icon('arrow')}</button></div>`;}
@@ -2147,8 +2327,8 @@ function orgCard(o){return `<article class="card org-card"><div class="org-art" 
 function organizationsPage(){return organizationDirectory();}
 function mapArt(){return `<svg class="network-map" viewBox="0 0 380 240" fill="none" aria-label="个人、团队、组织构成的开放网络"><g stroke="var(--tone-becdad, #becdad)" stroke-width="1"><path d="m180 113-76-67 166-8-90 75 120 45-155 56 35-101-124 47 48-114m166-8 30 120-50-68-105 124M56 160l89 54m35-101 70-23M104 46l-64 1m230-9 61-15m-31 135 47 44M145 214l-35 20"/><circle cx="180" cy="113" r="50" stroke-dasharray="2 5"/><circle cx="180" cy="113" r="102" stroke="var(--tone-dbe3cf, #dbe3cf)" stroke-dasharray="3 5"/></g><g fill="var(--tone-e3ecd6, #e3ecd6)" stroke="var(--tone-b4c69c, #b4c69c)"><circle cx="104" cy="46" r="19"/><circle cx="270" cy="38" r="14"/><circle cx="300" cy="158" r="19"/><circle cx="145" cy="214" r="13"/><circle cx="56" cy="160" r="14"/><circle cx="250" cy="90" r="7"/></g><circle cx="180" cy="113" r="31" fill="var(--tone-e8eedf, #e8eedf)" stroke="var(--tone-9fb68a, #9fb68a)"/><path d="m180 93 20 34h-40Z" fill="var(--tone-7f9b67, #7f9b67)"/><path d="m180 103 10 18h-20Z" fill="var(--tone-e8eedf, #e8eedf)"/><g fill="var(--tone-9caf84, #9caf84)"><circle cx="40" cy="47" r="4"/><circle cx="331" cy="23" r="4"/><circle cx="347" cy="202" r="4"/><circle cx="110" cy="234" r="4"/></g><g fill="var(--tone-8a9d74, #8a9d74)" font-family="inherit" font-size="9"><text x="77" y="81">你的组织</text><text x="278" y="191">组织</text><text x="232" y="20">Agent 团队</text><text x="162" y="166">FractalMind</text></g></svg>`;}
 function networkPage(){return `${pageHeading('THE OPEN NETWORK','智能，因连接而生长。','发现共同的目标，找到值得一起完成的事。')}<section class="network-hero"><div><span class="eyebrow">ASI THAT NO ONE OWNS</span><h1>由每一个你，<br>共同建设的智能。</h1><p>从一个 Agent 到一个团队，从一个组织到开放网络。能力可以组合，成果可以延续。</p><span class="pill">${icon('globe')}无需许可参与 · 自主选择协作</span></div>${mapArt()}</section><div class="toolbar"><h2 style="font-size:15px">发现组织</h2><div class="inline-search">${icon('search')}<input id="org-search" class="search-field" placeholder="按名称查找组织…" aria-label="查找组织"></div></div><div class="org-grid" id="org-results">${organizations.map(orgCard).join('')}</div><div class="footer-note"><span class="row">${icon('info')}本页为演示组织与数据，不代表实时链上状态。</span><span>TESTNET · CONCEPT PREVIEW</span></div>`;}
-function settingsPage(){return `${pageHeading('SPACE SETTINGS','属于你的组织，由你掌控。','连接设备、管理工具，让工作以你习惯的方式发生。')}<div class="settings-grid"><div class="stack">${appearanceControls()}<div class="card"><h3>身份与设备</h3><button class="choice-card" data-page="identity">${icon('shield')}<span class="grow"><strong>我的身份与已授权设备</strong><small>添加设备、管理权限、保存恢复包</small></span>${icon('arrow')}</button><button class="choice-card" data-page="hosts">${icon('laptop')}<span class="grow"><strong>管理本地与云端主机</strong><small>通过 Host 邀请码接入执行主机</small></span>${icon('arrow')}</button></div><div class="card"><h3>模型与工具</h3>${[['spark','模型连接','Claude / GPT · 演示配置','已配置'],['folder','工作区访问','fractalmind-os · 仅当前项目','已授权'],['code','命令执行','遵守 OKR 范围与预算','约定内自主'],['book','内置技能','文件分析 · 代码检查 · 研究整理','3 项启用']].map(([ic,title,sub,label])=>`<div class="setting-row"><div class="row">${icon(ic)}<div><p>${title}</p><small>${sub}</small></div></div><button class="badge green" data-action="tool" data-id="${esc(title)}">${label}${icon('chevron')}</button></div>`).join('')}</div></div><div class="stack"><div class="card"><h3>工作偏好</h3><div class="setting-row"><div><p>需要决定时通知我</p><small>待审批、待验收和执行失败</small></div><button class="switch ${state.notifications?'on':''}" role="switch" aria-checked="${state.notifications}" aria-label="需要决定时通知我" data-action="toggle-notifications"></button></div><div class="setting-row"><div><p>关闭窗口后继续执行</p><small>保持本机核心服务运行</small></div><button class="switch ${state.background?'on':''}" role="switch" aria-checked="${state.background}" aria-label="关闭窗口后继续执行" data-action="toggle-background"></button></div></div><div class="card"><h3>数据与诊断</h3><p class="muted" style="font-size:11px;margin:10px 0 18px">产品持久状态以 Sui 为准；本页只使用浏览器模拟缓存。个人组织不自动保证数据保密。</p><div class="stack" style="gap:9px"><button class="btn" data-action="export">${icon('download')}导出演示数据</button><button class="btn" data-action="diagnostic">${icon('info')}查看服务诊断</button><button class="btn" data-action="${state.offline?'online':'offline'}">${icon('wifi')}${state.offline?'恢复设备连接':'模拟设备离线'}</button></div></div><div class="notice">FractalMind · 产品原型 11 · 我的身份与多设备<br>所有操作均为本地交互演示，无真实执行。</div></div></div>`;}
-function go(id,goalId=null){if(id==='tasks')selectedOKR=goalId;page=id;closeOverlay();render();$('#content').scrollTop=0;}
+function settingsPage(){return `${pageHeading('SPACE SETTINGS','属于你的组织，由你掌控。','连接设备、管理工具，让工作以你习惯的方式发生。')}<div class="settings-grid"><div class="stack">${appearanceControls()}<div class="card"><h3>身份与设备</h3><button class="choice-card" data-page="identity">${icon('shield')}<span class="grow"><strong>我的身份与已授权设备</strong><small>添加设备、管理权限、保存恢复包</small></span>${icon('arrow')}</button><button class="choice-card" data-page="hosts">${icon('laptop')}<span class="grow"><strong>管理本地与云端主机</strong><small>通过 Host 邀请码接入执行主机</small></span>${icon('arrow')}</button></div><div class="card"><h3>模型与工具</h3>${[['spark','模型连接','Claude / GPT · 演示配置','已配置'],['folder','工作区访问','fractalmind-os · 仅当前项目','已授权'],['code','命令执行','遵守 OKR 范围与预算','约定内自主'],['book','内置技能','文件分析 · 代码检查 · 研究整理','3 项启用']].map(([ic,title,sub,label])=>`<div class="setting-row"><div class="row">${icon(ic)}<div><p>${title}</p><small>${sub}</small></div></div><button class="badge green" data-action="tool" data-id="${esc(title)}">${label}${icon('chevron')}</button></div>`).join('')}</div></div><div class="stack"><div class="card"><h3>工作偏好</h3><div class="setting-row"><div><p>需要决定时通知我</p><small>待审批、待验收和执行失败</small></div><button class="switch ${state.notifications?'on':''}" role="switch" aria-checked="${state.notifications}" aria-label="需要决定时通知我" data-action="toggle-notifications"></button></div><div class="setting-row"><div><p>关闭窗口后继续执行</p><small>保持本机核心服务运行</small></div><button class="switch ${state.background?'on':''}" role="switch" aria-checked="${state.background}" aria-label="关闭窗口后继续执行" data-action="toggle-background"></button></div></div><div class="card"><h3>数据与诊断</h3><p class="muted" style="font-size:11px;margin:10px 0 18px">产品持久状态以 Sui 为准；本页只使用浏览器模拟缓存。个人组织不自动保证数据保密。</p><div class="stack" style="gap:9px"><button class="btn" data-action="export">${icon('download')}导出演示数据</button><button class="btn" data-action="diagnostic">${icon('info')}查看服务诊断</button><button class="btn" data-action="${state.offline?'online':'offline'}">${icon('wifi')}${state.offline?'恢复设备连接':'模拟设备离线'}</button></div></div><div class="notice">FractalMind · 产品原型 12 · 首次使用与身份接入<br>所有操作均为本地交互演示，无真实执行。</div></div></div>`;}
+function go(id,goalId=null){if(id==='tasks')selectedOKR=goalId;page=id;closeOverlay();render();if($('#content'))$('#content').scrollTop=0;}
 function openOverlay(html,kind='dialog'){activeConversation=null;overlayReturn=document.activeElement;$('#overlay').classList.add('open');$('#overlay').innerHTML=`<div class="backdrop" data-action="close"></div>${kind==='drawer'?html:`<div class="dialog-wrap">${html}</div>`}`;translateDOM($('#overlay'));requestAnimationFrame(()=>{const focus=$('#run-chat-input')||$('#overlay input:not([type="checkbox"]),#overlay textarea,#overlay button');focus?.focus();});}
 function closeOverlay(){identityView=null;inviteView={};activeConversation=null;const wasOpen=$('#overlay').classList.contains('open');$('#overlay').innerHTML='';$('#overlay').classList.remove('open');activeTask=null;if(wasOpen&&overlayReturn?.isConnected)overlayReturn.focus();}
 function dialogHeader(title,desc,ico='spark'){return `<div class="row between"><span class="avatar">${icon(ico)}</span><button class="icon-btn" data-action="close" aria-label="关闭对话框">${icon('close')}</button></div><h2 id="dialog-title">${title}</h2><p>${desc}</p>`;}
@@ -2167,7 +2347,7 @@ function showMemory(id){const m=orgMemories().find(x=>x.id===id);openOverlay(`<s
 function showAgent(id){const a=agentFor(id);const taskCount=orgTasks().filter(t=>t.agent===id&&!['done','cancelled'].includes(t.status)).length;openOverlay(`<section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">${dialogHeader(a.name,a.desc,a.symbol)}<div class="detail-grid" style="margin-top:24px"><div><small>角色</small>${a.role}</div><div><small>模型</small>${a.model}</div><div><small>执行主机</small>${esc(hostAgentSummary(id))}</div><div><small>任务</small>${taskCount} 项待处理</div></div><div class="notice">${icon('shield')}按 OKR 已确认范围自主执行；越界、超预算与公开发布需升级确认。</div><div class="dialog-footer"><button class="btn" data-action="pause-agent" data-id="${id}">${organizationRuntime().paused.includes(id)?'恢复 Agent':'暂停 Agent'}</button><button class="btn primary" data-action="agent-tasks" data-id="${id}">查看任务 ${icon('arrow')}</button></div></section>`);}
 function showOrganization(id){const o=organizations.find(x=>x.id===id);openOverlay(`<section class="dialog wide" role="dialog" aria-modal="true" aria-labelledby="dialog-title">${dialogHeader(o.name,o.mission,'org')}<div class="row wrap" style="margin:20px 0"><span class="badge ${o.color}">${o.topic}</span><span class="badge">${o.members} 位成员 · 演示</span><span class="badge">Sui Testnet</span></div><h3>我们如何协作</h3><p class="muted" style="font-size:12px;margin:10px 0 18px">围绕公开目标贡献工作，提交可核查的成果。每位成员的职责、权限和贡献都清楚可见。</p><h3>参与之前</h3><div class="setting-row"><p>了解目标与成员规则</p>${icon('checkCircle')}</div><div class="setting-row"><p>自主选择公开的个人信息</p>${icon('lock')}</div><div class="setting-row"><p>组织权限独立授予</p>${icon('shield')}</div><div class="notice" style="margin-top:16px">演示资料 · 原型不查询链上身份、不提交加入申请。</div><div class="dialog-footer"><button class="btn" data-action="close">返回</button><button class="btn primary" data-action="org-interest" data-id="${id}">${id==='labs'?'进入组织概念预览':'了解参与方式'}${icon('arrow')}</button></div></section>`);}
 function showSpaces(){showOrganizationSwitcher();}
-function onboarding(){onboardStep=0;drawOnboarding();}
+function onboarding(){entrySignOut();}
 function drawOnboarding(){const headings=[['你的智能，从这里生长。','先建立可恢复的个人身份，再进入你的组织。'],['先给想法，一个落脚点。','选择一个工作区，Agent 的操作会限定在这里。'],['选择与你一起工作的伙伴。','原型提供演示配置，无需输入任何真实密钥。']];const [title,desc]=headings[onboardStep];openOverlay(`<section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><div class="step-track">${[0,1,2].map(i=>`<i class="${i<=onboardStep?'active':''}"></i>`).join('')}</div>${dialogHeader(title,desc,onboardStep===0?'leaf':onboardStep===1?'folder':'agents')}${onboardStep===0?`<button class="choice-card" data-page="identity">${icon('shield')}<span><strong>设置我的身份</strong><small>演示身份已载入，继续设置设备与恢复包</small></span>${icon('arrow')}</button><div style="margin:22px 0">${['个人使用也创建链上组织','按需连接 Agent、工具与设备','自主参与更大的组织与网络'].map(t=>`<p class="row" style="font-size:12px;margin:12px 0;color:var(--tone-8a977e, #8a977e)">${icon('checkCircle')}${t}</p>`).join('')}</div>`:onboardStep===1?`<button class="choice-card selected"><span class="avatar">${icon('folder')}</span><span><strong>fractalmind-os</strong><small>示例工作区 · 无实际文件访问</small></span></button><div class="notice" style="margin-top:15px">你确认工作范围与验证规则，Agent 自主推进；越界时请求你的决定。</div>`:`<button class="choice-card selected">${ava('builder')}<span><strong>Builder · 开发与实现</strong><small>Claude · 演示模型 · MacBook Pro</small></span></button><div class="notice" style="margin-top:15px">模型已配置（演示）。真实产品会在此检查鉴权、计费来源与可用能力。</div>`}<div class="dialog-footer">${onboardStep?'<button class="btn" data-action="onboard-back">上一步</button>':''}<button class="btn primary" data-action="onboard-next">${onboardStep===2?'创建第一个 OKR':'继续'}${icon('arrow')}</button></div></section>`);}
 function showPair(){showIdentityAdd();}
 
