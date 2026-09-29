@@ -202,3 +202,36 @@ assert.equal(state.organizationRegistry[0].id,org.id);assert.equal(identityModel
 entryLoadDemo();assert(state.entry.signedOut);assert.equal(identityModel().id,'DEMO-HUMAN-YUBING');assert.equal(state.goals[0].description,'preserved review');
 console.log('PASS: unauthenticated fresh install, pending/failed registration, isolated new identity and organization, preserved profile, trusted-device pairing, read-only access and signed-out recovery');
 })()`,entryCtx).catch(error=>{console.error(error);process.exitCode=1;});
+
+// Importing a discovered runtime must not turn observation into execution authority.
+const discoveryCtx = vm.createContext({
+  console, assert, crypto: webcrypto, Date, Blob, URL, URLSearchParams, TextEncoder, atob, btoa,
+  location: { search: '' }, setTimeout: () => 0, clearTimeout() {},
+  document: { addEventListener() {} },localStorage:{getItem:()=>null,setItem(){}},
+});
+vm.runInContext(source,discoveryCtx);
+vm.runInContext(`
+state=defaults();fleet();identityModel();
+const h=hostById('mini-studio'),g=orgGoals()[0],original=JSON.stringify([state.goals,state.tasks,state.fleet.instances]);
+let rows=discoveryScan(h.id);assert.equal(rows.length,3);
+currentOrg().role='member';assert.throws(()=>discoveryBegin('import',rows[0].key),/管理设备/);currentOrg().role='admin';
+let tx=discoveryBegin('import',rows[0].key);assert.equal(discoveredImports().length,0);assert(!discoverySettle(tx.id,false));assert.equal(discoveredImports().length,0);
+tx=discoveryBegin('import',rows[0].key);assert(discoverySettle(tx.id));assert(!discoverySettle(tx.id));
+assert.equal(JSON.stringify([state.goals,state.tasks,state.fleet.instances]),original,'observe import does not modify running work');
+let r=discoveredImports()[0];assert.equal(r.mode,'observe');assert.throws(()=>discoveryBegin('import',rows[0].key),/已经导入/);
+assert.throws(()=>discoveryBegin('import',rows[2].key),/未核实/);
+rows[1].observedAt-=6*60000;assert.throws(()=>discoveryBegin('import',rows[1].key),/过期/);
+rows=discoveryScan(h.id);tx=discoveryBegin('import',rows[1].key);assert(discoverySettle(tx.id));const observer=discoveredImports()[1];assert.throws(()=>discoveryBegin('manage',observer.id,g.id),/仅支持观察/);
+rows=discoveryScan('cloud-sg');tx=discoveryBegin('import',rows[0].key);assert(discoverySettle(tx.id));assert.notEqual(discoveredImports()[2].agentId,r.agentId,'same name on another Host is a separate identity');
+identityModel().locked=true;assert.throws(()=>discoveryScan(h.id),/权限/);assert.throws(()=>discoveryBegin('manage',r.id,g.id),/管理设备/);identityModel().locked=false;
+tx=discoveryBegin('manage',r.id,g.id);const oldBudget=g.budget;g.budget++;assert(!discoverySettle(tx.id));assert.equal(r.mode,'observe');g.budget=oldBudget;
+tx=discoveryBegin('manage',r.id,g.id);assert(discoverySettle(tx.id));assert.equal(g.owner,r.agentId);assert.equal(g.hostId,h.id);assert.equal(g.auto,false);assert(g.manualPause);assert(discoveryManaged(r,g));assert.equal(assignedInstance(g).importId,r.id);
+g.budget++;assert(!discoveryManaged(r,g));assert.equal(hostExecutionProblem(g).id,'host-scope');assert(!runHostCommand(h,'restart',r.key,''));
+tx=discoveryBegin('manage',r.id,g.id);assert(discoverySettle(tx.id));assert(discoveryManaged(r,g));assert.equal(state.fleet.instances.filter(i=>i.importId===r.id).length,1);
+const beforeOffline=discoveryModel().snapshots[h.id].at;h.status='offline';assert.throws(()=>discoveryScan(h.id),/失联/);assert.equal(discoveryModel().snapshots[h.id].at,beforeOffline);assert.equal(discoveryStatus(r),'主机失联 · 状态未知');h.status='online';
+state.orgId='DEMO-ORG-LABS';assert.equal(discoveredImports().length,0);assert.equal(discoveryCandidate(r.key),undefined);assert.throws(()=>discoveryBegin('manage',r.id,g.id));
+state.orgId=h.orgId;state=JSON.parse(JSON.stringify(state));assert.equal(discoveredImports().length,3);assert.equal(discoveryRecord(r.id).agentId,r.agentId);
+assert.equal(discoveryScan(h.id,'empty').length,0);assert.equal(discoveredImports().length,3,'empty scan does not delete confirmed identities');
+assert.equal(discoveryStatus(discoveryRecord(r.id)),'观测已失效 · 需要重新发现');assert.equal(hostExecutionProblem(orgGoals()[0]).id,'unknown');
+console.log('PASS: discovery permissions, stale/unverified/offline observations, atomic imports, duplicate prevention, name isolation, observation-only adapters, constrained OKR handoff, stale grant blocking, reconfirmation and reload');
+`,discoveryCtx);
