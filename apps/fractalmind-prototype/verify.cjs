@@ -109,3 +109,55 @@ fleet().coordinators.find(c=>c.id==='home').connected=true;assert(connectEnrolle
 ({i,code}=await create());const record=JSON.stringify(i);inviteSecrets.clear();state=JSON.parse(JSON.stringify(state));assert.equal(JSON.stringify(inviteById(i.id)),record,'public invite survives reload without secret');
 await assert.rejects(()=>redeem('123456'),/INVITE_INVALID/);
 })()`, ctx).then(()=>console.log('PASS: invitation secrecy, prior approval, one-time atomic redemption, races, proof/device/org/network binding, permissions, expiry, revocation, failure/retry, offline recovery and reload')).catch(error=>{console.error(error);process.exitCode=1;});
+
+const identityStorage = new Map();
+const identityCtx = vm.createContext({
+  console, assert, crypto: webcrypto, Date, Blob, URL, URLSearchParams, TextEncoder, atob, btoa,
+  location: { search: '' }, setTimeout: () => 0, clearTimeout() {},
+  document: { addEventListener() {} },
+  localStorage: { getItem: k => identityStorage.get(k) || null, setItem: (k, v) => identityStorage.set(k, v) },
+});
+vm.runInContext(source, identityCtx);
+vm.runInContext(`(async()=>{
+state=defaults();fleet();
+const original=JSON.stringify([state.goals,state.tasks,state.memories,state.organizationRegistry]);
+let m=identityModel();const human=m.id,root=m.currentDevice;
+identityModel();assert.equal(m.devices.length,1,'idempotent fixture migration');
+assert(identityAllowed('manage'));assert(identityDataReady());
+const r=identityRequest('iOS','Review phone');
+assert.throws(()=>identityBegin('add',r.id),/配对/);r.status='scanned';
+let tx=identityBegin('add',r.id,{operate:false,shareData:true,days:7});
+assert(!m.devices.some(d=>d.id===r.deviceId),'no pending grant');
+assert(!identitySettle(tx.id,false));assert.equal(m.devices.length,1);
+tx=identityBegin('add',r.id,{operate:false,shareData:true,days:7});
+chainDemo().rpc=false;assert(!identitySettle(tx.id));assert.equal(tx.status,'pending');
+chainDemo().rpc=true;assert(identitySettle(tx.id));assert(!identitySettle(tx.id),'no duplicate grant');
+const phone=m.devices.find(d=>d.id===r.deviceId);assert.equal(phone.dataOrgs.length,0);
+m.currentDevice=phone.id;assert(!identityAllowed('operate'));assert(!canOperate());assert(identityAllowed('read'));assert(!identityDataReady());
+assert.throws(()=>identityBegin('rotate',''),/权限/);
+await assert.rejects(()=>prepareHostInvite({coordinator:'home'}),/INVITE_PERMISSION/);
+m.currentDevice=root;assert(identitySyncData(phone.id));m.currentDevice=phone.id;assert(identityDataReady());
+state.orgId='DEMO-ORG-LABS';assert(!identityAllowed('read'));assert(!identityDataReady());state.orgId='DEMO-ORG-YUBING';
+m.currentDevice=root;const added=identityRequest('Ubuntu','Ubuntu');added.status='scanned';added.expires=Date.now()-1;assert.throws(()=>identityBegin('add',added.id),/配对/);
+const stale=identityRequest('Android','Android');stale.status='scanned';let pending=identityBegin('add',stale.id,{operate:true});stale.expires=Date.now()-1;assert(!identitySettle(pending.id));
+let revoke=identityBegin('revoke',phone.id);assert(identityDeviceActive(phone));assert(identitySettle(revoke.id));assert(!identityDeviceActive(phone));assert.equal(phone.dataOrgs.length,1,'revocation cannot erase acquired keys');
+m.currentDevice=phone.id;assert(!identityAllowed('read'));assert(!identityDataReady());m.currentDevice=root;
+let code=await identityCreateKit();assert(!JSON.stringify(state).includes(code));assert(!JSON.stringify(state).includes(code.slice('DEMO-RECOVERY-'.length)));
+assert(identityKitText().includes(code));m.recovery.saved=true;
+await assert.rejects(()=>identityRecover('DEMO-RECOVERY-wrong'),/恢复码/);
+chainDemo().rpc=false;await assert.rejects(()=>identityRecover(code),/Sui/);chainDemo().rpc=true;
+// Reload retains public recovery metadata, not raw secrets.
+state=JSON.parse(JSON.stringify(state));recoverySecrets.clear();assert.equal(identityKitText(),null);m=identityModel();
+const next=identityRequest('Windows','Windows');next.status='scanned';pending=identityBegin('add',next.id,{operate:true});
+m.lost=true;m.locked=true;assert(!identityAllowed('manage'));assert(!identityDataReady());
+const recovered=await identityRecover(code);assert.equal(m.id,human);assert(m.devices.filter(d=>d.id!==recovered.id).every(d=>d.status==='revoked'));
+assert.equal(pending.status,'cancelled');assert(!identitySettle(pending.id));assert(identityAllowed('manage'));assert(!identityDataReady());
+assert(identityRestoreData());assert(identityDataReady());assert(!identityRestoreData(),'data restore is idempotent');
+assert.equal(JSON.stringify([state.goals,state.tasks,state.memories,state.organizationRegistry]),original,'recovery preserves organizations, roles and all work');
+await assert.rejects(()=>identityRecover(code),/恢复码/);
+assert.equal(m.recovery,null,'recovery consumes the authorization credential');
+const old=await identityCreateKit();const replacement=await identityCreateKit();m.recovery.saved=true;await assert.rejects(()=>identityRecover(old),/恢复码/);assert(!JSON.stringify(state).includes(replacement));
+m.locked=true;assert(!identityAllowed('operate'));assert(!identityDataReady());m.locked=false;
+state=defaults();state.phonePaired=true;delete state.phoneAccess;identityModel();identityModel();assert.equal(identityModel().devices.length,2);assert.equal(identityModel().devices[1].operate,false);
+console.log('PASS: identity migration, device grants, pending/failure/retry, read-only and organization scopes, independent data sync, expiry, revocation, recovery secrecy, reload, rotation and preserved work');
+})()`, identityCtx).catch(error=>{console.error(error);process.exitCode=1;});

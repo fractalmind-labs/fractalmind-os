@@ -13,7 +13,8 @@ python3 -m http.server 4173 --bind 127.0.0.1 --directory apps/fractalmind-protot
 
 Open <http://127.0.0.1:4173> for the workbench. Direct review entries:
 `?prototype=workbench` (or the existing `?prototype=navigation`) opens the workbench,
-`?prototype=okr` opens the OKR list, and `?prototype=hosts` opens host management.
+`?prototype=okr` opens the OKR list, `?prototype=hosts` opens host management,
+and `?prototype=identity` opens My identity.
 The HTML can also be opened directly; browser storage
 availability for `file:` URLs may vary.
 
@@ -70,8 +71,9 @@ usable. The pre-paint theme initialization avoids a bright flash on dark startup
    **查看推进记录** and **查看约定** expose details on small screens.
 
 Other flows remain available: onboarding, organizations, Agent details, task evidence,
-memory, simulated phone pairing with separate read/operate scopes, and organization
-browsing. **模拟设备离线** in settings pauses autonomous execution and disables remote
+memory, identity-based device enrollment with separate read/operate scopes, and organization
+browsing. Desktop/mobile preview changes layout only; use **Review as this device**
+on My identity to change the simulated operator and permissions. **模拟设备离线** in settings pauses autonomous execution and disables remote
 operations. Reconnection requires explicit resume. Reloading pauses demo loops.
 
 ## Navigation review paths
@@ -177,6 +179,64 @@ unified product prototype. The original React client and real coordinator/runtim
 are not replaced or connected. Host data is initialized lazily inside v2 demo state;
 existing OKR measurements and evidence survive the upgrade.
 
+## My identity and multiple devices (prototype 11)
+
+Open `?prototype=identity`, the user avatar, or **我的身份 / My identity**. Organization
+settings and the first-use walkthrough also link here. The existing Yubing identity
+is an explicit fixture: upgrading does not replace organizations, OKRs, evidence,
+conversations or host invitations. Any legacy paired phone migrates once to an
+organization-scoped device grant.
+
+This flow borrows the unlock, device-linking and recovery-kit experience researched
+in 1Password. The production proposal uses Sui for a stable HumanIdentity, device
+grants, recovery policy and trust history; a Coordinator only transports encrypted
+messages. These contract extensions, wallet signing and encryption are **not**
+implemented by this HTML.
+
+1. **Add my device** → choose iOS, Android, macOS, Windows or Ubuntu and a device
+   name → inspect the pairing card → simulate a trusted-device scan. The QR image
+   is explicitly illustrative and cannot be scanned. Requests expire after five
+   minutes and bind the proposed device, identity generation and current organization.
+2. Confirm this organization's read/operate permissions, whether to sync encrypted
+   data, and a 7/30-day grant. New devices cannot manage identities, add devices,
+   recover identities or access other organizations. Confirmation is simulated;
+   a pending or failed transaction grants nothing. Failure can be retried; expired
+   requests must be started again. Pending transactions survive a reload and can
+   be reconciled under **Review scenarios & implementation scope**.
+3. Authorization and encrypted data access are separate. **Sync encrypted data**
+   explicitly completes the simulated key handoff. Closing the success dialog
+   retains the unsynced device and its resume-sync button. A device with withheld
+   data access cannot display protected organization content.
+4. **Review as this device** changes the simulated operator. A read-only device can
+   inspect synchronized content, but cannot advance OKRs, send Agent messages,
+   approve actions, edit memories, issue Host invitations or administer devices.
+   Return to the management device using the same review selector. Choosing another
+   organization does not grant access. Viewport size never grants permissions.
+5. **Lock this app** hides protected organization content. Local unlock methods
+   are interaction concepts only: no password, passkey, biometrics or native keychain
+   is read or created. Unlocking cannot reactivate a revoked/expired device.
+6. **Set up recovery kit** generates a clearly marked `DEMO-RECOVERY-…` token and
+   downloads a plain-text **demo** kit. The raw token stays only in session memory
+   and the explicitly downloaded file; browser state and normal exports contain
+   only a SHA-256 comparison digest and mock recovery metadata. Confirm it is saved
+   before simulating total device loss. Reload loses the in-memory copy; the downloaded
+   token remains usable against the same browser's persisted mock chain.
+7. **Simulate losing all devices** → use a wrong token to inspect validation → enter
+   the saved demo token (or fill this session's demo token). Recovery preserves the
+   identity ID, organization roles and all work, revokes old devices, cancels pending
+   device grants and creates a new management device. Restore encrypted data as a
+   separate step, then save a new recovery kit; the old recovery authority is consumed.
+8. **Revoke device** requires a management device and chain confirmation. Already
+   acquired plaintext/keys cannot be recalled. **Rotate keys for future data** changes
+   the simulated data-key version for active devices only. Recovery encryption,
+   historic ciphertext and key distribution remain production engineering work.
+
+The prototype is a public-state simulation, **not a security boundary**: developer
+access to browser storage can alter it. No data is actually encrypted, no real Sui
+transactions or cross-device connections occur, and no production recovery keys are
+created. Do not enter real secrets. The example kit is excluded from ordinary JSON
+exports but is intentionally downloadable through its dedicated action.
+
 ## Data and limitations
 
 The review bar labels the entire prototype as demo data. All measurements, evidence,
@@ -247,7 +307,7 @@ reconstruction, identity binding and live authority resolution remain implementa
 work identified in PRD §8.4–8.5. A personal organization is not itself encryption or
 proof of restricted membership. UI deletion cannot erase public chain history.
 
-Run the simulation's organization/admission/invitation regression checks with Node.js 22 or later:
+Run the simulation's organization/admission/invitation/identity regression checks with Node.js 22 or later:
 
 ```sh
 node apps/fractalmind-prototype/verify.cjs
