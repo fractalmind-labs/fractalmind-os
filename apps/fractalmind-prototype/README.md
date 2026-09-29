@@ -11,7 +11,7 @@ From the repository root:
 python3 -m http.server 4173 --bind 127.0.0.1 --directory apps/fractalmind-prototype
 ```
 
-Open <http://127.0.0.1:4173> for the workbench. Direct review entries:
+Open <http://127.0.0.1:4173>. A new browser starts at identity onboarding; an existing signed-in profile opens the workbench. Direct review entries:
 `?prototype=workbench` (or the existing `?prototype=navigation`) opens the workbench,
 `?prototype=okr` opens the OKR list, `?prototype=hosts` opens host management,
 and `?prototype=identity` opens My identity.
@@ -315,15 +315,15 @@ node apps/fractalmind-prototype/verify.cjs
 
 These checks validate the embedded state machine, not deployed contract security.
 
-### 首次使用与未连接身份（原型 12）
+### 首次使用与未连接身份（原型 14 更新）
 
 评审入口：<http://127.0.0.1:4173/?prototype=welcome>。全新浏览器默认显示此页；已有会话可点击顶部「首次使用」，或「我的身份 → 评审场景与实现边界 → 退出此设备」。退出后不展示组织侧栏、目标或主机内容。
 
-- **创建身份**：填写称呼、设备平台和本机解锁偏好 → 模拟登记确认（支持失败重试）→ 离线恢复包 → 创建空的个人组织 → 工作台。新身份使用独立本地演示档案，不继承旧身份的角色、OKR、主机或记忆。
+- **创建身份**：填写称呼、个人组织名称、设备平台和本机解锁偏好 → 运行费准备（自付或已有赞助方）→ 核对并提交 → 模拟链上确认身份、设备与个人组织 → 完整身份恢复包 → 工作台。自付前先保存无密钥的临时备份示例；到账不会自动提交。新身份使用独立本地演示档案，不继承旧身份的角色、OKR、主机或记忆。
 - **已有身份**：新设备显示配对请求 → 明确切换到旧管理设备视角核对并批准 → 独立同步加密数据 → 进入组织。默认仅授予当前组织的 7 天只读权限；可显式允许任务和审批，不授予身份管理权限。
 - **恢复包**：未登录时输入身份 ID 和演示恢复码；错误保持未登录，成功后撤销旧设备，再单独恢复加密数据。只验证当前演示档案中的本地模拟链记录，不查询真实 Sui。
 - **评审工具**：页面底部可「载入已有身份演示」恢复原有 Yubing 评审档案，再「模拟返回原设备」查看此前 OKR / Host 数据。此按钮明确模拟可信旧设备，并非产品的免验证登录入口。新建身份档案保留在独立 localStorage key 中。
-- **刷新**：未连接状态持久保存；未完成的登记与配对可从入口继续。`?prototype=welcome` 专门强制预览未连接状态。
+- **刷新**：未连接状态持久保存；未完成的登记与配对可从入口继续。新身份的费用草稿与待确认交易会自动恢复，已完成创建的新身份不会因为保留 `?prototype=welcome` 而被再次退出；顶部「首次使用」可明确退出预览。
 
 此版延续中英文、浅色/深色主题和移动布局。未实现真实身份合约、系统凭据存储、密码、生物识别、扫码连接或加密。组织成员邀请尚待合约支持，不复用 Host 邀请码登录 Human。
 
@@ -339,3 +339,27 @@ These checks validate the embedded state machine, not deployed contract security
 4. tmux 观察适配器不能进入控制模式。已授权实例的 OKR 边界变化会阻断后续执行，需重新确认；观测超过 5 分钟或再次扫描不见实例时，显示状态未知并要求重新发现。组织管理员角色与当前设备管理授权都必须有效。
 
 技术边界：真实 envd 目前只扫描特定命名的 tmux 会话。此 HTML 使用固定演示观测、身份核验与协作适配器，未连接真实主机或提交 Sui 交易。持久导入/绑定/授权模拟链上权威状态；扫描快照模拟可重建观测。运行时实例标识为演示定位键，真实实现还需要可信身份与实例连续性证明。
+
+
+### 全流程走查修复（原型 14）
+
+- 常规入口仍使用你的原有身份；`?prototype=workbench&review=qa` 使用隔离的样例档案，
+  `?prototype=welcome&review=onboarding` 使用隔离的首次使用档案。首次使用页的「原型评审工具」
+  可切回已保存的身份。重置新身份的评审场景会另建样例档案，保留原身份数据。
+- 首次运行费覆盖不足额到账、自付、赞助方离线/额度不足、Sui 不可用、失败扣费和重试。
+  待确认交易保留原交易编号并固定资料；已失败交易重试时生成新编号。所有 SUI 数额均为
+  演示值（预计 0.003、预算 0.010、失败费 0.0006），不是实时估价或充值建议。
+  地址明确无效，不提供真实收款码；后续 Host、Agent、OKR 的费用尚未接入。
+- 空组织首次接入 Host 会引导绑定 Coordinator 连接入口，再进入一次性邀请码流程。
+  绑定前、待确认和确认后的状态分开，输入的地址不会被访问。
+- 未部署、暂停或失联的 Agent 不再统一显示就绪。新建/激活 OKR 时检查工作区、
+  责任 Agent、主机可达性和授权；不可执行的目标可以保存为候选。
+- 锁定和缺少数据访问授权时，组织设置、内容与导出均受保护；只读设备能查主机状态，
+  不能发起执行操作。完整导出只包含当前组织；「导出记忆」仅包含记忆。
+- 同一档案被另一窗口更新时，旧窗口停止模拟计时器和写入，并持续提示刷新。
+  这是防覆盖措施，不是多窗口实时同步或真实链上事务。
+- 手机顶部「全部功能」可访问 Agents、记忆、审批、身份和费用；首次使用的手机布局
+  优先显示当前步骤。补齐新增页面中英文，保留主题和用户输入语言。
+
+本轮检查范围与结果见 [QA-REPORT.md](QA-REPORT.md)。`verify.cjs` 的六组回归检查已接入
+`.github/workflows/prototype.yml`，针对原型改动运行；浏览器交互走查仍需单独执行。

@@ -178,10 +178,10 @@ assert.throws(()=>entryPairStart('iOS','Phone'),/恢复包/);
 // Preserve the previously reviewed profile while a different Human is created.
 state=defaults();ensureOrganizationModel();identityModel();state.goals[0].description='preserved review';state.entry={signedOut:true};save();
 const original=JSON.stringify([state.goals,state.tasks,state.memories,state.organizationRegistry,state.identityDemo]);
-let registration=entryCreate('New Human','Ubuntu','system');assert.equal(identityModel().id,'DEMO-HUMAN-YUBING');assert(!identityAllowed('manage'));
+let registration=entryCreate('New Human','Ubuntu','system');assert.equal(identityModel().id,'DEMO-HUMAN-YUBING');assert(!identityAllowed('manage'));assert.equal(registration.status,'funding');assert(!entryConfirmCreation());assert.throws(()=>fundRegistration(30_000_000),/备份/);fundingOf().backupDownloaded=true;fundingOf().backupSaved=true;fundRegistration(5_000_000);assert(!fundingReady());fundRegistration(30_000_000);assert(fundingReady());assert.equal(registration.status,'funding','arrival does not submit');submitRegistration();
 chainDemo().rpc=false;assert(!entryConfirmCreation());assert.equal(registration.status,'pending');chainDemo().rpc=true;
 assert(!entryConfirmCreation(false));assert.equal(registration.status,'failed');assert(!entryConfirmCreation());
-registration=entryCreate('New Human','Ubuntu','system');assert(entryConfirmCreation());assert(!entryConfirmCreation());
+registration=entryCreate('New Human','Ubuntu','system');submitRegistration();assert(entryConfirmCreation());assert(!entryConfirmCreation());
 const archived=JSON.parse(localStorage.getItem(KEY));
 assert.equal(JSON.stringify([archived.goals,archived.tasks,archived.memories,archived.organizationRegistry,archived.identityDemo]),original);
 assert.notEqual(profileKey,KEY);assert.equal(identityModel().id,registration.id);assert.equal(state.organizationRegistry.length,0);assert.equal(state.orgId,'');
@@ -235,3 +235,75 @@ assert.equal(discoveryScan(h.id,'empty').length,0);assert.equal(discoveredImport
 assert.equal(discoveryStatus(discoveryRecord(r.id)),'观测已失效 · 需要重新发现');assert.equal(hostExecutionProblem(orgGoals()[0]).id,'unknown');
 console.log('PASS: discovery permissions, stale/unverified/offline observations, atomic imports, duplicate prevention, name isolation, observation-only adapters, constrained OKR handoff, stale grant blocking, reconfirmation and reload');
 `,discoveryCtx);
+
+// Bootstrap funding and first-host fixes found by the browser QA pass.
+const qaStorage = new Map();
+const qaCtx = vm.createContext({
+  console, assert, crypto: webcrypto, Date, Blob, URL, URLSearchParams, TextEncoder, atob, btoa,
+  location: { search: '?review=qa' }, setTimeout: () => 0, clearTimeout() {},
+  document: { addEventListener() {} },
+  localStorage: { getItem: k => qaStorage.get(k) || null, setItem: (k,v) => qaStorage.set(k,v) },
+});
+vm.runInContext(source,qaCtx);
+vm.runInContext(`
+refreshOKR=()=>{};toast=()=>{};go=()=>{};
+state=defaults();fleet();identityModel();save();
+const originalProfile=profileKey,originalOrg=state.orgId;
+state.entry={signedOut:true};
+let r=entryCreate('Sponsor test','Android','password','First organization'),f=fundingOf();
+assert(!fundingReady());f.payer='sponsor';
+for(const sponsor of ['none','offline','limit']){f.sponsor=sponsor;f.quota=0;assert(!fundingReady());assert.throws(()=>submitRegistration());}
+f.sponsor='ready';f.quota=30_000_000;assert(fundingReady());assert(!f.backupSaved,'sponsor does not require self-funding');
+chainDemo().rpc=false;assert(!fundingReady());chainDemo().rpc=true;
+submitRegistration();const firstTx=r.txId;assert(firstTx);assert.equal(r.status,'pending');
+assert.throws(()=>entryCreate('Changed','macOS','system'),/待确认/);
+submitRegistration();assert.equal(r.txId,firstTx,'pending queries retain the transaction');
+assert(!entryConfirmCreation(false));assert.equal(f.spent,600_000);assert.equal(f.balance,0);assert.equal(f.quota,29_400_000);
+submitRegistration();assert.notEqual(r.txId,firstTx,'failed execution retry is a new transaction');
+assert(entryConfirmCreation());assert.equal(state.funding.quota,26_400_000);assert.equal(state.funding.spent,3_600_000);assert(!entryConfirmCreation());
+assert.equal(state.organizationRegistry.length,1);assert.equal(currentOrg().name,'First organization');
+assert.equal(state.goals.length,0);assert.equal(fleet().hosts.length,0);
+assert.equal(builtInAgentState('builder')[0],'未部署');
+assert(savedProfiles().some(p=>p.key===originalProfile));assert(savedProfiles().some(p=>p.key===profileKey));
+assert.equal(JSON.parse(localStorage.getItem(originalProfile)).orgId,originalOrg);
+assert.throws(()=>beginCoordinator('Home','file:///tmp'));assert.throws(()=>beginCoordinator('Home','https://user:pass@example.invalid'));
+assert.throws(()=>beginCoordinator('Home','not a URL'));assert.throws(()=>beginCoordinator(' ','https://home.example.invalid'));
+const count=fleet().coordinators.length,tx=beginCoordinator('Home','https://home.example.invalid');
+assert.equal(fleet().coordinators.length,count);assert.throws(()=>beginCoordinator('Duplicate','https://cloud.example.invalid'));
+chainDemo().rpc=false;assert(!settleCoordinator(tx.id));assert.equal(tx.status,'pending');chainDemo().rpc=true;
+currentOrg().role='member';assert(!settleCoordinator(tx.id));currentOrg().role='admin';
+identityModel().locked=true;assert(!settleCoordinator(tx.id));identityModel().locked=false;
+assert(settleCoordinator(tx.id));assert(!settleCoordinator(tx.id));assert.equal(fleet().coordinators.length,count+1);
+state=defaults();fleet();identityModel();
+const g=orgGoals()[0],h=hostById('mini-studio');assert(eligibleGoalHost(g));
+g.scope='Different workspace';assert(!eligibleGoalHost(g));g.scope=h.workspace;
+g.owner='undeployed';assert(!eligibleGoalHost(g));g.owner='builder';
+const before=state.goals.length;
+const entries={objective:'   ',criteria:'1 verified report',owner:'builder',scope:h.workspace,allowed:'read',escalate:'publish',budget:'10',deadline:'2026-10-13',krTitle1:'Verified reports',unit1:'reports',deliverable1:'report',verify1:'check',base1:'0',target1:'1',weight1:'1',lifecycle:'CANDIDATE',confirmed:'on'};
+const data={get:k=>entries[k],has:k=>k in entries},form={querySelectorAll:()=>[{}]};
+submitOKR(form,data);assert.equal(state.goals.length,before,'whitespace objective rejected');
+entries.objective='Valid candidate';entries.scope='Unavailable workspace';entries.lifecycle='ACTIVE';submitOKR(form,data);assert.equal(state.goals.length,before,'unavailable runtime cannot be promised');
+entries.lifecycle='CANDIDATE';submitOKR(form,data);assert.equal(state.goals.length,before+1);assert.equal(state.goals[0].lifecycle,'CANDIDATE');
+state.goals.push({...g,id:'other-goal',name:'PRIVATE OTHER ORG',orgId:'DEMO-ORG-LABS'});
+const exported=exportPayload();assert(!JSON.stringify(exported).includes('PRIVATE OTHER ORG'));assert(!('identityDemo' in exported));assert(!('chainDemo' in exported));assert(!('entry' in exported));
+assert(exported.fleet.hosts.every(h=>h.orgId===state.orgId));
+const memoriesOnly=exportPayload('memory');assert(memoriesOnly.memories.length);assert(!('tasks' in memoriesOnly));assert(!('fleet' in memoriesOnly));
+identityDevice().dataOrgs=[];assert(!canOperate());assert.throws(()=>exportPayload());assert(!runHostCommand(h,'status','',''));
+identityDevice().dataOrgs=[state.orgId];identityDevice().operate=false;assert(!canOperate());assert(runHostCommand(h,'status','',''));assert(!runHostCommand(h,'shell','','id'));
+identityModel().locked=true;assert(!runHostCommand(h,'status','',''));assert.throws(()=>exportPayload());identityModel().locked=false;
+identityDevice().operate=true;state.fleet.instances.filter(i=>i.role==='builder').forEach(i=>i.status='stopped');assert.equal(builtInAgentState('builder')[0],'已暂停');
+const saved=localStorage.getItem(profileKey);externalProfileChange=true;state.memories=[];assert.equal(save(),false);assert.equal(localStorage.getItem(profileKey),saved,'stale tab cannot overwrite the stored profile');
+console.log('PASS: funding gates, sponsor outages/quotas, fixed pending payloads, failed retry and charges, profile preservation, first Coordinator, eligible execution, validation, scoped export, read-only console and stale-tab save blocking');
+`,qaCtx);
+
+// Reload an unfinished pre-funding prototype without stranding it in confirmation.
+const oldDraft = vm.runInContext(`JSON.stringify({...defaults(),entry:{signedOut:true,registration:{id:'DEMO-OLD-DRAFT',deviceId:'old-app',name:'Old draft',platform:'Ubuntu',unlock:'system',status:'pending'}}})`,qaCtx);
+const migrationStorage = new Map([['fractalmind.product-prototype.v2',oldDraft]]);
+const migrationCtx = vm.createContext({
+  console, assert, crypto: webcrypto, Date, Blob, URL, URLSearchParams, TextEncoder, atob, btoa,
+  location: { search: '' }, setTimeout: () => 0, clearTimeout() {},
+  document: { addEventListener() {} },
+  localStorage: { getItem: k => migrationStorage.get(k) || null, setItem: (k,v) => migrationStorage.set(k,v) },
+});
+vm.runInContext(source,migrationCtx);
+vm.runInContext(`assert.equal(state.entry.registration.status,'funding');assert.equal(state.entry.registration.id,'DEMO-OLD-DRAFT');assert.equal(state.entry.registration.name,'Old draft');assert(!fundingReady());entryCreate('Updated draft','Ubuntu','system','My organization');assert.equal(state.entry.registration.id,'DEMO-OLD-DRAFT');`,migrationCtx);
