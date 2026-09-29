@@ -159,8 +159,8 @@ instances and two simulated Coordinator connections.
 3. Open **远程桌面**, start/release simulated control, adjust quality/zoom/stats,
    choose the mobile input mode and send example text. This is an HTML illustration,
    not a real stream. Headless cloud hosts report no desktop capability.
-4. **Host 接入指导** walks through device request, chain confirmation, administrator
-   approval, a separate execution grant and the first authenticated heartbeat. See
+4. **Host 接入指导** offers a one-use invitation with prior administrator approval,
+   atomic membership plus execution grant, and an automatic first heartbeat. See
    the organization enrollment review below. **管理连接** lists existing organization
    bindings with isolated disconnect/reconnect; arbitrary URLs cannot grant membership.
 5. From the workbench, open its host chip or **选择执行主机**. Assignment checks availability,
@@ -181,7 +181,7 @@ existing OKR measurements and evidence survive the upgrade.
 
 The review bar labels the entire prototype as demo data. All measurements, evidence,
 verification, costs, execution, approvals, devices and organizations are simulated.
-No repository files are modified, messages sent, services purchased, credentials
+No repository files are modified, messages sent, services purchased, production credentials
 created or chain transactions submitted by these workflows. The external service
 request is a fixed sample scenario. Free-text constraints are interaction concepts,
 not a policy engine. The verification simulator assumes the user-confirmed success
@@ -197,7 +197,7 @@ security, complete native localization, file synchronization, background runtime
 Navigation state and its event history are stored within the existing v2 demo state.
 Older v2 entries initialize navigation lazily; no user metrics are reset on reload.
 
-## Organization and Host enrollment (PRD v0.7)
+## Organization and Host enrollment (PRD v0.8)
 
 Production uses **Organization** as the boundary, including personal use. All durable
 product state is authoritative on Sui; there is no business backend/database. App
@@ -211,29 +211,34 @@ The HTML's localStorage is a **simulation cache**, not this production architect
    Labs / DEMO-ORG-LABS** starts without goals or hosts. Search, workbench, OKRs, memories,
    hosts and grants follow the selection; switching back preserves earlier work.
    The demo pauses active timers on switch with a notice; it does not revoke grants.
-2. Open **主机与算力 → Host 接入指导**. The organization entry is a public locator with
-   demo network/package/organization IDs. It is not a password or bearer invitation.
-   Select a bound Coordinator and host platform, and confirm consent on the device.
-   Desktop/App and headless/envd installation guidance are shown without inventing
-   a released installer or enrollment CLI.
-3. **模拟 envd 生成设备身份 → 模拟设备签名并提交**. Before **模拟链上确认**, the
-   request has no confirmed membership. Try **模拟交易失败**, then resubmit/confirm.
-   Requests expire after 24 hours; device keys are only represented by demo labels.
-4. **切换普通成员评审** disables approval; restore the administrator. Confirm the
-   matching device fingerprint, sign approval, then simulate confirmation. The host
-   now appears as pending connection and **cannot execute** without a grant.
-5. Confirm the fixed execution bundle (project scope, Builder, commands), optionally
-   desktop access, sign and confirm the separate seven-day grant. **模拟认证连接与首次心跳**
-   is a separate action. Only now is the host online with an available Builder.
-6. Close and resume pending enrollment from Host management or Governance. Turn off
-   the relevant Coordinator from **管理连接**: chain approval still works, but connection
-   cannot complete. **模拟 Sui 不可用** separately disables chain confirmations.
-7. In the new host's overview choose **查看接入与撤销 → 撤销组织资格**. The pending
-   transaction does not change authority; after confirmation, new commands/desktop
-   access and OKR execution are blocked even if the transport remains connected.
-8. Review Chinese/English, light/dark and mobile layouts. Reset restores fixture data;
-   reload retains requests, transactions, membership and grants without duplicating
-   them. No workflow submits real transactions, creates keys or installs services.
+2. **主机与算力 → Host 接入指导** defaults to one-use invitations. As administrator,
+   select 15 minutes / 1 hour / 24 hours, inspect the fixed seven-day execution grant,
+   optionally include desktop access, then **签名创建邀请码**. Confirmation is automatic
+   in the simulation; the invitation cannot be used while its transaction is pending.
+3. Copy the invitation or choose **在新主机使用（演示）**. The device sees its target
+   organization, expiry and grant. Confirm local consent and **加入组织并连接**. A single
+   simulated transaction consumes the invitation and creates membership plus the
+   capped grant; connection and the first heartbeat follow automatically. No second
+   administrator approval is required. Device details are optional review inputs.
+4. **演示故障与人工审核 → 模拟下一笔交易失败** tests retry without consumption. RPC
+   failures retain pending transactions; **查询兑换结果** reconciles the same transaction.
+   Disable the Coordinator to get **已加入组织，等待连接**; retry the connection without
+   spending the code again. Previously consumed codes cannot enroll another host.
+5. **管理已有邀请码** lists active, consumed, expired, revoked and pending invitations.
+   An unused invitation can be revoked. After redemption, revoke the actual host's
+   membership/authority through host details; revoking an invitation is not a substitute.
+6. Raw invitation secrets remain in session memory and are excluded from localStorage
+   and ordinary exports. Reload retains the invitation's public verification key and
+   transaction records, but cannot recover the code. Revoke and regenerate if it was
+   not saved. This browser's mock chain is not available on another browser/device.
+7. The prototype demonstrates Ed25519 proofs bound to the invitation and target device;
+   it never places the raw invitation key in a transaction. Its JSON signing format,
+   local clock and local state commit are **not a deployed Sui protocol**. Production
+   needs domain-separated BCS, Sui Clock, atomic shared-object consumption, verified
+   authority, gas handling and the device's actual transaction signature.
+8. **演示故障与人工审核 → 改用设备申请与人工审核** retains the previous device-request,
+   fingerprint approval and separate grant flow. Existing requests remain available
+   under **全部接入记录**. Chinese/English, light/dark and mobile review remain supported.
 
 Original fixture hosts have explicitly simulated confirmed membership and grants.
 Older user-added hosts receive no implicit authority and must use the new flow.
@@ -242,7 +247,7 @@ reconstruction, identity binding and live authority resolution remain implementa
 work identified in PRD §8.4–8.5. A personal organization is not itself encryption or
 proof of restricted membership. UI deletion cannot erase public chain history.
 
-Run the simulation's organization/admission regression checks with:
+Run the simulation's organization/admission/invitation regression checks with Node.js 22 or later:
 
 ```sh
 node apps/fractalmind-prototype/verify.cjs

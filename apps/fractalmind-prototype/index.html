@@ -91,11 +91,15 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 @media(max-width:600px){.enroll-identity,.enroll-roles{grid-template-columns:1fr}.enroll-steps{gap:4px}.enroll-steps>div{flex-direction:column;align-items:flex-start;font-size:10px}.enrollment-dialog .dialog-footer{flex-wrap:wrap}}
 .phone-mode .enroll-identity,.phone-mode .enroll-roles{grid-template-columns:1fr}.phone-mode .enroll-steps>div{flex-direction:column;align-items:flex-start;font-size:10px}
 
+
+.invite-route{display:flex;align-items:center;gap:12px;justify-content:space-between;margin:24px 0;color:var(--green);font-size:12px}.invite-route .icon{width:14px}.invite-dialog .tabs{margin-bottom:22px}.invite-success{text-align:center;margin:24px 0}.invite-success>.icon{width:38px;height:38px;color:var(--green);margin-bottom:12px}.invite-success p{font-size:12px;color:var(--muted);margin-top:8px}.invite-facts{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:11px;color:var(--muted);margin:18px 0}.invite-dialog textarea[readonly]{font-family:monospace;font-size:11px;min-height:90px;overflow-wrap:anywhere}.invite-protocol{border-top:1px solid var(--line);padding-top:14px;margin-top:18px}.invite-protocol p{font-size:11px;color:var(--muted);margin:10px 0;line-height:1.8}.invite-protocol .link-btn{display:block;margin-top:10px}.invite-dialog #invite-feedback .notice{margin-top:14px}.invite-dialog .detail-grid{margin:0}.invite-dialog .enroll-body>p.muted{font-size:12px}
+@media(max-width:600px){.invite-dialog .detail-grid{grid-template-columns:1fr}.invite-route{gap:7px;font-size:11px}.invite-dialog .tab{font-size:11px;padding:10px 8px}.invite-dialog .btn{white-space:normal}.invite-dialog .dialog-footer .btn{width:100%}}
+.phone-mode .invite-dialog .detail-grid{grid-template-columns:1fr}
 </style>
 </head>
 <body>
 <div class="review-bar">
-  <div class="review-brand"><strong>FRACTALMIND <span class="mobile-demo-label">· 演示</span></strong><span style="opacity:.35">/</span><span>产品原型 09 · 组织与主机接入 · 所有数据与执行均为演示</span></div>
+  <div class="review-brand"><strong>FRACTALMIND <span class="mobile-demo-label">· 演示</span></strong><span style="opacity:.35">/</span><span>产品原型 10 · 邀请码快速接入 · 所有数据与执行均为演示</span></div>
   <div class="review-actions"><div class="view-switch" aria-label="预览尺寸"><button id="desktop-preview" class="active" data-action="desktop">桌面</button><button id="mobile-preview" data-action="mobile">手机</button></div><button data-action="onboarding">首次使用</button><button data-action="reset">重置演示</button></div>
 </div>
 <div class="app-viewport" id="app-viewport">
@@ -136,7 +140,7 @@ const EN={
   "通知": "Notifications",
   "台连接可用": "hosts connected",
   "本地与云端": "Local & cloud",
-  "产品原型 09 · 组织与主机接入": "Prototype 08 · Run conversations",
+  "产品原型 10 · 邀请码快速接入": "Prototype 08 · Run conversations",
   "所有数据与执行均为演示": "All data and execution are simulated",
   "预览尺寸": "Preview size",
   "桌面": "Desktop",
@@ -1186,7 +1190,7 @@ let preferences={locale:'zh-CN',theme:'system'};
 try{const p=JSON.parse(localStorage.getItem(UI_KEY)||'null');if(p){if(['zh-CN','en'].includes(p.locale))preferences.locale=p.locale;if(['light','dark','system'].includes(p.theme))preferences.theme=p.theme;}}catch{}
 const textSources=new WeakMap(),attributeSources=new WeakMap();
 Object.assign(EN,{
-  "产品原型 09 · 组织与主机接入": "Prototype 09 · Organizations & host enrollment",
+  "产品原型 10 · 邀请码快速接入": "Prototype 09 · Organizations & host enrollment",
   "已切换组织；演示循环暂停，授权保持原状": "Organization switched; demo loops paused, grants unchanged",
   "主机组织资格已撤销，新的执行已拦截": "Host membership revoked; new execution blocked",
   "设备身份、组织资格与执行授权已核验；收到首次演示心跳。": "Device identity, membership and execution grant verified; first demo heartbeat received.",
@@ -1301,6 +1305,93 @@ Object.assign(EN,{
   "授权绑定当前组织与手机身份，须经链上确认；此按钮仅模拟确认结果。Host 使用单独的设备申请流程。": "The grant is bound to the current organization and phone identity and requires chain confirmation. This button only simulates that result. Hosts use a separate device request flow."
 });
 Object.assign(EN,{"刚刚上线 · 演示": "Just connected · Demo", "尚未分配进行中的 OKR。可在工作台运行导航中选择执行主机。": "No active OKRs assigned. Select an execution host from the workbench navigation.", "执行未授权": "Execution not authorized", "全部接入记录": "All enrollment records", "组织导航": "Organization navigation", "我的组织": "My organizations", "家中工作区": "Home Coordinator", "云端工作区": "Cloud Coordinator", "尚未上线": "Not connected yet", "待确认": "Pending confirmation", "个人组织的默认规则": "Current organization rules", "当前组织 / 我的组织 / 开放网络": "Current organization / My organizations / Open network"});
+Object.assign(EN,{
+  "产品原型 10 · 邀请码快速接入": "Prototype 10 · Quick host invitations",
+  "创建邀请码 → 新主机输入 → 自动连接": "Create invitation → Enter on host → Auto-connect",
+  "邀请码无效，请检查完整内容": "Invalid invitation code; check the complete code",
+  "未找到邀请；演示码仅适用于此浏览器中的模拟链": "Invitation not found; demo codes use this browser's simulated chain",
+  "邀请尚未确认，请等待交易结果": "Invitation pending; wait for confirmation",
+  "邀请码已使用，不能重复加入": "Invitation already used; it cannot enroll another host",
+  "邀请码已过期，请管理员重新生成": "Invitation expired; ask the administrator for a new one",
+  "邀请码已撤销，请管理员重新生成": "Invitation revoked; ask the administrator for a new one",
+  "Sui 暂不可用，尚未确认加入": "Sui unavailable; membership has not been confirmed",
+  "只有当前组织管理员可以生成或撤销邀请": "Only the current organization administrator can create or revoke invitations",
+  "请确认目标组织和本机执行权限": "Confirm the target organization and local execution permissions",
+  "模拟交易失败，邀请码尚未消费，可以重试": "Simulated transaction failed; the invitation is unused and can be retried",
+  "组织连接配置已变化，请管理员重新生成邀请": "Organization connection settings changed; request a new invitation",
+  "兑换证明与设备或邀请不匹配": "Redemption proof does not match the device or invitation",
+  "邀请权限不匹配，不能扩大范围": "Invitation permissions do not match; scope cannot be expanded",
+  "组织上下文已变化，请重新操作": "Organization context changed; try again",
+  "此浏览器无法生成演示签名，请使用支持 Ed25519 的浏览器": "Demo signing unavailable; use a browser with Ed25519 support",
+  "操作未完成，请重试": "Action incomplete; try again",
+  "待使用": "Ready to use",
+  "交易待确认": "Transaction pending",
+  "已使用": "Used",
+  "创建失败": "Creation failed",
+  "链上如何保证一次性与有效期？": "How are one-time use and expiry verified on chain?",
+  "管理员预先批准组织资格和有限执行权限。App 生成秘密凭证；链上只存验证公钥、权限、期限和使用状态。": "The administrator approves membership and limited execution rights in advance. The App creates a secret; the chain stores only its verification key, permissions, expiry and usage state.",
+  "envd 用邀请码为自己的设备身份生成兑换证明。Sui 校验设备绑定、链上时间、权限及未使用状态，在同一交易中消费邀请并建立成员资格和授权。": "envd uses the invitation to prove redemption for its own device identity. Sui checks device binding, chain time, permissions and unused status, then consumes the invitation and creates membership and grants in one transaction.",
+  "Coordinator 负责连接与转发，envd 校验每次执行。入组已确认与连接在线分别展示。": "Coordinator connects and routes; envd checks every execution. Confirmed membership and live connectivity are displayed separately.",
+  "持码者可以认领一台主机，请私下传递；原始邀请码不写入交易参数、日志或普通导出。丢失未使用的邀请码可撤销并重建。": "A code holder can enroll one host; share it privately. Raw codes stay out of transaction arguments, logs and ordinary exports. Revoke and replace an unused code if lost.",
+  "主机已加入并上线": "Host enrolled and online",
+  "已加入组织，等待连接": "Enrolled; awaiting connection",
+  "邀请码已消费": "Invitation consumed",
+  "组织资格已确认": "Membership confirmed",
+  "预设权限已生效": "Preset permissions active",
+  "已收到首次心跳，现在可以分配 OKR。": "First heartbeat received. You can now assign an OKR.",
+  "链上入组和授权已完成。恢复连接后自动上线，无需再次使用邀请码。": "Membership and grants are confirmed on chain. Reconnect without redeeming the invitation again.",
+  "重试连接": "Retry connection",
+  "正在确认邀请…": "Confirming invitation…",
+  "仅限 1 台主机 · 使用后立即失效": "One host only · Invalid after use",
+  "邀请码 · 演示": "Invitation code · Demo",
+  "复制邀请码": "Copy invitation code",
+  "在新主机使用（演示）": "Use on a new host (demo)",
+  "有效期至": "Valid until",
+  "执行权限 7 天": "Execution rights for 7 days",
+  "将邀请码发给新主机。无需再等待管理员审批。": "Send the code to the new host. No further administrator approval is needed.",
+  "邀请码未保存在浏览器持久数据中。若已丢失，请撤销未使用的邀请并重新生成。": "The code is not stored in persistent browser data. If lost, revoke the unused invitation and create another.",
+  "查询交易结果": "Check transaction result",
+  "撤销这个邀请码": "Revoke this invitation",
+  "兑换交易待确认。先查询这笔交易的结果，避免重复提交。": "Redemption is pending. Check this transaction's result before submitting another.",
+  "查询兑换结果": "Check redemption result",
+  "粘贴邀请码": "Paste invitation code",
+  "我确认加入所示组织，并允许本机使用邀请中的执行权限": "I confirm this organization and allow this host to use the invited execution permissions",
+  "主机信息": "Host details",
+  "本机允许桌面访问（仍需邀请已授权）": "Allow local desktop access (also requires invitation permission)",
+  "正在验证并加入…": "Verifying and joining…",
+  "加入组织并连接": "Join organization & connect",
+  "创建一次性邀请码，把新主机的加入与执行权限一起批准。": "Create a one-use invitation that approves host membership and execution together.",
+  "邀请码有效期": "Invitation validity",
+  "15 分钟": "15 minutes",
+  "1 小时": "1 hour",
+  "24 小时": "24 hours",
+  "仅限 1 台主机 · fractalmind-os 工作区": "One host · fractalmind-os workspace",
+  "Builder 执行、状态与日志、Agent 重启/停止、Shell · 授权 7 天": "Builder execution, status/logs, agent restart/stop, shell · Granted for 7 days",
+  "不授予组织管理员权限": "Does not grant organization administrator rights",
+  "同时预授权远程桌面（可选）": "Also preauthorize remote desktop (optional)",
+  "正在创建…": "Creating…",
+  "签名创建邀请码": "Sign & create invitation",
+  "只有管理员可以创建；新主机持有效邀请码即可加入。": "Only administrators can create invitations; a new host can join using a valid code.",
+  "管理已有邀请码": "Manage existing invitations",
+  "还没有邀请码": "No invitations yet",
+  "用邀请码，快速接入主机": "Connect a host with an invitation",
+  "管理员创建一次，新主机输入一次。": "Create once as admin. Enter once on the host.",
+  "创建邀请码": "Create invitation",
+  "输入并确认": "Enter & confirm",
+  "自动连接": "Auto-connect",
+  "管理员：创建邀请": "Admin: create invitation",
+  "新主机：使用邀请": "Host: use invitation",
+  "仅交互演示。链上确认与连接会自动模拟，未连接真实 Sui 或主机。": "Interactive demo only. Chain confirmation and connection are simulated automatically; no real Sui or host is connected.",
+  "演示故障与人工审核": "Demo failures & manual review",
+  "模拟下一笔交易失败": "Fail the next simulated transaction",
+  "改用设备申请与人工审核": "Use a device request with manual approval",
+  "允许申请桌面访问": "Desktop access permitted",
+  "未授予桌面访问": "Desktop access not granted",
+  "粘贴后显示组织名称、有效期和预授权范围。": "Paste a code to see the organization, expiry and preauthorized scope.",
+  "邀请码已复制": "Invitation code copied",
+  "请复制已选中的邀请码": "Copy the selected invitation code"
+});
+Object.assign(EN,{"链上确认前不可使用。": "The invitation cannot be used before chain confirmation.", "此邀请已完成接入，请到主机详情管理后续权限。": "This invitation enrolled a host. Manage its ongoing permissions in host details.", "此邀请已失效，可重新创建邀请码。": "This invitation is no longer valid. Create a new code.", "查看已加入主机": "View enrolled host", "重新创建邀请码": "Create another invitation"});
 const localeWords=Object.keys(EN).sort((a,b)=>b.length-a.length);
 const localePattern=new RegExp(localeWords.map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'g');
 const seededText=new Set();
@@ -1483,7 +1574,7 @@ function enrollmentRoleCards(){return `<details class="enroll-responsibilities">
  ['Coordinator','从链上重建目录，认证连接并转发消息；不签发组织资格。'],
  ['envd','在主机上持有设备私钥，签署申请；执行前检查授权、撤销、范围及本机同意。']
  ].map(([title,body])=>`<div><strong>${title}</strong><p>${body}</p></div>`).join('')}</div></details>`;}
-function enrollmentPanel(){const pending=pendingEnrollment();return `<section class="card enroll-banner"><div class="row wrap"><span class="avatar">${icon('shield')}</span><div class="grow"><h3>主机接入组织</h3><p class="muted">申请上链 → 组织批准 → 执行授权 → 连接上线</p></div><button class="btn" data-enroll="guide">Host 接入指导</button></div><div class="enroll-summary"><span>${currentOrg().id}</span><span>持久状态：Sui</span><span>实时状态：Coordinator / envd</span></div>${pending.length?`<button class="link-btn" data-enroll="open" data-id="${pending[0].id}">${pending.length} 个接入流程待处理 ${icon('arrow')}</button>`:''}${enrollmentRequests().length?`<details style="margin-top:14px"><summary>全部接入记录</summary>${enrollmentRequests().map(r=>`<button class="choice-card" data-enroll="open" data-id="${r.id}"><span class="grow"><strong data-i18n-content>${esc(r.name)}</strong><small translate="no">${r.id} · ${r.status}</small></span>${icon('arrow')}</button>`).join('')}</details>`:''}</section>`;}
+function enrollmentPanel(){const pending=pendingEnrollment();return `<section class="card enroll-banner"><div class="row wrap"><span class="avatar">${icon('shield')}</span><div class="grow"><h3>主机接入组织</h3><p class="muted">创建邀请码 → 新主机输入 → 自动连接</p></div><button class="btn" data-enroll="guide">Host 接入指导</button></div><div class="enroll-summary"><span>${currentOrg().id}</span><span>持久状态：Sui</span><span>实时状态：Coordinator / envd</span></div>${pending.length?`<button class="link-btn" data-enroll="open" data-id="${pending[0].id}">${pending.length} 个接入流程待处理 ${icon('arrow')}</button>`:''}${enrollmentRequests().length?`<details style="margin-top:14px"><summary>全部接入记录</summary>${enrollmentRequests().map(r=>`<button class="choice-card" data-enroll="open" data-id="${r.id}"><span class="grow"><strong data-i18n-content>${esc(r.name)}</strong><small translate="no">${r.id} · ${r.status}</small></span>${icon('arrow')}</button>`).join('')}</details>`:''}</section>`;}
 function showEnrollment(r=null){
   const ledger=chainDemo();
   if(r&&r.orgId!==state.orgId)return;
@@ -1512,7 +1603,7 @@ document.addEventListener('click',e=>{
   const el=e.target.closest('[data-enroll]');if(!el||el.disabled)return;
   const action=el.dataset.enroll,r=enrollmentRequests().find(x=>x.id===el.dataset.id);
   if(action==='switch')return switchOrganization(el.dataset.id);
-  if(action==='guide')return showEnrollment();
+  if(action==='guide')return showQuickEnrollment();
   if(action==='open')return showEnrollment(r);
   if(action==='host')return openFleetHost(r.hostId);
   if(action==='rpc')chainDemo().rpc=!chainDemo().rpc;
@@ -1528,6 +1619,143 @@ document.addEventListener('click',e=>{
   save();render();showEnrollment(r);
 });
 
+
+// One-use invitations model prior administrator approval. Secrets stay in review-session memory.
+let inviteSecrets=new Map(),inviteView={mode:'create',id:null,code:'',error:'',busy:false,result:null};
+function invitations(){return chainDemo().invites??=([]);}
+function inviteById(id){return invitations().find(i=>i.id===id);}
+function orgInvitations(){return invitations().filter(i=>i.orgId===state.orgId);}
+function invitationState(i){return i.status==='active'&&i.expires<=Date.now()?'expired':i.status;}
+function inviteBytes(text){return new TextEncoder().encode(text);}
+function inviteBase64(bytes){return btoa(String.fromCharCode(...new Uint8Array(bytes))).replaceAll('+','-').replaceAll('/','_').replace(/=+$/,'');}
+function inviteUnbase64(text){if(!/^[A-Za-z0-9_-]+$/.test(text))throw new Error('INVITE_INVALID');return Uint8Array.from(atob(text.replaceAll('-','+').replaceAll('_','/')),c=>c.charCodeAt(0));}
+function inviteParse(code){const p=String(code).trim().split('.');if(p.length!==3||p[0]!=='FMI-DEMO'||!/^DEMO-INVITE-[A-Z0-9-]+$/.test(p[1]))throw new Error('INVITE_INVALID');return {id:p[1],secret:p[2]};}
+function inviteError(key){return ({INVITE_INVALID:'邀请码无效，请检查完整内容',INVITE_MISSING:'未找到邀请；演示码仅适用于此浏览器中的模拟链',INVITE_PENDING:'邀请尚未确认，请等待交易结果',INVITE_USED:'邀请码已使用，不能重复加入',INVITE_EXPIRED:'邀请码已过期，请管理员重新生成',INVITE_REVOKED:'邀请码已撤销，请管理员重新生成',INVITE_RPC:'Sui 暂不可用，尚未确认加入',INVITE_PERMISSION:'只有当前组织管理员可以生成或撤销邀请',INVITE_CONSENT:'请确认目标组织和本机执行权限',INVITE_FAILED:'模拟交易失败，邀请码尚未消费，可以重试',INVITE_BINDING:'组织连接配置已变化，请管理员重新生成邀请',INVITE_PROOF:'兑换证明与设备或邀请不匹配',INVITE_SCOPE:'邀请权限不匹配，不能扩大范围',INVITE_CANCELLED:'组织上下文已变化，请重新操作',INVITE_CRYPTO:'此浏览器无法生成演示签名，请使用支持 Ed25519 的浏览器'})[key]||'操作未完成，请重试';}
+function inviteAssertAvailable(i){
+  if(!chainDemo().rpc)throw new Error('INVITE_RPC');if(!i)throw new Error('INVITE_MISSING');
+  const s=invitationState(i);if(s!=='active')throw new Error(({pending:'INVITE_PENDING',consumed:'INVITE_USED',expired:'INVITE_EXPIRED',revoked:'INVITE_REVOKED',failed:'INVITE_FAILED'})[s]||'INVITE_INVALID');
+  if(i.network!=='DEMO-SUI'||i.package!=='DEMO-PACKAGE')throw new Error('INVITE_INVALID');
+  if(!state.fleet.coordinators.some(c=>c.id===i.coordinator&&c.orgId===i.orgId&&c.binding==='confirmed'))throw new Error('INVITE_BINDING');
+}
+async function prepareHostInvite(options={}){
+  if(currentOrg().role!=='admin'||mobileReadOnly())throw new Error('INVITE_PERMISSION');
+  if(!chainDemo().rpc)throw new Error('INVITE_RPC');
+  const orgId=state.orgId,coordinator=fleet().coordinators.find(c=>c.id===options.coordinator&&c.binding==='confirmed');
+  if(!coordinator)throw new Error('INVITE_BINDING');
+  const minutes=Number(options.minutes??60);if(![15,60,1440].includes(minutes))throw new Error('INVITE_INVALID');
+  let key;try{key=await crypto.subtle.generateKey({name:'Ed25519'},true,['sign','verify']);}catch{throw new Error('INVITE_CRYPTO');}
+  const publicKey=inviteBase64(await crypto.subtle.exportKey('raw',key.publicKey)),secret=inviteBase64(await crypto.subtle.exportKey('pkcs8',key.privateKey));
+  if(state.orgId!==orgId||currentOrg().role!=='admin')throw new Error('INVITE_CANCELLED');
+  const i={id:'DEMO-INVITE-'+crypto.randomUUID().toUpperCase(),orgId,network:'DEMO-SUI',package:'DEMO-PACKAGE',publicKey,coordinator:coordinator.id,scope:'fractalmind-os 工作区',execute:true,desktop:!!options.desktop,grantMs:7*86400000,createdAt:Date.now(),expires:Date.now()+minutes*60000,maxUses:1,status:'pending',usedBy:null};
+  const tx={id:demoId('TX'),orgId,inviteId:i.id,kind:'invite-create',status:'pending'};i.createTx=tx.id;
+  invitations().push(i);chainDemo().transactions.push(tx);inviteSecrets.set(i.id,`FMI-DEMO.${i.id}.${secret}`);save();return i;
+}
+function confirmHostInvite(i,success=true){
+  if(!chainDemo().rpc)throw new Error('INVITE_RPC');
+  if(!i||i.orgId!==state.orgId||currentOrg().role!=='admin'||mobileReadOnly())throw new Error('INVITE_PERMISSION');
+  const tx=chainDemo().transactions.find(t=>t.id===i.createTx);if(!tx||tx.status!=='pending')return false;
+  if(!success){tx.status='failed';i.status='failed';inviteSecrets.delete(i.id);save();return false;}
+  tx.status='confirmed';i.status='active';save();return true;
+}
+function invitationTerms(i){return JSON.stringify([i.network,i.package,i.id,i.orgId,i.coordinator,i.scope,i.execute,i.desktop,i.grantMs,i.expires,i.maxUses]);}
+function invitationProofMessage(payload){return inviteBytes(JSON.stringify(['FRACTALMIND_HOST_REDEEM_DEMO_V1',payload.network,payload.package,payload.inviteId,payload.orgId,payload.device,payload.nonce,payload.terms]));}
+async function prepareInviteRedemption(code,values={}){
+  if(mobileReadOnly())throw new Error('INVITE_PERMISSION');
+  if(!values.consent)throw new Error('INVITE_CONSENT');
+  const {id,secret}=inviteParse(code),i=inviteById(id);inviteAssertAvailable(i);
+  const payload={network:i.network,package:i.package,inviteId:i.id,orgId:i.orgId,device:values.device||demoId('DEVICE'),nonce:crypto.randomUUID(),terms:invitationTerms(i)};
+  let proof;try{const key=await crypto.subtle.importKey('pkcs8',inviteUnbase64(secret),{name:'Ed25519'},false,['sign']);proof=inviteBase64(await crypto.subtle.sign('Ed25519',key,invitationProofMessage(payload)));}catch{throw new Error('INVITE_INVALID');}
+  inviteAssertAvailable(i);
+  const tx={id:demoId('TX'),orgId:i.orgId,inviteId:i.id,kind:'invite-redeem',status:'pending',sender:payload.device,payload,proof,host:{name:String(values.name||'New Host').trim().slice(0,60)||'New Host',os:values.os||'Ubuntu · amd64',kind:values.kind==='cloud'?'cloud':'local',desktop:!!values.desktop,consent:true}};
+  chainDemo().transactions.push(tx);save();return tx;
+}
+async function confirmInviteRedemption(tx,success=true){
+  if(!tx||tx.kind!=='invite-redeem'||tx.status!=='pending')throw new Error('INVITE_USED');
+  if(!chainDemo().rpc)throw new Error('INVITE_RPC');
+  if(!success){tx.status='failed';tx.error='INVITE_FAILED';save();throw new Error('INVITE_FAILED');}
+  const i=inviteById(tx.inviteId),p=tx.payload;
+  try{
+    inviteAssertAvailable(i);
+    if(p.inviteId!==i.id||p.orgId!==i.orgId||p.network!==i.network||p.package!==i.package||tx.sender!==p.device||!tx.host.consent)throw new Error('INVITE_PROOF');
+    if(p.terms!==invitationTerms(i))throw new Error('INVITE_SCOPE');
+    const publicKey=await crypto.subtle.importKey('raw',inviteUnbase64(i.publicKey),{name:'Ed25519'},false,['verify']);
+    if(!await crypto.subtle.verify('Ed25519',publicKey,inviteUnbase64(tx.proof),invitationProofMessage(p)))throw new Error('INVITE_PROOF');
+    // Recheck after async verification. The consumption and grants below are one synchronous demo commit.
+    inviteAssertAvailable(i);if(tx.status!=='pending')throw new Error('INVITE_USED');
+    if(p.terms!==invitationTerms(i))throw new Error('INVITE_SCOPE');
+    const hostId=demoId('HOST'),r={id:demoId('JOIN'),orgId:i.orgId,inviteId:i.id,device:p.device,hostId,name:tx.host.name,os:tx.host.os,kind:tx.host.kind,desktop:i.desktop&&tx.host.desktop,coordinator:i.coordinator,scope:i.scope,consent:true,status:'authorized',expires:i.expires,tx:null};
+    const host={id:hostId,orgId:i.orgId,device:p.device,authorityMigrated:true,name:r.name,kind:r.kind,coordinator:r.coordinator,location:'—',os:r.os,status:'pending',cpu:0,mem:0,ram:16,disk:256,desktop:r.desktop,accepting:true,workspace:r.scope,lastSeen:new Date().toISOString(),heartbeat:null,uptime:'尚未上线',version:'待确认',commands:[],audit:[]};
+    const member={id:demoId('MEMBER'),orgId:i.orgId,hostId,device:p.device,status:'confirmed',inviteId:i.id};
+    const grant={id:demoId('GRANT'),orgId:i.orgId,hostId,status:'confirmed',scope:i.scope,execute:i.execute,desktop:r.desktop,expires:Date.now()+i.grantMs,inviteId:i.id};
+    const ledger=chainDemo();i.status='consumed';i.usedBy=p.device;i.consumedAt=Date.now();i.hostId=hostId;
+    ledger.requests.push(r);ledger.memberships.push(member);ledger.grants.push(grant);state.fleet.hosts.push(host);tx.status='confirmed';tx.requestId=r.id;
+    inviteSecrets.delete(i.id);save();return r;
+  }catch(error){if(error.message!=='INVITE_RPC'){tx.status='failed';tx.error=error.message;save();}throw error;}
+}
+function revokeHostInvite(i){
+  if(!chainDemo().rpc)throw new Error('INVITE_RPC');
+  if(!i||i.orgId!==state.orgId||currentOrg().role!=='admin'||mobileReadOnly())throw new Error('INVITE_PERMISSION');
+  if(invitationState(i)!=='active')return false;
+  i.status='revoked';chainDemo().transactions.push({id:demoId('TX'),orgId:i.orgId,inviteId:i.id,kind:'invite-revoke',status:'confirmed'});inviteSecrets.delete(i.id);save();return true;
+}
+function quickInviteStatus(i){return ({active:'待使用',pending:'交易待确认',consumed:'已使用',expired:'已过期',revoked:'已撤销',failed:'创建失败'})[invitationState(i)];}
+function showQuickEnrollment(mode='create',id=null,code=''){
+  const pending=id&&chainDemo().transactions.find(t=>t.inviteId===id&&t.kind==='invite-redeem'&&t.status==='pending');
+  inviteView={mode:pending?'redeem':mode,id,code,error:'',busy:false,result:null,txId:pending?.id};drawQuickEnrollment();
+}
+function inviteProtocolDetails(){return `<details class="invite-protocol"><summary>链上如何保证一次性与有效期？</summary><p>管理员预先批准组织资格和有限执行权限。App 生成秘密凭证；链上只存验证公钥、权限、期限和使用状态。</p><p>envd 用邀请码为自己的设备身份生成兑换证明。Sui 校验设备绑定、链上时间、权限及未使用状态，在同一交易中消费邀请并建立成员资格和授权。</p><p>Coordinator 负责连接与转发，envd 校验每次执行。入组已确认与连接在线分别展示。</p><p>持码者可以认领一台主机，请私下传递；原始邀请码不写入交易参数、日志或普通导出。丢失未使用的邀请码可撤销并重建。</p></details>`;}
+function drawQuickEnrollment(){
+  const v=inviteView,i=inviteById(v.id),busy=v.busy,disabled=busy||!chainDemo().rpc||mobileReadOnly(),admin=currentOrg().role==='admin';
+  let body='';
+  if(v.result){const r=v.result,h=hostById(r.hostId),online=hostReachable(h);body=`<div class="invite-success">${icon(online?'checkCircle':'wifi')}<h3>${online?'主机已加入并上线':'已加入组织，等待连接'}</h3><p data-i18n-content>${esc(r.name)} · ${esc(currentOrg().name)}</p></div><div class="invite-facts"><span>邀请码已消费</span><span>组织资格已确认</span><span>预设权限已生效</span></div><p class="muted">${online?'已收到首次心跳，现在可以分配 OKR。':'链上入组和授权已完成。恢复连接后自动上线，无需再次使用邀请码。'}</p><div class="dialog-footer">${!online?'<button class="btn" data-invite="reconnect">重试连接</button>':''}<button class="btn primary" data-invite="host">查看主机</button></div>`;}
+  else if(v.mode==='created'&&i){const secret=inviteSecrets.get(i.id);body=`<div class="invite-success">${icon('shield')}<h3>${invitationState(i)==='pending'?'正在确认邀请…':quickInviteStatus(i)}</h3><p>仅限 1 台主机 · 使用后立即失效</p></div>${invitationState(i)==='active'&&secret?`<label class="field">邀请码 · 演示<textarea readonly id="invite-secret" aria-label="邀请码 · 演示" translate="no">${esc(secret)}</textarea></label><div class="row wrap"><button class="btn" data-invite="copy">${icon('copy')}复制邀请码</button><button class="btn primary" data-invite="use" data-id="${i.id}">在新主机使用（演示） ${icon('arrow')}</button></div>`:''}<div class="invite-facts"><span data-i18n-content>${esc(currentOrg().name)}</span><span>有效期至 ${new Date(i.expires).toLocaleString(preferences.locale)}</span><span>执行权限 7 天</span></div><p class="muted">${invitationState(i)==='pending'?'链上确认前不可使用。':invitationState(i)==='consumed'?'此邀请已完成接入，请到主机详情管理后续权限。':invitationState(i)==='active'?(secret?'将邀请码发给新主机。无需再等待管理员审批。':'邀请码未保存在浏览器持久数据中。若已丢失，请撤销未使用的邀请并重新生成。'):'此邀请已失效，可重新创建邀请码。'}</p>${invitationState(i)==='pending'?'<button class="btn" data-invite="query-create">查询交易结果</button>':''}${invitationState(i)==='active'?`<button class="link-btn" data-invite="revoke" data-id="${i.id}">撤销这个邀请码</button>`:''}${invitationState(i)==='consumed'?`<button class="btn" data-invite="host-record" data-id="${i.id}">查看已加入主机</button>`:!['active','pending'].includes(invitationState(i))?'<button class="btn" data-invite="create">重新创建邀请码</button>':''}`;}
+  else if(v.txId&&chainDemo().transactions.some(t=>t.id===v.txId&&t.status==='pending'))body=`<div class="notice">兑换交易待确认。先查询这笔交易的结果，避免重复提交。</div><div class="dialog-footer"><button class="btn primary" data-invite="query-redeem" ${disabled?'disabled':''}>查询兑换结果</button></div>`;
+  else if(v.mode==='redeem'){
+    let preview=null;try{preview=inviteById(inviteParse(v.code).id);}catch{}
+    body=`<form id="invite-redeem-form"><label class="field">粘贴邀请码<textarea name="code" id="invite-code" required aria-label="粘贴邀请码" placeholder="FMI-DEMO.…" translate="no">${esc(v.code)}</textarea></label><div id="invite-target">${inviteTargetPreview(preview)}</div><label class="check-row"><input type="checkbox" name="consent" required>我确认加入所示组织，并允许本机使用邀请中的执行权限</label><details><summary>主机信息</summary><label class="field">主机名称<input name="name" value="${esc(v.hostValues?.name||'New Host')}" maxlength="60"></label><div class="detail-grid"><label class="field">操作系统<select name="os"><option>Ubuntu · amd64</option><option>macOS · arm64</option><option>Windows · amd64</option></select></label><label class="field">部署位置<select name="kind"><option value="local">本地 / 小主机</option><option value="cloud">云端服务器</option></select></label></div><label class="check-row"><input type="checkbox" name="desktop">本机允许桌面访问（仍需邀请已授权）</label></details><div class="dialog-footer"><button class="btn primary" ${disabled?'disabled':''}>${busy?'正在验证并加入…':'加入组织并连接'}</button></div></form>`;
+  }else body=`<p class="muted">创建一次性邀请码，把新主机的加入与执行权限一起批准。</p><form id="invite-create-form"><div class="detail-grid"><label class="field">邀请码有效期<select name="minutes"><option value="15">15 分钟</option><option value="60" selected>1 小时</option><option value="1440">24 小时</option></select></label><label class="field">连接入口<select name="coordinator">${fleet().coordinators.filter(c=>c.binding==='confirmed').map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label></div><div class="notice">仅限 1 台主机 · fractalmind-os 工作区<br>Builder 执行、状态与日志、Agent 重启/停止、Shell · 授权 7 天<br>不授予组织管理员权限</div><label class="check-row"><input type="checkbox" name="desktop">同时预授权远程桌面（可选）</label><div class="dialog-footer"><button class="btn primary" ${disabled||!admin?'disabled':''}>${busy?'正在创建…':'签名创建邀请码'}</button></div></form>${!admin?'<p class="muted">只有管理员可以创建；新主机持有效邀请码即可加入。</p>':''}<details><summary>管理已有邀请码</summary>${orgInvitations().map(x=>`<button class="choice-card" data-invite="inspect" data-id="${x.id}"><span class="grow"><strong>${quickInviteStatus(x)}</strong><small>${new Date(x.expires).toLocaleString(preferences.locale)} · ${x.id.slice(-8)}</small></span>${icon('arrow')}</button>`).join('')||'<p class="muted">还没有邀请码</p>'}</details>`;
+  openOverlay(`<section class="dialog wide enrollment-dialog invite-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">${dialogHeader('用邀请码，快速接入主机','管理员创建一次，新主机输入一次。','laptop')}<div class="invite-route"><span>创建邀请码</span>${icon('arrow')}<span>输入并确认</span>${icon('arrow')}<span>自动连接</span></div>${!v.result?`<div class="tabs"><button class="tab ${v.mode!=='redeem'?'active':''}" data-invite="create" ${busy?'disabled':''}>管理员：创建邀请</button><button class="tab ${v.mode==='redeem'?'active':''}" data-invite="redeem" ${busy?'disabled':''}>新主机：使用邀请</button></div>`:''}<div class="enroll-body">${body}</div><div id="invite-feedback" role="status">${v.error?`<div class="notice amber">${esc(v.error)}</div>`:''}</div><p class="fleet-demo-note">仅交互演示。链上确认与连接会自动模拟，未连接真实 Sui 或主机。</p>${inviteProtocolDetails()}<details class="invite-protocol"><summary>演示故障与人工审核</summary><label class="check-row"><input type="checkbox" id="invite-fail-next" ${chainDemo().failNextInvite?'checked':''}>模拟下一笔交易失败</label><button class="link-btn" data-invite="rpc">${chainDemo().rpc?'模拟 Sui 不可用':'恢复 Sui 连接'}</button><button class="link-btn" data-invite="manual">改用设备申请与人工审核</button></details></section>`);
+}
+function inviteTargetPreview(i){return i?`<div class="notice"><strong data-i18n-content>${esc(state.organizationRegistry.find(o=>o.id===i.orgId)?.name||i.orgId)}</strong><br>${esc(i.scope)} · 执行权限 7 天 · ${i.desktop?'允许申请桌面访问':'未授予桌面访问'}<br>${quickInviteStatus(i)} · 有效期至 ${new Date(i.expires).toLocaleString(preferences.locale)}</div>`:'<p class="muted">粘贴后显示组织名称、有效期和预授权范围。</p>';}
+function inviteFailNext(){const fail=!!chainDemo().failNextInvite;chainDemo().failNextInvite=false;return fail;}
+function inviteUIError(error){inviteView.busy=false;inviteView.error=inviteError(error.message);drawQuickEnrollment();}
+document.addEventListener('submit',async e=>{
+  if(!['invite-create-form','invite-redeem-form'].includes(e.target.id))return;e.preventDefault();if(inviteView.busy)return;
+  const form=e.target,data=new FormData(form),view=inviteView;view.busy=true;view.error='';
+  try{
+    if(form.id==='invite-create-form'){
+      const options={minutes:data.get('minutes'),coordinator:data.get('coordinator'),desktop:data.has('desktop')};drawQuickEnrollment();
+      const i=await prepareHostInvite(options);if(inviteView!==view)return;view.id=i.id;view.mode='created';drawQuickEnrollment();
+      later(()=>{if(inviteView!==view)return;try{const confirmed=confirmHostInvite(i,!inviteFailNext());view.busy=false;if(!confirmed)view.error=inviteError('INVITE_FAILED');drawQuickEnrollment();}catch(error){inviteUIError(error);}},650);
+    }else{
+      view.code=String(data.get('code')||'');const values={consent:data.has('consent'),name:data.get('name'),os:data.get('os'),kind:data.get('kind'),desktop:data.has('desktop')};
+      view.hostValues=values;const button=form.querySelector('button[type="submit"],button.btn.primary');button.disabled=true;button.textContent=localizedText('正在验证并加入…');
+      const tx=await prepareInviteRedemption(view.code,values);view.txId=tx.id;
+      later(async()=>{if(inviteView!==view)return;try{const r=await confirmInviteRedemption(tx,!inviteFailNext());if(inviteView!==view)return;state.orgId=r.orgId;selectedHost='';view.result=r;view.code='';view.busy=false;connectEnrolledHost(r);render();drawQuickEnrollment();}catch(error){inviteUIError(error);}},650);
+    }
+  }catch(error){if(inviteView===view)inviteUIError(error);}
+});
+document.addEventListener('click',async e=>{
+  const el=e.target.closest('[data-invite]');if(!el||el.disabled)return;const a=el.dataset.invite,i=inviteById(el.dataset.id||inviteView.id);
+  if(inviteView.busy)return;
+  try{
+    if(a==='create')showQuickEnrollment();
+    if(a==='redeem')showQuickEnrollment('redeem');
+    if(a==='use')showQuickEnrollment('redeem',i.id,inviteSecrets.get(i.id)||'');
+    if(a==='inspect')showQuickEnrollment('created',i.id);
+    if(a==='copy'){const code=inviteSecrets.get(i.id);if(code){try{await navigator.clipboard.writeText(code);toast('邀请码已复制');}catch{const field=$('#invite-secret');field.focus();field.select();toast('请复制已选中的邀请码');}}}
+    if(a==='revoke'){revokeHostInvite(i);drawQuickEnrollment();}
+    if(a==='query-create'){confirmHostInvite(i);drawQuickEnrollment();}
+    if(a==='query-redeem'){const tx=chainDemo().transactions.find(t=>t.id===inviteView.txId);const r=await confirmInviteRedemption(tx);state.orgId=r.orgId;selectedHost='';inviteView.result=r;inviteView.code='';connectEnrolledHost(r);render();drawQuickEnrollment();}
+    if(a==='rpc'){chainDemo().rpc=!chainDemo().rpc;drawQuickEnrollment();}
+    if(a==='manual')showEnrollment();
+    if(a==='host')openFleetHost(inviteView.result.hostId);
+    if(a==='host-record'&&i)openFleetHost(i.hostId);
+    if(a==='reconnect'){connectEnrolledHost(inviteView.result);render();drawQuickEnrollment();}
+  }catch(error){inviteUIError(error);}
+});
+document.addEventListener('input',e=>{if(e.target.id==='invite-code'){inviteView.code=e.target.value;let i;try{i=inviteById(inviteParse(e.target.value).id);}catch{}$('#invite-target').innerHTML=inviteTargetPreview(i);}});
+document.addEventListener('change',e=>{if(e.target.id==='invite-fail-next')chainDemo().failNextInvite=e.target.checked;});
 
 const agents=[{id:'builder',name:'Builder',role:'开发与实现',color:'',symbol:'code',model:'Claude · 演示配置',desc:'把明确的目标变成可运行的代码，逐步验证每一次修改。'},{id:'researcher',name:'Researcher',role:'研究与验证',color:'blue',symbol:'flask',model:'GPT · 演示配置',desc:'寻找可靠证据，整理可复用的研究结论，帮助团队做出判断。'},{id:'designer',name:'Designer',role:'体验与设计',color:'sand',symbol:'grid',model:'Claude · 演示配置',desc:'从用户的真实目标出发，构建连贯、清晰的产品体验。'}];
 function legacyDefaults(){return{space:'personal',offline:false,phonePaired:false,notifications:true,background:true,paused:[],goals:[{id:'app',name:'发布 FractalMind 的第一个公开版本',description:'让每个人从一个入口，开始与自己的 Agent 协作。',label:'产品构建',color:'green'},{id:'network',name:'探索开放组织的协作方式',description:'从个人的成果，走向共同建设的智能。',label:'开放研究',color:'blue'}],tasks:[{id:'t1',goal:'app',name:'搭建统一 App 的导航与组织切换',agent:'builder',status:'approval',detail:'实现「当前组织 / 我的组织 / 开放网络」三个入口，并保持任务上下文一致。',history:[],messages:[]},{id:'t2',goal:'app',name:'完成首次上手体验设计',agent:'designer',status:'review',detail:'梳理新用户从创建个人组织，到完成第一个真实目标的完整路径。',history:[],messages:[]},{id:'t3',goal:'app',name:'验证五平台运行时兼容性',agent:'researcher',status:'running',detail:'检查 macOS、Windows、Ubuntu、iOS 和 Android 的运行边界与依赖。',history:[],messages:[]},{id:'t4',goal:'app',name:'梳理产品使命与信息架构',agent:'designer',status:'done',detail:'明确从个人组织到组织联邦的产品成长路径。',history:[],messages:[]},{id:'t5',goal:'app',name:'确认OKR的状态约定',agent:'builder',status:'done',detail:'区分运行完成、成果提交和验收通过。',history:[],messages:[]},{id:'t6',goal:'network',name:'研究组织成员的授权与撤销机制',agent:'researcher',status:'queued',detail:'整理可验证授权、成员角色和撤销后的执行边界。',history:[],messages:[]},{id:'t7',goal:'network',name:'建立公开协作的研究目录',agent:'researcher',status:'done',detail:'建立可引用的公开组织研究资料。',history:[],messages:[]}],memories:[{id:'m1',title:'成果提交与任务验收，应该分开',body:'Agent 完成执行后提交成果，由人或已授权的验收者确认。保留过程中的证据，让完成状态有据可查。',type:'产品决策',source:'确认OKR的状态约定',date:'今天'},{id:'m2',title:'个人组织是开放网络的起点',body:'保留本地优先、模型可选和数据可导出的能力，让用户自主决定如何参与团队与组织。',type:'设计原则',source:'梳理产品使命与信息架构',date:'昨天'},{id:'m3',title:'用相同的原语，组织不同尺度的协作',body:'目标、任务、身份、权限、状态和证据，在 Agent、团队与组织之间保持一致。',type:'研究笔记',source:'建立公开协作的研究目录',date:'9 月 26 日'}]};}
@@ -1577,10 +1805,10 @@ function orgCard(o){return `<article class="card org-card"><div class="org-art" 
 function organizationsPage(){return organizationDirectory();}
 function mapArt(){return `<svg class="network-map" viewBox="0 0 380 240" fill="none" aria-label="个人、团队、组织构成的开放网络"><g stroke="var(--tone-becdad, #becdad)" stroke-width="1"><path d="m180 113-76-67 166-8-90 75 120 45-155 56 35-101-124 47 48-114m166-8 30 120-50-68-105 124M56 160l89 54m35-101 70-23M104 46l-64 1m230-9 61-15m-31 135 47 44M145 214l-35 20"/><circle cx="180" cy="113" r="50" stroke-dasharray="2 5"/><circle cx="180" cy="113" r="102" stroke="var(--tone-dbe3cf, #dbe3cf)" stroke-dasharray="3 5"/></g><g fill="var(--tone-e3ecd6, #e3ecd6)" stroke="var(--tone-b4c69c, #b4c69c)"><circle cx="104" cy="46" r="19"/><circle cx="270" cy="38" r="14"/><circle cx="300" cy="158" r="19"/><circle cx="145" cy="214" r="13"/><circle cx="56" cy="160" r="14"/><circle cx="250" cy="90" r="7"/></g><circle cx="180" cy="113" r="31" fill="var(--tone-e8eedf, #e8eedf)" stroke="var(--tone-9fb68a, #9fb68a)"/><path d="m180 93 20 34h-40Z" fill="var(--tone-7f9b67, #7f9b67)"/><path d="m180 103 10 18h-20Z" fill="var(--tone-e8eedf, #e8eedf)"/><g fill="var(--tone-9caf84, #9caf84)"><circle cx="40" cy="47" r="4"/><circle cx="331" cy="23" r="4"/><circle cx="347" cy="202" r="4"/><circle cx="110" cy="234" r="4"/></g><g fill="var(--tone-8a9d74, #8a9d74)" font-family="inherit" font-size="9"><text x="77" y="81">你的组织</text><text x="278" y="191">组织</text><text x="232" y="20">Agent 团队</text><text x="162" y="166">FractalMind</text></g></svg>`;}
 function networkPage(){return `${pageHeading('THE OPEN NETWORK','智能，因连接而生长。','发现共同的目标，找到值得一起完成的事。')}<section class="network-hero"><div><span class="eyebrow">ASI THAT NO ONE OWNS</span><h1>由每一个你，<br>共同建设的智能。</h1><p>从一个 Agent 到一个团队，从一个组织到开放网络。能力可以组合，成果可以延续。</p><span class="pill">${icon('globe')}无需许可参与 · 自主选择协作</span></div>${mapArt()}</section><div class="toolbar"><h2 style="font-size:15px">发现组织</h2><div class="inline-search">${icon('search')}<input id="org-search" class="search-field" placeholder="按名称查找组织…" aria-label="查找组织"></div></div><div class="org-grid" id="org-results">${organizations.map(orgCard).join('')}</div><div class="footer-note"><span class="row">${icon('info')}本页为演示组织与数据，不代表实时链上状态。</span><span>TESTNET · CONCEPT PREVIEW</span></div>`;}
-function settingsPage(){return `${pageHeading('SPACE SETTINGS','属于你的组织，由你掌控。','连接设备、管理工具，让工作以你习惯的方式发生。')}<div class="settings-grid"><div class="stack">${appearanceControls()}<div class="card"><div class="row between"><h3>执行与协作设备</h3><button class="link-btn" data-action="pair">${icon('plus')}配对手机</button></div><button class="choice-card" data-page="hosts">${icon('org')}<span class="grow"><strong>管理本地与云端主机</strong><small>${fleet().hosts.length} 台执行主机 · 节点、Agent、命令与桌面</small></span>${icon('arrow')}</button><div class="device-card"><span class="device-icon">${icon('laptop')}</span><div class="grow"><strong>MacBook Pro <span class="badge">本机</span></strong><small>macOS · Apple Silicon · 演示设备</small></div><span class="badge ${state.offline?'':'green'}">${state.offline?'离线':'在线'}</span></div>${state.phonePaired?`<div class="device-card"><span class="device-icon">${icon('phone')}</span><div class="grow"><strong>我的 iPhone <span class="badge green">已授权</span></strong><small>${state.phoneAccess?.operate?'查看任务 · 发起任务 · 操作审批':'查看任务与成果 · 只读'}</small></div><button class="btn small danger" data-action="revoke">撤销</button></div>`:`<div class="device-card"><span class="device-icon">${icon('phone')}</span><div class="grow"><strong>让手机接上你的工作</strong><small>离开电脑，也能查看结果和处理审批。</small></div></div>`}<div class="notice" style="font-size:10px;margin-top:14px">${icon('lock')}配对与授权分别确认。原型不会访问相机或创建真实凭据。</div></div><div class="card"><h3>模型与工具</h3>${[['spark','模型连接','Claude / GPT · 演示配置','已配置'],['folder','工作区访问','fractalmind-os · 仅当前项目','已授权'],['code','命令执行','遵守 OKR 范围与预算','约定内自主'],['book','内置技能','文件分析 · 代码检查 · 研究整理','3 项启用']].map(([ic,title,sub,label])=>`<div class="setting-row"><div class="row">${icon(ic)}<div><p>${title}</p><small>${sub}</small></div></div><button class="badge green" data-action="tool" data-id="${esc(title)}">${label}${icon('chevron')}</button></div>`).join('')}</div></div><div class="stack"><div class="card"><h3>工作偏好</h3><div class="setting-row"><div><p>需要决定时通知我</p><small>待审批、待验收和执行失败</small></div><button class="switch ${state.notifications?'on':''}" role="switch" aria-checked="${state.notifications}" aria-label="需要决定时通知我" data-action="toggle-notifications"></button></div><div class="setting-row"><div><p>关闭窗口后继续执行</p><small>保持本机核心服务运行</small></div><button class="switch ${state.background?'on':''}" role="switch" aria-checked="${state.background}" aria-label="关闭窗口后继续执行" data-action="toggle-background"></button></div></div><div class="card"><h3>数据与诊断</h3><p class="muted" style="font-size:11px;margin:10px 0 18px">产品持久状态以 Sui 为准；本页只使用浏览器模拟缓存。个人组织不自动保证数据保密。</p><div class="stack" style="gap:9px"><button class="btn" data-action="export">${icon('download')}导出演示数据</button><button class="btn" data-action="diagnostic">${icon('info')}查看服务诊断</button><button class="btn" data-action="${state.offline?'online':'offline'}">${icon('wifi')}${state.offline?'恢复设备连接':'模拟设备离线'}</button></div></div><div class="notice">FractalMind · 产品原型 09 · 组织与主机接入<br>所有操作均为本地交互演示，无真实执行。</div></div></div>`;}
+function settingsPage(){return `${pageHeading('SPACE SETTINGS','属于你的组织，由你掌控。','连接设备、管理工具，让工作以你习惯的方式发生。')}<div class="settings-grid"><div class="stack">${appearanceControls()}<div class="card"><div class="row between"><h3>执行与协作设备</h3><button class="link-btn" data-action="pair">${icon('plus')}配对手机</button></div><button class="choice-card" data-page="hosts">${icon('org')}<span class="grow"><strong>管理本地与云端主机</strong><small>${fleet().hosts.length} 台执行主机 · 节点、Agent、命令与桌面</small></span>${icon('arrow')}</button><div class="device-card"><span class="device-icon">${icon('laptop')}</span><div class="grow"><strong>MacBook Pro <span class="badge">本机</span></strong><small>macOS · Apple Silicon · 演示设备</small></div><span class="badge ${state.offline?'':'green'}">${state.offline?'离线':'在线'}</span></div>${state.phonePaired?`<div class="device-card"><span class="device-icon">${icon('phone')}</span><div class="grow"><strong>我的 iPhone <span class="badge green">已授权</span></strong><small>${state.phoneAccess?.operate?'查看任务 · 发起任务 · 操作审批':'查看任务与成果 · 只读'}</small></div><button class="btn small danger" data-action="revoke">撤销</button></div>`:`<div class="device-card"><span class="device-icon">${icon('phone')}</span><div class="grow"><strong>让手机接上你的工作</strong><small>离开电脑，也能查看结果和处理审批。</small></div></div>`}<div class="notice" style="font-size:10px;margin-top:14px">${icon('lock')}配对与授权分别确认。原型不会访问相机或创建真实凭据。</div></div><div class="card"><h3>模型与工具</h3>${[['spark','模型连接','Claude / GPT · 演示配置','已配置'],['folder','工作区访问','fractalmind-os · 仅当前项目','已授权'],['code','命令执行','遵守 OKR 范围与预算','约定内自主'],['book','内置技能','文件分析 · 代码检查 · 研究整理','3 项启用']].map(([ic,title,sub,label])=>`<div class="setting-row"><div class="row">${icon(ic)}<div><p>${title}</p><small>${sub}</small></div></div><button class="badge green" data-action="tool" data-id="${esc(title)}">${label}${icon('chevron')}</button></div>`).join('')}</div></div><div class="stack"><div class="card"><h3>工作偏好</h3><div class="setting-row"><div><p>需要决定时通知我</p><small>待审批、待验收和执行失败</small></div><button class="switch ${state.notifications?'on':''}" role="switch" aria-checked="${state.notifications}" aria-label="需要决定时通知我" data-action="toggle-notifications"></button></div><div class="setting-row"><div><p>关闭窗口后继续执行</p><small>保持本机核心服务运行</small></div><button class="switch ${state.background?'on':''}" role="switch" aria-checked="${state.background}" aria-label="关闭窗口后继续执行" data-action="toggle-background"></button></div></div><div class="card"><h3>数据与诊断</h3><p class="muted" style="font-size:11px;margin:10px 0 18px">产品持久状态以 Sui 为准；本页只使用浏览器模拟缓存。个人组织不自动保证数据保密。</p><div class="stack" style="gap:9px"><button class="btn" data-action="export">${icon('download')}导出演示数据</button><button class="btn" data-action="diagnostic">${icon('info')}查看服务诊断</button><button class="btn" data-action="${state.offline?'online':'offline'}">${icon('wifi')}${state.offline?'恢复设备连接':'模拟设备离线'}</button></div></div><div class="notice">FractalMind · 产品原型 10 · 邀请码快速接入<br>所有操作均为本地交互演示，无真实执行。</div></div></div>`;}
 function go(id,goalId=null){if(id==='tasks')selectedOKR=goalId;page=id;closeOverlay();render();$('#content').scrollTop=0;}
 function openOverlay(html,kind='dialog'){activeConversation=null;overlayReturn=document.activeElement;$('#overlay').classList.add('open');$('#overlay').innerHTML=`<div class="backdrop" data-action="close"></div>${kind==='drawer'?html:`<div class="dialog-wrap">${html}</div>`}`;translateDOM($('#overlay'));requestAnimationFrame(()=>{const focus=$('#run-chat-input')||$('#overlay input:not([type="checkbox"]),#overlay textarea,#overlay button');focus?.focus();});}
-function closeOverlay(){activeConversation=null;const wasOpen=$('#overlay').classList.contains('open');$('#overlay').innerHTML='';$('#overlay').classList.remove('open');activeTask=null;if(wasOpen&&overlayReturn?.isConnected)overlayReturn.focus();}
+function closeOverlay(){inviteView={};activeConversation=null;const wasOpen=$('#overlay').classList.contains('open');$('#overlay').innerHTML='';$('#overlay').classList.remove('open');activeTask=null;if(wasOpen&&overlayReturn?.isConnected)overlayReturn.focus();}
 function dialogHeader(title,desc,ico='spark'){return `<div class="row between"><span class="avatar">${icon(ico)}</span><button class="icon-btn" data-action="close" aria-label="关闭对话框">${icon('close')}</button></div><h2 id="dialog-title">${title}</h2><p>${desc}</p>`;}
 function openTask(id,tab='overview'){const t=orgTasks().find(x=>x.id===id);if(!t)return;activeTask=id;detailTab=tab;drawTask();}
 function drawTask(){const t=orgTasks().find(x=>x.id===activeTask);if(!t)return;const a=agentFor(t.agent);const html=`<section class="drawer" role="dialog" aria-modal="true" aria-labelledby="task-dialog-title"><div class="drawer-head"><div class="row">${badge(t.status)}<span class="mono muted">TASK / ${t.id.toUpperCase().slice(-8)}</span><span class="spacer"></span><button class="icon-btn" data-action="close" aria-label="关闭任务详情">${icon('close')}</button></div><h2 id="task-dialog-title" data-i18n-content>${esc(t.name)}</h2><div class="row" style="font-size:10px;color:var(--tone-98a187, #98a187)">${icon('target')}${esc(orgGoals().find(g=>g.id===t.goal)?.name||'个人目标')}</div><div class="tabs" role="tablist">${[['overview','任务概览'],['evidence','成果与证据'],['activity','活动记录']].map(([id,title])=>`<button class="tab ${detailTab===id?'active':''}" role="tab" aria-selected="${detailTab===id}" data-detail-tab="${id}">${title}</button>`).join('')}</div></div><div class="drawer-content">${mobileReadOnly()?'<div class="notice amber" style="margin-bottom:18px">此手机只有查看权限。审批和任务操作需要桌面授予相应权限。</div>':''}${detailTab==='activity'?taskActivity(t):`${detailTab==='overview'?`<div class="detail-grid"><div><small>责任 Agent</small><div class="row">${ava(a.id,'tiny')}${a.name} · ${a.role}</div></div><div><small>执行设备</small><div class="row">${icon('laptop')}MacBook Pro ${state.offline?'<span class="badge">离线</span>':'<span class="dot"></span>'}</div></div><div><small>组织与工作区</small><div class="row">${icon('lock')}个人组织 / fractalmind-os</div></div><div><small>交付状态</small><span>${t.status==='done'?'已验收并完成':t.status==='review'?'已提交，等待你的验收':'任务已指派，正在推进'}</span></div></div><h3>目标与验收条件</h3><p style="font-size:12px;color:var(--tone-8b967d, #8b967d)" data-i18n-content>${esc(t.detail)}</p>`:''}${taskActionBox(t)}${detailTab==='overview'?`<h3 style="margin-top:24px">继续对话</h3>${t.messages.map(m=>`<div class="chat-message">${esc(m)}</div>`).join('')}<form class="chat-input" id="chat-form"><textarea name="message" aria-label="任务补充说明" placeholder="补充背景，或给 Agent 新的反馈…" required maxlength="1000"></textarea><button class="btn primary" type="submit" aria-label="发送任务反馈">${icon('arrowUp')}</button></form>`:''}`}</div></section>`;openOverlay(html,'drawer');activeTask=t.id;}
@@ -1729,7 +1957,7 @@ function hostConsole(h){return `<section class="card host-console"><div class="r
 function hostDesktop(h){if(!hostAuthorized(h,'desktop'))return '<section class="card empty"><h3>桌面访问尚未授权</h3><p>组织资格和执行权限不自动授予桌面查看或控制。</p></section>';if(!h.desktop)return `<section class="card empty">${icon('laptop')}<h3>这台主机没有图形会话</h3><p>仍可通过远程控制台管理 Agent、读取日志和执行命令。</p><button class="btn" data-fleet="tab" data-id="console">打开控制台</button></section>`;if(desktopDemo.hostId!==h.id)desktopDemo={hostId:h.id,control:false,quality:'clear',zoom:1,touch:'touchpad',stats:false,clicks:0,text:''};const d=desktopDemo,live=hostReachable(h);return `<section class="remote-workspace"><div class="desktop-tools"><span class="badge ${live?'green':''}">${live?'演示画面':'连接中断'}</span><label>画质<select id="desktop-quality" aria-label="远程桌面画质">${[['smooth','流畅 · 720p'],['clear','清晰 · 1080p'],['sharp','精细 · 1440p']].map(([v,l])=>`<option value="${v}" ${d.quality===v?'selected':''}>${l}</option>`).join('')}</select></label><button class="btn small" data-fleet="desktop-zoom" data-id="out" aria-label="缩小远程桌面">−</button><button class="btn small" data-fleet="desktop-zoom" data-id="fit">适应</button><button class="btn small" data-fleet="desktop-zoom" data-id="in" aria-label="放大远程桌面">＋</button><button class="btn small ${d.control?'soft':''}" data-fleet="desktop-control" ${!canOperate()||!live?'disabled':''}>${icon(d.control?'lock':'play')}${d.control?'释放控制':'开始控制（演示）'}</button><button class="btn small" data-fleet="desktop-reconnect" ${!live?'disabled':''}>重新连接</button><button class="icon-btn" data-fleet="desktop-stats" aria-label="桌面连接统计">${icon('info')}</button></div>${d.stats?`<div class="desktop-stats">模拟统计 · ${live?'RTT 28ms · 30fps · 丢包 0.2%':'观测不可用'} · ${d.quality==='smooth'?'2':d.quality==='sharp'?'8':'4'} Mbps · ${Math.round(d.zoom*100)}%</div>`:''}
   <div class="desktop-stage"><div class="desktop-scene ${live?'':'disconnected'}" style="transform:scale(${d.zoom})"><div class="desktop-menubar"><strong data-i18n-content>${esc(h.name)}</strong><span>${esc(h.os)} · 模拟桌面</span></div><div class="desktop-window"><div class="desktop-window-bar"><i></i><i></i><i></i><span>Agent Workspace</span></div><div class="desktop-window-body"><div class="eyebrow" data-i18n-content>${esc(h.workspace)}</div><h3>${hostGoals(h).length?'正在为你的目标工作':'执行环境已就绪'}</h3><p>${hostGoals(h).map(g=>esc(agentFor(g.owner).name+' · '+currentKR(g).id.toUpperCase())).join(' / ')||'等待分配 OKR'}</p><pre>runtime: ready\nnode: ${esc(h.id)}\nagents: ${hostInstances(h).length}\n${d.text?'input (demo): <span translate="no">'+esc(d.text)+'</span>':'等待授权内的下一步动作。'}</pre><button class="btn small" data-fleet="desktop-click" ${!live?'disabled':''}>${icon('folder')}打开工作区（演示）</button>${d.clicks?`<small>已收到 ${d.clicks} 次模拟点击</small>`:''}</div></div><div class="desktop-dock">${['folder','code','agents','target','settings'].map(ic=>`<span>${icon(ic)}</span>`).join('')}</div></div>${!live?'<div class="desktop-lost">画面已过期 · 输入已停止<br><small>恢复主机连接后，重新选择控制模式。</small></div>':''}</div>
   <form id="fleet-desktop-input"><div class="desktop-input"><select id="desktop-touch" aria-label="远程桌面触控方式"><option value="touchpad" ${d.touch==='touchpad'?'selected':''}>触控板模式</option><option value="direct" ${d.touch==='direct'?'selected':''}>直接触控模式</option></select><input name="text" aria-label="模拟键盘输入" placeholder="输入一段文字，演示远程键盘" maxlength="160" ${!d.control||!live?'disabled':''}><button class="btn small" ${!d.control||!live?'disabled':''}>发送输入</button></div></form><p class="fleet-demo-note">${d.control?'控制中 · 演示输入仅影响上方示意画面':'只读查看 · 开始控制后才接受演示输入'}。真实产品复用 Agent Console 的 WebRTC 会话、画质、重连和移动输入能力。</p></section>`;}
-function fleetAddHost(){showEnrollment();}
+function fleetAddHost(){showQuickEnrollment();}
 function fleetCoordinators(){openOverlay(`<section class="dialog wide" role="dialog" aria-modal="true" aria-labelledby="dialog-title">${dialogHeader('组织的连接入口','连接地址从链上组织绑定读取；连接不授予成员资格。','link')}${fleet().coordinators.map(c=>`<div class="coordinator-row"><span class="avatar">${icon('link')}</span><div class="grow"><strong>${esc(c.name)}</strong><small>${esc(c.url)}</small><small>组织绑定：已确认 · 演示</small></div><button class="btn small" data-fleet="coordinator-toggle" data-id="${c.id}">${c.connected?'断开演示连接':'模拟重新连接'}</button></div>`).join('')}<div class="notice">Coordinator 负责连接、观测与转发。持久组织配置由链上确认，重启后从链上重建。新连接入口的绑定需单独管理员交易，本原型展示已有绑定。</div>${enrollmentRoleCards()}</section>`);}
 
 function fleetAssign(g){const source=goalHost(g),canMove=hostReachable(source);openOverlay(`<section class="dialog wide" role="dialog" aria-modal="true" aria-labelledby="dialog-title">${dialogHeader('选择这个 OKR 的执行主机',esc(g.name),'laptop')}<p class="muted" style="font-size:12px;margin-top:16px">当前：${esc(source?.name)} · ${esc(agentFor(g.owner).name)}</p>${!canMove?'<div class="notice amber" style="margin-top:14px">源主机失联，尚不能确认旧操作是否仍在执行。请先恢复源机连接并核对结果，再进行改派。</div>':''}<div style="margin-top:16px">${fleet().hosts.map(h=>{const reason=hostEligibility(g,h);return `<button class="choice-card" data-fleet="assign-confirm" data-id="${g.id}" data-host="${h.id}" ${reason||!canMove||!canOperate()||h.id===g.hostId?'disabled':''}><span class="avatar">${icon(hostIcon(h))}</span><span class="grow"><strong data-i18n-content>${esc(h.name)} ${h.id===g.hostId?'· 当前':''}</strong><small>${reason||`${h.kind==='cloud'?'云端':'本地'} · 同一工作区 · 可用 ${agentFor(g.owner).name}`}</small></span>${hostBadge(h)}</button>`;}).join('')}</div><div class="notice" style="margin-top:15px">改派会暂停旧循环、保留已记录的 KR 指标与证据，在新主机上等待你继续。文件与运行中进程的迁移不在此演示中执行。</div><div class="dialog-footer"><button class="btn" data-action="close">返回导航</button></div></section>`);}
@@ -2040,7 +2268,7 @@ case 'export-okr':exportOKRs();break;
 case 'desktop':case 'mobile':document.body.classList.toggle('phone-mode',action==='mobile');$('#desktop-preview').classList.toggle('active',action==='desktop');$('#mobile-preview').classList.toggle('active',action==='mobile');render();if(activeTask&&$('#overlay .drawer'))drawTask();break;
 case 'close':closeOverlay();break;
 case 'reset':openOverlay(`<section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">${dialogHeader('重新体验这个原型','清除本次浏览器中的演示修改，恢复最初的目标、任务和审批。','refresh')}<div class="dialog-footer"><button class="btn" data-action="close">保留当前进度</button><button class="btn primary" data-action="confirm-reset">重置演示数据</button></div></section>`);break;
-case 'confirm-reset':activeTimers.forEach(clearTimeout);activeTimers.clear();state=defaults();selectedHost='';hostTab='overview';fleetFilter='all';fleetStatusFilter='all';fleetQuery='';desktopDemo.control=false;selectedOKR=null;watchedOKR='app';okrFilter='all';page='home';filter='all';taskQuery='';closeOverlay();render();toast('已恢复初始演示，可以重新开始评审');break;
+case 'confirm-reset':activeTimers.forEach(clearTimeout);activeTimers.clear();inviteSecrets.clear();inviteView={};state=defaults();selectedHost='';hostTab='overview';fleetFilter='all';fleetStatusFilter='all';fleetQuery='';desktopDemo.control=false;selectedOKR=null;watchedOKR='app';okrFilter='all';page='home';filter='all';taskQuery='';closeOverlay();render();toast('已恢复初始演示，可以重新开始评审');break;
 case 'new-goal':newGoal();break;
 case 'goal':go('tasks',id);break;
 case 'task':openTask(id);break;

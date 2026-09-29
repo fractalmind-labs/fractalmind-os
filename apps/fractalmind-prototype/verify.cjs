@@ -11,7 +11,7 @@ const source = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)[1]
     "const preferences={locale:'zh-CN'};function localizedText(s){return s;}const KEY=");
 const storage = new Map();
 const ctx = vm.createContext({
-  console, assert, crypto: webcrypto, Date, Blob, URL, URLSearchParams,
+  console, assert, crypto: webcrypto, Date, Blob, URL, URLSearchParams, TextEncoder, atob, btoa,
   location: { search: '' }, setTimeout: () => 0, clearTimeout() {},
   document: { addEventListener() {} },
   localStorage: { getItem: k => storage.get(k) || null, setItem: (k, v) => storage.set(k, v) },
@@ -69,3 +69,43 @@ reset();state.fleet.hosts.push({...state.fleet.hosts[0],id:'old-custom',device:u
 fleet();assert.equal(hostById('old-custom').status,'pending');assert(!membershipFor(hostById('old-custom')));
 `, ctx);
 console.log('PASS: migration, organization isolation, pending/failed/duplicate transactions, signer and fingerprint checks, expiry, separate grants, connectivity, revocation, reload and legacy admission');
+
+vm.runInContext(`(async()=>{
+reset();
+const create=async(options={})=>{const i=await prepareHostInvite({coordinator:'home',...options});const code=inviteSecrets.get(i.id);assert(confirmHostInvite(i));return {i,code};};
+const redeem=async(code,values={})=>prepareInviteRedemption(code,{name:'Invite host',consent:true,...values});
+let pending=await prepareHostInvite({coordinator:'home'}),code=inviteSecrets.get(pending.id);
+await assert.rejects(()=>redeem(code),/INVITE_PENDING/);
+assert(confirmHostInvite(pending));let i=pending;
+assert(!JSON.stringify(state).includes(code),'raw code is not persisted or exported');
+assert(!JSON.stringify(state).includes(inviteParse(code).secret),'invitation private key stays out of public state');
+currentOrg().role='member';await assert.rejects(()=>prepareHostInvite({coordinator:'home'}),/INVITE_PERMISSION/);
+// Possession can enroll a device without a fresh administrator approval.
+let tx=await redeem(code);assert.equal(tx.status,'pending');assert.equal(i.status,'active');
+const count=chainDemo().memberships.length;
+let r=await confirmInviteRedemption(tx);assert.equal(chainDemo().memberships.length,count+1);
+assert.equal(i.status,'consumed');assert.equal(r.status,'authorized');assert(hostAuthorized(hostById(r.hostId)));
+assert(!hostAuthorized(hostById(r.hostId),'desktop'));
+await assert.rejects(()=>redeem(code),/INVITE_USED/);await assert.rejects(()=>confirmInviteRedemption(tx),/INVITE_USED/);
+currentOrg().role='admin';({i,code}=await create());i.expires=Date.now()-1;await assert.rejects(()=>redeem(code),/INVITE_EXPIRED/);
+({i,code}=await create());assert(revokeHostInvite(i));await assert.rejects(()=>redeem(code),/INVITE_REVOKED/);
+({i,code}=await create());tx=await redeem(code);await assert.rejects(()=>confirmInviteRedemption(tx,false),/INVITE_FAILED/);assert.equal(i.status,'active');
+tx=await redeem(code);r=await confirmInviteRedemption(tx);assert.equal(i.status,'consumed');
+({i,code}=await create());const first=await redeem(code),second=await redeem(code);
+const membersBefore=chainDemo().memberships.length,grantsBefore=chainDemo().grants.length;
+const concurrent=await Promise.allSettled([confirmInviteRedemption(first),confirmInviteRedemption(second)]);
+assert.equal(concurrent.filter(x=>x.status==='fulfilled').length,1,'concurrent redeemers cannot both win');
+assert.equal(chainDemo().memberships.length,membersBefore+1);assert.equal(chainDemo().grants.length,grantsBefore+1);
+for(const mutate of [t=>t.sender='other-device',t=>{t.payload.device='other-device';t.sender='other-device';},t=>t.payload.orgId='DEMO-ORG-LABS',t=>t.payload.network='OTHER-NETWORK',t=>t.proof=t.proof.slice(4)+'AAAA']){
+ ({i,code}=await create());tx=await redeem(code);mutate(tx);await assert.rejects(()=>confirmInviteRedemption(tx),/INVITE_PROOF/);assert.equal(i.status,'active');
+}
+({i,code}=await create());tx=await redeem(code);i.scope='expanded workspace';await assert.rejects(()=>confirmInviteRedemption(tx),/INVITE_SCOPE/);assert.equal(i.status,'active');
+({i,code}=await create());tx=await redeem(code);revokeHostInvite(i);await assert.rejects(()=>confirmInviteRedemption(tx),/INVITE_REVOKED/);
+({i,code}=await create());tx=await redeem(code);i.expires=Date.now()-1;await assert.rejects(()=>confirmInviteRedemption(tx),/INVITE_EXPIRED/);
+({i,code}=await create());tx=await redeem(code);chainDemo().rpc=false;await assert.rejects(()=>confirmInviteRedemption(tx),/INVITE_RPC/);assert.equal(tx.status,'pending');
+chainDemo().rpc=true;fleet().coordinators.find(c=>c.id==='home').connected=false;r=await confirmInviteRedemption(tx);assert.equal(r.status,'authorized');assert(!connectEnrolledHost(r));assert.equal(i.status,'consumed');
+fleet().coordinators.find(c=>c.id==='home').connected=true;assert(connectEnrolledHost(r));assert.equal(i.status,'consumed');
+({i,code}=await create({desktop:true}));tx=await redeem(code,{desktop:false});r=await confirmInviteRedemption(tx);assert(!hostAuthorized(hostById(r.hostId),'desktop'),'local device consent limits preauthorization');
+({i,code}=await create());const record=JSON.stringify(i);inviteSecrets.clear();state=JSON.parse(JSON.stringify(state));assert.equal(JSON.stringify(inviteById(i.id)),record,'public invite survives reload without secret');
+await assert.rejects(()=>redeem('123456'),/INVITE_INVALID/);
+})()`, ctx).then(()=>console.log('PASS: invitation secrecy, prior approval, one-time atomic redemption, races, proof/device/org/network binding, permissions, expiry, revocation, failure/retry, offline recovery and reload')).catch(error=>{console.error(error);process.exitCode=1;});
