@@ -527,6 +527,10 @@
     if (a.expiresAt && now > a.expiresAt) return { ok: false, code: 'expired' };
     const okr = find(org.okrs, a.okrId);
     if (a.kind === 'boundary' && okr && a.boundVersion !== okr.constraints.version) return { ok: false, code: 'invalidated' };
+    if (a.kind === 'standing') {
+      const ag = find(org.agents, a.agentId);
+      if (!ag || a.boundVersion !== ag.standing.version) return { ok: false, code: 'invalidated' };
+    }
     if (!ctx || !ctx.ok) return { ok: false, code: (ctx && ctx.code) || 'no_permission' };
     return { ok: true };
   }
@@ -544,6 +548,10 @@
     a.state = approve ? 'approved' : 'rejected';
     a.decidedAt = now;
     a.decidedBy = ctx.deviceId || null;
+    if (a.kind === 'standing') {
+      log(profile, org, { agentId: a.agentId, kind: approve ? 'standing_approved' : 'standing_rejected', approvalId: a.id }, now);
+      return { ok: true };
+    }
     const okr = find(org.okrs, a.okrId);
     if (!okr) return { ok: true };
     okr.version += 1;
@@ -717,7 +725,7 @@
     else {
       if (inst.agentId !== okr.ownerAgentId) issues.push('agent_mismatch');
       if (inst.status === 'stopped') issues.push('agent_stopped');
-      if (inst.adapter === 'tmux-observe') issues.push('observe_only');
+      if (!constrainable(inst)) issues.push('observe_only');
     }
     const ws = find(org.workspaces, okr.workspaceId);
     if (ws && !ws.hostIds.includes(hostId)) issues.push('workspace_unavailable');
@@ -1041,7 +1049,7 @@
     'invite.create': 900000, 'invite.redeem': 1100000, 'invite.revoke': 500000, 'binding.create': 900000,
     'host.revoke': 600000, 'device.grant': 800000, 'device.revoke': 500000, 'recovery.set': 700000,
     'recovery.apply': 1500000, 'agent.import': 700000, 'agent.include': 900000, 'memory.write': 600000,
-    'memory.archive': 400000,
+    'memory.archive': 400000, 'agent.policy': 600000,
   };
   const FAIL_FEE = 600000;
   const feeFor = kind => FEES[kind] || 500000;
@@ -1155,6 +1163,7 @@
         if (p.patch) Object.assign(m, p.patch);
         return { ok: true };
       }
+      case 'agent.policy': return updateStanding(profile, org, p.agentId, p.patch, p.fromVersion, now);
       case 'memory.archive': {
         const m = find(org.memories, p.memoryId);
         if (!m) return { ok: false, code: 'missing' };
@@ -1310,7 +1319,7 @@
   function includeIssues(org, inst, okr, checks, now) {
     const issues = [];
     if (!inst) return ['missing'];
-    if (inst.adapter === 'tmux-observe') issues.push('observe_only');
+    if (!constrainable(inst)) issues.push('observe_only');
     if (!inst.observedAt || now - inst.observedAt > OBSERVATION_TTL) issues.push('observation_stale');
     if (!okr || okr.lifecycle !== 'ACTIVE') issues.push('okr_not_active');
     else {
@@ -1397,6 +1406,175 @@
     };
   }
 
+
+  /* ------------------------------------ Direct conversations (J12) */
+
+  /** Actions an Agent can be asked to do outside any OKR. Only grantable ones fit a standing policy. */
+  const DIRECT_ACTIONS = {
+    test: { cost: 20, grantable: true, writes: false },
+    edit_sandbox: { cost: 40, grantable: true, writes: true },
+    external: { cost: 300, grantable: false, writes: false },
+    upload: { cost: 0, grantable: false, writes: false },
+  };
+
+  const constrainable = inst => !!inst && inst.adapter !== 'tmux-observe' && inst.adapter !== 'unconstrained';
+
+  function standingToday(agent, now) {
+    const st = agent.standing;
+    if (!st.dayStart || now - st.dayStart >= DAY) {
+      st.dayStart = now - (now % DAY);
+      st.spentToday = 0;
+    }
+    return st;
+  }
+
+  function directConversation(org, agentId) {
+    org.direct = org.direct || {};
+    org.direct[agentId] = org.direct[agentId] || { agentId, instanceId: null, messages: [], draft: '' };
+    return org.direct[agentId];
+  }
+
+  /** Role addressing picks an online instance; a thread then stays on it (no silent switching). */
+  function pickInstance(org, agentId, preferred) {
+    const candidates = org.instances.filter(i => i.agentId === agentId);
+    const online = i => { const h = find(org.hosts, i.hostId); return h && h.status === 'online' && i.status !== 'stopped'; };
+    if (preferred) {
+      const inst = find(candidates, preferred);
+      if (!inst) return { ok: false, code: 'instance_missing' };
+      return online(inst) ? { ok: true, instance: inst } : { ok: false, code: 'host_offline', instance: inst };
+    }
+    const inst = candidates.filter(online).sort((a, b) => constrainable(b) - constrainable(a))[0];
+    return inst ? { ok: true, instance: inst } : { ok: false, code: 'host_offline' };
+  }
+
+  function setDirectInstance(org, agentId, instanceId) {
+    const conv = directConversation(org, agentId);
+    const inst = find(org.instances, instanceId);
+    if (!inst || inst.agentId !== agentId) return { ok: false, code: 'instance_missing' };
+    conv.instanceId = instanceId;
+    return { ok: true };
+  }
+
+  /**
+   * Channel identities act for a linked Human with low-risk actions only.
+   * Anything they trigger is still checked against the Agent's standing policy.
+   */
+  function channelCan(profile, channel, orgId, action) {
+    const g = (profile.channelGrants || []).find(x => x.channel === channel && x.orgId === orgId && !x.revoked);
+    if (!g) return { ok: false, code: 'channel_not_linked' };
+    return g.actions.includes(action) ? { ok: true, channel } : { ok: false, code: 'action_not_granted' };
+  }
+
+  function sendDirect(profile, org, agentId, req, ctx, now) {
+    const conv = directConversation(org, agentId);
+    if (!ctx || !ctx.ok) { conv.draft = req.text || ''; return { ok: false, code: (ctx && ctx.code) || 'no_permission' }; }
+    const pick = pickInstance(org, agentId, conv.instanceId);
+    if (!pick.ok) { conv.draft = req.text || ''; return pick; }
+    const inst = pick.instance;
+    if (!constrainable(inst) && !ctx.manager) return { ok: false, code: 'unconstrained_requires_manager' };
+    if (req.kind === 'action' && !DIRECT_ACTIONS[req.action]) return { ok: false, code: 'unknown_action' };
+    conv.instanceId = inst.id;
+    const msg = {
+      id: nextId(profile, 'dm'), from: 'user', kind: req.kind, action: req.action || null, text: req.text || '',
+      at: now, instanceId: inst.id, hostId: inst.hostId, source: req.source || 'app', delivery: 'delivered',
+    };
+    conv.messages.push(msg);
+    conv.draft = '';
+    return { ok: true, msg };
+  }
+
+  function runDirect(profile, org, agent, inst, action, now, approvalId) {
+    const def = DIRECT_ACTIONS[action];
+    const run = {
+      id: nextRunId(profile), okrId: null, krId: null, agentId: agent.id, direct: true, hostId: inst.hostId,
+      instanceId: inst.id, state: 'succeeded', attempt: 1, startedAt: now, endedAt: now, action, cost: def.cost,
+      approvalId: approvalId || null, sideEffects: [],
+    };
+    org.runs.unshift(run);
+    standingToday(agent, now).spentToday += def.cost;
+    log(profile, org, { agentId: agent.id, kind: 'direct_exec', runId: run.id, action, cost: def.cost }, now);
+    return run;
+  }
+
+  /** The Agent's side of a direct message: answer, execute within standing policy, or escalate. */
+  function directReply(profile, org, agentId, msgId, now) {
+    const conv = directConversation(org, agentId);
+    const msg = find(conv.messages, msgId);
+    if (!msg || msg.delivery === 'replied') return { ok: false, code: 'not_pending' };
+    msg.delivery = 'replied';
+    const agent = find(org.agents, agentId);
+    const inst = find(org.instances, msg.instanceId);
+    const reply = { id: nextId(profile, 'dm'), from: 'agent', replyTo: msg.id, at: now, instanceId: inst.id, demo: true };
+    if (msg.kind !== 'action') reply.outcome = msg.kind === 'status' ? 'status' : 'answer';
+    else if (!constrainable(inst)) reply.outcome = 'unconstrained';
+    else {
+      const def = DIRECT_ACTIONS[msg.action];
+      const st = standingToday(agent, now);
+      const reasons = [];
+      if (!def.grantable || !st.actions.includes(msg.action)) reasons.push('outside_standing');
+      const busy = org.okrs.some(o => o.lifecycle === 'ACTIVE' && o.instanceId === inst.id && currentRun(org, o));
+      if (def.writes && busy) reasons.push('workspace_busy');
+      if (!reasons.length && st.spentToday + def.cost > st.dailyBudget) reply.outcome = 'budget_exhausted';
+      else if (reasons.length) {
+        const apv = createApproval(profile, org, {
+          kind: 'standing', agentId, instanceId: inst.id, action: msg.action, reasons, budgetImpact: def.cost,
+          boundVersion: st.version, expiresAt: now + 20 * HOUR, messageId: msg.id,
+        }, now);
+        reply.outcome = 'approval_requested';
+        reply.approvalId = apv.id;
+      } else {
+        reply.outcome = 'executed';
+        reply.runId = runDirect(profile, org, agent, inst, msg.action, now).id;
+      }
+    }
+    conv.messages.push(reply);
+    return { ok: true, reply };
+  }
+
+  /** After approval the Agent proceeds once; the run links back to the approval. */
+  function executeStandingApproval(profile, org, approvalId, now) {
+    const a = find(org.approvals, approvalId);
+    if (!a || a.kind !== 'standing' || a.state !== 'approved') return { ok: false, code: 'not_approved' };
+    if (a.execution) return { ok: false, code: 'already_executed' };
+    const agent = find(org.agents, a.agentId);
+    const inst = find(org.instances, a.instanceId);
+    const h = inst && find(org.hosts, inst.hostId);
+    if (!h || h.status !== 'online') return { ok: false, code: 'host_offline' };
+    const run = runDirect(profile, org, agent, inst, a.action, now, a.id);
+    a.execution = { runId: run.id, at: now, result: 'executed' };
+    directConversation(org, a.agentId).messages.push({ id: nextId(profile, 'dm'), from: 'agent', at: now, instanceId: inst.id, outcome: 'approved_executed', runId: run.id, approvalId: a.id, demo: true });
+    return { ok: true, run };
+  }
+
+  /** A new standing-policy version invalidates pending approvals bound to the old one. */
+  function updateStanding(profile, org, agentId, patch, fromVersion, now) {
+    const agent = find(org.agents, agentId);
+    if (!agent) return { ok: false, code: 'missing' };
+    const st = agent.standing;
+    if (fromVersion !== undefined && fromVersion !== st.version) return { ok: false, code: 'version_conflict' };
+    if (patch.actions) st.actions = patch.actions.filter(x => DIRECT_ACTIONS[x] && DIRECT_ACTIONS[x].grantable);
+    if (patch.dailyBudget != null) st.dailyBudget = patch.dailyBudget;
+    st.version += 1;
+    st.confirmedAt = now;
+    org.approvals.forEach(a => {
+      if (a.kind === 'standing' && a.agentId === agentId && a.state === 'pending') { a.state = 'invalidated'; a.invalidatedAt = now; }
+    });
+    log(profile, org, { agentId, kind: 'standing_updated', version: st.version }, now);
+    return { ok: true };
+  }
+
+  /** Turn a direct request into a standalone task (not tied to any KR); context comes along. */
+  function promoteDirect(profile, org, agentId, msgId, now) {
+    const conv = directConversation(org, agentId);
+    const msg = find(conv.messages, msgId);
+    if (!msg || msg.from !== 'user') return { ok: false, code: 'missing' };
+    if (msg.taskId) return { ok: false, code: 'already_promoted', taskId: msg.taskId };
+    const task = { id: nextId(profile, 'task'), okrId: null, krId: null, agentId, title: msg.text, state: 'Created', createdAt: now, source: { agentId, messageId: msg.id } };
+    org.tasks.push(task);
+    msg.taskId = task.id;
+    return { ok: true, task };
+  }
+
   return {
     MIN, HOUR, DAY, MAX_ACTIVE, OBSERVATION_TTL, PAIRING_TTL, INVITE_TTL, MIST, FEES, FAIL_FEE,
     RUN_STATES, APPROVAL_STATES, CONDITIONS, TRUST, ACTIONS,
@@ -1415,5 +1593,7 @@
     snapshot, canMessage, conversation, sendMessage, agentReply, adoptProposal, switchRoute,
     scanHost, importObserve, confirmImport, includeIssues, includeInOkr,
     switchOrg, sameContext, contextToken, buildExport,
+    DIRECT_ACTIONS, constrainable, standingToday, directConversation, pickInstance, setDirectInstance, channelCan,
+    sendDirect, directReply, executeStandingApproval, updateStanding, promoteDirect,
   };
 });

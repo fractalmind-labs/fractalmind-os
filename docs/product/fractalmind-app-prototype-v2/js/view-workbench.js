@@ -465,6 +465,7 @@
     const where = `${okr ? `<span class="prio ${okr.priority}">${okr.priority}</span> ` : ''}${esc(krLabel(okr, a.krId))}`;
     const busy = !!tx;
     const actions = busy ? `<div class="d-tx">${U.txLine(tx)}</div>` : '';
+    if (a.kind === 'standing') return FM.standingCard(a, tx);
     if (a.kind === 'boundary') {
       const left = okr ? M.budgetLeft(okr.constraints.budget) : 0;
       return `<article class="decision k-boundary">
@@ -683,6 +684,16 @@
       }
       const approve = el.dataset.d === 'approve';
       const boundary = a.kind === 'boundary';
+      if (a.kind === 'standing') {
+        U.submitTx({ kind: 'approval.decide', payload: { approvalId: a.id, decision: approve ? 'approve' : 'reject', deviceId: ctx.deviceId } }, {
+          ok: approve ? T('已同意本次：Agent 已执行这一次，常驻权限不变。', 'Approved once: the Agent ran it this one time; the standing permission is unchanged.') : T('已拒绝：该操作不会执行。', 'Rejected: the action will not run.'),
+          onConfirmed: (res, p) => {
+            if (approve) M.executeStandingApproval(p, p.data[res.tx.orgId], a.id, U.now());
+            if (FM.review) FM.review.mark(`approval.standing.${approve ? 'approve' : 'reject'}`);
+          },
+        });
+        return;
+      }
       U.submitTx({ kind: 'approval.decide', payload: { approvalId: a.id, decision: approve ? 'approve' : 'reject', deviceId: ctx.deviceId } }, {
         ok: boundary
           ? (approve ? T('已同意：操作获准，尚未执行；执行结果会关联到这条审批。', 'Approved: the action is authorized but not yet executed; its result will link to this approval.') : T('已拒绝：该操作不会执行。可在约定内换路。', 'Rejected: the action will not run. You can reroute within the agreement.'))
@@ -781,6 +792,23 @@
     const okr = M.find(org.okrs, a.okrId);
     const tx = pendingDecisionTx(a.id);
     const st = M.approvalStatus(a, U.now());
+    if (a.kind === 'standing') {
+      const ag = U.agent(a.agentId);
+      return {
+        title: T('超出常驻权限的请求', 'Beyond standing permission'),
+        sub: `${esc(ag.name)} · ${esc((U.inst(a.instanceId) || {}).name || '')} · ${T('来自直接对话', 'From a direct chat')}`,
+        body: `<div class="strong" style="font-size:15px">${esc(FM.directActionLabel(a.action))}</div>
+          <dl class="kv">
+            <dt>${T('状态', 'State')}</dt><dd>${U.apvState(a)}</dd>
+            <dt>${T('范围', 'Scope')}</dt><dd>${T('仅此一次；绑定常驻权限', 'This one action; bound to standing permission')} v${a.boundVersion}</dd>
+            <dt>${T('预计花费', 'Est. cost')}</dt><dd>${U.money(a.budgetImpact || 0)} · ${T('计入常驻预算，不占用 OKR 预算', 'counts against the standing budget, never an OKR')}</dd>
+            ${a.execution ? `<dt>${T('执行结果', 'Execution')}</dt><dd>${T('已执行', 'Executed')} · ${U.dateTime(a.execution.at)} · <span class="mono">${esc(a.execution.runId)}</span></dd>` : ''}
+          </dl>
+          <div class="note">${icon('info')}<div>${T('同意只授权这一次，不会扩大常驻权限；要长期允许，请调整常驻权限。聊天中的“同意”不构成审批。', 'Approving authorizes this once and does not widen the standing permission; change the standing permission to allow it long-term. “OK” in a chat is not an approval.')}</div></div>
+          ${tx ? U.txLine(tx) : ''}`,
+        foot: st === 'pending' && !tx ? `${U.btn({ action: 'decide-close', data: { id: a.id, d: 'reject' }, label: T('拒绝', 'Reject'), perm: 'approve' })}${U.btn({ action: 'decide-close', data: { id: a.id, d: 'approve' }, label: T('同意本次', 'Approve once'), kind: 'primary', perm: 'approve' })}` : `<button class="btn" data-action="close-dialog">${T('关闭', 'Close')}</button>`,
+      };
+    }
     return {
       title: a.kind === 'boundary' ? T('越界请求', 'Out-of-bounds request') : T('验收请求', 'Acceptance request'),
       sub: `${esc(okr ? L(okr.title) : '')} · ${esc(krLabel(okr, a.krId))}`,
@@ -1028,7 +1056,7 @@
       label: T('与 Agent 沟通', 'Talk to agent'),
       html: `<div class="drawer-h">
           <div class="row between"><span class="row"><span class="avatar sm round">${esc(ag.name.slice(0, 1))}</span><strong>${T(`与 ${ag.name} 沟通`, `Talk to ${ag.name}`)}</strong></span><button class="btn ghost icon sm" data-action="close-drawer" aria-label="${T('关闭', 'Close')}">${icon('x')}</button></div>
-          <div class="small muted ellipsis">${esc(L(okr.title))}</div>
+          <div class="row between gap-sm"><span class="small muted ellipsis">${esc(L(okr.title))}</span><button class="link-btn tiny" style="flex:none" data-action="open-direct" data-agent="${esc(okr.ownerAgentId)}">${T('聊与本目标无关的事 →', 'Something unrelated to this goal →')}</button></div>
           <div class="snap">${icon('link', 'xs')} ${T('当前快照', 'Current snapshot')}：${snapChip(snap)}</div>
         </div>
         <div class="drawer-b" id="talk-body">${msgs || `<div class="empty"><div class="ico">${icon('message', 'lg')}</div><p class="small">${T('会话按 OKR 保存。每条消息都会绑定发送时的 KR、Run、主机与约定快照。', "Conversations are saved per OKR. Each message binds the KR, run, host and agreement at send time.")}</p></div>`}</div>

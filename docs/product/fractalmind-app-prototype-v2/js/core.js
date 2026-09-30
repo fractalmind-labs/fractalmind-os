@@ -33,7 +33,7 @@
   function seedRoot(now) {
     const demo = F.createDemoProfile(now, M);
     return {
-      schema: 'fm-prototype-v2', version: 1, rev: 0, seededAt: now,
+      schema: 'fm-prototype-v2', version: 2, rev: 0, seededAt: now,
       activeProfileId: demo.id, profiles: { [demo.id]: demo },
       faults: { nextTxFail: false, rpcDown: false, coordinatorDown: false, networkFail: false },
       network: F.networkDirectory(now, M),
@@ -42,7 +42,7 @@
   }
 
   let root = read(STATE_KEY);
-  if (!root || root.schema !== 'fm-prototype-v2' || root.version !== 1) root = seedRoot(Date.now());
+  if (!root || root.schema !== 'fm-prototype-v2' || root.version !== 2) root = seedRoot(Date.now());
 
   const prefs = Object.assign({ locale: 'zh-CN', theme: 'system' }, read(PREFS_KEY) || {});
 
@@ -345,6 +345,7 @@
     'recovery.apply': ['使用恢复码恢复', 'Recover with a recovery code'],
     'agent.import': ['导入 Agent（仅观察）', 'Import Agent (observe only)'],
     'agent.include': ['授权 Agent 纳入 OKR', 'Authorize Agent for an OKR'],
+    'agent.policy': ['更新 Agent 常驻权限', 'Update Agent standing permission'],
     'memory.write': ['写入记忆', 'Write memory'],
     'memory.archive': ['归档记忆', 'Archive memory'],
   };
@@ -540,8 +541,9 @@
     const s = M.approvalStatus(a, now());
     const x = APV[s];
     let label = T(x[2], x[3]);
-    if (a.kind !== 'boundary' && s === 'approved') label = T('已验收', 'Accepted');
-    if (a.kind !== 'boundary' && s === 'rejected') label = T('已退回', 'Returned');
+    const acceptance = a.kind === 'acceptance' || a.kind === 'okr_acceptance';
+    if (acceptance && s === 'approved') label = T('已验收', 'Accepted');
+    if (acceptance && s === 'rejected') label = T('已退回', 'Returned');
     if (s === 'invalidated' && a.superseded) label = T('已替代', 'Superseded');
     return `<span class="st ${x[0]}">${icon(x[1])}${esc(label)}</span>`;
   }
@@ -579,7 +581,7 @@
     if (dev && dev.role === 'manage') {
       p.pairings.filter(x => M.pairingStatus(x, t) === 'waiting').forEach(x => out.push({ kind: 'pairing', id: x.id, item: x, at: x.createdAt }));
     }
-    const rank = { boundary: 0, confirmation: 1, pairing: 2, acceptance: 3, okr_acceptance: 4 };
+    const rank = { boundary: 0, standing: 0, confirmation: 1, pairing: 2, acceptance: 3, okr_acceptance: 4 };
     return out.sort((a, b) => rank[a.kind] - rank[b.kind] || b.at - a.at);
   }
 

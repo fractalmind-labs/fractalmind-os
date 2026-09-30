@@ -655,6 +655,93 @@ check('discovery', 'only constraint-capable, freshly observed instances join an 
   assert.equal(okrOf(p, 'okr-alpha').nav.pausedReason, 'handoff');
 });
 
+/* ------------------------------------------- Direct conversations (J12) */
+
+const mgr = (p, id) => Object.assign(ctxFor(p, id || 'dev-mbp', 'operate'), { manager: true });
+const ask = (p, agentId, req, ctx, t) => {
+  const org = personal(p);
+  const sent = M.sendDirect(p, org, agentId, req, ctx || mgr(p), t || T0);
+  if (!sent.ok) return sent;
+  return M.directReply(p, org, agentId, sent.msg.id, t || T0);
+};
+
+check('direct', 'questions are answered without runs or spending', () => {
+  const p = fresh();
+  const runs = personal(p).runs.length;
+  const r = ask(p, 'agent-reviewer', { kind: 'ask', text: '签名报告怎么看？' });
+  assert.equal(r.reply.outcome, 'answer');
+  assert.equal(personal(p).runs.length, runs);
+});
+check('direct', 'actions inside the standing policy run without any OKR budget', () => {
+  const p = fresh();
+  const org = personal(p);
+  const b = okrOf(p, 'okr-alpha').constraints.budget.spent;
+  const r = ask(p, 'agent-builder', { kind: 'action', action: 'test', text: '跑测试' });
+  assert.equal(r.reply.outcome, 'executed');
+  const run = M.find(org.runs, r.reply.runId);
+  assert.equal(run.direct, true);
+  assert.equal(run.okrId, null);
+  assert.equal(M.find(org.agents, 'agent-builder').standing.spentToday, 100);
+  assert.equal(okrOf(p, 'okr-alpha').constraints.budget.spent, b);
+});
+check('direct', 'outside the policy, over budget, or busy workspace: never executed silently', () => {
+  const p = fresh();
+  const org = personal(p);
+  assert.equal(ask(p, 'agent-reviewer', { kind: 'action', action: 'test' }).reply.outcome, 'approval_requested');
+  const ext = ask(p, 'agent-builder', { kind: 'action', action: 'external' });
+  assert.deepEqual(M.find(org.approvals, ext.reply.approvalId).reasons, ['outside_standing']);
+  const busy = ask(p, 'agent-builder', { kind: 'action', action: 'edit_sandbox' });
+  assert.deepEqual(M.find(org.approvals, busy.reply.approvalId).reasons, ['workspace_busy'], 'builder-1 is running an OKR');
+  M.find(org.agents, 'agent-builder').standing.spentToday = 495;
+  assert.equal(ask(p, 'agent-builder', { kind: 'action', action: 'test' }).reply.outcome, 'budget_exhausted');
+  assert.equal(M.find(org.agents, 'agent-builder').standing.spentToday, 495);
+});
+check('direct', 'standing approvals: approved is not executed; a new policy version invalidates', () => {
+  const p = fresh();
+  const org = personal(p);
+  const a = ask(p, 'agent-builder', { kind: 'action', action: 'external' }).reply.approvalId;
+  assert.equal(approve(p, a, 'approve', T0).ok, true);
+  assert.equal(M.find(org.approvals, a).execution, undefined);
+  const res = M.executeStandingApproval(p, org, a, T0 + 1);
+  assert.equal(M.find(org.runs, res.run.id).approvalId, a);
+  assert.equal(M.executeStandingApproval(p, org, a, T0 + 2).code, 'already_executed');
+  const b = ask(p, 'agent-reviewer', { kind: 'action', action: 'test' }).reply.approvalId;
+  M.updateStanding(p, org, 'agent-reviewer', { actions: ['test', 'external'] }, 1, T0);
+  assert.equal(M.find(org.approvals, b).state, 'invalidated');
+  assert.deepEqual(M.find(org.agents, 'agent-reviewer').standing.actions, ['test'], 'non-grantable actions never enter a policy');
+  assert.equal(M.updateStanding(p, org, 'agent-reviewer', { dailyBudget: 1 }, 1, T0).code, 'version_conflict');
+});
+check('direct', 'threads stay on their instance; offline hosts keep a draft', () => {
+  const p = fresh();
+  const org = personal(p);
+  M.setDirectInstance(org, 'agent-researcher', 'inst-researcher-2');
+  const r = M.sendDirect(p, org, 'agent-researcher', { kind: 'ask', text: '索引进度？' }, mgr(p), T0);
+  assert.equal(r.code, 'host_offline', 'no silent switch to another instance');
+  assert.equal(org.direct['agent-researcher'].draft, '索引进度？');
+  M.setDirectInstance(org, 'agent-researcher', 'inst-researcher-1');
+  assert.equal(M.sendDirect(p, org, 'agent-researcher', { kind: 'ask', text: 'hi' }, mgr(p), T0).ok, true);
+});
+check('direct', 'unconstrained agents: managers only, execution outside FractalMind', () => {
+  const p = fresh();
+  const org = personal(p);
+  assert.equal(M.sendDirect(p, org, 'agent-desktop', { kind: 'ask' }, ctxFor(p, 'dev-iphone', 'operate'), T0).code, 'unconstrained_requires_manager');
+  const r = ask(p, 'agent-desktop', { kind: 'action', action: 'edit_sandbox' });
+  assert.equal(r.reply.outcome, 'unconstrained');
+  assert.ok(M.assignIssues(org, okrOf(p, 'okr-explorer'), 'host-mbp', 'inst-desktop-1').includes('observe_only'));
+});
+check('direct', 'channel identities are limited; requests become standalone tasks', () => {
+  const p = fresh();
+  const org = personal(p);
+  assert.equal(M.channelCan(p, 'telegram', F.P, 'chat').ok, true);
+  assert.equal(M.channelCan(p, 'telegram', F.P, 'approve').code, 'action_not_granted');
+  assert.equal(M.channelCan(p, 'telegram', F.LABS, 'chat').code, 'channel_not_linked');
+  const sent = M.sendDirect(p, org, 'agent-builder', { kind: 'ask', text: '整理发布说明', source: 'telegram' }, M.channelCan(p, 'telegram', F.P, 'chat'), T0);
+  assert.equal(sent.msg.source, 'telegram');
+  const t = M.promoteDirect(p, org, 'agent-builder', sent.msg.id, T0).task;
+  assert.deepEqual([t.okrId, t.krId, t.state], [null, null, 'Created']);
+  assert.equal(M.promoteDirect(p, org, 'agent-builder', sent.msg.id, T0).code, 'already_promoted');
+});
+
 /* -------------------------------------------- Organization and export */
 
 check('organization', 'switching changes context; old async results are recognized', () => {
@@ -684,8 +771,11 @@ check('fixtures', 'references resolve in every organization', () => {
     const has = (list, id) => assert.ok(M.find(org[list], id), `${orgId}: ${list} ${id}`);
     org.okrs.forEach(o => { has('workspaces', o.workspaceId); has('hosts', o.hostId); has('instances', o.instanceId); has('agents', o.ownerAgentId); });
     org.instances.forEach(i => { has('hosts', i.hostId); has('agents', i.agentId); });
-    org.approvals.forEach(a => has('okrs', a.okrId));
-    org.runs.forEach(r => { has('okrs', r.okrId); has('hosts', r.hostId); has('instances', r.instanceId); });
+    org.approvals.forEach(a => (a.kind === 'standing' ? has('agents', a.agentId) : has('okrs', a.okrId)));
+    org.runs.forEach(r => { if (r.direct) has('agents', r.agentId); else has('okrs', r.okrId); has('hosts', r.hostId); has('instances', r.instanceId); });
+    org.agents.forEach(a => assert.ok(a.standing && Number.isInteger(a.standing.version), `${a.id} standing policy`));
+    Object.values(org.direct || {}).forEach(c => { has('agents', c.agentId); if (c.instanceId) has('instances', c.instanceId); });
+    (org.channels || []).forEach(c => has('hosts', c.hostId));
     org.evidence.forEach(e => has('okrs', e.okrId));
     org.hosts.forEach(h => assert.ok(org.bindings.some(b => b.id === h.bindingId), `${h.id} binding`));
   }
@@ -729,6 +819,16 @@ check('page', 'index.html loads only local files that exist', () => {
     const text = fs.readFileSync(path.join(dir, f), 'utf8');
     assert.ok(!/(?:fetch|XMLHttpRequest|WebSocket|sendBeacon)\s*\(/.test(text), `${f} must not make network requests`);
     assert.ok(!/@import\s+url|https?:\/\/(?!www\.w3\.org)/.test(text.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')), `${f} must not load remote assets`);
+  });
+});
+
+check('page', 'every script index.html loads parses', () => {
+  const vm = require('node:vm');
+  const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map(m => m[1]);
+  assert.ok(scripts.includes('js/view-direct.js'));
+  scripts.forEach(f => {
+    try { new vm.Script(fs.readFileSync(path.join(__dirname, f), 'utf8'), { filename: f }); } catch (e) { assert.fail(`${f}: ${e.message}`); }
   });
 });
 

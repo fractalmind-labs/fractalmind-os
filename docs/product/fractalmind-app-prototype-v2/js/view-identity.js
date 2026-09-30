@@ -71,7 +71,8 @@
         <div class="card"><div class="card-h"><h2>${icon('layers', 'sm')}${T('组织关系', 'Organizations')}</h2></div>
           ${p.orgs.map(o => `<div class="item"><span class="avatar sm ${o.kind === 'team' ? 'team' : ''}">${U.orgInitial(o)}</span><div class="grow"><div class="strong">${esc(L(o.name))}</div><div class="tiny muted">${o.role === 'admin' ? T('管理员 · 链上 OrgAdminCap', 'Admin · on-chain OrgAdminCap') : T('成员 · 链上成员资格对象', 'Member · on-chain membership object')} · <span class="mono">${esc(U.shortId(o.chainId, 6))}</span></div></div>${o.id === p.currentOrgId ? `<span class="chip brand">${T('当前', 'Current')}</span>` : `<button class="btn sm" data-action="switch-org" data-id="${esc(o.id)}">${T('切换', 'Switch')}</button>`}</div>`).join('')}
           <div class="tiny muted mt-8">${T('名称、缓存和网络连接不能推导成员资格。', 'Names, caches and connections never imply membership.')}</div></div>
-      </section>`;
+      </section>
+      <section class="sec">${FM.channelGrantsCard()}</section>`;
   };
 
   /* ------------------------------------------------------ Add a device */
