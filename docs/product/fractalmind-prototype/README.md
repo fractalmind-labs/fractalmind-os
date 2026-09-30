@@ -1,14 +1,14 @@
 # FractalMind interactive prototype
 
-A self-contained HTML prototype based on the [product PRD](../../docs/product/fractalmind-app-prd.md)
-and [okr-manager skill](../../skills/coordination/okr-manager-skill/SKILL.md).
+A self-contained HTML prototype based on the [product PRD](../fractalmind-app-prd.md)
+and [okr-manager skill](../../../skills/coordination/okr-manager-skill/SKILL.md).
 Styles, icons, sample data and interactions are embedded in `index.html`.
 No package installation, external assets, model keys or backend services are required.
 
 From the repository root:
 
 ```sh
-python3 -m http.server 4173 --bind 127.0.0.1 --directory apps/fractalmind-prototype
+python3 -m http.server 4173 --bind 127.0.0.1 --directory docs/product/fractalmind-prototype
 ```
 
 Open <http://127.0.0.1:4173>. A new browser starts at identity onboarding; an existing signed-in profile opens the workbench. Direct review entries:
@@ -310,7 +310,7 @@ proof of restricted membership. UI deletion cannot erase public chain history.
 Run the simulation's organization/admission/invitation/identity regression checks with Node.js 22 or later:
 
 ```sh
-node apps/fractalmind-prototype/verify.cjs
+node docs/product/fractalmind-prototype/verify.cjs
 ```
 
 These checks validate the embedded state machine, not deployed contract security.

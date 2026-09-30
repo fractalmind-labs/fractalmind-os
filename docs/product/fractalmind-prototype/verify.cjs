@@ -1,5 +1,5 @@
 // Domain regression checks for the HTML simulation; no real Sui or host connections.
-// Run from any directory: node apps/fractalmind-prototype/verify.cjs
+// Run from any directory: node docs/product/fractalmind-prototype/verify.cjs
 const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
