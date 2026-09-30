@@ -477,6 +477,10 @@
       resumed: ['play', T('已明确继续自主推进', 'Explicitly resumed autonomous work')],
       reassigned: ['server', T('已改派执行位置，等待明确继续', 'Execution moved; waiting for an explicit continue')],
       handoff: ['users', T('已交接给导入的实例，等待明确继续', 'Handed off to the imported instance; waiting to continue')],
+      direct_exec: ['message', T(`${esc(U.agent(a.agentId).name)} 在常驻权限内执行：${esc(FM.directActionLabel(a.action))}（${U.money(a.cost || 0)}）`, `${esc(U.agent(a.agentId).name)} ran within its standing permission: ${esc(FM.directActionLabel(a.action))} (${U.money(a.cost || 0)})`)],
+      standing_updated: ['shield', T(`${esc(U.agent(a.agentId).name)} 的常驻权限更新到 v${a.version}`, `${esc(U.agent(a.agentId).name)}’s standing permission is now v${a.version}`)],
+      standing_approved: ['check', T(`你同意了 ${esc(U.agent(a.agentId).name)} 的一次超权请求：${esc(FM.directActionLabel(apv ? apv.action : ''))}`, `You approved a one-off request from ${esc(U.agent(a.agentId).name)}: ${esc(FM.directActionLabel(apv ? apv.action : ''))}`)],
+      standing_rejected: ['x', T(`你拒绝了 ${esc(U.agent(a.agentId).name)} 的超权请求`, `You rejected a request from ${esc(U.agent(a.agentId).name)}`)],
     }[a.kind] || ['info', esc(a.kind)];
     return { icon: X[0], html: X[1], trust: X[2] || null };
   };

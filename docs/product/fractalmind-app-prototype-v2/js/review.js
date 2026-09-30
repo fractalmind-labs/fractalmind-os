@@ -151,6 +151,18 @@
         { zh: '确认交接检查后纳入 OKR', en: 'Complete the handoff checks and add it to an OKR', ev: 'agent.included' },
       ],
     },
+    {
+      id: 'J12', zh: '直接与 Agent 对话', en: 'Chat with an Agent directly', dzh: '提问 → 权限内执行 → 超权审批 → 转为任务；渠道来信', den: 'Ask → act within standing permission → approval beyond it → make a task; channel messages',
+      start: () => { demoActive(); U.go('agents'); U.openDrawer('direct', { agentId: 'agent-builder' }); },
+      steps: [
+        { zh: '向 Builder 提一个问题（只读，不需要 OKR）', en: 'Ask Builder a question (read-only, no OKR needed)', ev: 'direct.answer' },
+        { zh: '请它“运行测试”：在常驻权限内直接执行', en: 'Ask it to “run tests”: runs within the standing permission', ev: 'direct.executed' },
+        { zh: '请它“调用付费外部服务”：超出权限，先发起审批', en: 'Ask it to “call a paid external service”: beyond the permission, so it asks first', ev: 'direct.approval_requested' },
+        { zh: '同意本次：Agent 执行一次，常驻权限不变', en: 'Approve once: it runs one time; the standing permission is unchanged', ev: 'approval.standing.approve' },
+        { zh: '把一条消息转为任务或 OKR 草稿', en: 'Turn a message into a task or an OKR draft', ev: 'direct.promoted' },
+        { zh: '在评审工具中模拟 Telegram 来信（经渠道网关路由）', en: 'In the review tools, simulate a Telegram message (routed by the channel gateway)', ev: 'direct.channel', optional: true },
+      ],
+    },
   ];
 
   function startJourney(id) {
@@ -277,6 +289,7 @@
           ${b('rv-fault', 'link', T('Coordinator 不可达', 'Coordinator unreachable'), f.coordinatorDown, { k: 'coordinatorDown' })}${b('rv-fault', 'globe', T('开放网络查询失败', 'Network query fails'), f.networkFail, { k: 'networkFail' })}
           ${b('rv-fault', 'wallet', T('赞助方离线', 'Sponsor offline'), f.sponsorOffline, { k: 'sponsorOffline' })}${okr ? b('rv-host', 'offline', T('执行主机失联/恢复', 'Host drops/returns'), U.host(okr.hostId) && U.host(okr.hostId).status !== 'online') : ''}
         </div></div>
+        ${p && org().channels ? `<div class="rv-sec"><h3>${T('消息渠道（演示）', 'Message channels (demo)')}</h3><div class="rv-grid">${b('rv-channel', 'message', T('模拟 Telegram 来信给 Builder', 'Simulate a Telegram message to Builder'))}</div><div class="tiny muted">${T('来自已绑定的聊天账号；渠道网关所在主机离线或渠道停用时不会送达。', 'From a linked chat account; not delivered if the gateway host is offline or the channel is disabled.')}</div></div>` : ''}
         ${p ? `<div class="rv-sec"><h3>${T('设备视角（视口不授予权限）', 'Device perspective (viewport grants nothing)')}</h3><div class="col" style="gap:6px">${devices}</div></div>` : ''}
         <div class="rv-sec"><h3>${T('视图与数据', 'View and data')}</h3><div class="rv-grid">
           ${b('rv-frame', 'phone', T('手机预览', 'Phone preview'), ui.framed)}${b('rv-export', 'download', T('导出演示状态', 'Export demo state'))}
@@ -291,9 +304,11 @@
     const done = progress(j);
     const next = done.findIndex((d, i) => !d && !j.steps[i].optional);
     const all = next === -1;
+    // Stay out of the way of open dialogs and drawers: show only the current step.
+    const compact = !!(ui.dialog || ui.drawer);
     return `<div class="jr-dock" role="region" aria-label="${T('旅程走查', 'Journey walkthrough')}">
       <div class="row between"><span class="row gap-sm"><span class="chip brand">${j.id}</span><strong class="small">${esc(T(j.zh, j.en))}</strong></span><button class="btn ghost icon sm" data-action="rv-end" aria-label="${T('结束走查', 'End walkthrough')}">${icon('x')}</button></div>
-      <ol>${j.steps.map((s, i) => `<li class="${done[i] ? 'done' : i === next ? 'now' : ''}">${icon(done[i] ? 'check' : i === next ? 'arrow' : 'clock')}<span>${esc(T(s.zh, s.en))}${s.optional ? T('（可选）', ' (optional)') : ''}</span></li>`).join('')}</ol>
+      <ol>${j.steps.map((s, i) => (compact && i !== next ? '' : `<li class="${done[i] ? 'done' : i === next ? 'now' : ''}">${icon(done[i] ? 'check' : i === next ? 'arrow' : 'clock')}<span>${esc(T(s.zh, s.en))}${s.optional ? T('（可选）', ' (optional)') : ''}</span></li>`)).join('')}</ol>
       ${all ? `<div class="calm small">${icon('check')}<span>${T('本旅程已走完。', 'Journey complete.')}</span></div>` : ''}
       ${j.id === 'J9' && !P() ? `<div class="tiny muted">${T('演示恢复码在评审工具中（⌘.）。', 'The demo code is in the review tools (⌘.).')}</div>` : ''}
     </div>`;
@@ -350,6 +365,22 @@
     'rv-signout': () => { stopAutoplay(); U.root.activeProfileId = null; U.root.welcome = { mode: 'choose' }; U.save(); ui.review = false; U.go('welcome'); },
     'rv-demo': () => { demoActive(); ui.review = false; U.go('workbench'); },
     'rv-reset': () => { stopAutoplay(); U.resetDemo(); ui.review = false; ui.framed = false; toast(T('演示已重置。', 'Demo reset.'), 'ok'); U.go('workbench'); },
+    'rv-channel': () => {
+      const p = P();
+      const o = org();
+      const ch = (o.channels || []).find(c => c.kind === 'telegram');
+      const h = ch && U.host(ch.hostId);
+      if (!ch || ch.state !== 'online' || !h || h.status !== 'online') { toast(T('Telegram 渠道网关不可用：消息未送达，Telegram 侧会收到失败提示。', 'The Telegram gateway is unavailable: not delivered; the sender is told it failed.'), 'warn'); return; }
+      const ctx = M.channelCan(p, 'telegram', p.currentOrgId, 'chat');
+      if (!ctx.ok) { toast(ctx.code === 'channel_not_linked' ? T('没有绑定到这个组织的 Telegram 账号：消息被拒绝。', 'No Telegram account is linked to this organization: refused.') : T('该聊天账号没有对话权限。', 'This chat account may not chat.'), 'warn'); return; }
+      const res = M.sendDirect(p, o, 'agent-builder', { kind: 'status', text: { zh: '现在在忙什么？', en: 'What are you working on right now?' }, source: 'telegram' }, ctx, U.now());
+      U.save();
+      if (!res.ok) { toast(U.permText(res.code), 'warn'); render(); return; }
+      mark('direct.channel');
+      ui.review = false;
+      U.openDrawer('direct', { agentId: 'agent-builder' });
+      FM.directAfterSend('agent-builder', res.msg.id);
+    },
     'rv-fill-code': el => { U.setF('welcome.code', el.dataset.code); render(); },
   });
 

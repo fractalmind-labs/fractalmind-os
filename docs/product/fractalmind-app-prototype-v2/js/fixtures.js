@@ -28,10 +28,12 @@
   function emptyOrgData() {
     return {
       workspaces: [], okrs: [], hosts: [], agents: [], instances: [], runs: [], tasks: [], approvals: [],
-      evidence: [], memories: [], results: [], conversations: {}, invites: [], bindings: [], activity: [],
+      evidence: [], memories: [], results: [], conversations: {}, direct: {}, channels: [], invites: [], bindings: [], activity: [],
       decisions: [], receipts: [], seenHeartbeats: [], focusOkrId: null,
     };
   }
+
+  const standing = (now, version, actions, dailyBudget, spentToday) => ({ version, actions, dailyBudget, spentToday, dayStart: now - (now % DAY), confirmedAt: now - 5 * DAY });
 
   const nav = () => ({ scenario: null, waiting: null, observation: 'ok', paused: false, pausedReason: null, blocked: null });
 
@@ -69,10 +71,11 @@
     ];
 
     d.agents = [
-      { id: 'agent-builder', name: 'Builder', role: L('构建、打包与发布', 'Build, package and release'), runtime: 'Claude Code', model: 'Claude Sonnet 5.5', capabilities: [L('文件读写', 'Files'), L('命令执行', 'Commands'), L('本地虚拟机', 'Local VMs')] },
-      { id: 'agent-reviewer', name: 'Reviewer', role: L('独立验证', 'Independent verification'), runtime: 'Claude Code', model: 'Claude Opus 5.5', verifier: true, capabilities: [L('只读检查', 'Read-only checks'), L('签名与哈希校验', 'Signature and hash checks')] },
-      { id: 'agent-tester', name: 'Tester', role: L('真机与网络测试', 'Device and network testing'), runtime: 'Codex CLI', model: L('账号默认模型', 'Account default model'), capabilities: [L('真机池', 'Device farm'), L('网络限速', 'Network shaping')] },
-      { id: 'agent-researcher', name: 'Researcher', role: L('调研、方案与记忆整理', 'Research, options and memory'), runtime: 'Claude Code', model: 'Claude Haiku 4.5', capabilities: [L('文件读写', 'Files'), L('检索', 'Retrieval')] },
+      { id: 'agent-builder', name: 'Builder', role: L('构建、打包与发布', 'Build, package and release'), runtime: 'Claude Code', model: 'Claude Sonnet 5.5', capabilities: [L('文件读写', 'Files'), L('命令执行', 'Commands'), L('本地虚拟机', 'Local VMs')], standing: standing(now, 2, ['test', 'edit_sandbox'], 500, 80) },
+      { id: 'agent-reviewer', name: 'Reviewer', role: L('独立验证', 'Independent verification'), runtime: 'Claude Code', model: 'Claude Opus 5.5', verifier: true, capabilities: [L('只读检查', 'Read-only checks'), L('签名与哈希校验', 'Signature and hash checks')], standing: standing(now, 1, [], 200, 0) },
+      { id: 'agent-tester', name: 'Tester', role: L('真机与网络测试', 'Device and network testing'), runtime: 'Codex CLI', model: L('账号默认模型', 'Account default model'), capabilities: [L('真机池', 'Device farm'), L('网络限速', 'Network shaping')], standing: standing(now, 1, ['test'], 300, 40) },
+      { id: 'agent-researcher', name: 'Researcher', role: L('调研、方案与记忆整理', 'Research, options and memory'), runtime: 'Claude Code', model: 'Claude Haiku 4.5', capabilities: [L('文件读写', 'Files'), L('检索', 'Retrieval')], standing: standing(now, 1, [], 200, 0) },
+      { id: 'agent-desktop', name: 'Claude Desktop', role: L('桌面应用 · 仅对话', 'Desktop app · chat only'), runtime: 'Claude Desktop（CDP）', model: L('应用内模型', 'In-app model'), unconstrained: true, capabilities: [L('对话', 'Chat')], standing: standing(now, 1, [], 0, 0) },
     ];
 
     d.instances = [
@@ -83,6 +86,7 @@
       { id: 'inst-tester-1', name: 'tester-1', agentId: 'agent-tester', hostId: 'host-build', runtime: 'Codex CLI 0.9', adapter: 'native', status: 'running', workspace: '/srv/work/fractalmind-mobile', sessionKey: 'tmux:tester-1', imported: 'managed', okrIds: ['okr-mobile'] },
       { id: 'inst-builder-2', name: 'builder-2', agentId: 'agent-builder', hostId: 'host-build', runtime: 'Claude Code 2.4', adapter: 'native', status: 'idle', workspace: '/srv/work/fractalmind-mobile', sessionKey: 'fm:builder-2', okrIds: [] },
       { id: 'inst-tester-2', name: 'tester-2', agentId: 'agent-tester', hostId: 'host-gpu', runtime: 'Codex CLI 0.9', adapter: 'native', status: 'idle', workspace: '/srv/work/fractalmind-mobile', sessionKey: 'fm:tester-2', okrIds: [] },
+      { id: 'inst-desktop-1', name: 'claude-desktop', agentId: 'agent-desktop', hostId: 'host-mbp', runtime: 'Claude Desktop', adapter: 'unconstrained', status: 'idle', workspace: '—', sessionKey: 'cdp:claude-desktop', okrIds: [] },
     ];
 
     const alpha = {
@@ -280,6 +284,24 @@
 
     d.okrs = [alpha, mobile, memory, explorer, first];
 
+    d.direct = {
+      'agent-builder': {
+        agentId: 'agent-builder', instanceId: 'inst-builder-1', draft: '',
+        messages: [
+          { id: 'dm-1', from: 'user', kind: 'ask', action: null, text: L('今天的安装包构建为什么比昨天慢？', 'Why is today’s installer build slower than yesterday’s?'), at: now - 20 * HOUR, instanceId: 'inst-builder-1', hostId: 'host-mini', source: 'telegram', delivery: 'replied' },
+          { id: 'dm-2', from: 'agent', replyTo: 'dm-1', outcome: 'answer', text: L('Windows 虚拟机快照失效，冷启动多花了 6 分钟。我已在工作区记下原因，不影响 KR2 的测量口径。', 'The Windows VM snapshot expired, adding 6 minutes to cold starts. I noted it in the workspace; KR2’s measurement is unaffected.'), at: now - 20 * HOUR + MIN, instanceId: 'inst-builder-1', demo: true },
+          { id: 'dm-3', from: 'user', kind: 'action', action: 'test', text: L('跑一遍单元测试', 'Run the unit tests'), at: now - 3 * HOUR, instanceId: 'inst-builder-1', hostId: 'host-mini', source: 'app', delivery: 'replied' },
+          { id: 'dm-4', from: 'agent', replyTo: 'dm-3', outcome: 'executed', runId: 'R-0144', at: now - 3 * HOUR + 2 * MIN, instanceId: 'inst-builder-1', demo: true },
+        ],
+      },
+    };
+
+    d.channels = [
+      { id: 'ch-telegram', kind: 'telegram', label: 'Telegram', hostId: 'host-mini', state: 'online', version: 1, confirmedAt: now - 10 * DAY },
+      { id: 'ch-imessage', kind: 'imessage', label: 'iMessage', hostId: 'host-mbp', state: 'online', version: 1, confirmedAt: now - 6 * DAY },
+      { id: 'ch-feishu', kind: 'feishu', label: L('飞书', 'Feishu / Lark'), hostId: 'host-mini', state: 'disabled', version: 1, confirmedAt: now - 30 * DAY },
+    ];
+
     d.tasks = [
       { id: 'task-a1', okrId: 'okr-alpha', krId: 'kr1', title: L('构建三平台安装包', 'Build installers for three platforms'), state: 'Verified', createdAt: now - 13 * DAY },
       { id: 'task-a2', okrId: 'okr-alpha', krId: 'kr1', title: L('签名与公证', 'Sign and notarize'), state: 'Verified', createdAt: now - 9 * DAY },
@@ -292,6 +314,7 @@
     ];
 
     d.runs = [
+      { id: 'R-0144', okrId: null, krId: null, agentId: 'agent-builder', direct: true, hostId: 'host-mini', instanceId: 'inst-builder-1', state: 'succeeded', attempt: 1, startedAt: now - 3 * HOUR, endedAt: now - 3 * HOUR + 2 * MIN, action: 'test', cost: 20, sideEffects: [] },
       { id: 'R-0142', okrId: 'okr-alpha', krId: 'kr2', taskId: 'task-a3', hostId: 'host-mini', instanceId: 'inst-builder-1', state: 'running', attempt: 1, startedAt: now - 38 * MIN, title: L('Windows 11 干净环境安装冒烟（第 24/30 次）', 'Windows 11 clean-install smoke (run 24/30)'), sideEffects: [L('在工作区写入 4 个日志文件', 'Wrote 4 log files in the workspace')] },
       { id: 'R-0140', okrId: 'okr-mobile', krId: 'kr1', taskId: 'task-m1', hostId: 'host-build', instanceId: 'inst-tester-1', state: 'awaiting_approval', attempt: 1, startedAt: now - 26 * MIN, title: L('在蜂窝网络下验证 iOS 审批往返', 'Verify iOS approval round-trips on cellular'), sideEffects: [] },
       { id: 'R-0137', okrId: 'okr-mobile', krId: 'kr2', taskId: 'task-m2', hostId: 'host-build', instanceId: 'inst-tester-1', state: 'needs_confirmation', attempt: 1, startedAt: now - 5 * HOUR, title: L('向本组织 Android 真机池提交测试任务', "Submit a test job to this organization's Android device farm"), note: L('执行进程在提交后崩溃，无法确认真机池是否已接收该任务。', 'The runner crashed after submitting; it cannot confirm whether the device farm received the job.'), check: L('真机池控制台显示任务 #5521 已于 14:02 排队（演示）', 'The device farm console shows job #5521 queued at 14:02 (demo)'), sideEffects: [L('可能已向真机池提交 1 个任务（外部，消耗配额）', 'May have submitted 1 job to the device farm (external, uses quota)')] },
@@ -375,8 +398,8 @@
       { id: 'host-labs-gpu', name: 'Labs GPU Node', kind: 'cloud', location: L('东京', 'Tokyo'), os: 'Ubuntu 22.04', arch: 'x86_64', status: 'online', accepting: true, desktop: 'headless', lastHeartbeatAt: now - 26e3, cpu: 17, mem: 30, sampledAt: now - 26e3, bindingId: 'bind-labs', membership: member, grant: { actions: ['execute'], desktop: false, expiresAt: now + 5 * DAY } },
     ];
     d.agents = [
-      { id: 'agent-lead', name: 'Protocol Lead', role: L('协议负责人（Lead）', 'Protocol lead'), runtime: 'Claude Code', model: 'Claude Opus 5.5', capabilities: [L('任务拆分', 'Task breakdown'), L('Move 构建', 'Move builds')] },
-      { id: 'agent-auditor', name: 'Auditor', role: L('独立审查', 'Independent review'), runtime: 'Claude Code', model: 'Claude Opus 5.5', verifier: true, capabilities: [L('只读审查', 'Read-only review')] },
+      { id: 'agent-lead', name: 'Protocol Lead', role: L('协议负责人（Lead）', 'Protocol lead'), runtime: 'Claude Code', model: 'Claude Opus 5.5', capabilities: [L('任务拆分', 'Task breakdown'), L('Move 构建', 'Move builds')], standing: standing(now, 3, ['test'], 800, 120) },
+      { id: 'agent-auditor', name: 'Auditor', role: L('独立审查', 'Independent review'), runtime: 'Claude Code', model: 'Claude Opus 5.5', verifier: true, capabilities: [L('只读审查', 'Read-only review')], standing: standing(now, 1, [], 300, 0) },
     ];
     d.instances = [
       { id: 'inst-lead-1', name: 'lead-1', agentId: 'agent-lead', hostId: 'host-labs-ci', runtime: 'Claude Code 2.4', adapter: 'native', status: 'running', workspace: '/srv/work/fractalmind-protocol', sessionKey: 'fm:lead-1', okrIds: ['okr-labs'] },
@@ -443,6 +466,9 @@
         { id: 'dev-ipad', name: 'iPad Air', platform: 'ios', role: 'access', addedAt: now - 60 * DAY, revokedAt: now - 20 * DAY, grant: { state: 'revoked', expiresAt: now - 20 * DAY, scopes: [{ orgId: P, actions: ['read'] }] }, dataSync: 'synced', shareData: true },
       ],
       pairings: [],
+      channelGrants: [
+        { id: 'cg-1', channel: 'telegram', handle: '@ada_builds', orgId: P, actions: ['read', 'ask', 'inform', 'pause', 'chat'], linkedAt: now - 10 * DAY, revoked: false },
+      ],
       currentDeviceId: 'dev-mbp',
       locked: false,
       orgs: [
@@ -473,6 +499,7 @@
         dataSync: 'synced', shareData: true,
       }],
       pairings: [],
+      channelGrants: [],
       currentDeviceId: 'dev-first',
       locked: false,
       orgs: [{ id: orgId, chainId: chainId(model, orgId), name: input.orgName, kind: 'personal', role: 'admin', network: 'testnet', status: 'confirmed', createdAt: now }],

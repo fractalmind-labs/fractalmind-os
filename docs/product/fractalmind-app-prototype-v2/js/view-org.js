@@ -8,7 +8,7 @@
 
   /* ---------------------------------------------------------- Governance */
 
-  const KIND_T = { boundary: ['越界请求', 'Out-of-bounds'], acceptance: ['KR 验收', 'KR acceptance'], okr_acceptance: ['最终验收', 'Final acceptance'] };
+  const KIND_T = { boundary: ['越界请求', 'Out-of-bounds'], acceptance: ['KR 验收', 'KR acceptance'], okr_acceptance: ['最终验收', 'Final acceptance'], standing: ['超出常驻权限', 'Beyond standing'] };
 
   function permissions() {
     const p = P();
@@ -47,8 +47,8 @@
       body = `<div class="card flush" style="overflow-x:auto"><table class="table"><thead><tr><th>${T('类型', 'Type')}</th><th>${T('内容', 'What')}</th><th>OKR</th><th>${T('结果', 'Outcome')}</th><th>${T('执行', 'Execution')}</th><th>${T('时间', 'When')}</th></tr></thead><tbody>
         ${history.map(a => {
           const okr = M.find(org.okrs, a.okrId);
-          const exec = a.kind !== 'boundary' ? '—' : a.execution ? `<span class="st ok">${icon('play')}${T('已执行', 'Executed')}</span>` : a.state === 'approved' ? `<span class="st warn">${icon('clock')}${T('获准，未执行', 'Approved, not run')}</span>` : a.superseded ? T('已替代', 'Superseded') : T('未执行', 'Not run');
-          return `<tr><td class="small">${esc(T(...(KIND_T[a.kind] || [a.kind, a.kind])))}</td><td>${esc(L(a.action || (okr && a.krId ? M.find(okr.krs, a.krId).title : okr ? okr.title : '')))}</td><td class="small">${okr ? `${okr.priority} · ${esc(FM.krLabel(okr, a.krId) || '')}` : '—'}</td><td>${U.apvState(a)}</td><td class="small">${exec}</td><td class="small muted">${U.dateTime(a.decidedAt || a.invalidatedAt || a.expiresAt)}</td></tr>`;
+          const exec = a.kind !== 'boundary' && a.kind !== 'standing' ? '—' : a.execution ? `<span class="st ok">${icon('play')}${T('已执行', 'Executed')}</span>` : a.state === 'approved' ? `<span class="st warn">${icon('clock')}${T('获准，未执行', 'Approved, not run')}</span>` : a.superseded ? T('已替代', 'Superseded') : T('未执行', 'Not run');
+          return `<tr><td class="small">${esc(T(...(KIND_T[a.kind] || [a.kind, a.kind])))}</td><td>${esc(a.kind === 'standing' ? `${U.agent(a.agentId).name} · ${FM.directActionLabel(a.action)}` : L(a.action || (okr && a.krId ? M.find(okr.krs, a.krId).title : okr ? okr.title : '')))}</td><td class="small">${okr ? `${okr.priority} · ${esc(FM.krLabel(okr, a.krId) || '')}` : '—'}</td><td>${U.apvState(a)}</td><td class="small">${exec}</td><td class="small muted">${U.dateTime(a.decidedAt || a.invalidatedAt || a.expiresAt)}</td></tr>`;
         }).join('')}</tbody></table></div>`;
     }
     if (tab === 'perm') body = permissions();
@@ -102,7 +102,7 @@
   }
 
   function connections() {
-    return `${FM.dialogs.bindings().body.replace(/class="list"/, 'class="list card"')}<div class="row mt-12">${U.btn({ action: 'invite-stage', data: { stage: 'binding', dialog: 'invite' }, label: T('新增连接入口', 'Add endpoint'), icon: 'plus', perm: 'manage_hosts' })}</div>`;
+    return `${FM.dialogs.bindings().body.replace(/class="list"/, 'class="list card"')}<div class="row mt-12">${U.btn({ action: 'invite-stage', data: { stage: 'binding', dialog: 'invite' }, label: T('新增连接入口', 'Add endpoint'), icon: 'plus', perm: 'manage_hosts' })}</div>${FM.channelsCard()}`;
   }
 
   function fees() {
