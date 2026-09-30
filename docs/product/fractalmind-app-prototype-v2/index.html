@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>FractalMind</title>
+  <meta name="description" content="FractalMind App interactive prototype v2. All data, transactions and execution are simulated for product review.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <script>
+    // Apply the saved theme before first paint so dark mode does not flash.
+    (function () {
+      try {
+        var p = JSON.parse(localStorage.getItem('fractalmind.prototype-v2.prefs') || '{}');
+        var t = p.theme || 'system';
+        var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        if (p.locale === 'en') document.documentElement.lang = 'en';
+      } catch (e) { /* storage unavailable: follow defaults */ }
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app" class="app">
+    <div class="device">
+      <div id="shell" class="shell"></div>
+      <div id="overlay"></div>
+      <div id="toasts" class="toasts" aria-live="polite"></div>
+    </div>
+  </div>
+  <div id="review"></div>
+  <noscript><p style="padding:24px">This prototype needs JavaScript. / 此原型需要启用 JavaScript。</p></noscript>
+  <script src="js/model.js"></script>
+  <script src="js/fixtures.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/shell.js"></script>
+  <script src="js/view-workbench.js"></script>
+  <script src="js/view-okr.js"></script>
+  <script src="js/view-hosts.js"></script>
+  <script src="js/view-agents.js"></script>
+  <script src="js/view-identity.js"></script>
+  <script src="js/view-org.js"></script>
+  <script src="js/view-welcome.js"></script>
+  <script src="js/review.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

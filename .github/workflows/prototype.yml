@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - docs/product/fractalmind-app-prototype/**
+      - docs/product/fractalmind-app-prototype-v2/**
       - .github/workflows/prototype.yml
   push:
     branches: [main]
     paths:
       - docs/product/fractalmind-app-prototype/**
+      - docs/product/fractalmind-app-prototype-v2/**
       - .github/workflows/prototype.yml
 
 permissions:
@@ -24,3 +26,13 @@ jobs:
         with:
           node-version: '22'
       - run: node docs/product/fractalmind-app-prototype/verify.cjs
+
+  verify-v2:
+    name: Prototype v2 model regressions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node docs/product/fractalmind-app-prototype-v2/verify.cjs
