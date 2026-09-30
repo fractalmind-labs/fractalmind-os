@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>FractalMind</title>
+  <meta name="description" content="FractalMind App interactive prototype v2. All data, transactions and execution are simulated for product review.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <script>
+    // Apply the saved theme before first paint so dark mode does not flash.
+    (function () {
+      try {
+        var p = JSON.parse(localStorage.getItem('fractalmind.prototype-v2.prefs') || '{}');
+        var t = p.theme || 'system';
+        var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        if (p.locale === 'en') document.documentElement.lang = 'en';
+      } catch (e) { /* storage unavailable: follow defaults */ }
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="fm-g24" gradientUnits="userSpaceOnUse" x1="3" y1="3" x2="21" y2="21"><stop offset="0" stop-color="#06b6d4"/><stop offset=".52" stop-color="#5b5bd6"/><stop offset="1" stop-color="#a855f7"/></linearGradient>
+      <linearGradient id="fm-g48" gradientUnits="userSpaceOnUse" x1="4" y1="4" x2="44" y2="44"><stop offset="0" stop-color="#06b6d4"/><stop offset=".52" stop-color="#5b5bd6"/><stop offset="1" stop-color="#a855f7"/></linearGradient>
+      <linearGradient id="fm-g200" gradientUnits="userSpaceOnUse" x1="10" y1="10" x2="190" y2="190"><stop offset="0" stop-color="#22d3ee"/><stop offset=".5" stop-color="#6d6df0"/><stop offset="1" stop-color="#c084fc"/></linearGradient>
+    </defs>
+  </svg>
+  <div id="app" class="app">
+    <div class="device">
+      <div id="shell" class="shell"></div>
+      <div id="overlay"></div>
+      <div id="toasts" class="toasts" aria-live="polite"></div>
+    </div>
+  </div>
+  <div id="review"></div>
+  <noscript><p style="padding:24px">This prototype needs JavaScript. / 此原型需要启用 JavaScript。</p></noscript>
+  <script src="js/model.js"></script>
+  <script src="js/fixtures.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/shell.js"></script>
+  <script src="js/view-workbench.js"></script>
+  <script src="js/view-okr.js"></script>
+  <script src="js/view-hosts.js"></script>
+  <script src="js/view-agents.js"></script>
+  <script src="js/view-identity.js"></script>
+  <script src="js/view-org.js"></script>
+  <script src="js/view-welcome.js"></script>
+  <script src="js/review.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
