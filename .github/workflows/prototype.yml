@@ -3,12 +3,12 @@ name: FractalMind prototype
 on:
   pull_request:
     paths:
-      - docs/product/fractalmind-prototype/**
+      - docs/product/fractalmind-app-prototype/**
       - .github/workflows/prototype.yml
   push:
     branches: [main]
     paths:
-      - docs/product/fractalmind-prototype/**
+      - docs/product/fractalmind-app-prototype/**
       - .github/workflows/prototype.yml
 
 permissions:
@@ -23,4 +23,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node docs/product/fractalmind-prototype/verify.cjs
+      - run: node docs/product/fractalmind-app-prototype/verify.cjs

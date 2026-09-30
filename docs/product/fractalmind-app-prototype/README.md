@@ -8,7 +8,7 @@ No package installation, external assets, model keys or backend services are req
 From the repository root:
 
 ```sh
-python3 -m http.server 4173 --bind 127.0.0.1 --directory docs/product/fractalmind-prototype
+python3 -m http.server 4173 --bind 127.0.0.1 --directory docs/product/fractalmind-app-prototype
 ```
 
 Open <http://127.0.0.1:4173>. A new browser starts at identity onboarding; an existing signed-in profile opens the workbench. Direct review entries:
@@ -310,7 +310,7 @@ proof of restricted membership. UI deletion cannot erase public chain history.
 Run the simulation's organization/admission/invitation/identity regression checks with Node.js 22 or later:
 
 ```sh
-node docs/product/fractalmind-prototype/verify.cjs
+node docs/product/fractalmind-app-prototype/verify.cjs
 ```
 
 These checks validate the embedded state machine, not deployed contract security.

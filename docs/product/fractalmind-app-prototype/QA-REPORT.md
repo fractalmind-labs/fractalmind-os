@@ -44,7 +44,7 @@
 ## 可重复执行的回归
 
 ```sh
-node docs/product/fractalmind-prototype/verify.cjs
+node docs/product/fractalmind-app-prototype/verify.cjs
 ```
 
 六组领域回归全部通过，覆盖：

@@ -690,4 +690,4 @@ macOS Intel、Windows ARM 和 Ubuntu ARM 在单独通过验收后加入支持列
 - [本地运行时适配边界](../../runtime/fractalmind-envd/docs/local-runtime-adapter.md)：操作、授权和持久化执行约定。
 
 - [OKR Manager](../../skills/coordination/okr-manager-skill/SKILL.md)：OKR 质量门槛、生命周期、依赖与 heartbeat。
-- [单 HTML 产品原型](fractalmind-prototype/README.md)：交互评审入口，所有执行与数据为演示。
+- [单 HTML 产品原型](fractalmind-app-prototype/README.md)：交互评审入口，所有执行与数据为演示。
