@@ -174,7 +174,7 @@ vm.runInContext(source, entryCtx);
 vm.runInContext(`(async()=>{
 assert(state.entry.signedOut);assert(state.entry.fresh);assert.equal(identityModel().id,'');assert(!state.identityDemo);
 assert(!identityAllowed('operate'));assert(!identityAllowed('manage'));assert(!identityDataReady());
-assert.throws(()=>entryPairStart('iOS','Phone'),/恢复包/);
+assert.throws(()=>entryPairStart('iOS','Phone'),/恢复码/);
 // Preserve the previously reviewed profile while a different Human is created.
 state=defaults();ensureOrganizationModel();identityModel();state.goals[0].description='preserved review';state.entry={signedOut:true};save();
 const original=JSON.stringify([state.goals,state.tasks,state.memories,state.organizationRegistry,state.identityDemo]);
@@ -307,3 +307,42 @@ const migrationCtx = vm.createContext({
 });
 vm.runInContext(source,migrationCtx);
 vm.runInContext(`assert.equal(state.entry.registration.status,'funding');assert.equal(state.entry.registration.id,'DEMO-OLD-DRAFT');assert.equal(state.entry.registration.name,'Old draft');assert(!fundingReady());entryCreate('Updated draft','Ubuntu','system','My organization');assert.equal(state.entry.registration.id,'DEMO-OLD-DRAFT');`,migrationCtx);
+
+// A code alone locates an identity; discovery never grants access or changes profile.
+const recoveryStorage = new Map();
+const recoveryCtx = vm.createContext({
+  console, assert, crypto: webcrypto, Date, Blob, URL, URLSearchParams, TextEncoder, atob, btoa,
+  location: { search: '?review=qa' }, setTimeout: () => 0, clearTimeout() {},
+  document: { addEventListener() {} },
+  localStorage: { getItem: k => recoveryStorage.get(k) || null, setItem: (k,v) => recoveryStorage.set(k,v) },
+});
+vm.runInContext(source,recoveryCtx);
+vm.runInContext(`(async()=>{
+state=defaults();fleet();const m=identityModel(),human=m.id;save();
+const code=await identityCreateKit();assert.match(code,/^DEMO-FMRC1-LOCAL-[A-F0-9]{64}-[A-F0-9]{8}$/);
+await assert.rejects(()=>findRecoveryIdentity(code),/有效恢复记录/);
+m.recovery.saved=true;save();const key=profileKey,original=JSON.stringify([state.goals,state.tasks,state.memories,state.organizationRegistry]);
+assert(!JSON.stringify([...localStorageForTest()]).includes(code));
+let found=await findRecoveryIdentity(code.toLowerCase().replace(/-/g,'-'+String.fromCharCode(10)));assert.equal(found.id,human);assert.equal(profileKey,key);
+const malformed=code.slice(0,-1)+(code.endsWith('0')?'1':'0');await assert.rejects(()=>findRecoveryIdentity(malformed),/校验/);
+await assert.rejects(()=>findRecoveryIdentity(code.replace('FMRC1','FMRC9')),/版本/);
+await assert.rejects(()=>findRecoveryIdentity(code.replace('LOCAL','MAINNET')),/网络/);
+// A fresh entry can find another profile without asking for its Human ID.
+profileKey=KEY+'.fresh-recovery-test';state={...defaults(),entry:{fresh:true,signedOut:true}};chainDemo();save();
+const before=JSON.stringify(state);found=await findRecoveryIdentity(code);assert.equal(found.id,human);assert.equal(JSON.stringify(state),before);assert(state.entry.signedOut);
+assert(!identityAllowed('manage'));assert(!identityDataReady());
+chainDemo().rpc=false;await assert.rejects(()=>recoverLocatedIdentity(found,'Android'),/Sui/);chainDemo().rpc=true;
+await assert.rejects(()=>recoverLocatedIdentity(found,'Android',()=>false),/变化/);assert.equal(JSON.stringify(state),before);
+const newDevice=await recoverLocatedIdentity(found,'Android');assert.equal(newDevice.platform,'Android');assert.equal(identityModel().id,human);assert.equal(profileKey,key);assert(!state.entry.signedOut);
+assert(identityModel().devices.filter(d=>d.id!==newDevice.id).every(d=>d.status==='revoked'));
+assert(!identityDataReady());assert(identityRestoreData());assert(identityDataReady());assert.equal(JSON.stringify([state.goals,state.tasks,state.memories,state.organizationRegistry]),original);
+await assert.rejects(()=>findRecoveryIdentity(code),/有效恢复记录/);await assert.rejects(()=>recoverLocatedIdentity(found),/变化/);
+const replacement=await identityCreateKit();identityModel().recovery.saved=true;save();found=await findRecoveryIdentity(replacement);
+await identityCreateKit();identityModel().recovery.saved=true;save();await assert.rejects(()=>recoverLocatedIdentity(found),/有效恢复记录/);
+// Legacy v14 UUID codes keep working with the same single-field UI.
+const legacy='DEMO-RECOVERY-12345678-1234-1234-1234-123456789ABC';identityModel().recovery={hash:await recoveryDigest(legacy),version:1,saved:true,dataBackup:true,orgs:[state.orgId]};save();
+found=await findRecoveryIdentity(legacy);assert.equal(found.id,human);
+// Revalidate a changed target after preview; no restoration from a stale snapshot.
+identityModel().generation++;save();await assert.rejects(()=>recoverLocatedIdentity(found),/变化/);
+console.log('PASS: single-code lookup, checksum/version/network, fresh-profile discovery, explicit confirmation, RPC retry, new-device platform, unchanged identity/work, consumed/replaced codes, legacy codes and stale confirmation');
+})()`,Object.assign(recoveryCtx,{localStorageForTest:()=>recoveryStorage})).catch(error=>{console.error(error);process.exitCode=1;});
