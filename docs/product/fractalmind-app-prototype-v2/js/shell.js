@@ -75,7 +75,7 @@
       <nav class="col" style="gap:2px">${NAV_GLOBAL.map(n => navLink(n, r, org)).join('')}</nav>
       <div class="sb-foot">
         <a class="sb-me" href="#/identity">
-          <span class="avatar round sm" style="background:#8a6a3a">${esc(p.human.name.slice(0, 1).toUpperCase())}</span>
+          <span class="avatar round sm human">${esc(p.human.name.slice(0, 1).toUpperCase())}</span>
           <span class="grow"><span class="t ellipsis" style="display:block">${esc(p.human.name)}</span><span class="s ellipsis" style="display:block">${esc(dev ? dev.name : '')} · ${dev && dev.role === 'manage' ? T('管理设备', 'Management device') : T('访问设备', 'Access device')}</span></span>
         </a>
         <button class="btn ghost sm" data-action="lock" style="justify-content:flex-start">${icon('lock', 'sm')}<span>${T('锁定此 App', 'Lock this app')}</span></button>

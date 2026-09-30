@@ -51,7 +51,7 @@
     const unlock = { touch_id: 'Touch ID', face_id: 'Face ID', fingerprint: T('指纹', 'Fingerprint'), windows_hello: 'Windows Hello', password: T('本机密码', 'Device password') }[dev.unlock] || T('本机解锁', 'Device unlock');
     return `<div class="page-h"><div><h1>${T('我的身份', 'My identity')}</h1><p class="muted">${T('一个稳定的 Human 身份，多台设备各自独立授权。', 'One stable Human identity; every device has its own grant.')}</p></div></div>
       <div class="grid-2">
-        <section class="card"><div class="row gap-lg"><span class="avatar round" style="width:52px;height:52px;font-size:20px;background:#8a6a3a">${esc(p.human.name.slice(0, 1).toUpperCase())}</span><div class="grow"><h2>${esc(p.human.name)}</h2>
+        <section class="card"><div class="row gap-lg"><span class="avatar round human" style="width:52px;height:52px;font-size:20px">${esc(p.human.name.slice(0, 1).toUpperCase())}</span><div class="grow"><h2>${esc(p.human.name)}</h2>
           <div class="row small mt-4"><span class="muted">Human ID</span><span class="mono">${esc(p.human.id)}</span><button class="btn ghost icon sm" data-action="copy" data-copy="${esc(p.human.id)}" aria-label="${T('复制', 'Copy')}">${icon('copy', 'sm')}</button></div>
           <div class="tiny muted">${T('创建于', 'Created')} ${U.date(p.human.createdAt)} · ${T(`${active} 台设备已授权 · ${p.orgs.length} 个组织`, `${active} devices authorized · ${p.orgs.length} organizations`)}</div></div></div>
           <div class="note mt-12">${icon('info')}<div>${T('Human ID、钱包地址、Host ID、AgentCertificate 与运行会话各有用途，不能互相代替。', 'Human ID, wallet address, Host ID, AgentCertificate and run sessions each have a purpose; none substitutes for another.')}</div></div></section>

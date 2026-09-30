@@ -13,7 +13,8 @@
   const IDENTITY_FEE = M.FEES['identity.create'];
   const BUDGET = 10000000;
 
-  const ART = `<svg class="art" viewBox="0 0 200 200" aria-hidden="true"><rect x="4" y="4" width="192" height="192" rx="44" fill="none" stroke="currentColor" stroke-width="3"/><rect x="30" y="30" width="62" height="62" rx="14" fill="currentColor"/><rect x="104" y="104" width="34" height="34" rx="8" fill="currentColor" opacity=".85"/><rect x="146" y="146" width="18" height="18" rx="4" fill="currentColor" opacity=".7"/><rect x="170" y="170" width="9" height="9" rx="2" fill="currentColor" opacity=".55"/><rect x="104" y="30" width="62" height="62" rx="14" fill="none" stroke="currentColor" stroke-width="2" opacity=".5"/><rect x="30" y="104" width="62" height="62" rx="14" fill="none" stroke="currentColor" stroke-width="2" opacity=".5"/></svg>`;
+  // Self-similar squares along the diagonal: each level repeats the one before it.
+  const ART = `<svg class="art" viewBox="0 0 200 200" aria-hidden="true"><rect x="4" y="4" width="192" height="192" rx="44" fill="none" stroke="url(#fm-g200)" stroke-width="2.5" opacity=".75"/><rect x="104" y="30" width="62" height="62" rx="14" fill="none" stroke="url(#fm-g200)" stroke-width="1.5" opacity=".35"/><rect x="30" y="104" width="62" height="62" rx="14" fill="none" stroke="url(#fm-g200)" stroke-width="1.5" opacity=".35"/><rect x="30" y="30" width="62" height="62" rx="14" fill="url(#fm-g200)" opacity=".92"/><rect x="104" y="104" width="34" height="34" rx="8" fill="url(#fm-g200)" opacity=".85"/><rect x="146" y="146" width="18" height="18" rx="4" fill="url(#fm-g200)" opacity=".8"/><rect x="170" y="170" width="9" height="9" rx="2" fill="url(#fm-g200)" opacity=".75"/></svg>`;
 
   function stepsNav(list, cur) {
     return `<div class="steps-nav" style="margin:0">${list.map(([zh, en], i) => `<span class="${i + 1 === cur ? 'on' : i + 1 < cur ? 'done' : ''}"><b>${i + 1 < cur ? '✓' : i + 1}</b>${esc(T(zh, en))}</span>`).join('')}</div>`;
@@ -190,7 +191,7 @@
       foot = `<button class="btn" data-action="w-mode" data-mode="choose">${T('返回', 'Back')}</button><button class="btn primary" data-action="w-lookup">${T('查找身份', 'Find identity')}</button>`;
     }
     if (step === 2 && tp) {
-      body = `<div class="card soft tight"><div class="row gap-lg"><span class="avatar round" style="width:44px;height:44px;background:#8a6a3a">${esc(tp.human.name.slice(0, 1))}</span><div><div class="strong">${esc(tp.human.name)}</div><div class="mono small">${esc(tp.human.id)}</div></div></div>
+      body = `<div class="card soft tight"><div class="row gap-lg"><span class="avatar round human" style="width:44px;height:44px">${esc(tp.human.name.slice(0, 1))}</span><div><div class="strong">${esc(tp.human.name)}</div><div class="mono small">${esc(tp.human.id)}</div></div></div>
           <div class="small mt-8">${tp.orgs.map(o => `${esc(L(o.name))}（${o.role === 'admin' ? T('管理员', 'admin') : T('成员', 'member')}）`).join('、')}</div>
           <div class="tiny muted mt-4">${T(`当前 ${tp.devices.filter(d => d.grant.state === 'active').length} 台有效设备将被撤销`, `${tp.devices.filter(d => d.grant.state === 'active').length} active devices will be revoked`)}</div></div>
         <div class="note">${icon('info')}<div>${T('找到记录只代表定位到身份，不代表已登录或获得权限。', 'Finding the record only locates the identity; it signs nothing in and grants nothing.')}</div></div>
@@ -225,9 +226,11 @@
     const card = { choose, create, existing, recover }[w.mode] || choose;
     return `<div class="welcome">
       <section class="w-hero">${ART}
-        <div style="position:relative"><div class="row">${U.LOGO.replace('class="logo"', 'class="logo" style="color:#9ed6be;width:30px;height:30px"')}<strong style="font-size:17px">FractalMind</strong></div>
+        <div style="position:relative"><div class="row">${U.LOGO.replace('class="logo"', 'class="logo" style="width:30px;height:30px"')}<strong style="font-size:17px;color:#fff">FractalMind</strong></div>
+          <span class="eyebrow"><i></i>${T('开放 · 可验证 · 无需许可', 'Open · Verifiable · Permissionless')}</span>
           <h1>${T('从一个人的组织开始', 'Start with an organization of one')}</h1>
-          <p>${T('建立自己的组织，和 Agent 一起完成可验证的目标，再逐步加入更大的团队与开放网络。', 'Create your own organization, deliver verifiable goals with Agents, then grow into larger teams and the open network.')}</p></div>
+          <p>${T('建立自己的组织，和 Agent 一起完成可验证的目标，再逐步加入更大的团队与开放网络。', 'Create your own organization, deliver verifiable goals with Agents, then grow into larger teams and the open network.')}</p>
+          <p class="mission">${T('我们通过分形、自相似的 Agent 组织，走向一个没有人能独占的 ASI。', 'Through fractal, self-similar agent organizations, toward an ASI that no one owns.')}</p></div>
         <div class="fine">${T('测试网 · 原型演示：不连接真实服务，不要输入真实密钥或恢复码。', 'Testnet · prototype demo: no real services; never enter real keys or recovery codes.')}</div>
       </section>
       <main class="w-main"><div class="w-card">

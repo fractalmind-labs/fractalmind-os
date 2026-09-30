@@ -209,7 +209,7 @@
     trash: '<path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.8 12.5a1.5 1.5 0 0 0 1.5 1.5h6.4a1.5 1.5 0 0 0 1.5-1.5L17.5 7"/>',
   };
   const icon = (name, cls) => `<svg class="i ${cls || ''}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ''}</svg>`;
-  const LOGO = '<svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="6" y="6" width="6.2" height="6.2" rx="1.4" fill="currentColor"/><rect x="13.2" y="13.2" width="3.3" height="3.3" rx=".8" fill="currentColor"/><rect x="17" y="17" width="1.7" height="1.7" rx=".4" fill="currentColor"/></svg>';
+  const LOGO = '<svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" fill="none" stroke="url(#fm-g24)" stroke-width="1.8"/><rect x="6" y="6" width="6.2" height="6.2" rx="1.4" fill="url(#fm-g24)"/><rect x="13.2" y="13.2" width="3.3" height="3.3" rx=".8" fill="url(#fm-g24)"/><rect x="17" y="17" width="1.7" height="1.7" rx=".4" fill="url(#fm-g24)"/></svg>';
 
   /* -------------------------------------------------------------- State */
 
@@ -607,7 +607,12 @@
     app.classList.toggle('m', mobile);
     app.classList.toggle('framed', ui.framed);
 
-    const r = route();
+    let r = route();
+    if (P() && r.name === 'welcome') {
+      // Signed in: the welcome entry becomes the workbench so navigation state stays accurate.
+      history.replaceState(null, '', '#/workbench');
+      r = route();
+    }
     const key = `${root.activeProfileId}|${r.parts.join('/')}`;
     const changed = key !== ui.lastRoute;
     const sc = scroller();
