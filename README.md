@@ -35,9 +35,9 @@ local execution on macOS, Windows, and Ubuntu, with companion workflows on iOS
 and Android.
 
 See the [product requirements](docs/product/fractalmind-app-prd.md) for scope,
-user journeys, and acceptance criteria, and the
-[engineering plan](docs/fractalmind-app-plan.md) for implementation options.
-These documents describe planned capabilities, not a released application.
+user journeys, acceptance criteria, and delivery stages. Its engineering appendices
+cover implementation options, existing assets, and dependencies.
+This document describes planned capabilities, not a released application.
 
 ## Building and testing
 
