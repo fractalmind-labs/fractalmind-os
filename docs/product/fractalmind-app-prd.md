@@ -3,7 +3,7 @@
 | 项目 | 内容 |
 | --- | --- |
 | 状态 | 待评审；单 HTML 原型已覆盖核心交互，生产集成按验收门槛交付 |
-| 文档版本 | 0.9 · 同步原型 15：身份、恢复、费用与 Agent 导入 |
+| 文档版本 | 0.10 · 单一 PRD：原型 15 与工程附录 |
 | 同步基线 | PR #19 合并后的 main `c590689`；原型为交互证据，生产能力另行验收 |
 | 产品 | FractalMind App |
 | 定位 | FractalMind 开放智能网络的统一入口 |
@@ -11,11 +11,11 @@
 | 目标平台 | macOS、Windows、Ubuntu、iOS、Android |
 | 首版边界 | P2 五平台 MVP Beta；P1 为桌面 Alpha，P3 为团队协作与治理阶段 |
 | 依据 | PR #18 产品基线、用户确认的 OKR 方向，okr-manager 技能约定，以及组织 / 链上持久状态的产品决策 |
-| 配套文档 | [工程规划与资产盘点](../fractalmind-app-plan.md)；技术选型由 PoC/ADR 确认 |
+| 文档维护 | 本文件统一维护需求、验收、阶段与工程候选；独立技术决策由 PoC/ADR 确认 |
 
-本 PRD 是 App 产品范围和验收的依据。工程规划中的方案、工期和框架建议
-服务于这些需求；需求变化应同步更新本文件。发布阶段不代表协议已上主网，
-也不代表产品已达到 ASI。
+本 PRD 是 App 产品范围、验收和阶段规划的单一依据。正文维护产品决策；附录保留
+资产盘点、技术候选、发行约束和工程依赖，不另行维护 PLAN。候选方案仍需 P0/ADR
+验证，不能视为已实现功能。发布阶段不代表协议已上主网，也不代表产品已达到 ASI。
 
 ## 1. 使命与产品定位
 
@@ -738,7 +738,9 @@ macOS Intel、Windows ARM 和 Ubuntu ARM 在单独通过验收后加入支持列
 
 发布记录必须列出版本、平台、测试环境、通过/未通过需求和证据链接。公开
 支持列表只包含已通过的组合；缺少任一五平台核心验收时，P2 保持预览状态。
-协议部署、主网迁移和公开服务运营另按相应发布流程执行。
+协议部署、主网迁移和公开服务运营另按相应发布流程执行。工程依赖见附录 D。
+原先按 2–3 名工程师估算的工期未覆盖新增合约、恢复和链上存储工作，已撤回；
+完成 P0 的协议、成本及五平台验证后重新估算，商店审核与协议安全评审另计。
 
 ## 12. 服务整合顺序
 
@@ -778,7 +780,6 @@ macOS Intel、Windows ARM 和 Ubuntu ARM 在单独通过验收后加入支持列
 
 ## 14. 参考与关联
 
-- [工程规划与资产盘点](../fractalmind-app-plan.md)：技术候选、运行时边界、跨平台差异和工程切片。
 - [What is FractalMind?](../site/docs/guide/what-is-fractalmind.md)：使命、愿景和当前阶段。
 - [Fractal Model](../site/docs/architecture/fractal-model.md)：Agent、团队、组织和联邦的共用原语。
 - [Architecture Overview](../site/docs/architecture/overview.md)：权威、执行和应用的边界。
@@ -788,3 +789,149 @@ macOS Intel、Windows ARM 和 Ubuntu ARM 在单独通过验收后加入支持列
 
 - [OKR Manager](../../skills/coordination/okr-manager-skill/SKILL.md)：OKR 质量门槛、生命周期、依赖与 heartbeat。
 - [单 HTML 产品原型](fractalmind-app-prototype/README.md)：交互评审入口，所有执行与数据为演示。
+
+
+## 附录 A：可复用资产与实施差距
+
+以下保留 PR #17 的资产盘点，并补充原型 15 所需差距；未重新验收全部组件。
+工作流存在不等于五平台发行已验证；产品整合阶段统一见 §12。
+
+| 资产 | 当前可复用部分 | 统一 App 的整合方式 | 需要补齐 |
+| --- | --- | --- | --- |
+| `apps/agent-console` | React/TS、协调器客户端、节点列表、控制命令、WebRTC 查看器；Tauri/Capacitor 配置 | 作为 FractalMind App 起点 | 导航、任务/会话模型、本地服务管理、配对、发布签名、iOS 工程 |
+| `runtime/fractalmind-envd` | 节点发现、协调器、心跳、重连、进程监督、运行时适配、Sui 授权 | 多主机控制面和节点服务 | 链上权威解析/对账、Host 准入、真实 Agent 实例发现/交接、事件同步、安装生命周期、完整 Windows 支持 |
+| `skills/coordination/agent-manager-skill/agent-manager` | 已有 Agent 操作和协议适配 | 兼容运行时适配器 | 当前 tmux/Python 依赖的托管安装；原生跨平台执行适配 |
+| `runtime/fractalbot` | Telegram、飞书、Slack、Discord、iMessage 等渠道和运行时路由 | “连接”中的可选服务 | App 配置界面、健康状态、密钥引用、统一任务映射 |
+| `runtime/fractalmind-envd/desktop` | WebRTC、屏幕采集、输入控制、健康检查 | 设备页中的远程桌面模块 | Windows 采集/输入、Ubuntu Wayland、系统权限和组件打包 |
+| `skills/` 与 `roms/` | 技能、注册表、Agent 发行模板 | 工具/技能目录与创建 Agent 模板 | 版本锁、运行依赖、权限说明、卸载与升级 |
+| `protocols/fractalmind-protocol` | Sui SDK、Organization/Agent 及命令授权 | 组织和远程授权基础 | Human/DeviceGrant、恢复目录/密钥备份、HostInvite/HostMembership、admin 权力映射及 Gas 引导；原型不代表已有合约 |
+| `protocols/fractal-demail` | 邮件客户端、桥接和 gas station 适配 | 高级消息连接器 | App 数据模型、发送/收件 UX；fractalbot 的通用 Demail Agent 入站路由仍待实现 |
+| `apps/explorer` | React、组织/链上可视化 | 后续“组织/网络”模块，按需加载 | React 18/19 等依赖统一、抽离组件和数据访问；避免同时引入两套应用状态 |
+| `apps/typemind-android` | Android IME 与输入 API | 可选 Android 原生扩展，后续验证同一安装包内集成 | Kotlin/Manifest 合并与系统启用引导；当前 shell/root 广播不是普通 App 的无配置接口 |
+| `apps/openclaw-gateway-app` | macOS 包装和权限说明 | 可选 OpenClaw 连接器的权限引导 | 统一签名和进程归属验证；当前仍要求外部 OpenClaw/Node 安装 |
+| `runtime/claude-code-go` | 实验中的 CLI、server 和会话兼容面 | 实验连接器，逐功能标明支持范围 | 稳定性与兼容性验证，不作为默认执行引擎依赖 |
+| 私有 memory/gateway 仓库 | 此次未检查其内部实现 | 按版本化服务协议预留连接器 | 分别核实可用 API、部署、认证、许可和数据边界 |
+| `workspace/oh-my-code`、`governance/`、team/OKR/heartbeat 技能 | 文件工作区、运行闭环、团队协调、候选 OKR | 目标、团队、记忆、提案和验收的统一产品体验 | 文件适配、冲突处理、治理 UI；继续遵守 Agent OS 文件契约 |
+
+盘点发现的发行前缺口：Agent Console 连接 token 存入 localStorage，
+Tauri CSP 为 `null`，macOS 使用临时签名且 hardened runtime 关闭；这些都需在
+正式发行前处理。现有节点命令 UI 也尚不是产品需要的任务与审批界面。
+
+## 附录 B：技术候选与适配契约
+
+### B.1 客户端框架候选
+
+统一 UI、领域模型、API 客户端和设计系统；原生能力经 `PlatformAdapter` 访问。
+桌面和移动分别构建原生安装包，对外使用相同产品名称。
+
+| 方案 | 适合本项目的理由 | 代价与决策 |
+| --- | --- | --- |
+| React + Tauri + Capacitor | 直接复用现有 UI、TS SDK 和已有打包路径 | 保留两套原生壳；首版推荐，维护边界集中在平台适配层 |
+| React + 全平台 Tauri 2 | 可统一原生壳；官方支持桌面与移动 | 需实机验证推送、安全存储、扫码、WebRTC 和后台恢复；PoC 全通过后可选，尚不承诺迁移 |
+| Flutter | 官方覆盖五个目标平台，统一 UI 工具链 | 现有 React 页面和 TS 客户端需重写或重新桥接；本阶段投入收益较低 |
+
+框架覆盖平台并不代表运行时能力相同。Tauri 的移动 Shell 插件不提供桌面式
+子进程执行；本方案把完整 Agent 执行留在桌面/远程节点。移动本地能力使用
+Swift/Kotlin 插件，例如扫码、系统安全存储、推送和文件选择。
+
+### B.2 Core 与传输拓扑候选
+
+组件权力边界以 §8.4 为准，持久状态以 §8 为准；以下仅说明部署和调用关系。
+
+```mermaid
+flowchart TB
+    D[FractalMind 桌面 App] -->|受限原生桥接| C[本机 Core / envd]
+    M[FractalMind iOS / Android] -->|认证会话| R[Coordinator / 可替换中继]
+    R -->|认证与路由| C
+    R -->|认证与路由| H[本地或云端 Host / envd]
+    C --> A[Agent 运行时 / 工具 / 技能]
+    H --> A2[Agent 运行时 / 工具 / 技能]
+    C --> X[(可重建索引 / 临时执行副本)]
+    C -->|签名提交与读取| S[(Sui：持久状态 / 授权 / 加密正文)]
+    M -->|客户端链上适配| S
+    R -->|读取绑定与授权| S
+    H -->|验证授权 / 提交回执| S
+    C -->|最小通知元数据| N[可选推送设施]
+    N --> M
+```
+
+FractalMind Core 是逻辑层，优先扩展 envd 的入口和包。默认运行一个本机核心
+进程，按需监督独立服务；Go 核心、Rust 原生桥接和 TS UI 分别承担清晰职责。
+不把所有第三方服务编进同一二进制。是否需要额外可执行入口由 PoC 的依赖
+和跨平台构建结果决定。
+
+桌面通过受限原生桥接访问 Core；本机 IPC 使用有访问限制的 socket/管道。
+采用 loopback HTTP 时仍需随机凭据、Origin 校验与明确操作范围，UI 不获得任意 Shell 权限。
+链上接入复用仓库 gRPC/GraphQL/SDK 适配，移动 WebView 的可用传输在 P0 验证。
+支持 LAN 直连与自托管中继；APNs/FCM 仅携带最小唤醒信息，不依赖手机永久后台连接。
+
+### B.3 API、运行时与文件适配
+
+- 节点接口候选 `/api/v1`，保留旧 envd 端点；定义 OpenAPI 与事件 schema，包含
+  `event_id`、`device_id`、`run_id`、序号、时间与来源版本；断线按游标补拉。
+- 能力协商返回 OS、运行时版本和可用操作。适配器提供 capabilities、start、assign、
+  events、cancel、resume、health；结构化事件优先，终端输出不能冒充任务/审批协议。
+- Unix PTY 与 Windows ConPTY 分别验证启动、取消及清理。tmux/Python 作为兼容接入，
+  不能据此承诺原生 Windows 或任意既有 Agent 的约束控制能力。
+- 文件适配保留 `SYSTEM.md`、`SOUL.md`、`AGENTS.md`、`USER.md`、`HEARTBEAT.md`、
+  `OKR.md`、`okrs/Candidate.md`、`memory/`；变更检测、来源版本与冲突处理进入契约。
+  SQLite 仅作可重建索引和临时暂存，不成为另一套产品事实库。
+- 技能安装复用 `npx skills add` 与注册表语义，由目标桌面/Host Core 执行，展示预览、
+  版本锁、依赖和结果。内置技能直接分发；手机只发起对指定执行主机的授权请求。
+
+## 附录 C：安装与发行工程约束
+
+产品能力和平台范围以 §9 为准；下表保留安装与系统集成的验证事项。
+
+| 平台 | 工程验证与发行要求 |
+| --- | --- |
+| macOS | 签名/公证 DMG、Developer ID、hardened runtime、稳定 helper 身份；GUI 服务使用用户 LaunchAgent；桌面采集/输入另获系统权限 |
+| Windows | 签名 EXE/MSI、Authenticode、ConPTY 和 Job Object 清理；Core 与 GUI 会话权限分离；被控采集/输入按独立能力验收 |
+| Ubuntu | DEB 优先、用户 systemd 服务、声明系统 WebView 依赖；分别验证 X11/Wayland，xdotool/X11 不能证明 Wayland 支持 |
+| iOS | TestFlight/App Store、APNs、安全存储与扫码；前后台切换恢复、WebRTC 查看按真机验收，不能依赖桌面式守护进程 |
+| Android | 签名 APK/AAB、FCM、安全存储与扫码；前台服务/后台恢复按平台验证，IME 为后续专项 |
+
+- 一个产品版本记录 Core、API schema、UI、平台壳及可选组件版本。桌面基础包包含 UI、
+  Core、默认工具及可分发运行时；不可内置时提供 App 内安装，不要求用户预装开发环境。
+- 大组件/可选依赖按需安装，锁版本并校验签名/摘要；Git 等外部工具先检测、再引导。
+  模型和外部渠道凭据由用户授权；不静默运行任意注册表安装脚本。
+- OS 权限在启用对应能力时申请，不将远程桌面、全盘访问、WireGuard 设为首次运行前提。
+- 更新在安全检查点应用，链上 schema/客户端兼容和缓存重建分开验证；回滚不能恢复旧授权。
+  卸载停止后台组件，用户决定保留哪些本地工作副本；不能宣称擦除链上历史。
+- 工程目录候选先在 `apps/agent-console` 迭代；品牌/App ID 迁移核查已有安装包后决定。
+  后续移至 `apps/fractalmind` 或抽出 `packages/app-ui` / `packages/app-client` 需独立实施，
+  同步工作流和迁移；不与深层运行时重构混在同一 PR。
+- 受影响的 PR 验证客户端/API 契约、核心构建、任务恢复与对应原生壳；发布前完成真实安装、
+  权限、更新迁移与五平台流程。浏览器走查不能替代 WKWebView/Android WebView/系统权限验证。
+
+## 附录 D：工程切片与依赖
+
+使命、流程、信息架构和 P0–P4 门槛仅在正文维护。下表将实施工作关联到 FR/J，
+原型覆盖与生产差距见 §8.5，不再复制另一份阶段计划。
+
+| 顺序 | 工程切片 | 依赖与交付证据 | PRD |
+| --- | --- | --- | --- |
+| 1 | 链上状态、身份与恢复 ADR/PoC | Human 与 admin 权力映射、恢复定位/消费、密钥封装、资金恢复；全新客户端恢复同一身份和数据 | FR-32–38，J8–J10 |
+| 2 | Host 准入与实时权限 | 邀请原子兑换、连接绑定、目标验签、撤销/重放；明确 Coordinator/envd 边界 | FR-25–30、33–34，J7 |
+| 3 | 五平台壳与三桌面执行 PoC | 安全存储/配对/推送、签名、Unix/Windows 生命周期；受支持能力矩阵 | FR-01、03、09、11–15，NFR-01 |
+| 4 | Desktop Bootstrap 与运行费 | 依赖 1–3；首次创建、备份、空组织、Core 打包和后台生命周期 | FR-01–03、35–38，J1/J10 |
+| 5 | OKR/Run/Approval 与导航对话 | 链上持久化和并发控制、证据、预算、偏航/阻塞干预、恢复对账 | FR-04–09、31–32、40 |
+| 6 | Host Agent 发现/导入/交接 | 依赖 2/3/5；可靠实例标识、先观察、安全停止与重新授权 | FR-29、39–40，J11 |
+| 7 | Mobile Identity/Sync | 依赖 1/2/5；逐设备授权、数据同步、恢复与费用、外网/推送 | FR-11–15、35–38，J2/J8/J9 |
+| 8 | Connector/Skill/团队治理 | 核心闭环完成后扩展运行时、渠道、技能与人员提案 | FR-21–24 |
+
+1–3 可并行验证，后续切片按表中依赖交付；完成 P0 后重新估算排期。项目发布门槛
+逐项引用 §11，HTML 已有入口不能抵消缺少的合约、费用、真实适配器或五平台验证。
+
+## 附录 E：技术参考
+
+以下为既有技术候选的参考链接；本次仅同步仓库内产品决策，未重新确认外部版本/平台政策。
+实施时按 P0/发行验证更新兼容矩阵。
+
+- [Tauri 平台与架构](https://v2.tauri.app/start/)：支持桌面/移动，采用 Web UI 与原生桥接。
+- [Tauri sidecar](https://v2.tauri.app/develop/sidecar/)：可分发外部二进制，需针对平台/架构产物。
+- [Tauri Shell 平台能力](https://v2.tauri.app/plugin/shell/)：移动端不具备桌面式子进程能力。
+- [Capacitor 文档](https://capacitorjs.com/docs)：Web 应用到 iOS/Android 的原生运行时及插件路径。
+- [Flutter 平台矩阵](https://docs.flutter.dev/reference/supported-platforms)：框架覆盖候选平台，不等于本项目功能已验证。
+- [Apple App Review Guidelines §2.5](https://developer.apple.com/app-store/review/guidelines/#software-requirements)：移动代码执行和后台服务的约束，需在设计与发行时核查。
+- [Android 后台任务](https://developer.android.com/develop/background-work/background-tasks)：前台服务与后台运行限制，推送和恢复机制需独立设计。
