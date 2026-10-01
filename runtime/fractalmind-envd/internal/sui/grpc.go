@@ -83,6 +83,48 @@ func inputArgument(index uint32) *v2.Argument {
 // address/string primitive. Never guess from a string's 0x prefix.
 type ObjectArgument string
 
+// ChunkedBytes assembles a bounded vector inside the same PTB; each pure
+// argument remains below Sui's 16 KiB limit. No staging object is persisted.
+type ChunkedBytes []byte
+
+func appendMoveArgument(ptb *v2.ProgrammableTransaction, packageID string, arg any) (*v2.Argument, error) {
+	if data, ok := arg.(ChunkedBytes); ok {
+		if len(data) > 65536 {
+			return nil, fmt.Errorf("byte payload exceeds 64 KiB")
+		}
+		const chunkSize = 16000
+		first := len(data)
+		if first > chunkSize {
+			first = chunkSize
+		}
+		value, err := appendMoveArgument(ptb, packageID, []byte(data[:first]))
+		if err != nil {
+			return nil, err
+		}
+		for start := chunkSize; start < len(data); start += chunkSize {
+			end := start + chunkSize
+			if end > len(data) {
+				end = len(data)
+			}
+			next, err := appendMoveArgument(ptb, packageID, []byte(data[start:end]))
+			if err != nil {
+				return nil, err
+			}
+			index := uint32(len(ptb.Commands))
+			ptb.Commands = append(ptb.Commands, &v2.Command{Command: &v2.Command_MoveCall{MoveCall: &v2.MoveCall{Package: proto.String(packageID), Module: proto.String("wire_bytes"), Function: proto.String("append_bytes"), Arguments: []*v2.Argument{value, next}}}})
+			value = &v2.Argument{Kind: v2.Argument_RESULT.Enum(), Result: proto.Uint32(index)}
+		}
+		return value, nil
+	}
+	in, err := literal(arg)
+	if err != nil {
+		return nil, err
+	}
+	index := uint32(len(ptb.Inputs))
+	ptb.Inputs = append(ptb.Inputs, in)
+	return inputArgument(index), nil
+}
+
 // literal preserves decimal integer strings rather than coercing u64 into an
 // imprecise protobuf double. Slice/map inputs are normalized through JSON.
 func literal(value any) (*v2.Input, error) {
@@ -218,6 +260,9 @@ func pageToken(cursor any) ([]byte, error) {
 	if !ok {
 		return nil, fmt.Errorf("gRPC pagination cursor must be a base64 string")
 	}
+	if token == "" {
+		return nil, nil
+	}
 	return base64.StdEncoding.DecodeString(token)
 }
 
@@ -240,14 +285,13 @@ func (c *GRPCClient) MoveCall(ctx context.Context, req models.MoveCallRequest) (
 		call.TypeArguments = append(call.TypeArguments, s)
 	}
 	for i, arg := range req.Arguments {
-		in, err := literal(arg)
+		argument, err := appendMoveArgument(ptb, req.PackageObjectId, arg)
 		if err != nil {
 			return models.TxnMetaData{}, fmt.Errorf("argument %d: %w", i, err)
 		}
-		ptb.Inputs = append(ptb.Inputs, in)
-		call.Arguments = append(call.Arguments, inputArgument(uint32(i)))
+		call.Arguments = append(call.Arguments, argument)
 	}
-	ptb.Commands = []*v2.Command{{Command: &v2.Command_MoveCall{MoveCall: call}}}
+	ptb.Commands = append(ptb.Commands, &v2.Command{Command: &v2.Command_MoveCall{MoveCall: call}})
 	tx := &v2.Transaction{Version: proto.Int32(1), Sender: proto.String(sender), Kind: &v2.TransactionKind{Kind: v2.TransactionKind_PROGRAMMABLE_TRANSACTION.Enum(), Data: &v2.TransactionKind_ProgrammableTransaction{ProgrammableTransaction: ptb}}, GasPayment: &v2.GasPayment{Owner: proto.String(sender), Budget: proto.Uint64(budget)}}
 	if req.Gas != nil {
 		if err := c.setGasCoin(ctx, tx, *req.Gas); err != nil {

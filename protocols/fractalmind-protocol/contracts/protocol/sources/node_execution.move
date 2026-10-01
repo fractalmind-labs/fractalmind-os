@@ -25,6 +25,7 @@ module fractalmind_protocol::node_execution {
     const E_STATE: u64 = 9305;
     const E_VERSION: u64 = 9306;
     const E_BUDGET_SETTLEMENT_REQUIRED: u64 = 9310;
+    const E_RESULT_KEY: u64 = 9311;
     const QUEUED: u8 = 0;
     const RUNNING: u8 = 1;
     const SUCCEEDED: u8 = 2;
@@ -33,6 +34,8 @@ module fractalmind_protocol::node_execution {
     const CANCELLED: u8 = 5;
     public struct ExecutionIndexKey has copy, drop, store {}
     public struct ExecutionIndex has store { executions: Table<vector<u8>, ID> }
+    public struct ResultKeyKey has copy, drop, store { intent_hash: vector<u8>, key_version: u64 }
+    public struct ResultKeyGrant has store { org_id: ID, membership_id: ID, host_address: address, key_version: u64, wrapped_key: vector<u8> }
     public struct CommandExecution has key {
         id: UID, org_id: ID, capability_id: ID, capability_version: u64,
         human_id: ID, grant_id: ID, grant_version: u64,
@@ -47,6 +50,26 @@ module fractalmind_protocol::node_execution {
     }
     public struct CommandPrepared has copy, drop { execution_id: ID, capability_id: ID, intent_hash: vector<u8>, duplicate: bool }
     public struct ExecutionChanged has copy, drop { execution_id: ID, state: u8, cursor: u64, stop_requested: bool, updated_at_ms: u64 }
+
+    /// Include before prepare_* in the same PTB. Wrapping is to the Host's
+    /// membership encryption key and carries only this command's result key.
+    public fun grant_result_key(
+        cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, intent_hash: vector<u8>, key_version: u64,
+        wrapped_key: vector<u8>, clock: &Clock, ctx: &TxContext,
+    ) {
+        host::assert_device_authority(org, human, grant, member, binding, cap, clock);
+        assert!(tx_context::sender(ctx) == ra::delegate(cap), E_RESULT_KEY);
+        let key = ResultKeyKey { intent_hash, key_version };
+        assert!(key_version == product_record::key_version(org) && vector::length(&intent_hash) == 32, E_RESULT_KEY);
+        assert!(vector::length(&wrapped_key) == 132 && wrapped_key[0] == 70 && wrapped_key[1] == 77 && wrapped_key[2] == 87 && wrapped_key[3] == 49
+            && wrapped_key[68] == 70 && wrapped_key[69] == 77 && wrapped_key[70] == 69 && wrapped_key[71] == 49, E_RESULT_KEY);
+        if (df::exists_(ra::capability_uid(cap), key)) return;
+        // A started legacy command cannot have its encryption scheme switched.
+        assert!(option::is_none(&execution_id(cap, intent_hash)), E_RESULT_KEY);
+        df::add(ra::capability_uid_mut(cap), key, ResultKeyGrant { org_id: object::id(org), membership_id: object::id(member),
+            host_address: host::membership_host_address(member), key_version, wrapped_key });
+    }
 
     public fun prepare_agent_command(
         cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
@@ -166,6 +189,12 @@ module fractalmind_protocol::node_execution {
         assert!(run.state == RUNNING && run.cursor == expected_cursor, E_STATE);
         assert!(final_state == SUCCEEDED || final_state == FAILED || final_state == NEEDS_CONFIRMATION
             || (final_state == CANCELLED && run.stop_requested), E_STATE);
+        if (vector::length(&encrypted_result) >= 4 && encrypted_result[3] == 50) {
+            let key = ResultKeyKey { intent_hash: run.intent_hash, key_version };
+            assert!(df::exists_(ra::capability_uid(cap), key), E_RESULT_KEY);
+            let envelope: &ResultKeyGrant = df::borrow(ra::capability_uid(cap), key);
+            assert!(envelope.org_id == run.org_id && envelope.membership_id == run.membership_id && envelope.host_address == run.host_address, E_RESULT_KEY);
+        };
         if (final_state == NEEDS_CONFIRMATION) {
             // Unknown side effects retain their entire reservation. This entry
             // cannot invent zero actual cost and release their remaining budget.

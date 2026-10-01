@@ -156,6 +156,20 @@ func TestLiteralRejectsUnsafeDoubles(t *testing.T) {
 	}
 }
 
+func TestFirstCoinPageOmitsEmptyToken(t *testing.T) {
+	client := testTransport(t, &transportServer{list: func(req *v2.ListOwnedObjectsRequest) (*v2.ListOwnedObjectsResponse, error) {
+		if req.PageToken != nil {
+			t.Fatal("first page must omit page_token rather than send an empty token")
+		}
+		return &v2.ListOwnedObjectsResponse{}, nil
+	}})
+	for _, cursor := range []interface{}{nil, ""} {
+		if _, err := client.SuiXGetCoins(context.Background(), models.SuiXGetCoinsRequest{Owner: "0x1", Cursor: cursor, Limit: 100}); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestObjectArgumentsRemainDistinctFromAddressPrimitives(t *testing.T) {
 	object, err := literal(ObjectArgument("0x6"))
 	if err != nil {

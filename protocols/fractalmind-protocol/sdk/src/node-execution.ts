@@ -2,9 +2,12 @@ import { bcs } from '@mysten/sui/bcs';
 import type { Transaction, TransactionArgument } from '@mysten/sui/transactions';
 import { Ed25519PublicKey } from '@mysten/sui/keypairs/ed25519';
 import { sha256 } from '@noble/hashes/sha2.js';
+import { normalizeSuiAddress } from '@mysten/sui/utils';
 import { FractalMindClient, toBigInt } from './client.js';
 import { canonicalNodeCommandSigningBytes } from './node-command.js';
-import { bytesToHex, hexToBytes } from './identity-crypto.js';
+import { bytesToHex, hexToBytes, wrapKeys } from './identity-crypto.js';
+import { commandResultKey, commandResultWrapContext } from './command-result-crypto.js';
+import { HostApi } from './host.js';
 import { bytesArgument } from './wire-bytes.js';
 import type { SignedNodeCommand } from './types.js';
 
@@ -13,6 +16,8 @@ const Bytes = bcs.vector(bcs.u8());
 const BudgetTotals = bcs.struct('BoundBudgetTotals', { spent: bcs.u64(), reserved: bcs.u64() });
 const BudgetClaimKey = bcs.struct('BoundBudgetClaimKey', { intent_hash: Bytes });
 const BudgetClaim = bcs.struct('BoundBudgetClaim', { reserved_amount: bcs.u64(), spent_amount: bcs.u64(), settled: bcs.bool() });
+const ResultKeyName = bcs.struct('ResultKeyKey', { intent_hash: Bytes, key_version: bcs.u64() });
+const ResultKeyGrant = bcs.struct('ResultKeyGrant', { org_id: ID, membership_id: ID, host_address: ID, key_version: bcs.u64(), wrapped_key: Bytes });
 export const CommandExecutionBcs = bcs.struct('CommandExecution', {
   id: ID, org_id: ID, capability_id: ID, capability_version: bcs.u64(),
   human_id: ID, grant_id: ID, grant_version: bcs.u64(), membership_id: ID,
@@ -49,11 +54,21 @@ export async function verifySignedNodeCommand(command: SignedNodeCommand) {
 
 export class NodeExecutionApi {
   constructor(private readonly fm: FractalMindClient) {}
-  async prepareCommand(input: Authority & { command: SignedNodeCommand; tx?: Transaction }) {
+  async prepareCommand(input: Authority & { command: SignedNodeCommand; resultKey?: { organizationKey: Uint8Array; keyVersion: bigint | string | number }; tx?: Transaction }) {
     await verifySignedNodeCommand(input.command);
     if (Boolean(input.command.target.agent_id) !== Boolean(input.managedAgentId)) throw new Error('Managed instance authority must match the command target.');
     const tx = this.fm.useTransaction(input.tx);
     const command = input.command;
+    if (input.resultKey) {
+      const member = await new HostApi(this.fm).getMembership(input.membershipId);
+      if (member.id !== normalizeSuiAddress(input.membershipId) || member.org_id !== normalizeSuiAddress(command.target.organization_id) || member.host_address !== normalizeSuiAddress(command.target.node_id)) throw new Error('Host membership does not match command key recipient.');
+      const fingerprint = bytesToHex(nodeCommandIntentHash(command));
+      const derived = commandResultKey(input.resultKey.organizationKey, command.target.organization_id, fingerprint, input.resultKey.keyVersion);
+      let wrapped: Uint8Array;
+      try { wrapped = await wrapKeys(derived, Uint8Array.from(member.encryption_public_key), commandResultWrapContext(command.target.organization_id, command.capability.id, input.membershipId, fingerprint, input.resultKey.keyVersion)); }
+      finally { derived.fill(0); }
+      tx.moveCall({ target: `${this.fm.packageId}::node_execution::grant_result_key`, arguments: [tx.object(command.capability.id), tx.object(command.target.organization_id), tx.object(input.humanId), tx.object(input.grantId), tx.object(input.membershipId), tx.object(input.bindingId), tx.pure.vector('u8', nodeCommandIntentHash(command)), tx.pure.u64(toBigInt(input.resultKey.keyVersion)), tx.pure.vector('u8', wrapped), tx.object('0x6')] });
+    }
     const args: TransactionArgument[] = [tx.object(command.capability.id), tx.object(command.target.organization_id), tx.object(input.humanId), tx.object(input.grantId), tx.object(input.membershipId), tx.object(input.bindingId)];
     if (input.managedAgentId) args.push(tx.object(input.managedAgentId));
     args.push(tx.pure.string(command.action), tx.pure.string(command.scope), tx.pure.string(command.command_id), tx.pure.string(command.nonce), tx.pure.string(command.idempotency_key), tx.pure.string(command.budget?.asset ?? ''), tx.pure.u64(toBigInt(command.budget?.amount ?? 0)), tx.pure.vector('u8', nodeCommandIntentHash(command)), tx.pure.u64(command.issued_at_ms), tx.pure.u64(command.expires_at_ms), tx.object('0x6'));
@@ -98,6 +113,14 @@ export class NodeExecutionApi {
     if (object.type !== `${this.fm.typesPackageId}::node_execution::CommandExecution` || !object.content) throw new Error('Unexpected execution object type or content.');
     const value = CommandExecutionBcs.parse(object.content);
     if (value.id !== id || value.state > 5 || value.intent_hash.length !== 32) throw new Error('Invalid execution checkpoint.');
+    return value;
+  }
+  async getResultKey(capabilityId: string, intentHash: Uint8Array, keyVersion: bigint | string | number) {
+    if (intentHash.length !== 32) throw new Error('Expected a 32-byte intent hash.');
+    const field = await this.fm.client.core.getDynamicField({ parentId: capabilityId, name: { type: `${this.fm.typesPackageId}::node_execution::ResultKeyKey`, bcs: ResultKeyName.serialize({ intent_hash: Array.from(intentHash), key_version: toBigInt(keyVersion).toString() }).toBytes() } });
+    if (field.dynamicField.value.type !== `${this.fm.typesPackageId}::node_execution::ResultKeyGrant`) throw new Error('Unexpected command result key type.');
+    const value = ResultKeyGrant.parse(field.dynamicField.value.bcs);
+    if (value.key_version !== toBigInt(keyVersion).toString() || value.wrapped_key.length !== 132) throw new Error('Invalid command result key grant.');
     return value;
   }
 }

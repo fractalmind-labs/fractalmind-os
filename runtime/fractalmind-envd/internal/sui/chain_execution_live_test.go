@@ -3,6 +3,7 @@ package sui
 import (
 	"context"
 	"crypto/ed25519"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/productcrypto"
 )
 
 func TestChainExecutionLive(t *testing.T) {
@@ -132,4 +134,53 @@ func TestChainExecutionResultReadLive(t *testing.T) {
 	}
 	encoded, _ := json.Marshal(map[string]any{"recordId": result.ID, "state": result.Execution.State, "keyVersion": result.KeyVersion, "revision": result.Revision, "size": len(result.EncryptedBody), "resultHash": result.Execution.ResultHash})
 	t.Logf("FM_CHAIN_RESULT_EVIDENCE %s", encoded)
+}
+
+func TestChainCommandResultKeyLive(t *testing.T) {
+	raw := os.Getenv("FM_CHAIN_RESULT_KEY_CASE")
+	if raw == "" {
+		t.Skip("requires generated localnet Host encryption secret")
+	}
+	var input struct {
+		RPC, PackageID, CapabilityID, Fingerprint, ExpectedKeyHash string
+		KeyVersion                                                 uint64
+	}
+	if err := json.Unmarshal([]byte(raw), &input); err != nil {
+		t.Fatal(err)
+	}
+	secret, err := hex.DecodeString(os.Getenv("FM_HOST_RESULT_ENCRYPTION_TEST_SECRET"))
+	if err != nil || len(secret) != 32 {
+		t.Fatal("missing generated Host encryption secret")
+	}
+	defer clear(secret)
+	client, err := NewGRPCClient(input.RPC, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	resolver, err := nodecommand.NewChainAuthorityResolver(client, input.PackageID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	grant, err := resolver.ReadResultKey(ctx, input.CapabilityID, input.Fingerprint, input.KeyVersion)
+	if err != nil {
+		t.Fatal(err)
+	}
+	context, err := productcrypto.CommandResultWrapContext(grant.OrganizationID, input.CapabilityID, grant.MembershipID, input.Fingerprint, input.KeyVersion)
+	if err != nil {
+		t.Fatal(err)
+	}
+	key, err := productcrypto.UnwrapResultKey(grant.WrappedKey, secret, context)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer clear(key)
+	hash := sha256.Sum256(key)
+	if hex.EncodeToString(hash[:]) != input.ExpectedKeyHash {
+		t.Fatal("Host result key does not match device derivative")
+	}
+	encoded, _ := json.Marshal(map[string]any{"capabilityId": input.CapabilityID, "fingerprint": input.Fingerprint, "keyVersion": input.KeyVersion, "hostAddress": grant.HostAddress, "wrappedSize": len(grant.WrappedKey), "unwrapped": true})
+	t.Logf("FM_RESULT_KEY_EVIDENCE %s", encoded)
 }

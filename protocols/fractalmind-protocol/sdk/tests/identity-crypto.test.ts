@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
+import { commandResultKey, encryptCommandResult, decryptCommandResult, commandResultWrapContext } from '../src/command-result-crypto.js';
 import { createRecoveryCode, parseRecoveryCode, recoveryKeys, createDeviceEncryptionKeys, encryptContent, decryptContent, wrapKeys, unwrapKeys, randomContentKey, hexToBytes } from '../src/identity-crypto.js';
 
 test('one recovery code deterministically locates the recovery signer and decryption key', () => {
@@ -60,4 +61,20 @@ test('SDK independently decrypts Go-generated FME1 result content', async () => 
   const plaintext = await decryptContent(hexToBytes(fixture.envelope), hexToBytes(fixture.key), fixture.context);
   assert.equal(new TextDecoder().decode(plaintext), fixture.plaintext);
   await assert.rejects(decryptContent(hexToBytes(fixture.envelope), hexToBytes(fixture.key), `${fixture.context}:wrong`));
+});
+
+test('command result keys isolate commands, organizations and key versions', async () => {
+  const root = randomContentKey();
+  const fingerprint = 'ab'.repeat(32);
+  const key = commandResultKey(root, '0x2', fingerprint, 1n);
+  const body = await encryptCommandResult(new TextEncoder().encode('private result'), key, 'record-context');
+  assert.equal(new TextDecoder().decode(body.slice(0, 4)), 'FME2');
+  assert.equal(new TextDecoder().decode(await decryptCommandResult(body, key, 'record-context')), 'private result');
+  for (const wrong of [root, commandResultKey(root, '0x3', fingerprint, 1n), commandResultKey(root, '0x2', 'cd'.repeat(32), 1n), commandResultKey(root, '0x2', fingerprint, 2n)]) {
+    assert.notDeepEqual(key, wrong);
+    await assert.rejects(decryptCommandResult(body, wrong, 'record-context'));
+  }
+  assert.notEqual(commandResultWrapContext('0x2', '0x3', '0x4', fingerprint, 1n), commandResultWrapContext('0x2', '0x3', '0x5', fingerprint, 1n));
+  assert.throws(() => commandResultKey(root, '0x2', fingerprint, 0n));
+  assert.throws(() => commandResultKey(root, '0x2', 'ab', 1n));
 });

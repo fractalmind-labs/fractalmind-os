@@ -36,7 +36,7 @@ module fractalmind_protocol::product_record {
         grant_id: ID,
         grant_version: u64,
         created_at_ms: u64,
-        // FME1: AES-256-GCM nonce + authenticated ciphertext. No hash-only body.
+        // FME1 org key / FME2 command result key: AES-256-GCM encrypted bytes.
         encrypted_body: vector<u8>,
     }
     public struct RecordSaved has copy, drop {
@@ -65,7 +65,8 @@ module fractalmind_protocol::product_record {
         assert!(string::length(&logical_id) > 0 && string::length(&logical_id) <= 128, E_INPUT);
         let size = vector::length(&encrypted_body);
         assert!(size >= 32 && size <= MAX_BODY, E_INPUT);
-        assert!(encrypted_body[0] == 70 && encrypted_body[1] == 77 && encrypted_body[2] == 69 && encrypted_body[3] == 49, E_INPUT);
+        assert!(encrypted_body[0] == 70 && encrypted_body[1] == 77 && encrypted_body[2] == 69
+            && (encrypted_body[3] == 49 || (kind == 5 && encrypted_body[3] == 50)), E_INPUT);
         let organization_id = object::id(org);
         if (!df::exists_(organization::borrow_uid(org), IndexBinding {})) {
             df::add(organization::borrow_uid_mut(org), IndexBinding {}, RecordIndex { key_version: 1, records: table::new(ctx) });
@@ -98,6 +99,11 @@ module fractalmind_protocol::product_record {
     public fun current(org: &Organization, kind: u8, logical_id: String): RecordPointer {
         let index: &RecordIndex = df::borrow(organization::borrow_uid(org), IndexBinding {});
         *table::borrow(&index.records, RecordKey { kind, logical_id })
+    }
+    public fun key_version(org: &Organization): u64 {
+        if (!df::exists_(organization::borrow_uid(org), IndexBinding {})) return 1;
+        let index: &RecordIndex = df::borrow(organization::borrow_uid(org), IndexBinding {});
+        index.key_version
     }
     /// Include with revocation and key-envelope updates in the same PTB.
     /// All later record writes must use the new key generation.

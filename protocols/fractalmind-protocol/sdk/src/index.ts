@@ -57,6 +57,7 @@ export type { ProductRecordKind } from './product-record.js';
 export { createRecoveryCode, parseRecoveryCode, recoveryKeys, createDeviceEncryptionKeys,
   encryptContent, decryptContent, wrapKeys, unwrapKeys, randomContentKey,
   bytesToHex, hexToBytes } from './identity-crypto.js';
+export { commandResultKey, commandResultWrapContext, encryptCommandResult, decryptCommandResult } from './command-result-crypto.js';
 export { ObjectiveApi } from './objective.js';
 export { OrganizationApi } from './organization.js';
 export { AgentApi } from './agent.js';

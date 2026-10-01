@@ -7,13 +7,15 @@ import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
 import type { SuiClientTypes } from '@mysten/sui/client';
 import type { Transaction } from '@mysten/sui/transactions';
 import { FractalMindSDK, signNodeCommand, nodeCommandIntentHash } from '../src/index.js';
-import { bytesToHex, encryptContent } from '../src/identity-crypto.js';
+import { bytesToHex, encryptContent, unwrapKeys } from '../src/identity-crypto.js';
+import { commandResultKey, commandResultWrapContext, encryptCommandResult, decryptCommandResult } from '../src/command-result-crypto.js';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { recordContext } from '../src/product-record.js';
 import type { SignedNodeCommand } from '../src/types.js';
 
 type Data = SuiClientTypes.Transaction<{ effects: true; objectTypes: true; events: true }>;
 type Execute = (label: string, tx: Transaction, signer?: Ed25519Keypair, sponsor?: Ed25519Keypair, allowRejected?: boolean) => Promise<{ data: Data }>;
-type Options = { sdk: FractalMindSDK; execute: Execute; created: (data: Data, suffix: string) => string; organizationId: string; humanId: string; grantId: string; membershipId: string; bindingId: string; managedAgentId: string; desktop: Ed25519Keypair; host: Ed25519Keypair; wrongHost: Ed25519Keypair; contentKey: Uint8Array };
+type Options = { sdk: FractalMindSDK; execute: Execute; created: (data: Data, suffix: string) => string; organizationId: string; humanId: string; grantId: string; membershipId: string; bindingId: string; managedAgentId: string; desktop: Ed25519Keypair; host: Ed25519Keypair; wrongHost: Ed25519Keypair; hostEncryptionSecret: Uint8Array; contentKey: Uint8Array };
 
 async function goValidate(o: Options, command: SignedNodeCommand, expectedDuplicate = false, expectedCode = '') {
   const seed = decodeSuiPrivateKey(o.host.getSecretKey()).secretKey;
@@ -30,8 +32,8 @@ async function goValidate(o: Options, command: SignedNodeCommand, expectedDuplic
   } finally { seed.fill(0); }
 }
 
-/** Tests chain claim/start/result semantics. This slice does not call an Agent
- * adapter or assert that an assigned task has physically run. */
+/** Tests chain claim/start/result semantics and a synthetic subprocess adapter.
+ * Actual bounded Agent execution and cost metering remain separate gates. */
 export async function exerciseNodeExecutions(o: Options) {
   const { sdk, execute, created, desktop, host } = o;
   const goChecks: Record<string, unknown>[] = [];
@@ -52,17 +54,31 @@ export async function exerciseNodeExecutions(o: Options) {
   const cap = await sdk.remoteAuthority.getCapability(capabilityId);
   const prepareInput = { ...authority, capabilityId };
   const newCommand = () => signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: capabilityId, revocationVersion: 1n }, budget: { asset: 'MIST', amount: 20n }, payload: { task: 'verify bounded command preflight' }, expiresAtMs: Date.now() + 300000 });
-  async function prepare(command: SignedNodeCommand) {
-    const made = await execute('Execution: device atomically reserves command and checkpoint', await sdk.nodeExecution.prepareCommand({ ...authority, command }));
+  async function prepare(command: SignedNodeCommand, keyed = false) {
+    const made = await execute('Execution: device atomically reserves command and checkpoint', await sdk.nodeExecution.prepareCommand({ ...authority, command, resultKey: keyed ? { organizationKey: o.contentKey, keyVersion: 1n } : undefined }));
     assert.equal(made.data.status.success, true);
     const id = created(made.data, '::node_execution::CommandExecution');
     assert.equal((await sdk.nodeExecution.getExecution(id)).state, 0);
     return id;
   }
   const first = await newCommand();
-  const firstId = await prepare(first);
-  const repeat = await execute('Execution: exact claim retry does not create another checkpoint', await sdk.nodeExecution.prepareCommand({ ...authority, command: first }));
+  const firstId = await prepare(first, true);
+  const storedKey = await sdk.nodeExecution.getResultKey(capabilityId, nodeCommandIntentHash(first), 1n);
+  const wrapContext = commandResultWrapContext(o.organizationId, capabilityId, o.membershipId, bytesToHex(nodeCommandIntentHash(first)), 1n);
+  const hostResultKey = await unwrapKeys(Uint8Array.from(storedKey.wrapped_key), o.hostEncryptionSecret, wrapContext);
+  assert.deepEqual(hostResultKey, commandResultKey(o.contentKey, o.organizationId, bytesToHex(nodeCommandIntentHash(first)), 1n));
+  const goKey = await promisify(execFile)('go', ['test', './internal/sui', '-run', '^TestChainCommandResultKeyLive$', '-count=1', '-v'], { cwd: fileURLToPath(new URL('../../../../runtime/fractalmind-envd/', import.meta.url)), timeout: 30000, env: { ...process.env, FM_HOST_RESULT_ENCRYPTION_TEST_SECRET: bytesToHex(o.hostEncryptionSecret), FM_CHAIN_RESULT_KEY_CASE: JSON.stringify({ RPC: process.env.FM_LOCALNET_RPC ?? 'http://127.0.0.1:29000', PackageID: sdk.client.packageId, CapabilityID: capabilityId, Fingerprint: bytesToHex(nodeCommandIntentHash(first)), KeyVersion: 1, ExpectedKeyHash: bytesToHex(sha256(hostResultKey)) }) } });
+  assert.ok(goKey.stdout.includes('--- PASS: TestChainCommandResultKeyLive'));
+  const resultKeyEvidence = JSON.parse(/FM_RESULT_KEY_EVIDENCE (.+)/.exec(goKey.stdout)![1]);
+  const repeat = await execute('Execution: exact claim retry does not create another checkpoint', await sdk.nodeExecution.prepareCommand({ ...authority, command: first, resultKey: { organizationKey: o.contentKey, keyVersion: 1n } }));
+  assert.deepEqual(await sdk.nodeExecution.getResultKey(capabilityId, nodeCommandIntentHash(first), 1n), storedKey, 'Retry preserves the existing wrapping envelope.');
   assert.equal(repeat.data.status.success, true);
+  const copiedKeyRequest = await execute('Result key: another sender cannot grant a device command key', await sdk.nodeExecution.prepareCommand({ ...authority, command: first, resultKey: { organizationKey: o.contentKey, keyVersion: 1n } }), o.wrongHost, undefined, true);
+  assert.equal(copiedKeyRequest.data.status.success, false);
+  assert.match(JSON.stringify(copiedKeyRequest.data.status), /9311/);
+  const badKeyVersion = await execute('Result key: stale or future organization key generation is rejected atomically', await sdk.nodeExecution.prepareCommand({ ...authority, command: await newCommand(), resultKey: { organizationKey: o.contentKey, keyVersion: 2n } }), desktop, undefined, true);
+  assert.equal(badKeyVersion.data.status.success, false);
+  assert.match(JSON.stringify(badKeyVersion.data.status), /9311/);
   assert.equal((await sdk.remoteAuthority.getCapability(capabilityId)).usesClaimed, 1n);
   assert.equal((await sdk.remoteAuthority.getCapability(capabilityId)).budgetClaimed, 20n);
   await assertBudget(capabilityId, 0n, 20n, 'Exact retry preserves a single pending reservation');
@@ -78,15 +94,17 @@ export async function exerciseNodeExecutions(o: Options) {
   assert.match(JSON.stringify(alreadyRunning.data.status), /9304/);
   const logicalId = `command-${bytesToHex(nodeCommandIntentHash(first))}`;
   const plaintext = new TextEncoder().encode(JSON.stringify({ result: 'chain preflight test only; no adapter was invoked' }));
-  const encryptedResult = await encryptContent(plaintext, o.contentKey, recordContext(o.organizationId, 'checkpoint', logicalId, 1, 1));
+  const encryptedResult = await encryptCommandResult(plaintext, hostResultKey, recordContext(o.organizationId, 'checkpoint', logicalId, 1, 1));
+  await assert.rejects(decryptCommandResult(encryptedResult, o.contentKey, recordContext(o.organizationId, 'checkpoint', logicalId, 1, 1)));
+  hostResultKey.fill(0);
   const finishInput = { executionId: firstId, capabilityId, organizationId: o.organizationId, finalState: 2, expectedCursor: 2n, keyVersion: 1n, encryptedResult };
   const overSpent = await execute('Budget: actual cost above reservation is rejected', sdk.nodeExecution.finishCommand({ ...finishInput, spentAmount: 21n }), host, undefined, true);
   assert.equal(overSpent.data.status.success, false);
   assert.match(JSON.stringify(overSpent.data.status), /8319/);
   await assertBudget(capabilityId, 0n, 20n, 'Rejected overspend cannot release reservation');
-  const wrongKey = await execute('Budget: failed result write rolls back settlement atomically', sdk.nodeExecution.finishCommand({ ...finishInput, spentAmount: 7n, keyVersion: 2n }), host, undefined, true);
+  const wrongKey = await execute('Budget: failed result write rolls back settlement atomically', sdk.nodeExecution.finishCommand({ ...finishInput, spentAmount: 7n, encryptedResult: encryptedResult.slice(0, 31) }), host, undefined, true);
   assert.equal(wrongKey.data.status.success, false);
-  assert.match(JSON.stringify(wrongKey.data.status), /9102/);
+  assert.match(JSON.stringify(wrongKey.data.status), /9101/);
   assert.equal((await sdk.nodeExecution.getExecution(firstId)).state, 1);
   await assertBudget(capabilityId, 0n, 20n, 'Result write failure rolls back cost settlement');
   await assertClaim(first, 0n, false);
@@ -129,6 +147,10 @@ export async function exerciseNodeExecutions(o: Options) {
   assert.match(JSON.stringify(tooMany.data.status), /8308/);
   const unknownLogicalId = `command-${bytesToHex(nodeCommandIntentHash(third))}`;
   const unknownPlaintext = new TextEncoder().encode(JSON.stringify({ result: 'needs confirmation; no automatic retry' }));
+  const missingKeyGrant = await execute('Result key: Host cannot publish command-derived body without a chain key grant', sdk.nodeExecution.finishCommand({ executionId: thirdId, capabilityId, spentAmount: 0n, organizationId: o.organizationId, finalState: 4, expectedCursor: 2n, keyVersion: 1n, encryptedResult: await encryptCommandResult(unknownPlaintext, commandResultKey(o.contentKey, o.organizationId, bytesToHex(nodeCommandIntentHash(third)), 1n), recordContext(o.organizationId, 'checkpoint', unknownLogicalId, 1, 1)) }), host, undefined, true);
+  assert.equal(missingKeyGrant.data.status.success, false);
+  assert.match(JSON.stringify(missingKeyGrant.data.status), /9311/);
+  assert.equal((await sdk.nodeExecution.getExecution(thirdId)).state, 1);
   await execute('Execution: unknown result is persisted without granting replay', sdk.nodeExecution.finishCommand({ executionId: thirdId, capabilityId, spentAmount: 0n, organizationId: o.organizationId, finalState: 4, expectedCursor: 2n, keyVersion: 1n, encryptedResult: await encryptContent(unknownPlaintext, o.contentKey, recordContext(o.organizationId, 'checkpoint', unknownLogicalId, 1, 1)) }), host);
   assert.equal((await sdk.nodeExecution.getExecution(thirdId)).state, 4);
   await assertBudget(capabilityId, 7n, 20n, 'Unknown result retains entire pending reservation');
@@ -165,11 +187,36 @@ export async function exerciseNodeExecutions(o: Options) {
   await assertClaim(stoppedCommand, 3n, true);
   await verifyGo(stoppedCommand, true);
   assert.equal((await sdk.remoteAuthority.getCapability(limitedId)).usesClaimed, 2n);
+  const runtimeCapTx = await execute('Runtime store: issue two-use fixture adapter authority', sdk.host.issueCapability({ ...authority, actions: ['assign'], scope: 'control', maxUses: 2n, budgetAsset: 'MIST', maxBudget: 40n, expiresAtMs: Date.now() + 3600000 }));
+  const runtimeCapabilityId = created(runtimeCapTx.data, '::remote_authority::RemoteCapability');
+  const runtimeRecords: { logicalId: string; plaintext: string }[] = [];
+  const runtimeExecutionIds: string[] = [];
+  const runtimeStoreChecks: Record<string, unknown>[] = [];
+  for (const known of [true, false]) {
+    const command = await signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: runtimeCapabilityId, revocationVersion: 1n }, budget: { asset: 'MIST', amount: 20n }, payload: { task: 'synthetic subprocess fixture; verify result transport and no replay' }, expiresAtMs: Date.now() + 300000 });
+    runtimeExecutionIds.push(await prepare(command, true));
+    const seed = decodeSuiPrivateKey(host.getSecretKey()).secretKey;
+    try {
+      const { stdout } = await promisify(execFile)('go', ['test', './internal/sui', '-run', '^TestChainRuntimeResultStoreLive$', '-count=1', '-v'], {
+        cwd: fileURLToPath(new URL('../../../../runtime/fractalmind-envd/', import.meta.url)), timeout: 60000,
+        env: { ...process.env, FM_CHAIN_EXECUTION_TEST_SEED: bytesToHex(seed), FM_HOST_RESULT_ENCRYPTION_TEST_SECRET: bytesToHex(o.hostEncryptionSecret), FM_CHAIN_RUNTIME_STORE_CASE: JSON.stringify({ RPC: process.env.FM_LOCALNET_RPC ?? 'http://127.0.0.1:29000', PackageID: sdk.client.packageId, Command: command, KnownSpend: known }) },
+      });
+      assert.ok(stdout.includes('--- PASS: TestChainRuntimeResultStoreLive'));
+      const evidence = JSON.parse(/FM_RUNTIME_STORE_EVIDENCE (.+)/.exec(stdout)![1]);
+      runtimeStoreChecks.push(evidence);
+      const record = await sdk.productRecord.decryptRecord(evidence.recordId, o.contentKey);
+      const plaintext = new TextDecoder().decode(record.plaintext);
+      assert.equal(JSON.parse(plaintext).response.execution_state, known ? 'succeeded' : 'needs_confirmation');
+      runtimeRecords.push({ logicalId: 'command-' + bytesToHex(nodeCommandIntentHash(command)), plaintext });
+      console.log('Go chain result store PASS', evidence.state, 'one fixture subprocess; fresh executor restored encrypted result');
+    } finally { seed.fill(0); }
+  }
+  await assertBudget(runtimeCapabilityId, 3n, 20n, 'Go executor settles known fixture cost and preserves unknown reservation');
   const pendingCap = await execute('Execution: issue authority for revoke-after-prepare check', sdk.host.issueCapability({ ...authority, actions: ['assign'], scope: 'control', maxUses: 1n, budgetAsset: 'MIST', maxBudget: 100n, expiresAtMs: Date.now() + 3600000 }));
   const pendingCapabilityId = created(pendingCap.data, '::remote_authority::RemoteCapability');
   const pendingCommand = await signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: pendingCapabilityId, revocationVersion: 1n }, budget: { asset: 'MIST', amount: 20n }, payload: { task: 'must not begin after Host revocation' }, expiresAtMs: Date.now() + 300000 });
   const pendingId = await prepare(pendingCommand);
-  return { capabilityId, limitedCapabilityId: limitedId, executions: [firstId, secondId, thirdId, waitingId, stoppedId], goChecks, budgetChecks, pendingStart: { ...authority, capabilityId: pendingCapabilityId, executionId: pendingId }, records: [{ logicalId, plaintext: new TextDecoder().decode(plaintext) }, { logicalId: unknownLogicalId, plaintext: new TextDecoder().decode(unknownPlaintext) }, { logicalId: stopLogicalId, plaintext: stopPlaintext }], checks: 'real chain reservation/checkpoints, actual/pending budget settlement and Go start ownership; actual Agent adapter execution pending' };
+  return { capabilityId, limitedCapabilityId: limitedId, runtimeCapabilityId, executions: [firstId, secondId, thirdId, waitingId, stoppedId, ...runtimeExecutionIds], goChecks, budgetChecks, resultKeyEvidence, runtimeStoreChecks, pendingStart: { ...authority, capabilityId: pendingCapabilityId, executionId: pendingId }, records: [{ logicalId, plaintext: new TextDecoder().decode(plaintext) }, { logicalId: unknownLogicalId, plaintext: new TextDecoder().decode(unknownPlaintext) }, { logicalId: stopLogicalId, plaintext: stopPlaintext }, ...runtimeRecords], checks: 'real chain reservation/checkpoints, budget settlement, command-scoped result keys and Go executor result persistence with synthetic subprocesses; bounded Agent execution and real metering pending' };
 }
 
 /** Reconstruct the selected fixture budgets solely from their persisted chain

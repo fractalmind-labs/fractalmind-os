@@ -21,6 +21,8 @@ const (
 	CodeAuthorityStale         RejectionCode = "authority_stale"
 	CodeCapabilityExhausted    RejectionCode = "capability_exhausted"
 	CodeBudgetExceeded         RejectionCode = "budget_exceeded"
+	CodeHostGasInsufficient    RejectionCode = "host_gas_insufficient"
+	CodeHostGasUnavailable     RejectionCode = "host_gas_unavailable"
 	CodeRiskUnclassified       RejectionCode = "risk_unclassified"
 	CodeSignatureInvalid       RejectionCode = "signature_invalid"
 	CodeReplay                 RejectionCode = "replay"

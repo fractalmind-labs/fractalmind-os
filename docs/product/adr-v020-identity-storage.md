@@ -40,7 +40,17 @@ IdentityRegistry 通过已配置 ProtocolRegistry 的私有动态字段绑定，
 
 ## 3. 数据密钥和撤销
 
-正文采用 AES-256-GCM：`FME1 + nonce(12) + ciphertext + tag(16)`，随机 nonce，AAD 绑定组织、种类、逻辑 ID、修订和密钥代次。不同记录、代次或密钥下替换正文会解密失败。
+正文采用 AES-256-GCM：`FME1 + nonce(12) + ciphertext + tag(16)`，随机 nonce，AAD 绑定组织、种类、逻辑 ID、修订和密钥代次。不同记录、代次或密钥下替换正文会解密失败。执行器新结果采用下述 FME2 命令专用密钥格式。
+
+### Host 命令结果密钥
+
+Host 成员资格不授予读取整个组织的权限。设备从组织内容密钥按组织 ID、命令签名意图 SHA-256 和 key_version，经 HKDF-SHA256 派生 32 字节结果密钥；盐域为 `fractalmind.command-result-key.v1`。使用 HostMembership 的 X25519 公钥封装，AAD 再绑定 capability、Host 成员与代次，存入 capability 私有动态字段。
+
+密钥登记和命令准备可在同一 PTB 原子完成；登记验证当前设备/组织/Host/能力权限及当前内容代次。复制签发请求、错误代次被拒；精确重试保留原密钥封装。FME2 checkpoint 正文须有对应命令结果密钥登记，旧命令不能靠事后登记静默转换密钥方案。
+
+FME2 保留 AES-GCM 正文容量及 AAD 规则，但明确采用命令派生密钥。SDK 解密时从恢复 keyring 中对应代次的组织密钥重派生；不另存每条命令的恢复密钥。Host 只解封自己的命令密钥，不能由它推导组织根密钥或其他命令密钥。旧 FME1 根密钥结果可由管理设备读取，Host 执行器不回退获取组织根密钥。
+
+Go 执行器在调用适配器前确认结果密钥、资金和本次链上启动归属，正文及密钥不写本地结果文件。生产 OS 安全存储与工厂接线仍待完成；组织轮换后在途命令需要新的明确结果密钥授权，目前缺失时拒绝写入并保持未知，不能使用旧代次或重新执行。测试证据见 [命令结果存储](evidence/v020-runtime-result-store-localnet.json)，其中子进程和费用均为合成 fixture。
 
 设备和恢复备份采用临时 X25519 + HKDF-SHA256 + AES-GCM：`FMW1 + ephemeral public key + salt + encrypted keyring`。只需要恢复公钥就可以更新加密备份，日常密钥轮换不需要用户输入离线恢复码。
 

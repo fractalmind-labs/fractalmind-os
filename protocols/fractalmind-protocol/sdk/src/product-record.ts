@@ -4,6 +4,7 @@ import { normalizeSuiAddress } from '@mysten/sui/utils';
 import { FractalMindClient, toBigInt } from './client.js';
 import { encryptContent, decryptContent } from './identity-crypto.js';
 import { bytesArgument } from './wire-bytes.js';
+import { commandResultKey, decryptCommandResult } from './command-result-crypto.js';
 
 export const PRODUCT_RECORD_KINDS = Object.freeze({ okr: 1, contract: 2, approval: 3, evidence: 4, checkpoint: 5, message: 6, backup: 7 } as const);
 export type ProductRecordKind = keyof typeof PRODUCT_RECORD_KINDS;
@@ -59,7 +60,15 @@ export class ProductRecordApi {
     const record = await this.getRecord(recordId);
     const kind = Object.entries(PRODUCT_RECORD_KINDS).find(([, id]) => id === record.kind)?.[0] as ProductRecordKind | undefined;
     if (!kind) throw new Error('Unsupported encrypted record kind.');
-    const plaintext = await decryptContent(Uint8Array.from(record.encrypted_body), key, recordContext(record.organization_id, kind, record.logical_id, record.revision, record.key_version));
+    const body = Uint8Array.from(record.encrypted_body);
+    const context = recordContext(record.organization_id, kind, record.logical_id, record.revision, record.key_version);
+    let plaintext: Uint8Array;
+    if (new TextDecoder().decode(body.slice(0, 4)) === 'FME2') {
+      if (kind !== 'checkpoint' || !/^command-[0-9a-f]{64}$/.test(record.logical_id)) throw new Error('Invalid command result record context.');
+      const derived = commandResultKey(key, record.organization_id, record.logical_id.slice(8), record.key_version);
+      try { plaintext = await decryptCommandResult(body, derived, context); }
+      finally { derived.fill(0); }
+    } else plaintext = await decryptContent(body, key, context);
     return { record, plaintext };
   }
   async listCurrent(organizationId: string, cursor?: string | null, limit = 50) {

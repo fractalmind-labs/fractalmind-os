@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 	"strings"
 )
 
@@ -154,15 +155,25 @@ type Error struct {
 }
 
 type Response struct {
-	SchemaVersion string          `json:"schema_version"`
-	Adapter       string          `json:"adapter"`
-	CommandID     string          `json:"command_id"`
-	Operation     Operation       `json:"operation"`
-	Duplicate     bool            `json:"duplicate"`
-	OK            bool            `json:"ok"`
-	ObservedAt    string          `json:"observed_at"`
-	Result        json.RawMessage `json:"result"`
-	Error         *Error          `json:"error"`
+	SchemaVersion        string          `json:"schema_version"`
+	Adapter              string          `json:"adapter"`
+	CommandID            string          `json:"command_id"`
+	Operation            Operation       `json:"operation"`
+	Duplicate            bool            `json:"duplicate"`
+	OK                   bool            `json:"ok"`
+	ObservedAt           string          `json:"observed_at"`
+	Result               json.RawMessage `json:"result"`
+	Error                *Error          `json:"error"`
+	Spend                *Spend          `json:"spend,omitempty"`
+	ExecutionID          string          `json:"execution_id,omitempty"`
+	ExecutionState       string          `json:"execution_state,omitempty"`
+	RequiresConfirmation bool            `json:"requires_confirmation,omitempty"`
+	TransactionDigest    string          `json:"transaction_digest,omitempty"`
+}
+type Spend struct {
+	Asset  string                   `json:"asset"`
+	Amount nodecommand.Uint64String `json:"amount"`
+	Known  bool                     `json:"known"`
 }
 
 func (r Response) Validate(request Request) error {
@@ -191,6 +202,9 @@ func (r Response) Validate(request Request) error {
 	}
 	if strings.TrimSpace(r.ObservedAt) == "" {
 		return fmt.Errorf("adapter response has no observed_at")
+	}
+	if r.Spend != nil && (strings.TrimSpace(r.Spend.Asset) == "" || (!r.Spend.Known && r.Spend.Amount != 0)) {
+		return fmt.Errorf("adapter returned invalid or unconfirmed spend")
 	}
 	return nil
 }

@@ -28,10 +28,11 @@ var actionOperations = map[string]Operation{
 }
 
 type Executor struct {
-	validator *nodecommand.Validator
-	adapter   Adapter
-	now       func() time.Time
-	store     ExecutionStore
+	validator    *nodecommand.Validator
+	adapter      Adapter
+	now          func() time.Time
+	store        ExecutionStore
+	commandStore CommandExecutionStore
 
 	mu       sync.Mutex
 	inflight map[string]*flight
@@ -84,6 +85,16 @@ func NewExecutorWithStore(validator *nodecommand.Validator, adapter Adapter, sto
 	}
 }
 
+func NewExecutorWithCommandStore(validator *nodecommand.Validator, adapter Adapter, store CommandExecutionStore) (*Executor, error) {
+	if validator == nil || adapter == nil || store == nil {
+		return nil, fmt.Errorf("validator, adapter and chain command result store are required")
+	}
+	executor := NewExecutorWithStore(validator, adapter, nil)
+	executor.commandStore = store
+	executor.store = nil
+	return executor, nil
+}
+
 // Execute validates and reserves the signed command before invoking the local
 // runtime. Exact concurrent replays wait for the first execution and reuse its
 // evidence instead of invoking the lifecycle action again.
@@ -116,7 +127,7 @@ func (e *Executor) Execute(ctx context.Context, command nodecommand.NodeCommand)
 			return Response{}, event, err
 		}
 		if !validation.Duplicate {
-			result := e.executeReserved(ctx, command, key)
+			result := e.executeReserved(ctx, command, key, validation.Execution)
 			return result.response, result.event, result.err
 		}
 		result := current.execution
@@ -137,6 +148,11 @@ func (e *Executor) Execute(ctx context.Context, command nodecommand.NodeCommand)
 }
 
 func (e *Executor) executeFirst(ctx context.Context, command nodecommand.NodeCommand, key string) execution {
+	if e.commandStore != nil {
+		if err := e.commandStore.Preflight(ctx, command); err != nil {
+			return execution{err: err}
+		}
+	}
 	validation, err := e.validator.Validate(ctx, command)
 	if err != nil {
 		event, eventErr := e.commandRejectedEvent(command, err)
@@ -146,7 +162,14 @@ func (e *Executor) executeFirst(ctx context.Context, command nodecommand.NodeCom
 		return execution{event: event, err: err}
 	}
 	if validation.Duplicate {
-		record, ok, loadErr := e.store.Load(ctx, key)
+		var record ExecutionRecord
+		var ok bool
+		var loadErr error
+		if e.commandStore != nil {
+			record, ok, loadErr = e.commandStore.LoadCommand(ctx, command)
+		} else {
+			record, ok, loadErr = e.store.Load(ctx, key)
+		}
 		if loadErr != nil {
 			return execution{err: fmt.Errorf("load prior runtime result: %w", loadErr)}
 		}
@@ -160,32 +183,40 @@ func (e *Executor) executeFirst(ctx context.Context, command nodecommand.NodeCom
 		cached.response.Duplicate = true
 		return cached
 	}
-	return e.executeReserved(ctx, command, key)
+	return e.executeReserved(ctx, command, key, validation.Execution)
 }
 
-func (e *Executor) executeReserved(ctx context.Context, command nodecommand.NodeCommand, key string) execution {
+func (e *Executor) executeReserved(ctx context.Context, command nodecommand.NodeCommand, key string, checkpoint *nodecommand.ChainExecution) execution {
+	if e.commandStore != nil && (checkpoint == nil || checkpoint.State != 1 || len(checkpoint.AttemptID) != 64) {
+		return execution{err: &nodecommand.RejectionError{Code: nodecommand.CodeUnauthorized, Message: "chain-confirmed start ownership is required before invoking the adapter"}}
+	}
+	if e.commandStore != nil {
+		if err := e.commandStore.ConfirmStart(ctx, command, checkpoint); err != nil {
+			return execution{err: err}
+		}
+	}
 	operation, ok := actionOperations[command.Action]
 	if !ok {
-		return e.runtimeRejectedExecution(ctx, key, command, "", "unsupported_operation", fmt.Errorf("action %q has no runtime adapter mapping", command.Action))
+		return e.runtimeRejectedExecution(ctx, key, command, checkpoint, "", "unsupported_operation", fmt.Errorf("action %q has no runtime adapter mapping", command.Action))
 	}
 	var input payload
 	if len(command.Payload) > 0 {
 		decoder := json.NewDecoder(bytes.NewReader(command.Payload))
 		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&input); err != nil {
-			return e.runtimeRejectedExecution(ctx, key, command, operation, "malformed_input", fmt.Errorf("decode runtime adapter payload: %w", err))
+			return e.runtimeRejectedExecution(ctx, key, command, checkpoint, operation, "malformed_input", fmt.Errorf("decode runtime adapter payload: %w", err))
 		}
 		var trailing any
 		if err := decoder.Decode(&trailing); err != io.EOF {
 			if err == nil {
 				err = fmt.Errorf("trailing JSON value")
 			}
-			return e.runtimeRejectedExecution(ctx, key, command, operation, "malformed_input", fmt.Errorf("decode runtime adapter payload: %w", err))
+			return e.runtimeRejectedExecution(ctx, key, command, checkpoint, operation, "malformed_input", fmt.Errorf("decode runtime adapter payload: %w", err))
 		}
 	}
 	params, err := operationParams(operation, input)
 	if err != nil {
-		return e.runtimeRejectedExecution(ctx, key, command, operation, "malformed_input", err)
+		return e.runtimeRejectedExecution(ctx, key, command, checkpoint, operation, "malformed_input", err)
 	}
 	request := Request{
 		SchemaVersion:  SchemaVersion,
@@ -198,7 +229,7 @@ func (e *Executor) executeReserved(ctx context.Context, command nodecommand.Node
 		Params:         params,
 	}
 	if err := request.Validate(); err != nil {
-		return e.runtimeRejectedExecution(ctx, key, command, operation, "malformed_input", err)
+		return e.runtimeRejectedExecution(ctx, key, command, checkpoint, operation, "malformed_input", err)
 	}
 
 	response, err := e.adapter.run(ctx, request)
@@ -217,23 +248,17 @@ func (e *Executor) executeReserved(ctx context.Context, command nodecommand.Node
 			return execution{err: eventErr}
 		}
 		result := execution{response: response, event: event, err: err}
-		if storeErr := e.store.Save(ctx, key, recordFromExecution(result)); storeErr != nil {
-			result.err = errors.Join(err, fmt.Errorf("persist runtime result: %w", storeErr))
-		}
-		return result
+		return e.persistExecution(ctx, command, key, checkpoint, result)
 	}
 	event, err := e.event(command, response)
 	if err != nil {
 		return execution{err: err}
 	}
 	result := execution{response: response, event: event}
-	if err := e.store.Save(ctx, key, recordFromExecution(result)); err != nil {
-		result.err = fmt.Errorf("persist runtime result: %w", err)
-	}
-	return result
+	return e.persistExecution(ctx, command, key, checkpoint, result)
 }
 
-func (e *Executor) runtimeRejectedExecution(ctx context.Context, key string, command nodecommand.NodeCommand, operation Operation, code string, err error) execution {
+func (e *Executor) runtimeRejectedExecution(ctx context.Context, key string, command nodecommand.NodeCommand, checkpoint *nodecommand.ChainExecution, operation Operation, code string, err error) execution {
 	resultErr := runError(code, err)
 	response := Response{
 		SchemaVersion: SchemaVersion,
@@ -249,8 +274,25 @@ func (e *Executor) runtimeRejectedExecution(ctx context.Context, key string, com
 		return execution{err: eventErr}
 	}
 	result := execution{response: response, event: event, err: resultErr}
-	if storeErr := e.store.Save(ctx, key, recordFromExecution(result)); storeErr != nil {
-		result.err = errors.Join(resultErr, fmt.Errorf("persist runtime result: %w", storeErr))
+	return e.persistExecution(ctx, command, key, checkpoint, result)
+}
+
+func (e *Executor) persistExecution(ctx context.Context, command nodecommand.NodeCommand, key string, checkpoint *nodecommand.ChainExecution, result execution) execution {
+	if e.commandStore != nil {
+		record, err := e.commandStore.SaveCommand(ctx, command, checkpoint, recordFromExecution(result))
+		if err != nil {
+			result.err = errors.Join(result.err, fmt.Errorf("persist runtime result: %w", err))
+			return result
+		}
+		restored, err := record.execution()
+		if err != nil {
+			result.err = errors.Join(result.err, err)
+			return result
+		}
+		return restored
+	}
+	if err := e.store.Save(ctx, key, recordFromExecution(result)); err != nil {
+		result.err = errors.Join(result.err, fmt.Errorf("persist runtime result: %w", err))
 	}
 	return result
 }
@@ -373,7 +415,13 @@ func (e *Executor) rejectionEvent(command nodecommand.NodeCommand, eventType, re
 }
 
 func executionKey(command nodecommand.NodeCommand) string {
-	return command.Signer + "\x00" + command.Capability.ID + "\x00" + command.CommandID
+	key := command.Signer + "\x00" + command.Capability.ID + "\x00" + command.CommandID
+	bytes, err := command.SigningBytes()
+	if err != nil {
+		return key + "\x00invalid"
+	}
+	hash := sha256.Sum256(bytes)
+	return key + "\x00" + hex.EncodeToString(hash[:])
 }
 
 func ResultCode(response Response) string {

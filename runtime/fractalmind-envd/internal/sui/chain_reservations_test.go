@@ -25,6 +25,14 @@ type reservationRPC struct {
 	RPCClient
 	build func(models.MoveCallRequest) (models.TxnMetaData, error)
 	send  func(models.SignAndExecuteTransactionBlockRequest) (models.SuiTransactionBlockResponse, error)
+	coins func(models.SuiXGetCoinsRequest) (models.PaginatedCoinsResponse, error)
+}
+
+func (r *reservationRPC) SuiXGetCoins(_ context.Context, req models.SuiXGetCoinsRequest) (models.PaginatedCoinsResponse, error) {
+	if r.coins != nil {
+		return r.coins(req)
+	}
+	return models.PaginatedCoinsResponse{Data: []models.CoinData{{Balance: "3000000000"}}}, nil
 }
 
 func (r *reservationRPC) MoveCall(_ context.Context, req models.MoveCallRequest) (models.TxnMetaData, error) {

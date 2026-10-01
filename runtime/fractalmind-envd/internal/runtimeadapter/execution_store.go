@@ -23,6 +23,16 @@ type ExecutionStore interface {
 	Save(ctx context.Context, key string, record ExecutionRecord) error
 }
 
+// CommandExecutionStore uses the signed intent and confirmed start checkpoint.
+// Preflight must establish result-key availability before a Host starts work.
+// Implementations cannot use a local file as the persistent result authority.
+type CommandExecutionStore interface {
+	Preflight(context.Context, nodecommand.NodeCommand) error
+	ConfirmStart(context.Context, nodecommand.NodeCommand, *nodecommand.ChainExecution) error
+	LoadCommand(context.Context, nodecommand.NodeCommand) (ExecutionRecord, bool, error)
+	SaveCommand(context.Context, nodecommand.NodeCommand, *nodecommand.ChainExecution, ExecutionRecord) (ExecutionRecord, error)
+}
+
 type ExecutionRecord struct {
 	Version      string                `json:"version"`
 	Response     Response              `json:"response"`

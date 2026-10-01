@@ -120,7 +120,7 @@ export async function exerciseHostAdmission(o: Options) {
   assert.equal(authorityBinding.device_grant, rootGrantId);
   assert.equal(authorityBinding.managed_agent, managedId);
   await verifyGoAuthority(sdk.client.packageId, capabilityId);
-  const executions = process.env.FM_NODE_CHECKPOINT_ACCEPTANCE === '1' ? await exerciseNodeExecutions({ sdk, execute, created, organizationId, humanId, grantId: rootGrantId, membershipId: localMemberId, bindingId, managedAgentId: managedId, desktop, host: local, wrongHost: cloud, contentKey: o.contentKey }) : undefined;
+  const executions = process.env.FM_NODE_CHECKPOINT_ACCEPTANCE === '1' ? await exerciseNodeExecutions({ sdk, execute, created, organizationId, humanId, grantId: rootGrantId, membershipId: localMemberId, bindingId, managedAgentId: managedId, desktop, host: local, wrongHost: cloud, hostEncryptionSecret: localEncryption.secret, contentKey: o.contentKey }) : undefined;
   const deniedReadOnly = await execute('Host: read-only phone cannot acquire operation authority', sdk.host.issueCapability({ ...membership, grantId: o.phoneGrantId, managedAgentId: managedId, actions: ['direct.message'], scope: 'direct', expiresAtMs: Date.now() + 3600000 }), o.phone, undefined, true);
   assert.equal(deniedReadOnly.data.status.success, false);
   assert.match(JSON.stringify(deniedReadOnly.data.status), /9001/);
