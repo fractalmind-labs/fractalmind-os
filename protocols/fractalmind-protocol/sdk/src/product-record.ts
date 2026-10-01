@@ -29,6 +29,13 @@ export class ProductRecordApi {
   constructor(private readonly fm: FractalMindClient, typesPackageId?: string) {
     this.typesPackageId = normalizeSuiAddress(typesPackageId ?? fm.typesPackageId);
   }
+  async getCurrent(organizationId: string, kind: ProductRecordKind, logicalId: string) {
+    if (!PRODUCT_RECORD_KINDS[kind]) throw new Error('Invalid product record kind.');
+    const binding = await this.fm.client.core.getDynamicField({ parentId: organizationId, name: { type: `${this.typesPackageId}::product_record::IndexBinding`, bcs: EmptyBinding.serialize({ dummy_field: false }).toBytes() } });
+    const index = Index.parse(binding.dynamicField.value.bcs);
+    const field = await this.fm.client.core.getDynamicField({ parentId: index.records.id, name: { type: `${this.typesPackageId}::product_record::RecordKey`, bcs: Key.serialize({ kind: PRODUCT_RECORD_KINDS[kind], logical_id: logicalId }).toBytes() } });
+    return Pointer.parse(field.dynamicField.value.bcs);
+  }
   save(input: { organizationId: string; humanId: string; grantId: string; kind: ProductRecordKind; logicalId: string; expectedRevision: bigint | string | number; keyVersion: bigint | string | number; encryptedBody: Uint8Array; tx?: Transaction }): Transaction {
     if (input.encryptedBody.length < 32 || input.encryptedBody.length > 65536) throw new Error('Encrypted body must be 32..65536 bytes.');
     const tx = this.fm.useTransaction(input.tx);

@@ -8,6 +8,7 @@ import { NodeExecutionApi } from './node-execution.js';
 import { FractalApi } from './fractal.js';
 import { GovernanceApi } from './governance.js';
 import { ObjectiveApi } from './objective.js';
+import { OkrApi } from './okr.js';
 import { OrganizationApi } from './organization.js';
 import { RemoteAuthorityApi } from './remote-authority.js';
 import { TaskApi } from './task.js';
@@ -18,6 +19,7 @@ export class FractalMindSDK {
   public readonly nodeExecution: NodeExecutionApi;
   public readonly organization: OrganizationApi;
   public readonly objective: ObjectiveApi;
+  public readonly okr: OkrApi;
   public readonly agent: AgentApi;
   public readonly identity: IdentityApi;
   public readonly host: HostApi;
@@ -33,6 +35,7 @@ export class FractalMindSDK {
     this.nodeExecution = new NodeExecutionApi(this.client);
     this.organization = new OrganizationApi(this.client);
     this.objective = new ObjectiveApi(this.client);
+    this.okr = new OkrApi(this.client);
     this.agent = new AgentApi(this.client);
     this.identity = new IdentityApi(this.client);
     this.host = new HostApi(this.client);
@@ -59,6 +62,7 @@ export { createRecoveryCode, parseRecoveryCode, recoveryKeys, createDeviceEncryp
   bytesToHex, hexToBytes } from './identity-crypto.js';
 export { commandResultKey, commandResultWrapContext, encryptCommandResult, decryptCommandResult } from './command-result-crypto.js';
 export { ObjectiveApi } from './objective.js';
+export { OkrApi, OkrBcs, OkrMetricBcs, OkrObservationBcs, OKR_STATES, metricProgress, weightedProgress } from './okr.js';
 export { OrganizationApi } from './organization.js';
 export { AgentApi } from './agent.js';
 export { AgentPolicyApi } from './agent-policy.js';

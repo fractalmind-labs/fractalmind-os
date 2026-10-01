@@ -391,6 +391,8 @@ module fractalmind_protocol::host {
     public fun membership_version(member: &HostMembership): u64 { member.version }
     public fun observation_capability(member: &HostMembership): ID { member.observation_capability }
     public fun managed_instance(managed: &ManagedAgent): String { managed.instance_id }
+    public fun managed_version(managed: &ManagedAgent): u64 { managed.version }
+    public fun managed_workspace_hash(managed: &ManagedAgent): vector<u8> { managed.workspace_hash }
     public fun binding_version(binding: &CoordinatorBinding): u64 { binding.version }
 
     public(package) fun authority_binding(cap: &RemoteCapability): AuthorityBinding {

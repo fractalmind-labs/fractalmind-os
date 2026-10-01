@@ -12,6 +12,7 @@ import { commandResultKey, commandResultWrapContext, encryptCommandResult, decry
 import { sha256 } from '@noble/hashes/sha2.js';
 import { recordContext } from '../src/product-record.js';
 import type { SignedNodeCommand } from '../src/types.js';
+import { prepareOkrAcceptance } from './okr-localnet-cases.js';
 
 type Data = SuiClientTypes.Transaction<{ effects: true; objectTypes: true; events: true }>;
 type Execute = (label: string, tx: Transaction, signer?: Ed25519Keypair, sponsor?: Ed25519Keypair, allowRejected?: boolean) => Promise<{ data: Data }>;
@@ -249,7 +250,9 @@ export async function exerciseNodeExecutions(o: Options) {
   const nativeCommand = (files: typeof fileGoals, maxCalls: bigint) => signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: nativeCapabilityId, revocationVersion: 1n }, budget: { asset: 'TOOL_CALLS', amount: maxCalls }, payload: { task: JSON.stringify({ kind: 'ensure_text_files', files }), bounds: { paths: { 'file.read': ['.'], 'file.write': ['.'] }, max_calls: maxCalls.toString() } }, expiresAtMs: Date.now() + 300000 });
   const native = await nativeCommand(fileGoals, 10n);
   const nativeStopped = await nativeCommand([fileGoals[0], { path: 'after-stop.md', content: 'must not be written' }], 4n);
-  runtimeExecutionIds.push(await prepare(native, true), await prepare(nativeStopped, true));
+  const okrAcceptance = process.env.FM_OKR_ACCEPTANCE === '1' ? await prepareOkrAcceptance(o, sha256(new TextEncoder().encode(JSON.stringify(native.payload!.bounds)))) : undefined;
+  const nativeExecutionId = await prepare(native, true);
+  runtimeExecutionIds.push(nativeExecutionId, await prepare(nativeStopped, true));
   const nativeSeed = decodeSuiPrivateKey(host.getSecretKey()).secretKey;
   const deviceSeed = decodeSuiPrivateKey(desktop.getSecretKey()).secretKey;
   let nativeFileAgentEvidence: Record<string, unknown>;
@@ -271,11 +274,12 @@ export async function exerciseNodeExecutions(o: Options) {
     console.log('Native file Agent PASS actual workspace goals, reader measurements, chain stop and factory restart restoration');
   } finally { nativeSeed.fill(0); deviceSeed.fill(0); }
   await assertBudget(nativeCapabilityId, 7n, 0n, 'Native Agent charges seven actual tool attempts and releases unused reservations');
+  const okrAcceptanceEvidence = okrAcceptance ? await okrAcceptance.finish(nativeExecutionId, (nativeFileAgentEvidence.recordIds as string[])[0]) : undefined;
   const pendingCap = await execute('Execution: issue authority for revoke-after-prepare check', sdk.host.issueCapability({ ...authority, actions: ['assign'], scope: 'control', maxUses: 1n, budgetAsset: 'MIST', maxBudget: 100n, expiresAtMs: Date.now() + 3600000 }));
   const pendingCapabilityId = created(pendingCap.data, '::remote_authority::RemoteCapability');
   const pendingCommand = await signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: pendingCapabilityId, revocationVersion: 1n }, budget: { asset: 'MIST', amount: 20n }, payload: { task: 'must not begin after Host revocation' }, expiresAtMs: Date.now() + 300000 });
   const pendingId = await prepare(pendingCommand);
-  return { capabilityId, limitedCapabilityId: limitedId, runtimeCapabilityId, factoryCapabilityId, nativeCapabilityId, executions: [firstId, secondId, thirdId, waitingId, stoppedId, ...runtimeExecutionIds], goChecks, budgetChecks, resultKeyEvidence, runtimeStoreChecks, productionFactoryEvidence, nativeFileAgentEvidence, pendingStart: { ...authority, capabilityId: pendingCapabilityId, executionId: pendingId }, records: [{ logicalId, plaintext: new TextDecoder().decode(plaintext) }, { logicalId: unknownLogicalId, plaintext: new TextDecoder().decode(unknownPlaintext) }, { logicalId: stopLogicalId, plaintext: stopPlaintext }, ...runtimeRecords], checks: 'real chain budget/checkpoints, native bounded text-file goals, actual tool-call accounting and stop; generic model planning, command tools, financial metering and cloud deployment pending' };
+  return { capabilityId, limitedCapabilityId: limitedId, runtimeCapabilityId, factoryCapabilityId, nativeCapabilityId, executions: [firstId, secondId, thirdId, waitingId, stoppedId, ...runtimeExecutionIds], goChecks, budgetChecks, resultKeyEvidence, runtimeStoreChecks, productionFactoryEvidence, nativeFileAgentEvidence, okrAcceptanceEvidence, pendingStart: { ...authority, capabilityId: pendingCapabilityId, executionId: pendingId }, records: [{ logicalId, plaintext: new TextDecoder().decode(plaintext) }, { logicalId: unknownLogicalId, plaintext: new TextDecoder().decode(unknownPlaintext) }, { logicalId: stopLogicalId, plaintext: stopPlaintext }, ...runtimeRecords], checks: 'real chain budget/checkpoints, native bounded text-file goals, actual tool-call accounting and stop; generic model planning, command tools, financial metering and cloud deployment pending' };
 }
 
 /** Reconstruct the selected fixture budgets solely from their persisted chain

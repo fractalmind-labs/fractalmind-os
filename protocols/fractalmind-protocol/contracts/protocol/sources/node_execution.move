@@ -245,4 +245,11 @@ module fractalmind_protocol::node_execution {
     }
     public fun state(run: &CommandExecution): u8 { run.state }
     public fun cursor(run: &CommandExecution): u64 { run.cursor }
+    /// Typed checkpoint facts for product evidence. These getters grant no
+    /// authority and do not turn a Host measurement into human acceptance.
+    public fun organization_id(run: &CommandExecution): ID { run.org_id }
+    public fun managed_agent_id(run: &CommandExecution): Option<ID> { run.managed_agent }
+    public fun host_address(run: &CommandExecution): address { run.host_address }
+    public fun created_at_ms(run: &CommandExecution): u64 { run.created_at_ms }
+    public fun result_record(run: &CommandExecution): Option<ID> { run.result_record }
 }
