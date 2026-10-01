@@ -11,6 +11,7 @@ struct Request {
     bytes: Option<String>,
     challenge: Option<String>,
     network: Option<String>,
+    record: Option<String>,
 }
 fn main() {
     if let Err(error) = run() {
@@ -66,6 +67,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             vault.remove_test_profile(&request.profile)?;
             serde_json::json!({"removed":true})
         }
+        "decryptRecord" => serde_json::to_value(
+            vault.decrypt_record(&request.profile, &request.record.ok_or("Record required")?)?,
+        )?,
         _ => return Err("Unknown test operation".into()),
     };
     println!("{}", output);

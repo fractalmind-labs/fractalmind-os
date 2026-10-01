@@ -1378,3 +1378,9 @@ h3 {
 .create-identity button {
   font-size: 12px;
 }
+
+.private-records label {display:block;margin:12px 0;}
+.private-records input,.private-records select {display:block;width:100%;max-width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);}
+.record-list {display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;}
+.record-list button {text-align:left;overflow-wrap:anywhere;}
+.record-body {white-space:pre-wrap;overflow-wrap:anywhere;max-height:400px;overflow:auto;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;}

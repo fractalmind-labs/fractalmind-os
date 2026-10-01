@@ -82,7 +82,11 @@ async function pages<T>(
   } while (cursor);
   throw new ChainReadError("invalid_pagination");
 }
-function missingIndex(error: unknown, organizationId: string, type: string) {
+export function missingIndex(
+  error: unknown,
+  organizationId: string,
+  type: string,
+) {
   const expected = deriveDynamicFieldID(
     organizationId,
     TypeTagSerializer.parseFromStr(type),

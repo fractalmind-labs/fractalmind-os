@@ -14,7 +14,8 @@ export type NativeDeviceCommand =
   | "fm_device_prove"
   | "fm_onboarding_create"
   | "fm_onboarding_public"
-  | "fm_onboarding_sign_transaction";
+  | "fm_onboarding_sign_transaction"
+  | "fm_device_decrypt_record";
 export type NativeInvoke = (
   command: NativeDeviceCommand,
   args: Record<string, string>,

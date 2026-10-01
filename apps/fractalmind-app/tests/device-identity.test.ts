@@ -1,8 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { bcs } from "@mysten/sui/bcs";
+import { bcs, TypeTagSerializer } from "@mysten/sui/bcs";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
-import { toBase64, normalizeSuiAddress as id } from "@mysten/sui/utils";
+import {
+  deriveDynamicFieldID,
+  toBase64,
+  normalizeSuiAddress as id,
+} from "@mysten/sui/utils";
 import {
   DeviceGrantBcs,
   HumanIdentityBcs,
@@ -14,6 +18,7 @@ import {
 } from "../src/device-identity";
 import { NativeDeviceSigner, type NativeInvoke } from "../src/native-device";
 import type { ChainReadSession } from "../src/chain";
+import { PrivateRecords, PrivateRecordError } from "../src/private-records";
 
 async function fixture() {
   const key = Ed25519Keypair.generate(),
@@ -21,6 +26,56 @@ async function fixture() {
   let proveCalls = 0,
     source: "normal" | "foreignType" | "owned" | "uid" = "normal",
     changeVersion = false;
+  const orgId = id("0x70");
+  const orgTable = { id: id("0x71"), size: "0" };
+  const org = {
+    id: orgId,
+    name: "test",
+    description: "",
+    admin: id("0x1"),
+    is_active: true,
+    agents: orgTable,
+    agent_count: "0",
+    tasks: orgTable,
+    task_count: "0",
+    parent_org: null,
+    child_orgs: orgTable,
+    child_org_count: "0",
+    depth: "0",
+    created_at: "1",
+  };
+  const role = {
+    owner_human: org.admin,
+    admin: true,
+    active: true,
+    version: "1",
+  };
+  const tableBcs = bcs.struct("Table", { id: bcs.Address, size: bcs.u64() });
+  const orgBcs = bcs.struct("Organization", {
+    id: bcs.Address,
+    name: bcs.string(),
+    description: bcs.string(),
+    admin: bcs.Address,
+    is_active: bcs.bool(),
+    agents: tableBcs,
+    agent_count: bcs.u64(),
+    tasks: tableBcs,
+    task_count: bcs.u64(),
+    parent_org: bcs.option(bcs.Address),
+    child_orgs: tableBcs,
+    child_org_count: bcs.u64(),
+    depth: bcs.u64(),
+    created_at: bcs.u64(),
+  });
+  const roleBcs = bcs.struct("OrgRole", {
+    owner_human: bcs.Address,
+    admin: bcs.bool(),
+    active: bcs.bool(),
+    version: bcs.u64(),
+  });
+  let decryptCalls = 0,
+    onDecrypt: (() => void) | undefined;
+
   const invoke: NativeInvoke = async (command, args) => {
     if (command === "fm_device_public")
       return {
@@ -30,6 +85,11 @@ async function fixture() {
         signingPublicKey: key.getPublicKey().toBase64(),
         encryptionPublicKey: toBase64(encryption),
       };
+    if (command === "fm_device_decrypt_record") {
+      decryptCalls++;
+      onDecrypt?.();
+      return toBase64(new TextEncoder().encode("private body"));
+    }
     assert.equal(command, "fm_device_prove");
     proveCalls++;
     return key.signPersonalMessage(new TextEncoder().encode(args.challenge));
@@ -46,7 +106,7 @@ async function fixture() {
     recovery_address: id("0x4"),
     admin_caps: table,
     roles: table,
-    organizations: [],
+    organizations: [orgId],
     grants: [id("0x5")],
   };
   const grant = {
@@ -84,40 +144,55 @@ async function fixture() {
         typesPackageId: packageId,
         client: {
           core: {
+            getDynamicField: async () => ({
+              dynamicField: {
+                value: {
+                  type: `${packageId}::identity::OrgRole`,
+                  bcs: roleBcs.serialize(role).toBytes(),
+                },
+              },
+            }),
             getObject: async ({ objectId }: { objectId: string }) => {
               const data =
-                objectId === human.id
-                  ? [
-                      HumanIdentityBcs.serialize({
-                        ...human,
-                        ...(source === "uid" ? { id: id("0x99") } : {}),
-                      }).toBytes(),
-                      "HumanIdentity",
-                    ]
-                  : objectId === grant.id
-                    ? [DeviceGrantBcs.serialize(grant).toBytes(), "DeviceGrant"]
-                    : objectId === registry.id
+                objectId === orgId
+                  ? [orgBcs.serialize(org).toBytes(), "Organization"]
+                  : objectId === human.id
+                    ? [
+                        HumanIdentityBcs.serialize({
+                          ...human,
+                          ...(source === "uid" ? { id: id("0x99") } : {}),
+                        }).toBytes(),
+                        "HumanIdentity",
+                      ]
+                    : objectId === grant.id
                       ? [
-                          IdentityRegistryBcs.serialize(registry).toBytes(),
-                          "IdentityRegistry",
+                          DeviceGrantBcs.serialize(grant).toBytes(),
+                          "DeviceGrant",
                         ]
-                      : [
-                          bcs
-                            .struct("Clock", {
-                              id: bcs.Address,
-                              timestamp_ms: bcs.u64(),
-                            })
-                            .serialize({ id: clockId, timestamp_ms: clockMs })
-                            .toBytes(),
-                          "Clock",
-                        ];
+                      : objectId === registry.id
+                        ? [
+                            IdentityRegistryBcs.serialize(registry).toBytes(),
+                            "IdentityRegistry",
+                          ]
+                        : [
+                            bcs
+                              .struct("Clock", {
+                                id: bcs.Address,
+                                timestamp_ms: bcs.u64(),
+                              })
+                              .serialize({ id: clockId, timestamp_ms: clockMs })
+                              .toBytes(),
+                            "Clock",
+                          ];
               return {
                 object: {
                   objectId,
                   type:
                     data[1] === "Clock"
                       ? `${id("0x2")}::clock::Clock`
-                      : `${source === "foreignType" ? id("0xb") : packageId}::identity::${data[1]}`,
+                      : data[1] === "Organization"
+                        ? `${packageId}::organization::Organization`
+                        : `${source === "foreignType" ? id("0xb") : packageId}::identity::${data[1]}`,
                   owner: {
                     $kind: source === "owned" ? "AddressOwner" : "Shared",
                   },
@@ -133,6 +208,16 @@ async function fixture() {
   } as unknown as ChainReadSession;
   return {
     verifier: () => new DeviceIdentityVerifier(chain, signer, grant.id),
+    chain,
+    signer,
+    invoke,
+    orgId,
+    org,
+    role,
+    decryptCalls: () => decryptCalls,
+    onDecrypt: (fn: () => void) => {
+      onDecrypt = fn;
+    },
     human,
     grant,
     registry,
@@ -208,4 +293,146 @@ test("network or registry mismatch cannot be fixed by a valid native signature",
   f.human.network = "testnet";
   await assert.rejects(f.verifier().verify(), code("invalid_source"));
   assert.equal(f.calls(), 0);
+});
+
+test("organization reads require active matching roles and grant scope, even with valid possession", async () => {
+  for (const mutation of [
+    (f: Awaited<ReturnType<typeof fixture>>) => {
+      f.role.active = false;
+    },
+    (f: Awaited<ReturnType<typeof fixture>>) => {
+      f.role.owner_human = id("0x99");
+    },
+    (f: Awaited<ReturnType<typeof fixture>>) => {
+      f.org.is_active = false;
+    },
+    (f: Awaited<ReturnType<typeof fixture>>) => {
+      f.grant.org_scope = id("0x99");
+    },
+    (f: Awaited<ReturnType<typeof fixture>>) => {
+      f.human.organizations = [];
+    },
+  ]) {
+    const f = await fixture();
+    mutation(f);
+    await assert.rejects(
+      f.verifier().verifyOrganization(f.orgId),
+      code("invalid_grant"),
+    );
+    assert.equal(f.calls(), 0);
+  }
+  const f = await fixture();
+  const bound = await f.verifier().verifyOrganization(f.orgId);
+  assert.equal(bound.organizationId, f.orgId);
+  assert.equal(bound.encryptedKeys, toBase64(Uint8Array.of(1)));
+});
+async function recordFixture() {
+  const f = await fixture(),
+    pointer = {
+      kind: 1,
+      logicalId: "private",
+      record_id: id("0x88"),
+      revision: "1",
+      key_version: "1",
+    };
+  const record = {
+    id: pointer.record_id,
+    organization_id: f.orgId,
+    kind: 1,
+    logical_id: "private",
+    revision: "1",
+    key_version: "1",
+    encrypted_body: [70, 77, 69, 49],
+  };
+  let head = { record_id: pointer.record_id, revision: "1", key_version: "1" };
+  Object.defineProperty(f.chain.sdk, "productRecord", {
+    value: {
+      listCurrent: async () => ({
+        records: [pointer],
+        keyVersion: "1",
+        cursor: null,
+        hasNextPage: false,
+      }),
+      getCurrent: async () => head,
+      getRecord: async () => record,
+    } as unknown as ChainReadSession["sdk"]["productRecord"],
+  });
+  return {
+    ...f,
+    pointer,
+    record,
+    head,
+    api: () =>
+      new PrivateRecords(f.chain, f.signer, f.grant.id, f.orgId, f.invoke),
+  };
+}
+test("private record reads release only freshly authorized current chain bodies", async () => {
+  const f = await recordFixture();
+  assert.equal((await f.api().list()).length, 1);
+  const body = await f.api().read(f.pointer);
+  assert.equal(new TextDecoder().decode(body), "private body");
+  body.fill(0);
+  assert.equal(f.decryptCalls(), 1);
+});
+test("foreign record scope and stale directory never reach native decrypt", async () => {
+  for (const mutation of [
+    (f: Awaited<ReturnType<typeof recordFixture>>) => {
+      f.record.organization_id = id("0x99");
+    },
+    (f: Awaited<ReturnType<typeof recordFixture>>) => {
+      f.head.record_id = id("0x99");
+    },
+    (f: Awaited<ReturnType<typeof recordFixture>>) => {
+      f.record.key_version = "2";
+    },
+  ]) {
+    const f = await recordFixture();
+    mutation(f);
+    await assert.rejects(
+      f.api().read(f.pointer),
+      (e) => e instanceof PrivateRecordError,
+    );
+    assert.equal(f.decryptCalls(), 0);
+  }
+});
+test("revocation, permission changes and directory races while decrypting do not release plaintext", async () => {
+  for (const mutation of [
+    (f: Awaited<ReturnType<typeof recordFixture>>) => {
+      f.grant.revoked = true;
+    },
+    (f: Awaited<ReturnType<typeof recordFixture>>) => {
+      f.role.version = "2";
+    },
+    (f: Awaited<ReturnType<typeof recordFixture>>) => {
+      f.head.revision = "2";
+    },
+  ]) {
+    const f = await recordFixture();
+    f.onDecrypt(() => mutation(f));
+    await assert.rejects(f.api().read(f.pointer));
+    assert.equal(f.decryptCalls(), 1);
+  }
+});
+
+test("only an exact missing organization index is empty; child and network failures remain unknown", async () => {
+  const f = await recordFixture();
+  const expected = deriveDynamicFieldID(
+    f.orgId,
+    TypeTagSerializer.parseFromStr(
+      `${f.chain.sdk.client.typesPackageId}::product_record::IndexBinding`,
+    ),
+    Uint8Array.of(0),
+  );
+  f.chain.sdk.productRecord.listCurrent = async () => {
+    throw { reason: "notFound", objectId: expected };
+  };
+  assert.deepEqual(await f.api().list(), []);
+  f.chain.sdk.productRecord.listCurrent = async () => {
+    throw { reason: "notFound", objectId: id("0x99") };
+  };
+  await assert.rejects(f.api().list());
+  f.chain.sdk.productRecord.listCurrent = async () => {
+    throw new Error("Network unavailable");
+  };
+  await assert.rejects(f.api().list());
 });

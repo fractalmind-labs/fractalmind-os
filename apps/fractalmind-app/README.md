@@ -70,12 +70,13 @@ bundled-assets debug executable. These are development artifacts, not signed
 five-platform releases. The identity page can explicitly load/prepare a device
 and prove its possession against a current chain grant. New devices still need
 an existing trusted device's on-chain authorization; a public profile cannot
-authorize one. Private-body access and management controls remain pending.
+authorize one. The Memory & results page now connects current encrypted body reads to fresh device/organization authority checks and native key unwrapping. Management controls, history selection and content writes remain pending.
 
 The native vault keeps independent signing/encryption private keys in the OS
 credential store, never in the WebView. macOS real-Keychain/signature/localnet
 evidence, transport limits and test instructions are documented in
-[native device verification](../../docs/product/v020-app-native-device.md).
+[native device verification](../../docs/product/v020-app-native-device.md). Current encrypted-body reads and their test scope are documented in
+[private record access](../../docs/product/v020-app-private-records.md).
 
 - V2 shell: neutral/iris light and dark tokens, fractal brand and mission welcome,
   ten grouped desktop entries, persistent execution context and organization growth
@@ -93,7 +94,7 @@ evidence, transport limits and test instructions are documented in
 - Identity: chain Human generation/recovery version and device grants. The page
   labels these as snapshots and refreshes them with organization reads.
 - Chinese/English and system/light/dark appearance; responsive navigation includes
-  all six pages. An actual narrow browser frame is tested separately from native
+  all ten pages. An actual narrow browser frame is tested separately from native
   phone/platform acceptance.
 
 Reads refresh every 15 seconds in a visible document. Switching organizations

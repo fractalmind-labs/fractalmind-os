@@ -32,6 +32,7 @@ type Page =
 type Translate = (zh: string, en: string) => string;
 const PROFILE_KEY = "fractalmind.app.public-connection.v1";
 const PREFERENCE_KEY = "fractalmind.app.appearance.v1";
+const PrivateRecordView = lazy(() => import("./PrivateRecordView"));
 const DeviceAccess = lazy(() => import("./DeviceAccess"));
 const runLabels: Array<[string, string]> = [
   ["待启动", "Queued"],
@@ -389,8 +390,8 @@ export function App() {
           <p>{t("链上只读浏览", "Read-only chain browser")}</p>
           <small>
             {t(
-              "此 App 尚未获得设备授权",
-              "This App has no device authorization",
+              "公开连接不提供设备授权",
+              "A public connection does not grant device authority",
             )}
           </small>
           <button onClick={disconnect}>
@@ -775,11 +776,32 @@ export function App() {
         )}
         {page === "memory" && snapshot && (
           <>
+            <Suspense
+              fallback={
+                <p>{t("加载加密记录…", "Loading encrypted records…")}</p>
+              }
+            >
+              <PrivateRecordView
+                key={JSON.stringify([
+                  profile,
+                  snapshot.organization.objectId,
+                  data.identity?.human.generation,
+                ])}
+                profile={{
+                  ...profile,
+                  chainIdentifier:
+                    data.identity?.chainIdentifier ?? profile.chainIdentifier,
+                }}
+                organizationId={snapshot.organization.objectId}
+                grants={data.identity?.grants.value}
+                t={t}
+              />
+            </Suspense>
             <h2>{t("已验收成果", "Accepted results")}</h2>
             <p className="muted">
               {t(
-                "仅展示有独立人工验收记录的链上成果；记忆正文与版本管理尚未接入。",
-                "Only chain results with a separate human acceptance record are shown. Memory bodies and version management are not integrated yet.",
+                "下方展示有独立人工验收记录的链上成果；加密正文在上方按当前授权独立读取，不能代替验收。",
+                "Results below have a separate human acceptance record. Bodies above are read under current authority and do not establish acceptance.",
               )}
             </p>
             {!okrs ? (
@@ -920,8 +942,8 @@ export function App() {
         )}
         <footer>
           {t(
-            "持久产品状态以 Sui 为准 · 只读 Alpha 尚未完成 v0.2.0 验收",
-            "Persistent product state lives on Sui · read-only Alpha is not v0.2.0 acceptance",
+            "持久产品状态以 Sui 为准 · Alpha 尚未完成 v0.2.0 验收",
+            "Persistent product state lives on Sui · Alpha is not v0.2.0 acceptance",
           )}
         </footer>
       </div>

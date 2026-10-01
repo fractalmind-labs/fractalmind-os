@@ -17,7 +17,9 @@ use x25519_dalek::{PublicKey, StaticSecret};
 use zeroize::Zeroizing;
 
 mod onboarding;
+mod records;
 pub use onboarding::{OnboardingCreated, OnboardingPublic};
+pub use records::RecordRequest;
 
 pub const DEVICE_SERVICE: &str = "org.fractalmind.app.device";
 const MAGIC: &[u8; 4] = b"FMD1";
