@@ -5,6 +5,9 @@ edition = "2021"
 license = "MIT"
 
 [dependencies]
+aes-gcm = { version = "=0.10.3", features = ["zeroize"] }
+hkdf = "=0.12.4"
+sha2 = "=0.10.9"
 base64 = "0.22"
 bcs = "0.1"
 blake2 = "0.10"

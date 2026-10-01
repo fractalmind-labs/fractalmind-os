@@ -16,6 +16,9 @@ use sui_sdk_types::{Transaction, TransactionKind};
 use x25519_dalek::{PublicKey, StaticSecret};
 use zeroize::Zeroizing;
 
+mod onboarding;
+pub use onboarding::{OnboardingCreated, OnboardingPublic};
+
 pub const DEVICE_SERVICE: &str = "org.fractalmind.app.device";
 const MAGIC: &[u8; 4] = b"FMD1";
 const MAX_TRANSACTION: usize = 1024 * 1024;
@@ -23,6 +26,9 @@ const MAX_TRANSACTION: usize = 1024 * 1024;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VaultError {
     InvalidProfile,
+    AlreadyInitialized,
+    InvalidRecovery,
+    InvalidEnvelope,
     NotInitialized,
     StorageUnavailable,
     InvalidStoredKey,
@@ -71,6 +77,9 @@ impl DeviceVault {
     }
     fn entry(&self, profile: &str) -> Result<keyring::Entry> {
         validate_profile(profile)?;
+        if self.service == "org.fractalmind.app.device.test" && !profile.starts_with("test-") {
+            return Err(VaultError::InvalidProfile);
+        }
         keyring::Entry::new(&self.service, &format!("device-v1-{profile}"))
             .map_err(|_| VaultError::StorageUnavailable)
     }
@@ -121,38 +130,7 @@ impl DeviceVault {
         public(profile, &readback)
     }
     pub fn sign_transaction(&self, profile: &str, encoded: &str) -> Result<SignedBytes> {
-        if encoded.len() > (MAX_TRANSACTION + 2) / 3 * 4 {
-            return Err(VaultError::InvalidTransaction);
-        }
-        let bytes = STANDARD
-            .decode(encoded)
-            .map_err(|_| VaultError::InvalidTransaction)?;
-        if bytes.is_empty() || bytes.len() > MAX_TRANSACTION {
-            return Err(VaultError::InvalidTransaction);
-        }
-        let transaction: Transaction =
-            bcs::from_bytes(&bytes).map_err(|_| VaultError::InvalidTransaction)?;
-        if bcs::to_bytes(&transaction).map_err(|_| VaultError::InvalidTransaction)? != bytes {
-            return Err(VaultError::InvalidTransaction);
-        }
-        if !matches!(
-            transaction.kind,
-            TransactionKind::ProgrammableTransaction(_)
-        ) {
-            return Err(VaultError::UnsupportedTransaction);
-        }
-        let keys = self.load(profile)?;
-        let address = public(profile, &keys)?.address;
-        if transaction.sender.to_string() != address {
-            return Err(VaultError::WrongSender);
-        }
-        if transaction.gas_payment.owner.to_string() != address {
-            return Err(VaultError::WrongGasOwner);
-        }
-        Ok(SignedBytes {
-            bytes: STANDARD.encode(&bytes),
-            signature: sign(&keys, &transaction.signing_digest())?,
-        })
+        sign_transaction_keys(&self.load(profile)?, profile, encoded)
     }
     /// Only the bounded FractalMind possession challenge is supported. This is
     /// not a general wallet personal-message signing endpoint.
@@ -174,10 +152,47 @@ impl DeviceVault {
         if self.service != "org.fractalmind.app.device.test" || !profile.starts_with("test-") {
             return Err(VaultError::InvalidProfile);
         }
-        self.entry(profile)?
-            .delete_credential()
-            .map_err(|_| VaultError::StorageUnavailable)
+        for entry in [self.entry(profile)?, self.onboarding_entry(profile)?] {
+            match entry.delete_credential() {
+                Ok(()) | Err(keyring::Error::NoEntry) => (),
+                Err(_) => return Err(VaultError::StorageUnavailable),
+            }
+        }
+        Ok(())
     }
+}
+fn sign_transaction_keys(keys: &[u8], profile: &str, encoded: &str) -> Result<SignedBytes> {
+    if encoded.len() > (MAX_TRANSACTION + 2) / 3 * 4 {
+        return Err(VaultError::InvalidTransaction);
+    }
+    let bytes = STANDARD
+        .decode(encoded)
+        .map_err(|_| VaultError::InvalidTransaction)?;
+    if bytes.is_empty() || bytes.len() > MAX_TRANSACTION || STANDARD.encode(&bytes) != encoded {
+        return Err(VaultError::InvalidTransaction);
+    }
+    let transaction: Transaction =
+        bcs::from_bytes(&bytes).map_err(|_| VaultError::InvalidTransaction)?;
+    if bcs::to_bytes(&transaction).map_err(|_| VaultError::InvalidTransaction)? != bytes {
+        return Err(VaultError::InvalidTransaction);
+    }
+    if !matches!(
+        transaction.kind,
+        TransactionKind::ProgrammableTransaction(_)
+    ) {
+        return Err(VaultError::UnsupportedTransaction);
+    }
+    let address = public(profile, keys)?.address;
+    if transaction.sender.to_string() != address {
+        return Err(VaultError::WrongSender);
+    }
+    if transaction.gas_payment.owner.to_string() != address {
+        return Err(VaultError::WrongGasOwner);
+    }
+    Ok(SignedBytes {
+        bytes: encoded.into(),
+        signature: sign(keys, &transaction.signing_digest())?,
+    })
 }
 fn validate_profile(profile: &str) -> Result<()> {
     if profile.is_empty()
@@ -269,6 +284,18 @@ fn validate_proof(challenge: &str, now_ms: u64) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn isolated_vault_never_accepts_production_profile_names() {
+        let vault = DeviceVault::new("org.fractalmind.app.device.test", PathBuf::new());
+        assert!(matches!(
+            vault.entry("primary"),
+            Err(VaultError::InvalidProfile)
+        ));
+        assert!(matches!(
+            vault.onboarding_entry("primary"),
+            Err(VaultError::InvalidProfile)
+        ));
+    }
     #[test]
     fn profiles_are_bounded_native_accounts() {
         for profile in ["", "../key", "key/path", "space key", "-first"] {

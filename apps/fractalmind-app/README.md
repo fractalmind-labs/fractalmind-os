@@ -57,9 +57,10 @@ Remote endpoints must use HTTPS and cannot contain credentials, queries or
 fragments. Only the allowlisted public fields are retained.
 
 This profile is **not login**. It cannot sign commands, unlock encrypted product
-bodies or grant authority. Do not paste private keys or recovery codes. Identity
-creation, device pairing and recovery choices explain their pending integration;
-they cannot submit transactions or accept recovery secrets yet.
+bodies or grant authority. Do not paste private keys or recovery codes. The native welcome page now connects identity creation to independent OS keys,
+a one-shot recovery backup, fee preparation and separately confirmed Human / personal
+organization transactions. The browser cannot generate those keys. Device pairing
+and consumption-based recovery remain pending and do not accept recovery secrets.
 
 ## Current behavior
 
@@ -130,3 +131,6 @@ splitting still need performance work before release.
 
 Interface mapping, actual v2 walk-through evidence and remaining integration gates:
 [v2 baseline](../../docs/product/v020-app-v2-baseline.md).
+
+Native identity creation, exact current gates and localnet interoperability evidence:
+[creation flow](../../docs/product/v020-app-identity-creation.md).

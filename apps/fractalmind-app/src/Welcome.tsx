@@ -1,8 +1,10 @@
-import { useId, useState } from "react";
+import { lazy, Suspense, useId, useState } from "react";
 import type { ReactNode } from "react";
 import { normalizeProfile } from "./chain";
 import type { ConnectionProfile } from "./domain";
 import { BrandMark, NavIcon } from "./V2Views";
+
+const CreateIdentity = lazy(() => import("./CreateIdentity"));
 
 /** V2 view-welcome.js layout/mission. Real onboarding is enabled only when its
  * native + chain path exists; prototype simulation is never imported here. */
@@ -20,6 +22,7 @@ export default function Welcome({
   const [mode, setMode] = useState<"create" | "existing" | "recover" | null>(
     null,
   );
+  const [creatingBusy, setCreatingBusy] = useState(false);
   const gradient = `welcome-${useId().replace(/:/g, "")}`;
   return (
     <div className="welcome-v2">
@@ -157,6 +160,7 @@ export default function Welcome({
               <button
                 key={key}
                 className="welcome-option"
+                disabled={creatingBusy}
                 onClick={() => setMode(key)}
                 aria-pressed={mode === key}
               >
@@ -169,7 +173,20 @@ export default function Welcome({
               </button>
             ))}
           </div>
-          {mode && (
+          {mode === "create" && (
+            <Suspense
+              fallback={
+                <p>{t("加载身份创建…", "Loading identity creation…")}</p>
+              }
+            >
+              <CreateIdentity
+                t={t}
+                connect={connect}
+                onBusyChange={setCreatingBusy}
+              />
+            </Suspense>
+          )}
+          {mode && mode !== "create" && (
             <div className="panel onboarding-status" role="status">
               <strong>
                 {t(
@@ -178,20 +195,15 @@ export default function Welcome({
                 )}
               </strong>
               <p>
-                {mode === "create"
+                {mode === "existing"
                   ? t(
-                      "将依次准备独立设备密钥、运行费、链上身份和个人组织，并保存恢复码。当前不能提交创建交易。",
-                      "Prepare independent device keys, transaction funds, the on-chain Human and personal organization, then save a recovery code. Creation transactions are not enabled yet.",
+                      "已有可信设备需要批准此设备的独立授权。连接资料仅用于定位公开记录，不授予登录权限。",
+                      "An existing trusted device must approve an independent grant for this device. Connection metadata locates public records and grants no sign-in authority.",
                     )
-                  : mode === "existing"
-                    ? t(
-                        "已有可信设备需要批准此设备的独立授权。连接资料仅用于定位公开记录，不授予登录权限。",
-                        "An existing trusted device must approve an independent grant for this device. Connection metadata locates public records and grants no sign-in authority.",
-                      )
-                    : t(
-                        "恢复需要原生安全处理恢复码，并在一笔交易中更换恢复记录和设备授权。当前请不要输入恢复码。",
-                        "Recovery needs native handling of the code and an atomic recovery/grant transaction. Do not enter a recovery code here yet.",
-                      )}
+                  : t(
+                      "恢复需要原生安全处理恢复码，并在一笔交易中更换恢复记录和设备授权。当前请不要输入恢复码。",
+                      "Recovery needs native handling of the code and an atomic recovery/grant transaction. Do not enter a recovery code here yet.",
+                    )}
               </p>
             </div>
           )}
@@ -217,6 +229,7 @@ export default function Welcome({
             <form
               onSubmit={(e) => {
                 e.preventDefault();
+                if (creatingBusy) return;
                 try {
                   connect(normalizeProfile(JSON.parse(text)));
                   setError(false);
@@ -228,6 +241,7 @@ export default function Welcome({
               <label>
                 {t("公开连接资料 JSON", "Public connection profile JSON")}
                 <textarea
+                  disabled={creatingBusy}
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   aria-label={t(
@@ -247,7 +261,7 @@ export default function Welcome({
                   )}
                 </p>
               )}
-              <button className="primary" type="submit">
+              <button className="primary" type="submit" disabled={creatingBusy}>
                 {t("读取真实链上数据", "Read live chain data")}
               </button>
             </form>

@@ -10,6 +10,7 @@ struct Request {
     profile: String,
     bytes: Option<String>,
     challenge: Option<String>,
+    network: Option<String>,
 }
 fn main() {
     if let Err(error) = run() {
@@ -48,6 +49,19 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     .try_into()?,
             )?,
         )?,
+        "createOnboarding" => serde_json::to_value(vault.create_onboarding(
+            &request.profile,
+            &request.network.ok_or("Network required")?,
+        )?)?,
+        "publicOnboarding" => serde_json::to_value(vault.onboarding_public(
+            &request.profile,
+            &request.network.ok_or("Network required")?,
+        )?)?,
+        "signOnboarding" => serde_json::to_value(vault.sign_onboarding_transaction(
+            &request.profile,
+            &request.network.ok_or("Network required")?,
+            &request.bytes.ok_or("Bytes required")?,
+        )?)?,
         "remove" => {
             vault.remove_test_profile(&request.profile)?;
             serde_json::json!({"removed":true})

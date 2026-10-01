@@ -11,7 +11,10 @@ export type NativeDeviceCommand =
   | "fm_device_public"
   | "fm_device_initialize"
   | "fm_device_sign_transaction"
-  | "fm_device_prove";
+  | "fm_device_prove"
+  | "fm_onboarding_create"
+  | "fm_onboarding_public"
+  | "fm_onboarding_sign_transaction";
 export type NativeInvoke = (
   command: NativeDeviceCommand,
   args: Record<string, string>,
@@ -39,7 +42,7 @@ export class NativeDeviceError extends Error {
 }
 const id = /^0x[0-9a-f]{64}$/;
 const profilePattern = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
-function profileCheck(profile: string) {
+export function profileCheck(profile: string) {
   if (!profilePattern.test(profile))
     throw new NativeDeviceError("invalid_profile");
 }
@@ -59,7 +62,7 @@ function decode(value: unknown, length: number): Uint8Array {
     throw new NativeDeviceError("invalid_response");
   }
 }
-function publicResult(value: unknown, profile: string): DevicePublic {
+export function publicResult(value: unknown, profile: string): DevicePublic {
   const result = object(value);
   const pub = new Ed25519PublicKey(decode(result.signingPublicKey, 32));
   decode(result.encryptionPublicKey, 32);
@@ -79,7 +82,7 @@ function publicResult(value: unknown, profile: string): DevicePublic {
     encryptionPublicKey: result.encryptionPublicKey as string,
   });
 }
-async function call(
+export async function call(
   invoke: NativeInvoke,
   command: NativeDeviceCommand,
   args: Record<string, string>,

@@ -1310,3 +1310,71 @@ h3 {
     font-size: 21px;
   }
 }
+
+.create-identity {
+  display: grid;
+  gap: 12px;
+}
+.create-identity label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+}
+.create-identity input:not([type="checkbox"]) {
+  min-width: 0;
+  width: 100%;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.create-identity .creation-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  font-size: 11px;
+  color: var(--muted);
+  padding-left: 20px;
+  margin: 0;
+}
+.create-identity .checkline {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.create-identity .checkline input {
+  accent-color: var(--brand);
+}
+.create-identity .recovery-display,
+.create-identity .fee-quote,
+.create-identity .transaction-outcome {
+  padding: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+}
+.create-identity .recovery-display > code {
+  display: block;
+  margin: 12px 0;
+  user-select: all;
+  color: var(--text);
+}
+.create-identity dd code {
+  user-select: all;
+}
+.create-identity h3 {
+  margin: 4px 0;
+}
+.create-identity p {
+  font-size: 12px;
+}
+.create-identity dl {
+  margin: 4px 0;
+  gap: 12px;
+}
+.create-identity .actions {
+  margin: 0;
+}
+.create-identity button {
+  font-size: 12px;
+}

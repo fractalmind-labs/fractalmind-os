@@ -1,0 +1,47 @@
+{
+  "format": 1,
+  "recordedAt": "2026-10-01T22:26:04.625Z",
+  "platform": "darwin",
+  "chain": {
+    "rpc": "http://127.0.0.1:29000",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "profile": "test-dd555aef-5ae2-458f-b088-9442cbe5bbf3",
+  "publicDevice": {
+    "format": 1,
+    "profile": "test-dd555aef-5ae2-458f-b088-9442cbe5bbf3",
+    "address": "0x30656feb79fa7cf0d51165428add94c4cd897ec42d656965bd527b3786e5f501",
+    "signingPublicKey": "9yboob3lv89ep/eJFiEvSSbWL27V4dtK6WbmHGr97uA=",
+    "encryptionPublicKey": "H0BAsDMDwFPMzJYa8Bbkljd4KMhdSqQ3i1vFno/G61w="
+  },
+  "recoveryAddress": "0x46664597bd74ac2318856df1cb83554c98429f17071a5a7d210549671db6d3fc",
+  "humanId": "0x7aeb7c2178d509288d32f1c2cb1524f5f213f99c820d24002fb13bc3501a68de",
+  "organizationId": "0xe61406b47cecf24050f10faf47e95cead7a6d68031e7be30a4e9f86c063c1165",
+  "checks": [
+    "loading an absent onboarding profile does not create keys",
+    "native recovery code/HKDF keys and FMW1/AES-GCM backup interoperate with the official JS path",
+    "fresh-process reload reveals public keys/ciphertext only; re-creation and wrong network are rejected",
+    "zero recovery balance blocks Human preparation without submitting",
+    "native recovery signs a real self-paid Human transaction; independent device possession resolves stable Human",
+    "new native processes and a rebuilt controller query original digests and reconstruct the same Human/organization without replay",
+    "discarding transaction caches reconstructs confirmed business state from chain and refuses duplicate creation"
+  ],
+  "transactions": [
+    {
+      "action": "create Human with native recovery signature and self-paid Gas",
+      "digest": "EcF5Edintor684P9i9PyHUx2zvYLak9Umvx2mTyEChkG",
+      "actualGas": "18742548"
+    },
+    {
+      "action": "create personal organization with independent native device",
+      "digest": "A6TfHXbzY7JXjekcejLQ2rnkcazQ8DSEFhB8nQeUdg5A",
+      "actualGas": "14701216"
+    }
+  ],
+  "limits": {
+    "nativeTransport": "isolated subprocess test transport, not installed UI IPC",
+    "journal": "in-memory fixture; installed UI uses IndexedDbTransactionJournal",
+    "rawCodeInReport": false,
+    "fullV020Complete": false
+  }
+}
