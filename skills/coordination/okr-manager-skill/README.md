@@ -15,7 +15,7 @@ with `claude-code` when installing for Claude Code.
 
 ### Manual
 
-Copy `SKILL.md` into your agent's skills directory (e.g., `.agent/skills/okr-manager/SKILL.md`).
+Copy the skill directory, including `SKILL.md` and `examples/`, into your agent's skills directory (e.g., `.agent/skills/okr-manager/`).
 
 ## What It Does
 
@@ -23,6 +23,8 @@ Copy `SKILL.md` into your agent's skills directory (e.g., `.agent/skills/okr-man
 - **Track progress** by updating KR statuses with completion evidence
 - **Heartbeat audit** — periodic check-ins that identify blocked KRs and push work forward
 - **Report status** in a compact, scannable format
+
+For FractalMind Sui organizations, use [chain projection mode](examples/sui-projection.md): `OKR.md` carries source versions and measurable KR fields; local edits remain unsubmitted until an authorized device signs and confirms them. Measurements, KR verification and final human acceptance stay separate. The skill does not implement an automatic file synchronizer or grant execution permissions.
 
 ## Recommended Shape for AI Teams
 
@@ -89,6 +91,7 @@ See [`examples/`](examples/) for:
 - **[okr-template-en.md](examples/okr-template-en.md)** — English OKR template
 - **[okr-template-zh.md](examples/okr-template-zh.md)** — Chinese OKR template
 - **[heartbeat-integration.md](examples/heartbeat-integration.md)** — How to wire OKR audits into your heartbeat loop
+- **[sui-projection.md](examples/sui-projection.md)** — Chain provenance, KR measurements, execution boundaries, observations and explicit submission
 
 ## Who Is This For?
 

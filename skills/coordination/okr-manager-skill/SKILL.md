@@ -26,6 +26,14 @@ This skill works with any markdown-based OKR file. Set these in your workspace:
 | Status markers | `PENDING / IN PROGRESS / COMPLETE` | KR status labels |
 | Priority markers | `P0 / P1 / P2` | Priority levels |
 
+### FractalMind chain projection mode
+
+When an OKR belongs to a Sui organization, read [the projection example](examples/sui-projection.md). The chain is authoritative; `OKR.md` is a versioned local projection. Preserve organization/network/OKR IDs, source version, agreement version and observation time. Local edits are **unsubmitted proposals** and do not change permissions or committed progress.
+
+For v0.2.0, use one explicitly managed Agent and 1–3 sequential KRs. Each KR declares baseline, target, unit, integer scale, direction, weight, freshness and evidence method. Missing or stale current values mean unknown. A Host observation, a verified KR and a human-accepted Objective are separate states; never mark the chain Objective ACHIEVED by editing a file or because the percentage reached 100%.
+
+Submitting a proposal requires an authorized device, current version checks and explicit signing. An unknown transaction result is queried before any retry. If the client submission path is unavailable, leave the proposal unsubmitted. Refresh before execution, check spent plus pending reservations against the approved budget, and keep within the current agreement. A file edit cannot widen the approved boundary. Pause/replan requires a newly approved agreement before resuming.
+
 ## OKR Creation Checklist
 
 Every OKR MUST have ALL of these. Reject or flag any OKR missing items.
@@ -135,6 +143,8 @@ Human assigns objective
 [Success Criteria met] → Mark OKR as ACHIEVED
 ```
 
+In chain projection mode the final transition is **request human acceptance → confirmed chain transaction → refresh projection**. KR verification also uses the authorized chain path; an Agent may submit observations and evidence but cannot self-approve them through this skill.
+
 ## Operations
 
 ### Creating an OKR
@@ -153,7 +163,7 @@ When a KR completes:
 1. Update status: `PENDING` → `IN PROGRESS` → `✅ COMPLETE`
 2. Add completion evidence (PR number, CI link, test results)
 3. Check if downstream KRs are now unblocked
-4. If all KRs complete → check Success Criteria → mark OKR ACHIEVED
+4. If all KRs complete → check Success Criteria → mark OKR ACHIEVED in file-only mode; in chain projection mode request separate human acceptance and reflect only its confirmed result
 
 ### Heartbeat OKR Audit
 
@@ -165,6 +175,8 @@ During periodic check-ins:
    - What's the next action?
 3. Report summary to human (only if there are changes or blockers)
 4. Push forward: assign tasks, trigger CI, follow up on blockers
+
+In chain projection mode, attach structured observations with source Run/evidence IDs, agreement version, metric value and sampling time, next action, blocker reason and last confirmed budget. Distinguish no fresh observation from no progress. A heartbeat or local status report neither grants execution authority nor replaces a chain checkpoint. See [the heartbeat example](examples/heartbeat-integration.md).
 
 ### Reporting Status
 
