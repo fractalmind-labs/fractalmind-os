@@ -42,7 +42,10 @@
 const runner = new NativeFileOkrRunner({
   sdk, organizationId, humanId, grantId, signer: deviceSigner,
   keyForVersion: authorizedOrganizationKey,
-  submit: transactionManager.submit,
+  submit: createSelfPayOkrSubmitter({
+    manager: transactionManager, gasBudget: approvedGasCeiling,
+    approveQuote: showFeeConfirmation,
+  }),
   deliver: fixedHostTransport.deliver,
 });
 
@@ -60,6 +63,8 @@ await runner.step({ okrId, capabilityId, createIfMissing: true });
 进度到达目标后返回待人工验证；KR 全部验证后返回待最终验收，执行循环不会代人签署验证或验收。缺失、过期或未来采样有明确状态依据。确定拒绝可在纠正后显式创建；未知提交在同一实例内保持查询状态。新进程默认仅恢复，尚未接入 App 持久交易摘要及自动推进开关的恢复流程，因此不能据此宣称完整自主循环已经完成。
 
 ## 验证
+
+最新[自付接线证据](evidence/v020-selfpay-runner-localnet.json)重新运行完整闭环：138 笔 SDK 交易中，两个 KR 的原子准备使用正式 `SelfPayTransactionManager` 和真实费用报价，恢复、人工验证与验收仍通过。SDK 104/104、类型检查及构建通过。`submit(transaction, { requestId })` 接收与票据相同的稳定请求 ID；`createSelfPayOkrSubmitter` 先查询原交易，再对首次请求确认费用。未知和失败交易不自动替换。浏览器持久提供器及实际刷新证据见[自付交易说明](v020-selfpay-transactions.md)。
 
 [真实本地链报告](evidence/v020-device-runner-localnet.json) 包含 138 笔 SDK 交易：88 成功、50 预期拒绝，另有正式 Go Host 启动、结果与三次自动观测。重新审批后的两个 KR 由正式执行循环从批准正文读取目标并创建票据，实际工具次数为 1／3；总支出 11、在途 0。新执行循环查询已测量的 KR，没有第二次投递。Human 消费式恢复和密钥轮换后，仅凭恢复记录的历史 keyring，可从链上目录定位并解密两份命令票据，重建原有 OKR、观测、历史正文、Run 和预算。
 

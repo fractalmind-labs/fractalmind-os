@@ -1,0 +1,2437 @@
+{
+  "schema": "fractalmind.v020-selfpay-okr-runner-evidence.v1",
+  "testedAt": "2026-10-01T12:47:33.141Z",
+  "chain": {
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "packageId": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+  "humanId": "0xce907ca770d4fee16b713e66f2a17ff8c68274b5054da1c75f8bb8cd250a7147",
+  "organizationId": "0x24f250fed82ef63c48360f32bf5db0cac70ffada45f4464c9116460a756aa208",
+  "sdkTransactions": [
+    {
+      "label": "publish test package",
+      "digest": "6NFqCoovkcbpDFMXsddEVEQjRCg3RW6Vuqk2ybAmb3QM",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "initialize authenticated identity registry",
+      "digest": "4QbzsQkieAbVBc84SGBhHqeHHpahgGs4e3rTQrwWnMYq",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "create Human using recovery signature and device-paid gas",
+      "digest": "P8oErZBJCkk8pXex2R8JmNchaWz39XFr4Hs1C1btogN",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "create organization bound to Human",
+      "digest": "9pvtqLASrgJhp6cgRLPJ3RRjYaZR63K25axFte4XHQr6",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "save encrypted okr (256 bytes)",
+      "digest": "21QWgeuyJkYSotwCW8mgdUxhGrYbebfMDd9bJfnbScXd",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "save encrypted contract (1024 bytes)",
+      "digest": "ETLoLfE9kAdpNi8ry7zB7kjTFSUQBsEtQzaSe3WSeWYt",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "save encrypted approval (4096 bytes)",
+      "digest": "21FirNgG6mUpeCR2EFPvU3GJ8mh7mG5EMef8kP75mVYz",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "save encrypted evidence (8192 bytes)",
+      "digest": "7GQFnvy1oSvygrKepmbRWNvESerdWtaWStkCkkojkvjZ",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "save encrypted checkpoint (16384 bytes)",
+      "digest": "FPzRUyxdCtej5qT7gvztxTjxG5R5H4zbX9R3zz5piFyu",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "save encrypted message (32768 bytes)",
+      "digest": "FEcZWhbTUcs7hpDNCv6s66grM6KAnD5ZEKtsRWedtbbR",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "save encrypted backup (65504 bytes)",
+      "digest": "CEHcqZ5GtrCJeGHWsBXHsHu9A447sm1kkCStYLnGKshi",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "add phone with seven-day org-scoped read grant",
+      "digest": "5U4MSzQorUEmSLz7R4Cj4rUdb4pnWK8G2jEhFafwZZkV",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Host: approve organization Coordinator entry",
+      "digest": "FH7pTweHeDyy9yaadgFVy25hjLQf6SqWqmTFj4DCgaFQ",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Host: issue one-use invitation",
+      "digest": "GeyeGvSuKy3KgBmJywLhrM463uPwSLygna8SYuUnrA6j",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Host: copied proof cannot join as another sender",
+      "digest": "6CF1qc3wXouq7r4r4ERwBWQgvFffNSe747gC5jRTKLUx",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9205, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::host::redeem_invite' (instruction 357)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9205",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "host",
+              "function": 6,
+              "instruction": 357,
+              "functionName": "redeem_invite"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Host: valid proof consumes invite, creates membership and limited authority",
+      "digest": "CgRone9aEYJMkmvs2ETb54Ps4Us7GH6o9wTBzhssKHXp",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Host: consumed invite cannot be revoked",
+      "digest": "5fGYJi3M3kcqNEXEPshfMf3ccDCgshMvJoQ9uyr51JwB",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9204, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::host::revoke_invite' (instruction 29)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9204",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "host",
+              "function": 5,
+              "instruction": 29,
+              "functionName": "revoke_invite"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Host: issue one-use invitation",
+      "digest": "8ujwCW4JkHRtpZcqmnASdTxAYP48VFryvBkEV8fBLqrD",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Host: revoke an unused invitation",
+      "digest": "FRzwfhURmi4tibcRkKpTxndvKEyZ5jV9k4pKXaHyNFGu",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Host: issue one-use invitation",
+      "digest": "E4suXXsp4fBbDhFB8x6daeYTrdu269rA3wVcgJvXNRSS",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Host: concurrent join candidate 2",
+      "digest": "5z5BADKguEo9FJxwzHcKwWtoG9xV2XZE6unFhgcWX1o9",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Host: concurrent join candidate 1",
+      "digest": "CmyD6BHzhXWjzC9Ti1GhrqMedCS3CXa4G8vKBgjRoAWG",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9204, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::host::redeem_invite' (instruction 133)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9204",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "host",
+              "function": 6,
+              "instruction": 133,
+              "functionName": "redeem_invite"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Host: discover and explicitly import existing observation instance",
+      "digest": "DcGfVMLJFtSvbySmnb4D9rVtkjmqSF86BF2XM9NpFJ6v",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Host: repeating import does not create a second record",
+      "digest": "C94gKHjVWoLxHBWid22uqB42RYo6DdooQb7sYiAaERJC",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Host: repeated discovery cannot silently change workspace",
+      "digest": "A5EPtxEZyUTZPcjyxVEcijAVMXsjb3xaGxbrKTGyN8j",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9207, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::host::import_agent' (instruction 181)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9207",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "host",
+              "function": 10,
+              "instruction": 181,
+              "functionName": "import_agent"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Host: same instance name on another Host stays separate",
+      "digest": "DAGqzrpTw83Yesf7EvTARvjLEB2GtGR5jnBPKfib77Dc",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Host: observation instance cannot receive execution authority",
+      "digest": "CZcF5JmZaJViX1B2ehVwtQK7BMMiwbBhJnBnPKsofGxk",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9201, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::host::assert_managed' (instruction 71)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9201",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "host",
+              "function": 17,
+              "instruction": 71,
+              "functionName": "assert_managed"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Host: tmux self-report cannot become constrained runtime",
+      "digest": "3NS6ah1v1SHGtUTAnjn22u26LAgQPm47jPFfjBGYNGg6",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9201, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::host::import_agent' (instruction 98)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9201",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "host",
+              "function": 10,
+              "instruction": 98,
+              "functionName": "import_agent"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Host: managing device confirms bounded adapter instance",
+      "digest": "6vfdWNqkErxXyx2q9P5QZuKjrKg6aUenGM7W8LtTZDYw",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Host: issue exact-instance device execution authority",
+      "digest": "8S9hJuythaVij3yuuzpjkua6xKteLXLWbwf2pvx9SHaQ",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Execution: issue three-use bounded device authority",
+      "digest": "9JHAfMYBiEkErhdeG5tSaXqVLZHV67R9Lefe8ZoBAiV6",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "2cEeGypFsJqufbMUpgt5JsE3w9f9yF3GE1gg3m2XMxqD",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Execution: exact claim retry does not create another checkpoint",
+      "digest": "J7EShNVz4543LbQ8Vm5V1HDkJoFtUCqGXmyDsSK5uzND",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Result key: another sender cannot grant a device command key",
+      "digest": "FFYEFQ5PLncgt6E98HiH9jSeCVLVwiPrWgyvZZ2sUw2r",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9311, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::node_execution::grant_result_key' (instruction 24)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9311",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "node_execution",
+              "function": 0,
+              "instruction": 24,
+              "functionName": "grant_result_key"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Result key: stale or future organization key generation is rejected atomically",
+      "digest": "BMmxJbrDYPQ3DwqDzprQMUrc9wa2v3kt3C2Z7AwZAGC1",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9311, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::node_execution::grant_result_key' (instruction 52)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9311",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "node_execution",
+              "function": 0,
+              "instruction": 52,
+              "functionName": "grant_result_key"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Execution: running checkpoint cannot start again",
+      "digest": "3h5YwppjLMY1QCU66rK8LD8H2qNEbZBC7ELHoKXdBRJ7",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9304, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::node_execution::begin' (instruction 80)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9304",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "node_execution",
+              "function": 8,
+              "instruction": 80,
+              "functionName": "begin"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Budget: actual cost above reservation is rejected",
+      "digest": "Fz1W2T2kr7ErMxMmBboYVaqGDpU2RR5w6rA17ww6KpbQ",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8319, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::remote_authority::settle_bound_budget' (instruction 45)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8319",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "remote_authority",
+              "function": 18,
+              "instruction": 45,
+              "functionName": "settle_bound_budget"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Budget: failed result write rolls back settlement atomically",
+      "digest": "6fJmFH7gaQAG4DVK3ynuW8rKo6abiTBpw1DvCPpYUYom",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9101, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::product_record::save_authorized' (instruction 77)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9101",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "product_record",
+              "function": 1,
+              "instruction": 77,
+              "functionName": "save_authorized"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Execution: Host persists encrypted terminal checkpoint result",
+      "digest": "83NPRehRXECcqXQuZEMQmwKkSHGErH9ooztuvmbso4dm",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Budget: already terminal command cannot settle a second cost",
+      "digest": "4Yr2qXnrcgYK45vi5UGD6T8ehfZRTtyQmS1KEkpwJFiY",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9305, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::node_execution::finish' (instruction 84)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9305",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "node_execution",
+              "function": 13,
+              "instruction": 84,
+              "functionName": "finish"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "6eTbM23fghYpAUekEK9CquKkmXaKGkPVYacr6EGuixd4",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Execution: another Host cannot start a valid queued command",
+      "digest": "F3fJyS4VWs7vi5cmD6uncnJG93B47Cw1AQKzuo9irSXN",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9302, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::node_execution::begin' (instruction 53)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9302",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "node_execution",
+              "function": 8,
+              "instruction": 53,
+              "functionName": "begin"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Execution: result cannot precede a confirmed start",
+      "digest": "7MQKkWwxx3C4psFPRhkLGUd4jzBb2LXja9pa8y6d3EDH",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9305, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::node_execution::finish' (instruction 84)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9305",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "node_execution",
+              "function": 13,
+              "instruction": 84,
+              "functionName": "finish"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Execution: device cancels queued command before any start",
+      "digest": "EDczU9k5yrpZsfy1HotWNriKRWy5mZ6Qce73GEPhttJY",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Execution: cancelled queued command cannot start",
+      "digest": "38t5q15uVja3iubsB7S5NswwQng8DytnjaP7JUr3ahma",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9304, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::node_execution::begin' (instruction 80)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9304",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "node_execution",
+              "function": 8,
+              "instruction": 80,
+              "functionName": "begin"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "3y4KJiwCzgAiTVkGQHbE9W4qtkT7jmMcSh5zUTJsoNCw",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Execution: fourth unique claim exceeds use bound",
+      "digest": "8ZTxX8KyCRQG2u9csfynpBeokTbUgbVBFLRacdzmwM5X",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8308, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::remote_authority::claim_use' (instruction 229)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8308",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "remote_authority",
+              "function": 20,
+              "instruction": 229,
+              "functionName": "claim_use"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Result key: Host cannot publish command-derived body without a chain key grant",
+      "digest": "9fkkii6vWF777Lfuht5caYzxgCZsdxofn4WYCNCmKnae",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9311, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::node_execution::finish' (instruction 175)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9311",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "node_execution",
+              "function": 13,
+              "instruction": 175,
+              "functionName": "finish"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Execution: unknown result is persisted without granting replay",
+      "digest": "3G4HKKb6h1HZjopG8vSxvXdH5nhKSLCq6hVkdbC2nnuV",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Budget: issue thirty-unit capability for pending limit and stop checks",
+      "digest": "AVC97ZxjEHSki9FbDTr7KRoPu8TH6dFQWY9uqLQtQbrV",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "8rmA3WJVuVb7sRT6BkGCEqbnKp76g61NoEkJTTLNEKzj",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Budget: pending reservation prevents oversubscribing remaining budget",
+      "digest": "DVs6FNDDJy2Qwux1n8Eqq97cWT35zbA37ZoKw63xeLxb",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8309, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::remote_authority::claim_use' (instruction 282)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8309",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "remote_authority",
+              "function": 20,
+              "instruction": 282,
+              "functionName": "claim_use"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Budget: cancel pending command to release budget",
+      "digest": "7oBiBkvZqKFK3zh9TMazaCmJVNhupdssYm8x8wyhcpcN",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "6K1hvpkYiSznUNSbgSFVq53jrYtobB6gRfWpgjCxBh5x",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Budget: request running stop while retaining pending reservation",
+      "digest": "5RBHYLW3LuJRTdakvsamru76eK9wCeyjiq2kA3L9qNme",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Budget: Host confirms stop and settles known cost",
+      "digest": "GMBjpMsAqUQMDmFVD6SN2J8UE5pPqBXv159UuSGak1G6",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Runtime store: issue two-use fixture adapter authority",
+      "digest": "6CffoJprcDw1Y8EMXutRgwXRGMchoiDWySsLdr4papWX",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "2XHzwDXLg12x7EVN3Lg6LuGJJKgN1LyYnxs3cD1nj8oZ",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "Fmss9ws6KECE8pZNG2bJ2qTpymZPi1KqCF8jYzpFo4f5",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Production factory: issue observation and control test authority",
+      "digest": "AmJ8bmiLtCYeFcpnazD7NeTuK9ch3hSnPxc8okeoTwG",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "8xvmjCGdQzFHzcSgZwzoNqAyLnbfPDatiVCgRTaEHtuU",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "9CoEdwKw8cDn71JRasuQJEg15fW6u3goRqbX5sQWLXLz",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Production factory: device cancels unsupported queued control",
+      "digest": "FLoKrgKCcKRpCUeBUNd1kZWnFKRjfwtuo5bJcYmYbdbR",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR: create encrypted measurable draft",
+      "digest": "EgGNHSR6RrUeguijYhSMLpZ6zx12bJcYCnaoE11hPYCS",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR: create encrypted measurable draft",
+      "digest": "5Go8SDNuhb92HYt7FkaXsMsuVCD6MMCgk18H6TtoRaW1",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR: create encrypted measurable draft",
+      "digest": "85i5NyKUSVuAqhMF8RAvoXQU26meskuTbRV4FiVCY8Gn",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR: create encrypted measurable draft",
+      "digest": "4YeLwTBUbb8t6hf19aN5owG8Ed39MW1uGe4gyfxjpcwF",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR: exact draft retry preserves original object",
+      "digest": "APnjSa6JwVHvascZeThyGYNHKfHRMeLHgLwUcFuDTMWW",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR: activate one explicitly managed Agent",
+      "digest": "MpfdeYVs98iV9x9mEmQRVv8hrZW8HvMyLwRuefNjEb8",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR: activate one explicitly managed Agent",
+      "digest": "82gYVfAeKWgFchJXzKRF1tV1R77nDSsDmd4LKBJCZA2Q",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR: activate one explicitly managed Agent",
+      "digest": "8X2i7GVSoECo6D9EHShzWoB35Uwnp7rfz9vT1TrmZSjg",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR: fourth ACTIVE is rejected atomically",
+      "digest": "9d8bjyeZkwYGfcz5ccnxeQx9v4wgNwB44cFTQFgDxfuC",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9404, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::okr::activate' (instruction 195)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9404",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "okr",
+              "function": 6,
+              "instruction": 195,
+              "functionName": "activate"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR binding: issue capability for pause boundary",
+      "digest": "GPkHD4wjgjjW13NhQWkPHGHr7Ar4NmDcbAhzxNCgB87m",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR binding: prepare command before pause",
+      "digest": "5fb8KrVzqernuYNCYHmhTySBzGJDRtEqNXgzJ5Jyo3ia",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR: pause releases ACTIVE slot and invalidates agreement version",
+      "digest": "2fRqpabAfYoDjXfhSSXCJjv74FicbPUS46js2sBzem5o",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR binding: paused OKR rejects old prepared start",
+      "digest": "83CnLdiKzPvefZhSvgW7PkF9YkY48ks2LRGQdxGB1LsH",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9403, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::okr::assignment_witness' (instruction 70)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9403",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "okr",
+              "function": 8,
+              "instruction": 70,
+              "functionName": "assignment_witness"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR binding: historical queued claim can cancel after pause",
+      "digest": "7JXyhEhLc3sZgK4J33pEVuzX5xSa9zERt4S9oVv2KTHF",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR: activate one explicitly managed Agent",
+      "digest": "AgjWfYZUWwgdqL3EizsGvrALmCNQJp947eJ3cbs2shdk",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR: stale version cannot replace criteria",
+      "digest": "2yTXmxbYz37pmwMT9SaEoWAJXyU8dLmNFwrFwzEmxeYv",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9402, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::okr::assert_version' (instruction 20)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9402",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "okr",
+              "function": 2,
+              "instruction": 20,
+              "functionName": "assert_version"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR: measurements alone cannot achieve the Objective",
+      "digest": "55qhosXzvyLENFkNt9qRjeautoiCqbPWzoLoVC1RrA7n",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9403, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::okr::achieve' (instruction 53)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9403",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "okr",
+              "function": 20,
+              "instruction": 53,
+              "functionName": "achieve"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Native file Agent: issue two-run actual tool-call budget",
+      "digest": "4vEojc4owBM29TvvjVKcbFgHgXhpaqVJXcgP4gS3UuUU",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR binding: generic prepare cannot bypass OKR ledger",
+      "digest": "DV6LTm6KQFpryyGAibRuoegyW4qJf8M58q3y64nN5Hqe",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8321, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::remote_authority::assert_unbound_contract' (instruction 9)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8321",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "remote_authority",
+              "function": 7,
+              "instruction": 9,
+              "functionName": "assert_unbound_contract"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR binding: reject stale agreement",
+      "digest": "4qAnJuP1U2cowaLgPmtc36zaRbUEphisZx4DRYWsMsZw",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9402, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::okr::prepare_command' (instruction 28)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9402",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "okr",
+              "function": 10,
+              "instruction": 28,
+              "functionName": "prepare_command"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR binding: reject wrong KR cursor",
+      "digest": "DmoTQykAZ72tbqb1iFbfcRYwfXiVgH3MnDcvgJHj6mim",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9406, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::okr::assignment_witness' (instruction 104)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9406",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "okr",
+              "function": 8,
+              "instruction": 104,
+              "functionName": "assignment_witness"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "A7hW1doVDkkhoTLqCDqnvKoeBtsjriLzJ98ZYT1LjojG",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR binding: exact command retry does not reserve global budget twice",
+      "digest": "BA3TAoh9J3zN98c6FYvmtjafjqApNpuiE4rTUpq56WT5",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "4zjQX4Yz2atPHPEqejfnxw9qP36eBGyeuLYY1G4SXt9N",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR binding: issue second capability sharing global budget",
+      "digest": "CrThvNdFiW78mbXcxi5RSa3E2F87JkLfrMVcWta3TDDx",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR binding: second capability cannot reset global pending budget",
+      "digest": "E6F7SutADGHQkX1Rj5CVEZS6GQ4CNrMw5D6ADm1vHKfa",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9409, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::okr::prepare_command' (instruction 176)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9409",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "okr",
+              "function": 10,
+              "instruction": 176,
+              "functionName": "prepare_command"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR binding: generic start cannot bypass live OKR",
+      "digest": "BKsPm6hmTCxpgYh32jdVA7srPV2ugggqXLksmbq6nk5L",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8321, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::remote_authority::assert_unbound_contract' (instruction 9)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8321",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "remote_authority",
+              "function": 7,
+              "instruction": 9,
+              "functionName": "assert_unbound_contract"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR binding: generic stop cannot leave global budget inconsistent",
+      "digest": "4R8Tpa47MkWZfX1yuepkeDavHwZY2nxNSo3srSPSRoPk",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8321, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::remote_authority::assert_unbound_contract' (instruction 9)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8321",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "remote_authority",
+              "function": 7,
+              "instruction": 9,
+              "functionName": "assert_unbound_contract"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR binding: generic finish cannot leave global budget inconsistent",
+      "digest": "WufZkS73T3ukf9gbPB7um81NddUSBfs1J9S78ic4FSK",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8321, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::remote_authority::assert_unbound_contract' (instruction 9)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8321",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "remote_authority",
+              "function": 7,
+              "instruction": 9,
+              "functionName": "assert_unbound_contract"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR: another Host cannot submit measurements",
+      "digest": "DcEfVPiW6khkhnvgBse67WFgn5NAWBV9i28heRS7EBoH",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9405, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::okr::observe' (instruction 178)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9405",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "okr",
+              "function": 17,
+              "instruction": 178,
+              "functionName": "observe"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR: measurements alone cannot achieve the Objective",
+      "digest": "6L53wXctstjKQK2s7hiiiLtwoAQHFcRUp9eGDTznijBM",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9403, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::okr::achieve' (instruction 53)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9403",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "okr",
+              "function": 20,
+              "instruction": 53,
+              "functionName": "achieve"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR: authorized human verifies KR independently of observation",
+      "digest": "E8iefc6koQp9tcXNv6AiC477hsvDkiB79qcFt8vquzzA",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR: measurements alone cannot achieve the Objective",
+      "digest": "Foemx4VevfzCY38LWJuWq5v4r1yzeDhLuyS2f7mGDxM4",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9403, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::okr::achieve' (instruction 53)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9403",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "okr",
+              "function": 20,
+              "instruction": 53,
+              "functionName": "achieve"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR replan: pause running objective and invalidate old agreement",
+      "digest": "2D9zgimSmur1maMvQFgrLsApZhQb6iceKAxRScVxy8C3",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR replan: paused objective cannot reuse old verification",
+      "digest": "8BHhXEC9VZMroupgv8H4V7WAGdop4K972Pf7FXnWUfQ6",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9403, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::okr::verify_kr' (instruction 35)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9403",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "okr",
+              "function": 19,
+              "instruction": 35,
+              "functionName": "verify_kr"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR replan: cannot approve budget below already spent amount",
+      "digest": "AzRhg6cZNco9UVu4iqt5Surfb7fBkq6TtYGqtXCbFwU1",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9409, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::okr::activate' (instruction 339)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9409",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "okr",
+              "function": 6,
+              "instruction": 339,
+              "functionName": "activate"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR replan: replace criteria and clear previous metric verification",
+      "digest": "Fb6M9UqJPanCirsJV3GRJQECaPibD5HfbsiuSXYojkAa",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR replan: old approval version cannot reactivate revised spec",
+      "digest": "Bg6EPjaotwC24rEWMgTmjVxLA6ZzXgqqkdKUhXHcw1A4",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9402, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::okr::assert_version' (instruction 20)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9402",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "okr",
+              "function": 2,
+              "instruction": 20,
+              "functionName": "assert_version"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR replan: explicitly reapprove current spec",
+      "digest": "884n7CrmsVHo3aoPhZ5TnDiLawFtwHjx4fpfDKx8fGSA",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR replan: issue new version-bound authority without resetting global budget",
+      "digest": "4CdPFmLf4jeXoKcQAfZtb2TMoNRGnDSyHaCkFbdp9xp1",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR replan: old capability cannot claim new agreement",
+      "digest": "CM7x5qj11QYag8WkuhEGqQvvHbV2xi5ytSEKGZaT8sku",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8321, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::remote_authority::contract_witness' (instruction 45)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8321",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "remote_authority",
+              "function": 8,
+              "instruction": 45,
+              "functionName": "contract_witness"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR replan: old agreement evidence cannot populate reset metrics",
+      "digest": "Bpu5icCtcxTvxD6QLDh82CXTT6KMmt8GUWv7gq9jFt8f",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8321, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::remote_authority::contract_witness' (instruction 45)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8321",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "remote_authority",
+              "function": 8,
+              "instruction": 45,
+              "functionName": "contract_witness"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR: measurements alone cannot achieve the Objective",
+      "digest": "9yKZFv5SnjWM23g6Toe8L7dhw4UjvDm1u75SjSEDAY2T",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9403, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::okr::achieve' (instruction 53)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9403",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "okr",
+              "function": 20,
+              "instruction": 53,
+              "functionName": "achieve"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR sequential: human verifies current KR 0",
+      "digest": "2G7Zu8ttNtDXchy7mETAM1FfUJTpayPUuwzRSV3pmV6M",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR sequential: completed KR cannot reserve another execution",
+      "digest": "9gPya3WVSg7XkG25m1sJuGryCDQRaPpob8djMUfHmkvC",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9406, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::okr::assignment_witness' (instruction 104)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9406",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "okr",
+              "function": 8,
+              "instruction": 104,
+              "functionName": "assignment_witness"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR: measurements alone cannot achieve the Objective",
+      "digest": "7KpiMRVozM5Pbuy8vxiM9q6tTbsqLAPGwFnbpGSGNgzG",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9403, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::okr::achieve' (instruction 53)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9403",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "okr",
+              "function": 20,
+              "instruction": 53,
+              "functionName": "achieve"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "OKR sequential: human verifies current KR 1",
+      "digest": "DUsM9GhtXMREc5jcg5YKEo6RQvGZE4LBqzg5DNQMvXm8",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR: human separately accepts success criteria",
+      "digest": "9A3mt9pEZnKWpM9ZqgsyeF6qbXPoYSN2GfAAreAxCiD4",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR unknown: issue transport-check capability with shared budget",
+      "digest": "GhpmFF9SnderB45BdkqGLKPZPzPb2Ghvx5bo7YnGJ8EL",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "CjWZQHAjRNNu4a7g8frACeeaSaxG8qSy4YVacFXUipDN",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR unknown: issue second authority without resetting unknown reservation",
+      "digest": "3gPpywVkQEgbFJSRF1xNuRNDyZqSo8rfaDkWBdj7kz2q",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "OKR unknown: unresolved result prevents oversubscribing global budget",
+      "digest": "HBm8cocW8Ab256MYS9QY9oo2TdMHXr1SLP7Jx9SjMj5A",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9409, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::okr::prepare_command' (instruction 176)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9409",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "okr",
+              "function": 10,
+              "instruction": 176,
+              "functionName": "prepare_command"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Execution: issue authority for revoke-after-prepare check",
+      "digest": "CmiYzAgWcVYiEezxB1UYepDiks126jxnpntePMaNsNAy",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "AmREqifk999Pyzrtgz7Q1zAr9t43yE3uEm3ogjUy72eT",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Host: read-only phone cannot acquire operation authority",
+      "digest": "6dKfaU8WnXNgab792Qaxzqan7S15qj5X3b5DTaWUgyRk",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9001, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::identity::assert_grant_for_device' (instruction 73)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9001",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "identity",
+              "function": 22,
+              "instruction": 73,
+              "functionName": "assert_grant_for_device"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Host: revoke admitted membership",
+      "digest": "9T3WmJuHfb2FBaxiGFG5DnUJycA7NHWQFJCWzPvbYTaD",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Execution: Host revocation rejects an already reserved queued command",
+      "digest": "8UwUMMkrFhxEN96797eVagqdshjcmvrzrtHLotToLoQV",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9203, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::host::assert_member' (instruction 46)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9203",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "host",
+              "function": 9,
+              "instruction": 46,
+              "functionName": "assert_member"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Host: revoked membership prevents new execution grants",
+      "digest": "5xPBj6pM8KpAhVYJBm9ycKrqUZxWEgLuvGe9pDBUiTF6",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9203, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::host::assert_member' (instruction 46)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9203",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "host",
+              "function": 9,
+              "instruction": 46,
+              "functionName": "assert_member"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Host: issue one-use invitation",
+      "digest": "9RcyNjAM54aFprDZ4PR873GZmk19N9HzMvzL6RH3uXYb",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Host: explicit invitation admits same Host with new membership",
+      "digest": "4D4qsHoRR8f9HgiPeoBVY2UjyNZ4yhoDv55dzBuEsLwn",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Host: discovery cannot implicitly re-authorize old managed instance",
+      "digest": "7EgiwUYhuMNayKXCJUNCrEY8RJ9Y88jr5mqwmkQ16VAa",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9207, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::host::import_agent' (instruction 181)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9207",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "host",
+              "function": 10,
+              "instruction": 181,
+              "functionName": "import_agent"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "Host: management explicitly rebinds original managed ID",
+      "digest": "BRLfHryEZBdwg5ydMWTTtcAeu16e8Y8ESt1vwTkpxiuv",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Host: re-authorized instance receives new version-bound capability",
+      "digest": "FMGNTaNuxcVRvgJUrxRmfBBm2ziyCYuYWrYWMbYEEy1",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "read-only phone cannot create organization",
+      "digest": "4jZhFCgbBQQdBvBiVakRNvP9ri9xZVo5eNLJdnayiCKZ",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9001, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::identity::assert_grant_for_device' (instruction 73)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9001",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "identity",
+              "function": 22,
+              "instruction": 73,
+              "functionName": "assert_grant_for_device"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "read-only phone cannot modify a canonical body",
+      "digest": "C3Fcs2PRzfXhJWb4YFAd3R3oPVuGGb3TAb3MYsB2xaKC",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9001, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::identity::assert_grant_for_device' (instruction 73)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9001",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "identity",
+              "function": 22,
+              "instruction": 73,
+              "functionName": "assert_grant_for_device"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "revoke phone and rotate content generation, device and recovery keyring atomically",
+      "digest": "szHHGqbUiD165C7FwYUeA8Q8ynNZoqztLcvdbAND6v9",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "save future message with rotated key",
+      "digest": "Ektsqsb3z5JZffFUxM4GKgwGRZnVte96vSkU25SSCXgo",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "stale body revision rejected atomically",
+      "digest": "9GEptT9WVvTAzLv5cdKYbJ2SzePnbkLmZzvq1K7JBJ5y",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9102, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::product_record::save_authorized' (instruction 232)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9102",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "product_record",
+              "function": 1,
+              "instruction": 232,
+              "functionName": "save_authorized"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "atomically recover Human, revoke all old devices, consume old code",
+      "digest": "CPYFvRoMwJwsyPFBEUVxVGtJqkVcUFHRp5fF7bXDKaPa",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "old desktop authorization rejected after recovery",
+      "digest": "BPxYWYb5LnH5QuXqEcWpSHGZN23iTL2pCsdrsMybEfbc",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9003, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::identity::assert_grant_for_device' (instruction 53)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9003",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "identity",
+              "function": 22,
+              "instruction": 53,
+              "functionName": "assert_grant_for_device"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "replay of consumed recovery record rejected",
+      "digest": "APsTY84eV9D1jYMMauvb2a35Ufgxrw7ePDbxJZaYeNfv",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9005, in '0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87::identity::assert_current_recovery' (instruction 66)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9005",
+            "location": {
+              "package": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+              "module": "identity",
+              "function": 24,
+              "instruction": 66,
+              "functionName": "assert_current_recovery"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "persist future body inaccessible to all lost devices",
+      "digest": "6P9kcJiTfLUEvVXiR7PoJ9aLa4ia1oajk7hTNzm723VV",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "recovered phone operates same Human",
+      "digest": "4obc526PHj3Jv38Zgyt8HwxrQerQuWkgKJroN4Eg3h3p",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Device runner: selfpay atomic signed ticket, result key and current KR",
+      "digest": "5pJPmAkeZt1TLjMKWfQVNB9PXktcvmtxDanCL9YS6hEz",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "Device runner: selfpay atomic signed ticket, result key and current KR",
+      "digest": "F2wdbLBiwifcQgRz4RopoZ5yrn33sQ6a9TxmheY77nBS",
+      "status": {
+        "success": true,
+        "error": null
+      }
+    }
+  ],
+  "managedTransactions": [
+    {
+      "label": "Device runner: selfpay atomic signed ticket, result key and current KR",
+      "digest": "5pJPmAkeZt1TLjMKWfQVNB9PXktcvmtxDanCL9YS6hEz",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1710000",
+        "storageCost": "75369200",
+        "storageRebate": "19306584",
+        "nonRefundableStorageFee": "195016"
+      },
+      "actualGas": "57772616",
+      "quote": {
+        "requestId": "runner-083333fe10667be4b0fe14bc89fd4a3ce8fae76b31664322bccf25194e6cec12-4-0",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x9e6fd2b31614cb3d792585a8ec48096a1442400414b33de25f33d6ec146ef0ba\"]",
+        "digest": "5pJPmAkeZt1TLjMKWfQVNB9PXktcvmtxDanCL9YS6hEz",
+        "sender": "0x9e6fd2b31614cb3d792585a8ec48096a1442400414b33de25f33d6ec146ef0ba",
+        "balance": "996954338516",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "57772616",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1790858884354
+      },
+      "confirmation": "original digest queried from real Sui ledger"
+    },
+    {
+      "label": "Device runner: selfpay atomic signed ticket, result key and current KR",
+      "digest": "F2wdbLBiwifcQgRz4RopoZ5yrn33sQ6a9TxmheY77nBS",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1710000",
+        "storageCost": "76304000",
+        "storageRebate": "25160256",
+        "nonRefundableStorageFee": "254144"
+      },
+      "actualGas": "52853744",
+      "quote": {
+        "requestId": "runner-083333fe10667be4b0fe14bc89fd4a3ce8fae76b31664322bccf25194e6cec12-4-1",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x9e6fd2b31614cb3d792585a8ec48096a1442400414b33de25f33d6ec146ef0ba\"]",
+        "digest": "F2wdbLBiwifcQgRz4RopoZ5yrn33sQ6a9TxmheY77nBS",
+        "sender": "0x9e6fd2b31614cb3d792585a8ec48096a1442400414b33de25f33d6ec146ef0ba",
+        "balance": "996887688460",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "52853744",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1790858888723
+      },
+      "confirmation": "original digest queried from real Sui ledger"
+    }
+  ],
+  "nativeFileAgent": {
+    "actualWorkspaceWrites": true,
+    "cancelledResultDigest": "4ibiG46UFvGh9S5RZmNRa2VPNnhWVjf1tFebqo46Gw1x",
+    "cloudHostVerified": false,
+    "factoryRestartDuplicate": true,
+    "measurementsFromHostReader": true,
+    "modelPlanningVerified": false,
+    "nativeFileGoalsOnly": true,
+    "okrObservation": {
+      "status": "submitted",
+      "transaction_digest": "AcV6ZK9JtPBo7kiJib9q4ZR9eBTuWVCTo2eNtw3DWxta",
+      "current": "2",
+      "sampled_at_ms": "1790858815893"
+    },
+    "physicalStopBeforeNextGoal": true,
+    "recordIds": [
+      "0xe96927c05ffe6b10a942097d3f9456877100c07679d331ec3be6009c82042a85",
+      "0xab24338589f5453cab59bb46133e043544a48ebabb6c57c0dfe11c77f6052757"
+    ],
+    "stopRequestDigest": "HmNUz8mtYLUCP6W6z6uBh5t66oQNzzJy5JeBhdpNDDnj",
+    "successDigest": "CAg8LGQBstGw2hRc5MVHkyTnzcuQmPkuQxGjdRpTf8N6",
+    "toolCallsSpent": [
+      6,
+      1
+    ]
+  },
+  "sequentialKrExecutions": [
+    {
+      "executionId": "0x341dcb0eb708fc7909463b96bc81c07c5efb74e305d1a2bb4f9178bfbc4e3330",
+      "evidenceId": "0xc830bcdbfa4949a2dda3d89534d197470974debc5b79549b701967eeec77a58a",
+      "runtimeEvidence": {
+        "actualFileOutcome": true,
+        "contract": {
+          "id": "0x083333fe10667be4b0fe14bc89fd4a3ce8fae76b31664322bccf25194e6cec12",
+          "agreement_version": "4",
+          "kr_index": "0",
+          "boundary_hash": "23ff5a9204bd4625deb00c95ab445ba3b5a49dba9c378e4be22532c52eedef8d"
+        },
+        "executionId": "0x341dcb0eb708fc7909463b96bc81c07c5efb74e305d1a2bb4f9178bfbc4e3330",
+        "factoryRestartDuplicate": true,
+        "hostReaderMeasurement": true,
+        "modelPlanningVerified": false,
+        "nativeFileGoalsOnly": true,
+        "okrObservation": {
+          "status": "submitted",
+          "transaction_digest": "Eua6qEmNZN2v24jkjZyTRKVxByVSbbLDGqQANMnZ5ZCJ",
+          "current": "1",
+          "sampled_at_ms": "1790858826440"
+        },
+        "recordId": "0xc830bcdbfa4949a2dda3d89534d197470974debc5b79549b701967eeec77a58a",
+        "resultDigest": "5zg78BbewPtFtcV6YvAAWmSPzesvtccrwGo66KkGhRbX",
+        "toolCallsSpent": 1,
+        "deviceRunner": {
+          "outcome": {
+            "okrId": "0x083333fe10667be4b0fe14bc89fd4a3ce8fae76b31664322bccf25194e6cec12",
+            "krIndex": "0",
+            "ticketRecordId": "0x44a6ad0fe8a4c1289284f1e0ea652f50f27c89585f3b7da93997b67038e80a6d",
+            "transactionDigest": "5pJPmAkeZt1TLjMKWfQVNB9PXktcvmtxDanCL9YS6hEz",
+            "executionId": "0x341dcb0eb708fc7909463b96bc81c07c5efb74e305d1a2bb4f9178bfbc4e3330",
+            "status": "awaiting_verification"
+          },
+          "restoredState": {
+            "okrId": "0x083333fe10667be4b0fe14bc89fd4a3ce8fae76b31664322bccf25194e6cec12",
+            "krIndex": "0",
+            "status": "awaiting_verification",
+            "executionId": "0x341dcb0eb708fc7909463b96bc81c07c5efb74e305d1a2bb4f9178bfbc4e3330"
+          },
+          "deliveries": 1,
+          "source": "approved encrypted execution agreement",
+          "atomicallySavedTicketAndReservation": true,
+          "selfpayTransactionManager": true,
+          "feeQuote": {
+            "requestId": "runner-083333fe10667be4b0fe14bc89fd4a3ce8fae76b31664322bccf25194e6cec12-4-0",
+            "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x9e6fd2b31614cb3d792585a8ec48096a1442400414b33de25f33d6ec146ef0ba\"]",
+            "digest": "5pJPmAkeZt1TLjMKWfQVNB9PXktcvmtxDanCL9YS6hEz",
+            "sender": "0x9e6fd2b31614cb3d792585a8ec48096a1442400414b33de25f33d6ec146ef0ba",
+            "balance": "996954338516",
+            "requiredBalance": "2000000000",
+            "gasBudget": "2000000000",
+            "maxSuiSpend": "0",
+            "estimatedGas": "57772616",
+            "simulatedSuiSpend": "0",
+            "expiresAtMs": 1790858884354
+          }
+        }
+      }
+    },
+    {
+      "executionId": "0xcc893bee888ecc4fe4cc468711223a94939fcf9cf330cd48dbdb50ad6e6ef102",
+      "evidenceId": "0x77c3eaf414f19be5b2e08e65d66e9968135fbba1248081204177b1f28dfc9e7c",
+      "runtimeEvidence": {
+        "actualFileOutcome": true,
+        "contract": {
+          "id": "0x083333fe10667be4b0fe14bc89fd4a3ce8fae76b31664322bccf25194e6cec12",
+          "agreement_version": "4",
+          "kr_index": "1",
+          "boundary_hash": "23ff5a9204bd4625deb00c95ab445ba3b5a49dba9c378e4be22532c52eedef8d"
+        },
+        "executionId": "0xcc893bee888ecc4fe4cc468711223a94939fcf9cf330cd48dbdb50ad6e6ef102",
+        "factoryRestartDuplicate": true,
+        "hostReaderMeasurement": true,
+        "modelPlanningVerified": false,
+        "nativeFileGoalsOnly": true,
+        "okrObservation": {
+          "status": "submitted",
+          "transaction_digest": "8GQ5RTTqFNfQWz7YHHkdtFUx1MpT23pUiMH77rwD4fVe",
+          "current": "1",
+          "sampled_at_ms": "1790858830830"
+        },
+        "recordId": "0x77c3eaf414f19be5b2e08e65d66e9968135fbba1248081204177b1f28dfc9e7c",
+        "resultDigest": "EabZcikuPF938rRwmppSpSoRf6SecscZUKPR7jzMHQkw",
+        "toolCallsSpent": 3,
+        "deviceRunner": {
+          "outcome": {
+            "okrId": "0x083333fe10667be4b0fe14bc89fd4a3ce8fae76b31664322bccf25194e6cec12",
+            "krIndex": "1",
+            "ticketRecordId": "0xfa3fb33c94a4a7bf6c94f6b3ab7343d0b6fc5fc53400f5e2b5e53e916a2e1716",
+            "transactionDigest": "F2wdbLBiwifcQgRz4RopoZ5yrn33sQ6a9TxmheY77nBS",
+            "executionId": "0xcc893bee888ecc4fe4cc468711223a94939fcf9cf330cd48dbdb50ad6e6ef102",
+            "status": "awaiting_verification"
+          },
+          "restoredState": {
+            "okrId": "0x083333fe10667be4b0fe14bc89fd4a3ce8fae76b31664322bccf25194e6cec12",
+            "krIndex": "1",
+            "status": "awaiting_verification",
+            "executionId": "0xcc893bee888ecc4fe4cc468711223a94939fcf9cf330cd48dbdb50ad6e6ef102"
+          },
+          "deliveries": 1,
+          "source": "approved encrypted execution agreement",
+          "atomicallySavedTicketAndReservation": true,
+          "selfpayTransactionManager": true,
+          "feeQuote": {
+            "requestId": "runner-083333fe10667be4b0fe14bc89fd4a3ce8fae76b31664322bccf25194e6cec12-4-1",
+            "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x9e6fd2b31614cb3d792585a8ec48096a1442400414b33de25f33d6ec146ef0ba\"]",
+            "digest": "F2wdbLBiwifcQgRz4RopoZ5yrn33sQ6a9TxmheY77nBS",
+            "sender": "0x9e6fd2b31614cb3d792585a8ec48096a1442400414b33de25f33d6ec146ef0ba",
+            "balance": "996887688460",
+            "requiredBalance": "2000000000",
+            "gasBudget": "2000000000",
+            "maxSuiSpend": "0",
+            "estimatedGas": "52853744",
+            "simulatedSuiSpend": "0",
+            "expiresAtMs": 1790858888723
+          }
+        }
+      }
+    }
+  ],
+  "acceptedOkr": {
+    "id": "0x083333fe10667be4b0fe14bc89fd4a3ce8fae76b31664322bccf25194e6cec12",
+    "org_id": "0x24f250fed82ef63c48360f32bf5db0cac70ffada45f4464c9116460a756aa208",
+    "owner_human": "0xce907ca770d4fee16b713e66f2a17ff8c68274b5054da1c75f8bb8cd250a7147",
+    "logical_id": "47b2e4db-64ef-49a4-b18b-8a2567f32843",
+    "state": 3,
+    "version": "12",
+    "agreement_version": "5",
+    "priority": 0,
+    "deadline_ms": "1790862401290",
+    "spec_record": "0xa98328670acae1427a635c319244a7dfb27576bdd1ed0e94ae6a170615aa35c3",
+    "spec_revision": "2",
+    "metrics": [
+      {
+        "baseline": "0",
+        "target": "1",
+        "weight": "1",
+        "max_age_ms": "3600000",
+        "current": "1",
+        "sampled_at_ms": "1790858826440",
+        "run_id": "0x341dcb0eb708fc7909463b96bc81c07c5efb74e305d1a2bb4f9178bfbc4e3330",
+        "evidence_id": "0xc830bcdbfa4949a2dda3d89534d197470974debc5b79549b701967eeec77a58a",
+        "verified": true,
+        "verification_id": "0x4103b5c61d4f3f75acec29bd038e633d28e5e8a15ebfff2a943864e4c78ff0dc"
+      },
+      {
+        "baseline": "0",
+        "target": "1",
+        "weight": "1",
+        "max_age_ms": "3600000",
+        "current": "1",
+        "sampled_at_ms": "1790858830830",
+        "run_id": "0xcc893bee888ecc4fe4cc468711223a94939fcf9cf330cd48dbdb50ad6e6ef102",
+        "evidence_id": "0x77c3eaf414f19be5b2e08e65d66e9968135fbba1248081204177b1f28dfc9e7c",
+        "verified": true,
+        "verification_id": "0x90d27c59d241a53bd5d2bfd6f17babc278bf326ca21eeba19cffc4cedc3f277d"
+      }
+    ],
+    "next_kr": "2",
+    "observations": {
+      "id": "0x268b28f54acc4d52adf282a31ae45a745ce603e3e7211098d48dfcffb12137c0",
+      "size": "3"
+    },
+    "managed_agent": "0xc482af5cbd4c0303cf7bceacfd58ec04228dd3baa2ddbdc0c757b4f803dcf57d",
+    "managed_version": "1",
+    "membership_id": "0xe3954bbf0ab1b2c3fa7fe21dea80f85e975a3b38c8844a0670b8772d0dec755b",
+    "membership_version": "1",
+    "workspace_hash": [
+      193,
+      173,
+      153,
+      42,
+      154,
+      7,
+      202,
+      139,
+      67,
+      182,
+      151,
+      228,
+      11,
+      172,
+      62,
+      234,
+      7,
+      63,
+      22,
+      177,
+      226,
+      166,
+      236,
+      185,
+      66,
+      15,
+      7,
+      16,
+      75,
+      32,
+      69,
+      60
+    ],
+    "boundary_hash": [
+      35,
+      255,
+      90,
+      146,
+      4,
+      189,
+      70,
+      37,
+      222,
+      176,
+      12,
+      149,
+      171,
+      68,
+      91,
+      163,
+      181,
+      164,
+      157,
+      186,
+      156,
+      55,
+      142,
+      75,
+      226,
+      37,
+      50,
+      197,
+      46,
+      237,
+      239,
+      141
+    ],
+    "budget_asset": "TOOL_CALLS",
+    "budget_limit": "14",
+    "expires_at_ms": "1790862401289",
+    "activated_at_ms": "1790858822621",
+    "agreement_record": "0x9d2f556bafab6b338564b9974354d1811675311318a82de4041a8dbb0fa03a4e",
+    "acceptance_record": "0x54c38df82e5c225ad7fad7a586f42fc91afc6c4fb817abcd41574845d74f89df",
+    "accepted_by_human": "0xce907ca770d4fee16b713e66f2a17ff8c68274b5054da1c75f8bb8cd250a7147",
+    "accepted_at_ms": "1790858832688"
+  },
+  "observations": [
+    {
+      "id": "0x8e8b9c93c0bd2516368e56901edf18408ac28761ae31c4ae516201d42411083c",
+      "org_id": "0x24f250fed82ef63c48360f32bf5db0cac70ffada45f4464c9116460a756aa208",
+      "okr_id": "0x083333fe10667be4b0fe14bc89fd4a3ce8fae76b31664322bccf25194e6cec12",
+      "kr_index": "0",
+      "agreement_version": "4",
+      "current": "1",
+      "sampled_at_ms": "1790858826440",
+      "recorded_at_ms": "1790858827048",
+      "run_id": "0x341dcb0eb708fc7909463b96bc81c07c5efb74e305d1a2bb4f9178bfbc4e3330",
+      "evidence_id": "0xc830bcdbfa4949a2dda3d89534d197470974debc5b79549b701967eeec77a58a",
+      "host_address": "0x935005779470e1de43d6dea25f564e1daa237b24faa7cac2927fc5e25d54efd3"
+    },
+    {
+      "id": "0x0f821dd432026d3f4fe57e2d2717250b463ef08cd8cae85d6227da11394d72ea",
+      "org_id": "0x24f250fed82ef63c48360f32bf5db0cac70ffada45f4464c9116460a756aa208",
+      "okr_id": "0x083333fe10667be4b0fe14bc89fd4a3ce8fae76b31664322bccf25194e6cec12",
+      "kr_index": "1",
+      "agreement_version": "4",
+      "current": "1",
+      "sampled_at_ms": "1790858830830",
+      "recorded_at_ms": "1790858831215",
+      "run_id": "0xcc893bee888ecc4fe4cc468711223a94939fcf9cf330cd48dbdb50ad6e6ef102",
+      "evidence_id": "0x77c3eaf414f19be5b2e08e65d66e9968135fbba1248081204177b1f28dfc9e7c",
+      "host_address": "0x935005779470e1de43d6dea25f564e1daa237b24faa7cac2927fc5e25d54efd3"
+    },
+    {
+      "id": "0x1e8896add0d37432e6e159ee71c2e0cb6e92a68e90c03081a665095fbdd95f28",
+      "org_id": "0x24f250fed82ef63c48360f32bf5db0cac70ffada45f4464c9116460a756aa208",
+      "okr_id": "0x083333fe10667be4b0fe14bc89fd4a3ce8fae76b31664322bccf25194e6cec12",
+      "kr_index": "0",
+      "agreement_version": "1",
+      "current": "2",
+      "sampled_at_ms": "1790858815893",
+      "recorded_at_ms": "1790858816466",
+      "run_id": "0xad0036994d314a4554897b5a4244e64bc7a4bdcaf4edb1233a7a2d852956530f",
+      "evidence_id": "0xe96927c05ffe6b10a942097d3f9456877100c07679d331ec3be6009c82042a85",
+      "host_address": "0x935005779470e1de43d6dea25f564e1daa237b24faa7cac2927fc5e25d54efd3"
+    }
+  ],
+  "recoveredRunnerTickets": [
+    "0x44a6ad0fe8a4c1289284f1e0ea652f50f27c89585f3b7da93997b67038e80a6d",
+    "0xfa3fb33c94a4a7bf6c94f6b3ab7343d0b6fc5fc53400f5e2b5e53e916a2e1716"
+  ],
+  "recoveredOkrs": {
+    "directoryCount": 4,
+    "acceptedOkrId": "0x083333fe10667be4b0fe14bc89fd4a3ce8fae76b31664322bccf25194e6cec12",
+    "historyCount": 3,
+    "decryptedBodies": [
+      "0xa98328670acae1427a635c319244a7dfb27576bdd1ed0e94ae6a170615aa35c3",
+      "0x3d8d3d396d10b1d33226574eee8e2513e1045a0ff993422abb3fa29f5e4ccfc7",
+      "0x4fc6ee16ec72e1abc34ad357d8dc832130971ab8c34a3832ba44d4c8c05612d5",
+      "0xb72355210e4823bcbb2dba8118ee60dbd1c59e5a9e7fa1453dedbb654a0e9792",
+      "0x9d2f556bafab6b338564b9974354d1811675311318a82de4041a8dbb0fa03a4e",
+      "0xec25b0ac53fcb134d3ef2cee98f2277e1ef3c372754fd6659b5b9ead61471c88",
+      "0xb9385d5184f5bd29bc107e55552063bc700b21760d1293f9882208c4e0ab6d45",
+      "0x5858fd9ba35253619b702862c6fb1116f11fbbfe5527664da272ae5c16de16b2",
+      "0x54c38df82e5c225ad7fad7a586f42fc91afc6c4fb817abcd41574845d74f89df",
+      "0x90d27c59d241a53bd5d2bfd6f17babc278bf326ca21eeba19cffc4cedc3f277d"
+    ],
+    "globalBudget": {
+      "asset": "TOOL_CALLS",
+      "spent": "11",
+      "reserved": "0"
+    },
+    "globalClaim": {
+      "capability_id": "0xb9dfc80d811bdc8d6a50371aaf4297fcbfe2bc8ddc14eef88ea6819a742418e1",
+      "agreement_version": "1",
+      "kr_index": "0",
+      "reserved": "10",
+      "spent": "6",
+      "settled": true
+    },
+    "pausedClaim": {
+      "capability_id": "0x86372210d5a3100586e21298d81b7ffff54afffec2e529ba443459fb19d05076",
+      "agreement_version": "1",
+      "kr_index": "0",
+      "reserved": "2",
+      "spent": "0",
+      "settled": true
+    },
+    "executionDirectoryCount": 4,
+    "historicalBodyIds": [
+      "0x23a7c9f0198f467761c2ee5f5672457aa146807793ffd85a8ffa38aadbce1963",
+      "0xcae982e82192fc465ad488a720a0633d1259a618195d54a4997a08a464c8efd8"
+    ]
+  },
+  "recoveredUnknownOkr": {
+    "okrId": "0x345566858ebe9235316925fd00afb4cfc239787aaaea00859e2870e165e20542",
+    "state": 1,
+    "spent": "0",
+    "reserved": "14",
+    "executionState": 4
+  },
+  "recoveredExecutionBudgets": {
+    "checkpoints": [
+      {
+        "id": "0xc0a0365f75e8f61733f6ec5487d7fd30c0b369af566718842b7d4d66b345410d",
+        "state": 2,
+        "capabilityId": "0x3869107cd9c1b48f674e68453d5bd4bbe63a0e11692ff67be2828d5ac615c5f9",
+        "spent": "7",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0x82db16c6f202a1bac13236cf906f4299146477558916f38db5185c50b81d9b06",
+        "state": 5,
+        "capabilityId": "0x3869107cd9c1b48f674e68453d5bd4bbe63a0e11692ff67be2828d5ac615c5f9",
+        "spent": "0",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0x7def586a5d23dad0e067516a7417cfcf664e9d1290fd3ad2a86ba9de71381d93",
+        "state": 4,
+        "capabilityId": "0x3869107cd9c1b48f674e68453d5bd4bbe63a0e11692ff67be2828d5ac615c5f9",
+        "spent": "0",
+        "reserved": "20",
+        "settled": false
+      },
+      {
+        "id": "0x432e57a182d0fc2f8c507508ebb837c166737f2f5402ade42e923209b97656e5",
+        "state": 5,
+        "capabilityId": "0x66e41cf8660b014fda3d5f90f5becd9f0bdb61b0db68222eb94ae34220cd606f",
+        "spent": "0",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0x8a9e4ad2e574e38a9a3072446cacbda5fedaf7e0660efdd2926b059239fb1f06",
+        "state": 5,
+        "capabilityId": "0x66e41cf8660b014fda3d5f90f5becd9f0bdb61b0db68222eb94ae34220cd606f",
+        "spent": "3",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0xa246906405b1d374e32b106dfaf3119e0c26c80602f505554e50e86f007b7929",
+        "state": 2,
+        "capabilityId": "0xbbaaad5a41c509a215f4a5ff12b82a9de36b42cb723b4299c5b53382c03495ce",
+        "spent": "3",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0xd3c7fdbf677118f93b15032b360fa6eafc2cbb3e88ceace2bb94fe38b8e7be61",
+        "state": 4,
+        "capabilityId": "0xbbaaad5a41c509a215f4a5ff12b82a9de36b42cb723b4299c5b53382c03495ce",
+        "spent": "0",
+        "reserved": "20",
+        "settled": false
+      },
+      {
+        "id": "0xc8343b08df42bf5a7210fac3135d739fb041669b45741bd51a2b31f7dc192697",
+        "state": 2,
+        "capabilityId": "0x3791e0d90cbedf376784caf81ebd3a3c2416f59d5aa462e9788678385736b504",
+        "spent": "0",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0xc9442ca721cf11b95e83dd628da9b403dc19d1d6badba5978458d2f43717165f",
+        "state": 5,
+        "capabilityId": "0x3791e0d90cbedf376784caf81ebd3a3c2416f59d5aa462e9788678385736b504",
+        "spent": "0",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0xad0036994d314a4554897b5a4244e64bc7a4bdcaf4edb1233a7a2d852956530f",
+        "state": 2,
+        "capabilityId": "0xb9dfc80d811bdc8d6a50371aaf4297fcbfe2bc8ddc14eef88ea6819a742418e1",
+        "spent": "6",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0xca2925d615a213c4d52c0f63f4402f4d2e8331adc54aab5e27fc9fb43d976455",
+        "state": 5,
+        "capabilityId": "0xb9dfc80d811bdc8d6a50371aaf4297fcbfe2bc8ddc14eef88ea6819a742418e1",
+        "spent": "1",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0x341dcb0eb708fc7909463b96bc81c07c5efb74e305d1a2bb4f9178bfbc4e3330",
+        "state": 2,
+        "capabilityId": "0xaa77956728f12b410ea419f101b72c8b6ca772162347c5a256494fb9f52dc1ea",
+        "spent": "1",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0xcc893bee888ecc4fe4cc468711223a94939fcf9cf330cd48dbdb50ad6e6ef102",
+        "state": 2,
+        "capabilityId": "0xaa77956728f12b410ea419f101b72c8b6ca772162347c5a256494fb9f52dc1ea",
+        "spent": "3",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0xb0b062e7837e8cbd307a3a486d4efb90e8e9415effbcc26769efa63d28729d9b",
+        "state": 4,
+        "capabilityId": "0xda97279e7c822d8cdf39657dd1fe4a908602212f966484c6d773c78a62475916",
+        "spent": "0",
+        "reserved": "14",
+        "settled": false
+      },
+      {
+        "id": "0x991b3afb8ad96a9b8fec31910aad239834e89dd0be9bc295676370d625a8458b",
+        "state": 0,
+        "capabilityId": "0x103dd5710e8230fe10da3e5c9c0367e1cbc0449d0a860571d0f1ca1ec875f710",
+        "spent": "0",
+        "reserved": "20",
+        "settled": false
+      }
+    ],
+    "ledgers": [
+      {
+        "capabilityId": "0x3869107cd9c1b48f674e68453d5bd4bbe63a0e11692ff67be2828d5ac615c5f9",
+        "spent": "7",
+        "reserved": "20"
+      },
+      {
+        "capabilityId": "0x66e41cf8660b014fda3d5f90f5becd9f0bdb61b0db68222eb94ae34220cd606f",
+        "spent": "3",
+        "reserved": "0"
+      },
+      {
+        "capabilityId": "0xbbaaad5a41c509a215f4a5ff12b82a9de36b42cb723b4299c5b53382c03495ce",
+        "spent": "3",
+        "reserved": "20"
+      },
+      {
+        "capabilityId": "0x3791e0d90cbedf376784caf81ebd3a3c2416f59d5aa462e9788678385736b504",
+        "spent": "0",
+        "reserved": "0"
+      },
+      {
+        "capabilityId": "0xb9dfc80d811bdc8d6a50371aaf4297fcbfe2bc8ddc14eef88ea6819a742418e1",
+        "spent": "7",
+        "reserved": "0"
+      },
+      {
+        "capabilityId": "0xaa77956728f12b410ea419f101b72c8b6ca772162347c5a256494fb9f52dc1ea",
+        "spent": "4",
+        "reserved": "0"
+      },
+      {
+        "capabilityId": "0xda97279e7c822d8cdf39657dd1fe4a908602212f966484c6d773c78a62475916",
+        "spent": "0",
+        "reserved": "14"
+      },
+      {
+        "capabilityId": "0x103dd5710e8230fe10da3e5c9c0367e1cbc0449d0a860571d0f1ca1ec875f710",
+        "spent": "0",
+        "reserved": "20"
+      }
+    ]
+  },
+  "validationSummary": {
+    "sdkTransactions": 138,
+    "successfulTransactions": 88,
+    "expectedRejections": 50,
+    "selfpayManagedRunnerTransactions": 2,
+    "deviceRunnerTickets": 2,
+    "recoveredRunnerTickets": 2,
+    "productionDeviceStepEngine": true,
+    "approvedEncryptedFilePlanSource": true,
+    "atomicTicketKeyAndReservation": true,
+    "restoredDeviceStepDidNotRedeliver": true,
+    "realSelfpaySimulationAndLedgerReceipts": true,
+    "automaticEnvdMeasurements": true,
+    "separateHumanVerificationAndAcceptance": true,
+    "okrGlobalBudget": {
+      "asset": "TOOL_CALLS",
+      "spent": "11",
+      "reserved": "0"
+    },
+    "sdkTests": 104,
+    "sdkTestsPassed": 104,
+    "sdkTypecheckAndBuildPassed": true,
+    "testEnvironment": "macOS; isolated Sui localnet; generated identities; MemoryTransactionJournal for chain fixture; browser persistence verified separately; native Agent via production factory with injected credential provider",
+    "fullAppAutonomousLoopVerified": false,
+    "genericModelPlanningVerified": false,
+    "realCloudHostVerified": false,
+    "unknownSideEffectsHumanReconciliationVerified": false
+  }
+}

@@ -7,7 +7,8 @@ import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
 import type { SuiClientTypes } from '@mysten/sui/client';
 import type { Transaction } from '@mysten/sui/transactions';
-import { FractalMindSDK, NativeFileOkrRunner, signNodeCommand, nodeCommandIntentHash } from '../src/index.js';
+import { FractalMindSDK, NativeFileOkrRunner, SelfPayTransactionManager, MemoryTransactionJournal, createSelfPayOkrSubmitter, signNodeCommand, nodeCommandIntentHash } from '../src/index.js';
+import type { SelfPayFeeQuote } from '../src/index.js';
 import { bytesToHex, encryptContent, unwrapKeys } from '../src/identity-crypto.js';
 import { commandResultKey, commandResultWrapContext, encryptCommandResult, decryptCommandResult } from '../src/command-result-crypto.js';
 import { sha256 } from '@noble/hashes/sha2.js';
@@ -325,6 +326,8 @@ export async function exerciseNodeExecutions(o: Options) {
     assert.equal(claim.spent, '6'); assert.equal(claim.settled, true);
   }
   const runnerTickets: Array<{ logicalId: string; plaintext: string }> = [];
+  const managedTransactions: Record<string, unknown>[] = [];
+  const selfpayManager = new SelfPayTransactionManager({ client: sdk.client.client, network: 'localnet', signer: desktop, journal: new MemoryTransactionJournal() });
   const okrAcceptanceEvidence = okrAcceptance ? await okrAcceptance.finish(nativeExecutionId, (nativeFileAgentEvidence.recordIds as string[])[0], async step => {
     const payload = { okr: { id: step.okrId, agreement_version: step.agreementVersion, kr_index: step.krIndex }, measurement: { kind: 'verified_text_file_count' }, bounds: { paths, max_calls: step.maxCalls.toString() }, task: JSON.stringify({ kind: 'ensure_text_files', files: step.files }) };
     const signStep = (krIndex: string) => signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: step.capabilityId, revocationVersion: 1n }, budget: { asset: 'TOOL_CALLS', amount: step.maxCalls }, payload: { ...payload, okr: { ...payload.okr, kr_index: krIndex } }, expiresAtMs: step.expiresAtMs });
@@ -336,13 +339,31 @@ export async function exerciseNodeExecutions(o: Options) {
     }
     let result: { executionId: string; evidenceId: string; runtimeEvidence: Record<string, unknown> } | undefined;
     let deliveries = 0;
+    let approvedQuote: SelfPayFeeQuote | undefined;
+    const selfpaySubmit = createSelfPayOkrSubmitter({ manager: selfpayManager, gasBudget: 2000000000n, approveQuote: async quote => {
+      assert.equal(quote.simulatedSuiSpend, '0');
+      assert.ok(BigInt(quote.estimatedGas) <= BigInt(quote.gasBudget));
+      approvedQuote = quote; return true; // Explicit acceptance of this isolated localnet test fee.
+    } });
     const runnerOptions = {
       sdk, organizationId: o.organizationId, humanId: o.humanId, grantId: o.grantId, signer: desktop,
       keyForVersion: async (version: string) => { assert.equal(version, '1'); return o.contentKey; },
-      submit: async (tx: Transaction) => {
-        const saved = await execute('Device runner: atomically save signed ticket, result key and prepare current KR', tx);
-        assert.equal(saved.data.status.success, true);
-        return { status: 'confirmed' as const, digest: saved.data.digest };
+      submit: async (tx: Transaction, context: { requestId: string }) => {
+        const saved = await selfpaySubmit(tx, context);
+        console.log('Device runner selfpay submission', JSON.stringify(saved));
+        if (saved.status !== 'confirmed') return saved;
+        assert.ok(approvedQuote);
+        assert.equal(approvedQuote.requestId, context.requestId);
+        let receipt = await selfpayManager.query(context.requestId);
+        const deadline = Date.now() + 20000;
+        while (receipt?.status === 'unknown' && Date.now() < deadline) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          receipt = await selfpayManager.query(context.requestId);
+        }
+        assert.equal(receipt?.status, 'confirmed'); assert.ok(receipt.transaction);
+        managedTransactions.push({ label: 'Device runner: selfpay atomic signed ticket, result key and current KR', digest: saved.digest, status: receipt.transaction.status, gasUsed: receipt.gasUsed, actualGas: receipt.actualGas, quote: approvedQuote, confirmation: 'original digest queried from real Sui ledger' });
+        console.log('Device runner selfpay PASS', saved.digest, 'actual Gas', receipt.actualGas);
+        return saved;
       },
       deliver: async (command: SignedNodeCommand) => {
         deliveries++;
@@ -384,7 +405,7 @@ export async function exerciseNodeExecutions(o: Options) {
     assert.equal(restoredState.status, 'awaiting_verification'); assert.equal(deliveries, 1, 'Fresh runner queries chain facts without executing again.');
     const ticket = await sdk.productRecord.decryptRecord(outcome.ticketRecordId, o.contentKey);
     runnerTickets.push({ logicalId: ticket.record.logical_id, plaintext: new TextDecoder().decode(ticket.plaintext) });
-    result.runtimeEvidence.deviceRunner = { outcome, restoredState, deliveries, source: 'approved encrypted execution agreement', atomicallySavedTicketAndReservation: true };
+    result.runtimeEvidence.deviceRunner = { outcome, restoredState, deliveries, source: 'approved encrypted execution agreement', atomicallySavedTicketAndReservation: true, selfpayTransactionManager: true, feeQuote: approvedQuote };
     return result;
   }) : undefined;
   let unknownResultEvidence: Record<string, unknown> | undefined;
@@ -428,7 +449,7 @@ export async function exerciseNodeExecutions(o: Options) {
   const pendingCapabilityId = created(pendingCap.data, '::remote_authority::RemoteCapability');
   const pendingCommand = await signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: pendingCapabilityId, revocationVersion: 1n }, budget: { asset: 'MIST', amount: 20n }, payload: { task: 'must not begin after Host revocation' }, expiresAtMs: Date.now() + 300000 });
   const pendingId = await prepare(pendingCommand);
-  return { capabilityId, limitedCapabilityId: limitedId, runtimeCapabilityId, factoryCapabilityId, nativeCapabilityId, executions: [firstId, secondId, thirdId, waitingId, stoppedId, ...runtimeExecutionIds], goChecks, budgetChecks, resultKeyEvidence, runtimeStoreChecks, productionFactoryEvidence, nativeFileAgentEvidence, okrAcceptanceEvidence, unknownResultEvidence, runnerTickets, pendingStart: { ...authority, capabilityId: pendingCapabilityId, executionId: pendingId }, records: [{ logicalId, plaintext: new TextDecoder().decode(plaintext) }, { logicalId: unknownLogicalId, plaintext: new TextDecoder().decode(unknownPlaintext) }, { logicalId: stopLogicalId, plaintext: stopPlaintext }, ...runtimeRecords], checks: 'real chain budget/checkpoints, device runner loads approved file plans and atomically prepares tickets, native bounded text-file goals, actual tool-call accounting and stop; generic model planning, full App autonomous loop, command tools, financial metering and cloud deployment pending' };
+  return { capabilityId, limitedCapabilityId: limitedId, runtimeCapabilityId, factoryCapabilityId, nativeCapabilityId, executions: [firstId, secondId, thirdId, waitingId, stoppedId, ...runtimeExecutionIds], goChecks, budgetChecks, resultKeyEvidence, runtimeStoreChecks, productionFactoryEvidence, nativeFileAgentEvidence, okrAcceptanceEvidence, unknownResultEvidence, runnerTickets, managedTransactions, pendingStart: { ...authority, capabilityId: pendingCapabilityId, executionId: pendingId }, records: [{ logicalId, plaintext: new TextDecoder().decode(plaintext) }, { logicalId: unknownLogicalId, plaintext: new TextDecoder().decode(unknownPlaintext) }, { logicalId: stopLogicalId, plaintext: stopPlaintext }, ...runtimeRecords], checks: 'real chain budget/checkpoints, device runner loads approved file plans and atomically prepares tickets, native bounded text-file goals, actual tool-call accounting and stop; generic model planning, full App autonomous loop, command tools, financial metering and cloud deployment pending' };
 }
 
 /** Reconstruct the selected fixture budgets solely from their persisted chain

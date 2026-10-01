@@ -50,6 +50,18 @@ await sdk.client.client.core.waitForTransaction({ digest: executed.digest });
 
 ## API Notes
 
+For the App's identity/device/OKR flows, use `SelfPayTransactionManager` with a
+durable `TransactionJournal`, such as `IndexedDbTransactionJournal` in a browser
+or WebView. `prepare()` estimates fees without signing; display its quote before
+calling `submit()`. A lost response remains unknown and `query(requestId)` reads
+the original digest. A failed transaction can still charge Gas. The
+`MemoryTransactionJournal` is a test/reference provider, not durable App storage.
+
+`createSelfPayOkrSubmitter({ manager, gasBudget, approveQuote })` connects the
+manager to `NativeFileOkrRunner` using its stable ticket request ID. Recorded
+requests are queried after restart rather than signed again. See the
+[selfpay design and real-chain evidence](../../../docs/product/v020-selfpay-transactions.md).
+
 - `registryId` is required for organization/fractal create flows.
 - `getAgentCertificate` supports:
   - by object id: `{ certificateId }`

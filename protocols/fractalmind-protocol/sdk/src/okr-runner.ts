@@ -10,7 +10,8 @@ import { nodeCommandIntentHash, verifySignedNodeCommand } from './node-execution
 
 export type NativeFileKrPlan = { files: Array<{ path: string; content: string }>; maxCalls: string };
 export type NativeFileOkrPlan = { format: 1; paths: Record<string, string[]>; krs: NativeFileKrPlan[] };
-export type OkrRunnerSubmission = { status: 'confirmed' | 'rejected' | 'unknown'; digest?: string };
+export type OkrRunnerSubmission = { status: 'confirmed' | 'rejected' | 'unknown'; digest?: string; reason?: string };
+export type OkrRunnerSubmissionContext = { requestId: string };
 export type OkrRunnerState = {
   status: 'idle' | 'paused' | 'awaiting_approval' | 'queued' | 'running' | 'awaiting_confirmation' | 'awaiting_verification' | 'awaiting_acceptance' | 'achieved' | 'blocked';
   reason?: string; okrId: string; krIndex?: string; executionId?: string; ticketRecordId?: string; transactionDigest?: string;
@@ -21,7 +22,7 @@ export type OkrRunnerOptions = {
   /** Return an authorized current/historical organization key. Runner copies it. */
   keyForVersion(version: string): Promise<Uint8Array>;
   /** Uses the application's transaction manager; no internal blind retry. */
-  submit(transaction: Transaction): Promise<OkrRunnerSubmission>;
+  submit(transaction: Transaction, context: OkrRunnerSubmissionContext): Promise<OkrRunnerSubmission>;
   /** Fixed-instance signed delivery; an unavailable Host must not be rerouted. */
   deliver(command: SignedNodeCommand): Promise<void>;
   now?: () => number;
@@ -210,15 +211,15 @@ export class NativeFileOkrRunner {
         await sdk.nodeExecution.prepareCommand({ humanId: this.options.humanId, grantId: this.options.grantId, membershipId: member.id, bindingId: member.coordinator_binding, managedAgentId: managed.id, command, resultKey: { organizationKey: key, keyVersion: directory.keyVersion }, tx });
         newFingerprint = bytesToHex(nodeCommandIntentHash(command));
         this.unknownSubmissions.set(name, {});
-        try { submission = await this.options.submit(tx); } catch { submission = { status: 'unknown' }; }
+        try { submission = await this.options.submit(tx, { requestId: name }); } catch { submission = { status: 'unknown' }; }
         this.unknownSubmissions.set(name, { digest: submission.digest, confirmed: submission.status === 'confirmed' });
         if (submission.status === 'rejected') this.unknownSubmissions.delete(name);
         directory = submission.status === 'confirmed'
           ? await this.confirmRead(() => this.directory(name), value => Boolean(value.ticketId))
           : await this.directory(name);
         if (!directory.ticketId) {
-          if (submission.status === 'rejected') { this.unknownSubmissions.delete(name); return { ...base, status: 'blocked', reason: 'ticket_transaction_rejected', transactionDigest: submission.digest }; }
-          return { ...base, status: 'awaiting_confirmation', reason: submission.status === 'confirmed' ? 'ticket_index_not_visible' : 'ticket_transaction_unknown', transactionDigest: submission.digest };
+          if (submission.status === 'rejected') { this.unknownSubmissions.delete(name); return { ...base, status: 'blocked', reason: submission.reason ?? 'ticket_transaction_rejected', transactionDigest: submission.digest }; }
+          return { ...base, status: 'awaiting_confirmation', reason: submission.status === 'confirmed' ? 'ticket_index_not_visible' : submission.reason ?? 'ticket_transaction_unknown', transactionDigest: submission.digest };
         }
       } finally { key.fill(0); }
     }

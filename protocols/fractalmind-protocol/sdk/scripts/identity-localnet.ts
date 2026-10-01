@@ -373,6 +373,6 @@ const postRecoveryId = created(afterRecovery.data, '::product_record::EncryptedR
 await assert.rejects(sdk.productRecord.decryptRecord(postRecoveryId, newContentKey));
 assert.deepEqual((await sdk.productRecord.decryptRecord(postRecoveryId, recoveryContentKey)).plaintext, newMessage);
 assert.equal((await execute('recovered phone operates same Human', sdk.identity.createOrganization({ humanId, grantId: newPhoneGrantId, name: `Recovered-${Date.now()}`, description: '' }), phone)).data.status.success, true);
-const report = { testedAt: new Date().toISOString(), chain: await c.core.getChainIdentifier(), packageId, registryId, identityRegistryId, humanId, organizationId, checks: rows, records: recordChecks, host: hostReport, recoveredCheckpointRecords, recoveredRunnerTickets, recoveredExecutionBudgets, recoveredOkrs, recoveredUnknownOkr };
+const report = { testedAt: new Date().toISOString(), chain: await c.core.getChainIdentifier(), packageId, registryId, identityRegistryId, humanId, organizationId, checks: [...rows, ...(hostReport?.executions?.managedTransactions ?? [])], records: recordChecks, host: hostReport, recoveredCheckpointRecords, recoveredRunnerTickets, recoveredExecutionBudgets, recoveredOkrs, recoveredUnknownOkr };
 if (process.argv[3]) await writeFile(process.argv[3], `${JSON.stringify(report, null, 2)}\n`);
 console.log('Identity localnet acceptance passed. Recovery codes and private keys were not recorded.');
