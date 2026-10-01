@@ -1,6 +1,9 @@
 /// FractalMind Protocol — Objective / OKR control plane
 /// Minimal Sui-native Objective → KeyResult → KRReview model.
 module fractalmind_protocol::objective {
+    use sui::clock::{Self, Clock};
+    const E_CLOCK_REQUIRED: u64 = 8399;
+
     use sui::object::{Self, ID, UID};
     use sui::tx_context::{Self, TxContext};
     use sui::transfer;
@@ -118,6 +121,8 @@ module fractalmind_protocol::objective {
 
     // ===== Public Functions =====
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun create_objective(
         admin_cap: &OrgAdminCap,
         org: &Organization,
@@ -126,8 +131,20 @@ module fractalmind_protocol::objective {
         deadline_ms: u64,
         ctx: &mut TxContext,
     ) {
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun create_objective_with_clock(
+        admin_cap: &OrgAdminCap,
+        org: &Organization,
+        title: String,
+        description_hash: vector<u8>,
+        deadline_ms: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
         let sender = tx_context::sender(ctx);
-        let now = tx_context::epoch_timestamp_ms(ctx);
+        let now = clock::timestamp_ms(clock);
         let org_id = organization::org_id(org);
 
         assert!(organization::admin_cap_org_id(admin_cap) == org_id, constants::e_not_admin());

@@ -5,10 +5,17 @@
 //   GET  /api/sentinels
 //   GET  /api/sentinels/{id}
 //   GET  /api/sentinels/{id}/agents
-//   POST /api/sentinels/{id}/command   { command, agent_id, args }
+//   POST /api/sentinels/{id}/command   { node_command: SignedNodeCommand }
 //
 // This client is transport-agnostic (plain fetch) so it runs unchanged inside
 // Tauri (desktop) and Capacitor (mobile) WebViews.
+
+import type { SignedNodeCommand } from '../../../../protocols/fractalmind-protocol/sdk/src/node-command-wire';
+
+export type ControlAction = 'inventory' | 'status' | 'start' | 'stop' | 'assign' | 'monitor' | 'logs' | 'health' | 'availability';
+export type ControlCommandSigner = (intent: {
+  nodeId: string; agentId: string; action: ControlAction; payload: Record<string, unknown>;
+}) => Promise<SignedNodeCommand>;
 
 export interface SystemInfo {
   hostname?: string;
@@ -83,6 +90,7 @@ export class CoordinatorClient {
   constructor(
     private baseURL: string,
     private token: string,
+    private commandSigner?: ControlCommandSigner,
   ) {
     // Normalize: drop trailing slash so path joins are predictable.
     this.baseURL = baseURL.replace(/\/+$/, "");
@@ -127,16 +135,43 @@ export class CoordinatorClient {
     return this.req(`/api/sentinels/${encodeURIComponent(id)}/agents`);
   }
 
-  /** Send a control command (status | logs | restart | kill | shell) to a node. */
-  sendCommand(
+  setCommandSigner(signer: ControlCommandSigner | undefined): void {
+    this.commandSigner = signer;
+  }
+
+  canSendCommands(): boolean { return Boolean(this.commandSigner); }
+
+  /** Build a device-signed intent; a transport token alone grants no action. */
+  async sendCommand(
     id: string,
-    command: string,
+    action: ControlAction,
     agentId = "",
     args = "",
+    nodeId = id,
   ): Promise<CommandResult> {
+    if (!this.commandSigner) throw new Error('Connect an authorized signing device to run commands.');
+    const nodeWide = action === 'inventory' || action === 'health';
+    if (!nodeWide && !agentId.trim()) throw new Error('Agent instance is required.');
+    const payload: Record<string, unknown> = {};
+    if (action === 'assign') {
+      if (!args.trim()) throw new Error('A task is required.');
+      payload.task = args;
+    } else if (action === 'logs' || action === 'monitor') {
+      const lines = args.trim() ? Number(args) : 100;
+      if (!Number.isInteger(lines) || lines < 1 || lines > 1000) throw new Error('Log lines must be between 1 and 1000.');
+      payload.lines = lines;
+    }
+    const command = await this.commandSigner({ nodeId, agentId: nodeWide ? '' : agentId, action, payload });
+    if (command.target.node_id !== nodeId || command.target.agent_id !== (nodeWide ? undefined : agentId) || command.action !== action) {
+      throw new Error('Signed target does not match the selected host and instance.');
+    }
+    return this.sendSignedCommand(id, command);
+  }
+
+  sendSignedCommand(id: string, command: SignedNodeCommand): Promise<CommandResult> {
     return this.req(`/api/sentinels/${encodeURIComponent(id)}/command`, {
       method: "POST",
-      body: JSON.stringify({ command, agent_id: agentId, args }),
+      body: JSON.stringify({ node_command: command }),
     });
   }
 

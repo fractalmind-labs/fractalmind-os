@@ -17,10 +17,12 @@ const MAX_U64 = (1n << 64n) - 1n;
 export class FractalMindClient {
   public readonly client: ClientWithCoreApi;
   public readonly packageId: ObjectId;
+  public readonly typesPackageId: ObjectId;
   public readonly registryId?: ObjectId;
 
   constructor(options: FractalMindClientOptions) {
     this.packageId = normalizeSuiAddress(options.packageId);
+    this.typesPackageId = normalizeSuiAddress(options.originalPackageId ?? options.packageId);
     this.registryId = options.registryId ? normalizeSuiAddress(options.registryId) : undefined;
 
     if (options.client) {

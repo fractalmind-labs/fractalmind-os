@@ -11,6 +11,8 @@ export type KeyResultVerdict = 1 | 2 | 3;
 
 export interface FractalMindClientOptions {
   packageId: string;
+  /** Original type package address when calling an upgraded package. */
+  originalPackageId?: ObjectId;
   registryId?: ObjectId;
   network?: NetworkName;
   /** gRPC endpoint; the existing fullnode host can be reused. */
@@ -466,4 +468,25 @@ export interface NodeCommandSigningInput {
   idempotencyKey: string;
   budget?: EnvdBudgetClaim;
   payloadHash: string;
+}
+
+export type { SignedNodeCommand } from './node-command-wire.js';
+
+export interface NodeCommandSigner {
+  getPublicKey(): { toSuiAddress(): string; toRawBytes(): Uint8Array };
+  sign(bytes: Uint8Array): Promise<Uint8Array>;
+}
+
+export interface SignNodeCommandInput {
+  target: CapabilityTarget;
+  action: string;
+  scope: string;
+  capability: CapabilityReference;
+  payload?: Record<string, unknown>;
+  budget?: EnvdBudgetClaim;
+  commandId?: string;
+  nonce?: string;
+  idempotencyKey?: string;
+  issuedAtMs?: number;
+  expiresAtMs?: number;
 }

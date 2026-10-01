@@ -38,7 +38,7 @@ export class RemoteAuthorityApi {
   createCapability(input: CreateRemoteCapabilityInput): Transaction {
     const tx = this.fm.useTransaction(input.tx);
     tx.moveCall({
-      target: this.fm.target('create_remote_capability'),
+      target: this.fm.target('create_remote_capability_with_clock'),
       arguments: [
         tx.object(input.organizationId),
         tx.pure.address(input.delegate),
@@ -51,6 +51,7 @@ export class RemoteAuthorityApi {
         tx.pure.string(input.budgetAsset),
         tx.pure.u64(toBigInt(input.maxBudget)),
         tx.pure.u64(toBigInt(input.expiresAtMs)),
+        tx.object('0x6'),
       ],
     });
     return tx;
@@ -59,7 +60,7 @@ export class RemoteAuthorityApi {
   delegateCapability(input: DelegateRemoteCapabilityInput): Transaction {
     const tx = this.fm.useTransaction(input.tx);
     tx.moveCall({
-      target: this.fm.target('delegate_remote_capability'),
+      target: this.fm.target('delegate_remote_capability_with_clock'),
       arguments: [
         tx.object(input.parentCapabilityId),
         tx.object(input.organizationId),
@@ -73,6 +74,7 @@ export class RemoteAuthorityApi {
         tx.pure.string(input.budgetAsset),
         tx.pure.u64(toBigInt(input.maxBudget)),
         tx.pure.u64(toBigInt(input.expiresAtMs)),
+        tx.object('0x6'),
       ],
     });
     return tx;
@@ -90,7 +92,7 @@ export class RemoteAuthorityApi {
   claimAuthorityUse(input: ClaimRemoteAuthorityUseInput): Transaction {
     const tx = this.fm.useTransaction(input.tx);
     tx.moveCall({
-      target: this.fm.target('claim_remote_authority_use'),
+      target: this.fm.target('claim_remote_authority_use_with_clock'),
       arguments: [
         tx.object(input.capabilityId),
         tx.pure.string(input.action),
@@ -104,6 +106,7 @@ export class RemoteAuthorityApi {
         tx.pure.string(input.budgetAsset),
         tx.pure.u64(toBigInt(input.budgetAmount)),
         tx.pure.vector('u8', input.intentHash),
+        tx.object('0x6'),
       ],
     });
     return tx;

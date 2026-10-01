@@ -199,7 +199,7 @@ func (c *Client) UpdateUptimeScore(ctx context.Context, score uint64) error {
 // instead of carrying an envd-local policy implementation.
 // TODO: Return the created policy object ID once tx effect plumbing exists.
 func (c *Client) CreatePolicy(ctx context.Context, input PolicyInput) error {
-	err := c.executeProtocolCall(ctx, "entry", "create_agent_policy", []interface{}{
+	err := c.executeProtocolCall(ctx, "entry", "create_agent_policy_with_clock", []interface{}{
 		c.orgID,
 		input.AgentAddress,
 		input.AllowedAction,
@@ -207,6 +207,7 @@ func (c *Client) CreatePolicy(ctx context.Context, input PolicyInput) error {
 		fmt.Sprintf("%d", input.MaxUses),
 		fmt.Sprintf("%d", input.ExpiresAtMS),
 		fmt.Sprintf("%d", input.MaxGasBudget),
+		"0x6",
 	})
 	if err != nil {
 		return fmt.Errorf("create policy: %w", err)
@@ -238,7 +239,7 @@ func (c *Client) ExecuteAction(ctx context.Context, evidence ActionEvidence) err
 		c.certID = certID
 	}
 
-	err := c.executeProtocolCall(ctx, "entry", "execute_agent_action", []interface{}{
+	err := c.executeProtocolCall(ctx, "entry", "execute_agent_action_with_clock", []interface{}{
 		evidence.PolicyID,
 		c.orgID,
 		c.certID,
@@ -247,6 +248,7 @@ func (c *Client) ExecuteAction(ctx context.Context, evidence ActionEvidence) err
 		byteVector(evidence.IntentHash),
 		byteVector(evidence.ResultHash),
 		fmt.Sprintf("%d", evidence.GasBudget),
+		"0x6",
 	})
 	if err != nil {
 		return fmt.Errorf("execute action: %w", err)

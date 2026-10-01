@@ -1,4 +1,6 @@
 import { AgentApi } from './agent.js';
+import { IdentityApi } from './identity.js';
+import { ProductRecordApi } from './product-record.js';
 import { AgentPolicyApi } from './agent-policy.js';
 import { FractalMindClient } from './client.js';
 import { FractalApi } from './fractal.js';
@@ -14,6 +16,8 @@ export class FractalMindSDK {
   public readonly organization: OrganizationApi;
   public readonly objective: ObjectiveApi;
   public readonly agent: AgentApi;
+  public readonly identity: IdentityApi;
+  public readonly productRecord: ProductRecordApi;
   public readonly agentPolicy: AgentPolicyApi;
   public readonly task: TaskApi;
   public readonly fractal: FractalApi;
@@ -25,6 +29,8 @@ export class FractalMindSDK {
     this.organization = new OrganizationApi(this.client);
     this.objective = new ObjectiveApi(this.client);
     this.agent = new AgentApi(this.client);
+    this.identity = new IdentityApi(this.client);
+    this.productRecord = new ProductRecordApi(this.client);
     this.agentPolicy = new AgentPolicyApi(this.client);
     this.task = new TaskApi(this.client);
     this.fractal = new FractalApi(this.client);
@@ -34,6 +40,13 @@ export class FractalMindSDK {
 }
 
 export { FractalMindClient } from './client.js';
+export { IdentityApi, IdentityRegistryBcs, RecoveryLocationBcs, HumanIdentityBcs, DeviceGrantBcs, RecoveryRecordBcs, DEVICE_ACTIONS } from './identity.js';
+export type { DeviceAction } from './identity.js';
+export { ProductRecordApi, PRODUCT_RECORD_KINDS, EncryptedRecordBcs, recordContext } from './product-record.js';
+export type { ProductRecordKind } from './product-record.js';
+export { createRecoveryCode, parseRecoveryCode, recoveryKeys, createDeviceEncryptionKeys,
+  encryptContent, decryptContent, wrapKeys, unwrapKeys, randomContentKey,
+  bytesToHex, hexToBytes } from './identity-crypto.js';
 export { ObjectiveApi } from './objective.js';
 export { OrganizationApi } from './organization.js';
 export { AgentApi } from './agent.js';
@@ -51,6 +64,7 @@ export {
   NODE_COMMAND_SIGNATURE_DOMAIN,
   canonicalNodeCommandSigningBytes,
   capabilityReferenceWire,
+  signNodeCommand,
 } from './node-command.js';
 
 export type {
@@ -94,6 +108,9 @@ export type {
   MoveObjectData,
   NetworkName,
   NodeCommandSigningInput,
+  NodeCommandSigner,
+  SignNodeCommandInput,
+  SignedNodeCommand,
   ObjectId,
   ObjectiveData,
   OrganizationData,

@@ -240,6 +240,18 @@ func (s *Server) handleCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The relay's bearer credential is not execution authority. Reject legacy
+	// commands here too, so older workers cannot remain reachable through it.
+	switch req.Command {
+	case "signed_command", "signed-command", "node_command":
+	default:
+		writeJSON(w, http.StatusGone, map[string]string{
+			"error":      "commands require a signed node_command",
+			"error_code": "unsigned_command_disabled",
+		})
+		return
+	}
+
 	result, err := s.manager.SendCommand(r.PathValue("id"), req.Command, req.AgentID, req.Args)
 	if err != nil {
 		status := http.StatusInternalServerError

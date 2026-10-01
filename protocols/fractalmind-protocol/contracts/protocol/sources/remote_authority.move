@@ -6,6 +6,9 @@
 /// node- and agent-scoped capabilities are reserved by envd in durable local
 /// storage under the same bounds.
 module fractalmind_protocol::remote_authority {
+    use sui::clock::{Self, Clock};
+    const E_CLOCK_REQUIRED: u64 = 8399;
+
     use std::option::{Self, Option};
     use std::string::{Self, String};
     use sui::event;
@@ -150,6 +153,8 @@ module fractalmind_protocol::remote_authority {
         duplicate: bool,
     }
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun create_capability(
         org: &Organization,
         delegate: address,
@@ -162,6 +167,24 @@ module fractalmind_protocol::remote_authority {
         budget_asset: String,
         max_budget: u64,
         expires_at_ms: u64,
+        ctx: &mut TxContext,
+    ) {
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun create_capability_with_clock(
+        org: &Organization,
+        delegate: address,
+        target_kind: u8,
+        node_id: String,
+        agent_id: String,
+        actions: vector<String>,
+        scope: String,
+        max_uses: u64,
+        budget_asset: String,
+        max_budget: u64,
+        expires_at_ms: u64,
+        clock: &Clock,
         ctx: &mut TxContext,
     ) {
         let sender = ctx.sender();
@@ -177,7 +200,7 @@ module fractalmind_protocol::remote_authority {
             &budget_asset,
             max_budget,
             expires_at_ms,
-            ctx.epoch_timestamp_ms(),
+            clock::timestamp_ms(clock),
         );
 
         let capability = RemoteCapability {
@@ -215,6 +238,8 @@ module fractalmind_protocol::remote_authority {
 
     /// Delegate a bounded node/agent subset from an organization root. Quota is
     /// reserved at child creation and never returned in Phase 0.
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun delegate_capability(
         parent: &mut RemoteCapability,
         org: &Organization,
@@ -230,8 +255,27 @@ module fractalmind_protocol::remote_authority {
         expires_at_ms: u64,
         ctx: &mut TxContext,
     ): ID {
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun delegate_capability_with_clock(
+        parent: &mut RemoteCapability,
+        org: &Organization,
+        delegate: address,
+        target_kind: u8,
+        node_id: String,
+        agent_id: String,
+        actions: vector<String>,
+        scope: String,
+        max_uses: u64,
+        budget_asset: String,
+        max_budget: u64,
+        expires_at_ms: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ): ID {
         let sender = ctx.sender();
-        let now = ctx.epoch_timestamp_ms();
+        let now = clock::timestamp_ms(clock);
         let org_id = organization::org_id(org);
 
         assert!(parent.org_id == org_id, constants::e_unauthorized());
@@ -334,6 +378,8 @@ module fractalmind_protocol::remote_authority {
 
     /// Claim an organization-scoped intent before execution. The delegate
     /// submits this transaction; target envd verifies the claim by intent hash.
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun claim_authority_use(
         capability: &mut RemoteCapability,
         action: String,
@@ -349,9 +395,28 @@ module fractalmind_protocol::remote_authority {
         intent_hash: vector<u8>,
         ctx: &TxContext,
     ) {
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun claim_authority_use_with_clock(
+        capability: &mut RemoteCapability,
+        action: String,
+        scope: String,
+        target_kind: u8,
+        node_id: String,
+        agent_id: String,
+        command_id: String,
+        nonce: String,
+        idempotency_key: String,
+        budget_asset: String,
+        budget_amount: u64,
+        intent_hash: vector<u8>,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
         assert!(capability.reservation_scope == RESERVATION_AUTHORITY, E_WRONG_RESERVATION_SCOPE);
         assert!(ctx.sender() == capability.delegate, E_NOT_DELEGATE);
-        assert_authorized(capability, &action, &scope, target_kind, &node_id, &agent_id, ctx);
+        assert_authorized_with_clock(capability, &action, &scope, target_kind, &node_id, &agent_id, clock, ctx);
         assert!(is_token(&command_id, false), E_INVALID_TOKEN);
         assert!(is_token(&nonce, false), E_INVALID_TOKEN);
         assert!(is_token(&idempotency_key, false), E_INVALID_TOKEN);
@@ -529,6 +594,8 @@ module fractalmind_protocol::remote_authority {
     }
 
     /// Read-only validation shared by the authority claim and tests/adapters.
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun assert_authorized(
         capability: &RemoteCapability,
         action: &String,
@@ -538,13 +605,28 @@ module fractalmind_protocol::remote_authority {
         agent_id: &String,
         ctx: &TxContext,
     ) {
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun assert_authorized_with_clock(
+        capability: &RemoteCapability,
+        action: &String,
+        scope: &String,
+        target_kind: u8,
+        node_id: &String,
+        agent_id: &String,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
         assert!(!capability.revoked, E_CAPABILITY_REVOKED);
-        assert!(ctx.epoch_timestamp_ms() < capability.expires_at_ms, E_CAPABILITY_EXPIRED);
+        assert!(clock::timestamp_ms(clock) < capability.expires_at_ms, E_CAPABILITY_EXPIRED);
         assert!(scope == &capability.scope, E_INVALID_SCOPE);
         assert!(vector::contains(&capability.actions, action), E_INVALID_ACTION);
         assert!(target_contains(capability, target_kind, node_id, agent_id), E_INVALID_TARGET);
     }
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun assert_delegated_authorized(
         parent: &RemoteCapability,
         capability: &RemoteCapability,
@@ -555,12 +637,26 @@ module fractalmind_protocol::remote_authority {
         agent_id: &String,
         ctx: &TxContext,
     ) {
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun assert_delegated_authorized_with_clock(
+        parent: &RemoteCapability,
+        capability: &RemoteCapability,
+        action: &String,
+        scope: &String,
+        target_kind: u8,
+        node_id: &String,
+        agent_id: &String,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
         assert!(!parent.revoked, E_PARENT_AUTHORITY_STALE);
-        assert!(ctx.epoch_timestamp_ms() < parent.expires_at_ms, E_PARENT_AUTHORITY_STALE);
+        assert!(clock::timestamp_ms(clock) < parent.expires_at_ms, E_PARENT_AUTHORITY_STALE);
         assert!(option::is_some(&capability.parent_id), E_PARENT_AUTHORITY_STALE);
         assert!(*option::borrow(&capability.parent_id) == object::id(parent), E_PARENT_AUTHORITY_STALE);
         assert!(capability.parent_revocation_version == parent.revocation_version, E_PARENT_AUTHORITY_STALE);
-        assert_authorized(capability, action, scope, target_kind, node_id, agent_id, ctx);
+        assert_authorized_with_clock(capability, action, scope, target_kind, node_id, agent_id, clock, ctx);
     }
 
     fun validate_capability_shape(

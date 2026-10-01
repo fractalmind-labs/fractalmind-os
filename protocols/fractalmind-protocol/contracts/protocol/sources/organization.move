@@ -113,6 +113,19 @@ module fractalmind_protocol::organization {
         ctx: &mut TxContext,
     ) {
         let sender = tx_context::sender(ctx);
+        let (org, cap) = new_organization(registry, name, description, sender, ctx);
+        transfer::share_object(org);
+        transfer::transfer(cap, sender);
+    }
+
+    // Human identities retain their cap privately. No device can extract it.
+    public(package) fun new_organization(
+        registry: &mut ProtocolRegistry,
+        name: String,
+        description: String,
+        sender: address,
+        ctx: &mut TxContext,
+    ): (Organization, OrgAdminCap) {
         let created_at = tx_context::epoch_timestamp_ms(ctx);
 
         assert!(std::string::length(&name) > 0, constants::e_empty_name());
@@ -158,8 +171,19 @@ module fractalmind_protocol::organization {
             parent_org: option::none(),
         });
 
-        transfer::share_object(org);
-        transfer::transfer(admin_cap, sender);
+        (org, admin_cap)
+    }
+
+    public(package) fun registry_uid(registry: &ProtocolRegistry): &UID { &registry.id }
+    public(package) fun registry_uid_mut(registry: &mut ProtocolRegistry): &mut UID { &mut registry.id }
+
+    public(package) fun share_organization(org: Organization) { transfer::share_object(org); }
+
+    public(package) fun bind_human_admin(cap: &OrgAdminCap, org: &mut Organization, human: address, ctx: &TxContext) {
+        assert!(cap.org_id == object::id(org) && org.admin == tx_context::sender(ctx), constants::e_not_admin());
+        let old_admin = org.admin;
+        org.admin = human;
+        event::emit(OrgAdminTransferred { org_id: object::id(org), old_admin, new_admin: human });
     }
 
     /// Admin-only: deactivate an organization.

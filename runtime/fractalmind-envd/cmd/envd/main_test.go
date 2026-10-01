@@ -182,29 +182,39 @@ func TestHandleSignedCommandMalformedJSONHasNoNodeEvent(t *testing.T) {
 	}
 }
 
-func TestHandleCommandShellTimesOutAndReleasesHandler(t *testing.T) {
-	cfg := &config.Config{Agents: config.AgentsConfig{
-		AllowShell:   true,
-		ShellTimeout: "50ms",
-	}}
+func TestHandleCommandRejectsEveryUnsignedOperation(t *testing.T) {
+	for _, operation := range []string{"inventory", "status", "logs", "restart", "kill", "shell", "start", "stop", "assign"} {
+		t.Run(operation, func(t *testing.T) {
+			// Even explicitly enabling the old shell config must not authorize it.
+			cfg := &config.Config{Agents: config.AgentsConfig{AllowShell: true}}
+			marker := t.TempDir() + "/escaped"
+			result := handleCommand(ws.CommandPayload{
+				Command: operation, AgentID: "agent-1", Args: "touch " + marker,
+			}, nil, cfg, runtimeCommandExecutorFunc(func(context.Context, nodecommand.NodeCommand) (runtimeadapter.Response, nodecommand.NodeEvent, error) {
+				t.Fatal("unsigned operation reached the executor")
+				return runtimeadapter.Response{}, nodecommand.NodeEvent{}, nil
+			}))
+			if result["success"] != false || result["error_code"] != "unsigned_command_disabled" {
+				t.Fatalf("unsigned command accepted: %+v", result)
+			}
+			if _, err := os.Stat(marker); !os.IsNotExist(err) {
+				t.Fatal("unsigned shell produced a side effect")
+			}
+		})
+	}
+}
 
+func TestRunShellTimeoutReleasesProcess(t *testing.T) {
 	started := time.Now()
-	result := handleCommand(ws.CommandPayload{
-		Command: "shell",
-		Args:    "printf started; sleep 30",
-	}, nil, cfg, nil)
-
-	if result["success"] != false {
-		t.Fatalf("success = %v, want false: %+v", result["success"], result)
+	out, err := runShellCommand("printf started; sleep 30", 50*time.Millisecond)
+	if err == nil || !strings.Contains(err.Error(), "timed out after 50ms") {
+		t.Fatalf("expected timeout, got %v", err)
 	}
-	if !strings.Contains(fmt.Sprint(result["error"]), "timed out after 50ms") {
-		t.Fatalf("error = %v, want timeout", result["error"])
+	if string(out) != "started" {
+		t.Fatalf("output = %q", out)
 	}
-	if result["output"] != "started" {
-		t.Fatalf("output = %q, want started", result["output"])
-	}
-	if elapsed := time.Since(started); elapsed > 2*time.Second {
-		t.Fatalf("shell timeout took %s, handler remained blocked", elapsed)
+	if time.Since(started) > 2*time.Second {
+		t.Fatal("shell timeout remained blocked")
 	}
 }
 

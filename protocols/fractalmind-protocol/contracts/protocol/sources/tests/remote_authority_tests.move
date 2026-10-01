@@ -1,5 +1,6 @@
 #[test_only]
 module fractalmind_protocol::remote_authority_tests {
+    use sui::clock::{Self, Clock};
     use std::option;
     use std::string;
     use sui::test_scenario::{Self as ts};
@@ -35,7 +36,9 @@ module fractalmind_protocol::remote_authority_tests {
     ): ID {
         ts::next_tx(scenario, ADMIN);
         let org = ts::take_shared<Organization>(scenario);
-        authority::create_capability(
+        let mut fm_clock = ts::take_shared<Clock>(scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(scenario).epoch_timestamp_ms());
+        authority::create_capability_with_clock(
             &org,
             DELEGATE,
             target_kind,
@@ -47,8 +50,10 @@ module fractalmind_protocol::remote_authority_tests {
             string::utf8(budget_asset),
             max_budget,
             expires_at_ms,
+            &fm_clock,
             ts::ctx(scenario),
         );
+        ts::return_shared(fm_clock);
         ts::return_shared(org);
         ts::next_tx(scenario, ADMIN);
         option::destroy_some(ts::most_recent_id_shared<RemoteCapability>())
@@ -66,6 +71,7 @@ module fractalmind_protocol::remote_authority_tests {
     #[test]
     fun test_create_and_claim_authority_use() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org(&mut scenario);
         let capability_id = create_root(
             &mut scenario,
@@ -80,7 +86,9 @@ module fractalmind_protocol::remote_authority_tests {
 
         ts::next_tx(&mut scenario, DELEGATE);
         let mut capability = ts::take_shared_by_id<RemoteCapability>(&scenario, capability_id);
-        authority::claim_authority_use(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::claim_authority_use_with_clock(
             &mut capability,
             string::utf8(b"deploy"),
             string::utf8(b"lifecycle"),
@@ -93,8 +101,10 @@ module fractalmind_protocol::remote_authority_tests {
             string::utf8(b"MIST"),
             40,
             hash(1),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         assert!(authority::uses_claimed(&capability) == 1, 0);
         assert!(authority::budget_claimed(&capability) == 40, 1);
         assert!(authority::has_authority_claim(&capability, hash(1)), 2);
@@ -123,6 +133,7 @@ module fractalmind_protocol::remote_authority_tests {
     #[test]
     fun test_delegate_node_subset_and_validate_parent_checkpoint() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org(&mut scenario);
         let root_id = create_root(
             &mut scenario,
@@ -138,7 +149,9 @@ module fractalmind_protocol::remote_authority_tests {
         ts::next_tx(&mut scenario, ADMIN);
         let org = ts::take_shared<Organization>(&scenario);
         let mut root = ts::take_shared_by_id<RemoteCapability>(&scenario, root_id);
-        let child_id = authority::delegate_capability(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        let child_id = authority::delegate_capability_with_clock(
             &mut root,
             &org,
             CHILD_DELEGATE,
@@ -151,8 +164,10 @@ module fractalmind_protocol::remote_authority_tests {
             string::utf8(b"MIST"),
             30,
             900,
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         assert!(authority::uses_delegated(&root) == 2, 0);
         assert!(authority::budget_delegated(&root) == 30, 1);
         ts::return_shared(root);
@@ -160,7 +175,9 @@ module fractalmind_protocol::remote_authority_tests {
         ts::next_tx(&mut scenario, CHILD_DELEGATE);
         let parent = ts::take_shared_by_id<RemoteCapability>(&scenario, root_id);
         let child = ts::take_shared_by_id<RemoteCapability>(&scenario, child_id);
-        authority::assert_delegated_authorized(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::assert_delegated_authorized_with_clock(
             &parent,
             &child,
             &string::utf8(b"status"),
@@ -168,8 +185,10 @@ module fractalmind_protocol::remote_authority_tests {
             authority::target_agent(),
             &string::utf8(b"node-1"),
             &string::utf8(b"agent-1"),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         assert!(authority::parent_id(&child) == option::some(root_id), 2);
         assert!(authority::reservation_scope(&child) == authority::reservation_node(), 3);
         ts::return_shared(child);
@@ -181,6 +200,7 @@ module fractalmind_protocol::remote_authority_tests {
     #[expected_failure(abort_code = 8303, location = fractalmind_protocol::remote_authority)]
     fun test_rejects_target_mismatch() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org(&mut scenario);
         let capability_id = create_root(
             &mut scenario,
@@ -194,15 +214,19 @@ module fractalmind_protocol::remote_authority_tests {
         );
         ts::next_tx(&mut scenario, DELEGATE);
         let capability = ts::take_shared_by_id<RemoteCapability>(&scenario, capability_id);
-        authority::assert_authorized(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::assert_authorized_with_clock(
             &capability,
             &string::utf8(b"status"),
             &string::utf8(b"lifecycle"),
             authority::target_node(),
             &string::utf8(b"node-2"),
             &string::utf8(b""),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         abort 0
     }
 
@@ -210,6 +234,7 @@ module fractalmind_protocol::remote_authority_tests {
     #[expected_failure(abort_code = 8304, location = fractalmind_protocol::remote_authority)]
     fun test_rejects_scope_mismatch() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org(&mut scenario);
         let capability_id = create_root(
             &mut scenario,
@@ -223,15 +248,19 @@ module fractalmind_protocol::remote_authority_tests {
         );
         ts::next_tx(&mut scenario, DELEGATE);
         let capability = ts::take_shared_by_id<RemoteCapability>(&scenario, capability_id);
-        authority::assert_authorized(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::assert_authorized_with_clock(
             &capability,
             &string::utf8(b"status"),
             &string::utf8(b"view"),
             authority::target_node(),
             &string::utf8(b"node-1"),
             &string::utf8(b""),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         abort 0
     }
 
@@ -239,6 +268,7 @@ module fractalmind_protocol::remote_authority_tests {
     #[expected_failure(abort_code = 8307, location = fractalmind_protocol::remote_authority)]
     fun test_rejects_expired_capability() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org(&mut scenario);
         let capability_id = create_root(
             &mut scenario,
@@ -252,15 +282,19 @@ module fractalmind_protocol::remote_authority_tests {
         );
         ts::later_epoch(&mut scenario, 11, DELEGATE);
         let capability = ts::take_shared_by_id<RemoteCapability>(&scenario, capability_id);
-        authority::assert_authorized(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::assert_authorized_with_clock(
             &capability,
             &string::utf8(b"status"),
             &string::utf8(b"lifecycle"),
             authority::target_node(),
             &string::utf8(b"node-1"),
             &string::utf8(b""),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         abort 0
     }
 
@@ -268,6 +302,7 @@ module fractalmind_protocol::remote_authority_tests {
     #[expected_failure(abort_code = 8308, location = fractalmind_protocol::remote_authority)]
     fun test_rejects_max_use_exhaustion() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org(&mut scenario);
         let capability_id = create_root(
             &mut scenario,
@@ -281,7 +316,9 @@ module fractalmind_protocol::remote_authority_tests {
         );
         ts::next_tx(&mut scenario, DELEGATE);
         let mut capability = ts::take_shared_by_id<RemoteCapability>(&scenario, capability_id);
-        authority::claim_authority_use(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::claim_authority_use_with_clock(
             &mut capability,
             string::utf8(b"status"),
             string::utf8(b"lifecycle"),
@@ -294,12 +331,16 @@ module fractalmind_protocol::remote_authority_tests {
             string::utf8(b""),
             0,
             hash(2),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         ts::return_shared(capability);
         ts::next_tx(&mut scenario, DELEGATE);
         let mut capability = ts::take_shared_by_id<RemoteCapability>(&scenario, capability_id);
-        authority::claim_authority_use(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::claim_authority_use_with_clock(
             &mut capability,
             string::utf8(b"status"),
             string::utf8(b"lifecycle"),
@@ -312,8 +353,10 @@ module fractalmind_protocol::remote_authority_tests {
             string::utf8(b""),
             0,
             hash(3),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         abort 0
     }
 
@@ -321,6 +364,7 @@ module fractalmind_protocol::remote_authority_tests {
     #[expected_failure(abort_code = 8306, location = fractalmind_protocol::remote_authority)]
     fun test_rejects_revoked_capability() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org(&mut scenario);
         let capability_id = create_root(
             &mut scenario,
@@ -340,15 +384,19 @@ module fractalmind_protocol::remote_authority_tests {
         ts::return_shared(org);
         ts::next_tx(&mut scenario, DELEGATE);
         let capability = ts::take_shared_by_id<RemoteCapability>(&scenario, capability_id);
-        authority::assert_authorized(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::assert_authorized_with_clock(
             &capability,
             &string::utf8(b"status"),
             &string::utf8(b"lifecycle"),
             authority::target_node(),
             &string::utf8(b"node-1"),
             &string::utf8(b""),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         abort 0
     }
 
@@ -356,6 +404,7 @@ module fractalmind_protocol::remote_authority_tests {
     #[expected_failure(abort_code = 8311, location = fractalmind_protocol::remote_authority)]
     fun test_rejects_conflicting_authority_claim() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org(&mut scenario);
         let capability_id = create_root(
             &mut scenario,
@@ -369,7 +418,9 @@ module fractalmind_protocol::remote_authority_tests {
         );
         ts::next_tx(&mut scenario, DELEGATE);
         let mut capability = ts::take_shared_by_id<RemoteCapability>(&scenario, capability_id);
-        authority::claim_authority_use(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::claim_authority_use_with_clock(
             &mut capability,
             string::utf8(b"status"),
             string::utf8(b"lifecycle"),
@@ -382,12 +433,16 @@ module fractalmind_protocol::remote_authority_tests {
             string::utf8(b""),
             0,
             hash(4),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         ts::return_shared(capability);
         ts::next_tx(&mut scenario, DELEGATE);
         let mut capability = ts::take_shared_by_id<RemoteCapability>(&scenario, capability_id);
-        authority::claim_authority_use(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::claim_authority_use_with_clock(
             &mut capability,
             string::utf8(b"status"),
             string::utf8(b"lifecycle"),
@@ -400,14 +455,17 @@ module fractalmind_protocol::remote_authority_tests {
             string::utf8(b""),
             0,
             hash(5),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         abort 0
     }
 
     #[test]
     fun test_exact_authority_claim_retry_is_idempotent() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org(&mut scenario);
         let capability_id = create_root(
             &mut scenario,
@@ -421,7 +479,9 @@ module fractalmind_protocol::remote_authority_tests {
         );
         ts::next_tx(&mut scenario, DELEGATE);
         let mut capability = ts::take_shared_by_id<RemoteCapability>(&scenario, capability_id);
-        authority::claim_authority_use(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::claim_authority_use_with_clock(
             &mut capability,
             string::utf8(b"status"),
             string::utf8(b"lifecycle"),
@@ -434,12 +494,16 @@ module fractalmind_protocol::remote_authority_tests {
             string::utf8(b""),
             0,
             hash(6),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         ts::return_shared(capability);
         ts::next_tx(&mut scenario, DELEGATE);
         let mut capability = ts::take_shared_by_id<RemoteCapability>(&scenario, capability_id);
-        authority::claim_authority_use(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::claim_authority_use_with_clock(
             &mut capability,
             string::utf8(b"status"),
             string::utf8(b"lifecycle"),
@@ -452,8 +516,10 @@ module fractalmind_protocol::remote_authority_tests {
             string::utf8(b""),
             0,
             hash(6),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         assert!(authority::uses_claimed(&capability) == 1, 0);
         ts::return_shared(capability);
         ts::end(scenario);
@@ -463,6 +529,7 @@ module fractalmind_protocol::remote_authority_tests {
     #[expected_failure(abort_code = 8318, location = fractalmind_protocol::remote_authority)]
     fun test_exact_fingerprint_rejects_budget_mismatch() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org(&mut scenario);
         let capability_id = create_root(
             &mut scenario,
@@ -476,7 +543,9 @@ module fractalmind_protocol::remote_authority_tests {
         );
         ts::next_tx(&mut scenario, DELEGATE);
         let mut capability = ts::take_shared_by_id<RemoteCapability>(&scenario, capability_id);
-        authority::claim_authority_use(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::claim_authority_use_with_clock(
             &mut capability,
             string::utf8(b"deploy"),
             string::utf8(b"lifecycle"),
@@ -489,12 +558,16 @@ module fractalmind_protocol::remote_authority_tests {
             string::utf8(b"MIST"),
             40,
             hash(11),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         ts::return_shared(capability);
         ts::next_tx(&mut scenario, DELEGATE);
         let mut capability = ts::take_shared_by_id<RemoteCapability>(&scenario, capability_id);
-        authority::claim_authority_use(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::claim_authority_use_with_clock(
             &mut capability,
             string::utf8(b"deploy"),
             string::utf8(b"lifecycle"),
@@ -507,8 +580,10 @@ module fractalmind_protocol::remote_authority_tests {
             string::utf8(b""),
             0,
             hash(11),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         abort 0
     }
 
@@ -516,6 +591,7 @@ module fractalmind_protocol::remote_authority_tests {
     #[expected_failure(abort_code = 8317, location = fractalmind_protocol::remote_authority)]
     fun test_rejects_idempotency_key_conflict() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org(&mut scenario);
         let capability_id = create_root(
             &mut scenario,
@@ -529,7 +605,9 @@ module fractalmind_protocol::remote_authority_tests {
         );
         ts::next_tx(&mut scenario, DELEGATE);
         let mut capability = ts::take_shared_by_id<RemoteCapability>(&scenario, capability_id);
-        authority::claim_authority_use(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::claim_authority_use_with_clock(
             &mut capability,
             string::utf8(b"status"),
             string::utf8(b"lifecycle"),
@@ -542,12 +620,16 @@ module fractalmind_protocol::remote_authority_tests {
             string::utf8(b""),
             0,
             hash(7),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         ts::return_shared(capability);
         ts::next_tx(&mut scenario, DELEGATE);
         let mut capability = ts::take_shared_by_id<RemoteCapability>(&scenario, capability_id);
-        authority::claim_authority_use(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::claim_authority_use_with_clock(
             &mut capability,
             string::utf8(b"status"),
             string::utf8(b"lifecycle"),
@@ -560,8 +642,10 @@ module fractalmind_protocol::remote_authority_tests {
             string::utf8(b""),
             0,
             hash(8),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         abort 0
     }
 
@@ -569,6 +653,7 @@ module fractalmind_protocol::remote_authority_tests {
     #[expected_failure(abort_code = 8311, location = fractalmind_protocol::remote_authority)]
     fun test_rejects_nonce_replay() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org(&mut scenario);
         let capability_id = create_root(
             &mut scenario,
@@ -582,7 +667,9 @@ module fractalmind_protocol::remote_authority_tests {
         );
         ts::next_tx(&mut scenario, DELEGATE);
         let mut capability = ts::take_shared_by_id<RemoteCapability>(&scenario, capability_id);
-        authority::claim_authority_use(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::claim_authority_use_with_clock(
             &mut capability,
             string::utf8(b"status"),
             string::utf8(b"lifecycle"),
@@ -595,12 +682,16 @@ module fractalmind_protocol::remote_authority_tests {
             string::utf8(b""),
             0,
             hash(9),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         ts::return_shared(capability);
         ts::next_tx(&mut scenario, DELEGATE);
         let mut capability = ts::take_shared_by_id<RemoteCapability>(&scenario, capability_id);
-        authority::claim_authority_use(
+        let mut fm_clock = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+        authority::claim_authority_use_with_clock(
             &mut capability,
             string::utf8(b"status"),
             string::utf8(b"lifecycle"),
@@ -613,8 +704,54 @@ module fractalmind_protocol::remote_authority_tests {
             string::utf8(b""),
             0,
             hash(10),
+            &fm_clock,
             ts::ctx(&mut scenario),
         );
+        ts::return_shared(fm_clock);
         abort 0
     }
+
+    fun check_millisecond_authority(now_ms: u64, legacy: bool, delegation: bool) {
+        let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
+        setup_org(&mut scenario);
+        let cap_id = create_root(&mut scenario, authority::target_organization(), b"", b"", 3, b"", 0, 1000);
+        ts::next_tx(&mut scenario, DELEGATE);
+        let mut capability = ts::take_shared_by_id<RemoteCapability>(&scenario, cap_id);
+        let mut clock_obj = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut clock_obj, now_ms);
+        // The epoch remains at zero: only Clock can enforce this boundary.
+        assert!(ts::ctx(&mut scenario).epoch_timestamp_ms() == 0, 900);
+        if (legacy) {
+            authority::assert_authorized(&capability, &string::utf8(b"status"), &string::utf8(b"lifecycle"), authority::target_node(), &string::utf8(b"node-1"), &string::utf8(b""), ts::ctx(&mut scenario));
+        } else if (delegation) {
+            let org = ts::take_shared<Organization>(&scenario);
+            let _id = authority::delegate_capability_with_clock(&mut capability, &org, CHILD_DELEGATE, authority::target_node(), string::utf8(b"node-1"), string::utf8(b""), vector[string::utf8(b"status")], string::utf8(b"lifecycle"), 1, string::utf8(b""), 0, 2000, &clock_obj, ts::ctx(&mut scenario));
+            ts::return_shared(org);
+        } else {
+            authority::assert_authorized_with_clock(&capability, &string::utf8(b"status"), &string::utf8(b"lifecycle"), authority::target_node(), &string::utf8(b"node-1"), &string::utf8(b""), &clock_obj, ts::ctx(&mut scenario));
+        };
+        ts::return_shared(capability);
+        ts::return_shared(clock_obj);
+        ts::end(scenario);
+    }
+
+    #[test]
+    fun test_clock_one_ms_before_expiry() { check_millisecond_authority(999, false, false); }
+
+    #[test]
+    #[expected_failure(abort_code = 8307, location = fractalmind_protocol::remote_authority)]
+    fun test_clock_exact_expiry() { check_millisecond_authority(1000, false, false); }
+
+    #[test]
+    #[expected_failure(abort_code = 8307, location = fractalmind_protocol::remote_authority)]
+    fun test_clock_one_ms_after_expiry() { check_millisecond_authority(1001, false, false); }
+
+    #[test]
+    #[expected_failure(abort_code = 8399, location = fractalmind_protocol::remote_authority)]
+    fun test_legacy_validation_cannot_bypass_clock() { check_millisecond_authority(999, true, false); }
+
+    #[test]
+    #[expected_failure(abort_code = 8307, location = fractalmind_protocol::remote_authority)]
+    fun test_expired_parent_cannot_delegate_within_epoch() { check_millisecond_authority(1000, false, true); }
 }
