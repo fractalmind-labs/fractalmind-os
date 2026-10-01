@@ -31,5 +31,5 @@ func (c *GRPCClient) ReadChainObject(ctx context.Context, id string) (nodecomman
 		return nodecommand.ChainObject{}, fmt.Errorf("incomplete latest chain object %s", id)
 	}
 	owner := object.GetOwner()
-	return nodecommand.ChainObject{ID: object.GetObjectId(), Type: object.GetObjectType(), Version: object.GetVersion(), Shared: owner.GetKind() == v2.Owner_SHARED, OwnerID: owner.GetAddress(), Content: append([]byte(nil), object.GetContents().GetValue()...)}, nil
+	return nodecommand.ChainObject{ID: object.GetObjectId(), Type: object.GetObjectType(), Version: object.GetVersion(), Shared: owner.GetKind() == v2.Owner_SHARED, Immutable: owner.GetKind() == v2.Owner_IMMUTABLE, OwnerID: owner.GetAddress(), Content: append([]byte(nil), object.GetContents().GetValue()...)}, nil
 }

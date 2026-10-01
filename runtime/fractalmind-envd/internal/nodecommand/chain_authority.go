@@ -21,6 +21,7 @@ type ChainObject struct {
 	ID, Type, OwnerID string
 	Version           uint64
 	Shared            bool
+	Immutable         bool
 	Content           []byte
 }
 

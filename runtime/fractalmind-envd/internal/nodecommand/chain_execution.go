@@ -46,6 +46,8 @@ type ChainExecution struct {
 	BudgetSettled                                                                          bool
 	IssuedAtMS, ExpiresAtMS                                                                int64
 	CapabilityVersion, Cursor                                                              uint64
+	GrantVersion                                                                           uint64
+	UpdatedAtMS                                                                            int64
 	State                                                                                  uint8
 	StopRequested                                                                          bool
 	ResultRecordID, ResultHash                                                             string
@@ -90,7 +92,7 @@ func (s *ChainAuthorityResolver) LookupExecution(ctx context.Context, capability
 	if err = r.object(ctx, runID.String(), "node_execution::CommandExecution", &run); err != nil {
 		return ChainExecution{}, false, err
 	}
-	if run.Capability != cap.ID || run.Org != cap.Org || hex.EncodeToString(run.IntentHash) != fingerprint || run.Delegate != cap.Delegate || len(run.Managed) > 1 || len(run.Result) > 1 || run.State > 5 || run.Issued > math.MaxInt64 || run.Expires > math.MaxInt64 {
+	if run.Capability != cap.ID || run.Org != cap.Org || hex.EncodeToString(run.IntentHash) != fingerprint || run.Delegate != cap.Delegate || len(run.Managed) > 1 || len(run.Result) > 1 || run.State > 5 || run.Issued > math.MaxInt64 || run.Expires > math.MaxInt64 || run.Updated > math.MaxInt64 {
 		return ChainExecution{}, false, fmt.Errorf("invalid chain execution binding")
 	}
 	var budget moveBoundBudgetClaim
@@ -114,6 +116,8 @@ func (s *ChainAuthorityResolver) LookupExecution(ctx context.Context, capability
 		value.ManagedAgentID = run.Managed[0].String()
 	}
 	value.AttemptID = hex.EncodeToString(run.AttemptID)
+	value.GrantVersion = run.GrantVersion
+	value.UpdatedAtMS = int64(run.Updated)
 	value.BudgetSpent = Uint64String(budget.Spent)
 	value.BudgetSettled = budget.Settled
 	if !budget.Settled {

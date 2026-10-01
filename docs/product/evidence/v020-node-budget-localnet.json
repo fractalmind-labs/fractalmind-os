@@ -9181,5 +9181,31 @@
         "reserved": "20"
       }
     ]
-  }
+  },
+  "authenticatedResultReads": [
+    {
+      "keyVersion": 1,
+      "recordId": "0x483f0f0b4009a4dae653d4f2360db92c89e96a6a5dd573395da7992fdf0a5f6b",
+      "resultHash": "d9610f6a5f70f7d8b16d34083e679416292296be9b105bda58d131cbb51648d4",
+      "revision": 1,
+      "size": 94,
+      "state": 2
+    },
+    {
+      "keyVersion": 1,
+      "recordId": "0xf78c7c873c422fcce9e60b3e3543c778866b43d37a0c749ef8872eb7c63cbcab",
+      "resultHash": "b56a802236b67de7392a9df1af00f123710815ea1850e1e4b8131c53f896e3ed",
+      "revision": 1,
+      "size": 83,
+      "state": 4
+    },
+    {
+      "keyVersion": 1,
+      "recordId": "0x04b6ef502dfff3d00ab780da6a07dfb1c59f6396a5aa17eaced32a12d349b811",
+      "resultHash": "17aba4ec5bffaaf1aab105b7f287b14a1abbfebb61d7f2fdd9c415d14fb46fea",
+      "revision": 1,
+      "size": 116,
+      "state": 5
+    }
+  ]
 }

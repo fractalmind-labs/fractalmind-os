@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createRecoveryCode, parseRecoveryCode, recoveryKeys, createDeviceEncryptionKeys, encryptContent, decryptContent, wrapKeys, unwrapKeys, randomContentKey } from '../src/identity-crypto.js';
+import { readFile } from 'node:fs/promises';
+import { createRecoveryCode, parseRecoveryCode, recoveryKeys, createDeviceEncryptionKeys, encryptContent, decryptContent, wrapKeys, unwrapKeys, randomContentKey, hexToBytes } from '../src/identity-crypto.js';
 
 test('one recovery code deterministically locates the recovery signer and decryption key', () => {
   const code = createRecoveryCode('testnet');
@@ -52,4 +53,11 @@ test('key distribution and recovery use independent recipient secrets', async ()
 test('low-order recipients and malformed wrapping envelopes are rejected', async () => {
   await assert.rejects(wrapKeys(randomContentKey(), new Uint8Array(32), 'human-1'));
   await assert.rejects(unwrapKeys(new Uint8Array(100), randomContentKey(), 'human-1'), /envelope/);
+});
+
+test('SDK independently decrypts Go-generated FME1 result content', async () => {
+  const fixture = JSON.parse(await readFile(new URL('./testdata/go-content.json', import.meta.url), 'utf8'));
+  const plaintext = await decryptContent(hexToBytes(fixture.envelope), hexToBytes(fixture.key), fixture.context);
+  assert.equal(new TextDecoder().decode(plaintext), fixture.plaintext);
+  await assert.rejects(decryptContent(hexToBytes(fixture.envelope), hexToBytes(fixture.key), `${fixture.context}:wrong`));
 });

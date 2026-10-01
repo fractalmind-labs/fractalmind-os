@@ -33,6 +33,10 @@
 
 恢复后 3 份终态正文可解密；另用新建 SDK 只读核对 6 个选定检查点的逐笔预算及 3 份总账，记录在 `recoveredExecutionBudgets`。选定对象 ID 来自测试报告，这证明链上账本可独立重读，不代表 App 的目录发现或完整缓存重建已完成。
 
+执行端新增 `ReadExecutionResult`，直接核验不可变正文的原始包类型、UID、组织、命令逻辑 ID、修订、Host/Human/Grant 及版本、写入时间与密文摘要。3 次真实 Go 结果读取记录于报告的 `authenticatedResultReads`；原设备已经恢复失效，历史密文仍可核验，读取不授予新执行权限。
+
+Go `productcrypto` 与 SDK 双向 FME1 AES-256-GCM 互操作已测试，包括中文/Unicode 正文、AAD 不匹配、篡改、nonce 随机性和 64 KiB 链上正文上限。互操作 fixture 只包含公开的合成测试密钥。尚未向 Host 分发生产正文密钥，不能把这项基础验证当作结果存储已接入执行器；运行时的密钥访问还须符合实例和命令的权限范围。
+
 在已经启动的隔离本地网络上，从仓库根目录运行：
 
 ```sh

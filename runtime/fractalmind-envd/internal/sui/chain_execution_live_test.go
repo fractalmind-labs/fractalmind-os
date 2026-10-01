@@ -102,3 +102,34 @@ func TestChainExecutionReadLive(t *testing.T) {
 	}
 	t.Logf("execution=%s state=%d cursor=%d", run.ID, run.State, run.Cursor)
 }
+
+func TestChainExecutionResultReadLive(t *testing.T) {
+	raw := os.Getenv("FM_CHAIN_RESULT_PUBLIC")
+	if raw == "" {
+		t.Skip("requires public isolated-localnet terminal checkpoint")
+	}
+	var input struct{ RPC, PackageID, CapabilityID, Fingerprint, ExpectedRecordID string }
+	if err := json.Unmarshal([]byte(raw), &input); err != nil {
+		t.Fatal(err)
+	}
+	client, err := NewGRPCClient(input.RPC, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	resolver, err := nodecommand.NewChainAuthorityResolver(client, input.PackageID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	result, found, err := resolver.ReadExecutionResult(ctx, input.CapabilityID, input.Fingerprint)
+	if err != nil || !found {
+		t.Fatalf("result read: found=%v error=%v", found, err)
+	}
+	if result.ID != input.ExpectedRecordID {
+		t.Fatalf("result pointer mismatch: %s", result.ID)
+	}
+	encoded, _ := json.Marshal(map[string]any{"recordId": result.ID, "state": result.Execution.State, "keyVersion": result.KeyVersion, "revision": result.Revision, "size": len(result.EncryptedBody), "resultHash": result.Execution.ResultHash})
+	t.Logf("FM_CHAIN_RESULT_EVIDENCE %s", encoded)
+}
