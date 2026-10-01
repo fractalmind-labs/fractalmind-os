@@ -64,12 +64,20 @@ func (s *ChainReservations) Reserve(ctx context.Context, r nodecommand.Reservati
 		args = append(args, ObjectArgument(execution.ManagedAgentID))
 		function = "begin_agent_command"
 	}
+	module := "node_execution"
+	if execution.Contract != nil {
+		if state.Contract == nil || *execution.Contract != *state.Contract {
+			return nodecommand.ReservationResult{}, fmt.Errorf("prepared OKR contract changed")
+		}
+		module, function = "okr", "begin_command"
+		args = append([]interface{}{ObjectArgument(execution.Contract.ID)}, args...)
+	}
 	attempt := make([]byte, 32)
 	if _, err = rand.Read(attempt); err != nil {
 		return nodecommand.ReservationResult{}, err
 	}
 	args = append(args, byteVector(attempt), ObjectArgument("0x6"))
-	tx, err := s.rpc.MoveCall(ctx, models.MoveCallRequest{Signer: s.keypair.Address(), PackageObjectId: s.packageID, Module: "node_execution", Function: function, Arguments: args, TypeArguments: []interface{}{}, GasBudget: "100000000"})
+	tx, err := s.rpc.MoveCall(ctx, models.MoveCallRequest{Signer: s.keypair.Address(), PackageObjectId: s.packageID, Module: module, Function: function, Arguments: args, TypeArguments: []interface{}{}, GasBudget: "100000000"})
 	if err != nil {
 		return nodecommand.ReservationResult{}, err
 	}

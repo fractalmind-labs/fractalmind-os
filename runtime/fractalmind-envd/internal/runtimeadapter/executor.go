@@ -50,12 +50,13 @@ type flight struct {
 }
 
 type payload struct {
-	TimeoutSeconds float64          `json:"timeout_seconds,omitempty"`
-	Cancel         bool             `json:"cancel,omitempty"`
-	Restore        *bool            `json:"restore,omitempty"`
-	Task           string           `json:"task,omitempty"`
-	Lines          *int             `json:"lines,omitempty"`
-	Bounds         *ExecutionBounds `json:"bounds,omitempty"`
+	TimeoutSeconds float64                           `json:"timeout_seconds,omitempty"`
+	Cancel         bool                              `json:"cancel,omitempty"`
+	Restore        *bool                             `json:"restore,omitempty"`
+	Task           string                            `json:"task,omitempty"`
+	Lines          *int                              `json:"lines,omitempty"`
+	Bounds         *ExecutionBounds                  `json:"bounds,omitempty"`
+	Okr            *nodecommand.ExecutionContractRef `json:"okr,omitempty"`
 }
 
 func NewExecutor(validator *nodecommand.Validator, adapter Adapter) *Executor {

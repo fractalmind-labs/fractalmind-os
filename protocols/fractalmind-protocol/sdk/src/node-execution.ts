@@ -59,6 +59,10 @@ export class NodeExecutionApi {
     if (Boolean(input.command.target.agent_id) !== Boolean(input.managedAgentId)) throw new Error('Managed instance authority must match the command target.');
     const tx = this.fm.useTransaction(input.tx);
     const command = input.command;
+    const contract = command.payload?.okr as { id: string; agreement_version: string; kr_index: string } | undefined;
+    if ('okr' in (command.payload ?? {})) {
+      if (!contract || !input.managedAgentId || typeof contract.id !== 'string' || typeof contract.agreement_version !== 'string' || typeof contract.kr_index !== 'string' || normalizeSuiAddress(contract.id) !== contract.id || !/^[1-9][0-9]*$/.test(contract.agreement_version) || !/^[0-2]$/.test(contract.kr_index)) throw new Error('Invalid signed OKR context.');
+    }
     if (input.resultKey) {
       const member = await new HostApi(this.fm).getMembership(input.membershipId);
       if (member.id !== normalizeSuiAddress(input.membershipId) || member.org_id !== normalizeSuiAddress(command.target.organization_id) || member.host_address !== normalizeSuiAddress(command.target.node_id)) throw new Error('Host membership does not match command key recipient.');
@@ -71,27 +75,30 @@ export class NodeExecutionApi {
     }
     const args: TransactionArgument[] = [tx.object(command.capability.id), tx.object(command.target.organization_id), tx.object(input.humanId), tx.object(input.grantId), tx.object(input.membershipId), tx.object(input.bindingId)];
     if (input.managedAgentId) args.push(tx.object(input.managedAgentId));
+    if (contract) args.push(tx.pure.u64(toBigInt(contract.agreement_version)), tx.pure.u64(toBigInt(contract.kr_index)));
     args.push(tx.pure.string(command.action), tx.pure.string(command.scope), tx.pure.string(command.command_id), tx.pure.string(command.nonce), tx.pure.string(command.idempotency_key), tx.pure.string(command.budget?.asset ?? ''), tx.pure.u64(toBigInt(command.budget?.amount ?? 0)), tx.pure.vector('u8', nodeCommandIntentHash(command)), tx.pure.u64(command.issued_at_ms), tx.pure.u64(command.expires_at_ms), tx.object('0x6'));
-    tx.moveCall({ target: `${this.fm.packageId}::node_execution::prepare_${input.managedAgentId ? 'agent' : 'host'}_command`, arguments: args });
+    if (contract) args.unshift(tx.object(contract.id));
+    tx.moveCall({ target: contract ? `${this.fm.packageId}::okr::prepare_command` : `${this.fm.packageId}::node_execution::prepare_${input.managedAgentId ? 'agent' : 'host'}_command`, arguments: args });
     return tx;
   }
-  beginCommand(input: Authority & { executionId: string; capabilityId: string; organizationId: string; attemptId?: Uint8Array; tx?: Transaction }) {
+  beginCommand(input: Authority & { executionId: string; capabilityId: string; organizationId: string; okrId?: string; attemptId?: Uint8Array; tx?: Transaction }) {
     const tx = this.fm.useTransaction(input.tx);
     const args: TransactionArgument[] = [tx.object(input.executionId), tx.object(input.capabilityId), tx.object(input.organizationId), tx.object(input.humanId), tx.object(input.grantId), tx.object(input.membershipId), tx.object(input.bindingId)];
     if (input.managedAgentId) args.push(tx.object(input.managedAgentId));
     args.push(tx.pure.vector('u8', input.attemptId ?? globalThis.crypto.getRandomValues(new Uint8Array(32))), tx.object('0x6'));
-    tx.moveCall({ target: `${this.fm.packageId}::node_execution::begin_${input.managedAgentId ? 'agent' : 'host'}_command`, arguments: args });
+    if (input.okrId) { if (!input.managedAgentId) throw new Error('OKR commands require a managed Agent.'); args.unshift(tx.object(input.okrId)); }
+    tx.moveCall({ target: input.okrId ? `${this.fm.packageId}::okr::begin_command` : `${this.fm.packageId}::node_execution::begin_${input.managedAgentId ? 'agent' : 'host'}_command`, arguments: args });
     return tx;
   }
-  finishCommand(input: { executionId: string; capabilityId: string; organizationId: string; finalState: number; expectedCursor: bigint | string | number; spentAmount: bigint | string | number; keyVersion: bigint | string | number; encryptedResult: Uint8Array; tx?: Transaction }) {
+  finishCommand(input: { executionId: string; capabilityId: string; organizationId: string; okrId?: string; finalState: number; expectedCursor: bigint | string | number; spentAmount: bigint | string | number; keyVersion: bigint | string | number; encryptedResult: Uint8Array; tx?: Transaction }) {
     if (input.finalState === EXECUTION_STATES.needsConfirmation && toBigInt(input.spentAmount) !== 0n) throw new Error('Unknown execution cannot release its budget reservation.');
     const tx = this.fm.useTransaction(input.tx);
-    tx.moveCall({ target: `${this.fm.packageId}::node_execution::finish_command_with_budget`, arguments: [tx.object(input.executionId), tx.object(input.capabilityId), tx.object(input.organizationId), tx.pure.u8(input.finalState), tx.pure.u64(toBigInt(input.expectedCursor)), tx.pure.u64(toBigInt(input.spentAmount)), tx.pure.u64(toBigInt(input.keyVersion)), bytesArgument(tx, this.fm.packageId, input.encryptedResult), tx.object('0x6')] });
+    tx.moveCall({ target: input.okrId ? `${this.fm.packageId}::okr::finish_command` : `${this.fm.packageId}::node_execution::finish_command_with_budget`, arguments: [...(input.okrId ? [tx.object(input.okrId)] : []), tx.object(input.executionId), tx.object(input.capabilityId), tx.object(input.organizationId), tx.pure.u8(input.finalState), tx.pure.u64(toBigInt(input.expectedCursor)), tx.pure.u64(toBigInt(input.spentAmount)), tx.pure.u64(toBigInt(input.keyVersion)), bytesArgument(tx, this.fm.packageId, input.encryptedResult), tx.object('0x6')] });
     return tx;
   }
-  requestStop(input: { executionId: string; capabilityId: string; organizationId: string; humanId: string; grantId: string; tx?: Transaction }) {
+  requestStop(input: { executionId: string; capabilityId: string; organizationId: string; humanId: string; grantId: string; okrId?: string; tx?: Transaction }) {
     const tx = this.fm.useTransaction(input.tx);
-    tx.moveCall({ target: `${this.fm.packageId}::node_execution::request_stop_with_budget`, arguments: [tx.object(input.executionId), tx.object(input.capabilityId), tx.object(input.organizationId), tx.object(input.humanId), tx.object(input.grantId), tx.object('0x6')] });
+    tx.moveCall({ target: input.okrId ? `${this.fm.packageId}::okr::request_stop` : `${this.fm.packageId}::node_execution::request_stop_with_budget`, arguments: [...(input.okrId ? [tx.object(input.okrId)] : []), tx.object(input.executionId), tx.object(input.capabilityId), tx.object(input.organizationId), tx.object(input.humanId), tx.object(input.grantId), tx.object('0x6')] });
     return tx;
   }
   async getBudget(capabilityId: string) {

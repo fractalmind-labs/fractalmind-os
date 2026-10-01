@@ -140,7 +140,13 @@ func TestNativeChainFileAgentLive(t *testing.T) {
 	var stopDigest string
 	trigger := &chainStopTrigger{ChainAuthorityResolver: resolver}
 	trigger.stop = func(ctx context.Context, run nodecommand.ChainExecution) error {
-		tx, err := fresh.rpc.MoveCall(ctx, models.MoveCallRequest{Signer: device.Address(), PackageObjectId: input.PackageID, Module: "node_execution", Function: "request_stop_with_budget", Arguments: []interface{}{sui.ObjectArgument(run.ID), sui.ObjectArgument(run.CapabilityID), sui.ObjectArgument(run.Target.OrganizationID), sui.ObjectArgument(run.HumanID), sui.ObjectArgument(run.GrantID), sui.ObjectArgument("0x6")}, TypeArguments: []interface{}{}, GasBudget: "100000000"})
+		args := []interface{}{sui.ObjectArgument(run.ID), sui.ObjectArgument(run.CapabilityID), sui.ObjectArgument(run.Target.OrganizationID), sui.ObjectArgument(run.HumanID), sui.ObjectArgument(run.GrantID), sui.ObjectArgument("0x6")}
+		module, function := "node_execution", "request_stop_with_budget"
+		if run.Contract != nil {
+			module, function = "okr", "request_stop"
+			args = append([]interface{}{sui.ObjectArgument(run.Contract.ID)}, args...)
+		}
+		tx, err := fresh.rpc.MoveCall(ctx, models.MoveCallRequest{Signer: device.Address(), PackageObjectId: input.PackageID, Module: module, Function: function, Arguments: args, TypeArguments: []interface{}{}, GasBudget: "100000000"})
 		if err != nil {
 			return err
 		}

@@ -17,6 +17,7 @@ module fractalmind_protocol::okr {
     use fractalmind_protocol::host::{Self, HostMembership, CoordinatorBinding, ManagedAgent};
     use fractalmind_protocol::node_execution::{Self, CommandExecution};
     use fractalmind_protocol::product_record::{Self, EncryptedRecord};
+    use fractalmind_protocol::remote_authority::{Self as ra, RemoteCapability, ContractWitness};
 
     const E_INPUT: u64 = 9401;
     const E_VERSION: u64 = 9402;
@@ -26,6 +27,7 @@ module fractalmind_protocol::okr {
     const E_ORDER: u64 = 9406;
     const E_EVIDENCE: u64 = 9407;
     const E_STALE: u64 = 9408;
+    const E_BUDGET: u64 = 9409;
     const DRAFT: u8 = 0;
     const ACTIVE: u8 = 1;
     const PAUSED: u8 = 2;
@@ -35,6 +37,9 @@ module fractalmind_protocol::okr {
     public struct IndexKey has copy, drop, store {}
     public struct DraftPointer has copy, drop, store { id: ID, fingerprint: vector<u8> }
     public struct OkrIndex has store { active_count: u64, records: Table<String, DraftPointer> }
+    public struct BudgetKey has copy, drop, store {}
+    public struct BudgetState has store { asset: String, spent: u64, reserved: u64, claims: Table<ID, BudgetClaim> }
+    public struct BudgetClaim has copy, drop, store { capability_id: ID, agreement_version: u64, kr_index: u64, reserved: u64, spent: u64, settled: bool }
     public struct DraftIntent has copy, drop, store {
         human_id: ID, priority: u8, deadline_ms: u64, metrics: vector<Metric>, key_version: u64, encrypted_spec: vector<u8>,
     }
@@ -158,9 +163,113 @@ module fractalmind_protocol::okr {
         okr.membership_id = option::some(object::id(member)); okr.membership_version = host::membership_version(member);
         okr.workspace_hash = workspace_hash; okr.boundary_hash = boundary_hash;
         okr.budget_asset = budget_asset; okr.budget_limit = budget_limit; okr.expires_at_ms = expires_at_ms;
+        let ledger = budget(okr, ctx);
+        assert!((ledger.asset == budget_asset || (ledger.spent == 0 && ledger.reserved == 0 && table::length(&ledger.claims) == 0)) && ledger.spent <= budget_limit && ledger.reserved <= budget_limit - ledger.spent, E_BUDGET);
+        ledger.asset = budget_asset;
         okr.agreement_record = option::some(record); okr.agreement_version = okr.agreement_version + 1;
         okr.activated_at_ms = clock::timestamp_ms(clock); okr.state = ACTIVE;
         changed(okr);
+    }
+    fun budget(okr: &mut Okr, ctx: &mut TxContext): &mut BudgetState {
+        if (!df::exists_(&okr.id, BudgetKey {})) {
+            df::add(&mut okr.id, BudgetKey {}, BudgetState { asset: okr.budget_asset, spent: 0, reserved: 0, claims: table::new(ctx) });
+        };
+        df::borrow_mut(&mut okr.id, BudgetKey {})
+    }
+    fun assignment_witness(
+        okr: &Okr, org: &Organization, member: &HostMembership, binding: &CoordinatorBinding,
+        managed: &ManagedAgent, cap: &RemoteCapability, kr_index: u64, clock: &Clock,
+    ): ContractWitness {
+        assert!(okr.org_id == object::id(org) && ra::org_id(cap) == okr.org_id, E_TARGET);
+        assert!(okr.state == ACTIVE && clock::timestamp_ms(clock) < okr.expires_at_ms, E_STATE);
+        assert!(kr_index == okr.next_kr && kr_index < vector::length(&okr.metrics), E_ORDER);
+        host::assert_member(org, member, binding, clock); host::assert_managed(org, member, managed, true);
+        assert!(okr.managed_agent == option::some(object::id(managed)) && okr.managed_version == host::managed_version(managed)
+            && okr.membership_id == option::some(object::id(member)) && okr.membership_version == host::membership_version(member)
+            && okr.workspace_hash == host::managed_workspace_hash(managed), E_TARGET);
+        assert!(ra::actions(cap) == vector[string::utf8(b"assign")] && ra::scope(cap) == string::utf8(b"control")
+            && ra::budget_asset(cap) == okr.budget_asset && ra::max_budget(cap) <= okr.budget_limit && ra::expires_at_ms(cap) <= okr.expires_at_ms, E_TARGET);
+        ra::contract_witness(cap, object::id(okr), okr.agreement_version, kr_index, okr.boundary_hash)
+    }
+    public fun issue_capability(
+        okr: &Okr, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent,
+        expected_version: u64, max_uses: u64, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        identity::assert_can(human, grant, org, identity::approve_action(), clock, ctx);
+        assert_version(okr, org, expected_version);
+        assert!(okr.state == ACTIVE && okr.next_kr < vector::length(&okr.metrics), E_STATE);
+        let mut cap = host::new_agent_capability(org, human, grant, member, binding, managed,
+            vector[string::utf8(b"assign")], string::utf8(b"control"), max_uses, okr.budget_asset, okr.budget_limit, okr.expires_at_ms, clock, ctx);
+        ra::bind_execution_contract(&mut cap, object::id(okr), okr.agreement_version, okr.boundary_hash);
+        let _ = assignment_witness(okr, org, member, binding, managed, &cap, okr.next_kr, clock);
+        ra::share_capability(cap);
+    }
+    public fun prepare_command(
+        okr: &mut Okr, cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent, expected_agreement: u64, kr_index: u64,
+        action: String, scope: String, command_id: String, nonce: String, idempotency_key: String,
+        budget_asset: String, budget_amount: u64, intent_hash: vector<u8>, issued_at_ms: u64, expires_at_ms: u64,
+        clock: &Clock, ctx: &mut TxContext,
+    ) {
+        assert!(expected_agreement == okr.agreement_version, E_VERSION);
+        let witness = assignment_witness(okr, org, member, binding, managed, cap, kr_index, clock);
+        assert!(budget_asset == okr.budget_asset && budget_amount > 0, E_BUDGET);
+        let old = node_execution::execution_id(cap, intent_hash);
+        let limit = okr.budget_limit; let agreement_version = okr.agreement_version;
+        let ledger = budget(okr, ctx);
+        let existed = option::is_some(&old) && table::contains(&ledger.claims, *option::borrow(&old));
+        if (!existed) assert!(ledger.spent <= limit && ledger.reserved <= limit - ledger.spent && budget_amount <= limit - ledger.spent - ledger.reserved, E_BUDGET);
+        let run_id = node_execution::prepare_agent_command_with_contract(cap, org, human, grant, member, binding, managed, witness,
+            action, scope, command_id, nonce, idempotency_key, budget_asset, budget_amount, intent_hash, issued_at_ms, expires_at_ms, clock, ctx);
+        let ledger = budget(okr, ctx);
+        if (existed) {
+            let previous = table::borrow(&ledger.claims, run_id);
+            assert!(previous.capability_id == object::id(cap) && previous.agreement_version == agreement_version && previous.kr_index == kr_index && previous.reserved == budget_amount, E_BUDGET);
+        } else {
+            assert!(!table::contains(&ledger.claims, run_id), E_BUDGET);
+            ledger.reserved = ledger.reserved + budget_amount;
+            table::add(&mut ledger.claims, run_id, BudgetClaim { capability_id: object::id(cap), agreement_version, kr_index, reserved: budget_amount, spent: 0, settled: false });
+        };
+    }
+    public fun begin_command(
+        okr: &Okr, run: &mut CommandExecution, cap: &RemoteCapability, org: &Organization,
+        human: &HumanIdentity, grant: &DeviceGrant, member: &HostMembership, binding: &CoordinatorBinding,
+        managed: &ManagedAgent, attempt_id: vector<u8>, clock: &Clock, ctx: &TxContext,
+    ) {
+        let witness = assignment_witness(okr, org, member, binding, managed, cap, okr.next_kr, clock);
+        let ledger: &BudgetState = df::borrow(&okr.id, BudgetKey {});
+        let claim = table::borrow(&ledger.claims, sui::object::id(run));
+        assert!(!claim.settled && claim.capability_id == object::id(cap) && claim.agreement_version == okr.agreement_version && claim.kr_index == okr.next_kr, E_BUDGET);
+        node_execution::begin_agent_command_with_contract(run, cap, org, human, grant, member, binding, managed, witness, attempt_id, clock, ctx);
+    }
+    public fun finish_command(
+        okr: &mut Okr, run: &mut CommandExecution, cap: &mut RemoteCapability, org: &mut Organization, final_state: u8,
+        expected_cursor: u64, spent_amount: u64, key_version: u64, encrypted_result: vector<u8>, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        assert!(okr.org_id == object::id(org) && node_execution::capability_id(run) == object::id(cap), E_TARGET);
+        let witness = ra::settlement_witness(cap, node_execution::intent_hash(run), object::id(okr));
+        let ledger = budget(okr, ctx); let claim = table::borrow(&ledger.claims, object::id(run));
+        assert!(!claim.settled && claim.capability_id == object::id(cap) && claim.reserved == node_execution::budget_amount(run)
+            && ledger.asset == node_execution::budget_asset(run) && spent_amount <= claim.reserved, E_BUDGET);
+        node_execution::finish_command_with_contract(run, cap, org, witness, final_state, expected_cursor, spent_amount, key_version, encrypted_result, clock, ctx);
+        if (final_state != 4) settle(okr, object::id(run), spent_amount, ctx);
+    }
+    public fun request_stop(
+        okr: &mut Okr, run: &mut CommandExecution, cap: &mut RemoteCapability, org: &Organization,
+        human: &HumanIdentity, grant: &DeviceGrant, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        assert!(okr.org_id == object::id(org) && node_execution::capability_id(run) == object::id(cap), E_TARGET);
+        let witness = ra::settlement_witness(cap, node_execution::intent_hash(run), object::id(okr));
+        let was_queued = node_execution::state(run) == 0;
+        node_execution::request_stop_with_contract(run, cap, org, human, grant, witness, clock, ctx);
+        if (was_queued) settle(okr, object::id(run), 0, ctx);
+    }
+    fun settle(okr: &mut Okr, run_id: ID, spent: u64, ctx: &mut TxContext) {
+        let ledger = budget(okr, ctx); let claim = table::borrow_mut(&mut ledger.claims, run_id);
+        assert!(!claim.settled && spent <= claim.reserved && ledger.reserved >= claim.reserved, E_BUDGET);
+        ledger.reserved = ledger.reserved - claim.reserved; ledger.spent = ledger.spent + spent;
+        claim.spent = spent; claim.settled = true;
     }
     public fun pause(
         okr: &mut Okr, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
@@ -195,7 +304,7 @@ module fractalmind_protocol::okr {
     /// evidence. Runtime-to-OKR authorization binding is a separate integration.
     public fun observe(
         okr: &mut Okr, org: &Organization, member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent,
-        run: &CommandExecution, evidence: &EncryptedRecord, expected_version: u64, expected_agreement: u64,
+        cap: &RemoteCapability, run: &CommandExecution, evidence: &EncryptedRecord, expected_version: u64, expected_agreement: u64,
         kr_index: u64, current: u64, sampled_at_ms: u64, clock: &Clock, ctx: &mut TxContext,
     ) {
         assert_version(okr, org, expected_version); assert!(okr.agreement_version == expected_agreement, E_VERSION);
@@ -205,7 +314,9 @@ module fractalmind_protocol::okr {
             && okr.membership_id == option::some(object::id(member)) && okr.membership_version == host::membership_version(member), E_TARGET);
         assert!(tx_context::sender(ctx) == host::membership_host_address(member), E_TARGET);
         assert!(kr_index == okr.next_kr && kr_index < vector::length(&okr.metrics), E_ORDER);
-        assert!(node_execution::state(run) == 2 && node_execution::organization_id(run) == okr.org_id
+        let witness = assignment_witness(okr, org, member, binding, managed, cap, kr_index, clock);
+        ra::assert_contract_command(cap, node_execution::intent_hash(run), &witness);
+        assert!(node_execution::state(run) == 2 && node_execution::capability_id(run) == object::id(cap) && node_execution::organization_id(run) == okr.org_id
             && node_execution::managed_agent_id(run) == okr.managed_agent && node_execution::host_address(run) == tx_context::sender(ctx)
             && node_execution::created_at_ms(run) >= okr.activated_at_ms && node_execution::result_record(run) == option::some(object::id(evidence))
             && product_record::record_organization(evidence) == okr.org_id, E_EVIDENCE);

@@ -39,6 +39,7 @@ module fractalmind_protocol::remote_authority {
     const E_CLAIM_MISMATCH: u64 = 8318;
     const E_BUDGET_SETTLEMENT: u64 = 8319;
     const E_BUDGET_LEDGER_REQUIRED: u64 = 8320;
+    const E_CONTRACT_REQUIRED: u64 = 8321;
 
     const SCHEMA_VERSION: u8 = 1;
     const TARGET_ORGANIZATION: u8 = 1;
@@ -78,6 +79,19 @@ module fractalmind_protocol::remote_authority {
     public struct BoundBudgetTotals has copy, drop, store { spent: u64, reserved: u64 }
     public struct BoundBudgetClaimKey has copy, drop, store { intent_hash: vector<u8> }
     public struct BoundBudgetClaim has copy, drop, store { reserved_amount: u64, spent_amount: u64, settled: bool }
+    public struct ExecutionContractKey has copy, drop, store {}
+    public struct ExecutionContractBinding has copy, drop, store {
+        contract_id: ID, agreement_version: u64, boundary_hash: vector<u8>,
+    }
+    public struct CommandContractKey has copy, drop, store { intent_hash: vector<u8> }
+    public struct CommandContractBinding has copy, drop, store {
+        contract_id: ID, agreement_version: u64, kr_index: u64, boundary_hash: vector<u8>,
+    }
+    /// A transaction cannot supply this non-storable witness as pure data.
+    /// Its constructor and consumers stay inside the audited protocol package.
+    public struct ContractWitness has drop {
+        capability_id: ID, contract_id: ID, agreement_version: u64, kr_index: u64, boundary_hash: vector<u8>,
+    }
     public struct BoundBudgetSettled has copy, drop {
         capability_id: ID, intent_hash: vector<u8>, reserved_amount: u64, spent_amount: u64,
         spent_total: u64, reserved_total: u64,
@@ -269,6 +283,40 @@ module fractalmind_protocol::remote_authority {
 
     public(package) fun capability_uid(capability: &RemoteCapability): &UID { &capability.id }
     public(package) fun capability_uid_mut(capability: &mut RemoteCapability): &mut UID { &mut capability.id }
+    public(package) fun bind_execution_contract(cap: &mut RemoteCapability, contract_id: ID, agreement_version: u64, boundary_hash: vector<u8>) {
+        assert!(cap.uses_claimed == 0 && cap.budget_claimed == 0 && agreement_version > 0 && vector::length(&boundary_hash) == 32
+            && !df::exists_(&cap.id, ExecutionContractKey {}), E_CONTRACT_REQUIRED);
+        df::add(&mut cap.id, ExecutionContractKey {}, ExecutionContractBinding { contract_id, agreement_version, boundary_hash });
+    }
+    public(package) fun assert_unbound_contract(cap: &RemoteCapability) {
+        assert!(!df::exists_(&cap.id, ExecutionContractKey {}), E_CONTRACT_REQUIRED);
+    }
+    public(package) fun contract_witness(cap: &RemoteCapability, contract_id: ID, agreement_version: u64, kr_index: u64, boundary_hash: vector<u8>): ContractWitness {
+        let binding: &ExecutionContractBinding = df::borrow(&cap.id, ExecutionContractKey {});
+        assert!(binding.contract_id == contract_id && binding.agreement_version == agreement_version && binding.boundary_hash == boundary_hash && kr_index < 3, E_CONTRACT_REQUIRED);
+        ContractWitness { capability_id: object::id(cap), contract_id, agreement_version, kr_index, boundary_hash: binding.boundary_hash }
+    }
+    public(package) fun record_contract_command(cap: &mut RemoteCapability, intent_hash: vector<u8>, witness: &ContractWitness) {
+        assert!(witness.capability_id == object::id(cap), E_CONTRACT_REQUIRED);
+        let key = CommandContractKey { intent_hash };
+        let value = CommandContractBinding { contract_id: witness.contract_id, agreement_version: witness.agreement_version,
+            kr_index: witness.kr_index, boundary_hash: witness.boundary_hash };
+        if (df::exists_(&cap.id, key)) {
+            assert!(*df::borrow<CommandContractKey, CommandContractBinding>(&cap.id, key) == value, E_CONTRACT_REQUIRED);
+        } else df::add(&mut cap.id, key, value);
+    }
+    public(package) fun settlement_witness(cap: &RemoteCapability, intent_hash: vector<u8>, contract_id: ID): ContractWitness {
+        let recorded: &CommandContractBinding = df::borrow(&cap.id, CommandContractKey { intent_hash });
+        assert!(recorded.contract_id == contract_id, E_CONTRACT_REQUIRED);
+        ContractWitness { capability_id: object::id(cap), contract_id, agreement_version: recorded.agreement_version,
+            kr_index: recorded.kr_index, boundary_hash: recorded.boundary_hash }
+    }
+    public(package) fun assert_contract_command(cap: &RemoteCapability, intent_hash: vector<u8>, witness: &ContractWitness) {
+        assert!(witness.capability_id == object::id(cap), E_CONTRACT_REQUIRED);
+        let recorded: &CommandContractBinding = df::borrow(&cap.id, CommandContractKey { intent_hash });
+        assert!(recorded.contract_id == witness.contract_id && recorded.agreement_version == witness.agreement_version
+            && recorded.kr_index == witness.kr_index && recorded.boundary_hash == witness.boundary_hash, E_CONTRACT_REQUIRED);
+    }
 
     /// Delegate a bounded node/agent subset from an organization root. Quota is
     /// reserved at child creation and never returned in Phase 0.

@@ -52,6 +52,7 @@ type ChainExecution struct {
 	StopRequested                                                                          bool
 	ResultRecordID, ResultHash                                                             string
 	AttemptID                                                                              string
+	Contract                                                                               *ExecutionContractAuthority
 }
 
 type ChainExecutionReader interface {
@@ -104,6 +105,10 @@ func (s *ChainAuthorityResolver) LookupExecution(ctx context.Context, capability
 	if budget.Reserved != run.BudgetAmount || budget.Spent > budget.Reserved || (!budget.Settled && budget.Spent != 0) || budget.Settled != knownTerminal {
 		return ChainExecution{}, false, fmt.Errorf("invalid execution budget settlement")
 	}
+	contract, err := r.executionContract(ctx, cap, run, budget)
+	if err != nil {
+		return ChainExecution{}, false, err
+	}
 	var member moveMembership
 	if err = r.object(ctx, run.Membership.String(), "host::HostMembership", &member); err != nil {
 		return ChainExecution{}, false, err
@@ -115,6 +120,7 @@ func (s *ChainAuthorityResolver) LookupExecution(ctx context.Context, capability
 	if len(run.Managed) == 1 {
 		value.ManagedAgentID = run.Managed[0].String()
 	}
+	value.Contract = contract
 	value.AttemptID = hex.EncodeToString(run.AttemptID)
 	value.GrantVersion = run.GrantVersion
 	value.UpdatedAtMS = int64(run.Updated)

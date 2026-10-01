@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { FractalMindSDK, encryptContent, recordContext, metricProgress } from '../src/index.js';
+import { FractalMindSDK, encryptContent, recordContext, metricProgress, signNodeCommand } from '../src/index.js';
 import type { ProductRecordKind } from '../src/index.js';
 import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import type { Transaction } from '@mysten/sui/transactions';
@@ -9,9 +9,7 @@ type Data = SuiClientTypes.Transaction<{ effects: true; objectTypes: true; event
 type Execute = (label: string, tx: Transaction, signer?: Ed25519Keypair, sponsor?: Ed25519Keypair, allowRejected?: boolean) => Promise<{ data: Data }>;
 type Options = { sdk: FractalMindSDK; execute: Execute; created: (data: Data, suffix: string) => string; organizationId: string; humanId: string; grantId: string; membershipId: string; bindingId: string; managedAgentId: string; desktop: Ed25519Keypair; host: Ed25519Keypair; wrongHost: Ed25519Keypair; contentKey: Uint8Array };
 
-/** This slice tests typed OKR lifecycle against actual file-run evidence. The
- * execution capability still needs a version-bound OKR authorization bridge;
- * declaring an agreement here does not claim it is enforced by that runtime. */
+/** Real OKR-bound file execution; no mock budget or runtime authority. */
 export async function prepareOkrAcceptance(o: Options, boundaryHash: Uint8Array) {
   const { sdk, execute, created } = o;
   const authorized = { organizationId: o.organizationId, humanId: o.humanId, grantId: o.grantId };
@@ -36,8 +34,8 @@ export async function prepareOkrAcceptance(o: Options, boundaryHash: Uint8Array)
   assert.equal(Object.values(exactRetry.data.objectTypes ?? {}).filter(type => type.endsWith('::okr::Okr')).length, 0);
   const managed = await sdk.host.getManagedAgent(o.managedAgentId);
   async function activate(draft: typeof first, allowed = true) {
-    const agreement = await body(draft.logicalId, 'agreement', 'contract', 1n, JSON.stringify({ format: 1, managedAgentId: o.managedAgentId, boundaryHash: Array.from(boundaryHash), budget: { asset: 'TOOL_CALLS', limit: '10' }, order: 'sequential', verifier: 'authorized human' }));
-    const made = await execute(allowed ? 'OKR: activate one explicitly managed Agent' : 'OKR: fourth ACTIVE is rejected atomically', sdk.okr.activate({ ...authorized, ...agreement, okrId: draft.id, expectedVersion: 1n, membershipId: o.membershipId, bindingId: o.bindingId, managedAgentId: o.managedAgentId, workspaceHash: Uint8Array.from(managed.workspace_hash), boundaryHash, budgetAsset: 'TOOL_CALLS', budgetLimit: 10n, expiresAtMs: Date.now() + 300000, expectedRecordRevision: 0n }), o.desktop, undefined, !allowed);
+    const agreement = await body(draft.logicalId, 'agreement', 'contract', 1n, JSON.stringify({ format: 1, managedAgentId: o.managedAgentId, boundaryHash: Array.from(boundaryHash), budget: { asset: 'TOOL_CALLS', limit: '14' }, order: 'sequential', verifier: 'authorized human' }));
+    const made = await execute(allowed ? 'OKR: activate one explicitly managed Agent' : 'OKR: fourth ACTIVE is rejected atomically', sdk.okr.activate({ ...authorized, ...agreement, okrId: draft.id, expectedVersion: 1n, membershipId: o.membershipId, bindingId: o.bindingId, managedAgentId: o.managedAgentId, workspaceHash: Uint8Array.from(managed.workspace_hash), boundaryHash, budgetAsset: 'TOOL_CALLS', budgetLimit: 14n, expiresAtMs: Date.now() + 300000, expectedRecordRevision: 0n }), o.desktop, undefined, !allowed);
     assert.equal(made.data.status.success, allowed);
     if (!allowed) assert.match(JSON.stringify(made.data.status), /9404/);
   }
@@ -45,10 +43,26 @@ export async function prepareOkrAcceptance(o: Options, boundaryHash: Uint8Array)
   await activate(drafts[3], false);
   assert.equal((await sdk.okr.getIndex(o.organizationId)).active_count, '3');
   assert.equal((await sdk.okr.getOkr(drafts[3].id)).state, 0);
+  // A prepared command loses start authority when its OKR pauses, while the
+  // device may still cancel that old reservation using its historical binding.
+  const pausedCap = await execute('OKR binding: issue capability for pause boundary', sdk.okr.issueCapability({ ...authorized, okrId: drafts[1].id, membershipId: o.membershipId, bindingId: o.bindingId, managedAgentId: o.managedAgentId, expectedVersion: 2n, maxUses: 1n }));
+  assert.equal(pausedCap.data.status.success, true);
+  const pausedCapabilityId = created(pausedCap.data, '::remote_authority::RemoteCapability');
+  const pausedCommand = await signNodeCommand(o.desktop, { target: { organizationId: o.organizationId, nodeId: o.host.getPublicKey().toSuiAddress(), agentId: managed.instance_id }, action: 'assign', scope: 'control', capability: { id: pausedCapabilityId, revocationVersion: 1n }, budget: { asset: 'TOOL_CALLS', amount: 2n }, payload: { okr: { id: drafts[1].id, agreement_version: '1', kr_index: '0' }, bounds: { paths: { 'file.read': ['.'], 'file.write': ['.'] }, max_calls: '2' }, task: 'prepared only; no physical Agent execution' }, expiresAtMs: Number((await sdk.okr.getOkr(drafts[1].id)).expires_at_ms) - 1 });
+  const pausedPrepared = await execute('OKR binding: prepare command before pause', await sdk.nodeExecution.prepareCommand({ ...authorized, membershipId: o.membershipId, bindingId: o.bindingId, managedAgentId: o.managedAgentId, command: pausedCommand }));
+  assert.equal(pausedPrepared.data.status.success, true);
+  const pausedExecutionId = created(pausedPrepared.data, '::node_execution::CommandExecution');
   const before = await sdk.okr.getOkr(drafts[1].id);
   const pause = await body(drafts[1].logicalId, 'agreement', 'contract', 2n, JSON.stringify({ reason: 'Pause to free one ACTIVE slot', previousAgreement: 1 }));
   assert.equal((await execute('OKR: pause releases ACTIVE slot and invalidates agreement version', sdk.okr.pause({ ...authorized, ...pause, okrId: drafts[1].id, expectedVersion: before.version, expectedRecordRevision: 1n }))).data.status.success, true);
   assert.equal((await sdk.okr.getOkr(drafts[1].id)).agreement_version, '2');
+  const pausedStart = await execute('OKR binding: paused OKR rejects old prepared start', sdk.nodeExecution.beginCommand({ ...authorized, membershipId: o.membershipId, bindingId: o.bindingId, managedAgentId: o.managedAgentId, executionId: pausedExecutionId, capabilityId: pausedCapabilityId, okrId: drafts[1].id }), o.host, undefined, true);
+  assert.equal(pausedStart.data.status.success, false); assert.match(JSON.stringify(pausedStart.data.status), /9403/);
+  assert.equal((await sdk.nodeExecution.getExecution(pausedExecutionId)).state, 0);
+  const cancelPaused = await execute('OKR binding: historical queued claim can cancel after pause', sdk.nodeExecution.requestStop({ ...authorized, okrId: drafts[1].id, executionId: pausedExecutionId, capabilityId: pausedCapabilityId }));
+  assert.equal(cancelPaused.data.status.success, true);
+  assert.equal((await sdk.okr.getBudget(drafts[1].id)).reserved, 0n);
+
   await activate(drafts[3]);
   assert.equal((await sdk.okr.getIndex(o.organizationId)).active_count, '3');
   const stale = await execute('OKR: stale version cannot replace criteria', sdk.okr.replaceSpec({ ...authorized, ...criteria, ...drafts[1].spec, okrId: drafts[1].id, expectedVersion: before.version }), o.desktop, undefined, true);
@@ -61,9 +75,11 @@ export async function prepareOkrAcceptance(o: Options, boundaryHash: Uint8Array)
   }
   await achieve('2', false);
   return {
+    okrId: first.id,
+    pausedProof: { okrId: drafts[1].id, capabilityId: pausedCapabilityId, executionId: pausedExecutionId },
     async finish(executionId: string, evidenceId: string) {
       const run = await sdk.nodeExecution.getExecution(executionId);
-      const observe = () => sdk.okr.observe({ okrId: first.id, organizationId: o.organizationId, membershipId: o.membershipId, bindingId: o.bindingId, managedAgentId: o.managedAgentId, executionId, evidenceId, expectedVersion: 2n, expectedAgreement: 1n, krIndex: 0n, current: 2n, sampledAtMs: run.updated_at_ms });
+      const observe = () => sdk.okr.observe({ okrId: first.id, organizationId: o.organizationId, membershipId: o.membershipId, bindingId: o.bindingId, managedAgentId: o.managedAgentId, capabilityId: run.capability_id, executionId, evidenceId, expectedVersion: 2n, expectedAgreement: 1n, krIndex: 0n, current: 2n, sampledAtMs: run.updated_at_ms });
       const forged = await execute('OKR: another Host cannot submit measurements', observe(), o.wrongHost, undefined, true);
       assert.equal(forged.data.status.success, false); assert.match(JSON.stringify(forged.data.status), /9405/);
       assert.equal((await execute('OKR: admitted Host submits actual successful Run evidence', observe(), o.host)).data.status.success, true);
@@ -97,7 +113,10 @@ export async function prepareOkrAcceptance(o: Options, boundaryHash: Uint8Array)
           pointers.push({ logicalId, plaintext });
         } catch (error) { throw new Error(`Unable to reconstruct OKR body ${logicalId}`, { cause: error }); }
       }
-      return { okrId: first.id, draftIds: drafts.map(draft => draft.id), accepted, observations: history.observations, records: pointers, cacheFreeOrganizationDirectory: true, actualFileRunEvidence: true, separateObservationVerificationAcceptance: true, runtimeAuthorizationBoundToOkr: false, multiKrRuntimeVerified: false };
+      const totals = await sdk.okr.getBudget(first.id);
+      const globalBudget = { asset: totals.asset, spent: totals.spent.toString(), reserved: totals.reserved.toString() };
+      const globalClaim = await sdk.okr.getReservationBudget(first.id, executionId);
+      return { globalBudget, globalClaim, pausedProof: { okrId: drafts[1].id, capabilityId: pausedCapabilityId, executionId: pausedExecutionId }, okrId: first.id, draftIds: drafts.map(draft => draft.id), accepted, observations: history.observations, records: pointers, cacheFreeOrganizationDirectory: true, actualFileRunEvidence: true, separateObservationVerificationAcceptance: true, runtimeAuthorizationBoundToOkr: true, multiKrRuntimeVerified: false };
     },
   };
 }

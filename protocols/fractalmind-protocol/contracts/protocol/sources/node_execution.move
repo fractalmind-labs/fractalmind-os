@@ -15,7 +15,7 @@ module fractalmind_protocol::node_execution {
     use fractalmind_protocol::organization::Organization;
     use fractalmind_protocol::identity::{Self, HumanIdentity, DeviceGrant};
     use fractalmind_protocol::host::{Self, HostMembership, CoordinatorBinding, ManagedAgent};
-    use fractalmind_protocol::remote_authority::{Self as ra, RemoteCapability};
+    use fractalmind_protocol::remote_authority::{Self as ra, RemoteCapability, ContractWitness};
     use fractalmind_protocol::product_record;
 
     const E_INPUT: u64 = 9301;
@@ -78,6 +78,7 @@ module fractalmind_protocol::node_execution {
         budget_asset: String, budget_amount: u64, intent_hash: vector<u8>, issued_at_ms: u64, expires_at_ms: u64,
         clock: &Clock, ctx: &mut TxContext,
     ) {
+        ra::assert_unbound_contract(cap);
         host::assert_agent_authority(org, human, grant, member, binding, managed, cap, clock);
         prepare(cap, org, human, grant, member, option::some(object::id(managed)), action, scope,
             command_id, nonce, idempotency_key, budget_asset, budget_amount, intent_hash, issued_at_ms, expires_at_ms, clock, ctx);
@@ -89,9 +90,22 @@ module fractalmind_protocol::node_execution {
         budget_asset: String, budget_amount: u64, intent_hash: vector<u8>, issued_at_ms: u64, expires_at_ms: u64,
         clock: &Clock, ctx: &mut TxContext,
     ) {
+        ra::assert_unbound_contract(cap);
         host::assert_host_authority(org, human, grant, member, binding, cap, clock);
         prepare(cap, org, human, grant, member, option::none(), action, scope,
             command_id, nonce, idempotency_key, budget_asset, budget_amount, intent_hash, issued_at_ms, expires_at_ms, clock, ctx);
+    }
+    public(package) fun prepare_agent_command_with_contract(
+        cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent, witness: ContractWitness,
+        action: String, scope: String, command_id: String, nonce: String, idempotency_key: String,
+        budget_asset: String, budget_amount: u64, intent_hash: vector<u8>, issued_at_ms: u64, expires_at_ms: u64,
+        clock: &Clock, ctx: &mut TxContext,
+    ): ID {
+        host::assert_agent_authority(org, human, grant, member, binding, managed, cap, clock);
+        ra::record_contract_command(cap, intent_hash, &witness);
+        prepare(cap, org, human, grant, member, option::some(object::id(managed)), action, scope,
+            command_id, nonce, idempotency_key, budget_asset, budget_amount, intent_hash, issued_at_ms, expires_at_ms, clock, ctx)
     }
     fun prepare(
         cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
@@ -99,7 +113,7 @@ module fractalmind_protocol::node_execution {
         action: String, scope: String, command_id: String, nonce: String, idempotency_key: String,
         budget_asset: String, budget_amount: u64, intent_hash: vector<u8>, issued_at_ms: u64, expires_at_ms: u64,
         clock: &Clock, ctx: &mut TxContext,
-    ) {
+    ): ID {
         let now = clock::timestamp_ms(clock);
         assert!(issued_at_ms > 0 && expires_at_ms > issued_at_ms && expires_at_ms - issued_at_ms <= 300000, E_INPUT);
         assert!(now < expires_at_ms && issued_at_ms <= now + 30000 && expires_at_ms <= ra::expires_at_ms(cap), E_EXPIRED);
@@ -111,7 +125,7 @@ module fractalmind_protocol::node_execution {
         let old = execution_id(cap, intent_hash);
         if (option::is_some(&old)) {
             event::emit(CommandPrepared { execution_id: *option::borrow(&old), capability_id: object::id(cap), intent_hash, duplicate: true });
-            return
+            return *option::borrow(&old)
         };
         let run = CommandExecution {
             id: object::new(ctx), org_id: object::id(org), capability_id: object::id(cap), capability_version: ra::revocation_version(cap),
@@ -130,6 +144,7 @@ module fractalmind_protocol::node_execution {
         table::add(&mut idx.executions, intent_hash, run_id);
         event::emit(CommandPrepared { execution_id: run_id, capability_id: object::id(cap), intent_hash, duplicate: false });
         transfer::share_object(run);
+        run_id
     }
     public fun execution_id(cap: &RemoteCapability, intent_hash: vector<u8>): Option<ID> {
         if (!df::exists_(ra::capability_uid(cap), ExecutionIndexKey {})) return option::none();
@@ -141,6 +156,7 @@ module fractalmind_protocol::node_execution {
         human: &HumanIdentity, grant: &DeviceGrant, member: &HostMembership,
         binding: &CoordinatorBinding, managed: &ManagedAgent, attempt_id: vector<u8>, clock: &Clock, ctx: &TxContext,
     ) {
+        ra::assert_unbound_contract(cap);
         host::assert_agent_authority(org, human, grant, member, binding, managed, cap, clock);
         assert!(run.managed_agent == option::some(object::id(managed)), E_TARGET);
         begin(run, cap, member, attempt_id, clock, ctx);
@@ -150,6 +166,7 @@ module fractalmind_protocol::node_execution {
         human: &HumanIdentity, grant: &DeviceGrant, member: &HostMembership,
         binding: &CoordinatorBinding, attempt_id: vector<u8>, clock: &Clock, ctx: &TxContext,
     ) {
+        ra::assert_unbound_contract(cap);
         host::assert_host_authority(org, human, grant, member, binding, cap, clock);
         assert!(option::is_none(&run.managed_agent), E_TARGET);
         begin(run, cap, member, attempt_id, clock, ctx);
@@ -170,6 +187,17 @@ module fractalmind_protocol::node_execution {
         run.started_at_ms = clock::timestamp_ms(clock);
         changed(run, clock);
     }
+    public(package) fun begin_agent_command_with_contract(
+        run: &mut CommandExecution, cap: &RemoteCapability, org: &Organization,
+        human: &HumanIdentity, grant: &DeviceGrant, member: &HostMembership,
+        binding: &CoordinatorBinding, managed: &ManagedAgent, witness: ContractWitness,
+        attempt_id: vector<u8>, clock: &Clock, ctx: &TxContext,
+    ) {
+        host::assert_agent_authority(org, human, grant, member, binding, managed, cap, clock);
+        assert!(run.managed_agent == option::some(object::id(managed)), E_TARGET);
+        ra::assert_contract_command(cap, run.intent_hash, &witness);
+        begin(run, cap, member, attempt_id, clock, ctx);
+    }
     /// Publishing historical execution evidence remains allowed after authority
     /// expires or is revoked; this entry cannot start or approve new execution.
     /// Retain the previous ABI, requiring explicit budget settlement in v0.2.0.
@@ -181,6 +209,20 @@ module fractalmind_protocol::node_execution {
         abort E_BUDGET_SETTLEMENT_REQUIRED
     }
     public fun finish_command_with_budget(
+        run: &mut CommandExecution, cap: &mut RemoteCapability, org: &mut Organization, final_state: u8,
+        expected_cursor: u64, spent_amount: u64, key_version: u64, encrypted_result: vector<u8>, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        ra::assert_unbound_contract(cap);
+        finish(run, cap, org, final_state, expected_cursor, spent_amount, key_version, encrypted_result, clock, ctx);
+    }
+    public(package) fun finish_command_with_contract(
+        run: &mut CommandExecution, cap: &mut RemoteCapability, org: &mut Organization, witness: ContractWitness, final_state: u8,
+        expected_cursor: u64, spent_amount: u64, key_version: u64, encrypted_result: vector<u8>, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        ra::assert_contract_command(cap, run.intent_hash, &witness);
+        finish(run, cap, org, final_state, expected_cursor, spent_amount, key_version, encrypted_result, clock, ctx);
+    }
+    fun finish(
         run: &mut CommandExecution, cap: &mut RemoteCapability, org: &mut Organization, final_state: u8,
         expected_cursor: u64, spent_amount: u64, key_version: u64, encrypted_result: vector<u8>, clock: &Clock, ctx: &mut TxContext,
     ) {
@@ -216,6 +258,14 @@ module fractalmind_protocol::node_execution {
         abort E_BUDGET_SETTLEMENT_REQUIRED
     }
     public fun request_stop_with_budget(run: &mut CommandExecution, cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant, clock: &Clock, ctx: &TxContext) {
+        ra::assert_unbound_contract(cap);
+        request_stop_authorized(run, cap, org, human, grant, clock, ctx);
+    }
+    public(package) fun request_stop_with_contract(run: &mut CommandExecution, cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant, witness: ContractWitness, clock: &Clock, ctx: &TxContext) {
+        ra::assert_contract_command(cap, run.intent_hash, &witness);
+        request_stop_authorized(run, cap, org, human, grant, clock, ctx);
+    }
+    fun request_stop_authorized(run: &mut CommandExecution, cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant, clock: &Clock, ctx: &TxContext) {
         identity::assert_can(human, grant, org, identity::operate_action(), clock, ctx);
         assert!(run.org_id == object::id(org) && run.human_id == object::id(human) && run.capability_id == object::id(cap), E_TARGET);
         assert!(run.state == QUEUED || run.state == RUNNING, E_STATE);
@@ -252,4 +302,8 @@ module fractalmind_protocol::node_execution {
     public fun host_address(run: &CommandExecution): address { run.host_address }
     public fun created_at_ms(run: &CommandExecution): u64 { run.created_at_ms }
     public fun result_record(run: &CommandExecution): Option<ID> { run.result_record }
+    public fun intent_hash(run: &CommandExecution): vector<u8> { run.intent_hash }
+    public fun capability_id(run: &CommandExecution): ID { run.capability_id }
+    public fun budget_amount(run: &CommandExecution): u64 { run.budget_amount }
+    public fun budget_asset(run: &CommandExecution): String { run.budget_asset }
 }

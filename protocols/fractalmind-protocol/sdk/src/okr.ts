@@ -21,6 +21,8 @@ export const OkrBcs = bcs.struct('Okr', {
   agreement_record: bcs.option(ID), acceptance_record: bcs.option(ID), accepted_by_human: bcs.option(ID), accepted_at_ms: bcs.u64(),
 });
 const Index = bcs.struct('OkrIndex', { active_count: bcs.u64(), records: Table });
+const Budget = bcs.struct('BudgetState', { asset: bcs.string(), spent: bcs.u64(), reserved: bcs.u64(), claims: Table });
+const Claim = bcs.struct('BudgetClaim', { capability_id: ID, agreement_version: bcs.u64(), kr_index: bcs.u64(), reserved: bcs.u64(), spent: bcs.u64(), settled: bcs.bool() });
 const Pointer = bcs.struct('DraftPointer', { id: ID, fingerprint: Bytes });
 export const OkrObservationBcs = bcs.struct('Observation', {
   id: ID, org_id: ID, okr_id: ID, kr_index: bcs.u64(), agreement_version: bcs.u64(), current: bcs.u64(),
@@ -67,9 +69,13 @@ export class OkrApi {
     const tx = this.fm.useTransaction(input.tx);
     return this.call(tx, 'replace_spec', [tx.object(input.okrId), ...this.authorized(tx, input), tx.pure.u64(toBigInt(input.expectedVersion)), ...this.criteria(tx, input), ...this.body(tx, input), tx.object('0x6')]);
   }
-  observe(input: { okrId: string; organizationId: string; membershipId: string; bindingId: string; managedAgentId: string; executionId: string; evidenceId: string; expectedVersion: U64; expectedAgreement: U64; krIndex: U64; current: U64; sampledAtMs: U64; tx?: Transaction }) {
+  issueCapability(input: Mutation & { membershipId: string; bindingId: string; managedAgentId: string; maxUses: U64 }) {
     const tx = this.fm.useTransaction(input.tx);
-    return this.call(tx, 'observe', [tx.object(input.okrId), tx.object(input.organizationId), tx.object(input.membershipId), tx.object(input.bindingId), tx.object(input.managedAgentId), tx.object(input.executionId), tx.object(input.evidenceId), ...[input.expectedVersion, input.expectedAgreement, input.krIndex, input.current, input.sampledAtMs].map(x => tx.pure.u64(toBigInt(x))), tx.object('0x6')]);
+    return this.call(tx, 'issue_capability', [tx.object(input.okrId), ...this.authorized(tx, input), tx.object(input.membershipId), tx.object(input.bindingId), tx.object(input.managedAgentId), tx.pure.u64(toBigInt(input.expectedVersion)), tx.pure.u64(toBigInt(input.maxUses)), tx.object('0x6')]);
+  }
+  observe(input: { okrId: string; organizationId: string; membershipId: string; bindingId: string; managedAgentId: string; capabilityId: string; executionId: string; evidenceId: string; expectedVersion: U64; expectedAgreement: U64; krIndex: U64; current: U64; sampledAtMs: U64; tx?: Transaction }) {
+    const tx = this.fm.useTransaction(input.tx);
+    return this.call(tx, 'observe', [tx.object(input.okrId), tx.object(input.organizationId), tx.object(input.membershipId), tx.object(input.bindingId), tx.object(input.managedAgentId), tx.object(input.capabilityId), tx.object(input.executionId), tx.object(input.evidenceId), ...[input.expectedVersion, input.expectedAgreement, input.krIndex, input.current, input.sampledAtMs].map(x => tx.pure.u64(toBigInt(x))), tx.object('0x6')]);
   }
   verifyKr(input: Mutation & Body & { krIndex: U64; expectedRecordRevision: U64 }) {
     const tx = this.fm.useTransaction(input.tx);
@@ -82,6 +88,23 @@ export class OkrApi {
   archive(input: Mutation) {
     const tx = this.fm.useTransaction(input.tx);
     return this.call(tx, 'archive', [tx.object(input.okrId), ...this.authorized(tx, input), tx.pure.u64(toBigInt(input.expectedVersion)), tx.object('0x6')]);
+  }
+  async getBudget(okrId: string) {
+    const field = await this.fm.client.core.getDynamicField({ parentId: okrId, name: { type: `${this.fm.typesPackageId}::okr::BudgetKey`, bcs: new Uint8Array([0]) } });
+    if (field.dynamicField.value.type !== `${this.fm.typesPackageId}::okr::BudgetState`) throw new Error('Unexpected OKR budget type.');
+    const value = Budget.parse(field.dynamicField.value.bcs);
+    const okr = await this.getOkr(okrId);
+    const spent = BigInt(value.spent), reserved = BigInt(value.reserved);
+    if (value.asset !== okr.budget_asset || spent + reserved > BigInt(okr.budget_limit)) throw new Error('Invalid OKR budget totals.');
+    return { asset: value.asset, spent, reserved, claimsId: value.claims.id };
+  }
+  async getReservationBudget(okrId: string, executionId: string) {
+    const budget = await this.getBudget(okrId);
+    const field = await this.fm.client.core.getDynamicField({ parentId: budget.claimsId, name: { type: '0x2::object::ID', bcs: ID.serialize(executionId).toBytes() } });
+    if (field.dynamicField.value.type !== `${this.fm.typesPackageId}::okr::BudgetClaim`) throw new Error('Unexpected OKR claim type.');
+    const value = Claim.parse(field.dynamicField.value.bcs);
+    if (BigInt(value.spent) > BigInt(value.reserved) || (!value.settled && BigInt(value.spent) !== 0n)) throw new Error('Invalid OKR claim.');
+    return value;
   }
   async getOkr(id: string) {
     const { object } = await this.fm.client.core.getObject({ objectId: id, include: { content: true } });

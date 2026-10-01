@@ -18,20 +18,21 @@ type SignatureVerifier interface {
 // CapabilityState is an authority-plane projection. Implementations may load
 // it from SUI RPC, an indexer, or a bounded local cache.
 type CapabilityState struct {
-	ID                     string                    `json:"id"`
-	Target                 Target                    `json:"target"`
-	AuthorizedSigners      []string                  `json:"authorized_signers"`
-	Actions                []string                  `json:"actions"`
-	Scopes                 []string                  `json:"scopes"`
-	ExpiresAtMS            int64                     `json:"expires_at_ms"`
-	Revoked                bool                      `json:"revoked"`
-	RevocationVersion      uint64                    `json:"revocation_version"`
-	CheckpointObservedAtMS int64                     `json:"checkpoint_observed_at_ms"`
-	ReservationScope       ReservationScope          `json:"reservation_scope"`
-	RemainingUses          *uint64                   `json:"remaining_uses,omitempty"`
-	RemainingBudget        *BudgetClaim              `json:"remaining_budget,omitempty"`
-	AuthorityVersionHash   string                    `json:"authority_version_hash,omitempty"`
-	ManagedInstance        *ManagedInstanceAuthority `json:"managed_instance,omitempty"`
+	ID                     string                      `json:"id"`
+	Target                 Target                      `json:"target"`
+	AuthorizedSigners      []string                    `json:"authorized_signers"`
+	Actions                []string                    `json:"actions"`
+	Scopes                 []string                    `json:"scopes"`
+	ExpiresAtMS            int64                       `json:"expires_at_ms"`
+	Revoked                bool                        `json:"revoked"`
+	RevocationVersion      uint64                      `json:"revocation_version"`
+	CheckpointObservedAtMS int64                       `json:"checkpoint_observed_at_ms"`
+	ReservationScope       ReservationScope            `json:"reservation_scope"`
+	RemainingUses          *uint64                     `json:"remaining_uses,omitempty"`
+	RemainingBudget        *BudgetClaim                `json:"remaining_budget,omitempty"`
+	AuthorityVersionHash   string                      `json:"authority_version_hash,omitempty"`
+	ManagedInstance        *ManagedInstanceAuthority   `json:"managed_instance,omitempty"`
+	Contract               *ExecutionContractAuthority `json:"contract,omitempty"`
 }
 
 // ManagedInstanceAuthority is authenticated chain data, not an adapter label.
@@ -270,7 +271,7 @@ func (v *Validator) validateAuthority(command NodeCommand, state CapabilityState
 		nowMS-state.CheckpointObservedAtMS > maxCheckpointAge.Milliseconds() {
 		return reject(CodeAuthorityStale, "capability revocation checkpoint is outside the action freshness window", nil)
 	}
-	return nil
+	return ValidateExecutionContract(command, state.Contract)
 }
 
 // SnapshotHash covers every validated authority field except mutable remaining
@@ -289,21 +290,22 @@ func (state CapabilityState) SnapshotHash() string {
 		budgetAsset = state.RemainingBudget.Asset
 	}
 	payload, _ := json.Marshal(struct {
-		ID                     string                    `json:"id"`
-		Target                 Target                    `json:"target"`
-		AuthorizedSigners      []string                  `json:"authorized_signers"`
-		Actions                []string                  `json:"actions"`
-		Scopes                 []string                  `json:"scopes"`
-		ExpiresAtMS            string                    `json:"expires_at_ms"`
-		Revoked                bool                      `json:"revoked"`
-		RevocationVersion      string                    `json:"revocation_version"`
-		CheckpointObservedAtMS string                    `json:"checkpoint_observed_at_ms"`
-		ReservationScope       ReservationScope          `json:"reservation_scope"`
-		HasUseBound            bool                      `json:"has_use_bound"`
-		HasBudgetBound         bool                      `json:"has_budget_bound"`
-		BudgetAsset            string                    `json:"budget_asset,omitempty"`
-		AuthorityVersionHash   string                    `json:"authority_version_hash,omitempty"`
-		ManagedInstance        *ManagedInstanceAuthority `json:"managed_instance,omitempty"`
+		ID                     string                      `json:"id"`
+		Target                 Target                      `json:"target"`
+		AuthorizedSigners      []string                    `json:"authorized_signers"`
+		Actions                []string                    `json:"actions"`
+		Scopes                 []string                    `json:"scopes"`
+		ExpiresAtMS            string                      `json:"expires_at_ms"`
+		Revoked                bool                        `json:"revoked"`
+		RevocationVersion      string                      `json:"revocation_version"`
+		CheckpointObservedAtMS string                      `json:"checkpoint_observed_at_ms"`
+		ReservationScope       ReservationScope            `json:"reservation_scope"`
+		HasUseBound            bool                        `json:"has_use_bound"`
+		HasBudgetBound         bool                        `json:"has_budget_bound"`
+		BudgetAsset            string                      `json:"budget_asset,omitempty"`
+		AuthorityVersionHash   string                      `json:"authority_version_hash,omitempty"`
+		ManagedInstance        *ManagedInstanceAuthority   `json:"managed_instance,omitempty"`
+		Contract               *ExecutionContractAuthority `json:"contract,omitempty"`
 	}{
 		ID:                     state.ID,
 		Target:                 state.Target,
@@ -320,6 +322,7 @@ func (state CapabilityState) SnapshotHash() string {
 		BudgetAsset:            budgetAsset,
 		AuthorityVersionHash:   state.AuthorityVersionHash,
 		ManagedInstance:        state.ManagedInstance,
+		Contract:               state.Contract,
 	})
 	return hashBytes(payload)
 }

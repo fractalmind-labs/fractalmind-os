@@ -75,6 +75,9 @@ func (g *Guard) Check(ctx context.Context) error {
 	if state.ID != g.command.Capability.ID || state.Revoked || state.Target != g.command.Target || state.RevocationVersion != uint64(g.command.Capability.RevocationVersion) || !slices.Contains(state.AuthorizedSigners, g.command.Signer) || !slices.Contains(state.Actions, g.command.Action) || !slices.Contains(state.Scopes, g.command.Scope) || state.ManagedInstance == nil || state.ManagedInstance.ID != g.managedID || state.ManagedInstance.Runtime != "bounded-process-v1" || state.ManagedInstance.WorkspaceHash != g.workspaceHash || state.AuthorityVersionHash == "" {
 		return ErrBoundary
 	}
+	if err := nodecommand.ValidateExecutionContract(g.command, state.Contract); err != nil {
+		return err
+	}
 	run, found, err := g.reader.LookupExecution(ctx, g.command.Capability.ID, g.fingerprint)
 	if err != nil {
 		return fmt.Errorf("current execution checkpoint: %w", err)
@@ -83,6 +86,9 @@ func (g *Guard) Check(ctx context.Context) error {
 		return ErrStopped
 	}
 	if run.ID != g.runID || run.AttemptID != g.attemptID || run.Fingerprint != g.fingerprint || run.Target != g.command.Target || run.CapabilityID != state.ID || run.CapabilityVersion != state.RevocationVersion || run.ManagedAgentID != g.managedID || run.HostAddress != g.command.Target.NodeID || run.Signer != g.command.Signer || run.Action != g.command.Action || run.Scope != g.command.Scope || run.ExpiresAtMS != g.command.ExpiresAtMS {
+		return ErrBoundary
+	}
+	if (run.Contract == nil) != (state.Contract == nil) || (run.Contract != nil && *run.Contract != *state.Contract) {
 		return ErrBoundary
 	}
 	if g.command.Budget != nil {

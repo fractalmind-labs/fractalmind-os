@@ -327,7 +327,13 @@ func (s *ChainExecutionStore) SaveCommand(ctx context.Context, command nodecomma
 	if err != nil {
 		return record, unknownResult(run, "", err)
 	}
-	tx, err := s.rpc.MoveCall(ctx, models.MoveCallRequest{Signer: s.signer.Address(), PackageObjectId: s.packageID, Module: "node_execution", Function: "finish_command_with_budget", Arguments: []interface{}{ObjectArgument(run.ID), ObjectArgument(run.CapabilityID), ObjectArgument(run.Target.OrganizationID), state, strconv.FormatUint(run.Cursor, 10), strconv.FormatUint(spent, 10), strconv.FormatUint(version, 10), ChunkedBytes(encrypted), ObjectArgument("0x6")}, TypeArguments: []interface{}{}, GasBudget: strconv.FormatUint(s.gasBudget, 10)})
+	args := []interface{}{ObjectArgument(run.ID), ObjectArgument(run.CapabilityID), ObjectArgument(run.Target.OrganizationID), state, strconv.FormatUint(run.Cursor, 10), strconv.FormatUint(spent, 10), strconv.FormatUint(version, 10), ChunkedBytes(encrypted), ObjectArgument("0x6")}
+	module, function := "node_execution", "finish_command_with_budget"
+	if run.Contract != nil {
+		module, function = "okr", "finish_command"
+		args = append([]interface{}{ObjectArgument(run.Contract.ID)}, args...)
+	}
+	tx, err := s.rpc.MoveCall(ctx, models.MoveCallRequest{Signer: s.signer.Address(), PackageObjectId: s.packageID, Module: module, Function: function, Arguments: args, TypeArguments: []interface{}{}, GasBudget: strconv.FormatUint(s.gasBudget, 10)})
 	if err != nil {
 		return record, unknownResult(run, "", err)
 	}

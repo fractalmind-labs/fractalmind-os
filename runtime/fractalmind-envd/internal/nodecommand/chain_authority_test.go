@@ -36,7 +36,7 @@ func (f *chainFixture) ReadChainObject(_ context.Context, id string) (ChainObjec
 	}
 	object, ok := f.objects[id]
 	if !ok {
-		return ChainObject{}, errors.New("object missing")
+		return ChainObject{}, ErrChainObjectNotFound
 	}
 	f.reads[id]++
 	if id == f.changeOnRead && f.reads[id] > 1 {

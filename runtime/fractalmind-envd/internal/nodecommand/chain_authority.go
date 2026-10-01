@@ -395,6 +395,13 @@ func (s *ChainAuthorityResolver) Resolve(ctx context.Context, ref CapabilityRef)
 	if !validSigningToken(cap.Scope) || cap.Scope == "" || (cap.MaxBudget > 0 && (!validSigningToken(cap.BudgetAsset) || cap.BudgetAsset == "")) {
 		return CapabilityState{}, fmt.Errorf("invalid capability scope/budget")
 	}
+	contract, contractExpiry, err := r.currentContract(ctx, cap, auth, instance, uint64(now))
+	if err != nil {
+		return CapabilityState{}, err
+	}
+	if contractExpiry < expiry {
+		expiry = contractExpiry
+	}
 	// Re-read each dependency by latest version. Any change during resolution
 	// fails closed; the chain reservation transaction will check again atomically.
 	ids := make([]string, 0, len(r.versions))
@@ -416,6 +423,7 @@ func (s *ChainAuthorityResolver) Resolve(ctx context.Context, ref CapabilityRef)
 	uses := cap.MaxUses - cap.DelegatedUses
 	state := CapabilityState{ID: ref.ID, Target: Target{OrganizationID: cap.Org.String(), NodeID: cap.Node, AgentID: cap.Agent}, AuthorizedSigners: []string{cap.Delegate.String()}, Actions: cap.Actions, Scopes: []string{cap.Scope}, ExpiresAtMS: int64(expiry), RevocationVersion: cap.Version, CheckpointObservedAtMS: now, ReservationScope: ReservationScopeNode, RemainingUses: &uses, AuthorityVersionHash: hashBytes([]byte(stamp.String()))}
 	state.ManagedInstance = instance
+	state.Contract = contract
 	// Pre-validation ceilings: the exact intent may already be reserved. The
 	// chain reservation backend checks its claim and counters without consuming twice.
 	if cap.MaxBudget > 0 {

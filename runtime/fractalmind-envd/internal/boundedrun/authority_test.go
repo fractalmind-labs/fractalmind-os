@@ -136,3 +136,64 @@ func TestGuardRequiresValidSignatureAndOwnStartedAttempt(t *testing.T) {
 		t.Fatal("missing attempt accepted")
 	}
 }
+
+func TestGuardRechecksOkrAgreementAndCursorBeforeEffects(t *testing.T) {
+	for _, change := range []string{"agreement", "cursor", "boundary", "binding removed", "historical cursor"} {
+		t.Run(change, func(t *testing.T) {
+			command, probe, dir := guardFixture(t)
+			public, private, err := ed25519.GenerateKey(rand.Reader)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer clear(private)
+			address := blake2b.Sum256(append([]byte{0}, public...))
+			command.Signer = "0x" + hex.EncodeToString(address[:])
+			paths := map[string][]string{"file.read": {"."}, "file.write": {"."}}
+			hash, err := nodecommand.ExecutionBoundaryHash(paths)
+			if err != nil {
+				t.Fatal(err)
+			}
+			contract := nodecommand.ExecutionContractAuthority{ID: "okr", AgreementVersion: 1, KRIndex: 0, BoundaryHash: hash}
+			probe.state.Contract = &contract
+			recorded := contract
+			probe.run.Contract = &recorded
+			probe.state.AuthorizedSigners = []string{command.Signer}
+			probe.run.Signer = command.Signer
+			command.Payload, err = json.Marshal(map[string]any{"okr": nodecommand.ExecutionContractRef{ID: contract.ID, AgreementVersion: 1, KRIndex: 0}, "bounds": map[string]any{"paths": paths, "max_calls": command.Budget.Amount}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			command.PayloadHash = nodecommand.HashPayload(command.Payload)
+			signing, err := command.SigningBytes()
+			if err != nil {
+				t.Fatal(err)
+			}
+			command.Signature = "ed25519:" + hex.EncodeToString(public) + ":" + hex.EncodeToString(ed25519.Sign(private, signing))
+			fingerprint := sha256.Sum256(signing)
+			probe.run.Fingerprint = hex.EncodeToString(fingerprint[:])
+			guard, err := NewGuard(context.Background(), probe, command, probe.run, dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			tools := openTestTools(t, dir, 4, guard.Check)
+			switch change {
+			case "agreement":
+				probe.state.Contract.AgreementVersion++
+			case "cursor":
+				probe.state.Contract.KRIndex++
+			case "boundary":
+				probe.state.Contract.BoundaryHash = strings.Repeat("0", 64)
+			case "binding removed":
+				probe.state.Contract = nil
+			case "historical cursor":
+				probe.run.Contract.KRIndex++
+			}
+			if _, err := tools.Call(context.Background(), Call{ID: "must-refuse", Action: Write, Path: "after-change", Content: "no"}); err == nil {
+				t.Fatal("changed OKR produced a tool effect")
+			}
+			if tools.Used() != 0 {
+				t.Fatal("denied tool charged budget")
+			}
+		})
+	}
+}

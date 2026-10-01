@@ -149,3 +149,5 @@ export type {
   VerifyTaskInput,
   VoteOption,
 } from './types.js';
+
+export { executionBoundaryHash } from './execution-boundary.js';

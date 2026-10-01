@@ -1,3 +1,4 @@
+import { executionBoundaryHash } from '../src/execution-boundary.js';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -57,7 +58,7 @@ export async function exerciseNodeExecutions(o: Options) {
   const newCommand = () => signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: capabilityId, revocationVersion: 1n }, budget: { asset: 'MIST', amount: 20n }, payload: { task: 'verify bounded command preflight' }, expiresAtMs: Date.now() + 300000 });
   async function prepare(command: SignedNodeCommand, keyed = false) {
     const made = await execute('Execution: device atomically reserves command and checkpoint', await sdk.nodeExecution.prepareCommand({ ...authority, command, resultKey: keyed ? { organizationKey: o.contentKey, keyVersion: 1n } : undefined }));
-    assert.equal(made.data.status.success, true);
+    assert.equal(made.data.status.success, true, JSON.stringify(made.data.status));
     const id = created(made.data, '::node_execution::CommandExecution');
     assert.equal((await sdk.nodeExecution.getExecution(id)).state, 0);
     return id;
@@ -243,16 +244,59 @@ export async function exerciseNodeExecutions(o: Options) {
   await assertBudget(factoryCapabilityId, 0n, 20n, 'Observation factory never starts unsupported control');
   assert.equal((await execute('Production factory: device cancels unsupported queued control', sdk.nodeExecution.requestStop({ ...authority, capabilityId: factoryCapabilityId, executionId: forbiddenExecutionId }))).data.status.success, true);
   await assertBudget(factoryCapabilityId, 0n, 0n, 'Cancelled unsupported command releases pending budget');
-  const nativeCap = await execute('Native file Agent: issue two-run actual tool-call budget', sdk.host.issueCapability({ ...authority, actions: ['assign'], scope: 'control', maxUses: 2n, budgetAsset: 'TOOL_CALLS', maxBudget: 14n, expiresAtMs: Date.now() + 3600000 }));
+  const paths = { 'file.read': ['.'], 'file.write': ['.'] };
+  const okrAcceptance = process.env.FM_OKR_ACCEPTANCE === '1' ? await prepareOkrAcceptance(o, executionBoundaryHash(paths)) : undefined;
+  const nativeCap = await execute('Native file Agent: issue two-run actual tool-call budget', okrAcceptance
+    ? sdk.okr.issueCapability({ ...authority, okrId: okrAcceptance.okrId, expectedVersion: 2n, maxUses: 2n })
+    : sdk.host.issueCapability({ ...authority, actions: ['assign'], scope: 'control', maxUses: 2n, budgetAsset: 'TOOL_CALLS', maxBudget: 14n, expiresAtMs: Date.now() + 3600000 }));
   assert.equal(nativeCap.data.status.success, true);
   const nativeCapabilityId = created(nativeCap.data, '::remote_authority::RemoteCapability');
+  const nativeExpiresAtMs = okrAcceptance ? Number((await sdk.okr.getOkr(okrAcceptance.okrId)).expires_at_ms) - 1 : Date.now() + 300000;
   const fileGoals = [{ path: 'README.md', content: 'FractalMind: human-approved native goal\n' }, { path: 'RESULT.md', content: 'Measured by the Host file reader\n' }];
-  const nativeCommand = (files: typeof fileGoals, maxCalls: bigint) => signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: nativeCapabilityId, revocationVersion: 1n }, budget: { asset: 'TOOL_CALLS', amount: maxCalls }, payload: { task: JSON.stringify({ kind: 'ensure_text_files', files }), bounds: { paths: { 'file.read': ['.'], 'file.write': ['.'] }, max_calls: maxCalls.toString() } }, expiresAtMs: Date.now() + 300000 });
+  const nativeCommand = (files: typeof fileGoals, maxCalls: bigint) => signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: nativeCapabilityId, revocationVersion: 1n }, budget: { asset: 'TOOL_CALLS', amount: maxCalls }, payload: { task: JSON.stringify({ kind: 'ensure_text_files', files }), bounds: { paths, max_calls: maxCalls.toString() }, ...(okrAcceptance ? { okr: { id: okrAcceptance.okrId, agreement_version: '1', kr_index: '0' } } : {}) }, expiresAtMs: nativeExpiresAtMs });
   const native = await nativeCommand(fileGoals, 10n);
   const nativeStopped = await nativeCommand([fileGoals[0], { path: 'after-stop.md', content: 'must not be written' }], 4n);
-  const okrAcceptance = process.env.FM_OKR_ACCEPTANCE === '1' ? await prepareOkrAcceptance(o, sha256(new TextEncoder().encode(JSON.stringify(native.payload!.bounds)))) : undefined;
+  if (okrAcceptance) {
+    const signVariant = (payload: Record<string, unknown>, budgetAmount: bigint = 1n, capability = nativeCapabilityId) => signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: capability, revocationVersion: 1n }, budget: { asset: 'TOOL_CALLS', amount: budgetAmount }, payload, expiresAtMs: nativeExpiresAtMs });
+    const { okr: context, ...withoutContext } = native.payload!;
+    const bypass = await signVariant(withoutContext);
+    const denied = await execute('OKR binding: generic prepare cannot bypass OKR ledger', await sdk.nodeExecution.prepareCommand({ ...authority, command: bypass }), desktop, undefined, true);
+    assert.equal(denied.data.status.success, false); assert.match(JSON.stringify(denied.data.status), /8321/);
+    for (const [label, change, code] of [['stale agreement', { agreement_version: '2' }, '9402'], ['wrong KR cursor', { kr_index: '1' }, '9406']] as const) {
+      const command = await signVariant({ ...native.payload, okr: { ...context as object, ...change } });
+      const rejected = await execute('OKR binding: reject ' + label, await sdk.nodeExecution.prepareCommand({ ...authority, command }), desktop, undefined, true);
+      assert.equal(rejected.data.status.success, false); assert.match(JSON.stringify(rejected.data.status), new RegExp(code));
+    }
+    assert.equal((await sdk.remoteAuthority.getCapability(nativeCapabilityId)).usesClaimed, 0n);
+  }
   const nativeExecutionId = await prepare(native, true);
+  if (okrAcceptance) {
+    const retry = await execute('OKR binding: exact command retry does not reserve global budget twice', await sdk.nodeExecution.prepareCommand({ ...authority, command: native, resultKey: { organizationKey: o.contentKey, keyVersion: 1n } }));
+    assert.equal(retry.data.status.success, true);
+    assert.equal((await sdk.okr.getBudget(okrAcceptance.okrId)).reserved, 10n);
+    assert.equal((await sdk.remoteAuthority.getCapability(nativeCapabilityId)).usesClaimed, 1n);
+  }
   runtimeExecutionIds.push(nativeExecutionId, await prepare(nativeStopped, true));
+  if (okrAcceptance) {
+    const budget = await sdk.okr.getBudget(okrAcceptance.okrId);
+    assert.equal(budget.spent, 0n); assert.equal(budget.reserved, 14n);
+  }
+  if (okrAcceptance) {
+    const secondCap = await execute('OKR binding: issue second capability sharing global budget', sdk.okr.issueCapability({ ...authority, okrId: okrAcceptance.okrId, expectedVersion: 2n, maxUses: 1n }));
+    assert.equal(secondCap.data.status.success, true);
+    const secondCapabilityId = created(secondCap.data, '::remote_authority::RemoteCapability');
+    const oversubscribed = await signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: secondCapabilityId, revocationVersion: 1n }, budget: { asset: 'TOOL_CALLS', amount: 1n }, payload: { ...native.payload, bounds: { paths, max_calls: '1' } }, expiresAtMs: nativeExpiresAtMs });
+    const denied = await execute('OKR binding: second capability cannot reset global pending budget', await sdk.nodeExecution.prepareCommand({ ...authority, command: oversubscribed }), desktop, undefined, true);
+    assert.equal(denied.data.status.success, false); assert.match(JSON.stringify(denied.data.status), /9409/);
+    assert.equal((await sdk.remoteAuthority.getCapability(secondCapabilityId)).usesClaimed, 0n);
+    const genericInput = { ...authority, executionId: nativeExecutionId, capabilityId: nativeCapabilityId };
+    const startBypass = await execute('OKR binding: generic start cannot bypass live OKR', sdk.nodeExecution.beginCommand(genericInput), host, undefined, true);
+    assert.equal(startBypass.data.status.success, false); assert.match(JSON.stringify(startBypass.data.status), /8321/);
+    const stopBypass = await execute('OKR binding: generic stop cannot leave global budget inconsistent', sdk.nodeExecution.requestStop(genericInput), desktop, undefined, true);
+    assert.equal(stopBypass.data.status.success, false); assert.match(JSON.stringify(stopBypass.data.status), /8321/);
+    const finishBypass = await execute('OKR binding: generic finish cannot leave global budget inconsistent', sdk.nodeExecution.finishCommand({ ...genericInput, finalState: 2, expectedCursor: 1n, spentAmount: 0n, keyVersion: 1n, encryptedResult: new Uint8Array() }), host, undefined, true);
+    assert.equal(finishBypass.data.status.success, false); assert.match(JSON.stringify(finishBypass.data.status), /8321/);
+  }
   const nativeSeed = decodeSuiPrivateKey(host.getSecretKey()).secretKey;
   const deviceSeed = decodeSuiPrivateKey(desktop.getSecretKey()).secretKey;
   let nativeFileAgentEvidence: Record<string, unknown>;
@@ -274,6 +318,12 @@ export async function exerciseNodeExecutions(o: Options) {
     console.log('Native file Agent PASS actual workspace goals, reader measurements, chain stop and factory restart restoration');
   } finally { nativeSeed.fill(0); deviceSeed.fill(0); }
   await assertBudget(nativeCapabilityId, 7n, 0n, 'Native Agent charges seven actual tool attempts and releases unused reservations');
+  if (okrAcceptance) {
+    const budget = await sdk.okr.getBudget(okrAcceptance.okrId);
+    assert.equal(budget.spent, 7n); assert.equal(budget.reserved, 0n);
+    const claim = await sdk.okr.getReservationBudget(okrAcceptance.okrId, nativeExecutionId);
+    assert.equal(claim.spent, '6'); assert.equal(claim.settled, true);
+  }
   const okrAcceptanceEvidence = okrAcceptance ? await okrAcceptance.finish(nativeExecutionId, (nativeFileAgentEvidence.recordIds as string[])[0]) : undefined;
   const pendingCap = await execute('Execution: issue authority for revoke-after-prepare check', sdk.host.issueCapability({ ...authority, actions: ['assign'], scope: 'control', maxUses: 1n, budgetAsset: 'MIST', maxBudget: 100n, expiresAtMs: Date.now() + 3600000 }));
   const pendingCapabilityId = created(pendingCap.data, '::remote_authority::RemoteCapability');

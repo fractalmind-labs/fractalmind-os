@@ -276,7 +276,7 @@ assert.deepEqual(recoveredBackup, recoveryKeyring);
 const recoveredKeyring = JSON.parse(new TextDecoder().decode(recoveredBackup));
 const recoveredCheckpointRecords: string[] = [];
 let recoveredExecutionBudgets: Awaited<ReturnType<typeof verifyExecutionBudgetRebuild>> | undefined;
-let recoveredOkrs: { directoryCount: number; acceptedOkrId: string; historyCount: number; decryptedBodies: string[] } | undefined;
+let recoveredOkrs: { directoryCount: number; acceptedOkrId: string; historyCount: number; decryptedBodies: string[]; globalBudget?: unknown; globalClaim?: unknown; pausedClaim?: unknown } | undefined;
 if (hostReport?.executions) {
   // Verify decryption again after consumption and key rotation, using only the
   // replacement recovery record and a newly constructed SDK, not cached IDs.
@@ -310,7 +310,16 @@ if (hostReport?.executions) {
       assert.equal(new TextDecoder().decode((await sdk.productRecord.decryptRecord(pointer.record_id, key)).plaintext), body.plaintext);
       decryptedBodies.push(pointer.record_id);
     }
-    recoveredOkrs = { directoryCount: directory.okrs.length, acceptedOkrId: accepted.id, historyCount: history.observations.length, decryptedBodies };
+    const budget = await sdk.okr.getBudget(accepted.id);
+    const globalBudget = { asset: budget.asset, spent: budget.spent.toString(), reserved: budget.reserved.toString() };
+    assert.deepEqual(globalBudget, expected.globalBudget);
+    const globalClaim = await sdk.okr.getReservationBudget(accepted.id, history.observations[0].run_id);
+    assert.deepEqual(globalClaim, expected.globalClaim);
+    const pausedClaim = await sdk.okr.getReservationBudget(expected.pausedProof.okrId, expected.pausedProof.executionId);
+    assert.equal(pausedClaim.capability_id, expected.pausedProof.capabilityId);
+    assert.equal(pausedClaim.spent, '0'); assert.equal(pausedClaim.settled, true);
+    assert.equal((await sdk.okr.getBudget(expected.pausedProof.okrId)).reserved, 0n);
+    recoveredOkrs = { directoryCount: directory.okrs.length, acceptedOkrId: accepted.id, historyCount: history.observations.length, decryptedBodies, globalBudget, globalClaim, pausedClaim };
   }
 }
 const afterRecovery = await execute('persist future body inaccessible to all lost devices', await sdk.productRecord.encryptAndSave({ organizationId, humanId, grantId: newPhoneGrantId, kind: 'message', logicalId: 'after-recovery', expectedRevision: 0n, keyVersion: 3n, plaintext: newMessage, key: recoveryContentKey }), phone);

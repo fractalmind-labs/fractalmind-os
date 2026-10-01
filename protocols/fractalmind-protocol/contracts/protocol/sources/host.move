@@ -328,6 +328,14 @@ module fractalmind_protocol::host {
         binding: &CoordinatorBinding, managed: &ManagedAgent, actions: vector<String>, scope: String,
         max_uses: u64, budget_asset: String, max_budget: u64, expires_at_ms: u64, clock: &Clock, ctx: &mut TxContext,
     ) {
+        let cap = new_agent_capability(org, human, grant, member, binding, managed, actions, scope, max_uses, budget_asset, max_budget, expires_at_ms, clock, ctx);
+        remote_authority::share_capability(cap);
+    }
+    public(package) fun new_agent_capability(
+        org: &Organization, human: &HumanIdentity, grant: &DeviceGrant, member: &HostMembership,
+        binding: &CoordinatorBinding, managed: &ManagedAgent, actions: vector<String>, scope: String,
+        max_uses: u64, budget_asset: String, max_budget: u64, expires_at_ms: u64, clock: &Clock, ctx: &mut TxContext,
+    ): RemoteCapability {
         assert_member(org, member, binding, clock);
         assert_managed(org, member, managed, false);
         assert!(max_uses > 0 && max_uses <= 10000, E_INPUT);
@@ -338,7 +346,7 @@ module fractalmind_protocol::host {
         let mut cap = remote_authority::new_capability(org, identity::human_address(human), tx_context::sender(ctx),
             3, node_identifier(member.host_address), managed.instance_id, actions, scope, max_uses, budget_asset, max_budget, expires_at_ms, clock, ctx);
         attach_device_authority(&mut cap, human, grant, member, option::some(object::id(managed)), managed.version, required_action);
-        remote_authority::share_capability(cap);
+        cap
     }
     fun attach_device_authority(cap: &mut RemoteCapability, human: &HumanIdentity, grant: &DeviceGrant, member: &HostMembership, managed: Option<ID>, managed_version: u64, required_action: u8) {
         df::add(remote_authority::capability_uid_mut(cap), AuthorityBindingKey {}, AuthorityBinding {
