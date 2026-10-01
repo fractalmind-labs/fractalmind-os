@@ -1,0 +1,195 @@
+/// Chain reservations and execution checkpoints for signed NodeCommands.
+/// Preparation consumes one bounded capability use; only the admitted target
+/// Host can confirm a start. A running/unknown checkpoint never permits replay.
+module fractalmind_protocol::node_execution {
+    use sui::object::{Self, ID, UID};
+    use sui::tx_context::{Self, TxContext};
+    use sui::clock::{Self, Clock};
+    use sui::dynamic_field as df;
+    use sui::table::{Self, Table};
+    use sui::transfer;
+    use sui::event;
+    use std::hash;
+    use std::option::{Self, Option};
+    use std::string::{Self, String};
+    use fractalmind_protocol::organization::Organization;
+    use fractalmind_protocol::identity::{Self, HumanIdentity, DeviceGrant};
+    use fractalmind_protocol::host::{Self, HostMembership, CoordinatorBinding, ManagedAgent};
+    use fractalmind_protocol::remote_authority::{Self as ra, RemoteCapability};
+    use fractalmind_protocol::product_record;
+
+    const E_INPUT: u64 = 9301;
+    const E_TARGET: u64 = 9302;
+    const E_EXPIRED: u64 = 9303;
+    const E_STARTED: u64 = 9304;
+    const E_STATE: u64 = 9305;
+    const E_VERSION: u64 = 9306;
+    const QUEUED: u8 = 0;
+    const RUNNING: u8 = 1;
+    const SUCCEEDED: u8 = 2;
+    const FAILED: u8 = 3;
+    const NEEDS_CONFIRMATION: u8 = 4;
+    const CANCELLED: u8 = 5;
+    public struct ExecutionIndexKey has copy, drop, store {}
+    public struct ExecutionIndex has store { executions: Table<vector<u8>, ID> }
+    public struct CommandExecution has key {
+        id: UID, org_id: ID, capability_id: ID, capability_version: u64,
+        human_id: ID, grant_id: ID, grant_version: u64,
+        membership_id: ID, host_address: address, managed_agent: Option<ID>,
+        delegate: address, node_id: String, agent_id: String,
+        command_id: String, nonce: String, idempotency_key: String,
+        intent_hash: vector<u8>, action: String, scope: String,
+        budget_asset: String, budget_amount: u64,
+        issued_at_ms: u64, expires_at_ms: u64, state: u8, cursor: u64,
+        stop_requested: bool, created_at_ms: u64, started_at_ms: u64, updated_at_ms: u64,
+        result_record: Option<ID>, result_hash: vector<u8>, attempt_id: vector<u8>,
+    }
+    public struct CommandPrepared has copy, drop { execution_id: ID, capability_id: ID, intent_hash: vector<u8>, duplicate: bool }
+    public struct ExecutionChanged has copy, drop { execution_id: ID, state: u8, cursor: u64, stop_requested: bool, updated_at_ms: u64 }
+
+    public fun prepare_agent_command(
+        cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent,
+        action: String, scope: String, command_id: String, nonce: String, idempotency_key: String,
+        budget_asset: String, budget_amount: u64, intent_hash: vector<u8>, issued_at_ms: u64, expires_at_ms: u64,
+        clock: &Clock, ctx: &mut TxContext,
+    ) {
+        host::assert_agent_authority(org, human, grant, member, binding, managed, cap, clock);
+        prepare(cap, org, human, grant, member, option::some(object::id(managed)), action, scope,
+            command_id, nonce, idempotency_key, budget_asset, budget_amount, intent_hash, issued_at_ms, expires_at_ms, clock, ctx);
+    }
+    public fun prepare_host_command(
+        cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding,
+        action: String, scope: String, command_id: String, nonce: String, idempotency_key: String,
+        budget_asset: String, budget_amount: u64, intent_hash: vector<u8>, issued_at_ms: u64, expires_at_ms: u64,
+        clock: &Clock, ctx: &mut TxContext,
+    ) {
+        host::assert_host_authority(org, human, grant, member, binding, cap, clock);
+        prepare(cap, org, human, grant, member, option::none(), action, scope,
+            command_id, nonce, idempotency_key, budget_asset, budget_amount, intent_hash, issued_at_ms, expires_at_ms, clock, ctx);
+    }
+    fun prepare(
+        cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, managed: Option<ID>,
+        action: String, scope: String, command_id: String, nonce: String, idempotency_key: String,
+        budget_asset: String, budget_amount: u64, intent_hash: vector<u8>, issued_at_ms: u64, expires_at_ms: u64,
+        clock: &Clock, ctx: &mut TxContext,
+    ) {
+        let now = clock::timestamp_ms(clock);
+        assert!(issued_at_ms > 0 && expires_at_ms > issued_at_ms && expires_at_ms - issued_at_ms <= 300000, E_INPUT);
+        assert!(now < expires_at_ms && issued_at_ms <= now + 30000 && expires_at_ms <= ra::expires_at_ms(cap), E_EXPIRED);
+        let target_kind = ra::target_kind(cap);
+        let node_id = ra::node_id(cap);
+        let agent_id = ra::agent_id(cap);
+        ra::claim_bound_use(cap, action, scope, target_kind, node_id, agent_id,
+            command_id, nonce, idempotency_key, budget_asset, budget_amount, intent_hash, clock, ctx);
+        let old = execution_id(cap, intent_hash);
+        if (option::is_some(&old)) {
+            event::emit(CommandPrepared { execution_id: *option::borrow(&old), capability_id: object::id(cap), intent_hash, duplicate: true });
+            return
+        };
+        let run = CommandExecution {
+            id: object::new(ctx), org_id: object::id(org), capability_id: object::id(cap), capability_version: ra::revocation_version(cap),
+            human_id: object::id(human), grant_id: object::id(grant), grant_version: identity::grant_version(grant),
+            membership_id: object::id(member), host_address: host::membership_host_address(member), managed_agent: managed,
+            delegate: ra::delegate(cap), node_id: ra::node_id(cap), agent_id: ra::agent_id(cap),
+            command_id, nonce, idempotency_key, intent_hash, action, scope, budget_asset, budget_amount,
+            issued_at_ms, expires_at_ms, state: QUEUED, cursor: 1, stop_requested: false,
+            created_at_ms: now, started_at_ms: 0, updated_at_ms: now, result_record: option::none(), result_hash: vector[], attempt_id: vector[],
+        };
+        let run_id = object::id(&run);
+        if (!df::exists_(ra::capability_uid(cap), ExecutionIndexKey {})) {
+            df::add(ra::capability_uid_mut(cap), ExecutionIndexKey {}, ExecutionIndex { executions: table::new(ctx) });
+        };
+        let idx: &mut ExecutionIndex = df::borrow_mut(ra::capability_uid_mut(cap), ExecutionIndexKey {});
+        table::add(&mut idx.executions, intent_hash, run_id);
+        event::emit(CommandPrepared { execution_id: run_id, capability_id: object::id(cap), intent_hash, duplicate: false });
+        transfer::share_object(run);
+    }
+    public fun execution_id(cap: &RemoteCapability, intent_hash: vector<u8>): Option<ID> {
+        if (!df::exists_(ra::capability_uid(cap), ExecutionIndexKey {})) return option::none();
+        let idx: &ExecutionIndex = df::borrow(ra::capability_uid(cap), ExecutionIndexKey {});
+        if (table::contains(&idx.executions, intent_hash)) option::some(*table::borrow(&idx.executions, intent_hash)) else option::none()
+    }
+    public fun begin_agent_command(
+        run: &mut CommandExecution, cap: &RemoteCapability, org: &Organization,
+        human: &HumanIdentity, grant: &DeviceGrant, member: &HostMembership,
+        binding: &CoordinatorBinding, managed: &ManagedAgent, attempt_id: vector<u8>, clock: &Clock, ctx: &TxContext,
+    ) {
+        host::assert_agent_authority(org, human, grant, member, binding, managed, cap, clock);
+        assert!(run.managed_agent == option::some(object::id(managed)), E_TARGET);
+        begin(run, cap, member, attempt_id, clock, ctx);
+    }
+    public fun begin_host_command(
+        run: &mut CommandExecution, cap: &RemoteCapability, org: &Organization,
+        human: &HumanIdentity, grant: &DeviceGrant, member: &HostMembership,
+        binding: &CoordinatorBinding, attempt_id: vector<u8>, clock: &Clock, ctx: &TxContext,
+    ) {
+        host::assert_host_authority(org, human, grant, member, binding, cap, clock);
+        assert!(option::is_none(&run.managed_agent), E_TARGET);
+        begin(run, cap, member, attempt_id, clock, ctx);
+    }
+    fun begin(run: &mut CommandExecution, cap: &RemoteCapability, member: &HostMembership, attempt_id: vector<u8>, clock: &Clock, ctx: &TxContext) {
+        assert!(tx_context::sender(ctx) == run.host_address && host::membership_host_address(member) == run.host_address
+            && object::id(member) == run.membership_id && object::id(cap) == run.capability_id, E_TARGET);
+        assert!(run.state == QUEUED && !run.stop_requested, E_STARTED);
+        assert!(vector::length(&attempt_id) == 32, E_INPUT);
+        assert!(clock::timestamp_ms(clock) < run.expires_at_ms, E_EXPIRED);
+        assert!(ra::revocation_version(cap) == run.capability_version && ra::delegate(cap) == run.delegate, E_VERSION);
+        ra::assert_authorized_with_clock(cap, &run.action, &run.scope, ra::target_kind(cap), &run.node_id, &run.agent_id, clock, ctx);
+        assert!(ra::authority_claim_matches(cap, &run.action, &run.scope, ra::target_kind(cap), &run.node_id, &run.agent_id,
+            &run.command_id, &run.nonce, &run.idempotency_key, &run.budget_asset, run.budget_amount, &run.intent_hash), E_INPUT);
+        assert!(execution_id(cap, run.intent_hash) == option::some(object::id(run)), E_TARGET);
+        run.state = RUNNING;
+        run.attempt_id = attempt_id;
+        run.started_at_ms = clock::timestamp_ms(clock);
+        changed(run, clock);
+    }
+    /// Publishing historical execution evidence remains allowed after authority
+    /// expires or is revoked; this entry cannot start or approve new execution.
+    public fun finish_command(
+        run: &mut CommandExecution, org: &mut Organization, final_state: u8,
+        expected_cursor: u64, key_version: u64, encrypted_result: vector<u8>, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        assert!(tx_context::sender(ctx) == run.host_address && object::id(org) == run.org_id, E_TARGET);
+        assert!(run.state == RUNNING && run.cursor == expected_cursor, E_STATE);
+        assert!(final_state == SUCCEEDED || final_state == FAILED || final_state == NEEDS_CONFIRMATION
+            || (final_state == CANCELLED && run.stop_requested), E_STATE);
+        let logical_id = result_logical_id(&run.intent_hash);
+        let result_hash = hash::sha2_256(encrypted_result);
+        let record_id = product_record::save_authorized(org, run.human_id, run.grant_id, run.grant_version,
+            5, logical_id, 0, key_version, encrypted_result, clock, ctx);
+        run.result_record = option::some(record_id);
+        run.result_hash = result_hash;
+        run.state = final_state;
+        changed(run, clock);
+    }
+    public fun request_stop(run: &mut CommandExecution, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant, clock: &Clock, ctx: &TxContext) {
+        identity::assert_can(human, grant, org, identity::operate_action(), clock, ctx);
+        assert!(run.org_id == object::id(org) && run.human_id == object::id(human), E_TARGET);
+        assert!(run.state == QUEUED || run.state == RUNNING, E_STATE);
+        if (run.stop_requested) return;
+        run.stop_requested = true;
+        if (run.state == QUEUED) run.state = CANCELLED;
+        changed(run, clock);
+    }
+    fun changed(run: &mut CommandExecution, clock: &Clock) {
+        run.cursor = run.cursor + 1;
+        run.updated_at_ms = clock::timestamp_ms(clock);
+        event::emit(ExecutionChanged { execution_id: object::id(run), state: run.state, cursor: run.cursor, stop_requested: run.stop_requested, updated_at_ms: run.updated_at_ms });
+    }
+    fun result_logical_id(hash: &vector<u8>): String {
+        let alphabet = b"0123456789abcdef";
+        let mut bytes = b"command-";
+        let mut i = 0u64;
+        while (i < vector::length(hash)) {
+            vector::push_back(&mut bytes, alphabet[hash[i] as u64 / 16]);
+            vector::push_back(&mut bytes, alphabet[hash[i] as u64 % 16]);
+            i = i + 1;
+        };
+        string::utf8(bytes)
+    }
+    public fun state(run: &CommandExecution): u8 { run.state }
+    public fun cursor(run: &CommandExecution): u64 { run.cursor }
+}

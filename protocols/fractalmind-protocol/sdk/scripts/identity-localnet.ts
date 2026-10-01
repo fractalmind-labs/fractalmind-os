@@ -18,6 +18,7 @@ import { verifyGoAuthority } from './verify-go-authority.js';
 const baseUrl = process.env.FM_LOCALNET_RPC ?? 'http://127.0.0.1:29000';
 const faucet = process.env.FM_LOCALNET_FAUCET ?? 'http://127.0.0.1:29123';
 for (const url of [baseUrl, faucet]) assert.ok(['localhost', '127.0.0.1', '[::1]'].includes(new URL(url).hostname), 'This script only spends localnet SUI.');
+assert.ok(process.env.FM_NODE_CHECKPOINT_ACCEPTANCE !== '1' || process.env.FM_HOST_ACCEPTANCE === '1', 'Command checkpoint acceptance requires FM_HOST_ACCEPTANCE=1.');
 const bytecodePath = process.argv[2];
 assert.ok(bytecodePath, 'Pass the bytecode JSON built from a zero-address test copy.');
 const c = new SuiGrpcClient({ baseUrl, network: 'localnet' });
@@ -35,28 +36,53 @@ async function execute(label: string, tx: Transaction, signer = desktop, sponsor
   tx.setSender(signer.getPublicKey().toSuiAddress());
   tx.setGasBudget(2000000000);
   if (sponsor) tx.setGasOwner(sponsor.getPublicKey().toSuiAddress());
-  // Negative acceptance cases are submitted to validators, not merely rejected
-  // by the SDK's preflight simulation. Resolve kind, then pay an explicit coin.
-  if (allowRejected) {
-    await tx.build({ client: c, onlyTransactionKind: true });
-    const payer = (sponsor ?? signer).getPublicKey().toSuiAddress();
-    const coins = await c.core.listCoins({ owner: payer });
-    const coin = coins.objects.find(coin => BigInt(coin.balance) >= 2000000000n);
-    assert.ok(coin, 'Expected a funded localnet gas coin.');
-    tx.setGasPayment([{ objectId: coin.objectId, version: coin.version, digest: coin.digest }]);
-    tx.setGasPrice((await c.core.getReferenceGasPrice()).referenceGasPrice);
-  }
+  // Always resolve current gas references. Automatic coin selection may retain
+  // a cached reference after explicit negative transactions or a Go Host start.
+  // Negative cases still reach validators instead of stopping at simulation.
+  await tx.build({ client: c, onlyTransactionKind: true });
+  const payer = (sponsor ?? signer).getPublicKey().toSuiAddress();
+  const coins = await c.core.listCoins({ owner: payer });
+  const coin = coins.objects.find(coin => BigInt(coin.balance) >= 2000000000n);
+  assert.ok(coin, 'Expected a funded localnet gas coin.');
+  // The owner/coin index can lag behind the latest ledger object even when a
+  // prior execution's effects are already visible. Hydrate its actual reference.
+  const { object: gasObject } = await c.core.getObject({ objectId: coin.objectId });
+  tx.setGasPayment([{ objectId: gasObject.objectId, version: gasObject.version, digest: gasObject.digest }]);
+  tx.setGasPrice((await c.core.getReferenceGasPrice()).referenceGasPrice);
   const bytes = allowRejected ? await tx.build() : await tx.build({ client: c });
   const signatures = [(await signer.signTransaction(bytes)).signature];
   if (sponsor) signatures.push((await sponsor.signTransaction(bytes)).signature);
   const result = await c.core.executeTransaction({ transaction: bytes, signatures, include });
   const data = result.$kind === 'Transaction' ? result.Transaction : result.FailedTransaction;
-  rows.push({ label, digest: data.digest, status: data.status, gasUsed: data.effects?.gasUsed });
+  const row = { label, digest: data.digest, status: data.status, gasUsed: data.effects?.gasUsed, changedObjects: data.effects?.changedObjects, confirmation: 'effects returned; ledger visibility pending' };
+  rows.push(row);
   console.log(label, data.status.success ? 'PASS' : 'REJECTED', data.digest);
   // Keep public transaction evidence even if confirmation is interrupted.
   // This contains no generated key material or recovery/invitation codes.
   if (process.argv[3]) await writeFile(`${process.argv[3]}.progress.json`, JSON.stringify({ complete: false, transactions: rows }, null, 2));
-  await c.core.waitForTransaction({ digest: data.digest, include });
+  // Localnet prunes transaction history aggressively. Confirm that the exact
+  // effects returned by ExecuteTransaction are visible through current object
+  // versions, without resubmitting or depending on retained history. Version
+  // visibility is not used to infer transaction success: status comes from the
+  // execution response above, including actual validator-rejected cases.
+  assert.equal(data.effects?.transactionDigest, data.digest);
+  const writes = data.effects!.changedObjects.filter(object => object.outputState === 'ObjectWrite' || object.outputState === 'PackageWrite');
+  assert.ok(writes.length > 0, 'Confirmed effects must include the paid gas object.');
+  const confirmationSignal = AbortSignal.timeout(20000);
+  for (const write of writes) {
+    let lastError: unknown;
+    while (!confirmationSignal.aborted) {
+      try {
+        const { object } = await c.core.getObject({ objectId: write.objectId, signal: confirmationSignal });
+        if (BigInt(object.version) >= BigInt(write.outputVersion!)) { lastError = undefined; break; }
+        lastError = new Error(`Object ${write.objectId} has not reached version ${write.outputVersion}.`);
+      } catch (error) { lastError = error; }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    if (lastError || confirmationSignal.aborted) throw new Error(`Cannot confirm ${data.digest}; query its digest or effect object versions before retrying.`, { cause: lastError });
+  }
+  row.confirmation = 'execution effects and output object versions confirmed';
+  if (process.argv[3]) await writeFile(`${process.argv[3]}.progress.json`, JSON.stringify({ complete: false, transactions: rows }, null, 2));
   return { result, data };
 }
 function created(data: Awaited<ReturnType<typeof execute>>['data'], suffix: string): string {
@@ -138,7 +164,7 @@ let human = await sdk.identity.getHuman(humanId);
 const phoneGrantId = human.grants[1];
 const phoneGrant = await sdk.identity.getDeviceGrant(phoneGrantId);
 const hostReport = process.env.FM_HOST_ACCEPTANCE === '1'
-  ? await exerciseHostAdmission({ sdk, execute, created, humanId, organizationId, rootGrantId, phoneGrantId, desktop, phone, faucet })
+  ? await exerciseHostAdmission({ sdk, execute, created, humanId, organizationId, rootGrantId, phoneGrantId, desktop, phone, faucet, contentKey: originalContentKey })
   : undefined;
 assert.deepEqual(phoneGrant.actions, [1]);
 assert.equal(phoneGrant.org_scope, organizationId);
@@ -190,11 +216,13 @@ while (page.hasNextPage) {
   page = await sdk.productRecord.listCurrent(organizationId, page.cursor, 3);
   records = [...records, ...page.records];
 }
-assert.equal(records.length, 7);
+assert.equal(records.length, 7 + (hostReport?.executions?.records.length ?? 0));
 for (const pointer of records) {
   const keys = hexToBytes(restoredKeyring.historicalKeys[pointer.key_version]);
   const decoded = await sdk.productRecord.decryptRecord(pointer.record_id, keys);
   const kind = Object.entries(PRODUCT_RECORD_KINDS).find(([, value]) => value === pointer.kind)![0];
+  const executionBody = hostReport?.executions?.records.find(body => body.logicalId === pointer.logicalId);
+  if (executionBody) { assert.equal(new TextDecoder().decode(decoded.plaintext), executionBody.plaintext); continue; }
   assert.deepEqual(decoded.plaintext, kind === 'message' ? newMessage : originalBodies.get(kind));
 }
 const nextCode = createRecoveryCode('localnet');
@@ -238,15 +266,33 @@ const replay = await execute('replay of consumed recovery record rejected', reco
 assert.equal(replay.data.status.success, false);
 assert.match(JSON.stringify(replay.data.status), /9005/);
 await assert.rejects(sdk.identity.locateRecovery(code, 'localnet'), /consumed/);
+sdk = new FractalMindSDK({ packageId, registryId, client: c, network: 'localnet' });
 const nextLocated = await sdk.identity.locateRecovery(nextCode, 'localnet');
 assert.equal(nextLocated.human.id, humanId);
-assert.deepEqual(await unwrapKeys(Uint8Array.from(nextLocated.record.encrypted_backup), nextRecovery.encryptionSecret, nextContext), recoveryKeyring);
+const recoveredBackup = await unwrapKeys(Uint8Array.from(nextLocated.record.encrypted_backup), nextRecovery.encryptionSecret, nextContext);
+assert.deepEqual(recoveredBackup, recoveryKeyring);
+const recoveredKeyring = JSON.parse(new TextDecoder().decode(recoveredBackup));
+const recoveredCheckpointRecords: string[] = [];
+if (hostReport?.executions) {
+  // Verify decryption again after consumption and key rotation, using only the
+  // replacement recovery record and a newly constructed SDK, not cached IDs.
+  const recoveredOrganizationId = nextLocated.human.organizations[0];
+  const pointers = await sdk.productRecord.listCurrent(recoveredOrganizationId, null, 50);
+  for (const expected of hostReport.executions.records) {
+    const pointer = pointers.records.find(pointer => pointer.logicalId === expected.logicalId);
+    assert.ok(pointer, 'Recovered chain index must locate the command result.');
+    const key = hexToBytes(recoveredKeyring.historicalKeys[pointer.key_version]);
+    const decoded = await sdk.productRecord.decryptRecord(pointer.record_id, key);
+    assert.equal(new TextDecoder().decode(decoded.plaintext), expected.plaintext);
+    recoveredCheckpointRecords.push(pointer.record_id);
+  }
+}
 const afterRecovery = await execute('persist future body inaccessible to all lost devices', await sdk.productRecord.encryptAndSave({ organizationId, humanId, grantId: newPhoneGrantId, kind: 'message', logicalId: 'after-recovery', expectedRevision: 0n, keyVersion: 3n, plaintext: newMessage, key: recoveryContentKey }), phone);
 assert.equal(afterRecovery.data.status.success, true);
 const postRecoveryId = created(afterRecovery.data, '::product_record::EncryptedRecord');
 await assert.rejects(sdk.productRecord.decryptRecord(postRecoveryId, newContentKey));
 assert.deepEqual((await sdk.productRecord.decryptRecord(postRecoveryId, recoveryContentKey)).plaintext, newMessage);
 assert.equal((await execute('recovered phone operates same Human', sdk.identity.createOrganization({ humanId, grantId: newPhoneGrantId, name: `Recovered-${Date.now()}`, description: '' }), phone)).data.status.success, true);
-const report = { testedAt: new Date().toISOString(), chain: await c.core.getChainIdentifier(), packageId, registryId, identityRegistryId, humanId, organizationId, checks: rows, records: recordChecks, host: hostReport };
+const report = { testedAt: new Date().toISOString(), chain: await c.core.getChainIdentifier(), packageId, registryId, identityRegistryId, humanId, organizationId, checks: rows, records: recordChecks, host: hostReport, recoveredCheckpointRecords };
 if (process.argv[3]) await writeFile(process.argv[3], `${JSON.stringify(report, null, 2)}\n`);
 console.log('Identity localnet acceptance passed. Recovery codes and private keys were not recorded.');

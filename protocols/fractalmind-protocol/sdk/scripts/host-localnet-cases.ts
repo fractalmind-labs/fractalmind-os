@@ -7,6 +7,7 @@ import type { FractalMindSDK } from '../src/index.js';
 import { createDeviceEncryptionKeys, createHostInviteMaterial, encodeHostInviteCode } from '../src/index.js';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { verifyGoAuthority } from './verify-go-authority.js';
+import { exerciseNodeExecutions } from './node-execution-localnet-cases.js';
 
 type Data = SuiClientTypes.Transaction<{ effects: true; objectTypes: true; events: true }>;
 type Execute = (label: string, tx: Transaction, signer?: Ed25519Keypair, sponsor?: Ed25519Keypair, allowRejected?: boolean) => Promise<{ data: Data }>;
@@ -14,6 +15,7 @@ type Options = {
   sdk: FractalMindSDK; execute: Execute; created: (data: Data, suffix: string) => string;
   humanId: string; organizationId: string; rootGrantId: string; phoneGrantId: string;
   desktop: Ed25519Keypair; phone: Ed25519Keypair; faucet: string;
+  contentKey: Uint8Array;
 };
 /** Chain integration, not a claim of two deployed runtime hosts. The following
  * runtime phase must start real envd processes and test routing and execution. */
@@ -118,10 +120,17 @@ export async function exerciseHostAdmission(o: Options) {
   assert.equal(authorityBinding.device_grant, rootGrantId);
   assert.equal(authorityBinding.managed_agent, managedId);
   await verifyGoAuthority(sdk.client.packageId, capabilityId);
+  const executions = process.env.FM_NODE_CHECKPOINT_ACCEPTANCE === '1' ? await exerciseNodeExecutions({ sdk, execute, created, organizationId, humanId, grantId: rootGrantId, membershipId: localMemberId, bindingId, managedAgentId: managedId, desktop, host: local, wrongHost: cloud, contentKey: o.contentKey }) : undefined;
   const deniedReadOnly = await execute('Host: read-only phone cannot acquire operation authority', sdk.host.issueCapability({ ...membership, grantId: o.phoneGrantId, managedAgentId: managedId, actions: ['direct.message'], scope: 'direct', expiresAtMs: Date.now() + 3600000 }), o.phone, undefined, true);
   assert.equal(deniedReadOnly.data.status.success, false);
   assert.match(JSON.stringify(deniedReadOnly.data.status), /9001/);
   await execute('Host: revoke admitted membership', sdk.host.revokeMembership({ ...auth, membershipId: localMemberId }));
+  if (executions) {
+    const stopped = await execute('Execution: Host revocation rejects an already reserved queued command', sdk.nodeExecution.beginCommand(executions.pendingStart), local, undefined, true);
+    assert.equal(stopped.data.status.success, false);
+    assert.match(JSON.stringify(stopped.data.status), /9203/);
+    assert.equal((await sdk.nodeExecution.getExecution(executions.pendingStart.executionId)).state, 0);
+  }
   const afterRevoke = await execute('Host: revoked membership prevents new execution grants', sdk.host.issueCapability({ ...membership, managedAgentId: managedId, actions: ['direct.message'], scope: 'direct', expiresAtMs: Date.now() + 3600000 }), desktop, undefined, true);
   assert.equal(afterRevoke.data.status.success, false);
   assert.match(JSON.stringify(afterRevoke.data.status), /9203/);
@@ -150,5 +159,5 @@ export async function exerciseHostAdmission(o: Options) {
   const reconstructed = await sdk.host.listManagedAgents(organizationId);
   assert.equal(reconstructed.agents.length, 3);
   assert.equal(reconstructed.agents.find(agent => agent.id === observedId)!.control_confirmed, false);
-  return { bindingId, localMembershipId: localMemberId, replacementMembershipId: newMemberId, secondMembershipId: cloudMemberId, managedAgentId: managedId, observationAgentId: observedId, sameNameOtherHostId: sameNameId, capabilityId, freshCapabilityId, freshObservationCapabilityId, authorityReaderVerified: process.env.FM_HOST_AUTHORITY_VERIFY === '1', checks: 'chain admission and optional real Go authority reads; runtime execution and external cloud deployment pending' };
+  return { bindingId, localMembershipId: localMemberId, replacementMembershipId: newMemberId, secondMembershipId: cloudMemberId, managedAgentId: managedId, observationAgentId: observedId, sameNameOtherHostId: sameNameId, capabilityId, freshCapabilityId, freshObservationCapabilityId, executions, authorityReaderVerified: process.env.FM_HOST_AUTHORITY_VERIFY === '1', checks: 'chain admission and optional real Go authority reads; runtime execution and external cloud deployment pending' };
 }

@@ -4,6 +4,7 @@ import { HostApi } from './host.js';
 import { ProductRecordApi } from './product-record.js';
 import { AgentPolicyApi } from './agent-policy.js';
 import { FractalMindClient } from './client.js';
+import { NodeExecutionApi } from './node-execution.js';
 import { FractalApi } from './fractal.js';
 import { GovernanceApi } from './governance.js';
 import { ObjectiveApi } from './objective.js';
@@ -14,6 +15,7 @@ import type { FractalMindClientOptions } from './types.js';
 
 export class FractalMindSDK {
   public readonly client: FractalMindClient;
+  public readonly nodeExecution: NodeExecutionApi;
   public readonly organization: OrganizationApi;
   public readonly objective: ObjectiveApi;
   public readonly agent: AgentApi;
@@ -28,6 +30,7 @@ export class FractalMindSDK {
 
   constructor(options: FractalMindClientOptions) {
     this.client = new FractalMindClient(options);
+    this.nodeExecution = new NodeExecutionApi(this.client);
     this.organization = new OrganizationApi(this.client);
     this.objective = new ObjectiveApi(this.client);
     this.agent = new AgentApi(this.client);
@@ -43,6 +46,7 @@ export class FractalMindSDK {
 }
 
 export { FractalMindClient } from './client.js';
+export { NodeExecutionApi, CommandExecutionBcs, EXECUTION_STATES, nodeCommandSigningBytes, nodeCommandIntentHash, verifySignedNodeCommand } from './node-execution.js';
 export { HostApi, HostInviteBcs, HostMembershipBcs, ManagedAgentBcs, CoordinatorBindingBcs,
   HostIndexBcs, AuthorityBindingBcs, HostJoinIntentBcs, createHostInviteMaterial,
   encodeHostInviteCode, parseHostInviteCode } from './host.js';

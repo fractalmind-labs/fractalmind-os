@@ -253,6 +253,7 @@ module fractalmind_protocol::remote_authority {
         transfer::share_object(capability);
     }
 
+    public(package) fun capability_uid(capability: &RemoteCapability): &UID { &capability.id }
     public(package) fun capability_uid_mut(capability: &mut RemoteCapability): &mut UID { &mut capability.id }
 
     /// Delegate a bounded node/agent subset from an organization root. Quota is
@@ -434,6 +435,29 @@ module fractalmind_protocol::remote_authority {
         ctx: &TxContext,
     ) {
         assert!(capability.reservation_scope == RESERVATION_AUTHORITY, E_WRONG_RESERVATION_SCOPE);
+        claim_use(capability, action, scope, target_kind, node_id, agent_id, command_id,
+            nonce, idempotency_key, budget_asset, budget_amount, intent_hash, clock, ctx);
+    }
+
+    /// Package wrappers check current Human/Host bindings before reserving a
+    /// node capability. They reuse the existing counters and replay indexes.
+    public(package) fun claim_bound_use(
+        capability: &mut RemoteCapability, action: String, scope: String,
+        target_kind: u8, node_id: String, agent_id: String, command_id: String,
+        nonce: String, idempotency_key: String, budget_asset: String,
+        budget_amount: u64, intent_hash: vector<u8>, clock: &Clock, ctx: &TxContext,
+    ) {
+        assert!(capability.reservation_scope == RESERVATION_NODE, E_WRONG_RESERVATION_SCOPE);
+        claim_use(capability, action, scope, target_kind, node_id, agent_id, command_id,
+            nonce, idempotency_key, budget_asset, budget_amount, intent_hash, clock, ctx);
+    }
+
+    fun claim_use(
+        capability: &mut RemoteCapability, action: String, scope: String,
+        target_kind: u8, node_id: String, agent_id: String, command_id: String,
+        nonce: String, idempotency_key: String, budget_asset: String,
+        budget_amount: u64, intent_hash: vector<u8>, clock: &Clock, ctx: &TxContext,
+    ) {
         assert!(ctx.sender() == capability.delegate, E_NOT_DELEGATE);
         assert_authorized_with_clock(capability, &action, &scope, target_kind, &node_id, &agent_id, clock, ctx);
         assert!(is_token(&command_id, false), E_INVALID_TOKEN);

@@ -33,7 +33,9 @@
 4. 对实例能力读取 ManagedAgent，校验 Host/实例归属、当前成员与版本；执行能力需要实际受约束的运行时。
 5. 重读所有依赖的最新对象版本，读取期间变化则拒绝；预留前再次读取，避免使用过期投影。
 
-读取结果仅是授权投影。命令和预算必须通过链上原子预留，再由执行端写入可恢复检查点；`ChainAuthorityStore` 需要明确的 `ChainReservationBackend`。该后端与生产工厂接线仍待实现，现有生产工厂仍使用 Phase 0 文件存储，因此 #30 尚未交付。链上事务也必须重新核验当前依赖，不能以应用内两次读取代替原子条件校验。
+读取结果仅是授权投影。命令和预算通过 `node_execution` 原子预留并创建检查点；`ChainReservations` 只接受与签名意图完全一致、由设备事先创建的排队记录。Host 启动事务在链上再次核验当前依赖，并记录本次随机尝试标识。执行端确认该标识后才能调用适配器，回执未知时保留 digest，不重发启动。完整说明见 [命令检查点](v020-node-execution.md)。
+
+现有生产工厂仍使用 Phase 0 文件存储；真实适配器、Host 加密密钥、链上结果存储及预算结算尚未接线，因此 #30 尚未交付。
 
 ## 可复现验证
 
@@ -50,4 +52,6 @@ FM_HOST_ACCEPTANCE=1 FM_HOST_AUTHORITY_VERIFY=1 node --import tsx scripts/identi
 
 Go 工具链须可用。独立网络地址可用 `FM_LOCALNET_RPC`、`FM_LOCALNET_FAUCET` 指定。脚本发布零地址临时包，不更改仓库 published-at/命名地址，不升级真实已部署包。事务执行结果及 digest 先落到 `.progress.json`；确认中断不能推断原事务失败，更不能自动重放。完整报告只有所有断言通过后写出。
 
-当前证据：[真实本地链报告](evidence/v020-host-admission-localnet.json)。包含 48 笔交易与 6 次真实 Go gRPC 权限核验。尚待：已发布包实际升级、邀请码接入 CLI/App、真实本地/云端 envd、运行时能力核验、签名心跳、设备鉴权路由、链上命令/预算预留、检查点与完整 OKR/App 闭环。
+Host 基础证据：[真实本地链报告](evidence/v020-host-admission-localnet.json)，包含 48 笔交易与 6 次真实 Go gRPC 权限核验。加入 `FM_NODE_CHECKPOINT_ACCEPTANCE=1` 可同时运行命令预留、启动、终态及恢复测试；扩展证据见 [命令报告](evidence/v020-node-execution-localnet.json)。
+
+尚待：已发布包实际升级、邀请码接入 CLI/App、真实本地/云端 envd、运行时能力核验、签名心跳、设备鉴权路由、预算结算、生产接线与完整 OKR/App 闭环。

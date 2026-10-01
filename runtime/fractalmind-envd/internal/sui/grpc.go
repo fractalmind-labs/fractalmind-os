@@ -79,9 +79,20 @@ func inputArgument(index uint32) *v2.Argument {
 	return &v2.Argument{Kind: v2.Argument_INPUT.Enum(), Input: proto.Uint32(index)}
 }
 
+// ObjectArgument explicitly distinguishes a Move object reference from an
+// address/string primitive. Never guess from a string's 0x prefix.
+type ObjectArgument string
+
 // literal preserves decimal integer strings rather than coercing u64 into an
 // imprecise protobuf double. Slice/map inputs are normalized through JSON.
 func literal(value any) (*v2.Input, error) {
+	if object, ok := value.(ObjectArgument); ok {
+		id, err := normalizeAddress(string(object))
+		if err != nil {
+			return nil, err
+		}
+		return &v2.Input{ObjectId: proto.String(id)}, nil
+	}
 	if b, ok := value.([]byte); ok {
 		value = byteVector(b)
 	}
@@ -322,7 +333,11 @@ func (c *GRPCClient) SuiExecuteTransactionBlock(ctx context.Context, req models.
 		return models.SuiTransactionBlockResponse{}, err
 	}
 	if err := executionError(resp.GetTransaction()); err != nil {
-		return models.SuiTransactionBlockResponse{}, err
+		result := models.SuiTransactionBlockResponse{Digest: resp.GetTransaction().GetDigest()}
+		if status := resp.GetTransaction().GetEffects().GetStatus(); status != nil && !status.GetSuccess() {
+			result.Effects.Status.Status = "failure"
+		}
+		return result, err
 	}
 	return models.SuiTransactionBlockResponse{Digest: resp.GetTransaction().GetDigest(), Effects: models.SuiEffects{Status: models.ExecutionStatus{Status: "success"}}}, nil
 }

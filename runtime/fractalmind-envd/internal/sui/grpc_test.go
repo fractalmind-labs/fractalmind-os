@@ -126,7 +126,7 @@ func TestSimulationRefusesModifiedAuthorityOrBudget(t *testing.T) {
 func TestExecutionFailureAndOpaqueOwnedObjectPagination(t *testing.T) {
 	c := testTransport(t, &transportServer{
 		execute: func(*v2.ExecuteTransactionRequest) (*v2.ExecuteTransactionResponse, error) {
-			return &v2.ExecuteTransactionResponse{Transaction: &v2.ExecutedTransaction{Effects: &v2.TransactionEffects{Status: &v2.ExecutionStatus{Success: proto.Bool(false)}}}}, nil
+			return &v2.ExecuteTransactionResponse{Transaction: &v2.ExecutedTransaction{Digest: proto.String("failed-digest"), Effects: &v2.TransactionEffects{Status: &v2.ExecutionStatus{Success: proto.Bool(false)}}}}, nil
 		},
 		list: func(req *v2.ListOwnedObjectsRequest) (*v2.ListOwnedObjectsResponse, error) {
 			if string(req.PageToken) != "page-2" {
@@ -135,8 +135,8 @@ func TestExecutionFailureAndOpaqueOwnedObjectPagination(t *testing.T) {
 			return &v2.ListOwnedObjectsResponse{NextPageToken: []byte("page-3"), Objects: []*v2.Object{{ObjectId: proto.String("0xcoin"), Balance: proto.Uint64(18446744073709551615)}}}, nil
 		},
 	})
-	if _, err := c.SuiExecuteTransactionBlock(context.Background(), models.SuiExecuteTransactionBlockRequest{TxBytes: "dHg="}); err == nil {
-		t.Fatal("failed execution accepted")
+	if result, err := c.SuiExecuteTransactionBlock(context.Background(), models.SuiExecuteTransactionBlockRequest{TxBytes: "dHg="}); err == nil || result.Digest != "failed-digest" || result.Effects.Status.Status != "failure" {
+		t.Fatalf("confirmed failure must preserve its digest and status: result=%+v err=%v", result, err)
 	}
 	token := base64.StdEncoding.EncodeToString([]byte("page-2"))
 	coins, err := c.SuiXGetCoins(context.Background(), models.SuiXGetCoinsRequest{Owner: "0x1", Cursor: token, Limit: 1})
@@ -153,6 +153,27 @@ func TestLiteralRejectsUnsafeDoubles(t *testing.T) {
 		if _, err := literal(value); err == nil {
 			t.Fatalf("accepted unsafe argument %v", value)
 		}
+	}
+}
+
+func TestObjectArgumentsRemainDistinctFromAddressPrimitives(t *testing.T) {
+	object, err := literal(ObjectArgument("0x6"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	address, err := literal("0x6")
+	if err != nil {
+		t.Fatal(err)
+	}
+	normalized, _ := normalizeAddress("0x6")
+	if object.GetObjectId() != normalized || object.Literal != nil {
+		t.Fatal("object reference encoded as a primitive literal")
+	}
+	if address.ObjectId != nil || address.GetLiteral().GetStringValue() != "0x6" {
+		t.Fatal("primitive address inferred as an object reference")
+	}
+	if _, err := literal(ObjectArgument("invalid")); err == nil {
+		t.Fatal("invalid object ID accepted")
 	}
 }
 

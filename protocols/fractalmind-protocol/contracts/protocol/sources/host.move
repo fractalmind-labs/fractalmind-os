@@ -392,4 +392,49 @@ module fractalmind_protocol::host {
     public fun observation_capability(member: &HostMembership): ID { member.observation_capability }
     public fun managed_instance(managed: &ManagedAgent): String { managed.instance_id }
     public fun binding_version(binding: &CoordinatorBinding): u64 { binding.version }
+
+    public(package) fun authority_binding(cap: &RemoteCapability): AuthorityBinding {
+        *df::borrow(remote_authority::capability_uid(cap), AuthorityBindingKey {})
+    }
+    /// Host-signed starts check the recorded delegate explicitly, granting
+    /// the Host none of the device's unrelated permissions.
+    public(package) fun assert_device_authority(
+        org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding,
+        cap: &RemoteCapability, clock: &Clock,
+    ) {
+        assert_member(org, member, binding, clock);
+        let auth = authority_binding(cap);
+        assert!(remote_authority::org_id(cap) == object::id(org)
+            && remote_authority::node_id(cap) == node_identifier(member.host_address)
+            && option::is_none(&remote_authority::parent_id(cap)), E_SCOPE);
+        assert!(auth.membership_id == object::id(member) && auth.membership_version == member.version, E_REVOKED);
+        assert!(auth.human_id == object::id(human) && auth.device_grant == option::some(object::id(grant)), E_SCOPE);
+        assert!(auth.device_grant_version == identity::grant_version(grant)
+            && auth.human_generation == identity::generation(human), E_REVOKED);
+        identity::assert_can_for_device(human, grant, org, auth.required_action, clock, remote_authority::delegate(cap));
+    }
+    public(package) fun assert_agent_authority(
+        org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent,
+        cap: &RemoteCapability, clock: &Clock,
+    ) {
+        assert_device_authority(org, human, grant, member, binding, cap, clock);
+        let auth = authority_binding(cap);
+        assert!(auth.managed_agent == option::some(object::id(managed))
+            && auth.managed_agent_version == managed.version, E_REVOKED);
+        assert!(remote_authority::target_kind(cap) == remote_authority::target_agent()
+            && remote_authority::agent_id(cap) == managed.instance_id, E_SCOPE);
+        assert_managed(org, member, managed, auth.required_action == identity::operate_action());
+    }
+    public(package) fun assert_host_authority(
+        org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding,
+        cap: &RemoteCapability, clock: &Clock,
+    ) {
+        assert_device_authority(org, human, grant, member, binding, cap, clock);
+        let auth = authority_binding(cap);
+        assert!(option::is_none(&auth.managed_agent) && auth.required_action == identity::read_action()
+            && remote_authority::target_kind(cap) == remote_authority::target_node(), E_SCOPE);
+    }
 }

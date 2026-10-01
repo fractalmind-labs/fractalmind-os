@@ -192,10 +192,10 @@ func TestCreatePolicy(t *testing.T) {
 		t.Fatalf("expected 0xproto::entry::create_agent_policy_with_clock, got %s::%s::%s", calledPackage, calledModule, calledFunction)
 	}
 
-	if len(capturedArgs) != 8 || capturedArgs[7] != "0x6" {
+	if len(capturedArgs) != 8 || capturedArgs[7] != ObjectArgument("0x6") {
 		t.Fatalf("expected 8 args including Clock, got %#v", capturedArgs)
 	}
-	if capturedArgs[0] != "0xorg" || capturedArgs[1] != "0xagent" {
+	if capturedArgs[0] != ObjectArgument("0xorg") || capturedArgs[1] != "0xagent" {
 		t.Fatalf("unexpected object/address args: %#v", capturedArgs[:2])
 	}
 	if capturedArgs[4] != "2" || capturedArgs[5] != "123456" || capturedArgs[6] != "1000" {
@@ -231,7 +231,7 @@ func TestRevokePolicy(t *testing.T) {
 	if len(capturedArgs) != 2 {
 		t.Fatalf("expected 2 args, got %d", len(capturedArgs))
 	}
-	if capturedArgs[0] != "0xpolicy" || capturedArgs[1] != "0xorg" {
+	if capturedArgs[0] != ObjectArgument("0xpolicy") || capturedArgs[1] != ObjectArgument("0xorg") {
 		t.Fatalf("unexpected revoke args: %#v", capturedArgs)
 	}
 }
@@ -271,7 +271,7 @@ func TestExecuteAction(t *testing.T) {
 		t.Fatalf("expected 0xproto::entry::execute_agent_action_with_clock, got %s::%s::%s", calledPackage, calledModule, calledFunction)
 	}
 
-	if len(capturedArgs) != 9 || capturedArgs[8] != "0x6" {
+	if len(capturedArgs) != 9 || capturedArgs[8] != ObjectArgument("0x6") {
 		t.Fatalf("expected 9 args including Clock, got %#v", capturedArgs)
 	}
 

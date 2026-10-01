@@ -6,6 +6,8 @@ import (
 
 	v2 "github.com/block-vision/sui-go-sdk/pb/sui/rpc/v2"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
@@ -19,6 +21,9 @@ func (c *GRPCClient) ReadChainObject(ctx context.Context, id string) (nodecomman
 	}
 	response, err := c.ledger.GetObject(ctx, &v2.GetObjectRequest{ObjectId: proto.String(id), ReadMask: &fieldmaskpb.FieldMask{Paths: []string{"object_id", "object_type", "version", "contents", "owner"}}})
 	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return nodecommand.ChainObject{}, nodecommand.ErrChainObjectNotFound
+		}
 		return nodecommand.ChainObject{}, err
 	}
 	object := response.GetObject()

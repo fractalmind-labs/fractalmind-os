@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -859,6 +860,18 @@ func handleSignedCommand(ctx context.Context, rawCommand string, runtimeExecutor
 	}
 	if err != nil {
 		result["error"] = err.Error()
+		var rejection *nodecommand.RejectionError
+		if errors.As(err, &rejection) {
+			if rejection.ExecutionID != "" {
+				result["execution_id"] = rejection.ExecutionID
+			}
+			if rejection.TransactionDigest != "" {
+				result["transaction_digest"] = rejection.TransactionDigest
+			}
+			if rejection.Code == nodecommand.CodeExecutionUnknown {
+				result["requires_confirmation"] = true
+			}
+		}
 		if code := nodecommand.CodeOf(err); code != "" {
 			result["error_code"] = code
 		} else {

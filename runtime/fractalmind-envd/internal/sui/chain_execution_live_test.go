@@ -1,0 +1,104 @@
+package sui
+
+import (
+	"context"
+	"crypto/ed25519"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
+)
+
+func TestChainExecutionLive(t *testing.T) {
+	raw := os.Getenv("FM_CHAIN_EXECUTION_CASE")
+	if raw == "" {
+		t.Skip("requires isolated localnet device-prepared command")
+	}
+	var input struct {
+		RPC, PackageID    string
+		Command           nodecommand.NodeCommand
+		ExpectedDuplicate bool
+		ExpectedCode      string
+	}
+	if err := json.Unmarshal([]byte(raw), &input); err != nil {
+		t.Fatal(err)
+	}
+	seed, err := hex.DecodeString(os.Getenv("FM_CHAIN_EXECUTION_TEST_SEED"))
+	if err != nil || len(seed) != 32 {
+		t.Fatal("missing generated localnet test Host key")
+	}
+	private := ed25519.NewKeyFromSeed(seed)
+	defer func() { clear(private); clear(seed) }()
+	keypair := &Keypair{Private: private, Public: private.Public().(ed25519.PublicKey)}
+	client, err := NewGRPCClient(input.RPC, "")
+	if err != nil {
+		t.Fatalf("%v (cause: %v)", err, errors.Unwrap(err))
+	}
+	defer client.Close()
+	resolver, err := nodecommand.NewChainAuthorityResolver(client, input.PackageID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	backend, err := NewChainReservations(resolver, client, keypair, input.PackageID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, err := nodecommand.NewChainAuthorityStore(resolver, backend)
+	if err != nil {
+		t.Fatal(err)
+	}
+	validator := nodecommand.NewValidator(nodecommand.Ed25519Verifier{}, store, nodecommand.ValidatorOptions{LocalTarget: input.Command.Target, HighRiskActions: map[string]struct{}{"assign": {}}, BudgetedActions: map[string]struct{}{"assign": {}}})
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	result, err := validator.Validate(ctx, input.Command)
+	if input.ExpectedCode != "" {
+		if string(nodecommand.CodeOf(err)) != input.ExpectedCode {
+			t.Fatalf("expected %s, got %v", input.ExpectedCode, err)
+		}
+		encoded, _ := json.Marshal(map[string]any{"commandId": input.Command.CommandID, "code": input.ExpectedCode})
+		t.Logf("FM_EXECUTION_EVIDENCE %s", encoded)
+		return
+	}
+	if err != nil {
+		t.Fatalf("%v (cause: %v)", err, errors.Unwrap(err))
+	}
+	if result.Duplicate != input.ExpectedDuplicate {
+		t.Fatalf("expected duplicate %t, got %t", input.ExpectedDuplicate, result.Duplicate)
+	}
+	t.Logf("real chain command preflight: duplicate=%t", result.Duplicate)
+	encoded, _ := json.Marshal(map[string]any{"commandId": input.Command.CommandID, "duplicate": result.Duplicate, "transactionDigest": result.TransactionDigest, "execution": result.Execution})
+	t.Logf("FM_EXECUTION_EVIDENCE %s", encoded)
+}
+
+// Read-only diagnosis also works after a test wallet has been discarded. It
+// never turns a visible RUNNING checkpoint into permission to run an adapter.
+func TestChainExecutionReadLive(t *testing.T) {
+	raw := os.Getenv("FM_CHAIN_EXECUTION_PUBLIC")
+	if raw == "" {
+		t.Skip("requires public isolated-localnet execution IDs")
+	}
+	var input struct{ RPC, PackageID, CapabilityID, Fingerprint string }
+	if err := json.Unmarshal([]byte(raw), &input); err != nil {
+		t.Fatal(err)
+	}
+	client, err := NewGRPCClient(input.RPC, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	resolver, err := nodecommand.NewChainAuthorityResolver(client, input.PackageID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	run, found, err := resolver.LookupExecution(ctx, input.CapabilityID, input.Fingerprint)
+	if err != nil || !found {
+		t.Fatalf("execution read: found=%t error=%v", found, err)
+	}
+	t.Logf("execution=%s state=%d cursor=%d", run.ID, run.State, run.Cursor)
+}

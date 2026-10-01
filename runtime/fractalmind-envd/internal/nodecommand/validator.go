@@ -52,10 +52,7 @@ type ValidatorOptions struct {
 	BudgetedActions          map[string]struct{}
 }
 
-type ValidationResult struct {
-	Duplicate           bool
-	AuthorityCheckpoint uint64
-}
+type ValidationResult = ReservationResult
 
 type Validator struct {
 	signatures SignatureVerifier
@@ -106,6 +103,11 @@ func (v *Validator) Validate(ctx context.Context, command NodeCommand) (Validati
 		IdempotencyKey: command.IdempotencyKey,
 		Fingerprint:    fingerprint,
 		Budget:         command.Budget,
+		Target:         command.Target,
+		Action:         command.Action,
+		CommandScope:   command.Scope,
+		IssuedAtMS:     command.IssuedAtMS,
+		ExpiresAtMS:    command.ExpiresAtMS,
 	}
 
 	if v.authority == nil {
@@ -114,7 +116,8 @@ func (v *Validator) Validate(ctx context.Context, command NodeCommand) (Validati
 	if result, found, err := v.authority.Inspect(ctx, reservation); err != nil {
 		return ValidationResult{}, err
 	} else if found {
-		return ValidationResult{Duplicate: true, AuthorityCheckpoint: result.AuthorityCheckpoint}, nil
+		result.Duplicate = true
+		return result, nil
 	}
 	state, err := v.authority.Resolve(ctx, command.Capability)
 	if err != nil {
@@ -138,7 +141,7 @@ func (v *Validator) Validate(ctx context.Context, command NodeCommand) (Validati
 		}
 		return ValidationResult{}, reject(CodeUnauthorized, "reserve capability", err)
 	}
-	return ValidationResult{Duplicate: result.Duplicate, AuthorityCheckpoint: result.AuthorityCheckpoint}, nil
+	return result, nil
 }
 
 func (v *Validator) validateEnvelope(command NodeCommand) error {

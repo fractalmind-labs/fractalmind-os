@@ -182,6 +182,15 @@ func TestHandleSignedCommandMalformedJSONHasNoNodeEvent(t *testing.T) {
 	}
 }
 
+func TestHandleSignedCommandPreservesUnknownTransactionForQuery(t *testing.T) {
+	result := handleSignedCommand(context.Background(), `{"command_id":"cmd"}`, runtimeCommandExecutorFunc(func(context.Context, nodecommand.NodeCommand) (runtimeadapter.Response, nodecommand.NodeEvent, error) {
+		return runtimeadapter.Response{}, nodecommand.NodeEvent{}, &nodecommand.RejectionError{Code: nodecommand.CodeExecutionUnknown, Message: "start receipt lost", ExecutionID: "execution-1", TransactionDigest: "original-digest"}
+	}))
+	if result["success"] != false || result["error_code"] != nodecommand.CodeExecutionUnknown || result["requires_confirmation"] != true || result["execution_id"] != "execution-1" || result["transaction_digest"] != "original-digest" {
+		t.Fatalf("App cannot query the original unknown execution: %+v", result)
+	}
+}
+
 func TestHandleCommandRejectsEveryUnsignedOperation(t *testing.T) {
 	for _, operation := range []string{"inventory", "status", "logs", "restart", "kill", "shell", "start", "stop", "assign"} {
 		t.Run(operation, func(t *testing.T) {

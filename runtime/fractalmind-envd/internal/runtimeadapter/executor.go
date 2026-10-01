@@ -151,7 +151,7 @@ func (e *Executor) executeFirst(ctx context.Context, command nodecommand.NodeCom
 			return execution{err: fmt.Errorf("load prior runtime result: %w", loadErr)}
 		}
 		if !ok {
-			return execution{err: fmt.Errorf("authorized duplicate command result is unavailable")}
+			return execution{err: &nodecommand.RejectionError{Code: nodecommand.CodeExecutionUnknown, Message: "authorized duplicate command result is unavailable; query the execution checkpoint before retry"}}
 		}
 		cached, loadErr := record.execution()
 		if loadErr != nil {

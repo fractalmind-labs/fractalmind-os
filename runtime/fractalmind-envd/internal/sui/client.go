@@ -107,9 +107,9 @@ func (c *Client) RegisterPeer(ctx context.Context, wgPubKey []byte, endpoints []
 	pubKey := byteVector(wgPubKey)
 
 	err := c.executeMoveCall(ctx, "peer", "register_peer", []interface{}{
-		c.registryID,
-		c.orgID,
-		c.certID,
+		ObjectArgument(c.registryID),
+		ObjectArgument(c.orgID),
+		ObjectArgument(c.certID),
 		pubKey,
 		endpoints,
 		hostname,
@@ -130,7 +130,7 @@ func (c *Client) RegisterPeer(ctx context.Context, wgPubKey []byte, endpoints []
 // UpdateEndpoints updates this node's endpoints on-chain.
 func (c *Client) UpdateEndpoints(ctx context.Context, endpoints []string) error {
 	err := c.executeMoveCall(ctx, "peer", "update_endpoints", []interface{}{
-		c.registryID,
+		ObjectArgument(c.registryID),
 		endpoints,
 	})
 	if err != nil {
@@ -143,7 +143,7 @@ func (c *Client) UpdateEndpoints(ctx context.Context, endpoints []string) error 
 // GoOffline marks this node as offline on-chain.
 func (c *Client) GoOffline(ctx context.Context) error {
 	err := c.executeMoveCall(ctx, "peer", "go_offline", []interface{}{
-		c.registryID,
+		ObjectArgument(c.registryID),
 	})
 	if err != nil {
 		return fmt.Errorf("go offline: %w", err)
@@ -155,7 +155,7 @@ func (c *Client) GoOffline(ctx context.Context) error {
 // GoOnline marks this node as online on-chain with updated endpoints.
 func (c *Client) GoOnline(ctx context.Context, endpoints []string) error {
 	err := c.executeMoveCall(ctx, "peer", "go_online", []interface{}{
-		c.registryID,
+		ObjectArgument(c.registryID),
 		endpoints,
 	})
 	if err != nil {
@@ -168,7 +168,7 @@ func (c *Client) GoOnline(ctx context.Context, endpoints []string) error {
 // RegisterRelay registers this node as a relay on-chain with relay metadata.
 func (c *Client) RegisterRelay(ctx context.Context, relayAddr, region, isp string, capacity uint64) error {
 	err := c.executeMoveCall(ctx, "relay_info", "register_relay", []interface{}{
-		c.registryID,
+		ObjectArgument(c.registryID),
 		relayAddr,
 		region,
 		isp,
@@ -184,7 +184,7 @@ func (c *Client) RegisterRelay(ctx context.Context, relayAddr, region, isp strin
 // UpdateUptimeScore updates this relay's uptime score on-chain.
 func (c *Client) UpdateUptimeScore(ctx context.Context, score uint64) error {
 	err := c.executeMoveCall(ctx, "relay_info", "update_uptime_score", []interface{}{
-		c.registryID,
+		ObjectArgument(c.registryID),
 		fmt.Sprintf("%d", score),
 	})
 	if err != nil {
@@ -200,14 +200,14 @@ func (c *Client) UpdateUptimeScore(ctx context.Context, score uint64) error {
 // TODO: Return the created policy object ID once tx effect plumbing exists.
 func (c *Client) CreatePolicy(ctx context.Context, input PolicyInput) error {
 	err := c.executeProtocolCall(ctx, "entry", "create_agent_policy_with_clock", []interface{}{
-		c.orgID,
+		ObjectArgument(c.orgID),
 		input.AgentAddress,
 		input.AllowedAction,
 		input.TargetScope,
 		fmt.Sprintf("%d", input.MaxUses),
 		fmt.Sprintf("%d", input.ExpiresAtMS),
 		fmt.Sprintf("%d", input.MaxGasBudget),
-		"0x6",
+		ObjectArgument("0x6"),
 	})
 	if err != nil {
 		return fmt.Errorf("create policy: %w", err)
@@ -219,8 +219,8 @@ func (c *Client) CreatePolicy(ctx context.Context, input PolicyInput) error {
 // RevokePolicy revokes a previously created policy.
 func (c *Client) RevokePolicy(ctx context.Context, policyID string) error {
 	err := c.executeProtocolCall(ctx, "entry", "revoke_agent_policy", []interface{}{
-		policyID,
-		c.orgID,
+		ObjectArgument(policyID),
+		ObjectArgument(c.orgID),
 	})
 	if err != nil {
 		return fmt.Errorf("revoke policy: %w", err)
@@ -240,15 +240,15 @@ func (c *Client) ExecuteAction(ctx context.Context, evidence ActionEvidence) err
 	}
 
 	err := c.executeProtocolCall(ctx, "entry", "execute_agent_action_with_clock", []interface{}{
-		evidence.PolicyID,
-		c.orgID,
-		c.certID,
+		ObjectArgument(evidence.PolicyID),
+		ObjectArgument(c.orgID),
+		ObjectArgument(c.certID),
 		evidence.ActionKind,
 		evidence.TargetScope,
 		byteVector(evidence.IntentHash),
 		byteVector(evidence.ResultHash),
 		fmt.Sprintf("%d", evidence.GasBudget),
-		"0x6",
+		ObjectArgument("0x6"),
 	})
 	if err != nil {
 		return fmt.Errorf("execute action: %w", err)
@@ -522,7 +522,7 @@ func (c *Client) ensureAgentCert(ctx context.Context) (string, error) {
 	// 2. No cert found — self-register as agent (permissionless)
 	log.Printf("[sui] no AgentCertificate found, registering as agent in org %s...", c.orgID)
 	err = c.executeProtocolCall(ctx, "entry", "register_agent", []interface{}{
-		c.orgID,
+		ObjectArgument(c.orgID),
 		[]string{"envd-node"},
 	})
 	if err != nil {
