@@ -165,20 +165,31 @@ type Error struct {
 }
 
 type Response struct {
-	SchemaVersion        string          `json:"schema_version"`
-	Adapter              string          `json:"adapter"`
-	CommandID            string          `json:"command_id"`
-	Operation            Operation       `json:"operation"`
-	Duplicate            bool            `json:"duplicate"`
-	OK                   bool            `json:"ok"`
-	ObservedAt           string          `json:"observed_at"`
-	Result               json.RawMessage `json:"result"`
-	Error                *Error          `json:"error"`
-	Spend                *Spend          `json:"spend,omitempty"`
-	ExecutionID          string          `json:"execution_id,omitempty"`
-	ExecutionState       string          `json:"execution_state,omitempty"`
-	RequiresConfirmation bool            `json:"requires_confirmation,omitempty"`
-	TransactionDigest    string          `json:"transaction_digest,omitempty"`
+	SchemaVersion        string                 `json:"schema_version"`
+	Adapter              string                 `json:"adapter"`
+	CommandID            string                 `json:"command_id"`
+	Operation            Operation              `json:"operation"`
+	Duplicate            bool                   `json:"duplicate"`
+	OK                   bool                   `json:"ok"`
+	ObservedAt           string                 `json:"observed_at"`
+	Result               json.RawMessage        `json:"result"`
+	Error                *Error                 `json:"error"`
+	Spend                *Spend                 `json:"spend,omitempty"`
+	ExecutionID          string                 `json:"execution_id,omitempty"`
+	ExecutionState       string                 `json:"execution_state,omitempty"`
+	RequiresConfirmation bool                   `json:"requires_confirmation,omitempty"`
+	TransactionDigest    string                 `json:"transaction_digest,omitempty"`
+	OkrObservation       *OkrObservationReceipt `json:"okr_observation,omitempty"`
+}
+
+// This publication state is separate from execution and from human verification.
+// A successful Run can still have an observation awaiting confirmation.
+type OkrObservationReceipt struct {
+	Status            string                   `json:"status"`
+	Reason            string                   `json:"reason,omitempty"`
+	TransactionDigest string                   `json:"transaction_digest,omitempty"`
+	Current           nodecommand.Uint64String `json:"current"`
+	SampledAtMS       nodecommand.Uint64String `json:"sampled_at_ms"`
 }
 type Spend struct {
 	Asset  string                   `json:"asset"`

@@ -125,6 +125,17 @@ func TestNativeChainFileAgentLive(t *testing.T) {
 	if err := first.Close(); err != nil {
 		t.Fatal(err)
 	}
+	var measurementProfile struct {
+		Measurement json.RawMessage `json:"measurement"`
+	}
+	if err := json.Unmarshal(input.Command.Payload, &measurementProfile); err != nil {
+		t.Fatal(err)
+	}
+	if len(measurementProfile.Measurement) > 0 {
+		if response.OkrObservation == nil || response.OkrObservation.Status != "submitted" || response.OkrObservation.TransactionDigest == "" {
+			t.Fatalf("automatic Host measurement not confirmed: %+v", response.OkrObservation)
+		}
+	}
 	fresh := construct()
 	duplicate, _, err := fresh.Execute(ctx, input.Command)
 	if err != nil || !duplicate.Duplicate || duplicate.ExecutionState != "succeeded" || string(duplicate.Result) != string(response.Result) {
@@ -211,7 +222,7 @@ func TestNativeChainFileAgentLive(t *testing.T) {
 		}
 		resultIDs = append(resultIDs, result.ID)
 	}
-	evidence, _ := json.Marshal(map[string]any{"recordIds": resultIDs, "successDigest": response.TransactionDigest, "stopRequestDigest": stopDigest, "cancelledResultDigest": stopped.TransactionDigest, "toolCallsSpent": []uint64{6, 1}, "actualWorkspaceWrites": true, "measurementsFromHostReader": true, "factoryRestartDuplicate": true, "physicalStopBeforeNextGoal": true, "nativeFileGoalsOnly": true, "modelPlanningVerified": false, "cloudHostVerified": false})
+	evidence, _ := json.Marshal(map[string]any{"recordIds": resultIDs, "successDigest": response.TransactionDigest, "okrObservation": response.OkrObservation, "stopRequestDigest": stopDigest, "cancelledResultDigest": stopped.TransactionDigest, "toolCallsSpent": []uint64{6, 1}, "actualWorkspaceWrites": true, "measurementsFromHostReader": true, "factoryRestartDuplicate": true, "physicalStopBeforeNextGoal": true, "nativeFileGoalsOnly": true, "modelPlanningVerified": false, "cloudHostVerified": false})
 	t.Logf("FM_NATIVE_FILE_AGENT_EVIDENCE %s", evidence)
 }
 
@@ -291,6 +302,9 @@ func TestNativeChainSingleKrLive(t *testing.T) {
 	if err != nil || string(actual) != task.Files[0].Content {
 		t.Fatal("actual KR workspace outcome differs")
 	}
+	if response.OkrObservation == nil || response.OkrObservation.Status != "submitted" || response.OkrObservation.TransactionDigest == "" {
+		t.Fatal("automatic KR observation was not confirmed")
+	}
 	if err := first.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -298,6 +312,9 @@ func TestNativeChainSingleKrLive(t *testing.T) {
 	duplicate, _, err := fresh.Execute(ctx, input.Command)
 	if err != nil || !duplicate.Duplicate || string(duplicate.Result) != string(response.Result) {
 		t.Fatal("fresh executor failed to restore KR result")
+	}
+	if duplicate.OkrObservation == nil || duplicate.OkrObservation.Status != "submitted" || duplicate.OkrObservation.TransactionDigest != "" {
+		t.Fatal("duplicate query republished the observation")
 	}
 	resolver, err := nodecommand.NewChainAuthorityResolver(fresh.rpc, input.PackageID)
 	if err != nil {
@@ -311,6 +328,6 @@ func TestNativeChainSingleKrLive(t *testing.T) {
 	if err != nil || !found || result.Execution.Contract == nil {
 		t.Fatal("OKR-bound encrypted KR result missing")
 	}
-	evidence, _ := json.Marshal(map[string]any{"recordId": result.ID, "executionId": result.Execution.ID, "contract": result.Execution.Contract, "resultDigest": response.TransactionDigest, "toolCallsSpent": input.ExpectedToolCalls, "actualFileOutcome": true, "hostReaderMeasurement": true, "factoryRestartDuplicate": true, "nativeFileGoalsOnly": true, "modelPlanningVerified": false})
+	evidence, _ := json.Marshal(map[string]any{"recordId": result.ID, "executionId": result.Execution.ID, "contract": result.Execution.Contract, "resultDigest": response.TransactionDigest, "okrObservation": response.OkrObservation, "toolCallsSpent": input.ExpectedToolCalls, "actualFileOutcome": true, "hostReaderMeasurement": true, "factoryRestartDuplicate": true, "nativeFileGoalsOnly": true, "modelPlanningVerified": false})
 	t.Logf("FM_SINGLE_KR_EVIDENCE %s", evidence)
 }

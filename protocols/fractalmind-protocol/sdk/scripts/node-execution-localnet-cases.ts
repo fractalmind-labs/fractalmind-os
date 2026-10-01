@@ -253,7 +253,7 @@ export async function exerciseNodeExecutions(o: Options) {
   const nativeCapabilityId = created(nativeCap.data, '::remote_authority::RemoteCapability');
   const nativeExpiresAtMs = okrAcceptance ? Number((await sdk.okr.getOkr(okrAcceptance.okrId)).expires_at_ms) - 1 : Date.now() + 300000;
   const fileGoals = [{ path: 'README.md', content: 'FractalMind: human-approved native goal\n' }, { path: 'RESULT.md', content: 'Measured by the Host file reader\n' }];
-  const nativeCommand = (files: typeof fileGoals, maxCalls: bigint) => signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: nativeCapabilityId, revocationVersion: 1n }, budget: { asset: 'TOOL_CALLS', amount: maxCalls }, payload: { task: JSON.stringify({ kind: 'ensure_text_files', files }), bounds: { paths, max_calls: maxCalls.toString() }, ...(okrAcceptance ? { okr: { id: okrAcceptance.okrId, agreement_version: '1', kr_index: '0' } } : {}) }, expiresAtMs: nativeExpiresAtMs });
+  const nativeCommand = (files: typeof fileGoals, maxCalls: bigint) => signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: nativeCapabilityId, revocationVersion: 1n }, budget: { asset: 'TOOL_CALLS', amount: maxCalls }, payload: { task: JSON.stringify({ kind: 'ensure_text_files', files }), bounds: { paths, max_calls: maxCalls.toString() }, ...(okrAcceptance ? { okr: { id: okrAcceptance.okrId, agreement_version: '1', kr_index: '0' }, measurement: { kind: 'verified_text_file_count' } } : {}) }, expiresAtMs: nativeExpiresAtMs });
   const native = await nativeCommand(fileGoals, 10n);
   const nativeStopped = await nativeCommand([fileGoals[0], { path: 'after-stop.md', content: 'must not be written' }], 4n);
   if (okrAcceptance) {
@@ -325,7 +325,7 @@ export async function exerciseNodeExecutions(o: Options) {
     assert.equal(claim.spent, '6'); assert.equal(claim.settled, true);
   }
   const okrAcceptanceEvidence = okrAcceptance ? await okrAcceptance.finish(nativeExecutionId, (nativeFileAgentEvidence.recordIds as string[])[0], async step => {
-    const payload = { okr: { id: step.okrId, agreement_version: step.agreementVersion, kr_index: step.krIndex }, bounds: { paths, max_calls: step.maxCalls.toString() }, task: JSON.stringify({ kind: 'ensure_text_files', files: step.files }) };
+    const payload = { okr: { id: step.okrId, agreement_version: step.agreementVersion, kr_index: step.krIndex }, measurement: { kind: 'verified_text_file_count' }, bounds: { paths, max_calls: step.maxCalls.toString() }, task: JSON.stringify({ kind: 'ensure_text_files', files: step.files }) };
     const signStep = (krIndex: string) => signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: step.capabilityId, revocationVersion: 1n }, budget: { asset: 'TOOL_CALLS', amount: step.maxCalls }, payload: { ...payload, okr: { ...payload.okr, kr_index: krIndex } }, expiresAtMs: step.expiresAtMs });
     if (step.krIndex === '1') {
       const priorCursor = await signStep('0');

@@ -57,6 +57,9 @@ type payload struct {
 	Lines          *int                              `json:"lines,omitempty"`
 	Bounds         *ExecutionBounds                  `json:"bounds,omitempty"`
 	Okr            *nodecommand.ExecutionContractRef `json:"okr,omitempty"`
+	Measurement    *struct {
+		Kind string `json:"kind"`
+	} `json:"measurement,omitempty"`
 }
 
 func NewExecutor(validator *nodecommand.Validator, adapter Adapter) *Executor {

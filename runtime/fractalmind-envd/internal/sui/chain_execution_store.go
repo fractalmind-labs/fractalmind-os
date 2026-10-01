@@ -117,6 +117,23 @@ func (s *ChainExecutionStore) Preflight(ctx context.Context, command nodecommand
 	if err != nil {
 		return err
 	}
+	task, err := nativeMeasurementTask(command)
+	if err != nil {
+		return err
+	}
+	if task != nil && (run.State == 0 || run.State == 1) {
+		reader, ok := s.reader.(okrObservationReader)
+		if !ok || run.Contract == nil {
+			return fmt.Errorf("native measurement requires an OKR observation reader and bound Run")
+		}
+		state, err := reader.ReadOkrObservationState(ctx, run)
+		if err != nil {
+			return err
+		}
+		if state.Baseline != 0 || state.Target != uint64(len(task.Files)) {
+			return fmt.Errorf("approved metric must count the signed file goals")
+		}
+	}
 	if run.State == 5 && run.ResultRecordID == "" {
 		return nil
 	}
@@ -140,7 +157,7 @@ func (s *ChainExecutionStore) Preflight(ctx context.Context, command nodecommand
 	}
 	clear(key)
 	if run.State == 0 || run.State == 1 {
-		if err := s.checkResultGas(ctx, run.State == 0); err != nil {
+		if err := s.checkResultGas(ctx, run.State == 0, task != nil); err != nil {
 			code, message := nodecommand.CodeHostGasUnavailable, "Host SUI balance could not be verified; execution has not been authorized"
 			if errors.Is(err, errHostGasInsufficient) {
 				code, message = nodecommand.CodeHostGasInsufficient, "Host needs SUI for start and encrypted result publication before executing"
@@ -153,8 +170,14 @@ func (s *ChainExecutionStore) Preflight(ctx context.Context, command nodecommand
 
 // This is a prerequisite check, not a reservation or a fee quote. Other Host
 // transactions may consume coins later; a failed publication remains unknown.
-func (s *ChainExecutionStore) checkResultGas(ctx context.Context, queued bool) error {
+func (s *ChainExecutionStore) checkResultGas(ctx context.Context, queued, observation bool) error {
 	remaining := s.gasBudget
+	if observation {
+		if remaining > ^uint64(0)-observationGasBudget {
+			return fmt.Errorf("gas ceiling overflow")
+		}
+		remaining += observationGasBudget
+	}
 	if queued {
 		const startGasBudget = uint64(100000000)
 		if remaining > ^uint64(0)-startGasBudget {
@@ -256,6 +279,7 @@ func (s *ChainExecutionStore) LoadCommand(ctx context.Context, command nodecomma
 	record.Response.ExecutionID = run.ID
 	record.Response.ExecutionState = executionState(run.State)
 	record.Response.RequiresConfirmation = run.State == 4
+	s.observeNativeResult(ctx, command, &record, false)
 	return record, true, nil
 }
 func executionState(state uint8) string {
@@ -368,6 +392,7 @@ func (s *ChainExecutionStore) SaveCommand(ctx context.Context, command nodecomma
 		}
 	}
 	record.Response.TransactionDigest = digest
+	s.observeNativeResult(ctx, command, &record, true)
 	return record, nil
 }
 
