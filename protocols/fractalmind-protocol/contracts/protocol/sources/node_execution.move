@@ -24,6 +24,7 @@ module fractalmind_protocol::node_execution {
     const E_STARTED: u64 = 9304;
     const E_STATE: u64 = 9305;
     const E_VERSION: u64 = 9306;
+    const E_BUDGET_SETTLEMENT_REQUIRED: u64 = 9310;
     const QUEUED: u8 = 0;
     const RUNNING: u8 = 1;
     const SUCCEEDED: u8 = 2;
@@ -148,14 +149,30 @@ module fractalmind_protocol::node_execution {
     }
     /// Publishing historical execution evidence remains allowed after authority
     /// expires or is revoked; this entry cannot start or approve new execution.
+    /// Retain the previous ABI, requiring explicit budget settlement in v0.2.0.
+    #[allow(unused_variable)]
     public fun finish_command(
         run: &mut CommandExecution, org: &mut Organization, final_state: u8,
         expected_cursor: u64, key_version: u64, encrypted_result: vector<u8>, clock: &Clock, ctx: &mut TxContext,
     ) {
+        abort E_BUDGET_SETTLEMENT_REQUIRED
+    }
+    public fun finish_command_with_budget(
+        run: &mut CommandExecution, cap: &mut RemoteCapability, org: &mut Organization, final_state: u8,
+        expected_cursor: u64, spent_amount: u64, key_version: u64, encrypted_result: vector<u8>, clock: &Clock, ctx: &mut TxContext,
+    ) {
         assert!(tx_context::sender(ctx) == run.host_address && object::id(org) == run.org_id, E_TARGET);
+        assert!(object::id(cap) == run.capability_id, E_TARGET);
         assert!(run.state == RUNNING && run.cursor == expected_cursor, E_STATE);
         assert!(final_state == SUCCEEDED || final_state == FAILED || final_state == NEEDS_CONFIRMATION
             || (final_state == CANCELLED && run.stop_requested), E_STATE);
+        if (final_state == NEEDS_CONFIRMATION) {
+            // Unknown side effects retain their entire reservation. This entry
+            // cannot invent zero actual cost and release their remaining budget.
+            assert!(spent_amount == 0, E_INPUT);
+        } else {
+            ra::settle_bound_budget(cap, run.intent_hash, spent_amount);
+        };
         let logical_id = result_logical_id(&run.intent_hash);
         let result_hash = hash::sha2_256(encrypted_result);
         let record_id = product_record::save_authorized(org, run.human_id, run.grant_id, run.grant_version,
@@ -165,13 +182,20 @@ module fractalmind_protocol::node_execution {
         run.state = final_state;
         changed(run, clock);
     }
+    #[allow(unused_variable)]
     public fun request_stop(run: &mut CommandExecution, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant, clock: &Clock, ctx: &TxContext) {
+        abort E_BUDGET_SETTLEMENT_REQUIRED
+    }
+    public fun request_stop_with_budget(run: &mut CommandExecution, cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant, clock: &Clock, ctx: &TxContext) {
         identity::assert_can(human, grant, org, identity::operate_action(), clock, ctx);
-        assert!(run.org_id == object::id(org) && run.human_id == object::id(human), E_TARGET);
+        assert!(run.org_id == object::id(org) && run.human_id == object::id(human) && run.capability_id == object::id(cap), E_TARGET);
         assert!(run.state == QUEUED || run.state == RUNNING, E_STATE);
         if (run.stop_requested) return;
         run.stop_requested = true;
-        if (run.state == QUEUED) run.state = CANCELLED;
+        if (run.state == QUEUED) {
+            ra::settle_bound_budget(cap, run.intent_hash, 0);
+            run.state = CANCELLED;
+        };
         changed(run, clock);
     }
     fun changed(run: &mut CommandExecution, clock: &Clock) {

@@ -754,4 +754,74 @@ module fractalmind_protocol::remote_authority_tests {
     #[test]
     #[expected_failure(abort_code = 8307, location = fractalmind_protocol::remote_authority)]
     fun test_expired_parent_cannot_delegate_within_epoch() { check_millisecond_authority(1000, false, true); }
+
+    fun budget_scenario(): (ts::Scenario, ID) {
+        let mut s = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut s)));
+        setup_org(&mut s);
+        let cap_id = create_root(&mut s, authority::target_node(), b"node-1", b"", 10, b"MIST", 100, 1000);
+        ts::next_tx(&mut s, DELEGATE);
+        (s, cap_id)
+    }
+    fun reserve_budget(s: &mut ts::Scenario, cap: &mut RemoteCapability, c: &Clock, token: u8, amount: u64) {
+        authority::claim_bound_use(cap, string::utf8(b"deploy"), string::utf8(b"lifecycle"), authority::target_node(),
+            string::utf8(b"node-1"), string::utf8(b""), string::utf8(vector[token]), string::utf8(vector[token]),
+            string::utf8(vector[token]), string::utf8(b"MIST"), amount, hash(token), c, ts::ctx(s));
+    }
+    fun assert_budget(cap: &RemoteCapability, expected_spent: u64, expected_reserved: u64, code: u64) {
+        let (spent, reserved) = authority::bound_budget(cap);
+        assert!(spent == expected_spent && reserved == expected_reserved, code);
+    }
+    #[test]
+    fun test_budget_spent_reserved_cancel_and_exact_retries() {
+        let (mut s, cap_id) = budget_scenario();
+        let mut cap = ts::take_shared_by_id<RemoteCapability>(&s, cap_id);
+        let c = ts::take_shared<Clock>(&s);
+        reserve_budget(&mut s, &mut cap, &c, 97, 40);
+        reserve_budget(&mut s, &mut cap, &c, 97, 40);
+        assert_budget(&cap, 0, 40, 1);
+        assert!(authority::uses_claimed(&cap) == 1, 1);
+        reserve_budget(&mut s, &mut cap, &c, 98, 60);
+        assert_budget(&cap, 0, 100, 2);
+        authority::settle_bound_budget(&mut cap, hash(97), 7);
+        authority::settle_bound_budget(&mut cap, hash(97), 7);
+        assert_budget(&cap, 7, 60, 3);
+        assert!(authority::budget_claimed(&cap) == 67, 3);
+        reserve_budget(&mut s, &mut cap, &c, 99, 30);
+        authority::settle_bound_budget(&mut cap, hash(98), 0);
+        assert_budget(&cap, 7, 30, 4);
+        assert!(authority::budget_claimed(&cap) == 37, 4);
+        reserve_budget(&mut s, &mut cap, &c, 97, 40);
+        assert_budget(&cap, 7, 30, 5);
+        assert!(authority::uses_claimed(&cap) == 3, 5);
+        ts::return_shared(cap); ts::return_shared(c); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 8309, location = fractalmind_protocol::remote_authority)]
+    fun test_pending_reservations_count_toward_budget_limit() {
+        let (mut s, cap_id) = budget_scenario();
+        let mut cap = ts::take_shared_by_id<RemoteCapability>(&s, cap_id);
+        let c = ts::take_shared<Clock>(&s);
+        reserve_budget(&mut s, &mut cap, &c, 97, 60); reserve_budget(&mut s, &mut cap, &c, 98, 41);
+        ts::return_shared(cap); ts::return_shared(c); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 8319, location = fractalmind_protocol::remote_authority)]
+    fun test_spent_cannot_exceed_reserved_amount() {
+        let (mut s, cap_id) = budget_scenario();
+        let mut cap = ts::take_shared_by_id<RemoteCapability>(&s, cap_id);
+        let c = ts::take_shared<Clock>(&s);
+        reserve_budget(&mut s, &mut cap, &c, 97, 40); authority::settle_bound_budget(&mut cap, hash(97), 41);
+        ts::return_shared(cap); ts::return_shared(c); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 8319, location = fractalmind_protocol::remote_authority)]
+    fun test_settlement_cannot_change_an_already_settled_cost() {
+        let (mut s, cap_id) = budget_scenario();
+        let mut cap = ts::take_shared_by_id<RemoteCapability>(&s, cap_id);
+        let c = ts::take_shared<Clock>(&s);
+        reserve_budget(&mut s, &mut cap, &c, 97, 40); authority::settle_bound_budget(&mut cap, hash(97), 7);
+        authority::settle_bound_budget(&mut cap, hash(97), 8);
+        ts::return_shared(cap); ts::return_shared(c); ts::end(s);
+    }
 }

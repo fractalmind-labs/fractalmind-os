@@ -11,6 +11,10 @@ import (
 var ErrChainObjectNotFound = errors.New("chain object not found")
 
 type moveExecutionIndex struct{ Executions moveTable }
+type moveBoundBudgetClaim struct {
+	Reserved, Spent uint64
+	Settled         bool
+}
 type moveExecution struct {
 	ID, Org, Capability                      moveAddress
 	CapabilityVersion                        uint64
@@ -38,6 +42,8 @@ type ChainExecution struct {
 	Signer, HostAddress, CommandID, Nonce, IdempotencyKey, Fingerprint, Action, Scope      string
 	Target                                                                                 Target
 	Budget                                                                                 *BudgetClaim
+	BudgetSpent, BudgetReserved                                                            Uint64String
+	BudgetSettled                                                                          bool
 	IssuedAtMS, ExpiresAtMS                                                                int64
 	CapabilityVersion, Cursor                                                              uint64
 	State                                                                                  uint8
@@ -87,6 +93,15 @@ func (s *ChainAuthorityResolver) LookupExecution(ctx context.Context, capability
 	if run.Capability != cap.ID || run.Org != cap.Org || hex.EncodeToString(run.IntentHash) != fingerprint || run.Delegate != cap.Delegate || len(run.Managed) > 1 || len(run.Result) > 1 || run.State > 5 || run.Issued > math.MaxInt64 || run.Expires > math.MaxInt64 {
 		return ChainExecution{}, false, fmt.Errorf("invalid chain execution binding")
 	}
+	var budget moveBoundBudgetClaim
+	err = r.field(ctx, capabilityID, structKeyTag(s.packageID, "remote_authority", "BoundBudgetClaimKey"), appendBCSBytes(nil, key), s.packageID+"::remote_authority::BoundBudgetClaimKey", s.packageID+"::remote_authority::BoundBudgetClaim", &budget)
+	if err != nil {
+		return ChainExecution{}, false, fmt.Errorf("execution budget ledger: %w", err)
+	}
+	knownTerminal := run.State == 2 || run.State == 3 || run.State == 5
+	if budget.Reserved != run.BudgetAmount || budget.Spent > budget.Reserved || (!budget.Settled && budget.Spent != 0) || budget.Settled != knownTerminal {
+		return ChainExecution{}, false, fmt.Errorf("invalid execution budget settlement")
+	}
 	var member moveMembership
 	if err = r.object(ctx, run.Membership.String(), "host::HostMembership", &member); err != nil {
 		return ChainExecution{}, false, err
@@ -99,6 +114,11 @@ func (s *ChainAuthorityResolver) LookupExecution(ctx context.Context, capability
 		value.ManagedAgentID = run.Managed[0].String()
 	}
 	value.AttemptID = hex.EncodeToString(run.AttemptID)
+	value.BudgetSpent = Uint64String(budget.Spent)
+	value.BudgetSettled = budget.Settled
+	if !budget.Settled {
+		value.BudgetReserved = Uint64String(budget.Reserved)
+	}
 	if len(run.Result) == 1 {
 		value.ResultRecordID = run.Result[0].String()
 	}
@@ -106,6 +126,17 @@ func (s *ChainAuthorityResolver) LookupExecution(ctx context.Context, capability
 		value.Budget = &BudgetClaim{Asset: run.BudgetAsset, Amount: Uint64String(run.BudgetAmount)}
 	} else if run.BudgetAsset != "" {
 		return ChainExecution{}, false, fmt.Errorf("invalid execution budget")
+	}
+	// A settlement mutates the capability, private claim and checkpoint in one
+	// transaction. Do not return a mixed view while those writes become visible.
+	for id, version := range r.versions {
+		current, err := s.reader.ReadChainObject(ctx, id)
+		if err != nil {
+			return ChainExecution{}, false, err
+		}
+		if current.ID != id || current.Version != version {
+			return ChainExecution{}, false, reject(CodeAuthorityStale, "chain execution changed during resolution", nil)
+		}
 	}
 	return value, true, nil
 }

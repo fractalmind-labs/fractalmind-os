@@ -1,10 +1,11 @@
 /// FractalMind Protocol - Remote Control Authority v1
 ///
 /// This module is the canonical authority projection for signed NodeCommand
-/// intents. Command payloads, logs, media, and input events remain off-chain.
+/// intents. Persistent product bodies use encrypted on-chain records; transient
+/// observations and work files are outside this authority projection.
 /// Organization-scoped capabilities use an authority-wide pre-execution claim;
-/// node- and agent-scoped capabilities are reserved by envd in durable local
-/// storage under the same bounds.
+/// admitted node/agent commands use chain reservations, private budget ledgers
+/// and Host-owned execution checkpoints through node_execution.
 module fractalmind_protocol::remote_authority {
     use sui::clock::{Self, Clock};
     const E_CLOCK_REQUIRED: u64 = 8399;
@@ -13,6 +14,7 @@ module fractalmind_protocol::remote_authority {
     use std::string::{Self, String};
     use sui::event;
     use sui::table::{Self, Table};
+    use sui::dynamic_field as df;
 
     use fractalmind_protocol::constants;
     use fractalmind_protocol::organization::{Self, Organization};
@@ -35,6 +37,8 @@ module fractalmind_protocol::remote_authority {
     const E_INVALID_TOKEN: u64 = 8316;
     const E_IDEMPOTENCY_CONFLICT: u64 = 8317;
     const E_CLAIM_MISMATCH: u64 = 8318;
+    const E_BUDGET_SETTLEMENT: u64 = 8319;
+    const E_BUDGET_LEDGER_REQUIRED: u64 = 8320;
 
     const SCHEMA_VERSION: u8 = 1;
     const TARGET_ORGANIZATION: u8 = 1;
@@ -67,6 +71,16 @@ module fractalmind_protocol::remote_authority {
         budget_asset: String,
         budget_amount: u64,
         intent_hash: vector<u8>,
+    }
+
+    /// Private dynamic fields preserve the deployed RemoteCapability layout.
+    public struct BoundBudgetKey has copy, drop, store {}
+    public struct BoundBudgetTotals has copy, drop, store { spent: u64, reserved: u64 }
+    public struct BoundBudgetClaimKey has copy, drop, store { intent_hash: vector<u8> }
+    public struct BoundBudgetClaim has copy, drop, store { reserved_amount: u64, spent_amount: u64, settled: bool }
+    public struct BoundBudgetSettled has copy, drop {
+        capability_id: ID, intent_hash: vector<u8>, reserved_amount: u64, spent_amount: u64,
+        spent_total: u64, reserved_total: u64,
     }
 
     /// Shared authority object resolved by envd and the TypeScript SDK.
@@ -448,8 +462,56 @@ module fractalmind_protocol::remote_authority {
         budget_amount: u64, intent_hash: vector<u8>, clock: &Clock, ctx: &TxContext,
     ) {
         assert!(capability.reservation_scope == RESERVATION_NODE, E_WRONG_RESERVATION_SCOPE);
+        if (!df::exists_(&capability.id, BoundBudgetKey {})) {
+            // Legacy claims must not be silently relabeled as actual spending.
+            assert!(capability.budget_claimed == 0 && capability.uses_claimed == 0, E_BUDGET_LEDGER_REQUIRED);
+            df::add(&mut capability.id, BoundBudgetKey {}, BoundBudgetTotals { spent: 0, reserved: 0 });
+        };
+        let existed = table::contains(&capability.authority_claims, intent_hash);
         claim_use(capability, action, scope, target_kind, node_id, agent_id, command_id,
             nonce, idempotency_key, budget_asset, budget_amount, intent_hash, clock, ctx);
+        let key = BoundBudgetClaimKey { intent_hash };
+        if (existed) {
+            assert!(df::exists_(&capability.id, key), E_BUDGET_LEDGER_REQUIRED);
+            return
+        };
+        df::add(&mut capability.id, key, BoundBudgetClaim { reserved_amount: budget_amount, spent_amount: 0, settled: false });
+        let totals: &mut BoundBudgetTotals = df::borrow_mut(&mut capability.id, BoundBudgetKey {});
+        totals.reserved = totals.reserved + budget_amount;
+        assert!(totals.spent + totals.reserved == capability.budget_claimed, E_BUDGET_SETTLEMENT);
+    }
+
+    /// The checkpoint module binds the claim to its recorded Host and final
+    /// state. Settlement records are permanent; freed budget never frees a use
+    /// or permits replay of the command that originally reserved it.
+    public(package) fun settle_bound_budget(capability: &mut RemoteCapability, intent_hash: vector<u8>, spent_amount: u64) {
+        let capability_id = object::id(capability);
+        assert!(capability.reservation_scope == RESERVATION_NODE, E_WRONG_RESERVATION_SCOPE);
+        let key = BoundBudgetClaimKey { intent_hash };
+        assert!(df::exists_(&capability.id, key), E_BUDGET_LEDGER_REQUIRED);
+        let claim: &mut BoundBudgetClaim = df::borrow_mut(&mut capability.id, key);
+        assert!(spent_amount <= claim.reserved_amount, E_BUDGET_SETTLEMENT);
+        if (claim.settled) {
+            assert!(claim.spent_amount == spent_amount, E_BUDGET_SETTLEMENT);
+            return
+        };
+        let amount = claim.reserved_amount;
+        claim.settled = true;
+        claim.spent_amount = spent_amount;
+        let totals: &mut BoundBudgetTotals = df::borrow_mut(&mut capability.id, BoundBudgetKey {});
+        assert!(totals.reserved >= amount && capability.budget_claimed >= amount, E_BUDGET_SETTLEMENT);
+        totals.reserved = totals.reserved - amount;
+        totals.spent = totals.spent + spent_amount;
+        capability.budget_claimed = capability.budget_claimed - amount + spent_amount;
+        assert!(totals.spent + totals.reserved == capability.budget_claimed, E_BUDGET_SETTLEMENT);
+        event::emit(BoundBudgetSettled { capability_id, intent_hash, reserved_amount: amount,
+            spent_amount, spent_total: totals.spent, reserved_total: totals.reserved });
+    }
+
+    public fun bound_budget(capability: &RemoteCapability): (u64, u64) {
+        assert!(df::exists_(&capability.id, BoundBudgetKey {}), E_BUDGET_LEDGER_REQUIRED);
+        let totals: &BoundBudgetTotals = df::borrow(&capability.id, BoundBudgetKey {});
+        (totals.spent, totals.reserved)
     }
 
     fun claim_use(

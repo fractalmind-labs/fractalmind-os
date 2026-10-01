@@ -35,6 +35,15 @@ async function goValidate(o: Options, command: SignedNodeCommand, expectedDuplic
 export async function exerciseNodeExecutions(o: Options) {
   const { sdk, execute, created, desktop, host } = o;
   const goChecks: Record<string, unknown>[] = [];
+  const budgetChecks: Record<string, unknown>[] = [];
+  async function assertBudget(id: string, spent: bigint, reserved: bigint, label: string) {
+    assert.deepEqual(await sdk.nodeExecution.getBudget(id), { spent, reserved });
+    assert.equal((await sdk.remoteAuthority.getCapability(id)).budgetClaimed, spent + reserved);
+    budgetChecks.push({ label, capabilityId: id, spent: spent.toString(), reserved: reserved.toString() });
+  }
+  async function assertClaim(command: SignedNodeCommand, spentAmount: bigint, settled: boolean) {
+    assert.deepEqual(await sdk.nodeExecution.getReservationBudget(command.capability.id, nodeCommandIntentHash(command)), { reservedAmount: 20n, spentAmount, settled });
+  }
   async function verifyGo(command: SignedNodeCommand, duplicate = false, code = '') { goChecks.push(await goValidate(o, command, duplicate, code)); }
   const authority = { organizationId: o.organizationId, humanId: o.humanId, grantId: o.grantId, membershipId: o.membershipId, bindingId: o.bindingId, managedAgentId: o.managedAgentId };
   const capTx = await execute('Execution: issue three-use bounded device authority', sdk.host.issueCapability({ ...authority, actions: ['assign'], scope: 'control', maxUses: 3n, budgetAsset: 'MIST', maxBudget: 100n, expiresAtMs: Date.now() + 3600000 }));
@@ -56,6 +65,8 @@ export async function exerciseNodeExecutions(o: Options) {
   assert.equal(repeat.data.status.success, true);
   assert.equal((await sdk.remoteAuthority.getCapability(capabilityId)).usesClaimed, 1n);
   assert.equal((await sdk.remoteAuthority.getCapability(capabilityId)).budgetClaimed, 20n);
+  await assertBudget(capabilityId, 0n, 20n, 'Exact retry preserves a single pending reservation');
+  await assertClaim(first, 0n, false);
   const unprepared = await newCommand();
   await verifyGo(unprepared, false, 'unauthorized');
   await verifyGo(first);
@@ -68,22 +79,43 @@ export async function exerciseNodeExecutions(o: Options) {
   const logicalId = `command-${bytesToHex(nodeCommandIntentHash(first))}`;
   const plaintext = new TextEncoder().encode(JSON.stringify({ result: 'chain preflight test only; no adapter was invoked' }));
   const encryptedResult = await encryptContent(plaintext, o.contentKey, recordContext(o.organizationId, 'checkpoint', logicalId, 1, 1));
-  const finished = await execute('Execution: Host persists encrypted terminal checkpoint result', sdk.nodeExecution.finishCommand({ executionId: firstId, organizationId: o.organizationId, finalState: 2, expectedCursor: 2n, keyVersion: 1n, encryptedResult }), host);
+  const finishInput = { executionId: firstId, capabilityId, organizationId: o.organizationId, finalState: 2, expectedCursor: 2n, keyVersion: 1n, encryptedResult };
+  const overSpent = await execute('Budget: actual cost above reservation is rejected', sdk.nodeExecution.finishCommand({ ...finishInput, spentAmount: 21n }), host, undefined, true);
+  assert.equal(overSpent.data.status.success, false);
+  assert.match(JSON.stringify(overSpent.data.status), /8319/);
+  await assertBudget(capabilityId, 0n, 20n, 'Rejected overspend cannot release reservation');
+  const wrongKey = await execute('Budget: failed result write rolls back settlement atomically', sdk.nodeExecution.finishCommand({ ...finishInput, spentAmount: 7n, keyVersion: 2n }), host, undefined, true);
+  assert.equal(wrongKey.data.status.success, false);
+  assert.match(JSON.stringify(wrongKey.data.status), /9102/);
+  assert.equal((await sdk.nodeExecution.getExecution(firstId)).state, 1);
+  await assertBudget(capabilityId, 0n, 20n, 'Result write failure rolls back cost settlement');
+  await assertClaim(first, 0n, false);
+  const finished = await execute('Execution: Host persists encrypted terminal checkpoint result', sdk.nodeExecution.finishCommand({ executionId: firstId, capabilityId, spentAmount: 7n, organizationId: o.organizationId, finalState: 2, expectedCursor: 2n, keyVersion: 1n, encryptedResult }), host);
   assert.equal(finished.data.status.success, true);
+  await assertBudget(capabilityId, 7n, 0n, 'Known result settles seven and releases thirteen');
+  await assertClaim(first, 7n, true);
+  const twice = await execute('Budget: already terminal command cannot settle a second cost', sdk.nodeExecution.finishCommand({ ...finishInput, spentAmount: 8n }), host, undefined, true);
+  assert.equal(twice.data.status.success, false);
+  assert.match(JSON.stringify(twice.data.status), /9305/);
+  await assertBudget(capabilityId, 7n, 0n, 'Second result cannot change already settled cost');
   const resultId = (await sdk.nodeExecution.getExecution(firstId)).result_record!;
   assert.deepEqual((await sdk.productRecord.decryptRecord(resultId, o.contentKey)).plaintext, plaintext);
   await verifyGo(first, true);
 
   const second = await newCommand();
   const secondId = await prepare(second);
+  await assertBudget(capabilityId, 7n, 20n, 'Next command reserves against actual plus pending budget');
   const wrong = await execute('Execution: another Host cannot start a valid queued command', sdk.nodeExecution.beginCommand({ ...prepareInput, executionId: secondId }), o.wrongHost, undefined, true);
   assert.equal(wrong.data.status.success, false);
   assert.match(JSON.stringify(wrong.data.status), /9302/);
-  const early = await execute('Execution: result cannot precede a confirmed start', sdk.nodeExecution.finishCommand({ executionId: secondId, organizationId: o.organizationId, finalState: 2, expectedCursor: 1n, keyVersion: 1n, encryptedResult }), host, undefined, true);
+  const early = await execute('Execution: result cannot precede a confirmed start', sdk.nodeExecution.finishCommand({ executionId: secondId, capabilityId, spentAmount: 0n, organizationId: o.organizationId, finalState: 2, expectedCursor: 1n, keyVersion: 1n, encryptedResult }), host, undefined, true);
   assert.equal(early.data.status.success, false);
   assert.match(JSON.stringify(early.data.status), /9305/);
-  await execute('Execution: device cancels queued command before any start', sdk.nodeExecution.requestStop({ ...authority, executionId: secondId }));
+  await execute('Execution: device cancels queued command before any start', sdk.nodeExecution.requestStop({ ...authority, capabilityId, executionId: secondId }));
   assert.equal((await sdk.nodeExecution.getExecution(secondId)).state, 5);
+  await assertBudget(capabilityId, 7n, 0n, 'Queued cancellation releases reservation without refunding a use');
+  await assertClaim(second, 0n, true);
+  assert.equal((await sdk.remoteAuthority.getCapability(capabilityId)).usesClaimed, 2n);
   const cancelled = await execute('Execution: cancelled queued command cannot start', sdk.nodeExecution.beginCommand({ ...prepareInput, executionId: secondId }), host, undefined, true);
   assert.equal(cancelled.data.status.success, false);
   assert.match(JSON.stringify(cancelled.data.status), /9304/);
@@ -97,12 +129,71 @@ export async function exerciseNodeExecutions(o: Options) {
   assert.match(JSON.stringify(tooMany.data.status), /8308/);
   const unknownLogicalId = `command-${bytesToHex(nodeCommandIntentHash(third))}`;
   const unknownPlaintext = new TextEncoder().encode(JSON.stringify({ result: 'needs confirmation; no automatic retry' }));
-  await execute('Execution: unknown result is persisted without granting replay', sdk.nodeExecution.finishCommand({ executionId: thirdId, organizationId: o.organizationId, finalState: 4, expectedCursor: 2n, keyVersion: 1n, encryptedResult: await encryptContent(unknownPlaintext, o.contentKey, recordContext(o.organizationId, 'checkpoint', unknownLogicalId, 1, 1)) }), host);
+  await execute('Execution: unknown result is persisted without granting replay', sdk.nodeExecution.finishCommand({ executionId: thirdId, capabilityId, spentAmount: 0n, organizationId: o.organizationId, finalState: 4, expectedCursor: 2n, keyVersion: 1n, encryptedResult: await encryptContent(unknownPlaintext, o.contentKey, recordContext(o.organizationId, 'checkpoint', unknownLogicalId, 1, 1)) }), host);
   assert.equal((await sdk.nodeExecution.getExecution(thirdId)).state, 4);
+  await assertBudget(capabilityId, 7n, 20n, 'Unknown result retains entire pending reservation');
+  await assertClaim(third, 0n, false);
   await verifyGo(third, true);
+  await assertBudget(capabilityId, 7n, 20n, 'Duplicate query cannot release an unknown result reservation');
+
+  const limited = await execute('Budget: issue thirty-unit capability for pending limit and stop checks', sdk.host.issueCapability({ ...authority, actions: ['assign'], scope: 'control', maxUses: 3n, budgetAsset: 'MIST', maxBudget: 30n, expiresAtMs: Date.now() + 3600000 }));
+  const limitedId = created(limited.data, '::remote_authority::RemoteCapability');
+  const limitedCommand = () => signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: limitedId, revocationVersion: 1n }, budget: { asset: 'MIST', amount: 20n }, payload: { task: 'test pending budget and confirmed stop only; no adapter invoked' }, expiresAtMs: Date.now() + 300000 });
+  const waiting = await limitedCommand();
+  const waitingId = await prepare(waiting);
+  const competing = await execute('Budget: pending reservation prevents oversubscribing remaining budget', await sdk.nodeExecution.prepareCommand({ ...authority, command: await limitedCommand() }), desktop, undefined, true);
+  assert.equal(competing.data.status.success, false);
+  assert.match(JSON.stringify(competing.data.status), /8309/);
+  await assertBudget(limitedId, 0n, 20n, 'Pending twenty consumes twenty of thirty-unit budget');
+  assert.equal((await sdk.remoteAuthority.getCapability(limitedId)).usesClaimed, 1n);
+  await execute('Budget: cancel pending command to release budget', sdk.nodeExecution.requestStop({ ...authority, capabilityId: limitedId, executionId: waitingId }));
+  await assertBudget(limitedId, 0n, 0n, 'Cancelled pending command restores available budget');
+  const stoppedCommand = await limitedCommand();
+  const stoppedId = await prepare(stoppedCommand);
+  await verifyGo(stoppedCommand);
+  await execute('Budget: request running stop while retaining pending reservation', sdk.nodeExecution.requestStop({ ...authority, capabilityId: limitedId, executionId: stoppedId }));
+  const stopping = await sdk.nodeExecution.getExecution(stoppedId);
+  assert.equal(stopping.state, 1);
+  assert.equal(stopping.stop_requested, true);
+  assert.equal(stopping.cursor, '3');
+  await assertBudget(limitedId, 0n, 20n, 'Running stop request retains budget until Host confirms');
+  const stopLogicalId = `command-${bytesToHex(nodeCommandIntentHash(stoppedCommand))}`;
+  const stopPlaintext = JSON.stringify({ result: 'chain stop confirmation fixture; no physical adapter invoked', cost: '3' });
+  const stopEncrypted = await encryptContent(new TextEncoder().encode(stopPlaintext), o.contentKey, recordContext(o.organizationId, 'checkpoint', stopLogicalId, 1, 1));
+  await execute('Budget: Host confirms stop and settles known cost', sdk.nodeExecution.finishCommand({ executionId: stoppedId, capabilityId: limitedId, organizationId: o.organizationId, finalState: 5, expectedCursor: 3n, spentAmount: 3n, keyVersion: 1n, encryptedResult: stopEncrypted }), host);
+  await assertBudget(limitedId, 3n, 0n, 'Confirmed stop settles three and releases seventeen');
+  await assertClaim(stoppedCommand, 3n, true);
+  await verifyGo(stoppedCommand, true);
+  assert.equal((await sdk.remoteAuthority.getCapability(limitedId)).usesClaimed, 2n);
   const pendingCap = await execute('Execution: issue authority for revoke-after-prepare check', sdk.host.issueCapability({ ...authority, actions: ['assign'], scope: 'control', maxUses: 1n, budgetAsset: 'MIST', maxBudget: 100n, expiresAtMs: Date.now() + 3600000 }));
   const pendingCapabilityId = created(pendingCap.data, '::remote_authority::RemoteCapability');
   const pendingCommand = await signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: pendingCapabilityId, revocationVersion: 1n }, budget: { asset: 'MIST', amount: 20n }, payload: { task: 'must not begin after Host revocation' }, expiresAtMs: Date.now() + 300000 });
   const pendingId = await prepare(pendingCommand);
-  return { capabilityId, executions: [firstId, secondId, thirdId], goChecks, pendingStart: { ...authority, capabilityId: pendingCapabilityId, executionId: pendingId }, records: [{ logicalId, plaintext: new TextDecoder().decode(plaintext) }, { logicalId: unknownLogicalId, plaintext: new TextDecoder().decode(unknownPlaintext) }], checks: 'real chain reservation/checkpoints and Go start ownership; actual Agent adapter execution pending' };
+  return { capabilityId, limitedCapabilityId: limitedId, executions: [firstId, secondId, thirdId, waitingId, stoppedId], goChecks, budgetChecks, pendingStart: { ...authority, capabilityId: pendingCapabilityId, executionId: pendingId }, records: [{ logicalId, plaintext: new TextDecoder().decode(plaintext) }, { logicalId: unknownLogicalId, plaintext: new TextDecoder().decode(unknownPlaintext) }, { logicalId: stopLogicalId, plaintext: stopPlaintext }], checks: 'real chain reservation/checkpoints, actual/pending budget settlement and Go start ownership; actual Agent adapter execution pending' };
+}
+
+/** Reconstruct the selected fixture budgets solely from their persisted chain
+ * claims after Human recovery. Fixture IDs select the records under test; this
+ * is not yet an App-wide discovery/index rebuild. */
+export async function verifyExecutionBudgetRebuild(sdk: FractalMindSDK, executionIds: string[]) {
+  const totals = new Map<string, { spent: bigint; reserved: bigint }>();
+  const checkpoints: Record<string, unknown>[] = [];
+  for (const id of executionIds) {
+    const run = await sdk.nodeExecution.getExecution(id);
+    const claim = await sdk.nodeExecution.getReservationBudget(run.capability_id, Uint8Array.from(run.intent_hash));
+    assert.equal(claim.reservedAmount, BigInt(run.budget_amount));
+    assert.equal(claim.settled, [2, 3, 5].includes(run.state));
+    const sum = totals.get(run.capability_id) ?? { spent: 0n, reserved: 0n };
+    sum.spent += claim.spentAmount;
+    if (!claim.settled) sum.reserved += claim.reservedAmount;
+    totals.set(run.capability_id, sum);
+    checkpoints.push({ id, state: run.state, capabilityId: run.capability_id, spent: claim.spentAmount.toString(), reserved: claim.settled ? '0' : claim.reservedAmount.toString(), settled: claim.settled });
+  }
+  const ledgers: Record<string, unknown>[] = [];
+  for (const [capabilityId, sum] of totals) {
+    assert.deepEqual(await sdk.nodeExecution.getBudget(capabilityId), sum);
+    assert.equal((await sdk.remoteAuthority.getCapability(capabilityId)).budgetClaimed, sum.spent + sum.reserved);
+    ledgers.push({ capabilityId, spent: sum.spent.toString(), reserved: sum.reserved.toString() });
+  }
+  return { checkpoints, ledgers };
 }

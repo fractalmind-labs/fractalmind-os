@@ -14,6 +14,7 @@ import type { ProductRecordKind } from '../src/index.js';
 import { bytesArgument } from '../src/wire-bytes.js';
 import { exerciseHostAdmission } from './host-localnet-cases.js';
 import { verifyGoAuthority } from './verify-go-authority.js';
+import { verifyExecutionBudgetRebuild } from './node-execution-localnet-cases.js';
 
 const baseUrl = process.env.FM_LOCALNET_RPC ?? 'http://127.0.0.1:29000';
 const faucet = process.env.FM_LOCALNET_FAUCET ?? 'http://127.0.0.1:29123';
@@ -273,6 +274,7 @@ const recoveredBackup = await unwrapKeys(Uint8Array.from(nextLocated.record.encr
 assert.deepEqual(recoveredBackup, recoveryKeyring);
 const recoveredKeyring = JSON.parse(new TextDecoder().decode(recoveredBackup));
 const recoveredCheckpointRecords: string[] = [];
+let recoveredExecutionBudgets: Awaited<ReturnType<typeof verifyExecutionBudgetRebuild>> | undefined;
 if (hostReport?.executions) {
   // Verify decryption again after consumption and key rotation, using only the
   // replacement recovery record and a newly constructed SDK, not cached IDs.
@@ -286,6 +288,7 @@ if (hostReport?.executions) {
     assert.equal(new TextDecoder().decode(decoded.plaintext), expected.plaintext);
     recoveredCheckpointRecords.push(pointer.record_id);
   }
+  recoveredExecutionBudgets = await verifyExecutionBudgetRebuild(sdk, [...hostReport.executions.executions, hostReport.executions.pendingStart.executionId]);
 }
 const afterRecovery = await execute('persist future body inaccessible to all lost devices', await sdk.productRecord.encryptAndSave({ organizationId, humanId, grantId: newPhoneGrantId, kind: 'message', logicalId: 'after-recovery', expectedRevision: 0n, keyVersion: 3n, plaintext: newMessage, key: recoveryContentKey }), phone);
 assert.equal(afterRecovery.data.status.success, true);
@@ -293,6 +296,6 @@ const postRecoveryId = created(afterRecovery.data, '::product_record::EncryptedR
 await assert.rejects(sdk.productRecord.decryptRecord(postRecoveryId, newContentKey));
 assert.deepEqual((await sdk.productRecord.decryptRecord(postRecoveryId, recoveryContentKey)).plaintext, newMessage);
 assert.equal((await execute('recovered phone operates same Human', sdk.identity.createOrganization({ humanId, grantId: newPhoneGrantId, name: `Recovered-${Date.now()}`, description: '' }), phone)).data.status.success, true);
-const report = { testedAt: new Date().toISOString(), chain: await c.core.getChainIdentifier(), packageId, registryId, identityRegistryId, humanId, organizationId, checks: rows, records: recordChecks, host: hostReport, recoveredCheckpointRecords };
+const report = { testedAt: new Date().toISOString(), chain: await c.core.getChainIdentifier(), packageId, registryId, identityRegistryId, humanId, organizationId, checks: rows, records: recordChecks, host: hostReport, recoveredCheckpointRecords, recoveredExecutionBudgets };
 if (process.argv[3]) await writeFile(process.argv[3], `${JSON.stringify(report, null, 2)}\n`);
 console.log('Identity localnet acceptance passed. Recovery codes and private keys were not recorded.');

@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHash } from 'node:crypto';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { bcs } from '@mysten/sui/bcs';
+import type { ClientWithCoreApi } from '@mysten/sui/client';
+import { FractalMindClient } from '../src/client.js';
 import { signNodeCommand, canonicalNodeCommandSigningBytes } from '../src/node-command.js';
-import { nodeCommandIntentHash, nodeCommandSigningBytes, verifySignedNodeCommand } from '../src/node-execution.js';
+import { NodeExecutionApi, nodeCommandIntentHash, nodeCommandSigningBytes, verifySignedNodeCommand } from '../src/node-execution.js';
 
 test('prepared intent hashes the exact signed NodeCommand envelope', async () => {
   const signer = Ed25519Keypair.generate();
@@ -20,4 +23,41 @@ test('preparation rejects payload or envelope mutation before submitting a trans
   await assert.rejects(verifySignedNodeCommand({ ...command, payload: { injected: true } }), /payload/);
   await assert.rejects(verifySignedNodeCommand({ ...command, action: 'start' }), /signature/);
   await assert.rejects(verifySignedNodeCommand({ ...command, target: { ...command.target, node_id: '0x5' } }), /signature/);
+});
+
+test('budget reads use original package types after upgrade and retain full u64 precision', async () => {
+  const original = `0x${'1'.repeat(64)}`;
+  const totals = bcs.struct('Totals', { spent: bcs.u64(), reserved: bcs.u64() });
+  const spent = 9007199254740993n;
+  const reserved = 10n;
+  let read = false;
+  const core = { getDynamicField: async (input: { parentId: string; name: { type: string; bcs: Uint8Array } }) => {
+    assert.equal(input.parentId, '0x3');
+    assert.equal(input.name.type, `${original}::remote_authority::BoundBudgetKey`);
+    assert.deepEqual(input.name.bcs, new Uint8Array([0]));
+    read = true;
+    return { dynamicField: { value: { type: `${original}::remote_authority::BoundBudgetTotals`, bcs: totals.serialize({ spent, reserved }).toBytes() } } };
+  } };
+  const api = new NodeExecutionApi(new FractalMindClient({ packageId: '0x2', originalPackageId: original, client: { core } as unknown as ClientWithCoreApi }));
+  assert.deepEqual(await api.getBudget('0x3'), { spent, reserved });
+  assert.equal(read, true);
+});
+
+test('reservation ledger rejects wrong types, impossible costs and an unsettled claimed cost', async () => {
+  const original = `0x${'0'.repeat(63)}2`;
+  const claim = bcs.struct('Claim', { reserved_amount: bcs.u64(), spent_amount: bcs.u64(), settled: bcs.bool() });
+  for (const item of [
+    { type: `${original}::remote_authority::BoundBudgetTotals`, reserved_amount: 20n, spent_amount: 0n, settled: false },
+    { type: `${original}::remote_authority::BoundBudgetClaim`, reserved_amount: 20n, spent_amount: 21n, settled: true },
+    { type: `${original}::remote_authority::BoundBudgetClaim`, reserved_amount: 20n, spent_amount: 1n, settled: false },
+  ]) {
+    const core = { getDynamicField: async () => ({ dynamicField: { value: { type: item.type, bcs: claim.serialize(item).toBytes() } } }) };
+    const api = new NodeExecutionApi(new FractalMindClient({ packageId: '0x2', client: { core } as unknown as ClientWithCoreApi }));
+    await assert.rejects(api.getReservationBudget('0x3', new Uint8Array(32)), /type|budget/);
+  }
+});
+
+test('unknown result cannot request settlement with nonzero cost', () => {
+  const api = new NodeExecutionApi(new FractalMindClient({ packageId: '0x2' }));
+  assert.throws(() => api.finishCommand({ executionId: '0x3', capabilityId: '0x4', organizationId: '0x5', finalState: 4, expectedCursor: 2n, spentAmount: 7n, keyVersion: 1n, encryptedResult: new Uint8Array(32) }), /Unknown execution/);
 });

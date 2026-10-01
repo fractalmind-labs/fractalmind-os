@@ -10,6 +10,9 @@ import type { SignedNodeCommand } from './types.js';
 
 const ID = bcs.Address;
 const Bytes = bcs.vector(bcs.u8());
+const BudgetTotals = bcs.struct('BoundBudgetTotals', { spent: bcs.u64(), reserved: bcs.u64() });
+const BudgetClaimKey = bcs.struct('BoundBudgetClaimKey', { intent_hash: Bytes });
+const BudgetClaim = bcs.struct('BoundBudgetClaim', { reserved_amount: bcs.u64(), spent_amount: bcs.u64(), settled: bcs.bool() });
 export const CommandExecutionBcs = bcs.struct('CommandExecution', {
   id: ID, org_id: ID, capability_id: ID, capability_version: bcs.u64(),
   human_id: ID, grant_id: ID, grant_version: bcs.u64(), membership_id: ID,
@@ -65,15 +68,30 @@ export class NodeExecutionApi {
     tx.moveCall({ target: `${this.fm.packageId}::node_execution::begin_${input.managedAgentId ? 'agent' : 'host'}_command`, arguments: args });
     return tx;
   }
-  finishCommand(input: { executionId: string; organizationId: string; finalState: number; expectedCursor: bigint | string | number; keyVersion: bigint | string | number; encryptedResult: Uint8Array; tx?: Transaction }) {
+  finishCommand(input: { executionId: string; capabilityId: string; organizationId: string; finalState: number; expectedCursor: bigint | string | number; spentAmount: bigint | string | number; keyVersion: bigint | string | number; encryptedResult: Uint8Array; tx?: Transaction }) {
+    if (input.finalState === EXECUTION_STATES.needsConfirmation && toBigInt(input.spentAmount) !== 0n) throw new Error('Unknown execution cannot release its budget reservation.');
     const tx = this.fm.useTransaction(input.tx);
-    tx.moveCall({ target: `${this.fm.packageId}::node_execution::finish_command`, arguments: [tx.object(input.executionId), tx.object(input.organizationId), tx.pure.u8(input.finalState), tx.pure.u64(toBigInt(input.expectedCursor)), tx.pure.u64(toBigInt(input.keyVersion)), bytesArgument(tx, this.fm.packageId, input.encryptedResult), tx.object('0x6')] });
+    tx.moveCall({ target: `${this.fm.packageId}::node_execution::finish_command_with_budget`, arguments: [tx.object(input.executionId), tx.object(input.capabilityId), tx.object(input.organizationId), tx.pure.u8(input.finalState), tx.pure.u64(toBigInt(input.expectedCursor)), tx.pure.u64(toBigInt(input.spentAmount)), tx.pure.u64(toBigInt(input.keyVersion)), bytesArgument(tx, this.fm.packageId, input.encryptedResult), tx.object('0x6')] });
     return tx;
   }
-  requestStop(input: { executionId: string; organizationId: string; humanId: string; grantId: string; tx?: Transaction }) {
+  requestStop(input: { executionId: string; capabilityId: string; organizationId: string; humanId: string; grantId: string; tx?: Transaction }) {
     const tx = this.fm.useTransaction(input.tx);
-    tx.moveCall({ target: `${this.fm.packageId}::node_execution::request_stop`, arguments: [tx.object(input.executionId), tx.object(input.organizationId), tx.object(input.humanId), tx.object(input.grantId), tx.object('0x6')] });
+    tx.moveCall({ target: `${this.fm.packageId}::node_execution::request_stop_with_budget`, arguments: [tx.object(input.executionId), tx.object(input.capabilityId), tx.object(input.organizationId), tx.object(input.humanId), tx.object(input.grantId), tx.object('0x6')] });
     return tx;
+  }
+  async getBudget(capabilityId: string) {
+    const field = await this.fm.client.core.getDynamicField({ parentId: capabilityId, name: { type: `${this.fm.typesPackageId}::remote_authority::BoundBudgetKey`, bcs: new Uint8Array([0]) } });
+    if (field.dynamicField.value.type !== `${this.fm.typesPackageId}::remote_authority::BoundBudgetTotals`) throw new Error('Unexpected budget ledger type.');
+    const value = BudgetTotals.parse(field.dynamicField.value.bcs);
+    return { spent: BigInt(value.spent), reserved: BigInt(value.reserved) };
+  }
+  async getReservationBudget(capabilityId: string, intentHash: Uint8Array) {
+    if (intentHash.length !== 32) throw new Error('Expected a 32-byte intent hash.');
+    const field = await this.fm.client.core.getDynamicField({ parentId: capabilityId, name: { type: `${this.fm.typesPackageId}::remote_authority::BoundBudgetClaimKey`, bcs: BudgetClaimKey.serialize({ intent_hash: Array.from(intentHash) }).toBytes() } });
+    if (field.dynamicField.value.type !== `${this.fm.typesPackageId}::remote_authority::BoundBudgetClaim`) throw new Error('Unexpected reservation ledger type.');
+    const value = BudgetClaim.parse(field.dynamicField.value.bcs);
+    if (BigInt(value.spent_amount) > BigInt(value.reserved_amount) || (!value.settled && BigInt(value.spent_amount) !== 0n)) throw new Error('Invalid reservation budget.');
+    return { reservedAmount: BigInt(value.reserved_amount), spentAmount: BigInt(value.spent_amount), settled: value.settled };
   }
   async getExecution(id: string) {
     const { object } = await this.fm.client.core.getObject({ objectId: id, include: { content: true } });
