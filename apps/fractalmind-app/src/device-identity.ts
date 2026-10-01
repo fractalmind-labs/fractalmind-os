@@ -60,7 +60,10 @@ export class DeviceIdentityVerifier {
     if (!/^0x[0-9a-f]{64}$/.test(grantId))
       throw new DeviceIdentityError("invalid_grant");
   }
-  private async snapshot(organizationId?: string) {
+  private async snapshot(
+    organizationId?: string,
+    action: DeviceAction = "read",
+  ) {
     const sdk = this.chain.sdk,
       core = sdk.client.client.core;
     const chainIdentifier = await this.chain.checkNetwork();
@@ -115,7 +118,8 @@ export class DeviceIdentityVerifier {
       grant.generation !== human.generation ||
       toBase64(Uint8Array.from(grant.encryption_public_key)) !==
         this.signer.device.encryptionPublicKey ||
-      !grant.actions.includes(DEVICE_ACTIONS.read)
+      !grant.actions.includes(DEVICE_ACTIONS.read) ||
+      !grant.actions.includes(DEVICE_ACTIONS[action])
     )
       throw new DeviceIdentityError("invalid_grant");
     if (BigInt(grant.expires_at_ms) <= BigInt(clock.timestamp_ms))
@@ -149,6 +153,7 @@ export class DeviceIdentityVerifier {
         org.id !== organizationId ||
         !org.is_active ||
         !role.active ||
+        ((action === "approve" || action === "manage_hosts") && !role.admin) ||
         role.owner_human !== org.admin ||
         BigInt(role.version) < 1n
       )
@@ -175,11 +180,17 @@ export class DeviceIdentityVerifier {
     return this.verifyScoped();
   }
   /** Fresh organization role and scope checks, not an inference from possession. */
-  async verifyOrganization(organizationId: string) {
-    return this.verifyScoped(organizationId);
+  async verifyOrganization(
+    organizationId: string,
+    action: DeviceAction = "read",
+  ) {
+    return this.verifyScoped(organizationId, action);
   }
-  private async verifyScoped(organizationId?: string) {
-    const before = await this.snapshot(organizationId);
+  private async verifyScoped(
+    organizationId?: string,
+    action: DeviceAction = "read",
+  ) {
+    const before = await this.snapshot(organizationId, action);
     const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) =>
       b.toString(16).padStart(2, "0"),
     ).join("");
@@ -192,7 +203,7 @@ export class DeviceIdentityVerifier {
       nonce,
       expiresAtMs: Date.now() + 60_000,
     });
-    const after = await this.snapshot(organizationId);
+    const after = await this.snapshot(organizationId, action);
     if (after.versions !== before.versions)
       throw new DeviceIdentityError("state_changed");
     return Object.freeze({

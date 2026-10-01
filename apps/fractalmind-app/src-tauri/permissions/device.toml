@@ -1,4 +1,4 @@
 [[permission]]
 identifier = "device-access"
-description = "Read or explicitly initialize device public keys, sign self-paid PTBs, and prove scoped device possession. Explicitly create one recovery backup code and native ciphertext; decrypt authenticated product bodies without exporting content keys; no private-key export, filesystem or shell access."
-commands.allow = ["fm_device_public", "fm_device_initialize", "fm_device_sign_transaction", "fm_device_prove", "fm_onboarding_create", "fm_onboarding_public", "fm_onboarding_sign_transaction", "fm_device_decrypt_record"]
+description = "Read or explicitly initialize device public keys, sign self-paid PTBs, and prove scoped device possession. Explicitly create one recovery backup code and native ciphertext; encrypt/decrypt authenticated product bodies without exporting content keys; no private-key export, filesystem or shell access."
+commands.allow = ["fm_device_public", "fm_device_initialize", "fm_device_sign_transaction", "fm_device_prove", "fm_onboarding_create", "fm_onboarding_public", "fm_onboarding_sign_transaction", "fm_device_decrypt_record", "fm_device_encrypt_record"]

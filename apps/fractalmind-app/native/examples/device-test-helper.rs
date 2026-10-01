@@ -67,6 +67,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             vault.remove_test_profile(&request.profile)?;
             serde_json::json!({"removed":true})
         }
+        "encryptRecord" => serde_json::to_value(
+            vault.encrypt_record(&request.profile, &request.record.ok_or("Record required")?)?,
+        )?,
         "decryptRecord" => serde_json::to_value(
             vault.decrypt_record(&request.profile, &request.record.ok_or("Record required")?)?,
         )?,

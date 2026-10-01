@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { isTauri, invoke } from "@tauri-apps/api/core";
 import {
   NativeDeviceSigner,
+  preferredDeviceProfile,
   NativeDeviceError,
   type NativeInvoke,
 } from "./native-device";
@@ -22,7 +23,7 @@ export default function DeviceAccess({
   grants?: Grant[] | null;
   t: (zh: string, en: string) => string;
 }) {
-  const [deviceProfile, setDeviceProfile] = useState("primary");
+  const [deviceProfile, setDeviceProfile] = useState(preferredDeviceProfile);
   const [signer, setSigner] = useState<NativeDeviceSigner | null>(null);
   const [grantId, setGrantId] = useState("");
   const [verified, setVerified] = useState<Verified | null>(null);

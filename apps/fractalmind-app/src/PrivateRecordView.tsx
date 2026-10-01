@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
-import { NativeDeviceSigner, type NativeInvoke } from "./native-device";
+import {
+  NativeDeviceSigner,
+  preferredDeviceProfile,
+  type NativeInvoke,
+} from "./native-device";
 import { PrivateRecords, type RecordPointer } from "./private-records";
 import { ChainReadSession } from "./chain";
 import type { ConnectionProfile, Grant } from "./domain";
@@ -16,7 +20,7 @@ export default function PrivateRecordView({
   grants: Grant[] | null | undefined;
   t: (zh: string, en: string) => string;
 }) {
-  const [deviceProfile, setDeviceProfile] = useState("primary"),
+  const [deviceProfile, setDeviceProfile] = useState(preferredDeviceProfile),
     [grantId, setGrantId] = useState("");
   const [rows, setRows] = useState<RecordPointer[] | null>(null),
     [body, setBody] = useState<string | null>(null);

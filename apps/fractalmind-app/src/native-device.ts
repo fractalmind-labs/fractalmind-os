@@ -15,7 +15,8 @@ export type NativeDeviceCommand =
   | "fm_onboarding_create"
   | "fm_onboarding_public"
   | "fm_onboarding_sign_transaction"
-  | "fm_device_decrypt_record";
+  | "fm_device_decrypt_record"
+  | "fm_device_encrypt_record";
 export type NativeInvoke = (
   command: NativeDeviceCommand,
   args: Record<string, string>,
@@ -43,6 +44,22 @@ export class NativeDeviceError extends Error {
 }
 const id = /^0x[0-9a-f]{64}$/;
 const profilePattern = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
+/** Disposable local connection preference; it is never identity authority. */
+export function preferredDeviceProfile() {
+  try {
+    const stored = JSON.parse(
+      localStorage.getItem("fractalmind.app.onboarding-connection.v1") ??
+        "null",
+    );
+    if (
+      stored &&
+      typeof stored.profile === "string" &&
+      profilePattern.test(stored.profile)
+    )
+      return stored.profile as string;
+  } catch {}
+  return "primary";
+}
 export function profileCheck(profile: string) {
   if (!profilePattern.test(profile))
     throw new NativeDeviceError("invalid_profile");

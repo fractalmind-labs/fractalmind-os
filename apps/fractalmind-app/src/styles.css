@@ -1384,3 +1384,13 @@ h3 {
 .record-list {display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;}
 .record-list button {text-align:left;overflow-wrap:anywhere;}
 .record-body {white-space:pre-wrap;overflow-wrap:anywhere;max-height:400px;overflow:auto;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;}
+
+.okr-create-dialog {width:min(760px,calc(100vw - 24px));max-height:calc(100dvh - 32px);overflow:auto;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--r-lg);padding:24px;}
+.okr-create-dialog::backdrop {background:rgba(0,0,0,.5);}
+.okr-create-dialog header {display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.okr-create-dialog fieldset {border:0;padding:0;margin:0;min-width:0;}
+.okr-create-dialog label {display:block;margin:12px 0;}
+.okr-create-dialog input,.okr-create-dialog textarea,.okr-create-dialog select {display:block;width:100%;min-width:0;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);}
+.okr-create-dialog textarea {min-height:80px;resize:vertical;}
+.okr-form-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;}
+@media (max-width:600px) {.okr-create-dialog {padding:16px;} .okr-form-grid {grid-template-columns:1fr;}}

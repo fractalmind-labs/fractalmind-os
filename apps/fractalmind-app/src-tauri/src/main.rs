@@ -161,6 +161,23 @@ async fn fm_device_decrypt_record(
     .await
     .map_err(|_| "NativeTaskFailed".to_string())?
 }
+#[tauri::command]
+async fn fm_device_encrypt_record(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: String,
+    record: String,
+) -> Result<String, String> {
+    main_window(&window)?;
+    let vault = Arc::clone(vault.inner());
+    tauri::async_runtime::spawn_blocking(move || {
+        vault
+            .encrypt_record(&profile, &record)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|_| "NativeTaskFailed".to_string())?
+}
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -195,7 +212,8 @@ fn main() {
             fm_onboarding_create,
             fm_onboarding_public,
             fm_onboarding_sign_transaction,
-            fm_device_decrypt_record
+            fm_device_decrypt_record,
+            fm_device_encrypt_record
         ])
         .run(tauri::generate_context!())
         .expect("FractalMind App runtime failed");

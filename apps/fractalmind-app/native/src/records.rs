@@ -1,6 +1,6 @@
 //! Authenticated product bodies only. Unwrapped keyrings and content keys never
 //! cross the native boundary. Chain authorization is independently checked by
-//! the App before/after each read; this primitive does not assert chain roles.
+//! the App before/after each operation; this primitive does not assert chain roles.
 use super::*;
 use aes_gcm::{
     aead::{Aead, Payload},
@@ -26,6 +26,23 @@ pub struct RecordRequest {
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct WriteRequest {
+    network: String,
+    encrypted_keys: String,
+    organization_id: String,
+    kind: u8,
+    logical_id: String,
+    revision: String,
+    key_version: String,
+    plaintext: String,
+}
+impl Drop for WriteRequest {
+    fn drop(&mut self) {
+        self.plaintext.zeroize();
+    }
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Keyring {
     format: u8,
     content_key: String,
@@ -40,6 +57,26 @@ impl Drop for Keyring {
     }
 }
 impl DeviceVault {
+    pub fn encrypt_record(&self, profile: &str, request: &str) -> Result<String> {
+        if request.len() > 200_000 {
+            return Err(VaultError::InvalidEnvelope);
+        }
+        let input: WriteRequest =
+            serde_json::from_str(request).map_err(|_| VaultError::InvalidEnvelope)?;
+        let header = RecordRequest {
+            network: input.network.clone(),
+            encrypted_keys: input.encrypted_keys.clone(),
+            organization_id: input.organization_id.clone(),
+            kind: input.kind,
+            logical_id: input.logical_id.clone(),
+            revision: input.revision.clone(),
+            key_version: input.key_version.clone(),
+            encrypted_body: String::new(),
+        };
+        let plaintext = Zeroizing::new(encoded(&input.plaintext, 65504)?);
+        let (key, context) = content_material(&self.load(profile)?, profile, &header)?;
+        Ok(STANDARD.encode(seal_body(&plaintext, key.as_ref(), &context)?))
+    }
     pub fn decrypt_record(&self, profile: &str, request: &str) -> Result<String> {
         if request.len() > 200_000 {
             return Err(VaultError::InvalidEnvelope);
@@ -69,7 +106,11 @@ fn encoded(value: &str, max: usize) -> Result<Vec<u8>> {
     }
     Ok(bytes)
 }
-fn decrypt(keys: &[u8], profile: &str, input: &RecordRequest) -> Result<Zeroizing<Vec<u8>>> {
+fn content_material(
+    keys: &[u8],
+    profile: &str,
+    input: &RecordRequest,
+) -> Result<(Zeroizing<[u8; 32]>, String)> {
     validate_keys(keys)?;
     if !["localnet", "devnet", "testnet", "mainnet"].contains(&input.network.as_str())
         || !(1..=7).contains(&input.kind)
@@ -129,7 +170,6 @@ fn decrypt(keys: &[u8], profile: &str, input: &RecordRequest) -> Result<Zeroizin
         .get(&input.key_version)
         .ok_or(VaultError::InvalidEnvelope)?;
     hex::decode_to_slice(key, content_key.as_mut()).map_err(|_| VaultError::InvalidEnvelope)?;
-    let body = encoded(&input.encrypted_body, 65536)?;
     let context = format!(
         "fractalmind.product-record.v1:{}:{}:{}:{}:{}",
         input.organization_id,
@@ -138,6 +178,11 @@ fn decrypt(keys: &[u8], profile: &str, input: &RecordRequest) -> Result<Zeroizin
         input.revision,
         input.key_version
     );
+    Ok((content_key, context))
+}
+fn decrypt(keys: &[u8], profile: &str, input: &RecordRequest) -> Result<Zeroizing<Vec<u8>>> {
+    let (content_key, context) = content_material(keys, profile, input)?;
+    let body = encoded(&input.encrypted_body, 65536)?;
     if body.starts_with(b"FME2") {
         if input.kind != 5
             || input.logical_id.len() != 72
@@ -186,6 +231,29 @@ fn unwrap(body: &[u8], secret: &StaticSecret, context: &str) -> Result<Zeroizing
         .map_err(|_| VaultError::InvalidEnvelope)?;
     open_body(&body[68..], key.as_ref(), context, b"FME1")
 }
+fn seal_body(plaintext: &[u8], key: &[u8], context: &str) -> Result<Vec<u8>> {
+    if plaintext.len() > 65504 || context.is_empty() || context.len() > 1024 {
+        return Err(VaultError::InvalidEnvelope);
+    }
+    let mut nonce = [0u8; 12];
+    OsRng
+        .try_fill_bytes(&mut nonce)
+        .map_err(|_| VaultError::StorageUnavailable)?;
+    let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| VaultError::InvalidEnvelope)?;
+    let encrypted = cipher
+        .encrypt(
+            Nonce::from_slice(&nonce),
+            Payload {
+                msg: plaintext,
+                aad: context.as_bytes(),
+            },
+        )
+        .map_err(|_| VaultError::InvalidEnvelope)?;
+    let mut body = b"FME1".to_vec();
+    body.extend_from_slice(&nonce);
+    body.extend_from_slice(&encrypted);
+    Ok(body)
+}
 fn open_body(
     body: &[u8],
     key: &[u8],
@@ -215,6 +283,16 @@ fn open_body(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn record_encryption_is_randomized_bounded_and_context_authenticated() {
+        let key = [7u8; 32];
+        let a = seal_body(b"body", &key, "record:1").unwrap();
+        let b = seal_body(b"body", &key, "record:1").unwrap();
+        assert_ne!(a, b);
+        assert_eq!(&*open_body(&a, &key, "record:1", b"FME1").unwrap(), b"body");
+        assert!(open_body(&a, &key, "record:2", b"FME1").is_err());
+        assert!(seal_body(&vec![0; 65505], &key, "record:1").is_err());
+    }
     #[test]
     fn rejects_noncanonical_versions_and_unbounded_inputs() {
         for value in ["0", "01", "+1", "18446744073709551616"] {

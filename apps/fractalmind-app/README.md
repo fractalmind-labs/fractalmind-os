@@ -83,7 +83,8 @@ evidence, transport limits and test instructions are documented in
   path. Mobile uses five tabs plus an All features bottom drawer and a route strip.
 - Workbench: decisions first, then objectives and factual OKR route; verified checkpoints, fresh measured progress,
   separate human acceptance, execution state and global budget/reservations.
-- OKRs: lifecycle list/filter, details, immutable observation history, Run
+- OKRs: a candidate form with 1–3 KRs, exact fixed-point metrics, evidence rules and constraints; native encrypted draft creation requires current admin/approval authority and explicit self-paid fee confirmation. Confirmed drafts do not activate Agents. See [draft creation and limits](../../docs/product/v020-app-okr-draft.md).
+- OKR reads: lifecycle list/filter, details, immutable observation history, Run
   provenance and independent final acceptance record. Titles/units remain locked
   until an authorized device can decrypt the specification.
 - Hosts: one card per stable address. The authoritative `active_hosts` table

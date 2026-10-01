@@ -32,6 +32,7 @@ type Page =
 type Translate = (zh: string, en: string) => string;
 const PROFILE_KEY = "fractalmind.app.public-connection.v1";
 const PREFERENCE_KEY = "fractalmind.app.appearance.v1";
+const CreateOkr = lazy(() => import("./CreateOkr"));
 const PrivateRecordView = lazy(() => import("./PrivateRecordView"));
 const DeviceAccess = lazy(() => import("./DeviceAccess"));
 const runLabels: Array<[string, string]> = [
@@ -666,6 +667,21 @@ export function App() {
         )}
         {page === "okrs" && snapshot && (
           <>
+            <Suspense
+              fallback={<p>{t("加载创建入口…", "Loading creation…")}</p>}
+            >
+              <CreateOkr
+                key={JSON.stringify([profile, snapshot.organization.objectId])}
+                profile={{
+                  ...profile,
+                  chainIdentifier:
+                    data.identity?.chainIdentifier ?? profile.chainIdentifier,
+                }}
+                organizationId={snapshot.organization.objectId}
+                t={t}
+                onCreated={data.refresh}
+              />
+            </Suspense>
             {detailId && okrs?.find((row) => row.okr.id === detailId) ? (
               <OkrDetails
                 focus={okrs.find((row) => row.okr.id === detailId)!}

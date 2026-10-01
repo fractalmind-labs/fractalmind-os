@@ -11,6 +11,7 @@ import {
   DeviceGrantBcs,
   HumanIdentityBcs,
   IdentityRegistryBcs,
+  MemoryTransactionJournal,
 } from "@fractalmind-labs/fractalmind-sdk";
 import {
   DeviceIdentityVerifier,
@@ -18,6 +19,8 @@ import {
 } from "../src/device-identity";
 import { NativeDeviceSigner, type NativeInvoke } from "../src/native-device";
 import type { ChainReadSession } from "../src/chain";
+import { OkrDraftCreation } from "../src/okr-draft";
+import { Transaction } from "@mysten/sui/transactions";
 import { PrivateRecords, PrivateRecordError } from "../src/private-records";
 
 async function fixture() {
@@ -73,6 +76,7 @@ async function fixture() {
     active: bcs.bool(),
     version: bcs.u64(),
   });
+  const encryptInputs: string[] = [];
   let decryptCalls = 0,
     onDecrypt: (() => void) | undefined;
 
@@ -85,6 +89,14 @@ async function fixture() {
         signingPublicKey: key.getPublicKey().toBase64(),
         encryptionPublicKey: toBase64(encryption),
       };
+    if (command === "fm_device_encrypt_record") {
+      encryptInputs.push(args.record);
+      decryptCalls++;
+      onDecrypt?.();
+      const body = new Uint8Array(32);
+      body.set([70, 77, 69, 49]);
+      return toBase64(body);
+    }
     if (command === "fm_device_decrypt_record") {
       decryptCalls++;
       onDecrypt?.();
@@ -214,6 +226,7 @@ async function fixture() {
     orgId,
     org,
     role,
+    encryptInputs: () => encryptInputs,
     decryptCalls: () => decryptCalls,
     onDecrypt: (fn: () => void) => {
       onDecrypt = fn;
@@ -435,4 +448,146 @@ test("only an exact missing organization index is empty; child and network failu
     throw new Error("Network unavailable");
   };
   await assert.rejects(f.api().list());
+});
+
+test("approval reads require both an approval action and admin role independently of read access", async () => {
+  const f = await fixture();
+  f.role.admin = false;
+  await f.verifier().verifyOrganization(f.orgId, "read");
+  await assert.rejects(
+    f.verifier().verifyOrganization(f.orgId, "approve"),
+    code("invalid_grant"),
+  );
+  const g = await fixture();
+  g.grant.actions = [1];
+  await assert.rejects(
+    g.verifier().verifyOrganization(g.orgId, "approve"),
+    code("invalid_grant"),
+  );
+});
+async function draftFixture() {
+  const f = await recordFixture();
+  Object.assign(f.chain.profile, {
+    rpcUrl: "http://127.0.0.1:29000",
+    network: "localnet",
+  });
+  let prepareCalls = 0,
+    submitCalls = 0;
+  Object.defineProperty(f.chain.sdk, "okr", {
+    value: {
+      listOkrs: async () => ({ okrs: [], hasNextPage: false, cursor: null }),
+      createDraft: () => new Transaction(),
+    },
+  });
+  f.chain.sdk.productRecord.listCurrent = async () => ({
+    records: [],
+    keyVersion: "1",
+    cursor: null,
+    hasNextPage: false,
+  });
+  const controller = new OkrDraftCreation(
+    f.chain,
+    f.signer,
+    f.grant.id,
+    f.orgId,
+    "11111111-1111-4111-8111-111111111111",
+    f.invoke,
+    new MemoryTransactionJournal(),
+  );
+  controller.manager.query = async () => undefined;
+  const quote = {
+    requestId: controller.requestId,
+    namespace: "fixture",
+    digest: "fixture",
+    sender: f.signer.device.address,
+    balance: "1",
+    requiredBalance: "1",
+    gasBudget: "1",
+    maxSuiSpend: "0",
+    estimatedGas: "1",
+    simulatedSuiSpend: "0",
+    expiresAtMs: Date.now() + 60000,
+  };
+  controller.manager.prepare = async () => {
+    prepareCalls++;
+    return quote;
+  };
+  controller.manager.submit = async () => {
+    submitCalls++;
+    return {
+      status: "confirmed",
+      digest: quote.digest,
+      requestId: quote.requestId,
+      journalSynced: true,
+    };
+  };
+  const input = {
+    objective: "Measured goal",
+    successCriteria: "Independent confirmation",
+    priority: 1,
+    deadlineMs: "2000",
+    allowedPaths: ["src"],
+    prohibitedActions: ["outside writes"],
+    maxCalls: "20",
+    krs: [
+      {
+        title: "Outcome",
+        unit: "items",
+        precision: 0,
+        baseline: "0",
+        target: "1",
+        weight: "1",
+        maxAgeMinutes: "1",
+        verificationRule: "Independent evidence",
+      },
+    ],
+  };
+  return {
+    ...f,
+    controller,
+    quote,
+    input,
+    prepareCalls: () => prepareCalls,
+    submitCalls: () => submitCalls,
+  };
+}
+test("native encryption prepares a quote without submitting; changed authority blocks explicit submission", async () => {
+  const f = await draftFixture();
+  const pending = f.controller.prepare(f.input);
+  f.input.objective = "caller mutation while awaiting a journal query";
+  const quote = await pending;
+  const payload = JSON.parse(f.encryptInputs()[0]);
+  assert.equal(
+    JSON.parse(
+      new TextDecoder().decode(
+        Uint8Array.from(Buffer.from(payload.plaintext, "base64")),
+      ),
+    ).objective,
+    "Measured goal",
+  );
+  assert.equal("status" in quote, false);
+  assert.equal(f.prepareCalls(), 1);
+  assert.equal(f.submitCalls(), 0);
+  f.role.version = "2";
+  await assert.rejects(f.controller.submit(f.quote), /authority_changed/);
+  assert.equal(f.submitCalls(), 0);
+});
+test("known original draft outcomes are returned before encrypting, and encryption-time changes never prepare a transaction", async () => {
+  const f = await draftFixture();
+  f.controller.manager.query = async () => ({
+    status: "unknown",
+    digest: "original",
+    requestId: f.controller.requestId,
+    journalSynced: true,
+  });
+  const original = await f.controller.prepare(f.input);
+  assert.equal("status" in original && original.digest, "original");
+  assert.equal(f.decryptCalls(), 0);
+  assert.equal(f.prepareCalls(), 0);
+  const g = await draftFixture();
+  g.onDecrypt(() => {
+    g.grant.revoked = true;
+  });
+  await assert.rejects(g.controller.prepare(g.input));
+  assert.equal(g.prepareCalls(), 0);
 });
