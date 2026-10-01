@@ -351,6 +351,7 @@ func (s *ChainAuthorityResolver) Resolve(ctx context.Context, ref CapabilityRef)
 			expiry = grant.Expiry
 		}
 	}
+	var instance *ManagedInstanceAuthority
 	if len(auth.Managed) == 0 {
 		if cap.TargetKind != 2 || cap.Agent != "" || auth.RequiredAction != 1 {
 			return CapabilityState{}, fmt.Errorf("unmanaged instance cannot execute")
@@ -371,6 +372,10 @@ func (s *ChainAuthorityResolver) Resolve(ctx context.Context, ref CapabilityRef)
 		if managed.Revoked || managed.Version != auth.ManagedVersion {
 			return CapabilityState{}, reject(CodeRevoked, "managed instance changed or was revoked", nil)
 		}
+		if len(managed.Workspace) != 32 {
+			return CapabilityState{}, fmt.Errorf("invalid managed workspace hash")
+		}
+		instance = &ManagedInstanceAuthority{ID: managed.ID.String(), Runtime: managed.Runtime, WorkspaceHash: hex.EncodeToString(managed.Workspace), Version: Uint64String(managed.Version)}
 		for _, action := range cap.Actions {
 			if !observationAction(action) && (auth.RequiredAction != 2 || !managed.Control || managed.Runtime != "bounded-process-v1") {
 				return CapabilityState{}, reject(CodeUnauthorized, "instance cannot execute constrained commands", nil)
@@ -410,6 +415,7 @@ func (s *ChainAuthorityResolver) Resolve(ctx context.Context, ref CapabilityRef)
 	}
 	uses := cap.MaxUses - cap.DelegatedUses
 	state := CapabilityState{ID: ref.ID, Target: Target{OrganizationID: cap.Org.String(), NodeID: cap.Node, AgentID: cap.Agent}, AuthorizedSigners: []string{cap.Delegate.String()}, Actions: cap.Actions, Scopes: []string{cap.Scope}, ExpiresAtMS: int64(expiry), RevocationVersion: cap.Version, CheckpointObservedAtMS: now, ReservationScope: ReservationScopeNode, RemainingUses: &uses, AuthorityVersionHash: hashBytes([]byte(stamp.String()))}
+	state.ManagedInstance = instance
 	// Pre-validation ceilings: the exact intent may already be reserved. The
 	// chain reservation backend checks its claim and counters without consuming twice.
 	if cap.MaxBudget > 0 {

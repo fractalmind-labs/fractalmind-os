@@ -21,6 +21,7 @@ var stableErrorCodes = map[string]struct{}{
 	"cancelled": {}, "duplicate_command_id": {}, "internal_error": {},
 	"malformed_input": {}, "missing_agent": {}, "missing_command_id": {},
 	"operation_failed": {}, "timeout": {}, "unsupported_operation": {},
+	"boundary_denied": {}, "budget_exhausted": {}, "workspace_changed": {}, "operation_unconfirmed": {}, "measurement_mismatch": {},
 }
 
 type Operation string
@@ -46,6 +47,12 @@ type Request struct {
 	TimeoutSeconds float64          `json:"timeout_seconds,omitempty"`
 	Cancel         bool             `json:"cancel,omitempty"`
 	Params         *OperationParams `json:"params,omitempty"`
+	Bounds         *ExecutionBounds `json:"bounds,omitempty"`
+}
+
+type ExecutionBounds struct {
+	Paths    map[string][]string      `json:"paths"`
+	MaxCalls nodecommand.Uint64String `json:"max_calls"`
 }
 
 // OperationParams is the complete set of local runtime inputs that a signed
@@ -59,6 +66,9 @@ type OperationParams struct {
 }
 
 func (r Request) Validate() error {
+	if r.Bounds != nil && r.Operation != OperationAssign {
+		return fmt.Errorf("execution bounds are only supported for assign")
+	}
 	if r.SchemaVersion != SchemaVersion {
 		return fmt.Errorf("unsupported schema_version %q", r.SchemaVersion)
 	}

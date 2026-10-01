@@ -1,6 +1,6 @@
 # v0.2.0 Host 密钥与生产执行器
 
-此增量对应 #25/#30/#32/#48。链上授权和加密结果存储已接入 envd 生产工厂；当前 agent-manager 仅用于观察，真实受约束 Agent 仍待交付。
+此增量对应 #25/#30/#32/#48。链上授权和加密结果存储已接入 envd 生产工厂；agent-manager 仅用于观察，可显式选择 [原生受约束文件 Agent](v020-bounded-file-agent.md)。通用模型 Agent、完整 OKR 与云端部署仍待交付。
 
 ## Host 本机身份
 
@@ -20,6 +20,7 @@ identity:
   key_profile: default
 runtime:
   enabled: true
+  adapter_kind: observation
   adapter_command: python3
   adapter_args: [/absolute/path/agent-manager/scripts/main.py]
   result_gas_budget: 2000000000
@@ -44,9 +45,9 @@ envd --config sentinel.yaml
 
 ## 能力与结果
 
-现有 tmux/agent-manager 未提供执行沙箱。适配器仅支持 inventory、status、monitor、logs、health、availability；start、stop、assign 和直接执行消息在校验/预留/调用进程之前拒绝。每个并发请求都要检查实际适配器能力，管理设备确认的链上标签不能替代执行边界。
+现有 tmux/agent-manager 未提供执行沙箱。默认观察适配器仅支持 inventory、status、monitor、logs、health、availability；start、stop、assign 和直接执行消息在校验/预留/调用进程之前拒绝。每个并发请求都要检查实际适配器能力，管理设备确认的链上标签不能替代执行边界。`native-file-agent` 可执行明确的文件目标，设置、授权和限制见其 [说明](v020-bounded-file-agent.md)。
 
-观察结果用命令专用密钥写入 Sui；重启从链上读取并解密原结果，不建立文件结果缓存。Host 不持有组织根密钥。组织轮换后的在途结果补交、实际受约束执行、物理停止和真实费用计量仍待完成。
+结果用命令专用密钥写入 Sui；重启从链上读取并解密原结果，不建立文件结果缓存。Host 不持有组织根密钥。原生文件工具的实际执行、步骤间停止和工具调用计数已通过增量验证；组织轮换后的在途结果补交、通用 Agent、进程停止和模型费用计量仍待完成。
 
 ## 验证证据
 

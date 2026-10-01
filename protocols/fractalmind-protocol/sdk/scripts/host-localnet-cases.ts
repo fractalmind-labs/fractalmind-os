@@ -8,6 +8,9 @@ import { createDeviceEncryptionKeys, createHostInviteMaterial, encodeHostInviteC
 import { sha256 } from '@noble/hashes/sha2.js';
 import { verifyGoAuthority } from './verify-go-authority.js';
 import { exerciseNodeExecutions } from './node-execution-localnet-cases.js';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 type Data = SuiClientTypes.Transaction<{ effects: true; objectTypes: true; events: true }>;
 type Execute = (label: string, tx: Transaction, signer?: Ed25519Keypair, sponsor?: Ed25519Keypair, allowRejected?: boolean) => Promise<{ data: Data }>;
@@ -86,7 +89,9 @@ export async function exerciseHostAdmission(o: Options) {
   assert.deepEqual(new Set(idx.memberships), new Set([localMemberId, cloudMemberId]));
 
   const membership = { ...auth, membershipId: localMemberId, bindingId };
-  const workspaceHash = sha256(new TextEncoder().encode('/tmp/localnet-bound-workspace'));
+  const workspace = await mkdtemp(join(tmpdir(), 'fractalmind-v020-native-agent-'));
+  const workspaceHash = sha256(new TextEncoder().encode(workspace));
+  try {
   const observationImport = { ...membership, instanceId: 'existing-observed-agent', runtime: 'tmux-observe' as const, workspaceHash, controlConfirmed: false };
   const observed = await execute('Host: discover and explicitly import existing observation instance', sdk.host.importAgent(observationImport));
   assert.equal(observed.data.status.success, true);
@@ -120,7 +125,7 @@ export async function exerciseHostAdmission(o: Options) {
   assert.equal(authorityBinding.device_grant, rootGrantId);
   assert.equal(authorityBinding.managed_agent, managedId);
   await verifyGoAuthority(sdk.client.packageId, capabilityId);
-  const executions = process.env.FM_NODE_CHECKPOINT_ACCEPTANCE === '1' ? await exerciseNodeExecutions({ sdk, execute, created, organizationId, humanId, grantId: rootGrantId, membershipId: localMemberId, bindingId, managedAgentId: managedId, desktop, host: local, wrongHost: cloud, hostEncryptionSecret: localEncryption.secret, contentKey: o.contentKey }) : undefined;
+  const executions = process.env.FM_NODE_CHECKPOINT_ACCEPTANCE === '1' ? await exerciseNodeExecutions({ sdk, execute, created, organizationId, humanId, grantId: rootGrantId, membershipId: localMemberId, bindingId, managedAgentId: managedId, desktop, host: local, wrongHost: cloud, hostEncryptionSecret: localEncryption.secret, contentKey: o.contentKey, workspace }) : undefined;
   const deniedReadOnly = await execute('Host: read-only phone cannot acquire operation authority', sdk.host.issueCapability({ ...membership, grantId: o.phoneGrantId, managedAgentId: managedId, actions: ['direct.message'], scope: 'direct', expiresAtMs: Date.now() + 3600000 }), o.phone, undefined, true);
   assert.equal(deniedReadOnly.data.status.success, false);
   assert.match(JSON.stringify(deniedReadOnly.data.status), /9001/);
@@ -160,4 +165,5 @@ export async function exerciseHostAdmission(o: Options) {
   assert.equal(reconstructed.agents.length, 3);
   assert.equal(reconstructed.agents.find(agent => agent.id === observedId)!.control_confirmed, false);
   return { bindingId, localMembershipId: localMemberId, replacementMembershipId: newMemberId, secondMembershipId: cloudMemberId, managedAgentId: managedId, observationAgentId: observedId, sameNameOtherHostId: sameNameId, capabilityId, freshCapabilityId, freshObservationCapabilityId, executions, authorityReaderVerified: process.env.FM_HOST_AUTHORITY_VERIFY === '1', checks: 'chain admission and optional real Go authority reads; runtime execution and external cloud deployment pending' };
+  } finally { await rm(workspace, { recursive: true, force: true }); }
 }

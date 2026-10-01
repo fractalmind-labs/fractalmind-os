@@ -125,10 +125,12 @@ type SUIConfig struct {
 // RuntimeConfig enables the chain-authorized command path. Local result or
 // authority files are not accepted as production persistence.
 type RuntimeConfig struct {
-	Enabled         bool     `yaml:"enabled"`
-	AdapterCommand  string   `yaml:"adapter_command"`
-	AdapterArgs     []string `yaml:"adapter_args"`
-	ResultGasBudget uint64   `yaml:"result_gas_budget"`
+	Enabled         bool              `yaml:"enabled"`
+	AdapterKind     string            `yaml:"adapter_kind"` // observation (default) or native-file-agent
+	Workspaces      map[string]string `yaml:"workspaces"`   // physical instance bindings, not authority
+	AdapterCommand  string            `yaml:"adapter_command"`
+	AdapterArgs     []string          `yaml:"adapter_args"`
+	ResultGasBudget uint64            `yaml:"result_gas_budget"`
 }
 
 // SponsorConfig configures the built-in gas sponsorship role.

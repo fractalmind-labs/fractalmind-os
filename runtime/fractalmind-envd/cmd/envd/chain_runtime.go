@@ -169,7 +169,31 @@ func newRuntimeCommandExecutorWithStore(cfg *config.Config, store hostidentity.S
 	}
 	// Existing tmux/agent-manager instances have no execution sandbox. Observing
 	// them must not grant control merely because the chain record says bounded.
-	adapter := runtimeadapter.ObservationAgentManager(command, args...)
+	var adapter runtimeadapter.Adapter = runtimeadapter.ObservationAgentManager(command, args...)
+	switch cfg.Runtime.AdapterKind {
+	case "", "observation":
+	case "native-file-agent":
+		original := cfg.SUI.ProtocolOriginalPackageID
+		if original == "" {
+			original = cfg.SUI.ProtocolPackageID
+		}
+		resolver, resolverErr := nodecommand.NewChainAuthorityResolver(rpc, original)
+		if resolverErr != nil {
+			rpc.Close()
+			keys.Close()
+			return nil, resolverErr
+		}
+		adapter, err = runtimeadapter.BoundedFileAgent(resolver, cfg.Runtime.Workspaces, adapter)
+		if err != nil {
+			rpc.Close()
+			keys.Close()
+			return nil, err
+		}
+	default:
+		rpc.Close()
+		keys.Close()
+		return nil, fmt.Errorf("unsupported runtime.adapter_kind %q", cfg.Runtime.AdapterKind)
+	}
 	executor, err := newChainRuntimeExecutor(cfg, keys, rpc, adapter)
 	if err != nil {
 		rpc.Close()

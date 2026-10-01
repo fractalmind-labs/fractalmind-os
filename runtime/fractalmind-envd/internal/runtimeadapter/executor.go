@@ -50,11 +50,12 @@ type flight struct {
 }
 
 type payload struct {
-	TimeoutSeconds float64 `json:"timeout_seconds,omitempty"`
-	Cancel         bool    `json:"cancel,omitempty"`
-	Restore        *bool   `json:"restore,omitempty"`
-	Task           string  `json:"task,omitempty"`
-	Lines          *int    `json:"lines,omitempty"`
+	TimeoutSeconds float64          `json:"timeout_seconds,omitempty"`
+	Cancel         bool             `json:"cancel,omitempty"`
+	Restore        *bool            `json:"restore,omitempty"`
+	Task           string           `json:"task,omitempty"`
+	Lines          *int             `json:"lines,omitempty"`
+	Bounds         *ExecutionBounds `json:"bounds,omitempty"`
 }
 
 func NewExecutor(validator *nodecommand.Validator, adapter Adapter) *Executor {
@@ -238,12 +239,20 @@ func (e *Executor) executeReserved(ctx context.Context, command nodecommand.Node
 		TimeoutSeconds: input.TimeoutSeconds,
 		Cancel:         input.Cancel,
 		Params:         params,
+		Bounds:         input.Bounds,
 	}
 	if err := request.Validate(); err != nil {
 		return e.runtimeRejectedExecution(ctx, key, command, checkpoint, operation, "malformed_input", err)
 	}
 
-	response, err := e.adapter.run(ctx, request)
+	var response Response
+	if adapter, ok := e.adapter.(interface {
+		runAuthorized(context.Context, Request, nodecommand.NodeCommand, *nodecommand.ChainExecution) (Response, error)
+	}); ok {
+		response, err = adapter.runAuthorized(ctx, request, command, checkpoint)
+	} else {
+		response, err = e.adapter.run(ctx, request)
+	}
 	if err != nil {
 		response = Response{
 			SchemaVersion: SchemaVersion,

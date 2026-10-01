@@ -15,7 +15,7 @@ import type { SignedNodeCommand } from '../src/types.js';
 
 type Data = SuiClientTypes.Transaction<{ effects: true; objectTypes: true; events: true }>;
 type Execute = (label: string, tx: Transaction, signer?: Ed25519Keypair, sponsor?: Ed25519Keypair, allowRejected?: boolean) => Promise<{ data: Data }>;
-type Options = { sdk: FractalMindSDK; execute: Execute; created: (data: Data, suffix: string) => string; organizationId: string; humanId: string; grantId: string; membershipId: string; bindingId: string; managedAgentId: string; desktop: Ed25519Keypair; host: Ed25519Keypair; wrongHost: Ed25519Keypair; hostEncryptionSecret: Uint8Array; contentKey: Uint8Array };
+type Options = { sdk: FractalMindSDK; execute: Execute; created: (data: Data, suffix: string) => string; organizationId: string; humanId: string; grantId: string; membershipId: string; bindingId: string; managedAgentId: string; desktop: Ed25519Keypair; host: Ed25519Keypair; wrongHost: Ed25519Keypair; hostEncryptionSecret: Uint8Array; contentKey: Uint8Array; workspace: string };
 
 async function goValidate(o: Options, command: SignedNodeCommand, expectedDuplicate = false, expectedCode = '') {
   const seed = decodeSuiPrivateKey(o.host.getSecretKey()).secretKey;
@@ -242,11 +242,40 @@ export async function exerciseNodeExecutions(o: Options) {
   await assertBudget(factoryCapabilityId, 0n, 20n, 'Observation factory never starts unsupported control');
   assert.equal((await execute('Production factory: device cancels unsupported queued control', sdk.nodeExecution.requestStop({ ...authority, capabilityId: factoryCapabilityId, executionId: forbiddenExecutionId }))).data.status.success, true);
   await assertBudget(factoryCapabilityId, 0n, 0n, 'Cancelled unsupported command releases pending budget');
+  const nativeCap = await execute('Native file Agent: issue two-run actual tool-call budget', sdk.host.issueCapability({ ...authority, actions: ['assign'], scope: 'control', maxUses: 2n, budgetAsset: 'TOOL_CALLS', maxBudget: 14n, expiresAtMs: Date.now() + 3600000 }));
+  assert.equal(nativeCap.data.status.success, true);
+  const nativeCapabilityId = created(nativeCap.data, '::remote_authority::RemoteCapability');
+  const fileGoals = [{ path: 'README.md', content: 'FractalMind: human-approved native goal\n' }, { path: 'RESULT.md', content: 'Measured by the Host file reader\n' }];
+  const nativeCommand = (files: typeof fileGoals, maxCalls: bigint) => signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: nativeCapabilityId, revocationVersion: 1n }, budget: { asset: 'TOOL_CALLS', amount: maxCalls }, payload: { task: JSON.stringify({ kind: 'ensure_text_files', files }), bounds: { paths: { 'file.read': ['.'], 'file.write': ['.'] }, max_calls: maxCalls.toString() } }, expiresAtMs: Date.now() + 300000 });
+  const native = await nativeCommand(fileGoals, 10n);
+  const nativeStopped = await nativeCommand([fileGoals[0], { path: 'after-stop.md', content: 'must not be written' }], 4n);
+  runtimeExecutionIds.push(await prepare(native, true), await prepare(nativeStopped, true));
+  const nativeSeed = decodeSuiPrivateKey(host.getSecretKey()).secretKey;
+  const deviceSeed = decodeSuiPrivateKey(desktop.getSecretKey()).secretKey;
+  let nativeFileAgentEvidence: Record<string, unknown>;
+  try {
+    const { stdout } = await promisify(execFile)('go', ['test', './cmd/envd', '-run', '^TestNativeChainFileAgentLive$', '-count=1', '-v'], {
+      cwd: fileURLToPath(new URL('../../../../runtime/fractalmind-envd/', import.meta.url)), timeout: 120000,
+      env: { ...process.env, FM_CHAIN_EXECUTION_TEST_SEED: bytesToHex(nativeSeed), FM_HOST_RESULT_ENCRYPTION_TEST_SECRET: bytesToHex(o.hostEncryptionSecret), FM_CHAIN_FILE_DEVICE_TEST_SEED: bytesToHex(deviceSeed), FM_CHAIN_FILE_AGENT_CASE: JSON.stringify({ RPC: process.env.FM_LOCALNET_RPC ?? 'http://127.0.0.1:29000', PackageID: sdk.client.packageId, Workspace: o.workspace, Command: native, StoppedCommand: nativeStopped }) },
+    });
+    assert.ok(stdout.includes('--- PASS: TestNativeChainFileAgentLive'));
+    const evidence = /FM_NATIVE_FILE_AGENT_EVIDENCE (.+)/.exec(stdout)?.[1];
+    assert.ok(evidence, 'Native file Agent must report actual effects, measurements and chain stop.');
+    nativeFileAgentEvidence = JSON.parse(evidence);
+    for (const [index, id] of (nativeFileAgentEvidence.recordIds as string[]).entries()) {
+      const record = await sdk.productRecord.decryptRecord(id, o.contentKey);
+      const plaintext = new TextDecoder().decode(record.plaintext);
+      assert.equal(JSON.parse(plaintext).response.execution_state, index === 0 ? 'succeeded' : 'cancelled');
+      runtimeRecords.push({ logicalId: 'command-' + bytesToHex(nodeCommandIntentHash(index === 0 ? native : nativeStopped)), plaintext });
+    }
+    console.log('Native file Agent PASS actual workspace goals, reader measurements, chain stop and factory restart restoration');
+  } finally { nativeSeed.fill(0); deviceSeed.fill(0); }
+  await assertBudget(nativeCapabilityId, 7n, 0n, 'Native Agent charges seven actual tool attempts and releases unused reservations');
   const pendingCap = await execute('Execution: issue authority for revoke-after-prepare check', sdk.host.issueCapability({ ...authority, actions: ['assign'], scope: 'control', maxUses: 1n, budgetAsset: 'MIST', maxBudget: 100n, expiresAtMs: Date.now() + 3600000 }));
   const pendingCapabilityId = created(pendingCap.data, '::remote_authority::RemoteCapability');
   const pendingCommand = await signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: pendingCapabilityId, revocationVersion: 1n }, budget: { asset: 'MIST', amount: 20n }, payload: { task: 'must not begin after Host revocation' }, expiresAtMs: Date.now() + 300000 });
   const pendingId = await prepare(pendingCommand);
-  return { capabilityId, limitedCapabilityId: limitedId, runtimeCapabilityId, factoryCapabilityId, executions: [firstId, secondId, thirdId, waitingId, stoppedId, ...runtimeExecutionIds], goChecks, budgetChecks, resultKeyEvidence, runtimeStoreChecks, productionFactoryEvidence, pendingStart: { ...authority, capabilityId: pendingCapabilityId, executionId: pendingId }, records: [{ logicalId, plaintext: new TextDecoder().decode(plaintext) }, { logicalId: unknownLogicalId, plaintext: new TextDecoder().decode(unknownPlaintext) }, { logicalId: stopLogicalId, plaintext: stopPlaintext }, ...runtimeRecords], checks: 'real chain reservation/checkpoints, budget settlement, command-scoped result keys, Go executor and production observation factory with synthetic subprocesses; bounded Agent execution and real metering pending' };
+  return { capabilityId, limitedCapabilityId: limitedId, runtimeCapabilityId, factoryCapabilityId, nativeCapabilityId, executions: [firstId, secondId, thirdId, waitingId, stoppedId, ...runtimeExecutionIds], goChecks, budgetChecks, resultKeyEvidence, runtimeStoreChecks, productionFactoryEvidence, nativeFileAgentEvidence, pendingStart: { ...authority, capabilityId: pendingCapabilityId, executionId: pendingId }, records: [{ logicalId, plaintext: new TextDecoder().decode(plaintext) }, { logicalId: unknownLogicalId, plaintext: new TextDecoder().decode(unknownPlaintext) }, { logicalId: stopLogicalId, plaintext: stopPlaintext }, ...runtimeRecords], checks: 'real chain budget/checkpoints, native bounded text-file goals, actual tool-call accounting and stop; generic model planning, command tools, financial metering and cloud deployment pending' };
 }
 
 /** Reconstruct the selected fixture budgets solely from their persisted chain
