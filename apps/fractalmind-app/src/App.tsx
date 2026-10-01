@@ -1,5 +1,14 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { normalizeProfile } from "./chain";
+import Welcome from "./Welcome";
+import {
+  BrandMark,
+  NavIcon,
+  TrustLadder,
+  Decisions,
+  OrganizationViews,
+} from "./V2Views";
+import { trustState } from "./v2-model";
 import { useChain } from "./use-chain";
 import { clockNow, memberStatus, navigation } from "./domain";
 import type {
@@ -9,10 +18,21 @@ import type {
   Navigation,
 } from "./domain";
 
-type Page = "workbench" | "okrs" | "hosts" | "agents" | "identity" | "settings";
+type Page =
+  | "workbench"
+  | "okrs"
+  | "hosts"
+  | "agents"
+  | "memory"
+  | "governance"
+  | "identity"
+  | "settings"
+  | "orgs"
+  | "network";
 type Translate = (zh: string, en: string) => string;
 const PROFILE_KEY = "fractalmind.app.public-connection.v1";
 const PREFERENCE_KEY = "fractalmind.app.appearance.v1";
+const DeviceAccess = lazy(() => import("./DeviceAccess"));
 const runLabels: Array<[string, string]> = [
   ["待启动", "Queued"],
   ["链上记录：运行中", "Chain record: running"],
@@ -50,8 +70,12 @@ const labels: Record<Page, [string, string]> = {
   okrs: ["OKR", "OKRs"],
   hosts: ["主机与算力", "Hosts & compute"],
   agents: ["团队与 Agents", "Team & Agents"],
-  identity: ["身份", "Identity"],
-  settings: ["设置", "Settings"],
+  memory: ["记忆与成果", "Memory & results"],
+  governance: ["治理与审批", "Governance & approvals"],
+  identity: ["我的身份", "My identity"],
+  settings: ["组织设置", "Organization settings"],
+  orgs: ["我的组织", "My organizations"],
+  network: ["开放网络", "Open network"],
 };
 const statusLabels: Record<Navigation["condition"], [string, string]> = {
   achieved: ["已人工验收", "Human accepted"],
@@ -162,6 +186,27 @@ const reasons: Record<string, [string, string]> = {
   ],
 };
 
+const pageIcons: Record<Page, string> = {
+  workbench: "home",
+  okrs: "target",
+  hosts: "server",
+  agents: "users",
+  memory: "book",
+  governance: "shield",
+  identity: "user",
+  settings: "sliders",
+  orgs: "layers",
+  network: "globe",
+};
+const navGroups: Array<{ label: [string, string]; pages: Page[] }> = [
+  {
+    label: ["组织", "Organization"],
+    pages: ["workbench", "okrs", "hosts", "agents", "memory", "governance"],
+  },
+  { label: ["个人", "You"], pages: ["identity", "settings"] },
+  { label: ["网络", "Network"], pages: ["orgs", "network"] },
+];
+
 export function App() {
   const [prefs, setPrefs] = useState(savedPreferences);
   const [profile, setProfile] = useState<ConnectionProfile | null>(
@@ -171,6 +216,12 @@ export function App() {
   const [focusId, setFocusId] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [okrFilter, setOkrFilter] = useState("all");
+  const [allFeatures, setAllFeatures] = useState(false);
+  const allDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (allFeatures) allDialog.current?.showModal();
+    else allDialog.current?.close();
+  }, [allFeatures]);
   const [wallMs, setWallMs] = useState(Date.now());
   const data = useChain(profile);
   const t: Translate = (zh, en) => (prefs.language === "zh" ? zh : en);
@@ -239,6 +290,7 @@ export function App() {
     } catch {}
   };
   const disconnect = () => {
+    setAllFeatures(false);
     setProfile(null);
     setFocusId("");
     setDetailId(null);
@@ -277,23 +329,44 @@ export function App() {
     setDetailId(to === "okrs" ? id : null);
     setPage(to);
   };
+  const selectOrganization = (id: string) => {
+    setDetailId(null);
+    setFocusId("");
+    setOkrFilter("all");
+    data.selectOrganization(id);
+  };
+  const contextHost = snapshot?.memberships.value?.find(
+    (member) => member.id === focus?.okr.membership_id,
+  );
+  const contextAgent = snapshot?.agents.value?.find(
+    (agent) => agent.id === focus?.okr.managed_agent,
+  );
+  const navButton = (id: Page) => (
+    <button
+      key={id}
+      aria-current={page === id ? "page" : undefined}
+      onClick={() => {
+        setPage(id);
+        if (id !== "okrs") setDetailId(null);
+        setAllFeatures(false);
+      }}
+    >
+      <NavIcon name={pageIcons[id]} />
+      {t(...labels[id])}
+    </button>
+  );
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark">◈</span> FractalMind <small>Alpha</small>
+          <BrandMark /> FractalMind <small>Alpha</small>
         </div>
         <label className="org-select">
           <span>{t("当前组织", "Current organization")}</span>
           <select
             aria-label={t("切换组织", "Switch organization")}
             value={data.organizationId}
-            onChange={(e) => {
-              setDetailId(null);
-              setFocusId("");
-              setOkrFilter("all");
-              data.selectOrganization(e.target.value);
-            }}
+            onChange={(e) => selectOrganization(e.target.value)}
           >
             {data.identity?.organizations.map((org) => (
               <option key={org.objectId} value={org.objectId}>
@@ -304,30 +377,11 @@ export function App() {
           </select>
         </label>
         <nav aria-label={t("主导航", "Main navigation")}>
-          {(Object.keys(labels) as Page[]).map((id) => (
-            <button
-              key={id}
-              aria-current={page === id ? "page" : undefined}
-              onClick={() => {
-                setPage(id);
-                if (id !== "okrs") setDetailId(null);
-              }}
-            >
-              <span>
-                {id === "workbench"
-                  ? "⌁"
-                  : id === "okrs"
-                    ? "◎"
-                    : id === "hosts"
-                      ? "▤"
-                      : id === "agents"
-                        ? "♧"
-                        : id === "identity"
-                          ? "◉"
-                          : "⚙"}
-              </span>
-              {t(...labels[id])}
-            </button>
+          {navGroups.map((group) => (
+            <div className="nav-group" key={group.label[1]}>
+              <span className="nav-group-label">{t(...group.label)}</span>
+              {group.pages.map(navButton)}
+            </div>
           ))}
         </nav>
         <div className="sidebar-foot">
@@ -353,6 +407,9 @@ export function App() {
             <h1>{t(...labels[page])}</h1>
           </div>
           {appearance}
+          <button className="all-features" onClick={() => setAllFeatures(true)}>
+            {t("全部功能", "All features")}
+          </button>
           <button
             aria-label={t("刷新链上数据", "Refresh chain data")}
             disabled={data.busy}
@@ -361,17 +418,43 @@ export function App() {
             {data.busy ? t("同步中…", "Syncing…") : t("刷新", "Refresh")}
           </button>
         </header>
-        <div className="context">
-          <span className="badge">
-            {data.identity
-              ? t("真实链数据", "Live chain data")
-              : t("连接待核对", "Connection unverified")}
-          </span>
-          <span>{short(data.identity?.human.id)}</span>
+        <div
+          className="context"
+          aria-label={t("运行上下文", "Execution context")}
+        >
           <span>
-            {t("未登录 · 无签名权限", "Not signed in · no signing authority")}
+            <small>{t("工作区", "Workspace")}</small>
+            <strong>
+              {focus
+                ? t("约定正文待解锁", "Agreement body locked")
+                : t("未选择 OKR", "No OKR selected")}
+            </strong>
           </span>
           <span>
+            <small>{t("执行主机", "Execution Host")}</small>
+            <strong>
+              {short(contextHost?.host_address)} ·{" "}
+              {t("在线状态未知", "Connectivity unknown")}
+            </strong>
+          </span>
+          <span>
+            <small>{t("Agent 与模型", "Agent & model")}</small>
+            <strong>
+              {contextAgent?.instance_id ?? "—"} ·{" "}
+              {contextAgent?.runtime ?? "—"}
+            </strong>
+            <small>{t("模型配置待读取", "Model configuration not read")}</small>
+          </span>
+          <span>
+            <small>{t("本设备权限", "This device's authority")}</small>
+            <strong>
+              {t(
+                "未核验 · 公开只读入口",
+                "Unverified · public read-only entry",
+              )}
+            </strong>
+          </span>
+          <span className="context-snapshot">
             {snapshot
               ? `${t("快照", "Snapshot")} ${new Date(snapshot.loadedAtMs).toLocaleTimeString()}`
               : t("尚无快照", "No snapshot")}
@@ -419,6 +502,40 @@ export function App() {
         )}
         {page === "workbench" && snapshot && (
           <>
+            <Decisions
+              snapshot={snapshot}
+              now={now}
+              reachable={data.reachable}
+              t={t}
+              open={(id) => goOkr(id, "okrs")}
+            />
+            <div className="section-heading">
+              <h2>{t("进行中的目标", "Goals in progress")}</h2>
+              <button onClick={() => setPage("okrs")}>
+                {t("查看全部 OKR", "View all OKRs")} →
+              </button>
+            </div>
+            <div className="goal-strip">
+              {okrs
+                ?.filter((row) => row.okr.state === 1)
+                .map((row) => (
+                  <button
+                    key={row.okr.id}
+                    aria-pressed={focus?.okr.id === row.okr.id}
+                    onClick={() => setFocusId(row.okr.id)}
+                  >
+                    <strong>{row.okr.logical_id}</strong>
+                    <small>
+                      {t("已验证 KR", "Verified KRs")}{" "}
+                      {
+                        row.okr.metrics.filter((metric) => metric.verified)
+                          .length
+                      }
+                      /{row.okr.metrics.length}
+                    </small>
+                  </button>
+                ))}
+            </div>
             <div className="section-heading">
               <div>
                 <h2>{t("运行导航", "Run navigation")}</h2>
@@ -621,7 +738,142 @@ export function App() {
           </>
         )}
         {page === "identity" && data.identity && (
-          <IdentityView identity={data.identity} wallMs={wallMs} t={t} />
+          <>
+            <Suspense
+              fallback={
+                <p>{t("加载设备核验…", "Loading device verification…")}</p>
+              }
+            >
+              <DeviceAccess
+                key={JSON.stringify([
+                  profile,
+                  data.identity.human.generation,
+                  data.identity.grants.value?.map((grant) => [
+                    grant.id,
+                    grant.version,
+                    grant.revoked,
+                  ]),
+                ])}
+                profile={{
+                  ...profile,
+                  chainIdentifier: data.identity.chainIdentifier,
+                }}
+                grants={data.identity.grants.value}
+                t={t}
+              />
+            </Suspense>
+            <IdentityView identity={data.identity} wallMs={wallMs} t={t} />
+          </>
+        )}
+        {page === "orgs" && data.identity && (
+          <OrganizationViews
+            organizations={data.identity.organizations}
+            current={data.organizationId}
+            select={selectOrganization}
+            t={t}
+          />
+        )}
+        {page === "memory" && snapshot && (
+          <>
+            <h2>{t("已验收成果", "Accepted results")}</h2>
+            <p className="muted">
+              {t(
+                "仅展示有独立人工验收记录的链上成果；记忆正文与版本管理尚未接入。",
+                "Only chain results with a separate human acceptance record are shown. Memory bodies and version management are not integrated yet.",
+              )}
+            </p>
+            {!okrs ? (
+              <ReadFailure t={t} />
+            ) : (
+              <>
+                {okrs
+                  .filter(
+                    (row) =>
+                      row.okr.state === 3 &&
+                      row.okr.acceptance_record &&
+                      row.okr.accepted_by_human,
+                  )
+                  .map((row) => (
+                    <div className="panel" key={row.okr.id}>
+                      <h3>{row.okr.logical_id}</h3>
+                      <TrustLadder level="accepted" t={t} />
+                      <p>
+                        {t("验收记录", "Acceptance record")}:{" "}
+                        <code className="long-id">
+                          {row.okr.acceptance_record}
+                        </code>
+                      </p>
+                      <button onClick={() => goOkr(row.okr.id, "okrs")}>
+                        {t("查看成果与证据", "View result and evidence")} →
+                      </button>
+                    </div>
+                  ))}
+                {!okrs.some(
+                  (row) =>
+                    row.okr.state === 3 &&
+                    row.okr.acceptance_record &&
+                    row.okr.accepted_by_human,
+                ) && (
+                  <div className="panel">
+                    {t(
+                      "已读取的 OKR 中暂无已验收成果。",
+                      "No accepted results in the OKRs read.",
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
+        {page === "governance" && (
+          <>
+            {snapshot && (
+              <Decisions
+                snapshot={snapshot}
+                now={now}
+                reachable={data.reachable}
+                t={t}
+                open={(id) => goOkr(id, "okrs")}
+              />
+            )}
+            <div className="panel">
+              <h2>{t("权限与审批", "Authority & approvals")}</h2>
+              <p>
+                {t(
+                  "可用操作 = 组织角色 × 设备授权 × 数据访问。完整审批请求、角色与数据密钥尚未接入，不将授权记录直接视作本设备权限。",
+                  "Available actions = organization role × device grant × data access. Full approval requests, roles and data keys are not connected; a grant record alone is not this device's authority.",
+                )}
+              </p>
+              <button onClick={() => setPage("identity")}>
+                {t("查看身份与设备授权", "View identity and device grants")} →
+              </button>
+            </div>
+          </>
+        )}
+        {page === "network" && (
+          <div className="panel">
+            <NavIcon name="globe" />
+            <h2>{t("开放网络", "Open network")}</h2>
+            <p>
+              {t(
+                "通过分形、自相似的 Agent 组织，走向一个没有人能独占的 ASI。",
+                "Through fractal, self-similar agent organizations, toward an ASI that no one owns.",
+              )}
+            </p>
+            <p className="muted">
+              {t(
+                "公开组织目录与联邦协作属于后续阶段，当前没有发起网络查询。",
+                "The public organization directory and federation collaboration are future stages. No network directory query has been made.",
+              )}
+            </p>
+            <button onClick={() => setPage("orgs")}>
+              {t(
+                "查看我的组织与成长路径",
+                "View my organizations and growth path",
+              )}{" "}
+              →
+            </button>
+          </div>
         )}
         {page === "settings" && (
           <div className="panel">
@@ -677,173 +929,54 @@ export function App() {
         className="mobile-nav"
         aria-label={t("移动导航", "Mobile navigation")}
       >
-        {(
-          [
-            "workbench",
-            "okrs",
-            "hosts",
-            "agents",
-            "identity",
-            "settings",
-          ] as Page[]
-        ).map((id) => (
-          <button
-            aria-current={page === id ? "page" : undefined}
-            key={id}
-            onClick={() => {
-              setPage(id);
-              setDetailId(null);
-            }}
-          >
-            {id === "hosts"
-              ? t("主机", "Hosts")
-              : id === "agents"
-                ? "Agents"
-                : t(...labels[id])}
-          </button>
-        ))}
+        {(["workbench", "okrs", "hosts", "orgs", "settings"] as Page[]).map(
+          (id) => (
+            <button
+              aria-current={page === id ? "page" : undefined}
+              key={id}
+              onClick={() => {
+                setPage(id);
+                setDetailId(null);
+              }}
+            >
+              <NavIcon name={pageIcons[id]} />
+              {id === "hosts"
+                ? t("主机", "Hosts")
+                : id === "settings"
+                  ? t("设置", "Settings")
+                  : t(...labels[id])}
+            </button>
+          ),
+        )}
       </nav>
+      <dialog
+        ref={allDialog}
+        className="features-sheet"
+        aria-label={t("全部功能", "All features")}
+        onCancel={() => setAllFeatures(false)}
+        onClose={() => setAllFeatures(false)}
+      >
+        <div className="section-heading">
+          <h2>{t("全部功能", "All features")}</h2>
+          <button autoFocus onClick={() => setAllFeatures(false)}>
+            {t("关闭", "Close")}
+          </button>
+        </div>
+        {navGroups.map((group) => (
+          <nav
+            className="nav-group"
+            key={group.label[1]}
+            aria-label={t(...group.label)}
+          >
+            <span className="nav-group-label">{t(...group.label)}</span>
+            {group.pages.map(navButton)}
+          </nav>
+        ))}
+      </dialog>
     </div>
   );
 }
 
-function Welcome({
-  t,
-  appearance,
-  connect,
-}: {
-  t: Translate;
-  appearance: React.ReactNode;
-  connect: (profile: ConnectionProfile) => void;
-}) {
-  const [text, setText] = useState("");
-  const [error, setError] = useState(false);
-  return (
-    <div className="welcome">
-      <header>
-        <div className="brand">
-          <span className="brand-mark">◈</span> FractalMind
-        </div>
-        {appearance}
-      </header>
-      <main>
-        <span className="eyebrow">
-          {t(
-            "统一入口 · 自主执行 · 人掌握方向",
-            "One entry · autonomous execution · human direction",
-          )}
-        </span>
-        <h1>
-          {t(
-            "把目标交给 Agent，\n把方向握在手里。",
-            "Give Agents your goals.\nStay in control of the direction.",
-          )}
-        </h1>
-        <p>
-          {t(
-            "在同一入口管理组织、主机和 Agent，查看真实进展、边界和证据。",
-            "Manage organizations, Hosts and Agents in one place. See real progress, boundaries and evidence.",
-          )}
-        </p>
-        <div className="card-grid">
-          <div className="panel">
-            <h3>{t("创建我的身份", "Create my identity")}</h3>
-            <p>
-              {t(
-                "独立设备密钥、恢复码和首次运行费。",
-                "Independent device key, recovery code and first transaction funds.",
-              )}
-            </p>
-            <button disabled>
-              {t("安全签名接线中", "Secure signing integration pending")}
-            </button>
-          </div>
-          <div className="panel">
-            <h3>{t("已有身份", "Existing identity")}</h3>
-            <p>
-              {t(
-                "新设备需独立授权；Host 邀请不用于登录。",
-                "New devices need their own grant; Host invites are not sign-in.",
-              )}
-            </p>
-            <button disabled>
-              {t("设备配对接线中", "Device pairing integration pending")}
-            </button>
-          </div>
-          <div className="panel">
-            <h3>{t("使用恢复码", "Use recovery code")}</h3>
-            <p>
-              {t(
-                "恢复稳定身份并使旧设备失效。",
-                "Recover the stable Human and invalidate old devices.",
-              )}
-            </p>
-            <button disabled>
-              {t("恢复界面接线中", "Recovery UI integration pending")}
-            </button>
-          </div>
-        </div>
-        <details open className="panel">
-          <summary>
-            {t(
-              "开发预览：只读链上浏览",
-              "Development preview: read-only chain browser",
-            )}
-          </summary>
-          <p>
-            {t(
-              "粘贴公开连接资料以读取真实组织与 OKR；这不是登录，不获得权限，也不导入私钥或恢复码。",
-              "Paste a public connection profile to read real organizations and OKRs. This is not sign-in, grants no authority, and imports no private key or recovery code.",
-            )}
-          </p>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              try {
-                connect(normalizeProfile(JSON.parse(text)));
-                setError(false);
-              } catch {
-                setError(true);
-              }
-            }}
-          >
-            <label>
-              {t("公开连接资料 JSON", "Public connection profile JSON")}
-              <textarea
-                aria-label={t(
-                  "公开连接资料 JSON",
-                  "Public connection profile JSON",
-                )}
-                value={text}
-                onChange={(event) => setText(event.target.value)}
-                placeholder={
-                  '{"network":"localnet","rpcUrl":"http://127.0.0.1:29000","packageId":"0x…","registryId":"0x…","humanId":"0x…"}'
-                }
-              />
-            </label>
-            {error && (
-              <p role="alert">
-                {t(
-                  "连接资料格式错误，请核对端点、网络和完整对象 ID。",
-                  "Invalid profile. Check the endpoint, network and full object IDs.",
-                )}
-              </p>
-            )}
-            <button className="primary">
-              {t("读取真实链上数据", "Read live chain data")}
-            </button>
-          </form>
-        </details>
-      </main>
-      <footer>
-        {t(
-          "Alpha · 身份、执行和对话功能继续接线",
-          "Alpha · identity, execution and conversation integration continues",
-        )}
-      </footer>
-    </div>
-  );
-}
 function ReadFailure({ t }: { t: Translate }) {
   return (
     <div className="panel warn" role="status">
@@ -914,31 +1047,11 @@ function MapView({
   t: Translate;
   onDetails: () => void;
 }) {
-  const [narrow, setNarrow] = useState(
-    () => matchMedia("(max-width: 760px)").matches,
-  );
-  useEffect(() => {
-    const media = matchMedia("(max-width: 760px)");
-    const update = () => setNarrow(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
   const { okr } = focus;
-  const height = narrow ? (okr.metrics.length === 3 ? 450 : 420) : 360;
-  const start = narrow ? { x: 70, y: 65 } : { x: 70, y: 250 };
-  const end = narrow ? { x: 265, y: height - 70 } : { x: 935, y: 240 };
+  const height = 360;
+  const start = { x: 70, y: 250 };
+  const end = { x: 935, y: 240 };
   const krPoints = okr.metrics.map((_, i) => {
-    if (narrow)
-      return {
-        x: okr.metrics.length === 1 ? 180 : i % 2 === 0 ? 135 : 230,
-        y:
-          okr.metrics.length === 1
-            ? 200
-            : 120 +
-              ((110 * i) / (okr.metrics.length - 1)) *
-                (okr.metrics.length === 3 ? 1.5 : 1),
-      };
     return {
       x:
         okr.metrics.length === 1
@@ -995,8 +1108,45 @@ function MapView({
             : `${t("实测", "Measured")} ${Math.round(nav.progress * 100)}%`}
         </span>
       </div>
+      <ol className="route-strip" aria-label={t("OKR 路线", "OKR route")}>
+        <li>{t("出发", "Start")}</li>
+        {okr.metrics.map((metric, i) => (
+          <li key={i}>
+            <button onClick={onDetails}>
+              <strong>KR{i + 1}</strong>
+              <span>
+                {metric.verified
+                  ? t("已验证", "Verified")
+                  : nav.metricProgress[i] === null
+                    ? t("当前实测未知", "Current measurement unknown")
+                    : `${Math.round(nav.metricProgress[i]! * 100)}%`}
+              </span>
+            </button>
+            <TrustLadder
+              {...{
+                level: acceptedCheckpoint
+                  ? "accepted"
+                  : metric.verified
+                    ? "verified"
+                    : nav.metricProgress[i] !== null
+                      ? "measured"
+                      : null,
+                stale:
+                  metric.current !== null && nav.metricProgress[i] === null,
+              }}
+              t={t}
+            />
+          </li>
+        ))}
+        <li className={acceptedCheckpoint ? "accepted" : ""}>
+          {t("人工验收终点", "Human acceptance")} ·{" "}
+          {acceptedCheckpoint
+            ? t("已验收", "Accepted")
+            : t("尚未验收", "Not accepted")}
+        </li>
+      </ol>
       <svg
-        viewBox={`0 0 ${narrow ? 360 : 1040} ${height}`}
+        viewBox={`0 0 1040 ${height}`}
         role="img"
         aria-label={t(
           "绿色为已验证路线，蓝色为实测位置，虚线为计划",
@@ -1013,13 +1163,9 @@ function MapView({
             <path d="M36 0H0V36" className="map-grid" fill="none" />
           </pattern>
         </defs>
-        <rect width={narrow ? 360 : 1040} height={height} fill="url(#grid)" />
+        <rect width={1040} height={height} fill="url(#grid)" />
         <path
-          d={
-            narrow
-              ? `M20 20Q60 100 25 ${height - 20}M335 30Q290 160 335 ${height - 10}`
-              : "M60 80Q180 30 350 55T960 75M30 310Q200 280 430 320T1000 300"
-          }
+          d="M60 80Q180 30 350 55T960 75M30 310Q200 280 430 320T1000 300"
           className="contour"
           fill="none"
         />
@@ -1089,7 +1235,7 @@ function MapView({
           height="40"
           rx="12"
           className={
-            nav.condition === "achieved" ? "verified-node" : "planned-node"
+            nav.condition === "achieved" ? "accepted-node" : "planned-node"
           }
         />
         <text x={end.x} y={end.y + 6} textAnchor="middle" className="node-text">
@@ -1109,11 +1255,13 @@ function MapView({
           cy={position.y}
           r="12"
           className={
-            acceptedCheckpoint || allVerified
-              ? "verified-position"
-              : nav.condition === "unknown" || !hasMeasurement
-                ? "unknown-position"
-                : "current-position"
+            acceptedCheckpoint
+              ? "accepted-position"
+              : allVerified
+                ? "verified-position"
+                : nav.condition === "unknown" || !hasMeasurement
+                  ? "unknown-position"
+                  : "current-position"
           }
         />
         <text
@@ -1128,6 +1276,7 @@ function MapView({
       <div className="legend">
         <span>● {t("已验证", "Verified")}</span>
         <span>● {t("实测，非验收", "Measured, not accepted")}</span>
+        <span>◆ {t("已验收", "Accepted")}</span>
         <span>┄ {t("计划路线", "Planned route")}</span>
       </div>
       <p className="muted">
@@ -1265,6 +1414,7 @@ function OkrDetails({
                   : t("未验证", "Unverified")}
               </span>
               <h3>KR{i + 1}</h3>
+              <TrustLadder {...trustState(okr, i, now)} t={t} />
               <dl>
                 <dt>
                   {t("基线 / 实测 / 目标", "Baseline / measured / target")}
@@ -1493,8 +1643,8 @@ function IdentityView({
         <code className="long-id">{identity.human.id}</code>
         <p>
           {t(
-            "公开标识用于定位记录，不能证明你持有该身份。此 App 未登录，不能读取加密正文或进行管理操作。",
-            "The public ID locates a record; it is not proof of possession. This App is not signed in and cannot decrypt private bodies or manage the identity.",
+            "公开标识用于定位记录，不能证明你持有该身份。设备核验仅证明选定授权，当前界面尚未开启正文解密与管理操作。",
+            "The public ID locates a record; it is not proof of possession. Device verification proves the selected grant. Private-body decryption and management actions are not enabled in this view yet.",
           )}
         </p>
         <dl>

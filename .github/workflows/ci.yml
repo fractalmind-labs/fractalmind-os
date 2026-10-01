@@ -402,6 +402,42 @@ jobs:
         run: npm run build
         working-directory: apps/fractalmind-app
 
+  fractalmind-app-native:
+    name: FractalMind device core (${{ matrix.os }})
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.node), 'apps/fractalmind-app')
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Format native device core
+        run: cargo fmt --manifest-path apps/fractalmind-app/native/Cargo.toml -- --check
+      - name: Test native device core without user credentials
+        run: cargo test --locked --manifest-path apps/fractalmind-app/native/Cargo.toml
+      - uses: actions/setup-node@v4
+        if: matrix.os == 'macos-latest'
+        with:
+          node-version: 22
+      - name: Build SDK for macOS desktop shell
+        if: matrix.os == 'macos-latest'
+        working-directory: protocols/fractalmind-protocol/sdk
+        run: |
+          npm ci
+          npm run build
+      - name: Build and test macOS desktop shell
+        if: matrix.os == 'macos-latest'
+        working-directory: apps/fractalmind-app
+        run: |
+          npm ci
+          npm run desktop:build -- --debug
+          cargo test --locked --manifest-path src-tauri/Cargo.toml
+
   explorer:
     name: Explorer
     needs: changes
@@ -542,6 +578,7 @@ jobs:
       - skills-structure
       - agent-console
       - fractalmind-app
+      - fractalmind-app-native
       - explorer
       - docs
       - sdk

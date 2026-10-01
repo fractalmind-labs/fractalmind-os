@@ -7,15 +7,19 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "node --import tsx --test tests/*.test.ts"
+    "test": "node --import tsx --test tests/*.test.ts",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build --no-bundle"
   },
   "dependencies": {
     "@fractalmind-labs/fractalmind-sdk": "file:../../protocols/fractalmind-protocol/sdk",
     "@mysten/sui": "2.33.1",
+    "@tauri-apps/api": "2.12.1",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "2.12.1",
     "@types/node": "20.19.38",
     "@types/react": "18.3.31",
     "@types/react-dom": "18.3.7",

@@ -193,3 +193,56 @@ test("expiry and replanning do not resolve unknown side effects from an earlier 
   assert.equal(result.boundary, "invalid");
   assert.equal(result.latest!.run.id, pending.run.id);
 });
+
+test("v2 decision inbox keeps unknown side effects ahead of budget or verification", async () => {
+  const { decisionFacts } = await import("../src/v2-model");
+  const f = fixture();
+  f.focus.executions.value = [f.run(4)];
+  f.focus.budget.value!.reserved = 18n;
+  const facts = decisionFacts(f.snapshot, 1000n, true);
+  assert.equal(facts.unavailable, null);
+  assert.equal(facts.items.length, 1);
+  assert.equal(facts.items[0].nav.reason, "execution_outcome_unknown");
+  assert.equal(f.focus.budget.value!.reserved, 18n);
+  assert.equal(
+    decisionFacts(f.snapshot, 1000n, false).unavailable,
+    "connection",
+  );
+  f.snapshot.okrs.value = null;
+  assert.equal(decisionFacts(f.snapshot, 1000n, true).unavailable, "okrs");
+});
+
+test("v2 trust ladder separates fresh measurements, historical verification and independent acceptance", async () => {
+  const { trustState } = await import("../src/v2-model");
+  const f = fixture();
+  assert.deepEqual(trustState(f.focus.okr, 0, 1000n), {
+    level: "measured",
+    stale: false,
+  });
+  assert.deepEqual(trustState(f.focus.okr, 0, 2001n), {
+    level: null,
+    stale: true,
+  });
+  assert.deepEqual(trustState(f.focus.okr, 0, 999n), {
+    level: null,
+    stale: true,
+  });
+  f.metric.verified = true;
+  assert.deepEqual(trustState(f.focus.okr, 0, 2001n), {
+    level: "verified",
+    stale: true,
+  });
+  f.focus.okr.state = 3;
+  assert.equal(trustState(f.focus.okr, 0, 1000n).level, "verified");
+  f.focus.okr.acceptance_record = "acceptance";
+  assert.equal(trustState(f.focus.okr, 0, 1000n).level, "verified");
+  f.focus.okr.accepted_by_human = "human";
+  assert.equal(trustState(f.focus.okr, 0, 1000n).level, "accepted");
+  f.metric.current = null as unknown as string;
+  f.metric.verified = false;
+  f.focus.okr.state = 1;
+  assert.deepEqual(trustState(f.focus.okr, 0, 1000n), {
+    level: null,
+    stale: false,
+  });
+});

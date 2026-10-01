@@ -1,0 +1,7 @@
+{
+  "identifier": "device-main",
+  "description": "Bounded device operations for the bundled main App only.",
+  "windows": ["main"],
+  "local": true,
+  "permissions": ["device-access"]
+}

@@ -7,17 +7,20 @@ export default defineConfig({
     {
       name: "production-csp",
       apply: "build",
-      transformIndexHtml: () => [
-        {
-          tag: "meta",
-          attrs: {
-            "http-equiv": "Content-Security-Policy",
-            content:
-              "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https: http://127.0.0.1:* http://localhost:* http://[::1]:*; img-src 'self' data:; object-src 'none'; base-uri 'none'",
-          },
-          injectTo: "head-prepend",
-        },
-      ],
+      transformIndexHtml: () =>
+        process.env.TAURI_ENV_PLATFORM
+          ? []
+          : [
+              {
+                tag: "meta",
+                attrs: {
+                  "http-equiv": "Content-Security-Policy",
+                  content:
+                    "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https: http://127.0.0.1:* http://localhost:* http://[::1]:*; img-src 'self' data:; object-src 'none'; frame-src 'none'; base-uri 'none'",
+                },
+                injectTo: "head-prepend",
+              },
+            ],
     },
   ],
   base: "./",

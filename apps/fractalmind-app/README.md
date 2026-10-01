@@ -1,8 +1,10 @@
 # FractalMind App
 
 React + TypeScript client for the unified FractalMind entry point. This is an
-implementation in progress, separate from the static product prototypes under
-`docs/product`. The current client reads real Sui data directly through the
+implementation in progress whose authoritative interface baseline is
+[prototype v2](../../docs/product/fractalmind-app-prototype-v2/README.md).
+The static prototype supplies the product design; this client supplies real
+chain/native integrations. v1 is not an implementation reference. The current client reads real Sui data directly through the
 production SDK and gRPC/Core API. It does not use a business backend.
 
 ## Run locally
@@ -34,19 +36,21 @@ CSP restricting scripts and styles to this origin; development uses Vite HMR.
 ## Public read-only connection
 
 The welcome page's development preview accepts a public profile for an existing
-deployment. Supply the full package, identity registry and Human object IDs:
+deployment. Supply the full package, ProtocolRegistry and Human object IDs:
 
 ```json
 {
   "network": "localnet",
   "rpcUrl": "http://127.0.0.1:29000",
   "packageId": "<full deployed package ID>",
-  "registryId": "<full identity registry ID>",
+  "registryId": "<full ProtocolRegistry ID>",
   "humanId": "<full Human object ID>"
 }
 ```
 
 For an upgraded package, also supply `originalPackageId` if required by the SDK.
+The SDK resolves the IdentityRegistry through the ProtocolRegistry's private
+dynamic-field binding; the two registry IDs are not interchangeable.
 The session verifies the identity's registry/network and pins the actual chain
 identifier; the public connection cache keeps that identifier across reloads.
 Remote endpoints must use HTTPS and cannot contain credentials, queries or
@@ -54,12 +58,28 @@ fragments. Only the allowlisted public fields are retained.
 
 This profile is **not login**. It cannot sign commands, unlock encrypted product
 bodies or grant authority. Do not paste private keys or recovery codes. Identity
-creation, device pairing and recovery buttons remain disabled until secure
-signing is integrated.
+creation, device pairing and recovery choices explain their pending integration;
+they cannot submit transactions or accept recovery secrets yet.
 
 ## Current behavior
 
-- Workbench: factual OKR route, verified checkpoints, fresh measured progress,
+The desktop development shell uses Tauri with a native device vault. From this
+directory run `npm run desktop:dev`, or `npm run desktop:build -- --debug` for a
+bundled-assets debug executable. These are development artifacts, not signed
+five-platform releases. The identity page can explicitly load/prepare a device
+and prove its possession against a current chain grant. New devices still need
+an existing trusted device's on-chain authorization; a public profile cannot
+authorize one. Private-body access and management controls remain pending.
+
+The native vault keeps independent signing/encryption private keys in the OS
+credential store, never in the WebView. macOS real-Keychain/signature/localnet
+evidence, transport limits and test instructions are documented in
+[native device verification](../../docs/product/v020-app-native-device.md).
+
+- V2 shell: neutral/iris light and dark tokens, fractal brand and mission welcome,
+  ten grouped desktop entries, persistent execution context and organization growth
+  path. Mobile uses five tabs plus an All features bottom drawer and a route strip.
+- Workbench: decisions first, then objectives and factual OKR route; verified checkpoints, fresh measured progress,
   separate human acceptance, execution state and global budget/reservations.
 - OKRs: lifecycle list/filter, details, immutable observation history, Run
   provenance and independent final acceptance record. Titles/units remain locked
@@ -101,9 +121,12 @@ node --import tsx scripts/localnet-read.ts /tmp/deployment-report.json /tmp/app-
 
 See [v0.2.0 validation](../../docs/product/fractalmind-app-v020-validation.md) for
 actual public evidence and browser screenshots. Unit tests and the public reader
-do not prove full v0.2.0 acceptance. Secure identity/key storage/signing, encrypted
-body access, fees and approval UI, dialogue/intervention, sustained autonomous
+do not prove full v0.2.0 acceptance. Complete native identity/onboarding and
+authorized encrypted-body access, fees and approval UI, dialogue/intervention, sustained autonomous
 execution, a real cloud Host and native platform validation remain required.
 
 The production bundle currently emits a large-chunk warning. Loading and bundle
 splitting still need performance work before release.
+
+Interface mapping, actual v2 walk-through evidence and remaining integration gates:
+[v2 baseline](../../docs/product/v020-app-v2-baseline.md).

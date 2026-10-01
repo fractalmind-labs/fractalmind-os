@@ -1,0 +1,216 @@
+import { Ed25519PublicKey } from "@mysten/sui/keypairs/ed25519";
+import { fromBase64, toBase64 } from "@mysten/sui/utils";
+import {
+  verifyPersonalMessageSignature,
+  verifyTransactionSignature,
+} from "@mysten/sui/verify";
+
+/** The host supplies this transport. No service name, secret export, shell or
+ * file path is accepted from the WebView. Possession is not chain authority. */
+export type NativeDeviceCommand =
+  | "fm_device_public"
+  | "fm_device_initialize"
+  | "fm_device_sign_transaction"
+  | "fm_device_prove";
+export type NativeInvoke = (
+  command: NativeDeviceCommand,
+  args: Record<string, string>,
+) => Promise<unknown>;
+export type DevicePublic = Readonly<{
+  format: 1;
+  profile: string;
+  address: string;
+  signingPublicKey: string;
+  encryptionPublicKey: string;
+}>;
+export class NativeDeviceError extends Error {
+  constructor(
+    public readonly code:
+      | "invalid_profile"
+      | "invalid_response"
+      | "native_unavailable"
+      | "not_initialized"
+      | "invalid_transaction"
+      | "invalid_proof",
+  ) {
+    super(code);
+    this.name = "NativeDeviceError";
+  }
+}
+const id = /^0x[0-9a-f]{64}$/;
+const profilePattern = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
+function profileCheck(profile: string) {
+  if (!profilePattern.test(profile))
+    throw new NativeDeviceError("invalid_profile");
+}
+function object(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new NativeDeviceError("invalid_response");
+  return value as Record<string, unknown>;
+}
+function decode(value: unknown, length: number): Uint8Array {
+  if (typeof value !== "string" || value.length !== Math.ceil(length / 3) * 4)
+    throw new NativeDeviceError("invalid_response");
+  try {
+    const bytes = fromBase64(value);
+    if (bytes.length !== length || toBase64(bytes) !== value) throw new Error();
+    return bytes;
+  } catch {
+    throw new NativeDeviceError("invalid_response");
+  }
+}
+function publicResult(value: unknown, profile: string): DevicePublic {
+  const result = object(value);
+  const pub = new Ed25519PublicKey(decode(result.signingPublicKey, 32));
+  decode(result.encryptionPublicKey, 32);
+  if (
+    result.format !== 1 ||
+    result.profile !== profile ||
+    typeof result.address !== "string" ||
+    !id.test(result.address) ||
+    pub.toSuiAddress() !== result.address
+  )
+    throw new NativeDeviceError("invalid_response");
+  return Object.freeze({
+    format: 1,
+    profile,
+    address: result.address,
+    signingPublicKey: result.signingPublicKey as string,
+    encryptionPublicKey: result.encryptionPublicKey as string,
+  });
+}
+async function call(
+  invoke: NativeInvoke,
+  command: NativeDeviceCommand,
+  args: Record<string, string>,
+) {
+  try {
+    return await invoke(command, args);
+  } catch (error) {
+    const code =
+      typeof error === "string"
+        ? error
+        : error instanceof Error
+          ? error.message
+          : "";
+    if (code === "NotInitialized")
+      throw new NativeDeviceError("not_initialized");
+    throw new NativeDeviceError("native_unavailable");
+  }
+}
+
+/** Loading never initializes or replaces a missing/locked device key. The
+ * caller must explicitly choose initialization as a separate user action. */
+export class NativeDeviceSigner {
+  private constructor(
+    private readonly invoke: NativeInvoke,
+    readonly device: DevicePublic,
+  ) {}
+  static async load(invoke: NativeInvoke, profile: string) {
+    profileCheck(profile);
+    return new NativeDeviceSigner(
+      invoke,
+      publicResult(
+        await call(invoke, "fm_device_public", { profile }),
+        profile,
+      ),
+    );
+  }
+  static async initialize(invoke: NativeInvoke, profile: string) {
+    profileCheck(profile);
+    return new NativeDeviceSigner(
+      invoke,
+      publicResult(
+        await call(invoke, "fm_device_initialize", { profile }),
+        profile,
+      ),
+    );
+  }
+  getPublicKey() {
+    return new Ed25519PublicKey(decode(this.device.signingPublicKey, 32));
+  }
+  async signTransaction(
+    bytes: Uint8Array,
+  ): Promise<{ bytes: string; signature: string }> {
+    if (
+      !(bytes instanceof Uint8Array) ||
+      bytes.length === 0 ||
+      bytes.length > 1024 * 1024
+    )
+      throw new NativeDeviceError("invalid_transaction");
+    // Snapshot caller bytes before crossing an asynchronous native boundary.
+    const input = new Uint8Array(bytes),
+      encoded = toBase64(input);
+    return this.checkedSignature(
+      await call(this.invoke, "fm_device_sign_transaction", {
+        profile: this.device.profile,
+        bytes: encoded,
+      }),
+      encoded,
+      async (signature) => {
+        await verifyTransactionSignature(input, signature, {
+          address: this.device.address,
+        });
+      },
+    );
+  }
+  async proveDevice(
+    input: {
+      chainIdentifier: string;
+      humanId: string;
+      grantId: string;
+      nonce: string;
+      expiresAtMs: number;
+    },
+    nowMs = Date.now(),
+  ) {
+    if (
+      !/^[A-Za-z0-9]{1,64}$/.test(input.chainIdentifier) ||
+      !id.test(input.humanId) ||
+      !id.test(input.grantId) ||
+      !/^[0-9a-f]{32}$/.test(input.nonce) ||
+      !Number.isSafeInteger(nowMs) ||
+      nowMs < 0 ||
+      !Number.isSafeInteger(input.expiresAtMs) ||
+      input.expiresAtMs <= nowMs ||
+      input.expiresAtMs - nowMs > 120_000
+    )
+      throw new NativeDeviceError("invalid_proof");
+    const challenge = `FM-DEVICE-PROOF:1:${input.chainIdentifier}:${input.humanId}:${input.grantId}:${input.nonce}:${input.expiresAtMs}`;
+    const bytes = new TextEncoder().encode(challenge);
+    const result = await this.checkedSignature(
+      await call(this.invoke, "fm_device_prove", {
+        profile: this.device.profile,
+        challenge,
+      }),
+      toBase64(bytes),
+      async (signature) => {
+        await verifyPersonalMessageSignature(bytes, signature, {
+          address: this.device.address,
+        });
+      },
+    );
+    return { ...result, challenge };
+  }
+  private async checkedSignature(
+    value: unknown,
+    encoded: string,
+    verify: (signature: string) => Promise<void>,
+  ) {
+    const result = object(value);
+    if (result.bytes !== encoded || typeof result.signature !== "string")
+      throw new NativeDeviceError("invalid_response");
+    const bytes = decode(result.signature, 97);
+    if (
+      bytes[0] !== 0 ||
+      toBase64(bytes.subarray(65)) !== this.device.signingPublicKey
+    )
+      throw new NativeDeviceError("invalid_response");
+    try {
+      await verify(result.signature);
+    } catch {
+      throw new NativeDeviceError("invalid_response");
+    }
+    return { bytes: encoded, signature: result.signature };
+  }
+}

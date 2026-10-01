@@ -1,0 +1,87 @@
+{
+  "schema": "fractalmind.v020-app-native-device.v1",
+  "testedAt": "2026-10-01T16:21:49.771Z",
+  "platform": "darwin",
+  "chain": {
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "packageId": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+  "registryId": "0x713c99a46f2afb657bbd839230214d7d7603bcf542b63c1ed6b3d2fa072aa5d8",
+  "device": {
+    "format": 1,
+    "profile": "test-8463f258-5cd4-464d-8945-3407ca7d1461",
+    "address": "0x538f140609106cec388eb870a17d66242cc22de52e96562f1b30d5d15c7f018a",
+    "signingPublicKey": "Yng8BmCwTDO9/HYv0sUImrnPu9fRHzRo/9iUp2lG734=",
+    "encryptionPublicKey": "oSLZGuhZ88+lUkJl0i8Ld/87OWhtgt8Flkxb4V0DTTs="
+  },
+  "checks": [
+    "missing profile is not implicitly initialized",
+    "new processes reload the same OS keys; explicit initialization is idempotent",
+    "native BCS parser rejects malformed/trailing bytes, foreign sender and sponsored gas",
+    "Rust transaction intent/hash/signature verified independently by Mysten JS",
+    "native personal-message proof verifies against actual chain grant; stale/unscoped proof rejected",
+    "formal verifier checks actual BCS source/UID/shared owner, generation, encryption key, expiry, possession and stable versions",
+    "actual Sui organization transaction simulated, signed natively, verified and paid by device",
+    "new manager queries original digest without another broadcast",
+    "actual on-chain revocation invalidates login and rejects another organization transaction before signing/broadcast",
+    "test credential removed; existing signer fails without recreating it"
+  ],
+  "transactions": [
+    {
+      "action": "create generated Human fixture",
+      "digest": "2VP3vwdMTgiFUoyUDJUpQLfLR7T5NkkVkTDJtYW3tAB8",
+      "gasUsed": {
+        "computationCost": "1390000",
+        "storageCost": "18255200",
+        "storageRebate": "3182652",
+        "nonRefundableStorageFee": "32148"
+      }
+    },
+    {
+      "action": "native device self-pays creation of actual organization",
+      "digest": "FHWcuRK7kiUbLKnYzCXM4RJNmde4YYisZM6vv5pdHzB9",
+      "sender": "0x538f140609106cec388eb870a17d66242cc22de52e96562f1b30d5d15c7f018a",
+      "estimatedGas": "15332016",
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "20071600",
+        "storageRebate": "6139584",
+        "nonRefundableStorageFee": "62016"
+      },
+      "actualGas": "15332016",
+      "humanId": "0x17cb7407efa387c62d5d38162d2565cff3eaeb98d087a3772d3846855423d05e",
+      "grantId": "0x459e157ced7d9990a391775327a005dcf2fa9af1f70d2536f245dd983e544cb5",
+      "organizationId": "0x667af7d9e706fc05075b5ff3f7b15d21ef40a28fc240090f939189db85aa34fd"
+    },
+    {
+      "action": "native device explicitly adds isolated authorizer fixture",
+      "digest": "HwCmkUgenuK6Bjzf3QyLaKR5RuHucnPjeEYvnQ7QNX7Z",
+      "gasUsed": {
+        "computationCost": "1390000",
+        "storageCost": "12342400",
+        "storageRebate": "6530832",
+        "nonRefundableStorageFee": "65968"
+      }
+    },
+    {
+      "action": "authorizer revokes native device on Sui",
+      "digest": "DLsVHya4xJJs55UnbRSdC3dfM69UeCLm1YMx7j4T6ikW",
+      "gasUsed": {
+        "computationCost": "1390000",
+        "storageCost": "4316800",
+        "storageRebate": "4273632",
+        "nonRefundableStorageFee": "43168"
+      }
+    }
+  ],
+  "testCredentialRemoved": true,
+  "evidenceLimits": {
+    "transport": "isolated subprocess test helper, not installed WebView IPC",
+    "recovery": "ephemeral JS test fixture, not native recovery flow",
+    "journal": "memory test fixture; durable browser journal tested separately",
+    "desktopShellVerified": false,
+    "privateBodyDecryptVerified": false,
+    "windowsLinuxMobileVerified": false,
+    "fullV020Acceptance": false
+  }
+}

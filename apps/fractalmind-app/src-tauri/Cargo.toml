@@ -1,0 +1,15 @@
+[package]
+name = "fractalmind-app"
+version = "0.2.0"
+edition = "2021"
+license = "MIT"
+
+[build-dependencies]
+tauri-build = { version = "=2.7.1", features = [] }
+
+[dependencies]
+tauri = { version = "=2.12.1", features = [] }
+fractalmind-device-vault = { path = "../native" }
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]

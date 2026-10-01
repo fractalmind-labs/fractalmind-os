@@ -1,0 +1,28 @@
+[package]
+name = "fractalmind-device-vault"
+version = "0.2.0"
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+base64 = "0.22"
+bcs = "0.1"
+blake2 = "0.10"
+ed25519-dalek = { version = "2.2", features = ["zeroize"] }
+fs2 = "0.4"
+hex = "0.4"
+rand = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sui-sdk-types = { version = "=0.4.0", features = ["serde", "hash"] }
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+zeroize = { version = "1", features = ["derive"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { version = "=3.6.3", default-features = false, features = ["apple-native"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+keyring = { version = "=3.6.3", default-features = false, features = ["windows-native"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+keyring = { version = "=3.6.3", default-features = false, features = ["sync-secret-service", "crypto-rust", "vendored"] }
