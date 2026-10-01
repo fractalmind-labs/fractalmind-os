@@ -127,6 +127,10 @@ jobs:
             apps/agent-console:
               - .github/workflows/ci.yml
               - apps/agent-console/**
+            apps/fractalmind-app:
+              - .github/workflows/ci.yml
+              - apps/fractalmind-app/**
+              - protocols/fractalmind-protocol/sdk/**
 
       - uses: dorny/paths-filter@v3
         id: move
@@ -371,6 +375,33 @@ jobs:
       - name: Build (typecheck + bundle)
         run: pnpm build
 
+  fractalmind-app:
+    name: FractalMind App
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.node), 'apps/fractalmind-app')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            protocols/fractalmind-protocol/sdk/package-lock.json
+            apps/fractalmind-app/package-lock.json
+      - name: Build local protocol SDK dependency
+        working-directory: protocols/fractalmind-protocol/sdk
+        run: |
+          npm ci
+          npm run build
+      - run: npm ci
+        working-directory: apps/fractalmind-app
+      - run: npm test
+        working-directory: apps/fractalmind-app
+      - name: Typecheck and build App
+        run: npm run build
+        working-directory: apps/fractalmind-app
+
   explorer:
     name: Explorer
     needs: changes
@@ -510,6 +541,7 @@ jobs:
       - skills-layout
       - skills-structure
       - agent-console
+      - fractalmind-app
       - explorer
       - docs
       - sdk
