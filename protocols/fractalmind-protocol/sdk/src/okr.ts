@@ -3,6 +3,7 @@ import type { Transaction, TransactionArgument } from '@mysten/sui/transactions'
 import { normalizeSuiAddress } from '@mysten/sui/utils';
 import { FractalMindClient, toBigInt } from './client.js';
 import { bytesArgument } from './wire-bytes.js';
+import { NodeExecutionApi } from './node-execution.js';
 
 const ID = bcs.Address;
 const Bytes = bcs.vector(bcs.u8());
@@ -22,6 +23,8 @@ export const OkrBcs = bcs.struct('Okr', {
 });
 const Index = bcs.struct('OkrIndex', { active_count: bcs.u64(), records: Table });
 const Budget = bcs.struct('BudgetState', { asset: bcs.string(), spent: bcs.u64(), reserved: bcs.u64(), claims: Table });
+const CommandContract = bcs.struct('CommandContractBinding', { contract_id: ID, agreement_version: bcs.u64(), kr_index: bcs.u64(), boundary_hash: Bytes });
+const CommandContractKey = bcs.struct('CommandContractKey', { intent_hash: Bytes });
 const Claim = bcs.struct('BudgetClaim', { capability_id: ID, agreement_version: bcs.u64(), kr_index: bcs.u64(), reserved: bcs.u64(), spent: bcs.u64(), settled: bcs.bool() });
 const Pointer = bcs.struct('DraftPointer', { id: ID, fingerprint: Bytes });
 export const OkrObservationBcs = bcs.struct('Observation', {
@@ -105,6 +108,36 @@ export class OkrApi {
     const value = Claim.parse(field.dynamicField.value.bcs);
     if (BigInt(value.spent) > BigInt(value.reserved) || (!value.settled && BigInt(value.spent) !== 0n)) throw new Error('Invalid OKR claim.');
     return value;
+  }
+  /** Enumerate every Run from the chain-owned OKR claims directory. Historical
+   * agreements remain readable; this method never grants execution authority. */
+  async listExecutions(okrId: string, cursor?: string | null, limit = 50) {
+    const okr = await this.getOkr(okrId);
+    if (okr.managed_agent === null) {
+      if (![OKR_STATES.draft, OKR_STATES.archived].includes(okr.state as 0 | 4) || okr.budget_limit !== '0') throw new Error('Unexpected unassigned OKR.');
+      return { executions: [], cursor: null, hasNextPage: false };
+    }
+    const budget = await this.getBudget(okrId);
+    const page = await this.fm.client.core.listDynamicFields({ parentId: budget.claimsId, cursor, limit });
+    if (page.hasNextPage && (!page.cursor || page.cursor === cursor)) throw new Error('Invalid execution page cursor.');
+    const reader = new NodeExecutionApi(this.fm);
+    const executions = await Promise.all(page.dynamicFields.map(async field => {
+      if (field.name.type !== '0x2::object::ID' && field.name.type !== `${normalizeSuiAddress('0x2')}::object::ID`) throw new Error('Unexpected OKR claim key.');
+      const executionId = ID.parse(field.name.bcs);
+      const pointer = await this.fm.client.core.getDynamicField({ parentId: budget.claimsId, name: field.name });
+      if (pointer.dynamicField.value.type !== `${this.fm.typesPackageId}::okr::BudgetClaim`) throw new Error('Unexpected OKR claim type.');
+      const claim = Claim.parse(pointer.dynamicField.value.bcs);
+      const run = await reader.getExecution(executionId);
+      const binding = await this.fm.client.core.getDynamicField({ parentId: run.capability_id, name: { type: `${this.fm.typesPackageId}::remote_authority::CommandContractKey`, bcs: CommandContractKey.serialize({ intent_hash: run.intent_hash }).toBytes() } });
+      if (binding.dynamicField.value.type !== `${this.fm.typesPackageId}::remote_authority::CommandContractBinding`) throw new Error('Unexpected execution contract type.');
+      const contract = CommandContract.parse(binding.dynamicField.value.bcs);
+      const localClaim = await reader.getReservationBudget(run.capability_id, Uint8Array.from(run.intent_hash));
+      if (localClaim.reservedAmount !== BigInt(claim.reserved) || localClaim.spentAmount !== BigInt(claim.spent) || localClaim.settled !== claim.settled) throw new Error('OKR and capability budget claims differ.');
+      const settled = run.state === 2 || run.state === 3 || run.state === 5;
+      if (run.org_id !== okr.org_id || contract.contract_id !== okr.id || claim.capability_id !== run.capability_id || contract.agreement_version !== claim.agreement_version || contract.kr_index !== claim.kr_index || contract.boundary_hash.length !== 32 || claim.reserved !== run.budget_amount || BigInt(claim.spent) > BigInt(claim.reserved) || claim.settled !== settled || (!settled && BigInt(claim.spent) !== 0n) || run.budget_asset !== budget.asset) throw new Error('Inconsistent OKR execution binding or budget.');
+      return { run, claim, contract };
+    }));
+    return { executions, cursor: page.hasNextPage ? page.cursor : null, hasNextPage: page.hasNextPage };
   }
   async getOkr(id: string) {
     const { object } = await this.fm.client.core.getObject({ objectId: id, include: { content: true } });

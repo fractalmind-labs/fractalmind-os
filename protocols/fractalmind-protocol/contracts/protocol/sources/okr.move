@@ -301,7 +301,7 @@ module fractalmind_protocol::okr {
 
     /// Host observations are explicitly unverified. A real successful Run and
     /// its immutable encrypted result must exist; a supplied hash alone is not
-    /// evidence. Runtime-to-OKR authorization binding is a separate integration.
+    /// evidence. The capability and command must bind this agreement and KR.
     public fun observe(
         okr: &mut Okr, org: &Organization, member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent,
         cap: &RemoteCapability, run: &CommandExecution, evidence: &EncryptedRecord, expected_version: u64, expected_agreement: u64,

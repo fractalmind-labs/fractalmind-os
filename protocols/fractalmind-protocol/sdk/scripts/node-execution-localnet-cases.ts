@@ -324,12 +324,77 @@ export async function exerciseNodeExecutions(o: Options) {
     const claim = await sdk.okr.getReservationBudget(okrAcceptance.okrId, nativeExecutionId);
     assert.equal(claim.spent, '6'); assert.equal(claim.settled, true);
   }
-  const okrAcceptanceEvidence = okrAcceptance ? await okrAcceptance.finish(nativeExecutionId, (nativeFileAgentEvidence.recordIds as string[])[0]) : undefined;
+  const okrAcceptanceEvidence = okrAcceptance ? await okrAcceptance.finish(nativeExecutionId, (nativeFileAgentEvidence.recordIds as string[])[0], async step => {
+    const payload = { okr: { id: step.okrId, agreement_version: step.agreementVersion, kr_index: step.krIndex }, bounds: { paths, max_calls: step.maxCalls.toString() }, task: JSON.stringify({ kind: 'ensure_text_files', files: step.files }) };
+    const signStep = (krIndex: string) => signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: step.capabilityId, revocationVersion: 1n }, budget: { asset: 'TOOL_CALLS', amount: step.maxCalls }, payload: { ...payload, okr: { ...payload.okr, kr_index: krIndex } }, expiresAtMs: step.expiresAtMs });
+    if (step.krIndex === '1') {
+      const priorCursor = await signStep('0');
+      const denied = await execute('OKR sequential: completed KR cannot reserve another execution', await sdk.nodeExecution.prepareCommand({ ...authority, command: priorCursor }), desktop, undefined, true);
+      assert.equal(denied.data.status.success, false); assert.match(JSON.stringify(denied.data.status), /9406/);
+      assert.equal((await sdk.remoteAuthority.getCapability(step.capabilityId)).usesClaimed, 1n);
+    }
+    const command = await signStep(step.krIndex);
+    const executionId = await prepare(command, true); runtimeExecutionIds.push(executionId);
+    const seed = decodeSuiPrivateKey(host.getSecretKey()).secretKey;
+    try {
+      const { stdout } = await promisify(execFile)('go', ['test', './cmd/envd', '-run', '^TestNativeChainSingleKrLive$', '-count=1', '-v'], {
+        cwd: fileURLToPath(new URL('../../../../runtime/fractalmind-envd/', import.meta.url)), timeout: 90000,
+        env: { ...process.env, FM_CHAIN_EXECUTION_TEST_SEED: bytesToHex(seed), FM_HOST_RESULT_ENCRYPTION_TEST_SECRET: bytesToHex(o.hostEncryptionSecret), FM_CHAIN_SINGLE_KR_CASE: JSON.stringify({ RPC: process.env.FM_LOCALNET_RPC ?? 'http://127.0.0.1:29000', PackageID: sdk.client.packageId, Workspace: o.workspace, Command: command, ExpectedToolCalls: Number(step.maxCalls) }) },
+      });
+      assert.ok(stdout.includes('--- PASS: TestNativeChainSingleKrLive'));
+      const runtimeEvidence = JSON.parse(/FM_SINGLE_KR_EVIDENCE (.+)/.exec(stdout)![1]);
+      assert.equal(runtimeEvidence.executionId, executionId); assert.equal(runtimeEvidence.contract.agreement_version, step.agreementVersion); assert.equal(runtimeEvidence.contract.kr_index, step.krIndex);
+      const record = await sdk.productRecord.decryptRecord(runtimeEvidence.recordId, o.contentKey);
+      const plaintext = new TextDecoder().decode(record.plaintext);
+      assert.equal(JSON.parse(plaintext).response.execution_state, 'succeeded');
+      runtimeRecords.push({ logicalId: 'command-' + bytesToHex(nodeCommandIntentHash(command)), plaintext });
+      await assertBudget(step.capabilityId, step.krIndex === '0' ? 1n : 4n, 0n, 'Sequential KR actual tool costs accumulate without resetting global budget');
+      console.log('Native sequential KR PASS', step.krIndex, 'actual files, new agreement and restored result');
+      return { executionId, evidenceId: runtimeEvidence.recordId as string, runtimeEvidence };
+    } finally { seed.fill(0); }
+  }) : undefined;
+  let unknownResultEvidence: Record<string, unknown> | undefined;
+  if (okrAcceptance) {
+    const okr = await sdk.okr.getOkr(okrAcceptance.unknownContext.okrId);
+    const made = await execute('OKR unknown: issue transport-check capability with shared budget', sdk.okr.issueCapability({ ...authority, okrId: okr.id, expectedVersion: okr.version, maxUses: 1n }));
+    assert.equal(made.data.status.success, true);
+    const unknownCapabilityId = created(made.data, '::remote_authority::RemoteCapability');
+    const signUnknown = (capabilityId: string, amount: bigint) => signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: capabilityId, revocationVersion: 1n }, budget: { asset: 'TOOL_CALLS', amount }, payload: { okr: { id: okr.id, agreement_version: okr.agreement_version, kr_index: okr.next_kr }, bounds: { paths, max_calls: amount.toString() }, task: 'synthetic unknown-result transport check; no actual file Agent claim' }, expiresAtMs: Math.min(Date.now() + 300000, Number(okr.expires_at_ms) - 1) });
+    const command = await signUnknown(unknownCapabilityId, 14n);
+    const executionId = await prepare(command, true); runtimeExecutionIds.push(executionId);
+    const seed = decodeSuiPrivateKey(host.getSecretKey()).secretKey;
+    try {
+      const { stdout } = await promisify(execFile)('go', ['test', './internal/sui', '-run', '^TestChainRuntimeResultStoreLive$', '-count=1', '-v'], {
+        cwd: fileURLToPath(new URL('../../../../runtime/fractalmind-envd/', import.meta.url)), timeout: 60000,
+        env: { ...process.env, FM_CHAIN_EXECUTION_TEST_SEED: bytesToHex(seed), FM_HOST_RESULT_ENCRYPTION_TEST_SECRET: bytesToHex(o.hostEncryptionSecret), FM_CHAIN_RUNTIME_STORE_CASE: JSON.stringify({ RPC: process.env.FM_LOCALNET_RPC ?? 'http://127.0.0.1:29000', PackageID: sdk.client.packageId, Command: command, KnownSpend: false }) },
+      });
+      assert.ok(stdout.includes('--- PASS: TestChainRuntimeResultStoreLive'));
+      const runtimeEvidence = JSON.parse(/FM_RUNTIME_STORE_EVIDENCE (.+)/.exec(stdout)![1]);
+      assert.equal(runtimeEvidence.state, 'needs_confirmation'); assert.equal(runtimeEvidence.reserved, '14'); assert.equal(runtimeEvidence.fixtureOnly, true);
+      runtimeStoreChecks.push(runtimeEvidence);
+      const record = await sdk.productRecord.decryptRecord(runtimeEvidence.recordId, o.contentKey);
+      const plaintext = new TextDecoder().decode(record.plaintext);
+      assert.equal(JSON.parse(plaintext).response.execution_state, 'needs_confirmation');
+      runtimeRecords.push({ logicalId: 'command-' + bytesToHex(nodeCommandIntentHash(command)), plaintext });
+      unknownResultEvidence = { okrId: okr.id, capabilityId: unknownCapabilityId, executionId, runtimeEvidence, unknownReservationRetained: true, actualAgentSideEffectsVerified: false };
+    } finally { seed.fill(0); }
+    await assertBudget(unknownCapabilityId, 0n, 14n, 'Unknown OKR transport result retains all capability budget');
+    assert.equal((await sdk.okr.getBudget(okr.id)).reserved, 14n);
+    const replacement = await execute('OKR unknown: issue second authority without resetting unknown reservation', sdk.okr.issueCapability({ ...authority, okrId: okr.id, expectedVersion: okr.version, maxUses: 1n }));
+    assert.equal(replacement.data.status.success, true);
+    const replacementId = created(replacement.data, '::remote_authority::RemoteCapability');
+    const denied = await execute('OKR unknown: unresolved result prevents oversubscribing global budget', await sdk.nodeExecution.prepareCommand({ ...authority, command: await signUnknown(replacementId, 1n) }), desktop, undefined, true);
+    assert.equal(denied.data.status.success, false); assert.match(JSON.stringify(denied.data.status), /9409/);
+    assert.equal((await sdk.remoteAuthority.getCapability(replacementId)).usesClaimed, 0n);
+    await verifyGo(command, true);
+    const directory = await sdk.okr.listExecutions(okr.id);
+    assert.equal(directory.executions.length, 1); assert.equal(directory.executions[0].run.state, 4); assert.equal(directory.executions[0].claim.settled, false);
+  }
   const pendingCap = await execute('Execution: issue authority for revoke-after-prepare check', sdk.host.issueCapability({ ...authority, actions: ['assign'], scope: 'control', maxUses: 1n, budgetAsset: 'MIST', maxBudget: 100n, expiresAtMs: Date.now() + 3600000 }));
   const pendingCapabilityId = created(pendingCap.data, '::remote_authority::RemoteCapability');
   const pendingCommand = await signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: pendingCapabilityId, revocationVersion: 1n }, budget: { asset: 'MIST', amount: 20n }, payload: { task: 'must not begin after Host revocation' }, expiresAtMs: Date.now() + 300000 });
   const pendingId = await prepare(pendingCommand);
-  return { capabilityId, limitedCapabilityId: limitedId, runtimeCapabilityId, factoryCapabilityId, nativeCapabilityId, executions: [firstId, secondId, thirdId, waitingId, stoppedId, ...runtimeExecutionIds], goChecks, budgetChecks, resultKeyEvidence, runtimeStoreChecks, productionFactoryEvidence, nativeFileAgentEvidence, okrAcceptanceEvidence, pendingStart: { ...authority, capabilityId: pendingCapabilityId, executionId: pendingId }, records: [{ logicalId, plaintext: new TextDecoder().decode(plaintext) }, { logicalId: unknownLogicalId, plaintext: new TextDecoder().decode(unknownPlaintext) }, { logicalId: stopLogicalId, plaintext: stopPlaintext }, ...runtimeRecords], checks: 'real chain budget/checkpoints, native bounded text-file goals, actual tool-call accounting and stop; generic model planning, command tools, financial metering and cloud deployment pending' };
+  return { capabilityId, limitedCapabilityId: limitedId, runtimeCapabilityId, factoryCapabilityId, nativeCapabilityId, executions: [firstId, secondId, thirdId, waitingId, stoppedId, ...runtimeExecutionIds], goChecks, budgetChecks, resultKeyEvidence, runtimeStoreChecks, productionFactoryEvidence, nativeFileAgentEvidence, okrAcceptanceEvidence, unknownResultEvidence, pendingStart: { ...authority, capabilityId: pendingCapabilityId, executionId: pendingId }, records: [{ logicalId, plaintext: new TextDecoder().decode(plaintext) }, { logicalId: unknownLogicalId, plaintext: new TextDecoder().decode(unknownPlaintext) }, { logicalId: stopLogicalId, plaintext: stopPlaintext }, ...runtimeRecords], checks: 'real chain budget/checkpoints, native bounded text-file goals, actual tool-call accounting and stop; generic model planning, command tools, financial metering and cloud deployment pending' };
 }
 
 /** Reconstruct the selected fixture budgets solely from their persisted chain

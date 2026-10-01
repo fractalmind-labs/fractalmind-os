@@ -276,7 +276,8 @@ assert.deepEqual(recoveredBackup, recoveryKeyring);
 const recoveredKeyring = JSON.parse(new TextDecoder().decode(recoveredBackup));
 const recoveredCheckpointRecords: string[] = [];
 let recoveredExecutionBudgets: Awaited<ReturnType<typeof verifyExecutionBudgetRebuild>> | undefined;
-let recoveredOkrs: { directoryCount: number; acceptedOkrId: string; historyCount: number; decryptedBodies: string[]; globalBudget?: unknown; globalClaim?: unknown; pausedClaim?: unknown } | undefined;
+let recoveredUnknownOkr: { okrId: string; state: number; spent: string; reserved: string; executionState: number } | undefined;
+let recoveredOkrs: { directoryCount: number; acceptedOkrId: string; historyCount: number; decryptedBodies: string[]; globalBudget?: unknown; globalClaim?: unknown; pausedClaim?: unknown; executionDirectoryCount?: number; historicalBodyIds?: string[] } | undefined;
 if (hostReport?.executions) {
   // Verify decryption again after consumption and key rotation, using only the
   // replacement recovery record and a newly constructed SDK, not cached IDs.
@@ -300,8 +301,8 @@ if (hostReport?.executions) {
     assert.equal(accepted.id, expected.okrId);
     assert.equal(accepted.accepted_by_human, nextLocated.human.id);
     const history = await sdk.okr.listObservations(accepted.id);
-    assert.equal(history.observations.length, 1);
-    assert.equal(history.observations[0].run_id, accepted.metrics[0].run_id);
+    assert.equal(history.observations.length, 3);
+    for (const metric of accepted.metrics) assert.ok(history.observations.some(sample => sample.run_id === metric.run_id && sample.evidence_id === metric.evidence_id));
     const decryptedBodies: string[] = [];
     for (const body of expected.records) {
       const pointer = pointers.records.find(pointer => pointer.logicalId === body.logicalId);
@@ -313,13 +314,47 @@ if (hostReport?.executions) {
     const budget = await sdk.okr.getBudget(accepted.id);
     const globalBudget = { asset: budget.asset, spent: budget.spent.toString(), reserved: budget.reserved.toString() };
     assert.deepEqual(globalBudget, expected.globalBudget);
-    const globalClaim = await sdk.okr.getReservationBudget(accepted.id, history.observations[0].run_id);
+    const priorSample = history.observations.find(sample => sample.agreement_version === '1')!;
+    const globalClaim = await sdk.okr.getReservationBudget(accepted.id, priorSample.run_id);
     assert.deepEqual(globalClaim, expected.globalClaim);
     const pausedClaim = await sdk.okr.getReservationBudget(expected.pausedProof.okrId, expected.pausedProof.executionId);
     assert.equal(pausedClaim.capability_id, expected.pausedProof.capabilityId);
     assert.equal(pausedClaim.spent, '0'); assert.equal(pausedClaim.settled, true);
     assert.equal((await sdk.okr.getBudget(expected.pausedProof.okrId)).reserved, 0n);
-    recoveredOkrs = { directoryCount: directory.okrs.length, acceptedOkrId: accepted.id, historyCount: history.observations.length, decryptedBodies, globalBudget, globalClaim, pausedClaim };
+    const directoryExecutions = []; let runCursor: string | null = null;
+    do { const page = await sdk.okr.listExecutions(accepted.id, runCursor, 2); directoryExecutions.push(...page.executions); runCursor = page.cursor; } while (runCursor);
+    assert.equal(directoryExecutions.length, expected.executionDirectoryCount);
+    assert.equal(directoryExecutions.reduce((spent, execution) => spent + BigInt(execution.claim.spent), 0n), budget.spent);
+    assert.ok(directoryExecutions.every(execution => execution.claim.settled));
+    const historicalBodyIds: string[] = [];
+    for (const kind of ['okr', 'evidence'] as const) {
+      const name = `okr-${accepted.logical_id}-${kind === 'okr' ? 'spec' : 'verification'}`;
+      const revisions: Array<Awaited<ReturnType<typeof sdk.productRecord.getRecord>>> = []; let bodyCursor: string | null = null;
+      do { const page = await sdk.productRecord.listHistory(recoveredOrganizationId, kind, name, bodyCursor, 1); revisions.push(...page.records); bodyCursor = page.cursor; } while (bodyCursor);
+      for (const expectedBody of expected.historicalBodies) {
+        const record = revisions.find(record => record.id === expectedBody.recordId); if (!record) continue;
+        const key = hexToBytes(recoveredKeyring.historicalKeys[record.key_version]);
+        assert.equal(new TextDecoder().decode((await sdk.productRecord.decryptRecord(record.id, key)).plaintext), expectedBody.plaintext);
+        historicalBodyIds.push(record.id);
+      }
+    }
+    assert.equal(historicalBodyIds.length, 2);
+    if (hostReport.executions.unknownResultEvidence) {
+      const pending = [];
+      for (const objective of directory.okrs) {
+        const total = await sdk.okr.getBudget(objective.id);
+        if (total.reserved === 0n) continue;
+        const page = await sdk.okr.listExecutions(objective.id);
+        const unresolved = page.executions.find(execution => execution.run.state === 4);
+        assert.ok(unresolved, 'Recovery must discover the unresolved OKR Run from the chain.');
+        assert.equal(unresolved.claim.settled, false); assert.equal(unresolved.claim.spent, '0');
+        pending.push({ okrId: objective.id, state: objective.state, spent: total.spent.toString(), reserved: total.reserved.toString(), executionState: unresolved.run.state });
+      }
+      assert.equal(pending.length, 1); assert.equal(pending[0].reserved, '14'); assert.equal(pending[0].spent, '0');
+      assert.equal(pending[0].okrId, hostReport.executions.unknownResultEvidence.okrId);
+      recoveredUnknownOkr = pending[0];
+    }
+    recoveredOkrs = { directoryCount: directory.okrs.length, acceptedOkrId: accepted.id, historyCount: history.observations.length, decryptedBodies, globalBudget, globalClaim, pausedClaim, executionDirectoryCount: directoryExecutions.length, historicalBodyIds };
   }
 }
 const afterRecovery = await execute('persist future body inaccessible to all lost devices', await sdk.productRecord.encryptAndSave({ organizationId, humanId, grantId: newPhoneGrantId, kind: 'message', logicalId: 'after-recovery', expectedRevision: 0n, keyVersion: 3n, plaintext: newMessage, key: recoveryContentKey }), phone);
@@ -328,6 +363,6 @@ const postRecoveryId = created(afterRecovery.data, '::product_record::EncryptedR
 await assert.rejects(sdk.productRecord.decryptRecord(postRecoveryId, newContentKey));
 assert.deepEqual((await sdk.productRecord.decryptRecord(postRecoveryId, recoveryContentKey)).plaintext, newMessage);
 assert.equal((await execute('recovered phone operates same Human', sdk.identity.createOrganization({ humanId, grantId: newPhoneGrantId, name: `Recovered-${Date.now()}`, description: '' }), phone)).data.status.success, true);
-const report = { testedAt: new Date().toISOString(), chain: await c.core.getChainIdentifier(), packageId, registryId, identityRegistryId, humanId, organizationId, checks: rows, records: recordChecks, host: hostReport, recoveredCheckpointRecords, recoveredExecutionBudgets, recoveredOkrs };
+const report = { testedAt: new Date().toISOString(), chain: await c.core.getChainIdentifier(), packageId, registryId, identityRegistryId, humanId, organizationId, checks: rows, records: recordChecks, host: hostReport, recoveredCheckpointRecords, recoveredExecutionBudgets, recoveredOkrs, recoveredUnknownOkr };
 if (process.argv[3]) await writeFile(process.argv[3], `${JSON.stringify(report, null, 2)}\n`);
 console.log('Identity localnet acceptance passed. Recovery codes and private keys were not recorded.');

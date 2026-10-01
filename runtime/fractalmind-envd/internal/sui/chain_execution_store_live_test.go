@@ -148,7 +148,10 @@ func TestChainRuntimeResultStoreLive(t *testing.T) {
 	if err != nil || !found {
 		t.Fatalf("read result: found=%t err=%v", found, err)
 	}
-	spent, reserved := nodecommand.Uint64String(0), nodecommand.Uint64String(20)
+	if input.Command.Budget == nil {
+		t.Fatal("fixture command budget required")
+	}
+	spent, reserved := nodecommand.Uint64String(0), input.Command.Budget.Amount
 	if input.KnownSpend {
 		spent, reserved = 3, 0
 	}

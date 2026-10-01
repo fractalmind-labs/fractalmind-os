@@ -214,3 +214,103 @@ func TestNativeChainFileAgentLive(t *testing.T) {
 	evidence, _ := json.Marshal(map[string]any{"recordIds": resultIDs, "successDigest": response.TransactionDigest, "stopRequestDigest": stopDigest, "cancelledResultDigest": stopped.TransactionDigest, "toolCallsSpent": []uint64{6, 1}, "actualWorkspaceWrites": true, "measurementsFromHostReader": true, "factoryRestartDuplicate": true, "physicalStopBeforeNextGoal": true, "nativeFileGoalsOnly": true, "modelPlanningVerified": false, "cloudHostVerified": false})
 	t.Logf("FM_NATIVE_FILE_AGENT_EVIDENCE %s", evidence)
 }
+
+// Runs a real approved KR through the production factory. The workspace is
+// retained across processes, while authority and result recovery use the chain.
+func TestNativeChainSingleKrLive(t *testing.T) {
+	raw := os.Getenv("FM_CHAIN_SINGLE_KR_CASE")
+	if raw == "" {
+		t.Skip("isolated localnet and generated test keys required")
+	}
+	var input struct {
+		RPC, PackageID, Workspace string
+		Command                   nodecommand.NodeCommand
+		ExpectedToolCalls         uint64
+	}
+	if err := json.Unmarshal([]byte(raw), &input); err != nil {
+		t.Fatal(err)
+	}
+	decode := func(name string) []byte {
+		value, err := hex.DecodeString(os.Getenv(name))
+		if err != nil || len(value) != 32 {
+			t.Fatalf("generated key %s required", name)
+		}
+		t.Cleanup(func() { clear(value) })
+		return value
+	}
+	seed := decode("FM_CHAIN_EXECUTION_TEST_SEED")
+	secret := decode("FM_HOST_RESULT_ENCRYPTION_TEST_SECRET")
+	data := append(append([]byte("FMH1"), seed...), secret...)
+	defer clear(data)
+	store := &fixtureHostStore{data: data}
+	cfg := chainRuntimeConfig()
+	cfg.SUI.RPC = input.RPC
+	cfg.SUI.ProtocolPackageID = input.PackageID
+	cfg.SUI.OrgID = input.Command.Target.OrganizationID
+	cfg.Runtime.AdapterKind = "native-file-agent"
+	cfg.Runtime.Workspaces = map[string]string{input.Command.Target.AgentID: input.Workspace}
+	t.Setenv("FRACTALMIND_RUNTIME_STATE_DIR", "")
+	t.Setenv("FRACTALMIND_NODE_COMMAND_AUTHORITY_FILE", "")
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	construct := func() *chainRuntimeExecutor {
+		instance, err := newRuntimeCommandExecutorWithStore(cfg, store)
+		if err != nil {
+			t.Fatal(err)
+		}
+		executor := instance.(*chainRuntimeExecutor)
+		t.Cleanup(func() { executor.Close() })
+		return executor
+	}
+	first := construct()
+	response, _, err := first.Execute(ctx, input.Command)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !response.OK || response.ExecutionState != "succeeded" || response.Spend == nil || !response.Spend.Known || response.Spend.Asset != "TOOL_CALLS" || uint64(response.Spend.Amount) != input.ExpectedToolCalls {
+		t.Fatalf("KR result: %+v", response)
+	}
+	var outcome boundedrun.Outcome
+	if err := json.Unmarshal(response.Result, &outcome); err != nil {
+		t.Fatal(err)
+	}
+	if outcome.Status != "submitted" || len(outcome.Evidence) != 1 || !outcome.Evidence[0].Verified || outcome.Evidence[0].ExpectedHash != outcome.Evidence[0].ObservedHash {
+		t.Fatal("KR evidence is not a measured file outcome")
+	}
+	var payload struct {
+		Task string `json:"task"`
+	}
+	if err := json.Unmarshal(input.Command.Payload, &payload); err != nil {
+		t.Fatal(err)
+	}
+	task, err := boundedrun.ParseFileTask(payload.Task)
+	if err != nil || len(task.Files) != 1 {
+		t.Fatal("one declared KR file required")
+	}
+	actual, err := os.ReadFile(filepath.Join(input.Workspace, task.Files[0].Path))
+	if err != nil || string(actual) != task.Files[0].Content {
+		t.Fatal("actual KR workspace outcome differs")
+	}
+	if err := first.Close(); err != nil {
+		t.Fatal(err)
+	}
+	fresh := construct()
+	duplicate, _, err := fresh.Execute(ctx, input.Command)
+	if err != nil || !duplicate.Duplicate || string(duplicate.Result) != string(response.Result) {
+		t.Fatal("fresh executor failed to restore KR result")
+	}
+	resolver, err := nodecommand.NewChainAuthorityResolver(fresh.rpc, input.PackageID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signing, err := input.Command.SigningBytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, found, err := resolver.ReadExecutionResult(ctx, input.Command.Capability.ID, sha256Hex(signing))
+	if err != nil || !found || result.Execution.Contract == nil {
+		t.Fatal("OKR-bound encrypted KR result missing")
+	}
+	evidence, _ := json.Marshal(map[string]any{"recordId": result.ID, "executionId": result.Execution.ID, "contract": result.Execution.Contract, "resultDigest": response.TransactionDigest, "toolCallsSpent": input.ExpectedToolCalls, "actualFileOutcome": true, "hostReaderMeasurement": true, "factoryRestartDuplicate": true, "nativeFileGoalsOnly": true, "modelPlanningVerified": false})
+	t.Logf("FM_SINGLE_KR_EVIDENCE %s", evidence)
+}

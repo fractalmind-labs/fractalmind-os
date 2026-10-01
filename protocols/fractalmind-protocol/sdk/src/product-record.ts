@@ -51,7 +51,33 @@ export class ProductRecordApi {
   async getRecord(recordId: string) {
     const { object } = await this.fm.client.core.getObject({ objectId: recordId, include: { content: true } });
     if (object.type !== `${this.typesPackageId}::product_record::EncryptedRecord` || !object.content || object.owner.$kind !== 'Immutable') throw new Error('Unexpected encrypted record type, content, or ownership.');
-    return EncryptedRecordBcs.parse(object.content);
+    const record = EncryptedRecordBcs.parse(object.content);
+    if (record.id !== normalizeSuiAddress(recordId)) throw new Error('Encrypted record UID mismatch.');
+    return record;
+  }
+  /** Follow immutable previous links from the chain index. A cursor continues
+   * one logical record, never permits cross-organization history substitution. */
+  async listHistory(organizationId: string, kind: ProductRecordKind, logicalId: string, cursor?: string | null, limit = 50) {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error('History limit must be 1..100.');
+    if (cursor === '') throw new Error('Empty history cursor.');
+    const head = await this.getCurrent(organizationId, kind, logicalId);
+    let next: string | null = cursor ?? head.record_id;
+    let expectedRevision: bigint | null = cursor ? null : BigInt(head.revision);
+    const records = []; const visited = new Set<string>();
+    while (next && records.length < limit) {
+      if (visited.has(next)) throw new Error('Cyclic encrypted record history.'); visited.add(next);
+      const record = await this.getRecord(next); const revision = BigInt(record.revision);
+      if (record.organization_id !== normalizeSuiAddress(organizationId) || record.kind !== PRODUCT_RECORD_KINDS[kind] || record.logical_id !== logicalId || revision < 1n || revision > BigInt(head.revision) || (expectedRevision !== null && revision !== expectedRevision) || (revision === 1n) !== (record.previous === null)) throw new Error('Encrypted history scope or revision mismatch.');
+      records.push(record); next = record.previous; expectedRevision = revision - 1n;
+      if (next && visited.has(next)) throw new Error('Cyclic encrypted record history.');
+      // Check the link at a page boundary as well. A one-record page must not
+      // conceal a revision gap or a cycle that would repeat across pages.
+      if (next && records.length === limit) {
+        const following = await this.getRecord(next);
+        if (following.organization_id !== record.organization_id || following.kind !== record.kind || following.logical_id !== record.logical_id || BigInt(following.revision) !== expectedRevision) throw new Error('Encrypted history link mismatch.');
+      }
+    }
+    return { records, cursor: next, hasNextPage: next !== null, headRecordId: head.record_id };
   }
   rotateKey(input: { organizationId: string; humanId: string; grantId: string; expectedKeyVersion: bigint | string | number; tx?: Transaction }): Transaction {
     const tx = this.fm.useTransaction(input.tx);

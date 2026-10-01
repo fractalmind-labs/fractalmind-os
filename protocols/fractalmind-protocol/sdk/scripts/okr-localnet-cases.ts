@@ -13,7 +13,7 @@ type Options = { sdk: FractalMindSDK; execute: Execute; created: (data: Data, su
 export async function prepareOkrAcceptance(o: Options, boundaryHash: Uint8Array) {
   const { sdk, execute, created } = o;
   const authorized = { organizationId: o.organizationId, humanId: o.humanId, grantId: o.grantId };
-  const criteria = { priority: 0, deadlineMs: Date.now() + 3600000, baselines: [0n], targets: [2n], weights: [1n], maxAgesMs: [3600000n] };
+  const criteria = { priority: 0, deadlineMs: Date.now() + 3600000, baselines: [0n, 0n], targets: [2n, 1n], weights: [1n, 1n], maxAgesMs: [3600000n, 3600000n] };
   const originals = new Map<string, string>();
   async function body(logicalId: string, suffix: string, kind: ProductRecordKind, revision: bigint, plaintext: string) {
     const name = `okr-${logicalId}-${suffix}`;
@@ -23,7 +23,7 @@ export async function prepareOkrAcceptance(o: Options, boundaryHash: Uint8Array)
   const drafts: Array<{ id: string; logicalId: string; spec: Awaited<ReturnType<typeof body>> }> = [];
   for (let i = 0; i < 4; i++) {
     const logicalId = randomUUID();
-    const spec = await body(logicalId, 'spec', 'okr', 1n, JSON.stringify({ format: 1, objective: 'Two declared file outcomes are measured and human accepted', successCriteria: ['Both text-file goals match their expected hashes'], metric: { unit: 'verified files', scale: 1, baseline: 0, target: 2, source: 'Host post-write reader', freshnessMs: 3600000 } }));
+    const spec = await body(logicalId, 'spec', 'okr', 1n, JSON.stringify({ format: 1, objective: 'Two sequential KRs produce measured file outcomes and human acceptance', successCriteria: ['KR0: both initial text goals match', 'KR1: a final deliverable matches'], metrics: [{ unit: 'verified files', scale: 1, baseline: 0, target: 2, source: 'Host post-write reader', freshnessMs: 3600000 }, { unit: 'verified files', scale: 1, baseline: 0, target: 1, source: 'Host post-write reader', freshnessMs: 3600000 }] }));
     const made = await execute('OKR: create encrypted measurable draft', sdk.okr.createDraft({ ...authorized, ...criteria, ...spec, logicalId }));
     assert.equal(made.data.status.success, true);
     drafts.push({ id: created(made.data, '::okr::Okr'), logicalId, spec });
@@ -76,8 +76,9 @@ export async function prepareOkrAcceptance(o: Options, boundaryHash: Uint8Array)
   await achieve('2', false);
   return {
     okrId: first.id,
+    unknownContext: { okrId: drafts[2].id },
     pausedProof: { okrId: drafts[1].id, capabilityId: pausedCapabilityId, executionId: pausedExecutionId },
-    async finish(executionId: string, evidenceId: string) {
+    async finish(executionId: string, evidenceId: string, dispatch: (step: { okrId: string; capabilityId: string; agreementVersion: string; krIndex: string; files: Array<{ path: string; content: string }>; maxCalls: bigint; expiresAtMs: number }) => Promise<{ executionId: string; evidenceId: string; runtimeEvidence: Record<string, unknown> }>) {
       const run = await sdk.nodeExecution.getExecution(executionId);
       const observe = () => sdk.okr.observe({ okrId: first.id, organizationId: o.organizationId, membershipId: o.membershipId, bindingId: o.bindingId, managedAgentId: o.managedAgentId, capabilityId: run.capability_id, executionId, evidenceId, expectedVersion: 2n, expectedAgreement: 1n, krIndex: 0n, current: 2n, sampledAtMs: run.updated_at_ms });
       const forged = await execute('OKR: another Host cannot submit measurements', observe(), o.wrongHost, undefined, true);
@@ -91,7 +92,60 @@ export async function prepareOkrAcceptance(o: Options, boundaryHash: Uint8Array)
       assert.equal((await execute('OKR: authorized human verifies KR independently of observation', sdk.okr.verifyKr({ ...authorized, ...verification, okrId: first.id, expectedVersion: measured.version, krIndex: 0n, expectedRecordRevision: 0n }))).data.status.success, true);
       const verified = await sdk.okr.getOkr(first.id);
       assert.equal(verified.state, 1); assert.equal(verified.next_kr, '1'); assert.equal(verified.metrics[0].verified, true);
-      await achieve(verified.version, true);
+      await achieve(verified.version, false);
+      const originalSpecId = verified.spec_record;
+      const originalSpecText = originals.get(`okr-${first.logicalId}-spec`)!;
+      const originalVerificationId = verified.metrics[0].verification_id!;
+      const originalVerificationText = originals.get(`okr-${first.logicalId}-verification`)!;
+      const pauseCurrent = await body(first.logicalId, 'agreement', 'contract', 2n, JSON.stringify({ reason: 'Human asks to revise the goal after reviewing KR0', priorAgreement: verified.agreement_version }));
+      assert.equal((await execute('OKR replan: pause running objective and invalidate old agreement', sdk.okr.pause({ ...authorized, ...pauseCurrent, okrId: first.id, expectedVersion: verified.version, expectedRecordRevision: 1n }))).data.status.success, true);
+      const paused = await sdk.okr.getOkr(first.id);
+      const rejectedVerification = await body(first.logicalId, 'verification', 'evidence', 2n, JSON.stringify({ reason: 'Must not verify while paused' }));
+      const cannotVerify = await execute('OKR replan: paused objective cannot reuse old verification', sdk.okr.verifyKr({ ...authorized, ...rejectedVerification, okrId: first.id, expectedVersion: paused.version, krIndex: 1n, expectedRecordRevision: 1n }), o.desktop, undefined, true);
+      assert.equal(cannotVerify.data.status.success, false); assert.match(JSON.stringify(cannotVerify.data.status), /9403/);
+      const approval = await body(first.logicalId, 'agreement', 'contract', 3n, JSON.stringify({ managedAgentId: o.managedAgentId, boundaryHash: Array.from(boundaryHash), budget: { asset: 'TOOL_CALLS', limit: '14' }, order: 'sequential', reason: 'Reapprove revised goals without resetting spent budget' }));
+      const reapprove = { ...authorized, ...approval, okrId: first.id, expectedVersion: paused.version, membershipId: o.membershipId, bindingId: o.bindingId, managedAgentId: o.managedAgentId, workspaceHash: Uint8Array.from(managed.workspace_hash), boundaryHash, budgetAsset: 'TOOL_CALLS', budgetLimit: 14n, expiresAtMs: criteria.deadlineMs - 1, expectedRecordRevision: 2n };
+      const belowSpent = await execute('OKR replan: cannot approve budget below already spent amount', sdk.okr.activate({ ...reapprove, budgetLimit: 6n }), o.desktop, undefined, true);
+      assert.equal(belowSpent.data.status.success, false); assert.match(JSON.stringify(belowSpent.data.status), /9409/);
+      const revisedSpec = await body(first.logicalId, 'spec', 'okr', 2n, JSON.stringify({ objective: 'Revised: retain approved README and produce final deliverable', successCriteria: ['README matches the existing approved bytes', 'FINAL.md matches approved content'], metrics: [{ unit: 'verified file', scale: 1, baseline: 0, target: 1 }, { unit: 'verified file', scale: 1, baseline: 0, target: 1 }] }));
+      assert.equal((await execute('OKR replan: replace criteria and clear previous metric verification', sdk.okr.replaceSpec({ ...authorized, ...revisedSpec, ...criteria, targets: [1n, 1n], okrId: first.id, expectedVersion: paused.version }))).data.status.success, true);
+      const revised = await sdk.okr.getOkr(first.id);
+      assert.equal(revised.next_kr, '0'); assert.ok(revised.metrics.every(metric => !metric.verified && metric.current === null));
+      const staleApproval = await execute('OKR replan: old approval version cannot reactivate revised spec', sdk.okr.activate(reapprove), o.desktop, undefined, true);
+      assert.equal(staleApproval.data.status.success, false); assert.match(JSON.stringify(staleApproval.data.status), /9402/);
+      assert.equal((await execute('OKR replan: explicitly reapprove current spec', sdk.okr.activate({ ...reapprove, expectedVersion: revised.version }))).data.status.success, true);
+      const resumed = await sdk.okr.getOkr(first.id);
+      assert.equal(resumed.agreement_version, '4');
+      assert.equal((await sdk.okr.getBudget(first.id)).spent, 7n);
+      const nextCapability = await execute('OKR replan: issue new version-bound authority without resetting global budget', sdk.okr.issueCapability({ ...authorized, okrId: first.id, membershipId: o.membershipId, bindingId: o.bindingId, managedAgentId: o.managedAgentId, expectedVersion: resumed.version, maxUses: 2n }));
+      assert.equal(nextCapability.data.status.success, true);
+      const nextCapabilityId = created(nextCapability.data, '::remote_authority::RemoteCapability');
+      const oldCommand = await signNodeCommand(o.desktop, { target: { organizationId: o.organizationId, nodeId: o.host.getPublicKey().toSuiAddress(), agentId: managed.instance_id }, action: 'assign', scope: 'control', capability: { id: run.capability_id, revocationVersion: 1n }, budget: { asset: 'TOOL_CALLS', amount: 1n }, payload: { okr: { id: first.id, agreement_version: resumed.agreement_version, kr_index: '0' }, bounds: { paths: { 'file.read': ['.'], 'file.write': ['.'] }, max_calls: '1' }, task: 'old capability must never resume this new agreement' }, expiresAtMs: Math.min(Date.now() + 300000, Number(resumed.expires_at_ms) - 1) });
+      const oldDenied = await execute('OKR replan: old capability cannot claim new agreement', await sdk.nodeExecution.prepareCommand({ ...authorized, membershipId: o.membershipId, bindingId: o.bindingId, managedAgentId: o.managedAgentId, command: oldCommand }), o.desktop, undefined, true);
+      assert.equal(oldDenied.data.status.success, false); assert.match(JSON.stringify(oldDenied.data.status), /8321/);
+      const oldEvidence = await execute('OKR replan: old agreement evidence cannot populate reset metrics', sdk.okr.observe({ okrId: first.id, organizationId: o.organizationId, membershipId: o.membershipId, bindingId: o.bindingId, managedAgentId: o.managedAgentId, capabilityId: run.capability_id, executionId, evidenceId, expectedVersion: resumed.version, expectedAgreement: resumed.agreement_version, krIndex: 0n, current: 2n, sampledAtMs: run.updated_at_ms }), o.host, undefined, true);
+      assert.equal(oldEvidence.data.status.success, false); assert.match(JSON.stringify(oldEvidence.data.status), /8321/);
+      const steps = [
+        { files: [{ path: 'README.md', content: 'FractalMind: human-approved native goal\n' }], maxCalls: 1n },
+        { files: [{ path: 'FINAL.md', content: 'FractalMind: final KR deliverable after explicit reapproval\n' }], maxCalls: 3n },
+      ];
+      const sequential: Array<{ executionId: string; evidenceId: string; runtimeEvidence: Record<string, unknown> }> = [];
+      for (const [index, step] of steps.entries()) {
+        const current = await sdk.okr.getOkr(first.id);
+        assert.equal(current.next_kr, index.toString());
+        const result = await dispatch({ ...step, okrId: first.id, capabilityId: nextCapabilityId, agreementVersion: current.agreement_version, krIndex: current.next_kr, expiresAtMs: Math.min(Date.now() + 300000, Number(current.expires_at_ms) - 1) });
+        sequential.push(result);
+        const execution = await sdk.nodeExecution.getExecution(result.executionId);
+        assert.equal((await execute('OKR sequential: Host records measured KR ' + index, sdk.okr.observe({ okrId: first.id, organizationId: o.organizationId, membershipId: o.membershipId, bindingId: o.bindingId, managedAgentId: o.managedAgentId, capabilityId: nextCapabilityId, executionId: result.executionId, evidenceId: result.evidenceId, expectedVersion: current.version, expectedAgreement: current.agreement_version, krIndex: current.next_kr, current: 1n, sampledAtMs: execution.updated_at_ms }), o.host)).data.status.success, true);
+        const measured = await sdk.okr.getOkr(first.id);
+        assert.equal(measured.metrics[index].verified, false);
+        await achieve(measured.version, false);
+        const review = await body(first.logicalId, 'verification', 'evidence', BigInt(index + 2), JSON.stringify({ ruleVersion: 2, krIndex: index, executionId: result.executionId, evidenceId: result.evidenceId, reason: 'Human reviewed actual post-reapproval file reader evidence' }));
+        assert.equal((await execute('OKR sequential: human verifies current KR ' + index, sdk.okr.verifyKr({ ...authorized, ...review, okrId: first.id, expectedVersion: measured.version, krIndex: current.next_kr, expectedRecordRevision: BigInt(index + 1) }))).data.status.success, true);
+      }
+      const fullyVerified = await sdk.okr.getOkr(first.id);
+      assert.equal(fullyVerified.next_kr, '2'); assert.ok(fullyVerified.metrics.every(metric => metric.verified));
+      await achieve(fullyVerified.version, true);
       const accepted = await sdk.okr.getOkr(first.id);
       assert.equal(accepted.state, 3); assert.equal(accepted.accepted_by_human, o.humanId); assert.ok(accepted.acceptance_record);
       assert.equal((await sdk.okr.getIndex(o.organizationId)).active_count, '2');
@@ -101,10 +155,20 @@ export async function prepareOkrAcceptance(o: Options, boundaryHash: Uint8Array)
       do { const page = await fresh.okr.listOkrs(o.organizationId, cursor, 2); listed.push(...page.okrs.map(okr => okr.id)); cursor = page.cursor; } while (cursor);
       assert.deepEqual(listed.sort(), drafts.map(draft => draft.id).sort());
       const history = await fresh.okr.listObservations(first.id);
-      assert.equal(history.observations.length, 1);
-      assert.equal(history.observations[0].run_id, executionId);
-      assert.equal(history.observations[0].evidence_id, evidenceId);
-      assert.equal(history.observations[0].current, '2');
+      assert.equal(history.observations.length, 3);
+      const prior = history.observations.find(sample => sample.run_id === executionId)!;
+      assert.equal(prior.agreement_version, '1'); assert.equal(prior.evidence_id, evidenceId); assert.equal(prior.current, '2');
+      for (const [index, step] of sequential.entries()) {
+        const sample = history.observations.find(sample => sample.run_id === step.executionId)!;
+        assert.equal(sample.agreement_version, '4'); assert.equal(sample.kr_index, index.toString()); assert.equal(sample.evidence_id, step.evidenceId);
+      }
+      const historicalBodies = [{ recordId: originalSpecId, plaintext: originalSpecText }, { recordId: originalVerificationId, plaintext: originalVerificationText }];
+      for (const body of historicalBodies) assert.equal(new TextDecoder().decode((await fresh.productRecord.decryptRecord(body.recordId, o.contentKey)).plaintext), body.plaintext);
+      const enumerated = []; cursor = null;
+      do { const page = await fresh.okr.listExecutions(first.id, cursor, 2); enumerated.push(...page.executions); cursor = page.cursor; } while (cursor);
+      assert.equal(enumerated.length, 4);
+      assert.equal(enumerated.reduce((sum, execution) => sum + BigInt(execution.claim.spent), 0n), 11n);
+      assert.ok(enumerated.every(execution => execution.claim.settled));
       const pointers: Array<{ logicalId: string; plaintext: string }> = [];
       for (const [logicalId, plaintext] of originals) {
         try {
@@ -116,7 +180,7 @@ export async function prepareOkrAcceptance(o: Options, boundaryHash: Uint8Array)
       const totals = await sdk.okr.getBudget(first.id);
       const globalBudget = { asset: totals.asset, spent: totals.spent.toString(), reserved: totals.reserved.toString() };
       const globalClaim = await sdk.okr.getReservationBudget(first.id, executionId);
-      return { globalBudget, globalClaim, pausedProof: { okrId: drafts[1].id, capabilityId: pausedCapabilityId, executionId: pausedExecutionId }, okrId: first.id, draftIds: drafts.map(draft => draft.id), accepted, observations: history.observations, records: pointers, cacheFreeOrganizationDirectory: true, actualFileRunEvidence: true, separateObservationVerificationAcceptance: true, runtimeAuthorizationBoundToOkr: true, multiKrRuntimeVerified: false };
+      return { historicalBodies, sequential, executionDirectoryCount: enumerated.length, explicitReplanningVerified: true, globalBudget, globalClaim, pausedProof: { okrId: drafts[1].id, capabilityId: pausedCapabilityId, executionId: pausedExecutionId }, okrId: first.id, draftIds: drafts.map(draft => draft.id), accepted, observations: history.observations, records: pointers, cacheFreeOrganizationDirectory: true, actualFileRunEvidence: true, separateObservationVerificationAcceptance: true, runtimeAuthorizationBoundToOkr: true, multiKrRuntimeVerified: true };
     },
   };
 }
