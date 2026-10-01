@@ -151,3 +151,5 @@ export type {
 } from './types.js';
 
 export { executionBoundaryHash } from './execution-boundary.js';
+export { NativeFileOkrRunner, parseNativeFileOkrPlan, okrRunnerTicketName } from './okr-runner.js';
+export type { NativeFileOkrPlan, NativeFileKrPlan, OkrRunnerOptions, OkrRunnerSubmission, OkrRunnerState } from './okr-runner.js';

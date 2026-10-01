@@ -24,6 +24,7 @@ export const OkrBcs = bcs.struct('Okr', {
 const Index = bcs.struct('OkrIndex', { active_count: bcs.u64(), records: Table });
 const Budget = bcs.struct('BudgetState', { asset: bcs.string(), spent: bcs.u64(), reserved: bcs.u64(), claims: Table });
 const CommandContract = bcs.struct('CommandContractBinding', { contract_id: ID, agreement_version: bcs.u64(), kr_index: bcs.u64(), boundary_hash: Bytes });
+const CapabilityContract = bcs.struct('ExecutionContractBinding', { contract_id: ID, agreement_version: bcs.u64(), boundary_hash: Bytes });
 const CommandContractKey = bcs.struct('CommandContractKey', { intent_hash: Bytes });
 const Claim = bcs.struct('BudgetClaim', { capability_id: ID, agreement_version: bcs.u64(), kr_index: bcs.u64(), reserved: bcs.u64(), spent: bcs.u64(), settled: bcs.bool() });
 const Pointer = bcs.struct('DraftPointer', { id: ID, fingerprint: Bytes });
@@ -107,6 +108,13 @@ export class OkrApi {
     if (field.dynamicField.value.type !== `${this.fm.typesPackageId}::okr::BudgetClaim`) throw new Error('Unexpected OKR claim type.');
     const value = Claim.parse(field.dynamicField.value.bcs);
     if (BigInt(value.spent) > BigInt(value.reserved) || (!value.settled && BigInt(value.spent) !== 0n)) throw new Error('Invalid OKR claim.');
+    return value;
+  }
+  async getCapabilityContract(capabilityId: string) {
+    const field = await this.fm.client.core.getDynamicField({ parentId: capabilityId, name: { type: `${this.fm.typesPackageId}::remote_authority::ExecutionContractKey`, bcs: new Uint8Array([0]) } });
+    if (field.dynamicField.value.type !== `${this.fm.typesPackageId}::remote_authority::ExecutionContractBinding`) throw new Error('Unexpected capability contract type.');
+    const value = CapabilityContract.parse(field.dynamicField.value.bcs);
+    if (value.agreement_version === '0' || value.boundary_hash.length !== 32) throw new Error('Invalid capability contract.');
     return value;
   }
   /** Enumerate every Run from the chain-owned OKR claims directory. Historical

@@ -218,12 +218,12 @@ while (page.hasNextPage) {
   page = await sdk.productRecord.listCurrent(organizationId, page.cursor, 3);
   records = [...records, ...page.records];
 }
-assert.equal(records.length, 7 + (hostReport?.executions?.records.length ?? 0) + (hostReport?.executions?.okrAcceptanceEvidence?.records.length ?? 0));
+assert.equal(records.length, 7 + (hostReport?.executions?.records.length ?? 0) + (hostReport?.executions?.okrAcceptanceEvidence?.records.length ?? 0) + (hostReport?.executions?.runnerTickets.length ?? 0));
 for (const pointer of records) {
   const keys = hexToBytes(restoredKeyring.historicalKeys[pointer.key_version]);
   const decoded = await sdk.productRecord.decryptRecord(pointer.record_id, keys);
   const kind = Object.entries(PRODUCT_RECORD_KINDS).find(([, value]) => value === pointer.kind)![0];
-  const executionBody = [...(hostReport?.executions?.records ?? []), ...(hostReport?.executions?.okrAcceptanceEvidence?.records ?? [])].find(body => body.logicalId === pointer.logicalId);
+  const executionBody = [...(hostReport?.executions?.records ?? []), ...(hostReport?.executions?.okrAcceptanceEvidence?.records ?? []), ...(hostReport?.executions?.runnerTickets ?? [])].find(body => body.logicalId === pointer.logicalId);
   if (executionBody) { assert.equal(new TextDecoder().decode(decoded.plaintext), executionBody.plaintext); continue; }
   assert.deepEqual(decoded.plaintext, kind === 'message' ? newMessage : originalBodies.get(kind));
 }
@@ -275,6 +275,7 @@ const recoveredBackup = await unwrapKeys(Uint8Array.from(nextLocated.record.encr
 assert.deepEqual(recoveredBackup, recoveryKeyring);
 const recoveredKeyring = JSON.parse(new TextDecoder().decode(recoveredBackup));
 const recoveredCheckpointRecords: string[] = [];
+const recoveredRunnerTickets: string[] = [];
 let recoveredExecutionBudgets: Awaited<ReturnType<typeof verifyExecutionBudgetRebuild>> | undefined;
 let recoveredUnknownOkr: { okrId: string; state: number; spent: string; reserved: string; executionState: number } | undefined;
 let recoveredOkrs: { directoryCount: number; acceptedOkrId: string; historyCount: number; decryptedBodies: string[]; globalBudget?: unknown; globalClaim?: unknown; pausedClaim?: unknown; executionDirectoryCount?: number; historicalBodyIds?: string[] } | undefined;
@@ -290,6 +291,15 @@ if (hostReport?.executions) {
     const decoded = await sdk.productRecord.decryptRecord(pointer.record_id, key);
     assert.equal(new TextDecoder().decode(decoded.plaintext), expected.plaintext);
     recoveredCheckpointRecords.push(pointer.record_id);
+  }
+  for (const expected of hostReport.executions.runnerTickets) {
+    const pointer = pointers.records.find(pointer => pointer.kind === 5 && pointer.logicalId === expected.logicalId);
+    assert.ok(pointer, 'Recovery must discover the durable device command ticket.');
+    const key = hexToBytes(recoveredKeyring.historicalKeys[pointer.key_version]);
+    const ticket = await sdk.productRecord.decryptRecord(pointer.record_id, key);
+    assert.equal(new TextDecoder().decode(ticket.plaintext), expected.plaintext);
+    assert.equal(JSON.parse(expected.plaintext).schema, 'fractalmind.okr-command-ticket.v1');
+    recoveredRunnerTickets.push(pointer.record_id);
   }
   recoveredExecutionBudgets = await verifyExecutionBudgetRebuild(sdk, [...hostReport.executions.executions, hostReport.executions.pendingStart.executionId]);
   if (hostReport.executions.okrAcceptanceEvidence) {
@@ -363,6 +373,6 @@ const postRecoveryId = created(afterRecovery.data, '::product_record::EncryptedR
 await assert.rejects(sdk.productRecord.decryptRecord(postRecoveryId, newContentKey));
 assert.deepEqual((await sdk.productRecord.decryptRecord(postRecoveryId, recoveryContentKey)).plaintext, newMessage);
 assert.equal((await execute('recovered phone operates same Human', sdk.identity.createOrganization({ humanId, grantId: newPhoneGrantId, name: `Recovered-${Date.now()}`, description: '' }), phone)).data.status.success, true);
-const report = { testedAt: new Date().toISOString(), chain: await c.core.getChainIdentifier(), packageId, registryId, identityRegistryId, humanId, organizationId, checks: rows, records: recordChecks, host: hostReport, recoveredCheckpointRecords, recoveredExecutionBudgets, recoveredOkrs, recoveredUnknownOkr };
+const report = { testedAt: new Date().toISOString(), chain: await c.core.getChainIdentifier(), packageId, registryId, identityRegistryId, humanId, organizationId, checks: rows, records: recordChecks, host: hostReport, recoveredCheckpointRecords, recoveredRunnerTickets, recoveredExecutionBudgets, recoveredOkrs, recoveredUnknownOkr };
 if (process.argv[3]) await writeFile(process.argv[3], `${JSON.stringify(report, null, 2)}\n`);
 console.log('Identity localnet acceptance passed. Recovery codes and private keys were not recorded.');

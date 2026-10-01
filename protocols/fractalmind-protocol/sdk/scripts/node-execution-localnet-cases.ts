@@ -7,7 +7,7 @@ import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
 import type { SuiClientTypes } from '@mysten/sui/client';
 import type { Transaction } from '@mysten/sui/transactions';
-import { FractalMindSDK, signNodeCommand, nodeCommandIntentHash } from '../src/index.js';
+import { FractalMindSDK, NativeFileOkrRunner, signNodeCommand, nodeCommandIntentHash } from '../src/index.js';
 import { bytesToHex, encryptContent, unwrapKeys } from '../src/identity-crypto.js';
 import { commandResultKey, commandResultWrapContext, encryptCommandResult, decryptCommandResult } from '../src/command-result-crypto.js';
 import { sha256 } from '@noble/hashes/sha2.js';
@@ -324,6 +324,7 @@ export async function exerciseNodeExecutions(o: Options) {
     const claim = await sdk.okr.getReservationBudget(okrAcceptance.okrId, nativeExecutionId);
     assert.equal(claim.spent, '6'); assert.equal(claim.settled, true);
   }
+  const runnerTickets: Array<{ logicalId: string; plaintext: string }> = [];
   const okrAcceptanceEvidence = okrAcceptance ? await okrAcceptance.finish(nativeExecutionId, (nativeFileAgentEvidence.recordIds as string[])[0], async step => {
     const payload = { okr: { id: step.okrId, agreement_version: step.agreementVersion, kr_index: step.krIndex }, measurement: { kind: 'verified_text_file_count' }, bounds: { paths, max_calls: step.maxCalls.toString() }, task: JSON.stringify({ kind: 'ensure_text_files', files: step.files }) };
     const signStep = (krIndex: string) => signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: step.capabilityId, revocationVersion: 1n }, budget: { asset: 'TOOL_CALLS', amount: step.maxCalls }, payload: { ...payload, okr: { ...payload.okr, kr_index: krIndex } }, expiresAtMs: step.expiresAtMs });
@@ -333,25 +334,58 @@ export async function exerciseNodeExecutions(o: Options) {
       assert.equal(denied.data.status.success, false); assert.match(JSON.stringify(denied.data.status), /9406/);
       assert.equal((await sdk.remoteAuthority.getCapability(step.capabilityId)).usesClaimed, 1n);
     }
-    const command = await signStep(step.krIndex);
-    const executionId = await prepare(command, true); runtimeExecutionIds.push(executionId);
-    const seed = decodeSuiPrivateKey(host.getSecretKey()).secretKey;
-    try {
-      const { stdout } = await promisify(execFile)('go', ['test', './cmd/envd', '-run', '^TestNativeChainSingleKrLive$', '-count=1', '-v'], {
-        cwd: fileURLToPath(new URL('../../../../runtime/fractalmind-envd/', import.meta.url)), timeout: 90000,
-        env: { ...process.env, FM_CHAIN_EXECUTION_TEST_SEED: bytesToHex(seed), FM_HOST_RESULT_ENCRYPTION_TEST_SECRET: bytesToHex(o.hostEncryptionSecret), FM_CHAIN_SINGLE_KR_CASE: JSON.stringify({ RPC: process.env.FM_LOCALNET_RPC ?? 'http://127.0.0.1:29000', PackageID: sdk.client.packageId, Workspace: o.workspace, Command: command, ExpectedToolCalls: Number(step.maxCalls) }) },
-      });
-      assert.ok(stdout.includes('--- PASS: TestNativeChainSingleKrLive'));
-      const runtimeEvidence = JSON.parse(/FM_SINGLE_KR_EVIDENCE (.+)/.exec(stdout)![1]);
-      assert.equal(runtimeEvidence.executionId, executionId); assert.equal(runtimeEvidence.contract.agreement_version, step.agreementVersion); assert.equal(runtimeEvidence.contract.kr_index, step.krIndex);
-      const record = await sdk.productRecord.decryptRecord(runtimeEvidence.recordId, o.contentKey);
-      const plaintext = new TextDecoder().decode(record.plaintext);
-      assert.equal(JSON.parse(plaintext).response.execution_state, 'succeeded');
-      runtimeRecords.push({ logicalId: 'command-' + bytesToHex(nodeCommandIntentHash(command)), plaintext });
-      await assertBudget(step.capabilityId, step.krIndex === '0' ? 1n : 4n, 0n, 'Sequential KR actual tool costs accumulate without resetting global budget');
-      console.log('Native sequential KR PASS', step.krIndex, 'actual files, new agreement and restored result');
-      return { executionId, evidenceId: runtimeEvidence.recordId as string, runtimeEvidence };
-    } finally { seed.fill(0); }
+    let result: { executionId: string; evidenceId: string; runtimeEvidence: Record<string, unknown> } | undefined;
+    let deliveries = 0;
+    const runnerOptions = {
+      sdk, organizationId: o.organizationId, humanId: o.humanId, grantId: o.grantId, signer: desktop,
+      keyForVersion: async (version: string) => { assert.equal(version, '1'); return o.contentKey; },
+      submit: async (tx: Transaction) => {
+        const saved = await execute('Device runner: atomically save signed ticket, result key and prepare current KR', tx);
+        assert.equal(saved.data.status.success, true);
+        return { status: 'confirmed' as const, digest: saved.data.digest };
+      },
+      deliver: async (command: SignedNodeCommand) => {
+        deliveries++;
+        // The production runner obtains goals from the approved encrypted
+        // agreement. The fixture checks the resulting signed command only.
+        assert.deepEqual(JSON.parse(command.payload.task as string).files, step.files);
+        assert.equal(command.budget?.amount, step.maxCalls.toString());
+        const seed = decodeSuiPrivateKey(host.getSecretKey()).secretKey;
+        try {
+          const { stdout } = await promisify(execFile)('go', ['test', './cmd/envd', '-run', '^TestNativeChainSingleKrLive$', '-count=1', '-v'], {
+            cwd: fileURLToPath(new URL('../../../../runtime/fractalmind-envd/', import.meta.url)), timeout: 90000,
+            env: { ...process.env, FM_CHAIN_EXECUTION_TEST_SEED: bytesToHex(seed), FM_HOST_RESULT_ENCRYPTION_TEST_SECRET: bytesToHex(o.hostEncryptionSecret), FM_CHAIN_SINGLE_KR_CASE: JSON.stringify({ RPC: process.env.FM_LOCALNET_RPC ?? 'http://127.0.0.1:29000', PackageID: sdk.client.packageId, Workspace: o.workspace, Command: command, ExpectedToolCalls: Number(step.maxCalls) }) },
+          });
+          assert.ok(stdout.includes('--- PASS: TestNativeChainSingleKrLive'));
+          const runtimeEvidence = JSON.parse(/FM_SINGLE_KR_EVIDENCE (.+)/.exec(stdout)![1]);
+          const executionId = runtimeEvidence.executionId as string; runtimeExecutionIds.push(executionId);
+          assert.equal(runtimeEvidence.contract.agreement_version, step.agreementVersion); assert.equal(runtimeEvidence.contract.kr_index, step.krIndex);
+          const record = await sdk.productRecord.decryptRecord(runtimeEvidence.recordId, o.contentKey);
+          const plaintext = new TextDecoder().decode(record.plaintext);
+          assert.equal(JSON.parse(plaintext).response.execution_state, 'succeeded');
+          runtimeRecords.push({ logicalId: 'command-' + bytesToHex(nodeCommandIntentHash(command)), plaintext });
+          await assertBudget(step.capabilityId, step.krIndex === '0' ? 1n : 4n, 0n, 'Sequential KR actual tool costs accumulate without resetting global budget');
+          console.log('Native sequential KR PASS', step.krIndex, 'actual files, new agreement and restored result');
+          result = { executionId, evidenceId: runtimeEvidence.recordId as string, runtimeEvidence };
+        } catch (error) {
+          // Print only the subprocess diagnostics; never serialize execFile's
+          // options/environment, which contain temporary test signing keys.
+          console.error('Device runner Host diagnostics:', (error as { stdout?: string }).stdout ?? 'No Host stdout');
+          throw error;
+        } finally { seed.fill(0); }
+      },
+    };
+    const runner = new NativeFileOkrRunner(runnerOptions);
+    const input = { okrId: step.okrId, capabilityId: step.capabilityId };
+    const outcome = await runner.step({ ...input, createIfMissing: true });
+    assert.equal(outcome.status, 'awaiting_verification', JSON.stringify(outcome)); assert.ok(result); assert.ok(outcome.ticketRecordId);
+    assert.equal(outcome.executionId, result.executionId); assert.equal(deliveries, 1);
+    const restoredState = await new NativeFileOkrRunner(runnerOptions).step(input);
+    assert.equal(restoredState.status, 'awaiting_verification'); assert.equal(deliveries, 1, 'Fresh runner queries chain facts without executing again.');
+    const ticket = await sdk.productRecord.decryptRecord(outcome.ticketRecordId, o.contentKey);
+    runnerTickets.push({ logicalId: ticket.record.logical_id, plaintext: new TextDecoder().decode(ticket.plaintext) });
+    result.runtimeEvidence.deviceRunner = { outcome, restoredState, deliveries, source: 'approved encrypted execution agreement', atomicallySavedTicketAndReservation: true };
+    return result;
   }) : undefined;
   let unknownResultEvidence: Record<string, unknown> | undefined;
   if (okrAcceptance) {
@@ -394,7 +428,7 @@ export async function exerciseNodeExecutions(o: Options) {
   const pendingCapabilityId = created(pendingCap.data, '::remote_authority::RemoteCapability');
   const pendingCommand = await signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: pendingCapabilityId, revocationVersion: 1n }, budget: { asset: 'MIST', amount: 20n }, payload: { task: 'must not begin after Host revocation' }, expiresAtMs: Date.now() + 300000 });
   const pendingId = await prepare(pendingCommand);
-  return { capabilityId, limitedCapabilityId: limitedId, runtimeCapabilityId, factoryCapabilityId, nativeCapabilityId, executions: [firstId, secondId, thirdId, waitingId, stoppedId, ...runtimeExecutionIds], goChecks, budgetChecks, resultKeyEvidence, runtimeStoreChecks, productionFactoryEvidence, nativeFileAgentEvidence, okrAcceptanceEvidence, unknownResultEvidence, pendingStart: { ...authority, capabilityId: pendingCapabilityId, executionId: pendingId }, records: [{ logicalId, plaintext: new TextDecoder().decode(plaintext) }, { logicalId: unknownLogicalId, plaintext: new TextDecoder().decode(unknownPlaintext) }, { logicalId: stopLogicalId, plaintext: stopPlaintext }, ...runtimeRecords], checks: 'real chain budget/checkpoints, native bounded text-file goals, actual tool-call accounting and stop; generic model planning, command tools, financial metering and cloud deployment pending' };
+  return { capabilityId, limitedCapabilityId: limitedId, runtimeCapabilityId, factoryCapabilityId, nativeCapabilityId, executions: [firstId, secondId, thirdId, waitingId, stoppedId, ...runtimeExecutionIds], goChecks, budgetChecks, resultKeyEvidence, runtimeStoreChecks, productionFactoryEvidence, nativeFileAgentEvidence, okrAcceptanceEvidence, unknownResultEvidence, runnerTickets, pendingStart: { ...authority, capabilityId: pendingCapabilityId, executionId: pendingId }, records: [{ logicalId, plaintext: new TextDecoder().decode(plaintext) }, { logicalId: unknownLogicalId, plaintext: new TextDecoder().decode(unknownPlaintext) }, { logicalId: stopLogicalId, plaintext: stopPlaintext }, ...runtimeRecords], checks: 'real chain budget/checkpoints, device runner loads approved file plans and atomically prepares tickets, native bounded text-file goals, actual tool-call accounting and stop; generic model planning, full App autonomous loop, command tools, financial metering and cloud deployment pending' };
 }
 
 /** Reconstruct the selected fixture budgets solely from their persisted chain

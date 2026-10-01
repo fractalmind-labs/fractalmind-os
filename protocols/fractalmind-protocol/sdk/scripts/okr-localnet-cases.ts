@@ -33,8 +33,12 @@ export async function prepareOkrAcceptance(o: Options, boundaryHash: Uint8Array)
   assert.equal(exactRetry.data.status.success, true);
   assert.equal(Object.values(exactRetry.data.objectTypes ?? {}).filter(type => type.endsWith('::okr::Okr')).length, 0);
   const managed = await sdk.host.getManagedAgent(o.managedAgentId);
+  const nativeFilePlan = { format: 1, paths: { 'file.read': ['.'], 'file.write': ['.'] }, krs: [
+    { files: [{ path: 'README.md', content: 'FractalMind: human-approved native goal\n' }, { path: 'RESULT.md', content: 'Measured by the Host file reader\n' }], maxCalls: '10' },
+    { files: [{ path: 'FINAL.md', content: 'FractalMind: final KR deliverable after explicit reapproval\n' }], maxCalls: '3' },
+  ] };
   async function activate(draft: typeof first, allowed = true) {
-    const agreement = await body(draft.logicalId, 'agreement', 'contract', 1n, JSON.stringify({ format: 1, managedAgentId: o.managedAgentId, boundaryHash: Array.from(boundaryHash), budget: { asset: 'TOOL_CALLS', limit: '14' }, order: 'sequential', verifier: 'authorized human' }));
+    const agreement = await body(draft.logicalId, 'agreement', 'contract', 1n, JSON.stringify({ format: 1, managedAgentId: o.managedAgentId, boundaryHash: Array.from(boundaryHash), budget: { asset: 'TOOL_CALLS', limit: '14' }, order: 'sequential', verifier: 'authorized human', nativeFilePlan }));
     const made = await execute(allowed ? 'OKR: activate one explicitly managed Agent' : 'OKR: fourth ACTIVE is rejected atomically', sdk.okr.activate({ ...authorized, ...agreement, okrId: draft.id, expectedVersion: 1n, membershipId: o.membershipId, bindingId: o.bindingId, managedAgentId: o.managedAgentId, workspaceHash: Uint8Array.from(managed.workspace_hash), boundaryHash, budgetAsset: 'TOOL_CALLS', budgetLimit: 14n, expiresAtMs: Date.now() + 300000, expectedRecordRevision: 0n }), o.desktop, undefined, !allowed);
     assert.equal(made.data.status.success, allowed);
     if (!allowed) assert.match(JSON.stringify(made.data.status), /9404/);
@@ -104,7 +108,11 @@ export async function prepareOkrAcceptance(o: Options, boundaryHash: Uint8Array)
       const rejectedVerification = await body(first.logicalId, 'verification', 'evidence', 2n, JSON.stringify({ reason: 'Must not verify while paused' }));
       const cannotVerify = await execute('OKR replan: paused objective cannot reuse old verification', sdk.okr.verifyKr({ ...authorized, ...rejectedVerification, okrId: first.id, expectedVersion: paused.version, krIndex: 1n, expectedRecordRevision: 1n }), o.desktop, undefined, true);
       assert.equal(cannotVerify.data.status.success, false); assert.match(JSON.stringify(cannotVerify.data.status), /9403/);
-      const approval = await body(first.logicalId, 'agreement', 'contract', 3n, JSON.stringify({ managedAgentId: o.managedAgentId, boundaryHash: Array.from(boundaryHash), budget: { asset: 'TOOL_CALLS', limit: '14' }, order: 'sequential', reason: 'Reapprove revised goals without resetting spent budget' }));
+      const revisedPlan = { ...nativeFilePlan, krs: [
+        { files: [{ path: 'README.md', content: 'FractalMind: human-approved native goal\n' }], maxCalls: '1' },
+        nativeFilePlan.krs[1],
+      ] };
+      const approval = await body(first.logicalId, 'agreement', 'contract', 3n, JSON.stringify({ managedAgentId: o.managedAgentId, boundaryHash: Array.from(boundaryHash), budget: { asset: 'TOOL_CALLS', limit: '14' }, order: 'sequential', reason: 'Reapprove revised goals without resetting spent budget', nativeFilePlan: revisedPlan }));
       const reapprove = { ...authorized, ...approval, okrId: first.id, expectedVersion: paused.version, membershipId: o.membershipId, bindingId: o.bindingId, managedAgentId: o.managedAgentId, workspaceHash: Uint8Array.from(managed.workspace_hash), boundaryHash, budgetAsset: 'TOOL_CALLS', budgetLimit: 14n, expiresAtMs: criteria.deadlineMs - 1, expectedRecordRevision: 2n };
       const belowSpent = await execute('OKR replan: cannot approve budget below already spent amount', sdk.okr.activate({ ...reapprove, budgetLimit: 6n }), o.desktop, undefined, true);
       assert.equal(belowSpent.data.status.success, false); assert.match(JSON.stringify(belowSpent.data.status), /9409/);
