@@ -364,7 +364,13 @@ module fractalmind_protocol::identity {
     }
 
     public fun assert_can(human: &HumanIdentity, grant: &DeviceGrant, org: &Organization, action: u8, clock: &Clock, ctx: &TxContext) {
-        assert_grant(human, grant, action, clock, ctx);
+        assert_can_for_device(human, grant, org, action, clock, tx_context::sender(ctx));
+    }
+
+    // Checking a recorded issuer does not authorize the current transaction.
+    // Used only by invitations/authority bindings with a pinned issuer device.
+    public fun assert_can_for_device(human: &HumanIdentity, grant: &DeviceGrant, org: &Organization, action: u8, clock: &Clock, device: address) {
+        assert_grant_for_device(human, grant, action, clock, device);
         let org_id = object::id(org);
         assert!(organization::is_active(org), E_PERMISSION);
         if (option::is_some(&grant.org_scope)) assert!(*option::borrow(&grant.org_scope) == org_id, E_SCOPE);
@@ -375,7 +381,10 @@ module fractalmind_protocol::identity {
     }
 
     public fun assert_grant(human: &HumanIdentity, grant: &DeviceGrant, action: u8, clock: &Clock, ctx: &TxContext) {
-        assert!(grant.human_id == object::id(human) && grant.device == tx_context::sender(ctx), E_PERMISSION);
+        assert_grant_for_device(human, grant, action, clock, tx_context::sender(ctx));
+    }
+    fun assert_grant_for_device(human: &HumanIdentity, grant: &DeviceGrant, action: u8, clock: &Clock, device: address) {
+        assert!(grant.human_id == object::id(human) && grant.device == device, E_PERMISSION);
         assert!(!grant.revoked && grant.generation == human.generation, E_REVOKED);
         assert!(clock::timestamp_ms(clock) < grant.expires_at_ms, E_EXPIRED);
         assert!(vector::contains(&grant.actions, &action), E_PERMISSION);

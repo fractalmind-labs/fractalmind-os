@@ -18,19 +18,24 @@ export class FractalMindClient {
   public readonly client: ClientWithCoreApi;
   public readonly packageId: ObjectId;
   public readonly typesPackageId: ObjectId;
+  public readonly network: NetworkName;
   public readonly registryId?: ObjectId;
 
   constructor(options: FractalMindClientOptions) {
     this.packageId = normalizeSuiAddress(options.packageId);
     this.typesPackageId = normalizeSuiAddress(options.originalPackageId ?? options.packageId);
     this.registryId = options.registryId ? normalizeSuiAddress(options.registryId) : undefined;
+    const clientNetwork = options.client?.network;
+    const knownClientNetwork = ['localnet', 'devnet', 'testnet', 'mainnet'].includes(clientNetwork ?? '') ? clientNetwork as NetworkName : undefined;
+    if (options.network && knownClientNetwork && options.network !== knownClientNetwork) throw new Error('Configured network does not match the supplied Sui client.');
+    this.network = options.network ?? knownClientNetwork ?? DEFAULT_NETWORK;
 
     if (options.client) {
       this.client = options.client;
       return;
     }
 
-    const network = options.network ?? DEFAULT_NETWORK;
+    const network = this.network;
     const url = options.fullnodeUrl ?? (network === 'localnet' ? 'http://127.0.0.1:9000' : `https://fullnode.${network}.sui.io:443`);
     this.client = new SuiGrpcClient({ baseUrl: url, network });
   }

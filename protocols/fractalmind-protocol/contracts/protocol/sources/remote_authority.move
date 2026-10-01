@@ -189,6 +189,19 @@ module fractalmind_protocol::remote_authority {
     ) {
         let sender = ctx.sender();
         assert!(organization::admin(org) == sender, E_NOT_ISSUER);
+        let capability = new_capability(org, sender, delegate, target_kind, node_id, agent_id,
+            actions, scope, max_uses, budget_asset, max_budget, expires_at_ms, clock, ctx);
+        emit_created(&capability);
+        transfer::share_object(capability);
+    }
+
+    /// Package callers must enforce their own Human/Host authorization first.
+    public(package) fun new_capability(
+        org: &Organization, sender: address, delegate: address, target_kind: u8,
+        node_id: String, agent_id: String, actions: vector<String>, scope: String,
+        max_uses: u64, budget_asset: String, max_budget: u64, expires_at_ms: u64,
+        clock: &Clock, ctx: &mut TxContext,
+    ): RemoteCapability {
         assert!(delegate != @0x0, E_INVALID_CAPABILITY);
         validate_capability_shape(
             target_kind,
@@ -232,9 +245,15 @@ module fractalmind_protocol::remote_authority {
             authority_nonces: table::new(ctx),
             authority_idempotency_keys: table::new(ctx),
         };
+        capability
+    }
+
+    public(package) fun share_capability(capability: RemoteCapability) {
         emit_created(&capability);
         transfer::share_object(capability);
     }
+
+    public(package) fun capability_uid_mut(capability: &mut RemoteCapability): &mut UID { &mut capability.id }
 
     /// Delegate a bounded node/agent subset from an organization root. Quota is
     /// reserved at child creation and never returned in Phase 0.
@@ -732,7 +751,9 @@ module fractalmind_protocol::remote_authority {
     }
 
     fun is_initial_scope(value: &String): bool {
-        value == &string::utf8(b"view") ||
+        value == &string::utf8(b"observation") ||
+            value == &string::utf8(b"direct") ||
+            value == &string::utf8(b"view") ||
             value == &string::utf8(b"control") ||
             value == &string::utf8(b"logs") ||
             value == &string::utf8(b"terminal") ||

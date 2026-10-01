@@ -16,6 +16,7 @@ type Reservation struct {
 	Fingerprint               string
 	ExpectedAuthorityHash     string
 	ExpectedRevocationVersion uint64
+	AuthorityObservedAtMS     int64
 	Scope                     ReservationScope
 	Budget                    *BudgetClaim
 }

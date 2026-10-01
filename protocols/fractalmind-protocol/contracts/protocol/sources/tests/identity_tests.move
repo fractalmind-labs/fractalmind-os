@@ -17,7 +17,7 @@ module fractalmind_protocol::identity_tests {
         out
     }
     fun recovery_address(): address { identity::signing_address(&key(1)) }
-    fun setup(): Scenario {
+    public fun setup(): Scenario {
         let mut s = ts::begin(recovery_address());
         organization::create_and_share_registry(ts::ctx(&mut s));
         let c = clock::create_for_testing(ts::ctx(&mut s));

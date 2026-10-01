@@ -30,6 +30,7 @@ type CapabilityState struct {
 	ReservationScope       ReservationScope `json:"reservation_scope"`
 	RemainingUses          *uint64          `json:"remaining_uses,omitempty"`
 	RemainingBudget        *BudgetClaim     `json:"remaining_budget,omitempty"`
+	AuthorityVersionHash   string           `json:"authority_version_hash,omitempty"`
 }
 
 type ReservationScope string
@@ -129,6 +130,7 @@ func (v *Validator) Validate(ctx context.Context, command NodeCommand) (Validati
 	reservation.Scope = state.ReservationScope
 	reservation.ExpectedAuthorityHash = state.SnapshotHash()
 	reservation.ExpectedRevocationVersion = state.RevocationVersion
+	reservation.AuthorityObservedAtMS = state.CheckpointObservedAtMS
 	result, err := v.authority.Reserve(ctx, reservation)
 	if err != nil {
 		if CodeOf(err) != "" {
@@ -288,6 +290,7 @@ func (state CapabilityState) SnapshotHash() string {
 		HasUseBound            bool             `json:"has_use_bound"`
 		HasBudgetBound         bool             `json:"has_budget_bound"`
 		BudgetAsset            string           `json:"budget_asset,omitempty"`
+		AuthorityVersionHash   string           `json:"authority_version_hash,omitempty"`
 	}{
 		ID:                     state.ID,
 		Target:                 state.Target,
@@ -302,6 +305,7 @@ func (state CapabilityState) SnapshotHash() string {
 		HasUseBound:            hasUseBound,
 		HasBudgetBound:         hasBudgetBound,
 		BudgetAsset:            budgetAsset,
+		AuthorityVersionHash:   state.AuthorityVersionHash,
 	})
 	return hashBytes(payload)
 }

@@ -12,6 +12,8 @@ import { bcs } from '@mysten/sui/bcs';
 import { FractalMindSDK, createRecoveryCode, recoveryKeys, createDeviceEncryptionKeys, wrapKeys, unwrapKeys, randomContentKey, bytesToHex, hexToBytes, PRODUCT_RECORD_KINDS } from '../src/index.js';
 import type { ProductRecordKind } from '../src/index.js';
 import { bytesArgument } from '../src/wire-bytes.js';
+import { exerciseHostAdmission } from './host-localnet-cases.js';
+import { verifyGoAuthority } from './verify-go-authority.js';
 
 const baseUrl = process.env.FM_LOCALNET_RPC ?? 'http://127.0.0.1:29000';
 const faucet = process.env.FM_LOCALNET_FAUCET ?? 'http://127.0.0.1:29123';
@@ -51,6 +53,9 @@ async function execute(label: string, tx: Transaction, signer = desktop, sponsor
   const data = result.$kind === 'Transaction' ? result.Transaction : result.FailedTransaction;
   rows.push({ label, digest: data.digest, status: data.status, gasUsed: data.effects?.gasUsed });
   console.log(label, data.status.success ? 'PASS' : 'REJECTED', data.digest);
+  // Keep public transaction evidence even if confirmation is interrupted.
+  // This contains no generated key material or recovery/invitation codes.
+  if (process.argv[3]) await writeFile(`${process.argv[3]}.progress.json`, JSON.stringify({ complete: false, transactions: rows }, null, 2));
   await c.core.waitForTransaction({ digest: data.digest, include });
   return { result, data };
 }
@@ -132,6 +137,9 @@ assert.equal((await execute('add phone with seven-day org-scoped read grant', sd
 let human = await sdk.identity.getHuman(humanId);
 const phoneGrantId = human.grants[1];
 const phoneGrant = await sdk.identity.getDeviceGrant(phoneGrantId);
+const hostReport = process.env.FM_HOST_ACCEPTANCE === '1'
+  ? await exerciseHostAdmission({ sdk, execute, created, humanId, organizationId, rootGrantId, phoneGrantId, desktop, phone, faucet })
+  : undefined;
 assert.deepEqual(phoneGrant.actions, [1]);
 assert.equal(phoneGrant.org_scope, organizationId);
 assert.equal(phoneGrant.device, phoneAddress);
@@ -212,6 +220,11 @@ const recovered = await execute('atomically recover Human, revoke all old device
 assert.equal(recovered.data.status.success, true);
 human = await sdk.identity.getHuman(humanId);
 assert.equal(human.generation, '2');
+if (hostReport) {
+  await verifyGoAuthority(packageId, hostReport.freshCapabilityId, 'revoked');
+  // Recovery revokes device authority, not the organization's admitted Hosts.
+  await verifyGoAuthority(packageId, hostReport.freshObservationCapabilityId);
+}
 assert.deepEqual(human.organizations, [organizationId]);
 assert.equal((await sdk.organization.getOrganization(organizationId)).admin, humanId);
 const newPhoneGrantId = human.grants[2];
@@ -234,6 +247,6 @@ const postRecoveryId = created(afterRecovery.data, '::product_record::EncryptedR
 await assert.rejects(sdk.productRecord.decryptRecord(postRecoveryId, newContentKey));
 assert.deepEqual((await sdk.productRecord.decryptRecord(postRecoveryId, recoveryContentKey)).plaintext, newMessage);
 assert.equal((await execute('recovered phone operates same Human', sdk.identity.createOrganization({ humanId, grantId: newPhoneGrantId, name: `Recovered-${Date.now()}`, description: '' }), phone)).data.status.success, true);
-const report = { testedAt: new Date().toISOString(), chain: await c.core.getChainIdentifier(), packageId, registryId, identityRegistryId, humanId, organizationId, checks: rows, records: recordChecks };
+const report = { testedAt: new Date().toISOString(), chain: await c.core.getChainIdentifier(), packageId, registryId, identityRegistryId, humanId, organizationId, checks: rows, records: recordChecks, host: hostReport };
 if (process.argv[3]) await writeFile(process.argv[3], `${JSON.stringify(report, null, 2)}\n`);
 console.log('Identity localnet acceptance passed. Recovery codes and private keys were not recorded.');

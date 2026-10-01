@@ -1,5 +1,6 @@
 import { AgentApi } from './agent.js';
 import { IdentityApi } from './identity.js';
+import { HostApi } from './host.js';
 import { ProductRecordApi } from './product-record.js';
 import { AgentPolicyApi } from './agent-policy.js';
 import { FractalMindClient } from './client.js';
@@ -17,6 +18,7 @@ export class FractalMindSDK {
   public readonly objective: ObjectiveApi;
   public readonly agent: AgentApi;
   public readonly identity: IdentityApi;
+  public readonly host: HostApi;
   public readonly productRecord: ProductRecordApi;
   public readonly agentPolicy: AgentPolicyApi;
   public readonly task: TaskApi;
@@ -30,6 +32,7 @@ export class FractalMindSDK {
     this.objective = new ObjectiveApi(this.client);
     this.agent = new AgentApi(this.client);
     this.identity = new IdentityApi(this.client);
+    this.host = new HostApi(this.client);
     this.productRecord = new ProductRecordApi(this.client);
     this.agentPolicy = new AgentPolicyApi(this.client);
     this.task = new TaskApi(this.client);
@@ -40,6 +43,9 @@ export class FractalMindSDK {
 }
 
 export { FractalMindClient } from './client.js';
+export { HostApi, HostInviteBcs, HostMembershipBcs, ManagedAgentBcs, CoordinatorBindingBcs,
+  HostIndexBcs, AuthorityBindingBcs, HostJoinIntentBcs, createHostInviteMaterial,
+  encodeHostInviteCode, parseHostInviteCode } from './host.js';
 export { IdentityApi, IdentityRegistryBcs, RecoveryLocationBcs, HumanIdentityBcs, DeviceGrantBcs, RecoveryRecordBcs, DEVICE_ACTIONS } from './identity.js';
 export type { DeviceAction } from './identity.js';
 export { ProductRecordApi, PRODUCT_RECORD_KINDS, EncryptedRecordBcs, recordContext } from './product-record.js';
