@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -23,6 +22,7 @@ import (
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/config"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/coordinator"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/heartbeat"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/hostidentity"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/processsupervisor"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/relay"
@@ -51,6 +51,7 @@ type runtimeCommandExecutor interface {
 func main() {
 	configPath := flag.String("config", "sentinel.yaml", "path to config file")
 	showVersion := flag.Bool("version", false, "show version")
+	initHost := flag.Bool("init-host", false, "initialize Host signing/encryption keys in the system credential store")
 	flag.Parse()
 
 	if *showVersion {
@@ -66,11 +67,38 @@ func main() {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
+	if *initHost {
+		store, err := hostidentity.OpenNativeStore()
+		if err != nil {
+			log.Fatal(err)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		keys, err := hostidentity.Initialize(ctx, store, cfg.Identity.KeyProfile, "")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer keys.Close()
+		public, err := keys.Public(cfg.Identity.KeyProfile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := json.NewEncoder(os.Stdout).Encode(public); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	log.Printf("starting fractalmind-envd %s (host=%s)", version, cfg.Identity.Hostname)
 
 	runtimeExecutor, err := newRuntimeCommandExecutorFromEnv(cfg)
 	if err != nil {
 		log.Fatalf("[runtimeadapter] failed to initialize persistent signed-command runtime: %v", err)
+	}
+	if chainRuntime, ok := runtimeExecutor.(*chainRuntimeExecutor); ok {
+		cfg.Identity.HostID = chainRuntime.signer.Address()
+	}
+	if closer, ok := runtimeExecutor.(io.Closer); ok {
+		defer closer.Close()
 	}
 	if runtimeExecutor != nil {
 		log.Printf("[runtimeadapter] persistent signed-command runtime enabled (executor=%T)", runtimeExecutor)
@@ -134,10 +162,22 @@ func main() {
 	// of the full SUI role so control-channel auth works even when on-chain
 	// features are disabled.
 	var ctrlKey *sui.Keypair
-	if kp, kerr := sui.LoadOrGenerateKeypair(cfg.SUI.KeypairPath); kerr != nil {
+	loadControlKey := func() (*sui.Keypair, error) {
+		if chainRuntime, ok := runtimeExecutor.(*chainRuntimeExecutor); ok {
+			return chainRuntime.controlKeypair()
+		}
+		return sui.LoadOrGenerateKeypair(cfg.SUI.KeypairPath)
+	}
+	if kp, kerr := loadControlKey(); kerr != nil {
+		if _, ok := runtimeExecutor.(*chainRuntimeExecutor); ok {
+			log.Fatalf("[auth] secure Host control-channel identity unavailable: %v", kerr)
+		}
 		log.Printf("[auth] WARNING: could not load control-channel keypair (%v); control channel will be UNAUTHENTICATED", kerr)
 	} else {
 		ctrlKey = kp
+		if _, ok := runtimeExecutor.(*chainRuntimeExecutor); ok {
+			defer clear(ctrlKey.Private)
+		}
 		wsClient.SetAuth(ctrlKey, cfg.Gateway.CoordinatorAddress)
 		log.Printf("[auth] control channel enabled, node identity=%s", ctrlKey.Address())
 	}
@@ -186,7 +226,11 @@ func main() {
 		}
 
 		// Init SUI client (works independently of WireGuard)
-		suiClient, err = sui.NewClient(cfg.SUI)
+		if _, ok := runtimeExecutor.(*chainRuntimeExecutor); ok {
+			suiClient, err = sui.NewClientWithKeypair(cfg.SUI, ctrlKey)
+		} else {
+			suiClient, err = sui.NewClient(cfg.SUI)
+		}
 		if err != nil {
 			log.Fatalf("failed to create sui client: %v", err)
 		}
@@ -621,66 +665,6 @@ func parseSupervisorDuration(raw string, fallback time.Duration) (time.Duration,
 	return value, nil
 }
 
-func newRuntimeCommandExecutorFromEnv(cfg *config.Config) (runtimeCommandExecutor, error) {
-	runtimeStateDir := strings.TrimSpace(os.Getenv("FRACTALMIND_RUNTIME_STATE_DIR"))
-	if runtimeStateDir == "" {
-		return nil, nil
-	}
-	if cfg == nil {
-		return nil, fmt.Errorf("config is required")
-	}
-
-	localTarget := nodecommand.Target{
-		OrganizationID: strings.TrimSpace(cfg.SUI.OrgID),
-		NodeID:         strings.TrimSpace(cfg.Identity.HostID),
-	}
-	if localTarget.NodeID == "" {
-		localTarget.NodeID = strings.TrimSpace(cfg.Identity.Hostname)
-	}
-	if localTarget.OrganizationID == "" || localTarget.NodeID == "" {
-		return nil, fmt.Errorf("sui.org_id and identity.host_id or identity.hostname are required for signed-command validation")
-	}
-
-	authorityFile := strings.TrimSpace(os.Getenv("FRACTALMIND_NODE_COMMAND_AUTHORITY_FILE"))
-	if authorityFile == "" {
-		authorityFile = filepath.Join(runtimeStateDir, "authority.json")
-	}
-	authorityStore, err := nodecommand.NewFileAuthorityStore(authorityFile, filepath.Join(runtimeStateDir, "authority-reservations"))
-	if err != nil {
-		return nil, err
-	}
-	validator := nodecommand.NewValidator(
-		nodecommand.Ed25519Verifier{},
-		authorityStore,
-		nodecommand.ValidatorOptions{
-			LocalTarget:              localTarget,
-			LowRiskActions:           signedCommandLowRiskActions(),
-			HighRiskActions:          signedCommandHighRiskActions(),
-			BudgetedActions:          map[string]struct{}{},
-			MaxCommandTTL:            5 * time.Minute,
-			MaxLowRiskCheckpointAge:  24 * time.Hour,
-			MaxHighRiskCheckpointAge: 2 * time.Minute,
-		},
-	)
-
-	adapterCommand := strings.TrimSpace(os.Getenv("FRACTALMIND_AGENT_MANAGER_COMMAND"))
-	adapterArgs := splitRuntimeAdapterArgs(os.Getenv("FRACTALMIND_AGENT_MANAGER_ARGS"))
-	if adapterCommand == "" {
-		if mainPath := strings.TrimSpace(os.Getenv("FRACTALMIND_AGENT_MANAGER_MAIN")); mainPath != "" {
-			adapterCommand = "python3"
-			adapterArgs = append([]string{mainPath}, adapterArgs...)
-		} else {
-			adapterCommand = "agent-manager"
-		}
-	}
-
-	executor, err := runtimeadapter.NewExecutorWithStateDir(validator, runtimeadapter.AgentManager(adapterCommand, adapterArgs...), runtimeStateDir)
-	if err != nil {
-		return nil, err
-	}
-	return executor, nil
-}
-
 func signedCommandLowRiskActions() map[string]struct{} {
 	return map[string]struct{}{
 		"inventory":    {},
@@ -823,8 +807,8 @@ func handleSignedCommand(ctx context.Context, rawCommand string, runtimeExecutor
 		"success": false,
 	}
 	if runtimeExecutor == nil {
-		result["error_code"] = "runtime_state_dir_required"
-		result["error"] = "signed-command runtime requires FRACTALMIND_RUNTIME_STATE_DIR-backed persistent executor"
+		result["error_code"] = "runtime_configuration_required"
+		result["error"] = "signed-command runtime requires runtime.enabled, Sui configuration and an initialized secure Host identity"
 		return result
 	}
 	if strings.TrimSpace(rawCommand) == "" {

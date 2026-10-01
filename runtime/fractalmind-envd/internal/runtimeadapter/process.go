@@ -46,6 +46,26 @@ func AgentManager(command string, args ...string) Adapter {
 	return &processAdapter{Command: command, Args: append(args, "adapter")}
 }
 
+type observationAdapter struct{ *processAdapter }
+
+func ObservationAgentManager(command string, args ...string) Adapter {
+	return &observationAdapter{&processAdapter{Command: command, Args: append(args, "adapter")}}
+}
+func (*observationAdapter) Supports(operation Operation) bool {
+	switch operation {
+	case OperationInventory, OperationStatus, OperationMonitor, OperationLogs, OperationHealth, OperationAvailability:
+		return true
+	default:
+		return false
+	}
+}
+func (a *observationAdapter) run(ctx context.Context, request Request) (Response, error) {
+	if !a.Supports(request.Operation) {
+		return Response{}, runError("unsupported_operation", fmt.Errorf("observation adapter cannot control an Agent"))
+	}
+	return a.processAdapter.run(ctx, request)
+}
+
 func (a *processAdapter) run(ctx context.Context, request Request) (Response, error) {
 	if err := request.Validate(); err != nil {
 		return Response{}, err

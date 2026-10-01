@@ -35,7 +35,7 @@
 
 读取结果仅是授权投影。命令和预算通过 `node_execution` 原子预留并创建检查点；`ChainReservations` 只接受与签名意图完全一致、由设备事先创建的排队记录。Host 启动事务在链上再次核验当前依赖，并记录本次随机尝试标识。执行端确认该标识后才能调用适配器，回执未知时保留 digest，不重发启动。完整说明见 [命令检查点](v020-node-execution.md)。
 
-现有生产工厂仍使用 Phase 0 文件存储；真实适配器、Host 加密密钥、链上结果存储及预算结算尚未接线，因此 #30 尚未交付。
+生产工厂已接入链上 AuthorityStore、启动预留和加密结果存储，Host 密钥由 OS 凭据库加载；真实链观察及重启查询已验证，见 [Host 身份与执行器](v020-host-identity-runtime.md)。当前 agent-manager 仅观察，真实受约束执行和完整 #30 验收仍待完成。
 
 ## 可复现验证
 
@@ -54,4 +54,4 @@ Go 工具链须可用。独立网络地址可用 `FM_LOCALNET_RPC`、`FM_LOCALNE
 
 Host 基础证据：[真实本地链报告](evidence/v020-host-admission-localnet.json)，包含 48 笔交易与 6 次真实 Go gRPC 权限核验。加入 `FM_NODE_CHECKPOINT_ACCEPTANCE=1` 可同时运行命令预留、启动、终态及恢复测试；扩展证据见 [命令报告](evidence/v020-node-execution-localnet.json)。
 
-尚待：已发布包实际升级、邀请码接入 CLI/App、真实本地/云端 envd、运行时能力核验、签名心跳、设备鉴权路由、预算结算、生产接线与完整 OKR/App 闭环。
+尚待：已发布包实际升级、邀请码接入 CLI/App、真实本地/云端 envd、运行时能力核验、签名心跳、设备鉴权路由、实际费用及 OKR 预算联动与完整 OKR/App 闭环。

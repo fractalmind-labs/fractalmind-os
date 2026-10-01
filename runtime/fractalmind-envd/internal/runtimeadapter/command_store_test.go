@@ -3,18 +3,57 @@ package runtimeadapter
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 )
 
 type commandStoreProbe struct {
-	preflightErr    error
-	saves, confirms int
+	preflightErr                error
+	saves, confirms, preflights int
 }
 
 func (s *commandStoreProbe) Preflight(context.Context, nodecommand.NodeCommand) error {
+	s.preflights++
 	return s.preflightErr
+}
+
+func TestObservationAdapterRejectsControlBeforeAnyChainClaim(t *testing.T) {
+	for _, action := range []string{"assign", "start", "stop", "direct.message"} {
+		store := &commandStoreProbe{}
+		executor, err := NewExecutorWithCommandStore(testValidator(), ObservationAgentManager("must-not-run"), store)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _, err = executor.Execute(context.Background(), runtimeCommand(action, "lifecycle", `{"task":"must not execute"}`))
+		if nodecommand.CodeOf(err) != nodecommand.CodeRuntimeUnsupported || store.preflights != 0 || store.confirms != 0 || store.saves != 0 {
+			t.Fatalf("unsupported action reached authority/runtime: action=%s err=%v store=%+v", action, err, store)
+		}
+	}
+}
+func TestConcurrentObservationControlRejectionsNeverReserve(t *testing.T) {
+	store := &commandStoreProbe{}
+	executor, err := NewExecutorWithCommandStore(testValidator(), ObservationAgentManager("must-not-run"), store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := runtimeCommand("assign", "lifecycle", `{"task":"never execute"}`)
+	var group sync.WaitGroup
+	for range 32 {
+		group.Add(1)
+		go func() {
+			defer group.Done()
+			_, _, err := executor.Execute(context.Background(), command)
+			if nodecommand.CodeOf(err) != nodecommand.CodeRuntimeUnsupported {
+				t.Errorf("concurrent request acquired execution: %v", err)
+			}
+		}()
+	}
+	group.Wait()
+	if store.preflights != 0 || store.saves != 0 || store.confirms != 0 {
+		t.Fatal("unsupported concurrency reached chain state")
+	}
 }
 func (s *commandStoreProbe) ConfirmStart(context.Context, nodecommand.NodeCommand, *nodecommand.ChainExecution) error {
 	s.confirms++

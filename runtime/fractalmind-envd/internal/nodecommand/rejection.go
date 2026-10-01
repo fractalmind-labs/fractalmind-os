@@ -23,6 +23,7 @@ const (
 	CodeBudgetExceeded         RejectionCode = "budget_exceeded"
 	CodeHostGasInsufficient    RejectionCode = "host_gas_insufficient"
 	CodeHostGasUnavailable     RejectionCode = "host_gas_unavailable"
+	CodeRuntimeUnsupported     RejectionCode = "runtime_unsupported"
 	CodeRiskUnclassified       RejectionCode = "risk_unclassified"
 	CodeSignatureInvalid       RejectionCode = "signature_invalid"
 	CodeReplay                 RejectionCode = "replay"

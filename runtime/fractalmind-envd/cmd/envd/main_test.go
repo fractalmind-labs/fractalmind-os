@@ -19,7 +19,7 @@ import (
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/wsauth"
 )
 
-func TestSignedCommandWithoutStateDirExecutorFailsClosed(t *testing.T) {
+func TestSignedCommandWithoutEnabledRuntimeFailsClosed(t *testing.T) {
 	t.Setenv("FRACTALMIND_RUNTIME_STATE_DIR", "")
 
 	executor, err := newRuntimeCommandExecutorFromEnv(testRuntimeConfig())
@@ -27,22 +27,22 @@ func TestSignedCommandWithoutStateDirExecutorFailsClosed(t *testing.T) {
 		t.Fatalf("newRuntimeCommandExecutorFromEnv: %v", err)
 	}
 	if executor != nil {
-		t.Fatal("missing FRACTALMIND_RUNTIME_STATE_DIR must not create memory-backed executor")
+		t.Fatal("disabled runtime must not create a memory-backed executor")
 	}
 
 	result := handleSignedCommand(context.Background(), `{}`, executor)
 	if result["success"] != false {
 		t.Fatalf("success = %v, want false", result["success"])
 	}
-	if result["error_code"] != "runtime_state_dir_required" {
-		t.Fatalf("error_code = %v, want runtime_state_dir_required", result["error_code"])
+	if result["error_code"] != "runtime_configuration_required" {
+		t.Fatalf("error_code = %v, want runtime_configuration_required", result["error_code"])
 	}
-	if !strings.Contains(fmt.Sprint(result["error"]), "FRACTALMIND_RUNTIME_STATE_DIR") {
-		t.Fatalf("error = %v, want state-dir guidance", result["error"])
+	if !strings.Contains(fmt.Sprint(result["error"]), "runtime.enabled") {
+		t.Fatalf("error = %v, want chain runtime configuration guidance", result["error"])
 	}
 }
 
-func TestRuntimeCommandExecutorRejectsUnusableStateDir(t *testing.T) {
+func TestRuntimeCommandExecutorRejectsLegacyStatePath(t *testing.T) {
 	blockingFile := t.TempDir() + "/state-file"
 	if err := os.WriteFile(blockingFile, []byte("not a directory"), 0o600); err != nil {
 		t.Fatal(err)
@@ -54,11 +54,11 @@ func TestRuntimeCommandExecutorRejectsUnusableStateDir(t *testing.T) {
 	}
 }
 
-func TestRuntimeCommandExecutorRequiresAuthorityFile(t *testing.T) {
+func TestRuntimeCommandExecutorRejectsLegacyStateDirectory(t *testing.T) {
 	t.Setenv("FRACTALMIND_RUNTIME_STATE_DIR", t.TempDir())
 
 	if _, err := newRuntimeCommandExecutorFromEnv(testRuntimeConfig()); err == nil {
-		t.Fatal("missing authority state file was accepted")
+		t.Fatal("legacy state directory enabled a production file authority store")
 	}
 }
 
@@ -247,7 +247,18 @@ func newTestPersistentRuntimeExecutor(
 	t.Setenv("FRACTALMIND_AGENT_MANAGER_COMMAND", os.Args[0])
 	t.Setenv("FRACTALMIND_AGENT_MANAGER_ARGS", "-test.run=TestEnvdRuntimeAdapterHelperProcess --")
 
-	executor, err := newRuntimeCommandExecutorFromEnv(testRuntimeConfig())
+	// File-state replay tests remain Phase 0 compatibility tests. Production
+	// construction is independently tested and never selects this backend.
+	authority, err := nodecommand.NewFileAuthorityStore(stateDir+"/authority.json", stateDir+"/authority-reservations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	validator := nodecommand.NewValidator(nodecommand.Ed25519Verifier{}, authority, nodecommand.ValidatorOptions{
+		LocalTarget:    nodecommand.Target{OrganizationID: "org-1", NodeID: "node-1"},
+		LowRiskActions: signedCommandLowRiskActions(), HighRiskActions: signedCommandHighRiskActions(),
+		MaxCommandTTL: 5 * time.Minute, MaxLowRiskCheckpointAge: 24 * time.Hour, MaxHighRiskCheckpointAge: 2 * time.Minute,
+	})
+	executor, err := runtimeadapter.NewExecutorWithStateDir(validator, runtimeadapter.AgentManager(os.Args[0], "-test.run=TestEnvdRuntimeAdapterHelperProcess", "--"), stateDir)
 	if err != nil {
 		t.Fatalf("newRuntimeCommandExecutorFromEnv: %v", err)
 	}

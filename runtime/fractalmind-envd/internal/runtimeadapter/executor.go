@@ -108,6 +108,17 @@ func (e *Executor) Execute(ctx context.Context, command nodecommand.NodeCommand)
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	// Apply to every request before creating/waiting on an in-flight entry.
+	// Otherwise a concurrent replay could claim a command its first caller
+	// rejected before authorization.
+	if adapter, ok := e.adapter.(interface{ Supports(Operation) bool }); ok && !adapter.Supports(actionOperations[command.Action]) {
+		err := &nodecommand.RejectionError{Code: nodecommand.CodeRuntimeUnsupported, Message: "configured runtime cannot enforce the requested execution boundaries"}
+		event, eventErr := e.commandRejectedEvent(command, err)
+		if eventErr != nil {
+			return Response{}, nodecommand.NodeEvent{}, eventErr
+		}
+		return Response{}, event, err
+	}
 
 	key := executionKey(command)
 	e.mu.Lock()

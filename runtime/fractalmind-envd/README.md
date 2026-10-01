@@ -64,7 +64,7 @@ brew install wireguard-tools go git
 
 # Build (produces bin/envd-darwin-arm64)
 make build-darwin
-# Or: CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o bin/envd ./cmd/envd/
+# Or: CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -o bin/envd ./cmd/envd/
 
 # Configure
 cp sentinel.yaml.example sentinel.yaml
@@ -126,6 +126,22 @@ an OS security decision and is not enabled by this installer.
 ## Configuration
 
 See [`sentinel.yaml.example`](sentinel.yaml.example) for all options.
+
+### Chain-authorized command runtime
+
+The v0.2.0 command factory uses Sui authority and encrypted chain results.
+Initialize this Host's local signing/encryption keys explicitly, then enable
+the runtime as described in [Host identity and runtime setup](../../docs/product/v020-host-identity-runtime.md).
+`envd --config sentinel.yaml --init-host` prints public keys only; normal startup
+never generates a replacement identity. The macOS build requires CGO and
+Xcode command-line tools for Keychain access. Linux requires an available
+Secret Service session; Windows uses Credential Manager. The current
+agent-manager adapter supports observation only. Control requires the bounded
+runtime still being implemented; a chain capability alone does not grant it.
+
+`FRACTALMIND_RUNTIME_STATE_DIR` no longer selects a production file store,
+and `FRACTALMIND_NODE_COMMAND_AUTHORITY_FILE` is rejected when the chain runtime
+is enabled. Legacy file stores remain only for compatibility tests.
 
 | Setting | Default | Description |
 |---------|---------|-------------|

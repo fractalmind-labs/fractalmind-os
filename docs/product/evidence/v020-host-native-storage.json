@@ -1,0 +1,21 @@
+{
+  "testedAt": "2026-10-01T07:48:59.332372+00:00",
+  "macOS": {
+    "backend": "macOS Keychain",
+    "duplicateCreationRejected": true,
+    "generatedTestIdentityOnly": true,
+    "localSecretFileCreated": false,
+    "reloadStable": true
+  },
+  "linux": {
+    "provider": "Secret Service",
+    "crossCompiled": true,
+    "nativeRuntimeVerified": false
+  },
+  "windows": {
+    "provider": "Credential Manager",
+    "crossCompiled": true,
+    "nativeRuntimeVerified": false
+  },
+  "scope": "Host local keys only; App device keys and actual cloud deployment still pending"
+}

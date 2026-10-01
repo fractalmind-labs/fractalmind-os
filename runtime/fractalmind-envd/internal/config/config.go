@@ -19,6 +19,7 @@ type Config struct {
 	Sponsor     SponsorConfig     `yaml:"sponsor"`
 	Relay       RelayConfig       `yaml:"relay"`
 	Desktop     DesktopConfig     `yaml:"desktop"`
+	Runtime     RuntimeConfig     `yaml:"runtime"`
 
 	// Gateway config is the worker-side transport target.
 	// Workers connect to the coordinator envd WebSocket at this URL.
@@ -77,8 +78,10 @@ type GatewayConfig struct {
 }
 
 type IdentityConfig struct {
-	HostID   string `yaml:"host_id"`
-	Hostname string `yaml:"hostname"`
+	// KeyProfile names this Host's private keys in the OS credential store.
+	KeyProfile string `yaml:"key_profile"`
+	HostID     string `yaml:"host_id"`
+	Hostname   string `yaml:"hostname"`
 	// DesktopURL is the public URL of this node's envd-desktop server (e.g. a
 	// tunnel). When set, the worker advertises it on register so a console can
 	// open the remote desktop without the operator pasting the URL.
@@ -106,16 +109,26 @@ type HeartbeatConfig struct {
 }
 
 type SUIConfig struct {
-	Enabled           bool   `yaml:"enabled"`
-	RPC               string `yaml:"rpc"` // gRPC fullnode endpoint
-	GraphQLURL        string `yaml:"graphql_url"`
-	KeypairPath       string `yaml:"keypair_path"`
-	PackageID         string `yaml:"package_id"`
-	ProtocolPackageID string `yaml:"protocol_package_id"`
-	RegistryID        string `yaml:"registry_id"`
-	OrgID             string `yaml:"org_id"`
-	CertID            string `yaml:"cert_id"`
-	PollInterval      string `yaml:"poll_interval"`
+	Enabled                   bool   `yaml:"enabled"`
+	RPC                       string `yaml:"rpc"` // gRPC fullnode endpoint
+	GraphQLURL                string `yaml:"graphql_url"`
+	KeypairPath               string `yaml:"keypair_path"`
+	PackageID                 string `yaml:"package_id"`
+	ProtocolPackageID         string `yaml:"protocol_package_id"`
+	ProtocolOriginalPackageID string `yaml:"protocol_original_package_id"`
+	RegistryID                string `yaml:"registry_id"`
+	OrgID                     string `yaml:"org_id"`
+	CertID                    string `yaml:"cert_id"`
+	PollInterval              string `yaml:"poll_interval"`
+}
+
+// RuntimeConfig enables the chain-authorized command path. Local result or
+// authority files are not accepted as production persistence.
+type RuntimeConfig struct {
+	Enabled         bool     `yaml:"enabled"`
+	AdapterCommand  string   `yaml:"adapter_command"`
+	AdapterArgs     []string `yaml:"adapter_args"`
+	ResultGasBudget uint64   `yaml:"result_gas_budget"`
 }
 
 // SponsorConfig configures the built-in gas sponsorship role.
@@ -170,8 +183,9 @@ func DefaultConfig() *Config {
 			ReconnectInterval: "5s",
 		},
 		Identity: IdentityConfig{
-			HostID:   "",
-			Hostname: hostname,
+			KeyProfile: "default",
+			HostID:     "",
+			Hostname:   hostname,
 		},
 		Roles: RolesConfig{
 			Coordinator: false,

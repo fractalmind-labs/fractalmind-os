@@ -2,7 +2,8 @@
 # Copy to sentinel.yaml and edit for your environment.
 
 identity:
-  host_id: ""          # auto-generated if empty
+  key_profile: default # local OS credential-store profile; initialize with --init-host
+  host_id: ""          # chain runtime derives this from the secure Host signing address
   hostname: ""         # defaults to os.Hostname()
 
 # Roles control which capabilities this node provides.
@@ -38,6 +39,15 @@ agents:
 heartbeat:
   interval: 30s        # Relay nodes include relay_load in P2P heartbeat
 
+# Signed command runtime: Sui authorization and encrypted Sui results.
+# Initialize keys explicitly: envd --config sentinel.yaml --init-host
+# The current agent-manager integration is observation-only.
+runtime:
+  enabled: false       # enabling requires sui.enabled, rpc, org_id and protocol_package_id
+  adapter_command: agent-manager
+  adapter_args: []      # for Python use command python3 and args [/absolute/path/main.py]
+  result_gas_budget: 2000000000 # MIST ceiling (2 SUI), not the actual charged fee
+
 # Optional local remote-desktop relay and self-healing supervision. When
 # command is set, envd starts envd-desktop as its direct child, restarts it on
 # exit or repeated /healthz failures, and supplies token via the environment.
@@ -66,9 +76,10 @@ sui:
   enabled: false
   rpc: https://fullnode.testnet.sui.io:443 # gRPC (the fullnode host is unchanged)
   graphql_url: https://graphql.testnet.sui.io/graphql # indexed event history
-  keypair_path: ~/.sui/envd.key       # Ed25519 keypair (auto-generated if missing)
+  keypair_path: ~/.sui/envd.key       # legacy roles only; chain runtime uses identity.key_profile
   package_id: "0x..."                 # fractalmind_envd package on SUI
   protocol_package_id: "0x..."       # fractalmind_protocol package (for auto agent cert discovery)
+  protocol_original_package_id: ""  # original type package after upgrade; empty uses protocol_package_id
   registry_id: "0x..."                # PeerRegistry shared object ID
   org_id: "0x..."                     # Organization object ID
   cert_id: ""                         # AgentCertificate object ID (auto-discovered if empty)

@@ -212,11 +212,41 @@ export async function exerciseNodeExecutions(o: Options) {
     } finally { seed.fill(0); }
   }
   await assertBudget(runtimeCapabilityId, 3n, 20n, 'Go executor settles known fixture cost and preserves unknown reservation');
+  const factoryCapTx = await execute('Production factory: issue observation and control test authority', sdk.host.issueCapability({ ...authority, actions: ['status', 'assign'], scope: 'control', maxUses: 2n, budgetAsset: 'MIST', maxBudget: 40n, expiresAtMs: Date.now() + 3600000 }));
+  assert.equal(factoryCapTx.data.status.success, true);
+  const factoryCapabilityId = created(factoryCapTx.data, '::remote_authority::RemoteCapability');
+  const factoryCommand = (action: 'status' | 'assign') => signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action, scope: 'control', capability: { id: factoryCapabilityId, revocationVersion: 1n }, budget: action === 'assign' ? { asset: 'MIST', amount: 20n } : undefined, payload: action === 'assign' ? { task: 'must be rejected by actual observation adapter before chain start' } : {}, expiresAtMs: Date.now() + 300000 });
+  const observation = await factoryCommand('status');
+  const forbiddenControl = await factoryCommand('assign');
+  runtimeExecutionIds.push(await prepare(observation, true));
+  const forbiddenExecutionId = await prepare(forbiddenControl, true);
+  runtimeExecutionIds.push(forbiddenExecutionId);
+  let productionFactoryEvidence: Record<string, unknown>;
+  const factorySeed = decodeSuiPrivateKey(host.getSecretKey()).secretKey;
+  try {
+    const { stdout } = await promisify(execFile)('go', ['test', './cmd/envd', '-run', '^TestProductionChainRuntimeLive$', '-count=1', '-v'], {
+      cwd: fileURLToPath(new URL('../../../../runtime/fractalmind-envd/', import.meta.url)), timeout: 60000,
+      env: { ...process.env, FM_CHAIN_EXECUTION_TEST_SEED: bytesToHex(factorySeed), FM_HOST_RESULT_ENCRYPTION_TEST_SECRET: bytesToHex(o.hostEncryptionSecret), FM_PRODUCTION_CHAIN_RUNTIME_CASE: JSON.stringify({ RPC: process.env.FM_LOCALNET_RPC ?? 'http://127.0.0.1:29000', PackageID: sdk.client.packageId, Command: observation, ForbiddenCommand: forbiddenControl }) },
+    });
+    assert.ok(stdout.includes('--- PASS: TestProductionChainRuntimeLive'));
+    const evidence = /FM_PRODUCTION_FACTORY_EVIDENCE (.+)/.exec(stdout)?.[1];
+    assert.ok(evidence, 'Production factory must report confirmed chain result and restart evidence.');
+    productionFactoryEvidence = JSON.parse(evidence);
+    const record = await sdk.productRecord.decryptRecord(productionFactoryEvidence.recordId as string, o.contentKey);
+    const plaintext = new TextDecoder().decode(record.plaintext);
+    assert.equal(JSON.parse(plaintext).response.execution_state, 'succeeded');
+    runtimeRecords.push({ logicalId: 'command-' + bytesToHex(nodeCommandIntentHash(observation)), plaintext });
+    console.log('Production factory PASS chain authority/result, stable identity, restart deduplication and observation-only control refusal');
+  } finally { factorySeed.fill(0); }
+  assert.equal((await sdk.nodeExecution.getExecution(forbiddenExecutionId)).state, 0);
+  await assertBudget(factoryCapabilityId, 0n, 20n, 'Observation factory never starts unsupported control');
+  assert.equal((await execute('Production factory: device cancels unsupported queued control', sdk.nodeExecution.requestStop({ ...authority, capabilityId: factoryCapabilityId, executionId: forbiddenExecutionId }))).data.status.success, true);
+  await assertBudget(factoryCapabilityId, 0n, 0n, 'Cancelled unsupported command releases pending budget');
   const pendingCap = await execute('Execution: issue authority for revoke-after-prepare check', sdk.host.issueCapability({ ...authority, actions: ['assign'], scope: 'control', maxUses: 1n, budgetAsset: 'MIST', maxBudget: 100n, expiresAtMs: Date.now() + 3600000 }));
   const pendingCapabilityId = created(pendingCap.data, '::remote_authority::RemoteCapability');
   const pendingCommand = await signNodeCommand(desktop, { target: { organizationId: o.organizationId, nodeId: host.getPublicKey().toSuiAddress(), agentId: cap.agentId }, action: 'assign', scope: 'control', capability: { id: pendingCapabilityId, revocationVersion: 1n }, budget: { asset: 'MIST', amount: 20n }, payload: { task: 'must not begin after Host revocation' }, expiresAtMs: Date.now() + 300000 });
   const pendingId = await prepare(pendingCommand);
-  return { capabilityId, limitedCapabilityId: limitedId, runtimeCapabilityId, executions: [firstId, secondId, thirdId, waitingId, stoppedId, ...runtimeExecutionIds], goChecks, budgetChecks, resultKeyEvidence, runtimeStoreChecks, pendingStart: { ...authority, capabilityId: pendingCapabilityId, executionId: pendingId }, records: [{ logicalId, plaintext: new TextDecoder().decode(plaintext) }, { logicalId: unknownLogicalId, plaintext: new TextDecoder().decode(unknownPlaintext) }, { logicalId: stopLogicalId, plaintext: stopPlaintext }, ...runtimeRecords], checks: 'real chain reservation/checkpoints, budget settlement, command-scoped result keys and Go executor result persistence with synthetic subprocesses; bounded Agent execution and real metering pending' };
+  return { capabilityId, limitedCapabilityId: limitedId, runtimeCapabilityId, factoryCapabilityId, executions: [firstId, secondId, thirdId, waitingId, stoppedId, ...runtimeExecutionIds], goChecks, budgetChecks, resultKeyEvidence, runtimeStoreChecks, productionFactoryEvidence, pendingStart: { ...authority, capabilityId: pendingCapabilityId, executionId: pendingId }, records: [{ logicalId, plaintext: new TextDecoder().decode(plaintext) }, { logicalId: unknownLogicalId, plaintext: new TextDecoder().decode(unknownPlaintext) }, { logicalId: stopLogicalId, plaintext: stopPlaintext }, ...runtimeRecords], checks: 'real chain reservation/checkpoints, budget settlement, command-scoped result keys, Go executor and production observation factory with synthetic subprocesses; bounded Agent execution and real metering pending' };
 }
 
 /** Reconstruct the selected fixture budgets solely from their persisted chain

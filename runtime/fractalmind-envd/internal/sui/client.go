@@ -41,6 +41,15 @@ func NewClient(cfg config.SUIConfig) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load sui keypair: %w", err)
 	}
+	return NewClientWithKeypair(cfg, kp)
+}
+
+// NewClientWithKeypair shares the secure Host identity with control-channel and
+// execution signing. It never reads or creates a keypair file.
+func NewClientWithKeypair(cfg config.SUIConfig, kp *Keypair) (*Client, error) {
+	if kp == nil {
+		return nil, fmt.Errorf("Host signing keypair is required")
+	}
 
 	rpc, err := NewGRPCClient(cfg.RPC, cfg.GraphQLURL)
 	if err != nil {
