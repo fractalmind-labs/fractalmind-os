@@ -22,6 +22,11 @@ import {
   commandResultWrapContext,
   encryptCommandResult,
   recordContext,
+  handoverAcceptanceSigningBytes,
+  handoverProposalHash,
+  type HandoverProposal,
+  type HandoverAcceptance,
+  type NativeFileOkrPlan,
   type SelfPayTransactionOutcome,
 } from "@fractalmind-labs/fractalmind-sdk";
 import { NativeDeviceSigner, type NativeInvoke } from "../src/native-device";
@@ -31,16 +36,19 @@ import { ChainReadSession } from "../src/chain";
 import { NativeCommandResults } from "../src/command-results";
 import { NativeExecutionResults } from "../src/execution-results";
 import { OkrDraftCreation } from "../src/okr-draft";
+import { HandoverApproval } from "../src/handover-approval";
+import { PrivateRecords } from "../src/private-records";
 assert.ok(
   process.argv[2] && process.argv[3],
   "Pass isolated deployment and a new output report",
 );
 const output = process.argv[3],
   progress = output + ".progress.json";
-const readResultMode = process.argv[4] === "--read-result";
+const approvalMode = process.argv[4] === "--approve-handover";
+const readResultMode = process.argv[4] === "--read-result" || approvalMode;
 assert.ok(
   !process.argv[4] || readResultMode,
-  "Only --read-result is supported",
+  "Only --read-result or --approve-handover is supported",
 );
 for (const path of [output, progress]) {
   try {
@@ -290,8 +298,12 @@ try {
     new MemoryTransactionJournal(),
   );
   const draftQuote = await draft.prepare({
-    objective: "Test native command result preparation",
-    successCriteria: "The native device alone can unlock exact command results",
+    objective: approvalMode
+      ? "Prepare a reviewed documentation file goal"
+      : "Test native command result preparation",
+    successCriteria: approvalMode
+      ? "Human independently reviews the original documentation evidence after explicit continuation"
+      : "The native device alone can unlock exact command results",
     priority: 0,
     deadlineMs: String(Date.now() + 3600000),
     allowedPaths: ["docs"],
@@ -299,8 +311,10 @@ try {
     maxCalls: "3",
     krs: [
       {
-        title: "Prepare one observed command",
-        unit: "command",
+        title: approvalMode
+          ? "Create one reviewed documentation file"
+          : "Prepare one observed command",
+        unit: approvalMode ? "files" : "command",
         precision: 0,
         baseline: "0",
         target: "1",
@@ -312,9 +326,10 @@ try {
   });
   assert.ok(!("status" in draftQuote));
   await preparedQuote("native encrypted draft", draftQuote);
+  const draftOutcome = await draft.submit(draftQuote);
   await record(
     "native encrypted draft establishes current record key directory",
-    await draft.submit(draftQuote),
+    draftOutcome,
   );
   await readVisible(
     () => sdk.productRecord.listCurrent(organizationId, null, 1),
@@ -456,6 +471,43 @@ try {
     ),
     "remote_authority::RemoteCapability",
   );
+  const nativeFilePlan: NativeFileOkrPlan = {
+    format: 1,
+    paths: { "file.read": ["docs"], "file.write": ["docs"] },
+    krs: [
+      {
+        files: [
+          {
+            path: "docs/APPROVED.md",
+            content: "Requires explicit continuation",
+          },
+        ],
+        maxCalls: "3",
+      },
+    ],
+  };
+  let proposal: HandoverProposal | undefined;
+  if (approvalMode) {
+    const okrId = createdObject(draftOutcome, "okr::Okr");
+    const okr = await sdk.okr.getOkr(okrId),
+      managed = await sdk.host.getManagedAgent(managedAgentId);
+    proposal = {
+      version: "1",
+      managed_agent_id: managedAgentId,
+      managed_version: managed.version,
+      okr_id: okrId,
+      okr_version: okr.version,
+      spec_revision: okr.spec_revision,
+      workspace_hash: bytesToHex(Uint8Array.from(managed.workspace_hash)),
+      paths: nativeFilePlan.paths,
+      budget_asset: "TOOL_CALLS",
+      budget_limit: "3",
+      max_calls: "3",
+      expires_at_ms: Date.now() + 120000,
+      review_expires_at_ms: Date.now() + 55000,
+      nonce: bytesToHex(globalThis.crypto.getRandomValues(new Uint8Array(32))),
+    };
+  }
   const command = await signNodeCommand(device, {
     target: {
       organizationId,
@@ -465,7 +517,7 @@ try {
     action: "status",
     scope: "observation",
     capability: { id: capabilityId, revocationVersion: 1n },
-    payload: {},
+    payload: proposal ? { handover_review: proposal } : {},
     expiresAtMs: Date.now() + 120000,
   });
   const results = new NativeCommandResults(
@@ -590,6 +642,45 @@ try {
   checks.push(
     "wrong command wrap context and another Host cannot unwrap the native derivative",
   );
+  let acceptance: HandoverAcceptance | undefined;
+  if (approvalMode) {
+    await execute(
+      "fixture Host begins original review",
+      sdk.nodeExecution.beginCommand({
+        ...auth,
+        executionId,
+        capabilityId,
+        membershipId,
+        bindingId,
+        managedAgentId,
+      }),
+      hostManager,
+    );
+    await readVisible(
+      () => sdk.nodeExecution.getExecution(executionId),
+      (v) => v.state === 1,
+    );
+    const coverage = await sdk.nodeExecution.readAgentExecutions(
+      organizationId,
+      managedAgentId,
+    );
+    acceptance = {
+      version: "1",
+      execution_id: executionId,
+      organization_id: organizationId,
+      human_id: auth.humanId,
+      grant_id: auth.grantId,
+      membership_id: membershipId,
+      binding_id: bindingId,
+      host_address: host.toSuiAddress(),
+      instance_id: instanceId,
+      proposal: proposal!,
+      coverage_revision: coverage.revision,
+      observed_at_ms: Number((await chain.human()).clockMs),
+      signature: "",
+    };
+    acceptance.signature = `ed25519:${bytesToHex(host.getPublicKey().toRawBytes())}:${bytesToHex(await host.sign(handoverAcceptanceSigningBytes(acceptance)))}`;
+  }
   const logicalId = "command-" + fingerprint,
     plaintext = new TextEncoder().encode(
       JSON.stringify({
@@ -610,6 +701,7 @@ try {
           execution_id: executionId,
           execution_state: "succeeded",
           transaction_digest: "UNTRUSTED-FIXTURE-DIGEST",
+          ...(acceptance ? { handover_review: acceptance } : {}),
         },
         event: {
           version: "1",
@@ -667,18 +759,19 @@ try {
   );
   let finalRun;
   if (readResultMode) {
-    await execute(
-      "fixture Host begins original observation",
-      sdk.nodeExecution.beginCommand({
-        ...auth,
-        executionId,
-        capabilityId,
-        membershipId,
-        bindingId,
-        managedAgentId,
-      }),
-      hostManager,
-    );
+    if (!approvalMode)
+      await execute(
+        "fixture Host begins original observation",
+        sdk.nodeExecution.beginCommand({
+          ...auth,
+          executionId,
+          capabilityId,
+          membershipId,
+          bindingId,
+          managedAgentId,
+        }),
+        hostManager,
+      );
     const started = await readVisible(
       () => sdk.nodeExecution.getExecution(executionId),
       (v) => v.state === 1,
@@ -714,6 +807,110 @@ try {
     );
     state = { ...state, resultCreationDigest: finished.digest };
     await save();
+    if (approvalMode) {
+      await readVisible(
+        () =>
+          sdk.nodeExecution.readAgentExecutions(organizationId, managedAgentId),
+        (v) =>
+          BigInt(v.revision) === BigInt(acceptance!.coverage_revision) + 1n,
+      );
+      const approval = new HandoverApproval(
+        chain,
+        device,
+        auth.grantId,
+        organizationId,
+        executionId,
+        invoke,
+        new MemoryTransactionJournal(),
+      );
+      const approvalInput = { command, nativeFilePlan };
+      const approvalQuote = await approval.prepare(approvalInput);
+      assert.ok(!("status" in approvalQuote));
+      await preparedQuote(
+        "explicit official App approval of original Host proof",
+        approvalQuote,
+      );
+      assert.equal((await sdk.okr.getOkr(proposal!.okr_id)).state, 0);
+      assert.equal(
+        (await sdk.host.getManagedAgent(managedAgentId)).control_confirmed,
+        false,
+      );
+      checks.push(
+        "official App decrypts the current spec and validates exact Host review/paths/file plan/metrics/budget before an ephemeral quote; quoting does not grant control",
+      );
+      const approved = await approval.submit(approvalQuote);
+      await record(
+        "official App native signature atomically consumes original Host review and approves OKR",
+        approved,
+      );
+      const activeOkr = await readVisible(
+        () => sdk.okr.getOkr(proposal!.okr_id),
+        (v) => v.state === 1,
+      );
+      const policy = await sdk.handover.getPolicy(activeOkr.id),
+        approvedProof = await sdk.handover.getApproval(policy.approval_id);
+      assert.equal(approvedProof.review_execution_id, executionId);
+      assert.equal(approvedProof.review_result_id, finalRun.result_record);
+      assert.equal(approvedProof.managed_version, "2");
+      assert.equal(activeOkr.agreement_version, "1");
+      assert.equal(policy.max_calls, "3");
+      assert.equal(
+        bytesToHex(Uint8Array.from(policy.proposal_hash)),
+        bytesToHex(handoverProposalHash(proposal!)),
+      );
+      const agreementHead = await sdk.productRecord.getCurrent(
+        organizationId,
+        "contract",
+        `okr-${activeOkr.logical_id}-agreement`,
+      );
+      const privateRecords = new PrivateRecords(
+        chain,
+        device,
+        auth.grantId,
+        organizationId,
+        invoke,
+      );
+      const agreedBody = await privateRecords.read({
+        ...agreementHead,
+        kind: 2,
+        logicalId: `okr-${activeOkr.logical_id}-agreement`,
+      });
+      try {
+        const agreement = JSON.parse(new TextDecoder().decode(agreedBody));
+        assert.deepEqual(agreement.nativeFilePlan, nativeFilePlan);
+        assert.deepEqual(agreement.hostAcceptance, acceptance);
+        assert.equal(agreement.specRecordId, activeOkr.spec_record);
+      } finally {
+        agreedBody.fill(0);
+      }
+      const after = await sdk.nodeExecution.readAgentExecutions(
+        organizationId,
+        managedAgentId,
+      );
+      assert.equal(after.executions.length, 1);
+      assert.equal(after.unsettledControl, 0);
+      const originalApproval = await approval.query();
+      assert.equal(originalApproval!.digest, approved.digest);
+      assert.ok(["confirmed", "unknown"].includes(originalApproval!.status));
+      checks.push(
+        "actual native App approval creates exact on-chain policy/immutable proof and natively decryptable agreement; no continuation Run or Host delivery is created",
+      );
+      checks.push(
+        "original approval digest is queried before rebuilding; original successful Gas receipt and potentially pruned query remain distinct without replay",
+      );
+      state = {
+        ...state,
+        approvalDigest: approved.digest,
+        approvalQueryStatus: originalApproval!.status,
+        approvalId: policy.approval_id,
+        okrId: activeOkr.id,
+        agreementRecordId: activeOkr.agreement_record,
+        agreementVersion: activeOkr.agreement_version,
+        managedVersion: approvedProof.managed_version,
+        explicitContinuationDispatched: false,
+      };
+      await save();
+    }
   } else {
     await execute(
       "explicitly cancel original queued observation without dispatch",
@@ -751,9 +948,11 @@ try {
   }
   state = {
     ...state,
-    phase: readResultMode
-      ? "validated_original_result"
-      : "validated_and_cancelled",
+    phase: approvalMode
+      ? "validated_native_approval_without_continuation"
+      : readResultMode
+        ? "validated_original_result"
+        : "validated_and_cancelled",
     runState: finalRun.state,
     resultRecord: finalRun.result_record,
   };
