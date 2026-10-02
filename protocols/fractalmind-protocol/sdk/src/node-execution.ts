@@ -9,6 +9,7 @@ import { canonicalNodeCommandSigningBytes } from './node-command.js';
 import { bytesToHex, hexToBytes, wrapKeys } from './identity-crypto.js';
 import { commandResultKey, commandResultWrapContext } from './command-result-crypto.js';
 import { HostApi, ManagedAgentBcs } from './host.js';
+import { DirectAgentApi } from './direct-agent.js';
 import { bytesArgument } from './wire-bytes.js';
 import type { SignedNodeCommand } from './types.js';
 
@@ -144,6 +145,9 @@ export class NodeExecutionApi {
     try {
       await verifySignedNodeCommand(command);
       if (Boolean(command.target.agent_id) !== Boolean(authority.managedAgentId)) throw new Error('Managed instance authority must match the command target.');
+      const directPresent = 'direct' in (command.payload ?? {});
+      if (directPresent !== (command.action === 'direct.message')) throw new Error('Direct messages require their signed standing permission context.');
+      const direct = directPresent ? await new DirectAgentApi(this.fm).assertCommandContext(command, { ...authority, managedAgentId: authority.managedAgentId! }) : undefined;
       const tx = this.fm.useTransaction(input.tx);
       const contract = command.payload?.okr as { id: string; agreement_version: string; kr_index: string } | undefined;
       if ('okr' in (command.payload ?? {})) {
@@ -173,6 +177,11 @@ export class NodeExecutionApi {
           finally { derived.fill(0); }
         }
         tx.moveCall({ target: `${this.fm.packageId}::node_execution::grant_result_key`, arguments: [tx.object(command.capability.id), tx.object(command.target.organization_id), tx.object(authority.humanId), tx.object(authority.grantId), tx.object(authority.membershipId), tx.object(authority.bindingId), tx.pure.vector('u8', nodeCommandIntentHash(command)), tx.pure.u64(keyVersion), tx.pure.vector('u8', wrapped), tx.object('0x6')] });
+      }
+      if (direct) {
+        const args: TransactionArgument[] = [tx.object(direct.permission_id), ...(direct.approval_id ? [tx.object(direct.approval_id)] : []), tx.object(direct.message_id), tx.object(command.capability.id), tx.object(command.target.organization_id), tx.object(authority.humanId), tx.object(authority.grantId), ...(direct.approving_grant_id ? [tx.object(direct.approving_grant_id)] : []), tx.object(authority.membershipId), tx.object(authority.bindingId), tx.object(authority.managedAgentId!), tx.pure.string(command.command_id), tx.pure.string(command.nonce), tx.pure.string(command.idempotency_key), tx.pure.vector('u8', nodeCommandIntentHash(command)), tx.pure.u64(command.issued_at_ms), tx.pure.u64(command.expires_at_ms), tx.object('0x6')];
+        tx.moveCall({ target: `${this.fm.packageId}::direct_agent::${direct.approval_id ? 'prepare_approved_message' : 'prepare_message'}`, arguments: args });
+        return tx;
       }
       const args: TransactionArgument[] = [tx.object(command.capability.id), tx.object(command.target.organization_id), tx.object(authority.humanId), tx.object(authority.grantId), tx.object(authority.membershipId), tx.object(authority.bindingId)];
       if (authority.managedAgentId) args.push(tx.object(authority.managedAgentId));

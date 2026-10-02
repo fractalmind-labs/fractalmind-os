@@ -241,6 +241,29 @@ module fractalmind_protocol::host {
         assert!(*table::borrow(&read_index(org).active_hosts, member.host_address) == object::id(member), E_SCOPE);
     }
 
+    /// Fixture for state-machine tests only. Admission signatures and physical
+    /// handover are tested separately against a real chain and production envd.
+    /// This function is absent from published bytecode.
+    #[test_only]
+    public(package) fun admitted_member_for_testing(
+        org: &mut Organization, binding: &CoordinatorBinding,
+        public_key: vector<u8>, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        let host_address = identity::signing_address(&public_key);
+        let member = HostMembership {
+            id: object::new(ctx), org_id: object::id(org), host_address,
+            host_public_key: public_key, encryption_public_key: vector[],
+            name: string::utf8(b"unit-fixture"), coordinator_binding: object::id(binding),
+            version: 1, revoked: false, expires_at_ms: 100000,
+            joined_at_ms: clock::timestamp_ms(clock), source_invite: object::id_from_address(@0x0),
+            observation_capability: object::id_from_address(@0x0),
+        };
+        let id = object::id(&member);
+        table::add(&mut index(org, ctx).active_hosts, host_address, id);
+        vector::push_back(&mut index(org, ctx).memberships, id);
+        transfer::share_object(member);
+    }
+
     public fun import_agent(
         org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant, member: &HostMembership,
         binding: &CoordinatorBinding, instance_id: String, runtime: String, workspace_hash: vector<u8>,

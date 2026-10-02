@@ -1,4 +1,5 @@
 import { HandoverApi } from './handover.js';
+import { DirectAgentApi } from './direct-agent.js';
 import { AgentApi } from './agent.js';
 import { IdentityApi } from './identity.js';
 import { HostApi } from './host.js';
@@ -25,6 +26,7 @@ export class FractalMindSDK {
   public readonly identity: IdentityApi;
   public readonly host: HostApi;
   public readonly handover: HandoverApi;
+  public readonly directAgent: DirectAgentApi;
   public readonly productRecord: ProductRecordApi;
   public readonly agentPolicy: AgentPolicyApi;
   public readonly task: TaskApi;
@@ -42,6 +44,7 @@ export class FractalMindSDK {
     this.identity = new IdentityApi(this.client);
     this.host = new HostApi(this.client);
     this.handover = new HandoverApi(this.client);
+    this.directAgent = new DirectAgentApi(this.client);
     this.productRecord = new ProductRecordApi(this.client);
     this.agentPolicy = new AgentPolicyApi(this.client);
     this.task = new TaskApi(this.client);
@@ -167,3 +170,6 @@ export { handoverProposalHash, handoverAcceptanceSigningBytes, verifyHandoverAcc
 export type { HandoverProposal, HandoverAcceptance } from './handover.js';
 
 export { HandoverApi, HandoverApprovalBcs, HandoverPolicyBcs } from './handover.js';
+export { DirectAgentApi, StandingPermissionBcs, DirectMessageBcs, DirectApprovalBcs, DirectClaimBcs,
+  DIRECT_ACTIONS, DIRECT_APPROVAL_STATES, parseDirectMessageContext, directMessageRecordName, directRequestHash } from './direct-agent.js';
+export type { DirectAuthority, DirectAction, DirectMessageContext, DirectRequest } from './direct-agent.js';

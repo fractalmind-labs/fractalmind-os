@@ -11,8 +11,16 @@ import { randomUUID } from "node:crypto";
 import { access, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { requestSuiFromFaucetV2 } from "@mysten/sui/faucet";
+import { fromBase64, toBase64 } from "@mysten/sui/utils";
+import type { Transaction } from "@mysten/sui/transactions";
 import {
   MemoryTransactionJournal,
+  SelfPayTransactionManager,
+  signNodeCommand,
+  directRequestHash,
+  directMessageRecordName,
+  type DirectRequest,
+  type DirectMessageContext,
   type NativeFileOkrPlan,
   type SelfPayTransactionOutcome,
 } from "@fractalmind-labs/fractalmind-sdk";
@@ -32,6 +40,7 @@ import { HostAdmission } from "../src/host-admission";
 import { AgentImport } from "../src/agent-import";
 import { CoordinatorReadClient } from "../src/coordinator-read";
 import { canonical } from "../src/handover-plan";
+import { DeviceIdentityVerifier } from "../src/device-identity";
 assert.ok(
   process.argv[2] && process.argv[3],
   "Pass isolated deployment and a new output report",
@@ -39,8 +48,15 @@ assert.ok(
 const output = process.argv[3],
   progress = output + ".progress.json";
 const humanSequence = process.argv.slice(4).includes("--human-sequence");
+const directPermission = process.argv.slice(4).includes("--direct-permission");
 assert.ok(
-  process.argv.slice(4).every((a) => a === "--human-sequence"),
+  !directPermission || humanSequence,
+  "Direct protocol checks run after the reviewed Human sequence",
+);
+assert.ok(
+  process.argv
+    .slice(4)
+    .every((a) => ["--human-sequence", "--direct-permission"].includes(a)),
   "Unknown harness option",
 );
 for (const path of [output, progress]) {
@@ -130,6 +146,10 @@ async function save(complete = false) {
           hostKeyStorage: "isolated memory provider",
           realCoordinatorDeviceHTTP: true,
           humanFinalAcceptanceVerified: state.humanAcceptanceVerified === true,
+          directPermissionProtocolVerified:
+            state.directPermissionProtocolVerified === true,
+          directMessageEnvdDispatchVerified: false,
+          directMessageUIVerified: false,
           installedHumanReviewVerified: false,
           reviewDecisions: humanSequence
             ? "explicit scripted test approvals, not installed Human UI"
@@ -1091,6 +1111,388 @@ try {
       transportCalls,
       commandDeliveries: deliveries,
       feeConfirmations,
+    };
+    await save();
+  }
+  if (directPermission) {
+    // Protocol/SDK proof with actual OS crypto. This is not a formal direct UI
+    // controller or a claim of direct.message dispatch by envd.
+    const verifier = new DeviceIdentityVerifier(chain, device, auth.grantId);
+    const directManager = new SelfPayTransactionManager({
+      client: sdk.client.client,
+      network: "localnet",
+      signer: device,
+      journal,
+    });
+    const target = { ...auth, membershipId, bindingId, managedAgentId };
+    const expiry = Date.now() + 120000;
+    async function encrypt(
+      kind: number,
+      logicalId: string,
+      revision: string,
+      value: unknown,
+    ) {
+      const before = await verifier.verifyOrganization(
+        organizationId,
+        "approve",
+      );
+      assert.ok(before.encryptedKeys);
+      const ciphertext = await invoke("fm_device_encrypt_record", {
+        profile,
+        record: JSON.stringify({
+          network: "localnet",
+          encryptedKeys: before.encryptedKeys,
+          organizationId,
+          kind,
+          logicalId,
+          revision,
+          keyVersion: "1",
+          plaintext: toBase64(new TextEncoder().encode(JSON.stringify(value))),
+        }),
+      });
+      assert.equal(typeof ciphertext, "string");
+      assert.equal(
+        (await verifier.verifyOrganization(organizationId, "approve"))
+          .authorityPin,
+        before.authorityPin,
+      );
+      return fromBase64(ciphertext as string);
+    }
+    async function submitDirect(label: string, transaction: Transaction) {
+      const quote = await directManager.prepare({
+        requestId: `direct-test:${randomUUID()}`,
+        transaction,
+        gasBudget: 200000000n,
+      });
+      await preparedQuote(label, quote);
+      const outcome = await directManager.submit(quote);
+      await record(label, outcome);
+      return outcome;
+    }
+    const actions = ["status", "file.read", "file.write"] as const;
+    const permissionBody = {
+      schema: "fractalmind.standing-permission.v1",
+      managedAgentId,
+      actions,
+      paths: plan.paths,
+      budgetLimit: "6",
+      maxCalls: "3",
+      expiresAtMs: expiry,
+    };
+    const permissionOutcome = await submitDirect(
+      "native standing permission creation",
+      sdk.directAgent.createPermission({
+        ...target,
+        actions: [...actions],
+        paths: plan.paths,
+        maxCalls: "3",
+        budgetLimit: "6",
+        expiresAtMs: expiry,
+        keyVersion: "1",
+        encryptedBody: await encrypt(
+          2,
+          `standing-${managedAgentId}-permission`,
+          "1",
+          permissionBody,
+        ),
+      }),
+    );
+    const permissionId = createdObject(
+      permissionOutcome,
+      "direct_agent::StandingPermission",
+    );
+    const policy = await readVisible(
+      () =>
+        sdk.directAgent.getPermissionForAgent(organizationId, managedAgentId),
+      (p) => p.id === permissionId,
+    );
+    assert.equal(policy.host_address, hello.host_address);
+    const ordinaryCapOutcome = await submitDirect(
+      "native standing direct capability",
+      sdk.directAgent.issueCapability({
+        ...target,
+        permissionId,
+        expectedVersion: "1",
+        expiresAtMs: expiry,
+      }),
+    );
+    const ordinaryCapId = createdObject(
+      ordinaryCapOutcome,
+      "remote_authority::RemoteCapability",
+    );
+    async function createMessage(token: string, calls: string) {
+      const request: DirectRequest = {
+        message: "Write the reviewed direct-message test file",
+        task: JSON.stringify({
+          kind: "ensure_text_files",
+          files: [{ path: "docs/DIRECT.md", content: "Native direct request" }],
+        }),
+        bounds: { paths: plan.paths, max_calls: calls },
+      };
+      const messageExpiry = Date.now() + 60000;
+      const outcome = await submitDirect(
+        `native encrypted direct message ${calls}`,
+        sdk.directAgent.createMessage({
+          ...target,
+          permissionId,
+          expectedVersion: "1",
+          conversationId: "native-direct",
+          messageToken: token,
+          action: "file.write",
+          paths: plan.paths,
+          budgetAmount: calls,
+          requestHash: directRequestHash(request, "file.write"),
+          expiresAtMs: messageExpiry,
+          keyVersion: "1",
+          encryptedBody: await encrypt(6, directMessageRecordName(token), "1", {
+            schema: "fractalmind.direct-request.v1",
+            ...request,
+            action: "file.write",
+          }),
+        }),
+      );
+      const messageId = createdObject(outcome, "direct_agent::Message");
+      const message = await readVisible(
+        () => sdk.directAgent.getMessage(messageId),
+        (m) => m.id === messageId,
+      );
+      const publicRecord = await sdk.productRecord.getRecord(
+        message.encrypted_record,
+      );
+      const source = await verifier.verifyOrganization(organizationId, "read");
+      const plaintext = await invoke("fm_device_decrypt_record", {
+        profile,
+        record: JSON.stringify({
+          network: "localnet",
+          encryptedKeys: source.encryptedKeys,
+          organizationId,
+          kind: 6,
+          logicalId: directMessageRecordName(token),
+          revision: "1",
+          keyVersion: "1",
+          encryptedBody: toBase64(Uint8Array.from(publicRecord.encrypted_body)),
+        }),
+      });
+      const decoded = fromBase64(plaintext as string);
+      try {
+        assert.equal(
+          JSON.parse(new TextDecoder().decode(decoded)).message,
+          request.message,
+        );
+      } finally {
+        decoded.fill(0);
+      }
+      return { request, message };
+    }
+    async function commandFor(
+      source: Awaited<ReturnType<typeof createMessage>>,
+      capabilityId: string,
+      approval?: { id: string; grant: string },
+    ) {
+      const context: DirectMessageContext = {
+        version: "1",
+        permission_id: permissionId,
+        permission_version: "1",
+        message_id: source.message.id,
+        conversation_id: source.message.conversation_id,
+        message_token: source.message.message_token,
+        message_record_id: source.message.encrypted_record,
+        action: "file.write",
+        ...(approval
+          ? { approval_id: approval.id, approving_grant_id: approval.grant }
+          : {}),
+      };
+      return signNodeCommand(device, {
+        target: {
+          organizationId,
+          nodeId: hello.host_address,
+          agentId: instance.instanceId,
+        },
+        action: "direct.message",
+        scope: "direct",
+        capability: { id: capabilityId, revocationVersion: 1n },
+        budget: {
+          asset: "TOOL_CALLS",
+          amount: BigInt(source.message.budget_amount),
+        },
+        issuedAtMs: Date.now(),
+        expiresAtMs: Number(source.message.expires_at_ms),
+        payload: { ...source.request, direct: context },
+      });
+    }
+    const ordinary = await createMessage(randomUUID(), "3"),
+      ordinaryCommand = await commandFor(ordinary, ordinaryCapId);
+    const ordinaryPrepared = await submitDirect(
+      "native original direct Run preparation",
+      await sdk.nodeExecution.prepareCommand({
+        ...target,
+        command: ordinaryCommand,
+      }),
+    );
+    const ordinaryRunId = createdObject(
+      ordinaryPrepared,
+      "node_execution::CommandExecution",
+    );
+    const claim = await readVisible(
+      () => sdk.directAgent.getClaim(permissionId, ordinaryRunId),
+      (c) => c.reserved === "3",
+    );
+    assert.equal(claim.settled, false);
+    assert.equal(
+      (await sdk.directAgent.getPermission(permissionId)).reserved,
+      "3",
+    );
+    await submitDirect(
+      "native queued direct cancellation",
+      sdk.directAgent.requestStop({
+        ...auth,
+        permissionId,
+        executionId: ordinaryRunId,
+        capabilityId: ordinaryCapId,
+      }),
+    );
+    assert.equal(
+      (await sdk.directAgent.getPermission(permissionId)).reserved,
+      "0",
+    );
+    assert.equal(
+      (await sdk.nodeExecution.getExecution(ordinaryRunId)).state,
+      5,
+    );
+    const exception = await createMessage(randomUUID(), "5");
+    const approvalToken = directMessageRecordName(
+      exception.message.message_token,
+      true,
+    );
+    const requested = await submitDirect(
+      "native exact one-off approval request",
+      sdk.directAgent.requestApproval({
+        ...target,
+        permissionId,
+        messageId: exception.message.id,
+        keyVersion: "1",
+        encryptedBody: await encrypt(3, approvalToken, "1", {
+          messageId: exception.message.id,
+          requestedCalls: "5",
+        }),
+      }),
+    );
+    const directApprovalId = createdObject(requested, "direct_agent::Approval");
+    await submitDirect(
+      "native explicit one-off approval",
+      sdk.directAgent.decideApproval({
+        ...target,
+        permissionId,
+        approvalId: directApprovalId,
+        messageId: exception.message.id,
+        approve: true,
+        keyVersion: "1",
+        encryptedBody: await encrypt(3, approvalToken, "2", {
+          messageId: exception.message.id,
+          approved: true,
+          reason: "Explicit scripted test exception without standing expansion",
+        }),
+      }),
+    );
+    const approvedCap = await submitDirect(
+      "native one-off direct capability",
+      sdk.directAgent.issueApprovedCapability({
+        ...target,
+        permissionId,
+        approvalId: directApprovalId,
+        messageId: exception.message.id,
+        approvingGrantId: auth.grantId,
+      }),
+    );
+    const approvedCapId = createdObject(
+      approvedCap,
+      "remote_authority::RemoteCapability",
+    );
+    const approvedCommand = await commandFor(exception, approvedCapId, {
+      id: directApprovalId,
+      grant: auth.grantId,
+    });
+    const exceptionPrepared = await submitDirect(
+      "native one-off approval consumption",
+      await sdk.nodeExecution.prepareCommand({
+        ...target,
+        command: approvedCommand,
+      }),
+    );
+    const exceptionRunId = createdObject(
+      exceptionPrepared,
+      "node_execution::CommandExecution",
+    );
+    assert.equal(
+      (await sdk.directAgent.getApproval(directApprovalId)).state,
+      3,
+    );
+    const consumed = await sdk.directAgent.getPermission(permissionId);
+    assert.equal(consumed.budget_limit, "6");
+    assert.equal(consumed.spent, "0");
+    assert.equal(consumed.reserved, "0");
+    assert.equal(consumed.approved_reserved, "5");
+    await submitDirect(
+      "native standing permission version change",
+      sdk.directAgent.updatePermission({
+        ...target,
+        permissionId,
+        expectedVersion: "1",
+        actions: [...actions],
+        paths: plan.paths,
+        maxCalls: "3",
+        budgetLimit: "6",
+        expiresAtMs: expiry,
+        keyVersion: "1",
+        encryptedBody: await encrypt(
+          2,
+          `standing-${managedAgentId}-permission`,
+          "2",
+          { ...permissionBody, version: "2" },
+        ),
+      }),
+    );
+    assert.equal(
+      (await sdk.directAgent.getPermission(permissionId)).approved_reserved,
+      "5",
+    );
+    await assert.rejects(
+      sdk.nodeExecution.prepareCommand({ ...target, command: approvedCommand }),
+      /context changed/,
+    );
+    await submitDirect(
+      "native historical direct cancellation after policy change",
+      sdk.directAgent.requestStop({
+        ...auth,
+        permissionId,
+        executionId: exceptionRunId,
+        capabilityId: approvedCapId,
+      }),
+    );
+    const finalPermission = await sdk.directAgent.getPermission(permissionId);
+    assert.equal(finalPermission.approved_reserved, "0");
+    assert.equal(finalPermission.approved_spent, "0");
+    assert.equal(finalPermission.version, "2");
+    assert.equal((await sdk.directAgent.listMessages(permissionId)).length, 2);
+    assert.equal((await sdk.okr.getBudget(okrId)).spent, 6n);
+    assert.equal(deliveries, 2);
+    checks.push(
+      "actual OS-encrypted direct messages and versioned standing permission rebuild from Sui; ordinary and explicit one-off Run reservations use separate ledgers and can be cancelled historically after a policy change, without direct dispatch or OKR budget changes",
+    );
+    state = {
+      ...state,
+      directPermissionProtocolVerified: true,
+      directPermissionId: permissionId,
+      directMessageIds: [ordinary.message.id, exception.message.id],
+      directRunIds: [ordinaryRunId, exceptionRunId],
+      directApprovalId,
+      directPermissionVersion: finalPermission.version,
+      directFinalBudget: {
+        spent: finalPermission.spent,
+        reserved: finalPermission.reserved,
+        approvedSpent: finalPermission.approved_spent,
+        approvedReserved: finalPermission.approved_reserved,
+      },
     };
     await save();
   }

@@ -38,6 +38,14 @@ module fractalmind_protocol::okr {
     public struct IndexKey has copy, drop, store {}
     public struct DraftPointer has copy, drop, store { id: ID, fingerprint: vector<u8> }
     public struct OkrIndex has store { active_count: u64, records: Table<String, DraftPointer> }
+    /// Additive workspace ownership metadata; deployed Okr/Index layouts stay
+    /// unchanged. Missing legacy coverage remains protected until old active
+    /// assignments leave, rather than treating it as an empty workspace.
+    public struct ActiveAssignmentsKey has copy, drop, store {}
+    public struct ActiveAssignmentTrackedKey has copy, drop, store {}
+    public struct WorkspaceKey has copy, drop, store { host_address: address, workspace_hash: vector<u8> }
+    public struct ActiveAssignmentTracked has copy, drop, store { managed: ID, workspace: WorkspaceKey }
+    public struct ActiveAssignments has store { total: u64, revision: u64, agents: Table<ID, u64>, workspaces: Table<WorkspaceKey, u64> }
     public struct BudgetKey has copy, drop, store {}
     public struct BudgetState has store { asset: String, spent: u64, reserved: u64, claims: Table<ID, BudgetClaim> }
     public struct BudgetClaim has copy, drop, store { capability_id: ID, agreement_version: u64, kr_index: u64, reserved: u64, spent: u64, settled: bool }
@@ -181,6 +189,7 @@ module fractalmind_protocol::okr {
         host::assert_managed(org, member, managed, true);
         assert!(workspace_hash == host::managed_workspace_hash(managed) && vector::length(&workspace_hash) == 32 && vector::length(&boundary_hash) == 32, E_TARGET);
         assert!(string::length(&budget_asset) > 0 && string::length(&budget_asset) <= 32 && budget_limit > 0 && expires_at_ms > clock::timestamp_ms(clock) && expires_at_ms <= okr.deadline_ms, E_INPUT);
+        register_assignment(okr, org, object::id(managed), host::membership_host_address(member), workspace_hash, ctx);
         let registry = index(org, ctx);
         assert!(registry.active_count < 3, E_ACTIVE_LIMIT);
         registry.active_count = registry.active_count + 1;
@@ -346,6 +355,7 @@ module fractalmind_protocol::okr {
         assert_version(okr, org, expected_version); assert!(okr.state == ACTIVE, E_STATE);
         let record = product_record::save_authorized(org, object::id(human), object::id(grant), identity::grant_version(grant),
             2, record_name(okr.logical_id, b"-agreement"), expected_record_revision, key_version, encrypted_reason, clock, ctx);
+        release_assignment(okr, org);
         let registry = index(org, ctx); registry.active_count = registry.active_count - 1;
         okr.state = PAUSED; okr.agreement_version = okr.agreement_version + 1; okr.agreement_record = option::some(record);
         changed(okr);
@@ -438,6 +448,7 @@ module fractalmind_protocol::okr {
         };
         let record = product_record::save_authorized(org, object::id(human), object::id(grant), identity::grant_version(grant),
             4, record_name(okr.logical_id, b"-acceptance"), 0, key_version, encrypted_acceptance, clock, ctx);
+        release_assignment(okr, org);
         let registry = index(org, ctx); registry.active_count = registry.active_count - 1;
         okr.state = ACHIEVED; okr.acceptance_record = option::some(record); okr.accepted_by_human = option::some(object::id(human)); okr.accepted_at_ms = now;
         okr.agreement_version = okr.agreement_version + 1; changed(okr);
@@ -446,11 +457,51 @@ module fractalmind_protocol::okr {
         identity::assert_can(human, grant, org, identity::approve_action(), clock, ctx);
         assert_version(okr, org, expected_version); assert!(okr.state != ARCHIVED, E_STATE);
         if (okr.state == ACTIVE) {
+            release_assignment(okr, org);
             let registry = index(org, ctx); registry.active_count = registry.active_count - 1;
         };
         okr.state = ARCHIVED; okr.agreement_version = okr.agreement_version + 1; changed(okr);
     }
     public fun organization_id(okr: &Okr): ID { okr.org_id }
+    fun register_assignment(okr: &mut Okr, org: &mut Organization, managed: ID, host_address: address, workspace_hash: vector<u8>, ctx: &mut TxContext) {
+        if (!df::exists_(organization::borrow_uid(org), ActiveAssignmentsKey {}))
+            df::add(organization::borrow_uid_mut(org), ActiveAssignmentsKey {}, ActiveAssignments { total: 0, revision: 1, agents: table::new(ctx), workspaces: table::new(ctx) });
+        assert!(!df::exists_(&okr.id, ActiveAssignmentTrackedKey {}), E_STATE);
+        let entries: &mut ActiveAssignments = df::borrow_mut(organization::borrow_uid_mut(org), ActiveAssignmentsKey {});
+        if (table::contains(&entries.agents, managed)) {
+            let count = table::borrow_mut(&mut entries.agents, managed); *count = *count + 1;
+        } else table::add(&mut entries.agents, managed, 1);
+        let workspace = WorkspaceKey { host_address, workspace_hash };
+        if (table::contains(&entries.workspaces, workspace)) {
+            let count = table::borrow_mut(&mut entries.workspaces, workspace); *count = *count + 1;
+        } else table::add(&mut entries.workspaces, workspace, 1);
+        entries.total = entries.total + 1; entries.revision = entries.revision + 1;
+        df::add(&mut okr.id, ActiveAssignmentTrackedKey {}, ActiveAssignmentTracked { managed, workspace });
+    }
+    fun release_assignment(okr: &mut Okr, org: &mut Organization) {
+        if (!df::exists_(&okr.id, ActiveAssignmentTrackedKey {})) return;
+        let tracked: ActiveAssignmentTracked = df::remove(&mut okr.id, ActiveAssignmentTrackedKey {});
+        let managed = *option::borrow(&okr.managed_agent); assert!(tracked.managed == managed, E_STATE);
+        let entries: &mut ActiveAssignments = df::borrow_mut(organization::borrow_uid_mut(org), ActiveAssignmentsKey {});
+        let count = table::borrow_mut(&mut entries.agents, managed); assert!(*count > 0 && entries.total > 0, E_STATE);
+        *count = *count - 1;
+        if (*count == 0) { let _: u64 = table::remove(&mut entries.agents, managed); };
+        let count = table::borrow_mut(&mut entries.workspaces, tracked.workspace); assert!(*count > 0, E_STATE);
+        *count = *count - 1;
+        if (*count == 0) { let _: u64 = table::remove(&mut entries.workspaces, tracked.workspace); };
+        entries.total = entries.total - 1; entries.revision = entries.revision + 1;
+    }
+    /// protected, revision, complete. Unknown legacy coverage cannot authorize
+    /// direct writes; observations/questions need not pause another Run.
+    public fun direct_workspace_state(org: &Organization, managed: ID, host_address: address, workspace_hash: vector<u8>): (bool, u64, bool) {
+        let active = active_count(org);
+        if (!df::exists_(organization::borrow_uid(org), ActiveAssignmentsKey {})) return (active > 0, 0, active == 0);
+        let entries: &ActiveAssignments = df::borrow(organization::borrow_uid(org), ActiveAssignmentsKey {});
+        if (entries.total != active) return (true, entries.revision, false);
+        let workspace = WorkspaceKey { host_address, workspace_hash };
+        ((table::contains(&entries.agents, managed) && *table::borrow(&entries.agents, managed) > 0)
+            || (table::contains(&entries.workspaces, workspace) && *table::borrow(&entries.workspaces, workspace) > 0), entries.revision, true)
+    }
     public fun spec_revision(okr: &Okr): u64 { okr.spec_revision }
     public fun deadline_ms(okr: &Okr): u64 { okr.deadline_ms }
     public fun state(okr: &Okr): u8 { okr.state }

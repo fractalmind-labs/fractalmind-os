@@ -26,6 +26,7 @@ module fractalmind_protocol::node_execution {
     const E_VERSION: u64 = 9306;
     const E_BUDGET_SETTLEMENT_REQUIRED: u64 = 9310;
     const E_RESULT_KEY: u64 = 9311;
+    const E_DIRECT_PERMISSION_REQUIRED: u64 = 9312;
     const QUEUED: u8 = 0;
     const RUNNING: u8 = 1;
     const SUCCEEDED: u8 = 2;
@@ -78,6 +79,7 @@ module fractalmind_protocol::node_execution {
         budget_asset: String, budget_amount: u64, intent_hash: vector<u8>, issued_at_ms: u64, expires_at_ms: u64,
         clock: &Clock, ctx: &mut TxContext,
     ) {
+        assert!(action != string::utf8(b"direct.message"), E_DIRECT_PERMISSION_REQUIRED);
         ra::assert_unbound_contract(cap);
         host::assert_legacy_agent_execution(org, object::id(managed));
         host::assert_agent_authority(org, human, grant, member, binding, managed, cap, clock);
@@ -103,6 +105,7 @@ module fractalmind_protocol::node_execution {
         budget_asset: String, budget_amount: u64, intent_hash: vector<u8>, issued_at_ms: u64, expires_at_ms: u64,
         clock: &Clock, ctx: &mut TxContext,
     ) {
+        assert!(action != string::utf8(b"direct.message"), E_DIRECT_PERMISSION_REQUIRED);
         ra::assert_unbound_contract(cap);
         host::assert_tracked_agent_execution(org, object::id(managed));
         host::assert_agent_authority(org, human, grant, member, binding, managed, cap, clock);
@@ -189,6 +192,7 @@ module fractalmind_protocol::node_execution {
         human: &HumanIdentity, grant: &DeviceGrant, member: &HostMembership,
         binding: &CoordinatorBinding, managed: &ManagedAgent, attempt_id: vector<u8>, clock: &Clock, ctx: &TxContext,
     ) {
+        assert!(run.action != string::utf8(b"direct.message"), E_DIRECT_PERMISSION_REQUIRED);
         ra::assert_unbound_contract(cap);
         host::assert_agent_authority(org, human, grant, member, binding, managed, cap, clock);
         assert!(run.managed_agent == option::some(object::id(managed)), E_TARGET);
