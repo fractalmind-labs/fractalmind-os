@@ -37,7 +37,11 @@ func (s *transportServer) ListOwnedObjects(_ context.Context, r *v2.ListOwnedObj
 	return s.list(r)
 }
 
-func testTransport(t *testing.T, s *transportServer) *GRPCClient {
+func testTransport(t *testing.T, s interface {
+	v2.LedgerServiceServer
+	v2.StateServiceServer
+	v2.TransactionExecutionServiceServer
+}) *GRPCClient {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {

@@ -30,6 +30,17 @@ IndexedDB 只存原交易摘要及 Gas 元数据。可丢弃的本机尝试提�
 
 本次链报告使用新生成的内存夹具钥、注入的 NativeInvoke 传输和内存技术 journal；没有访问用户钱包。它验证生产控制器与真实链协议，不证明 OS 存储、安装后 UI／IPC／IndexedDB 全旅程、实际 envd 兑换、在线 Coordinator、云 Host 或五平台验收。原生 App 现有测试会话仍等待系统 Keychain 授权；没有因观察超时重启它。完整 v0.2.0 继续按[验收映射](fractalmind-app-v020-validation.md)推进。
 
+### envd 邀请核验与真实报价增量
+
+Go envd 已增加 `InspectHostJoin`、邀请码证明签署、`ReadHostAdmission` 与 `PrepareHostJoin`。预检从 Sui 读取协议／身份注册表、组织、入口、邀请、Human、Grant、管理员角色及目录，核对动态字段来源、网络、单次使用、链上时钟和权限版本。历史资格可以重建，但已删除的当前指针或已撤销资格不会被显示为有效入组。
+
+报价在本机编码纯参数，通过 gRPC 解析共享对象与 Gas 后逐项核对实际 BCS；拒绝改变目标／参数／付款人、附加命令、超预算、非规范长度及尾随字节。选中的 Gas coin 必须是该 Host 当前持有的 SUI，BCS 与 RPC 投影的 ID、版本和摘要必须一致。地址余额支付使用与当前 Sui SDK 一致的 `ValidDuring`：链标识、epoch 区间和随机 nonce；证明短时有效期由 Move 合约检查。真实验证器拒绝了时间戳形式的交易过期，已修正为 SDK 的 epoch 形式，没有广播该次模拟的交易。
+
+- [Go 包测试](evidence/v020-envd-host-join-unit.json)：跨语言 HKDF／JoinIntent 签名、独立 Mysten SDK 交易字节与摘要、权限失效、来源篡改、成员重建，以及 Gas coin 的归属、类型和版本检查。
+- [App → Go envd → 真实本地链报价](evidence/v020-envd-host-join-quote-localnet.json)：9 项联合检查、10 笔 App／SDK 夹具交易；Go 接收当前窗口的邀请码，通过 stdin 传递，成功验证组织并模拟兑换报价，**没有广播 Go 兑换交易**。
+
+这些接口尚未接到生产 `--join-host` CLI。终端隐藏输入、明确费用确认、广播前持久化原摘要、未知回执恢复、OS 原生签名及实际本地／云端 Host 联合验收仍待完成；接入指导继续只提供已经实现的命令。
+
 ## 复现
 
 先运行隔离 localnet、faucet 并发布当前合约。复用只含公开 package／registry／chain ID 的部署报告，从 `apps/fractalmind-app` 运行：
@@ -39,3 +50,5 @@ node --import tsx scripts/host-admission-localnet.ts /tmp/deployment.json /tmp/n
 ```
 
 脚本只接受固定 loopback 本地链和对应部署；输出路径必须不存在，避免把未知操作当成重新提交。`.progress.json` 保留准备摘要及交易结果，不包含生成的恢复码、邀请码或私钥。
+
+联合 Go 报价验收时，先在 `runtime/fractalmind-envd` 执行 `go test -c -o /tmp/fm-envd-hostquote-tests ./internal/sui`，再为上述命令设置 `FM_ENVD_JOIN_QUOTE_BIN=/tmp/fm-envd-hostquote-tests`，并选择新的报告路径。这个测试助手仅允许固定隔离 localnet，不是生产入组命令。

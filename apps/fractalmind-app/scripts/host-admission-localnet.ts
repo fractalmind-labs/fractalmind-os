@@ -4,6 +4,7 @@
  * saved, logged, passed in argv, or reused from a user's wallet. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { spawn } from "node:child_process";
 import { readFile, writeFile, access } from "node:fs/promises";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { fromBase64, toBase64 } from "@mysten/sui/utils";
@@ -288,6 +289,59 @@ async function invite(label: string) {
   return { ...result, outcome, attemptId };
 }
 const first = await invite("App creates one-use invitation");
+let envdQuote: unknown;
+if (process.env.FM_ENVD_JOIN_QUOTE_BIN) {
+  const helper = spawn(
+    process.env.FM_ENVD_JOIN_QUOTE_BIN,
+    ["-test.run=^TestHostJoinLiveQuote$", "-test.v"],
+    {
+      env: { ...process.env, FM_HOST_JOIN_LIVE_QUOTE: "1" },
+      stdio: ["pipe", "pipe", "pipe"],
+    },
+  );
+  let output = "",
+    diagnostic = "";
+  helper.stdout.on("data", (part) => {
+    output += String(part);
+  });
+  helper.stderr.on("data", (part) => {
+    diagnostic += String(part);
+  });
+  const done = new Promise<void>((resolve, reject) => {
+    helper.once("error", reject);
+    helper.once("exit", (code) =>
+      code === 0
+        ? resolve()
+        : reject(
+            new Error(
+              `envd quote fixture failed (${code}): ${output} ${diagnostic}`,
+            ),
+          ),
+    );
+  });
+  helper.stdin.end(
+    JSON.stringify({
+      Code: first.code,
+      Network: "localnet",
+      PackageID: deployment.packageId,
+      RegistryID: deployment.registryId,
+      OrganizationID: organizationId,
+      HostAddress: host.toSuiAddress(),
+      ChainIdentifier: deployment.chain.chainIdentifier,
+      HostPublicKey: toBase64(host.getPublicKey().toRawBytes()),
+      EncryptionPublicKey: toBase64(hostEncryption.publicKey),
+    }),
+  );
+  await done;
+  const line = output
+    .split("\n")
+    .find((line) => line.startsWith("FM_HOST_JOIN_QUOTE "));
+  assert.ok(line, "envd fixture produced no public quote");
+  envdQuote = JSON.parse(line.slice("FM_HOST_JOIN_QUOTE ".length));
+  checks.push(
+    "production Go envd inspects exact App invitation and validates live gRPC BCS quote; no broadcast or OS/CLI acceptance",
+  );
+}
 checks.push(
   "code is released only after exact receipt objects are visible and match invitation proof material",
 );
@@ -414,6 +468,7 @@ const report = {
   grantId,
   checks,
   transactions,
+  envdQuote,
   limits: {
     generatedFixtureKeysOnly: true,
     injectedNativeTransport: true,
@@ -421,6 +476,7 @@ const report = {
     installedAppVerified: false,
     nativeStoreVerified: false,
     envdJoinCliVerified: false,
+    envdJoinQuoteVerified: !!envdQuote,
     cloudHostVerified: false,
     invitationSecretsIncluded: false,
   },
