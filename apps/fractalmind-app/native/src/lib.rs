@@ -17,6 +17,7 @@ use x25519_dalek::{PublicKey, StaticSecret};
 use zeroize::Zeroizing;
 
 mod keyrings;
+mod node_command;
 mod onboarding;
 mod pairing;
 mod records;
@@ -44,6 +45,7 @@ pub enum VaultError {
     WrongGasOwner,
     UnsupportedTransaction,
     InvalidProof,
+    InvalidNodeCommand,
 }
 impl std::fmt::Display for VaultError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

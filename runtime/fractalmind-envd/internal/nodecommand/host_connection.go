@@ -3,6 +3,7 @@ package nodecommand
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/url"
 )
@@ -14,6 +15,7 @@ type HostConnection struct {
 	CoordinatorAddress, CoordinatorPublicKey, Endpoint   string
 	MembershipVersion, BindingVersion, ExpiresAtMS       uint64
 	VersionPin                                           string
+	AuthorityPin                                         string
 }
 
 func coordinatorURL(endpoint string) (*url.URL, error) {
@@ -85,7 +87,11 @@ func (s *ChainAuthorityResolver) ReadCoordinatorConnection(ctx context.Context, 
 	if err != nil {
 		return out, err
 	}
-	return HostConnection{OrganizationID: orgID, BindingID: bindingID, BindingVersion: binding.Version, CoordinatorAddress: binding.Address.String(), CoordinatorPublicKey: hex.EncodeToString(binding.PublicKey), Endpoint: binding.Endpoint, VersionPin: pin}, nil
+	semantic, err := json.Marshal([]any{org.ID, org.Admin, org.Active, binding})
+	if err != nil {
+		return out, err
+	}
+	return HostConnection{OrganizationID: orgID, BindingID: bindingID, BindingVersion: binding.Version, CoordinatorAddress: binding.Address.String(), CoordinatorPublicKey: hex.EncodeToString(binding.PublicKey), Endpoint: binding.Endpoint, VersionPin: pin, AuthorityPin: hashBytes(semantic)}, nil
 }
 
 // ReadHostConnection follows the exact active_hosts pointer using the verified

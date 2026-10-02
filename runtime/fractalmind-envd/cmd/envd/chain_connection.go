@@ -104,11 +104,11 @@ func configureChainCoordinator(server *coordinator.Server, cfg *config.Config, r
 		if err != nil {
 			return "", err
 		}
-		pin, err := reader.VerifyDeviceRead(ctx, nodecommand.DeviceReadInput{Network: cfg.SUI.Network, ProtocolRegistry: cfg.SUI.ProtocolRegistryID, OrganizationID: cfg.SUI.OrgID, HumanID: request.HumanID, GrantID: request.GrantID, DeviceAddress: request.DeviceAddress})
+		pin, err := reader.VerifyDeviceRead(ctx, nodecommand.DeviceReadInput{Network: cfg.SUI.Network, ProtocolRegistry: cfg.SUI.ProtocolRegistryID, OrganizationID: cfg.SUI.OrgID, HumanID: request.HumanID, GrantID: request.GrantID, DeviceAddress: request.DeviceAddress, RequiredAction: request.RequiredDeviceAction()})
 		if err != nil {
 			return "", err
 		}
-		return binding.VersionPin + ":" + pin, nil
+		return binding.AuthorityPin + ":" + pin, nil
 	})
 	if err != nil {
 		return err

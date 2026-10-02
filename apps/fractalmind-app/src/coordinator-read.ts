@@ -4,6 +4,10 @@ import { ChainReadSession } from "./chain";
 import { DeviceIdentityVerifier } from "./device-identity";
 import { hostDirectory, type HostBinding } from "./host-admission";
 import { NativeDeviceSigner } from "./native-device";
+import {
+  verifySignedNodeCommand,
+  type SignedNodeCommand,
+} from "@fractalmind-labs/fractalmind-sdk";
 
 export class CoordinatorReadError extends Error {
   constructor(
@@ -13,6 +17,8 @@ export class CoordinatorReadError extends Error {
       | "device_read_rejected"
       | "read_unavailable"
       | "read_already_used"
+      | "invalid_command"
+      | "command_outcome_unknown"
       | "invalid_observation",
   ) {
     super(code);
@@ -25,8 +31,10 @@ type ReadRequest = {
   device_address: string;
   organization_id: string;
   binding_id: string;
-  method: "GET";
+  method: "GET" | "POST";
   path: string;
+  command_hash?: string;
+  command_scope?: "observation" | "control";
 };
 type Challenge = ReadRequest & {
   chain_identifier: string;
@@ -36,6 +44,23 @@ type Challenge = ReadRequest & {
   signature: string;
 };
 function challengeText(c: Challenge) {
+  if (c.method === "POST")
+    return [
+      "FM-COORDINATOR-COMMAND",
+      "1",
+      c.chain_identifier,
+      c.organization_id,
+      c.binding_id,
+      c.human_id,
+      c.grant_id,
+      c.device_address,
+      c.method,
+      c.path,
+      c.command_scope,
+      c.command_hash,
+      c.nonce,
+      c.expires_at_ms,
+    ].join(":");
   return [
     "FM-COORDINATOR-READ",
     "1",
@@ -105,8 +130,9 @@ async function boundedJSON(response: Response) {
   }
 }
 
-/** Fresh signed read only. No wallet export, token login, business cache or
- * automatic replay; the server consumes the challenge once and rechecks Sui. */
+/** Native device transport. Read proofs cannot submit commands; command
+ * proofs bind the exact signed envelope. Host independently authorizes every
+ * command on Sui. No business cache, automatic dispatch or automatic replay. */
 export class CoordinatorReadClient {
   readonly verifier: DeviceIdentityVerifier;
   constructor(
@@ -144,7 +170,75 @@ export class CoordinatorReadClient {
   async prepare(bindingId: string, path = "/api/sentinels") {
     if (!id.test(bindingId) || !permitted(path))
       throw new CoordinatorReadError("invalid_challenge");
-    await this.verifier.verifyOrganization(this.organizationId, "read");
+    return this.prepareRequest(bindingId, path);
+  }
+  /** Takes an already signed and chain-prepared command. Preparing this
+   * transport sends no execution request. The caller explicitly invokes send
+   * after user confirmation and checks the original Run for final results. */
+  async prepareCommand(bindingId: string, command: SignedNodeCommand) {
+    let snapshot: SignedNodeCommand;
+    try {
+      snapshot = JSON.parse(JSON.stringify(command));
+      await verifySignedNodeCommand(snapshot);
+    } catch {
+      throw new CoordinatorReadError("invalid_command");
+    }
+    const read = [
+      "inventory",
+      "status",
+      "monitor",
+      "logs",
+      "health",
+      "availability",
+    ].includes(snapshot.action);
+    const control = ["start", "stop", "assign", "direct.message"].includes(
+      snapshot.action,
+    );
+    if (
+      !id.test(bindingId) ||
+      snapshot.signer !== this.signer.device.address ||
+      snapshot.target.organization_id !== this.organizationId ||
+      !id.test(snapshot.target.node_id) ||
+      !(
+        (read && snapshot.scope === "observation") ||
+        (control && snapshot.scope === "control")
+      ) ||
+      (control && !snapshot.target.agent_id) ||
+      snapshot.expires_at_ms <= Date.now()
+    )
+      throw new CoordinatorReadError("invalid_command");
+    const body = JSON.stringify({ node_command: snapshot });
+    if (new TextEncoder().encode(body).length > 1 << 20)
+      throw new CoordinatorReadError("invalid_command");
+    const commandHash = Array.from(
+      new Uint8Array(
+        await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body)),
+      ),
+      (b) => b.toString(16).padStart(2, "0"),
+    ).join("");
+    return this.prepareRequest(
+      bindingId,
+      `/api/sentinels/${snapshot.target.node_id}/command`,
+      {
+        body,
+        commandHash,
+        scope: control ? "control" : "observation",
+        expiresAtMs: snapshot.expires_at_ms,
+      },
+    );
+  }
+  private async prepareRequest(
+    bindingId: string,
+    path: string,
+    command?: {
+      body: string;
+      commandHash: string;
+      scope: "observation" | "control";
+      expiresAtMs: number;
+    },
+  ) {
+    const action = command?.scope === "control" ? "operate" : "read";
+    await this.verifier.verifyOrganization(this.organizationId, action);
     const before = await this.binding(bindingId),
       b = before.binding;
     const request: ReadRequest = {
@@ -153,8 +247,11 @@ export class CoordinatorReadClient {
       device_address: this.signer.device.address,
       organization_id: this.organizationId,
       binding_id: bindingId,
-      method: "GET",
+      method: command ? "POST" : "GET",
       path,
+      ...(command
+        ? { command_hash: command.commandHash, command_scope: command.scope }
+        : {}),
     };
     const response = await this.request(b.endpoint + "/api/device-challenge", {
       method: "POST",
@@ -174,6 +271,8 @@ export class CoordinatorReadClient {
       Object.entries(request).some(
         ([key, value]) => c[key as keyof Challenge] !== value,
       ) ||
+      (!command &&
+        (c.command_hash !== undefined || c.command_scope !== undefined)) ||
       c.chain_identifier !== before.chainIdentifier ||
       c.coordinator_public_key !== publicHex ||
       !Number.isSafeInteger(c.expires_at_ms) ||
@@ -215,73 +314,100 @@ export class CoordinatorReadClient {
         consumed = true;
         if (Date.now() >= c.expires_at_ms)
           throw new CoordinatorReadError("invalid_challenge");
-        const response = await this.request(b.endpoint + path, {
-          method: "GET",
-          headers: { Authorization: authorization },
-        });
-        if (!response.ok)
-          throw new CoordinatorReadError("device_read_rejected");
-        const envelope = (await boundedJSON(response)) as {
-          nonce: string;
-          body: string;
-          signature: string;
-        };
-        if (
-          !envelope ||
-          typeof envelope !== "object" ||
-          envelope.nonce !== c.nonce ||
-          typeof envelope.body !== "string" ||
-          envelope.body.length > 700_000 ||
-          typeof envelope.signature !== "string"
-        )
-          throw new CoordinatorReadError("invalid_observation");
-        let body: Uint8Array;
-        try {
-          body = fromBase64(envelope.body);
-          if (toBase64(body) !== envelope.body || body.length > 512 * 1024)
-            throw new Error();
-        } catch {
-          throw new CoordinatorReadError("invalid_observation");
-        }
-        const digest = new Uint8Array(
-          await crypto.subtle.digest("SHA-256", new Uint8Array(body)),
-        );
-        const bodyHash = Array.from(digest, (b) =>
-          b.toString(16).padStart(2, "0"),
-        ).join("");
-        const text = [
-          "FM-COORDINATOR-RESPONSE",
-          "1",
-          c.chain_identifier,
-          c.organization_id,
-          c.binding_id,
-          c.nonce,
-          c.method,
-          c.path,
-          response.status,
-          bodyHash,
-        ].join(":");
-        if (
-          !(await key.verify(
-            new TextEncoder().encode(text),
-            hex(envelope.signature, 64),
-          ))
-        )
-          throw new CoordinatorReadError("invalid_observation");
-        let value: unknown;
-        try {
-          value = JSON.parse(
-            new TextDecoder("utf-8", { fatal: true }).decode(body),
-          );
-        } catch {
-          throw new CoordinatorReadError("invalid_observation");
-        }
-        await this.verifier.verifyOrganization(this.organizationId, "read");
+        if (command && Date.now() >= command.expiresAtMs)
+          throw new CoordinatorReadError("invalid_command");
+        // A device or binding can change after preparation while the UI waits
+        // for explicit confirmation. Recheck before sending any execution.
+        await this.verifier.verifyOrganization(this.organizationId, action);
         if (
           bindingPin((await this.binding(bindingId)).binding) !== bindingPin(b)
         )
           throw new CoordinatorReadError("binding_changed");
-        return value;
+        if (
+          Date.now() >= c.expires_at_ms ||
+          (command && Date.now() >= command.expiresAtMs)
+        )
+          throw new CoordinatorReadError("invalid_challenge");
+        try {
+          const response = await this.request(b.endpoint + path, {
+            method: request.method,
+            headers: {
+              Authorization: authorization,
+              ...(command ? { "Content-Type": "application/json" } : {}),
+            },
+            ...(command ? { body: command.body } : {}),
+          });
+          if (!response.ok)
+            throw new CoordinatorReadError("device_read_rejected");
+          const envelope = (await boundedJSON(response)) as {
+            nonce: string;
+            body: string;
+            signature: string;
+          };
+          if (
+            !envelope ||
+            typeof envelope !== "object" ||
+            envelope.nonce !== c.nonce ||
+            typeof envelope.body !== "string" ||
+            envelope.body.length > 700_000 ||
+            typeof envelope.signature !== "string"
+          )
+            throw new CoordinatorReadError("invalid_observation");
+          let body: Uint8Array;
+          try {
+            body = fromBase64(envelope.body);
+            if (toBase64(body) !== envelope.body || body.length > 512 * 1024)
+              throw new Error();
+          } catch {
+            throw new CoordinatorReadError("invalid_observation");
+          }
+          const digest = new Uint8Array(
+            await crypto.subtle.digest("SHA-256", new Uint8Array(body)),
+          );
+          const bodyHash = Array.from(digest, (b) =>
+            b.toString(16).padStart(2, "0"),
+          ).join("");
+          const text = [
+            "FM-COORDINATOR-RESPONSE",
+            "1",
+            c.chain_identifier,
+            c.organization_id,
+            c.binding_id,
+            c.nonce,
+            c.method,
+            c.path,
+            response.status,
+            bodyHash,
+          ].join(":");
+          if (
+            !(await key.verify(
+              new TextEncoder().encode(text),
+              hex(envelope.signature, 64),
+            ))
+          )
+            throw new CoordinatorReadError("invalid_observation");
+          let value: unknown;
+          try {
+            value = JSON.parse(
+              new TextDecoder("utf-8", { fatal: true }).decode(body),
+            );
+          } catch {
+            throw new CoordinatorReadError("invalid_observation");
+          }
+          await this.verifier.verifyOrganization(this.organizationId, action);
+          if (
+            bindingPin((await this.binding(bindingId)).binding) !==
+            bindingPin(b)
+          )
+            throw new CoordinatorReadError("binding_changed");
+          return value;
+        } catch (error) {
+          // An HTTP error, lost response or revocation during execution is not
+          // proof that nothing happened. Never resend: query the original Run.
+          if (command)
+            throw new CoordinatorReadError("command_outcome_unknown");
+          throw error;
+        }
       },
     });
   }

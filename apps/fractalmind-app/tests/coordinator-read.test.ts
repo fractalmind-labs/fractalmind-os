@@ -5,6 +5,8 @@ import { normalizeSuiAddress as id, toBase64 } from "@mysten/sui/utils";
 import {
   CoordinatorBindingBcs,
   HostIndexBcs,
+  signNodeCommand,
+  verifySignedNodeCommand,
 } from "@fractalmind-labs/fractalmind-sdk";
 import {
   CoordinatorReadClient,
@@ -22,7 +24,7 @@ const org = id("0x1"),
   pkg = id("0x5");
 const failure = (code: string) => (e: unknown) =>
   e instanceof CoordinatorReadError && e.code === code;
-async function fixture(mode = "valid") {
+async function fixture(mode = "valid", commandMode = false) {
   const device = Ed25519Keypair.generate(),
     coordinator = Ed25519Keypair.generate();
   let nativeProofs = 0,
@@ -125,6 +127,17 @@ async function fixture(mode = "valid") {
       b.toString(16).padStart(2, "0"),
     ).join("");
   const body = { sentinels: [], count: 0 };
+  const command = await signNodeCommand(device, {
+    target: { organizationId: org, nodeId: id("0x8"), agentId: "native-test" },
+    action: "assign",
+    scope: "control",
+    capability: { id: id("0x9"), revocationVersion: 1n },
+    payload: { task: "complete KR" },
+    budget: { asset: "TOOL_CALLS", amount: 3n },
+    commandId: "cmd-native-test",
+    nonce: "cmd-nonce",
+    idempotencyKey: "cmd-native-test",
+  });
   const fetcher: typeof fetch = async (input, init) => {
     assert.equal(init?.credentials, "omit");
     assert.equal(init?.redirect, "error");
@@ -141,7 +154,7 @@ async function fixture(mode = "valid") {
         ).toString("hex"),
       };
       const signed = [
-        "FM-COORDINATOR-READ",
+        commandMode ? "FM-COORDINATOR-COMMAND" : "FM-COORDINATOR-READ",
         "1",
         challenge.chain_identifier,
         challenge.organization_id,
@@ -151,20 +164,41 @@ async function fixture(mode = "valid") {
         challenge.device_address,
         challenge.method,
         challenge.path,
+        ...(commandMode
+          ? [challenge.command_scope, challenge.command_hash]
+          : []),
         challenge.nonce,
         challenge.expires_at_ms,
       ].join(":");
       challenge.signature = await sign(signed);
       if (mode === "challenge-signature") challenge.signature = "0".repeat(128);
       if (mode === "challenge-path") challenge.path = "/api/health";
+      if (mode === "challenge-hash") challenge.command_hash = "0".repeat(64);
+      if (mode === "challenge-scope") challenge.command_scope = "observation";
       if (mode === "challenge-chain") challenge.chain_identifier = "Wrong1";
       if (mode === "challenge-expired")
         challenge.expires_at_ms = Date.now() - 1;
       if (mode === "binding-changed") changed = true;
       return Response.json(challenge);
     }
-    assert.equal(init?.method, "GET");
+    assert.equal(init?.method, commandMode ? "POST" : "GET");
     reads++;
+    if (commandMode) {
+      assert.equal(String(input), binding.endpoint + challenge.path);
+      assert.equal(
+        Buffer.from(
+          await crypto.subtle.digest(
+            "SHA-256",
+            new TextEncoder().encode(String(init?.body)),
+          ),
+        ).toString("hex"),
+        challenge.command_hash,
+      );
+      const packet = JSON.parse(String(init?.body));
+      await verifySignedNodeCommand(packet.node_command);
+      assert.equal(packet.node_command.payload.task, "complete KR");
+      if (mode === "timeout") throw new Error("lost response");
+    }
     const header = (init?.headers as Record<string, string>).Authorization;
     assert.ok(header.startsWith("FractalMind "));
     const proof = JSON.parse(
@@ -201,8 +235,8 @@ async function fixture(mode = "valid") {
       org,
       bindingId,
       challenge.nonce,
-      "GET",
-      "/api/sentinels",
+      challenge.method,
+      challenge.path,
       200,
       hash,
     ].join(":");
@@ -224,12 +258,88 @@ async function fixture(mode = "valid") {
   const client = new CoordinatorReadClient(chain, signer, grant, org, fetcher);
   // DeviceIdentityVerifier is covered by its own chain tests and the real Go/SDK
   // integration. These cases isolate client trust and asynchronous mutations.
-  client.verifier.verifyOrganization = async () => {
+  const actions: string[] = [];
+  client.verifier.verifyOrganization = async (
+    _organizationId,
+    action = "read",
+  ) => {
+    actions.push(action);
     if (!authority) throw new Error("revoked");
+    if (mode === "read-only" && action === "operate")
+      throw new Error("read-only device");
     return {} as never;
   };
-  return { client, counters: () => ({ nativeProofs, reads }) };
+  return {
+    client,
+    command,
+    actions,
+    revoke: () => {
+      authority = false;
+    },
+    changeBinding: () => {
+      changed = true;
+    },
+    counters: () => ({ nativeProofs, reads }),
+  };
 }
+test("command transport binds the exact signed envelope, is explicit and can be sent only once", async () => {
+  const f = await fixture("valid", true);
+  const prepared = await f.client.prepareCommand(bindingId, f.command);
+  assert.deepEqual(f.counters(), { nativeProofs: 1, reads: 0 });
+  f.command.payload.task = "mutated after prepare";
+  assert.deepEqual(await prepared.send(), { sentinels: [], count: 0 });
+  assert.deepEqual(f.actions, ["operate", "operate", "operate"]);
+  await assert.rejects(prepared.send(), failure("read_already_used"));
+  assert.deepEqual(f.counters(), { nativeProofs: 1, reads: 1 });
+});
+test("invalid command or untrusted command challenge never obtains a proof or dispatches", async () => {
+  for (const mode of [
+    "challenge-signature",
+    "challenge-hash",
+    "challenge-scope",
+    "challenge-chain",
+    "challenge-expired",
+    "binding-changed",
+    "read-only",
+  ]) {
+    const f = await fixture(mode, true);
+    await assert.rejects(f.client.prepareCommand(bindingId, f.command));
+    assert.deepEqual(f.counters(), { nativeProofs: 0, reads: 0 }, mode);
+  }
+  const f = await fixture("valid", true);
+  f.command.payload.task = "tampered";
+  await assert.rejects(
+    f.client.prepareCommand(bindingId, f.command),
+    failure("invalid_command"),
+  );
+  assert.deepEqual(f.counters(), { nativeProofs: 0, reads: 0 });
+});
+test("authority and binding changes while awaiting user confirmation prevent dispatch", async () => {
+  for (const mutate of ["revoke", "changeBinding"] as const) {
+    const f = await fixture("valid", true),
+      prepared = await f.client.prepareCommand(bindingId, f.command);
+    f[mutate]();
+    await assert.rejects(prepared.send());
+    assert.deepEqual(f.counters(), { nativeProofs: 1, reads: 0 });
+  }
+});
+test("lost, rejected or forged command responses are unknown and never automatically resent", async () => {
+  for (const mode of [
+    "timeout",
+    "server-rejected",
+    "body-tampered",
+    "response-nonce",
+    "response-signature",
+    "response-binding",
+    "response-authority",
+  ]) {
+    const f = await fixture(mode, true),
+      prepared = await f.client.prepareCommand(bindingId, f.command);
+    await assert.rejects(prepared.send(), failure("command_outcome_unknown"));
+    await assert.rejects(prepared.send(), failure("read_already_used"));
+    assert.deepEqual(f.counters(), { nativeProofs: 1, reads: 1 }, mode);
+  }
+});
 test("signed read is one-use and discloses no proof before trusting the Coordinator", async () => {
   const f = await fixture();
   const prepared = await f.client.prepare(bindingId);

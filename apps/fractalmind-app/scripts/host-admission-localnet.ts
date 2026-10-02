@@ -32,6 +32,7 @@ import {
   TransactionPreflightError,
 } from "@fractalmind-labs/fractalmind-sdk";
 import { NativeDeviceSigner, type NativeInvoke } from "../src/native-device";
+import { DeviceIdentityError } from "../src/device-identity";
 import { HostAdmission } from "../src/host-admission";
 import { ChainReadSession } from "../src/chain";
 import { CoordinatorReadClient } from "../src/coordinator-read";
@@ -79,6 +80,7 @@ const checks: string[] = [],
   transactions: unknown[] = [];
 let nativeExecution: unknown;
 const journal = new MemoryTransactionJournal();
+let nativeCommandSignatures = 0;
 const invoke: NativeInvoke = async (command, args) => {
   assert.equal(args.profile, "test-host-fixture");
   if (command === "fm_device_public")
@@ -95,6 +97,14 @@ const invoke: NativeInvoke = async (command, args) => {
     );
   if (command === "fm_device_sign_transaction")
     return deviceKey.signTransaction(fromBase64(args.bytes));
+  if (command === "fm_device_sign_node_command") {
+    nativeCommandSignatures++;
+    const bytes = fromBase64(args.bytes);
+    return {
+      bytes: args.bytes,
+      signature: toBase64(await deviceKey.sign(bytes)),
+    };
+  }
   throw new Error(
     "No initialization/decryption/wrapping commands are allowed by this fixture",
   );
@@ -924,7 +934,7 @@ if (earlyHarness && earlyPublic) {
           nodeId: earlyPublic.host_address,
           agentId: selected.instanceId,
         };
-        const before = await signNodeCommand(deviceKey, {
+        const before = await signNodeCommand(device, {
           target,
           action: "status",
           scope: "observation",
@@ -971,6 +981,44 @@ if (earlyHarness && earlyPublic) {
           "Native state: prepare current read-only status checkpoint",
           before,
         );
+        let statusTransport: unknown;
+        if (process.env.FM_ENVD_DEVICE_COMMAND === "1") {
+          assert.ok(liveReads);
+          nativeExecution = {
+            instanceId: selected.instanceId,
+            recordId: imported.id,
+            organizationId,
+            beforeExecution,
+            phase: "device_status_transport_prepared",
+            safeAppHandoverVerified: false,
+            osStoreVerified: false,
+          };
+          await save();
+          const prepared = await liveReads.prepareCommand(bindingId, before);
+          const response = (await prepared.send()) as any;
+          assert.equal(response.success, true);
+          assert.equal(response.response.ok, true);
+          assert.equal(response.response.result.physical_state, "idle");
+          assert.equal(response.response.execution_id, beforeExecution);
+          assert.equal(
+            (await sdk.nodeExecution.getExecution(beforeExecution)).state,
+            2,
+          );
+          await assert.rejects(prepared.send(), /read_already_used/);
+          statusTransport = {
+            nativeBridgeInjected: true,
+            osStoreVerified: false,
+            actualCoordinatorHttp: true,
+            actualAuthenticatedWorker: true,
+            scope: "observation",
+            executionId: beforeExecution,
+            originalDigest: response.response.transaction_digest,
+            replayRejectedBeforeSecondHttp: true,
+          };
+          checks.push(
+            "NativeDeviceSigner and explicit one-use body-bound command transport dispatch status through the real chain Coordinator and authenticated envd; original chain result confirmed before inspecting duplicate",
+          );
+        }
         earlyHarness.helper.stdin.write("STATUS\n");
         await earlyHarness.nativePhases.statusReady.promise;
         earlyHarness.helper.stdin.write(
@@ -980,6 +1028,10 @@ if (earlyHarness && earlyPublic) {
         assert.equal(status.response.ok, true);
         assert.equal(status.response.result.physical_state, "idle");
         assert.equal(status.response.result.instance_id, selected.instanceId);
+        if (statusTransport) {
+          assert.equal(status.device_command_dispatches, 1);
+          assert.equal(status.response.duplicate, true);
+        }
         assert.equal(
           (await sdk.host.getManagedAgent(imported.id)).control_confirmed,
           false,
@@ -1170,7 +1222,7 @@ if (earlyHarness && earlyPublic) {
           ),
           "remote_authority::RemoteCapability",
         );
-        const command = await signNodeCommand(deviceKey, {
+        const command = await signNodeCommand(device, {
           target,
           action: "assign",
           scope: "control",
@@ -1278,7 +1330,7 @@ if (earlyHarness && earlyPublic) {
           ),
           "remote_authority::RemoteCapability",
         );
-        const after = await signNodeCommand(deviceKey, {
+        const after = await signNodeCommand(device, {
           target,
           action: "status",
           scope: "observation",
@@ -1384,7 +1436,7 @@ if (earlyHarness && earlyPublic) {
           ),
           "remote_authority::RemoteCapability",
         );
-        const cancelCommand = await signNodeCommand(deviceKey, {
+        const cancelCommand = await signNodeCommand(device, {
           target,
           action: "assign",
           scope: "control",
@@ -1440,6 +1492,8 @@ if (earlyHarness && earlyPublic) {
           duplicateOriginalDigest: attained.duplicate_digest,
           productionFactory: true,
           factoryRebuiltInSameProcess: true,
+          statusTransport,
+          nativeCommandSignatures,
           controlSetupFixtureOnly: true,
           safeAppHandoverVerified: false,
           humanAcceptanceVerified: false,
@@ -2043,7 +2097,11 @@ await assert.rejects(
   /invalid_grant/,
 );
 if (beforeDeviceRevoked && earlyHarness) {
-  await assert.rejects(beforeDeviceRevoked.send(), /device_read_rejected/);
+  await assert.rejects(
+    beforeDeviceRevoked.send(),
+    (error) =>
+      error instanceof DeviceIdentityError && error.code === "invalid_grant",
+  );
   earlyHarness.helper.stdin.end("DONE\n");
   await earlyHarness.done;
   deviceHttp = {
@@ -2051,7 +2109,7 @@ if (beforeDeviceRevoked && earlyHarness) {
     deviceRevokedAfterChallengeRejected: true,
   };
   checks.push(
-    "device revocation after challenge preparation is rejected by actual Coordinator HTTP authority check; no cached device login survives",
+    "device revocation after challenge preparation is rejected by the App's fresh chain authority check before HTTP dispatch; no cached device login survives",
   );
 }
 controller.dispose();

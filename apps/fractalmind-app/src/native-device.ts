@@ -11,6 +11,7 @@ export type NativeDeviceCommand =
   | "fm_device_public"
   | "fm_device_initialize"
   | "fm_device_sign_transaction"
+  | "fm_device_sign_node_command"
   | "fm_device_prove"
   | "fm_onboarding_create"
   | "fm_onboarding_public"
@@ -42,6 +43,7 @@ export class NativeDeviceError extends Error {
       | "native_unavailable"
       | "not_initialized"
       | "invalid_transaction"
+      | "invalid_command"
       | "invalid_proof"
       | "invalid_recovery"
       | "invalid_envelope"
@@ -138,6 +140,11 @@ export async function call(
       throw new NativeDeviceError("invalid_recovery");
     if (code === "InvalidEnvelope")
       throw new NativeDeviceError("invalid_envelope");
+    if (
+      code === "InvalidNodeCommand" ||
+      (command === "fm_device_sign_node_command" && code === "WrongSender")
+    )
+      throw new NativeDeviceError("invalid_command");
     if (code === "AlreadyInitialized")
       throw new NativeDeviceError("already_initialized");
     throw new NativeDeviceError("native_unavailable");
@@ -173,6 +180,39 @@ export class NativeDeviceSigner {
   }
   getPublicKey() {
     return new Ed25519PublicKey(decode(this.device.signingPublicKey, 32));
+  }
+  /** NodeCommandSigner: direct Ed25519 for only the native-validated command
+   * domain, not a general raw/personal-message signing capability. */
+  async sign(bytes: Uint8Array): Promise<Uint8Array> {
+    if (!(bytes instanceof Uint8Array) || !bytes.length || bytes.length > 8192)
+      throw new NativeDeviceError("invalid_command");
+    const input = new Uint8Array(bytes),
+      encoded = toBase64(input);
+    try {
+      const value = JSON.parse(
+        new TextDecoder("utf-8", { fatal: true }).decode(input),
+      );
+      if (
+        value.domain !== "fractalmind.node-command.v1" ||
+        value.version !== "1" ||
+        value.signer !== this.device.address
+      )
+        throw new Error();
+    } catch {
+      throw new NativeDeviceError("invalid_command");
+    }
+    const result = object(
+      await call(this.invoke, "fm_device_sign_node_command", {
+        profile: this.device.profile,
+        bytes: encoded,
+      }),
+    );
+    if (result.bytes !== encoded)
+      throw new NativeDeviceError("invalid_response");
+    const signature = decode(result.signature, 64);
+    if (!(await this.getPublicKey().verify(input, signature)))
+      throw new NativeDeviceError("invalid_response");
+    return signature;
   }
   async signTransaction(
     bytes: Uint8Array,

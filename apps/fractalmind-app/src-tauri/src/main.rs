@@ -71,6 +71,29 @@ async fn fm_device_sign_transaction(
     .map_err(|_| "NativeTaskFailed".to_string())?
 }
 #[tauri::command]
+async fn fm_device_sign_node_command(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: String,
+    bytes: String,
+) -> Result<SignedBytes, String> {
+    main_window(&window)?;
+    let vault = Arc::clone(vault.inner());
+    tauri::async_runtime::spawn_blocking(move || {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|_| "NativeClockUnavailable".to_string())?
+            .as_millis()
+            .try_into()
+            .map_err(|_| "NativeClockUnavailable".to_string())?;
+        vault
+            .sign_node_command(&profile, &bytes, now)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|_| "NativeTaskFailed".to_string())?
+}
+#[tauri::command]
 async fn fm_device_prove(
     window: WebviewWindow,
     vault: State<'_, Arc<DeviceVault>>,
@@ -327,6 +350,7 @@ fn main() {
             fm_device_public,
             fm_device_initialize,
             fm_device_sign_transaction,
+            fm_device_sign_node_command,
             fm_device_prove,
             fm_onboarding_create,
             fm_onboarding_public,

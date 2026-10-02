@@ -2,16 +2,24 @@ package nodecommand
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 )
 
 type DeviceReadInput struct {
 	Network, ProtocolRegistry, OrganizationID, HumanID, GrantID, DeviceAddress string
+	RequiredAction                                                             byte
 }
 
 // VerifyDeviceRead checks the current org role and a device-specific grant;
 // public identity IDs, Host membership and an HTTP token are not device authority.
 func (s *ChainAuthorityResolver) VerifyDeviceRead(ctx context.Context, input DeviceReadInput) (string, error) {
+	if input.RequiredAction == 0 {
+		input.RequiredAction = 1
+	}
+	if input.RequiredAction != 1 && input.RequiredAction != 2 {
+		return "", fmt.Errorf("unsupported device transport action")
+	}
 	for _, id := range []string{input.ProtocolRegistry, input.OrganizationID, input.HumanID, input.GrantID, input.DeviceAddress} {
 		a, err := chainAddress(id)
 		if err != nil || a.String() != id {
@@ -46,7 +54,7 @@ func (s *ChainAuthorityResolver) VerifyDeviceRead(ctx context.Context, input Dev
 	device, _ := chainAddress(input.DeviceAddress)
 	if registry.ProtocolRegistry != protocol.ID || human.Registry != registry.ID || human.Network != input.Network || !org.Active ||
 		grant.Human != human.ID || grant.Device != device || grant.Revoked || grant.Version == 0 || human.Generation == 0 || grant.Generation != human.Generation || len(grant.EncryptionKey) != 32 ||
-		!containsAddress(human.Grants, grant.ID) || !containsAddress(human.Organizations, org.ID) || len(grant.Org) > 1 || (len(grant.Org) == 1 && grant.Org[0] != org.ID) || !containsByte(grant.Actions, 1) {
+		!containsAddress(human.Grants, grant.ID) || !containsAddress(human.Organizations, org.ID) || len(grant.Org) > 1 || (len(grant.Org) == 1 && grant.Org[0] != org.ID) || !containsByte(grant.Actions, 1) || !containsByte(grant.Actions, input.RequiredAction) {
 		return "", fmt.Errorf("current device read grant required")
 	}
 	var role moveRole
@@ -63,5 +71,16 @@ func (s *ChainAuthorityResolver) VerifyDeviceRead(ctx context.Context, input Dev
 	if clock < 0 || grant.Expiry <= uint64(clock) {
 		return "", fmt.Errorf("device read grant expired")
 	}
-	return r.joinPin(ctx)
+	if _, err := r.joinPin(ctx); err != nil {
+		return "", err
+	}
+	// Executing a command legitimately mutates Organization (execution ledger,
+	// encrypted evidence). Pin authority, not its unrelated object version.
+	// Every call still validates exact sources and rechecks their versions for a
+	// stable snapshot before producing this digest.
+	semantic, err := json.Marshal([]any{input.Network, protocol.ID, registry, human, grant, role, org.ID, org.Admin, org.Active, input.RequiredAction})
+	if err != nil {
+		return "", err
+	}
+	return hashBytes(semantic), nil
 }

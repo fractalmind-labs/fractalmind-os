@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -162,13 +163,18 @@ func TestHostJoinLiveCLI(t *testing.T) {
 	var nativeRuntime *chainRuntimeExecutor
 	var nativeConfig *config.Config
 	var nativeWorkspace string
+	var deviceCommandDispatches atomic.Int64
 	if input.LiveConnection {
 		reader, err = nodecommand.NewChainAuthorityResolver(base, input.PackageID)
 		if err != nil {
 			t.Fatal(err)
 		}
 		liveConfig = &config.Config{SUI: config.SUIConfig{Network: "localnet", ProtocolRegistryID: input.RegistryID, ProtocolPackageID: input.PackageID, ChainIdentifier: input.ChainIdentifier, OrgID: input.OrganizationID}, Coordinator: config.CoordinatorConfig{BindingID: result.Membership.BindingID}}
-		liveServer = coordinator.NewServer("", time.Second, "")
+		commandTimeout := time.Second
+		if os.Getenv("FM_ENVD_DEVICE_COMMAND") == "1" {
+			commandTimeout = 30 * time.Second
+		}
+		liveServer = coordinator.NewServer("", commandTimeout, "")
 		if err = configureChainCoordinator(liveServer, liveConfig, base, coordKey); err != nil {
 			t.Fatal(err)
 		}
@@ -268,6 +274,18 @@ func TestHostJoinLiveCLI(t *testing.T) {
 			default:
 			}
 		})
+		if os.Getenv("FM_ENVD_DEVICE_COMMAND") == "1" {
+			if nativeRuntime == nil {
+				t.Fatal("device commands require the production native executor")
+			}
+			liveClient.OnCommand(func(command ws.CommandPayload) {
+				deviceCommandDispatches.Add(1)
+				response := handleCommand(command, nil, nativeConfig, nativeRuntime)
+				if err := liveClient.Send("command_result", map[string]any{"request_id": command.RequestID, "result": response}); err != nil {
+					t.Errorf("device command result send failed: %v", err)
+				}
+			})
+		}
 		go liveClient.Connect()
 		select {
 		case err = <-connected:
@@ -318,6 +336,7 @@ func TestHostJoinLiveCLI(t *testing.T) {
 				t.Fatalf("native alias command failed: %+v %v", response, e)
 			}
 			report := map[string]any{"phase": phase, "response": response, "production_factory": true, "discovered_alias": scan.Instances[0].InstanceID}
+			report["device_command_dispatches"] = deviceCommandDispatches.Load()
 			if phase == "status" {
 				var state runtimeadapter.NativeState
 				if json.Unmarshal(response.Result, &state) != nil || state.PhysicalState != "idle" || state.InstanceID != scan.Instances[0].InstanceID {

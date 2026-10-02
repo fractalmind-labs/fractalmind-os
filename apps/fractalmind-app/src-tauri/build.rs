@@ -4,6 +4,7 @@ fn main() {
             "fm_device_public",
             "fm_device_initialize",
             "fm_device_sign_transaction",
+            "fm_device_sign_node_command",
             "fm_device_prove",
             "fm_onboarding_create",
             "fm_onboarding_public",

@@ -13,6 +13,36 @@ func connectionFixture(t *testing.T) *hostJoinFixture {
 	return f
 }
 
+func TestCoordinatorTransportAuthorityPinSurvivesEvidenceAndDetectsBindingChange(t *testing.T) {
+	f := connectionFixture(t)
+	read := func() HostConnection {
+		t.Helper()
+		value, err := f.resolver.ReadCoordinatorConnection(context.Background(), f.org.ID.String(), f.coordinator.ID.String(), f.coordinator.PublicKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return value
+	}
+	before := read()
+	obj := f.objects[f.org.ID.String()]
+	obj.Version++
+	f.objects[obj.ID] = obj
+	after := read()
+	if before.VersionPin == after.VersionPin || before.AuthorityPin == "" || before.AuthorityPin != after.AuthorityPin {
+		t.Fatal("execution version must change source pin but preserve transport authority")
+	}
+	f.coordinator.Version++
+	f.syncJoin(t)
+	if before.AuthorityPin == read().AuthorityPin {
+		t.Fatal("changed binding retained authority pin")
+	}
+	f.coordinator.Revoked = true
+	f.syncJoin(t)
+	if _, err := f.resolver.ReadCoordinatorConnection(context.Background(), f.org.ID.String(), f.coordinator.ID.String(), f.coordinator.PublicKey); err == nil {
+		t.Fatal("revoked binding accepted")
+	}
+}
+
 func TestHostConnectionUsesCurrentPointerAndKeys(t *testing.T) {
 	f := connectionFixture(t)
 	got, err := f.resolver.ReadHostConnection(context.Background(), f.org.ID.String(), f.member.PublicKey, f.member.EncryptionKey)

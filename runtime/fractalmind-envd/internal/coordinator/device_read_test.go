@@ -3,9 +3,13 @@ package coordinator
 import (
 	"context"
 	"crypto/ed25519"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -31,6 +35,111 @@ func deviceReadFixture(t *testing.T) (*DeviceReadAuth, *edSigner, DeviceReadRequ
 		t.Fatal(err)
 	}
 	return a, device, r, &pin
+}
+
+func TestDeviceCommandChallengeBindsBodySignerScopeAndSingleDispatch(t *testing.T) {
+	for _, mode := range []string{"valid", "replay", "body changed", "wrong signature", "foreign signer", "foreign host", "scope downgrade", "read-only phone", "revoked", "expired", "query", "lost authority during output"} {
+		t.Run(mode, func(t *testing.T) {
+			a, d, request, pin := deviceReadFixture(t)
+			host := "0x" + strings.Repeat("5", 64)
+			now := time.Now().UnixMilli()
+			command := nodecommand.NodeCommand{Version: "1", CommandID: "cmd-native", Signer: d.Address(), Target: nodecommand.Target{OrganizationID: request.OrganizationID, NodeID: host, AgentID: "agent-native"}, Action: "assign", Scope: "control", Capability: nodecommand.CapabilityRef{ID: "0x" + strings.Repeat("6", 64), RevocationVersion: 1}, Nonce: "cmd-nonce", IssuedAtMS: now, ExpiresAtMS: now + 60_000, IdempotencyKey: "cmd-native", Payload: json.RawMessage(`{}`)}
+			command.PayloadHash = nodecommand.HashPayload(command.Payload)
+			signer := d
+			if mode == "foreign signer" {
+				signer = newEdSigner(t)
+				command.Signer = signer.Address()
+			}
+			if mode == "foreign host" {
+				command.Target.NodeID = "0x" + strings.Repeat("7", 64)
+			}
+			signing, err := command.SigningBytes()
+			if err != nil {
+				t.Fatal(err)
+			}
+			command.Signature = "ed25519:" + hex.EncodeToString(signer.pub) + ":" + hex.EncodeToString(ed25519.Sign(signer.priv, signing))
+			if mode == "wrong signature" {
+				command.Signature = "ed25519:" + hex.EncodeToString(signer.pub) + ":" + strings.Repeat("0", 128)
+			}
+			body, err := json.Marshal(map[string]any{"node_command": command})
+			if err != nil {
+				t.Fatal(err)
+			}
+			request.Method = "POST"
+			request.Path = "/api/sentinels/" + host + "/command"
+			request.CommandScope = "control"
+			hash := sha256.Sum256(body)
+			request.CommandHash = hex.EncodeToString(hash[:])
+			if mode == "scope downgrade" {
+				request.CommandScope = "observation"
+			}
+			if request.RequiredDeviceAction() != 2 && mode != "scope downgrade" {
+				t.Fatal("control transport did not require operate")
+			}
+			if mode == "read-only phone" {
+				a.verify = func(_ context.Context, r DeviceReadRequest) (string, error) {
+					if r.RequiredDeviceAction() == 2 {
+						return "", fmt.Errorf("missing operate grant")
+					}
+					return "read-only", nil
+				}
+				raw, _ := json.Marshal(request)
+				w := httptest.NewRecorder()
+				a.issue(w, httptest.NewRequest("POST", "/api/device-challenge", strings.NewReader(string(raw))))
+				if w.Code != 403 {
+					t.Fatal("read-only phone obtained control challenge")
+				}
+				return
+			}
+			challenge := issueRead(t, a, request)
+			if mode == "body changed" {
+				body = append(body, ' ')
+			}
+			if mode == "revoked" {
+				*pin = "revoked"
+			}
+			if mode == "expired" {
+				a.now = func() time.Time { return time.UnixMilli(challenge.ExpiresAtMS) }
+			}
+			incoming := httptest.NewRequest("POST", request.Path, strings.NewReader(string(body)))
+			incoming.Header.Set("Authorization", proofRead(t, d, challenge))
+			if mode == "query" {
+				incoming.URL.RawQuery = "changed=1"
+			}
+			calls := 0
+			handler := a.Wrap(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls++
+				exact, err := io.ReadAll(r.Body)
+				if err != nil || string(exact) != string(body) {
+					t.Fatal("forwarded command bytes differ")
+				}
+				if mode == "lost authority during output" {
+					*pin = "revoked"
+				}
+				w.Write([]byte(`{"dispatched":true}`))
+			}))
+			output := httptest.NewRecorder()
+			handler.ServeHTTP(output, incoming)
+			if mode == "valid" || mode == "replay" {
+				if output.Code != 200 || calls != 1 {
+					t.Fatal(output.Code, output.Body.String(), calls)
+				}
+				if strings.Contains(output.Body.String(), `"dispatched"`) {
+					t.Fatal("unsigned raw response returned")
+				}
+				if mode == "replay" {
+					incoming.Body = io.NopCloser(strings.NewReader(string(body)))
+					again := httptest.NewRecorder()
+					handler.ServeHTTP(again, incoming)
+					if again.Code != 403 || calls != 1 {
+						t.Fatal("command was dispatched twice")
+					}
+				}
+			} else if output.Code != 403 || mode != "lost authority during output" && calls != 0 || mode == "lost authority during output" && calls != 1 {
+				t.Fatal(mode, output.Code, calls)
+			}
+		})
+	}
 }
 func issueRead(t *testing.T, a *DeviceReadAuth, r DeviceReadRequest) DeviceReadChallenge {
 	t.Helper()

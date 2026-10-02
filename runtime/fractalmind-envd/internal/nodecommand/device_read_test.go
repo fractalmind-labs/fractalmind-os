@@ -51,3 +51,52 @@ func TestDeviceReadChecksCurrentScopedGrantAndRole(t *testing.T) {
 		})
 	}
 }
+
+func TestDeviceTransportPinIgnoresExpectedEvidenceWritesButRetainsAuthority(t *testing.T) {
+	f := newHostJoinFixture(t)
+	f.grant.EncryptionKey = make([]byte, 32)
+	f.syncJoin(t)
+	input := DeviceReadInput{Network: "localnet", ProtocolRegistry: f.registry.ID.String(), OrganizationID: f.org.ID.String(), HumanID: f.human.ID.String(), GrantID: f.grant.ID.String(), DeviceAddress: f.grant.Device.String()}
+	before, err := f.resolver.VerifyDeviceRead(context.Background(), input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A status result and execution ledger update bump Organization's object
+	// version without changing grant, generation, role, active flag or admin.
+	obj := f.objects[f.org.ID.String()]
+	obj.Version++
+	f.objects[obj.ID] = obj
+	after, err := f.resolver.VerifyDeviceRead(context.Background(), input)
+	if err != nil || before != after {
+		t.Fatal("expected execution evidence write invalidated authority", err)
+	}
+	f.grant.Version++
+	f.syncJoin(t)
+	changed, err := f.resolver.VerifyDeviceRead(context.Background(), input)
+	if err != nil || changed == before {
+		t.Fatal("device version change retained authority pin", err)
+	}
+	f.grant.Revoked = true
+	f.syncJoin(t)
+	if _, err := f.resolver.VerifyDeviceRead(context.Background(), input); err == nil {
+		t.Fatal("revoked device retained authority")
+	}
+}
+
+func TestDeviceCommandTransportRequiresOperateIndependentlyOfRead(t *testing.T) {
+	for _, actions := range [][]byte{{1}, {1, 2}, {2}, {1, 4}} {
+		f := newHostJoinFixture(t)
+		f.grant.EncryptionKey = make([]byte, 32)
+		f.grant.Actions = actions
+		f.syncJoin(t)
+		input := DeviceReadInput{Network: "localnet", ProtocolRegistry: f.registry.ID.String(), OrganizationID: f.org.ID.String(), HumanID: f.human.ID.String(), GrantID: f.grant.ID.String(), DeviceAddress: f.grant.Device.String(), RequiredAction: 2}
+		_, err := f.resolver.VerifyDeviceRead(context.Background(), input)
+		if (len(actions) == 2 && actions[1] == 2) != (err == nil) {
+			t.Fatalf("actions %v: %v", actions, err)
+		}
+		input.RequiredAction = 3
+		if _, err := f.resolver.VerifyDeviceRead(context.Background(), input); err == nil {
+			t.Fatal("unsupported transport action admitted")
+		}
+	}
+}

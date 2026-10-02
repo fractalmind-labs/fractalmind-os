@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/wsauth"
 	"golang.org/x/crypto/blake2b"
 )
@@ -33,6 +34,8 @@ type DeviceReadRequest struct {
 	BindingID      string `json:"binding_id"`
 	Method         string `json:"method"`
 	Path           string `json:"path"`
+	CommandHash    string `json:"command_hash,omitempty"`
+	CommandScope   string `json:"command_scope,omitempty"`
 }
 type DeviceReadChallenge struct {
 	DeviceReadRequest
@@ -70,9 +73,32 @@ func allowedReadPath(path string) bool {
 	return (len(parts) == 4 || len(parts) == 5 && parts[4] == "agents") && parts[0] == "" && parts[1] == "api" && parts[2] == "sentinels" && readID.MatchString(parts[3])
 }
 func (a *DeviceReadAuth) valid(r DeviceReadRequest) bool {
-	return readID.MatchString(r.HumanID) && readID.MatchString(r.GrantID) && readID.MatchString(r.DeviceAddress) && r.OrganizationID == a.org && r.BindingID == a.binding && r.Method == http.MethodGet && allowedReadPath(r.Path)
+	base := readID.MatchString(r.HumanID) && readID.MatchString(r.GrantID) && readID.MatchString(r.DeviceAddress) && r.OrganizationID == a.org && r.BindingID == a.binding
+	read := r.Method == http.MethodGet && allowedReadPath(r.Path) && r.CommandHash == "" && r.CommandScope == ""
+	command := r.Method == http.MethodPost && allowedCommandPath(r.Path) && canonicalCommandHash(r.CommandHash) && (r.CommandScope == "observation" || r.CommandScope == "control")
+	return base && (read || command)
+}
+func allowedCommandPath(path string) bool {
+	parts := strings.Split(path, "/")
+	return len(parts) == 5 && parts[0] == "" && parts[1] == "api" && parts[2] == "sentinels" && readID.MatchString(parts[3]) && parts[4] == "command"
+}
+func canonicalCommandHash(hash string) bool {
+	raw, err := hex.DecodeString(hash)
+	return err == nil && len(raw) == 32 && hex.EncodeToString(raw) == hash
+}
+
+// The read grant alone never admits a control request. Host execution also
+// independently checks capability, target, budgets and the prepared Run.
+func (r DeviceReadRequest) RequiredDeviceAction() byte {
+	if r.Method == http.MethodPost && r.CommandScope == "control" {
+		return 2
+	}
+	return 1
 }
 func readChallengeText(c DeviceReadChallenge) string {
+	if c.Method == http.MethodPost {
+		return strings.Join([]string{"FM-COORDINATOR-COMMAND", "1", c.ChainIdentifier, c.OrganizationID, c.BindingID, c.HumanID, c.GrantID, c.DeviceAddress, c.Method, c.Path, c.CommandScope, c.CommandHash, c.Nonce, strconv.FormatInt(c.ExpiresAtMS, 10)}, ":")
+	}
 	return strings.Join([]string{"FM-COORDINATOR-READ", "1", c.ChainIdentifier, c.OrganizationID, c.BindingID, c.HumanID, c.GrantID, c.DeviceAddress, c.Method, c.Path, c.Nonce, strconv.FormatInt(c.ExpiresAtMS, 10)}, ":")
 }
 func deviceProofText(c DeviceReadChallenge) string {
@@ -174,6 +200,11 @@ func (a *DeviceReadAuth) authorize(r *http.Request) (readPending, error) {
 	if !ok || entry.challenge.ExpiresAtMS <= a.now().UnixMilli() || r.Method != entry.challenge.Method || r.URL.Path != entry.challenge.Path || r.URL.RawQuery != "" || r.URL.RawPath != "" || !verifyPersonalRead(proof.Signature, entry.challenge) {
 		return readPending{}, fmt.Errorf("proof does not match this read")
 	}
+	if entry.challenge.Method == http.MethodPost {
+		if err := validateCommandRequest(r, entry.challenge, a.now().UnixMilli()); err != nil {
+			return readPending{}, err
+		}
+	}
 	// A valid proof is consumed once, before network reads or directory output.
 	a.mu.Lock()
 	_, ok = a.pending[proof.Nonce]
@@ -185,10 +216,47 @@ func (a *DeviceReadAuth) authorize(r *http.Request) (readPending, error) {
 		return readPending{}, fmt.Errorf("read already consumed")
 	}
 	pin, err := a.check(r.Context(), entry.challenge.DeviceReadRequest)
-	if err != nil || pin != entry.pin {
+	if err != nil || pin != entry.pin || entry.challenge.ExpiresAtMS <= a.now().UnixMilli() {
 		return readPending{}, fmt.Errorf("device authority changed")
 	}
 	return entry, nil
+}
+
+func validateCommandRequest(r *http.Request, c DeviceReadChallenge, now int64) error {
+	body, err := io.ReadAll(io.LimitReader(r.Body, (1<<20)+1))
+	if err != nil || len(body) > 1<<20 {
+		return fmt.Errorf("invalid command size")
+	}
+	hash := sha256.Sum256(body)
+	if hex.EncodeToString(hash[:]) != c.CommandHash {
+		return fmt.Errorf("command body changed")
+	}
+	var packet struct {
+		Command nodecommand.NodeCommand `json:"node_command"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.DisallowUnknownFields()
+	if decoder.Decode(&packet) != nil || decoder.Decode(new(any)) != io.EOF {
+		return fmt.Errorf("invalid signed command")
+	}
+	command := packet.Command
+	parts := strings.Split(c.Path, "/")
+	read := command.Action == "inventory" || command.Action == "status" || command.Action == "monitor" || command.Action == "logs" || command.Action == "health" || command.Action == "availability"
+	control := command.Action == "start" || command.Action == "stop" || command.Action == "assign" || command.Action == "direct.message"
+	if command.Version != "1" || command.IssuedAtMS <= 0 || command.IssuedAtMS > now+30_000 || command.ExpiresAtMS <= now || command.ExpiresAtMS <= command.IssuedAtMS || command.ExpiresAtMS-command.IssuedAtMS > 300_000 || command.Signer != c.DeviceAddress || command.Target.OrganizationID != c.OrganizationID || command.Target.NodeID != parts[3] || command.Scope != c.CommandScope || !(read && command.Scope == "observation" || control && command.Scope == "control") || control && command.Target.AgentID == "" || nodecommand.HashPayload(command.Payload) != command.PayloadHash {
+		return fmt.Errorf("signed command scope mismatch")
+	}
+	signing, err := command.SigningBytes()
+	if err != nil {
+		return err
+	}
+	if err := (nodecommand.Ed25519Verifier{}).Verify(r.Context(), command.Signer, signing, command.Signature); err != nil {
+		return err
+	}
+	// Preserve the exact hashed bytes for the existing handler. This is a relay
+	// check, never permission to execute without envd's current chain checks.
+	r.Body = io.NopCloser(bytes.NewReader(body))
+	return nil
 }
 
 type bufferedRead struct {
