@@ -6,6 +6,14 @@
 
 ## 当前验证证据
 
+### Host 链资格与真实 Coordinator 连接增量
+
+- 独立 `host_connection_enabled` 模式从 NativeStore 加载已初始化 Host 身份，连接前／重连／收发核验完整 Chain ID、当前成员指针、组织目录、入口、公钥、期限与版本。按链上 origin 连接并固定 Coordinator 身份；不以主机名、自报 Host ID 或历史邀请回执授予权利。
+- Coordinator 保留握手地址，拒绝注册／心跳伪造；回执绑定原连接，撤销／未知资格拒绝新的转发。旧连接清理不会删除其他当前连接。Host 关闭取消链读取／拨号／重连。链模式保留旧 Agent 进程，旧桌面信令因无法携带设备动作权限而拒绝。
+- [真实链与 loopback 报告](evidence/v020-host-chain-connection-localnet.json)：**10 项检查、10 笔成功交易**，独立 Go Host 兑换后由链上入口真实双向认证，Coordinator 收到心跳；App 撤销成员后，路由明确因当前链指针缺失而拒绝，worker 心跳也拒绝。原摘要恢复仍为一次广播。
+- [四包 race 自测](evidence/v020-host-chain-connection-unit.json)、生产 envd 编译、App 类型／生产构建与脚本类型通过。大 JS 包性能警告仍保留。
+- **仍未完成**：本次 Host／Coordinator 是同机实际 socket 和生成的内存测试钥；正式 main 的 NativeStore／进程重启、安装后 UI、TLS／真实云 Host、签名观测正文、设备 HTTP 鉴权、桌面设备授权、Agent 发现／导入和五平台继续验收。现有原生 App 等待系统密钥库授权。完整目标保持未完成，详见[连接说明](v020-host-chain-connection.md)。
+
 ### envd Host 兑换 CLI 与原摘要恢复增量
 
 - 正式 `--join-host` 入口接通隐藏邀请码输入、完整组织确认、有限观察权限与 Gas 预览、签名前后核验、精确原字节签名／模拟。广播前磁盘 flush 原摘要和公开技术元数据；未知结果拒绝重放。`--host-join-status --host-address` 仅查原交易，无需私钥。

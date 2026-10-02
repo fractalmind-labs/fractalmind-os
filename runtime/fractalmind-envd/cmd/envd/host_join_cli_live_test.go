@@ -3,17 +3,27 @@ package main
 import (
 	"bufio"
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/config"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/coordinator"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/heartbeat"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/hostidentity"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/hostjoin"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/ws"
 )
 
 type cliFixtureStore struct{ data []byte }
@@ -53,13 +63,16 @@ func TestHostJoinLiveCLI(t *testing.T) {
 	if os.Getenv("FM_HOST_JOIN_LIVE_CLI") != "1" {
 		t.Skip("explicit real localnet fixture only")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 180*time.Second)
 	defer cancel()
 	frame, err := bufio.NewReaderSize(os.Stdin, 4096).ReadBytes('\n')
 	if err != nil || len(frame) > 4096 {
 		t.Fatal("invalid public fixture configuration")
 	}
-	var input struct{ PackageID, RegistryID, OrganizationID, ChainIdentifier, JournalRoot string }
+	var input struct {
+		PackageID, RegistryID, OrganizationID, ChainIdentifier, JournalRoot string
+		LiveConnection                                                      bool
+	}
 	if json.Unmarshal(frame, &input) != nil || input.JournalRoot == "" {
 		t.Fatal("invalid public fixture configuration")
 	}
@@ -74,7 +87,34 @@ func TestHostJoinLiveCLI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hello, _ := json.Marshal(public)
+	var listener net.Listener
+	var coordKey *sui.Keypair
+	var endpoint string
+	if input.LiveConnection {
+		pub, private, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer clear(private)
+		coordKey = &sui.Keypair{Private: private, Public: pub}
+		listener, err = net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer listener.Close()
+		endpoint = "http://" + listener.Addr().String()
+	}
+	coordPublic, coordAddress := "", ""
+	if coordKey != nil {
+		coordPublic = hex.EncodeToString(coordKey.Public)
+		coordAddress = coordKey.Address()
+	}
+	hello, _ := json.Marshal(struct {
+		hostidentity.Public
+		CoordinatorPublic  string `json:"coordinator_public_key,omitempty"`
+		CoordinatorAddress string `json:"coordinator_address,omitempty"`
+		Endpoint           string `json:"coordinator_endpoint,omitempty"`
+	}{public, coordPublic, coordAddress, endpoint})
 	fmt.Printf("FM_ENVD_HOST_PUBLIC %s\n", hello)
 	base, err := sui.NewGRPCClient("http://127.0.0.1:29000", "")
 	if err != nil {
@@ -109,6 +149,78 @@ func TestHostJoinLiveCLI(t *testing.T) {
 	if err != nil || withoutKeys.Digest != result.Digest || withoutKeys.ActualFee != result.ActualFee {
 		t.Fatal("public original lookup accessed credentials or lost fee")
 	}
+	var liveClient *ws.Client
+	var liveServer *coordinator.Server
+	var reader *nodecommand.ChainAuthorityResolver
+	var liveConfig *config.Config
+	if input.LiveConnection {
+		reader, err = nodecommand.NewChainAuthorityResolver(base, input.PackageID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		liveConfig = &config.Config{SUI: config.SUIConfig{ProtocolPackageID: input.PackageID, ChainIdentifier: input.ChainIdentifier, OrgID: input.OrganizationID}, Coordinator: config.CoordinatorConfig{BindingID: result.Membership.BindingID}}
+		liveServer = coordinator.NewServer("", time.Second, "")
+		if err = configureChainCoordinator(liveServer, liveConfig, base, coordKey); err != nil {
+			t.Fatal(err)
+		}
+		if err = liveServer.StartOnListener(listener); err != nil {
+			t.Fatal(err)
+		}
+		defer liveServer.Shutdown(context.Background())
+		private, err := keys.SigningPrivate()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer clear(private)
+		hostKey := &sui.Keypair{Private: private, Public: private.Public().(ed25519.PublicKey)}
+		enc, _ := hex.DecodeString(public.EncryptionPublicKey)
+		liveClient = ws.NewClient("ws://must-not-be-used.invalid", 50*time.Millisecond)
+		if err = configureChainWorker(liveClient, liveConfig, base, hostKey, enc); err != nil {
+			t.Fatal(err)
+		}
+		defer liveClient.Close()
+		connected := make(chan error, 1)
+		liveClient.OnConnect(func() {
+			err := liveClient.Send("register", map[string]string{"host_id": public.Address, "hostname": "physical loopback fixture"})
+			if err == nil {
+				err = liveClient.Send("heartbeat", heartbeat.Payload{HostID: public.Address, Hostname: "physical loopback fixture", Timestamp: time.Now()})
+			}
+			select {
+			case connected <- err:
+			default:
+			}
+		})
+		go liveClient.Connect()
+		select {
+		case err = <-connected:
+			if err != nil {
+				t.Fatal(err)
+			}
+		case <-ctx.Done():
+			t.Fatal("live chain connection did not authenticate")
+		}
+		visible := false
+		for attempt := 0; attempt < 40; attempt++ {
+			response, e := http.Get(endpoint + "/api/sentinels/" + public.Address)
+			if e != nil {
+				t.Fatal(e)
+			}
+			var snapshot struct {
+				HostID        string     `json:"host_id"`
+				LastHeartbeat *time.Time `json:"last_heartbeat"`
+			}
+			e = json.NewDecoder(response.Body).Decode(&snapshot)
+			response.Body.Close()
+			if e == nil && snapshot.HostID == public.Address && snapshot.LastHeartbeat != nil {
+				visible = true
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		if !visible {
+			t.Fatal("authenticated live heartbeat not visible")
+		}
+	}
 	encoded, _ := json.Marshal(struct {
 		Initial                hostjoin.Result `json:"initial"`
 		Result                 hostjoin.Result `json:"result"`
@@ -117,4 +229,45 @@ func TestHostJoinLiveCLI(t *testing.T) {
 		RealDiskJournal        bool            `json:"real_disk_journal"`
 	}{initial, result, client.broadcasts, true, true})
 	fmt.Printf("FM_HOST_JOIN_CLI_RESULT %s\n", encoded)
+	if input.LiveConnection {
+		// No new secrets are read: the fixture waits only for the App's public
+		// revocation signal, then observes the actual current chain pointer.
+		line, err := bufio.NewReaderSize(os.Stdin, 32).ReadString('\n')
+		if err != nil || line != "REVOKED\n" {
+			t.Fatal("expected public revocation signal")
+		}
+		if _, err = reader.ReadHostConnection(ctx, input.OrganizationID, mustDecodeHex(t, public.SigningPublicKey), mustDecodeHex(t, public.EncryptionPublicKey)); err == nil {
+			t.Fatal("revoked membership still authorizes Host connection")
+		}
+		request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint+"/api/sentinels/"+public.Address+"/command", strings.NewReader(`{"node_command":{}}`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		request.Header.Set("Content-Type", "application/json")
+		response, err := http.DefaultClient.Do(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var rejected struct {
+			Error string `json:"error"`
+		}
+		decodeErr := json.NewDecoder(response.Body).Decode(&rejected)
+		response.Body.Close()
+		if decodeErr != nil || !strings.Contains(rejected.Error, nodecommand.ErrChainObjectNotFound.Error()) || response.StatusCode >= 200 && response.StatusCode < 300 {
+			t.Fatal("revoked route accepted")
+		}
+		if err = liveClient.Send("heartbeat", heartbeat.Payload{HostID: public.Address}); err == nil {
+			t.Fatal("worker sent heartbeat after chain revocation")
+		}
+		fmt.Printf("FM_CHAIN_CONNECTION_RESULT {\"chain_endpoint_used\":true,\"mutual_authentication\":true,\"live_heartbeat\":true,\"revoked_pointer_rejected\":true,\"worker_revoked_heartbeat_rejected\":true,\"coordinator_revoked_routing_rejected\":true,\"generated_memory_keys\":true,\"loopback_only\":true}\n")
+	}
+}
+
+func mustDecodeHex(t *testing.T, value string) []byte {
+	t.Helper()
+	raw, err := hex.DecodeString(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return raw
 }

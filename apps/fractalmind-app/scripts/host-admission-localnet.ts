@@ -249,12 +249,123 @@ let controller = new HostAdmission(
 );
 assert.deepEqual((await controller.directory()).invitations, []);
 checks.push("exact absent Host index reconstructs as empty");
+type CliHello = {
+  host_address: string;
+  signing_public_key: string;
+  encryption_public_key: string;
+  coordinator_public_key?: string;
+  coordinator_address?: string;
+  coordinator_endpoint?: string;
+};
+const liveConnection = process.env.FM_ENVD_CHAIN_CONNECTION === "1";
+assert.ok(!liveConnection || process.env.FM_ENVD_JOIN_CLI_BIN);
+let envdConnection: unknown;
+function startCliHarness() {
+  const helper = spawn(
+    process.env.FM_ENVD_JOIN_CLI_BIN!,
+    ["-test.run=^TestHostJoinLiveCLI$", "-test.v"],
+    {
+      env: { ...process.env, FM_HOST_JOIN_LIVE_CLI: "1" },
+      stdio: ["pipe", "pipe", "pipe"],
+    },
+  );
+  let output = "",
+    diagnostic = "",
+    buffer = "";
+  let publicResolve!: (value: CliHello) => void,
+    resultResolve!: (value: any) => void,
+    connectionResolve!: (value: unknown) => void;
+  let publicReject!: (error: Error) => void,
+    resultReject!: (error: Error) => void,
+    connectionReject!: (error: Error) => void;
+  const publicValue = new Promise<CliHello>((resolve, reject) => {
+    publicResolve = resolve;
+    publicReject = reject;
+  });
+  const resultValue = new Promise<any>((resolve, reject) => {
+    resultResolve = resolve;
+    resultReject = reject;
+  });
+  const connectionValue = new Promise<unknown>((resolve, reject) => {
+    connectionResolve = resolve;
+    connectionReject = reject;
+  });
+  helper.stdout.on("data", (part) => {
+    output += String(part);
+    buffer += String(part);
+    let newline: number;
+    while ((newline = buffer.indexOf("\n")) >= 0) {
+      const line = buffer.slice(0, newline);
+      buffer = buffer.slice(newline + 1);
+      try {
+        if (line.startsWith("FM_ENVD_HOST_PUBLIC "))
+          publicResolve(JSON.parse(line.slice("FM_ENVD_HOST_PUBLIC ".length)));
+        if (line.startsWith("FM_HOST_JOIN_CLI_RESULT "))
+          resultResolve(
+            JSON.parse(line.slice("FM_HOST_JOIN_CLI_RESULT ".length)),
+          );
+        if (line.startsWith("FM_CHAIN_CONNECTION_RESULT "))
+          connectionResolve(
+            JSON.parse(line.slice("FM_CHAIN_CONNECTION_RESULT ".length)),
+          );
+      } catch (error) {
+        publicReject(error as Error);
+        resultReject(error as Error);
+        connectionReject(error as Error);
+      }
+    }
+  });
+  helper.stderr.on("data", (part) => {
+    diagnostic += String(part);
+  });
+  const done = new Promise<void>((resolve, reject) => {
+    helper.once("error", reject);
+    helper.once("exit", (code) =>
+      code === 0
+        ? resolve()
+        : reject(
+            new Error(`envd fixture failed (${code}): ${output} ${diagnostic}`),
+          ),
+    );
+  });
+  const ended = done.then(() => {
+    throw new Error("envd exited before requested public result");
+  });
+  // Install termination observers for all phases immediately; no orphaned
+  // promise rejection while the fixture waits for a later public chain action.
+  const publicReady = Promise.race([publicValue, ended]);
+  const resultReady = Promise.race([resultValue, ended]);
+  const connectionReady = Promise.race([connectionValue, ended]);
+  void publicReady.catch(() => {});
+  void resultReady.catch(() => {});
+  void connectionReady.catch(() => {});
+  helper.stdin.write(
+    JSON.stringify({
+      PackageID: deployment.packageId,
+      RegistryID: deployment.registryId,
+      OrganizationID: organizationId,
+      ChainIdentifier: deployment.chain.chainIdentifier,
+      JournalRoot: `${process.argv[3]}.journal`,
+      LiveConnection: liveConnection,
+    }) + "\n",
+  );
+  return { helper, publicReady, resultReady, connectionReady, done };
+}
+const earlyHarness = liveConnection ? startCliHarness() : undefined;
+const earlyPublic = earlyHarness ? await earlyHarness.publicReady : undefined;
+const coordinatorPublic =
+  earlyPublic?.coordinator_public_key ??
+  bytesToHex(coordinator.getPublicKey().toRawBytes());
+const coordinatorAddress =
+  earlyPublic?.coordinator_address ?? coordinator.toSuiAddress();
+const coordinatorEndpoint =
+  earlyPublic?.coordinator_endpoint ?? "http://127.0.0.1:19090";
 const bindingAttempt = randomUUID();
 const bindingQuote = await controller.prepare(
   {
     kind: "binding",
-    endpoint: "http://127.0.0.1:19090",
-    publicKey: bytesToHex(coordinator.getPublicKey().toRawBytes()),
+    endpoint: coordinatorEndpoint,
+    publicKey: coordinatorPublic,
   },
   bindingAttempt,
   true,
@@ -266,7 +377,7 @@ assert.equal(await controller.awaitVisible(bindingOutcome), true);
 const bindingId = created(bindingOutcome, "host::CoordinatorBinding");
 assert.equal(
   (await controller.directory()).bindings[0].coordinator_address,
-  coordinator.toSuiAddress(),
+  coordinatorAddress,
 );
 checks.push(
   "production verifier proves fresh device/organization management authority; public binding is not online evidence",
@@ -348,80 +459,14 @@ checks.push(
 );
 let joined: SelfPayTransactionOutcome;
 if (process.env.FM_ENVD_JOIN_CLI_BIN) {
-  const helper = spawn(
-    process.env.FM_ENVD_JOIN_CLI_BIN,
-    ["-test.run=^TestHostJoinLiveCLI$", "-test.v"],
-    {
-      env: { ...process.env, FM_HOST_JOIN_LIVE_CLI: "1" },
-      stdio: ["pipe", "pipe", "pipe"],
-    },
-  );
-  let output = "",
-    diagnostic = "",
-    helloDelivered = false;
-  let resolvePublic!: (value: { host_address: string }) => void;
-  let rejectPublic!: (error: Error) => void;
-  const publicReady = new Promise<{ host_address: string }>(
-    (resolve, reject) => {
-      resolvePublic = resolve;
-      rejectPublic = reject;
-    },
-  );
-  helper.stdout.on("data", (part) => {
-    output += String(part);
-    const lines = output.split("\n");
-    const hello = lines
-      .slice(0, -1)
-      .find((line) => line.startsWith("FM_ENVD_HOST_PUBLIC "));
-    if (hello && !helloDelivered) {
-      helloDelivered = true;
-      resolvePublic(JSON.parse(hello.slice("FM_ENVD_HOST_PUBLIC ".length)));
-    }
-  });
-  helper.stderr.on("data", (part) => {
-    diagnostic += String(part);
-  });
-  const done = new Promise<void>((resolve, reject) => {
-    helper.once("error", (error) => {
-      rejectPublic(error);
-      reject(error);
-    });
-    helper.once("exit", (code) => {
-      if (code === 0) resolve();
-      else {
-        const error = new Error(
-          `envd CLI fixture failed (${code}): ${output} ${diagnostic}`,
-        );
-        rejectPublic(error);
-        reject(error);
-      }
-    });
-  });
-  // Observe termination while waiting for the public Host, avoiding an
-  // unhandled rejection if the helper fails before it can read any credential.
-  const completed = done.then(() => ({ complete: true as const }));
-  helper.stdin.write(
-    JSON.stringify({
-      PackageID: deployment.packageId,
-      RegistryID: deployment.registryId,
-      OrganizationID: organizationId,
-      ChainIdentifier: deployment.chain.chainIdentifier,
-      JournalRoot: `${process.argv[3]}.journal`,
-    }) + "\n",
-  );
-  const ready = await Promise.race([publicReady, completed]);
-  assert.ok(
-    "host_address" in ready,
-    "envd exited before publishing its generated fixture address",
-  );
+  const harness = earlyHarness ?? startCliHarness();
+  const ready = await harness.publicReady;
   await requestSuiFromFaucetV2({ host: faucet, recipient: ready.host_address });
-  helper.stdin.end(`${first.code}\nJOIN ${organizationId}\n`);
-  await done;
-  const line = output
-    .split("\n")
-    .find((line) => line.startsWith("FM_HOST_JOIN_CLI_RESULT "));
-  assert.ok(line, "envd CLI produced no original-transaction recovery result");
-  const recovered = JSON.parse(line.slice("FM_HOST_JOIN_CLI_RESULT ".length));
+  const credentialInput = `${first.code}\nJOIN ${organizationId}\n`;
+  if (liveConnection) harness.helper.stdin.write(credentialInput);
+  else harness.helper.stdin.end(credentialInput);
+  const recovered = await harness.resultReady;
+  if (!liveConnection) await harness.done;
   assert.equal(recovered.broadcasts, 1);
   assert.equal(recovered.result.state, "confirmed");
   assert.equal(recovered.result.membership.current_membership, true);
@@ -509,6 +554,14 @@ assert.equal((await controller.directory()).memberships[0].revoked, true);
 checks.push(
   "membership revocation remains chain-owned and visible; consumed-invite revocation never substitutes for it",
 );
+if (earlyHarness) {
+  earlyHarness.helper.stdin.end("REVOKED\n");
+  envdConnection = await earlyHarness.connectionReady;
+  await earlyHarness.done;
+  checks.push(
+    "real loopback Coordinator/Host mutually authenticate using chain endpoint and keys; live heartbeat observed; App chain revocation rejects both Coordinator routing and worker heartbeat",
+  );
+}
 const second = await invite("App creates invitation for reload test");
 controller.dispose();
 controller = new HostAdmission(
@@ -585,6 +638,7 @@ const report = {
   transactions,
   envdQuote,
   envdCli,
+  envdConnection,
   limits: {
     generatedFixtureKeysOnly: true,
     injectedNativeTransport: true,
@@ -599,6 +653,7 @@ const report = {
     envdJoinCliVerified: false,
     envdJoinCliInjectedKeysVerified: !!envdCli,
     envdJoinQuoteVerified: !!envdQuote,
+    loopbackChainConnectionVerified: !!envdConnection,
     cloudHostVerified: false,
     invitationSecretsIncluded: false,
   },

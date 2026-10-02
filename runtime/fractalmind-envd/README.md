@@ -181,6 +181,25 @@ a separate pseudo-terminal verifies hidden input. Native credential-store,
 physical/cloud Host and five-platform acceptance remain pending. See
 [Host admission implementation and evidence](../../docs/product/v020-envd-host-join.md).
 
+### Chain-bound Host connections
+
+Set `sui.host_connection_enabled: true` after admission and start envd normally.
+This mode loads the explicitly initialized NativeStore Host keys independently
+of the execution adapter. It reads the exact current membership and Coordinator
+binding before every reconnect and rechecks them on traffic; the endpoint and
+Coordinator signer come from Sui. A Coordinator must additionally configure
+`coordinator.binding_id` to match its own signing key and organization.
+Authenticated registration/heartbeat IDs are signing addresses; names are display
+labels. Replies are bound to their original socket, and revoked/unknown membership
+rejects routing. Closing cancels chain lookup/dial/retry. This mode preserves
+existing Agent processes and refuses legacy desktop control envelopes that cannot
+carry device authority. Agent import/control still requires separate authorization.
+
+Actual loopback sockets with generated memory test keys and four-package race
+checks passed. NativeStore/main startup, cloud/TLS, signed observation bodies,
+device HTTP authentication, desktop authorization, Agent import and five-platform
+acceptance remain pending. See [connection implementation and evidence](../../docs/product/v020-host-chain-connection.md).
+
 `FRACTALMIND_RUNTIME_STATE_DIR` no longer selects a production file store,
 and `FRACTALMIND_NODE_COMMAND_AUTHORITY_FILE` is rejected when the chain runtime
 is enabled. Legacy file stores remain only for compatibility tests.

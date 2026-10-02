@@ -1,6 +1,6 @@
 # v0.2.0 envd：Host 邀请兑换与原交易恢复
 
-产品入口依据[原型 v2](fractalmind-app-prototype-v2/js/view-hosts.js)。App 创建单次链上邀请；新 Host 用独立本机钥确认组织、入口和有限权限，再自行支付兑换 Gas。组织成员资格由 Sui 保存与校验，Coordinator 在线路由、envd 运行和 Agent 导入继续独立验收。
+产品入口依据[原型 v2](fractalmind-app-prototype-v2/js/view-hosts.js)。App 创建单次链上邀请；新 Host 用独立本机钥确认组织、入口和有限权限，再自行支付兑换 Gas。组织成员资格由 Sui 保存与校验，Coordinator 连接的后续 loopback 验收见[连接说明](v020-host-chain-connection.md)；安装后 envd、云运行和 Agent 导入继续独立验收。
 
 ## 已实现的命令
 

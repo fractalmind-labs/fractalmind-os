@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/ed25519"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -172,29 +174,76 @@ func main() {
 		log.Printf("[desktop-supervisor] enabled command=%s", cfg.Desktop.Command)
 	}
 
-	// Control-channel identity: load (or generate) this node's SUI keypair so the
-	// coordinator<->worker channel is mutually authenticated. Loaded independently
-	// of the full SUI role so control-channel auth works even when on-chain
-	// features are disabled.
+	// The chain connection and execution runtime share the explicitly initialized
+	// NativeStore Host identity. Only legacy configurations use a wallet file.
 	var ctrlKey *sui.Keypair
+	var connectionReader connectionRPC
+	var connectionKeys *hostidentity.Keys
+	if chainRuntime, ok := runtimeExecutor.(*chainRuntimeExecutor); ok {
+		connectionReader, ok = chainRuntime.rpc.(connectionRPC)
+		if !ok {
+			log.Fatal("[auth] chain connection reader unavailable")
+		}
+		connectionKeys = chainRuntime.keys
+	} else if cfg.SUI.HostConnectionEnabled {
+		store, err := hostidentity.OpenNativeStore()
+		if err != nil {
+			log.Fatal("[auth] native Host store unavailable")
+		}
+		connectionKeys, err = hostidentity.Load(store, cfg.Identity.KeyProfile)
+		if err != nil {
+			log.Fatal("[auth] initialize native Host keys with --init-host first")
+		}
+		defer connectionKeys.Close()
+		rpc, err := sui.NewGRPCClient(cfg.SUI.RPC, cfg.SUI.GraphQLURL)
+		if err != nil {
+			log.Fatal("[auth] chain connection RPC unavailable")
+		}
+		defer rpc.Close()
+		connectionReader = rpc
+	}
 	loadControlKey := func() (*sui.Keypair, error) {
-		if chainRuntime, ok := runtimeExecutor.(*chainRuntimeExecutor); ok {
-			return chainRuntime.controlKeypair()
+		if connectionKeys != nil {
+			private, err := connectionKeys.SigningPrivate()
+			if err != nil {
+				return nil, err
+			}
+			return &sui.Keypair{Private: private, Public: private.Public().(ed25519.PublicKey)}, nil
 		}
 		return sui.LoadOrGenerateKeypair(cfg.SUI.KeypairPath)
 	}
 	if kp, kerr := loadControlKey(); kerr != nil {
-		if _, ok := runtimeExecutor.(*chainRuntimeExecutor); ok {
+		if connectionKeys != nil {
 			log.Fatalf("[auth] secure Host control-channel identity unavailable: %v", kerr)
 		}
 		log.Printf("[auth] WARNING: could not load control-channel keypair (%v); control channel will be UNAUTHENTICATED", kerr)
 	} else {
 		ctrlKey = kp
-		if _, ok := runtimeExecutor.(*chainRuntimeExecutor); ok {
+		if connectionKeys != nil {
 			defer clear(ctrlKey.Private)
+			if cfg.Identity.HostID != "" && cfg.Identity.HostID != ctrlKey.Address() {
+				log.Fatal("[auth] host_id must match the native Host address")
+			}
+			cfg.Identity.HostID = ctrlKey.Address()
 		}
+		// Hostnames remain display labels. Authenticated workers always register
+		// the address derived from their actual control key.
+		cfg.Identity.HostID = ctrlKey.Address()
 		wsClient.SetAuth(ctrlKey, cfg.Gateway.CoordinatorAddress)
 		log.Printf("[auth] control channel enabled, node identity=%s", ctrlKey.Address())
+	}
+	if connectionKeys != nil {
+		public, err := connectionKeys.Public(cfg.Identity.KeyProfile)
+		if err != nil {
+			log.Fatal("[auth] Host public keys unavailable")
+		}
+		encryption, err := hex.DecodeString(public.EncryptionPublicKey)
+		if err != nil {
+			log.Fatal("[auth] Host encryption key unavailable")
+		}
+		if err := configureChainWorker(wsClient, cfg, connectionReader, ctrlKey, encryption); err != nil {
+			log.Fatalf("[auth] %v", err)
+		}
 	}
 
 	// Track agents and restart counts
@@ -388,6 +437,11 @@ func main() {
 
 	if activeRoles.Coordinator {
 		coordinatorServer = coordinator.NewServer(cfg.Coordinator.ListenAddr, 30*time.Second, cfg.Coordinator.APIToken)
+		if connectionKeys != nil {
+			if err := configureChainCoordinator(coordinatorServer, cfg, connectionReader, ctrlKey); err != nil {
+				log.Fatalf("[coordinator] %v", err)
+			}
+		}
 		if ctrlKey != nil {
 			coordinatorServer.SetAuth(ctrlKey, cfg.Coordinator.AllowedSigners)
 			log.Printf("[coordinator] control-channel auth enabled (allowed_signers=%d)", len(cfg.Coordinator.AllowedSigners))
@@ -474,6 +528,12 @@ func main() {
 	// envd-desktop server, so the console reaches the desktop over the
 	// authenticated control channel instead of a public tunnel.
 	wsClient.OnDesktopSignal(func(sig ws.DesktopSignalPayload) {
+		if connectionKeys != nil {
+			// Admission/observation is not a device's permission to control the
+			// desktop. This legacy envelope cannot carry the required authority.
+			wsClient.Send("desktop_signal_result", ws.DesktopSignalResult{RequestID: sig.RequestID, Status: http.StatusForbidden, Error: "signed device desktop authority required"})
+			return
+		}
 		res := proxyDesktopSignal(cfg.Desktop, sig)
 		wsClient.Send("desktop_signal_result", res)
 	})
@@ -533,7 +593,7 @@ func main() {
 			}
 
 			// Detect crashed agents (was running, now missing)
-			if cfg.Agents.AutoRestart {
+			if cfg.Agents.AutoRestart && connectionKeys == nil {
 				detectAndRestart(lastAgents, agents, scanner, restartCounts, cfg.Agents.MaxRestartAttempts, wsClient)
 			}
 

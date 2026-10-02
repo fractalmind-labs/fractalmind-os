@@ -15,6 +15,8 @@ roles:
   # stun_server: null  # Auto-detect (public IP → true). Set true/false to override.
 
 coordinator:
+  # With the chain connection enabled, pin this Coordinator's organization binding.
+  binding_id: ""
   listen_addr: ":8080" # Bind address for the embedded coordinator API when roles.coordinator=true
   api_token: ""        # Optional: set bearer token to protect /api/* endpoints (Authorization: Bearer <token>)
   # The worker /ws control channel is authenticated by mutual Ed25519
@@ -74,6 +76,7 @@ desktop:
 # SUI blockchain control plane (peer discovery, identity, ACL)
 sui:
   enabled: false
+  host_connection_enabled: false  # enable NativeStore keys + chain-bound worker/Coordinator connections; execution authority is separate
   network: testnet
   chain_identifier: ""              # full genesis digest; pin to the App's current chain
   host_join_gas_budget: 200000000    # maximum self-paid Host admission Gas, in MIST

@@ -73,12 +73,24 @@ func (s *Server) SetAuth(signer wsauth.Signer, allowedSigners []string) {
 	s.manager.SetAuth(signer, allowedSigners)
 }
 
+func (s *Server) SetWorkerAuthority(authorize func(context.Context, string, []byte) error) {
+	s.manager.SetWorkerAuthority(authorize)
+}
+
 func (s *Server) Start() error {
 	listener, err := net.Listen("tcp", s.addr)
 	if err != nil {
 		return err
 	}
+	return s.StartOnListener(listener)
+}
 
+// StartOnListener supports a reserved endpoint, so its exact origin can be
+// registered on chain before the server accepts any connections.
+func (s *Server) StartOnListener(listener net.Listener) error {
+	if listener == nil {
+		return errors.New("Coordinator listener required")
+	}
 	s.listener = listener
 	s.httpServer = &http.Server{
 		Handler:           s.Handler(),

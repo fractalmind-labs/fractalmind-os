@@ -1,6 +1,8 @@
 package coordinator
 
 import (
+	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -50,6 +52,7 @@ type alertPayload struct {
 
 type pendingCommand struct {
 	resultCh chan map[string]interface{}
+	conn     *nodeConn
 }
 
 // desktopSignalResult mirrors ws.DesktopSignalResult for the coordinator side.
@@ -62,11 +65,14 @@ type desktopSignalResult struct {
 
 type pendingSignal struct {
 	resultCh chan desktopSignalResult
+	conn     *nodeConn
 }
 
 type nodeConn struct {
 	ws      *websocket.Conn
 	writeMu sync.Mutex
+	address string
+	public  []byte
 }
 
 func (c *nodeConn) WriteJSON(v interface{}) error {
@@ -102,6 +108,7 @@ type Manager struct {
 	signer           wsauth.Signer
 	allowedSigners   []string
 	handshakeTimeout time.Duration
+	workerAuthority  func(context.Context, string, []byte) error
 }
 
 func NewManager(commandTimeout time.Duration) *Manager {
@@ -125,6 +132,24 @@ func (m *Manager) SetAuth(signer wsauth.Signer, allowedSigners []string) {
 	m.allowedSigners = allowedSigners
 }
 
+// SetWorkerAuthority is configured before serving. A successful signature
+// authenticates a key; this reader separately proves current chain admission.
+func (m *Manager) SetWorkerAuthority(authorize func(context.Context, string, []byte) error) {
+	m.workerAuthority = authorize
+}
+
+func (m *Manager) authorizeWorker(conn *nodeConn) error {
+	if m.workerAuthority == nil {
+		return nil
+	}
+	if conn.address == "" || len(conn.public) != 32 {
+		return fmt.Errorf("authenticated Host identity required")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return m.workerAuthority(ctx, conn.address, conn.public)
+}
+
 func (m *Manager) tempID() string {
 	return fmt.Sprintf("temp-%d", atomic.AddUint64(&m.nextTempID, 1))
 }
@@ -135,33 +160,40 @@ func (m *Manager) commandID() string {
 
 func (m *Manager) HandleConnection(conn *websocket.Conn) {
 	nodeID := m.tempID()
+	client := &nodeConn{ws: conn}
+	defer func() { m.removeConnection(nodeID, client); conn.Close() }()
 
 	if m.signer != nil {
-		addr, err := m.authenticate(conn)
+		addr, public, err := m.authenticate(conn)
 		if err != nil {
 			log.Printf("[coordinator] worker %s auth rejected: %v", nodeID, err)
 			conn.Close()
 			return
 		}
 		log.Printf("[coordinator] worker %s authenticated as %s", nodeID, addr)
+		client.address, client.public = addr, public
 	} else {
+		if m.workerAuthority != nil {
+			return
+		}
 		log.Printf("[coordinator] WARNING: worker %s connected without control-channel auth (no signer configured)", nodeID)
 	}
 
-	client := &nodeConn{ws: conn}
 	log.Printf("[coordinator] new worker connection: %s", nodeID)
 
 	for {
 		var msg ws.Message
 		if err := conn.ReadJSON(&msg); err != nil {
 			log.Printf("[coordinator] worker %s disconnected: %v", nodeID, err)
-			m.removeNode(nodeID)
 			return
 		}
 
 		nextID, err := m.handleMessage(nodeID, client, msg)
 		if err != nil {
 			log.Printf("[coordinator] invalid message from %s: %v", nodeID, err)
+			if client.address != "" || m.workerAuthority != nil {
+				return
+			}
 			continue
 		}
 		nodeID = nextID
@@ -172,7 +204,7 @@ func (m *Manager) HandleConnection(conn *websocket.Conn) {
 // proves the coordinator's identity over the worker-issued nonce, then verifies
 // the worker's proof over a coordinator-issued nonce and checks the allowlist.
 // It returns the verified worker SUI address on success.
-func (m *Manager) authenticate(conn *websocket.Conn) (string, error) {
+func (m *Manager) authenticate(conn *websocket.Conn) (string, []byte, error) {
 	deadline := time.Now().Add(m.handshakeTimeout)
 	_ = conn.SetReadDeadline(deadline)
 	_ = conn.SetWriteDeadline(deadline)
@@ -184,45 +216,50 @@ func (m *Manager) authenticate(conn *websocket.Conn) (string, error) {
 	// Step 1: receive the worker's challenge nonce.
 	var init wsauth.InitPayload
 	if err := readTyped(conn, wsauth.MsgAuthInit, &init); err != nil {
-		return "", fmt.Errorf("read auth_init: %w", err)
+		return "", nil, fmt.Errorf("read auth_init: %w", err)
 	}
 	clientNonce, err := wsauth.DecodeNonce(init.ClientNonce)
 	if err != nil {
-		return "", fmt.Errorf("bad client nonce: %w", err)
+		return "", nil, fmt.Errorf("bad client nonce: %w", err)
 	}
 
 	// Step 2: prove our identity over the worker nonce and issue our own.
 	serverNonce, serverNonceHex, err := wsauth.NewNonce()
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	challenge := wsauth.ChallengePayload{
 		ServerNonce: serverNonceHex,
 		Proof:       wsauth.Prove(m.signer, clientNonce),
 	}
 	if err := writeTyped(conn, wsauth.MsgAuthChallenge, challenge); err != nil {
-		return "", fmt.Errorf("send auth_challenge: %w", err)
+		return "", nil, fmt.Errorf("send auth_challenge: %w", err)
 	}
 
 	// Step 3: verify the worker's proof over our nonce.
 	var resp wsauth.ResponsePayload
 	if err := readTyped(conn, wsauth.MsgAuthResponse, &resp); err != nil {
-		return "", fmt.Errorf("read auth_response: %w", err)
+		return "", nil, fmt.Errorf("read auth_response: %w", err)
 	}
 	addr, err := wsauth.VerifyProof(resp.Proof, serverNonce)
 	if err != nil {
 		_ = writeTyped(conn, wsauth.MsgAuthError, wsauth.ErrorPayload{Reason: "invalid worker proof"})
-		return "", fmt.Errorf("worker identity invalid: %w", err)
+		return "", nil, fmt.Errorf("worker identity invalid: %w", err)
 	}
 	if !wsauth.AddressAllowed(addr, m.allowedSigners) {
 		_ = writeTyped(conn, wsauth.MsgAuthError, wsauth.ErrorPayload{Reason: "worker not authorized"})
-		return "", fmt.Errorf("worker %s not in allowed_signers", addr)
+		return "", nil, fmt.Errorf("worker %s not in allowed_signers", addr)
+	}
+	public, _ := hex.DecodeString(resp.Proof.PublicKey) // VerifyProof already checked length and derivation.
+	if err := m.authorizeWorker(&nodeConn{address: addr, public: public}); err != nil {
+		_ = writeTyped(conn, wsauth.MsgAuthError, wsauth.ErrorPayload{Reason: "Host admission unavailable"})
+		return "", nil, err
 	}
 
 	if err := writeTyped(conn, wsauth.MsgAuthOK, struct{}{}); err != nil {
-		return "", fmt.Errorf("send auth_ok: %w", err)
+		return "", nil, fmt.Errorf("send auth_ok: %w", err)
 	}
-	return addr, nil
+	return addr, public, nil
 }
 
 func writeTyped(conn *websocket.Conn, msgType string, payload interface{}) error {
@@ -245,6 +282,9 @@ func readTyped(conn *websocket.Conn, wantType string, out interface{}) error {
 }
 
 func (m *Manager) handleMessage(currentID string, conn *nodeConn, msg ws.Message) (string, error) {
+	if err := m.authorizeWorker(conn); err != nil {
+		return currentID, err
+	}
 	switch msg.Type {
 	case "register":
 		var payload registerPayload
@@ -253,6 +293,12 @@ func (m *Manager) handleMessage(currentID string, conn *nodeConn, msg ws.Message
 		}
 
 		nodeID := payload.HostID
+		if conn.address != "" {
+			if payload.HostID != conn.address {
+				return currentID, fmt.Errorf("host_id differs from authenticated signing address")
+			}
+			nodeID = conn.address
+		}
 		if nodeID == "" {
 			nodeID = payload.Hostname
 		}
@@ -275,6 +321,10 @@ func (m *Manager) handleMessage(currentID string, conn *nodeConn, msg ws.Message
 		}
 
 		m.mu.Lock()
+		if existing, ok := m.nodes[nodeID]; ok && existing.conn != conn {
+			m.mu.Unlock()
+			return currentID, fmt.Errorf("Host already has an active connection")
+		}
 		if currentID != nodeID {
 			delete(m.nodes, currentID)
 		}
@@ -289,11 +339,14 @@ func (m *Manager) handleMessage(currentID string, conn *nodeConn, msg ws.Message
 		if err := json.Unmarshal(msg.Payload, &payload); err != nil {
 			return currentID, fmt.Errorf("decode heartbeat payload: %w", err)
 		}
+		if conn.address != "" && payload.HostID != conn.address {
+			return currentID, fmt.Errorf("heartbeat Host identity mismatch")
+		}
 
 		now := time.Now()
 
 		m.mu.Lock()
-		if node, ok := m.nodes[currentID]; ok {
+		if node, ok := m.nodes[currentID]; ok && node.conn == conn {
 			node.LastHeartbeat = &now
 			node.Agents = append([]agent.Agent(nil), payload.Agents...)
 			system := payload.System
@@ -318,8 +371,10 @@ func (m *Manager) handleMessage(currentID string, conn *nodeConn, msg ws.Message
 
 		m.mu.Lock()
 		pending, ok := m.pendingCommands[payload.RequestID]
-		if ok {
+		if ok && pending.conn == conn {
 			delete(m.pendingCommands, payload.RequestID)
+		} else {
+			ok = false
 		}
 		m.mu.Unlock()
 
@@ -337,8 +392,10 @@ func (m *Manager) handleMessage(currentID string, conn *nodeConn, msg ws.Message
 
 		m.mu.Lock()
 		pending, ok := m.pendingSignals[payload.RequestID]
-		if ok {
+		if ok && pending.conn == conn {
 			delete(m.pendingSignals, payload.RequestID)
+		} else {
+			ok = false
 		}
 		m.mu.Unlock()
 
@@ -368,6 +425,10 @@ func (m *Manager) handleMessage(currentID string, conn *nodeConn, msg ws.Message
 func (m *Manager) PingAll() {
 	nodes := m.connections()
 	for _, conn := range nodes {
+		if err := m.authorizeWorker(conn); err != nil {
+			conn.Close()
+			continue
+		}
 		if err := conn.WriteJSON(ws.Message{Type: "ping"}); err != nil {
 			log.Printf("[coordinator] ping failed: %v", err)
 		}
@@ -393,6 +454,9 @@ func (m *Manager) FindNode(id string) (nodeSnapshot, bool) {
 	if node, ok := m.nodes[id]; ok {
 		return cloneSnapshot(node.nodeSnapshot), true
 	}
+	if m.workerAuthority != nil {
+		return nodeSnapshot{}, false
+	}
 
 	for _, node := range m.nodes {
 		if node.Hostname == id {
@@ -410,6 +474,9 @@ func (m *Manager) lookupNode(nodeID string) (*connectedNode, bool) {
 	if node, ok := m.nodes[nodeID]; ok {
 		return node, true
 	}
+	if m.workerAuthority != nil {
+		return nil, false
+	}
 	for _, candidate := range m.nodes {
 		if candidate.Hostname == nodeID {
 			return candidate, true
@@ -423,9 +490,14 @@ func (m *Manager) SendCommand(nodeID, command, agentID, args string) (map[string
 	if !ok {
 		return nil, fmt.Errorf("worker %s not found", nodeID)
 	}
+	if err := m.authorizeWorker(node.conn); err != nil {
+		m.removeConnection(node.ID, node.conn)
+		node.conn.Close()
+		return nil, err
+	}
 
 	requestID := m.commandID()
-	pending := &pendingCommand{resultCh: make(chan map[string]interface{}, 1)}
+	pending := &pendingCommand{resultCh: make(chan map[string]interface{}, 1), conn: node.conn}
 
 	m.mu.Lock()
 	m.pendingCommands[requestID] = pending
@@ -467,9 +539,14 @@ func (m *Manager) SendDesktopSignal(nodeID, method, path string, body []byte) (i
 	if !ok {
 		return 0, nil, fmt.Errorf("worker %s not found", nodeID)
 	}
+	if err := m.authorizeWorker(node.conn); err != nil {
+		m.removeConnection(node.ID, node.conn)
+		node.conn.Close()
+		return 0, nil, err
+	}
 
 	requestID := m.commandID()
-	pending := &pendingSignal{resultCh: make(chan desktopSignalResult, 1)}
+	pending := &pendingSignal{resultCh: make(chan desktopSignalResult, 1), conn: node.conn}
 
 	m.mu.Lock()
 	m.pendingSignals[requestID] = pending
@@ -523,9 +600,11 @@ func (m *Manager) connections() []*nodeConn {
 	return conns
 }
 
-func (m *Manager) removeNode(nodeID string) {
+func (m *Manager) removeConnection(nodeID string, conn *nodeConn) {
 	m.mu.Lock()
-	delete(m.nodes, nodeID)
+	if node, ok := m.nodes[nodeID]; ok && node.conn == conn {
+		delete(m.nodes, nodeID)
+	}
 	m.mu.Unlock()
 }
 

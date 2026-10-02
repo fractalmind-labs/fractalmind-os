@@ -59,6 +59,7 @@ type RolesConfig struct {
 }
 
 type CoordinatorConfig struct {
+	BindingID  string `yaml:"binding_id"` // chain protocol CoordinatorBinding, required for the v0.2.0 chain runtime
 	ListenAddr string `yaml:"listen_addr"`
 	APIToken   string `yaml:"api_token"`
 	// AllowedSigners, when non-empty, restricts which verified worker SUI
@@ -109,6 +110,7 @@ type HeartbeatConfig struct {
 }
 
 type SUIConfig struct {
+	HostConnectionEnabled     bool   `yaml:"host_connection_enabled"` // Native Host keys and chain-bound control channel, independent of execution adapter
 	Network                   string `yaml:"network"`
 	ChainIdentifier           string `yaml:"chain_identifier"`
 	HostJoinGasBudget         uint64 `yaml:"host_join_gas_budget"`

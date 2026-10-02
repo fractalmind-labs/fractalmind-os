@@ -10,7 +10,7 @@
 4. 确认交易 effects 的输出版本已可读取后才显示邀请码。链上保留证明公钥，邀请码中的 256 位秘密只在当前窗口内存；不进入 localStorage、IndexedDB、报告、日志或 URL。关闭／刷新／重启后无法恢复。遗失未用码可撤销链上邀请，再明确创建新的。
 5. 已消费邀请无法用于撤销 Host；单独选择成员记录、核对并支付撤销交易。撤销拒绝新的受保护操作，不表示已结束在途工作。
 
-公开链连接只能读取目录。网页入口不会初始化私钥或获得管理授权。原生 Host 与管理设备是不同地址，Host 自己的兑换／结果交易也需要 Gas。接入指导在生成码之前即可查看，提供公开配置及真实 `--init-host`、`--join-host`、`--host-join-status --host-address` 命令；配置中的 `protocol_registry_id` 与旧 peer discovery 的 `registry_id` 分开。启动 envd 不等于入组。
+公开链连接只能读取目录。网页入口不会初始化私钥或获得管理授权。原生 Host 与管理设备是不同地址，Host 自己的兑换／结果交易也需要 Gas。接入指导在生成码之前即可查看，提供公开配置及真实 `--init-host`、`--join-host`、`--host-join-status --host-address` 命令；配置中的 `protocol_registry_id` 与旧 peer discovery 的 `registry_id` 分开。启动 envd 不等于入组。接入后按指导启用独立链连接模式，使用当前成员指针选择入口并认证；实际 loopback 连接与撤销证据见[Host 连接说明](v020-host-chain-connection.md)。
 
 ## 交易与来源约束
 

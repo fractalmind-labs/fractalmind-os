@@ -799,7 +799,7 @@ export default function HostAccess({
                     "将以下公开连接项合并进新主机的 sentinel.yaml。这里不包含邀请码或私钥。",
                     "Merge these public connection fields into sentinel.yaml on the new Host. They contain no invitation or private key.",
                   )}
-                  <pre>{`sui:\n  network: ${JSON.stringify(profile.network)}\n  rpc: ${JSON.stringify(profile.rpcUrl)}\n  chain_identifier: ${JSON.stringify(directory?.chainIdentifier ?? profile.chainIdentifier ?? "")}\n  protocol_package_id: ${JSON.stringify(profile.packageId)}\n  protocol_original_package_id: ${JSON.stringify(profile.originalPackageId ?? profile.packageId)}\n  protocol_registry_id: ${JSON.stringify(profile.registryId)}\n  org_id: ${JSON.stringify(organizationId)}\n  host_join_gas_budget: 200000000`}</pre>
+                  <pre>{`sui:\n  host_connection_enabled: true\n  network: ${JSON.stringify(profile.network)}\n  rpc: ${JSON.stringify(profile.rpcUrl)}\n  chain_identifier: ${JSON.stringify(directory?.chainIdentifier ?? profile.chainIdentifier ?? "")}\n  protocol_package_id: ${JSON.stringify(profile.packageId)}\n  protocol_original_package_id: ${JSON.stringify(profile.originalPackageId ?? profile.packageId)}\n  protocol_registry_id: ${JSON.stringify(profile.registryId)}\n  org_id: ${JSON.stringify(organizationId)}\n  host_join_gas_budget: 200000000`}</pre>
                 </li>
                 <li>
                   {t(
@@ -823,9 +823,10 @@ export default function HostAccess({
                 </li>
                 <li>
                   {t(
-                    "结果未知时查询原交易，无需邀请码或私钥。接入成功表示链上成员资格，主机在线、运行发现和 Agent 导入仍单独核验。",
-                    "Query an uncertain original transaction without the invitation or private keys. Admission confirms on-chain membership; online state, discovery and Agent import are verified separately.",
+                    "结果未知时查询原交易，无需邀请码或私钥。接入成功表示链上成员资格。再启动 envd，按链上当前入口和公钥认证连接；主机在线、运行发现和 Agent 导入仍单独核验。",
+                    "Query an uncertain original transaction without the invitation or private keys. Admission confirms on-chain membership. Then start envd to connect using the current chain endpoint and key; online state, discovery and Agent import are verified separately.",
                   )}
+                  <pre>envd --config sentinel.yaml</pre>
                   <pre>
                     envd --config sentinel.yaml --host-join-status
                     --host-address 0xYOUR_HOST_ADDRESS
