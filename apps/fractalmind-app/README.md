@@ -61,8 +61,11 @@ bodies or grant authority. Do not paste private keys or recovery codes. The nati
 a one-shot recovery backup, fee preparation and separately confirmed Human / personal
 organization transactions. The browser cannot generate those keys. The native recovery entry now imports a recovery code, locates the same Human from
 chain, prepares a one-shot replacement backup and separately quotes/confirms the
-atomic recovery. The browser recovery entry does not accept secrets. Device pairing
-remains pending.
+atomic recovery. The browser recovery entry does not accept secrets. Native
+device pairing now creates a 10-minute chain request, requires fingerprint
+comparison and an organization-scoped approval, then separately confirms data
+sharing. The browser pairing entry cannot initialize keys. See
+[pairing, actual evidence and remaining gates](../../docs/product/v020-app-pairing.md).
 
 ## Current behavior
 

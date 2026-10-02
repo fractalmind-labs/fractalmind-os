@@ -35,6 +35,7 @@ const PREFERENCE_KEY = "fractalmind.app.appearance.v1";
 const CreateOkr = lazy(() => import("./CreateOkr"));
 const PrivateRecordView = lazy(() => import("./PrivateRecordView"));
 const DeviceAccess = lazy(() => import("./DeviceAccess"));
+const PairingFlow = lazy(() => import("./PairingFlow"));
 const runLabels: Array<[string, string]> = [
   ["待启动", "Queued"],
   ["链上记录：运行中", "Chain record: running"],
@@ -655,8 +656,8 @@ export function App() {
                     </strong>
                     <p>
                       {t(
-                        "当前客户端尚未接通签名身份与消息投递。暂停、调整约定、审批和联系 Agent 在接线完成后启用。",
-                        "Secure identity and message delivery are not connected yet. Pause, agreement changes, approvals and Agent communication will be enabled when integrated.",
+                        "Agent 消息投递与执行介入尚未接通。暂停、调整执行约定和联系 Agent 在接线完成后启用。",
+                        "Agent message delivery and execution interventions are pending. Pause, agreement changes and Agent contact become available after integration.",
                       )}
                     </p>
                   </div>
@@ -780,6 +781,27 @@ export function App() {
               />
             </Suspense>
             <IdentityView identity={data.identity} wallMs={wallMs} t={t} />
+            {data.organizationId && (
+              <Suspense
+                fallback={
+                  <p>{t("加载设备配对…", "Loading device pairing…")}</p>
+                }
+              >
+                <PairingFlow
+                  key={JSON.stringify([
+                    profile,
+                    data.organizationId,
+                    data.identity.human.generation,
+                  ])}
+                  profile={{
+                    ...profile,
+                    chainIdentifier: data.identity.chainIdentifier,
+                  }}
+                  organizationId={data.organizationId}
+                  t={t}
+                />
+              </Suspense>
+            )}
           </>
         )}
         {page === "orgs" && data.identity && (
@@ -1029,8 +1051,8 @@ function Empty({ t }: { t: Translate }) {
   return (
     <div className="panel">
       {t(
-        "该组织暂无记录。创建与接入功能待签名身份接通后启用。",
-        "No records in this organization. Creation and admission will be enabled after secure identity integration.",
+        "该组织暂无此类记录。可用操作见对应功能页面。",
+        "No records of this kind in this organization. Available actions are shown on the corresponding feature page.",
       )}
     </div>
   );
@@ -1681,8 +1703,8 @@ function IdentityView({
         <code className="long-id">{identity.human.id}</code>
         <p>
           {t(
-            "公开标识用于定位记录，不能证明你持有该身份。设备核验仅证明选定授权，当前界面尚未开启正文解密与管理操作。",
-            "The public ID locates a record; it is not proof of possession. Device verification proves the selected grant. Private-body decryption and management actions are not enabled in this view yet.",
+            "公开标识用于定位记录，不能证明你持有该身份。设备核验仅证明选定授权；批准新设备、分享组织数据或解密正文，都要在对应操作中重新核验权限。",
+            "The public ID locates a record; it is not proof of possession. Device verification proves the selected grant. Device approval, organization data sharing and body decryption each recheck authority when performed.",
           )}
         </p>
         <dl>

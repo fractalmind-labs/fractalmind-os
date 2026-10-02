@@ -269,6 +269,23 @@ async fn fm_recovery_sign_transaction(
     .await
     .map_err(|_| "NativeTaskFailed".to_string())?
 }
+#[tauri::command]
+async fn fm_device_wrap_organization_keys(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: String,
+    request: String,
+) -> Result<String, String> {
+    main_window(&window)?;
+    let vault = Arc::clone(vault.inner());
+    tauri::async_runtime::spawn_blocking(move || {
+        vault
+            .wrap_organization_keys(&profile, &request)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|_| "NativeTaskFailed".to_string())?
+}
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -282,17 +299,28 @@ fn main() {
             } else {
                 DEVICE_SERVICE
             };
-            app.manage(Arc::new(DeviceVault::new(service, cache)));
-            WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
-                .title(if test_mode {
-                    "FractalMind · isolated local acceptance"
-                } else {
-                    "FractalMind"
-                })
-                .inner_size(1200.0, 800.0)
-                .min_inner_size(360.0, 600.0)
-                .on_navigation(local_origin)
-                .build()?;
+            app.manage(Arc::new(DeviceVault::new(service, cache.clone())));
+            let mut window =
+                WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+                    .title(if test_mode {
+                        "FractalMind · isolated local acceptance"
+                    } else {
+                        "FractalMind"
+                    })
+                    .inner_size(1200.0, 800.0)
+                    .min_inner_size(360.0, 600.0)
+                    .on_navigation(local_origin);
+            if test_mode {
+                // Acceptance must not read/overwrite the user's public
+                // connection cache or transaction journal. Keep this store
+                // persistent across restarts to test actual IndexedDB recovery.
+                window = window.data_directory(cache.join("isolated-webview"));
+                #[cfg(target_os = "macos")]
+                {
+                    window = window.data_store_identifier(*b"FMAppAcceptance1");
+                }
+            }
+            window.build()?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -309,7 +337,8 @@ fn main() {
             fm_recovery_imported_public,
             fm_recovery_prepare,
             fm_recovery_prepared_public,
-            fm_recovery_sign_transaction
+            fm_recovery_sign_transaction,
+            fm_device_wrap_organization_keys
         ])
         .run(tauri::generate_context!())
         .expect("FractalMind App runtime failed");

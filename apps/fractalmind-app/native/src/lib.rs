@@ -18,6 +18,7 @@ use zeroize::Zeroizing;
 
 mod keyrings;
 mod onboarding;
+mod pairing;
 mod records;
 mod recovery;
 pub use onboarding::{OnboardingCreated, OnboardingPublic};

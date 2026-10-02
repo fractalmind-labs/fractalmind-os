@@ -5,7 +5,7 @@ module fractalmind_protocol::identity_tests {
     use std::string;
     use std::option;
     use fractalmind_protocol::organization::{Self, ProtocolRegistry, Organization};
-    use fractalmind_protocol::identity::{Self, IdentityRegistry, HumanIdentity, DeviceGrant, RecoveryRecord};
+    use fractalmind_protocol::identity::{Self, IdentityRegistry, HumanIdentity, DeviceGrant, RecoveryRecord, DevicePairingRequest};
 
     const DESKTOP: address = @0xA;
     const PHONE: address = @0xB;
@@ -264,4 +264,99 @@ module fractalmind_protocol::identity_tests {
         identity::assert_grant(&human, &root, identity::approve_action(), &c, ts::ctx(&mut s));
         ts::return_shared(c); ts::return_shared(old); ts::return_shared(root); ts::return_shared(human); ts::return_shared(registry); ts::end(s);
     }
+    fun pairing_sender(): address { identity::signing_address(&key(8)) }
+    fun request_pairing(s: &mut Scenario) {
+        ts::next_tx(s, pairing_sender());
+        let human = ts::take_shared<HumanIdentity>(s); let org = ts::take_shared<Organization>(s);
+        let c = ts::take_shared<Clock>(s);
+        identity::create_device_pairing(&human, &org, key(8), key(9), string::utf8(b"Phone"), string::utf8(b"ios"), &c, ts::ctx(s));
+        ts::return_shared(c); ts::return_shared(org); ts::return_shared(human);
+        ts::next_tx(s, DESKTOP);
+    }
+    fun approve_pairing(s: &mut Scenario) {
+        let mut registry = ts::take_shared<IdentityRegistry>(s);
+        let mut human = ts::take_shared<HumanIdentity>(s);
+        let root = ts::take_shared_by_id<DeviceGrant>(s, identity::grants(&human)[0]);
+        let org = ts::take_shared<Organization>(s); let c = ts::take_shared<Clock>(s);
+        let mut request = ts::take_shared<DevicePairingRequest>(s);
+        identity::approve_device_pairing(&mut registry, &mut human, &root, &org, &mut request,
+            vector[identity::read_action()], clock::timestamp_ms(&c) + 604800000, &c, ts::ctx(s));
+        ts::return_shared(request); ts::return_shared(c); ts::return_shared(org);
+        ts::return_shared(root); ts::return_shared(human); ts::return_shared(registry);
+    }
+    #[test]
+    fun pairing_approval_is_scoped_read_only_without_data_keys() {
+        let mut s = setup(); request_pairing(&mut s); approve_pairing(&mut s);
+        ts::next_tx(&mut s, pairing_sender());
+        let human = ts::take_shared<HumanIdentity>(&s); let org = ts::take_shared<Organization>(&s);
+        let request = ts::take_shared<DevicePairingRequest>(&s);
+        assert!(identity::pairing_status(&request) == 1, 0);
+        let grant = ts::take_shared_by_id<DeviceGrant>(&s, *option::borrow(&identity::pairing_grant(&request)));
+        assert!(identity::grant_scope(&grant) == option::some(sui::object::id(&org)), 0);
+        assert!(identity::grant_keys(&grant).is_empty(), 0);
+        assert!(identity::grant_actions(&grant) == vector[identity::read_action()], 0);
+        let c = ts::take_shared<Clock>(&s);
+        identity::assert_can(&human, &grant, &org, identity::read_action(), &c, ts::ctx(&mut s));
+        ts::return_shared(c); ts::return_shared(grant); ts::return_shared(request); ts::return_shared(org); ts::return_shared(human); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9006, location = fractalmind_protocol::identity)]
+    fun pairing_cannot_be_approved_twice() {
+        let mut s = setup(); request_pairing(&mut s); approve_pairing(&mut s);
+        ts::next_tx(&mut s, DESKTOP); approve_pairing(&mut s); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9002, location = fractalmind_protocol::identity)]
+    fun pairing_expires_at_exact_clock_boundary() {
+        let mut s = setup(); request_pairing(&mut s);
+        let mut c = ts::take_shared<Clock>(&s); clock::increment_for_testing(&mut c, 600000); ts::return_shared(c);
+        ts::next_tx(&mut s, DESKTOP); approve_pairing(&mut s); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9001, location = fractalmind_protocol::identity)]
+    fun pairing_creation_cannot_impersonate_another_device() {
+        let mut s = setup(); ts::next_tx(&mut s, ATTACKER);
+        let human = ts::take_shared<HumanIdentity>(&s); let org = ts::take_shared<Organization>(&s); let c = ts::take_shared<Clock>(&s);
+        identity::create_device_pairing(&human, &org, key(8), key(9), string::utf8(b"spoof"), string::utf8(b"ios"), &c, ts::ctx(&mut s));
+        ts::return_shared(c); ts::return_shared(org); ts::return_shared(human); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9001, location = fractalmind_protocol::identity)]
+    fun pairing_cancel_requires_requesting_device() {
+        let mut s = setup(); request_pairing(&mut s); ts::next_tx(&mut s, ATTACKER);
+        let mut request = ts::take_shared<DevicePairingRequest>(&s);
+        identity::cancel_device_pairing(&mut request, ts::ctx(&mut s)); ts::return_shared(request); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9006, location = fractalmind_protocol::identity)]
+    fun cancelled_pairing_cannot_grant_permissions() {
+        let mut s = setup(); request_pairing(&mut s); ts::next_tx(&mut s, pairing_sender());
+        let mut request = ts::take_shared<DevicePairingRequest>(&s);
+        identity::cancel_device_pairing(&mut request, ts::ctx(&mut s)); ts::return_shared(request);
+        ts::next_tx(&mut s, DESKTOP); approve_pairing(&mut s); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9006, location = fractalmind_protocol::identity)]
+    fun rejected_pairing_cannot_grant_permissions() {
+        let mut s = setup(); request_pairing(&mut s);
+        let human = ts::take_shared<HumanIdentity>(&s); let grant = ts::take_shared<DeviceGrant>(&s);
+        let org = ts::take_shared<Organization>(&s); let c = ts::take_shared<Clock>(&s);
+        let mut request = ts::take_shared<DevicePairingRequest>(&s);
+        identity::reject_device_pairing(&human, &grant, &org, &mut request, &c, ts::ctx(&mut s));
+        ts::return_shared(request); ts::return_shared(c); ts::return_shared(org); ts::return_shared(grant); ts::return_shared(human);
+        ts::next_tx(&mut s, DESKTOP); approve_pairing(&mut s); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9003, location = fractalmind_protocol::identity)]
+    fun recovery_invalidates_pending_pairing_generation() {
+        let mut s = setup(); request_pairing(&mut s); ts::next_tx(&mut s, recovery_address()); recover(&mut s);
+        ts::next_tx(&mut s, PHONE);
+        let mut registry = ts::take_shared<IdentityRegistry>(&s); let mut human = ts::take_shared<HumanIdentity>(&s);
+        let grant = ts::take_shared_by_id<DeviceGrant>(&s, identity::grants(&human)[1]);
+        let org = ts::take_shared<Organization>(&s); let c = ts::take_shared<Clock>(&s);
+        let mut request = ts::take_shared<DevicePairingRequest>(&s);
+        identity::approve_device_pairing(&mut registry, &mut human, &grant, &org, &mut request, vector[identity::read_action()], 604800000, &c, ts::ctx(&mut s));
+        ts::return_shared(request); ts::return_shared(c); ts::return_shared(org); ts::return_shared(grant); ts::return_shared(human); ts::return_shared(registry); ts::end(s);
+    }
+
 }

@@ -53,7 +53,7 @@ export { NodeExecutionApi, CommandExecutionBcs, EXECUTION_STATES, nodeCommandSig
 export { HostApi, HostInviteBcs, HostMembershipBcs, ManagedAgentBcs, CoordinatorBindingBcs,
   HostIndexBcs, AuthorityBindingBcs, HostJoinIntentBcs, createHostInviteMaterial,
   encodeHostInviteCode, parseHostInviteCode } from './host.js';
-export { IdentityApi, IdentityRegistryBcs, RecoveryLocationBcs, HumanIdentityBcs, DeviceGrantBcs, RecoveryRecordBcs, DEVICE_ACTIONS } from './identity.js';
+export { IdentityApi, IdentityRegistryBcs, RecoveryLocationBcs, HumanIdentityBcs, DeviceGrantBcs, RecoveryRecordBcs, DevicePairingRequestBcs, DEVICE_ACTIONS } from './identity.js';
 export type { DeviceAction } from './identity.js';
 export { ProductRecordApi, PRODUCT_RECORD_KINDS, EncryptedRecordBcs, recordContext } from './product-record.js';
 export type { ProductRecordKind } from './product-record.js';

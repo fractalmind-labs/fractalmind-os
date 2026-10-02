@@ -104,6 +104,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         "encryptRecord" => serde_json::to_value(
             vault.encrypt_record(&request.profile, &request.record.ok_or("Record required")?)?,
         )?,
+        "wrapOrganizationKeys" => serde_json::to_value(vault.wrap_organization_keys(
+            &request.profile,
+            &request.record.ok_or("Share request required")?,
+        )?)?,
         "decryptRecord" => serde_json::to_value(
             vault.decrypt_record(&request.profile, &request.record.ok_or("Record required")?)?,
         )?,

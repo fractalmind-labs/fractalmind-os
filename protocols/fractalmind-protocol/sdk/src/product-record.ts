@@ -84,6 +84,11 @@ export class ProductRecordApi {
     tx.moveCall({ target: `${this.fm.packageId}::product_record::rotate_key`, arguments: [tx.object(input.organizationId), tx.object(input.humanId), tx.object(input.grantId), tx.pure.u64(toBigInt(input.expectedKeyVersion)), tx.object('0x6')] });
     return tx;
   }
+  assertKeyVersion(input: { organizationId: string; expectedKeyVersion: bigint | string | number; tx?: Transaction }): Transaction {
+    const tx = this.fm.useTransaction(input.tx);
+    tx.moveCall({ target: `${this.fm.packageId}::product_record::assert_key_version`, arguments: [tx.object(input.organizationId), tx.pure.u64(toBigInt(input.expectedKeyVersion))] });
+    return tx;
+  }
   rotateKeyForRecovery(input: { organizationId: string; humanId: string; recordId: string; expectedKeyVersion: bigint | string | number; tx?: Transaction }): Transaction {
     const tx = this.fm.useTransaction(input.tx);
     tx.moveCall({ target: `${this.fm.packageId}::product_record::rotate_key_for_recovery`, arguments: [tx.object(input.organizationId), tx.object(input.humanId), tx.object(input.recordId), tx.pure.u64(toBigInt(input.expectedKeyVersion))] });

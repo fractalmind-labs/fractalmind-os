@@ -105,6 +105,11 @@ module fractalmind_protocol::product_record {
         let index: &RecordIndex = df::borrow(organization::borrow_uid(org), IndexBinding {});
         index.key_version
     }
+    /// Use in the same PTB as key-envelope distribution. A rotation during
+    /// native wrapping/signing must not publish stale organization keys.
+    public fun assert_key_version(org: &Organization, expected_key_version: u64) {
+        assert!(key_version(org) == expected_key_version, E_VERSION);
+    }
     /// Include with revocation and key-envelope updates in the same PTB.
     /// All later record writes must use the new key generation.
     public fun rotate_key(org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant, expected_key_version: u64, clock: &Clock, ctx: &mut TxContext) {

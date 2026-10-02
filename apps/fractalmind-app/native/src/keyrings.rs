@@ -134,6 +134,64 @@ fn parse(bytes: &[u8]) -> Result<Ring> {
     }
     Ok(ring)
 }
+/// Export only one organization's keyring to the native wrapping primitive.
+/// The caller independently checks current chain role and key version.
+pub(super) fn for_organization(
+    bytes: &[u8],
+    organization: &str,
+    version: &str,
+    organization_count: usize,
+) -> Result<Scoped> {
+    id(organization)?;
+    super::records::positive(version)?;
+    let ring = parse(bytes)?;
+    if organization_count == 0 || organization_count > 256 {
+        return Err(VaultError::InvalidEnvelope);
+    }
+    let keys = match &ring {
+        Ring::Legacy(legacy) => {
+            if organization_count != 1 {
+                return Err(VaultError::InvalidEnvelope);
+            }
+            OrganizationKeys {
+                current_version: version.to_string(),
+                content_key: legacy
+                    .historical_keys
+                    .get(version)
+                    .ok_or(VaultError::InvalidEnvelope)?
+                    .clone(),
+                historical_keys: legacy.historical_keys.clone(),
+            }
+        }
+        Ring::Scoped(scoped) => {
+            let keys = scoped
+                .organizations
+                .get(organization)
+                .ok_or(VaultError::InvalidEnvelope)?;
+            if keys.current_version != version {
+                return Err(VaultError::InvalidEnvelope);
+            }
+            for (other_id, other) in &scoped.organizations {
+                if other_id != organization
+                    && other.historical_keys.values().any(|key| {
+                        keys.historical_keys
+                            .values()
+                            .any(|selected| selected == key)
+                    })
+                {
+                    return Err(VaultError::InvalidEnvelope);
+                }
+            }
+            keys.clone()
+        }
+    };
+    let scoped = Scoped {
+        format: 2,
+        organizations: BTreeMap::from([(organization.to_string(), keys)]),
+    };
+    scoped.validate()?;
+    Ok(scoped)
+}
 pub(super) fn select(
     bytes: &[u8],
     organization: &str,
@@ -250,6 +308,31 @@ mod tests {
             "a".repeat(64)
         )
         .into_bytes()
+    }
+    #[test]
+    fn sharing_rejects_global_and_overlapping_multi_organization_secrets() {
+        assert!(for_organization(&legacy(), &org('a'), "1", 1).is_ok());
+        assert!(for_organization(&legacy(), &org('a'), "1", 2).is_err());
+        let (scoped, _) = rotate(
+            &legacy(),
+            &[
+                OrganizationSource {
+                    organization_id: org('a'),
+                    key_version: "1".into(),
+                    rotate: true,
+                },
+                OrganizationSource {
+                    organization_id: org('b'),
+                    key_version: "1".into(),
+                    rotate: true,
+                },
+            ],
+        )
+        .unwrap();
+        let bytes = Zeroizing::new(serde_json::to_vec(&scoped).unwrap());
+        // Distinct future keys do not make a shared legacy historical key safe
+        // to disclose to only one organization's new device.
+        assert!(for_organization(&bytes, &org('a'), "2", 2).is_err());
     }
     #[test]
     fn recovery_rotates_owned_organizations_independently_and_retains_history() {

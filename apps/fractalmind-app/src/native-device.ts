@@ -21,7 +21,8 @@ export type NativeDeviceCommand =
   | "fm_recovery_imported_public"
   | "fm_recovery_prepare"
   | "fm_recovery_prepared_public"
-  | "fm_recovery_sign_transaction";
+  | "fm_recovery_sign_transaction"
+  | "fm_device_wrap_organization_keys";
 export type NativeInvoke = (
   command: NativeDeviceCommand,
   args: Record<string, string>,
@@ -43,6 +44,7 @@ export class NativeDeviceError extends Error {
       | "invalid_transaction"
       | "invalid_proof"
       | "invalid_recovery"
+      | "invalid_envelope"
       | "already_initialized",
   ) {
     super(code);
@@ -134,6 +136,8 @@ export async function call(
       throw new NativeDeviceError("not_initialized");
     if (code === "InvalidRecovery")
       throw new NativeDeviceError("invalid_recovery");
+    if (code === "InvalidEnvelope")
+      throw new NativeDeviceError("invalid_envelope");
     if (code === "AlreadyInitialized")
       throw new NativeDeviceError("already_initialized");
     throw new NativeDeviceError("native_unavailable");

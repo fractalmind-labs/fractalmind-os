@@ -30,6 +30,7 @@ module fractalmind_protocol::identity {
     const WEEK: u64 = 604800000;
     const MAX_TTL: u64 = 31536000000;
     const MAX_BACKUP: u64 = 65536;
+    const PAIRING_TTL: u64 = 600000;
 
     public struct RegistryBinding has copy, drop, store {}
     public struct IdentityRegistry has key {
@@ -91,6 +92,16 @@ module fractalmind_protocol::identity {
         encrypted_backup: vector<u8>,
         backup_version: u64,
     }
+    /// Public request, never a login credential. Status: pending=0,
+    /// approved=1, rejected=2, cancelled=3. Expiry is checked against Clock.
+    public struct DevicePairingRequest has key {
+        id: UID, human_id: ID, organization_id: ID, generation: u64,
+        device: address, signing_public_key: vector<u8>, encryption_public_key: vector<u8>,
+        device_name: String, platform: String, expires_at_ms: u64,
+        status: u8, grant_id: Option<ID>,
+    }
+    public struct DevicePairingCreated has copy, drop { request_id: ID, human_id: ID, device: address }
+    public struct DevicePairingResolved has copy, drop { request_id: ID, status: u8, grant_id: Option<ID> }
     public struct IdentityCreated has copy, drop { human_id: ID, recovery_record: ID, device_grant: ID }
     public struct DeviceGranted has copy, drop { human_id: ID, grant_id: ID, device: address, generation: u64 }
     public struct DeviceRevoked has copy, drop { human_id: ID, grant_id: ID, version: u64 }
@@ -139,6 +150,73 @@ module fractalmind_protocol::identity {
         event::emit(IdentityCreated { human_id: object::id(&human), recovery_record: object::id(&record), device_grant: grant_id });
         transfer::share_object(record);
         transfer::share_object(human);
+    }
+
+    /// Requesting device proves independent key possession through its sender.
+    public fun create_device_pairing(
+        human: &HumanIdentity, org: &Organization, signing_key: vector<u8>, encryption_key: vector<u8>,
+        device_name: String, platform: String, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        let device = signing_address(&signing_key);
+        assert!(device == tx_context::sender(ctx), E_PERMISSION);
+        check_encryption_key(&encryption_key);
+        assert!(organization::is_active(org) && table::contains(&human.roles, object::id(org)), E_SCOPE);
+        let role = table::borrow(&human.roles, object::id(org));
+        assert!(role.active && object::id_to_address(&role.owner_human) == organization::admin(org), E_SCOPE);
+        let name_len = vector::length(string::as_bytes(&device_name));
+        assert!(name_len > 0 && name_len <= 128, E_INPUT);
+        assert!(platform == string::utf8(b"macos") || platform == string::utf8(b"windows")
+            || platform == string::utf8(b"ubuntu") || platform == string::utf8(b"ios")
+            || platform == string::utf8(b"android"), E_INPUT);
+        let request = DevicePairingRequest {
+            id: object::new(ctx), human_id: object::id(human), organization_id: object::id(org),
+            generation: human.generation, device, signing_public_key: signing_key,
+            encryption_public_key: encryption_key, device_name, platform,
+            expires_at_ms: clock::timestamp_ms(clock) + PAIRING_TTL, status: 0, grant_id: option::none(),
+        };
+        event::emit(DevicePairingCreated { request_id: object::id(&request), human_id: request.human_id, device });
+        transfer::share_object(request);
+    }
+    /// Ordinary pairing always creates an organization-scoped grant and no keys.
+    /// Data sharing requires its own explicit update_device_keys transaction.
+    public fun approve_device_pairing(
+        registry: &mut IdentityRegistry, human: &mut HumanIdentity, authorizer: &DeviceGrant,
+        org: &Organization, request: &mut DevicePairingRequest, actions: vector<u8>,
+        expires_at_ms: u64, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        assert_can(human, authorizer, org, APPROVE, clock, ctx);
+        assert_pairing(human, org, request, clock);
+        check_actions(&actions);
+        // Data access needs read permission; later explicit changes may remove it.
+        let read = READ;
+        assert!(vector::contains(&actions, &read), E_INPUT);
+        check_expiry(expires_at_ms, clock);
+        let grant_id = new_grant(registry, human, request.device, option::some(object::id(org)), actions,
+            expires_at_ms, request.encryption_public_key, vector[], ctx);
+        request.status = 1;
+        request.grant_id = option::some(grant_id);
+        event::emit(DevicePairingResolved { request_id: object::id(request), status: 1, grant_id: request.grant_id });
+    }
+    public fun reject_device_pairing(
+        human: &HumanIdentity, authorizer: &DeviceGrant, org: &Organization,
+        request: &mut DevicePairingRequest, clock: &Clock, ctx: &TxContext,
+    ) {
+        assert_can(human, authorizer, org, APPROVE, clock, ctx);
+        assert_pairing(human, org, request, clock);
+        request.status = 2;
+        event::emit(DevicePairingResolved { request_id: object::id(request), status: 2, grant_id: option::none() });
+    }
+    public fun cancel_device_pairing(request: &mut DevicePairingRequest, ctx: &TxContext) {
+        assert!(request.device == tx_context::sender(ctx), E_PERMISSION);
+        assert!(request.status == 0, E_INPUT);
+        request.status = 3;
+        event::emit(DevicePairingResolved { request_id: object::id(request), status: 3, grant_id: option::none() });
+    }
+    fun assert_pairing(human: &HumanIdentity, org: &Organization, request: &DevicePairingRequest, clock: &Clock) {
+        assert!(request.human_id == object::id(human) && request.organization_id == object::id(org), E_SCOPE);
+        assert!(request.generation == human.generation, E_REVOKED);
+        assert!(request.status == 0, E_INPUT);
+        assert!(clock::timestamp_ms(clock) < request.expires_at_ms, E_EXPIRED);
     }
 
     /// New devices get the current organization, seven days, and read only.
@@ -465,6 +543,9 @@ module fractalmind_protocol::identity {
     public fun grant_expiry(grant: &DeviceGrant): u64 { grant.expires_at_ms }
     public fun grant_actions(grant: &DeviceGrant): vector<u8> { grant.actions }
     public fun grant_scope(grant: &DeviceGrant): Option<ID> { grant.org_scope }
+    public fun pairing_status(request: &DevicePairingRequest): u8 { request.status }
+    public fun pairing_grant(request: &DevicePairingRequest): Option<ID> { request.grant_id }
+    public fun grant_keys(grant: &DeviceGrant): vector<u8> { grant.encrypted_keys }
     public fun read_action(): u8 { READ }
     public fun operate_action(): u8 { OPERATE }
     public fun approve_action(): u8 { APPROVE }
