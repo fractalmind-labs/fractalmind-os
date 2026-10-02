@@ -61,6 +61,7 @@ export class OkrApi {
     const tx = this.fm.useTransaction(input.tx);
     return this.call(tx, 'create_draft', [...this.authorized(tx, input), tx.pure.string(input.logicalId), ...this.criteria(tx, input), ...this.body(tx, input), tx.object('0x6')]);
   }
+  /** @deprecated New protocol approvals require handover.confirmOkr; retained for historical package ABI. */
   activate(input: Mutation & Body & { membershipId: string; bindingId: string; managedAgentId: string; workspaceHash: Uint8Array; boundaryHash: Uint8Array; budgetAsset: string; budgetLimit: U64; expiresAtMs: U64; expectedRecordRevision: U64 }) {
     const tx = this.fm.useTransaction(input.tx);
     return this.call(tx, 'activate', [tx.object(input.okrId), ...this.authorized(tx, input), tx.object(input.membershipId), tx.object(input.bindingId), tx.object(input.managedAgentId), tx.pure.u64(toBigInt(input.expectedVersion)), tx.pure.vector('u8', input.workspaceHash), tx.pure.vector('u8', input.boundaryHash), tx.pure.string(input.budgetAsset), tx.pure.u64(toBigInt(input.budgetLimit)), tx.pure.u64(toBigInt(input.expiresAtMs)), tx.pure.u64(toBigInt(input.expectedRecordRevision)), ...this.body(tx, input), tx.object('0x6')]);

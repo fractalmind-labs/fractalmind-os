@@ -1,3 +1,6 @@
+import type { Transaction } from "@mysten/sui/transactions";
+import { FractalMindClient, toBigInt } from "./client.js";
+import { bytesArgument } from "./wire-bytes.js";
 import { bcs } from "@mysten/sui/bcs";
 import { Ed25519PublicKey } from "@mysten/sui/keypairs/ed25519";
 import { sha256 } from "@noble/hashes/sha2.js";
@@ -183,4 +186,138 @@ export function assertFreshHandoverAcceptance(
       bytesToHex(handoverProposalHash(expectedProposal))
   )
     throw new Error("Handover acceptance expired or proposal changed.");
+}
+
+export const HandoverApprovalBcs = bcs.struct("Approval", {
+  id: bcs.Address,
+  org_id: bcs.Address,
+  okr_id: bcs.Address,
+  managed_agent_id: bcs.Address,
+  review_execution_id: bcs.Address,
+  review_result_id: bcs.Address,
+  human_id: bcs.Address,
+  grant_id: bcs.Address,
+  host_address: bcs.Address,
+  proposal: ProposalBcs,
+  coverage_revision: bcs.u64(),
+  observed_at_ms: bcs.u64(),
+  approved_at_ms: bcs.u64(),
+  host_signature: Bytes,
+  managed_version: bcs.u64(),
+  agreement_version: bcs.u64(),
+});
+export const HandoverPolicyBcs = bcs.struct("HandoverPolicy", {
+  agreement_version: bcs.u64(),
+  managed_version: bcs.u64(),
+  max_calls: bcs.u64(),
+  nonce: Bytes,
+  proposal_hash: Bytes,
+  approval_id: bcs.Address,
+});
+/** Builds a fee-quoted device approval; no signing, broadcast or dispatch.
+ * The contract consumes the exact Host proof and rechecks current sources. */
+export class HandoverApi {
+  constructor(private readonly fm: FractalMindClient) {}
+  async confirmOkr(input: {
+    acceptance: HandoverAcceptance;
+    capabilityId: string;
+    expectedRecordRevision: bigint | string | number;
+    keyVersion: bigint | string | number;
+    encryptedAgreement: Uint8Array;
+    tx?: Transaction;
+  }): Promise<Transaction> {
+    const a = structuredClone(input.acceptance),
+      p = a.proposal;
+    await verifyHandoverAcceptanceSignature(a, a.host_address);
+    if (
+      input.encryptedAgreement.length < 32 ||
+      input.encryptedAgreement.length > 65536
+    )
+      throw new Error("Encrypted agreement must be 32..65536 bytes.");
+    const signature = a.signature.split(":")[2];
+    const tx = this.fm.useTransaction(input.tx);
+    tx.moveCall({
+      target: `${this.fm.packageId}::handover::confirm_okr`,
+      arguments: [
+        ...[
+          p.okr_id,
+          a.organization_id,
+          a.human_id,
+          a.grant_id,
+          a.membership_id,
+          a.binding_id,
+          p.managed_agent_id,
+          a.execution_id,
+          id(input.capabilityId),
+        ].map((value) => tx.object(value)),
+        ...[p.managed_version, p.okr_version, p.spec_revision].map((value) =>
+          tx.pure.u64(positiveU64(value)),
+        ),
+        tx.pure.vector("u8", hex32(p.workspace_hash)),
+        tx.pure.vector("u8", executionBoundaryHash(p.paths)),
+        tx.pure.string(p.budget_asset),
+        tx.pure.u64(positiveU64(p.budget_limit)),
+        tx.pure.u64(positiveU64(p.max_calls)),
+        tx.pure.u64(p.expires_at_ms),
+        tx.pure.u64(p.review_expires_at_ms),
+        tx.pure.vector("u8", hex32(p.nonce)),
+        tx.pure.u64(positiveU64(a.coverage_revision)),
+        tx.pure.u64(a.observed_at_ms),
+        tx.pure.vector("u8", hexToBytes(signature)),
+        tx.pure.u64(toBigInt(input.expectedRecordRevision)),
+        tx.pure.u64(positiveU64(toBigInt(input.keyVersion).toString())),
+        bytesArgument(tx, this.fm.packageId, input.encryptedAgreement.slice()),
+        tx.object("0x6"),
+      ],
+    });
+    return tx;
+  }
+  async getApproval(approvalId: string) {
+    const expectedId = id(approvalId);
+    const { object } = await this.fm.client.core.getObject({
+      objectId: expectedId,
+      include: { content: true },
+    });
+    if (
+      object.objectId !== expectedId ||
+      object.type !== `${this.fm.typesPackageId}::handover::Approval` ||
+      object.owner.$kind !== "Shared" ||
+      !object.content
+    )
+      throw new Error("Invalid handover approval source.");
+    const value = HandoverApprovalBcs.parse(object.content);
+    if (
+      value.id !== expectedId ||
+      BigInt(value.managed_version) !==
+        BigInt(value.proposal.managed_version) + 1n ||
+      BigInt(value.agreement_version) < 1n
+    )
+      throw new Error("Invalid handover approval versions.");
+    return value;
+  }
+  async getPolicy(okrId: string) {
+    const { dynamicField } = await this.fm.client.core.getDynamicField({
+      parentId: id(okrId),
+      name: {
+        type: `${this.fm.typesPackageId}::okr::HandoverPolicyKey`,
+        bcs: new Uint8Array([0]),
+      },
+    });
+    if (
+      dynamicField.value.type !==
+      `${this.fm.typesPackageId}::okr::HandoverPolicy`
+    )
+      throw new Error("Invalid handover policy source.");
+    const value = HandoverPolicyBcs.parse(dynamicField.value.bcs);
+    if (
+      BigInt(value.max_calls) < 1n ||
+      BigInt(value.max_calls) > 1000n ||
+      BigInt(value.agreement_version) < 1n ||
+      BigInt(value.managed_version) < 1n ||
+      value.nonce.length !== 32 ||
+      value.proposal_hash.length !== 32
+    )
+      throw new Error("Invalid handover policy.");
+    return value;
+  }
 }

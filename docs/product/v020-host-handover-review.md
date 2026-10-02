@@ -2,6 +2,8 @@
 
 依据 PRD v0.11、J11 与唯一界面基线 `fractalmind-app-prototype-v2`。本增量完成 Host 对精确提案的审阅和签名证据；完整 App 安全接管与 v0.2.0 仍未完成。
 
+后续增量已实现[Host 签名的链上审批](v020-host-handover-approval.md)，关闭直接控制／旧激活入口。下文“本轮没有新增审批”的描述对应审阅提交的历史范围；完整 App 交接与明确继续仍未完成。
+
 ## 已实现的链路
 
 1. 设备签名的 `status`／`observation` 命令携带 `handover_review`。提案固定 ManagedAgent／OKR／规格版本、工作区、工具路径、工具预算、执行截止时间、一次性 nonce 及最长 60 秒的审阅窗口。既有一次性 HTTP 挑战绑定完整请求。

@@ -6,6 +6,14 @@
 
 ## 当前验证证据
 
+### Host 签名消费与 OKR 原子审批增量
+
+- 新合约在当前权限、实例／规格版本、完整零未结目录、原成功 Run 与 Sui Clock 检查后，验证并消费精确 Host 签名，原子确认控制／激活 OKR，保存不可变审批与当前工具政策；审批不派发工具。
+- 直接传入控制标志和旧激活入口分别拒绝 `9211`／`9410`；已审阅工具上限用于 OKR Capability，实测总预算 10、能力上限 3。
+- [实际链报告](evidence/v020-handover-approval-localnet.json)：**18 项检查、17 笔确认交易／实际费用**；五项精确 validator 负向预检通过。保留[六次原 Run 查询与前序失败](evidence/v020-handover-approval-original-checks.json)及[前序发布未知费用](evidence/v020-handover-approval-publication-prior.json)，没有重放原命令／审批。
+- [SDK 115/115、App 98/98、Move 122/122、Go 五包 race、类型／构建](evidence/v020-handover-approval-unit.json)通过。隔离新发布不等于升级兼容／历史迁移；旧 raw SDK 夹具需迁移，不能将历史执行通过套用于新包。
+- **仍未完成**：完整 App 安全交接与明确继续、运行时政策／nonce 复核及未绑定 OKR 的入口保护、历史覆盖／升级迁移、持续自主／对话／人验收、安装后 UI／OS 密钥库、云 Host 与五平台。详见[审批实现与限制](v020-host-handover-approval.md)。
+
 ### Host 接管约束审阅与签名证据增量
 
 - 设备签名的状态命令携带精确版本／路径／预算／期限提案。Host 核对当前链资格、草稿／暂停 OKR、完整零未结执行目录和实际空闲工作区，在工具调用前预约同一物理实例并二次核验；预约不授予执行权。

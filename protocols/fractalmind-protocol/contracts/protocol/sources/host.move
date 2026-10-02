@@ -27,6 +27,7 @@ module fractalmind_protocol::host {
     const E_VERSION: u64 = 9208;
     const E_EXECUTION_COVERAGE: u64 = 9209;
     const E_UNSETTLED_EXECUTION: u64 = 9210;
+    const E_HANDOVER_REQUIRED: u64 = 9211;
     const DAY: u64 = 86400000;
     const MAX_INVITE_TTL: u64 = DAY;
     const MAX_MEMBER_TTL: u64 = 90 * DAY;
@@ -247,6 +248,7 @@ module fractalmind_protocol::host {
     ): ID {
         identity::assert_can(human, grant, org, identity::manage_hosts_action(), clock, ctx);
         assert_member(org, member, binding, clock);
+        assert!(!control_confirmed, E_HANDOVER_REQUIRED);
         assert!(string::length(&instance_id) > 0 && string::length(&instance_id) <= 128 && vector::length(&workspace_hash) == 32, E_INPUT);
         assert!(runtime == string::utf8(b"tmux-observe") || runtime == string::utf8(b"bounded-process-v1"), E_INPUT);
         if (control_confirmed) assert!(runtime == string::utf8(b"bounded-process-v1"), E_INPUT);
@@ -287,6 +289,25 @@ module fractalmind_protocol::host {
     /// and invalidates all previously issued capabilities. Repeated discovery
     /// alone must never silently restore a revoked instance or change its scope.
     public fun rebind_agent(
+        org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, record: &mut ManagedAgent,
+        runtime: String, workspace_hash: vector<u8>, control_confirmed: bool,
+        clock: &Clock, ctx: &mut TxContext,
+    ) {
+        // Retain the published ABI, but new control requires the Host proof.
+        assert_agent_execution_idle(org, object::id(record));
+        assert!(!control_confirmed, E_HANDOVER_REQUIRED);
+        rebind_agent_impl(org, human, grant, member, binding, record, runtime, workspace_hash, false, clock, ctx);
+    }
+    public(package) fun confirm_reviewed_control(
+        org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, record: &mut ManagedAgent,
+        expected_version: u64, workspace_hash: vector<u8>, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        assert!(record.version == expected_version, E_VERSION);
+        rebind_agent_impl(org, human, grant, member, binding, record, string::utf8(b"bounded-process-v1"), workspace_hash, true, clock, ctx);
+    }
+    fun rebind_agent_impl(
         org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
         member: &HostMembership, binding: &CoordinatorBinding, record: &mut ManagedAgent,
         runtime: String, workspace_hash: vector<u8>, control_confirmed: bool,
@@ -424,6 +445,8 @@ module fractalmind_protocol::host {
     }
     public fun membership_host_address(member: &HostMembership): address { member.host_address }
     public fun membership_version(member: &HostMembership): u64 { member.version }
+    public(package) fun membership_public_key(member: &HostMembership): vector<u8> { member.host_public_key }
+    public fun managed_runtime(managed: &ManagedAgent): String { managed.runtime }
     public fun observation_capability(member: &HostMembership): ID { member.observation_capability }
     public fun managed_instance(managed: &ManagedAgent): String { managed.instance_id }
     public fun managed_version(managed: &ManagedAgent): u64 { managed.version }
@@ -435,6 +458,11 @@ module fractalmind_protocol::host {
         assert!(has_agent_execution_coverage(org, managed_id), E_EXECUTION_COVERAGE);
         let ledger: &AgentExecutionIndex = df::borrow(organization::borrow_uid(org), AgentExecutionIndexKey { managed_agent: managed_id });
         assert!(ledger.unsettled_control == 0, E_UNSETTLED_EXECUTION);
+    }
+    public fun agent_execution_revision(org: &Organization, managed_id: ID): u64 {
+        assert!(has_agent_execution_coverage(org, managed_id), E_EXECUTION_COVERAGE);
+        let ledger: &AgentExecutionIndex = df::borrow(organization::borrow_uid(org), AgentExecutionIndexKey { managed_agent: managed_id });
+        ledger.revision
     }
     public fun unsettled_agent_controls(org: &Organization, managed_id: ID): u64 {
         assert!(has_agent_execution_coverage(org, managed_id), E_EXECUTION_COVERAGE);

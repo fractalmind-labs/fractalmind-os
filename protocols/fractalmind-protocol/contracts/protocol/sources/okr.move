@@ -28,6 +28,7 @@ module fractalmind_protocol::okr {
     const E_EVIDENCE: u64 = 9407;
     const E_STALE: u64 = 9408;
     const E_BUDGET: u64 = 9409;
+    const E_HANDOVER_REQUIRED: u64 = 9410;
     const DRAFT: u8 = 0;
     const ACTIVE: u8 = 1;
     const PAUSED: u8 = 2;
@@ -66,6 +67,22 @@ module fractalmind_protocol::okr {
         budget_asset: String, budget_limit: u64, expires_at_ms: u64,
         activated_at_ms: u64, agreement_record: Option<ID>,
         acceptance_record: Option<ID>, accepted_by_human: Option<ID>, accepted_at_ms: u64,
+    }
+    public struct HandoverPolicyKey has copy, drop, store {}
+    public struct HandoverPolicy has copy, drop, store {
+        agreement_version: u64, managed_version: u64, max_calls: u64,
+        nonce: vector<u8>, proposal_hash: vector<u8>, approval_id: ID,
+    }
+    public(package) fun record_handover_policy(okr: &mut Okr, max_calls: u64, nonce: vector<u8>, proposal_hash: vector<u8>, approval_id: ID) {
+        assert!(okr.state == ACTIVE && max_calls > 0 && max_calls <= 1000 && max_calls <= okr.budget_limit
+            && vector::length(&nonce) == 32 && vector::length(&proposal_hash) == 32, E_INPUT);
+        if (df::exists_(&okr.id, HandoverPolicyKey {})) {
+            let _: HandoverPolicy = df::remove(&mut okr.id, HandoverPolicyKey {});
+        };
+        df::add(&mut okr.id, HandoverPolicyKey {}, HandoverPolicy {
+            agreement_version: okr.agreement_version, managed_version: okr.managed_version,
+            max_calls, nonce, proposal_hash, approval_id,
+        });
     }
     public struct Changed has copy, drop {
         org_id: ID, okr_id: ID, state: u8, version: u64, agreement_version: u64, next_kr: u64,
@@ -140,7 +157,17 @@ module fractalmind_protocol::okr {
 
     /// Activation/resumption binds exactly one live, explicitly controllable
     /// instance. A new agreement version invalidates prior runtime approvals.
+    #[allow(unused_variable)]
     public fun activate(
+        okr: &mut Okr, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent,
+        expected_version: u64, workspace_hash: vector<u8>, boundary_hash: vector<u8>,
+        budget_asset: String, budget_limit: u64, expires_at_ms: u64,
+        expected_record_revision: u64, key_version: u64, encrypted_agreement: vector<u8>, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        abort E_HANDOVER_REQUIRED
+    }
+    public(package) fun activate_reviewed(
         okr: &mut Okr, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
         member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent,
         expected_version: u64, workspace_hash: vector<u8>, boundary_hash: vector<u8>,
@@ -199,8 +226,11 @@ module fractalmind_protocol::okr {
         identity::assert_can(human, grant, org, identity::approve_action(), clock, ctx);
         assert_version(okr, org, expected_version);
         assert!(okr.state == ACTIVE && okr.next_kr < vector::length(&okr.metrics), E_STATE);
+        assert!(df::exists_(&okr.id, HandoverPolicyKey {}), E_HANDOVER_REQUIRED);
+        let policy: &HandoverPolicy = df::borrow(&okr.id, HandoverPolicyKey {});
+        assert!(policy.agreement_version == okr.agreement_version && policy.managed_version == okr.managed_version, E_TARGET);
         let mut cap = host::new_agent_capability(org, human, grant, member, binding, managed,
-            vector[string::utf8(b"assign")], string::utf8(b"control"), max_uses, okr.budget_asset, okr.budget_limit, okr.expires_at_ms, clock, ctx);
+            vector[string::utf8(b"assign")], string::utf8(b"control"), max_uses, okr.budget_asset, policy.max_calls, okr.expires_at_ms, clock, ctx);
         ra::bind_execution_contract(&mut cap, object::id(okr), okr.agreement_version, okr.boundary_hash);
         let _ = assignment_witness(okr, org, member, binding, managed, &cap, okr.next_kr, clock);
         ra::share_capability(cap);
@@ -420,6 +450,9 @@ module fractalmind_protocol::okr {
         };
         okr.state = ARCHIVED; okr.agreement_version = okr.agreement_version + 1; changed(okr);
     }
+    public fun organization_id(okr: &Okr): ID { okr.org_id }
+    public fun spec_revision(okr: &Okr): u64 { okr.spec_revision }
+    public fun deadline_ms(okr: &Okr): u64 { okr.deadline_ms }
     public fun state(okr: &Okr): u8 { okr.state }
     public fun version(okr: &Okr): u64 { okr.version }
     public fun agreement_version(okr: &Okr): u64 { okr.agreement_version }

@@ -173,3 +173,52 @@ test("canonical handover fields reject unsafe numbers, aliases and malformed ide
     assert.throws(() => handoverAcceptanceSigningBytes(a));
   }
 });
+
+test("approval builder binds only signed constraints and does not sign or dispatch", async () => {
+  const { FractalMindSDK } = await import("../src/index.js");
+  const { SuiGrpcClient } = await import("@mysten/sui/grpc");
+  const { bcs } = await import("@mysten/sui/bcs");
+  const { fromBase64 } = await import("@mysten/sui/utils");
+  const sdk = new FractalMindSDK({
+    packageId: "0x42",
+    client: new SuiGrpcClient({
+      network: "localnet",
+      baseUrl: "http://127.0.0.1:1",
+    }),
+  });
+  const input = {
+    acceptance: structuredClone(vector.acceptance),
+    capabilityId: `0x${"3".repeat(64)}`,
+    expectedRecordRevision: 0n,
+    keyVersion: 1n,
+    encryptedAgreement: new Uint8Array(32).fill(7),
+  };
+  const tx = await sdk.handover.confirmOkr(input),
+    data = tx.getData(),
+    call = data.commands[0].MoveCall!;
+  assert.equal(call.module, "handover");
+  assert.equal(call.function, "confirm_okr");
+  assert.equal(call.arguments.length, 27);
+  const pure = (at: number) => {
+    const arg = call.arguments[at];
+    assert.equal(arg.$kind, "Input");
+    return fromBase64(
+      data.inputs[(arg as { Input: number }).Input].Pure!.bytes,
+    );
+  };
+  assert.equal(
+    bcs.u64().parse(pure(9)),
+    input.acceptance.proposal.managed_version,
+  );
+  assert.equal(bcs.u64().parse(pure(16)), input.acceptance.proposal.max_calls);
+  assert.equal(
+    bytesToHex(Uint8Array.from(bcs.vector(bcs.u8()).parse(pure(19)))),
+    input.acceptance.proposal.nonce,
+  );
+  assert.equal(
+    bytesToHex(Uint8Array.from(bcs.vector(bcs.u8()).parse(pure(22)))),
+    input.acceptance.signature.split(":")[2],
+  );
+  input.acceptance.proposal.max_calls = "4";
+  await assert.rejects(sdk.handover.confirmOkr(input), /signature/);
+});

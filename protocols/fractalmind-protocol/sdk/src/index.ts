@@ -1,3 +1,4 @@
+import { HandoverApi } from './handover.js';
 import { AgentApi } from './agent.js';
 import { IdentityApi } from './identity.js';
 import { HostApi } from './host.js';
@@ -23,6 +24,7 @@ export class FractalMindSDK {
   public readonly agent: AgentApi;
   public readonly identity: IdentityApi;
   public readonly host: HostApi;
+  public readonly handover: HandoverApi;
   public readonly productRecord: ProductRecordApi;
   public readonly agentPolicy: AgentPolicyApi;
   public readonly task: TaskApi;
@@ -39,6 +41,7 @@ export class FractalMindSDK {
     this.agent = new AgentApi(this.client);
     this.identity = new IdentityApi(this.client);
     this.host = new HostApi(this.client);
+    this.handover = new HandoverApi(this.client);
     this.productRecord = new ProductRecordApi(this.client);
     this.agentPolicy = new AgentPolicyApi(this.client);
     this.task = new TaskApi(this.client);
@@ -161,3 +164,5 @@ export type { SelfPayOkrSubmitterOptions } from './selfpay-okr-submit.js';
 
 export { handoverProposalHash, handoverAcceptanceSigningBytes, verifyHandoverAcceptanceSignature, assertFreshHandoverAcceptance } from './handover.js';
 export type { HandoverProposal, HandoverAcceptance } from './handover.js';
+
+export { HandoverApi, HandoverApprovalBcs, HandoverPolicyBcs } from './handover.js';

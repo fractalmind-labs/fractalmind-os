@@ -348,6 +348,19 @@ module fractalmind_protocol::node_execution {
         };
         string::utf8(bytes)
     }
+    public(package) fun assert_handover_review(
+        run: &CommandExecution, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, managed: &ManagedAgent, cap: &RemoteCapability, observed_at_ms: u64,
+    ) {
+        assert!(run.state == SUCCEEDED && !run.stop_requested && option::is_some(&run.result_record), E_STATE);
+        assert!(run.org_id == object::id(org) && run.human_id == object::id(human) && run.grant_id == object::id(grant)
+            && run.grant_version == identity::grant_version(grant) && run.delegate == identity::device_address(grant)
+            && run.membership_id == object::id(member) && run.host_address == host::membership_host_address(member)
+            && run.managed_agent == option::some(object::id(managed)) && run.agent_id == host::managed_instance(managed)
+            && run.capability_id == object::id(cap) && run.capability_version == ra::revocation_version(cap), E_TARGET);
+        assert!(run.action == string::utf8(b"status") && run.scope == string::utf8(b"observation") && run.budget_amount == 0
+            && observed_at_ms >= run.issued_at_ms && observed_at_ms < run.expires_at_ms, E_INPUT);
+    }
     public fun state(run: &CommandExecution): u8 { run.state }
     public fun cursor(run: &CommandExecution): u64 { run.cursor }
     /// Typed checkpoint facts for product evidence. These getters grant no

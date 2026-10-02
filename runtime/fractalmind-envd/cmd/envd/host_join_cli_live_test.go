@@ -171,7 +171,7 @@ func TestHostJoinLiveCLI(t *testing.T) {
 		}
 		liveConfig = &config.Config{SUI: config.SUIConfig{Network: "localnet", ProtocolRegistryID: input.RegistryID, ProtocolPackageID: input.PackageID, ChainIdentifier: input.ChainIdentifier, OrgID: input.OrganizationID}, Coordinator: config.CoordinatorConfig{BindingID: result.Membership.BindingID}}
 		commandTimeout := time.Second
-		if os.Getenv("FM_ENVD_DEVICE_COMMAND") == "1" {
+		if os.Getenv("FM_ENVD_DEVICE_COMMAND") == "1" || os.Getenv("FM_ENVD_HANDOVER_APPROVAL") == "1" {
 			commandTimeout = 30 * time.Second
 		}
 		liveServer = coordinator.NewServer("", commandTimeout, "")
@@ -206,7 +206,7 @@ func TestHostJoinLiveCLI(t *testing.T) {
 				t.Fatal(e)
 			}
 			nativeAdapter = runtimeadapter.NewExecutor(nil, adapter)
-			if os.Getenv("FM_ENVD_NATIVE_EXECUTION") == "1" {
+			if os.Getenv("FM_ENVD_NATIVE_EXECUTION") == "1" || os.Getenv("FM_ENVD_HANDOVER_APPROVAL") == "1" {
 				nativeConfig = chainRuntimeConfig()
 				nativeConfig.SUI.Network = "localnet"
 				nativeConfig.SUI.ProtocolPackageID = input.PackageID
@@ -274,7 +274,7 @@ func TestHostJoinLiveCLI(t *testing.T) {
 			default:
 			}
 		})
-		if os.Getenv("FM_ENVD_DEVICE_COMMAND") == "1" {
+		if os.Getenv("FM_ENVD_DEVICE_COMMAND") == "1" || os.Getenv("FM_ENVD_HANDOVER_APPROVAL") == "1" {
 			if nativeRuntime == nil {
 				t.Fatal("device commands require the production native executor")
 			}

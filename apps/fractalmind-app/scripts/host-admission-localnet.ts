@@ -11,6 +11,7 @@ import { fromBase64, toBase64 } from "@mysten/sui/utils";
 import { Transaction } from "@mysten/sui/transactions";
 import { requestSuiFromFaucetV2 } from "@mysten/sui/faucet";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
+import { SimulationError } from "@mysten/sui/client";
 import {
   FractalMindSDK,
   MemoryTransactionJournal,
@@ -910,6 +911,378 @@ if (earlyHarness && earlyPublic) {
         )?.id,
         imported.id,
       );
+      if (process.env.FM_ENVD_HANDOVER_APPROVAL === "1") {
+        assert.notEqual(
+          process.env.FM_ENVD_NATIVE_EXECUTION,
+          "1",
+          "Approval fixture cannot use raw control setup",
+        );
+        assert.ok(nativeDiscovery && liveReads && earlyPublic);
+        const authority = {
+          organizationId,
+          humanId,
+          grantId,
+          membershipId,
+          bindingId,
+          managedAgentId: imported.id,
+        };
+        const logicalId = randomUUID(),
+          paths = { "file.read": ["."], "file.write": ["."] };
+        const spec = await encryptContent(
+          new TextEncoder().encode(
+            JSON.stringify({
+              format: 1,
+              objective:
+                "Approve a bounded file goal from exact Host acceptance",
+              successCriteria: ["accepted tool constraints"],
+            }),
+          ),
+          fixtureContentKey,
+          recordContext(organizationId, "okr", `okr-${logicalId}-spec`, 1n, 1n),
+        );
+        const okrId = created(
+          await execute(
+            "Host proof: create measurable draft",
+            sdk.okr.createDraft({
+              organizationId,
+              humanId,
+              grantId,
+              logicalId,
+              priority: 0,
+              deadlineMs: Date.now() + 300000,
+              baselines: [0n],
+              targets: [1n],
+              weights: [1n],
+              maxAgesMs: [60000n],
+              keyVersion: 1n,
+              encryptedBody: spec,
+            }),
+          ),
+          "okr::Okr",
+        );
+        const capId = created(
+          await execute(
+            "Host proof: issue observation capability",
+            sdk.host.issueCapability({
+              ...authority,
+              actions: ["status"],
+              scope: "observation",
+              maxUses: 1n,
+              expiresAtMs: Date.now() + 180000,
+            }),
+          ),
+          "remote_authority::RemoteCapability",
+        );
+        const managed = await sdk.host.getManagedAgent(imported.id);
+        assert.equal(managed.control_confirmed, false);
+        const proposal: HandoverProposal = {
+          version: "1",
+          managed_agent_id: imported.id,
+          managed_version: managed.version,
+          okr_id: okrId,
+          okr_version: "1",
+          spec_revision: "1",
+          workspace_hash: bytesToHex(Uint8Array.from(managed.workspace_hash)),
+          paths,
+          budget_asset: "TOOL_CALLS",
+          budget_limit: "10",
+          max_calls: "3",
+          expires_at_ms: Date.now() + 120000,
+          review_expires_at_ms: Date.now() + 55000,
+          nonce:
+            randomUUID().replaceAll("-", "") + randomUUID().replaceAll("-", ""),
+        };
+        const command = await signNodeCommand(device, {
+          target: {
+            organizationId,
+            nodeId: earlyPublic.host_address,
+            agentId: selected.instanceId,
+          },
+          action: "status",
+          scope: "observation",
+          capability: { id: capId, revocationVersion: 1n },
+          payload: { handover_review: proposal },
+          expiresAtMs: Date.now() + 120000,
+        });
+        const executionId = created(
+          await execute(
+            "Host proof: prepare review and encrypted result recipient",
+            await sdk.nodeExecution.prepareCommand({
+              ...authority,
+              command,
+              resultKey: { organizationKey: fixtureContentKey, keyVersion: 1n },
+            }),
+          ),
+          "node_execution::CommandExecution",
+        );
+        nativeExecution = {
+          phase: "approval_review_prepared",
+          executionId,
+          okrId,
+          managedId: imported.id,
+          safeAppHandoverVerified: false,
+        };
+        await save();
+        const response = (await (
+          await liveReads.prepareCommand(bindingId, command)
+        ).send()) as any;
+        assert.equal(response.success, true);
+        assert.equal(response.response.ok, true);
+        const acceptance = response.response
+          .handover_review as HandoverAcceptance;
+        await verifyHandoverAcceptanceSignature(
+          acceptance,
+          earlyPublic.host_address,
+        );
+        const reviewRun = await sdk.nodeExecution.getExecution(executionId);
+        assert.equal(reviewRun.state, 2);
+        assert.ok(reviewRun.result_record);
+        const decrypted = await sdk.productRecord.decryptRecord(
+          reviewRun.result_record,
+          fixtureContentKey,
+        );
+        assert.deepEqual(
+          JSON.parse(new TextDecoder().decode(decrypted.plaintext)).response
+            .handover_review,
+          acceptance,
+        );
+        decrypted.plaintext.fill(0);
+        nativeExecution = {
+          ...(nativeExecution as Record<string, unknown>),
+          phase: "host_review_confirmed",
+          acceptance,
+          originalReviewDigest: response.response.transaction_digest,
+        };
+        await save();
+        const agreement = await encryptContent(
+          new TextEncoder().encode(
+            JSON.stringify({
+              format: 1,
+              hostAcceptance: acceptance,
+              nativeFilePlan: {
+                format: 1,
+                paths,
+                krs: [
+                  {
+                    maxCalls: "3",
+                    files: [
+                      {
+                        path: "APPROVED.md",
+                        content: "Requires explicit continuation",
+                      },
+                    ],
+                  },
+                ],
+              },
+            }),
+          ),
+          fixtureContentKey,
+          recordContext(
+            organizationId,
+            "contract",
+            `okr-${logicalId}-agreement`,
+            1n,
+            1n,
+          ),
+        );
+        const confirm = await sdk.handover.confirmOkr({
+          acceptance,
+          capabilityId: capId,
+          expectedRecordRevision: 0n,
+          keyVersion: 1n,
+          encryptedAgreement: agreement,
+        });
+        const rejected: Array<{ label: string; error: string }> = [];
+        const reject = async (
+          label: string,
+          transaction: Transaction,
+          code: number,
+          abortLocation?: string,
+        ) => {
+          const target = transaction.getData().commands[0].MoveCall!;
+          const [abortModule, abortFunction] = (
+            abortLocation ?? `${target.module}::${target.function}`
+          ).split("::");
+          transaction.setSender(deviceKey.toSuiAddress());
+          // Both gRPC resolution and explicit simulation can report a validator
+          // MoveAbort. Only the precise typed abort for this call is evidence;
+          // RPC, parsing or gas-selection failures must still fail this fixture.
+          transaction.setGasBudget(100000000n);
+          let executionError: any;
+          try {
+            const result = await coreClient.core.simulateTransaction({
+              transaction: await transaction.build({ client: coreClient }),
+              include: { effects: true },
+            });
+            const value =
+              result.$kind === "Transaction"
+                ? result.Transaction
+                : result.FailedTransaction;
+            assert.equal(value.status.success, false);
+            executionError = value.status.error;
+          } catch (error) {
+            if (!(error instanceof SimulationError) || !error.executionError)
+              throw error;
+            executionError = error.executionError;
+          }
+          assert.equal(executionError.$kind, "MoveAbort");
+          assert.equal(executionError.MoveAbort.abortCode, String(code));
+          assert.equal(
+            executionError.MoveAbort.location.package,
+            target.package,
+          );
+          assert.equal(executionError.MoveAbort.location.module, abortModule);
+          assert.equal(
+            executionError.MoveAbort.location.functionName,
+            abortFunction,
+          );
+          rejected.push({ label, error: JSON.stringify(executionError) });
+          nativeExecution = {
+            ...(nativeExecution as Record<string, unknown>),
+            negativePreflights: rejected,
+          };
+          await save();
+        };
+        // Preserve unresolved original inputs before fee preparation resolves them.
+        const confirmData = confirm.getData();
+        const changedArgument = (
+          arg: number,
+          value: (tx: Transaction) => any,
+        ) => {
+          const data = confirmData,
+            call = data.commands[0].MoveCall!;
+          const tx = new Transaction();
+          tx.moveCall({
+            target: `${call.package}::${call.module}::${call.function}`,
+            arguments: call.arguments.map((input, i) => {
+              if (i === arg) return value(tx);
+              if (input.$kind !== "Input")
+                throw new Error("Expected direct fixture input");
+              const original = data.inputs[input.Input];
+              if (original.Pure)
+                return tx.pure(fromBase64(original.Pure.bytes));
+              if (original.UnresolvedObject)
+                return tx.object(original.UnresolvedObject.objectId);
+              throw new Error("Expected raw fixture inputs");
+            }),
+          });
+          return tx;
+        };
+        await reject(
+          "wrong coverage cannot approve",
+          changedArgument(20, (tx) =>
+            tx.pure.u64(BigInt(acceptance.coverage_revision) + 1n),
+          ),
+          9503,
+        );
+        const corruptSignature = Uint8Array.from(
+          Buffer.from(acceptance.signature.split(":")[2], "hex"),
+        );
+        corruptSignature[0] ^= 1;
+        await reject(
+          "wrong Host signature cannot approve",
+          changedArgument(22, (tx) => tx.pure.vector("u8", corruptSignature)),
+          9504,
+        );
+        await reject(
+          "raw control flag cannot bypass",
+          sdk.host.rebindAgent({
+            ...authority,
+            expectedVersion: BigInt(managed.version),
+            runtime: "bounded-process-v1",
+            workspaceHash: Uint8Array.from(managed.workspace_hash),
+            controlConfirmed: true,
+          }),
+          9211,
+          "host::rebind_agent",
+        );
+        await reject(
+          "legacy activation cannot bypass",
+          sdk.okr.activate({
+            ...authority,
+            okrId,
+            expectedVersion: 1n,
+            workspaceHash: Uint8Array.from(managed.workspace_hash),
+            boundaryHash: executionBoundaryHash(paths),
+            budgetAsset: "TOOL_CALLS",
+            budgetLimit: 10n,
+            expiresAtMs: proposal.expires_at_ms,
+            expectedRecordRevision: 0n,
+            keyVersion: 1n,
+            encryptedBody: agreement,
+          }),
+          9410,
+        );
+        const approved = await execute(
+          "Host proof: consume constraints and activate atomically",
+          confirm,
+        );
+        const approvalId = created(approved, "handover::Approval");
+        nativeExecution = {
+          ...(nativeExecution as Record<string, unknown>),
+          phase: "approval_transaction_confirmed",
+          approvalId,
+          approvalDigest: approved.digest,
+        };
+        await save();
+        const policy = await sdk.handover.getPolicy(okrId),
+          receipt = await sdk.handover.getApproval(approvalId);
+        assert.equal(policy.approval_id, approvalId);
+        assert.equal(policy.max_calls, "3");
+        assert.equal(policy.managed_version, "2");
+        assert.equal(policy.agreement_version, "1");
+        assert.equal(receipt.review_execution_id, executionId);
+        assert.equal(receipt.review_result_id, reviewRun.result_record);
+        assert.equal(
+          (await sdk.host.getManagedAgent(imported.id)).control_confirmed,
+          true,
+        );
+        assert.equal((await sdk.okr.getOkr(okrId)).state, 1);
+        await reject(
+          "same proof cannot be consumed twice",
+          changedArgument(-1, (tx) => tx.pure.u8(0)),
+          9203,
+          "host::assert_agent_authority",
+        );
+        const boundedCap = created(
+          await execute(
+            "Host proof: issue reviewed tool ceiling",
+            sdk.okr.issueCapability({
+              ...authority,
+              okrId,
+              expectedVersion: 2n,
+              maxUses: 1n,
+            }),
+          ),
+          "remote_authority::RemoteCapability",
+        );
+        assert.equal(
+          (await sdk.remoteAuthority.getCapability(boundedCap)).maxBudget,
+          3n,
+        );
+        nativeExecution = {
+          ...(nativeExecution as Record<string, unknown>),
+          phase: "approval_confirmed",
+          approvalId,
+          approvalDigest: approved.digest,
+          boundedCapabilityId: boundedCap,
+          reviewedMaxCalls: 3,
+          totalBudget: 10,
+          negativePreflights: rejected,
+          approvalPolicyVerified: true,
+          hostProofPersisted: true,
+          explicitContinueVerified: false,
+          actualToolsDispatched: false,
+          safeAppHandoverVerified: false,
+        };
+        checks.push(
+          "Actual chain consumes Host proof atomically, preserves original evidence, activates Draft and advances ManagedAgent once without tool dispatch",
+        );
+        checks.push(
+          "Validator preflights reject wrong coverage/signature, raw control, legacy activation and proof replay; capability ceiling 3 retains total OKR budget 10",
+        );
+        await save();
+      }
       if (process.env.FM_ENVD_NATIVE_EXECUTION === "1") {
         assert.ok(nativeDiscovery);
         const authority = {
