@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -40,6 +41,8 @@ type HostJoinQuote struct {
 	GasPrice        uint64 `json:"gas_price_mist"`
 	EstimatedNetFee string `json:"estimated_net_fee_mist"`
 	gas             []joinGas
+	intent          *joinIntent
+	broadcast       *atomic.Bool
 }
 type joinGas struct {
 	id, digest string
@@ -199,6 +202,8 @@ func (c *GRPCClient) PrepareHostJoin(ctx context.Context, req HostJoinRequest) (
 	if err != nil {
 		return HostJoinQuote{}, err
 	}
+	quote.intent = &i
+	quote.broadcast = &atomic.Bool{}
 	return quote, nil
 }
 

@@ -290,6 +290,7 @@ async function invite(label: string) {
 }
 const first = await invite("App creates one-use invitation");
 let envdQuote: unknown;
+let envdCli: unknown;
 if (process.env.FM_ENVD_JOIN_QUOTE_BIN) {
   const helper = spawn(
     process.env.FM_ENVD_JOIN_QUOTE_BIN,
@@ -345,18 +346,132 @@ if (process.env.FM_ENVD_JOIN_QUOTE_BIN) {
 checks.push(
   "code is released only after exact receipt objects are visible and match invitation proof material",
 );
-const redemption = await sdk.host.prepareJoin({
-  code: first.code,
-  network: "localnet",
-  hostPublicKey: host.getPublicKey().toRawBytes(),
-  encryptionPublicKey: hostEncryption.publicKey,
-  name: "fixture Host (not deployed envd)",
-});
-const joined = await execute(
-  "SDK fixture Host redeems App invitation",
-  redemption.transaction,
-  host,
-);
+let joined: SelfPayTransactionOutcome;
+if (process.env.FM_ENVD_JOIN_CLI_BIN) {
+  const helper = spawn(
+    process.env.FM_ENVD_JOIN_CLI_BIN,
+    ["-test.run=^TestHostJoinLiveCLI$", "-test.v"],
+    {
+      env: { ...process.env, FM_HOST_JOIN_LIVE_CLI: "1" },
+      stdio: ["pipe", "pipe", "pipe"],
+    },
+  );
+  let output = "",
+    diagnostic = "",
+    helloDelivered = false;
+  let resolvePublic!: (value: { host_address: string }) => void;
+  let rejectPublic!: (error: Error) => void;
+  const publicReady = new Promise<{ host_address: string }>(
+    (resolve, reject) => {
+      resolvePublic = resolve;
+      rejectPublic = reject;
+    },
+  );
+  helper.stdout.on("data", (part) => {
+    output += String(part);
+    const lines = output.split("\n");
+    const hello = lines
+      .slice(0, -1)
+      .find((line) => line.startsWith("FM_ENVD_HOST_PUBLIC "));
+    if (hello && !helloDelivered) {
+      helloDelivered = true;
+      resolvePublic(JSON.parse(hello.slice("FM_ENVD_HOST_PUBLIC ".length)));
+    }
+  });
+  helper.stderr.on("data", (part) => {
+    diagnostic += String(part);
+  });
+  const done = new Promise<void>((resolve, reject) => {
+    helper.once("error", (error) => {
+      rejectPublic(error);
+      reject(error);
+    });
+    helper.once("exit", (code) => {
+      if (code === 0) resolve();
+      else {
+        const error = new Error(
+          `envd CLI fixture failed (${code}): ${output} ${diagnostic}`,
+        );
+        rejectPublic(error);
+        reject(error);
+      }
+    });
+  });
+  // Observe termination while waiting for the public Host, avoiding an
+  // unhandled rejection if the helper fails before it can read any credential.
+  const completed = done.then(() => ({ complete: true as const }));
+  helper.stdin.write(
+    JSON.stringify({
+      PackageID: deployment.packageId,
+      RegistryID: deployment.registryId,
+      OrganizationID: organizationId,
+      ChainIdentifier: deployment.chain.chainIdentifier,
+      JournalRoot: `${process.argv[3]}.journal`,
+    }) + "\n",
+  );
+  const ready = await Promise.race([publicReady, completed]);
+  assert.ok(
+    "host_address" in ready,
+    "envd exited before publishing its generated fixture address",
+  );
+  await requestSuiFromFaucetV2({ host: faucet, recipient: ready.host_address });
+  helper.stdin.end(`${first.code}\nJOIN ${organizationId}\n`);
+  await done;
+  const line = output
+    .split("\n")
+    .find((line) => line.startsWith("FM_HOST_JOIN_CLI_RESULT "));
+  assert.ok(line, "envd CLI produced no original-transaction recovery result");
+  const recovered = JSON.parse(line.slice("FM_HOST_JOIN_CLI_RESULT ".length));
+  assert.equal(recovered.broadcasts, 1);
+  assert.equal(recovered.result.state, "confirmed");
+  assert.equal(recovered.result.membership.current_membership, true);
+  envdCli = {
+    ...recovered,
+    hostAddress: ready.host_address,
+    journalRoot: `${process.argv[3]}.journal`,
+  };
+  const lookup = await coreClient.core.getTransaction({
+    digest: recovered.result.digest,
+    include: {
+      effects: true,
+      objectTypes: true,
+      events: true,
+      balanceChanges: true,
+      transaction: true,
+    },
+  });
+  assert.equal(lookup.$kind, "Transaction");
+  assert.equal(lookup.Transaction.status.success, true);
+  joined = {
+    status: "confirmed",
+    digest: recovered.result.digest,
+    requestId: "go-envd-cli-fixture",
+    actualGas: recovered.result.actual_fee_mist,
+    journalSynced: true,
+    transaction: lookup.Transaction,
+  };
+  await record(
+    "Go envd CLI redeems App invitation; injected response loss recovered by original query",
+    joined,
+  );
+  await visible(joined);
+  checks.push(
+    "production CLI pipeline confirms organization and fees, signs once with generated Go Host keys, persists original digest, recovers lost receipt and supports public query without keys; OS/TTY/cloud not verified",
+  );
+} else {
+  const redemption = await sdk.host.prepareJoin({
+    code: first.code,
+    network: "localnet",
+    hostPublicKey: host.getPublicKey().toRawBytes(),
+    encryptionPublicKey: hostEncryption.publicKey,
+    name: "fixture Host (not deployed envd)",
+  });
+  joined = await execute(
+    "SDK fixture Host redeems App invitation",
+    redemption.transaction,
+    host,
+  );
+}
 const membershipId = created(joined, "host::HostMembership");
 const rebuilt = await controller.directory();
 assert.equal(
@@ -469,13 +584,20 @@ const report = {
   checks,
   transactions,
   envdQuote,
+  envdCli,
   limits: {
     generatedFixtureKeysOnly: true,
     injectedNativeTransport: true,
     memoryTechnicalJournal: true,
+    appTechnicalJournal: "injected memory journal",
+    envdTechnicalJournal: envdCli ? "real disk journal" : "not exercised",
+    envdRecovery: envdCli
+      ? "new runner in the same test process"
+      : "not exercised",
     installedAppVerified: false,
     nativeStoreVerified: false,
     envdJoinCliVerified: false,
+    envdJoinCliInjectedKeysVerified: !!envdCli,
     envdJoinQuoteVerified: !!envdQuote,
     cloudHostVerified: false,
     invitationSecretsIncluded: false,

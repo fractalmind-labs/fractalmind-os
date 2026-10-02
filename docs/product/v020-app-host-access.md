@@ -1,6 +1,6 @@
 # v0.2.0 App：组织 Host 邀请与管理
 
-界面来源：[原型 v2 的主机页](fractalmind-app-prototype-v2/js/view-hosts.js)。正式客户端的“主机与算力 → 接入主机”已连接实际 Sui 合约与自付交易控制器。Host 的邀请码兑换 CLI、安装后原生 UI 联合验收及实际本地／云端运行仍待完成。
+界面来源：[原型 v2 的主机页](fractalmind-app-prototype-v2/js/view-hosts.js)。正式客户端的“主机与算力 → 接入主机”已连接实际 Sui 合约与自付交易控制器。Host 兑换 CLI 已实现，生成的 Go Host 测试钥完成真实链兑换与丢失回执恢复；安装后原生钥／UI 联合验收及实际本地／云端运行仍待完成。
 
 ## 管理设备的操作
 
@@ -10,7 +10,7 @@
 4. 确认交易 effects 的输出版本已可读取后才显示邀请码。链上保留证明公钥，邀请码中的 256 位秘密只在当前窗口内存；不进入 localStorage、IndexedDB、报告、日志或 URL。关闭／刷新／重启后无法恢复。遗失未用码可撤销链上邀请，再明确创建新的。
 5. 已消费邀请无法用于撤销 Host；单独选择成员记录、核对并支付撤销交易。撤销拒绝新的受保护操作，不表示已结束在途工作。
 
-公开链连接只能读取目录。网页入口不会初始化私钥或获得管理授权。原生 Host 与管理设备是不同地址，Host 自己的兑换／结果交易也需要 Gas。接入指导给出实际 `envd --config sentinel.yaml --init-host` 命令；当前不提供不存在的兑换命令，也不把启动 envd 当成入组。
+公开链连接只能读取目录。网页入口不会初始化私钥或获得管理授权。原生 Host 与管理设备是不同地址，Host 自己的兑换／结果交易也需要 Gas。接入指导在生成码之前即可查看，提供公开配置及真实 `--init-host`、`--join-host`、`--host-join-status --host-address` 命令；配置中的 `protocol_registry_id` 与旧 peer discovery 的 `registry_id` 分开。启动 envd 不等于入组。
 
 ## 交易与来源约束
 
@@ -39,7 +39,15 @@ Go envd 已增加 `InspectHostJoin`、邀请码证明签署、`ReadHostAdmission
 - [Go 包测试](evidence/v020-envd-host-join-unit.json)：跨语言 HKDF／JoinIntent 签名、独立 Mysten SDK 交易字节与摘要、权限失效、来源篡改、成员重建，以及 Gas coin 的归属、类型和版本检查。
 - [App → Go envd → 真实本地链报价](evidence/v020-envd-host-join-quote-localnet.json)：9 项联合检查、10 笔 App／SDK 夹具交易；Go 接收当前窗口的邀请码，通过 stdin 传递，成功验证组织并模拟兑换报价，**没有广播 Go 兑换交易**。
 
-这些接口尚未接到生产 `--join-host` CLI。终端隐藏输入、明确费用确认、广播前持久化原摘要、未知回执恢复、OS 原生签名及实际本地／云端 Host 联合验收仍待完成；接入指导继续只提供已经实现的命令。
+上述报告记录的是仅报价阶段。后续已接到生产 `--join-host` CLI：隐藏输入、完整组织与费用确认、签名前后核验、原摘要磁盘持久化、单次广播和只读恢复均已实现。
+
+### envd CLI 兑换与原交易恢复增量
+
+- [真实链 CLI 报告](evidence/v020-envd-host-cli-localnet.json)：9 项检查、10 笔成功交易。App 创建的单次码经 stdin 交给独立 Go Host；实际兑换后测试丢弃回执，重建 runner 从真实磁盘 journal 查回同一交易，广播计数为 1，实际费用为 11450292 MIST。公开地址查询原交易无需私钥；随后 App 撤销成员，恢复报告中的有效资格是撤销前的快照。
+- [Go 测试](evidence/v020-envd-host-cli-unit.json)四包通过，覆盖原交易优先、互斥与持久化、未知结果阻止替代提交、签名／回执／费用及输入保护。[独立伪终端报告](evidence/v020-envd-host-cli-tty.json)确认隐藏读取关闭 echo，凭据未出现在捕获输出。
+- [指导浏览器报告](evidence/v020-app-host-cli-guide.json)覆盖未生成码时的指导、完整公开配置、中英文／明暗主题与公开连接权限保护；[截图](evidence/v020-app-host-cli-guide.png)展示中文白天指导上半部。
+
+链夹具只在测试二进制注入新生成的内存 Host 钥；正式入口仍只加载 OS NativeStore。该测试重建 runner，没有证明进程重启和原生钥恢复。App 的技术 journal 为内存夹具，Go journal 是真实磁盘文件，二者分别记录。Windows 断电持久性、安装后 CLI／NativeStore、实际本地／云 Host、Coordinator 在线、Agent 发现／导入及五平台继续验收。命令与恢复约束详见[envd 接入说明](v020-envd-host-join.md)。
 
 ## 复现
 

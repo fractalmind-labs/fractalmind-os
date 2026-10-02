@@ -21,6 +21,11 @@ type transportServer struct {
 	simulate func(*v2.SimulateTransactionRequest) (*v2.SimulateTransactionResponse, error)
 	execute  func(*v2.ExecuteTransactionRequest) (*v2.ExecuteTransactionResponse, error)
 	list     func(*v2.ListOwnedObjectsRequest) (*v2.ListOwnedObjectsResponse, error)
+	query    func(*v2.GetTransactionRequest) (*v2.GetTransactionResponse, error)
+}
+
+func (s *transportServer) GetTransaction(_ context.Context, r *v2.GetTransactionRequest) (*v2.GetTransactionResponse, error) {
+	return s.query(r)
 }
 
 func (s *transportServer) GetObject(context.Context, *v2.GetObjectRequest) (*v2.GetObjectResponse, error) {

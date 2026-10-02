@@ -74,11 +74,15 @@ desktop:
 # SUI blockchain control plane (peer discovery, identity, ACL)
 sui:
   enabled: false
+  network: testnet
+  chain_identifier: ""              # full genesis digest; pin to the App's current chain
+  host_join_gas_budget: 200000000    # maximum self-paid Host admission Gas, in MIST
   rpc: https://fullnode.testnet.sui.io:443 # gRPC (the fullnode host is unchanged)
   graphql_url: https://graphql.testnet.sui.io/graphql # indexed event history
   keypair_path: ~/.sui/envd.key       # legacy roles only; chain runtime uses identity.key_profile
   package_id: "0x..."                 # fractalmind_envd package on SUI
   protocol_package_id: "0x..."       # fractalmind_protocol package (for auto agent cert discovery)
+  protocol_registry_id: "0x..."      # ProtocolRegistry for Host invitations; not the PeerRegistry below
   protocol_original_package_id: ""  # original type package after upgrade; empty uses protocol_package_id
   registry_id: "0x..."                # PeerRegistry shared object ID
   org_id: "0x..."                     # Organization object ID

@@ -788,7 +788,19 @@ export default function HostAccess({
                   )}
                 </p>
               )}
+            </section>
+          )}
+          {directory && (
+            <section className="panel">
+              <h3>{t("Host 接入指导", "Host admission guide")}</h3>
               <ol>
+                <li>
+                  {t(
+                    "将以下公开连接项合并进新主机的 sentinel.yaml。这里不包含邀请码或私钥。",
+                    "Merge these public connection fields into sentinel.yaml on the new Host. They contain no invitation or private key.",
+                  )}
+                  <pre>{`sui:\n  network: ${JSON.stringify(profile.network)}\n  rpc: ${JSON.stringify(profile.rpcUrl)}\n  chain_identifier: ${JSON.stringify(directory?.chainIdentifier ?? profile.chainIdentifier ?? "")}\n  protocol_package_id: ${JSON.stringify(profile.packageId)}\n  protocol_original_package_id: ${JSON.stringify(profile.originalPackageId ?? profile.packageId)}\n  protocol_registry_id: ${JSON.stringify(profile.registryId)}\n  org_id: ${JSON.stringify(organizationId)}\n  host_join_gas_budget: 200000000`}</pre>
+                </li>
                 <li>
                   {t(
                     "在新主机安装 envd，明确初始化独立 Host 密钥。",
@@ -804,9 +816,20 @@ export default function HostAccess({
                 </li>
                 <li>
                   {t(
-                    "Host 必须核对网络、组织、入口公钥和权限，再用自己的密钥签署兑换交易。邀请码兑换 CLI 尚在接入，当前不能通过启动 envd 自动入组。",
-                    "The Host must verify the network, organization, entry key and authority, then sign redemption with its own keys. The redemption CLI is pending; starting envd does not automatically join the organization.",
+                    "运行接入命令，在终端隐藏输入邀请码。核对组织、Coordinator 公钥、有限观察权限和 Gas，再输入 JOIN 与完整组织 ID 确认。启动 envd 不会自动入组。",
+                    "Run admission and enter the invitation through hidden terminal input. Verify the organization, Coordinator key, finite observation authority and Gas, then confirm with JOIN and the full organization ID. Starting envd does not automatically join.",
                   )}
+                  <pre>envd --config sentinel.yaml --join-host</pre>
+                </li>
+                <li>
+                  {t(
+                    "结果未知时查询原交易，无需邀请码或私钥。接入成功表示链上成员资格，主机在线、运行发现和 Agent 导入仍单独核验。",
+                    "Query an uncertain original transaction without the invitation or private keys. Admission confirms on-chain membership; online state, discovery and Agent import are verified separately.",
+                  )}
+                  <pre>
+                    envd --config sentinel.yaml --host-join-status
+                    --host-address 0xYOUR_HOST_ADDRESS
+                  </pre>
                 </li>
               </ol>
             </section>

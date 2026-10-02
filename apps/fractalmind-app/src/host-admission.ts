@@ -44,6 +44,7 @@ export type HostOperation =
   | { kind: "revoke-invite"; targetId: string }
   | { kind: "revoke-member"; targetId: string };
 export type HostDirectory = {
+  chainIdentifier: string;
   bindings: HostBinding[];
   invitations: HostInvite[];
   memberships: HostMember[];
@@ -245,8 +246,9 @@ export async function hostDirectory(
     JSON.stringify(index) !== JSON.stringify(await readIndex())
   )
     throw new HostAdmissionError("state_changed");
-  await chain.checkNetwork();
+  const chainIdentifier = await chain.checkNetwork();
   return {
+    chainIdentifier,
     bindings,
     invitations,
     memberships,

@@ -109,12 +109,16 @@ type HeartbeatConfig struct {
 }
 
 type SUIConfig struct {
+	Network                   string `yaml:"network"`
+	ChainIdentifier           string `yaml:"chain_identifier"`
+	HostJoinGasBudget         uint64 `yaml:"host_join_gas_budget"`
 	Enabled                   bool   `yaml:"enabled"`
 	RPC                       string `yaml:"rpc"` // gRPC fullnode endpoint
 	GraphQLURL                string `yaml:"graphql_url"`
 	KeypairPath               string `yaml:"keypair_path"`
 	PackageID                 string `yaml:"package_id"`
 	ProtocolPackageID         string `yaml:"protocol_package_id"`
+	ProtocolRegistryID        string `yaml:"protocol_registry_id"`
 	ProtocolOriginalPackageID string `yaml:"protocol_original_package_id"`
 	RegistryID                string `yaml:"registry_id"`
 	OrgID                     string `yaml:"org_id"`
@@ -214,11 +218,13 @@ func DefaultConfig() *Config {
 			UnhealthyThreshold:  3,
 		},
 		SUI: SUIConfig{
-			Enabled:      false,
-			RPC:          "https://fullnode.testnet.sui.io:443",
-			GraphQLURL:   "", // inferred for official fullnodes; set explicitly for custom nodes
-			KeypairPath:  "~/.sui/envd.key",
-			PollInterval: "30s",
+			Network:           "testnet",
+			HostJoinGasBudget: 200000000,
+			Enabled:           false,
+			RPC:               "https://fullnode.testnet.sui.io:443",
+			GraphQLURL:        "", // inferred for official fullnodes; set explicitly for custom nodes
+			KeypairPath:       "~/.sui/envd.key",
+			PollInterval:      "30s",
 		},
 		WireGuard: WireGuardConfig{
 			Enabled:       false,

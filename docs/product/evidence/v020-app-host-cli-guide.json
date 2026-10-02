@@ -1,0 +1,33 @@
+{
+  "recordedAt": "2026-10-02T04:24:06.098226+00:00",
+  "url": "http://127.0.0.1:4189/",
+  "profile": {
+    "network": "localnet",
+    "rpcUrl": "http://127.0.0.1:29000",
+    "packageId": "0x2ef39db88cffefa9c16dcaf6593032ccd6ac0e79acfd22e30fc10d4b4c7a45e5",
+    "registryId": "0xfdf5ad498229c22b1652cae940c8803e9bc8de20ead4fbc049c514198e123220",
+    "humanId": "0xd2aefdd1869a346c2c536415d0d74c6f8c0756ab35a1d0a6e8fe315d2753d97b",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "organizationId": "0x97732e48183bf4e47c1b4f65227e7fb82909bc1e1c157763a69711b2c005b5c1",
+  "sourceChainEvidence": "v020-envd-host-cli-localnet.json",
+  "screenshot": "v020-app-host-cli-guide.png",
+  "checks": [
+    "public-only profile loads the actual fixture chain directory",
+    "Host connection guide is visible before generating an invitation",
+    "public YAML includes full verified chain ID, network, RPC, package, original type package, protocol_registry_id and organization ID",
+    "guide shows implemented init-host, join-host and public-address host-join-status commands",
+    "English dark and Chinese light DOM and rendered page inspected",
+    "read-only browser cannot prepare management transactions",
+    "after the fixture revocation, membership history is retained without a current member or online/control claim"
+  ],
+  "limits": {
+    "browserOnly": true,
+    "installedNativeUiVerified": false,
+    "privateKeysAccessed": false,
+    "nativeKeychainAuthorizationPending": true,
+    "guideCommandsExecutedInBrowser": false,
+    "chainCliUsesGeneratedInjectedKeys": true,
+    "screenshotShowsUpperGuideAndPublicConfiguration": true
+  }
+}

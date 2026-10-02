@@ -139,6 +139,48 @@ Secret Service session; Windows uses Credential Manager. The current
 agent-manager adapter supports observation only. Control requires the bounded
 runtime still being implemented; a chain capability alone does not grant it.
 
+### Host invitation admission
+
+Copy the App's public connection fields into `sentinel.yaml`: `sui.network`,
+`chain_identifier`, `protocol_package_id`, `protocol_original_package_id`,
+`protocol_registry_id`, `org_id` and `host_join_gas_budget`. The protocol registry
+is distinct from the legacy peer `registry_id`; admission does not read the
+legacy wallet file. Initialize native Host keys explicitly, fund their printed
+address, then run:
+
+```sh
+envd --config sentinel.yaml --join-host
+```
+
+Enter the one-use code through hidden terminal input, check the chain/organization,
+Coordinator public key, finite observation permissions and Gas quote, then type
+`JOIN <full organization ID>` to confirm. No code is accepted in argv, URLs or
+configuration. Cancelling signs/broadcasts nothing. Admission grants chain
+membership and bounded observation; execution authority and connectivity are
+verified separately.
+
+Before broadcast, envd flushes an original digest and public Gas/object metadata
+under the OS cache's `fractalmind/host-join-v1` directory. It never persists the
+invitation, signed transaction or business state there. Re-running queries the
+original first. Unknown/pruned receipts are not permission to replay or create
+another transaction. Public receipt lookup needs no private key or invitation:
+
+```sh
+envd --config sentinel.yaml --host-join-status --host-address 0xYOUR_FULL_HOST_ADDRESS
+```
+
+Only after a known terminal original receipt, use `--join-host
+--new-host-join-attempt` to explicitly preview another invitation. The old digest
+is archived after the new confirmation. Both successful and failed receipts
+retain actual fees. Chain membership can be reconstructed even though a
+historical admission receipt does not establish current membership.
+
+Real localnet tests cover production signing/gRPC and a disk journal with injected
+memory Host keys, including a deliberately lost receipt and a single broadcast;
+a separate pseudo-terminal verifies hidden input. Native credential-store,
+physical/cloud Host and five-platform acceptance remain pending. See
+[Host admission implementation and evidence](../../docs/product/v020-envd-host-join.md).
+
 `FRACTALMIND_RUNTIME_STATE_DIR` no longer selects a production file store,
 and `FRACTALMIND_NODE_COMMAND_AUTHORITY_FILE` is rejected when the chain runtime
 is enabled. Legacy file stores remain only for compatibility tests.

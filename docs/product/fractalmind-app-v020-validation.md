@@ -6,19 +6,27 @@
 
 ## 当前验证证据
 
+### envd Host 兑换 CLI 与原摘要恢复增量
+
+- 正式 `--join-host` 入口接通隐藏邀请码输入、完整组织确认、有限观察权限与 Gas 预览、签名前后核验、精确原字节签名／模拟。广播前磁盘 flush 原摘要和公开技术元数据；未知结果拒绝重放。`--host-join-status --host-address` 仅查原交易，无需私钥。
+- [真实链 CLI 报告](evidence/v020-envd-host-cli-localnet.json)：App 创建邀请码，独立 Go Host 实际兑换；广播后故意丢失回执，再创建 runner 从真实磁盘 journal 恢复同一摘要、费用和资格，**广播计数 1**。9 项检查、10 笔成功交易；App 后续撤销成员，Go 恢复的有效资格是撤销前快照。
+- [四包 Go 测试](evidence/v020-envd-host-cli-unit.json)通过，覆盖原摘要优先、未知／失败回执、单次广播、费用／签名／来源和损坏记录拒绝；[独立 PTY 测试](evidence/v020-envd-host-cli-tty.json)确认实际隐藏读取关闭 echo，输入凭据未泄露。
+- App 接入指导在生成邀请码之前可见，公开配置使用独立 `protocol_registry_id` 和核验后的完整 Chain ID；[中英文／明暗浏览器证据](evidence/v020-app-host-cli-guide.json)与[中文截图](evidence/v020-app-host-cli-guide.png)已保存。App 60/60、类型和生产构建通过。
+- **仍未完成**：链夹具使用仅测试二进制注入的生成内存钥，恢复为同进程重建 runner；正式 NativeStore／进程重启验收、Windows 断电持久性、安装后 UI、实际本地／云 Host 与 Coordinator、发现／导入及五平台继续推进。现有原生 App 会话等待用户处理系统密钥库授权。完整目标保持未完成，详见[CLI 实现和边界](v020-envd-host-join.md)。
+
 ### envd Host 邀请预检与交易字节核验增量
 
 - Go envd 从 Sui 核对注册表、组织、入口、邀请码、Human／Grant／管理员角色、目录、时钟与权限版本；邀请码跨语言派生／证明与 TypeScript SDK 一致。成员重建分别表达当前、撤销和历史指针缺失，RPC 故障保持未知。
 - 接入报价在本机编码参数，逐项校验 gRPC 返回的原始 BCS，拒绝额外命令、参数或付款人替换、超预算及错误 Gas coin。地址余额的 `ValidDuring` 与当前 Mysten SDK 一致；真实验证器不支持时间戳过期，已改为 epoch 有效期，证明短时有效期继续由合约检查。
 - [Go 测试](evidence/v020-envd-host-join-unit.json)：两个相关包通过，10 个 Host 测试组及 70 个子项通过；普通单元运行跳过独立真实链助手。[联合本地链报告](evidence/v020-envd-host-join-quote-localnet.json)：9 项检查、10 笔成功夹具交易，生产 Go 路径的预检／模拟报价成功，没有广播 Go Host 兑换交易。
-- **仍未完成**：生产 `--join-host` CLI、终端隐藏输入、费用确认、广播前原摘要持久化／未知结果恢复、OS 原生签名、实际本地／云 Host 与 Coordinator 运行，以及五平台联合验收。现有 App 原生会话的系统密钥库授权仍待用户处理。完整目标保持未完成，详见[接入实现和边界](v020-app-host-access.md)。
+- **该阶段边界**：此报告只验收预检与报价。生产 CLI、终端确认、原摘要持久化与恢复的后续增量见上一节；OS 原生签名、实际本地／云 Host 与 Coordinator 及五平台仍未完成。
 
 ### v2 App Host 邀请与成员管理增量
 
 - 主机页接通入口公钥／地址登记、Clock 限时单次邀请码、成员与有限观察期限、实际费用确认、原摘要查询及邀请／成员撤销。邀请码秘密只在当前窗口，丢失后不能从链上重建。当前合约的观察权限不被标为 OKR 执行权限。
 - [控制器本地链报告](evidence/v020-app-host-controller-localnet.json)：**8 项检查、10 笔成功交易**；实际邀请兑换／消费、成员撤销、无秘密重建与报价后权限撤销拒绝均通过。使用生成的内存夹具钥与注入传输，尚不证明原生 OS 存储或安装后完整 UI。
 - [浏览器证据](evidence/v020-app-host-browser.json)覆盖真实目录、中英文／明暗主题、网页管理保护与已消费／已撤销状态。修复撤销后当前指针缺失被错误标为 RPC 失败的问题，历史记录继续保留。
-- App **60/60**、类型与生产构建通过。envd 邀请兑换 CLI、实际本地／云 Host 与 Coordinator 路由、发现／导入、原生联测及五平台等仍须完成，详见[实现和边界](v020-app-host-access.md)。完整目标保持未完成。
+- App **60/60**、类型与生产构建通过。envd CLI 的后续进展见本记录首节；实际本地／云 Host 与 Coordinator 路由、发现／导入、原生联测及五平台等仍须完成，详见[实现和边界](v020-app-host-access.md)。完整目标保持未完成。
 
 ### v2 设备配对、组织数据分享与原生界面增量
 
