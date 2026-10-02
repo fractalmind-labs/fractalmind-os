@@ -229,6 +229,25 @@ module fractalmind_protocol::identity {
         grant.version = grant.version + 1;
     }
 
+    /// Run first in the recovery PTB, before any organization key rotation.
+    /// A backup/directory update after quotation must reject the whole PTB;
+    /// otherwise a stale encrypted keyring could replace newer history.
+    public fun assert_recovery_snapshot(
+        human: &HumanIdentity, record: &RecoveryRecord,
+        expected_generation: u64, expected_backup_version: u64,
+        expected_organizations: vector<address>, ctx: &TxContext,
+    ) {
+        assert_recovery_signer(human, record, ctx);
+        assert!(human.generation == expected_generation
+            && record.backup_version == expected_backup_version, E_INPUT);
+        assert!(vector::length(&human.organizations) == vector::length(&expected_organizations), E_INPUT);
+        let mut i = 0;
+        while (i < vector::length(&expected_organizations)) {
+            assert!(object::id_to_address(&human.organizations[i]) == expected_organizations[i], E_INPUT);
+            i = i + 1;
+        };
+    }
+
     /// One shared Human mutation serializes concurrent recoveries. No loop over
     /// devices: changing the generation invalidates every previous grant.
     public fun recover_identity(

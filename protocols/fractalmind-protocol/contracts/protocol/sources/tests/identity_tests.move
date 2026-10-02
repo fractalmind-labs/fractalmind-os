@@ -64,6 +64,55 @@ module fractalmind_protocol::identity_tests {
         ts::return_shared(c); ts::return_shared(record); ts::return_shared(human); ts::return_shared(registry);
     }
 
+    fun organization_addresses(human: &HumanIdentity): vector<address> {
+        let ids = identity::organizations(human);
+        let mut addresses = vector[];
+        let mut i = 0;
+        while (i < vector::length(&ids)) {
+            vector::push_back(&mut addresses, sui::object::id_to_address(&ids[i]));
+            i = i + 1;
+        };
+        addresses
+    }
+    #[test]
+    fun current_recovery_snapshot_allows_atomic_recovery() {
+        let mut s = setup(); ts::next_tx(&mut s, recovery_address());
+        let mut registry = ts::take_shared<IdentityRegistry>(&s);
+        let mut human = ts::take_shared<HumanIdentity>(&s);
+        let mut record = ts::take_shared_by_id<RecoveryRecord>(&s, identity::recovery_record(&human));
+        let c = ts::take_shared<Clock>(&s);
+        identity::assert_recovery_snapshot(&human, &record, 1, 1, organization_addresses(&human), ts::ctx(&mut s));
+        identity::recover_identity(&mut registry, &mut human, &mut record, key(5), key(6), b"new backup", PHONE, key(4), b"restored keys", &c, ts::ctx(&mut s));
+        ts::return_shared(c); ts::return_shared(record); ts::return_shared(human); ts::return_shared(registry); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9006, location = fractalmind_protocol::identity)]
+    fun newer_backup_rejects_quoted_recovery_snapshot() {
+        let mut s = setup();
+        let human = ts::take_shared<HumanIdentity>(&s); let grant = ts::take_shared<DeviceGrant>(&s);
+        let mut record = ts::take_shared_by_id<RecoveryRecord>(&s, identity::recovery_record(&human));
+        let c = ts::take_shared<Clock>(&s);
+        identity::update_recovery_backup(&human, &grant, &mut record, 1, b"newer history", &c, ts::ctx(&mut s));
+        ts::return_shared(c); ts::return_shared(grant); ts::return_shared(record); ts::return_shared(human);
+        ts::next_tx(&mut s, recovery_address());
+        let human = ts::take_shared<HumanIdentity>(&s); let record = ts::take_shared_by_id<RecoveryRecord>(&s, identity::recovery_record(&human));
+        identity::assert_recovery_snapshot(&human, &record, 1, 1, organization_addresses(&human), ts::ctx(&mut s));
+        ts::return_shared(record); ts::return_shared(human); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9006, location = fractalmind_protocol::identity)]
+    fun newly_added_organization_rejects_quoted_recovery_snapshot() {
+        let mut s = setup();
+        let mut human = ts::take_shared<HumanIdentity>(&s); let expected_orgs = organization_addresses(&human);
+        let mut protocol = ts::take_shared<ProtocolRegistry>(&s); let grant = ts::take_shared<DeviceGrant>(&s); let c = ts::take_shared<Clock>(&s);
+        identity::create_organization(&mut protocol, &mut human, &grant, string::utf8(b"LaterOrg"), string::utf8(b""), &c, ts::ctx(&mut s));
+        ts::return_shared(c); ts::return_shared(grant); ts::return_shared(protocol); ts::return_shared(human);
+        ts::next_tx(&mut s, recovery_address());
+        let human = ts::take_shared<HumanIdentity>(&s); let record = ts::take_shared_by_id<RecoveryRecord>(&s, identity::recovery_record(&human));
+        identity::assert_recovery_snapshot(&human, &record, 1, 1, expected_orgs, ts::ctx(&mut s));
+        ts::return_shared(record); ts::return_shared(human); ts::end(s);
+    }
+
     #[test]
     fun default_device_scope_and_org_survive_recovery() {
         let mut s = setup();

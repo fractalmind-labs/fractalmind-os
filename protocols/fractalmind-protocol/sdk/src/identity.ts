@@ -108,6 +108,12 @@ export class IdentityApi {
     const tx = this.fm.useTransaction(input.tx);
     return this.call('update_recovery_backup', tx, [tx.object(input.humanId), tx.object(input.grantId), tx.object(input.recordId), tx.pure.u64(toBigInt(input.expectedBackupVersion)), bytesArgument(tx, this.fm.packageId, input.encryptedBackup), tx.object('0x6')]);
   }
+  /** Atomic snapshot guard: add before organization rotations/recoverIdentity
+   * in the same PTB. Fails on backup, generation or directory changes at commit. */
+  assertRecoverySnapshot(input: TxInput & { humanId: string; recordId: string; expectedGeneration: bigint | string | number; expectedBackupVersion: bigint | string | number; expectedOrganizations: string[] }): Transaction {
+    const tx = this.fm.useTransaction(input.tx);
+    return this.call('assert_recovery_snapshot', tx, [tx.object(input.humanId), tx.object(input.recordId), tx.pure.u64(toBigInt(input.expectedGeneration)), tx.pure.u64(toBigInt(input.expectedBackupVersion)), tx.pure.vector('address', input.expectedOrganizations)]);
+  }
   recoverIdentity(input: TxInput & DeviceKeys & RecoveryKeys & { identityRegistryId: string; humanId: string; recordId: string }): Transaction {
     const tx = this.fm.useTransaction(input.tx);
     return this.call('recover_identity', tx, [tx.object(input.identityRegistryId), tx.object(input.humanId), tx.object(input.recordId), ...this.recoveryArguments(tx, input), ...this.deviceArguments(tx, input), tx.object('0x6')]);

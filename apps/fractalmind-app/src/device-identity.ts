@@ -29,7 +29,7 @@ const ClockBcs = bcs.struct("Clock", {
   timestamp_ms: bcs.u64(),
 });
 const TableBcs = bcs.struct("Table", { id: bcs.Address, size: bcs.u64() });
-const OrganizationBcs = bcs.struct("Organization", {
+export const OrganizationBcs = bcs.struct("Organization", {
   id: bcs.Address,
   name: bcs.string(),
   description: bcs.string(),

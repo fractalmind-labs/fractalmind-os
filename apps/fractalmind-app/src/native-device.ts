@@ -16,7 +16,12 @@ export type NativeDeviceCommand =
   | "fm_onboarding_public"
   | "fm_onboarding_sign_transaction"
   | "fm_device_decrypt_record"
-  | "fm_device_encrypt_record";
+  | "fm_device_encrypt_record"
+  | "fm_recovery_import"
+  | "fm_recovery_imported_public"
+  | "fm_recovery_prepare"
+  | "fm_recovery_prepared_public"
+  | "fm_recovery_sign_transaction";
 export type NativeInvoke = (
   command: NativeDeviceCommand,
   args: Record<string, string>,
@@ -36,7 +41,9 @@ export class NativeDeviceError extends Error {
       | "native_unavailable"
       | "not_initialized"
       | "invalid_transaction"
-      | "invalid_proof",
+      | "invalid_proof"
+      | "invalid_recovery"
+      | "already_initialized",
   ) {
     super(code);
     this.name = "NativeDeviceError";
@@ -47,6 +54,15 @@ const profilePattern = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 /** Disposable local connection preference; it is never identity authority. */
 export function preferredDeviceProfile() {
   try {
+    const preferred = JSON.parse(
+      localStorage.getItem("fractalmind.app.device-connection.v1") ?? "null",
+    );
+    if (
+      preferred &&
+      typeof preferred.profile === "string" &&
+      profilePattern.test(preferred.profile)
+    )
+      return preferred.profile as string;
     const stored = JSON.parse(
       localStorage.getItem("fractalmind.app.onboarding-connection.v1") ??
         "null",
@@ -116,6 +132,10 @@ export async function call(
           : "";
     if (code === "NotInitialized")
       throw new NativeDeviceError("not_initialized");
+    if (code === "InvalidRecovery")
+      throw new NativeDeviceError("invalid_recovery");
+    if (code === "AlreadyInitialized")
+      throw new NativeDeviceError("already_initialized");
     throw new NativeDeviceError("native_unavailable");
   }
 }

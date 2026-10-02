@@ -59,8 +59,10 @@ fragments. Only the allowlisted public fields are retained.
 This profile is **not login**. It cannot sign commands, unlock encrypted product
 bodies or grant authority. Do not paste private keys or recovery codes. The native welcome page now connects identity creation to independent OS keys,
 a one-shot recovery backup, fee preparation and separately confirmed Human / personal
-organization transactions. The browser cannot generate those keys. Device pairing
-and consumption-based recovery remain pending and do not accept recovery secrets.
+organization transactions. The browser cannot generate those keys. The native recovery entry now imports a recovery code, locates the same Human from
+chain, prepares a one-shot replacement backup and separately quotes/confirms the
+atomic recovery. The browser recovery entry does not accept secrets. Device pairing
+remains pending.
 
 ## Current behavior
 
@@ -138,6 +140,10 @@ Native identity creation, exact current gates and localnet interoperability evid
 [creation flow](../../docs/product/v020-app-identity-creation.md).
 
 Native recovery import, staged replacement codes and per-organization historical
-key rings have isolated real-chain coverage. Recovery is **not yet connected to
-installed App IPC or the welcome flow**. See
-[native recovery core and limits](../../docs/product/v020-app-native-recovery.md).
+key rings now connect to the v2 welcome page and allowlisted Tauri commands. The
+production controller has isolated real-chain coverage, including ambiguous
+responses and an atomic snapshot guard for changes during signing. Installed
+UI/IPC and durable-journal recovery acceptance remain pending. The guarded flow
+requires a deployment with `identity::assert_recovery_snapshot`; it does not fall
+back to unguarded recovery on older packages. See
+[recovery journey and limits](../../docs/product/v020-app-recovery.md).

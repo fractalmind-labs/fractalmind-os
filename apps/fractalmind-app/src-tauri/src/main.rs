@@ -1,7 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use fractalmind_device_vault::{
-    DevicePublic, DeviceVault, OnboardingCreated, OnboardingPublic, SignedBytes, DEVICE_SERVICE,
+    DevicePublic, DeviceVault, OnboardingCreated, OnboardingPublic, RecoveryImported,
+    RecoveryPrepared, RecoveryPublic, SignedBytes, DEVICE_SERVICE,
 };
 use std::sync::Arc;
 use tauri::{Manager, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
@@ -178,6 +179,96 @@ async fn fm_device_encrypt_record(
     .await
     .map_err(|_| "NativeTaskFailed".to_string())?
 }
+#[tauri::command]
+async fn fm_recovery_import(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: String,
+    network: String,
+    code: String,
+) -> Result<RecoveryImported, String> {
+    main_window(&window)?;
+    let vault = Arc::clone(vault.inner());
+    tauri::async_runtime::spawn_blocking(move || {
+        let code = zeroize::Zeroizing::new(code);
+        vault
+            .import_recovery(&profile, &network, &code)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|_| "NativeTaskFailed".to_string())?
+}
+#[tauri::command]
+async fn fm_recovery_imported_public(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: String,
+    network: String,
+) -> Result<RecoveryImported, String> {
+    main_window(&window)?;
+    let vault = Arc::clone(vault.inner());
+    tauri::async_runtime::spawn_blocking(move || {
+        vault
+            .recovery_imported_public(&profile, &network)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|_| "NativeTaskFailed".to_string())?
+}
+#[tauri::command]
+async fn fm_recovery_prepare(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: String,
+    network: String,
+    source: String,
+) -> Result<RecoveryPrepared, String> {
+    main_window(&window)?;
+    let vault = Arc::clone(vault.inner());
+    tauri::async_runtime::spawn_blocking(move || {
+        vault
+            .prepare_recovery(&profile, &network, &source)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|_| "NativeTaskFailed".to_string())?
+}
+#[tauri::command]
+async fn fm_recovery_prepared_public(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: String,
+    network: String,
+) -> Result<RecoveryPublic, String> {
+    main_window(&window)?;
+    let vault = Arc::clone(vault.inner());
+    tauri::async_runtime::spawn_blocking(move || {
+        vault
+            .recovery_prepared_public(&profile, &network)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|_| "NativeTaskFailed".to_string())?
+}
+#[tauri::command]
+async fn fm_recovery_sign_transaction(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: String,
+    network: String,
+    phase: String,
+    bytes: String,
+) -> Result<SignedBytes, String> {
+    main_window(&window)?;
+    let vault = Arc::clone(vault.inner());
+    tauri::async_runtime::spawn_blocking(move || {
+        vault
+            .sign_recovery_transaction(&profile, &network, &phase, &bytes)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|_| "NativeTaskFailed".to_string())?
+}
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -213,7 +304,12 @@ fn main() {
             fm_onboarding_public,
             fm_onboarding_sign_transaction,
             fm_device_decrypt_record,
-            fm_device_encrypt_record
+            fm_device_encrypt_record,
+            fm_recovery_import,
+            fm_recovery_imported_public,
+            fm_recovery_prepare,
+            fm_recovery_prepared_public,
+            fm_recovery_sign_transaction
         ])
         .run(tauri::generate_context!())
         .expect("FractalMind App runtime failed");

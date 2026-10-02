@@ -1268,6 +1268,7 @@ dependencies = [
  "fractalmind-device-vault",
  "tauri",
  "tauri-build",
+ "zeroize",
 ]
 
 [[package]]

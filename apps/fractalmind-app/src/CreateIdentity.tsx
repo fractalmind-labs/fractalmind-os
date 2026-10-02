@@ -468,6 +468,17 @@ export default function CreateIdentity({
                   if (!identity?.organizations.length) throw new Error();
                   if (mounted.current) {
                     setCode("");
+                    try {
+                      localStorage.setItem(
+                        "fractalmind.app.device-connection.v1",
+                        JSON.stringify({
+                          profile: session.device.device.profile,
+                          network: identity.profile.network,
+                          chainIdentifier: identity.profile.chainIdentifier,
+                          humanId: identity.profile.humanId,
+                        }),
+                      );
+                    } catch {}
                     connect(identity.profile);
                   }
                 })

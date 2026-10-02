@@ -5,6 +5,7 @@ import type { ConnectionProfile } from "./domain";
 import { BrandMark, NavIcon } from "./V2Views";
 
 const CreateIdentity = lazy(() => import("./CreateIdentity"));
+const RecoverIdentity = lazy(() => import("./RecoverIdentity"));
 
 /** V2 view-welcome.js layout/mission. Real onboarding is enabled only when its
  * native + chain path exists; prototype simulation is never imported here. */
@@ -186,7 +187,20 @@ export default function Welcome({
               />
             </Suspense>
           )}
-          {mode && mode !== "create" && (
+          {mode === "recover" && (
+            <Suspense
+              fallback={
+                <p>{t("加载身份恢复…", "Loading identity recovery…")}</p>
+              }
+            >
+              <RecoverIdentity
+                t={t}
+                connect={connect}
+                onBusyChange={setCreatingBusy}
+              />
+            </Suspense>
+          )}
+          {mode === "existing" && (
             <div className="panel onboarding-status" role="status">
               <strong>
                 {t(
@@ -195,15 +209,10 @@ export default function Welcome({
                 )}
               </strong>
               <p>
-                {mode === "existing"
-                  ? t(
-                      "已有可信设备需要批准此设备的独立授权。连接资料仅用于定位公开记录，不授予登录权限。",
-                      "An existing trusted device must approve an independent grant for this device. Connection metadata locates public records and grants no sign-in authority.",
-                    )
-                  : t(
-                      "恢复需要原生安全处理恢复码，并在一笔交易中更换恢复记录和设备授权。当前请不要输入恢复码。",
-                      "Recovery needs native handling of the code and an atomic recovery/grant transaction. Do not enter a recovery code here yet.",
-                    )}
+                {t(
+                  "已有可信设备需要批准此设备的独立授权。连接资料仅用于定位公开记录，不授予登录权限。",
+                  "An existing trusted device must approve an independent grant for this device. Connection metadata locates public records and grants no sign-in authority.",
+                )}
               </p>
             </div>
           )}

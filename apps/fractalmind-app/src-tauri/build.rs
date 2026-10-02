@@ -10,6 +10,11 @@ fn main() {
             "fm_onboarding_sign_transaction",
             "fm_device_decrypt_record",
             "fm_device_encrypt_record",
+            "fm_recovery_import",
+            "fm_recovery_imported_public",
+            "fm_recovery_prepare",
+            "fm_recovery_prepared_public",
+            "fm_recovery_sign_transaction",
         ]),
     ))
     .expect("FractalMind App native manifest failed");

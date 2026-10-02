@@ -22,7 +22,7 @@ export type OnboardingPublic = Readonly<{
   encryptedBackup: string;
   encryptedDeviceKeys: string;
 }>;
-function envelope(value: unknown) {
+export function wrappedEnvelope(value: unknown) {
   if (typeof value !== "string" || value.length > 87520)
     throw new NativeDeviceError("invalid_response");
   try {
@@ -62,8 +62,8 @@ function bundle(
     network,
     device,
     recovery,
-    encryptedBackup: envelope(data.encryptedBackup),
-    encryptedDeviceKeys: envelope(data.encryptedDeviceKeys),
+    encryptedBackup: wrappedEnvelope(data.encryptedBackup),
+    encryptedDeviceKeys: wrappedEnvelope(data.encryptedDeviceKeys),
   });
 }
 /** Explicit recovery-code creation is the sole export of the backup credential.
