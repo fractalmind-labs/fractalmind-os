@@ -106,7 +106,10 @@ test('validator failure is a known failed transaction with actual charged Gas', 
 
 test('simulation rejection and unapproved value transfers stop before signing', async () => {
   const rejected = fixture(); rejected.rejectSimulation();
-  await assert.rejects(rejected.manager().prepare(rejected.input()), code('simulation_failed')); assert.equal(rejected.stats().signing, 0);
+  await assert.rejects(rejected.manager().prepare(rejected.input()), error => {
+    assert.ok(error instanceof TransactionPreflightError); assert.equal(error.code, 'simulation_failed');
+    assert.deepEqual(error.cause, { kind: 'MoveAbort', message: 'Expected test abort' }); return true;
+  }); assert.equal(rejected.stats().signing, 0); assert.equal(rejected.stats().executing, 0);
   const spend = fixture(); spend.overspend();
   await assert.rejects(spend.manager().prepare(spend.input()), code('value_limit_exceeded')); assert.equal(spend.stats().executing, 0);
 });

@@ -6,10 +6,14 @@ import {
   createRecoveryCode,
   recoveryKeys,
   wrapKeys,
+  TransactionPreflightError,
 } from "@fractalmind-labs/fractalmind-sdk";
 import { NativeRecoverySigner } from "../src/native-onboarding";
 import type { NativeInvoke } from "../src/native-device";
-import { normalizeDeployment } from "../src/onboarding";
+import {
+  normalizeDeployment,
+  identityCreationFailure,
+} from "../src/onboarding";
 async function fixture() {
   const code = createRecoveryCode("localnet"),
     recovery = recoveryKeys(code),
@@ -138,5 +142,67 @@ test("deployment setup needs no existing Human; cache metadata strips secrets an
       ...input,
       rpcUrl: "https://user:secret@example.com",
     }),
+  );
+});
+
+test("organization name conflict uses only the exact typed validator abort and retains other failure categories", () => {
+  const pkg = `0x${"1".repeat(64)}`;
+  const cause = {
+    $kind: "MoveAbort",
+    MoveAbort: {
+      abortCode: "3002",
+      location: {
+        package: pkg,
+        module: "organization",
+        functionName: "new_organization",
+      },
+    },
+  };
+  assert.equal(
+    identityCreationFailure(
+      new TransactionPreflightError("simulation_failed", "rejected", { cause }),
+      pkg,
+    ),
+    "organization_name_taken",
+  );
+  for (const mutate of [
+    (v: typeof cause) => {
+      v.$kind = "InputObjectDeleted";
+    },
+    (v: typeof cause) => {
+      v.MoveAbort.abortCode = "9001";
+    },
+    (v: typeof cause) => {
+      v.MoveAbort.location.package = `0x${"2".repeat(64)}`;
+    },
+    (v: typeof cause) => {
+      v.MoveAbort.location.module = "identity";
+    },
+    (v: typeof cause) => {
+      v.MoveAbort.location.functionName = "assert_root";
+    },
+  ]) {
+    const changed = structuredClone(cause);
+    mutate(changed);
+    assert.equal(
+      identityCreationFailure(
+        new TransactionPreflightError("simulation_failed", "3002", {
+          cause: changed,
+        }),
+        pkg,
+      ),
+      "simulation_failed",
+    );
+  }
+  assert.equal(
+    identityCreationFailure(new Error("3002"), pkg),
+    "native_or_chain_unavailable",
+  );
+  assert.equal(
+    identityCreationFailure(
+      new TransactionPreflightError("needs_funds", "balance"),
+      pkg,
+    ),
+    "needs_funds",
   );
 });

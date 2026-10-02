@@ -142,7 +142,7 @@ export class SelfPayTransactionManager {
       simulation = result.$kind === 'Transaction' ? result.Transaction : result.FailedTransaction;
     } catch (cause) { throw new TransactionPreflightError('rpc_unavailable', 'Cannot estimate this transaction safely.', { cause }); }
     if (!simulation.effects || simulation.status.success !== simulation.effects.status.success) throw new TransactionPreflightError('simulation_failed', 'Simulation returned inconsistent effects.');
-    if (!simulation.status.success) throw new TransactionPreflightError('simulation_failed', 'Transaction simulation rejected the requested operation.');
+    if (!simulation.status.success) throw new TransactionPreflightError('simulation_failed', 'Transaction simulation rejected the requested operation.', { cause: simulation.status.error });
     const estimatedGas = gasCost(simulation.effects.gasUsed);
     if (!simulation.balanceChanges) throw new TransactionPreflightError('simulation_failed', 'Simulation did not return balance changes.');
     const debit = -simulation.balanceChanges.filter(change => normalizeSuiAddress(change.address) === sender && normalizeStructTag(change.coinType) === SUI).reduce((total, change) => total + BigInt(change.amount), 0n);

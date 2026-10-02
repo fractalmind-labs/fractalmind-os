@@ -3,14 +3,17 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import {
   FractalMindSDK,
   IndexedDbTransactionJournal,
-  TransactionPreflightError,
   type SelfPayFeeQuote,
   type SelfPayTransactionOutcome,
 } from "@fractalmind-labs/fractalmind-sdk";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
 import { NativeDeviceSigner, type NativeInvoke } from "./native-device";
 import { NativeRecoverySigner } from "./native-onboarding";
-import { IdentityCreation, normalizeDeployment } from "./onboarding";
+import {
+  IdentityCreation,
+  normalizeDeployment,
+  identityCreationFailure,
+} from "./onboarding";
 import type { ConnectionProfile } from "./domain";
 type Translate = (zh: string, en: string) => string;
 const CACHE = "fractalmind.app.onboarding-connection.v1";
@@ -88,9 +91,7 @@ export default function CreateIdentity({
     } catch (e) {
       if (mounted.current)
         setError(
-          e instanceof TransactionPreflightError
-            ? e.code
-            : "native_or_chain_unavailable",
+          identityCreationFailure(e, session?.deployment.packageId ?? ""),
         );
     } finally {
       flight.current = false;
@@ -499,20 +500,25 @@ export default function CreateIdentity({
       )}
       {error && (
         <p role="alert">
-          {error === "needs_funds"
+          {error === "organization_name_taken"
             ? t(
-                "余额不足。向上面的地址充值后重新检查，不会自动提交。",
-                "Insufficient funds. Fund the addresses above and recheck; no automatic submission.",
+                "组织名称已被使用。请输入其他名称，再估算并确认费用；你的身份仍然保留。",
+                "This organization name is already taken. Choose another name, then estimate and confirm the fee. Your Human identity is retained.",
               )
-            : error === "stale_quote"
+            : error === "needs_funds"
               ? t(
-                  "报价或 Gas 已变化，请重新估算并确认。",
-                  "Quote or Gas changed. Estimate and confirm again.",
+                  "余额不足。向上面的地址充值后重新检查，不会自动提交。",
+                  "Insufficient funds. Fund the addresses above and recheck; no automatic submission.",
                 )
-              : t(
-                  "本次未完成。检查部署、密钥库和原交易；已有配置可继续，不自动重建或重放。",
-                  "Not completed. Check deployment, credential store and original transaction. Continue existing setup; no silent regeneration or replay.",
-                )}
+              : error === "stale_quote"
+                ? t(
+                    "报价或 Gas 已变化，请重新估算并确认。",
+                    "Quote or Gas changed. Estimate and confirm again.",
+                  )
+                : t(
+                    "本次未完成。检查部署、密钥库和原交易；已有配置可继续，不自动重建或重放。",
+                    "Not completed. Check deployment, credential store and original transaction. Continue existing setup; no silent regeneration or replay.",
+                  )}
         </p>
       )}
     </section>

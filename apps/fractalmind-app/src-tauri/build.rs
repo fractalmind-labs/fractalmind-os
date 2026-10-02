@@ -17,6 +17,7 @@ fn main() {
             "fm_recovery_prepared_public",
             "fm_recovery_sign_transaction",
             "fm_device_wrap_organization_keys",
+            "fm_device_wrap_command_result_key",
         ]),
     ))
     .expect("FractalMind App native manifest failed");

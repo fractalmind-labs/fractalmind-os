@@ -53,6 +53,7 @@ export class FractalMindSDK {
 
 export { FractalMindClient } from './client.js';
 export { NodeExecutionApi, CommandExecutionBcs, AgentExecutionIndexBcs, AgentExecutionPointerBcs, AgentExecutionReadError, EXECUTION_STATES, nodeCommandSigningBytes, nodeCommandIntentHash, verifySignedNodeCommand } from './node-execution.js';
+export type { WrappedCommandResultKey, CommandResultKeyInput } from './node-execution.js';
 export { HostApi, HostInviteBcs, HostMembershipBcs, ManagedAgentBcs, CoordinatorBindingBcs,
   HostIndexBcs, AuthorityBindingBcs, HostJoinIntentBcs, createHostInviteMaterial,
   encodeHostInviteCode, parseHostInviteCode } from './host.js';

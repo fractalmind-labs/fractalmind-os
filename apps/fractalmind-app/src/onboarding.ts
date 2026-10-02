@@ -4,6 +4,7 @@ import { fromBase64, toBase64, normalizeSuiAddress } from "@mysten/sui/utils";
 import {
   FractalMindSDK,
   SelfPayTransactionManager,
+  TransactionPreflightError,
   IdentityRegistryBcs,
   RecoveryLocationBcs,
   RecoveryRecordBcs,
@@ -19,6 +20,38 @@ import { DeviceIdentityVerifier } from "./device-identity";
 import type { ConnectionProfile } from "./domain";
 
 export type DeploymentProfile = Omit<ConnectionProfile, "humanId">;
+/** Match the typed validator abort, never a message substring or another
+ * package's coincidentally identical error number. No automatic rename/retry. */
+export function identityCreationFailure(
+  error: unknown,
+  packageId: string,
+): string {
+  if (!(error instanceof TransactionPreflightError))
+    return "native_or_chain_unavailable";
+  const cause = error.cause as
+    | {
+        $kind?: string;
+        MoveAbort?: {
+          abortCode?: string;
+          location?: {
+            package?: string;
+            module?: string;
+            functionName?: string;
+          };
+        };
+      }
+    | undefined;
+  if (
+    error.code === "simulation_failed" &&
+    cause?.$kind === "MoveAbort" &&
+    cause.MoveAbort?.abortCode === "3002" &&
+    cause.MoveAbort.location?.package === packageId &&
+    cause.MoveAbort.location.module === "organization" &&
+    cause.MoveAbort.location.functionName === "new_organization"
+  )
+    return "organization_name_taken";
+  return error.code;
+}
 export function normalizeDeployment(
   value: DeploymentProfile,
 ): DeploymentProfile {

@@ -37,6 +37,16 @@ export const CommandExecutionBcs = bcs.struct('CommandExecution', {
 });
 export const EXECUTION_STATES = Object.freeze({ queued: 0, running: 1, succeeded: 2, failed: 3, needsConfirmation: 4, cancelled: 5 });
 type Authority = { humanId: string; grantId: string; membershipId: string; bindingId: string; managedAgentId?: string };
+/** Ciphertext supplied by a native key vault. Metadata pins the recipient and
+ * command; this is not proof of chain authorization or of ciphertext contents. */
+export type WrappedCommandResultKey = {
+  wrappedKey: Uint8Array; keyVersion: bigint | string | number;
+  organizationId: string; capabilityId: string; membershipId: string;
+  hostAddress: string; hostEncryptionPublicKey: Uint8Array; intentHash: string;
+};
+export type CommandResultKeyInput =
+  | { organizationKey: Uint8Array; keyVersion: bigint | string | number; wrappedKey?: never }
+  | (WrappedCommandResultKey & { organizationKey?: never });
 
 export function nodeCommandSigningBytes(command: SignedNodeCommand): Uint8Array {
   return canonicalNodeCommandSigningBytes({
@@ -126,32 +136,52 @@ export class NodeExecutionApi {
       throw new AgentExecutionReadError('invalid_source', `directory size ${before.value.executions.size}, read ${executions.length}; unsettled ${before.value.unsettled_control}, read ${unsettledControl}`);
     return { managed, revision: before.value.revision, executions, unsettledControl };
   }
-  async prepareCommand(input: Authority & { command: SignedNodeCommand; resultKey?: { organizationKey: Uint8Array; keyVersion: bigint | string | number }; tx?: Transaction }) {
-    await verifySignedNodeCommand(input.command);
-    if (Boolean(input.command.target.agent_id) !== Boolean(input.managedAgentId)) throw new Error('Managed instance authority must match the command target.');
-    const tx = this.fm.useTransaction(input.tx);
-    const command = input.command;
-    const contract = command.payload?.okr as { id: string; agreement_version: string; kr_index: string } | undefined;
-    if ('okr' in (command.payload ?? {})) {
-      if (!contract || !input.managedAgentId || typeof contract.id !== 'string' || typeof contract.agreement_version !== 'string' || typeof contract.kr_index !== 'string' || normalizeSuiAddress(contract.id) !== contract.id || !/^[1-9][0-9]*$/.test(contract.agreement_version) || !/^[0-2]$/.test(contract.kr_index)) throw new Error('Invalid signed OKR context.');
-    }
-    if (input.resultKey) {
-      const member = await new HostApi(this.fm).getMembership(input.membershipId);
-      if (member.id !== normalizeSuiAddress(input.membershipId) || member.org_id !== normalizeSuiAddress(command.target.organization_id) || member.host_address !== normalizeSuiAddress(command.target.node_id)) throw new Error('Host membership does not match command key recipient.');
-      const fingerprint = bytesToHex(nodeCommandIntentHash(command));
-      const derived = commandResultKey(input.resultKey.organizationKey, command.target.organization_id, fingerprint, input.resultKey.keyVersion);
-      let wrapped: Uint8Array;
-      try { wrapped = await wrapKeys(derived, Uint8Array.from(member.encryption_public_key), commandResultWrapContext(command.target.organization_id, command.capability.id, input.membershipId, fingerprint, input.resultKey.keyVersion)); }
-      finally { derived.fill(0); }
-      tx.moveCall({ target: `${this.fm.packageId}::node_execution::grant_result_key`, arguments: [tx.object(command.capability.id), tx.object(command.target.organization_id), tx.object(input.humanId), tx.object(input.grantId), tx.object(input.membershipId), tx.object(input.bindingId), tx.pure.vector('u8', nodeCommandIntentHash(command)), tx.pure.u64(toBigInt(input.resultKey.keyVersion)), tx.pure.vector('u8', wrapped), tx.object('0x6')] });
-    }
-    const args: TransactionArgument[] = [tx.object(command.capability.id), tx.object(command.target.organization_id), tx.object(input.humanId), tx.object(input.grantId), tx.object(input.membershipId), tx.object(input.bindingId)];
-    if (input.managedAgentId) args.push(tx.object(input.managedAgentId));
-    if (contract) args.push(tx.pure.u64(toBigInt(contract.agreement_version)), tx.pure.u64(toBigInt(contract.kr_index)));
-    args.push(tx.pure.string(command.action), tx.pure.string(command.scope), tx.pure.string(command.command_id), tx.pure.string(command.nonce), tx.pure.string(command.idempotency_key), tx.pure.string(command.budget?.asset ?? ''), tx.pure.u64(toBigInt(command.budget?.amount ?? 0)), tx.pure.vector('u8', nodeCommandIntentHash(command)), tx.pure.u64(command.issued_at_ms), tx.pure.u64(command.expires_at_ms), tx.object('0x6'));
-    if (contract) args.unshift(tx.object(contract.id));
-    tx.moveCall({ target: contract ? `${this.fm.packageId}::okr::prepare_command_v2` : `${this.fm.packageId}::node_execution::prepare_${input.managedAgentId ? 'agent_command_v2' : 'host_command'}`, arguments: args });
-    return tx;
+  async prepareCommand(input: Authority & { command: SignedNodeCommand; resultKey?: CommandResultKeyInput; tx?: Transaction }) {
+    // Snapshot mutable caller data before signature and membership reads.
+    const command = structuredClone(input.command),
+      resultKey = input.resultKey ? structuredClone(input.resultKey) : undefined,
+      authority = { humanId: input.humanId, grantId: input.grantId, membershipId: input.membershipId, bindingId: input.bindingId, managedAgentId: input.managedAgentId };
+    try {
+      await verifySignedNodeCommand(command);
+      if (Boolean(command.target.agent_id) !== Boolean(authority.managedAgentId)) throw new Error('Managed instance authority must match the command target.');
+      const tx = this.fm.useTransaction(input.tx);
+      const contract = command.payload?.okr as { id: string; agreement_version: string; kr_index: string } | undefined;
+      if ('okr' in (command.payload ?? {})) {
+        if (!contract || !authority.managedAgentId || typeof contract.id !== 'string' || typeof contract.agreement_version !== 'string' || typeof contract.kr_index !== 'string' || normalizeSuiAddress(contract.id) !== contract.id || !/^[1-9][0-9]*$/.test(contract.agreement_version) || !/^[0-2]$/.test(contract.kr_index)) throw new Error('Invalid signed OKR context.');
+      }
+      if (resultKey) {
+        const member = await new HostApi(this.fm).getMembership(authority.membershipId);
+        if (member.id !== normalizeSuiAddress(authority.membershipId) || member.org_id !== normalizeSuiAddress(command.target.organization_id) || member.host_address !== normalizeSuiAddress(command.target.node_id) || member.revoked || member.coordinator_binding !== normalizeSuiAddress(authority.bindingId)) throw new Error('Host membership does not match command key recipient.');
+        const fingerprint = bytesToHex(nodeCommandIntentHash(command));
+        let wrapped: Uint8Array;
+        const keyVersion = toBigInt(resultKey.keyVersion);
+        if (keyVersion <= 0n || keyVersion > 0xffffffffffffffffn) throw new Error('Invalid command result key version.');
+        if (resultKey.wrappedKey !== undefined) {
+          if (resultKey.organizationKey !== undefined || !(resultKey.wrappedKey instanceof Uint8Array)
+            || resultKey.wrappedKey.length !== 132 || new TextDecoder().decode(resultKey.wrappedKey.slice(0, 4)) !== 'FMW1'
+            || new TextDecoder().decode(resultKey.wrappedKey.slice(68, 72)) !== 'FME1'
+            || resultKey.organizationId !== command.target.organization_id || resultKey.capabilityId !== command.capability.id
+            || resultKey.membershipId !== authority.membershipId || resultKey.hostAddress !== member.host_address
+            || resultKey.intentHash !== fingerprint || !(resultKey.hostEncryptionPublicKey instanceof Uint8Array)
+            || resultKey.hostEncryptionPublicKey.length !== 32 || member.encryption_public_key.length !== 32
+            || !resultKey.hostEncryptionPublicKey.every((value, i) => value === member.encryption_public_key[i]))
+            throw new Error('Wrapped command result key context changed.');
+          wrapped = resultKey.wrappedKey;
+        } else {
+          const derived = commandResultKey(resultKey.organizationKey, command.target.organization_id, fingerprint, keyVersion);
+          try { wrapped = await wrapKeys(derived, Uint8Array.from(member.encryption_public_key), commandResultWrapContext(command.target.organization_id, command.capability.id, authority.membershipId, fingerprint, keyVersion)); }
+          finally { derived.fill(0); }
+        }
+        tx.moveCall({ target: `${this.fm.packageId}::node_execution::grant_result_key`, arguments: [tx.object(command.capability.id), tx.object(command.target.organization_id), tx.object(authority.humanId), tx.object(authority.grantId), tx.object(authority.membershipId), tx.object(authority.bindingId), tx.pure.vector('u8', nodeCommandIntentHash(command)), tx.pure.u64(keyVersion), tx.pure.vector('u8', wrapped), tx.object('0x6')] });
+      }
+      const args: TransactionArgument[] = [tx.object(command.capability.id), tx.object(command.target.organization_id), tx.object(authority.humanId), tx.object(authority.grantId), tx.object(authority.membershipId), tx.object(authority.bindingId)];
+      if (authority.managedAgentId) args.push(tx.object(authority.managedAgentId));
+      if (contract) args.push(tx.pure.u64(toBigInt(contract.agreement_version)), tx.pure.u64(toBigInt(contract.kr_index)));
+      args.push(tx.pure.string(command.action), tx.pure.string(command.scope), tx.pure.string(command.command_id), tx.pure.string(command.nonce), tx.pure.string(command.idempotency_key), tx.pure.string(command.budget?.asset ?? ''), tx.pure.u64(toBigInt(command.budget?.amount ?? 0)), tx.pure.vector('u8', nodeCommandIntentHash(command)), tx.pure.u64(command.issued_at_ms), tx.pure.u64(command.expires_at_ms), tx.object('0x6'));
+      if (contract) args.unshift(tx.object(contract.id));
+      tx.moveCall({ target: contract ? `${this.fm.packageId}::okr::prepare_command_v2` : `${this.fm.packageId}::node_execution::prepare_${authority.managedAgentId ? 'agent_command_v2' : 'host_command'}`, arguments: args });
+      return tx;
+    } finally { resultKey?.organizationKey?.fill(0); }
   }
   beginCommand(input: Authority & { executionId: string; capabilityId: string; organizationId: string; okrId?: string; attemptId?: Uint8Array; tx?: Transaction }) {
     const tx = this.fm.useTransaction(input.tx);

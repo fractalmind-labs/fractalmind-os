@@ -309,6 +309,23 @@ async fn fm_device_wrap_organization_keys(
     .await
     .map_err(|_| "NativeTaskFailed".to_string())?
 }
+#[tauri::command]
+async fn fm_device_wrap_command_result_key(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: String,
+    request: String,
+) -> Result<String, String> {
+    main_window(&window)?;
+    let vault = Arc::clone(vault.inner());
+    tauri::async_runtime::spawn_blocking(move || {
+        vault
+            .wrap_command_result_key(&profile, &request)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|_| "NativeTaskFailed".to_string())?
+}
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -362,7 +379,8 @@ fn main() {
             fm_recovery_prepare,
             fm_recovery_prepared_public,
             fm_recovery_sign_transaction,
-            fm_device_wrap_organization_keys
+            fm_device_wrap_organization_keys,
+            fm_device_wrap_command_result_key
         ])
         .run(tauri::generate_context!())
         .expect("FractalMind App runtime failed");

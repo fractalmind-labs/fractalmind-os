@@ -16,6 +16,7 @@ use sui_sdk_types::{Transaction, TransactionKind};
 use x25519_dalek::{PublicKey, StaticSecret};
 use zeroize::Zeroizing;
 
+mod command_results;
 mod keyrings;
 mod node_command;
 mod onboarding;

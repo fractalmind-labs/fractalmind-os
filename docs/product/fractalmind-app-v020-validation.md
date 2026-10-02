@@ -6,6 +6,13 @@
 
 ## 当前验证证据
 
+### App 原生命令结果密钥与实际交易接线增量
+
+- 新原生接口从 OS keyring 派生单条命令结果密钥，仅返回指定 Host 的密文；App 在原生调用及构建前后核验当前设备、组织、成员／活跃指针、实例和密钥版本，并提供广播前复核。SDK 同一 PTB 授予密钥与预留原 Run，不要求正式 App 导出组织密钥。
+- [真实 OS／localnet 报告](evidence/v020-native-command-results-localnet.json)：**8 项检查、11 笔确认交易及费用**。原生签名／封装、Host 独立解包、FME2 原生解密、原摘要查询、原排队观察取消及实际 Host 撤销拒绝通过；测试凭据已清理。
+- [SDK 121/121、App 103/103、Rust 核心 19/19、Tauri 来源 1/1、类型／构建](evidence/v020-native-command-results-unit.json)通过。保留[五次前序记录](evidence/v020-native-command-results-prior.json)，修复活跃 Host 目录键类型及测试可见性门禁，并保留类型化模拟错误／明确组织名冲突提示。
+- **仍未完成**：完整 App 审阅／审批／明确继续、原生 runner／持续自主／对话／人验收、历史迁移／升级、安装后 UI／持久 journal、真实云 Host 与五平台。此专项 Host／实例为登记夹具，未派发 envd，FME2 互操作正文未作为真实 Run 结果上链；独立子进程 OS 测试不替代安装后 IPC。详见[原生命令结果接线与限制](v020-app-command-results.md)。
+
 ### 审批政策复核与签名继续执行增量
 
 - 正式 envd 读取当前类型化 HandoverPolicy，原生 assign 拒绝未绑定 OKR 的通用能力。签名继续固定审批 ID／提案哈希／nonce；每次工具前检查当前政策、协议／游标、路径、预算、本人 Run 和实例。物理审阅只在当前链检查通过后消费，失败保留另一条预约。

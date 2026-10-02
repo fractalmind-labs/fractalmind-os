@@ -50,6 +50,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             &request.profile,
             &request.bytes.ok_or("Transaction bytes required")?,
         )?)?,
+        "signNodeCommand" => serde_json::to_value(
+            vault.sign_node_command(
+                &request.profile,
+                &request.bytes.ok_or("Command bytes required")?,
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)?
+                    .as_millis()
+                    .try_into()?,
+            )?,
+        )?,
         "proveDevice" => serde_json::to_value(
             vault.prove_device(
                 &request.profile,
@@ -107,6 +117,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         "wrapOrganizationKeys" => serde_json::to_value(vault.wrap_organization_keys(
             &request.profile,
             &request.record.ok_or("Share request required")?,
+        )?)?,
+        "wrapCommandResultKey" => serde_json::to_value(vault.wrap_command_result_key(
+            &request.profile,
+            &request.record.ok_or("Command result request required")?,
         )?)?,
         "decryptRecord" => serde_json::to_value(
             vault.decrypt_record(&request.profile, &request.record.ok_or("Record required")?)?,

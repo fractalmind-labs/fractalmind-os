@@ -148,20 +148,12 @@ fn decrypt(keys: &[u8], profile: &str, input: &RecordRequest) -> Result<Zeroizin
         {
             return Err(VaultError::InvalidEnvelope);
         }
-        let domain = "fractalmind.command-result-key.v1";
-        let mut derived = Zeroizing::new([0u8; 32]);
-        Hkdf::<Sha256>::new(Some(domain.as_bytes()), content_key.as_ref())
-            .expand(
-                format!(
-                    "{domain}:{}:{}:{}",
-                    input.organization_id,
-                    &input.logical_id[8..],
-                    input.key_version
-                )
-                .as_bytes(),
-                derived.as_mut(),
-            )
-            .map_err(|_| VaultError::InvalidEnvelope)?;
+        let derived = super::command_results::derive_result_key(
+            content_key.as_ref(),
+            &input.organization_id,
+            &input.logical_id[8..],
+            &input.key_version,
+        )?;
         open_body(&body, derived.as_ref(), &context, b"FME2")
     } else {
         open_body(&body, content_key.as_ref(), &context, b"FME1")
