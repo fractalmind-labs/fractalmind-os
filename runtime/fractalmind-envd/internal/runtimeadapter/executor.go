@@ -70,7 +70,8 @@ type payload struct {
 	Measurement    *struct {
 		Kind string `json:"kind"`
 	} `json:"measurement,omitempty"`
-	Handover *nodecommand.HandoverProposal `json:"handover_review,omitempty"`
+	Handover     *nodecommand.HandoverProposal        `json:"handover_review,omitempty"`
+	Continuation *nodecommand.HandoverContinuationRef `json:"handover_continue,omitempty"`
 }
 
 func NewExecutor(validator *nodecommand.Validator, adapter Adapter) *Executor {

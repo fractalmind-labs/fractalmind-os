@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 )
 
 // NativeState reports physical activity only. Idle is not a claim that every
@@ -26,26 +28,65 @@ type nativeAttempt struct {
 
 // Both the original configured name and its discovered native-* alias address
 // the same physical slot. The gate spans all tool operations through Close.
+
 func (a *boundedFileAgent) beginNative(agent, command, execution string) (func(), bool) {
+	release, _, ok := a.beginNativeContinuation(agent, command, execution, nil)
+	return release, ok
+}
+
+// An untrusted matching reference may reserve the physical slot, but cannot
+// consume a review. Only the independently checked chain policy commits it.
+// Failure retains the same lease and releases only this attempt's slot.
+func (a *boundedFileAgent) beginNativeContinuation(agent, command, execution string, continuation *nodecommand.HandoverContinuationRef) (func(), func(nodecommand.ExecutionHandoverAuthority) bool, bool) {
 	id := a.instanceIDs[agent]
 	if id == "" {
 		id = agent
 	}
 	a.mu.Lock()
-	if review, exists := a.reviews[id]; exists {
-		if time.Now().Before(review.deadline) {
-			a.mu.Unlock()
-			return nil, false
-		}
-		delete(a.reviews, id)
-	}
 	if _, exists := a.active[id]; exists {
 		a.mu.Unlock()
-		return nil, false
+		return nil, nil, false
 	}
-	a.active[id] = nativeAttempt{command, execution, time.Now().UTC()}
+	var lease *nativeReviewLease
+	if review, exists := a.reviews[id]; exists {
+		if time.Now().Before(review.deadline) {
+			if continuation == nil || continuation.ProposalHash != review.hash || continuation.Nonce != review.nonce {
+				a.mu.Unlock()
+				return nil, nil, false
+			}
+			lease = review
+		} else {
+			delete(a.reviews, id)
+		}
+	}
+	attempt := nativeAttempt{command, execution, time.Now().UTC()}
+	a.active[id] = attempt
 	a.mu.Unlock()
-	return func() { a.mu.Lock(); delete(a.active, id); a.mu.Unlock() }, true
+	release := func() {
+		a.mu.Lock()
+		defer a.mu.Unlock()
+		if current, exists := a.active[id]; exists && current == attempt {
+			delete(a.active, id)
+		}
+	}
+	commit := func(approved nodecommand.ExecutionHandoverAuthority) bool {
+		a.mu.Lock()
+		defer a.mu.Unlock()
+		if current, exists := a.active[id]; !exists || current != attempt {
+			return false
+		}
+		if continuation == nil || approved.ApprovalID != continuation.ApprovalID || approved.ProposalHash != continuation.ProposalHash || approved.Nonce != continuation.Nonce {
+			return false
+		}
+		if lease != nil {
+			if current := a.reviews[id]; current != lease || !time.Now().Before(lease.deadline) || approved.ProposalHash != lease.hash || approved.Nonce != lease.nonce {
+				return false
+			}
+			delete(a.reviews, id)
+		}
+		return true
+	}
+	return release, commit, true
 }
 
 func (a *boundedFileAgent) nativeStatus(request Request) (Response, error) {

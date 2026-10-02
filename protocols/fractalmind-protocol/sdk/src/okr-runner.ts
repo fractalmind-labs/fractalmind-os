@@ -175,8 +175,8 @@ export class NativeFileOkrRunner {
       if (unknown) return { ...base, status: 'awaiting_confirmation', reason: unknown.confirmed ? 'ticket_index_not_visible' : 'ticket_transaction_unknown', transactionDigest: unknown.digest };
       if (!input.createIfMissing) return { ...base, status: 'idle', reason: 'no_confirmed_ticket' };
       if (!okr.managed_agent || !okr.membership_id) throw new Error('Active OKR has no managed assignment.');
-      const [managed, member, capability, binding, contract, budget] = await Promise.all([
-        sdk.host.getManagedAgent(okr.managed_agent), sdk.host.getMembership(okr.membership_id), sdk.remoteAuthority.getCapability(input.capabilityId), sdk.host.getAuthorityBinding(input.capabilityId), sdk.okr.getCapabilityContract(input.capabilityId), sdk.okr.getBudget(okr.id),
+      const [managed, member, capability, binding, contract, budget, policy] = await Promise.all([
+        sdk.host.getManagedAgent(okr.managed_agent), sdk.host.getMembership(okr.membership_id), sdk.remoteAuthority.getCapability(input.capabilityId), sdk.host.getAuthorityBinding(input.capabilityId), sdk.okr.getCapabilityContract(input.capabilityId), sdk.okr.getBudget(okr.id), sdk.handover.getPolicy(okr.id),
       ]);
       const signer = this.options.signer.getPublicKey().toSuiAddress(), now = (this.options.now ?? Date.now)(), kr = plan.krs[Number(okr.next_kr)];
       const assignmentMatches = managed.org_id === okr.org_id && managed.id === okr.managed_agent
@@ -192,15 +192,18 @@ export class NativeFileOkrRunner {
       const deviceMatches = binding.human_id === normalizeSuiAddress(this.options.humanId)
         && binding.device_grant === normalizeSuiAddress(this.options.grantId);
       if (!assignmentMatches || !capabilityMatches || !contractMatches || !deviceMatches) return { ...base, status: 'awaiting_approval', reason: 'current_device_or_assignment_authority_changed' };
+      if (policy.agreement_version !== okr.agreement_version || policy.managed_version !== managed.version || BigInt(kr.maxCalls) > BigInt(policy.max_calls) || capability.maxBudget > BigInt(policy.max_calls)) return { ...base, status: 'awaiting_approval', reason: 'current_reviewed_policy_or_tool_ceiling_changed' };
+      const continuation = { approval_id: policy.approval_id, proposal_hash: bytesToHex(Uint8Array.from(policy.proposal_hash)), nonce: bytesToHex(Uint8Array.from(policy.nonce)) };
       if (capability.usesClaimed + capability.usesDelegated >= capability.maxUses) return { ...base, status: 'awaiting_approval', reason: 'capability_uses_exhausted' };
       if (binding.membership_id !== member.id || binding.membership_version !== member.version || binding.managed_agent !== managed.id || binding.managed_agent_version !== managed.version || managed.host_address !== member.host_address || bytesToHex(Uint8Array.from(managed.workspace_hash)) !== bytesToHex(Uint8Array.from(okr.workspace_hash)) || capability.budgetAsset !== 'TOOL_CALLS') return { ...base, status: 'awaiting_approval', reason: 'current_assignment_binding_changed' };
       if (capability.budgetClaimed + capability.budgetDelegated + BigInt(kr.maxCalls) > capability.maxBudget) return { ...base, status: 'awaiting_approval', reason: 'capability_budget_exhausted' };
       if (budget.spent + budget.reserved + BigInt(kr.maxCalls) > BigInt(okr.budget_limit)) return { ...base, status: 'awaiting_approval', reason: 'budget_exhausted_including_reservations' };
       const expires = [BigInt(now + 300000), capability.expiresAtMs, BigInt(okr.expires_at_ms), BigInt(member.expires_at_ms)].reduce((a, b) => a < b ? a : b);
       if (expires <= BigInt(now)) return { ...base, status: 'awaiting_approval', reason: 'execution_authority_expired' };
-      const command = await signNodeCommand(this.options.signer, { target: { organizationId: okr.org_id, nodeId: member.host_address, agentId: managed.instance_id }, action: 'assign', scope: 'control', capability: { id: capability.objectId, revocationVersion: capability.revocationVersion }, budget: { asset: 'TOOL_CALLS', amount: BigInt(kr.maxCalls) }, issuedAtMs: now, expiresAtMs: Number(expires), payload: { okr: { id: okr.id, agreement_version: okr.agreement_version, kr_index: okr.next_kr }, measurement: { kind: 'verified_text_file_count' }, bounds: { paths: plan.paths, max_calls: kr.maxCalls }, task: JSON.stringify({ kind: 'ensure_text_files', files: kr.files }) } });
+      const command = await signNodeCommand(this.options.signer, { target: { organizationId: okr.org_id, nodeId: member.host_address, agentId: managed.instance_id }, action: 'assign', scope: 'control', capability: { id: capability.objectId, revocationVersion: capability.revocationVersion }, budget: { asset: 'TOOL_CALLS', amount: BigInt(kr.maxCalls) }, issuedAtMs: now, expiresAtMs: Number(expires), payload: { handover_continue: continuation, okr: { id: okr.id, agreement_version: okr.agreement_version, kr_index: okr.next_kr }, measurement: { kind: 'verified_text_file_count' }, bounds: { paths: plan.paths, max_calls: kr.maxCalls }, task: JSON.stringify({ kind: 'ensure_text_files', files: kr.files }) } });
       const latest = await sdk.okr.getOkr(okr.id);
       if (latest.state !== 1 || latest.version !== okr.version || latest.agreement_version !== okr.agreement_version || latest.agreement_record !== okr.agreement_record || latest.next_kr !== okr.next_kr) return { ...base, status: 'paused', reason: 'agreement_changed_during_planning' };
+      if (JSON.stringify(await sdk.handover.getPolicy(okr.id)) !== JSON.stringify(policy)) return { ...base, status: 'paused', reason: 'reviewed_policy_changed_during_signing' };
       const key = new Uint8Array(await this.options.keyForVersion(directory.keyVersion));
       try {
         const ticket: Ticket = { schema: 'fractalmind.okr-command-ticket.v1', okrId: okr.id, specRecordId: okr.spec_record, agreementRecordId: okr.agreement_record!, command };
@@ -239,6 +242,9 @@ export class NativeFileOkrRunner {
     if (fingerprint !== newFingerprint && !input.releaseQueued) return { ...withRun, status: 'queued', reason: 'restored_ticket_requires_delivery_release' };
     const current = await sdk.okr.getOkr(okr.id);
     if (current.version !== okr.version || current.state !== 1 || current.agreement_version !== okr.agreement_version || current.next_kr !== okr.next_kr) return { ...withRun, status: 'paused', reason: 'agreement_changed_before_delivery' };
+    const deliveryPolicy = await sdk.handover.getPolicy(okr.id);
+    const deliveryRef = { approval_id: deliveryPolicy.approval_id, proposal_hash: bytesToHex(Uint8Array.from(deliveryPolicy.proposal_hash)), nonce: bytesToHex(Uint8Array.from(deliveryPolicy.nonce)) };
+    if (deliveryPolicy.agreement_version !== current.agreement_version || deliveryPolicy.managed_version !== current.managed_version || BigInt(ticket.command.budget!.amount) > BigInt(deliveryPolicy.max_calls) || JSON.stringify(ticket.command.payload.handover_continue) !== JSON.stringify(deliveryRef)) return { ...withRun, status: 'paused', reason: 'reviewed_policy_changed_before_delivery' };
     try { await this.options.deliver(ticket.command); } catch { return { ...withRun, status: 'awaiting_confirmation', reason: 'delivery_outcome_unknown' }; }
     const observed = await sdk.okr.getOkr(okr.id);
     const updated = this.lifecycle(observed);

@@ -15,6 +15,7 @@ import (
 // never authorizes a tool call, and a Host restart cannot recreate its promise.
 type nativeReviewLease struct {
 	hash        string
+	nonce       string
 	deadline    time.Time
 	expiresAtMS int64
 }
@@ -82,7 +83,7 @@ func (a *boundedFileAgent) reviewHandover(ctx context.Context, r Request, comman
 		a.mu.Unlock()
 		return deny("instance_busy", fmt.Errorf("instance has a current execution or review"))
 	}
-	lease := &nativeReviewLease{hash: hash, deadline: deadline, expiresAtMS: proposal.ReviewExpiresAtMS}
+	lease := &nativeReviewLease{hash: hash, nonce: proposal.Nonce, deadline: deadline, expiresAtMS: proposal.ReviewExpiresAtMS}
 	a.reviews[id] = lease
 	a.mu.Unlock()
 	release := func() {

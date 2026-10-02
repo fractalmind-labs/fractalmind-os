@@ -183,3 +183,68 @@ func TestLateReviewFailureDoesNotReleaseNewReservation(t *testing.T) {
 		t.Fatal("failed review released another reservation")
 	}
 }
+
+func TestReviewedContinuationConsumesOnlyTheMatchingLeaseAfterChainCheck(t *testing.T) {
+	for _, mode := range []string{"valid", "wrong reference", "changed authority", "expired lease", "replaced lease"} {
+		t.Run(mode, func(t *testing.T) {
+			a, reader, observer, request, reviewCommand, reviewRun, dir := nativeReviewFixture(t)
+			review, err := a.runAuthorized(context.Background(), request, reviewCommand, &reviewRun)
+			if err != nil || !review.OK {
+				t.Fatal(review, err)
+			}
+			hash, _ := request.Handover.Hash()
+			approved := nodecommand.ExecutionHandoverAuthority{ApprovalID: "0x" + strings.Repeat("f", 64), ProposalHash: hash, Nonce: request.Handover.Nonce, MaxCalls: 3, ManagedVersion: 2}
+			if mode == "wrong reference" {
+				approved.ProposalHash = strings.Repeat("e", 64)
+			}
+			assignment, command := nativeAssignment(t, reader.blockingNativeAuthority, request.Agent, dir, &approved)
+			lease := a.reviews[request.Agent]
+			if mode == "changed authority" {
+				reader.state.Handover.ApprovalID = "0x" + strings.Repeat("e", 64)
+			}
+			if mode == "expired lease" || mode == "replaced lease" {
+				reader.entered, reader.release = make(chan struct{}), make(chan struct{})
+				go func() {
+					<-reader.entered
+					a.mu.Lock()
+					if mode == "expired lease" {
+						lease.deadline = time.Now().Add(-time.Second)
+					} else {
+						a.reviews[request.Agent] = &nativeReviewLease{hash: lease.hash, nonce: lease.nonce, deadline: time.Now().Add(time.Minute), expiresAtMS: lease.expiresAtMS}
+					}
+					a.mu.Unlock()
+					close(reader.release)
+				}()
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			result, err := a.runAuthorized(ctx, assignment, command, &reader.run)
+			if err != nil {
+				t.Fatal(err)
+			}
+			entries, err := os.ReadDir(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if mode == "valid" {
+				if !result.OK || result.Spend.Amount != 3 || len(entries) != 1 || len(a.reviews) != 0 {
+					t.Fatal("valid continuation did not consume matching review and execute", result)
+				}
+				content, err := os.ReadFile(filepath.Join(dir, "actual.md"))
+				if err != nil || string(content) != "attained" {
+					t.Fatal("actual bounded file result missing", err)
+				}
+			} else {
+				if result.OK || result.Spend.Amount != 0 || len(entries) != 0 || a.reviews[request.Agent] == nil {
+					t.Fatal("denied continuation consumed review or touched tools", result)
+				}
+				if mode == "replaced lease" && a.reviews[request.Agent] == lease {
+					t.Fatal("new reservation was discarded")
+				}
+			}
+			if len(a.active) != 0 || observer.callCount() != 0 {
+				t.Fatal("attempt leaked or observer invoked")
+			}
+		})
+	}
+}

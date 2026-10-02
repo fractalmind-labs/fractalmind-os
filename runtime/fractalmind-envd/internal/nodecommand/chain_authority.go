@@ -400,6 +400,13 @@ func (s *ChainAuthorityResolver) Resolve(ctx context.Context, ref CapabilityRef)
 	if err != nil {
 		return CapabilityState{}, err
 	}
+	var handover *ExecutionHandoverAuthority
+	if contract != nil {
+		handover, err = r.currentHandover(ctx, cap, contract, instance)
+		if err != nil {
+			return CapabilityState{}, err
+		}
+	}
 	if contractExpiry < expiry {
 		expiry = contractExpiry
 	}
@@ -425,6 +432,7 @@ func (s *ChainAuthorityResolver) Resolve(ctx context.Context, ref CapabilityRef)
 	state := CapabilityState{ID: ref.ID, Target: Target{OrganizationID: cap.Org.String(), NodeID: cap.Node, AgentID: cap.Agent}, AuthorizedSigners: []string{cap.Delegate.String()}, Actions: cap.Actions, Scopes: []string{cap.Scope}, ExpiresAtMS: int64(expiry), RevocationVersion: cap.Version, CheckpointObservedAtMS: now, ReservationScope: ReservationScopeNode, RemainingUses: &uses, AuthorityVersionHash: hashBytes([]byte(stamp.String()))}
 	state.ManagedInstance = instance
 	state.Contract = contract
+	state.Handover = handover
 	// Pre-validation ceilings: the exact intent may already be reserved. The
 	// chain reservation backend checks its claim and counters without consuming twice.
 	if cap.MaxBudget > 0 {

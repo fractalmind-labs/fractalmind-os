@@ -20,6 +20,7 @@ type Guard struct {
 	reader                                                  ExecutionAuthority
 	command                                                 nodecommand.NodeCommand
 	runID, attemptID, fingerprint, workspaceHash, managedID string
+	handover                                                *nodecommand.ExecutionHandoverAuthority
 }
 
 func WorkspaceHash(directory string) (string, error) {
@@ -75,6 +76,18 @@ func (g *Guard) Check(ctx context.Context) error {
 	if state.ID != g.command.Capability.ID || state.Revoked || state.Target != g.command.Target || state.RevocationVersion != uint64(g.command.Capability.RevocationVersion) || !slices.Contains(state.AuthorizedSigners, g.command.Signer) || !slices.Contains(state.Actions, g.command.Action) || !slices.Contains(state.Scopes, g.command.Scope) || state.ManagedInstance == nil || state.ManagedInstance.ID != g.managedID || state.ManagedInstance.Runtime != "bounded-process-v1" || state.ManagedInstance.WorkspaceHash != g.workspaceHash || state.AuthorityVersionHash == "" {
 		return ErrBoundary
 	}
+	if state.Contract == nil || state.Handover == nil {
+		return ErrBoundary
+	}
+	if err := nodecommand.ValidateExecutionHandover(g.command, state); err != nil {
+		return err
+	}
+	if g.handover == nil {
+		copy := *state.Handover
+		g.handover = &copy
+	} else if *g.handover != *state.Handover {
+		return ErrBoundary
+	}
 	if err := nodecommand.ValidateExecutionContract(g.command, state.Contract); err != nil {
 		return err
 	}
@@ -106,4 +119,12 @@ func (g *Guard) Check(ctx context.Context) error {
 		return ErrStopped
 	}
 	return nil
+}
+
+// Copy from the successfully checked initial policy, never caller payload.
+func (g *Guard) ApprovedHandover() nodecommand.ExecutionHandoverAuthority {
+	if g.handover == nil {
+		return nodecommand.ExecutionHandoverAuthority{}
+	}
+	return *g.handover
 }

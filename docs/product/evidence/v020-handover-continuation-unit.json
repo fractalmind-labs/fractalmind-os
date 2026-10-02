@@ -1,0 +1,76 @@
+{
+  "checkedAt": "2026-10-02T13:19:04.965768+00:00",
+  "checks": [
+    {
+      "name": "SDK current-policy runner regression/types/build",
+      "cwd": "protocols/fractalmind-protocol/sdk",
+      "commands": [
+        "npm run typecheck",
+        "npm run build",
+        "node --import tsx --test tests/*.test.ts"
+      ],
+      "passed": 118,
+      "failed": 0
+    },
+    {
+      "name": "App regression/types/production build",
+      "cwd": "apps/fractalmind-app",
+      "commands": [
+        "npm test",
+        "npm run build"
+      ],
+      "passed": 98,
+      "failed": 0,
+      "existingWarning": "large entry chunk and dependency PURE annotations"
+    },
+    {
+      "name": "Actual-chain harness typecheck",
+      "cwd": "apps/fractalmind-app",
+      "command": "tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck scripts/host-admission-localnet.ts",
+      "success": true
+    },
+    {
+      "name": "Go six-package concurrency/regression",
+      "cwd": "runtime/fractalmind-envd",
+      "command": "go test -race ./internal/nodecommand ./internal/runtimeadapter ./internal/boundedrun ./internal/sui ./internal/coordinator ./cmd/envd -count=1",
+      "success": true,
+      "evidence": [
+        "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand\t2.366s",
+        "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter\t7.330s",
+        "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun\t2.955s",
+        "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui\t4.949s",
+        "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/coordinator\t3.842s",
+        "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd\t5.820s"
+      ]
+    },
+    {
+      "name": "Historical settlement with physically absent current policy",
+      "cwd": "runtime/fractalmind-envd",
+      "command": "go test -race ./internal/nodecommand -run TestOkrExecutionHistoryRetainsOriginalAgreementAndChecksBothBudgets -count=1",
+      "success": true
+    }
+  ],
+  "coverage": {
+    "currentPolicyTypedSourceAndOwnerNamePins": true,
+    "missingLegacyPolicyDenied": true,
+    "unboundNativeAssignmentDenied": true,
+    "everyToolRequiresCurrentPolicyAndSignedContinuation": true,
+    "policyPinnedAcrossExecution": true,
+    "failedAttemptPreservesOriginalReview": true,
+    "lateAttemptCannotConsumeReplacementReview": true,
+    "leaseExpiryDoesNotGrantTools": true,
+    "originalHistoryRetainsContractWithoutCurrentPolicy": true,
+    "sdkRunnerRechecksAfterSigningAndBeforeDelivery": true,
+    "unknownOrIndexLagDoesNotCauseReplay": true
+  },
+  "limits": {
+    "moveChanged": false,
+    "uiChanged": false,
+    "actualChainRunUsedExplicitSdkCommand": true,
+    "newSdkRunnerActualChainAcceptance": false,
+    "safeAppHandoverComplete": false,
+    "installedAppVerified": false,
+    "cloudHostVerified": false,
+    "fivePlatformAcceptanceComplete": false
+  }
+}

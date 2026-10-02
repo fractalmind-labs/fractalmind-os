@@ -2,6 +2,8 @@
 
 依据 PRD v0.11、J11 及唯一界面基线 `fractalmind-app-prototype-v2`。本增量将已经实现的 Host 审阅签名接到 Sui 原子审批。完整 App 安全交接与 v0.2.0 尚未完成。
 
+后续已实现[运行时政策复核与签名继续](v020-reviewed-continuation.md)，并验证原实际文件任务；下文剩余项对应本次审批提交的历史范围，App 完整旅程及其他总目标门禁仍待完成。
+
 ## 实现
 
 `handover::confirm_okr` 在同一交易中完成以下检查与更新：

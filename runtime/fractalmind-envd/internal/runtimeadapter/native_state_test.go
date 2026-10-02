@@ -64,7 +64,7 @@ func nativeFixture(t *testing.T) (*boundedFileAgent, *blockingNativeAuthority, *
 	}
 	return a, probe, observer, scan.Instances[0].InstanceID, scan.Instances[0].Workspace
 }
-func nativeAssignment(t *testing.T, probe *blockingNativeAuthority, id, dir string) (Request, nodecommand.NodeCommand) {
+func nativeAssignment(t *testing.T, probe *blockingNativeAuthority, id, dir string, policies ...*nodecommand.ExecutionHandoverAuthority) (Request, nodecommand.NodeCommand) {
 	t.Helper()
 	public, private, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -73,7 +73,14 @@ func nativeAssignment(t *testing.T, probe *blockingNativeAuthority, id, dir stri
 	defer clear(private)
 	address := blake2b.Sum256(append([]byte{0}, public...))
 	task := `{"kind":"ensure_text_files","files":[{"path":"actual.md","content":"attained"}]}`
-	payload, err := json.Marshal(map[string]any{"task": task})
+	paths := map[string][]string{"file.read": {"."}, "file.write": {"."}}
+	boundary, _ := nodecommand.ExecutionBoundaryHash(paths)
+	contract := nodecommand.ExecutionContractAuthority{ID: "okr", AgreementVersion: 1, BoundaryHash: boundary}
+	policy := nodecommand.ExecutionHandoverAuthority{ApprovalID: "0x" + strings.Repeat("f", 64), ProposalHash: strings.Repeat("c", 64), Nonce: strings.Repeat("b", 64), MaxCalls: 3, ManagedVersion: 1}
+	if len(policies) > 0 {
+		policy = *policies[0]
+	}
+	payload, err := json.Marshal(map[string]any{"task": task, "okr": nodecommand.ExecutionContractRef{ID: contract.ID, AgreementVersion: 1}, "bounds": map[string]any{"paths": paths, "max_calls": nodecommand.Uint64String(3)}, "handover_continue": nodecommand.HandoverContinuationRef{ApprovalID: policy.ApprovalID, ProposalHash: policy.ProposalHash, Nonce: policy.Nonce}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,6 +99,11 @@ func nativeAssignment(t *testing.T, probe *blockingNativeAuthority, id, dir stri
 	}
 	probe.state = nodecommand.CapabilityState{ID: command.Capability.ID, Target: command.Target, AuthorizedSigners: []string{command.Signer}, Actions: []string{command.Action}, Scopes: []string{command.Scope}, RevocationVersion: 1, ExpiresAtMS: command.ExpiresAtMS, AuthorityVersionHash: "current-chain-source", ManagedInstance: &nodecommand.ManagedInstanceAuthority{ID: "0x5", Runtime: "bounded-process-v1", WorkspaceHash: workspace, Version: 1}}
 	probe.run = nodecommand.ChainExecution{ID: "0x6", State: 1, CapabilityID: command.Capability.ID, Target: command.Target, CapabilityVersion: 1, HostAddress: command.Target.NodeID, ManagedAgentID: "0x5", Signer: command.Signer, Action: command.Action, Scope: command.Scope, Fingerprint: hex.EncodeToString(hash[:]), AttemptID: strings.Repeat("a", 64), Budget: command.Budget, BudgetReserved: command.Budget.Amount, ExpiresAtMS: command.ExpiresAtMS}
+	probe.state.ManagedInstance.Version = policy.ManagedVersion
+	probe.state.Contract = &contract
+	probe.state.Handover = &policy
+	recorded := contract
+	probe.run.Contract = &recorded
 	return Request{SchemaVersion: SchemaVersion, CommandID: command.CommandID, Operation: OperationAssign, Agent: id, Params: &OperationParams{Task: task}, Bounds: &ExecutionBounds{Paths: map[string][]string{"file.read": {"."}, "file.write": {"."}}, MaxCalls: 3}}, command
 }
 func physicalState(t *testing.T, a *boundedFileAgent, id string) NativeState {

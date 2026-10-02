@@ -49,6 +49,12 @@ func guardFixture(t *testing.T) (nodecommand.NodeCommand, *authorityProbe, strin
 	address := blake2b.Sum256(append([]byte{0}, public...))
 	now := time.Now().UnixMilli()
 	command := nodecommand.NodeCommand{Version: "1", CommandID: "bounded-test", Signer: "0x" + hex.EncodeToString(address[:]), Target: nodecommand.Target{OrganizationID: "0x2", NodeID: "0x3", AgentID: "bounded"}, Action: "assign", Scope: "control", Capability: nodecommand.CapabilityRef{ID: "0x4", RevocationVersion: 1}, IssuedAtMS: now, ExpiresAtMS: now + 300000, Nonce: "nonce", IdempotencyKey: "idem", Budget: &nodecommand.BudgetClaim{Asset: "TOOL_CALLS", Amount: 4}, Payload: json.RawMessage(`{"task":"verify real files"}`)}
+	paths := map[string][]string{"file.read": {"."}, "file.write": {"."}}
+	boundary, _ := nodecommand.ExecutionBoundaryHash(paths)
+	contract := nodecommand.ExecutionContractAuthority{ID: "okr", AgreementVersion: 1, KRIndex: 0, BoundaryHash: boundary}
+	policy := nodecommand.ExecutionHandoverAuthority{ApprovalID: "0x" + strings.Repeat("f", 64), ProposalHash: strings.Repeat("c", 64), Nonce: strings.Repeat("b", 64), MaxCalls: 4, ManagedVersion: 1}
+	continuation := nodecommand.HandoverContinuationRef{ApprovalID: policy.ApprovalID, ProposalHash: policy.ProposalHash, Nonce: policy.Nonce}
+	command.Payload, _ = json.Marshal(map[string]any{"task": "verify real files", "okr": nodecommand.ExecutionContractRef{ID: contract.ID, AgreementVersion: 1, KRIndex: 0}, "bounds": map[string]any{"paths": paths, "max_calls": command.Budget.Amount}, "handover_continue": continuation})
 	command.PayloadHash = nodecommand.HashPayload(command.Payload)
 	bytes, err := command.SigningBytes()
 	if err != nil {
@@ -60,6 +66,10 @@ func guardFixture(t *testing.T) (nodecommand.NodeCommand, *authorityProbe, strin
 		state: nodecommand.CapabilityState{ID: command.Capability.ID, Target: command.Target, AuthorizedSigners: []string{command.Signer}, Actions: []string{command.Action}, Scopes: []string{command.Scope}, RevocationVersion: 1, ExpiresAtMS: command.ExpiresAtMS, AuthorityVersionHash: "source-and-version-proof", ManagedInstance: &nodecommand.ManagedInstanceAuthority{ID: "0x5", Runtime: "bounded-process-v1", WorkspaceHash: workspace, Version: 1}},
 		run:   nodecommand.ChainExecution{ID: "0x6", State: 1, CapabilityID: command.Capability.ID, Target: command.Target, CapabilityVersion: 1, HostAddress: command.Target.NodeID, ManagedAgentID: "0x5", Signer: command.Signer, Action: command.Action, Scope: command.Scope, Fingerprint: hex.EncodeToString(hash[:]), AttemptID: strings.Repeat("a", 64), Budget: command.Budget, BudgetReserved: command.Budget.Amount, ExpiresAtMS: command.ExpiresAtMS},
 	}
+	probe.state.Contract = &contract
+	probe.state.Handover = &policy
+	recorded := contract
+	probe.run.Contract = &recorded
 	return command, probe, dir
 }
 func TestGuardChecksCurrentChainBeforeEveryToolCall(t *testing.T) {
@@ -89,6 +99,13 @@ func TestGuardRefusesChangedAuthorityAttemptBudgetAndClock(t *testing.T) {
 		mutate func(*authorityProbe)
 	}{
 		{"RPC", func(p *authorityProbe) { p.fail = true }},
+		{"missing OKR", func(p *authorityProbe) { p.state.Contract = nil }},
+		{"missing review", func(p *authorityProbe) { p.state.Handover = nil }},
+		{"review replaced", func(p *authorityProbe) { p.state.Handover.ApprovalID = "0x" + strings.Repeat("e", 64) }},
+		{"review nonce", func(p *authorityProbe) { p.state.Handover.Nonce = strings.Repeat("e", 64) }},
+		{"review hash", func(p *authorityProbe) { p.state.Handover.ProposalHash = strings.Repeat("e", 64) }},
+		{"tool ceiling", func(p *authorityProbe) { p.state.Handover.MaxCalls = 1 }},
+		{"review instance version", func(p *authorityProbe) { p.state.Handover.ManagedVersion++ }},
 		{"revoked", func(p *authorityProbe) { p.state.Revoked = true }},
 		{"workspace", func(p *authorityProbe) { p.state.ManagedInstance.WorkspaceHash = strings.Repeat("b", 64) }},
 		{"runtime label", func(p *authorityProbe) { p.state.ManagedInstance.Runtime = "tmux-observe" }},
@@ -159,7 +176,7 @@ func TestGuardRechecksOkrAgreementAndCursorBeforeEffects(t *testing.T) {
 			probe.run.Contract = &recorded
 			probe.state.AuthorizedSigners = []string{command.Signer}
 			probe.run.Signer = command.Signer
-			command.Payload, err = json.Marshal(map[string]any{"okr": nodecommand.ExecutionContractRef{ID: contract.ID, AgreementVersion: 1, KRIndex: 0}, "bounds": map[string]any{"paths": paths, "max_calls": command.Budget.Amount}})
+			command.Payload, err = json.Marshal(map[string]any{"okr": nodecommand.ExecutionContractRef{ID: contract.ID, AgreementVersion: 1, KRIndex: 0}, "bounds": map[string]any{"paths": paths, "max_calls": command.Budget.Amount}, "handover_continue": nodecommand.HandoverContinuationRef{ApprovalID: probe.state.Handover.ApprovalID, ProposalHash: probe.state.Handover.ProposalHash, Nonce: probe.state.Handover.Nonce}})
 			if err != nil {
 				t.Fatal(err)
 			}

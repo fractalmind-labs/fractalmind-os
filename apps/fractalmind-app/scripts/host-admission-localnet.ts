@@ -911,6 +911,72 @@ if (earlyHarness && earlyPublic) {
         )?.id,
         imported.id,
       );
+      const hostResult = async (
+        label: string,
+        response: any,
+        observationId?: string,
+      ) => {
+        const digest = response.transaction_digest;
+        assert.ok(digest);
+        transactions.push({
+          label,
+          digest,
+          phase: "original_host_digest_received",
+        });
+        await save();
+        const run = await sdk.nodeExecution.getExecution(response.execution_id);
+        assert.equal(run.state, 2);
+        assert.equal(run.agent_id, selected.instanceId);
+        assert.ok(run.result_record);
+        const resultId = observationId ?? run.result_record;
+        const { object } = await coreClient.core.getObject({
+          objectId: resultId,
+          include: { previousTransaction: true },
+        });
+        assert.equal(object.owner.$kind, "Immutable");
+        assert.equal(
+          object.type,
+          `${deployment.packageId}::${observationId ? "okr::Observation" : "product_record::EncryptedRecord"}`,
+        );
+        assert.equal(object.previousTransaction, digest);
+        let receipt;
+        try {
+          receipt = await coreClient.core.getTransaction({
+            digest,
+            include: {
+              effects: true,
+              objectTypes: true,
+              events: true,
+              balanceChanges: true,
+              transaction: true,
+            },
+          });
+        } catch (error) {
+          // Tiny localnet retention can prune a transaction while the Host
+          // confirms its exact result object. Do not replay or invent a fee.
+          if ((error as { reason?: string }).reason !== "notFound") throw error;
+          transactions.push({
+            label,
+            digest,
+            status: "immutable_effect_confirmed",
+            immutableObjectId: resultId,
+            actualGas: null,
+            feeState: "original_transaction_unavailable",
+          });
+          await save();
+          return;
+        }
+        assert.equal(receipt.$kind, "Transaction");
+        assert.equal(receipt.Transaction!.status.success, true);
+        await record(label, {
+          status: "confirmed",
+          requestId: "native-host:" + response.command_id,
+          digest,
+          actualGas: gasCost(receipt.Transaction!.effects.gasUsed),
+          journalSynced: true,
+          transaction: receipt.Transaction!,
+        });
+      };
       if (process.env.FM_ENVD_HANDOVER_APPROVAL === "1") {
         assert.notEqual(
           process.env.FM_ENVD_NATIVE_EXECUTION,
@@ -1047,6 +1113,10 @@ if (earlyHarness && earlyPublic) {
           acceptance,
         );
         decrypted.plaintext.fill(0);
+        await hostResult(
+          "Host proof: original review result",
+          response.response,
+        );
         nativeExecution = {
           ...(nativeExecution as Record<string, unknown>),
           phase: "host_review_confirmed",
@@ -1282,6 +1352,142 @@ if (earlyHarness && earlyPublic) {
           "Validator preflights reject wrong coverage/signature, raw control, legacy activation and proof replay; capability ceiling 3 retains total OKR budget 10",
         );
         await save();
+        if (process.env.FM_ENVD_HANDOVER_CONTINUE === "1") {
+          const continuation = {
+            approval_id: policy.approval_id,
+            proposal_hash: bytesToHex(Uint8Array.from(policy.proposal_hash)),
+            nonce: bytesToHex(Uint8Array.from(policy.nonce)),
+          };
+          const assign = await signNodeCommand(device, {
+            target: {
+              organizationId,
+              nodeId: earlyPublic.host_address,
+              agentId: selected.instanceId,
+            },
+            action: "assign",
+            scope: "control",
+            capability: { id: boundedCap, revocationVersion: 1n },
+            budget: { asset: "TOOL_CALLS", amount: 3n },
+            expiresAtMs: proposal.expires_at_ms,
+            payload: {
+              handover_continue: continuation,
+              okr: { id: okrId, agreement_version: "1", kr_index: "0" },
+              measurement: { kind: "verified_text_file_count" },
+              bounds: { paths, max_calls: "3" },
+              task: JSON.stringify({
+                kind: "ensure_text_files",
+                files: [
+                  {
+                    path: "APPROVED.md",
+                    content: "Requires explicit continuation",
+                  },
+                ],
+              }),
+            },
+          });
+          const continuedRunId = created(
+            await execute(
+              "Reviewed continuation: prepare signed exact-policy file goal",
+              await sdk.nodeExecution.prepareCommand({
+                ...authority,
+                command: assign,
+                resultKey: {
+                  organizationKey: fixtureContentKey,
+                  keyVersion: 1n,
+                },
+              }),
+            ),
+            "node_execution::CommandExecution",
+          );
+          nativeExecution = {
+            ...(nativeExecution as Record<string, unknown>),
+            phase: "continuation_prepared",
+            continuedRunId,
+          };
+          await save();
+          const continued = (await (
+            await liveReads.prepareCommand(bindingId, assign)
+          ).send()) as any;
+          nativeExecution = {
+            ...(nativeExecution as Record<string, unknown>),
+            phase: "continuation_response_received",
+            originalContinuationResponse: continued,
+          };
+          await save();
+          assert.equal(continued.success, true);
+          assert.equal(continued.response.ok, true);
+          assert.equal(continued.response.spend.amount, "3");
+          assert.equal(continued.response.result.status, "submitted");
+          assert.equal(
+            continued.response.result.evidence[0].path,
+            "APPROVED.md",
+          );
+          assert.equal(continued.response.result.evidence[0].verified, true);
+          const settled = await sdk.nodeExecution.getExecution(continuedRunId);
+          assert.equal(settled.state, 2);
+          assert.ok(settled.result_record);
+          await hostResult(
+            "Reviewed continuation: original file execution result",
+            continued.response,
+          );
+          const immutable = await sdk.productRecord.decryptRecord(
+            settled.result_record,
+            fixtureContentKey,
+          );
+          const original = JSON.parse(
+            new TextDecoder().decode(immutable.plaintext),
+          );
+          assert.equal(original.response.ok, true);
+          assert.equal(original.response.spend.amount, "3");
+          immutable.plaintext.fill(0);
+          // A successful Host receipt can precede directory visibility. Query
+          // only this original measurement; never deliver the command again.
+          const observationDeadline = Date.now() + 5000;
+          let observations = (await sdk.okr.listObservations(okrId))
+            .observations;
+          while (
+            observations.length === 0 &&
+            Date.now() < observationDeadline
+          ) {
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            observations = (await sdk.okr.listObservations(okrId)).observations;
+          }
+          assert.equal(observations.length, 1);
+          assert.equal(observations[0].run_id, continuedRunId);
+          assert.equal(observations[0].current, "1");
+          await hostResult(
+            "Reviewed continuation: original Host measurement",
+            {
+              ...continued.response,
+              transaction_digest:
+                continued.response.okr_observation.transaction_digest,
+            },
+            observations[0].id,
+          );
+          const budget = await sdk.okr.getBudget(okrId);
+          assert.equal(budget.spent, 3n);
+          assert.equal(budget.reserved, 0n);
+          const measured = await sdk.okr.getOkr(okrId);
+          assert.equal(measured.metrics[0].current, "1");
+          assert.equal(measured.metrics[0].verified, false);
+          assert.equal(measured.state, 1);
+          nativeExecution = {
+            ...(nativeExecution as Record<string, unknown>),
+            phase: "continuation_confirmed",
+            explicitContinueVerified: true,
+            actualToolsDispatched: true,
+            originalContinueDigest: continued.response.transaction_digest,
+            measuredCurrent: "1",
+            spent: "3",
+            reserved: "0",
+            humanAcceptanceVerified: false,
+            safeAppHandoverVerified: false,
+          };
+          checks.push(
+            "Explicit signed continuation consumes matching physical review under current typed chain policy; actual file goal uses 3 tools and settles budget, encrypted original result and measurement remain on Sui without human acceptance",
+          );
+          await save();
+        }
       }
       if (process.env.FM_ENVD_NATIVE_EXECUTION === "1") {
         assert.ok(nativeDiscovery);
@@ -1413,75 +1619,6 @@ if (earlyHarness && earlyPublic) {
           (await sdk.host.getManagedAgent(imported.id)).control_confirmed,
           false,
         );
-        const hostResult = async (
-          label: string,
-          response: any,
-          observationId?: string,
-        ) => {
-          const digest = response.transaction_digest;
-          assert.ok(digest);
-          transactions.push({
-            label,
-            digest,
-            phase: "original_host_digest_received",
-          });
-          await save();
-          const run = await sdk.nodeExecution.getExecution(
-            response.execution_id,
-          );
-          assert.equal(run.state, 2);
-          assert.equal(run.agent_id, selected.instanceId);
-          assert.ok(run.result_record);
-          const resultId = observationId ?? run.result_record;
-          const { object } = await coreClient.core.getObject({
-            objectId: resultId,
-            include: { previousTransaction: true },
-          });
-          assert.equal(object.owner.$kind, "Immutable");
-          assert.equal(
-            object.type,
-            `${deployment.packageId}::${observationId ? "okr::Observation" : "product_record::EncryptedRecord"}`,
-          );
-          assert.equal(object.previousTransaction, digest);
-          let receipt;
-          try {
-            receipt = await coreClient.core.getTransaction({
-              digest,
-              include: {
-                effects: true,
-                objectTypes: true,
-                events: true,
-                balanceChanges: true,
-                transaction: true,
-              },
-            });
-          } catch (error) {
-            // Tiny localnet retention can prune a transaction while the Host
-            // confirms its exact result object. Do not replay or invent a fee.
-            if ((error as { reason?: string }).reason !== "notFound")
-              throw error;
-            transactions.push({
-              label,
-              digest,
-              status: "immutable_effect_confirmed",
-              immutableObjectId: resultId,
-              actualGas: null,
-              feeState: "original_transaction_unavailable",
-            });
-            await save();
-            return;
-          }
-          assert.equal(receipt.$kind, "Transaction");
-          assert.equal(receipt.Transaction!.status.success, true);
-          await record(label, {
-            status: "confirmed",
-            requestId: "native-host:" + response.command_id,
-            digest,
-            actualGas: gasCost(receipt.Transaction!.effects.gasUsed),
-            journalSynced: true,
-            transaction: receipt.Transaction!,
-          });
-        };
         await hostResult(
           "Native state: Host confirms encrypted physical idle evidence",
           status.response,

@@ -48,6 +48,8 @@ func saveContractFixture(t *testing.T, f *chainFixture, okr moveOkr, budget move
 	f.saveObject(t, okr.ID, "okr::Okr", okr)
 	f.saveField(t, f.cap.ID, structKeyTag(pkg, "remote_authority", "ExecutionContractKey"), []byte{0}, pkg+"::remote_authority::ExecutionContractKey", pkg+"::remote_authority::ExecutionContractBinding", binding)
 	f.saveField(t, okr.ID, structKeyTag(pkg, "okr", "BudgetKey"), []byte{0}, pkg+"::okr::BudgetKey", pkg+"::okr::BudgetState", budget)
+	policy := moveHandoverPolicy{Agreement: okr.Agreement, ManagedVersion: okr.ManagedVersion, MaxCalls: 100, Nonce: make([]byte, 32), ProposalHash: make([]byte, 32), Approval: addressNumber(25)}
+	f.saveField(t, okr.ID, structKeyTag(pkg, "okr", "HandoverPolicyKey"), []byte{0}, pkg+"::okr::HandoverPolicyKey", pkg+"::okr::HandoverPolicy", policy)
 }
 func TestCurrentOkrAuthorityAndSignedBoundary(t *testing.T) {
 	f, _, _, _ := contractFixture(t)
@@ -134,6 +136,10 @@ func TestOkrExecutionHistoryRetainsOriginalAgreementAndChecksBothBudgets(t *test
 			okr := moveOkr{ID: binding.Contract, Org: f.org.ID, State: 2, Version: 3, Agreement: 2, Metrics: []moveOkrMetric{{Baseline: 0, Target: 1}}, Managed: []moveAddress{f.managed.ID}, Membership: []moveAddress{f.member.ID}, Workspace: f.managed.Workspace, Boundary: hash, Asset: "MIST", Limit: 100}
 			budget := moveOkrBudget{Asset: "MIST", Spent: 7, Claims: moveTable{ID: addressNumber(21)}}
 			saveContractFixture(t, f, okr, budget, binding)
+			// Historical settlements must remain readable even for an older
+			// agreement with no current approval policy.
+			policyID, _ := dynamicFieldID(okr.ID.String(), structKeyTag(pkg, "okr", "HandoverPolicyKey"), []byte{0})
+			delete(f.objects, policyID)
 			command := moveCommandContract{Contract: okr.ID, Agreement: 1, KR: 0, Boundary: hash}
 			f.saveField(t, f.cap.ID, structKeyTag(pkg, "remote_authority", "CommandContractKey"), appendBCSBytes(nil, intent), pkg+"::remote_authority::CommandContractKey", pkg+"::remote_authority::CommandContractBinding", command)
 			claim := moveOkrClaim{Capability: f.cap.ID, Agreement: 1, Reserved: 20, Spent: 7, Settled: true}

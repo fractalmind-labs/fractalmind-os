@@ -33,6 +33,7 @@ type CapabilityState struct {
 	AuthorityVersionHash   string                      `json:"authority_version_hash,omitempty"`
 	ManagedInstance        *ManagedInstanceAuthority   `json:"managed_instance,omitempty"`
 	Contract               *ExecutionContractAuthority `json:"contract,omitempty"`
+	Handover               *ExecutionHandoverAuthority `json:"handover,omitempty"`
 }
 
 // ManagedInstanceAuthority is authenticated chain data, not an adapter label.
@@ -271,7 +272,10 @@ func (v *Validator) validateAuthority(command NodeCommand, state CapabilityState
 		nowMS-state.CheckpointObservedAtMS > maxCheckpointAge.Milliseconds() {
 		return reject(CodeAuthorityStale, "capability revocation checkpoint is outside the action freshness window", nil)
 	}
-	return ValidateExecutionContract(command, state.Contract)
+	if err := ValidateExecutionContract(command, state.Contract); err != nil {
+		return err
+	}
+	return ValidateExecutionHandover(command, state)
 }
 
 // SnapshotHash covers every validated authority field except mutable remaining
@@ -306,6 +310,7 @@ func (state CapabilityState) SnapshotHash() string {
 		AuthorityVersionHash   string                      `json:"authority_version_hash,omitempty"`
 		ManagedInstance        *ManagedInstanceAuthority   `json:"managed_instance,omitempty"`
 		Contract               *ExecutionContractAuthority `json:"contract,omitempty"`
+		Handover               *ExecutionHandoverAuthority `json:"handover,omitempty"`
 	}{
 		ID:                     state.ID,
 		Target:                 state.Target,
@@ -323,6 +328,7 @@ func (state CapabilityState) SnapshotHash() string {
 		AuthorityVersionHash:   state.AuthorityVersionHash,
 		ManagedInstance:        state.ManagedInstance,
 		Contract:               state.Contract,
+		Handover:               state.Handover,
 	})
 	return hashBytes(payload)
 }

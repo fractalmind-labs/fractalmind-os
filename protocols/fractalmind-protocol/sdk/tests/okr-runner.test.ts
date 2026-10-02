@@ -30,6 +30,8 @@ async function fixture() {
   const capability = { objectId: id('0x30'), type: `${sdk.client.typesPackageId}::remote_authority::RemoteCapability`, schemaVersion: 1, orgId: org, issuer: device.toSuiAddress(), delegate: device.toSuiAddress(), parentId: null, parentRevocationVersion: 0n, reservationScope: 'node' as const, targetKind: 3 as const, nodeId: host.toSuiAddress(), agentId: managed.instance_id, actions: ['assign'], scope: 'control', maxUses: 10n, usesClaimed: 0n, usesDelegated: 0n, budgetAsset: 'TOOL_CALLS', maxBudget: 10n, budgetClaimed: 0n, budgetDelegated: 0n, expiresAtMs: 700000n, revocationVersion: 1n, revoked: false };
   const binding = { membership_id: memberId, membership_version: '1', managed_agent: managedId, managed_agent_version: '1', human_id: human, device_grant: grant, device_grant_version: '1', human_generation: '1', required_action: 2 };
   const contract = { contract_id: okr.id, agreement_version: '1', boundary_hash: okr.boundary_hash };
+  const policy = { approval_id: id('0x60'), agreement_version: '1', managed_version: '1', max_calls: '10', nonce: new Array(32).fill(3), proposal_hash: new Array(32).fill(4) };
+  sdk.handover.getPolicy = async () => structuredClone(policy);
   const budget = { asset: 'TOOL_CALLS', spent: 0n, reserved: 0n, claimsId: id('0x31') };
   type Record = Awaited<ReturnType<typeof sdk.productRecord.getRecord>>;
   const records = new Map<string, Record>();
@@ -85,7 +87,7 @@ async function fixture() {
     deliver: async (_command: SignedNodeCommand) => { deliveries++; if (failDelivery) throw new Error('Delivery receipt lost'); run!.state = 1; },
   };
   const input = { okrId: okr.id, capabilityId: capability.objectId };
-  return { options, input, okr, metric, managed, member, capability, binding, contract, budget, key, records,
+  return { options, input, okr, metric, managed, member, capability, binding, contract, policy, budget, key, records,
     runner: () => new NativeFileOkrRunner(options),
     mode: (value: typeof mode) => { mode = value; }, failDelivery: () => { failDelivery = true; }, allowDelivery: () => { failDelivery = false; }, failDirectory: () => { failDirectory = true; },
     lag: () => { ticketLag = 2; runLag = 2; },
@@ -199,4 +201,39 @@ test('known transaction rejection can be corrected explicitly without a permanen
   const f = await fixture(), runner = f.runner(); f.mode('rejected');
   assert.equal((await runner.step({ ...f.input, createIfMissing: true })).reason, 'ticket_transaction_rejected');
   f.mode('confirmed'); assert.equal((await runner.step({ ...f.input, createIfMissing: true })).status, 'running'); assert.equal(f.stats().calls, 2);
+});
+
+test('reviewed policy versions and tool ceiling prevent a new ticket', async () => {
+  for (const mode of ['agreement', 'instance', 'ceiling', 'capability ceiling']) {
+    const f = await fixture();
+    if (mode === 'agreement') f.policy.agreement_version = '2';
+    if (mode === 'instance') f.policy.managed_version = '2';
+    if (mode === 'ceiling') { f.policy.max_calls = '2'; f.capability.maxBudget = 2n; }
+    if (mode === 'capability ceiling') f.policy.max_calls = '3';
+    const result = await f.runner().step({ ...f.input, createIfMissing: true });
+    assert.equal(result.reason, 'current_reviewed_policy_or_tool_ceiling_changed');
+    assert.equal(f.stats().calls, 0); assert.equal(f.stats().prepares, 0); assert.equal(f.stats().deliveries, 0);
+  }
+});
+
+test('policy replaced while device signing cannot release a new transaction', async () => {
+  const f = await fixture(), device = f.options.signer;
+  const runner = new NativeFileOkrRunner({ ...f.options, signer: {
+    getPublicKey: () => device.getPublicKey(),
+    sign: async bytes => { const signature = await device.sign(bytes); f.policy.nonce[0] ^= 1; return signature; },
+  } });
+  const result = await runner.step({ ...f.input, createIfMissing: true });
+  assert.equal(result.reason, 'reviewed_policy_changed_during_signing');
+  assert.equal(f.stats().calls, 0); assert.equal(f.stats().prepares, 0); assert.equal(f.stats().deliveries, 0);
+});
+
+test('restored queued ticket queries its original Run but cannot deliver under a replacement policy', async () => {
+  const f = await fixture(); f.failDelivery();
+  await f.runner().step({ ...f.input, createIfMissing: true });
+  const commandId = f.run().command_id;
+  f.policy.nonce[0] ^= 1;
+  const result = await f.runner().step({ ...f.input, releaseQueued: true });
+  assert.equal(result.reason, 'reviewed_policy_changed_before_delivery');
+  assert.equal(f.run().command_id, commandId);
+  assert.equal(f.stats().calls, 1); assert.equal(f.stats().prepares, 1); assert.equal(f.stats().deliveries, 1);
 });

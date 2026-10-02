@@ -6,6 +6,13 @@
 
 ## 当前验证证据
 
+### 审批政策复核与签名继续执行增量
+
+- 正式 envd 读取当前类型化 HandoverPolicy，原生 assign 拒绝未绑定 OKR 的通用能力。签名继续固定审批 ID／提案哈希／nonce；每次工具前检查当前政策、协议／游标、路径、预算、本人 Run 和实例。物理审阅只在当前链检查通过后消费，失败保留另一条预约。
+- SDK runner 在票据创建、签名返回及派发前核验政策，恢复票据不在政策替换后派发；历史结果读取保持原协议，不成为当前授权。
+- [原请求实际链确认](evidence/v020-handover-continuation-localnet.json)：**9 项检查、14 笔成功费用回执、2 份原不可变对象确认**。真实文件任务 3 次工具、预算 3／0、测量 1，仍 ACTIVE／未 Human 验证。原 harness 在索引可见性断言失败后，由同一 Run 的只读重查完成继续验收，没有重派；未执行该 harness 尾部撤销回归，详见[前序记录](evidence/v020-handover-continuation-prior.json)。
+- [SDK 118/118、App 98/98、Go 六包 race、类型／构建](evidence/v020-handover-continuation-unit.json)通过。**仍未完成**：App 完整交接／明确继续 UI、新版 runner 实际链／持续自主、对话／独立人验收、历史覆盖／升级迁移、安装后 UI／OS 密钥库、云 Host 与五平台。详见[继续实现与限制](v020-reviewed-continuation.md)。
+
 ### Host 签名消费与 OKR 原子审批增量
 
 - 新合约在当前权限、实例／规格版本、完整零未结目录、原成功 Run 与 Sui Clock 检查后，验证并消费精确 Host 签名，原子确认控制／激活 OKR，保存不可变审批与当前工具政策；审批不派发工具。

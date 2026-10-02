@@ -129,7 +129,11 @@ func (a *boundedFileAgent) runAuthorized(ctx context.Context, request Request, c
 	if err != nil {
 		return reject("boundary_denied", err)
 	}
-	release, available := a.beginNative(request.Agent, request.CommandID, checkpoint.ID)
+	continuation, err := nodecommand.HandoverContinuation(command)
+	if err != nil {
+		return reject("boundary_denied", err)
+	}
+	release, commitReview, available := a.beginNativeContinuation(request.Agent, request.CommandID, checkpoint.ID, continuation)
 	if !available {
 		return reject("instance_busy", fmt.Errorf("native instance has a physical execution or pending constraint review; check it before continuing"))
 	}
@@ -137,6 +141,9 @@ func (a *boundedFileAgent) runAuthorized(ctx context.Context, request Request, c
 	guard, err := boundedrun.NewGuard(ctx, a.reader, command, *checkpoint, workspace)
 	if err != nil {
 		return reject("operation_unconfirmed", err)
+	}
+	if !commitReview(guard.ApprovedHandover()) {
+		return reject("handover_changed", fmt.Errorf("physical review or current approval changed before continuation"))
 	}
 	deadline := time.UnixMilli(command.ExpiresAtMS)
 	if request.TimeoutSeconds > 0 {

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"sort"
 	"unicode/utf8"
 )
@@ -179,8 +180,14 @@ func (r *chainRead) okr(ctx context.Context, binding *moveContractBinding) (move
 }
 func (r *chainRead) currentContract(ctx context.Context, cap moveCapability, auth moveAuthorityBinding, instance *ManagedInstanceAuthority, now uint64) (*ExecutionContractAuthority, uint64, error) {
 	binding, err := r.contractBinding(ctx, cap.ID.String())
-	if err != nil || binding == nil {
+	if err != nil {
 		return nil, cap.Expiry, err
+	}
+	if binding == nil {
+		if instance != nil && instance.Runtime == "bounded-process-v1" && slices.Contains(cap.Actions, "assign") {
+			return nil, 0, reject(CodeUnauthorized, "native assignments require a reviewed OKR binding", nil)
+		}
+		return nil, cap.Expiry, nil
 	}
 	okr, _, err := r.okr(ctx, binding)
 	if err != nil {
