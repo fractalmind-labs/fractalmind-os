@@ -41,7 +41,8 @@ export type Budget = { asset: string; spent: bigint; reserved: bigint };
 export type ReadSection<T> = { value: T | null; failure?: string };
 export type HostRecord = {
   address: string;
-  current: ReadSection<Membership>;
+  // null without failure means the exact current-directory pointer is absent.
+  current: ReadSection<Membership | null>;
   history: Membership[];
 };
 export type OkrSnapshot = {

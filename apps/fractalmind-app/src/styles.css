@@ -1392,5 +1392,11 @@ h3 {
 .okr-create-dialog label {display:block;margin:12px 0;}
 .okr-create-dialog input,.okr-create-dialog textarea,.okr-create-dialog select {display:block;width:100%;min-width:0;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);}
 .okr-create-dialog textarea {min-height:80px;resize:vertical;}
+.host-actions {display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;}
+.host-access .host-confirm {display:flex;align-items:flex-start;gap:8px;}
+.host-access .host-confirm input {width:auto;margin:4px 0;}
+.host-row {padding:12px 0;border-bottom:1px solid var(--border);}
+.host-row button {display:block;margin-top:8px;}
+.host-access pre {white-space:pre-wrap;overflow-wrap:anywhere;}
 .okr-form-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;}
 @media (max-width:600px) {.okr-create-dialog {padding:16px;} .okr-form-grid {grid-template-columns:1fr;}}

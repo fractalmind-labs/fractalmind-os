@@ -87,10 +87,18 @@ export function missingIndex(
   organizationId: string,
   type: string,
 ) {
+  return missingDynamicField(error, organizationId, type, new Uint8Array([0]));
+}
+export function missingDynamicField(
+  error: unknown,
+  parentId: string,
+  type: string,
+  name: Uint8Array,
+) {
   const expected = deriveDynamicFieldID(
-    organizationId,
+    parentId,
     TypeTagSerializer.parseFromStr(type),
-    new Uint8Array([0]),
+    name,
   );
   return (
     typeof error === "object" &&
@@ -351,13 +359,30 @@ export class ChainReadSession {
           current: await section(async () => {
             if (!index.value)
               throw new ChainReadError("membership_not_readable");
-            const field = await this.sdk.client.client.core.getDynamicField({
-              parentId: index.value.active_hosts.id,
-              name: {
-                type: "address",
-                bcs: bcs.Address.serialize(address).toBytes(),
-              },
-            });
+            const name = {
+              type: "address",
+              bcs: bcs.Address.serialize(address).toBytes(),
+            };
+            const field = await this.sdk.client.client.core
+              .getDynamicField({
+                parentId: index.value.active_hosts.id,
+                name,
+              })
+              .catch((error) => {
+                // Revocation removes this exact pointer. It is a known absence,
+                // distinct from an unreadable directory or a missing child object.
+                if (
+                  missingDynamicField(
+                    error,
+                    index.value!.active_hosts.id,
+                    name.type,
+                    name.bcs,
+                  )
+                )
+                  return null;
+                throw error;
+              });
+            if (!field) return null;
             if (
               field.dynamicField.value.type !==
               `${normalizeSuiAddress("0x2")}::object::ID`

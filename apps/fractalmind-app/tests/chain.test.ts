@@ -238,11 +238,28 @@ test("a rejoined Host uses its authoritative pointer even when an old membership
   assert.equal(snapshot.hosts.value![0].history.length, 2);
   Object.assign(f.sdk.client.client.core, {
     getDynamicField: async () => {
+      throw {
+        reason: "notFound",
+        objectId: deriveDynamicFieldID(
+          tableId,
+          TypeTagSerializer.parseFromStr("address"),
+          bcs.Address.serialize(hostAddress).toBytes(),
+        ),
+      };
+    },
+  });
+  const noCurrent = await f.session().loadOrganization(f.organizationId);
+  assert.equal(noCurrent.hosts.value![0].current.value, null);
+  assert.equal(noCurrent.hosts.value![0].current.failure, undefined);
+  assert.equal(noCurrent.hosts.value![0].history.length, 2);
+  Object.assign(f.sdk.client.client.core, {
+    getDynamicField: async () => {
       throw new Error("RPC unavailable");
     },
   });
   const unavailable = await f.session().loadOrganization(f.organizationId);
   assert.equal(unavailable.hosts.value![0].current.value, null);
+  assert.ok(unavailable.hosts.value![0].current.failure);
   assert.equal(unavailable.hosts.value![0].history.length, 2);
 });
 

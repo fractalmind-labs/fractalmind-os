@@ -36,6 +36,7 @@ const CreateOkr = lazy(() => import("./CreateOkr"));
 const PrivateRecordView = lazy(() => import("./PrivateRecordView"));
 const DeviceAccess = lazy(() => import("./DeviceAccess"));
 const PairingFlow = lazy(() => import("./PairingFlow"));
+const HostAccess = lazy(() => import("./HostAccess"));
 const runLabels: Array<[string, string]> = [
   ["待启动", "Queued"],
   ["链上记录：运行中", "Chain record: running"],
@@ -703,12 +704,31 @@ export function App() {
           </>
         )}
         {page === "hosts" && snapshot && (
-          <HostList
-            snapshot={snapshot}
-            now={now}
-            t={t}
-            reachable={data.reachable}
-          />
+          <>
+            <Suspense
+              fallback={
+                <p>{t("加载主机接入入口…", "Loading Host onboarding…")}</p>
+              }
+            >
+              <HostAccess
+                key={JSON.stringify([profile, snapshot.organization.objectId])}
+                profile={{
+                  ...profile,
+                  chainIdentifier:
+                    data.identity?.chainIdentifier ?? profile.chainIdentifier,
+                }}
+                organizationId={snapshot.organization.objectId}
+                t={t}
+                onChanged={data.refresh}
+              />
+            </Suspense>
+            <HostList
+              snapshot={snapshot}
+              now={now}
+              t={t}
+              reachable={data.reachable}
+            />
+          </>
         )}
         {page === "agents" && snapshot && (
           <>
@@ -1647,11 +1667,18 @@ function HostList({
                       {new Date(Number(member.expires_at_ms)).toLocaleString()}
                     </dd>
                   </dl>
-                ) : (
+                ) : row.current.failure ? (
                   <p className="warn">
                     {t(
                       "当前成员目录读取失败；不会以旧记录推断新资格。",
                       "Current membership could not be read; an older record does not establish new authority.",
+                    )}
+                  </p>
+                ) : (
+                  <p className="muted">
+                    {t(
+                      "当前链上目录无成员记录；历史记录不授予当前权限。",
+                      "No current membership is indexed on chain. Historical records grant no current authority.",
                     )}
                   </p>
                 )}

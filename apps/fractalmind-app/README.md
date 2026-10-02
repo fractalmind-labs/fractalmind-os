@@ -94,7 +94,12 @@ evidence, transport limits and test instructions are documented in
   until an authorized device can decrypt the specification.
 - Hosts: one card per stable address. The authoritative `active_hosts` table
   selects current membership; historical records do not create duplicate Hosts.
-  Membership never implies current connectivity or a tool's execution authority.
+  The native Connect Host dialog registers Coordinator entries, issues one-use
+  invitations, quotes/confirms actual Gas, queries original transactions and
+  revokes unused invitations or memberships. Invitation secrets remain in the
+  current session only. Membership never implies current connectivity or a
+  tool's execution authority. The envd redemption CLI and installed-host journey
+  are still pending. See [Host access and evidence](../../docs/product/v020-app-host-access.md).
 - Agents: current organization's managed instance records. Live capability and
   connectivity are not inferred from registration labels.
 - Identity: chain Human generation/recovery version and device grants. The page
@@ -109,7 +114,7 @@ specific absent organization index can produce an empty directory. Unknown Run
 outcomes preserve reservations even after agreement expiry or replanning.
 Without action traces, the map does not establish drift or a dead end.
 
-`localStorage` contains public connection metadata and device appearance settings,
+`localStorage` contains public connection metadata, disposable technical attempt identifiers and device appearance settings,
 not business snapshots, keys or encrypted product bodies. Clearing that connection
 and reconnecting reconstructs public state from Sui; it does not modify the chain.
 
