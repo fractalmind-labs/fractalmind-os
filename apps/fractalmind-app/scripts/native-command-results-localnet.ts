@@ -40,18 +40,20 @@ import { HandoverApproval } from "../src/handover-approval";
 import { PrivateRecords } from "../src/private-records";
 import { HandoverReview } from "../src/handover-review";
 import { HandoverSetup } from "../src/handover-setup";
+import { NativeOkrRunner } from "../src/native-okr-runner";
 assert.ok(
   process.argv[2] && process.argv[3],
   "Pass isolated deployment and a new output report",
 );
 const output = process.argv[3],
   progress = output + ".progress.json";
-const ticketMode = process.argv[4] === "--review-ticket";
+const runnerMode = process.argv[4] === "--prepare-okr";
+const ticketMode = process.argv[4] === "--review-ticket" || runnerMode;
 const approvalMode = process.argv[4] === "--approve-handover" || ticketMode;
 const readResultMode = process.argv[4] === "--read-result" || approvalMode;
 assert.ok(
   !process.argv[4] || readResultMode,
-  "Only --read-result, --approve-handover or --review-ticket is supported",
+  "Only --read-result, --approve-handover, --review-ticket or --prepare-okr is supported",
 );
 for (const path of [output, progress]) {
   try {
@@ -1021,6 +1023,142 @@ try {
         explicitContinuationDispatched: false,
       };
       await save();
+      if (runnerMode) {
+        const controlOutcome = await execute(
+          "explicit single-use OKR control capability",
+          sdk.okr.issueCapability({
+            ...auth,
+            okrId: activeOkr.id,
+            expectedVersion: activeOkr.version,
+            membershipId,
+            bindingId,
+            managedAgentId,
+            maxUses: 1n,
+          }),
+        );
+        const controlCapabilityId = createdObject(
+          controlOutcome,
+          "remote_authority::RemoteCapability",
+        );
+        let feeConfirmations = 0,
+          transportCalls = 0;
+        const runnerJournal = new MemoryTransactionJournal();
+        const runner = new NativeOkrRunner(
+          chain,
+          device,
+          auth.grantId,
+          organizationId,
+          invoke,
+          runnerJournal,
+          async (quote) => {
+            feeConfirmations++;
+            await preparedQuote(
+              "explicit native OKR ticket and Run fee",
+              quote,
+            );
+            return true;
+          },
+          async () => {
+            transportCalls++;
+            throw new Error("This fixture must not deliver to a Host");
+          },
+        );
+        const runnerInput = {
+          okrId: activeOkr.id,
+          capabilityId: controlCapabilityId,
+        };
+        const candidate = await runner.step({
+          ...runnerInput,
+          createIfMissing: true,
+          prepareOnly: true,
+        });
+        assert.equal(candidate.status, "queued");
+        assert.ok(candidate.executionId && candidate.ticketRecordId);
+        assert.equal(feeConfirmations, 1);
+        assert.equal(transportCalls, 0);
+        assert.equal(
+          runner.lastSubmission!.digest,
+          candidate.transactionDigest,
+        );
+        await record(
+          "official native runner atomically saves encrypted ticket, scoped result key and original queued Run",
+          runner.lastSubmission!,
+        );
+        const queued = await sdk.nodeExecution.getExecution(
+          candidate.executionId!,
+        );
+        assert.equal(queued.state, 0);
+        const commandTicket = await sdk.productRecord.getRecord(
+          candidate.ticketRecordId!,
+        );
+        assert.equal(commandTicket.organization_id, organizationId);
+        assert.equal(commandTicket.kind, 5);
+        assert.equal(commandTicket.revision, "1");
+        const restoredRunner = new NativeOkrRunner(
+          chain,
+          device,
+          auth.grantId,
+          organizationId,
+          invoke,
+          new MemoryTransactionJournal(),
+          async () => {
+            throw new Error("Restoration cannot ask for a fee");
+          },
+          async () => {
+            transportCalls++;
+            throw new Error("Restoration cannot deliver");
+          },
+        );
+        const original = await restoredRunner.step(runnerInput);
+        assert.equal(original.status, "queued");
+        assert.equal(original.executionId, queued.id);
+        assert.equal(original.ticketRecordId, commandTicket.id);
+        assert.equal(transportCalls, 0);
+        const continuationBudget = await sdk.okr.getBudget(activeOkr.id);
+        assert.equal(continuationBudget.spent, 0n);
+        assert.equal(continuationBudget.reserved, 3n);
+        checks.push(
+          "official runner uses actual native decrypt/encrypt/result wrapping and one separately confirmed self-paid transaction for the exact original signed ticket and queued Run; no organization key is exported to JS",
+        );
+        checks.push(
+          "fresh native runner with an empty journal restores the original queued ticket and Run from Sui without a fee, new command, preparation or Host delivery; preparation alone does not establish RUNNING",
+        );
+        state = {
+          ...state,
+          continuationCapabilityId: controlCapabilityId,
+          continuationDigest: candidate.transactionDigest,
+          continuationRunId: queued.id,
+          continuationTicketId: commandTicket.id,
+          continuationFeeConfirmations: feeConfirmations,
+          continuationTransportCalls: transportCalls,
+          continuationReserved: continuationBudget.reserved.toString(),
+        };
+        await save();
+        await execute(
+          "explicitly cancel original queued continuation without delivery",
+          sdk.nodeExecution.requestStop({
+            ...auth,
+            executionId: queued.id,
+            capabilityId: controlCapabilityId,
+            okrId: activeOkr.id,
+          }),
+        );
+        await readVisible(
+          () => sdk.nodeExecution.getExecution(queued.id),
+          (v) => v.state === 5,
+        );
+        const settledBudget = await sdk.okr.getBudget(activeOkr.id);
+        assert.equal(settledBudget.reserved, 0n);
+        state = {
+          ...state,
+          continuationFinalState: 5,
+          continuationFinalReserved: settledBudget.reserved.toString(),
+        };
+        checks.push(
+          "fixture explicitly cancels its original undispatched continuation and confirms budget reservation release; no verification or final acceptance is inferred",
+        );
+        await save();
+      }
     }
   } else {
     await execute(
@@ -1059,11 +1197,13 @@ try {
   }
   state = {
     ...state,
-    phase: approvalMode
-      ? "validated_native_approval_without_continuation"
-      : readResultMode
-        ? "validated_original_result"
-        : "validated_and_cancelled",
+    phase: runnerMode
+      ? "validated_native_runner_prepared_and_cancelled_without_delivery"
+      : approvalMode
+        ? "validated_native_approval_without_continuation"
+        : readResultMode
+          ? "validated_original_result"
+          : "validated_and_cancelled",
     runState: finalRun.state,
     resultRecord: finalRun.result_record,
   };

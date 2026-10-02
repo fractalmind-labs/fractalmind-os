@@ -240,7 +240,7 @@ async function fixture(review = false) {
           assert.equal(input.resultKey.wrappedKey.length, 132);
           assert.equal(input.managedAgentId, managedId);
           duringBuilder();
-          return new Transaction();
+          return input.tx ?? new Transaction();
         },
       },
     },
@@ -337,6 +337,24 @@ test("existing-command preflight reads exact current pointers without key wrappi
   await assert.rejects(assertCurrent());
   assert.equal(f.counts().wraps, 0);
   assert.equal(f.counts().builds, 0);
+});
+test("native result preparation preserves a ticket PTB and rejects a different key generation before wrapping", async () => {
+  const f = await fixture(),
+    tx = new Transaction();
+  tx.moveCall({ target: `${pkg}::product_record::save`, arguments: [] });
+  await assert.rejects(
+    f.controller.prepare(f.input, { tx, expectedKeyVersion: "1" }),
+    /state_changed/,
+  );
+  assert.equal(f.counts().wraps, 0);
+  assert.equal(f.counts().builds, 0);
+  const prepared = await f.controller.prepare(f.input, {
+    tx,
+    expectedKeyVersion: "2",
+  });
+  assert.equal(prepared.transaction, tx);
+  assert.equal(tx.getData().commands.length, 1);
+  assert.equal(f.counts().wraps, 1);
 });
 test("changes while native wrapping waits cannot produce a transaction", async () => {
   for (const mutate of [

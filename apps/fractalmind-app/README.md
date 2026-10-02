@@ -112,6 +112,13 @@ evidence, transport limits and test instructions are documented in
   expired/failed attempts and native continuation still need acceptance;
   approval never dispatches continuation. See [flow and limits](../../docs/product/v020-app-handover-flow.md)
   and [review tickets](../../docs/product/v020-app-handover-review.md).
+- Native OKR runner bridge: approved-plan decryption, encrypted ticket creation
+  and Host-specific result wrapping use the OS vault without organization-key
+  export. Durable originals are queried before private reads/signing, and a
+  preparation can remain queued until explicit delivery. The localnet fixture
+  verifies atomic preparation, empty-journal restoration and cancellation;
+  continuation UI, installed journal/IPC and real envd delivery remain pending.
+  See [implementation and evidence](../../docs/product/v020-native-okr-runner.md).
 - Identity: chain Human generation/recovery version and device grants. The page
   labels these as snapshots and refreshes them with organization reads.
 - Chinese/English and system/light/dark appearance; responsive navigation includes

@@ -1,5 +1,6 @@
 import { fromBase64, toBase64 } from "@mysten/sui/utils";
 import { bcs } from "@mysten/sui/bcs";
+import type { Transaction } from "@mysten/sui/transactions";
 import {
   bytesToHex,
   nodeCommandIntentHash,
@@ -193,11 +194,20 @@ export class NativeCommandResults {
         throw new CommandResultError("state_changed");
     };
   }
-  async prepare(raw: CommandResultTarget) {
+  async prepare(
+    raw: CommandResultTarget,
+    options: { tx?: Transaction; expectedKeyVersion?: string } = {},
+  ) {
+    const compose = { ...options };
     const input = await this.snapshot(raw),
       c = input.command;
     const before = await this.source(input),
       fingerprint = bytesToHex(nodeCommandIntentHash(c));
+    if (
+      compose.expectedKeyVersion !== undefined &&
+      compose.expectedKeyVersion !== before.keyVersion
+    )
+      throw new CommandResultError("state_changed");
     const result = await call(
       this.invoke,
       "fm_device_wrap_command_result_key",
@@ -261,7 +271,10 @@ export class NativeCommandResults {
       managedAgentId: input.managedAgentId,
       command: c,
       resultKey,
+      tx: compose.tx,
     });
+    if (compose.tx && transaction !== compose.tx)
+      throw new CommandResultError("invalid_source");
     await assertCurrent();
     return Object.freeze({ transaction, assertCurrent });
   }

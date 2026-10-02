@@ -5,7 +5,7 @@ import { normalizeSuiAddress as id } from '@mysten/sui/utils';
 import type { ClientWithCoreApi } from '@mysten/sui/client';
 import type { Transaction } from '@mysten/sui/transactions';
 import { FractalMindSDK } from '../src/index.js';
-import { NativeFileOkrRunner, parseNativeFileOkrPlan } from '../src/okr-runner.js';
+import { NativeFileOkrRunner, parseNativeFileOkrPlan, type OkrRunnerCrypto, type OkrRunnerOptions } from '../src/okr-runner.js';
 import { executionBoundaryHash } from '../src/execution-boundary.js';
 import { EncryptedRecordBcs, recordContext } from '../src/product-record.js';
 import { encryptContent } from '../src/identity-crypto.js';
@@ -65,7 +65,9 @@ async function fixture() {
   sdk.okr.listExecutions = async () => ({ executions: run && (runLag === 0 || runLag-- < 0) ? [{ run, claim: {} as never, contract: {} as never }] : [], cursor: null, hasNextPage: false });
   sdk.nodeExecution.prepareCommand = async input => {
     prepares++; assert.ok(input.tx); assert.ok(input.resultKey);
-    assert.equal(input.resultKey.keyVersion, '1'); assert.deepEqual(input.resultKey.organizationKey, key);
+    assert.equal(input.resultKey.keyVersion, '1');
+    if (input.resultKey.organizationKey) assert.deepEqual(input.resultKey.organizationKey, key);
+    else { assert.equal(input.resultKey.wrappedKey.length, 132); assert.equal(input.resultKey.membershipId, memberId); }
     pending.get(input.tx)!.command = input.command;
     input.tx.moveCall({ target: `${sdk.client.packageId}::okr::prepare_command`, arguments: [] });
     return input.tx;
@@ -236,4 +238,79 @@ test('restored queued ticket queries its original Run but cannot deliver under a
   assert.equal(result.reason, 'reviewed_policy_changed_before_delivery');
   assert.equal(f.run().command_id, commandId);
   assert.equal(f.stats().calls, 1); assert.equal(f.stats().prepares, 1); assert.equal(f.stats().deliveries, 1);
+});
+
+test('native crypto preserves atomic preparation and query-only restoration without a runner key provider', async () => {
+  const f = await fixture();
+  const {keyForVersion: _unused, ...options} = f.options;
+  let encryptions = 0, wraps = 0, retained: Uint8Array | undefined;
+  const crypto: OkrRunnerCrypto = {
+    decrypt: async record => (await options.sdk.productRecord.decryptRecord(record.id, f.key)).plaintext,
+    encrypt: async (plaintext, context) => {
+      encryptions++; retained = plaintext;
+      return encryptContent(plaintext, f.key, recordContext(context.organizationId, 'checkpoint', context.logicalId, context.revision, context.keyVersion));
+    },
+    prepareCommand: async input => {
+      wraps++;
+      return options.sdk.nodeExecution.prepareCommand({...input, humanId: options.humanId, grantId: options.grantId,
+        resultKey: {wrappedKey: new Uint8Array(132), keyVersion: input.keyVersion, organizationId: options.organizationId, capabilityId: input.command.capability.id, membershipId: input.membershipId, hostAddress: input.command.target.node_id, hostEncryptionPublicKey: new Uint8Array(32), intentHash: 'fixture'},
+      });
+    },
+  };
+  const native = new NativeFileOkrRunner({...options, crypto});
+  assert.equal((await native.step({...f.input, createIfMissing: true})).status, 'running');
+  assert.equal(encryptions, 1); assert.equal(wraps, 1);
+  assert.ok(retained!.every(byte => byte === 0), 'Runner zeroes plaintext after native encryption returns.');
+  assert.equal((await new NativeFileOkrRunner({...options, crypto}).step(f.input)).status, 'running');
+  assert.equal(encryptions, 1); assert.equal(wraps, 1);
+  assert.equal(f.stats().calls, 1); assert.equal(f.stats().deliveries, 1);
+  assert.throws(() => new NativeFileOkrRunner({...f.options, crypto} as unknown as OkrRunnerOptions), /exactly one/);
+  assert.throws(() => new NativeFileOkrRunner(options as OkrRunnerOptions), /exactly one/);
+});
+
+test('persisted confirmed, rejected or unknown receipts stop a fresh runner before command signing and preparation', async () => {
+  for (const status of ['confirmed', 'rejected', 'unknown', 'query-error'] as const) {
+    const f = await fixture(), device = f.options.signer; let signatures = 0;
+    f.options.sdk.productRecord.getRecord = async () => { throw new Error('Original receipt must precede private decryption.'); };
+    const runner = new NativeFileOkrRunner({...f.options,
+      signer: {getPublicKey: () => device.getPublicKey(), sign: async bytes => { signatures++; return device.sign(bytes); }},
+      querySubmission: async () => { if (status === 'query-error') throw new Error('journal unavailable'); return {status, digest: 'original-digest'}; },
+    });
+    const result = await runner.step({...f.input, createIfMissing: true});
+    assert.equal(result.status, status === 'rejected' ? 'blocked' : 'awaiting_confirmation');
+    if (status !== 'query-error') assert.equal(result.transactionDigest, 'original-digest');
+    assert.equal(signatures, 0); assert.equal(f.stats().calls, 0); assert.equal(f.stats().prepares, 0); assert.equal(f.stats().deliveries, 0);
+  }
+});
+
+test('authoritative ticket point reads restore without pagination; native preparation cannot replace the ticket transaction', async () => {
+  const f = await fixture(); f.options.sdk.productRecord.listCurrent = async () => { throw new Error('pagination must not establish absence'); };
+  const runner = new NativeFileOkrRunner({...f.options, discoverTicket: async () => ({keyVersion: '1', ticketId: f.ticketId()})});
+  assert.equal((await runner.step({...f.input, createIfMissing: true})).status, 'running');
+  const broken = await fixture(), {keyForVersion: _unused, ...options} = broken.options;
+  const bad = new NativeFileOkrRunner({...options, crypto: {
+    decrypt: async record => (await options.sdk.productRecord.decryptRecord(record.id, broken.key)).plaintext,
+    encrypt: async (plaintext, context) => encryptContent(plaintext, broken.key, recordContext(context.organizationId, 'checkpoint', context.logicalId, 1, context.keyVersion)),
+    prepareCommand: async () => new (await import('@mysten/sui/transactions')).Transaction(),
+  }});
+  await assert.rejects(bad.step({...broken.input, createIfMissing: true}), /atomic ticket transaction/);
+  assert.equal(broken.stats().calls, 0);
+});
+
+test('a delivery receipt does not establish RUNNING without matching chain progress', async () => {
+  const f = await fixture(); f.options.deliver = async () => {};
+  const result = await f.runner().step({...f.input, createIfMissing: true});
+  assert.equal(result.status, 'awaiting_confirmation'); assert.equal(result.reason, 'awaiting_chain_execution_progress');
+  assert.equal(f.run().state, 0);
+});
+
+test('preparing a new ticket can defer all delivery until explicit release of the same command', async () => {
+  const f = await fixture(), runner = f.runner();
+  const prepared = await runner.step({...f.input, createIfMissing: true, prepareOnly: true});
+  assert.equal(prepared.status, 'queued'); assert.equal(f.stats().calls, 1); assert.equal(f.stats().deliveries, 0);
+  const commandId = f.run().command_id;
+  assert.equal((await f.runner().step(f.input)).status, 'queued'); assert.equal(f.stats().deliveries, 0);
+  assert.equal((await runner.step({...f.input, releaseQueued: true})).status, 'running');
+  assert.equal(f.stats().calls, 1); assert.equal(f.stats().prepares, 1); assert.equal(f.stats().deliveries, 1);
+  assert.equal(f.run().command_id, commandId);
 });
