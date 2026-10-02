@@ -6,6 +6,14 @@
 
 ## 当前验证证据
 
+### 设备 HTTP 读取鉴权与 v2 主机运行观测增量
+
+- Coordinator read API 接通链上 read Grant／角色／范围／代次和期限核验，单次限时挑战、Sui 设备持钥证明及响应签名。公开 ID、未签名请求及旧 Bearer token 均不能读取。生成数据前后重读权限，撤销后无缓存登录。
+- App 主机页读取链上入口、验证 Coordinator 公钥、调用原生证明、核验精确响应与最新权限；显示 Host 地址、心跳、系统／CPU 和实例数。失败或上下文改变清除观测，旧数据明确标注；网页禁用签名操作，页面不持久化观测。
+- [真实 localnet 报告](evidence/v020-device-http-localnet.json)：**12 项检查、10 笔确认交易**。实际 Host 心跳经生产 App 客户端和页面格式核验；链上撤销设备后，之前已准备的读取被真实 HTTP 服务拒绝。成员撤销及原摘要单次广播恢复继续通过。
+- [测试摘要](evidence/v020-device-http-unit.json)：Go 三包 race 通过、App **64/64**、类型／生产构建通过。[浏览器走查](evidence/v020-device-http-browser.json)覆盖中英文与明暗、真实链上入口和网页保护。
+- **仍未完成**：以上设备钥为注入内存夹具，尚未证明安装后 IPC／OS 密钥库流程。签名响应认证 Coordinator 观测，独立 Host 签名未接通；不能提升为最终在线或执行凭据。公开 TLS／云 Host、完整设备控制、Agent 发现／导入、自主闭环和五平台仍需验收。现有原生 App 等待系统密钥库授权。完整目标保持未完成，详见[读取说明](v020-device-http-read.md)。
+
 ### Host 链资格与真实 Coordinator 连接增量
 
 - 独立 `host_connection_enabled` 模式从 NativeStore 加载已初始化 Host 身份，连接前／重连／收发核验完整 Chain ID、当前成员指针、组织目录、入口、公钥、期限与版本。按链上 origin 连接并固定 Coordinator 身份；不以主机名、自报 Host ID 或历史邀请回执授予权利。

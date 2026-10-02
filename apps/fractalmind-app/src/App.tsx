@@ -37,6 +37,7 @@ const PrivateRecordView = lazy(() => import("./PrivateRecordView"));
 const DeviceAccess = lazy(() => import("./DeviceAccess"));
 const PairingFlow = lazy(() => import("./PairingFlow"));
 const HostAccess = lazy(() => import("./HostAccess"));
+const HostObservations = lazy(() => import("./HostObservations"));
 const runLabels: Array<[string, string]> = [
   ["待启动", "Queued"],
   ["链上记录：运行中", "Chain record: running"],
@@ -720,6 +721,22 @@ export function App() {
                 organizationId={snapshot.organization.objectId}
                 t={t}
                 onChanged={data.refresh}
+              />
+            </Suspense>
+            <Suspense
+              fallback={
+                <p>{t("加载运行观测…", "Loading runtime observations…")}</p>
+              }
+            >
+              <HostObservations
+                key={JSON.stringify([profile, snapshot.organization.objectId])}
+                profile={{
+                  ...profile,
+                  chainIdentifier:
+                    data.identity?.chainIdentifier ?? profile.chainIdentifier,
+                }}
+                organizationId={snapshot.organization.objectId}
+                t={t}
               />
             </Suspense>
             <HostList

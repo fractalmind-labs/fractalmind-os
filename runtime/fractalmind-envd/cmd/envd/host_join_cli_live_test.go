@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -158,7 +157,7 @@ func TestHostJoinLiveCLI(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		liveConfig = &config.Config{SUI: config.SUIConfig{ProtocolPackageID: input.PackageID, ChainIdentifier: input.ChainIdentifier, OrgID: input.OrganizationID}, Coordinator: config.CoordinatorConfig{BindingID: result.Membership.BindingID}}
+		liveConfig = &config.Config{SUI: config.SUIConfig{Network: "localnet", ProtocolRegistryID: input.RegistryID, ProtocolPackageID: input.PackageID, ChainIdentifier: input.ChainIdentifier, OrgID: input.OrganizationID}, Coordinator: config.CoordinatorConfig{BindingID: result.Membership.BindingID}}
 		liveServer = coordinator.NewServer("", time.Second, "")
 		if err = configureChainCoordinator(liveServer, liveConfig, base, coordKey); err != nil {
 			t.Fatal(err)
@@ -183,7 +182,7 @@ func TestHostJoinLiveCLI(t *testing.T) {
 		liveClient.OnConnect(func() {
 			err := liveClient.Send("register", map[string]string{"host_id": public.Address, "hostname": "physical loopback fixture"})
 			if err == nil {
-				err = liveClient.Send("heartbeat", heartbeat.Payload{HostID: public.Address, Hostname: "physical loopback fixture", Timestamp: time.Now()})
+				err = liveClient.Send("heartbeat", heartbeat.NewPayload(public.Address, "physical loopback fixture", nil, time.Now()))
 			}
 			select {
 			case connected <- err:
@@ -199,27 +198,8 @@ func TestHostJoinLiveCLI(t *testing.T) {
 		case <-ctx.Done():
 			t.Fatal("live chain connection did not authenticate")
 		}
-		visible := false
-		for attempt := 0; attempt < 40; attempt++ {
-			response, e := http.Get(endpoint + "/api/sentinels/" + public.Address)
-			if e != nil {
-				t.Fatal(e)
-			}
-			var snapshot struct {
-				HostID        string     `json:"host_id"`
-				LastHeartbeat *time.Time `json:"last_heartbeat"`
-			}
-			e = json.NewDecoder(response.Body).Decode(&snapshot)
-			response.Body.Close()
-			if e == nil && snapshot.HostID == public.Address && snapshot.LastHeartbeat != nil {
-				visible = true
-				break
-			}
-			time.Sleep(100 * time.Millisecond)
-		}
-		if !visible {
-			t.Fatal("authenticated live heartbeat not visible")
-		}
+		// The App fixture now proves its device grant over HTTP and verifies the
+		// heartbeat through that protected API after this public readiness marker.
 	}
 	encoded, _ := json.Marshal(struct {
 		Initial                hostjoin.Result `json:"initial"`
@@ -239,27 +219,19 @@ func TestHostJoinLiveCLI(t *testing.T) {
 		if _, err = reader.ReadHostConnection(ctx, input.OrganizationID, mustDecodeHex(t, public.SigningPublicKey), mustDecodeHex(t, public.EncryptionPublicKey)); err == nil {
 			t.Fatal("revoked membership still authorizes Host connection")
 		}
-		request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint+"/api/sentinels/"+public.Address+"/command", strings.NewReader(`{"node_command":{}}`))
-		if err != nil {
-			t.Fatal(err)
-		}
-		request.Header.Set("Content-Type", "application/json")
-		response, err := http.DefaultClient.Do(request)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var rejected struct {
-			Error string `json:"error"`
-		}
-		decodeErr := json.NewDecoder(response.Body).Decode(&rejected)
-		response.Body.Close()
-		if decodeErr != nil || !strings.Contains(rejected.Error, nodecommand.ErrChainObjectNotFound.Error()) || response.StatusCode >= 200 && response.StatusCode < 300 {
+		_, err = liveServer.SendCommand(public.Address, "signed_command", "", "{}")
+		if err == nil || !strings.Contains(err.Error(), nodecommand.ErrChainObjectNotFound.Error()) {
 			t.Fatal("revoked route accepted")
 		}
 		if err = liveClient.Send("heartbeat", heartbeat.Payload{HostID: public.Address}); err == nil {
 			t.Fatal("worker sent heartbeat after chain revocation")
 		}
-		fmt.Printf("FM_CHAIN_CONNECTION_RESULT {\"chain_endpoint_used\":true,\"mutual_authentication\":true,\"live_heartbeat\":true,\"revoked_pointer_rejected\":true,\"worker_revoked_heartbeat_rejected\":true,\"coordinator_revoked_routing_rejected\":true,\"generated_memory_keys\":true,\"loopback_only\":true}\n")
+		liveClient.Close()
+		fmt.Printf("FM_CHAIN_CONNECTION_RESULT {\"chain_endpoint_used\":true,\"mutual_authentication\":true,\"heartbeat_sent\":true,\"revoked_pointer_rejected\":true,\"worker_revoked_heartbeat_rejected\":true,\"coordinator_revoked_routing_rejected\":true,\"generated_memory_keys\":true,\"loopback_only\":true}\n")
+		line, err = bufio.NewReaderSize(os.Stdin, 32).ReadString('\n')
+		if err != nil || line != "DONE\n" {
+			t.Fatal("expected public completion signal")
+		}
 	}
 }
 

@@ -48,6 +48,7 @@ type Server struct {
 	listener     net.Listener
 	pingInterval time.Duration
 	done         chan struct{}
+	deviceRead   *DeviceReadAuth
 }
 
 func NewServer(addr string, commandTimeout time.Duration, apiToken string) *Server {
@@ -75,6 +76,14 @@ func (s *Server) SetAuth(signer wsauth.Signer, allowedSigners []string) {
 
 func (s *Server) SetWorkerAuthority(authorize func(context.Context, string, []byte) error) {
 	s.manager.SetWorkerAuthority(authorize)
+}
+
+func (s *Server) SetDeviceReadAuth(auth *DeviceReadAuth) { s.deviceRead = auth }
+
+// SendCommand routes an already-authorized internal request. HTTP clients still
+// pass the request middleware; the target Host verifies its execution envelope.
+func (s *Server) SendCommand(nodeID, command, agentID, args string) (map[string]interface{}, error) {
+	return s.manager.SendCommand(nodeID, command, agentID, args)
 }
 
 func (s *Server) Start() error {
@@ -264,7 +273,7 @@ func (s *Server) handleCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := s.manager.SendCommand(r.PathValue("id"), req.Command, req.AgentID, req.Args)
+	result, err := s.SendCommand(r.PathValue("id"), req.Command, req.AgentID, req.Args)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if errors.Is(err, context.DeadlineExceeded) {
@@ -342,6 +351,9 @@ func (s *Server) pingLoop() {
 }
 
 func (s *Server) withAPITokenAuth(next http.Handler) http.Handler {
+	if s.deviceRead != nil {
+		return s.deviceRead.Wrap(next)
+	}
 	if s.apiToken == "" {
 		return next
 	}

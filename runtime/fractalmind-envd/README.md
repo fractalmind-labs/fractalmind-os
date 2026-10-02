@@ -195,9 +195,17 @@ rejects routing. Closing cancels chain lookup/dial/retry. This mode preserves
 existing Agent processes and refuses legacy desktop control envelopes that cannot
 carry device authority. Agent import/control still requires separate authorization.
 
-Actual loopback sockets with generated memory test keys and four-package race
-checks passed. NativeStore/main startup, cloud/TLS, signed observation bodies,
-device HTTP authentication, desktop authorization, Agent import and five-platform
+In this mode, Coordinator HTTP reads require a single-use native device proof
+and a current Sui read grant and organization role. The App first verifies the
+on-chain Coordinator key; the response is signed for the specific read. Legacy
+Bearer tokens cannot replace device authority. Challenges are held in memory
+for at most one minute; restart invalidates them. This read protocol does not
+authorize HTTP writes or desktop control. See
+[device reads and evidence](../../docs/product/v020-device-http-read.md).
+
+Actual loopback sockets with generated memory test keys and race checks passed.
+NativeStore/main startup, cloud/TLS, independent Host-signed observation bodies,
+desktop authorization, Agent import and five-platform
 acceptance remain pending. See [connection implementation and evidence](../../docs/product/v020-host-chain-connection.md).
 
 `FRACTALMIND_RUNTIME_STATE_DIR` no longer selects a production file store,

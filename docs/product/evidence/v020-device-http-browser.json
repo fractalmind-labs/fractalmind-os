@@ -1,0 +1,18 @@
+{
+  "recordedAt": "2026-10-02T05:26:50.732337+00:00",
+  "url": "http://127.0.0.1:4189/",
+  "checks": [
+    "Chinese Light Hosts page shows Runtime observations and browser-only guard",
+    "Load organization entry points reads real Sui binding",
+    "Native device proof/read button disabled in browser",
+    "English Dark labels and guard rendered correctly",
+    "Chinese Light settings restored"
+  ],
+  "screenshot": "v020-device-http-browser-en-dark.jpg",
+  "limits": {
+    "nativeSigningVerified": false,
+    "installedAppVerified": false,
+    "hostSignedObservationVerified": false,
+    "mobileVerified": false
+  }
+}

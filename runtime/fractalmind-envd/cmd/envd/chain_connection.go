@@ -78,6 +78,27 @@ func configureChainCoordinator(server *coordinator.Server, cfg *config.Config, r
 		return fmt.Errorf("chain Coordinator requires its binding ID, native signer and pinned chain: %v", err)
 	}
 	server.SetAuth(key, cfg.Coordinator.AllowedSigners)
+	if cfg.SUI.ProtocolRegistryID == "" {
+		return fmt.Errorf("device reads require the organization protocol registry")
+	}
+	readAuth, err := coordinator.NewDeviceReadAuth(cfg.SUI.ChainIdentifier, cfg.SUI.OrgID, cfg.Coordinator.BindingID, key, func(ctx context.Context, request coordinator.DeviceReadRequest) (string, error) {
+		if err := rpc.CheckHostJoinChain(ctx, cfg.SUI.ChainIdentifier); err != nil {
+			return "", err
+		}
+		binding, err := reader.ReadCoordinatorConnection(ctx, cfg.SUI.OrgID, cfg.Coordinator.BindingID, key.Public)
+		if err != nil {
+			return "", err
+		}
+		pin, err := reader.VerifyDeviceRead(ctx, nodecommand.DeviceReadInput{Network: cfg.SUI.Network, ProtocolRegistry: cfg.SUI.ProtocolRegistryID, OrganizationID: cfg.SUI.OrgID, HumanID: request.HumanID, GrantID: request.GrantID, DeviceAddress: request.DeviceAddress})
+		if err != nil {
+			return "", err
+		}
+		return binding.VersionPin + ":" + pin, nil
+	})
+	if err != nil {
+		return err
+	}
+	server.SetDeviceReadAuth(readAuth)
 	server.SetWorkerAuthority(func(ctx context.Context, address string, public []byte) error {
 		if err := rpc.CheckHostJoinChain(ctx, cfg.SUI.ChainIdentifier); err != nil {
 			return err

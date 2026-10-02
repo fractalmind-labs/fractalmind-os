@@ -1397,6 +1397,11 @@ h3 {
 .host-access .host-confirm input {width:auto;margin:4px 0;}
 .host-row {padding:12px 0;border-bottom:1px solid var(--border);}
 .host-row button {display:block;margin-top:8px;}
+.host-observations {margin-top:16px;}
+.host-observations fieldset {border:0;padding:0;min-width:0;}
+.host-observations label {display:block;margin:12px 0;}
+.host-observations input,.host-observations select {display:block;width:100%;min-width:0;padding:8px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--text);}
+.host-observations .long-id {overflow-wrap:anywhere;}
 .host-access pre {white-space:pre-wrap;overflow-wrap:anywhere;}
 .okr-form-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;}
 @media (max-width:600px) {.okr-create-dialog {padding:16px;} .okr-form-grid {grid-template-columns:1fr;}}

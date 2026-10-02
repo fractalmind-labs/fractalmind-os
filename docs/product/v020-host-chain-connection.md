@@ -31,14 +31,14 @@ sui:
 - Host 收发时也核验当前链资格和连接版本。关闭取消正在进行的链读取、拨号与重连等待；重复关闭不崩溃。
 - 链连接模式不调用旧扫描器的自动重启，保留原有 Agent 进程与任务。观察资格不是控制权；旧桌面信令不能携带设备授权，正式 Host 在该模式拒绝其控制转发。完整远程桌面仍需接入绑定具体动作的设备权限。
 
-持久成员资格由 Sui 保存；Coordinator 的 socket／心跳目录只是可丢弃观测，不新增业务数据库。直接 HTTP API 的设备鉴权尚未完成，当前 loopback 测试不作为公开部署验收。通过握手认证的心跳也不等于可由 App 独立核验的签名观测正文。
+持久成员资格由 Sui 保存；Coordinator 的 socket／心跳目录只是可丢弃观测，不新增业务数据库。直接 HTTP API 的设备读取鉴权已在[后续增量](v020-device-http-read.md)接通；当前 loopback 测试不作为公开部署验收。通过握手认证的心跳也不等于可由 App 独立核验的 Host 签名观测正文。
 
 ## 实际测试
 
 - [真实链与 loopback 报告](evidence/v020-host-chain-connection-localnet.json)：App 创建组织／入口／单次邀请，独立 Go Host 兑换；仍覆盖实际广播后丢失回执、真实磁盘原摘要恢复和一次广播。使用保留的随机 loopback 端口，Host 从链上选择入口，双向认证并上报真实心跳。App 链上撤销成员后，Coordinator 路由明确因当前指针缺失而拒绝，Host 也拒绝后续心跳。**10 项检查、10 笔成功交易**。
 - [四包 race 测试](evidence/v020-host-chain-connection-unit.json)：来源、期限、撤销、变更期间读取、Host ID 伪造、错误入口、其他连接冒领回执、清理与取消重连等通过。生产 envd 编译、App 类型与生产构建、联合脚本类型检查通过。
 
-测试 Host／Coordinator 钥在 Go 测试二进制内生成；App 管理设备仍为注入的内存夹具钥。它验证实际 socket 和生产连接函数，不证明正式 `main` 的 NativeStore 启动、进程重启、安装后 App、TLS 公网部署、云 Host、五平台或已有 Agent 导入。签名观测、设备 HTTP 鉴权、桌面授权和完整 Agent 闭环继续实现。完整 v0.2.0 未完成，见[验收映射](fractalmind-app-v020-validation.md)。
+测试 Host／Coordinator 钥在 Go 测试二进制内生成；App 管理设备仍为注入的内存夹具钥。它验证实际 socket 和生产连接函数，不证明正式 `main` 的 NativeStore 启动、进程重启、安装后 App、TLS 公网部署、云 Host、五平台或已有 Agent 导入。Host 签名观测、桌面授权和完整 Agent 闭环继续实现；设备 HTTP 读取的后续证据见上述增量。完整 v0.2.0 未完成，见[验收映射](fractalmind-app-v020-validation.md)。
 
 ## 复现
 

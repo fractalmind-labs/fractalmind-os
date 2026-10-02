@@ -27,6 +27,8 @@ import {
 import { NativeDeviceSigner, type NativeInvoke } from "../src/native-device";
 import { HostAdmission } from "../src/host-admission";
 import { ChainReadSession } from "../src/chain";
+import { CoordinatorReadClient } from "../src/coordinator-read";
+import { coordinatorHosts } from "../src/host-observations";
 
 assert.ok(
   process.argv[2] && process.argv[3],
@@ -260,6 +262,8 @@ type CliHello = {
 const liveConnection = process.env.FM_ENVD_CHAIN_CONNECTION === "1";
 assert.ok(!liveConnection || process.env.FM_ENVD_JOIN_CLI_BIN);
 let envdConnection: unknown;
+let deviceHttp: unknown;
+let liveReads: CoordinatorReadClient | undefined;
 function startCliHarness() {
   const helper = spawn(
     process.env.FM_ENVD_JOIN_CLI_BIN!,
@@ -541,6 +545,54 @@ await assert.rejects(
 checks.push(
   "redemption consumes the invitation; reconstruction finds membership and finite observation authority, not execution authority",
 );
+if (earlyHarness && earlyPublic) {
+  liveReads = new CoordinatorReadClient(
+    new ChainReadSession(profile),
+    device,
+    grantId,
+    organizationId,
+  );
+  assert.equal(
+    (await fetch(coordinatorEndpoint + "/api/sentinels")).status,
+    403,
+  );
+  assert.equal(
+    (
+      await fetch(coordinatorEndpoint + "/api/sentinels", {
+        headers: { Authorization: "Bearer legacy-token" },
+      })
+    ).status,
+    403,
+  );
+  let observed: any;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    observed = await liveReads.read(
+      bindingId,
+      `/api/sentinels/${earlyPublic.host_address}`,
+    );
+    if (observed.last_heartbeat) break;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.equal(observed.host_id, earlyPublic.host_address);
+  assert.ok(observed.last_heartbeat);
+  assert.ok(observed.system.num_cpu > 0);
+  const displayed = coordinatorHosts(await liveReads.read(bindingId));
+  assert.equal(displayed.length, 1);
+  assert.equal(displayed[0].address, earlyPublic.host_address);
+  assert.equal(displayed[0].system?.cpu, observed.system.num_cpu);
+  deviceHttp = {
+    unsignedRejected: true,
+    bearerRejected: true,
+    actualAppDeviceProofAndSignedResponse: true,
+    coordinatorObservedHost: observed.host_id,
+    observedAt: observed.last_heartbeat,
+    hostSignatureVerified: false,
+    appDisplaySchemaVerified: true,
+  };
+  checks.push(
+    "App production read client proves native-held fixture device key; Go verifies current grant; unsigned/token reads denied and Coordinator-signed response returns actual Host heartbeat",
+  );
+}
 const revokeMember = await controller.prepare(
   { kind: "revoke-member", targetId: membershipId },
   randomUUID(),
@@ -555,9 +607,8 @@ checks.push(
   "membership revocation remains chain-owned and visible; consumed-invite revocation never substitutes for it",
 );
 if (earlyHarness) {
-  earlyHarness.helper.stdin.end("REVOKED\n");
+  earlyHarness.helper.stdin.write("REVOKED\n");
   envdConnection = await earlyHarness.connectionReady;
-  await earlyHarness.done;
   checks.push(
     "real loopback Coordinator/Host mutually authenticate using chain endpoint and keys; live heartbeat observed; App chain revocation rejects both Coordinator routing and worker heartbeat",
   );
@@ -607,6 +658,9 @@ const adminAdded = await execute(
 const otherGrantId = created(adminAdded, "identity::DeviceGrant");
 const late = await controller.prepare(operation, randomUUID(), true);
 assert.ok(!("status" in late));
+const beforeDeviceRevoked = liveReads
+  ? await liveReads.prepare(bindingId)
+  : undefined;
 await execute(
   "independent root fixture revokes managing device",
   sdk.identity.revokeDevice({
@@ -620,6 +674,18 @@ await assert.rejects(
   controller.submit(late as SelfPayFeeQuote),
   /invalid_grant/,
 );
+if (beforeDeviceRevoked && earlyHarness) {
+  await assert.rejects(beforeDeviceRevoked.send(), /device_read_rejected/);
+  earlyHarness.helper.stdin.end("DONE\n");
+  await earlyHarness.done;
+  deviceHttp = {
+    ...(deviceHttp as object),
+    deviceRevokedAfterChallengeRejected: true,
+  };
+  checks.push(
+    "device revocation after challenge preparation is rejected by actual Coordinator HTTP authority check; no cached device login survives",
+  );
+}
 controller.dispose();
 checks.push(
   "management revocation between quote and submit rejects the App operation before a new broadcast",
@@ -639,6 +705,7 @@ const report = {
   envdQuote,
   envdCli,
   envdConnection,
+  deviceHttp,
   limits: {
     generatedFixtureKeysOnly: true,
     injectedNativeTransport: true,
