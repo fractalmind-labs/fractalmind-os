@@ -16,6 +16,8 @@ type NativeState struct {
 	ActiveCommandID   string `json:"active_command_id,omitempty"`
 	ActiveExecutionID string `json:"active_execution_id,omitempty"`
 	StartedAt         string `json:"started_at,omitempty"`
+	ReviewPending     bool   `json:"review_pending,omitempty"`
+	ReviewExpiresAtMS int64  `json:"review_expires_at_ms,omitempty"`
 }
 type nativeAttempt struct {
 	commandID, executionID string
@@ -30,6 +32,13 @@ func (a *boundedFileAgent) beginNative(agent, command, execution string) (func()
 		id = agent
 	}
 	a.mu.Lock()
+	if review, exists := a.reviews[id]; exists {
+		if time.Now().Before(review.deadline) {
+			a.mu.Unlock()
+			return nil, false
+		}
+		delete(a.reviews, id)
+	}
 	if _, exists := a.active[id]; exists {
 		a.mu.Unlock()
 		return nil, false
@@ -58,6 +67,10 @@ func (a *boundedFileAgent) nativeStatus(request Request) (Response, error) {
 	}
 	state := NativeState{InstanceID: id, Runtime: "bounded-process-v1", PhysicalState: "idle", WorkspaceHash: hash}
 	a.mu.Lock()
+	if review, exists := a.reviews[id]; exists && time.Now().Before(review.deadline) {
+		state.ReviewPending = true
+		state.ReviewExpiresAtMS = review.expiresAtMS
+	}
 	if active, exists := a.active[id]; exists {
 		state.PhysicalState = "running"
 		state.ActiveCommandID = active.commandID

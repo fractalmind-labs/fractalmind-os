@@ -231,7 +231,15 @@ func validateExecutionRecord(command nodecommand.NodeCommand, record runtimeadap
 	if record.Version != "1" || record.Response.CommandID != command.CommandID || record.Event.CommandID != command.CommandID || record.Event.Target != command.Target || record.Event.Version != nodecommand.ProtocolVersion || string(record.Response.Operation) != command.Action {
 		return fmt.Errorf("stored runtime record does not match the command")
 	}
-	return record.Response.Validate(runtimeadapter.Request{SchemaVersion: runtimeadapter.SchemaVersion, CommandID: command.CommandID, Operation: runtimeadapter.Operation(command.Action)})
+	var payload struct {
+		Handover *nodecommand.HandoverProposal `json:"handover_review"`
+	}
+	if len(command.Payload) != 0 {
+		if err := json.Unmarshal(command.Payload, &payload); err != nil {
+			return err
+		}
+	}
+	return record.Response.Validate(runtimeadapter.Request{SchemaVersion: runtimeadapter.SchemaVersion, CommandID: command.CommandID, Operation: runtimeadapter.Operation(command.Action), Handover: payload.Handover})
 }
 func (s *ChainExecutionStore) LoadCommand(ctx context.Context, command nodecommand.NodeCommand) (runtimeadapter.ExecutionRecord, bool, error) {
 	run, _, err := s.lookup(ctx, command)
@@ -275,6 +283,14 @@ func (s *ChainExecutionStore) LoadCommand(ctx context.Context, command nodecomma
 	state, spent, err := settlement(command, record, run.StopRequested)
 	if err != nil || state != run.State || record.Response.ExecutionID != run.ID || record.Response.ExecutionState != executionState(run.State) || record.Response.RequiresConfirmation != (run.State == 4) || (run.State != 4 && uint64(run.BudgetSpent) != spent) {
 		return record, false, fmt.Errorf("runtime result disagrees with the chain state or settled spend")
+	}
+	if acceptance := record.Response.HandoverReview; acceptance != nil {
+		if err := acceptance.ValidateCommand(command, run); err != nil {
+			return record, false, err
+		}
+		if err := acceptance.VerifySignature(ctx); err != nil {
+			return record, false, err
+		}
 	}
 	record.Response.ExecutionID = run.ID
 	record.Response.ExecutionState = executionState(run.State)
@@ -329,6 +345,32 @@ func (s *ChainExecutionStore) SaveCommand(ctx context.Context, command nodecomma
 	state, spent, err := settlement(command, record, run.StopRequested)
 	if err != nil {
 		return record, unknownResult(run, "", err)
+	}
+	if acceptance := record.Response.HandoverReview; acceptance != nil {
+		if state != 2 || acceptance.Signature != "" || acceptance.HostAddress != s.signer.Address() {
+			return record, unknownResult(run, "", fmt.Errorf("review cannot sign an unsuccessful or pre-signed acceptance"))
+		}
+		if err := acceptance.ValidateCommand(command, run); err != nil {
+			return record, unknownResult(run, "", err)
+		}
+		clock, ok := s.reader.(interface {
+			ChainTime(context.Context) (int64, error)
+		})
+		if !ok {
+			return record, unknownResult(run, "", fmt.Errorf("review publication requires chain Clock"))
+		}
+		now, err := clock.ChainTime(ctx)
+		if err != nil || now < acceptance.ObservedAtMS || now >= acceptance.Proposal.ReviewExpiresAtMS {
+			return record, unknownResult(run, "", fmt.Errorf("review expired before publication"))
+		}
+		data, err := acceptance.SigningBytes()
+		if err != nil {
+			return record, unknownResult(run, "", err)
+		}
+		// Work on an owned copy: caller state cannot be changed by publication.
+		copy := *acceptance
+		copy.Signature = "ed25519:" + hex.EncodeToString(s.signer.Public) + ":" + hex.EncodeToString(s.signer.Sign(data))
+		record.Response.HandoverReview = &copy
 	}
 	version, err := s.reader.CurrentRecordKeyVersion(ctx, run.Target.OrganizationID)
 	if err != nil {

@@ -22,6 +22,7 @@ type boundedFileAgent struct {
 	instanceIDs map[string]string
 	mu          sync.Mutex
 	active      map[string]nativeAttempt
+	reviews     map[string]*nativeReviewLease
 }
 
 // BoundedFileAgent supports an explicit, measurable native file-goal adapter.
@@ -54,7 +55,7 @@ func BoundedFileAgent(reader boundedrun.ExecutionAuthority, workspaces map[strin
 		instanceIDs[instance.Session] = instance.InstanceID
 		copied[instance.Session] = instance.Workspace
 	}
-	return &boundedFileAgent{reader: reader, workspaces: copied, observer: observer, inventory: inventory, instanceIDs: instanceIDs, active: map[string]nativeAttempt{}}, nil
+	return &boundedFileAgent{reader: reader, workspaces: copied, observer: observer, inventory: inventory, instanceIDs: instanceIDs, active: map[string]nativeAttempt{}, reviews: map[string]*nativeReviewLease{}}, nil
 }
 
 func (a *boundedFileAgent) NativeDiscovery() *agent.Discovery {
@@ -71,6 +72,9 @@ func (a *boundedFileAgent) Supports(operation Operation) bool {
 	return false
 }
 func (a *boundedFileAgent) run(ctx context.Context, request Request) (Response, error) {
+	if request.Handover != nil {
+		return Response{}, runError("handover_unavailable", fmt.Errorf("review requires a signed, prepared chain status command"))
+	}
 	if (request.Operation == OperationStatus || request.Operation == OperationAvailability) && (a.workspaces[request.Agent] != "" || strings.HasPrefix(request.Agent, "native-")) {
 		return a.nativeStatus(request)
 	}
@@ -80,6 +84,9 @@ func (a *boundedFileAgent) run(ctx context.Context, request Request) (Response, 
 	return a.observer.run(ctx, request)
 }
 func (a *boundedFileAgent) runAuthorized(ctx context.Context, request Request, command nodecommand.NodeCommand, checkpoint *nodecommand.ChainExecution) (Response, error) {
+	if request.Handover != nil {
+		return a.reviewHandover(ctx, request, command, checkpoint)
+	}
 	if request.Operation != OperationAssign {
 		return a.run(ctx, request)
 	}
@@ -124,7 +131,7 @@ func (a *boundedFileAgent) runAuthorized(ctx context.Context, request Request, c
 	}
 	release, available := a.beginNative(request.Agent, request.CommandID, checkpoint.ID)
 	if !available {
-		return reject("instance_busy", fmt.Errorf("native instance still has a physical execution; query its checkpoint before handover"))
+		return reject("instance_busy", fmt.Errorf("native instance has a physical execution or pending constraint review; check it before continuing"))
 	}
 	defer release()
 	guard, err := boundedrun.NewGuard(ctx, a.reader, command, *checkpoint, workspace)

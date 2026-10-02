@@ -158,3 +158,6 @@ export type { TransactionJournal, TransactionJournalEntry, SelfPayFeeQuote, Self
 export { IndexedDbTransactionJournal } from './browser-transaction-journal.js';
 export { createSelfPayOkrSubmitter } from './selfpay-okr-submit.js';
 export type { SelfPayOkrSubmitterOptions } from './selfpay-okr-submit.js';
+
+export { handoverProposalHash, handoverAcceptanceSigningBytes, verifyHandoverAcceptanceSignature, assertFreshHandoverAcceptance } from './handover.js';
+export type { HandoverProposal, HandoverAcceptance } from './handover.js';

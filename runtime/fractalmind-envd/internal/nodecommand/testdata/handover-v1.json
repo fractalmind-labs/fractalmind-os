@@ -1,0 +1,42 @@
+{
+  "acceptance": {
+    "version": "1",
+    "execution_id": "0x5555555555555555555555555555555555555555555555555555555555555555",
+    "organization_id": "0x2222222222222222222222222222222222222222222222222222222222222222",
+    "human_id": "0x8888888888888888888888888888888888888888888888888888888888888888",
+    "grant_id": "0x9999999999999999999999999999999999999999999999999999999999999999",
+    "membership_id": "0x4444444444444444444444444444444444444444444444444444444444444444",
+    "binding_id": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "host_address": "0x6c889013fb165a3a991a62d706af2435d3145a2655347074db6fc94b0eb97ad3",
+    "instance_id": "native-dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "proposal": {
+      "version": "1",
+      "managed_agent_id": "0x6666666666666666666666666666666666666666666666666666666666666666",
+      "managed_version": "1",
+      "okr_id": "0x7777777777777777777777777777777777777777777777777777777777777777",
+      "okr_version": "1",
+      "spec_revision": "1",
+      "workspace_hash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "paths": {
+        "file.read": [
+          "."
+        ],
+        "file.write": [
+          "."
+        ]
+      },
+      "budget_asset": "TOOL_CALLS",
+      "budget_limit": "10",
+      "max_calls": "3",
+      "expires_at_ms": 1700000060000,
+      "nonce": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "review_expires_at_ms": 1700000030000
+    },
+    "coverage_revision": "2",
+    "observed_at_ms": 1700000000000,
+    "signature": "ed25519:fd1724385aa0c75b64fb78cd602fa1d991fdebf76b13c58ed702eac835e9f618:a1b542c35c144f1b40f4d75aa812fe6331f2bf64078282e4518594f00a9eebfdbfc42be6bce2e6a74cfc86a976aa436205f013d8486922401cb7861a04466209"
+  },
+  "bytes": "ZnJhY3RhbG1pbmQuaGFuZG92ZXItYWNjZXB0YW5jZS52MQFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVSIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmUREREREREREREREREREREREREREREREREREREREREREqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpsiJAT+xZaOpkaYtcGryQ10xRaJlU0cHTbb8lLDrl600duYXRpdmUtZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZCB2fEiKM5dcy3/RWG1ls2NujYgJAGtcNmk6icJvdpCftAIAAAAAAAAAAGjlz4sBAAA=",
+  "proposalHash": "767c488a33975ccb7fd1586d65b3636e8d8809006b5c36693a89c26f76909fb4",
+  "source": "Go canonical BCS; public non-production fixture Host seed [9;32]"
+}

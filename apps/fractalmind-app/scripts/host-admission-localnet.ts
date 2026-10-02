@@ -23,6 +23,10 @@ import {
   bytesToHex,
   signNodeCommand,
   executionBoundaryHash,
+  verifyHandoverAcceptanceSignature,
+  assertFreshHandoverAcceptance,
+  type HandoverProposal,
+  type HandoverAcceptance,
   encryptContent,
   recordContext,
   gasCost,
@@ -1515,6 +1519,193 @@ if (earlyHarness && earlyPublic) {
         checks.push(
           "Factory rebuild in the same process reconstructs original result without re-execution; fresh signed status proves physical idle after tool handles close",
         );
+        if (process.env.FM_ENVD_HANDOVER_REVIEW === "1") {
+          assert.ok(liveReads);
+          const reviewLogical = randomUUID();
+          const reviewSpec = await encryptContent(
+            new TextEncoder().encode(
+              JSON.stringify({
+                format: 1,
+                objective:
+                  "Review a bounded file agreement without starting tools",
+                successCriteria: [
+                  "Host accepts exact constraints; no file changes",
+                ],
+              }),
+            ),
+            fixtureContentKey,
+            recordContext(
+              organizationId,
+              "okr",
+              `okr-${reviewLogical}-spec`,
+              1n,
+              1n,
+            ),
+          );
+          const reviewOkr = created(
+            await execute(
+              "Handover review: create encrypted draft without activation",
+              sdk.okr.createDraft({
+                organizationId,
+                humanId,
+                grantId,
+                logicalId: reviewLogical,
+                priority: 0,
+                deadlineMs: Date.now() + 300000,
+                baselines: [0n],
+                targets: [1n],
+                weights: [1n],
+                maxAgesMs: [60000n],
+                keyVersion: 1n,
+                encryptedBody: reviewSpec,
+              }),
+            ),
+            "okr::Okr",
+          );
+          const reviewCap = created(
+            await execute(
+              "Handover review: issue observation capability for exact current native registration",
+              sdk.host.issueCapability({
+                ...authority,
+                actions: ["status"],
+                scope: "observation",
+                maxUses: 1n,
+                expiresAtMs: Date.now() + 180000,
+              }),
+            ),
+            "remote_authority::RemoteCapability",
+          );
+          const managedBefore = await sdk.host.getManagedAgent(imported.id);
+          const draftBefore = await sdk.okr.getOkr(reviewOkr);
+          const proposal: HandoverProposal = {
+            version: "1",
+            managed_agent_id: imported.id,
+            managed_version: managedBefore.version,
+            okr_id: reviewOkr,
+            okr_version: draftBefore.version,
+            spec_revision: draftBefore.spec_revision,
+            workspace_hash: bytesToHex(
+              Uint8Array.from(managedBefore.workspace_hash),
+            ),
+            paths,
+            budget_asset: "TOOL_CALLS",
+            budget_limit: "10",
+            max_calls: "3",
+            expires_at_ms: Date.now() + 120000,
+            review_expires_at_ms: Date.now() + 45000,
+            nonce:
+              randomUUID().replaceAll("-", "") +
+              randomUUID().replaceAll("-", ""),
+          };
+          const reviewCommand = await signNodeCommand(device, {
+            target,
+            action: "status",
+            scope: "observation",
+            capability: { id: reviewCap, revocationVersion: 1n },
+            payload: { handover_review: proposal },
+            expiresAtMs: Date.now() + 120000,
+          });
+          const reviewExecution = await prepare(
+            "Handover review: prepare signed status with encrypted result recipient",
+            reviewCommand,
+          );
+          nativeExecution = {
+            ...(nativeExecution as Record<string, unknown>),
+            handoverReview: {
+              phase: "prepared",
+              executionId: reviewExecution,
+              okrId: reviewOkr,
+              proposal,
+              safeAppHandoverVerified: false,
+            },
+          };
+          await save();
+          const prepared = await liveReads.prepareCommand(
+            bindingId,
+            reviewCommand,
+          );
+          const response = (await prepared.send()) as any;
+          assert.equal(response.success, true);
+          assert.equal(response.response.ok, true);
+          const acceptance = response.response
+            .handover_review as HandoverAcceptance;
+          assert.ok(acceptance);
+          assert.equal(acceptance.execution_id, reviewExecution);
+          assert.equal(response.response.result.physical_state, "idle");
+          assert.equal(response.response.result.review_pending, true);
+          await verifyHandoverAcceptanceSignature(
+            acceptance,
+            earlyPublic.host_address,
+          );
+          const clock = await sdk.client.getMoveObject("0x6");
+          assertFreshHandoverAcceptance(
+            acceptance,
+            Number(clock.fields.timestamp_ms),
+            proposal,
+          );
+          const reviewRun =
+            await sdk.nodeExecution.getExecution(reviewExecution);
+          assert.equal(reviewRun.state, 2);
+          assert.ok(reviewRun.result_record);
+          const decrypted = await sdk.productRecord.decryptRecord(
+            reviewRun.result_record,
+            fixtureContentKey,
+          );
+          const persisted = JSON.parse(
+            new TextDecoder().decode(decrypted.plaintext),
+          );
+          decrypted.plaintext.fill(0);
+          assert.deepEqual(persisted.response.handover_review, acceptance);
+          await verifyHandoverAcceptanceSignature(
+            persisted.response.handover_review,
+            earlyPublic.host_address,
+          );
+          const history = await readHistory();
+          assert.equal(history.unsettledControl, 0);
+          assert.equal(
+            BigInt(history.revision),
+            BigInt(acceptance.coverage_revision) + 1n,
+          );
+          assert.equal((await sdk.okr.getOkr(reviewOkr)).state, 0);
+          assert.equal(
+            (await sdk.host.getManagedAgent(imported.id)).version,
+            managedBefore.version,
+          );
+          await hostResult(
+            "Handover review: original encrypted Host acceptance confirmed",
+            response.response,
+          );
+          await assert.rejects(prepared.send(), /read_already_used/);
+          nativeExecution = {
+            ...(nativeExecution as Record<string, unknown>),
+            handoverReview: {
+              phase: "confirmed",
+              executionId: reviewExecution,
+              okrId: reviewOkr,
+              proposal,
+              acceptance,
+              originalDigest: response.response.transaction_digest,
+              persistedEncryptedProofVerified: true,
+              actualCoordinatorHttp: true,
+              actualTypedChainInspection: true,
+              physicalIdleHeld: true,
+              reviewCoverageRevision: acceptance.coverage_revision,
+              settledCoverageRevision: history.revision,
+              draftRemainedInactive: true,
+              managedVersionUnchanged: true,
+              safeAppHandoverVerified: false,
+              osStoreVerified: false,
+              requiresExplicitChainApprovalAndContinue: true,
+            },
+          };
+          checks.push(
+            "Real signed status review checks exact live Sui authority, full zero-unsettled coverage and physical roots, holds native slot without tools, and persists an independently verified Host proof encrypted on Sui; draft stays inactive",
+          );
+          checks.push(
+            "Review publication increments coverage exactly once; SDK decrypts original immutable evidence and verifies Host signature and original expiry; duplicate send is denied before a second HTTP dispatch",
+          );
+          await save();
+        }
       }
       if (process.env.FM_ENVD_AGENT_REBIND === "1") {
         const rebindParameters = {

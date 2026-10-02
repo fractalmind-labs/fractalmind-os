@@ -21,10 +21,11 @@ import (
 )
 
 type resultReaderFixture struct {
-	run        nodecommand.ChainExecution
-	grant      nodecommand.ChainResultKeyGrant
-	result     nodecommand.ChainExecutionResult
-	missingKey bool
+	run           nodecommand.ChainExecution
+	grant         nodecommand.ChainResultKeyGrant
+	result        nodecommand.ChainExecutionResult
+	missingKey    bool
+	clockOverride int64
 }
 
 func (r *resultReaderFixture) LookupExecution(context.Context, string, string) (nodecommand.ChainExecution, bool, error) {

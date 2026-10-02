@@ -70,6 +70,7 @@ type payload struct {
 	Measurement    *struct {
 		Kind string `json:"kind"`
 	} `json:"measurement,omitempty"`
+	Handover *nodecommand.HandoverProposal `json:"handover_review,omitempty"`
 }
 
 func NewExecutor(validator *nodecommand.Validator, adapter Adapter) *Executor {
@@ -254,6 +255,7 @@ func (e *Executor) executeReserved(ctx context.Context, command nodecommand.Node
 		Cancel:         input.Cancel,
 		Params:         params,
 		Bounds:         input.Bounds,
+		Handover:       input.Handover,
 	}
 	if err := request.Validate(); err != nil {
 		return e.runtimeRejectedExecution(ctx, key, command, checkpoint, operation, "malformed_input", err)
@@ -265,6 +267,9 @@ func (e *Executor) executeReserved(ctx context.Context, command nodecommand.Node
 	}); ok {
 		response, err = adapter.runAuthorized(ctx, request, command, checkpoint)
 	} else {
+		if request.Handover != nil {
+			return e.runtimeRejectedExecution(ctx, key, command, checkpoint, operation, "handover_unavailable", fmt.Errorf("adapter cannot accept native constraints"))
+		}
 		response, err = e.adapter.run(ctx, request)
 	}
 	if err != nil {

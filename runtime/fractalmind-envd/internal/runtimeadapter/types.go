@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 	"strings"
+
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 )
 
 const (
@@ -22,7 +23,8 @@ var stableErrorCodes = map[string]struct{}{
 	"malformed_input": {}, "missing_agent": {}, "missing_command_id": {},
 	"operation_failed": {}, "timeout": {}, "unsupported_operation": {},
 	"boundary_denied": {}, "budget_exhausted": {}, "workspace_changed": {}, "operation_unconfirmed": {}, "measurement_mismatch": {},
-	"instance_busy": {},
+	"instance_busy":        {},
+	"handover_unavailable": {}, "handover_changed": {},
 }
 
 type Operation string
@@ -40,15 +42,16 @@ const (
 )
 
 type Request struct {
-	SchemaVersion  string           `json:"schema_version"`
-	CommandID      string           `json:"command_id"`
-	IdempotencyKey string           `json:"idempotency_key,omitempty"`
-	Operation      Operation        `json:"operation"`
-	Agent          string           `json:"agent,omitempty"`
-	TimeoutSeconds float64          `json:"timeout_seconds,omitempty"`
-	Cancel         bool             `json:"cancel,omitempty"`
-	Params         *OperationParams `json:"params,omitempty"`
-	Bounds         *ExecutionBounds `json:"bounds,omitempty"`
+	SchemaVersion  string                        `json:"schema_version"`
+	CommandID      string                        `json:"command_id"`
+	IdempotencyKey string                        `json:"idempotency_key,omitempty"`
+	Operation      Operation                     `json:"operation"`
+	Agent          string                        `json:"agent,omitempty"`
+	TimeoutSeconds float64                       `json:"timeout_seconds,omitempty"`
+	Cancel         bool                          `json:"cancel,omitempty"`
+	Params         *OperationParams              `json:"params,omitempty"`
+	Bounds         *ExecutionBounds              `json:"bounds,omitempty"`
+	Handover       *nodecommand.HandoverProposal `json:"handover_review,omitempty"`
 }
 
 type ExecutionBounds struct {
@@ -67,6 +70,9 @@ type OperationParams struct {
 }
 
 func (r Request) Validate() error {
+	if r.Handover != nil && r.Operation != OperationStatus {
+		return fmt.Errorf("handover review is only supported by status")
+	}
 	if r.Bounds != nil && r.Operation != OperationAssign {
 		return fmt.Errorf("execution bounds are only supported for assign")
 	}
@@ -166,21 +172,22 @@ type Error struct {
 }
 
 type Response struct {
-	SchemaVersion        string                 `json:"schema_version"`
-	Adapter              string                 `json:"adapter"`
-	CommandID            string                 `json:"command_id"`
-	Operation            Operation              `json:"operation"`
-	Duplicate            bool                   `json:"duplicate"`
-	OK                   bool                   `json:"ok"`
-	ObservedAt           string                 `json:"observed_at"`
-	Result               json.RawMessage        `json:"result"`
-	Error                *Error                 `json:"error"`
-	Spend                *Spend                 `json:"spend,omitempty"`
-	ExecutionID          string                 `json:"execution_id,omitempty"`
-	ExecutionState       string                 `json:"execution_state,omitempty"`
-	RequiresConfirmation bool                   `json:"requires_confirmation,omitempty"`
-	TransactionDigest    string                 `json:"transaction_digest,omitempty"`
-	OkrObservation       *OkrObservationReceipt `json:"okr_observation,omitempty"`
+	SchemaVersion        string                          `json:"schema_version"`
+	Adapter              string                          `json:"adapter"`
+	CommandID            string                          `json:"command_id"`
+	Operation            Operation                       `json:"operation"`
+	Duplicate            bool                            `json:"duplicate"`
+	OK                   bool                            `json:"ok"`
+	ObservedAt           string                          `json:"observed_at"`
+	Result               json.RawMessage                 `json:"result"`
+	Error                *Error                          `json:"error"`
+	Spend                *Spend                          `json:"spend,omitempty"`
+	ExecutionID          string                          `json:"execution_id,omitempty"`
+	ExecutionState       string                          `json:"execution_state,omitempty"`
+	RequiresConfirmation bool                            `json:"requires_confirmation,omitempty"`
+	TransactionDigest    string                          `json:"transaction_digest,omitempty"`
+	OkrObservation       *OkrObservationReceipt          `json:"okr_observation,omitempty"`
+	HandoverReview       *nodecommand.HandoverAcceptance `json:"handover_review,omitempty"`
 }
 
 // This publication state is separate from execution and from human verification.
@@ -199,6 +206,22 @@ type Spend struct {
 }
 
 func (r Response) Validate(request Request) error {
+	if request.Handover != nil && r.OK && r.HandoverReview == nil {
+		return fmt.Errorf("successful review is missing native acceptance")
+	}
+	if r.HandoverReview != nil {
+		if request.Handover == nil || !r.OK || r.Operation != OperationStatus {
+			return fmt.Errorf("unexpected handover acceptance")
+		}
+		want, err := request.Handover.Hash()
+		got, other := r.HandoverReview.Proposal.Hash()
+		if err != nil || other != nil || want != got {
+			return fmt.Errorf("review proposal changed")
+		}
+		if _, err := r.HandoverReview.SigningBytes(); err != nil {
+			return err
+		}
+	}
 	if r.SchemaVersion != SchemaVersion {
 		return fmt.Errorf("adapter returned schema_version %q", r.SchemaVersion)
 	}
