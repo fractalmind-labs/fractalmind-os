@@ -91,6 +91,7 @@ type IdentityConfig struct {
 
 type AgentsConfig struct {
 	ScanMethod         string `yaml:"scan_method"`
+	TmuxSocket         string `yaml:"tmux_socket"`
 	ScanInterval       string `yaml:"scan_interval"`
 	AutoRestart        bool   `yaml:"auto_restart"`
 	MaxRestartAttempts int    `yaml:"max_restart_attempts"`

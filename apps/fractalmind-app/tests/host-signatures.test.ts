@@ -79,6 +79,14 @@ async function fixture(mode = "valid") {
       hostname: `actual-${n}`,
       timestamp: new Date(now).toISOString(),
       agents: [],
+      discovery: {
+        format: 1,
+        state: mode === "scan-failed" ? "unavailable" : "complete",
+        observed_at: new Date(
+          mode === "scan-old" ? now - 60001 : now,
+        ).toISOString(),
+        instances: [],
+      },
       system: { os: "darwin", arch: "arm64", num_cpu: 8 + n },
       uptime_seconds: 10,
     };
@@ -307,4 +315,27 @@ test("expired signed bytes and directory replacement cannot retain current trust
     verifyHostObservations(changed.chain, org, bindingId, changed.response),
     (e) => e instanceof HostObservationError && e.code === "invalid_host_scope",
   );
+});
+test("scan freshness and failure remain independent of a current signed heartbeat", async () => {
+  for (const mode of ["valid", "scan-old", "scan-failed"]) {
+    const f = await fixture(mode);
+    const rows = await verifyHostObservations(
+      f.chain,
+      org,
+      bindingId,
+      f.response,
+    );
+    assert.equal(rows[0].state, "verified");
+    assert.equal(
+      rows[0].discovery?.state,
+      mode === "scan-old"
+        ? "expired"
+        : mode === "scan-failed"
+          ? "unavailable"
+          : "complete",
+    );
+    assert.deepEqual(rows[0].discovery?.instances, []);
+    if (mode === "scan-old")
+      assert.equal(rows[0].discovery?.freshUntilMs, null);
+  }
 });

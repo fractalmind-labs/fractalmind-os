@@ -156,7 +156,7 @@ func main() {
 	}
 
 	// Initialize components
-	scanner := agent.NewScanner(cfg.Agents.ScanMethod)
+	scanner := agent.NewScannerAtSocket(cfg.Agents.ScanMethod, cfg.Agents.TmuxSocket)
 	wsClient := ws.NewClient(cfg.Gateway.URL, reconnectWait)
 
 	var desktopCancel context.CancelFunc
@@ -565,10 +565,28 @@ func main() {
 		defer suiPollTicker.Stop()
 	}
 
-	// Initial scan
-	if agents, err := scanner.Scan(); err == nil {
+	var discovery *agent.Discovery
+	// Chain-connected Hosts report a scan's actual timestamp and failure state.
+	// An unreadable inventory must never keep renewing the previous list.
+	scan := func() ([]agent.Agent, error) {
+		if connectionKeys == nil {
+			return scanner.Scan()
+		}
+		value := scanner.Discover()
+		discovery = &value
+		rows := []agent.Agent{}
+		for _, instance := range value.Instances {
+			status := "running"
+			if instance.State == "dead" {
+				status = "dead"
+			}
+			rows = append(rows, agent.Agent{ID: instance.Session, Session: instance.Session, Status: status})
+		}
+		return rows, nil
+	}
+	if agents, err := scan(); err == nil {
 		lastAgents = agents
-		log.Printf("initial scan: %d agents found", len(agents))
+		log.Printf("initial scan: %d agent panes found", len(agents))
 	}
 
 	// Signal handling
@@ -586,7 +604,7 @@ func main() {
 	for {
 		select {
 		case <-scanTicker.C:
-			agents, err := scanner.Scan()
+			agents, err := scan()
 			if err != nil {
 				log.Printf("[scan] error: %v", err)
 				continue
@@ -606,6 +624,7 @@ func main() {
 				lastAgents,
 				startedAt,
 			)
+			payload.Discovery = discovery
 
 			// v3: Attach relay load info if this node is a relay
 			if activeRoles.Relay && relayServer != nil {

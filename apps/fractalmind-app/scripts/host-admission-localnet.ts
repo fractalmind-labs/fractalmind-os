@@ -610,6 +610,20 @@ if (earlyHarness && earlyPublic) {
   assert.equal(rejected[0].observation, null);
   const honest = await liveReads.readHosts(bindingId);
   assert.equal(honest[0].state, "verified");
+  if (process.env.FM_ENVD_AGENT_DISCOVERY === "1") {
+    const scan = honest[0].discovery;
+    assert.equal(scan?.state, "complete");
+    assert.equal(scan?.instances.length, 1);
+    assert.equal(scan?.instances[0].session, "agent-chain-existing");
+    assert.equal(scan?.instances[0].state, "observed");
+    assert.equal(scan?.instances[0].runtime, "tmux-observe");
+    assert.equal(scan?.instances[0].continuity, "kernel-process-v1");
+    assert.match(scan!.instances[0].instanceId, /^tmux-[0-9a-f]{64}$/);
+    assert.ok(scan!.freshUntilMs! > Date.now());
+    checks.push(
+      "Actual isolated tmux pane and native kernel birth identity traverse Host signature, authenticated Coordinator read and App discovery verification; observation-only capabilities and independent scan deadline preserved",
+    );
+  }
   deviceHttp = {
     unsignedRejected: true,
     bearerRejected: true,
@@ -620,6 +634,7 @@ if (earlyHarness && earlyPublic) {
     tamperedHostBodyRejected: true,
     hostMembershipId: independent[0].membershipId,
     appDisplaySchemaVerified: true,
+    realTmuxDiscoveryVerified: process.env.FM_ENVD_AGENT_DISCOVERY === "1",
   };
   checks.push(
     "App production read client uses injected fixture device signing; Go verifies current grant; unsigned/token reads denied and Coordinator-signed response returns actual Host heartbeat",

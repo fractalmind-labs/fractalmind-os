@@ -321,6 +321,26 @@ export function App() {
   if (!profile)
     return <Welcome t={t} appearance={appearance} connect={connect} />;
   const snapshot = data.snapshot;
+  const hostAuthorityRevision = JSON.stringify([
+    data.reachable,
+    data.identity?.human.generation,
+    data.identity?.grants.value?.map((g) => [
+      g.id,
+      g.version,
+      g.revoked,
+      g.generation,
+      g.expires_at_ms,
+    ]),
+    snapshot?.bindings.value,
+    snapshot?.hosts.value?.map((row) => [
+      row.address,
+      row.current.value?.id,
+      row.current.value?.version,
+      row.current.value?.revoked,
+      row.current.value?.expires_at_ms,
+      row.current.failure,
+    ]),
+  ]);
   const now = snapshot ? clockNow(snapshot, wallMs) : BigInt(wallMs);
   const okrs = snapshot?.okrs.value;
   const focus =
@@ -736,26 +756,7 @@ export function App() {
                     data.identity?.chainIdentifier ?? profile.chainIdentifier,
                 }}
                 organizationId={snapshot.organization.objectId}
-                authorityRevision={JSON.stringify([
-                  data.reachable,
-                  data.identity?.human.generation,
-                  data.identity?.grants.value?.map((g) => [
-                    g.id,
-                    g.version,
-                    g.revoked,
-                    g.generation,
-                    g.expires_at_ms,
-                  ]),
-                  snapshot.bindings.value,
-                  snapshot.hosts.value?.map((row) => [
-                    row.address,
-                    row.current.value?.id,
-                    row.current.value?.version,
-                    row.current.value?.revoked,
-                    row.current.value?.expires_at_ms,
-                    row.current.failure,
-                  ]),
-                ])}
+                authorityRevision={hostAuthorityRevision}
                 t={t}
               />
             </Suspense>
@@ -769,6 +770,24 @@ export function App() {
         )}
         {page === "agents" && snapshot && (
           <>
+            <Suspense
+              fallback={
+                <p>{t("加载实例发现…", "Loading instance discovery…")}</p>
+              }
+            >
+              <HostObservations
+                key={JSON.stringify([profile, snapshot.organization.objectId])}
+                profile={{
+                  ...profile,
+                  chainIdentifier:
+                    data.identity?.chainIdentifier ?? profile.chainIdentifier,
+                }}
+                organizationId={snapshot.organization.objectId}
+                authorityRevision={hostAuthorityRevision}
+                showDiscovery
+                t={t}
+              />
+            </Suspense>
             <h2>{t("受管理实例", "Managed instances")}</h2>
             <p className="muted">
               {t(

@@ -4,6 +4,7 @@ import { fromBase64, toBase64, normalizeSuiAddress } from "@mysten/sui/utils";
 import { ChainReadSession } from "./chain";
 import { hostDirectory } from "./host-admission";
 import { coordinatorHosts, type CoordinatorHost } from "./host-observations";
+import { agentDiscovery, type AgentDiscovery } from "./agent-discovery";
 
 export class HostObservationError extends Error {
   constructor(
@@ -24,6 +25,7 @@ export type VerifiedHostObservation = {
   membershipId: string | null;
   expiresAtMs: number | null;
   freshUntilMs: number | null;
+  discovery: AgentDiscovery | null;
 };
 type Signed = {
   format: number;
@@ -234,6 +236,11 @@ export async function verifyHostObservations(
         membershipId: member.id,
         expiresAtMs: s.expires_at_ms,
         freshUntilMs: null,
+        discovery: await agentDiscovery(
+          body.discovery,
+          s.observed_at_ms,
+          s.expires_at_ms,
+        ),
       });
     } catch (e) {
       const reason =
@@ -246,6 +253,7 @@ export async function verifyHostObservations(
         membershipId: null,
         expiresAtMs: null,
         freshUntilMs: null,
+        discovery: null,
       });
     }
   }
@@ -278,6 +286,20 @@ export async function verifyHostObservations(
             after.clockMs -
             BigInt(Math.max(0, Date.now() - after.loadedAtMs)),
         );
+      const discovery = result.discovery;
+      if (
+        discovery?.expiresAtMs !== null &&
+        discovery?.expiresAtMs !== undefined
+      ) {
+        const remaining =
+          BigInt(discovery.expiresAtMs) -
+          after.clockMs -
+          BigInt(Math.max(0, Date.now() - after.loadedAtMs));
+        if (remaining <= 0n) {
+          discovery.state = "expired";
+          discovery.instances = [];
+        } else discovery.freshUntilMs = Date.now() + Number(remaining);
+      }
     } catch (e) {
       result.state =
         e instanceof HostObservationError &&
@@ -290,6 +312,7 @@ export async function verifyHostObservations(
       result.expiresAtMs = null;
       result.membershipId = null;
       result.freshUntilMs = null;
+      result.discovery = null;
     }
   }
   return results;

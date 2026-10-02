@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/agent"
+
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/wsauth"
 )
 
@@ -115,6 +117,9 @@ func Verify(s Signed, public []byte, now int64) (*Payload, error) {
 		if a.ID == "" || len(a.ID) > 256 || a.Session == "" || len(a.Session) > 256 || (a.Status != "running" && a.Status != "dead" && a.Status != "missing") {
 			return nil, fmt.Errorf("invalid observed Agent descriptor")
 		}
+	}
+	if err := agent.ValidateDiscovery(payload.Discovery, payload.Timestamp); err != nil {
+		return nil, err
 	}
 	return &payload, nil
 }

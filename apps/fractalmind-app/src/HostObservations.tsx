@@ -20,11 +20,13 @@ export default function HostObservations({
   profile,
   organizationId,
   authorityRevision,
+  showDiscovery = false,
   t,
 }: {
   profile: ConnectionProfile;
   organizationId: string;
   authorityRevision: string;
+  showDiscovery?: boolean;
   t: (zh: string, en: string) => string;
 }) {
   const [deviceProfile, setDeviceProfile] = useState(preferredDeviceProfile);
@@ -111,12 +113,21 @@ export default function HostObservations({
   const stale = receivedAt !== null && now - receivedAt >= 60_000;
   return (
     <section className="panel host-observations">
-      <h2>{t("运行观测", "Runtime observations")}</h2>
+      <h2>
+        {showDiscovery
+          ? t("发现已有 Agent", "Discover existing Agents")
+          : t("运行观测", "Runtime observations")}
+      </h2>
       <p className="muted">
-        {t(
-          "读取组织入口观察到的主机与资源，查看心跳时间判断新鲜度。",
-          "Read the Hosts and resources observed by an organization entry point. Check heartbeat times for freshness.",
-        )}
+        {showDiscovery
+          ? t(
+              "从组织入口读取 Host 最近的扫描，核对运行实例、工作区和连续性。扫描不会启动或改变已有任务。",
+              "Read the Hosts' recent scans through an organization entry point. Review instances, workspaces and continuity. Discovery does not start or change existing tasks.",
+            )
+          : t(
+              "读取组织入口观察到的主机与资源，查看心跳时间判断新鲜度。",
+              "Read the Hosts and resources observed by an organization entry point. Check heartbeat times for freshness.",
+            )}
       </p>
       {!native && (
         <p className="warn">
@@ -314,6 +325,102 @@ export default function HostObservations({
                         {current && row ? row.agentCount : t("未知", "Unknown")}
                       </dd>
                     </dl>
+                    {showDiscovery &&
+                      (() => {
+                        const discovery = result.discovery;
+                        const fresh =
+                          current &&
+                          discovery?.freshUntilMs != null &&
+                          now < discovery.freshUntilMs;
+                        const complete =
+                          fresh && discovery?.state === "complete";
+                        return (
+                          <section>
+                            <h4>{t("实例扫描", "Instance scan")}</h4>
+                            <p>
+                              {complete
+                                ? t("Host 扫描已核验", "Host scan verified")
+                                : fresh && discovery?.state === "unsupported"
+                                  ? t(
+                                      "此主机的扫描适配器尚不支持",
+                                      "Discovery adapter unsupported on this Host",
+                                    )
+                                  : fresh && discovery?.state === "unavailable"
+                                    ? t(
+                                        "扫描失败，请检查 Host 后重新读取",
+                                        "Scan unavailable. Check the Host and read again",
+                                      )
+                                    : t(
+                                        "无有效扫描，实例状态未知",
+                                        "No current scan. Instance state unknown",
+                                      )}
+                            </p>
+                            {discovery?.observedAtMs != null && (
+                              <p>
+                                {t("扫描时间", "Scan time")} ·{" "}
+                                {new Date(
+                                  discovery.observedAtMs,
+                                ).toLocaleString()}
+                              </p>
+                            )}
+                            {complete && !discovery.instances.length && (
+                              <p>
+                                {t(
+                                  "扫描完成：未发现符合命名规则的 Agent pane",
+                                  "Scan complete: no Agent panes matching the naming rules",
+                                )}
+                              </p>
+                            )}
+                            {complete &&
+                              discovery.instances.map((instance) => (
+                                <article className="panel" key={instance.pane}>
+                                  <h4>
+                                    {instance.session} · {instance.pane}
+                                  </h4>
+                                  <span className="badge">
+                                    {instance.state === "observed"
+                                      ? t(
+                                          "实例连续性已观测 · 仅观察",
+                                          "Instance continuity observed · observation only",
+                                        )
+                                      : instance.state === "dead"
+                                        ? t("进程已结束", "Process ended")
+                                        : t(
+                                            "实例身份未核实",
+                                            "Instance identity unverified",
+                                          )}
+                                  </span>
+                                  {instance.instanceId && (
+                                    <p className="long-id">
+                                      <code>{instance.instanceId}</code>
+                                    </p>
+                                  )}
+                                  <p>
+                                    {t("工作区", "Workspace")}:{" "}
+                                    {instance.workspace || t("未知", "Unknown")}
+                                  </p>
+                                  {instance.workspaceHash && (
+                                    <p className="long-id">
+                                      <small>
+                                        {t(
+                                          "工作区指纹",
+                                          "Workspace fingerprint",
+                                        )}
+                                        : {instance.workspaceHash}
+                                      </small>
+                                    </p>
+                                  )}
+                                  <p>
+                                    {t(
+                                      "适配器：tmux 仅观察；不支持约束执行或 OKR 接管。",
+                                      "Adapter: tmux observation only; constrained execution and OKR handover unsupported.",
+                                    )}
+                                  </p>
+                                </article>
+                              ))}
+                          </section>
+                        );
+                      })()}
                   </article>
                 );
               })}

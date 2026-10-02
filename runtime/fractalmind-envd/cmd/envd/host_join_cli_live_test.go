@@ -11,9 +11,13 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/agent"
 
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/config"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/coordinator"
@@ -179,10 +183,36 @@ func TestHostJoinLiveCLI(t *testing.T) {
 		}
 		defer liveClient.Close()
 		connected := make(chan error, 1)
+		var discovery *agent.Discovery
+		if os.Getenv("FM_ENVD_AGENT_DISCOVERY") == "1" {
+			fixtureDir, e := os.MkdirTemp("/tmp", "fm-chain-discovery-")
+			if e != nil {
+				t.Fatal(e)
+			}
+			defer os.RemoveAll(fixtureDir)
+			socket := filepath.Join(fixtureDir, "tmux.sock")
+			cmd := exec.Command("tmux", "-S", socket, "-f", "/dev/null", "new-session", "-d", "-s", "agent-chain-existing", "-c", fixtureDir, "sleep 300")
+			if e = cmd.Run(); e != nil {
+				t.Fatal("isolated real tmux fixture unavailable", e)
+			}
+			defer exec.Command("tmux", "-S", socket, "kill-server").Run()
+			value := agent.NewScannerAtSocket("tmux", socket).Discover()
+			if value.State != "complete" || len(value.Instances) != 1 || value.Instances[0].State != "observed" {
+				t.Fatalf("real tmux discovery unavailable: %+v", value)
+			}
+			discovery = &value
+		}
 		liveClient.OnConnect(func() {
 			err := liveClient.Send("register", map[string]string{"host_id": public.Address, "hostname": "physical loopback fixture"})
 			if err == nil {
-				err = liveClient.Send("heartbeat", heartbeat.NewPayload(public.Address, "physical loopback fixture", nil, time.Now()))
+				payload := heartbeat.NewPayload(public.Address, "physical loopback fixture", nil, time.Now())
+				payload.Discovery = discovery
+				if discovery != nil {
+					for _, instance := range discovery.Instances {
+						payload.Agents = append(payload.Agents, agent.Agent{ID: instance.Session, Session: instance.Session, Status: "running"})
+					}
+				}
+				err = liveClient.Send("heartbeat", payload)
 			}
 			select {
 			case connected <- err:

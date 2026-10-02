@@ -211,6 +211,15 @@ exact current chain pointer separately from the Coordinator response signature;
 it never promotes self-reported Agent metadata to independent identity or control.
 See [Host signatures and evidence](../../docs/product/v020-host-signed-observations.md).
 
+Chain-connected Hosts also include a read-only tmux pane discovery snapshot.
+Each scan has its own deadline; failed scans clear the list rather than renewing
+old instances. macOS and Linux use kernel process birth and boot identifiers
+together with tmux internal pane IDs. `agents.tmux_socket` optionally selects an
+existing server. Other platforms report the adapter as unsupported. The App's
+Team & Agents view checks Host signatures, workspaces and scan freshness;
+discovery does not import, restart or grant control of an Agent. See
+[discovery implementation and remaining acceptance](../../docs/product/v020-agent-discovery.md).
+
 Actual loopback sockets with generated memory test keys and race checks passed.
 NativeStore/main startup, cloud/TLS, desktop authorization, Agent import and five-platform
 acceptance remain pending. See [connection implementation and evidence](../../docs/product/v020-host-chain-connection.md).

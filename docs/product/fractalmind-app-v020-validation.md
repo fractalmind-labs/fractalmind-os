@@ -6,6 +6,14 @@
 
 ## 当前验证证据
 
+### Host 已有实例连续性与 v2 Agent 发现增量
+
+- envd 链模式扫描真实 tmux pane，实例标识结合 server／pane 内部 ID、系统启动标识及原生进程创建时间；改名不重建实例，respawn、拆分与同名重建可区分。工作区指纹和原扫描时间随 Host 原文签名，不以心跳刷新旧扫描期限。
+- App 团队与 Agents 接通发现视图；独立核验当前 Host、扫描新鲜度和指纹，区分无实例、失败、未核实、不支持与过期。观察结果只保留页面内存，不获得执行能力。
+- [真实 localnet 报告](evidence/v020-agent-discovery-localnet.json)：**15 项检查、10 笔确认交易**，实际 tmux／系统进程数据经过 Host 签名、设备鉴权和生产 App 校验。成员／设备撤销与原摘要一次广播恢复继续通过。
+- [测试与构建](evidence/v020-agent-discovery-unit.json)：Go 五包 race、真实 tmux 生命周期、App **71/71**、类型与生产构建通过。[浏览器走查](evidence/v020-agent-discovery-browser.json)覆盖真实链目录、中英文和明暗发现入口；没有注入可信实例。
+- **仍未完成**：J11 链上导入／幂等确认与安全交接、支持约束的适配器、对话／自主闭环、云 TLS Host、安装后原生资格旅程及五平台验收。Windows/Linux 交叉构建只证明编译。完整目标不变，详见[发现实现与范围](v020-agent-discovery.md)。
+
 ### Host 独立签名心跳与 App 当前资格核验增量
 
 - Host 主动心跳绑定完整链／组织／成员／入口逻辑版本、实际握手 nonce、连接序号、精确原文和有限期限，使用已初始化 Host 签名钥。Coordinator 拒绝重放、跨连接 nonce、旧 unsigned 和变化／撤销资格；保留原始签名再以设备读取协议转发。
