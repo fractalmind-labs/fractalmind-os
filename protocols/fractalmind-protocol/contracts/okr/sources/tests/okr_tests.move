@@ -1,12 +1,12 @@
 #[test_only]
-module fractalmind_protocol::okr_tests {
+module fractalmind_okr::okr_tests {
     use sui::test_scenario::{Self as ts, Scenario};
     use sui::clock::Clock;
     use std::string;
     use fractalmind_protocol::organization::Organization;
     use fractalmind_protocol::identity::{HumanIdentity, DeviceGrant};
     use fractalmind_protocol::identity_tests;
-    use fractalmind_protocol::okr::{Self, Okr};
+    use fractalmind_okr::okr::{Self, Okr};
 
     fun body(): vector<u8> {
         let mut out = b"FME1"; let mut i = 0;
@@ -39,16 +39,16 @@ module fractalmind_protocol::okr_tests {
         ts::return_shared(draft); ts::return_shared(c); ts::return_shared(grant); ts::return_shared(human); ts::return_shared(org); ts::end(s);
     }
     #[test]
-    #[expected_failure(abort_code = 9401, location = fractalmind_protocol::okr)]
+    #[expected_failure(abort_code = 9401, location = fractalmind_okr::okr)]
     fun equal_baseline_target_rejected() { let mut s = identity_tests::setup(); create(&mut s, 3, 3, 1, 100); ts::end(s); }
     #[test]
-    #[expected_failure(abort_code = 9401, location = fractalmind_protocol::okr)]
+    #[expected_failure(abort_code = 9401, location = fractalmind_okr::okr)]
     fun zero_weight_rejected() { let mut s = identity_tests::setup(); create(&mut s, 0, 3, 0, 100); ts::end(s); }
     #[test]
-    #[expected_failure(abort_code = 9401, location = fractalmind_protocol::okr)]
+    #[expected_failure(abort_code = 9401, location = fractalmind_okr::okr)]
     fun unbounded_observation_age_rejected() { let mut s = identity_tests::setup(); create(&mut s, 0, 3, 1, 2592000001); ts::end(s); }
     #[test]
-    #[expected_failure(abort_code = 9402, location = fractalmind_protocol::okr)]
+    #[expected_failure(abort_code = 9402, location = fractalmind_okr::okr)]
     fun conflicting_draft_retry_rejected() {
         let mut s = identity_tests::setup(); create(&mut s, 0, 3, 1, 100);
         ts::next_tx(&mut s, @0xA); create(&mut s, 0, 2, 1, 100); ts::end(s);
@@ -59,7 +59,7 @@ module fractalmind_protocol::okr_tests {
         let mut s = identity_tests::setup(); ts::next_tx(&mut s, @0xB); create(&mut s, 0, 3, 1, 100); ts::end(s);
     }
     #[test]
-    #[expected_failure(abort_code = 9403, location = fractalmind_protocol::okr)]
+    #[expected_failure(abort_code = 9403, location = fractalmind_okr::okr)]
     fun unactivated_draft_cannot_be_verified() {
         let mut s = identity_tests::setup(); create(&mut s, 0, 3, 1, 100); ts::next_tx(&mut s, @0xA);
         let mut org = ts::take_shared<Organization>(&s); let human = ts::take_shared<HumanIdentity>(&s);

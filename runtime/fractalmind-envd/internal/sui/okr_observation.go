@@ -163,7 +163,7 @@ func (s *ChainExecutionStore) observeNativeResult(ctx context.Context, command n
 		}
 	}
 	args := []interface{}{ObjectArgument(run.Contract.ID), ObjectArgument(run.Target.OrganizationID), ObjectArgument(run.MembershipID), ObjectArgument(run.CoordinatorBindingID), ObjectArgument(run.ManagedAgentID), ObjectArgument(run.CapabilityID), ObjectArgument(run.ID), ObjectArgument(run.ResultRecordID), strconv.FormatUint(state.Version, 10), strconv.FormatUint(uint64(run.Contract.AgreementVersion), 10), strconv.FormatUint(uint64(run.Contract.KRIndex), 10), strconv.FormatUint(current, 10), strconv.FormatUint(sampled, 10), ObjectArgument("0x6")}
-	tx, err := s.rpc.MoveCall(ctx, models.MoveCallRequest{Signer: s.signer.Address(), PackageObjectId: s.packageID, Module: "okr", Function: "observe", Arguments: args, TypeArguments: []interface{}{}, GasBudget: strconv.FormatUint(observationGasBudget, 10)})
+	tx, err := s.rpc.MoveCall(ctx, models.MoveCallRequest{Signer: s.signer.Address(), PackageObjectId: s.okrPackageID, Module: "okr", Function: "observe", Arguments: args, TypeArguments: []interface{}{}, GasBudget: strconv.FormatUint(observationGasBudget, 10)})
 	if err != nil {
 		log.Printf("[okr] observation build failed for Run %s: %v", run.ID, err)
 		receipt.Reason = "observation_build_failed"

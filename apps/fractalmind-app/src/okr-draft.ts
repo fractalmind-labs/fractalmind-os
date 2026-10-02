@@ -200,11 +200,7 @@ export class OkrDraftCreation {
         .catch((error) => {
           if (
             cursor === null &&
-            missingIndex(
-              error,
-              this.organizationId,
-              `${this.chain.sdk.client.typesPackageId}::okr::IndexKey`,
-            )
+            this.chain.sdk.okr.isMissingIndex(error, this.organizationId)
           )
             return { okrs: [], cursor: null, hasNextPage: false };
           throw error;

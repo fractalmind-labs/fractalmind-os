@@ -1,6 +1,7 @@
 import { bcs } from '@mysten/sui/bcs';
 import type { Transaction, TransactionArgument } from '@mysten/sui/transactions';
-import { normalizeSuiAddress } from '@mysten/sui/utils';
+import { normalizeSuiAddress, deriveDynamicFieldID } from '@mysten/sui/utils';
+import { TypeTagSerializer } from '@mysten/sui/bcs';
 import { FractalMindClient, toBigInt } from './client.js';
 import { bytesArgument } from './wire-bytes.js';
 import { NodeExecutionApi } from './node-execution.js';
@@ -44,7 +45,7 @@ type Criteria = { priority: number; deadlineMs: U64; baselines: U64[]; targets: 
 export class OkrApi {
   constructor(private readonly fm: FractalMindClient) {}
   private call(tx: Transaction, name: string, args: TransactionArgument[]) {
-    tx.moveCall({ target: `${this.fm.packageId}::okr::${name}`, arguments: args }); return tx;
+    tx.moveCall({ target: `${this.fm.okrPackageId}::okr::${name}`, arguments: args }); return tx;
   }
   private authorized(tx: Transaction, input: Authorized) { return [tx.object(input.organizationId), tx.object(input.humanId), tx.object(input.grantId)]; }
   private criteria(tx: Transaction, input: Criteria) {
@@ -95,8 +96,8 @@ export class OkrApi {
     return this.call(tx, 'archive', [tx.object(input.okrId), ...this.authorized(tx, input), tx.pure.u64(toBigInt(input.expectedVersion)), tx.object('0x6')]);
   }
   async getBudget(okrId: string) {
-    const field = await this.fm.client.core.getDynamicField({ parentId: okrId, name: { type: `${this.fm.typesPackageId}::okr::BudgetKey`, bcs: new Uint8Array([0]) } });
-    if (field.dynamicField.value.type !== `${this.fm.typesPackageId}::okr::BudgetState`) throw new Error('Unexpected OKR budget type.');
+    const field = await this.fm.client.core.getDynamicField({ parentId: okrId, name: { type: `${this.fm.okrTypesPackageId}::okr::BudgetKey`, bcs: new Uint8Array([0]) } });
+    if (field.dynamicField.value.type !== `${this.fm.okrTypesPackageId}::okr::BudgetState`) throw new Error('Unexpected OKR budget type.');
     const value = Budget.parse(field.dynamicField.value.bcs);
     const okr = await this.getOkr(okrId);
     const spent = BigInt(value.spent), reserved = BigInt(value.reserved);
@@ -106,7 +107,7 @@ export class OkrApi {
   async getReservationBudget(okrId: string, executionId: string) {
     const budget = await this.getBudget(okrId);
     const field = await this.fm.client.core.getDynamicField({ parentId: budget.claimsId, name: { type: '0x2::object::ID', bcs: ID.serialize(executionId).toBytes() } });
-    if (field.dynamicField.value.type !== `${this.fm.typesPackageId}::okr::BudgetClaim`) throw new Error('Unexpected OKR claim type.');
+    if (field.dynamicField.value.type !== `${this.fm.okrTypesPackageId}::okr::BudgetClaim`) throw new Error('Unexpected OKR claim type.');
     const value = Claim.parse(field.dynamicField.value.bcs);
     if (BigInt(value.spent) > BigInt(value.reserved) || (!value.settled && BigInt(value.spent) !== 0n)) throw new Error('Invalid OKR claim.');
     return value;
@@ -134,7 +135,7 @@ export class OkrApi {
       if (field.name.type !== '0x2::object::ID' && field.name.type !== `${normalizeSuiAddress('0x2')}::object::ID`) throw new Error('Unexpected OKR claim key.');
       const executionId = ID.parse(field.name.bcs);
       const pointer = await this.fm.client.core.getDynamicField({ parentId: budget.claimsId, name: field.name });
-      if (pointer.dynamicField.value.type !== `${this.fm.typesPackageId}::okr::BudgetClaim`) throw new Error('Unexpected OKR claim type.');
+      if (pointer.dynamicField.value.type !== `${this.fm.okrTypesPackageId}::okr::BudgetClaim`) throw new Error('Unexpected OKR claim type.');
       const claim = Claim.parse(pointer.dynamicField.value.bcs);
       const run = await reader.getExecution(executionId);
       const binding = await this.fm.client.core.getDynamicField({ parentId: run.capability_id, name: { type: `${this.fm.typesPackageId}::remote_authority::CommandContractKey`, bcs: CommandContractKey.serialize({ intent_hash: run.intent_hash }).toBytes() } });
@@ -150,13 +151,23 @@ export class OkrApi {
   }
   async getOkr(id: string) {
     const { object } = await this.fm.client.core.getObject({ objectId: id, include: { content: true } });
-    if (object.type !== `${this.fm.typesPackageId}::okr::Okr` || !object.content || object.owner.$kind !== 'Shared') throw new Error('Unexpected OKR type, body or owner.');
+    if (object.type !== `${this.fm.okrTypesPackageId}::okr::Okr` || !object.content || object.owner.$kind !== 'Shared') throw new Error('Unexpected OKR type, body or owner.');
     const value = OkrBcs.parse(object.content);
     if (normalizeSuiAddress(value.id) !== normalizeSuiAddress(id) || value.state > 4 || value.metrics.length < 1 || value.metrics.length > 3 || BigInt(value.next_kr) > BigInt(value.metrics.length)) throw new Error('Invalid OKR identity or state.');
     return value;
   }
+  indexName() {
+    return this.fm.okrTypesPackageId === this.fm.typesPackageId
+      ? { type: `${this.fm.okrTypesPackageId}::okr::IndexKey`, bcs: new Uint8Array([0]) }
+      : { type: `${this.fm.typesPackageId}::execution_extension::FieldKey<${this.fm.okrTypesPackageId}::okr::Witness>`, bcs: Bytes.serialize(Array.from(new TextEncoder().encode('okr-index'))).toBytes() };
+  }
+  isMissingIndex(error: unknown, organizationId: string) {
+    const name = this.indexName(), expected = deriveDynamicFieldID(normalizeSuiAddress(organizationId), TypeTagSerializer.parseFromStr(name.type), name.bcs);
+    return Boolean(error && typeof error === 'object' && 'reason' in error && error.reason === 'notFound' && 'objectId' in error && error.objectId === expected);
+  }
   async getIndex(organizationId: string) {
-    const field = await this.fm.client.core.getDynamicField({ parentId: organizationId, name: { type: `${this.fm.typesPackageId}::okr::IndexKey`, bcs: new Uint8Array([0]) } });
+    const field = await this.fm.client.core.getDynamicField({ parentId: organizationId, name: this.indexName() });
+    if (field.dynamicField.value.type !== `${this.fm.okrTypesPackageId}::okr::OkrIndex`) throw new Error('Unexpected OKR index source.');
     const value = Index.parse(field.dynamicField.value.bcs);
     if (BigInt(value.active_count) > 3n) throw new Error('Invalid OKR active count.'); return value;
   }
@@ -168,7 +179,7 @@ export class OkrApi {
       const pointer = await this.fm.client.core.getDynamicField({ parentId: okr.observations.id, name: field.name });
       const id = ID.parse(pointer.dynamicField.value.bcs);
       const { object } = await this.fm.client.core.getObject({ objectId: id, include: { content: true } });
-      if (object.type !== `${this.fm.typesPackageId}::okr::Observation` || !object.content || object.owner.$kind !== 'Immutable') throw new Error('Unexpected observation type, content or owner.');
+      if (object.type !== `${this.fm.okrTypesPackageId}::okr::Observation` || !object.content || object.owner.$kind !== 'Immutable') throw new Error('Unexpected observation type, content or owner.');
       const observation = OkrObservationBcs.parse(object.content);
       if (observation.id !== id || observation.okr_id !== okr.id || observation.org_id !== okr.org_id) throw new Error('Observation identity or scope mismatch.');
       return observation;

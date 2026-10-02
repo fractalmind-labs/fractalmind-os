@@ -69,15 +69,15 @@ func TestHostJoinLiveCLI(t *testing.T) {
 	if os.Getenv("FM_HOST_JOIN_LIVE_CLI") != "1" {
 		t.Skip("explicit real localnet fixture only")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 180*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancel()
 	frame, err := bufio.NewReaderSize(os.Stdin, 4096).ReadBytes('\n')
 	if err != nil || len(frame) > 4096 {
 		t.Fatal("invalid public fixture configuration")
 	}
 	var input struct {
-		PackageID, RegistryID, OrganizationID, ChainIdentifier, JournalRoot string
-		LiveConnection                                                      bool
+		PackageID, OkrPackageID, RegistryID, OrganizationID, ChainIdentifier, JournalRoot string
+		LiveConnection                                                                    bool
 	}
 	if json.Unmarshal(frame, &input) != nil || input.JournalRoot == "" {
 		t.Fatal("invalid public fixture configuration")
@@ -165,11 +165,11 @@ func TestHostJoinLiveCLI(t *testing.T) {
 	var nativeWorkspace string
 	var deviceCommandDispatches atomic.Int64
 	if input.LiveConnection {
-		reader, err = nodecommand.NewChainAuthorityResolver(base, input.PackageID)
+		reader, err = nodecommand.NewChainAuthorityResolver(base, input.PackageID, input.OkrPackageID)
 		if err != nil {
 			t.Fatal(err)
 		}
-		liveConfig = &config.Config{SUI: config.SUIConfig{Network: "localnet", ProtocolRegistryID: input.RegistryID, ProtocolPackageID: input.PackageID, ChainIdentifier: input.ChainIdentifier, OrgID: input.OrganizationID}, Coordinator: config.CoordinatorConfig{BindingID: result.Membership.BindingID}}
+		liveConfig = &config.Config{SUI: config.SUIConfig{Network: "localnet", ProtocolRegistryID: input.RegistryID, ProtocolPackageID: input.PackageID, OkrPackageID: input.OkrPackageID, ChainIdentifier: input.ChainIdentifier, OrgID: input.OrganizationID}, Coordinator: config.CoordinatorConfig{BindingID: result.Membership.BindingID}}
 		commandTimeout := time.Second
 		if os.Getenv("FM_ENVD_DEVICE_COMMAND") == "1" || os.Getenv("FM_ENVD_HANDOVER_APPROVAL") == "1" {
 			commandTimeout = 30 * time.Second
@@ -217,6 +217,7 @@ func TestHostJoinLiveCLI(t *testing.T) {
 				nativeConfig = chainRuntimeConfig()
 				nativeConfig.SUI.Network = "localnet"
 				nativeConfig.SUI.ProtocolPackageID = input.PackageID
+				nativeConfig.SUI.OkrPackageID = input.OkrPackageID
 				nativeConfig.SUI.ProtocolRegistryID = input.RegistryID
 				nativeConfig.SUI.ChainIdentifier = input.ChainIdentifier
 				nativeConfig.SUI.OrgID = input.OrganizationID

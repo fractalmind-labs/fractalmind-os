@@ -38,17 +38,21 @@ type ResultStoreRPC interface {
 var errHostGasInsufficient = errors.New("Host SUI balance cannot cover the configured gas ceilings")
 
 type ChainExecutionStore struct {
-	reader    ExecutionResultReader
-	rpc       ResultStoreRPC
-	signer    *Keypair
-	packageID string
-	secret    HostEncryptionSecret
-	gasBudget uint64
+	reader       ExecutionResultReader
+	rpc          ResultStoreRPC
+	signer       *Keypair
+	packageID    string
+	okrPackageID string
+	secret       HostEncryptionSecret
+	gasBudget    uint64
 }
 
 // ResultGasBudget is a ceiling, not an actual fee. The default accommodates the
 // validated 64 KiB encrypted-body bound; Sui charges actual execution/storage.
-type ChainExecutionStoreOptions struct{ ResultGasBudget uint64 }
+type ChainExecutionStoreOptions struct {
+	ResultGasBudget uint64
+	OkrPackageID    string
+}
 
 func NewChainExecutionStore(reader ExecutionResultReader, rpc ResultStoreRPC, signer *Keypair, packageID string, secret HostEncryptionSecret, options ...ChainExecutionStoreOptions) (*ChainExecutionStore, error) {
 	if reader == nil || rpc == nil || signer == nil || secret == nil {
@@ -65,7 +69,14 @@ func NewChainExecutionStore(reader ExecutionResultReader, rpc ResultStoreRPC, si
 	if len(options) == 1 && options[0].ResultGasBudget != 0 {
 		budget = options[0].ResultGasBudget
 	}
-	return &ChainExecutionStore{reader: reader, rpc: rpc, signer: signer, packageID: canonical, secret: secret, gasBudget: budget}, nil
+	okr := canonical
+	if len(options) == 1 && options[0].OkrPackageID != "" {
+		okr, err = normalizeAddress(options[0].OkrPackageID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &ChainExecutionStore{reader: reader, rpc: rpc, signer: signer, packageID: canonical, okrPackageID: okr, secret: secret, gasBudget: budget}, nil
 }
 
 func commandReservation(command nodecommand.NodeCommand) (nodecommand.Reservation, error) {
@@ -397,12 +408,16 @@ func (s *ChainExecutionStore) SaveCommand(ctx context.Context, command nodecomma
 		return record, unknownResult(run, "", err)
 	}
 	args := []interface{}{ObjectArgument(run.ID), ObjectArgument(run.CapabilityID), ObjectArgument(run.Target.OrganizationID), state, strconv.FormatUint(run.Cursor, 10), strconv.FormatUint(spent, 10), strconv.FormatUint(version, 10), ChunkedBytes(encrypted), ObjectArgument("0x6")}
-	module, function := "node_execution", "finish_command_with_budget"
+	module, function, targetPackage := "node_execution", "finish_command_with_budget", s.packageID
 	if run.Contract != nil {
 		module, function = "okr", "finish_command"
+		targetPackage = s.okrPackageID
+		if targetPackage != s.packageID {
+			args[7] = PackageChunkedBytes{PackageID: s.packageID, Bytes: encrypted}
+		}
 		args = append([]interface{}{ObjectArgument(run.Contract.ID)}, args...)
 	}
-	tx, err := s.rpc.MoveCall(ctx, models.MoveCallRequest{Signer: s.signer.Address(), PackageObjectId: s.packageID, Module: module, Function: function, Arguments: args, TypeArguments: []interface{}{}, GasBudget: strconv.FormatUint(s.gasBudget, 10)})
+	tx, err := s.rpc.MoveCall(ctx, models.MoveCallRequest{Signer: s.signer.Address(), PackageObjectId: targetPackage, Module: module, Function: function, Arguments: args, TypeArguments: []interface{}{}, GasBudget: strconv.FormatUint(s.gasBudget, 10)})
 	if err != nil {
 		return record, unknownResult(run, "", err)
 	}

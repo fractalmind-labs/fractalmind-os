@@ -50,6 +50,36 @@ await sdk.client.client.core.waitForTransaction({ digest: executed.digest });
 
 ## API Notes
 
+### Product package graph
+
+New v0.2.0 deployments publish three packages under the standard Sui package
+size limit: the core protocol, OKR/handover, and direct Agent messages. Both
+extensions depend on the core. Configure their IDs explicitly:
+
+```ts
+const sdk = new FractalMindSDK({
+  packageId: '0xCORE_PACKAGE_ID',
+  registryId: '0xPROTOCOL_REGISTRY_ID',
+  okrPackageId: '0xOKR_PACKAGE_ID',
+  directPackageId: '0xDIRECT_PACKAGE_ID',
+  network: 'testnet',
+});
+```
+
+`originalPackageId`, `originalOkrPackageId`, and `originalDirectPackageId`
+select BCS/type origins separately from the respective current call package
+IDs. Each defaults to its current package ID. Omitting extension configuration
+retains historical monolithic routing; it does not discover a new deployment.
+Core identities, capabilities, Runs and encrypted product records remain core
+types. The extensions use the checked core witness bridge to bind execution
+and write their own records.
+
+New core publishes initialize the identity directory atomically; use
+`sdk.identity.resolveRegistry()` afterward. `initializeRegistry()` remains for
+older explicitly verified deployments whose directory has not been initialized.
+The isolated three-package publish and native tests do not establish an
+in-place upgrade or migration of previously published objects.
+
 For the App's identity/device/OKR flows, use `SelfPayTransactionManager` with a
 durable `TransactionJournal`, such as `IndexedDbTransactionJournal` in a browser
 or WebView. `prepare()` estimates fees without signing; display its quote before

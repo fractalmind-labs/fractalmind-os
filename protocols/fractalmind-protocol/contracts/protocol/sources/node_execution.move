@@ -114,7 +114,7 @@ module fractalmind_protocol::node_execution {
             command_id, nonce, idempotency_key, budget_asset, budget_amount, intent_hash, issued_at_ms, expires_at_ms, clock, ctx);
         if (!duplicate) host::record_agent_execution(org, object::id(managed), run_id, object::id(cap), action);
     }
-    public(package) fun prepare_agent_command_with_contract(
+    public fun prepare_agent_command_with_contract(
         cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
         member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent, witness: ContractWitness,
         action: String, scope: String, command_id: String, nonce: String, idempotency_key: String,
@@ -127,7 +127,7 @@ module fractalmind_protocol::node_execution {
         prepare(cap, org, human, grant, member, option::some(object::id(managed)), action, scope,
             command_id, nonce, idempotency_key, budget_asset, budget_amount, intent_hash, issued_at_ms, expires_at_ms, clock, ctx)
     }
-    public(package) fun prepare_agent_command_with_contract_v2(
+    public fun prepare_agent_command_with_contract_v2(
         cap: &mut RemoteCapability, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
         member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent, witness: ContractWitness,
         action: String, scope: String, command_id: String, nonce: String, idempotency_key: String,
@@ -224,7 +224,7 @@ module fractalmind_protocol::node_execution {
         run.started_at_ms = clock::timestamp_ms(clock);
         changed(run, clock);
     }
-    public(package) fun begin_agent_command_with_contract(
+    public fun begin_agent_command_with_contract(
         run: &mut CommandExecution, cap: &RemoteCapability, org: &Organization,
         human: &HumanIdentity, grant: &DeviceGrant, member: &HostMembership,
         binding: &CoordinatorBinding, managed: &ManagedAgent, witness: ContractWitness,
@@ -252,7 +252,7 @@ module fractalmind_protocol::node_execution {
         ra::assert_unbound_contract(cap);
         finish(run, cap, org, final_state, expected_cursor, spent_amount, key_version, encrypted_result, clock, ctx);
     }
-    public(package) fun finish_command_with_contract(
+    public fun finish_command_with_contract(
         run: &mut CommandExecution, cap: &mut RemoteCapability, org: &mut Organization, witness: ContractWitness, final_state: u8,
         expected_cursor: u64, spent_amount: u64, key_version: u64, encrypted_result: vector<u8>, clock: &Clock, ctx: &mut TxContext,
     ) {
@@ -305,12 +305,12 @@ module fractalmind_protocol::node_execution {
         ra::assert_unbound_contract(cap);
         request_stop_tracked(run, cap, org, human, grant, clock, ctx);
     }
-    public(package) fun request_stop_with_contract(run: &mut CommandExecution, cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant, witness: ContractWitness, clock: &Clock, ctx: &TxContext) {
+    public fun request_stop_with_contract(run: &mut CommandExecution, cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant, witness: ContractWitness, clock: &Clock, ctx: &TxContext) {
         ra::assert_contract_command(cap, run.intent_hash, &witness);
         assert_legacy_queued_stop(run, org);
         request_stop_authorized(run, cap, org, human, grant, clock, ctx);
     }
-    public(package) fun request_stop_with_contract_v2(run: &mut CommandExecution, cap: &mut RemoteCapability, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant, witness: ContractWitness, clock: &Clock, ctx: &TxContext) {
+    public fun request_stop_with_contract_v2(run: &mut CommandExecution, cap: &mut RemoteCapability, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant, witness: ContractWitness, clock: &Clock, ctx: &TxContext) {
         ra::assert_contract_command(cap, run.intent_hash, &witness);
         request_stop_tracked(run, cap, org, human, grant, clock, ctx);
     }
@@ -352,7 +352,7 @@ module fractalmind_protocol::node_execution {
         };
         string::utf8(bytes)
     }
-    public(package) fun assert_handover_review(
+    public fun assert_handover_review(
         run: &CommandExecution, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
         member: &HostMembership, managed: &ManagedAgent, cap: &RemoteCapability, observed_at_ms: u64,
     ) {

@@ -237,7 +237,7 @@ export class HandoverApi {
     const signature = a.signature.split(":")[2];
     const tx = this.fm.useTransaction(input.tx);
     tx.moveCall({
-      target: `${this.fm.packageId}::handover::confirm_okr`,
+      target: `${this.fm.okrPackageId}::handover::confirm_okr`,
       arguments: [
         ...[
           p.okr_id,
@@ -280,7 +280,7 @@ export class HandoverApi {
     });
     if (
       object.objectId !== expectedId ||
-      object.type !== `${this.fm.typesPackageId}::handover::Approval` ||
+      object.type !== `${this.fm.okrTypesPackageId}::handover::Approval` ||
       object.owner.$kind !== "Shared" ||
       !object.content
     )
@@ -299,13 +299,13 @@ export class HandoverApi {
     const { dynamicField } = await this.fm.client.core.getDynamicField({
       parentId: id(okrId),
       name: {
-        type: `${this.fm.typesPackageId}::okr::HandoverPolicyKey`,
+        type: `${this.fm.okrTypesPackageId}::okr::HandoverPolicyKey`,
         bcs: new Uint8Array([0]),
       },
     });
     if (
       dynamicField.value.type !==
-      `${this.fm.typesPackageId}::okr::HandoverPolicy`
+      `${this.fm.okrTypesPackageId}::okr::HandoverPolicy`
     )
       throw new Error("Invalid handover policy source.");
     const value = HandoverPolicyBcs.parse(dynamicField.value.bcs);

@@ -164,3 +164,33 @@ func TestOkrExecutionHistoryRetainsOriginalAgreementAndChecksBothBudgets(t *test
 		})
 	}
 }
+
+func TestSplitOkrTypeOriginAndCoreBindings(t *testing.T) {
+	f, okr, budget, _ := contractFixture(t)
+	pkg := addressNumber(99).String()
+	f.resolver.okrPackageID = pkg
+	object := f.objects[okr.ID.String()]
+	object.Type = pkg + "::okr::Okr"
+	f.objects[object.ID] = object
+	budgetField := f.saveField(t, okr.ID, structKeyTag(pkg, "okr", "BudgetKey"), []byte{0}, pkg+"::okr::BudgetKey", pkg+"::okr::BudgetState", budget)
+	policy := moveHandoverPolicy{Agreement: okr.Agreement, ManagedVersion: okr.ManagedVersion, MaxCalls: 100, Nonce: make([]byte, 32), ProposalHash: make([]byte, 32), Approval: addressNumber(25)}
+	f.saveField(t, okr.ID, structKeyTag(pkg, "okr", "HandoverPolicyKey"), []byte{0}, pkg+"::okr::HandoverPolicyKey", pkg+"::okr::HandoverPolicy", policy)
+	state, err := f.resolver.Resolve(context.Background(), CapabilityRef{ID: f.cap.ID.String()})
+	if err != nil || state.Contract == nil || state.Contract.ID != okr.ID.String() {
+		t.Fatalf("split source: %v", err)
+	}
+	// An object with the same BCS in core cannot masquerade as the configured extension.
+	object.Type = f.resolver.packageID + "::okr::Okr"
+	f.objects[object.ID] = object
+	if _, err = f.resolver.Resolve(context.Background(), CapabilityRef{ID: f.cap.ID.String()}); err == nil {
+		t.Fatal("wrong OKR origin accepted")
+	}
+	object.Type = pkg + "::okr::Okr"
+	f.objects[object.ID] = object
+	field := f.objects[budgetField]
+	field.Type = "0x2::dynamic_field::Field<" + pkg + "::okr::BudgetKey," + f.resolver.packageID + "::okr::BudgetState>"
+	f.objects[budgetField] = field
+	if _, err = f.resolver.Resolve(context.Background(), CapabilityRef{ID: f.cap.ID.String()}); err == nil {
+		t.Fatal("wrong budget origin accepted")
+	}
+}

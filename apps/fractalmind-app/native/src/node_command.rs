@@ -76,10 +76,8 @@ fn decode_command(encoded: &str, now: u64) -> Result<(Vec<u8>, Envelope)> {
         c.action.as_str(),
         "inventory" | "status" | "monitor" | "logs" | "health" | "availability"
     );
-    let control = matches!(
-        c.action.as_str(),
-        "start" | "stop" | "assign" | "direct.message"
-    );
+    let control = matches!(c.action.as_str(), "start" | "stop" | "assign");
+    let direct = c.action == "direct.message";
     if c.domain != "fractalmind.node-command.v1"
         || c.version != "1"
         || keyrings::id(&c.signer).is_err()
@@ -90,8 +88,11 @@ fn decode_command(encoded: &str, now: u64) -> Result<(Vec<u8>, Envelope)> {
         || !token(&c.command_id, 128)
         || !token(&c.nonce, 128)
         || !token(&c.idempotency_key, 128)
-        || !(read && c.scope == "observation" || control && c.scope == "control")
-        || control && c.target.agent_id.is_none()
+        || !(read && c.scope == "observation"
+            || control && c.scope == "control"
+            || direct && c.scope == "direct")
+        || (control || direct) && c.target.agent_id.is_none()
+        || direct && c.budget.as_ref().is_some_and(|b| b.asset != "TOOL_CALLS")
         || !positive_u64(&c.capability.revocation_version)
         || c.payload_hash.len() != 64
         || !c
@@ -263,6 +264,27 @@ mod tests {
             amount: "18446744073709551615".into(),
         });
         assert!(decode_command(&STANDARD.encode(serde_json::to_vec(&c).unwrap()), NOW).is_ok());
+    }
+    #[test]
+    fn direct_commands_require_their_scope_and_fixed_instance() {
+        let mut c = envelope();
+        c.action = "direct.message".into();
+        c.scope = "direct".into();
+        let encoded = STANDARD.encode(serde_json::to_vec(&c).unwrap());
+        assert!(decode_command(&encoded, NOW).is_ok());
+        c.budget = Some(Budget {
+            asset: "TOOL_CALLS".into(),
+            amount: "3".into(),
+        });
+        assert!(decode_command(&STANDARD.encode(serde_json::to_vec(&c).unwrap()), NOW).is_ok());
+        c.scope = "control".into();
+        assert!(decode_command(&STANDARD.encode(serde_json::to_vec(&c).unwrap()), NOW).is_err());
+        c.scope = "direct".into();
+        c.target.agent_id = None;
+        assert!(decode_command(&STANDARD.encode(serde_json::to_vec(&c).unwrap()), NOW).is_err());
+        c.target.agent_id = Some("native-fixture".into());
+        c.budget.as_mut().unwrap().asset = "SUI".into();
+        assert!(decode_command(&STANDARD.encode(serde_json::to_vec(&c).unwrap()), NOW).is_err());
     }
     #[test]
     fn foreign_key_and_alternate_json_cannot_obtain_a_signature() {

@@ -13,6 +13,10 @@ export type ConnectionProfile = {
   rpcUrl: string;
   packageId: string;
   originalPackageId?: string;
+  okrPackageId?: string;
+  originalOkrPackageId?: string;
+  directPackageId?: string;
+  originalDirectPackageId?: string;
   registryId: string;
   humanId: string;
   chainIdentifier?: string;

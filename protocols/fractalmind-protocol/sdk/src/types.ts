@@ -13,6 +13,11 @@ export interface FractalMindClientOptions {
   packageId: string;
   /** Original type package address when calling an upgraded package. */
   originalPackageId?: ObjectId;
+  /** v0.2 product extensions; omit only for historical monolithic deployments. */
+  okrPackageId?: ObjectId;
+  originalOkrPackageId?: ObjectId;
+  directPackageId?: ObjectId;
+  originalDirectPackageId?: ObjectId;
   registryId?: ObjectId;
   network?: NetworkName;
   /** gRPC endpoint; the existing fullnode host can be reused. */

@@ -267,7 +267,7 @@ func (s *ChainAuthorityResolver) InspectHandover(ctx context.Context, command No
 	}
 	if okr.State == 2 {
 		var budget moveOkrBudget
-		if err := r.field(ctx, p.OkrID, structKeyTag(s.packageID, "okr", "BudgetKey"), []byte{0}, s.packageID+"::okr::BudgetKey", s.packageID+"::okr::BudgetState", &budget); err != nil {
+		if err := r.field(ctx, p.OkrID, structKeyTag(s.okrPackageID, "okr", "BudgetKey"), []byte{0}, s.okrPackageID+"::okr::BudgetKey", s.okrPackageID+"::okr::BudgetState", &budget); err != nil {
 			return HandoverAuthority{}, err
 		}
 		if budget.Reserved != 0 || budget.Spent > uint64(p.BudgetLimit) || budget.Asset != p.BudgetAsset {

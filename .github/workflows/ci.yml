@@ -139,6 +139,12 @@ jobs:
             protocols/fractalmind-protocol/contracts/protocol:
               - .github/workflows/ci.yml
               - protocols/fractalmind-protocol/contracts/**
+            protocols/fractalmind-protocol/contracts/okr:
+              - .github/workflows/ci.yml
+              - protocols/fractalmind-protocol/contracts/**
+            protocols/fractalmind-protocol/contracts/direct-agent:
+              - .github/workflows/ci.yml
+              - protocols/fractalmind-protocol/contracts/**
             runtime/fractalmind-envd/contracts/envd:
               - .github/workflows/ci.yml
               - runtime/fractalmind-envd/contracts/**

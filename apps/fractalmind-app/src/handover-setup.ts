@@ -348,7 +348,7 @@ export class HandoverSetup {
       object.objectId !== okrId ||
       object.owner.$kind !== "Shared" ||
       !object.content ||
-      object.type !== `${this.chain.sdk.client.typesPackageId}::okr::Okr`
+      object.type !== `${this.chain.sdk.client.okrTypesPackageId}::okr::Okr`
     )
       throw new HandoverSetupError("invalid_source");
     const okr = OkrBcs.parse(object.content);

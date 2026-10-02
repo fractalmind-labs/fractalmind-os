@@ -6,11 +6,18 @@
 
 ## 当前验证证据
 
-### 直接消息常驻权限与 SDK 增量：尚未通过发布门禁
+### 三包部署与真实 OKR 回归：发布门禁已通过
+
+- core、OKR/handover、direct-agent 三包在标准大小限制下全部实际发布；身份目录随 core 发布原子初始化。[原发布摘要／费用](evidence/v020-product-three-package-deployment.json)已保存。既有 main 模块保留，真实旧发布升级与开发单包对象迁移仍未验证。
+- [实际 OS＋localnet＋生产 envd](evidence/v020-product-three-package-native-localnet.json)：**12 项检查、29 笔 App 确认交易／费用**。新三包上两个 KR 真实按序执行、独立人工验证与最终验收通过，ACHIEVED／游标 2／工具预算 **6 已用、0 预留**。直接消息常驻与单次审批的签名、原 Run 预留、权限换版和历史取消通过，独立预算最后全部归零，未派发直接消息。Host 撤销与原历史读取通过，OS 测试凭据已清理。
+- [回归摘要](evidence/v020-product-three-package-unit.json)：Move **143/143**、SDK **137/137**、App **146/146**、Rust 核心 **20/20**、四包 envd race、类型／构建和脚本严格类型通过。三项跨包伪造拒绝测试通过。[前序记录](evidence/v020-product-three-package-prior.json)保留未完成联测、原未知初始化和原状态只读复查，无重放。
+- **仍未完成**：direct envd／对话与介入 UI、首次直接纳管、持续自主／技能投影、安装后人工操作、云 Host、清缓存重启与手机核心旅程。详见[三包职责与验证限制](v020-product-package-split.md)。
+
+### 历史：直接消息常驻权限与 SDK 增量，原单包未通过发布门禁
 
 - 新协议实现版本化常驻权限、精确消息／内容绑定、单次审批与分账、原 Run 幂等和历史退款；同 Host 同目录中的不同实例共享 OKR 写保护。旧通用命令入口拒绝未经该模型的 direct.message。SDK 接通类型化读写、消息目录及签名命令准备；envd 和正式对话 UI 尚未接入。
 - [专项与回归](evidence/v020-direct-permission-unit.json)：Move **140/140**（新增 18）、SDK **136/136**（新增 8 组）、App **146/146**、类型／构建和联测脚本严格类型通过。单位测试 Host 入网／控制来源使用明确的 test_only 夹具；不证明真实直接消息派发。
-- [实际发布模拟](evidence/v020-direct-package-size.json)拒绝：完整新包对象 **116,714 bytes** 超过当前上限 **102,400 bytes**，未广播发布交易。新增 --direct-permission 联测分支仅通过类型检查。**下一步必须拆包并保留旧 ABI／核心授权边界，再验证两包发布与旧对象兼容**；本增量不关闭 #41/#43/#45 或完整目标。详见[当前实现与发布门禁](v020-direct-permission.md)。
+- [原发布模拟](evidence/v020-direct-package-size.json)拒绝：完整单包对象 **116,714 bytes** 超过当前上限 **102,400 bytes**，未广播发布交易。当时新增 --direct-permission 分支仅通过类型检查；后续三包部署和联测见上一节，旧对象升级仍需验收。本增量不关闭 #41/#43/#45 或完整目标。详见[直接权限与原发布门禁记录](v020-direct-permission.md)。
 
 ### 原生人工 KR 验证与最终验收增量
 

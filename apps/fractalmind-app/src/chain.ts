@@ -49,6 +49,16 @@ export function normalizeProfile(value: ConnectionProfile): ConnectionProfile {
     originalPackageId: value.originalPackageId
       ? id(value.originalPackageId)
       : undefined,
+    okrPackageId: value.okrPackageId ? id(value.okrPackageId) : undefined,
+    originalOkrPackageId: value.originalOkrPackageId
+      ? id(value.originalOkrPackageId)
+      : undefined,
+    directPackageId: value.directPackageId
+      ? id(value.directPackageId)
+      : undefined,
+    originalDirectPackageId: value.originalDirectPackageId
+      ? id(value.originalDirectPackageId)
+      : undefined,
     registryId: id(value.registryId),
     humanId: id(value.humanId),
     ...(value.chainIdentifier
@@ -219,14 +229,14 @@ export class ChainReadSession {
           return { ...page, rows: page.okrs };
         });
       } catch (error) {
-        const type = `${this.sdk.client.typesPackageId}::okr::IndexKey`;
-        if (missingIndex(error, organizationId, type)) {
+        if (this.sdk.okr.isMissingIndex(error, organizationId)) {
           await this.sdk.okr.getIndex(organizationId).then(
             () => {
               throw new ChainReadError("incomplete_directory");
             },
             (missing) => {
-              if (!missingIndex(missing, organizationId, type)) throw missing;
+              if (!this.sdk.okr.isMissingIndex(missing, organizationId))
+                throw missing;
             },
           );
           return [];

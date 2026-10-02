@@ -169,8 +169,7 @@ func (r *chainRead) okr(ctx context.Context, binding *moveContractBinding) (move
 	if okr.State > 4 || okr.Version == 0 || len(okr.Metrics) < 1 || len(okr.Metrics) > 3 || okr.NextKR > uint64(len(okr.Metrics)) || len(okr.Managed) != 1 || len(okr.Membership) != 1 || len(okr.Workspace) != 32 || len(okr.Boundary) != 32 {
 		return okr, budget, fmt.Errorf("invalid OKR layout")
 	}
-	pkg := r.resolver.packageID
-	if err := r.field(ctx, okr.ID.String(), structKeyTag(pkg, "okr", "BudgetKey"), []byte{0}, pkg+"::okr::BudgetKey", pkg+"::okr::BudgetState", &budget); err != nil {
+	if err := r.field(ctx, okr.ID.String(), structKeyTag(r.resolver.okrPackageID, "okr", "BudgetKey"), []byte{0}, r.resolver.okrPackageID+"::okr::BudgetKey", r.resolver.okrPackageID+"::okr::BudgetState", &budget); err != nil {
 		return okr, budget, err
 	}
 	if budget.Asset != okr.Asset || budget.Spent > okr.Limit || budget.Reserved > okr.Limit-budget.Spent {
@@ -223,7 +222,7 @@ func (r *chainRead) executionContract(ctx context.Context, cap moveCapability, r
 		return nil, err
 	}
 	var claim moveOkrClaim
-	err = r.field(ctx, budget.Claims.ID.String(), structKeyTag("0x2", "object", "ID"), run.ID[:], "0x2::object::ID", pkg+"::okr::BudgetClaim", &claim)
+	err = r.field(ctx, budget.Claims.ID.String(), structKeyTag("0x2", "object", "ID"), run.ID[:], "0x2::object::ID", r.resolver.okrPackageID+"::okr::BudgetClaim", &claim)
 	if err != nil {
 		return nil, err
 	}

@@ -87,7 +87,20 @@ type ObjectArgument string
 // argument remains below Sui's 16 KiB limit. No staging object is persisted.
 type ChunkedBytes []byte
 
+// The payload helper remains in core when the called product module is in an extension.
+type PackageChunkedBytes struct {
+	PackageID string
+	Bytes     []byte
+}
+
 func appendMoveArgument(ptb *v2.ProgrammableTransaction, packageID string, arg any) (*v2.Argument, error) {
+	if data, ok := arg.(PackageChunkedBytes); ok {
+		core, err := normalizeAddress(data.PackageID)
+		if err != nil {
+			return nil, err
+		}
+		return appendMoveArgument(ptb, core, ChunkedBytes(data.Bytes))
+	}
 	if data, ok := arg.(ChunkedBytes); ok {
 		if len(data) > 65536 {
 			return nil, fmt.Errorf("byte payload exceeds 64 KiB")

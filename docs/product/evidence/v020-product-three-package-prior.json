@@ -1,0 +1,802 @@
+{
+  "recordedAt": "2026-10-02T20:44:54.461625+00:00",
+  "nativeAttempts": [
+    {
+      "attempt": 1,
+      "complete": false,
+      "phase": "real_agent_imported",
+      "error": "Object 0x2ba92c3f9db6bd80e3e1e289ca7764dc6be784fe53e34e0735e7610e723afac0 not found",
+      "checks": [
+        "real native recovery and device signatures create Human and organization on the existing isolated chain",
+        "native App registers the actual Coordinator and one-use invitation; production envd CLI persists and queries one lost join receipt without another broadcast",
+        "signed live Host discovery is authenticated by the native device; formal App imports the existing actual native file Agent with observation rights only"
+      ],
+      "originalRequest": {
+        "label": "native import of actual bounded Agent",
+        "requestId": "agent-import:61912cfc-9054-49d9-b4d6-5b8d49e63a9b",
+        "digest": "31wKkbYXXLdkw6aEcW69zxqrVsfp8PdF1RYDc6gE12Yn",
+        "phase": "quoted_before_submission"
+      },
+      "originalTransactions": [
+        {
+          "label": "native self-paid Human creation",
+          "digest": "2ASF4m31JeBrh3YZ1e8edroE5Td2kn9AZC7TGFFk58Mq",
+          "status": "confirmed",
+          "actualGas": "18742548"
+        },
+        {
+          "label": "native self-paid organization creation",
+          "digest": "7SVzJRnqMaHiyyFSAYmR6FQFSUgsEBnmzCMEepnaZC86",
+          "status": "confirmed",
+          "actualGas": "15111616"
+        },
+        {
+          "label": "native registration of actual loopback Coordinator",
+          "digest": "4PJSQ7cq2JodwhZmyuvwMGKRsAmnsKTLyJXohUKUYLo6",
+          "status": "confirmed",
+          "actualGas": "6793340"
+        },
+        {
+          "label": "native single-use Host invitation",
+          "digest": "BLeBWLkK5geiHFC5CXfYQB3VquXHGuqY5EECLPV491VA",
+          "status": "confirmed",
+          "actualGas": "4931036"
+        },
+        {
+          "label": "native import of actual bounded Agent",
+          "digest": "31wKkbYXXLdkw6aEcW69zxqrVsfp8PdF1RYDc6gE12Yn",
+          "status": "confirmed",
+          "actualGas": "11849100"
+        }
+      ],
+      "okrState": null,
+      "okrBudget": null,
+      "cleanupConfirmed": true,
+      "replayed": false
+    },
+    {
+      "attempt": 2,
+      "complete": false,
+      "phase": "real_agent_imported",
+      "error": "okr::Okr\n\n0 !== 1\n",
+      "checks": [
+        "real native recovery and device signatures create Human and organization on the existing isolated chain",
+        "native App registers the actual Coordinator and one-use invitation; production envd CLI persists and queries one lost join receipt without another broadcast",
+        "signed live Host discovery is authenticated by the native device; formal App imports the existing actual native file Agent with observation rights only"
+      ],
+      "originalRequest": {
+        "label": "native encrypted actual Host OKR draft",
+        "requestId": "okr-draft:0xf79f22c858436f581644d1aad078442d2037ee93d80f359e244a7fccdb8fa4b1:70209ef5-69e0-4a02-bcdc-4eb3593fc960",
+        "digest": "5K39oN9DS9Y2hJHxwkiRn8saDSeZBCRtTEi2Y4QVSMRq",
+        "phase": "quoted_before_submission"
+      },
+      "originalTransactions": [
+        {
+          "label": "native self-paid Human creation",
+          "digest": "PDDxCgv13cV2ZH7zmphDxTH5k91DTZzEvFQFJJ8GrC2",
+          "status": "confirmed",
+          "actualGas": "18742548"
+        },
+        {
+          "label": "native self-paid organization creation",
+          "digest": "Gifad2KHhXtiJ1WLqhGgRr6Gvraz2qQuaEie2B5UwhwE",
+          "status": "confirmed",
+          "actualGas": "15111616"
+        },
+        {
+          "label": "native registration of actual loopback Coordinator",
+          "digest": "5rngE21kjmSH3eoM1EWqWN9mkb84nSXVvu6nSraJJ1Yx",
+          "status": "confirmed",
+          "actualGas": "6793340"
+        },
+        {
+          "label": "native single-use Host invitation",
+          "digest": "3hVwtMxJ3CzXdxPTVegCtNv9bdQFfgveUwchmN4fsvFc",
+          "status": "confirmed",
+          "actualGas": "4931036"
+        },
+        {
+          "label": "native import of actual bounded Agent",
+          "digest": "AH43kqpUitgf8mtXKHdt9fixd2R2TVsE4U3To7enr1qQ",
+          "status": "confirmed",
+          "actualGas": "11849100"
+        },
+        {
+          "label": "native encrypted actual Host OKR draft",
+          "digest": "5K39oN9DS9Y2hJHxwkiRn8saDSeZBCRtTEi2Y4QVSMRq",
+          "status": "confirmed",
+          "actualGas": "28828540"
+        }
+      ],
+      "okrState": null,
+      "okrBudget": null,
+      "cleanupConfirmed": true,
+      "replayed": false
+    },
+    {
+      "attempt": 3,
+      "complete": false,
+      "phase": "real_agent_imported",
+      "error": "missingIndex is not defined",
+      "checks": [
+        "real native recovery and device signatures create Human and organization on the existing isolated chain",
+        "native App registers the actual Coordinator and one-use invitation; production envd CLI persists and queries one lost join receipt without another broadcast",
+        "signed live Host discovery is authenticated by the native device; formal App imports the existing actual native file Agent with observation rights only"
+      ],
+      "originalRequest": {
+        "label": "native import of actual bounded Agent",
+        "requestId": "agent-import:64d15e1a-b49e-4ccb-bd78-aec836b4c516",
+        "digest": "GGK93PHPwVfna52YrDxikTLmT7WnYtTKVDMBD9r9t7Pf",
+        "phase": "quoted_before_submission"
+      },
+      "originalTransactions": [
+        {
+          "label": "native self-paid Human creation",
+          "digest": "783GuvHHSpcr65LRhQTCWY4Za4xjvwr6uaeuhYEuRvn4",
+          "status": "confirmed",
+          "actualGas": "18742548"
+        },
+        {
+          "label": "native self-paid organization creation",
+          "digest": "8an3UVbb4g4BwkSW3pnMtRq7hSTEtaku449AKbnUG2mf",
+          "status": "confirmed",
+          "actualGas": "15111616"
+        },
+        {
+          "label": "native registration of actual loopback Coordinator",
+          "digest": "5j3wafH9TNj6uME8YfUTq9XLq1oKaJQJMTqWGzahYCnV",
+          "status": "confirmed",
+          "actualGas": "6793340"
+        },
+        {
+          "label": "native single-use Host invitation",
+          "digest": "HRqbxfqY5UjJDnj8MaEXzgkUMWo3oheF3BpF9qryYTWu",
+          "status": "confirmed",
+          "actualGas": "4931036"
+        },
+        {
+          "label": "native import of actual bounded Agent",
+          "digest": "GGK93PHPwVfna52YrDxikTLmT7WnYtTKVDMBD9r9t7Pf",
+          "status": "confirmed",
+          "actualGas": "11849100"
+        }
+      ],
+      "okrState": null,
+      "okrBudget": null,
+      "cleanupConfirmed": true,
+      "replayed": false
+    },
+    {
+      "attempt": 4,
+      "complete": false,
+      "phase": "human_sequence_accepted",
+      "error": "Original effects not visible; no replay: Invalid direct index/binding source.",
+      "checks": [
+        "real native recovery and device signatures create Human and organization on the existing isolated chain",
+        "native App registers the actual Coordinator and one-use invitation; production envd CLI persists and queries one lost join receipt without another broadcast",
+        "signed live Host discovery is authenticated by the native device; formal App imports the existing actual native file Agent with observation rights only",
+        "formal native review ticket is sent through the actual device HTTP Coordinator to production envd; actual Agent reserves its physical slot and publishes the exact signed acceptance on Sui",
+        "formal native approval atomically activates the current OKR and exact reviewed policy, without preparing or delivering a continuation Run",
+        "formal native control quotation/issuance and command preparation do not dispatch; a fresh runner with an empty journal restores the same encrypted ticket and queued Run",
+        "explicit continuation reaches the actual production envd and native file adapter exactly once; original encrypted result decrypts through the OS vault, Host measurement is 1 and tool budget is 3 spent/0 reserved",
+        "fresh native runner recovers the original successful Run and measurement without another fee or delivery; KR verification and final Human acceptance remain pending",
+        "two real envd KR Runs are explicitly released in order; native Human verification advances the cursor without another dispatch or implicit acceptance",
+        "final native review reads both original results and separate immutable verification revisions; an explicit, separately quoted Human decision achieves the OKR on Sui"
+      ],
+      "originalRequest": {
+        "label": "native standing permission creation",
+        "requestId": "direct-test:d5100626-3ade-4b4b-9480-13502340d1de",
+        "digest": "5pLMJFnDHt7QDLEhgNrthGZVmRcwx5P6xQHqiqWLLkeW",
+        "phase": "quoted_before_submission"
+      },
+      "originalTransactions": [
+        {
+          "label": "native self-paid Human creation",
+          "digest": "9dvUwiCJHW7hydTWbKW5UGYUjLo2trGAYzdCVjy9J885",
+          "status": "confirmed",
+          "actualGas": "18742548"
+        },
+        {
+          "label": "native self-paid organization creation",
+          "digest": "Dp6yeyxR9S5Pybstut9Y3Mtf2SPhDtt7c1tMqcansdx9",
+          "status": "confirmed",
+          "actualGas": "15111616"
+        },
+        {
+          "label": "native registration of actual loopback Coordinator",
+          "digest": "8SXygfH1WzjTQhisfJUNbb1zJMb6sDjC23kvCRKz8nuV",
+          "status": "confirmed",
+          "actualGas": "6793340"
+        },
+        {
+          "label": "native single-use Host invitation",
+          "digest": "3CUrNkiE3ZBhJzSveoRHvudMXJkKSL4eqmF3Ws8uyaU9",
+          "status": "confirmed",
+          "actualGas": "4931036"
+        },
+        {
+          "label": "native import of actual bounded Agent",
+          "digest": "A697FDRF6nvHLf9L7JeeoMYgbvjfG2HtKy5YrZE3oreN",
+          "status": "confirmed",
+          "actualGas": "11849100"
+        },
+        {
+          "label": "native encrypted actual Host OKR draft",
+          "digest": "AT4rvQT22TxZDCbqYoKD5FeWoUaoGoThGLEEYoaHEGTi",
+          "status": "confirmed",
+          "actualGas": "28828540"
+        },
+        {
+          "label": "native one-use observation capability",
+          "digest": "EqmkTaGYCwPoo2HBB5AiqiiFdhjTKhUopDMiw9F5F6eb",
+          "status": "confirmed",
+          "actualGas": "10143480"
+        },
+        {
+          "label": "native exact review ticket and Run",
+          "digest": "ELqD5MTFX7eu9b9ASkXP4xvSKYG8wuApYxey8cqqQQ7u",
+          "status": "confirmed",
+          "actualGas": "59904328"
+        },
+        {
+          "label": "native approval of actual Host acceptance",
+          "digest": "7nHLqewcsddeqiqN38Gh16JvEDpuVb3RMurWX1kK6YF8",
+          "status": "confirmed",
+          "actualGas": "49450304"
+        },
+        {
+          "label": "formal native single-use KR control fee",
+          "digest": "NWfD5HcQoXWwRDBtBv6xKEEof5nUV4UeaxheUJpLTg3",
+          "status": "confirmed",
+          "actualGas": "15662680"
+        },
+        {
+          "label": "formal native atomic continuation ticket and queued Run",
+          "digest": "9n8obUphNCdRGkri6MjAnYNMGcTURk1bng235b4BCpaP",
+          "status": "confirmed",
+          "actualGas": "64346720"
+        },
+        {
+          "label": "native independent KR 1 verification",
+          "digest": "AMET5XK1ZNQujH2p8yEsQn7nEg2n8Cryxah74YMZSRgK",
+          "status": "confirmed",
+          "actualGas": "15392804"
+        },
+        {
+          "label": "native second KR explicit control fee",
+          "digest": "GTdTxoXshyTsWVw2xrzUHCksBmtxpceBQm3s8My7KFD3",
+          "status": "confirmed",
+          "actualGas": "15662680"
+        },
+        {
+          "label": "native second KR exact ticket and Run",
+          "digest": "DPY2J7DJf77ZwV6nTei5xiArUHPab5xRCCBfaNqJLwD4",
+          "status": "confirmed",
+          "actualGas": "64288624"
+        },
+        {
+          "label": "native independent KR 2 verification",
+          "digest": "AeMVWPTnrKRLkPTt9zCrwE2piVYqH7t8hH2iG1ge1Vue",
+          "status": "confirmed",
+          "actualGas": "12607936"
+        },
+        {
+          "label": "native separate final Human acceptance",
+          "digest": "5c2H9q2wp7Xk3w3zQn9dM2uhY1VsaM9chsEzGNfmi3Ni",
+          "status": "confirmed",
+          "actualGas": "11672756"
+        },
+        {
+          "label": "native standing permission creation",
+          "digest": "5pLMJFnDHt7QDLEhgNrthGZVmRcwx5P6xQHqiqWLLkeW",
+          "status": "confirmed",
+          "actualGas": "21999712"
+        }
+      ],
+      "okrState": 3,
+      "okrBudget": {
+        "spent": "6",
+        "reserved": "0"
+      },
+      "cleanupConfirmed": true,
+      "replayed": false
+    },
+    {
+      "attempt": 5,
+      "complete": false,
+      "phase": "human_sequence_accepted",
+      "error": "invalid_command",
+      "checks": [
+        "real native recovery and device signatures create Human and organization on the existing isolated chain",
+        "native App registers the actual Coordinator and one-use invitation; production envd CLI persists and queries one lost join receipt without another broadcast",
+        "signed live Host discovery is authenticated by the native device; formal App imports the existing actual native file Agent with observation rights only",
+        "formal native review ticket is sent through the actual device HTTP Coordinator to production envd; actual Agent reserves its physical slot and publishes the exact signed acceptance on Sui",
+        "formal native approval atomically activates the current OKR and exact reviewed policy, without preparing or delivering a continuation Run",
+        "formal native control quotation/issuance and command preparation do not dispatch; a fresh runner with an empty journal restores the same encrypted ticket and queued Run",
+        "explicit continuation reaches the actual production envd and native file adapter exactly once; original encrypted result decrypts through the OS vault, Host measurement is 1 and tool budget is 3 spent/0 reserved",
+        "fresh native runner recovers the original successful Run and measurement without another fee or delivery; KR verification and final Human acceptance remain pending",
+        "two real envd KR Runs are explicitly released in order; native Human verification advances the cursor without another dispatch or implicit acceptance",
+        "final native review reads both original results and separate immutable verification revisions; an explicit, separately quoted Human decision achieves the OKR on Sui"
+      ],
+      "originalRequest": {
+        "label": "native encrypted direct message 3",
+        "requestId": "direct-test:8f099e5f-e922-4972-ad3a-537af53bcf28",
+        "digest": "6pBYviw1gb6TtwwKzEMEQuxBmLqdoS5Pt8hXdUFkmz1R",
+        "phase": "quoted_before_submission"
+      },
+      "originalTransactions": [
+        {
+          "label": "native self-paid Human creation",
+          "digest": "EysN5y1qs9uf2YwtihxS2gzuwkxezwoTBVbRbZCxsSPb",
+          "status": "confirmed",
+          "actualGas": "18742548"
+        },
+        {
+          "label": "native self-paid organization creation",
+          "digest": "HrLNBrea5jFwC8aYrN6SH9c9Fv5Gqx55FaiEefQ9o3xW",
+          "status": "confirmed",
+          "actualGas": "15111616"
+        },
+        {
+          "label": "native registration of actual loopback Coordinator",
+          "digest": "D4enXHKhZuRXiups6hmTZNU96XxxRKdk38EYQ4yCvp8N",
+          "status": "confirmed",
+          "actualGas": "6793340"
+        },
+        {
+          "label": "native single-use Host invitation",
+          "digest": "AissK5j26ayuUFX1ytHFoFcq2hPHoJnHbzHuknBYtba9",
+          "status": "confirmed",
+          "actualGas": "4931036"
+        },
+        {
+          "label": "native import of actual bounded Agent",
+          "digest": "5Pi2y8z5tcWswg49ZaT4H1M1aheqdn6uwVEpS1wpUk83",
+          "status": "confirmed",
+          "actualGas": "11849100"
+        },
+        {
+          "label": "native encrypted actual Host OKR draft",
+          "digest": "C79yFqRCuAeCb17jbXcJA33vQnJw4ZSZHk2FPef747N5",
+          "status": "confirmed",
+          "actualGas": "28828540"
+        },
+        {
+          "label": "native one-use observation capability",
+          "digest": "HRb4DV74CFE9V7VoKQVaE5f3TBgGqdQbE1L382EdEW5f",
+          "status": "confirmed",
+          "actualGas": "10143480"
+        },
+        {
+          "label": "native exact review ticket and Run",
+          "digest": "GHQThCpfvh3v2nyinTticktgujoFsCeQKhd6KgFUHzk8",
+          "status": "confirmed",
+          "actualGas": "59904328"
+        },
+        {
+          "label": "native approval of actual Host acceptance",
+          "digest": "FstTAWM2PVZWb4bVQVDBCnJZRfxSKuedw2o4KJivSsNb",
+          "status": "confirmed",
+          "actualGas": "49450304"
+        },
+        {
+          "label": "formal native single-use KR control fee",
+          "digest": "BJ7j9DfKFCTkcjsHtm4qfhHJEUQsTAYcK3LrYqqvftx1",
+          "status": "confirmed",
+          "actualGas": "15662680"
+        },
+        {
+          "label": "formal native atomic continuation ticket and queued Run",
+          "digest": "EBpKMVtX7PwxCrfPu9DV483j2pzvCEyeqKFpsXYaqMso",
+          "status": "confirmed",
+          "actualGas": "64346720"
+        },
+        {
+          "label": "native independent KR 1 verification",
+          "digest": "BLwB4ULew2utcoaVLFYXrH3Ti8V9q9wrcGeM3ecN3Pxk",
+          "status": "confirmed",
+          "actualGas": "15392804"
+        },
+        {
+          "label": "native second KR explicit control fee",
+          "digest": "7y4Gaf1gwThhXtXsrXM2M1dXYmpoUtAw2YmDwrzEq4Y2",
+          "status": "confirmed",
+          "actualGas": "15662680"
+        },
+        {
+          "label": "native second KR exact ticket and Run",
+          "digest": "Da3pQJk5znoMJCLMkWQDra2cig9u2nrZRAnohH9xAMzU",
+          "status": "confirmed",
+          "actualGas": "64278624"
+        },
+        {
+          "label": "native independent KR 2 verification",
+          "digest": "FWgszetE7YZDD8Mb6mbN9BnPrwCSq7Jgf5hojpQwVVF5",
+          "status": "confirmed",
+          "actualGas": "12607936"
+        },
+        {
+          "label": "native separate final Human acceptance",
+          "digest": "2GHag5pUU8w8xTRQbJiUyynmLegyXeUB27E4K7Uf7CN2",
+          "status": "confirmed",
+          "actualGas": "11672756"
+        },
+        {
+          "label": "native standing permission creation",
+          "digest": "CPEw4krVZ7niJqAzxU7wbJz2o7niqb6YEY5JWxExhhRc",
+          "status": "confirmed",
+          "actualGas": "21999712"
+        },
+        {
+          "label": "native standing direct capability",
+          "digest": "23bPLJkXcpidfE4htRAuw6xWrkwS9hke1mXCh7KjyxyU",
+          "status": "confirmed",
+          "actualGas": "18923080"
+        },
+        {
+          "label": "native encrypted direct message 3",
+          "digest": "6pBYviw1gb6TtwwKzEMEQuxBmLqdoS5Pt8hXdUFkmz1R",
+          "status": "confirmed",
+          "actualGas": "17135332"
+        }
+      ],
+      "okrState": 3,
+      "okrBudget": {
+        "spent": "6",
+        "reserved": "0"
+      },
+      "cleanupConfirmed": true,
+      "replayed": false
+    },
+    {
+      "attempt": 6,
+      "complete": false,
+      "phase": "human_sequence_accepted",
+      "error": "Expected values to be strictly equal:\n\n'3' !== '0'\n",
+      "checks": [
+        "real native recovery and device signatures create Human and organization on the existing isolated chain",
+        "native App registers the actual Coordinator and one-use invitation; production envd CLI persists and queries one lost join receipt without another broadcast",
+        "signed live Host discovery is authenticated by the native device; formal App imports the existing actual native file Agent with observation rights only",
+        "formal native review ticket is sent through the actual device HTTP Coordinator to production envd; actual Agent reserves its physical slot and publishes the exact signed acceptance on Sui",
+        "formal native approval atomically activates the current OKR and exact reviewed policy, without preparing or delivering a continuation Run",
+        "formal native control quotation/issuance and command preparation do not dispatch; a fresh runner with an empty journal restores the same encrypted ticket and queued Run",
+        "explicit continuation reaches the actual production envd and native file adapter exactly once; original encrypted result decrypts through the OS vault, Host measurement is 1 and tool budget is 3 spent/0 reserved",
+        "fresh native runner recovers the original successful Run and measurement without another fee or delivery; KR verification and final Human acceptance remain pending",
+        "two real envd KR Runs are explicitly released in order; native Human verification advances the cursor without another dispatch or implicit acceptance",
+        "final native review reads both original results and separate immutable verification revisions; an explicit, separately quoted Human decision achieves the OKR on Sui"
+      ],
+      "originalRequest": {
+        "label": "native queued direct cancellation",
+        "requestId": "direct-test:46244f88-025f-4e95-968b-2be1d9f8ccb7",
+        "digest": "4dmPU3yZQ2iS6ngV2gxNfokigTnkKRX9uCbmqfsoJKd5",
+        "phase": "quoted_before_submission"
+      },
+      "originalTransactions": [
+        {
+          "label": "native self-paid Human creation",
+          "digest": "3bHc6QmZ9UmuD6gj8FUTHYwCsjHsMr5yUt3j3EZa6Uf7",
+          "status": "confirmed",
+          "actualGas": "18742548"
+        },
+        {
+          "label": "native self-paid organization creation",
+          "digest": "EgcVXENSxG1vVKaGxw1GqHhxUjkG8ohNMdcww28gTiDs",
+          "status": "confirmed",
+          "actualGas": "15111616"
+        },
+        {
+          "label": "native registration of actual loopback Coordinator",
+          "digest": "8fisNMXKaGqqGpGgEDeifKYBdhiHzugyhpRTPXPwcwCo",
+          "status": "confirmed",
+          "actualGas": "6793340"
+        },
+        {
+          "label": "native single-use Host invitation",
+          "digest": "FPHp1NRQpr3pzy6nCnA3aXRP94Kro4oZpbr3mJk52H3e",
+          "status": "confirmed",
+          "actualGas": "4931036"
+        },
+        {
+          "label": "native import of actual bounded Agent",
+          "digest": "6KnSNmwQm9DzuQxGBNbf3VFR4WszWWEh8zE3zeeGQQZ4",
+          "status": "confirmed",
+          "actualGas": "11849100"
+        },
+        {
+          "label": "native encrypted actual Host OKR draft",
+          "digest": "B3m3BctZCZpeqCMULcKgbWFhHCViCNnvMM6t32E63fB6",
+          "status": "confirmed",
+          "actualGas": "28828540"
+        },
+        {
+          "label": "native one-use observation capability",
+          "digest": "4BfpyJECKvvm9FEKMhLXi2bujmobpe4NXTA9rgCsAn2M",
+          "status": "confirmed",
+          "actualGas": "10143480"
+        },
+        {
+          "label": "native exact review ticket and Run",
+          "digest": "9xdNFRfTFoQEyH7Ycr4Y75sHkpsw6saXhvFeQHSuye6e",
+          "status": "confirmed",
+          "actualGas": "59904328"
+        },
+        {
+          "label": "native approval of actual Host acceptance",
+          "digest": "5mNHPrhmVZ79Fi3uG4R9xKttASxBFLbDDcMtgWoChxBW",
+          "status": "confirmed",
+          "actualGas": "49450304"
+        },
+        {
+          "label": "formal native single-use KR control fee",
+          "digest": "7VEdgtahDqJ6BhZyoDW9Lz4yLe48w6nVhZWP9jYnh3bM",
+          "status": "confirmed",
+          "actualGas": "15662680"
+        },
+        {
+          "label": "formal native atomic continuation ticket and queued Run",
+          "digest": "GSY6PQ1mQYJUcXJUfwXt1c4Qbpn8xEEGuRWCqWHL3JX4",
+          "status": "confirmed",
+          "actualGas": "64346720"
+        },
+        {
+          "label": "native independent KR 1 verification",
+          "digest": "3WkLaMDR8wPqF8rTru156Eptkese3trtpm6n2gaREsv1",
+          "status": "confirmed",
+          "actualGas": "15392804"
+        },
+        {
+          "label": "native second KR explicit control fee",
+          "digest": "7hExQrQkdz9QRRtLntNXLkvyb9V9MAygZCgRvsxJMZYH",
+          "status": "confirmed",
+          "actualGas": "15662680"
+        },
+        {
+          "label": "native second KR exact ticket and Run",
+          "digest": "6ffoRmzhCaK8CwXdwfEWkBmYY4rx64WqHc5NzhfpDHJT",
+          "status": "confirmed",
+          "actualGas": "64288624"
+        },
+        {
+          "label": "native independent KR 2 verification",
+          "digest": "3KsixrLNebaqqmCcga8fCmiUxCF8FnqhhXHUNNnJav7W",
+          "status": "confirmed",
+          "actualGas": "12607936"
+        },
+        {
+          "label": "native separate final Human acceptance",
+          "digest": "597Vud6YsR5BQ3vRp7YVmSRYitDDey2y1oSFcatmVHpn",
+          "status": "confirmed",
+          "actualGas": "11672756"
+        },
+        {
+          "label": "native standing permission creation",
+          "digest": "87y31dC5hJpW9ADTqvU4Y6A4sxxtooasi8mQbbzC4Wwo",
+          "status": "confirmed",
+          "actualGas": "21999712"
+        },
+        {
+          "label": "native standing direct capability",
+          "digest": "7HXfAp7jUTr1fThZHyBewDTzCBmAQqq75R1rXFtvrEco",
+          "status": "confirmed",
+          "actualGas": "18923080"
+        },
+        {
+          "label": "native encrypted direct message 3",
+          "digest": "GR4qYc99Y7FSxvS2JTx3kmWoC4Jpexzb8pGgS1knntXU",
+          "status": "confirmed",
+          "actualGas": "17135332"
+        },
+        {
+          "label": "native original direct Run preparation",
+          "digest": "DadRg9FNygq83Zdh2hHf72gfKrZPnJBmAxggRrWQM5wm",
+          "status": "confirmed",
+          "actualGas": "42894164"
+        },
+        {
+          "label": "native queued direct cancellation",
+          "digest": "4dmPU3yZQ2iS6ngV2gxNfokigTnkKRX9uCbmqfsoJKd5",
+          "status": "confirmed",
+          "actualGas": "1358188"
+        }
+      ],
+      "okrState": 3,
+      "okrBudget": {
+        "spent": "6",
+        "reserved": "0"
+      },
+      "cleanupConfirmed": true,
+      "replayed": false
+    }
+  ],
+  "firstDeployment": {
+    "complete": false,
+    "phase": "result_initialize-identity-registry",
+    "packages": [
+      {
+        "name": "protocol",
+        "packageId": "0x1c91ce4a7f872e64658de0724f2c185b298a426b53d0db187f31da35a2255aa4",
+        "digest": "5DjMp6Mtq9FPsnuCjthLqRhziHnpLS5AoHAU32dqkBtB",
+        "actualGas": "692527880",
+        "modules": 19,
+        "rawModuleBytes": 82214
+      },
+      {
+        "name": "okr",
+        "packageId": "0x18fd3ec0f44b5a902c8a721ace11cb79626000e81b7817f900a3c23e12427de6",
+        "digest": "DpDL69g4txQuJWSx2DSgzrU98NP7DTUCdEKXNLWpxCWR",
+        "actualGas": "144983880",
+        "modules": 2,
+        "rawModuleBytes": 17313
+      },
+      {
+        "name": "direct-agent",
+        "packageId": "0x3e86ae0c5b50c52d89a278ea705d9ea4b60f67d565f7b8d4e4dbcefc3b052f15",
+        "digest": "7bm9xYwKMMM8wW1LLsjj878fMGLYa3FWEEo2b7xax87U",
+        "actualGas": "105727480",
+        "modules": 1,
+        "rawModuleBytes": 12493
+      }
+    ],
+    "originalQuote": {
+      "requestId": "initialize-identity-registry",
+      "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x6b9d09d8ef8214739ff25da5f07ca9454684c34ffd492c46d94e4720c07a9f91\"]",
+      "digest": "71PQfY1PyZiGWJwu97mtusryT8Z6rFQfUHrR8SYezJeR",
+      "sender": "0x6b9d09d8ef8214739ff25da5f07ca9454684c34ffd492c46d94e4720c07a9f91",
+      "balance": "999162488240",
+      "requiredBalance": "2000000000",
+      "gasBudget": "2000000000",
+      "maxSuiSpend": "0",
+      "estimatedGas": "5981028",
+      "simulatedSuiSpend": "0",
+      "expiresAtMs": 1790972055054
+    },
+    "originalOutcome": {
+      "status": "unknown",
+      "digest": "71PQfY1PyZiGWJwu97mtusryT8Z6rFQfUHrR8SYezJeR"
+    },
+    "replayed": false
+  },
+  "r4OriginalDirectoryRead": {
+    "permission": {
+      "id": "0x9c0bc35ec3986ca6eac1362e7a48c56dad3839ab96535953c83b000c8dfb565c",
+      "org_id": "0xb3c85e309a42fbbad35c4629ebc64747734a3ed572d180b514172db0b991280c",
+      "owner_human": "0x9ab74f9bc3b7aaeaec55a9df86ae1639d1d34bd4d52e577503fae8e90ce21b80",
+      "human_generation": "1",
+      "managed_agent": "0xfb21938453a5ae9573bb640ff5876777a3a053813074dcaad0d7fb335eaabca4",
+      "managed_version": "2",
+      "membership_id": "0x039b9e6acc122302ee3e00dce921453e52c0d6dbb79f020423daed06c8d178b3",
+      "membership_version": "1",
+      "host_address": "0xd25d2771c940efa6273a0da6ce783311b621c138bafa7e1970185de72a4c068b",
+      "workspace_hash": [
+        121,
+        42,
+        238,
+        36,
+        203,
+        6,
+        113,
+        57,
+        20,
+        154,
+        195,
+        230,
+        154,
+        148,
+        204,
+        64,
+        190,
+        218,
+        162,
+        159,
+        9,
+        91,
+        74,
+        22,
+        83,
+        56,
+        138,
+        128,
+        227,
+        69,
+        119,
+        64
+      ],
+      "version": "1",
+      "revoked": false,
+      "allowed_actions": [
+        "status",
+        "file.read",
+        "file.write"
+      ],
+      "boundary_hash": [
+        112,
+        254,
+        194,
+        159,
+        165,
+        206,
+        193,
+        135,
+        72,
+        173,
+        44,
+        188,
+        195,
+        212,
+        205,
+        29,
+        131,
+        183,
+        30,
+        68,
+        40,
+        85,
+        239,
+        73,
+        100,
+        200,
+        201,
+        59,
+        89,
+        33,
+        73,
+        105
+      ],
+      "max_calls": "3",
+      "budget_limit": "6",
+      "spent": "0",
+      "reserved": "0",
+      "approved_spent": "0",
+      "approved_reserved": "0",
+      "expires_at_ms": "1790973004009",
+      "approved_device": "0x85cf7beafea70534c0c715fd1e2d7a0583c049e9067d0226e69d33eef73e424f",
+      "approved_grant": "0xd8758fae85227a88d6c9b74b49e2c2591acabbb32b98ac771bb38c4df7ee7390",
+      "permission_record": "0x8c2b416a30c4a25a314ba6709cf8d6e16a3b5070699aa06a1da798df48d0bdc9",
+      "record_revision": "1",
+      "messages": {
+        "id": "0xaad72e955a7aaecd5ac914b1a36aea441b5a735cbf0b40cef53a26680be6627a",
+        "size": "0"
+      },
+      "approvals": {
+        "id": "0xe30732395bfd8f480aef43a438e46185a552540da25df681cfbe541002cec8cc",
+        "size": "0"
+      },
+      "message_runs": {
+        "id": "0xdda9e1453bb0476b444eac23c10e37c9dc8880182e0af76b3ac220205a8fdb0d",
+        "size": "0"
+      },
+      "claims": {
+        "id": "0x09265eb99a846e3b12044079bd0541baace0f3d35ad5d9848d7e20f8a7e24dc6",
+        "size": "0"
+      }
+    },
+    "noNewTransaction": true,
+    "source": "original R4 permission, read after field type normalization"
+  },
+  "r6OriginalCancellationRead": {
+    "recordedAt": "2026-10-02T20:40:29.921Z",
+    "readOnly": true,
+    "broadcasts": 0,
+    "originalCancelDigest": "4dmPU3yZQ2iS6ngV2gxNfokigTnkKRX9uCbmqfsoJKd5",
+    "permissionId": "0x455b7306fc1c07302938512207cfb10f303d12716edf13c487ed81917e5a123a",
+    "runId": "0x6786c28d0fb6b61d1d532c00551e6741dd324267064fe3fddbed1d2e045cea1f",
+    "permission": {
+      "spent": "0",
+      "reserved": "0"
+    },
+    "execution": {
+      "state": 5
+    },
+    "claim": {
+      "capability_id": "0xf746f26b30e668d386e41a76ce205edf23bd32ab60b010726835dd30129925ee",
+      "message_id": "0x461acc7aa312e0483dd3a682cf2fbb8f5220c116a2eaf996e6a97f165fc9f97e",
+      "permission_version": "1",
+      "approval_id": null,
+      "reserved": "3",
+      "spent": "0",
+      "settled": true
+    }
+  },
+  "privateKeysInReport": false,
+  "recoveryCodeInReport": false
+}

@@ -16,17 +16,29 @@ import (
 // It atomically transitions its checkpoint using the admitted Host signer.
 // A read of RUNNING after a timeout never authorizes local execution.
 type ChainReservations struct {
-	resolver  nodecommand.ChainExecutionReader
-	rpc       RPCClient
-	keypair   *Keypair
-	packageID string
+	resolver     nodecommand.ChainExecutionReader
+	rpc          RPCClient
+	keypair      *Keypair
+	packageID    string
+	okrPackageID string
 }
 
-func NewChainReservations(resolver nodecommand.ChainExecutionReader, rpc RPCClient, keypair *Keypair, packageID string) (*ChainReservations, error) {
+func NewChainReservations(resolver nodecommand.ChainExecutionReader, rpc RPCClient, keypair *Keypair, packageID string, okrPackages ...string) (*ChainReservations, error) {
 	if resolver == nil || rpc == nil || keypair == nil || packageID == "" {
 		return nil, fmt.Errorf("chain reader, transaction transport, Host signer and package ID are required")
 	}
-	return &ChainReservations{resolver: resolver, rpc: rpc, keypair: keypair, packageID: packageID}, nil
+	if len(okrPackages) > 1 {
+		return nil, fmt.Errorf("at most one OKR call package is supported")
+	}
+	okr := packageID
+	if len(okrPackages) == 1 && okrPackages[0] != "" {
+		var err error
+		okr, err = normalizeAddress(okrPackages[0])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &ChainReservations{resolver: resolver, rpc: rpc, keypair: keypair, packageID: packageID, okrPackageID: okr}, nil
 }
 func (s *ChainReservations) Supports(scope nodecommand.ReservationScope) bool {
 	return scope == nodecommand.ReservationScopeNode
@@ -64,12 +76,13 @@ func (s *ChainReservations) Reserve(ctx context.Context, r nodecommand.Reservati
 		args = append(args, ObjectArgument(execution.ManagedAgentID))
 		function = "begin_agent_command"
 	}
-	module := "node_execution"
+	module, targetPackage := "node_execution", s.packageID
 	if execution.Contract != nil {
 		if state.Contract == nil || *execution.Contract != *state.Contract {
 			return nodecommand.ReservationResult{}, fmt.Errorf("prepared OKR contract changed")
 		}
 		module, function = "okr", "begin_command"
+		targetPackage = s.okrPackageID
 		args = append([]interface{}{ObjectArgument(execution.Contract.ID)}, args...)
 	}
 	attempt := make([]byte, 32)
@@ -77,7 +90,7 @@ func (s *ChainReservations) Reserve(ctx context.Context, r nodecommand.Reservati
 		return nodecommand.ReservationResult{}, err
 	}
 	args = append(args, byteVector(attempt), ObjectArgument("0x6"))
-	tx, err := s.rpc.MoveCall(ctx, models.MoveCallRequest{Signer: s.keypair.Address(), PackageObjectId: s.packageID, Module: module, Function: function, Arguments: args, TypeArguments: []interface{}{}, GasBudget: "100000000"})
+	tx, err := s.rpc.MoveCall(ctx, models.MoveCallRequest{Signer: s.keypair.Address(), PackageObjectId: targetPackage, Module: module, Function: function, Arguments: args, TypeArguments: []interface{}{}, GasBudget: "100000000"})
 	if err != nil {
 		return nodecommand.ReservationResult{}, err
 	}

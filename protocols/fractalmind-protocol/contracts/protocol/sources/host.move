@@ -245,7 +245,7 @@ module fractalmind_protocol::host {
     /// handover are tested separately against a real chain and production envd.
     /// This function is absent from published bytecode.
     #[test_only]
-    public(package) fun admitted_member_for_testing(
+    public fun admitted_member_for_testing(
         org: &mut Organization, binding: &CoordinatorBinding,
         public_key: vector<u8>, clock: &Clock, ctx: &mut TxContext,
     ) {
@@ -321,6 +321,14 @@ module fractalmind_protocol::host {
         assert_agent_execution_idle(org, object::id(record));
         assert!(!control_confirmed, E_HANDOVER_REQUIRED);
         rebind_agent_impl(org, human, grant, member, binding, record, runtime, workspace_hash, false, clock, ctx);
+    }
+    #[test_only]
+    public fun confirm_reviewed_control_for_testing(
+        org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, managed: &mut ManagedAgent,
+        expected_version: u64, workspace_hash: vector<u8>, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        confirm_reviewed_control(org, human, grant, member, binding, managed, expected_version, workspace_hash, clock, ctx);
     }
     public(package) fun confirm_reviewed_control(
         org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
@@ -468,7 +476,7 @@ module fractalmind_protocol::host {
     }
     public fun membership_host_address(member: &HostMembership): address { member.host_address }
     public fun membership_version(member: &HostMembership): u64 { member.version }
-    public(package) fun membership_public_key(member: &HostMembership): vector<u8> { member.host_public_key }
+    public fun membership_public_key(member: &HostMembership): vector<u8> { member.host_public_key }
     public fun managed_runtime(managed: &ManagedAgent): String { managed.runtime }
     public fun observation_capability(member: &HostMembership): ID { member.observation_capability }
     public fun managed_instance(managed: &ManagedAgent): String { managed.instance_id }
@@ -546,7 +554,7 @@ module fractalmind_protocol::host {
             && auth.human_generation == identity::generation(human), E_REVOKED);
         identity::assert_can_for_device(human, grant, org, auth.required_action, clock, remote_authority::delegate(cap));
     }
-    public(package) fun assert_agent_authority(
+    public fun assert_agent_authority(
         org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
         member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent,
         cap: &RemoteCapability, clock: &Clock,

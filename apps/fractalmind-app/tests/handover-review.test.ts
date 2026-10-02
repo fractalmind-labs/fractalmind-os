@@ -176,6 +176,7 @@ async function fixture() {
     sdk: {
       client: {
         typesPackageId: pkg,
+        okrTypesPackageId: pkg,
         client: {
           core: {
             getObject: async () => ({ object: provenance }),

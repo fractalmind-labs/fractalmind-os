@@ -248,6 +248,8 @@ try {
     network: "localnet",
     rpcUrl: rpc,
     packageId: deployment.packageId,
+    okrPackageId: deployment.okrPackageId,
+    directPackageId: deployment.directPackageId,
     registryId: deployment.registryId,
     chainIdentifier: deployment.chain.chainIdentifier,
   });
@@ -312,11 +314,17 @@ try {
     "real native recovery and device signatures create Human and organization on the existing isolated chain",
   );
   function createdObject(result: SelfPayTransactionOutcome, suffix: string) {
+    const origin =
+      suffix.startsWith("okr::") || suffix.startsWith("handover::")
+        ? (deployment.okrPackageId ?? deployment.packageId)
+        : suffix.startsWith("direct_agent::")
+          ? (deployment.directPackageId ?? deployment.packageId)
+          : deployment.packageId;
     const matches = result.transaction!.effects.changedObjects.filter(
       (o) =>
         o.idOperation === "Created" &&
         result.transaction!.objectTypes?.[o.objectId] ===
-          `${deployment.packageId}::${suffix}`,
+          `${origin}::${suffix}`,
     );
     assert.equal(matches.length, 1, suffix);
     return matches[0].objectId;
@@ -402,6 +410,7 @@ try {
   child.stdin.write(
     JSON.stringify({
       PackageID: deployment.packageId,
+      OkrPackageID: deployment.okrPackageId,
       RegistryID: deployment.registryId,
       OrganizationID: organizationId,
       ChainIdentifier: deployment.chain.chainIdentifier,
@@ -1351,13 +1360,13 @@ try {
         capabilityId: ordinaryCapId,
       }),
     );
-    assert.equal(
-      (await sdk.directAgent.getPermission(permissionId)).reserved,
-      "0",
+    await readVisible(
+      () => sdk.directAgent.getPermission(permissionId),
+      (p) => p.reserved === "0",
     );
-    assert.equal(
-      (await sdk.nodeExecution.getExecution(ordinaryRunId)).state,
-      5,
+    await readVisible(
+      () => sdk.nodeExecution.getExecution(ordinaryRunId),
+      (r) => r.state === 5,
     );
     const exception = await createMessage(randomUUID(), "5");
     const approvalToken = directMessageRecordName(
@@ -1423,11 +1432,14 @@ try {
       exceptionPrepared,
       "node_execution::CommandExecution",
     );
-    assert.equal(
-      (await sdk.directAgent.getApproval(directApprovalId)).state,
-      3,
+    await readVisible(
+      () => sdk.directAgent.getApproval(directApprovalId),
+      (a) => a.state === 3,
     );
-    const consumed = await sdk.directAgent.getPermission(permissionId);
+    const consumed = await readVisible(
+      () => sdk.directAgent.getPermission(permissionId),
+      (p) => p.approved_reserved === "5",
+    );
     assert.equal(consumed.budget_limit, "6");
     assert.equal(consumed.spent, "0");
     assert.equal(consumed.reserved, "0");
@@ -1452,10 +1464,11 @@ try {
         ),
       }),
     );
-    assert.equal(
-      (await sdk.directAgent.getPermission(permissionId)).approved_reserved,
-      "5",
+    const changedPermission = await readVisible(
+      () => sdk.directAgent.getPermission(permissionId),
+      (p) => p.version === "2",
     );
+    assert.equal(changedPermission.approved_reserved, "5");
     await assert.rejects(
       sdk.nodeExecution.prepareCommand({ ...target, command: approvedCommand }),
       /context changed/,
@@ -1469,7 +1482,10 @@ try {
         capabilityId: approvedCapId,
       }),
     );
-    const finalPermission = await sdk.directAgent.getPermission(permissionId);
+    const finalPermission = await readVisible(
+      () => sdk.directAgent.getPermission(permissionId),
+      (p) => p.version === "2" && p.approved_reserved === "0",
+    );
     assert.equal(finalPermission.approved_reserved, "0");
     assert.equal(finalPermission.approved_spent, "0");
     assert.equal(finalPermission.version, "2");

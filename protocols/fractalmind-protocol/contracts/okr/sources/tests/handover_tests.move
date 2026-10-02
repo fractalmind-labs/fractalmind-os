@@ -1,9 +1,9 @@
 #[test_only]
-module fractalmind_protocol::handover_tests {
+module fractalmind_okr::handover_tests {
     use sui::object;
     use sui::ed25519;
     use std::string;
-    use fractalmind_protocol::handover;
+    use fractalmind_okr::handover;
     #[test]
     fun independent_go_sdk_bcs_and_host_signature_vector() {
         let p = handover::proposal(object::id_from_address(@0x6666666666666666666666666666666666666666666666666666666666666666), object::id_from_address(@0x7777777777777777777777777777777777777777777777777777777777777777), 1, 1, 1,

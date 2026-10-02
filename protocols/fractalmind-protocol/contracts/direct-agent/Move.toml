@@ -1,0 +1,13 @@
+[package]
+name = "fractalmind_direct"
+version = "0.0.1"
+edition = "2024.beta"
+
+[dependencies]
+fractalmind_protocol = { local = "../protocol" }
+
+[dev-dependencies]
+fractalmind_okr = { local = "../okr" }
+
+[addresses]
+fractalmind_direct = "0x0"

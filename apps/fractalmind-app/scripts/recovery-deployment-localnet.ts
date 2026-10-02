@@ -120,50 +120,26 @@ const sdk = new FractalMindSDK({
   client,
   network: "localnet",
 });
-const initQuote = await manager.prepare({
-  requestId: "initialize-recovery-registry",
-  transaction: sdk.identity.initializeRegistry(),
-  gasBudget: 200_000_000n,
-});
-await writeFile(
-  progress,
-  JSON.stringify(
-    {
-      phase: "quoted_before_registry_init",
-      packageId,
-      registryId,
-      publishDigest: publish.digest,
-      originalRequest: initQuote,
-      privateKeysInReport: false,
-    },
-    null,
-    2,
-  ) + "\n",
-);
-const init = await manager.submit(initQuote);
-await writeFile(
-  progress,
-  JSON.stringify(
-    {
-      phase: "original_registry_init_result",
-      packageId,
-      registryId,
-      publishDigest: publish.digest,
-      digest: init.digest,
-      status: init.status,
-      actualGas: init.actualGas,
-      privateKeysInReport: false,
-    },
-    null,
-    2,
-  ) + "\n",
-);
-assert.equal(init.status, "confirmed");
+// Current fresh product packages create the identity directory atomically.
+// Resolve it from the original publish; do not submit a second initialization.
+const registryUntil = Date.now() + 15000;
+let identityRegistryId: string;
+while (true) {
+  try {
+    identityRegistryId = await sdk.identity.resolveRegistry();
+    break;
+  } catch (error) {
+    if (Date.now() > registryUntil) throw error;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+}
 const report = {
   recordedAt: new Date().toISOString(),
   chain: await client.core.getChainIdentifier(),
   packageId,
   registryId,
+  identityRegistryId,
+  identityInitialization: "atomic_with_core_publish",
   checks: [
     {
       action: "publish guarded recovery test package",
@@ -171,9 +147,9 @@ const report = {
       actualGas: publish.actualGas,
     },
     {
-      action: "initialize isolated identity registry",
-      digest: init.digest,
-      actualGas: init.actualGas,
+      action: "resolve identity registry created by the original publish",
+      digest: publish.digest,
+      identityRegistryId,
     },
   ],
   limits: { isolatedLocalnet: true, rawPrivateKeysInReport: false },

@@ -33,7 +33,7 @@ type moveHandoverPolicy struct {
 
 func (r *chainRead) currentHandover(ctx context.Context, cap moveCapability, contract *ExecutionContractAuthority, instance *ManagedInstanceAuthority) (*ExecutionHandoverAuthority, error) {
 	var policy moveHandoverPolicy
-	pkg := r.resolver.packageID
+	pkg := r.resolver.okrPackageID
 	if err := r.field(ctx, contract.ID, structKeyTag(pkg, "okr", "HandoverPolicyKey"), []byte{0}, pkg+"::okr::HandoverPolicyKey", pkg+"::okr::HandoverPolicy", &policy); err != nil {
 		return nil, fmt.Errorf("current reviewed policy unavailable: %w", err)
 	}

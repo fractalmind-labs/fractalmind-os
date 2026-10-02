@@ -344,7 +344,7 @@ async function fixture() {
       loadedAtMs: Date.now(),
     }),
     sdk: {
-      client: { typesPackageId: pkg, client: { core } },
+      client: { typesPackageId: pkg, okrTypesPackageId: pkg, client: { core } },
       productRecord: {
         getCurrent: async () => ({ ...head }),
         listCurrent: async () => ({

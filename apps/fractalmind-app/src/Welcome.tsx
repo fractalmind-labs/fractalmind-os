@@ -254,7 +254,7 @@ export default function Welcome({
                     "Public connection profile JSON",
                   )}
                   placeholder={
-                    '{"network":"localnet","rpcUrl":"http://127.0.0.1:29000","packageId":"0x…","registryId":"0x…","humanId":"0x…"}'
+                    '{"network":"localnet","rpcUrl":"http://127.0.0.1:29000","packageId":"0x…","okrPackageId":"0x…","directPackageId":"0x…","registryId":"0x…","humanId":"0x…"}'
                   }
                 />
               </label>

@@ -34,17 +34,28 @@ type ChainObjectReader interface {
 // not reserve execution or budget; ChainAuthorityStore must use a chain-backed
 // reservation backend before an executor can consume the projection.
 type ChainAuthorityResolver struct {
-	reader    ChainObjectReader
-	packageID string
-	now       func() time.Time
+	reader       ChainObjectReader
+	packageID    string
+	okrPackageID string
+	now          func() time.Time
 }
 
-func NewChainAuthorityResolver(reader ChainObjectReader, originalPackageID string) (*ChainAuthorityResolver, error) {
+func NewChainAuthorityResolver(reader ChainObjectReader, originalPackageID string, okrOrigins ...string) (*ChainAuthorityResolver, error) {
 	addr, err := chainAddress(originalPackageID)
 	if err != nil || reader == nil {
 		return nil, fmt.Errorf("chain reader and original protocol package ID are required")
 	}
-	return &ChainAuthorityResolver{reader: reader, packageID: addr.String(), now: time.Now}, nil
+	if len(okrOrigins) > 1 {
+		return nil, fmt.Errorf("at most one OKR type origin is supported")
+	}
+	okr := addr
+	if len(okrOrigins) == 1 && okrOrigins[0] != "" {
+		okr, err = chainAddress(okrOrigins[0])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &ChainAuthorityResolver{reader: reader, packageID: addr.String(), okrPackageID: okr.String(), now: time.Now}, nil
 }
 
 type moveAddress [32]byte
@@ -174,7 +185,11 @@ func (r *chainRead) object(ctx context.Context, id string, kind string, out any)
 	if err != nil {
 		return err
 	}
-	if obj.ID != id || obj.Type != r.resolver.packageID+"::"+kind || obj.Version == 0 || !obj.Shared {
+	pkg := r.resolver.packageID
+	if strings.HasPrefix(kind, "okr::") {
+		pkg = r.resolver.okrPackageID
+	}
+	if obj.ID != id || obj.Type != pkg+"::"+kind || obj.Version == 0 || !obj.Shared {
 		return fmt.Errorf("unexpected protocol object, owner or version for %s", kind)
 	}
 	if err := decodeChainBCS(obj.Content, out); err != nil {

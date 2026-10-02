@@ -1,6 +1,6 @@
 /// v0.2.0 product OKRs. Legacy Objective objects retain their ABI; this model
 /// separates measurements, authorized verification and final human acceptance.
-module fractalmind_protocol::okr {
+module fractalmind_okr::okr {
     use sui::object::{Self, ID, UID};
     use sui::clock::{Self, Clock};
     use sui::tx_context::{Self, TxContext};
@@ -13,6 +13,7 @@ module fractalmind_protocol::okr {
     use std::hash;
     use std::bcs;
     use fractalmind_protocol::organization::{Self, Organization};
+    use fractalmind_protocol::execution_extension as extension;
     use fractalmind_protocol::identity::{Self, HumanIdentity, DeviceGrant};
     use fractalmind_protocol::host::{Self, HostMembership, CoordinatorBinding, ManagedAgent};
     use fractalmind_protocol::node_execution::{Self, CommandExecution};
@@ -38,14 +39,8 @@ module fractalmind_protocol::okr {
     public struct IndexKey has copy, drop, store {}
     public struct DraftPointer has copy, drop, store { id: ID, fingerprint: vector<u8> }
     public struct OkrIndex has store { active_count: u64, records: Table<String, DraftPointer> }
-    /// Additive workspace ownership metadata; deployed Okr/Index layouts stay
-    /// unchanged. Missing legacy coverage remains protected until old active
-    /// assignments leave, rather than treating it as an empty workspace.
-    public struct ActiveAssignmentsKey has copy, drop, store {}
-    public struct ActiveAssignmentTrackedKey has copy, drop, store {}
-    public struct WorkspaceKey has copy, drop, store { host_address: address, workspace_hash: vector<u8> }
-    public struct ActiveAssignmentTracked has copy, drop, store { managed: ID, workspace: WorkspaceKey }
-    public struct ActiveAssignments has store { total: u64, revision: u64, agents: Table<ID, u64>, workspaces: Table<WorkspaceKey, u64> }
+    public struct Witness has drop {}
+    public(package) fun seal(): Witness { Witness {} }
     public struct BudgetKey has copy, drop, store {}
     public struct BudgetState has store { asset: String, spent: u64, reserved: u64, claims: Table<ID, BudgetClaim> }
     public struct BudgetClaim has copy, drop, store { capability_id: ID, agreement_version: u64, kr_index: u64, reserved: u64, spent: u64, settled: bool }
@@ -123,10 +118,10 @@ module fractalmind_protocol::okr {
         event::emit(Changed { org_id: okr.org_id, okr_id: object::id(okr), state: okr.state, version: okr.version, agreement_version: okr.agreement_version, next_kr: okr.next_kr });
     }
     fun index(org: &mut Organization, ctx: &mut TxContext): &mut OkrIndex {
-        if (!df::exists_(organization::borrow_uid(org), IndexKey {})) {
-            df::add(organization::borrow_uid_mut(org), IndexKey {}, OkrIndex { active_count: 0, records: table::new(ctx) });
+        if (!extension::has_org_field(org, 1, &Witness {}, b"okr-index")) {
+            extension::put_org_field(org, 1, &Witness {}, b"okr-index", OkrIndex { active_count: 0, records: table::new(ctx) });
         };
-        df::borrow_mut(organization::borrow_uid_mut(org), IndexKey {})
+        extension::org_field_mut(org, 1, &Witness {}, b"okr-index")
     }
 
     /// The encrypted spec and its typed measurable criteria are created in one
@@ -142,13 +137,14 @@ module fractalmind_protocol::okr {
         let measured = metrics(baselines, targets, weights, max_ages_ms);
         let intent = DraftIntent { human_id: object::id(human), priority, deadline_ms, metrics: measured, key_version, encrypted_spec };
         let fingerprint = hash::sha2_256(bcs::to_bytes(&intent));
+        extension::register_source(org, human, grant, 1, &Witness {}, clock, ctx);
         let registry = index(org, ctx);
         if (table::contains(&registry.records, logical_id)) {
             let previous = table::borrow(&registry.records, logical_id);
             assert!(previous.fingerprint == fingerprint, E_VERSION);
             return previous.id
         };
-        let spec_record = product_record::save_authorized(org, object::id(human), object::id(grant), identity::grant_version(grant),
+        let spec_record = extension::save_record(org, human, grant, 1, &Witness {},
             1, record_name(logical_id, b"-spec"), 0, key_version, encrypted_spec, clock, ctx);
         let okr = Okr { id: object::new(ctx), org_id: object::id(org), owner_human: object::id(human), logical_id,
             state: DRAFT, version: 1, agreement_version: 0, priority, deadline_ms, spec_record, spec_revision: 1,
@@ -175,6 +171,16 @@ module fractalmind_protocol::okr {
     ) {
         abort E_HANDOVER_REQUIRED
     }
+    #[test_only]
+    public fun activate_reviewed_for_testing(
+        okr: &mut Okr, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent,
+        expected_version: u64, workspace_hash: vector<u8>, boundary_hash: vector<u8>,
+        budget_asset: String, budget_limit: u64, expires_at_ms: u64,
+        expected_record_revision: u64, key_version: u64, encrypted_agreement: vector<u8>, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        activate_reviewed(okr, org, human, grant, member, binding, managed, expected_version, workspace_hash, boundary_hash, budget_asset, budget_limit, expires_at_ms, expected_record_revision, key_version, encrypted_agreement, clock, ctx);
+    }
     public(package) fun activate_reviewed(
         okr: &mut Okr, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
         member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent,
@@ -189,11 +195,11 @@ module fractalmind_protocol::okr {
         host::assert_managed(org, member, managed, true);
         assert!(workspace_hash == host::managed_workspace_hash(managed) && vector::length(&workspace_hash) == 32 && vector::length(&boundary_hash) == 32, E_TARGET);
         assert!(string::length(&budget_asset) > 0 && string::length(&budget_asset) <= 32 && budget_limit > 0 && expires_at_ms > clock::timestamp_ms(clock) && expires_at_ms <= okr.deadline_ms, E_INPUT);
-        register_assignment(okr, org, object::id(managed), host::membership_host_address(member), workspace_hash, ctx);
+        extension::register_assignment(org, &mut okr.id, &Witness {}, object::id(managed), host::membership_host_address(member), workspace_hash, ctx);
         let registry = index(org, ctx);
         assert!(registry.active_count < 3, E_ACTIVE_LIMIT);
         registry.active_count = registry.active_count + 1;
-        let record = product_record::save_authorized(org, object::id(human), object::id(grant), identity::grant_version(grant),
+        let record = extension::save_record(org, human, grant, 1, &Witness {},
             2, record_name(okr.logical_id, b"-agreement"), expected_record_revision, key_version, encrypted_agreement, clock, ctx);
         okr.managed_agent = option::some(object::id(managed)); okr.managed_version = host::managed_version(managed);
         okr.membership_id = option::some(object::id(member)); okr.membership_version = host::membership_version(member);
@@ -225,7 +231,7 @@ module fractalmind_protocol::okr {
             && okr.workspace_hash == host::managed_workspace_hash(managed), E_TARGET);
         assert!(ra::actions(cap) == vector[string::utf8(b"assign")] && ra::scope(cap) == string::utf8(b"control")
             && ra::budget_asset(cap) == okr.budget_asset && ra::max_budget(cap) <= okr.budget_limit && ra::expires_at_ms(cap) <= okr.expires_at_ms, E_TARGET);
-        ra::contract_witness(cap, object::id(okr), okr.agreement_version, kr_index, okr.boundary_hash)
+        extension::witness(cap, &Witness {}, object::id(okr), okr.agreement_version, kr_index, okr.boundary_hash)
     }
     public fun issue_capability(
         okr: &Okr, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
@@ -238,9 +244,8 @@ module fractalmind_protocol::okr {
         assert!(df::exists_(&okr.id, HandoverPolicyKey {}), E_HANDOVER_REQUIRED);
         let policy: &HandoverPolicy = df::borrow(&okr.id, HandoverPolicyKey {});
         assert!(policy.agreement_version == okr.agreement_version && policy.managed_version == okr.managed_version, E_TARGET);
-        let mut cap = host::new_agent_capability(org, human, grant, member, binding, managed,
-            vector[string::utf8(b"assign")], string::utf8(b"control"), max_uses, okr.budget_asset, policy.max_calls, okr.expires_at_ms, clock, ctx);
-        ra::bind_execution_contract(&mut cap, object::id(okr), okr.agreement_version, okr.boundary_hash);
+        let cap = extension::new_capability(org, human, grant, member, binding, managed,
+            1, &Witness {}, object::id(okr), okr.agreement_version, okr.boundary_hash, max_uses, okr.budget_asset, policy.max_calls, okr.expires_at_ms, clock, ctx);
         let _ = assignment_witness(okr, org, member, binding, managed, &cap, okr.next_kr, clock);
         ra::share_capability(cap);
     }
@@ -314,7 +319,7 @@ module fractalmind_protocol::okr {
         expected_cursor: u64, spent_amount: u64, key_version: u64, encrypted_result: vector<u8>, clock: &Clock, ctx: &mut TxContext,
     ) {
         assert!(okr.org_id == object::id(org) && node_execution::capability_id(run) == object::id(cap), E_TARGET);
-        let witness = ra::settlement_witness(cap, node_execution::intent_hash(run), object::id(okr));
+        let witness = extension::settlement_witness(cap, &Witness {}, node_execution::intent_hash(run), object::id(okr));
         let ledger = budget(okr, ctx); let claim = table::borrow(&ledger.claims, object::id(run));
         assert!(!claim.settled && claim.capability_id == object::id(cap) && claim.reserved == node_execution::budget_amount(run)
             && ledger.asset == node_execution::budget_asset(run) && spent_amount <= claim.reserved, E_BUDGET);
@@ -326,7 +331,7 @@ module fractalmind_protocol::okr {
         human: &HumanIdentity, grant: &DeviceGrant, clock: &Clock, ctx: &mut TxContext,
     ) {
         assert!(okr.org_id == object::id(org) && node_execution::capability_id(run) == object::id(cap), E_TARGET);
-        let witness = ra::settlement_witness(cap, node_execution::intent_hash(run), object::id(okr));
+        let witness = extension::settlement_witness(cap, &Witness {}, node_execution::intent_hash(run), object::id(okr));
         let was_queued = node_execution::state(run) == 0;
         node_execution::request_stop_with_contract(run, cap, org, human, grant, witness, clock, ctx);
         if (was_queued) settle(okr, object::id(run), 0, ctx);
@@ -336,7 +341,7 @@ module fractalmind_protocol::okr {
         human: &HumanIdentity, grant: &DeviceGrant, clock: &Clock, ctx: &mut TxContext,
     ) {
         assert!(okr.org_id == object::id(org) && node_execution::capability_id(run) == object::id(cap), E_TARGET);
-        let witness = ra::settlement_witness(cap, node_execution::intent_hash(run), object::id(okr));
+        let witness = extension::settlement_witness(cap, &Witness {}, node_execution::intent_hash(run), object::id(okr));
         let was_queued = node_execution::state(run) == 0;
         node_execution::request_stop_with_contract_v2(run, cap, org, human, grant, witness, clock, ctx);
         if (was_queued) settle(okr, object::id(run), 0, ctx);
@@ -353,9 +358,9 @@ module fractalmind_protocol::okr {
     ) {
         identity::assert_can(human, grant, org, identity::operate_action(), clock, ctx);
         assert_version(okr, org, expected_version); assert!(okr.state == ACTIVE, E_STATE);
-        let record = product_record::save_authorized(org, object::id(human), object::id(grant), identity::grant_version(grant),
+        let record = extension::save_record(org, human, grant, 1, &Witness {},
             2, record_name(okr.logical_id, b"-agreement"), expected_record_revision, key_version, encrypted_reason, clock, ctx);
-        release_assignment(okr, org);
+        extension::release_assignment(org, &mut okr.id, &Witness {});
         let registry = index(org, ctx); registry.active_count = registry.active_count - 1;
         okr.state = PAUSED; okr.agreement_version = okr.agreement_version + 1; okr.agreement_record = option::some(record);
         changed(okr);
@@ -369,7 +374,7 @@ module fractalmind_protocol::okr {
         assert_version(okr, org, expected_version); assert!(okr.state == DRAFT || okr.state == PAUSED, E_STATE);
         assert!(priority <= 2 && deadline_ms > clock::timestamp_ms(clock), E_INPUT);
         let measured = metrics(baselines, targets, weights, max_ages_ms);
-        okr.spec_record = product_record::save_authorized(org, object::id(human), object::id(grant), identity::grant_version(grant),
+        okr.spec_record = extension::save_record(org, human, grant, 1, &Witness {},
             1, record_name(okr.logical_id, b"-spec"), okr.spec_revision, key_version, encrypted_spec, clock, ctx);
         okr.spec_revision = okr.spec_revision + 1; okr.metrics = measured; okr.next_kr = 0;
         okr.priority = priority; okr.deadline_ms = deadline_ms; okr.agreement_version = okr.agreement_version + 1;
@@ -425,7 +430,7 @@ module fractalmind_protocol::okr {
         assert_version(okr, org, expected_version); assert!(okr.state == ACTIVE, E_STATE);
         assert!(kr_index == okr.next_kr && kr_index < vector::length(&okr.metrics), E_ORDER);
         assert_measured(&okr.metrics[kr_index], clock::timestamp_ms(clock));
-        let record = product_record::save_authorized(org, object::id(human), object::id(grant), identity::grant_version(grant),
+        let record = extension::save_record(org, human, grant, 1, &Witness {},
             4, record_name(okr.logical_id, b"-verification"), expected_record_revision, key_version, encrypted_verification, clock, ctx);
         okr.metrics[kr_index].verified = true; okr.metrics[kr_index].verification_id = option::some(record);
         okr.next_kr = okr.next_kr + 1;
@@ -446,9 +451,9 @@ module fractalmind_protocol::okr {
             assert!(okr.metrics[i].verified && option::is_some(&okr.metrics[i].verification_id), E_EVIDENCE);
             assert_measured(&okr.metrics[i], now); i = i + 1;
         };
-        let record = product_record::save_authorized(org, object::id(human), object::id(grant), identity::grant_version(grant),
+        let record = extension::save_record(org, human, grant, 1, &Witness {},
             4, record_name(okr.logical_id, b"-acceptance"), 0, key_version, encrypted_acceptance, clock, ctx);
-        release_assignment(okr, org);
+        extension::release_assignment(org, &mut okr.id, &Witness {});
         let registry = index(org, ctx); registry.active_count = registry.active_count - 1;
         okr.state = ACHIEVED; okr.acceptance_record = option::some(record); okr.accepted_by_human = option::some(object::id(human)); okr.accepted_at_ms = now;
         okr.agreement_version = okr.agreement_version + 1; changed(okr);
@@ -457,51 +462,12 @@ module fractalmind_protocol::okr {
         identity::assert_can(human, grant, org, identity::approve_action(), clock, ctx);
         assert_version(okr, org, expected_version); assert!(okr.state != ARCHIVED, E_STATE);
         if (okr.state == ACTIVE) {
-            release_assignment(okr, org);
+            extension::release_assignment(org, &mut okr.id, &Witness {});
             let registry = index(org, ctx); registry.active_count = registry.active_count - 1;
         };
         okr.state = ARCHIVED; okr.agreement_version = okr.agreement_version + 1; changed(okr);
     }
     public fun organization_id(okr: &Okr): ID { okr.org_id }
-    fun register_assignment(okr: &mut Okr, org: &mut Organization, managed: ID, host_address: address, workspace_hash: vector<u8>, ctx: &mut TxContext) {
-        if (!df::exists_(organization::borrow_uid(org), ActiveAssignmentsKey {}))
-            df::add(organization::borrow_uid_mut(org), ActiveAssignmentsKey {}, ActiveAssignments { total: 0, revision: 1, agents: table::new(ctx), workspaces: table::new(ctx) });
-        assert!(!df::exists_(&okr.id, ActiveAssignmentTrackedKey {}), E_STATE);
-        let entries: &mut ActiveAssignments = df::borrow_mut(organization::borrow_uid_mut(org), ActiveAssignmentsKey {});
-        if (table::contains(&entries.agents, managed)) {
-            let count = table::borrow_mut(&mut entries.agents, managed); *count = *count + 1;
-        } else table::add(&mut entries.agents, managed, 1);
-        let workspace = WorkspaceKey { host_address, workspace_hash };
-        if (table::contains(&entries.workspaces, workspace)) {
-            let count = table::borrow_mut(&mut entries.workspaces, workspace); *count = *count + 1;
-        } else table::add(&mut entries.workspaces, workspace, 1);
-        entries.total = entries.total + 1; entries.revision = entries.revision + 1;
-        df::add(&mut okr.id, ActiveAssignmentTrackedKey {}, ActiveAssignmentTracked { managed, workspace });
-    }
-    fun release_assignment(okr: &mut Okr, org: &mut Organization) {
-        if (!df::exists_(&okr.id, ActiveAssignmentTrackedKey {})) return;
-        let tracked: ActiveAssignmentTracked = df::remove(&mut okr.id, ActiveAssignmentTrackedKey {});
-        let managed = *option::borrow(&okr.managed_agent); assert!(tracked.managed == managed, E_STATE);
-        let entries: &mut ActiveAssignments = df::borrow_mut(organization::borrow_uid_mut(org), ActiveAssignmentsKey {});
-        let count = table::borrow_mut(&mut entries.agents, managed); assert!(*count > 0 && entries.total > 0, E_STATE);
-        *count = *count - 1;
-        if (*count == 0) { let _: u64 = table::remove(&mut entries.agents, managed); };
-        let count = table::borrow_mut(&mut entries.workspaces, tracked.workspace); assert!(*count > 0, E_STATE);
-        *count = *count - 1;
-        if (*count == 0) { let _: u64 = table::remove(&mut entries.workspaces, tracked.workspace); };
-        entries.total = entries.total - 1; entries.revision = entries.revision + 1;
-    }
-    /// protected, revision, complete. Unknown legacy coverage cannot authorize
-    /// direct writes; observations/questions need not pause another Run.
-    public fun direct_workspace_state(org: &Organization, managed: ID, host_address: address, workspace_hash: vector<u8>): (bool, u64, bool) {
-        let active = active_count(org);
-        if (!df::exists_(organization::borrow_uid(org), ActiveAssignmentsKey {})) return (active > 0, 0, active == 0);
-        let entries: &ActiveAssignments = df::borrow(organization::borrow_uid(org), ActiveAssignmentsKey {});
-        if (entries.total != active) return (true, entries.revision, false);
-        let workspace = WorkspaceKey { host_address, workspace_hash };
-        ((table::contains(&entries.agents, managed) && *table::borrow(&entries.agents, managed) > 0)
-            || (table::contains(&entries.workspaces, workspace) && *table::borrow(&entries.workspaces, workspace) > 0), entries.revision, true)
-    }
     public fun spec_revision(okr: &Okr): u64 { okr.spec_revision }
     public fun deadline_ms(okr: &Okr): u64 { okr.deadline_ms }
     public fun state(okr: &Okr): u8 { okr.state }
@@ -509,7 +475,7 @@ module fractalmind_protocol::okr {
     public fun agreement_version(okr: &Okr): u64 { okr.agreement_version }
     public fun next_kr(okr: &Okr): u64 { okr.next_kr }
     public fun active_count(org: &Organization): u64 {
-        if (!df::exists_(organization::borrow_uid(org), IndexKey {})) return 0;
-        let registry: &OkrIndex = df::borrow(organization::borrow_uid(org), IndexKey {}); registry.active_count
+        if (!extension::has_org_field(org, 1, &Witness {}, b"okr-index")) return 0;
+        let registry: &OkrIndex = extension::org_field(org, 1, &Witness {}, b"okr-index"); registry.active_count
     }
 }

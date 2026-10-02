@@ -88,7 +88,8 @@ module fractalmind_protocol::remote_authority {
         contract_id: ID, agreement_version: u64, kr_index: u64, boundary_hash: vector<u8>,
     }
     /// A transaction cannot supply this non-storable witness as pure data.
-    /// Its constructor and consumers stay inside the audited protocol package.
+    /// Its constructor stays private; sealed extension witnesses reach consumers
+    /// through the core bridge after source and capability binding checks.
     public struct ContractWitness has drop {
         capability_id: ID, contract_id: ID, agreement_version: u64, kr_index: u64, boundary_hash: vector<u8>,
     }
@@ -276,7 +277,7 @@ module fractalmind_protocol::remote_authority {
         capability
     }
 
-    public(package) fun share_capability(capability: RemoteCapability) {
+    public fun share_capability(capability: RemoteCapability) {
         emit_created(&capability);
         transfer::share_object(capability);
     }
@@ -311,7 +312,7 @@ module fractalmind_protocol::remote_authority {
         ContractWitness { capability_id: object::id(cap), contract_id, agreement_version: recorded.agreement_version,
             kr_index: recorded.kr_index, boundary_hash: recorded.boundary_hash }
     }
-    public(package) fun assert_contract_command(cap: &RemoteCapability, intent_hash: vector<u8>, witness: &ContractWitness) {
+    public fun assert_contract_command(cap: &RemoteCapability, intent_hash: vector<u8>, witness: &ContractWitness) {
         assert!(witness.capability_id == object::id(cap), E_CONTRACT_REQUIRED);
         let recorded: &CommandContractBinding = df::borrow(&cap.id, CommandContractKey { intent_hash });
         assert!(recorded.contract_id == witness.contract_id && recorded.agreement_version == witness.agreement_version

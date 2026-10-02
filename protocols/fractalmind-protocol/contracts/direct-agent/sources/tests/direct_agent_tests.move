@@ -1,5 +1,5 @@
 #[test_only]
-module fractalmind_protocol::direct_agent_tests {
+module fractalmind_direct::direct_agent_tests {
     use sui::test_scenario::{Self as ts, Scenario};
     use sui::object::{Self, ID};
     use sui::clock::{Self, Clock};
@@ -11,11 +11,37 @@ module fractalmind_protocol::direct_agent_tests {
     use fractalmind_protocol::host::{Self, HostMembership, CoordinatorBinding, ManagedAgent};
     use fractalmind_protocol::remote_authority::RemoteCapability;
     use fractalmind_protocol::node_execution::{Self as execution, CommandExecution};
-    use fractalmind_protocol::direct_agent::{Self as direct, StandingPermission, Message, Approval};
-    use fractalmind_protocol::okr::{Self, Okr};
+    use fractalmind_direct::direct_agent::{Self as direct, StandingPermission, Message, Approval};
+    use fractalmind_okr::okr::{Self, Okr};
 
     fun bytes(n: u8): vector<u8> { vector[n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n, n] }
     fun body(): vector<u8> { let mut out = b"FME1"; vector::append(&mut out, bytes(0)); out }
+    #[test]
+    #[expected_failure(abort_code = 9701, location = fractalmind_protocol::execution_extension)]
+    fun another_package_cannot_replace_registered_direct_source() {
+        let mut s = setup(true);
+        let mut org = ts::take_shared<Organization>(&s); let human = ts::take_shared<HumanIdentity>(&s);
+        let grant = ts::take_shared<DeviceGrant>(&s); let c = ts::take_shared<Clock>(&s);
+        fractalmind_protocol::execution_extension::register_source(&mut org, &human, &grant, 0, &fractalmind_protocol::extension_attack::seal(), &c, ts::ctx(&mut s));
+        ts::return_shared(c); ts::return_shared(grant); ts::return_shared(human); ts::return_shared(org); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9701, location = fractalmind_protocol::execution_extension)]
+    fun another_package_cannot_mint_execution_witness_for_valid_capability() {
+        let s = setup(true);
+        let cap = ts::take_shared<RemoteCapability>(&s); let permission = ts::take_shared<StandingPermission>(&s);
+        let witness = fractalmind_protocol::execution_extension::witness(&cap, &fractalmind_protocol::extension_attack::seal(), object::id(&permission), 1, 0, bytes(8));
+        witness;
+        ts::return_shared(permission); ts::return_shared(cap); ts::end(s);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9701, location = fractalmind_protocol::execution_extension)]
+    fun another_package_cannot_mutate_okr_directory() {
+        let mut s = setup(true); activate(&mut s);
+        let mut org = ts::take_shared<Organization>(&s);
+        fractalmind_protocol::execution_extension::put_org_field(&mut org, 1, &fractalmind_protocol::extension_attack::seal(), b"okr-index", bytes(0));
+        ts::return_shared(org); ts::end(s);
+    }
     fun setup(control: bool): Scenario {
         let mut s = identity_tests::setup();
         let mut org = ts::take_shared<Organization>(&s); let human = ts::take_shared<HumanIdentity>(&s);
@@ -37,7 +63,7 @@ module fractalmind_protocol::direct_agent_tests {
         ts::next_tx(&mut s, @0xA);
         let mut org = ts::take_shared<Organization>(&s); let human = ts::take_shared<HumanIdentity>(&s); let grant = ts::take_shared<DeviceGrant>(&s);
         let c = ts::take_shared<Clock>(&s); let binding = ts::take_shared<CoordinatorBinding>(&s); let member = ts::take_shared<HostMembership>(&s); let mut managed = ts::take_shared<ManagedAgent>(&s);
-        if (control) host::confirm_reviewed_control(&mut org, &human, &grant, &member, &binding, &mut managed, 1, bytes(7), &c, ts::ctx(&mut s));
+        if (control) host::confirm_reviewed_control_for_testing(&mut org, &human, &grant, &member, &binding, &mut managed, 1, bytes(7), &c, ts::ctx(&mut s));
         direct::create_permission(&mut org, &human, &grant, &member, &binding, &managed,
             vector[string::utf8(b"ask"), string::utf8(b"status"), string::utf8(b"file.read"), string::utf8(b"file.write")], bytes(8), 3, 6, 1000, 1, body(), &c, ts::ctx(&mut s));
         ts::return_shared(managed); ts::return_shared(member); ts::return_shared(binding); ts::return_shared(c); ts::return_shared(grant); ts::return_shared(human); ts::return_shared(org);
@@ -125,14 +151,14 @@ module fractalmind_protocol::direct_agent_tests {
         ts::return_shared(c); ts::return_shared(grant); ts::return_shared(human); ts::return_shared(org); ts::next_tx(s, @0xA);
         let mut org = ts::take_shared<Organization>(s); let human = ts::take_shared<HumanIdentity>(s); let grant = ts::take_shared<DeviceGrant>(s); let c = ts::take_shared<Clock>(s);
         let binding = ts::take_shared<CoordinatorBinding>(s); let member = ts::take_shared<HostMembership>(s); let managed = ts::take_shared<ManagedAgent>(s); let mut o = ts::take_shared<Okr>(s);
-        okr::activate_reviewed(&mut o, &mut org, &human, &grant, &member, &binding, &managed, 1, bytes(7), bytes(8), string::utf8(b"TOOL_CALLS"), 6, 1000, 0, 1, body(), &c, ts::ctx(s));
-        let (protected, revision, complete) = okr::direct_workspace_state(&org, object::id(&managed), host::membership_host_address(&member), bytes(7));
+        okr::activate_reviewed_for_testing(&mut o, &mut org, &human, &grant, &member, &binding, &managed, 1, bytes(7), bytes(8), string::utf8(b"TOOL_CALLS"), 6, 1000, 0, 1, body(), &c, ts::ctx(s));
+        let (protected, revision, complete) = fractalmind_protocol::execution_extension::direct_workspace_state(&org, object::id(&managed), host::membership_host_address(&member), bytes(7));
         assert!(protected && revision == 2 && complete, 0);
-        let (protected, revision, complete) = okr::direct_workspace_state(&org, object::id_from_address(@0xF), host::membership_host_address(&member), bytes(8));
+        let (protected, revision, complete) = fractalmind_protocol::execution_extension::direct_workspace_state(&org, object::id_from_address(@0xF), host::membership_host_address(&member), bytes(8));
         assert!(!protected && revision == 2 && complete, 0);
-        let (protected, _, complete) = okr::direct_workspace_state(&org, object::id_from_address(@0xF), host::membership_host_address(&member), bytes(7));
+        let (protected, _, complete) = fractalmind_protocol::execution_extension::direct_workspace_state(&org, object::id_from_address(@0xF), host::membership_host_address(&member), bytes(7));
         assert!(protected && complete, 0);
-        let (protected, _, complete) = okr::direct_workspace_state(&org, object::id_from_address(@0xF), @0xF, bytes(7));
+        let (protected, _, complete) = fractalmind_protocol::execution_extension::direct_workspace_state(&org, object::id_from_address(@0xF), @0xF, bytes(7));
         assert!(!protected && complete, 0);
         ts::return_shared(o); ts::return_shared(managed); ts::return_shared(member); ts::return_shared(binding); ts::return_shared(c); ts::return_shared(grant); ts::return_shared(human); ts::return_shared(org); ts::next_tx(s, @0xA);
     }
@@ -142,7 +168,7 @@ module fractalmind_protocol::direct_agent_tests {
         let r = prepare(&mut s, m, 1, false); assert!(prepare(&mut s, m, 1, false) == r, 0); check(&mut s, 0, 3, 0, 0); ts::end(s);
     }
     #[test]
-    #[expected_failure(abort_code = 9605, location = fractalmind_protocol::direct_agent)]
+    #[expected_failure(abort_code = 9605, location = fractalmind_direct::direct_agent)]
     fun pending_reservations_exhaust_standing_budget() {
         let mut s = setup(true); let m = message(&mut s, b"one", b"file.write", 3, 8); prepare(&mut s, m, 1, false);
         let m = message(&mut s, b"two", b"file.write", 3, 8); prepare(&mut s, m, 2, false); check(&mut s, 0, 6, 0, 0);
@@ -155,7 +181,7 @@ module fractalmind_protocol::direct_agent_tests {
         update(&mut s, 6); check(&mut s, 2, 0, 0, 0); ts::end(s);
     }
     #[test]
-    #[expected_failure(abort_code = 9607, location = fractalmind_protocol::direct_agent)]
+    #[expected_failure(abort_code = 9607, location = fractalmind_direct::direct_agent)]
     fun policy_cannot_reduce_limit_below_inflight_reservation() {
         let mut s = setup(true); let m = message(&mut s, b"one", b"file.write", 3, 8); prepare(&mut s, m, 1, false); update(&mut s, 2); ts::end(s);
     }
@@ -173,22 +199,22 @@ module fractalmind_protocol::direct_agent_tests {
         begin(&mut s, m, r, true); finish(&mut s, r, 2, 4); check(&mut s, 0, 0, 4, 0); ts::end(s);
     }
     #[test]
-    #[expected_failure(abort_code = 9606, location = fractalmind_protocol::direct_agent)]
+    #[expected_failure(abort_code = 9606, location = fractalmind_direct::direct_agent)]
     fun approval_cannot_authorize_a_second_command() {
         let mut s = setup(true); let m = message(&mut s, b"exception", b"file.write", 5, 9); approve(&mut s, m, true); prepare(&mut s, m, 1, true); prepare(&mut s, m, 2, true); ts::end(s);
     }
     #[test]
-    #[expected_failure(abort_code = 9602, location = fractalmind_protocol::direct_agent)]
+    #[expected_failure(abort_code = 9602, location = fractalmind_direct::direct_agent)]
     fun replaced_policy_invalidates_a_queued_message() {
         let mut s = setup(true); let m = message(&mut s, b"one", b"file.write", 3, 8); let r = prepare(&mut s, m, 1, false); update(&mut s, 6); begin(&mut s, m, r, false); ts::end(s);
     }
     #[test]
-    #[expected_failure(abort_code = 9602, location = fractalmind_protocol::direct_agent)]
+    #[expected_failure(abort_code = 9602, location = fractalmind_direct::direct_agent)]
     fun replaced_policy_invalidates_prior_approval() {
         let mut s = setup(true); let m = message(&mut s, b"exception", b"file.write", 5, 9); approve(&mut s, m, true); update(&mut s, 6); prepare(&mut s, m, 1, true); ts::end(s);
     }
     #[test]
-    #[expected_failure(abort_code = 9605, location = fractalmind_protocol::direct_agent)]
+    #[expected_failure(abort_code = 9605, location = fractalmind_direct::direct_agent)]
     fun active_okr_protects_its_workspace_from_unapproved_writes() {
         let mut s = setup(true); activate(&mut s); let m = message(&mut s, b"one", b"file.write", 3, 8); prepare(&mut s, m, 1, false); ts::end(s);
     }
@@ -210,7 +236,7 @@ module fractalmind_protocol::direct_agent_tests {
     #[expected_failure(abort_code = 9201, location = fractalmind_protocol::host)]
     fun observation_import_cannot_obtain_standing_execution_permission() { let s = setup(false); ts::end(s); }
     #[test]
-    #[expected_failure(abort_code = 9608, location = fractalmind_protocol::direct_agent)]
+    #[expected_failure(abort_code = 9608, location = fractalmind_direct::direct_agent)]
     fun one_message_cannot_reserve_two_different_commands() {
         let mut s = setup(true); let m = message(&mut s, b"one", b"file.write", 3, 8);
         prepare(&mut s, m, 1, false); prepare(&mut s, m, 2, false); ts::end(s);
@@ -228,14 +254,14 @@ module fractalmind_protocol::direct_agent_tests {
         ts::return_shared(run); ts::return_shared(cap); ts::return_shared(p); ts::return_shared(c); ts::return_shared(grant); ts::return_shared(human); ts::return_shared(org); ts::end(s);
     }
     #[test]
-    #[expected_failure(abort_code = 9604, location = fractalmind_protocol::direct_agent)]
+    #[expected_failure(abort_code = 9604, location = fractalmind_direct::direct_agent)]
     fun message_reaches_exact_clock_expiry_before_any_start() {
         let mut s = setup(true); let m = message(&mut s, b"one", b"file.write", 3, 8); let r = prepare(&mut s, m, 1, false);
         let mut c = ts::take_shared<Clock>(&s); clock::set_for_testing(&mut c, 500); ts::return_shared(c); ts::next_tx(&mut s, @0xA);
         begin(&mut s, m, r, false); ts::end(s);
     }
     #[test]
-    #[expected_failure(abort_code = 9602, location = fractalmind_protocol::direct_agent)]
+    #[expected_failure(abort_code = 9602, location = fractalmind_direct::direct_agent)]
     fun changed_approving_device_grant_invalidates_one_off_start() {
         let mut s = setup(true); let m = message(&mut s, b"exception", b"file.write", 5, 9); approve(&mut s, m, true); let r = prepare(&mut s, m, 1, true);
         let human = ts::take_shared<HumanIdentity>(&s); let mut grant = ts::take_shared<DeviceGrant>(&s); let c = ts::take_shared<Clock>(&s);
@@ -244,13 +270,13 @@ module fractalmind_protocol::direct_agent_tests {
         begin(&mut s, m, r, true); ts::end(s);
     }
     #[test]
-    #[expected_failure(abort_code = 9602, location = fractalmind_protocol::direct_agent)]
+    #[expected_failure(abort_code = 9602, location = fractalmind_direct::direct_agent)]
     fun changed_workspace_ownership_invalidates_prior_write_approval() {
         let mut s = setup(true); activate(&mut s); let m = message(&mut s, b"write", b"file.write", 3, 8); approve(&mut s, m, true);
         let mut org = ts::take_shared<Organization>(&s); let human = ts::take_shared<HumanIdentity>(&s); let grant = ts::take_shared<DeviceGrant>(&s); let c = ts::take_shared<Clock>(&s); let mut o = ts::take_shared<Okr>(&s);
         okr::pause(&mut o, &mut org, &human, &grant, 2, 1, 1, body(), &c, ts::ctx(&mut s));
         let managed = ts::take_shared<ManagedAgent>(&s); let member = ts::take_shared<HostMembership>(&s);
-        let (protected, revision, complete) = okr::direct_workspace_state(&org, object::id(&managed), host::membership_host_address(&member), bytes(7));
+        let (protected, revision, complete) = fractalmind_protocol::execution_extension::direct_workspace_state(&org, object::id(&managed), host::membership_host_address(&member), bytes(7));
         assert!(!protected && revision == 3 && complete, 0);
         ts::return_shared(member); ts::return_shared(managed); ts::return_shared(o); ts::return_shared(c); ts::return_shared(grant); ts::return_shared(human); ts::return_shared(org); ts::next_tx(&mut s, @0xA);
         prepare(&mut s, m, 1, true); ts::end(s);

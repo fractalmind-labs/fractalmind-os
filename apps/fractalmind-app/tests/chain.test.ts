@@ -6,7 +6,7 @@ import {
   normalizeSuiAddress as id,
 } from "@mysten/sui/utils";
 import type { FractalMindSDK } from "@fractalmind-labs/fractalmind-sdk";
-import { ChainReadSession, normalizeProfile } from "../src/chain";
+import { ChainReadSession, normalizeProfile, missingIndex } from "../src/chain";
 import type { ConnectionProfile } from "../src/domain";
 
 const profile: ConnectionProfile = {
@@ -76,6 +76,8 @@ function fixture() {
     },
     organization: { getOrganization: async () => org },
     okr: {
+      isMissingIndex: (error: unknown, org: string) =>
+        missingIndex(error, org, `${profile.packageId}::okr::IndexKey`),
       listOkrs: async () => {
         if (cycle)
           return { okrs: [], hasNextPage: true, cursor: "repeated-cursor" };

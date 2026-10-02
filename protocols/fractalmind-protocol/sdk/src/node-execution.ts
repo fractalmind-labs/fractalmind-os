@@ -180,7 +180,7 @@ export class NodeExecutionApi {
       }
       if (direct) {
         const args: TransactionArgument[] = [tx.object(direct.permission_id), ...(direct.approval_id ? [tx.object(direct.approval_id)] : []), tx.object(direct.message_id), tx.object(command.capability.id), tx.object(command.target.organization_id), tx.object(authority.humanId), tx.object(authority.grantId), ...(direct.approving_grant_id ? [tx.object(direct.approving_grant_id)] : []), tx.object(authority.membershipId), tx.object(authority.bindingId), tx.object(authority.managedAgentId!), tx.pure.string(command.command_id), tx.pure.string(command.nonce), tx.pure.string(command.idempotency_key), tx.pure.vector('u8', nodeCommandIntentHash(command)), tx.pure.u64(command.issued_at_ms), tx.pure.u64(command.expires_at_ms), tx.object('0x6')];
-        tx.moveCall({ target: `${this.fm.packageId}::direct_agent::${direct.approval_id ? 'prepare_approved_message' : 'prepare_message'}`, arguments: args });
+        tx.moveCall({ target: `${this.fm.directPackageId}::direct_agent::${direct.approval_id ? 'prepare_approved_message' : 'prepare_message'}`, arguments: args });
         return tx;
       }
       const args: TransactionArgument[] = [tx.object(command.capability.id), tx.object(command.target.organization_id), tx.object(authority.humanId), tx.object(authority.grantId), tx.object(authority.membershipId), tx.object(authority.bindingId)];
@@ -188,7 +188,7 @@ export class NodeExecutionApi {
       if (contract) args.push(tx.pure.u64(toBigInt(contract.agreement_version)), tx.pure.u64(toBigInt(contract.kr_index)));
       args.push(tx.pure.string(command.action), tx.pure.string(command.scope), tx.pure.string(command.command_id), tx.pure.string(command.nonce), tx.pure.string(command.idempotency_key), tx.pure.string(command.budget?.asset ?? ''), tx.pure.u64(toBigInt(command.budget?.amount ?? 0)), tx.pure.vector('u8', nodeCommandIntentHash(command)), tx.pure.u64(command.issued_at_ms), tx.pure.u64(command.expires_at_ms), tx.object('0x6'));
       if (contract) args.unshift(tx.object(contract.id));
-      tx.moveCall({ target: contract ? `${this.fm.packageId}::okr::prepare_command_v2` : `${this.fm.packageId}::node_execution::prepare_${authority.managedAgentId ? 'agent_command_v2' : 'host_command'}`, arguments: args });
+      tx.moveCall({ target: contract ? `${this.fm.okrPackageId}::okr::prepare_command_v2` : `${this.fm.packageId}::node_execution::prepare_${authority.managedAgentId ? 'agent_command_v2' : 'host_command'}`, arguments: args });
       return tx;
     } finally { resultKey?.organizationKey?.fill(0); }
   }
@@ -198,18 +198,18 @@ export class NodeExecutionApi {
     if (input.managedAgentId) args.push(tx.object(input.managedAgentId));
     args.push(tx.pure.vector('u8', input.attemptId ?? globalThis.crypto.getRandomValues(new Uint8Array(32))), tx.object('0x6'));
     if (input.okrId) { if (!input.managedAgentId) throw new Error('OKR commands require a managed Agent.'); args.unshift(tx.object(input.okrId)); }
-    tx.moveCall({ target: input.okrId ? `${this.fm.packageId}::okr::begin_command` : `${this.fm.packageId}::node_execution::begin_${input.managedAgentId ? 'agent' : 'host'}_command`, arguments: args });
+    tx.moveCall({ target: input.okrId ? `${this.fm.okrPackageId}::okr::begin_command` : `${this.fm.packageId}::node_execution::begin_${input.managedAgentId ? 'agent' : 'host'}_command`, arguments: args });
     return tx;
   }
   finishCommand(input: { executionId: string; capabilityId: string; organizationId: string; okrId?: string; finalState: number; expectedCursor: bigint | string | number; spentAmount: bigint | string | number; keyVersion: bigint | string | number; encryptedResult: Uint8Array; tx?: Transaction }) {
     if (input.finalState === EXECUTION_STATES.needsConfirmation && toBigInt(input.spentAmount) !== 0n) throw new Error('Unknown execution cannot release its budget reservation.');
     const tx = this.fm.useTransaction(input.tx);
-    tx.moveCall({ target: input.okrId ? `${this.fm.packageId}::okr::finish_command` : `${this.fm.packageId}::node_execution::finish_command_with_budget`, arguments: [...(input.okrId ? [tx.object(input.okrId)] : []), tx.object(input.executionId), tx.object(input.capabilityId), tx.object(input.organizationId), tx.pure.u8(input.finalState), tx.pure.u64(toBigInt(input.expectedCursor)), tx.pure.u64(toBigInt(input.spentAmount)), tx.pure.u64(toBigInt(input.keyVersion)), bytesArgument(tx, this.fm.packageId, input.encryptedResult), tx.object('0x6')] });
+    tx.moveCall({ target: input.okrId ? `${this.fm.okrPackageId}::okr::finish_command` : `${this.fm.packageId}::node_execution::finish_command_with_budget`, arguments: [...(input.okrId ? [tx.object(input.okrId)] : []), tx.object(input.executionId), tx.object(input.capabilityId), tx.object(input.organizationId), tx.pure.u8(input.finalState), tx.pure.u64(toBigInt(input.expectedCursor)), tx.pure.u64(toBigInt(input.spentAmount)), tx.pure.u64(toBigInt(input.keyVersion)), bytesArgument(tx, this.fm.packageId, input.encryptedResult), tx.object('0x6')] });
     return tx;
   }
   requestStop(input: { executionId: string; capabilityId: string; organizationId: string; humanId: string; grantId: string; okrId?: string; tx?: Transaction }) {
     const tx = this.fm.useTransaction(input.tx);
-    tx.moveCall({ target: input.okrId ? `${this.fm.packageId}::okr::request_stop_v2` : `${this.fm.packageId}::node_execution::request_stop_with_budget_v2`, arguments: [...(input.okrId ? [tx.object(input.okrId)] : []), tx.object(input.executionId), tx.object(input.capabilityId), tx.object(input.organizationId), tx.object(input.humanId), tx.object(input.grantId), tx.object('0x6')] });
+    tx.moveCall({ target: input.okrId ? `${this.fm.okrPackageId}::okr::request_stop_v2` : `${this.fm.packageId}::node_execution::request_stop_with_budget_v2`, arguments: [...(input.okrId ? [tx.object(input.okrId)] : []), tx.object(input.executionId), tx.object(input.capabilityId), tx.object(input.organizationId), tx.object(input.humanId), tx.object(input.grantId), tx.object('0x6')] });
     return tx;
   }
   async getBudget(capabilityId: string) {

@@ -1,22 +1,22 @@
 /// Consume the exact Host acceptance in the same transaction as control and
 /// OKR approval. This transaction does not dispatch or continue execution.
-module fractalmind_protocol::handover {
+module fractalmind_okr::handover {
     use std::string::{Self, String};
     use std::bcs;
     use std::hash;
     use sui::object::{Self, ID, UID};
     use sui::clock::{Self, Clock};
     use sui::tx_context::TxContext;
-    use sui::dynamic_field as df;
     use sui::ed25519;
     use sui::transfer;
     use sui::event;
-    use fractalmind_protocol::organization::{Self, Organization};
+    use fractalmind_protocol::organization::Organization;
+    use fractalmind_protocol::execution_extension as extension;
     use fractalmind_protocol::identity::{Self, HumanIdentity, DeviceGrant};
     use fractalmind_protocol::host::{Self, HostMembership, CoordinatorBinding, ManagedAgent};
     use fractalmind_protocol::node_execution::{Self, CommandExecution};
     use fractalmind_protocol::remote_authority::{Self as ra, RemoteCapability};
-    use fractalmind_protocol::okr::{Self, Okr};
+    use fractalmind_okr::okr::{Self, Okr};
 
     const E_INPUT: u64 = 9501;
     const E_STALE: u64 = 9502;
@@ -109,13 +109,13 @@ module fractalmind_protocol::handover {
             && expires <= identity::grant_expiry(grant), E_STALE);
         node_execution::assert_handover_review(review, org, human, grant, member, managed, cap, observed_at);
         let key = UsedReviewKey { execution: object::id(review) };
-        assert!(!df::exists_(organization::borrow_uid(org), key), E_USED);
+        assert!(!extension::has_org_field(org, 1, &okr::seal(), bcs::to_bytes(&key)), E_USED);
         let hashed = proposal_hash(&p);
         let a = acceptance(object::id(review), object::id(org), object::id(human), object::id(grant),
             object::id(member), object::id(binding), host::membership_host_address(member), host::managed_instance(managed),
             hashed, coverage_revision, observed_at);
         assert!(ed25519::ed25519_verify(&host_signature, &host::membership_public_key(member), &acceptance_bytes(&a)), E_PROOF);
-        host::confirm_reviewed_control(org, human, grant, member, binding, managed, expected_managed_version, workspace, clock, ctx);
+        extension::confirm_reviewed_control(org, human, grant, &okr::seal(), member, binding, managed, expected_managed_version, workspace, clock, ctx);
         okr::activate_reviewed(okr, org, human, grant, member, binding, managed, expected_okr_version,
             workspace, boundary, asset, limit, expires, expected_record_revision, key_version, encrypted_agreement, clock, ctx);
         let record = Approval {
@@ -126,7 +126,7 @@ module fractalmind_protocol::handover {
             managed_version: host::managed_version(managed), agreement_version: okr::agreement_version(okr),
         };
         let id = object::id(&record);
-        df::add(organization::borrow_uid_mut(org), key, id);
+        extension::put_org_field(org, 1, &okr::seal(), bcs::to_bytes(&key), id);
         okr::record_handover_policy(okr, max_calls, nonce, hashed, id);
         event::emit(Approved { approval_id: id, org_id: object::id(org), okr_id: object::id(okr),
             managed_agent_id: object::id(managed), review_execution_id: object::id(review),

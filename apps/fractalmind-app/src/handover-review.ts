@@ -280,7 +280,7 @@ export class HandoverReview {
       object.objectId !== p.okr_id ||
       object.owner.$kind !== "Shared" ||
       !object.content ||
-      object.type !== `${this.chain.sdk.client.typesPackageId}::okr::Okr`
+      object.type !== `${this.chain.sdk.client.okrTypesPackageId}::okr::Okr`
     )
       throw new HandoverReviewError("invalid_source");
     const okr = OkrBcs.parse(object.content);

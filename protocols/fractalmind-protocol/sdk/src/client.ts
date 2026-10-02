@@ -18,12 +18,21 @@ export class FractalMindClient {
   public readonly client: ClientWithCoreApi;
   public readonly packageId: ObjectId;
   public readonly typesPackageId: ObjectId;
+  public readonly okrPackageId: ObjectId;
+  public readonly okrTypesPackageId: ObjectId;
+  public readonly directPackageId: ObjectId;
+  public readonly directTypesPackageId: ObjectId;
   public readonly network: NetworkName;
   public readonly registryId?: ObjectId;
 
   constructor(options: FractalMindClientOptions) {
     this.packageId = normalizeSuiAddress(options.packageId);
     this.typesPackageId = normalizeSuiAddress(options.originalPackageId ?? options.packageId);
+    if ((options.originalOkrPackageId && !options.okrPackageId) || (options.originalDirectPackageId && !options.directPackageId)) throw new Error('An extension type origin requires its call package.');
+    this.okrPackageId = normalizeSuiAddress(options.okrPackageId ?? options.packageId);
+    this.okrTypesPackageId = normalizeSuiAddress(options.originalOkrPackageId ?? options.okrPackageId ?? this.typesPackageId);
+    this.directPackageId = normalizeSuiAddress(options.directPackageId ?? options.packageId);
+    this.directTypesPackageId = normalizeSuiAddress(options.originalDirectPackageId ?? options.directPackageId ?? this.typesPackageId);
     this.registryId = options.registryId ? normalizeSuiAddress(options.registryId) : undefined;
     const clientNetwork = options.client?.network;
     const knownClientNetwork = ['localnet', 'devnet', 'testnet', 'mainnet'].includes(clientNetwork ?? '') ? clientNetwork as NetworkName : undefined;

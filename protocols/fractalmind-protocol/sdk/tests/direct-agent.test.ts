@@ -36,7 +36,7 @@ const PermissionBinding = bcs.struct("PermissionCapability", {
   permission_version: bcs.u64(),
   approval_id: bcs.option(bcs.Address),
 });
-function fixture(approved = false) {
+function fixture(approved = false, directPackage = id(1)) {
   const signer = Ed25519Keypair.generate(),
     device = signer.toSuiAddress();
   const permission = {
@@ -188,7 +188,7 @@ function fixture(approved = false) {
       ) => ({
         object: {
           objectId,
-          type: `${id(1)}::${module}::${name}`,
+          type: `${module === "direct_agent" ? directPackage : id(1)}::${module}::${name}`,
           owner: { $kind: owner },
           content,
         },
@@ -248,15 +248,22 @@ function fixture(approved = false) {
       parentId: string;
       name: { type: string; bcs: Uint8Array };
     }) => {
+      if (parentId === id(2)) {
+        assert.equal(name.type, `${id(1)}::execution_extension::IndexKey`);
+        assert.deepEqual(name.bcs, new Uint8Array([0]));
+        return { dynamicField: { value: { type: `${id(1)}::execution_extension::PermissionIndex`, bcs: bcs.struct("PermissionIndex", { source: bcs.struct("TypeName", {name:bcs.string()}), agents: bcs.struct("Table", {id:bcs.Address,size:bcs.u64()}) }).serialize({source:{name:`${directPackage.slice(2)}::direct_agent::Witness`},agents:Table(31,1)}).toBytes() } } };
+      }
+      if (parentId === id(31)) return { dynamicField: { value: { type:`${id(2)}::object::ID`, bcs:bcs.Address.serialize(id(4)).toBytes() } } };
       if (parentId === id(10)) {
         assert.equal(
           name.type,
-          `${id(1)}::direct_agent::PermissionCapabilityKey`,
+          `${id(1)}::execution_extension::FieldKey<${directPackage}::direct_agent::Witness>`,
         );
+        assert.deepEqual(name.bcs, bcs.vector(bcs.u8()).serialize(Array.from(new TextEncoder().encode("permission"))).toBytes());
         return {
           dynamicField: {
             value: {
-              type: `${id(1)}::direct_agent::PermissionCapability`,
+              type: `${directPackage}::direct_agent::PermissionCapability`,
               bcs: PermissionBinding.serialize(binding).toBytes(),
             },
           },
@@ -288,6 +295,7 @@ function fixture(approved = false) {
   };
   const sdk = new FractalMindSDK({
     packageId: id(1),
+    directPackageId: directPackage,
     client: { core } as unknown as ClientWithCoreApi,
   });
   const authority = {
@@ -705,3 +713,14 @@ test("direct lifecycle builders retain unknown reservations and pin single appro
     /budget/,
   );
 });
+
+ test("split direct package pins reads and routes execution separately from core", async () => {
+  const direct = id(50), f = fixture(false, direct), command = await f.command();
+  assert.equal((await f.sdk.directAgent.getPermissionForAgent(id(2), id(5))).id, id(4));
+  const tx = await f.sdk.nodeExecution.prepareCommand({ ...f.authority, command });
+  const call = tx.getData().commands.find(x => x.$kind === "MoveCall")!.MoveCall;
+  assert.equal(call.package, direct);
+  assert.equal(call.module, "direct_agent");
+  assert.equal(f.sdk.client.typesPackageId, id(1));
+  assert.equal(f.sdk.client.directTypesPackageId, direct);
+ });

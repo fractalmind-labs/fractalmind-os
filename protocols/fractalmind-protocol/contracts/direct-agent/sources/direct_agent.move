@@ -1,22 +1,21 @@
 /// v0.2.0 direct interaction with a fixed managed instance. Legacy AgentPolicy
 /// objects retain their certificate/action ABI; managed-device permissions use
 /// the existing RemoteCapability, CommandExecution and encrypted product records.
-module fractalmind_protocol::direct_agent {
+module fractalmind_direct::direct_agent {
     use sui::object::{Self, ID, UID};
     use sui::clock::{Self, Clock};
     use sui::tx_context::{Self, TxContext};
-    use sui::dynamic_field as df;
     use sui::table::{Self, Table};
     use sui::transfer;
     use sui::event;
     use sui::address;
     use std::string::{Self, String};
     use std::option::{Self, Option};
-    use fractalmind_protocol::organization::{Self, Organization};
+    use fractalmind_protocol::organization::Organization;
+    use fractalmind_protocol::execution_extension as extension;
     use fractalmind_protocol::identity::{Self, HumanIdentity, DeviceGrant};
     use fractalmind_protocol::host::{Self, HostMembership, CoordinatorBinding, ManagedAgent};
-    use fractalmind_protocol::okr;
-    use fractalmind_protocol::product_record;
+
     use fractalmind_protocol::node_execution::{Self as execution, CommandExecution};
     use fractalmind_protocol::remote_authority::{Self as ra, RemoteCapability, ContractWitness};
 
@@ -31,13 +30,11 @@ module fractalmind_protocol::direct_agent {
     const E_WORKSPACE_UNKNOWN: u64 = 9609;
     const MAX_TTL: u64 = 2592000000;
 
-    public struct IndexKey has copy, drop, store {}
-    public struct PermissionIndex has store { agents: Table<ID, ID> }
-    public struct PermissionCapabilityKey has copy, drop, store {}
+    /// Constructor stays private to this module, including after upgrades.
+    public struct Witness has drop {}
     public struct PermissionCapability has copy, drop, store {
         permission_id: ID, permission_version: u64, approval_id: Option<ID>,
     }
-    public struct DirectCommandKey has copy, drop, store { intent_hash: vector<u8> }
     public struct DirectCommandBinding has copy, drop, store {
         permission_id: ID, permission_version: u64, message_id: ID, approval_id: Option<ID>,
     }
@@ -120,14 +117,12 @@ module fractalmind_protocol::direct_agent {
     ): ID {
         approve_source(org, human, grant, member, binding, managed, clock, ctx);
         input(&actions, &boundary_hash, max_calls, budget_limit, expires_at_ms, clock);
-        if (!df::exists_(organization::borrow_uid(org), IndexKey {}))
-            df::add(organization::borrow_uid_mut(org), IndexKey {}, PermissionIndex { agents: table::new(ctx) });
-        let idx: &PermissionIndex = df::borrow(organization::borrow_uid(org), IndexKey {});
-        assert!(!table::contains(&idx.agents, object::id(managed)), E_CONFLICT);
-        let record = product_record::save_authorized(org, object::id(human), object::id(grant), identity::grant_version(grant),
+        let id = object::new(ctx);
+        extension::register_permission(org, human, grant, object::id(managed), object::uid_to_inner(&id), &Witness {}, clock, ctx);
+        let record = extension::save_record(org, human, grant, 0, &Witness {},
             2, name(object::id(managed), b"-permission"), 0, key_version, encrypted_permission, clock, ctx);
         let permission = StandingPermission {
-            id: object::new(ctx), org_id: object::id(org), owner_human: object::id(human), human_generation: identity::generation(human),
+            id, org_id: object::id(org), owner_human: object::id(human), human_generation: identity::generation(human),
             managed_agent: object::id(managed), managed_version: host::managed_version(managed), membership_id: object::id(member), membership_version: host::membership_version(member),
             host_address: host::membership_host_address(member), workspace_hash: host::managed_workspace_hash(managed), version: 1, revoked: false, allowed_actions: actions, boundary_hash,
             max_calls, budget_limit, spent: 0, reserved: 0, approved_spent: 0, approved_reserved: 0, expires_at_ms,
@@ -135,7 +130,6 @@ module fractalmind_protocol::direct_agent {
             messages: table::new(ctx), approvals: table::new(ctx), message_runs: table::new(ctx), claims: table::new(ctx),
         };
         let id = object::id(&permission);
-        let idx: &mut PermissionIndex = df::borrow_mut(organization::borrow_uid_mut(org), IndexKey {}); table::add(&mut idx.agents, object::id(managed), id);
         changed(&permission); transfer::share_object(permission); id
     }
     public fun update_permission(
@@ -149,7 +143,7 @@ module fractalmind_protocol::direct_agent {
         assert!(permission.version == expected_version, E_VERSION);
         input(&actions, &boundary_hash, max_calls, budget_limit, expires_at_ms, clock);
         assert!(permission.spent <= budget_limit && permission.reserved <= budget_limit - permission.spent, E_BUDGET);
-        permission.permission_record = product_record::save_authorized(org, object::id(human), object::id(grant), identity::grant_version(grant),
+        permission.permission_record = extension::save_record(org, human, grant, 0, &Witness {},
             2, name(permission.managed_agent, b"-permission"), permission.record_revision, key_version, encrypted_permission, clock, ctx);
         permission.record_revision = permission.record_revision + 1;
         permission.version = permission.version + 1; permission.revoked = false;
@@ -170,8 +164,7 @@ module fractalmind_protocol::direct_agent {
         host::assert_member(org, member, binding, clock); host::assert_managed(org, member, managed, true);
         assert!(permission.managed_agent == object::id(managed) && permission.managed_version == host::managed_version(managed) && permission.membership_id == object::id(member)
             && permission.membership_version == host::membership_version(member) && permission.host_address == host::membership_host_address(member) && permission.workspace_hash == host::managed_workspace_hash(managed), E_VERSION);
-        let idx: &PermissionIndex = df::borrow(organization::borrow_uid(org), IndexKey {});
-        assert!(*table::borrow(&idx.agents, permission.managed_agent) == object::id(permission), E_SCOPE);
+        extension::assert_permission(org, &Witness {}, permission.managed_agent, object::id(permission));
     }
     public fun create_message(
         permission: &mut StandingPermission, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
@@ -186,7 +179,7 @@ module fractalmind_protocol::direct_agent {
         assert!(budget_amount <= 1000 && ((action == string::utf8(b"ask") || action == string::utf8(b"status")) == (budget_amount == 0)), E_BUDGET);
         assert!(expires_at_ms > now && expires_at_ms - now <= 300000 && expires_at_ms <= permission.expires_at_ms, E_EXPIRED);
         assert!(!table::contains(&permission.messages, message_token), E_CONFLICT);
-        let record = product_record::save_authorized(org, object::id(human), object::id(grant), identity::grant_version(grant),
+        let record = extension::save_record(org, human, grant, 0, &Witness {},
             6, message_name(message_token, false), 0, key_version, encrypted_message, clock, ctx);
         let message = Message { id: object::new(ctx), org_id: permission.org_id, permission_id: object::id(permission), permission_version: permission.version,
             managed_agent: permission.managed_agent, managed_version: permission.managed_version, membership_id: permission.membership_id,
@@ -209,7 +202,7 @@ module fractalmind_protocol::direct_agent {
             && message.budget_amount <= permission.budget_limit - permission.spent - permission.reserved && (!writes(&message.action) || (complete && !protected))
     }
     fun workspace_state(permission: &StandingPermission, org: &Organization): (bool, u64, bool) {
-        okr::direct_workspace_state(org, permission.managed_agent, permission.host_address, permission.workspace_hash)
+        extension::direct_workspace_state(org, permission.managed_agent, permission.host_address, permission.workspace_hash)
     }
     public fun request_approval(
         permission: &mut StandingPermission, message: &Message, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
@@ -220,7 +213,7 @@ module fractalmind_protocol::direct_agent {
         assert!(!normal_allowed(permission, message, org), E_APPROVAL_STATE);
         assert!(!table::contains(&permission.approvals, object::id(message)) && !table::contains(&permission.message_runs, object::id(message)), E_CONFLICT);
         let (_, revision, _) = workspace_state(permission, org);
-        let record = product_record::save_authorized(org, object::id(human), object::id(grant), identity::grant_version(grant),
+        let record = extension::save_record(org, human, grant, 0, &Witness {},
             3, message_name(message.message_token, true), 0, key_version, encrypted_request, clock, ctx);
         let approval = Approval { id: object::new(ctx), org_id: permission.org_id, permission_id: object::id(permission), permission_version: permission.version,
             message_id: object::id(message), managed_agent: permission.managed_agent, managed_version: permission.managed_version,
@@ -254,7 +247,7 @@ module fractalmind_protocol::direct_agent {
         current(permission, org, human, member, binding, managed, clock); message_current(permission, message, human, clock); approval_message(permission, approval, message);
         assert!(approval.state == 0 && clock::timestamp_ms(clock) < approval.expires_at_ms, E_APPROVAL_STATE);
         if (approve) approval_workspace(permission, approval, org);
-        approval.encrypted_record = product_record::save_authorized(org, object::id(human), object::id(grant), identity::grant_version(grant),
+        approval.encrypted_record = extension::save_record(org, human, grant, 0, &Witness {},
             3, message_name(message.message_token, true), 1, key_version, encrypted_decision, clock, ctx);
         approval.state = if (approve) 1 else 2; approval.approved_device = tx_context::sender(ctx); approval.approved_grant = option::some(object::id(grant));
         approval.grant_version = identity::grant_version(grant); approval_changed(approval);
@@ -269,9 +262,8 @@ module fractalmind_protocol::direct_agent {
         boundary: vector<u8>, amount: u64, approval: Option<ID>, expires: u64, max_uses: u64, clock: &Clock, ctx: &mut TxContext) {
         current(permission, org, human, member, binding, managed, clock);
         let asset = if (amount == 0) string::utf8(b"") else string::utf8(b"TOOL_CALLS");
-        let mut cap = host::new_agent_capability(org, human, grant, member, binding, managed, vector[string::utf8(b"direct.message")], string::utf8(b"direct"), max_uses, asset, amount, expires, clock, ctx);
-        ra::bind_execution_contract(&mut cap, object::id(permission), permission.version, boundary);
-        df::add(ra::capability_uid_mut(&mut cap), PermissionCapabilityKey {}, PermissionCapability { permission_id: object::id(permission), permission_version: permission.version, approval_id: approval });
+        let mut cap = extension::new_capability(org, human, grant, member, binding, managed, 0, &Witness {}, object::id(permission), permission.version, boundary, max_uses, asset, amount, expires, clock, ctx);
+        extension::put_field(&mut cap, &Witness {}, b"permission", PermissionCapability { permission_id: object::id(permission), permission_version: permission.version, approval_id: approval });
         ra::share_capability(cap);
     }
     public fun issue_capability(permission: &StandingPermission, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant, member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent, expected_version: u64, expires_at_ms: u64, clock: &Clock, ctx: &mut TxContext) {
@@ -285,10 +277,10 @@ module fractalmind_protocol::direct_agent {
         issue(permission, org, human, grant, member, binding, managed, message.boundary_hash, message.budget_amount, option::some(object::id(approval)), approval.expires_at_ms, 1, clock, ctx);
     }
     fun witness(permission: &StandingPermission, cap: &RemoteCapability, message: &Message, approval: Option<ID>): ContractWitness {
-        let binding: &PermissionCapability = df::borrow(ra::capability_uid(cap), PermissionCapabilityKey {});
+        let binding: &PermissionCapability = extension::field(cap, &Witness {}, b"permission");
         assert!(binding.permission_id == object::id(permission) && binding.permission_version == permission.version && binding.approval_id == approval, E_VERSION);
         assert!(ra::org_id(cap) == permission.org_id && ra::actions(cap) == vector[string::utf8(b"direct.message")] && ra::scope(cap) == string::utf8(b"direct"), E_SCOPE);
-        ra::contract_witness(cap, object::id(permission), permission.version, 0, message.boundary_hash)
+        extension::witness(cap, &Witness {}, object::id(permission), permission.version, 0, message.boundary_hash)
     }
     fun prepare(
         permission: &mut StandingPermission, message: &Message, cap: &mut RemoteCapability, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
@@ -302,14 +294,14 @@ module fractalmind_protocol::direct_agent {
         let budget_asset = if (message.budget_amount == 0) string::utf8(b"") else string::utf8(b"TOOL_CALLS");
         let run = execution::prepare_agent_command_with_contract_v2(cap, org, human, grant, member, binding, managed, witness,
             string::utf8(b"direct.message"), string::utf8(b"direct"), command_id, nonce, idempotency_key, budget_asset, message.budget_amount, intent_hash, issued_at_ms, expires_at_ms, clock, ctx);
-        let key = DirectCommandKey { intent_hash };
+        let key = intent_hash;
         let value = DirectCommandBinding { permission_id: object::id(permission), permission_version: permission.version, message_id: object::id(message), approval_id: approval };
         if (option::is_none(&old)) {
             if (option::is_some(&approval)) permission.approved_reserved = permission.approved_reserved + message.budget_amount else permission.reserved = permission.reserved + message.budget_amount;
             table::add(&mut permission.message_runs, object::id(message), run);
             table::add(&mut permission.claims, run, DirectClaim { capability_id: object::id(cap), message_id: object::id(message), permission_version: permission.version, approval_id: approval, reserved: message.budget_amount, spent: 0, settled: false });
-            df::add(ra::capability_uid_mut(cap), key, value);
-        } else assert!(*df::borrow<DirectCommandKey, DirectCommandBinding>(ra::capability_uid(cap), key) == value, E_CONFLICT);
+            extension::put_field(cap, &Witness {}, key, value);
+        } else assert!(*extension::field<Witness, DirectCommandBinding>(cap, &Witness {}, key) == value, E_CONFLICT);
         run
     }
     public fun prepare_message(permission: &mut StandingPermission, message: &Message, cap: &mut RemoteCapability, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
@@ -354,10 +346,10 @@ module fractalmind_protocol::direct_agent {
     fun historical(permission: &StandingPermission, run: &CommandExecution, cap: &RemoteCapability, org: &Organization): ContractWitness {
         assert!(permission.org_id == object::id(org) && execution::organization_id(run) == permission.org_id && execution::capability_id(run) == object::id(cap), E_SCOPE);
         let claim = table::borrow(&permission.claims, object::id(run));
-        let binding: &DirectCommandBinding = df::borrow(ra::capability_uid(cap), DirectCommandKey { intent_hash: execution::intent_hash(run) });
+        let binding: &DirectCommandBinding = extension::field(cap, &Witness {}, execution::intent_hash(run));
         assert!(!claim.settled && claim.capability_id == object::id(cap) && claim.reserved == execution::budget_amount(run) && binding.permission_id == object::id(permission)
             && binding.permission_version == claim.permission_version && binding.message_id == claim.message_id && binding.approval_id == claim.approval_id, E_SCOPE);
-        ra::settlement_witness(cap, execution::intent_hash(run), object::id(permission))
+        extension::settlement_witness(cap, &Witness {}, execution::intent_hash(run), object::id(permission))
     }
     fun settle(permission: &mut StandingPermission, run: ID, spent: u64) {
         let claim = table::borrow_mut(&mut permission.claims, run);

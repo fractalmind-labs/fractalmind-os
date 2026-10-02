@@ -799,7 +799,7 @@ export default function HostAccess({
                     "将以下公开连接项合并进新主机的 sentinel.yaml。这里不包含邀请码或私钥。",
                     "Merge these public connection fields into sentinel.yaml on the new Host. They contain no invitation or private key.",
                   )}
-                  <pre>{`sui:\n  host_connection_enabled: true\n  network: ${JSON.stringify(profile.network)}\n  rpc: ${JSON.stringify(profile.rpcUrl)}\n  chain_identifier: ${JSON.stringify(directory?.chainIdentifier ?? profile.chainIdentifier ?? "")}\n  protocol_package_id: ${JSON.stringify(profile.packageId)}\n  protocol_original_package_id: ${JSON.stringify(profile.originalPackageId ?? profile.packageId)}\n  protocol_registry_id: ${JSON.stringify(profile.registryId)}\n  org_id: ${JSON.stringify(organizationId)}\n  host_join_gas_budget: 200000000`}</pre>
+                  <pre>{`sui:\n  host_connection_enabled: true\n  network: ${JSON.stringify(profile.network)}\n  rpc: ${JSON.stringify(profile.rpcUrl)}\n  chain_identifier: ${JSON.stringify(directory?.chainIdentifier ?? profile.chainIdentifier ?? "")}\n  protocol_package_id: ${JSON.stringify(profile.packageId)}\n  protocol_original_package_id: ${JSON.stringify(profile.originalPackageId ?? profile.packageId)}\n  okr_package_id: ${JSON.stringify(profile.okrPackageId ?? profile.packageId)}\n  okr_original_package_id: ${JSON.stringify(profile.originalOkrPackageId ?? profile.okrPackageId ?? profile.originalPackageId ?? profile.packageId)}\n  protocol_registry_id: ${JSON.stringify(profile.registryId)}\n  org_id: ${JSON.stringify(organizationId)}\n  host_join_gas_budget: 200000000`}</pre>
                 </li>
                 <li>
                   {t(

@@ -3,7 +3,7 @@ import type {
   Transaction,
   TransactionArgument,
 } from "@mysten/sui/transactions";
-import { deriveDynamicFieldID, normalizeSuiAddress } from "@mysten/sui/utils";
+import { deriveDynamicFieldID, normalizeSuiAddress, normalizeStructTag } from "@mysten/sui/utils";
 import { FractalMindClient, toBigInt } from "./client.js";
 import { executionBoundaryHash } from "./execution-boundary.js";
 import { sha256 } from "@noble/hashes/sha2.js";
@@ -98,7 +98,7 @@ export const DirectClaimBcs = bcs.struct("DirectClaim", {
   spent: bcs.u64(),
   settled: bcs.bool(),
 });
-const PermissionIndex = bcs.struct("PermissionIndex", { agents: Table });
+const PermissionIndex = bcs.struct("PermissionIndex", { source: bcs.struct("TypeName", { name: bcs.string() }), agents: Table });
 const PermissionBinding = bcs.struct("PermissionCapability", {
   permission_id: ID,
   permission_version: bcs.u64(),
@@ -301,7 +301,7 @@ export class DirectAgentApi {
   constructor(private readonly fm: FractalMindClient) {}
   private call(tx: Transaction, name: string, args: TransactionArgument[]) {
     tx.moveCall({
-      target: `${this.fm.packageId}::direct_agent::${name}`,
+      target: `${this.fm.directPackageId}::direct_agent::${name}`,
       arguments: args,
     });
     return tx;
@@ -596,7 +596,7 @@ export class DirectAgentApi {
       });
     if (
       object.objectId !== expectedId ||
-      object.type !== `${this.fm.typesPackageId}::${module}::${name}` ||
+      object.type !== `${module === "direct_agent" ? this.fm.directTypesPackageId : this.fm.typesPackageId}::${module}::${name}` ||
       object.owner.$kind !== owner ||
       !object.content
     )
@@ -612,7 +612,7 @@ export class DirectAgentApi {
       parentId: normalizeSuiAddress(parentId),
       name,
     });
-    if (dynamicField.value.type !== type)
+    if (normalizeStructTag(dynamicField.value.type) !== normalizeStructTag(type))
       throw new Error("Invalid direct index/binding source.");
     return dynamicField.value.bcs;
   }
@@ -644,13 +644,14 @@ export class DirectAgentApi {
   async getPermissionForAgent(organizationId: string, managedAgentId: string) {
     const org = normalizeSuiAddress(organizationId),
       managed = normalizeSuiAddress(managedAgentId),
-      module = `${this.fm.typesPackageId}::direct_agent`;
+      module = `${this.fm.directTypesPackageId}::direct_agent`;
     const index = PermissionIndex.parse(
-      await this.field(org, `${module}::PermissionIndex`, {
-        type: `${module}::IndexKey`,
+      await this.field(org, `${this.fm.typesPackageId}::execution_extension::PermissionIndex`, {
+        type: `${this.fm.typesPackageId}::execution_extension::IndexKey`,
         bcs: new Uint8Array([0]),
       }),
     );
+    if (index.source.name !== `${this.fm.directTypesPackageId.slice(2)}::direct_agent::Witness`) throw new Error("Unexpected direct extension source.");
     const pointer = ID.parse(
       await this.field(index.agents.id, "0x2::object::ID", {
         type: "0x2::object::ID",
@@ -706,30 +707,28 @@ export class DirectAgentApi {
     return a;
   }
   async getCapabilityBinding(capabilityId: string) {
-    const module = `${this.fm.typesPackageId}::direct_agent`;
+    const module = `${this.fm.directTypesPackageId}::direct_agent`;
     return PermissionBinding.parse(
       await this.field(capabilityId, `${module}::PermissionCapability`, {
-        type: `${module}::PermissionCapabilityKey`,
-        bcs: new Uint8Array([0]),
+        type: `${this.fm.typesPackageId}::execution_extension::FieldKey<${module}::Witness>`,
+        bcs: Bytes.serialize(Array.from(new TextEncoder().encode("permission"))).toBytes(),
       }),
     );
   }
   async getCommandBinding(capabilityId: string, intentHash: Uint8Array) {
     if (intentHash.length !== 32)
       throw new Error("32-byte signed intent required.");
-    const module = `${this.fm.typesPackageId}::direct_agent`;
+    const module = `${this.fm.directTypesPackageId}::direct_agent`;
     return CommandBinding.parse(
       await this.field(capabilityId, `${module}::DirectCommandBinding`, {
-        type: `${module}::DirectCommandKey`,
-        bcs: CommandKey.serialize({
-          intent_hash: Array.from(intentHash),
-        }).toBytes(),
+        type: `${this.fm.typesPackageId}::execution_extension::FieldKey<${module}::Witness>`,
+        bcs: Bytes.serialize(Array.from(intentHash)).toBytes(),
       }),
     );
   }
   async getClaim(permissionId: string, executionId: string) {
     const permission = await this.getPermission(permissionId),
-      module = `${this.fm.typesPackageId}::direct_agent`;
+      module = `${this.fm.directTypesPackageId}::direct_agent`;
     const claim = DirectClaimBcs.parse(
       await this.field(permission.claims.id, `${module}::DirectClaim`, {
         type: "0x2::object::ID",
@@ -806,7 +805,7 @@ export class DirectAgentApi {
   }
   /** Exact absence is distinct from a corrupt index or network failure. */
   isMissingPermissionIndex(error: unknown, organizationId: string) {
-    const type = `${this.fm.typesPackageId}::direct_agent::IndexKey`;
+    const type = `${this.fm.typesPackageId}::execution_extension::IndexKey`;
     const expected = deriveDynamicFieldID(
       normalizeSuiAddress(organizationId),
       TypeTagSerializer.parseFromStr(type),

@@ -28,7 +28,7 @@ func connectionResolver(cfg *config.Config, rpc connectionRPC) (*nodecommand.Cha
 	if original == "" {
 		original = cfg.SUI.ProtocolPackageID
 	}
-	return nodecommand.NewChainAuthorityResolver(rpc, original)
+	return nodecommand.NewChainAuthorityResolver(rpc, original, okrTypeOrigin(cfg))
 }
 
 func configureChainWorker(client *ws.Client, cfg *config.Config, rpc connectionRPC, key *sui.Keypair, encryption []byte) error {

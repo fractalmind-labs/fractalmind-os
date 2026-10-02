@@ -265,7 +265,7 @@ export class HandoverApproval {
       object.objectId !== proposal.okr_id ||
       object.owner.$kind !== "Shared" ||
       !object.content ||
-      object.type !== `${this.chain.sdk.client.typesPackageId}::okr::Okr`
+      object.type !== `${this.chain.sdk.client.okrTypesPackageId}::okr::Okr`
     )
       throw new HandoverApprovalError("invalid_source");
     const okr = OkrBcs.parse(object.content);

@@ -54,3 +54,23 @@ func TestChunkedBytesStayAtomicAndReconstructOriginalPayload(t *testing.T) {
 		t.Fatal("oversize payload accepted")
 	}
 }
+
+func TestExtensionResultChunksUseCoreHelper(t *testing.T) {
+	ptb := &v2.ProgrammableTransaction{}
+	_, err := appendMoveArgument(ptb, "0x99", PackageChunkedBytes{PackageID: "0x42", Bytes: bytes.Repeat([]byte{1}, 32001)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ptb.Commands) != 2 {
+		t.Fatal("expected two core append calls")
+	}
+	core, _ := normalizeAddress("0x42")
+	for _, command := range ptb.Commands {
+		if command.GetMoveCall().GetPackage() != core {
+			t.Fatal("helper routed to extension")
+		}
+	}
+	if _, err = appendMoveArgument(&v2.ProgrammableTransaction{}, "0x99", PackageChunkedBytes{PackageID: "malformed", Bytes: []byte{1}}); err == nil {
+		t.Fatal("invalid helper package accepted")
+	}
+}

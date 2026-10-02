@@ -93,14 +93,17 @@ module fractalmind_protocol::organization {
 
     /// Create and share the global ProtocolRegistry. Called once at publish.
     public(package) fun create_and_share_registry(ctx: &mut TxContext) {
-        let registry = ProtocolRegistry {
+        transfer::share_object(new_registry(ctx));
+    }
+    public(package) fun new_registry(ctx: &mut TxContext): ProtocolRegistry {
+        ProtocolRegistry {
             id: object::new(ctx),
             organizations: table::new(ctx),
             name_registry: table::new(ctx),
             org_count: 0,
-        };
-        transfer::share_object(registry);
+        }
     }
+    public(package) fun share_registry(registry: ProtocolRegistry) { transfer::share_object(registry); }
 
     // ===== Public Functions =====
 
