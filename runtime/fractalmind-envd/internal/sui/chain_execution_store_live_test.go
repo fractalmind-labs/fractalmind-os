@@ -133,7 +133,7 @@ func TestChainRuntimeResultStoreLive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(calls) != input.Command.CommandID+"\n" || !duplicate.Duplicate || duplicate.ExecutionState != expected || string(duplicate.Result) != string(response.Result) {
+	if string(calls) != input.Command.CommandID+"\n" || !duplicate.Duplicate || duplicate.ExecutionState != expected || string(duplicate.Result) != string(response.Result) || duplicate.TransactionDigest != response.TransactionDigest {
 		t.Fatal("fresh executor failed to restore exact chain result without invoking adapter")
 	}
 	resolver, err := nodecommand.NewChainAuthorityResolver(client, input.PackageID)

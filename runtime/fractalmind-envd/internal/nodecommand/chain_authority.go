@@ -18,11 +18,12 @@ import (
 // ChainObject contains raw, lossless Move BCS. JSON projections and local
 // authority.json files are never sources of identity or membership authority.
 type ChainObject struct {
-	ID, Type, OwnerID string
-	Version           uint64
-	Shared            bool
-	Immutable         bool
-	Content           []byte
+	ID, Type, OwnerID   string
+	PreviousTransaction string
+	Version             uint64
+	Shared              bool
+	Immutable           bool
+	Content             []byte
 }
 
 type ChainObjectReader interface {

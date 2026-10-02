@@ -19,7 +19,7 @@ func (c *GRPCClient) ReadChainObject(ctx context.Context, id string) (nodecomman
 	if err != nil || canonical != id {
 		return nodecommand.ChainObject{}, fmt.Errorf("object ID must be canonical")
 	}
-	response, err := c.ledger.GetObject(ctx, &v2.GetObjectRequest{ObjectId: proto.String(id), ReadMask: &fieldmaskpb.FieldMask{Paths: []string{"object_id", "object_type", "version", "contents", "owner"}}})
+	response, err := c.ledger.GetObject(ctx, &v2.GetObjectRequest{ObjectId: proto.String(id), ReadMask: &fieldmaskpb.FieldMask{Paths: []string{"object_id", "object_type", "version", "contents", "owner", "previous_transaction"}}})
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
 			return nodecommand.ChainObject{}, nodecommand.ErrChainObjectNotFound
@@ -31,5 +31,5 @@ func (c *GRPCClient) ReadChainObject(ctx context.Context, id string) (nodecomman
 		return nodecommand.ChainObject{}, fmt.Errorf("incomplete latest chain object %s", id)
 	}
 	owner := object.GetOwner()
-	return nodecommand.ChainObject{ID: object.GetObjectId(), Type: object.GetObjectType(), Version: object.GetVersion(), Shared: owner.GetKind() == v2.Owner_SHARED, Immutable: owner.GetKind() == v2.Owner_IMMUTABLE, OwnerID: owner.GetAddress(), Content: append([]byte(nil), object.GetContents().GetValue()...)}, nil
+	return nodecommand.ChainObject{ID: object.GetObjectId(), Type: object.GetObjectType(), Version: object.GetVersion(), PreviousTransaction: object.GetPreviousTransaction(), Shared: owner.GetKind() == v2.Owner_SHARED, Immutable: owner.GetKind() == v2.Owner_IMMUTABLE, OwnerID: owner.GetAddress(), Content: append([]byte(nil), object.GetContents().GetValue()...)}, nil
 }

@@ -21,6 +21,11 @@ import {
   wrapKeys,
   randomContentKey,
   bytesToHex,
+  signNodeCommand,
+  executionBoundaryHash,
+  encryptContent,
+  recordContext,
+  gasCost,
   type SelfPayTransactionOutcome,
   type SelfPayFeeQuote,
 } from "@fractalmind-labs/fractalmind-sdk";
@@ -70,6 +75,7 @@ const encryption = createDeviceEncryptionKeys(),
 const recovery = recoveryKeys(createRecoveryCode("localnet"), "localnet");
 const checks: string[] = [],
   transactions: unknown[] = [];
+let nativeExecution: unknown;
 const journal = new MemoryTransactionJournal();
 const invoke: NativeInvoke = async (command, args) => {
   assert.equal(args.profile, "test-host-fixture");
@@ -100,6 +106,7 @@ async function save() {
         complete: false,
         checks,
         transactions,
+        nativeExecution,
         limits: {
           generatedFixtureKeysOnly: true,
           invitationSecretsIncluded: false,
@@ -189,10 +196,11 @@ await Promise.all(
   ),
 );
 const identityRegistryId = await sdk.identity.resolveRegistry();
+const fixtureContentKey = randomContentKey();
 const keyring = new TextEncoder().encode(
   JSON.stringify({
     format: 1,
-    contentKey: bytesToHex(randomContentKey()),
+    contentKey: bytesToHex(fixtureContentKey),
     historicalKeys: {},
   }),
 );
@@ -272,6 +280,14 @@ const liveConnection = process.env.FM_ENVD_CHAIN_CONNECTION === "1";
 assert.ok(!liveConnection || process.env.FM_ENVD_JOIN_CLI_BIN);
 let envdConnection: unknown;
 let envdRejoin: unknown;
+assert.ok(
+  process.env.FM_ENVD_NATIVE_EXECUTION !== "1" ||
+    (process.env.FM_ENVD_NATIVE_DISCOVERY === "1" &&
+      process.env.FM_ENVD_AGENT_IMPORT === "1" &&
+      process.env.FM_ENVD_HOST_REJOIN !== "1" &&
+      process.env.FM_ENVD_AGENT_REBIND !== "1"),
+  "native execution requires its independent discovery/import fixture",
+);
 let beforeHostRevocation:
   | Awaited<ReturnType<CoordinatorReadClient["prepare"]>>
   | undefined;
@@ -320,6 +336,18 @@ function startCliHarness() {
     rejoinResultResolve = resolve;
     rejoinResultReject = reject;
   });
+  const nativePhases = Object.fromEntries(
+    ["statusReady", "statusResult", "executeReady", "executeResult"].map(
+      (name) => {
+        let resolve!: (value: any) => void, reject!: (e: Error) => void;
+        const promise = new Promise<any>((yes, no) => {
+          resolve = yes;
+          reject = no;
+        });
+        return [name, { resolve, reject, promise }];
+      },
+    ),
+  );
   helper.stdout.on("data", (part) => {
     output += String(part);
     buffer += String(part);
@@ -328,6 +356,18 @@ function startCliHarness() {
       const line = buffer.slice(0, newline);
       buffer = buffer.slice(newline + 1);
       try {
+        if (line.startsWith("FM_NATIVE_CONTROL_READY ")) {
+          const value = JSON.parse(
+            line.slice("FM_NATIVE_CONTROL_READY ".length),
+          );
+          nativePhases[value.phase + "Ready"].resolve(value);
+        }
+        if (line.startsWith("FM_NATIVE_CONTROL_RESULT ")) {
+          const value = JSON.parse(
+            line.slice("FM_NATIVE_CONTROL_RESULT ".length),
+          );
+          nativePhases[value.phase + "Result"].resolve(value);
+        }
         if (line.startsWith("FM_ENVD_HOST_PUBLIC "))
           publicResolve(JSON.parse(line.slice("FM_ENVD_HOST_PUBLIC ".length)));
         if (line.startsWith("FM_HOST_JOIN_CLI_RESULT "))
@@ -352,6 +392,8 @@ function startCliHarness() {
         connectionReject(error as Error);
         rejoinReadyReject(error as Error);
         rejoinResultReject(error as Error);
+        for (const phase of Object.values(nativePhases))
+          phase.reject(error as Error);
       }
     }
   });
@@ -383,6 +425,10 @@ function startCliHarness() {
     rejoinResult = Promise.race([rejoinResultValue, ended]);
   void rejoinReady.catch(() => {});
   void rejoinResult.catch(() => {});
+  for (const phase of Object.values(nativePhases)) {
+    phase.promise = Promise.race([phase.promise, ended]);
+    void phase.promise.catch(() => {});
+  }
   helper.stdin.write(
     JSON.stringify({
       PackageID: deployment.packageId,
@@ -400,6 +446,7 @@ function startCliHarness() {
     connectionReady,
     rejoinReady,
     rejoinResult,
+    nativePhases,
     done,
   };
 }
@@ -465,6 +512,18 @@ if (process.env.FM_ENVD_JOIN_QUOTE_BIN) {
   );
   let output = "",
     diagnostic = "";
+  const nativePhases = Object.fromEntries(
+    ["statusReady", "statusResult", "executeReady", "executeResult"].map(
+      (name) => {
+        let resolve!: (value: any) => void, reject!: (e: Error) => void;
+        const promise = new Promise<any>((yes, no) => {
+          resolve = yes;
+          reject = no;
+        });
+        return [name, { resolve, reject, promise }];
+      },
+    ),
+  );
   helper.stdout.on("data", (part) => {
     output += String(part);
   });
@@ -556,6 +615,7 @@ if (process.env.FM_ENVD_JOIN_CLI_BIN) {
     "production CLI pipeline confirms organization and fees, signs once with generated Go Host keys, persists original digest, recovers lost receipt and supports public query without keys; OS/TTY/cloud not verified",
   );
 } else {
+  assert.ok(first.code);
   const redemption = await sdk.host.prepareJoin({
     code: first.code,
     network: "localnet",
@@ -834,6 +894,395 @@ if (earlyHarness && earlyPublic) {
         )?.id,
         imported.id,
       );
+      if (process.env.FM_ENVD_NATIVE_EXECUTION === "1") {
+        assert.ok(nativeDiscovery);
+        const authority = {
+          organizationId,
+          humanId,
+          grantId,
+          membershipId,
+          bindingId,
+          managedAgentId: imported.id,
+        };
+        const beforeCap = created(
+          await execute(
+            "Native state: issue read-only status authority before control fixture",
+            sdk.host.issueCapability({
+              ...authority,
+              actions: ["status"],
+              scope: "observation",
+              maxUses: 1n,
+              expiresAtMs: Date.now() + 300000,
+            }),
+          ),
+          "remote_authority::RemoteCapability",
+        );
+        const target = {
+          organizationId,
+          nodeId: earlyPublic.host_address,
+          agentId: selected.instanceId,
+        };
+        const before = await signNodeCommand(deviceKey, {
+          target,
+          action: "status",
+          scope: "observation",
+          capability: { id: beforeCap, revocationVersion: 1n },
+          payload: {},
+          expiresAtMs: Date.now() + 120000,
+        });
+        const prepare = async (label: string, command: any) =>
+          created(
+            await execute(
+              label,
+              await sdk.nodeExecution.prepareCommand({
+                ...authority,
+                command,
+                resultKey: {
+                  organizationKey: fixtureContentKey,
+                  keyVersion: 1n,
+                },
+              }),
+            ),
+            "node_execution::CommandExecution",
+          );
+        const beforeExecution = await prepare(
+          "Native state: prepare current read-only status checkpoint",
+          before,
+        );
+        earlyHarness.helper.stdin.write("STATUS\n");
+        await earlyHarness.nativePhases.statusReady.promise;
+        earlyHarness.helper.stdin.write(
+          JSON.stringify({ Command: before }) + "\n",
+        );
+        const status = await earlyHarness.nativePhases.statusResult.promise;
+        assert.equal(status.response.ok, true);
+        assert.equal(status.response.result.physical_state, "idle");
+        assert.equal(status.response.result.instance_id, selected.instanceId);
+        assert.equal(
+          (await sdk.host.getManagedAgent(imported.id)).control_confirmed,
+          false,
+        );
+        const hostResult = async (
+          label: string,
+          response: any,
+          observationId?: string,
+        ) => {
+          const digest = response.transaction_digest;
+          assert.ok(digest);
+          transactions.push({
+            label,
+            digest,
+            phase: "original_host_digest_received",
+          });
+          await save();
+          const run = await sdk.nodeExecution.getExecution(
+            response.execution_id,
+          );
+          assert.equal(run.state, 2);
+          assert.equal(run.agent_id, selected.instanceId);
+          assert.ok(run.result_record);
+          const resultId = observationId ?? run.result_record;
+          const { object } = await coreClient.core.getObject({
+            objectId: resultId,
+            include: { previousTransaction: true },
+          });
+          assert.equal(object.owner.$kind, "Immutable");
+          assert.equal(
+            object.type,
+            `${deployment.packageId}::${observationId ? "okr::Observation" : "product_record::EncryptedRecord"}`,
+          );
+          assert.equal(object.previousTransaction, digest);
+          let receipt;
+          try {
+            receipt = await coreClient.core.getTransaction({
+              digest,
+              include: {
+                effects: true,
+                objectTypes: true,
+                events: true,
+                balanceChanges: true,
+                transaction: true,
+              },
+            });
+          } catch (error) {
+            // Tiny localnet retention can prune a transaction while the Host
+            // confirms its exact result object. Do not replay or invent a fee.
+            if ((error as { reason?: string }).reason !== "notFound")
+              throw error;
+            transactions.push({
+              label,
+              digest,
+              status: "immutable_effect_confirmed",
+              immutableObjectId: resultId,
+              actualGas: null,
+              feeState: "original_transaction_unavailable",
+            });
+            await save();
+            return;
+          }
+          assert.equal(receipt.$kind, "Transaction");
+          assert.equal(receipt.Transaction!.status.success, true);
+          await record(label, {
+            status: "confirmed",
+            requestId: "native-host:" + response.command_id,
+            digest,
+            actualGas: gasCost(receipt.Transaction!.effects.gasUsed),
+            journalSynced: true,
+            transaction: receipt.Transaction!,
+          });
+        };
+        await hostResult(
+          "Native state: Host confirms encrypted physical idle evidence",
+          status.response,
+        );
+        // This explicit raw control grant is a fixture for the already installed
+        // execution engine. It is not App handover or evidence of safe adoption.
+        await execute(
+          "Native alias execution fixture: explicitly set controlled test registration",
+          sdk.host.rebindAgent({
+            ...authority,
+            expectedVersion: 1n,
+            runtime: "bounded-process-v1",
+            workspaceHash: Uint8Array.from(imported.workspace_hash),
+            controlConfirmed: true,
+          }),
+        );
+        const logicalId = randomUUID(),
+          paths = { "file.read": ["."], "file.write": ["."] };
+        const files = [
+          {
+            path: "FIRST.md",
+            content: "Native alias attained the first bounded file goal\n",
+          },
+          {
+            path: "SECOND.md",
+            content: "Native alias attained the second bounded file goal\n",
+          },
+        ];
+        const spec = await encryptContent(
+          new TextEncoder().encode(
+            JSON.stringify({
+              format: 1,
+              objective:
+                "Two actual text-file goals on the discovered native instance",
+              successCriteria: ["Both measured hashes match"],
+            }),
+          ),
+          fixtureContentKey,
+          recordContext(organizationId, "okr", `okr-${logicalId}-spec`, 1n, 1n),
+        );
+        const draft = created(
+          await execute(
+            "Native alias: create one measurable OKR",
+            sdk.okr.createDraft({
+              organizationId,
+              humanId,
+              grantId,
+              logicalId,
+              priority: 0,
+              deadlineMs: Date.now() + 300000,
+              baselines: [0n],
+              targets: [2n],
+              weights: [1n],
+              maxAgesMs: [60000n],
+              keyVersion: 1n,
+              encryptedBody: spec,
+            }),
+          ),
+          "okr::Okr",
+        );
+        const boundaryHash = executionBoundaryHash(paths);
+        const agreement = await encryptContent(
+          new TextEncoder().encode(
+            JSON.stringify({
+              format: 1,
+              managedAgentId: imported.id,
+              boundaryHash: Array.from(boundaryHash),
+              budget: { asset: "TOOL_CALLS", limit: "6" },
+              nativeFilePlan: {
+                format: 1,
+                paths,
+                krs: [{ files, maxCalls: "6" }],
+              },
+            }),
+          ),
+          fixtureContentKey,
+          recordContext(
+            organizationId,
+            "contract",
+            `okr-${logicalId}-agreement`,
+            1n,
+            1n,
+          ),
+        );
+        await execute(
+          "Native alias: explicitly authorize bounded ACTIVE OKR fixture",
+          sdk.okr.activate({
+            ...authority,
+            okrId: draft,
+            expectedVersion: 1n,
+            workspaceHash: Uint8Array.from(imported.workspace_hash),
+            boundaryHash,
+            budgetAsset: "TOOL_CALLS",
+            budgetLimit: 6n,
+            expiresAtMs: Date.now() + 180000,
+            expectedRecordRevision: 0n,
+            keyVersion: 1n,
+            encryptedBody: agreement,
+          }),
+        );
+        const capId = created(
+          await execute(
+            "Native alias: issue current OKR authority",
+            sdk.okr.issueCapability({
+              ...authority,
+              okrId: draft,
+              expectedVersion: 2n,
+              maxUses: 1n,
+            }),
+          ),
+          "remote_authority::RemoteCapability",
+        );
+        const command = await signNodeCommand(deviceKey, {
+          target,
+          action: "assign",
+          scope: "control",
+          capability: { id: capId, revocationVersion: 1n },
+          budget: { asset: "TOOL_CALLS", amount: 6n },
+          payload: {
+            task: JSON.stringify({ kind: "ensure_text_files", files }),
+            bounds: { paths, max_calls: "6" },
+            okr: { id: draft, agreement_version: "1", kr_index: "0" },
+            measurement: { kind: "verified_text_file_count" },
+          },
+          expiresAtMs: Number((await sdk.okr.getOkr(draft)).expires_at_ms) - 1,
+        });
+        const executionId = await prepare(
+          "Native alias: reserve the explicitly authorized command and result key",
+          command,
+        );
+        const afterCap = created(
+          await execute(
+            "Native state: issue fresh status authority for current managed version",
+            sdk.host.issueCapability({
+              ...authority,
+              actions: ["status"],
+              scope: "observation",
+              maxUses: 1n,
+              expiresAtMs: Date.now() + 300000,
+            }),
+          ),
+          "remote_authority::RemoteCapability",
+        );
+        const after = await signNodeCommand(deviceKey, {
+          target,
+          action: "status",
+          scope: "observation",
+          capability: { id: afterCap, revocationVersion: 1n },
+          payload: {},
+          expiresAtMs: Date.now() + 120000,
+        });
+        const afterExecution = await prepare(
+          "Native state: reserve post-execution status checkpoint",
+          after,
+        );
+        nativeExecution = {
+          instanceId: selected.instanceId,
+          recordId: imported.id,
+          okrId: draft,
+          executionId,
+          beforeExecution,
+          afterExecution,
+          phase: "commands_prepared",
+          controlSetupFixtureOnly: true,
+          safeAppHandoverVerified: false,
+        };
+        await save();
+        earlyHarness.helper.stdin.write("EXECUTE\n");
+        await earlyHarness.nativePhases.executeReady.promise;
+        earlyHarness.helper.stdin.write(
+          JSON.stringify({ Command: command, After: after }) + "\n",
+        );
+        const attained = await earlyHarness.nativePhases.executeResult.promise;
+        assert.equal(attained.actual_workspace_writes, true);
+        assert.equal(attained.factory_rebuild_duplicate, true);
+        assert.equal(attained.response.spend.amount, "6");
+        assert.equal(attained.after.result.physical_state, "idle");
+        await hostResult(
+          "Native alias: original Host execution result confirmed",
+          attained.response,
+        );
+        const observations = (await sdk.okr.listObservations(draft))
+          .observations;
+        assert.equal(observations.length, 1);
+        assert.equal(observations[0].run_id, executionId);
+        assert.equal(observations[0].current, "2");
+        await hostResult(
+          "Native alias: original Host measurement confirmed",
+          {
+            ...attained.response,
+            transaction_digest:
+              attained.response.okr_observation.transaction_digest,
+            command_id: "measurement",
+          },
+          observations[0].id,
+        );
+        await hostResult(
+          "Native state: original Host post-execution status confirmed",
+          attained.after,
+        );
+        const okr = await sdk.okr.getOkr(draft);
+        assert.equal(okr.metrics[0].current, "2");
+        assert.equal(okr.metrics[0].verified, false);
+        assert.equal(okr.state, 1);
+        const { asset, spent, reserved } = await sdk.okr.getBudget(draft);
+        assert.deepEqual(
+          { asset, spent, reserved },
+          {
+            asset: "TOOL_CALLS",
+            spent: 6n,
+            reserved: 0n,
+          },
+        );
+        assert.equal(
+          (await sdk.nodeExecution.getExecution(executionId)).state,
+          2,
+        );
+        assert.equal(
+          (await sdk.remoteAuthority.getCapability(capId)).usesClaimed,
+          1n,
+        );
+        nativeExecution = {
+          instanceId: selected.instanceId,
+          recordId: imported.id,
+          okrId: draft,
+          executionId,
+          beforeExecution,
+          afterExecution,
+          physicalIdleBefore: true,
+          physicalIdleAfter: true,
+          actualWorkspaceWrites: true,
+          toolCallsSpent: 6,
+          originalResultDigest: attained.response.transaction_digest,
+          measurementDigest:
+            attained.response.okr_observation.transaction_digest,
+          duplicateOriginalDigest: attained.duplicate_digest,
+          productionFactory: true,
+          factoryRebuiltInSameProcess: true,
+          controlSetupFixtureOnly: true,
+          safeAppHandoverVerified: false,
+          humanAcceptanceVerified: false,
+        };
+        checks.push(
+          "Read-only signed native status before control returns actual physical idle and encrypted chain result; it does not grant control",
+        );
+        checks.push(
+          "Same discovered native alias executes six actual bounded file tools under an ACTIVE OKR; real Host measurement reaches two while human verification remains pending",
+        );
+        checks.push(
+          "Factory rebuild in the same process reconstructs original result without re-execution; fresh signed status proves physical idle after tool handles close",
+        );
+      }
       if (process.env.FM_ENVD_AGENT_REBIND === "1") {
         const rebindParameters = {
           organizationId,
@@ -1446,6 +1895,7 @@ const report = {
   envdCli,
   envdConnection,
   envdRejoin,
+  nativeExecution,
   deviceHttp,
   limits: {
     generatedFixtureKeysOnly: true,
@@ -1476,3 +1926,5 @@ console.log(
     output: process.argv[3],
   }),
 );
+
+fixtureContentKey.fill(0);

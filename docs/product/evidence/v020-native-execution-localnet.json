@@ -1,0 +1,393 @@
+{
+  "recordedAt": "2026-10-02T09:38:38.895Z",
+  "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+  "profile": {
+    "network": "localnet",
+    "rpcUrl": "http://127.0.0.1:29000",
+    "packageId": "0x4bc3adef64b6ec90f19f505f25dff439fc2a327a6e52a098c758a6c8a57567a3",
+    "registryId": "0x037f3398761bc64064f4d3a5c9e99df6cd9231270f9cb42a9fd71ad4f46085ef",
+    "humanId": "0xab13162d7245042bed595d63b13a57ee018049d340c97f6936dc9f4a40d472ec",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "organizationId": "0xa7565f62ddc5251474def73f6fb03ac3d0bd8e42c0d5d36902af23a2b9b6d494",
+  "grantId": "0x52b8dd2d663acb19efffc3f0bba431e10a8cfc5fa8ac60d3df5115a2624f341c",
+  "checks": [
+    "exact absent Host index reconstructs as empty",
+    "production verifier proves fresh device/organization management authority; public binding is not online evidence",
+    "code is released only after exact receipt objects are visible and match invitation proof material",
+    "production CLI pipeline confirms organization and fees, signs once with generated Go Host keys, persists original digest, recovers lost receipt and supports public query without keys; OS/TTY/cloud not verified",
+    "redemption consumes the invitation; reconstruction finds membership and finite observation authority, not execution authority",
+    "Actual instantiated native file adapter and envd kernel birth identity traverse Host signature, authenticated Coordinator read and App discovery verification; workspace binding is canonical, import remains observation-only",
+    "Read-only signed native status before control returns actual physical idle and encrypted chain result; it does not grant control",
+    "Same discovered native alias executes six actual bounded file tools under an ACTIVE OKR; real Host measurement reaches two while human verification remains pending",
+    "Factory rebuild in the same process reconstructs original result without re-execution; fresh signed status proves physical idle after tool handles close",
+    "Production App imports the actual discovered instance for observation only on Sui; injected lost response recovers original digest with one broadcast; a fresh controller reconstructs the indexed record and avoids duplicate quotation/payment",
+    "App production read client uses injected fixture device signing; Go verifies current grant; unsigned/token reads denied and Coordinator-signed response returns actual Host heartbeat",
+    "Go Host signs its actual heartbeat; App independently verifies exact body, current membership pointer, scoped chain and Coordinator versions; forged body remains unknown",
+    "a retained, cryptographically valid Host heartbeat cannot regain trust after actual chain membership revocation",
+    "membership revocation remains chain-owned and visible; consumed-invite revocation never substitutes for it",
+    "real loopback Coordinator/Host mutually authenticate using chain endpoint and keys; live heartbeat observed; App chain revocation rejects both Coordinator routing and worker heartbeat",
+    "new controller reconstructs chain state but cannot recover the invitation bearer secret",
+    "a lost unused code has an explicit on-chain revocation path",
+    "device revocation after challenge preparation is rejected by actual Coordinator HTTP authority check; no cached device login survives",
+    "management revocation between quote and submit rejects the App operation before a new broadcast"
+  ],
+  "transactions": [
+    {
+      "label": "create isolated fixture Human",
+      "digest": "4N9TZSjSc9XdDtuvviFh5ynntaSyyBf63p4ZYBxtzGXV",
+      "phase": "prepared"
+    },
+    {
+      "label": "create isolated fixture Human",
+      "requestId": "fixture:2140a1c9-981f-4a06-adf4-16332ecec62d",
+      "digest": "4N9TZSjSc9XdDtuvviFh5ynntaSyyBf63p4ZYBxtzGXV",
+      "status": "confirmed",
+      "actualGas": "17708548"
+    },
+    {
+      "label": "create isolated fixture organization",
+      "digest": "C2RMJR2a8Bjc7EdYv8vPUVHEczXTPFjnthfHcmMp1uV2",
+      "phase": "prepared"
+    },
+    {
+      "label": "create isolated fixture organization",
+      "requestId": "fixture:4cdb8426-1dc0-4edc-8325-adbb03159434",
+      "digest": "C2RMJR2a8Bjc7EdYv8vPUVHEczXTPFjnthfHcmMp1uV2",
+      "status": "confirmed",
+      "actualGas": "15278416"
+    },
+    {
+      "label": "App registers Coordinator binding",
+      "requestId": "host:62098268-d00e-41ea-b1e2-0eddaad3323f",
+      "digest": "12jZgUd63Ay5PByhSD7iMMfBbB2DQ2Ur3sVxPQt4EZ3V",
+      "status": "confirmed",
+      "actualGas": "6825696"
+    },
+    {
+      "label": "App creates one-use invitation",
+      "requestId": "host:cbdb68a7-bc5a-4186-8bfa-8c9ffec2f375",
+      "digest": "6eX97M2arjbWES6QZckPVkEWVir4uukbD7BNQp7trTqR",
+      "status": "confirmed",
+      "actualGas": "4963392"
+    },
+    {
+      "label": "Go envd CLI redeems App invitation; injected response loss recovered by original query",
+      "requestId": "go-envd-cli-fixture",
+      "digest": "FcDTLfo7fjz8mVX33H2hqLFpmxmTXLvn4UzkFTQ4np6z",
+      "status": "confirmed",
+      "actualGas": "11450292"
+    },
+    {
+      "label": "App observation-only Agent import; lost response recovered by original digest",
+      "requestId": "agent-import:1fc97bd1-a0fb-4b7a-99c3-57d8e775c576",
+      "digest": "FNH3N1BnUqSvYCs9n5jovCVtLPJvMq4HWmoy3FNTr9vq",
+      "status": "confirmed",
+      "actualGas": "8963056"
+    },
+    {
+      "label": "Deliberate contract duplicate receipt; App normal duplicates remain fee-free",
+      "requestId": "agent-import-race:b54d8c16-2d09-4f90-8fcf-77bfb99430cd",
+      "digest": "DGvPJ8ZW5sfZZSP5FNdeYo8F3pstW26nWHc2Na1SqJSr",
+      "status": "confirmed",
+      "actualGas": "1485296"
+    },
+    {
+      "label": "Native state: issue read-only status authority before control fixture",
+      "digest": "2KiAy2NnKacMR9i1VoBrkax1jFGjpZVLjcNFrxe2b426",
+      "phase": "prepared"
+    },
+    {
+      "label": "Native state: issue read-only status authority before control fixture",
+      "requestId": "fixture:a83905ba-2aef-4f36-afd3-4d38070b58d8",
+      "digest": "2KiAy2NnKacMR9i1VoBrkax1jFGjpZVLjcNFrxe2b426",
+      "status": "confirmed",
+      "actualGas": "10183480"
+    },
+    {
+      "label": "Native state: prepare current read-only status checkpoint",
+      "digest": "8Kxq8bPYZZr3aMMu7EJuW6z9Cxye984vyEC1FWAS2CGC",
+      "phase": "prepared"
+    },
+    {
+      "label": "Native state: prepare current read-only status checkpoint",
+      "requestId": "fixture:2e186bef-b5a1-47b5-b492-5199f20b8cd5",
+      "digest": "8Kxq8bPYZZr3aMMu7EJuW6z9Cxye984vyEC1FWAS2CGC",
+      "status": "confirmed",
+      "actualGas": "32676112"
+    },
+    {
+      "label": "Native state: Host confirms encrypted physical idle evidence",
+      "digest": "6EcVR6PYyc8ADgVgrobzaH5QJ4U87bq4XjdRc4MA4hHz",
+      "phase": "original_host_digest_received"
+    },
+    {
+      "label": "Native state: Host confirms encrypted physical idle evidence",
+      "digest": "6EcVR6PYyc8ADgVgrobzaH5QJ4U87bq4XjdRc4MA4hHz",
+      "status": "immutable_effect_confirmed",
+      "immutableObjectId": "0x5832d5254964bd8986bb2913ce8b98cf99baef9215e2eabf89dead1e41794e03",
+      "actualGas": null,
+      "feeState": "original_transaction_unavailable"
+    },
+    {
+      "label": "Native alias execution fixture: explicitly set controlled test registration",
+      "digest": "2jw1DQp65EYoWUbraHBqgE5LA7eAoo2g7xHYkFBJFCYN",
+      "phase": "prepared"
+    },
+    {
+      "label": "Native alias execution fixture: explicitly set controlled test registration",
+      "requestId": "fixture:8a91966e-4a2e-44e3-8bfb-2325675b5fd3",
+      "digest": "2jw1DQp65EYoWUbraHBqgE5LA7eAoo2g7xHYkFBJFCYN",
+      "status": "confirmed",
+      "actualGas": "1569624"
+    },
+    {
+      "label": "Native alias: create one measurable OKR",
+      "digest": "ByGFiBLx8GhpPNcD7u3wQ3mCcA2qhQvh5P3r68wcLLu1",
+      "phase": "prepared"
+    },
+    {
+      "label": "Native alias: create one measurable OKR",
+      "requestId": "fixture:ecae0989-d3a2-4ce9-971d-39fcc3aaf515",
+      "digest": "ByGFiBLx8GhpPNcD7u3wQ3mCcA2qhQvh5P3r68wcLLu1",
+      "status": "confirmed",
+      "actualGas": "17709668"
+    },
+    {
+      "label": "Native alias: explicitly authorize bounded ACTIVE OKR fixture",
+      "digest": "5NuhzaVXfFQr8Q886TMjRTkZhrFD2Xs2S8CwmF934UbU",
+      "phase": "prepared"
+    },
+    {
+      "label": "Native alias: explicitly authorize bounded ACTIVE OKR fixture",
+      "requestId": "fixture:84947aa1-df69-41db-9c66-357cd0222a82",
+      "digest": "5NuhzaVXfFQr8Q886TMjRTkZhrFD2Xs2S8CwmF934UbU",
+      "status": "confirmed",
+      "actualGas": "16021916"
+    },
+    {
+      "label": "Native alias: issue current OKR authority",
+      "digest": "EeNNqSdQn78jmhYKboHcYbFS88WxjPJWdiAe5yoXPACP",
+      "phase": "prepared"
+    },
+    {
+      "label": "Native alias: issue current OKR authority",
+      "requestId": "fixture:1a359899-6061-46b5-8fc6-ff458ea74db8",
+      "digest": "EeNNqSdQn78jmhYKboHcYbFS88WxjPJWdiAe5yoXPACP",
+      "status": "confirmed",
+      "actualGas": "13266280"
+    },
+    {
+      "label": "Native alias: reserve the explicitly authorized command and result key",
+      "digest": "qrNa261DLeiMQhD3YMsAfYa84yx2PodqSUMPXmLpmaY",
+      "phase": "prepared"
+    },
+    {
+      "label": "Native alias: reserve the explicitly authorized command and result key",
+      "requestId": "fixture:b81a17a3-ed6c-4a25-977c-503b289466f9",
+      "digest": "qrNa261DLeiMQhD3YMsAfYa84yx2PodqSUMPXmLpmaY",
+      "status": "confirmed",
+      "actualGas": "38955484"
+    },
+    {
+      "label": "Native state: issue fresh status authority for current managed version",
+      "digest": "7nVpJUM7xyyweRGytWaHGY2Doou98UERKqiap624ePEC",
+      "phase": "prepared"
+    },
+    {
+      "label": "Native state: issue fresh status authority for current managed version",
+      "requestId": "fixture:538ac572-8deb-4533-9167-ca29748fd24e",
+      "digest": "7nVpJUM7xyyweRGytWaHGY2Doou98UERKqiap624ePEC",
+      "status": "confirmed",
+      "actualGas": "10183480"
+    },
+    {
+      "label": "Native state: reserve post-execution status checkpoint",
+      "digest": "5yQuUMq7aY44jBmbJ12CcXoCvWLFKvx9MNL5cZtfU2un",
+      "phase": "prepared"
+    },
+    {
+      "label": "Native state: reserve post-execution status checkpoint",
+      "requestId": "fixture:4e772745-189e-4992-9278-ad8050daab3f",
+      "digest": "5yQuUMq7aY44jBmbJ12CcXoCvWLFKvx9MNL5cZtfU2un",
+      "status": "confirmed",
+      "actualGas": "32676112"
+    },
+    {
+      "label": "Native alias: original Host execution result confirmed",
+      "digest": "967WxzLwD53KjM3npWcqz6bjutZyiDq63g38Epa2QQyz",
+      "phase": "original_host_digest_received"
+    },
+    {
+      "label": "Native alias: original Host execution result confirmed",
+      "requestId": "native-host:4ab76932-7a43-4c21-bf0e-d57b543f90d1",
+      "digest": "967WxzLwD53KjM3npWcqz6bjutZyiDq63g38Epa2QQyz",
+      "status": "confirmed",
+      "actualGas": "21116316"
+    },
+    {
+      "label": "Native alias: original Host measurement confirmed",
+      "digest": "Bi3xkzHYUpFHLogGyDu2XRLHZW9AfTRGpG4AMqnSB2Cn",
+      "phase": "original_host_digest_received"
+    },
+    {
+      "label": "Native alias: original Host measurement confirmed",
+      "requestId": "native-host:measurement",
+      "digest": "Bi3xkzHYUpFHLogGyDu2XRLHZW9AfTRGpG4AMqnSB2Cn",
+      "status": "confirmed",
+      "actualGas": "6912080"
+    },
+    {
+      "label": "Native state: original Host post-execution status confirmed",
+      "digest": "BuvMp5RMG6YEFs7kqWCysiqzEagwNZuUgYjad3JUz1sz",
+      "phase": "original_host_digest_received"
+    },
+    {
+      "label": "Native state: original Host post-execution status confirmed",
+      "digest": "BuvMp5RMG6YEFs7kqWCysiqzEagwNZuUgYjad3JUz1sz",
+      "status": "immutable_effect_confirmed",
+      "immutableObjectId": "0xd72bd8d1c15bd1fe8a06dd491ff7bb2e3ab9c8824f4a11a50e7bb19d5fd0cc1e",
+      "actualGas": null,
+      "feeState": "original_transaction_unavailable"
+    },
+    {
+      "label": "App revokes Host membership",
+      "requestId": "host:dfadcfbb-21c2-4130-bad3-4c8c00c4aff7",
+      "digest": "Eq5B72CznjJNN4FbRhMNxZvcCTbZRRXDFRZpPYdBsGja",
+      "status": "confirmed",
+      "actualGas": "-592892"
+    },
+    {
+      "label": "App creates invitation for reload test",
+      "requestId": "host:b42e1afa-22d9-4c59-be08-7e3548cfe362",
+      "digest": "5ezWsox2ZmmcSfJSBLYMjjJ4Zird956MgsLZkGnEVeRa",
+      "status": "confirmed",
+      "actualGas": "4968256"
+    },
+    {
+      "label": "App revokes unrecoverable unused invitation",
+      "requestId": "host:384272d9-0937-48a1-82f2-745cb6d5950f",
+      "digest": "8xGLJ7oMQCpcjFBarev2RDo7uVpXKJWHuBwPrBmtskso",
+      "status": "confirmed",
+      "actualGas": "1472028"
+    },
+    {
+      "label": "fixture explicitly adds independent root management device",
+      "digest": "Ehj7oETU8gnRi5h5kgVhaHzwsM2X8JbYCqpqJ1WowBEj",
+      "phase": "prepared"
+    },
+    {
+      "label": "fixture explicitly adds independent root management device",
+      "requestId": "fixture:fed81b34-ce1e-4417-b8ff-c05aac880ff9",
+      "digest": "Ehj7oETU8gnRi5h5kgVhaHzwsM2X8JbYCqpqJ1WowBEj",
+      "status": "confirmed",
+      "actualGas": "7849568"
+    },
+    {
+      "label": "independent root fixture revokes managing device",
+      "digest": "HTqnF4tnSRkDj6VHPcPa44Xgyv8toG2yUek7LRgi3ExH",
+      "phase": "prepared"
+    },
+    {
+      "label": "independent root fixture revokes managing device",
+      "requestId": "fixture:f3e7fde8-230a-43bb-a31f-fd52ffe518a1",
+      "digest": "HTqnF4tnSRkDj6VHPcPa44Xgyv8toG2yUek7LRgi3ExH",
+      "status": "confirmed",
+      "actualGas": "1469248"
+    }
+  ],
+  "envdCli": {
+    "initial": {
+      "state": "unknown",
+      "digest": "FcDTLfo7fjz8mVX33H2hqLFpmxmTXLvn4UzkFTQ4np6z"
+    },
+    "result": {
+      "state": "confirmed",
+      "digest": "FcDTLfo7fjz8mVX33H2hqLFpmxmTXLvn4UzkFTQ4np6z",
+      "actual_fee_mist": "11450292",
+      "membership": {
+        "organization_id": "0xa7565f62ddc5251474def73f6fb03ac3d0bd8e42c0d5d36902af23a2b9b6d494",
+        "invite_id": "0xb704d7a17f10c36b8e986355a49c07881d572f0e9c6736e2510660809bfd98d8",
+        "membership_id": "0xfc1b705a753c6728cd189c1ff8538c82215f5deaf242327c13f2cf0fd829f956",
+        "host_address": "0x9872ac34c8a6364a40dcfbb5b1ebd9d6f0c2d761955c7e64c96a8da18418cc6c",
+        "coordinator_binding": "0x3914976a0778aa59b5f6fca8eebe62e23579d9071d0a6bcd45359d9839d84a31",
+        "observation_capability": "0xeb52b4dbb5a18f3fa046e9a7fd1c6a2ec59d77f4c94e6ad43e2c40565f909ea8",
+        "expires_at_ms": 1793525907629,
+        "revoked": false,
+        "current_membership": true
+      }
+    },
+    "broadcasts": 1,
+    "public_query_without_keys": true,
+    "real_disk_journal": true,
+    "hostAddress": "0x9872ac34c8a6364a40dcfbb5b1ebd9d6f0c2d761955c7e64c96a8da18418cc6c",
+    "journalRoot": "/tmp/fractalmind-native-execution-localnet-20261002-r2.json.journal"
+  },
+  "envdConnection": {
+    "chain_endpoint_used": true,
+    "mutual_authentication": true,
+    "heartbeat_sent": true,
+    "revoked_pointer_rejected": true,
+    "worker_revoked_heartbeat_rejected": true,
+    "coordinator_revoked_routing_rejected": true,
+    "generated_memory_keys": true,
+    "loopback_only": true
+  },
+  "nativeExecution": {
+    "instanceId": "native-7c3f13a688b24110f2cc5fc1018dc7dae76e13a44ad2abeb09acff7fde40e673",
+    "recordId": "0xa5e32feb5af1a8cfbc382330ae4850a0e5592f2854e98530db487c6a4d4684a3",
+    "okrId": "0xf516ff27fa1c278d998494d6523d4944e187843ab2b0ac0b6372729f34e5adbf",
+    "executionId": "0xc282009bde136bd9c373fc5df22b1f260f65ada94fbc0aa1f52476455c32ae97",
+    "beforeExecution": "0x2ae79e20f3f1b811286e00b143aec73fc9d9447cd93bd00118abc7e624061e80",
+    "afterExecution": "0x2adfd65b52fc3407d63dde950d45eef31b92dfb054aecaaf8117fad625c79249",
+    "physicalIdleBefore": true,
+    "physicalIdleAfter": true,
+    "actualWorkspaceWrites": true,
+    "toolCallsSpent": 6,
+    "originalResultDigest": "967WxzLwD53KjM3npWcqz6bjutZyiDq63g38Epa2QQyz",
+    "measurementDigest": "Bi3xkzHYUpFHLogGyDu2XRLHZW9AfTRGpG4AMqnSB2Cn",
+    "duplicateOriginalDigest": "967WxzLwD53KjM3npWcqz6bjutZyiDq63g38Epa2QQyz",
+    "productionFactory": true,
+    "factoryRebuiltInSameProcess": true,
+    "controlSetupFixtureOnly": true,
+    "safeAppHandoverVerified": false,
+    "humanAcceptanceVerified": false
+  },
+  "deviceHttp": {
+    "agentImportVerified": true,
+    "importRecordId": "0xa5e32feb5af1a8cfbc382330ae4850a0e5592f2854e98530db487c6a4d4684a3",
+    "importBroadcasts": 1,
+    "duplicateImportAvoided": true,
+    "originalImportDigestRecovered": true,
+    "contractDuplicateReceiptVerified": true,
+    "unsignedRejected": true,
+    "bearerRejected": true,
+    "actualAppDeviceProofAndSignedResponse": true,
+    "coordinatorObservedHost": "0x9872ac34c8a6364a40dcfbb5b1ebd9d6f0c2d761955c7e64c96a8da18418cc6c",
+    "observedAt": "2026-10-02T02:38:28.649698-07:00",
+    "hostSignatureVerified": true,
+    "tamperedHostBodyRejected": true,
+    "hostMembershipId": "0xfc1b705a753c6728cd189c1ff8538c82215f5deaf242327c13f2cf0fd829f956",
+    "appDisplaySchemaVerified": true,
+    "realTmuxDiscoveryVerified": false,
+    "nativeFileDiscoveryVerified": true,
+    "retainedHostSignatureRejectedAfterRevocation": true,
+    "deviceRevokedAfterChallengeRejected": true
+  },
+  "limits": {
+    "generatedFixtureKeysOnly": true,
+    "injectedNativeTransport": true,
+    "memoryTechnicalJournal": true,
+    "appTechnicalJournal": "injected memory journal",
+    "envdTechnicalJournal": "real disk journal",
+    "envdRecovery": "new runner in the same test process",
+    "installedAppVerified": false,
+    "nativeStoreVerified": false,
+    "envdJoinCliVerified": false,
+    "envdJoinCliInjectedKeysVerified": true,
+    "envdJoinQuoteVerified": false,
+    "loopbackChainConnectionVerified": true,
+    "cloudHostVerified": false,
+    "invitationSecretsIncluded": false
+  }
+}

@@ -26,6 +26,7 @@ type moveEncryptedRecord struct {
 // permission. The caller must separately obtain an authorized historical key.
 type ChainExecutionResult struct {
 	ID, OrganizationID, LogicalID string
+	TransactionDigest             string
 	Revision, KeyVersion          uint64
 	EncryptedBody                 []byte
 	Execution                     ChainExecution
@@ -127,5 +128,7 @@ func (s *ChainAuthorityResolver) ReadExecutionResult(ctx context.Context, capabi
 			return ChainExecutionResult{}, false, fmt.Errorf("command result key: %w", err)
 		}
 	}
-	return ChainExecutionResult{ID: record.ID.String(), OrganizationID: record.Org.String(), LogicalID: record.LogicalID, Revision: record.Revision, KeyVersion: record.KeyVersion, EncryptedBody: append([]byte(nil), record.Body...), Execution: run}, true, nil
+	// The result record is immutable, so its last transaction is its creation.
+	// The encrypted body was prepared before that transaction's digest existed.
+	return ChainExecutionResult{ID: record.ID.String(), OrganizationID: record.Org.String(), LogicalID: record.LogicalID, TransactionDigest: object.PreviousTransaction, Revision: record.Revision, KeyVersion: record.KeyVersion, EncryptedBody: append([]byte(nil), record.Body...), Execution: run}, true, nil
 }

@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/agent"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun"
 
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/config"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/coordinator"
@@ -158,6 +159,9 @@ func TestHostJoinLiveCLI(t *testing.T) {
 	var reader *nodecommand.ChainAuthorityResolver
 	var liveConfig *config.Config
 	var connected chan error
+	var nativeRuntime *chainRuntimeExecutor
+	var nativeConfig *config.Config
+	var nativeWorkspace string
 	if input.LiveConnection {
 		reader, err = nodecommand.NewChainAuthorityResolver(base, input.PackageID)
 		if err != nil {
@@ -190,11 +194,29 @@ func TestHostJoinLiveCLI(t *testing.T) {
 		var nativeAdapter *runtimeadapter.Executor
 		if os.Getenv("FM_ENVD_NATIVE_DISCOVERY") == "1" {
 			workspace := t.TempDir()
+			nativeWorkspace = workspace
 			adapter, e := runtimeadapter.BoundedFileAgent(reader, map[string]string{"native-files": workspace}, runtimeadapter.ObservationAgentManager("must-not-run"))
 			if e != nil {
 				t.Fatal(e)
 			}
 			nativeAdapter = runtimeadapter.NewExecutor(nil, adapter)
+			if os.Getenv("FM_ENVD_NATIVE_EXECUTION") == "1" {
+				nativeConfig = chainRuntimeConfig()
+				nativeConfig.SUI.Network = "localnet"
+				nativeConfig.SUI.ProtocolPackageID = input.PackageID
+				nativeConfig.SUI.ProtocolRegistryID = input.RegistryID
+				nativeConfig.SUI.ChainIdentifier = input.ChainIdentifier
+				nativeConfig.SUI.OrgID = input.OrganizationID
+				nativeConfig.Runtime.AdapterKind = "native-file-agent"
+				nativeConfig.Runtime.Workspaces = map[string]string{"native-files": workspace}
+				created, e := newRuntimeCommandExecutorWithStore(nativeConfig, store)
+				if e != nil {
+					t.Fatal(e)
+				}
+				nativeRuntime = created.(*chainRuntimeExecutor)
+				t.Cleanup(func() { nativeRuntime.Close() })
+				nativeAdapter = nativeRuntime.Executor
+			}
 		}
 		if os.Getenv("FM_ENVD_AGENT_DISCOVERY") == "1" {
 			fixtureDir, e := os.MkdirTemp("/tmp", "fm-chain-discovery-")
@@ -266,6 +288,86 @@ func TestHostJoinLiveCLI(t *testing.T) {
 		RealDiskJournal        bool            `json:"real_disk_journal"`
 	}{initial, result, client.broadcasts, true, true})
 	fmt.Printf("FM_HOST_JOIN_CLI_RESULT %s\n", encoded)
+	if os.Getenv("FM_ENVD_NATIVE_EXECUTION") == "1" {
+		if nativeRuntime == nil {
+			t.Fatal("native production executor required")
+		}
+		for _, phase := range []string{"status", "execute"} {
+			line, e := bufio.NewReaderSize(os.Stdin, 32).ReadString('\n')
+			if e != nil || line != strings.ToUpper(phase)+"\n" {
+				t.Fatal("expected native control public phase", phase)
+			}
+			fmt.Printf("FM_NATIVE_CONTROL_READY {\"phase\":\"%s\"}\n", phase)
+			raw, e := bufio.NewReaderSize(os.Stdin, 65536).ReadBytes('\n')
+			if e != nil || len(raw) > 65536 {
+				t.Fatal("invalid generated native commands")
+			}
+			var commands struct {
+				Command nodecommand.NodeCommand
+				After   nodecommand.NodeCommand
+			}
+			if json.Unmarshal(raw, &commands) != nil {
+				t.Fatal("invalid native command frame")
+			}
+			scan := nativeRuntime.NativeDiscovery()
+			if scan == nil || scan.State != "complete" || len(scan.Instances) != 1 || commands.Command.Target.AgentID != scan.Instances[0].InstanceID {
+				t.Fatal("command bypassed discovered alias")
+			}
+			response, _, e := nativeRuntime.Execute(ctx, commands.Command)
+			if e != nil || !response.OK || response.ExecutionState != "succeeded" {
+				t.Fatalf("native alias command failed: %+v %v", response, e)
+			}
+			report := map[string]any{"phase": phase, "response": response, "production_factory": true, "discovered_alias": scan.Instances[0].InstanceID}
+			if phase == "status" {
+				var state runtimeadapter.NativeState
+				if json.Unmarshal(response.Result, &state) != nil || state.PhysicalState != "idle" || state.InstanceID != scan.Instances[0].InstanceID {
+					t.Fatal("native physical idle unavailable")
+				}
+			} else {
+				if response.Spend == nil || !response.Spend.Known || response.Spend.Amount != 6 {
+					t.Fatal("native alias did not use six real tools")
+				}
+				var taskPayload struct{ Task string }
+				if json.Unmarshal(commands.Command.Payload, &taskPayload) != nil {
+					t.Fatal("invalid file task")
+				}
+				task, e := boundedrun.ParseFileTask(taskPayload.Task)
+				if e != nil {
+					t.Fatal(e)
+				}
+				for _, goal := range task.Files {
+					value, e := os.ReadFile(filepath.Join(nativeWorkspace, goal.Path))
+					if e != nil || string(value) != goal.Content {
+						t.Fatal("native alias did not attain actual file goal")
+					}
+				}
+				again, e := newRuntimeCommandExecutorWithStore(nativeConfig, store)
+				if e != nil {
+					t.Fatal(e)
+				}
+				rebuilt := again.(*chainRuntimeExecutor)
+				duplicate, _, e := rebuilt.Execute(ctx, commands.Command)
+				if e != nil || !duplicate.Duplicate || string(duplicate.Result) != string(response.Result) || duplicate.TransactionDigest != response.TransactionDigest {
+					t.Fatal("native duplicate did not reconstruct original chain evidence", e)
+				}
+				rebuilt.Close()
+				after, _, e := nativeRuntime.Execute(ctx, commands.After)
+				if e != nil || !after.OK {
+					t.Fatal("post-execution native status unavailable", e)
+				}
+				var state runtimeadapter.NativeState
+				if json.Unmarshal(after.Result, &state) != nil || state.PhysicalState != "idle" || state.ActiveCommandID != "" {
+					t.Fatal("physical slot not released after tools closed")
+				}
+				report["after"] = after
+				report["actual_workspace_writes"] = true
+				report["factory_rebuild_duplicate"] = true
+				report["duplicate_digest"] = duplicate.TransactionDigest
+			}
+			encoded, _ := json.Marshal(report)
+			fmt.Printf("FM_NATIVE_CONTROL_RESULT %s\n", encoded)
+		}
+	}
 	if input.LiveConnection {
 		// No new secrets are read: the fixture waits only for the App's public
 		// revocation signal, then observes the actual current chain pointer.

@@ -6,13 +6,22 @@
 
 ## 当前验证证据
 
+### 原生别名实际链执行与物理忙闲状态增量
+
+- 同一发现出的 `native-*` 实例沿生产 envd 工厂、签名命令、链授权／检查点、实际工作区工具和加密结果执行两个文件目标。ACTIVE OKR 实测值为 2，6 次工具预算结算，仍未人类验证／验收。
+- 原生 `status`／`availability` 查询实际忙闲及当前命令／执行 ID；配置名称与发现别名共享执行槽，第二条任务在工具前拒绝、已知工具支出为 0，工具句柄关闭后释放。配置名称也固定原物理目录，不允许替换目录执行。
+- 重建执行器从不可变加密结果对象的 `previous_transaction` 恢复原摘要，无新工具调用。摘要来自链对象而非运行时明文；物理空闲不等于所有链检查点均终结或接管授权。
+- [实际链报告](evidence/v020-native-execution-localnet.json)：**19 项检查**，记录 **23 份成功交易回执及实际费用，2 份不可变结果原摘要确认**。后两笔原交易查询不可用，费用明确未知，未补造费用／重放。首轮独立状态查询摘要[保留为回执未核实](evidence/v020-native-execution-prior-query.json)，不从后续独立成功夹具推断其状态。
+- [Go 五包 race、gRPC 元数据专项及脚本类型](evidence/v020-native-execution-unit.json)通过。UI 本轮未更改；依然以原型 v2 为基线。
+- **仍未完成**：本测试通过 raw SDK 显式设置 `control_confirmed=true`，仅证明执行引擎。App 安全交接、旧执行停止／检查点确认、用户明确继续、对话／持续自主与人验收、原生 Host 重新接入、OS 密钥库／安装后 UI、云 Host 和五平台仍未验收，详见[原生执行说明](v020-native-agent-execution.md)。
+
 ### 原生文件 Agent 发现与仅观察导入增量
 
 - 原生适配器按实际 envd 进程创建身份与绑定标识生成实例 ID，固定规范工作区和物理目录身份；生产扫描和独立 Host 签名带出单独来源，tmux 不能提升为原生适配器。
 - App 区分来源和能力，原生导入／显式重新关联仍为仅观察，不授予 OKR 执行；原生实例别名映射固定工作区，工具实际打开根目录时再次核对物理身份。
 - [实际链导入](evidence/v020-native-agent-localnet.json)：**16 项检查、12 笔确认交易**；[原生重新关联](evidence/v020-native-agent-rebind-localnet.json)：**19 项检查、16 成功、1 预期 Move 失败**。原摘要恢复、正常重复免新支付与版本条件拒绝通过。
 - [App 90/90、Go 五包 race、类型与构建](evidence/v020-native-agent-unit.json)通过；[浏览器证据](evidence/v020-native-agent-browser.json)核对实际链上登记、中英文／明暗和网页权限保护。
-- **仍未完成**：原生别名的实际链执行、原生 Host 重新接入、完整安全交接／ACTIVE OKR 授权与明确继续、直接沟通／自主验证闭环、OS 密钥库／安装后 UI、云 Host 与五平台。详见[原生发现说明](v020-native-agent-discovery.md)，完整目标保持不变。
+- 原生别名的实际链执行随后通过上节专项验收。**仍未完成**：原生 Host 重新接入、完整安全交接／ACTIVE OKR 授权与明确继续、直接沟通／自主验证闭环、OS 密钥库／安装后 UI、云 Host 与五平台。详见[原生发现说明](v020-native-agent-discovery.md)，完整目标保持不变。
 
 ### Host 显式重新接入与同一实例连续性验收
 

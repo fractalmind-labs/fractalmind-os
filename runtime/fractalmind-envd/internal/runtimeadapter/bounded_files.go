@@ -4,24 +4,29 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/agent"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/agent"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 )
 
 type boundedFileAgent struct {
-	reader     boundedrun.ExecutionAuthority
-	workspaces map[string]string
-	observer   Adapter
-	inventory  *agent.NativeInventory
+	reader      boundedrun.ExecutionAuthority
+	workspaces  map[string]string
+	observer    Adapter
+	inventory   *agent.NativeInventory
+	instanceIDs map[string]string
+	mu          sync.Mutex
+	active      map[string]nativeAttempt
 }
 
 // BoundedFileAgent supports an explicit, measurable native file-goal adapter.
-// Observation still uses agent-manager; writing never invokes that process.
+// Native status is physical activity; other observations use agent-manager.
+// Writing never invokes that process.
 func BoundedFileAgent(reader boundedrun.ExecutionAuthority, workspaces map[string]string, observer Adapter) (Adapter, error) {
 	if reader == nil || len(workspaces) == 0 || observer == nil {
 		return nil, fmt.Errorf("chain authority, workspace bindings and observer are required")
@@ -43,7 +48,13 @@ func BoundedFileAgent(reader boundedrun.ExecutionAuthority, workspaces map[strin
 		}
 		copied[id] = path
 	}
-	return &boundedFileAgent{reader: reader, workspaces: copied, observer: observer, inventory: inventory}, nil
+	instanceIDs := map[string]string{}
+	for _, instance := range inventory.Discover().Instances {
+		instanceIDs[instance.InstanceID] = instance.InstanceID
+		instanceIDs[instance.Session] = instance.InstanceID
+		copied[instance.Session] = instance.Workspace
+	}
+	return &boundedFileAgent{reader: reader, workspaces: copied, observer: observer, inventory: inventory, instanceIDs: instanceIDs, active: map[string]nativeAttempt{}}, nil
 }
 
 func (a *boundedFileAgent) NativeDiscovery() *agent.Discovery {
@@ -51,7 +62,7 @@ func (a *boundedFileAgent) NativeDiscovery() *agent.Discovery {
 	return &d
 }
 func (a *boundedFileAgent) Supports(operation Operation) bool {
-	if operation == OperationAssign {
+	if operation == OperationAssign || operation == OperationStatus || operation == OperationAvailability {
 		return true
 	}
 	if observer, ok := a.observer.(interface{ Supports(Operation) bool }); ok {
@@ -60,6 +71,9 @@ func (a *boundedFileAgent) Supports(operation Operation) bool {
 	return false
 }
 func (a *boundedFileAgent) run(ctx context.Context, request Request) (Response, error) {
+	if (request.Operation == OperationStatus || request.Operation == OperationAvailability) && (a.workspaces[request.Agent] != "" || strings.HasPrefix(request.Agent, "native-")) {
+		return a.nativeStatus(request)
+	}
 	if request.Operation == OperationAssign {
 		return Response{}, runError("unsupported_operation", fmt.Errorf("bounded tools require a signed command and this Host's confirmed attempt"))
 	}
@@ -85,18 +99,21 @@ func (a *boundedFileAgent) runAuthorized(ctx context.Context, request Request, c
 	if workspace == "" {
 		return reject("boundary_denied", fmt.Errorf("instance has no local workspace binding"))
 	}
-	if strings.HasPrefix(request.Agent, "native-") {
+	if a.instanceIDs[request.Agent] == "" {
+		return reject("workspace_changed", fmt.Errorf("native instance continuity is unavailable"))
+	}
+	if id := a.instanceIDs[request.Agent]; id != "" {
 		scan := a.inventory.Discover()
 		present := false
 		for _, instance := range scan.Instances {
-			if instance.InstanceID == request.Agent && instance.Workspace == workspace {
+			if instance.InstanceID == id && instance.Workspace == workspace {
 				present = true
 			}
 		}
 		if scan.State != "complete" || !present {
 			return reject("workspace_changed", fmt.Errorf("native instance or original workspace is no longer present"))
 		}
-		workspaceIdentity = a.inventory.WorkspaceIdentity(request.Agent)
+		workspaceIdentity = a.inventory.WorkspaceIdentity(id)
 		if workspaceIdentity == nil {
 			return reject("workspace_changed", fmt.Errorf("original directory identity is unavailable"))
 		}
@@ -105,6 +122,11 @@ func (a *boundedFileAgent) runAuthorized(ctx context.Context, request Request, c
 	if err != nil {
 		return reject("boundary_denied", err)
 	}
+	release, available := a.beginNative(request.Agent, request.CommandID, checkpoint.ID)
+	if !available {
+		return reject("instance_busy", fmt.Errorf("native instance still has a physical execution; query its checkpoint before handover"))
+	}
+	defer release()
 	guard, err := boundedrun.NewGuard(ctx, a.reader, command, *checkpoint, workspace)
 	if err != nil {
 		return reject("operation_unconfirmed", err)

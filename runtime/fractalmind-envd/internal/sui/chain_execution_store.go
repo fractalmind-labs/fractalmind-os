@@ -279,6 +279,9 @@ func (s *ChainExecutionStore) LoadCommand(ctx context.Context, command nodecomma
 	record.Response.ExecutionID = run.ID
 	record.Response.ExecutionState = executionState(run.State)
 	record.Response.RequiresConfirmation = run.State == 4
+	// Never recover a transaction digest from runtime-provided plaintext. The
+	// immutable chain result's creation transaction is the durable source.
+	record.Response.TransactionDigest = result.TransactionDigest
 	s.observeNativeResult(ctx, command, &record, false)
 	return record, true, nil
 }

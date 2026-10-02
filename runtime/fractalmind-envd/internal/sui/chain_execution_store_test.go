@@ -113,6 +113,8 @@ func TestChainResultStorePersistsAndLoadsWithoutCache(t *testing.T) {
 			if !known {
 				record.Response.Spend = nil
 			}
+			// A runtime-provided value cannot claim the eventual creation digest.
+			record.Response.TransactionDigest = "untrusted-runtime-digest"
 			if err := store.Preflight(context.Background(), cmd); err != nil {
 				t.Fatal(err)
 			}
@@ -145,8 +147,9 @@ func TestChainResultStorePersistsAndLoadsWithoutCache(t *testing.T) {
 				reader.run.ResultRecordID = "record"
 				hash := sha256.Sum256(ciphertext)
 				reader.run.ResultHash = hex.EncodeToString(hash[:])
-				reader.result = nodecommand.ChainExecutionResult{EncryptedBody: ciphertext, KeyVersion: 1}
-				return txResponse(t, req.TxnMetaData, "success"), nil
+				receipt := txResponse(t, req.TxnMetaData, "success")
+				reader.result = nodecommand.ChainExecutionResult{EncryptedBody: ciphertext, KeyVersion: 1, TransactionDigest: receipt.Digest}
+				return receipt, nil
 			}
 			saved, err := store.SaveCommand(context.Background(), cmd, &started, record)
 			if err != nil {
@@ -164,7 +167,7 @@ func TestChainResultStorePersistsAndLoadsWithoutCache(t *testing.T) {
 				t.Fatal(err)
 			}
 			loaded, found, err := fresh.LoadCommand(context.Background(), cmd)
-			if err != nil || !found || loaded.Response.ExecutionState != saved.Response.ExecutionState || sends != 1 {
+			if err != nil || !found || loaded.Response.ExecutionState != saved.Response.ExecutionState || loaded.Response.TransactionDigest != saved.Response.TransactionDigest || sends != 1 {
 				t.Fatalf("loaded=%+v found=%t sends=%d err=%v", loaded, found, sends, err)
 			}
 		})

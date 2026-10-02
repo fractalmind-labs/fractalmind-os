@@ -1,0 +1,41 @@
+{
+  "recordedAt": "2026-10-02T09:43:54.913Z",
+  "baseline": "PRD v0.11 / fractalmind-app-prototype-v2",
+  "results": [
+    {
+      "command": "go test -race ./internal/runtimeadapter ./internal/boundedrun ./internal/nodecommand ./internal/sui ./cmd/envd",
+      "exitCode": 0,
+      "packagesPassed": 5,
+      "scope": "actual kernel native process identity; signed bounded file execution with concurrency and directory replacement; protocol source validation and result reconstruction; live-test helpers skipped in unit run"
+    },
+    {
+      "command": "go test -race ./internal/sui",
+      "exitCode": 0,
+      "scope": "after adding gRPC immutable creation digest metadata test"
+    },
+    {
+      "command": "go test -c -o /tmp/fm-envd-native-execution-tests ./cmd/envd",
+      "exitCode": 0
+    },
+    {
+      "command": "tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --strict --skipLibCheck --esModuleInterop scripts/host-admission-localnet.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "go test -race ./internal/runtimeadapter",
+      "exitCode": 0,
+      "scope": "final concurrent gate test uses two distinct signed commands and checkpoints; actual native process and workspace"
+    }
+  ],
+  "realChainEvidence": "v020-native-execution-localnet.json",
+  "limits": {
+    "appUiChanged": false,
+    "safeAppHandoverVerified": false,
+    "installedAppVerified": false,
+    "nativeStoreVerified": false,
+    "cloudHostVerified": false,
+    "fivePlatformsVerified": false,
+    "sharedGateAcrossExecutorFactoriesVerified": false,
+    "humanAcceptanceVerified": false
+  }
+}

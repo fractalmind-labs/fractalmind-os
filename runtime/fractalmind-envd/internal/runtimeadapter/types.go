@@ -22,6 +22,7 @@ var stableErrorCodes = map[string]struct{}{
 	"malformed_input": {}, "missing_agent": {}, "missing_command_id": {},
 	"operation_failed": {}, "timeout": {}, "unsupported_operation": {},
 	"boundary_denied": {}, "budget_exhausted": {}, "workspace_changed": {}, "operation_unconfirmed": {}, "measurement_mismatch": {},
+	"instance_busy": {},
 }
 
 type Operation string

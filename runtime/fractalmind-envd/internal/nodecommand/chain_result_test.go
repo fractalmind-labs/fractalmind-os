@@ -38,11 +38,14 @@ func saveResult(t *testing.T, f *chainFixture, record moveEncryptedRecord) {
 
 func TestChainExecutionResultAuthenticatesRecordBinding(t *testing.T) {
 	f, fingerprint, record := resultFixture(t)
+	object := f.objects[record.ID.String()]
+	object.PreviousTransaction = "original-chain-creation-digest"
+	f.objects[object.ID] = object
 	got, found, err := f.resolver.ReadExecutionResult(context.Background(), f.cap.ID.String(), fingerprint)
 	if err != nil || !found {
 		t.Fatalf("found=%v err=%v", found, err)
 	}
-	if got.ID != record.ID.String() || got.KeyVersion != 2 || got.LogicalID != record.LogicalID || string(got.EncryptedBody) != string(record.Body) {
+	if got.ID != record.ID.String() || got.KeyVersion != 2 || got.LogicalID != record.LogicalID || string(got.EncryptedBody) != string(record.Body) || got.TransactionDigest != object.PreviousTransaction {
 		t.Fatalf("wrong result %+v", got)
 	}
 	// The historical key version remains readable independently of current

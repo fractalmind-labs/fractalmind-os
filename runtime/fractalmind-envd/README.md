@@ -234,6 +234,13 @@ this adapter's capability. Discovery and App import remain observation-only;
 they do not adopt an old task, confirm control or continue an OKR. See
 [native adapter discovery and limits](../../docs/product/v020-native-agent-discovery.md).
 
+The native adapter answers signed `status` / `availability` commands with its
+physical idle/running state and active command/checkpoint IDs. Configured names
+and discovered aliases share one execution slot and pinned workspace; a second
+assignment returns `instance_busy` before tools run. Physical idle alone does
+not authorize handover or prove that chain checkpoints are terminal. See
+[native execution validation](../../docs/product/v020-native-agent-execution.md).
+
 Actual loopback sockets with generated memory test keys and race checks passed.
 NativeStore/main startup, cloud/TLS, desktop authorization, Agent import and five-platform
 acceptance remain pending. See [connection implementation and evidence](../../docs/product/v020-host-chain-connection.md).

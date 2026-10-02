@@ -22,15 +22,42 @@ type transportServer struct {
 	execute  func(*v2.ExecuteTransactionRequest) (*v2.ExecuteTransactionResponse, error)
 	list     func(*v2.ListOwnedObjectsRequest) (*v2.ListOwnedObjectsResponse, error)
 	query    func(*v2.GetTransactionRequest) (*v2.GetTransactionResponse, error)
+	object   func(*v2.GetObjectRequest) (*v2.GetObjectResponse, error)
 }
 
 func (s *transportServer) GetTransaction(_ context.Context, r *v2.GetTransactionRequest) (*v2.GetTransactionResponse, error) {
 	return s.query(r)
 }
 
-func (s *transportServer) GetObject(context.Context, *v2.GetObjectRequest) (*v2.GetObjectResponse, error) {
+func (s *transportServer) GetObject(_ context.Context, req *v2.GetObjectRequest) (*v2.GetObjectResponse, error) {
+	if s.object != nil {
+		return s.object(req)
+	}
 	owner, _ := normalizeAddress("0x2")
 	return &v2.GetObjectResponse{Object: &v2.Object{ObjectId: proto.String("0xcoin"), Version: proto.Uint64(7), Digest: proto.String("coin-digest"), Owner: &v2.Owner{Address: proto.String(owner)}}}, nil
+}
+
+func TestChainObjectRetainsImmutableCreationTransaction(t *testing.T) {
+	id, _ := normalizeAddress("0x3")
+	s := &transportServer{object: func(req *v2.GetObjectRequest) (*v2.GetObjectResponse, error) {
+		if req.GetObjectId() != id {
+			t.Fatal("read a different object")
+		}
+		requested := false
+		for _, path := range req.ReadMask.Paths {
+			if path == "previous_transaction" {
+				requested = true
+			}
+		}
+		if !requested {
+			t.Fatal("original digest cannot be reconstructed from this mask")
+		}
+		return &v2.GetObjectResponse{Object: &v2.Object{ObjectId: proto.String(id), Version: proto.Uint64(8), ObjectType: proto.String("0x3::product_record::EncryptedRecord"), Owner: &v2.Owner{Kind: v2.Owner_IMMUTABLE.Enum()}, Contents: &v2.Bcs{Value: []byte("raw encrypted BCS")}, PreviousTransaction: proto.String("creation-transaction")}}, nil
+	}}
+	object, err := testTransport(t, s).ReadChainObject(context.Background(), id)
+	if err != nil || !object.Immutable || object.Shared || object.PreviousTransaction != "creation-transaction" || string(object.Content) != "raw encrypted BCS" {
+		t.Fatalf("creation metadata lost: %+v %v", object, err)
+	}
 }
 func (s *transportServer) SimulateTransaction(_ context.Context, r *v2.SimulateTransactionRequest) (*v2.SimulateTransactionResponse, error) {
 	return s.simulate(r)
