@@ -2,6 +2,8 @@
 
 产品基准仍是[原型 v2 主机页](fractalmind-app-prototype-v2/js/view-hosts.js)和 [PRD](fractalmind-app-prd.md)。该增量连接已关联设备到组织 Coordinator 的只读 API，及 App 的“主机与算力 → 运行观测”。完整 v0.2.0 未完成。
 
+本文记录设备读取增量 `8d43406` 及其当时证据。后续已接入 [Host 独立签名](v020-host-signed-observations.md)，最新页面和可信边界以该记录为准。
+
 ## 身份和状态归属
 
 设备钥继续保留在原生 OS 密钥库。App 使用现有 `fm_device_prove` IPC，不导出钥，不在浏览器创建替代钥。Sui 的 Human、当前 DeviceGrant、OrgRole、组织和 CoordinatorBinding 决定读取权；公开 ID、Host 成员资格和 Bearer token 不代表设备持钥或读取授权。
@@ -24,7 +26,7 @@
 
 返回内容经过大小和结构检查：完整稳定 Host 地址且不重复、计数一致、有限整数资源、有效心跳时间。显示主机、系统／CPU、实例数和心跳时间；超过一分钟或未来时间显示未知／陈旧。读取失败、改设备、改入口时清除旧观测，切换组织重新挂载，不显示另一个组织的数据。没有观测业务缓存。
 
-**当前可信边界：数据由 Coordinator 签名，尚无 App 可独立验证的 Host 签名正文。** 因此页面标为“入口观测”，不会提升为 Host 在线凭据、独立 Agent 控制证明或执行权限。链上成员目录依然单独展示；正在运行的 Agent 不因读取自动导入或重启。
+**该阶段的可信边界：数据由 Coordinator 签名，当时尚无 App 可独立验证的 Host 签名正文。** 当时页面标为“入口观测”，不提升为 Host 在线凭据、独立 Agent 控制证明或执行权限。后续 Host 签名已实现，见首节链接；链上成员目录依然单独展示，正在运行的 Agent 不因读取自动导入或重启。
 
 ## 验证
 

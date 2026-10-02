@@ -1,0 +1,96 @@
+{
+  "recordedAt": "2026-10-02T06:01:23.572821+00:00",
+  "command": "go test -race -json ./internal/heartbeat ./internal/ws ./internal/coordinator ./cmd/envd",
+  "sourceSha256": "731c40d91c500a4244300fcd1a2745dbdd12ce2a4a4429b646ed1c1618862daa",
+  "packages": [
+    {
+      "name": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/heartbeat",
+      "status": "pass",
+      "elapsedSeconds": 2.226
+    },
+    {
+      "name": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/ws",
+      "status": "pass",
+      "elapsedSeconds": 2.933
+    },
+    {
+      "name": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/coordinator",
+      "status": "pass",
+      "elapsedSeconds": 3.132
+    },
+    {
+      "name": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "status": "pass",
+      "elapsedSeconds": 3.539
+    }
+  ],
+  "passedTestEvents": 113,
+  "skippedTests": [
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestNativeChainFileAgentLive"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestNativeChainSingleKrLive"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestProductionObservationFixture"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestProductionChainRuntimeLive"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestHostJoinLiveCLI"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestHostJoinHiddenTTY"
+    }
+  ],
+  "app": {
+    "command": "npm test",
+    "tests": 67,
+    "passed": 67,
+    "failed": 0,
+    "sourceSha256": "fa707d655aad8f463623d1f22a0b047a7145f08826f0ea9af9ce97cfcf98f94a",
+    "productionBuild": "pass",
+    "productionBuildSourceSha256": "113fbc5897e690178a2d578c9ce1796c4523575553fba9f086cff761af9e838e"
+  },
+  "limits": {
+    "generatedFixtureKeys": true,
+    "nativeStoreVerified": false,
+    "installedAppVerified": false,
+    "cloudHostVerified": false,
+    "independentAgentIdentityVerified": false
+  },
+  "platformBuilds": [
+    {
+      "target": "darwin/arm64",
+      "mode": "native build",
+      "status": "pass",
+      "bytes": 23507218,
+      "sha256": "54344e5cf5e74959ef207bb8f2f115e1dde5946439820f91425e1cb785b0ce2f",
+      "actualHostRuntimeVerified": false
+    },
+    {
+      "target": "windows/amd64",
+      "mode": "cross build",
+      "status": "pass",
+      "bytes": 24851456,
+      "sha256": "86b2391e51bd770822e5b0b8f74ec4064c25d365e716b7b58134c8bf2d696550",
+      "actualHostRuntimeVerified": false
+    },
+    {
+      "target": "linux/amd64",
+      "mode": "cross build",
+      "status": "pass",
+      "bytes": 25282767,
+      "sha256": "fb49d98a4666a01f9a28778d06b802d5cb6a3502c4f86f392454b853213629ca",
+      "actualHostRuntimeVerified": false
+    }
+  ]
+}

@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"sync"
 
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/config"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/coordinator"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/heartbeat"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/ws"
@@ -69,6 +71,19 @@ func configureChainWorker(client *ws.Client, cfg *config.Config, rpc connectionR
 		}
 		return nil
 	})
+	client.SetHostObservation(func(ctx context.Context) (heartbeat.Scope, uint64, error) {
+		current, err := read(ctx)
+		if err != nil {
+			return heartbeat.Scope{}, 0, err
+		}
+		mu.Lock()
+		previous := accepted
+		mu.Unlock()
+		if current.MembershipID != previous.MembershipID || current.MembershipVersion != previous.MembershipVersion || current.BindingID != previous.BindingID || current.BindingVersion != previous.BindingVersion {
+			return heartbeat.Scope{}, 0, fmt.Errorf("Host observation scope changed")
+		}
+		return heartbeat.Scope{ChainIdentifier: cfg.SUI.ChainIdentifier, OrganizationID: current.OrganizationID, MembershipID: current.MembershipID, MembershipVersion: strconv.FormatUint(current.MembershipVersion, 10), BindingID: current.BindingID, BindingVersion: strconv.FormatUint(current.BindingVersion, 10), HostAddress: current.HostAddress}, current.ExpiresAtMS, nil
+	})
 	return nil
 }
 
@@ -99,6 +114,22 @@ func configureChainCoordinator(server *coordinator.Server, cfg *config.Config, r
 		return err
 	}
 	server.SetDeviceReadAuth(readAuth)
+	server.SetHostObservationAuthority(func(ctx context.Context, observation heartbeat.Signed, public []byte) error {
+		if observation.ChainIdentifier != cfg.SUI.ChainIdentifier || observation.OrganizationID != cfg.SUI.OrgID || observation.BindingID != cfg.Coordinator.BindingID {
+			return fmt.Errorf("Host observation belongs to another chain, organization or binding")
+		}
+		if err := rpc.CheckHostJoinChain(ctx, cfg.SUI.ChainIdentifier); err != nil {
+			return err
+		}
+		current, err := reader.ReadHostConnection(ctx, cfg.SUI.OrgID, public, nil)
+		if err != nil {
+			return err
+		}
+		if current.HostAddress != observation.HostAddress || current.MembershipID != observation.MembershipID || strconv.FormatUint(current.MembershipVersion, 10) != observation.MembershipVersion || current.BindingID != observation.BindingID || strconv.FormatUint(current.BindingVersion, 10) != observation.BindingVersion || observation.ExpiresAtMS < 0 || uint64(observation.ExpiresAtMS) > current.ExpiresAtMS {
+			return fmt.Errorf("Host observation chain scope changed")
+		}
+		return nil
+	})
 	server.SetWorkerAuthority(func(ctx context.Context, address string, public []byte) error {
 		if err := rpc.CheckHostJoinChain(ctx, cfg.SUI.ChainIdentifier); err != nil {
 			return err

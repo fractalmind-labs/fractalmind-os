@@ -33,6 +33,8 @@ sui:
 
 持久成员资格由 Sui 保存；Coordinator 的 socket／心跳目录只是可丢弃观测，不新增业务数据库。直接 HTTP API 的设备读取鉴权已在[后续增量](v020-device-http-read.md)接通；当前 loopback 测试不作为公开部署验收。通过握手认证的心跳也不等于可由 App 独立核验的 Host 签名观测正文。
 
+随后已实现独立 [Host 签名观测](v020-host-signed-observations.md)，包含 App 原文签名与当前成员指针核验。下方连接报告保留本连接增量当时的验收范围。
+
 ## 实际测试
 
 - [真实链与 loopback 报告](evidence/v020-host-chain-connection-localnet.json)：App 创建组织／入口／单次邀请，独立 Go Host 兑换；仍覆盖实际广播后丢失回执、真实磁盘原摘要恢复和一次广播。使用保留的随机 loopback 端口，Host 从链上选择入口，双向认证并上报真实心跳。App 链上撤销成员后，Coordinator 路由明确因当前指针缺失而拒绝，Host 也拒绝后续心跳。**10 项检查、10 笔成功交易**。

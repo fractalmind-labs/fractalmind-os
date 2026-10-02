@@ -18,17 +18,18 @@ import (
 )
 
 type nodeSnapshot struct {
-	ID            string                   `json:"id"`
-	HostID        string                   `json:"host_id"`
-	Hostname      string                   `json:"hostname"`
-	Version       string                   `json:"version"`
-	ConnectedAt   time.Time                `json:"connected_at"`
-	LastHeartbeat *time.Time               `json:"last_heartbeat"`
-	Agents        []agent.Agent            `json:"agents"`
-	System        *heartbeat.SystemInfo    `json:"system"`
-	UptimeSeconds int64                    `json:"uptime_seconds"`
-	RelayLoad     *heartbeat.RelayLoadInfo `json:"relay_load,omitempty"`
-	DesktopURL    string                   `json:"desktop_url,omitempty"`
+	ID              string                   `json:"id"`
+	HostID          string                   `json:"host_id"`
+	Hostname        string                   `json:"hostname"`
+	Version         string                   `json:"version"`
+	ConnectedAt     time.Time                `json:"connected_at"`
+	LastHeartbeat   *time.Time               `json:"last_heartbeat"`
+	Agents          []agent.Agent            `json:"agents"`
+	System          *heartbeat.SystemInfo    `json:"system"`
+	UptimeSeconds   int64                    `json:"uptime_seconds"`
+	RelayLoad       *heartbeat.RelayLoadInfo `json:"relay_load,omitempty"`
+	DesktopURL      string                   `json:"desktop_url,omitempty"`
+	HostObservation *heartbeat.Signed        `json:"host_observation,omitempty"`
 }
 
 type registerPayload struct {
@@ -69,10 +70,12 @@ type pendingSignal struct {
 }
 
 type nodeConn struct {
-	ws      *websocket.Conn
-	writeMu sync.Mutex
-	address string
-	public  []byte
+	ws                  *websocket.Conn
+	writeMu             sync.Mutex
+	address             string
+	public              []byte
+	sessionNonce        string
+	observationSequence uint64
 }
 
 func (c *nodeConn) WriteJSON(v interface{}) error {
@@ -105,10 +108,15 @@ type Manager struct {
 	// message is processed. allowedSigners, when non-empty, restricts which
 	// verified SUI identities may register (authorization); empty means any
 	// authenticated identity is accepted.
-	signer           wsauth.Signer
-	allowedSigners   []string
-	handshakeTimeout time.Duration
-	workerAuthority  func(context.Context, string, []byte) error
+	signer               wsauth.Signer
+	allowedSigners       []string
+	handshakeTimeout     time.Duration
+	workerAuthority      func(context.Context, string, []byte) error
+	observationAuthority func(context.Context, heartbeat.Signed, []byte) error
+}
+
+func (m *Manager) SetHostObservationAuthority(check func(context.Context, heartbeat.Signed, []byte) error) {
+	m.observationAuthority = check
 }
 
 func NewManager(commandTimeout time.Duration) *Manager {
@@ -159,12 +167,13 @@ func (m *Manager) commandID() string {
 }
 
 func (m *Manager) HandleConnection(conn *websocket.Conn) {
+	conn.SetReadLimit(1 << 20)
 	nodeID := m.tempID()
 	client := &nodeConn{ws: conn}
 	defer func() { m.removeConnection(nodeID, client); conn.Close() }()
 
 	if m.signer != nil {
-		addr, public, err := m.authenticate(conn)
+		addr, public, err := m.authenticate(conn, client)
 		if err != nil {
 			log.Printf("[coordinator] worker %s auth rejected: %v", nodeID, err)
 			conn.Close()
@@ -204,7 +213,7 @@ func (m *Manager) HandleConnection(conn *websocket.Conn) {
 // proves the coordinator's identity over the worker-issued nonce, then verifies
 // the worker's proof over a coordinator-issued nonce and checks the allowlist.
 // It returns the verified worker SUI address on success.
-func (m *Manager) authenticate(conn *websocket.Conn) (string, []byte, error) {
+func (m *Manager) authenticate(conn *websocket.Conn, client *nodeConn) (string, []byte, error) {
 	deadline := time.Now().Add(m.handshakeTimeout)
 	_ = conn.SetReadDeadline(deadline)
 	_ = conn.SetWriteDeadline(deadline)
@@ -259,6 +268,7 @@ func (m *Manager) authenticate(conn *websocket.Conn) (string, []byte, error) {
 	if err := writeTyped(conn, wsauth.MsgAuthOK, struct{}{}); err != nil {
 		return "", nil, fmt.Errorf("send auth_ok: %w", err)
 	}
+	client.sessionNonce = serverNonceHex
 	return addr, public, nil
 }
 
@@ -335,6 +345,9 @@ func (m *Manager) handleMessage(currentID string, conn *nodeConn, msg ws.Message
 		return nodeID, nil
 
 	case "heartbeat":
+		if m.observationAuthority != nil {
+			return currentID, fmt.Errorf("signed Host observation required")
+		}
 		var payload heartbeat.Payload
 		if err := json.Unmarshal(msg.Payload, &payload); err != nil {
 			return currentID, fmt.Errorf("decode heartbeat payload: %w", err)
@@ -361,6 +374,52 @@ func (m *Manager) handleMessage(currentID string, conn *nodeConn, msg ws.Message
 		}
 		m.mu.Unlock()
 
+		return currentID, nil
+
+	case "host_observation":
+		if m.observationAuthority == nil || conn.address == "" {
+			return currentID, fmt.Errorf("current Host observation authority required")
+		}
+		signed, err := heartbeat.DecodeSigned(msg.Payload)
+		if err != nil {
+			return currentID, err
+		}
+		if signed.HostAddress != conn.address || signed.SessionNonce != conn.sessionNonce || signed.Sequence <= conn.observationSequence {
+			return currentID, fmt.Errorf("Host observation connection or sequence mismatch")
+		}
+		payload, err := heartbeat.Verify(signed, conn.public, time.Now().UnixMilli())
+		if err != nil {
+			return currentID, err
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		err = m.observationAuthority(ctx, signed, conn.public)
+		cancel()
+		if err != nil {
+			return currentID, err
+		}
+		if _, err = heartbeat.Verify(signed, conn.public, time.Now().UnixMilli()); err != nil {
+			return currentID, err
+		}
+		m.mu.Lock()
+		node, ok := m.nodes[currentID]
+		if !ok || node.conn != conn {
+			m.mu.Unlock()
+			return currentID, fmt.Errorf("registered Host connection required")
+		}
+		conn.observationSequence = signed.Sequence
+		observed := payload.Timestamp
+		node.LastHeartbeat, node.HostObservation = &observed, &signed
+		node.Hostname = payload.Hostname
+		node.Agents = append([]agent.Agent(nil), payload.Agents...)
+		system := payload.System
+		node.System, node.UptimeSeconds = &system, payload.Uptime
+		if payload.RelayLoad != nil {
+			relay := *payload.RelayLoad
+			node.RelayLoad = &relay
+		} else {
+			node.RelayLoad = nil
+		}
+		m.mu.Unlock()
 		return currentID, nil
 
 	case "command_result":
@@ -611,6 +670,10 @@ func (m *Manager) removeConnection(nodeID string, conn *nodeConn) {
 func cloneSnapshot(node nodeSnapshot) nodeSnapshot {
 	cloned := node
 	cloned.Agents = append([]agent.Agent(nil), node.Agents...)
+	if node.HostObservation != nil {
+		observation := *node.HostObservation
+		cloned.HostObservation = &observation
+	}
 	if node.System != nil {
 		system := *node.System
 		cloned.System = &system

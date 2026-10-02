@@ -288,4 +288,22 @@ export class CoordinatorReadClient {
   async read(bindingId: string, path = "/api/sentinels") {
     return (await this.prepare(bindingId, path)).send();
   }
+  async readHosts(bindingId: string) {
+    const before = await this.binding(bindingId);
+    const response = await this.read(bindingId);
+    const { verifyHostObservations } = await import("./host-signatures");
+    const observations = await verifyHostObservations(
+      this.chain,
+      this.organizationId,
+      bindingId,
+      response,
+    );
+    await this.verifier.verifyOrganization(this.organizationId, "read");
+    if (
+      bindingPin((await this.binding(bindingId)).binding) !==
+      bindingPin(before.binding)
+    )
+      throw new CoordinatorReadError("binding_changed");
+    return observations;
+  }
 }

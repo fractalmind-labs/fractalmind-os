@@ -50,6 +50,7 @@ export type HostDirectory = {
   memberships: HostMember[];
   clockMs: bigint;
   loadedAtMs: number;
+  activeHostsTableId: string | null;
 };
 const id = /^0x[0-9a-f]{64}$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -254,6 +255,7 @@ export async function hostDirectory(
     memberships,
     clockMs: human.clockMs,
     loadedAtMs: human.loadedAtMs,
+    activeHostsTableId: index?.active_hosts.id ?? null,
   };
 }
 type Plan = {

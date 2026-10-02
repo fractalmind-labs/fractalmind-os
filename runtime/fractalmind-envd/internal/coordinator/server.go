@@ -26,16 +26,17 @@ type commandRequest struct {
 }
 
 type sentinelSummary struct {
-	ID            string                `json:"id"`
-	HostID        string                `json:"host_id"`
-	Hostname      string                `json:"hostname"`
-	Version       string                `json:"version"`
-	ConnectedAt   time.Time             `json:"connected_at"`
-	LastHeartbeat *time.Time            `json:"last_heartbeat"`
-	AgentCount    int                   `json:"agent_count"`
-	UptimeSeconds int64                 `json:"uptime_seconds"`
-	System        *heartbeat.SystemInfo `json:"system"`
-	DesktopURL    string                `json:"desktop_url,omitempty"`
+	ID              string                `json:"id"`
+	HostID          string                `json:"host_id"`
+	Hostname        string                `json:"hostname"`
+	Version         string                `json:"version"`
+	ConnectedAt     time.Time             `json:"connected_at"`
+	LastHeartbeat   *time.Time            `json:"last_heartbeat"`
+	AgentCount      int                   `json:"agent_count"`
+	UptimeSeconds   int64                 `json:"uptime_seconds"`
+	System          *heartbeat.SystemInfo `json:"system"`
+	DesktopURL      string                `json:"desktop_url,omitempty"`
+	HostObservation *heartbeat.Signed     `json:"host_observation,omitempty"`
 }
 
 // Server exposes the embedded coordinator REST and WebSocket API.
@@ -76,6 +77,10 @@ func (s *Server) SetAuth(signer wsauth.Signer, allowedSigners []string) {
 
 func (s *Server) SetWorkerAuthority(authorize func(context.Context, string, []byte) error) {
 	s.manager.SetWorkerAuthority(authorize)
+}
+
+func (s *Server) SetHostObservationAuthority(check func(context.Context, heartbeat.Signed, []byte) error) {
+	s.manager.SetHostObservationAuthority(check)
 }
 
 func (s *Server) SetDeviceReadAuth(auth *DeviceReadAuth) { s.deviceRead = auth }
@@ -166,16 +171,17 @@ func (s *Server) handleListSentinels(w http.ResponseWriter, _ *http.Request) {
 	summaries := make([]sentinelSummary, 0, len(nodes))
 	for _, node := range nodes {
 		summaries = append(summaries, sentinelSummary{
-			ID:            node.ID,
-			HostID:        node.HostID,
-			Hostname:      node.Hostname,
-			Version:       node.Version,
-			ConnectedAt:   node.ConnectedAt,
-			LastHeartbeat: node.LastHeartbeat,
-			AgentCount:    len(node.Agents),
-			UptimeSeconds: node.UptimeSeconds,
-			System:        node.System,
-			DesktopURL:    node.DesktopURL,
+			ID:              node.ID,
+			HostID:          node.HostID,
+			Hostname:        node.Hostname,
+			Version:         node.Version,
+			ConnectedAt:     node.ConnectedAt,
+			LastHeartbeat:   node.LastHeartbeat,
+			AgentCount:      len(node.Agents),
+			UptimeSeconds:   node.UptimeSeconds,
+			System:          node.System,
+			DesktopURL:      node.DesktopURL,
+			HostObservation: node.HostObservation,
 		})
 	}
 

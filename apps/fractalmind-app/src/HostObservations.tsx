@@ -12,29 +12,37 @@ import {
   NativeDeviceError,
   preferredDeviceProfile,
 } from "./native-device";
-import { coordinatorHosts, type CoordinatorHost } from "./host-observations";
+import type { VerifiedHostObservation } from "./host-signatures";
 import type { ConnectionProfile } from "./domain";
 
 /** Transient observations: no business cache, auto-connect, import or execution. */
 export default function HostObservations({
   profile,
   organizationId,
+  authorityRevision,
   t,
 }: {
   profile: ConnectionProfile;
   organizationId: string;
+  authorityRevision: string;
   t: (zh: string, en: string) => string;
 }) {
   const [deviceProfile, setDeviceProfile] = useState(preferredDeviceProfile);
   const [bindings, setBindings] = useState<HostBinding[] | null>(null);
   const [bindingId, setBindingId] = useState("");
-  const [rows, setRows] = useState<CoordinatorHost[] | null>(null);
+  const [rows, setRows] = useState<VerifiedHostObservation[] | null>(null);
   const [receivedAt, setReceivedAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const flight = useRef(false),
     mounted = useRef(true);
+  const authority = useRef(authorityRevision);
+  authority.current = authorityRevision;
+  useEffect(() => {
+    setRows(null);
+    setReceivedAt(null);
+  }, [authorityRevision]);
   useEffect(() => {
     mounted.current = true;
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -186,6 +194,7 @@ export default function HostObservations({
           disabled={!native || !bindingId}
           onClick={() =>
             void run(async () => {
+              const revision = authorityRevision;
               const signer = await NativeDeviceSigner.load(
                 (command, args) => invoke(command, args),
                 deviceProfile,
@@ -207,14 +216,13 @@ export default function HostObservations({
                 usable = scoped?.length ? scoped : candidates;
               if (usable?.length !== 1)
                 throw new DeviceIdentityError("invalid_grant");
-              const value = await new CoordinatorReadClient(
+              const parsed = await new CoordinatorReadClient(
                 chain,
                 signer,
                 usable[0].id,
                 organizationId,
-              ).read(bindingId);
-              const parsed = coordinatorHosts(value);
-              if (mounted.current) {
+              ).readHosts(bindingId);
+              if (mounted.current && authority.current === revision) {
                 setRows(parsed);
                 setReceivedAt(Date.now());
               }
@@ -255,47 +263,68 @@ export default function HostObservations({
               </p>
             )}
             <div className="card-grid">
-              {rows.map((row) => (
-                <article className="panel" key={row.address}>
-                  <span className="badge">
-                    {t("入口观测", "Entry point observation")}
-                  </span>
-                  <h3>{row.hostname || `Host ${row.address.slice(0, 10)}`}</h3>
-                  <code className="long-id">{row.address}</code>
-                  <dl>
-                    <dt>{t("心跳时间", "Heartbeat time")}</dt>
-                    <dd>
-                      {row.heartbeatMs === null
-                        ? t("尚未收到心跳", "No heartbeat received")
-                        : new Date(row.heartbeatMs).toLocaleString()}
-                    </dd>
-                    <dt>{t("心跳新鲜度", "Heartbeat freshness")}</dt>
-                    <dd>
-                      {row.heartbeatMs === null ||
-                      row.heartbeatMs > now ||
-                      now - row.heartbeatMs >= 60_000
-                        ? t("未知或陈旧", "Unknown or stale")
-                        : t("最近一分钟", "Within the last minute")}
-                    </dd>
-                    <dt>{t("系统 / CPU", "System / CPU")}</dt>
-                    <dd>
-                      {row.system
-                        ? `${row.system.os} / ${row.system.arch} · ${row.system.cpu}`
-                        : t("未知", "Unknown")}
-                    </dd>
-                    <dt>{t("发现的实例数", "Observed instances")}</dt>
-                    <dd>{row.agentCount}</dd>
-                  </dl>
-                </article>
-              ))}
+              {rows.map((result) => {
+                const row = result.observation;
+                const current =
+                  result.state === "verified" &&
+                  result.freshUntilMs !== null &&
+                  now < result.freshUntilMs;
+                return (
+                  <article className="panel" key={result.address}>
+                    <span className="badge">
+                      {current
+                        ? t("已验证 Host 签名", "Host signature verified")
+                        : result.state === "expired" ||
+                            result.state === "verified"
+                          ? t("观测已过期", "Observation expired")
+                          : t("Host 状态未知", "Host state unknown")}
+                    </span>
+                    <h3>
+                      {(current && row?.hostname) ||
+                        `Host ${result.address.slice(0, 10)}`}
+                    </h3>
+                    <code className="long-id">{result.address}</code>
+                    <dl>
+                      <dt>{t("心跳时间", "Heartbeat time")}</dt>
+                      <dd>
+                        {row?.heartbeatMs == null
+                          ? t("无可信心跳", "No trusted heartbeat")
+                          : new Date(row.heartbeatMs).toLocaleString()}
+                      </dd>
+                      <dt>{t("心跳新鲜度", "Heartbeat freshness")}</dt>
+                      <dd>
+                        {current
+                          ? t(
+                              "有效期内的 Host 签名观测",
+                              "Host-signed observation within its validity window",
+                            )
+                          : t(
+                              "未知或陈旧，请重新读取",
+                              "Unknown or stale; read again",
+                            )}
+                      </dd>
+                      <dt>{t("系统 / CPU", "System / CPU")}</dt>
+                      <dd>
+                        {current && row?.system
+                          ? `${row.system.os} / ${row.system.arch} · ${row.system.cpu}`
+                          : t("未知", "Unknown")}
+                      </dd>
+                      <dt>{t("发现的实例数", "Observed instances")}</dt>
+                      <dd>
+                        {current && row ? row.agentCount : t("未知", "Unknown")}
+                      </dd>
+                    </dl>
+                  </article>
+                );
+              })}
             </div>
           </>
         )}
       </div>
       <p className="muted">
         {t(
-          "这些观测由 Coordinator 签名；Host 独立签名尚未接入，因此不能作为主机在线或执行权限的最终凭据。观测只保留在当前页面内存中。",
-          "These observations are signed by the Coordinator. Independent Host signatures are not connected yet, so they do not establish Host connectivity or execution authority. Observations remain in this page's memory only.",
+          "入口和 Host 签名分别核验，Host 资格以当前链上目录为准。签名心跳证明近期观测，不能授予执行权限或证明独立 Agent 身份。观测只保留在当前页面内存中，到期转为未知。",
+          "Entry point and Host signatures are checked separately against the current chain directory. A signed heartbeat proves a recent observation; it grants no execution authority or independent Agent identity. Observations remain in this page's memory only and become unknown on expiry.",
         )}
       </p>
     </section>

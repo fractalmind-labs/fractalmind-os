@@ -29,6 +29,7 @@ import { HostAdmission } from "../src/host-admission";
 import { ChainReadSession } from "../src/chain";
 import { CoordinatorReadClient } from "../src/coordinator-read";
 import { coordinatorHosts } from "../src/host-observations";
+import { verifyHostObservations } from "../src/host-signatures";
 
 assert.ok(
   process.argv[2] && process.argv[3],
@@ -264,6 +265,7 @@ assert.ok(!liveConnection || process.env.FM_ENVD_JOIN_CLI_BIN);
 let envdConnection: unknown;
 let deviceHttp: unknown;
 let liveReads: CoordinatorReadClient | undefined;
+let signedHostSnapshot: unknown;
 function startCliHarness() {
   const helper = spawn(
     process.env.FM_ENVD_JOIN_CLI_BIN!,
@@ -580,17 +582,50 @@ if (earlyHarness && earlyPublic) {
   assert.equal(displayed.length, 1);
   assert.equal(displayed[0].address, earlyPublic.host_address);
   assert.equal(displayed[0].system?.cpu, observed.system.num_cpu);
+  signedHostSnapshot = await liveReads.read(bindingId);
+  const independent = await verifyHostObservations(
+    new ChainReadSession(profile),
+    organizationId,
+    bindingId,
+    signedHostSnapshot,
+  );
+  assert.equal(independent[0].state, "verified");
+  assert.equal(independent[0].observation?.address, earlyPublic.host_address);
+  assert.equal(
+    independent[0].observation?.system?.cpu,
+    observed.system.num_cpu,
+  );
+  assert.ok(independent[0].freshUntilMs! > Date.now());
+  const changedBody = structuredClone(signedHostSnapshot) as any;
+  changedBody.sentinels[0].host_observation.body = toBase64(
+    new TextEncoder().encode('{"forged":true}'),
+  );
+  const rejected = await verifyHostObservations(
+    new ChainReadSession(profile),
+    organizationId,
+    bindingId,
+    changedBody,
+  );
+  assert.equal(rejected[0].state, "unknown");
+  assert.equal(rejected[0].observation, null);
+  const honest = await liveReads.readHosts(bindingId);
+  assert.equal(honest[0].state, "verified");
   deviceHttp = {
     unsignedRejected: true,
     bearerRejected: true,
     actualAppDeviceProofAndSignedResponse: true,
     coordinatorObservedHost: observed.host_id,
     observedAt: observed.last_heartbeat,
-    hostSignatureVerified: false,
+    hostSignatureVerified: true,
+    tamperedHostBodyRejected: true,
+    hostMembershipId: independent[0].membershipId,
     appDisplaySchemaVerified: true,
   };
   checks.push(
-    "App production read client proves native-held fixture device key; Go verifies current grant; unsigned/token reads denied and Coordinator-signed response returns actual Host heartbeat",
+    "App production read client uses injected fixture device signing; Go verifies current grant; unsigned/token reads denied and Coordinator-signed response returns actual Host heartbeat",
+  );
+  checks.push(
+    "Go Host signs its actual heartbeat; App independently verifies exact body, current membership pointer, scoped chain and Coordinator versions; forged body remains unknown",
   );
 }
 const revokeMember = await controller.prepare(
@@ -603,6 +638,23 @@ const revoked = await controller.submit(revokeMember);
 await record("App revokes Host membership", revoked);
 assert.equal(await controller.awaitVisible(revoked), true);
 assert.equal((await controller.directory()).memberships[0].revoked, true);
+if (signedHostSnapshot) {
+  const revokedObservation = await verifyHostObservations(
+    new ChainReadSession(profile),
+    organizationId,
+    bindingId,
+    signedHostSnapshot,
+  );
+  assert.equal(revokedObservation[0].state, "unknown");
+  assert.equal(revokedObservation[0].observation, null);
+  deviceHttp = {
+    ...(deviceHttp as object),
+    retainedHostSignatureRejectedAfterRevocation: true,
+  };
+  checks.push(
+    "a retained, cryptographically valid Host heartbeat cannot regain trust after actual chain membership revocation",
+  );
+}
 checks.push(
   "membership revocation remains chain-owned and visible; consumed-invite revocation never substitutes for it",
 );

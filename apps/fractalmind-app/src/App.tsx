@@ -736,6 +736,26 @@ export function App() {
                     data.identity?.chainIdentifier ?? profile.chainIdentifier,
                 }}
                 organizationId={snapshot.organization.objectId}
+                authorityRevision={JSON.stringify([
+                  data.reachable,
+                  data.identity?.human.generation,
+                  data.identity?.grants.value?.map((g) => [
+                    g.id,
+                    g.version,
+                    g.revoked,
+                    g.generation,
+                    g.expires_at_ms,
+                  ]),
+                  snapshot.bindings.value,
+                  snapshot.hosts.value?.map((row) => [
+                    row.address,
+                    row.current.value?.id,
+                    row.current.value?.version,
+                    row.current.value?.revoked,
+                    row.current.value?.expires_at_ms,
+                    row.current.failure,
+                  ]),
+                ])}
                 t={t}
               />
             </Suspense>

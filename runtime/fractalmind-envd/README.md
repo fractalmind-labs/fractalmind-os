@@ -203,9 +203,16 @@ for at most one minute; restart invalidates them. This read protocol does not
 authorize HTTP writes or desktop control. See
 [device reads and evidence](../../docs/product/v020-device-http-read.md).
 
+Chain-mode heartbeats now retain an independent Host signature over the exact
+body, current membership/binding versions, handshake nonce, connection sequence
+and a validity window of at most one minute. The Coordinator rejects unsigned,
+replayed or changed-scope observations. The App checks the Host signature and
+exact current chain pointer separately from the Coordinator response signature;
+it never promotes self-reported Agent metadata to independent identity or control.
+See [Host signatures and evidence](../../docs/product/v020-host-signed-observations.md).
+
 Actual loopback sockets with generated memory test keys and race checks passed.
-NativeStore/main startup, cloud/TLS, independent Host-signed observation bodies,
-desktop authorization, Agent import and five-platform
+NativeStore/main startup, cloud/TLS, desktop authorization, Agent import and five-platform
 acceptance remain pending. See [connection implementation and evidence](../../docs/product/v020-host-chain-connection.md).
 
 `FRACTALMIND_RUNTIME_STATE_DIR` no longer selects a production file store,

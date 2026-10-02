@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/heartbeat"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/wsauth"
 	"github.com/gorilla/websocket"
 )
@@ -62,11 +63,20 @@ type Client struct {
 	// Control-channel authentication. signer proves this worker's SUI
 	// identity to the coordinator; expectedCoordAddr, when non-empty, pins the
 	// coordinator's SUI address so a spoofed gateway cannot drive this worker.
-	signer             wsauth.Signer
-	expectedCoordAddr  string
-	handshakeTimeout   time.Duration
-	resolveEndpoint    func(context.Context) (string, string, error)
-	validateConnection func(context.Context) error
+	signer              wsauth.Signer
+	expectedCoordAddr   string
+	handshakeTimeout    time.Duration
+	resolveEndpoint     func(context.Context) (string, string, error)
+	validateConnection  func(context.Context) error
+	observationScope    func(context.Context) (heartbeat.Scope, uint64, error)
+	sessionNonce        string
+	observationSequence uint64
+}
+
+// SetHostObservation is configured before Connect; only current admitted Host
+// keys can produce a signed heartbeat. No legacy unsigned fallback is permitted.
+func (c *Client) SetHostObservation(read func(context.Context) (heartbeat.Scope, uint64, error)) {
+	c.observationScope = read
 }
 
 // SetChainAuthority is configured before Connect. Resolve reads current chain
@@ -258,6 +268,9 @@ func (c *Client) authenticate(conn *websocket.Conn) error {
 	}
 	switch raw.Type {
 	case wsauth.MsgAuthOK:
+		c.mu.Lock()
+		c.sessionNonce, c.observationSequence = challenge.ServerNonce, 0
+		c.mu.Unlock()
 		return nil
 	case wsauth.MsgAuthError:
 		var ep wsauth.ErrorPayload
@@ -304,6 +317,34 @@ func (c *Client) Send(msgType string, payload interface{}) error {
 	if conn == nil {
 		return fmt.Errorf("not connected")
 	}
+	var scope heartbeat.Scope
+	var expiry uint64
+	if msgType == "heartbeat" && c.observationScope != nil {
+		ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second)
+		var err error
+		scope, expiry, err = c.observationScope(ctx)
+		cancel()
+		if err != nil {
+			return err
+		}
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if conn != c.conn {
+		return fmt.Errorf("Host connection changed before send")
+	}
+	if msgType == "heartbeat" && c.observationScope != nil {
+		observed, ok := payload.(*heartbeat.Payload)
+		if !ok {
+			return fmt.Errorf("typed Host heartbeat required")
+		}
+		signed, err := heartbeat.Sign(c.signer, scope, c.sessionNonce, c.observationSequence+1, heartbeat.Expiry(observed.Timestamp, expiry), observed)
+		if err != nil {
+			return err
+		}
+		c.observationSequence++
+		msgType, payload = "host_observation", signed
+	}
 
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -315,8 +356,6 @@ func (c *Client) Send(msgType string, payload interface{}) error {
 		Payload: data,
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
 	return conn.WriteJSON(msg)
 }
 
