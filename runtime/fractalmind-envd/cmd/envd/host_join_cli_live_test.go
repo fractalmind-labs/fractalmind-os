@@ -200,6 +200,13 @@ func TestHostJoinLiveCLI(t *testing.T) {
 		var nativeAdapter *runtimeadapter.Executor
 		if os.Getenv("FM_ENVD_NATIVE_DISCOVERY") == "1" {
 			workspace := t.TempDir()
+			if os.Getenv("FM_ENVD_NATIVE_APP_EXECUTION") == "1" {
+				// The App reviews an existing docs directory as its narrow scope.
+				// Creating this isolated fixture root does not grant tool rights.
+				if err := os.Mkdir(filepath.Join(workspace, "docs"), 0700); err != nil {
+					t.Fatal(err)
+				}
+			}
 			nativeWorkspace = workspace
 			adapter, e := runtimeadapter.BoundedFileAgent(reader, map[string]string{"native-files": workspace}, runtimeadapter.ObservationAgentManager("must-not-run"))
 			if e != nil {

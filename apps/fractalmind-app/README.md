@@ -115,9 +115,12 @@ evidence, transport limits and test instructions are documented in
 - Native OKR runner bridge: approved-plan decryption, encrypted ticket creation
   and Host-specific result wrapping use the OS vault without organization-key
   export. Durable originals are queried before private reads/signing, and a
-  preparation can remain queued until explicit delivery. The localnet fixture
-  verifies atomic preparation, empty-journal restoration and cancellation;
-  continuation UI, installed journal/IPC and real envd delivery remain pending.
+  preparation can remain queued until explicit delivery. Workbench and OKR
+  detail now expose separate one-use control and command fee confirmations,
+  original-request queries and explicit Host delivery. Real OS vault + localnet
+  + production envd validates native review, approval, one exact file execution,
+  result decryption and revocation. Installed journal/IPC, Human verification,
+  final acceptance and sustained execution still need end-to-end acceptance.
   See [implementation and evidence](../../docs/product/v020-native-okr-runner.md).
 - Identity: chain Human generation/recovery version and device grants. The page
   labels these as snapshots and refreshes them with organization reads.

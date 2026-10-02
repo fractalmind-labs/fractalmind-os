@@ -117,6 +117,18 @@ test('device steps join one atomic ticket submission and fixed-instance delivery
   assert.ok(f.key.some(byte => byte !== 0), 'Caller-owned organization key must remain intact.');
 });
 
+test('displaying the approved plan does not sign, reserve, submit or deliver and rejects concurrent agreement drift', async () => {
+  const f = await fixture();
+  const description = await f.runner().describe(f.okr.id);
+  assert.deepEqual(description.plan, plan);
+  assert.equal(description.okr.id, f.okr.id);
+  assert.equal(f.stats().calls, 0); assert.equal(f.stats().prepares, 0); assert.equal(f.stats().deliveries, 0);
+  const changed = await fixture();
+  changed.onRead(() => { if (changed.stats().reads === 2) changed.okr.version = '3'; });
+  await assert.rejects(changed.runner().describe(changed.okr.id), /Agreement changed/);
+  assert.equal(changed.stats().calls, 0);
+});
+
 test('unknown submission stays query-only; new runner defaults to restoration without signing or replay', async () => {
   const f = await fixture(); f.mode('unknown'); const runner = f.runner();
   assert.equal((await runner.step({ ...f.input, createIfMissing: true })).status, 'awaiting_confirmation');

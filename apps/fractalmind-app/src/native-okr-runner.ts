@@ -20,7 +20,7 @@ import {
 } from "./command-results";
 import { CoordinatorReadClient } from "./coordinator-read";
 import { DeviceIdentityVerifier } from "./device-identity";
-import { canonical } from "./handover-plan";
+import { canonical, parseOkrSpecification } from "./handover-plan";
 import {
   NativeDeviceSigner,
   call,
@@ -262,6 +262,62 @@ export class NativeOkrRunner {
   }
   get lastSubmission() {
     return this.manager.lastSubmission;
+  }
+  async describe(okrId: string) {
+    this.assertActive();
+    const description = await this.runner.describe(okrId);
+    const okr = description.okr;
+    const record = await this.chain.sdk.productRecord.getRecord(
+      okr.spec_record,
+    );
+    if (
+      record.organization_id !== this.organizationId ||
+      record.kind !== 1 ||
+      record.logical_id !== `okr-${okr.logical_id}-spec` ||
+      record.revision !== okr.spec_revision
+    )
+      throw new NativeOkrRunnerError("invalid_source");
+    const plaintext = await this.records.read({
+      kind: 1,
+      logicalId: record.logical_id,
+      record_id: record.id,
+      revision: record.revision,
+      key_version: record.key_version,
+    });
+    let spec: ReturnType<typeof parseOkrSpecification>;
+    try {
+      spec = parseOkrSpecification(
+        JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(plaintext)),
+      );
+    } finally {
+      plaintext.fill(0);
+    }
+    if (
+      spec.priority !== okr.priority ||
+      spec.deadlineMs !== okr.deadline_ms ||
+      spec.krs.length !== okr.metrics.length ||
+      spec.krs.some((kr, i) =>
+        ["baseline", "target", "weight", "maxAgeMs"].some(
+          (field) =>
+            kr[field as keyof typeof kr] !==
+            okr.metrics[i][
+              field === "maxAgeMs"
+                ? "max_age_ms"
+                : (field as "baseline" | "target" | "weight")
+            ],
+        ),
+      )
+    )
+      throw new NativeOkrRunnerError("invalid_source");
+    const policy = await this.chain.sdk.handover.getPolicy(okr.id);
+    if (
+      policy.agreement_version !== okr.agreement_version ||
+      policy.managed_version !== okr.managed_version ||
+      canonical(await this.chain.sdk.okr.getOkr(okr.id)) !== canonical(okr)
+    )
+      throw new NativeOkrRunnerError("state_changed");
+    this.assertActive();
+    return { ...description, spec, policy };
   }
   async query(okrId: string) {
     await this.chain.checkNetwork();

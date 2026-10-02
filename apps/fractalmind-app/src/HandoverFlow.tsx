@@ -55,6 +55,7 @@ export default function HandoverFlow({
   managed,
   okrs,
   onChanged,
+  onContinue,
   t,
 }: {
   profile: ConnectionProfile;
@@ -62,6 +63,7 @@ export default function HandoverFlow({
   managed: Agent;
   okrs: OkrSnapshot[] | null;
   onChanged: () => void;
+  onContinue?: (okrId: string) => void;
   t: (zh: string, en: string) => string;
 }) {
   const [open, setOpen] = useState(false),
@@ -1173,12 +1175,26 @@ export default function HandoverFlow({
             </section>
           ))}
           {outcomes.approval?.status === "confirmed" && (
-            <p className="notice">
-              {t(
-                "执行约定已确认。本次审批未派发继续命令，当前运行状态请查看工作台。",
-                "The execution agreement is confirmed. This approval did not dispatch continuation. Check the workbench for current execution state.",
+            <section className="notice">
+              <p>
+                {t(
+                  "执行约定已确认。本次审批未派发继续命令，当前运行状态请查看工作台。",
+                  "The execution agreement is confirmed. This approval did not dispatch continuation. Check the workbench for current execution state.",
+                )}
+              </p>
+              {onContinue && proposal && (
+                <button
+                  disabled={busy}
+                  onClick={() => {
+                    const id = proposal.okr_id;
+                    close();
+                    onContinue(id);
+                  }}
+                >
+                  {t("前往工作台继续", "Continue from the workbench")}
+                </button>
               )}
-            </p>
+            </section>
           )}
         </dialog>
       )}

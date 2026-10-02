@@ -98,6 +98,16 @@ export class NativeFileOkrRunner {
     if (Boolean(options.crypto) === Boolean(options.keyForVersion)) throw new Error('Choose exactly one runner crypto provider.');
   }
 
+  /** Read the exact approved plan for human review. No quote, signing,
+   * reservation or delivery; private crypto still checks current read access. */
+  async describe(okrId: string) {
+    const okr = await this.options.sdk.okr.getOkr(normalizeSuiAddress(okrId));
+    if (okr.org_id !== normalizeSuiAddress(this.options.organizationId)) throw new Error('Runner organization mismatch.');
+    const plan = await this.plan(okr);
+    if (JSON.stringify(await this.options.sdk.okr.getOkr(okr.id)) !== JSON.stringify(okr)) throw new Error('Agreement changed during plan review.');
+    return { okr, plan };
+  }
+
   step(input: { okrId: string; capabilityId: string; createIfMissing?: boolean; releaseQueued?: boolean; prepareOnly?: boolean }): Promise<OkrRunnerState> {
     const key = normalizeSuiAddress(input.okrId);
     const running = this.flights.get(key); if (running) return running;

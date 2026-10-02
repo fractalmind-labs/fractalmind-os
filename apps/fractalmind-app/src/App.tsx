@@ -40,6 +40,7 @@ const HostAccess = lazy(() => import("./HostAccess"));
 const HostObservations = lazy(() => import("./HostObservations"));
 const AgentCheckpointView = lazy(() => import("./AgentCheckpointView"));
 const HandoverFlow = lazy(() => import("./HandoverFlow"));
+const OkrContinuation = lazy(() => import("./OkrContinuation"));
 const runLabels: Array<[string, string]> = [
   ["待启动", "Queued"],
   ["链上记录：运行中", "Chain record: running"],
@@ -616,6 +617,26 @@ export function App() {
                     t={t}
                     onDetails={() => goOkr(focus.okr.id, "okrs")}
                   />
+                  {focus.okr.agreement_record && (
+                    <Suspense
+                      fallback={
+                        <p>{t("加载执行入口…", "Loading execution entry…")}</p>
+                      }
+                    >
+                      <OkrContinuation
+                        key={JSON.stringify([
+                          profile,
+                          snapshot.organization.objectId,
+                          focus.okr.id,
+                        ])}
+                        profile={profile!}
+                        organizationId={snapshot.organization.objectId}
+                        okrId={focus.okr.id}
+                        onChanged={data.refresh}
+                        t={t}
+                      />
+                    </Suspense>
+                  )}
                   <div className="summary-grid">
                     <div className="panel">
                       <span className="eyebrow">
@@ -708,13 +729,36 @@ export function App() {
               />
             </Suspense>
             {detailId && okrs?.find((row) => row.okr.id === detailId) ? (
-              <OkrDetails
-                focus={okrs.find((row) => row.okr.id === detailId)!}
-                now={now}
-                t={t}
-                back={() => setDetailId(null)}
-                workbench={() => goOkr(detailId, "workbench")}
-              />
+              <>
+                <OkrDetails
+                  focus={okrs.find((row) => row.okr.id === detailId)!}
+                  now={now}
+                  t={t}
+                  back={() => setDetailId(null)}
+                  workbench={() => goOkr(detailId, "workbench")}
+                />
+                {okrs.find((row) => row.okr.id === detailId)?.okr
+                  .agreement_record && (
+                  <Suspense
+                    fallback={
+                      <p>{t("加载执行入口…", "Loading execution entry…")}</p>
+                    }
+                  >
+                    <OkrContinuation
+                      key={JSON.stringify([
+                        profile,
+                        snapshot.organization.objectId,
+                        detailId,
+                      ])}
+                      profile={profile!}
+                      organizationId={snapshot.organization.objectId}
+                      okrId={detailId}
+                      onChanged={data.refresh}
+                      t={t}
+                    />
+                  </Suspense>
+                )}
+              </>
             ) : (
               <OkrList
                 okrs={okrs ?? null}
@@ -879,6 +923,7 @@ export function App() {
                         managed={agent}
                         okrs={snapshot.okrs.value}
                         onChanged={data.refresh}
+                        onContinue={(id) => goOkr(id, "workbench")}
                         t={t}
                       />
                     </Suspense>
