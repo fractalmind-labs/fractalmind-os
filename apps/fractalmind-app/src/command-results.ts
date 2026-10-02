@@ -145,7 +145,7 @@ export class NativeCommandResults {
       ]),
     };
   }
-  async prepare(raw: CommandResultTarget) {
+  private async snapshot(raw: CommandResultTarget) {
     const input = structuredClone(raw),
       c = input.command;
     if (
@@ -181,6 +181,21 @@ export class NativeCommandResults {
     } catch {
       throw new CommandResultError("invalid_command");
     }
+    return input;
+  }
+  /** Current authority/pointer check for an existing command. No key wrapping,
+   * transaction construction, claim or Host delivery. */
+  async preflight(raw: CommandResultTarget) {
+    const input = await this.snapshot(raw),
+      before = await this.source(input);
+    return async () => {
+      if ((await this.source(input)).pin !== before.pin)
+        throw new CommandResultError("state_changed");
+    };
+  }
+  async prepare(raw: CommandResultTarget) {
+    const input = await this.snapshot(raw),
+      c = input.command;
     const before = await this.source(input),
       fingerprint = bytesToHex(nodeCommandIntentHash(c));
     const result = await call(

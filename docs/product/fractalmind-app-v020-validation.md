@@ -6,6 +6,12 @@
 
 ## 当前验证证据
 
+### App 原生 Host 审阅票据与恢复增量
+
+- 正式控制器在当前设备／观察能力、实例、规格、边界和完整执行目录核验后，同一 PTB 原子保存精确加密审阅票据、结果密钥授予及原 Run；费用／原生签名等待期间重新复核，已有摘要优先查询。恢复默认只读，核验原作者／签名／Run 和不可变票据创建摘要；已有命令 preflight 不构建新交易。
+- [实际 OS／localnet](evidence/v020-native-review-ticket-localnet.json)：**14 项检查、13 笔确认交易／费用**。同一公开 attempt UUID、空 journal 重建后恢复原命令／计划／Run，读取并验签原 Host 接受证明，再完成原生原子审批；无 Host 派发或继续 Run，测试凭据已清理。[前序记录及原请求只读复查](evidence/v020-native-review-ticket-prior.json)保留分页延迟的两次终止及一次中间成功，无重放；原排队 Run 未结清。
+- [App 125/125、专项 5/5、类型／构建及脚本严格类型](evidence/v020-native-review-ticket-unit.json)通过。**仍未完成**：观察能力发行／票据发现／审阅费用与继续 UI、真实 envd＋原生 App 联测、安装后 IPC／持久 journal、持续自主／对话／独立人验收、迁移升级、云 Host 和五平台。专项 Host 接受证明为夹具；空 journal 恢复保留公开 attempt UUID，不是完整客户端清空恢复验收。详见[实现与限制](v020-app-handover-review.md)。
+
 ### App 原生 OKR 交接审批控制器增量
 
 - 正式控制器从原 Run 验证 Host 审阅，在当前设备四项权限、成员／活跃指针、实例、规格／指标、路径／预算和完整零未结执行目录核验后，通过 OS 密钥库加密精确约定、准备费用报价及链上原子审批。原生签名前／返回后再次核验；已有原摘要优先查询，审批没有继续执行接口。

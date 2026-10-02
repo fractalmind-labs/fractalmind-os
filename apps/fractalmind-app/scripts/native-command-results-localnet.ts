@@ -38,17 +38,19 @@ import { NativeExecutionResults } from "../src/execution-results";
 import { OkrDraftCreation } from "../src/okr-draft";
 import { HandoverApproval } from "../src/handover-approval";
 import { PrivateRecords } from "../src/private-records";
+import { HandoverReview } from "../src/handover-review";
 assert.ok(
   process.argv[2] && process.argv[3],
   "Pass isolated deployment and a new output report",
 );
 const output = process.argv[3],
   progress = output + ".progress.json";
-const approvalMode = process.argv[4] === "--approve-handover";
+const ticketMode = process.argv[4] === "--review-ticket";
+const approvalMode = process.argv[4] === "--approve-handover" || ticketMode;
 const readResultMode = process.argv[4] === "--read-result" || approvalMode;
 assert.ok(
   !process.argv[4] || readResultMode,
-  "Only --read-result or --approve-handover is supported",
+  "Only --read-result, --approve-handover or --review-ticket is supported",
 );
 for (const path of [output, progress]) {
   try {
@@ -547,14 +549,30 @@ try {
     },
   });
   const requestId = "native-result-run:" + randomUUID();
-  const quote = await preparedManager.prepare({
-    requestId,
-    gasBudget: 200000000n,
-    transaction: prepared.transaction,
-  });
+  const reviewAttempt = ticketMode
+    ? new HandoverReview(
+        chain,
+        device,
+        auth.grantId,
+        organizationId,
+        randomUUID(),
+        invoke,
+        new MemoryTransactionJournal(),
+      )
+    : null;
+  const quote = reviewAttempt
+    ? await reviewAttempt.prepare({ ...input, nativeFilePlan })
+    : await preparedManager.prepare({
+        requestId,
+        gasBudget: 200000000n,
+        transaction: prepared.transaction,
+      });
+  assert.ok(!("status" in quote));
   await prepared.assertCurrent();
   await preparedQuote("atomic result-key and Run", quote);
-  const outcome = await preparedManager.submit(quote);
+  const outcome = reviewAttempt
+    ? await reviewAttempt.submit(quote)
+    : await preparedManager.submit(quote);
   await record(
     "atomic native-wrapped result grant and original Run preparation",
     outcome,
@@ -573,7 +591,9 @@ try {
     originalDigest: outcome.digest,
   };
   await save();
-  const restored = await preparedManager.query(requestId);
+  const restored = reviewAttempt
+    ? await reviewAttempt.query()
+    : await preparedManager.query(requestId);
   assert.equal(restored!.digest, outcome.digest);
   assert.ok(["confirmed", "unknown"].includes(restored!.status));
   state = { ...state, originalQueryStatus: restored!.status };
@@ -586,6 +606,42 @@ try {
     (v) => v.id === executionId,
   );
   assert.equal(run.state, 0);
+  if (reviewAttempt) {
+    const rebuilt = new HandoverReview(
+      chain,
+      device,
+      auth.grantId,
+      organizationId,
+      reviewAttempt.attemptId,
+      invoke,
+      new MemoryTransactionJournal(),
+    );
+    const restoredTicket = await readVisible(
+      () => rebuilt.restore(),
+      (v) => v.run?.id === executionId,
+    );
+    assert.equal(restoredTicket.originalOutcome, undefined);
+    assert.equal(restoredTicket.run!.id, executionId);
+    assert.equal(restoredTicket.preparationDigest, outcome.digest);
+    assert.deepEqual(restoredTicket.ticket!.input.command, command);
+    assert.deepEqual(
+      restoredTicket.ticket!.input.nativeFilePlan,
+      nativeFilePlan,
+    );
+    assert.equal(restoredTicket.pointer!.revision, "1");
+    await assert.rejects(rebuilt.send(false), /confirmation_required/);
+    checks.push(
+      "official App atomically persists exact native-encrypted review ticket/result-key grant/original Run; an empty technical journal reconstructs the same signed command and plan from Sui without new preparation or delivery",
+    );
+    state = {
+      ...state,
+      reviewAttemptId: reviewAttempt.attemptId,
+      reviewTicketId: restoredTicket.pointer!.record_id,
+      reviewRequestId: reviewAttempt.requestId,
+      reviewDeliveryDispatched: false,
+    };
+    await save();
+  }
   const keyGrant = await readVisible(
     () =>
       sdk.nodeExecution.getResultKey(
@@ -814,6 +870,13 @@ try {
         (v) =>
           BigInt(v.revision) === BigInt(acceptance!.coverage_revision) + 1n,
       );
+      if (reviewAttempt) {
+        const originalReview = await reviewAttempt.readAcceptance();
+        assert.deepEqual(originalReview.acceptance, acceptance);
+        checks.push(
+          "official App reconstructs the original review ticket and authenticates the fixture Host acceptance from the exact immutable result without regenerating command or proposal",
+        );
+      }
       const approval = new HandoverApproval(
         chain,
         device,

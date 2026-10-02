@@ -98,10 +98,16 @@ evidence, transport limits and test instructions are documented in
   invitations, quotes/confirms actual Gas, queries original transactions and
   revokes unused invitations or memberships. Invitation secrets remain in the
   current session only. Membership never implies current connectivity or a
-  tool's execution authority. The envd redemption CLI and installed-host journey
-  are still pending. See [Host access and evidence](../../docs/product/v020-app-host-access.md).
+  tool's execution authority. The envd redemption CLI supports inspection,
+  fee confirmation and original-digest recovery; the installed-host/cloud journey
+  still needs acceptance. See [Host access](../../docs/product/v020-app-host-access.md)
+  and [envd CLI evidence](../../docs/product/v020-envd-host-join.md).
 - Agents: current organization's managed instance records. Live capability and
-  connectivity are not inferred from registration labels.
+  connectivity are not inferred from registration labels. Native review/approval
+  controllers now persist exact encrypted review tickets with the original Run,
+  restore them read-only and consume authenticated Host proofs through explicit
+  fee-confirmed approval. Their full UI and actual envd integration remain pending;
+  approval never dispatches continuation. See [review tickets and limits](../../docs/product/v020-app-handover-review.md).
 - Identity: chain Human generation/recovery version and device grants. The page
   labels these as snapshots and refreshes them with organization reads.
 - Chinese/English and system/light/dark appearance; responsive navigation includes

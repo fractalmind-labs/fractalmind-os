@@ -327,6 +327,17 @@ test("App prepares native result ciphertext under current exact Host and retains
   f.pin();
   await assert.rejects(prepared.assertCurrent(), /state_changed/);
 });
+test("existing-command preflight reads exact current pointers without key wrapping or new transaction construction", async () => {
+  const f = await fixture(true),
+    assertCurrent = await f.controller.preflight(f.input);
+  await assertCurrent();
+  assert.equal(f.counts().wraps, 0);
+  assert.equal(f.counts().builds, 0);
+  f.replaceMember();
+  await assert.rejects(assertCurrent());
+  assert.equal(f.counts().wraps, 0);
+  assert.equal(f.counts().builds, 0);
+});
 test("changes while native wrapping waits cannot produce a transaction", async () => {
   for (const mutate of [
     (f: Awaited<ReturnType<typeof fixture>>) => f.pin(),
