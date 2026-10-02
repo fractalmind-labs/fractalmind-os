@@ -51,7 +51,7 @@ const Imported = bcs.struct("AgentImported", {
   instance_id: bcs.string(),
   duplicate: bcs.bool(),
 });
-async function fixture() {
+async function fixture(rebind = false, controlled = false, rejoined = false) {
   const key = Ed25519Keypair.generate(),
     host = Ed25519Keypair.generate(),
     coordinator = Ed25519Keypair.generate(),
@@ -236,10 +236,10 @@ async function fixture() {
             type: `${pkg}::host::InstancePointer`,
             bcs: Pointer.serialize({
               record_id: recordId,
-              membership_id: memberId,
-              runtime: "tmux-observe",
-              workspace_hash: Array(32).fill(0xbb),
-              control_confirmed: false,
+              membership_id: record.membership_id,
+              runtime: record.runtime,
+              workspace_hash: record.workspace_hash,
+              control_confirmed: record.control_confirmed,
               revoked: record.revoked,
             }).toBytes(),
           },
@@ -258,6 +258,18 @@ async function fixture() {
     sdk: {
       client: { typesPackageId: pkg, packageId: pkg, client: { core } },
       host: {
+        rebindAgent: (input: any) => {
+          assert.equal(input.controlConfirmed, false);
+          assert.equal(input.runtime, "tmux-observe");
+          assert.equal(input.managedAgentId, recordId);
+          assert.equal(input.expectedVersion, "1");
+          assert.equal(input.membershipId, memberId);
+          assert.deepEqual(
+            Array.from(input.workspaceHash),
+            Array(32).fill(0xbb),
+          );
+          return new Transaction();
+        },
         importAgent: (input: any) => {
           assert.equal(input.controlConfirmed, false);
           assert.equal(input.runtime, "tmux-observe");
@@ -268,13 +280,28 @@ async function fixture() {
       },
     },
   } as unknown as ChainReadSession;
+  if (controlled) {
+    record.runtime = "bounded-process-v1";
+    record.control_confirmed = true;
+  }
+  if (rejoined) {
+    record.membership_id = id("0xfd");
+    record.workspace_hash = Array(32).fill(0xaa);
+  }
   const controller = new AgentImport(
     chain,
     device,
     grant,
     org,
     new MemoryTransactionJournal(),
+    rebind
+      ? { kind: "rebind", reviewed: { ...record, revoked: true } }
+      : undefined,
   );
+  if (rebind) {
+    exists = true;
+    record.revoked = true;
+  }
   // This fixture targets source pin/quote/receipt behavior. Actual device and
   // Host signature validation is exercised by the real Sui/socket integration.
   (controller as any).verifier.verifyOrganization = async () => {
@@ -572,4 +599,110 @@ test("native signature wait cannot release a transaction after the authority, sc
       );
     else await assert.rejects(signer.signTransaction(bytes));
   }
+});
+
+test("rebind requires explicit review, pins the revoked record and retains observation-only scope", async () => {
+  const f = await fixture(true);
+  await assert.rejects(
+    f.controller.prepare(f.selected, attempt, false),
+    /confirmation_required/,
+  );
+  const quote = await f.controller.prepare(f.selected, attempt, true);
+  assert.ok(!("status" in quote));
+  assert.equal(quote.requestId, `agent-rebind:${attempt}`);
+  assert.equal(f.counts().submits, 0);
+  f.record.version = "2";
+  await assert.rejects(f.controller.submit(quote), /state_changed/);
+  assert.equal(f.counts().submits, 0);
+});
+
+test("rebind cannot replace the reviewed record, accept missing instances or use revoked device authority", async () => {
+  for (const mode of [
+    "missing-instance",
+    "expired-scan",
+    "unknown-host",
+    "changed-workspace",
+  ]) {
+    const f = await fixture(true);
+    f.setMode(mode);
+    await assert.rejects(
+      f.controller.prepare(f.selected, attempt, true),
+      /discovery_unavailable/,
+    );
+    assert.equal(f.counts().submits, 0);
+  }
+  const f = await fixture(true);
+  const quote = await f.controller.prepare(f.selected, attempt, true);
+  assert.ok(!("status" in quote));
+  f.setAuthority("revoked");
+  await assert.rejects(f.controller.submit(quote), /state_changed/);
+  assert.equal(f.counts().submits, 0);
+});
+
+test("rebind recovery queries the original request before a newly selected source", async () => {
+  const f = await fixture(true);
+  f.setPrior({
+    ...f.outcome,
+    status: "unknown",
+    requestId: `agent-rebind:${attempt}`,
+  });
+  const recovered = await f.controller.prepare({} as any, attempt, false);
+  assert.equal((recovered as any).requestId, `agent-rebind:${attempt}`);
+  assert.equal(f.counts().reads, 0);
+});
+
+test("rebind receipts retain the original record and require exactly the next logical version", async () => {
+  const f = await fixture(true);
+  f.record.revoked = false;
+  await assert.rejects(f.controller.confirmed(f.outcome), /state_changed/);
+  f.record.version = "2";
+  assert.equal((await f.controller.confirmed(f.outcome)).id, f.record.id);
+  f.record.version = "3";
+  await assert.rejects(f.controller.confirmed(f.outcome), /state_changed/);
+});
+
+test("an observation rebind refuses controlled records until a separate safe handover", async () => {
+  const f = await fixture(true, true);
+  await assert.rejects(
+    f.controller.prepare(f.selected, attempt, true),
+    /handover_required/,
+  );
+  assert.equal(f.counts().prepares, 0);
+});
+
+test("a changed record during native authorization cannot release a rebind signature", async () => {
+  const f = await fixture(true),
+    tx = new Transaction();
+  tx.setSender(f.controller.device.device.address);
+  tx.setGasOwner(f.controller.device.device.address);
+  tx.setGasPrice(1);
+  tx.setGasBudget(200000000);
+  tx.setGasPayment([
+    {
+      objectId: id("0xf1"),
+      version: "1",
+      digest: "11111111111111111111111111111111",
+    },
+  ]);
+  const bytes = await tx.build();
+  f.setQuoteDigest(await Transaction.from(bytes).getDigest());
+  const quote = await f.controller.prepare(f.selected, attempt, true);
+  assert.ok(!("status" in quote));
+  f.setSigningMutation(() => {
+    f.record.version = "2";
+  });
+  await assert.rejects(
+    (f.controller.manager as any).options.signer.signTransaction(bytes),
+    /state_changed/,
+  );
+});
+
+test("observation rebind reviews previous membership/workspace but uses the freshly verified source", async () => {
+  const f = await fixture(true, false, true);
+  assert.notEqual(f.record.membership_id, f.member.id);
+  assert.notEqual(f.record.workspace_hash[0], 0xbb);
+  const quote = await f.controller.prepare(f.selected, attempt, true);
+  assert.ok(!("status" in quote));
+  assert.equal(f.counts().prepares, 1);
+  assert.equal(f.counts().submits, 0);
 });

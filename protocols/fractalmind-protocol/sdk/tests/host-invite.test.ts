@@ -43,3 +43,19 @@ test('a valid code for another network is rejected before any RPC request', asyn
   const material = createHostInviteMaterial('testnet');
   await assert.rejects(sdk.host.prepareJoin({ code: encodeHostInviteCode('testnet', '0x1', material.entropy), network: 'testnet', hostPublicKey: new Uint8Array(32), encryptionPublicKey: new Uint8Array(32), name: 'wrong network' }), /network/);
 });
+
+test('reviewed Agent rebind uses the versioned contract entry with exact u64 encoding', async () => {
+  const { bcs } = await import('@mysten/sui/bcs');
+  const { fromBase64 } = await import('@mysten/sui/utils');
+  const client = new SuiGrpcClient({network:'localnet', baseUrl:'http://127.0.0.1:1'});
+  const sdk = new FractalMindSDK({packageId:'0x42',client});
+  const parameters = {organizationId:'0x1',humanId:'0x2',grantId:'0x3',membershipId:'0x4',bindingId:'0x5',managedAgentId:'0x6',runtime:'tmux-observe' as const,workspaceHash:new Uint8Array(32),controlConfirmed:false};
+  const data = sdk.host.rebindAgent({...parameters,expectedVersion:'9007199254740993'}).getData();
+  const call = data.commands[0].MoveCall!;
+  assert.equal(call.module,'host');
+  assert.equal(call.function,'rebind_agent_at_version');
+  assert.equal(call.arguments.length,11);
+  const input = data.inputs[call.arguments[6].Input!];
+  assert.equal(bcs.u64().parse(fromBase64(input.Pure!.bytes)),'9007199254740993');
+  assert.equal(sdk.host.rebindAgent(parameters).getData().commands[0].MoveCall!.function,'rebind_agent');
+});

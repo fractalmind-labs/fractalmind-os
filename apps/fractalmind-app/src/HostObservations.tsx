@@ -17,7 +17,8 @@ import type { ConnectionProfile } from "./domain";
 import type { ImportTarget } from "./AgentImportFlow";
 const AgentImportFlow = lazy(() => import("./AgentImportFlow"));
 
-/** Transient observations: no business cache, auto-connect, import or execution. */
+/** Transient observations: no business cache or automatic connection/execution.
+ * Registration requires its own explicit, chain-backed confirmation flow. */
 export default function HostObservations({
   profile,
   organizationId,

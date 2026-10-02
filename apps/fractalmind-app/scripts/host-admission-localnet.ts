@@ -772,6 +772,257 @@ if (earlyHarness && earlyPublic) {
         )?.id,
         imported.id,
       );
+      if (process.env.FM_ENVD_AGENT_REBIND === "1") {
+        const rebindParameters = {
+          organizationId,
+          humanId,
+          grantId,
+          membershipId,
+          bindingId,
+          managedAgentId: imported.id,
+          runtime: "tmux-observe" as const,
+          workspaceHash: Uint8Array.from(
+            selected.workspaceHash.match(/../g)!,
+            (x) => parseInt(x, 16),
+          ),
+          controlConfirmed: false,
+        };
+        await execute(
+          "fixture revokes observation record before explicit rebind",
+          sdk.host.revokeAgent({
+            organizationId,
+            humanId,
+            grantId,
+            managedAgentId: imported.id,
+          }),
+        );
+        const reviewed = await managedInstance(
+          new ChainReadSession(profile),
+          organizationId,
+          selected.hostAddress,
+          selected.instanceId,
+        );
+        assert.ok(reviewed?.revoked);
+        const rebinder = new AgentImport(
+          new ChainReadSession(profile),
+          device,
+          grantId,
+          organizationId,
+          journal,
+          { kind: "rebind", reviewed },
+        );
+        const rebindAttempt = randomUUID(),
+          rebindQuote = await rebinder.prepare(selected, rebindAttempt, true);
+        assert.ok(!("status" in rebindQuote));
+        const rebindOptions = (rebinder.manager as any).options,
+          original = rebindOptions.client;
+        let rebindBroadcasts = 0,
+          loseRebindQuery = false;
+        const rebindCore = new Proxy(original.core, {
+          get(target, property) {
+            if (property === "executeTransaction")
+              return async (input: any) => {
+                rebindBroadcasts++;
+                await target.executeTransaction(input);
+                loseRebindQuery = true;
+                throw new Error("injected lost rebind response");
+              };
+            if (property === "getTransaction")
+              return async (input: any) => {
+                if (loseRebindQuery) {
+                  loseRebindQuery = false;
+                  throw new Error("injected unavailable first rebind receipt");
+                }
+                return target.getTransaction(input);
+              };
+            const value = Reflect.get(target, property, target);
+            return typeof value === "function" ? value.bind(target) : value;
+          },
+        });
+        rebindOptions.client = new Proxy(original, {
+          get(target, property) {
+            if (property === "core") return rebindCore;
+            const value = Reflect.get(target, property, target);
+            return typeof value === "function" ? value.bind(target) : value;
+          },
+        });
+        const lostRebind = await rebinder.submit(rebindQuote);
+        assert.equal(lostRebind.status, "unknown");
+        rebinder.dispose();
+        const restoredRebind = new AgentImport(
+          new ChainReadSession(profile),
+          device,
+          grantId,
+          organizationId,
+          journal,
+          { kind: "rebind" },
+        );
+        let resolvedRebind: SelfPayTransactionOutcome | undefined;
+        for (let n = 0; n < 40; n++) {
+          resolvedRebind = await restoredRebind.query(rebindAttempt);
+          if (resolvedRebind?.status === "confirmed") break;
+          await new Promise((resolve) => setTimeout(resolve, 125));
+        }
+        assert.equal(
+          resolvedRebind?.digest,
+          (lostRebind as SelfPayTransactionOutcome).digest,
+        );
+        await record(
+          "App explicit observation rebind; lost response recovered by original digest",
+          resolvedRebind!,
+        );
+        const rebound = await restoredRebind.confirmed(resolvedRebind!);
+        assert.equal(rebound.id, imported.id);
+        assert.equal(BigInt(rebound.version), BigInt(reviewed.version) + 1n);
+        assert.equal(rebound.revoked, false);
+        assert.equal(rebound.control_confirmed, false);
+        assert.equal(rebindBroadcasts, 1);
+        checks.push(
+          "Explicit App rebind revives the same observation record with a new logical version; original digest recovers a lost response with one broadcast and without persisting the reviewed record",
+        );
+
+        await execute(
+          "fixture revokes record for concurrent rebind test",
+          sdk.host.revokeAgent({
+            organizationId,
+            humanId,
+            grantId,
+            managedAgentId: imported.id,
+          }),
+        );
+        const beforeRace = (await managedInstance(
+          new ChainReadSession(profile),
+          organizationId,
+          selected.hostAddress,
+          selected.instanceId,
+        ))!;
+        const racing = new AgentImport(
+          new ChainReadSession(profile),
+          device,
+          grantId,
+          organizationId,
+          journal,
+          { kind: "rebind", reviewed: beforeRace },
+        );
+        const racingQuote = await racing.prepare(selected, randomUUID(), true);
+        assert.ok(!("status" in racingQuote));
+        // Deliberately bypass App preflight in this fixture to prove the on-chain
+        // CAS. Save the exact digest before one raw submission; failures only query it.
+        const stale = sdk.host.rebindAgent({
+          ...rebindParameters,
+          expectedVersion: beforeRace.version,
+        });
+        stale.setSender(deviceKey.toSuiAddress());
+        const gasFixture = Ed25519Keypair.generate();
+        await requestSuiFromFaucetV2({
+          host: faucet,
+          recipient: gasFixture.toSuiAddress(),
+        });
+        stale.setGasOwner(gasFixture.toSuiAddress());
+        stale.setGasBudget(200000000);
+        const staleBytes = await stale.build({ client: coreClient }),
+          staleDigest = await Transaction.from(staleBytes).getDigest();
+        await execute(
+          "concurrent fixture rebind advances the reviewed record version",
+          sdk.host.rebindAgent({
+            ...rebindParameters,
+            expectedVersion: beforeRace.version,
+          }),
+        );
+        await assert.rejects(racing.submit(racingQuote), /state_changed/);
+        racing.dispose();
+        checks.push(
+          "A second confirmed rebind changes the record while an App quote is open; stale App submission is rejected before broadcast",
+        );
+
+        const signed = await deviceKey.signTransaction(staleBytes),
+          gasSigned = await gasFixture.signTransaction(staleBytes);
+        transactions.push({
+          label:
+            "Deliberate stale reviewed version; original digest saved before raw test submission",
+          digest: staleDigest,
+          phase: "prepared",
+        });
+        await save();
+        let staleReceipt: any;
+        try {
+          staleReceipt = await coreClient.core.executeTransaction({
+            transaction: staleBytes,
+            signatures: [signed.signature, gasSigned.signature],
+            include: { effects: true },
+          });
+        } catch (error) {
+          const failure = error as Error & { code?: string };
+          transactions.push({
+            label:
+              "Raw stale-version execution RPC returned an error; query original digest",
+            digest: staleDigest,
+            rpcError: {
+              name: failure.name,
+              message: failure.message,
+              code: failure.code,
+            },
+          });
+          await save();
+          for (let n = 0; n < 40; n++) {
+            try {
+              staleReceipt = await coreClient.core.getTransaction({
+                digest: staleDigest,
+                include: { effects: true },
+              });
+              break;
+            } catch {
+              await new Promise((resolve) => setTimeout(resolve, 125));
+            }
+          }
+        }
+        assert.ok(
+          staleReceipt,
+          "Query original stale-version transaction; do not resend",
+        );
+        const failed =
+          staleReceipt.$kind === "Transaction"
+            ? staleReceipt.Transaction
+            : staleReceipt.FailedTransaction;
+        assert.equal(failed.digest, staleDigest);
+        assert.equal(failed.status.success, false);
+        assert.match(JSON.stringify(failed.status.error), /9208/);
+        transactions.push({
+          label: "Contract CAS rejects stale reviewed version atomically",
+          digest: staleDigest,
+          status: "failed",
+          error: failed.status.error,
+          gasUsed: failed.effects.gasUsed,
+        });
+        await save();
+        const afterRace = (await managedInstance(
+          new ChainReadSession(profile),
+          organizationId,
+          selected.hostAddress,
+          selected.instanceId,
+        ))!;
+        assert.equal(afterRace.id, imported.id);
+        assert.equal(
+          BigInt(afterRace.version),
+          BigInt(beforeRace.version) + 1n,
+        );
+        assert.equal(afterRace.revoked, false);
+        assert.equal(afterRace.control_confirmed, false);
+        checks.push(
+          "Actual on-chain stale-version execution fails with host E_VERSION 9208 and leaves the winning record unchanged; no new instance or execution permission is created",
+        );
+        deviceHttp = {
+          ...(deviceHttp as object),
+          agentRebindVerified: true,
+          rebindRecordId: rebound.id,
+          rebindBroadcasts,
+          originalRebindDigestRecovered: true,
+          staleRebindQuoteRejected: true,
+          contractRebindCasRejected: true,
+          reboundVersion: rebound.version,
+          finalRecordVersion: afterRace.version,
+        };
+      }
       deviceHttp = {
         ...(deviceHttp as object),
         agentImportVerified: true,

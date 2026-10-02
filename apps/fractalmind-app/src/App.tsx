@@ -815,7 +815,9 @@ export function App() {
                         {t("链上记录", "Chain record")}: <code>{agent.id}</code>
                       </small>
                     </p>
-                    <p>{agent.runtime}</p>
+                    <p>
+                      {agent.runtime} · v{agent.version}
+                    </p>
                     <code>{short(agent.host_address)}</code>
                     <p>
                       {agent.control_confirmed

@@ -28,7 +28,8 @@ export class AgentImportError extends Error {
       | "invalid_source"
       | "existing_conflict"
       | "invalid_quote"
-      | "sync_pending",
+      | "sync_pending"
+      | "handover_required",
   ) {
     super(code);
   }
@@ -40,6 +41,9 @@ export type AgentImportSelection = {
   workspaceHash: string;
 };
 export type ManagedInstance = ReturnType<typeof ManagedAgentBcs.parse>;
+export type RegistrationIntent =
+  | { kind: "import" }
+  | { kind: "rebind"; reviewed?: ManagedInstance };
 export type AlreadyImported = {
   status: "already-imported";
   record: ManagedInstance;
@@ -188,6 +192,7 @@ type Plan = {
  * authority or business state is stored outside Sui. */
 export class AgentImport {
   readonly manager: SelfPayTransactionManager;
+  readonly intent: RegistrationIntent;
   private verifier: DeviceIdentityVerifier;
   private reads: CoordinatorReadClient;
   private plans = new Map<SelfPayFeeQuote, Plan>();
@@ -197,8 +202,15 @@ export class AgentImport {
     readonly grantId: string,
     readonly organizationId: string,
     journal: TransactionJournal,
+    intent: RegistrationIntent = { kind: "import" },
   ) {
     if (!fullId.test(organizationId)) fail("invalid_selection");
+    this.intent = structuredClone(intent);
+    if (this.intent.kind === "rebind" && this.intent.reviewed) {
+      Object.freeze(this.intent.reviewed.workspace_hash);
+      Object.freeze(this.intent.reviewed);
+    }
+    Object.freeze(this.intent);
     this.verifier = new DeviceIdentityVerifier(chain, device, grantId);
     this.reads = new CoordinatorReadClient(
       chain,
@@ -242,7 +254,7 @@ export class AgentImport {
   }
   private request(attemptId: string) {
     if (!uuid.test(attemptId)) fail("invalid_selection");
-    return `agent-import:${attemptId}`;
+    return `agent-${this.intent.kind}:${attemptId}`;
   }
   async query(attemptId: string) {
     await this.chain.checkNetwork();
@@ -257,6 +269,16 @@ export class AgentImport {
       input.hostAddress,
       input.instanceId,
     );
+    if (this.intent.kind === "rebind") {
+      const reviewed = this.intent.reviewed;
+      if (!reviewed || !record) fail("invalid_selection");
+      if (JSON.stringify(record) !== JSON.stringify(reviewed))
+        fail("state_changed");
+      // Dropping control while an old execution may be running is a handover,
+      // not an observation-only repair. It needs separate stop evidence.
+      if (record.control_confirmed || record.runtime !== "tmux-observe")
+        fail("handover_required");
+    }
     if (!record) return null;
     const directory = await hostDirectory(this.chain, this.organizationId);
     const member = directory.memberships.find(
@@ -271,8 +293,10 @@ export class AgentImport {
       member.revoked ||
       BigInt(member.expires_at_ms) <= directory.clockMs ||
       member.coordinator_binding !== input.bindingId
-    )
+    ) {
+      if (this.intent.kind === "rebind") return null;
       fail("existing_conflict");
+    }
     if (!directory.activeHostsTableId) fail("existing_conflict");
     const { dynamicField } =
       await this.chain.sdk.client.client.core.getDynamicField({
@@ -369,19 +393,29 @@ export class AgentImport {
     const existing = await this.existing(input);
     if (existing) return existing;
     const source = await this.source(input);
-    const tx = this.chain.sdk.host.importAgent({
+    const parameters = {
       organizationId: this.organizationId,
       humanId: this.chain.profile.humanId,
       grantId: this.grantId,
       membershipId: source.member.id,
       bindingId: input.bindingId,
-      instanceId: input.instanceId,
-      runtime: "tmux-observe",
+      runtime: "tmux-observe" as const,
       workspaceHash: Uint8Array.from(input.workspaceHash.match(/../g)!, (s) =>
         parseInt(s, 16),
       ),
       controlConfirmed: false,
-    });
+    };
+    const tx =
+      this.intent.kind === "rebind"
+        ? this.chain.sdk.host.rebindAgent({
+            ...parameters,
+            managedAgentId: this.intent.reviewed!.id,
+            expectedVersion: this.intent.reviewed!.version,
+          })
+        : this.chain.sdk.host.importAgent({
+            ...parameters,
+            instanceId: input.instanceId,
+          });
     const quote = await this.manager.prepare({
       requestId,
       transaction: tx,
@@ -486,6 +520,13 @@ export class AgentImport {
       (record.host_address !== input.hostAddress ||
         record.instance_id !== input.instanceId ||
         hash(record.workspace_hash) !== input.workspaceHash)
+    )
+      fail("state_changed");
+    if (
+      this.intent.kind === "rebind" &&
+      this.intent.reviewed &&
+      (record.id !== this.intent.reviewed.id ||
+        BigInt(record.version) !== BigInt(this.intent.reviewed.version) + 1n)
     )
       fail("state_changed");
     const indexed = await managedInstance(

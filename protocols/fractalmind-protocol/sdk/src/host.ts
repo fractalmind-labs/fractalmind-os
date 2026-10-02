@@ -121,9 +121,10 @@ export class HostApi {
     const tx = this.fm.useTransaction(input.tx);
     return this.call('revoke_agent', tx, [...this.authorized(tx, input), tx.object(input.managedAgentId), tx.object('0x6')]);
   }
-  rebindAgent(input: MembershipInput & { managedAgentId: string; runtime: 'tmux-observe' | 'bounded-process-v1'; workspaceHash: Uint8Array; controlConfirmed: boolean }): Transaction {
+  rebindAgent(input: MembershipInput & { managedAgentId: string; expectedVersion?: bigint | string | number; runtime: 'tmux-observe' | 'bounded-process-v1'; workspaceHash: Uint8Array; controlConfirmed: boolean }): Transaction {
     const tx = this.fm.useTransaction(input.tx);
-    return this.call('rebind_agent', tx, [...this.authorized(tx, input), tx.object(input.membershipId), tx.object(input.bindingId), tx.object(input.managedAgentId), tx.pure.string(input.runtime), tx.pure.vector('u8', input.workspaceHash), tx.pure.bool(input.controlConfirmed), tx.object('0x6')]);
+    const version = input.expectedVersion === undefined ? [] : [tx.pure.u64(toBigInt(input.expectedVersion))];
+    return this.call(input.expectedVersion === undefined ? 'rebind_agent' : 'rebind_agent_at_version', tx, [...this.authorized(tx, input), tx.object(input.membershipId), tx.object(input.bindingId), tx.object(input.managedAgentId), ...version, tx.pure.string(input.runtime), tx.pure.vector('u8', input.workspaceHash), tx.pure.bool(input.controlConfirmed), tx.object('0x6')]);
   }
   issueCapability(input: MembershipInput & { managedAgentId?: string; actions: string[]; scope: string; maxUses?: bigint | string | number; budgetAsset?: string; maxBudget?: bigint | string | number; expiresAtMs: bigint | string | number }): Transaction {
     const tx = this.fm.useTransaction(input.tx);

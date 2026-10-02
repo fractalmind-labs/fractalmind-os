@@ -9,6 +9,7 @@ import {
 import {
   AgentImport,
   AgentImportError,
+  managedInstance,
   type AgentImportSelection,
   type AlreadyImported,
   type ManagedInstance,
@@ -27,7 +28,12 @@ export type ImportTarget = {
   selection: AgentImportSelection;
   instance: DiscoveredInstance;
 };
-type Attempt = { id: string; deviceProfile: string; grantId: string };
+type Attempt = {
+  id: string;
+  deviceProfile: string;
+  grantId: string;
+  kind: "import" | "rebind";
+};
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const id = /^0x[0-9a-f]{64}$/;
 
@@ -55,6 +61,10 @@ export default function AgentImportFlow({
     [quote, setQuote] = useState<SelfPayFeeQuote | null>(null),
     [outcome, setOutcome] = useState<SelfPayTransactionOutcome | null>(null),
     [record, setRecord] = useState<ManagedInstance | null>(null);
+  const [reviewed, setReviewed] = useState<
+      ManagedInstance | null | undefined
+    >(),
+    [kind, setKind] = useState<"import" | "rebind">("import");
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null),
     [unsubmitted, setUnsubmitted] = useState(false),
@@ -94,6 +104,8 @@ export default function AgentImportFlow({
     if (target) {
       setOpen(true);
       setConfirmed(false);
+      setReviewed(undefined);
+      if (!attempt) setKind("import");
     }
   }, [target]);
   useEffect(() => {
@@ -107,13 +119,18 @@ export default function AgentImportFlow({
         uuid.test(saved.id) &&
         id.test(saved.grantId) &&
         typeof saved.deviceProfile === "string" &&
-        /^[A-Za-z0-9_-]{1,64}$/.test(saved.deviceProfile)
+        /^[A-Za-z0-9_-]{1,64}$/.test(saved.deviceProfile) &&
+        (saved.kind === undefined ||
+          saved.kind === "import" ||
+          saved.kind === "rebind")
       ) {
         setAttempt({
           id: saved.id,
           grantId: saved.grantId,
           deviceProfile: saved.deviceProfile,
+          kind: saved.kind ?? "import",
         });
+        setKind(saved.kind ?? "import");
         setDeviceProfile(saved.deviceProfile);
         setRestored(true);
       }
@@ -152,7 +169,7 @@ export default function AgentImportFlow({
       if (mounted.current) setBusy(false);
     }
   }
-  async function load(value?: Attempt) {
+  async function load(value?: Attempt, forQuote = false) {
     if (session.current) return session.current;
     if (!isTauri()) throw new NativeDeviceError("native_unavailable");
     const device = await NativeDeviceSigner.load(
@@ -178,7 +195,7 @@ export default function AgentImportFlow({
         usable = scoped?.length ? scoped : candidates;
       if (usable?.length !== 1) throw new DeviceIdentityError("invalid_grant");
       grantId = usable[0].id;
-      value = { id: crypto.randomUUID(), deviceProfile, grantId };
+      value = { id: crypto.randomUUID(), deviceProfile, grantId, kind };
       // Technical correlation only. Instance, workspace, Host payload and
       // derived product records remain in memory or Sui, never this cache.
       localStorage.setItem(key, JSON.stringify(value));
@@ -191,6 +208,12 @@ export default function AgentImportFlow({
       grantId,
       organizationId,
       journal.current,
+      (value?.kind ?? kind) === "rebind"
+        ? {
+            kind: "rebind",
+            reviewed: forQuote ? (reviewed ?? undefined) : undefined,
+          }
+        : { kind: "import" },
     );
     return session.current;
   }
@@ -238,6 +261,8 @@ export default function AgentImportFlow({
     setRestored(false);
     setPayer(null);
     setError(null);
+    setKind("import");
+    setReviewed(undefined);
   }
   const messages: Record<string, [string, string]> = {
     needs_funds: [
@@ -252,8 +277,12 @@ export default function AgentImportFlow({
       "权限、Host 或工作区已改变。原交易结果保留；重新发现后再授权。",
       "Authority, Host or workspace changed. Original transaction results remain; rediscover before authorizing again.",
     ],
+    handover_required: [
+      "该记录曾确认可控能力，须完成旧执行停止与安全交接后再关联。",
+      "This record has controlled-runtime authority. Stop the old execution and complete a safe handover before rebinding.",
+    ],
     existing_conflict: [
-      "此实例已有冲突或撤销的登记，需要单独核对并重新关联。",
+      "此实例已有冲突或撤销的登记，请读取已有登记、核对差异后明确选择重新关联。",
       "This instance has a conflicting or revoked record. Review before rebinding.",
     ],
     invalid_grant: [
@@ -278,7 +307,7 @@ export default function AgentImportFlow({
           setOpen(true);
         }}
       >
-        {t("恢复导入交易", "Recover import transaction")}
+        {t("恢复登记交易", "Recover registration transaction")}
       </button>
       {open && (
         <dialog
@@ -290,7 +319,11 @@ export default function AgentImportFlow({
           }}
         >
           <div className="dialog-head">
-            <h2>{t("导入为仅观察", "Import for observation only")}</h2>
+            <h2>
+              {kind === "rebind"
+                ? t("重新关联为仅观察", "Rebind for observation only")
+                : t("导入为仅观察", "Import for observation only")}
+            </h2>
             <button disabled={busy} onClick={close}>
               {t("关闭", "Close")}
             </button>
@@ -304,8 +337,8 @@ export default function AgentImportFlow({
           {restored && !unsubmitted && !outcome && !record && (
             <p className="warn">
               {t(
-                "先查询上次导入结果，完成后再导入所选实例。",
-                "Query the previous import first, then import the selected instance.",
+                "先查询上次交易。确认未提交或已有结果后，开始新操作再核对所选实例。",
+                "Query the previous transaction first. Once its result or non-submission is known, start a new operation to review the selected instance.",
               )}
             </p>
           )}
@@ -337,6 +370,100 @@ export default function AgentImportFlow({
               </small>
             </section>
           )}
+          {target && !outcome && !record && !restored && (
+            <section className="panel">
+              <button
+                disabled={busy || !!quote || !!attempt}
+                onClick={() =>
+                  void run(async () => {
+                    const startedRevision = authorityRevision;
+                    const found = await managedInstance(
+                      new ChainReadSession(profile),
+                      organizationId,
+                      target.selection.hostAddress,
+                      target.selection.instanceId,
+                    );
+                    if (
+                      mounted.current &&
+                      latestRevision.current === startedRevision
+                    )
+                      setReviewed(found);
+                  })
+                }
+              >
+                {t("读取已有链上登记", "Review existing chain registration")}
+              </button>
+              {reviewed === null && (
+                <p>
+                  {t(
+                    "当前组织没有此 Host／实例的登记，请使用导入。",
+                    "No record for this Host and instance in the organization. Use import.",
+                  )}
+                </p>
+              )}
+              {reviewed && (
+                <>
+                  <h3>
+                    {t("待核对的原登记", "Existing registration to review")} · v
+                    {reviewed.version}
+                  </h3>
+                  <code className="long-id">{reviewed.id}</code>
+                  <p>
+                    {reviewed.revoked
+                      ? t("已撤销", "Revoked")
+                      : t("未撤销", "Not revoked")}{" "}
+                    · {reviewed.runtime}
+                  </p>
+                  <p>
+                    {t("原成员资格", "Previous Host membership")}:{" "}
+                    <code className="long-id">{reviewed.membership_id}</code>
+                  </p>
+                  <p className="long-id">
+                    {t("原工作区指纹", "Previous workspace hash")}:{" "}
+                    {reviewed.workspace_hash
+                      .map((b) => b.toString(16).padStart(2, "0"))
+                      .join("")}
+                  </p>
+                  <p>
+                    {t(
+                      "重新关联保留此记录和实例 ID，更新当前 Host 成员资格与所选工作区，推进版本并使旧能力失效。不会重启原进程。",
+                      "Rebinding retains this record and instance ID, uses the current Host membership and selected workspace, advances the version and invalidates old capabilities. It does not restart the process.",
+                    )}
+                  </p>
+                  {reviewed.control_confirmed ||
+                  reviewed.runtime !== "tmux-observe" ? (
+                    <p className="warn">{t(...messages.handover_required)}</p>
+                  ) : (
+                    <button
+                      disabled={
+                        busy || !!quote || !!attempt || kind === "rebind"
+                      }
+                      onClick={() => {
+                        setKind("rebind");
+                        setConfirmed(false);
+                      }}
+                    >
+                      {t(
+                        "选择重新关联为仅观察",
+                        "Choose observation-only rebind",
+                      )}
+                    </button>
+                  )}
+                </>
+              )}
+            </section>
+          )}
+          {kind === "rebind" && !outcome && !record && !restored && (
+            <button
+              disabled={busy || !!quote || !!attempt}
+              onClick={() => {
+                setKind("import");
+                setConfirmed(false);
+              }}
+            >
+              {t("返回普通导入", "Return to import")}
+            </button>
+          )}
           {!outcome && !record && (
             <fieldset disabled={busy || !!quote}>
               <label>
@@ -355,8 +482,8 @@ export default function AgentImportFlow({
                   onChange={(e) => setConfirmed(e.target.checked)}
                 />
                 {t(
-                  "我已核对 Host、运行实例和工作区，确认只导入为观察。",
-                  "I reviewed the Host, instance and workspace and confirm observation-only import.",
+                  "我已核对 Host、运行实例、工作区及已有登记，确认只关联为观察。",
+                  "I reviewed the Host, instance, workspace and any previous registration and confirm observation-only registration.",
                 )}
               </label>
             </fieldset>
@@ -368,13 +495,19 @@ export default function AgentImportFlow({
                 !isTauri() ||
                 !target ||
                 !confirmed ||
+                reviewed === undefined ||
+                !!(
+                  reviewed &&
+                  (reviewed.control_confirmed ||
+                    reviewed.runtime !== "tmux-observe")
+                ) ||
                 !!quote ||
-                (restored && !unsubmitted)
+                restored
               }
               onClick={() =>
                 void run(async () => {
                   const startedRevision = authorityRevision;
-                  const controller = await load(attempt ?? undefined);
+                  const controller = await load(attempt ?? undefined, true);
                   const current =
                     attempt ?? JSON.parse(localStorage.getItem(key)!);
                   const result = await controller.prepare(
@@ -428,7 +561,9 @@ export default function AgentImportFlow({
                   })
                 }
               >
-                {t("确认支付并导入", "Confirm payment & import")}
+                {kind === "rebind"
+                  ? t("确认支付并重新关联", "Confirm payment & rebind")
+                  : t("确认支付并导入", "Confirm payment & import")}
               </button>
               <button
                 disabled={busy}

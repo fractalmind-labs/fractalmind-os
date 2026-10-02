@@ -1,0 +1,34 @@
+{
+  "recordedAt": "2026-10-02T08:08:54.665157+00:00",
+  "url": "http://127.0.0.1:4189/",
+  "profile": {
+    "network": "localnet",
+    "rpcUrl": "http://127.0.0.1:29000",
+    "packageId": "0x4bc3adef64b6ec90f19f505f25dff439fc2a327a6e52a098c758a6c8a57567a3",
+    "registryId": "0x037f3398761bc64064f4d3a5c9e99df6cd9231270f9cb42a9fd71ad4f46085ef",
+    "humanId": "0xcf90d3e892ddcb6f4cebd8ec322f89dbb0c72dd53e34de37a499b8f78ba1460a",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "organizationId": "0xc43da44ae71120fc6ff5d9444f65f938dc83b5af49de4cb39394723dba82fec6",
+  "recordId": "0x810c68f74e0f16ff2279b61f1c2f162c3c2286ab5a8eb8263b389c19249af4ee",
+  "instanceId": "tmux-933712ef274ef7054feb4242f47b6859da14ed453437dace89022e166d617ef3",
+  "logicalVersion": "5",
+  "checks": [
+    "Public profile entered through actual welcome page; no private keys or synthetic records",
+    "Same actual integration record retains its identity and renders latest v5",
+    "Long record/instance IDs wrap in card",
+    "Chinese Light and English Dark visually inspected; Chinese Light restored",
+    "Device verification and registration recovery remain disabled in browser",
+    "Observation registration does not assert online or messaging capability"
+  ],
+  "screenshots": {
+    "v020-agent-rebind-browser-zh-light.jpg": "7bca0bb5bf70721d95cfb8e8abc86b53f6b05b33fbff9ea37fdf9bb5a50b5c2c",
+    "v020-agent-rebind-browser-en-dark.jpg": "f924240c53f10be73853fdbb4bbf610b3eaa1fb96e6c319fc23228b7ee39ea55"
+  },
+  "limits": {
+    "installedNativeDialogVerified": false,
+    "nativeStoreVerified": false,
+    "persistentJournalRestartVerified": false,
+    "mobileInstalledVerified": false
+  }
+}

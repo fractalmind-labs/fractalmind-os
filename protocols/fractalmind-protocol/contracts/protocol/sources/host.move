@@ -24,6 +24,7 @@ module fractalmind_protocol::host {
     const E_PROOF: u64 = 9205;
     const E_SCOPE: u64 = 9206;
     const E_CONFLICT: u64 = 9207;
+    const E_VERSION: u64 = 9208;
     const DAY: u64 = 86400000;
     const MAX_INVITE_TTL: u64 = DAY;
     const MAX_MEMBER_TTL: u64 = 90 * DAY;
@@ -303,6 +304,18 @@ module fractalmind_protocol::host {
         pointer.control_confirmed = control_confirmed;
         pointer.revoked = false;
         event::emit(AgentImported { org_id: object::id(org), membership_id: object::id(member), record_id: object::id(record), instance_id: record.instance_id, duplicate: false });
+    }
+
+    /// A reviewed snapshot cannot overwrite a later revocation or rebind.
+    /// Kept separate to preserve the published rebind_agent signature.
+    public fun rebind_agent_at_version(
+        org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, record: &mut ManagedAgent,
+        expected_version: u64, runtime: String, workspace_hash: vector<u8>, control_confirmed: bool,
+        clock: &Clock, ctx: &mut TxContext,
+    ) {
+        assert!(record.version == expected_version, E_VERSION);
+        rebind_agent(org, human, grant, member, binding, record, runtime, workspace_hash, control_confirmed, clock, ctx);
     }
 
     /// One device obtains its own exact Host capability. It cannot silently

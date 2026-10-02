@@ -40,6 +40,8 @@ node --import tsx scripts/host-admission-localnet.ts DEPLOYMENT.json NEW_REPORT.
 
 ## 剩余目标
 
+后续已接通仅观察记录的[显式重新关联](v020-agent-rebind.md)。以下记录是本导入增量当时的剩余项；整体范围以最新验证记录为准。
+
 支持约束的适配器、安全检查点与原执行停止、重新绑定、纳入 ACTIVE OKR、明确继续，以及对话／介入和自主验证闭环仍需完成。tmux 仅观察不会自动升级成这些能力。
 
 原生 App 的系统密钥库授权仍待用户处理；实际云 TLS Host、Windows 原生发现、五平台安装／运行及完整身份旅程保持未验收。目标范围不变。
