@@ -63,7 +63,7 @@ func (a *boundedFileAgent) NativeDiscovery() *agent.Discovery {
 	return &d
 }
 func (a *boundedFileAgent) Supports(operation Operation) bool {
-	if operation == OperationAssign || operation == OperationStatus || operation == OperationAvailability {
+	if operation == OperationAssign || operation == OperationStatus || operation == OperationAvailability || operation == OperationDirect {
 		return true
 	}
 	if observer, ok := a.observer.(interface{ Supports(Operation) bool }); ok {
@@ -78,12 +78,15 @@ func (a *boundedFileAgent) run(ctx context.Context, request Request) (Response, 
 	if (request.Operation == OperationStatus || request.Operation == OperationAvailability) && (a.workspaces[request.Agent] != "" || strings.HasPrefix(request.Agent, "native-")) {
 		return a.nativeStatus(request)
 	}
-	if request.Operation == OperationAssign {
+	if request.Operation == OperationAssign || request.Operation == OperationDirect {
 		return Response{}, runError("unsupported_operation", fmt.Errorf("bounded tools require a signed command and this Host's confirmed attempt"))
 	}
 	return a.observer.run(ctx, request)
 }
 func (a *boundedFileAgent) runAuthorized(ctx context.Context, request Request, command nodecommand.NodeCommand, checkpoint *nodecommand.ChainExecution) (Response, error) {
+	if request.Operation == OperationDirect {
+		return a.runDirect(ctx, request, command, checkpoint)
+	}
 	if request.Handover != nil {
 		return a.reviewHandover(ctx, request, command, checkpoint)
 	}

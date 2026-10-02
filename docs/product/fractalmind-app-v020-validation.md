@@ -6,18 +6,25 @@
 
 ## 当前验证证据
 
-### envd 直接权限读取与原消息核验增量
+### envd 直接消息执行与原生结果回执增量
+
+- 生产验证器／每次工具 hook、普通及单次批准 begin／finish、固定实例文件适配器、direct scope 设备鉴权和原生结果密钥接通。SDK 补齐常驻动作／边界／单消息与剩余额度预检；Go PTB 复用同一对象输入，修复同设备执行及批准的真实开始拒绝。
+- [实际 OS＋localnet＋生产 envd](evidence/v020-direct-message-localnet.json)：**14 项检查、41 笔 App 确认交易**。真实普通写入、读取、零工具状态、重复投递和精确单次批准通过。常驻工具预算 **4 已用／0 预留**，审批预算 **3 已用／0 预留**；原两 KR 独立验证及最终验收仍通过，OKR 预算 **6 已用／0 预留**。
+- [回归摘要](evidence/v020-direct-message-unit.json)：SDK **138/138**、App **147/147**、两者构建、脚本严格类型及六包 envd race 通过。[前序原回执只读复查](evidence/v020-direct-message-prior.json)保留两项历史未执行预留，无重放；新成功联测不代表它们已取消。
+- **仍未完成**：正式对话／审批／介入 UI、通用对话适配器、首次直接纳管、持续自主／技能投影、安装后人工操作、云 Host、清缓存重启和手机核心旅程。当前适配器只支持明确文件任务及状态，`ask` 明确拒绝；脚本人审不能替代安装后 UI 验收。详见[实现、原账本与限制](v020-direct-message-execution.md)。完整 #40 保持未完成。
+
+### 历史：envd 直接权限读取与原消息核验增量
 
 - 生产 Go 读取器分开 direct 与 OKR 来源，核对常驻权限、固定实例、工作区及单次审批的当前批准设备；新增 SDK 同源内容哈希、原不可变消息／加密记录／Run／两个预算账本核验。原历史可读取，旧版权限不能成为当前执行资格。
 - [7 组专项、45 个子测试及五包 race](evidence/v020-direct-authority-unit.json)通过，App 构建和原生脚本严格类型通过。[生产 gRPC 真实链只读复查](evidence/v020-direct-authority-original-localnet-read.json)读取原普通及审批取消 Run，并拒绝错误扩展来源，**0 次广播**。
-- **尚未完成**：direct 验证器／工具 hook、begin／finish 交易路由、实际适配器处理和 App 对话／审批 UI；该证据不能用于证明 #43 已完成。详见[读取实现与后续验收](v020-direct-authority-runtime.md)。其余 #40 缺口保持不变。
+- **该阶段边界**：此只读证据不能证明直接消息执行。验证器／工具 hook、begin／finish 交易路由及明确文件任务随后由上述执行增量接通；正式 App 对话／审批 UI 仍未完成。详见[读取实现与后续验收](v020-direct-authority-runtime.md)。
 
 ### 三包部署与真实 OKR 回归：发布门禁已通过
 
 - core、OKR/handover、direct-agent 三包在标准大小限制下全部实际发布；身份目录随 core 发布原子初始化。[原发布摘要／费用](evidence/v020-product-three-package-deployment.json)已保存。既有 main 模块保留，真实旧发布升级与开发单包对象迁移仍未验证。
 - [实际 OS＋localnet＋生产 envd](evidence/v020-product-three-package-native-localnet.json)：**12 项检查、29 笔 App 确认交易／费用**。新三包上两个 KR 真实按序执行、独立人工验证与最终验收通过，ACHIEVED／游标 2／工具预算 **6 已用、0 预留**。直接消息常驻与单次审批的签名、原 Run 预留、权限换版和历史取消通过，独立预算最后全部归零，未派发直接消息。Host 撤销与原历史读取通过，OS 测试凭据已清理。
 - [回归摘要](evidence/v020-product-three-package-unit.json)：Move **143/143**、SDK **137/137**、App **146/146**、Rust 核心 **20/20**、四包 envd race、类型／构建和脚本严格类型通过。三项跨包伪造拒绝测试通过。[前序记录](evidence/v020-product-three-package-prior.json)保留未完成联测、原未知初始化和原状态只读复查，无重放。
-- **仍未完成**：direct envd／对话与介入 UI、首次直接纳管、持续自主／技能投影、安装后人工操作、云 Host、清缓存重启与手机核心旅程。详见[三包职责与验证限制](v020-product-package-split.md)。
+- **该阶段边界**：直接执行随后由本记录首节接通；对话与介入 UI、首次直接纳管、持续自主／技能投影、安装后人工操作、云 Host、清缓存重启与手机核心旅程仍未完成。详见[三包职责与验证限制](v020-product-package-split.md)。
 
 ### 历史：直接消息常驻权限与 SDK 增量，原单包未通过发布门禁
 

@@ -57,7 +57,7 @@ export class NativeCommandResults {
       c.action === "status" && Object.hasOwn(c.payload, "handover_review");
     const action = review
       ? "approve"
-      : c.scope === "control"
+      : c.scope === "control" || c.scope === "direct"
         ? "operate"
         : "read";
     const authority = await this.verifier.verifyOrganization(
@@ -173,7 +173,8 @@ export class NativeCommandResults {
             "availability",
           ].includes(c.action)) ||
         (c.scope === "control" &&
-          ["assign", "start", "stop", "direct.message"].includes(c.action))
+          ["assign", "start", "stop"].includes(c.action)) ||
+        (c.scope === "direct" && c.action === "direct.message")
       )
     )
       throw new CommandResultError("invalid_command");

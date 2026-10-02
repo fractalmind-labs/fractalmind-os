@@ -28,6 +28,7 @@ import { NativeDeviceSigner, type NativeInvoke } from "../src/native-device";
 import { NativeRecoverySigner } from "../src/native-onboarding";
 import { IdentityCreation, normalizeDeployment } from "../src/onboarding";
 import { ChainReadSession } from "../src/chain";
+import { NativeCommandResults } from "../src/command-results";
 import { NativeExecutionResults } from "../src/execution-results";
 import { OkrDraftCreation } from "../src/okr-draft";
 import { HandoverApproval } from "../src/handover-approval";
@@ -38,7 +39,10 @@ import { OkrControl } from "../src/okr-control";
 import { OkrHumanReview, humanReviewIntent } from "../src/okr-human-review";
 import { HostAdmission } from "../src/host-admission";
 import { AgentImport } from "../src/agent-import";
-import { CoordinatorReadClient } from "../src/coordinator-read";
+import {
+  CoordinatorReadClient,
+  CoordinatorReadError,
+} from "../src/coordinator-read";
 import { canonical } from "../src/handover-plan";
 import { DeviceIdentityVerifier } from "../src/device-identity";
 assert.ok(
@@ -49,6 +53,11 @@ const output = process.argv[3],
   progress = output + ".progress.json";
 const humanSequence = process.argv.slice(4).includes("--human-sequence");
 const directPermission = process.argv.slice(4).includes("--direct-permission");
+const directDispatch = process.argv.slice(4).includes("--direct-dispatch");
+assert.ok(
+  !directDispatch || directPermission,
+  "Dispatch needs the direct protocol setup",
+);
 assert.ok(
   !directPermission || humanSequence,
   "Direct protocol checks run after the reviewed Human sequence",
@@ -56,7 +65,11 @@ assert.ok(
 assert.ok(
   process.argv
     .slice(4)
-    .every((a) => ["--human-sequence", "--direct-permission"].includes(a)),
+    .every((a) =>
+      ["--human-sequence", "--direct-permission", "--direct-dispatch"].includes(
+        a,
+      ),
+    ),
   "Unknown harness option",
 );
 for (const path of [output, progress]) {
@@ -148,7 +161,8 @@ async function save(complete = false) {
           humanFinalAcceptanceVerified: state.humanAcceptanceVerified === true,
           directPermissionProtocolVerified:
             state.directPermissionProtocolVerified === true,
-          directMessageEnvdDispatchVerified: false,
+          directMessageEnvdDispatchVerified:
+            state.directMessageEnvdDispatchVerified === true,
           directMessageUIVerified: false,
           installedHumanReviewVerified: false,
           reviewDecisions: humanSequence
@@ -1135,7 +1149,7 @@ try {
       journal,
     });
     const target = { ...auth, membershipId, bindingId, managedAgentId };
-    const expiry = Date.now() + 120000;
+    const expiry = Date.now() + 900000;
     async function encrypt(
       kind: number,
       logicalId: string,
@@ -1230,34 +1244,46 @@ try {
       ordinaryCapOutcome,
       "remote_authority::RemoteCapability",
     );
-    async function createMessage(token: string, calls: string) {
-      const request: DirectRequest = {
-        message: "Write the reviewed direct-message test file",
-        task: JSON.stringify({
+    async function createMessage(
+      token: string,
+      calls: string,
+      options: {
+        version?: string;
+        action?: "file.write" | "file.read" | "status";
+        task?: string;
+      } = {},
+    ) {
+      const action = options.action ?? "file.write";
+      const task =
+        options.task ??
+        JSON.stringify({
           kind: "ensure_text_files",
           files: [{ path: "docs/DIRECT.md", content: "Native direct request" }],
-        }),
+        });
+      const request: DirectRequest = {
+        message: "Write the reviewed direct-message test file",
+        ...(task ? { task } : {}),
         bounds: { paths: plan.paths, max_calls: calls },
       };
-      const messageExpiry = Date.now() + 60000;
+      const messageExpiry = Date.now() + 120000;
       const outcome = await submitDirect(
         `native encrypted direct message ${calls}`,
         sdk.directAgent.createMessage({
           ...target,
           permissionId,
-          expectedVersion: "1",
+          expectedVersion: options.version ?? "1",
           conversationId: "native-direct",
           messageToken: token,
-          action: "file.write",
+          action,
           paths: plan.paths,
           budgetAmount: calls,
-          requestHash: directRequestHash(request, "file.write"),
+          requestHash: directRequestHash(request, action),
           expiresAtMs: messageExpiry,
           keyVersion: "1",
           encryptedBody: await encrypt(6, directMessageRecordName(token), "1", {
             schema: "fractalmind.direct-request.v1",
             ...request,
-            action: "file.write",
+            action,
           }),
         }),
       );
@@ -1302,12 +1328,12 @@ try {
       const context: DirectMessageContext = {
         version: "1",
         permission_id: permissionId,
-        permission_version: "1",
+        permission_version: source.message.permission_version,
         message_id: source.message.id,
         conversation_id: source.message.conversation_id,
         message_token: source.message.message_token,
         message_record_id: source.message.encrypted_record,
-        action: "file.write",
+        action: source.message.action as "file.write" | "file.read" | "status",
         ...(approval
           ? { approval_id: approval.id, approving_grant_id: approval.grant }
           : {}),
@@ -1321,10 +1347,14 @@ try {
         action: "direct.message",
         scope: "direct",
         capability: { id: capabilityId, revocationVersion: 1n },
-        budget: {
-          asset: "TOOL_CALLS",
-          amount: BigInt(source.message.budget_amount),
-        },
+        ...(BigInt(source.message.budget_amount) > 0n
+          ? {
+              budget: {
+                asset: "TOOL_CALLS",
+                amount: BigInt(source.message.budget_amount),
+              },
+            }
+          : {}),
         issuedAtMs: Date.now(),
         expiresAtMs: Number(source.message.expires_at_ms),
         payload: { ...source.request, direct: context },
@@ -1512,6 +1542,334 @@ try {
       },
     };
     await save();
+    if (directDispatch) {
+      const results = new NativeCommandResults(
+        chain,
+        device,
+        auth.grantId,
+        organizationId,
+        invoke,
+      );
+      const transportClient = new CoordinatorReadClient(
+        chain,
+        device,
+        auth.grantId,
+        organizationId,
+        transport,
+      );
+      const issued = await submitDirect(
+        "native runtime direct capability v2",
+        sdk.directAgent.issueCapability({
+          ...target,
+          permissionId,
+          expectedVersion: "2",
+          expiresAtMs: expiry,
+        }),
+      );
+      const cap = createdObject(issued, "remote_authority::RemoteCapability");
+      const liveRuns: string[] = [];
+      async function executeDirect(
+        source: Awaited<ReturnType<typeof createMessage>>,
+        capabilityId: string,
+        expectedSpent: string,
+        approval?: { id: string; grant: string },
+      ) {
+        const command = await commandFor(source, capabilityId, approval);
+        const prepared = await results.prepare({
+          command,
+          membershipId,
+          bindingId,
+          managedAgentId,
+        });
+        await prepared.assertCurrent();
+        const created = await submitDirect(
+          "native direct Run and OS-wrapped result key",
+          prepared.transaction,
+        );
+        const runId = createdObject(
+          created,
+          "node_execution::CommandExecution",
+        );
+        await readVisible(
+          () => sdk.nodeExecution.getExecution(runId),
+          (r) => r.state === 0,
+        );
+        state = {
+          ...state,
+          originalDirectDelivery: {
+            runId,
+            messageId: source.message.id,
+            capabilityId,
+            fingerprint: source.message.request_hash,
+            phase: "prepared_not_sent",
+          },
+        };
+        await save();
+        const request = await transportClient.prepareCommand(
+          bindingId,
+          command,
+        );
+        const currentRecipient = await results.preflight({
+          command,
+          membershipId,
+          bindingId,
+          managedAgentId,
+        });
+        await currentRecipient();
+        state = {
+          ...state,
+          originalDirectDelivery: {
+            runId,
+            messageId: source.message.id,
+            capabilityId,
+            phase: "sending_once",
+          },
+        };
+        await save();
+        try {
+          const reply = (await request.send()) as {
+            success?: boolean;
+            error_code?: string;
+            error?: string;
+          };
+          state = {
+            ...state,
+            directRelayReply: {
+              success: reply.success,
+              code: reply.error_code,
+              error: reply.error,
+            },
+          };
+          await save();
+          if (!reply.success)
+            throw new Error(
+              `Direct envd rejected original Run: ${reply.error_code}: ${reply.error}`,
+            );
+        } catch (error) {
+          if (
+            !(error instanceof CoordinatorReadError) ||
+            error.code !== "command_outcome_unknown"
+          )
+            throw error;
+          state = {
+            ...state,
+            directTransportOutcome: "unknown_query_original_only",
+          };
+          await save();
+        }
+        const finished = await readVisible(
+          () => sdk.nodeExecution.getExecution(runId),
+          (r) => r.state >= 2,
+        );
+        assert.equal(finished.state, 2);
+        const claim = await readVisible(
+          () => sdk.directAgent.getClaim(permissionId, runId),
+          (c) =>
+            c.settled &&
+            c.spent === expectedSpent &&
+            c.reserved === source.message.budget_amount,
+        );
+        assert.equal(claim.spent, expectedSpent);
+        // An immutable claim retains its original allowance; settled and the
+        // aggregate ledger, rather than rewriting that allowance, release it.
+        assert.equal(claim.reserved, source.message.budget_amount);
+        assert.equal(claim.settled, true);
+        await readVisible(
+          () => sdk.directAgent.getPermission(permissionId),
+          (p) => (approval ? p.approved_reserved === "0" : p.reserved === "0"),
+        );
+        const decoded = await reader.read(runId, managedAgentId);
+        assert.ok(decoded.response?.ok);
+        assert.equal(decoded.response!.operation, "direct.message");
+        assert.equal(decoded.recordId, finished.result_record);
+        liveRuns.push(runId);
+        state = {
+          ...state,
+          originalDirectDelivery: {
+            runId,
+            phase: "confirmed_original_result",
+            resultId: decoded.recordId,
+            creationDigest: decoded.transactionDigest,
+          },
+          directRuntimeRuns: liveRuns,
+          transportCalls,
+          commandDeliveries: deliveries,
+        };
+        await save();
+        return { command, finished, decoded };
+      }
+      const write = await createMessage(randomUUID(), "3", {
+        version: "2",
+        task: JSON.stringify({
+          kind: "ensure_text_files",
+          files: [
+            {
+              path: "docs/DIRECT-RUNTIME.md",
+              content: "Real direct execution through envd",
+            },
+          ],
+        }),
+      });
+      const first = await executeDirect(write, cap, "3");
+      const writeEvidence = first.decoded.response!.result as {
+        evidence: { path: string; verified: boolean }[];
+      };
+      assert.equal(writeEvidence.evidence[0].path, "docs/DIRECT-RUNTIME.md");
+      assert.equal(writeEvidence.evidence[0].verified, true);
+      const beforeReplay = await sdk.directAgent.getPermission(permissionId);
+      const replay = await transportClient.prepareCommand(
+        bindingId,
+        first.command,
+      );
+      await replay.send();
+      const afterReplay = await sdk.directAgent.getPermission(permissionId);
+      assert.deepEqual(
+        [afterReplay.spent, afterReplay.reserved],
+        [beforeReplay.spent, beforeReplay.reserved],
+      );
+      assert.equal(
+        (await sdk.nodeExecution.getExecution(first.finished.id)).result_record,
+        first.finished.result_record,
+      );
+      const read = await createMessage(randomUUID(), "1", {
+        version: "2",
+        action: "file.read",
+        task: JSON.stringify({
+          kind: "inspect_text_files",
+          paths: ["docs/DIRECT-RUNTIME.md"],
+        }),
+      });
+      const readResult = await executeDirect(read, cap, "1");
+      assert.equal(
+        (
+          readResult.decoded.response!.result as {
+            results: { content: string }[];
+          }
+        ).results[0].content,
+        "Real direct execution through envd",
+      );
+      const status = await createMessage(randomUUID(), "0", {
+        version: "2",
+        action: "status",
+        task: "",
+      });
+      const statusResult = await executeDirect(status, cap, "0");
+      assert.equal(
+        (
+          statusResult.decoded.response!.result as {
+            instance_id: string;
+            physical_state: string;
+          }
+        ).instance_id,
+        instance.instanceId,
+      );
+      assert.equal(
+        (statusResult.decoded.response!.result as { physical_state: string })
+          .physical_state,
+        "idle",
+      );
+      const over = await createMessage(randomUUID(), "5", {
+        version: "2",
+        task: JSON.stringify({
+          kind: "ensure_text_files",
+          files: [
+            {
+              path: "docs/DIRECT-APPROVED.md",
+              content: "Real explicitly approved direct execution",
+            },
+          ],
+        }),
+      });
+      await assert.rejects(
+        commandFor(over, cap).then((c) =>
+          sdk.nodeExecution.prepareCommand({ ...target, command: c }),
+        ),
+      );
+      const approvalName = directMessageRecordName(
+        over.message.message_token,
+        true,
+      );
+      const requested = await submitDirect(
+        "native runtime exception request",
+        sdk.directAgent.requestApproval({
+          ...target,
+          permissionId,
+          messageId: over.message.id,
+          keyVersion: "1",
+          encryptedBody: await encrypt(3, approvalName, "1", {
+            messageId: over.message.id,
+            requestedCalls: "5",
+          }),
+        }),
+      );
+      const approvalId = createdObject(requested, "direct_agent::Approval");
+      await submitDirect(
+        "native runtime explicit exception",
+        sdk.directAgent.decideApproval({
+          ...target,
+          permissionId,
+          approvalId,
+          messageId: over.message.id,
+          approve: true,
+          keyVersion: "1",
+          encryptedBody: await encrypt(3, approvalName, "2", {
+            messageId: over.message.id,
+            approved: true,
+            reason: "Explicit isolated execution test",
+          }),
+        }),
+      );
+      const exceptionCap = await submitDirect(
+        "native runtime one-off capability",
+        sdk.directAgent.issueApprovedCapability({
+          ...target,
+          permissionId,
+          approvalId,
+          messageId: over.message.id,
+          approvingGrantId: auth.grantId,
+        }),
+      );
+      const exceptionCapability = createdObject(
+        exceptionCap,
+        "remote_authority::RemoteCapability",
+      );
+      await executeDirect(over, exceptionCapability, "3", {
+        id: approvalId,
+        grant: auth.grantId,
+      });
+      const budget = await readVisible(
+        () => sdk.directAgent.getPermission(permissionId),
+        (p) =>
+          p.spent === "4" &&
+          p.reserved === "0" &&
+          p.approved_spent === "3" &&
+          p.approved_reserved === "0",
+      );
+      assert.equal(budget.budget_limit, "6");
+      assert.equal(budget.max_calls, "3");
+      assert.equal((await sdk.okr.getBudget(okrId)).spent, 6n);
+      assert.equal((await sdk.okr.getBudget(okrId)).reserved, 0n);
+      checks.push(
+        "actual OS-signed direct write, read and zero-tool status traverse authenticated Coordinator to production envd; original encrypted results decrypt through the OS vault",
+      );
+      checks.push(
+        "exact direct replay reuses the original Run and immutable result without another tool spend; explicit five-call approval spends three and refunds two in its separate ledger, without changing the six-call OKR ledger",
+      );
+      state = {
+        ...state,
+        directMessageEnvdDispatchVerified: true,
+        directRuntimeRuns: liveRuns,
+        directFinalBudget: {
+          spent: budget.spent,
+          reserved: budget.reserved,
+          approvedSpent: budget.approved_spent,
+          approvedReserved: budget.approved_reserved,
+        },
+        transportCalls,
+        commandDeliveries: deliveries,
+      };
+      await save();
+    }
   }
   const revokeQuote = await admission.prepare(
     { kind: "revoke-member", targetId: membershipId },

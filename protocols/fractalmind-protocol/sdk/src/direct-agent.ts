@@ -3,7 +3,11 @@ import type {
   Transaction,
   TransactionArgument,
 } from "@mysten/sui/transactions";
-import { deriveDynamicFieldID, normalizeSuiAddress, normalizeStructTag } from "@mysten/sui/utils";
+import {
+  deriveDynamicFieldID,
+  normalizeSuiAddress,
+  normalizeStructTag,
+} from "@mysten/sui/utils";
 import { FractalMindClient, toBigInt } from "./client.js";
 import { executionBoundaryHash } from "./execution-boundary.js";
 import { sha256 } from "@noble/hashes/sha2.js";
@@ -98,7 +102,10 @@ export const DirectClaimBcs = bcs.struct("DirectClaim", {
   spent: bcs.u64(),
   settled: bcs.bool(),
 });
-const PermissionIndex = bcs.struct("PermissionIndex", { source: bcs.struct("TypeName", { name: bcs.string() }), agents: Table });
+const PermissionIndex = bcs.struct("PermissionIndex", {
+  source: bcs.struct("TypeName", { name: bcs.string() }),
+  agents: Table,
+});
 const PermissionBinding = bcs.struct("PermissionCapability", {
   permission_id: ID,
   permission_version: bcs.u64(),
@@ -596,7 +603,8 @@ export class DirectAgentApi {
       });
     if (
       object.objectId !== expectedId ||
-      object.type !== `${module === "direct_agent" ? this.fm.directTypesPackageId : this.fm.typesPackageId}::${module}::${name}` ||
+      object.type !==
+        `${module === "direct_agent" ? this.fm.directTypesPackageId : this.fm.typesPackageId}::${module}::${name}` ||
       object.owner.$kind !== owner ||
       !object.content
     )
@@ -612,7 +620,9 @@ export class DirectAgentApi {
       parentId: normalizeSuiAddress(parentId),
       name,
     });
-    if (normalizeStructTag(dynamicField.value.type) !== normalizeStructTag(type))
+    if (
+      normalizeStructTag(dynamicField.value.type) !== normalizeStructTag(type)
+    )
       throw new Error("Invalid direct index/binding source.");
     return dynamicField.value.bcs;
   }
@@ -646,12 +656,20 @@ export class DirectAgentApi {
       managed = normalizeSuiAddress(managedAgentId),
       module = `${this.fm.directTypesPackageId}::direct_agent`;
     const index = PermissionIndex.parse(
-      await this.field(org, `${this.fm.typesPackageId}::execution_extension::PermissionIndex`, {
-        type: `${this.fm.typesPackageId}::execution_extension::IndexKey`,
-        bcs: new Uint8Array([0]),
-      }),
+      await this.field(
+        org,
+        `${this.fm.typesPackageId}::execution_extension::PermissionIndex`,
+        {
+          type: `${this.fm.typesPackageId}::execution_extension::IndexKey`,
+          bcs: new Uint8Array([0]),
+        },
+      ),
     );
-    if (index.source.name !== `${this.fm.directTypesPackageId.slice(2)}::direct_agent::Witness`) throw new Error("Unexpected direct extension source.");
+    if (
+      index.source.name !==
+      `${this.fm.directTypesPackageId.slice(2)}::direct_agent::Witness`
+    )
+      throw new Error("Unexpected direct extension source.");
     const pointer = ID.parse(
       await this.field(index.agents.id, "0x2::object::ID", {
         type: "0x2::object::ID",
@@ -711,7 +729,9 @@ export class DirectAgentApi {
     return PermissionBinding.parse(
       await this.field(capabilityId, `${module}::PermissionCapability`, {
         type: `${this.fm.typesPackageId}::execution_extension::FieldKey<${module}::Witness>`,
-        bcs: Bytes.serialize(Array.from(new TextEncoder().encode("permission"))).toBytes(),
+        bcs: Bytes.serialize(
+          Array.from(new TextEncoder().encode("permission")),
+        ).toBytes(),
       }),
     );
   }
@@ -937,7 +957,18 @@ export class DirectAgentApi {
       throw new Error(
         "Signed direct message, permission or reservation context changed.",
       );
-    if (d.approval_id) {
+    if (!d.approval_id) {
+      if (
+        !p.allowed_actions.includes(d.action) ||
+        amount > BigInt(p.max_calls) ||
+        !equalBytes(m.boundary_hash, p.boundary_hash) ||
+        amount > BigInt(p.budget_limit) - BigInt(p.spent) - BigInt(p.reserved)
+      ) {
+        throw new Error(
+          "Direct request exceeds standing permission; explicit approval required.",
+        );
+      }
+    } else {
       const a = await this.getApproval(d.approval_id);
       if (
         a.org_id !== p.org_id ||

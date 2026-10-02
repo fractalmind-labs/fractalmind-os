@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/block-vision/sui-go-sdk/models"
@@ -224,6 +225,27 @@ func TestObjectArgumentsRemainDistinctFromAddressPrimitives(t *testing.T) {
 	}
 	if _, err := literal(ObjectArgument("invalid")); err == nil {
 		t.Fatal("invalid object ID accepted")
+	}
+}
+
+func TestRepeatedObjectArgumentsUseOneInputWithoutMergingAddressValues(t *testing.T) {
+	ptb := &v2.ProgrammableTransaction{}
+	grant := "0x" + strings.Repeat("0", 63) + "6"
+	first, err := appendMoveArgument(ptb, "0x3", ObjectArgument("0x6"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := appendMoveArgument(ptb, "0x3", ObjectArgument(grant))
+	if err != nil || len(ptb.Inputs) != 1 || first.GetInput() != second.GetInput() {
+		t.Fatal("grant was duplicated", err)
+	}
+	value, err := appendMoveArgument(ptb, "0x3", grant)
+	if err != nil || len(ptb.Inputs) != 2 || value.GetInput() == first.GetInput() || ptb.Inputs[1].GetObjectId() != "" {
+		t.Fatal("address primitive merged into an object", err)
+	}
+	other, err := appendMoveArgument(ptb, "0x3", ObjectArgument("0x7"))
+	if err != nil || len(ptb.Inputs) != 3 || other.GetInput() == first.GetInput() {
+		t.Fatal("different object merged", err)
 	}
 }
 

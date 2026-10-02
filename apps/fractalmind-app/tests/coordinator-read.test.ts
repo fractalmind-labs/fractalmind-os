@@ -24,7 +24,7 @@ const org = id("0x1"),
   pkg = id("0x5");
 const failure = (code: string) => (e: unknown) =>
   e instanceof CoordinatorReadError && e.code === code;
-async function fixture(mode = "valid", commandMode = false) {
+async function fixture(mode = "valid", commandMode = false, direct = false) {
   const device = Ed25519Keypair.generate(),
     coordinator = Ed25519Keypair.generate();
   let nativeProofs = 0,
@@ -129,8 +129,8 @@ async function fixture(mode = "valid", commandMode = false) {
   const body = { sentinels: [], count: 0 };
   const command = await signNodeCommand(device, {
     target: { organizationId: org, nodeId: id("0x8"), agentId: "native-test" },
-    action: "assign",
-    scope: "control",
+    action: direct ? "direct.message" : "assign",
+    scope: direct ? "direct" : "control",
     capability: { id: id("0x9"), revocationVersion: 1n },
     payload: { task: "complete KR" },
     budget: { asset: "TOOL_CALLS", amount: 3n },
@@ -419,4 +419,16 @@ test("observation display rejects aliases, duplicate Hosts and invalid resource 
     () => coordinatorHosts({ sentinels: [], count: 1 }),
     failure("invalid_observation"),
   );
+});
+
+test("direct transport retains direct scope, requires operate and rejects a read-only device", async () => {
+  const f = await fixture("valid", true, true);
+  const prepared = await f.client.prepareCommand(bindingId, f.command);
+  assert.deepEqual(await prepared.send(), { sentinels: [], count: 0 });
+  assert.deepEqual(f.actions, ["operate", "operate", "operate"]);
+  const readOnly = await fixture("read-only", true, true);
+  await assert.rejects(
+    readOnly.client.prepareCommand(bindingId, readOnly.command),
+  );
+  assert.deepEqual(readOnly.counters(), { nativeProofs: 0, reads: 0 });
 });

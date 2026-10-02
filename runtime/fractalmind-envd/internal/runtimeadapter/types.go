@@ -39,6 +39,7 @@ const (
 	OperationLogs         Operation = "logs"
 	OperationHealth       Operation = "health"
 	OperationAvailability Operation = "availability"
+	OperationDirect       Operation = "direct.message"
 )
 
 type Request struct {
@@ -52,6 +53,8 @@ type Request struct {
 	Params         *OperationParams              `json:"params,omitempty"`
 	Bounds         *ExecutionBounds              `json:"bounds,omitempty"`
 	Handover       *nodecommand.HandoverProposal `json:"handover_review,omitempty"`
+	Message        string                        `json:"message,omitempty"`
+	Direct         *nodecommand.DirectMessageRef `json:"direct,omitempty"`
 }
 
 type ExecutionBounds struct {
@@ -73,8 +76,15 @@ func (r Request) Validate() error {
 	if r.Handover != nil && r.Operation != OperationStatus {
 		return fmt.Errorf("handover review is only supported by status")
 	}
-	if r.Bounds != nil && r.Operation != OperationAssign {
-		return fmt.Errorf("execution bounds are only supported for assign")
+	if r.Bounds != nil && r.Operation != OperationAssign && r.Operation != OperationDirect {
+		return fmt.Errorf("execution bounds require assign or direct.message")
+	}
+	if r.Operation == OperationDirect {
+		if r.Direct == nil || r.Bounds == nil || strings.TrimSpace(r.Message) == "" {
+			return fmt.Errorf("direct.message requires its exact message and bounds")
+		}
+	} else if r.Direct != nil || r.Message != "" {
+		return fmt.Errorf("direct metadata requires direct.message")
 	}
 	if r.SchemaVersion != SchemaVersion {
 		return fmt.Errorf("unsupported schema_version %q", r.SchemaVersion)
@@ -123,6 +133,10 @@ func (r Request) validateParams() error {
 		if params.Restore != nil || params.Lines != nil || params.Follow != nil {
 			return fmt.Errorf("assign only accepts an inline task")
 		}
+	case OperationDirect:
+		if params == nil || len(params.Task) > MaxTaskBytes || params.Restore != nil || params.Lines != nil || params.Follow != nil {
+			return fmt.Errorf("direct.message only accepts its bounded inline task")
+		}
 	case OperationMonitor, OperationLogs:
 		if params == nil || params.Lines == nil || params.Follow == nil {
 			return fmt.Errorf("%s requires bounded lines and follow=false", r.Operation)
@@ -148,7 +162,7 @@ func (o Operation) Valid() bool {
 	switch o {
 	case OperationInventory, OperationStatus, OperationStart, OperationStop,
 		OperationAssign, OperationMonitor, OperationLogs, OperationHealth,
-		OperationAvailability:
+		OperationAvailability, OperationDirect:
 		return true
 	default:
 		return false
@@ -158,7 +172,7 @@ func (o Operation) Valid() bool {
 func (o Operation) RequiresAgent() bool {
 	switch o {
 	case OperationStatus, OperationStart, OperationStop, OperationAssign,
-		OperationMonitor, OperationLogs, OperationAvailability:
+		OperationMonitor, OperationLogs, OperationAvailability, OperationDirect:
 		return true
 	default:
 		return false

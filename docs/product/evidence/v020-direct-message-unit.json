@@ -1,0 +1,67 @@
+{
+  "baselineCommit": "c907433",
+  "checkedWorkingTree": true,
+  "go": {
+    "racePackages": [
+      "internal/nodecommand",
+      "internal/boundedrun",
+      "internal/runtimeadapter",
+      "internal/sui",
+      "internal/coordinator",
+      "cmd/envd"
+    ],
+    "newChecks": {
+      "validatorCases": 6,
+      "nativeAdapterCases": 9,
+      "startRouteCases": 2,
+      "resultRouteCases": 2,
+      "objectInputReuse": true,
+      "coordinatorDirectScopeCases": 2
+    }
+  },
+  "sdk": {
+    "testsPassed": 138,
+    "buildPassed": true,
+    "standingPermissionPreflightCases": 5
+  },
+  "app": {
+    "testsPassed": 147,
+    "buildPassed": true,
+    "nativeScriptStrictTypesPassed": true
+  },
+  "logs": {
+    "goRace": {
+      "sha256": "702c105b37aeb6585e0859d029e80e7fcc4917dd6200b3e383000140faa49459",
+      "bytes": 594
+    },
+    "sdkTests": {
+      "sha256": "6715c6e2bd77ff7e84c2ab50c3eac7fe7003341f5706c7155404c1efb9bb404f",
+      "bytes": 12710
+    },
+    "sdkBuild": {
+      "sha256": "dcd4658fbc5af48be5fec75f18c6bbf16ab306e69f58156aa82336298392c2b0",
+      "bytes": 73
+    },
+    "appTests": {
+      "sha256": "d7187956d9cef389c2cce49fddc5149ab79f59fac5787e18119ffe4fcc403b3c",
+      "bytes": 16194
+    },
+    "appBuild": {
+      "sha256": "e8a211338bffce969c1b83d3d400dd4aef4ee0b2de0fab3d3e9906787b16e470",
+      "bytes": 3857
+    },
+    "scriptTypes": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  },
+  "limits": {
+    "directNativeFileAdapterOnly": true,
+    "generalConversationVerified": false,
+    "directAppUIVerified": false,
+    "installedUIVerified": false,
+    "mainUpgradeVerified": false,
+    "cloudHostVerified": false,
+    "cacheWipeAndRestartVerified": false
+  }
+}

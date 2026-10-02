@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -46,13 +47,16 @@ func (r *resultReaderFixture) CurrentRecordKeyVersion(context.Context, string) (
 	return 1, nil
 }
 
-func chainStoreFixture(t *testing.T) (*ChainExecutionStore, *resultReaderFixture, *reservationRPC, nodecommand.NodeCommand, runtimeadapter.ExecutionRecord, []byte) {
+func chainStoreFixture(t *testing.T, direct ...bool) (*ChainExecutionStore, *resultReaderFixture, *reservationRPC, nodecommand.NodeCommand, runtimeadapter.ExecutionRecord, []byte) {
 	t.Helper()
 	id := func(n string) string { return "0x" + strings.Repeat(n, 64) }
 	private := ed25519.NewKeyFromSeed(bytesRepeated(9, 32))
 	signer := &Keypair{Private: private, Public: private.Public().(ed25519.PublicKey)}
 	t.Cleanup(func() { clear(private) })
 	cmd := nodecommand.NodeCommand{Version: nodecommand.ProtocolVersion, Signer: id("1"), Capability: nodecommand.CapabilityRef{ID: id("3"), RevocationVersion: 1}, CommandID: "cmd", Nonce: "nonce", IdempotencyKey: "idem", Action: "assign", Scope: "control", Target: nodecommand.Target{OrganizationID: id("2"), NodeID: signer.Address(), AgentID: "worker"}, Budget: &nodecommand.BudgetClaim{Asset: "MIST", Amount: 20}, PayloadHash: strings.Repeat("ab", 32), IssuedAtMS: 1, ExpiresAtMS: 100}
+	if len(direct) == 1 && direct[0] {
+		cmd.Action, cmd.Scope, cmd.Budget.Asset = "direct.message", "direct", "TOOL_CALLS"
+	}
 	reservation, err := commandReservation(cmd)
 	if err != nil {
 		t.Fatal(err)
@@ -96,7 +100,7 @@ func chainStoreFixture(t *testing.T) (*ChainExecutionStore, *resultReaderFixture
 	if err != nil {
 		t.Fatal(err)
 	}
-	record := runtimeadapter.ExecutionRecord{Version: "1", Response: runtimeadapter.Response{SchemaVersion: runtimeadapter.SchemaVersion, Adapter: runtimeadapter.AdapterName, CommandID: cmd.CommandID, Operation: runtimeadapter.Operation(cmd.Action), OK: true, ObservedAt: "2026-09-30T00:00:00Z", Spend: &runtimeadapter.Spend{Asset: "MIST", Amount: 3, Known: true}}, Event: nodecommand.NodeEvent{Version: nodecommand.ProtocolVersion, CommandID: cmd.CommandID, Target: cmd.Target, Type: "runtime_result", ResultCode: "runtime_ok", OccurredAtMS: 2}}
+	record := runtimeadapter.ExecutionRecord{Version: "1", Response: runtimeadapter.Response{SchemaVersion: runtimeadapter.SchemaVersion, Adapter: runtimeadapter.AdapterName, CommandID: cmd.CommandID, Operation: runtimeadapter.Operation(cmd.Action), OK: true, ObservedAt: "2026-09-30T00:00:00Z", Spend: &runtimeadapter.Spend{Asset: cmd.Budget.Asset, Amount: 3, Known: true}}, Event: nodecommand.NodeEvent{Version: nodecommand.ProtocolVersion, CommandID: cmd.CommandID, Target: cmd.Target, Type: "runtime_result", ResultCode: "runtime_ok", OccurredAtMS: 2}}
 	return store, reader, rpc, cmd, record, key
 }
 func bytesRepeated(value byte, count int) []byte {
@@ -105,6 +109,74 @@ func bytesRepeated(value byte, count int) []byte {
 		b[i] = value
 	}
 	return b
+}
+
+func TestDirectResultUsesCoreCiphertextHelperAndRestoresOriginalLedger(t *testing.T) {
+	for _, known := range []bool{true, false} {
+		t.Run(fmt.Sprintf("known=%v", known), func(t *testing.T) {
+			store, reader, rpc, cmd, record, key := chainStoreFixture(t, true)
+			pkg := "0x" + strings.Repeat("b", 64)
+			store.directPackageID = pkg
+			reader.run.Direct = &nodecommand.DirectExecutionAuthority{PermissionID: "0x" + strings.Repeat("c", 64), PermissionVersion: 2}
+			if !known {
+				record.Response.Spend = nil
+			}
+			var call models.MoveCallRequest
+			sends := 0
+			rpc.build = func(req models.MoveCallRequest) (models.TxnMetaData, error) {
+				call = req
+				return models.TxnMetaData{TxBytes: base64.StdEncoding.EncodeToString([]byte("direct result transaction"))}, nil
+			}
+			rpc.send = func(req models.SignAndExecuteTransactionBlockRequest) (models.SuiTransactionBlockResponse, error) {
+				sends++
+				if call.PackageObjectId != pkg || call.Module != "direct_agent" || call.Function != "finish_message" || len(call.Arguments) != 10 || call.Arguments[0] != ObjectArgument(reader.run.Direct.PermissionID) {
+					t.Fatalf("wrong direct result route: %+v", call)
+				}
+				chunk, ok := call.Arguments[8].(PackageChunkedBytes)
+				if !ok || chunk.PackageID != store.packageID {
+					t.Fatal("ciphertext helper did not use core")
+				}
+				if _, err := productcrypto.DecryptCommandResult(chunk.Bytes, key, resultContext(reader.run, 1)); err != nil {
+					t.Fatal(err)
+				}
+				reader.run.State = call.Arguments[4].(uint8)
+				reader.run.BudgetSettled = known
+				if known {
+					reader.run.BudgetSpent = 3
+				} else {
+					reader.run.BudgetReserved = 20
+				}
+				reader.run.ResultRecordID = "record"
+				hash := sha256.Sum256(chunk.Bytes)
+				reader.run.ResultHash = hex.EncodeToString(hash[:])
+				receipt := txResponse(t, req.TxnMetaData, "success")
+				reader.result = nodecommand.ChainExecutionResult{EncryptedBody: chunk.Bytes, KeyVersion: 1, TransactionDigest: receipt.Digest}
+				return receipt, nil
+			}
+			started := reader.run
+			saved, err := store.SaveCommand(context.Background(), cmd, &started, record)
+			if err != nil {
+				t.Fatal(err)
+			}
+			state := uint8(2)
+			spent := "3"
+			if !known {
+				state = 4
+				spent = "0"
+			}
+			if reader.run.State != state || call.Arguments[6] != spent || saved.Response.RequiresConfirmation == known || sends != 1 {
+				t.Fatal("wrong direct settlement", saved, call.Arguments)
+			}
+			fresh, err := NewChainExecutionStore(reader, rpc, store.signer, store.packageID, store.secret, ChainExecutionStoreOptions{DirectPackageID: pkg})
+			if err != nil {
+				t.Fatal(err)
+			}
+			loaded, found, err := fresh.LoadCommand(context.Background(), cmd)
+			if err != nil || !found || loaded.Response.TransactionDigest != saved.Response.TransactionDigest || loaded.Response.RequiresConfirmation != saved.Response.RequiresConfirmation || sends != 1 {
+				t.Fatal("fresh direct reader did not reuse original", err)
+			}
+		})
+	}
 }
 
 func TestChainResultStorePersistsAndLoadsWithoutCache(t *testing.T) {

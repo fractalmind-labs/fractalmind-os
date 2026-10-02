@@ -777,9 +777,10 @@ func signedCommandLowRiskActions() map[string]struct{} {
 
 func signedCommandHighRiskActions() map[string]struct{} {
 	return map[string]struct{}{
-		"start":  {},
-		"stop":   {},
-		"assign": {},
+		"start":          {},
+		"stop":           {},
+		"assign":         {},
+		"direct.message": {},
 	}
 }
 

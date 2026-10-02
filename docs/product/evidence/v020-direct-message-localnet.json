@@ -1,0 +1,1932 @@
+{
+  "recordedAt": "2026-10-02T22:01:48.204Z",
+  "complete": true,
+  "chain": {
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "packageId": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500",
+  "checks": [
+    "real native recovery and device signatures create Human and organization on the existing isolated chain",
+    "native App registers the actual Coordinator and one-use invitation; production envd CLI persists and queries one lost join receipt without another broadcast",
+    "signed live Host discovery is authenticated by the native device; formal App imports the existing actual native file Agent with observation rights only",
+    "formal native review ticket is sent through the actual device HTTP Coordinator to production envd; actual Agent reserves its physical slot and publishes the exact signed acceptance on Sui",
+    "formal native approval atomically activates the current OKR and exact reviewed policy, without preparing or delivering a continuation Run",
+    "formal native control quotation/issuance and command preparation do not dispatch; a fresh runner with an empty journal restores the same encrypted ticket and queued Run",
+    "explicit continuation reaches the actual production envd and native file adapter exactly once; original encrypted result decrypts through the OS vault, Host measurement is 1 and tool budget is 3 spent/0 reserved",
+    "fresh native runner recovers the original successful Run and measurement without another fee or delivery; KR verification and final Human acceptance remain pending",
+    "two real envd KR Runs are explicitly released in order; native Human verification advances the cursor without another dispatch or implicit acceptance",
+    "final native review reads both original results and separate immutable verification revisions; an explicit, separately quoted Human decision achieves the OKR on Sui",
+    "actual OS-encrypted direct messages and versioned standing permission rebuild from Sui; ordinary and explicit one-off Run reservations use separate ledgers and can be cancelled historically after a policy change, without direct dispatch or OKR budget changes",
+    "actual OS-signed direct write, read and zero-tool status traverse authenticated Coordinator to production envd; original encrypted results decrypt through the OS vault",
+    "exact direct replay reuses the original Run and immutable result without another tool spend; explicit five-call approval spends three and refunds two in its separate ledger, without changing the six-call OKR ledger",
+    "actual on-chain Host revocation rejects Coordinator routing and worker heartbeat; currently authorized Human can still read the immutable original historical result"
+  ],
+  "transactions": [
+    {
+      "label": "native self-paid Human creation",
+      "requestId": "identity:test-584761e2-4b7a-4e50-ac6d-c8763c7b73a7",
+      "digest": "Aij9HF9iYHGsqs9u61fJYb3LYutQwqJVeu42GqdZVRSW",
+      "status": "confirmed",
+      "actualGas": "18742548",
+      "createdObjects": [
+        {
+          "id": "0x3b50932f5f1f8c77a9e14ffb9e8a5c0b5e63cd2fb69de3cc120f09ae1793204f",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x60adab14553dbf2fc560469f302e991dada6a7584321b50fce8ed3669bb0d2f2",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x6a53090018764399fda067f60b9d0bd352f61ac7899c5536f5a4d291e0e1b039",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::identity::RecoveryRecord",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x6aea345c67bbde832453eeb3c57bb967ed343a6d1c8f158fa66ad62cb792d3b7",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::identity::HumanIdentity",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xb0973ad3b86e73e26ed716f2dfd2253933de7c97cd63260a9a8179e70d69b510",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,vector<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xc550262449b85717224a88f5acff0e2e2412469a2dc70475499a13e0b147f961",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::identity::DeviceGrant",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xc6f0f4c08674ff3e644e219b2e8c5e41f23a0e7a173e459e6bf1dd401efd9a84",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::identity::RecoveryLocation>",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native self-paid organization creation",
+      "requestId": "org:test-584761e2-4b7a-4e50-ac6d-c8763c7b73a7:0x6aea345c67bbde832453eeb3c57bb967ed343a6d1c8f158fa66ad62cb792d3b7",
+      "digest": "DWb4EnodxR7y9KZBvfNY76qX71EjQVqWC8dcUQG2fyZ6",
+      "status": "confirmed",
+      "actualGas": "15111616",
+      "createdObjects": [
+        {
+          "id": "0x12a891daafc11ad33da113017140aa0066bc6cbab861342988e8c5864af08764",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000001::string::String,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x5f64e6e905ff704314f910d184c59f69a9808d40c64a104aa5d4db1722d493c3",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,bool>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xa0a87576d90a74d75c8353b80dc6756bd239bcc9ba93be862a235585728194a9",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xbcce970e94b16a8d04e27e2f5945d48572a0ea79e5ab562eeadca4cc6df1390d",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::organization::Organization",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xd06fe9f808b96ff11eae93c1ea47978cd323aff73fe3bff50b15e8804b0b068c",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xd4f4b22a2a043661d1182bd00b4575cb934ae431807bd169661dbd7183fe44a4",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xe64d232856d15415d74cd112178ae95a29a4aa17a0d714cbecc359d0cf63bc87",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::organization::OrgAdminCap>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xe6ee33a6a7969ce76418467e8822b831ff84711b91e2c8f4d1b6722f1c8d8529",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xe7b606fa7bf83b1d95c4e0e28694236b011208ccd352fcdebee200319cf0b61e",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::identity::OrgRole>",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native registration of actual loopback Coordinator",
+      "requestId": "host:ba57e69c-ba93-4be9-84ae-8b8db26dab85",
+      "digest": "5TR4nky1sWtnbVE1thW7KZSK4wu9NbpccLJLnCG5pzCb",
+      "status": "confirmed",
+      "actualGas": "6793340",
+      "createdObjects": [
+        {
+          "id": "0x0dead6b76dabf58283ef64a3f4d147c9f5d2c3ab7ffa69eb8f1b6cbb328cf478",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::CoordinatorBinding",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x115df0975557a821396d72caf9b82cf17ee9c501e4b4fdc74b7a8904d0c2e8c5",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xcacecad990855a9491a4e4a50e68f285b75baec567d281e8384e01b721cdb619",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xe67967e3514033009faebf9aa57da4d08c6d61ffa1d2f4c1a36cd7cd1e199dff",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::HostIndexBinding,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::HostIndex>",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native single-use Host invitation",
+      "requestId": "host:9734f3df-240e-478a-a8e7-7753abfbe48d",
+      "digest": "8aTv9wWPvtniwmBVP1vXhZeqqGjwajwnKPAuqwYfZG1e",
+      "status": "confirmed",
+      "actualGas": "4931036",
+      "createdObjects": [
+        {
+          "id": "0x47bb4ae7c7b7fe5c7eb4ea73e23d3ed90951223c01efe3bd6e043c42ed67e26a",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::HostInvite",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native import of actual bounded Agent",
+      "requestId": "agent-import:946f2639-7194-486f-bbbe-cc8cf19dbf28",
+      "digest": "Cogfd8UD93rBW9JdWsr3febuCEdHgCMDn2GARYfRQKCN",
+      "status": "confirmed",
+      "actualGas": "11849100",
+      "createdObjects": [
+        {
+          "id": "0x354b0bbb6491e462d2565438a3774dc06a7827973a9fb066bf2c71c04482c01a",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::InstanceKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::InstancePointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x41c7af471d3c50f7a507b78a51262d1d5c8f132a83a832f22b9cf7d90535a663",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x6472ce8434626c7242e7a5265982003d196218818522c7ad88b7aa6e4f6daa86",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AgentExecutionIndexKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AgentExecutionIndex>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xb5abc43f2e9d10e73362bc6fa92f5f1bd6f0cb3f8bc0c856fa1c3cc3b845d63a",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::ManagedAgent",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native encrypted actual Host OKR draft",
+      "requestId": "okr-draft:0xbcce970e94b16a8d04e27e2f5945d48572a0ea79e5ab562eeadca4cc6df1390d:0b991f72-a7d2-44fb-b76d-02b32e3b1e1b",
+      "digest": "7TCixXg8THWWhezFrP1AfdpJxpcYBy2B2kU5MFGmPHhF",
+      "status": "confirmed",
+      "actualGas": "28828540",
+      "createdObjects": [
+        {
+          "id": "0x14a4f386ac44e28512f0326b195586dec0abdac5a6187b460193f23d0081e0aa",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x2329b3abc379d1a2b68a17ab393e89be616d2aa3c28959ce8e0d4f6d01af81e9",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x575950639bed41b281c098fdf95cef45d5c9f23335a2f86632128f7c0520dfcf",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x57599e6e5d78f5d6308e00a117bfec12db263163aff2d4af0722e3cb18a2cd83",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::FieldKey<0xd6e51e2728a3fa0cfe3465494b257d894fa97fd1d68942545c286e5f132c89bc::okr::Witness>,0xd6e51e2728a3fa0cfe3465494b257d894fa97fd1d68942545c286e5f132c89bc::okr::OkrIndex>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xb7c921cb5263454680cb764a64f59f47a5cc4fabe6d4c0d9fbfd44c8ebf343fe",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::IndexKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::PermissionIndex>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xbafa267fc1e188ca2f9b94021044224c2f5bc728714790950ab5e8e4ca5c198d",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xccd9a51da02037c52b394500c96fbbaf16da15d26141fe7af1e4d97fd074ef2c",
+          "type": "0xd6e51e2728a3fa0cfe3465494b257d894fa97fd1d68942545c286e5f132c89bc::okr::Okr",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xd5a666d5228d88b5ac5181e2ecf6f385d54edde3cb15fa1f40d2ebac4c2f1cce",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::IndexBinding,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordIndex>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xd65fea70064b973e95ec4084294123d29b200e426d4edc33777ce0da8099d4ba",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xe64f88ef8ce8929d0d01adec93f50dfdcdb521a8cd4f159045c675fe4429dc1c",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000001::string::String,0xd6e51e2728a3fa0cfe3465494b257d894fa97fd1d68942545c286e5f132c89bc::okr::DraftPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xf5e372228632a5160ac3f577825f26bbeeeb0853918904140d31b7ff7d11c8fc",
+          "outputState": "DoesNotExist"
+        }
+      ]
+    },
+    {
+      "label": "native one-use observation capability",
+      "requestId": "handover-observe-0d7113f8-c458-4b40-bdbf-461372ec45e4",
+      "digest": "Ggnv9MBxqGSqQaPZ1jLjEdkkoFLPBzSkUzTXF9gicgT7",
+      "status": "confirmed",
+      "actualGas": "10143480",
+      "createdObjects": [
+        {
+          "id": "0x0dc09c66237f727836df8cacff59c14718f004ecff06fede2b27cbb61cae1fb9",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x137e80c3ef1a2bd4f575fc548572f071f7e4854f3544e850cefff3b731fe31e7",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x23ed88abb8619884bc7c11cea2cbb69c60ba9dd835f3d8230ceec3807947b929",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x2f50ef159d8a3e733393140cf48ea6d243c7ee098d5c42963c2d6efa4c91b637",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x78cd6f5e4ffebe43707e596457efa2dd9fca7c1aceb1abd2b50c0ee52de39499",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::RemoteCapability",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xd7e6fee7d5a97e95b07376c7f598dd15e202860f6bd0489de4e7367c2b60dacb",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AuthorityBindingKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AuthorityBinding>",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native exact review ticket and Run",
+      "requestId": "handover-review-0d7113f8-c458-4b40-bdbf-461372ec45e4",
+      "digest": "94dBsrbB5jBjbPYNEdZHRGeehcdCUDd28TJJCcVV39Fh",
+      "status": "confirmed",
+      "actualGas": "59904328",
+      "createdObjects": [
+        {
+          "id": "0x1957aeab503314d2b0f045b53ade0dc362b12c95b8368347ac7d3a4abdc1e4f4",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x202bab1306d092abed553547b5e1cead2d9beee2d6eedf4a3918fe1751fc4f28",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AgentExecutionPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x4043634020124cd99b4a1f816a355f32d2dbdc39a374808edce32c3a3f3eda9f",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ResultKeyKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ResultKeyGrant>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x536f0d96e8f72fdf0b69c8c40fe904f95ec83c29d432b64140201992b0c16c42",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ExecutionIndexKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ExecutionIndex>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x5a90804876a65149d40f5153adbe2466ec2f5559364f3083f30523cbef0aa58d",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::CommandExecution",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x67e7757c8e88e9275ae0d7ae43a2e0070f1d3b871a0b422d38ac734b94c9abfb",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaimKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaim>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x7d22bc01e3444482173680bbd85164e29d42038c1c42d6b760568a76b7b356c9",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::AuthorityClaimRecord>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xa05168bfff1fae55e1e9290823f0fff619889381caff1c1c1a6c2ae35fc321eb",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xa8e1f75f06c065baa0bcbebebd7856e934df2e98d4b767777305d58ab0d5b8d8",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xb04aed878dd63d71495d63c67ee19c6e2747b29748c3f4a4d13fc1dc4d9f9186",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xcf3c8248fcb7f0f0b992406c8671a36efa2d6fa064e1206a9155305c315a9bbf",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xe2a017267ed7ec2f55a2df071b1165a6978e1700d1d8116735131290b953bb91",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xf0d172369a25cfc2d34a3c8a30b3e50823fd3f4fda53177d9376772197b09b28",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xfb5e2dab965378b78c6ab103b5fe23dbaf728df4e23626a6ea21f5047549ec1d",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetTotals>",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native approval of actual Host acceptance",
+      "requestId": "handover-approve:0x5a90804876a65149d40f5153adbe2466ec2f5559364f3083f30523cbef0aa58d",
+      "digest": "ERRma4n8zaUcxLHTshYNV2e7cAC87dQEhxgCq5WbxtWV",
+      "status": "confirmed",
+      "actualGas": "49450304",
+      "createdObjects": [
+        {
+          "id": "0x30409066524319a17ad17c85f5ae3da43d78d0db9f1c489dc918ffbb6c5caa41",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x38e4dd5f777f4e5a4a3da19ac3665366c37f7c29b63f3718310dd3e5953c9629",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xd6e51e2728a3fa0cfe3465494b257d894fa97fd1d68942545c286e5f132c89bc::okr::BudgetKey,0xd6e51e2728a3fa0cfe3465494b257d894fa97fd1d68942545c286e5f132c89bc::okr::BudgetState>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x3c2f74abc5a50a245da9fb69a525f28434f99c9f03b001c9ec552a452d843a04",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::WorkspaceKey,u64>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x4c55ab03e18998ba91af8e9ef127e078f0e6895d476d2a908b3f964661a9e328",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x519ff5dc068b4210567c8690fcc30d3fbc66715897339abd7d40f75d6feaed2e",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x51ca9b1d99b52362a3467fc4887922a59a96c5b15413f69ec126cf3d409400ae",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,u64>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x7805cd78ca088c00557a92f8f185ce1bb2bbb926c6832a7ac6f032319f280a01",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::FieldKey<0xd6e51e2728a3fa0cfe3465494b257d894fa97fd1d68942545c286e5f132c89bc::okr::Witness>,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x813e998b11476251b8c78ca561b970f6cf223da6346dd6d6232f97f9b54cb28a",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x8bc78950604d2b95ebac0a8f47635fa59c56ae9f35ae7b3b891105a6e785949e",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::ActiveAssignmentTrackedKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::ActiveAssignmentTracked>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xbe1647d6b90850749f3a14118d7e5d49cea4ff4eaf9d883f881646248ddc6814",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::ActiveAssignmentsKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::ActiveAssignments>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xe9777ad6fbb22ef66c622a0f94b1c6bd8b501216a3b3b363fc3a01b200edcfa2",
+          "type": "0xd6e51e2728a3fa0cfe3465494b257d894fa97fd1d68942545c286e5f132c89bc::handover::Approval",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xf6a6fcc18da77bba1a4d1ac5f65bc7878edd5e7483afb632cb5a73276715c0e0",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xfdb5335a58fa7b635051866d6c2c40079b3e9db6a6ab2f82c839d443c636c913",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xd6e51e2728a3fa0cfe3465494b257d894fa97fd1d68942545c286e5f132c89bc::okr::HandoverPolicyKey,0xd6e51e2728a3fa0cfe3465494b257d894fa97fd1d68942545c286e5f132c89bc::okr::HandoverPolicy>",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "formal native single-use KR control fee",
+      "requestId": "okr-control:0xccd9a51da02037c52b394500c96fbbaf16da15d26141fe7af1e4d97fd074ef2c:1:0",
+      "digest": "4iSqXC3yoDyc3VSN82Wd3XqVN9SrzLYiphoQXJ5JHFqy",
+      "status": "confirmed",
+      "actualGas": "15662680",
+      "createdObjects": [
+        {
+          "id": "0x0aa5f53f2698b0a31630276ad61454fe66e93006d722eb0836ba895973d1f9e3",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x0bf9725aff7324b708f46b9c1d0876f3819e2c54fc891fdea7e2aee3989fdbc1",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::SourceKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::ExtensionSource>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x3ab13f936028e57ea49275e1b4b372f9d75302cc55e7328ea816c2fe4f8da62d",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::ExecutionContractKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::ExecutionContractBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x44c51437930fa21886e5f78699efde612403bb4dfa3b9c46db529773b1bd36d7",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x88d7a5e4f838b536493ba55e2abca65eeda536f17939adb530bc97a70a42ffc1",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x9d544149b0d99c11e4367599783583df6672ba7b01a01d68d5474a11eaa71b92",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AuthorityBindingKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AuthorityBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xb6b2f815aae844c0cf7c3f047de713eef4d8481c8cd73cbde30d870032cb330a",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::RemoteCapability",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xfe6d7622ac7feaf82ed6a73c3dbf1dfedaded88d98cdba728c6a3d86ccaf32bb",
+          "outputState": "DoesNotExist"
+        }
+      ]
+    },
+    {
+      "label": "formal native atomic continuation ticket and queued Run",
+      "requestId": "runner-ccd9a51da02037c52b394500c96fbbaf16da15d26141fe7af1e4d97fd074ef2c-1-0",
+      "digest": "nd67ekYK8z9SdHdMJrbtP5bX5YRtfv8Z2Cu2H56BLhv",
+      "status": "confirmed",
+      "actualGas": "64346720",
+      "createdObjects": [
+        {
+          "id": "0x0a63ed1fdc4e6ae34d2289d0d4b09ca1f5db9f776bd3be20da15029c3cdda5bd",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ExecutionIndexKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ExecutionIndex>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x10e2a95c3111791ee75f0bcd4ebe22e2f9bfd5fd62545337b312ba43b3fb277f",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x3d8f523fec883eec0090cf9e133a5a63887c02f2a293a89c691b6fbc34ad994a",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetTotals>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x4edd5a8e305cd5cf5a5162f01f6dd9f1a1ee47e7d94674ad2c19cd6f76797895",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x6ddf035ad86a96590c141bff177b167f2ba49e1af617aa7f5f50be1b2838438d",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::AuthorityClaimRecord>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x7cd87f37cadc11c0c35aabf2acfb7c0567935d1896543077a42138eefe364986",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x88afdcf82d3723798d7bd14d3ddfc3269a06be36e966be0e4d3089349b72dbe7",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0xd6e51e2728a3fa0cfe3465494b257d894fa97fd1d68942545c286e5f132c89bc::okr::BudgetClaim>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x899a9b67435e2601118a154fcfce97d02e726201f76b57532f7f9929f2e4cce8",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AgentExecutionPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x8b5547cd3b530608f544d91dd174b3b63c421c3b89a111c9af26d4ebd74a6f5f",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x90c9a5b505458690162fec92913ba39c95fb0c8beefbbb393e86d86972509db7",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ResultKeyKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ResultKeyGrant>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x9cf13e535dae8e30a3237bcf436df1bb3145bdfd5c2df4827048f5d821dd464b",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::CommandContractKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::CommandContractBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xc3d0e41e27e38e8fb442d9638845229529482007f9a6961a777045e9a493045d",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xc566e910922bd6621cd17f0db345d235036c15d7ca054b32c724558f635623b7",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::CommandExecution",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xf15bae62667d6e9d2c697a0ed5760e6a5f87d1565f859a85852d98caee3de6fc",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xf3235d590c8d236914ee39d07e74605847eae84ce0b5a9a6a3b9d741b20531bc",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xffaaabf49157942d541fd6cc33344475c32f8517ce3431c26592af088f80195c",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaimKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaim>",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native independent KR 1 verification",
+      "requestId": "okr-human:0xccd9a51da02037c52b394500c96fbbaf16da15d26141fe7af1e4d97fd074ef2c:1:3:verify:0",
+      "digest": "FeoCqU9CZHtscE2JMiR5t7PZ88cLpiGzWK3wrQt76duA",
+      "status": "confirmed",
+      "actualGas": "15392804",
+      "createdObjects": [
+        {
+          "id": "0xe775f6029d4f204f2de8aa543c16a6253e021d4f1740a461a4b1c71a9b7ca0a2",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xecc56650936328a33a2711a5a718dd2d84709bc1944ae425028a13388ffdf5e6",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native second KR explicit control fee",
+      "requestId": "okr-control:0xccd9a51da02037c52b394500c96fbbaf16da15d26141fe7af1e4d97fd074ef2c:1:1",
+      "digest": "38NmRrBc2BDrfpZvyyh3YvWoYgQwQbT1KgHp6jnPdaLS",
+      "status": "confirmed",
+      "actualGas": "15662680",
+      "createdObjects": [
+        {
+          "id": "0x104e9233050b7673b43e6715e5d6776567a733e92febefd7c00a77243c91be71",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x3957bc25fccbfacf0e8e43c620bcc92e8877a6bd349e78f4d763dc432249c8ea",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::SourceKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::ExtensionSource>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x3f499ec7aef60401d0dd2211c7a7df707b972a5a182f8a552a12181e30c4910d",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AuthorityBindingKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AuthorityBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x5f972c37dbdf633ae38333fb59f10070446782e4472fcacfe10d2720713a6c81",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x83e34b78ef6285ab7a8372dea21e5f5c2e6131693b5197021f57b00f6106a200",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::RemoteCapability",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xa74bb5232bb199235cd58ab90ff6ca60101036f3d28714bb6a0d8a4939810e1d",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xbbea3b89db28f17c085885089e58fc8b27db1846a8cb4010b461cc6dab4e3b19",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::ExecutionContractKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::ExecutionContractBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xfbab360ae6cb5dddee67ffb45d5c2296cb8e6bd6214443cf07565d031c76dc36",
+          "outputState": "DoesNotExist"
+        }
+      ]
+    },
+    {
+      "label": "native second KR exact ticket and Run",
+      "requestId": "runner-ccd9a51da02037c52b394500c96fbbaf16da15d26141fe7af1e4d97fd074ef2c-1-1",
+      "digest": "ERVkhGVBhdeC1ocaHeCsxKrj2h4CoSeLBjBHrMwK8rqv",
+      "status": "confirmed",
+      "actualGas": "64278624",
+      "createdObjects": [
+        {
+          "id": "0x0b4f8f94bf997231753586c868d839bbecf3141ff914dd71ff8c2c460e4cee98",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ResultKeyKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ResultKeyGrant>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x114a6feddf1d44726424ac4bf9359713bfc24b80f93a886d83ab8c5b9a2491e7",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaimKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaim>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x21d94e496bc01519064e06c3ef7d49b2a9a50c5614b396f1f9fc61e19863c825",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x3a596036d7e74cafcd537b96037a24310e61f965ec4dffdd5bc505e2bcf380d8",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0xd6e51e2728a3fa0cfe3465494b257d894fa97fd1d68942545c286e5f132c89bc::okr::BudgetClaim>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x4f5f0bf226da5b327d7ad54ec870adaab271c7c9878fc56db9362a58c388355a",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AgentExecutionPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x5aa559f34722d9b3bfc63f9b78122f7e18f12de7da7ba641e4440f797e6210e5",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x65bf5ba399bdbd9470efdfe1d084a03d7ca47fc8dba8712d4144f341317e497a",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x6868cb8676e727d013d6a321dd59cc4d88ca84fb511fac4b2982a28839e93a42",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x6feaa4e39c6b11471cb734bd8214b5d1a2918717f0f2326a77457cff320db414",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::CommandExecution",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xaf6e1766da791b99119c495daadc3307b32629e559db4e80508db58a1d6b355c",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ExecutionIndexKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ExecutionIndex>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xb1a59ef1c22f11a02bf5451ea0458780385a70881e9c5d8e23f8a1f683ad1b55",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xb7bf1c6c09bc4c2893d285f93f4c62380815134d192b35465908f9632b8daa29",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xd3408dc6e9b635d3472fa7de5f292c70e9d96f9739e8e787c5c850b636e7360e",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::CommandContractKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::CommandContractBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xdd8c1f5f79ea2f2fce13ca300bb67ca5648f8894c3c6f1652d6d3fab983f7f7b",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::AuthorityClaimRecord>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xebe8bc5ee5ba0447a7074159f6fcd87bf817462afd1a57546e947e03c67b90e0",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xef2ac1bb42bffec1e81985b4ed1fe53398e6b0194f02d4a56184d6d67f2ab4ab",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetTotals>",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native independent KR 2 verification",
+      "requestId": "okr-human:0xccd9a51da02037c52b394500c96fbbaf16da15d26141fe7af1e4d97fd074ef2c:1:5:verify:1",
+      "digest": "AoiFCFn9EGRpJLhVPehcdMNCEK2NCzJ6N3WodcoSN6oV",
+      "status": "confirmed",
+      "actualGas": "12607936",
+      "createdObjects": [
+        {
+          "id": "0x138fad0e7052489ffca2c853ce976e4dd186f564016c94346bfaf29a09e8769a",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native separate final Human acceptance",
+      "requestId": "okr-human:0xccd9a51da02037c52b394500c96fbbaf16da15d26141fe7af1e4d97fd074ef2c:1:6:accept:2",
+      "digest": "FT3KoksJabUkERGktu2xK9LrLoA6jLefU3mGpRwoH8mw",
+      "status": "confirmed",
+      "actualGas": "11672756",
+      "createdObjects": [
+        {
+          "id": "0xd295b96ee31e95148ba6bef33143c09699deb40bee086b0f6c5f066224e1dbb2",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xef50024db6da1c697975291b9ad5a13772ca232b2c657278d36acd7fd6d098e1",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native standing permission creation",
+      "requestId": "direct-test:d12f99cb-b2f7-49c3-bc3d-fd273035576f",
+      "digest": "CD5Q5yyeUP7HbLu9KdprN8rpwcwW62xiogiWDxdc4Qjx",
+      "status": "confirmed",
+      "actualGas": "21999712",
+      "createdObjects": [
+        {
+          "id": "0x2fa9a12cd8f8dbab560af2d04b13ebb6bf3d9a4d312754447906857da794864e",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x2fdb0af72ca28ea4a42ea2b9db80fea6e938306905b284c44d7fb285e81e32a1",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x3f9de86b302ae073caad4dbb441fd5bd394cc3303c3a4f15cf1dd3acfeebf5a1",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x5c1bd638fc53b89c4093be4ae8ead60398e76e0c5d6b0340761394ca87ffac22",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x5ca16aa5b3ba5871c449a9dc7f8d29e1b5f78aa995dcbb8baddf5dafe3f10c6a",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xd10e994664ab3248ec15f167a39a48d6bc5dea577129ad1053f650a6f5614822",
+          "type": "0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::StandingPermission",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xd1bb9eaa3221dcbf45f94ee5e345d3be05599b293aeea9cb36fb5c5d9d990494",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::IndexKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::PermissionIndex>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xe37d1378f34f92a8e6195df174047ff3d69130d53def66159c6464f4db1dd047",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xf165b2e1e56d25059ffe8b5f8ed7d06e81bd939e6c7f025af86ae776db947fad",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xf7051a23307a7c62724ce62b7f831683bba2dd2d9f49fab97b9358a8b33bc295",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native standing direct capability",
+      "requestId": "direct-test:a0bd5bf7-1193-4e87-a53a-aa4de946cdad",
+      "digest": "3As5J1JLTEF2dkrvCUoYDMXucA8q8pRwZz2wmXpdBdG8",
+      "status": "confirmed",
+      "actualGas": "18923080",
+      "createdObjects": [
+        {
+          "id": "0x1be77510cabefa39da6ea23e9f65a47fdbc1632643b4d4b362f8925fb8779444",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x53f81bf8c99736c2dc0b9df5150b9c7e3fb7ab529007a5ad36f46ba024ba49cb",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x5c143fac3edec946b347b169b87b446708e73a6d689ed6b7609b5f3a5cdd2046",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::RemoteCapability",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x5c27edbb8bdf4f787c405063701bd1ea91725a044e7222cd9794fa88d18c97a2",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x5d9ddaded9c685093f51e6e397a37251fbfc7979ef60a025dd205f8bf6d83105",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AuthorityBindingKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AuthorityBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x8d11a9e9ba3ba633ba34718c48fa4aa7b538ecf0d863070da71f64dfdbbb3571",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::SourceKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::ExtensionSource>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xc70f77da70dd66f68f95a4108293d5f176eeb6f8314f3e80e550bc296fc6a082",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::ExecutionContractKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::ExecutionContractBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xc7d1fe8015e04cdfb7498ced1bc95b3175cf63a66d77fe7c7ee7a7fd84d85a02",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::FieldKey<0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Witness>,0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::PermissionCapability>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xe7af1f4185d6f94f44461d9a621cbcb87c19e2ddb5dc178ef0f982c3e5e5398d",
+          "outputState": "DoesNotExist"
+        }
+      ]
+    },
+    {
+      "label": "native encrypted direct message 3",
+      "requestId": "direct-test:eaf5631c-a734-46ca-b846-842bc16d2750",
+      "digest": "9FujyBrAGbmhfvKvWhNFgNRQdxbVmWbmxTA5yBcBRm3T",
+      "status": "confirmed",
+      "actualGas": "17135332",
+      "createdObjects": [
+        {
+          "id": "0x0f6ce08c3b85baec1874a15aff25e15f68f5744dfa440b100a332c5f4acee877",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000001::string::String,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x441f4ed28da3abdbc37d8a1699732db0836c57d5f0c30fdc99f3f9516a6ecce9",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x4d9d90f8c7bc899b95bccee9090f21ef82956877fdad4a6c08f5cbc6584b9d0f",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xaa7cc00803b3fea777fcba5c8f4310f1456e63504eeed086a92aaf70a592c6ca",
+          "type": "0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Message",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native original direct Run preparation",
+      "requestId": "direct-test:f0079ae9-ff92-4991-9594-a274d2caae5a",
+      "digest": "8Jsd7YsPhJNRmcq5GTus5vmcXVTLS83CmzNCKMjkUpcj",
+      "status": "confirmed",
+      "actualGas": "42894164",
+      "createdObjects": [
+        {
+          "id": "0x07f7c52ee31107cc098120644b29890a108f4192f56b440315979332d5094029",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::DirectClaim>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x1d5d21807fedd04be0b67bfbe5ce0687b8cd9256dc42dc312b93259c3c1cd78e",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AgentExecutionPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x2225d2b28101ab272308e6507145ff72bb3f65ccbf9814ffeb827e2fdca2c37a",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::FieldKey<0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Witness>,0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::DirectCommandBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x3f4f2486880daf4b4c744fe528bac7e2524230175940212a6b6a379172c61186",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x4e36bf76381d692680e82f3d87b3a031269181eef99d87a06a3d7f53191a73f3",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ExecutionIndexKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ExecutionIndex>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x52fbc3306a3d9de4ab07a463f3b3ed534b777006a8eaeaa51c8281fa84e77c54",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x54d87616b01bc388e74c26b3dc3a67b5187d859c698e8513c59c546820d2ab7f",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetTotals>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x97094123dc860046988e8d4d1065573aa46c944af7c66f71933903879ed45f59",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xb283c97d529e330fa3d0b5517c276bc1f54a5c3955c27698f12b0dd22e05afb2",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaimKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaim>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xb5deb32ea5271029aef921c3bd56a8113f9372b2e76652f2340891b91b404beb",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::AuthorityClaimRecord>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xc0dfc69c9da075008e8bad8a64ad630334fdee17f635e499b143d4636d80a20f",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xcb1359b050a7f031522857872118b7566a96da37527c9753094df2558724bd23",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::CommandExecution",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xef12e77b892cb95ad7501aabca7e43345804ba0f03f1fedd3c00581319f01e1c",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::CommandContractKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::CommandContractBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xf08d164067ad15e08328222dda4b8c6ba3b97b42876eac8e3b135ffa3fa14002",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xffa1861e60715ccc6dc2b1b8c0c3fc21ea643f7c284f6f7ce1ee573d9a559dc9",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native queued direct cancellation",
+      "requestId": "direct-test:0de11b42-cdf3-4fb9-8c45-690b1595bd90",
+      "digest": "3y7qUBk9ybwfLjkvxe4cUXRyCi7dgMd1GmPd2BLwz8X9",
+      "status": "confirmed",
+      "actualGas": "1358188",
+      "createdObjects": []
+    },
+    {
+      "label": "native encrypted direct message 5",
+      "requestId": "direct-test:9a5421d7-eb8e-41be-935b-fb3c193a5849",
+      "digest": "G33ocfNLhhMBUrumCTQrrqHsNHRxFqxXcwSDwWEkxpes",
+      "status": "confirmed",
+      "actualGas": "17135332",
+      "createdObjects": [
+        {
+          "id": "0x73cfbaef56a3c5cd584f7659069e46d049742cfedb26194f6e2ef7bd5cab8287",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x7e3bc61e8949b498949da310dc97ea5a4bc1cebe426fbfd5a432f94c05daecfe",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xa1f126a6361db5573a50743e31b458f0485399963c3b0f53e6784ade6299258e",
+          "type": "0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Message",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xb4da05b0dfc628bccce21133368a8a7f74e5605d67c07b9742b3330f018cf821",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000001::string::String,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native exact one-off approval request",
+      "requestId": "direct-test:20fa3e39-b509-4406-8264-58dbf529dda7",
+      "digest": "BSbY7FWJx2d4ECaEVAEjzuqVL81k47M7YivtFAXJv5D9",
+      "status": "confirmed",
+      "actualGas": "14315732",
+      "createdObjects": [
+        {
+          "id": "0x1148906e3550e20fd6d4ff9e61bcd8cebf643c5e35d3560b47e18d42ef0a77e8",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x2a6963509edee6b4b01e736289a316c8aee375b6cf95405b42700ed75d86dcb7",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x60b481c088fb01c6901bad6906a2c0fd222b762bdd4fcf83a25e51d851b9d07b",
+          "type": "0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Approval",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xf961e84e21f916b04447fcc149be3f236ed5a69c267943c4c9b46b8e5ab3ccdd",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native explicit one-off approval",
+      "requestId": "direct-test:4c2ecff4-5661-424d-9e1e-89fa7d0f487f",
+      "digest": "6JoNyvtVfN3i37CokjWuD4Vs4fPQWDAoj8U91eo7kiq4",
+      "status": "confirmed",
+      "actualGas": "6185860",
+      "createdObjects": [
+        {
+          "id": "0x829eb44485525bc3ac3d3b87f61871f3bee88db3e6647df83a6d06b5e07827fb",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native one-off direct capability",
+      "requestId": "direct-test:b5b1f1e8-077e-4d05-9dbc-9ea3b32363dd",
+      "digest": "2nJMrKuHicB7k6creWHV1x28cXc3FqH6bb4WdHNs6Pq1",
+      "status": "confirmed",
+      "actualGas": "19166280",
+      "createdObjects": [
+        {
+          "id": "0x0ad3429d7732619fce16cb63a01549106c0ca763f2cc950c095e4722f90788f7",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x237f18af2d5dfd4a8dd3971c5d34c103f0c97ffc52b6f995790ab8bd7aecf29b",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AuthorityBindingKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AuthorityBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x53803496c219457f9340fa57d93b90f194c46ca2ef22b249403b4fc8382978e2",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::RemoteCapability",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x8e1093e0d0f4b9d8489c07732270b85df6418477cfdd18ed07432c87304eae12",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::ExecutionContractKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::ExecutionContractBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xcab619493aa1c51e8606519dfb1d8f3db25114d9e4152a61d2af33495b02d6df",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::FieldKey<0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Witness>,0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::PermissionCapability>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xd5c460fb309bc05218433dcd69d51f21c307d2ea364c6e179fffa0cdfed456c8",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xe2209522b346075dcb81c2aec472fa64b7d66c85839ce2ccd0ab10ab8da5f3a3",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::SourceKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::ExtensionSource>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xeda1640fa7fa47f247de8471eed5c7fc88b3c44bd92c48d05e2b7b3f240b0110",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xf796e67bb8166f9877f5ccf97213e9ff8fb23586afb0d48c9860cad5fde9bbd4",
+          "outputState": "DoesNotExist"
+        }
+      ]
+    },
+    {
+      "label": "native one-off approval consumption",
+      "requestId": "direct-test:2225c29f-ed0d-4276-afa1-d5e56f26e40a",
+      "digest": "FESSpk4hRRfsVd2BLBZV2aScpTYZPPEfR6v578Jn3Zp4",
+      "status": "confirmed",
+      "actualGas": "43418792",
+      "createdObjects": [
+        {
+          "id": "0x2320a4b9dd0f79e1ac87808562b4b50a32aaab70e017d13027bbea1c66016261",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::CommandExecution",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x2e4f8748b076b45c31126f656cf97db557e5d75daa0fc9a5c5a19c8466b5ba96",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetTotals>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x2f113b2fabdf550b65942118104bfeb3009650a2b48fb29a135784181047856e",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::FieldKey<0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Witness>,0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::DirectCommandBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x3830e91e4c2f2cd5f1a6fffcdce7365dd5cc9efd9a3738c7c9e6f6c31c20eedb",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ExecutionIndexKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ExecutionIndex>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x53dd7989ac51b6dc129c8ae1924cdba467568ef689de23c07b225beee08ebd29",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x62dfc84934890473bd89a939d0a9c347547aad9f4d41b39ddfb4890811d6ec7b",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::CommandContractKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::CommandContractBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x6bd96109b8a969436588e5af5670e2bfa194b40e013c1727d71229b58fbc7716",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AgentExecutionPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x8bf1509e23d528f2bb4a62b61017c6ed129d5dd33f464ab61bf22aae7a40edf7",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xa1ae2d47666c08c5281de6df2410fc41c5460f83a202d8174a94bb48089f6e45",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xab3dd5d848529834803328c121697d9d7da6838fc7915256eba4f01d43e62609",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::DirectClaim>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xd2c6b56553ad18ba455bfd1b2d7e302eee62ff1a4c292c02a2f6ba69bccac555",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xdc5636b6af2fcdc7b9241e076e53baf80bc56966a84099750a5c8b4e70db4432",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xe45bc3be36c13ca8f271de8e5e30fb86719581e8e1a081c0ba9329d22f752ea8",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xea501b8ea786f3b10d604e91db0702e886bc600f2a46902804a399ad962ae5d1",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::AuthorityClaimRecord>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xff87c6ba57aa61f52e9031f0fb21b8d2b61b7f8d7af05139c95e57d4ccd4bb18",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaimKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaim>",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native standing permission version change",
+      "requestId": "direct-test:74846592-b8b8-467a-a7ff-20a063a5486f",
+      "digest": "3egBBaspXr3Rm7VHiDkQCoxGfXrwENKSSTjB7NQ3uCh7",
+      "status": "confirmed",
+      "actualGas": "7277068",
+      "createdObjects": [
+        {
+          "id": "0xb1342c992df64e8811869489dc949bb91ab39ad6899d3a5965a57089876e7fb4",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native historical direct cancellation after policy change",
+      "requestId": "direct-test:415f9119-8347-46d6-acba-ea222539d7ac",
+      "digest": "GUcv5ezv1iuKXHMpfbbDpWYZLK5VW9gFBAsZCSjm9JHu",
+      "status": "confirmed",
+      "actualGas": "1360620",
+      "createdObjects": []
+    },
+    {
+      "label": "native runtime direct capability v2",
+      "requestId": "direct-test:59ec8315-9889-4b84-9d61-397ece30e3c7",
+      "digest": "7H7vrcxxbbuG4qSbUmQvgzwHxTux5GKEQnWRRBfiEGCZ",
+      "status": "confirmed",
+      "actualGas": "18923080",
+      "createdObjects": [
+        {
+          "id": "0x073baa7391c2b0ecf64ec1a9ae45358396cb98a3a4f900ef9f7135f94ec61304",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::ExecutionContractKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::ExecutionContractBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x21874d6a26699ecacafc2875ba144c0b6b874f1baa85564a5adf24aba44f7848",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::RemoteCapability",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x24a94618499243cd2ca998e0f736db831147d04807432230db9604461923b733",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AuthorityBindingKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AuthorityBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x453a55c9a9646312570e824aa129e7729194eb48daf9a956cf1b27ce8134b52f",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x46b8ad252d14bc0bb29280f24f623693816b83b8c2d6f3c1005cf549f2fca02c",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::SourceKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::ExtensionSource>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x71fc3ddd9ed29be3d5eb6d05061cd592495ee25d51291107cef2a071ccd38cb4",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x9b50a80ac597c3ce8c88479049f4c4f661e400b30ed15818e92c05fc36566af3",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::FieldKey<0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Witness>,0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::PermissionCapability>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xad85788a03977e2a62dcb7f20fe78a0d954ea3516d898df0f27e6f14b4fdcf55",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xd3c3ad3797a30e4dd55f5829badbd504e42941e6c50b3f5adb43a0aafd130d35",
+          "outputState": "DoesNotExist"
+        }
+      ]
+    },
+    {
+      "label": "native encrypted direct message 3",
+      "requestId": "direct-test:96513123-e994-4384-b793-cb6cb3c6a844",
+      "digest": "DR9JVjLjfMwECRQrdsfLFDQbeUJRNePf16Ka174F5F8b",
+      "status": "confirmed",
+      "actualGas": "17294932",
+      "createdObjects": [
+        {
+          "id": "0x7a4248b97b0587da79ac4045af68a21e4ab94be1a35b1a20988c0c81dcebe4e6",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xc0f81383228ba981ddc3d1c39c78dc13dec0884cc62b6917863cdb7c7a9841fb",
+          "type": "0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Message",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xd91b5f6ae864c376fe798b76df72f8ad4162a5c50e05446e9f37f705012cb728",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000001::string::String,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xfbe0cd0c55fab6db71f333be7352abbe5363451e5c5d3b5f36e0ebb90275e0aa",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordPointer>",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native direct Run and OS-wrapped result key",
+      "requestId": "direct-test:55d9b933-1c7d-469b-b902-557152193f11",
+      "digest": "3aQEf1VmtdVeqwEu7zTUX5461b5XaAJgMQ6LM7SHVYZ5",
+      "status": "confirmed",
+      "actualGas": "48252164",
+      "createdObjects": [
+        {
+          "id": "0x0a89c5f53d0f9adffde62b9985f97e76ee362db54575cce7a234c467b462beee",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AgentExecutionPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x0c29c7240a44de009fe5e0c0161220229edd690fa806f1ec812bf6ae2988b8aa",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x0f3186704da506622e79e5bf128bdd4149bf9bf0f1af49ec61eead30e1bc1004",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaimKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaim>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x23d79d937510c0fcb1df344b8443e0e9b770bbf170c45336c1314cb5770c4478",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ExecutionIndexKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ExecutionIndex>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x27b9dde9ea96c66a802952e22675f7568b5bdd17393d41b2cdbde2b0ea4a60d0",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x3eb8817863e4efa7f9fd0662d9ee7720f08a1b3a930e52e834b2a5ea96d20d22",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetTotals>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x46e3156d46a41a7d91506b7d06d525bda8038539232531b98fa0eb766bf7e10b",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x71cc6ab972633c3ec2234633e663cb9d9a72dcc5e6732d7b527c3e2ad0a7eaff",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x7bd9086c137a4c6f01f2d99feadc91904588e838213c573a91e75f42ef631a80",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::AuthorityClaimRecord>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x8acd142ef772ea6c1c59774e225e2f6c0fbd659799a5d379f95e7953f90399d6",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::DirectClaim>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xb5dd61bbb2121841a998defc8cd38834f05c6150dc8d3c95f205ed57247511d9",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xc3869512ac36f7ac11ce5fad5d0ec705d831e84d955bdc288ca7d88576854472",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::FieldKey<0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Witness>,0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::DirectCommandBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xc7ab95b9635c99dedf069bbdb355d9c6b2fbae64b607509ec6fecc7bd1603173",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::CommandContractKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::CommandContractBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xca190cdc2487364501dc0910b15e112c61d7842435c70234eb0a91a4f6de152d",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ResultKeyKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ResultKeyGrant>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xe8093ff51577e1b8e7f4ee9dbc0608f1c5a1c774e7cab31c0d5535233e69401e",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xe9902e0b540bd63fbdfb5683f1c36552b51853b3fb96ea3f5adac7d300e1f379",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::CommandExecution",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native encrypted direct message 1",
+      "requestId": "direct-test:a83f64fd-3982-44d5-b7d2-be7c6ee86938",
+      "digest": "FaEUEFugQyE7svJ2VeDvP1tfQVKS5QbcpenAekPemxXC",
+      "status": "confirmed",
+      "actualGas": "16816132",
+      "createdObjects": [
+        {
+          "id": "0x1b4a9b8518bd4911d9ec37c8fc535250f4ab993a6ce82197be6684de28bd9b34",
+          "type": "0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Message",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x5b560aa14cfed5e1f46fa00dc886cf732685f66cddd7fb66421538f26716c76c",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000001::string::String,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x9a0319d89ae1681e23d131a31d445d3438269c0fef8a5eea0678d332c25cada6",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xedac3f00b30953812657e4b7005416de6df85050240079762857195710cdb6b2",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native direct Run and OS-wrapped result key",
+      "requestId": "direct-test:cfabe6bc-9d31-48b1-872b-d5f6a81d9835",
+      "digest": "DEeoTeH1WCh4my3D6VLBCoVHuLFdiMeCgurwAFMKyrpP",
+      "status": "confirmed",
+      "actualGas": "43180988",
+      "createdObjects": [
+        {
+          "id": "0x0b032f133206da04d1b8082932f4227bc5627ebeba68532043b68c8678e98dfb",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::CommandExecution",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x2bd682e37829b33dc43e5923967399978fca8e2af7b04ded4707c12c6445717f",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::FieldKey<0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Witness>,0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::DirectCommandBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x370ab467e32e845651d0183c9ec04e981947017ea7d40157c7b9139f99d43604",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x3d38dad53397367554a47b22543e55cfbe3e72c8920dacdfe4d06c0ff9da3a37",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AgentExecutionPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x4bd254f31f76c67695307bde627cc159226db4733c386d2b8d6d85882ba95d67",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x4d82f8af3fc926a3796a2fae73ef10e5f3b5b9c2c0d2c97fb23f5344ee4c6938",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::DirectClaim>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x5708fbec7d2ab622212025ed65db32365e3a9b586b163ae655ce08d3099ee297",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaimKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaim>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x5c168157b5811c145e009fca590d40f4c9b82fa90e1fa8310115b52e388b91d0",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x64d5dbc7c11bfeaf3c9cd0c3e0e9a7c703297f7d53d056003a790a509a59322e",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::CommandContractKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::CommandContractBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x7acfa515f16cad9630541e75043cadeeec09cd0f7582e3d39b0935946c160988",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::AuthorityClaimRecord>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x9058e579dd7a7d9784795d8c5322cddbaaa79975ad2ab6f51fd6b09c324cd540",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xef63286243a9afb0efec11ec9356a1031fea1e239894ce8a3106eb27355efc84",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xf7f4e1521fd74527f3b3b05227ec9d63dce137f1a3c25b3e77c72fe968b135fd",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ResultKeyKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ResultKeyGrant>",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native encrypted direct message 0",
+      "requestId": "direct-test:1bc88866-630f-42de-80e7-2c47e0ceb6f6",
+      "digest": "3HzuC9vKLVqudLEeRgY3Ncqz1SZYSApMRjUWwH79vnab",
+      "status": "confirmed",
+      "actualGas": "16147332",
+      "createdObjects": [
+        {
+          "id": "0x806203748bdf01c511b0c1b2381439538c1c3f79c4c212c8c5288a02da0cc2fb",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000001::string::String,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x971fae45262e3ee4c64ff4efd846ffea55ad36fe70ffbfd9caefc804c8349922",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x98d4b8237de4edc44098212c24b915f3d0d50c4288d71e415a9f674ed043678c",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xb20666ae19ff08e86f915e704e0c9514f283af3b6096ddf25d470ce199aa9f1a",
+          "type": "0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Message",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native direct Run and OS-wrapped result key",
+      "requestId": "direct-test:a9b564eb-6b95-41ae-9a2c-534e2a2eeca4",
+      "digest": "EGHdiQXTGGrvx6eYxD8fLNaXZaMsqVCY2pKD4qswaE1t",
+      "status": "confirmed",
+      "actualGas": "43004136",
+      "createdObjects": [
+        {
+          "id": "0x0e1640e752039affba89b8a1f955a858abd243af03f1ad2e032cacfd57e0f243",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AgentExecutionPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x2cb235cd5ae1d14571c4a955bf29c3ddcadf7122a2a45113edd67742ebc3f29d",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::AuthorityClaimRecord>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x2ff5ce4150126487bc0effc330f69af5037eb69dea84b8a036fa599b290c3c5d",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaimKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaim>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x33eb51a5d236dbc455303d9314e779433e17c1bdca67a959713b4e787496b272",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x38015c71f6826f9f9ef383a7544664a3bbd9bc2f29986d366cc50718e9a7d723",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::CommandExecution",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x5d663d4914622b7eaf185b7cdec87331dd898df133114f2fc028e37e340eec4c",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x5dd5042331fab5465af819d1e3a78da980b43ce077172312974d4429b5dc5531",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x7294b51e7e6efb536e04955a419b0394a970c1ad515fa10e287642c55640b7bf",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::CommandContractKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::CommandContractBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x8d839585c75c00775a4c66073facde941077fcf99290c9a0bd8226e68b4354f2",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xb5902c75a21cd8689fc02e22aca223e5d8a61694121abf8c016b68a03066f731",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ResultKeyKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ResultKeyGrant>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xb86bae9c485580fad70de05eb422ad661f10f5545384d7fda67b2e8e95bc06a4",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::FieldKey<0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Witness>,0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::DirectCommandBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xcb2e670c94b7eea209c170e8a098e7a3febf5af33ce9e584bde869ddb9d0bb2e",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::DirectClaim>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xd31dbce348ebc737b1ec81ac37841c523708977acf63334786d2c06cff3000fe",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native encrypted direct message 5",
+      "requestId": "direct-test:32b520a4-d567-4c25-bcab-66887423571b",
+      "digest": "HpxFze3nGv3Kj95ztnX2b5bjaopmmHV9jnL2GMNXYq1L",
+      "status": "confirmed",
+      "actualGas": "17355732",
+      "createdObjects": [
+        {
+          "id": "0x78ef7336fecbf307078008e4a5d37a548d3129b877df0feea93539ec668c0606",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xbdd0896dd5e9b4693a23a475364c888ec3c1bd149839c1649fdddc239b02d841",
+          "type": "0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Message",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xfaf1219e9a3c26f277f66f8ed4886bcc389f30372b4480ec7a357ee9579eac91",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xfdc76ce88f53577c651270298220df5394a532d42b13e80fe6e4df7c6f88f73c",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000001::string::String,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native runtime exception request",
+      "requestId": "direct-test:69f05203-50fb-4a25-a81f-1e0a4c497882",
+      "digest": "CzJotDczCzeU3GJT6Ep2kaVvRmRd6c6iC9a1wq3tfSSw",
+      "status": "confirmed",
+      "actualGas": "14315732",
+      "createdObjects": [
+        {
+          "id": "0x80726fae37bcd27bcc16679d894455a70815b3179eb2cdbea476f0f6d0136f30",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xba28af6e61cbda50d31148d859ad29379d5e844980580938406f7df168431f2a",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::RecordPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xbc94911b58a22c23f1f6f9eaf6d6983f9b93872abcb3cd2c3a9d3f009ed42fbd",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xc7de81afdf597f1a15acb0561de2a2c1e52f7daa756546304f1674a7c72f216a",
+          "type": "0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Approval",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native runtime explicit exception",
+      "requestId": "direct-test:b08d96a7-6b45-4ff9-ba4c-689719983662",
+      "digest": "B9HSW9wXe6bFGWwj78cd8cyG1TGkXBGmeseXGvgwU5Ki",
+      "status": "confirmed",
+      "actualGas": "5980660",
+      "createdObjects": [
+        {
+          "id": "0xc7c901bf1987d76267d038c9d88f50c15d444d7389f70bd4af7b0a48c05fd7fa",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native runtime one-off capability",
+      "requestId": "direct-test:1af48b87-9a9e-4156-be9e-088bcbf9838f",
+      "digest": "Gqi8g7b4C71MeSmaionEiHFVKA3hcMg1vmiuASevmL8q",
+      "status": "confirmed",
+      "actualGas": "19166280",
+      "createdObjects": [
+        {
+          "id": "0x3a6b51a7837703afb0c53097238acdd172563a1c2616be308f8cb0d9e839894f",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::FieldKey<0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Witness>,0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::PermissionCapability>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x49b886791130ab056843e9f5095a1df2b6a52a769d3a65075003f04e87e4c631",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::SourceKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::ExtensionSource>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x5ddddb6198ecfef28e1d0ff4e3b1cbebc5f1cd92029347dd91559aecda1d5fda",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::RemoteCapability",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x714c7e9fb145a27caba0d29c0d85e3aacde3d3dc2e8fc21f434f5fbfc641f536",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x7c6432a6d4a660610a731f4369972270dc0884bcab19b542717de3fe9c688c21",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xafecdfaf8ddf3f103a741e3c40f09f2dc657f4fc326f3aaa258e3a2c82f8809b",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AuthorityBindingKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AuthorityBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xb55cc81d414b62b99f2bae48a9ea27beea41db810ed4e6c37ce23bde3f4e466e",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::ExecutionContractKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::ExecutionContractBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xdbbc4f37e658fde5991ebe633b5f31d958d74e6147db3c6aff036d0107d37f73",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0xdf769305c01a06737fccf05dccd6488d342ee62222e916b46db479421d3492a7",
+          "outputState": "DoesNotExist"
+        }
+      ]
+    },
+    {
+      "label": "native direct Run and OS-wrapped result key",
+      "requestId": "direct-test:10d05da6-ede5-4d27-979a-a4d1de2f3bfa",
+      "digest": "DVL5pNiVe5mUHtrmSYvPdPXpu2GBdRJZimrPVX6natAX",
+      "status": "confirmed",
+      "actualGas": "48796792",
+      "createdObjects": [
+        {
+          "id": "0x03cb2f7bb2877fb31caf5239c040d4975ba75c81607f433585ea9627ca8322a3",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::CommandContractKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::CommandContractBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x040add712bb98385a508ade6583069e7255bb7524f708afec00df0830d19f0e7",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x079566aa9f2c2a96895e5bb0efed0b509f984fb74a8d35389bf38b6bfc865561",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::execution_extension::FieldKey<0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::Witness>,0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::DirectCommandBinding>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x0823c55f057f7ed3a1d2eadac7efbb54658e34df3aed102ae0200f4604fcc1f3",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ResultKeyKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ResultKeyGrant>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x1145fbc56cb91870627cd8146bda178708f0d7dc0b1a0dd78c036e8e5bbac9ed",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetTotals>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x2a7182ecff169d59f56153ae4e39db2b44746f3019a020b2b493d3e189debd0a",
+          "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::CommandExecution",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x2c018ba308c57068e0f68836d1da7b54d0cf843b6a56eb7fa219d1206ad5c501",
+          "outputState": "DoesNotExist"
+        },
+        {
+          "id": "0x3eae0f66c5c2b50bb445336734ee1562603a33f9684a4044ad257ad3d1c0d09c",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x458ee652fe62c62033faa276108f086f7a9c8bb2dfd0aff495b3d3226469eb70",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::AuthorityClaimRecord>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x5f319616c4dffd2bd8486380afa07a4a00b08461bc12f8de095d3c331dbe3df8",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0x653624db1f23ba21292b7b8e08b1e39efd9391d09ddb36c88e8913e4b4cce9f6",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaimKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::remote_authority::BoundBudgetClaim>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xacc59ca96f92ba8f19dfd02772fc0e9a08d67ab3f9908286bf41fe0f26c539db",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab::direct_agent::DirectClaim>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xb073435849205f17a7a38aff474402962930fae7186fac84dd9f1d6ad5325e6d",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::host::AgentExecutionPointer>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xc0bb5bd70b0802cea8ef7f3ffcda72dea277d1ac96ab348e75295306fe5b0a8a",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xcdb6d04a08385cbf61a124446a9435971d9a769a8f31a4e0ecfc62b6cd6786b6",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ExecutionIndexKey,0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::node_execution::ExecutionIndex>",
+          "outputState": "ObjectWrite"
+        },
+        {
+          "id": "0xe09c99247cb8882a4f08d1cdca0b032c1b24413ee4176190f5ed31d3e587769a",
+          "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "outputState": "ObjectWrite"
+        }
+      ]
+    },
+    {
+      "label": "native revocation of actual Host",
+      "requestId": "host:f436faa7-49c5-480a-b6d4-5b844794b59e",
+      "digest": "ENFe5ekQSLH4UFYh3dYv3irsUsQJXtKXgQoDr7yVieUb",
+      "status": "confirmed",
+      "actualGas": "-625248",
+      "createdObjects": []
+    }
+  ],
+  "state": {
+    "phase": "validated_native_app_real_envd",
+    "humanId": "0x6aea345c67bbde832453eeb3c57bb967ed343a6d1c8f158fa66ad62cb792d3b7",
+    "organizationId": "0xbcce970e94b16a8d04e27e2f5945d48572a0ea79e5ab562eeadca4cc6df1390d",
+    "deviceAddress": "0xd949a79d177221224605707a6cb24535f9f0437d037e9ff1923581033ee60cd2",
+    "originalRequest": {
+      "label": "native revocation of actual Host",
+      "requestId": "host:f436faa7-49c5-480a-b6d4-5b844794b59e",
+      "digest": "ENFe5ekQSLH4UFYh3dYv3irsUsQJXtKXgQoDr7yVieUb",
+      "phase": "quoted_before_submission"
+    },
+    "bindingId": "0x0dead6b76dabf58283ef64a3f4d147c9f5d2c3ab7ffa69eb8f1b6cbb328cf478",
+    "membershipId": "0xb578d1efd07b1d60c155e9eb0882563466d464febf88a6a3a0750eab0b103c67",
+    "hostAddress": "0x4e4c2977d73e70491ae1ba9882888719717f6f1de793ffa74c9960d413e01530",
+    "joinDigest": "656DuzytdmVVhorj19QsNqP4ZcB5MTrkWDk9TS3gTsca",
+    "hostJoinBroadcasts": 1,
+    "managedAgentId": "0xb5abc43f2e9d10e73362bc6fa92f5f1bd6f0cb3f8bc0c856fa1c3cc3b845d63a",
+    "instanceId": "native-3ba074583030e1f93e4e792f2ed7866ab8232a901ae9ba62ab0369a27818b87e",
+    "okrId": "0xccd9a51da02037c52b394500c96fbbaf16da15d26141fe7af1e4d97fd074ef2c",
+    "reviewExecutionId": "0x5a90804876a65149d40f5153adbe2466ec2f5559364f3083f30523cbef0aa58d",
+    "reviewDigest": "94dBsrbB5jBjbPYNEdZHRGeehcdCUDd28TJJCcVV39Fh",
+    "originalReviewDelivery": {},
+    "reviewRunState": 2,
+    "reviewResultId": "0xa41c5ddc6eec14bedbb7870f01fd514f88c4b87442e49eab253df00491244556",
+    "continuationExecutionId": "0xc566e910922bd6621cd17f0db345d235036c15d7ca054b32c724558f635623b7",
+    "continuationDigest": "nd67ekYK8z9SdHdMJrbtP5bX5YRtfv8Z2Cu2H56BLhv",
+    "ticketRecordId": "0xc3d0e41e27e38e8fb442d9638845229529482007f9a6961a777045e9a493045d",
+    "capabilityId": "0xb6b2f815aae844c0cf7c3f047de713eef4d8481c8cd73cbde30d870032cb330a",
+    "firstDeliveryStatus": "awaiting_verification",
+    "transportCalls": 14,
+    "commandDeliveries": 7,
+    "resultRecordId": "0x7771f2fce0aa9ee829a0a7f732377bd7ff9158f3c3a0409f47ece096f4a1985f",
+    "resultCreationDigest": "HNePL2QXwp4EBRgJyEeyoYxc5iJizUcYqaEuLKjQ9zCJ",
+    "observationId": "0x3c0fa2d2d62bf18dcdf60473c872d8ef5dd5ddfa08155103fabb6c2f2c9d1c65",
+    "observedCurrent": "1",
+    "humanVerified": true,
+    "okrState": 3,
+    "budget": {
+      "spent": "6",
+      "reserved": "0"
+    },
+    "restoredStatus": "awaiting_verification",
+    "feeConfirmations": 2,
+    "humanDecisions": [
+      {
+        "krIndex": "0",
+        "requestId": "okr-human:0xccd9a51da02037c52b394500c96fbbaf16da15d26141fe7af1e4d97fd074ef2c:1:3:verify:0",
+        "digest": "FeoCqU9CZHtscE2JMiR5t7PZ88cLpiGzWK3wrQt76duA",
+        "verificationRecordId": "0xecc56650936328a33a2711a5a718dd2d84709bc1944ae425028a13388ffdf5e6",
+        "runId": "0xc566e910922bd6621cd17f0db345d235036c15d7ca054b32c724558f635623b7"
+      },
+      {
+        "krIndex": "1",
+        "requestId": "okr-human:0xccd9a51da02037c52b394500c96fbbaf16da15d26141fe7af1e4d97fd074ef2c:1:5:verify:1",
+        "digest": "AoiFCFn9EGRpJLhVPehcdMNCEK2NCzJ6N3WodcoSN6oV",
+        "verificationRecordId": "0x138fad0e7052489ffca2c853ce976e4dd186f564016c94346bfaf29a09e8769a",
+        "runId": "0x6feaa4e39c6b11471cb734bd8214b5d1a2918717f0f2326a77457cff320db414"
+      }
+    ],
+    "nextKr": "2",
+    "secondExecutionId": "0x6feaa4e39c6b11471cb734bd8214b5d1a2918717f0f2326a77457cff320db414",
+    "secondPreparationDigest": "ERVkhGVBhdeC1ocaHeCsxKrj2h4CoSeLBjBHrMwK8rqv",
+    "secondResultRecordId": "0xacdac833e9eac72926e112783b7cbb597e73467cfb13612a0a00887d7811f4be",
+    "humanAcceptanceVerified": true,
+    "acceptanceRecordId": "0xef50024db6da1c697975291b9ad5a13772ca232b2c657278d36acd7fd6d098e1",
+    "acceptanceDigest": "FT3KoksJabUkERGktu2xK9LrLoA6jLefU3mGpRwoH8mw",
+    "historicalVerificationRecordIds": [
+      "0xecc56650936328a33a2711a5a718dd2d84709bc1944ae425028a13388ffdf5e6",
+      "0x138fad0e7052489ffca2c853ce976e4dd186f564016c94346bfaf29a09e8769a"
+    ],
+    "krExecutionIds": [
+      "0xc566e910922bd6621cd17f0db345d235036c15d7ca054b32c724558f635623b7",
+      "0x6feaa4e39c6b11471cb734bd8214b5d1a2918717f0f2326a77457cff320db414"
+    ],
+    "directPermissionProtocolVerified": true,
+    "directPermissionId": "0xd10e994664ab3248ec15f167a39a48d6bc5dea577129ad1053f650a6f5614822",
+    "directMessageIds": [
+      "0xaa7cc00803b3fea777fcba5c8f4310f1456e63504eeed086a92aaf70a592c6ca",
+      "0xa1f126a6361db5573a50743e31b458f0485399963c3b0f53e6784ade6299258e"
+    ],
+    "directRunIds": [
+      "0xcb1359b050a7f031522857872118b7566a96da37527c9753094df2558724bd23",
+      "0x2320a4b9dd0f79e1ac87808562b4b50a32aaab70e017d13027bbea1c66016261"
+    ],
+    "directApprovalId": "0x60b481c088fb01c6901bad6906a2c0fd222b762bdd4fcf83a25e51d851b9d07b",
+    "directPermissionVersion": "2",
+    "directFinalBudget": {
+      "spent": "4",
+      "reserved": "0",
+      "approvedSpent": "3",
+      "approvedReserved": "0"
+    },
+    "originalDirectDelivery": {
+      "runId": "0x2a7182ecff169d59f56153ae4e39db2b44746f3019a020b2b493d3e189debd0a",
+      "phase": "confirmed_original_result",
+      "resultId": "0x4469b56c086cf965d653ccb75bbb96d91f5ebcfd813868b81db352033f21596f",
+      "creationDigest": "D8EkKRGpnLvBoUzHvzJjjyAfEp2DkuHKJ4PczeD6oyjS"
+    },
+    "directRelayReply": {
+      "success": true
+    },
+    "directRuntimeRuns": [
+      "0xe9902e0b540bd63fbdfb5683f1c36552b51853b3fb96ea3f5adac7d300e1f379",
+      "0x0b032f133206da04d1b8082932f4227bc5627ebeba68532043b68c8678e98dfb",
+      "0x38015c71f6826f9f9ef383a7544664a3bbd9bc2f29986d366cc50718e9a7d723",
+      "0x2a7182ecff169d59f56153ae4e39db2b44746f3019a020b2b493d3e189debd0a"
+    ],
+    "directMessageEnvdDispatchVerified": true,
+    "connectionRevocation": {
+      "chain_endpoint_used": true,
+      "mutual_authentication": true,
+      "heartbeat_sent": true,
+      "revoked_pointer_rejected": true,
+      "worker_revoked_heartbeat_rejected": true,
+      "coordinator_revoked_routing_rejected": true,
+      "generated_memory_keys": true,
+      "loopback_only": true
+    },
+    "hostExitedSuccessfully": true
+  },
+  "limits": {
+    "actualOSVault": true,
+    "installedUIVerified": false,
+    "envdDispatchVerified": true,
+    "hostKeyStorage": "isolated memory provider",
+    "realCoordinatorDeviceHTTP": true,
+    "humanFinalAcceptanceVerified": true,
+    "directPermissionProtocolVerified": true,
+    "directMessageEnvdDispatchVerified": true,
+    "directMessageUIVerified": false,
+    "installedHumanReviewVerified": false,
+    "reviewDecisions": "explicit scripted test approvals, not installed Human UI",
+    "physicalHostVerified": false,
+    "humanHandoverVerified": false,
+    "nativeWindowSourceVerified": false,
+    "testTransport": "isolated subprocess",
+    "technicalJournal": "memory",
+    "cleanupConfirmed": true,
+    "privateKeysInReport": false,
+    "recoveryCodeInReport": false
+  }
+}

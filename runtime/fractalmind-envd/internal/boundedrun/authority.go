@@ -76,20 +76,30 @@ func (g *Guard) Check(ctx context.Context) error {
 	if state.ID != g.command.Capability.ID || state.Revoked || state.Target != g.command.Target || state.RevocationVersion != uint64(g.command.Capability.RevocationVersion) || !slices.Contains(state.AuthorizedSigners, g.command.Signer) || !slices.Contains(state.Actions, g.command.Action) || !slices.Contains(state.Scopes, g.command.Scope) || state.ManagedInstance == nil || state.ManagedInstance.ID != g.managedID || state.ManagedInstance.Runtime != "bounded-process-v1" || state.ManagedInstance.WorkspaceHash != g.workspaceHash || state.AuthorityVersionHash == "" {
 		return ErrBoundary
 	}
-	if state.Contract == nil || state.Handover == nil {
-		return ErrBoundary
-	}
-	if err := nodecommand.ValidateExecutionHandover(g.command, state); err != nil {
-		return err
-	}
-	if g.handover == nil {
-		copy := *state.Handover
-		g.handover = &copy
-	} else if *g.handover != *state.Handover {
-		return ErrBoundary
-	}
-	if err := nodecommand.ValidateExecutionContract(g.command, state.Contract); err != nil {
-		return err
+	if g.command.Action == "direct.message" {
+		reader, ok := g.reader.(nodecommand.DirectCommandAuthority)
+		if !ok || state.Direct == nil || state.Contract != nil || state.Handover != nil {
+			return ErrBoundary
+		}
+		if err := reader.ValidateDirectCommand(ctx, g.command, state); err != nil {
+			return err
+		}
+	} else {
+		if state.Contract == nil || state.Handover == nil || state.Direct != nil {
+			return ErrBoundary
+		}
+		if err := nodecommand.ValidateExecutionHandover(g.command, state); err != nil {
+			return err
+		}
+		if g.handover == nil {
+			copy := *state.Handover
+			g.handover = &copy
+		} else if *g.handover != *state.Handover {
+			return ErrBoundary
+		}
+		if err := nodecommand.ValidateExecutionContract(g.command, state.Contract); err != nil {
+			return err
+		}
 	}
 	run, found, err := g.reader.LookupExecution(ctx, g.command.Capability.ID, g.fingerprint)
 	if err != nil {
@@ -102,6 +112,9 @@ func (g *Guard) Check(ctx context.Context) error {
 		return ErrBoundary
 	}
 	if (run.Contract == nil) != (state.Contract == nil) || (run.Contract != nil && *run.Contract != *state.Contract) {
+		return ErrBoundary
+	}
+	if g.command.Action == "direct.message" && (run.Direct == nil || run.Direct.PermissionID != state.Direct.ID || run.Direct.PermissionVersion != state.Direct.Version || run.Direct.ApprovalID != state.Direct.ApprovalID) {
 		return ErrBoundary
 	}
 	if g.command.Budget != nil {

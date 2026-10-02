@@ -123,6 +123,63 @@ func TestChainStartConfirmsOwnAttemptAfterLedgerLag(t *testing.T) {
 	}
 }
 
+func TestDirectStartUsesExactExtensionAndApprovalArguments(t *testing.T) {
+	for _, approved := range []bool{false, true} {
+		t.Run(fmt.Sprintf("approved=%v", approved), func(t *testing.T) {
+			kp, run, r, state := reservationFixture(t)
+			run.Action, run.Scope, r.Action, r.CommandScope = "direct.message", "direct", "direct.message", "direct"
+			run.Budget = &nodecommand.BudgetClaim{Asset: "TOOL_CALLS", Amount: 3}
+			r.Budget = run.Budget
+			run.Direct = &nodecommand.DirectExecutionAuthority{PermissionID: "0x10", PermissionVersion: 2, MessageID: "0x11", BoundaryHash: "boundary"}
+			state.Direct = &nodecommand.DirectPermissionAuthority{ID: "0x10", Version: 2, BoundaryHash: "boundary"}
+			fn := "begin_message"
+			want := []interface{}{ObjectArgument("0x10"), ObjectArgument("0x11"), ObjectArgument(run.ID), ObjectArgument(run.CapabilityID), ObjectArgument(run.Target.OrganizationID), ObjectArgument(run.HumanID), ObjectArgument(run.GrantID), ObjectArgument(run.MembershipID), ObjectArgument(run.CoordinatorBindingID), ObjectArgument(run.ManagedAgentID)}
+			if approved {
+				fn = "begin_approved_message"
+				run.Direct.ApprovalID, run.Direct.ApprovingGrantID = "0x12", "0x13"
+				state.Direct.ApprovalID, state.Direct.ApprovingGrantID = "0x12", "0x13"
+				want = []interface{}{ObjectArgument("0x10"), ObjectArgument("0x12"), ObjectArgument("0x11"), ObjectArgument(run.ID), ObjectArgument(run.CapabilityID), ObjectArgument(run.Target.OrganizationID), ObjectArgument(run.HumanID), ObjectArgument(run.GrantID), ObjectArgument("0x13"), ObjectArgument(run.MembershipID), ObjectArgument(run.CoordinatorBindingID), ObjectArgument(run.ManagedAgentID)}
+			}
+			var attempt string
+			reader := executionLookupFunc(func(context.Context, string, string) (nodecommand.ChainExecution, bool, error) {
+				if attempt != "" {
+					run.State = 1
+					run.AttemptID = attempt
+				}
+				return run, true, nil
+			})
+			sends := 0
+			pkg := "0x" + fmt.Sprintf("%064x", 99)
+			rpc := &reservationRPC{
+				build: func(req models.MoveCallRequest) (models.TxnMetaData, error) {
+					if req.Module != "direct_agent" || req.Function != fn || req.PackageObjectId != pkg || len(req.Arguments) != len(want)+2 {
+						t.Fatalf("wrong direct start: %+v", req)
+					}
+					for i, value := range want {
+						if req.Arguments[i] != value {
+							t.Fatalf("arg %d got %v want %v", i, req.Arguments[i], value)
+						}
+					}
+					attempt = attemptFromCall(req)
+					return models.TxnMetaData{TxBytes: base64.StdEncoding.EncodeToString([]byte(attempt))}, nil
+				},
+				send: func(req models.SignAndExecuteTransactionBlockRequest) (models.SuiTransactionBlockResponse, error) {
+					sends++
+					return txResponse(t, req.TxnMetaData, "success"), nil
+				},
+			}
+			backend, err := NewChainReservations(reader, rpc, kp, "0x42", "", pkg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := backend.Reserve(context.Background(), r, state)
+			if err != nil || result.Execution == nil || result.Execution.AttemptID != attempt || sends != 1 {
+				t.Fatal("direct own-start failed", err, result)
+			}
+		})
+	}
+}
+
 func TestChainStartUnknownNeverResendsOrAdoptsAnotherAttempt(t *testing.T) {
 	for _, mode := range []string{"receipt lost", "different digest", "another attempt", "known rejection"} {
 		t.Run(mode, func(t *testing.T) {

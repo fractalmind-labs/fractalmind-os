@@ -138,6 +138,15 @@ func (v *Validator) Validate(ctx context.Context, command NodeCommand) (Validati
 	if err := v.validateAuthority(command, state); err != nil {
 		return ValidationResult{}, err
 	}
+	if command.Action == "direct.message" {
+		reader, ok := v.authority.(DirectCommandAuthority)
+		if !ok {
+			return ValidationResult{}, reject(CodeUnauthorized, "chain-backed direct message verification is required", nil)
+		}
+		if err := reader.ValidateDirectCommand(ctx, command, state); err != nil {
+			return ValidationResult{}, err
+		}
+	}
 
 	if !v.authority.Supports(state.ReservationScope) {
 		return ValidationResult{}, reject(CodeUnauthorized, "authority store does not support capability reservation scope", nil)
@@ -251,6 +260,13 @@ func (v *Validator) validateAuthority(command NodeCommand, state CapabilityState
 		return reject(CodeRiskUnclassified, "action has no explicit risk classification", nil)
 	}
 	_, budgeted := v.options.BudgetedActions[command.Action]
+	if command.Action == "direct.message" {
+		p, err := ParseDirectRequest(command, state.Direct)
+		if err != nil {
+			return err
+		}
+		budgeted = p.Bounds.MaxCalls > 0
+	}
 	if budgeted && command.Budget == nil {
 		return reject(CodeBudgetExceeded, "action requires an explicit budget claim", nil)
 	}

@@ -92,7 +92,7 @@ func newChainRuntimeExecutor(cfg *config.Config, keys *hostidentity.Keys, rpc ch
 		clear(private)
 		return nil, err
 	}
-	reservations, err := sui.NewChainReservations(resolver, rpc, signer, current, cfg.SUI.OkrPackageID)
+	reservations, err := sui.NewChainReservations(resolver, rpc, signer, current, cfg.SUI.OkrPackageID, cfg.SUI.DirectPackageID)
 	if err != nil {
 		clear(private)
 		return nil, err
@@ -108,7 +108,7 @@ func newChainRuntimeExecutor(cfg *config.Config, keys *hostidentity.Keys, rpc ch
 		BudgetedActions: signedCommandHighRiskActions(), MaxCommandTTL: 5 * time.Minute,
 		MaxLowRiskCheckpointAge: 24 * time.Hour, MaxHighRiskCheckpointAge: 2 * time.Minute,
 	})
-	results, err := sui.NewChainExecutionStore(resolver, rpc, signer, current, keys.EncryptionSecret, sui.ChainExecutionStoreOptions{ResultGasBudget: cfg.Runtime.ResultGasBudget, OkrPackageID: cfg.SUI.OkrPackageID})
+	results, err := sui.NewChainExecutionStore(resolver, rpc, signer, current, keys.EncryptionSecret, sui.ChainExecutionStoreOptions{ResultGasBudget: cfg.Runtime.ResultGasBudget, OkrPackageID: cfg.SUI.OkrPackageID, DirectPackageID: cfg.SUI.DirectPackageID})
 	if err != nil {
 		clear(private)
 		return nil, err

@@ -17,15 +17,16 @@ import (
 )
 
 var actionOperations = map[string]Operation{
-	"inventory":    OperationInventory,
-	"status":       OperationStatus,
-	"start":        OperationStart,
-	"stop":         OperationStop,
-	"assign":       OperationAssign,
-	"monitor":      OperationMonitor,
-	"logs":         OperationLogs,
-	"health":       OperationHealth,
-	"availability": OperationAvailability,
+	"inventory":      OperationInventory,
+	"status":         OperationStatus,
+	"start":          OperationStart,
+	"stop":           OperationStop,
+	"assign":         OperationAssign,
+	"monitor":        OperationMonitor,
+	"logs":           OperationLogs,
+	"health":         OperationHealth,
+	"availability":   OperationAvailability,
+	"direct.message": OperationDirect,
 }
 
 type Executor struct {
@@ -72,6 +73,8 @@ type payload struct {
 	} `json:"measurement,omitempty"`
 	Handover     *nodecommand.HandoverProposal        `json:"handover_review,omitempty"`
 	Continuation *nodecommand.HandoverContinuationRef `json:"handover_continue,omitempty"`
+	Message      string                               `json:"message,omitempty"`
+	Direct       *nodecommand.DirectMessageRef        `json:"direct,omitempty"`
 }
 
 func NewExecutor(validator *nodecommand.Validator, adapter Adapter) *Executor {
@@ -257,6 +260,8 @@ func (e *Executor) executeReserved(ctx context.Context, command nodecommand.Node
 		Params:         params,
 		Bounds:         input.Bounds,
 		Handover:       input.Handover,
+		Message:        input.Message,
+		Direct:         input.Direct,
 	}
 	if err := request.Validate(); err != nil {
 		return e.runtimeRejectedExecution(ctx, key, command, checkpoint, operation, "malformed_input", err)
@@ -268,7 +273,7 @@ func (e *Executor) executeReserved(ctx context.Context, command nodecommand.Node
 	}); ok {
 		response, err = adapter.runAuthorized(ctx, request, command, checkpoint)
 	} else {
-		if request.Handover != nil {
+		if request.Handover != nil || request.Operation == OperationDirect {
 			return e.runtimeRejectedExecution(ctx, key, command, checkpoint, operation, "handover_unavailable", fmt.Errorf("adapter cannot accept native constraints"))
 		}
 		response, err = e.adapter.run(ctx, request)
@@ -341,7 +346,7 @@ func operationParams(operation Operation, input payload) (*OperationParams, erro
 	switch operation {
 	case OperationStart:
 		return &OperationParams{Restore: input.Restore}, nil
-	case OperationAssign:
+	case OperationAssign, OperationDirect:
 		return &OperationParams{Task: input.Task}, nil
 	case OperationMonitor, OperationLogs:
 		lines := DefaultLogLines

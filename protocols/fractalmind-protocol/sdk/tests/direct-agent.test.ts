@@ -251,15 +251,50 @@ function fixture(approved = false, directPackage = id(1)) {
       if (parentId === id(2)) {
         assert.equal(name.type, `${id(1)}::execution_extension::IndexKey`);
         assert.deepEqual(name.bcs, new Uint8Array([0]));
-        return { dynamicField: { value: { type: `${id(1)}::execution_extension::PermissionIndex`, bcs: bcs.struct("PermissionIndex", { source: bcs.struct("TypeName", {name:bcs.string()}), agents: bcs.struct("Table", {id:bcs.Address,size:bcs.u64()}) }).serialize({source:{name:`${directPackage.slice(2)}::direct_agent::Witness`},agents:Table(31,1)}).toBytes() } } };
+        return {
+          dynamicField: {
+            value: {
+              type: `${id(1)}::execution_extension::PermissionIndex`,
+              bcs: bcs
+                .struct("PermissionIndex", {
+                  source: bcs.struct("TypeName", { name: bcs.string() }),
+                  agents: bcs.struct("Table", {
+                    id: bcs.Address,
+                    size: bcs.u64(),
+                  }),
+                })
+                .serialize({
+                  source: {
+                    name: `${directPackage.slice(2)}::direct_agent::Witness`,
+                  },
+                  agents: Table(31, 1),
+                })
+                .toBytes(),
+            },
+          },
+        };
       }
-      if (parentId === id(31)) return { dynamicField: { value: { type:`${id(2)}::object::ID`, bcs:bcs.Address.serialize(id(4)).toBytes() } } };
+      if (parentId === id(31))
+        return {
+          dynamicField: {
+            value: {
+              type: `${id(2)}::object::ID`,
+              bcs: bcs.Address.serialize(id(4)).toBytes(),
+            },
+          },
+        };
       if (parentId === id(10)) {
         assert.equal(
           name.type,
           `${id(1)}::execution_extension::FieldKey<${directPackage}::direct_agent::Witness>`,
         );
-        assert.deepEqual(name.bcs, bcs.vector(bcs.u8()).serialize(Array.from(new TextEncoder().encode("permission"))).toBytes());
+        assert.deepEqual(
+          name.bcs,
+          bcs
+            .vector(bcs.u8())
+            .serialize(Array.from(new TextEncoder().encode("permission")))
+            .toBytes(),
+        );
         return {
           dynamicField: {
             value: {
@@ -509,6 +544,44 @@ test("even correctly re-signed messages cannot replace immutable source content,
   }
 });
 
+test("ordinary direct preparation checks actions, per-message ceiling and remaining standing budget before mutation", async () => {
+  for (const mutate of [
+    (f: ReturnType<typeof fixture>) => {
+      f.permission.allowed_actions = ["status"];
+    },
+    (f: ReturnType<typeof fixture>) => {
+      f.permission.max_calls = "2";
+    },
+    (f: ReturnType<typeof fixture>) => {
+      f.permission.spent = "4";
+    },
+    (f: ReturnType<typeof fixture>) => {
+      f.permission.reserved = "4";
+    },
+  ]) {
+    const f = fixture(),
+      tx = new Transaction();
+    mutate(f);
+    await assert.rejects(
+      f.sdk.nodeExecution.prepareCommand({
+        ...f.authority,
+        command: await f.command(),
+        tx,
+      }),
+      /standing permission/,
+    );
+    assert.equal(tx.getData().commands.length, 0);
+  }
+  const f = fixture(true);
+  f.permission.max_calls = "1";
+  f.permission.spent = "6";
+  const tx = await f.sdk.nodeExecution.prepareCommand({
+    ...f.authority,
+    command: await f.command(),
+  });
+  assert.ok(tx.getData().commands.length > 0);
+});
+
 test("revoked or replaced Host, managed instance, policy and capability are rejected before transaction mutation", async () => {
   for (const mutate of [
     (f: ReturnType<typeof fixture>) => {
@@ -714,13 +787,23 @@ test("direct lifecycle builders retain unknown reservations and pin single appro
   );
 });
 
- test("split direct package pins reads and routes execution separately from core", async () => {
-  const direct = id(50), f = fixture(false, direct), command = await f.command();
-  assert.equal((await f.sdk.directAgent.getPermissionForAgent(id(2), id(5))).id, id(4));
-  const tx = await f.sdk.nodeExecution.prepareCommand({ ...f.authority, command });
-  const call = tx.getData().commands.find(x => x.$kind === "MoveCall")!.MoveCall;
+test("split direct package pins reads and routes execution separately from core", async () => {
+  const direct = id(50),
+    f = fixture(false, direct),
+    command = await f.command();
+  assert.equal(
+    (await f.sdk.directAgent.getPermissionForAgent(id(2), id(5))).id,
+    id(4),
+  );
+  const tx = await f.sdk.nodeExecution.prepareCommand({
+    ...f.authority,
+    command,
+  });
+  const call = tx
+    .getData()
+    .commands.find((x) => x.$kind === "MoveCall")!.MoveCall;
   assert.equal(call.package, direct);
   assert.equal(call.module, "direct_agent");
   assert.equal(f.sdk.client.typesPackageId, id(1));
   assert.equal(f.sdk.client.directTypesPackageId, direct);
- });
+});

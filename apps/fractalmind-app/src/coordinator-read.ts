@@ -34,7 +34,7 @@ type ReadRequest = {
   method: "GET" | "POST";
   path: string;
   command_hash?: string;
-  command_scope?: "observation" | "control";
+  command_scope?: "observation" | "control" | "direct";
 };
 type Challenge = ReadRequest & {
   chain_identifier: string;
@@ -191,9 +191,8 @@ export class CoordinatorReadClient {
       "health",
       "availability",
     ].includes(snapshot.action);
-    const control = ["start", "stop", "assign", "direct.message"].includes(
-      snapshot.action,
-    );
+    const control = ["start", "stop", "assign"].includes(snapshot.action);
+    const direct = snapshot.action === "direct.message";
     if (
       !id.test(bindingId) ||
       snapshot.signer !== this.signer.device.address ||
@@ -201,9 +200,10 @@ export class CoordinatorReadClient {
       !id.test(snapshot.target.node_id) ||
       !(
         (read && snapshot.scope === "observation") ||
-        (control && snapshot.scope === "control")
+        (control && snapshot.scope === "control") ||
+        (direct && snapshot.scope === "direct")
       ) ||
-      (control && !snapshot.target.agent_id) ||
+      ((control || direct) && !snapshot.target.agent_id) ||
       snapshot.expires_at_ms <= Date.now()
     )
       throw new CoordinatorReadError("invalid_command");
@@ -222,7 +222,7 @@ export class CoordinatorReadClient {
       {
         body,
         commandHash,
-        scope: control ? "control" : "observation",
+        scope: direct ? "direct" : control ? "control" : "observation",
         expiresAtMs: snapshot.expires_at_ms,
       },
     );
@@ -233,11 +233,12 @@ export class CoordinatorReadClient {
     command?: {
       body: string;
       commandHash: string;
-      scope: "observation" | "control";
+      scope: "observation" | "control" | "direct";
       expiresAtMs: number;
     },
   ) {
-    const action = command?.scope === "control" ? "operate" : "read";
+    const action =
+      command && command.scope !== "observation" ? "operate" : "read";
     await this.verifier.verifyOrganization(this.organizationId, action);
     const before = await this.binding(bindingId),
       b = before.binding;

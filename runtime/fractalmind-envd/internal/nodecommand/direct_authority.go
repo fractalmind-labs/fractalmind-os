@@ -25,6 +25,9 @@ type DirectPermissionAuthority struct {
 	Actions                                                           []string
 	WorkspaceProtected                                                bool
 }
+type DirectCommandAuthority interface {
+	ValidateDirectCommand(context.Context, NodeCommand, CapabilityState) error
+}
 type DirectMessageRef struct {
 	Version           string       `json:"version"`
 	PermissionID      string       `json:"permission_id"`

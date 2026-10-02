@@ -16,29 +16,38 @@ import (
 // It atomically transitions its checkpoint using the admitted Host signer.
 // A read of RUNNING after a timeout never authorizes local execution.
 type ChainReservations struct {
-	resolver     nodecommand.ChainExecutionReader
-	rpc          RPCClient
-	keypair      *Keypair
-	packageID    string
-	okrPackageID string
+	resolver        nodecommand.ChainExecutionReader
+	rpc             RPCClient
+	keypair         *Keypair
+	packageID       string
+	okrPackageID    string
+	directPackageID string
 }
 
-func NewChainReservations(resolver nodecommand.ChainExecutionReader, rpc RPCClient, keypair *Keypair, packageID string, okrPackages ...string) (*ChainReservations, error) {
+func NewChainReservations(resolver nodecommand.ChainExecutionReader, rpc RPCClient, keypair *Keypair, packageID string, extensionPackages ...string) (*ChainReservations, error) {
 	if resolver == nil || rpc == nil || keypair == nil || packageID == "" {
 		return nil, fmt.Errorf("chain reader, transaction transport, Host signer and package ID are required")
 	}
-	if len(okrPackages) > 1 {
-		return nil, fmt.Errorf("at most one OKR call package is supported")
+	if len(extensionPackages) > 2 {
+		return nil, fmt.Errorf("at most OKR and direct call packages are supported")
 	}
 	okr := packageID
-	if len(okrPackages) == 1 && okrPackages[0] != "" {
+	if len(extensionPackages) >= 1 && extensionPackages[0] != "" {
 		var err error
-		okr, err = normalizeAddress(okrPackages[0])
+		okr, err = normalizeAddress(extensionPackages[0])
 		if err != nil {
 			return nil, err
 		}
 	}
-	return &ChainReservations{resolver: resolver, rpc: rpc, keypair: keypair, packageID: packageID, okrPackageID: okr}, nil
+	direct := packageID
+	if len(extensionPackages) == 2 && extensionPackages[1] != "" {
+		var err error
+		direct, err = normalizeAddress(extensionPackages[1])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &ChainReservations{resolver: resolver, rpc: rpc, keypair: keypair, packageID: packageID, okrPackageID: okr, directPackageID: direct}, nil
 }
 func (s *ChainReservations) Supports(scope nodecommand.ReservationScope) bool {
 	return scope == nodecommand.ReservationScopeNode
@@ -77,7 +86,18 @@ func (s *ChainReservations) Reserve(ctx context.Context, r nodecommand.Reservati
 		function = "begin_agent_command"
 	}
 	module, targetPackage := "node_execution", s.packageID
-	if execution.Contract != nil {
+	if execution.Direct != nil {
+		d := execution.Direct
+		if execution.Contract != nil || state.Direct == nil || state.Contract != nil || state.Direct.ID != d.PermissionID || state.Direct.Version != d.PermissionVersion || state.Direct.ApprovalID != d.ApprovalID || state.Direct.ApprovingGrantID != d.ApprovingGrantID || state.Direct.BoundaryHash != d.BoundaryHash {
+			return nodecommand.ReservationResult{}, fmt.Errorf("prepared direct permission changed")
+		}
+		module, function, targetPackage = "direct_agent", "begin_message", s.directPackageID
+		args = append([]interface{}{ObjectArgument(d.PermissionID), ObjectArgument(d.MessageID)}, args...)
+		if d.ApprovalID != "" {
+			function = "begin_approved_message"
+			args = []interface{}{ObjectArgument(d.PermissionID), ObjectArgument(d.ApprovalID), ObjectArgument(d.MessageID), ObjectArgument(execution.ID), ObjectArgument(r.CapabilityID), ObjectArgument(execution.Target.OrganizationID), ObjectArgument(execution.HumanID), ObjectArgument(execution.GrantID), ObjectArgument(d.ApprovingGrantID), ObjectArgument(execution.MembershipID), ObjectArgument(execution.CoordinatorBindingID), ObjectArgument(execution.ManagedAgentID)}
+		}
+	} else if execution.Contract != nil {
 		if state.Contract == nil || *execution.Contract != *state.Contract {
 			return nodecommand.ReservationResult{}, fmt.Errorf("prepared OKR contract changed")
 		}

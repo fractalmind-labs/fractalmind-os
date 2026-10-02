@@ -75,7 +75,7 @@ func allowedReadPath(path string) bool {
 func (a *DeviceReadAuth) valid(r DeviceReadRequest) bool {
 	base := readID.MatchString(r.HumanID) && readID.MatchString(r.GrantID) && readID.MatchString(r.DeviceAddress) && r.OrganizationID == a.org && r.BindingID == a.binding
 	read := r.Method == http.MethodGet && allowedReadPath(r.Path) && r.CommandHash == "" && r.CommandScope == ""
-	command := r.Method == http.MethodPost && allowedCommandPath(r.Path) && canonicalCommandHash(r.CommandHash) && (r.CommandScope == "observation" || r.CommandScope == "control")
+	command := r.Method == http.MethodPost && allowedCommandPath(r.Path) && canonicalCommandHash(r.CommandHash) && (r.CommandScope == "observation" || r.CommandScope == "control" || r.CommandScope == "direct")
 	return base && (read || command)
 }
 func allowedCommandPath(path string) bool {
@@ -90,7 +90,7 @@ func canonicalCommandHash(hash string) bool {
 // The read grant alone never admits a control request. Host execution also
 // independently checks capability, target, budgets and the prepared Run.
 func (r DeviceReadRequest) RequiredDeviceAction() byte {
-	if r.Method == http.MethodPost && r.CommandScope == "control" {
+	if r.Method == http.MethodPost && (r.CommandScope == "control" || r.CommandScope == "direct") {
 		return 2
 	}
 	return 1
@@ -242,8 +242,9 @@ func validateCommandRequest(r *http.Request, c DeviceReadChallenge, now int64) e
 	command := packet.Command
 	parts := strings.Split(c.Path, "/")
 	read := command.Action == "inventory" || command.Action == "status" || command.Action == "monitor" || command.Action == "logs" || command.Action == "health" || command.Action == "availability"
-	control := command.Action == "start" || command.Action == "stop" || command.Action == "assign" || command.Action == "direct.message"
-	if command.Version != "1" || command.IssuedAtMS <= 0 || command.IssuedAtMS > now+30_000 || command.ExpiresAtMS <= now || command.ExpiresAtMS <= command.IssuedAtMS || command.ExpiresAtMS-command.IssuedAtMS > 300_000 || command.Signer != c.DeviceAddress || command.Target.OrganizationID != c.OrganizationID || command.Target.NodeID != parts[3] || command.Scope != c.CommandScope || !(read && command.Scope == "observation" || control && command.Scope == "control") || control && command.Target.AgentID == "" || nodecommand.HashPayload(command.Payload) != command.PayloadHash {
+	control := command.Action == "start" || command.Action == "stop" || command.Action == "assign"
+	direct := command.Action == "direct.message"
+	if command.Version != "1" || command.IssuedAtMS <= 0 || command.IssuedAtMS > now+30_000 || command.ExpiresAtMS <= now || command.ExpiresAtMS <= command.IssuedAtMS || command.ExpiresAtMS-command.IssuedAtMS > 300_000 || command.Signer != c.DeviceAddress || command.Target.OrganizationID != c.OrganizationID || command.Target.NodeID != parts[3] || command.Scope != c.CommandScope || !(read && command.Scope == "observation" || control && command.Scope == "control" || direct && command.Scope == "direct") || (control || direct) && command.Target.AgentID == "" || nodecommand.HashPayload(command.Payload) != command.PayloadHash {
 		return fmt.Errorf("signed command scope mismatch")
 	}
 	signing, err := command.SigningBytes()

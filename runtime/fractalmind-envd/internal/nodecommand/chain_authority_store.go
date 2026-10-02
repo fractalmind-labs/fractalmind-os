@@ -32,6 +32,9 @@ func (s *ChainAuthorityStore) Supports(scope ReservationScope) bool {
 func (s *ChainAuthorityStore) Resolve(ctx context.Context, ref CapabilityRef) (CapabilityState, error) {
 	return s.resolver.Resolve(ctx, ref)
 }
+func (s *ChainAuthorityStore) ValidateDirectCommand(ctx context.Context, command NodeCommand, state CapabilityState) error {
+	return s.resolver.ValidateDirectCommand(ctx, command, state)
+}
 func (s *ChainAuthorityStore) Inspect(ctx context.Context, reservation Reservation) (ReservationResult, bool, error) {
 	// Even a cached duplicate must not reveal protected results to a device
 	// whose grant or membership has since been revoked.

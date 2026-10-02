@@ -38,12 +38,16 @@ func deviceReadFixture(t *testing.T) (*DeviceReadAuth, *edSigner, DeviceReadRequ
 }
 
 func TestDeviceCommandChallengeBindsBodySignerScopeAndSingleDispatch(t *testing.T) {
-	for _, mode := range []string{"valid", "replay", "body changed", "wrong signature", "foreign signer", "foreign host", "scope downgrade", "read-only phone", "revoked", "expired", "query", "lost authority during output"} {
+	for _, mode := range []string{"valid", "direct", "direct old scope", "replay", "body changed", "wrong signature", "foreign signer", "foreign host", "scope downgrade", "read-only phone", "revoked", "expired", "query", "lost authority during output"} {
 		t.Run(mode, func(t *testing.T) {
 			a, d, request, pin := deviceReadFixture(t)
 			host := "0x" + strings.Repeat("5", 64)
 			now := time.Now().UnixMilli()
 			command := nodecommand.NodeCommand{Version: "1", CommandID: "cmd-native", Signer: d.Address(), Target: nodecommand.Target{OrganizationID: request.OrganizationID, NodeID: host, AgentID: "agent-native"}, Action: "assign", Scope: "control", Capability: nodecommand.CapabilityRef{ID: "0x" + strings.Repeat("6", 64), RevocationVersion: 1}, Nonce: "cmd-nonce", IssuedAtMS: now, ExpiresAtMS: now + 60_000, IdempotencyKey: "cmd-native", Payload: json.RawMessage(`{}`)}
+			if strings.HasPrefix(mode, "direct") {
+				command.Action = "direct.message"
+				command.Scope = "direct"
+			}
 			command.PayloadHash = nodecommand.HashPayload(command.Payload)
 			signer := d
 			if mode == "foreign signer" {
@@ -68,6 +72,9 @@ func TestDeviceCommandChallengeBindsBodySignerScopeAndSingleDispatch(t *testing.
 			request.Method = "POST"
 			request.Path = "/api/sentinels/" + host + "/command"
 			request.CommandScope = "control"
+			if mode == "direct" {
+				request.CommandScope = "direct"
+			}
 			hash := sha256.Sum256(body)
 			request.CommandHash = hex.EncodeToString(hash[:])
 			if mode == "scope downgrade" {
@@ -120,7 +127,7 @@ func TestDeviceCommandChallengeBindsBodySignerScopeAndSingleDispatch(t *testing.
 			}))
 			output := httptest.NewRecorder()
 			handler.ServeHTTP(output, incoming)
-			if mode == "valid" || mode == "replay" {
+			if mode == "valid" || mode == "direct" || mode == "replay" {
 				if output.Code != 200 || calls != 1 {
 					t.Fatal(output.Code, output.Body.String(), calls)
 				}

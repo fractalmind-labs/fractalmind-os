@@ -133,6 +133,16 @@ func appendMoveArgument(ptb *v2.ProgrammableTransaction, packageID string, arg a
 	if err != nil {
 		return nil, err
 	}
+	// A caller may use the same immutable object in two parameter positions,
+	// such as the executing and approving DeviceGrant. Sui requires one input
+	// per object ID; both arguments must reference that same input.
+	if id := in.GetObjectId(); id != "" {
+		for index, existing := range ptb.Inputs {
+			if existing.GetObjectId() == id {
+				return inputArgument(uint32(index)), nil
+			}
+		}
+	}
 	index := uint32(len(ptb.Inputs))
 	ptb.Inputs = append(ptb.Inputs, in)
 	return inputArgument(index), nil
