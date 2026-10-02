@@ -10,6 +10,7 @@ import {
   AgentImport,
   AgentImportError,
   managedInstance,
+  observationRuntime,
   type AgentImportSelection,
   type AlreadyImported,
   type ManagedInstance,
@@ -330,8 +331,8 @@ export default function AgentImportFlow({
           </div>
           <p>
             {t(
-              "保留原进程和任务。链上确认后建立组织关联，tmux 不能获得约束执行或 OKR 接管权限。",
-              "Keep the existing process and tasks. Confirmation creates an organization association on Sui; tmux receives no constrained execution or OKR handover authority.",
+              "保留原进程和任务。链上确认后建立仅观察关联；支持约束的适配器也必须另行完成交接与 OKR 授权。",
+              "Keep the existing process and tasks. Confirmation creates an observation-only association on Sui; bounded adapters require separate handover and OKR authorization.",
             )}
           </p>
           {restored && !unsubmitted && !outcome && !record && (
@@ -351,7 +352,8 @@ export default function AgentImportFlow({
           {target && !outcome && !record && (
             <section className="panel">
               <h3 className="long-id">
-                {target.instance.session} · {target.instance.pane}
+                {target.instance.session}
+                {target.instance.pane && ` · ${target.instance.pane}`}
               </h3>
               <p>
                 {t("组织", "Organization")}:{" "}
@@ -431,7 +433,8 @@ export default function AgentImportFlow({
                     )}
                   </p>
                   {reviewed.control_confirmed ||
-                  reviewed.runtime !== "tmux-observe" ? (
+                  reviewed.runtime !==
+                    observationRuntime(reviewed.instance_id) ? (
                     <p className="warn">{t(...messages.handover_required)}</p>
                   ) : (
                     <button
@@ -499,7 +502,8 @@ export default function AgentImportFlow({
                 !!(
                   reviewed &&
                   (reviewed.control_confirmed ||
-                    reviewed.runtime !== "tmux-observe")
+                    reviewed.runtime !==
+                      observationRuntime(reviewed.instance_id))
                 ) ||
                 !!quote ||
                 restored

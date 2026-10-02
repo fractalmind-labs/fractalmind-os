@@ -137,7 +137,10 @@ never generates a replacement identity. The macOS build requires CGO and
 Xcode command-line tools for Keychain access. Linux requires an available
 Secret Service session; Windows uses Credential Manager. The current
 agent-manager adapter supports observation only. Control requires the bounded
-runtime still being implemented; a chain capability alone does not grant it.
+runtime and a current chain-confirmed execution; a chain capability alone does
+not grant it. The `native-file-agent` adapter supports 1–3 explicit text-file
+goals with bounded file tools. App handover and execution authorization remain
+under implementation.
 
 ### Host invitation admission
 
@@ -219,6 +222,17 @@ existing server. Other platforms report the adapter as unsupported. The App's
 Team & Agents view checks Host signatures, workspaces and scan freshness;
 discovery does not import, restart or grant control of an Agent. See
 [discovery implementation and remaining acceptance](../../docs/product/v020-agent-discovery.md).
+
+With `runtime.enabled: true`, `runtime.adapter_kind: native-file-agent` and
+`runtime.workspaces` mapping binding names to existing absolute directories,
+the installed native adapter also reports a separate signed `native_discovery`
+snapshot. On macOS/Linux its `native-*` IDs bind this envd kernel process birth
+to the configured binding name. Canonical directory identities are pinned;
+replacement directories invalidate the scan and cannot become an authorized
+tool root. Restarting envd creates new instance IDs. tmux entries cannot claim
+this adapter's capability. Discovery and App import remain observation-only;
+they do not adopt an old task, confirm control or continue an OKR. See
+[native adapter discovery and limits](../../docs/product/v020-native-agent-discovery.md).
 
 Actual loopback sockets with generated memory test keys and race checks passed.
 NativeStore/main startup, cloud/TLS, desktop authorization, Agent import and five-platform

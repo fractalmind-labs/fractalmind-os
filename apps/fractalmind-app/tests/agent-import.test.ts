@@ -51,7 +51,12 @@ const Imported = bcs.struct("AgentImported", {
   instance_id: bcs.string(),
   duplicate: bcs.bool(),
 });
-async function fixture(rebind = false, controlled = false, rejoined = false) {
+async function fixture(
+  rebind = false,
+  controlled = false,
+  rejoined = false,
+  native = false,
+) {
   const key = Ed25519Keypair.generate(),
     host = Ed25519Keypair.generate(),
     coordinator = Ed25519Keypair.generate(),
@@ -116,7 +121,7 @@ async function fixture(rebind = false, controlled = false, rejoined = false) {
   const selected = {
     bindingId,
     hostAddress: host.toSuiAddress(),
-    instanceId: "tmux-" + "a".repeat(64),
+    instanceId: (native ? "native-" : "tmux-") + "a".repeat(64),
     workspaceHash: "b".repeat(64),
   };
   const record = {
@@ -125,7 +130,7 @@ async function fixture(rebind = false, controlled = false, rejoined = false) {
     membership_id: memberId,
     host_address: selected.hostAddress,
     instance_id: selected.instanceId,
-    runtime: "tmux-observe",
+    runtime: native ? "bounded-process-v1" : "tmux-observe",
     workspace_hash: Array(32).fill(0xbb),
     control_confirmed: false,
     confirmed_by_human: human,
@@ -260,7 +265,10 @@ async function fixture(rebind = false, controlled = false, rejoined = false) {
       host: {
         rebindAgent: (input: any) => {
           assert.equal(input.controlConfirmed, false);
-          assert.equal(input.runtime, "tmux-observe");
+          assert.equal(
+            input.runtime,
+            native ? "bounded-process-v1" : "tmux-observe",
+          );
           assert.equal(input.managedAgentId, recordId);
           assert.equal(input.expectedVersion, "1");
           assert.equal(input.membershipId, memberId);
@@ -272,7 +280,10 @@ async function fixture(rebind = false, controlled = false, rejoined = false) {
         },
         importAgent: (input: any) => {
           assert.equal(input.controlConfirmed, false);
-          assert.equal(input.runtime, "tmux-observe");
+          assert.equal(
+            input.runtime,
+            native ? "bounded-process-v1" : "tmux-observe",
+          );
           assert.equal(input.membershipId, memberId);
           assert.equal(input.workspaceHash.length, 32);
           return new Transaction();
@@ -317,7 +328,7 @@ async function fixture(rebind = false, controlled = false, rejoined = false) {
         state: valid ? "verified" : "unknown",
         membershipId: memberId,
         freshUntilMs: Date.now() + 60000,
-        discovery: {
+        [native ? "nativeDiscovery" : "discovery"]: {
           state: mode === "failed-scan" ? "unavailable" : "complete",
           freshUntilMs:
             mode === "expired-scan" ? Date.now() - 1 : Date.now() + 60000,
@@ -331,13 +342,15 @@ async function fixture(rebind = false, controlled = false, rejoined = false) {
                       mode === "unverified-instance"
                         ? "unverified"
                         : "observed",
-                    runtime: "tmux-observe",
-                    continuity: "kernel-process-v1",
+                    runtime: native ? "bounded-process-v1" : "tmux-observe",
+                    continuity: native
+                      ? "envd-process-v1"
+                      : "kernel-process-v1",
                     workspaceHash:
                       mode === "changed-workspace"
                         ? "c".repeat(64)
                         : selected.workspaceHash,
-                    pane: "%1",
+                    pane: native ? "" : "%1",
                   },
                 ],
         },
@@ -705,4 +718,66 @@ test("observation rebind reviews previous membership/workspace but uses the fres
   assert.ok(!("status" in quote));
   assert.equal(f.counts().prepares, 1);
   assert.equal(f.counts().submits, 0);
+});
+
+test("native file instances import and explicitly rebind for observation without granting control", async () => {
+  for (const rebind of [false, true]) {
+    const f = await fixture(rebind, false, false, true);
+    const quote = await f.controller.prepare(f.selected, attempt, true);
+    assert.ok(!("status" in quote));
+    assert.equal(f.counts().prepares, 1);
+    f.setExists(true);
+    f.record.revoked = false;
+    if (rebind) f.record.version = "2";
+    const record = await f.controller.confirmed(f.outcome, f.selected);
+    assert.equal(record.runtime, "bounded-process-v1");
+    assert.equal(record.control_confirmed, false);
+    assert.equal(record.instance_id, f.selected.instanceId);
+    f.controller.dispose();
+  }
+});
+test("native selection cannot use tmux inventory or survive missing and stale native scans", async () => {
+  for (const mode of [
+    "expired-scan",
+    "failed-scan",
+    "missing-instance",
+    "changed-workspace",
+    "unknown-host",
+  ]) {
+    const f = await fixture(false, false, false, true);
+    f.setMode(mode);
+    await assert.rejects(
+      f.controller.prepare(f.selected, attempt, true),
+      /discovery_unavailable/,
+    );
+    assert.equal(f.counts().prepares, 0);
+    f.controller.dispose();
+  }
+  const f = await fixture(false, false, false, true);
+  (f.controller as any).reads.readHosts = async () => [
+    {
+      address: f.selected.hostAddress,
+      state: "verified",
+      membershipId: memberId,
+      freshUntilMs: Date.now() + 60000,
+      discovery: {
+        state: "complete",
+        freshUntilMs: Date.now() + 60000,
+        instances: [
+          {
+            instanceId: f.selected.instanceId,
+            state: "observed",
+            runtime: "bounded-process-v1",
+            continuity: "envd-process-v1",
+            workspaceHash: f.selected.workspaceHash,
+          },
+        ],
+      },
+    },
+  ];
+  await assert.rejects(
+    f.controller.prepare(f.selected, attempt, true),
+    /discovery_unavailable/,
+  );
+  assert.equal(f.counts().prepares, 0);
 });

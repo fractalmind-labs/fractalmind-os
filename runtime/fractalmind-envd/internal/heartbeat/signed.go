@@ -121,6 +121,9 @@ func Verify(s Signed, public []byte, now int64) (*Payload, error) {
 	if err := agent.ValidateDiscovery(payload.Discovery, payload.Timestamp); err != nil {
 		return nil, err
 	}
+	if err := agent.ValidateNativeDiscovery(payload.NativeDiscovery, payload.Timestamp); err != nil {
+		return nil, err
+	}
 	return &payload, nil
 }
 

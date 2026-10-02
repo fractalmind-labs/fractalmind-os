@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/agent"
 	"io"
 	"sync"
 	"time"
@@ -36,6 +37,15 @@ type Executor struct {
 
 	mu       sync.Mutex
 	inflight map[string]*flight
+}
+
+// Only the installed native adapter can publish these instances. Reading an
+// inventory neither reserves a command nor runs the observer or a file goal.
+func (e *Executor) NativeDiscovery() *agent.Discovery {
+	if adapter, ok := e.adapter.(interface{ NativeDiscovery() *agent.Discovery }); ok {
+		return adapter.NativeDiscovery()
+	}
+	return nil
 }
 
 type execution struct {

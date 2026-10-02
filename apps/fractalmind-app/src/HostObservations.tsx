@@ -333,8 +333,10 @@ export default function HostObservations({
                       </dd>
                     </dl>
                     {showDiscovery &&
-                      (() => {
-                        const discovery = result.discovery;
+                      [
+                        { key: "tmux", discovery: result.discovery },
+                        { key: "native", discovery: result.nativeDiscovery },
+                      ].map(({ key, discovery }) => {
                         const fresh =
                           current &&
                           discovery?.freshUntilMs != null &&
@@ -342,8 +344,12 @@ export default function HostObservations({
                         const complete =
                           fresh && discovery?.state === "complete";
                         return (
-                          <section>
-                            <h4>{t("实例扫描", "Instance scan")}</h4>
+                          <section key={key}>
+                            <h4>
+                              {key === "native"
+                                ? t("原生文件 Agent", "Native file Agents")
+                                : t("tmux 实例扫描", "tmux instance scan")}
+                            </h4>
                             <p>
                               {complete
                                 ? t("Host 扫描已核验", "Host scan verified")
@@ -373,16 +379,20 @@ export default function HostObservations({
                             {complete && !discovery.instances.length && (
                               <p>
                                 {t(
-                                  "扫描完成：未发现符合命名规则的 Agent pane",
-                                  "Scan complete: no Agent panes matching the naming rules",
+                                  "扫描完成：没有可发现的实例",
+                                  "Scan complete: no discoverable instances",
                                 )}
                               </p>
                             )}
                             {complete &&
                               discovery.instances.map((instance) => (
-                                <article className="panel" key={instance.pane}>
+                                <article
+                                  className="panel"
+                                  key={instance.instanceId || instance.pane}
+                                >
                                   <h4>
-                                    {instance.session} · {instance.pane}
+                                    {instance.session}
+                                    {instance.pane && ` · ${instance.pane}`}
                                   </h4>
                                   <span className="badge">
                                     {instance.state === "observed"
@@ -419,8 +429,12 @@ export default function HostObservations({
                                   )}
                                   <p>
                                     {t(
-                                      "适配器：tmux 仅观察；不支持约束执行或 OKR 接管。",
-                                      "Adapter: tmux observation only; constrained execution and OKR handover unsupported.",
+                                      instance.runtime === "bounded-process-v1"
+                                        ? "适配器：原生文件 Agent，支持 1–3 个文件目标及有界读写。当前仅观察；执行需要交接和 ACTIVE OKR 授权。"
+                                        : "适配器：tmux 仅观察；不支持约束执行或 OKR 接管。",
+                                      instance.runtime === "bounded-process-v1"
+                                        ? "Adapter: native file Agent, supporting 1–3 file goals and bounded read/write. Observation only; execution requires handover and ACTIVE OKR authorization."
+                                        : "Adapter: tmux observation only; constrained execution and OKR handover unsupported.",
                                     )}
                                   </p>
                                   {instance.state === "observed" && (
@@ -449,7 +463,7 @@ export default function HostObservations({
                               ))}
                           </section>
                         );
-                      })()}
+                      })}
                   </article>
                 );
               })}

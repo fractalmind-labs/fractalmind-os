@@ -38,6 +38,9 @@ var ErrConflict = errors.New("workspace file changed")
 type Policy struct {
 	// The local workspace binding must match the chain ManagedAgent record.
 	Workspace string
+	// Optional physical pin supplied by the native instance inventory. Check the
+	// opened handle itself, closing the gap between a path check and OpenRoot.
+	WorkspaceIdentity os.FileInfo
 	// Paths are existing directory roots relative to Workspace, per action.
 	// Each gets its own os.Root handle, so a symlink cannot cross into another
 	// directory inside Workspace that the action was not authorized to access.
@@ -113,6 +116,12 @@ func OpenTools(policy Policy, check Check) (*Tools, error) {
 		return nil, err
 	}
 	defer root.Close()
+	if policy.WorkspaceIdentity != nil {
+		info, err := root.Stat(".")
+		if err != nil || !os.SameFile(info, policy.WorkspaceIdentity) {
+			return nil, ErrConflict
+		}
+	}
 	roots := make(map[string][]scopedRoot)
 	for action, directories := range paths {
 		for _, directory := range directories {

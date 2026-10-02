@@ -25,6 +25,7 @@ import (
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/hostidentity"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/hostjoin"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/ws"
 )
@@ -186,6 +187,15 @@ func TestHostJoinLiveCLI(t *testing.T) {
 		connected = make(chan error, 1)
 		var discovery *agent.Discovery
 		var rescan func() agent.Discovery
+		var nativeAdapter *runtimeadapter.Executor
+		if os.Getenv("FM_ENVD_NATIVE_DISCOVERY") == "1" {
+			workspace := t.TempDir()
+			adapter, e := runtimeadapter.BoundedFileAgent(reader, map[string]string{"native-files": workspace}, runtimeadapter.ObservationAgentManager("must-not-run"))
+			if e != nil {
+				t.Fatal(e)
+			}
+			nativeAdapter = runtimeadapter.NewExecutor(nil, adapter)
+		}
 		if os.Getenv("FM_ENVD_AGENT_DISCOVERY") == "1" {
 			fixtureDir, e := os.MkdirTemp("/tmp", "fm-chain-discovery-")
 			if e != nil {
@@ -211,6 +221,9 @@ func TestHostJoinLiveCLI(t *testing.T) {
 			if err == nil {
 				payload := heartbeat.NewPayload(public.Address, "physical loopback fixture", nil, time.Now())
 				payload.Discovery = discovery
+				if nativeAdapter != nil {
+					payload.NativeDiscovery = nativeAdapter.NativeDiscovery()
+				}
 				if rescan != nil {
 					fresh := rescan()
 					if fresh.State != "complete" || len(fresh.Instances) != 1 || fresh.Instances[0].State != "observed" || fresh.Instances[0].InstanceID != discovery.Instances[0].InstanceID {

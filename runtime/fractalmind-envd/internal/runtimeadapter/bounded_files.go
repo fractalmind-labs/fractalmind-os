@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/agent"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun"
@@ -14,6 +17,7 @@ type boundedFileAgent struct {
 	reader     boundedrun.ExecutionAuthority
 	workspaces map[string]string
 	observer   Adapter
+	inventory  *agent.NativeInventory
 }
 
 // BoundedFileAgent supports an explicit, measurable native file-goal adapter.
@@ -29,7 +33,22 @@ func BoundedFileAgent(reader boundedrun.ExecutionAuthority, workspaces map[strin
 		}
 		copied[instance] = directory
 	}
-	return &boundedFileAgent{reader: reader, workspaces: copied, observer: observer}, nil
+	inventory, aliases, err := agent.NewNativeInventory(copied)
+	if err != nil {
+		return nil, err
+	}
+	for id, path := range aliases {
+		if _, exists := copied[id]; exists {
+			return nil, fmt.Errorf("native instance alias collides with configured binding")
+		}
+		copied[id] = path
+	}
+	return &boundedFileAgent{reader: reader, workspaces: copied, observer: observer, inventory: inventory}, nil
+}
+
+func (a *boundedFileAgent) NativeDiscovery() *agent.Discovery {
+	d := a.inventory.Discover()
+	return &d
 }
 func (a *boundedFileAgent) Supports(operation Operation) bool {
 	if operation == OperationAssign {
@@ -62,8 +81,25 @@ func (a *boundedFileAgent) runAuthorized(ctx context.Context, request Request, c
 		return reject("boundary_denied", fmt.Errorf("signed bounds, TOOL_CALLS budget and own confirmed checkpoint are required"))
 	}
 	workspace := a.workspaces[request.Agent]
+	var workspaceIdentity os.FileInfo
 	if workspace == "" {
 		return reject("boundary_denied", fmt.Errorf("instance has no local workspace binding"))
+	}
+	if strings.HasPrefix(request.Agent, "native-") {
+		scan := a.inventory.Discover()
+		present := false
+		for _, instance := range scan.Instances {
+			if instance.InstanceID == request.Agent && instance.Workspace == workspace {
+				present = true
+			}
+		}
+		if scan.State != "complete" || !present {
+			return reject("workspace_changed", fmt.Errorf("native instance or original workspace is no longer present"))
+		}
+		workspaceIdentity = a.inventory.WorkspaceIdentity(request.Agent)
+		if workspaceIdentity == nil {
+			return reject("workspace_changed", fmt.Errorf("original directory identity is unavailable"))
+		}
 	}
 	task, err := boundedrun.ParseFileTask(request.Params.Task)
 	if err != nil {
@@ -82,7 +118,17 @@ func (a *boundedFileAgent) runAuthorized(ctx context.Context, request Request, c
 	}
 	ctx, cancel := context.WithDeadline(ctx, deadline)
 	defer cancel()
-	tools, err := boundedrun.OpenTools(boundedrun.Policy{Workspace: workspace, Paths: request.Bounds.Paths, MaxCalls: uint64(request.Bounds.MaxCalls), Deadline: deadline}, guard.Check)
+	check := guard.Check
+	if workspaceIdentity != nil {
+		check = func(ctx context.Context) error {
+			info, err := os.Stat(workspace)
+			if err != nil || !os.SameFile(info, workspaceIdentity) {
+				return boundedrun.ErrConflict
+			}
+			return guard.Check(ctx)
+		}
+	}
+	tools, err := boundedrun.OpenTools(boundedrun.Policy{Workspace: workspace, WorkspaceIdentity: workspaceIdentity, Paths: request.Bounds.Paths, MaxCalls: uint64(request.Bounds.MaxCalls), Deadline: deadline}, check)
 	if err != nil {
 		return reject("boundary_denied", err)
 	}

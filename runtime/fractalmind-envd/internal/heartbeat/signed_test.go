@@ -10,12 +10,41 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/agent"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/wsauth"
 )
 
 type testSigner struct {
 	pub     ed25519.PublicKey
 	private ed25519.PrivateKey
+}
+
+func TestNativeDiscoveryIsSignedAndCannotUpgradeTmuxSource(t *testing.T) {
+	inventory, _, err := agent.NewNativeInventory(map[string]string{"files": t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := inventory.Discover()
+	if d.State != "complete" {
+		t.Skip("actual native continuity unsupported or unavailable")
+	}
+	signer, old, payload := signedFixture(t)
+	payload.NativeDiscovery = &d
+	// The scan finishes after the base fixture's timestamp; publish current time.
+	payload.Timestamp = time.Now()
+	proof, err := Sign(signer, old.Scope, old.SessionNonce, 1, payload.Timestamp.UnixMilli()+FreshnessMS, payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actual, err := Verify(proof, signer.pub, payload.Timestamp.UnixMilli())
+	if err != nil || actual.NativeDiscovery == nil || actual.NativeDiscovery.Instances[0].InstanceID != d.Instances[0].InstanceID {
+		t.Fatal("native source not preserved", err)
+	}
+	payload.NativeDiscovery = nil
+	payload.Discovery = &d
+	if _, err := Sign(signer, old.Scope, old.SessionNonce, 2, payload.Timestamp.UnixMilli()+FreshnessMS, payload); err == nil {
+		t.Fatal("native adapter promoted via tmux source")
+	}
 }
 
 func (s testSigner) PublicKeyBytes() []byte  { return s.pub }

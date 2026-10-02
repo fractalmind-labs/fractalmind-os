@@ -1,0 +1,34 @@
+{
+  "recordedAt": "2026-10-02T08:59:48.173727+00:00",
+  "url": "http://127.0.0.1:4189/",
+  "source": "v020-native-agent-localnet.json",
+  "profile": {
+    "network": "localnet",
+    "rpcUrl": "http://127.0.0.1:29000",
+    "packageId": "0x4bc3adef64b6ec90f19f505f25dff439fc2a327a6e52a098c758a6c8a57567a3",
+    "registryId": "0x037f3398761bc64064f4d3a5c9e99df6cd9231270f9cb42a9fd71ad4f46085ef",
+    "humanId": "0x69163cb98555d2a8e27ab39ad5ea67279af1641ad6a02eb22326fb5490f15ee5",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "organizationId": "0xb78bb1c7a2d07f35ede1194947b50ab1fe356e3b3f730870b909f9d8e3167d23",
+  "recordId": "0x825cf2baf30a5a0b325f8fc06e78cc33fbc1f54c28d11874bc9e54cac8928d44",
+  "recordVersion": "1",
+  "runtime": "bounded-process-v1",
+  "controlConfirmed": false,
+  "checks": [
+    "Real native-* record read from Sui, not synthetic inventory",
+    "Chinese Light and English Dark display full instance and record IDs",
+    "Observation registration only; current instance status remains unknown after live fixture exits",
+    "Browser device proof and original transaction recovery buttons disabled"
+  ],
+  "screenshots": [
+    "v020-native-agent-light.png",
+    "v020-native-agent-dark.png"
+  ],
+  "limits": {
+    "browserReadOnly": true,
+    "authenticatedScanCardsRendered": false,
+    "installedDialogVerified": false,
+    "noSecretOrFakeSignedHostRowsInjected": true
+  }
+}

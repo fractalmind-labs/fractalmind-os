@@ -5,8 +5,8 @@ export type DiscoveredInstance = {
   session: string;
   pane: string;
   state: "observed" | "unverified" | "dead";
-  runtime: "tmux-observe";
-  continuity: "kernel-process-v1" | "unverified";
+  runtime: "tmux-observe" | "bounded-process-v1";
+  continuity: "kernel-process-v1" | "envd-process-v1" | "unverified";
   workspace: string;
   workspaceHash: string;
 };
@@ -35,6 +35,7 @@ export async function agentDiscovery(
   value: unknown,
   heartbeatMs: number,
   hostExpiresAtMs: number,
+  sourceKind: "tmux" | "native" = "tmux",
 ): Promise<AgentDiscovery> {
   const unknown: AgentDiscovery = {
     state: "unknown",
@@ -74,17 +75,24 @@ export async function agentDiscovery(
         workspaceHash = text(r.workspace_hash, 64);
       if (
         !session ||
-        !/^%[0-9]+$/.test(pane) ||
-        panes.has(pane) ||
-        r.runtime !== "tmux-observe" ||
+        (sourceKind === "tmux"
+          ? !/^%[0-9]+$/.test(pane) ||
+            panes.has(pane) ||
+            r.runtime !== "tmux-observe"
+          : pane !== "" ||
+            r.runtime !== "bounded-process-v1" ||
+            r.state !== "observed") ||
         !["observed", "unverified", "dead"].includes(String(r.state))
       )
         return unknown;
       panes.add(pane);
       if (r.state === "observed") {
         if (
-          r.continuity !== "kernel-process-v1" ||
-          !/^tmux-[0-9a-f]{64}$/.test(instanceId) ||
+          (sourceKind === "tmux"
+            ? r.continuity !== "kernel-process-v1" ||
+              !/^tmux-[0-9a-f]{64}$/.test(instanceId)
+            : r.continuity !== "envd-process-v1" ||
+              !/^native-[0-9a-f]{64}$/.test(instanceId)) ||
           !workspace.startsWith("/") ||
           !/^[0-9a-f]{64}$/.test(workspaceHash) ||
           seen.has(instanceId)
@@ -113,7 +121,7 @@ export async function agentDiscovery(
         session,
         pane,
         state: r.state as DiscoveredInstance["state"],
-        runtime: "tmux-observe",
+        runtime: r.runtime as DiscoveredInstance["runtime"],
         continuity: r.continuity as DiscoveredInstance["continuity"],
         workspace,
         workspaceHash,

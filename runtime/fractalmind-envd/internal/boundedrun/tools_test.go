@@ -232,3 +232,25 @@ func TestPolicyIsCopiedAndDirectoryListDoesNotExposeControlFolders(t *testing.T)
 		t.Fatal("caller mutated cached result")
 	}
 }
+
+func TestToolsOpenRootRejectsReplacedNativeWorkspace(t *testing.T) {
+	original := t.TempDir()
+	pin, err := os.Stat(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	replacement := t.TempDir()
+	policy := Policy{Workspace: replacement, WorkspaceIdentity: pin, Paths: map[string][]string{Read: {"."}}, MaxCalls: 1, Deadline: time.Now().Add(time.Minute)}
+	if tools, err := OpenTools(policy, func(context.Context) error { return nil }); err != ErrConflict {
+		if tools != nil {
+			tools.Close()
+		}
+		t.Fatalf("replacement opened with original pin: %v", err)
+	}
+	policy.Workspace = original
+	tools, err := OpenTools(policy, func(context.Context) error { return nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	tools.Close()
+}

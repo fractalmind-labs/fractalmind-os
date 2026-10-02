@@ -76,11 +76,18 @@ function selection(s: AgentImportSelection) {
   if (
     !fullId.test(s.bindingId) ||
     !fullId.test(s.hostAddress) ||
-    !/^tmux-[0-9a-f]{64}$/.test(s.instanceId) ||
+    !/^(tmux|native)-[0-9a-f]{64}$/.test(s.instanceId) ||
     !/^[0-9a-f]{64}$/.test(s.workspaceHash)
   )
     fail("invalid_selection");
   return { ...s };
+}
+export function observationRuntime(
+  instanceId: string,
+): "tmux-observe" | "bounded-process-v1" {
+  if (/^tmux-[0-9a-f]{64}$/.test(instanceId)) return "tmux-observe";
+  if (/^native-[0-9a-f]{64}$/.test(instanceId)) return "bounded-process-v1";
+  return fail("invalid_selection");
 }
 function hash(bytes: number[]) {
   return bytes.map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -96,7 +103,7 @@ export async function managedInstance(
   if (
     !fullId.test(organizationId) ||
     !fullId.test(hostAddress) ||
-    !/^tmux-[0-9a-f]{64}$/.test(instanceId)
+    !/^(tmux|native)-[0-9a-f]{64}$/.test(instanceId)
   )
     fail("invalid_selection");
   const directory = await hostDirectory(chain, organizationId);
@@ -276,7 +283,10 @@ export class AgentImport {
         fail("state_changed");
       // Dropping control while an old execution may be running is a handover,
       // not an observation-only repair. It needs separate stop evidence.
-      if (record.control_confirmed || record.runtime !== "tmux-observe")
+      if (
+        record.control_confirmed ||
+        record.runtime !== observationRuntime(input.instanceId)
+      )
         fail("handover_required");
     }
     if (!record) return null;
@@ -287,7 +297,7 @@ export class AgentImport {
     if (
       record.revoked ||
       record.control_confirmed ||
-      record.runtime !== "tmux-observe" ||
+      record.runtime !== observationRuntime(input.instanceId) ||
       hash(record.workspace_hash) !== input.workspaceHash ||
       !member ||
       member.revoked ||
@@ -334,7 +344,9 @@ export class AgentImport {
         r.membershipId === member.id &&
         r.freshUntilMs! > Date.now(),
     );
-    const scan = row?.discovery;
+    const scan = input.instanceId.startsWith("native-")
+      ? row?.nativeDiscovery
+      : row?.discovery;
     const instance = scan?.instances.find(
       (i) => i.instanceId === input.instanceId,
     );
@@ -344,8 +356,11 @@ export class AgentImport {
       scan.freshUntilMs <= Date.now() ||
       !instance ||
       instance.state !== "observed" ||
-      instance.runtime !== "tmux-observe" ||
-      instance.continuity !== "kernel-process-v1" ||
+      instance.runtime !== observationRuntime(input.instanceId) ||
+      instance.continuity !==
+        (input.instanceId.startsWith("native-")
+          ? "envd-process-v1"
+          : "kernel-process-v1") ||
       instance.workspaceHash !== input.workspaceHash
     )
       fail("discovery_unavailable");
@@ -362,6 +377,7 @@ export class AgentImport {
       fail("state_changed");
     return {
       member,
+      runtime: instance.runtime,
       sourcePin: JSON.stringify([
         before.chainIdentifier,
         member,
@@ -371,6 +387,8 @@ export class AgentImport {
         instance.instanceId,
         instance.workspaceHash,
         instance.pane,
+        instance.runtime,
+        instance.continuity,
       ]),
     };
   }
@@ -399,7 +417,7 @@ export class AgentImport {
       grantId: this.grantId,
       membershipId: source.member.id,
       bindingId: input.bindingId,
-      runtime: "tmux-observe" as const,
+      runtime: source.runtime,
       workspaceHash: Uint8Array.from(input.workspaceHash.match(/../g)!, (s) =>
         parseInt(s, 16),
       ),
@@ -509,10 +527,10 @@ export class AgentImport {
     )
       fail("invalid_source");
     if (
-      record.runtime !== "tmux-observe" ||
+      record.runtime !== observationRuntime(record.instance_id) ||
       record.control_confirmed ||
       record.workspace_hash.length !== 32 ||
-      !/^tmux-[0-9a-f]{64}$/.test(record.instance_id)
+      !/^(tmux|native)-[0-9a-f]{64}$/.test(record.instance_id)
     )
       fail("state_changed");
     if (

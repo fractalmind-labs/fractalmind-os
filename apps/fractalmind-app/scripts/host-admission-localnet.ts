@@ -261,6 +261,13 @@ type CliHello = {
   coordinator_address?: string;
   coordinator_endpoint?: string;
 };
+assert.ok(
+  !(
+    process.env.FM_ENVD_NATIVE_DISCOVERY === "1" &&
+    process.env.FM_ENVD_HOST_REJOIN === "1"
+  ),
+  "native rejoin fixture not yet supported",
+);
 const liveConnection = process.env.FM_ENVD_CHAIN_CONNECTION === "1";
 assert.ok(!liveConnection || process.env.FM_ENVD_JOIN_CLI_BIN);
 let envdConnection: unknown;
@@ -650,17 +657,34 @@ if (earlyHarness && earlyPublic) {
   const honest = await liveReads.readHosts(bindingId);
   assert.equal(honest[0].state, "verified");
   if (process.env.FM_ENVD_AGENT_DISCOVERY === "1") {
-    const scan = honest[0].discovery;
+    const nativeDiscovery = process.env.FM_ENVD_NATIVE_DISCOVERY === "1";
+    const scan = nativeDiscovery
+      ? honest[0].nativeDiscovery
+      : honest[0].discovery;
     assert.equal(scan?.state, "complete");
     assert.equal(scan?.instances.length, 1);
-    assert.equal(scan?.instances[0].session, "agent-chain-existing");
+    assert.equal(
+      scan?.instances[0].session,
+      nativeDiscovery ? "native-files" : "agent-chain-existing",
+    );
     assert.equal(scan?.instances[0].state, "observed");
-    assert.equal(scan?.instances[0].runtime, "tmux-observe");
-    assert.equal(scan?.instances[0].continuity, "kernel-process-v1");
-    assert.match(scan!.instances[0].instanceId, /^tmux-[0-9a-f]{64}$/);
+    assert.equal(
+      scan?.instances[0].runtime,
+      nativeDiscovery ? "bounded-process-v1" : "tmux-observe",
+    );
+    assert.equal(
+      scan?.instances[0].continuity,
+      nativeDiscovery ? "envd-process-v1" : "kernel-process-v1",
+    );
+    assert.match(
+      scan!.instances[0].instanceId,
+      nativeDiscovery ? /^native-[0-9a-f]{64}$/ : /^tmux-[0-9a-f]{64}$/,
+    );
     assert.ok(scan!.freshUntilMs! > Date.now());
     checks.push(
-      "Actual isolated tmux pane and native kernel birth identity traverse Host signature, authenticated Coordinator read and App discovery verification; observation-only capabilities and independent scan deadline preserved",
+      nativeDiscovery
+        ? "Actual instantiated native file adapter and envd kernel birth identity traverse Host signature, authenticated Coordinator read and App discovery verification; workspace binding is canonical, import remains observation-only"
+        : "Actual isolated tmux pane and native kernel birth identity traverse Host signature, authenticated Coordinator read and App discovery verification; observation-only capabilities and independent scan deadline preserved",
     );
     if (process.env.FM_ENVD_AGENT_IMPORT === "1") {
       const chain = new ChainReadSession(profile);
@@ -751,7 +775,7 @@ if (earlyHarness && earlyPublic) {
       const imported = await restarted.confirmed(recovered!);
       assert.equal(imported.instance_id, selected.instanceId);
       assert.equal(imported.control_confirmed, false);
-      assert.equal(imported.runtime, "tmux-observe");
+      assert.equal(imported.runtime, scan!.instances[0].runtime);
       // Exercise the contract's idempotent receipt directly. Normal App
       // duplicate handling below sends no transaction and pays no new fee.
       const duplicateManager = new SelfPayTransactionManager({
@@ -769,7 +793,7 @@ if (earlyHarness && earlyPublic) {
           membershipId,
           bindingId,
           instanceId: selected.instanceId,
-          runtime: "tmux-observe",
+          runtime: scan!.instances[0].runtime,
           workspaceHash: Uint8Array.from(
             selected.workspaceHash.match(/../g)!,
             (x) => parseInt(x, 16),
@@ -818,7 +842,7 @@ if (earlyHarness && earlyPublic) {
           membershipId,
           bindingId,
           managedAgentId: imported.id,
-          runtime: "tmux-observe" as const,
+          runtime: scan!.instances[0].runtime,
           workspaceHash: Uint8Array.from(
             selected.workspaceHash.match(/../g)!,
             (x) => parseInt(x, 16),
@@ -1071,7 +1095,7 @@ if (earlyHarness && earlyPublic) {
         contractDuplicateReceiptVerified: true,
       };
       checks.push(
-        "Production App imports the actual discovered pane for observation only on Sui; injected lost response recovers original digest with one broadcast; a fresh controller reconstructs the indexed record and avoids duplicate quotation/payment",
+        "Production App imports the actual discovered instance for observation only on Sui; injected lost response recovers original digest with one broadcast; a fresh controller reconstructs the indexed record and avoids duplicate quotation/payment",
       );
     }
   }
@@ -1086,7 +1110,10 @@ if (earlyHarness && earlyPublic) {
     tamperedHostBodyRejected: true,
     hostMembershipId: independent[0].membershipId,
     appDisplaySchemaVerified: true,
-    realTmuxDiscoveryVerified: process.env.FM_ENVD_AGENT_DISCOVERY === "1",
+    realTmuxDiscoveryVerified:
+      process.env.FM_ENVD_AGENT_DISCOVERY === "1" &&
+      process.env.FM_ENVD_NATIVE_DISCOVERY !== "1",
+    nativeFileDiscoveryVerified: process.env.FM_ENVD_NATIVE_DISCOVERY === "1",
   };
   checks.push(
     "App production read client uses injected fixture device signing; Go verifies current grant; unsigned/token reads denied and Coordinator-signed response returns actual Host heartbeat",

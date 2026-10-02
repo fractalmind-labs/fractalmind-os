@@ -566,6 +566,7 @@ func main() {
 	}
 
 	var discovery *agent.Discovery
+	var nativeDiscovery *agent.Discovery
 	// Chain-connected Hosts report a scan's actual timestamp and failure state.
 	// An unreadable inventory must never keep renewing the previous list.
 	scan := func() ([]agent.Agent, error) {
@@ -574,6 +575,9 @@ func main() {
 		}
 		value := scanner.Discover()
 		discovery = &value
+		if runtime, ok := runtimeExecutor.(interface{ NativeDiscovery() *agent.Discovery }); ok {
+			nativeDiscovery = runtime.NativeDiscovery()
+		}
 		rows := []agent.Agent{}
 		for _, instance := range value.Instances {
 			status := "running"
@@ -625,6 +629,7 @@ func main() {
 				startedAt,
 			)
 			payload.Discovery = discovery
+			payload.NativeDiscovery = nativeDiscovery
 
 			// v3: Attach relay load info if this node is a relay
 			if activeRoles.Relay && relayServer != nil {

@@ -86,3 +86,35 @@ test("no instances, failed scan, unsupported platform and legacy missing schema 
   assert.equal(d.instances[0].state, "unverified");
   assert.equal(d.instances[0].instanceId, "");
 });
+
+test("native file source requires envd lifetime identity and remains separate from tmux", async () => {
+  const f = await fixture();
+  Object.assign(f.instances[0], {
+    instance_id: "native-" + "b".repeat(64),
+    pane: "",
+    runtime: "bounded-process-v1",
+    continuity: "envd-process-v1",
+  });
+  const now = Date.now();
+  const native = await agentDiscovery(f, now, now + 60000, "native");
+  assert.equal(native.state, "complete");
+  assert.equal(native.instances[0].runtime, "bounded-process-v1");
+  assert.equal((await agentDiscovery(f, now, now + 60000)).state, "unknown");
+  for (const mutate of [
+    (r: any) => (r.pane = "%1"),
+    (r: any) => (r.continuity = "kernel-process-v1"),
+    (r: any) => (r.instance_id = "native-name"),
+    (r: any) => (r.runtime = "tmux-observe"),
+  ]) {
+    const copy = structuredClone(f);
+    mutate(copy.instances[0]);
+    assert.equal(
+      (await agentDiscovery(copy, now, now + 60000, "native")).state,
+      "unknown",
+    );
+  }
+  assert.equal(
+    (await agentDiscovery(await fixture(), now, now + 60000, "native")).state,
+    "unknown",
+  );
+});

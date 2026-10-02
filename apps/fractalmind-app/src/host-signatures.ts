@@ -26,6 +26,7 @@ export type VerifiedHostObservation = {
   expiresAtMs: number | null;
   freshUntilMs: number | null;
   discovery: AgentDiscovery | null;
+  nativeDiscovery?: AgentDiscovery | null;
 };
 type Signed = {
   format: number;
@@ -236,6 +237,12 @@ export async function verifyHostObservations(
         membershipId: member.id,
         expiresAtMs: s.expires_at_ms,
         freshUntilMs: null,
+        nativeDiscovery: await agentDiscovery(
+          body.native_discovery,
+          s.observed_at_ms,
+          s.expires_at_ms,
+          "native",
+        ),
         discovery: await agentDiscovery(
           body.discovery,
           s.observed_at_ms,
@@ -254,6 +261,7 @@ export async function verifyHostObservations(
         expiresAtMs: null,
         freshUntilMs: null,
         discovery: null,
+        nativeDiscovery: null,
       });
     }
   }
@@ -286,19 +294,20 @@ export async function verifyHostObservations(
             after.clockMs -
             BigInt(Math.max(0, Date.now() - after.loadedAtMs)),
         );
-      const discovery = result.discovery;
-      if (
-        discovery?.expiresAtMs !== null &&
-        discovery?.expiresAtMs !== undefined
-      ) {
-        const remaining =
-          BigInt(discovery.expiresAtMs) -
-          after.clockMs -
-          BigInt(Math.max(0, Date.now() - after.loadedAtMs));
-        if (remaining <= 0n) {
-          discovery.state = "expired";
-          discovery.instances = [];
-        } else discovery.freshUntilMs = Date.now() + Number(remaining);
+      for (const discovery of [result.discovery, result.nativeDiscovery]) {
+        if (
+          discovery?.expiresAtMs !== null &&
+          discovery?.expiresAtMs !== undefined
+        ) {
+          const remaining =
+            BigInt(discovery.expiresAtMs) -
+            after.clockMs -
+            BigInt(Math.max(0, Date.now() - after.loadedAtMs));
+          if (remaining <= 0n) {
+            discovery.state = "expired";
+            discovery.instances = [];
+          } else discovery.freshUntilMs = Date.now() + Number(remaining);
+        }
       }
     } catch (e) {
       result.state =
@@ -313,6 +322,7 @@ export async function verifyHostObservations(
       result.membershipId = null;
       result.freshUntilMs = null;
       result.discovery = null;
+      result.nativeDiscovery = null;
     }
   }
   return results;

@@ -46,6 +46,13 @@ heartbeat:
 # The current agent-manager integration is observation-only.
 runtime:
   enabled: false       # enabling requires sui.enabled, rpc, org_id and protocol_package_id
+  adapter_kind: observation # observation | native-file-agent (1–3 text-file goals)
+  workspaces: {}       # native-file-agent: configured binding name -> existing absolute directory
+  # workspaces:
+  #   files: /absolute/path/to/workspace
+  # Native instance IDs are derived from this envd process lifetime and binding
+  # name. Discover/import the signed native-* ID in the App; configuration alone
+  # grants no control. ACTIVE OKR authorization and safe handover are separate.
   adapter_command: agent-manager
   adapter_args: []      # for Python use command python3 and args [/absolute/path/main.py]
   result_gas_budget: 2000000000 # MIST ceiling (2 SUI), not the actual charged fee
