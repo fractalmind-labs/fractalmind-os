@@ -16,10 +16,13 @@ use sui_sdk_types::{Transaction, TransactionKind};
 use x25519_dalek::{PublicKey, StaticSecret};
 use zeroize::Zeroizing;
 
+mod keyrings;
 mod onboarding;
 mod records;
+mod recovery;
 pub use onboarding::{OnboardingCreated, OnboardingPublic};
 pub use records::RecordRequest;
+pub use recovery::{RecoveryImported, RecoveryPrepared, RecoveryPublic};
 
 pub const DEVICE_SERVICE: &str = "org.fractalmind.app.device";
 const MAGIC: &[u8; 4] = b"FMD1";
@@ -154,7 +157,11 @@ impl DeviceVault {
         if self.service != "org.fractalmind.app.device.test" || !profile.starts_with("test-") {
             return Err(VaultError::InvalidProfile);
         }
-        for entry in [self.entry(profile)?, self.onboarding_entry(profile)?] {
+        for entry in [
+            self.entry(profile)?,
+            self.onboarding_entry(profile)?,
+            self.recovery_entry(profile)?,
+        ] {
             match entry.delete_credential() {
                 Ok(()) | Err(keyring::Error::NoEntry) => (),
                 Err(_) => return Err(VaultError::StorageUnavailable),

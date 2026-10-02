@@ -54,6 +54,17 @@ impl DeviceVault {
     pub fn create_onboarding(&self, profile: &str, network: &str) -> Result<OnboardingCreated> {
         let index = network_index(network)?;
         validate_profile(profile)?;
+        // Creation and recovery must never mix credentials in the same native
+        // profile, including two processes racing before the vault write.
+        let _workflow_lock = self.recovery_lock(profile)?;
+        match self.recovery_entry(profile)?.get_secret() {
+            Ok(bytes) => {
+                let _secret = Zeroizing::new(bytes);
+                return Err(VaultError::AlreadyInitialized);
+            }
+            Err(keyring::Error::NoEntry) => (),
+            Err(_) => return Err(VaultError::StorageUnavailable),
+        }
         // Explicit device initialization; a malformed or locked key is never replaced.
         self.initialize(profile)?;
         let lock = OpenOptions::new()
@@ -145,14 +156,14 @@ impl DeviceVault {
         sign_transaction_keys(&derived_keys(&stored[5..37])?, profile, encoded)
     }
 }
-fn network_index(network: &str) -> Result<u8> {
+pub(super) fn network_index(network: &str) -> Result<u8> {
     NETWORKS
         .iter()
         .position(|n| *n == network)
         .map(|n| n as u8)
         .ok_or(VaultError::InvalidRecovery)
 }
-fn derived_keys(entropy: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
+pub(super) fn derived_keys(entropy: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
     if entropy.len() != 32 {
         return Err(VaultError::InvalidRecovery);
     }
@@ -165,14 +176,14 @@ fn derived_keys(entropy: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
         .map_err(|_| VaultError::InvalidRecovery)?;
     Ok(keys)
 }
-fn decode_public(value: &str) -> Result<[u8; 32]> {
+pub(super) fn decode_public(value: &str) -> Result<[u8; 32]> {
     STANDARD
         .decode(value)
         .map_err(|_| VaultError::InvalidEnvelope)?
         .try_into()
         .map_err(|_| VaultError::InvalidEnvelope)
 }
-fn wrap(plaintext: &[u8], recipient: &[u8; 32], context: &str) -> Result<Vec<u8>> {
+pub(super) fn wrap(plaintext: &[u8], recipient: &[u8; 32], context: &str) -> Result<Vec<u8>> {
     if plaintext.len() > 65536 || context.is_empty() || context.len() > 1024 {
         return Err(VaultError::InvalidEnvelope);
     }

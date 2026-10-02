@@ -1,0 +1,82 @@
+{
+  "format": 1,
+  "recordedAt": "2026-10-02T00:05:38.799Z",
+  "platform": "darwin",
+  "chain": {
+    "rpc": "http://127.0.0.1:29000",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "profile": "test-f0ef1fe5-958c-4ef1-8232-db412f967dad",
+  "humanId": "0xad8d394af850caebce84833f82f6a173b8a0a7266fa75920255cad4a6305624b",
+  "organizationId": "0x1f83294f0ac44f21f3a60d452ff9e7978826308655e5d72bf28c84725cb75134",
+  "publicRecovered": {
+    "humanId": "0xad8d394af850caebce84833f82f6a173b8a0a7266fa75920255cad4a6305624b",
+    "device": {
+      "format": 1,
+      "profile": "test-f0ef1fe5-958c-4ef1-8232-db412f967dad-b",
+      "address": "0xc8598b00d35136c0bd12a73fba19d71bb9cd7da716829a6e943ebb99a7ee26ca",
+      "signingPublicKey": "IN0Bcm4x7Jag4fT+ik5/uTPLSvbC9EbqtKE2OPN+hkU=",
+      "encryptionPublicKey": "coKHh7DD1czyv0goavhwAs5wCn+Xl8Rd6ypVUS/m510="
+    },
+    "grantId": "0xfd31ad07f0eff0c230e3c7762dd30d7e7373262a3527c94558be9bbe91da8693",
+    "recoveryAddress": "0xfbd2b08e1f3dba389c1d07beeae2396ac4aa4ff6e5369d18e6eee31ad7f10ccf",
+    "generation": "3",
+    "recoveryVersion": "3"
+  },
+  "checks": [
+    "loading an absent onboarding profile does not create keys",
+    "native recovery code/HKDF keys and FMW1/AES-GCM backup interoperate with the official JS path",
+    "fresh-process reload reveals public keys/ciphertext only; re-creation and wrong network are rejected",
+    "zero recovery balance blocks Human preparation without submitting",
+    "native recovery signs a real self-paid Human transaction; independent device possession resolves stable Human",
+    "new native processes and a rebuilt controller query original digests and reconstruct the same Human/organization without replay",
+    "discarding transaction caches reconstructs confirmed business state from chain and refuses duplicate creation",
+    "recovery 1: checksum/network validation, fresh device, public address lookup, backup authentication, one-shot replacement code and native per-org key rotation",
+    "recovery 1: actual chain consumes old code, advances Human generation, retains org IDs, invalidates previous devices, rejects replay and reads historical ciphertext from chain",
+    "old native content ring cannot decrypt version-2 writes; chain accepts the recovered device's new-key body",
+    "recovery 2: checksum/network validation, fresh device, public address lookup, backup authentication, one-shot replacement code and native per-org key rotation",
+    "new recovery address with zero SUI blocks a second recovery quote until explicit fixture funding",
+    "recovery 2: actual chain consumes old code, advances Human generation, retains org IDs, invalidates previous devices, rejects replay and reads historical ciphertext from chain",
+    "a second native recovery retains version-1 and version-2 history and installs version-3 keys",
+    "only the new code plus public network/deployment metadata locates the same stable Human from a fresh native profile"
+  ],
+  "transactions": [
+    {
+      "action": "create Human with native recovery signature and self-paid Gas",
+      "digest": "5YuNTeUk4F9AsDxz19MWRNdg6MrsV2wahgA9Ak2HjG2o",
+      "actualGas": "18542548"
+    },
+    {
+      "action": "create personal organization with independent native device",
+      "digest": "8rEdeywFnfzrrQ3yEvvW436EBekr6zxEv9qHUEosjR9f",
+      "actualGas": "14501216"
+    },
+    {
+      "action": "save historical body with native content key/signature",
+      "digest": "8emtTR1XhMaLcg3VaWML9VDLMq7PWWhRUqHaFTFNasse",
+      "actualGas": "10079688"
+    },
+    {
+      "action": "recover 1 with native old-recovery signature and atomic owned-org key rotation",
+      "digest": "9nnGgFau9Go1t4pyzUrAzxj4dNmm2d5uNxWMHh7kQec2",
+      "actualGas": "18558900"
+    },
+    {
+      "action": "new device writes version-2 body after recovery",
+      "digest": "DsVRqtYeP75mJLXbKc78yx98UYJM2vktLoFuQHhPcWQ1",
+      "actualGas": "7423260"
+    },
+    {
+      "action": "recover 2 with native old-recovery signature and atomic owned-org key rotation",
+      "digest": "HRNAwAymdt6tndrMLbbC6KbZHERDJQXKYZS5KjCTmbws",
+      "actualGas": "19664288"
+    }
+  ],
+  "limits": {
+    "nativeTransport": "isolated subprocess helper, not installed App recovery IPC/UI",
+    "controller": "test adapter; production recovery source validation/quotes/unknown-outcome controller and UI remain pending",
+    "journal": "in-memory fixture; installed UI durable journal not exercised",
+    "rawCodeInReport": false,
+    "fullV020Complete": false
+  }
+}

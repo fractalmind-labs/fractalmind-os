@@ -9,7 +9,6 @@ use aes_gcm::{
 use hkdf::Hkdf;
 use serde::Deserialize;
 use sha2::Sha256;
-use std::collections::BTreeMap;
 use zeroize::Zeroize;
 
 #[derive(Deserialize)]
@@ -39,21 +38,6 @@ struct WriteRequest {
 impl Drop for WriteRequest {
     fn drop(&mut self) {
         self.plaintext.zeroize();
-    }
-}
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct Keyring {
-    format: u8,
-    content_key: String,
-    historical_keys: BTreeMap<String, String>,
-}
-impl Drop for Keyring {
-    fn drop(&mut self) {
-        self.content_key.zeroize();
-        for value in self.historical_keys.values_mut() {
-            value.zeroize();
-        }
     }
 }
 impl DeviceVault {
@@ -87,14 +71,14 @@ impl DeviceVault {
         Ok(STANDARD.encode(decrypt(&stored, profile, &input)?.as_slice()))
     }
 }
-fn positive(value: &str) -> Result<u64> {
+pub(super) fn positive(value: &str) -> Result<u64> {
     let parsed: u64 = value.parse().map_err(|_| VaultError::InvalidEnvelope)?;
     if parsed == 0 || parsed.to_string() != value {
         return Err(VaultError::InvalidEnvelope);
     }
     Ok(parsed)
 }
-fn encoded(value: &str, max: usize) -> Result<Vec<u8>> {
+pub(super) fn encoded(value: &str, max: usize) -> Result<Vec<u8>> {
     if value.len() > max.div_ceil(3) * 4 {
         return Err(VaultError::InvalidEnvelope);
     }
@@ -139,37 +123,8 @@ fn content_material(
             input.network, device.address
         ),
     )?;
-    let ring: Keyring =
-        serde_json::from_slice(&plaintext).map_err(|_| VaultError::InvalidEnvelope)?;
-    if ring.format != 1 || ring.historical_keys.is_empty() || ring.historical_keys.len() > 256 {
-        return Err(VaultError::InvalidEnvelope);
-    }
-    // No fallback to the latest key for old records. Explicit historical versions
-    // are required, including version 1. Missing rotation history fails closed.
-    let mut content_key = Zeroizing::new([0u8; 32]);
-    if ring.content_key.len() != 64
-        || !ring
-            .content_key
-            .bytes()
-            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-    {
-        return Err(VaultError::InvalidEnvelope);
-    }
-    for (version, key) in &ring.historical_keys {
-        positive(version)?;
-        if key.len() != 64
-            || !key
-                .bytes()
-                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-        {
-            return Err(VaultError::InvalidEnvelope);
-        }
-    }
-    let key = ring
-        .historical_keys
-        .get(&input.key_version)
-        .ok_or(VaultError::InvalidEnvelope)?;
-    hex::decode_to_slice(key, content_key.as_mut()).map_err(|_| VaultError::InvalidEnvelope)?;
+    let content_key =
+        super::keyrings::select(&plaintext, &input.organization_id, &input.key_version)?;
     let context = format!(
         "fractalmind.product-record.v1:{}:{}:{}:{}:{}",
         input.organization_id,
@@ -212,7 +167,11 @@ fn decrypt(keys: &[u8], profile: &str, input: &RecordRequest) -> Result<Zeroizin
         open_body(&body, content_key.as_ref(), &context, b"FME1")
     }
 }
-fn unwrap(body: &[u8], secret: &StaticSecret, context: &str) -> Result<Zeroizing<Vec<u8>>> {
+pub(super) fn unwrap(
+    body: &[u8],
+    secret: &StaticSecret,
+    context: &str,
+) -> Result<Zeroizing<Vec<u8>>> {
     if body.len() < 100 || body.len() > 65536 + 100 || !body.starts_with(b"FMW1") {
         return Err(VaultError::InvalidEnvelope);
     }

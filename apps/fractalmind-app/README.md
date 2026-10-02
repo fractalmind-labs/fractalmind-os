@@ -136,3 +136,8 @@ Interface mapping, actual v2 walk-through evidence and remaining integration gat
 
 Native identity creation, exact current gates and localnet interoperability evidence:
 [creation flow](../../docs/product/v020-app-identity-creation.md).
+
+Native recovery import, staged replacement codes and per-organization historical
+key rings have isolated real-chain coverage. Recovery is **not yet connected to
+installed App IPC or the welcome flow**. See
+[native recovery core and limits](../../docs/product/v020-app-native-recovery.md).

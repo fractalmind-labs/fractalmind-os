@@ -3,6 +3,7 @@
 use fractalmind_device_vault::DeviceVault;
 use serde::Deserialize;
 use std::io::{self, Read};
+use zeroize::Zeroizing;
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Request {
@@ -12,6 +13,15 @@ struct Request {
     challenge: Option<String>,
     network: Option<String>,
     record: Option<String>,
+    #[serde(default, deserialize_with = "read_code")]
+    code: Option<Zeroizing<String>>,
+    source: Option<String>,
+    phase: Option<String>,
+}
+fn read_code<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<Zeroizing<String>>, D::Error> {
+    Ok(Option::<String>::deserialize(deserializer)?.map(Zeroizing::new))
 }
 fn main() {
     if let Err(error) = run() {
@@ -20,7 +30,7 @@ fn main() {
     }
 }
 fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let mut input = String::new();
+    let mut input = Zeroizing::new(String::new());
     io::stdin().take(1_500_001).read_to_string(&mut input)?;
     if input.len() > 1_500_000 {
         return Err("Test input too large".into());
@@ -61,6 +71,30 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         "signOnboarding" => serde_json::to_value(vault.sign_onboarding_transaction(
             &request.profile,
             &request.network.ok_or("Network required")?,
+            &request.bytes.ok_or("Bytes required")?,
+        )?)?,
+        "importRecovery" => serde_json::to_value(vault.import_recovery(
+            &request.profile,
+            &request.network.ok_or("Network required")?,
+            &request.code.ok_or("Code required")?,
+        )?)?,
+        "publicImportedRecovery" => serde_json::to_value(vault.recovery_imported_public(
+            &request.profile,
+            &request.network.ok_or("Network required")?,
+        )?)?,
+        "prepareRecovery" => serde_json::to_value(vault.prepare_recovery(
+            &request.profile,
+            &request.network.ok_or("Network required")?,
+            &request.source.ok_or("Source required")?,
+        )?)?,
+        "publicPreparedRecovery" => serde_json::to_value(vault.recovery_prepared_public(
+            &request.profile,
+            &request.network.ok_or("Network required")?,
+        )?)?,
+        "signRecovery" => serde_json::to_value(vault.sign_recovery_transaction(
+            &request.profile,
+            &request.network.ok_or("Network required")?,
+            &request.phase.ok_or("Phase required")?,
             &request.bytes.ok_or("Bytes required")?,
         )?)?,
         "remove" => {
