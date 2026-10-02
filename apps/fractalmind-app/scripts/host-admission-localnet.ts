@@ -264,6 +264,10 @@ type CliHello = {
 const liveConnection = process.env.FM_ENVD_CHAIN_CONNECTION === "1";
 assert.ok(!liveConnection || process.env.FM_ENVD_JOIN_CLI_BIN);
 let envdConnection: unknown;
+let envdRejoin: unknown;
+let beforeHostRevocation:
+  | Awaited<ReturnType<CoordinatorReadClient["prepare"]>>
+  | undefined;
 let deviceHttp: unknown;
 let liveReads: CoordinatorReadClient | undefined;
 let signedHostSnapshot: unknown;
@@ -281,10 +285,14 @@ function startCliHarness() {
     buffer = "";
   let publicResolve!: (value: CliHello) => void,
     resultResolve!: (value: any) => void,
-    connectionResolve!: (value: unknown) => void;
+    connectionResolve!: (value: unknown) => void,
+    rejoinReadyResolve!: (value: unknown) => void,
+    rejoinResultResolve!: (value: any) => void;
   let publicReject!: (error: Error) => void,
     resultReject!: (error: Error) => void,
-    connectionReject!: (error: Error) => void;
+    connectionReject!: (error: Error) => void,
+    rejoinReadyReject!: (error: Error) => void,
+    rejoinResultReject!: (error: Error) => void;
   const publicValue = new Promise<CliHello>((resolve, reject) => {
     publicResolve = resolve;
     publicReject = reject;
@@ -296,6 +304,14 @@ function startCliHarness() {
   const connectionValue = new Promise<unknown>((resolve, reject) => {
     connectionResolve = resolve;
     connectionReject = reject;
+  });
+  const rejoinReadyValue = new Promise<unknown>((resolve, reject) => {
+    rejoinReadyResolve = resolve;
+    rejoinReadyReject = reject;
+  });
+  const rejoinResultValue = new Promise<any>((resolve, reject) => {
+    rejoinResultResolve = resolve;
+    rejoinResultReject = reject;
   });
   helper.stdout.on("data", (part) => {
     output += String(part);
@@ -311,6 +327,14 @@ function startCliHarness() {
           resultResolve(
             JSON.parse(line.slice("FM_HOST_JOIN_CLI_RESULT ".length)),
           );
+        if (line.startsWith("FM_HOST_REJOIN_READY "))
+          rejoinReadyResolve(
+            JSON.parse(line.slice("FM_HOST_REJOIN_READY ".length)),
+          );
+        if (line.startsWith("FM_HOST_REJOIN_RESULT "))
+          rejoinResultResolve(
+            JSON.parse(line.slice("FM_HOST_REJOIN_RESULT ".length)),
+          );
         if (line.startsWith("FM_CHAIN_CONNECTION_RESULT "))
           connectionResolve(
             JSON.parse(line.slice("FM_CHAIN_CONNECTION_RESULT ".length)),
@@ -319,6 +343,8 @@ function startCliHarness() {
         publicReject(error as Error);
         resultReject(error as Error);
         connectionReject(error as Error);
+        rejoinReadyReject(error as Error);
+        rejoinResultReject(error as Error);
       }
     }
   });
@@ -346,6 +372,10 @@ function startCliHarness() {
   void publicReady.catch(() => {});
   void resultReady.catch(() => {});
   void connectionReady.catch(() => {});
+  const rejoinReady = Promise.race([rejoinReadyValue, ended]),
+    rejoinResult = Promise.race([rejoinResultValue, ended]);
+  void rejoinReady.catch(() => {});
+  void rejoinResult.catch(() => {});
   helper.stdin.write(
     JSON.stringify({
       PackageID: deployment.packageId,
@@ -356,7 +386,15 @@ function startCliHarness() {
       LiveConnection: liveConnection,
     }) + "\n",
   );
-  return { helper, publicReady, resultReady, connectionReady, done };
+  return {
+    helper,
+    publicReady,
+    resultReady,
+    connectionReady,
+    rejoinReady,
+    rejoinResult,
+    done,
+  };
 }
 const earlyHarness = liveConnection ? startCliHarness() : undefined;
 const earlyPublic = earlyHarness ? await earlyHarness.publicReady : undefined;
@@ -1057,6 +1095,15 @@ if (earlyHarness && earlyPublic) {
     "Go Host signs its actual heartbeat; App independently verifies exact body, current membership pointer, scoped chain and Coordinator versions; forged body remains unknown",
   );
 }
+if (process.env.FM_ENVD_HOST_REJOIN === "1") {
+  assert.ok(
+    liveReads &&
+      signedHostSnapshot &&
+      earlyPublic &&
+      (deviceHttp as any)?.agentImportVerified,
+  );
+  beforeHostRevocation = await liveReads.prepare(bindingId);
+}
 const revokeMember = await controller.prepare(
   { kind: "revoke-member", targetId: membershipId },
   randomUUID(),
@@ -1094,6 +1141,188 @@ if (earlyHarness) {
     "real loopback Coordinator/Host mutually authenticate using chain endpoint and keys; live heartbeat observed; App chain revocation rejects both Coordinator routing and worker heartbeat",
   );
 }
+if (process.env.FM_ENVD_HOST_REJOIN === "1") {
+  assert.ok(earlyHarness && earlyPublic && liveReads && signedHostSnapshot);
+  const renewedInvite = await invite(
+    "App explicitly creates invitation to rejoin the same Host",
+  );
+  earlyHarness.helper.stdin.write("REJOIN\n");
+  await earlyHarness.rejoinReady;
+  // Bearer code is sent only after the public readiness marker, never argv or logs.
+  earlyHarness.helper.stdin.write(
+    `${renewedInvite.code}\nJOIN ${organizationId}\n`,
+  );
+  const rejoined = await earlyHarness.rejoinResult;
+  assert.equal(rejoined.broadcasts, 2);
+  assert.equal(rejoined.same_host_keys, true);
+  assert.equal(rejoined.same_worker_reauthenticated, true);
+  assert.equal(rejoined.result.state, "confirmed");
+  const newMembershipId = rejoined.result.membership.membership_id;
+  assert.notEqual(newMembershipId, membershipId);
+  assert.equal(
+    rejoined.result.membership.host_address,
+    earlyPublic.host_address,
+  );
+  const originalLookup = await coreClient.core.getTransaction({
+    digest: rejoined.result.digest,
+    include: {
+      effects: true,
+      objectTypes: true,
+      events: true,
+      balanceChanges: true,
+      transaction: true,
+    },
+  });
+  assert.equal(originalLookup.$kind, "Transaction");
+  await record(
+    "Same Go Host explicitly rejoins; lost response recovered once from disk journal",
+    {
+      status: "confirmed",
+      digest: rejoined.result.digest,
+      requestId: "go-envd-rejoin-fixture",
+      actualGas: rejoined.result.actual_fee_mist,
+      journalSynced: true,
+      transaction: originalLookup.Transaction!,
+    },
+  );
+  // Prove the archived technical digest was not discarded when NewAttempt moved
+  // the known original to history. These records contain no invitation material.
+  const { createHash } = await import("node:crypto");
+  const namespace = createHash("sha256")
+    .update(`${deployment.chain.chainIdentifier}:${earlyPublic.host_address}`)
+    .digest("hex");
+  const archived = JSON.parse(
+    await readFile(
+      `${process.argv[3]}.journal/${namespace}/${rejoined.archived_original_digest}.json`,
+      "utf8",
+    ),
+  );
+  const pending = JSON.parse(
+    await readFile(
+      `${process.argv[3]}.journal/${namespace}/pending.json`,
+      "utf8",
+    ),
+  );
+  assert.equal(archived.digest, joined.digest);
+  assert.equal(pending.digest, rejoined.result.digest);
+  await assert.rejects(beforeHostRevocation!.send(), /device_read_rejected/);
+  const oldSigned = (signedHostSnapshot as any).sentinels[0].host_observation;
+  assert.ok(
+    oldSigned.expires_at_ms > Date.now(),
+    "Old signature must still be time-valid to prove membership replacement rejection",
+  );
+  const rejectedOld = await verifyHostObservations(
+    new ChainReadSession(profile),
+    organizationId,
+    bindingId,
+    signedHostSnapshot,
+  );
+  assert.equal(rejectedOld[0].state, "unknown");
+  assert.equal(rejectedOld[0].observation, null);
+  let rows: Awaited<ReturnType<CoordinatorReadClient["readHosts"]>> = [];
+  for (let n = 0; n < 30; n++) {
+    rows = await liveReads.readHosts(bindingId);
+    if (
+      rows[0]?.state === "verified" &&
+      rows[0].membershipId === newMembershipId
+    )
+      break;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.equal(rows[0]?.state, "verified");
+  assert.equal(rows[0].membershipId, newMembershipId);
+  const newScan = rows[0].discovery;
+  assert.equal(newScan?.state, "complete");
+  assert.equal(newScan?.instances.length, 1);
+  const observedAgain = newScan!.instances[0];
+  const recordId = (deviceHttp as any).importRecordId;
+  const priorRecord = await sdk.host.getManagedAgent(recordId);
+  assert.equal(observedAgain.instanceId, priorRecord.instance_id);
+  assert.equal(
+    observedAgain.workspaceHash,
+    priorRecord.workspace_hash
+      .map((x) => x.toString(16).padStart(2, "0"))
+      .join(""),
+  );
+  const selected = {
+    bindingId,
+    hostAddress: earlyPublic.host_address,
+    instanceId: observedAgain.instanceId,
+    workspaceHash: observedAgain.workspaceHash,
+  };
+  const oldManaged = await managedInstance(
+    new ChainReadSession(profile),
+    organizationId,
+    selected.hostAddress,
+    selected.instanceId,
+  );
+  assert.ok(oldManaged);
+  assert.equal(oldManaged.id, recordId);
+  assert.equal(oldManaged.membership_id, membershipId);
+  const ordinaryImport = new AgentImport(
+    new ChainReadSession(profile),
+    device,
+    grantId,
+    organizationId,
+    journal,
+  );
+  await assert.rejects(
+    ordinaryImport.prepare(selected, randomUUID(), true),
+    /existing_conflict/,
+  );
+  ordinaryImport.dispose();
+  const explicitRebind = new AgentImport(
+    new ChainReadSession(profile),
+    device,
+    grantId,
+    organizationId,
+    journal,
+    { kind: "rebind", reviewed: oldManaged },
+  );
+  const rebindQuote = await explicitRebind.prepare(
+    selected,
+    randomUUID(),
+    true,
+  );
+  assert.ok(!("status" in rebindQuote));
+  const rebindOutcome = await explicitRebind.submit(rebindQuote);
+  assert.ok(rebindOutcome.status !== "already-imported");
+  await record(
+    "App explicitly rebinds continuous instance to new Host membership",
+    rebindOutcome,
+  );
+  const newRecord = await explicitRebind.confirmed(rebindOutcome, selected);
+  assert.equal(newRecord.id, recordId);
+  assert.equal(newRecord.instance_id, oldManaged.instance_id);
+  assert.equal(newRecord.membership_id, newMembershipId);
+  assert.equal(BigInt(newRecord.version), BigInt(oldManaged.version) + 1n);
+  assert.equal(newRecord.control_confirmed, false);
+  assert.equal(newRecord.runtime, "tmux-observe");
+  envdRejoin = {
+    ...rejoined,
+    archivedDigestVerified: true,
+    newOriginalDigestVerified: true,
+    timeValidOldSignatureRejected: true,
+    previousDeviceChallengeRejected: true,
+    sameKernelInstanceVerified: true,
+    newMembershipId,
+    recordId,
+    instanceId: newRecord.instance_id,
+    recordVersion: newRecord.version,
+    automaticImportRejected: true,
+    explicitRebindVerified: true,
+  };
+  checks.push(
+    "Same live Go worker and unchanged Host keys explicitly rejoin through new chain invitation; original disk digest archived, new response loss recovered once, worker reauthenticates and sends a fresh native tmux scan",
+  );
+  checks.push(
+    "Time-valid old Host signature and pre-revocation device challenge remain rejected after membership replacement; fresh signature proves the new active member and same kernel instance",
+  );
+  checks.push(
+    "App ordinary import cannot silently replace an old membership; explicit reviewed-version rebind retains record/instance IDs, adopts new member and stays observation-only",
+  );
+}
+const invitesBeforeReload = (await controller.directory()).invitations.length;
 const second = await invite("App creates invitation for reload test");
 controller.dispose();
 controller = new HostAdmission(
@@ -1104,7 +1333,10 @@ controller = new HostAdmission(
   journal,
 );
 assert.equal((await controller.createdInvite(second.outcome)).code, null);
-assert.equal((await controller.directory()).invitations.length, 2);
+assert.equal(
+  (await controller.directory()).invitations.length,
+  invitesBeforeReload + 1,
+);
 checks.push(
   "new controller reconstructs chain state but cannot recover the invitation bearer secret",
 );
@@ -1186,6 +1418,7 @@ const report = {
   envdQuote,
   envdCli,
   envdConnection,
+  envdRejoin,
   deviceHttp,
   limits: {
     generatedFixtureKeysOnly: true,

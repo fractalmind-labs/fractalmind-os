@@ -156,6 +156,7 @@ func TestHostJoinLiveCLI(t *testing.T) {
 	var liveServer *coordinator.Server
 	var reader *nodecommand.ChainAuthorityResolver
 	var liveConfig *config.Config
+	var connected chan error
 	if input.LiveConnection {
 		reader, err = nodecommand.NewChainAuthorityResolver(base, input.PackageID)
 		if err != nil {
@@ -182,8 +183,9 @@ func TestHostJoinLiveCLI(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer liveClient.Close()
-		connected := make(chan error, 1)
+		connected = make(chan error, 1)
 		var discovery *agent.Discovery
+		var rescan func() agent.Discovery
 		if os.Getenv("FM_ENVD_AGENT_DISCOVERY") == "1" {
 			fixtureDir, e := os.MkdirTemp("/tmp", "fm-chain-discovery-")
 			if e != nil {
@@ -196,7 +198,9 @@ func TestHostJoinLiveCLI(t *testing.T) {
 				t.Fatal("isolated real tmux fixture unavailable", e)
 			}
 			defer exec.Command("tmux", "-S", socket, "kill-server").Run()
-			value := agent.NewScannerAtSocket("tmux", socket).Discover()
+			scanner := agent.NewScannerAtSocket("tmux", socket)
+			rescan = scanner.Discover
+			value := rescan()
 			if value.State != "complete" || len(value.Instances) != 1 || value.Instances[0].State != "observed" {
 				t.Fatalf("real tmux discovery unavailable: %+v", value)
 			}
@@ -207,12 +211,22 @@ func TestHostJoinLiveCLI(t *testing.T) {
 			if err == nil {
 				payload := heartbeat.NewPayload(public.Address, "physical loopback fixture", nil, time.Now())
 				payload.Discovery = discovery
-				if discovery != nil {
-					for _, instance := range discovery.Instances {
+				if rescan != nil {
+					fresh := rescan()
+					if fresh.State != "complete" || len(fresh.Instances) != 1 || fresh.Instances[0].State != "observed" || fresh.Instances[0].InstanceID != discovery.Instances[0].InstanceID {
+						err = errors.New("tmux process continuity lost across connection")
+					} else {
+						payload.Discovery = &fresh
+					}
+				}
+				if payload.Discovery != nil {
+					for _, instance := range payload.Discovery.Instances {
 						payload.Agents = append(payload.Agents, agent.Agent{ID: instance.Session, Session: instance.Session, Status: "running"})
 					}
 				}
-				err = liveClient.Send("heartbeat", payload)
+				if err == nil {
+					err = liveClient.Send("heartbeat", payload)
+				}
 			}
 			select {
 			case connected <- err:
@@ -256,8 +270,57 @@ func TestHostJoinLiveCLI(t *testing.T) {
 		if err = liveClient.Send("heartbeat", heartbeat.Payload{HostID: public.Address}); err == nil {
 			t.Fatal("worker sent heartbeat after chain revocation")
 		}
-		liveClient.Close()
+		if os.Getenv("FM_ENVD_HOST_REJOIN") != "1" {
+			liveClient.Close()
+		}
 		fmt.Printf("FM_CHAIN_CONNECTION_RESULT {\"chain_endpoint_used\":true,\"mutual_authentication\":true,\"heartbeat_sent\":true,\"revoked_pointer_rejected\":true,\"worker_revoked_heartbeat_rejected\":true,\"coordinator_revoked_routing_rejected\":true,\"generated_memory_keys\":true,\"loopback_only\":true}\n")
+		if os.Getenv("FM_ENVD_HOST_REJOIN") == "1" {
+			line, err = bufio.NewReaderSize(os.Stdin, 32).ReadString('\n')
+			if err != nil || line != "REJOIN\n" {
+				t.Fatal("expected explicit public rejoin signal")
+			}
+			fmt.Printf("FM_HOST_REJOIN_READY {}\n")
+			previous := result
+			options.StatusOnly, options.NewAttempt = false, true
+			result, runErr = hostjoin.Run(ctx, client, factory, keys, options, hostJoinInteraction(os.Stdin, os.Stdout, os.Stderr))
+			if result.Digest == "" || result.Digest == previous.Digest {
+				t.Fatal("new confirmed admission requires a distinct original digest")
+			}
+			options.NewAttempt = false
+			for n := 0; n < 40; n++ {
+				result, runErr = hostjoin.Run(ctx, client, factory, keys, options, hostjoin.Interaction{ReadInvitation: func() ([]byte, error) {
+					t.Fatal("rejoin recovery asked for another code")
+					return nil, errors.New("forbidden")
+				}})
+				if runErr == nil && result.State == "confirmed" && result.Membership != nil {
+					break
+				}
+				time.Sleep(125 * time.Millisecond)
+			}
+			if runErr != nil || result.State != "confirmed" || result.Membership == nil || !result.Membership.Current || result.Membership.MembershipID == previous.Membership.MembershipID || result.Membership.HostAddress != public.Address || client.broadcasts != 2 {
+				t.Fatalf("explicit rejoin failed: %+v %v", result, runErr)
+			}
+			current, e := reader.ReadHostConnection(ctx, input.OrganizationID, mustDecodeHex(t, public.SigningPublicKey), mustDecodeHex(t, public.EncryptionPublicKey))
+			if e != nil || current.MembershipID != result.Membership.MembershipID {
+				t.Fatal("new current membership not used", e)
+			}
+			select {
+			case e := <-connected:
+				if e != nil {
+					t.Fatal("new connection did not publish a fresh continuous scan", e)
+				}
+			case <-ctx.Done():
+				t.Fatal("same worker did not reauthenticate after explicit rejoin")
+			}
+			encoded, _ := json.Marshal(struct {
+				Result         hostjoin.Result `json:"result"`
+				Broadcasts     int             `json:"broadcasts"`
+				SameKeys       bool            `json:"same_host_keys"`
+				SameWorker     bool            `json:"same_worker_reauthenticated"`
+				ArchivedDigest string          `json:"archived_original_digest"`
+			}{result, client.broadcasts, true, true, previous.Digest})
+			fmt.Printf("FM_HOST_REJOIN_RESULT %s\n", encoded)
+		}
 		line, err = bufio.NewReaderSize(os.Stdin, 32).ReadString('\n')
 		if err != nil || line != "DONE\n" {
 			t.Fatal("expected public completion signal")

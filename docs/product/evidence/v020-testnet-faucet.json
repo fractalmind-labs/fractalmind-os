@@ -29,7 +29,7 @@
     "isolatedOsKeyRetainedForTestnetAcceptance": true
   },
   "latestVerification": {
-    "checkedAt": "2026-10-02T07:32:27.130Z",
+    "checkedAt": "2026-10-02T08:29:58.318Z",
     "transport": "Official Testnet gRPC",
     "digest": "CfNdtcUFQd7X6ip9sZeJF5J4ynFFTPAv298D1BhRMqCb",
     "success": true,
