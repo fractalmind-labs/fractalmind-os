@@ -6,6 +6,12 @@
 
 ## 当前验证证据
 
+### envd 直接权限读取与原消息核验增量
+
+- 生产 Go 读取器分开 direct 与 OKR 来源，核对常驻权限、固定实例、工作区及单次审批的当前批准设备；新增 SDK 同源内容哈希、原不可变消息／加密记录／Run／两个预算账本核验。原历史可读取，旧版权限不能成为当前执行资格。
+- [7 组专项、45 个子测试及五包 race](evidence/v020-direct-authority-unit.json)通过，App 构建和原生脚本严格类型通过。[生产 gRPC 真实链只读复查](evidence/v020-direct-authority-original-localnet-read.json)读取原普通及审批取消 Run，并拒绝错误扩展来源，**0 次广播**。
+- **尚未完成**：direct 验证器／工具 hook、begin／finish 交易路由、实际适配器处理和 App 对话／审批 UI；该证据不能用于证明 #43 已完成。详见[读取实现与后续验收](v020-direct-authority-runtime.md)。其余 #40 缺口保持不变。
+
 ### 三包部署与真实 OKR 回归：发布门禁已通过
 
 - core、OKR/handover、direct-agent 三包在标准大小限制下全部实际发布；身份目录随 core 发布原子初始化。[原发布摘要／费用](evidence/v020-product-three-package-deployment.json)已保存。既有 main 模块保留，真实旧发布升级与开发单包对象迁移仍未验证。

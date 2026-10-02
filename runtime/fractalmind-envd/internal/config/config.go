@@ -125,6 +125,8 @@ type SUIConfig struct {
 	ProtocolOriginalPackageID string `yaml:"protocol_original_package_id"`
 	OkrPackageID              string `yaml:"okr_package_id"`
 	OkrOriginalPackageID      string `yaml:"okr_original_package_id"`
+	DirectPackageID           string `yaml:"direct_package_id"`
+	DirectOriginalPackageID   string `yaml:"direct_original_package_id"`
 	RegistryID                string `yaml:"registry_id"`
 	OrgID                     string `yaml:"org_id"`
 	CertID                    string `yaml:"cert_id"`

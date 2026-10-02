@@ -411,6 +411,7 @@ try {
     JSON.stringify({
       PackageID: deployment.packageId,
       OkrPackageID: deployment.okrPackageId,
+      DirectPackageID: deployment.directPackageId,
       RegistryID: deployment.registryId,
       OrganizationID: organizationId,
       ChainIdentifier: deployment.chain.chainIdentifier,

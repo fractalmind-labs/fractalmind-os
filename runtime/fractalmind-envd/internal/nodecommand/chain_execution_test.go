@@ -17,7 +17,7 @@ func executionFixture(t *testing.T, state uint8, claim moveBoundBudgetClaim) (*c
 		Human: f.human.ID, Grant: f.grant.ID, GrantVersion: 1, Membership: f.member.ID, Host: f.member.Host,
 		Managed: []moveAddress{f.managed.ID}, Delegate: f.cap.Delegate, Node: f.cap.Node, Agent: f.cap.Agent,
 		Command: "command-1", Nonce: "nonce-1", Idempotency: "idem-1", IntentHash: hash,
-		Action: "direct.message", Scope: "direct", BudgetAsset: "MIST", BudgetAmount: 20,
+		Action: "start", Scope: "control", BudgetAsset: "MIST", BudgetAmount: 20,
 		Issued: 1700000000000, Expires: 1700000060000, State: state, Cursor: 2}
 	f.saveObject(t, run.ID, "node_execution::CommandExecution", run)
 	index := moveExecutionIndex{Executions: moveTable{ID: addressNumber(12), Size: 1}}

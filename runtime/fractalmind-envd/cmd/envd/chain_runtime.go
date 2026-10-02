@@ -72,6 +72,9 @@ func newChainRuntimeExecutor(cfg *config.Config, keys *hostidentity.Keys, rpc ch
 	if err != nil {
 		return nil, err
 	}
+	if cfg.SUI.DirectOriginalPackageID != "" && cfg.SUI.DirectPackageID == "" {
+		return nil, fmt.Errorf("direct type origin requires its call package")
+	}
 	if cfg.SUI.OkrOriginalPackageID != "" && cfg.SUI.OkrPackageID == "" {
 		return nil, fmt.Errorf("OKR type origin requires its call package")
 	}
@@ -84,7 +87,7 @@ func newChainRuntimeExecutor(cfg *config.Config, keys *hostidentity.Keys, rpc ch
 		clear(private)
 		return nil, fmt.Errorf("identity.host_id must match the secure Host signing address")
 	}
-	resolver, err := nodecommand.NewChainAuthorityResolver(rpc, original, okrTypeOrigin(cfg))
+	resolver, err := nodecommand.NewChainAuthorityResolver(rpc, original, okrTypeOrigin(cfg), directTypeOrigin(cfg))
 	if err != nil {
 		clear(private)
 		return nil, err
@@ -180,7 +183,7 @@ func newRuntimeCommandExecutorWithStore(cfg *config.Config, store hostidentity.S
 		if original == "" {
 			original = cfg.SUI.ProtocolPackageID
 		}
-		resolver, resolverErr := nodecommand.NewChainAuthorityResolver(rpc, original, okrTypeOrigin(cfg))
+		resolver, resolverErr := nodecommand.NewChainAuthorityResolver(rpc, original, okrTypeOrigin(cfg), directTypeOrigin(cfg))
 		if resolverErr != nil {
 			rpc.Close()
 			keys.Close()
@@ -211,4 +214,18 @@ func okrTypeOrigin(cfg *config.Config) string {
 		return cfg.SUI.OkrOriginalPackageID
 	}
 	return cfg.SUI.OkrPackageID
+}
+
+// Direct state retains core Run types and its independent original extension ID.
+func directTypeOrigin(cfg *config.Config) string {
+	if cfg.SUI.DirectOriginalPackageID != "" {
+		return cfg.SUI.DirectOriginalPackageID
+	}
+	if cfg.SUI.DirectPackageID != "" {
+		return cfg.SUI.DirectPackageID
+	}
+	if cfg.SUI.ProtocolOriginalPackageID != "" {
+		return cfg.SUI.ProtocolOriginalPackageID
+	}
+	return cfg.SUI.ProtocolPackageID
 }

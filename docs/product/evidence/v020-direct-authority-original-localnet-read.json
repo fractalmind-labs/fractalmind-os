@@ -1,0 +1,40 @@
+{
+  "broadcasts": 0,
+  "directDispatchVerified": false,
+  "readOnly": true,
+  "runs": [
+    {
+      "approvalId": "",
+      "capabilityId": "0x514d6e0a881a6a666b61c903baf2a5c5115fc059f7496610d8d55b1ca09bb8ed",
+      "foreignOriginRejected": true,
+      "messageId": "0x8ff4489107d0dd91eab2fd4589a1e9d15a04a523881df68731d805cc2c466c5f",
+      "messageRecordId": "0xac623006f75c9a270743376fca72ad5af82aca82804335ea158625af9de5dfc2",
+      "originalPermissionVersion": "1",
+      "permissionId": "0x9ee6d847cd6995bd20b77dce39d997ff30fca79edcc2db99f4b74d04ba872e0c",
+      "reserved": "0",
+      "runId": "0x146b337c372f19cbbf052c9fa68860b9c922a4095a3c591ce6143487b3515ec0",
+      "settled": true,
+      "spent": "0",
+      "state": 5
+    },
+    {
+      "approvalId": "0x81ac82215734c867683e1cd6207d7281d60b81158f1473897a922ef898ebefa9",
+      "capabilityId": "0xdadde3489e4ee1b7f868ba67a9633532cbc8f246fac2aaf0004f9bee534b16be",
+      "foreignOriginRejected": true,
+      "messageId": "0x574a849bbd48f824bcc8b01a24420329b20bb6ffcb8f20e7df64e783d41d32ba",
+      "messageRecordId": "0x700a3dba4ead657f686a42384c62099537c10296b40785510826d7ee51f891f9",
+      "originalPermissionVersion": "1",
+      "permissionId": "0x9ee6d847cd6995bd20b77dce39d997ff30fca79edcc2db99f4b74d04ba872e0c",
+      "reserved": "0",
+      "runId": "0x9a739b474e9a9ffe021dd6b7934ee8c46989fac16a15c85351703b4c12624e9c",
+      "settled": true,
+      "spent": "0",
+      "state": 5
+    }
+  ],
+  "source": "original confirmed native three-package Runs",
+  "recordedAt": "2026-10-02T21:16:48.968227+00:00",
+  "privateKeysInReport": false,
+  "currentDirectAuthorityLiveVerified": false,
+  "originalRunHistoricalVerified": true
+}

@@ -34,6 +34,7 @@ type CapabilityState struct {
 	ManagedInstance        *ManagedInstanceAuthority   `json:"managed_instance,omitempty"`
 	Contract               *ExecutionContractAuthority `json:"contract,omitempty"`
 	Handover               *ExecutionHandoverAuthority `json:"handover,omitempty"`
+	Direct                 *DirectPermissionAuthority  `json:"direct,omitempty"`
 }
 
 // ManagedInstanceAuthority is authenticated chain data, not an adapter label.
@@ -311,6 +312,7 @@ func (state CapabilityState) SnapshotHash() string {
 		ManagedInstance        *ManagedInstanceAuthority   `json:"managed_instance,omitempty"`
 		Contract               *ExecutionContractAuthority `json:"contract,omitempty"`
 		Handover               *ExecutionHandoverAuthority `json:"handover,omitempty"`
+		Direct                 *DirectPermissionAuthority  `json:"direct,omitempty"`
 	}{
 		ID:                     state.ID,
 		Target:                 state.Target,
@@ -329,6 +331,7 @@ func (state CapabilityState) SnapshotHash() string {
 		ManagedInstance:        state.ManagedInstance,
 		Contract:               state.Contract,
 		Handover:               state.Handover,
+		Direct:                 state.Direct,
 	})
 	return hashBytes(payload)
 }

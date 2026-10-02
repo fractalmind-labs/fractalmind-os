@@ -1,0 +1,37 @@
+{
+  "recordedAt": "2026-10-02T21:16:48.968227+00:00",
+  "newDirectAuthorityTests": {
+    "groups": [
+      "TestDirectOriginalRunAndImmutableContent",
+      "TestDirectContentHashMatchesSdk",
+      "TestDirectCurrentPermissionAndSourceBinding",
+      "TestDirectPermissionRejectsChangedSources",
+      "TestDirectWorkspaceProtectionAndUnknownTransport",
+      "TestDirectSingleApprovalRequiresCurrentApprover",
+      "TestDirectPayloadScopeBudgetAndApproval"
+    ],
+    "subtestsPassed": 45,
+    "failed": 0
+  },
+  "racePassedPackages": [
+    "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun",
+    "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand",
+    "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui",
+    "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+    "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter"
+  ],
+  "appProductionBuild": true,
+  "nativeIntegrationScriptStrictTypecheck": true,
+  "sdkRequestHashVectors": {
+    "file.write": "60a90a2e370de16c9f3604ae205b19469f5d8f9879f52e1ed13fec23c7dbec80",
+    "status": "f55703706f2e249f3d55d006204ab33f6be1ad78527739a35183d536d093d758"
+  },
+  "limits": {
+    "validatorDirectHookConnected": false,
+    "perToolDirectHookConnected": false,
+    "directStartFinishTransactionRoutingConnected": false,
+    "directDispatchVerified": false,
+    "directUIVerified": false,
+    "currentDirectAuthorityLiveVerified": false
+  }
+}

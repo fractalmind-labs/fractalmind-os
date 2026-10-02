@@ -96,7 +96,9 @@ func newChainFixture(t *testing.T) *chainFixture {
 	seed[0] = 6
 	public := ed25519.NewKeyFromSeed(seed).Public().(ed25519.PublicKey)
 	hostAddress := moveAddress(blake2b.Sum256(append([]byte{0}, public...)))
-	f.cap = moveCapability{ID: addressNumber(1), Schema: 1, Org: addressNumber(2), Issuer: addressNumber(3), Delegate: addressNumber(4), ReservationScope: 2, TargetKind: 3, Node: hostAddress.String(), Agent: "worker", Actions: []string{"direct.message"}, Scope: "direct", MaxUses: 10, MaxBudget: 100, BudgetAsset: "MIST", Expiry: now + 60000, Version: 1}
+	// Generic Host ledger fixture. Direct messages require their separate
+	// permission/source fixture and cannot use an unbound generic capability.
+	f.cap = moveCapability{ID: addressNumber(1), Schema: 1, Org: addressNumber(2), Issuer: addressNumber(3), Delegate: addressNumber(4), ReservationScope: 2, TargetKind: 3, Node: hostAddress.String(), Agent: "worker", Actions: []string{"start"}, Scope: "control", MaxUses: 10, MaxBudget: 100, BudgetAsset: "MIST", Expiry: now + 60000, Version: 1}
 	f.member = moveMembership{ID: addressNumber(5), Org: f.cap.Org, Host: hostAddress, PublicKey: public, EncryptionKey: make([]byte, 32), Name: "local", Binding: addressNumber(6), Version: 1, Expiry: now + 120000}
 	f.coordinator = moveCoordinator{ID: addressNumber(6), Org: f.cap.Org, Address: hostAddress, PublicKey: public, Endpoint: "https://entry.example.invalid", Version: 1}
 	f.human = moveHuman{ID: addressNumber(3), Generation: 1, Network: "localnet", Roles: moveTable{ID: addressNumber(7), Size: 1}}

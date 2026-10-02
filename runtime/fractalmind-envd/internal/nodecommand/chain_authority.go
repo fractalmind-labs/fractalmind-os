@@ -34,28 +34,38 @@ type ChainObjectReader interface {
 // not reserve execution or budget; ChainAuthorityStore must use a chain-backed
 // reservation backend before an executor can consume the projection.
 type ChainAuthorityResolver struct {
-	reader       ChainObjectReader
-	packageID    string
-	okrPackageID string
-	now          func() time.Time
+	reader          ChainObjectReader
+	packageID       string
+	okrPackageID    string
+	directPackageID string
+	now             func() time.Time
 }
 
-func NewChainAuthorityResolver(reader ChainObjectReader, originalPackageID string, okrOrigins ...string) (*ChainAuthorityResolver, error) {
+// Extension origins are ordered OKR, direct. Empty positions retain the core
+// origin for historical deployments; current call IDs are configured separately.
+func NewChainAuthorityResolver(reader ChainObjectReader, originalPackageID string, extensionOrigins ...string) (*ChainAuthorityResolver, error) {
 	addr, err := chainAddress(originalPackageID)
 	if err != nil || reader == nil {
 		return nil, fmt.Errorf("chain reader and original protocol package ID are required")
 	}
-	if len(okrOrigins) > 1 {
-		return nil, fmt.Errorf("at most one OKR type origin is supported")
+	if len(extensionOrigins) > 2 {
+		return nil, fmt.Errorf("at most OKR and direct type origins are supported")
 	}
 	okr := addr
-	if len(okrOrigins) == 1 && okrOrigins[0] != "" {
-		okr, err = chainAddress(okrOrigins[0])
+	if len(extensionOrigins) >= 1 && extensionOrigins[0] != "" {
+		okr, err = chainAddress(extensionOrigins[0])
 		if err != nil {
 			return nil, err
 		}
 	}
-	return &ChainAuthorityResolver{reader: reader, packageID: addr.String(), okrPackageID: okr.String(), now: time.Now}, nil
+	direct := addr
+	if len(extensionOrigins) == 2 && extensionOrigins[1] != "" {
+		direct, err = chainAddress(extensionOrigins[1])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &ChainAuthorityResolver{reader: reader, packageID: addr.String(), okrPackageID: okr.String(), directPackageID: direct.String(), now: time.Now}, nil
 }
 
 type moveAddress [32]byte
@@ -188,6 +198,8 @@ func (r *chainRead) object(ctx context.Context, id string, kind string, out any)
 	pkg := r.resolver.packageID
 	if strings.HasPrefix(kind, "okr::") {
 		pkg = r.resolver.okrPackageID
+	} else if strings.HasPrefix(kind, "direct_agent::") {
+		pkg = r.resolver.directPackageID
 	}
 	if obj.ID != id || obj.Type != pkg+"::"+kind || obj.Version == 0 || !obj.Shared {
 		return fmt.Errorf("unexpected protocol object, owner or version for %s", kind)
@@ -230,7 +242,10 @@ func (r *chainRead) field(ctx context.Context, parent string, keyTag []byte, key
 func normalizeMoveType(value string) string {
 	value = strings.ReplaceAll(value, " ", "")
 	// Framework type IDs may be expanded by the RPC service.
-	return strings.ReplaceAll(value, "0x"+strings.Repeat("0", 63)+"2::", "0x2::")
+	for _, framework := range []string{"1", "2"} {
+		value = strings.ReplaceAll(value, "0x"+strings.Repeat("0", 63)+framework+"::", "0x"+framework+"::")
+	}
+	return value
 }
 func structKeyTag(packageID, module, name string) []byte {
 	addr, _ := chainAddress(packageID)
@@ -411,7 +426,14 @@ func (s *ChainAuthorityResolver) Resolve(ctx context.Context, ref CapabilityRef)
 	if !validSigningToken(cap.Scope) || cap.Scope == "" || (cap.MaxBudget > 0 && (!validSigningToken(cap.BudgetAsset) || cap.BudgetAsset == "")) {
 		return CapabilityState{}, fmt.Errorf("invalid capability scope/budget")
 	}
-	contract, contractExpiry, err := r.currentContract(ctx, cap, auth, instance, uint64(now))
+	var contract *ExecutionContractAuthority
+	var direct *DirectPermissionAuthority
+	var contractExpiry uint64
+	if contains(cap.Actions, "direct.message") {
+		direct, contractExpiry, err = r.currentDirect(ctx, cap, auth, instance, uint64(now))
+	} else {
+		contract, contractExpiry, err = r.currentContract(ctx, cap, auth, instance, uint64(now))
+	}
 	if err != nil {
 		return CapabilityState{}, err
 	}
@@ -447,6 +469,7 @@ func (s *ChainAuthorityResolver) Resolve(ctx context.Context, ref CapabilityRef)
 	state := CapabilityState{ID: ref.ID, Target: Target{OrganizationID: cap.Org.String(), NodeID: cap.Node, AgentID: cap.Agent}, AuthorizedSigners: []string{cap.Delegate.String()}, Actions: cap.Actions, Scopes: []string{cap.Scope}, ExpiresAtMS: int64(expiry), RevocationVersion: cap.Version, CheckpointObservedAtMS: now, ReservationScope: ReservationScopeNode, RemainingUses: &uses, AuthorityVersionHash: hashBytes([]byte(stamp.String()))}
 	state.ManagedInstance = instance
 	state.Contract = contract
+	state.Direct = direct
 	state.Handover = handover
 	// Pre-validation ceilings: the exact intent may already be reserved. The
 	// chain reservation backend checks its claim and counters without consuming twice.

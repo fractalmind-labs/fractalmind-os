@@ -76,8 +76,8 @@ func TestHostJoinLiveCLI(t *testing.T) {
 		t.Fatal("invalid public fixture configuration")
 	}
 	var input struct {
-		PackageID, OkrPackageID, RegistryID, OrganizationID, ChainIdentifier, JournalRoot string
-		LiveConnection                                                                    bool
+		PackageID, OkrPackageID, DirectPackageID, RegistryID, OrganizationID, ChainIdentifier, JournalRoot string
+		LiveConnection                                                                                     bool
 	}
 	if json.Unmarshal(frame, &input) != nil || input.JournalRoot == "" {
 		t.Fatal("invalid public fixture configuration")
@@ -165,11 +165,11 @@ func TestHostJoinLiveCLI(t *testing.T) {
 	var nativeWorkspace string
 	var deviceCommandDispatches atomic.Int64
 	if input.LiveConnection {
-		reader, err = nodecommand.NewChainAuthorityResolver(base, input.PackageID, input.OkrPackageID)
+		reader, err = nodecommand.NewChainAuthorityResolver(base, input.PackageID, input.OkrPackageID, input.DirectPackageID)
 		if err != nil {
 			t.Fatal(err)
 		}
-		liveConfig = &config.Config{SUI: config.SUIConfig{Network: "localnet", ProtocolRegistryID: input.RegistryID, ProtocolPackageID: input.PackageID, OkrPackageID: input.OkrPackageID, ChainIdentifier: input.ChainIdentifier, OrgID: input.OrganizationID}, Coordinator: config.CoordinatorConfig{BindingID: result.Membership.BindingID}}
+		liveConfig = &config.Config{SUI: config.SUIConfig{Network: "localnet", ProtocolRegistryID: input.RegistryID, ProtocolPackageID: input.PackageID, OkrPackageID: input.OkrPackageID, DirectPackageID: input.DirectPackageID, ChainIdentifier: input.ChainIdentifier, OrgID: input.OrganizationID}, Coordinator: config.CoordinatorConfig{BindingID: result.Membership.BindingID}}
 		commandTimeout := time.Second
 		if os.Getenv("FM_ENVD_DEVICE_COMMAND") == "1" || os.Getenv("FM_ENVD_HANDOVER_APPROVAL") == "1" {
 			commandTimeout = 30 * time.Second
@@ -218,6 +218,7 @@ func TestHostJoinLiveCLI(t *testing.T) {
 				nativeConfig.SUI.Network = "localnet"
 				nativeConfig.SUI.ProtocolPackageID = input.PackageID
 				nativeConfig.SUI.OkrPackageID = input.OkrPackageID
+				nativeConfig.SUI.DirectPackageID = input.DirectPackageID
 				nativeConfig.SUI.ProtocolRegistryID = input.RegistryID
 				nativeConfig.SUI.ChainIdentifier = input.ChainIdentifier
 				nativeConfig.SUI.OrgID = input.OrganizationID
