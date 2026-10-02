@@ -42,6 +42,7 @@ const AgentCheckpointView = lazy(() => import("./AgentCheckpointView"));
 const HandoverFlow = lazy(() => import("./HandoverFlow"));
 const OkrContinuation = lazy(() => import("./OkrContinuation"));
 const OkrVerification = lazy(() => import("./OkrVerification"));
+const DirectAgentConversation = lazy(() => import("./DirectAgentConversation"));
 const runLabels: Array<[string, string]> = [
   ["待启动", "Queued"],
   ["链上记录：运行中", "Chain record: running"],
@@ -710,10 +711,30 @@ export function App() {
                     </strong>
                     <p>
                       {t(
-                        "Agent 消息投递与执行介入尚未接通。暂停、调整执行约定和联系 Agent 在接线完成后启用。",
-                        "Agent message delivery and execution interventions are pending. Pause, agreement changes and Agent contact become available after integration.",
+                        "可以联系负责实例，查询状态或提出有限文件操作；直接消息使用独立权限与预算。OKR 的暂停和约定调整仍待接入。",
+                        "Contact the assigned instance for status or bounded file requests. Direct messages use separate authority and budget. OKR pause and agreement changes are not connected yet.",
                       )}
                     </p>
+                    {contextAgent && (
+                      <Suspense
+                        fallback={
+                          <p>{t("加载沟通入口…", "Loading communication…")}</p>
+                        }
+                      >
+                        <DirectAgentConversation
+                          key={JSON.stringify([
+                            profile,
+                            contextAgent,
+                            hostAuthorityRevision,
+                          ])}
+                          profile={profile!}
+                          organizationId={snapshot.organization.objectId}
+                          managed={contextAgent}
+                          onChanged={data.refresh}
+                          t={t}
+                        />
+                      </Suspense>
+                    )}
                   </div>
                 </>
               )
@@ -892,10 +913,33 @@ export function App() {
                     </p>
                     <small>
                       {t(
-                        "实例状态未知 · 无已验证消息投递能力",
-                        "Instance status unknown · no verified messaging capability",
+                        "实例状态待核实 · 发送时重新检查固定实例与权限",
+                        "Instance state needs verification · fixed instance and authority rechecked when sending",
                       )}
                     </small>
+                    <Suspense
+                      fallback={
+                        <p>{t("加载沟通入口…", "Loading communication…")}</p>
+                      }
+                    >
+                      <DirectAgentConversation
+                        key={JSON.stringify([
+                          profile,
+                          agent,
+                          hostAuthorityRevision,
+                        ])}
+                        profile={{
+                          ...profile,
+                          chainIdentifier:
+                            data.identity?.chainIdentifier ??
+                            profile.chainIdentifier,
+                        }}
+                        organizationId={snapshot.organization.objectId}
+                        managed={agent}
+                        onChanged={data.refresh}
+                        t={t}
+                      />
+                    </Suspense>
                     <Suspense
                       fallback={
                         <p>{t("加载执行检查…", "Loading execution check…")}</p>

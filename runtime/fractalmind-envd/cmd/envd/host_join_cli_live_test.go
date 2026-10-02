@@ -69,7 +69,13 @@ func TestHostJoinLiveCLI(t *testing.T) {
 	if os.Getenv("FM_HOST_JOIN_LIVE_CLI") != "1" {
 		t.Skip("explicit real localnet fixture only")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+	// The explicit App scenario includes additional native fee confirmations;
+	// this fixture lifetime does not extend any capability or message deadline.
+	liveTimeout := 300 * time.Second
+	if os.Getenv("FM_ENVD_DIRECT_APP") == "1" {
+		liveTimeout = 900 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), liveTimeout)
 	defer cancel()
 	frame, err := bufio.NewReaderSize(os.Stdin, 4096).ReadBytes('\n')
 	if err != nil || len(frame) > 4096 {

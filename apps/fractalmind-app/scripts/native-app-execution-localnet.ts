@@ -45,6 +45,7 @@ import {
 } from "../src/coordinator-read";
 import { canonical } from "../src/handover-plan";
 import { DeviceIdentityVerifier } from "../src/device-identity";
+import { NativeDirectAgent, type DirectOperation } from "../src/direct-agent";
 assert.ok(
   process.argv[2] && process.argv[3],
   "Pass isolated deployment and a new output report",
@@ -54,6 +55,8 @@ const output = process.argv[3],
 const humanSequence = process.argv.slice(4).includes("--human-sequence");
 const directPermission = process.argv.slice(4).includes("--direct-permission");
 const directDispatch = process.argv.slice(4).includes("--direct-dispatch");
+const directApp = process.argv.slice(4).includes("--direct-app");
+assert.ok(!directApp || directDispatch, "Direct App checks need real dispatch");
 assert.ok(
   !directDispatch || directPermission,
   "Dispatch needs the direct protocol setup",
@@ -66,9 +69,12 @@ assert.ok(
   process.argv
     .slice(4)
     .every((a) =>
-      ["--human-sequence", "--direct-permission", "--direct-dispatch"].includes(
-        a,
-      ),
+      [
+        "--human-sequence",
+        "--direct-permission",
+        "--direct-dispatch",
+        "--direct-app",
+      ].includes(a),
     ),
   "Unknown harness option",
 );
@@ -164,6 +170,8 @@ async function save(complete = false) {
           directMessageEnvdDispatchVerified:
             state.directMessageEnvdDispatchVerified === true,
           directMessageUIVerified: false,
+          directAppControllerVerified:
+            state.directAppControllerVerified === true,
           installedHumanReviewVerified: false,
           reviewDecisions: humanSequence
             ? "explicit scripted test approvals, not installed Human UI"
@@ -355,6 +363,7 @@ try {
       FM_ENVD_CHAIN_CONNECTION: "1",
       FM_ENVD_NATIVE_DISCOVERY: "1",
       FM_ENVD_NATIVE_APP_EXECUTION: "1",
+      FM_ENVD_DIRECT_APP: directApp ? "1" : "0",
       FM_ENVD_AGENT_DISCOVERY: "1",
       FM_ENVD_DEVICE_COMMAND: "1",
       FM_ENVD_HANDOVER_APPROVAL: "1",
@@ -1869,6 +1878,212 @@ try {
         commandDeliveries: deliveries,
       };
       await save();
+      if (directApp) {
+        const controller = new NativeDirectAgent(
+          chain,
+          device,
+          auth.grantId,
+          organizationId,
+          managedAgentId,
+          invoke,
+          journal,
+          transport,
+        );
+        const originalDeliveries = deliveries;
+        async function operation(label: string, op: DirectOperation) {
+          const quote = await controller.prepare(op);
+          assert.ok(
+            !("status" in quote),
+            "Fresh explicit controller operation",
+          );
+          await preparedQuote(label, quote);
+          const outcome = await controller.submit(quote);
+          await record(label, outcome);
+          assert.equal(
+            deliveries,
+            originalDeliveries + ((state.directAppDelivered as number) ?? 0),
+            "Quoting and mutations do not deliver",
+          );
+          return outcome;
+        }
+        const description = await controller.describe();
+        assert.equal(description.permission!.version, "2");
+        assert.equal(description.policy!.maxCalls, "3");
+        await operation("formal direct App permission edit", {
+          kind: "permission",
+          expectedVersion: "2",
+          policy: {
+            ...description.policy!,
+            actions: ["status", "file.read", "file.write"],
+            maxCalls: "1",
+            budgetLimit: "4",
+            expiresAtMs: String(Date.now() + 600000),
+          },
+        });
+        const edited = await controller.describe();
+        assert.equal(edited.permission!.version, "3");
+        assert.equal(edited.permission!.spent, "4");
+        assert.equal(edited.permission!.budget_limit, "4");
+        async function create(
+          action: "status" | "file.write",
+          calls: string,
+          task?: string,
+        ) {
+          const token = randomUUID();
+          await operation("formal direct App encrypted message", {
+            kind: "message",
+            messageToken: token,
+            action,
+            request: {
+              message: "Reviewed formal App direct request",
+              bounds: { paths: plan.paths, max_calls: calls },
+              ...(task ? { task } : {}),
+            },
+          });
+          const message = await sdk.directAgent.findMessage(
+            permissionId,
+            token,
+          );
+          assert.ok(message);
+          return message.id;
+        }
+        async function run(messageId: string) {
+          const cap = await operation("formal direct App capability", {
+            kind: "capability",
+            messageId,
+          });
+          const capabilityId = createdObject(
+            cap,
+            "remote_authority::RemoteCapability",
+          );
+          await operation("formal direct App original Run and OS result wrap", {
+            kind: "run",
+            messageId,
+            capabilityId,
+          });
+          const queued = await controller.message(messageId);
+          assert.equal(queued.result!.run.state, 0);
+          assert.equal(controller.canSend(messageId), true);
+          const before = deliveries;
+          state = {
+            ...state,
+            directAppOriginalRun: queued.result!.run.id,
+            directAppOriginalMessage: messageId,
+          };
+          await save();
+          const reply = (await controller.send(messageId, async () => {
+            state = { ...state, directAppDeliveryAttempted: true };
+            await save();
+          })) as { success?: boolean };
+          assert.equal(reply.success, true);
+          assert.equal(deliveries, before + 1);
+          state = {
+            ...state,
+            directAppDelivered: ((state.directAppDelivered as number) ?? 0) + 1,
+          };
+          await save();
+          await assert.rejects(controller.send(messageId, async () => {}));
+          assert.equal(deliveries, before + 1);
+          await readVisible(
+            () => sdk.nodeExecution.getExecution(queued.result!.run.id),
+            (r) => r.state === 2,
+          );
+          const result = await controller.message(messageId);
+          assert.equal(result.result!.response!.ok, true);
+          assert.equal(result.claim!.settled, true);
+          const restored = new NativeDirectAgent(
+            chain,
+            device,
+            auth.grantId,
+            organizationId,
+            managedAgentId,
+            invoke,
+            new MemoryTransactionJournal(),
+            transport,
+          );
+          assert.equal(
+            (await restored.message(messageId)).result!.recordId,
+            result.result!.recordId,
+          );
+          assert.equal(restored.canSend(messageId), false);
+          assert.equal(deliveries, before + 1);
+          return result;
+        }
+        const statusId = await create("status", "0");
+        await run(statusId);
+        const writeId = await create(
+          "file.write",
+          "3",
+          JSON.stringify({
+            kind: "ensure_text_files",
+            files: [
+              {
+                path: "docs/APP-DIRECT.md",
+                content: "Formal native App direct controller execution",
+              },
+            ],
+          }),
+        );
+        const needsApproval = await controller.message(writeId);
+        assert.ok(needsApproval.reasons.includes("per_message_limit"));
+        assert.ok(needsApproval.reasons.includes("budget"));
+        await assert.rejects(
+          controller.prepare({ kind: "capability", messageId: writeId }),
+        );
+        await operation("formal direct App one-off request", {
+          kind: "approval",
+          messageId: writeId,
+        });
+        await operation("formal direct App explicit decision", {
+          kind: "decision",
+          messageId: writeId,
+          approve: true,
+        });
+        const written = await run(writeId);
+        assert.equal(written.claim!.spent, "3");
+        assert.equal(
+          (await sdk.directAgent.getPermission(permissionId)).spent,
+          "4",
+        );
+        assert.equal(
+          (await sdk.directAgent.getPermission(permissionId)).approved_spent,
+          "6",
+        );
+        await operation("formal direct App permission revocation", {
+          kind: "revoke",
+          expectedVersion: "3",
+        });
+        assert.equal(
+          (await controller.message(writeId)).result!.recordId,
+          written.result!.recordId,
+        );
+        assert.equal((await sdk.okr.getBudget(okrId)).spent, 6n);
+        checks.push(
+          "formal native Direct App controller edits and revokes versioned authority, stores messages, quotes every operation, sends status at zero remaining budget and executes an explicitly approved file request without changing the standing ceiling",
+        );
+        checks.push(
+          "fresh Direct App controller with an empty technical journal rebuilds both original encrypted results from Sui, refuses to infer resend authority and retains historical read access after permission revocation",
+        );
+        const finalAppPermission =
+          await sdk.directAgent.getPermission(permissionId);
+        state = {
+          ...state,
+          directAppControllerVerified: true,
+          directAppFinalBudget: {
+            permissionVersion: finalAppPermission.version,
+            revoked: finalAppPermission.revoked,
+            maxCalls: finalAppPermission.max_calls,
+            budgetLimit: finalAppPermission.budget_limit,
+            spent: finalAppPermission.spent,
+            reserved: finalAppPermission.reserved,
+            approvedSpent: finalAppPermission.approved_spent,
+            approvedReserved: finalAppPermission.approved_reserved,
+          },
+          transportCalls,
+          commandDeliveries: deliveries,
+        };
+        await save();
+      }
     }
   }
   const revokeQuote = await admission.prepare(

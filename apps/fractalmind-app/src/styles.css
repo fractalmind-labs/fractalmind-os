@@ -1396,6 +1396,16 @@ h3 {
 .okr-create-dialog .checkbox-row input {width:auto;flex:0 0 auto;margin-top:3px;}
 .handover-dialog .dialog-heading > div {min-width:0;}
 .handover-dialog .dialog-heading p {overflow-wrap:anywhere;}
+.direct-agent-dialog {width:min(1080px,calc(100vw - 24px));}
+.direct-layout {display:grid;grid-template-columns:minmax(220px,1fr) minmax(0,2fr);gap:16px;margin-top:20px;}
+.direct-layout > * {min-width:0;}
+.direct-layout .panel {margin-bottom:16px;}
+.direct-agent-dialog pre {white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto;}
+.direct-thread-list {list-style:none;padding:0;max-height:320px;overflow:auto;}
+.direct-thread-list li {display:grid;gap:4px;margin-bottom:12px;}
+.direct-thread-list button {text-align:left;width:100%;}
+.direct-message-text {white-space:pre-wrap;overflow-wrap:anywhere;}
+@media (max-width:700px) {.direct-layout {grid-template-columns:1fr;} .direct-agent-dialog {padding:16px;} .direct-thread-list {max-height:180px;}}
 .host-actions {display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;}
 .host-access .host-confirm {display:flex;align-items:flex-start;gap:8px;}
 .host-access .host-confirm input {width:auto;margin:4px 0;}

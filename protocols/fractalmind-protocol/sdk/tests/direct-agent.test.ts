@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { bcs } from "@mysten/sui/bcs";
+import { bcs, TypeTagSerializer } from "@mysten/sui/bcs";
+import { deriveDynamicFieldID } from "@mysten/sui/utils";
 import { Transaction } from "@mysten/sui/transactions";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import type { ClientWithCoreApi } from "@mysten/sui/client";
@@ -806,4 +807,165 @@ test("split direct package pins reads and routes execution separately from core"
   assert.equal(call.module, "direct_agent");
   assert.equal(f.sdk.client.typesPackageId, id(1));
   assert.equal(f.sdk.client.directTypesPackageId, direct);
+});
+
+function missing(parentId: string, name: { type: string; bcs: Uint8Array }) {
+  return {
+    reason: "notFound",
+    objectId: deriveDynamicFieldID(
+      parentId,
+      TypeTagSerializer.parseFromStr(name.type),
+      name.bcs,
+    ),
+  };
+}
+test("direct optional discovery distinguishes exact absence from broken source and transport", async (t) => {
+  for (const mode of [
+    "root",
+    "agent",
+    "transport",
+    "wrong_missing",
+    "pointed_object",
+  ] as const) {
+    await t.test(mode, async () => {
+      const f = fixture(),
+        read = f.core.getDynamicField,
+        object = f.core.getObject;
+      f.core.getDynamicField = async (input) => {
+        if (
+          (mode === "root" && input.parentId === id(2)) ||
+          (mode === "agent" && input.parentId === id(31))
+        )
+          throw missing(input.parentId, input.name);
+        if (mode === "transport") throw new Error("offline");
+        if (mode === "wrong_missing")
+          throw { reason: "notFound", objectId: id(999) };
+        return read(input);
+      };
+      if (mode === "pointed_object")
+        f.core.getObject = async (input) => {
+          if (input.objectId === id(4))
+            throw { reason: "notFound", objectId: id(4) };
+          return object(input);
+        };
+      if (["root", "agent"].includes(mode))
+        assert.equal(
+          await f.sdk.directAgent.findPermissionForAgent(id(2), id(5)),
+          null,
+        );
+      else
+        await assert.rejects(
+          f.sdk.directAgent.findPermissionForAgent(id(2), id(5)),
+        );
+    });
+  }
+});
+test("direct history resolves exact original approval and Run pointers, rejecting another message", async () => {
+  const f = fixture(true),
+    read = f.core.getDynamicField;
+  let wrong = false;
+  f.core.getDynamicField = async (input) => {
+    if ([id(22), id(23)].includes(input.parentId)) {
+      assert.equal(bcs.Address.parse(input.name.bcs), f.message.id);
+      return {
+        dynamicField: {
+          value: {
+            type: "0x2::object::ID",
+            bcs: bcs.Address.serialize(
+              input.parentId === id(22) ? id(9) : id(30),
+            ).toBytes(),
+          },
+        },
+      };
+    }
+    if (input.parentId === id(21) && wrong)
+      return {
+        dynamicField: {
+          value: {
+            type: "0x2::object::ID",
+            bcs: bcs.Address.serialize(id(999)).toBytes(),
+          },
+        },
+      };
+    return read(input);
+  };
+  const links = await f.sdk.directAgent.getMessageLinks(f.message.id);
+  assert.equal(links.approval?.id, id(9));
+  assert.equal(links.executionId, id(30));
+  f.approval.message_id = id(999);
+  await assert.rejects(
+    f.sdk.directAgent.getMessageLinks(f.message.id),
+    /pointer and message/,
+  );
+  f.approval.message_id = f.message.id;
+  wrong = true;
+  await assert.rejects(f.sdk.directAgent.getMessageLinks(f.message.id));
+});
+test("direct workspace occupancy includes aliases and rejects changed or incomplete reads", async (t) => {
+  for (const mode of [
+    "alias",
+    "clear",
+    "missing",
+    "changing",
+    "offline",
+    "wrong_type",
+  ] as const)
+    await t.test(mode, async () => {
+      const f = fixture(),
+        module = `${id(1)}::execution_extension`;
+      const Entries = bcs.struct("ActiveAssignments", {
+        total: bcs.u64(),
+        revision: bcs.u64(),
+        agents: bcs.struct("Table", { id: bcs.Address, size: bcs.u64() }),
+        workspaces: bcs.struct("Table", { id: bcs.Address, size: bcs.u64() }),
+      });
+      let reads = 0;
+      f.core.getDynamicField = async (input) => {
+        if (mode === "offline") throw new Error("offline");
+        if (input.parentId === id(2)) {
+          assert.equal(input.name.type, `${module}::ActiveAssignmentsKey`);
+          if (mode === "missing") throw missing(input.parentId, input.name);
+          reads++;
+          return {
+            dynamicField: {
+              value: {
+                type: `${module}::ActiveAssignments`,
+                bcs: Entries.serialize({
+                  total: "1",
+                  revision: mode === "changing" && reads > 1 ? "2" : "1",
+                  agents: Table(31, 1),
+                  workspaces: Table(32, 1),
+                }).toBytes(),
+              },
+            },
+          };
+        }
+        if (input.parentId === id(31) || mode === "clear")
+          throw missing(input.parentId, input.name);
+        assert.equal(input.parentId, id(32));
+        return {
+          dynamicField: {
+            value: {
+              type: mode === "wrong_type" ? "address" : "u64",
+              bcs: bcs.u64().serialize(1).toBytes(),
+            },
+          },
+        };
+      };
+      const result = () =>
+        f.sdk.directAgent.getWorkspaceState(
+          id(2),
+          id(5),
+          id(11),
+          Array(32).fill(7),
+        );
+      if (["changing", "offline", "wrong_type"].includes(mode))
+        await assert.rejects(result());
+      else
+        assert.deepEqual(await result(), {
+          protected: mode === "alias",
+          revision: mode === "missing" ? "0" : "1",
+          complete: true,
+        });
+    });
 });

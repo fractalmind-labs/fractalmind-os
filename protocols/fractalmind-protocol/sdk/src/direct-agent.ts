@@ -621,7 +621,10 @@ export class DirectAgentApi {
       name,
     });
     if (
-      normalizeStructTag(dynamicField.value.type) !== normalizeStructTag(type)
+      type === "u64"
+        ? dynamicField.value.type !== type
+        : normalizeStructTag(dynamicField.value.type) !==
+          normalizeStructTag(type)
     )
       throw new Error("Invalid direct index/binding source.");
     return dynamicField.value.bcs;
@@ -652,34 +655,210 @@ export class DirectAgentApi {
     return p;
   }
   async getPermissionForAgent(organizationId: string, managedAgentId: string) {
+    const permission = await this.findPermissionForAgent(
+      organizationId,
+      managedAgentId,
+    );
+    if (!permission)
+      throw new Error("No standing permission for this instance.");
+    return permission;
+  }
+  private missingField(
+    error: unknown,
+    parentId: string,
+    name: { type: string; bcs: Uint8Array },
+  ) {
+    const expected = deriveDynamicFieldID(
+      normalizeSuiAddress(parentId),
+      TypeTagSerializer.parseFromStr(name.type),
+      name.bcs,
+    );
+    return Boolean(
+      error &&
+        typeof error === "object" &&
+        "reason" in error &&
+        error.reason === "notFound" &&
+        "objectId" in error &&
+        error.objectId === expected,
+    );
+  }
+  private async pointer(
+    parentId: string,
+    name: { type: string; bcs: Uint8Array },
+  ) {
+    try {
+      return ID.parse(await this.field(parentId, "0x2::object::ID", name));
+    } catch (error) {
+      if (this.missingField(error, parentId, name)) return null;
+      throw error;
+    }
+  }
+  /** Exact missing index/instance pointer is empty. Missing pointed objects,
+   * wrong extension sources and transport failures remain errors. */
+  async findPermissionForAgent(organizationId: string, managedAgentId: string) {
     const org = normalizeSuiAddress(organizationId),
       managed = normalizeSuiAddress(managedAgentId),
-      module = `${this.fm.directTypesPackageId}::direct_agent`;
-    const index = PermissionIndex.parse(
-      await this.field(
-        org,
-        `${this.fm.typesPackageId}::execution_extension::PermissionIndex`,
-        {
-          type: `${this.fm.typesPackageId}::execution_extension::IndexKey`,
-          bcs: new Uint8Array([0]),
-        },
-      ),
-    );
+      name = {
+        type: `${this.fm.typesPackageId}::execution_extension::IndexKey`,
+        bcs: new Uint8Array([0]),
+      };
+    let index: ReturnType<typeof PermissionIndex.parse>;
+    try {
+      index = PermissionIndex.parse(
+        await this.field(
+          org,
+          `${this.fm.typesPackageId}::execution_extension::PermissionIndex`,
+          name,
+        ),
+      );
+    } catch (error) {
+      if (this.missingField(error, org, name)) return null;
+      throw error;
+    }
     if (
       index.source.name !==
       `${this.fm.directTypesPackageId.slice(2)}::direct_agent::Witness`
     )
       throw new Error("Unexpected direct extension source.");
-    const pointer = ID.parse(
-      await this.field(index.agents.id, "0x2::object::ID", {
-        type: "0x2::object::ID",
-        bcs: ID.serialize(managed).toBytes(),
-      }),
-    );
+    const pointer = await this.pointer(index.agents.id, {
+      type: "0x2::object::ID",
+      bcs: ID.serialize(managed).toBytes(),
+    });
+    if (!pointer) return null;
     const permission = await this.getPermission(pointer);
     if (permission.org_id !== org || permission.managed_agent !== managed)
       throw new Error("Direct permission belongs to another instance.");
     return permission;
+  }
+  async findMessage(permissionId: string, messageToken: string) {
+    const permission = await this.getPermission(permissionId);
+    const pointer = await this.pointer(permission.messages.id, {
+      type: "0x1::string::String",
+      bcs: bcs.string().serialize(token(messageToken)).toBytes(),
+    });
+    if (!pointer) return null;
+    const message = await this.getMessage(pointer);
+    if (
+      message.permission_id !== permission.id ||
+      message.org_id !== permission.org_id ||
+      message.managed_agent !== permission.managed_agent ||
+      message.message_token !== messageToken
+    )
+      throw new Error("Direct message pointer and source disagree.");
+    return message;
+  }
+  /** Discover original approval/Run from Sui after discarding local locators.
+   * A missing exact pointer never makes another message or Run authoritative. */
+  async getMessageLinks(messageId: string) {
+    const message = await this.getMessage(messageId),
+      permission = await this.getPermission(message.permission_id);
+    if (
+      message.org_id !== permission.org_id ||
+      message.managed_agent !== permission.managed_agent ||
+      (await this.findMessage(permission.id, message.message_token))?.id !==
+        message.id
+    )
+      throw new Error("Direct message is absent from its original index.");
+    const name = {
+      type: "0x2::object::ID",
+      bcs: ID.serialize(message.id).toBytes(),
+    };
+    const [approvalId, executionId] = await Promise.all([
+      this.pointer(permission.approvals.id, name),
+      this.pointer(permission.message_runs.id, name),
+    ]);
+    const approval = approvalId ? await this.getApproval(approvalId) : null;
+    if (
+      approval &&
+      (approval.permission_id !== permission.id ||
+        approval.message_id !== message.id ||
+        approval.org_id !== message.org_id ||
+        approval.managed_agent !== message.managed_agent)
+    )
+      throw new Error("Direct approval pointer and message disagree.");
+    if (
+      JSON.stringify(permission) !==
+      JSON.stringify(await this.getPermission(permission.id))
+    )
+      throw new Error("Direct message links changed during read.");
+    return { approval, executionId };
+  }
+  /** Mirrors the core extension's active assignment occupancy. It includes
+   * aliases of the same Host workspace and pins the assignment revision. */
+  async getWorkspaceState(
+    organizationId: string,
+    managedAgentId: string,
+    hostAddress: string,
+    workspaceHash: number[],
+  ) {
+    if (workspaceHash.length !== 32)
+      throw new Error("Workspace hash required.");
+    const org = normalizeSuiAddress(organizationId),
+      module = `${this.fm.typesPackageId}::execution_extension`,
+      name = {
+        type: `${module}::ActiveAssignmentsKey`,
+        bcs: new Uint8Array([0]),
+      };
+    const Entries = bcs.struct("ActiveAssignments", {
+      total: bcs.u64(),
+      revision: bcs.u64(),
+      agents: Table,
+      workspaces: Table,
+    });
+    const read = () => this.field(org, `${module}::ActiveAssignments`, name);
+    let original: Uint8Array;
+    try {
+      original = await read();
+    } catch (error) {
+      if (this.missingField(error, org, name))
+        return { protected: false, revision: "0", complete: true };
+      throw error;
+    }
+    const entries = Entries.parse(original);
+    if (
+      BigInt(entries.revision) < 1n ||
+      BigInt(entries.agents.size) > BigInt(entries.total) ||
+      BigInt(entries.workspaces.size) > BigInt(entries.total)
+    )
+      throw new Error("Invalid active assignment coverage.");
+    const count = async (
+      parent: string,
+      key: { type: string; bcs: Uint8Array },
+    ) => {
+      try {
+        const n = bcs.u64().parse(await this.field(parent, "u64", key));
+        if (BigInt(n) < 1n || BigInt(n) > BigInt(entries.total))
+          throw new Error("Invalid active assignment count.");
+        return BigInt(n);
+      } catch (error) {
+        if (this.missingField(error, parent, key)) return 0n;
+        throw error;
+      }
+    };
+    const Workspace = bcs.struct("WorkspaceKey", {
+      host_address: ID,
+      workspace_hash: Bytes,
+    });
+    const [agent, workspace] = await Promise.all([
+      count(entries.agents.id, {
+        type: "0x2::object::ID",
+        bcs: ID.serialize(normalizeSuiAddress(managedAgentId)).toBytes(),
+      }),
+      count(entries.workspaces.id, {
+        type: `${module}::WorkspaceKey`,
+        bcs: Workspace.serialize({
+          host_address: normalizeSuiAddress(hostAddress),
+          workspace_hash: workspaceHash,
+        }).toBytes(),
+      }),
+    ]);
+    if (!equalBytes(original, await read()))
+      throw new Error("Active assignments changed during read.");
+    return {
+      protected: agent > 0n || workspace > 0n,
+      revision: entries.revision,
+      complete: true,
+    };
   }
   async getMessage(messageId: string) {
     const m = DirectMessageBcs.parse(

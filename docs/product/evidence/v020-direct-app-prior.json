@@ -1,0 +1,397 @@
+{
+  "recordedAt": "2026-10-02T23:04:31.813331+00:00",
+  "readOnlyRecheck": {
+    "recordedAt": "2026-10-02T23:02:45.264Z",
+    "readOnly": true,
+    "broadcasts": 0,
+    "reads": [
+      {
+        "attempt": "r15",
+        "permission": {
+          "id": "0xa1895b14e3a9c92f3ee0b8fc502014aec59e6751d70776764a3e95685927e120",
+          "version": "3",
+          "revoked": false,
+          "maxCalls": "1",
+          "budgetLimit": "4",
+          "spent": "4",
+          "reserved": "0",
+          "approvedSpent": "3",
+          "approvedReserved": "0",
+          "messageCount": "6"
+        },
+        "okr": {
+          "id": "0xb04745bf4de9e746e4ba904f2a606a97ff035ed3d45cae58317cb989480ff85c",
+          "state": 3,
+          "nextKr": "2",
+          "budget": {
+            "asset": "TOOL_CALLS",
+            "spent": "6",
+            "reserved": "0",
+            "claimsId": "0x6758676059eb997594927445ff0f6e30977f8db12b1c0f74ac09b3c085742216"
+          }
+        },
+        "originalPermissionEditReceipt": {
+          "label": "formal direct App permission edit",
+          "requestId": "direct-permission:0x3a72fb0a7d924ec75979b13ac1a48d10e0762119ee9d7669c6b8b852e4c10b4d:2",
+          "digest": "Fan6mUsLSTFXcFJVauSRZgFHBh7qiSHarB8mjS7wHbxg",
+          "status": "confirmed",
+          "actualGas": "7185868",
+          "createdObjects": [
+            {
+              "id": "0x37e6c543e1d90516afaeb188924450ce943c042863aa2527888b1dd2b26cc7d6",
+              "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+              "outputState": "ObjectWrite"
+            }
+          ]
+        }
+      },
+      {
+        "attempt": "r16",
+        "permission": {
+          "id": "0x0d7cf78755a7d2d74801e6ca60d8775ad2677654240374fad3acd14d7b17da78",
+          "version": "4",
+          "revoked": true,
+          "maxCalls": "1",
+          "budgetLimit": "4",
+          "spent": "4",
+          "reserved": "0",
+          "approvedSpent": "6",
+          "approvedReserved": "0",
+          "messageCount": "8"
+        },
+        "okr": {
+          "id": "0xe3b69e4362add41b0697da43d9f7a4182fe57e93229bde004c79fe1a9a11b366",
+          "state": 3,
+          "nextKr": "2",
+          "budget": {
+            "asset": "TOOL_CALLS",
+            "spent": "6",
+            "reserved": "0",
+            "claimsId": "0xb02ba26140160c3c8b044d8c7abc25eaca02f595c1386e7c2c089546ff2b29d4"
+          }
+        },
+        "originalPermissionEditReceipt": {
+          "label": "formal direct App permission edit",
+          "requestId": "direct-permission:0x05b10e2a8fc007d96e00eaddda65b6e2ca733e262e6d6b5fc7159d6661099b9d:2",
+          "digest": "6Z55FXpQHn9kcinhUGw8aK8CjrQH3kGPgQ8ZVfmnJD4U",
+          "status": "confirmed",
+          "actualGas": "7185868",
+          "createdObjects": [
+            {
+              "id": "0x2ff67df15ba331c210d3324d66d5bfd9069505414895b00306cf0748905b3725",
+              "type": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500::product_record::EncryptedRecord",
+              "outputState": "ObjectWrite"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "priorAttempt": {
+    "name": "r15",
+    "complete": false,
+    "checkCount": 13,
+    "confirmedAppTransactions": 41,
+    "cleanupConfirmed": true,
+    "failure": {
+      "code": "simulation_failed",
+      "abortCode": 9604,
+      "entry": "direct_agent::create_message",
+      "reason": "Local Date.now plus the exact 300000 ms maximum exceeded Sui Clock-relative TTL. No formal App message broadcast or delivery followed. Fixed by capping at both Sui Clock and local time plus 240000 ms."
+    },
+    "originalReceipts": [
+      {
+        "label": "native self-paid Human creation",
+        "requestId": "identity:test-f9b1a576-0376-4f7a-a96c-285e92f08736",
+        "digest": "8NCBNKggurHkuzJc9k8sca9o581kvXp65hbn1LUk7zDN",
+        "status": "confirmed",
+        "actualGas": "18742548"
+      },
+      {
+        "label": "native self-paid organization creation",
+        "requestId": "org:test-f9b1a576-0376-4f7a-a96c-285e92f08736:0x6515afdb78676cf9d0483f2b8f77b9dcedbbf5a9cfc2d079e8fbc0d50a643f6a",
+        "digest": "5jL1gXsvsNDj9u1XjxqeaQGRGkyNA1uGVP7QuzhDptWe",
+        "status": "confirmed",
+        "actualGas": "15111616"
+      },
+      {
+        "label": "native registration of actual loopback Coordinator",
+        "requestId": "host:befe8de2-6cb1-4088-b568-0c0e7d40b38a",
+        "digest": "G64QpHL1EGm4p9D2JirpBrUHmC2fqkTTPFakBv5gWwGo",
+        "status": "confirmed",
+        "actualGas": "6793340"
+      },
+      {
+        "label": "native single-use Host invitation",
+        "requestId": "host:3408d3a9-10d3-4a2a-955d-db355863025e",
+        "digest": "D5BuFLUtgH2cqLtAvYJ8bpF7ubaLKVMhrqQw4ypYcjHM",
+        "status": "confirmed",
+        "actualGas": "4931036"
+      },
+      {
+        "label": "native import of actual bounded Agent",
+        "requestId": "agent-import:5537856b-01d0-4be9-828c-59d4ad51e308",
+        "digest": "G5vDCmnqiuQvoT7L1Ao6vqmDZbgptx7EgC1cYBwzy6er",
+        "status": "confirmed",
+        "actualGas": "11849100"
+      },
+      {
+        "label": "native encrypted actual Host OKR draft",
+        "requestId": "okr-draft:0xf0f9abad4a0009a3501100181d5afe9674de30e38ab3062a8d1589d3b149ef86:12fba1ac-4052-4f8e-aa8f-fec35f6ff1bc",
+        "digest": "8SSZ7sd8vyc1w93qqjGyPsSZXHAgMw2kThqydmZwmJPd",
+        "status": "confirmed",
+        "actualGas": "28828540"
+      },
+      {
+        "label": "native one-use observation capability",
+        "requestId": "handover-observe-0e73fc93-e1a4-4c05-b407-8ffbc3a44384",
+        "digest": "H525XP9WbU8ANi1EwGyDJh3qQQA9jpRBfhGMjkSakyUi",
+        "status": "confirmed",
+        "actualGas": "10143480"
+      },
+      {
+        "label": "native exact review ticket and Run",
+        "requestId": "handover-review-0e73fc93-e1a4-4c05-b407-8ffbc3a44384",
+        "digest": "7hFXJXXdiHFetoXhdAiuBaYngaQuoFXrDg6mdCKowDQL",
+        "status": "confirmed",
+        "actualGas": "59904328"
+      },
+      {
+        "label": "native approval of actual Host acceptance",
+        "requestId": "handover-approve:0x4d512b0873f6960bc7832b8fc488d39077831f5036b9909f4d90dd1ee73e0c86",
+        "digest": "4jWURhbYuvBHh8N7Emfy2WGPEkRqmuAVT8h2Vb3PGYjP",
+        "status": "confirmed",
+        "actualGas": "49450304"
+      },
+      {
+        "label": "formal native single-use KR control fee",
+        "requestId": "okr-control:0xb04745bf4de9e746e4ba904f2a606a97ff035ed3d45cae58317cb989480ff85c:1:0",
+        "digest": "GVvcjASFLxZgdefGeJ3VVKZpMXYhfxoXoiipocrp9F8M",
+        "status": "confirmed",
+        "actualGas": "15662680"
+      },
+      {
+        "label": "formal native atomic continuation ticket and queued Run",
+        "requestId": "runner-b04745bf4de9e746e4ba904f2a606a97ff035ed3d45cae58317cb989480ff85c-1-0",
+        "digest": "HQjrLSUnS6doBhi24Ej6BkbvPqcqDr7r5QXcJCnpZPru",
+        "status": "confirmed",
+        "actualGas": "64346720"
+      },
+      {
+        "label": "native independent KR 1 verification",
+        "requestId": "okr-human:0xb04745bf4de9e746e4ba904f2a606a97ff035ed3d45cae58317cb989480ff85c:1:3:verify:0",
+        "digest": "8ARMALjtStUgaRP6KHngPJv1N3MUq7jw93Fb81MjRRPN",
+        "status": "confirmed",
+        "actualGas": "15392804"
+      },
+      {
+        "label": "native second KR explicit control fee",
+        "requestId": "okr-control:0xb04745bf4de9e746e4ba904f2a606a97ff035ed3d45cae58317cb989480ff85c:1:1",
+        "digest": "2rihc3t6dDvmfYtn3RkZue98Fv3zaupY4tZGR3jtT9wc",
+        "status": "confirmed",
+        "actualGas": "15662680"
+      },
+      {
+        "label": "native second KR exact ticket and Run",
+        "requestId": "runner-b04745bf4de9e746e4ba904f2a606a97ff035ed3d45cae58317cb989480ff85c-1-1",
+        "digest": "6eVkZ3wddGNZmkeeKsWSHUN61qqHNakPgG7n7iLfTYAc",
+        "status": "confirmed",
+        "actualGas": "64288624"
+      },
+      {
+        "label": "native independent KR 2 verification",
+        "requestId": "okr-human:0xb04745bf4de9e746e4ba904f2a606a97ff035ed3d45cae58317cb989480ff85c:1:5:verify:1",
+        "digest": "8Z4mGMRkpefHKxQDKN2z2nAbmB735VpDeHmv7omeJNG9",
+        "status": "confirmed",
+        "actualGas": "12607936"
+      },
+      {
+        "label": "native separate final Human acceptance",
+        "requestId": "okr-human:0xb04745bf4de9e746e4ba904f2a606a97ff035ed3d45cae58317cb989480ff85c:1:6:accept:2",
+        "digest": "EJgfeece99u4HXwwsZYZoqGTih46RBJ3qGoeks7p9T71",
+        "status": "confirmed",
+        "actualGas": "11672756"
+      },
+      {
+        "label": "native standing permission creation",
+        "requestId": "direct-test:34bae270-2e51-4e5f-a1b4-739eff1549b8",
+        "digest": "2miGGsy34f5hFzGqkLxfzzVayN5GMryADPRMNXZrNzKq",
+        "status": "confirmed",
+        "actualGas": "21999712"
+      },
+      {
+        "label": "native standing direct capability",
+        "requestId": "direct-test:66b0135a-b96a-4f23-b21f-1a699185ff2a",
+        "digest": "CSz2pvu8kbtMyCD1cX6uRJ57a1y8mWWAmv8jEn2tKvfY",
+        "status": "confirmed",
+        "actualGas": "18923080"
+      },
+      {
+        "label": "native encrypted direct message 3",
+        "requestId": "direct-test:bb5743b3-25d5-4d0d-aedd-66b79e4fa9b2",
+        "digest": "G2EVRq1TkfnXRBkzhGVHUcrFbY7rheFBHv8jyTGxaTJA",
+        "status": "confirmed",
+        "actualGas": "17135332"
+      },
+      {
+        "label": "native original direct Run preparation",
+        "requestId": "direct-test:d9ba832e-190b-430d-929c-bb1f1c164339",
+        "digest": "B5LbRqfcAs8tg2U7R7ba3W1XWiZc2jB4p4uuq5rKwUZT",
+        "status": "confirmed",
+        "actualGas": "42894164"
+      },
+      {
+        "label": "native queued direct cancellation",
+        "requestId": "direct-test:051c024b-ec7c-4d0d-be0c-e32af223f640",
+        "digest": "EKBE1eHergHfvFb1ogSgVTXU7qw5yAgAYt1FsNFt2y88",
+        "status": "confirmed",
+        "actualGas": "1358188"
+      },
+      {
+        "label": "native encrypted direct message 5",
+        "requestId": "direct-test:e1a652ad-acb0-4bf8-b1d4-62b1b888d1fd",
+        "digest": "2AJk2v2JoXA4zSqeba2xTWXVqJsM7FNfzEJpdq4bbFyh",
+        "status": "confirmed",
+        "actualGas": "17135332"
+      },
+      {
+        "label": "native exact one-off approval request",
+        "requestId": "direct-test:53c023c4-07b7-46a1-bd91-1bf1c3cc934f",
+        "digest": "AWsQq6oLBcABFbSHUsnrHAapp4GVyy9rMx92zwrz2LuL",
+        "status": "confirmed",
+        "actualGas": "14315732"
+      },
+      {
+        "label": "native explicit one-off approval",
+        "requestId": "direct-test:b2ba75f7-1897-400b-a295-c68e449eb358",
+        "digest": "d6BsPQBnoWg6NkQ567sL8J6PUyRiuZgN4V4FkSW9r2y",
+        "status": "confirmed",
+        "actualGas": "6185860"
+      },
+      {
+        "label": "native one-off direct capability",
+        "requestId": "direct-test:d94f545c-1d4d-4318-bd8e-da050ad0e39f",
+        "digest": "UCPPBX5Y6jfUFbFEdb7aTqbt6XFNb28yNqPJVK4RHgy",
+        "status": "confirmed",
+        "actualGas": "19166280"
+      },
+      {
+        "label": "native one-off approval consumption",
+        "requestId": "direct-test:f820ebe7-9002-4829-a3d7-99a042fcb4ab",
+        "digest": "7NwCz49u9AWvUoRYbLwVmZST2WTdgVgxd621wU3Vy96j",
+        "status": "confirmed",
+        "actualGas": "43418792"
+      },
+      {
+        "label": "native standing permission version change",
+        "requestId": "direct-test:a59dfda3-970d-4ac7-8474-e05ee906d474",
+        "digest": "3csjjtsikzoP2eaDuwF2xULhPfhDMeoKRv5p8zLJW5Qi",
+        "status": "confirmed",
+        "actualGas": "7277068"
+      },
+      {
+        "label": "native historical direct cancellation after policy change",
+        "requestId": "direct-test:f30e611a-0e76-482e-aa10-86fccbd1e485",
+        "digest": "9P2UKsoGW4Jw74bjDZDR7L87Jt7B5cYFezJuTTkxL8zt",
+        "status": "confirmed",
+        "actualGas": "1360620"
+      },
+      {
+        "label": "native runtime direct capability v2",
+        "requestId": "direct-test:92c5a752-b8ad-449b-98c9-93fd67501444",
+        "digest": "edFjQobaJLukek1SANdVjAG7EdLSBAWir1MinTZxpdS",
+        "status": "confirmed",
+        "actualGas": "18923080"
+      },
+      {
+        "label": "native encrypted direct message 3",
+        "requestId": "direct-test:fe5d1b8e-a679-4a7a-bf49-dee32d9793d0",
+        "digest": "8bkToDw8YkNiNbkZShfd2s8xwQNJXx6TMCEvKHPwYCaA",
+        "status": "confirmed",
+        "actualGas": "17294932"
+      },
+      {
+        "label": "native direct Run and OS-wrapped result key",
+        "requestId": "direct-test:0009e529-b3bb-494e-9782-8a650d806be6",
+        "digest": "9c5mYoThpAEYDoL1xMqpWJmXqLHy7Qt6jguENGwNYCxM",
+        "status": "confirmed",
+        "actualGas": "48252164"
+      },
+      {
+        "label": "native encrypted direct message 1",
+        "requestId": "direct-test:8b39e801-465c-442e-ad9b-b5bbd31120ba",
+        "digest": "7WssTfWjFahNw2AM4krK6y9dGT7YSkr9tnnCnFtBvcp2",
+        "status": "confirmed",
+        "actualGas": "16816132"
+      },
+      {
+        "label": "native direct Run and OS-wrapped result key",
+        "requestId": "direct-test:fe5955c9-da4f-4e69-b24f-20f538e08a28",
+        "digest": "iobPrPHG5bzjYsSrLmNsm8pHsswzj47NQS7R7ZXQsLU",
+        "status": "confirmed",
+        "actualGas": "43180988"
+      },
+      {
+        "label": "native encrypted direct message 0",
+        "requestId": "direct-test:0a186567-fd32-4a76-bcc0-ddb970e7fffc",
+        "digest": "2yrUuspsk5MPuH9RKeVVkyDzNh2Z9hekefG3DxrRuRC7",
+        "status": "confirmed",
+        "actualGas": "16147332"
+      },
+      {
+        "label": "native direct Run and OS-wrapped result key",
+        "requestId": "direct-test:974b20e4-867d-451e-8528-8839140606c3",
+        "digest": "Crg4aPA2MSz3Wzg3jqj2RGj73ZDms4SFWaSnkL7WnSE3",
+        "status": "confirmed",
+        "actualGas": "43004136"
+      },
+      {
+        "label": "native encrypted direct message 5",
+        "requestId": "direct-test:3334e8a7-c1a0-4907-a9a0-74e038fa51db",
+        "digest": "J4CUuBPnADRZkaJTfFrmPEN4LREa7acDfWJSuVimNiNs",
+        "status": "confirmed",
+        "actualGas": "17355732"
+      },
+      {
+        "label": "native runtime exception request",
+        "requestId": "direct-test:5605d71c-d782-4b4e-bd10-317993776c56",
+        "digest": "GyhFzfqWBFiSnYyrhu4M4tT2ESS7pThqTLJK2ntzCWzc",
+        "status": "confirmed",
+        "actualGas": "14315732"
+      },
+      {
+        "label": "native runtime explicit exception",
+        "requestId": "direct-test:7f42dc11-f091-467d-9766-d2ccf1f9016c",
+        "digest": "74oYS714triRxeExD3GU4borzAcPGaoUDUEUZDhkhoVZ",
+        "status": "confirmed",
+        "actualGas": "5980660"
+      },
+      {
+        "label": "native runtime one-off capability",
+        "requestId": "direct-test:693734fe-42fa-4c8b-a927-d61e9e8c4ce6",
+        "digest": "9XMsxFAdp8PPfrKit6yaDyViDSoj1ZKa19eCRKaFPaWB",
+        "status": "confirmed",
+        "actualGas": "19166280"
+      },
+      {
+        "label": "native direct Run and OS-wrapped result key",
+        "requestId": "direct-test:b0da12c2-c4ed-46d7-9d14-56702af20ad7",
+        "digest": "CKqX6C6UjjcYar3MfxL71w348snrDvS2UsZZX8tCBLeK",
+        "status": "confirmed",
+        "actualGas": "48796792"
+      },
+      {
+        "label": "formal direct App permission edit",
+        "requestId": "direct-permission:0x3a72fb0a7d924ec75979b13ac1a48d10e0762119ee9d7669c6b8b852e4c10b4d:2",
+        "digest": "Fan6mUsLSTFXcFJVauSRZgFHBh7qiSHarB8mjS7wHbxg",
+        "status": "confirmed",
+        "actualGas": "7185868"
+      }
+    ],
+    "noOriginalReplay": true
+  },
+  "notes": {
+    "r16RawDirectFinalBudget": "The preserved directFinalBudget state is from the pre-App dispatch phase. The later readOnlyRecheck proves the final ordinary 4/0 and approved 6/0 ledger; the original report is not rewritten.",
+    "credentials": "OS test credentials cleared. R15 permission remains on chain at version 3 and was not silently revoked; local secret cleanup does not erase chain state."
+  }
+}
