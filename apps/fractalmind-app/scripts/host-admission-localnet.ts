@@ -30,6 +30,7 @@ import { ChainReadSession } from "../src/chain";
 import { CoordinatorReadClient } from "../src/coordinator-read";
 import { coordinatorHosts } from "../src/host-observations";
 import { verifyHostObservations } from "../src/host-signatures";
+import { AgentImport, managedInstance } from "../src/agent-import";
 
 assert.ok(
   process.argv[2] && process.argv[3],
@@ -623,8 +624,170 @@ if (earlyHarness && earlyPublic) {
     checks.push(
       "Actual isolated tmux pane and native kernel birth identity traverse Host signature, authenticated Coordinator read and App discovery verification; observation-only capabilities and independent scan deadline preserved",
     );
+    if (process.env.FM_ENVD_AGENT_IMPORT === "1") {
+      const chain = new ChainReadSession(profile);
+      const importer = new AgentImport(
+        chain,
+        device,
+        grantId,
+        organizationId,
+        journal,
+      );
+      const selected = {
+        bindingId,
+        hostAddress: earlyPublic.host_address,
+        instanceId: scan!.instances[0].instanceId,
+        workspaceHash: scan!.instances[0].workspaceHash,
+      };
+      assert.equal(
+        await managedInstance(
+          chain,
+          organizationId,
+          selected.hostAddress,
+          selected.instanceId,
+        ),
+        null,
+      );
+      const attemptId = randomUUID(),
+        quote = await importer.prepare(selected, attemptId, true);
+      assert.ok(!("status" in quote));
+      // Lose only the real execution response. Authority, signing, simulation,
+      // durable digest and subsequent ledger reads use production code.
+      let importBroadcasts = 0;
+      let loseInitialQuery = false;
+      const options = (importer.manager as any).options,
+        originalClient = options.client;
+      const coreProxy = new Proxy(originalClient.core, {
+        get(target, property) {
+          if (property === "executeTransaction")
+            return async (input: unknown) => {
+              importBroadcasts++;
+              await target.executeTransaction(input);
+              loseInitialQuery = true;
+              throw new Error("injected lost import response");
+            };
+          if (property === "getTransaction")
+            return async (input: unknown) => {
+              if (loseInitialQuery) {
+                loseInitialQuery = false;
+                throw new Error(
+                  "injected unavailable first import receipt query",
+                );
+              }
+              return target.getTransaction(input);
+            };
+          const value = Reflect.get(target, property, target);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+      options.client = new Proxy(originalClient, {
+        get(target, property) {
+          if (property === "core") return coreProxy;
+          const value = Reflect.get(target, property, target);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+      const lost = await importer.submit(quote);
+      assert.ok(lost.status !== "already-imported");
+      assert.equal(lost.status, "unknown");
+      importer.dispose();
+      const restarted = new AgentImport(
+        new ChainReadSession(profile),
+        device,
+        grantId,
+        organizationId,
+        journal,
+      );
+      let recovered: SelfPayTransactionOutcome | undefined;
+      for (let n = 0; n < 40; n++) {
+        recovered = await restarted.query(attemptId);
+        if (recovered?.status === "confirmed") break;
+        await new Promise((resolve) => setTimeout(resolve, 125));
+      }
+      assert.equal(recovered?.digest, lost.digest);
+      assert.equal(recovered?.status, "confirmed");
+      await record(
+        "App observation-only Agent import; lost response recovered by original digest",
+        recovered!,
+      );
+      const imported = await restarted.confirmed(recovered!);
+      assert.equal(imported.instance_id, selected.instanceId);
+      assert.equal(imported.control_confirmed, false);
+      assert.equal(imported.runtime, "tmux-observe");
+      // Exercise the contract's idempotent receipt directly. Normal App
+      // duplicate handling below sends no transaction and pays no new fee.
+      const duplicateManager = new SelfPayTransactionManager({
+        client: coreClient,
+        network: "localnet",
+        signer: device,
+        journal,
+      });
+      const duplicateQuote = await duplicateManager.prepare({
+        requestId: `agent-import-race:${randomUUID()}`,
+        transaction: sdk.host.importAgent({
+          organizationId,
+          humanId,
+          grantId,
+          membershipId,
+          bindingId,
+          instanceId: selected.instanceId,
+          runtime: "tmux-observe",
+          workspaceHash: Uint8Array.from(
+            selected.workspaceHash.match(/../g)!,
+            (x) => parseInt(x, 16),
+          ),
+          controlConfirmed: false,
+        }),
+        gasBudget: 200000000n,
+      });
+      let duplicateOutcome = await duplicateManager.submit(duplicateQuote);
+      for (let n = 0; n < 40 && duplicateOutcome.status === "unknown"; n++) {
+        await new Promise((resolve) => setTimeout(resolve, 125));
+        duplicateOutcome = (await duplicateManager.query(
+          duplicateQuote.requestId,
+        ))!;
+      }
+      await record(
+        "Deliberate contract duplicate receipt; App normal duplicates remain fee-free",
+        duplicateOutcome,
+      );
+      assert.equal(
+        (await restarted.confirmed(duplicateOutcome)).id,
+        imported.id,
+      );
+      const duplicate = await restarted.prepare(selected, randomUUID(), true);
+      assert.ok(
+        "status" in duplicate && duplicate.status === "already-imported",
+      );
+      assert.equal(duplicate.record.id, imported.id);
+      assert.equal(importBroadcasts, 1);
+      assert.equal(
+        (
+          await managedInstance(
+            new ChainReadSession(profile),
+            organizationId,
+            selected.hostAddress,
+            selected.instanceId,
+          )
+        )?.id,
+        imported.id,
+      );
+      deviceHttp = {
+        ...(deviceHttp as object),
+        agentImportVerified: true,
+        importRecordId: imported.id,
+        importBroadcasts,
+        duplicateImportAvoided: true,
+        originalImportDigestRecovered: true,
+        contractDuplicateReceiptVerified: true,
+      };
+      checks.push(
+        "Production App imports the actual discovered pane for observation only on Sui; injected lost response recovers original digest with one broadcast; a fresh controller reconstructs the indexed record and avoids duplicate quotation/payment",
+      );
+    }
   }
   deviceHttp = {
+    ...(deviceHttp as object),
     unsignedRejected: true,
     bearerRejected: true,
     actualAppDeviceProofAndSignedResponse: true,

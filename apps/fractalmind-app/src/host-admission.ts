@@ -12,6 +12,10 @@ import {
   type TransactionJournal,
 } from "@fractalmind-labs/fractalmind-sdk";
 import { ChainReadSession, missingIndex } from "./chain";
+import {
+  awaitTransactionVisible,
+  TransactionVisibilityError,
+} from "./transaction-visibility";
 import { DeviceIdentityVerifier, OrganizationBcs } from "./device-identity";
 import { NativeDeviceSigner } from "./native-device";
 
@@ -51,6 +55,7 @@ export type HostDirectory = {
   clockMs: bigint;
   loadedAtMs: number;
   activeHostsTableId: string | null;
+  instancesTableId: string | null;
 };
 const id = /^0x[0-9a-f]{64}$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -256,6 +261,7 @@ export async function hostDirectory(
     clockMs: human.clockMs,
     loadedAtMs: human.loadedAtMs,
     activeHostsTableId: index?.active_hosts.id ?? null,
+    instancesTableId: index?.instances.id ?? null,
   };
 }
 type Plan = {
@@ -435,50 +441,12 @@ export class HostAdmission {
   }
   /** Exact receipt output versions can lag ledger reads; polling is read-only. */
   async awaitVisible(outcome: SelfPayTransactionOutcome, attempts = 40) {
-    if (outcome.status !== "confirmed") return false;
-    if (
-      !outcome.transaction?.effects ||
-      !Number.isInteger(attempts) ||
-      attempts < 1 ||
-      attempts > 40
-    )
-      bad();
-    const writes = outcome.transaction.effects.changedObjects.filter(
-      (x) => x.outputState === "ObjectWrite" && x.outputVersion,
-    );
-    if (!writes.length) bad();
-    await this.chain.checkNetwork();
-    for (let n = 0; n < attempts; n++) {
-      let ready = true;
-      for (const write of writes) {
-        try {
-          const { object } = await this.chain.sdk.client.client.core.getObject({
-            objectId: write.objectId,
-          });
-          if (object.objectId !== write.objectId) bad();
-          if (BigInt(object.version) < BigInt(write.outputVersion!))
-            ready = false;
-        } catch (e) {
-          if (
-            typeof e === "object" &&
-            e &&
-            "reason" in e &&
-            e.reason === "notFound" &&
-            "objectId" in e &&
-            e.objectId === write.objectId
-          )
-            ready = false;
-          else throw e;
-        }
-      }
-      if (ready) {
-        await this.chain.checkNetwork();
-        return true;
-      }
-      if (n + 1 < attempts)
-        await new Promise((resolve) => setTimeout(resolve, 250));
+    try {
+      return await awaitTransactionVisible(this.chain, outcome, attempts);
+    } catch (e) {
+      if (e instanceof TransactionVisibilityError) bad();
+      throw e;
     }
-    return false;
   }
   async createdInvite(outcome: SelfPayTransactionOutcome) {
     if (!(await this.awaitVisible(outcome)))

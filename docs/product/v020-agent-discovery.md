@@ -50,6 +50,8 @@ node --import tsx scripts/host-admission-localnet.ts DEPLOYMENT.json NEW_REPORT.
 
 ## 尚未完成的验收
 
+后续的[仅观察链上导入增量](v020-agent-import.md)已接通生产控制器、费用确认和原摘要重建；安装后 UI 仍待验收。以下是发现增量保存时的阶段记录。
+
 发现是 J11 第一步，链上仅观察导入的报价／确认／幂等／重建界面，以及可接受约束适配器的安全检查点、旧执行停止、纳入 OKR 和明确继续仍需完成。tmux 不能取得这些能力；本增量不消耗或扩大 RemoteCapability。
 
 真实 Linux 运行、Windows 原生发现、安装后 OS 密钥库与 IPC、云端 TLS Host 和五平台仍未验收。本地链使用生成的测试钥，不能代替原生身份验收。现有原生 App 的系统密钥库提示仍需用户处理；该阻塞不影响独立扫描及链路工作。

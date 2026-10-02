@@ -785,6 +785,7 @@ export function App() {
                 organizationId={snapshot.organization.objectId}
                 authorityRevision={hostAuthorityRevision}
                 showDiscovery
+                onChanged={data.refresh}
                 t={t}
               />
             </Suspense>
@@ -808,7 +809,12 @@ export function App() {
                         ? t("已撤销", "Revoked")
                         : t("已登记", "Registered")}
                     </span>
-                    <h3>{agent.instance_id}</h3>
+                    <h3 className="long-id">{agent.instance_id}</h3>
+                    <p className="long-id">
+                      <small>
+                        {t("链上记录", "Chain record")}: <code>{agent.id}</code>
+                      </small>
+                    </p>
                     <p>{agent.runtime}</p>
                     <code>{short(agent.host_address)}</code>
                     <p>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { ChainReadSession } from "./chain";
 import {
@@ -14,6 +14,8 @@ import {
 } from "./native-device";
 import type { VerifiedHostObservation } from "./host-signatures";
 import type { ConnectionProfile } from "./domain";
+import type { ImportTarget } from "./AgentImportFlow";
+const AgentImportFlow = lazy(() => import("./AgentImportFlow"));
 
 /** Transient observations: no business cache, auto-connect, import or execution. */
 export default function HostObservations({
@@ -21,12 +23,14 @@ export default function HostObservations({
   organizationId,
   authorityRevision,
   showDiscovery = false,
+  onChanged = () => {},
   t,
 }: {
   profile: ConnectionProfile;
   organizationId: string;
   authorityRevision: string;
   showDiscovery?: boolean;
+  onChanged?: () => void;
   t: (zh: string, en: string) => string;
 }) {
   const [deviceProfile, setDeviceProfile] = useState(preferredDeviceProfile);
@@ -37,6 +41,7 @@ export default function HostObservations({
   const [now, setNow] = useState(Date.now());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [importTarget, setImportTarget] = useState<ImportTarget | null>(null);
   const flight = useRef(false),
     mounted = useRef(true);
   const authority = useRef(authorityRevision);
@@ -44,6 +49,7 @@ export default function HostObservations({
   useEffect(() => {
     setRows(null);
     setReceivedAt(null);
+    setImportTarget(null);
   }, [authorityRevision]);
   useEffect(() => {
     mounted.current = true;
@@ -416,6 +422,28 @@ export default function HostObservations({
                                       "Adapter: tmux observation only; constrained execution and OKR handover unsupported.",
                                     )}
                                   </p>
+                                  {instance.state === "observed" && (
+                                    <button
+                                      disabled={!native || busy}
+                                      onClick={() =>
+                                        setImportTarget({
+                                          selection: {
+                                            bindingId,
+                                            hostAddress: result.address,
+                                            instanceId: instance.instanceId,
+                                            workspaceHash:
+                                              instance.workspaceHash,
+                                          },
+                                          instance,
+                                        })
+                                      }
+                                    >
+                                      {t(
+                                        "导入为仅观察",
+                                        "Import for observation only",
+                                      )}
+                                    </button>
+                                  )}
                                 </article>
                               ))}
                           </section>
@@ -428,6 +456,19 @@ export default function HostObservations({
           </>
         )}
       </div>
+      {showDiscovery && (
+        <Suspense fallback={<p>{t("加载导入流程…", "Loading import…")}</p>}>
+          <AgentImportFlow
+            profile={profile}
+            organizationId={organizationId}
+            authorityRevision={authorityRevision}
+            target={importTarget}
+            onClose={() => setImportTarget(null)}
+            onChanged={onChanged}
+            t={t}
+          />
+        </Suspense>
+      )}
       <p className="muted">
         {t(
           "入口和 Host 签名分别核验，Host 资格以当前链上目录为准。签名心跳证明近期观测，不能授予执行权限或证明独立 Agent 身份。观测只保留在当前页面内存中，到期转为未知。",
