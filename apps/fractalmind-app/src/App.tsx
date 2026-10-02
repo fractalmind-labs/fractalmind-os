@@ -39,6 +39,7 @@ const PairingFlow = lazy(() => import("./PairingFlow"));
 const HostAccess = lazy(() => import("./HostAccess"));
 const HostObservations = lazy(() => import("./HostObservations"));
 const AgentCheckpointView = lazy(() => import("./AgentCheckpointView"));
+const HandoverFlow = lazy(() => import("./HandoverFlow"));
 const runLabels: Array<[string, string]> = [
   ["待启动", "Queued"],
   ["链上记录：运行中", "Chain record: running"],
@@ -854,6 +855,30 @@ export function App() {
                         organizationId={snapshot.organization.objectId}
                         managed={agent}
                         grants={data.identity?.grants.value}
+                        t={t}
+                      />
+                    </Suspense>
+                    <Suspense
+                      fallback={
+                        <p>{t("加载 OKR 接入…", "Loading OKR inclusion…")}</p>
+                      }
+                    >
+                      <HandoverFlow
+                        key={JSON.stringify([
+                          profile,
+                          snapshot.organization.objectId,
+                          agent.id,
+                        ])}
+                        profile={{
+                          ...profile,
+                          chainIdentifier:
+                            data.identity?.chainIdentifier ??
+                            profile.chainIdentifier,
+                        }}
+                        organizationId={snapshot.organization.objectId}
+                        managed={agent}
+                        okrs={snapshot.okrs.value}
+                        onChanged={data.refresh}
                         t={t}
                       />
                     </Suspense>

@@ -87,6 +87,7 @@ export class HandoverReview {
     private readonly invoke: NativeInvoke,
     journal: TransactionJournal,
     private readonly transport: typeof fetch = fetch,
+    private readonly assertActive: () => void = () => {},
   ) {
     if (
       ![grantId, organizationId].every((v) => id.test(v)) ||
@@ -116,6 +117,7 @@ export class HandoverReview {
       client: chain.sdk.client.client,
       network: chain.profile.network,
       journal,
+      assertBeforeBroadcast: assertActive,
       signer: {
         getPublicKey: () => signer.getPublicKey(),
         signTransaction: async (bytes) => {

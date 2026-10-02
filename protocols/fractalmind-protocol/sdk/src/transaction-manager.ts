@@ -48,6 +48,10 @@ export type SelfPayTransactionManagerOptions = {
   client: ClientWithCoreApi; network: NetworkName;
   signer: Pick<Signer, 'getPublicKey' | 'signTransaction'>; journal: TransactionJournal;
   now?: () => number; quoteTtlMs?: number;
+  /** Synchronous lifetime check after signature verification and again after
+   * durable claim, immediately before broadcast. A failed post-claim check
+   * retains the original pending digest; it is never silently retried. */
+  assertBeforeBroadcast?: () => void;
 };
 
 export function pendingGasConflict(a: TransactionJournalEntry, b: TransactionJournalEntry): boolean {
@@ -204,6 +208,7 @@ export class SelfPayTransactionManager {
       const signed = await this.options.signer.signTransaction(new Uint8Array(prepared.bytes));
       if (signed.bytes !== toBase64(prepared.bytes)) throw new Error('Signer returned different transaction bytes.');
       await verifyTransactionSignature(prepared.bytes, signed.signature, { address: quote.sender });
+      this.options.assertBeforeBroadcast?.();
       signature = signed.signature;
     } catch (cause) { throw new TransactionPreflightError('signature_not_obtained', 'No valid signature was obtained; nothing was broadcast.', { cause }); }
     try {
@@ -218,6 +223,7 @@ export class SelfPayTransactionManager {
     }
     prepared.used = true;
     try {
+      this.options.assertBeforeBroadcast?.();
       const result = await this.options.client.core.executeTransaction({ transaction: new Uint8Array(prepared.bytes), signatures: [signature], include });
       return await this.confirm(prepared.entry, result.$kind === 'Transaction' ? result.Transaction : result.FailedTransaction);
     } catch { return this.queryEntry(prepared.entry); }

@@ -106,8 +106,12 @@ evidence, transport limits and test instructions are documented in
   connectivity are not inferred from registration labels. Native review/approval
   controllers now persist exact encrypted review tickets with the original Run,
   restore them read-only and consume authenticated Host proofs through explicit
-  fee-confirmed approval. Their full UI and actual envd integration remain pending;
-  approval never dispatches continuation. See [review tickets and limits](../../docs/product/v020-app-handover-review.md).
+  fee-confirmed approval. The v2 Include in OKR dialog now connects device-bound
+  observation issuance, concrete plan review, separate fees, ticket lookup,
+  Host response validation and approval. Installed UI and actual envd integration,
+  expired/failed attempts and native continuation still need acceptance;
+  approval never dispatches continuation. See [flow and limits](../../docs/product/v020-app-handover-flow.md)
+  and [review tickets](../../docs/product/v020-app-handover-review.md).
 - Identity: chain Human generation/recovery version and device grants. The page
   labels these as snapshots and refreshes them with organization reads.
 - Chinese/English and system/light/dark appearance; responsive navigation includes

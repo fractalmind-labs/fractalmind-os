@@ -39,6 +39,7 @@ import { OkrDraftCreation } from "../src/okr-draft";
 import { HandoverApproval } from "../src/handover-approval";
 import { PrivateRecords } from "../src/private-records";
 import { HandoverReview } from "../src/handover-review";
+import { HandoverSetup } from "../src/handover-setup";
 assert.ok(
   process.argv[2] && process.argv[3],
   "Pass isolated deployment and a new output report",
@@ -457,22 +458,54 @@ try {
     () => sdk.host.getManagedAgent(managedAgentId),
     (v) => v.id === managedAgentId,
   );
-  const capabilityId = createdObject(
-    await execute(
-      "issue exact observation capability",
-      sdk.host.issueCapability({
-        ...auth,
-        membershipId,
-        bindingId,
+  const setupAttemptId = randomUUID();
+  const setup = ticketMode
+    ? new HandoverSetup(
+        chain,
+        device,
+        auth.grantId,
+        organizationId,
         managedAgentId,
-        actions: ["status"],
-        scope: "observation",
-        maxUses: 1,
-        expiresAtMs: Date.now() + 180000,
-      }),
-    ),
-    "remote_authority::RemoteCapability",
-  );
+        setupAttemptId,
+        invoke,
+        new MemoryTransactionJournal(),
+      )
+    : null;
+  let capabilityId: string;
+  if (setup) {
+    const capQuote = await setup.prepare();
+    assert.ok(!("status" in capQuote));
+    await preparedQuote("official App single-use observation", capQuote);
+    const capOutcome = await setup.submit(capQuote);
+    await record("official App single-use observation", capOutcome);
+    capabilityId = await setup.confirmed(capOutcome);
+    state = {
+      ...state,
+      observationAttemptId: setupAttemptId,
+      observationCapabilityId: capabilityId,
+      observationDigest: capOutcome.digest,
+    };
+    await save();
+    checks.push(
+      "official App issues a current device-bound, one-use status capability with zero tool budget through native guarded fee confirmation; no Run or Host dispatch",
+    );
+  } else
+    capabilityId = createdObject(
+      await execute(
+        "issue exact observation capability",
+        sdk.host.issueCapability({
+          ...auth,
+          membershipId,
+          bindingId,
+          managedAgentId,
+          actions: ["status"],
+          scope: "observation",
+          maxUses: 1,
+          expiresAtMs: Date.now() + 180000,
+        }),
+      ),
+      "remote_authority::RemoteCapability",
+    );
   const nativeFilePlan: NativeFileOkrPlan = {
     format: 1,
     paths: { "file.read": ["docs"], "file.write": ["docs"] },
@@ -510,7 +543,7 @@ try {
       nonce: bytesToHex(globalThis.crypto.getRandomValues(new Uint8Array(32))),
     };
   }
-  const command = await signNodeCommand(device, {
+  let command = await signNodeCommand(device, {
     target: {
       organizationId,
       nodeId: host.toSuiAddress(),
@@ -522,6 +555,21 @@ try {
     payload: proposal ? { handover_review: proposal } : {},
     expiresAtMs: Date.now() + 120000,
   });
+  if (setup) {
+    const request = await setup.createReview(
+      createdObject(draftOutcome, "okr::Okr"),
+      capabilityId,
+      nativeFilePlan,
+    );
+    assert.equal(request.membershipId, membershipId);
+    assert.equal(request.bindingId, bindingId);
+    assert.equal(request.managedAgentId, managedAgentId);
+    command = request.command;
+    proposal = command.payload.handover_review as HandoverProposal;
+    checks.push(
+      "official App reads and decrypts the current draft and validates metrics, paths, constraints and budget before natively signing the exact original Host review; current versions are rechecked after signing",
+    );
+  }
   const results = new NativeCommandResults(
       chain,
       device,
@@ -555,7 +603,7 @@ try {
         device,
         auth.grantId,
         organizationId,
-        randomUUID(),
+        setupAttemptId,
         invoke,
         new MemoryTransactionJournal(),
       )

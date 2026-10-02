@@ -68,6 +68,7 @@ export class HandoverApproval {
     readonly executionId: string,
     private readonly invoke: NativeInvoke,
     journal: TransactionJournal,
+    private readonly assertActive: () => void = () => {},
   ) {
     if (![organizationId, grantId, executionId].every((v) => id.test(v)))
       throw new HandoverApprovalError("invalid_input");
@@ -91,6 +92,7 @@ export class HandoverApproval {
       client: chain.sdk.client.client,
       network: chain.profile.network,
       journal,
+      assertBeforeBroadcast: assertActive,
       signer: {
         getPublicKey: () => signer.getPublicKey(),
         signTransaction: async (bytes) => {

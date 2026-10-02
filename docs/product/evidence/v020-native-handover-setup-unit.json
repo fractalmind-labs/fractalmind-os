@@ -1,0 +1,25 @@
+{
+  "recordedAt": "2026-10-02T16:27:33Z",
+  "focused": { "command": "node --import tsx --test tests/handover-setup.test.ts", "passed": 6, "failed": 0 },
+  "finalSpecificationGuardFocused": { "passed": 6, "failed": 0 },
+  "appRegression": { "command": "npm test", "passed": 131, "failed": 0 },
+  "sdkRegression": { "command": "node --import tsx --test tests/*.test.ts", "passed": 122, "failed": 0 },
+  "sdkFeeManagerFocused": { "command": "node --import tsx --test tests/transaction-manager.test.ts", "passed": 17, "failed": 0 },
+  "sdkBuild": { "command": "npm run build", "passed": true },
+  "appTypecheckAndProductionBuild": { "command": "npm run build", "passed": true, "warnings": ["existing large entry chunk", "dependency PURE annotation"] },
+  "localnetScriptStrictTypecheck": { "passed": true },
+  "limits": {
+    "sdkChanged": true,
+    "rustGoMoveChanged": false,
+    "reviewApprovalUIConnected": true,
+    "installedUIVerified": false,
+    "nativeTransport": "isolated subprocess",
+    "technicalJournal": "memory",
+    "envdDispatchVerified": false,
+    "physicalHostReviewVerified": false,
+    "continuationUIConnected": false,
+    "fullCacheWipeUIVerified": false,
+    "fullV020Complete": false,
+    "unitServices": "controlled chain/authority/fee services; real native source positive checked separately on localnet"
+  }
+}

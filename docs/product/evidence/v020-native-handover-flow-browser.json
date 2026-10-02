@@ -1,0 +1,23 @@
+{
+  "recordedAt": "2026-10-02T16:11:03Z",
+  "finalBuildCheckedAt": "2026-10-02T16:32:14Z",
+  "url": "http://127.0.0.1:4189/",
+  "source": "production App preview connected to the existing isolated Sui localnet",
+  "checks": [
+    "managed bounded-process-v1 instance has an Include in OKR entry",
+    "Chinese light modal opens with source selection and explicit native requirement",
+    "web Find reviews on Sui action explicitly returns native_unavailable without initializing keys or starting a transaction",
+    "English dark modal opens and labels are translated",
+    "closing the modal permits theme/language navigation and reopening",
+    "final production build provides a separate original-review entry and an explicit no-eligible-goals message"
+  ],
+  "limits": {
+    "nativeKeysMocked": false,
+    "installedUIVerified": false,
+    "nativeFeeConfirmationVerified": false,
+    "envdDispatchVerified": false,
+    "fullCacheWipeUIVerified": false,
+    "narrowViewportVerified": false,
+    "fullV020Complete": false
+  }
+}

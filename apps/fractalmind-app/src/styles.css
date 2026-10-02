@@ -1392,6 +1392,8 @@ h3 {
 .okr-create-dialog label {display:block;margin:12px 0;}
 .okr-create-dialog input,.okr-create-dialog textarea,.okr-create-dialog select {display:block;width:100%;min-width:0;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text);}
 .okr-create-dialog textarea {min-height:80px;resize:vertical;}
+.handover-dialog .dialog-heading > div {min-width:0;}
+.handover-dialog .dialog-heading p {overflow-wrap:anywhere;}
 .host-actions {display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;}
 .host-access .host-confirm {display:flex;align-items:flex-start;gap:8px;}
 .host-access .host-confirm input {width:auto;margin:4px 0;}

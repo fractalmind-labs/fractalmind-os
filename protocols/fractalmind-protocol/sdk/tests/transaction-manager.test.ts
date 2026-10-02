@@ -139,6 +139,28 @@ test('known chain result remains known when cache update fails; restart still qu
   fail = false; assert.equal((await f.manager().query(q.requestId))!.journalSynced, true); assert.equal(f.stats().executing, 1);
 });
 
+test('closing the UI after signing or during durable claim never broadcasts, and retains an already claimed original digest', async () => {
+  const before = fixture();
+  before.options.assertBeforeBroadcast = () => { throw new Error('UI closed'); };
+  const manager = before.manager(), quote = await manager.prepare(before.input());
+  await assert.rejects(manager.submit(quote), code('signature_not_obtained'));
+  assert.equal(before.stats().executing, 0); assert.equal(await manager.query(quote.requestId), undefined);
+
+  const after = fixture(); let live = true;
+  after.mode('offline');
+  after.options.assertBeforeBroadcast = () => { if (!live) throw new Error('UI closed'); };
+  after.options.journal = {
+    get: after.journal.get.bind(after.journal), replace: after.journal.replace.bind(after.journal),
+    claim: async entry => { const claimed = await after.journal.claim(entry); live = false; return claimed; },
+  };
+  const claimed = after.manager(), original = await claimed.prepare(after.input());
+  const result = await claimed.submit(original);
+  assert.equal(result.status, 'unknown'); assert.equal(result.digest, original.digest);
+  assert.equal((await after.manager().query(original.requestId))!.digest, original.digest);
+  assert.equal((await claimed.submit(original)).status, 'unknown');
+  assert.equal(after.stats().executing, 0); assert.equal(after.stats().signing, 1);
+});
+
 test('foreign receipt and unavailable history never become authority from a cached status', async () => {
   const f = fixture(), m = f.manager(), q = await m.prepare(f.input()); f.badReceipt(true);
   assert.equal((await m.submit(q)).status, 'unknown');

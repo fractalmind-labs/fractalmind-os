@@ -29,6 +29,19 @@ export type NativeInvoke = (
   command: NativeDeviceCommand,
   args: Record<string, string>,
 ) => Promise<unknown>;
+/** Guard both sides of a native permission/signing dialog. A closed or changed
+ * UI scope must not release its returned signature for later broadcast. */
+export function scopedNativeInvoke(
+  invoke: NativeInvoke,
+  assertCurrent: () => void,
+): NativeInvoke {
+  return async (command, args) => {
+    assertCurrent();
+    const result = await invoke(command, args);
+    assertCurrent();
+    return result;
+  };
+}
 export type DevicePublic = Readonly<{
   format: 1;
   profile: string;
