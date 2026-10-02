@@ -1405,3 +1405,19 @@ h3 {
 .host-access pre {white-space:pre-wrap;overflow-wrap:anywhere;}
 .okr-form-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;}
 @media (max-width:600px) {.okr-create-dialog {padding:16px;} .okr-form-grid {grid-template-columns:1fr;}}
+/* Same v2 theme tokens; narrow instance cards keep full chain IDs readable. */
+.agent-checkpoints {
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+.checkpoint-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+.checkpoint-list li {
+  border-top: 1px solid var(--border);
+  padding: 0.8rem 0;
+  overflow-wrap: anywhere;
+}

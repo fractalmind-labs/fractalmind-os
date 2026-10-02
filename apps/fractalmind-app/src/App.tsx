@@ -38,6 +38,7 @@ const DeviceAccess = lazy(() => import("./DeviceAccess"));
 const PairingFlow = lazy(() => import("./PairingFlow"));
 const HostAccess = lazy(() => import("./HostAccess"));
 const HostObservations = lazy(() => import("./HostObservations"));
+const AgentCheckpointView = lazy(() => import("./AgentCheckpointView"));
 const runLabels: Array<[string, string]> = [
   ["待启动", "Queued"],
   ["链上记录：运行中", "Chain record: running"],
@@ -833,6 +834,28 @@ export function App() {
                         "Instance status unknown · no verified messaging capability",
                       )}
                     </small>
+                    <Suspense
+                      fallback={
+                        <p>{t("加载执行检查…", "Loading execution check…")}</p>
+                      }
+                    >
+                      <AgentCheckpointView
+                        key={JSON.stringify([
+                          profile,
+                          agent,
+                          hostAuthorityRevision,
+                        ])}
+                        profile={{
+                          ...profile,
+                          chainIdentifier:
+                            data.identity?.chainIdentifier ??
+                            profile.chainIdentifier,
+                        }}
+                        organizationId={snapshot.organization.objectId}
+                        managed={agent}
+                        t={t}
+                      />
+                    </Suspense>
                   </div>
                 ))}
               </div>

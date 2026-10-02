@@ -28,6 +28,8 @@ import {
   gasCost,
   type SelfPayTransactionOutcome,
   type SelfPayFeeQuote,
+  AgentExecutionReadError,
+  TransactionPreflightError,
 } from "@fractalmind-labs/fractalmind-sdk";
 import { NativeDeviceSigner, type NativeInvoke } from "../src/native-device";
 import { HostAdmission } from "../src/host-admission";
@@ -945,6 +947,26 @@ if (earlyHarness && earlyPublic) {
             ),
             "node_execution::CommandExecution",
           );
+        // Object writes and indexed dynamic-field pagination become visible
+        // separately. Retry only reads of the same instance; never its write.
+        const readHistory = async () => {
+          const deadline = Date.now() + 20000;
+          while (true) {
+            try {
+              return await sdk.nodeExecution.readAgentExecutions(
+                organizationId,
+                imported.id,
+              );
+            } catch (e) {
+              if (
+                !(e instanceof AgentExecutionReadError) ||
+                Date.now() >= deadline
+              )
+                throw e;
+              await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+          }
+        };
         const beforeExecution = await prepare(
           "Native state: prepare current read-only status checkpoint",
           before,
@@ -1035,6 +1057,11 @@ if (earlyHarness && earlyPublic) {
           "Native state: Host confirms encrypted physical idle evidence",
           status.response,
         );
+        const initialHistory = await readHistory();
+        assert.equal(initialHistory.unsettledControl, 0);
+        assert.equal(initialHistory.executions.length, 1);
+        assert.equal(initialHistory.executions[0].settled, true);
+        assert.equal(initialHistory.executions[0].control, false);
         // This explicit raw control grant is a fixture for the already installed
         // execution engine. It is not App handover or evidence of safe adoption.
         await execute(
@@ -1161,6 +1188,83 @@ if (earlyHarness && earlyPublic) {
           "Native alias: reserve the explicitly authorized command and result key",
           command,
         );
+        nativeExecution = {
+          phase: "queued_coverage_read",
+          organizationId,
+          humanId,
+          recordId: imported.id,
+          executionId,
+          beforeExecution,
+        };
+        await save();
+        const queuedHistory = await readHistory();
+        assert.equal(queuedHistory.unsettledControl, 1);
+        const queued = queuedHistory.executions.find(
+          (x) => x.run.id === executionId,
+        )!;
+        assert.equal(queued.run.state, 0);
+        assert.equal(queued.reserved, 6n);
+        let queuedMoveAbortVerified = false;
+        const negativeCore = new Proxy(coreClient.core, {
+          get(target, property) {
+            if (property === "simulateTransaction")
+              return async (
+                input: Parameters<typeof target.simulateTransaction>[0],
+              ) => {
+                const result = await target.simulateTransaction(input);
+                const receipt =
+                  result.$kind === "Transaction"
+                    ? result.Transaction
+                    : result.FailedTransaction;
+                assert.equal(receipt.status.success, false);
+                assert.match(JSON.stringify(receipt.status.error), /9210/);
+                queuedMoveAbortVerified = true;
+                return result;
+              };
+            const value = Reflect.get(target, property);
+            return typeof value === "function" ? value.bind(target) : value;
+          },
+        });
+        const negativeManager = new SelfPayTransactionManager({
+          client: new Proxy(coreClient, {
+            get(target, property) {
+              if (property === "core") return negativeCore;
+              const value = Reflect.get(target, property);
+              return typeof value === "function" ? value.bind(target) : value;
+            },
+          }),
+          network: "localnet",
+          signer: deviceKey,
+          journal,
+        });
+        await assert.rejects(
+          negativeManager.prepare({
+            requestId: `fixture:queued-handover:${randomUUID()}`,
+            gasBudget: 200000000n,
+            transaction: sdk.host.rebindAgent({
+              ...authority,
+              expectedVersion: 2n,
+              runtime: "bounded-process-v1",
+              workspaceHash: Uint8Array.from(imported.workspace_hash),
+              controlConfirmed: true,
+            }),
+          }),
+          (e) =>
+            e instanceof TransactionPreflightError &&
+            e.code === "simulation_failed",
+        );
+        assert.equal(queuedMoveAbortVerified, true);
+        await execute(
+          "Execution coverage: identical preparation does not add a second execution",
+          await sdk.nodeExecution.prepareCommand({ ...authority, command }),
+        );
+        const duplicateHistory = await readHistory();
+        assert.equal(duplicateHistory.revision, queuedHistory.revision);
+        assert.equal(duplicateHistory.executions.length, 2);
+        assert.equal(duplicateHistory.unsettledControl, 1);
+        checks.push(
+          "Actual chain preflight rejects Agent rebind with Move 9210 while a control is queued; duplicate preparation keeps one entry and one reservation",
+        );
         const afterCap = created(
           await execute(
             "Native state: issue fresh status authority for current managed version",
@@ -1252,6 +1356,73 @@ if (earlyHarness && earlyPublic) {
           (await sdk.remoteAuthority.getCapability(capId)).usesClaimed,
           1n,
         );
+        const settledHistory = await readHistory();
+        assert.equal(settledHistory.unsettledControl, 0);
+        assert.equal(settledHistory.executions.length, 3);
+        assert.ok(
+          settledHistory.executions.every(
+            (x) => x.settled && x.reserved === 0n,
+          ),
+        );
+        assert.equal(
+          settledHistory.executions.find((x) => x.run.id === executionId)!
+            .spent,
+          6n,
+        );
+        const cancelCap = created(
+          await execute(
+            "Execution coverage: issue separate control for queued cancellation",
+            sdk.host.issueCapability({
+              ...authority,
+              actions: ["assign"],
+              scope: "control",
+              maxUses: 1n,
+              budgetAsset: "TOOL_CALLS",
+              maxBudget: 3n,
+              expiresAtMs: Date.now() + 120000,
+            }),
+          ),
+          "remote_authority::RemoteCapability",
+        );
+        const cancelCommand = await signNodeCommand(deviceKey, {
+          target,
+          action: "assign",
+          scope: "control",
+          capability: { id: cancelCap, revocationVersion: 1n },
+          budget: { asset: "TOOL_CALLS", amount: 3n },
+          payload: {
+            task: "Protocol-only queued cancellation fixture; never dispatch",
+            bounds: { paths, max_calls: "3" },
+          },
+          expiresAtMs: Date.now() + 60000,
+        });
+        const cancelId = await prepare(
+          "Execution coverage: prepare cancellation fixture without dispatch",
+          cancelCommand,
+        );
+        assert.equal((await readHistory()).unsettledControl, 1);
+        await execute(
+          "Execution coverage: cancel queued command and release its reservation atomically",
+          sdk.nodeExecution.requestStop({
+            organizationId,
+            humanId,
+            grantId,
+            capabilityId: cancelCap,
+            executionId: cancelId,
+          }),
+        );
+        const finalHistory = await readHistory();
+        assert.equal(finalHistory.unsettledControl, 0);
+        const cancelled = finalHistory.executions.find(
+          (x) => x.run.id === cancelId,
+        )!;
+        assert.equal(cancelled.run.state, 5);
+        assert.equal(cancelled.settled, true);
+        assert.equal(cancelled.spent, 0n);
+        assert.equal(cancelled.reserved, 0n);
+        checks.push(
+          "Complete instance history covers four executions across independent capabilities; real Host settlement clears control once and queued cancellation clears reservation without dispatch",
+        );
         nativeExecution = {
           instanceId: selected.instanceId,
           recordId: imported.id,
@@ -1272,6 +1443,14 @@ if (earlyHarness && earlyPublic) {
           controlSetupFixtureOnly: true,
           safeAppHandoverVerified: false,
           humanAcceptanceVerified: false,
+          executionCoverage: {
+            revision: finalHistory.revision,
+            entries: finalHistory.executions.length,
+            unsettledControl: finalHistory.unsettledControl,
+            queuedRebindMoveAbort: 9210,
+            duplicatePreparationCountedOnce: true,
+            queuedCancellationId: cancelId,
+          },
         };
         checks.push(
           "Read-only signed native status before control returns actual physical idle and encrypted chain result; it does not grant control",

@@ -25,6 +25,8 @@ module fractalmind_protocol::host {
     const E_SCOPE: u64 = 9206;
     const E_CONFLICT: u64 = 9207;
     const E_VERSION: u64 = 9208;
+    const E_EXECUTION_COVERAGE: u64 = 9209;
+    const E_UNSETTLED_EXECUTION: u64 = 9210;
     const DAY: u64 = 86400000;
     const MAX_INVITE_TTL: u64 = DAY;
     const MAX_MEMBER_TTL: u64 = 90 * DAY;
@@ -40,6 +42,15 @@ module fractalmind_protocol::host {
     public struct InstancePointer has copy, drop, store {
         record_id: ID, membership_id: ID, runtime: String, workspace_hash: vector<u8>,
         control_confirmed: bool, revoked: bool,
+    }
+    /// Initialized with a new managed instance. Absence on a legacy instance
+    /// is unknown coverage, never evidence that it has no old executions.
+    public struct AgentExecutionIndexKey has copy, drop, store { managed_agent: ID }
+    public struct AgentExecutionIndex has store {
+        executions: Table<ID, AgentExecutionPointer>, unsettled_control: u64, revision: u64,
+    }
+    public struct AgentExecutionPointer has copy, drop, store {
+        capability_id: ID, control: bool, settled: bool,
     }
     public struct CoordinatorBinding has key {
         id: UID, org_id: ID, coordinator_address: address, public_key: vector<u8>,
@@ -255,6 +266,8 @@ module fractalmind_protocol::host {
             confirmed_by_device: tx_context::sender(ctx), version: 1, revoked: false, imported_at_ms: clock::timestamp_ms(clock),
         };
         let record_id = object::id(&record);
+        df::add(organization::borrow_uid_mut(org), AgentExecutionIndexKey { managed_agent: record_id },
+            AgentExecutionIndex { executions: table::new(ctx), unsettled_control: 0, revision: 1 });
         table::add(&mut index(org, ctx).instances, key, InstancePointer { record_id, membership_id: object::id(member), runtime, workspace_hash, control_confirmed, revoked: false });
         event::emit(AgentImported { org_id: object::id(org), membership_id: object::id(member), record_id, instance_id, duplicate: false });
         transfer::share_object(record);
@@ -282,6 +295,7 @@ module fractalmind_protocol::host {
         identity::assert_can(human, grant, org, identity::manage_hosts_action(), clock, ctx);
         assert_member(org, member, binding, clock);
         assert!(record.org_id == object::id(org) && record.host_address == member.host_address, E_SCOPE);
+        assert_agent_execution_idle(org, object::id(record));
         assert!(vector::length(&workspace_hash) == 32, E_INPUT);
         assert!(runtime == string::utf8(b"tmux-observe") || runtime == string::utf8(b"bounded-process-v1"), E_INPUT);
         if (control_confirmed) assert!(runtime == string::utf8(b"bounded-process-v1"), E_INPUT);
@@ -414,6 +428,50 @@ module fractalmind_protocol::host {
     public fun managed_instance(managed: &ManagedAgent): String { managed.instance_id }
     public fun managed_version(managed: &ManagedAgent): u64 { managed.version }
     public fun managed_workspace_hash(managed: &ManagedAgent): vector<u8> { managed.workspace_hash }
+    public fun has_agent_execution_coverage(org: &Organization, managed_id: ID): bool {
+        df::exists_(organization::borrow_uid(org), AgentExecutionIndexKey { managed_agent: managed_id })
+    }
+    public fun assert_agent_execution_idle(org: &Organization, managed_id: ID) {
+        assert!(has_agent_execution_coverage(org, managed_id), E_EXECUTION_COVERAGE);
+        let ledger: &AgentExecutionIndex = df::borrow(organization::borrow_uid(org), AgentExecutionIndexKey { managed_agent: managed_id });
+        assert!(ledger.unsettled_control == 0, E_UNSETTLED_EXECUTION);
+    }
+    public fun unsettled_agent_controls(org: &Organization, managed_id: ID): u64 {
+        assert!(has_agent_execution_coverage(org, managed_id), E_EXECUTION_COVERAGE);
+        let ledger: &AgentExecutionIndex = df::borrow(organization::borrow_uid(org), AgentExecutionIndexKey { managed_agent: managed_id });
+        ledger.unsettled_control
+    }
+    /// Old immutable-org preparation cannot append this directory. It may
+    /// continue servicing legacy instances but cannot bypass new coverage.
+    public(package) fun assert_legacy_agent_execution(org: &Organization, managed_id: ID) {
+        assert!(!has_agent_execution_coverage(org, managed_id), E_EXECUTION_COVERAGE);
+    }
+    public(package) fun assert_tracked_agent_execution(org: &Organization, managed_id: ID) {
+        assert!(has_agent_execution_coverage(org, managed_id), E_EXECUTION_COVERAGE);
+    }
+    public(package) fun record_agent_execution(org: &mut Organization, managed_id: ID, run_id: ID, capability_id: ID, action: String) {
+        assert!(has_agent_execution_coverage(org, managed_id), E_EXECUTION_COVERAGE);
+        let control = classify_agent_actions(&vector[action]) == identity::operate_action();
+        let ledger: &mut AgentExecutionIndex = df::borrow_mut(organization::borrow_uid_mut(org), AgentExecutionIndexKey { managed_agent: managed_id });
+        assert!(!table::contains(&ledger.executions, run_id), E_CONFLICT);
+        table::add(&mut ledger.executions, run_id, AgentExecutionPointer { capability_id, control, settled: false });
+        if (control) ledger.unsettled_control = ledger.unsettled_control + 1;
+        ledger.revision = ledger.revision + 1;
+    }
+    public(package) fun settle_agent_execution(org: &mut Organization, managed_id: ID, run_id: ID, capability_id: ID) {
+        // Historical evidence may still settle a legacy command. That never
+        // creates coverage or permits a legacy instance to pass handover.
+        if (!has_agent_execution_coverage(org, managed_id)) return;
+        let ledger: &mut AgentExecutionIndex = df::borrow_mut(organization::borrow_uid_mut(org), AgentExecutionIndexKey { managed_agent: managed_id });
+        let pointer = table::borrow_mut(&mut ledger.executions, run_id);
+        assert!(pointer.capability_id == capability_id && !pointer.settled, E_CONFLICT);
+        pointer.settled = true;
+        if (pointer.control) {
+            assert!(ledger.unsettled_control > 0, E_CONFLICT);
+            ledger.unsettled_control = ledger.unsettled_control - 1;
+        };
+        ledger.revision = ledger.revision + 1;
+    }
     public fun binding_version(binding: &CoordinatorBinding): u64 { binding.version }
 
     public(package) fun authority_binding(cap: &RemoteCapability): AuthorityBinding {

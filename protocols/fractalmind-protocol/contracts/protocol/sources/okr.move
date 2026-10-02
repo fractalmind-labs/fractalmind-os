@@ -232,6 +232,33 @@ module fractalmind_protocol::okr {
             table::add(&mut ledger.claims, run_id, BudgetClaim { capability_id: object::id(cap), agreement_version, kr_index, reserved: budget_amount, spent: 0, settled: false });
         };
     }
+    public fun prepare_command_v2(
+        okr: &mut Okr, cap: &mut RemoteCapability, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent, expected_agreement: u64, kr_index: u64,
+        action: String, scope: String, command_id: String, nonce: String, idempotency_key: String,
+        budget_asset: String, budget_amount: u64, intent_hash: vector<u8>, issued_at_ms: u64, expires_at_ms: u64,
+        clock: &Clock, ctx: &mut TxContext,
+    ) {
+        assert!(expected_agreement == okr.agreement_version, E_VERSION);
+        let witness = assignment_witness(okr, org, member, binding, managed, cap, kr_index, clock);
+        assert!(budget_asset == okr.budget_asset && budget_amount > 0, E_BUDGET);
+        let old = node_execution::execution_id(cap, intent_hash);
+        let limit = okr.budget_limit; let agreement_version = okr.agreement_version;
+        let ledger = budget(okr, ctx);
+        let existed = option::is_some(&old) && table::contains(&ledger.claims, *option::borrow(&old));
+        if (!existed) assert!(ledger.spent <= limit && ledger.reserved <= limit - ledger.spent && budget_amount <= limit - ledger.spent - ledger.reserved, E_BUDGET);
+        let run_id = node_execution::prepare_agent_command_with_contract_v2(cap, org, human, grant, member, binding, managed, witness,
+            action, scope, command_id, nonce, idempotency_key, budget_asset, budget_amount, intent_hash, issued_at_ms, expires_at_ms, clock, ctx);
+        let ledger = budget(okr, ctx);
+        if (existed) {
+            let previous = table::borrow(&ledger.claims, run_id);
+            assert!(previous.capability_id == object::id(cap) && previous.agreement_version == agreement_version && previous.kr_index == kr_index && previous.reserved == budget_amount, E_BUDGET);
+        } else {
+            assert!(!table::contains(&ledger.claims, run_id), E_BUDGET);
+            ledger.reserved = ledger.reserved + budget_amount;
+            table::add(&mut ledger.claims, run_id, BudgetClaim { capability_id: object::id(cap), agreement_version, kr_index, reserved: budget_amount, spent: 0, settled: false });
+        };
+    }
     public fun begin_command(
         okr: &Okr, run: &mut CommandExecution, cap: &RemoteCapability, org: &Organization,
         human: &HumanIdentity, grant: &DeviceGrant, member: &HostMembership, binding: &CoordinatorBinding,
@@ -263,6 +290,16 @@ module fractalmind_protocol::okr {
         let witness = ra::settlement_witness(cap, node_execution::intent_hash(run), object::id(okr));
         let was_queued = node_execution::state(run) == 0;
         node_execution::request_stop_with_contract(run, cap, org, human, grant, witness, clock, ctx);
+        if (was_queued) settle(okr, object::id(run), 0, ctx);
+    }
+    public fun request_stop_v2(
+        okr: &mut Okr, run: &mut CommandExecution, cap: &mut RemoteCapability, org: &mut Organization,
+        human: &HumanIdentity, grant: &DeviceGrant, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        assert!(okr.org_id == object::id(org) && node_execution::capability_id(run) == object::id(cap), E_TARGET);
+        let witness = ra::settlement_witness(cap, node_execution::intent_hash(run), object::id(okr));
+        let was_queued = node_execution::state(run) == 0;
+        node_execution::request_stop_with_contract_v2(run, cap, org, human, grant, witness, clock, ctx);
         if (was_queued) settle(okr, object::id(run), 0, ctx);
     }
     fun settle(okr: &mut Okr, run_id: ID, spent: u64, ctx: &mut TxContext) {

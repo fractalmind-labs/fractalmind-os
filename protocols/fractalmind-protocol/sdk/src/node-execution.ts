@@ -2,17 +2,25 @@ import { bcs } from '@mysten/sui/bcs';
 import type { Transaction, TransactionArgument } from '@mysten/sui/transactions';
 import { Ed25519PublicKey } from '@mysten/sui/keypairs/ed25519';
 import { sha256 } from '@noble/hashes/sha2.js';
-import { normalizeSuiAddress } from '@mysten/sui/utils';
+import { deriveDynamicFieldID, normalizeSuiAddress } from '@mysten/sui/utils';
+import { TypeTagSerializer } from '@mysten/sui/bcs';
 import { FractalMindClient, toBigInt } from './client.js';
 import { canonicalNodeCommandSigningBytes } from './node-command.js';
 import { bytesToHex, hexToBytes, wrapKeys } from './identity-crypto.js';
 import { commandResultKey, commandResultWrapContext } from './command-result-crypto.js';
-import { HostApi } from './host.js';
+import { HostApi, ManagedAgentBcs } from './host.js';
 import { bytesArgument } from './wire-bytes.js';
 import type { SignedNodeCommand } from './types.js';
 
 const ID = bcs.Address;
 const Bytes = bcs.vector(bcs.u8());
+export const AgentExecutionIndexBcs = bcs.struct('AgentExecutionIndex', {
+  executions: bcs.struct('Table', { id: ID, size: bcs.u64() }), unsettled_control: bcs.u64(), revision: bcs.u64(),
+});
+export const AgentExecutionPointerBcs = bcs.struct('AgentExecutionPointer', { capability_id: ID, control: bcs.bool(), settled: bcs.bool() });
+export class AgentExecutionReadError extends Error {
+  constructor(readonly code: 'coverage_unavailable' | 'invalid_source' | 'snapshot_changed', detail?: string) { super(detail ? `${code}: ${detail}` : code); }
+}
 const BudgetTotals = bcs.struct('BoundBudgetTotals', { spent: bcs.u64(), reserved: bcs.u64() });
 const BudgetClaimKey = bcs.struct('BoundBudgetClaimKey', { intent_hash: Bytes });
 const BudgetClaim = bcs.struct('BoundBudgetClaim', { reserved_amount: bcs.u64(), spent_amount: bcs.u64(), settled: bcs.bool() });
@@ -54,6 +62,70 @@ export async function verifySignedNodeCommand(command: SignedNodeCommand) {
 
 export class NodeExecutionApi {
   constructor(private readonly fm: FractalMindClient) {}
+  /** Complete instance history across capabilities and OKRs. Only known
+   * terminal states with settled budget cease blocking handover. This is not
+   * physical idle, current device permission or permission to continue. */
+  async readAgentExecutions(organizationId: string, managedAgentId: string) {
+    const org = normalizeSuiAddress(organizationId), managedId = normalizeSuiAddress(managedAgentId);
+    const invalid = (): never => { throw new AgentExecutionReadError('invalid_source'); };
+    const readManaged = async () => {
+      const { object } = await this.fm.client.core.getObject({ objectId: managedId, include: { content: true } });
+      if (object.objectId !== managedId || object.type !== `${this.fm.typesPackageId}::host::ManagedAgent` || object.owner.$kind !== 'Shared' || !object.content) invalid();
+      const value = ManagedAgentBcs.parse(object.content!);
+      if (value.id !== managedId || value.org_id !== org || value.workspace_hash.length !== 32 || BigInt(value.version) < 1n) invalid();
+      return value;
+    };
+    const managed = await readManaged();
+    const type = `${this.fm.typesPackageId}::host::AgentExecutionIndexKey`;
+    const name = { type, bcs: ID.serialize(managedId).toBytes() };
+    const absentId = deriveDynamicFieldID(org, TypeTagSerializer.parseFromStr(type), name.bcs);
+    const readIndex = async () => {
+      try {
+        const { dynamicField } = await this.fm.client.core.getDynamicField({ parentId: org, name });
+        if (dynamicField.value.type !== `${this.fm.typesPackageId}::host::AgentExecutionIndex`) invalid();
+        const value = AgentExecutionIndexBcs.parse(dynamicField.value.bcs);
+        if (BigInt(value.revision) < 1n || BigInt(value.unsettled_control) > BigInt(value.executions.size)) invalid();
+        return { value, version: dynamicField.version };
+      } catch (error) {
+        if (error && typeof error === 'object' && 'reason' in error && error.reason === 'notFound' && 'objectId' in error && error.objectId === absentId) throw new AgentExecutionReadError('coverage_unavailable');
+        throw error;
+      }
+    };
+    const before = await readIndex(), executions = [];
+    let cursor: string | null = null;
+    const cursors = new Set<string>(), ids = new Set<string>();
+    do {
+      const page = await this.fm.client.core.listDynamicFields({ parentId: before.value.executions.id, cursor, limit: 100 });
+      if (page.hasNextPage && (!page.cursor || cursors.has(page.cursor))) invalid();
+      if (page.cursor) cursors.add(page.cursor);
+      for (const field of page.dynamicFields) {
+        if (field.name.type !== '0x2::object::ID' && field.name.type !== `${normalizeSuiAddress('0x2')}::object::ID`) invalid();
+        const executionId = ID.parse(field.name.bcs);
+        if (ids.has(executionId)) invalid();
+        ids.add(executionId);
+        const { dynamicField } = await this.fm.client.core.getDynamicField({ parentId: before.value.executions.id, name: field.name });
+        if (dynamicField.value.type !== `${this.fm.typesPackageId}::host::AgentExecutionPointer`) invalid();
+        const pointer = AgentExecutionPointerBcs.parse(dynamicField.value.bcs);
+        const { object } = await this.fm.client.core.getObject({ objectId: executionId, include: { content: true } });
+        if (object.objectId !== executionId || object.type !== `${this.fm.typesPackageId}::node_execution::CommandExecution` || object.owner.$kind !== 'Shared' || !object.content) invalid();
+        const run = CommandExecutionBcs.parse(object.content!);
+        const control = ['start', 'stop', 'assign', 'direct.message'].includes(run.action);
+        if (!control && !['inventory', 'status', 'monitor', 'logs', 'health', 'availability'].includes(run.action)) invalid();
+        const settled = [2, 3, 5].includes(run.state);
+        if (run.id !== executionId || run.org_id !== org || run.managed_agent !== managedId || run.host_address !== managed.host_address || run.node_id !== managed.host_address || run.agent_id !== managed.instance_id || run.capability_id !== pointer.capability_id || run.state > 5 || run.intent_hash.length !== 32 || pointer.control !== control || pointer.settled !== settled) invalid();
+        const budget = await this.getReservationBudget(run.capability_id, Uint8Array.from(run.intent_hash));
+        if (budget.reservedAmount !== BigInt(run.budget_amount) || budget.settled !== settled) invalid();
+        executions.push({ run, control, settled, spent: budget.spentAmount, reserved: settled ? 0n : budget.reservedAmount });
+      }
+      cursor = page.hasNextPage ? page.cursor : null;
+    } while (cursor);
+    const after = await readIndex();
+    if (JSON.stringify(before) !== JSON.stringify(after) || JSON.stringify(managed) !== JSON.stringify(await readManaged())) throw new AgentExecutionReadError('snapshot_changed');
+    const unsettledControl = executions.filter(row => row.control && !row.settled).length;
+    if (BigInt(executions.length) !== BigInt(before.value.executions.size) || BigInt(unsettledControl) !== BigInt(before.value.unsettled_control))
+      throw new AgentExecutionReadError('invalid_source', `directory size ${before.value.executions.size}, read ${executions.length}; unsettled ${before.value.unsettled_control}, read ${unsettledControl}`);
+    return { managed, revision: before.value.revision, executions, unsettledControl };
+  }
   async prepareCommand(input: Authority & { command: SignedNodeCommand; resultKey?: { organizationKey: Uint8Array; keyVersion: bigint | string | number }; tx?: Transaction }) {
     await verifySignedNodeCommand(input.command);
     if (Boolean(input.command.target.agent_id) !== Boolean(input.managedAgentId)) throw new Error('Managed instance authority must match the command target.');
@@ -78,7 +150,7 @@ export class NodeExecutionApi {
     if (contract) args.push(tx.pure.u64(toBigInt(contract.agreement_version)), tx.pure.u64(toBigInt(contract.kr_index)));
     args.push(tx.pure.string(command.action), tx.pure.string(command.scope), tx.pure.string(command.command_id), tx.pure.string(command.nonce), tx.pure.string(command.idempotency_key), tx.pure.string(command.budget?.asset ?? ''), tx.pure.u64(toBigInt(command.budget?.amount ?? 0)), tx.pure.vector('u8', nodeCommandIntentHash(command)), tx.pure.u64(command.issued_at_ms), tx.pure.u64(command.expires_at_ms), tx.object('0x6'));
     if (contract) args.unshift(tx.object(contract.id));
-    tx.moveCall({ target: contract ? `${this.fm.packageId}::okr::prepare_command` : `${this.fm.packageId}::node_execution::prepare_${input.managedAgentId ? 'agent' : 'host'}_command`, arguments: args });
+    tx.moveCall({ target: contract ? `${this.fm.packageId}::okr::prepare_command_v2` : `${this.fm.packageId}::node_execution::prepare_${input.managedAgentId ? 'agent_command_v2' : 'host_command'}`, arguments: args });
     return tx;
   }
   beginCommand(input: Authority & { executionId: string; capabilityId: string; organizationId: string; okrId?: string; attemptId?: Uint8Array; tx?: Transaction }) {
@@ -98,7 +170,7 @@ export class NodeExecutionApi {
   }
   requestStop(input: { executionId: string; capabilityId: string; organizationId: string; humanId: string; grantId: string; okrId?: string; tx?: Transaction }) {
     const tx = this.fm.useTransaction(input.tx);
-    tx.moveCall({ target: input.okrId ? `${this.fm.packageId}::okr::request_stop` : `${this.fm.packageId}::node_execution::request_stop_with_budget`, arguments: [...(input.okrId ? [tx.object(input.okrId)] : []), tx.object(input.executionId), tx.object(input.capabilityId), tx.object(input.organizationId), tx.object(input.humanId), tx.object(input.grantId), tx.object('0x6')] });
+    tx.moveCall({ target: input.okrId ? `${this.fm.packageId}::okr::request_stop_v2` : `${this.fm.packageId}::node_execution::request_stop_with_budget_v2`, arguments: [...(input.okrId ? [tx.object(input.okrId)] : []), tx.object(input.executionId), tx.object(input.capabilityId), tx.object(input.organizationId), tx.object(input.humanId), tx.object(input.grantId), tx.object('0x6')] });
     return tx;
   }
   async getBudget(capabilityId: string) {

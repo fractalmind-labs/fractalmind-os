@@ -79,6 +79,7 @@ module fractalmind_protocol::node_execution {
         clock: &Clock, ctx: &mut TxContext,
     ) {
         ra::assert_unbound_contract(cap);
+        host::assert_legacy_agent_execution(org, object::id(managed));
         host::assert_agent_authority(org, human, grant, member, binding, managed, cap, clock);
         prepare(cap, org, human, grant, member, option::some(object::id(managed)), action, scope,
             command_id, nonce, idempotency_key, budget_asset, budget_amount, intent_hash, issued_at_ms, expires_at_ms, clock, ctx);
@@ -95,6 +96,21 @@ module fractalmind_protocol::node_execution {
         prepare(cap, org, human, grant, member, option::none(), action, scope,
             command_id, nonce, idempotency_key, budget_asset, budget_amount, intent_hash, issued_at_ms, expires_at_ms, clock, ctx);
     }
+    public fun prepare_agent_command_v2(
+        cap: &mut RemoteCapability, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent,
+        action: String, scope: String, command_id: String, nonce: String, idempotency_key: String,
+        budget_asset: String, budget_amount: u64, intent_hash: vector<u8>, issued_at_ms: u64, expires_at_ms: u64,
+        clock: &Clock, ctx: &mut TxContext,
+    ) {
+        ra::assert_unbound_contract(cap);
+        host::assert_tracked_agent_execution(org, object::id(managed));
+        host::assert_agent_authority(org, human, grant, member, binding, managed, cap, clock);
+        let duplicate = option::is_some(&execution_id(cap, intent_hash));
+        let run_id = prepare(cap, org, human, grant, member, option::some(object::id(managed)), action, scope,
+            command_id, nonce, idempotency_key, budget_asset, budget_amount, intent_hash, issued_at_ms, expires_at_ms, clock, ctx);
+        if (!duplicate) host::record_agent_execution(org, object::id(managed), run_id, object::id(cap), action);
+    }
     public(package) fun prepare_agent_command_with_contract(
         cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
         member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent, witness: ContractWitness,
@@ -102,10 +118,27 @@ module fractalmind_protocol::node_execution {
         budget_asset: String, budget_amount: u64, intent_hash: vector<u8>, issued_at_ms: u64, expires_at_ms: u64,
         clock: &Clock, ctx: &mut TxContext,
     ): ID {
+        host::assert_legacy_agent_execution(org, object::id(managed));
         host::assert_agent_authority(org, human, grant, member, binding, managed, cap, clock);
         ra::record_contract_command(cap, intent_hash, &witness);
         prepare(cap, org, human, grant, member, option::some(object::id(managed)), action, scope,
             command_id, nonce, idempotency_key, budget_asset, budget_amount, intent_hash, issued_at_ms, expires_at_ms, clock, ctx)
+    }
+    public(package) fun prepare_agent_command_with_contract_v2(
+        cap: &mut RemoteCapability, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent, witness: ContractWitness,
+        action: String, scope: String, command_id: String, nonce: String, idempotency_key: String,
+        budget_asset: String, budget_amount: u64, intent_hash: vector<u8>, issued_at_ms: u64, expires_at_ms: u64,
+        clock: &Clock, ctx: &mut TxContext,
+    ): ID {
+        host::assert_tracked_agent_execution(org, object::id(managed));
+        host::assert_agent_authority(org, human, grant, member, binding, managed, cap, clock);
+        ra::record_contract_command(cap, intent_hash, &witness);
+        let duplicate = option::is_some(&execution_id(cap, intent_hash));
+        let run_id = prepare(cap, org, human, grant, member, option::some(object::id(managed)), action, scope,
+            command_id, nonce, idempotency_key, budget_asset, budget_amount, intent_hash, issued_at_ms, expires_at_ms, clock, ctx);
+        if (!duplicate) host::record_agent_execution(org, object::id(managed), run_id, object::id(cap), action);
+        run_id
     }
     fun prepare(
         cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant,
@@ -251,6 +284,8 @@ module fractalmind_protocol::node_execution {
         run.result_record = option::some(record_id);
         run.result_hash = result_hash;
         run.state = final_state;
+        if (final_state != NEEDS_CONFIRMATION && option::is_some(&run.managed_agent))
+            host::settle_agent_execution(org, *option::borrow(&run.managed_agent), object::id(run), object::id(cap));
         changed(run, clock);
     }
     #[allow(unused_variable)]
@@ -259,11 +294,31 @@ module fractalmind_protocol::node_execution {
     }
     public fun request_stop_with_budget(run: &mut CommandExecution, cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant, clock: &Clock, ctx: &TxContext) {
         ra::assert_unbound_contract(cap);
+        assert_legacy_queued_stop(run, org);
         request_stop_authorized(run, cap, org, human, grant, clock, ctx);
+    }
+    public fun request_stop_with_budget_v2(run: &mut CommandExecution, cap: &mut RemoteCapability, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant, clock: &Clock, ctx: &TxContext) {
+        ra::assert_unbound_contract(cap);
+        request_stop_tracked(run, cap, org, human, grant, clock, ctx);
     }
     public(package) fun request_stop_with_contract(run: &mut CommandExecution, cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant, witness: ContractWitness, clock: &Clock, ctx: &TxContext) {
         ra::assert_contract_command(cap, run.intent_hash, &witness);
+        assert_legacy_queued_stop(run, org);
         request_stop_authorized(run, cap, org, human, grant, clock, ctx);
+    }
+    public(package) fun request_stop_with_contract_v2(run: &mut CommandExecution, cap: &mut RemoteCapability, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant, witness: ContractWitness, clock: &Clock, ctx: &TxContext) {
+        ra::assert_contract_command(cap, run.intent_hash, &witness);
+        request_stop_tracked(run, cap, org, human, grant, clock, ctx);
+    }
+    fun assert_legacy_queued_stop(run: &CommandExecution, org: &Organization) {
+        if (run.state == QUEUED && option::is_some(&run.managed_agent))
+            host::assert_legacy_agent_execution(org, *option::borrow(&run.managed_agent));
+    }
+    fun request_stop_tracked(run: &mut CommandExecution, cap: &mut RemoteCapability, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant, clock: &Clock, ctx: &TxContext) {
+        let was_queued = run.state == QUEUED;
+        request_stop_authorized(run, cap, org, human, grant, clock, ctx);
+        if (was_queued && option::is_some(&run.managed_agent))
+            host::settle_agent_execution(org, *option::borrow(&run.managed_agent), object::id(run), object::id(cap));
     }
     fun request_stop_authorized(run: &mut CommandExecution, cap: &mut RemoteCapability, org: &Organization, human: &HumanIdentity, grant: &DeviceGrant, clock: &Clock, ctx: &TxContext) {
         identity::assert_can(human, grant, org, identity::operate_action(), clock, ctx);

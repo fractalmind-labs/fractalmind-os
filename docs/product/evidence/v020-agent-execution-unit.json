@@ -1,0 +1,62 @@
+{
+  "recordedAt": "2026-10-02T10:36:43.402Z",
+  "baseline": "PRD v0.11 + fractalmind-app-prototype-v2",
+  "checks": [
+    {
+      "command": "SDK npm run build",
+      "success": true
+    },
+    {
+      "command": "SDK npm run typecheck",
+      "success": true
+    },
+    {
+      "command": "SDK node --import tsx --test tests/*.test.ts",
+      "passed": 111,
+      "failed": 0
+    },
+    {
+      "command": "App npm test",
+      "passed": 90,
+      "failed": 0
+    },
+    {
+      "command": "sui move test",
+      "passed": 121,
+      "failed": 0
+    },
+    {
+      "command": "App npm run build",
+      "success": true,
+      "notes": [
+        "Existing main chunk exceeds 500 kB; build succeeds.",
+        "Existing @scure/base annotation warning remains."
+      ]
+    },
+    {
+      "command": "App tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --strict --skipLibCheck --esModuleInterop scripts/host-admission-localnet.ts",
+      "success": true
+    },
+    {
+      "command": "git diff --check",
+      "success": true
+    }
+  ],
+  "newSdkTests": [
+    "complete per-instance cross-capability pagination and all execution states",
+    "unknown/expired controls keep reservations and full u64 precision",
+    "read-only history does not grant or block control by itself",
+    "missing exact coverage vs empty directory vs other missing data",
+    "source, budget and concurrent snapshot validation",
+    "index pagination lag must fail closed",
+    "SDK preparation and cancellation use tracked v2 entries"
+  ],
+  "realChainEvidence": "v020-agent-execution-localnet.json",
+  "priorSourceEvidence": "v020-agent-execution-prior-checks.json",
+  "limits": {
+    "nativeInstallAcceptance": false,
+    "fullAppHandoverAcceptance": false,
+    "fivePlatformsAcceptance": false,
+    "newMoveUnitCoverage": "Existing 121 tests compile updated contracts; new positive coverage/settlement assertions run on actual localnet."
+  }
+}
