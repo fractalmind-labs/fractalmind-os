@@ -356,6 +356,7 @@ async function recordFixture() {
     revision: "1",
     key_version: "1",
     encrypted_body: [70, 77, 69, 49],
+    previous: null as string | null,
   };
   let head = { record_id: pointer.record_id, revision: "1", key_version: "1" };
   Object.defineProperty(f.chain.sdk, "productRecord", {
@@ -448,6 +449,80 @@ test("only an exact missing organization index is empty; child and network failu
     throw new Error("Network unavailable");
   };
   await assert.rejects(f.api().list());
+});
+
+async function historyFixture() {
+  const f = await recordFixture();
+  const second = {
+    ...f.record,
+    id: id("0x89"),
+    revision: "2",
+    previous: f.record.id,
+  };
+  const third = {
+    ...f.record,
+    id: id("0x90"),
+    revision: "3",
+    previous: second.id,
+  };
+  Object.assign(f.head, { record_id: third.id, revision: "3" });
+  const rows = new Map([f.record, second, third].map((r) => [r.id, r]));
+  const fetched: string[] = [];
+  f.chain.sdk.productRecord.getRecord = async (recordId) => {
+    fetched.push(recordId);
+    const row = rows.get(recordId);
+    assert.ok(row);
+    return row as Awaited<
+      ReturnType<typeof f.chain.sdk.productRecord.getRecord>
+    >;
+  };
+  return { ...f, second, third, rows, fetched };
+}
+test("historical native reads follow the immutable chain from its current head; default reads still reject old records", async () => {
+  const f = await historyFixture();
+  await assert.rejects(f.api().read(f.pointer), /directory_changed/);
+  assert.equal(f.decryptCalls(), 0);
+  const body = await f.api().read(f.pointer, true);
+  assert.equal(new TextDecoder().decode(body), "private body");
+  body.fill(0);
+  assert.deepEqual(f.fetched, [f.third.id, f.second.id, f.record.id]);
+  assert.equal(f.decryptCalls(), 1);
+});
+test("historical reads reject revision gaps, cycles, scope substitutions and a forged requested revision before decrypting", async () => {
+  for (const change of [
+    (f: Awaited<ReturnType<typeof historyFixture>>) => {
+      f.third.previous = f.record.id;
+    },
+    (f: Awaited<ReturnType<typeof historyFixture>>) => {
+      f.second.previous = f.third.id;
+    },
+    (f: Awaited<ReturnType<typeof historyFixture>>) => {
+      f.second.organization_id = id("0x99");
+    },
+    (f: Awaited<ReturnType<typeof historyFixture>>) => {
+      f.pointer.revision = "2";
+    },
+  ]) {
+    const f = await historyFixture();
+    change(f);
+    await assert.rejects(f.api().read(f.pointer, true));
+    assert.equal(f.decryptCalls(), 0);
+  }
+});
+test("historical decryption rechecks current permission and the current head before releasing plaintext", async () => {
+  for (const change of [
+    (f: Awaited<ReturnType<typeof historyFixture>>) => {
+      f.grant.revoked = true;
+    },
+    (f: Awaited<ReturnType<typeof historyFixture>>) => {
+      f.head.revision = "4";
+    },
+  ]) {
+    const f = await historyFixture();
+    f.onDecrypt(() => change(f));
+    await assert.rejects(f.api().read(f.pointer, true));
+    assert.equal(f.decryptCalls(), 1);
+  }
 });
 
 test("approval reads require both an approval action and admin role independently of read access", async () => {

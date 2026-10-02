@@ -27,6 +27,7 @@ import { HandoverReview } from "../src/handover-review";
 import { HandoverSetup } from "../src/handover-setup";
 import { NativeOkrRunner } from "../src/native-okr-runner";
 import { OkrControl } from "../src/okr-control";
+import { OkrHumanReview, humanReviewIntent } from "../src/okr-human-review";
 import { HostAdmission } from "../src/host-admission";
 import { AgentImport } from "../src/agent-import";
 import { CoordinatorReadClient } from "../src/coordinator-read";
@@ -37,6 +38,11 @@ assert.ok(
 );
 const output = process.argv[3],
   progress = output + ".progress.json";
+const humanSequence = process.argv.slice(4).includes("--human-sequence");
+assert.ok(
+  process.argv.slice(4).every((a) => a === "--human-sequence"),
+  "Unknown harness option",
+);
 for (const path of [output, progress]) {
   try {
     await access(path);
@@ -123,7 +129,11 @@ async function save(complete = false) {
             state.phase === "validated_native_app_real_envd",
           hostKeyStorage: "isolated memory provider",
           realCoordinatorDeviceHTTP: true,
-          humanFinalAcceptanceVerified: false,
+          humanFinalAcceptanceVerified: state.humanAcceptanceVerified === true,
+          installedHumanReviewVerified: false,
+          reviewDecisions: humanSequence
+            ? "explicit scripted test approvals, not installed Human UI"
+            : "pending",
           physicalHostVerified: false,
           humanHandoverVerified: false,
           nativeWindowSourceVerified: false,
@@ -532,19 +542,17 @@ try {
     deadlineMs: String(Date.now() + 3600000),
     allowedPaths: ["docs"],
     prohibitedActions: ["external network", "no shell"],
-    maxCalls: "3",
-    krs: [
-      {
-        title: "Create one exact documentation file",
-        unit: "files",
-        precision: 0,
-        baseline: "0",
-        target: "1",
-        weight: "1",
-        maxAgeMinutes: "5",
-        verificationRule: "Inspect actual original file evidence",
-      },
-    ],
+    maxCalls: humanSequence ? "6" : "3",
+    krs: Array.from({ length: humanSequence ? 2 : 1 }, (_, index) => ({
+      title: `Create exact documentation file ${index + 1}`,
+      unit: "files",
+      precision: 0,
+      baseline: "0",
+      target: "1",
+      weight: "1",
+      maxAgeMinutes: "5",
+      verificationRule: "Inspect actual original file evidence",
+    })),
   });
   assert.ok(!("status" in draftQuote));
   await preparedQuote("native encrypted actual Host OKR draft", draftQuote);
@@ -574,18 +582,18 @@ try {
   const plan: NativeFileOkrPlan = {
     format: 1,
     paths: { "file.read": ["docs"], "file.write": ["docs"] },
-    krs: [
-      {
-        maxCalls: "3",
-        files: [
-          {
-            path: "docs/APPROVED.md",
-            content:
-              "Actual envd execution from the native FractalMind App controller\n",
-          },
-        ],
-      },
-    ],
+    krs: Array.from({ length: humanSequence ? 2 : 1 }, (_, index) => ({
+      maxCalls: "3",
+      files: [
+        {
+          path: index === 0 ? "docs/APPROVED.md" : "docs/SECOND.md",
+          content:
+            index === 0
+              ? "Actual envd execution from the native FractalMind App controller\n"
+              : "Second KR independently reviewed before final acceptance\n",
+        },
+      ],
+    })),
   };
   const input = await setup.createReview(okrId, observeCapability, plan);
   const reviewTransport: typeof fetch = async (...args) => {
@@ -868,6 +876,224 @@ try {
     feeConfirmations,
   };
   await save();
+  if (humanSequence) {
+    const decisions: unknown[] = [],
+      krRuns = [settled.id];
+    async function verifyCurrent(label: string) {
+      const source = await sdk.okr.getOkr(okrId);
+      const human = new OkrHumanReview(
+        chain,
+        device,
+        auth.grantId,
+        organizationId,
+        okrId,
+        humanReviewIntent(source),
+        invoke,
+        journal,
+      );
+      const view = await human.read();
+      assert.equal(view.evidence.length, 1);
+      assert.equal(
+        view.evidence[0].result.run.id,
+        krRuns[Number(source.next_kr)],
+      );
+      assert.equal(
+        view.evidence[0].files[0].expectedHash,
+        view.evidence[0].files[0].observedHash,
+      );
+      const beforeDeliveries = deliveries,
+        beforeFees = feeConfirmations;
+      await assert.rejects(
+        human.prepare(view, {
+          reviewed: false,
+          reason: "Scripted test has not yet confirmed evidence",
+        }),
+        /confirmation_required/,
+      );
+      const q = await human.prepare(view, {
+        reviewed: true,
+        reason: `Explicit scripted Human review of ${label}: original Run, file content and SHA-256 match the approved specification.`,
+      });
+      assert.ok(!("status" in q));
+      assert.equal(deliveries, beforeDeliveries);
+      await preparedQuote(label, q);
+      const outcome = await human.submit(q);
+      await record(label, outcome);
+      const confirmed = await human.confirmed(outcome);
+      assert.equal(confirmed.okr.state, 1);
+      assert.equal(confirmed.okr.next_kr, String(BigInt(source.next_kr) + 1n));
+      assert.equal(
+        confirmed.okr.metrics[Number(source.next_kr)].verified,
+        true,
+      );
+      assert.equal(deliveries, beforeDeliveries);
+      assert.equal(feeConfirmations, beforeFees);
+      // Even with a stale view, a known request only returns its original receipt.
+      const original = await human.prepare(view, {
+        reviewed: false,
+        reason: "",
+      });
+      assert.ok("status" in original);
+      assert.equal(original.digest, outcome.digest);
+      decisions.push({
+        krIndex: source.next_kr,
+        requestId: human.requestId,
+        digest: outcome.digest,
+        verificationRecordId: confirmed.record.id,
+        runId: view.evidence[0].result.run.id,
+      });
+      state = {
+        ...state,
+        phase: "human_kr_verified",
+        humanDecisions: decisions,
+        nextKr: confirmed.okr.next_kr,
+      };
+      await save();
+      return confirmed.okr;
+    }
+    const afterFirst = await verifyCurrent(
+      "native independent KR 1 verification",
+    );
+    assert.equal((await sdk.okr.listExecutions(okrId)).executions.length, 1);
+    const nextDescription = await runner.describe(okrId);
+    const nextControl = new OkrControl(
+      chain,
+      device,
+      auth.grantId,
+      organizationId,
+      okrId,
+      afterFirst.agreement_version,
+      afterFirst.next_kr,
+      journal,
+      () => {},
+      {
+        okrVersion: nextDescription.okr.version,
+        policyPin: canonical(nextDescription.policy),
+      },
+    );
+    const nextQuote = await nextControl.prepare();
+    assert.ok(!("status" in nextQuote));
+    await preparedQuote("native second KR explicit control fee", nextQuote);
+    const nextOutcome = await nextControl.submit(nextQuote);
+    await record("native second KR explicit control fee", nextOutcome);
+    const nextCapability = await nextControl.confirmed(nextOutcome);
+    await nextControl.use(nextCapability);
+    const nextInput = { okrId, capabilityId: nextCapability };
+    const nextQueued = await runner.step({
+      ...nextInput,
+      createIfMissing: true,
+      prepareOnly: true,
+    });
+    assert.equal(nextQueued.status, "queued");
+    assert.ok(nextQueued.executionId);
+    assert.equal(deliveries, 1);
+    await record(
+      "native second KR exact ticket and Run",
+      runner.lastSubmission!,
+    );
+    state = {
+      ...state,
+      phase: "second_kr_queued",
+      secondExecutionId: nextQueued.executionId,
+      secondPreparationDigest: nextQueued.transactionDigest,
+    };
+    await save();
+    await runner.step({ ...nextInput, releaseQueued: true });
+    const second = await readVisible(
+      () => sdk.nodeExecution.getExecution(nextQueued.executionId!),
+      (r) => r.state === 2 && !!r.result_record,
+    );
+    await readVisible(
+      () => sdk.okr.getOkr(okrId),
+      (r) => r.metrics[1].run_id === second.id && r.metrics[1].current === "1",
+    );
+    krRuns.push(second.id);
+    assert.equal(deliveries, 2);
+    assert.equal(feeConfirmations, 2);
+    const afterSecond = await verifyCurrent(
+      "native independent KR 2 verification",
+    );
+    assert.equal(afterSecond.next_kr, "2");
+    assert.equal(afterSecond.state, 1);
+    const final = new OkrHumanReview(
+      chain,
+      device,
+      auth.grantId,
+      organizationId,
+      okrId,
+      humanReviewIntent(afterSecond),
+      invoke,
+      journal,
+    );
+    const all = await final.read();
+    assert.equal(all.evidence.length, 2);
+    assert.ok(
+      all.evidence.every((e) =>
+        e.priorVerification?.reason.includes("Explicit scripted Human review"),
+      ),
+    );
+    assert.notEqual(
+      all.evidence[0].priorVerification!.recordId,
+      all.evidence[1].priorVerification!.recordId,
+    );
+    await assert.rejects(
+      final.prepare(all, {
+        reviewed: false,
+        reason: "All KR records are present",
+      }),
+      /confirmation_required/,
+    );
+    const finalQuote = await final.prepare(all, {
+      reviewed: true,
+      reason:
+        "Explicit scripted final acceptance: both exact documentation files and their independent KR verification records satisfy the overall success criteria.",
+    });
+    assert.ok(!("status" in finalQuote));
+    await preparedQuote("native separate final Human acceptance", finalQuote);
+    assert.equal((await sdk.okr.getOkr(okrId)).state, 1);
+    const finalOutcome = await final.submit(finalQuote);
+    await record("native separate final Human acceptance", finalOutcome);
+    const accepted = await final.confirmed(finalOutcome),
+      total = await sdk.okr.getBudget(okrId);
+    assert.equal(accepted.okr.state, 3);
+    assert.equal(accepted.okr.accepted_by_human, chain.profile.humanId);
+    assert.equal(
+      accepted.okr.agreement_version,
+      String(BigInt(afterSecond.agreement_version) + 1n),
+    );
+    assert.equal(total.spent, 6n);
+    assert.equal(total.reserved, 0n);
+    assert.equal(deliveries, 2);
+    assert.equal((await sdk.okr.listExecutions(okrId)).executions.length, 2);
+    checks.push(
+      "two real envd KR Runs are explicitly released in order; native Human verification advances the cursor without another dispatch or implicit acceptance",
+    );
+    checks.push(
+      "final native review reads both original results and separate immutable verification revisions; an explicit, separately quoted Human decision achieves the OKR on Sui",
+    );
+    state = {
+      ...state,
+      phase: "human_sequence_accepted",
+      secondExecutionId: second.id,
+      secondResultRecordId: second.result_record,
+      humanAcceptanceVerified: true,
+      humanVerified: true,
+      okrState: accepted.okr.state,
+      nextKr: accepted.okr.next_kr,
+      acceptanceRecordId: accepted.record.id,
+      acceptanceDigest: finalOutcome.digest,
+      historicalVerificationRecordIds: all.evidence.map(
+        (e) => e.priorVerification!.recordId,
+      ),
+      humanDecisions: decisions,
+      krExecutionIds: krRuns,
+      budget: { spent: String(total.spent), reserved: String(total.reserved) },
+      transportCalls,
+      commandDeliveries: deliveries,
+      feeConfirmations,
+    };
+    await save();
+  }
   const revokeQuote = await admission.prepare(
     { kind: "revoke-member", targetId: membershipId },
     randomUUID(),

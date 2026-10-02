@@ -41,6 +41,7 @@ const HostObservations = lazy(() => import("./HostObservations"));
 const AgentCheckpointView = lazy(() => import("./AgentCheckpointView"));
 const HandoverFlow = lazy(() => import("./HandoverFlow"));
 const OkrContinuation = lazy(() => import("./OkrContinuation"));
+const OkrVerification = lazy(() => import("./OkrVerification"));
 const runLabels: Array<[string, string]> = [
   ["待启动", "Queued"],
   ["链上记录：运行中", "Chain record: running"],
@@ -635,6 +636,14 @@ export function App() {
                         onChanged={data.refresh}
                         t={t}
                       />
+                      <OkrVerification
+                        key={`review:${JSON.stringify([profile, snapshot.organization.objectId, focus.okr.id])}`}
+                        profile={profile!}
+                        organizationId={snapshot.organization.objectId}
+                        okrId={focus.okr.id}
+                        onChanged={data.refresh}
+                        t={t}
+                      />
                     </Suspense>
                   )}
                   <div className="summary-grid">
@@ -750,6 +759,14 @@ export function App() {
                         snapshot.organization.objectId,
                         detailId,
                       ])}
+                      profile={profile!}
+                      organizationId={snapshot.organization.objectId}
+                      okrId={detailId}
+                      onChanged={data.refresh}
+                      t={t}
+                    />
+                    <OkrVerification
+                      key={`review:${JSON.stringify([profile, snapshot.organization.objectId, detailId])}`}
                       profile={profile!}
                       organizationId={snapshot.organization.objectId}
                       okrId={detailId}

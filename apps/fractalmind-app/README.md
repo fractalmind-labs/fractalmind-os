@@ -108,8 +108,8 @@ evidence, transport limits and test instructions are documented in
   restore them read-only and consume authenticated Host proofs through explicit
   fee-confirmed approval. The v2 Include in OKR dialog now connects device-bound
   observation issuance, concrete plan review, separate fees, ticket lookup,
-  Host response validation and approval. Installed UI and actual envd integration,
-  expired/failed attempts and native continuation still need acceptance;
+  Host response validation and approval. Installed UI, expired/failed attempts
+  and the complete autonomous journey still need acceptance;
   approval never dispatches continuation. See [flow and limits](../../docs/product/v020-app-handover-flow.md)
   and [review tickets](../../docs/product/v020-app-handover-review.md).
 - Native OKR runner bridge: approved-plan decryption, encrypted ticket creation
@@ -118,10 +118,19 @@ evidence, transport limits and test instructions are documented in
   preparation can remain queued until explicit delivery. Workbench and OKR
   detail now expose separate one-use control and command fee confirmations,
   original-request queries and explicit Host delivery. Real OS vault + localnet
-  + production envd validates native review, approval, one exact file execution,
-  result decryption and revocation. Installed journal/IPC, Human verification,
-  final acceptance and sustained execution still need end-to-end acceptance.
+  + production envd validates native review, approval, exact file execution,
+  result decryption and revocation. Installed journal/IPC and sustained execution
+  still need end-to-end acceptance.
   See [implementation and evidence](../../docs/product/v020-native-okr-runner.md).
+- Human KR verification and final acceptance: Workbench and OKR detail expose
+  original evidence, independent confirmation, a reason and separate native fee
+  submissions. KR verification advances only its cursor; final acceptance
+  separately confirms overall success criteria. Historical encrypted verification
+  records are read from the current head with current authority checks. Actual
+  OS + localnet + envd tests cover two ordered KR Runs, both verification decisions
+  and an ACHIEVED OKR, with scripted explicit Human decisions. Installed Human UI,
+  full cache wiping and cloud/phone journeys remain pending. See
+  [review implementation and limits](../../docs/product/v020-app-human-review.md).
 - Identity: chain Human generation/recovery version and device grants. The page
   labels these as snapshots and refreshes them with organization reads.
 - Chinese/English and system/light/dark appearance; responsive navigation includes

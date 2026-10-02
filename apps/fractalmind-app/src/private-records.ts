@@ -54,7 +54,11 @@ export class PrivateRecords {
     let cursor: string | null = null;
     const seen = new Set<string>();
     do {
-      const page: {records: RecordPointer[]; cursor: string|null; hasNextPage: boolean} = await this.chain.sdk.productRecord
+      const page: {
+        records: RecordPointer[];
+        cursor: string | null;
+        hasNextPage: boolean;
+      } = await this.chain.sdk.productRecord
         .listCurrent(this.organizationId, cursor, 50)
         .catch((error) => {
           // Only the exact missing organization index on the first page is empty.
@@ -93,11 +97,15 @@ export class PrivateRecords {
       throw new PrivateRecordError("authority_changed");
     return rows;
   }
-  async read(pointer: RecordPointer): Promise<Uint8Array> {
+  async read(pointer: RecordPointer, historical = false): Promise<Uint8Array> {
     // Snapshot caller data before crossing any asynchronous boundary.
     const requested = { ...pointer },
       kind = kindName(requested.kind);
-    if (!id.test(requested.record_id))
+    if (
+      !id.test(requested.record_id) ||
+      !/^[1-9][0-9]{0,19}$/.test(requested.revision) ||
+      !/^[1-9][0-9]{0,19}$/.test(requested.key_version)
+    )
       throw new PrivateRecordError("invalid_record");
     const before = await this.verifier.verifyOrganization(this.organizationId);
     const head = {
@@ -108,18 +116,43 @@ export class PrivateRecords {
       )),
     };
     if (
-      head.record_id !== requested.record_id ||
-      head.revision !== requested.revision ||
-      head.key_version !== requested.key_version
+      !historical &&
+      (head.record_id !== requested.record_id ||
+        head.revision !== requested.revision ||
+        head.key_version !== requested.key_version)
     )
       throw new PrivateRecordError("directory_changed");
-    const record = await this.chain.sdk.productRecord.getRecord(head.record_id);
+    let record = await this.chain.sdk.productRecord.getRecord(head.record_id);
+    let expectedRevision = BigInt(head.revision);
+    const seen = new Set<string>();
+    for (;;) {
+      if (
+        seen.has(record.id) ||
+        seen.size >= 1000 ||
+        record.organization_id !== this.organizationId ||
+        record.kind !== requested.kind ||
+        record.logical_id !== requested.logicalId ||
+        BigInt(record.revision) !== expectedRevision ||
+        (record.revision === "1") !== (record.previous === null)
+      )
+        throw new PrivateRecordError("invalid_record");
+      seen.add(record.id);
+      if (record.id === requested.record_id) break;
+      if (
+        !historical ||
+        !record.previous ||
+        BigInt(record.revision) <= BigInt(requested.revision)
+      )
+        throw new PrivateRecordError("directory_changed");
+      expectedRevision--;
+      record = await this.chain.sdk.productRecord.getRecord(record.previous);
+    }
     if (
       record.organization_id !== this.organizationId ||
       record.kind !== requested.kind ||
       record.logical_id !== requested.logicalId ||
-      record.revision !== head.revision ||
-      record.key_version !== head.key_version ||
+      record.revision !== requested.revision ||
+      record.key_version !== requested.key_version ||
       !before.encryptedKeys
     )
       throw new PrivateRecordError("invalid_record");
