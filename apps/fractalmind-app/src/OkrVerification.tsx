@@ -442,6 +442,13 @@ export default function OkrVerification({
                       "Recorded Human verification reason",
                     )}
                     : {e.priorVerification.reason}
+                    <br />
+                    {t(
+                      "原执行约定／人工验证时约定",
+                      "Execution agreement / agreement when reviewed",
+                    )}
+                    : {e.priorVerification.executionAgreementVersion} /{" "}
+                    {e.priorVerification.reviewedAgreementVersion}
                   </p>
                 )}
                 <details>

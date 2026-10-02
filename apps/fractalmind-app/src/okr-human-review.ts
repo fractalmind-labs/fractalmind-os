@@ -53,6 +53,8 @@ export type HumanReviewEvidence = {
   }[];
   priorVerification?: {
     recordId: string;
+    executionAgreementVersion: string;
+    reviewedAgreementVersion: string;
     reason: string;
     writerHuman: string;
     writerDevice: string;
@@ -81,7 +83,32 @@ export class OkrHumanReviewError extends Error {
 }
 const id = /^0x[0-9a-f]{64}$/;
 const positive = (v: string) =>
-  /^[1-9][0-9]*$/.test(v) && v.length <= 20 && BigInt(v) <= 0xffffffffffffffffn;
+  typeof v === "string" &&
+  /^[1-9][0-9]*$/.test(v) &&
+  v.length <= 20 &&
+  BigInt(v) <= 0xffffffffffffffffn;
+/** Historical evidence can be reviewed against an unchanged specification and
+ * exact current file plan. This only admits a result for independent review;
+ * it cannot authorize an old command under a renewed execution agreement. */
+export function reviewableEvidenceAgreement(
+  executionVersion: string,
+  currentVersion: string,
+  originalBoundary: number[],
+  currentBoundary: number[],
+) {
+  if (
+    !positive(executionVersion) ||
+    !positive(currentVersion) ||
+    BigInt(executionVersion) > BigInt(currentVersion) ||
+    originalBoundary.length !== 32 ||
+    currentBoundary.length !== 32
+  )
+    return false;
+  return (
+    executionVersion !== currentVersion ||
+    canonical(originalBoundary) === canonical(currentBoundary)
+  );
+}
 function object(v: unknown): Record<string, any> {
   if (!v || typeof v !== "object" || Array.isArray(v))
     throw new OkrHumanReviewError("invalid_source");
@@ -308,9 +335,14 @@ export class OkrHumanReview {
         e.run.scope !== "control" ||
         e.run.action !== "assign" ||
         !e.claim.settled ||
-        e.contract.agreement_version !== okr.agreement_version ||
+        !reviewableEvidenceAgreement(
+          e.contract.agreement_version,
+          okr.agreement_version,
+          e.contract.boundary_hash,
+          okr.boundary_hash,
+        ) ||
         e.contract.kr_index !== String(i) ||
-        canonical(e.contract.boundary_hash) !== canonical(okr.boundary_hash)
+        e.claim.agreement_version !== e.contract.agreement_version
       )
         throw new OkrHumanReviewError("invalid_source");
       return { index: i, ...e };
@@ -495,7 +527,10 @@ export class OkrHumanReview {
           v.kind !== "verify" ||
           v.organizationId !== this.organizationId ||
           v.okrId !== okr.id ||
-          v.agreementVersion !== okr.agreement_version ||
+          !positive(v.agreementVersion) ||
+          BigInt(v.agreementVersion) > BigInt(okr.agreement_version) ||
+          BigInt(v.agreementVersion) <
+            BigInt(selected.contract.agreement_version) ||
           v.specRecordId !== okr.spec_record ||
           v.krIndex !== String(selected.index) ||
           v.reviewerHuman !== verified.record.writer_human ||
@@ -508,6 +543,8 @@ export class OkrHumanReview {
           !Array.isArray(v.evidence) ||
           v.evidence.length !== 1 ||
           v.evidence[0].krIndex !== String(selected.index) ||
+          (v.evidence[0].executionAgreementVersion ?? v.agreementVersion) !==
+            selected.contract.agreement_version ||
           v.evidence[0].runId !== result.run.id ||
           v.evidence[0].resultRecordId !== result.recordId ||
           v.evidence[0].resultCreationDigest !== result.transactionDigest ||
@@ -517,6 +554,8 @@ export class OkrHumanReview {
           throw new OkrHumanReviewError("invalid_source");
         item.priorVerification = {
           recordId: verified.record.id,
+          executionAgreementVersion: selected.contract.agreement_version,
+          reviewedAgreementVersion: v.agreementVersion,
           reason: v.reason,
           writerHuman: verified.record.writer_human,
           writerDevice: verified.record.writer_device,
@@ -579,6 +618,9 @@ export class OkrHumanReview {
           resultCreationDigest: e.result.transactionDigest,
           current: e.metric.current,
           sampledAtMs: e.metric.sampled_at_ms,
+          executionAgreementVersion: before.selected.find(
+            (s) => s.index === e.krIndex,
+          )!.contract.agreement_version,
           verificationId: e.priorVerification?.recordId,
         })),
       }),

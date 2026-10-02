@@ -12,7 +12,11 @@ import {
   type SelfPayTransactionOutcome,
 } from "@fractalmind-labs/fractalmind-sdk";
 import { NativeDeviceSigner, scopedNativeInvoke } from "../src/native-device";
-import { OkrHumanReview, type HumanReviewView } from "../src/okr-human-review";
+import {
+  OkrHumanReview,
+  reviewableEvidenceAgreement,
+  type HumanReviewView,
+} from "../src/okr-human-review";
 import type { ChainReadSession } from "../src/chain";
 
 // Controlled source and fees; native signature verification remains production.
@@ -142,6 +146,7 @@ async function fixture(final = false) {
       okr: okrRecord,
       specHead: { keyVersion: "1" },
       verificationHead: { pointer: final ? { revision: "1" } : undefined },
+      selected: [{ index: 0, contract: { agreement_version: "1" } }],
       pin,
     };
   };
@@ -211,6 +216,16 @@ const decision = {
   reviewed: true,
   reason: "I independently inspected the original file evidence.",
 };
+test("renewed agreements admit older results only for evidence review, with exact current boundaries for current-version results", () => {
+  const original = Array(32).fill(1),
+    current = Array(32).fill(2);
+  assert.equal(reviewableEvidenceAgreement("1", "3", original, current), true);
+  assert.equal(reviewableEvidenceAgreement("3", "3", current, current), true);
+  assert.equal(reviewableEvidenceAgreement("3", "3", original, current), false);
+  assert.equal(reviewableEvidenceAgreement("4", "3", original, current), false);
+  assert.equal(reviewableEvidenceAgreement("0", "3", original, current), false);
+  assert.equal(reviewableEvidenceAgreement("1", "3", [1], current), false);
+});
 test("Human KR verification requires an independent confirmation, reason and original view before encryption or fees", async () => {
   const f = await fixture();
   for (const input of [

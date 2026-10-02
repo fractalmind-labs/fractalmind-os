@@ -46,6 +46,7 @@ import {
 import { canonical } from "../src/handover-plan";
 import { DeviceIdentityVerifier } from "../src/device-identity";
 import { NativeDirectAgent, type DirectOperation } from "../src/direct-agent";
+import { OkrIntervention, specificationDraft } from "../src/okr-intervention";
 assert.ok(
   process.argv[2] && process.argv[3],
   "Pass isolated deployment and a new output report",
@@ -56,6 +57,11 @@ const humanSequence = process.argv.slice(4).includes("--human-sequence");
 const directPermission = process.argv.slice(4).includes("--direct-permission");
 const directDispatch = process.argv.slice(4).includes("--direct-dispatch");
 const directApp = process.argv.slice(4).includes("--direct-app");
+const intervention = process.argv.slice(4).includes("--intervention");
+assert.ok(
+  !intervention || humanSequence,
+  "Intervention needs the independent Human sequence",
+);
 assert.ok(!directApp || directDispatch, "Direct App checks need real dispatch");
 assert.ok(
   !directDispatch || directPermission,
@@ -74,6 +80,7 @@ assert.ok(
         "--direct-permission",
         "--direct-dispatch",
         "--direct-app",
+        "--intervention",
       ].includes(a),
     ),
   "Unknown harness option",
@@ -172,6 +179,8 @@ async function save(complete = false) {
           directMessageUIVerified: false,
           directAppControllerVerified:
             state.directAppControllerVerified === true,
+          interventionControllerVerified:
+            state.interventionControllerVerified === true,
           installedHumanReviewVerified: false,
           reviewDecisions: humanSequence
             ? "explicit scripted test approvals, not installed Human UI"
@@ -363,7 +372,7 @@ try {
       FM_ENVD_CHAIN_CONNECTION: "1",
       FM_ENVD_NATIVE_DISCOVERY: "1",
       FM_ENVD_NATIVE_APP_EXECUTION: "1",
-      FM_ENVD_DIRECT_APP: directApp ? "1" : "0",
+      FM_ENVD_DIRECT_APP: directApp || intervention ? "1" : "0",
       FM_ENVD_AGENT_DISCOVERY: "1",
       FM_ENVD_DEVICE_COMMAND: "1",
       FM_ENVD_HANDOVER_APPROVAL: "1",
@@ -616,6 +625,50 @@ try {
   await save();
   const attempt = randomUUID(),
     journal = new MemoryTransactionJournal();
+  if (intervention) {
+    const editor = new OkrIntervention(
+      chain,
+      device,
+      auth.grantId,
+      organizationId,
+      okrId,
+      invoke,
+      journal,
+    );
+    const original = await editor.read();
+    const replacement = specificationDraft(original.spec);
+    replacement.successCriteria =
+      "Human independently reviews both original documentation files and separate KR verification records";
+    const editQuote = await editor.prepare(
+      { kind: "replace", expectedVersion: original.okr.version },
+      { reviewed: true, replacement },
+    );
+    assert.ok(!("status" in editQuote));
+    await preparedQuote(
+      "native explicit encrypted specification replacement",
+      editQuote,
+    );
+    const editOutcome = await editor.submit(editQuote);
+    await record(
+      "native explicit encrypted specification replacement",
+      editOutcome,
+    );
+    const edited = await editor.read();
+    assert.equal(edited.okr.state, 0);
+    assert.equal(edited.okr.spec_revision, "2");
+    assert.equal(edited.spec.successCriteria, replacement.successCriteria);
+    assert.equal(edited.okr.next_kr, "0");
+    assert.equal(edited.executions.length, 0);
+    state = {
+      ...state,
+      specificationReplacementVerified: true,
+      replacementDigest: editOutcome.digest,
+    };
+    checks.push(
+      "formal native specification replacement encrypts the new success criteria, advances the original goal's specification revision, retains draft state and does not create a Run or dispatch",
+    );
+    await save();
+  }
   const setup = new HandoverSetup(
     chain,
     device,
@@ -1031,8 +1084,8 @@ try {
     await record("native second KR explicit control fee", nextOutcome);
     const nextCapability = await nextControl.confirmed(nextOutcome);
     await nextControl.use(nextCapability);
-    const nextInput = { okrId, capabilityId: nextCapability };
-    const nextQueued = await runner.step({
+    let nextInput = { okrId, capabilityId: nextCapability };
+    let nextQueued = await runner.step({
       ...nextInput,
       createIfMissing: true,
       prepareOnly: true,
@@ -1051,6 +1104,208 @@ try {
       secondPreparationDigest: nextQueued.transactionDigest,
     };
     await save();
+    if (intervention) {
+      const interventionController = new OkrIntervention(
+        chain,
+        device,
+        auth.grantId,
+        organizationId,
+        okrId,
+        invoke,
+        journal,
+      );
+      const originalQueued = nextQueued.executionId!;
+      const beforePause = await interventionController.read();
+      assert.equal(beforePause.budget!.reserved, 3n);
+      const pauseQuote = await interventionController.prepare(
+        { kind: "pause", expectedVersion: beforePause.okr.version },
+        {
+          reviewed: true,
+          reason:
+            "Explicit scripted pause before delivering the second KR; retain the first verified result.",
+        },
+      );
+      assert.ok(!("status" in pauseQuote));
+      await preparedQuote("native explicit OKR pause", pauseQuote);
+      const pauseOutcome = await interventionController.submit(pauseQuote);
+      await record("native explicit OKR pause", pauseOutcome);
+      const paused = await sdk.okr.getOkr(okrId);
+      assert.equal(paused.state, 2);
+      assert.equal(paused.next_kr, "1");
+      assert.equal((await sdk.okr.getBudget(okrId)).reserved, 3n);
+      assert.equal(
+        (await runner.step({ ...nextInput, releaseQueued: true })).status,
+        "paused",
+      );
+      assert.equal(deliveries, 1);
+      await assert.rejects(nextControl.use(nextCapability));
+      const stopQuote = await interventionController.prepare(
+        { kind: "stop", runId: originalQueued },
+        { reviewed: true },
+      );
+      assert.ok(!("status" in stopQuote));
+      await preparedQuote("native stop of original queued OKR Run", stopQuote);
+      const stopOutcome = await interventionController.submit(stopQuote);
+      await record("native stop of original queued OKR Run", stopOutcome);
+      assert.equal(
+        (await sdk.nodeExecution.getExecution(originalQueued)).state,
+        5,
+      );
+      const settledBudget = await sdk.okr.getBudget(okrId);
+      assert.equal(settledBudget.spent, 3n);
+      assert.equal(settledBudget.reserved, 0n);
+      state = {
+        ...state,
+        phase: "original_queued_okr_cancelled_after_pause",
+        pausedAgreementVersion: paused.agreement_version,
+        cancelledOriginalRun: originalQueued,
+        pauseDigest: pauseOutcome.digest,
+        stopDigest: stopOutcome.digest,
+      };
+      await save();
+      const freshAttempt = randomUUID(),
+        renewedSetup = new HandoverSetup(
+          chain,
+          device,
+          auth.grantId,
+          organizationId,
+          managedAgentId,
+          freshAttempt,
+          invoke,
+          journal,
+        );
+      const observationQuote = await renewedSetup.prepare();
+      assert.ok(!("status" in observationQuote));
+      await preparedQuote(
+        "native renewed review observation authority",
+        observationQuote,
+      );
+      const observationOutcome = await renewedSetup.submit(observationQuote);
+      await record(
+        "native renewed review observation authority",
+        observationOutcome,
+      );
+      const observationCapability =
+        await renewedSetup.confirmed(observationOutcome);
+      const reviewInput = await renewedSetup.createReview(
+        okrId,
+        observationCapability,
+        plan,
+      );
+      const renewedReview = new HandoverReview(
+        chain,
+        device,
+        auth.grantId,
+        organizationId,
+        freshAttempt,
+        invoke,
+        journal,
+        reviewTransport,
+      );
+      const renewedQuote = await renewedReview.prepare(reviewInput);
+      assert.ok(!("status" in renewedQuote));
+      await preparedQuote("native exact renewed review ticket", renewedQuote);
+      const renewedOutcome = await renewedReview.submit(renewedQuote);
+      await record("native exact renewed review ticket", renewedOutcome);
+      const renewedTicket = await readVisible(
+        () => renewedReview.restore(),
+        (v) => !!v.run,
+      );
+      state = {
+        ...state,
+        phase: "renewed_review_prepared",
+        renewedReviewRun: renewedTicket.run!.id,
+      };
+      await save();
+      await renewedReview.send(true);
+      const reviewedRun = await readVisible(
+        () => sdk.nodeExecution.getExecution(renewedTicket.run!.id),
+        (r) => r.state === 2 || r.state === 3,
+      );
+      assert.equal(
+        reviewedRun.state,
+        2,
+        "Original renewed Host review must succeed without replay",
+      );
+      await renewedReview.readAcceptance();
+      const renewedApproval = new HandoverApproval(
+        chain,
+        device,
+        auth.grantId,
+        organizationId,
+        renewedTicket.run!.id,
+        invoke,
+        journal,
+      );
+      const approvalQuote = await renewedApproval.prepare({
+        command: reviewInput.command,
+        nativeFilePlan: plan,
+      });
+      assert.ok(!("status" in approvalQuote));
+      await preparedQuote(
+        "native separate renewed execution agreement",
+        approvalQuote,
+      );
+      const approvalOutcome = await renewedApproval.submit(approvalQuote);
+      await record(
+        "native separate renewed execution agreement",
+        approvalOutcome,
+      );
+      const resumed = await sdk.okr.getOkr(okrId);
+      assert.equal(resumed.state, 1);
+      assert.equal(resumed.next_kr, "1");
+      assert.equal(resumed.metrics[0].verified, true);
+      assert.equal(deliveries, 1, "Renewed agreement does not dispatch");
+      const description = await runner.describe(okrId);
+      const renewedControl = new OkrControl(
+        chain,
+        device,
+        auth.grantId,
+        organizationId,
+        okrId,
+        resumed.agreement_version,
+        resumed.next_kr,
+        journal,
+        () => {},
+        {
+          okrVersion: description.okr.version,
+          policyPin: canonical(description.policy),
+        },
+      );
+      const controlQuote = await renewedControl.prepare();
+      assert.ok(!("status" in controlQuote));
+      await preparedQuote("native renewed second KR control", controlQuote);
+      const controlOutcome = await renewedControl.submit(controlQuote);
+      await record("native renewed second KR control", controlOutcome);
+      const capability = await renewedControl.confirmed(controlOutcome);
+      await renewedControl.use(capability);
+      nextInput = { okrId, capabilityId: capability };
+      nextQueued = await runner.step({
+        ...nextInput,
+        createIfMissing: true,
+        prepareOnly: true,
+      });
+      assert.equal(nextQueued.status, "queued");
+      assert.ok(nextQueued.executionId);
+      assert.notEqual(nextQueued.executionId, originalQueued);
+      await record(
+        "native renewed exact second KR ticket and Run",
+        runner.lastSubmission!,
+      );
+      assert.equal(deliveries, 1);
+      checks.push(
+        "formal native intervention pauses a queued second KR without clearing its reservation, blocks old continuation, settles only the original queued Run and renews through fresh real Host review and separate Human approval without implicit dispatch",
+      );
+      state = {
+        ...state,
+        phase: "renewed_kr_prepared_without_delivery",
+        resumedAgreementVersion: resumed.agreement_version,
+        renewedRun: nextQueued.executionId,
+        renewedApprovalDigest: approvalOutcome.digest,
+        interventionControllerVerified: true,
+      };
+      await save();
+    }
     await runner.step({ ...nextInput, releaseQueued: true });
     const second = await readVisible(
       () => sdk.nodeExecution.getExecution(nextQueued.executionId!),
@@ -1062,7 +1317,7 @@ try {
     );
     krRuns.push(second.id);
     assert.equal(deliveries, 2);
-    assert.equal(feeConfirmations, 2);
+    assert.equal(feeConfirmations, intervention ? 3 : 2);
     const afterSecond = await verifyCurrent(
       "native independent KR 2 verification",
     );
@@ -1117,7 +1372,10 @@ try {
     assert.equal(total.spent, 6n);
     assert.equal(total.reserved, 0n);
     assert.equal(deliveries, 2);
-    assert.equal((await sdk.okr.listExecutions(okrId)).executions.length, 2);
+    assert.equal(
+      (await sdk.okr.listExecutions(okrId)).executions.length,
+      intervention ? 3 : 2,
+    );
     checks.push(
       "two real envd KR Runs are explicitly released in order; native Human verification advances the cursor without another dispatch or implicit acceptance",
     );

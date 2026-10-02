@@ -43,6 +43,7 @@ const HandoverFlow = lazy(() => import("./HandoverFlow"));
 const OkrContinuation = lazy(() => import("./OkrContinuation"));
 const OkrVerification = lazy(() => import("./OkrVerification"));
 const DirectAgentConversation = lazy(() => import("./DirectAgentConversation"));
+const OkrIntervention = lazy(() => import("./OkrIntervention"));
 const runLabels: Array<[string, string]> = [
   ["待启动", "Queued"],
   ["链上记录：运行中", "Chain record: running"],
@@ -647,6 +648,21 @@ export function App() {
                       />
                     </Suspense>
                   )}
+                  <Suspense
+                    fallback={
+                      <p>{t("加载介入入口…", "Loading intervention…")}</p>
+                    }
+                  >
+                    <OkrIntervention
+                      key={`intervene:${JSON.stringify([profile, snapshot.organization.objectId, focus.okr.id])}`}
+                      profile={profile!}
+                      organizationId={snapshot.organization.objectId}
+                      okrId={focus.okr.id}
+                      onChanged={data.refresh}
+                      onReviewAgreement={() => setPage("agents")}
+                      t={t}
+                    />
+                  </Suspense>
                   <div className="summary-grid">
                     <div className="panel">
                       <span className="eyebrow">
@@ -711,8 +727,8 @@ export function App() {
                     </strong>
                     <p>
                       {t(
-                        "可以联系负责实例，查询状态或提出有限文件操作；直接消息使用独立权限与预算。OKR 的暂停和约定调整仍待接入。",
-                        "Contact the assigned instance for status or bounded file requests. Direct messages use separate authority and budget. OKR pause and agreement changes are not connected yet.",
+                        "可以联系负责实例，查询状态或提出有限文件操作。暂停与调整入口用于核对原执行、停止及结算；暂停后需要重新审阅执行约定，再明确继续。",
+                        "Contact the assigned instance for status or bounded file requests. Pause & adjust reviews original Runs, stops and settlement. A paused goal needs a new agreement review before explicit continuation.",
                       )}
                     </p>
                     {contextAgent && (
@@ -796,6 +812,21 @@ export function App() {
                     />
                   </Suspense>
                 )}
+                <Suspense
+                  fallback={
+                    <p>{t("加载介入入口…", "Loading intervention…")}</p>
+                  }
+                >
+                  <OkrIntervention
+                    key={`intervene:${JSON.stringify([profile, snapshot.organization.objectId, detailId])}`}
+                    profile={profile!}
+                    organizationId={snapshot.organization.objectId}
+                    okrId={detailId}
+                    onChanged={data.refresh}
+                    onReviewAgreement={() => setPage("agents")}
+                    t={t}
+                  />
+                </Suspense>
               </>
             ) : (
               <OkrList
