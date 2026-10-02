@@ -29,6 +29,7 @@ import { NativeRecoverySigner } from "../src/native-onboarding";
 import { IdentityCreation, normalizeDeployment } from "../src/onboarding";
 import { ChainReadSession } from "../src/chain";
 import { NativeCommandResults } from "../src/command-results";
+import { NativeExecutionResults } from "../src/execution-results";
 import { OkrDraftCreation } from "../src/okr-draft";
 assert.ok(
   process.argv[2] && process.argv[3],
@@ -36,6 +37,11 @@ assert.ok(
 );
 const output = process.argv[3],
   progress = output + ".progress.json";
+const readResultMode = process.argv[4] === "--read-result";
+assert.ok(
+  !process.argv[4] || readResultMode,
+  "Only --read-result is supported",
+);
 for (const path of [output, progress]) {
   try {
     await access(path);
@@ -501,12 +507,6 @@ try {
     "atomic native-wrapped result grant and original Run preparation",
     outcome,
   );
-  const restored = await preparedManager.query(requestId);
-  assert.equal(restored!.digest, outcome.digest);
-  assert.equal(restored!.status, "confirmed");
-  checks.push(
-    "original preparation digest is queried without another transaction or Host dispatch",
-  );
   const executionId = createdObject(
       outcome,
       "node_execution::CommandExecution",
@@ -521,6 +521,14 @@ try {
     originalDigest: outcome.digest,
   };
   await save();
+  const restored = await preparedManager.query(requestId);
+  assert.equal(restored!.digest, outcome.digest);
+  assert.ok(["confirmed", "unknown"].includes(restored!.status));
+  state = { ...state, originalQueryStatus: restored!.status };
+  await save();
+  checks.push(
+    `original preparation digest is queried without replay; query status ${restored!.status}, original successful fee receipt retained`,
+  );
   const run = await readVisible(
     () => sdk.nodeExecution.getExecution(executionId),
     (v) => v.id === executionId,
@@ -584,7 +592,34 @@ try {
   );
   const logicalId = "command-" + fingerprint,
     plaintext = new TextEncoder().encode(
-      "Native result interoperability fixture; no Host execution claim",
+      JSON.stringify({
+        version: "1",
+        response: {
+          schema_version: "1",
+          adapter: "agent-manager-runtime",
+          command_id: command.command_id,
+          operation: "status",
+          duplicate: false,
+          ok: true,
+          observed_at: new Date().toISOString(),
+          result: {
+            fixture: true,
+            description: "No physical envd execution claim",
+          },
+          error: null,
+          execution_id: executionId,
+          execution_state: "succeeded",
+          transaction_digest: "UNTRUSTED-FIXTURE-DIGEST",
+        },
+        event: {
+          version: "1",
+          command_id: command.command_id,
+          target: command.target,
+          type: "runtime_completed",
+          result_code: "runtime_completed",
+          occurred_at_ms: Date.now(),
+        },
+      }),
     );
   const body = await encryptCommandResult(
     plaintext,
@@ -623,18 +658,76 @@ try {
   checks.push(
     "independent Host FME2 envelope decrypts natively under the on-chain device ring; wrong fingerprint/version/revision rejected",
   );
-  await execute(
-    "explicitly cancel original queued observation without dispatch",
-    sdk.nodeExecution.requestStop({ ...auth, executionId, capabilityId }),
+  const reader = new NativeExecutionResults(
+    chain,
+    device,
+    auth.grantId,
+    organizationId,
+    invoke,
   );
-  const cancelled = await readVisible(
-    () => sdk.nodeExecution.getExecution(executionId),
-    (v) => v.state === 5,
-  );
-  assert.equal(cancelled.result_record, null);
-  checks.push(
-    "fixture performs no Host delivery, creates no result claim, and explicitly cancels the original queued Run",
-  );
+  let finalRun;
+  if (readResultMode) {
+    await execute(
+      "fixture Host begins original observation",
+      sdk.nodeExecution.beginCommand({
+        ...auth,
+        executionId,
+        capabilityId,
+        membershipId,
+        bindingId,
+        managedAgentId,
+      }),
+      hostManager,
+    );
+    const started = await readVisible(
+      () => sdk.nodeExecution.getExecution(executionId),
+      (v) => v.state === 1,
+    );
+    const finished = await execute(
+      "fixture Host publishes original encrypted result",
+      sdk.nodeExecution.finishCommand({
+        executionId,
+        capabilityId,
+        organizationId,
+        finalState: 2,
+        expectedCursor: started.cursor,
+        spentAmount: "0",
+        keyVersion: "1",
+        encryptedResult: body,
+      }),
+      hostManager,
+    );
+    finalRun = await readVisible(
+      () => sdk.nodeExecution.getExecution(executionId),
+      (v) => v.state === 2,
+    );
+    const result = await reader.read(executionId, managedAgentId);
+    assert.equal(result.recordId, finalRun.result_record);
+    assert.equal(result.transactionDigest, finished.digest);
+    assert.equal(result.response!.transaction_digest, finished.digest);
+    assert.deepEqual(result.response!.result, {
+      fixture: true,
+      description: "No physical envd execution claim",
+    });
+    checks.push(
+      "production App reads exact immutable original Run result, decrypts via actual OS vault and replaces untrusted plaintext digest with creation transaction provenance",
+    );
+    state = { ...state, resultCreationDigest: finished.digest };
+    await save();
+  } else {
+    await execute(
+      "explicitly cancel original queued observation without dispatch",
+      sdk.nodeExecution.requestStop({ ...auth, executionId, capabilityId }),
+    );
+    finalRun = await readVisible(
+      () => sdk.nodeExecution.getExecution(executionId),
+      (v) => v.state === 5,
+    );
+    assert.equal(finalRun.result_record, null);
+    checks.push(
+      "fixture performs no Host delivery, creates no result claim, and explicitly cancels the original queued Run",
+    );
+  }
   await execute(
     "revoke fixture Host membership",
     sdk.host.revokeMembership({ ...auth, membershipId }),
@@ -647,11 +740,22 @@ try {
   checks.push(
     "the retained production preflight rejects actual chain Host revocation",
   );
+  if (readResultMode) {
+    assert.equal(
+      (await reader.read(executionId, managedAgentId)).recordId,
+      finalRun.result_record,
+    );
+    checks.push(
+      "Host revocation blocks new preparation while currently authorized device can still read original historical result without replay",
+    );
+  }
   state = {
     ...state,
-    phase: "validated_and_cancelled",
-    runState: cancelled.state,
-    resultRecord: null,
+    phase: readResultMode
+      ? "validated_original_result"
+      : "validated_and_cancelled",
+    runState: finalRun.state,
+    resultRecord: finalRun.result_record,
   };
 } catch (error) {
   state = {

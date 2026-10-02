@@ -1,10 +1,21 @@
 import { useEffect, useRef, useState } from "react";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import {
   AgentExecutionReadError,
   type FractalMindSDK,
 } from "@fractalmind-labs/fractalmind-sdk";
 import { ChainReadError, ChainReadSession } from "./chain";
-import type { Agent, ConnectionProfile } from "./domain";
+import type { Agent, ConnectionProfile, Grant } from "./domain";
+import {
+  NativeDeviceSigner,
+  preferredDeviceProfile,
+  type NativeInvoke,
+} from "./native-device";
+import {
+  NativeExecutionResults,
+  type ExecutionResult,
+} from "./execution-results";
+const transport: NativeInvoke = (command, args) => invoke(command, args);
 
 type History = Awaited<
   ReturnType<FractalMindSDK["nodeExecution"]["readAgentExecutions"]>
@@ -24,11 +35,13 @@ export default function AgentCheckpointView({
   profile,
   organizationId,
   managed,
+  grants,
   t,
 }: {
   profile: ConnectionProfile;
   organizationId: string;
   managed: Agent;
+  grants: Grant[] | null | undefined;
   t: (zh: string, en: string) => string;
 }) {
   const [history, setHistory] = useState<History | null>(null);
@@ -36,6 +49,62 @@ export default function AgentCheckpointView({
   const [now, setNow] = useState(Date.now());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deviceProfile, setDeviceProfile] = useState(preferredDeviceProfile);
+  const [grantId, setGrantId] = useState("");
+  const [result, setResult] = useState<ExecutionResult | null>(null);
+  const [resultError, setResultError] = useState(false);
+  const [resultBusy, setResultBusy] = useState(false);
+  const resultEpoch = useRef(0),
+    resultFlight = useRef(false),
+    resultOpened = useRef(0);
+  function clearResult() {
+    resultEpoch.current++;
+    resultOpened.current = 0;
+    setResult(null);
+    setResultError(false);
+  }
+  useEffect(() => {
+    const hidden = () => {
+      if (document.visibilityState === "hidden") clearResult();
+    };
+    const timer = setInterval(() => {
+      if (resultOpened.current && Date.now() - resultOpened.current >= 60000)
+        clearResult();
+    }, 1000);
+    document.addEventListener("visibilitychange", hidden);
+    return () => {
+      resultEpoch.current++;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", hidden);
+    };
+  }, []);
+  async function readResult(executionId: string) {
+    if (resultFlight.current || !isTauri()) return;
+    resultFlight.current = true;
+    clearResult();
+    const epoch = resultEpoch.current;
+    setResultBusy(true);
+    try {
+      const signer = await NativeDeviceSigner.load(transport, deviceProfile);
+      const reader = new NativeExecutionResults(
+        new ChainReadSession(profile),
+        signer,
+        grantId,
+        organizationId,
+        transport,
+      );
+      const value = await reader.read(executionId, managed.id);
+      if (live.current && epoch === resultEpoch.current) {
+        setResult(value);
+        resultOpened.current = Date.now();
+      }
+    } catch {
+      if (live.current && epoch === resultEpoch.current) setResultError(true);
+    } finally {
+      resultFlight.current = false;
+      if (live.current) setResultBusy(false);
+    }
+  }
   const live = useRef(true),
     flight = useRef(false);
   useEffect(() => {
@@ -53,6 +122,7 @@ export default function AgentCheckpointView({
     setError(null);
     setHistory(null);
     setReceivedAt(null);
+    clearResult();
     try {
       const session = new ChainReadSession(profile);
       await session.checkNetwork();
@@ -81,7 +151,7 @@ export default function AgentCheckpointView({
   }
   const stale = receivedAt !== null && now - receivedAt >= 60_000;
   return (
-    <section className="agent-checkpoints" aria-busy={busy}>
+    <section className="agent-checkpoints" aria-busy={busy || resultBusy}>
       <h4>{t("接管前的执行检查", "Execution check before handover")}</h4>
       <p className="muted">
         {t(
@@ -152,6 +222,60 @@ export default function AgentCheckpointView({
                   `View ${history.executions.length} executions`,
                 )}
               </summary>
+              {isTauri() ? (
+                <div>
+                  <label>
+                    {t("本机设备配置名", "Local device profile")}
+                    <input
+                      maxLength={64}
+                      disabled={resultBusy}
+                      value={deviceProfile}
+                      onChange={(e) => {
+                        clearResult();
+                        setGrantId("");
+                        setDeviceProfile(e.target.value);
+                      }}
+                    />
+                  </label>
+                  <label>
+                    {t("读取结果的设备授权", "Device grant for result reading")}
+                    <select
+                      disabled={resultBusy}
+                      value={grantId}
+                      onChange={(e) => {
+                        clearResult();
+                        setGrantId(e.target.value);
+                      }}
+                    >
+                      <option value="">
+                        {t(
+                          "选择授权；读取时重新核验",
+                          "Select a grant; rechecked on read",
+                        )}
+                      </option>
+                      {(grants ?? [])
+                        .filter(
+                          (g) =>
+                            !g.revoked &&
+                            (g.org_scope === null ||
+                              g.org_scope === organizationId),
+                        )
+                        .map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.id}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                </div>
+              ) : (
+                <p className="muted">
+                  {t(
+                    "在桌面 App 中可读取链上加密结果。",
+                    "Read encrypted chain results in the desktop App.",
+                  )}
+                </p>
+              )}
               <ul className="checkpoint-list">
                 {history.executions.map(
                   ({ run, control, settled, spent, reserved }) => (
@@ -185,10 +309,83 @@ export default function AgentCheckpointView({
                                 "Read-only execution remains in history and does not count as unsettled control.",
                               )}
                       </small>
+                      {run.result_record && isTauri() && (
+                        <p>
+                          <button
+                            type="button"
+                            disabled={resultBusy || !grantId || busy}
+                            onClick={() => void readResult(run.id)}
+                          >
+                            {t(
+                              "读取原执行结果",
+                              "Read original execution result",
+                            )}
+                          </button>
+                        </p>
+                      )}
                     </li>
                   ),
                 )}
               </ul>
+              {resultBusy && (
+                <p role="status">
+                  {t(
+                    "正在核验并读取原执行结果…",
+                    "Verifying and reading the original execution result…",
+                  )}
+                </p>
+              )}
+              {resultError && (
+                <p role="alert" className="warn">
+                  {t(
+                    "当前授权、原记录或解密结果无法核验，请重新读取。",
+                    "Current authority, original record or decrypted result could not be verified. Read again.",
+                  )}
+                </p>
+              )}
+              {result && (
+                <section
+                  aria-label={t("原执行结果", "Original execution result")}
+                >
+                  <p className="long-id">
+                    <code>{result.run.id}</code>
+                  </p>
+                  <p className="muted">
+                    {t(
+                      "正文仅保留在页面内存，60 秒后或切到后台隐藏。运行结果不代表人工验收或继续授权。",
+                      "The body stays in page memory and hides after 60 seconds or when backgrounded. A runtime result is not Human acceptance or authorization to continue.",
+                    )}
+                  </p>
+                  <p className="long-id">
+                    {t("结果创建交易", "Result creation transaction")}:{" "}
+                    <code>
+                      {result.transactionDigest ??
+                        t("摘要不可读", "Digest unavailable")}
+                    </code>
+                  </p>
+                  <p>
+                    {t(...states[result.run.state])} · {result.run.action}
+                  </p>
+                  <pre className="record-body">
+                    {JSON.stringify(
+                      result.response?.result ?? result.response?.error ?? null,
+                      null,
+                      2,
+                    )}
+                  </pre>
+                  <details>
+                    <summary>
+                      {t("查看技术详情", "View technical details")}
+                    </summary>
+                    <pre className="record-body">
+                      {JSON.stringify(result.response, null, 2)}
+                    </pre>
+                  </details>
+                  <button type="button" onClick={clearResult}>
+                    {t("隐藏结果", "Hide result")}
+                  </button>
+                </section>
+              )}
             </details>
           )}
         </div>

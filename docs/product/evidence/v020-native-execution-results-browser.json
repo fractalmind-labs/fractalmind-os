@@ -1,0 +1,17 @@
+{
+  "recordedAt": "2026-10-02T14:30:23.708589+00:00",
+  "url": "http://127.0.0.1:4189/",
+  "installedUIVerified": false,
+  "verified": {
+    "englishDarkPublicHistory": true,
+    "chineseLightPublicHistory": true,
+    "completeExecutionCount": 4,
+    "desktopResultHintPresent": true,
+    "nativeReadButtonsInWeb": 0,
+    "bodyHorizontalOverflow": false
+  },
+  "limits": [
+    "Browser check covers public directory and desktop-only access boundary.",
+    "Native result decryption controls, auto-hide and actual installed IPC were not exercised through the UI."
+  ]
+}

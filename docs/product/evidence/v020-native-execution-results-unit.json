@@ -1,0 +1,30 @@
+{
+  "recordedAt": "2026-10-02T14:34:23.135875+00:00",
+  "appRegression": {
+    "passed": 109,
+    "failed": 0,
+    "command": "npm test"
+  },
+  "executionResultsFocused": {
+    "passed": 6,
+    "failed": 0,
+    "command": "node --import tsx --test tests/execution-results.test.ts",
+    "latestAfterMembershipProofChecks": true
+  },
+  "appTypecheckAndProductionBuild": "passed",
+  "localnetScriptStrictTypecheck": "passed",
+  "limits": {
+    "sdkRustGoMoveChanged": false,
+    "installedResultUIVerified": false,
+    "autoHideUIVerified": false,
+    "nativeTransport": "isolated subprocess",
+    "browser": "public history and desktop-only access boundary",
+    "envdDispatchVerified": false,
+    "fullHandoverVerified": false,
+    "fivePlatformsVerified": false,
+    "warnings": [
+      "existing large entry chunk",
+      "dependency PURE annotation"
+    ]
+  }
+}

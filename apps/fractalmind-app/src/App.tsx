@@ -853,6 +853,7 @@ export function App() {
                         }}
                         organizationId={snapshot.organization.objectId}
                         managed={agent}
+                        grants={data.identity?.grants.value}
                         t={t}
                       />
                     </Suspense>
