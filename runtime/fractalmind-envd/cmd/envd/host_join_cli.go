@@ -88,7 +88,7 @@ func runHostJoinCLI(ctx context.Context, cfg *config.Config, statusOnly, newAtte
 	defer client.Close()
 	var keys *hostidentity.Keys
 	if !statusOnly {
-		store, err := hostidentity.OpenNativeStore()
+		store, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
 		if err != nil {
 			return err
 		}

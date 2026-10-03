@@ -81,8 +81,11 @@ type GatewayConfig struct {
 type IdentityConfig struct {
 	// KeyProfile names this Host's private keys in the OS credential store.
 	KeyProfile string `yaml:"key_profile"`
-	HostID     string `yaml:"host_id"`
-	Hostname   string `yaml:"hostname"`
+	// SecretServiceCollection explicitly selects a provisioned Linux collection.
+	// Empty retains the dedicated fractalmind collection; no fallback is allowed.
+	SecretServiceCollection string `yaml:"secret_service_collection"`
+	HostID                  string `yaml:"host_id"`
+	Hostname                string `yaml:"hostname"`
 	// DesktopURL is the public URL of this node's envd-desktop server (e.g. a
 	// tunnel). When set, the worker advertises it on register so a console can
 	// open the remote desktop without the operator pasting the URL.

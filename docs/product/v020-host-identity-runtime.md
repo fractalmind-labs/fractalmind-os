@@ -8,7 +8,7 @@
 
 - macOS：Keychain，只在设备本机保存、不同步，使用时须可访问 Keychain；构建需要 CGO 和 Xcode command-line tools。
 - Windows：Credential Manager。
-- Linux：Secret Service，需要可用的 D-Bus session 和 Secret Service。无该服务的无界面 Ubuntu 云主机目前不能通过此存储提供者启动；云端部署与合适的系统密钥存储仍需真实验收。
+- Linux：Secret Service，需要可用的 D-Bus session、密钥服务和已解锁的 collection。`identity.secret_service_collection` 可显式指定已准备的 `login` 等 collection；省略仍使用 `fractalmind`，不可用时不自动切换。初始化、邀请码兑换、运行时与连接入口使用同一配置。
 - 不回退明文文件或临时内存身份。凭据库锁定、不可用、格式损坏都会拒绝初始化/启动。正常启动只加载已有密钥，不自动生成。
 
 同一 `identity.key_profile` 重复初始化保留原身份；跨进程初始化用不包含密钥或产品状态的本机锁串行化。改变 profile 会选择另一个 Host 身份，不能静默沿用原成员资格。只有独立生成的测试条目用于原生存储验收，测试后删除。
@@ -38,6 +38,10 @@ sui:
 envd --config sentinel.yaml --init-host
 envd --config sentinel.yaml
 ```
+
+无桌面 Linux 可以在独立 D-Bus 会话中启动仅启用 `secrets` 的 GNOME Keyring 服务，通过 stdin 解锁已有、带非空口令的密钥库，再启动 envd。服务与 envd 必须继承同一 `DBUS_SESSION_BUS_ADDRESS`；口令不放在配置、命令参数或日志中。collection 的准备／解锁是本机运维步骤，链上邀请码只提供组织成员准入。此配置项在 macOS／Windows 非空时拒绝，避免误以为改变了平台凭据库。
+
+macOS 的 SSH 免密登录不等于登录钥匙串已解锁或已允许该程序访问。返回 `User interaction is not allowed (-25308)` 时须由本机用户完成钥匙串解锁／授权，不能自动生成另一个身份。远程测试的原失败、实际云端结果和限制见[远程 Host 验收](v020-remote-host-acceptance.md)。
 
 生产工厂使用 `ChainAuthorityStore`、`ChainReservations` 与 `ChainExecutionStore`。控制通道和 Sui 客户端复用同一安全 Host 身份；显式 `identity.host_id` 必须与签名地址一致。原始包用于 BCS 类型来源校验，当前包用于事务调用。启动和结果交易的回执未知时只查询，不能重发命令。
 

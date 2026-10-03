@@ -12,7 +12,7 @@ import (
 
 type nativeStore struct{ ring keyring.Keyring }
 
-func OpenNativeStore() (Store, error) {
+func openNativeStore(collection string) (Store, error) {
 	var backend keyring.BackendType
 	switch runtime.GOOS {
 	case "windows":
@@ -22,7 +22,7 @@ func OpenNativeStore() (Store, error) {
 	default:
 		return nil, fmt.Errorf("native Host credential store unavailable on %s", runtime.GOOS)
 	}
-	ring, err := keyring.Open(keyring.Config{ServiceName: nativeService, AllowedBackends: []keyring.BackendType{backend}, WinCredPrefix: nativeService + "/", LibSecretCollectionName: "fractalmind"})
+	ring, err := keyring.Open(keyring.Config{ServiceName: nativeService, AllowedBackends: []keyring.BackendType{backend}, WinCredPrefix: nativeService + "/", LibSecretCollectionName: collection})
 	if err != nil {
 		return nil, fmt.Errorf("native Host credential store unavailable: %w", err)
 	}

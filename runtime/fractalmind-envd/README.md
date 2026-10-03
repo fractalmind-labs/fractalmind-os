@@ -156,7 +156,14 @@ the runtime as described in [Host identity and runtime setup](../../docs/product
 `envd --config sentinel.yaml --init-host` prints public keys only; normal startup
 never generates a replacement identity. The macOS build requires CGO and
 Xcode command-line tools for Keychain access. Linux requires an available
-Secret Service session; Windows uses Credential Manager. The current
+Secret Service session; Windows uses Credential Manager. On headless Linux,
+provision and unlock the Secret Service collection before starting envd in the
+same D-Bus session. `identity.secret_service_collection: login` explicitly
+selects an existing unlocked collection; omission keeps `fractalmind`. The
+option is Linux-only. No unavailable/locked store falls back to a different
+collection or a plaintext key file. SSH access alone does not unlock a macOS
+login Keychain. See [remote Host setup](../../docs/product/v020-remote-host-acceptance.md).
+The current
 agent-manager adapter supports observation only. Control requires the bounded
 runtime and a current chain-confirmed execution; a chain capability alone does
 not grant it. The `native-file-agent` adapter supports 1–3 explicit text-file

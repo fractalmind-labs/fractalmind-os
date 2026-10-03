@@ -9,7 +9,7 @@ import (
 
 type nativeStore struct{}
 
-func OpenNativeStore() (Store, error) { return nativeStore{}, nil }
+func openNativeStore(string) (Store, error) { return nativeStore{}, nil }
 func hostQuery(profile string) (keychain.Item, error) {
 	name, err := account(profile)
 	if err != nil {

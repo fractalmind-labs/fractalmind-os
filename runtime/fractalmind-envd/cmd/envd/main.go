@@ -85,7 +85,7 @@ func main() {
 	}
 
 	if *initHost {
-		store, err := hostidentity.OpenNativeStore()
+		store, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -190,7 +190,7 @@ func main() {
 		}
 		connectionKeys = chainRuntime.keys
 	} else if cfg.SUI.HostConnectionEnabled {
-		store, err := hostidentity.OpenNativeStore()
+		store, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
 		if err != nil {
 			log.Fatal("[auth] native Host store unavailable")
 		}

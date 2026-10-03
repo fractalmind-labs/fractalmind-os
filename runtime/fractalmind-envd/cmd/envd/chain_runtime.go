@@ -175,7 +175,7 @@ func newRuntimeCommandExecutorFromEnv(cfg *config.Config) (runtimeCommandExecuto
 	if err != nil || !enabled {
 		return nil, err
 	}
-	store, err := hostidentity.OpenNativeStore()
+	store, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
 	if err != nil {
 		return nil, err
 	}
