@@ -32,6 +32,7 @@ export class OkrInterventionError extends Error {
       | "state_changed"
       | "unsettled_execution"
       | "invalid_quote"
+      | "journal_unavailable"
       | "sync_pending",
   ) {
     super(code);
@@ -62,6 +63,65 @@ export function interventionRequestId(
   if (!positive(intent.expectedVersion))
     throw new OkrInterventionError("invalid_input");
   return `okr-intervene:${okrId}:${intent.expectedVersion}:${intent.kind}`;
+}
+
+/** Public locators only. Keep the legacy locator and append new requests before
+ * showing a fee; cancelling a quote must not hide an older unknown outcome. */
+type InterventionStorage = Pick<Storage, "getItem" | "setItem">;
+export function interventionHistory(storage: InterventionStorage, key: string) {
+  try {
+    const legacy = storage.getItem(key),
+      raw = storage.getItem(`${key}:history`);
+    const history: unknown = raw === null ? [] : JSON.parse(raw);
+    if (!Array.isArray(history) || history.length > 1000)
+      throw new Error();
+    const values: unknown[] = legacy === null ? history : [legacy, ...history];
+    if (values.some((v) =>
+      typeof v !== "string" || !/^[A-Za-z0-9._:/@+\-]{1,128}$/.test(v),
+    ))
+      throw new Error();
+    return [...new Set(values as string[])];
+  } catch {
+    throw new OkrInterventionError("journal_unavailable");
+  }
+}
+export function rememberIntervention(
+  storage: InterventionStorage,
+  key: string,
+  requestId: string,
+) {
+  const history = interventionHistory(storage, key);
+  if (!history.includes(requestId)) history.push(requestId);
+  if (
+    history.length > 1000 ||
+    !/^[A-Za-z0-9._:/@+\-]{1,128}$/.test(requestId)
+  )
+    throw new OkrInterventionError("journal_unavailable");
+  const encoded = JSON.stringify(history);
+  try {
+    storage.setItem(`${key}:history`, encoded);
+    if (storage.getItem(`${key}:history`) !== encoded) throw new Error();
+  } catch {
+    throw new OkrInterventionError("journal_unavailable");
+  }
+}
+
+/** This only establishes that the old version cannot execute against the new
+ * source. It never proves the old transaction's outcome or permits its replay. */
+export function independentPauseAfterUnknown(
+  okr: { id: string; version: string; state: number },
+  intent: OkrInterventionIntent,
+  original: SelfPayTransactionOutcome,
+) {
+  const match =
+    /^okr-intervene:(0x[0-9a-f]{64}):([1-9][0-9]{0,19}):(pause|replace)$/.exec(original.requestId);
+  return (
+    original.status === "unknown" && !!original.digest &&
+    intent.kind === "pause" && intent.expectedVersion === okr.version &&
+    okr.state === 1 && positive(okr.version) && !!match &&
+    match[1] === okr.id && positive(match[2]) &&
+    BigInt(match[2]) < BigInt(okr.version)
+  );
 }
 /** Display decimal metrics without rounding the chain's u64 fixed-point values. */
 export function specificationDraft(spec: OkrSpecification): DraftInput {
@@ -363,7 +423,12 @@ export class OkrIntervention {
   }
   async prepare(
     rawIntent: OkrInterventionIntent,
-    input: { reviewed: boolean; reason?: string; replacement?: DraftInput },
+    input: {
+      reviewed: boolean;
+      reason?: string;
+      replacement?: DraftInput;
+      priorUnknown?: readonly SelfPayTransactionOutcome[];
+    },
   ): Promise<SelfPayFeeQuote | SelfPayTransactionOutcome> {
     const intent = structuredClone(rawIntent),
       requestId = interventionRequestId(this.okrId, intent);
@@ -373,6 +438,16 @@ export class OkrIntervention {
       throw new OkrInterventionError("confirmation_required");
     const action = intent.kind === "replace" ? "approve" : "operate";
     const before = await this.source(action);
+    for (const original of input.priorUnknown ?? []) {
+      const current = await this.query(original.requestId);
+      if (
+        !current || current.digest !== original.digest ||
+        current.requestId !== original.requestId ||
+        (current.status === "unknown" &&
+          !independentPauseAfterUnknown(before.okr, intent, current))
+      )
+        throw new OkrInterventionError("state_changed");
+    }
     const guard = async () => {
       if ((await this.source(action)).pin !== before.pin)
         throw new OkrInterventionError("state_changed");

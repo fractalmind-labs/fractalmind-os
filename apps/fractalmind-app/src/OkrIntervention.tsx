@@ -13,6 +13,9 @@ import {
 } from "./native-device";
 import {
   OkrIntervention,
+  independentPauseAfterUnknown,
+  interventionHistory,
+  rememberIntervention,
   specificationDraft,
   type OkrInterventionIntent,
   type OkrInterventionView,
@@ -70,7 +73,7 @@ export default function OkrInterventionView({
       intent: OkrInterventionIntent;
     } | null>(null),
     [receipt, setReceipt] = useState<SelfPayTransactionOutcome | null>(null);
-  const [requestId, setRequestId] = useState<string | null>(null),
+  const [history, setHistory] = useState<SelfPayTransactionOutcome[]>([]),
     [now, setNow] = useState(Date.now());
   const dialog = useRef<HTMLDialogElement>(null),
     mounted = useRef(true),
@@ -120,6 +123,7 @@ export default function OkrInterventionView({
     context.current = null;
     clearPrivate();
     setReceipt(null);
+    setHistory([]);
     setError(null);
     setOpen(false);
     dialog.current?.close();
@@ -192,16 +196,15 @@ export default function OkrInterventionView({
       journal.current,
       assertLive,
     );
-    context.current = { controller, assertLive };
-    const original = localStorage.getItem(key);
-    if (original) {
-      if (!/^[A-Za-z0-9._:/@+\-]{1,128}$/.test(original))
-        throw Object.assign(new Error(), { code: "journal_unavailable" });
-      setRequestId(original);
+    const restored: SelfPayTransactionOutcome[] = [];
+    for (const original of interventionHistory(localStorage, key)) {
       const prior = await controller.query(original);
       assertLive();
-      setReceipt(prior ?? null);
+      if (prior) restored.push(prior);
     }
+    setHistory(restored);
+    setReceipt(restored.at(-1) ?? null);
+    context.current = { controller, assertLive };
     return context.current;
   }
   async function read() {
@@ -218,17 +221,15 @@ export default function OkrInterventionView({
         reviewed,
         reason,
         replacement: form ?? undefined,
+        priorUnknown: history.filter((r) => r.status === "unknown"),
       });
     ctx.assertLive();
     if ("status" in value) {
-      setReceipt(value);
-      setRequestId(value.requestId);
+      recordReceipt(value);
+      rememberIntervention(localStorage, key, value.requestId);
       return;
     }
-    localStorage.setItem(key, value.requestId);
-    if (localStorage.getItem(key) !== value.requestId)
-      throw Object.assign(new Error(), { code: "journal_unavailable" });
-    setRequestId(value.requestId);
+    rememberIntervention(localStorage, key, value.requestId);
     setFee({ quote: value, intent });
     setReceipt(null);
   }
@@ -238,7 +239,7 @@ export default function OkrInterventionView({
       throw Object.assign(new Error(), { code: "state_changed" });
     const value = await ctx.controller.submit(fee.quote);
     ctx.assertLive();
-    setReceipt(value);
+    recordReceipt(value);
     setFee(null);
     if (value.status === "confirmed") {
       setEditing(false);
@@ -249,28 +250,37 @@ export default function OkrInterventionView({
     }
   }
   async function query() {
-    const ctx = await load(),
-      original = requestId ?? localStorage.getItem(key);
-    if (original) {
+    const ctx = await load();
+    for (const original of interventionHistory(localStorage, key)) {
       const next = await ctx.controller.query(original);
       ctx.assertLive();
-      setReceipt((old) =>
-        next?.status === "unknown" &&
-        old?.digest === next.digest &&
-        old.status !== "unknown"
-          ? old
-          : (next ?? null),
-      );
+      if (next) recordReceipt(next);
     }
     await read();
+  }
+  function recordReceipt(value: SelfPayTransactionOutcome) {
+    const preserve = (old?: SelfPayTransactionOutcome | null) =>
+      value.status === "unknown" && old?.digest === value.digest &&
+      old.requestId === value.requestId && old.status !== "unknown" ? old : value;
+    setReceipt(preserve);
+    setHistory((old) => {
+      const found = old.find((r) => r.requestId === value.requestId);
+      return found ? old.map((r) => r === found ? preserve(r) : r) : [...old, value];
+    });
   }
   function update<K extends keyof DraftInput>(key: K, value: DraftInput[K]) {
     setForm((old) => (old ? { ...old, [key]: value } : old));
     setReviewed(false);
   }
-  const blocked = busy || !!fee || receipt?.status === "unknown",
+  const unknown = history.filter((r) => r.status === "unknown"),
+    blocked = busy || !!fee || unknown.length > 0,
     canOperate = view?.actions.includes("operate"),
-    canApprove = view?.actions.includes("approve");
+    canApprove = view?.actions.includes("approve"),
+    pauseBlocked = busy || !!fee || !view || !canOperate ||
+      Number(view.authorityExpiresAtMs) <= now ||
+      unknown.some((r) => !independentPauseAfterUnknown(view.okr, {
+        kind: "pause", expectedVersion: view.okr.version,
+      }, r));
   const labels = {
     pause: t("暂停 OKR", "Pause OKR"),
     replace: t("修改目标规格", "Change goal specification"),
@@ -375,7 +385,7 @@ export default function OkrInterventionView({
                     <textarea
                       maxLength={4096}
                       value={reason}
-                      disabled={blocked}
+                      disabled={pauseBlocked}
                       onChange={(e) => {
                         setReason(e.target.value);
                         setReviewed(false);
@@ -383,7 +393,7 @@ export default function OkrInterventionView({
                     />
                   </label>
                   <button
-                    disabled={blocked || !reviewed || !reason.trim()}
+                    disabled={pauseBlocked || !reviewed || !reason.trim()}
                     onClick={() =>
                       void perform(() =>
                         prepare({
@@ -690,7 +700,7 @@ export default function OkrInterventionView({
               <input
                 type="checkbox"
                 checked={reviewed}
-                disabled={blocked}
+                disabled={blocked && pauseBlocked}
                 onChange={(e) => setReviewed(e.target.checked)}
               />
               {t(
@@ -701,7 +711,7 @@ export default function OkrInterventionView({
             {view.okr.state === 2 && (
               <button
                 className="secondary"
-                disabled={busy || !!fee || receipt?.status === "unknown"}
+                disabled={blocked}
                 onClick={() => {
                   close();
                   onReviewAgreement();
@@ -755,11 +765,12 @@ export default function OkrInterventionView({
             </button>
           </section>
         )}
-        {receipt && (
-          <section className="panel" role="status">
+        {[...history.filter((r) => r.requestId !== receipt?.requestId), ...(receipt ? [receipt] : [])].map((receipt) => (
+          <section className="panel" role="status" key={receipt.requestId}>
             <p>
               {t("原请求状态", "Original request status")}: {receipt.status}
             </p>
+            <code className="long-id">{receipt.requestId}</code>
             <code className="long-id">{receipt.digest}</code>
             {receipt.actualGas !== undefined && (
               <p>
@@ -775,7 +786,7 @@ export default function OkrInterventionView({
               </p>
             )}
           </section>
-        )}
+        ))}
       </dialog>
     </>
   );

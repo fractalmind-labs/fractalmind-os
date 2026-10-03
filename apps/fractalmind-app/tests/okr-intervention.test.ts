@@ -16,6 +16,9 @@ import {
   OkrIntervention,
   OkrInterventionError,
   interventionRequestId,
+  independentPauseAfterUnknown,
+  interventionHistory,
+  rememberIntervention,
   specificationDraft,
 } from "../src/okr-intervention";
 import { normalizeDraft, type DraftInput } from "../src/okr-draft";
@@ -60,9 +63,8 @@ async function fixture() {
     broadcasts = 0,
     reads = 0,
     encryptions = 0;
-  let onNative = () => {},
-    onQuote = () => {},
-    prior: SelfPayTransactionOutcome | undefined;
+  let onNative = () => {}, onQuote = () => {}, onQuery = () => {};
+  const prior = new Map<string, SelfPayTransactionOutcome>(), queried: string[] = [];
   const actions: string[] = [];
   const plaintexts: any[] = [];
   const transactions: any[] = [];
@@ -146,7 +148,7 @@ async function fixture() {
     assertLive();
     reads++;
     actions.push(action);
-    return structuredClone({ ...source, pin });
+    return structuredClone({ ...source, pin: JSON.stringify([source, pin], (_k, v) => typeof v === "bigint" ? v.toString() : v) });
   };
   const rows = [
     {
@@ -180,7 +182,11 @@ async function fixture() {
     new TextEncoder().encode(JSON.stringify(originalSpecification));
   const sign = (controller as any).manager.options.signer.signTransaction;
   (controller as any).manager = {
-    query: async () => prior,
+    query: async (requestId: string) => {
+      queried.push(requestId);
+      onQuery();
+      return prior.get(requestId);
+    },
     prepare: async (input: any) => {
       builds++;
       transactions.push(input.transaction.getData());
@@ -210,7 +216,9 @@ async function fixture() {
     actions,
     plaintexts,
     transactions,
-    setPrior: (value: SelfPayTransactionOutcome) => (prior = value),
+    queried,
+    setPrior: (value: SelfPayTransactionOutcome) => prior.set(value.requestId, value),
+    onQuery: (fn: () => void) => (onQuery = fn),
     setSpecification: (value: ReturnType<typeof normalizeDraft>) => {
       originalSpecification = value;
     },
@@ -473,4 +481,91 @@ test("specification revisions preserve original message provenance; removing or 
       }
       assert.equal(f.counts().broadcasts, 0);
     });
+});
+
+test("an older unknown intervention allows a separately reviewed pause of the new version while preserving the original receipt", async (t) => {
+  for (const kind of ["replace", "pause"] as const) await t.test(kind, async () => {
+    const f = await fixture();
+    f.source.okr.version = "3";
+    const original = { status: "unknown", digest: "retained-original", requestId: interventionRequestId(okrId, { kind, expectedVersion: "1" }) } as SelfPayTransactionOutcome;
+    const saved = structuredClone(original);
+    f.setPrior(original);
+    const quote = await f.controller.prepare({ kind: "pause", expectedVersion: "3" }, { reviewed: true, reason: "Stop for independent review", priorUnknown: [original] });
+    assert.ok(!("status" in quote));
+    assert.deepEqual(f.queried, [interventionRequestId(okrId, { kind: "pause", expectedVersion: "3" }), original.requestId]);
+    assert.equal(f.transactions[0].commands[0].MoveCall.function, "pause");
+    assert.equal(f.counts().broadcasts, 0);
+    assert.equal((await f.controller.submit(quote)).requestId, quote.requestId);
+    assert.equal(f.counts().broadcasts, 1);
+    const counts = f.counts();
+    assert.deepEqual(await f.controller.prepare({ kind, expectedVersion: "1" }, { reviewed: false }), saved);
+    assert.deepEqual(f.counts(), counts);
+    assert.deepEqual(original, saved);
+    assert.deepEqual(await f.controller.query(original.requestId), saved);
+  });
+});
+
+test("unknown history cannot release same-version, foreign, stop, malformed or unverified requests", async (t) => {
+  for (const mode of ["same-version", "future-version", "foreign-okr", "stop", "malformed", "missing-original", "different-digest", "query-failed", "replace-intent", "paused", "wrong-current-version"] as const) await t.test(mode, async () => {
+    const f = await fixture();
+    f.source.okr.version = "3";
+    let originalId = interventionRequestId(okrId, { kind: "replace", expectedVersion: mode === "same-version" ? "3" : mode === "future-version" ? "4" : "1" });
+    if (mode === "foreign-okr") originalId = interventionRequestId(id("ff"), { kind: "replace", expectedVersion: "1" });
+    if (mode === "stop") originalId = interventionRequestId(okrId, { kind: "stop", runId });
+    if (mode === "malformed") originalId = "okr-intervene:untrusted";
+    const original = { status: "unknown", digest: "retained-original", requestId: originalId } as SelfPayTransactionOutcome;
+    if (mode !== "missing-original") f.setPrior({ ...original, digest: mode === "different-digest" ? "different" : original.digest });
+    if (mode === "query-failed") f.onQuery(() => { throw new Error("RPC unavailable"); });
+    if (mode === "paused") f.source.okr.state = 2;
+    await assert.rejects(f.controller.prepare({ kind: mode === "replace-intent" ? "replace" : "pause", expectedVersion: mode === "wrong-current-version" ? "2" : "3" }, { reviewed: true, reason: "Pause", replacement: draft(), priorUnknown: [original] }));
+    assert.equal(f.counts().builds, 0);
+    assert.equal(f.counts().encryptions, 0);
+    assert.equal(f.counts().signs, 0);
+    assert.equal(f.counts().broadcasts, 0);
+  });
+});
+
+test("the independent pause still requires explicit review and rejects quote or signing races", async (t) => {
+  for (const mode of ["not-reviewed", "quote", "sign", "authority", "closed"] as const) await t.test(mode, async () => {
+    const f = await fixture();
+    f.source.okr.version = "3";
+    const original = { status: "unknown", digest: "retained-original", requestId: interventionRequestId(okrId, { kind: "replace", expectedVersion: "1" }) } as SelfPayTransactionOutcome;
+    f.setPrior(original);
+    if (mode === "quote") f.onQuote(() => { f.source.okr.version = "4"; });
+    const prepare = () => f.controller.prepare({ kind: "pause", expectedVersion: "3" }, { reviewed: mode !== "not-reviewed", reason: "Pause", priorUnknown: [original] });
+    if (mode === "not-reviewed" || mode === "quote") await assert.rejects(prepare(), OkrInterventionError);
+    else {
+      const quote = await prepare();
+      assert.ok(!("status" in quote));
+      if (mode === "sign") f.onNative(() => { f.source.okr.version = "4"; });
+      if (mode === "authority") f.change();
+      if (mode === "closed") f.close();
+      await assert.rejects(f.controller.submit(quote), OkrInterventionError);
+    }
+    assert.equal(f.counts().broadcasts, 0);
+    assert.equal(original.status, "unknown");
+  });
+});
+
+test("public history preserves legacy unknown locators across quotes and cold reopen; failed storage cannot overwrite them", () => {
+  const old = interventionRequestId(okrId, { kind: "replace", expectedVersion: "1" }), next = interventionRequestId(okrId, { kind: "pause", expectedVersion: "3" });
+  const values = new Map([["scope", old]]);
+  const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };
+  rememberIntervention(storage, "scope", next);
+  assert.equal(storage.getItem("scope"), old);
+  assert.deepEqual(interventionHistory(storage, "scope"), [old, next]);
+  // Cancelling a fee changes no locator; a fresh reader still finds both originals.
+  assert.deepEqual(interventionHistory({ ...storage }, "scope"), [old, next]);
+  rememberIntervention(storage, "scope", next);
+  assert.deepEqual(interventionHistory(storage, "scope"), [old, next]);
+  const another = interventionRequestId(okrId, { kind: "pause", expectedVersion: "5" });
+  for (const setItem of [() => {}, () => { throw new Error("storage unavailable"); }])
+    assert.throws(() => rememberIntervention({ ...storage, setItem }, "scope", another), { code: "journal_unavailable" });
+  assert.deepEqual(interventionHistory(storage, "scope"), [old, next]);
+  values.set("scope:history", "{}");
+  assert.throws(() => rememberIntervention(storage, "scope", another), { code: "journal_unavailable" });
+  assert.equal(storage.getItem("scope"), old);
+  assert.equal(storage.getItem("scope:history"), "{}");
+  const original = { status: "unknown", digest: "retained-original", requestId: old } as SelfPayTransactionOutcome;
+  assert.equal(independentPauseAfterUnknown({ id: okrId, version: "3", state: 1 }, { kind: "stop", runId }, original), false);
 });
