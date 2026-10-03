@@ -7,6 +7,7 @@ import {
   canComposeAfterSupersededDecision,
   canComposeAfterResolvedOriginal,
   directConversationState,
+  directMessageRemainingSeconds,
 } from "../src/direct-conversation-state";
 import type { SelfPayTransactionOutcome } from "@fractalmind-labs/fractalmind-sdk";
 
@@ -72,6 +73,15 @@ function fixture() {
   } as DirectMessageView;
   return { description, selected };
 }
+
+test("the shared deadline countdown reaches zero without extending expired history", () => {
+  const originalExpiry = "301000";
+  assert.equal(directMessageRemainingSeconds(originalExpiry, 1000), 300);
+  assert.equal(directMessageRemainingSeconds(originalExpiry, 300999), 1);
+  assert.equal(directMessageRemainingSeconds(originalExpiry, 301000), 0);
+  assert.equal(directMessageRemainingSeconds(originalExpiry, 999000), 0);
+  assert.equal(originalExpiry, "301000");
+});
 
 test("a pruned permission receipt permits a distinct message only under newer verified authority", () => {
   const { description } = fixture();

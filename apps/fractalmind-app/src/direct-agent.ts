@@ -49,6 +49,9 @@ export class DirectAgentError extends Error {
 }
 const id = /^0x[0-9a-f]{64}$/;
 const token = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+// Matches the existing Move message/command maximum; existing messages are
+// immutable and every subsequent step keeps their original deadline.
+export const DIRECT_MESSAGE_TTL_MS = 300000;
 export type StandingInput = {
   actions: DirectAction[];
   paths: Record<string, string[]>;
@@ -723,8 +726,15 @@ export class NativeDirectAgent {
     const before = await this.source(action, historical),
       api = this.chain.sdk.directAgent,
       target = this.target(before);
+    let messageDeadline: bigint | null = null;
     const guard = async () => {
-      if ((await this.source(action, historical)).pin !== before.pin)
+      const current = await this.source(action, historical);
+      if (
+        current.pin !== before.pin ||
+        (messageDeadline !== null &&
+          (messageDeadline <= current.authority.clockMs ||
+            messageDeadline <= BigInt(Date.now())))
+      )
         throw new DirectAgentError("state_changed");
     };
     let transaction, command: SignedNodeCommand | undefined;
@@ -800,8 +810,8 @@ export class NativeDirectAgent {
           throw new DirectAgentError("state_changed");
         const hash = directRequestHash(op.request, op.action);
         const expires = [
-          before.authority.clockMs + 240000n,
-          BigInt(Date.now() + 240000),
+          before.authority.clockMs + BigInt(DIRECT_MESSAGE_TTL_MS),
+          BigInt(Date.now() + DIRECT_MESSAGE_TTL_MS),
           BigInt(p.expires_at_ms),
           BigInt(before.member.expires_at_ms),
           BigInt(before.authority.expiresAtMs),
@@ -811,6 +821,7 @@ export class NativeDirectAgent {
           expires <= before.authority.clockMs
         )
           throw new DirectAgentError("state_changed");
+        messageDeadline = expires;
         const body = await this.encrypt(
           before,
           6,
@@ -846,6 +857,7 @@ export class NativeDirectAgent {
           BigInt(m.expires_at_ms) <= BigInt(Date.now())
         )
           throw new DirectAgentError("state_changed");
+        messageDeadline = BigInt(m.expires_at_ms);
         if (op.kind === "approval") {
           if (v.approval || v.result || !v.reasons.length)
             throw new DirectAgentError("state_changed");

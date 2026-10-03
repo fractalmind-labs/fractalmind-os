@@ -142,14 +142,35 @@ func (r *chainRead) directField(ctx context.Context, parent string, tag []byte, 
 	return r.field(ctx, parent, extensionFieldTag(core, ext), appendBCSBytes(nil, tag),
 		core+"::execution_extension::FieldKey<"+ext+"::direct_agent::Witness>", ext+"::direct_agent::"+kind, out)
 }
+
+func (r *chainRead) directPermissionFields(cap moveCapability) []chainFieldRef {
+	core, ext := r.resolver.packageID, r.resolver.directPackageID
+	return []chainFieldRef{
+		{cap.ID.String(), extensionFieldTag(core, ext), appendBCSBytes(nil, []byte("permission"))},
+		{cap.ID.String(), structKeyTag(core, "remote_authority", "ExecutionContractKey"), []byte{0}},
+		{cap.ID.String(), structKeyTag(core, "execution_extension", "SourceKey"), []byte{0}},
+		{cap.Org.String(), structKeyTag(core, "execution_extension", "IndexKey"), []byte{0}},
+	}
+}
+
 func (r *chainRead) directPermission(ctx context.Context, cap moveCapability) (moveDirectPermission, moveDirectCapability, *moveContractBinding, error) {
 	var p moveDirectPermission
 	var b moveDirectCapability
+	if err := r.prefetchDependencies(ctx, nil, r.directPermissionFields(cap)...); err != nil {
+		return p, b, nil, err
+	}
 	if err := r.directField(ctx, cap.ID.String(), []byte("permission"), "PermissionCapability", &b); err != nil {
 		return p, b, nil, err
 	}
 	if b.Version == 0 || len(b.Approval) > 1 {
 		return p, b, nil, fmt.Errorf("invalid direct capability binding")
+	}
+	ids := []string{b.Permission.String()}
+	if len(b.Approval) == 1 {
+		ids = append(ids, b.Approval[0].String())
+	}
+	if err := r.prefetchObjects(ctx, ids); err != nil {
+		return p, b, nil, err
 	}
 	if err := r.object(ctx, b.Permission.String(), "direct_agent::StandingPermission", &p); err != nil {
 		return p, b, nil, err
@@ -353,7 +374,7 @@ func ParseDirectRequest(command NodeCommand, authority *DirectPermissionAuthorit
 }
 
 func (r *chainRead) immutable(ctx context.Context, id, kind string, out any) error {
-	o, err := r.resolver.reader.ReadChainObject(ctx, id)
+	o, err := r.readObject(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -408,6 +429,12 @@ func (r *chainRead) directExecution(ctx context.Context, cap moveCapability, run
 	if core.Contract != p.ID || core.Agreement != binding.Version || core.KR != 0 || !bytes.Equal(core.Boundary, contract.Boundary) {
 		return nil, fmt.Errorf("core and direct command contract disagree")
 	}
+	if err = r.prefetchDependencies(ctx, []string{binding.Message.String()},
+		chainFieldRef{p.Claims.ID.String(), structKeyTag("0x2", "object", "ID"), run.ID[:]},
+		chainFieldRef{p.Runs.ID.String(), structKeyTag("0x2", "object", "ID"), binding.Message[:]},
+	); err != nil {
+		return nil, err
+	}
 	var claim moveDirectClaim
 	if err = r.field(ctx, p.Claims.ID.String(), structKeyTag("0x2", "object", "ID"), run.ID[:], "0x2::object::ID", r.resolver.directPackageID+"::direct_agent::DirectClaim", &claim); err != nil {
 		return nil, err
@@ -438,6 +465,11 @@ func (r *chainRead) directExecution(ctx context.Context, cap moveCapability, run
 	}
 	if message.Org != run.Org || message.Permission != p.ID || message.PermissionVersion != binding.Version || message.Managed != run.Managed[0] || message.Membership != run.Membership || message.Human != run.Human || message.Device != run.Delegate || message.Grant != run.Grant || message.GrantVersion != run.GrantVersion || message.Amount != run.BudgetAmount || !bytes.Equal(message.Boundary, core.Boundary) || len(message.RequestHash) != 32 {
 		return nil, fmt.Errorf("immutable message and original Run disagree")
+	}
+	if err = r.prefetchDependencies(ctx, []string{message.Record.String()},
+		chainFieldRef{p.Messages.ID.String(), structKeyTag("0x1", "string", "String"), appendBCSBytes(nil, []byte(message.Token))},
+	); err != nil {
+		return nil, err
 	}
 	var messagePointer moveAddress
 	if err = r.field(ctx, p.Messages.ID.String(), structKeyTag("0x1", "string", "String"), appendBCSBytes(nil, []byte(message.Token)), "0x1::string::String", "0x2::object::ID", &messagePointer); err != nil {

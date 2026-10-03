@@ -13,6 +13,7 @@ import {
 } from "./native-device";
 import {
   NativeDirectAgent,
+  DIRECT_MESSAGE_TTL_MS,
   boundedDirectRequest,
   modelReply,
   type DirectMessageView,
@@ -27,6 +28,7 @@ import {
   canComposeAfterSupersededDecision,
   canComposeAfterResolvedOriginal,
   directConversationState,
+  directMessageRemainingSeconds,
 } from "./direct-conversation-state";
 import { NativeDirectDraft, type DirectDraft } from "./direct-draft";
 import {
@@ -822,6 +824,9 @@ export default function DirectAgentConversation({
   const { current, fresh, approvalFresh, approvalWorkspaceFresh } =
     directConversationState(description, selected, BigInt(now));
   const m = selected?.message;
+  const remainingSeconds = m
+    ? directMessageRemainingSeconds(m.expires_at_ms, now)
+    : 0;
   const working = busy || !!fee,
     unknown = receipt?.status === "unknown";
   const independentPermissionMessage = canComposeAfterPermissionReceipt(
@@ -1200,6 +1205,21 @@ export default function DirectAgentConversation({
                     {t("消息有效至", "Message expires")}:{" "}
                     {new Date(Number(m!.expires_at_ms)).toLocaleString()}
                   </p>
+                  <p className={remainingSeconds === 0 ? "warn" : "muted"}>
+                    {t(
+                      "审批、执行准备和 Host 执行共用此截止时间；原消息不会延期。",
+                      "Approval, Run preparation and Host execution share this deadline; the original message is never extended.",
+                    )}
+                    {remainingSeconds > 0
+                      ? t(
+                          ` 剩余 ${Math.floor(remainingSeconds / 60)} 分 ${remainingSeconds % 60} 秒（设备时间估算）。`,
+                          ` ${Math.floor(remainingSeconds / 60)}m ${remainingSeconds % 60}s remaining (device-clock estimate).`,
+                        )
+                      : t(
+                          " 已到期，仅保留历史；新的意图需要另建消息。",
+                          " Expired; history remains available. A new intent requires a distinct message.",
+                        )}
+                  </p>
                   <details>
                     <summary>
                       {t("核对具体操作与边界", "Review exact task & bounds")}
@@ -1474,6 +1494,12 @@ export default function DirectAgentConversation({
         {opened && isTauri() && (
           <section className="panel">
             <h3>{t("新消息", "New message")}</h3>
+            <p className="muted">
+              {t(
+                `新消息最多有 ${DIRECT_MESSAGE_TTL_MS / 60000} 分钟完成审批与执行；权限、Host 或设备资格更早到期时会相应缩短。预览费用也会占用这段时间。`,
+                `New messages have at most ${DIRECT_MESSAGE_TTL_MS / 60000} minutes for approval and execution, shortened by earlier permission, Host or device expiry. Fee previews consume this window too.`,
+              )}
+            </p>
             <p className="muted">
               {t(
                 "离线或只读时可编辑并保存仅本机未发送草稿。草稿不授予权限，也不会自动发送；发送前重新核验此实例的当前资格并确认费用。",

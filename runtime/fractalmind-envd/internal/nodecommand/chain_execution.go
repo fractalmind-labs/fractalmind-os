@@ -134,6 +134,20 @@ func (s *ChainAuthorityResolver) lookupExecution(ctx context.Context, capability
 	if run.Capability != cap.ID || run.Org != cap.Org || hex.EncodeToString(run.IntentHash) != fingerprint || run.Delegate != cap.Delegate || len(run.Managed) > 1 || len(run.Result) > 1 || run.State > 5 || run.Issued > math.MaxInt64 || run.Expires > math.MaxInt64 || run.Updated > math.MaxInt64 {
 		return ChainExecution{}, false, fmt.Errorf("invalid chain execution binding")
 	}
+	if run.Action == "direct.message" {
+		// These exact mandatory fields are independent once the original Run
+		// is known. Keep all typed decoders and the final full version pin.
+		core := s.packageID
+		fields := r.directPermissionFields(cap)
+		fields = append(fields,
+			chainFieldRef{capabilityID, structKeyTag(core, "remote_authority", "BoundBudgetClaimKey"), appendBCSBytes(nil, key)},
+			chainFieldRef{capabilityID, extensionFieldTag(core, s.directPackageID), appendBCSBytes(nil, run.IntentHash)},
+			chainFieldRef{capabilityID, structKeyTag(core, "remote_authority", "CommandContractKey"), appendBCSBytes(nil, run.IntentHash)},
+		)
+		if err := r.prefetchDependencies(ctx, []string{run.Membership.String()}, fields...); err != nil {
+			return ChainExecution{}, false, err
+		}
+	}
 	var budget moveBoundBudgetClaim
 	err = r.field(ctx, capabilityID, structKeyTag(s.packageID, "remote_authority", "BoundBudgetClaimKey"), appendBCSBytes(nil, key), s.packageID+"::remote_authority::BoundBudgetClaimKey", s.packageID+"::remote_authority::BoundBudgetClaim", &budget)
 	if err != nil {

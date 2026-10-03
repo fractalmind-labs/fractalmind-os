@@ -5,6 +5,15 @@ type Description = Awaited<ReturnType<NativeDirectAgent["describe"]>>;
 const sameBytes = (a: number[], b: number[]) =>
   a.length === b.length && a.every((value, index) => value === b[index]);
 
+/** Display-only device-clock estimate. Mutation checks use the original
+ * deadline and freshly read chain authority, never this presentation value. */
+export function directMessageRemainingSeconds(
+  expiresAtMs: string,
+  nowMs: number,
+) {
+  return Math.max(0, Math.ceil((Number(expiresAtMs) - nowMs) / 1000));
+}
+
 /** A missing historical permission receipt must not permanently block a
  * distinct new message under independently verified current chain authority.
  * This does not resolve that receipt, retry its operation, or authorize a

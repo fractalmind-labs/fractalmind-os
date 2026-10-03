@@ -16,6 +16,7 @@ import {
 } from "@fractalmind-labs/fractalmind-sdk";
 import {
   NativeDirectAgent,
+  DIRECT_MESSAGE_TTL_MS,
   DirectAgentError,
   standingInput,
   directApprovalReasons,
@@ -735,8 +736,83 @@ test("message expiry respects a lagging Sui Clock before quoting or signing", as
     action: "status",
     request: { message: "Query status", bounds: { paths, max_calls: "0" } },
   });
-  assert.ok(expiry <= f.source.authority.clockMs + 240000n);
+  assert.equal(
+    expiry,
+    f.source.authority.clockMs + BigInt(DIRECT_MESSAGE_TTL_MS),
+  );
   assert.ok(expiry > BigInt(Date.now()));
+  assert.equal(f.counts().broadcasts, 0);
+});
+
+test("new messages use at most five minutes and clip independently to chain/wall time and each authority expiry", async (t) => {
+  const wall = 1900000000000;
+  t.mock.method(Date, "now", () => wall);
+  const cases = [
+    { name: "full existing contract window", offset: 0, seconds: 300 },
+    { name: "lagging chain", offset: -90000, seconds: 210 },
+    { name: "wall before chain", offset: 30000, seconds: 300 },
+    { name: "standing permission", offset: 0, clip: "permission", seconds: 30 },
+    { name: "Host membership", offset: 0, clip: "member", seconds: 40 },
+    { name: "device grant", offset: 0, clip: "authority", seconds: 50 },
+  ];
+  for (const c of cases)
+    await t.test(c.name, async () => {
+      const f = await sendingFixture();
+      f.source.authority.clockMs = BigInt(wall + c.offset);
+      if (c.clip === "permission")
+        f.source.permission.expires_at_ms = String(wall + c.seconds * 1000);
+      if (c.clip === "member")
+        f.source.member.expires_at_ms = String(wall + c.seconds * 1000);
+      if (c.clip === "authority")
+        f.source.authority.expiresAtMs = String(wall + c.seconds * 1000);
+      const api = f.controller.chain.sdk.directAgent,
+        create = api.createMessage.bind(api);
+      let expiry = 0n;
+      (api as any).findMessage = async () => null;
+      (api as any).createMessage = (input: any) => {
+        expiry = BigInt(input.expiresAtMs);
+        return create(input);
+      };
+      await f.controller.prepare({
+        kind: "message",
+        messageToken: crypto.randomUUID(),
+        action: "status",
+        request: {
+          message: "Explicit new status request",
+          bounds: { paths, max_calls: "0" },
+        },
+      });
+      assert.equal(expiry, BigInt(wall + c.seconds * 1000));
+      assert.ok(expiry - f.source.authority.clockMs <= 300000n);
+      assert.ok(expiry - BigInt(wall) <= 300000n);
+      assert.equal(f.counts().broadcasts, 0);
+    });
+});
+
+test("an original message quote never renews its deadline and expiry stops signing or broadcast", async (t) => {
+  let wall = 1900000000000;
+  t.mock.method(Date, "now", () => wall);
+  const f = await sendingFixture(),
+    api = f.controller.chain.sdk.directAgent,
+    create = api.createMessage.bind(api);
+  const deadlines: bigint[] = [];
+  (api as any).findMessage = async () => null;
+  (api as any).createMessage = (input: any) => {
+    deadlines.push(BigInt(input.expiresAtMs));
+    return create(input);
+  };
+  const quote = await f.controller.prepare({
+    kind: "message",
+    messageToken: crypto.randomUUID(),
+    action: "status",
+    request: { message: "Original intent", bounds: { paths, max_calls: "0" } },
+  });
+  assert.ok(!("status" in quote));
+  const originalDeadline = deadlines[0];
+  wall += DIRECT_MESSAGE_TTL_MS + 1;
+  await assert.rejects(f.controller.submit(quote), DirectAgentError);
+  assert.deepEqual(deadlines, [originalDeadline]);
+  assert.equal(f.counts().signs, 0);
   assert.equal(f.counts().broadcasts, 0);
 });
 

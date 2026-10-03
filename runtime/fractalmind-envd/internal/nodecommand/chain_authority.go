@@ -239,7 +239,7 @@ func (r *chainRead) field(ctx context.Context, parent string, keyTag []byte, key
 	if err != nil {
 		return err
 	}
-	obj, err := r.resolver.reader.ReadChainObject(ctx, id)
+	obj, err := r.readObject(ctx, id)
 	if err != nil {
 		return err
 	}
