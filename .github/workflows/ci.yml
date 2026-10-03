@@ -426,6 +426,14 @@ jobs:
         run: cargo fmt --manifest-path apps/fractalmind-app/native/Cargo.toml -- --check
       - name: Test native device core without user credentials
         run: cargo test --locked --manifest-path apps/fractalmind-app/native/Cargo.toml
+      - name: Install mobile Rust targets
+        if: matrix.os == 'macos-latest'
+        run: rustup target add aarch64-apple-ios aarch64-linux-android
+      - name: Check mobile native credential providers
+        if: matrix.os == 'macos-latest'
+        run: |
+          cargo check --locked --manifest-path apps/fractalmind-app/native/Cargo.toml --target aarch64-apple-ios
+          cargo check --locked --manifest-path apps/fractalmind-app/native/Cargo.toml --target aarch64-linux-android
       - uses: actions/setup-node@v4
         if: matrix.os == 'macos-latest'
         with:

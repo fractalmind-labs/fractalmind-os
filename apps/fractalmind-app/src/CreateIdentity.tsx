@@ -207,8 +207,8 @@ export default function CreateIdentity({
         </strong>
         <p>
           {t(
-            "网页预览不生成或保存设备与恢复私钥。桌面创建流程使用系统密钥库和真实链上交易。",
-            "The web preview does not generate or store device/recovery private keys. Desktop creation uses the OS credential store and real chain transactions.",
+            "网页预览不生成或保存设备与恢复私钥。原生 App 创建流程使用系统密钥库和真实链上交易。",
+            "The web preview does not generate or store device/recovery private keys. Native App creation uses the OS credential store and real chain transactions.",
           )}
         </p>
       </div>

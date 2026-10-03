@@ -539,8 +539,8 @@ export default function HandoverFlow({
   }
   const messages: Record<string, [string, string]> = {
     native_unavailable: [
-      "请在桌面 App 中使用设备密钥。网页不会签发权限或提交交易。",
-      "Use your device key in the desktop App. The web page cannot issue permissions or submit transactions.",
+      "请在 FractalMind 原生 App 中使用设备密钥。网页不会签发权限或提交交易。",
+      "Use your device key in the native FractalMind App. The web page cannot issue permissions or submit transactions.",
     ],
     invalid_grant: [
       "当前设备需要此组织的读取、执行、审批和主机管理权限。",

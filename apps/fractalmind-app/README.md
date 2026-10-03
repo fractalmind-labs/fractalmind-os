@@ -76,6 +76,13 @@ sharing. The browser pairing entry cannot initialize keys. See
 
 ## Current behavior
 
+The native shell exposes the same Rust library entry point to desktop and mobile.
+Its vault uses Keychain on iOS and a named Android Keystore-backed encrypted
+credential store on Android. Mobile vault type checks pass; phone installation,
+native IPC, device pairing, real signing and mobile approval journeys remain
+unverified. This does not establish that the mobile App is ready for release.
+See [mobile entry and credential evidence](../../docs/product/v020-app-mobile-native.md).
+
 The desktop development shell uses Tauri with a native device vault. From this
 directory run `npm run desktop:dev`, or `npm run desktop:build -- --debug` for a
 bundled-assets debug executable. These are development artifacts, not signed
@@ -104,6 +111,32 @@ credential store, never in the WebView. macOS real-Keychain/signature/localnet
 evidence, transport limits and test instructions are documented in
 [native device verification](../../docs/product/v020-app-native-device.md). Current encrypted-body reads and their test scope are documented in
 [private record access](../../docs/product/v020-app-private-records.md).
+
+### Mobile development
+
+Use the [Tauri mobile prerequisites](https://v2.tauri.app/start/prerequisites/)
+for a full Xcode installation on iOS, or Java and the Android SDK/NDK on Android.
+Build the local SDK as described above, then initialize the platform project
+from this directory:
+
+```sh
+npm run android:init
+npm run android:build -- --debug
+```
+
+On a Mac with full Xcode and the required test signing configuration:
+
+```sh
+npm run ios:init
+npm run ios:build -- --debug
+```
+
+Generated projects live in the ignored `src-tauri/gen/` directory. Bundled
+assets use the same native origin guard and command permissions as desktop;
+a browser preview or remote development page does not acquire signing rights.
+Use a reachable HTTPS RPC/Coordinator for a physical phone; the phone's
+loopback address does not point at the desktop Host. Check the pinned network,
+device grant and organization before approving an operation.
 
 - V2 shell: neutral/iris light and dark tokens, fractal brand and mission welcome,
   ten grouped desktop entries, persistent execution context and organization growth

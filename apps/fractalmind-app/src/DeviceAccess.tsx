@@ -84,8 +84,8 @@ export default function DeviceAccess({
         <h3>{t("当前设备", "This device")}</h3>
         <p>
           {t(
-            "网页预览只能读取公开记录。设备密钥与持钥验证需在 FractalMind 桌面 App 内使用。",
-            "The web preview reads public records only. Device keys and possession verification require the FractalMind desktop App.",
+            "网页预览只能读取公开记录。设备密钥与持钥验证需在 FractalMind 原生 App 内使用。",
+            "The web preview reads public records only. Device keys and possession verification require the native FractalMind App.",
           )}
         </p>
       </div>

@@ -117,8 +117,8 @@ export default function PrivateRecordView({
       {!ready ? (
         <p>
           {t(
-            "请在桌面 App 中读取加密正文。网页预览不提供恢复码或私钥输入。",
-            "Read encrypted bodies in the desktop App. The web preview has no recovery code or private-key input.",
+            "请在 FractalMind 原生 App 中读取加密正文。网页预览不提供恢复码或私钥输入。",
+            "Read encrypted bodies in the native FractalMind App. The web preview has no recovery code or private-key input.",
           )}
         </p>
       ) : (

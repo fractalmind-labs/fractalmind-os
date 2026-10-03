@@ -9,7 +9,13 @@
     "preview": "vite preview",
     "test": "node --import tsx --test tests/*.test.ts",
     "desktop:dev": "tauri dev",
-    "desktop:build": "tauri build --no-bundle"
+    "desktop:build": "tauri build --no-bundle",
+    "android:init": "tauri android init --ci",
+    "android:dev": "tauri android dev",
+    "android:build": "tauri android build",
+    "ios:init": "tauri ios init --ci",
+    "ios:dev": "tauri ios dev",
+    "ios:build": "tauri ios build"
   },
   "dependencies": {
     "@fractalmind-labs/fractalmind-sdk": "file:../../protocols/fractalmind-protocol/sdk",

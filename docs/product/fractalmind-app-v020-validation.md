@@ -8,6 +8,12 @@
 
 以下按增量从新到旧记录；每项证明范围和当时尚未完成的事项独立保留，整体验收仍以 #40 为准。
 
+### 移动端原生入口与密钥库接线增量
+
+- 修复仅有桌面 binary／缺少移动依赖的实现缺口：同一 Rust 库提供桌面及移动入口；iOS 选择原生 Keychain，Android 通过固定的具名 Keystore 加密存储访问原 device／onboarding／recovery 账号，不调用全局默认／mock 存储。原 CSP、来源／权限边界和秘密格式保持；加入移动 CLI 命令、CI 编译检查及通用原生 App 提示。
+- [当前回归与编译证据](evidence/v020-app-mobile-native-validation.json)：原生核心 **21/21**、共享壳来源保护 **1/1**、Android／iOS 密钥库交叉编译检查、最终桌面执行文件、前端构建及格式／CI YAML 解析通过。SDK／Move／Go 未计作全量重跑，运行中的原 `.app`／授权请求没有被替换。
+- 当前缺完整 Xcode／Java／Android NDK，无本轮 APK／IPA；移动壳完整构建、真实 OS 凭据／锁定／备份、安装后 IPC／扫码／配对／签名、手机沟通审批及蜂窝网络均未验收。完整 #40 保持进行中，详见[移动实现与证明范围](v020-app-mobile-native.md)。
+
 ### 原生 Host 进程重启与目录读取修复增量
 
 - runner 对 `snapshot_changed` 最多进行六次有界只读查询，保留来源、RPC、上下文及持续变化的拒绝，不重签／重发。保留其他严格读取的导入，修复首次改动导致的构建回归。

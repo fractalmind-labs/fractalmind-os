@@ -23,9 +23,11 @@ mod onboarding;
 mod pairing;
 mod records;
 mod recovery;
+mod storage;
 pub use onboarding::{OnboardingCreated, OnboardingPublic};
 pub use records::RecordRequest;
 pub use recovery::{RecoveryImported, RecoveryPrepared, RecoveryPublic};
+use storage as keyring;
 
 pub const DEVICE_SERVICE: &str = "org.fractalmind.app.device";
 const MAGIC: &[u8; 4] = b"FMD1";

@@ -271,8 +271,8 @@ export default function AgentCheckpointView({
               ) : (
                 <p className="muted">
                   {t(
-                    "在桌面 App 中可读取链上加密结果。",
-                    "Read encrypted chain results in the desktop App.",
+                    "在 FractalMind 原生 App 中可读取链上加密结果。",
+                    "Read encrypted chain results in the native FractalMind App.",
                   )}
                 </p>
               )}

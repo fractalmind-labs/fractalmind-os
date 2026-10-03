@@ -1,0 +1,191 @@
+{
+  "recordedAt": "2026-10-03T10:08:54.463906+00:00",
+  "baselineCommit": "9454530",
+  "sourceHashes": {
+    ".github/workflows/ci.yml": "cc2437d949ac3f4efe3a7232626188a6a3b27361a9919936c016d70b55041a2d",
+    "apps/fractalmind-app/package.json": "2232ed0bfe469f20681c370c3e4351bcb53e3bd188159a529e98dde5384d2e55",
+    "apps/fractalmind-app/native/Cargo.toml": "bfcdbf647dc14d2b7235f58fea35fc98ee4fb3bccdbcb1a9b09a72410885f434",
+    "apps/fractalmind-app/native/Cargo.lock": "240056621bf7eafbfbf76945a888cca182f700f7b5702f9016d765431d11a1d7",
+    "apps/fractalmind-app/native/src/lib.rs": "5f2d053f489433edfd07b090cd8f4e94638d059321514c27c40ff2ed810a6860",
+    "apps/fractalmind-app/native/src/storage.rs": "803292646967f1c0ea1d420db5ab659150660a8e16d2ef991ed7948defd1c4d7",
+    "apps/fractalmind-app/src-tauri/Cargo.toml": "98d7acccae957e1eacf74782f40460d1522a91cfa25c555c4418ece27a677b5a",
+    "apps/fractalmind-app/src-tauri/Cargo.lock": "555f52ab228c18f9816c27a6b191b266bf78e60beccffbb7ccbc88d27179357d",
+    "apps/fractalmind-app/src-tauri/src/main.rs": "10b93433ae33b6483e88be9fdab5f1d5ef32ebd15bcebec4bc3ccc64db34facf",
+    "apps/fractalmind-app/src-tauri/src/lib.rs": "09e9181609d934bf2d2227fd60d48906dfff0cac3ab5a9870b46e4a1cbbb047c",
+    "apps/fractalmind-app/src-tauri/tauri.conf.json": "85644ab929a8ade544d80a63297be7c23a2481cb222908d8c9bd1780bdebfce6",
+    "apps/fractalmind-app/src-tauri/capabilities/device-main.json": "c77ac58bb8cf55d64247447c347a0be525f190730d3288648819d399721d2df0",
+    "apps/fractalmind-app/src-tauri/permissions/device.toml": "ce5148039744e77cbe96492512b24a70717951826244b838e9cf32b9149c97f6",
+    "apps/fractalmind-app/src/native-device.ts": "f5ce5ae423f3e78c660bc7b360cbd54a44f675711712c2dd310f6e80e955cb0d",
+    "apps/fractalmind-app/src/CreateIdentity.tsx": "53d67efb72cb7b00d3a0b4c47fd84b015cce2008fdd6bcc8d3ce5f1727bb7274",
+    "apps/fractalmind-app/src/DeviceAccess.tsx": "e174eba132a20423019a9adf9b9ba19b6e118a73caa3453a21f8ec0ef09d086c",
+    "apps/fractalmind-app/src/HandoverFlow.tsx": "26400ab2ec886573eaac8f342a0798bac1bb00b9d2d10c177e8632e894cdf7f2",
+    "apps/fractalmind-app/src/PrivateRecordView.tsx": "78c9399b4dc6626ac2e5cf05a97f4c9607fdeee7700ceb85fbeb6a3ebfcfde71",
+    "apps/fractalmind-app/src/AgentCheckpointView.tsx": "18d90d734073889408e65a40340cbae4f617fc1e68d914b59a86fe932437ccfd"
+  },
+  "checks": [
+    {
+      "kind": "macOS native core regression",
+      "passed": 21,
+      "command": "cargo test --manifest-path native/Cargo.toml",
+      "log": {
+        "path": "/tmp/fm-mobile-vault-macos-r1.log",
+        "sha256": "ae2410846fc93da433d398156a63c24b5a2b516feeec8dbbd098a1beb0f460c3",
+        "exitCode": 0,
+        "text": "    Updating crates.io index\n     Locking 25 packages to latest compatible versions\n      Adding aho-corasick v1.1.5\n      Adding android-native-keyring-store v1.0.0\n      Adding cesu8 v1.1.0\n      Adding combine v4.6.8\n      Adding jni v0.21.1\n      Adding jni-sys v0.3.1\n      Adding jni-sys v0.4.1\n      Adding jni-sys-macros v0.4.1\n      Adding keyring-core v1.0.0\n      Adding ndk-context v0.1.1\n      Adding regex v1.13.1\n      Adding regex-automata v0.4.18\n      Adding regex-syntax v0.8.11\n      Adding same-file v1.0.6\n      Adding walkdir v2.5.0\n      Adding winapi-util v0.1.11\n      Adding windows-sys v0.45.0\n      Adding windows-targets v0.42.2\n      Adding windows_aarch64_gnullvm v0.42.2\n      Adding windows_aarch64_msvc v0.42.2\n      Adding windows_i686_gnu v0.42.2\n      Adding windows_i686_msvc v0.42.2\n      Adding windows_x86_64_gnu v0.42.2\n      Adding windows_x86_64_gnullvm v0.42.2\n      Adding windows_x86_64_msvc v0.42.2\n   Compiling fractalmind-device-vault v0.2.0 (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/native)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.58s\n     Running unittests src/lib.rs (native/target/debug/deps/fractalmind_device_vault-ca7ea70502d344b0)\n\nrunning 21 tests\ntest node_command::tests::direct_commands_require_their_scope_and_fixed_instance ... ok\ntest keyrings::tests::sharing_rejects_global_and_overlapping_multi_organization_secrets ... ok\ntest keyrings::tests::recovery_rotates_owned_organizations_independently_and_retains_history ... ok\ntest node_command::tests::foreign_key_and_alternate_json_cannot_obtain_a_signature ... ok\ntest keyrings::tests::malformed_history_duplicate_sources_and_version_overflow_fail_closed ... ok\ntest node_command::tests::actual_signing_is_raw_ed25519_for_exact_sdk_bytes ... ok\ntest onboarding::tests::recovery_domains_are_network_bounded_and_reproducible ... ok\ntest command_results::tests::invalid_requests_fail_before_os_key_access ... ok\ntest records::tests::record_encryption_is_randomized_bounded_and_context_authenticated ... ok\ntest records::tests::rejects_noncanonical_versions_and_unbounded_inputs ... ok\ntest recovery::tests::malformed_native_recovery_entries_and_unknown_sources_are_rejected ... ok\ntest recovery::tests::recovery_code_is_exact_network_bound_and_reproduces_public_identity ... ok\ntest tests::isolated_vault_never_accepts_production_profile_names ... ok\ntest tests::malformed_keys_are_not_replaced ... ok\ntest tests::profiles_are_bounded_native_accounts ... ok\ntest tests::proofs_are_scoped_and_expire ... ok\ntest onboarding::tests::key_wrap_rejects_low_order_keys_and_is_randomized ... ok\ntest command_results::tests::delivery_uses_only_the_command_key_and_a_distinct_authenticated_domain ... ok\ntest node_command::tests::malformed_scopes_domains_ids_budget_and_expiry_never_sign ... ok\ntest command_results::tests::host_receives_only_scoped_derivative_with_authenticated_wrap_context ... ok\ntest pairing::tests::shares_only_selected_organization_with_exact_version_and_bound_recipient ... ok\n\ntest result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s\n\n   Doc-tests fractalmind_device_vault\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n"
+      }
+    },
+    {
+      "kind": "shared shell source-origin protection",
+      "passed": 1,
+      "command": "cargo test --manifest-path src-tauri/Cargo.toml",
+      "log": {
+        "path": "/tmp/fm-mobile-shell-macos-r1.log",
+        "sha256": "7b5e99cd8ce1d6fe2b9c7ed2f50d693250ac7c218d174c7725bc761f75da2036",
+        "exitCode": 0,
+        "text": "    Updating crates.io index\n     Locking 2 packages to latest compatible versions\n      Adding android-native-keyring-store v1.0.0\n      Adding keyring-core v1.0.0\n   Compiling objc2-exception-helper v0.1.1\n   Compiling objc2 v0.6.4\n   Compiling fractalmind-device-vault v0.2.0 (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/native)\n   Compiling objc2-foundation v0.3.2\n   Compiling wry v0.57.0\n   Compiling block2 v0.6.2\n   Compiling objc2-core-foundation v0.3.2\n   Compiling dispatch2 v0.3.1\n   Compiling objc2-quartz-core v0.3.2\n   Compiling objc2-app-kit v0.3.2\n   Compiling objc2-web-kit v0.3.2\n   Compiling tao v0.37.1\n   Compiling window-vibrancy v0.8.1\n   Compiling muda v0.20.0\n   Compiling tauri-runtime v2.12.1\n   Compiling tauri-runtime-wry v2.12.1\n   Compiling tauri v2.12.1\n   Compiling fractalmind-app v0.2.0 (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 20.57s\n     Running unittests src/lib.rs (src-tauri/target/debug/deps/fractalmind_app_lib-9bc7ee9dcdac4ab4)\n\nrunning 1 test\ntest tests::only_app_origins_can_use_native_commands ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running unittests src/main.rs (src-tauri/target/debug/deps/fractalmind_app-d751b8d24bce7df5)\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n   Doc-tests fractalmind_app_lib\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n"
+      }
+    },
+    {
+      "kind": "Android vault actual target type check",
+      "command": "cargo check --locked --manifest-path native/Cargo.toml --target aarch64-linux-android",
+      "log": {
+        "path": "/tmp/fm-mobile-vault-android-r1.log",
+        "sha256": "1297e239ee864a6d4a80b9e0dd3902861b7db3287fe0c63b7f74f050c63bf077",
+        "exitCode": 0,
+        "text": " Downloading crates ...\n  Downloaded ndk-context v0.1.1\n  Downloaded jni-sys v0.3.1\n  Downloaded jni-sys v0.4.1\n  Downloaded cesu8 v1.1.0\n  Downloaded jni-sys-macros v0.4.1\n  Downloaded combine v4.6.8\n  Downloaded android-native-keyring-store v1.0.0\n  Downloaded keyring-core v1.0.0\n  Downloaded jni v0.21.1\n   Compiling proc-macro2 v1.0.107\n   Compiling libc v0.2.189\n   Compiling unicode-ident v1.0.26\n   Compiling quote v1.0.47\n    Checking cfg-if v1.0.5\n   Compiling version_check v0.9.5\n    Checking typenum v1.20.1\n    Checking subtle v2.6.1\n   Compiling serde_core v1.0.229\n    Checking memchr v2.8.3\n   Compiling semver v1.0.28\n   Compiling thiserror v1.0.69\n   Compiling zerocopy v0.8.59\n   Compiling rustc_version v0.4.1\n    Checking bytes v1.12.1\n   Compiling generic-array v0.14.7\n   Compiling serde v1.0.229\n   Compiling zmij v1.0.23\n   Compiling curve25519-dalek v4.1.3\n   Compiling jni-sys v0.3.1\n   Compiling serde_json v1.0.151\n    Checking getrandom v0.2.17\n    Checking cpufeatures v0.2.17\n    Checking rand_core v0.6.4\n    Checking aho-corasick v1.1.5\n    Checking once_cell v1.21.4\n   Compiling thiserror v2.0.21\n    Checking itoa v1.0.18\n    Checking log v0.4.34\n    Checking regex-syntax v0.8.11\n    Checking opaque-debug v0.3.1\n    Checking regex-automata v0.4.18\n    Checking tracing-core v0.1.36\n   Compiling syn v2.0.119\n   Compiling syn v3.0.6\n    Checking crypto-common v0.1.7\n    Checking block-buffer v0.10.4\n    Checking digest v0.10.7\n    Checking inout v0.1.4\n    Checking cipher v0.4.4\n    Checking universal-hash v0.5.1\n    Checking polyval v0.6.2\n    Checking combine v4.6.8\n    Checking signature v2.2.0\n    Checking either v1.18.0\n    Checking pin-project-lite v0.2.17\n    Checking cesu8 v1.1.0\n    Checking bytemuck v1.25.2\n    Checking byteorder v1.5.0\n    Checking itertools v0.14.0\n    Checking roaring v0.11.5\n    Checking ed25519 v2.2.3\n    Checking ghash v0.5.1\n    Checking ctr v0.9.2\n   Compiling serde_derive v1.0.229\n   Compiling thiserror-impl v2.0.21\n    Checking aes v0.8.4\n    Checking sha2 v0.10.9\n    Checking blake2 v0.10.6\n    Checking hmac v0.12.1\n    Checking aead v0.5.2\n    Checking regex v1.13.1\n    Checking keyring-core v1.0.0\n    Checking serde_with v3.24.0\n    Checking bytestring v1.5.1\n    Checking ndk-context v0.1.1\n    Checking bnum v0.13.0\n    Checking winnow v0.7.15\n    Checking bs58 v0.5.1\n    Checking base64 v0.22.1\n    Checking ppv-lite86 v0.2.21\n    Checking base64ct v1.8.3\n    Checking rand_chacha v0.3.1\n    Checking hkdf v0.12.4\n    Checking fs2 v0.4.3\n    Checking rand v0.8.8\n    Checking hex v0.4.3\n   Compiling thiserror-impl v1.0.69\n   Compiling zeroize_derive v1.5.0\n   Compiling jni-sys-macros v0.4.1\n   Compiling tracing-attributes v0.1.31\n    Checking jni-sys v0.4.1\n    Checking zeroize v1.9.0\n    Checking tracing v0.1.44\n    Checking aes-gcm v0.10.3\n    Checking ed25519-dalek v2.2.0\n    Checking x25519-dalek v2.0.1\n    Checking jni v0.21.1\n    Checking bcs v0.1.6\n    Checking sui-sdk-types v0.4.0\n    Checking android-native-keyring-store v1.0.0\n    Checking fractalmind-device-vault v0.2.0 (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/native)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 32.26s\n"
+      }
+    },
+    {
+      "kind": "iOS vault actual target type check",
+      "command": "cargo check --locked --manifest-path native/Cargo.toml --target aarch64-apple-ios",
+      "log": {
+        "path": "/tmp/fm-mobile-vault-ios-r1.log",
+        "sha256": "0ed047888554fafde3bab9612a9538f4904e23e897faaeb67eb59305b28649d1",
+        "exitCode": 0,
+        "text": "   Compiling libc v0.2.189\n    Checking cfg-if v1.0.5\n    Checking typenum v1.20.1\n    Checking subtle v2.6.1\n   Compiling serde_core v1.0.229\n   Compiling generic-array v0.14.7\n   Compiling zerocopy v0.8.59\n    Checking core-foundation-sys v0.8.7\n   Compiling syn v2.0.119\n   Compiling syn v3.0.6\n   Compiling serde v1.0.229\n   Compiling zmij v1.0.23\n   Compiling thiserror v1.0.69\n   Compiling curve25519-dalek v4.1.3\n   Compiling serde_derive v1.0.229\n    Checking getrandom v0.2.17\n    Checking rand_core v0.6.4\n    Checking cpufeatures v0.2.17\n    Checking opaque-debug v0.3.1\n   Compiling serde_json v1.0.151\n   Compiling zeroize_derive v1.5.0\n    Checking crypto-common v0.1.7\n    Checking block-buffer v0.10.4\n    Checking inout v0.1.4\n    Checking digest v0.10.7\n    Checking cipher v0.4.4\n    Checking universal-hash v0.5.1\n   Compiling thiserror-impl v1.0.69\n    Checking polyval v0.6.2\n    Checking security-framework-sys v2.17.0\n    Checking zeroize v1.9.0\n    Checking core-foundation v0.9.4\n    Checking memchr v2.8.3\n    Checking either v1.18.0\n    Checking bytemuck v1.25.2\n    Checking byteorder v1.5.0\n    Checking itoa v1.0.18\n    Checking bytes v1.12.1\n    Checking bitflags v2.13.2\n    Checking signature v2.2.0\n    Checking ed25519 v2.2.3\n    Checking security-framework v2.11.1\n    Checking bytestring v1.5.1\n    Checking roaring v0.11.5\n    Checking itertools v0.14.0\n    Checking ghash v0.5.1\n    Checking aes v0.8.4\n    Checking ctr v0.9.2\n    Checking sha2 v0.10.9\n    Checking blake2 v0.10.6\n    Checking hmac v0.12.1\n    Checking serde_with v3.24.0\n    Checking aead v0.5.2\n    Checking bnum v0.13.0\n    Checking bs58 v0.5.1\n    Checking log v0.4.34\n    Checking winnow v0.7.15\n    Checking base64ct v1.8.3\n    Checking keyring v3.6.3\n    Checking hkdf v0.12.4\n    Checking ppv-lite86 v0.2.21\n    Checking fs2 v0.4.3\n    Checking rand_chacha v0.3.1\n    Checking base64 v0.22.1\n    Checking rand v0.8.8\n    Checking hex v0.4.3\n    Checking aes-gcm v0.10.3\n    Checking x25519-dalek v2.0.1\n    Checking ed25519-dalek v2.2.0\n    Checking bcs v0.1.6\n    Checking sui-sdk-types v0.4.0\n    Checking fractalmind-device-vault v0.2.0 (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/native)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.34s\n"
+      }
+    },
+    {
+      "kind": "final desktop executable and frontend assets",
+      "command": "npm run desktop:build -- --debug",
+      "log": {
+        "path": "/tmp/fm-mobile-shell-desktop-build-r2.log",
+        "sha256": "52180a55323b8d3de6b80904bf27cb3fb126d3211c1b07dda96bf333739b2741",
+        "exitCode": 0,
+        "text": "\n> @fractalmind-labs/fractalmind-app@0.2.0 desktop:build\n> tauri build --no-bundle --debug\n\n        Info Looking up installed tauri packages to check mismatched versions...\n     Running beforeBuildCommand `npm run build`\n\n> @fractalmind-labs/fractalmind-app@0.2.0 build\n> tsc --noEmit && vite build\n\nvite v7.3.6 building client environment for production...\ntransforming...\nnode_modules/@scure/base/index.js (2:0): A comment\n\n\"// Freeze the result of a thunk. `/* @__PURE__ */ freeze(() => expr)` keeps the whole\"\n\nin \"node_modules/@scure/base/index.js\" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.\n../../protocols/fractalmind-protocol/sdk/node_modules/@scure/base/index.js (2:0): A comment\n\n\"// Freeze the result of a thunk. `/* @__PURE__ */ freeze(() => expr)` keeps the whole\"\n\nin \"../../protocols/fractalmind-protocol/sdk/node_modules/@scure/base/index.js\" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.\n✓ 696 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                                        0.51 kB │ gzip:   0.32 kB\ndist/assets/index-qUct96CR.css                        23.75 kB │ gzip:   6.05 kB\ndist/assets/MessageOkrContext--On9P4km.js              1.53 kB │ gzip:   0.76 kB\ndist/assets/record-pointer-BJTG1zAx.js                 1.91 kB │ gzip:   0.84 kB\ndist/assets/browser-transaction-journal-CqLta42G.js    2.10 kB │ gzip:   0.85 kB\ndist/assets/native-onboarding-DI2JL5i2.js              2.36 kB │ gzip:   0.91 kB\ndist/assets/private-records-DJzOvw7A.js                3.51 kB │ gzip:   1.28 kB\ndist/assets/PrivateRecordView-DnfDOjay.js              3.98 kB │ gzip:   2.05 kB\ndist/assets/DeviceAccess-pDMR7Bnc.js                   4.06 kB │ gzip:   1.95 kB\ndist/assets/onboarding-B3kCHhek.js                     6.07 kB │ gzip:   2.11 kB\ndist/assets/execution-results-DkaafSs5.js              7.06 kB │ gzip:   2.55 kB\ndist/assets/coordinator-read-YJtLvrKp.js               7.33 kB │ gzip:   2.63 kB\ndist/assets/AgentCheckpointView-C-zU3ihx.js            7.95 kB │ gzip:   3.56 kB\ndist/assets/host-signatures-DoMmy45u.js                8.37 kB │ gzip:   3.07 kB\ndist/assets/host-admission-BlT-XuDF.js                 8.54 kB │ gzip:   3.14 kB\ndist/assets/agent-import-CUMfc5yU.js                   9.80 kB │ gzip:   3.21 kB\ndist/assets/okr-intervention-wuuj4NjL.js              10.28 kB │ gzip:   3.53 kB\ndist/assets/HostObservations-BZ_fLNTC.js              10.73 kB │ gzip:   4.62 kB\ndist/assets/CreateIdentity-D8rc7AkS.js                11.20 kB │ gzip:   4.55 kB\ndist/assets/AgentImportFlow-D82s5n4i.js               12.69 kB │ gzip:   5.11 kB\ndist/assets/CreateOkr-Cf7zX-yP.js                     14.28 kB │ gzip:   5.95 kB\ndist/assets/OkrIntervention-Cwo0unVC.js               14.71 kB │ gzip:   6.05 kB\ndist/assets/OkrProjection-CVaZBSG9.js                 18.86 kB │ gzip:   7.37 kB\ndist/assets/OkrAutonomy-DbkGWDX1.js                   19.84 kB │ gzip:   7.32 kB\ndist/assets/HostAccess-CitlGhWh.js                    19.90 kB │ gzip:   7.42 kB\ndist/assets/OkrContinuation-DPTUHC_M.js               22.71 kB │ gzip:   7.90 kB\ndist/assets/okr-delivery-journal-BQuMhZit.js          22.82 kB │ gzip:   6.60 kB\ndist/assets/PairingFlow-D0tnTwBF.js                   25.88 kB │ gzip:   8.85 kB\ndist/assets/RecoverIdentity-CR3Lyal5.js               25.95 kB │ gzip:   8.72 kB\ndist/assets/OkrVerification-CkAkzHCw.js               26.01 kB │ gzip:   8.84 kB\ndist/assets/DirectAgentConversation-1pkPHODt.js       27.00 kB │ gzip:   9.38 kB\ndist/assets/HandoverFlow-B3fORsyC.js                  52.38 kB │ gzip:  15.46 kB\ndist/assets/okr-draft-BRBcl1gN.js                     54.44 kB │ gzip:  14.79 kB\ndist/assets/Transaction-DnzR0ADb.js                   62.02 kB │ gzip:  18.26 kB\ndist/assets/device-identity-YVXxGv9N.js               78.38 kB │ gzip:  27.85 kB\ndist/assets/index-D1kVpQQ_.js                        957.12 kB │ gzip: 269.00 kB\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n✓ built in 1.39s\n   Compiling fractalmind-app v0.2.0 (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 7.10s\n       Built application at: /Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/fractalmind-app\n"
+      }
+    },
+    {
+      "kind": "current frontend types and browser build",
+      "command": "npm run build",
+      "log": {
+        "path": "/tmp/fm-mobile-app-browser-build-r1.log",
+        "sha256": "6ec8cf78ca4980db94bf454adf9124ff7056e8102cd78a0f07b4548e545c3789",
+        "exitCode": 0,
+        "text": "\n> @fractalmind-labs/fractalmind-app@0.2.0 build\n> tsc --noEmit && vite build\n\nvite v7.3.6 building client environment for production...\ntransforming...\nnode_modules/@scure/base/index.js (2:0): A comment\n\n\"// Freeze the result of a thunk. `/* @__PURE__ */ freeze(() => expr)` keeps the whole\"\n\nin \"node_modules/@scure/base/index.js\" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.\n../../protocols/fractalmind-protocol/sdk/node_modules/@scure/base/index.js (2:0): A comment\n\n\"// Freeze the result of a thunk. `/* @__PURE__ */ freeze(() => expr)` keeps the whole\"\n\nin \"../../protocols/fractalmind-protocol/sdk/node_modules/@scure/base/index.js\" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.\n✓ 696 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                                        0.85 kB │ gzip:   0.45 kB\ndist/assets/index-qUct96CR.css                        23.75 kB │ gzip:   6.05 kB\ndist/assets/MessageOkrContext--On9P4km.js              1.53 kB │ gzip:   0.76 kB\ndist/assets/record-pointer-BJTG1zAx.js                 1.91 kB │ gzip:   0.84 kB\ndist/assets/browser-transaction-journal-CqLta42G.js    2.10 kB │ gzip:   0.85 kB\ndist/assets/native-onboarding-DI2JL5i2.js              2.36 kB │ gzip:   0.91 kB\ndist/assets/private-records-DJzOvw7A.js                3.51 kB │ gzip:   1.28 kB\ndist/assets/PrivateRecordView-DnfDOjay.js              3.98 kB │ gzip:   2.05 kB\ndist/assets/DeviceAccess-pDMR7Bnc.js                   4.06 kB │ gzip:   1.95 kB\ndist/assets/onboarding-B3kCHhek.js                     6.07 kB │ gzip:   2.11 kB\ndist/assets/execution-results-DkaafSs5.js              7.06 kB │ gzip:   2.55 kB\ndist/assets/coordinator-read-YJtLvrKp.js               7.33 kB │ gzip:   2.63 kB\ndist/assets/AgentCheckpointView-C-zU3ihx.js            7.95 kB │ gzip:   3.56 kB\ndist/assets/host-signatures-DoMmy45u.js                8.37 kB │ gzip:   3.07 kB\ndist/assets/host-admission-BlT-XuDF.js                 8.54 kB │ gzip:   3.14 kB\ndist/assets/agent-import-CUMfc5yU.js                   9.80 kB │ gzip:   3.21 kB\ndist/assets/okr-intervention-wuuj4NjL.js              10.28 kB │ gzip:   3.53 kB\ndist/assets/HostObservations-BZ_fLNTC.js              10.73 kB │ gzip:   4.62 kB\ndist/assets/CreateIdentity-D8rc7AkS.js                11.20 kB │ gzip:   4.55 kB\ndist/assets/AgentImportFlow-D82s5n4i.js               12.69 kB │ gzip:   5.11 kB\ndist/assets/CreateOkr-Cf7zX-yP.js                     14.28 kB │ gzip:   5.95 kB\ndist/assets/OkrIntervention-Cwo0unVC.js               14.71 kB │ gzip:   6.05 kB\ndist/assets/OkrProjection-CVaZBSG9.js                 18.86 kB │ gzip:   7.37 kB\ndist/assets/OkrAutonomy-DbkGWDX1.js                   19.84 kB │ gzip:   7.32 kB\ndist/assets/HostAccess-CitlGhWh.js                    19.90 kB │ gzip:   7.42 kB\ndist/assets/OkrContinuation-DPTUHC_M.js               22.71 kB │ gzip:   7.90 kB\ndist/assets/okr-delivery-journal-BQuMhZit.js          22.82 kB │ gzip:   6.60 kB\ndist/assets/PairingFlow-D0tnTwBF.js                   25.88 kB │ gzip:   8.85 kB\ndist/assets/RecoverIdentity-CR3Lyal5.js               25.95 kB │ gzip:   8.72 kB\ndist/assets/OkrVerification-CkAkzHCw.js               26.01 kB │ gzip:   8.84 kB\ndist/assets/DirectAgentConversation-1pkPHODt.js       27.00 kB │ gzip:   9.38 kB\ndist/assets/HandoverFlow-B3fORsyC.js                  52.38 kB │ gzip:  15.46 kB\ndist/assets/okr-draft-BRBcl1gN.js                     54.44 kB │ gzip:  14.79 kB\ndist/assets/Transaction-DnzR0ADb.js                   62.02 kB │ gzip:  18.26 kB\ndist/assets/device-identity-YVXxGv9N.js               78.38 kB │ gzip:  27.85 kB\ndist/assets/index-D1kVpQQ_.js                        957.12 kB │ gzip: 269.00 kB\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n✓ built in 1.44s\n"
+      }
+    },
+    {
+      "kind": "CI YAML syntax and mobile conditional steps",
+      "log": {
+        "path": "/tmp/fm-mobile-ci-yaml-r1.log",
+        "sha256": "70844c89d80feec3c30e462881dd2e9a2627527f98ccf65b81cef910d230c681",
+        "exitCode": 0,
+        "text": "[[\"Install mobile Rust targets\", \"matrix.os == 'macos-latest'\"], [\"Check mobile native credential providers\", \"matrix.os == 'macos-latest'\"]]\n"
+      }
+    }
+  ],
+  "desktopBinary": {
+    "path": "apps/fractalmind-app/src-tauri/target/debug/fractalmind-app",
+    "sha256": "0dd3b1cd9b14dc5605f3a3f88d47ed6888b6459f919dd34a226031d738e7b7ca"
+  },
+  "prerequisites": {
+    "path": "/tmp/fm-mobile-native-prerequisites-r1.json",
+    "sha256": "674f82343d7aa322e0b77262dbc3fc02643ae52d4d0ceecd580ea84bf9d71a0e",
+    "report": {
+      "recordedAt": "2026-10-03T09:58:22.519814+00:00",
+      "checks": [
+        {
+          "command": [
+            "xcode-select",
+            "-p"
+          ],
+          "exitCode": 0,
+          "stdout": "/Library/Developer/CommandLineTools\n",
+          "stderr": ""
+        },
+        {
+          "command": [
+            "xcrun",
+            "--sdk",
+            "iphonesimulator",
+            "--show-sdk-path"
+          ],
+          "exitCode": 1,
+          "stdout": "",
+          "stderr": "xcrun: error: SDK \"iphonesimulator\" cannot be located\nxcrun: error: SDK \"iphonesimulator\" cannot be located\nxcrun: error: unable to lookup item 'Path' in SDK 'iphonesimulator'\n"
+        },
+        {
+          "command": [
+            "xcrun",
+            "simctl",
+            "list",
+            "devices",
+            "available"
+          ],
+          "exitCode": 72,
+          "stdout": "",
+          "stderr": "xcrun: error: unable to find utility \"simctl\", not a developer tool or in PATH\n"
+        },
+        {
+          "command": [
+            "/usr/libexec/java_home"
+          ],
+          "exitCode": 1,
+          "stdout": "",
+          "stderr": "The operation couldn’t be completed. Unable to locate a Java Runtime.\nPlease visit http://www.java.com for information on installing Java.\n\n"
+        },
+        {
+          "kind": "Android NDK installation",
+          "path": "/Users/yubing/Library/Android/sdk/ndk",
+          "exists": false
+        }
+      ]
+    }
+  },
+  "reviewedProviderSources": [
+    {
+      "package": "android-native-keyring-store",
+      "version": "1.0.0",
+      "archiveSha256": "48c6349ddff23194f8fdce2ea8849380f5a4868c1648965b70e801e104cba9b3"
+    },
+    {
+      "package": "keyring-core",
+      "version": "1.0.0",
+      "archiveSha256": "fb1e621458ca9c51aa110bd0339d4751a056b9576bf1253aee1aa560dda0fc9d"
+    }
+  ],
+  "limits": {
+    "mobileVaultTypeChecksPassed": true,
+    "mobileFullShellBuilt": false,
+    "androidKeystoreExecuted": false,
+    "iosKeychainExecuted": false,
+    "nativePhoneIPCVerified": false,
+    "phonePairingSigningApprovalVerified": false,
+    "physicalPhoneVerified": false,
+    "cellularNetworkVerified": false,
+    "phoneBackupLockPolicyVerified": false,
+    "apkIpaProduced": false,
+    "remoteCIExecuted": false,
+    "originalNativeGUIRestarted": false,
+    "originalNativeBundleOverwritten": false,
+    "sdkMoveGoFullSuitesRerun": false
+  },
+  "notes": [
+    "desktop OS providers and account formats retained; Android binds a named store directly, not a global mock/default registry",
+    "Tauri Mobile initializes NDK context; actual JNI startup remains unverified until a mobile App is built and installed",
+    "mobile type checks do not execute OS credentials or link/install the full App",
+    "no user credentials, private keys or recovery codes accessed or recorded",
+    "Mac app bundle awaiting the original system authorization was not rebuilt or restarted"
+  ]
+}
