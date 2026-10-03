@@ -24,6 +24,8 @@ import CreateOkr from "./CreateOkr";
 import {
   canComposeAfterPermissionReceipt,
   canComposeAfterSettledRun,
+  canComposeAfterSupersededDecision,
+  canComposeAfterResolvedOriginal,
   directConversationState,
 } from "./direct-conversation-state";
 import { NativeDirectDraft, type DirectDraft } from "./direct-draft";
@@ -92,6 +94,7 @@ export default function DirectAgentConversation({
   managed,
   initialMessageId,
   entryLabel,
+  autoOpen = false,
   onChanged,
   t,
 }: {
@@ -100,6 +103,7 @@ export default function DirectAgentConversation({
   managed: Agent;
   initialMessageId?: string;
   entryLabel?: string;
+  autoOpen?: boolean;
   onChanged: () => void;
   t: (zh: string, en: string) => string;
 }) {
@@ -241,6 +245,13 @@ export default function DirectAgentConversation({
       if (initialMessageId) await select(initialMessageId);
     });
   }
+  useEffect(() => {
+    if (!autoOpen) return;
+    // The queue owns an independent dialog, outside its refresh/filter rows.
+    // Defer opening so development effect cleanup cannot start a stale read.
+    const timer = setTimeout(begin, 0);
+    return () => clearTimeout(timer);
+  }, [autoOpen]);
   function draftFailure(e: unknown) {
     return e && typeof e === "object" && "code" in e
       ? String(e.code)
@@ -531,7 +542,7 @@ export default function DirectAgentConversation({
     if (operation.kind === "message") {
       for (const original of originals) {
         if (
-          !canComposeAfterSettledRun(
+          !canComposeAfterResolvedOriginal(
             description,
             selected,
             { ...original, status: "unknown", journalSynced: false },
@@ -601,7 +612,7 @@ export default function DirectAgentConversation({
       ctx.assertLive();
       for (const original of originals) {
         if (
-          !canComposeAfterSettledRun(
+          !canComposeAfterResolvedOriginal(
             description,
             selected,
             { ...original, status: "unknown", journalSynced: false },
@@ -654,6 +665,10 @@ export default function DirectAgentConversation({
         ctx.assertLive();
         setSelected(view);
         if (operation.kind === "capability") await useCapability(result);
+      } else if (operation.kind === "permission" && selected) {
+        // A pre-renewal cached null Run cannot prove an old decision is now
+        // superseded without execution; read its original directory again.
+        await select(selected.message.id);
       }
       onChanged();
     }
@@ -821,10 +836,25 @@ export default function DirectAgentConversation({
     BigInt(now),
   );
   const independentMessage =
-    independentPermissionMessage || independentSettledRunMessage;
+    independentPermissionMessage ||
+    independentSettledRunMessage ||
+    canComposeAfterSupersededDecision(
+      description,
+      selected,
+      receipt,
+      BigInt(now),
+    );
+  const supersededDecision = unresolved.some((original) =>
+    canComposeAfterSupersededDecision(
+      description,
+      selected,
+      { ...original, status: "unknown", journalSynced: false },
+      BigInt(now),
+    ),
+  );
   const blockedOriginals = unresolved.filter(
     (original) =>
-      !canComposeAfterSettledRun(
+      !canComposeAfterResolvedOriginal(
         description,
         selected,
         { ...original, status: "unknown", journalSynced: false },
@@ -834,9 +864,11 @@ export default function DirectAgentConversation({
   const decisionUnknown = Boolean(m && hasUnresolvedDecision(unresolved, m.id));
   return (
     <>
-      <button className="secondary" onClick={begin}>
-        {entryLabel ?? t("与 Agent 沟通", "Contact Agent")}
-      </button>
+      {!autoOpen && (
+        <button className="secondary" onClick={begin}>
+          {entryLabel ?? t("与 Agent 沟通", "Contact Agent")}
+        </button>
+      )}
       <dialog
         ref={dialog}
         className="okr-create-dialog handover-dialog direct-agent-dialog"
@@ -1461,6 +1493,14 @@ export default function DirectAgentConversation({
                 {t(
                   "原交易回执仍不可查，摘要和技术记录继续保留。已独立读取此消息的原 Run 成功结果、核验解密原 Host 结果并确认预算结算，可另发新消息；这不会重试或重新投递原请求。",
                   "The original transaction receipt remains unavailable; its digest and journal remain. This message's original Run succeeded, its original result was verified and decrypted, and its budget claim is settled. You can compose a distinct new message; the original request is never retried or redelivered.",
+                )}
+              </p>
+            )}
+            {supersededDecision && (
+              <p role="status">
+                {t(
+                  "原决定的交易回执仍未知并保留。已核验原消息与审批没有产生 Run，且同一权限的链上新版本已替代旧版本；仅可另发新消息，不能重试或执行旧审批。",
+                  "The original decision receipt remains unknown and retained. Its exact message and approval produced no Run, and a newer on-chain version of the same permission superseded them. Only a distinct new message is available; the old approval cannot be retried or executed.",
                 )}
               </p>
             )}

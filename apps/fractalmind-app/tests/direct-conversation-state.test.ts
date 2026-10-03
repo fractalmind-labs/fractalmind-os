@@ -4,6 +4,8 @@ import type { DirectMessageView, NativeDirectAgent } from "../src/direct-agent";
 import {
   canComposeAfterPermissionReceipt,
   canComposeAfterSettledRun,
+  canComposeAfterSupersededDecision,
+  canComposeAfterResolvedOriginal,
   directConversationState,
 } from "../src/direct-conversation-state";
 import type { SelfPayTransactionOutcome } from "@fractalmind-labs/fractalmind-sdk";
@@ -442,6 +444,195 @@ test("a successful but foreign message, Run or claim and stale current permissio
     canComposeAfterSettledRun(f.description, f.selected, null, 2000n),
     false,
   );
+});
+
+function supersededDecisionFixture() {
+  const f = settledRunFixture();
+  f.description.permission!.org_id = "organization";
+  f.description.permission!.version = "5";
+  f.selected.message.boundary_hash = new Array(32).fill(1);
+  f.selected.message.expires_at_ms = "1000";
+  f.selected.result = null;
+  f.selected.claim = null;
+  f.selected.readPermission = {
+    id: f.description.permission!.id,
+    version: "5",
+  };
+  Object.assign(f.selected.approval!, {
+    id: "original-approval",
+    org_id: "organization",
+    managed_agent: "agent",
+    human_generation: "1",
+    action: "status",
+    budget_amount: "0",
+    boundary_hash: new Array(32).fill(1),
+    state: 1,
+  });
+  f.receipt.requestId = "direct-decision:message:true";
+  return f;
+}
+
+test("a renewed permission supersedes an exact expired old decision with no Run without resolving its receipt", () => {
+  const f = supersededDecisionFixture(),
+    original = structuredClone(f.receipt);
+  assert.equal(
+    canComposeAfterSupersededDecision(
+      f.description,
+      f.selected,
+      f.receipt,
+      2000n,
+    ),
+    true,
+  );
+  assert.equal(
+    canComposeAfterResolvedOriginal(
+      f.description,
+      f.selected,
+      f.receipt,
+      2000n,
+    ),
+    true,
+  );
+  assert.equal(
+    directConversationState(f.description, f.selected, 2000n).approvalFresh,
+    false,
+  );
+  assert.deepEqual(f.receipt, original);
+});
+
+test("superseding a decision never substitutes another permission/message or ignores an original Run or expired authority", () => {
+  const cases: Array<
+    [string, (f: ReturnType<typeof supersededDecisionFixture>) => void]
+  > = [
+    [
+      "different request",
+      (f) => {
+        f.receipt.requestId = "direct-decision:other-message:true";
+      },
+    ],
+    [
+      "unknown Run",
+      (f) => {
+        f.receipt.requestId = "direct-run:message";
+      },
+    ],
+    [
+      "unknown message creation",
+      (f) => {
+        f.receipt.requestId = "direct-message:token";
+      },
+    ],
+    [
+      "permission did not advance",
+      (f) => {
+        f.description.permission!.version = "4";
+      },
+    ],
+    [
+      "pre-renewal cached no Run",
+      (f) => {
+        f.selected.readPermission.version = "4";
+      },
+    ],
+    [
+      "unknown no-Run read source",
+      (f) => {
+        f.selected.readPermission = undefined as any;
+      },
+    ],
+    [
+      "different permission",
+      (f) => {
+        f.description.permission!.id = "other-permission";
+      },
+    ],
+    [
+      "different approval message",
+      (f) => {
+        f.selected.approval!.message_id = "other-message";
+      },
+    ],
+    [
+      "different approval version",
+      (f) => {
+        f.selected.approval!.permission_version = "3";
+      },
+    ],
+    [
+      "different approval boundary",
+      (f) => {
+        f.selected.approval!.boundary_hash = new Array(32).fill(2);
+      },
+    ],
+    [
+      "consumed approval",
+      (f) => {
+        f.selected.approval!.state = 3;
+      },
+    ],
+    [
+      "existing original Run",
+      (f) => {
+        f.selected.result = settledRunFixture().selected.result;
+      },
+    ],
+    [
+      "unreadable Run coverage",
+      (f) => {
+        f.selected.result = undefined as any;
+      },
+    ],
+    [
+      "existing claim",
+      (f) => {
+        f.selected.claim = settledRunFixture().selected.claim;
+      },
+    ],
+    [
+      "missing approval",
+      (f) => {
+        f.selected.approval = null;
+      },
+    ],
+    [
+      "permission expired",
+      (f) => {
+        f.description.permission!.expires_at_ms = "1999";
+      },
+    ],
+    [
+      "permission revoked",
+      (f) => {
+        f.description.permission!.revoked = true;
+      },
+    ],
+    [
+      "member expired",
+      (f) => {
+        f.description.member.expires_at_ms = "1999";
+      },
+    ],
+    [
+      "device authority expired",
+      (f) => {
+        f.description.authorityExpiresAtMs = "1999";
+      },
+    ],
+  ];
+  for (const [name, mutate] of cases) {
+    const f = supersededDecisionFixture();
+    mutate(f);
+    assert.equal(
+      canComposeAfterSupersededDecision(
+        f.description,
+        f.selected,
+        f.receipt,
+        2000n,
+      ),
+      false,
+      name,
+    );
+  }
 });
 
 test("conversation mutation entries use fresh managed/member and permission versions", () => {

@@ -92,6 +92,67 @@ export function canComposeAfterSettledRun(
   );
 }
 
+/** A separately renewed permission can supersede an exact old decision that
+ * never produced a Run. The old receipt remains unknown; only a distinct new
+ * message under the current permission becomes possible. */
+export function canComposeAfterSupersededDecision(
+  description: Description | null,
+  selected: DirectMessageView | null,
+  receipt: SelfPayTransactionOutcome | null,
+  now: bigint,
+) {
+  if (
+    receipt?.status !== "unknown" ||
+    !selected?.approval ||
+    ![
+      `direct-decision:${selected.message.id}:true`,
+      `direct-decision:${selected.message.id}:false`,
+    ].includes(receipt.requestId) ||
+    !directConversationState(description, null, now).current
+  )
+    return false;
+  // message() has resolved the exact original Sui message/approval directory.
+  // Missing or unreadable Run coverage throws there; only a known null is safe.
+  const { message, approval } = selected,
+    p = description!.permission!;
+  return Boolean(
+    selected.result === null &&
+      selected.claim === null &&
+      selected.readPermission?.id === p.id &&
+      selected.readPermission.version === p.version &&
+      message.permission_id === p.id &&
+      message.org_id === p.org_id &&
+      BigInt(message.permission_version) < BigInt(p.version) &&
+      message.managed_agent === description!.managed.id &&
+      message.managed_version === description!.managed.version &&
+      message.membership_id === description!.member.id &&
+      message.human_generation === description!.humanGeneration &&
+      approval.permission_id === message.permission_id &&
+      approval.permission_version === message.permission_version &&
+      approval.message_id === message.id &&
+      approval.org_id === message.org_id &&
+      approval.managed_agent === message.managed_agent &&
+      approval.managed_version === message.managed_version &&
+      approval.human_generation === message.human_generation &&
+      approval.action === message.action &&
+      approval.budget_amount === message.budget_amount &&
+      sameBytes(approval.boundary_hash, message.boundary_hash) &&
+      [0, 1, 2].includes(approval.state),
+  );
+}
+
+export function canComposeAfterResolvedOriginal(
+  description: Description | null,
+  selected: DirectMessageView | null,
+  receipt: SelfPayTransactionOutcome | null,
+  now: bigint,
+) {
+  return (
+    canComposeAfterSettledRun(description, selected, receipt, now) ||
+    canComposeAfterSupersededDecision(description, selected, receipt, now)
+  );
+}
+
 /** Hide invalid mutation entries using the fresh description, including when
  * a historical queue row was opened. The controller still independently checks
  * all authority, directories and source versions before quoting and signing. */

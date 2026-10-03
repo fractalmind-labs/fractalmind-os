@@ -668,6 +668,9 @@ export class NativeDirectAgent {
       throw new DirectAgentError("state_changed");
     return {
       message: m,
+      // The read's pinned current permission, distinct from the immutable
+      // message's historical version. Needed to prove no Run after renewal.
+      readPermission: { id: s.permission.id, version: s.permission.version },
       request,
       approval: links.approval,
       result,

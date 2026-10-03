@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ChainReadSession } from "./chain";
-import type { ConnectionProfile, OrganizationSnapshot } from "./domain";
+import type { Agent, ConnectionProfile, OrganizationSnapshot } from "./domain";
 import DirectAgentConversation from "./DirectAgentConversation";
 import {
   directApprovalStatus,
@@ -60,15 +60,25 @@ export default function DirectApprovalQueue({
     [failed, setFailed] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [showAll, setShowAll] = useState(false);
+  const [conversation, setConversation] = useState<{
+    managed: Agent;
+    messageId: string;
+    opening: number;
+  } | null>(null);
+  const opening = useRef(0);
   const epoch = useRef(0);
   const scope = JSON.stringify([
     profile,
     snapshot.organization.objectId,
     snapshot.agents,
   ]);
+  const loadedScope = useRef(scope);
   useEffect(() => {
     const generation = ++epoch.current;
-    setQueue(null);
+    if (loadedScope.current !== scope) {
+      loadedScope.current = scope;
+      setQueue(null);
+    }
     setFailed(false);
     if (!reachable || !snapshot.agents.value) return;
     let loading = false;
@@ -290,22 +300,23 @@ export default function DirectApprovalQueue({
                       )}
                     </dd>
                   </dl>
-                  <DirectAgentConversation
-                    profile={profile}
-                    organizationId={snapshot.organization.objectId}
-                    managed={row.managed}
-                    initialMessageId={row.message.id}
-                    entryLabel={
-                      status === "pending"
-                        ? t("查看请求并决定", "Review request & decide")
-                        : t(
-                            "查看原消息与结果",
-                            "View original message & result",
-                          )
+                  <button
+                    className="secondary"
+                    onClick={() =>
+                      setConversation({
+                        managed: row.managed,
+                        messageId: row.message.id,
+                        opening: ++opening.current,
+                      })
                     }
-                    onChanged={changed}
-                    t={t}
-                  />
+                  >
+                    {status === "pending"
+                      ? t("查看请求并决定", "Review request & decide")
+                      : t(
+                          "查看原消息与结果",
+                          "View original message & result",
+                        )}
+                  </button>
                   <details>
                     <summary>{t("链上来源标识", "Chain source IDs")}</summary>
                     <p>
@@ -331,6 +342,22 @@ export default function DirectApprovalQueue({
             })}
           </div>
         </>
+      )}
+      {conversation && (
+        <DirectAgentConversation
+          key={conversation.opening}
+          profile={profile}
+          organizationId={snapshot.organization.objectId}
+          managed={
+            snapshot.agents.value?.find(
+              (agent) => agent.id === conversation.managed.id,
+            ) ?? conversation.managed
+          }
+          initialMessageId={conversation.messageId}
+          autoOpen
+          onChanged={changed}
+          t={t}
+        />
       )}
     </section>
   );
