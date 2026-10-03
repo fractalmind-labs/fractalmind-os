@@ -56,3 +56,5 @@ envd --config sentinel.yaml
 生产构造路径使用注入的独立测试凭据库和合成观察子进程。验证了真实链授权、加密结果写入、重启后同一身份和结果复用、控制请求保持 QUEUED、取消后释放预算。观察进程仅调用一次。Human 恢复后 6 份终态正文可解密，10 个选定检查点与 5 份预算总账一致。此测试不证明实际 Agent 自主执行、原生存储与链路联合部署或云端 Host 已部署。
 
 [原生 Host 存储证据](evidence/v020-host-native-storage.json) 单独记录 macOS Keychain 创建、重载和拒绝覆盖的真实测试。Linux/Windows 的跨平台编译不等于原生凭据库运行验收。全量 Go 回归和 Host/执行器 `-race` 检测通过。完整 v0.2.0 仍按 [验收映射](fractalmind-app-v020-validation.md) 推进。
+
+后续[实际原生 Host 进程重启](v020-native-host-process-restart.md)把生产 macOS Keychain、原成员资格和 ChainExecutionStore 联合验证：两 KR 与独立验收后原进程退出，新进程加载同一身份、解密原 Sui 结果，文件／原 Run／预算不变；独立撤销后当前连接与原命令拒绝。此增量为 **12 项检查、17 笔 App 确认交易**，生成的测试凭据已清理；没有证明运行中重启后的继续执行、Coordinator 重连、物理重启或云端部署。

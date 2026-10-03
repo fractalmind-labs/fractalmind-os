@@ -8,6 +8,13 @@
 
 以下按增量从新到旧记录；每项证明范围和当时尚未完成的事项独立保留，整体验收仍以 #40 为准。
 
+### 原生 Host 进程重启与目录读取修复增量
+
+- runner 对 `snapshot_changed` 最多进行六次有界只读查询，保留来源、RPC、上下文及持续变化的拒绝，不重签／重发。保留其他严格读取的导入，修复首次改动导致的构建回归。
+- [实际 OS＋生产 Host R3](evidence/v020-native-host-process-restart-localnet.json)：**12 项检查、17 笔 App 确认交易，退出 0**。两 KR 与独立 Human 验收后，原 Host 退出，新 PID 从生产 Keychain／工厂重载同一签名与加密身份、原成员和原 Sui 结果；新实例 ID 不同，原 Run／文件／预算 **6／0** 不变。已完成命令拒绝；另行撤销成员后当前连接和原命令均拒绝，测试凭据清理确认。
+- [回归／独立零广播复查](evidence/v020-native-host-process-restart-validation.json)：App **234/234**、类型／构建、夹具严格类型及 Go 三包 race 通过；原目录 **3 个成功 Run／0 个未结控制执行**、已验收 OKR、预算 **6／0** 和原成员撤销保持。[R1／R2 与清理](evidence/v020-native-host-process-restart-prior.json)保留快照变化／漏导入；R1 原排队另行取消结算，R2 未创建继续 Run，两轮成员与凭据均独立清理，无原请求重放。
+- 尚未证明运行中重启后继续、Coordinator 重连／新实例重绑定、物理重启、云 Host、真实模型或手机。安装 UI／清缓存、系统授权和公共升级等 #40 门禁保持；原生包未随本次 runner 修复重建，其他历史 QUEUED Run 未清理。详见[方法与证明范围](v020-native-host-process-restart.md)。
+
 ### 升级部署上的独立设备配对增量
 
 - 基于 `716eb0f` 复用 main R8 升级部署，补齐配对夹具的当前／原包配置和精确链核对；每次提交前保存公开 pending 摘要，失败与清理结果保留，已有报告／进度路径拒绝覆盖启动。

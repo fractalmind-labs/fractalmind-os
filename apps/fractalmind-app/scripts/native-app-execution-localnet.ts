@@ -1,5 +1,6 @@
 /** Actual native App controllers + localnet + production envd/Coordinator.
- * Human keys use the OS vault; Go Host keys use an isolated memory provider.
+ * Human keys use the OS vault; Host keys use an isolated memory provider by
+ * default and the production OS vault for the explicit Host restart scenario.
  * No installed UI, cloud machine or general model-planning claim. */
 import assert from "node:assert/strict";
 import {
@@ -9,7 +10,15 @@ import {
 } from "node:child_process";
 import { randomUUID, createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
-import { access, readFile, writeFile } from "node:fs/promises";
+import {
+  access,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import { resolve } from "node:path";
 import { requestSuiFromFaucetV2 } from "@mysten/sui/faucet";
 import { fromBase64, toBase64 } from "@mysten/sui/utils";
@@ -24,6 +33,7 @@ import {
   type DirectMessageContext,
   type NativeFileOkrPlan,
   type SelfPayTransactionOutcome,
+  type SignedNodeCommand,
 } from "@fractalmind-labs/fractalmind-sdk";
 import { NativeDeviceSigner, type NativeInvoke } from "../src/native-device";
 import { NativeRecoverySigner } from "../src/native-onboarding";
@@ -66,6 +76,15 @@ assert.ok(
 const output = process.argv[3],
   progress = output + ".progress.json";
 const humanSequence = process.argv.slice(4).includes("--human-sequence");
+const hostRestart = process.argv.slice(4).includes("--host-restart");
+assert.ok(
+  !hostRestart ||
+    (process.argv
+      .slice(4)
+      .every((arg) => ["--host-restart", "--human-sequence"].includes(arg)) &&
+      humanSequence),
+  "Native Host restart uses its own complete two-KR Human sequence",
+);
 const directPermission = process.argv.slice(4).includes("--direct-permission");
 const directDispatch = process.argv.slice(4).includes("--direct-dispatch");
 const directApp = process.argv.slice(4).includes("--direct-app");
@@ -146,6 +165,7 @@ assert.ok(
     .every((a) =>
       [
         "--human-sequence",
+        "--host-restart",
         "--direct-permission",
         "--direct-dispatch",
         "--direct-app",
@@ -183,6 +203,15 @@ const checks: string[] = [],
 let coreForVisibility: ChainReadSession["sdk"]["client"]["client"] | undefined;
 let hostProcess: ChildProcessWithoutNullStreams | undefined;
 let hostCompleted = false;
+let nativeHostWorkspace = "";
+const nativeHostProfile = hostRestart
+  ? `test-native-restart-${randomUUID()}`
+  : "";
+let restartCommand: SignedNodeCommand | undefined;
+let restartProcess: ChildProcessWithoutNullStreams | undefined;
+let restartCompleted = false;
+let hostExitWait: Promise<void> | undefined;
+let restartExitWait: Promise<void> | undefined;
 let modelServer: Server | undefined;
 let modelAPIBase = "";
 let modelRequests = 0;
@@ -333,7 +362,11 @@ async function save(complete = false) {
           installedUIVerified: false,
           envdDispatchVerified:
             state.phase === "validated_native_app_real_envd",
-          hostKeyStorage: "isolated memory provider",
+          hostKeyStorage: hostRestart
+            ? "native macOS Host Keychain, isolated generated profile"
+            : "isolated memory provider",
+          actualHostProcessRestartVerified:
+            state.hostProcessRestartVerified === true,
           realCoordinatorDeviceHTTP: true,
           humanFinalAcceptanceVerified: state.humanAcceptanceVerified === true,
           directPermissionProtocolVerified:
@@ -662,6 +695,14 @@ try {
     binary,
     "Compile the explicit live Go helper and pass FM_ENVD_JOIN_CLI_BIN",
   );
+  if (hostRestart) {
+    assert.equal(process.platform, "darwin");
+    nativeHostWorkspace = await realpath(
+      await mkdtemp("/tmp/fm-native-host-restart-"),
+    );
+    state = { ...state, nativeHostProfile, nativeHostWorkspace };
+    await save();
+  }
   const child = spawn(binary, ["-test.run=^TestHostJoinLiveCLI$", "-test.v"], {
     env: {
       ...process.env,
@@ -685,7 +726,11 @@ try {
   });
   hostProcess = child;
   type Hello = {
+    format: string;
+    profile: string;
     host_address: string;
+    signing_public_key: string;
+    encryption_public_key: string;
     coordinator_endpoint: string;
     coordinator_public_key: string;
   };
@@ -746,6 +791,7 @@ try {
       else no(error);
     });
   });
+  hostExitWait = done;
   void done.catch(() => {});
   child.stdin.write(
     JSON.stringify({
@@ -760,6 +806,12 @@ try {
       ChainIdentifier: deployment.chain.chainIdentifier,
       JournalRoot: output + ".journal",
       LiveConnection: true,
+      ...(hostRestart
+        ? {
+            NativeProfile: nativeHostProfile,
+            NativeWorkspace: nativeHostWorkspace,
+          }
+        : {}),
     }) + "\n",
   );
   const hello: Hello = await phases.get("FM_ENVD_HOST_PUBLIC")!.promise;
@@ -1264,7 +1316,14 @@ try {
   let preparedNextCapability = "";
   const transport: typeof fetch = async (...args) => {
     transportCalls++;
-    if (String(args[0]).endsWith("/command")) deliveries++;
+    if (String(args[0]).endsWith("/command")) {
+      deliveries++;
+      if (hostRestart && !restartCommand) {
+        const input = JSON.parse(String(args[1]!.body));
+        assert.equal(input.node_command.action, "assign");
+        restartCommand = input.node_command;
+      }
+    }
     return fetch(...args);
   };
   const runner = new NativeOkrRunner(
@@ -3801,6 +3860,156 @@ try {
     };
     await save();
   }
+  let restartPhases: Map<string, Promise<any>> | undefined;
+  if (hostRestart) {
+    assert.ok(restartCommand && nativeHostWorkspace);
+    assert.equal(state.humanAcceptanceVerified, true);
+    const snapshotFiles = async () =>
+      await Promise.all(
+        plan.krs
+          .flatMap((kr) => kr.files)
+          .map(async (file) => {
+            const path = resolve(nativeHostWorkspace, file.path);
+            const info = await stat(path, { bigint: true });
+            return {
+              path: file.path,
+              bytes: info.size.toString(),
+              mtimeNs: info.mtimeNs.toString(),
+              sha256: createHash("sha256")
+                .update(await readFile(path))
+                .digest("hex"),
+            };
+          }),
+      );
+    const filesBefore = await snapshotFiles();
+    child.stdin.end("HOST_RESTART\n");
+    await done;
+    state = {
+      ...state,
+      firstHostExitedSuccessfully: true,
+      firstHostPid: child.pid,
+    };
+    await save();
+    const next = spawn(
+      binary,
+      ["-test.run=^TestHostNativeRestartLive$", "-test.v"],
+      {
+        env: { ...process.env, FM_HOST_NATIVE_RESTART_LIVE: "1" },
+        stdio: ["pipe", "pipe", "pipe"],
+      },
+    );
+    restartProcess = next;
+    const listeners = new Map<
+      string,
+      {
+        promise: Promise<any>;
+        resolve: (value: any) => void;
+        reject: (error: Error) => void;
+      }
+    >();
+    restartPhases = new Map();
+    for (const name of [
+      "FM_NATIVE_HOST_RESTART_RESULT",
+      "FM_NATIVE_HOST_REVOKED",
+    ]) {
+      let resolve!: (value: any) => void, reject!: (error: Error) => void;
+      const promise = new Promise<any>((yes, no) => {
+        resolve = yes;
+        reject = no;
+      });
+      void promise.catch(() => {});
+      listeners.set(name, { promise, resolve, reject });
+      restartPhases.set(name, promise);
+    }
+    let frames = "",
+      diagnostics = "";
+    next.stdout.on("data", (part) => {
+      frames += String(part);
+      let end: number;
+      while ((end = frames.indexOf("\n")) >= 0) {
+        const line = frames.slice(0, end);
+        frames = frames.slice(end + 1);
+        for (const [name, listener] of listeners)
+          if (line.startsWith(name + " ")) {
+            try {
+              listener.resolve(JSON.parse(line.slice(name.length + 1)));
+            } catch {
+              listener.reject(new Error("Malformed native restart phase"));
+            }
+          }
+        if (line.includes("host_restart_live_test.go:"))
+          diagnostics += line + "\n";
+      }
+    });
+    next.stderr.on("data", (part) => {
+      diagnostics = (diagnostics + String(part)).slice(-4000);
+    });
+    restartExitWait = new Promise<void>((yes, no) => {
+      next.once("error", no);
+      next.once("exit", (code) => {
+        restartCompleted = true;
+        const error = new Error(
+          `Native restart helper exited (${code}): ${diagnostics}`,
+        );
+        for (const listener of listeners.values()) listener.reject(error);
+        if (code === 0) yes();
+        else no(error);
+      });
+    });
+    void restartExitWait.catch(() => {});
+    next.stdin.write(
+      JSON.stringify({
+        Mode: "query",
+        NativeProfile: nativeHostProfile,
+        NativeWorkspace: nativeHostWorkspace,
+        PackageID: deployment.packageId,
+        OriginalPackageID: deployment.originalPackageId,
+        OkrPackageID: deployment.okrPackageId,
+        DirectPackageID: deployment.directPackageId,
+        OriginalOkrPackageID: deployment.originalOkrPackageId,
+        OriginalDirectPackageID: deployment.originalDirectPackageId,
+        RegistryID: deployment.registryId,
+        OrganizationID: organizationId,
+        ChainIdentifier: deployment.chain.chainIdentifier,
+        MembershipID: membershipId,
+        ExecutionID: settled.id,
+        ResultRecordID: settled.result_record,
+        ResultDigest: result.transactionDigest,
+        ResultHash: createHash("sha256")
+          .update(JSON.stringify(result.response!.result))
+          .digest("hex"),
+        FirstInstanceID: restartCommand.target.agent_id,
+        OriginalCommand: restartCommand,
+        ExpectedPublic: {
+          format: hello.format,
+          profile: hello.profile,
+          host_address: hello.host_address,
+          signing_public_key: hello.signing_public_key,
+          encryption_public_key: hello.encryption_public_key,
+        },
+      }) + "\n",
+    );
+    const restored = await restartPhases.get("FM_NATIVE_HOST_RESTART_RESULT")!;
+    assert.notEqual(restored.pid, child.pid);
+    assert.equal(restored.host.host_address, hello.host_address);
+    assert.equal(restored.membershipId, membershipId);
+    assert.notEqual(restored.instanceId, restored.originalInstanceId);
+    assert.deepEqual(await sdk.nodeExecution.getExecution(settled.id), settled);
+    assert.deepEqual(await snapshotFiles(), filesBefore);
+    const budgetAfter = await sdk.okr.getBudget(okrId);
+    assert.equal(budgetAfter.spent, 6n);
+    assert.equal(budgetAfter.reserved, 0n);
+    state = {
+      ...state,
+      hostProcessRestartVerified: true,
+      nativeHostRestart: restored,
+      nativeHostFilesUnchanged: true,
+    };
+    checks.push(
+      "actual original Host process exits; a fresh process loads the same production OS signing/encryption identity, reconstructs its exact live membership and decrypts the original Sui result, exposes a fresh process-bound instance and refuses completed OKR execution without changing the original Run, files or spent budget",
+    );
+    await save();
+  }
   const revokeQuote = await finalAdmission.prepare(
     { kind: "revoke-member", targetId: membershipId },
     randomUUID(),
@@ -3814,20 +4023,35 @@ try {
     () => sdk.host.getMembership(membershipId),
     (r) => r.revoked,
   );
-  child.stdin.write("REVOKED\n");
-  state = {
-    ...state,
-    connectionRevocation: await phases.get("FM_CHAIN_CONNECTION_RESULT")!
-      .promise,
-  };
-  child.stdin.end("DONE\n");
-  await done;
+  if (hostRestart) {
+    state = { ...state, nativeHostMembershipRevoked: true };
+    await save();
+    restartProcess!.stdin.end("REVOKED\n");
+    state = {
+      ...state,
+      nativeHostRestartRevocation: await restartPhases!.get(
+        "FM_NATIVE_HOST_REVOKED",
+      )!,
+    };
+    await restartExitWait;
+  } else {
+    child.stdin.write("REVOKED\n");
+    state = {
+      ...state,
+      connectionRevocation: await phases.get("FM_CHAIN_CONNECTION_RESULT")!
+        .promise,
+    };
+    child.stdin.end("DONE\n");
+    await done;
+  }
   assert.equal(
     (await finalReader.read(settled.id, managedAgentId)).recordId,
     settled.result_record,
   );
   checks.push(
-    "actual on-chain Host revocation rejects Coordinator routing and worker heartbeat; currently authorized Human can still read the immutable original historical result",
+    hostRestart
+      ? "actual original membership revocation is rechecked by the fresh native Host process and rejects its original command; the current Human still reads the immutable result"
+      : "actual on-chain Host revocation rejects Coordinator routing and worker heartbeat; currently authorized Human can still read the immutable original historical result",
   );
   state = {
     ...state,
@@ -3852,8 +4076,43 @@ try {
   if (hostProcess && !hostCompleted) {
     hostProcess.stdin.destroy();
     hostProcess.kill("SIGTERM");
+    await hostExitWait?.catch(() => {});
   }
-  if (created) {
+  if (restartProcess && !restartCompleted) {
+    restartProcess.stdin.destroy();
+    restartProcess.kill("SIGTERM");
+    await restartExitWait?.catch(() => {});
+  }
+  const nativeCleanupAllowed =
+    !hostRestart || state.nativeHostMembershipRevoked === true;
+  if (hostRestart && nativeCleanupAllowed) {
+    const removed = spawnSync(
+      process.env.FM_ENVD_JOIN_CLI_BIN!,
+      ["-test.run=^TestHostNativeRestartLive$", "-test.v"],
+      {
+        env: { ...process.env, FM_HOST_NATIVE_RESTART_LIVE: "1" },
+        input:
+          JSON.stringify({
+            Mode: "remove",
+            NativeProfile: nativeHostProfile,
+            NativeWorkspace: nativeHostWorkspace,
+          }) + "\n",
+        encoding: "utf8",
+        timeout: 30000,
+      },
+    );
+    state.nativeHostCredentialsRemoved =
+      removed.status === 0 &&
+      removed.stdout.includes('FM_NATIVE_HOST_CLEANUP {"removed":true}');
+    await save();
+    assert.equal(
+      state.nativeHostCredentialsRemoved,
+      true,
+      "native Host cleanup failed; original profile preserved in report",
+    );
+    await rm(nativeHostWorkspace, { recursive: true });
+  }
+  if (created && nativeCleanupAllowed) {
     backupCode = "";
     for (const target of recoveryProfiles) {
       request("remove", { profile: target });
@@ -3865,6 +4124,12 @@ try {
     request("remove");
     cleanupConfirmed = true;
     assert.throws(() => request("public"), /NotInitialized/);
+  } else if (created && hostRestart) {
+    state = {
+      ...state,
+      nativeHostCredentialsRetainedForOriginalRequests: true,
+      retainedHumanProfile: profile,
+    };
   }
   await save();
 }

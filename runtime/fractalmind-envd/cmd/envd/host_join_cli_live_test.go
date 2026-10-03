@@ -64,9 +64,10 @@ func (c *cliDropReceipt) ExecuteHostJoin(ctx context.Context, q sui.HostJoinQuot
 	return sui.HostJoinReceipt{}, errors.New("injected loss after actual broadcast")
 }
 
-// Generated memory keys are injected only into this test binary. Interaction,
+// The default fixture injects generated memory keys; the explicit restart
+// scenario uses an isolated profile in the production OS store. Interaction,
 // runner, signing, gRPC and the disk journal are the production paths. This does
-// not claim OS credential store, hidden TTY or physical/cloud Host acceptance.
+// not claim hidden TTY or physical/cloud Host acceptance.
 func TestHostJoinLiveCLI(t *testing.T) {
 	if os.Getenv("FM_HOST_JOIN_LIVE_CLI") != "1" {
 		t.Skip("explicit real localnet fixture only")
@@ -86,19 +87,32 @@ func TestHostJoinLiveCLI(t *testing.T) {
 	var input struct {
 		PackageID, OkrPackageID, DirectPackageID, RegistryID, OrganizationID, ChainIdentifier, JournalRoot string
 		OriginalPackageID, OriginalOkrPackageID, OriginalDirectPackageID                                   string
+		NativeProfile, NativeWorkspace                                                                     string
 		LiveConnection                                                                                     bool
 	}
 	if json.Unmarshal(frame, &input) != nil || input.JournalRoot == "" {
 		t.Fatal("invalid public fixture configuration")
 	}
-	store := &cliFixtureStore{}
-	defer func() { clear(store.data) }()
-	keys, err := hostidentity.Initialize(ctx, store, "test-cli", t.TempDir())
+	memoryStore := &cliFixtureStore{}
+	defer func() { clear(memoryStore.data) }()
+	var store hostidentity.Store = memoryStore
+	keyProfile := "test-cli"
+	if input.NativeProfile != "" {
+		if err := validateNativeRestartFixture(input.NativeProfile, input.NativeWorkspace); err != nil {
+			t.Fatal(err)
+		}
+		store, err = hostidentity.OpenNativeStore()
+		if err != nil {
+			t.Fatal(err)
+		}
+		keyProfile = input.NativeProfile
+	}
+	keys, err := hostidentity.Initialize(ctx, store, keyProfile, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer keys.Close()
-	public, err := keys.Public("test-cli")
+	public, err := keys.Public(keyProfile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +163,7 @@ func TestHostJoinLiveCLI(t *testing.T) {
 	if directOrigin == "" {
 		directOrigin = input.DirectPackageID
 	}
-	options := hostjoin.Options{Network: "localnet", Chain: input.ChainIdentifier, PackageID: input.PackageID, TypesPackageID: original, RegistryID: input.RegistryID, ExpectedOrganization: input.OrganizationID, Profile: "test-cli", Name: "envd CLI fixture", GasBudget: 200000000, JournalRoot: input.JournalRoot}
+	options := hostjoin.Options{Network: "localnet", Chain: input.ChainIdentifier, PackageID: input.PackageID, TypesPackageID: original, RegistryID: input.RegistryID, ExpectedOrganization: input.OrganizationID, Profile: keyProfile, Name: "envd CLI fixture", GasBudget: 200000000, JournalRoot: input.JournalRoot}
 	factory := func(original string) (hostjoin.Authority, error) {
 		return nodecommand.NewChainAuthorityResolverForPackage(base, input.PackageID, original)
 	}
@@ -221,6 +235,9 @@ func TestHostJoinLiveCLI(t *testing.T) {
 		var nativeAdapter *runtimeadapter.Executor
 		if os.Getenv("FM_ENVD_NATIVE_DISCOVERY") == "1" {
 			workspace := t.TempDir()
+			if input.NativeProfile != "" {
+				workspace = input.NativeWorkspace
+			}
 			if os.Getenv("FM_ENVD_NATIVE_APP_EXECUTION") == "1" {
 				// The App reviews an existing docs directory as its narrow scope.
 				// Creating this isolated fixture root does not grant tool rights.
@@ -236,6 +253,9 @@ func TestHostJoinLiveCLI(t *testing.T) {
 			nativeAdapter = runtimeadapter.NewExecutor(nil, adapter)
 			if os.Getenv("FM_ENVD_NATIVE_EXECUTION") == "1" || os.Getenv("FM_ENVD_HANDOVER_APPROVAL") == "1" {
 				nativeConfig = chainRuntimeConfig()
+				if input.NativeProfile != "" {
+					nativeConfig.Identity.KeyProfile = input.NativeProfile
+				}
 				nativeConfig.SUI.Network = "localnet"
 				nativeConfig.SUI.ProtocolPackageID = input.PackageID
 				nativeConfig.SUI.ProtocolOriginalPackageID = original
@@ -522,6 +542,10 @@ func TestHostJoinLiveCLI(t *testing.T) {
 		// No new secrets are read: the fixture waits only for the App's public
 		// revocation signal, then observes the actual current chain pointer.
 		line, err := bufio.NewReaderSize(os.Stdin, 32).ReadString('\n')
+		if input.NativeProfile != "" && err == nil && line == "HOST_RESTART\n" {
+			fmt.Printf("FM_NATIVE_HOST_EXIT {}\n")
+			return // Deferred cleanup closes the real process's runtime and sockets.
+		}
 		if err != nil || line != "REVOKED\n" {
 			t.Fatal("expected public revocation signal")
 		}

@@ -30,7 +30,7 @@ import {
   type NativeInvoke,
 } from "./native-device";
 import { PrivateRecords } from "./private-records";
-import { readRecordPointer } from "./record-pointer";
+import { readRecordPointer, readStableRecordPointer } from "./record-pointer";
 
 export class NativeOkrRunnerError extends Error {
   constructor(
@@ -166,11 +166,12 @@ export class NativeOkrRunner {
       },
       discoverTicket: async (logicalId) => {
         assertActive();
-        const found = await readRecordPointer(
+        const found = await readStableRecordPointer(
           chain,
           organizationId,
           "checkpoint",
           logicalId,
+          assertActive,
         );
         assertActive();
         return {

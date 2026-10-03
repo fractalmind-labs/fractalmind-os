@@ -6,7 +6,10 @@ import {
   deriveDynamicFieldID,
   normalizeSuiAddress as id,
 } from "@mysten/sui/utils";
-import { readRecordPointer } from "../src/record-pointer";
+import {
+  readRecordPointer,
+  readStableRecordPointer,
+} from "../src/record-pointer";
 import type { ChainReadSession } from "../src/chain";
 const org = id("1"),
   pkg = id("2"),
@@ -27,6 +30,7 @@ function fixture() {
     rootAbsent = false,
     error: unknown,
     swapped = false,
+    churning = false,
     wrongType = false;
   const pointer = { record_id: record, revision: "1", key_version: "1" };
   const chain = {
@@ -66,7 +70,11 @@ function fixture() {
                     value: {
                       type: `${pkg}::product_record::RecordIndex`,
                       bcs: Index.serialize({
-                        key_version: swapped && reads > 1 ? "2" : "1",
+                        key_version: churning
+                          ? String(reads)
+                          : swapped && reads > 1
+                            ? "2"
+                            : "1",
                         records: { id: table, size: "2" },
                       }).toBytes(),
                     },
@@ -94,17 +102,20 @@ function fixture() {
   return {
     chain,
     pointer,
+    reads: () => reads,
     change: (v: {
       absent?: boolean;
       rootAbsent?: boolean;
       error?: unknown;
       swapped?: boolean;
+      churning?: boolean;
       wrongType?: boolean;
     }) => {
       absent = v.absent ?? absent;
       rootAbsent = v.rootAbsent ?? rootAbsent;
       error = v.error ?? error;
       swapped = v.swapped ?? swapped;
+      churning = v.churning ?? churning;
       wrongType = v.wrongType ?? wrongType;
     },
   };
@@ -153,4 +164,58 @@ test("key/table changes during present or absent lookup invalidate the snapshot"
       /snapshot_changed/,
     );
   }
+});
+
+test("runner rereads a changed directory and returns only a stable current snapshot", async () => {
+  const f = fixture();
+  f.change({ swapped: true });
+  let guards = 0;
+  const found = await readStableRecordPointer(
+    f.chain,
+    org,
+    "checkpoint",
+    "review",
+    () => {
+      guards++;
+    },
+  );
+  assert.equal(found.keyVersion, "2");
+  assert.equal(found.pointer!.record_id, record);
+  assert.equal(f.reads(), 4);
+  assert.ok(guards >= 3);
+});
+
+test("runner directory retry retains source errors and stops when its context is lost", async () => {
+  for (const change of [
+    { rootAbsent: true },
+    { wrongType: true },
+    { error: new Error("rpc unavailable") },
+  ]) {
+    const f = fixture();
+    f.change(change);
+    await assert.rejects(
+      readStableRecordPointer(f.chain, org, "checkpoint", "review", () => {}),
+    );
+    assert.ok(f.reads() <= 1);
+  }
+  const f = fixture();
+  f.change({ swapped: true });
+  let guards = 0;
+  await assert.rejects(
+    readStableRecordPointer(f.chain, org, "checkpoint", "review", () => {
+      if (++guards === 2) throw new Error("context closed");
+    }),
+    /context closed/,
+  );
+  assert.equal(f.reads(), 2);
+});
+
+test("sustained runner directory churn remains unavailable after bounded read-only attempts", async () => {
+  const f = fixture();
+  f.change({ churning: true });
+  await assert.rejects(
+    readStableRecordPointer(f.chain, org, "checkpoint", "review", () => {}),
+    /snapshot_changed/,
+  );
+  assert.equal(f.reads(), 12);
 });

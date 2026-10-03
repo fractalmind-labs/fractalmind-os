@@ -97,3 +97,38 @@ export async function readRecordPointer(
     throw new RecordPointerError("snapshot_changed");
   return { keyVersion: before.key_version, pointer };
 }
+
+/** A runner's post-submit directory can become visible between its two reads.
+ * Repeat only that read on a changed snapshot, with a live caller guard. A
+ * missing root, wrong type, transport failure or sustained churn stays an error.
+ * This helper never signs, submits or delivers a command. */
+export async function readStableRecordPointer(
+  chain: ChainReadSession,
+  organizationId: string,
+  kind: ProductRecordKind,
+  logicalId: string,
+  assertActive: () => void,
+) {
+  for (let attempt = 0; ; attempt++) {
+    assertActive();
+    try {
+      const found = await readRecordPointer(
+        chain,
+        organizationId,
+        kind,
+        logicalId,
+      );
+      assertActive();
+      return found;
+    } catch (error) {
+      if (
+        !(error instanceof RecordPointerError) ||
+        error.code !== "snapshot_changed" ||
+        attempt === 5
+      )
+        throw error;
+      assertActive();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
+}
