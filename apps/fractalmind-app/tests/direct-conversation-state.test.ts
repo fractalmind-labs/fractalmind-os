@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { DirectMessageView, NativeDirectAgent } from "../src/direct-agent";
-import { directConversationState } from "../src/direct-conversation-state";
+import {
+  canComposeAfterPermissionReceipt,
+  directConversationState,
+} from "../src/direct-conversation-state";
+import type { SelfPayTransactionOutcome } from "@fractalmind-labs/fractalmind-sdk";
 
 function fixture() {
   const description = {
@@ -65,6 +69,47 @@ function fixture() {
   } as DirectMessageView;
   return { description, selected };
 }
+
+test("a pruned permission receipt permits a distinct message only under newer verified authority", () => {
+  const { description } = fixture();
+  const receipt: SelfPayTransactionOutcome = {
+    status: "unknown",
+    requestId: "direct-permission:agent:create",
+    digest: "original-permission-digest",
+    journalSynced: true,
+  };
+  assert.equal(canComposeAfterPermissionReceipt(description, receipt, 2000n), true);
+  assert.equal(receipt.status, "unknown");
+  receipt.requestId = "direct-permission:agent:3";
+  assert.equal(canComposeAfterPermissionReceipt(description, receipt, 2000n), true);
+  receipt.requestId = "direct-permission:agent:4";
+  assert.equal(canComposeAfterPermissionReceipt(description, receipt, 2000n), false);
+  receipt.requestId = "direct-permission:agent:create";
+  description.permission!.revoked = true;
+  assert.equal(canComposeAfterPermissionReceipt(description, receipt, 2000n), false);
+});
+
+test("unknown message, execution, approval and foreign permission remain blocked", () => {
+  const { description } = fixture();
+  for (const requestId of [
+    "direct-message:message-token",
+    "direct-run:message",
+    "direct-decision:message:true",
+    "direct-capability:message",
+    "direct-permission:another-agent:create",
+    "direct-permission:agent:create:extra",
+    "direct-permission:agent:-1",
+  ]) {
+    assert.equal(canComposeAfterPermissionReceipt(description, {
+      status: "unknown", requestId, digest: "original", journalSynced: true,
+    }, 2000n), false, requestId);
+  }
+  assert.equal(canComposeAfterPermissionReceipt(description, {
+    status: "unknown", requestId: "direct-permission:agent:create",
+    digest: "original", journalSynced: true,
+  }, 4000n), false);
+  assert.equal(canComposeAfterPermissionReceipt(null, null, 2000n), false);
+});
 
 test("conversation mutation entries use fresh managed/member and permission versions", () => {
   const f = fixture();

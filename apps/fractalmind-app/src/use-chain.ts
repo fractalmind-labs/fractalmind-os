@@ -54,8 +54,15 @@ export function useChain(profile: ConnectionProfile | null) {
       previous?.organization.objectId === organizationId ? previous : null,
     );
     setError(false);
-    setReachable(false);
-    if (!session || !organizationId || !hasIdentity) return;
+    // A requested refresh is loading, not evidence of lost connectivity.
+    // Flipping reachable here remounted protected dialogs immediately after
+    // their successful submit and discarded the displayed original receipt.
+    // Scope changes already clear scoped content; actual read failure below
+    // still invalidates open authority contexts.
+    if (!session || !organizationId || !hasIdentity) {
+      setReachable(false);
+      return;
+    }
     const refresh = async () => {
       if (loading) return;
       loading = true;

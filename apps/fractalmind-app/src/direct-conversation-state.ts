@@ -1,8 +1,32 @@
 import type { DirectMessageView, NativeDirectAgent } from "./direct-agent";
+import type { SelfPayTransactionOutcome } from "@fractalmind-labs/fractalmind-sdk";
 
 type Description = Awaited<ReturnType<NativeDirectAgent["describe"]>>;
 const sameBytes = (a: number[], b: number[]) =>
   a.length === b.length && a.every((value, index) => value === b[index]);
+
+/** A missing historical permission receipt must not permanently block a
+ * distinct new message under independently verified current chain authority.
+ * This does not resolve that receipt, retry its operation, or authorize a
+ * message/approval/Run whose own outcome is unknown. */
+export function canComposeAfterPermissionReceipt(
+  description: Description | null,
+  receipt: SelfPayTransactionOutcome | null,
+  now: bigint,
+) {
+  if (
+    receipt?.status !== "unknown" ||
+    !description?.permission ||
+    !directConversationState(description, null, now).current
+  )
+    return false;
+  const prefix = `direct-permission:${description.managed.id}:`;
+  if (!receipt.requestId.startsWith(prefix)) return false;
+  const revision = receipt.requestId.slice(prefix.length);
+  if (revision !== "create" && !/^[1-9][0-9]*$/.test(revision)) return false;
+  return BigInt(description.permission.version) >
+    (revision === "create" ? 0n : BigInt(revision));
+}
 
 /** Hide invalid mutation entries using the fresh description, including when
  * a historical queue row was opened. The controller still independently checks

@@ -21,7 +21,10 @@ import {
 } from "./direct-agent";
 import type { ConnectionProfile, Agent } from "./domain";
 import CreateOkr from "./CreateOkr";
-import { directConversationState } from "./direct-conversation-state";
+import {
+  canComposeAfterPermissionReceipt,
+  directConversationState,
+} from "./direct-conversation-state";
 import { NativeDirectDraft, type DirectDraft } from "./direct-draft";
 import {
   readMessageOkrSource,
@@ -691,6 +694,11 @@ export default function DirectAgentConversation({
   const m = selected?.message;
   const working = busy || !!fee,
     unknown = receipt?.status === "unknown";
+  const independentMessage = canComposeAfterPermissionReceipt(
+    description,
+    receipt,
+    BigInt(now),
+  );
   return (
     <>
       <button className="secondary" onClick={begin}>
@@ -1305,6 +1313,14 @@ export default function DirectAgentConversation({
                 "Offline or read-only: edit and save a local unsent draft. Drafts grant no authority and never send automatically. Sending rechecks this instance and requires fee confirmation.",
               )}
             </p>
+            {independentMessage && (
+              <p role="status">
+                {t(
+                  "原权限交易的回执暂不可查，原摘要和技术记录仍保留。已独立读取并核验当前链上权限，可另发新消息；这不会重试原权限交易，也不代表其历史回执已恢复。",
+                  "The original permission receipt is unavailable; its digest and journal remain. Current on-chain authority was independently checked, so you can compose a distinct new message. This neither retries the permission transaction nor restores its historical receipt.",
+                )}
+              </p>
+            )}
             <fieldset disabled={working}>
               <label>
                 {t("请求类型", "Request type")}
@@ -1402,7 +1418,10 @@ export default function DirectAgentConversation({
               )}
               <button
                 disabled={
-                  !current || !canOperate || !!unknown || !localDraft.current
+                  !current ||
+                  !canOperate ||
+                  (!!unknown && !independentMessage) ||
+                  !localDraft.current
                 }
                 onClick={() => void perform(() => prepare(messageOperation()))}
               >
@@ -1415,7 +1434,11 @@ export default function DirectAgentConversation({
             <div className="button-row">
               <button
                 className="secondary"
-                disabled={working || !!unknown || (!message && !content)}
+                disabled={
+                  working ||
+                  (!!unknown && !independentMessage) ||
+                  (!message && !content)
+                }
                 onClick={() => void performDraft(saveDraft)}
               >
                 {t("保存本机草稿", "Save local draft")}
