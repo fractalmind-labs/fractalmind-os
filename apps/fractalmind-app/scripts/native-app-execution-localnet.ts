@@ -77,6 +77,13 @@ const projection = process.argv.slice(4).includes("--projection");
 const modelFixture = process.argv.slice(4).includes("--model-fixture");
 const messageOkr = process.argv.slice(4).includes("--message-okr");
 const workloadRecovery = process.argv.slice(4).includes("--workload-recovery");
+const recoveryAuthority = process.argv
+  .slice(4)
+  .includes("--recovery-authority");
+assert.ok(
+  !recoveryAuthority || workloadRecovery,
+  "Host recovery authority checks require the full workload recovery",
+);
 assert.ok(
   !workloadRecovery || messageOkr,
   "Workload recovery requires completed OKR, actual direct execution and a message-derived draft",
@@ -151,6 +158,7 @@ assert.ok(
         "--running-stop",
         "--message-okr",
         "--workload-recovery",
+        "--recovery-authority",
       ].includes(a),
     ),
   "Unknown harness option",
@@ -281,6 +289,13 @@ function recoveryTransport(target: string): NativeInvoke {
         return request("proveDevice", { ...extra, challenge: args.challenge });
       case "fm_device_sign_transaction":
         return request("signTransaction", { ...extra, bytes: args.bytes });
+      case "fm_device_sign_node_command":
+        return request("signNodeCommand", { ...extra, bytes: args.bytes });
+      case "fm_device_wrap_command_result_key":
+        return request("wrapCommandResultKey", {
+          ...extra,
+          record: args.request,
+        });
       case "fm_device_encrypt_record":
         return request("encryptRecord", { ...extra, record: args.record });
       case "fm_device_decrypt_record":
@@ -327,6 +342,8 @@ async function save(complete = false) {
             state.messageOkrControllerVerified === true,
           workloadRecoveryControllerVerified:
             state.workloadRecoveryControllerVerified === true,
+          independentHostRecoveryCommandRevocationVerified:
+            recoveryAuthority && state.recoveryHostAuthorityVerified === true,
           installedCacheWipeVerified: false,
           actualDeviceRestartVerified: false,
           installedMessageOkrUIVerified: false,
@@ -654,6 +671,7 @@ try {
       FM_ENVD_HOST_REJOIN: "0",
       FM_ENVD_TEST_MODEL_API_BASE: modelAPIBase,
       FM_ENVD_WORKLOAD_RECOVERY: workloadRecovery ? "1" : "0",
+      FM_ENVD_RECOVERY_AUTHORITY: recoveryAuthority ? "1" : "0",
     },
     stdio: ["pipe", "pipe", "pipe"],
   });
@@ -675,6 +693,12 @@ try {
     "FM_ENVD_HOST_PUBLIC",
     "FM_HOST_JOIN_CLI_RESULT",
     "FM_CHAIN_CONNECTION_RESULT",
+    ...[1, 2].flatMap((round) =>
+      ["BEFORE", "AFTER"].flatMap((stage) => [
+        `FM_RECOVERY_AUTHORITY_${round}_${stage}_READY`,
+        `FM_RECOVERY_AUTHORITY_${round}_${stage}_RESULT`,
+      ]),
+    ),
   ]) {
     let resolve!: (v: any) => void, reject!: (e: Error) => void;
     const promise = new Promise<any>((yes, no) => {
@@ -3735,6 +3759,20 @@ try {
         assert.equal(deliveries, deliveriesBefore);
         assert.equal(modelRequests, modelsBefore);
       },
+      ...(recoveryAuthority
+        ? {
+            hostAuthorityProbe: async (round, stage, command, executionId) => {
+              const label = `RECOVERY_AUTHORITY_${round}_${stage.toUpperCase()}`;
+              child.stdin.write(label + "\n");
+              await phases.get(`FM_${label}_READY`)!.promise;
+              child.stdin.write(
+                JSON.stringify({ ExecutionID: executionId, Command: command }) +
+                  "\n",
+              );
+              return await phases.get(`FM_${label}_RESULT`)!.promise;
+            },
+          }
+        : {}),
     });
     backupCode = "";
     finalAdmission = restored.admission;

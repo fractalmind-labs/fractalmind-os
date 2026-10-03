@@ -57,4 +57,6 @@ Host 钥为隔离内存提供方，Human 钥使用实际 OS 测试服务；审�
 
 完整 v0.2.0 目标保持未完成，见[实现与验证记录](fractalmind-app-v020-validation.md)。
 
-后续[Coordinator 独立撤权增量](v020-recovery-coordinator-authority.md)已在新的原始工作历史联测中补齐两次恢复后的直接 HTTP 拒绝与旧设备新挑战拒绝；R4 的原证明范围保持不变。实际 Host 的独立旧命令拒绝仍待验收。
+后续[Coordinator 独立撤权增量](v020-recovery-coordinator-authority.md)已在新的原始工作历史联测中补齐两次恢复后的直接 HTTP 拒绝与旧设备新挑战拒绝；R4 的原证明范围保持不变。该阶段尚未覆盖实际 Host 的独立旧命令拒绝。
+
+再后续[Host 独立撤权增量](v020-recovery-host-authority.md)补齐两次恢复后同一原有效 QUEUED 状态命令的生产执行器拒绝、零预算不变及新设备另行签名取消。安装后清缓存／重启与其他最终门禁仍保持未完成。

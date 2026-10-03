@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -13,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -433,6 +435,74 @@ func TestHostJoinLiveCLI(t *testing.T) {
 		}
 	}
 	if input.LiveConnection {
+		if os.Getenv("FM_ENVD_RECOVERY_AUTHORITY") == "1" {
+			if nativeRuntime == nil || os.Getenv("FM_ENVD_WORKLOAD_RECOVERY") != "1" {
+				t.Fatal("recovery authority requires the actual workload executor")
+			}
+			// Public, explicit test-binary protocol. It does not add a product
+			// endpoint or bypass the production Executor's current authority checks.
+			frames := bufio.NewReaderSize(os.Stdin, 65536)
+			for round := 1; round <= 2; round++ {
+				var original nodecommand.NodeCommand
+				var originalRun nodecommand.ChainExecution
+				for _, stage := range []string{"before", "after"} {
+					label := fmt.Sprintf("RECOVERY_AUTHORITY_%d_%s", round, strings.ToUpper(stage))
+					line, e := frames.ReadString('\n')
+					if e != nil || line != label+"\n" {
+						t.Fatal("expected explicit recovery authority phase", label)
+					}
+					fmt.Printf("FM_%s_READY {}\n", label)
+					raw, e := frames.ReadBytes('\n')
+					if e != nil || len(raw) > 65536 {
+						t.Fatal("invalid public recovery command frame")
+					}
+					var frame struct {
+						ExecutionID string
+						Command     nodecommand.NodeCommand
+					}
+					if json.Unmarshal(raw, &frame) != nil {
+						t.Fatal("invalid public recovery command")
+					}
+					command := frame.Command
+					signing, e := command.SigningBytes()
+					if e != nil || (nodecommand.Ed25519Verifier{}).Verify(ctx, command.Signer, signing, command.Signature) != nil || command.Action != "status" || command.Scope != "observation" || command.Budget != nil || command.ExpiresAtMS <= time.Now().UnixMilli() || command.ExpiresAtMS-command.IssuedAtMS > 300000 {
+						t.Fatal("recovery probe requires an actual valid unexpired status signature")
+					}
+					hash := sha256.Sum256(signing)
+					fingerprint := hex.EncodeToString(hash[:])
+					run, found, e := reader.LookupExecution(ctx, command.Capability.ID, fingerprint)
+					reservation := nodecommand.Reservation{CapabilityID: command.Capability.ID, Signer: command.Signer, CommandID: command.CommandID, Nonce: command.Nonce, IdempotencyKey: command.IdempotencyKey, Fingerprint: fingerprint, Budget: command.Budget, Target: command.Target, Action: command.Action, CommandScope: command.Scope, IssuedAtMS: command.IssuedAtMS, ExpiresAtMS: command.ExpiresAtMS}
+					if e != nil || !found || run.ID != frame.ExecutionID || run.State != 0 || run.StopRequested || run.ResultRecordID != "" || !run.Matches(reservation) || run.HostAddress != public.Address {
+						t.Fatal("recovery probe must use its exact original queued Run", e)
+					}
+					var report map[string]any
+					if stage == "before" {
+						state, e := reader.Resolve(ctx, command.Capability)
+						scan := nativeRuntime.NativeDiscovery()
+						if e != nil || state.Revoked || len(state.AuthorizedSigners) != 1 || state.AuthorizedSigners[0] != command.Signer || state.ManagedInstance == nil || state.ManagedInstance.ID != run.ManagedAgentID || scan == nil || scan.State != "complete" || len(scan.Instances) != 1 || scan.Instances[0].InstanceID != command.Target.AgentID {
+							t.Fatal("old device was not currently authorized at actual Host", e)
+						}
+						original, originalRun = command, run
+						report = map[string]any{"round": round, "stage": stage, "executionId": run.ID, "signatureVerified": true, "currentAuthorityResolved": true, "queuedUnexecuted": true, "expiresAtMs": command.ExpiresAtMS}
+					} else {
+						if !reflect.DeepEqual(command, original) || !reflect.DeepEqual(run, originalRun) {
+							t.Fatal("recovery probe replaced or mutated the original command/Run")
+						}
+						response, event, e := nativeRuntime.Execute(ctx, command)
+						if nodecommand.CodeOf(e) != nodecommand.CodeRevoked || !strings.Contains(e.Error(), "device permission or identity generation changed") || response.OK || event.ResultCode != string(nodecommand.CodeRevoked) || time.Now().UnixMilli() >= command.ExpiresAtMS {
+							t.Fatalf("actual Host did not independently reject old generation: response=%+v event=%+v err=%v", response, event, e)
+						}
+						after, found, e := reader.LookupExecution(ctx, command.Capability.ID, fingerprint)
+						if e != nil || !found || !reflect.DeepEqual(after, originalRun) {
+							t.Fatal("rejected old command changed its original Run", e)
+						}
+						report = map[string]any{"round": round, "stage": stage, "executionId": run.ID, "rejectionCode": string(nodecommand.CodeRevoked), "rejectionReason": "device permission or identity generation changed", "productionExecutor": true, "bypassedCoordinator": true, "originalRunUnchanged": true, "checkedAtMs": time.Now().UnixMilli(), "expiresAtMs": command.ExpiresAtMS}
+					}
+					encoded, _ := json.Marshal(report)
+					fmt.Printf("FM_%s_RESULT %s\n", label, encoded)
+				}
+			}
+		}
 		// No new secrets are read: the fixture waits only for the App's public
 		// revocation signal, then observes the actual current chain pointer.
 		line, err := bufio.NewReaderSize(os.Stdin, 32).ReadString('\n')

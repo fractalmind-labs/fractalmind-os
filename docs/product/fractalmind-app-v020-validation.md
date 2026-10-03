@@ -8,6 +8,12 @@
 
 以下按增量从新到旧记录；每项证明范围和当时尚未完成的事项独立保留，整体验收仍以 #40 为准。
 
+### 恢复后的 Host 独立撤权与原 Run 取消增量
+
+- 生产结果执行器增加预留前的只读当前授权检查，避免内容密钥轮换把撤权原因掩盖为密钥不可用；原逐执行／逐工具权限与 claim 检查保持。两轮实际恢复后，绕过 Coordinator 向生产 Host 提交同一原有效 QUEUED 状态命令，均返回 **revoked / identity generation changed**，剩余期限约 **298 秒**；Run、Capability 和零预算不变。恢复后的新设备另行签名取消原 Run，CANCELLED／claim 结算／工具 **0／0**。
+- [R2 实际 OS＋localnet＋生产 envd／Coordinator](evidence/v020-recovery-host-authority-localnet.json)：**26 项检查、65 笔 App 确认交易**，Host 开启 race，测试凭据清理／最终 Host 撤销确认。38 份正文哈希／9 条消息／两 KR 最终验收／来源草稿及 Coordinator 独立撤权保持，恢复新增派发和模型调用 **0**。[R1 原失败与只读复查](evidence/v020-recovery-host-authority-prior.json)保留原 61 笔确认及原取消 Run，未重放。
+- [四包 race／严格类型／生产及测试构建](evidence/v020-recovery-host-authority-validation.json)通过。**仍未完成**：安装后 UI／清缓存重启、真实模型、云 Host、手机及 main 旧包升级；不扩大为任意工具中断／回滚。#40 保持未完成。详见[修复与证据范围](v020-recovery-host-authority.md)。
+
 ### 恢复后的 Coordinator 独立撤权验收增量
 
 - 两轮恢复前先用旧设备完成实际受保护读取，再保留另一条未消费挑战和 OS 签名；恢复后绕过 App 预检直接请求实际 Coordinator。旧签名读取均返回 **403 / device_read_rejected**，旧设备新挑战均返回 **403 / device_authority_unavailable**，拒绝时原挑战仍有约 **59 秒**有效期；新设备随后正常读取。

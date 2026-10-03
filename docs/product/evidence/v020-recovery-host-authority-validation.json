@@ -1,0 +1,95 @@
+{
+  "recordedAt": "2026-10-03T06:01:56.325357+00:00",
+  "baselineCommit": "f084031",
+  "sourceHashes": {
+    "apps/fractalmind-app/scripts/native-app-execution-localnet.ts": "a2e748b5f0b7d1826e9dcb00870667d034cd080f4d52f0b8624c646e14278ae8",
+    "apps/fractalmind-app/scripts/native-workload-recovery.ts": "d331ef9d48597b937f217fe338915eafafff9875ef77678d495747f1712beb85",
+    "runtime/fractalmind-envd/cmd/envd/host_join_cli_live_test.go": "4df1740ca2179709ed57a2b8e4c13cba4d4dffd0d220bb61486b7386162ee2bd",
+    "runtime/fractalmind-envd/internal/nodecommand/validator.go": "97ce869475a83f34604bfb17488070389f66cec26248a82abb0046fda2779751",
+    "runtime/fractalmind-envd/internal/runtimeadapter/executor.go": "cd4e421f65a97facfb1b5b8a3a6df32d8a55943d2e137e2ee7fdd729eb1ef797",
+    "runtime/fractalmind-envd/internal/runtimeadapter/command_store_test.go": "ed3d29a828df6463baff9bbc8ddaf691760eeee21de0b3d5928db843179eafcd"
+  },
+  "checks": [
+    {
+      "name": "Go nodecommand/runtimeadapter/sui/cmd race regression",
+      "path": "/tmp/fm-recovery-host-authority-race-r2.log",
+      "sha256": "1ef1f9c506d21b211859c887cbbb23d50e384b00beb2b1ad050bfb465f90e27c",
+      "exitCode": 0,
+      "output": "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand\t4.245s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter\t9.027s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui\t3.536s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd\t5.475s\n"
+    },
+    {
+      "name": "current race Host test binary build",
+      "path": "/tmp/fm-recovery-host-authority-build-r2.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "name": "ordinary production envd build",
+      "path": "/tmp/fm-recovery-host-authority-production-build-r1.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "name": "strict native execution/recovery script TypeScript",
+      "path": "/tmp/fm-recovery-host-authority-types-r2.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "name": "read-only R1 original-state followup",
+      "path": "/tmp/fm-recovery-host-authority-original-check-r1.log",
+      "sha256": "cfda7067eda4e0d36092da15c258921bebb2e0a69cd4894d60843c58bc889db0",
+      "exitCode": 0,
+      "output": "{\"readOnly\":true,\"broadcasts\":0,\"originalRunState\":5,\"currentGeneration\":\"2\",\"hostRevoked\":false}\n"
+    },
+    {
+      "name": "prior sandbox Go native-metadata unit failure",
+      "path": "/tmp/fm-recovery-host-authority-unit-r1.log",
+      "sha256": "7ef82b5bc2f3b99e0bbf85a8f84511169b281843f65ca73886f878e0db31fcbd",
+      "exitCode": 1
+    },
+    {
+      "name": "prior sandbox Go cache-read build denial",
+      "path": "/tmp/fm-recovery-host-authority-build-r1.log",
+      "sha256": "5efc19cbcb7ffb9d649df397dad71350bb97112c77d3f0426779740d721a53b0",
+      "exitCode": 1
+    }
+  ],
+  "actualLiveFixture": {
+    "exitCode": 0,
+    "report": "v020-recovery-host-authority-localnet.json",
+    "checks": 26,
+    "confirmedAppTransactions": 65,
+    "raceInstrumented": true,
+    "credentialsCleanupConfirmed": true
+  },
+  "productionBinary": {
+    "path": "/tmp/fm-envd-recovery-host-authority",
+    "sha256": "aaedaf291ad8ebc33dee4ea985ec1f143ec03b2b9149d6aea671c77c3e6ef7a4"
+  },
+  "formattingAndDiffChecksPassed": true,
+  "unchangedProductionSource": {
+    "AppSDKMoveRustChanged": false,
+    "AppUnitTestsRerun": false,
+    "nativeInstalledBundleRebuilt": false
+  },
+  "limits": {
+    "defaultGoRaceSkipsExplicitLocalnetFixture": true,
+    "actualLiveFixtureSeparatelyRanWithRace": true,
+    "independentHostQueuedStatusCommandRevocationVerified": true,
+    "allRunningToolsCancellationOrRollbackVerified": false,
+    "installedUIVerified": false,
+    "installedCacheWipeVerified": false,
+    "physicalRestartVerified": false,
+    "actualLanguageModelVerified": false,
+    "cloudHostVerified": false,
+    "mobileVerified": false,
+    "mainPackageUpgradeVerified": false,
+    "privateKeysInReport": false,
+    "recoveryCodeInReport": false
+  },
+  "lastNativeUIGateEvidence": "v020-recovery-coordinator-authority-validation.json"
+}

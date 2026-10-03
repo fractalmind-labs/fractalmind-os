@@ -100,6 +100,31 @@ func TestMissingResultKeyStopsBeforeAdapterAndReservation(t *testing.T) {
 	}
 }
 
+func TestCurrentRevocationPrecedesMissingResultKeyWithoutExecution(t *testing.T) {
+	state := runtimeCapabilityState(testNow(), "status")
+	state.Revoked = true
+	store := &commandStoreProbe{preflightErr: errors.New("rotated result key unavailable")}
+	runner := &fakeRunner{}
+	executor, err := NewExecutorWithCommandStore(validatorForState(testNow(), state, "status"), runner, store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, event, err := executor.Execute(context.Background(), runtimeCommand("status", "lifecycle", `{}`))
+	if nodecommand.CodeOf(err) != nodecommand.CodeRevoked || event.ResultCode != string(nodecommand.CodeRevoked) || runner.calls != 0 || store.preflights != 0 || store.confirms != 0 || store.saves != 0 {
+		t.Fatalf("revocation was obscured or reached execution: err=%v event=%+v calls=%d store=%+v", err, event, runner.calls, store)
+	}
+}
+
+func TestReadOnlyAuthorityCheckDoesNotRejectConsumedUsesBeforeDuplicateLookup(t *testing.T) {
+	state := runtimeCapabilityState(testNow(), "status")
+	zero := uint64(0)
+	state.RemainingUses = &zero
+	validator := validatorForState(testNow(), state, "status")
+	if err := validator.CheckCurrentAuthority(context.Background(), runtimeCommand("status", "lifecycle", `{}`)); err != nil {
+		t.Fatalf("read-only check treated consumed uses as a new claim: %v", err)
+	}
+}
+
 func TestExecutionKeysSeparateIntentsWithTheSameDisplayID(t *testing.T) {
 	a := runtimeCommand("status", "lifecycle", `{}`)
 	b := a

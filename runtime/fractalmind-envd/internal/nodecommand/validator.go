@@ -91,6 +91,48 @@ func NewValidator(signatures SignatureVerifier, authority AuthorityStore, option
 	return &Validator{signatures: signatures, authority: authority, options: options}
 }
 
+// CheckCurrentAuthority is read-only. Result-key/gas preflight must not hide a
+// revoked device behind an unrelated missing-key error after identity recovery.
+// It does not consume uses, reserve budget or authorize execution; Validate
+// still checks actions, scopes and the exact claim before every execution.
+func (v *Validator) CheckCurrentAuthority(ctx context.Context, command NodeCommand) error {
+	if err := v.validateEnvelope(command); err != nil {
+		return err
+	}
+	signingBytes, err := command.SigningBytes()
+	if err != nil {
+		return reject(CodeInvalidEnvelope, "canonicalize signing payload", err)
+	}
+	if v.signatures == nil {
+		return reject(CodeSignatureInvalid, "signature verifier is not configured", nil)
+	}
+	if err := v.signatures.Verify(ctx, command.Signer, signingBytes, command.Signature); err != nil {
+		return reject(CodeSignatureInvalid, "signature verification failed", err)
+	}
+	if v.authority == nil {
+		return reject(CodeUnauthorized, "capability resolver is not configured", nil)
+	}
+	state, err := v.authority.Resolve(ctx, command.Capability)
+	if err != nil {
+		if CodeOf(err) != "" {
+			return err
+		}
+		return reject(CodeUnauthorized, "resolve current authority", err)
+	}
+	if state.Revoked || state.RevocationVersion != uint64(command.Capability.RevocationVersion) {
+		return reject(CodeRevoked, "capability permission changed", nil)
+	}
+	if state.ExpiresAtMS <= v.options.Now().UnixMilli() {
+		return reject(CodeExpired, "capability expired", nil)
+	}
+	if !contains(state.AuthorizedSigners, command.Signer) {
+		return reject(CodeUnauthorized, "command signer is not authorized", nil)
+	}
+	// Remaining uses/budget may already be consumed by an exact duplicate. Only
+	// Validate/Inspect can decide whether that original claim is still usable.
+	return nil
+}
+
 func (v *Validator) Validate(ctx context.Context, command NodeCommand) (ValidationResult, error) {
 	if err := v.validateEnvelope(command); err != nil {
 		return ValidationResult{}, err

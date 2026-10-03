@@ -7,7 +7,11 @@ import { requestSuiFromFaucetV2 } from "@mysten/sui/faucet";
 import { toBase64 } from "@mysten/sui/utils";
 import {
   MemoryTransactionJournal,
+  SelfPayTransactionManager,
   TransactionPreflightError,
+  signNodeCommand,
+  nodeCommandIntentHash,
+  type SignedNodeCommand,
   type SelfPayFeeQuote,
   type SelfPayTransactionOutcome,
 } from "@fractalmind-labs/fractalmind-sdk";
@@ -31,6 +35,9 @@ import { readMessageOkrSource } from "../src/message-okr-source";
 import { NativeExecutionResults } from "../src/execution-results";
 import { CoordinatorReadClient } from "../src/coordinator-read";
 import { HostAdmission } from "../src/host-admission";
+import { HandoverSetup } from "../src/handover-setup";
+import { NativeCommandResults } from "../src/command-results";
+import type { Transaction } from "@mysten/sui/transactions";
 import type { DeploymentProfile } from "../src/onboarding";
 
 type Options = {
@@ -54,6 +61,12 @@ type Options = {
   record: (label: string, result: SelfPayTransactionOutcome) => Promise<void>;
   checkpoint: (publicState: Record<string, unknown>) => Promise<void>;
   assertNoDispatch: () => void;
+  hostAuthorityProbe?: (
+    round: number,
+    stage: "before" | "after",
+    command: SignedNodeCommand,
+    executionId: string,
+  ) => Promise<Record<string, unknown>>;
 };
 type HistoricalRecord = { pointer: RecordPointer; sha256: string };
 type RecoveryReadChallenge = {
@@ -279,6 +292,170 @@ export async function nativeWorkloadRecovery(o: Options) {
     // usable before recovery. Keep a different challenge unconsumed so the
     // later raw HTTP request tests server revocation, not nonce replay.
     const previousChain = last?.chain ?? o.chain;
+    const previousInvoke = last?.invoke ?? o.invoke;
+    const submit = async (
+      label: string,
+      sourceChain: ChainReadSession,
+      signer: NativeDeviceSigner,
+      sourceGrant: string,
+      transaction: Transaction,
+      extraGuard: () => Promise<void> = async () => {},
+    ) => {
+      const guard = async () => {
+        await new DeviceIdentityVerifier(
+          sourceChain,
+          signer,
+          sourceGrant,
+        ).verifyOrganization(o.organizationId, "approve");
+        await extraGuard();
+      };
+      const manager = new SelfPayTransactionManager({
+        client: sourceChain.sdk.client.client,
+        network: sourceChain.profile.network,
+        journal: new MemoryTransactionJournal(),
+        assertBeforeBroadcast: guard,
+        signer: {
+          getPublicKey: () => signer.getPublicKey(),
+          signTransaction: async (bytes) => {
+            await guard();
+            const signed = await signer.signTransaction(bytes);
+            await guard();
+            return signed;
+          },
+        },
+      });
+      const quote = await manager.prepare({
+        requestId: `recovery-authority:${randomUUID()}`,
+        transaction,
+        gasBudget: 200000000n,
+      });
+      await o.preparedQuote(label, quote);
+      const outcome = await manager.submit(quote);
+      await o.record(label, outcome);
+      assert.equal(outcome.status, "confirmed");
+      return outcome;
+    };
+    let hostProbe:
+      | {
+          command: SignedNodeCommand;
+          executionId: string;
+          run: Awaited<
+            ReturnType<typeof previousChain.sdk.nodeExecution.getExecution>
+          >;
+          capability: Awaited<
+            ReturnType<typeof previousChain.sdk.remoteAuthority.getCapability>
+          >;
+          budget: Awaited<
+            ReturnType<typeof previousChain.sdk.nodeExecution.getBudget>
+          >;
+          claim: Awaited<
+            ReturnType<
+              typeof previousChain.sdk.nodeExecution.getReservationBudget
+            >
+          >;
+          before: Record<string, unknown>;
+        }
+      | undefined;
+    if (o.hostAuthorityProbe) {
+      const setup = new HandoverSetup(
+        previousChain,
+        previousDevice,
+        previousGrant,
+        o.organizationId,
+        o.managedAgentId,
+        randomUUID(),
+        previousInvoke,
+        new MemoryTransactionJournal(),
+      );
+      const capabilityQuote = await setup.prepare();
+      assert.ok(!("status" in capabilityQuote));
+      await o.preparedQuote(
+        `recovery ${round + 1}: old-device observation authority`,
+        capabilityQuote,
+      );
+      const issued = await setup.submit(capabilityQuote);
+      await o.record(
+        `recovery ${round + 1}: old-device observation authority`,
+        issued,
+      );
+      const capabilityId = await setup.confirmed(issued);
+      const issuedAtMs = Date.now();
+      const command = await signNodeCommand(previousDevice, {
+        target: {
+          organizationId: o.organizationId,
+          nodeId: originalMember.host_address,
+          agentId: originalManaged.instance_id,
+        },
+        action: "status",
+        scope: "observation",
+        capability: { id: capabilityId, revocationVersion: 1n },
+        issuedAtMs,
+        expiresAtMs: issuedAtMs + 300000,
+        payload: {},
+      });
+      const prepared = await new NativeCommandResults(
+        previousChain,
+        previousDevice,
+        previousGrant,
+        o.organizationId,
+        previousInvoke,
+      ).prepare({
+        command,
+        membershipId: originalMember.id,
+        bindingId: o.bindingId,
+        managedAgentId: o.managedAgentId,
+      });
+      const created = await submit(
+        `recovery ${round + 1}: original queued status Run`,
+        previousChain,
+        previousDevice,
+        previousGrant,
+        prepared.transaction,
+        prepared.assertCurrent,
+      );
+      const candidates = created.transaction!.effects.changedObjects.filter(
+        (r) =>
+          r.idOperation === "Created" &&
+          created.transaction!.objectTypes?.[r.objectId] ===
+            `${previousChain.sdk.client.typesPackageId}::node_execution::CommandExecution`,
+      );
+      assert.equal(candidates.length, 1);
+      const executionId = candidates[0].objectId;
+      const run =
+        await previousChain.sdk.nodeExecution.getExecution(executionId);
+      assert.equal(run.state, 0);
+      assert.equal(run.stop_requested, false);
+      const before = await o.hostAuthorityProbe(
+        round + 1,
+        "before",
+        command,
+        executionId,
+      );
+      assert.equal(before.currentAuthorityResolved, true);
+      hostProbe = {
+        command,
+        executionId,
+        run,
+        before,
+        capability:
+          await previousChain.sdk.remoteAuthority.getCapability(capabilityId),
+        budget: await previousChain.sdk.nodeExecution.getBudget(capabilityId),
+        claim: await previousChain.sdk.nodeExecution.getReservationBudget(
+          capabilityId,
+          nodeCommandIntentHash(command),
+        ),
+      };
+      assert.equal(hostProbe.budget.spent, 0n);
+      assert.equal(hostProbe.budget.reserved, 0n);
+      assert.equal(hostProbe.claim.settled, false);
+      await o.checkpoint({
+        workloadRecoveryPhase: "old_command_authorized_at_actual_host",
+        recoveryRound: round + 1,
+        recoveryAuthorityExecutionId: executionId,
+        recoveryAuthorityCapabilityId: capabilityId,
+        recoveryHostAuthorityBefore: before,
+      });
+    }
     const oldHosts = await new CoordinatorReadClient(
       previousChain,
       previousDevice,
@@ -431,6 +608,50 @@ export async function nativeWorkloadRecovery(o: Options) {
     const chain = new ChainReadSession(restored.profile),
       grantId = restored.grantId;
     last = { chain, device, grantId, invoke };
+    let independentHostRejection: Record<string, unknown> | undefined;
+    if (hostProbe) {
+      const after = await o.hostAuthorityProbe!(
+        round + 1,
+        "after",
+        hostProbe.command,
+        hostProbe.executionId,
+      );
+      assert.equal(after.rejectionCode, "revoked");
+      assert.equal(after.originalRunUnchanged, true);
+      assert.deepEqual(
+        await chain.sdk.nodeExecution.getExecution(hostProbe.executionId),
+        hostProbe.run,
+      );
+      assert.deepEqual(
+        await chain.sdk.remoteAuthority.getCapability(
+          hostProbe.command.capability.id,
+        ),
+        hostProbe.capability,
+      );
+      assert.deepEqual(
+        await chain.sdk.nodeExecution.getBudget(
+          hostProbe.command.capability.id,
+        ),
+        hostProbe.budget,
+      );
+      assert.deepEqual(
+        await chain.sdk.nodeExecution.getReservationBudget(
+          hostProbe.command.capability.id,
+          nodeCommandIntentHash(hostProbe.command),
+        ),
+        hostProbe.claim,
+      );
+      independentHostRejection = {
+        before: hostProbe.before,
+        after,
+        capabilityAndBudgetsUnchanged: true,
+      };
+      await o.checkpoint({
+        workloadRecoveryPhase: "old_command_rejected_by_actual_host",
+        recoveryRound: round + 1,
+        independentHostRejection,
+      });
+    }
     await assert.rejects(
       new DeviceIdentityVerifier(
         chain,
@@ -770,6 +991,61 @@ export async function nativeWorkloadRecovery(o: Options) {
         "second code-only recovery retains original v1 history plus the independently written v2 draft under current key v3; prior recovered-device credentials are removed, and the new device again needs explicit fixture funding before a later separately signed Host management transaction",
       );
     }
+    if (hostProbe) {
+      const cancelled = await submit(
+        `recovery ${round + 1}: recovered device explicitly cancels original queued Run`,
+        chain,
+        device,
+        grantId,
+        chain.sdk.nodeExecution.requestStop({
+          executionId: hostProbe.executionId,
+          capabilityId: hostProbe.command.capability.id,
+          organizationId: o.organizationId,
+          humanId: restored.humanId,
+          grantId,
+        }),
+      );
+      let stopped;
+      for (let attempt = 0; ; attempt++) {
+        stopped = await chain.sdk.nodeExecution.getExecution(
+          hostProbe.executionId,
+        );
+        if (stopped.state === 5) break;
+        assert.ok(
+          attempt < 40,
+          "Original queued cancellation must become visible",
+        );
+        await new Promise((resolve) => setTimeout(resolve, 125));
+      }
+      assert.equal(stopped.stop_requested, true);
+      assert.deepEqual(
+        await chain.sdk.nodeExecution.getBudget(
+          hostProbe.command.capability.id,
+        ),
+        hostProbe.budget,
+      );
+      const claim = await chain.sdk.nodeExecution.getReservationBudget(
+        hostProbe.command.capability.id,
+        nodeCommandIntentHash(hostProbe.command),
+      );
+      assert.equal(claim.settled, true);
+      assert.equal(claim.spentAmount, 0n);
+      independentHostRejection = {
+        ...independentHostRejection,
+        cancelledByNewDevice: {
+          digest: cancelled.digest,
+          executionId: stopped.id,
+          state: stopped.state,
+          stopRequested: stopped.stop_requested,
+          spent: "0",
+          reserved: "0",
+        },
+      };
+      o.assertNoDispatch();
+      o.checks.push(
+        `workload recovery ${round + 1}: actual production Host independently rejects the exact old-device queued status command with revoked generation before result-key preflight; original Run, capability and zero budgets stay unchanged; recovered device separately signs cancellation without dispatch or tool/model use`,
+      );
+    }
     rounds.push({
       round: round + 1,
       profile,
@@ -783,6 +1059,7 @@ export async function nativeWorkloadRecovery(o: Options) {
       originalMessagesVerified: originalMessages.length,
       broadcasts,
       independentCoordinatorRejection,
+      ...(independentHostRejection ? { independentHostRejection } : {}),
     });
     await o.checkpoint({
       workloadRecoveryPhase: "history_and_authority_verified",
@@ -796,6 +1073,8 @@ export async function nativeWorkloadRecovery(o: Options) {
   }
   code = "";
   assert.ok(last);
+  if (o.hostAuthorityProbe)
+    await o.checkpoint({ recoveryHostAuthorityVerified: true });
   return {
     ...last,
     reader: new NativeExecutionResults(

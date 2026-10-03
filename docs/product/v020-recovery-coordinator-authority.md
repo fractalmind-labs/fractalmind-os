@@ -41,3 +41,5 @@ node --import tsx scripts/native-app-execution-localnet.ts \
 本增量证明 Coordinator 受保护读取及挑战签发独立撤权。**尚未证明**绕过 Coordinator 的实际 Host 对恢复前有效、未执行命令的独立拒绝，也未覆盖所有命令派发端点。
 
 本轮 Computer Use 只读检查再次返回 Mac 锁定。安装后完整 UI／IndexedDB 清空、实际进程／物理 Host 重启、真实语言模型、云 TLS Host、手机沟通审批、main 旧包升级仍未完成。模型继续为合成 HTTP 夹具，Host 凭据和技术 journal 为隔离内存，Human 决定由脚本给出。完整 v0.2.0 及 #40 保持未完成。
+
+后续[Host 独立撤权增量](v020-recovery-host-authority.md)已在新的双次恢复联测中验证原有效、未执行状态命令被实际生产 Host 拒绝及新设备显式取消；本报告的原证明范围保持不变。
