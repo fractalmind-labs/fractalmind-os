@@ -8,6 +8,13 @@
 
 以下按增量从新到旧记录；每项证明范围和当时尚未完成的事项独立保留，整体验收仍以 #40 为准。
 
+### Android 系统栏与实际安装版身份／组织重建增量
+
+- 修复系统栏随 App 外观变化及系统栏／切口 insets；追踪平台模板与 npm 生命周期钩子。身份生成前校验 Registry 精确类型来源，升级部署遗漏原始包字段时明确提示。
+- [实际 Android 记录](evidence/v020-app-android-installed.json)：完整 APK／签名／安装通过，原生 **19 项检查、0 笔广播**；真实 UI 充值后分别确认 Human 与组织两笔交易。遗漏 `originalPackageId` 导致后续来源拒绝，补齐后对同一 profile 只读恢复原组织，**3 项检查、0 笔新广播**。
+- 清空实际 localStorage／IndexedDB 交易日志／CacheStorage 并冷启动，PID **4409→4602**；重新输入原公开本机配置名和部署资料后，**3 项检查、0 笔新广播**，原 Human／组织与工作台重建。独立链上核对来源正确及原创建 `previousTransaction` 保持。App **234/234**、Rust 壳来源保护 **1/1**、最终严格类型／格式通过。
+- 原失败与确认回执保留，没有重放。任务 localnet 裁剪的旧交易不能重新读取；此增量没有证明完整恢复码 UI／OS 重装、Host／OKR／消息／证据重建、云 Host 或实体手机。任务模拟器／工具已暂停，原 App/profile 保留供后续联测。详见[方法、截图与限制](v020-app-android-installed.md)；完整 #40 继续进行。
+
 ### Android 完整 APK 与安装后原生凭据增量
 
 - 修复完整 Gradle 打包所需的 `tauri` npm 脚本；新增 ARM64 Android APK CI job 与聚合 gate，上传 debug 构建产物。GitHub job 尚未执行。

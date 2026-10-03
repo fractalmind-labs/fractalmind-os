@@ -16,5 +16,8 @@ tauri = { version = "=2.12.1", features = [] }
 fractalmind-device-vault = { path = "../native" }
 zeroize = "1"
 
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "=0.21.1"
+
 [features]
 custom-protocol = ["tauri/custom-protocol"]

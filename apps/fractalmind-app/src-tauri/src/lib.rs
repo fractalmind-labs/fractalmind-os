@@ -26,6 +26,51 @@ fn main_window(window: &WebviewWindow) -> Result<(), String> {
     Ok(())
 }
 #[tauri::command]
+async fn fm_app_appearance(window: WebviewWindow, theme: String) -> Result<(), String> {
+    main_window(&window)?;
+    let dark = match theme.as_str() {
+        "dark" => true,
+        "light" => false,
+        _ => return Err("InvalidAppearance".into()),
+    };
+    #[cfg(target_os = "android")]
+    {
+        let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+        window
+            .with_webview(move |webview| {
+                webview.jni_handle().exec(move |env, activity, _| {
+                    let result = env
+                        .call_method(
+                            activity,
+                            "fmSetAppearance",
+                            "(Z)V",
+                            &[jni::objects::JValue::Bool(u8::from(dark))],
+                        )
+                        .map(|_| ())
+                        .map_err(|_| "NativeAppearanceUnavailable".to_string());
+                    if result.is_err() {
+                        let _ = env.exception_clear();
+                    }
+                    let _ = sender.send(result);
+                });
+            })
+            .map_err(|_| "NativeAppearanceUnavailable".to_string())?;
+        // JNI executes on the UI thread; wait off that thread and bound the wait.
+        return tauri::async_runtime::spawn_blocking(move || {
+            receiver
+                .recv_timeout(std::time::Duration::from_secs(5))
+                .map_err(|_| "NativeAppearanceUnavailable".to_string())?
+        })
+        .await
+        .map_err(|_| "NativeTaskFailed".to_string())?;
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = dark;
+        Ok(())
+    }
+}
+#[tauri::command]
 async fn fm_device_public(
     window: WebviewWindow,
     vault: State<'_, Arc<DeviceVault>>,
@@ -380,6 +425,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            fm_app_appearance,
             fm_device_public,
             fm_device_initialize,
             fm_device_sign_transaction,

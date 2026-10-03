@@ -62,6 +62,30 @@ assert.equal(adb("emu", "avd", "name").split("\n")[0]?.trim(), avd);
 assert.equal(adb("shell", "getprop", "sys.boot_completed").trim(), "1");
 assert.match(adb("shell", "pm", "path", app), /^package:/);
 assert.match(adb("shell", "dumpsys", "package", app), /versionName=0\.2\.0/);
+function nativeSystemBars() {
+  const block = adb("shell", "dumpsys", "window", "windows")
+    .split(/(?=  Window #)/)
+    .find(
+      (value) =>
+        value.includes(`${app}/${app}.MainActivity`) &&
+        value.includes("mAttrs="),
+    );
+  assert.ok(block, "Actual installed Activity window is required");
+  return {
+    lightStatus: block.includes("LIGHT_STATUS_BARS"),
+    lightNavigation: block.includes("LIGHT_NAVIGATION_BARS"),
+  };
+}
+async function expectSystemBars(light: boolean) {
+  // Only OS observation is polled; no native mutation is retried.
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const bars = nativeSystemBars();
+    if (bars.lightStatus === light && bars.lightNavigation === light)
+      return bars;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.fail("Actual system bars must follow the App theme");
+}
 
 class Devtools {
   private sequence = 0;
@@ -244,7 +268,10 @@ async function transaction(sender: string) {
   tx.transferObjects([tx.gas], tx.pure.address(sender));
   return tx.build();
 }
-const invoke: NativeInvoke = async (command, args) => {
+async function nativeRequest(
+  command: Parameters<NativeInvoke>[0] | "fm_app_appearance",
+  args: Record<string, string>,
+) {
   assert.ok(active);
   // No request/response tracing: the one-shot backup credential stays in memory.
   const result = await active.evaluate<{
@@ -256,14 +283,15 @@ const invoke: NativeInvoke = async (command, args) => {
   );
   if (!result.ok) throw result.error;
   return result.value;
-};
+}
+const invoke: NativeInvoke = nativeRequest;
 async function rejected(
-  command: Parameters<NativeInvoke>[0],
+  command: Parameters<NativeInvoke>[0] | "fm_app_appearance",
   args: Record<string, string>,
   expected: string,
 ) {
   await assert.rejects(
-    async () => invoke(command, args),
+    async () => nativeRequest(command, args),
     (error) => error === expected,
   );
 }
@@ -380,6 +408,12 @@ try {
     await transaction(created.signer.material.recovery.address),
   );
   checkpoint("Native recovery transaction signature verified offline");
+  await rejected(
+    "fm_app_appearance",
+    { theme: "arbitrary" },
+    "InvalidAppearance",
+  );
+  checkpoint("Native appearance rejects values outside light/dark");
   await active.evaluate(
     `(()=>{const s=document.querySelector('select[aria-label="语言"],select[aria-label="Language"]');s.value='zh';s.dispatchEvent(new Event('change',{bubbles:true}));return true})()`,
   );
@@ -392,6 +426,8 @@ try {
     ),
     { lang: "zh-CN", theme: "light" },
   );
+  report.nativeBarsLight = await expectSystemBars(true);
+  checkpoint("Actual light App controls set dark system-bar icons");
   await active.evaluate(
     `(()=>{const s=document.querySelector('select[aria-label="语言"]');s.value='en';s.dispatchEvent(new Event('change',{bubbles:true}));return true})()`,
   );
@@ -402,6 +438,8 @@ try {
     `({lang:document.documentElement.lang,theme:document.documentElement.dataset.theme})`,
   );
   assert.deepEqual(appearance, { lang: "en", theme: "dark" });
+  report.nativeBarsDark = await expectSystemBars(false);
+  checkpoint("Actual dark App controls set light system-bar icons");
   checkpoint("Actual native welcome language and dark theme controls");
   const storedAppearance = await active.evaluate<{
     language: string;
@@ -466,6 +504,8 @@ try {
   );
   assert.deepEqual(restoredAppearance, appearance);
   checkpoint("Public language/appearance preferences survive process restart");
+  report.nativeBarsRestart = await expectSystemBars(false);
+  checkpoint("Cold-start system bars follow the original App appearance");
   report.completed = true;
   writeFileSync(reportPath, JSON.stringify(report, null, 2) + "\n");
   console.log(

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { normalizeProfile } from "./chain";
 import Welcome from "./Welcome";
 import {
@@ -248,6 +249,12 @@ export function App() {
             : "light"
           : prefs.theme;
       document.documentElement.lang = prefs.language === "zh" ? "zh-CN" : "en";
+      if (isTauri())
+        void invoke("fm_app_appearance", {
+          theme: document.documentElement.dataset.theme,
+        }).catch(() => {
+          /* Appearance is optional and never changes chain state. */
+        });
     };
     apply();
     media.addEventListener("change", apply);

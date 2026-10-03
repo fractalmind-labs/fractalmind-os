@@ -13,6 +13,7 @@ import {
   IdentityCreation,
   normalizeDeployment,
   identityCreationFailure,
+  validateCreationDeployment,
 } from "./onboarding";
 import type { ConnectionProfile } from "./domain";
 type Translate = (zh: string, en: string) => string;
@@ -113,10 +114,9 @@ export default function CreateIdentity({
       deployment.chainIdentifier !== chainIdentifier
     )
       throw new Error();
-    await new FractalMindSDK({
-      ...deployment,
-      client,
-    }).identity.resolveRegistry();
+    await validateCreationDeployment(
+      new FractalMindSDK({ ...deployment, client }),
+    );
     const journal = new IndexedDbTransactionJournal();
     // Explicit native generation occurs only after deployment checks succeed.
     const value = load
@@ -254,8 +254,8 @@ export default function CreateIdentity({
             </summary>
             <p>
               {t(
-                "开发部署仅需 RPC、合约包和 ProtocolRegistry，不需要先有 Human ID。正式网络部署配置仍待发布。",
-                "Development setup needs RPC, package and ProtocolRegistry, with no existing Human ID. Official deployment configuration is not published yet.",
+                "开发部署需要 RPC、合约包和 ProtocolRegistry，不需要先有 Human ID。升级部署还需原始包 ID；会先校验类型来源，再生成密钥。正式网络配置仍待发布。",
+                "Development setup needs RPC, packages and ProtocolRegistry, with no existing Human ID. Upgraded deployments also need the original package IDs; type origins are checked before keys are generated. Official network configuration is not published yet.",
               )}
             </p>
             <textarea
@@ -264,7 +264,7 @@ export default function CreateIdentity({
               disabled={busy}
               onChange={(e) => setDeploymentText(e.target.value)}
               placeholder={
-                '{"network":"localnet","rpcUrl":"http://127.0.0.1:29000","packageId":"0x…","okrPackageId":"0x…","directPackageId":"0x…","registryId":"0x…"}'
+                '{"network":"localnet","rpcUrl":"http://127.0.0.1:29000","packageId":"0x…","originalPackageId":"0x…","okrPackageId":"0x…","originalOkrPackageId":"0x…","directPackageId":"0x…","originalDirectPackageId":"0x…","registryId":"0x…"}'
               }
             />
           </details>
@@ -500,25 +500,30 @@ export default function CreateIdentity({
       )}
       {error && (
         <p role="alert">
-          {error === "organization_name_taken"
+          {error === "deployment_type_origin_mismatch"
             ? t(
-                "组织名称已被使用。请输入其他名称，再估算并确认费用；你的身份仍然保留。",
-                "This organization name is already taken. Choose another name, then estimate and confirm the fee. Your Human identity is retained.",
+                "部署资料与链上合约来源不一致。请核对 Registry 和原始包 ID；升级部署需要填写 originalPackageId。已有身份和组织保持，可继续原创建流程。",
+                "Deployment metadata does not match the chain type origins. Check Registry and original package IDs; an upgraded deployment needs originalPackageId. Existing identity and organization are retained; continue the original setup.",
               )
-            : error === "needs_funds"
+            : error === "organization_name_taken"
               ? t(
-                  "余额不足。向上面的地址充值后重新检查，不会自动提交。",
-                  "Insufficient funds. Fund the addresses above and recheck; no automatic submission.",
+                  "组织名称已被使用。请输入其他名称，再估算并确认费用；你的身份仍然保留。",
+                  "This organization name is already taken. Choose another name, then estimate and confirm the fee. Your Human identity is retained.",
                 )
-              : error === "stale_quote"
+              : error === "needs_funds"
                 ? t(
-                    "报价或 Gas 已变化，请重新估算并确认。",
-                    "Quote or Gas changed. Estimate and confirm again.",
+                    "余额不足。向上面的地址充值后重新检查，不会自动提交。",
+                    "Insufficient funds. Fund the addresses above and recheck; no automatic submission.",
                   )
-                : t(
-                    "本次未完成。检查部署、密钥库和原交易；已有配置可继续，不自动重建或重放。",
-                    "Not completed. Check deployment, credential store and original transaction. Continue existing setup; no silent regeneration or replay.",
-                  )}
+                : error === "stale_quote"
+                  ? t(
+                      "报价或 Gas 已变化，请重新估算并确认。",
+                      "Quote or Gas changed. Estimate and confirm again.",
+                    )
+                  : t(
+                      "本次未完成。检查部署、密钥库和原交易；已有配置可继续，不自动重建或重放。",
+                      "Not completed. Check deployment, credential store and original transaction. Continue existing setup; no silent regeneration or replay.",
+                    )}
         </p>
       )}
     </section>

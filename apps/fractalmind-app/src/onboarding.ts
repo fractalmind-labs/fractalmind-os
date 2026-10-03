@@ -20,12 +20,40 @@ import { DeviceIdentityVerifier } from "./device-identity";
 import type { ConnectionProfile } from "./domain";
 
 export type DeploymentProfile = Omit<ConnectionProfile, "humanId">;
+export class IdentityDeploymentError extends Error {
+  readonly code = "deployment_type_origin_mismatch";
+  constructor() {
+    super("deployment_type_origin_mismatch");
+  }
+}
+/** Validate the registry against the configured core type origins before
+ * generating credentials. Upgraded deployments must retain originalPackageId. */
+export async function validateCreationDeployment(sdk: FractalMindSDK) {
+  const registryId = sdk.client.resolveRegistryId();
+  const expected = await sdk.client.coreType(
+    "organization",
+    "ProtocolRegistry",
+  );
+  const { object } = await sdk.client.client.core.getObject({
+    objectId: registryId,
+    include: { content: true },
+  });
+  if (
+    object.objectId !== registryId ||
+    object.type !== expected ||
+    object.owner.$kind !== "Shared" ||
+    !object.content
+  )
+    throw new IdentityDeploymentError();
+  await sdk.identity.resolveRegistry();
+}
 /** Match the typed validator abort, never a message substring or another
  * package's coincidentally identical error number. No automatic rename/retry. */
 export function identityCreationFailure(
   error: unknown,
   packageId: string,
 ): string {
+  if (error instanceof IdentityDeploymentError) return error.code;
   if (!(error instanceof TransactionPreflightError))
     return "native_or_chain_unavailable";
   const cause = error.cause as

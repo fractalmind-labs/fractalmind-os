@@ -1284,6 +1284,7 @@ name = "fractalmind-app"
 version = "0.2.0"
 dependencies = [
  "fractalmind-device-vault",
+ "jni",
  "tauri",
  "tauri-build",
  "zeroize",
