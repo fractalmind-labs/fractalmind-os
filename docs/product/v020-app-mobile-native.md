@@ -1,5 +1,7 @@
 # v0.2.0：移动端原生入口与密钥提供者
 
+后续已补齐临时 Android 工具链，完成完整 ARM64 APK 构建与模拟器中的实际 IPC／凭据验收，见 [Android 完整构建记录](v020-app-android-native.md)。以下保留本次移动入口增量的原始证明范围。
+
 对应 [#23](https://github.com/fractalmind-labs/fractalmind-os/issues/23)、[#38](https://github.com/fractalmind-labs/fractalmind-os/issues/38)、[#45](https://github.com/fractalmind-labs/fractalmind-os/issues/45) 和总验收 [#40](https://github.com/fractalmind-labs/fractalmind-os/issues/40)，基线 `9454530`。此前手机只有响应式界面，原生壳仅有桌面 binary，密钥库也未声明 iOS／Android 依赖，不能完成实际手机签名审批。
 
 ## 实现
@@ -14,14 +16,14 @@
 
 [当前源码、锁文件与原始日志](evidence/v020-app-mobile-native-validation.json)：
 
-| 项目 | 当前实际结果 |
-| --- | --- |
-| macOS 原生核心 | **21/21**，包括签名域、交易／命令边界、恢复、加密及组织密钥范围 |
-| 共享 Tauri 壳 | **1/1** 来源保护测试，桌面入口及共享库编译通过 |
-| Android 密钥库 | `cargo check --locked --target aarch64-linux-android` 通过，实际编译 Android 提供者／JNI 路径 |
-| iOS 密钥库 | `cargo check --locked --target aarch64-apple-ios` 通过，实际编译 iOS Keychain 路径 |
-| 当前桌面执行文件 | `npm run desktop:build -- --debug` 通过，包含最终前端与共享库，未生成／覆盖原运行中的 `.app` |
-| 前端与配置 | TypeScript／Vite 构建、Rust 格式及 CI YAML 解析通过；移动 CLI 参数已核对 |
+| 项目             | 当前实际结果                                                                                  |
+| ---------------- | --------------------------------------------------------------------------------------------- |
+| macOS 原生核心   | **21/21**，包括签名域、交易／命令边界、恢复、加密及组织密钥范围                               |
+| 共享 Tauri 壳    | **1/1** 来源保护测试，桌面入口及共享库编译通过                                                |
+| Android 密钥库   | `cargo check --locked --target aarch64-linux-android` 通过，实际编译 Android 提供者／JNI 路径 |
+| iOS 密钥库       | `cargo check --locked --target aarch64-apple-ios` 通过，实际编译 iOS Keychain 路径            |
+| 当前桌面执行文件 | `npm run desktop:build -- --debug` 通过，包含最终前端与共享库，未生成／覆盖原运行中的 `.app`  |
+| 前端与配置       | TypeScript／Vite 构建、Rust 格式及 CI YAML 解析通过；移动 CLI 参数已核对                      |
 
 编译检查没有执行手机凭据库，也没有验证移动壳的完整构建／链接、JNI 初始化、系统锁定与备份行为、安装后 IPC、扫码／配对、真实签名、通信审批或蜂窝网络。SDK／Move／Go 生产源码未改，未计作本轮全量重跑。原桌面 UI 的待授权请求没有被重启或替换。
 

@@ -1,0 +1,695 @@
+{
+  "format": 1,
+  "recordedAtUnix": 1791030545.342758,
+  "sourceHeadBeforeCommit": "cbf63a4",
+  "scope": "Full ARM64 debug APK; actual installed Android native IPC/Keystore/signatures and normal background/cold-process restart. No on-chain/mobile product journey claim.",
+  "build": {
+    "firstAttempt": {
+      "exitCode": 1,
+      "rawLogPath": "/tmp/fm-android-build-r1.log",
+      "rawLogSha256": "9d06f67a328737eb79d27b18cb7ba453203177e4a0d06bc9648075d766bf6089",
+      "diagnostic": "FAILURE: Build failed with an exception.\n\n* What went wrong:\nExecution failed for task ':app:rustBuildArm64Debug' (registered by plugin 'rust').\n> Process 'command 'npm'' finished with non-zero exit value 1\n\n",
+      "missingScript": "npm error Missing script: \"tauri\""
+    },
+    "finalAttempt": {
+      "exitCode": 0,
+      "command": "npm run android:build -- --debug --apk --target aarch64 --ci",
+      "rawLogPath": "/tmp/fm-android-build-r2.log",
+      "rawLogSha256": "d02e9a0b64ed67d0120fcc14f65fc80767c51420e3cbe4ccdb8449519d5af02c",
+      "toolchain": {
+        "java": "Temurin 21.0.12.1+1",
+        "ndk": "30.0.16248370",
+        "commandLineTools": "23.0.0 (16111833)",
+        "sdk": "37.0",
+        "buildTools": "36.0.0",
+        "gradle": "9.6.1",
+        "agp": "9.3.1",
+        "tauriCli": "2.12.1"
+      }
+    }
+  },
+  "apk": {
+    "path": "apps/fractalmind-app/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk",
+    "sha256": "2553e748b1fb4e6e8074d3f8bcd8e544376e25914840f093545482acd4b8392f",
+    "bytes": 169291395,
+    "signatureVerificationExit": 0,
+    "signatureOutput": "Verifies\nVerified using v1 scheme (JAR signing): false\nVerified using v2 scheme (APK Signature Scheme v2): true\nVerified using v3 scheme (APK Signature Scheme v3): false\nVerified using v3.1 scheme (APK Signature Scheme v3.1): false\nVerified using v4 scheme (APK Signature Scheme v4): false\nVerified for SourceStamp: false\nNumber of signers: 1\nSigner #1 certificate DN: C=US, O=Android, CN=Android Debug\nSigner #1 certificate SHA-256 digest: 4f2bd3fa46b3f912aee9ec863b106847b0f4b78fa81c967f475e4f7dc26e3f66\nSigner #1 certificate SHA-1 digest: 1c8bedf92b25aeb4b0379eb1e7be13294fa6cdf4\nSigner #1 certificate MD5 digest: 4a26dd2e44582b8ee9499c3d6677c61b\nSigner #1 key algorithm: RSA\nSigner #1 key size (bits): 2048\nSigner #1 public key SHA-256 digest: 585df5015c604bcb2f8ed87ab4a9987be716b8ffa11f4900a2190dc13c2d6b7e\nSigner #1 public key SHA-1 digest: d3ee064f648f7bf8d3735d68605ac9849d777d30\nSigner #1 public key MD5 digest: 33b85d9c264d3d031cd785189d29ba37\n",
+    "installExit": 0,
+    "installResult": "Success",
+    "initialAppPid": "7176",
+    "sharedLibrarySha256": "6e40c04fddbfb79d504dd44763569dfe01c5e0f37f44e83467667aaf77f00064"
+  },
+  "toolchain": {
+    "officialMetadata": {
+      "jdk": {
+        "version": "21.0.12.1+1-LTS",
+        "name": "OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.12.1_1.tar.gz",
+        "link": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.12.1_1.tar.gz",
+        "checksum": "3623232f33a9c3baadf304480b2535f9a3cba8a58d42ecbb438ba267315d9998",
+        "size": 200073404
+      },
+      "commandLineTools": {
+        "package": "cmdline-tools;latest",
+        "url": "https://dl.google.com/android/repository/commandlinetools-mac_arm64-16111833_latest.zip",
+        "size": 155384151,
+        "checksum": "ad03dc49bfacfd52c110b14104ea548b8a07e830",
+        "checksumType": "sha1",
+        "license": "android-sdk-license"
+      },
+      "ndk": {
+        "package": "ndk;30.0.16248370",
+        "url": "https://dl.google.com/android/repository/android-ndk-r30-darwin.zip",
+        "size": 974984488,
+        "checksum": "c060be96767eefbb8e0a27796d6f43115fc1a0c4",
+        "checksumType": "sha1",
+        "license": "android-sdk-license"
+      }
+    },
+    "downloads": [
+      {
+        "component": "jdk",
+        "path": "/tmp/fm-v020-android-kkr_ahu_/downloads/OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.12.1_1.tar.gz",
+        "bytes": 200073404,
+        "checksumType": "sha256",
+        "checksum": "3623232f33a9c3baadf304480b2535f9a3cba8a58d42ecbb438ba267315d9998",
+        "verified": true,
+        "elapsedSeconds": 51.758732080459595,
+        "archiveRemovedAfterVerifiedExtraction": true
+      },
+      {
+        "component": "commandLineTools",
+        "path": "/tmp/fm-v020-android-kkr_ahu_/downloads/commandlinetools-mac_arm64-16111833_latest.zip",
+        "bytes": 155384151,
+        "checksumType": "sha1",
+        "checksum": "ad03dc49bfacfd52c110b14104ea548b8a07e830",
+        "verified": true,
+        "elapsedSeconds": 11.919768810272217,
+        "archiveRemovedAfterVerifiedExtraction": true
+      },
+      {
+        "component": "ndk",
+        "path": "/tmp/fm-v020-android-kkr_ahu_/downloads/android-ndk-r30-darwin.zip",
+        "bytes": 974984488,
+        "checksumType": "sha1",
+        "checksum": "c060be96767eefbb8e0a27796d6f43115fc1a0c4",
+        "verified": true,
+        "elapsedSeconds": 251.15714502334595,
+        "archiveRemovedAfterVerifiedExtraction": true
+      }
+    ],
+    "prerequisiteFailures": [
+      {
+        "phase": "android:init r1",
+        "exitCode": 1,
+        "reason": "Android NDK not found"
+      },
+      {
+        "phase": "emulator r1",
+        "exitCode": 1,
+        "reason": "Available 6059.77 MB, userdata requires 7372.80 MB"
+      }
+    ],
+    "acceptedLicenseFilesReused": [
+      "android-sdk-license",
+      "android-sdk-arm-dbt-license"
+    ],
+    "emulator": {
+      "serial": "emulator-5580",
+      "properties": {
+        "sys.boot_completed": "1",
+        "ro.build.version.sdk": "36",
+        "ro.build.version.sdk_full": "36.1",
+        "ro.product.cpu.abi": "arm64-v8a",
+        "ro.build.version.release": "16"
+      }
+    },
+    "modelCacheCleanup": {
+      "scope": "task-owned downloadable Ollama model cache only",
+      "path": "/var/folders/9m/4m4v8zks49nck63f0063ny340000gn/T/fm-v020-ollama-1evxvkeq/models",
+      "files": 9,
+      "bytes": 5669138339,
+      "recordedAt": 1791026593.234325,
+      "reportsRetained": true,
+      "removed": true,
+      "freeBytesAfter": 12904833024
+    },
+    "buildCacheCleanup": {
+      "at": 1791027319.2627661,
+      "records": [
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/native/target",
+          "scope": "standalone native vault generated build cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_app-31yprbfpi3vwl",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_app-09mmh2bw58fn0",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_app-0bhxk7vlil4vw",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_app-1iyansn75n7xd",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_app-0l8r6sqz6ebn4",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_app-2qiz3yqya2tem",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_app-2rmzfaakklsd9",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_device_vault-1djpdhq2lc9z4",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_device_vault-1snrislkwbgxb",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_device_vault-276m5zo6tzbjo",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_app-3cdr9lyjwnq2n",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_app_lib-137p6718bqxyz",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_app-3cxe45pl2w458",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_app_lib-3sw6bmwu5jr83",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_device_vault-2e4cl1b65e86k",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_app_lib-1xwaiotin2est",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_app-2cqadspqtzgai",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/incremental/fractalmind_app-37obaszjiv5e7",
+          "scope": "desktop-only incremental compilation cache"
+        },
+        {
+          "path": "/tmp/fm-envd-workload-recovery-app-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24454386,
+          "sha256": "3b6c9d6d9311ae247070674ac8f339523fd59c309a10e9708c81c80fe40c3324"
+        },
+        {
+          "path": "/tmp/fm-envd-device-http-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 23893154,
+          "sha256": "3781c04f0af60f166f769d80edfb1cb5a253d35ef1dbb62e08675e513356bb89"
+        },
+        {
+          "path": "/tmp/fm-envd-host-join",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 23367026,
+          "sha256": "a681ef8bcdcc4deafa794cae6e1eeb7b613e34dad784d89143b7187e1782f904"
+        },
+        {
+          "path": "/tmp/fm-envd-direct-execution-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24330994,
+          "sha256": "84f5b8aa90b19b382dde8ef21919b634536d86a91ba5d52b7a0aeba1378703bd"
+        },
+        {
+          "path": "/tmp/fm-envd-recovery-host-authority",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 23959858,
+          "sha256": "aaedaf291ad8ebc33dee4ea985ec1f143ec03b2b9149d6aea671c77c3e6ef7a4"
+        },
+        {
+          "path": "/tmp/fm-envd-native-execution-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24072594,
+          "sha256": "94caf3a21be5618039f493a0363d610afdb3cc4f51ff46be46bfe8a959b8b61c"
+        },
+        {
+          "path": "/tmp/fm-envd-chain-queue-app-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24418786,
+          "sha256": "68fcc57dee864ca1048b5296cd9943963601b435419a4a9a824f2a2b17275494"
+        },
+        {
+          "path": "/tmp/fm-envd-model-app-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24383202,
+          "sha256": "9521245ad4dbb37976f7ab8e9e916987e80d914329cc1fa6692186651de06055"
+        },
+        {
+          "path": "/tmp/fm-envd-ollama-r1",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 29876898,
+          "sha256": "90ea07dd9ce7efa657ad03268c2d5ae0ecb50a6a43fc496a7a8ffb5a5221d227"
+        },
+        {
+          "path": "/tmp/fm-envd-workload-recovery-race-app-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 29703234,
+          "sha256": "96c66a76c06060bb12d9a3504e8cddc557165cf9ccae5b46d337f56a6e625835"
+        },
+        {
+          "path": "/tmp/fm-envd-agent-discovery-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24000482,
+          "sha256": "237d01b0f208a1f1716fa62cab442e3e58c5d6c6e909bf779f9a11bef8f6ac2d"
+        },
+        {
+          "path": "/tmp/fm-envd-device-command-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24090594,
+          "sha256": "3fa1277b3c84c2f444db50c1b388feaac164f820bb86efd1588fae1fea57effb"
+        },
+        {
+          "path": "/tmp/fm-envd-three-package-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24193922,
+          "sha256": "8c304a2bdeb14628d019b8a4e9015ea95fbe8b7749a8bfb4ff212b05b6e75bb4"
+        },
+        {
+          "path": "/tmp/fm-envd-direct-app-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24330994,
+          "sha256": "1da14d43091421b6ddff32fa0ee3981e725f52220664a2793e829446e9908f59"
+        },
+        {
+          "path": "/tmp/fm-envd-native-host-restart-r1",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 29859762,
+          "sha256": "32f8869fcda0c7c69f02482f3d5248a916a842b05338bf7f517819fa57b1db57"
+        },
+        {
+          "path": "/tmp/fm-envd-scheduled-queue-app-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24418786,
+          "sha256": "25b2db4e6f46a4864d07f2d6fb892a33f6f185ac9da83817325cc160115e53a9"
+        },
+        {
+          "path": "/tmp/fm-envd-native-discovery-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24053858,
+          "sha256": "fa155336a93b62140d54ba360856c0d9de3a2607cc2c018fdcb7690fa8384cc7"
+        },
+        {
+          "path": "/tmp/fm-envd-host-rejoin-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24018450,
+          "sha256": "0857cfab044c80cb276769d747d5f9ae8bd872920e54a2269637d87a0c3fcda4"
+        },
+        {
+          "path": "/tmp/fm-envd-ollama-r2",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 29876898,
+          "sha256": "e6a4ffe42cabac2160686169401ddbd12e6bc2fc8f724dc051de0f9248e9b97e"
+        },
+        {
+          "path": "/tmp/fm-envd-ollama-r5",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 29876898,
+          "sha256": "5c539d73fcdbe9ee64605af8624b2c83f50b7159b4647eef63666192ff46d0f6"
+        },
+        {
+          "path": "/tmp/fm-envd-handover-review-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24176178,
+          "sha256": "0548229c87b71dc71717f8b1e05f7fae2b687d120afac6ed5b22b3b7c7ec85e2"
+        },
+        {
+          "path": "/tmp/fm-envd-chain-connection",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 23436034,
+          "sha256": "4e2ccd3ce7d841ed14c89c88eeec646fc150e51f9e1b724543f1856f88d2bae6"
+        },
+        {
+          "path": "/tmp/fm-envd-chain-connection-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 23840034,
+          "sha256": "cc4930d07426b2e9052b83003c079d3c3ffdf0edc9d558c4ec4aea1fb4e63abe"
+        },
+        {
+          "path": "/tmp/fm-envd-ollama-r4",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 29876898,
+          "sha256": "34c22ebe41b54d5fa6ed69f6d177b223c00f855212179974f68282369fdc13a9"
+        },
+        {
+          "path": "/tmp/fm-envd-ollama-r3",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 29876898,
+          "sha256": "34c22ebe41b54d5fa6ed69f6d177b223c00f855212179974f68282369fdc13a9"
+        },
+        {
+          "path": "/tmp/fm-envd-hostquote-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 22592642,
+          "sha256": "41e4705b0bf8fea90be875d3338eb0c32ecaffc2aad6de945b8175f55f286cb1"
+        },
+        {
+          "path": "/tmp/fm-envd-running-stop-app-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24420722,
+          "sha256": "f86c9c56cdea1d5f83c0a4605876cf2ede702b1268f2aacc68dab391d33519e7"
+        },
+        {
+          "path": "/tmp/fm-envd-model-app-tests-r2",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24383202,
+          "sha256": "1203bab97b0b2424e9c878031ad6068ce20b054a6d23312687b0e3050267e2fa"
+        },
+        {
+          "path": "/tmp/fm-envd-handover-approval-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24176178,
+          "sha256": "009c35d44be14f5222a32432f0844d9943336f75798e56fbf7ab8e6a9bf3b428"
+        },
+        {
+          "path": "/tmp/fm-envd-mixed-origins-live",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24508722,
+          "sha256": "66a65f2640cb522ac473dd27c98e7740e39c1343dd617d70eab50a87d56faace"
+        },
+        {
+          "path": "/tmp/fm-envd-hostjoin-cli-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 22687042,
+          "sha256": "62c46c58a585b9cfc19bee886877c0724c79543a49d817640fcab681948eb096"
+        },
+        {
+          "path": "/tmp/fm-envd-handover-continuation-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24177394,
+          "sha256": "b62a705279ed1b2b853e5f3d4894fd9ab4ab37752c16f76929eaf9cb41e1134a"
+        },
+        {
+          "path": "/tmp/fm-envd-host-observation-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 23928050,
+          "sha256": "bb34cf933550a795adf930add1f0f4e95b8f93d9890c556c8f64d09882503efb"
+        },
+        {
+          "path": "/tmp/fm-envd-recovery-host-authority-race-app-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 29770674,
+          "sha256": "90165d0f07d9965f8bebe4dbda80d23e54cbd5073969f4dbaa0bb9f81353fca4"
+        },
+        {
+          "path": "/tmp/fm-envd-native-app-execution-tests",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 24177394,
+          "sha256": "b0b6ebda9acab5fee28d4a6eff8c7100c87c1231da5a672f1dfab9a5d065016c"
+        },
+        {
+          "path": "/tmp/fm-envd-mixed-origins-race-live",
+          "scope": "inactive task-owned Mach-O test helper",
+          "bytes": 29823602,
+          "sha256": "958c86b05648ff11d5fd00c4e3c3db4d28087ea39775b116919fbe4158ecb2be"
+        }
+      ],
+      "freeBytesAfter": 8288739328,
+      "sourceAndBundleModified": false
+    }
+  },
+  "runtime": {
+    "format": 1,
+    "scope": "Installed ARM64 Android App native IPC and credential persistence; offline signatures only",
+    "app": "org.fractalmind.desktop",
+    "avd": "fm-v020-android-r1",
+    "serial": "emulator-5580",
+    "broadcasts": 0,
+    "checks": [
+      "Bundled native welcome, secure context and mobile viewport",
+      "Missing credential fails without initialization",
+      "Android credential generation, verified public keys and idempotent initialization",
+      "Native profile boundary",
+      "Native bounded possession signature verified by production client",
+      "Native programmable transaction signature verified offline",
+      "Wrong transaction sender rejected natively",
+      "Arbitrary command bytes rejected natively",
+      "Independent device/recovery credentials and wrapped onboarding material",
+      "Read-only onboarding reload and duplicate creation rejection",
+      "Native recovery transaction signature verified offline",
+      "Actual native welcome language and dark theme controls",
+      "Cold App process restart preserves original device and recovery keys",
+      "Reloaded Android credential signs a new bounded challenge",
+      "Public language/appearance preferences survive process restart"
+    ],
+    "initialPid": "7770",
+    "initialPage": {
+      "origin": "http://tauri.localhost",
+      "secure": true,
+      "native": true,
+      "width": 411,
+      "scrollWidth": 411,
+      "text": "FractalMind\nOpen · Verifiable · Permissionless\nStart with an organization of one\n\nCreate your own organization, deliver verifiable goals with Agents, then grow into larger teams and the open network.\n\nThrough fractal, self-similar agent organizations, toward an ASI that no one owns.\n\nDevelopment Alpha · private keys stay on devices; persistent product state lives on Sui.\n\nLanguage\n简体中文\nEnglish\nAppearance\nSystem\nLight\nDark\nWelcome to FractalMind\n\nChoose how to start. Nothing private is shown while signed out.\n\nCreate my identity\nA new Human identity and personal organization, starting empty\n›\nI already have an identity\nSign in on this device, approved by one you already use\n›\nRecover with a code\nIf every device is lost, one code recovers your identity\n›\n\nThere is no FractalMind cloud account: identity, device grants and organizations live on Sui; private keys stay on your devices.\n\nDevelopment preview: read-only chain browser",
+      "storageKeys": ["fractalmind.app.appearance.v1"]
+    },
+    "profiles": [
+      "test-android-1b502922-dcc",
+      "test-android-1b502922-dcc-onboarding"
+    ],
+    "device": {
+      "format": 1,
+      "profile": "test-android-1b502922-dcc",
+      "address": "0xdcc0847cec06b399455de1445b127b7dcaf7e3269f157ba904de0f0d1074bc2a",
+      "signingPublicKey": "PJ8WS1fSbExmkcPqwhKbJ9sNhMFcoLlUSfz/i91LgvQ=",
+      "encryptionPublicKey": "820/C0tv0Uiqw/lB+Kr64aUtfkvlqRBrYiaiTE4WAgg="
+    },
+    "onboarding": {
+      "format": 1,
+      "network": "localnet",
+      "device": {
+        "format": 1,
+        "profile": "test-android-1b502922-dcc-onboarding",
+        "address": "0xfed9f9315e5c4f8c2d2e1e32ceb117c0c0d76112a2fc6f48c0fb856a5e9afb3c",
+        "signingPublicKey": "2f8sSMVi/OH3Aeq3RRGgmxqUygBP7J1kSKdm2081WqE=",
+        "encryptionPublicKey": "IiviJmxl6w1o2qxnKXJr8emxphulTwX9fKCfpwZszU8="
+      },
+      "recovery": {
+        "format": 1,
+        "profile": "test-android-1b502922-dcc-onboarding",
+        "address": "0x56efb1fad96e43b9383b3867c128f32cf6c384cce771fcf4ad4c2f201eb4f4f2",
+        "signingPublicKey": "tX8VcoRZet2fIs6fzW5EUhUCgPs3pe8M/pZc8yusJM0=",
+        "encryptionPublicKey": "JOyMd0fvV4zWRr6LAf61OvaZtPDLqY4/+xKdPDNifgU="
+      },
+      "encryptedBackup": "Rk1XMVYKkVohjvw/InJ7zlMep9F/nY5F1vneTADe10DiXQgcQ5y8ZK15BPluKWoFu1op1pgLTViUfcI0faLLM/6Y5pZGTUUx9vN1Hfeza4GoSXtYSBx374KykdQo30nOdXB4WRXbmeU7DdCUCPAPYf3xiN/C6Ftm46oGhwbD9xWB8qICKqPWk5354Eqwk3CoYvwspKXqhCXbzHOwPW8A6cQafqvtRr6Q/e7dKGLd5DOFxXuRZ/t6qjyNOKIILtZrh2HyAhdN/atetlBlgL4EXH3D0c7CVyyi+YMMAn4Yp0Qt9kI7VQBYQdE0aJ+fJ1Hw7dB9J+QZ/X3fLRI1wypcjmS+eqg6dnjpvgjK85rfC585aWZFuwUQBlWx",
+      "encryptedDeviceKeys": "Rk1XMcsexLYdegqGESZD+1MLumP/5KWWsVaZ0zBlDjxrqxc/jwIHSg/dUxOA/240LqpnYXGhVxw5x79Z23FY1zqaogpGTUUxThR1XbmjYKUKD2YF/Y7RGF0k9wqQTheLTIaaVZBm8E+vwxVayfS3xNzqUeWJi5jaTDAEUq3C5fqQRCqGC0z+pYSWGoE9PB3KXPvUDVOclTRjY6p9zGHJSa1uKBwe+0cibOVJxGKA395x1RUYU0t+nlamd1RFo1FP5RlPt3xnGRuQLmJRcHMDW4yrKNc7OhWtUfn0Sr47bCDT+REpB2f6scsGoYNTwG2n5B1PSeB5axeWX935GZWPFIu/Php+utMw1lpD6fUcXCjEWtlUx1DK+o6M"
+    },
+    "appearanceBeforeRestart": {
+      "language": "en",
+      "theme": "dark"
+    },
+    "backgroundBeforeStopMs": 6000,
+    "restartedPid": "7962",
+    "completed": true
+  },
+  "priorAttempts": [
+    {
+      "attempt": 1,
+      "exitCode": 1,
+      "rawReportPath": "/tmp/fm-android-native-acceptance-r1.json.progress.json",
+      "rawReportSha256": "43ee229407b696335ed2c60f36eb7b334c34f37d0aacb9f378d39baf72019089",
+      "checks": [
+        "Bundled native welcome, secure context and mobile viewport",
+        "Missing credential fails without initialization",
+        "Android credential generation, verified public keys and idempotent initialization",
+        "Native profile boundary",
+        "Native bounded possession signature verified by production client",
+        "Native programmable transaction signature verified offline",
+        "Wrong transaction sender rejected natively",
+        "Arbitrary command bytes rejected natively"
+      ],
+      "profiles": [
+        "test-android-54bf52a6-03c",
+        "test-android-54bf52a6-03c-onboarding"
+      ],
+      "initialPid": "7176",
+      "restartedPid": null,
+      "summary": "Fixture assumed the wrong recovery-code delimiter.",
+      "broadcasts": 0
+    },
+    {
+      "attempt": 2,
+      "exitCode": 1,
+      "rawReportPath": "/tmp/fm-android-native-acceptance-r2.json.progress.json",
+      "rawReportSha256": "043171981800050b8bd978e481967d2569b0c6c56242ab45c96b810f627cb906",
+      "checks": [
+        "Bundled native welcome, secure context and mobile viewport",
+        "Missing credential fails without initialization",
+        "Android credential generation, verified public keys and idempotent initialization",
+        "Native profile boundary",
+        "Native bounded possession signature verified by production client",
+        "Native programmable transaction signature verified offline",
+        "Wrong transaction sender rejected natively",
+        "Arbitrary command bytes rejected natively",
+        "Independent device/recovery credentials and wrapped onboarding material"
+      ],
+      "profiles": [
+        "test-android-34ae9f15-112",
+        "test-android-34ae9f15-112-onboarding"
+      ],
+      "initialPid": "7176",
+      "restartedPid": null,
+      "summary": "Fixture compared randomized ciphertext instead of decrypting and comparing original contents.",
+      "broadcasts": 0
+    },
+    {
+      "attempt": 3,
+      "exitCode": 1,
+      "rawReportPath": "/tmp/fm-android-native-acceptance-r3.json.progress.json",
+      "rawReportSha256": "ff95e1470e89dd588fbb0ebd842d20f9bacc2af7c8570396eaeb6ccc277d07fe",
+      "checks": [
+        "Bundled native welcome, secure context and mobile viewport",
+        "Missing credential fails without initialization",
+        "Android credential generation, verified public keys and idempotent initialization",
+        "Native profile boundary",
+        "Native bounded possession signature verified by production client",
+        "Native programmable transaction signature verified offline",
+        "Wrong transaction sender rejected natively",
+        "Arbitrary command bytes rejected natively",
+        "Independent device/recovery credentials and wrapped onboarding material",
+        "Read-only onboarding reload and duplicate creation rejection",
+        "Native recovery transaction signature verified offline",
+        "Actual native welcome language and dark theme controls",
+        "Cold App process restart preserves original device and recovery keys",
+        "Reloaded Android credential signs a new bounded challenge"
+      ],
+      "profiles": [
+        "test-android-a37f0b6c-cb5",
+        "test-android-a37f0b6c-cb5-onboarding"
+      ],
+      "initialPid": "7176",
+      "restartedPid": "7592",
+      "summary": "Immediate force-stop after changing optional preferences yielded default preferences; original native credentials reloaded.",
+      "broadcasts": 0
+    },
+    {
+      "attempt": 4,
+      "exitCode": 1,
+      "rawReportPath": "/tmp/fm-android-native-acceptance-r4.json.progress.json",
+      "rawReportSha256": "fc2788c8f61dedbb775712573256fdf112a805ab8a77c04e0375795017a7b0a7",
+      "checks": [
+        "Bundled native welcome, secure context and mobile viewport",
+        "Missing credential fails without initialization",
+        "Android credential generation, verified public keys and idempotent initialization",
+        "Native profile boundary",
+        "Native bounded possession signature verified by production client",
+        "Native programmable transaction signature verified offline",
+        "Wrong transaction sender rejected natively",
+        "Arbitrary command bytes rejected natively",
+        "Independent device/recovery credentials and wrapped onboarding material",
+        "Read-only onboarding reload and duplicate creation rejection",
+        "Native recovery transaction signature verified offline",
+        "Actual native welcome language and dark theme controls"
+      ],
+      "profiles": [
+        "test-android-3d0976c7-470",
+        "test-android-3d0976c7-470-onboarding"
+      ],
+      "initialPid": "7592",
+      "restartedPid": "7770",
+      "summary": "Initial cold-start credential read returned native_unavailable; original profile later read successfully, with original en/dark preferences.",
+      "broadcasts": 0
+    }
+  ],
+  "originalR4Read": {
+    "scope": "Original failed cold-start profile read only; no signing, creation or broadcast",
+    "ready": "complete",
+    "lang": "en",
+    "theme": "dark",
+    "preferences": "{\"language\":\"en\",\"theme\":\"dark\"}",
+    "public": {
+      "format": 1,
+      "profile": "test-android-3d0976c7-470",
+      "address": "0x8fd814ca8b726a3a5f776074141c125595eaa615881fa30114dc9476bd555365",
+      "signingPublicKey": "LARpWDrM1s6ihCQ15GHlywiopZYUocX8wSpn22kjPsk=",
+      "encryptionPublicKey": "lRnhtbKdbU+lNvDq+w3c2+bo9mMCZvwRS9QUJire7Uk="
+    }
+  },
+  "finalSourceChecks": {
+    "strictTypeCheck": {
+      "exitCode": 0,
+      "command": "tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --jsx react-jsx --esModuleInterop --skipLibCheck --strict scripts/android-native-acceptance.ts",
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "workflowYamlAndAggregateGate": "Passed local parser/assertions; GitHub job not run",
+    "fixtureSourceNote": "R5 source was subsequently changed only by Prettier whitespace formatting; strict type check uses final formatted source."
+  },
+  "sourceHashes": {
+    ".github/workflows/ci.yml": "dc3871dca922c5626925c06c5233c24638a1a8cb797bd2cdc3be2806c800be53",
+    "apps/fractalmind-app/package.json": "cff235d492e7df343974e9cc16a2298e56e3c0d220e07d96d026f0f60e90cde6",
+    "apps/fractalmind-app/package-lock.json": "78f60455cfac134e1b983f826ee1fa2f68d91dd0179215deb0c68daad88efd0f",
+    "apps/fractalmind-app/scripts/android-native-acceptance.ts": "05b3e3a9b6669ca7254ba6a380ff9126a1334ef54be8b668f2eb1a5d822f1f54",
+    "apps/fractalmind-app/src-tauri/Cargo.toml": "98d7acccae957e1eacf74782f40460d1522a91cfa25c555c4418ece27a677b5a",
+    "apps/fractalmind-app/src-tauri/Cargo.lock": "555f52ab228c18f9816c27a6b191b266bf78e60beccffbb7ccbc88d27179357d",
+    "apps/fractalmind-app/src-tauri/tauri.conf.json": "85644ab929a8ade544d80a63297be7c23a2481cb222908d8c9bd1780bdebfce6",
+    "apps/fractalmind-app/src-tauri/src/lib.rs": "09e9181609d934bf2d2227fd60d48906dfff0cac3ab5a9870b46e4a1cbbb047c",
+    "apps/fractalmind-app/src-tauri/capabilities/device-main.json": "c77ac58bb8cf55d64247447c347a0be525f190730d3288648819d399721d2df0",
+    "apps/fractalmind-app/native/Cargo.toml": "bfcdbf647dc14d2b7235f58fea35fc98ee4fb3bccdbcb1a9b09a72410885f434",
+    "apps/fractalmind-app/native/src/storage.rs": "803292646967f1c0ea1d420db5ab659150660a8e16d2ef991ed7948defd1c4d7"
+  },
+  "screenshots": [
+    {
+      "path": "docs/product/evidence/v020-app-android-welcome-light.png",
+      "sha256": "476f1e215b0504d608173f0b35821efb5c13708d1d84b0c627d59c3600a1f067",
+      "bytes": 697131
+    },
+    {
+      "path": "docs/product/evidence/v020-app-android-welcome-dark.png",
+      "sha256": "423415a2368e58a3602be4122d2f87dcec7197bda0ecad7970570de69a87c729",
+      "bytes": 723376
+    }
+  ],
+  "cleanup": {
+    "app": {
+      "scope": "All profiles created by this zero-broadcast Android fixture on its disposable AVD",
+      "at": 1791029931.151773,
+      "avd": "fm-v020-android-r1",
+      "broadcasts": 0,
+      "uninstallExit": 0,
+      "uninstallResult": "Success",
+      "packagePathAfter": "",
+      "applicationAbsent": true
+    },
+    "emulatorExitCode": 0,
+    "tools": {
+      "adbExit": 0,
+      "gradleExit": 0,
+      "scope": "Dedicated ADB port 15037 and temporary GRADLE_USER_HOME only"
+    }
+  },
+  "notVerified": [
+    "Physical phone and cellular connectivity",
+    "Hardware-backed security or per-use biometric authorization",
+    "Android fee confirmation and chain broadcasts",
+    "Actual mobile device pairing/messages/approval/human acceptance",
+    "Full installed UI and chain reconstruction after clearing client caches",
+    "Latest optional preferences after immediate force-stop",
+    "Android status-bar contrast on dark welcome hero",
+    "Cloud Host and running-task restart/reconnection",
+    "Public deployment upgrade and historical unsettled Run cleanup"
+  ]
+}

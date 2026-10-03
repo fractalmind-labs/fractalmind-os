@@ -78,10 +78,13 @@ sharing. The browser pairing entry cannot initialize keys. See
 
 The native shell exposes the same Rust library entry point to desktop and mobile.
 Its vault uses Keychain on iOS and a named Android Keystore-backed encrypted
-credential store on Android. Mobile vault type checks pass; phone installation,
-native IPC, device pairing, real signing and mobile approval journeys remain
-unverified. This does not establish that the mobile App is ready for release.
-See [mobile entry and credential evidence](../../docs/product/v020-app-mobile-native.md).
+credential store on Android. An ARM64 debug APK now builds and installs;
+actual Android emulator IPC, offline signatures and credential reload after a
+cold process restart pass. Physical phones, on-chain mobile transactions,
+pairing and mobile approval journeys remain unverified. This does not establish
+that the mobile App is ready for release. See
+[Android build and actual evidence](../../docs/product/v020-app-android-native.md)
+and [mobile entry evidence](../../docs/product/v020-app-mobile-native.md).
 
 The desktop development shell uses Tauri with a native device vault. From this
 directory run `npm run desktop:dev`, or `npm run desktop:build -- --debug` for a
