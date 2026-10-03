@@ -58,6 +58,7 @@ import {
   parseOkrProjection,
   renderOkrProjection,
 } from "../src/okr-projection";
+import { nativeWorkloadRecovery } from "./native-workload-recovery";
 assert.ok(
   process.argv[2] && process.argv[3],
   "Pass isolated deployment and a new output report",
@@ -75,6 +76,11 @@ const autonomy = process.argv.slice(4).includes("--autonomy");
 const projection = process.argv.slice(4).includes("--projection");
 const modelFixture = process.argv.slice(4).includes("--model-fixture");
 const messageOkr = process.argv.slice(4).includes("--message-okr");
+const workloadRecovery = process.argv.slice(4).includes("--workload-recovery");
+assert.ok(
+  !workloadRecovery || messageOkr,
+  "Workload recovery requires completed OKR, actual direct execution and a message-derived draft",
+);
 assert.ok(
   !messageOkr || (directApp && modelFixture),
   "Message-derived OKR requires formal direct App and its model-protocol fixture",
@@ -144,6 +150,7 @@ assert.ok(
         "--scheduled-queue",
         "--running-stop",
         "--message-okr",
+        "--workload-recovery",
       ].includes(a),
     ),
   "Unknown harness option",
@@ -179,6 +186,12 @@ let heldModelResponse: import("node:http").ServerResponse | undefined;
 let created = false,
   cleanupConfirmed = false,
   state: Record<string, unknown> = { phase: "before_native_creation" };
+const recoveryProfiles = [
+  profile + "-recover-a",
+  profile + "-recover-b",
+  profile + "-used",
+] as const;
+let backupCode = "";
 function request(action: string, extra: Record<string, string> = {}) {
   const result = spawnSync(helper, [], {
     input: JSON.stringify({ action, profile, ...extra }),
@@ -225,6 +238,58 @@ const invoke: NativeInvoke = async (command, args) => {
       throw new Error("Unexpected native operation");
   }
 };
+function recoveryTransport(target: string): NativeInvoke {
+  assert.ok(
+    recoveryProfiles.includes(target as (typeof recoveryProfiles)[number]),
+  );
+  return async (command, args) => {
+    assert.equal(args.profile, target);
+    const extra = { profile: target };
+    switch (command) {
+      case "fm_recovery_import":
+        return request("importRecovery", {
+          ...extra,
+          network: args.network,
+          code: args.code,
+        });
+      case "fm_recovery_imported_public":
+        return request("publicImportedRecovery", {
+          ...extra,
+          network: args.network,
+        });
+      case "fm_recovery_prepare":
+        return request("prepareRecovery", {
+          ...extra,
+          network: args.network,
+          source: args.source,
+        });
+      case "fm_recovery_prepared_public":
+        return request("publicPreparedRecovery", {
+          ...extra,
+          network: args.network,
+        });
+      case "fm_recovery_sign_transaction":
+        return request("signRecovery", {
+          ...extra,
+          network: args.network,
+          phase: args.phase,
+          bytes: args.bytes,
+        });
+      case "fm_device_public":
+        return request("public", extra);
+      case "fm_device_prove":
+        return request("proveDevice", { ...extra, challenge: args.challenge });
+      case "fm_device_sign_transaction":
+        return request("signTransaction", { ...extra, bytes: args.bytes });
+      case "fm_device_encrypt_record":
+        return request("encryptRecord", { ...extra, record: args.record });
+      case "fm_device_decrypt_record":
+        return request("decryptRecord", { ...extra, record: args.record });
+      default:
+        throw new Error("Unsupported recovery test operation");
+    }
+  };
+}
 async function save(complete = false) {
   await writeFile(
     complete ? output : progress,
@@ -260,6 +325,10 @@ async function save(complete = false) {
           directMessageUIVerified: false,
           messageOkrControllerVerified:
             state.messageOkrControllerVerified === true,
+          workloadRecoveryControllerVerified:
+            state.workloadRecoveryControllerVerified === true,
+          installedCacheWipeVerified: false,
+          actualDeviceRestartVerified: false,
           installedMessageOkrUIVerified: false,
           directAppControllerVerified:
             state.directAppControllerVerified === true,
@@ -476,6 +545,7 @@ try {
   created = true;
   const recovery = createdIdentity.signer,
     device = await NativeDeviceSigner.load(invoke, profile);
+  if (workloadRecovery) backupCode = createdIdentity.recoveryCode;
   createdIdentity.recoveryCode = "";
   const connection = normalizeDeployment({
     network: "localnet",
@@ -583,6 +653,7 @@ try {
       FM_ENVD_NATIVE_EXECUTION: "0",
       FM_ENVD_HOST_REJOIN: "0",
       FM_ENVD_TEST_MODEL_API_BASE: modelAPIBase,
+      FM_ENVD_WORKLOAD_RECOVERY: workloadRecovery ? "1" : "0",
     },
     stdio: ["pipe", "pipe", "pipe"],
   });
@@ -3617,14 +3688,78 @@ try {
       }
     }
   }
-  const revokeQuote = await admission.prepare(
+  let finalAdmission = admission,
+    finalReader = reader;
+  if (workloadRecovery) {
+    const deliveriesBefore = deliveries,
+      modelsBefore = modelRequests;
+    const oldBudget = await sdk.okr.getBudget(okrId);
+    assert.equal(oldBudget.spent, 6n);
+    assert.equal(oldBudget.reserved, 0n);
+    const restored = await nativeWorkloadRecovery({
+      deployment: connection,
+      chain,
+      device,
+      grantId: auth.grantId,
+      invoke,
+      organizationId,
+      managedAgentId,
+      bindingId,
+      okrId,
+      sourceOkrId: state.sourceOkrId as string,
+      sourceMessageId: state.sourceMessageId as string,
+      recoveryCode: backupCode,
+      recoveryProfiles,
+      transportFor: recoveryTransport,
+      removeProfile: (target) => {
+        assert.ok(
+          target === profile ||
+            recoveryProfiles.includes(
+              target as (typeof recoveryProfiles)[number],
+            ),
+        );
+        request("remove", { profile: target });
+        assert.throws(
+          () => request("public", { profile: target }),
+          /NotInitialized/,
+        );
+      },
+      checks,
+      preparedQuote,
+      record,
+      checkpoint: async (publicState) => {
+        state = { ...state, ...publicState };
+        await save();
+      },
+      assertNoDispatch: () => {
+        assert.equal(deliveries, deliveriesBefore);
+        assert.equal(modelRequests, modelsBefore);
+      },
+    });
+    backupCode = "";
+    finalAdmission = restored.admission;
+    finalReader = restored.reader;
+    assert.deepEqual(await sdk.okr.getBudget(okrId), oldBudget);
+    assert.equal(deliveries, deliveriesBefore);
+    assert.equal(modelRequests, modelsBefore);
+    state = {
+      ...state,
+      workloadRecoveryControllerVerified: true,
+      recoveredDeviceAddress: restored.device.device.address,
+      recoveredGrantId: restored.grantId,
+      recoveryExtraDispatches: deliveries - deliveriesBefore,
+      recoveryExtraModelRequests: modelRequests - modelsBefore,
+    };
+    await save();
+  }
+  const revokeQuote = await finalAdmission.prepare(
     { kind: "revoke-member", targetId: membershipId },
     randomUUID(),
     true,
   );
   assert.ok(!("status" in revokeQuote));
   await preparedQuote("native revocation of actual Host", revokeQuote);
-  const revoked = await admission.submit(revokeQuote);
+  const revoked = await finalAdmission.submit(revokeQuote);
   await record("native revocation of actual Host", revoked);
   await readVisible(
     () => sdk.host.getMembership(membershipId),
@@ -3639,7 +3774,7 @@ try {
   child.stdin.end("DONE\n");
   await done;
   assert.equal(
-    (await reader.read(settled.id, managedAgentId)).recordId,
+    (await finalReader.read(settled.id, managedAgentId)).recordId,
     settled.result_record,
   );
   checks.push(
@@ -3670,6 +3805,14 @@ try {
     hostProcess.kill("SIGTERM");
   }
   if (created) {
+    backupCode = "";
+    for (const target of recoveryProfiles) {
+      request("remove", { profile: target });
+      assert.throws(
+        () => request("public", { profile: target }),
+        /NotInitialized/,
+      );
+    }
     request("remove");
     cleanupConfirmed = true;
     assert.throws(() => request("public"), /NotInitialized/);

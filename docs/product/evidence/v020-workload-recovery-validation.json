@@ -1,0 +1,72 @@
+{
+  "recordedAt": "2026-10-03T05:19:46.891905+00:00",
+  "baselineCommit": "248b095",
+  "sourceHashes": {
+    "apps/fractalmind-app/scripts/native-workload-recovery.ts": "e194142a5b5bbc5038b7dbd1048a34f3650c1ee4e6dc1846db2f14b501afdd97",
+    "apps/fractalmind-app/scripts/native-app-execution-localnet.ts": "3db241813e4fd8989e493d74be67dfdfd11d13da5b22888fba69cb6007a218b1",
+    "runtime/fractalmind-envd/cmd/envd/host_join_cli_live_test.go": "e25d9e0b00cd218f5034fa14364659a085ccf4584e2989adcd83287498d2627e"
+  },
+  "checks": [
+    {
+      "name": "strict TypeScript for native workload entry and recovery helper",
+      "exitCode": 0,
+      "path": "/tmp/fm-workload-recovery-types-r4.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "Go live helper build",
+      "exitCode": 0,
+      "path": "/tmp/fm-workload-recovery-host-build-r1.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "Go live helper race build",
+      "exitCode": 0,
+      "path": "/tmp/fm-workload-recovery-host-race-build-r1.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "Go four package race regression",
+      "exitCode": 0,
+      "path": "/tmp/fm-workload-recovery-host-race-r1.log",
+      "sha256": "ae968d369e49fd79df9347096e001f854e39d6f3955c09fe55ae13279415f6a9",
+      "output": "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd\t4.051s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/ws\t(cached)\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/heartbeat\t(cached)\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/coordinator\t2.537s\n"
+    },
+    {
+      "name": "actual OS/localnet full workload via race-instrumented Host helper",
+      "exitCode": 0,
+      "report": "v020-workload-recovery-localnet.json",
+      "checks": 22,
+      "confirmedAppTransactions": 59
+    },
+    {
+      "name": "prettier for two TypeScript scripts",
+      "exitCode": 0
+    }
+  ],
+  "unchangedProductSource": {
+    "AppUnitTestsRerunThisTurn": false,
+    "previousApp229Evidence": "v020-message-okr-unit.json",
+    "SDKMoveRustProductionChanged": false,
+    "nativeInstalledBundleRebuiltThisTurn": false
+  },
+  "nativeUIGate": {
+    "observedThisTurn": true,
+    "app": "org.fractalmind.desktop",
+    "method": "Computer Use get_app_state",
+    "result": "Mac locked; automatic unlock unavailable",
+    "installedRecoveryUIVerified": false
+  },
+  "limits": {
+    "defaultGoRaceRunSkipsOptInLiveFixture": true,
+    "actualLiveFixtureSeparatelyRanWithRace": true,
+    "installedIndexedDBCacheWipeVerified": false,
+    "physicalRestartVerified": false,
+    "cloudHostVerified": false,
+    "mobileVerified": false,
+    "actualLanguageModelVerified": false,
+    "mainPackageUpgradeVerified": false,
+    "privateKeysInReport": false,
+    "recoveryCodeInReport": false
+  }
+}

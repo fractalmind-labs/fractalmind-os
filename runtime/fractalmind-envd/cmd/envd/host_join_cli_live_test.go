@@ -263,30 +263,31 @@ func TestHostJoinLiveCLI(t *testing.T) {
 			}
 			discovery = &value
 		}
+		sendHeartbeat := func() error {
+			payload := heartbeat.NewPayload(public.Address, "physical loopback fixture", nil, time.Now())
+			payload.Discovery = discovery
+			if nativeAdapter != nil {
+				payload.NativeDiscovery = nativeAdapter.NativeDiscovery()
+			}
+			if rescan != nil {
+				fresh := rescan()
+				if fresh.State != "complete" || len(fresh.Instances) != 1 || fresh.Instances[0].State != "observed" || fresh.Instances[0].InstanceID != discovery.Instances[0].InstanceID {
+					return errors.New("tmux process continuity lost across connection")
+				} else {
+					payload.Discovery = &fresh
+				}
+			}
+			if payload.Discovery != nil {
+				for _, instance := range payload.Discovery.Instances {
+					payload.Agents = append(payload.Agents, agent.Agent{ID: instance.Session, Session: instance.Session, Status: "running"})
+				}
+			}
+			return liveClient.Send("heartbeat", payload)
+		}
 		liveClient.OnConnect(func() {
 			err := liveClient.Send("register", map[string]string{"host_id": public.Address, "hostname": "physical loopback fixture"})
 			if err == nil {
-				payload := heartbeat.NewPayload(public.Address, "physical loopback fixture", nil, time.Now())
-				payload.Discovery = discovery
-				if nativeAdapter != nil {
-					payload.NativeDiscovery = nativeAdapter.NativeDiscovery()
-				}
-				if rescan != nil {
-					fresh := rescan()
-					if fresh.State != "complete" || len(fresh.Instances) != 1 || fresh.Instances[0].State != "observed" || fresh.Instances[0].InstanceID != discovery.Instances[0].InstanceID {
-						err = errors.New("tmux process continuity lost across connection")
-					} else {
-						payload.Discovery = &fresh
-					}
-				}
-				if payload.Discovery != nil {
-					for _, instance := range payload.Discovery.Instances {
-						payload.Agents = append(payload.Agents, agent.Agent{ID: instance.Session, Session: instance.Session, Status: "running"})
-					}
-				}
-				if err == nil {
-					err = liveClient.Send("heartbeat", payload)
-				}
+				err = sendHeartbeat()
 			}
 			select {
 			case connected <- err:
@@ -313,6 +314,31 @@ func TestHostJoinLiveCLI(t *testing.T) {
 			}
 		case <-ctx.Done():
 			t.Fatal("live chain connection did not authenticate")
+		}
+		if os.Getenv("FM_ENVD_WORKLOAD_RECOVERY") == "1" {
+			// Recovery intentionally outlives a single observation's 60s TTL.
+			// Use fresh physical scans and the production signed Send path rather
+			// than weakening expiry or manufacturing an online cached Host.
+			beatCtx, beatCancel := context.WithCancel(ctx)
+			beatDone := make(chan struct{})
+			go func() {
+				defer close(beatDone)
+				ticker := time.NewTicker(10 * time.Second)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-beatCtx.Done():
+						return
+					case <-ticker.C:
+						// Revocation or transport loss must make an observation
+						// unavailable. Never cache a successful replacement.
+						if e := sendHeartbeat(); e != nil {
+							t.Logf("isolated recovery heartbeat unavailable: %v", e)
+						}
+					}
+				}
+			}()
+			t.Cleanup(func() { beatCancel(); <-beatDone })
 		}
 		// The App fixture now proves its device grant over HTTP and verifies the
 		// heartbeat through that protected API after this public readiness marker.
