@@ -142,6 +142,19 @@ type RuntimeConfig struct {
 	AdapterCommand  string            `yaml:"adapter_command"`
 	AdapterArgs     []string          `yaml:"adapter_args"`
 	ResultGasBudget uint64            `yaml:"result_gas_budget"`
+	Model           ModelConfig       `yaml:"model"`
+}
+
+// Enabling this sends signed messages and approved file-task observations to
+// this Host-selected provider. Credentials are process environment only.
+type ModelConfig struct {
+	Enabled        bool   `yaml:"enabled"`
+	APIBase        string `yaml:"api_base"`
+	APIKeyEnv      string `yaml:"api_key_env"`
+	Name           string `yaml:"name"`
+	MaxTokens      int    `yaml:"max_tokens"`
+	TimeoutSeconds int    `yaml:"timeout_seconds"`
+	MaxRequests    int    `yaml:"max_requests"`
 }
 
 // SponsorConfig configures the built-in gas sponsorship role.

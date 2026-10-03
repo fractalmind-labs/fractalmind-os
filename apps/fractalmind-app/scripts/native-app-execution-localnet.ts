@@ -7,7 +7,8 @@ import {
   spawnSync,
   type ChildProcessWithoutNullStreams,
 } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
+import { createServer, type Server } from "node:http";
 import { access, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { requestSuiFromFaucetV2 } from "@mysten/sui/faucet";
@@ -66,6 +67,11 @@ const directApp = process.argv.slice(4).includes("--direct-app");
 const intervention = process.argv.slice(4).includes("--intervention");
 const autonomy = process.argv.slice(4).includes("--autonomy");
 const projection = process.argv.slice(4).includes("--projection");
+const modelFixture = process.argv.slice(4).includes("--model-fixture");
+assert.ok(
+  !modelFixture || directApp,
+  "Model protocol fixture requires the formal direct App sequence",
+);
 assert.ok(
   !projection ||
     (humanSequence && !autonomy && !intervention && !directPermission),
@@ -100,6 +106,7 @@ assert.ok(
         "--intervention",
         "--autonomy",
         "--projection",
+        "--model-fixture",
       ].includes(a),
     ),
   "Unknown harness option",
@@ -124,6 +131,11 @@ const checks: string[] = [],
 let coreForVisibility: ChainReadSession["sdk"]["client"]["client"] | undefined;
 let hostProcess: ChildProcessWithoutNullStreams | undefined;
 let hostCompleted = false;
+let modelServer: Server | undefined;
+let modelAPIBase = "";
+let modelRequests = 0;
+let modelPlanningRequests = 0;
+let modelQuestionRequests = 0;
 let created = false,
   cleanupConfirmed = false,
   state: Record<string, unknown> = { phase: "before_native_creation" };
@@ -182,7 +194,12 @@ async function save(complete = false) {
         packageId: deployment.packageId,
         checks,
         transactions,
-        state,
+        state: {
+          ...state,
+          ...(modelFixture
+            ? { modelRequests, modelPlanningRequests, modelQuestionRequests }
+            : {}),
+        },
         limits: {
           actualOSVault: true,
           installedUIVerified: false,
@@ -206,6 +223,12 @@ async function save(complete = false) {
             state.projectionControllerVerified === true,
           installedProjectionUIVerified: false,
           automaticHostProjectionDelivery: false,
+          modelProviderKind: modelFixture
+            ? "synthetic loopback Messages API fixture; not an actual language model"
+            : "not configured",
+          actualModelProviderVerified: false,
+          modelProtocolFixtureVerified:
+            state.modelProtocolFixtureVerified === true,
           installedHumanReviewVerified: false,
           reviewDecisions: humanSequence
             ? "explicit scripted test approvals, not installed Human UI"
@@ -291,6 +314,91 @@ async function readVisible<T>(
   );
 }
 try {
+  if (modelFixture) {
+    // This deterministic HTTP fixture tests transport and Host enforcement. It
+    // must never be reported as a real model or intelligence-quality proof.
+    modelServer = createServer(async (req, res) => {
+      try {
+        assert.equal(req.url, "/v1/messages");
+        assert.equal(req.method, "POST");
+        assert.equal(req.headers["anthropic-version"], "2023-06-01");
+        const chunks: Buffer[] = [];
+        let size = 0;
+        for await (const chunk of req) {
+          size += chunk.length;
+          assert.ok(size <= 1 << 20);
+          chunks.push(Buffer.from(chunk));
+        }
+        const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+        assert.equal(body.model, "synthetic-protocol-fixture");
+        assert.equal(body.tools, undefined);
+        const message = body.messages[0].content as string;
+        modelRequests++;
+        let text =
+          "Synthetic model-protocol reply for user review; no tools or OKR acceptance.";
+        if (message.startsWith("{")) {
+          const input = JSON.parse(message) as {
+            approved_task: { files: { path: string; content: string }[] };
+            host_observations: {
+              result: { action: string; path: string; hash?: string };
+              error?: string;
+            }[];
+          };
+          modelPlanningRequests++;
+          const goal = input.approved_task.files.find((g) => {
+            const latest = input.host_observations
+              .filter((o) => o.result.path === g.path)
+              .at(-1);
+            return (
+              latest?.result.action !== "file.read" ||
+              latest.error ||
+              latest.result.hash !==
+                createHash("sha256").update(g.content).digest("hex")
+            );
+          });
+          assert.ok(goal);
+          const latest = input.host_observations
+            .filter((o) => o.result.path === goal.path)
+            .at(-1);
+          const call =
+            latest?.result.action === "file.read"
+              ? {
+                  action: "file.write",
+                  path: goal.path,
+                  content: goal.content,
+                  expected_hash: latest.result.hash ?? "",
+                }
+              : { action: "file.read", path: goal.path };
+          text = JSON.stringify({ call });
+        } else {
+          modelQuestionRequests++;
+          assert.equal(message, "Reviewed formal App direct request");
+        }
+        res.setHeader("content-type", "application/json");
+        res.setHeader("request-id", `synthetic-${modelRequests}`);
+        res.end(
+          JSON.stringify({
+            type: "message",
+            role: "assistant",
+            model: "synthetic-protocol-fixture",
+            stop_reason: "end_turn",
+            content: [{ type: "text", text }],
+            usage: { input_tokens: 1, output_tokens: 1 },
+          }),
+        );
+      } catch {
+        res.statusCode = 400;
+        res.end("invalid synthetic protocol request");
+      }
+    });
+    await new Promise<void>((resolve, reject) => {
+      modelServer!.once("error", reject);
+      modelServer!.listen(0, "127.0.0.1", resolve);
+    });
+    const address = modelServer.address();
+    assert.ok(address && typeof address !== "string");
+    modelAPIBase = `http://127.0.0.1:${address.port}`;
+  }
   const createdIdentity = await NativeRecoverySigner.create(
     invoke,
     profile,
@@ -404,6 +512,7 @@ try {
       FM_ENVD_HANDOVER_APPROVAL: "1",
       FM_ENVD_NATIVE_EXECUTION: "0",
       FM_ENVD_HOST_REJOIN: "0",
+      FM_ENVD_TEST_MODEL_API_BASE: modelAPIBase,
     },
     stdio: ["pipe", "pipe", "pipe"],
   });
@@ -1075,8 +1184,28 @@ try {
   await save();
   const settled = await readVisible(
     () => sdk.nodeExecution.getExecution(queued.executionId!),
-    (r) => r.state === 2 && !!r.result_record,
+    (r) => [2, 3, 5].includes(r.state) && !!r.result_record,
   );
+  if (settled.state !== 2) {
+    const originalResult = await new NativeExecutionResults(
+      chain,
+      device,
+      auth.grantId,
+      organizationId,
+      invoke,
+    ).read(settled.id, managedAgentId);
+    state = {
+      ...state,
+      failedOriginalRunState: settled.state,
+      failedOriginalResponse: originalResult.response,
+    };
+    await save();
+    assert.equal(
+      settled.state,
+      2,
+      "Original execution failed; retained decrypted Host receipt, no replay",
+    );
+  }
   const observations = await readVisible(
     () => sdk.okr.listObservations(okrId),
     (r) => r.observations.some((o) => o.run_id === settled.id),
@@ -2671,7 +2800,9 @@ try {
           expectedVersion: "2",
           policy: {
             ...description.policy!,
-            actions: ["status", "file.read", "file.write"],
+            actions: modelFixture
+              ? ["ask", "status", "file.read", "file.write"]
+              : ["status", "file.read", "file.write"],
             maxCalls: "1",
             budgetLimit: "4",
             expiresAtMs: String(Date.now() + 600000),
@@ -2682,7 +2813,7 @@ try {
         assert.equal(edited.permission!.spent, "4");
         assert.equal(edited.permission!.budget_limit, "4");
         async function create(
-          action: "status" | "file.write",
+          action: "ask" | "status" | "file.write",
           calls: string,
           task?: string,
         ) {
@@ -2768,6 +2899,42 @@ try {
         }
         const statusId = await create("status", "0");
         await run(statusId);
+        if (modelFixture) {
+          const questionBefore = modelQuestionRequests;
+          const askId = await create("ask", "0");
+          const answered = await run(askId);
+          const reply = answered.result!.response!.result as {
+            schema: string;
+            verified: boolean;
+            reply: { text: string; model: string };
+          };
+          assert.equal(reply.schema, "fractalmind.model-reply.v1");
+          assert.equal(reply.verified, false);
+          assert.equal(reply.reply.model, "synthetic-protocol-fixture");
+          assert.match(reply.reply.text, /Synthetic model-protocol reply/);
+          assert.equal(modelQuestionRequests, questionBefore + 1);
+          assert.equal(answered.claim!.spent, "0");
+          assert.equal(
+            (await sdk.directAgent.getPermission(permissionId)).spent,
+            "4",
+          );
+          assert.equal((await sdk.okr.getBudget(okrId)).spent, 6n);
+          assert.equal(modelPlanningRequests, 6);
+          state = {
+            ...state,
+            modelProtocolFixtureVerified: true,
+            modelRequests,
+            modelPlanningRequests,
+            modelQuestionRequests,
+            modelOriginalMessageId: askId,
+            modelOriginalRunId: answered.result!.run.id,
+            modelOriginalResultRecordId: answered.result!.recordId,
+          };
+          checks.push(
+            "formal App zero-tool question reaches the configured synthetic Messages API exactly once; encrypted original reply is rebuilt from Sui, marked unverified, and leaves OKR/direct tool ledgers unchanged; six model-selected OKR tool steps were enforced by production envd (no real-model quality claim)",
+          );
+          await save();
+        }
         const writeId = await create(
           "file.write",
           "3",
@@ -2884,6 +3051,10 @@ try {
   await save();
   throw error;
 } finally {
+  if (modelServer)
+    await new Promise<void>((resolve, reject) =>
+      modelServer!.close((err) => (err ? reject(err) : resolve())),
+    );
   if (hostProcess && !hostCompleted) {
     hostProcess.stdin.destroy();
     hostProcess.kill("SIGTERM");

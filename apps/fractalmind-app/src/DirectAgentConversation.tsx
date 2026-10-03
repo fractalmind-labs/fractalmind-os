@@ -14,6 +14,7 @@ import {
 import {
   NativeDirectAgent,
   boundedDirectRequest,
+  modelReply,
   type DirectMessageView,
   type DirectOperation,
   type StandingInput,
@@ -92,16 +93,17 @@ export default function DirectAgentConversation({
     [receipt, setReceipt] = useState<SelfPayTransactionOutcome | null>(null);
   const [requestId, setRequestId] = useState<string | null>(null),
     [capabilityId, setCapabilityId] = useState<string | null>(null);
-  const [action, setAction] = useState<"status" | "file.read" | "file.write">(
-      "status",
-    ),
+  const [action, setAction] = useState<
+      "ask" | "status" | "file.read" | "file.write"
+    >("status"),
     [message, setMessage] = useState("");
   const [path, setPath] = useState("docs/RESULT.md"),
     [requestRoots, setRequestRoots] = useState("docs"),
     [content, setContent] = useState(""),
     [calls, setCalls] = useState("3");
   const [readAllowed, setReadAllowed] = useState(false),
-    [writeAllowed, setWriteAllowed] = useState(false);
+    [writeAllowed, setWriteAllowed] = useState(false),
+    [askAllowed, setAskAllowed] = useState(false);
   const [readRoots, setReadRoots] = useState("docs"),
     [writeRoots, setWriteRoots] = useState("docs");
   const [maxCalls, setMaxCalls] = useState("0"),
@@ -295,6 +297,7 @@ export default function DirectAgentConversation({
       hydrated.current = result.permission.version;
       setReadAllowed(result.policy.actions.includes("file.read"));
       setWriteAllowed(result.policy.actions.includes("file.write"));
+      setAskAllowed(result.policy.actions.includes("ask"));
       setReadRoots(result.policy.paths["file.read"]?.join(", ") ?? "docs");
       setWriteRoots(result.policy.paths["file.write"]?.join(", ") ?? "docs");
       setMaxCalls(result.policy.maxCalls);
@@ -452,6 +455,7 @@ export default function DirectAgentConversation({
   }
   function permissionOperation(): DirectOperation {
     const actions: StandingInput["actions"] = ["status"];
+    if (askAllowed) actions.push("ask");
     if (readAllowed) actions.push("file.read");
     if (writeAllowed) actions.push("file.write");
     const roots = (text: string) =>
@@ -484,7 +488,7 @@ export default function DirectAgentConversation({
     if (!description?.policy || !message.trim())
       throw Object.assign(new Error(), { code: "invalid_input" });
     const paths = structuredClone(description.policy.paths);
-    if (action !== "status")
+    if (action !== "status" && action !== "ask")
       paths[action] = requestRoots
         .split(",")
         .map((v) => v.trim())
@@ -507,6 +511,10 @@ export default function DirectAgentConversation({
   const p = description?.permission,
     canOperate = description?.actions.includes("operate") ?? false,
     canApprove = description?.actions.includes("approve") ?? false;
+  const answer =
+    selected?.message.action === "ask" && selected.result?.response?.ok
+      ? modelReply(selected.result.response.result)
+      : null;
   const current =
     p &&
     !p.revoked &&
@@ -551,8 +559,8 @@ export default function DirectAgentConversation({
         <small className="long-id">Host: {managed.host_address}</small>
         <p>
           {t(
-            "消息保存、批准、执行准备和 Agent 回应是独立状态。已接入的适配器支持状态查询和有限文件读写；此实例的当前资格在操作时核验，模型问答尚未接入。",
-            "Message storage, approval, Run preparation and Agent response are separate states. The connected adapter supports status and bounded file tasks; this instance's authority is checked when acting. Model conversation is not connected yet.",
+            "消息保存、批准、执行准备和 Agent 回应是独立状态。模型问答需要 Host 配置提供方，提问不使用文件工具；操作时仍核验此实例的当前资格。",
+            "Message storage, approval, Run preparation and Agent response are separate states. Model conversation requires the Host to configure a provider; questions use no file tools. This instance's authority is checked when acting.",
           )}
         </p>
         <details>
@@ -682,6 +690,17 @@ export default function DirectAgentConversation({
                           "Default: zero-tool status only. Expanded actions and allowance require fee confirmation and signature.",
                         )}
                       </p>
+                      <label className="checkbox-row">
+                        <input
+                          type="checkbox"
+                          checked={askAllowed}
+                          onChange={(e) => setAskAllowed(e.target.checked)}
+                        />
+                        {t(
+                          "允许模型问答（0 工具）",
+                          "Allow model questions (zero tools)",
+                        )}
+                      </label>
                       <label className="checkbox-row">
                         <input
                           type="checkbox"
@@ -861,6 +880,33 @@ export default function DirectAgentConversation({
                       )}
                       {selected.result.response && (
                         <>
+                          {answer && (
+                            <article className="panel">
+                              <h3>
+                                {t(
+                                  "模型回复 · 待你审阅",
+                                  "Model reply · review required",
+                                )}
+                              </h3>
+                              <p style={{ whiteSpace: "pre-wrap" }}>
+                                {answer.text}
+                              </p>
+                              <small>
+                                {answer.model} ·{" "}
+                                {t(
+                                  "输入 / 输出 token",
+                                  "Input / output tokens",
+                                )}
+                                : {answer.inputTokens} / {answer.outputTokens}
+                              </small>
+                              <p className="muted">
+                                {t(
+                                  "回复是建议，不代表文件观测、执行授权或 OKR 验收。",
+                                  "This is a suggestion, not a file observation, execution grant or OKR acceptance.",
+                                )}
+                              </p>
+                            </article>
+                          )}
                           <p>
                             {t(
                               "已读取并解密原 Host 回执",
@@ -1085,10 +1131,10 @@ export default function DirectAgentConversation({
                       <option value="file.write">
                         {t("生成或修改文件", "Create or edit a file")}
                       </option>
-                      <option disabled>
+                      <option value="ask">
                         {t(
-                          "模型问答（待接入）",
-                          "Model conversation (not connected)",
+                          "模型问答（Host 需配置模型，0 工具）",
+                          "Model question (Host model required, zero tools)",
                         )}
                       </option>
                     </select>
@@ -1101,7 +1147,15 @@ export default function DirectAgentConversation({
                       onChange={(e) => setMessage(e.target.value)}
                     />
                   </label>
-                  {action !== "status" && (
+                  {action === "ask" && (
+                    <p className="muted">
+                      {t(
+                        "问题文字会发送给这台 Host 配置的模型。不会自动读取文件，回复和计划需你审阅；模型费用由该模型账号支付，另于链上 Gas。",
+                        "Your question goes to this Host's configured model. No files are read automatically. Review replies and plans; model billing uses that model account and is separate from chain Gas.",
+                      )}
+                    </p>
+                  )}
+                  {action !== "status" && action !== "ask" && (
                     <>
                       <label>
                         {t(

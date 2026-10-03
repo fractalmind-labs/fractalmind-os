@@ -11,6 +11,7 @@ import (
 
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/agent"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/modelclient"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 )
 
@@ -23,12 +24,19 @@ type boundedFileAgent struct {
 	mu          sync.Mutex
 	active      map[string]nativeAttempt
 	reviews     map[string]*nativeReviewLease
+	model       *modelclient.Client
 }
 
 // BoundedFileAgent supports an explicit, measurable native file-goal adapter.
 // Native status is physical activity; other observations use agent-manager.
 // Writing never invokes that process.
 func BoundedFileAgent(reader boundedrun.ExecutionAuthority, workspaces map[string]string, observer Adapter) (Adapter, error) {
+	return BoundedFileAgentWithModel(reader, workspaces, observer, nil)
+}
+
+// The model is an explicitly configured Host data processor. It cannot acquire
+// keys, tools or execution authority; the existing native runtime remains owner.
+func BoundedFileAgentWithModel(reader boundedrun.ExecutionAuthority, workspaces map[string]string, observer Adapter, model *modelclient.Client) (Adapter, error) {
 	if reader == nil || len(workspaces) == 0 || observer == nil {
 		return nil, fmt.Errorf("chain authority, workspace bindings and observer are required")
 	}
@@ -55,7 +63,7 @@ func BoundedFileAgent(reader boundedrun.ExecutionAuthority, workspaces map[strin
 		instanceIDs[instance.Session] = instance.InstanceID
 		copied[instance.Session] = instance.Workspace
 	}
-	return &boundedFileAgent{reader: reader, workspaces: copied, observer: observer, inventory: inventory, instanceIDs: instanceIDs, active: map[string]nativeAttempt{}, reviews: map[string]*nativeReviewLease{}}, nil
+	return &boundedFileAgent{reader: reader, workspaces: copied, observer: observer, inventory: inventory, instanceIDs: instanceIDs, active: map[string]nativeAttempt{}, reviews: map[string]*nativeReviewLease{}, model: model}, nil
 }
 
 func (a *boundedFileAgent) NativeDiscovery() *agent.Discovery {
@@ -172,7 +180,14 @@ func (a *boundedFileAgent) runAuthorized(ctx context.Context, request Request, c
 		return reject("boundary_denied", err)
 	}
 	defer tools.Close()
-	result := boundedrun.RunFileGoals(ctx, tools, task)
+	var result boundedrun.Outcome
+	if a.model != nil {
+		// Choose exactly one execution strategy; never run the deterministic task
+		// before asking the model, or retry it after a failed model response.
+		result = boundedrun.RunPlannedFileGoals(ctx, tools, task, a.model, a.model.MaxRequests(), check)
+	} else {
+		result = boundedrun.RunFileGoals(ctx, tools, task)
+	}
 	response.Result, err = json.Marshal(result)
 	if err != nil {
 		return reject("operation_unconfirmed", err)

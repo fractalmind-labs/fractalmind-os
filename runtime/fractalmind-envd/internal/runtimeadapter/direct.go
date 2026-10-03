@@ -3,6 +3,7 @@ package runtimeadapter
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -74,7 +75,39 @@ func (a *boundedFileAgent) runDirect(ctx context.Context, request Request, comma
 		response.OK, response.Result, response.Error = status.OK, status.Result, status.Error
 		return response, nil
 	case "ask":
-		return reject("unsupported_operation", fmt.Errorf("this native file adapter supports status and explicit file tasks; conversational model execution is unavailable"))
+		if a.model == nil {
+			return reject("unsupported_operation", fmt.Errorf("this Host has no configured conversation model"))
+		}
+		// Questions may coexist with an OKR. No tool handles or physical control
+		// slot are acquired; only the exact signed message is sent to the model.
+		modelCtx, cancel := context.WithDeadline(ctx, time.UnixMilli(command.ExpiresAtMS))
+		defer cancel()
+		answer, modelErr := a.model.Answer(modelCtx, p.Message)
+		if err := guard.Check(modelCtx); err != nil {
+			if errors.Is(err, boundedrun.ErrStopped) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return reject("cancelled", fmt.Errorf("original question was stopped or expired"))
+			}
+			return reject("operation_unconfirmed", err)
+		}
+		info, identityErr := os.Stat(workspace)
+		if identityErr != nil || !os.SameFile(info, identity) {
+			return reject("workspace_changed", fmt.Errorf("original instance workspace changed while waiting for the model"))
+		}
+		if modelErr != nil {
+			return reject("model_unavailable", fmt.Errorf("configured model could not return a complete answer"))
+		}
+		response.Result, err = json.Marshal(struct {
+			Schema   string `json:"schema"`
+			Status   string `json:"status"`
+			Verified bool   `json:"verified"`
+			Reply    any    `json:"reply"`
+		}{"fractalmind.model-reply.v1", "answered", false, answer})
+		if err != nil {
+			return reject("operation_unconfirmed", err)
+		}
+		response.OK = true
+		response.ObservedAt = time.Now().UTC().Format(time.RFC3339Nano)
+		return response, nil
 	case "file.read", "file.write":
 	default:
 		return reject("unsupported_operation", fmt.Errorf("unsupported direct action"))

@@ -56,6 +56,17 @@ runtime:
   adapter_command: agent-manager
   adapter_args: []      # for Python use command python3 and args [/absolute/path/main.py]
   result_gas_budget: 2000000000 # MIST ceiling (2 SUI), not the actual charged fee
+  # Explicit opt-in: signed questions and approved file-task observations go to
+  # this provider. Model billing is separate from SUI Gas / TOOL_CALLS. No shell,
+  # provider tools, retries or authority to alter an approved goal are enabled.
+  model:
+    enabled: false
+    api_base: https://api.anthropic.com # Anthropic Messages API; loopback HTTP also allowed
+    api_key_env: FRACTALMIND_MODEL_API_KEY # secret value is never saved here or on chain
+    name: "" # choose a model supported by your provider; required when enabled
+    max_tokens: 2048 # per model response, 1–4096
+    timeout_seconds: 30 # per request; the original Run deadline still applies
+    max_requests: 12 # per OKR Run, 1–32; a direct question makes one request
 
 # Optional local remote-desktop relay and self-healing supervision. When
 # command is set, envd starts envd-desktop as its direct child, restarts it on

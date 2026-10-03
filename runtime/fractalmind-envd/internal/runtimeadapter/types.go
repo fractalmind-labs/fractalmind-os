@@ -23,7 +23,8 @@ var stableErrorCodes = map[string]struct{}{
 	"malformed_input": {}, "missing_agent": {}, "missing_command_id": {},
 	"operation_failed": {}, "timeout": {}, "unsupported_operation": {},
 	"boundary_denied": {}, "budget_exhausted": {}, "workspace_changed": {}, "operation_unconfirmed": {}, "measurement_mismatch": {},
-	"instance_busy":        {},
+	"instance_busy":     {},
+	"model_unavailable": {}, "model_stopped": {}, "model_limit": {},
 	"handover_unavailable": {}, "handover_changed": {},
 }
 

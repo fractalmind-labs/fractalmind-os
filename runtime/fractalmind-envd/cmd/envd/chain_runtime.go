@@ -11,6 +11,7 @@ import (
 
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/config"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/hostidentity"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/modelclient"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui"
@@ -176,6 +177,11 @@ func newRuntimeCommandExecutorWithStore(cfg *config.Config, store hostidentity.S
 	// Existing tmux/agent-manager instances have no execution sandbox. Observing
 	// them must not grant control merely because the chain record says bounded.
 	var adapter runtimeadapter.Adapter = runtimeadapter.ObservationAgentManager(command, args...)
+	if cfg.Runtime.Model.Enabled && cfg.Runtime.AdapterKind != "native-file-agent" {
+		rpc.Close()
+		keys.Close()
+		return nil, fmt.Errorf("runtime.model requires the native-file-agent adapter")
+	}
 	switch cfg.Runtime.AdapterKind {
 	case "", "observation":
 	case "native-file-agent":
@@ -189,7 +195,17 @@ func newRuntimeCommandExecutorWithStore(cfg *config.Config, store hostidentity.S
 			keys.Close()
 			return nil, resolverErr
 		}
-		adapter, err = runtimeadapter.BoundedFileAgent(resolver, cfg.Runtime.Workspaces, adapter)
+		var model *modelclient.Client
+		if cfg.Runtime.Model.Enabled {
+			m := cfg.Runtime.Model
+			model, err = modelclient.New(modelclient.Config{APIBase: m.APIBase, APIKeyEnv: m.APIKeyEnv, Model: m.Name, MaxTokens: m.MaxTokens, TimeoutSeconds: m.TimeoutSeconds, MaxRequests: m.MaxRequests})
+			if err != nil {
+				rpc.Close()
+				keys.Close()
+				return nil, err
+			}
+		}
+		adapter, err = runtimeadapter.BoundedFileAgentWithModel(resolver, cfg.Runtime.Workspaces, adapter, model)
 		if err != nil {
 			rpc.Close()
 			keys.Close()

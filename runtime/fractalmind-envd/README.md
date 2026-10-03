@@ -4,7 +4,7 @@
 
 **Lightweight daemon for remote AI Agent management on SUI.**
 
-[![Go](https://img.shields.io/badge/Go-1.22+-00ADD8)](https://go.dev/)
+[![Go](https://img.shields.io/badge/Go-1.25+-00ADD8)](https://go.dev/)
 [![SUI](https://img.shields.io/badge/SUI-Identity-4DA2FF)](https://sui.io/)
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -22,6 +22,24 @@
 4. **Self-heals** — auto-restarts crashed agents within 60 seconds
 
 Unlike traditional remote control tools (TeamViewer, Tailscale), envd uses **SUI blockchain** for identity and authorization — no central server can revoke your access.
+
+## Native model questions and file planning
+
+The chain-authorized `native-file-agent` can use a Host-configured Anthropic
+Messages-compatible provider. Set `runtime.model.enabled`, the explicit
+`api_base` and model `name` in `sentinel.yaml`; provide the credential through
+the named `api_key_env`. This is disabled by default. Questions send only the
+signed message and use zero file tools. Approved text-file OKRs may let the
+model select the next tool action, while envd enforces the original exact goals,
+directories, tool allowance, deadline and current Sui authority.
+
+Enabling this sends questions and approved file-task observations to that
+provider. Model billing is separate from Sui Gas and tool counts. Model replies
+are unverified proposals; they cannot approve an action or accept an OKR.
+Missing configuration and failed model requests do not trigger retries or an
+alternative executor. This still supports only explicit text-file goals;
+general project planning and the App model-configuration wizard are pending.
+See [configuration, evidence and acceptance limits](../../docs/product/v020-host-model-runtime.md).
 
 ## Architecture
 

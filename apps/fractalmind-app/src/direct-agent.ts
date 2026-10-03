@@ -50,7 +50,7 @@ export class DirectAgentError extends Error {
 const id = /^0x[0-9a-f]{64}$/;
 const token = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export type StandingInput = {
-  actions: Exclude<DirectAction, "ask">[];
+  actions: DirectAction[];
   paths: Record<string, string[]>;
   maxCalls: string;
   budgetLimit: string;
@@ -66,7 +66,7 @@ export type DirectOperation =
   | {
       kind: "message";
       messageToken: string;
-      action: Exclude<DirectAction, "ask">;
+      action: DirectAction;
       request: DirectRequest;
     }
   | { kind: "approval" | "capability" | "stop"; messageId: string }
@@ -77,10 +77,35 @@ export type DirectMessageView = Awaited<
 >;
 const equal = (a: number[] | Uint8Array, b: number[] | Uint8Array) =>
   bytesToHex(Uint8Array.from(a)) === bytesToHex(Uint8Array.from(b));
+/** Display only a Host-receipted model answer, always as unverified text. */
+export function modelReply(value: unknown) {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, any>;
+  if (
+    v.schema !== "fractalmind.model-reply.v1" ||
+    v.status !== "answered" ||
+    v.verified !== false ||
+    typeof v.reply?.text !== "string" ||
+    !v.reply.text ||
+    typeof v.reply.model !== "string" ||
+    !v.reply.model ||
+    !Number.isSafeInteger(v.reply.usage?.input_tokens) ||
+    v.reply.usage.input_tokens < 0 ||
+    !Number.isSafeInteger(v.reply.usage?.output_tokens) ||
+    v.reply.usage.output_tokens < 0
+  )
+    return null;
+  return {
+    text: v.reply.text as string,
+    model: v.reply.model as string,
+    inputTokens: v.reply.usage.input_tokens as number,
+    outputTokens: v.reply.usage.output_tokens as number,
+  };
+}
 /** A request declares its own bounds. A difference from standing authority
  * requires exact approval; it does not edit or expand the standing policy. */
 export function boundedDirectRequest(input: {
-  action: Exclude<DirectAction, "ask">;
+  action: DirectAction;
   message: string;
   paths: Record<string, string[]>;
   maxCalls: string;
@@ -88,11 +113,12 @@ export function boundedDirectRequest(input: {
   content?: string;
 }): DirectRequest {
   const paths = structuredClone(input.paths);
-  if (!["status", "file.read", "file.write"].includes(input.action))
+  if (!["ask", "status", "file.read", "file.write"].includes(input.action))
     throw new DirectAgentError("unsupported_action");
   const path = input.path ?? "";
   if (
     input.action !== "status" &&
+    input.action !== "ask" &&
     (!path ||
       /[\\\\:\u0000-\u001f\u007f]/.test(path) ||
       path.split("/").some((part) => !part || part === "." || part === "..") ||
@@ -105,7 +131,9 @@ export function boundedDirectRequest(input: {
     message: input.message,
     bounds: {
       paths,
-      max_calls: input.action === "status" ? "0" : input.maxCalls,
+      max_calls: ["ask", "status"].includes(input.action)
+        ? "0"
+        : input.maxCalls,
     },
     ...(input.action === "file.read"
       ? {
@@ -133,10 +161,10 @@ export function standingInput(raw: StandingInput): StandingInput {
     !input ||
     !Array.isArray(input.actions) ||
     !input.actions.length ||
-    input.actions.length > 3 ||
+    input.actions.length > 4 ||
     new Set(input.actions).size !== input.actions.length ||
     input.actions.some(
-      (a) => !["status", "file.read", "file.write"].includes(a),
+      (a) => !["ask", "status", "file.read", "file.write"].includes(a),
     )
   )
     throw new DirectAgentError("invalid_input");
@@ -150,7 +178,8 @@ export function standingInput(raw: StandingInput): StandingInput {
     BigInt(input.maxCalls) > 1000n ||
     BigInt(input.maxCalls) > BigInt(input.budgetLimit) ||
     BigInt(input.expiresAtMs) < 1n ||
-    (input.actions.some((a) => a !== "status") && BigInt(input.maxCalls) < 1n)
+    (input.actions.some((a) => !["status", "ask"].includes(a)) &&
+      BigInt(input.maxCalls) < 1n)
   )
     throw new DirectAgentError("invalid_input");
   try {
@@ -760,7 +789,7 @@ export class NativeDirectAgent {
     } else {
       const p = this.current(before);
       if (op.kind === "message") {
-        if (!["status", "file.read", "file.write"].includes(op.action))
+        if (!["ask", "status", "file.read", "file.write"].includes(op.action))
           throw new DirectAgentError("unsupported_action");
         if (await api.findMessage(p.id, op.messageToken))
           throw new DirectAgentError("state_changed");
@@ -804,8 +833,6 @@ export class NativeDirectAgent {
       } else {
         const v = await this.message(op.messageId),
           m = v.message;
-        if (["capability", "run"].includes(op.kind) && m.action === "ask")
-          throw new DirectAgentError("unsupported_action");
         if (
           m.permission_version !== p.version ||
           m.managed_version !== p.managed_version ||

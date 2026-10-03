@@ -20,6 +20,7 @@ import {
   standingInput,
   directApprovalReasons,
   boundedDirectRequest,
+  modelReply,
 } from "../src/direct-agent";
 import { NativeDeviceSigner } from "../src/native-device";
 import type { ChainReadSession } from "../src/chain";
@@ -41,6 +42,77 @@ const policy = () => ({
   maxCalls: "3",
   budgetLimit: "6",
   expiresAtMs: String(Date.now() + 3600000),
+});
+test("model reply display rejects self-verified claims and missing token usage", () => {
+  const reply = {
+    schema: "fractalmind.model-reply.v1",
+    status: "answered",
+    verified: false,
+    reply: {
+      text: "<script>untrusted prose</script>",
+      model: "fixture",
+      usage: { input_tokens: 3, output_tokens: 2 },
+    },
+  };
+  assert.equal(modelReply(reply)?.text, reply.reply.text);
+  assert.equal(modelReply({ ...reply, verified: true }), null);
+  assert.equal(
+    modelReply({ ...reply, reply: { ...reply.reply, usage: {} } }),
+    null,
+  );
+  assert.equal(
+    modelReply({
+      ...reply,
+      reply: { ...reply.reply, usage: { input_tokens: -1, output_tokens: 2 } },
+    }),
+    null,
+  );
+  assert.equal(modelReply(null), null);
+});
+test("model questions carry exact text, zero tools and no task; standing ask does not grant file access", () => {
+  const p = standingInput({
+    actions: ["status", "ask"],
+    paths: { "file.read": ["docs"] },
+    maxCalls: "0",
+    budgetLimit: "0",
+    expiresAtMs: String(Date.now() + 60000),
+  });
+  const request = boundedDirectRequest({
+    action: "ask",
+    message: "Explain the current proposal",
+    paths: p.paths,
+    maxCalls: "999",
+    path: "../secret",
+    content: "unapproved",
+  });
+  assert.equal(request.bounds.max_calls, "0");
+  assert.equal(request.task, undefined);
+  assert.equal(request.message, "Explain the current proposal");
+  assert.deepEqual(p.actions, ["status", "ask"]);
+  const permission = {
+    allowed_actions: p.actions,
+    max_calls: "0",
+    budget_limit: "0",
+    spent: "0",
+    reserved: "0",
+    boundary_hash: Array.from(executionBoundaryHash(p.paths)),
+  };
+  assert.deepEqual(
+    directApprovalReasons(permission, "ask", request, {
+      protected: true,
+      complete: true,
+    }),
+    [],
+  );
+  assert.deepEqual(
+    directApprovalReasons(
+      { ...permission, allowed_actions: ["status"] },
+      "ask",
+      request,
+      { protected: true, complete: true },
+    ),
+    ["action"],
+  );
 });
 test("bounded file requests can seek exact approval outside standing actions and directories without widening authority", () => {
   const standing = {
@@ -266,7 +338,7 @@ test("standing authority rejects invalid tools and preserves separate approval r
   const p = { ...policy(), actions: [...policy().actions] };
   assert.equal(standingInput(p).maxCalls, "3");
   for (const change of [
-    { actions: ["ask"] },
+    { actions: ["shell"] },
     { maxCalls: "1001" },
     { budgetLimit: "2" },
     { paths: {} },
