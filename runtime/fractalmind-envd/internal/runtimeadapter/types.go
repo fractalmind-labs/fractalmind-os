@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 )
 
 const (
@@ -20,6 +22,10 @@ var stableErrorCodes = map[string]struct{}{
 	"cancelled": {}, "duplicate_command_id": {}, "internal_error": {},
 	"malformed_input": {}, "missing_agent": {}, "missing_command_id": {},
 	"operation_failed": {}, "timeout": {}, "unsupported_operation": {},
+	"boundary_denied": {}, "budget_exhausted": {}, "workspace_changed": {}, "operation_unconfirmed": {}, "measurement_mismatch": {},
+	"instance_busy":     {},
+	"model_unavailable": {}, "model_stopped": {}, "model_limit": {},
+	"handover_unavailable": {}, "handover_changed": {},
 }
 
 type Operation string
@@ -34,17 +40,27 @@ const (
 	OperationLogs         Operation = "logs"
 	OperationHealth       Operation = "health"
 	OperationAvailability Operation = "availability"
+	OperationDirect       Operation = "direct.message"
 )
 
 type Request struct {
-	SchemaVersion  string           `json:"schema_version"`
-	CommandID      string           `json:"command_id"`
-	IdempotencyKey string           `json:"idempotency_key,omitempty"`
-	Operation      Operation        `json:"operation"`
-	Agent          string           `json:"agent,omitempty"`
-	TimeoutSeconds float64          `json:"timeout_seconds,omitempty"`
-	Cancel         bool             `json:"cancel,omitempty"`
-	Params         *OperationParams `json:"params,omitempty"`
+	SchemaVersion  string                        `json:"schema_version"`
+	CommandID      string                        `json:"command_id"`
+	IdempotencyKey string                        `json:"idempotency_key,omitempty"`
+	Operation      Operation                     `json:"operation"`
+	Agent          string                        `json:"agent,omitempty"`
+	TimeoutSeconds float64                       `json:"timeout_seconds,omitempty"`
+	Cancel         bool                          `json:"cancel,omitempty"`
+	Params         *OperationParams              `json:"params,omitempty"`
+	Bounds         *ExecutionBounds              `json:"bounds,omitempty"`
+	Handover       *nodecommand.HandoverProposal `json:"handover_review,omitempty"`
+	Message        string                        `json:"message,omitempty"`
+	Direct         *nodecommand.DirectMessageRef `json:"direct,omitempty"`
+}
+
+type ExecutionBounds struct {
+	Paths    map[string][]string      `json:"paths"`
+	MaxCalls nodecommand.Uint64String `json:"max_calls"`
 }
 
 // OperationParams is the complete set of local runtime inputs that a signed
@@ -58,6 +74,19 @@ type OperationParams struct {
 }
 
 func (r Request) Validate() error {
+	if r.Handover != nil && r.Operation != OperationStatus {
+		return fmt.Errorf("handover review is only supported by status")
+	}
+	if r.Bounds != nil && r.Operation != OperationAssign && r.Operation != OperationDirect {
+		return fmt.Errorf("execution bounds require assign or direct.message")
+	}
+	if r.Operation == OperationDirect {
+		if r.Direct == nil || r.Bounds == nil || strings.TrimSpace(r.Message) == "" {
+			return fmt.Errorf("direct.message requires its exact message and bounds")
+		}
+	} else if r.Direct != nil || r.Message != "" {
+		return fmt.Errorf("direct metadata requires direct.message")
+	}
 	if r.SchemaVersion != SchemaVersion {
 		return fmt.Errorf("unsupported schema_version %q", r.SchemaVersion)
 	}
@@ -105,6 +134,10 @@ func (r Request) validateParams() error {
 		if params.Restore != nil || params.Lines != nil || params.Follow != nil {
 			return fmt.Errorf("assign only accepts an inline task")
 		}
+	case OperationDirect:
+		if params == nil || len(params.Task) > MaxTaskBytes || params.Restore != nil || params.Lines != nil || params.Follow != nil {
+			return fmt.Errorf("direct.message only accepts its bounded inline task")
+		}
 	case OperationMonitor, OperationLogs:
 		if params == nil || params.Lines == nil || params.Follow == nil {
 			return fmt.Errorf("%s requires bounded lines and follow=false", r.Operation)
@@ -130,7 +163,7 @@ func (o Operation) Valid() bool {
 	switch o {
 	case OperationInventory, OperationStatus, OperationStart, OperationStop,
 		OperationAssign, OperationMonitor, OperationLogs, OperationHealth,
-		OperationAvailability:
+		OperationAvailability, OperationDirect:
 		return true
 	default:
 		return false
@@ -140,7 +173,7 @@ func (o Operation) Valid() bool {
 func (o Operation) RequiresAgent() bool {
 	switch o {
 	case OperationStatus, OperationStart, OperationStop, OperationAssign,
-		OperationMonitor, OperationLogs, OperationAvailability:
+		OperationMonitor, OperationLogs, OperationAvailability, OperationDirect:
 		return true
 	default:
 		return false
@@ -154,18 +187,56 @@ type Error struct {
 }
 
 type Response struct {
-	SchemaVersion string          `json:"schema_version"`
-	Adapter       string          `json:"adapter"`
-	CommandID     string          `json:"command_id"`
-	Operation     Operation       `json:"operation"`
-	Duplicate     bool            `json:"duplicate"`
-	OK            bool            `json:"ok"`
-	ObservedAt    string          `json:"observed_at"`
-	Result        json.RawMessage `json:"result"`
-	Error         *Error          `json:"error"`
+	SchemaVersion        string                          `json:"schema_version"`
+	Adapter              string                          `json:"adapter"`
+	CommandID            string                          `json:"command_id"`
+	Operation            Operation                       `json:"operation"`
+	Duplicate            bool                            `json:"duplicate"`
+	OK                   bool                            `json:"ok"`
+	ObservedAt           string                          `json:"observed_at"`
+	Result               json.RawMessage                 `json:"result"`
+	Error                *Error                          `json:"error"`
+	Spend                *Spend                          `json:"spend,omitempty"`
+	ExecutionID          string                          `json:"execution_id,omitempty"`
+	ExecutionState       string                          `json:"execution_state,omitempty"`
+	RequiresConfirmation bool                            `json:"requires_confirmation,omitempty"`
+	TransactionDigest    string                          `json:"transaction_digest,omitempty"`
+	OkrObservation       *OkrObservationReceipt          `json:"okr_observation,omitempty"`
+	HandoverReview       *nodecommand.HandoverAcceptance `json:"handover_review,omitempty"`
+}
+
+// This publication state is separate from execution and from human verification.
+// A successful Run can still have an observation awaiting confirmation.
+type OkrObservationReceipt struct {
+	Status            string                   `json:"status"`
+	Reason            string                   `json:"reason,omitempty"`
+	TransactionDigest string                   `json:"transaction_digest,omitempty"`
+	Current           nodecommand.Uint64String `json:"current"`
+	SampledAtMS       nodecommand.Uint64String `json:"sampled_at_ms"`
+}
+type Spend struct {
+	Asset  string                   `json:"asset"`
+	Amount nodecommand.Uint64String `json:"amount"`
+	Known  bool                     `json:"known"`
 }
 
 func (r Response) Validate(request Request) error {
+	if request.Handover != nil && r.OK && r.HandoverReview == nil {
+		return fmt.Errorf("successful review is missing native acceptance")
+	}
+	if r.HandoverReview != nil {
+		if request.Handover == nil || !r.OK || r.Operation != OperationStatus {
+			return fmt.Errorf("unexpected handover acceptance")
+		}
+		want, err := request.Handover.Hash()
+		got, other := r.HandoverReview.Proposal.Hash()
+		if err != nil || other != nil || want != got {
+			return fmt.Errorf("review proposal changed")
+		}
+		if _, err := r.HandoverReview.SigningBytes(); err != nil {
+			return err
+		}
+	}
 	if r.SchemaVersion != SchemaVersion {
 		return fmt.Errorf("adapter returned schema_version %q", r.SchemaVersion)
 	}
@@ -191,6 +262,9 @@ func (r Response) Validate(request Request) error {
 	}
 	if strings.TrimSpace(r.ObservedAt) == "" {
 		return fmt.Errorf("adapter response has no observed_at")
+	}
+	if r.Spend != nil && (strings.TrimSpace(r.Spend.Asset) == "" || (!r.Spend.Known && r.Spend.Amount != 0)) {
+		return fmt.Errorf("adapter returned invalid or unconfirmed spend")
 	}
 	return nil
 }

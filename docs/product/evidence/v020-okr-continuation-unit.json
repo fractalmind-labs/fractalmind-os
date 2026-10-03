@@ -1,0 +1,43 @@
+{
+  "recordedAt": "2026-10-02T18:04:03.358923+00:00",
+  "sdkRegression": {
+    "command": "node --import tsx --test tests/*.test.ts",
+    "tests": 128,
+    "pass": 128,
+    "fail": 0
+  },
+  "appRegression": {
+    "command": "npm test",
+    "tests": 137,
+    "pass": 137,
+    "fail": 0
+  },
+  "sdkBuild": {
+    "passed": true
+  },
+  "appTypecheckAndProductionBuild": {
+    "passed": true,
+    "warnings": [
+      "existing large entry chunk",
+      "dependency PURE annotation"
+    ]
+  },
+  "nativeAppExecutionScriptStrictTypecheck": {
+    "passed": true
+  },
+  "liveGoHarness": {
+    "compiled": true,
+    "actualExitCode": 0,
+    "evidence": "v020-native-app-execution-localnet.json"
+  },
+  "limits": {
+    "installedNativeUIVerified": false,
+    "fullCacheWipeVerified": false,
+    "cloudHostVerified": false,
+    "fullV020Complete": false,
+    "controlTests": "controlled RPC/source/fee manager; production signatures and binding BCS",
+    "nativeIntegration": "actual OS vault through isolated subprocess, production envd/Coordinator, Host memory key provider, memory transaction journal",
+    "browser": "actual public Sui data and native-denial flow, without native mock",
+    "sdkNpmTestPipeFailure": "Sandbox denied tsx CLI IPC socket; full tests passed with node --import tsx --test."
+  }
+}

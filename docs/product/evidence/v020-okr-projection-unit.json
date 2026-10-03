@@ -1,0 +1,46 @@
+{
+  "recordedAt": "2026-10-03T00:59:49.826575+00:00",
+  "appTests": {
+    "passed": 214,
+    "failed": 0
+  },
+  "projectionFocusedTests": {
+    "passed": 21,
+    "failed": 0
+  },
+  "appBuild": "passed",
+  "nativeScriptStrictTypes": "passed",
+  "skillValidation": "passed",
+  "changedSdkGoRustMoveCode": false,
+  "logs": [
+    {
+      "path": "/tmp/fm-okr-projection-final-app-tests.log",
+      "sha256": "18058471ff58e712ba83e8066e130166fbaffd21388d7ae56a9773c94e735c67"
+    },
+    {
+      "path": "/tmp/fm-okr-projection-focused-final-tests.log",
+      "sha256": "dbc41d4e1dbf19c3dc48341344ab90f0a081212ddb435a5e52b93fb48da7d865"
+    },
+    {
+      "path": "/tmp/fm-okr-projection-final-app-build.log",
+      "sha256": "39592515c7c0f7956791ff95754a3b6a8870db2ccf4374a2dc2d1784f8f192e0"
+    },
+    {
+      "path": "/tmp/fm-okr-projection-final-script-types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/tmp/fm-okr-projection-skill-check.log",
+      "sha256": "db349825903d66adffea3ecf1bd8e1803043e8a71cf1a051235dabc5371f5bb0"
+    }
+  ],
+  "limits": [
+    "Projection unit fixtures control chain/native source; real OS/Sui/envd are verified separately in localnet evidence.",
+    "R3 includes the final original Run/budget read guard and export-size limit. Large-context rejection was type/build checked without installed UI branch proof.",
+    "No installed Tauri IPC/IndexedDB positive UI, cloud Host, mobile journey, unattended Host loop, model planner or full cache-wipe recovery proof."
+  ],
+  "readGuardTests": {
+    "passed": 4,
+    "failed": 0
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "context": "fractalmind.product-record.v1:0x2222222222222222222222222222222222222222222222222222222222222222:5:\"command-abababababababababababababababababababababababababababababababab\":1:2",
+  "description": "Synthetic Go → SDK interoperability fixture; public test key",
+  "envelope": "464d4531514d56ec6aab53c15169a0ffe337b56716c26ba9d2fe2826fcf2a9e934b55709ffc881aa0cdb77212f6027ae78ad1e250362d1980ab5b2acee01d45466a082db6202db81197afe16685d1f3783e117798d716eece48a9199075b6dad4bdb",
+  "key": "0707070707070707070707070707070707070707070707070707070707070707",
+  "plaintext": "{\"result\":\"SDK → Go 加密正文 ✅\",\"cost\":\"9007199254740993\"}"
+}

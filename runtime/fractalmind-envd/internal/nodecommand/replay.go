@@ -16,13 +16,19 @@ type Reservation struct {
 	Fingerprint               string
 	ExpectedAuthorityHash     string
 	ExpectedRevocationVersion uint64
+	AuthorityObservedAtMS     int64
 	Scope                     ReservationScope
 	Budget                    *BudgetClaim
+	Target                    Target
+	Action, CommandScope      string
+	IssuedAtMS, ExpiresAtMS   int64
 }
 
 type ReservationResult struct {
 	Duplicate           bool
 	AuthorityCheckpoint uint64
+	Execution           *ChainExecution
+	TransactionDigest   string
 }
 
 // AuthorityStore resolves authority state and atomically reserves one use plus

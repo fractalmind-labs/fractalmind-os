@@ -1,0 +1,16 @@
+{
+  "recordedAt": "2026-10-02T06:01:23.584363+00:00",
+  "url": "http://127.0.0.1:4189/",
+  "checks": [
+    "Chinese Light runtime observations show separate Host and Coordinator verification",
+    "Actual chain directory entry loads; browser signing remains disabled",
+    "English Dark translated Host trust explanation renders correctly"
+  ],
+  "screenshot": "v020-host-signed-browser-zh-light.jpg",
+  "limits": {
+    "nativeSigningVerified": false,
+    "verifiedHostRowsRenderedInInstalledApp": false,
+    "mobileVerified": false,
+    "noSyntheticTrustedRowsInjected": true
+  }
+}

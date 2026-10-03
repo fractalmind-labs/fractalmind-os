@@ -1,0 +1,109 @@
+{
+  "recordedAt": "2026-10-02T06:33:52.972782+00:00",
+  "command": "go test -race -json ./internal/agent ./internal/heartbeat ./internal/ws ./internal/coordinator ./cmd/envd",
+  "sourceSha256": "1289c46be2f47cab8987e5dc8d5222c3f850237da61a8fa910b5373e04607850",
+  "packages": [
+    {
+      "name": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/heartbeat",
+      "status": "pass",
+      "elapsedSeconds": 0.003
+    },
+    {
+      "name": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/ws",
+      "status": "pass",
+      "elapsedSeconds": 0.001
+    },
+    {
+      "name": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/coordinator",
+      "status": "pass",
+      "elapsedSeconds": 0.003
+    },
+    {
+      "name": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/agent",
+      "status": "pass",
+      "elapsedSeconds": 2.237
+    },
+    {
+      "name": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "status": "pass",
+      "elapsedSeconds": 2.791
+    }
+  ],
+  "passedTestEvents": 125,
+  "skippedTests": [
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestNativeChainFileAgentLive"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestNativeChainSingleKrLive"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestProductionObservationFixture"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestProductionChainRuntimeLive"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestHostJoinLiveCLI"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestHostJoinHiddenTTY"
+    }
+  ],
+  "app": {
+    "command": "npm test",
+    "tests": 71,
+    "passed": 71,
+    "failed": 0,
+    "sourceSha256": "fce6e1ccceaca01bb27531e961b31a6f5397f177fa15a3ba956fad6311ea1adc",
+    "productionBuild": "pass",
+    "buildLogSha256": "dccec7052a3c34b2bf30b176606a5bda858752a836153c5341e97e0642eefa31",
+    "localnetScriptTypes": "pass"
+  },
+  "realTmux": [
+    "rescan identity unchanged without registry",
+    "rename preserves identity",
+    "multiple panes remain distinct",
+    "respawn changes identity",
+    "disappearance produces explicit empty JSON array",
+    "same-name recreation changes identity"
+  ],
+  "platformBuilds": [
+    {
+      "platform": "darwin/arm64",
+      "sha256": "51d718622a684d38fe5866fe12c1cfcc0f3774a452b5114ac732870c70ee292c",
+      "sizeBytes": 23579378,
+      "build": "pass",
+      "installedRuntimeAcceptance": false
+    },
+    {
+      "platform": "windows/amd64",
+      "sha256": "d4563565c920fc45bd746e2bfa72113ba946396ba171d19287076edbd80d2288",
+      "sizeBytes": 24885760,
+      "build": "pass",
+      "installedRuntimeAcceptance": false
+    },
+    {
+      "platform": "linux/amd64",
+      "sha256": "6e6568b82af5dbe6a14238d4081193dfe22e923e2548ccd38eb137683a3bcfcf",
+      "sizeBytes": 25330823,
+      "build": "pass",
+      "installedRuntimeAcceptance": false
+    }
+  ],
+  "limits": {
+    "nativeStoreAcceptance": false,
+    "independentAgentIdentity": false,
+    "chainImportAcceptance": false,
+    "boundedHandoverAcceptance": false,
+    "actualLinuxRuntimeAcceptance": false,
+    "cloudHostAcceptance": false,
+    "fivePlatformAcceptance": false
+  }
+}

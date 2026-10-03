@@ -2,7 +2,8 @@
 # Copy to sentinel.yaml and edit for your environment.
 
 identity:
-  host_id: ""          # auto-generated if empty
+  key_profile: default # local OS credential-store profile; initialize with --init-host
+  host_id: ""          # chain runtime derives this from the secure Host signing address
   hostname: ""         # defaults to os.Hostname()
 
 # Roles control which capabilities this node provides.
@@ -14,6 +15,8 @@ roles:
   # stun_server: null  # Auto-detect (public IP → true). Set true/false to override.
 
 coordinator:
+  # With the chain connection enabled, pin this Coordinator's organization binding.
+  binding_id: ""
   listen_addr: ":8080" # Bind address for the embedded coordinator API when roles.coordinator=true
   api_token: ""        # Optional: set bearer token to protect /api/* endpoints (Authorization: Bearer <token>)
   # The worker /ws control channel is authenticated by mutual Ed25519
@@ -37,6 +40,36 @@ agents:
 
 heartbeat:
   interval: 30s        # Relay nodes include relay_load in P2P heartbeat
+
+# Signed command runtime: Sui authorization and encrypted Sui results.
+# Initialize keys explicitly: envd --config sentinel.yaml --init-host
+# The current agent-manager integration is observation-only.
+runtime:
+  enabled: false       # enabling requires sui.enabled, rpc, org_id and protocol_package_id
+  adapter_kind: observation # observation | native-file-agent (1–3 text-file goals)
+  workspaces: {}       # native-file-agent: configured binding name -> existing absolute directory
+  # workspaces:
+  #   files: /absolute/path/to/workspace
+  # Native instance IDs are derived from this envd process lifetime and binding
+  # name. Discover/import the signed native-* ID in the App; configuration alone
+  # grants no control. ACTIVE OKR authorization and safe handover are separate.
+  adapter_command: agent-manager
+  adapter_args: []      # for Python use command python3 and args [/absolute/path/main.py]
+  result_gas_budget: 2000000000 # MIST ceiling (2 SUI), not the actual charged fee
+  # Explicit opt-in: signed questions and approved file-task observations go to
+  # this provider. Model billing is separate from SUI Gas / TOOL_CALLS. No shell,
+  # provider tools, retries or authority to alter an approved goal are enabled.
+  model:
+    enabled: false
+    protocol: anthropic-messages # anthropic-messages (default) | ollama
+    api_base: https://api.anthropic.com # Anthropic Messages API; loopback HTTP also allowed
+    api_key_env: FRACTALMIND_MODEL_API_KEY # secret value is never saved here or on chain
+    name: "" # choose a model supported by your provider; required when enabled
+    max_tokens: 2048 # per model response, 1–4096
+    timeout_seconds: 30 # per request; the original Run deadline still applies
+    max_requests: 12 # per OKR Run, 1–32; a direct question makes one request
+    # Local Ollama: protocol: ollama, api_base: http://127.0.0.1:11434,
+    # api_key_env: "", name: qwen2.5-coder:1.5b (pull the model separately).
 
 # Optional local remote-desktop relay and self-healing supervision. When
 # command is set, envd starts envd-desktop as its direct child, restarts it on
@@ -64,11 +97,17 @@ desktop:
 # SUI blockchain control plane (peer discovery, identity, ACL)
 sui:
   enabled: false
+  host_connection_enabled: false  # enable NativeStore keys + chain-bound worker/Coordinator connections; execution authority is separate
+  network: testnet
+  chain_identifier: ""              # full genesis digest; pin to the App's current chain
+  host_join_gas_budget: 200000000    # maximum self-paid Host admission Gas, in MIST
   rpc: https://fullnode.testnet.sui.io:443 # gRPC (the fullnode host is unchanged)
   graphql_url: https://graphql.testnet.sui.io/graphql # indexed event history
-  keypair_path: ~/.sui/envd.key       # Ed25519 keypair (auto-generated if missing)
+  keypair_path: ~/.sui/envd.key       # legacy roles only; chain runtime uses identity.key_profile
   package_id: "0x..."                 # fractalmind_envd package on SUI
   protocol_package_id: "0x..."       # fractalmind_protocol package (for auto agent cert discovery)
+  protocol_registry_id: "0x..."      # ProtocolRegistry for Host invitations; not the PeerRegistry below
+  protocol_original_package_id: ""  # original type package after upgrade; empty uses protocol_package_id
   registry_id: "0x..."                # PeerRegistry shared object ID
   org_id: "0x..."                     # Organization object ID
   cert_id: ""                         # AgentCertificate object ID (auto-discovered if empty)

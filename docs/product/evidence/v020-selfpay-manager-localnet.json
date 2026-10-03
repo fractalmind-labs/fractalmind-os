@@ -1,0 +1,205 @@
+{
+  "schema": "fractalmind.v020-selfpay-transaction-manager.v1",
+  "testedAt": "2026-10-01T12:27:29.365Z",
+  "chain": {
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "packageId": "0x5b91f480f27bf69da7a30a16ff20e14e1be7b519c6d9a6c58f0d95685d95beb4",
+  "humanId": "0xe75ee263dd525f5b66e173e4105d076f96c02069937b526b2a125fa2e0d89128",
+  "organizationId": "0x8c3092017dab2cf72ce59f19cf6a7eeb04004e40b3417fb997b9d4cfd9020869",
+  "transactions": [
+    {
+      "label": "Selfpay: recovery proof signer creates identity without sponsor",
+      "quote": {
+        "requestId": "create-human",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x9afd2325944b1a81804c7012a424eb7cd9d66b72c1d9fae5e9e2841d994a89cc\"]",
+        "digest": "EgqnghLBFD857rET69iAGprNZQpnG7cQ48aNPnxDypnX",
+        "sender": "0x9afd2325944b1a81804c7012a424eb7cd9d66b72c1d9fae5e9e2841d994a89cc",
+        "balance": "1000000000000",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "18742548",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1790857706275
+      },
+      "digest": "EgqnghLBFD857rET69iAGprNZQpnG7cQ48aNPnxDypnX",
+      "status": "confirmed",
+      "actualGas": "18742548",
+      "gasUsed": {
+        "computationCost": "1390000",
+        "storageCost": "20535200",
+        "storageRebate": "3182652",
+        "nonRefundableStorageFee": "32148"
+      }
+    },
+    {
+      "label": "Selfpay: device creates organization",
+      "quote": {
+        "requestId": "create-org",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x3a6aec8d826bf1a1bf7e7419936ad387de60ad9713fdf29c76eae79dcb87e269\"]",
+        "digest": "8e713DdHGkjc1vg6iLSB3eUE7cfAWy5VKecVhmaTXMjE",
+        "sender": "0x3a6aec8d826bf1a1bf7e7419936ad387de60ad9713fdf29c76eae79dcb87e269",
+        "balance": "1000000000000",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "14701216",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1790857706840
+      },
+      "digest": "8e713DdHGkjc1vg6iLSB3eUE7cfAWy5VKecVhmaTXMjE",
+      "status": "confirmed",
+      "actualGas": "14701216",
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "19440800",
+        "storageRebate": "6139584",
+        "nonRefundableStorageFee": "62016"
+      }
+    },
+    {
+      "label": "Selfpay: lost receipt resolves original digest after manager restart",
+      "quote": {
+        "requestId": "lost-receipt",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x3a6aec8d826bf1a1bf7e7419936ad387de60ad9713fdf29c76eae79dcb87e269\"]",
+        "digest": "12o7gej693xXXjHkfvtiiGCZRXLGjte8whgDwG5MvKR1",
+        "sender": "0x3a6aec8d826bf1a1bf7e7419936ad387de60ad9713fdf29c76eae79dcb87e269",
+        "balance": "1000000000000",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "1525476",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1790857707198
+      },
+      "digest": "12o7gej693xXXjHkfvtiiGCZRXLGjte8whgDwG5MvKR1",
+      "status": "confirmed",
+      "actualGas": "1525476",
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "4271200",
+        "storageRebate": "4145724",
+        "nonRefundableStorageFee": "41876"
+      },
+      "broadcasts": 1,
+      "digestQueries": 6
+    },
+    {
+      "label": "Selfpay: add independent root device",
+      "quote": {
+        "requestId": "add-phone",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x3a6aec8d826bf1a1bf7e7419936ad387de60ad9713fdf29c76eae79dcb87e269\"]",
+        "digest": "2hNoTS6hWAFFhLqWQekVXRSJ7J72mhDxMnG1qDi9LeCf",
+        "sender": "0x3a6aec8d826bf1a1bf7e7419936ad387de60ad9713fdf29c76eae79dcb87e269",
+        "balance": "999983773308",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "8351568",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1790857707679
+      },
+      "digest": "2hNoTS6hWAFFhLqWQekVXRSJ7J72mhDxMnG1qDi9LeCf",
+      "status": "confirmed",
+      "actualGas": "8351568",
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "13482400",
+        "storageRebate": "6530832",
+        "nonRefundableStorageFee": "65968"
+      }
+    },
+    {
+      "label": "Selfpay: second device revokes original grant after quote",
+      "quote": {
+        "requestId": "revoke-original",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x320f03affa0acdd53c8c8da942032504c56e8fd03e0491b567fde4cfb4083481\"]",
+        "digest": "DkK2uxLESu6Tfd8CUwVpncWFUoFEsq2YQYvhxLizbwmt",
+        "sender": "0x320f03affa0acdd53c8c8da942032504c56e8fd03e0491b567fde4cfb4083481",
+        "balance": "1000000000000",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "1454568",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1790857708044
+      },
+      "digest": "DkK2uxLESu6Tfd8CUwVpncWFUoFEsq2YQYvhxLizbwmt",
+      "status": "confirmed",
+      "actualGas": "1454568",
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "5456800",
+        "storageRebate": "5402232",
+        "nonRefundableStorageFee": "54568"
+      }
+    },
+    {
+      "label": "Selfpay: revoked-after-quote fails with real charged Gas",
+      "quote": {
+        "requestId": "revoked-after-quote",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x3a6aec8d826bf1a1bf7e7419936ad387de60ad9713fdf29c76eae79dcb87e269\"]",
+        "digest": "GL3xfeBpcnoUXqHNCqTESmU2J2Fv1yfgrhkXsw1qQRyp",
+        "sender": "0x3a6aec8d826bf1a1bf7e7419936ad387de60ad9713fdf29c76eae79dcb87e269",
+        "balance": "999983773308",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "1359112",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1790857708038
+      },
+      "digest": "GL3xfeBpcnoUXqHNCqTESmU2J2Fv1yfgrhkXsw1qQRyp",
+      "status": "failed",
+      "actualGas": "1432712",
+      "gasUsed": {
+        "computationCost": "1390000",
+        "storageCost": "4271200",
+        "storageRebate": "4228488",
+        "nonRefundableStorageFee": "42712"
+      },
+      "failure": "{\"$kind\":\"MoveAbort\",\"message\":\"MoveAbort in 1st command, abort code: 9003, in '0x5b91f480f27bf69da7a30a16ff20e14e1be7b519c6d9a6c58f0d95685d95beb4::identity::assert_grant_for_device' (instruction 53)\",\"command\":0,\"MoveAbort\":{\"abortCode\":\"9003\",\"location\":{\"package\":\"0x5b91f480f27bf69da7a30a16ff20e14e1be7b519c6d9a6c58f0d95685d95beb4\",\"module\":\"identity\",\"function\":22,\"instruction\":53,\"functionName\":\"assert_grant_for_device\"}}}"
+    },
+    {
+      "label": "Selfpay: recovery-derived signer consumes recovery without old wallet or sponsor",
+      "quote": {
+        "requestId": "recover-human",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x9afd2325944b1a81804c7012a424eb7cd9d66b72c1d9fae5e9e2841d994a89cc\"]",
+        "digest": "Bgk4W8vgzn3JcfGyrgaZ1PjQwSfSXi97rexTjGajAikW",
+        "sender": "0x9afd2325944b1a81804c7012a424eb7cd9d66b72c1d9fae5e9e2841d994a89cc",
+        "balance": "999981257452",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "15952752",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1790857708909
+      },
+      "digest": "Bgk4W8vgzn3JcfGyrgaZ1PjQwSfSXi97rexTjGajAikW",
+      "status": "confirmed",
+      "actualGas": "15952752",
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "26220000",
+        "storageRebate": "11677248",
+        "nonRefundableStorageFee": "117952"
+      }
+    }
+  ],
+  "broadcasts": 7,
+  "digestQueries": 6,
+  "checks": {
+    "zeroFundsStopsBeforeSignature": true,
+    "fundingDoesNotAutoSubmit": true,
+    "realSimulationAndFees": true,
+    "originalDigestAfterResponseLoss": true,
+    "restartDidNotResubmit": true,
+    "validatorFailureChargedGas": true,
+    "stableHumanSelfpayRecovery": true,
+    "oldWalletOrSponsorNeededForRecovery": false,
+    "browserDurabilityVerifiedBySeparateFixture": true,
+    "fullAppUiVerified": false,
+    "addressBalanceGasLiveVerified": false
+  }
+}

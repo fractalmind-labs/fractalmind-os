@@ -1,0 +1,161 @@
+{
+  "recordedAt": "2026-10-02T03:29:16.109Z",
+  "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+  "profile": {
+    "network": "localnet",
+    "rpcUrl": "http://127.0.0.1:29000",
+    "packageId": "0x2ef39db88cffefa9c16dcaf6593032ccd6ac0e79acfd22e30fc10d4b4c7a45e5",
+    "registryId": "0xfdf5ad498229c22b1652cae940c8803e9bc8de20ead4fbc049c514198e123220",
+    "humanId": "0xa22434b2b0902e50a9f7bff7444f8ff2904653db9209346c0eb88ad0852d5ace",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "organizationId": "0x59b81a712d552cdfc946915b295065d4cf5367307e0c7db27a9dfb339be3424f",
+  "grantId": "0xb5860dcda19c3be12bf8d78bf637ecac115cb7d53264257d98994fc85895516c",
+  "checks": [
+    "exact absent Host index reconstructs as empty",
+    "production verifier proves fresh device/organization management authority; public binding is not online evidence",
+    "production Go envd inspects exact App invitation and validates live gRPC BCS quote; no broadcast or OS/CLI acceptance",
+    "code is released only after exact receipt objects are visible and match invitation proof material",
+    "redemption consumes the invitation; reconstruction finds membership and finite observation authority, not execution authority",
+    "membership revocation remains chain-owned and visible; consumed-invite revocation never substitutes for it",
+    "new controller reconstructs chain state but cannot recover the invitation bearer secret",
+    "a lost unused code has an explicit on-chain revocation path",
+    "management revocation between quote and submit rejects the App operation before a new broadcast"
+  ],
+  "transactions": [
+    {
+      "label": "create isolated fixture Human",
+      "digest": "FYCmegDqQibQcpB7Fks2CkvZzMEUaad2zJq4jFQsTFN7",
+      "phase": "prepared"
+    },
+    {
+      "label": "create isolated fixture Human",
+      "requestId": "fixture:7b101e78-6e69-4e88-bc67-70d69dd278ab",
+      "digest": "FYCmegDqQibQcpB7Fks2CkvZzMEUaad2zJq4jFQsTFN7",
+      "status": "confirmed",
+      "actualGas": "17708548"
+    },
+    {
+      "label": "create isolated fixture organization",
+      "digest": "7FeuSUj9KyH9x2i8sK717MjPmrUTker8AGoaurvdDxjW",
+      "phase": "prepared"
+    },
+    {
+      "label": "create isolated fixture organization",
+      "requestId": "fixture:f5d9bf57-e2c8-4cf3-b205-73fec0c50614",
+      "digest": "7FeuSUj9KyH9x2i8sK717MjPmrUTker8AGoaurvdDxjW",
+      "status": "confirmed",
+      "actualGas": "15278416"
+    },
+    {
+      "label": "App registers Coordinator binding",
+      "requestId": "host:d6f8a296-b37c-4fce-a87a-b518a6eaaa49",
+      "digest": "EXtHZbutCYAN3tXYe8U94yybhV65jiG1wc37Sc8zKf4",
+      "status": "confirmed",
+      "actualGas": "6825696"
+    },
+    {
+      "label": "App creates one-use invitation",
+      "requestId": "host:421879a0-118d-4b3b-9a96-870b2b05d8f8",
+      "digest": "9Pd93rQxfEgKJyskg4Nug8nYddv9H2bjUaFE5NnMmnKM",
+      "status": "confirmed",
+      "actualGas": "4963392"
+    },
+    {
+      "label": "SDK fixture Host redeems App invitation",
+      "digest": "ACULcsVWHBTTGA7wPnxUFYNps7tJFuj22rBUnuwy4Jt",
+      "phase": "prepared"
+    },
+    {
+      "label": "SDK fixture Host redeems App invitation",
+      "requestId": "fixture:e0f4cdef-bed9-4a37-bbc8-92e31919c261",
+      "digest": "ACULcsVWHBTTGA7wPnxUFYNps7tJFuj22rBUnuwy4Jt",
+      "status": "confirmed",
+      "actualGas": "15474372"
+    },
+    {
+      "label": "App revokes Host membership",
+      "requestId": "host:92bced81-86a4-4ea3-a72f-ea0023f26684",
+      "digest": "2kQYZP4g721tEHxjm3xKyFdVX9ohErQ8Rb6uXxpjyc35",
+      "status": "confirmed",
+      "actualGas": "-591676"
+    },
+    {
+      "label": "App creates invitation for reload test",
+      "requestId": "host:e1592c45-5680-4f34-981e-0df5685aedb4",
+      "digest": "LF9WYWxS8QVywByJagNpp653s1LHYSe3oXCVysh6srT",
+      "status": "confirmed",
+      "actualGas": "4968256"
+    },
+    {
+      "label": "App revokes unrecoverable unused invitation",
+      "requestId": "host:8667106f-6c76-4e9e-aee2-5bee2745ce3e",
+      "digest": "2FhaUQMXLdunFHMEha8F7cgP2syBQpFyvAMHSN14i33t",
+      "status": "confirmed",
+      "actualGas": "1472028"
+    },
+    {
+      "label": "fixture explicitly adds independent root management device",
+      "digest": "9vwujqUsFguo3nDdk7fbYEgz2wLfRErHMtkxEDPgfwbL",
+      "phase": "prepared"
+    },
+    {
+      "label": "fixture explicitly adds independent root management device",
+      "requestId": "fixture:7d1f2801-ced7-4157-a9d6-b03bdefb43ed",
+      "digest": "9vwujqUsFguo3nDdk7fbYEgz2wLfRErHMtkxEDPgfwbL",
+      "status": "confirmed",
+      "actualGas": "7839568"
+    },
+    {
+      "label": "independent root fixture revokes managing device",
+      "digest": "EgmBidGvmpLVZDgr5wRHgX14TWygdQgRXWoQLRj4MuQJ",
+      "phase": "prepared"
+    },
+    {
+      "label": "independent root fixture revokes managing device",
+      "requestId": "fixture:8eb25473-8683-44b3-a6c6-00e670552a4e",
+      "digest": "EgmBidGvmpLVZDgr5wRHgX14TWygdQgRXWoQLRj4MuQJ",
+      "status": "confirmed",
+      "actualGas": "1469248"
+    }
+  ],
+  "envdQuote": {
+    "plan": {
+      "network": "localnet",
+      "invite_id": "0xe34dae983a9811c8f67da0feeb7a1ffb38e40e239dbbdf6b6dcd50643de0b8a2",
+      "organization_id": "0x59b81a712d552cdfc946915b295065d4cf5367307e0c7db27a9dfb339be3424f",
+      "organization_name": "Host-App-edac876d-59a6-4bce-aea2-dc9669b230a9",
+      "coordinator_binding": "0xb148c7d1c17881b5f701d74071cb1fc0d8bf19d938c243eaaa7c03d2bc87f6f3",
+      "binding_version": 1,
+      "coordinator_address": "0x3b47ebe6895f887d13f45763e81cc93c1c2dd3f92d21dc8cb36628fc8d60e796",
+      "coordinator_public_key": "5ba8a2617d06f97017ad2c19724e6f4e5bd4eb5e9f531d239dbf00263baae2da",
+      "coordinator_endpoint": "http://127.0.0.1:19090",
+      "issuer_human": "0xa22434b2b0902e50a9f7bff7444f8ff2904653db9209346c0eb88ad0852d5ace",
+      "issuer_grant": "0xb5860dcda19c3be12bf8d78bf637ecac115cb7d53264257d98994fc85895516c",
+      "invite_expires_at_ms": 1790915350428,
+      "membership_ttl_ms": 2592000000,
+      "observation_ttl_ms": 86400000,
+      "clock_ms": 1790911752743,
+      "proof_expires_at_ms": 1790911872743
+    },
+    "quote": {
+      "digest": "7ojvy38jW3cjEA34PWv3XFn1hQi12B9y5uHHjB3cxdDv",
+      "sender": "0xde01320e6a8723bb6ee9363a35ffd93e9e639a83f375c7e03ce461bbc5c3a2e2",
+      "gas_budget_mist": 200000000,
+      "gas_price_mist": 1000,
+      "estimated_net_fee_mist": "11465492"
+    },
+    "broadcast": false
+  },
+  "limits": {
+    "generatedFixtureKeysOnly": true,
+    "injectedNativeTransport": true,
+    "memoryTechnicalJournal": true,
+    "installedAppVerified": false,
+    "nativeStoreVerified": false,
+    "envdJoinCliVerified": false,
+    "envdJoinQuoteVerified": true,
+    "cloudHostVerified": false,
+    "invitationSecretsIncluded": false
+  }
+}

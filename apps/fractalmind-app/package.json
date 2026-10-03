@@ -1,0 +1,44 @@
+{
+  "name": "@fractalmind-labs/fractalmind-app",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build --no-bundle",
+    "android:init": "tauri android init --ci",
+    "postandroid:init": "node scripts/android-platform.mjs",
+    "preandroid:dev": "node scripts/android-platform.mjs",
+    "android:dev": "tauri android dev",
+    "preandroid:build": "node scripts/android-platform.mjs",
+    "android:build": "tauri android build",
+    "ios:init": "tauri ios init --ci",
+    "ios:dev": "tauri ios dev",
+    "ios:build": "tauri ios build"
+  },
+  "dependencies": {
+    "@fractalmind-labs/fractalmind-sdk": "file:../../protocols/fractalmind-protocol/sdk",
+    "@mysten/sui": "2.33.1",
+    "@tauri-apps/api": "2.12.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.1",
+    "@types/node": "20.19.38",
+    "@types/react": "18.3.31",
+    "@types/react-dom": "18.3.7",
+    "@vitejs/plugin-react": "4.7.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vite": "7.3.6"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

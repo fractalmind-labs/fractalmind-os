@@ -1,0 +1,165 @@
+{
+  "recordedAt": "2026-10-02T03:57:53.168Z",
+  "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+  "profile": {
+    "network": "localnet",
+    "rpcUrl": "http://127.0.0.1:29000",
+    "packageId": "0x2ef39db88cffefa9c16dcaf6593032ccd6ac0e79acfd22e30fc10d4b4c7a45e5",
+    "registryId": "0xfdf5ad498229c22b1652cae940c8803e9bc8de20ead4fbc049c514198e123220",
+    "humanId": "0xd2aefdd1869a346c2c536415d0d74c6f8c0756ab35a1d0a6e8fe315d2753d97b",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "organizationId": "0x97732e48183bf4e47c1b4f65227e7fb82909bc1e1c157763a69711b2c005b5c1",
+  "grantId": "0x2077521da0d7a6dbffe969842d8f493bc16fe182b33d9769556e3a1cbde83764",
+  "checks": [
+    "exact absent Host index reconstructs as empty",
+    "production verifier proves fresh device/organization management authority; public binding is not online evidence",
+    "code is released only after exact receipt objects are visible and match invitation proof material",
+    "production CLI pipeline confirms organization and fees, signs once with generated Go Host keys, persists original digest, recovers lost receipt and supports public query without keys; OS/TTY/cloud not verified",
+    "redemption consumes the invitation; reconstruction finds membership and finite observation authority, not execution authority",
+    "membership revocation remains chain-owned and visible; consumed-invite revocation never substitutes for it",
+    "new controller reconstructs chain state but cannot recover the invitation bearer secret",
+    "a lost unused code has an explicit on-chain revocation path",
+    "management revocation between quote and submit rejects the App operation before a new broadcast"
+  ],
+  "transactions": [
+    {
+      "label": "create isolated fixture Human",
+      "digest": "DoECQ2s34HxkZm1yntGf4EdTsCaYaCekkb3HeYs2swRm",
+      "phase": "prepared"
+    },
+    {
+      "label": "create isolated fixture Human",
+      "requestId": "fixture:7f5677d6-6da0-4c54-864c-c8c1bfd5032d",
+      "digest": "DoECQ2s34HxkZm1yntGf4EdTsCaYaCekkb3HeYs2swRm",
+      "status": "confirmed",
+      "actualGas": "17708548"
+    },
+    {
+      "label": "create isolated fixture organization",
+      "digest": "1xHxFhn3PK6kwYX5a5cyi3AzffdFkvqsxBzBdvjbXBa",
+      "phase": "prepared"
+    },
+    {
+      "label": "create isolated fixture organization",
+      "requestId": "fixture:649a0d08-a771-49f9-9c4e-9ed12f4cbedc",
+      "digest": "1xHxFhn3PK6kwYX5a5cyi3AzffdFkvqsxBzBdvjbXBa",
+      "status": "confirmed",
+      "actualGas": "15278416"
+    },
+    {
+      "label": "App registers Coordinator binding",
+      "requestId": "host:8af22c51-8714-4aa3-a54d-6cc0b63a5efe",
+      "digest": "3eZGGaAkiB9uYeuusuUhq7ysH3HCpupVrhGWqDVf47aZ",
+      "status": "confirmed",
+      "actualGas": "6825696"
+    },
+    {
+      "label": "App creates one-use invitation",
+      "requestId": "host:facfd564-665b-4d0f-92be-8a17fac9c985",
+      "digest": "3jsCVP9FrDPWudseRW6o52mDsHiYufNAiLsnofod26cq",
+      "status": "confirmed",
+      "actualGas": "4963392"
+    },
+    {
+      "label": "Go envd CLI redeems App invitation; injected response loss recovered by original query",
+      "requestId": "go-envd-cli-fixture",
+      "digest": "8M68iSFePwD13EJLJCWUEqJRmy3phbsXuxfLp9TDxiEW",
+      "status": "confirmed",
+      "actualGas": "11450292"
+    },
+    {
+      "label": "App revokes Host membership",
+      "requestId": "host:fa167921-ccb5-4ba2-bb45-c831717f42ef",
+      "digest": "D7TY3g6fZRzi2KUAA58KbrD8dDxy6C4MiW4zmyVpGjQ3",
+      "status": "confirmed",
+      "actualGas": "-592892"
+    },
+    {
+      "label": "App creates invitation for reload test",
+      "requestId": "host:c54a3459-890c-4646-ab64-42dfe8cd4ce7",
+      "digest": "HL5n6TfLPCyN5Tmvb9ksEsTYZvSYqaVNvT7gXK7GDCeY",
+      "status": "confirmed",
+      "actualGas": "4968256"
+    },
+    {
+      "label": "App revokes unrecoverable unused invitation",
+      "requestId": "host:0596c4e5-9ea2-4390-9d2c-0caee8ee2b36",
+      "digest": "GeYQ69UcchCznGDu84hSPAw5EXKm2XWoVbAhhL62i5kL",
+      "status": "confirmed",
+      "actualGas": "1472028"
+    },
+    {
+      "label": "fixture explicitly adds independent root management device",
+      "digest": "AGuKqkkf6vfAjAXSwLJwvJaRDi4Jsj9iQ4gWBC4qMfpD",
+      "phase": "prepared"
+    },
+    {
+      "label": "fixture explicitly adds independent root management device",
+      "requestId": "fixture:05c6a374-3ad8-40e7-9d39-97c29b20ecaf",
+      "digest": "AGuKqkkf6vfAjAXSwLJwvJaRDi4Jsj9iQ4gWBC4qMfpD",
+      "status": "confirmed",
+      "actualGas": "7839568"
+    },
+    {
+      "label": "independent root fixture revokes managing device",
+      "digest": "5JGwTEFBdBBMd6sEHtzgRFZaYJBq6Hr7eYQ6QFrJHX7J",
+      "phase": "prepared"
+    },
+    {
+      "label": "independent root fixture revokes managing device",
+      "requestId": "fixture:f04bc6f6-6ea2-4a70-a24b-5b03b56786de",
+      "digest": "5JGwTEFBdBBMd6sEHtzgRFZaYJBq6Hr7eYQ6QFrJHX7J",
+      "status": "confirmed",
+      "actualGas": "1469248"
+    }
+  ],
+  "envdCli": {
+    "initial": {
+      "state": "unknown",
+      "digest": "8M68iSFePwD13EJLJCWUEqJRmy3phbsXuxfLp9TDxiEW"
+    },
+    "result": {
+      "state": "confirmed",
+      "digest": "8M68iSFePwD13EJLJCWUEqJRmy3phbsXuxfLp9TDxiEW",
+      "actual_fee_mist": "11450292",
+      "membership": {
+        "organization_id": "0x97732e48183bf4e47c1b4f65227e7fb82909bc1e1c157763a69711b2c005b5c1",
+        "invite_id": "0x363e4970f2dabb16e5128c13d37635fbd3ae12cd6ea13c2bf77881196b0cf95d",
+        "membership_id": "0xae88d2118df5bba40c8fc4a972e8571f568356f57995fde28d629b579a3c2e00",
+        "host_address": "0x7f7f44c409fc1e38f86586b97c1c23fd61d8bfa250f2a6a1af84f75a8c14cc9d",
+        "coordinator_binding": "0x6200a8f6250259c4d7699360a5e6e078dc325a18fb94c8c2ad1288fea2fde79e",
+        "observation_capability": "0x3e8e46edb3f94627067d874abcf9085d8e9338645b6c515ae52b54a1966ea2cd",
+        "expires_at_ms": 1793505469784,
+        "revoked": false,
+        "current_membership": true
+      }
+    },
+    "broadcasts": 1,
+    "public_query_without_keys": true,
+    "real_disk_journal": true,
+    "hostAddress": "0x7f7f44c409fc1e38f86586b97c1c23fd61d8bfa250f2a6a1af84f75a8c14cc9d",
+    "journalRoot": "/tmp/fractalmind-envd-host-cli-localnet-01.json.journal"
+  },
+  "limits": {
+    "generatedFixtureKeysOnly": true,
+    "injectedNativeTransport": true,
+    "memoryTechnicalJournal": true,
+    "installedAppVerified": false,
+    "nativeStoreVerified": false,
+    "envdJoinCliVerified": false,
+    "envdJoinCliInjectedKeysVerified": true,
+    "envdJoinQuoteVerified": false,
+    "cloudHostVerified": false,
+    "invitationSecretsIncluded": false
+  },
+  "evidenceNotes": {
+    "sourceReport": "/tmp/fractalmind-envd-host-cli-localnet-01.json",
+    "membershipSnapshotPhase": "Go admission recovery, before the later App membership revocation in transactions",
+    "appJournal": "injected memory journal",
+    "envdJournal": "actual on-disk journal containing only digest and public technical metadata",
+    "recovery": "new runner in the same test process; not OS-key/process-restart acceptance",
+    "terminalInput": "pipe in this chain test; PTY checked separately",
+    "publicQuery": "StatusOnly with nil keys"
+  }
+}

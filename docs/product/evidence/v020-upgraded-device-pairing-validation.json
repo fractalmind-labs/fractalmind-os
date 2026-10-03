@@ -1,0 +1,172 @@
+{
+  "recordedAt": "2026-10-03T08:14:17.263715+00:00",
+  "baselineCommit": "716eb0f",
+  "sourceHashes": {
+    "apps/fractalmind-app/scripts/native-pairing-localnet.ts": "0ec99fe9b2001765c8603e821d442eb063e753dc59135a89a14949c7911b25d4",
+    "apps/fractalmind-app/src/pairing.ts": "e108aacb8e38a96269477f4e75ad03f0d8968ad253a57331a0fac64754bde13a",
+    "apps/fractalmind-app/src/onboarding.ts": "fe7c61e3f011a9e36659488e8be9bd98c529970144a827ca802f3555dc1d749b",
+    "apps/fractalmind-app/src/native-device.ts": "f5ce5ae423f3e78c660bc7b360cbd54a44f675711712c2dd310f6e80e955cb0d",
+    "apps/fractalmind-app/src/native-onboarding.ts": "87feabe74a1bee68ed262d3377aee47843de8205153039449a1623d46b98fca7",
+    "apps/fractalmind-app/src/private-records.ts": "b843f1aa1a4e31fb5885fc70f51367afc736f4dff7dc06cd03f1bca354314ec7",
+    "apps/fractalmind-app/src/device-identity.ts": "61f13404cb9c272c551a8aa2afba29edac0968c5e34802e745b48900a3eb45de",
+    "apps/fractalmind-app/src/chain.ts": "2165a8a419624f4fb1bdb6ecb9a582b01eb25862f05927db73bdba1f1e5e05bc",
+    "apps/fractalmind-app/tests/pairing.test.ts": "8b050d53694398695008f0b1ee990d26e66bc901eef183a38d6cacd25ad97b81",
+    "apps/fractalmind-app/native/examples/device-test-helper.rs": "ca57e3e51aea748cfb8be23e0ac28d358ddca84fad585879e35f425a6ac6503f",
+    "protocols/fractalmind-protocol/sdk/src/client.ts": "8bf53e1d611073599c8c2a3cdc94a84140e025ffd03c8c8634bbb64319b2934a",
+    "protocols/fractalmind-protocol/sdk/src/identity.ts": "d179f104d46f710304128f8c130cbf8e63868863b95e054a798029260f1633ff",
+    "protocols/fractalmind-protocol/sdk/src/transaction-manager.ts": "c7174a2a1bb7d5435c1b6ba2bad0df8e200f7e5965574fd05ef60ee63a266d84",
+    "apps/fractalmind-app/native/src/command_results.rs": "09be2003b0c777af31d1d66f35bd9206c99b5765d20a90362bc057196ac1f1d3",
+    "apps/fractalmind-app/native/src/keyrings.rs": "fa4e076063db718f64b596c3637c9077d920929efbb1848a82d41b160710f339",
+    "apps/fractalmind-app/native/src/lib.rs": "dddae7043e3c260f222f782d21f5f86f65e423bbb1ae52fcde704c50e22a8567",
+    "apps/fractalmind-app/native/src/node_command.rs": "5675cb99c0da0246762b47036222d662d4a05cf407483d1bf7b98e28535f6bd5",
+    "apps/fractalmind-app/native/src/onboarding.rs": "a78c8ba45e5182dfc983d8b1b2cd64f98030e34a9f91fe0de066c89c2335081b",
+    "apps/fractalmind-app/native/src/pairing.rs": "926099a804ec8ca575136ec0e9475b1ba8d05f0d5ae917aa90d6fcdb72579a71",
+    "apps/fractalmind-app/native/src/records.rs": "b6d1750c38f5cb384faddc1705cc300bed88fcca476221b589a17a1872d9db7e",
+    "apps/fractalmind-app/native/src/recovery.rs": "0ef19806ee494f77ab9bcf0968c3e2d9c9a48f29e5e910dac47162e8beff520f"
+  },
+  "checks": [
+    {
+      "kind": "strict fixture types",
+      "command": "./node_modules/.bin/tsc --noEmit --strict --skipLibCheck --module ESNext --moduleResolution Bundler --target ES2022 --lib ES2022,DOM scripts/native-pairing-localnet.ts",
+      "log": {
+        "path": "/tmp/fm-mixed-origins-pairing-types-r1.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "exitCode": 0,
+        "text": ""
+      }
+    },
+    {
+      "kind": "pairing controller regression",
+      "command": "node --import tsx --test tests/pairing.test.ts",
+      "passed": 4,
+      "log": {
+        "path": "/tmp/fm-mixed-origins-pairing-controller-r1.log",
+        "sha256": "03ca7f4601a1e43da79efdde9af7eeabd6d9f8d6f267d4087986564b9df124c4",
+        "exitCode": 0,
+        "text": "✔ pairing fingerprint binds both independent keys, chain, identity, scope and human-visible request details (19.823917ms)\n✔ original ambiguous pairing outcome precedes source reads, confirmation or new native key distribution (1.085834ms)\n✔ unapproved fingerprint/data sharing and a forged quote never reach source reads, signing or broadcast (0.772ms)\n✔ confirmed pairing waits for receipt output versions; stale/missing objects are not current and RPC failure propagates (0.682208ms)\nℹ tests 4\nℹ suites 0\nℹ pass 4\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 708.260708\n"
+      }
+    },
+    {
+      "kind": "existing output refuses restart before native initialization",
+      "command": "node --import tsx scripts/native-pairing-localnet.ts /tmp/fm-mixed-origin-deployment-r1.json /tmp/fm-mixed-origins-pairing-r1.json",
+      "expectedExitCode": 1,
+      "log": {
+        "path": "/tmp/fm-mixed-origins-pairing-output-guard-r1.log",
+        "sha256": "84027dbee0fd695c55ca0e2be28b7cc37e7c5e41c197cd3b432824cd4c906980",
+        "exitCode": 1,
+        "text": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/scripts/native-pairing-localnet.ts:36\n    throw new Error(\"Inspect the original report; do not overwrite or restart\");\n          ^\n\nError: Inspect the original report; do not overwrite or restart\n    at <anonymous> (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/scripts/native-pairing-localnet.ts:36:11)\n\nNode.js v25.8.0\n"
+      }
+    }
+  ],
+  "publicObjectRead": {
+    "script": "/tmp/fm-mixed-origins-pairing-read-r1.mjs",
+    "scriptSha256": "41aeaa267ddb94b163994a25d9f86bad9f574231d0949bc3970d2301b4235b76",
+    "path": "/tmp/fm-mixed-origins-pairing-read-r1.json",
+    "sha256": "e07f83fcf3b2d5a2fb48fc4c883d13c5123ab57e43f113ecdb23be36c32a68fe",
+    "log": {
+      "path": "/tmp/fm-mixed-origins-pairing-read-r1.log",
+      "sha256": "10733faf54528c2cdce60d6deae436664806b6f0330a4fcb5d06caf54392479c",
+      "exitCode": 0,
+      "text": "{\"broadcasts\":0,\"objects\":4,\"pairedGrantRevoked\":true}\n"
+    },
+    "report": {
+      "recordedAt": "2026-10-03T08:10:40.781Z",
+      "source": "/tmp/fm-mixed-origins-pairing-r1.json",
+      "chain": {
+        "rpc": "http://127.0.0.1:29000",
+        "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+      },
+      "deployment": {
+        "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+        "originalPackageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10",
+        "okrPackageId": "0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163",
+        "directPackageId": "0x70e43f069c7012b0e0ec2fa40792c64b0697ab0dff35184db0426a6402c8aafb",
+        "registryId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32"
+      },
+      "broadcasts": 0,
+      "objects": [
+        {
+          "label": "organization",
+          "objectId": "0x764fbee00efcde2b71ab1fd5a53c62343c2c255bcb01f2255f7a2109e4f932d9",
+          "type": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::Organization",
+          "version": "3495602",
+          "contentSha256": "07829920b2263eca59601584c1363256b897d8a17ca8b9d9713cbfc80aefe317"
+        },
+        {
+          "label": "human",
+          "objectId": "0x5302ba87bdf88c94f866d9af4fc6374b1cb2d5a2c5885b392d2f281785097967",
+          "type": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::HumanIdentity",
+          "version": "3495555",
+          "contentSha256": "4544b05c9aa8ef60df5f6b57d20f1b9705c46c00e18538cd3110bd0c579df49c"
+        },
+        {
+          "label": "request",
+          "objectId": "0xd655935eba507ed436392c2022343266e403a186af3520ff7b6bd0d91e8667c0",
+          "type": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::DevicePairingRequest",
+          "version": "3495555",
+          "contentSha256": "5067eff6482b19abf37d6a3d20cadeea447d13f99a537f02b755b58db74daa86",
+          "approved": true,
+          "grantId": "0xf86482293a6fcc82b49fed0e72cb2a1209730bdf6081ddfc6bf0d1b338fc2dbd"
+        },
+        {
+          "label": "pairedGrant",
+          "objectId": "0xf86482293a6fcc82b49fed0e72cb2a1209730bdf6081ddfc6bf0d1b338fc2dbd",
+          "type": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::DeviceGrant",
+          "version": "3495621",
+          "contentSha256": "5c7df5d50f67e6c364a21741a007ca1bf1a6765e04834db2e6cfab1fd810bd14",
+          "revoked": true
+        }
+      ],
+      "limits": {
+        "noSigner": true,
+        "installedUiVerified": false
+      }
+    }
+  },
+  "credentialAbsenceRead": {
+    "path": "/tmp/fm-mixed-origins-pairing-cleanup-read-r1.json",
+    "sha256": "3e9798c0954abb34d9054fa8647b1854c13d8ef87c427a242fc3e4bb2a98006e",
+    "log": {
+      "path": "/tmp/fm-mixed-origins-pairing-cleanup-read-r1.log",
+      "sha256": "2a9d3714830e64c89ca825863d1b5532a63cee46f823bfda41cd9ecd409c64ab",
+      "exitCode": 0,
+      "text": "{\"absentKeyReads\":3,\"broadcasts\":0}\n"
+    },
+    "report": {
+      "recordedAt": "2026-10-03T08:12:13.828Z",
+      "source": "/tmp/fm-mixed-origins-pairing-r1.json",
+      "broadcasts": 0,
+      "checks": [
+        {
+          "action": "public",
+          "profile": "test-e804014d-1cd0-449f-82c0-1e69bcaeefaa",
+          "status": 1,
+          "error": "NotInitialized"
+        },
+        {
+          "action": "publicOnboarding",
+          "profile": "test-e804014d-1cd0-449f-82c0-1e69bcaeefaa",
+          "status": 1,
+          "error": "NotInitialized"
+        },
+        {
+          "action": "public",
+          "profile": "test-e804014d-1cd0-449f-82c0-1e69bcaeefaa-a",
+          "status": 1,
+          "error": "NotInitialized"
+        }
+      ]
+    }
+  },
+  "limits": {
+    "fixtureOnlyChanges": true,
+    "appFullSuiteRerun": false,
+    "sdkFullSuiteRerun": false,
+    "moveFullSuiteRerun": false,
+    "rustFullSuiteRerun": false,
+    "installedUIVerified": false,
+    "physicalSecondDeviceVerified": false,
+    "fullV020Complete": false,
+    "priorMixedOriginsQueuedRunResolved": false
+  }
+}

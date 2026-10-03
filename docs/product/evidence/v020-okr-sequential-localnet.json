@@ -1,0 +1,4172 @@
+{
+  "testedAt": "2026-10-01T10:35:27.114Z",
+  "chain": {
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "packageId": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+  "registryId": "0x9e72da7d26f69ef5625d3cf58be956970a975d39b35a89bb4996945609b852cb",
+  "identityRegistryId": "0x69983f2d799f13bfaad888179f351643b6fd051aa56d2d3255f3ca7fcfac0d97",
+  "humanId": "0x2a570ffdb98f92f4e49658028eb5ab1588f7f2315f11205dd1317956c3fc9f3b",
+  "organizationId": "0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc",
+  "checks": [
+    {
+      "label": "publish test package",
+      "digest": "Dmi75p1ce8uk6qRMMwLVNQPMpiuFdm4VWLS7XXw16DJU",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "6680000",
+        "storageCost": "691964800",
+        "storageRebate": "978120",
+        "nonRefundableStorageFee": "9880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "initialize authenticated identity registry",
+      "digest": "4dBTpTS8B1FVFWEpf9zP8pYK9Ebfdjh3wvo9jvMAwbJf",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1370000",
+        "storageCost": "7653200",
+        "storageRebate": "3032172",
+        "nonRefundableStorageFee": "30628"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "create Human using recovery signature and device-paid gas",
+      "digest": "6bh1aDX991ahaxDWgdu2ARqXxFed4o7N2UZVqUmCzHsp",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1390000",
+        "storageCost": "20535200",
+        "storageRebate": "3182652",
+        "nonRefundableStorageFee": "32148"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "create organization bound to Human",
+      "digest": "2zD8tNU9aHuoyZwmkdcGBvYFT7arJxWZui9dAgjVYYMi",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "19524400",
+        "storageRebate": "6139584",
+        "nonRefundableStorageFee": "62016"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "save encrypted okr (256 bytes)",
+      "digest": "7dxfBuXDoaQuCtYepsmTWrynqRXapK7XFKnMmT1s4VtD",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "14485600",
+        "storageRebate": "4160772",
+        "nonRefundableStorageFee": "42028"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "save encrypted contract (1024 bytes)",
+      "digest": "3uhYYjqSykzqtbMRSYcneP8gcC4GLkAdUGycRYD8vtRP",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "20398400",
+        "storageRebate": "6771600",
+        "nonRefundableStorageFee": "68400"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "save encrypted approval (4096 bytes)",
+      "digest": "HGUt3aMHUvtiYotPXMTjvVoaivY68inE3zr2dZxXqvjP",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "43745600",
+        "storageRebate": "6771600",
+        "nonRefundableStorageFee": "68400"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "save encrypted evidence (8192 bytes)",
+      "digest": "odcMKtH5ZR5RRjSSciqGQfz678Lb2r9a9rfasa5PaGW",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "74875200",
+        "storageRebate": "6771600",
+        "nonRefundableStorageFee": "68400"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "save encrypted checkpoint (16384 bytes)",
+      "digest": "9LC9Q5udEx9LxUn9hdU7DEUcrt1sDprfcdezj6nAhN9Y",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1490000",
+        "storageCost": "137172400",
+        "storageRebate": "6771600",
+        "nonRefundableStorageFee": "68400"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "save encrypted message (32768 bytes)",
+      "digest": "B1jjCc8PD9MDr2mtHwQfmDmFJgXNq5FeUdqpsZt9E5PD",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "87900000",
+        "storageCost": "261645200",
+        "storageRebate": "6771600",
+        "nonRefundableStorageFee": "68400"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "save encrypted backup (65504 bytes)",
+      "digest": "3exEyC8At3UPYWZtnhnYn1UNrUwR9oVgifDCLf9b7WdG",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "468300000",
+        "storageCost": "510423600",
+        "storageRebate": "6771600",
+        "nonRefundableStorageFee": "68400"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "add phone with seven-day org-scoped read grant",
+      "digest": "BHc6fpfcoEqEpC7kypoyMdSJr86sewFB1iy7gNogEDQc",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "13702800",
+        "storageRebate": "6530832",
+        "nonRefundableStorageFee": "65968"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: approve organization Coordinator entry",
+      "digest": "4qLuQi3RLh9WWvNYcrNbEfU4sQUgvB5SE8dKHa61PbnW",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "9553200",
+        "storageRebate": "4160772",
+        "nonRefundableStorageFee": "42028"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: issue one-use invitation",
+      "digest": "DQt3hyKKAqAiBaZfReRUjScyBeGgEhSpqLK1Q711a57u",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "10670400",
+        "storageRebate": "7140276",
+        "nonRefundableStorageFee": "72124"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: copied proof cannot join as another sender",
+      "digest": "EAutzE6EpVb83eWxv5XeftK3exbovPijr2GFvX2CyD92",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9205, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::host::redeem_invite' (instruction 357)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9205",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "host",
+              "function": 6,
+              "instruction": 357,
+              "functionName": "redeem_invite"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "7417600",
+        "storageRebate": "7343424",
+        "nonRefundableStorageFee": "74176"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: valid proof consumes invite, creates membership and limited authority",
+      "digest": "6HrSqKAA3fQRws7UX2HYL7GsNZ1jqK2QKGc4FHrrAPAs",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1510000",
+        "storageCost": "24418800",
+        "storageRebate": "10563696",
+        "nonRefundableStorageFee": "106704"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: consumed invite cannot be revoked",
+      "digest": "KtNUrjGEDhRsXA5NRyMfedqpfrYgFc3fgtdDtXc57gb",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9204, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::host::revoke_invite' (instruction 29)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9204",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "host",
+              "function": 5,
+              "instruction": 29,
+              "functionName": "revoke_invite"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "4202800",
+        "storageRebate": "4160772",
+        "nonRefundableStorageFee": "42028"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: issue one-use invitation",
+      "digest": "DhwA8i28w2ozdQSDGZf16xyGnoWw5zpNwD8RPFLbrQCy",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "11156800",
+        "storageRebate": "7621812",
+        "nonRefundableStorageFee": "76988"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: revoke an unused invitation",
+      "digest": "GyocVi46WTRxBvaJY6H353DWux8PdDJStV7UCyXLQZas",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "4202800",
+        "storageRebate": "4160772",
+        "nonRefundableStorageFee": "42028"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: issue one-use invitation",
+      "digest": "Hbf1dhqYT2mNvkqMxmsKHxFnP2AQj5oGRBpfEjAsijTG",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "11400000",
+        "storageRebate": "7862580",
+        "nonRefundableStorageFee": "79420"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: concurrent join candidate 1",
+      "digest": "C91UjWvtRHCsbyXQSa7urx3xocWuwPuAWvnYjQHK1kks",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1510000",
+        "storageCost": "25148400",
+        "storageRebate": "11286000",
+        "nonRefundableStorageFee": "114000"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: concurrent join candidate 2",
+      "digest": "5NVWZy1ZRcFrNZ5SxR5JjFUH7HeWTQd6NGegfKzQqU1N",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9204, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::host::redeem_invite' (instruction 133)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9204",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "host",
+              "function": 6,
+              "instruction": 133,
+              "functionName": "redeem_invite"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "7417600",
+        "storageRebate": "7343424",
+        "nonRefundableStorageFee": "74176"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: discover and explicitly import existing observation instance",
+      "digest": "4pJvV33CHbKomMp8CL9JPnim7FQNyz6rzsaQQKPGLAV6",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "15040400",
+        "storageRebate": "8344116",
+        "nonRefundableStorageFee": "84284"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: repeating import does not create a second record",
+      "digest": "ESMLLh5BBNnEs7w2pKV3iP2zFnJHZJ2JtVDFNPCBQ5gL",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "4202800",
+        "storageRebate": "4160772",
+        "nonRefundableStorageFee": "42028"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: repeated discovery cannot silently change workspace",
+      "digest": "8NHMmTMrVbFrsE1p3pGZP5QfjuLJmthEMiN9UnFnWfnh",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9207, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::host::import_agent' (instruction 181)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9207",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "host",
+              "function": 10,
+              "instruction": 181,
+              "functionName": "import_agent"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "4202800",
+        "storageRebate": "4160772",
+        "nonRefundableStorageFee": "42028"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: same instance name on another Host stays separate",
+      "digest": "36EQy5FvYQULseB8AxgBmNKvRb7JPTF7Mk9rQ1LiuXYM",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "15040400",
+        "storageRebate": "8344116",
+        "nonRefundableStorageFee": "84284"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: observation instance cannot receive execution authority",
+      "digest": "BvqWNpyvD4Bfgj9Pyv8ZRFNRAzPkzGxeoEdH2UrmqHMM",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9201, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::host::assert_managed' (instruction 71)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9201",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "host",
+              "function": 17,
+              "instruction": 71,
+              "functionName": "assert_managed"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "988000",
+        "storageRebate": "978120",
+        "nonRefundableStorageFee": "9880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: tmux self-report cannot become constrained runtime",
+      "digest": "8iiYdjuwoWGnboqK8sh1BF4v3x9Yh3VQZPRHtgBHTnZa",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9201, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::host::import_agent' (instruction 98)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9201",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "host",
+              "function": 10,
+              "instruction": 98,
+              "functionName": "import_agent"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "4202800",
+        "storageRebate": "4160772",
+        "nonRefundableStorageFee": "42028"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: managing device confirms bounded adapter instance",
+      "digest": "5JyNf27vMzkPCkyYWMNyi5FD91ftEMdZ1U7QwBFLDykQ",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "14979600",
+        "storageRebate": "8344116",
+        "nonRefundableStorageFee": "84284"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: issue exact-instance device execution authority",
+      "digest": "EpnQbEceibCzXKz22o33ov2YaoLv5AGXgx4tJMDy4SCY",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1500000",
+        "storageCost": "9234000",
+        "storageRebate": "978120",
+        "nonRefundableStorageFee": "9880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: issue three-use bounded device authority",
+      "digest": "Dk5gG75JK4FZ4h9k5EgZkso56qcynW4muehE1HzyndML",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1490000",
+        "storageCost": "9180800",
+        "storageRebate": "978120",
+        "nonRefundableStorageFee": "9880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "BFBm6iLQVqx6d2gASEUDXNaLnzL5BoMVSomE3Brbj6jT",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1640000",
+        "storageCost": "35773200",
+        "storageRebate": "5673096",
+        "nonRefundableStorageFee": "57304"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: exact claim retry does not create another checkpoint",
+      "digest": "B8T5fDUbWPWjTp6PSye96bS3UgmJLeEXuzytgQZoCP1p",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1610000",
+        "storageCost": "5730400",
+        "storageRebate": "5673096",
+        "nonRefundableStorageFee": "57304"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Result key: another sender cannot grant a device command key",
+      "digest": "2hQvKqyvm7yugYZhHQW3pcY5xcXNmp4qQ3qs4TnHMGUw",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9311, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::node_execution::grant_result_key' (instruction 24)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9311",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "node_execution",
+              "function": 0,
+              "instruction": 24,
+              "functionName": "grant_result_key"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1470000",
+        "storageCost": "5730400",
+        "storageRebate": "5673096",
+        "nonRefundableStorageFee": "57304"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Result key: stale or future organization key generation is rejected atomically",
+      "digest": "8NmnDLfeWg4ft9PR3Rm7r7U299BKcJRQTLHX7knkF1XD",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9311, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::node_execution::grant_result_key' (instruction 52)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9311",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "node_execution",
+              "function": 0,
+              "instruction": 52,
+              "functionName": "grant_result_key"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1470000",
+        "storageCost": "5730400",
+        "storageRebate": "5673096",
+        "nonRefundableStorageFee": "57304"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: running checkpoint cannot start again",
+      "digest": "CrDJakKRczqCuZzN28yyf1y5cSyM7QpVzu8FM9b17RoP",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9304, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::node_execution::begin' (instruction 80)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9304",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "node_execution",
+              "function": 8,
+              "instruction": 80,
+              "functionName": "begin"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1490000",
+        "storageCost": "7052800",
+        "storageRebate": "6982272",
+        "nonRefundableStorageFee": "70528"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Budget: actual cost above reservation is rejected",
+      "digest": "Buz64Tp2DRp8kn4miYZGF3T6FkwvQ82X1zLWVvH7UQwQ",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8319, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::remote_authority::settle_bound_budget' (instruction 45)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8319",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "remote_authority",
+              "function": 18,
+              "instruction": 45,
+              "functionName": "settle_bound_budget"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "15010000",
+        "storageRebate": "14859900",
+        "nonRefundableStorageFee": "150100"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Budget: failed result write rolls back settlement atomically",
+      "digest": "Bq6792gVcXhWYN1HXEGWD3pPQhi1JMvaiSB7cbw2eMZh",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9101, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::product_record::save_authorized' (instruction 77)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9101",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "product_record",
+              "function": 1,
+              "instruction": 77,
+              "functionName": "save_authorized"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "15010000",
+        "storageRebate": "14859900",
+        "nonRefundableStorageFee": "150100"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: Host persists encrypted terminal checkpoint result",
+      "digest": "CPM1qFHB6FzDicdqzgqgJkEqWy7hTxCjV1fku6Cm4e3p",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "30491200",
+        "storageRebate": "22669812",
+        "nonRefundableStorageFee": "228988"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Budget: already terminal command cannot settle a second cost",
+      "digest": "G7tjXyLok5AfB2vVsYhmnDEwwuVNiCpu7jSNZoCq9gRr",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9305, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::node_execution::finish' (instruction 84)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9305",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "node_execution",
+              "function": 13,
+              "instruction": 84,
+              "functionName": "finish"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "15496400",
+        "storageRebate": "15341436",
+        "nonRefundableStorageFee": "154964"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "CMdMrbr2ivNTKFPnQnUcougz5YxTVwWDLHmVKLCxFoj2",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1550000",
+        "storageCost": "31365200",
+        "storageRebate": "10744272",
+        "nonRefundableStorageFee": "108528"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: another Host cannot start a valid queued command",
+      "digest": "5aQHpEpFGPyvZj1DfJS1KV8UmQNzpBeMZMDsWijidnq6",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9302, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::node_execution::begin' (instruction 53)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9302",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "node_execution",
+              "function": 8,
+              "instruction": 53,
+              "functionName": "begin"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1490000",
+        "storageCost": "6809600",
+        "storageRebate": "6741504",
+        "nonRefundableStorageFee": "68096"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: result cannot precede a confirmed start",
+      "digest": "2yMSkkJ5XjB3yL334oUiYfqQATNLCC2eZx7thK9p4ykJ",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9305, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::node_execution::finish' (instruction 84)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9305",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "node_execution",
+              "function": 13,
+              "instruction": 84,
+              "functionName": "finish"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "14766800",
+        "storageRebate": "14619132",
+        "nonRefundableStorageFee": "147668"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: device cancels queued command before any start",
+      "digest": "8o2aW1BtsgteiH16j9p2svmfxRvMKSJozBsv52Bvs2uv",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "16803600",
+        "storageRebate": "16635564",
+        "nonRefundableStorageFee": "168036"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: cancelled queued command cannot start",
+      "digest": "7m4ExPVXjAKG4diMEL6huR77tzMpSrkKiAWNAH9VFr4r",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9304, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::node_execution::begin' (instruction 80)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9304",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "node_execution",
+              "function": 8,
+              "instruction": 80,
+              "functionName": "begin"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1490000",
+        "storageCost": "6809600",
+        "storageRebate": "6741504",
+        "nonRefundableStorageFee": "68096"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "DmZHKSVs49PypoxdFFFX5YqbBju3hxHoBrE7zH9cheWM",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1550000",
+        "storageCost": "31365200",
+        "storageRebate": "10744272",
+        "nonRefundableStorageFee": "108528"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: fourth unique claim exceeds use bound",
+      "digest": "8ukSbUVipopg9sUDMkZYtKY1rZqeVcmhmFK2Mjmv1iJf",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8308, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::remote_authority::claim_use' (instruction 229)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8308",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "remote_authority",
+              "function": 20,
+              "instruction": 229,
+              "functionName": "claim_use"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1520000",
+        "storageCost": "5730400",
+        "storageRebate": "5673096",
+        "nonRefundableStorageFee": "57304"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Result key: Host cannot publish command-derived body without a chain key grant",
+      "digest": "2aaghkv56zTNq5oPSmGSNSFa5j81Jgs9JP1kSmn94RLj",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9311, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::node_execution::finish' (instruction 175)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9311",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "node_execution",
+              "function": 13,
+              "instruction": 175,
+              "functionName": "finish"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "15010000",
+        "storageRebate": "14859900",
+        "nonRefundableStorageFee": "150100"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: unknown result is persisted without granting replay",
+      "digest": "51afQ9f57cv2KvA9aE6oCNGCam8M3gnwLmFcdvwxGzQR",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "25156000",
+        "storageRebate": "17470728",
+        "nonRefundableStorageFee": "176472"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Budget: issue thirty-unit capability for pending limit and stop checks",
+      "digest": "AJo3GoCEQETk1ogqRmf1AHZeFXkxSVtz2PHGJHmUR3ym",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1490000",
+        "storageCost": "9180800",
+        "storageRebate": "978120",
+        "nonRefundableStorageFee": "9880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "9jqRqA68ddWnyrGBuZ6SHWG2MV11GmJ8nNQphDRSyVSb",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1560000",
+        "storageCost": "31365200",
+        "storageRebate": "5673096",
+        "nonRefundableStorageFee": "57304"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Budget: pending reservation prevents oversubscribing remaining budget",
+      "digest": "EnXutediTtoMZvcw1Uutgc7i3uV8bxNT2C6cLLqiFtMC",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8309, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::remote_authority::claim_use' (instruction 282)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8309",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "remote_authority",
+              "function": 20,
+              "instruction": 282,
+              "functionName": "claim_use"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1520000",
+        "storageCost": "5730400",
+        "storageRebate": "5673096",
+        "nonRefundableStorageFee": "57304"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Budget: cancel pending command to release budget",
+      "digest": "BdDhVAgxkHa4g8Jb7xCVmwJAoLJbAnZVoTch98BT52KS",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "16803600",
+        "storageRebate": "16635564",
+        "nonRefundableStorageFee": "168036"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "AsLzBdqvTVbKBLsUJdR4HeV8mLnN4npvfurQubhNTFSk",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1550000",
+        "storageCost": "31365200",
+        "storageRebate": "10744272",
+        "nonRefundableStorageFee": "108528"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Budget: request running stop while retaining pending reservation",
+      "digest": "483n927c6T3bsebCy3YVJ2TKkxAzuExHdfwUcYKEQL91",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "11795200",
+        "storageRebate": "11677248",
+        "nonRefundableStorageFee": "117952"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Budget: Host confirms stop and settles known cost",
+      "digest": "GfGUTSoWXo6TydK2d3N2AvGZohcozsWuYdG2UWDurEVj",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "30658400",
+        "storageRebate": "22669812",
+        "nonRefundableStorageFee": "228988"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Runtime store: issue two-use fixture adapter authority",
+      "digest": "C9R9cao4w8i3LDu4AMBfqFsB7KdRJeBxWn2GZnDutv3J",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1490000",
+        "storageCost": "9180800",
+        "storageRebate": "978120",
+        "nonRefundableStorageFee": "9880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "4ebhMTGGP9Vk12KncmvsP5r3xwLEcruirKrptrdS4QNm",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1640000",
+        "storageCost": "35773200",
+        "storageRebate": "5673096",
+        "nonRefundableStorageFee": "57304"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "CRUij2uBxfXEPGHuiUJhycbhPqsumMFTt1tj8gu3z1w7",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1640000",
+        "storageCost": "35773200",
+        "storageRebate": "10744272",
+        "nonRefundableStorageFee": "108528"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Production factory: issue observation and control test authority",
+      "digest": "FgN1LMaZyyJ1U8wNgwKdbkXzQyJikeL4wVhfyKMVeDr",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1500000",
+        "storageCost": "9234000",
+        "storageRebate": "978120",
+        "nonRefundableStorageFee": "9880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "89Rnk859PiN8wKdgPzt1SwpmZDYkwx5LJdBjNXUVp2PB",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1640000",
+        "storageCost": "35765600",
+        "storageRebate": "5725764",
+        "nonRefundableStorageFee": "57836"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "6Cz9b6HQjCLrUKJUGCLtBVzsk3TeohNyoXxXrqxVnhDg",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1640000",
+        "storageCost": "35826400",
+        "storageRebate": "10796940",
+        "nonRefundableStorageFee": "109060"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Production factory: device cancels unsupported queued control",
+      "digest": "9PSra9FNLjtSk4xHDLSJXz7zZVCUfskeXD7gVFuwnYNt",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "16856800",
+        "storageRebate": "16688232",
+        "nonRefundableStorageFee": "168568"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: create encrypted measurable draft",
+      "digest": "d5ChHkHPwLJQd2PkRTsKiJ3NkQFCdjZhc7zAk5TKT5y",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "25627200",
+        "storageRebate": "6771600",
+        "nonRefundableStorageFee": "68400"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: create encrypted measurable draft",
+      "digest": "4J6nApBreZawAkABNWwDiBs2eEGBnngJM9Lz1VMuf2Pu",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "25627200",
+        "storageRebate": "9164232",
+        "nonRefundableStorageFee": "92568"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: create encrypted measurable draft",
+      "digest": "76vJSNSzHAvraqoEvSxWvc7WtmJeamXPkNsh9ncJgigy",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "25627200",
+        "storageRebate": "9164232",
+        "nonRefundableStorageFee": "92568"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: create encrypted measurable draft",
+      "digest": "72PVamCQ3DoFRHPXu83LreNomde1kLPexffFSr9AGEbK",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "25627200",
+        "storageRebate": "9164232",
+        "nonRefundableStorageFee": "92568"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: exact draft retry preserves original object",
+      "digest": "4fApAfvStui8ZQZjZSFXr6z8LKAALLxDV2za1bSQVSqL",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "4202800",
+        "storageRebate": "4160772",
+        "nonRefundableStorageFee": "42028"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: activate one explicitly managed Agent",
+      "digest": "EaK6KewNe7ygsjsDFmvLxxqkBgUrYDKuqkyVxeMMHkP",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1450000",
+        "storageCost": "25908400",
+        "storageRebate": "13114332",
+        "nonRefundableStorageFee": "132468"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: activate one explicitly managed Agent",
+      "digest": "GzHi3VSNbvYnMdwFv5Gp3bK2uVh9nHgzQZizcNV47mTP",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1450000",
+        "storageCost": "25908400",
+        "storageRebate": "13114332",
+        "nonRefundableStorageFee": "132468"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: activate one explicitly managed Agent",
+      "digest": "64jngcz3bcj6GRbAUFu9283oDbLgnxV3xFuScR9GXiyE",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1450000",
+        "storageCost": "25908400",
+        "storageRebate": "13114332",
+        "nonRefundableStorageFee": "132468"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: fourth ACTIVE is rejected atomically",
+      "digest": "9vvtDSNf5AXuefy27L6PyNhkpuFtRav6bGSwNsk7fbrr",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9404, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::okr::activate' (instruction 195)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9404",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "okr",
+              "function": 6,
+              "instruction": 195,
+              "functionName": "activate"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "8192800",
+        "storageRebate": "8110872",
+        "nonRefundableStorageFee": "81928"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR binding: issue capability for pause boundary",
+      "digest": "H7JMcMh3ZRbpdT7BuvBWFP3neebXkqoBcz41ZzWShT5k",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1520000",
+        "storageCost": "12243600",
+        "storageRebate": "978120",
+        "nonRefundableStorageFee": "9880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR binding: prepare command before pause",
+      "digest": "AmZGa4esAoey7kyFDWgwk2wLUT9WVjUMWsGMAybuyawi",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1590000",
+        "storageCost": "45448000",
+        "storageRebate": "13513104",
+        "nonRefundableStorageFee": "136496"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: pause releases ACTIVE slot and invalidates agreement version",
+      "digest": "56Xe9qipKYZK1mZDaQb71wF2Ns8rNCCezZnDgdaKShZY",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "18931600",
+        "storageRebate": "14769612",
+        "nonRefundableStorageFee": "149188"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR binding: paused OKR rejects old prepared start",
+      "digest": "5S2PUPJXJ1SikzouZMn9vUgMqti787nZxKmrXwoTvjgf",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9403, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::okr::assignment_witness' (instruction 70)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9403",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "okr",
+              "function": 8,
+              "instruction": 70,
+              "functionName": "assignment_witness"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1440000",
+        "storageCost": "6855200",
+        "storageRebate": "6786648",
+        "nonRefundableStorageFee": "68552"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR binding: historical queued claim can cancel after pause",
+      "digest": "EnPgNrkZQVSAtHRTFahVFhVgsxv1g5xVmxgfHoZm7Nm8",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1440000",
+        "storageCost": "27550000",
+        "storageRebate": "27274500",
+        "nonRefundableStorageFee": "275500"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: activate one explicitly managed Agent",
+      "digest": "APMdCpGgpo5TLRHGzeSWXrGGNbcmfjTCriqbbpZxvE5e",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1450000",
+        "storageCost": "25908400",
+        "storageRebate": "13114332",
+        "nonRefundableStorageFee": "132468"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: stale version cannot replace criteria",
+      "digest": "8aM4rPef1Sfc3YbxpWhHpFo6RFaH4J6pBq9L8L96A1sa",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9402, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::okr::assert_version' (instruction 20)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9402",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "okr",
+              "function": 2,
+              "instruction": 20,
+              "functionName": "assert_version"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "9484800",
+        "storageRebate": "9389952",
+        "nonRefundableStorageFee": "94848"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: measurements alone cannot achieve the Objective",
+      "digest": "2MTU3YPM17PHXi37UjNFm8yyYPzPVCVh3yA2XDXPwYMs",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9403, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::okr::achieve' (instruction 53)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9403",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "okr",
+              "function": 20,
+              "instruction": 53,
+              "functionName": "achieve"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "9484800",
+        "storageRebate": "9389952",
+        "nonRefundableStorageFee": "94848"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Native file Agent: issue two-run actual tool-call budget",
+      "digest": "CxjuPJg3VHViX1gWWBszoLBGfe6wrUjEpLLuAS6vr66Q",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1520000",
+        "storageCost": "12243600",
+        "storageRebate": "978120",
+        "nonRefundableStorageFee": "9880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR binding: generic prepare cannot bypass OKR ledger",
+      "digest": "G1zDhiG8vKsDUfoZethXbum7PHE3TKu4XnTEbWGaHkZz",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8321, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::remote_authority::assert_unbound_contract' (instruction 9)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8321",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "remote_authority",
+              "function": 7,
+              "instruction": 9,
+              "functionName": "assert_unbound_contract"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "5776000",
+        "storageRebate": "5718240",
+        "nonRefundableStorageFee": "57760"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR binding: reject stale agreement",
+      "digest": "B4EJtYjPzJdq7JyWwx5xuFvZc961cpdWaNSqEFLfrmDd",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9402, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::okr::prepare_command' (instruction 28)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9402",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "okr",
+              "function": 10,
+              "instruction": 28,
+              "functionName": "prepare_command"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "11058000",
+        "storageRebate": "10947420",
+        "nonRefundableStorageFee": "110580"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR binding: reject wrong KR cursor",
+      "digest": "BBYw4AgejetX9WtHUnWGS1kXZFM15j4m7yJB1MvZ5rdT",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9406, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::okr::assignment_witness' (instruction 104)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9406",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "okr",
+              "function": 8,
+              "instruction": 104,
+              "functionName": "assignment_witness"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "11058000",
+        "storageRebate": "10947420",
+        "nonRefundableStorageFee": "110580"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "2qfVaEi1nn9qPannJd1YN9gd5vUGqUt9aDG7iUKbDALw",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1680000",
+        "storageCost": "49856000",
+        "storageRebate": "13513104",
+        "nonRefundableStorageFee": "136496"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR binding: exact command retry does not reserve global budget twice",
+      "digest": "F7XKwYYMwRs4cNUib3qDmreAZxfW5EzF9oB3gLaC5vKh",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1650000",
+        "storageCost": "11058000",
+        "storageRebate": "10947420",
+        "nonRefundableStorageFee": "110580"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "6QdejTnAAgJbMQxGMWNiZxuKNcJUekw1of6dofDo4pvG",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1680000",
+        "storageCost": "49856000",
+        "storageRebate": "18584280",
+        "nonRefundableStorageFee": "187720"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR binding: issue second capability sharing global budget",
+      "digest": "qUkYeqTpE8fsEdY6hbSa7x5GzcB3e7h2KSCekyMkZrx",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1520000",
+        "storageCost": "12243600",
+        "storageRebate": "978120",
+        "nonRefundableStorageFee": "9880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR binding: second capability cannot reset global pending budget",
+      "digest": "EnDCyiARba17PTwDvB2HNjGwqq3psqCD2T8hYe3sSKvs",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9409, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::okr::prepare_command' (instruction 176)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9409",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "okr",
+              "function": 10,
+              "instruction": 176,
+              "functionName": "prepare_command"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1440000",
+        "storageCost": "11058000",
+        "storageRebate": "10947420",
+        "nonRefundableStorageFee": "110580"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR binding: generic start cannot bypass live OKR",
+      "digest": "ChWWMUaycq1PqHAx8kv143fgkq4hn8JU4GQTczabznCW",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8321, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::remote_authority::assert_unbound_contract' (instruction 9)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8321",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "remote_authority",
+              "function": 7,
+              "instruction": 9,
+              "functionName": "assert_unbound_contract"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "6855200",
+        "storageRebate": "6786648",
+        "nonRefundableStorageFee": "68552"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR binding: generic stop cannot leave global budget inconsistent",
+      "digest": "FocaADXdJwWP9oEJ5JVhHgwxoMLsdQtgHqKXrQtooxJe",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8321, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::remote_authority::assert_unbound_contract' (instruction 9)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8321",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "remote_authority",
+              "function": 7,
+              "instruction": 9,
+              "functionName": "assert_unbound_contract"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "11643200",
+        "storageRebate": "11526768",
+        "nonRefundableStorageFee": "116432"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR binding: generic finish cannot leave global budget inconsistent",
+      "digest": "CEH8nW7msTbUenjMhPD3kfeJdpSgr2cANW1UcLcCtB55",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8321, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::remote_authority::assert_unbound_contract' (instruction 9)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8321",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "remote_authority",
+              "function": 7,
+              "instruction": 9,
+              "functionName": "assert_unbound_contract"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "14858000",
+        "storageRebate": "14709420",
+        "nonRefundableStorageFee": "148580"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: another Host cannot submit measurements",
+      "digest": "5o5tnDW1N5RvRLo82WK8TmDF6X6Ut63GEQWbgi7LJvzQ",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9405, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::okr::observe' (instruction 178)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9405",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "okr",
+              "function": 17,
+              "instruction": 178,
+              "functionName": "observe"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1460000",
+        "storageCost": "6270000",
+        "storageRebate": "6207300",
+        "nonRefundableStorageFee": "62700"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: admitted Host submits actual successful Run evidence",
+      "digest": "9dXJVpKNqbmPHArtwUYKtVQQey3KBVLpXqcKXrvhNaVP",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1480000",
+        "storageCost": "11612800",
+        "storageRebate": "6207300",
+        "nonRefundableStorageFee": "62700"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: measurements alone cannot achieve the Objective",
+      "digest": "Gr2dxX26YmPRuFg4BHHYnwZNbyGnnvk6ueEkYC56rAPe",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9403, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::okr::achieve' (instruction 53)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9403",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "okr",
+              "function": 20,
+              "instruction": 53,
+              "functionName": "achieve"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "10032000",
+        "storageRebate": "9931680",
+        "nonRefundableStorageFee": "100320"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: authorized human verifies KR independently of observation",
+      "digest": "8oUHWBPPQjNdknJZpANzT6Cd2DmjaHVncBQY9zPpUC7m",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "21606800",
+        "storageRebate": "12542508",
+        "nonRefundableStorageFee": "126692"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: measurements alone cannot achieve the Objective",
+      "digest": "3RVuRu2R1Dg6poa9hka6uGuWKBXMEXFLANAyVvPsyhtv",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9403, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::okr::achieve' (instruction 53)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9403",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "okr",
+              "function": 20,
+              "instruction": 53,
+              "functionName": "achieve"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "10275200",
+        "storageRebate": "10172448",
+        "nonRefundableStorageFee": "102752"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR replan: pause running objective and invalidate old agreement",
+      "digest": "Eaoz1en5RYkbjBRhprdZHhqMMSuhTbkcCYJeEGbApop4",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "19866400",
+        "storageRebate": "15552108",
+        "nonRefundableStorageFee": "157092"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR replan: paused objective cannot reuse old verification",
+      "digest": "DEiobZckFt8wuaN1ixbQXsBXJAJoWTLK3XfYHJLWtMak",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9403, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::okr::verify_kr' (instruction 35)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9403",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "okr",
+              "function": 19,
+              "instruction": 35,
+              "functionName": "verify_kr"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "10275200",
+        "storageRebate": "10172448",
+        "nonRefundableStorageFee": "102752"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR replan: cannot approve budget below already spent amount",
+      "digest": "4XPa8baKN1bB79wB4sxHJKBYfR66o74Lhh2BzPJsXcm1",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9409, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::okr::activate' (instruction 339)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9409",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "okr",
+              "function": 6,
+              "instruction": 339,
+              "functionName": "activate"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1450000",
+        "storageCost": "10275200",
+        "storageRebate": "10172448",
+        "nonRefundableStorageFee": "102752"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR replan: replace criteria and clear previous metric verification",
+      "digest": "2WzQ8BSGs6DPrUMgFdoKahzPgBzQD2RYpafzgpfh2GB3",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "18300800",
+        "storageRebate": "13121856",
+        "nonRefundableStorageFee": "132544"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR replan: old approval version cannot reactivate revised spec",
+      "digest": "ErkMTh6Pagd7o4vGkg4LJL386Cv7vGwvtN26AB93f3m2",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9402, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::okr::assert_version' (instruction 20)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9402",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "okr",
+              "function": 2,
+              "instruction": 20,
+              "functionName": "assert_version"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "9484800",
+        "storageRebate": "9389952",
+        "nonRefundableStorageFee": "94848"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR replan: explicitly reapprove current spec",
+      "digest": "4wbRzDZXtJqKZodkKDamfuXcgzEUmHvbdPQXrRre3p6X",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1450000",
+        "storageCost": "21112800",
+        "storageRebate": "14769612",
+        "nonRefundableStorageFee": "149188"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR replan: issue new version-bound authority without resetting global budget",
+      "digest": "HPaH7xP2VqcCgRfHDPoeWU2jPcebp5vEMviEztq4uReS",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1520000",
+        "storageCost": "12243600",
+        "storageRebate": "978120",
+        "nonRefundableStorageFee": "9880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR replan: old capability cannot claim new agreement",
+      "digest": "GV6Cojm64kaeHq5Y6sRtrcmLRK6FirWBMMZtXARATRES",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8321, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::remote_authority::contract_witness' (instruction 45)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8321",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "remote_authority",
+              "function": 8,
+              "instruction": 45,
+              "functionName": "contract_witness"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1440000",
+        "storageCost": "11058000",
+        "storageRebate": "10947420",
+        "nonRefundableStorageFee": "110580"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR replan: old agreement evidence cannot populate reset metrics",
+      "digest": "G5qgEZNhk3iByJ4r5ytCdsLr497a7cPkcEanJ5zcutwP",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 8321, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::remote_authority::contract_witness' (instruction 45)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "8321",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "remote_authority",
+              "function": 8,
+              "instruction": 45,
+              "functionName": "contract_witness"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1470000",
+        "storageCost": "6270000",
+        "storageRebate": "6207300",
+        "nonRefundableStorageFee": "62700"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "5fPwCAQLkZ25EZzneiNpgqdb3e8LXwiT2TMQGYHVUJsx",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1680000",
+        "storageCost": "49856000",
+        "storageRebate": "13513104",
+        "nonRefundableStorageFee": "136496"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR sequential: Host records measured KR 0",
+      "digest": "CuNNonJAcwa8r9q3MD21scrhscxpfbFCKf34WPLAFfj4",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1480000",
+        "storageCost": "11612800",
+        "storageRebate": "6207300",
+        "nonRefundableStorageFee": "62700"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: measurements alone cannot achieve the Objective",
+      "digest": "EoeNYvhx154h9R83aVR3mwKFDs3bULg7bP3eWhpkq99Q",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9403, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::okr::achieve' (instruction 53)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9403",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "okr",
+              "function": 20,
+              "instruction": 53,
+              "functionName": "achieve"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "10032000",
+        "storageRebate": "9931680",
+        "nonRefundableStorageFee": "100320"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR sequential: human verifies current KR 0",
+      "digest": "7TPcEun3i4ZqGvSetNQyheutgGb6WNFpFVNJi57hZAXq",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "18878400",
+        "storageRebate": "12941280",
+        "nonRefundableStorageFee": "130720"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR sequential: completed KR cannot reserve another execution",
+      "digest": "68GsHAYTCfsS8KDsYg3wqEaG8H5kAbNsow3EPh3hQJrH",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9406, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::okr::assignment_witness' (instruction 104)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9406",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "okr",
+              "function": 8,
+              "instruction": 104,
+              "functionName": "assignment_witness"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "11848400",
+        "storageRebate": "11729916",
+        "nonRefundableStorageFee": "118484"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "6uJrNUFRgRa5a838djbKqgVkgQovEKFk4mh2tPKp39mQ",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1680000",
+        "storageCost": "50646400",
+        "storageRebate": "19366776",
+        "nonRefundableStorageFee": "195624"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR sequential: Host records measured KR 1",
+      "digest": "J2QtQ5AtEQpRupJiDUFJA132gBKGCrh5yhFafU8r75HH",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1480000",
+        "storageCost": "12403200",
+        "storageRebate": "6989796",
+        "nonRefundableStorageFee": "70604"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: measurements alone cannot achieve the Objective",
+      "digest": "8oXr8pDbd4Bi6U7vduGpRJRt7KgCo7Nn2E5MBe8DFeaL",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9403, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::okr::achieve' (instruction 53)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9403",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "okr",
+              "function": 20,
+              "instruction": 53,
+              "functionName": "achieve"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "10822400",
+        "storageRebate": "10714176",
+        "nonRefundableStorageFee": "108224"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR sequential: human verifies current KR 1",
+      "digest": "6FXsewWSaB7uSXFhdnutQKCyc2ooUhFQeiRUVgN8jdXi",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "19668800",
+        "storageRebate": "13723776",
+        "nonRefundableStorageFee": "138624"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR: human separately accepts success criteria",
+      "digest": "H7G7gjafVmgHRh3G3Eoe6veGH4sTaVEf9LPXoFsURAbb",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "23719600",
+        "storageRebate": "15958404",
+        "nonRefundableStorageFee": "161196"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR unknown: issue transport-check capability with shared budget",
+      "digest": "GfQjYTbZRP6P8iKMAfpKueLM5P2Wq5bWsufz97Uq1BTy",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1520000",
+        "storageCost": "12243600",
+        "storageRebate": "978120",
+        "nonRefundableStorageFee": "9880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "5NEh1Ee64fBB8iTcv7j4Lwf7QDYPwz9vtmkv2xKwexH5",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1680000",
+        "storageCost": "49856000",
+        "storageRebate": "13513104",
+        "nonRefundableStorageFee": "136496"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR unknown: issue second authority without resetting unknown reservation",
+      "digest": "4vfwFhXWUfNPgfHFZDv2Sw87G34niBg4oYGoBK31Lpyp",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1520000",
+        "storageCost": "12243600",
+        "storageRebate": "978120",
+        "nonRefundableStorageFee": "9880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "OKR unknown: unresolved result prevents oversubscribing global budget",
+      "digest": "FvcYWdJU5K67ABhX1KdWZwhmE6V2UKARFnPdAPHudwaF",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9409, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::okr::prepare_command' (instruction 176)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9409",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "okr",
+              "function": 10,
+              "instruction": 176,
+              "functionName": "prepare_command"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1440000",
+        "storageCost": "11058000",
+        "storageRebate": "10947420",
+        "nonRefundableStorageFee": "110580"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: issue authority for revoke-after-prepare check",
+      "digest": "GqE5R8mVHydPd8GsGtddgdPrYBehz6uSaJvSBJn9Pfsa",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1490000",
+        "storageCost": "9180800",
+        "storageRebate": "978120",
+        "nonRefundableStorageFee": "9880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: device atomically reserves command and checkpoint",
+      "digest": "FEhxmsHMarjTGkaBw9NL6M3K6NRnEDdsAz6Se4vveMR3",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1560000",
+        "storageCost": "31365200",
+        "storageRebate": "5673096",
+        "nonRefundableStorageFee": "57304"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: read-only phone cannot acquire operation authority",
+      "digest": "HFdPkLDAzqAUrKGXUBfYkKsDn4Bdro5ApcwwqbKtbLj6",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9001, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::identity::assert_grant_for_device' (instruction 73)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9001",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "identity",
+              "function": 22,
+              "instruction": 73,
+              "functionName": "assert_grant_for_device"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "988000",
+        "storageRebate": "978120",
+        "nonRefundableStorageFee": "9880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: revoke admitted membership",
+      "digest": "6mQdshk2eiMH2FEJ5ucR5V8gjnDrAuNnkPTLkdWLfZM7",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "11840800",
+        "storageRebate": "13859208",
+        "nonRefundableStorageFee": "139992"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Execution: Host revocation rejects an already reserved queued command",
+      "digest": "6yrhGEeuWEjLnLmVwjrfrPXuN87vZbR1drYxuM5cf14E",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9203, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::host::assert_member' (instruction 46)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9203",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "host",
+              "function": 9,
+              "instruction": 46,
+              "functionName": "assert_member"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "6809600",
+        "storageRebate": "6741504",
+        "nonRefundableStorageFee": "68096"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: revoked membership prevents new execution grants",
+      "digest": "GUjPGmzdE7fF93bTbCQE9GtWEsLfgaySWtmbgGuNHaMQ",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9203, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::host::assert_member' (instruction 46)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9203",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "host",
+              "function": 9,
+              "instruction": 46,
+              "functionName": "assert_member"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "988000",
+        "storageRebate": "978120",
+        "nonRefundableStorageFee": "9880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: issue one-use invitation",
+      "digest": "EXxur9qfnVUhAC8ocRY4boJb6CAptkB9c3orMsmi5Sd5",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "11886400",
+        "storageRebate": "8344116",
+        "nonRefundableStorageFee": "84284"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: explicit invitation admits same Host with new membership",
+      "digest": "HmgYAWm6xgMtFCoikPM2b62tcDsBQ4GQDmk3v6zAtYN2",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1510000",
+        "storageCost": "25672800",
+        "storageRebate": "11767536",
+        "nonRefundableStorageFee": "118864"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: discovery cannot implicitly re-authorize old managed instance",
+      "digest": "AvT1LKQz1wvd2beam3Hdhp1QScCi74KEX35uYFRMfDLr",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9207, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::host::import_agent' (instruction 181)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9207",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "host",
+              "function": 10,
+              "instruction": 181,
+              "functionName": "import_agent"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "4202800",
+        "storageRebate": "4160772",
+        "nonRefundableStorageFee": "42028"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: management explicitly rebinds original managed ID",
+      "digest": "A3FfYqgcBqP6qT7RYdBZKHACGxCEQPXtSq4E8KpeRpKc",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "10754000",
+        "storageRebate": "10646460",
+        "nonRefundableStorageFee": "107540"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "Host: re-authorized instance receives new version-bound capability",
+      "digest": "3Ah3amiVeS6F4LozXMt4zqmQpoodkKT6E7iBFv8D41vj",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1500000",
+        "storageCost": "9203600",
+        "storageRebate": "978120",
+        "nonRefundableStorageFee": "9880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "read-only phone cannot create organization",
+      "digest": "8rdaf5k5YkxdSZo7oNr9rJx2TFrtBdy8EDGq8Jwzts8A",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9001, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::identity::assert_grant_for_device' (instruction 73)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9001",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "identity",
+              "function": 22,
+              "instruction": 73,
+              "functionName": "assert_grant_for_device"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1390000",
+        "storageCost": "6688000",
+        "storageRebate": "6621120",
+        "nonRefundableStorageFee": "66880"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "read-only phone cannot modify a canonical body",
+      "digest": "ABfrNtWqAhwkd87abjhvHsahBCkcwgoNTt9jtdBgQQig",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9001, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::identity::assert_grant_for_device' (instruction 73)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9001",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "identity",
+              "function": 22,
+              "instruction": 73,
+              "functionName": "assert_grant_for_device"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1390000",
+        "storageCost": "4202800",
+        "storageRebate": "4160772",
+        "nonRefundableStorageFee": "42028"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "revoke phone and rotate content generation, device and recovery keyring atomically",
+      "digest": "2gC9qpVthe4jiMeRuuFsZW5FMmhghYmJ7S7Zw644mNWp",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "22032400",
+        "storageRebate": "20743668",
+        "nonRefundableStorageFee": "209532"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "save future message with rotated key",
+      "digest": "4xdNQyHoWFwiUdwj5mNhYFmLfkj2atKhnKtbvVrQ87eF",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "10609600",
+        "storageRebate": "6876936",
+        "nonRefundableStorageFee": "69464"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "stale body revision rejected atomically",
+      "digest": "9CGNzXNWJjdXE6dbC5nk39xyiLenGVPmCHr4dezjh8d1",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9102, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::product_record::save_authorized' (instruction 232)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9102",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "product_record",
+              "function": 1,
+              "instruction": 232,
+              "functionName": "save_authorized"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "4202800",
+        "storageRebate": "4160772",
+        "nonRefundableStorageFee": "42028"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "atomically recover Human, revoke all old devices, consume old code",
+      "digest": "5GGG55FK7hRPHjMH1fLyqQ3EC6cuGLmrPR6vUYHJxQaf",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "35013200",
+        "storageRebate": "20156796",
+        "nonRefundableStorageFee": "203604"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "old desktop authorization rejected after recovery",
+      "digest": "5z4qj1CZr1Yzbmmm9TmjxUMcoWdfiAMjiBRUguyuiuRR",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9003, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::identity::assert_grant_for_device' (instruction 53)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9003",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "identity",
+              "function": 22,
+              "instruction": 53,
+              "functionName": "assert_grant_for_device"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1390000",
+        "storageCost": "6931200",
+        "storageRebate": "6861888",
+        "nonRefundableStorageFee": "69312"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "replay of consumed recovery record rejected",
+      "digest": "Ew9b7g9ytkYXMAyknX9PrHpLSCgwfQcYsJEAW4mDYVwv",
+      "status": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9005, in '0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb::identity::assert_current_recovery' (instruction 66)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9005",
+            "location": {
+              "package": "0x620ed138447fdfe48206f8d6a9322f75b548b12bcefe00595adb28b4d88c12eb",
+              "module": "identity",
+              "function": 24,
+              "instruction": 66,
+              "functionName": "assert_current_recovery"
+            }
+          }
+        }
+      },
+      "gasUsed": {
+        "computationCost": "1390000",
+        "storageCost": "12578000",
+        "storageRebate": "12452220",
+        "nonRefundableStorageFee": "125780"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "persist future body inaccessible to all lost devices",
+      "digest": "B92ep3ERZCbiSwTfsXJThsJ6FjjAS6Q7AsLG5WoToYE6",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "13003600",
+        "storageRebate": "6771600",
+        "nonRefundableStorageFee": "68400"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    },
+    {
+      "label": "recovered phone operates same Human",
+      "digest": "9HSNQBXimxm8y9BErLfjBzpvhkL3ez1sW7gCHCvAoZsG",
+      "status": {
+        "success": true,
+        "error": null
+      },
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "20048800",
+        "storageRebate": "6861888",
+        "nonRefundableStorageFee": "69312"
+      },
+      "confirmation": "execution effects and output object versions confirmed"
+    }
+  ],
+  "records": [
+    {
+      "kind": "okr",
+      "payloadBytes": 256,
+      "encryptedBytes": 288,
+      "objectBytes": 495,
+      "recordId": "0xfd11947fe3f57d80c8af57272414d6d634fcf2d959d2202860a77b9ae7cb2141",
+      "digest": "7dxfBuXDoaQuCtYepsmTWrynqRXapK7XFKnMmT1s4VtD",
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "14485600",
+        "storageRebate": "4160772",
+        "nonRefundableStorageFee": "42028"
+      }
+    },
+    {
+      "kind": "contract",
+      "payloadBytes": 1024,
+      "encryptedBytes": 1056,
+      "objectBytes": 1268,
+      "recordId": "0xf60fb416478fe89ccfbc0747ec48b8da1a7e7a1ce059105d9fbfcf74102a82e1",
+      "digest": "3uhYYjqSykzqtbMRSYcneP8gcC4GLkAdUGycRYD8vtRP",
+      "gasUsed": {
+        "computationCost": "1400000",
+        "storageCost": "20398400",
+        "storageRebate": "6771600",
+        "nonRefundableStorageFee": "68400"
+      }
+    },
+    {
+      "kind": "approval",
+      "payloadBytes": 4096,
+      "encryptedBytes": 4128,
+      "objectBytes": 4340,
+      "recordId": "0x0b6dbb7d1895ad25aa066a2e519199e0f4b6ca10f014a729e762a5d08f4a485a",
+      "digest": "HGUt3aMHUvtiYotPXMTjvVoaivY68inE3zr2dZxXqvjP",
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "43745600",
+        "storageRebate": "6771600",
+        "nonRefundableStorageFee": "68400"
+      }
+    },
+    {
+      "kind": "evidence",
+      "payloadBytes": 8192,
+      "encryptedBytes": 8224,
+      "objectBytes": 8436,
+      "recordId": "0xe660e6732a4363e0203b920dc487018533fb2faeda7c9ce90334cdf37bb83f87",
+      "digest": "odcMKtH5ZR5RRjSSciqGQfz678Lb2r9a9rfasa5PaGW",
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "74875200",
+        "storageRebate": "6771600",
+        "nonRefundableStorageFee": "68400"
+      }
+    },
+    {
+      "kind": "checkpoint",
+      "payloadBytes": 16384,
+      "encryptedBytes": 16416,
+      "objectBytes": 16631,
+      "recordId": "0xccf72b09408ce866bc2172c659631cfdfc398e77e7ead02b18e2eeffb433f8d8",
+      "digest": "9LC9Q5udEx9LxUn9hdU7DEUcrt1sDprfcdezj6nAhN9Y",
+      "gasUsed": {
+        "computationCost": "1490000",
+        "storageCost": "137172400",
+        "storageRebate": "6771600",
+        "nonRefundableStorageFee": "68400"
+      }
+    },
+    {
+      "kind": "message",
+      "payloadBytes": 32768,
+      "encryptedBytes": 32800,
+      "objectBytes": 33012,
+      "recordId": "0x90d9697709a08ab922be3733d503d04795bd0e3af43556fef09c1871db1f9315",
+      "digest": "B1jjCc8PD9MDr2mtHwQfmDmFJgXNq5FeUdqpsZt9E5PD",
+      "gasUsed": {
+        "computationCost": "87900000",
+        "storageCost": "261645200",
+        "storageRebate": "6771600",
+        "nonRefundableStorageFee": "68400"
+      }
+    },
+    {
+      "kind": "backup",
+      "payloadBytes": 65504,
+      "encryptedBytes": 65536,
+      "objectBytes": 65747,
+      "recordId": "0xba8cb53b78cf3c37c0f9cd9a7ccf54e3eab8f97a1644fc8ce63f507271b1a2a6",
+      "digest": "3exEyC8At3UPYWZtnhnYn1UNrUwR9oVgifDCLf9b7WdG",
+      "gasUsed": {
+        "computationCost": "468300000",
+        "storageCost": "510423600",
+        "storageRebate": "6771600",
+        "nonRefundableStorageFee": "68400"
+      }
+    }
+  ],
+  "host": {
+    "bindingId": "0xfd88908ce6992e4072a54d7898eaa65b69160f6664063b4703a1094e38d9c317",
+    "localMembershipId": "0x5c3729e8027f4bcda846291b5b9c7a92e2bf1b626c7043269cc5e9c1cc93b576",
+    "replacementMembershipId": "0xd0c18e0ae18f6ecdfadfebdbd18bedddcc9e066661e4934cf896e55469630696",
+    "secondMembershipId": "0x02d7066ab61f73e8dee7df1eca49bd60cb72d8164c766e732be2bfee56ca74fa",
+    "managedAgentId": "0x6d14d57e8d26310c0707e357ca38bdf6f076d3a6fe363a281008440aef785641",
+    "observationAgentId": "0xad338fd4d01c8004559c915415124a4fd5555290d958648bfb16542c9dfef81a",
+    "sameNameOtherHostId": "0xbfbc557095ea412346f0c9956961b6711f8df945325b3b598d3849089758f7d6",
+    "capabilityId": "0x8f06b57027774463b7d14cc546f4d2be6401ea706bd464dd24afdac3bb6d6dc1",
+    "freshCapabilityId": "0xc4c452f89044a36743a64fc4262860415c2f09ca48326187f2a05e16a0fb3055",
+    "freshObservationCapabilityId": "0xfc0bfa8640104798a1cb2c0d173e38ee8142f3e0811cd06a6e74773861e902b4",
+    "executions": {
+      "capabilityId": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+      "limitedCapabilityId": "0xfd11a08547d2addf52ffd487b7839738f6e85ac7d2b074a08160a649a6739eca",
+      "runtimeCapabilityId": "0x1f2aded890a336d54a4db1a96c743175d24d58f7055f47f0db7e624039732b5b",
+      "factoryCapabilityId": "0xe8faab92a17636c2346af474b65069674d7353aa05fa9f56fb4767b0b22652cf",
+      "nativeCapabilityId": "0xc067d201142674afcfc5677cd3a70fb2c0c162f1557e8e286602dfcdef07ded0",
+      "executions": [
+        "0x89cb27ba6afbe7a235e0156dae772c020e9f311c32df0b06e3a480c66e4994fa",
+        "0x268191ddd3f712b6a74d37986edb5dd7cdfb33c705a9ae64bea6d29fd5b5dfbd",
+        "0x511e79afe12e102197786ae2cdb59bae6b182ae1a04c4e62b2caddc1bcfcc6c1",
+        "0x10d44520e49d00d28503407dd54733de0a16183217d8c94d96633da24b307b08",
+        "0xa42ae7b8d11235e24c5f19bf9791391d298f703d4c89b4013764b53b2e9923ad",
+        "0xec1dcb5316edf598c262d6e0970c1b696d17d43bf7ff3ebe78846c296d0ea85c",
+        "0x65d81053d9d4074aae08fa59999f5e5e6aebd4f89a6df42dc2255db700c8de82",
+        "0xdf61dedba21fbcb8b3947036ff71ddd76abc327df1f8840ad5ab6df9deaa70e5",
+        "0x4dd2b13a1f6a32fbe448b195bcd142099030719aa593d8b3a09540a427fdd558",
+        "0x0a2fb0f5824c633d26c3d446268fb36648e13983ce6e5d3626856565f28440e2",
+        "0xd69b88bef7df7c86a36fe8949766cc56bef6c67662cb36cd16c83ed77ec7975d",
+        "0x9fcc19c1b50fb9292b682d62cf9fee755d9ac879dc1d7b055c742f57bcee2d64",
+        "0xcfad9a07312a8656ca46152a4d0c76a7b93dd311e125b6466cb6ad183479a6c9",
+        "0x94ff51edd70b1e251545570b8e947beb739bcde3328430bfdcc0b7800c273efd"
+      ],
+      "goChecks": [
+        {
+          "code": "unauthorized",
+          "commandId": "2082d457-7fb2-415f-8f3d-5f71822cebef"
+        },
+        {
+          "commandId": "64955f2d-cf26-42bb-be64-82781d59391c",
+          "duplicate": false,
+          "execution": {
+            "ID": "0x89cb27ba6afbe7a235e0156dae772c020e9f311c32df0b06e3a480c66e4994fa",
+            "CapabilityID": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+            "HumanID": "0x2a570ffdb98f92f4e49658028eb5ab1588f7f2315f11205dd1317956c3fc9f3b",
+            "GrantID": "0x10bda62de3b1fbe10d2a7f940c3aa5ff4f114517ff0270664a01f0a5b520b07c",
+            "MembershipID": "0x5c3729e8027f4bcda846291b5b9c7a92e2bf1b626c7043269cc5e9c1cc93b576",
+            "CoordinatorBindingID": "0xfd88908ce6992e4072a54d7898eaa65b69160f6664063b4703a1094e38d9c317",
+            "ManagedAgentID": "0x6d14d57e8d26310c0707e357ca38bdf6f076d3a6fe363a281008440aef785641",
+            "Signer": "0x8b09db8d4fa289f18bc81a89c29aa711661c1fe84671c39e3e133d5d251f46a9",
+            "HostAddress": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c",
+            "CommandID": "64955f2d-cf26-42bb-be64-82781d59391c",
+            "Nonce": "de49abec-0f46-4dc2-887f-492d089baff3",
+            "IdempotencyKey": "64955f2d-cf26-42bb-be64-82781d59391c",
+            "Fingerprint": "16b16f4d2f10a70b8fad34efefd436c6e0c2d39f4a8228e0a83b36aa5e4891f8",
+            "Action": "assign",
+            "Scope": "control",
+            "Target": {
+              "organization_id": "0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc",
+              "node_id": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c",
+              "agent_id": "bounded-agent"
+            },
+            "Budget": {
+              "asset": "MIST",
+              "amount": "20"
+            },
+            "BudgetSpent": "0",
+            "BudgetReserved": "20",
+            "BudgetSettled": false,
+            "IssuedAtMS": 1790850845304,
+            "ExpiresAtMS": 1790851145304,
+            "CapabilityVersion": 1,
+            "Cursor": 2,
+            "GrantVersion": 1,
+            "UpdatedAtMS": 1790850850007,
+            "State": 1,
+            "StopRequested": false,
+            "ResultRecordID": "",
+            "ResultHash": "",
+            "AttemptID": "56df2fa43e4a3758422613bb992caae5131d5e2d87ee8dc2fcd2290d8e5d96d9",
+            "Contract": null
+          },
+          "transactionDigest": "3HvmmuhY4dFnCRbBwLVkCsiGC5WzmVwfKURC7aN4sGe5"
+        },
+        {
+          "commandId": "64955f2d-cf26-42bb-be64-82781d59391c",
+          "duplicate": true,
+          "execution": {
+            "ID": "0x89cb27ba6afbe7a235e0156dae772c020e9f311c32df0b06e3a480c66e4994fa",
+            "CapabilityID": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+            "HumanID": "0x2a570ffdb98f92f4e49658028eb5ab1588f7f2315f11205dd1317956c3fc9f3b",
+            "GrantID": "0x10bda62de3b1fbe10d2a7f940c3aa5ff4f114517ff0270664a01f0a5b520b07c",
+            "MembershipID": "0x5c3729e8027f4bcda846291b5b9c7a92e2bf1b626c7043269cc5e9c1cc93b576",
+            "CoordinatorBindingID": "0xfd88908ce6992e4072a54d7898eaa65b69160f6664063b4703a1094e38d9c317",
+            "ManagedAgentID": "0x6d14d57e8d26310c0707e357ca38bdf6f076d3a6fe363a281008440aef785641",
+            "Signer": "0x8b09db8d4fa289f18bc81a89c29aa711661c1fe84671c39e3e133d5d251f46a9",
+            "HostAddress": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c",
+            "CommandID": "64955f2d-cf26-42bb-be64-82781d59391c",
+            "Nonce": "de49abec-0f46-4dc2-887f-492d089baff3",
+            "IdempotencyKey": "64955f2d-cf26-42bb-be64-82781d59391c",
+            "Fingerprint": "16b16f4d2f10a70b8fad34efefd436c6e0c2d39f4a8228e0a83b36aa5e4891f8",
+            "Action": "assign",
+            "Scope": "control",
+            "Target": {
+              "organization_id": "0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc",
+              "node_id": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c",
+              "agent_id": "bounded-agent"
+            },
+            "Budget": {
+              "asset": "MIST",
+              "amount": "20"
+            },
+            "BudgetSpent": "0",
+            "BudgetReserved": "20",
+            "BudgetSettled": false,
+            "IssuedAtMS": 1790850845304,
+            "ExpiresAtMS": 1790851145304,
+            "CapabilityVersion": 1,
+            "Cursor": 2,
+            "GrantVersion": 1,
+            "UpdatedAtMS": 1790850850007,
+            "State": 1,
+            "StopRequested": false,
+            "ResultRecordID": "",
+            "ResultHash": "",
+            "AttemptID": "56df2fa43e4a3758422613bb992caae5131d5e2d87ee8dc2fcd2290d8e5d96d9",
+            "Contract": null
+          },
+          "transactionDigest": ""
+        },
+        {
+          "commandId": "64955f2d-cf26-42bb-be64-82781d59391c",
+          "duplicate": true,
+          "execution": {
+            "ID": "0x89cb27ba6afbe7a235e0156dae772c020e9f311c32df0b06e3a480c66e4994fa",
+            "CapabilityID": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+            "HumanID": "0x2a570ffdb98f92f4e49658028eb5ab1588f7f2315f11205dd1317956c3fc9f3b",
+            "GrantID": "0x10bda62de3b1fbe10d2a7f940c3aa5ff4f114517ff0270664a01f0a5b520b07c",
+            "MembershipID": "0x5c3729e8027f4bcda846291b5b9c7a92e2bf1b626c7043269cc5e9c1cc93b576",
+            "CoordinatorBindingID": "0xfd88908ce6992e4072a54d7898eaa65b69160f6664063b4703a1094e38d9c317",
+            "ManagedAgentID": "0x6d14d57e8d26310c0707e357ca38bdf6f076d3a6fe363a281008440aef785641",
+            "Signer": "0x8b09db8d4fa289f18bc81a89c29aa711661c1fe84671c39e3e133d5d251f46a9",
+            "HostAddress": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c",
+            "CommandID": "64955f2d-cf26-42bb-be64-82781d59391c",
+            "Nonce": "de49abec-0f46-4dc2-887f-492d089baff3",
+            "IdempotencyKey": "64955f2d-cf26-42bb-be64-82781d59391c",
+            "Fingerprint": "16b16f4d2f10a70b8fad34efefd436c6e0c2d39f4a8228e0a83b36aa5e4891f8",
+            "Action": "assign",
+            "Scope": "control",
+            "Target": {
+              "organization_id": "0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc",
+              "node_id": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c",
+              "agent_id": "bounded-agent"
+            },
+            "Budget": {
+              "asset": "MIST",
+              "amount": "20"
+            },
+            "BudgetSpent": "7",
+            "BudgetReserved": "0",
+            "BudgetSettled": true,
+            "IssuedAtMS": 1790850845304,
+            "ExpiresAtMS": 1790851145304,
+            "CapabilityVersion": 1,
+            "Cursor": 3,
+            "GrantVersion": 1,
+            "UpdatedAtMS": 1790850852629,
+            "State": 2,
+            "StopRequested": false,
+            "ResultRecordID": "0x2186168b638cb76f8cc8316da496f8984cf134cb0764bedfb03d5b212d564f76",
+            "ResultHash": "130f93e64526c338002825c99b4cc9737f20210b75a8a3c33564541b88b9f8ff",
+            "AttemptID": "56df2fa43e4a3758422613bb992caae5131d5e2d87ee8dc2fcd2290d8e5d96d9",
+            "Contract": null
+          },
+          "transactionDigest": ""
+        },
+        {
+          "commandId": "409daed7-b5dc-46a5-aa28-8a07eeb03ce1",
+          "duplicate": false,
+          "execution": {
+            "ID": "0x511e79afe12e102197786ae2cdb59bae6b182ae1a04c4e62b2caddc1bcfcc6c1",
+            "CapabilityID": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+            "HumanID": "0x2a570ffdb98f92f4e49658028eb5ab1588f7f2315f11205dd1317956c3fc9f3b",
+            "GrantID": "0x10bda62de3b1fbe10d2a7f940c3aa5ff4f114517ff0270664a01f0a5b520b07c",
+            "MembershipID": "0x5c3729e8027f4bcda846291b5b9c7a92e2bf1b626c7043269cc5e9c1cc93b576",
+            "CoordinatorBindingID": "0xfd88908ce6992e4072a54d7898eaa65b69160f6664063b4703a1094e38d9c317",
+            "ManagedAgentID": "0x6d14d57e8d26310c0707e357ca38bdf6f076d3a6fe363a281008440aef785641",
+            "Signer": "0x8b09db8d4fa289f18bc81a89c29aa711661c1fe84671c39e3e133d5d251f46a9",
+            "HostAddress": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c",
+            "CommandID": "409daed7-b5dc-46a5-aa28-8a07eeb03ce1",
+            "Nonce": "5243727e-5a64-414f-a092-a5e9c3ed7f80",
+            "IdempotencyKey": "409daed7-b5dc-46a5-aa28-8a07eeb03ce1",
+            "Fingerprint": "69c6d9e849f3962ab2a473da400ced8ff985d39eb56871e6160a9d2f112f94df",
+            "Action": "assign",
+            "Scope": "control",
+            "Target": {
+              "organization_id": "0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc",
+              "node_id": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c",
+              "agent_id": "bounded-agent"
+            },
+            "Budget": {
+              "asset": "MIST",
+              "amount": "20"
+            },
+            "BudgetSpent": "0",
+            "BudgetReserved": "20",
+            "BudgetSettled": false,
+            "IssuedAtMS": 1790850856430,
+            "ExpiresAtMS": 1790851156430,
+            "CapabilityVersion": 1,
+            "Cursor": 2,
+            "GrantVersion": 1,
+            "UpdatedAtMS": 1790850857626,
+            "State": 1,
+            "StopRequested": false,
+            "ResultRecordID": "",
+            "ResultHash": "",
+            "AttemptID": "406b2538321312946e8166e155a4697a8cf9b9580946470d82e914ec16c47703",
+            "Contract": null
+          },
+          "transactionDigest": "BAo17ESXmFyghQJErg7kdwcHnPpDCCMJLqiELDozzcGs"
+        },
+        {
+          "commandId": "409daed7-b5dc-46a5-aa28-8a07eeb03ce1",
+          "duplicate": true,
+          "execution": {
+            "ID": "0x511e79afe12e102197786ae2cdb59bae6b182ae1a04c4e62b2caddc1bcfcc6c1",
+            "CapabilityID": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+            "HumanID": "0x2a570ffdb98f92f4e49658028eb5ab1588f7f2315f11205dd1317956c3fc9f3b",
+            "GrantID": "0x10bda62de3b1fbe10d2a7f940c3aa5ff4f114517ff0270664a01f0a5b520b07c",
+            "MembershipID": "0x5c3729e8027f4bcda846291b5b9c7a92e2bf1b626c7043269cc5e9c1cc93b576",
+            "CoordinatorBindingID": "0xfd88908ce6992e4072a54d7898eaa65b69160f6664063b4703a1094e38d9c317",
+            "ManagedAgentID": "0x6d14d57e8d26310c0707e357ca38bdf6f076d3a6fe363a281008440aef785641",
+            "Signer": "0x8b09db8d4fa289f18bc81a89c29aa711661c1fe84671c39e3e133d5d251f46a9",
+            "HostAddress": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c",
+            "CommandID": "409daed7-b5dc-46a5-aa28-8a07eeb03ce1",
+            "Nonce": "5243727e-5a64-414f-a092-a5e9c3ed7f80",
+            "IdempotencyKey": "409daed7-b5dc-46a5-aa28-8a07eeb03ce1",
+            "Fingerprint": "69c6d9e849f3962ab2a473da400ced8ff985d39eb56871e6160a9d2f112f94df",
+            "Action": "assign",
+            "Scope": "control",
+            "Target": {
+              "organization_id": "0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc",
+              "node_id": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c",
+              "agent_id": "bounded-agent"
+            },
+            "Budget": {
+              "asset": "MIST",
+              "amount": "20"
+            },
+            "BudgetSpent": "0",
+            "BudgetReserved": "20",
+            "BudgetSettled": false,
+            "IssuedAtMS": 1790850856430,
+            "ExpiresAtMS": 1790851156430,
+            "CapabilityVersion": 1,
+            "Cursor": 3,
+            "GrantVersion": 1,
+            "UpdatedAtMS": 1790850861568,
+            "State": 4,
+            "StopRequested": false,
+            "ResultRecordID": "0x7c66100c84e683f2934df77ac1fd0da28bbd58889a8e2e1accf89181a96f6ea3",
+            "ResultHash": "9d0a4f213b261018fafcca58a3f1a91f827b61db3d2a29542201f488fe7ced64",
+            "AttemptID": "406b2538321312946e8166e155a4697a8cf9b9580946470d82e914ec16c47703",
+            "Contract": null
+          },
+          "transactionDigest": ""
+        },
+        {
+          "commandId": "fcd27273-56a4-48eb-8828-7b0cb65cacf0",
+          "duplicate": false,
+          "execution": {
+            "ID": "0xa42ae7b8d11235e24c5f19bf9791391d298f703d4c89b4013764b53b2e9923ad",
+            "CapabilityID": "0xfd11a08547d2addf52ffd487b7839738f6e85ac7d2b074a08160a649a6739eca",
+            "HumanID": "0x2a570ffdb98f92f4e49658028eb5ab1588f7f2315f11205dd1317956c3fc9f3b",
+            "GrantID": "0x10bda62de3b1fbe10d2a7f940c3aa5ff4f114517ff0270664a01f0a5b520b07c",
+            "MembershipID": "0x5c3729e8027f4bcda846291b5b9c7a92e2bf1b626c7043269cc5e9c1cc93b576",
+            "CoordinatorBindingID": "0xfd88908ce6992e4072a54d7898eaa65b69160f6664063b4703a1094e38d9c317",
+            "ManagedAgentID": "0x6d14d57e8d26310c0707e357ca38bdf6f076d3a6fe363a281008440aef785641",
+            "Signer": "0x8b09db8d4fa289f18bc81a89c29aa711661c1fe84671c39e3e133d5d251f46a9",
+            "HostAddress": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c",
+            "CommandID": "fcd27273-56a4-48eb-8828-7b0cb65cacf0",
+            "Nonce": "5ce3d89e-a1a1-463d-ad3e-e0a7e424da25",
+            "IdempotencyKey": "fcd27273-56a4-48eb-8828-7b0cb65cacf0",
+            "Fingerprint": "4401f1e13a8272a71fee63079032bed07909ffa2e56a2ca5917afff1bc0aa22f",
+            "Action": "assign",
+            "Scope": "control",
+            "Target": {
+              "organization_id": "0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc",
+              "node_id": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c",
+              "agent_id": "bounded-agent"
+            },
+            "Budget": {
+              "asset": "MIST",
+              "amount": "20"
+            },
+            "BudgetSpent": "0",
+            "BudgetReserved": "20",
+            "BudgetSettled": false,
+            "IssuedAtMS": 1790850864436,
+            "ExpiresAtMS": 1790851164436,
+            "CapabilityVersion": 1,
+            "Cursor": 2,
+            "GrantVersion": 1,
+            "UpdatedAtMS": 1790850865677,
+            "State": 1,
+            "StopRequested": false,
+            "ResultRecordID": "",
+            "ResultHash": "",
+            "AttemptID": "1816fa64a47fa82e82d80c8a6fb843949f27536310c895134b2687133b6cde84",
+            "Contract": null
+          },
+          "transactionDigest": "7WQeTtCULGxgzffpAs8h23yQSbwtf17vtmVmvD1JvkQe"
+        },
+        {
+          "commandId": "fcd27273-56a4-48eb-8828-7b0cb65cacf0",
+          "duplicate": true,
+          "execution": {
+            "ID": "0xa42ae7b8d11235e24c5f19bf9791391d298f703d4c89b4013764b53b2e9923ad",
+            "CapabilityID": "0xfd11a08547d2addf52ffd487b7839738f6e85ac7d2b074a08160a649a6739eca",
+            "HumanID": "0x2a570ffdb98f92f4e49658028eb5ab1588f7f2315f11205dd1317956c3fc9f3b",
+            "GrantID": "0x10bda62de3b1fbe10d2a7f940c3aa5ff4f114517ff0270664a01f0a5b520b07c",
+            "MembershipID": "0x5c3729e8027f4bcda846291b5b9c7a92e2bf1b626c7043269cc5e9c1cc93b576",
+            "CoordinatorBindingID": "0xfd88908ce6992e4072a54d7898eaa65b69160f6664063b4703a1094e38d9c317",
+            "ManagedAgentID": "0x6d14d57e8d26310c0707e357ca38bdf6f076d3a6fe363a281008440aef785641",
+            "Signer": "0x8b09db8d4fa289f18bc81a89c29aa711661c1fe84671c39e3e133d5d251f46a9",
+            "HostAddress": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c",
+            "CommandID": "fcd27273-56a4-48eb-8828-7b0cb65cacf0",
+            "Nonce": "5ce3d89e-a1a1-463d-ad3e-e0a7e424da25",
+            "IdempotencyKey": "fcd27273-56a4-48eb-8828-7b0cb65cacf0",
+            "Fingerprint": "4401f1e13a8272a71fee63079032bed07909ffa2e56a2ca5917afff1bc0aa22f",
+            "Action": "assign",
+            "Scope": "control",
+            "Target": {
+              "organization_id": "0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc",
+              "node_id": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c",
+              "agent_id": "bounded-agent"
+            },
+            "Budget": {
+              "asset": "MIST",
+              "amount": "20"
+            },
+            "BudgetSpent": "3",
+            "BudgetReserved": "0",
+            "BudgetSettled": true,
+            "IssuedAtMS": 1790850864436,
+            "ExpiresAtMS": 1790851164436,
+            "CapabilityVersion": 1,
+            "Cursor": 4,
+            "GrantVersion": 1,
+            "UpdatedAtMS": 1790850866630,
+            "State": 5,
+            "StopRequested": true,
+            "ResultRecordID": "0x6a9087d922eadccf60b93cb28b631f71cd75927e84ae87672d1ae77b7e3b26de",
+            "ResultHash": "449586b41f6b3ec8cf16eb78a7cc8373e53596ee3cb9b96a6ef92ec4f76f9f8d",
+            "AttemptID": "1816fa64a47fa82e82d80c8a6fb843949f27536310c895134b2687133b6cde84",
+            "Contract": null
+          },
+          "transactionDigest": ""
+        },
+        {
+          "commandId": "cdb39c41-1dc3-461d-90da-5138e68f9156",
+          "duplicate": true,
+          "execution": {
+            "ID": "0x94ff51edd70b1e251545570b8e947beb739bcde3328430bfdcc0b7800c273efd",
+            "CapabilityID": "0x43094472cbfd49d9d9fac4e81127cd8192f7794c9a5679032ea22b17cadec953",
+            "HumanID": "0x2a570ffdb98f92f4e49658028eb5ab1588f7f2315f11205dd1317956c3fc9f3b",
+            "GrantID": "0x10bda62de3b1fbe10d2a7f940c3aa5ff4f114517ff0270664a01f0a5b520b07c",
+            "MembershipID": "0x5c3729e8027f4bcda846291b5b9c7a92e2bf1b626c7043269cc5e9c1cc93b576",
+            "CoordinatorBindingID": "0xfd88908ce6992e4072a54d7898eaa65b69160f6664063b4703a1094e38d9c317",
+            "ManagedAgentID": "0x6d14d57e8d26310c0707e357ca38bdf6f076d3a6fe363a281008440aef785641",
+            "Signer": "0x8b09db8d4fa289f18bc81a89c29aa711661c1fe84671c39e3e133d5d251f46a9",
+            "HostAddress": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c",
+            "CommandID": "cdb39c41-1dc3-461d-90da-5138e68f9156",
+            "Nonce": "be49ea69-57b4-4c51-b5c9-4db45f2dc721",
+            "IdempotencyKey": "cdb39c41-1dc3-461d-90da-5138e68f9156",
+            "Fingerprint": "137cdd48705841cf78df92f3a55f7fb0e865b2ce207f45d092ba7ab5dc10addc",
+            "Action": "assign",
+            "Scope": "control",
+            "Target": {
+              "organization_id": "0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc",
+              "node_id": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c",
+              "agent_id": "bounded-agent"
+            },
+            "Budget": {
+              "asset": "TOOL_CALLS",
+              "amount": "14"
+            },
+            "BudgetSpent": "0",
+            "BudgetReserved": "14",
+            "BudgetSettled": false,
+            "IssuedAtMS": 1790850907925,
+            "ExpiresAtMS": 1790851179715,
+            "CapabilityVersion": 1,
+            "Cursor": 3,
+            "GrantVersion": 1,
+            "UpdatedAtMS": 1790850909714,
+            "State": 4,
+            "StopRequested": false,
+            "ResultRecordID": "0x690ce74aec8378f3e63e85323dc75529021833a268ef907486c4486980ffca22",
+            "ResultHash": "f679fb13799e304c231f5cd0b00942d77cfb3a84459505f3127619a1e7586634",
+            "AttemptID": "b1eecd6a0472bf16aedd0fb51b2ff8a41ddde3fa8bb30ff065c8e61c33c1f657",
+            "Contract": {
+              "id": "0x34957b524ffc677143eaaf0f5a93ad488c0c8bb5defd981a316911f63732aea3",
+              "agreement_version": "1",
+              "kr_index": "0",
+              "boundary_hash": "23ff5a9204bd4625deb00c95ab445ba3b5a49dba9c378e4be22532c52eedef8d"
+            }
+          },
+          "transactionDigest": ""
+        }
+      ],
+      "budgetChecks": [
+        {
+          "label": "Exact retry preserves a single pending reservation",
+          "capabilityId": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+          "spent": "0",
+          "reserved": "20"
+        },
+        {
+          "label": "Rejected overspend cannot release reservation",
+          "capabilityId": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+          "spent": "0",
+          "reserved": "20"
+        },
+        {
+          "label": "Result write failure rolls back cost settlement",
+          "capabilityId": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+          "spent": "0",
+          "reserved": "20"
+        },
+        {
+          "label": "Known result settles seven and releases thirteen",
+          "capabilityId": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+          "spent": "7",
+          "reserved": "0"
+        },
+        {
+          "label": "Second result cannot change already settled cost",
+          "capabilityId": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+          "spent": "7",
+          "reserved": "0"
+        },
+        {
+          "label": "Next command reserves against actual plus pending budget",
+          "capabilityId": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+          "spent": "7",
+          "reserved": "20"
+        },
+        {
+          "label": "Queued cancellation releases reservation without refunding a use",
+          "capabilityId": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+          "spent": "7",
+          "reserved": "0"
+        },
+        {
+          "label": "Unknown result retains entire pending reservation",
+          "capabilityId": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+          "spent": "7",
+          "reserved": "20"
+        },
+        {
+          "label": "Duplicate query cannot release an unknown result reservation",
+          "capabilityId": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+          "spent": "7",
+          "reserved": "20"
+        },
+        {
+          "label": "Pending twenty consumes twenty of thirty-unit budget",
+          "capabilityId": "0xfd11a08547d2addf52ffd487b7839738f6e85ac7d2b074a08160a649a6739eca",
+          "spent": "0",
+          "reserved": "20"
+        },
+        {
+          "label": "Cancelled pending command restores available budget",
+          "capabilityId": "0xfd11a08547d2addf52ffd487b7839738f6e85ac7d2b074a08160a649a6739eca",
+          "spent": "0",
+          "reserved": "0"
+        },
+        {
+          "label": "Running stop request retains budget until Host confirms",
+          "capabilityId": "0xfd11a08547d2addf52ffd487b7839738f6e85ac7d2b074a08160a649a6739eca",
+          "spent": "0",
+          "reserved": "20"
+        },
+        {
+          "label": "Confirmed stop settles three and releases seventeen",
+          "capabilityId": "0xfd11a08547d2addf52ffd487b7839738f6e85ac7d2b074a08160a649a6739eca",
+          "spent": "3",
+          "reserved": "0"
+        },
+        {
+          "label": "Go executor settles known fixture cost and preserves unknown reservation",
+          "capabilityId": "0x1f2aded890a336d54a4db1a96c743175d24d58f7055f47f0db7e624039732b5b",
+          "spent": "3",
+          "reserved": "20"
+        },
+        {
+          "label": "Observation factory never starts unsupported control",
+          "capabilityId": "0xe8faab92a17636c2346af474b65069674d7353aa05fa9f56fb4767b0b22652cf",
+          "spent": "0",
+          "reserved": "20"
+        },
+        {
+          "label": "Cancelled unsupported command releases pending budget",
+          "capabilityId": "0xe8faab92a17636c2346af474b65069674d7353aa05fa9f56fb4767b0b22652cf",
+          "spent": "0",
+          "reserved": "0"
+        },
+        {
+          "label": "Native Agent charges seven actual tool attempts and releases unused reservations",
+          "capabilityId": "0xc067d201142674afcfc5677cd3a70fb2c0c162f1557e8e286602dfcdef07ded0",
+          "spent": "7",
+          "reserved": "0"
+        },
+        {
+          "label": "Sequential KR actual tool costs accumulate without resetting global budget",
+          "capabilityId": "0x794ea0f6142dd9bf43ac328ddf734576f0affb09e0adb02321991b4f51e76e0f",
+          "spent": "1",
+          "reserved": "0"
+        },
+        {
+          "label": "Sequential KR actual tool costs accumulate without resetting global budget",
+          "capabilityId": "0x794ea0f6142dd9bf43ac328ddf734576f0affb09e0adb02321991b4f51e76e0f",
+          "spent": "4",
+          "reserved": "0"
+        },
+        {
+          "label": "Unknown OKR transport result retains all capability budget",
+          "capabilityId": "0x43094472cbfd49d9d9fac4e81127cd8192f7794c9a5679032ea22b17cadec953",
+          "spent": "0",
+          "reserved": "14"
+        }
+      ],
+      "resultKeyEvidence": {
+        "capabilityId": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+        "fingerprint": "16b16f4d2f10a70b8fad34efefd436c6e0c2d39f4a8228e0a83b36aa5e4891f8",
+        "hostAddress": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c",
+        "keyVersion": 1,
+        "unwrapped": true,
+        "wrappedSize": 132
+      },
+      "runtimeStoreChecks": [
+        {
+          "adapterInvocations": 1,
+          "ciphertextSize": 33074,
+          "commandId": "2c6a434a-5db2-4979-8228-d0da245283fb",
+          "executionId": "0xec1dcb5316edf598c262d6e0970c1b696d17d43bf7ff3ebe78846c296d0ea85c",
+          "fixtureOnly": true,
+          "freshExecutorDuplicate": true,
+          "recordId": "0x0748e5bec77729783f91a0bc18db855c85d1300da7c6e6f3aa6075f5f29f325f",
+          "reserved": "0",
+          "spent": "3",
+          "state": "succeeded",
+          "transactionDigest": "AB5LWR8AWrKZYdV2HzSVecVKsZgyeGx2ba1pB56XTAzr"
+        },
+        {
+          "adapterInvocations": 1,
+          "ciphertextSize": 33077,
+          "commandId": "274391de-8647-4fa1-ba90-3baafe240eea",
+          "executionId": "0x65d81053d9d4074aae08fa59999f5e5e6aebd4f89a6df42dc2255db700c8de82",
+          "fixtureOnly": true,
+          "freshExecutorDuplicate": true,
+          "recordId": "0x02a95ec23a2e5bb9d42ed6592d8ec16cd11d5dd7826566c8cf871083fe6f99da",
+          "reserved": "20",
+          "spent": "0",
+          "state": "needs_confirmation",
+          "transactionDigest": "13BkFNeTULFsry6pMqQJNNFDgA7E9SEyQFNQT3m6TLJD"
+        },
+        {
+          "adapterInvocations": 1,
+          "ciphertextSize": 33077,
+          "commandId": "cdb39c41-1dc3-461d-90da-5138e68f9156",
+          "executionId": "0x94ff51edd70b1e251545570b8e947beb739bcde3328430bfdcc0b7800c273efd",
+          "fixtureOnly": true,
+          "freshExecutorDuplicate": true,
+          "recordId": "0x690ce74aec8378f3e63e85323dc75529021833a268ef907486c4486980ffca22",
+          "reserved": "14",
+          "spent": "0",
+          "state": "needs_confirmation",
+          "transactionDigest": "AK41vHHwqX1nuBf4q5nkGxirzweby5CXfipp5fK9sKZJ"
+        }
+      ],
+      "productionFactoryEvidence": {
+        "adapterInvocations": 1,
+        "controlIdentityMatches": true,
+        "executionId": "0xdf61dedba21fbcb8b3947036ff71ddd76abc327df1f8840ad5ab6df9deaa70e5",
+        "factoryRestartDuplicate": true,
+        "fileAuthoritySelected": false,
+        "forbiddenControlRemainsQueued": true,
+        "identityStable": true,
+        "localResultsCreated": false,
+        "observationFixtureOnly": true,
+        "recordId": "0xf6bf173083938638c1abddfc40cfb2455aac80547fbcf2776e635495f826e534",
+        "secureStoreInjectedForIsolatedTest": true,
+        "transactionDigest": "FTvSEAM63QXFpucmtVWVMmU54JAZHgfkwr8AR1L36owM"
+      },
+      "nativeFileAgentEvidence": {
+        "actualWorkspaceWrites": true,
+        "cancelledResultDigest": "AeVKKBDkHknneoSehpjkxTBTBwVjvJaoBuZXcteMjM7D",
+        "cloudHostVerified": false,
+        "factoryRestartDuplicate": true,
+        "measurementsFromHostReader": true,
+        "modelPlanningVerified": false,
+        "nativeFileGoalsOnly": true,
+        "physicalStopBeforeNextGoal": true,
+        "recordIds": [
+          "0xc8acd3fa0f29c8435cce5c8124448071b7d7dedf65d2b0a09a860be2c8ad5025",
+          "0x9b153b4402b9b806fbfab6f015656e0df7a36654178738479f30608b689821af"
+        ],
+        "stopRequestDigest": "3SsegBPsNiW7AMrMqUumoPCpa2TUbQYjTkTqEA6oqeSi",
+        "successDigest": "9od4GrjmhJWXaZE65HHF8B19KGEyrTC2nbiNcAx6HWZP",
+        "toolCallsSpent": [
+          6,
+          1
+        ]
+      },
+      "okrAcceptanceEvidence": {
+        "historicalBodies": [
+          {
+            "recordId": "0xfcfa76ddacb18ae34b914b80602630638a1327604fe09336cd4e4caa99ee41f3",
+            "plaintext": "{\"format\":1,\"objective\":\"Two sequential KRs produce measured file outcomes and human acceptance\",\"successCriteria\":[\"KR0: both initial text goals match\",\"KR1: a final deliverable matches\"],\"metrics\":[{\"unit\":\"verified files\",\"scale\":1,\"baseline\":0,\"target\":2,\"source\":\"Host post-write reader\",\"freshnessMs\":3600000},{\"unit\":\"verified files\",\"scale\":1,\"baseline\":0,\"target\":1,\"source\":\"Host post-write reader\",\"freshnessMs\":3600000}]}"
+          },
+          {
+            "recordId": "0xbc3069caef235278d339dce74ff49767d2b09179f8c2d41b008601070eb06948",
+            "plaintext": "{\"verifier\":\"authorized Human\",\"ruleVersion\":1,\"result\":\"passed\",\"evidenceId\":\"0xc8acd3fa0f29c8435cce5c8124448071b7d7dedf65d2b0a09a860be2c8ad5025\",\"executionId\":\"0x0a2fb0f5824c633d26c3d446268fb36648e13983ce6e5d3626856565f28440e2\",\"reason\":\"Two actual Host reader measurements match declared expected hashes\"}"
+          }
+        ],
+        "sequential": [
+          {
+            "executionId": "0x9fcc19c1b50fb9292b682d62cf9fee755d9ac879dc1d7b055c742f57bcee2d64",
+            "evidenceId": "0x4eb549a344b6a5a55bc629a670a89a6218c14e25d1a69fc0066d77d40155287a",
+            "runtimeEvidence": {
+              "actualFileOutcome": true,
+              "contract": {
+                "id": "0xe1d1043c7f7f2b1f38bd3eb7a140b891dddbddea49de7405071c213b63c35e7e",
+                "agreement_version": "4",
+                "kr_index": "0",
+                "boundary_hash": "23ff5a9204bd4625deb00c95ab445ba3b5a49dba9c378e4be22532c52eedef8d"
+              },
+              "executionId": "0x9fcc19c1b50fb9292b682d62cf9fee755d9ac879dc1d7b055c742f57bcee2d64",
+              "factoryRestartDuplicate": true,
+              "hostReaderMeasurement": true,
+              "modelPlanningVerified": false,
+              "nativeFileGoalsOnly": true,
+              "recordId": "0x4eb549a344b6a5a55bc629a670a89a6218c14e25d1a69fc0066d77d40155287a",
+              "resultDigest": "HUcQJ3e3jpTu51tsekYWKssQjhZRwp692j8qGWYxADQW",
+              "toolCallsSpent": 1
+            }
+          },
+          {
+            "executionId": "0xcfad9a07312a8656ca46152a4d0c76a7b93dd311e125b6466cb6ad183479a6c9",
+            "evidenceId": "0x52204d2a0247a8d56e3fad7b89681ba9baae580798417adf92c41a2984d362f9",
+            "runtimeEvidence": {
+              "actualFileOutcome": true,
+              "contract": {
+                "id": "0xe1d1043c7f7f2b1f38bd3eb7a140b891dddbddea49de7405071c213b63c35e7e",
+                "agreement_version": "4",
+                "kr_index": "1",
+                "boundary_hash": "23ff5a9204bd4625deb00c95ab445ba3b5a49dba9c378e4be22532c52eedef8d"
+              },
+              "executionId": "0xcfad9a07312a8656ca46152a4d0c76a7b93dd311e125b6466cb6ad183479a6c9",
+              "factoryRestartDuplicate": true,
+              "hostReaderMeasurement": true,
+              "modelPlanningVerified": false,
+              "nativeFileGoalsOnly": true,
+              "recordId": "0x52204d2a0247a8d56e3fad7b89681ba9baae580798417adf92c41a2984d362f9",
+              "resultDigest": "4z9uhzPfRMqSyojqxoeKT4qzDtEPpLVoS9UdRtJ3YmBF",
+              "toolCallsSpent": 3
+            }
+          }
+        ],
+        "executionDirectoryCount": 4,
+        "explicitReplanningVerified": true,
+        "globalBudget": {
+          "asset": "TOOL_CALLS",
+          "spent": "11",
+          "reserved": "0"
+        },
+        "globalClaim": {
+          "capability_id": "0xc067d201142674afcfc5677cd3a70fb2c0c162f1557e8e286602dfcdef07ded0",
+          "agreement_version": "1",
+          "kr_index": "0",
+          "reserved": "10",
+          "spent": "6",
+          "settled": true
+        },
+        "pausedProof": {
+          "okrId": "0xecd3137ad07a6491174d94780c93a40cae7accee0d56ee8ed50d38bb1684b56d",
+          "capabilityId": "0x0da9b495198dabefa556df88e15abf3e34c2aea33d38e2e2718261ec1eac4428",
+          "executionId": "0xb99af397408919fe263d06e1719aa7a39de953a604307d4940d08470f5a12a97"
+        },
+        "okrId": "0xe1d1043c7f7f2b1f38bd3eb7a140b891dddbddea49de7405071c213b63c35e7e",
+        "draftIds": [
+          "0xe1d1043c7f7f2b1f38bd3eb7a140b891dddbddea49de7405071c213b63c35e7e",
+          "0xecd3137ad07a6491174d94780c93a40cae7accee0d56ee8ed50d38bb1684b56d",
+          "0x34957b524ffc677143eaaf0f5a93ad488c0c8bb5defd981a316911f63732aea3",
+          "0xef9e6e6d96688cbfad7d9c0ce71b5668459a12a891e0f992ccb0cfef0787dcf5"
+        ],
+        "accepted": {
+          "id": "0xe1d1043c7f7f2b1f38bd3eb7a140b891dddbddea49de7405071c213b63c35e7e",
+          "org_id": "0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc",
+          "owner_human": "0x2a570ffdb98f92f4e49658028eb5ab1588f7f2315f11205dd1317956c3fc9f3b",
+          "logical_id": "97c8ecd6-af9e-484e-a66c-0d31485d76ed",
+          "state": 3,
+          "version": "12",
+          "agreement_version": "5",
+          "priority": 0,
+          "deadline_ms": "1790854476713",
+          "spec_record": "0x0a47fba623e44dd6690fa785322c998a769d5c1e743ee7e73a3a4b1643662026",
+          "spec_revision": "2",
+          "metrics": [
+            {
+              "baseline": "0",
+              "target": "1",
+              "weight": "1",
+              "max_age_ms": "3600000",
+              "current": "1",
+              "sampled_at_ms": "1790850900940",
+              "run_id": "0x9fcc19c1b50fb9292b682d62cf9fee755d9ac879dc1d7b055c742f57bcee2d64",
+              "evidence_id": "0x4eb549a344b6a5a55bc629a670a89a6218c14e25d1a69fc0066d77d40155287a",
+              "verified": true,
+              "verification_id": "0xebcc621dae85887da32c87b17bdcab3174bd0ec6ceef18b15eb1179251de2206"
+            },
+            {
+              "baseline": "0",
+              "target": "1",
+              "weight": "1",
+              "max_age_ms": "3600000",
+              "current": "1",
+              "sampled_at_ms": "1790850905206",
+              "run_id": "0xcfad9a07312a8656ca46152a4d0c76a7b93dd311e125b6466cb6ad183479a6c9",
+              "evidence_id": "0x52204d2a0247a8d56e3fad7b89681ba9baae580798417adf92c41a2984d362f9",
+              "verified": true,
+              "verification_id": "0xf48c42ea7014c1449ccf9d066f84b11380351d6d56d23dde74da3a24cd7a8735"
+            }
+          ],
+          "next_kr": "2",
+          "observations": {
+            "id": "0xf841722a0cf81d79034fbedb140edbf06b52d27a0774542144636bde83e71730",
+            "size": "3"
+          },
+          "managed_agent": "0x6d14d57e8d26310c0707e357ca38bdf6f076d3a6fe363a281008440aef785641",
+          "managed_version": "1",
+          "membership_id": "0x5c3729e8027f4bcda846291b5b9c7a92e2bf1b626c7043269cc5e9c1cc93b576",
+          "membership_version": "1",
+          "workspace_hash": [
+            190,
+            90,
+            214,
+            181,
+            64,
+            210,
+            144,
+            57,
+            200,
+            209,
+            11,
+            228,
+            83,
+            177,
+            144,
+            254,
+            93,
+            126,
+            13,
+            199,
+            77,
+            63,
+            110,
+            40,
+            65,
+            25,
+            142,
+            215,
+            41,
+            188,
+            15,
+            246
+          ],
+          "boundary_hash": [
+            35,
+            255,
+            90,
+            146,
+            4,
+            189,
+            70,
+            37,
+            222,
+            176,
+            12,
+            149,
+            171,
+            68,
+            91,
+            163,
+            181,
+            164,
+            157,
+            186,
+            156,
+            55,
+            142,
+            75,
+            226,
+            37,
+            50,
+            197,
+            46,
+            237,
+            239,
+            141
+          ],
+          "budget_asset": "TOOL_CALLS",
+          "budget_limit": "14",
+          "expires_at_ms": "1790854476712",
+          "activated_at_ms": "1790850897355",
+          "agreement_record": "0x92a22f37d5b6c704a60dc167f6cdc88a5a438db4507d4d2fa616d9e0a51cbf0a",
+          "acceptance_record": "0x3f65951ef5d0135a495497b021f13bfecda4cb5b40feda209670a633d3b6e44d",
+          "accepted_by_human": "0x2a570ffdb98f92f4e49658028eb5ab1588f7f2315f11205dd1317956c3fc9f3b",
+          "accepted_at_ms": "1790850907118"
+        },
+        "observations": [
+          {
+            "id": "0xdaf73ed3cee30d8aa619e2e8737c25d04ed54eae3b06d2f39dd89a0d09b8e2c5",
+            "org_id": "0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc",
+            "okr_id": "0xe1d1043c7f7f2b1f38bd3eb7a140b891dddbddea49de7405071c213b63c35e7e",
+            "kr_index": "0",
+            "agreement_version": "4",
+            "current": "1",
+            "sampled_at_ms": "1790850900940",
+            "recorded_at_ms": "1790850901466",
+            "run_id": "0x9fcc19c1b50fb9292b682d62cf9fee755d9ac879dc1d7b055c742f57bcee2d64",
+            "evidence_id": "0x4eb549a344b6a5a55bc629a670a89a6218c14e25d1a69fc0066d77d40155287a",
+            "host_address": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c"
+          },
+          {
+            "id": "0x575a83cbf6c003d43ec28349ed45cfd39cd00741e4b8a847f9c672f120e91355",
+            "org_id": "0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc",
+            "okr_id": "0xe1d1043c7f7f2b1f38bd3eb7a140b891dddbddea49de7405071c213b63c35e7e",
+            "kr_index": "0",
+            "agreement_version": "1",
+            "current": "2",
+            "sampled_at_ms": "1790850891315",
+            "recorded_at_ms": "1790850893621",
+            "run_id": "0x0a2fb0f5824c633d26c3d446268fb36648e13983ce6e5d3626856565f28440e2",
+            "evidence_id": "0xc8acd3fa0f29c8435cce5c8124448071b7d7dedf65d2b0a09a860be2c8ad5025",
+            "host_address": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c"
+          },
+          {
+            "id": "0xcc2627d040ec3b20fe339c5a499ca676cbe7f35b0963933e3daf7663582faccf",
+            "org_id": "0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc",
+            "okr_id": "0xe1d1043c7f7f2b1f38bd3eb7a140b891dddbddea49de7405071c213b63c35e7e",
+            "kr_index": "1",
+            "agreement_version": "4",
+            "current": "1",
+            "sampled_at_ms": "1790850905206",
+            "recorded_at_ms": "1790850905682",
+            "run_id": "0xcfad9a07312a8656ca46152a4d0c76a7b93dd311e125b6466cb6ad183479a6c9",
+            "evidence_id": "0x52204d2a0247a8d56e3fad7b89681ba9baae580798417adf92c41a2984d362f9",
+            "host_address": "0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c"
+          }
+        ],
+        "records": [
+          {
+            "logicalId": "okr-97c8ecd6-af9e-484e-a66c-0d31485d76ed-spec",
+            "plaintext": "{\"objective\":\"Revised: retain approved README and produce final deliverable\",\"successCriteria\":[\"README matches the existing approved bytes\",\"FINAL.md matches approved content\"],\"metrics\":[{\"unit\":\"verified file\",\"scale\":1,\"baseline\":0,\"target\":1},{\"unit\":\"verified file\",\"scale\":1,\"baseline\":0,\"target\":1}]}"
+          },
+          {
+            "logicalId": "okr-4e310523-9480-437c-9830-1b66843fc2b3-spec",
+            "plaintext": "{\"format\":1,\"objective\":\"Two sequential KRs produce measured file outcomes and human acceptance\",\"successCriteria\":[\"KR0: both initial text goals match\",\"KR1: a final deliverable matches\"],\"metrics\":[{\"unit\":\"verified files\",\"scale\":1,\"baseline\":0,\"target\":2,\"source\":\"Host post-write reader\",\"freshnessMs\":3600000},{\"unit\":\"verified files\",\"scale\":1,\"baseline\":0,\"target\":1,\"source\":\"Host post-write reader\",\"freshnessMs\":3600000}]}"
+          },
+          {
+            "logicalId": "okr-a3569b2c-ad4c-4970-bd89-26f553c6125c-spec",
+            "plaintext": "{\"format\":1,\"objective\":\"Two sequential KRs produce measured file outcomes and human acceptance\",\"successCriteria\":[\"KR0: both initial text goals match\",\"KR1: a final deliverable matches\"],\"metrics\":[{\"unit\":\"verified files\",\"scale\":1,\"baseline\":0,\"target\":2,\"source\":\"Host post-write reader\",\"freshnessMs\":3600000},{\"unit\":\"verified files\",\"scale\":1,\"baseline\":0,\"target\":1,\"source\":\"Host post-write reader\",\"freshnessMs\":3600000}]}"
+          },
+          {
+            "logicalId": "okr-08872721-9f5e-4b3e-a6f2-27754b9a463a-spec",
+            "plaintext": "{\"format\":1,\"objective\":\"Two sequential KRs produce measured file outcomes and human acceptance\",\"successCriteria\":[\"KR0: both initial text goals match\",\"KR1: a final deliverable matches\"],\"metrics\":[{\"unit\":\"verified files\",\"scale\":1,\"baseline\":0,\"target\":2,\"source\":\"Host post-write reader\",\"freshnessMs\":3600000},{\"unit\":\"verified files\",\"scale\":1,\"baseline\":0,\"target\":1,\"source\":\"Host post-write reader\",\"freshnessMs\":3600000}]}"
+          },
+          {
+            "logicalId": "okr-97c8ecd6-af9e-484e-a66c-0d31485d76ed-agreement",
+            "plaintext": "{\"managedAgentId\":\"0x6d14d57e8d26310c0707e357ca38bdf6f076d3a6fe363a281008440aef785641\",\"boundaryHash\":[35,255,90,146,4,189,70,37,222,176,12,149,171,68,91,163,181,164,157,186,156,55,142,75,226,37,50,197,46,237,239,141],\"budget\":{\"asset\":\"TOOL_CALLS\",\"limit\":\"14\"},\"order\":\"sequential\",\"reason\":\"Reapprove revised goals without resetting spent budget\"}"
+          },
+          {
+            "logicalId": "okr-4e310523-9480-437c-9830-1b66843fc2b3-agreement",
+            "plaintext": "{\"reason\":\"Pause to free one ACTIVE slot\",\"previousAgreement\":1}"
+          },
+          {
+            "logicalId": "okr-a3569b2c-ad4c-4970-bd89-26f553c6125c-agreement",
+            "plaintext": "{\"format\":1,\"managedAgentId\":\"0x6d14d57e8d26310c0707e357ca38bdf6f076d3a6fe363a281008440aef785641\",\"boundaryHash\":[35,255,90,146,4,189,70,37,222,176,12,149,171,68,91,163,181,164,157,186,156,55,142,75,226,37,50,197,46,237,239,141],\"budget\":{\"asset\":\"TOOL_CALLS\",\"limit\":\"14\"},\"order\":\"sequential\",\"verifier\":\"authorized human\"}"
+          },
+          {
+            "logicalId": "okr-08872721-9f5e-4b3e-a6f2-27754b9a463a-agreement",
+            "plaintext": "{\"format\":1,\"managedAgentId\":\"0x6d14d57e8d26310c0707e357ca38bdf6f076d3a6fe363a281008440aef785641\",\"boundaryHash\":[35,255,90,146,4,189,70,37,222,176,12,149,171,68,91,163,181,164,157,186,156,55,142,75,226,37,50,197,46,237,239,141],\"budget\":{\"asset\":\"TOOL_CALLS\",\"limit\":\"14\"},\"order\":\"sequential\",\"verifier\":\"authorized human\"}"
+          },
+          {
+            "logicalId": "okr-97c8ecd6-af9e-484e-a66c-0d31485d76ed-acceptance",
+            "plaintext": "{\"successCriteriaReviewed\":true,\"reason\":\"Human checked both actual file hashes and their Run evidence\"}"
+          },
+          {
+            "logicalId": "okr-97c8ecd6-af9e-484e-a66c-0d31485d76ed-verification",
+            "plaintext": "{\"ruleVersion\":2,\"krIndex\":1,\"executionId\":\"0xcfad9a07312a8656ca46152a4d0c76a7b93dd311e125b6466cb6ad183479a6c9\",\"evidenceId\":\"0x52204d2a0247a8d56e3fad7b89681ba9baae580798417adf92c41a2984d362f9\",\"reason\":\"Human reviewed actual post-reapproval file reader evidence\"}"
+          }
+        ],
+        "cacheFreeOrganizationDirectory": true,
+        "actualFileRunEvidence": true,
+        "separateObservationVerificationAcceptance": true,
+        "runtimeAuthorizationBoundToOkr": true,
+        "multiKrRuntimeVerified": true
+      },
+      "unknownResultEvidence": {
+        "okrId": "0x34957b524ffc677143eaaf0f5a93ad488c0c8bb5defd981a316911f63732aea3",
+        "capabilityId": "0x43094472cbfd49d9d9fac4e81127cd8192f7794c9a5679032ea22b17cadec953",
+        "executionId": "0x94ff51edd70b1e251545570b8e947beb739bcde3328430bfdcc0b7800c273efd",
+        "runtimeEvidence": {
+          "adapterInvocations": 1,
+          "ciphertextSize": 33077,
+          "commandId": "cdb39c41-1dc3-461d-90da-5138e68f9156",
+          "executionId": "0x94ff51edd70b1e251545570b8e947beb739bcde3328430bfdcc0b7800c273efd",
+          "fixtureOnly": true,
+          "freshExecutorDuplicate": true,
+          "recordId": "0x690ce74aec8378f3e63e85323dc75529021833a268ef907486c4486980ffca22",
+          "reserved": "14",
+          "spent": "0",
+          "state": "needs_confirmation",
+          "transactionDigest": "AK41vHHwqX1nuBf4q5nkGxirzweby5CXfipp5fK9sKZJ"
+        },
+        "unknownReservationRetained": true,
+        "actualAgentSideEffectsVerified": false
+      },
+      "pendingStart": {
+        "organizationId": "0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc",
+        "humanId": "0x2a570ffdb98f92f4e49658028eb5ab1588f7f2315f11205dd1317956c3fc9f3b",
+        "grantId": "0x10bda62de3b1fbe10d2a7f940c3aa5ff4f114517ff0270664a01f0a5b520b07c",
+        "membershipId": "0x5c3729e8027f4bcda846291b5b9c7a92e2bf1b626c7043269cc5e9c1cc93b576",
+        "bindingId": "0xfd88908ce6992e4072a54d7898eaa65b69160f6664063b4703a1094e38d9c317",
+        "managedAgentId": "0x6d14d57e8d26310c0707e357ca38bdf6f076d3a6fe363a281008440aef785641",
+        "capabilityId": "0x48c8b3cba8cf00ea73b40a854ca8d02c7e73bde78d39b5be41eb2b9bacbcf45c",
+        "executionId": "0x8eda164281809067c33056c329c11496be23ba9f935fd05f83770bb8cf2038d1"
+      },
+      "records": [
+        {
+          "logicalId": "command-16b16f4d2f10a70b8fad34efefd436c6e0c2d39f4a8228e0a83b36aa5e4891f8",
+          "plaintext": "{\"result\":\"chain preflight test only; no adapter was invoked\"}"
+        },
+        {
+          "logicalId": "command-69c6d9e849f3962ab2a473da400ced8ff985d39eb56871e6160a9d2f112f94df",
+          "plaintext": "{\"result\":\"needs confirmation; no automatic retry\"}"
+        },
+        {
+          "logicalId": "command-4401f1e13a8272a71fee63079032bed07909ffa2e56a2ca5917afff1bc0aa22f",
+          "plaintext": "{\"result\":\"chain stop confirmation fixture; no physical adapter invoked\",\"cost\":\"3\"}"
+        },
+        {
+          "logicalId": "command-2fa4a40ba88916bb0b49532bf66f2c6a9e25294073c9c2b06468e32dc88b323b",
+          "plaintextBytes": 33042,
+          "plaintextSha256": "1f4512efae669e60b7c9e7a36ef715d4ca98e265899987400b52114ed031497f"
+        },
+        {
+          "logicalId": "command-45850e3a1604821a09111ad94e1780701260c6908906684c6df4259776f281df",
+          "plaintextBytes": 33045,
+          "plaintextSha256": "3083e13ed0cccbbd15389cdcd1654e7a8235f4ba2470dca5d512be6ce4e31579"
+        },
+        {
+          "logicalId": "command-35b5c1bcc5a2d22d570ba03b872853bd1dfc33b9873d549a656cad561fd13802",
+          "plaintext": "{\"version\":\"1\",\"response\":{\"schema_version\":\"1\",\"adapter\":\"agent-manager-runtime\",\"command_id\":\"d6c57d70-85de-4b2c-81d7-aa93bcfd1115\",\"operation\":\"status\",\"duplicate\":false,\"ok\":true,\"observed_at\":\"2026-10-01T10:34:35.943239Z\",\"result\":{\"fixture\":\"production observation transport only\"},\"error\":null,\"execution_id\":\"0xdf61dedba21fbcb8b3947036ff71ddd76abc327df1f8840ad5ab6df9deaa70e5\",\"execution_state\":\"succeeded\"},\"event\":{\"version\":\"1\",\"event_id\":\"runtime-5c811845d7e1857322beef89\",\"command_id\":\"d6c57d70-85de-4b2c-81d7-aa93bcfd1115\",\"target\":{\"organization_id\":\"0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc\",\"node_id\":\"0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c\",\"agent_id\":\"bounded-agent\"},\"type\":\"runtime_result\",\"result_code\":\"runtime_ok\",\"result_hash\":\"ae5211312297cbb5d1cde397e332af9089f219d98e7cc08ed98660ed94e8b5c4\",\"evidence_hash\":\"ae5211312297cbb5d1cde397e332af9089f219d98e7cc08ed98660ed94e8b5c4\",\"occurred_at_ms\":1790850875943}}"
+        },
+        {
+          "logicalId": "command-d21102462243e2a8ffb140d39db0f4dda75a65ad6c54608f2cb53be5f3158bce",
+          "plaintext": "{\"version\":\"1\",\"response\":{\"schema_version\":\"1\",\"adapter\":\"agent-manager-runtime\",\"command_id\":\"f1106bc1-fa42-49ee-899f-8ea5a8c2e157\",\"operation\":\"assign\",\"duplicate\":false,\"ok\":true,\"observed_at\":\"2026-10-01T10:34:51.33279Z\",\"result\":{\"status\":\"submitted\",\"tool_calls_used\":6,\"evidence\":[{\"path\":\"README.md\",\"expected_hash\":\"58c9a3025e898690af01238732373c5619e16d6b5ec733347cc147f59b1629f9\",\"observed_hash\":\"58c9a3025e898690af01238732373c5619e16d6b5ec733347cc147f59b1629f9\",\"verified\":true,\"observed_at\":\"2026-10-01T10:34:51.312078Z\"},{\"path\":\"RESULT.md\",\"expected_hash\":\"dc740ead306cfe11249b4ea5b221ce6e994fbe340254d0bf43b342ae77c6b54b\",\"observed_hash\":\"dc740ead306cfe11249b4ea5b221ce6e994fbe340254d0bf43b342ae77c6b54b\",\"verified\":true,\"observed_at\":\"2026-10-01T10:34:51.332666Z\"}]},\"error\":null,\"spend\":{\"asset\":\"TOOL_CALLS\",\"amount\":\"6\",\"known\":true},\"execution_id\":\"0x0a2fb0f5824c633d26c3d446268fb36648e13983ce6e5d3626856565f28440e2\",\"execution_state\":\"succeeded\"},\"event\":{\"version\":\"1\",\"event_id\":\"runtime-a6905f12e2d038858a863dea\",\"command_id\":\"f1106bc1-fa42-49ee-899f-8ea5a8c2e157\",\"target\":{\"organization_id\":\"0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc\",\"node_id\":\"0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c\",\"agent_id\":\"bounded-agent\"},\"type\":\"runtime_result\",\"result_code\":\"runtime_ok\",\"result_hash\":\"27097716e1228f4622ed6147bcd07dbfe5fa51ff6284a7becf597aedcd01ae36\",\"evidence_hash\":\"27097716e1228f4622ed6147bcd07dbfe5fa51ff6284a7becf597aedcd01ae36\",\"occurred_at_ms\":1790850891332}}"
+        },
+        {
+          "logicalId": "command-cd58f3fbfd646e11110547b6ed51a4c12ba6aa1dc8d07b64bdef20d27c39a610",
+          "plaintext": "{\"version\":\"1\",\"response\":{\"schema_version\":\"1\",\"adapter\":\"agent-manager-runtime\",\"command_id\":\"66491ab9-1787-4149-b3b4-8e37ad2ffadd\",\"operation\":\"assign\",\"duplicate\":false,\"ok\":false,\"observed_at\":\"2026-10-01T10:34:52.726818Z\",\"result\":{\"status\":\"blocked\",\"reason\":\"stopped\",\"blocked_path\":\"after-stop.md\",\"tool_calls_used\":1,\"evidence\":[{\"path\":\"README.md\",\"expected_hash\":\"58c9a3025e898690af01238732373c5619e16d6b5ec733347cc147f59b1629f9\",\"observed_hash\":\"58c9a3025e898690af01238732373c5619e16d6b5ec733347cc147f59b1629f9\",\"verified\":true,\"observed_at\":\"2026-10-01T10:34:52.398934Z\"}]},\"error\":{\"code\":\"cancelled\",\"message\":\"Native file Agent paused: stopped\"},\"spend\":{\"asset\":\"TOOL_CALLS\",\"amount\":\"1\",\"known\":true},\"execution_id\":\"0xd69b88bef7df7c86a36fe8949766cc56bef6c67662cb36cd16c83ed77ec7975d\",\"execution_state\":\"cancelled\"},\"event\":{\"version\":\"1\",\"event_id\":\"runtime-59578006e688ea829f4c3b9a\",\"command_id\":\"66491ab9-1787-4149-b3b4-8e37ad2ffadd\",\"target\":{\"organization_id\":\"0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc\",\"node_id\":\"0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c\",\"agent_id\":\"bounded-agent\"},\"type\":\"runtime_result\",\"result_code\":\"runtime_cancelled\",\"result_hash\":\"dd1a9cd2505e1dcfb0eed18332e7700e85c7aaa8e5fa72dbbbd76c6c3875b617\",\"evidence_hash\":\"dd1a9cd2505e1dcfb0eed18332e7700e85c7aaa8e5fa72dbbbd76c6c3875b617\",\"occurred_at_ms\":1790850892726}}"
+        },
+        {
+          "logicalId": "command-3f2c9b3572255de3c09f0ca7e0c86b047e4961351d215cdcb32075e0941cb253",
+          "plaintext": "{\"version\":\"1\",\"response\":{\"schema_version\":\"1\",\"adapter\":\"agent-manager-runtime\",\"command_id\":\"76a8e5a4-d01b-452e-b31c-cf392776a601\",\"operation\":\"assign\",\"duplicate\":false,\"ok\":true,\"observed_at\":\"2026-10-01T10:35:00.975002Z\",\"result\":{\"status\":\"submitted\",\"tool_calls_used\":1,\"evidence\":[{\"path\":\"README.md\",\"expected_hash\":\"58c9a3025e898690af01238732373c5619e16d6b5ec733347cc147f59b1629f9\",\"observed_hash\":\"58c9a3025e898690af01238732373c5619e16d6b5ec733347cc147f59b1629f9\",\"verified\":true,\"observed_at\":\"2026-10-01T10:35:00.97478Z\"}]},\"error\":null,\"spend\":{\"asset\":\"TOOL_CALLS\",\"amount\":\"1\",\"known\":true},\"execution_id\":\"0x9fcc19c1b50fb9292b682d62cf9fee755d9ac879dc1d7b055c742f57bcee2d64\",\"execution_state\":\"succeeded\"},\"event\":{\"version\":\"1\",\"event_id\":\"runtime-6c8db1c85dbb1c302c2d50d1\",\"command_id\":\"76a8e5a4-d01b-452e-b31c-cf392776a601\",\"target\":{\"organization_id\":\"0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc\",\"node_id\":\"0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c\",\"agent_id\":\"bounded-agent\"},\"type\":\"runtime_result\",\"result_code\":\"runtime_ok\",\"result_hash\":\"f3f89e83abf8c3c2d92844170b73baf3ce2340bd9ccd1bd95b7b2d501f2b0b84\",\"evidence_hash\":\"f3f89e83abf8c3c2d92844170b73baf3ce2340bd9ccd1bd95b7b2d501f2b0b84\",\"occurred_at_ms\":1790850900975}}"
+        },
+        {
+          "logicalId": "command-fbc7e88d29b27e30c86146c9e8c590dce60c662d37b772c1a5d1fdb72b20f9ec",
+          "plaintext": "{\"version\":\"1\",\"response\":{\"schema_version\":\"1\",\"adapter\":\"agent-manager-runtime\",\"command_id\":\"40b976fc-32a0-4dea-bc36-04552968f9a9\",\"operation\":\"assign\",\"duplicate\":false,\"ok\":true,\"observed_at\":\"2026-10-01T10:35:05.205544Z\",\"result\":{\"status\":\"submitted\",\"tool_calls_used\":3,\"evidence\":[{\"path\":\"FINAL.md\",\"expected_hash\":\"7fa0426bcbe2f5c7554d6105560aa42d4f67217d4bcc4b8fac067211f34750ec\",\"observed_hash\":\"7fa0426bcbe2f5c7554d6105560aa42d4f67217d4bcc4b8fac067211f34750ec\",\"verified\":true,\"observed_at\":\"2026-10-01T10:35:05.205491Z\"}]},\"error\":null,\"spend\":{\"asset\":\"TOOL_CALLS\",\"amount\":\"3\",\"known\":true},\"execution_id\":\"0xcfad9a07312a8656ca46152a4d0c76a7b93dd311e125b6466cb6ad183479a6c9\",\"execution_state\":\"succeeded\"},\"event\":{\"version\":\"1\",\"event_id\":\"runtime-a67cf107fc695a65d1798285\",\"command_id\":\"40b976fc-32a0-4dea-bc36-04552968f9a9\",\"target\":{\"organization_id\":\"0xff144c9c94f424c3bd7a476873ce8cd920ca9cd5675256dfa5d90f983a6f4ebc\",\"node_id\":\"0x4d27c2a67aaa12f1f6c6e5a19fa1b3c1f11d7d4f558f05529378dc33c0628f9c\",\"agent_id\":\"bounded-agent\"},\"type\":\"runtime_result\",\"result_code\":\"runtime_ok\",\"result_hash\":\"a38a4e5323e448b5475d3b08abcdd0e321e4c2e00d18d911197a52dbd4a504f7\",\"evidence_hash\":\"a38a4e5323e448b5475d3b08abcdd0e321e4c2e00d18d911197a52dbd4a504f7\",\"occurred_at_ms\":1790850905205}}"
+        },
+        {
+          "logicalId": "command-137cdd48705841cf78df92f3a55f7fb0e865b2ce207f45d092ba7ab5dc10addc",
+          "plaintextBytes": 33045,
+          "plaintextSha256": "d28680505a3b737ab9a28276ec78c875d80d4a5b2842c9804c2cca9387267718"
+        }
+      ],
+      "checks": "real chain budget/checkpoints, native bounded text-file goals, actual tool-call accounting and stop; generic model planning, command tools, financial metering and cloud deployment pending"
+    },
+    "authorityReaderVerified": true,
+    "checks": "chain admission and optional real Go authority reads; runtime execution and external cloud deployment pending"
+  },
+  "recoveredCheckpointRecords": [
+    "0x2186168b638cb76f8cc8316da496f8984cf134cb0764bedfb03d5b212d564f76",
+    "0x7c66100c84e683f2934df77ac1fd0da28bbd58889a8e2e1accf89181a96f6ea3",
+    "0x6a9087d922eadccf60b93cb28b631f71cd75927e84ae87672d1ae77b7e3b26de",
+    "0x0748e5bec77729783f91a0bc18db855c85d1300da7c6e6f3aa6075f5f29f325f",
+    "0x02a95ec23a2e5bb9d42ed6592d8ec16cd11d5dd7826566c8cf871083fe6f99da",
+    "0xf6bf173083938638c1abddfc40cfb2455aac80547fbcf2776e635495f826e534",
+    "0xc8acd3fa0f29c8435cce5c8124448071b7d7dedf65d2b0a09a860be2c8ad5025",
+    "0x9b153b4402b9b806fbfab6f015656e0df7a36654178738479f30608b689821af",
+    "0x4eb549a344b6a5a55bc629a670a89a6218c14e25d1a69fc0066d77d40155287a",
+    "0x52204d2a0247a8d56e3fad7b89681ba9baae580798417adf92c41a2984d362f9",
+    "0x690ce74aec8378f3e63e85323dc75529021833a268ef907486c4486980ffca22"
+  ],
+  "recoveredExecutionBudgets": {
+    "checkpoints": [
+      {
+        "id": "0x89cb27ba6afbe7a235e0156dae772c020e9f311c32df0b06e3a480c66e4994fa",
+        "state": 2,
+        "capabilityId": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+        "spent": "7",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0x268191ddd3f712b6a74d37986edb5dd7cdfb33c705a9ae64bea6d29fd5b5dfbd",
+        "state": 5,
+        "capabilityId": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+        "spent": "0",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0x511e79afe12e102197786ae2cdb59bae6b182ae1a04c4e62b2caddc1bcfcc6c1",
+        "state": 4,
+        "capabilityId": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+        "spent": "0",
+        "reserved": "20",
+        "settled": false
+      },
+      {
+        "id": "0x10d44520e49d00d28503407dd54733de0a16183217d8c94d96633da24b307b08",
+        "state": 5,
+        "capabilityId": "0xfd11a08547d2addf52ffd487b7839738f6e85ac7d2b074a08160a649a6739eca",
+        "spent": "0",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0xa42ae7b8d11235e24c5f19bf9791391d298f703d4c89b4013764b53b2e9923ad",
+        "state": 5,
+        "capabilityId": "0xfd11a08547d2addf52ffd487b7839738f6e85ac7d2b074a08160a649a6739eca",
+        "spent": "3",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0xec1dcb5316edf598c262d6e0970c1b696d17d43bf7ff3ebe78846c296d0ea85c",
+        "state": 2,
+        "capabilityId": "0x1f2aded890a336d54a4db1a96c743175d24d58f7055f47f0db7e624039732b5b",
+        "spent": "3",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0x65d81053d9d4074aae08fa59999f5e5e6aebd4f89a6df42dc2255db700c8de82",
+        "state": 4,
+        "capabilityId": "0x1f2aded890a336d54a4db1a96c743175d24d58f7055f47f0db7e624039732b5b",
+        "spent": "0",
+        "reserved": "20",
+        "settled": false
+      },
+      {
+        "id": "0xdf61dedba21fbcb8b3947036ff71ddd76abc327df1f8840ad5ab6df9deaa70e5",
+        "state": 2,
+        "capabilityId": "0xe8faab92a17636c2346af474b65069674d7353aa05fa9f56fb4767b0b22652cf",
+        "spent": "0",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0x4dd2b13a1f6a32fbe448b195bcd142099030719aa593d8b3a09540a427fdd558",
+        "state": 5,
+        "capabilityId": "0xe8faab92a17636c2346af474b65069674d7353aa05fa9f56fb4767b0b22652cf",
+        "spent": "0",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0x0a2fb0f5824c633d26c3d446268fb36648e13983ce6e5d3626856565f28440e2",
+        "state": 2,
+        "capabilityId": "0xc067d201142674afcfc5677cd3a70fb2c0c162f1557e8e286602dfcdef07ded0",
+        "spent": "6",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0xd69b88bef7df7c86a36fe8949766cc56bef6c67662cb36cd16c83ed77ec7975d",
+        "state": 5,
+        "capabilityId": "0xc067d201142674afcfc5677cd3a70fb2c0c162f1557e8e286602dfcdef07ded0",
+        "spent": "1",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0x9fcc19c1b50fb9292b682d62cf9fee755d9ac879dc1d7b055c742f57bcee2d64",
+        "state": 2,
+        "capabilityId": "0x794ea0f6142dd9bf43ac328ddf734576f0affb09e0adb02321991b4f51e76e0f",
+        "spent": "1",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0xcfad9a07312a8656ca46152a4d0c76a7b93dd311e125b6466cb6ad183479a6c9",
+        "state": 2,
+        "capabilityId": "0x794ea0f6142dd9bf43ac328ddf734576f0affb09e0adb02321991b4f51e76e0f",
+        "spent": "3",
+        "reserved": "0",
+        "settled": true
+      },
+      {
+        "id": "0x94ff51edd70b1e251545570b8e947beb739bcde3328430bfdcc0b7800c273efd",
+        "state": 4,
+        "capabilityId": "0x43094472cbfd49d9d9fac4e81127cd8192f7794c9a5679032ea22b17cadec953",
+        "spent": "0",
+        "reserved": "14",
+        "settled": false
+      },
+      {
+        "id": "0x8eda164281809067c33056c329c11496be23ba9f935fd05f83770bb8cf2038d1",
+        "state": 0,
+        "capabilityId": "0x48c8b3cba8cf00ea73b40a854ca8d02c7e73bde78d39b5be41eb2b9bacbcf45c",
+        "spent": "0",
+        "reserved": "20",
+        "settled": false
+      }
+    ],
+    "ledgers": [
+      {
+        "capabilityId": "0x458f3bbea19791015d05334f241425445c1dcdb397f173d7c963282e6531880d",
+        "spent": "7",
+        "reserved": "20"
+      },
+      {
+        "capabilityId": "0xfd11a08547d2addf52ffd487b7839738f6e85ac7d2b074a08160a649a6739eca",
+        "spent": "3",
+        "reserved": "0"
+      },
+      {
+        "capabilityId": "0x1f2aded890a336d54a4db1a96c743175d24d58f7055f47f0db7e624039732b5b",
+        "spent": "3",
+        "reserved": "20"
+      },
+      {
+        "capabilityId": "0xe8faab92a17636c2346af474b65069674d7353aa05fa9f56fb4767b0b22652cf",
+        "spent": "0",
+        "reserved": "0"
+      },
+      {
+        "capabilityId": "0xc067d201142674afcfc5677cd3a70fb2c0c162f1557e8e286602dfcdef07ded0",
+        "spent": "7",
+        "reserved": "0"
+      },
+      {
+        "capabilityId": "0x794ea0f6142dd9bf43ac328ddf734576f0affb09e0adb02321991b4f51e76e0f",
+        "spent": "4",
+        "reserved": "0"
+      },
+      {
+        "capabilityId": "0x43094472cbfd49d9d9fac4e81127cd8192f7794c9a5679032ea22b17cadec953",
+        "spent": "0",
+        "reserved": "14"
+      },
+      {
+        "capabilityId": "0x48c8b3cba8cf00ea73b40a854ca8d02c7e73bde78d39b5be41eb2b9bacbcf45c",
+        "spent": "0",
+        "reserved": "20"
+      }
+    ]
+  },
+  "recoveredOkrs": {
+    "directoryCount": 4,
+    "acceptedOkrId": "0xe1d1043c7f7f2b1f38bd3eb7a140b891dddbddea49de7405071c213b63c35e7e",
+    "historyCount": 3,
+    "decryptedBodies": [
+      "0x0a47fba623e44dd6690fa785322c998a769d5c1e743ee7e73a3a4b1643662026",
+      "0xcc252f442f1057b1028fb63d07ca5c61d384c69ae5849608b79ca60a23e715c1",
+      "0x494b5be2a24d81b11fa644275afcdfb221fe6adcc873606ba6e754550f8804d2",
+      "0xb862d6b212da0a3a7c709e5b19b212698a511374f9c6b169d8c89b65a9a64c82",
+      "0x92a22f37d5b6c704a60dc167f6cdc88a5a438db4507d4d2fa616d9e0a51cbf0a",
+      "0x67d57f4e6c1695ed3fbdddf1f042c9af70f737773a1744b6b9c22d4e856e12c0",
+      "0x3f35f29f52dc7fbe1f76988d341ebf59d7a4ccffa53e6d26306d639831d322bf",
+      "0xf279db7ee411fc0f5a7ddc016482a47d5b6835c21413954d525c4ab0d7da814a",
+      "0x3f65951ef5d0135a495497b021f13bfecda4cb5b40feda209670a633d3b6e44d",
+      "0xf48c42ea7014c1449ccf9d066f84b11380351d6d56d23dde74da3a24cd7a8735"
+    ],
+    "globalBudget": {
+      "asset": "TOOL_CALLS",
+      "spent": "11",
+      "reserved": "0"
+    },
+    "globalClaim": {
+      "capability_id": "0xc067d201142674afcfc5677cd3a70fb2c0c162f1557e8e286602dfcdef07ded0",
+      "agreement_version": "1",
+      "kr_index": "0",
+      "reserved": "10",
+      "spent": "6",
+      "settled": true
+    },
+    "pausedClaim": {
+      "capability_id": "0x0da9b495198dabefa556df88e15abf3e34c2aea33d38e2e2718261ec1eac4428",
+      "agreement_version": "1",
+      "kr_index": "0",
+      "reserved": "2",
+      "spent": "0",
+      "settled": true
+    },
+    "executionDirectoryCount": 4,
+    "historicalBodyIds": [
+      "0xfcfa76ddacb18ae34b914b80602630638a1327604fe09336cd4e4caa99ee41f3",
+      "0xbc3069caef235278d339dce74ff49767d2b09179f8c2d41b008601070eb06948"
+    ]
+  },
+  "recoveredUnknownOkr": {
+    "okrId": "0x34957b524ffc677143eaaf0f5a93ad488c0c8bb5defd981a316911f63732aea3",
+    "state": 1,
+    "spent": "0",
+    "reserved": "14",
+    "executionState": 4
+  },
+  "validationSummary": {
+    "sdkTransactions": 141,
+    "sdkSuccesses": 91,
+    "sdkExpectedRejections": 50,
+    "sdkTests": 75,
+    "envdFullGoTestsPassed": true,
+    "envdBoundaryAuthorityRuntimeRaceTestsPassed": true,
+    "sdkTypecheckAndBuildPassed": true,
+    "multiKrActualFileExecution": true,
+    "explicitReplanningAndReapproval": true,
+    "historyAndRunDiscoveryWithoutSavedIds": true,
+    "boundUnknownResultRetainsReservation": true,
+    "unknownResultUsesSyntheticAdapter": true,
+    "unknownActualAgentSideEffectsVerified": false,
+    "generalModelPlanningVerified": false,
+    "cloudHostDeploymentVerified": false,
+    "completeAppVerified": false,
+    "completeV020Verified": false
+  }
+}

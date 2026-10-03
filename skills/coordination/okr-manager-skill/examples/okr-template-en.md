@@ -1,3 +1,5 @@
+> This is a file-only template. For a FractalMind Sui organization, use [chain projection mode](sui-projection.md), keep source versions, and label local edits UNSUBMITTED. Chain KRs use 1–3 sequential metrics; verified does not mean human-accepted.
+
 ### OKR {Name} ({date}) — ACTIVE {priority_emoji} {priority}
 
 **Owner**: {owner}
@@ -16,18 +18,30 @@
 - Deliverable: {What is produced — PR / Issue / Document / Deployment}
 - Outcome: {What changes in the world when this KR is done}
 - Verification: {How to prove done — CI green / QA PASS / test passed}
+- Metric: baseline {u64} / current {u64 or unknown} / target {u64}; unit {unit}; scale {positive integer}
+- Direction / weight: {increase or decrease} / {1..1000000}
+- Observation: sampled_at_ms {u64 or null}; max_age_ms {1..2592000000}; source Run/evidence {IDs or none}
+- Verification state: {unverified or verified}; final Objective acceptance is separate
 
 **KR2: {Observable result}** — PENDING
 - Deliverable: {What is produced}
 - Depends on: KR1
 - Outcome: {What changes in the world when this KR is done}
 - Verification: {How to prove done}
+- Metric: baseline {u64} / current {u64 or unknown} / target {u64}; unit {unit}; scale {positive integer}
+- Direction / weight: {increase or decrease} / {1..1000000}
+- Observation: sampled_at_ms {u64 or null}; max_age_ms {1..2592000000}; source Run/evidence {IDs or none}
+- Verification state: {unverified or verified}; final Objective acceptance is separate
 
 **KR3: {Observable result}** — PENDING
 - Deliverable: {What is produced}
 - Depends on: KR2
 - Outcome: {What changes in the world when this KR is done}
 - Verification: {How to prove done}
+- Metric: baseline {u64} / current {u64 or unknown} / target {u64}; unit {unit}; scale {positive integer}
+- Direction / weight: {increase or decrease} / {1..1000000}
+- Observation: sampled_at_ms {u64 or null}; max_age_ms {1..2592000000}; source Run/evidence {IDs or none}
+- Verification state: {unverified or verified}; final Objective acceptance is separate
 
 #### Tasks / Milestones (recommended)
 

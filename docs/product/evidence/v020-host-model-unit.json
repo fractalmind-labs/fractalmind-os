@@ -1,0 +1,223 @@
+{
+  "recordedAt": "2026-10-03T01:35:24.251977+00:00",
+  "appTests": {
+    "passed": 216,
+    "failed": 0
+  },
+  "appBuild": "passed",
+  "nativeScriptStrictTypes": "passed",
+  "goRacePackages": {
+    "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun": {
+      "passedTopLevelTests": 23,
+      "passedSubtests": 36,
+      "failedTests": 0,
+      "packagePassed": true
+    },
+    "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/modelclient": {
+      "passedTopLevelTests": 4,
+      "passedSubtests": 8,
+      "failedTests": 0,
+      "packagePassed": true
+    },
+    "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter": {
+      "passedTopLevelTests": 41,
+      "passedSubtests": 43,
+      "failedTests": 0,
+      "packagePassed": true
+    },
+    "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand": {
+      "passedTopLevelTests": 69,
+      "passedSubtests": 277,
+      "failedTests": 0,
+      "packagePassed": true
+    },
+    "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/ws": {
+      "passedTopLevelTests": 7,
+      "passedSubtests": 0,
+      "failedTests": 0,
+      "packagePassed": true
+    },
+    "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/coordinator": {
+      "passedTopLevelTests": 21,
+      "passedSubtests": 50,
+      "failedTests": 0,
+      "packagePassed": true
+    },
+    "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd": {
+      "passedTopLevelTests": 17,
+      "passedSubtests": 16,
+      "failedTests": 0,
+      "packagePassed": true
+    }
+  },
+  "focusedPassedTests": [
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun",
+      "test": "TestModelPlannerUsesActualToolsAndNeverAcceptsGoals"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun",
+      "test": "TestModelPlannerCannotReplaceAuthorityOrClaimEvidence/outside_approved_file"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun",
+      "test": "TestModelPlannerCannotReplaceAuthorityOrClaimEvidence/changed_approved_content"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun",
+      "test": "TestModelPlannerCannotReplaceAuthorityOrClaimEvidence/model_says_done"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun",
+      "test": "TestModelPlannerCannotReplaceAuthorityOrClaimEvidence/stop_during_model"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun",
+      "test": "TestModelPlannerCannotReplaceAuthorityOrClaimEvidence/request_limit"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun",
+      "test": "TestModelPlannerCannotReplaceAuthorityOrClaimEvidence/tool_budget"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun",
+      "test": "TestModelPlannerCannotReplaceAuthorityOrClaimEvidence/write_without_current_hash"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun",
+      "test": "TestModelPlannerCannotReplaceAuthorityOrClaimEvidence"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun",
+      "test": "TestPlannerDecisionRejectsUnframedClaims"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/modelclient",
+      "test": "TestConfiguredModelSendsExactTextWithoutToolsOrSecretsInResults"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/modelclient",
+      "test": "TestModelFailureTruncationToolsAndRedirectNeverRetry/http_error"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/modelclient",
+      "test": "TestModelFailureTruncationToolsAndRedirectNeverRetry/truncation"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/modelclient",
+      "test": "TestModelFailureTruncationToolsAndRedirectNeverRetry/tool_use"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/modelclient",
+      "test": "TestModelFailureTruncationToolsAndRedirectNeverRetry/redirect"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/modelclient",
+      "test": "TestModelFailureTruncationToolsAndRedirectNeverRetry/invalid_JSON"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/modelclient",
+      "test": "TestModelFailureTruncationToolsAndRedirectNeverRetry/oversize"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/modelclient",
+      "test": "TestModelFailureTruncationToolsAndRedirectNeverRetry/missing_usage"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/modelclient",
+      "test": "TestModelFailureTruncationToolsAndRedirectNeverRetry/oversize_text"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/modelclient",
+      "test": "TestModelFailureTruncationToolsAndRedirectNeverRetry"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/modelclient",
+      "test": "TestModelConfigurationRequiresExplicitProviderAndFiniteLimits"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/modelclient",
+      "test": "TestModelPlannerDecodesNextToolAsData"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter",
+      "test": "TestNativeQuestionIsAuthorizedZeroToolAndDoesNotInterruptOKR"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter",
+      "test": "TestNativeQuestionFailureNeverReplaysOrExposesStaleReply/no_provider"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter",
+      "test": "TestNativeQuestionFailureNeverReplaysOrExposesStaleReply/provider_failure"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter",
+      "test": "TestNativeQuestionFailureNeverReplaysOrExposesStaleReply/stop_during_reply"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter",
+      "test": "TestNativeQuestionFailureNeverReplaysOrExposesStaleReply/signed_message_changed"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter",
+      "test": "TestNativeQuestionFailureNeverReplaysOrExposesStaleReply/workspace_changed_during_reply"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter",
+      "test": "TestNativeQuestionFailureNeverReplaysOrExposesStaleReply"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter",
+      "test": "TestNativeOKRModelStrategyDoesNotFirstRunDeterministicTask/actual_model_selected_tools"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter",
+      "test": "TestNativeOKRModelStrategyDoesNotFirstRunDeterministicTask/model_failure"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter",
+      "test": "TestNativeOKRModelStrategyDoesNotFirstRunDeterministicTask/model_asks_changed_goal"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter",
+      "test": "TestNativeOKRModelStrategyDoesNotFirstRunDeterministicTask"
+    }
+  ],
+  "logs": [
+    {
+      "path": "/tmp/fm-model-app-tests-final.log",
+      "sha256": "e41520f5e249a000b0c5a10c1b24c66b775421fb10220180cac821240c4b93a6"
+    },
+    {
+      "path": "/tmp/fm-model-app-build-final.log",
+      "sha256": "70e1208f3d7ffbfff0729a16c0f643c02199a2dcf62367ef0323dcc16cad8c2d"
+    },
+    {
+      "path": "/tmp/fm-model-script-types-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/tmp/fm-model-go-race-final-r2.log",
+      "sha256": "33aea7c2bd2995cc8ced24dc327daaa6169694508e0ca82d4792eeece6f23936"
+    },
+    {
+      "path": "/tmp/fm-model-go-tests-final.jsonl",
+      "sha256": "264ac4925b308cdc94813b6364fa4ba5a9509b132f0c2ac248f55e0677ed3e6f"
+    },
+    {
+      "path": "/tmp/fm-native-model-protocol-r2.log",
+      "sha256": "0100de51bd0af5576aa851d7078e061055a99a67efdd7e9de8b4ce1b84affac6"
+    }
+  ],
+  "nativeFixtureBinary": {
+    "path": "/tmp/fm-envd-model-app-tests-r2",
+    "sha256": "1203bab97b0b2424e9c878031ad6068ce20b054a6d23312687b0e3050267e2fa"
+  },
+  "limits": [
+    "No actual language-model credentials configured; HTTP fixture tests only the protocol and Host enforcement.",
+    "R2 native positive flow preceded final negative stop/workspace guards; those added branches pass final Go tests, not installed running-stop acceptance.",
+    "No installed Tauri/IndexedDB question UI, model configuration wizard, unattended Host, cloud Host, phone, full cache-wipe recovery or main-package upgrade acceptance.",
+    "SDK/Move/Rust unchanged in this increment; older test totals are not a current rerun claim."
+  ]
+}

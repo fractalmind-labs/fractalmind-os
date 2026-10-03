@@ -41,7 +41,7 @@ export class GovernanceApi {
     const tx = this.fm.useTransaction(input.tx);
 
     tx.moveCall({
-      target: this.fm.target('create_proposal'),
+      target: this.fm.target('create_proposal_with_clock'),
       arguments: [
         tx.object(input.governanceId),
         tx.object(input.organizationId),
@@ -50,6 +50,7 @@ export class GovernanceApi {
         tx.pure.string(input.description),
         tx.pure.u64(toBigInt(input.votingDeadlineMs)),
         tx.pure.vector('u8', input.executionPayload),
+        tx.object('0x6'),
       ],
     });
 
@@ -60,11 +61,12 @@ export class GovernanceApi {
     const tx = this.fm.useTransaction(input.tx);
 
     tx.moveCall({
-      target: this.fm.target('start_proposal_voting'),
+      target: this.fm.target('start_proposal_voting_with_clock'),
       arguments: [
         tx.object(input.adminCapId),
         tx.object(input.governanceId),
         tx.object(input.proposalId),
+        tx.object('0x6'),
       ],
     });
 
@@ -75,11 +77,12 @@ export class GovernanceApi {
     const tx = this.fm.useTransaction(input.tx);
 
     tx.moveCall({
-      target: this.fm.target('cast_proposal_vote'),
+      target: this.fm.target('cast_proposal_vote_with_clock'),
       arguments: [
         tx.object(input.proposalId),
         tx.object(input.voterCertId),
         tx.pure.u8(input.vote),
+        tx.object('0x6'),
       ],
     });
 
@@ -90,11 +93,12 @@ export class GovernanceApi {
     const tx = this.fm.useTransaction(input.tx);
 
     tx.moveCall({
-      target: this.fm.target('finalize_proposal_voting'),
+      target: this.fm.target('finalize_proposal_voting_with_clock'),
       arguments: [
         tx.object(input.adminCapId),
         tx.object(input.governanceId),
         tx.object(input.proposalId),
+        tx.object('0x6'),
       ],
     });
 
@@ -105,11 +109,12 @@ export class GovernanceApi {
     const tx = this.fm.useTransaction(input.tx);
 
     tx.moveCall({
-      target: this.fm.target('close_proposal_voting'),
+      target: this.fm.target('close_proposal_voting_with_clock'),
       arguments: [
         tx.object(input.adminCapId),
         tx.object(input.governanceId),
         tx.object(input.proposalId),
+        tx.object('0x6'),
       ],
     });
 

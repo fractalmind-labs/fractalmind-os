@@ -127,12 +127,22 @@ jobs:
             apps/agent-console:
               - .github/workflows/ci.yml
               - apps/agent-console/**
+            apps/fractalmind-app:
+              - .github/workflows/ci.yml
+              - apps/fractalmind-app/**
+              - protocols/fractalmind-protocol/sdk/**
 
       - uses: dorny/paths-filter@v3
         id: move
         with:
           filters: |
             protocols/fractalmind-protocol/contracts/protocol:
+              - .github/workflows/ci.yml
+              - protocols/fractalmind-protocol/contracts/**
+            protocols/fractalmind-protocol/contracts/okr:
+              - .github/workflows/ci.yml
+              - protocols/fractalmind-protocol/contracts/**
+            protocols/fractalmind-protocol/contracts/direct-agent:
               - .github/workflows/ci.yml
               - protocols/fractalmind-protocol/contracts/**
             runtime/fractalmind-envd/contracts/envd:
@@ -371,6 +381,123 @@ jobs:
       - name: Build (typecheck + bundle)
         run: pnpm build
 
+  fractalmind-app:
+    name: FractalMind App
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.node), 'apps/fractalmind-app')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            protocols/fractalmind-protocol/sdk/package-lock.json
+            apps/fractalmind-app/package-lock.json
+      - name: Build local protocol SDK dependency
+        working-directory: protocols/fractalmind-protocol/sdk
+        run: |
+          npm ci
+          npm run build
+      - run: npm ci
+        working-directory: apps/fractalmind-app
+      - run: npm test
+        working-directory: apps/fractalmind-app
+      - name: Typecheck and build App
+        run: npm run build
+        working-directory: apps/fractalmind-app
+
+  fractalmind-app-native:
+    name: FractalMind device core (${{ matrix.os }})
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.node), 'apps/fractalmind-app')
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Format native device core
+        run: cargo fmt --manifest-path apps/fractalmind-app/native/Cargo.toml -- --check
+      - name: Test native device core without user credentials
+        run: cargo test --locked --manifest-path apps/fractalmind-app/native/Cargo.toml
+      - name: Install mobile Rust targets
+        if: matrix.os == 'macos-latest'
+        run: rustup target add aarch64-apple-ios aarch64-linux-android
+      - name: Check mobile native credential providers
+        if: matrix.os == 'macos-latest'
+        run: |
+          cargo check --locked --manifest-path apps/fractalmind-app/native/Cargo.toml --target aarch64-apple-ios
+          cargo check --locked --manifest-path apps/fractalmind-app/native/Cargo.toml --target aarch64-linux-android
+      - uses: actions/setup-node@v4
+        if: matrix.os == 'macos-latest'
+        with:
+          node-version: 22
+      - name: Build SDK for macOS desktop shell
+        if: matrix.os == 'macos-latest'
+        working-directory: protocols/fractalmind-protocol/sdk
+        run: |
+          npm ci
+          npm run build
+      - name: Build and test macOS desktop shell
+        if: matrix.os == 'macos-latest'
+        working-directory: apps/fractalmind-app
+        run: |
+          npm ci
+          npm run desktop:build -- --debug
+          cargo test --locked --manifest-path src-tauri/Cargo.toml
+
+  fractalmind-app-android:
+    name: FractalMind Android APK (ARM64)
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.node), 'apps/fractalmind-app')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            protocols/fractalmind-protocol/sdk/package-lock.json
+            apps/fractalmind-app/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: android-actions/setup-android@v4
+        with:
+          cmdline-tools-version: 16111833
+          packages: platform-tools platforms;android-37.0 build-tools;36.0.0 ndk;30.0.16248370
+      - name: Build local protocol SDK dependency
+        working-directory: protocols/fractalmind-protocol/sdk
+        run: |
+          npm ci
+          npm run build
+      - name: Initialize and build Android APK
+        working-directory: apps/fractalmind-app
+        env:
+          CARGO_BUILD_JOBS: 2
+          CARGO_PROFILE_DEV_DEBUG: 1
+        run: |
+          export NDK_HOME="$ANDROID_HOME/ndk/30.0.16248370"
+          npm ci
+          npm run android:init -- --skip-targets-install
+          npm run android:build -- --debug --apk --target aarch64 --ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fractalmind-app-android-arm64-debug
+          path: apps/fractalmind-app/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+
   explorer:
     name: Explorer
     needs: changes
@@ -510,6 +637,9 @@ jobs:
       - skills-layout
       - skills-structure
       - agent-console
+      - fractalmind-app
+      - fractalmind-app-native
+      - fractalmind-app-android
       - explorer
       - docs
       - sdk

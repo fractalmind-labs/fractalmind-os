@@ -1,0 +1,763 @@
+import { fromBase64, toBase64 } from "@mysten/sui/utils";
+import type { Transaction } from "@mysten/sui/transactions";
+import {
+  NativeFileOkrRunner,
+  bytesToHex,
+  nodeCommandIntentHash,
+  verifySignedNodeCommand,
+  SelfPayTransactionManager,
+  createSelfPayOkrSubmitter,
+  okrRunnerTicketName,
+  PRODUCT_RECORD_KINDS,
+  type OkrRunnerRecord,
+  type OkrRunnerTicketContext,
+  type SelfPayFeeQuote,
+  type SelfPayTransactionOutcome,
+  type TransactionJournal,
+} from "@fractalmind-labs/fractalmind-sdk";
+import { ChainReadSession } from "./chain";
+import {
+  NativeCommandResults,
+  type CommandResultTarget,
+} from "./command-results";
+import { CoordinatorReadClient } from "./coordinator-read";
+import { DeviceIdentityVerifier } from "./device-identity";
+import { canonical, parseOkrSpecification } from "./handover-plan";
+import {
+  NativeDeviceSigner,
+  call,
+  scopedNativeInvoke,
+  type NativeInvoke,
+} from "./native-device";
+import { PrivateRecords } from "./private-records";
+import { readRecordPointer, readStableRecordPointer } from "./record-pointer";
+
+export class NativeOkrRunnerError extends Error {
+  constructor(
+    readonly code:
+      | "invalid_source"
+      | "state_changed"
+      | "invalid_ciphertext"
+      | "invalid_transaction",
+  ) {
+    super(code);
+  }
+}
+const id = /^0x[0-9a-f]{64}$/;
+const outcome = (value: SelfPayTransactionOutcome) => ({
+  status: value.status === "failed" ? ("rejected" as const) : value.status,
+  digest: value.digest,
+  reason: value.reason,
+});
+/** Preserve the original receipt for ephemeral fee/result display. Later RPC
+ * pruning can make a query unknown without erasing this confirmed receipt. */
+class RunnerTransactionManager extends SelfPayTransactionManager {
+  lastSubmission?: SelfPayTransactionOutcome;
+  override async submit(quote: SelfPayFeeQuote) {
+    const result = await super.submit(quote);
+    this.lastSubmission = result;
+    return result;
+  }
+}
+
+/** Native bridge for the bounded sequential runner. Keys never enter the
+ * WebView. Caller supplies explicit fee confirmation; restored queued work
+ * stays read-only until releaseQueued is explicitly selected. Approval and
+ * control-capability issuance are separate prior operations. */
+export class NativeOkrRunner {
+  private readonly manager: RunnerTransactionManager;
+  private readonly verifier: DeviceIdentityVerifier;
+  private readonly records: PrivateRecords;
+  private readonly results: NativeCommandResults;
+  private readonly coordinator: CoordinatorReadClient;
+  private readonly runner: NativeFileOkrRunner;
+  private readonly submitCommand: ReturnType<typeof createSelfPayOkrSubmitter>;
+  private readonly guards = new WeakMap<Transaction, () => Promise<void>>();
+  private signingGuard?: () => Promise<void>;
+  private deliveryMode: "coordinator" | "chain" = "coordinator";
+  private chainFeeDeclined = false;
+  private flight?: {
+    okrId: string;
+    deliveryMode: "coordinator" | "chain";
+    inputPin: string;
+    result: ReturnType<NativeFileOkrRunner["step"]>;
+  };
+  private readonly invoke: NativeInvoke;
+
+  constructor(
+    readonly chain: ChainReadSession,
+    readonly signer: NativeDeviceSigner,
+    readonly grantId: string,
+    readonly organizationId: string,
+    invoke: NativeInvoke,
+    journal: TransactionJournal,
+    approveQuote: (quote: SelfPayFeeQuote) => Promise<boolean>,
+    transport: typeof fetch = fetch,
+    private readonly assertActive: () => void = () => {},
+  ) {
+    if (![grantId, organizationId].every((v) => id.test(v)))
+      throw new NativeOkrRunnerError("invalid_source");
+    this.invoke = scopedNativeInvoke(invoke, assertActive);
+    this.verifier = new DeviceIdentityVerifier(chain, signer, grantId);
+    this.records = new PrivateRecords(
+      chain,
+      signer,
+      grantId,
+      organizationId,
+      this.invoke,
+    );
+    this.results = new NativeCommandResults(
+      chain,
+      signer,
+      grantId,
+      organizationId,
+      this.invoke,
+    );
+    this.coordinator = new CoordinatorReadClient(
+      chain,
+      signer,
+      grantId,
+      organizationId,
+      transport,
+    );
+    this.manager = new RunnerTransactionManager({
+      client: chain.sdk.client.client,
+      network: chain.profile.network,
+      journal,
+      assertBeforeBroadcast: assertActive,
+      signer: {
+        getPublicKey: () => signer.getPublicKey(),
+        signTransaction: async (bytes) => {
+          const guard = this.signingGuard;
+          if (!guard) throw new NativeOkrRunnerError("invalid_transaction");
+          await guard();
+          const signed = await signer.signTransaction(bytes);
+          await guard();
+          return signed;
+        },
+      },
+    });
+    const submit = createSelfPayOkrSubmitter({
+      manager: this.manager,
+      gasBudget: 200000000n,
+      approveQuote: async (quote) => {
+        const guard = this.signingGuard;
+        if (!guard) throw new NativeOkrRunnerError("invalid_transaction");
+        await guard();
+        const accepted = await approveQuote(quote);
+        if (accepted) await guard();
+        return accepted;
+      },
+    });
+    this.submitCommand = submit;
+    this.runner = new NativeFileOkrRunner({
+      sdk: chain.sdk,
+      organizationId,
+      humanId: chain.profile.humanId,
+      grantId,
+      signer: {
+        getPublicKey: () => signer.getPublicKey(),
+        sign: async (bytes) => {
+          assertActive();
+          const signature = await signer.sign(bytes);
+          assertActive();
+          return signature;
+        },
+      },
+      discoverTicket: async (logicalId) => {
+        assertActive();
+        const found = await readStableRecordPointer(
+          chain,
+          organizationId,
+          "checkpoint",
+          logicalId,
+          assertActive,
+        );
+        assertActive();
+        return {
+          keyVersion: found.keyVersion,
+          ticketId: found.pointer?.record_id,
+        };
+      },
+      querySubmission: async ({ requestId }) => {
+        const prior = await this.manager.query(requestId);
+        assertActive();
+        return prior ? outcome(prior) : undefined;
+      },
+      crypto: {
+        decrypt: (record) => this.decrypt(record),
+        encrypt: (plaintext, context) => this.encrypt(plaintext, context),
+        prepareCommand: async (input) => {
+          assertActive();
+          const prepared = await this.results.prepare(
+            {
+              command: input.command,
+              membershipId: input.membershipId,
+              bindingId: input.bindingId,
+              managedAgentId: input.managedAgentId,
+            },
+            {
+              tx: input.tx,
+              expectedKeyVersion: input.keyVersion,
+              scheduled: input.scheduled,
+            },
+          );
+          const before = await this.policyPin(input, input.scheduled);
+          const guard = async () => {
+            assertActive();
+            await prepared.assertCurrent();
+            if ((await this.policyPin(input, input.scheduled)) !== before)
+              throw new NativeOkrRunnerError("state_changed");
+            assertActive();
+          };
+          await guard();
+          this.guards.set(input.tx, guard);
+          return prepared.transaction;
+        },
+      },
+      submit: async (transaction, context) => {
+        // The same manager is also queried by the runner before command signing.
+        const prior = await this.manager.query(context.requestId);
+        if (prior) return outcome(prior);
+        const guard = this.guards.get(transaction);
+        if (!guard || this.signingGuard)
+          throw new NativeOkrRunnerError("invalid_transaction");
+        await guard();
+        this.signingGuard = guard;
+        try {
+          return await submit(transaction, context);
+        } finally {
+          this.signingGuard = undefined;
+        }
+      },
+      deliver: async (command) => {
+        assertActive();
+        const okr = await chain.sdk.okr.getOkr(
+          (command.payload.okr as { id: string }).id,
+        );
+        const member = await chain.sdk.host.getMembership(okr.membership_id!);
+        const managed = await chain.sdk.host.getManagedAgent(
+          okr.managed_agent!,
+        );
+        const target = {
+          command,
+          membershipId: member.id,
+          bindingId: member.coordinator_binding,
+          managedAgentId: managed.id,
+        };
+        const before = await this.policyPin(target);
+        const preflight = await this.results.preflight(target);
+        const executions = await chain.sdk.nodeExecution.readAgentExecutions(
+          organizationId,
+          managed.id,
+        );
+        const original = executions.executions.find(
+          (row) =>
+            row.run.capability_id === command.capability.id &&
+            bytesToHex(Uint8Array.from(row.run.intent_hash)) ===
+              bytesToHex(nodeCommandIntentHash(command)),
+        );
+        if (!original) throw new NativeOkrRunnerError("invalid_source");
+        const published = await chain.sdk.nodeExecution.getCommandDelivery(
+          original.run.id,
+        );
+        // An existing chain delivery is already a send. It never authorizes an
+        // additional Coordinator send, even when local delivery state is empty.
+        if (published) return;
+        if (this.deliveryMode === "chain") {
+          const receipt = await this.queueTarget(target, original.run.id);
+          this.chainFeeDeclined =
+            receipt.status === "rejected" &&
+            receipt.reason === "fee_approval_declined";
+          if (receipt.status !== "confirmed")
+            throw new NativeOkrRunnerError("state_changed");
+          return;
+        }
+        const request = await this.coordinator.prepareCommand(
+          member.coordinator_binding,
+          command,
+        );
+        await preflight();
+        if ((await this.policyPin(target)) !== before)
+          throw new NativeOkrRunnerError("state_changed");
+        assertActive();
+        await request.send();
+        assertActive();
+      },
+    });
+  }
+  step(
+    input: Parameters<NativeFileOkrRunner["step"]>[0],
+    deliveryMode: "coordinator" | "chain" = "coordinator",
+  ) {
+    this.assertActive();
+    if (this.flight) {
+      if (
+        this.flight.okrId !== input.okrId ||
+        this.flight.deliveryMode !== deliveryMode ||
+        this.flight.inputPin !== canonical(input)
+      )
+        throw new NativeOkrRunnerError("invalid_transaction");
+      return this.flight.result;
+    }
+    this.deliveryMode = deliveryMode;
+    this.chainFeeDeclined = false;
+    const result = this.runner
+      .step(input)
+      .then((value) =>
+        this.chainFeeDeclined && value.status === "awaiting_confirmation"
+          ? {
+              ...value,
+              status: "queued" as const,
+              reason: "chain_delivery_fee_declined",
+            }
+          : value,
+      )
+      .finally(() => {
+        this.flight = undefined;
+        this.deliveryMode = "coordinator";
+      });
+    this.flight = {
+      okrId: input.okrId,
+      deliveryMode,
+      inputPin: canonical(input),
+      result,
+    };
+    return result;
+  }
+  /** Publish one exact already prepared remaining KR after a separate fee
+   * confirmation. Does not authorize a new Run or bypass independent review. */
+  async queuePreparedKr(
+    okrId: string,
+    agreementVersion: string,
+    krIndex: string,
+  ) {
+    this.assertActive();
+    if (
+      this.flight ||
+      this.signingGuard ||
+      !id.test(okrId) ||
+      !/^[1-9][0-9]*$/.test(agreementVersion) ||
+      !/^[0-2]$/.test(krIndex)
+    )
+      throw new NativeOkrRunnerError("invalid_source");
+    const original = await this.readPreparedKr(
+      okrId,
+      agreementVersion,
+      krIndex,
+    );
+    if (!original) throw new NativeOkrRunnerError("invalid_source");
+    const { okr, target, run, delivery } = original;
+    if (okr.state !== 1 || BigInt(krIndex) < BigInt(okr.next_kr))
+      throw new NativeOkrRunnerError("state_changed");
+    await this.policyPin(target, true);
+    if (delivery) return { executionId: run.id, alreadyPublished: true };
+    const receipt = await this.queueTarget(target, run.id, true);
+    return { executionId: run.id, alreadyPublished: false, receipt };
+  }
+  /** Read an original encrypted ticket and its current typed Run/delivery.
+   * Transaction history can be pruned independently. This method neither
+   * infers a receipt nor grants permission to sign, publish or execute. */
+  async readPreparedKr(
+    okrId: string,
+    agreementVersion: string,
+    krIndex: string,
+  ) {
+    this.assertActive();
+    if (
+      !id.test(okrId) ||
+      !/^[1-9][0-9]*$/.test(agreementVersion) ||
+      !/^[0-2]$/.test(krIndex)
+    )
+      throw new NativeOkrRunnerError("invalid_source");
+    const description = await this.describe(okrId),
+      okr = description.okr;
+    if (
+      okr.agreement_version !== agreementVersion ||
+      Number(krIndex) >= description.plan.krs.length ||
+      !okr.membership_id ||
+      !okr.managed_agent
+    )
+      throw new NativeOkrRunnerError("state_changed");
+    const name = okrRunnerTicketName(okrId, agreementVersion, krIndex);
+    const head = await readRecordPointer(
+      this.chain,
+      this.organizationId,
+      "checkpoint",
+      name,
+    );
+    if (!head.pointer) return null;
+    if (head.pointer.revision !== "1")
+      throw new NativeOkrRunnerError("invalid_source");
+    const record = await this.chain.sdk.productRecord.getRecord(
+      head.pointer.record_id,
+    );
+    if (
+      record.logical_id !== name ||
+      record.revision !== "1" ||
+      record.kind !== 5
+    )
+      throw new NativeOkrRunnerError("invalid_source");
+    const plaintext = await this.decrypt(record);
+    let ticket: {
+      schema: string;
+      okrId: string;
+      specRecordId: string;
+      agreementRecordId: string;
+      command: CommandResultTarget["command"];
+    };
+    try {
+      ticket = JSON.parse(new TextDecoder().decode(plaintext));
+    } finally {
+      plaintext.fill(0);
+    }
+    const command = ticket.command,
+      kr = description.plan.krs[Number(krIndex)];
+    await verifySignedNodeCommand(command);
+    if (
+      ticket.schema !== "fractalmind.okr-command-ticket.v1" ||
+      ticket.okrId !== okr.id ||
+      ticket.specRecordId !== okr.spec_record ||
+      ticket.agreementRecordId !== okr.agreement_record ||
+      command.action !== "assign" ||
+      command.scope !== "control" ||
+      command.target.organization_id !== this.organizationId ||
+      canonical(command.payload.okr) !==
+        canonical({
+          id: okr.id,
+          agreement_version: agreementVersion,
+          kr_index: krIndex,
+        }) ||
+      command.budget?.amount !== kr.maxCalls ||
+      command.budget.asset !== "TOOL_CALLS" ||
+      command.payload.task !==
+        JSON.stringify({ kind: "ensure_text_files", files: kr.files }) ||
+      canonical(command.payload.bounds) !==
+        canonical({ paths: description.plan.paths, max_calls: kr.maxCalls }) ||
+      canonical(command.payload.measurement) !==
+        canonical({ kind: "verified_text_file_count" })
+    )
+      throw new NativeOkrRunnerError("invalid_source");
+    const member = await this.chain.sdk.host.getMembership(okr.membership_id);
+    const target = {
+      command,
+      membershipId: member.id,
+      bindingId: member.coordinator_binding,
+      managedAgentId: okr.managed_agent,
+    };
+    const directory = await this.chain.sdk.nodeExecution.readAgentExecutions(
+      this.organizationId,
+      okr.managed_agent,
+    );
+    const original = directory.executions.find(
+      (row) =>
+        row.run.capability_id === command.capability.id &&
+        bytesToHex(Uint8Array.from(row.run.intent_hash)) ===
+          bytesToHex(nodeCommandIntentHash(command)),
+    );
+    if (!original) throw new NativeOkrRunnerError("invalid_source");
+    const run = original.run;
+    if (
+      run.org_id !== okr.org_id ||
+      run.managed_agent !== okr.managed_agent ||
+      run.membership_id !== okr.membership_id ||
+      run.command_id !== command.command_id ||
+      run.delegate !== command.signer ||
+      run.node_id !== command.target.node_id ||
+      run.agent_id !== command.target.agent_id ||
+      run.action !== command.action ||
+      run.scope !== command.scope ||
+      run.nonce !== command.nonce ||
+      run.idempotency_key !== command.idempotency_key ||
+      run.budget_asset !== command.budget.asset ||
+      run.budget_amount !== command.budget.amount ||
+      run.issued_at_ms !== String(command.issued_at_ms) ||
+      run.expires_at_ms !== String(command.expires_at_ms)
+    )
+      throw new NativeOkrRunnerError("invalid_source");
+    const claim = await this.chain.sdk.okr.getReservationBudget(okr.id, run.id);
+    if (
+      claim.agreement_version !== agreementVersion ||
+      claim.kr_index !== krIndex ||
+      claim.capability_id !== command.capability.id
+    )
+      throw new NativeOkrRunnerError("invalid_source");
+    const delivery = await this.chain.sdk.nodeExecution.getCommandDelivery(
+      original.run.id,
+    );
+    if (canonical(await this.chain.sdk.okr.getOkr(okr.id)) !== canonical(okr))
+      throw new NativeOkrRunnerError("state_changed");
+    this.assertActive();
+    return { okr, target, run, delivery, ticketRecordId: record.id };
+  }
+  private async queueTarget(
+    target: CommandResultTarget,
+    executionId: string,
+    scheduled = false,
+  ) {
+    const requestId = `chain-delivery:${executionId}`,
+      before = await this.policyPin(target, scheduled);
+    const prior = await this.manager.query(requestId);
+    if (prior) throw new NativeOkrRunnerError("state_changed");
+    const preflight = await this.results.preflight(target);
+    const prepared = await this.results.prepareDelivery(target, executionId);
+    const guard = async () => {
+      this.assertActive();
+      await preflight();
+      await prepared.assertCurrent();
+      if ((await this.policyPin(target, scheduled)) !== before)
+        throw new NativeOkrRunnerError("state_changed");
+      this.assertActive();
+    };
+    await guard();
+    if (this.signingGuard)
+      throw new NativeOkrRunnerError("invalid_transaction");
+    this.signingGuard = guard;
+    try {
+      return await this.submitCommand(prepared.transaction, { requestId });
+    } finally {
+      this.signingGuard = undefined;
+    }
+  }
+  get lastSubmission() {
+    return this.manager.lastSubmission;
+  }
+  get lastChainDeliverySubmission() {
+    const result = this.manager.lastSubmission;
+    return result?.requestId.startsWith("chain-delivery:") ? result : undefined;
+  }
+  queryChainDelivery(executionId: string) {
+    this.assertActive();
+    if (!id.test(executionId)) throw new NativeOkrRunnerError("invalid_source");
+    return this.manager.query(`chain-delivery:${executionId}`);
+  }
+  async describe(okrId: string) {
+    this.assertActive();
+    const description = await this.runner.describe(okrId);
+    const okr = description.okr;
+    const record = await this.chain.sdk.productRecord.getRecord(
+      okr.spec_record,
+    );
+    if (
+      record.organization_id !== this.organizationId ||
+      record.kind !== 1 ||
+      record.logical_id !== `okr-${okr.logical_id}-spec` ||
+      record.revision !== okr.spec_revision
+    )
+      throw new NativeOkrRunnerError("invalid_source");
+    const plaintext = await this.records.read({
+      kind: 1,
+      logicalId: record.logical_id,
+      record_id: record.id,
+      revision: record.revision,
+      key_version: record.key_version,
+    });
+    let spec: ReturnType<typeof parseOkrSpecification>;
+    try {
+      spec = parseOkrSpecification(
+        JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(plaintext)),
+      );
+    } finally {
+      plaintext.fill(0);
+    }
+    if (
+      spec.priority !== okr.priority ||
+      spec.deadlineMs !== okr.deadline_ms ||
+      spec.krs.length !== okr.metrics.length ||
+      spec.krs.some((kr, i) =>
+        ["baseline", "target", "weight", "maxAgeMs"].some(
+          (field) =>
+            kr[field as keyof typeof kr] !==
+            okr.metrics[i][
+              field === "maxAgeMs"
+                ? "max_age_ms"
+                : (field as "baseline" | "target" | "weight")
+            ],
+        ),
+      )
+    )
+      throw new NativeOkrRunnerError("invalid_source");
+    const policy = await this.chain.sdk.handover.getPolicy(okr.id);
+    if (
+      policy.agreement_version !== okr.agreement_version ||
+      policy.managed_version !== okr.managed_version ||
+      canonical(await this.chain.sdk.okr.getOkr(okr.id)) !== canonical(okr)
+    )
+      throw new NativeOkrRunnerError("state_changed");
+    this.assertActive();
+    return { ...description, spec, policy };
+  }
+  async query(okrId: string) {
+    await this.chain.checkNetwork();
+    const okr = await this.chain.sdk.okr.getOkr(okrId);
+    if (okr.org_id !== this.organizationId)
+      throw new NativeOkrRunnerError("invalid_source");
+    return this.manager.query(
+      okrRunnerTicketName(okr.id, okr.agreement_version, okr.next_kr),
+    );
+  }
+  async queryPreparedKr(
+    okrId: string,
+    agreementVersion: string,
+    krIndex: string,
+  ) {
+    this.assertActive();
+    if (
+      !id.test(okrId) ||
+      !/^[1-9][0-9]*$/.test(agreementVersion) ||
+      !/^[0-2]$/.test(krIndex)
+    )
+      throw new NativeOkrRunnerError("invalid_source");
+    await this.chain.checkNetwork();
+    return this.manager.query(
+      okrRunnerTicketName(okrId, agreementVersion, krIndex),
+    );
+  }
+  private async decrypt(record: OkrRunnerRecord) {
+    this.assertActive();
+    if (
+      record.organization_id !== this.organizationId ||
+      ![2, 5].includes(record.kind)
+    )
+      throw new NativeOkrRunnerError("invalid_source");
+    const plaintext = await this.records.read({
+      kind: record.kind,
+      logicalId: record.logical_id,
+      record_id: record.id,
+      revision: record.revision,
+      key_version: record.key_version,
+    });
+    try {
+      this.assertActive();
+      return plaintext;
+    } catch (error) {
+      plaintext.fill(0);
+      throw error;
+    }
+  }
+  private async encrypt(
+    plaintext: Uint8Array,
+    context: OkrRunnerTicketContext,
+  ) {
+    this.assertActive();
+    if (
+      context.organizationId !== this.organizationId ||
+      context.revision !== "1"
+    )
+      throw new NativeOkrRunnerError("invalid_source");
+    const before = await this.verifier.verifyOrganization(
+      this.organizationId,
+      "operate",
+    );
+    const head = await readRecordPointer(
+      this.chain,
+      this.organizationId,
+      "checkpoint",
+      context.logicalId,
+    );
+    if (
+      !before.encryptedKeys ||
+      head.pointer ||
+      head.keyVersion !== context.keyVersion
+    )
+      throw new NativeOkrRunnerError("state_changed");
+    const encrypted = await call(this.invoke, "fm_device_encrypt_record", {
+      profile: this.signer.device.profile,
+      record: JSON.stringify({
+        network: this.chain.profile.network,
+        encryptedKeys: before.encryptedKeys,
+        organizationId: this.organizationId,
+        kind: PRODUCT_RECORD_KINDS.checkpoint,
+        logicalId: context.logicalId,
+        revision: context.revision,
+        keyVersion: context.keyVersion,
+        plaintext: toBase64(plaintext),
+      }),
+    });
+    let body: Uint8Array;
+    try {
+      if (typeof encrypted !== "string" || encrypted.length > 87384)
+        throw new Error();
+      body = fromBase64(encrypted);
+      if (
+        body.length < 32 ||
+        body.length > 65536 ||
+        toBase64(body) !== encrypted ||
+        new TextDecoder().decode(body.slice(0, 4)) !== "FME1"
+      )
+        throw new Error();
+    } catch {
+      throw new NativeOkrRunnerError("invalid_ciphertext");
+    }
+    const after = await this.verifier.verifyOrganization(
+      this.organizationId,
+      "operate",
+    );
+    const current = await readRecordPointer(
+      this.chain,
+      this.organizationId,
+      "checkpoint",
+      context.logicalId,
+    );
+    if (
+      after.authorityPin !== before.authorityPin ||
+      current.pointer ||
+      current.keyVersion !== context.keyVersion
+    )
+      throw new NativeOkrRunnerError("state_changed");
+    this.assertActive();
+    return body;
+  }
+  private async policyPin(input: CommandResultTarget, scheduled = false) {
+    const context = input.command.payload.okr as {
+      id: string;
+      agreement_version: string;
+      kr_index: string;
+    };
+    const [okr, policy, budget, capability, binding, contract] =
+      await Promise.all([
+        this.chain.sdk.okr.getOkr(context.id),
+        this.chain.sdk.handover.getPolicy(context.id),
+        this.chain.sdk.okr.getBudget(context.id),
+        this.chain.sdk.remoteAuthority.getCapability(
+          input.command.capability.id,
+        ),
+        this.chain.sdk.host.getAuthorityBinding(input.command.capability.id),
+        this.chain.sdk.okr.getCapabilityContract(input.command.capability.id),
+      ]);
+    if (
+      okr.org_id !== this.organizationId ||
+      okr.state !== 1 ||
+      okr.agreement_version !== context.agreement_version ||
+      (scheduled
+        ? !/^[0-2]$/.test(context.kr_index) ||
+          BigInt(context.kr_index) < BigInt(okr.next_kr) ||
+          Number(context.kr_index) >= okr.metrics.length
+        : okr.next_kr !== context.kr_index) ||
+      okr.managed_agent !== input.managedAgentId ||
+      okr.membership_id !== input.membershipId ||
+      BigInt(okr.expires_at_ms) <= BigInt(Date.now()) ||
+      policy.agreement_version !== okr.agreement_version ||
+      policy.managed_version !== okr.managed_version ||
+      canonical(input.command.payload.handover_continue) !==
+        canonical({
+          approval_id: policy.approval_id,
+          proposal_hash: bytesToHex(Uint8Array.from(policy.proposal_hash)),
+          nonce: bytesToHex(Uint8Array.from(policy.nonce)),
+        }) ||
+      capability.revoked ||
+      capability.delegate !== this.signer.device.address ||
+      capability.revocationVersion.toString() !==
+        input.command.capability.revocation_version ||
+      binding.human_id !== this.chain.profile.humanId ||
+      binding.device_grant !== this.grantId ||
+      binding.membership_version !== okr.membership_version ||
+      binding.managed_agent_version !== okr.managed_version ||
+      contract.contract_id !== okr.id ||
+      contract.agreement_version !== okr.agreement_version ||
+      canonical(contract.boundary_hash) !== canonical(okr.boundary_hash)
+    )
+      throw new NativeOkrRunnerError("state_changed");
+    return canonical([okr, policy, budget, capability, binding, contract]);
+  }
+}

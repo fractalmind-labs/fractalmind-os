@@ -61,11 +61,11 @@ test('remote authority builders target the Phase 0 entry wrappers', () => {
 
   assert.equal(
     moveTarget(fm.remoteAuthority.createCapability(shape)),
-    `${ENTRY_PREFIX}create_remote_capability`,
+    `${ENTRY_PREFIX}create_remote_capability_with_clock`,
   );
   assert.equal(
     moveTarget(fm.remoteAuthority.delegateCapability({ ...shape, parentCapabilityId: '0x3' })),
-    `${ENTRY_PREFIX}delegate_remote_capability`,
+    `${ENTRY_PREFIX}delegate_remote_capability_with_clock`,
   );
   assert.equal(
     moveTarget(fm.remoteAuthority.revokeCapability({ capabilityId: '0x3', organizationId: '0x1' })),
@@ -86,7 +86,7 @@ test('remote authority builders target the Phase 0 entry wrappers', () => {
       budgetAmount: MAX_U64,
       intentHash: Array.from({ length: 32 }, (_, index) => index),
     })),
-    `${ENTRY_PREFIX}claim_remote_authority_use`,
+    `${ENTRY_PREFIX}claim_remote_authority_use_with_clock`,
   );
 });
 

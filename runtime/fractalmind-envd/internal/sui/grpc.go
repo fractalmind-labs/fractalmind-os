@@ -66,7 +66,7 @@ func NewGRPCClient(endpoint, graphqlURL string) (*GRPCClient, error) {
 			graphqlURL = "https://graphql.mainnet.sui.io/graphql"
 		}
 	}
-	conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(transport), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(16<<20)))
+	conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(transport), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(16<<20)), grpc.WithUnaryInterceptor(boundUnaryRPC))
 	if err != nil {
 		return nil, err
 	}
@@ -75,13 +75,98 @@ func NewGRPCClient(endpoint, graphqlURL string) (*GRPCClient, error) {
 
 func (c *GRPCClient) Close() error { return c.conn.Close() }
 
+// Background command contexts must not leave a disconnected ledger read
+// waiting indefinitely. A caller's shorter deadline/cancellation still wins;
+// this timeout never authorizes retrying an uncertain transaction.
+func boundUnaryRPC(ctx context.Context, method string, req, reply any, conn *grpc.ClientConn, invoke grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	return invoke(ctx, method, req, reply, conn, opts...)
+}
+
 func inputArgument(index uint32) *v2.Argument {
 	return &v2.Argument{Kind: v2.Argument_INPUT.Enum(), Input: proto.Uint32(index)}
+}
+
+// ObjectArgument explicitly distinguishes a Move object reference from an
+// address/string primitive. Never guess from a string's 0x prefix.
+type ObjectArgument string
+
+// ChunkedBytes assembles a bounded vector inside the same PTB; each pure
+// argument remains below Sui's 16 KiB limit. No staging object is persisted.
+type ChunkedBytes []byte
+
+// The payload helper remains in core when the called product module is in an extension.
+type PackageChunkedBytes struct {
+	PackageID string
+	Bytes     []byte
+}
+
+func appendMoveArgument(ptb *v2.ProgrammableTransaction, packageID string, arg any) (*v2.Argument, error) {
+	if data, ok := arg.(PackageChunkedBytes); ok {
+		core, err := normalizeAddress(data.PackageID)
+		if err != nil {
+			return nil, err
+		}
+		return appendMoveArgument(ptb, core, ChunkedBytes(data.Bytes))
+	}
+	if data, ok := arg.(ChunkedBytes); ok {
+		if len(data) > 65536 {
+			return nil, fmt.Errorf("byte payload exceeds 64 KiB")
+		}
+		const chunkSize = 16000
+		first := len(data)
+		if first > chunkSize {
+			first = chunkSize
+		}
+		value, err := appendMoveArgument(ptb, packageID, []byte(data[:first]))
+		if err != nil {
+			return nil, err
+		}
+		for start := chunkSize; start < len(data); start += chunkSize {
+			end := start + chunkSize
+			if end > len(data) {
+				end = len(data)
+			}
+			next, err := appendMoveArgument(ptb, packageID, []byte(data[start:end]))
+			if err != nil {
+				return nil, err
+			}
+			index := uint32(len(ptb.Commands))
+			ptb.Commands = append(ptb.Commands, &v2.Command{Command: &v2.Command_MoveCall{MoveCall: &v2.MoveCall{Package: proto.String(packageID), Module: proto.String("wire_bytes"), Function: proto.String("append_bytes"), Arguments: []*v2.Argument{value, next}}}})
+			value = &v2.Argument{Kind: v2.Argument_RESULT.Enum(), Result: proto.Uint32(index)}
+		}
+		return value, nil
+	}
+	in, err := literal(arg)
+	if err != nil {
+		return nil, err
+	}
+	// A caller may use the same immutable object in two parameter positions,
+	// such as the executing and approving DeviceGrant. Sui requires one input
+	// per object ID; both arguments must reference that same input.
+	if id := in.GetObjectId(); id != "" {
+		for index, existing := range ptb.Inputs {
+			if existing.GetObjectId() == id {
+				return inputArgument(uint32(index)), nil
+			}
+		}
+	}
+	index := uint32(len(ptb.Inputs))
+	ptb.Inputs = append(ptb.Inputs, in)
+	return inputArgument(index), nil
 }
 
 // literal preserves decimal integer strings rather than coercing u64 into an
 // imprecise protobuf double. Slice/map inputs are normalized through JSON.
 func literal(value any) (*v2.Input, error) {
+	if object, ok := value.(ObjectArgument); ok {
+		id, err := normalizeAddress(string(object))
+		if err != nil {
+			return nil, err
+		}
+		return &v2.Input{ObjectId: proto.String(id)}, nil
+	}
 	if b, ok := value.([]byte); ok {
 		value = byteVector(b)
 	}
@@ -207,6 +292,9 @@ func pageToken(cursor any) ([]byte, error) {
 	if !ok {
 		return nil, fmt.Errorf("gRPC pagination cursor must be a base64 string")
 	}
+	if token == "" {
+		return nil, nil
+	}
 	return base64.StdEncoding.DecodeString(token)
 }
 
@@ -229,14 +317,13 @@ func (c *GRPCClient) MoveCall(ctx context.Context, req models.MoveCallRequest) (
 		call.TypeArguments = append(call.TypeArguments, s)
 	}
 	for i, arg := range req.Arguments {
-		in, err := literal(arg)
+		argument, err := appendMoveArgument(ptb, req.PackageObjectId, arg)
 		if err != nil {
 			return models.TxnMetaData{}, fmt.Errorf("argument %d: %w", i, err)
 		}
-		ptb.Inputs = append(ptb.Inputs, in)
-		call.Arguments = append(call.Arguments, inputArgument(uint32(i)))
+		call.Arguments = append(call.Arguments, argument)
 	}
-	ptb.Commands = []*v2.Command{{Command: &v2.Command_MoveCall{MoveCall: call}}}
+	ptb.Commands = append(ptb.Commands, &v2.Command{Command: &v2.Command_MoveCall{MoveCall: call}})
 	tx := &v2.Transaction{Version: proto.Int32(1), Sender: proto.String(sender), Kind: &v2.TransactionKind{Kind: v2.TransactionKind_PROGRAMMABLE_TRANSACTION.Enum(), Data: &v2.TransactionKind_ProgrammableTransaction{ProgrammableTransaction: ptb}}, GasPayment: &v2.GasPayment{Owner: proto.String(sender), Budget: proto.Uint64(budget)}}
 	if req.Gas != nil {
 		if err := c.setGasCoin(ctx, tx, *req.Gas); err != nil {
@@ -322,7 +409,11 @@ func (c *GRPCClient) SuiExecuteTransactionBlock(ctx context.Context, req models.
 		return models.SuiTransactionBlockResponse{}, err
 	}
 	if err := executionError(resp.GetTransaction()); err != nil {
-		return models.SuiTransactionBlockResponse{}, err
+		result := models.SuiTransactionBlockResponse{Digest: resp.GetTransaction().GetDigest()}
+		if status := resp.GetTransaction().GetEffects().GetStatus(); status != nil && !status.GetSuccess() {
+			result.Effects.Status.Status = "failure"
+		}
+		return result, err
 	}
 	return models.SuiTransactionBlockResponse{Digest: resp.GetTransaction().GetDigest(), Effects: models.SuiEffects{Status: models.ExecutionStatus{Status: "success"}}}, nil
 }

@@ -1,0 +1,38 @@
+{
+  "recordedAt": "2026-10-03T04:32:06.538Z",
+  "url": "http://127.0.0.1:4189/",
+  "checks": {
+    "chineseLightEntryVerified": true,
+    "englishDarkEntryVerified": true,
+    "closeClearsObjective": true,
+    "nativeQuoteEnabled": false,
+    "mobileDialogBounds": {
+      "left": 19,
+      "right": 371,
+      "viewport": 390,
+      "width": 352
+    }
+  },
+  "screenshots": [
+    {
+      "path": "v020-message-okr-desktop-dark.jpg",
+      "sha256": "edb1f27b249e3299eeb92a6b5a197c668d63146c8629905657bdffbdde171ea5"
+    },
+    {
+      "path": "v020-message-okr-mobile-dark.jpg",
+      "sha256": "f0f9c319131db5db9d0a7d80cf9ad970e0765696af231ce61d53f4686d543784"
+    }
+  ],
+  "limits": {
+    "messageSourceUIVerified": false,
+    "installedNativeUIVerified": false,
+    "physicalMobileVerified": false,
+    "noChainWrites": true
+  },
+  "captureNote": "The browser backend returns JPEG captures. Mobile CSS viewport was 390x844, while its returned capture was a scaled 390x333 image. Responsive evidence is the measured DOM bounds, not physical-device visual acceptance.",
+  "temporaryViewportReset": true,
+  "preferencesRestored": {
+    "language": "zh",
+    "theme": "light"
+  }
+}

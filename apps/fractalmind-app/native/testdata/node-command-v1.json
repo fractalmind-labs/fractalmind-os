@@ -1,0 +1,30 @@
+{
+  "description": "Public test vector. SDK-generated raw Ed25519 command; Rust and Go independently verify. Fixed non-production test seed is defined in the unit tests.",
+  "deviceAddress": "0xa6ab0f1337bdb36bfd9733866e28f4aa0eec865a2bd8a4632f25456e5f02f0c7",
+  "publicKey": "ypOsFwUYcHHWe4PH/w7+gQjo7EUwV113JoeTM9vavnw=",
+  "bytes": "eyJkb21haW4iOiJmcmFjdGFsbWluZC5ub2RlLWNvbW1hbmQudjEiLCJ2ZXJzaW9uIjoiMSIsImNvbW1hbmRfaWQiOiJuYXRpdmUtZml4dHVyZSIsInNpZ25lciI6IjB4YTZhYjBmMTMzN2JkYjM2YmZkOTczMzg2NmUyOGY0YWEwZWVjODY1YTJiZDhhNDYzMmYyNTQ1NmU1ZjAyZjBjNyIsInRhcmdldCI6eyJvcmdhbml6YXRpb25faWQiOiIweDExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEiLCJub2RlX2lkIjoiMHgyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyIiwiYWdlbnRfaWQiOiJuYXRpdmUtZml4dHVyZSJ9LCJhY3Rpb24iOiJzdGF0dXMiLCJzY29wZSI6Im9ic2VydmF0aW9uIiwiY2FwYWJpbGl0eSI6eyJpZCI6IjB4MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMyIsInJldm9jYXRpb25fdmVyc2lvbiI6IjEifSwibm9uY2UiOiJuYXRpdmUtbm9uY2UiLCJpc3N1ZWRfYXRfbXMiOjE3MDAwMDAwMDAwMDAsImV4cGlyZXNfYXRfbXMiOjE3MDAwMDAxMjAwMDAsImlkZW1wb3RlbmN5X2tleSI6Im5hdGl2ZS1maXh0dXJlIiwicGF5bG9hZF9oYXNoIjoiNDQxMzZmYTM1NWIzNjc4YTExNDZhZDE2ZjdlODY0OWU5NGZiNGZjMjFmZTc3ZTgzMTBjMDYwZjYxY2FhZmY4YSJ9",
+  "signature": "n9JdnATeCMVHII+lPj6sVXGrbzc8yZ5rgDw79Ng9/RkziLseEcOFyOpC4WjOt+lBUPbA4n59TJwS81+jIVTTAA==",
+  "command": {
+    "version": "1",
+    "command_id": "native-fixture",
+    "signer": "0xa6ab0f1337bdb36bfd9733866e28f4aa0eec865a2bd8a4632f25456e5f02f0c7",
+    "target": {
+      "organization_id": "0x1111111111111111111111111111111111111111111111111111111111111111",
+      "node_id": "0x2222222222222222222222222222222222222222222222222222222222222222",
+      "agent_id": "native-fixture"
+    },
+    "action": "status",
+    "scope": "observation",
+    "capability": {
+      "id": "0x3333333333333333333333333333333333333333333333333333333333333333",
+      "revocation_version": "1"
+    },
+    "nonce": "native-nonce",
+    "issued_at_ms": 1700000000000,
+    "expires_at_ms": 1700000120000,
+    "idempotency_key": "native-fixture",
+    "payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "payload": {},
+    "signature": "ed25519:ca93ac1705187071d67b83c7ff0efe8108e8ec4530575d7726879333dbdabe7c:9fd25d9c04de08c547208fa53e3eac5571ab6f373cc99e6b803c3bf4d83dfd193388bb1e11c385c8ea42e168ceb7e94150f6c0e27e7d4c9c12f35fa32154d300"
+  }
+}

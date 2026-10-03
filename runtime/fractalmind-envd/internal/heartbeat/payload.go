@@ -9,13 +9,15 @@ import (
 
 // Payload is the heartbeat message sent via P2P (WireGuard).
 type Payload struct {
-	HostID    string         `json:"host_id"`
-	Hostname  string         `json:"hostname"`
-	Timestamp time.Time      `json:"timestamp"`
-	Agents    []agent.Agent  `json:"agents"`
-	System    SystemInfo     `json:"system"`
-	Uptime    int64          `json:"uptime_seconds"`
-	RelayLoad *RelayLoadInfo `json:"relay_load,omitempty"` // Only present on relay nodes
+	HostID          string           `json:"host_id"`
+	Hostname        string           `json:"hostname"`
+	Timestamp       time.Time        `json:"timestamp"`
+	Agents          []agent.Agent    `json:"agents"`
+	Discovery       *agent.Discovery `json:"discovery,omitempty"`
+	NativeDiscovery *agent.Discovery `json:"native_discovery,omitempty"`
+	System          SystemInfo       `json:"system"`
+	Uptime          int64            `json:"uptime_seconds"`
+	RelayLoad       *RelayLoadInfo   `json:"relay_load,omitempty"` // Only present on relay nodes
 }
 
 // SystemInfo contains basic system metrics.

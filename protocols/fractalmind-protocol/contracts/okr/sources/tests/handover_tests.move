@@ -1,0 +1,64 @@
+#[test_only]
+module fractalmind_okr::handover_tests {
+    use sui::object;
+    use sui::ed25519;
+    use std::string;
+    use fractalmind_okr::handover;
+
+    #[test]
+    fun original_short_review_windows_remain_valid() {
+        handover::assert_review_window_for_testing(1000000, 1000000, 1030000);
+        handover::assert_review_window_for_testing(1000000, 1059999, 1060000);
+    }
+    #[test]
+    fun review_can_exceed_old_minute_limit() {
+        handover::assert_review_window_for_testing(1000000, 1060000, 1060001);
+    }
+    #[test]
+    fun five_minute_review_accepts_exact_maximum_and_last_millisecond() {
+        handover::assert_review_window_for_testing(1000000, 1000000, 1300000);
+        handover::assert_review_window_for_testing(1000000, 1299999, 1300000);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9502, location = fractalmind_okr::handover)]
+    fun review_rejects_one_millisecond_above_maximum() {
+        handover::assert_review_window_for_testing(1000000, 1000000, 1300001);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9502, location = fractalmind_okr::handover)]
+    fun review_rejects_exact_expiry() {
+        handover::assert_review_window_for_testing(1000000, 1300000, 1300000);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9502, location = fractalmind_okr::handover)]
+    fun review_rejects_after_expiry() {
+        handover::assert_review_window_for_testing(1000000, 1300001, 1300000);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9502, location = fractalmind_okr::handover)]
+    fun review_rejects_future_observation() {
+        handover::assert_review_window_for_testing(1000000, 999999, 1300000);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9502, location = fractalmind_okr::handover)]
+    fun review_rejects_zero_length_without_underflow() {
+        handover::assert_review_window_for_testing(1000000, 1000000, 1000000);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9502, location = fractalmind_okr::handover)]
+    fun review_rejects_negative_length_without_underflow() {
+        handover::assert_review_window_for_testing(1000000, 1000000, 999999);
+    }
+    #[test]
+    fun independent_go_sdk_bcs_and_host_signature_vector() {
+        let p = handover::proposal(object::id_from_address(@0x6666666666666666666666666666666666666666666666666666666666666666), object::id_from_address(@0x7777777777777777777777777777777777777777777777777777777777777777), 1, 1, 1,
+            x"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", x"23ff5a9204bd4625deb00c95ab445ba3b5a49dba9c378e4be22532c52eedef8d", string::utf8(b"TOOL_CALLS"), 10, 3, 1700000060000, 1700000030000, x"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        assert!(handover::proposal_hash(&p) == x"767c488a33975ccb7fd1586d65b3636e8d8809006b5c36693a89c26f76909fb4", 0);
+        let a = handover::acceptance(object::id_from_address(@0x5555555555555555555555555555555555555555555555555555555555555555), object::id_from_address(@0x2222222222222222222222222222222222222222222222222222222222222222), object::id_from_address(@0x8888888888888888888888888888888888888888888888888888888888888888), object::id_from_address(@0x9999999999999999999999999999999999999999999999999999999999999999),
+            object::id_from_address(@0x4444444444444444444444444444444444444444444444444444444444444444), object::id_from_address(@0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa), @0x6c889013fb165a3a991a62d706af2435d3145a2655347074db6fc94b0eb97ad3, string::utf8(b"native-dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"),
+            handover::proposal_hash(&p), 2, 1700000000000);
+        let bytes = handover::acceptance_bytes(&a);
+        assert!(bytes == x"6672616374616c6d696e642e68616e646f7665722d616363657074616e63652e76310155555555555555555555555555555555555555555555555555555555555555552222222222222222222222222222222222222222222222222222222222222222888888888888888888888888888888888888888888888888888888888888888899999999999999999999999999999999999999999999999999999999999999994444444444444444444444444444444444444444444444444444444444444444aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa6c889013fb165a3a991a62d706af2435d3145a2655347074db6fc94b0eb97ad3476e61746976652d6464646464646464646464646464646464646464646464646464646464646464646464646464646464646464646464646464646464646464646464646464646420767c488a33975ccb7fd1586d65b3636e8d8809006b5c36693a89c26f76909fb402000000000000000068e5cf8b010000", 1);
+        assert!(ed25519::ed25519_verify(&x"a1b542c35c144f1b40f4d75aa812fe6331f2bf64078282e4518594f00a9eebfdbfc42be6bce2e6a74cfc86a976aa436205f013d8486922401cb7861a04466209", &x"fd1724385aa0c75b64fb78cd602fa1d991fdebf76b13c58ed702eac835e9f618", &bytes), 2);
+    }
+}

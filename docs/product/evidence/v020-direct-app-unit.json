@@ -1,0 +1,55 @@
+{
+  "recordedAt": "2026-10-02T23:04:31.815599+00:00",
+  "baselineCommit": "5574a50",
+  "checkedWorkingTree": true,
+  "sdk": {
+    "testsPassed": 152,
+    "buildPassed": true,
+    "typecheckPassed": true
+  },
+  "app": {
+    "testsPassed": 162,
+    "buildPassed": true,
+    "nativeScriptStrictTypesPassed": true
+  },
+  "logs": {
+    "sdkTests": {
+      "sha256": "116d664e9eb475453e13f5f986d43d960e5dcd41b654a61d2ba0c0548a7ea95f",
+      "bytes": 13469
+    },
+    "sdkBuild": {
+      "sha256": "dcd4658fbc5af48be5fec75f18c6bbf16ab306e69f58156aa82336298392c2b0",
+      "bytes": 73
+    },
+    "sdkTypecheck": {
+      "sha256": "d03b6f91caee853e3dcd0fd8a44660e3e88cee7f8eca3adc212209c6666eccd1",
+      "bytes": 83
+    },
+    "appTests": {
+      "sha256": "b60311325481a7e6036c312aa19d608c6746901e6ab1684cbfc6651a7c718957",
+      "bytes": 17548
+    },
+    "appBuild": {
+      "sha256": "b22fa21160957564d309c5cde2973cda5ffe4cde22e41fb0ac49dc6ea11d1e0c",
+      "bytes": 4023
+    },
+    "harnessTypes": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  },
+  "limits": {
+    "liveControllerProof": "R16 precedes the later durable-marker source guard, approval-only device refinement and request-boundary UI helper; final unit/build evidence covers those changes.",
+    "nativeBridge": "OS vault through isolated subprocess",
+    "hostKeys": "memory provider",
+    "technicalJournal": "memory",
+    "installedUIVerified": false,
+    "generalModelConversationVerified": false,
+    "continuousAutonomyVerified": false,
+    "cloudHostVerified": false,
+    "phoneJourneyVerified": false,
+    "cacheWipeAndRestartVerified": false,
+    "mainUpgradeVerified": false,
+    "moveAndRustRetestedThisIncrement": false
+  }
+}

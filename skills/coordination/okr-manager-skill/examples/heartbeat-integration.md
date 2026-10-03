@@ -2,6 +2,10 @@
 
 How to wire OKR audits into your agent's heartbeat loop.
 
+For a Sui organization, use [chain projection mode](sui-projection.md). The checklist and flow below describe file-only operation. In chain mode, replace “mark ACHIEVED” with “request human acceptance, then refresh the confirmed chain result”; local status updates are unsubmitted observations or proposals.
+
+Include current OKR/contract version, KR index, sampling time, measured value or unknown reason, Run/evidence IDs, next action, blocker start time and confirmed spent/pending budget. No fresh sample means current progress is unknown. After a pause, replan or reconnect, re-read the chain before continuing. Report changes and actionable blockers without signing or granting new permissions from the heartbeat file.
+
 ## Setup
 
 ### 1. Reference the Skill in Your Agent Config

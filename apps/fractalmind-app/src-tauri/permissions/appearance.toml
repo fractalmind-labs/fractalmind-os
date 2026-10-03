@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "app-appearance"
+description = "Set native system-bar appearance to light or dark for the bundled main App. No credentials, signing, paths or arbitrary native methods."
+commands.allow = ["fm_app_appearance"]

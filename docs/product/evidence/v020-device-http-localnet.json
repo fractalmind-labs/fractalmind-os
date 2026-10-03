@@ -1,0 +1,183 @@
+{
+  "recordedAt": "2026-10-02T05:23:14.225Z",
+  "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+  "profile": {
+    "network": "localnet",
+    "rpcUrl": "http://127.0.0.1:29000",
+    "packageId": "0x2ef39db88cffefa9c16dcaf6593032ccd6ac0e79acfd22e30fc10d4b4c7a45e5",
+    "registryId": "0xfdf5ad498229c22b1652cae940c8803e9bc8de20ead4fbc049c514198e123220",
+    "humanId": "0x316b2c743b6a2d49c0c1ff4852fdd00cae4fa038ba81f8aef979df6dfbd197e6",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "organizationId": "0xbdb441fead6b80c0165a123354a3f1bfe24547c0f7687f79b0f490cf00e3fb1f",
+  "grantId": "0x845aff1681d473d38a9dfee3246360eb4810f712884c73b8aa066729a23af1ec",
+  "checks": [
+    "exact absent Host index reconstructs as empty",
+    "production verifier proves fresh device/organization management authority; public binding is not online evidence",
+    "code is released only after exact receipt objects are visible and match invitation proof material",
+    "production CLI pipeline confirms organization and fees, signs once with generated Go Host keys, persists original digest, recovers lost receipt and supports public query without keys; OS/TTY/cloud not verified",
+    "redemption consumes the invitation; reconstruction finds membership and finite observation authority, not execution authority",
+    "App production read client proves native-held fixture device key; Go verifies current grant; unsigned/token reads denied and Coordinator-signed response returns actual Host heartbeat",
+    "membership revocation remains chain-owned and visible; consumed-invite revocation never substitutes for it",
+    "real loopback Coordinator/Host mutually authenticate using chain endpoint and keys; live heartbeat observed; App chain revocation rejects both Coordinator routing and worker heartbeat",
+    "new controller reconstructs chain state but cannot recover the invitation bearer secret",
+    "a lost unused code has an explicit on-chain revocation path",
+    "device revocation after challenge preparation is rejected by actual Coordinator HTTP authority check; no cached device login survives",
+    "management revocation between quote and submit rejects the App operation before a new broadcast"
+  ],
+  "transactions": [
+    {
+      "label": "create isolated fixture Human",
+      "digest": "AeK8yEpKQ6HGa3FPKPaontuSLthFTX3EgPntKH5YCeFJ",
+      "phase": "prepared"
+    },
+    {
+      "label": "create isolated fixture Human",
+      "requestId": "fixture:a7588ddb-6cdd-4c4c-8740-54497e9624d4",
+      "digest": "AeK8yEpKQ6HGa3FPKPaontuSLthFTX3EgPntKH5YCeFJ",
+      "status": "confirmed",
+      "actualGas": "17708548"
+    },
+    {
+      "label": "create isolated fixture organization",
+      "digest": "CLzDCjxSCLp496pQe24Nc5ZRfyJy6gr3deCZU1HDRtJN",
+      "phase": "prepared"
+    },
+    {
+      "label": "create isolated fixture organization",
+      "requestId": "fixture:feac7712-4583-4168-9b64-4e0a83e381d9",
+      "digest": "CLzDCjxSCLp496pQe24Nc5ZRfyJy6gr3deCZU1HDRtJN",
+      "status": "confirmed",
+      "actualGas": "15278416"
+    },
+    {
+      "label": "App registers Coordinator binding",
+      "requestId": "host:a12b1dc1-a3ec-4db7-81ae-be72cb493796",
+      "digest": "8bPFdYECrvzB24ggADKJ1oQ9nrqtXkwpHSaq3qsEgEe1",
+      "status": "confirmed",
+      "actualGas": "6825696"
+    },
+    {
+      "label": "App creates one-use invitation",
+      "requestId": "host:f11a73bc-c470-4b5f-a23f-da6d77ef4d95",
+      "digest": "FSyP88jwnhgsZBMWmYmhUBffEFTC9Ewmygq9D3VDKpb5",
+      "status": "confirmed",
+      "actualGas": "4963392"
+    },
+    {
+      "label": "Go envd CLI redeems App invitation; injected response loss recovered by original query",
+      "requestId": "go-envd-cli-fixture",
+      "digest": "Gn2zV9CRGX6HndbpssJHeMJf5F1jZ6bUqg8sAP74J76",
+      "status": "confirmed",
+      "actualGas": "11450292"
+    },
+    {
+      "label": "App revokes Host membership",
+      "requestId": "host:92038ae8-3431-43f4-a86a-45df41223443",
+      "digest": "GdY3GjPFwTrCmg52kmaN6dKj6j3gbDC9mQqVaqBpWxJN",
+      "status": "confirmed",
+      "actualGas": "-592892"
+    },
+    {
+      "label": "App creates invitation for reload test",
+      "requestId": "host:09d0eb15-4dad-444b-85ad-85d09262bd60",
+      "digest": "7viWmUHXy2xR1MtZVYqNR2Xvu6adsaP5zGwdMeCjCuPv",
+      "status": "confirmed",
+      "actualGas": "4968256"
+    },
+    {
+      "label": "App revokes unrecoverable unused invitation",
+      "requestId": "host:f50814a3-29f7-47ad-bbc0-27e94e4129e4",
+      "digest": "8G5fWqqWXZWVMA3CyD5hWp7VsJ9Yd1JeckgyKNGRGb6M",
+      "status": "confirmed",
+      "actualGas": "1472028"
+    },
+    {
+      "label": "fixture explicitly adds independent root management device",
+      "digest": "GsfJ6oEWDBXQvzP9Yits6d2z6JpCqXmb8SQ3uA4fTS3A",
+      "phase": "prepared"
+    },
+    {
+      "label": "fixture explicitly adds independent root management device",
+      "requestId": "fixture:03b85e05-ad5e-4d28-97ae-ebab6efdffc6",
+      "digest": "GsfJ6oEWDBXQvzP9Yits6d2z6JpCqXmb8SQ3uA4fTS3A",
+      "status": "confirmed",
+      "actualGas": "7839568"
+    },
+    {
+      "label": "independent root fixture revokes managing device",
+      "digest": "BiE3g2VjvJeax69tPWmqcTtEPsKSJnh7bR1z7YimHYrX",
+      "phase": "prepared"
+    },
+    {
+      "label": "independent root fixture revokes managing device",
+      "requestId": "fixture:4da4df7c-b3ed-41ee-b486-edf6ceba467f",
+      "digest": "BiE3g2VjvJeax69tPWmqcTtEPsKSJnh7bR1z7YimHYrX",
+      "status": "confirmed",
+      "actualGas": "1469248"
+    }
+  ],
+  "envdCli": {
+    "initial": {
+      "state": "unknown",
+      "digest": "Gn2zV9CRGX6HndbpssJHeMJf5F1jZ6bUqg8sAP74J76"
+    },
+    "result": {
+      "state": "confirmed",
+      "digest": "Gn2zV9CRGX6HndbpssJHeMJf5F1jZ6bUqg8sAP74J76",
+      "actual_fee_mist": "11450292",
+      "membership": {
+        "organization_id": "0xbdb441fead6b80c0165a123354a3f1bfe24547c0f7687f79b0f490cf00e3fb1f",
+        "invite_id": "0x6a5765ee8ff14f3ae9ad210d371b999490d49f66ac31f51da9e4529880e0db22",
+        "membership_id": "0xb1aa7f54fd0e499103ddef325409c74b95c96dbbda47f5b6ac75fe5eae8c08c6",
+        "host_address": "0x9a785c8e4d814be1b2ba6a08596e17758b54ea67ab13182d9aa14795320438bb",
+        "coordinator_binding": "0x09538db246c9d6f7c68a6fd8ec39461dda030e7a3736be21dba49da0b64aa52e",
+        "observation_capability": "0x57dba4766e19d6d875d74b014c02a9e26983fd8a2c60cd8bf0896326122bdc9b",
+        "expires_at_ms": 1793510591174,
+        "revoked": false,
+        "current_membership": true
+      }
+    },
+    "broadcasts": 1,
+    "public_query_without_keys": true,
+    "real_disk_journal": true,
+    "hostAddress": "0x9a785c8e4d814be1b2ba6a08596e17758b54ea67ab13182d9aa14795320438bb",
+    "journalRoot": "/tmp/fractalmind-device-http-localnet-02.json.journal"
+  },
+  "envdConnection": {
+    "chain_endpoint_used": true,
+    "mutual_authentication": true,
+    "heartbeat_sent": true,
+    "revoked_pointer_rejected": true,
+    "worker_revoked_heartbeat_rejected": true,
+    "coordinator_revoked_routing_rejected": true,
+    "generated_memory_keys": true,
+    "loopback_only": true
+  },
+  "deviceHttp": {
+    "unsignedRejected": true,
+    "bearerRejected": true,
+    "actualAppDeviceProofAndSignedResponse": true,
+    "coordinatorObservedHost": "0x9a785c8e4d814be1b2ba6a08596e17758b54ea67ab13182d9aa14795320438bb",
+    "observedAt": "2026-10-01T22:23:11.735973-07:00",
+    "hostSignatureVerified": false,
+    "appDisplaySchemaVerified": true,
+    "deviceRevokedAfterChallengeRejected": true
+  },
+  "limits": {
+    "generatedFixtureKeysOnly": true,
+    "injectedNativeTransport": true,
+    "memoryTechnicalJournal": true,
+    "appTechnicalJournal": "injected memory journal",
+    "envdTechnicalJournal": "real disk journal",
+    "envdRecovery": "new runner in the same test process",
+    "installedAppVerified": false,
+    "nativeStoreVerified": false,
+    "envdJoinCliVerified": false,
+    "envdJoinCliInjectedKeysVerified": true,
+    "envdJoinQuoteVerified": false,
+    "loopbackChainConnectionVerified": true,
+    "cloudHostVerified": false,
+    "invitationSecretsIncluded": false
+  }
+}

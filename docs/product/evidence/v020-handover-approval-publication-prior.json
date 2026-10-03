@@ -1,0 +1,8 @@
+{
+  "requestId": "handover-approval-publish",
+  "digest": "Dvbaj126h8Nivh3JCR3hwLKQ7yi3D8S5oLUWQNr1nXER",
+  "phase": "confirmed response reached metadata parsing; response not saved",
+  "query": "original transaction notFound after localnet pruning",
+  "actualGas": null,
+  "newPublicationIsIndependentFixture": true
+}

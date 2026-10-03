@@ -1,0 +1,23 @@
+{
+  "recordedAt": "2026-10-02T19:47:36.788843+00:00",
+  "chainEndpoint": "http://127.0.0.1:29000",
+  "faucet": "http://127.0.0.1:29123",
+  "network": "localnet",
+  "modules": 21,
+  "rawBytecodeBytes": 108033,
+  "packageObjectBytes": 116714,
+  "maxPackageObjectBytes": 102400,
+  "publishBroadcast": false,
+  "rejectionPhase": "SelfPayTransactionManager.prepare / transaction simulation",
+  "error": {
+    "kind": "SizeError",
+    "message": "MovePackageTooBig { object_size: 116714, max_object_size: 102400 } in command 0"
+  },
+  "requiredNextAction": "Split the interaction extension while preserving the existing core ABI and authority checks; validate both packages under the unchanged size limit.",
+  "limits": {
+    "packagePublished": false,
+    "directNativeLiveBranchExecuted": false,
+    "existingOlderPackageEvidenceDoesNotCoverNewModule": true,
+    "privateKeysInReport": false
+  }
+}

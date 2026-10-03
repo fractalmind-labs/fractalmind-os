@@ -1,0 +1,704 @@
+{
+  "format": 1,
+  "baseline": "fff6366",
+  "scope": "ARM64 installed Android emulator; native system bars, actual UI onboarding and original Human/organization reconstruction; incomplete #40",
+  "reports": {
+    "native": {
+      "format": 1,
+      "scope": "Installed ARM64 Android App native IPC and credential persistence; offline signatures only",
+      "app": "org.fractalmind.desktop",
+      "avd": "fm-v020-android-r1",
+      "serial": "emulator-5580",
+      "broadcasts": 0,
+      "checks": [
+        "Bundled native welcome, secure context and mobile viewport",
+        "Missing credential fails without initialization",
+        "Android credential generation, verified public keys and idempotent initialization",
+        "Native profile boundary",
+        "Native bounded possession signature verified by production client",
+        "Native programmable transaction signature verified offline",
+        "Wrong transaction sender rejected natively",
+        "Arbitrary command bytes rejected natively",
+        "Independent device/recovery credentials and wrapped onboarding material",
+        "Read-only onboarding reload and duplicate creation rejection",
+        "Native recovery transaction signature verified offline",
+        "Native appearance rejects values outside light/dark",
+        "Actual light App controls set dark system-bar icons",
+        "Actual dark App controls set light system-bar icons",
+        "Actual native welcome language and dark theme controls",
+        "Cold App process restart preserves original device and recovery keys",
+        "Reloaded Android credential signs a new bounded challenge",
+        "Public language/appearance preferences survive process restart",
+        "Cold-start system bars follow the original App appearance"
+      ],
+      "initialPid": "3897",
+      "initialPage": {
+        "origin": "http://tauri.localhost",
+        "secure": true,
+        "native": true,
+        "width": 411,
+        "scrollWidth": 411,
+        "text": "FractalMind\nOpen · Verifiable · Permissionless\nStart with an organization of one\n\nCreate your own organization, deliver verifiable goals with Agents, then grow into larger teams and the open network.\n\nThrough fractal, self-similar agent organizations, toward an ASI that no one owns.\n\nDevelopment Alpha · private keys stay on devices; persistent product state lives on Sui.\n\nLanguage\n简体中文\nEnglish\nAppearance\nSystem\nLight\nDark\nWelcome to FractalMind\n\nChoose how to start. Nothing private is shown while signed out.\n\nCreate my identity\nA new Human identity and personal organization, starting empty\n›\nI already have an identity\nSign in on this device, approved by one you already use\n›\nRecover with a code\nIf every device is lost, one code recovers your identity\n›\n\nThere is no FractalMind cloud account: identity, device grants and organizations live on Sui; private keys stay on your devices.\n\nDevelopment preview: read-only chain browser",
+        "storageKeys": ["fractalmind.app.appearance.v1"]
+      },
+      "profiles": [
+        "test-android-fd824f01-2ee",
+        "test-android-fd824f01-2ee-onboarding"
+      ],
+      "device": {
+        "format": 1,
+        "profile": "test-android-fd824f01-2ee",
+        "address": "0xf0dbba96967ab43eb8b8930b933393a633f7eccd0c56e082e84270009cc6d767",
+        "signingPublicKey": "9HVM09AlOKI3JCqzEhs503yx7JHeTD4ZCrxP6dhmDZI=",
+        "encryptionPublicKey": "5lQ/8Ifyxc8zZED6rFm0z81AvwXV4TAZedG/pEX7IyQ="
+      },
+      "onboarding": {
+        "format": 1,
+        "network": "localnet",
+        "device": {
+          "format": 1,
+          "profile": "test-android-fd824f01-2ee-onboarding",
+          "address": "0x7a20fbe1f7af3404e32800b260818320c6d7944877b499946fe10b26e1dbd15c",
+          "signingPublicKey": "yb6B0mJeCq77ec7Tg9uj2Dsio0rZdbUFoYbaw5fS0yM=",
+          "encryptionPublicKey": "g+IEn1eZxclHw01mEObZ4FhtlnMG1DDd4BwihAnfCQE="
+        },
+        "recovery": {
+          "format": 1,
+          "profile": "test-android-fd824f01-2ee-onboarding",
+          "address": "0xcef9f32bd1e2c52fe82954d586e5894d53c1d3ea89ef78f8761713ba504bd5d5",
+          "signingPublicKey": "OdnhwXKzOJTN2Ga5LAC23E5pUaotGgBANZTftS9k9ic=",
+          "encryptionPublicKey": "izeWuU2pFYmNvm82qiMbJql6kvsLnKW98hf5HZJDQGg="
+        },
+        "encryptedBackup": "Rk1XMQ7prAqyhYMXGUoBADnOsHFabVIuG3bWj19BqJxyGRQFP+gtJC1OYCpGIlpP5XVQphz1wvnJAoMPJqexuO7A0J1GTUUxkcUlVRT7cRkiZtn7kO+kUwmdYEgKlOXo3fvZ/q7f5l92EJCHugtmXbx+Yj1PVpUho0zv1iIgCUPepFqJ/9D7h/MRs2QGb98P/uyfCWuA2mll12w+iv7zELH/H0y0bHs/n94JZ2jsBFxl66JuB4rPcguWeDNbeoz13iIvdcmkYLwfD7aQT6rQVdgIF927UI27shNX0/Yhbff0f6L74/TKLPlpFOCSLQuw3K48CTh8CC+h0er1Jy7DKuwR63u3DBvrulXgg945oI1RXG9qiYxKsYqE",
+        "encryptedDeviceKeys": "Rk1XMVWbU7W7IFbASs/8i1P2I+dImKk/XrXnzlifIbGEKFA6j0ve94MSK7SkVJQSgAxYcS4tGJBlaGmP4XE74Y4Bj3hGTUUxGRdBTkjTutjq9LUGW3LRedxIOKccdZlp4n2orBKhAzDTcy1dDTRenb4CuYLjhKLs5nORiWKl6Oy1qOF/HvbwBfmktmXAHeh1VTG9e944LMvJcHvKCGazQV3DVlkW1Y0BjFqpUYzK/Rm1fMG9kDdQ9ZypAEv2W86H4Bw58t8GjDJpgo8dE3Za9eHjMNIdJUlPQnW5mLWpNG1Vwm9WVngowKLuOthKa/c7zS2Tnc6PnEz61F7PzwyUJA6n/77zXFCFSdpAP60oEh++/OsMraUAx7n7"
+      },
+      "nativeBarsLight": {
+        "lightStatus": true,
+        "lightNavigation": true
+      },
+      "nativeBarsDark": {
+        "lightStatus": false,
+        "lightNavigation": false
+      },
+      "appearanceBeforeRestart": {
+        "language": "en",
+        "theme": "dark"
+      },
+      "backgroundBeforeStopMs": 6000,
+      "restartedPid": "4069",
+      "nativeBarsRestart": {
+        "lightStatus": false,
+        "lightNavigation": false
+      },
+      "completed": true
+    },
+    "nativePrior": {
+      "format": 1,
+      "scope": "Installed ARM64 Android App native IPC and credential persistence; offline signatures only",
+      "app": "org.fractalmind.desktop",
+      "avd": "fm-v020-android-r1",
+      "serial": "emulator-5580",
+      "broadcasts": 0,
+      "checks": [
+        "Bundled native welcome, secure context and mobile viewport",
+        "Missing credential fails without initialization",
+        "Android credential generation, verified public keys and idempotent initialization",
+        "Native profile boundary",
+        "Native bounded possession signature verified by production client",
+        "Native programmable transaction signature verified offline",
+        "Wrong transaction sender rejected natively",
+        "Arbitrary command bytes rejected natively",
+        "Independent device/recovery credentials and wrapped onboarding material",
+        "Read-only onboarding reload and duplicate creation rejection",
+        "Native recovery transaction signature verified offline",
+        "Native appearance rejects values outside light/dark",
+        "Actual light App controls set dark system-bar icons",
+        "Actual dark App controls set light system-bar icons",
+        "Actual native welcome language and dark theme controls",
+        "Cold App process restart preserves original device and recovery keys",
+        "Reloaded Android credential signs a new bounded challenge",
+        "Public language/appearance preferences survive process restart",
+        "Cold-start system bars follow the original App appearance"
+      ],
+      "initialPid": "3607",
+      "initialPage": {
+        "origin": "http://tauri.localhost",
+        "secure": true,
+        "native": true,
+        "width": 411,
+        "scrollWidth": 411,
+        "text": "FractalMind\n开放 · 可验证 · 无需许可\n从一个人的组织开始\n\n建立自己的组织，和 Agent 一起完成可验证的目标，再逐步加入更大的团队与开放网络。\n\n我们通过分形、自相似的 Agent 组织，走向一个没有人能独占的 ASI。\n\n开发 Alpha · 私钥留在设备，持久产品状态保存在 Sui。\n\n语言\n简体中文\nEnglish\n外观\n跟随系统\n白天\n黑夜\n欢迎使用 FractalMind\n\n选择开始方式。未登录时不显示任何组织私有内容。\n\n创建我的身份\n新建 Human 身份和个人组织，从空组织开始\n›\n我已有身份\n在这台设备上登录，由已有设备批准\n›\n使用恢复码找回\n所有设备都丢失时，用一份恢复码找回身份\n›\n\n没有 FractalMind 云账号：身份、设备授权和组织记录在 Sui 上，私钥留在你的设备里。\n\n开发预览：只读链上浏览",
+        "storageKeys": ["fractalmind.app.appearance.v1"]
+      },
+      "profiles": [
+        "test-android-14b5794f-f7f",
+        "test-android-14b5794f-f7f-onboarding"
+      ],
+      "device": {
+        "format": 1,
+        "profile": "test-android-14b5794f-f7f",
+        "address": "0x3d42a8085907390f6e5326e88f2da30d0c0b614e9b94ab5914a55204520f2241",
+        "signingPublicKey": "t9q1ZYeY8N9y0At/yXAHsOMzmjQn6rYvCKoArW+xRgM=",
+        "encryptionPublicKey": "7R1XJ/JBUQ4K2HT3hB/v8Cc3APziB8MQKh99FX0sgXA="
+      },
+      "onboarding": {
+        "format": 1,
+        "network": "localnet",
+        "device": {
+          "format": 1,
+          "profile": "test-android-14b5794f-f7f-onboarding",
+          "address": "0x10a7a7ac6432de77a99e5f2d615b9a2cc55085eb9af267ca4a28f27292c14d01",
+          "signingPublicKey": "YUPm+sAC5CyVhRqJwW2MBPK9gHKtwJL/DJ42OOd65Wo=",
+          "encryptionPublicKey": "c1enq2/OAfSGB/By9nogoU1zZHdMBP8fuMkBxymUGBI="
+        },
+        "recovery": {
+          "format": 1,
+          "profile": "test-android-14b5794f-f7f-onboarding",
+          "address": "0x8f6383404d36280266d1223dd534eb9d153e6d38f80ff54ecef91415bd42d7ab",
+          "signingPublicKey": "mWQV9cYd5oAt/ZMI0E1ap5wuo2shRTFhczZa20ew7Ec=",
+          "encryptionPublicKey": "wxEQwCalniBcsYfkN1ZmTgkN5D1vDIaLy0bJo/Lqolk="
+        },
+        "encryptedBackup": "Rk1XMQzA3e8GtoW1oilqrU018skYrN9VsdT4BQkw3BOuS7MojBDL/UVFmH3BLWcgtBC3SP21JyPgfXUdAGGScW5roUZGTUUxme412OOg+k8ioseGSMFkgZ/jVN1Lt8P4KK1XsOgFP8OcmoMbw44WNxDTpGufZS3azlRvkQknKAw48i2BY8GnYZs8uZ8+AWyn9xuLeFZXknm3akBgJmWbKq2Uc//UPHFVbpOX0UMYQiwl/Q+QFSwQFZ3lLmxWIl2i7Q4VppGI63Q3tFWnqvjc6Dpaw0bG9kcYSjQwiE7WirbWZ53oWL7wxNNeDXQPQCc4l1CGl0Fk/UVOdh1XazbiF/ourL/Nr0cljljAn9nGtRNnZLQzVHVmShld",
+        "encryptedDeviceKeys": "Rk1XMRVwqI6ZSxUz7koVV6UBg3xY1K6JwLys4Kff88OtPLBWLY3fisXDFpMgWvliCM9I5K3FU++PVP/UYKdtFSJlvdtGTUUxsNQbwiV+jSAiG+C6CRuZGGfht0v5HfxmhXkRxLw0qlsIGqxpfms6gbSWOZjfzppYTr1ClDJk0O2XsHJKlULHBsMr7csDO4DSpsj7x2lxOlMklhmSJFjexnS+8hXb3IQ4P6jYwQPtXY9uIeXXJbnD4z+V+rNsH4qlSF4gFLIi1Fc9qfZ75T2PvzzI/TITUv7UDYpEhPdsQfC6uZ1ZuYNrR5kTOuz7Rm8dM1qFo9qB84DVh/5ncMWtgajRX9IV6norzSasOpMSo6Qy8RC0ZU1roaxe"
+      },
+      "nativeBarsLight": {
+        "lightStatus": true,
+        "lightNavigation": true
+      },
+      "nativeBarsDark": {
+        "lightStatus": false,
+        "lightNavigation": false
+      },
+      "appearanceBeforeRestart": {
+        "language": "en",
+        "theme": "dark"
+      },
+      "backgroundBeforeStopMs": 6000,
+      "restartedPid": "3897",
+      "nativeBarsRestart": {
+        "lightStatus": false,
+        "lightNavigation": false
+      },
+      "completed": true
+    },
+    "install": {
+      "apkBytes": 169291395,
+      "apkSha256": "741f181d1095ef2ccababeeac0acca89b54e255002953bf35691256b52d77cf9",
+      "signature": "Verifies\nVerified using v1 scheme (JAR signing): false\nVerified using v2 scheme (APK Signature Scheme v2): true\nVerified using v3 scheme (APK Signature Scheme v3): false\nVerified using v3.1 scheme (APK Signature Scheme v3.1): false\nVerified using v4 scheme (APK Signature Scheme v4): false\nVerified for SourceStamp: false\nNumber of signers: 1",
+      "install": "Performing Streamed Install\nSuccess",
+      "start": "Starting: Intent { cmp=org.fractalmind.desktop/.MainActivity }\nStatus: ok\nLaunchState: COLD\nActivity: org.fractalmind.desktop/.MainActivity\nTotalTime: 1666\nWaitTime: 1669\nComplete"
+    },
+    "installPrior": {
+      "apkBytes": 169291395,
+      "apkSha256": "62d8dc37ac7c4895a3e9841e99ecaf3391f5d69baaf317fb503bff39e63f08d5",
+      "signature": "Verifies\nVerified using v1 scheme (JAR signing): false\nVerified using v2 scheme (APK Signature Scheme v2): true\nVerified using v3 scheme (APK Signature Scheme v3): false\nVerified using v3.1 scheme (APK Signature Scheme v3.1): false\nVerified using v4 scheme (APK Signature Scheme v4): false\nVerified for SourceStamp: false\nNumber of signers: 1",
+      "install": "Performing Streamed Install\nSuccess",
+      "start": "Starting: Intent { cmp=org.fractalmind.desktop/.MainActivity }\nStatus: ok\nLaunchState: COLD\nActivity: org.fractalmind.desktop/.MainActivity\nTotalTime: 1164\nWaitTime: 1175\nComplete"
+    },
+    "initialUiAttempt": {
+      "format": 1,
+      "scope": "Actual installed Android debug App UI; original operations never retried",
+      "pid": "4069",
+      "checks": [
+        "Actual native Create Identity UI opens",
+        "Installed WebView reads localnet deployment and creates native device/recovery material",
+        "Explicit saved-code control removes recovery code from DOM"
+      ],
+      "transactions": [],
+      "faucetRequests": [],
+      "profile": "android-ui-9305be0b",
+      "deployment": {
+        "network": "localnet",
+        "rpcUrl": "http://127.0.0.1:29000",
+        "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+        "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+        "okrPackageId": "0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163",
+        "directPackageId": "0x70e43f069c7012b0e0ec2fa40792c64b0697ab0dff35184db0426a6402c8aafb",
+        "registryId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32"
+      },
+      "firstPreparation": {
+        "recoveryVisible": true,
+        "buttons": [
+          {
+            "text": "Check balance & original transaction",
+            "disabled": true
+          },
+          {
+            "text": "Estimate Human creation fee",
+            "disabled": true
+          }
+        ]
+      },
+      "addresses": [
+        "0x3ab3986a8812259e8a79029c30c47ab48386208a9b6387d4b8a44e534453fd9c",
+        "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e"
+      ],
+      "zeroFundsError": "Insufficient funds. Fund the addresses above and recheck; no automatic submission.",
+      "completed": false,
+      "failure": "The input did not match the regular expression /insufficient_balance/. Input:\n\n'Insufficient funds. Fund the addresses above and recheck; no automatic submission.'\n"
+    },
+    "continuedUiAttempt": {
+      "format": 1,
+      "scope": "Actual installed Android debug App UI; original operations never retried",
+      "pid": "4069",
+      "checks": [
+        "Actual native Create Identity UI opens",
+        "Installed WebView reads localnet deployment and creates native device/recovery material",
+        "Explicit saved-code control removes recovery code from DOM",
+        "Unfunded native UI refuses a fee quote and never submits",
+        "Local faucet funds only generated test recovery/device addresses",
+        "Actual Human creation quote shown before signing",
+        "Explicit UI submit signs natively and confirms original Human on chain",
+        "Separate organization quote shown before device signing"
+      ],
+      "transactions": [
+        {
+          "stage": "identity",
+          "digest": "C4MFncbXXmyvYaaHbiRpLWxbKHc5TX5vTBxUxL85jBBF",
+          "confirmationRequested": true
+        },
+        {
+          "stage": "organization",
+          "digest": "BG61MjicVGYKZghzrjeiywdcpesaD1iCd23eYu75YowJ",
+          "confirmationRequested": true
+        }
+      ],
+      "faucetRequests": [
+        {
+          "recipient": "0x3ab3986a8812259e8a79029c30c47ab48386208a9b6387d4b8a44e534453fd9c",
+          "status": 200,
+          "result": {
+            "status": "Success",
+            "coins_sent": [
+              {
+                "amount": 200000000000,
+                "id": "0x1583eda09fdd9244872231efc57f9decbbda7214abb434653916f13ce0771d47",
+                "transferTxDigest": "CbTcSXzvMVxhUeLuQz5DBoLf1DQVGqZAuuQPSJCqSEuj"
+              },
+              {
+                "amount": 200000000000,
+                "id": "0x2c925e071bc69eabb52cbe7392ee8c98dc0c0f9342ee6e7750caab54263bcde8",
+                "transferTxDigest": "CbTcSXzvMVxhUeLuQz5DBoLf1DQVGqZAuuQPSJCqSEuj"
+              },
+              {
+                "amount": 200000000000,
+                "id": "0xb701a61f7fa30a153c6fa8f2761cb6305957d8631f3d7cfa9e0301ff9bf699eb",
+                "transferTxDigest": "CbTcSXzvMVxhUeLuQz5DBoLf1DQVGqZAuuQPSJCqSEuj"
+              },
+              {
+                "amount": 200000000000,
+                "id": "0xbb195695c031f00df17574b98c8e52d3aa7792ad4a8c0e8e96b1797df2476331",
+                "transferTxDigest": "CbTcSXzvMVxhUeLuQz5DBoLf1DQVGqZAuuQPSJCqSEuj"
+              },
+              {
+                "amount": 200000000000,
+                "id": "0xc51a760bb30abff4c92aafa13b29483d7b28f7e4cdad069c0c4f580bb3f4c098",
+                "transferTxDigest": "CbTcSXzvMVxhUeLuQz5DBoLf1DQVGqZAuuQPSJCqSEuj"
+              }
+            ]
+          }
+        },
+        {
+          "recipient": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+          "status": 200,
+          "result": {
+            "status": "Success",
+            "coins_sent": [
+              {
+                "amount": 200000000000,
+                "id": "0x045246420c289dd9da51d33d34e05a0092847fa88cf55b718bd95ed9d66e5a94",
+                "transferTxDigest": "HyKDuMT6bot8CRcHM7ND5VWLwBVvuctmCi8hVDHN5ZqT"
+              },
+              {
+                "amount": 200000000000,
+                "id": "0x7ea3d29b266ab0c426cea0335481494b2a96f14f501cda9f87f37db9c2137851",
+                "transferTxDigest": "HyKDuMT6bot8CRcHM7ND5VWLwBVvuctmCi8hVDHN5ZqT"
+              },
+              {
+                "amount": 200000000000,
+                "id": "0xa60bfde72cc70d163801d744cd95bd2802ad113287be1d088318c68fcfedcce8",
+                "transferTxDigest": "HyKDuMT6bot8CRcHM7ND5VWLwBVvuctmCi8hVDHN5ZqT"
+              },
+              {
+                "amount": 200000000000,
+                "id": "0xc05c52e260b010ca917676c483c0aa06a6d6d2fc07f8bf0dbf2c82d3d824b1d2",
+                "transferTxDigest": "HyKDuMT6bot8CRcHM7ND5VWLwBVvuctmCi8hVDHN5ZqT"
+              },
+              {
+                "amount": 200000000000,
+                "id": "0xdeda9cf6024e415b6c5a350d58b685a615f5a0ba3339a09bb77eb039cdfa5328",
+                "transferTxDigest": "HyKDuMT6bot8CRcHM7ND5VWLwBVvuctmCi8hVDHN5ZqT"
+              }
+            ]
+          }
+        }
+      ],
+      "profile": "android-ui-9305be0b",
+      "deployment": {
+        "network": "localnet",
+        "rpcUrl": "http://127.0.0.1:29000",
+        "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+        "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+        "okrPackageId": "0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163",
+        "directPackageId": "0x70e43f069c7012b0e0ec2fa40792c64b0697ab0dff35184db0426a6402c8aafb",
+        "registryId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32"
+      },
+      "firstPreparation": {
+        "recoveryVisible": true,
+        "buttons": [
+          {
+            "text": "Check balance & original transaction",
+            "disabled": true
+          },
+          {
+            "text": "Estimate Human creation fee",
+            "disabled": true
+          }
+        ]
+      },
+      "addresses": [
+        "0x3ab3986a8812259e8a79029c30c47ab48386208a9b6387d4b8a44e534453fd9c",
+        "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e"
+      ],
+      "zeroFundsError": "Insufficient funds. Fund the addresses above and recheck; no automatic submission.",
+      "completed": false,
+      "resumedFrom": "/tmp/fm-android-installed-ui-r1.json.progress.json",
+      "humanId": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+      "failure": "Original organization not confirmed"
+    },
+    "originalUiObservation": {
+      "error": "Not completed. Check deployment, credential store and original transaction. Continue existing setup; no silent regeneration or replay.",
+      "outcome": "Confirmed on chainBG61MjicVGYKZghzrjeiywdcpesaD1iCd23eYu75YowJActual Gas: 0.014716016 SUIChecking queries the original and does not replay. A new attempt after failure is not connected yet.",
+      "busy": [
+        {
+          "text": "Check balance & original transaction",
+          "disabled": false
+        },
+        {
+          "text": "Estimate organization fee",
+          "disabled": true
+        }
+      ],
+      "connection": null
+    },
+    "originalLocationFailure": {
+      "scope": "Read original installed Android native credentials and chain location, zero broadcasts",
+      "error": {
+        "message": "invalid_provenance",
+        "stack": "Error: invalid_provenance\n    at ChainReadSession.organization (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src/chain.ts:215:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async Promise.all (index 0)\n    at async Promise.all (index 0)\n    at async ChainReadSession.human (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src/chain.ts:191:37)\n    at async IdentityCreation.locate (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src/onboarding.ts:228:18)\n    at async <anonymous> (/private/tmp/fm-android-ui-original-location-r1.mts:34:17)"
+      }
+    },
+    "originalWrongConfiguration": {
+      "humanId": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+      "organizations": [
+        {
+          "id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+          "org": {
+            "objectId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+            "type": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::Organization",
+            "name": "Android UI android-ui-9305be0b",
+            "description": "",
+            "admin": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+            "isActive": true,
+            "agentCount": "0",
+            "taskCount": "0",
+            "depth": "0",
+            "childOrgCount": "0",
+            "parentOrgId": null
+          },
+          "expected": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::organization::Organization",
+          "equal": false,
+          "idEqual": true
+        }
+      ],
+      "broadcasts": 0
+    },
+    "originalRecovery": {
+      "scope": "Installed Android deployment guard and read-only recovery of the same original Human/organization",
+      "profile": "android-ui-9305be0b",
+      "deployment": {
+        "network": "localnet",
+        "rpcUrl": "http://127.0.0.1:29000",
+        "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+        "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+        "okrPackageId": "0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163",
+        "directPackageId": "0x70e43f069c7012b0e0ec2fa40792c64b0697ab0dff35184db0426a6402c8aafb",
+        "registryId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32",
+        "originalPackageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+      },
+      "originalTransactions": [
+        {
+          "stage": "identity",
+          "digest": "C4MFncbXXmyvYaaHbiRpLWxbKHc5TX5vTBxUxL85jBBF",
+          "confirmationRequested": true
+        },
+        {
+          "stage": "organization",
+          "digest": "BG61MjicVGYKZghzrjeiywdcpesaD1iCd23eYu75YowJ",
+          "confirmationRequested": true
+        }
+      ],
+      "newBroadcasts": 0,
+      "checks": [
+        "Invalid upgraded deployment rejected with exact guidance before native onboarding keys are created",
+        "Correct deployment reloads the same native profile and confirms original Human/organization without key regeneration or transaction replay",
+        "Actual installed workbench displays the original chain-backed organization"
+      ],
+      "invalidProfile": "android-guard-8db131e3",
+      "guardMessage": "Deployment metadata does not match the chain type origins. Check Registry and original package IDs; an upgraded deployment needs originalPackageId. Existing identity and organization are retained; continue the original setup.",
+      "humanId": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+      "originalOutcome": "Outcome unknown; query originalBG61MjicVGYKZghzrjeiywdcpesaD1iCd23eYu75YowJChecking queries the original and does not replay. A new attempt after failure is not connected yet.",
+      "publicConnection": {
+        "network": "localnet",
+        "rpcUrl": "http://127.0.0.1:29000",
+        "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+        "originalPackageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10",
+        "okrPackageId": "0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163",
+        "directPackageId": "0x70e43f069c7012b0e0ec2fa40792c64b0697ab0dff35184db0426a6402c8aafb",
+        "registryId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32",
+        "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+        "humanId": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe"
+      },
+      "completed": true
+    },
+    "cacheClear": {
+      "scope": "Task emulator only; all App browser public connection/preferences, actual IndexedDB journal and CacheStorage cleared; native credentials retained",
+      "oldPid": "4409",
+      "before": {
+        "connection": {
+          "network": "localnet",
+          "rpcUrl": "http://127.0.0.1:29000",
+          "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+          "originalPackageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10",
+          "okrPackageId": "0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163",
+          "directPackageId": "0x70e43f069c7012b0e0ec2fa40792c64b0697ab0dff35184db0426a6402c8aafb",
+          "registryId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32",
+          "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+          "humanId": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe"
+        },
+        "keys": [
+          "fractalmind.app.public-connection.v1",
+          "fractalmind.app.onboarding-connection.v1",
+          "fractalmind.app.appearance.v1",
+          "fractalmind.app.device-connection.v1"
+        ],
+        "databases": ["fractalmind-transaction-journal-v1"]
+      },
+      "cleared": {
+        "localStorageKeys": [],
+        "databases": [],
+        "cacheNames": []
+      }
+    },
+    "cacheReconstruction": {
+      "scope": "Actual browser caches cleared and App cold-started; original public profile name/deployment explicitly reentered; reconstruct original Human/organization only",
+      "profile": "android-ui-9305be0b",
+      "deployment": {
+        "network": "localnet",
+        "rpcUrl": "http://127.0.0.1:29000",
+        "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+        "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+        "okrPackageId": "0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163",
+        "directPackageId": "0x70e43f069c7012b0e0ec2fa40792c64b0697ab0dff35184db0426a6402c8aafb",
+        "registryId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32",
+        "originalPackageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+      },
+      "originalTransactions": [
+        {
+          "stage": "identity",
+          "digest": "C4MFncbXXmyvYaaHbiRpLWxbKHc5TX5vTBxUxL85jBBF",
+          "confirmationRequested": true
+        },
+        {
+          "stage": "organization",
+          "digest": "BG61MjicVGYKZghzrjeiywdcpesaD1iCd23eYu75YowJ",
+          "confirmationRequested": true
+        }
+      ],
+      "newBroadcasts": 0,
+      "checks": [
+        "New App PID opens actual signed-out welcome after browser cache removal",
+        "Original native profile and current chain records reconstruct Human/organization with no cached transaction receipts, key regeneration or replay",
+        "Actual installed workbench displays the original chain-backed organization"
+      ],
+      "oldPid": "4409",
+      "newPid": "4602",
+      "humanId": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+      "journalReceiptsAbsent": true,
+      "publicConnection": {
+        "network": "localnet",
+        "rpcUrl": "http://127.0.0.1:29000",
+        "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+        "originalPackageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10",
+        "okrPackageId": "0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163",
+        "directPackageId": "0x70e43f069c7012b0e0ec2fa40792c64b0697ab0dff35184db0426a6402c8aafb",
+        "registryId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32",
+        "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+        "humanId": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe"
+      },
+      "completed": true
+    },
+    "independentOriginalRead": {
+      "scope": "Independent read-only original Human and organization provenance/previous transaction check",
+      "broadcasts": 0,
+      "humanId": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+      "organizations": [
+        {
+          "org": {
+            "objectId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+            "type": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::Organization",
+            "name": "Android UI android-ui-9305be0b",
+            "description": "",
+            "admin": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+            "isActive": true,
+            "agentCount": "0",
+            "taskCount": "0",
+            "depth": "0",
+            "childOrgCount": "0",
+            "parentOrgId": null
+          },
+          "expected": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::Organization",
+          "equal": true,
+          "previousTransaction": "BG61MjicVGYKZghzrjeiywdcpesaD1iCd23eYu75YowJ",
+          "unchanged": true
+        }
+      ],
+      "humanPreviousTransaction": "BG61MjicVGYKZghzrjeiywdcpesaD1iCd23eYu75YowJ"
+    },
+    "screenshots": {
+      "scope": "Actual installed Android workbench light/dark screenshots and system-bar flags",
+      "pid": "4602",
+      "screenshots": [
+        {
+          "theme": "light",
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/docs/product/evidence/v020-app-android-system-bars-light.png",
+          "lightStatus": true,
+          "lightNavigation": true
+        },
+        {
+          "theme": "dark",
+          "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/docs/product/evidence/v020-app-android-system-bars-dark.png",
+          "lightStatus": false,
+          "lightNavigation": false
+        }
+      ],
+      "viewport": {
+        "width": 411,
+        "height": 841,
+        "ratio": 2.625,
+        "screenWidth": 412,
+        "screenHeight": 915,
+        "lang": "en",
+        "theme": "dark"
+      }
+    },
+    "pause": {
+      "scope": "Pause task-only Android environment; retain original installed test App/profile for later original-result reconciliation",
+      "forceStop": {
+        "exitCode": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "preservedPackage": {
+        "exitCode": 0,
+        "stdout": "package:/data/app/~~R4cMMsxdFlrTOj_XMUqg7g==/org.fractalmind.desktop-0fd8qG9RIS7RwQtnnxfuFw==/base.apk",
+        "stderr": ""
+      },
+      "emulatorStop": {
+        "exitCode": 0,
+        "stdout": "OK: killing emulator, bye bye\nOK",
+        "stderr": ""
+      },
+      "gradleStop": {
+        "exitCode": 0,
+        "stdout": "Stopping Daemon(s)\n1 Daemon stopped",
+        "stderr": ""
+      },
+      "adbStop": {
+        "exitCode": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    }
+  },
+  "verification": {
+    "androidBuildR1Exit": 0,
+    "androidBuildR2Exit": 0,
+    "apkV2Verified": true,
+    "appTests": {
+      "passed": 234,
+      "failed": 0
+    },
+    "shellOriginTests": {
+      "passed": 1,
+      "failed": 0
+    },
+    "strictFixtureTypecheckExit": 0,
+    "formatCheckExit": 0,
+    "taskEmulatorExit": 0
+  },
+  "limits": [
+    "Task-only Android ARM64 emulator, debug APK; not physical phone or production signing.",
+    "First UI fixture failed on a wrong visible-text assertion before funding; same profile explicitly continued.",
+    "Organization confirmed but UI source check rejected incomplete deployment metadata; same original profile recovered after correcting originalPackageId, no transaction replay.",
+    "Installed deployment guard verified before creation: invalid configuration has no onboarding keys.",
+    "Two explicitly confirmed App writes and two task faucet requests; recovery/cache reconstruction has zero new broadcasts.",
+    "Cached transaction receipts are confirmed reads; the localnet prunes transaction history and GetTransaction returned NOT_FOUND for the old Human digest. Independent original live objects/previousTransaction remain unchanged.",
+    "Browser localStorage, actual IndexedDB journal and CacheStorage cleared; native credentials retained, public local profile name/deployment explicitly reentered. Not OS reinstall, full recovery-code UI, Host/OKR/message evidence reconstruction or full #40.",
+    "Native 19-check proof on R1 APK; R2 adds frontend deployment guard only; same native library commands and actual R2 guard/UI tested.",
+    "Cloud Host, physical phone messaging/approval, installed desktop journey, running Host resumption/reconnection, public upgrade and historical unsettled Run remain open.",
+    "GitHub Android CI not run; no PR yet."
+  ],
+  "sourceSha256": {
+    "apps/fractalmind-app/src/App.tsx": "8f731b5efcd0d17c4b53e03866411278323aac4536de4f820d0d7fe42ae8243f",
+    "apps/fractalmind-app/src/CreateIdentity.tsx": "9ff7a7a848ae5aff285e24ff6f6f4542973e10b4926791666d0ad820a838fa0e",
+    "apps/fractalmind-app/src/onboarding.ts": "b91c864c74446de1dae3ad6cce7cb779cbe2f4d9a207ea709c0c618465823aa6",
+    "apps/fractalmind-app/scripts/android-native-acceptance.ts": "ae26b31355618d5e11ea2b93bbc49ac57368a47a8f754dd70c7abc5e9ca5170f",
+    "apps/fractalmind-app/scripts/android-platform.mjs": "59dd0c30725715734c2b71ec754389cd2a9460bcc5c7c4335851aea14bf1b138",
+    "apps/fractalmind-app/src-tauri/src/lib.rs": "babb0c0b288999d9af1d986a85584c13ed99d0d787684e560bc9acd5cbed4c74",
+    "apps/fractalmind-app/src-tauri/build.rs": "dadac13361df8b0cd8faf7f6fdd973bace8341e9979ff16f2570db7fe986afd5",
+    "apps/fractalmind-app/src-tauri/platform/android/MainActivity.kt": "18156d90a51a9fa040c9a8cec59443067a74653db9f77966542b080737f09953",
+    "apps/fractalmind-app/src-tauri/permissions/appearance.toml": "112c76c4629e4f93a8d452d53df8a434b2f8a84f41ba01f22898bcf8a40e74ce",
+    "apps/fractalmind-app/src-tauri/capabilities/device-main.json": "02b04dd34e7c33b5bc5e5456f6bb2fda92f95e20b9bef2e8109aed21b8feca9d",
+    "apps/fractalmind-app/src-tauri/Cargo.toml": "64b554b4e2123619849b82386a6fa85e5d6810834be65ac6fdea8241c01ee25c",
+    "apps/fractalmind-app/src-tauri/Cargo.lock": "01f83132c199c41028789e38062333f0efe34fe1fbf83b3649e7aa836efd52cc",
+    "apps/fractalmind-app/package.json": "6a9071c42cbcd70a4ea4be961aa67254e05c6e59bcae9affe8c6c3323f3734db"
+  },
+  "receiptSha256": {
+    "native": "13c76a89e0675462614e0176d153aabaefb0deef633c23fde05bb85b0386c55c",
+    "nativePrior": "a63a64d95130e9394b1fd4c5e7e40df27d94291bf113b104a5182a79cbce3c15",
+    "install": "570149d1e46902d87cd6fb0a58dddec70a9518428d032823219c58a4915ee57b",
+    "installPrior": "5fb2ebd719137f29f64a1b8d86fd5c8056634b7742503128ca5165e74ca00022",
+    "initialUiAttempt": "a83dfb90c6bf0b7c00477384f739ddf45f1d064498426268b1715a99159ef559",
+    "continuedUiAttempt": "a862930db639663a819fcc28fa95682c4d1f86ac26fd640151abd82115550d48",
+    "originalUiObservation": "0a44648751d68508e62b311a0a9869547777377250dbb9b68a4c7ce91d7a7d1e",
+    "originalLocationFailure": "84fe51f52e667b72eef134e6d78d11ba04974419a335176b153e7938883274a5",
+    "originalWrongConfiguration": "15ecaaa5b2316b0c1a5cb24d4b52e8e4425c68104b0de912d5f85bbb48331657",
+    "originalRecovery": "faed6dcfa09230db47fbe197d730d34d23f13a4e55f53c254349b81993628e7f",
+    "cacheClear": "a8bce100b77a39c2329059e478a1e01a5ad61953fb0898081a956e3f3867d4ad",
+    "cacheReconstruction": "3909b5a020a963d56fbdcdfe0372dae8c12ba381dc665d1f69fd1e98f5b21694",
+    "independentOriginalRead": "7452d0759ccad09e0c896e5e880a10f495a0aebbe87475dc5c7af31e4d0c87d1",
+    "screenshots": "5c5a92fa8a7d2b25c0496a06cbbb19c35150a0c91a1e21c52cafc3ef8c223e59",
+    "pause": "bc6286ada98c805bb4046a4cd5269d1106e2ba467cbc129999f6a56bc0d63440"
+  },
+  "temporaryUiFixtureSha256": {
+    "fm-android-installed-ui-r1.mjs": "166046989f5990bd03161a4bd3f770fec94dc7f4436fa5ef494198090547b038",
+    "fm-android-installed-ui-r1-continue.mjs": "3a4e545a3d38bba02c5156084764211b4204d939d0316ea727ddd6fcc1627280",
+    "fm-android-ui-original-recovery-r1.mjs": "c189d36bc67b4e77974b8df73f3d7ed1e840db1d7d92c3887d23d995683231ad",
+    "fm-android-ui-cache-clear-r1.mjs": "bf4ddfa4ab4842753a06c385a718723735431c9a01fe9a1d3e92ff143f3d0338",
+    "fm-android-ui-cache-reconstruct-r1.mjs": "fb61eab5efbab2b54bb8b7ffd053567086cf9a932ed443949e569d5d46c65db7",
+    "fm-android-system-bars-screenshots-r1.mjs": "92350035d660206a61d1b652d0924867b16a082ed251ced63dcecfeae6a38de2"
+  },
+  "buildLogSha256": {
+    "fm-android-appearance-build-r1.log": "6965f582afddb1022bb684a40b7058f2f0bcb874a4629156993ac8453246e035",
+    "fm-android-appearance-build-r2.log": "7c06790cd3fbfb5d54fa9adf5dcb40d36e78b4ea9a2c6f6132d418e057c5c893",
+    "fm-android-appearance-app-tests-r1.log": "a0763a8db7cc2b4b5e0bccb5d97d855c33ee305d0e5329bfa6c43950d8158b85",
+    "fm-android-appearance-shell-test-r1.log": "e1e02cd0894694d4f5f11c162a950b58224964528729342d2216e861d351929a"
+  },
+  "apkNativeLibrarySha256": "51b62aead0c5526dad429af01ce9610c95d7c581810680dd8dc21388b16bdc9d",
+  "apkHasManagedAppearanceMethod": true,
+  "screenshotSha256": {
+    "docs/product/evidence/v020-app-android-system-bars-light.png": "0db54dd7995ddaa594b7e68714af974e97547d11d131c5cd2787a9e866b6a302",
+    "docs/product/evidence/v020-app-android-system-bars-dark.png": "21673b23a1edcab9e7710a1225af84e8033c97627475f09ee2221a458876814f"
+  }
+}

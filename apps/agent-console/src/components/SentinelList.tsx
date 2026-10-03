@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { CoordinatorClient, type CommandResult, type Sentinel } from "../lib/coordinator";
+import { CoordinatorClient, type CommandResult, type Sentinel, type ControlAction } from "../lib/coordinator";
 import { RemoteDesktop } from "./RemoteDesktop";
 
 // The remote commands the envd worker understands (see handleCommand).
-const COMMANDS = ["status", "logs", "restart", "kill", "shell"] as const;
+const COMMANDS: ControlAction[] = ["inventory", "status", "logs", "start", "stop", "assign", "monitor", "health", "availability"];
 
 export function SentinelList({
   client,
@@ -49,7 +49,7 @@ function SentinelCard({
   sentinel: Sentinel;
   onDesktop: () => void;
 }) {
-  const [cmd, setCmd] = useState<(typeof COMMANDS)[number]>("status");
+  const [cmd, setCmd] = useState<ControlAction>("inventory");
   const [agentId, setAgentId] = useState("");
   const [args, setArgs] = useState("");
   const [result, setResult] = useState<CommandResult | null>(null);
@@ -62,7 +62,7 @@ function SentinelCard({
     setBusy(true);
     setResult(null);
     try {
-      setResult(await client.sendCommand(s.id, cmd, agentId, args));
+      setResult(await client.sendCommand(s.id, cmd, agentId, args, s.host_id || s.id));
     } catch (e) {
       setResult({ success: false, error: (e as Error).message });
     } finally {
@@ -88,24 +88,24 @@ function SentinelCard({
         </div>
       )}
       <div className="cmd">
-        <select value={cmd} onChange={(e) => setCmd(e.target.value as (typeof COMMANDS)[number])}>
+        <select value={cmd} onChange={(e) => setCmd(e.target.value as ControlAction)}>
           {COMMANDS.map((c) => (
             <option key={c} value={c}>
               {c}
             </option>
           ))}
         </select>
-        {(cmd === "restart" || cmd === "kill" || cmd === "logs") && (
+        {cmd !== 'inventory' && cmd !== 'health' && (
           <input placeholder="agent id" value={agentId} onChange={(e) => setAgentId(e.target.value)} />
         )}
-        {(cmd === "shell" || cmd === "logs") && (
+        {(cmd === "assign" || cmd === "logs" || cmd === 'monitor') && (
           <input
-            placeholder={cmd === "shell" ? "command" : "lines (default 100)"}
+            placeholder={cmd === "assign" ? "task" : "lines (default 100)"}
             value={args}
             onChange={(e) => setArgs(e.target.value)}
           />
         )}
-        <button onClick={run} disabled={busy}>
+        <button onClick={run} disabled={busy || !client.canSendCommands()} title={client.canSendCommands() ? 'Run authorized action' : 'Connect an authorized signing device'}>
           {busy ? "…" : "Run"}
         </button>
         <button onClick={onDesktop} title="Open WebRTC remote desktop">

@@ -50,6 +50,57 @@ await sdk.client.client.core.waitForTransaction({ digest: executed.digest });
 
 ## API Notes
 
+### Product package graph
+
+New v0.2.0 deployments publish three packages under the standard Sui package
+size limit: the core protocol, OKR/handover, and direct Agent messages. Both
+extensions depend on the core. Configure their IDs explicitly:
+
+```ts
+const sdk = new FractalMindSDK({
+  packageId: '0xCORE_PACKAGE_ID',
+  registryId: '0xPROTOCOL_REGISTRY_ID',
+  okrPackageId: '0xOKR_PACKAGE_ID',
+  directPackageId: '0xDIRECT_PACKAGE_ID',
+  network: 'testnet',
+});
+```
+
+`originalPackageId` identifies the first core publication, while
+`originalOkrPackageId` and `originalDirectPackageId` select the extension type
+origins separately from current call package IDs. Each defaults to its current
+package ID. On core upgrades, SDK readers load the immutable package BCS type
+origin table: existing types keep their origin, but new types can originate in
+a later version, even within the same module. For synchronous field-name helpers,
+first await `sdk.client.loadCoreTypeOrigins()`; `coreType(module, name)` loads it
+as needed. Missing or mismatched origins fail instead of guessing an address.
+Omitting extension configuration
+retains historical monolithic routing; it does not discover a new deployment.
+Core identities, capabilities, Runs and encrypted product records remain core
+types. The extensions use the checked core witness bridge to bind execution
+and write their own records.
+
+New core publishes initialize the identity directory atomically; use
+`sdk.identity.resolveRegistry()` afterward. `initializeRegistry()` remains for
+older explicitly verified deployments whose directory has not been initialized.
+The [main upgrade fixture](../../../apps/fractalmind-app/scripts/main-upgrade-localnet.ts)
+verifies a real compatible localnet upgrade of the main source, original
+organization migration and the SDK's mixed-origin reads. It does not establish
+public deployment upgrades, installed App or envd upgrade execution, or migration
+of development monolithic product history. See the [evidence and limits](../../../docs/product/v020-main-upgrade.md).
+
+For the App's identity/device/OKR flows, use `SelfPayTransactionManager` with a
+durable `TransactionJournal`, such as `IndexedDbTransactionJournal` in a browser
+or WebView. `prepare()` estimates fees without signing; display its quote before
+calling `submit()`. A lost response remains unknown and `query(requestId)` reads
+the original digest. A failed transaction can still charge Gas. The
+`MemoryTransactionJournal` is a test/reference provider, not durable App storage.
+
+`createSelfPayOkrSubmitter({ manager, gasBudget, approveQuote })` connects the
+manager to `NativeFileOkrRunner` using its stable ticket request ID. Recorded
+requests are queried after restart rather than signed again. See the
+[selfpay design and real-chain evidence](../../../docs/product/v020-selfpay-transactions.md).
+
 - `registryId` is required for organization/fractal create flows.
 - `getAgentCertificate` supports:
   - by object id: `{ certificateId }`

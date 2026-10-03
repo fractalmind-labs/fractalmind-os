@@ -18,18 +18,35 @@ type SignatureVerifier interface {
 // CapabilityState is an authority-plane projection. Implementations may load
 // it from SUI RPC, an indexer, or a bounded local cache.
 type CapabilityState struct {
-	ID                     string           `json:"id"`
-	Target                 Target           `json:"target"`
-	AuthorizedSigners      []string         `json:"authorized_signers"`
-	Actions                []string         `json:"actions"`
-	Scopes                 []string         `json:"scopes"`
-	ExpiresAtMS            int64            `json:"expires_at_ms"`
-	Revoked                bool             `json:"revoked"`
-	RevocationVersion      uint64           `json:"revocation_version"`
-	CheckpointObservedAtMS int64            `json:"checkpoint_observed_at_ms"`
-	ReservationScope       ReservationScope `json:"reservation_scope"`
-	RemainingUses          *uint64          `json:"remaining_uses,omitempty"`
-	RemainingBudget        *BudgetClaim     `json:"remaining_budget,omitempty"`
+	// Private dependencies of one typed resolution. Handover can freshly
+	// recheck these exact versions instead of decoding identical objects twice.
+	// This is never serialized, persisted or reused across authority calls.
+	readVersions           map[string]uint64
+	ID                     string                      `json:"id"`
+	Target                 Target                      `json:"target"`
+	AuthorizedSigners      []string                    `json:"authorized_signers"`
+	Actions                []string                    `json:"actions"`
+	Scopes                 []string                    `json:"scopes"`
+	ExpiresAtMS            int64                       `json:"expires_at_ms"`
+	Revoked                bool                        `json:"revoked"`
+	RevocationVersion      uint64                      `json:"revocation_version"`
+	CheckpointObservedAtMS int64                       `json:"checkpoint_observed_at_ms"`
+	ReservationScope       ReservationScope            `json:"reservation_scope"`
+	RemainingUses          *uint64                     `json:"remaining_uses,omitempty"`
+	RemainingBudget        *BudgetClaim                `json:"remaining_budget,omitempty"`
+	AuthorityVersionHash   string                      `json:"authority_version_hash,omitempty"`
+	ManagedInstance        *ManagedInstanceAuthority   `json:"managed_instance,omitempty"`
+	Contract               *ExecutionContractAuthority `json:"contract,omitempty"`
+	Handover               *ExecutionHandoverAuthority `json:"handover,omitempty"`
+	Direct                 *DirectPermissionAuthority  `json:"direct,omitempty"`
+}
+
+// ManagedInstanceAuthority is authenticated chain data, not an adapter label.
+type ManagedInstanceAuthority struct {
+	ID            string       `json:"id"`
+	Runtime       string       `json:"runtime"`
+	WorkspaceHash string       `json:"workspace_hash"`
+	Version       Uint64String `json:"version"`
 }
 
 type ReservationScope string
@@ -51,10 +68,7 @@ type ValidatorOptions struct {
 	BudgetedActions          map[string]struct{}
 }
 
-type ValidationResult struct {
-	Duplicate           bool
-	AuthorityCheckpoint uint64
-}
+type ValidationResult = ReservationResult
 
 type Validator struct {
 	signatures SignatureVerifier
@@ -81,7 +95,88 @@ func NewValidator(signatures SignatureVerifier, authority AuthorityStore, option
 	return &Validator{signatures: signatures, authority: authority, options: options}
 }
 
+// CheckCurrentAuthority is read-only. Result-key/gas preflight must not hide a
+// revoked device behind an unrelated missing-key error after identity recovery.
+// It does not consume uses, reserve budget or authorize execution; Validate
+// still checks actions, scopes and the exact claim before every execution.
+func (v *Validator) CheckCurrentAuthority(ctx context.Context, command NodeCommand) error {
+	_, err := v.checkCurrentAuthority(ctx, command)
+	return err
+}
+
+func (v *Validator) checkCurrentAuthority(ctx context.Context, command NodeCommand) (CapabilityState, error) {
+	state, err := v.currentAuthority(ctx, command)
+	if err != nil {
+		return state, err
+	}
+	if state.Revoked || state.RevocationVersion != uint64(command.Capability.RevocationVersion) {
+		return state, reject(CodeRevoked, "capability permission changed", nil)
+	}
+	if state.ExpiresAtMS <= v.options.Now().UnixMilli() {
+		return state, reject(CodeExpired, "capability expired", nil)
+	}
+	if !contains(state.AuthorizedSigners, command.Signer) {
+		return state, reject(CodeUnauthorized, "command signer is not authorized", nil)
+	}
+	return state, nil
+}
+
+func (v *Validator) currentAuthority(ctx context.Context, command NodeCommand) (CapabilityState, error) {
+	if err := v.validateEnvelope(command); err != nil {
+		return CapabilityState{}, err
+	}
+	signingBytes, err := command.SigningBytes()
+	if err != nil {
+		return CapabilityState{}, reject(CodeInvalidEnvelope, "canonicalize signing payload", err)
+	}
+	if v.signatures == nil {
+		return CapabilityState{}, reject(CodeSignatureInvalid, "signature verifier is not configured", nil)
+	}
+	if err := v.signatures.Verify(ctx, command.Signer, signingBytes, command.Signature); err != nil {
+		return CapabilityState{}, reject(CodeSignatureInvalid, "signature verification failed", err)
+	}
+	if v.authority == nil {
+		return CapabilityState{}, reject(CodeUnauthorized, "capability resolver is not configured", nil)
+	}
+	state, err := v.authority.Resolve(ctx, command.Capability)
+	if err != nil {
+		if CodeOf(err) != "" {
+			return state, err
+		}
+		return state, reject(CodeUnauthorized, "resolve current authority", err)
+	}
+	// Remaining uses/budget may already be consumed by an exact duplicate. Only
+	// Validate/Inspect can decide whether that original claim is still usable.
+	return state, nil
+}
+
 func (v *Validator) Validate(ctx context.Context, command NodeCommand) (ValidationResult, error) {
+	return v.validate(ctx, command, nil)
+}
+
+// ValidateWithPreflight checks current authority before reading protected result
+// keys, then reserves only after preflight succeeds. Typed chain stores recheck
+// every dependency version before using this call's resolution; no state is
+// cached across requests, and the start transaction checks authority atomically.
+func (v *Validator) ValidateWithPreflight(ctx context.Context, command NodeCommand, preflight func(context.Context, NodeCommand) error) (ValidationResult, error) {
+	state, err := v.checkCurrentAuthority(ctx, command)
+	if err != nil {
+		return ValidationResult{}, err
+	}
+	if preflight != nil {
+		if err := preflight(ctx, command); err != nil {
+			return ValidationResult{}, err
+		}
+	}
+	return v.validate(ctx, command, &state)
+}
+
+type resolvedAuthorityStore interface {
+	InspectResolved(context.Context, Reservation, CapabilityState) (ReservationResult, bool, error)
+	ReserveResolved(context.Context, Reservation, CapabilityState) (ReservationResult, error)
+}
+
+func (v *Validator) validate(ctx context.Context, command NodeCommand, resolved *CapabilityState) (ValidationResult, error) {
 	if err := v.validateEnvelope(command); err != nil {
 		return ValidationResult{}, err
 	}
@@ -105,22 +200,49 @@ func (v *Validator) Validate(ctx context.Context, command NodeCommand) (Validati
 		IdempotencyKey: command.IdempotencyKey,
 		Fingerprint:    fingerprint,
 		Budget:         command.Budget,
+		Target:         command.Target,
+		Action:         command.Action,
+		CommandScope:   command.Scope,
+		IssuedAtMS:     command.IssuedAtMS,
+		ExpiresAtMS:    command.ExpiresAtMS,
 	}
 
 	if v.authority == nil {
 		return ValidationResult{}, reject(CodeUnauthorized, "capability resolver is not configured", nil)
 	}
-	if result, found, err := v.authority.Inspect(ctx, reservation); err != nil {
+	var inspected ReservationResult
+	var found bool
+	if store, ok := v.authority.(resolvedAuthorityStore); ok && resolved != nil {
+		inspected, found, err = store.InspectResolved(ctx, reservation, *resolved)
+	} else {
+		inspected, found, err = v.authority.Inspect(ctx, reservation)
+	}
+	if err != nil {
 		return ValidationResult{}, err
 	} else if found {
-		return ValidationResult{Duplicate: true, AuthorityCheckpoint: result.AuthorityCheckpoint}, nil
+		inspected.Duplicate = true
+		return inspected, nil
 	}
-	state, err := v.authority.Resolve(ctx, command.Capability)
-	if err != nil {
-		return ValidationResult{}, reject(CodeUnauthorized, "resolve capability", err)
+	var state CapabilityState
+	if resolved != nil {
+		state = *resolved
+	} else {
+		state, err = v.authority.Resolve(ctx, command.Capability)
+		if err != nil {
+			return ValidationResult{}, reject(CodeUnauthorized, "resolve capability", err)
+		}
 	}
 	if err := v.validateAuthority(command, state); err != nil {
 		return ValidationResult{}, err
+	}
+	if command.Action == "direct.message" {
+		reader, ok := v.authority.(DirectCommandAuthority)
+		if !ok {
+			return ValidationResult{}, reject(CodeUnauthorized, "chain-backed direct message verification is required", nil)
+		}
+		if err := reader.ValidateDirectCommand(ctx, command, state); err != nil {
+			return ValidationResult{}, err
+		}
 	}
 
 	if !v.authority.Supports(state.ReservationScope) {
@@ -129,14 +251,20 @@ func (v *Validator) Validate(ctx context.Context, command NodeCommand) (Validati
 	reservation.Scope = state.ReservationScope
 	reservation.ExpectedAuthorityHash = state.SnapshotHash()
 	reservation.ExpectedRevocationVersion = state.RevocationVersion
-	result, err := v.authority.Reserve(ctx, reservation)
+	reservation.AuthorityObservedAtMS = state.CheckpointObservedAtMS
+	var result ReservationResult
+	if store, ok := v.authority.(resolvedAuthorityStore); ok && resolved != nil {
+		result, err = store.ReserveResolved(ctx, reservation, state)
+	} else {
+		result, err = v.authority.Reserve(ctx, reservation)
+	}
 	if err != nil {
 		if CodeOf(err) != "" {
 			return ValidationResult{}, err
 		}
 		return ValidationResult{}, reject(CodeUnauthorized, "reserve capability", err)
 	}
-	return ValidationResult{Duplicate: result.Duplicate, AuthorityCheckpoint: result.AuthorityCheckpoint}, nil
+	return result, nil
 }
 
 func (v *Validator) validateEnvelope(command NodeCommand) error {
@@ -234,6 +362,13 @@ func (v *Validator) validateAuthority(command NodeCommand, state CapabilityState
 		return reject(CodeRiskUnclassified, "action has no explicit risk classification", nil)
 	}
 	_, budgeted := v.options.BudgetedActions[command.Action]
+	if command.Action == "direct.message" {
+		p, err := ParseDirectRequest(command, state.Direct)
+		if err != nil {
+			return err
+		}
+		budgeted = p.Bounds.MaxCalls > 0
+	}
 	if budgeted && command.Budget == nil {
 		return reject(CodeBudgetExceeded, "action requires an explicit budget claim", nil)
 	}
@@ -256,7 +391,10 @@ func (v *Validator) validateAuthority(command NodeCommand, state CapabilityState
 		nowMS-state.CheckpointObservedAtMS > maxCheckpointAge.Milliseconds() {
 		return reject(CodeAuthorityStale, "capability revocation checkpoint is outside the action freshness window", nil)
 	}
-	return nil
+	if err := ValidateExecutionContract(command, state.Contract); err != nil {
+		return err
+	}
+	return ValidateExecutionHandover(command, state)
 }
 
 // SnapshotHash covers every validated authority field except mutable remaining
@@ -275,19 +413,24 @@ func (state CapabilityState) SnapshotHash() string {
 		budgetAsset = state.RemainingBudget.Asset
 	}
 	payload, _ := json.Marshal(struct {
-		ID                     string           `json:"id"`
-		Target                 Target           `json:"target"`
-		AuthorizedSigners      []string         `json:"authorized_signers"`
-		Actions                []string         `json:"actions"`
-		Scopes                 []string         `json:"scopes"`
-		ExpiresAtMS            string           `json:"expires_at_ms"`
-		Revoked                bool             `json:"revoked"`
-		RevocationVersion      string           `json:"revocation_version"`
-		CheckpointObservedAtMS string           `json:"checkpoint_observed_at_ms"`
-		ReservationScope       ReservationScope `json:"reservation_scope"`
-		HasUseBound            bool             `json:"has_use_bound"`
-		HasBudgetBound         bool             `json:"has_budget_bound"`
-		BudgetAsset            string           `json:"budget_asset,omitempty"`
+		ID                     string                      `json:"id"`
+		Target                 Target                      `json:"target"`
+		AuthorizedSigners      []string                    `json:"authorized_signers"`
+		Actions                []string                    `json:"actions"`
+		Scopes                 []string                    `json:"scopes"`
+		ExpiresAtMS            string                      `json:"expires_at_ms"`
+		Revoked                bool                        `json:"revoked"`
+		RevocationVersion      string                      `json:"revocation_version"`
+		CheckpointObservedAtMS string                      `json:"checkpoint_observed_at_ms"`
+		ReservationScope       ReservationScope            `json:"reservation_scope"`
+		HasUseBound            bool                        `json:"has_use_bound"`
+		HasBudgetBound         bool                        `json:"has_budget_bound"`
+		BudgetAsset            string                      `json:"budget_asset,omitempty"`
+		AuthorityVersionHash   string                      `json:"authority_version_hash,omitempty"`
+		ManagedInstance        *ManagedInstanceAuthority   `json:"managed_instance,omitempty"`
+		Contract               *ExecutionContractAuthority `json:"contract,omitempty"`
+		Handover               *ExecutionHandoverAuthority `json:"handover,omitempty"`
+		Direct                 *DirectPermissionAuthority  `json:"direct,omitempty"`
 	}{
 		ID:                     state.ID,
 		Target:                 state.Target,
@@ -302,6 +445,11 @@ func (state CapabilityState) SnapshotHash() string {
 		HasUseBound:            hasUseBound,
 		HasBudgetBound:         hasBudgetBound,
 		BudgetAsset:            budgetAsset,
+		AuthorityVersionHash:   state.AuthorityVersionHash,
+		ManagedInstance:        state.ManagedInstance,
+		Contract:               state.Contract,
+		Handover:               state.Handover,
+		Direct:                 state.Direct,
 	})
 	return hashBytes(payload)
 }

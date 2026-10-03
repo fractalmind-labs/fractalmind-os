@@ -1,9 +1,16 @@
+import { HandoverApi } from './handover.js';
+import { DirectAgentApi } from './direct-agent.js';
 import { AgentApi } from './agent.js';
+import { IdentityApi } from './identity.js';
+import { HostApi } from './host.js';
+import { ProductRecordApi } from './product-record.js';
 import { AgentPolicyApi } from './agent-policy.js';
 import { FractalMindClient } from './client.js';
+import { NodeExecutionApi } from './node-execution.js';
 import { FractalApi } from './fractal.js';
 import { GovernanceApi } from './governance.js';
 import { ObjectiveApi } from './objective.js';
+import { OkrApi } from './okr.js';
 import { OrganizationApi } from './organization.js';
 import { RemoteAuthorityApi } from './remote-authority.js';
 import { TaskApi } from './task.js';
@@ -11,9 +18,16 @@ import type { FractalMindClientOptions } from './types.js';
 
 export class FractalMindSDK {
   public readonly client: FractalMindClient;
+  public readonly nodeExecution: NodeExecutionApi;
   public readonly organization: OrganizationApi;
   public readonly objective: ObjectiveApi;
+  public readonly okr: OkrApi;
   public readonly agent: AgentApi;
+  public readonly identity: IdentityApi;
+  public readonly host: HostApi;
+  public readonly handover: HandoverApi;
+  public readonly directAgent: DirectAgentApi;
+  public readonly productRecord: ProductRecordApi;
   public readonly agentPolicy: AgentPolicyApi;
   public readonly task: TaskApi;
   public readonly fractal: FractalApi;
@@ -22,9 +36,16 @@ export class FractalMindSDK {
 
   constructor(options: FractalMindClientOptions) {
     this.client = new FractalMindClient(options);
+    this.nodeExecution = new NodeExecutionApi(this.client);
     this.organization = new OrganizationApi(this.client);
     this.objective = new ObjectiveApi(this.client);
+    this.okr = new OkrApi(this.client);
     this.agent = new AgentApi(this.client);
+    this.identity = new IdentityApi(this.client);
+    this.host = new HostApi(this.client);
+    this.handover = new HandoverApi(this.client);
+    this.directAgent = new DirectAgentApi(this.client);
+    this.productRecord = new ProductRecordApi(this.client);
     this.agentPolicy = new AgentPolicyApi(this.client);
     this.task = new TaskApi(this.client);
     this.fractal = new FractalApi(this.client);
@@ -34,7 +55,22 @@ export class FractalMindSDK {
 }
 
 export { FractalMindClient } from './client.js';
+export { NodeExecutionApi, CommandExecutionBcs, AgentExecutionIndexBcs, AgentExecutionPointerBcs, AgentExecutionReadError, EXECUTION_STATES, nodeCommandSigningBytes, nodeCommandIntentHash, verifySignedNodeCommand } from './node-execution.js';
+export type { WrappedCommandResultKey, CommandResultKeyInput } from './node-execution.js';
+export { HostApi, HostInviteBcs, HostMembershipBcs, ManagedAgentBcs, CoordinatorBindingBcs,
+  HostIndexBcs, AuthorityBindingBcs, HostJoinIntentBcs, createHostInviteMaterial,
+  encodeHostInviteCode, parseHostInviteCode } from './host.js';
+export { IdentityApi, IdentityRegistryBcs, RecoveryLocationBcs, HumanIdentityBcs, DeviceGrantBcs, RecoveryRecordBcs, DevicePairingRequestBcs, DEVICE_ACTIONS } from './identity.js';
+export type { DeviceAction } from './identity.js';
+export { ProductRecordApi, PRODUCT_RECORD_KINDS, EncryptedRecordBcs, recordContext } from './product-record.js';
+export type { ProductRecordKind } from './product-record.js';
+export { createRecoveryCode, parseRecoveryCode, recoveryKeys, createDeviceEncryptionKeys,
+  encryptContent, decryptContent, wrapKeys, unwrapKeys, randomContentKey,
+  bytesToHex, hexToBytes } from './identity-crypto.js';
+export { commandResultKey, commandResultWrapContext, encryptCommandResult, decryptCommandResult,
+  commandDeliveryContext, encryptCommandDelivery, decryptCommandDelivery } from './command-result-crypto.js';
 export { ObjectiveApi } from './objective.js';
+export { OkrApi, OkrBcs, OkrMetricBcs, OkrObservationBcs, OKR_STATES, metricProgress, weightedProgress } from './okr.js';
 export { OrganizationApi } from './organization.js';
 export { AgentApi } from './agent.js';
 export { AgentPolicyApi } from './agent-policy.js';
@@ -51,6 +87,7 @@ export {
   NODE_COMMAND_SIGNATURE_DOMAIN,
   canonicalNodeCommandSigningBytes,
   capabilityReferenceWire,
+  signNodeCommand,
 } from './node-command.js';
 
 export type {
@@ -94,6 +131,9 @@ export type {
   MoveObjectData,
   NetworkName,
   NodeCommandSigningInput,
+  NodeCommandSigner,
+  SignNodeCommandInput,
+  SignedNodeCommand,
   ObjectId,
   ObjectiveData,
   OrganizationData,
@@ -117,3 +157,20 @@ export type {
   VerifyTaskInput,
   VoteOption,
 } from './types.js';
+
+export { executionBoundaryHash } from './execution-boundary.js';
+export { NativeFileOkrRunner, parseNativeFileOkrPlan, okrRunnerTicketName } from './okr-runner.js';
+export type { NativeFileOkrPlan, NativeFileKrPlan, OkrRunnerOptions, OkrRunnerCrypto, OkrRunnerRecord, OkrRunnerTicketContext, OkrRunnerSubmission, OkrRunnerSubmissionContext, OkrRunnerState, OkrRunnerStepInput } from './okr-runner.js';
+export { SelfPayTransactionManager, MemoryTransactionJournal, TransactionPreflightError, gasCost } from './transaction-manager.js';
+export type { TransactionJournal, TransactionJournalEntry, SelfPayFeeQuote, SelfPayTransactionOutcome, SelfPayTransactionData, SelfPayTransactionManagerOptions } from './transaction-manager.js';
+export { IndexedDbTransactionJournal } from './browser-transaction-journal.js';
+export { createSelfPayOkrSubmitter } from './selfpay-okr-submit.js';
+export type { SelfPayOkrSubmitterOptions } from './selfpay-okr-submit.js';
+
+export { HANDOVER_REVIEW_WINDOW_MS, handoverProposalHash, handoverAcceptanceSigningBytes, verifyHandoverAcceptanceSignature, assertFreshHandoverAcceptance } from './handover.js';
+export type { HandoverProposal, HandoverAcceptance } from './handover.js';
+
+export { HandoverApi, HandoverApprovalBcs, HandoverPolicyBcs } from './handover.js';
+export { DirectAgentApi, StandingPermissionBcs, DirectMessageBcs, DirectApprovalBcs, DirectClaimBcs,
+  DIRECT_ACTIONS, DIRECT_APPROVAL_STATES, parseDirectMessageContext, directMessageRecordName, directRequestHash } from './direct-agent.js';
+export type { DirectAuthority, DirectAction, DirectMessageContext, DirectRequest } from './direct-agent.js';

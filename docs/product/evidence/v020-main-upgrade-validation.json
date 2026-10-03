@@ -1,0 +1,154 @@
+{
+  "recordedAt": "2026-10-03T06:55:58.963609+00:00",
+  "baselineCommit": "2aa9af4",
+  "checks": [
+    {
+      "name": "SDK 161 tests",
+      "path": "/tmp/fm-main-upgrade-sdk-tests-r3.log",
+      "sha256": "8864a553821edfbe4d74b980a3a47eb9569296722b36fbf3300514963d01702b",
+      "exitCode": 0,
+      "output": "ds expected move target (0.21275ms)\n✔ objective.closeObjective builds expected move target (0.137958ms)\n✔ agentPolicy.createPolicy builds expected move target (1.805084ms)\n✔ agentPolicy.createPolicyForObjective builds expected move target (0.268542ms)\n✔ agentPolicy.createPolicyForKeyResult builds expected move target (0.360958ms)\n✔ agentPolicy.revokePolicy builds expected move target (0.09175ms)\n✔ agentPolicy.executeAction builds expected move target (0.160291ms)\n✔ task.createTask builds expected move target (0.090875ms)\n✔ task.createTaskForKeyResult builds expected move target (0.086584ms)\n✔ task.assignTask builds expected move target (0.059458ms)\n✔ task.submitTask builds expected move target (0.051708ms)\n✔ task.verifyTask builds expected move target (0.060584ms)\n✔ task.completeTask builds expected move target (0.056292ms)\n✔ task.rejectTask builds expected move target (0.097209ms)\n✔ fractal.createSubOrganization builds expected move target (0.086875ms)\n✔ fractal.detachSubOrganization builds expected move target (0.0675ms)\n✔ governance.createGovernance builds expected move target (0.049875ms)\n✔ governance.createProposal builds expected move target (0.11075ms)\n✔ governance.startProposalVoting builds expected move target (0.064333ms)\n✔ governance.castVote builds expected move target (0.058459ms)\n✔ governance.finalizeProposalVoting builds expected move target (0.052334ms)\n✔ governance.closeProposalVoting builds expected move target (0.061916ms)\n✔ governance.executeProposal builds expected move target (0.054042ms)\n✔ organization.getOrganization parses move object fields (0.221041ms)\n✔ task.getTask parses move object fields (0.087542ms)\n✔ governance.getProposal parses move object fields (0.075625ms)\n✔ agent.getAgentCertificate resolves by owner and org id (0.788167ms)\n✔ agentPolicy.getPolicy parses move object fields (0.08925ms)\n✔ fee quote does not sign/broadcast; actual net Gas includes rebate and does not double-count storage fee (30.697916ms)\n✔ insufficient funds and unavailable RPC remain distinct and never obtain a signature (1.9525ms)\n✔ concurrent submission joins one broadcast; new manager queries the same digest rather than resubmitting (4.780625ms)\n✔ lost receipt and missing digest remain unknown across restart until the original ledger result appears (3.13275ms)\n✔ unknown transaction reserves Gas against another request, including a fresh manager (4.777958ms)\n✔ validator failure is a known failed transaction with actual charged Gas (3.016458ms)\n✔ simulation rejection and unapproved value transfers stop before signing (1.799833ms)\n✔ stale Gas reference, expired quote and changed network cannot be silently rebuilt and signed (3.858625ms)\n✔ signing cancellation and journal write failure never broadcast a transaction (3.329417ms)\n✔ known chain result remains known when cache update fails; restart still queries the original digest (2.472667ms)\n✔ closing the UI after signing or during durable claim never broadcasts, and retains an already claimed original digest (4.423958ms)\n✔ foreign receipt and unavailable history never become authority from a cached status (2.373167ms)\n✔ journal contains only technical metadata; forged quote and signer mutation cannot change approved bytes (5.773792ms)\n✔ OKR submitter requires fee authorization and preserves a stable request through restart (5.742334ms)\n✔ OKR fee rejection does not sign; adding funds still requires explicit fee approval (0.809125ms)\n✔ OKR unknown/failed receipts are queried after restart and never automatically retried (4.580042ms)\n✔ OKR unreadable transaction journal remains unknown instead of starting a new request (0.68ms)\n✔ default transport is gRPC (0.767917ms)\n✔ Core API reads include JSON and paginate with opaque cursors (0.702625ms)\n✔ native Move JSON option forms preserve exact u64 values (0.175791ms)\n✔ owned-object reads reject missing page cursors (0.189875ms)\nℹ tests 161\nℹ suites 0\nℹ pass 161\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 2943.361458\n"
+    },
+    {
+      "name": "SDK strict types",
+      "path": "/tmp/fm-main-upgrade-sdk-types-r4.log",
+      "sha256": "d03b6f91caee853e3dcd0fd8a44660e3e88cee7f8eca3adc212209c6666eccd1",
+      "exitCode": 0,
+      "output": "\n> @fractalmind-labs/fractalmind-sdk@0.1.0 typecheck\n> tsc -p tsconfig.check.json\n\n"
+    },
+    {
+      "name": "SDK production build",
+      "path": "/tmp/fm-main-upgrade-sdk-build-r2.log",
+      "sha256": "dcd4658fbc5af48be5fec75f18c6bbf16ab306e69f58156aa82336298392c2b0",
+      "exitCode": 0,
+      "output": "\n> @fractalmind-labs/fractalmind-sdk@0.1.0 build\n> tsc -p tsconfig.json\n\n"
+    },
+    {
+      "name": "App 229 tests",
+      "path": "/tmp/fm-main-upgrade-app-tests-r2.log",
+      "sha256": "1c09a25a35039f1fa6b55451f3666b85512bd036b58ac460bb07872bc54e1103",
+      "exitCode": 0,
+      "output": "✔ sign (15.369916ms)\n  ✔ closed (1.768333ms)\n✔ intervention quotation and native signing reject changed or closed source without broadcasting (22.125792ms)\n✔ historical stop uses the original OKR settlement route after pause and never edits the standing permission (0.805167ms)\n▶ specification replacement requires pause, zero pending control and sufficient retained budget\n  ✔ active (0.3925ms)\n  ✔ reserved (0.441083ms)\n  ✔ unsettled (0.386625ms)\n  ✔ spent (0.375208ms)\n  ✔ valid (0.941375ms)\n✔ specification replacement requires pause, zero pending control and sufficient retained budget (2.734209ms)\n▶ specification revisions preserve original message provenance; removing or replacing it aborts before encryption\n  ✔ preserve (5.105083ms)\n  ✔ remove (2.054167ms)\n  ✔ replace (0.68675ms)\n✔ specification revisions preserve original message provenance; removing or replacing it aborts before encryption (9.091375ms)\n✔ projection preserves complete provenance, exact fixed-point values and unknown samples without a quote (4.939709ms)\n✔ local proposal is unsubmitted, lists exact differences, and requires independent confirmation before quotation (2.0185ms)\n✔ Windows line endings and JSON formatting do not change proposal meaning (1.129291ms)\n▶ read-only provenance, metric verification, budget, extra prose and unknown proposal fields cannot be submitted\n  ✔ organization (0.573542ms)\n  ✔ version (0.404792ms)\n  ✔ verified (0.392416ms)\n  ✔ budget (0.429125ms)\n  ✔ prose (0.303209ms)\n  ✔ extra (0.291ms)\n✔ read-only provenance, metric verification, budget, extra prose and unknown proposal fields cannot be submitted (2.740208ms)\n✔ export requires an approved plaintext destination and rejects a changed source (0.485083ms)\n▶ stale versions and execution/budget changes reject import, quotation and late submission\n  ✔ import (0.37125ms)\n  ✔ prepare (0.505625ms)\n  ✔ quote (0.756958ms)\n  ✔ submit (0.79425ms)\n  ✔ budget (0.685625ms)\n✔ stale versions and execution/budget changes reject import, quotation and late submission (3.28275ms)\n✔ a local ACTIVE proposal needs pause; file edits cannot resume or accept a goal (0.386042ms)\n✔ a retained original unknown request is queried without creating a new quote (0.375458ms)\n✔ closing during native source reads prevents late private context or export (0.132542ms)\n✔ sampling freshness retains original evidence and never rounds large u64 values (0.113792ms)\n✔ pairing fingerprint binds both independent keys, chain, identity, scope and human-visible request details (31.176083ms)\n✔ original ambiguous pairing outcome precedes source reads, confirmation or new native key distribution (3.384208ms)\n✔ unapproved fingerprint/data sharing and a forged quote never reach source reads, signing or broadcast (0.944958ms)\n✔ confirmed pairing waits for receipt output versions; stale/missing objects are not current and RPC failure propagates (0.72275ms)\n✔ known record point lookup bypasses lagging pagination; only exact missing child is absent (2.336917ms)\n✔ missing root/foreign child/RPC failures and substituted pointers cannot become an empty record (1.019708ms)\n✔ key/table changes during present or absent lookup invalidate the snapshot (1.244208ms)\n✔ recovery bridge loads public prepared credentials without exporting backup codes and verifies exact native signatures (65.469166ms)\n✔ recovery sources require exact shared objects, UID/network binding and typed address directory (43.698875ms)\n✔ recovery rotates active owned organizations only and rejects changed backup/key versions before quotation (31.197333ms)\n✔ a recovery quote never submits and source changes before/after simulation or confirmation block submission (17.147459ms)\n✔ unknown/confirmed original recovery is queried before any source read or new key preparation (11.024541ms)\n✔ a consumed recovery code cannot adopt another attempt's winning identity/device (6.300167ms)\nℹ tests 229\nℹ suites 0\nℹ pass 229\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 4659.131125\n"
+    },
+    {
+      "name": "App types and production browser build",
+      "path": "/tmp/fm-main-upgrade-app-build-r2.log",
+      "sha256": "f7d38106eb8854bd05573952332d4e8e58424e14a8e16f08a1767ccd5ce03d59",
+      "exitCode": 0,
+      "output": "comment\n\n\"// Freeze the result of a thunk. `/* @__PURE__ */ freeze(() => expr)` keeps the whole\"\n\nin \"node_modules/@scure/base/index.js\" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.\n../../protocols/fractalmind-protocol/sdk/node_modules/@scure/base/index.js (2:0): A comment\n\n\"// Freeze the result of a thunk. `/* @__PURE__ */ freeze(() => expr)` keeps the whole\"\n\nin \"../../protocols/fractalmind-protocol/sdk/node_modules/@scure/base/index.js\" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.\n✓ 696 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                                        0.85 kB │ gzip:   0.45 kB\ndist/assets/index-qUct96CR.css                        23.75 kB │ gzip:   6.05 kB\ndist/assets/MessageOkrContext-Dp7jQYDv.js              1.53 kB │ gzip:   0.76 kB\ndist/assets/record-pointer-DjiNjrRS.js                 1.63 kB │ gzip:   0.75 kB\ndist/assets/browser-transaction-journal-SU4jb0Kq.js    2.10 kB │ gzip:   0.85 kB\ndist/assets/native-onboarding-BX4S6IoY.js              2.36 kB │ gzip:   0.91 kB\ndist/assets/private-records-DuhW0WIi.js                3.51 kB │ gzip:   1.29 kB\ndist/assets/PrivateRecordView-B9XePJy8.js              3.95 kB │ gzip:   2.04 kB\ndist/assets/DeviceAccess-CWUxcDEJ.js                   4.06 kB │ gzip:   1.95 kB\ndist/assets/onboarding-q976Pqxz.js                     6.04 kB │ gzip:   2.12 kB\ndist/assets/execution-results-BOAHJjd_.js              7.07 kB │ gzip:   2.56 kB\ndist/assets/coordinator-read-Du-q8fWA.js               7.33 kB │ gzip:   2.63 kB\ndist/assets/AgentCheckpointView-Ds39u6Zh.js            7.93 kB │ gzip:   3.54 kB\ndist/assets/host-signatures-Di3wnUnF.js                8.37 kB │ gzip:   3.07 kB\ndist/assets/host-admission-qLIicC3B.js                 8.55 kB │ gzip:   3.16 kB\ndist/assets/agent-import-CvJJ5M6y.js                   9.81 kB │ gzip:   3.21 kB\ndist/assets/okr-intervention-CzjlsSA2.js              10.28 kB │ gzip:   3.53 kB\ndist/assets/HostObservations-BSDalWP7.js              10.73 kB │ gzip:   4.62 kB\ndist/assets/CreateIdentity-BTnfRKF1.js                11.19 kB │ gzip:   4.56 kB\ndist/assets/AgentImportFlow-CCHovJSM.js               12.69 kB │ gzip:   5.11 kB\ndist/assets/CreateOkr-aQYsi2qc.js                     14.28 kB │ gzip:   5.96 kB\ndist/assets/OkrIntervention-Dfh3aXRS.js               14.71 kB │ gzip:   6.05 kB\ndist/assets/OkrProjection-CUxKAVBA.js                 18.86 kB │ gzip:   7.37 kB\ndist/assets/OkrAutonomy-6xqVWkr7.js                   19.84 kB │ gzip:   7.33 kB\ndist/assets/HostAccess-DI1Y9iO9.js                    19.90 kB │ gzip:   7.42 kB\ndist/assets/OkrContinuation-Cjsg9cEX.js               22.71 kB │ gzip:   7.91 kB\ndist/assets/okr-delivery-journal-riFGWxRG.js          22.75 kB │ gzip:   6.61 kB\ndist/assets/RecoverIdentity-DkV9JLnm.js               25.83 kB │ gzip:   8.73 kB\ndist/assets/PairingFlow-BEHco-9z.js                   25.86 kB │ gzip:   8.87 kB\ndist/assets/OkrVerification-BY3JZHgy.js               26.01 kB │ gzip:   8.85 kB\ndist/assets/DirectAgentConversation-rooNjj6q.js       26.98 kB │ gzip:   9.39 kB\ndist/assets/HandoverFlow-CZnttrWF.js                  52.37 kB │ gzip:  15.45 kB\ndist/assets/okr-draft-CU87aEU8.js                     54.43 kB │ gzip:  14.80 kB\ndist/assets/Transaction-B6IQ3xaU.js                   62.02 kB │ gzip:  18.27 kB\ndist/assets/device-identity-C1NzSI3b.js               78.29 kB │ gzip:  27.85 kB\ndist/assets/index-ByL5NOKK.js                        957.12 kB │ gzip: 269.01 kB\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n✓ built in 1.38s\n"
+    },
+    {
+      "name": "upgrade fixture strict TypeScript",
+      "path": "/tmp/fm-main-upgrade-fixture-types-r4.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "exitCode": 0,
+      "output": ""
+    }
+  ],
+  "priorFailures": [
+    {
+      "path": "/tmp/fm-main-upgrade-sdk-origin-tests-r1.log",
+      "sha256": "aa4a9356d2d80d4c2c00a54bc43a897ce1c07307c40bd45bb665f5c65ceb8dac",
+      "exitCode": 1,
+      "output": "node:net:1986\n      const error = new UVExceptionWithHostPort(rval, 'listen', address, port);\n                    ^\n\nError: listen EPERM: operation not permitted /var/folders/9m/4m4v8zks49nck63f0063ny340000gn/T/tsx-501/71599.pipe\n    at Server.setupListenHandle [as _listen2] (node:net:1986:21)\n    at listenInCluster (node:net:2065:12)\n    at Server.listen (node:net:2187:5)\n    at file:///Users/yubing/Workspace/fractalmind-labs/fractalmind-os/protocols/fractalmind-protocol/sdk/node_modules/tsx/dist/cli.mjs:53:31537\n    at new Promise (<anonymous>)\n    at createIpcServer (file:///Users/yubing/Workspace/fractalmind-labs/fractalmind-os/protocols/fractalmind-protocol/sdk/node_modules/tsx/dist/cli.mjs:53:31515)\n    at async file:///Users/yubing/Workspace/fractalmind-labs/fractalmind-os/protocols/fractalmind-protocol/sdk/node_modules/tsx/dist/cli.mjs:55:459 {\n  code: 'EPERM',\n  errno: -1,\n  syscall: 'listen',\n  address: '/var/folders/9m/4m4v8zks49nck63f0063ny340000gn/T/tsx-501/71599.pipe',\n  port: -1\n}\n\nNode.js v25.8.0\n"
+    },
+    {
+      "path": "/tmp/fm-main-upgrade-sdk-tests-r1.log",
+      "sha256": "a4fe5944d93c2cfaa4380a9b186a5850e9298ea61411182571d9825dd3edef9f",
+      "exitCode": 1,
+      "output": "e: true,\n    code: 'ERR_ASSERTION',\n    actual: AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n    \n      assert.ok(record)\n    \n        at Object.getObject (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/protocols/fractalmind-protocol/sdk/tests/product-record-history.test.ts:19:56)\n        at <anonymous> (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/protocols/fractalmind-protocol/sdk/src/client.ts:66:51)\n        at FractalMindClient.loadCoreTypeOrigins (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/protocols/fractalmind-protocol/sdk/src/client.ts:80:7)\n        at FractalMindClient.coreType (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/protocols/fractalmind-protocol/sdk/src/client.ts:94:16)\n        at ProductRecordApi.type (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/protocols/fractalmind-protocol/sdk/src/product-record.ts:32:138)\n        at ProductRecordApi.getRecord (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/protocols/fractalmind-protocol/sdk/src/product-record.ts:54:36)\n        at async ProductRecordApi.listHistory (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/protocols/fractalmind-protocol/sdk/src/product-record.ts:70:22)\n        at async waitForActual (node:assert:621:5)\n        at async strict.rejects (node:assert:744:25)\n        at async TestContext.<anonymous> (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/protocols/fractalmind-protocol/sdk/tests/product-record-history.test.ts:63:3),\n    expected: /UID/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n"
+    },
+    {
+      "path": "/tmp/fm-main-upgrade-sdk-types-r1.log",
+      "sha256": "e2acc40ef8e0341df310e3ce67c08eb70a097e4c0458156a90135c40219a63c6",
+      "exitCode": 2,
+      "output": "\n> @fractalmind-labs/fractalmind-sdk@0.1.0 typecheck\n> tsc -p tsconfig.check.json\n\nsrc/direct-agent.ts(1007,18): error TS1308: 'await' expressions are only allowed within async functions and at the top levels of modules.\n"
+    },
+    {
+      "path": "/tmp/fm-main-upgrade-fixture-types-r1.log",
+      "sha256": "54c85afc01683c3b6dd17b5c1b5663f44ea5d05c01cfd272792b996bc761e2e2",
+      "exitCode": 2,
+      "output": "scripts/main-upgrade-localnet.ts(807,35): error TS2339: Property 'listDrafts' does not exist on type 'OkrApi'.\n"
+    }
+  ],
+  "actualLocalnet": {
+    "processExitCode": 0,
+    "checks": 13,
+    "confirmedTransactions": 22,
+    "report": "v020-main-upgrade-localnet.json"
+  },
+  "sourceHashes": {
+    "worktree:protocols/fractalmind-protocol/sdk/src/agent-policy.ts": "d535dd2be8b990a93a283247b88132eb4b7dd9a7e218cd1f4fefeb4edb4126a2",
+    "worktree:protocols/fractalmind-protocol/sdk/src/agent.ts": "9db9872feac79511b09c15560fd50d6950f09ffe65d07b1f62251ef1551d091a",
+    "worktree:protocols/fractalmind-protocol/sdk/src/browser-transaction-journal.ts": "ff8c18d49c84b903ed60c9110c8261184aef274df9b6f74100c1d4e503739d4e",
+    "worktree:protocols/fractalmind-protocol/sdk/src/client.ts": "8bf53e1d611073599c8c2a3cdc94a84140e025ffd03c8c8634bbb64319b2934a",
+    "worktree:protocols/fractalmind-protocol/sdk/src/command-result-crypto.ts": "4e4ee0752df2e96c7bf65e10338e3f5d0b84c9752dd55f58d0a3d11b2e30887a",
+    "worktree:protocols/fractalmind-protocol/sdk/src/direct-agent.ts": "c53b427711c0a15064fe437179d6907df5f14030c3a1f902d611407b6725128b",
+    "worktree:protocols/fractalmind-protocol/sdk/src/execution-boundary.ts": "55aa56a70dbd5f205f2c1d5c2bf0b66646d853492a6f4f8f98d473e97dd34065",
+    "worktree:protocols/fractalmind-protocol/sdk/src/fractal.ts": "07e07b24a0919a8c2281384d97544baaa8e988623662a64ebd37966b5449c2b4",
+    "worktree:protocols/fractalmind-protocol/sdk/src/governance.ts": "5a18d8cf38fb9e4b5a6b15150cfeb559586ecf46bfe926cf424815e679ae711e",
+    "worktree:protocols/fractalmind-protocol/sdk/src/handover.ts": "452affcf4f56ca8517f05b2fe620b3c3cc1e7a2276c578f5b7ed3392df5998cb",
+    "worktree:protocols/fractalmind-protocol/sdk/src/host.ts": "d0dab6a846ea423a97f27ba792075ab81bcd81ab3afb0a228d7dcc1b04ca9512",
+    "worktree:protocols/fractalmind-protocol/sdk/src/identity-crypto.ts": "d1ff7cab7f57d1c3262849350b00626374a16389173a0523bb79f094284fbac9",
+    "worktree:protocols/fractalmind-protocol/sdk/src/identity.ts": "d179f104d46f710304128f8c130cbf8e63868863b95e054a798029260f1633ff",
+    "worktree:protocols/fractalmind-protocol/sdk/src/index.ts": "11a03cf26f9c059c9064ef5d13835b5007f9c6bbde1ab0f99f7060762ff9a763",
+    "worktree:protocols/fractalmind-protocol/sdk/src/node-command-wire.ts": "96cb0d173d382b3aebc9dcf8101437d95d03ac3ae18763e611f653dd07798bab",
+    "worktree:protocols/fractalmind-protocol/sdk/src/node-command.ts": "b02fc0104463f069fb64a06e12feecb0b4a9c9f2ccf3eb1ca1731fe556b99398",
+    "worktree:protocols/fractalmind-protocol/sdk/src/node-execution.ts": "a8f62d83a3a27a5e70f60471451e559264c7cecdc94981ab7df01e8b2784dd3f",
+    "worktree:protocols/fractalmind-protocol/sdk/src/objective.ts": "63bdb85fd64975eda4851f3e65ea163bd711af760e42f31607fcb54e24b30324",
+    "worktree:protocols/fractalmind-protocol/sdk/src/okr-runner.ts": "a6d201424e6e39e19a76308937c12c9ab9f2ff0ee723d1654e3304b3b52c4df2",
+    "worktree:protocols/fractalmind-protocol/sdk/src/okr.ts": "278db66315f322362b01bd1898362b66df0e1d2a4c9342c82c29504e22c756eb",
+    "worktree:protocols/fractalmind-protocol/sdk/src/organization.ts": "b82f49b2f2d0fc261752bba7cb968f43fd21a6491d29af32ada50ee689d101a0",
+    "worktree:protocols/fractalmind-protocol/sdk/src/product-record.ts": "71568eece6b73700d7211229fffbe547ffeb4b3583cf71381b740268a4b09564",
+    "worktree:protocols/fractalmind-protocol/sdk/src/remote-authority.ts": "60fa51a6004f42eeb5a97e09b85f21d23f9428cb181592ace37d98aab1d74409",
+    "worktree:protocols/fractalmind-protocol/sdk/src/selfpay-okr-submit.ts": "0a3cd2db81216336a576d5574cc8dacea986bddcaf9e0523b99f2fce6f29d01b",
+    "worktree:protocols/fractalmind-protocol/sdk/src/task.ts": "c0eb184f730594a0d9168078b7c45442fbad658e5f59574a49c85c5fb3c32832",
+    "worktree:protocols/fractalmind-protocol/sdk/src/transaction-manager.ts": "c7174a2a1bb7d5435c1b6ba2bad0df8e200f7e5965574fd05ef60ee63a266d84",
+    "worktree:protocols/fractalmind-protocol/sdk/src/types.ts": "65fe717d3a1c13b78bc3210f07c91280c7aceaba53f3889ad349a5e0e8b28f6f",
+    "worktree:protocols/fractalmind-protocol/sdk/src/wire-bytes.ts": "30602c7f6a64b6cb38c6650e1a4cdabcf4ff5d19e3bd9f18da8f66d9b5fba3d8",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/Move.toml": "c0babe34580a8ba03095ee3d1d6ca06ed8e7149363f8e2bfc752c6b32107fbd8",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/agent.move": "a376aec832dcaeaa95d70009a0f3be091579e014f4045bf489d356e2b385635e",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/agent_policy.move": "0c1fc85b5c80174610faa5cd02ca18d68032e232fc5df7f3e767e14c54c7ea20",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/bootstrap.move": "94ede6ca0439dc6d2305ca9943e5e51c5c286b39048656d1c38c7853cd95bd34",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/constants.move": "865e77a763c2b09540f3393b698780a521c07a5be4b7432a47a6618f91f7e869",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/entry.move": "0cf3aadadd7ac5ac37897599cc02da9d75be9ad256aae937dd8564df9d49a57d",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/fractal.move": "aff5f6b950dc40edb24c5f23773ee23f86d930dc03871379f02834ae7077fe8a",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/governance.move": "871e7c7aa3dacda5dee90d1414110bb5c625fecd6dd3e8c627672ccaca4a11d8",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/objective.move": "ea066b99a04a79f1118c57de33b615c8b72d54e21c3c36824aa8dc1f8b5cdcb2",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/organization.move": "489e93253f027158f429b4cc0fa8e518d9930e2713aed950177c88ad42ed276f",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/profile.move": "4b28c2c6576ee81e708360bf1ec7fe5f9d34e79b3f8f23b15a730fd7e2233c2f",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/remote_authority.move": "476970ae5547ff88dea5da7b0f479648200f7063c268be82152b1e7320e27209",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/review.move": "77bcc80d8d0bed259c1f27b69d711dc2f3ed24d6e96d37426af20751f7ac9591",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/task.move": "33d4a31aa25fd18eb382cba4294cf7da00fbad1ef24179bbbf95d93593369883",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/agent_policy_tests.move": "7893eb994e8a140e5fc8d83195f0178fe344dab0b208f29cbf46daede783e751",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/agent_tests.move": "97ca72ce310f7e8df652fd9da995da00c08b7f091846819ee884988b245bc9e1",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/constants_tests.move": "470212534a4df6190eb2e073b6d0dc143372aa484fad49f3d0fee6ff2713723d",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/fractal_tests.move": "2926fd65dff9ef6924e467c5c43cf614e7576d2df507e23652e8b13ea30724a8",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/governance_tests.move": "03830ca43312c9e0177b639b5d0b613c65c3eca09edc3f33025e233a23e67e8a",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/integration_tests.move": "47f2a96338c27adeadb1136825e1f38a7d4cb8a535ca912f933618838972dfc6",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/objective_tests.move": "cee804e75b0854a9346df1b136485a82f4880dd97401e57a3bdb4b3d520dcc38",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/organization_tests.move": "47ff83b5c61936ff1402303664bd930f164bbb28fa3338c860e5687621cec52d",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/profile_tests.move": "6bc7e5b3ce8c30048712d1757dd8e4dfbdf779a685e8e6dba35135712d0b0a08",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/remote_authority_tests.move": "33738e3ebd5a7404196545b42a3444cd54b0a34da0b33a67e6b5383a7303c16b",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/review_tests.move": "6fc1552c7a93f697dfc97089da0fa3ecea1ae158c43445b5bcc8f2e6c5e7048d",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/task_tests.move": "01a4bd4364b9bad1ff20117e9422b0ae1b13b8661a0494140e623e14590d8661"
+  },
+  "scriptSha256": "d32cac5a119cc28fb83407bd931af96afbe15de08288318f7d07c865606e93a1",
+  "limits": {
+    "actualMainSourceUpgradedOnLocalnet": true,
+    "publicTestnetDeploymentUpgraded": false,
+    "originalOrganizationMigrated": true,
+    "SDKMixedTypeOriginsVerified": true,
+    "installedAppUpgradeVerified": false,
+    "envdMixedTypeOriginsVerified": false,
+    "originalSinglePackageProductHistoryMigrated": false,
+    "existingMainObjectivesConvertedToNewOKR": false,
+    "actualModelVerified": false,
+    "cloudHostVerified": false,
+    "recoveryInThisFixtureVerified": false
+  },
+  "productionAppMoveGoRustChanged": false,
+  "SDKChanged": true,
+  "nativeBundleRebuilt": false,
+  "GitHubActionsRun": false
+}

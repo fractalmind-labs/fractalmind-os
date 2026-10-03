@@ -1,0 +1,42 @@
+{
+  "network": "testnet",
+  "endpoint": "https://faucet.testnet.sui.io",
+  "recipient": "0x180709c7a104e7f7d6018d4a2d67034a08ef3a27621e5f42e2849b7c921b5c9f",
+  "chainIdentifier": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+  "state": "confirmed",
+  "updatedAt": "2026-10-02T01:57:09.147Z",
+  "proof": {
+    "recipient": "0x180709c7a104e7f7d6018d4a2d67034a08ef3a27621e5f42e2849b7c921b5c9f",
+    "checkpointSeq": "390046448",
+    "nonce": "1532",
+    "hashHex": "000d6c4d69c089b0c1d618fba109f126e8083d72b275465a29bd5412a387617f"
+  },
+  "response": {
+    "status": "success",
+    "digest": "CfNdtcUFQd7X6ip9sZeJF5J4ynFFTPAv298D1BhRMqCb",
+    "recipient": "0x180709c7a104e7f7d6018d4a2d67034a08ef3a27621e5f42e2849b7c921b5c9f",
+    "amountMist": "1000000000",
+    "difficulty": "3000"
+  },
+  "digest": "CfNdtcUFQd7X6ip9sZeJF5J4ynFFTPAv298D1BhRMqCb",
+  "balanceMist": "1000000000",
+  "limits": {
+    "onlyPublicAddressAndPowSent": true,
+    "noUserWallet": true,
+    "appTestnetDeploymentVerified": false,
+    "resumeQueriedSameDigestWithoutAnotherPayout": true,
+    "conformanceVectorsPassed": 5,
+    "isolatedOsKeyRetainedForTestnetAcceptance": true
+  },
+  "latestVerification": {
+    "checkedAt": "2026-10-02T10:25:41.342Z",
+    "transport": "Official Testnet gRPC",
+    "digest": "CfNdtcUFQd7X6ip9sZeJF5J4ynFFTPAv298D1BhRMqCb",
+    "success": true,
+    "checkpoint": "390046507",
+    "balanceMist": "1000000000",
+    "coinBalanceMist": "0",
+    "addressBalanceMist": "1000000000",
+    "requestedAnotherPayout": false
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "recordedAt": "2026-10-02T05:26:50.731597+00:00",
+  "command": "go test -race -json ./internal/nodecommand ./internal/coordinator ./cmd/envd",
+  "sourceSha256": "92354e657c3b03521e60469849c2b90fffa642c2748e50f69fbcfba72d72917d",
+  "packages": [
+    {
+      "name": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand",
+      "status": "pass",
+      "elapsedSeconds": 0.002
+    },
+    {
+      "name": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "status": "pass",
+      "elapsedSeconds": 0
+    },
+    {
+      "name": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/coordinator",
+      "status": "pass",
+      "elapsedSeconds": 1.7229999999999999
+    }
+  ],
+  "passedTestEvents": 314,
+  "skippedTests": [
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand",
+      "test": "TestChainAuthorityLive"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestNativeChainFileAgentLive"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestNativeChainSingleKrLive"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestProductionObservationFixture"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestProductionChainRuntimeLive"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestHostJoinLiveCLI"
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "test": "TestHostJoinHiddenTTY"
+    }
+  ],
+  "app": {
+    "command": "npm test",
+    "tests": 64,
+    "passed": 64,
+    "failed": 0,
+    "sourceSha256": "41e00dce07c4b4477e245caec12c04a2153820eb5ba86cec37016c7b1e0bbdeb",
+    "productionBuild": "pass"
+  },
+  "limits": [
+    "generated fixture keys only in real HTTP integration",
+    "browser evidence is not installed App acceptance",
+    "independent Host signature pending"
+  ]
+}

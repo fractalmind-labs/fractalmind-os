@@ -1,0 +1,3964 @@
+{
+  "mainCommit": "52713248cb8f5c66c2a015972b473ed57d7d5f8d",
+  "sourceCommit": "2aa9af430626ca511b679f324735efce47ca26dc",
+  "isolated": "/var/folders/9m/4m4v8zks49nck63f0063ny340000gn/T/fm-main-upgrade-VRhfkP",
+  "complete": true,
+  "checks": [
+    {
+      "name": "original main package and five existing objects confirmed",
+      "facts": {}
+    },
+    {
+      "name": "validator compatible upgrade preserves original registry, organization, cap, objective and KR bytes",
+      "facts": {}
+    },
+    {
+      "name": "actual package metadata distinguishes legacy and newly added type origins",
+      "facts": {}
+    },
+    {
+      "name": "SDK resolves new identity directory through the original protocol registry",
+      "facts": {}
+    },
+    {
+      "name": "new extensions publish against the actual upgraded core under standard validator limits",
+      "facts": {}
+    },
+    {
+      "name": "current legacy ABI rejects missing Clock; current SDK Clock entry creates the original Objective type",
+      "facts": {}
+    },
+    {
+      "name": "original admin cap migrates into stable Human; current device writes and original objective/KR remain unchanged",
+      "facts": {}
+    },
+    {
+      "name": "mixed-origin read-only device still cannot administer migrated organization",
+      "facts": {}
+    },
+    {
+      "name": "new product record and extension field origins support decryptable history and measurable draft under the original organization",
+      "facts": {}
+    },
+    {
+      "name": "new Host invitation and membership origins work with the original organization and current identity",
+      "facts": {}
+    },
+    {
+      "name": "original RemoteCapability reads new budget field origins in the same legacy module",
+      "facts": {}
+    },
+    {
+      "name": "new Run and result key types coexist with original capability; explicit cancellation settles the original zero-tool claim",
+      "facts": {}
+    },
+    {
+      "name": "test Host revoked through current Human authority",
+      "facts": {}
+    }
+  ],
+  "transactions": [
+    {
+      "name": "publish-main",
+      "quote": {
+        "requestId": "publish-main",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "9rUs8oTDCdwhv3dyz7A1TJwo5bvVv4LchZiiRTxFSeob",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "1000000000000",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "340743080",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010405717
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "9rUs8oTDCdwhv3dyz7A1TJwo5bvVv4LchZiiRTxFSeob",
+        "actualGas": "340743080",
+        "objectTypes": {
+          "0x0735c33455459006ba36ce03cbc80137c2b3350bba5e6ff1fa7483ae651a0400": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+          "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::ProtocolRegistry",
+          "0x389f4f3e79729c7a08041631cbacbb5798a41f263c3ae035816990922bf27b19": "0x0000000000000000000000000000000000000000000000000000000000000002::package::UpgradeCap",
+          "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10": "package"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x0735c33455459006ba36ce03cbc80137c2b3350bba5e6ff1fa7483ae651a0400",
+            "inputState": "Exists",
+            "inputVersion": "712",
+            "inputDigest": "BzjfqpwjQjDCaEvCJB7J2RM7fiLifVe5ffmbx5eXetpJ",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "713",
+            "outputDigest": "AEar6Phqb53rXsD5KYsQ6sw4PDowwQk7dXaYWLSq1XBG",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "713",
+            "outputDigest": "5HYjdTGN2eTRjuDqVRwRMW2HVEMZq4fhgYGZTjr4YWgx",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "713"
+              }
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x389f4f3e79729c7a08041631cbacbb5798a41f263c3ae035816990922bf27b19",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "713",
+            "outputDigest": "6nsVBwfsmNHYg64YVqgpgBqqwRTeY9cvYLuJDGnXfpzU",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x80912322df99f7f8b04182092cd4958979c4116f34bb430eba05354dd39bdd3d",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "PackageWrite",
+            "outputVersion": "1",
+            "outputDigest": "J5f7BCqFwAoDEo35Y5stNK2gKT8j9cwFzuu1bePZ6j3z",
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xc365c15f96c6c2d60a23b3415243ced7a1570a37ea027995d3bd0d2d339ab1b2",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "create-original-organization",
+      "quote": {
+        "requestId": "create-original-organization",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "EigZhzCKN4QHs5ufznyosSjWVeztzqHtdrVd8wojWnbm",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "1000000000000",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "10621828",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010406337
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "EigZhzCKN4QHs5ufznyosSjWVeztzqHtdrVd8wojWnbm",
+        "actualGas": "10621828",
+        "objectTypes": {
+          "0x0735c33455459006ba36ce03cbc80137c2b3350bba5e6ff1fa7483ae651a0400": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+          "0x218103ba2e9453083f65947ec05fc91d1ec563cf8304ee6308fa6be2a78c3202": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::OrgAdminCap",
+          "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::ProtocolRegistry",
+          "0x427b69e5d6dda7235cd65be02333d79347df07ca013ed55159b304aa80ea1597": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,bool>",
+          "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::Organization",
+          "0x82358741bdfc921d6237d370141bee623af0cec13906b844549473c770efa449": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000001::string::String,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x0735c33455459006ba36ce03cbc80137c2b3350bba5e6ff1fa7483ae651a0400",
+            "inputState": "Exists",
+            "inputVersion": "713",
+            "inputDigest": "AEar6Phqb53rXsD5KYsQ6sw4PDowwQk7dXaYWLSq1XBG",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "714",
+            "outputDigest": "9nCYJ2xQSge67fLNymXmoEjFHCNNtqfWotcWiQdCDpLQ",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x218103ba2e9453083f65947ec05fc91d1ec563cf8304ee6308fa6be2a78c3202",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "714",
+            "outputDigest": "93JXRPc77R5h1A9Y1YyFdchkDviwWd8ufCdQNRtqwBBQ",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32",
+            "inputState": "Exists",
+            "inputVersion": "713",
+            "inputDigest": "5HYjdTGN2eTRjuDqVRwRMW2HVEMZq4fhgYGZTjr4YWgx",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "713"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "714",
+            "outputDigest": "6ke3PuiDNsDxqf83Acbuu3xncpVMkjAwBcLZWv3waHz9",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "713"
+              }
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x427b69e5d6dda7235cd65be02333d79347df07ca013ed55159b304aa80ea1597",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "714",
+            "outputDigest": "4o1C34KBzZt2JDAn2XQo9WBBzg7ug35kNWVdJb2zvVwv",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x80912322df99f7f8b04182092cd4958979c4116f34bb430eba05354dd39bdd3d"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "714",
+            "outputDigest": "AExksX7HTjP3R8jKuGQpitm7MiAwr8ooDhsbGFTasQpd",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x5f1426e8d257c3f70d43f5a476cbff8cddb0a931854aef39481d818eac710bd7",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x82358741bdfc921d6237d370141bee623af0cec13906b844549473c770efa449",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "714",
+            "outputDigest": "H6TU5FddsVFZaugAi5fvejRRvsmv6U7b4TDH9jhSm2R5",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0xc365c15f96c6c2d60a23b3415243ced7a1570a37ea027995d3bd0d2d339ab1b2"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xa3a6583a46d0410e6b2c63a559b248f5a08d52eaf31133804c092edac62460d1",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xbdb138c4e07704dca17df4055ea0030a848b666be5f0c124b753eddbb4aab579",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "create-original-objective",
+      "quote": {
+        "requestId": "create-original-objective",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "B4tSqYpLGPcpdrNSunAbFQ3f6D3ubyys3QhG2mq6sVkQ",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "999659256920",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "3473192",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010406681
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "B4tSqYpLGPcpdrNSunAbFQ3f6D3ubyys3QhG2mq6sVkQ",
+        "actualGas": "3473192",
+        "objectTypes": {
+          "0x039761bfbb3cbac2d78a7ac8fcb03eb6fa86ecfd79800cc123cf62e5db27c8fc": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::objective::Objective",
+          "0x218103ba2e9453083f65947ec05fc91d1ec563cf8304ee6308fa6be2a78c3202": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::OrgAdminCap",
+          "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x039761bfbb3cbac2d78a7ac8fcb03eb6fa86ecfd79800cc123cf62e5db27c8fc",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "715",
+            "outputDigest": "3ARp8xwqUk1Wm68XP1qHZ3xctBvZRywYuKc1dCnR4c3v",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "715"
+              }
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x218103ba2e9453083f65947ec05fc91d1ec563cf8304ee6308fa6be2a78c3202",
+            "inputState": "Exists",
+            "inputVersion": "714",
+            "inputDigest": "93JXRPc77R5h1A9Y1YyFdchkDviwWd8ufCdQNRtqwBBQ",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "715",
+            "outputDigest": "9emyCR4oLShD91TYMQvpTTbTRjgUyNknC3Q31xKZPEMH",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e",
+            "inputState": "Exists",
+            "inputVersion": "712",
+            "inputDigest": "3jcHryJGzipBUBuAQpqtExTC3Jc1Bope6Cj7Fn1grE8p",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "715",
+            "outputDigest": "C6e5HgwrTv76HZpDy3er8cmqZBXvCS6VzNvBrmhEEie6",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "create-original-key-result",
+      "quote": {
+        "requestId": "create-original-key-result",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "76HTiG3bBwhvqdTdDxHcFoV7KLHnphogoYDuKa8T1yx6",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "999659256920",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "3444464",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010407060
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "76HTiG3bBwhvqdTdDxHcFoV7KLHnphogoYDuKa8T1yx6",
+        "actualGas": "3444464",
+        "objectTypes": {
+          "0x039761bfbb3cbac2d78a7ac8fcb03eb6fa86ecfd79800cc123cf62e5db27c8fc": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::objective::Objective",
+          "0x0cfd4833f26801b889b43fc0561d3e3e17af21e1f4c42c481bd46f47176880ce": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::objective::KeyResult",
+          "0x218103ba2e9453083f65947ec05fc91d1ec563cf8304ee6308fa6be2a78c3202": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::OrgAdminCap",
+          "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x039761bfbb3cbac2d78a7ac8fcb03eb6fa86ecfd79800cc123cf62e5db27c8fc",
+            "inputState": "Exists",
+            "inputVersion": "715",
+            "inputDigest": "3ARp8xwqUk1Wm68XP1qHZ3xctBvZRywYuKc1dCnR4c3v",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "715"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "716",
+            "outputDigest": "2ahctYVwNL4cgFnJ3vdvpMW1HUax9aHEWUQLe8GdoDr7",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "715"
+              }
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x0cfd4833f26801b889b43fc0561d3e3e17af21e1f4c42c481bd46f47176880ce",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "716",
+            "outputDigest": "AQPdMcZvKgo729A5PwUB53MYdvLqoLrT47gmxcHGNjFW",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "716"
+              }
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x218103ba2e9453083f65947ec05fc91d1ec563cf8304ee6308fa6be2a78c3202",
+            "inputState": "Exists",
+            "inputVersion": "715",
+            "inputDigest": "9emyCR4oLShD91TYMQvpTTbTRjgUyNknC3Q31xKZPEMH",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "716",
+            "outputDigest": "4ig8AnsxJQrxrKDju7DMtbCGsMoQhwPCduYCs7Faw7SV",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e",
+            "inputState": "Exists",
+            "inputVersion": "715",
+            "inputDigest": "C6e5HgwrTv76HZpDy3er8cmqZBXvCS6VzNvBrmhEEie6",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "716",
+            "outputDigest": "9fxuuxzQzFyiMfDKSKf47MZAV85bsciwwgYR9FHgf1dP",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "upgrade-main-compatible",
+      "quote": {
+        "requestId": "upgrade-main-compatible",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "Dp9yZwzgft5DZDwNBm4gQFkG69RnX1c985zTstmNgCzY",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "999641717436",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "706236220",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010410623
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "Dp9yZwzgft5DZDwNBm4gQFkG69RnX1c985zTstmNgCzY",
+        "actualGas": "706236220",
+        "objectTypes": {
+          "0x389f4f3e79729c7a08041631cbacbb5798a41f263c3ae035816990922bf27b19": "0x0000000000000000000000000000000000000000000000000000000000000002::package::UpgradeCap",
+          "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521": "package",
+          "0xa4b2106bc4499ca5bedb843e2f44c02df61aad5de36ab172cd5f26b84fc7d836": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x389f4f3e79729c7a08041631cbacbb5798a41f263c3ae035816990922bf27b19",
+            "inputState": "Exists",
+            "inputVersion": "713",
+            "inputDigest": "6nsVBwfsmNHYg64YVqgpgBqqwRTeY9cvYLuJDGnXfpzU",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "714",
+            "outputDigest": "ABLjqCJyohTu64bx3KQ94dzhMvrjEihaRfL1iqnQSqxr",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "PackageWrite",
+            "outputVersion": "2",
+            "outputDigest": "C9u5CjdNwEnyXxsNRqLaL8GWavVrWN3HequKLs5q8qG9",
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xa4b2106bc4499ca5bedb843e2f44c02df61aad5de36ab172cd5f26b84fc7d836",
+            "inputState": "Exists",
+            "inputVersion": "712",
+            "inputDigest": "FAb7qXsTq6ragToWRS2N9eUdfsjdpgeusgxBdWxnKjfz",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "714",
+            "outputDigest": "9c3sGgHrtcnXPmQmRg6MoMqB1QRsVg8kD4Etj5SCiEKv",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "initialize-original-registry-after-upgrade",
+      "quote": {
+        "requestId": "initialize-original-registry-after-upgrade",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "uEaoWqX23p7BUeXnHhuZEm8FNKaBm1d2NtZTp3aPbDm",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "999641717436",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "6011028",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010411629
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "uEaoWqX23p7BUeXnHhuZEm8FNKaBm1d2NtZTp3aPbDm",
+        "actualGas": "6011028",
+        "objectTypes": {
+          "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::ProtocolRegistry",
+          "0x64b97a4741aba2e9a2686c706009a4fd80c1d318deb3d24df7d97e4c36b334c3": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::RegistryBinding,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "0xa4b2106bc4499ca5bedb843e2f44c02df61aad5de36ab172cd5f26b84fc7d836": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+          "0xc9dec3c798d0cb9b4eb7b1bdc2756421ddad0475d05844bde67a917721a3f962": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::IdentityRegistry"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x17e43f0d154adb38266023142532695228e549e5332104795f725bc207a66959",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32",
+            "inputState": "Exists",
+            "inputVersion": "714",
+            "inputDigest": "6ke3PuiDNsDxqf83Acbuu3xncpVMkjAwBcLZWv3waHz9",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "713"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "715",
+            "outputDigest": "CinCMGKjtdp2VUmCXVrrSqp4oVwfKSAW2ZJvBGbBYsXY",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "713"
+              }
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x64b97a4741aba2e9a2686c706009a4fd80c1d318deb3d24df7d97e4c36b334c3",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "715",
+            "outputDigest": "8jRaVznc5LVNXE8f56YNBevvocSZn7h3n5g1BQF9ZAYa",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xa4b2106bc4499ca5bedb843e2f44c02df61aad5de36ab172cd5f26b84fc7d836",
+            "inputState": "Exists",
+            "inputVersion": "714",
+            "inputDigest": "9c3sGgHrtcnXPmQmRg6MoMqB1QRsVg8kD4Etj5SCiEKv",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "715",
+            "outputDigest": "H33DeKM49ZUXrRkBHuzusVMNEYycNgLNeKU4PJseNTUP",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0xc130a1b3a2ea460e4c67886536ae821b86c1391aae0197ef919fc217abdf0cf0",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xc9dec3c798d0cb9b4eb7b1bdc2756421ddad0475d05844bde67a917721a3f962",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "715",
+            "outputDigest": "GLSMgfLLF4hGQgv86sToEgEMwGmNugUUmMxLweF4Ajx6",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "715"
+              }
+            },
+            "idOperation": "Created"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "publish-okr",
+      "quote": {
+        "requestId": "publish-okr",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "Aqaq7mXt7KTugWL1X2LqSPbczaFUriYJPfNaYjH8ZfjK",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "998929470188",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "147475880",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010414242
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "Aqaq7mXt7KTugWL1X2LqSPbczaFUriYJPfNaYjH8ZfjK",
+        "actualGas": "147475880",
+        "objectTypes": {
+          "0x414708cdf049ec95d1b70a7d9e1531712dfbc7b7116b6f2b7393c2c69de71e2e": "0x0000000000000000000000000000000000000000000000000000000000000002::package::UpgradeCap",
+          "0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163": "package",
+          "0xcf43165bbf3a9b6c3e18f03c03389b3b6d75b098efbc017813c4beed7f7b7898": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x414708cdf049ec95d1b70a7d9e1531712dfbc7b7116b6f2b7393c2c69de71e2e",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "713",
+            "outputDigest": "38eiwFpSunhCBqh3NP3vBEh4dTcyZAdNaMjbLtKhkE8s",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "PackageWrite",
+            "outputVersion": "1",
+            "outputDigest": "DCfeqCnMkBAerxMucZGJBF1md2iuKstCBcmSzdfozxts",
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xcf43165bbf3a9b6c3e18f03c03389b3b6d75b098efbc017813c4beed7f7b7898",
+            "inputState": "Exists",
+            "inputVersion": "712",
+            "inputDigest": "wRcfghdAf3t4ZVd9FrixXsiiaR7VUb6PQLyfr9E8Esg",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "713",
+            "outputDigest": "FpyMSHEALcm91cgPD7ozNHfhcbiSSt3wtaCMh9X4MKri",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "publish-direct-agent",
+      "quote": {
+        "requestId": "publish-direct-agent",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "3DKWtoLMQ4qbZ5gyyrMiViJUfnpcnZ3KzGqXvA1baLUs",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "998781994308",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "105757480",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010416778
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "3DKWtoLMQ4qbZ5gyyrMiViJUfnpcnZ3KzGqXvA1baLUs",
+        "actualGas": "105757480",
+        "objectTypes": {
+          "0x70e43f069c7012b0e0ec2fa40792c64b0697ab0dff35184db0426a6402c8aafb": "package",
+          "0xcfd16b82c7104854c190c27a767115b75cc5ee04a9dce5dab452f74d4b3c9d16": "0x0000000000000000000000000000000000000000000000000000000000000002::package::UpgradeCap",
+          "0xf16cfccde01a040666909d9850df6fb38a216ccf132136fcdcf2e3cc9dcac681": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x70e43f069c7012b0e0ec2fa40792c64b0697ab0dff35184db0426a6402c8aafb",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "PackageWrite",
+            "outputVersion": "1",
+            "outputDigest": "6E8UbpkRiDzAX1ftfi3TZgfmBCMGcNP4p4S6aKfLfNfb",
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xcfd16b82c7104854c190c27a767115b75cc5ee04a9dce5dab452f74d4b3c9d16",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "713",
+            "outputDigest": "8rFXAfr6Mp4NLg96biojZjDc4sknVt2CpcqTxZfL3Apg",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xf16cfccde01a040666909d9850df6fb38a216ccf132136fcdcf2e3cc9dcac681",
+            "inputState": "Exists",
+            "inputVersion": "712",
+            "inputDigest": "ECfwzy6MsEbKGfjffg7iT1MkHpTXXfkbmes6nyobRAN",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "713",
+            "outputDigest": "Bud88aVaVfsLxy9E1KV6NeXiQ5iVwfBpdwK37Wc3m5gQ",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "create-objective-through-upgraded-clock-entry",
+      "quote": {
+        "requestId": "create-objective-through-upgraded-clock-entry",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "9vAhq5ddoTPu1iywYKzQD2J4tqgzL7T5ZnwDbXEYzKWV",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "998781994308",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "3842792",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010417370
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "9vAhq5ddoTPu1iywYKzQD2J4tqgzL7T5ZnwDbXEYzKWV",
+        "actualGas": "3842792",
+        "objectTypes": {
+          "0x218103ba2e9453083f65947ec05fc91d1ec563cf8304ee6308fa6be2a78c3202": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::OrgAdminCap",
+          "0x2ed04eeeb9f4e24a64f31e2bae70a5d7e0cb24591266ca3ca3dc31743f623064": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::objective::Objective",
+          "0xf16cfccde01a040666909d9850df6fb38a216ccf132136fcdcf2e3cc9dcac681": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x218103ba2e9453083f65947ec05fc91d1ec563cf8304ee6308fa6be2a78c3202",
+            "inputState": "Exists",
+            "inputVersion": "716",
+            "inputDigest": "4ig8AnsxJQrxrKDju7DMtbCGsMoQhwPCduYCs7Faw7SV",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412624",
+            "outputDigest": "GzqsynViZ3NsGKSdw8mWmiMGD9wsn9k9hoLoJDR8ofqx",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x2ed04eeeb9f4e24a64f31e2bae70a5d7e0cb24591266ca3ca3dc31743f623064",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412624",
+            "outputDigest": "92Ki6AT6srdtMYzHyrvyHATdsBHRNf2KK9n432BDmF1A",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412624"
+              }
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xf16cfccde01a040666909d9850df6fb38a216ccf132136fcdcf2e3cc9dcac681",
+            "inputState": "Exists",
+            "inputVersion": "713",
+            "inputDigest": "Bud88aVaVfsLxy9E1KV6NeXiQ5iVwfBpdwK37Wc3m5gQ",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412624",
+            "outputDigest": "AoTLxf4GADxAvo4eCUCzuG1zYYyNSCSPdSymAgsZYm74",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "create-human-after-main-upgrade",
+      "quote": {
+        "requestId": "create-human-after-main-upgrade",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0xeca2a650dde9f55d22359f69b4d5234e9567b0917e7ccfffa682e7c2a2c4be84\"]",
+        "digest": "5ZjseSRrSV8tL1YyhFdD3rDMymVkDjLqo1bmCzWsgngV",
+        "sender": "0xeca2a650dde9f55d22359f69b4d5234e9567b0917e7ccfffa682e7c2a2c4be84",
+        "balance": "1000000000000",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "18772548",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010418519
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "5ZjseSRrSV8tL1YyhFdD3rDMymVkDjLqo1bmCzWsgngV",
+        "actualGas": "18772548",
+        "objectTypes": {
+          "0x15ad46c8ce3648304e06f45cc4c128391ddfff1b57bc9aefb1da5fe93d41751c": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::DeviceGrant",
+          "0x654cf0b796374faba4425b50e966200b4c8b8ab54b3fbf29b00ef2ecd4d5749e": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::RecoveryRecord",
+          "0x86851dc98c71050cc6c96d27d89010eab7f297f56adec6cd637e4af0a9aabcab": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,vector<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>>",
+          "0x900d07f71951fffac879a69d22080371bad39c74f53683a1c033bbe25060d081": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+          "0xa29500c6900ed942054feb30909e769b266042ae6f60d93b6974ba60c517e8a3": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::HumanIdentity",
+          "0xbbe060f06301aad88fd18c4892fe73c28330b736fbbca4111c25f62c86c3a316": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::RecoveryLocation>",
+          "0xc9dec3c798d0cb9b4eb7b1bdc2756421ddad0475d05844bde67a917721a3f962": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::IdentityRegistry"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x15ad46c8ce3648304e06f45cc4c128391ddfff1b57bc9aefb1da5fe93d41751c",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412646",
+            "outputDigest": "GnfFiHKDM89tbeEnQkSHxnaopqCnzo3wzb5Gxj74mdWN",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412646"
+              }
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x5d6feccdd0e7a7bc883cff7364a56db248cf015f0d1ce6b725ff0def9089c7fa",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x654cf0b796374faba4425b50e966200b4c8b8ab54b3fbf29b00ef2ecd4d5749e",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412646",
+            "outputDigest": "Bcq1NiHA7Z7yDdEg1VddgaPTTjq1A25eP9MQ2xu9qTod",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412646"
+              }
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x86851dc98c71050cc6c96d27d89010eab7f297f56adec6cd637e4af0a9aabcab",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412646",
+            "outputDigest": "CVuCvkcSYJUdzZSN4dGgQ8N5US8nRZDLSXqpoCnMjHx2",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x17e43f0d154adb38266023142532695228e549e5332104795f725bc207a66959"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x900d07f71951fffac879a69d22080371bad39c74f53683a1c033bbe25060d081",
+            "inputState": "Exists",
+            "inputVersion": "713",
+            "inputDigest": "AT5sJdspE9SRouJDHXW83UC4mDVBn2FqiEMdKfSxDvua",
+            "inputOwner": {
+              "AddressOwner": "0xeca2a650dde9f55d22359f69b4d5234e9567b0917e7ccfffa682e7c2a2c4be84",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412646",
+            "outputDigest": "F8ojdh4yXBqgxEG4wBj4NoLBFxg9EMSADtkSeyEuzUBW",
+            "outputOwner": {
+              "AddressOwner": "0xeca2a650dde9f55d22359f69b4d5234e9567b0917e7ccfffa682e7c2a2c4be84",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0xa29500c6900ed942054feb30909e769b266042ae6f60d93b6974ba60c517e8a3",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412646",
+            "outputDigest": "mfX4X9HiDr3RbTTZ2FiPpQZZsmtaMNbsBgom2iN17Vu",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412646"
+              }
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xbbe060f06301aad88fd18c4892fe73c28330b736fbbca4111c25f62c86c3a316",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412646",
+            "outputDigest": "65WNCRttrGvD1d6q8wZTW4R8fpJxpPFmahLWFyFrjtbb",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0xc130a1b3a2ea460e4c67886536ae821b86c1391aae0197ef919fc217abdf0cf0"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xbef2ae13e3c6f0ab1f0a3fb79118d315903f0e55b15139590079df5c6339974a",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xc9dec3c798d0cb9b4eb7b1bdc2756421ddad0475d05844bde67a917721a3f962",
+            "inputState": "Exists",
+            "inputVersion": "715",
+            "inputDigest": "GLSMgfLLF4hGQgv86sToEgEMwGmNugUUmMxLweF4Ajx6",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "715"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412646",
+            "outputDigest": "J1mtM3A9h34qvWUqWyN8kaDsvTcSkVHEKah6w3vABbrV",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "715"
+              }
+            },
+            "idOperation": "None"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "migrate-original-organization-to-human",
+      "quote": {
+        "requestId": "migrate-original-organization-to-human",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "6HyDesrXxAdTkjhWB83kFBV4dVVm3sTU5zTr8YQ4WXCF",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "998672394036",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "5611292",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010418987
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "6HyDesrXxAdTkjhWB83kFBV4dVVm3sTU5zTr8YQ4WXCF",
+        "actualGas": "5611292",
+        "objectTypes": {
+          "0x218103ba2e9453083f65947ec05fc91d1ec563cf8304ee6308fa6be2a78c3202": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::OrgAdminCap",
+          "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::Organization",
+          "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+          "0x929ce6ad1c7284b1a223f930ea3244f99a4e294fd91ee80b34e3a8553dfc09e1": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::OrgAdminCap>",
+          "0x96f6c233363474b026273df141b606b0eaa94feb42f424c96242fdf85517fa46": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::OrgRole>",
+          "0xa29500c6900ed942054feb30909e769b266042ae6f60d93b6974ba60c517e8a3": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::HumanIdentity"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x218103ba2e9453083f65947ec05fc91d1ec563cf8304ee6308fa6be2a78c3202",
+            "inputState": "Exists",
+            "inputVersion": "3412624",
+            "inputDigest": "GzqsynViZ3NsGKSdw8mWmiMGD9wsn9k9hoLoJDR8ofqx",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+            "inputState": "Exists",
+            "inputVersion": "714",
+            "inputDigest": "AExksX7HTjP3R8jKuGQpitm7MiAwr8ooDhsbGFTasQpd",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412655",
+            "outputDigest": "2GCXQcXzN6RB5QrnvTwWhWGT5VpLooFm8isY2P74TyuE",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e",
+            "inputState": "Exists",
+            "inputVersion": "716",
+            "inputDigest": "9fxuuxzQzFyiMfDKSKf47MZAV85bsciwwgYR9FHgf1dP",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412655",
+            "outputDigest": "97DkyVXN38136dLTgiuFSYYTHtVdKH3pmqhoydN4VTty",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x929ce6ad1c7284b1a223f930ea3244f99a4e294fd91ee80b34e3a8553dfc09e1",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412655",
+            "outputDigest": "A4qYNqek19bWzwVYcq6QbkKF4DSfyjSNoxtZz6mKLUqG",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0xbef2ae13e3c6f0ab1f0a3fb79118d315903f0e55b15139590079df5c6339974a"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x96f6c233363474b026273df141b606b0eaa94feb42f424c96242fdf85517fa46",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412655",
+            "outputDigest": "AopVpSYw4BWW6maKvfKFgG182SqJt8JN3wHEHcfLaSPM",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x5d6feccdd0e7a7bc883cff7364a56db248cf015f0d1ce6b725ff0def9089c7fa"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xa29500c6900ed942054feb30909e769b266042ae6f60d93b6974ba60c517e8a3",
+            "inputState": "Exists",
+            "inputVersion": "3412646",
+            "inputDigest": "mfX4X9HiDr3RbTTZ2FiPpQZZsmtaMNbsBgom2iN17Vu",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412646"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412655",
+            "outputDigest": "BgxoZDdYoct5qkcEuk1rh7pMdMKiHvDK4FdBUJXZfUxq",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412646"
+              }
+            },
+            "idOperation": "None"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "edit-migrated-organization-with-current-device",
+      "quote": {
+        "requestId": "edit-migrated-organization-with-current-device",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "BbgyC2TYh9dQ7nByaty9aJMtm9iihKmtvkfWBignLJqJ",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "998672394036",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "1480192",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010419467
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "BbgyC2TYh9dQ7nByaty9aJMtm9iihKmtvkfWBignLJqJ",
+        "actualGas": "1480192",
+        "objectTypes": {
+          "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::Organization",
+          "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+            "inputState": "Exists",
+            "inputVersion": "3412655",
+            "inputDigest": "2GCXQcXzN6RB5QrnvTwWhWGT5VpLooFm8isY2P74TyuE",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412664",
+            "outputDigest": "AhF8mnnHkBQAqAuTHNTCwXbffFBjJVuncXhzrAbNc5cf",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e",
+            "inputState": "Exists",
+            "inputVersion": "3412655",
+            "inputDigest": "97DkyVXN38136dLTgiuFSYYTHtVdKH3pmqhoydN4VTty",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412664",
+            "outputDigest": "wDfbxFT4F8nGrj2omoqUQXbQxerdjXTsdLUbhHdDunk",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "add-read-device-after-migration",
+      "quote": {
+        "requestId": "add-read-device-after-migration",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "3ayTF99hVNtF9AaE7FvEAxxNbJuea8LH8whgUNyrE6Kj",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "998666782744",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "8601968",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010419837
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "3ayTF99hVNtF9AaE7FvEAxxNbJuea8LH8whgUNyrE6Kj",
+        "actualGas": "8601968",
+        "objectTypes": {
+          "0x717f2f43517be52e130fd65bf26a9dd0efa8592952afea394d69f8dc47e238c9": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,vector<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>>",
+          "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+          "0x8fbe48e223e9696762891c11378ee33b39df9f2119f24470825d5eafa4bc56d2": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::DeviceGrant",
+          "0xa29500c6900ed942054feb30909e769b266042ae6f60d93b6974ba60c517e8a3": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::HumanIdentity",
+          "0xc9dec3c798d0cb9b4eb7b1bdc2756421ddad0475d05844bde67a917721a3f962": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::IdentityRegistry"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x717f2f43517be52e130fd65bf26a9dd0efa8592952afea394d69f8dc47e238c9",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412671",
+            "outputDigest": "ETdEoSKnC7Bu9T8czCt9yCJ676qxfVijhufdCFHtYJp1",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x17e43f0d154adb38266023142532695228e549e5332104795f725bc207a66959"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e",
+            "inputState": "Exists",
+            "inputVersion": "3412664",
+            "inputDigest": "wDfbxFT4F8nGrj2omoqUQXbQxerdjXTsdLUbhHdDunk",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412671",
+            "outputDigest": "9L3T3hbuCQXS1C8d4tQJeRsiwJQzAqnvxrCYL4jrZPUe",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x8fbe48e223e9696762891c11378ee33b39df9f2119f24470825d5eafa4bc56d2",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412671",
+            "outputDigest": "BYaLaFYoJ9Y9YmZ37KrkBxTZtgyysC2qWfsx7oY9cEnq",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412671"
+              }
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xa29500c6900ed942054feb30909e769b266042ae6f60d93b6974ba60c517e8a3",
+            "inputState": "Exists",
+            "inputVersion": "3412655",
+            "inputDigest": "BgxoZDdYoct5qkcEuk1rh7pMdMKiHvDK4FdBUJXZfUxq",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412646"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412671",
+            "outputDigest": "4cQJmM3ewHziNWLZTw886CCv3jHzcrE9A13fUbhJS9J9",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412646"
+              }
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0xc9dec3c798d0cb9b4eb7b1bdc2756421ddad0475d05844bde67a917721a3f962",
+            "inputState": "Exists",
+            "inputVersion": "3412646",
+            "inputDigest": "J1mtM3A9h34qvWUqWyN8kaDsvTcSkVHEKah6w3vABbrV",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "715"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412671",
+            "outputDigest": "24SmyVd2koNuAD9UYZ3eS3ouA84jqF6JKx1zeTqjEw47",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "715"
+              }
+            },
+            "idOperation": "None"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "save-message-in-migrated-organization",
+      "quote": {
+        "requestId": "save-message-in-migrated-organization",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "CkjmWq2dcYbAGfrok3qKP5wZKH61kkZtFigjXbuAfSy8",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "998656700584",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "10329144",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010421037
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "CkjmWq2dcYbAGfrok3qKP5wZKH61kkZtFigjXbuAfSy8",
+        "actualGas": "10329144",
+        "objectTypes": {
+          "0x33b92d8b10e8ca74d4c31a477cdb8a1452cd038b6da8ea5c42bb517204838473": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::product_record::RecordKey,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::product_record::RecordPointer>",
+          "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::Organization",
+          "0x822b3b8d8a267169496bb2029ccde35a5ace17f3b72b9d2d7f6c534a9296981e": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::product_record::EncryptedRecord",
+          "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+          "0x89e5af33645aacf3137e5ba8ee565b0d7bed5bd92edefa526fd083ad6331db29": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::product_record::IndexBinding,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::product_record::RecordIndex>"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x33b92d8b10e8ca74d4c31a477cdb8a1452cd038b6da8ea5c42bb517204838473",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412694",
+            "outputDigest": "36dNZmTPpWsWFncWnch2bTDWzJL1a2viad82M33ozkM9",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0xcfcfaca34991443f436e3228c4f43ebd8eab636b6b3ff70914b023d2cc429cd9"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+            "inputState": "Exists",
+            "inputVersion": "3412664",
+            "inputDigest": "AhF8mnnHkBQAqAuTHNTCwXbffFBjJVuncXhzrAbNc5cf",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412694",
+            "outputDigest": "D9Q151VduTFCFfG2VC6KJbtqUtx5gqhHvGEv3P7jQX5s",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x822b3b8d8a267169496bb2029ccde35a5ace17f3b72b9d2d7f6c534a9296981e",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412694",
+            "outputDigest": "5ChvtUDSyMdrSEH7dVoxV5g3MMLTF8ncP13EjNBffo7L",
+            "outputOwner": {
+              "$kind": "Immutable",
+              "Immutable": true
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e",
+            "inputState": "Exists",
+            "inputVersion": "3412671",
+            "inputDigest": "9L3T3hbuCQXS1C8d4tQJeRsiwJQzAqnvxrCYL4jrZPUe",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412694",
+            "outputDigest": "H97EazdPuJ1TVosgwtpw7wv1LzWhFcCwQou89woCBj6V",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x89e5af33645aacf3137e5ba8ee565b0d7bed5bd92edefa526fd083ad6331db29",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412694",
+            "outputDigest": "AGJP1EqT3pbKGzZspcM4QY4YpXpYLqBv67Dhxx1nt8kk",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xcfcfaca34991443f436e3228c4f43ebd8eab636b6b3ff70914b023d2cc429cd9",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "create-okr-under-migrated-original-organization",
+      "quote": {
+        "requestId": "create-okr-under-migrated-original-organization",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "AZNX8VF9e3toPuZdtRioinjsiMn6qZSnfn4QdY9buf1v",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "998646371440",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "20177916",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010421528
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "AZNX8VF9e3toPuZdtRioinjsiMn6qZSnfn4QdY9buf1v",
+        "actualGas": "20177916",
+        "objectTypes": {
+          "0x1b62182066cfbae0fe35e5b312ae3c2072ac3e12e1093609cbf0120976dc7461": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::product_record::RecordKey,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::product_record::RecordPointer>",
+          "0x428c7dd7484206180c1aeb7d19007c054c4670f23a87cdd302936d6a0a37d993": "0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163::okr::Okr",
+          "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::Organization",
+          "0x826e03537f52c58ff9245c7e9a8ba50121e45a5597fa1a5d50a0323457eb5c86": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::product_record::EncryptedRecord",
+          "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+          "0x89e5af33645aacf3137e5ba8ee565b0d7bed5bd92edefa526fd083ad6331db29": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::product_record::IndexBinding,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::product_record::RecordIndex>",
+          "0xa156860d505e65b2c8d126ce936f82aebd7576672ed0d8471677f7d627e60afe": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::execution_extension::FieldKey<0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163::okr::Witness>,0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163::okr::OkrIndex>",
+          "0xc5896b1e8c871cd3f48c2b2aa244fc0be823c5d8e123c2faa4414af64276bdbd": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::execution_extension::IndexKey,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::execution_extension::PermissionIndex>",
+          "0xf721903ec97a108478c2cc571de7feeba4eab9ad9d752daebb2176f874b8d85e": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000001::string::String,0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163::okr::DraftPointer>"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x1b62182066cfbae0fe35e5b312ae3c2072ac3e12e1093609cbf0120976dc7461",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412703",
+            "outputDigest": "Fa2CDHAGFAREYBQQzn21azEx8rvFhWJLyba6SURVMyMn",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0xcfcfaca34991443f436e3228c4f43ebd8eab636b6b3ff70914b023d2cc429cd9"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x3381d7c5beee5e392fad0564dd5b5fc8d49c3008deb8113be147dd3a34bb424d",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x428c7dd7484206180c1aeb7d19007c054c4670f23a87cdd302936d6a0a37d993",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412703",
+            "outputDigest": "Gno8aaisG5ZriV3aCULtk7XRM1gb6hXLVwc7dPVxjkNK",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412703"
+              }
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+            "inputState": "Exists",
+            "inputVersion": "3412694",
+            "inputDigest": "D9Q151VduTFCFfG2VC6KJbtqUtx5gqhHvGEv3P7jQX5s",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412703",
+            "outputDigest": "7m4AxkrAbdiou5SFutwmc7fbjSFqggwd22vn8HZ1rvtL",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x6e7c49f98cd65cdb137a7682e765d2076c78230f6816f92bf12f95edd60bfe6c",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x826e03537f52c58ff9245c7e9a8ba50121e45a5597fa1a5d50a0323457eb5c86",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412703",
+            "outputDigest": "Gm7habD6x2NKjm5gRKzjNPTSmPbV65FQyjuv5yWpauLh",
+            "outputOwner": {
+              "$kind": "Immutable",
+              "Immutable": true
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e",
+            "inputState": "Exists",
+            "inputVersion": "3412694",
+            "inputDigest": "H97EazdPuJ1TVosgwtpw7wv1LzWhFcCwQou89woCBj6V",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412703",
+            "outputDigest": "4oqe13q9YVBKb1nfVDceP3cbABgC4JQ6iE3iCWDREPc3",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x89e5af33645aacf3137e5ba8ee565b0d7bed5bd92edefa526fd083ad6331db29",
+            "inputState": "Exists",
+            "inputVersion": "3412694",
+            "inputDigest": "AGJP1EqT3pbKGzZspcM4QY4YpXpYLqBv67Dhxx1nt8kk",
+            "inputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412703",
+            "outputDigest": "AjR4dGmmJVomwAMEh7kVmb3Wz1STHfad5BCbik3EB5hZ",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0xa156860d505e65b2c8d126ce936f82aebd7576672ed0d8471677f7d627e60afe",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412703",
+            "outputDigest": "8KZXe3VnRhuscsKsRzZ9WdwLAz1Ajzq7xQcca41Pecr7",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xc5896b1e8c871cd3f48c2b2aa244fc0be823c5d8e123c2faa4414af64276bdbd",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412703",
+            "outputDigest": "HbNT65CU1yXqCh36YNkLSN8m3My1NDhx9mUhEfYtvELm",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xda0afa7563e8fe395d7192e8b1ee084333394b8e813f4f7c9a3dd59119346808",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xf721903ec97a108478c2cc571de7feeba4eab9ad9d752daebb2176f874b8d85e",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412703",
+            "outputDigest": "EAbHwr21urfCcWD9QRAANFNFA55pNJs8uMWAsvv286fZ",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x6e7c49f98cd65cdb137a7682e765d2076c78230f6816f92bf12f95edd60bfe6c"
+            },
+            "idOperation": "Created"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "create-coordinator-binding-after-upgrade",
+      "quote": {
+        "requestId": "create-coordinator-binding-after-upgrade",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "2qax8rn5c4HtTTmPngurTKFezYgamUtqDsfTx2RtqxUd",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "998626193524",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "6825544",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010422098
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "2qax8rn5c4HtTTmPngurTKFezYgamUtqDsfTx2RtqxUd",
+        "actualGas": "6825544",
+        "objectTypes": {
+          "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::Organization",
+          "0x6f34265b4cf3495d87394185fffd7ee25749d21befe948dec8256d2b6fefa8dd": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::CoordinatorBinding",
+          "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+          "0x98858f5670a0c95c564c290e18227b5f9102ff27ab6b49a290972ceda16337a0": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::HostIndexBinding,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::HostIndex>"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x19ceadb453d50d407732fc3e8b9b8afe8c2b69593170690e53f0e244d7aba3d7",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+            "inputState": "Exists",
+            "inputVersion": "3412703",
+            "inputDigest": "7m4AxkrAbdiou5SFutwmc7fbjSFqggwd22vn8HZ1rvtL",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412714",
+            "outputDigest": "CSW4Zn81p78tjwg95WatMUuoPPBHyJ6JMnWRH46gW7f2",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x6f34265b4cf3495d87394185fffd7ee25749d21befe948dec8256d2b6fefa8dd",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412714",
+            "outputDigest": "FHeuuSbb2TWkwYtzqtsvPWdC3CQWCcEDEeduo37B5Svv",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412714"
+              }
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e",
+            "inputState": "Exists",
+            "inputVersion": "3412703",
+            "inputDigest": "4oqe13q9YVBKb1nfVDceP3cbABgC4JQ6iE3iCWDREPc3",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412714",
+            "outputDigest": "DY2o2CH1uvHYZ69DKzw3bvoavsDP2jjKxjFfeApQz2P3",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x98858f5670a0c95c564c290e18227b5f9102ff27ab6b49a290972ceda16337a0",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412714",
+            "outputDigest": "Dd1ErmJxffUnTvrB3tvHTRQte5AYyj7vEqsGXNGBGNMa",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xbd079c9082ff59608879bee63860f48b1eea1609e11b0249d2937f6c3bdffe84",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "create-invite-after-upgrade",
+      "quote": {
+        "requestId": "create-invite-after-upgrade",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "7f4tZdCxYjbbfFYbi6auvqzuqJFd5r6D5whJ9AgLUuEv",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "998626193524",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "4963240",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010422575
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "7f4tZdCxYjbbfFYbi6auvqzuqJFd5r6D5whJ9AgLUuEv",
+        "actualGas": "4963240",
+        "objectTypes": {
+          "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::Organization",
+          "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+          "0x98858f5670a0c95c564c290e18227b5f9102ff27ab6b49a290972ceda16337a0": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::HostIndexBinding,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::HostIndex>",
+          "0xc49bb44b7744d23a7ad4b09552d74c35e3a68b47961b08b1802cb4f0f8584da6": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::HostInvite"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+            "inputState": "Exists",
+            "inputVersion": "3412714",
+            "inputDigest": "CSW4Zn81p78tjwg95WatMUuoPPBHyJ6JMnWRH46gW7f2",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412723",
+            "outputDigest": "9zhCqkDCyUcaWVZTtP6Bz2jk8qcGVUfZSnapYj4iz9MC",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e",
+            "inputState": "Exists",
+            "inputVersion": "3412714",
+            "inputDigest": "DY2o2CH1uvHYZ69DKzw3bvoavsDP2jjKxjFfeApQz2P3",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412723",
+            "outputDigest": "655o7eMwCNVFeXHzFemyWRG4BVWgVAKYGXFX4WaKyKvg",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x98858f5670a0c95c564c290e18227b5f9102ff27ab6b49a290972ceda16337a0",
+            "inputState": "Exists",
+            "inputVersion": "3412714",
+            "inputDigest": "Dd1ErmJxffUnTvrB3tvHTRQte5AYyj7vEqsGXNGBGNMa",
+            "inputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412723",
+            "outputDigest": "wQ9JJ8dY94p73WaConzvFkLCJEsqPPyHhvwng2rzcKN",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0xc49bb44b7744d23a7ad4b09552d74c35e3a68b47961b08b1802cb4f0f8584da6",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412723",
+            "outputDigest": "HF98mFC78RPkv9gkh74cTnRfArU4Qe7wPzB7mCruD93E",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412723"
+              }
+            },
+            "idOperation": "Created"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "redeem-invite-after-upgrade",
+      "quote": {
+        "requestId": "redeem-invite-after-upgrade",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x3c9ca8294c0990ab8f26e64d5fce87e9617b6c13d8cd7623d9e48829421ff407\"]",
+        "digest": "8D5D5XbBVzKVbhQhdngrnsaDxEEBQuZFkv17aYwrkaFj",
+        "sender": "0x3c9ca8294c0990ab8f26e64d5fce87e9617b6c13d8cd7623d9e48829421ff407",
+        "balance": "1000000000000",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "15459020",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010423525
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "8D5D5XbBVzKVbhQhdngrnsaDxEEBQuZFkv17aYwrkaFj",
+        "actualGas": "15459020",
+        "objectTypes": {
+          "0x340532de5ccc16f425fa8cd0b9d1874d27c17ea5b6edee15d125693d39360fa2": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::remote_authority::RemoteCapability",
+          "0x41a5a2c5f04e057297207b35af3d4f8eaf70a26b020d01b2d174cacc504a6207": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+          "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::Organization",
+          "0x5bc51c11b623bb5fa55b3ca7e07bf1d00abead4bfcc3d17512a24f70888370b6": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "0x8317981f0fc6618009d433b6f8d0bd2451bcbcb2bd1ad1eeec1f7a5093109e88": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::HostMembership",
+          "0x98858f5670a0c95c564c290e18227b5f9102ff27ab6b49a290972ceda16337a0": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::HostIndexBinding,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::HostIndex>",
+          "0xc49bb44b7744d23a7ad4b09552d74c35e3a68b47961b08b1802cb4f0f8584da6": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::HostInvite",
+          "0xf34147a32cbacad122318adb5509c099ed43f440330d43b3d960d028cbc262bf": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::AuthorityBindingKey,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::AuthorityBinding>"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x01cb51f6aceeab8525b6ad6d4bc5793651e43f41be6b677f953d8f5054f32577",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x08f0dcfb432b34e40b84799acfb2a184456559f7151d4ec558c5e50458dc4f99",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x2e3a1c3ee89fa05cb3273d449f58a579e0b25a56c5fade9db382db5dd0ec0fe5",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x340532de5ccc16f425fa8cd0b9d1874d27c17ea5b6edee15d125693d39360fa2",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412741",
+            "outputDigest": "6nV3zDETb6GMhdXi5oAS1cfoYRh2XFgqJK7jyJedXkCZ",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412741"
+              }
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x41a5a2c5f04e057297207b35af3d4f8eaf70a26b020d01b2d174cacc504a6207",
+            "inputState": "Exists",
+            "inputVersion": "715",
+            "inputDigest": "FTk6j9CtFd587MkHRcm3vVPuUMqDH2kwDicdNFLidSSc",
+            "inputOwner": {
+              "AddressOwner": "0x3c9ca8294c0990ab8f26e64d5fce87e9617b6c13d8cd7623d9e48829421ff407",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412741",
+            "outputDigest": "49xpkzsMXfwvk7NgGxthQmkwnrQ68rRHyh9HAF93XMwU",
+            "outputOwner": {
+              "AddressOwner": "0x3c9ca8294c0990ab8f26e64d5fce87e9617b6c13d8cd7623d9e48829421ff407",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x48e0b51e40af575da721f40ed360a92c53c6e176ac8d3f1d26999f415e1aff2b",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+            "inputState": "Exists",
+            "inputVersion": "3412723",
+            "inputDigest": "9zhCqkDCyUcaWVZTtP6Bz2jk8qcGVUfZSnapYj4iz9MC",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412741",
+            "outputDigest": "6RE3wW8Cyy4dqXVRg2BcB6oKp9qx4PUGLTZ3jVrxgRG8",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x5bc51c11b623bb5fa55b3ca7e07bf1d00abead4bfcc3d17512a24f70888370b6",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412741",
+            "outputDigest": "6uqzbdUGmDUXEPqwiHJKG1A18siXLmyeWP5Bh2ce55r5",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0xbd079c9082ff59608879bee63860f48b1eea1609e11b0249d2937f6c3bdffe84"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x8317981f0fc6618009d433b6f8d0bd2451bcbcb2bd1ad1eeec1f7a5093109e88",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412741",
+            "outputDigest": "9Qi7qd3pmWYBUUkV5ERGVCDkDWfzS1uhtov6guKq4oUS",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412741"
+              }
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x98858f5670a0c95c564c290e18227b5f9102ff27ab6b49a290972ceda16337a0",
+            "inputState": "Exists",
+            "inputVersion": "3412723",
+            "inputDigest": "wQ9JJ8dY94p73WaConzvFkLCJEsqPPyHhvwng2rzcKN",
+            "inputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412741",
+            "outputDigest": "BArCP95X5nZzQh9ei7JMMCHBeSCni9fU7RVxCbSj9vRu",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0xc49bb44b7744d23a7ad4b09552d74c35e3a68b47961b08b1802cb4f0f8584da6",
+            "inputState": "Exists",
+            "inputVersion": "3412723",
+            "inputDigest": "HF98mFC78RPkv9gkh74cTnRfArU4Qe7wPzB7mCruD93E",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412723"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412741",
+            "outputDigest": "8Xo9Lf1GKhq7xazUNaPa1a7vnHAu2uG9DanPUAA8iD2z",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412723"
+              }
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0xf34147a32cbacad122318adb5509c099ed43f440330d43b3d960d028cbc262bf",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412741",
+            "outputDigest": "GvsHRJB2vYiunYrCyz19BCChqwHXHjxUG9VtHtPkR9xZ",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x340532de5ccc16f425fa8cd0b9d1874d27c17ea5b6edee15d125693d39360fa2"
+            },
+            "idOperation": "Created"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "issue-current-status-capability-after-upgrade",
+      "quote": {
+        "requestId": "issue-current-status-capability-after-upgrade",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "DVGssCLgPpGsMiZxHLxwcsQknHzMgxq4QTmAJ6GWDR3M",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "998614404740",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "9370680",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010424029
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "DVGssCLgPpGsMiZxHLxwcsQknHzMgxq4QTmAJ6GWDR3M",
+        "actualGas": "9370680",
+        "objectTypes": {
+          "0x065eb4aa0b58492cce98a5ff92c5c425f855e704a18d6fb82839047818336a23": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::remote_authority::RemoteCapability",
+          "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+          "0xdae06375725b63de9508d79440214a2e4232e6b979b7dd912c65daf987a77580": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::AuthorityBindingKey,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::AuthorityBinding>"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x065eb4aa0b58492cce98a5ff92c5c425f855e704a18d6fb82839047818336a23",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412751",
+            "outputDigest": "AfoKp61NpYRyEDLSFfTZAfr3UhvAK739EHWkyDMiBC4R",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412751"
+              }
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x3ed93725968388532ad80946860dbc5c8f1887ba793d4f40bb492f0c6a7601a7",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x429fbb7d5a6c3bec716effd1764d72b8ea738c4b2934ff57ccbe6b345ec773cc",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e",
+            "inputState": "Exists",
+            "inputVersion": "3412723",
+            "inputDigest": "655o7eMwCNVFeXHzFemyWRG4BVWgVAKYGXFX4WaKyKvg",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412751",
+            "outputDigest": "BNeTv9Xwfj9pbUSGAFMBbSVU5woBHRq4NfWZ2BLUtipM",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0xc52c651c9133a9c70d6eb631df69c62db84fda12f090f69a4f6dd0c381419211",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xdae06375725b63de9508d79440214a2e4232e6b979b7dd912c65daf987a77580",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412751",
+            "outputDigest": "9N5Ctui2zDnyJXTU6DJhRxw6mt8u71zVsbDKBt2FFDDb",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x065eb4aa0b58492cce98a5ff92c5c425f855e704a18d6fb82839047818336a23"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xff795af42a2413f50a7bea0668759466c00b67dab584f0293426a3907af1e05f",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "prepare-new-run-on-original-capability",
+      "quote": {
+        "requestId": "prepare-new-run-on-original-capability",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "G9LTFFdYxTs5oZk1gMFtghVfSyQ1MGvheyu9j1mj8qR8",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "998614404740",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "29750716",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010424461
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "G9LTFFdYxTs5oZk1gMFtghVfSyQ1MGvheyu9j1mj8qR8",
+        "actualGas": "29750716",
+        "objectTypes": {
+          "0x065eb4aa0b58492cce98a5ff92c5c425f855e704a18d6fb82839047818336a23": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::remote_authority::RemoteCapability",
+          "0x0d45e2c2c0a2c230f043183c062883b9e3f7955dceecf32f42ad365bc2753bac": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::node_execution::ExecutionIndexKey,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::node_execution::ExecutionIndex>",
+          "0x10ff8febb2d0184db31e91970688d80fd4c205cae2bde4fac04ef08de81933ad": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "0x1ae06bab1648f84d615d754e436e8db20938e6159936319d4fc8acb5c95a0b5c": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::remote_authority::BoundBudgetClaimKey,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::remote_authority::BoundBudgetClaim>",
+          "0x4de268ec35bf5070f437c172f6af79251badaa0206cced46f34d5e335df61e11": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::node_execution::ResultKeyKey,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::node_execution::ResultKeyGrant>",
+          "0x74e2556a266c104e9eabdde4f5d56abf614ca983dcf077e933dedf73d2a5791d": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>",
+          "0x7badd62196a76783865ae44f5687931a1e790e5e33f1b292f045f2a113845da0": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::remote_authority::BoundBudgetKey,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::remote_authority::BoundBudgetTotals>",
+          "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+          "0xaaa72c6a76581c7071e773d593b53fd2e7c376e4972b95346d129ee97215c90c": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::node_execution::CommandExecution",
+          "0xaeb08d3227b1b6f5b783f2cbeee7e89be99444bae01c70f5f0248b2be5a0ca8f": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::remote_authority::AuthorityClaimRecord>",
+          "0xb760e68e7b9d77170f7a95cb940fb63548cf2c4184849e3574e2d1f315c0e8cd": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "0xf3a2792470184793094906ae3ab8b3790ed912745f440d509e2552b4f1a3c845": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<u8>>"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x065eb4aa0b58492cce98a5ff92c5c425f855e704a18d6fb82839047818336a23",
+            "inputState": "Exists",
+            "inputVersion": "3412751",
+            "inputDigest": "AfoKp61NpYRyEDLSFfTZAfr3UhvAK739EHWkyDMiBC4R",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412751"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412759",
+            "outputDigest": "HPfgLhYmwSfJ7jY63E2rSdP5NDQfypdzM8X4RUVk47Qe",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412751"
+              }
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x0d45e2c2c0a2c230f043183c062883b9e3f7955dceecf32f42ad365bc2753bac",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412759",
+            "outputDigest": "AQGauvRRNANK2zchTK41bjemXzGrenHCAMPZXtJXpaKx",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x065eb4aa0b58492cce98a5ff92c5c425f855e704a18d6fb82839047818336a23"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x10ff8febb2d0184db31e91970688d80fd4c205cae2bde4fac04ef08de81933ad",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412759",
+            "outputDigest": "DHSVcbDt3BH3AYiuA2GHtN4HhosznEDXXQ46HyxgtT2D",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x3ed93725968388532ad80946860dbc5c8f1887ba793d4f40bb492f0c6a7601a7"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x1ae06bab1648f84d615d754e436e8db20938e6159936319d4fc8acb5c95a0b5c",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412759",
+            "outputDigest": "5ne8NXG1HUBA8Nw9jfEgSfU15WjhNAebfrgcNC4GxXF5",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x065eb4aa0b58492cce98a5ff92c5c425f855e704a18d6fb82839047818336a23"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x4de268ec35bf5070f437c172f6af79251badaa0206cced46f34d5e335df61e11",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412759",
+            "outputDigest": "DnkdqTDswHmqGfQqfFipkvPFmbmqGqGkgC52sjLCqbwh",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x065eb4aa0b58492cce98a5ff92c5c425f855e704a18d6fb82839047818336a23"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x74e2556a266c104e9eabdde4f5d56abf614ca983dcf077e933dedf73d2a5791d",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412759",
+            "outputDigest": "BiGPekxza4KE1nFNfYJJrzFFwiFgKx1rq4QwgwjatdSM",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0xff795af42a2413f50a7bea0668759466c00b67dab584f0293426a3907af1e05f"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x7badd62196a76783865ae44f5687931a1e790e5e33f1b292f045f2a113845da0",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412759",
+            "outputDigest": "4K1u8oFXsprvXaGifPFsBceF1QdAw48YRBhw7bD1qDtA",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x065eb4aa0b58492cce98a5ff92c5c425f855e704a18d6fb82839047818336a23"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e",
+            "inputState": "Exists",
+            "inputVersion": "3412751",
+            "inputDigest": "BNeTv9Xwfj9pbUSGAFMBbSVU5woBHRq4NfWZ2BLUtipM",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412759",
+            "outputDigest": "F1MJMT6KKANLArZRtaEST1uspU1WmB1iBYV8fbXtPfmV",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0xaaa72c6a76581c7071e773d593b53fd2e7c376e4972b95346d129ee97215c90c",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412759",
+            "outputDigest": "HrfS8dNCazE1Bvkd5bgrwTLgQFaUUU3ijJDAah8LbSuR",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412759"
+              }
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xaeb08d3227b1b6f5b783f2cbeee7e89be99444bae01c70f5f0248b2be5a0ca8f",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412759",
+            "outputDigest": "9wA2rHxK3a8swvc3sJGdbNADa2FFT5zwzNrTNJFX5K5T",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0xc52c651c9133a9c70d6eb631df69c62db84fda12f090f69a4f6dd0c381419211"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xb760e68e7b9d77170f7a95cb940fb63548cf2c4184849e3574e2d1f315c0e8cd",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412759",
+            "outputDigest": "8hP4AN1zBcMitm6qvYFN13JiqLgyadPTpXTwPKMZj5FP",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0xdebb10de3b17ae35bf830da7dadb5ac8fb3f9eed4983c57d5797a686c56cc6a5"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xdebb10de3b17ae35bf830da7dadb5ac8fb3f9eed4983c57d5797a686c56cc6a5",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xf3a2792470184793094906ae3ab8b3790ed912745f440d509e2552b4f1a3c845",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412759",
+            "outputDigest": "8rVXUtgrknnDtZobnCrRSzobenYyAp7j7axmxaRBrxM1",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x429fbb7d5a6c3bec716effd1764d72b8ea738c4b2934ff57ccbe6b345ec773cc"
+            },
+            "idOperation": "Created"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "cancel-original-new-queued-run",
+      "quote": {
+        "requestId": "cancel-original-new-queued-run",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "5fNbW5L3H9YDMsf8GWpeLExB8pqs9UHnvqk2FVtPTS5j",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "998605034060",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "1618948",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010424954
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "5fNbW5L3H9YDMsf8GWpeLExB8pqs9UHnvqk2FVtPTS5j",
+        "actualGas": "1618948",
+        "objectTypes": {
+          "0x065eb4aa0b58492cce98a5ff92c5c425f855e704a18d6fb82839047818336a23": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::remote_authority::RemoteCapability",
+          "0x1ae06bab1648f84d615d754e436e8db20938e6159936319d4fc8acb5c95a0b5c": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::remote_authority::BoundBudgetClaimKey,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::remote_authority::BoundBudgetClaim>",
+          "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::Organization",
+          "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+          "0xaaa72c6a76581c7071e773d593b53fd2e7c376e4972b95346d129ee97215c90c": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::node_execution::CommandExecution"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x065eb4aa0b58492cce98a5ff92c5c425f855e704a18d6fb82839047818336a23",
+            "inputState": "Exists",
+            "inputVersion": "3412759",
+            "inputDigest": "HPfgLhYmwSfJ7jY63E2rSdP5NDQfypdzM8X4RUVk47Qe",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412751"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412768",
+            "outputDigest": "HhBvQENZpS8Wt2iwtrzb87PB2aKRXdQMTdf8bbfM1Tps",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412751"
+              }
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x1ae06bab1648f84d615d754e436e8db20938e6159936319d4fc8acb5c95a0b5c",
+            "inputState": "Exists",
+            "inputVersion": "3412759",
+            "inputDigest": "5ne8NXG1HUBA8Nw9jfEgSfU15WjhNAebfrgcNC4GxXF5",
+            "inputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x065eb4aa0b58492cce98a5ff92c5c425f855e704a18d6fb82839047818336a23"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412768",
+            "outputDigest": "F8BGTmLLoooanLwjQKNjjfKkgQMdEECVZdj2oXDV3AeX",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x065eb4aa0b58492cce98a5ff92c5c425f855e704a18d6fb82839047818336a23"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+            "inputState": "Exists",
+            "inputVersion": "3412741",
+            "inputDigest": "6RE3wW8Cyy4dqXVRg2BcB6oKp9qx4PUGLTZ3jVrxgRG8",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412768",
+            "outputDigest": "AxJ2e2NCAb1ktRmenBcvtBvcQ6U64aFe76SGbCb9vMHs",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e",
+            "inputState": "Exists",
+            "inputVersion": "3412759",
+            "inputDigest": "F1MJMT6KKANLArZRtaEST1uspU1WmB1iBYV8fbXtPfmV",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412768",
+            "outputDigest": "6NJrYLFYqLopk5Zr1b79UZArZyArd7kjKPEoEFUbS9TP",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0xaaa72c6a76581c7071e773d593b53fd2e7c376e4972b95346d129ee97215c90c",
+            "inputState": "Exists",
+            "inputVersion": "3412759",
+            "inputDigest": "HrfS8dNCazE1Bvkd5bgrwTLgQFaUUU3ijJDAah8LbSuR",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412759"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412768",
+            "outputDigest": "GLbaWMvJiT4x46jTw5RZQUZ4pCjdRTzB8KGdnTXU4urX",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412759"
+              }
+            },
+            "idOperation": "None"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    },
+    {
+      "name": "revoke-test-host-after-upgrade",
+      "quote": {
+        "requestId": "revoke-test-host-after-upgrade",
+        "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372\"]",
+        "digest": "Ds9P4FbXKMrh6ohzjvqYtj4xnXwWcPxQoUDPgzuyp9yR",
+        "sender": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "balance": "998575283344",
+        "requiredBalance": "2000000000",
+        "gasBudget": "2000000000",
+        "maxSuiSpend": "0",
+        "estimatedGas": "-591980",
+        "simulatedSuiSpend": "0",
+        "expiresAtMs": 1791010425312
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "Ds9P4FbXKMrh6ohzjvqYtj4xnXwWcPxQoUDPgzuyp9yR",
+        "actualGas": "-591980",
+        "objectTypes": {
+          "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::Organization",
+          "0x5bc51c11b623bb5fa55b3ca7e07bf1d00abead4bfcc3d17512a24f70888370b6": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>",
+          "0x8317981f0fc6618009d433b6f8d0bd2451bcbcb2bd1ad1eeec1f7a5093109e88": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::HostMembership",
+          "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+          "0x98858f5670a0c95c564c290e18227b5f9102ff27ab6b49a290972ceda16337a0": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::HostIndexBinding,0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::HostIndex>"
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+            "inputState": "Exists",
+            "inputVersion": "3412768",
+            "inputDigest": "AxJ2e2NCAb1ktRmenBcvtBvcQ6U64aFe76SGbCb9vMHs",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412775",
+            "outputDigest": "GAeiPUYczTAKXLnwSsM3Db1uuGgE4TXNMfR4MRGJR6fj",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "714"
+              }
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x5bc51c11b623bb5fa55b3ca7e07bf1d00abead4bfcc3d17512a24f70888370b6",
+            "inputState": "Exists",
+            "inputVersion": "3412741",
+            "inputDigest": "6uqzbdUGmDUXEPqwiHJKG1A18siXLmyeWP5Bh2ce55r5",
+            "inputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0xbd079c9082ff59608879bee63860f48b1eea1609e11b0249d2937f6c3bdffe84"
+            },
+            "outputState": "DoesNotExist",
+            "outputVersion": null,
+            "outputDigest": null,
+            "outputOwner": null,
+            "idOperation": "Deleted"
+          },
+          {
+            "objectId": "0x8317981f0fc6618009d433b6f8d0bd2451bcbcb2bd1ad1eeec1f7a5093109e88",
+            "inputState": "Exists",
+            "inputVersion": "3412741",
+            "inputDigest": "9Qi7qd3pmWYBUUkV5ERGVCDkDWfzS1uhtov6guKq4oUS",
+            "inputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412741"
+              }
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412775",
+            "outputDigest": "3623sJpJD3S1fs5FVqNCxE5y35bDT2jQVj3ayTkAtUig",
+            "outputOwner": {
+              "$kind": "Shared",
+              "Shared": {
+                "initialSharedVersion": "3412741"
+              }
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x87d0076dc2af4a38abdf8bb2f56e3df1d0d41ab79f8c0f08129b5aa95c75628e",
+            "inputState": "Exists",
+            "inputVersion": "3412768",
+            "inputDigest": "6NJrYLFYqLopk5Zr1b79UZArZyArd7kjKPEoEFUbS9TP",
+            "inputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412775",
+            "outputDigest": "HH5yDfpGHHubKhP4hiUs16kNf12vJNhmA8VPUwWiahMq",
+            "outputOwner": {
+              "AddressOwner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0x98858f5670a0c95c564c290e18227b5f9102ff27ab6b49a290972ceda16337a0",
+            "inputState": "Exists",
+            "inputVersion": "3412741",
+            "inputDigest": "BArCP95X5nZzQh9ei7JMMCHBeSCni9fU7RVxCbSj9vRu",
+            "inputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "3412775",
+            "outputDigest": "BMRbcXg86WQywbMi9DNbSq3pK4YbavY2rV8iuPiSi6BQ",
+            "outputOwner": {
+              "$kind": "ObjectOwner",
+              "ObjectOwner": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc"
+            },
+            "idOperation": "None"
+          }
+        ]
+      },
+      "outputVersionsVisible": true
+    }
+  ],
+  "builds": [
+    {
+      "name": "main",
+      "modules": 13,
+      "dependencies": [
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+        "0x0000000000000000000000000000000000000000000000000000000000000002"
+      ],
+      "digest": [
+        159, 152, 200, 159, 192, 144, 52, 101, 130, 94, 88, 199, 66, 213, 89,
+        115, 73, 183, 29, 26, 9, 240, 154, 143, 87, 247, 23, 93, 138, 254, 206,
+        4
+      ],
+      "rawModuleBytes": 40385,
+      "bytecodeSha256": "4072ba7767022db0b04734c068c35a5cde9b035b3dbc53b92db70dfa1778a14f",
+      "logSha256": "34affa5d74280f118c91a6009bd8a4d7bdd28b448cab43e1bd3b446a23864099"
+    },
+    {
+      "name": "current-upgrade",
+      "modules": 19,
+      "dependencies": [
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+        "0x0000000000000000000000000000000000000000000000000000000000000002"
+      ],
+      "digest": [
+        213, 58, 230, 37, 53, 220, 198, 66, 122, 132, 101, 79, 195, 189, 164,
+        16, 89, 159, 152, 182, 35, 125, 139, 9, 194, 217, 210, 108, 158, 166,
+        74, 73
+      ],
+      "rawModuleBytes": 84020,
+      "bytecodeSha256": "20620e07d09de146bf4bf26b30110d82998dc476e2c7ef7280dedc7f4a078618",
+      "logSha256": "29d0949b41dc476c87ff34f3fe0889190d4762c178db4561aaab2a58c932d0b9"
+    },
+    {
+      "name": "okr",
+      "modules": 2,
+      "dependencies": [
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+        "0x0000000000000000000000000000000000000000000000000000000000000002",
+        "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+      ],
+      "digest": [
+        80, 241, 167, 240, 148, 84, 100, 45, 190, 122, 128, 212, 40, 84, 146,
+        93, 187, 230, 70, 83, 230, 119, 151, 206, 5, 36, 220, 31, 89, 175, 72,
+        74
+      ],
+      "rawModuleBytes": 17633,
+      "bytecodeSha256": "e0427a2d471d5abe82627baac66d11c0f8902c3e16e04d7722671b9a119a5769",
+      "logSha256": "cbab5ef9650eaf4ec5e193f3868b8cc7b48a964f44b3df4d20f8aecf44308431"
+    },
+    {
+      "name": "direct-agent",
+      "modules": 1,
+      "dependencies": [
+        "0x0000000000000000000000000000000000000000000000000000000000000001",
+        "0x0000000000000000000000000000000000000000000000000000000000000002",
+        "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+      ],
+      "digest": [
+        107, 23, 97, 109, 143, 36, 78, 135, 123, 183, 227, 236, 219, 199, 176,
+        243, 111, 29, 152, 18, 159, 226, 22, 220, 111, 127, 205, 176, 103, 78,
+        192, 112
+      ],
+      "rawModuleBytes": 12493,
+      "bytecodeSha256": "a74a407df4213d23c61fe829de4215b519aa51a383f711a2aa8ac1597445ffe7",
+      "logSha256": "a91e838481c0b79daf74e28e1f26ac1a45e370f8c4a5a035a6f60c032d5580df"
+    }
+  ],
+  "sourceHashes": {
+    "worktree:protocols/fractalmind-protocol/sdk/src/agent-policy.ts": "d535dd2be8b990a93a283247b88132eb4b7dd9a7e218cd1f4fefeb4edb4126a2",
+    "worktree:protocols/fractalmind-protocol/sdk/src/agent.ts": "9db9872feac79511b09c15560fd50d6950f09ffe65d07b1f62251ef1551d091a",
+    "worktree:protocols/fractalmind-protocol/sdk/src/browser-transaction-journal.ts": "ff8c18d49c84b903ed60c9110c8261184aef274df9b6f74100c1d4e503739d4e",
+    "worktree:protocols/fractalmind-protocol/sdk/src/client.ts": "8bf53e1d611073599c8c2a3cdc94a84140e025ffd03c8c8634bbb64319b2934a",
+    "worktree:protocols/fractalmind-protocol/sdk/src/command-result-crypto.ts": "4e4ee0752df2e96c7bf65e10338e3f5d0b84c9752dd55f58d0a3d11b2e30887a",
+    "worktree:protocols/fractalmind-protocol/sdk/src/direct-agent.ts": "c53b427711c0a15064fe437179d6907df5f14030c3a1f902d611407b6725128b",
+    "worktree:protocols/fractalmind-protocol/sdk/src/execution-boundary.ts": "55aa56a70dbd5f205f2c1d5c2bf0b66646d853492a6f4f8f98d473e97dd34065",
+    "worktree:protocols/fractalmind-protocol/sdk/src/fractal.ts": "07e07b24a0919a8c2281384d97544baaa8e988623662a64ebd37966b5449c2b4",
+    "worktree:protocols/fractalmind-protocol/sdk/src/governance.ts": "5a18d8cf38fb9e4b5a6b15150cfeb559586ecf46bfe926cf424815e679ae711e",
+    "worktree:protocols/fractalmind-protocol/sdk/src/handover.ts": "452affcf4f56ca8517f05b2fe620b3c3cc1e7a2276c578f5b7ed3392df5998cb",
+    "worktree:protocols/fractalmind-protocol/sdk/src/host.ts": "d0dab6a846ea423a97f27ba792075ab81bcd81ab3afb0a228d7dcc1b04ca9512",
+    "worktree:protocols/fractalmind-protocol/sdk/src/identity-crypto.ts": "d1ff7cab7f57d1c3262849350b00626374a16389173a0523bb79f094284fbac9",
+    "worktree:protocols/fractalmind-protocol/sdk/src/identity.ts": "d179f104d46f710304128f8c130cbf8e63868863b95e054a798029260f1633ff",
+    "worktree:protocols/fractalmind-protocol/sdk/src/index.ts": "11a03cf26f9c059c9064ef5d13835b5007f9c6bbde1ab0f99f7060762ff9a763",
+    "worktree:protocols/fractalmind-protocol/sdk/src/node-command-wire.ts": "96cb0d173d382b3aebc9dcf8101437d95d03ac3ae18763e611f653dd07798bab",
+    "worktree:protocols/fractalmind-protocol/sdk/src/node-command.ts": "b02fc0104463f069fb64a06e12feecb0b4a9c9f2ccf3eb1ca1731fe556b99398",
+    "worktree:protocols/fractalmind-protocol/sdk/src/node-execution.ts": "a8f62d83a3a27a5e70f60471451e559264c7cecdc94981ab7df01e8b2784dd3f",
+    "worktree:protocols/fractalmind-protocol/sdk/src/objective.ts": "63bdb85fd64975eda4851f3e65ea163bd711af760e42f31607fcb54e24b30324",
+    "worktree:protocols/fractalmind-protocol/sdk/src/okr-runner.ts": "a6d201424e6e39e19a76308937c12c9ab9f2ff0ee723d1654e3304b3b52c4df2",
+    "worktree:protocols/fractalmind-protocol/sdk/src/okr.ts": "278db66315f322362b01bd1898362b66df0e1d2a4c9342c82c29504e22c756eb",
+    "worktree:protocols/fractalmind-protocol/sdk/src/organization.ts": "b82f49b2f2d0fc261752bba7cb968f43fd21a6491d29af32ada50ee689d101a0",
+    "worktree:protocols/fractalmind-protocol/sdk/src/product-record.ts": "71568eece6b73700d7211229fffbe547ffeb4b3583cf71381b740268a4b09564",
+    "worktree:protocols/fractalmind-protocol/sdk/src/remote-authority.ts": "60fa51a6004f42eeb5a97e09b85f21d23f9428cb181592ace37d98aab1d74409",
+    "worktree:protocols/fractalmind-protocol/sdk/src/selfpay-okr-submit.ts": "0a3cd2db81216336a576d5574cc8dacea986bddcaf9e0523b99f2fce6f29d01b",
+    "worktree:protocols/fractalmind-protocol/sdk/src/task.ts": "c0eb184f730594a0d9168078b7c45442fbad658e5f59574a49c85c5fb3c32832",
+    "worktree:protocols/fractalmind-protocol/sdk/src/transaction-manager.ts": "c7174a2a1bb7d5435c1b6ba2bad0df8e200f7e5965574fd05ef60ee63a266d84",
+    "worktree:protocols/fractalmind-protocol/sdk/src/types.ts": "65fe717d3a1c13b78bc3210f07c91280c7aceaba53f3889ad349a5e0e8b28f6f",
+    "worktree:protocols/fractalmind-protocol/sdk/src/wire-bytes.ts": "30602c7f6a64b6cb38c6650e1a4cdabcf4ff5d19e3bd9f18da8f66d9b5fba3d8",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/Move.toml": "c0babe34580a8ba03095ee3d1d6ca06ed8e7149363f8e2bfc752c6b32107fbd8",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/agent.move": "a376aec832dcaeaa95d70009a0f3be091579e014f4045bf489d356e2b385635e",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/agent_policy.move": "0c1fc85b5c80174610faa5cd02ca18d68032e232fc5df7f3e767e14c54c7ea20",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/bootstrap.move": "94ede6ca0439dc6d2305ca9943e5e51c5c286b39048656d1c38c7853cd95bd34",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/constants.move": "865e77a763c2b09540f3393b698780a521c07a5be4b7432a47a6618f91f7e869",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/entry.move": "0cf3aadadd7ac5ac37897599cc02da9d75be9ad256aae937dd8564df9d49a57d",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/fractal.move": "aff5f6b950dc40edb24c5f23773ee23f86d930dc03871379f02834ae7077fe8a",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/governance.move": "871e7c7aa3dacda5dee90d1414110bb5c625fecd6dd3e8c627672ccaca4a11d8",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/objective.move": "ea066b99a04a79f1118c57de33b615c8b72d54e21c3c36824aa8dc1f8b5cdcb2",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/organization.move": "489e93253f027158f429b4cc0fa8e518d9930e2713aed950177c88ad42ed276f",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/profile.move": "4b28c2c6576ee81e708360bf1ec7fe5f9d34e79b3f8f23b15a730fd7e2233c2f",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/remote_authority.move": "476970ae5547ff88dea5da7b0f479648200f7063c268be82152b1e7320e27209",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/review.move": "77bcc80d8d0bed259c1f27b69d711dc2f3ed24d6e96d37426af20751f7ac9591",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/task.move": "33d4a31aa25fd18eb382cba4294cf7da00fbad1ef24179bbbf95d93593369883",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/agent_policy_tests.move": "7893eb994e8a140e5fc8d83195f0178fe344dab0b208f29cbf46daede783e751",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/agent_tests.move": "97ca72ce310f7e8df652fd9da995da00c08b7f091846819ee884988b245bc9e1",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/constants_tests.move": "470212534a4df6190eb2e073b6d0dc143372aa484fad49f3d0fee6ff2713723d",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/fractal_tests.move": "2926fd65dff9ef6924e467c5c43cf614e7576d2df507e23652e8b13ea30724a8",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/governance_tests.move": "03830ca43312c9e0177b639b5d0b613c65c3eca09edc3f33025e233a23e67e8a",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/integration_tests.move": "47f2a96338c27adeadb1136825e1f38a7d4cb8a535ca912f933618838972dfc6",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/objective_tests.move": "cee804e75b0854a9346df1b136485a82f4880dd97401e57a3bdb4b3d520dcc38",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/organization_tests.move": "47ff83b5c61936ff1402303664bd930f164bbb28fa3338c860e5687621cec52d",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/profile_tests.move": "6bc7e5b3ce8c30048712d1757dd8e4dfbdf779a685e8e6dba35135712d0b0a08",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/remote_authority_tests.move": "33738e3ebd5a7404196545b42a3444cd54b0a34da0b33a67e6b5383a7303c16b",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/review_tests.move": "6fc1552c7a93f697dfc97089da0fa3ecea1ae158c43445b5bcc8f2e6c5e7048d",
+    "52713248cb8f5c66c2a015972b473ed57d7d5f8d:protocols/fractalmind-protocol/contracts/protocol/sources/tests/task_tests.move": "01a4bd4364b9bad1ff20117e9422b0ae1b13b8661a0494140e623e14590d8661"
+  },
+  "scriptSha256": "d32cac5a119cc28fb83407bd931af96afbe15de08288318f7d07c865606e93a1",
+  "privateKeysInReport": false,
+  "recoveryCodeInReport": false,
+  "validatorLimitsChanged": false,
+  "existingPublicDeploymentChanged": false,
+  "chain": {
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "phase": "main-upgrade-deployment-verified",
+  "originalPackageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10",
+  "registryId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32",
+  "upgradeCapId": "0x389f4f3e79729c7a08041631cbacbb5798a41f263c3ae035816990922bf27b19",
+  "organizationId": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+  "adminCapId": "0x218103ba2e9453083f65947ec05fc91d1ec563cf8304ee6308fa6be2a78c3202",
+  "objectiveId": "0x039761bfbb3cbac2d78a7ac8fcb03eb6fa86ecfd79800cc123cf62e5db27c8fc",
+  "keyResultId": "0x0cfd4833f26801b889b43fc0561d3e3e17af21e1f4c42c481bd46f47176880ce",
+  "legacyBefore": [
+    {
+      "objectId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32",
+      "type": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::ProtocolRegistry",
+      "contentSha256": "779f031c461a27434a838eaef054c875bd31b45dd44ff722e3cd8de3286afae3",
+      "fields": {
+        "id": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32",
+        "name_registry": {
+          "id": "0xc365c15f96c6c2d60a23b3415243ced7a1570a37ea027995d3bd0d2d339ab1b2",
+          "size": "1"
+        },
+        "org_count": "1",
+        "organizations": {
+          "id": "0x80912322df99f7f8b04182092cd4958979c4116f34bb430eba05354dd39bdd3d",
+          "size": "1"
+        }
+      }
+    },
+    {
+      "objectId": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+      "type": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::Organization",
+      "contentSha256": "fe13f324c56b31b953f5e7931ceebed0e14eca18f2fcd23ae8870335bffeeed8",
+      "fields": {
+        "admin": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "agent_count": "0",
+        "agents": {
+          "id": "0x5f1426e8d257c3f70d43f5a476cbff8cddb0a931854aef39481d818eac710bd7",
+          "size": "0"
+        },
+        "child_org_count": "0",
+        "child_orgs": {
+          "id": "0xa3a6583a46d0410e6b2c63a559b248f5a08d52eaf31133804c092edac62460d1",
+          "size": "0"
+        },
+        "created_at": "1791010288758",
+        "depth": "0",
+        "description": "Original main organization; preserve its object ID",
+        "id": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+        "is_active": true,
+        "name": "Main upgrade fm-main-upgrade-VRhfkP",
+        "parent_org": null,
+        "task_count": "0",
+        "tasks": {
+          "id": "0xbdb138c4e07704dca17df4055ea0030a848b666be5f0c124b753eddbb4aab579",
+          "size": "0"
+        }
+      }
+    },
+    {
+      "objectId": "0x218103ba2e9453083f65947ec05fc91d1ec563cf8304ee6308fa6be2a78c3202",
+      "type": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::OrgAdminCap",
+      "contentSha256": "e945fbdcb439ed9d536b19d35d7d1b2609475bca6fdad46459af062f9f5a7716",
+      "fields": {
+        "id": "0x218103ba2e9453083f65947ec05fc91d1ec563cf8304ee6308fa6be2a78c3202",
+        "org_id": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc"
+      }
+    },
+    {
+      "objectId": "0x039761bfbb3cbac2d78a7ac8fcb03eb6fa86ecfd79800cc123cf62e5db27c8fc",
+      "type": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::objective::Objective",
+      "contentSha256": "889e6be1875705075bdd383ccf0bf601882081cebb88ac5995f5a827bd12e272",
+      "fields": {
+        "closed_at_ms": null,
+        "created_at_ms": "1791010288758",
+        "deadline_ms": "1791096746675",
+        "description_hash": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=",
+        "id": "0x039761bfbb3cbac2d78a7ac8fcb03eb6fa86ecfd79800cc123cf62e5db27c8fc",
+        "key_result_count": "1",
+        "org_id": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+        "owner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "status": 0,
+        "title": "Original main objective"
+      }
+    },
+    {
+      "objectId": "0x0cfd4833f26801b889b43fc0561d3e3e17af21e1f4c42c481bd46f47176880ce",
+      "type": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::objective::KeyResult",
+      "contentSha256": "1090a08068f4969689195d899bcc2c385d56a71e75a6ebf9c66976005eccd52c",
+      "fields": {
+        "accepted_at_ms": null,
+        "created_at_ms": "1791010288758",
+        "id": "0x0cfd4833f26801b889b43fc0561d3e3e17af21e1f4c42c481bd46f47176880ce",
+        "objective_id": "0x039761bfbb3cbac2d78a7ac8fcb03eb6fa86ecfd79800cc123cf62e5db27c8fc",
+        "org_id": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+        "review_count": "0",
+        "status": 0,
+        "target_hash": "CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg=",
+        "task_count": "0",
+        "title": "Original main KR"
+      }
+    }
+  ],
+  "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+  "legacyAfterUpgrade": [
+    {
+      "objectId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32",
+      "type": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::ProtocolRegistry",
+      "contentSha256": "779f031c461a27434a838eaef054c875bd31b45dd44ff722e3cd8de3286afae3",
+      "fields": {
+        "id": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32",
+        "name_registry": {
+          "id": "0xc365c15f96c6c2d60a23b3415243ced7a1570a37ea027995d3bd0d2d339ab1b2",
+          "size": "1"
+        },
+        "org_count": "1",
+        "organizations": {
+          "id": "0x80912322df99f7f8b04182092cd4958979c4116f34bb430eba05354dd39bdd3d",
+          "size": "1"
+        }
+      }
+    },
+    {
+      "objectId": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+      "type": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::Organization",
+      "contentSha256": "fe13f324c56b31b953f5e7931ceebed0e14eca18f2fcd23ae8870335bffeeed8",
+      "fields": {
+        "admin": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "agent_count": "0",
+        "agents": {
+          "id": "0x5f1426e8d257c3f70d43f5a476cbff8cddb0a931854aef39481d818eac710bd7",
+          "size": "0"
+        },
+        "child_org_count": "0",
+        "child_orgs": {
+          "id": "0xa3a6583a46d0410e6b2c63a559b248f5a08d52eaf31133804c092edac62460d1",
+          "size": "0"
+        },
+        "created_at": "1791010288758",
+        "depth": "0",
+        "description": "Original main organization; preserve its object ID",
+        "id": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+        "is_active": true,
+        "name": "Main upgrade fm-main-upgrade-VRhfkP",
+        "parent_org": null,
+        "task_count": "0",
+        "tasks": {
+          "id": "0xbdb138c4e07704dca17df4055ea0030a848b666be5f0c124b753eddbb4aab579",
+          "size": "0"
+        }
+      }
+    },
+    {
+      "objectId": "0x218103ba2e9453083f65947ec05fc91d1ec563cf8304ee6308fa6be2a78c3202",
+      "type": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::organization::OrgAdminCap",
+      "contentSha256": "e945fbdcb439ed9d536b19d35d7d1b2609475bca6fdad46459af062f9f5a7716",
+      "fields": {
+        "id": "0x218103ba2e9453083f65947ec05fc91d1ec563cf8304ee6308fa6be2a78c3202",
+        "org_id": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc"
+      }
+    },
+    {
+      "objectId": "0x039761bfbb3cbac2d78a7ac8fcb03eb6fa86ecfd79800cc123cf62e5db27c8fc",
+      "type": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::objective::Objective",
+      "contentSha256": "889e6be1875705075bdd383ccf0bf601882081cebb88ac5995f5a827bd12e272",
+      "fields": {
+        "closed_at_ms": null,
+        "created_at_ms": "1791010288758",
+        "deadline_ms": "1791096746675",
+        "description_hash": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=",
+        "id": "0x039761bfbb3cbac2d78a7ac8fcb03eb6fa86ecfd79800cc123cf62e5db27c8fc",
+        "key_result_count": "1",
+        "org_id": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+        "owner": "0x8566244cd5f37a126856c9a70e678a0bca8872f35ddd34ac7892c8f555d98372",
+        "status": 0,
+        "title": "Original main objective"
+      }
+    },
+    {
+      "objectId": "0x0cfd4833f26801b889b43fc0561d3e3e17af21e1f4c42c481bd46f47176880ce",
+      "type": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::objective::KeyResult",
+      "contentSha256": "1090a08068f4969689195d899bcc2c385d56a71e75a6ebf9c66976005eccd52c",
+      "fields": {
+        "accepted_at_ms": null,
+        "created_at_ms": "1791010288758",
+        "id": "0x0cfd4833f26801b889b43fc0561d3e3e17af21e1f4c42c481bd46f47176880ce",
+        "objective_id": "0x039761bfbb3cbac2d78a7ac8fcb03eb6fa86ecfd79800cc123cf62e5db27c8fc",
+        "org_id": "0x51b9ac6227f966d3ba114763ff9c5f4b57c87beeaf5000cf3b13f825d39af2cc",
+        "review_count": "0",
+        "status": 0,
+        "target_hash": "CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg=",
+        "task_count": "0",
+        "title": "Original main KR"
+      }
+    }
+  ],
+  "upgradedCap": {
+    "id": "0x389f4f3e79729c7a08041631cbacbb5798a41f263c3ae035816990922bf27b19",
+    "package": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+    "policy": 0,
+    "version": "2"
+  },
+  "typeOrigins": [
+    {
+      "moduleName": "organization",
+      "datatypeName": "ProtocolRegistry",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "organization",
+      "datatypeName": "Organization",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "organization",
+      "datatypeName": "OrgAdminCap",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "organization",
+      "datatypeName": "OrgCreated",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "organization",
+      "datatypeName": "OrgDeactivated",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "organization",
+      "datatypeName": "OrgDescriptionUpdated",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "organization",
+      "datatypeName": "OrgAdminTransferred",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "organization",
+      "datatypeName": "OrgRenamed",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "agent",
+      "datatypeName": "AgentCertificate",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "agent",
+      "datatypeName": "AgentRegistered",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "agent",
+      "datatypeName": "AgentDeactivated",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "agent",
+      "datatypeName": "AgentRemoved",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "agent",
+      "datatypeName": "AgentCapabilityUpdated",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "objective",
+      "datatypeName": "Objective",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "objective",
+      "datatypeName": "KeyResult",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "objective",
+      "datatypeName": "KRReview",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "objective",
+      "datatypeName": "ObjectiveCreated",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "objective",
+      "datatypeName": "KeyResultCreated",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "objective",
+      "datatypeName": "KeyResultReviewed",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "objective",
+      "datatypeName": "KeyResultAccepted",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "objective",
+      "datatypeName": "ObjectiveClosed",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "agent_policy",
+      "datatypeName": "AgentPolicy",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "agent_policy",
+      "datatypeName": "PolicyCreated",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "agent_policy",
+      "datatypeName": "PolicyRevoked",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "agent_policy",
+      "datatypeName": "ActionExecuted",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "identity",
+      "datatypeName": "RegistryBinding",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "identity",
+      "datatypeName": "IdentityRegistry",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "identity",
+      "datatypeName": "RecoveryLocation",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "identity",
+      "datatypeName": "HumanIdentity",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "identity",
+      "datatypeName": "OrgRole",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "identity",
+      "datatypeName": "DeviceGrant",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "identity",
+      "datatypeName": "RecoveryRecord",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "identity",
+      "datatypeName": "DevicePairingRequest",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "identity",
+      "datatypeName": "DevicePairingCreated",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "identity",
+      "datatypeName": "DevicePairingResolved",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "identity",
+      "datatypeName": "IdentityCreated",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "identity",
+      "datatypeName": "DeviceGranted",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "identity",
+      "datatypeName": "DeviceRevoked",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "identity",
+      "datatypeName": "IdentityRecovered",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "identity",
+      "datatypeName": "RecoveryCodeReplaced",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "identity",
+      "datatypeName": "OrganizationBound",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "bootstrap",
+      "datatypeName": "BOOTSTRAP",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "task",
+      "datatypeName": "Task",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "task",
+      "datatypeName": "TaskCreated",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "task",
+      "datatypeName": "TaskAssigned",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "task",
+      "datatypeName": "TaskSubmitted",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "task",
+      "datatypeName": "TaskVerified",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "task",
+      "datatypeName": "TaskCompleted",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "task",
+      "datatypeName": "TaskRejected",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "review",
+      "datatypeName": "Review",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "review",
+      "datatypeName": "ReviewCreated",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "review",
+      "datatypeName": "ReviewVoted",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "review",
+      "datatypeName": "ReviewFinalized",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "remote_authority",
+      "datatypeName": "CapabilityReference",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "remote_authority",
+      "datatypeName": "AuthorityClaimRecord",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "remote_authority",
+      "datatypeName": "BoundBudgetKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "remote_authority",
+      "datatypeName": "BoundBudgetTotals",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "remote_authority",
+      "datatypeName": "BoundBudgetClaimKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "remote_authority",
+      "datatypeName": "BoundBudgetClaim",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "remote_authority",
+      "datatypeName": "ExecutionContractKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "remote_authority",
+      "datatypeName": "ExecutionContractBinding",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "remote_authority",
+      "datatypeName": "CommandContractKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "remote_authority",
+      "datatypeName": "CommandContractBinding",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "remote_authority",
+      "datatypeName": "ContractWitness",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "remote_authority",
+      "datatypeName": "BoundBudgetSettled",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "remote_authority",
+      "datatypeName": "RemoteCapability",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "remote_authority",
+      "datatypeName": "CapabilityCreated",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "remote_authority",
+      "datatypeName": "CapabilityRevoked",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "remote_authority",
+      "datatypeName": "AuthorityUseClaimed",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "profile",
+      "datatypeName": "ProfileKey",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "profile",
+      "datatypeName": "AgentProfile",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "profile",
+      "datatypeName": "ProfileCreated",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "profile",
+      "datatypeName": "ProfileUpdated",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "governance",
+      "datatypeName": "Governance",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "governance",
+      "datatypeName": "Proposal",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "governance",
+      "datatypeName": "GovernanceCreated",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "governance",
+      "datatypeName": "ProposalCreated",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "governance",
+      "datatypeName": "ProposalVotingStarted",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "governance",
+      "datatypeName": "ProposalVoted",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "governance",
+      "datatypeName": "ProposalFinalized",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "governance",
+      "datatypeName": "ProposalVotingClosed",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "governance",
+      "datatypeName": "ProposalExecuted",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "fractal",
+      "datatypeName": "SubOrgCreated",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "fractal",
+      "datatypeName": "SubOrgDetached",
+      "packageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10"
+    },
+    {
+      "moduleName": "product_record",
+      "datatypeName": "IndexBinding",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "product_record",
+      "datatypeName": "RecordKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "product_record",
+      "datatypeName": "RecordPointer",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "product_record",
+      "datatypeName": "RecordIndex",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "product_record",
+      "datatypeName": "EncryptedRecord",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "product_record",
+      "datatypeName": "RecordSaved",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "HostIndexBinding",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "HostIndex",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "InstanceKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "InstancePointer",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "AgentExecutionIndexKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "AgentExecutionIndex",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "AgentExecutionPointer",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "CoordinatorBinding",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "HostInvite",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "HostMembership",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "ManagedAgent",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "AuthorityBindingKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "AuthorityBinding",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "JoinIntent",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "BindingCreated",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "InviteCreated",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "HostJoined",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "MembershipRevoked",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "host",
+      "datatypeName": "AgentImported",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "execution_extension",
+      "datatypeName": "IndexKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "execution_extension",
+      "datatypeName": "PermissionIndex",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "execution_extension",
+      "datatypeName": "SourceKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "execution_extension",
+      "datatypeName": "ExtensionSource",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "execution_extension",
+      "datatypeName": "FieldKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "execution_extension",
+      "datatypeName": "ActiveAssignmentsKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "execution_extension",
+      "datatypeName": "ActiveAssignmentTrackedKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "execution_extension",
+      "datatypeName": "WorkspaceKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "execution_extension",
+      "datatypeName": "ActiveAssignmentTracked",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "execution_extension",
+      "datatypeName": "ActiveAssignments",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "node_execution",
+      "datatypeName": "ExecutionIndexKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "node_execution",
+      "datatypeName": "ExecutionIndex",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "node_execution",
+      "datatypeName": "ResultKeyKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "node_execution",
+      "datatypeName": "ResultKeyGrant",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "node_execution",
+      "datatypeName": "CommandDeliveryKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "node_execution",
+      "datatypeName": "CommandDelivery",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "node_execution",
+      "datatypeName": "HostCommandQueueKey",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "node_execution",
+      "datatypeName": "HostCommandQueue",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "node_execution",
+      "datatypeName": "QueuedCommandPointer",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "node_execution",
+      "datatypeName": "CommandQueued",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "node_execution",
+      "datatypeName": "CommandExecution",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "node_execution",
+      "datatypeName": "CommandPrepared",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    },
+    {
+      "moduleName": "node_execution",
+      "datatypeName": "ExecutionChanged",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521"
+    }
+  ],
+  "packageObjectSha256": "523e79a4a18596a4d75052c71cd2b5f73ed070b4b39c4823f9cbcb1ada372ef9",
+  "packageLinkage": [
+    [
+      "0x0000000000000000000000000000000000000000000000000000000000000001",
+      {
+        "upgradedId": "0x0000000000000000000000000000000000000000000000000000000000000001",
+        "upgradedVersion": "1"
+      }
+    ],
+    [
+      "0x0000000000000000000000000000000000000000000000000000000000000002",
+      {
+        "upgradedId": "0x0000000000000000000000000000000000000000000000000000000000000002",
+        "upgradedVersion": "1"
+      }
+    ]
+  ],
+  "identityRegistryId": "0xc9dec3c798d0cb9b4eb7b1bdc2756421ddad0475d05844bde67a917721a3f962",
+  "okrPackageId": "0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163",
+  "directPackageId": "0x70e43f069c7012b0e0ec2fa40792c64b0697ab0dff35184db0426a6402c8aafb",
+  "clockObjectiveId": "0x2ed04eeeb9f4e24a64f31e2bae70a5d7e0cb24591266ca3ca3dc31743f623064",
+  "humanId": "0xa29500c6900ed942054feb30909e769b266042ae6f60d93b6974ba60c517e8a3",
+  "grantId": "0x15ad46c8ce3648304e06f45cc4c128391ddfff1b57bc9aefb1da5fe93d41751c",
+  "migratedAdminCap": {
+    "originalCapId": "0x218103ba2e9453083f65947ec05fc91d1ec563cf8304ee6308fa6be2a78c3202",
+    "humanCapTable": "0xbef2ae13e3c6f0ab1f0a3fb79118d315903f0e55b15139590079df5c6339974a",
+    "originalCapWrapped": true
+  },
+  "phoneGrantId": "0x8fbe48e223e9696762891c11378ee33b39df9f2119f24470825d5eafa4bc56d2",
+  "messageRecordId": "0x822b3b8d8a267169496bb2029ccde35a5ace17f3b72b9d2d7f6c534a9296981e",
+  "messagePlaintextSha256": "803a3b2fc482063c8362cb4bf1fe61d4577cec67914e0f0035aa64e883db4be0",
+  "okrId": "0x428c7dd7484206180c1aeb7d19007c054c4670f23a87cdd302936d6a0a37d993",
+  "bindingId": "0x6f34265b4cf3495d87394185fffd7ee25749d21befe948dec8256d2b6fefa8dd",
+  "inviteId": "0xc49bb44b7744d23a7ad4b09552d74c35e3a68b47961b08b1802cb4f0f8584da6",
+  "membershipId": "0x8317981f0fc6618009d433b6f8d0bd2451bcbcb2bd1ad1eeec1f7a5093109e88",
+  "capabilityId": "0x065eb4aa0b58492cce98a5ff92c5c425f855e704a18d6fb82839047818336a23",
+  "executionId": "0xaaa72c6a76581c7071e773d593b53fd2e7c376e4972b95346d129ee97215c90c",
+  "limits": {
+    "actualMainSourceUpgradedOnLocalnet": true,
+    "publicTestnetDeploymentUpgraded": false,
+    "originalOrganizationMigrated": true,
+    "SDKMixedTypeOriginsVerified": true,
+    "installedAppUpgradeVerified": false,
+    "envdMixedTypeOriginsVerified": false,
+    "originalSinglePackageProductHistoryMigrated": false,
+    "existingMainObjectivesConvertedToNewOKR": false,
+    "actualModelVerified": false,
+    "cloudHostVerified": false,
+    "recoveryInThisFixtureVerified": false
+  },
+  "evidenceMetadata": {
+    "recordedAt": "2026-10-03T06:55:58.946672+00:00",
+    "sourceReport": "/tmp/fm-main-upgrade-r8.json",
+    "originalReportSha256": "fc566972f39e40a6be169446f4147aea3b0796a0674b5822308a8d767b3dfead",
+    "log": "/tmp/fm-main-upgrade-r8.log",
+    "logSha256": "7a85ca7a430744d168cc97a3da89b99fdba7e2ca04274685a81e7b9cf240b8ef",
+    "processExitCode": 0,
+    "command": "node --import tsx scripts/main-upgrade-localnet.ts 52713248cb8f5c66c2a015972b473ed57d7d5f8d /tmp/fm-main-upgrade-r8.json"
+  }
+}

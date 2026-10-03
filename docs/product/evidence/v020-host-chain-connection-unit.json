@@ -1,0 +1,98 @@
+{
+  "command": "go test -race -json ./internal/nodecommand ./internal/coordinator ./internal/ws ./cmd/envd",
+  "packages": [
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd",
+      "sourceLog": "/tmp/fractalmind-chain-connection-final-unit-01.jsonl",
+      "recordedAt": "2026-10-01T21:46:04.461734-07:00",
+      "raceDetector": true,
+      "status": "pass",
+      "passedTopLevelTests": 17,
+      "passedSubtests": 16,
+      "skippedTests": [
+        "TestNativeChainFileAgentLive",
+        "TestNativeChainSingleKrLive",
+        "TestProductionObservationFixture",
+        "TestProductionChainRuntimeLive",
+        "TestHostJoinLiveCLI",
+        "TestHostJoinHiddenTTY"
+      ],
+      "connectionTests": []
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/coordinator",
+      "sourceLog": "/tmp/fractalmind-chain-connection-final-unit-01.jsonl",
+      "recordedAt": "2026-10-01T21:46:02.747028-07:00",
+      "raceDetector": true,
+      "status": "pass",
+      "passedTopLevelTests": 17,
+      "passedSubtests": 16,
+      "skippedTests": [],
+      "connectionTests": [
+        "TestAuthenticatedWorkerCannotClaimAnotherHost",
+        "TestCurrentAuthorityRecheckedOnHeartbeatAndRouting/heartbeat",
+        "TestCurrentAuthorityRecheckedOnHeartbeatAndRouting/command",
+        "TestCurrentAuthorityRecheckedOnHeartbeatAndRouting/desktop",
+        "TestCurrentAuthorityRecheckedOnHeartbeatAndRouting/handshake",
+        "TestCurrentAuthorityRecheckedOnHeartbeatAndRouting",
+        "TestResponseAndCleanupAreBoundToOriginalConnection"
+      ]
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand",
+      "sourceLog": "/tmp/fractalmind-chain-connection-unit-01.jsonl",
+      "recordedAt": "2026-10-01T21:43:25.450833-07:00",
+      "raceDetector": true,
+      "status": "pass",
+      "passedTopLevelTests": 49,
+      "passedSubtests": 170,
+      "skippedTests": [
+        "TestChainAuthorityLive"
+      ],
+      "connectionTests": [
+        "TestHostConnectionUsesCurrentPointerAndKeys",
+        "TestHostConnectionRejectsStaleForeignAndUnknownAuthority/revoked_member",
+        "TestHostConnectionRejectsStaleForeignAndUnknownAuthority/expired_member",
+        "TestHostConnectionRejectsStaleForeignAndUnknownAuthority/inactive_org",
+        "TestHostConnectionRejectsStaleForeignAndUnknownAuthority/unindexed_member",
+        "TestHostConnectionRejectsStaleForeignAndUnknownAuthority/unindexed_binding",
+        "TestHostConnectionRejectsStaleForeignAndUnknownAuthority/wrong_encryption",
+        "TestHostConnectionRejectsStaleForeignAndUnknownAuthority/foreign_org",
+        "TestHostConnectionRejectsStaleForeignAndUnknownAuthority/revoked_binding",
+        "TestHostConnectionRejectsStaleForeignAndUnknownAuthority/binding_signer_changed",
+        "TestHostConnectionRejectsStaleForeignAndUnknownAuthority/unsafe_endpoint",
+        "TestHostConnectionRejectsStaleForeignAndUnknownAuthority/pointer_removed",
+        "TestHostConnectionRejectsStaleForeignAndUnknownAuthority/pointer_foreign_owner",
+        "TestHostConnectionRejectsStaleForeignAndUnknownAuthority/RPC_unavailable",
+        "TestHostConnectionRejectsStaleForeignAndUnknownAuthority/changing_member",
+        "TestHostConnectionRejectsStaleForeignAndUnknownAuthority",
+        "TestCoordinatorConnectionRejectsDifferentSignerAndBinding/foreign_binding",
+        "TestCoordinatorConnectionRejectsDifferentSignerAndBinding/different_key",
+        "TestCoordinatorConnectionRejectsDifferentSignerAndBinding/revoked",
+        "TestCoordinatorConnectionRejectsDifferentSignerAndBinding/unindexed",
+        "TestCoordinatorConnectionRejectsDifferentSignerAndBinding/changed_during_read",
+        "TestCoordinatorConnectionRejectsDifferentSignerAndBinding/RPC_unavailable",
+        "TestCoordinatorConnectionRejectsDifferentSignerAndBinding"
+      ]
+    },
+    {
+      "package": "github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/ws",
+      "sourceLog": "/tmp/fractalmind-chain-connection-ws-final.jsonl",
+      "recordedAt": "2026-10-01T21:47:49.03936-07:00",
+      "raceDetector": true,
+      "status": "pass",
+      "passedTopLevelTests": 7,
+      "passedSubtests": 0,
+      "skippedTests": [],
+      "connectionTests": [
+        "TestCloseCancelsChainLookupBeforeDial"
+      ]
+    }
+  ],
+  "limits": {
+    "liveHelpersSkippedInUnitRun": true,
+    "chainEvidence": "v020-host-chain-connection-localnet.json",
+    "nativeStoreVerified": false,
+    "cloudHostVerified": false
+  }
+}

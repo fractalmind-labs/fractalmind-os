@@ -1,15 +1,20 @@
 /// FractalMind Protocol - Remote Control Authority v1
 ///
 /// This module is the canonical authority projection for signed NodeCommand
-/// intents. Command payloads, logs, media, and input events remain off-chain.
+/// intents. Persistent product bodies use encrypted on-chain records; transient
+/// observations and work files are outside this authority projection.
 /// Organization-scoped capabilities use an authority-wide pre-execution claim;
-/// node- and agent-scoped capabilities are reserved by envd in durable local
-/// storage under the same bounds.
+/// admitted node/agent commands use chain reservations, private budget ledgers
+/// and Host-owned execution checkpoints through node_execution.
 module fractalmind_protocol::remote_authority {
+    use sui::clock::{Self, Clock};
+    const E_CLOCK_REQUIRED: u64 = 8399;
+
     use std::option::{Self, Option};
     use std::string::{Self, String};
     use sui::event;
     use sui::table::{Self, Table};
+    use sui::dynamic_field as df;
 
     use fractalmind_protocol::constants;
     use fractalmind_protocol::organization::{Self, Organization};
@@ -32,6 +37,9 @@ module fractalmind_protocol::remote_authority {
     const E_INVALID_TOKEN: u64 = 8316;
     const E_IDEMPOTENCY_CONFLICT: u64 = 8317;
     const E_CLAIM_MISMATCH: u64 = 8318;
+    const E_BUDGET_SETTLEMENT: u64 = 8319;
+    const E_BUDGET_LEDGER_REQUIRED: u64 = 8320;
+    const E_CONTRACT_REQUIRED: u64 = 8321;
 
     const SCHEMA_VERSION: u8 = 1;
     const TARGET_ORGANIZATION: u8 = 1;
@@ -64,6 +72,30 @@ module fractalmind_protocol::remote_authority {
         budget_asset: String,
         budget_amount: u64,
         intent_hash: vector<u8>,
+    }
+
+    /// Private dynamic fields preserve the deployed RemoteCapability layout.
+    public struct BoundBudgetKey has copy, drop, store {}
+    public struct BoundBudgetTotals has copy, drop, store { spent: u64, reserved: u64 }
+    public struct BoundBudgetClaimKey has copy, drop, store { intent_hash: vector<u8> }
+    public struct BoundBudgetClaim has copy, drop, store { reserved_amount: u64, spent_amount: u64, settled: bool }
+    public struct ExecutionContractKey has copy, drop, store {}
+    public struct ExecutionContractBinding has copy, drop, store {
+        contract_id: ID, agreement_version: u64, boundary_hash: vector<u8>,
+    }
+    public struct CommandContractKey has copy, drop, store { intent_hash: vector<u8> }
+    public struct CommandContractBinding has copy, drop, store {
+        contract_id: ID, agreement_version: u64, kr_index: u64, boundary_hash: vector<u8>,
+    }
+    /// A transaction cannot supply this non-storable witness as pure data.
+    /// Its constructor stays private; sealed extension witnesses reach consumers
+    /// through the core bridge after source and capability binding checks.
+    public struct ContractWitness has drop {
+        capability_id: ID, contract_id: ID, agreement_version: u64, kr_index: u64, boundary_hash: vector<u8>,
+    }
+    public struct BoundBudgetSettled has copy, drop {
+        capability_id: ID, intent_hash: vector<u8>, reserved_amount: u64, spent_amount: u64,
+        spent_total: u64, reserved_total: u64,
     }
 
     /// Shared authority object resolved by envd and the TypeScript SDK.
@@ -150,6 +182,8 @@ module fractalmind_protocol::remote_authority {
         duplicate: bool,
     }
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun create_capability(
         org: &Organization,
         delegate: address,
@@ -164,8 +198,39 @@ module fractalmind_protocol::remote_authority {
         expires_at_ms: u64,
         ctx: &mut TxContext,
     ) {
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun create_capability_with_clock(
+        org: &Organization,
+        delegate: address,
+        target_kind: u8,
+        node_id: String,
+        agent_id: String,
+        actions: vector<String>,
+        scope: String,
+        max_uses: u64,
+        budget_asset: String,
+        max_budget: u64,
+        expires_at_ms: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
         let sender = ctx.sender();
         assert!(organization::admin(org) == sender, E_NOT_ISSUER);
+        let capability = new_capability(org, sender, delegate, target_kind, node_id, agent_id,
+            actions, scope, max_uses, budget_asset, max_budget, expires_at_ms, clock, ctx);
+        emit_created(&capability);
+        transfer::share_object(capability);
+    }
+
+    /// Package callers must enforce their own Human/Host authorization first.
+    public(package) fun new_capability(
+        org: &Organization, sender: address, delegate: address, target_kind: u8,
+        node_id: String, agent_id: String, actions: vector<String>, scope: String,
+        max_uses: u64, budget_asset: String, max_budget: u64, expires_at_ms: u64,
+        clock: &Clock, ctx: &mut TxContext,
+    ): RemoteCapability {
         assert!(delegate != @0x0, E_INVALID_CAPABILITY);
         validate_capability_shape(
             target_kind,
@@ -177,7 +242,7 @@ module fractalmind_protocol::remote_authority {
             &budget_asset,
             max_budget,
             expires_at_ms,
-            ctx.epoch_timestamp_ms(),
+            clock::timestamp_ms(clock),
         );
 
         let capability = RemoteCapability {
@@ -209,12 +274,55 @@ module fractalmind_protocol::remote_authority {
             authority_nonces: table::new(ctx),
             authority_idempotency_keys: table::new(ctx),
         };
+        capability
+    }
+
+    public fun share_capability(capability: RemoteCapability) {
         emit_created(&capability);
         transfer::share_object(capability);
     }
 
+    public(package) fun capability_uid(capability: &RemoteCapability): &UID { &capability.id }
+    public(package) fun capability_uid_mut(capability: &mut RemoteCapability): &mut UID { &mut capability.id }
+    public(package) fun bind_execution_contract(cap: &mut RemoteCapability, contract_id: ID, agreement_version: u64, boundary_hash: vector<u8>) {
+        assert!(cap.uses_claimed == 0 && cap.budget_claimed == 0 && agreement_version > 0 && vector::length(&boundary_hash) == 32
+            && !df::exists_(&cap.id, ExecutionContractKey {}), E_CONTRACT_REQUIRED);
+        df::add(&mut cap.id, ExecutionContractKey {}, ExecutionContractBinding { contract_id, agreement_version, boundary_hash });
+    }
+    public(package) fun assert_unbound_contract(cap: &RemoteCapability) {
+        assert!(!df::exists_(&cap.id, ExecutionContractKey {}), E_CONTRACT_REQUIRED);
+    }
+    public(package) fun contract_witness(cap: &RemoteCapability, contract_id: ID, agreement_version: u64, kr_index: u64, boundary_hash: vector<u8>): ContractWitness {
+        let binding: &ExecutionContractBinding = df::borrow(&cap.id, ExecutionContractKey {});
+        assert!(binding.contract_id == contract_id && binding.agreement_version == agreement_version && binding.boundary_hash == boundary_hash && kr_index < 3, E_CONTRACT_REQUIRED);
+        ContractWitness { capability_id: object::id(cap), contract_id, agreement_version, kr_index, boundary_hash: binding.boundary_hash }
+    }
+    public(package) fun record_contract_command(cap: &mut RemoteCapability, intent_hash: vector<u8>, witness: &ContractWitness) {
+        assert!(witness.capability_id == object::id(cap), E_CONTRACT_REQUIRED);
+        let key = CommandContractKey { intent_hash };
+        let value = CommandContractBinding { contract_id: witness.contract_id, agreement_version: witness.agreement_version,
+            kr_index: witness.kr_index, boundary_hash: witness.boundary_hash };
+        if (df::exists_(&cap.id, key)) {
+            assert!(*df::borrow<CommandContractKey, CommandContractBinding>(&cap.id, key) == value, E_CONTRACT_REQUIRED);
+        } else df::add(&mut cap.id, key, value);
+    }
+    public(package) fun settlement_witness(cap: &RemoteCapability, intent_hash: vector<u8>, contract_id: ID): ContractWitness {
+        let recorded: &CommandContractBinding = df::borrow(&cap.id, CommandContractKey { intent_hash });
+        assert!(recorded.contract_id == contract_id, E_CONTRACT_REQUIRED);
+        ContractWitness { capability_id: object::id(cap), contract_id, agreement_version: recorded.agreement_version,
+            kr_index: recorded.kr_index, boundary_hash: recorded.boundary_hash }
+    }
+    public fun assert_contract_command(cap: &RemoteCapability, intent_hash: vector<u8>, witness: &ContractWitness) {
+        assert!(witness.capability_id == object::id(cap), E_CONTRACT_REQUIRED);
+        let recorded: &CommandContractBinding = df::borrow(&cap.id, CommandContractKey { intent_hash });
+        assert!(recorded.contract_id == witness.contract_id && recorded.agreement_version == witness.agreement_version
+            && recorded.kr_index == witness.kr_index && recorded.boundary_hash == witness.boundary_hash, E_CONTRACT_REQUIRED);
+    }
+
     /// Delegate a bounded node/agent subset from an organization root. Quota is
     /// reserved at child creation and never returned in Phase 0.
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun delegate_capability(
         parent: &mut RemoteCapability,
         org: &Organization,
@@ -230,8 +338,27 @@ module fractalmind_protocol::remote_authority {
         expires_at_ms: u64,
         ctx: &mut TxContext,
     ): ID {
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun delegate_capability_with_clock(
+        parent: &mut RemoteCapability,
+        org: &Organization,
+        delegate: address,
+        target_kind: u8,
+        node_id: String,
+        agent_id: String,
+        actions: vector<String>,
+        scope: String,
+        max_uses: u64,
+        budget_asset: String,
+        max_budget: u64,
+        expires_at_ms: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ): ID {
         let sender = ctx.sender();
-        let now = ctx.epoch_timestamp_ms();
+        let now = clock::timestamp_ms(clock);
         let org_id = organization::org_id(org);
 
         assert!(parent.org_id == org_id, constants::e_unauthorized());
@@ -334,6 +461,8 @@ module fractalmind_protocol::remote_authority {
 
     /// Claim an organization-scoped intent before execution. The delegate
     /// submits this transaction; target envd verifies the claim by intent hash.
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun claim_authority_use(
         capability: &mut RemoteCapability,
         action: String,
@@ -349,9 +478,99 @@ module fractalmind_protocol::remote_authority {
         intent_hash: vector<u8>,
         ctx: &TxContext,
     ) {
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun claim_authority_use_with_clock(
+        capability: &mut RemoteCapability,
+        action: String,
+        scope: String,
+        target_kind: u8,
+        node_id: String,
+        agent_id: String,
+        command_id: String,
+        nonce: String,
+        idempotency_key: String,
+        budget_asset: String,
+        budget_amount: u64,
+        intent_hash: vector<u8>,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
         assert!(capability.reservation_scope == RESERVATION_AUTHORITY, E_WRONG_RESERVATION_SCOPE);
+        claim_use(capability, action, scope, target_kind, node_id, agent_id, command_id,
+            nonce, idempotency_key, budget_asset, budget_amount, intent_hash, clock, ctx);
+    }
+
+    /// Package wrappers check current Human/Host bindings before reserving a
+    /// node capability. They reuse the existing counters and replay indexes.
+    public(package) fun claim_bound_use(
+        capability: &mut RemoteCapability, action: String, scope: String,
+        target_kind: u8, node_id: String, agent_id: String, command_id: String,
+        nonce: String, idempotency_key: String, budget_asset: String,
+        budget_amount: u64, intent_hash: vector<u8>, clock: &Clock, ctx: &TxContext,
+    ) {
+        assert!(capability.reservation_scope == RESERVATION_NODE, E_WRONG_RESERVATION_SCOPE);
+        if (!df::exists_(&capability.id, BoundBudgetKey {})) {
+            // Legacy claims must not be silently relabeled as actual spending.
+            assert!(capability.budget_claimed == 0 && capability.uses_claimed == 0, E_BUDGET_LEDGER_REQUIRED);
+            df::add(&mut capability.id, BoundBudgetKey {}, BoundBudgetTotals { spent: 0, reserved: 0 });
+        };
+        let existed = table::contains(&capability.authority_claims, intent_hash);
+        claim_use(capability, action, scope, target_kind, node_id, agent_id, command_id,
+            nonce, idempotency_key, budget_asset, budget_amount, intent_hash, clock, ctx);
+        let key = BoundBudgetClaimKey { intent_hash };
+        if (existed) {
+            assert!(df::exists_(&capability.id, key), E_BUDGET_LEDGER_REQUIRED);
+            return
+        };
+        df::add(&mut capability.id, key, BoundBudgetClaim { reserved_amount: budget_amount, spent_amount: 0, settled: false });
+        let totals: &mut BoundBudgetTotals = df::borrow_mut(&mut capability.id, BoundBudgetKey {});
+        totals.reserved = totals.reserved + budget_amount;
+        assert!(totals.spent + totals.reserved == capability.budget_claimed, E_BUDGET_SETTLEMENT);
+    }
+
+    /// The checkpoint module binds the claim to its recorded Host and final
+    /// state. Settlement records are permanent; freed budget never frees a use
+    /// or permits replay of the command that originally reserved it.
+    public(package) fun settle_bound_budget(capability: &mut RemoteCapability, intent_hash: vector<u8>, spent_amount: u64) {
+        let capability_id = object::id(capability);
+        assert!(capability.reservation_scope == RESERVATION_NODE, E_WRONG_RESERVATION_SCOPE);
+        let key = BoundBudgetClaimKey { intent_hash };
+        assert!(df::exists_(&capability.id, key), E_BUDGET_LEDGER_REQUIRED);
+        let claim: &mut BoundBudgetClaim = df::borrow_mut(&mut capability.id, key);
+        assert!(spent_amount <= claim.reserved_amount, E_BUDGET_SETTLEMENT);
+        if (claim.settled) {
+            assert!(claim.spent_amount == spent_amount, E_BUDGET_SETTLEMENT);
+            return
+        };
+        let amount = claim.reserved_amount;
+        claim.settled = true;
+        claim.spent_amount = spent_amount;
+        let totals: &mut BoundBudgetTotals = df::borrow_mut(&mut capability.id, BoundBudgetKey {});
+        assert!(totals.reserved >= amount && capability.budget_claimed >= amount, E_BUDGET_SETTLEMENT);
+        totals.reserved = totals.reserved - amount;
+        totals.spent = totals.spent + spent_amount;
+        capability.budget_claimed = capability.budget_claimed - amount + spent_amount;
+        assert!(totals.spent + totals.reserved == capability.budget_claimed, E_BUDGET_SETTLEMENT);
+        event::emit(BoundBudgetSettled { capability_id, intent_hash, reserved_amount: amount,
+            spent_amount, spent_total: totals.spent, reserved_total: totals.reserved });
+    }
+
+    public fun bound_budget(capability: &RemoteCapability): (u64, u64) {
+        assert!(df::exists_(&capability.id, BoundBudgetKey {}), E_BUDGET_LEDGER_REQUIRED);
+        let totals: &BoundBudgetTotals = df::borrow(&capability.id, BoundBudgetKey {});
+        (totals.spent, totals.reserved)
+    }
+
+    fun claim_use(
+        capability: &mut RemoteCapability, action: String, scope: String,
+        target_kind: u8, node_id: String, agent_id: String, command_id: String,
+        nonce: String, idempotency_key: String, budget_asset: String,
+        budget_amount: u64, intent_hash: vector<u8>, clock: &Clock, ctx: &TxContext,
+    ) {
         assert!(ctx.sender() == capability.delegate, E_NOT_DELEGATE);
-        assert_authorized(capability, &action, &scope, target_kind, &node_id, &agent_id, ctx);
+        assert_authorized_with_clock(capability, &action, &scope, target_kind, &node_id, &agent_id, clock, ctx);
         assert!(is_token(&command_id, false), E_INVALID_TOKEN);
         assert!(is_token(&nonce, false), E_INVALID_TOKEN);
         assert!(is_token(&idempotency_key, false), E_INVALID_TOKEN);
@@ -529,6 +748,8 @@ module fractalmind_protocol::remote_authority {
     }
 
     /// Read-only validation shared by the authority claim and tests/adapters.
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun assert_authorized(
         capability: &RemoteCapability,
         action: &String,
@@ -538,13 +759,28 @@ module fractalmind_protocol::remote_authority {
         agent_id: &String,
         ctx: &TxContext,
     ) {
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun assert_authorized_with_clock(
+        capability: &RemoteCapability,
+        action: &String,
+        scope: &String,
+        target_kind: u8,
+        node_id: &String,
+        agent_id: &String,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
         assert!(!capability.revoked, E_CAPABILITY_REVOKED);
-        assert!(ctx.epoch_timestamp_ms() < capability.expires_at_ms, E_CAPABILITY_EXPIRED);
+        assert!(clock::timestamp_ms(clock) < capability.expires_at_ms, E_CAPABILITY_EXPIRED);
         assert!(scope == &capability.scope, E_INVALID_SCOPE);
         assert!(vector::contains(&capability.actions, action), E_INVALID_ACTION);
         assert!(target_contains(capability, target_kind, node_id, agent_id), E_INVALID_TARGET);
     }
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun assert_delegated_authorized(
         parent: &RemoteCapability,
         capability: &RemoteCapability,
@@ -555,12 +791,26 @@ module fractalmind_protocol::remote_authority {
         agent_id: &String,
         ctx: &TxContext,
     ) {
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun assert_delegated_authorized_with_clock(
+        parent: &RemoteCapability,
+        capability: &RemoteCapability,
+        action: &String,
+        scope: &String,
+        target_kind: u8,
+        node_id: &String,
+        agent_id: &String,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
         assert!(!parent.revoked, E_PARENT_AUTHORITY_STALE);
-        assert!(ctx.epoch_timestamp_ms() < parent.expires_at_ms, E_PARENT_AUTHORITY_STALE);
+        assert!(clock::timestamp_ms(clock) < parent.expires_at_ms, E_PARENT_AUTHORITY_STALE);
         assert!(option::is_some(&capability.parent_id), E_PARENT_AUTHORITY_STALE);
         assert!(*option::borrow(&capability.parent_id) == object::id(parent), E_PARENT_AUTHORITY_STALE);
         assert!(capability.parent_revocation_version == parent.revocation_version, E_PARENT_AUTHORITY_STALE);
-        assert_authorized(capability, action, scope, target_kind, node_id, agent_id, ctx);
+        assert_authorized_with_clock(capability, action, scope, target_kind, node_id, agent_id, clock, ctx);
     }
 
     fun validate_capability_shape(
@@ -636,7 +886,9 @@ module fractalmind_protocol::remote_authority {
     }
 
     fun is_initial_scope(value: &String): bool {
-        value == &string::utf8(b"view") ||
+        value == &string::utf8(b"observation") ||
+            value == &string::utf8(b"direct") ||
+            value == &string::utf8(b"view") ||
             value == &string::utf8(b"control") ||
             value == &string::utf8(b"logs") ||
             value == &string::utf8(b"terminal") ||

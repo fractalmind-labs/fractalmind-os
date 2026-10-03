@@ -2,6 +2,7 @@ import type { ClientWithCoreApi, SuiClientTypes } from '@mysten/sui/client';
 import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { Transaction } from '@mysten/sui/transactions';
 import { normalizeSuiAddress } from '@mysten/sui/utils';
+import { bcs } from '@mysten/sui/bcs';
 
 import type {
   Address,
@@ -17,24 +18,81 @@ const MAX_U64 = (1n << 64n) - 1n;
 export class FractalMindClient {
   public readonly client: ClientWithCoreApi;
   public readonly packageId: ObjectId;
+  public readonly typesPackageId: ObjectId;
+  public readonly okrPackageId: ObjectId;
+  public readonly okrTypesPackageId: ObjectId;
+  public readonly directPackageId: ObjectId;
+  public readonly directTypesPackageId: ObjectId;
+  public readonly network: NetworkName;
   public readonly registryId?: ObjectId;
+  private coreOrigins?: ReadonlyMap<string, ObjectId>;
+  private coreOriginsLoading?: Promise<void>;
 
   constructor(options: FractalMindClientOptions) {
     this.packageId = normalizeSuiAddress(options.packageId);
+    this.typesPackageId = normalizeSuiAddress(options.originalPackageId ?? options.packageId);
+    if ((options.originalOkrPackageId && !options.okrPackageId) || (options.originalDirectPackageId && !options.directPackageId)) throw new Error('An extension type origin requires its call package.');
+    this.okrPackageId = normalizeSuiAddress(options.okrPackageId ?? options.packageId);
+    this.okrTypesPackageId = normalizeSuiAddress(options.originalOkrPackageId ?? options.okrPackageId ?? this.typesPackageId);
+    this.directPackageId = normalizeSuiAddress(options.directPackageId ?? options.packageId);
+    this.directTypesPackageId = normalizeSuiAddress(options.originalDirectPackageId ?? options.directPackageId ?? this.typesPackageId);
     this.registryId = options.registryId ? normalizeSuiAddress(options.registryId) : undefined;
+    const clientNetwork = options.client?.network;
+    const knownClientNetwork = ['localnet', 'devnet', 'testnet', 'mainnet'].includes(clientNetwork ?? '') ? clientNetwork as NetworkName : undefined;
+    if (options.network && knownClientNetwork && options.network !== knownClientNetwork) throw new Error('Configured network does not match the supplied Sui client.');
+    this.network = options.network ?? knownClientNetwork ?? DEFAULT_NETWORK;
 
     if (options.client) {
       this.client = options.client;
       return;
     }
 
-    const network = options.network ?? DEFAULT_NETWORK;
+    const network = this.network;
     const url = options.fullnodeUrl ?? (network === 'localnet' ? 'http://127.0.0.1:9000' : `https://fullnode.${network}.sui.io:443`);
     this.client = new SuiGrpcClient({ baseUrl: url, network });
   }
 
   newTransaction(): Transaction {
     return new Transaction();
+  }
+
+  /** A Sui upgrade preserves existing type origins, while each new datatype
+   * belongs to the version that introduced it. Read the immutable package BCS
+   * rather than assuming every type belongs to originalPackageId. */
+  async loadCoreTypeOrigins(): Promise<void> {
+    if (this.packageId === this.typesPackageId || this.coreOrigins) return;
+    if (!this.coreOriginsLoading) {
+      this.coreOriginsLoading = (async () => {
+        const { object } = await this.client.core.getObject({ objectId: this.packageId, include: { objectBcs: true } });
+        if (object.objectId !== this.packageId || object.type !== 'package' || object.owner.$kind !== 'Immutable' || !object.objectBcs) throw new Error('Missing immutable core package BCS.');
+        const envelope = bcs.Object.parse(object.objectBcs);
+        if (envelope.data.$kind !== 'Package' || envelope.owner.$kind !== 'Immutable') throw new Error('Unexpected core package envelope.');
+        const pkg = envelope.data.Package;
+        if (pkg.id !== this.packageId || pkg.version !== object.version) throw new Error('Core package ID or version mismatch.');
+        const origins = new Map<string, string>();
+        for (const type of pkg.typeOriginTable) {
+          const key = `${type.moduleName}::${type.datatypeName}`;
+          if (!/^[A-Za-z_][A-Za-z0-9_]*::[A-Za-z_][A-Za-z0-9_]*$/.test(key) || origins.has(key)) throw new Error('Invalid or duplicate core type origin.');
+          origins.set(key, normalizeSuiAddress(type.package));
+        }
+        if (origins.get('organization::Organization') !== this.typesPackageId || origins.get('organization::ProtocolRegistry') !== this.typesPackageId) throw new Error('Configured original core package does not match the actual type origins.');
+        this.coreOrigins = origins;
+      })().finally(() => { this.coreOriginsLoading = undefined; });
+    }
+    await this.coreOriginsLoading;
+  }
+
+  coreTypeTag(module: string, name: string): string {
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(module) || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) throw new Error('Invalid core datatype name.');
+    const key = `${module}::${name}`;
+    const origin = this.packageId === this.typesPackageId ? this.typesPackageId : this.coreOrigins?.get(key);
+    if (!origin) throw new Error('Core type origin is unavailable; load the actual package before deriving a type or field name.');
+    return `${origin}::${key}`;
+  }
+
+  async coreType(module: string, name: string): Promise<string> {
+    await this.loadCoreTypeOrigins();
+    return this.coreTypeTag(module, name);
   }
 
   target(entryFunction: string): string {

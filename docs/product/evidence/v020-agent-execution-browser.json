@@ -1,0 +1,63 @@
+{
+  "recordedAt": "2026-10-02T10:38:05.567Z",
+  "url": "http://127.0.0.1:4189/",
+  "baseline": "fractalmind-app-prototype-v2",
+  "profile": {
+    "network": "localnet",
+    "rpcUrl": "http://127.0.0.1:29000",
+    "packageId": "0x5e9517b1cbb751603fc0a53fb6129a02706aa759444062216c321bc6e6ecd088",
+    "registryId": "0xf3940f4947b50a707e9877773cb8508f3a86c3a1a20041ee6f64cffaeb63fd57",
+    "humanId": "0x51106c485d239fd82a269218a96067ece9dfa29cd6fd6fa5ca4e691ce4616af2",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "managedAgentId": "0x9f2306dbdb4c21638d2ad202e3400cc4ff80292f7ed5b42df5b528305a2c8c9e",
+  "checks": [
+    {
+      "description": "Actual four-record history: two read-only successes, successful control with spent 6/reserved 0, undispatched queued cancellation with spent 0/reserved 0",
+      "verified": true
+    },
+    {
+      "description": "Zero unsettled control explicitly still requires Host physical state, boundaries and human authorization",
+      "verified": true
+    },
+    {
+      "description": "Read timestamp and revision 9 displayed; complete history starts collapsed and expands",
+      "verified": true
+    },
+    {
+      "description": "English/dark and Chinese/light use v2 tokens; full IDs wrap without horizontal overflow",
+      "verified": true
+    },
+    {
+      "description": "After 60 seconds, result marked stale without continuing or signing",
+      "verified": true
+    },
+    {
+      "description": "Legacy deployment lacks exact coverage field; explicit unknown coverage, not empty history",
+      "verified": true
+    },
+    {
+      "description": "Manual chain refresh clears prior execution check",
+      "verified": true
+    },
+    {
+      "description": "Original expired queued control retains reservation 6 and blocks handover",
+      "verified": true,
+      "managedAgentId": "0x2cde1e16bb39dc525eea7d9e0838ca823f23c87dea9a539ae3e441756adeb6f7",
+      "executionId": "0xe260a87568a2e0f5469c6e164dfda3088cb5353c79bb6e9e32beafdf4b876f10",
+      "chainClockEvidence": "v020-agent-execution-prior-checks.json"
+    }
+  ],
+  "screenshots": [
+    "v020-agent-checkpoint-zh-light.jpg",
+    "v020-agent-checkpoint-en-dark.jpg",
+    "v020-agent-checkpoint-blocked.jpg"
+  ],
+  "limits": {
+    "publicChainReadOnly": true,
+    "noPrivateKeyOrRecoveryInput": true,
+    "noSigningOrControlGranted": true,
+    "nativeInstalledAcceptance": false,
+    "mobileInstalledAcceptance": false
+  }
+}

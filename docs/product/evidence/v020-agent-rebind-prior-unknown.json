@@ -1,0 +1,16 @@
+{
+  "recordedAt": "2026-10-02T08:08:54.665157+00:00",
+  "network": "localnet",
+  "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+  "sourceProgressSha256": "1a08dda97fa40d27f5122c541cc250fe71fbdb796d6e12d87b7aea76f182a978",
+  "digest": "GUzgFqCydH2xvnqUzByYGHeWXp8BRfP9xBMLU59QRzeg",
+  "state": "unknown",
+  "lastQueryResult": "getTransaction returned notFound; this is not proof of failure or non-submission",
+  "requestedAnotherBroadcastForThisDigest": false,
+  "subsequentAcceptanceUsedIndependentOrganizationHostRecordAndKeys": true,
+  "limits": {
+    "originalExecutionErrorNotRetained": true,
+    "originalOutcomeResolved": false,
+    "isolatedGeneratedFixtureOnly": true
+  }
+}

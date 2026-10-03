@@ -1,0 +1,55 @@
+{
+  "recordedAt": "2026-10-02T08:08:54.665157+00:00",
+  "tests": {
+    "app": {
+      "passed": 87,
+      "failed": 0,
+      "logSha256": "ff406b055c8fdc6c881c1b1b2f01db1971ff177cba976d8b0839918872cd4347"
+    },
+    "sdk": {
+      "passed": 105,
+      "failed": 0,
+      "logSha256": "4b05e1f90196a0fe7bc14f83e10d745e344dc8c57a3137f0396a8480a04a9edf"
+    },
+    "move": {
+      "passed": 121,
+      "failed": 0,
+      "logSha256": "2300960e2069b5d564eca6f65e6c987a4c31dd2bb55dbb556841410d704e7ca0"
+    }
+  },
+  "build": {
+    "appBuildPassed": true,
+    "appLogSha256": "bdaa97260676f3ca2e2450cabde826e0d8a934e895cde88726be3f4ca268e384",
+    "sdkBuildPassed": true,
+    "sdkTypesPassed": true,
+    "chainScriptTypesPassed": true,
+    "moveBytecodeSha256": "9f5ddf488eff34189a3202beafc40ff2d1d9a3dd094180b524b06f17f03c4899"
+  },
+  "sourceSha256": {
+    "apps/fractalmind-app/src/agent-import.ts": "53a32dbaee0b4837b8472ed14ea6ad2005c2ad3b1956c4cdcf671a2a1b7ad7cc",
+    "apps/fractalmind-app/src/AgentImportFlow.tsx": "39c19d734432b7c6e21dcd809774ab0f97653977b5fcccbbcbc119098462eb66",
+    "apps/fractalmind-app/src/App.tsx": "f1ef7695d92b8661525c1f43edfaacf80ceeb4338e291b44807f031f8a32dc45",
+    "apps/fractalmind-app/src/HostObservations.tsx": "59ee5b94a65fb6375eb2a6466f156494decf4def601487683a95fcd26c9a0a47",
+    "apps/fractalmind-app/tests/agent-import.test.ts": "1df7262aee8b6c870029083c537746d1944e8c87666b54a98cacde1cc6d12247",
+    "apps/fractalmind-app/scripts/host-admission-localnet.ts": "6833ba05adadeb88e0c43beb5810621401332fb0c9167a3a9cfb6d9b8e2906b0",
+    "protocols/fractalmind-protocol/contracts/protocol/sources/host.move": "3e673ae21ebba47a67d8c422096e1011aa38c09dcdaa624f7d127ebca0dbc8e6",
+    "protocols/fractalmind-protocol/sdk/src/host.ts": "eb7694af8a02cca31fd560f32669e7f7761c6a1605180f0e7bac3a76c70df659",
+    "protocols/fractalmind-protocol/sdk/tests/host-invite.test.ts": "97225f8d578d3e54d4f23fd19f36ebf556bc832ecc9ecbffc81e9620f2ca5de9"
+  },
+  "checks": [
+    "Explicit review and separate quotation; original UUID operation namespaces",
+    "Frozen reviewed record pinned before quote, submit and after native signature",
+    "Missing/expired/changed source or device authority prevents broadcast",
+    "Controlled runtime requires independent safe handover",
+    "Rebind retains record identity and requires next logical version",
+    "Old member/workspace are reviewed while new source must be independently verified",
+    "SDK versioned ABI u64 value preserved beyond JavaScript Number precision"
+  ],
+  "limits": {
+    "installedNativeDialogVerified": false,
+    "persistentJournalRestartVerified": false,
+    "realHostRejoinVerified": false,
+    "fivePlatformsInstalledVerified": false,
+    "goRuntimeChangedOrRerunThisIncrement": false
+  }
+}

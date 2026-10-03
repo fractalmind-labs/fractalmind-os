@@ -1,0 +1,122 @@
+{
+  "format": 1,
+  "recordedAt": "2026-10-02T00:57:29.236Z",
+  "platform": "darwin",
+  "chain": {
+    "rpc": "http://127.0.0.1:29000",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "profile": "test-e7f011cb-b494-4ce3-a4cb-9538d38fe50c",
+  "humanId": "0x061a435ae231f0d1329597f7625c5b9829571ea37f564438efdc48c253f42471",
+  "organizationId": "0x01e8e6682c0f8c1e859635124553a42b3824d9481dd05f9fac4c0e8a721b475a",
+  "deployment": {
+    "packageId": "0x0598945cf22a558c26b1d9428b60f4120de0821fa08e409520f1d43ebe999252",
+    "registryId": "0x68c16bb3870ce6da013cf47e895667a0d8abf8da71f3b10e5e5b075b0161bc14"
+  },
+  "publicRecovered": {
+    "humanId": "0x061a435ae231f0d1329597f7625c5b9829571ea37f564438efdc48c253f42471",
+    "device": {
+      "format": 1,
+      "profile": "test-e7f011cb-b494-4ce3-a4cb-9538d38fe50c-b",
+      "address": "0x4772c08f180115ae7efb71fb86b24dcd28e4c342b79a8f2e9fdcbe716d2f65c9",
+      "signingPublicKey": "iiMfwwJ2+aZmIJGVkhxoe2x4sDjBkENuLG9l0UMdGA4=",
+      "encryptionPublicKey": "coOe0xP4li0xUHB/GIZu84x3rZ3jMhupg7clHc977Xk="
+    },
+    "grantId": "0x233de9c9fc9721e1f7bb4d2fe50f0b2a957e48d62aedb9abd83cfc4336cd72c7",
+    "recoveryAddress": "0xa9dbf642212a6b20553ccc16d1818083d3ab9b08c866b6d68f27ac5d4e747988",
+    "generation": "3",
+    "recoveryVersion": "3"
+  },
+  "checks": [
+    "loading an absent onboarding profile does not create keys",
+    "native recovery code/HKDF keys and FMW1/AES-GCM backup interoperate with the official JS path",
+    "fresh-process reload reveals public keys/ciphertext only; re-creation and wrong network are rejected",
+    "zero recovery balance blocks Human preparation without submitting",
+    "native recovery signs a real self-paid Human transaction; independent device possession resolves stable Human",
+    "new native processes and a rebuilt controller query original digests and reconstruct the same Human/organization without replay",
+    "discarding transaction caches reconstructs confirmed business state from chain and refuses duplicate creation",
+    "recovery 1: production native bridge imports/reloads independent credentials; verified chain lookup and fingerprint prepare a one-shot replacement without quoting/submitting",
+    "actual organization change invalidates the old recovery quote before native signing or broadcasting; an explicit fresh quote can proceed",
+    "actual recovery response loss stays unknown; only the same digest is queried, no second recovery broadcast or replacement code generation",
+    "recovery 1: production recovery reconstructs the exact new device from chain/OS and queries the original digest; an empty journal cannot replay consumed recovery",
+    "recovery 1: stable Human/org IDs, consumed code and invalidated prior device are proven on chain; historical v1 body decrypts on the authorized recovered device",
+    "old native content keys cannot decrypt new version-2 writes accepted on chain",
+    "recovery 2: production native bridge imports/reloads independent credentials; verified chain lookup and fingerprint prepare a one-shot replacement without quoting/submitting",
+    "zero recovery address balance blocks quotation until explicit isolated fixture funding",
+    "recovery 2: production recovery reconstructs the exact new device from chain/OS and queries the original digest; an empty journal cannot replay consumed recovery",
+    "recovery 2: stable Human/org IDs, consumed code and invalidated prior device are proven on chain; historical v1 body decrypts on the authorized recovered device",
+    "a second controller/native recovery preserves v1/v2 chain bodies and prepares v3 keys",
+    "only the new code and public deployment metadata locate the same stable Human through the production recovery controller without an input Human ID",
+    "backup update during native signing fails at the contract snapshot guard: Human/recovery/grants/key version remain unchanged and actual failed Gas is retained without replay"
+  ],
+  "transactions": [
+    {
+      "action": "create Human with native recovery signature and self-paid Gas",
+      "digest": "HJNk4ozMymuhXskVTNeKuZZBAWAh6pmnCSeStSxXi7r",
+      "actualGas": "18752548"
+    },
+    {
+      "action": "create personal organization with independent native device",
+      "digest": "5AJGndksysddJRnTEkPjVbmTuWyiZoy1fzXP9fJkuws3",
+      "actualGas": "14711216"
+    },
+    {
+      "action": "save historical body with native content key/signature",
+      "digest": "CJQfnHX6j7BVEJzyZYtqrAU5Nm2d6gB9tn7J1czDg4dT",
+      "actualGas": "10289688"
+    },
+    {
+      "action": "change organization after recovery quotation",
+      "digest": "2Q2GNxc5Pzgd83mw3TpQUMvNbfTq6pxbC11SvQj1Jcr3",
+      "actualGas": "1653688"
+    },
+    {
+      "action": "production native/controller atomic organization rotation and recovery 1",
+      "digest": "8AwtUDuL8oaujAfdEqqtkJuE8WyjLT83tmxqVMWsWr66",
+      "actualGas": "18781028"
+    },
+    {
+      "action": "recovered device saves version-2 body",
+      "digest": "FsBjPbRMhw3RxH3hdYXpGnGci8YsRuD6xgf8Cky4wmuJ",
+      "actualGas": "7635388"
+    },
+    {
+      "action": "production native/controller atomic organization rotation and recovery 2",
+      "digest": "Hi6Xu2m8fncARWnMtZNntRqynR65tjFpZfADFy26KdZ6",
+      "actualGas": "19876416"
+    },
+    {
+      "action": "replace backup after source checks but before native recovery signature",
+      "digest": "CeYt7gbQTXSKAmbmvaYUTq7GHu45VmaD7h8vs6ivnnsu",
+      "actualGas": "1488584"
+    },
+    {
+      "action": "on-chain recovery snapshot guard rejects stale signed recovery atomically",
+      "digest": "5BbwZuoZqWcbjPBq4joDkgtbUwbU4qW58YcuSW2gYTVD",
+      "actualGas": "1582672",
+      "status": "expected failure",
+      "failure": {
+        "$kind": "MoveAbort",
+        "message": "MoveAbort in 1st command, abort code: 9006, in '0x0598945cf22a558c26b1d9428b60f4120de0821fa08e409520f1d43ebe999252::identity::assert_recovery_snapshot' (instruction 27)",
+        "command": 0,
+        "MoveAbort": {
+          "abortCode": "9006",
+          "location": {
+            "package": "0x0598945cf22a558c26b1d9428b60f4120de0821fa08e409520f1d43ebe999252",
+            "module": "identity",
+            "function": 9,
+            "instruction": 27,
+            "functionName": "assert_recovery_snapshot"
+          }
+        }
+      }
+    }
+  ],
+  "limits": {
+    "nativeTransport": "isolated subprocess transport of production bridge commands, not installed UI IPC",
+    "controller": "production native bridge and recovery controller",
+    "journal": "in-memory fixture; installed UI durable journal not exercised",
+    "rawCodeInReport": false,
+    "fullV020Complete": false
+  }
+}

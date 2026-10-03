@@ -1,0 +1,34 @@
+{
+  "recordedAt": "2026-10-02T19:47:36.788843+00:00",
+  "move": {
+    "command": "sui move test --gas-limit 100000000",
+    "total": 140,
+    "pass": 140,
+    "fail": 0,
+    "directTests": 18,
+    "hostFixture": "test_only admitted membership and package-only reviewed-control fixture; not a live signature/handover proof"
+  },
+  "sdk": {
+    "command": "node --import tsx --test tests/*.test.ts",
+    "total": 136,
+    "pass": 136,
+    "fail": 0,
+    "directTestGroups": 8,
+    "typecheckPassed": true,
+    "productionBuildPassed": true
+  },
+  "app": {
+    "total": 146,
+    "pass": 146,
+    "fail": 0,
+    "productionBuildPassed": true
+  },
+  "nativeHarnessStrictTypecheckPassed": true,
+  "limits": {
+    "directEnvdDispatchVerified": false,
+    "directUIVerified": false,
+    "newDirectLiveBranchVerified": false,
+    "publishGatePassed": false,
+    "fullV020Complete": false
+  }
+}

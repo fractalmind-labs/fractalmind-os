@@ -1,0 +1,350 @@
+{
+  "recordedAt": "2026-10-02T12:47:43.614Z",
+  "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+  "profile": {
+    "network": "localnet",
+    "rpcUrl": "http://127.0.0.1:29000",
+    "packageId": "0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c",
+    "registryId": "0x18d674327b499a3c30aff714328733286182680283f370f13b380895f7f7ad18",
+    "humanId": "0xc866673e24d0cb9261bae9a8434a40ed0264c4630bc606713a5f911527f124d9",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "organizationId": "0x00dc3eab1ae157663bd63a9948047a0b2d23c1b4340570ff4aed78c8647c7114",
+  "grantId": "0x301b460d319e5115eb1e7c40d02e6e2fa0f570219164b2f02260e9a0f8f9e270",
+  "checks": [
+    "exact absent Host index reconstructs as empty",
+    "production verifier proves fresh device/organization management authority; public binding is not online evidence",
+    "code is released only after exact receipt objects are visible and match invitation proof material",
+    "production CLI pipeline confirms organization and fees, signs once with generated Go Host keys, persists original digest, recovers lost receipt and supports public query without keys; OS/TTY/cloud not verified",
+    "redemption consumes the invitation; reconstruction finds membership and finite observation authority, not execution authority",
+    "Actual instantiated native file adapter and envd kernel birth identity traverse Host signature, authenticated Coordinator read and App discovery verification; workspace binding is canonical, import remains observation-only",
+    "Actual chain consumes Host proof atomically, preserves original evidence, activates Draft and advances ManagedAgent once without tool dispatch",
+    "Validator preflights reject wrong coverage/signature, raw control, legacy activation and proof replay; capability ceiling 3 retains total OKR budget 10",
+    "Production App imports the actual discovered instance for observation only on Sui; injected lost response recovers original digest with one broadcast; a fresh controller reconstructs the indexed record and avoids duplicate quotation/payment",
+    "App production read client uses injected fixture device signing; Go verifies current grant; unsigned/token reads denied and Coordinator-signed response returns actual Host heartbeat",
+    "Go Host signs its actual heartbeat; App independently verifies exact body, current membership pointer, scoped chain and Coordinator versions; forged body remains unknown",
+    "a retained, cryptographically valid Host heartbeat cannot regain trust after actual chain membership revocation",
+    "membership revocation remains chain-owned and visible; consumed-invite revocation never substitutes for it",
+    "real loopback Coordinator/Host mutually authenticate using chain endpoint and keys; live heartbeat observed; App chain revocation rejects both Coordinator routing and worker heartbeat",
+    "new controller reconstructs chain state but cannot recover the invitation bearer secret",
+    "a lost unused code has an explicit on-chain revocation path",
+    "device revocation after challenge preparation is rejected by the App's fresh chain authority check before HTTP dispatch; no cached device login survives",
+    "management revocation between quote and submit rejects the App operation before a new broadcast"
+  ],
+  "transactions": [
+    {
+      "label": "create isolated fixture Human",
+      "digest": "4wwCEbwafymvujNNbc8HP5zkq9qBmrFQZQyVaRRQJ6TU",
+      "phase": "prepared"
+    },
+    {
+      "label": "create isolated fixture Human",
+      "requestId": "fixture:50d4b324-16ee-462a-833a-0f53d1e1f327",
+      "digest": "4wwCEbwafymvujNNbc8HP5zkq9qBmrFQZQyVaRRQJ6TU",
+      "status": "confirmed",
+      "actualGas": "17848548"
+    },
+    {
+      "label": "create isolated fixture organization",
+      "digest": "35Vex4L5a3tCEEjJWHrqvYEdpM8znhaxjHHDPD4LNg86",
+      "phase": "prepared"
+    },
+    {
+      "label": "create isolated fixture organization",
+      "requestId": "fixture:4287a1dd-8e0f-4189-a3a6-0c80313a26bc",
+      "digest": "35Vex4L5a3tCEEjJWHrqvYEdpM8znhaxjHHDPD4LNg86",
+      "status": "confirmed",
+      "actualGas": "15418416"
+    },
+    {
+      "label": "App registers Coordinator binding",
+      "requestId": "host:578288c6-57c3-4b2d-a342-1d6035509580",
+      "digest": "E58PZkume1dH2eqvsEET5RRACvGWvM4HKtz6L3XUvPCH",
+      "status": "confirmed",
+      "actualGas": "6965696"
+    },
+    {
+      "label": "App creates one-use invitation",
+      "requestId": "host:b4d2b540-ce59-47b4-a26e-6bb656c2900b",
+      "digest": "48qvqawjeHkYRsmXCrs3DwobTd3Nkm4e3L2qmUwgZxHB",
+      "status": "confirmed",
+      "actualGas": "5103392"
+    },
+    {
+      "label": "Go envd CLI redeems App invitation; injected response loss recovered by original query",
+      "requestId": "go-envd-cli-fixture",
+      "digest": "HSzXQTJ7k4mMXBfvtxvYEEZUmgYkJjDPVvkuyFDqK5Ad",
+      "status": "confirmed",
+      "actualGas": "11590292"
+    },
+    {
+      "label": "App observation-only Agent import; lost response recovered by original digest",
+      "requestId": "agent-import:0d495602-2957-4816-94c4-0ab726f22e4a",
+      "digest": "BYeVYHCtZgk897S9UkZWjVnszHr77TfLX75pmD6nwT7A",
+      "status": "confirmed",
+      "actualGas": "12021456"
+    },
+    {
+      "label": "Deliberate contract duplicate receipt; App normal duplicates remain fee-free",
+      "requestId": "agent-import-race:3f2e5cea-401e-4464-98ba-90ba7e857d04",
+      "digest": "GG7NwzmBKdKPcUkR44oHCTQ7hsWWAs9rzyW98u9sdV6k",
+      "status": "confirmed",
+      "actualGas": "1635296"
+    },
+    {
+      "label": "Host proof: create measurable draft",
+      "digest": "8Ey3fzPVWgmDjw9hmyEwxJ3ruR9tCZXnH8SVdsbHYy1S",
+      "phase": "prepared"
+    },
+    {
+      "label": "Host proof: create measurable draft",
+      "requestId": "fixture:a23536ce-e338-40a8-8109-f56acd2e8317",
+      "digest": "8Ey3fzPVWgmDjw9hmyEwxJ3ruR9tCZXnH8SVdsbHYy1S",
+      "status": "confirmed",
+      "actualGas": "20417296"
+    },
+    {
+      "label": "Host proof: issue observation capability",
+      "digest": "HebAxNkBcZu86pi2ekbf5QWdf3JM8BhAohqdLDfARpGM",
+      "phase": "prepared"
+    },
+    {
+      "label": "Host proof: issue observation capability",
+      "requestId": "fixture:29e2c8a2-f633-4918-847e-b3fc14c2fec0",
+      "digest": "HebAxNkBcZu86pi2ekbf5QWdf3JM8BhAohqdLDfARpGM",
+      "status": "confirmed",
+      "actualGas": "10323480"
+    },
+    {
+      "label": "Host proof: prepare review and encrypted result recipient",
+      "digest": "9TTebbkXxMtw5MF4Rk8gBXcgWW4TMUVWpkiGx1sNM1GA",
+      "phase": "prepared"
+    },
+    {
+      "label": "Host proof: prepare review and encrypted result recipient",
+      "requestId": "fixture:33b4cf72-6b98-46da-a5b3-dbb9886e7215",
+      "digest": "9TTebbkXxMtw5MF4Rk8gBXcgWW4TMUVWpkiGx1sNM1GA",
+      "status": "confirmed",
+      "actualGas": "35530312"
+    },
+    {
+      "label": "Host proof: consume constraints and activate atomically",
+      "digest": "FrHWhiDgVAifYLLinPWE4kohaAVZNVDeK6evSbp4sgbX",
+      "phase": "prepared"
+    },
+    {
+      "label": "Host proof: consume constraints and activate atomically",
+      "requestId": "fixture:db86b2fb-342b-4bf8-8e26-a948215d5180",
+      "digest": "FrHWhiDgVAifYLLinPWE4kohaAVZNVDeK6evSbp4sgbX",
+      "status": "confirmed",
+      "actualGas": "37109844"
+    },
+    {
+      "label": "Host proof: issue reviewed tool ceiling",
+      "digest": "BUr8KYr3xmmrAJvvPXDvLegfm8z3Xd1pB6mD3aMSohJT",
+      "phase": "prepared"
+    },
+    {
+      "label": "Host proof: issue reviewed tool ceiling",
+      "requestId": "fixture:11308df6-693a-4e34-afb7-a5a708bd2023",
+      "digest": "BUr8KYr3xmmrAJvvPXDvLegfm8z3Xd1pB6mD3aMSohJT",
+      "status": "confirmed",
+      "actualGas": "13416280"
+    },
+    {
+      "label": "App revokes Host membership",
+      "requestId": "host:057f1f8e-156f-41b5-8cb0-2ab9cad7c303",
+      "digest": "BgL1AmpyPNrgWienJLP8tmQve3yGkEahhmoDo8rpzc2v",
+      "status": "confirmed",
+      "actualGas": "-442892"
+    },
+    {
+      "label": "App creates invitation for reload test",
+      "requestId": "host:924e5ef2-ad5b-4692-b365-cb1a0ebba914",
+      "digest": "HExSfqqbj9naYD43oKhhF7ACZtye5c79Grgcdaqc32fy",
+      "status": "confirmed",
+      "actualGas": "5108256"
+    },
+    {
+      "label": "App revokes unrecoverable unused invitation",
+      "requestId": "host:6fc37a25-2ac0-4786-9fec-f3939b3b4f88",
+      "digest": "Ay7FzzuiSU9rczSUAaEhdbCKVtr8G3NQe3aijGmfy7qF",
+      "status": "confirmed",
+      "actualGas": "1612028"
+    },
+    {
+      "label": "fixture explicitly adds independent root management device",
+      "digest": "FF4kvkfScszj2HxcQhe3ooQoAgQbVx1ZgYXMoFjmH43n",
+      "phase": "prepared"
+    },
+    {
+      "label": "fixture explicitly adds independent root management device",
+      "requestId": "fixture:c448382e-1f59-40da-98e2-2d6172034082",
+      "digest": "FF4kvkfScszj2HxcQhe3ooQoAgQbVx1ZgYXMoFjmH43n",
+      "status": "confirmed",
+      "actualGas": "7989568"
+    },
+    {
+      "label": "independent root fixture revokes managing device",
+      "digest": "3tJ5yD3EVF9QjNuEiTepxL8tDCEfiiCQxYa5i1CX62bX",
+      "phase": "prepared"
+    },
+    {
+      "label": "independent root fixture revokes managing device",
+      "requestId": "fixture:ffad0579-5474-4137-a310-ba0023993483",
+      "digest": "3tJ5yD3EVF9QjNuEiTepxL8tDCEfiiCQxYa5i1CX62bX",
+      "status": "confirmed",
+      "actualGas": "1609248"
+    }
+  ],
+  "envdCli": {
+    "initial": {
+      "state": "unknown",
+      "digest": "HSzXQTJ7k4mMXBfvtxvYEEZUmgYkJjDPVvkuyFDqK5Ad"
+    },
+    "result": {
+      "state": "confirmed",
+      "digest": "HSzXQTJ7k4mMXBfvtxvYEEZUmgYkJjDPVvkuyFDqK5Ad",
+      "actual_fee_mist": "11590292",
+      "membership": {
+        "organization_id": "0x00dc3eab1ae157663bd63a9948047a0b2d23c1b4340570ff4aed78c8647c7114",
+        "invite_id": "0x7326fb938f4f581c4606edf0ac091e27a2eda0a18758fb3fffd3e338ad11995a",
+        "membership_id": "0x4073ef87a0f55f6f6050a97e72cdd985c471a9b5acb040c68ea0d1b32db773f5",
+        "host_address": "0x6d4957ffce4654339dd15969ca7e35dea3a3b856f54a1adf78fb66d608b7efff",
+        "coordinator_binding": "0xb85bdd793392b2cf255adfb0b9aa33cc1d53e6702734c641ee5fdaf734c29f66",
+        "observation_capability": "0x4ab2cfffcf4c89ff725166380c49a07af22c41b5363ae967b152eae3fa7c092f",
+        "expires_at_ms": 1793537255686,
+        "revoked": false,
+        "current_membership": true
+      }
+    },
+    "broadcasts": 1,
+    "public_query_without_keys": true,
+    "real_disk_journal": true,
+    "hostAddress": "0x6d4957ffce4654339dd15969ca7e35dea3a3b856f54a1adf78fb66d608b7efff",
+    "journalRoot": "/tmp/fractalmind-handover-approval-localnet-20261002-r6.json.journal"
+  },
+  "envdConnection": {
+    "chain_endpoint_used": true,
+    "mutual_authentication": true,
+    "heartbeat_sent": true,
+    "revoked_pointer_rejected": true,
+    "worker_revoked_heartbeat_rejected": true,
+    "coordinator_revoked_routing_rejected": true,
+    "generated_memory_keys": true,
+    "loopback_only": true
+  },
+  "nativeExecution": {
+    "phase": "approval_confirmed",
+    "executionId": "0xe9b6a2acc6ed40631978c8e64f03377b8a4708a1c29e765b28aff9f833fad4e4",
+    "okrId": "0xbb82f05490d83896595cfd339b85cfb1b4e089523b0e039c15dc867f6a8f89cd",
+    "managedId": "0x5b36f3be4c7c3e5f91b3ca466d47e0bacccba8e4f81ff5fb8b5ad9fed8a2725f",
+    "safeAppHandoverVerified": false,
+    "acceptance": {
+      "binding_id": "0xb85bdd793392b2cf255adfb0b9aa33cc1d53e6702734c641ee5fdaf734c29f66",
+      "coverage_revision": "2",
+      "execution_id": "0xe9b6a2acc6ed40631978c8e64f03377b8a4708a1c29e765b28aff9f833fad4e4",
+      "grant_id": "0x301b460d319e5115eb1e7c40d02e6e2fa0f570219164b2f02260e9a0f8f9e270",
+      "host_address": "0x6d4957ffce4654339dd15969ca7e35dea3a3b856f54a1adf78fb66d608b7efff",
+      "human_id": "0xc866673e24d0cb9261bae9a8434a40ed0264c4630bc606713a5f911527f124d9",
+      "instance_id": "native-249b9b4a4a0ddb152e35fd11820ae14c497873e719c9e347240b0ac6ba311308",
+      "membership_id": "0x4073ef87a0f55f6f6050a97e72cdd985c471a9b5acb040c68ea0d1b32db773f5",
+      "observed_at_ms": 1790945259693,
+      "organization_id": "0x00dc3eab1ae157663bd63a9948047a0b2d23c1b4340570ff4aed78c8647c7114",
+      "proposal": {
+        "budget_asset": "TOOL_CALLS",
+        "budget_limit": "10",
+        "expires_at_ms": 1790945379224,
+        "managed_agent_id": "0x5b36f3be4c7c3e5f91b3ca466d47e0bacccba8e4f81ff5fb8b5ad9fed8a2725f",
+        "managed_version": "1",
+        "max_calls": "3",
+        "nonce": "d06703ba3bdf4a8e9d185ce7ac146ef54e72a53faa8b4b259caa2c6aa54f34e2",
+        "okr_id": "0xbb82f05490d83896595cfd339b85cfb1b4e089523b0e039c15dc867f6a8f89cd",
+        "okr_version": "1",
+        "paths": {
+          "file.read": [
+            "."
+          ],
+          "file.write": [
+            "."
+          ]
+        },
+        "review_expires_at_ms": 1790945314224,
+        "spec_revision": "1",
+        "version": "1",
+        "workspace_hash": "9f16aa45540dcd59ca76f99b4991812e40242ab5635f638a3a2893444fcf6ca6"
+      },
+      "signature": "ed25519:1cdac681ba45ba3ebfca29fc395a3a568a0921a871b85e9f8531e1a904e80bdb:e8b8790f370d1fe9740c879e19f70fb09e73ed015ecc5a59c0e87c460adaffc911b4136b22000f2a63517b56c6d7646308a91bb5311810016e66f00d18ac1709",
+      "version": "1"
+    },
+    "originalReviewDigest": "iffHRn6AnPL1EhoR3WwRFApZ93xsCicRYAninPTcj69",
+    "negativePreflights": [
+      {
+        "label": "wrong coverage cannot approve",
+        "error": "{\"$kind\":\"MoveAbort\",\"message\":\"MoveAbort in 1st command, abort code: 9503, in '0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c::handover::confirm_okr' (instruction 233)\",\"command\":0,\"MoveAbort\":{\"abortCode\":\"9503\",\"location\":{\"package\":\"0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c\",\"module\":\"handover\",\"function\":4,\"instruction\":233,\"functionName\":\"confirm_okr\"}}}"
+      },
+      {
+        "label": "wrong Host signature cannot approve",
+        "error": "{\"$kind\":\"MoveAbort\",\"message\":\"MoveAbort in 1st command, abort code: 9504, in '0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c::handover::confirm_okr' (instruction 435)\",\"command\":0,\"MoveAbort\":{\"abortCode\":\"9504\",\"location\":{\"package\":\"0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c\",\"module\":\"handover\",\"function\":4,\"instruction\":435,\"functionName\":\"confirm_okr\"}}}"
+      },
+      {
+        "label": "raw control flag cannot bypass",
+        "error": "{\"$kind\":\"MoveAbort\",\"message\":\"MoveAbort in 1st command, abort code: 9211, in '0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c::host::rebind_agent' (instruction 27)\",\"command\":0,\"MoveAbort\":{\"abortCode\":\"9211\",\"location\":{\"package\":\"0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c\",\"module\":\"host\",\"function\":12,\"instruction\":27,\"functionName\":\"rebind_agent\"}}}"
+      },
+      {
+        "label": "legacy activation cannot bypass",
+        "error": "{\"$kind\":\"MoveAbort\",\"message\":\"MoveAbort in 1st command, abort code: 9410, in '0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c::okr::activate' (instruction 1)\",\"command\":0,\"MoveAbort\":{\"abortCode\":\"9410\",\"location\":{\"package\":\"0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c\",\"module\":\"okr\",\"function\":7,\"instruction\":1,\"functionName\":\"activate\"}}}"
+      },
+      {
+        "label": "same proof cannot be consumed twice",
+        "error": "{\"$kind\":\"MoveAbort\",\"message\":\"MoveAbort in 1st command, abort code: 9203, in '0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c::host::assert_agent_authority' (instruction 42)\",\"command\":0,\"MoveAbort\":{\"abortCode\":\"9203\",\"location\":{\"package\":\"0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c\",\"module\":\"host\",\"function\":44,\"instruction\":42,\"functionName\":\"assert_agent_authority\"}}}"
+      }
+    ],
+    "approvalId": "0x326e08603c2dda71d13ef5919d183b1e69fe0d30af0e277fc6c2b05ea58eda67",
+    "approvalDigest": "FrHWhiDgVAifYLLinPWE4kohaAVZNVDeK6evSbp4sgbX",
+    "boundedCapabilityId": "0x90fe7686a4c2506383464aed190d05e3d21002b8b895f14bcbf86c561eac7088",
+    "reviewedMaxCalls": 3,
+    "totalBudget": 10,
+    "approvalPolicyVerified": true,
+    "hostProofPersisted": true,
+    "explicitContinueVerified": false,
+    "actualToolsDispatched": false
+  },
+  "deviceHttp": {
+    "agentImportVerified": true,
+    "importRecordId": "0x5b36f3be4c7c3e5f91b3ca466d47e0bacccba8e4f81ff5fb8b5ad9fed8a2725f",
+    "importBroadcasts": 1,
+    "duplicateImportAvoided": true,
+    "originalImportDigestRecovered": true,
+    "contractDuplicateReceiptVerified": true,
+    "unsignedRejected": true,
+    "bearerRejected": true,
+    "actualAppDeviceProofAndSignedResponse": true,
+    "coordinatorObservedHost": "0x6d4957ffce4654339dd15969ca7e35dea3a3b856f54a1adf78fb66d608b7efff",
+    "observedAt": "2026-10-02T05:47:36.274737-07:00",
+    "hostSignatureVerified": true,
+    "tamperedHostBodyRejected": true,
+    "hostMembershipId": "0x4073ef87a0f55f6f6050a97e72cdd985c471a9b5acb040c68ea0d1b32db773f5",
+    "appDisplaySchemaVerified": true,
+    "realTmuxDiscoveryVerified": false,
+    "nativeFileDiscoveryVerified": true,
+    "retainedHostSignatureRejectedAfterRevocation": true,
+    "deviceRevokedAfterChallengeRejected": true
+  },
+  "limits": {
+    "generatedFixtureKeysOnly": true,
+    "injectedNativeTransport": true,
+    "memoryTechnicalJournal": true,
+    "appTechnicalJournal": "injected memory journal",
+    "envdTechnicalJournal": "real disk journal",
+    "envdRecovery": "new runner in the same test process",
+    "installedAppVerified": false,
+    "nativeStoreVerified": false,
+    "envdJoinCliVerified": false,
+    "envdJoinCliInjectedKeysVerified": true,
+    "envdJoinQuoteVerified": false,
+    "loopbackChainConnectionVerified": true,
+    "cloudHostVerified": false,
+    "invitationSecretsIncluded": false
+  }
+}

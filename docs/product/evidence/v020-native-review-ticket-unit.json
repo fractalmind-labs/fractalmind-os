@@ -1,0 +1,43 @@
+{
+  "recordedAt": "2026-10-02T15:37:44.792090+00:00",
+  "appRegression": {
+    "command": "npm test",
+    "passed": 125,
+    "failed": 0,
+    "newTestGroups": 9
+  },
+  "finalRestoreGuardFocused": {
+    "command": "node --import tsx --test tests/handover-review.test.ts",
+    "passed": 5,
+    "failed": 0
+  },
+  "appTypecheckAndProductionBuild": {
+    "command": "npm run build",
+    "passed": true,
+    "warnings": [
+      "existing large entry chunk",
+      "dependency PURE annotation"
+    ]
+  },
+  "finalAppTypecheck": {
+    "command": "npx tsc --noEmit",
+    "passed": true
+  },
+  "localnetScriptStrictTypecheck": {
+    "passed": true,
+    "command": "npx tsc --noEmit --module ESNext --moduleResolution bundler --target ES2022 --skipLibCheck --esModuleInterop --strict --types node scripts/native-command-results-localnet.ts"
+  },
+  "limits": {
+    "sdkRustGoMoveChanged": false,
+    "reviewUIConnected": false,
+    "installedUIVerified": false,
+    "envdDispatchVerified": false,
+    "physicalHostReviewVerified": false,
+    "humanApprovalUIVerified": false,
+    "technicalJournal": "memory",
+    "nativeTransport": "isolated subprocess",
+    "fullV020Complete": false,
+    "fivePlatformsVerified": false,
+    "unitControllerServices": "controlled authority/context, fee and record fixtures; actual scope source verified separately on localnet"
+  }
+}

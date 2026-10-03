@@ -1,0 +1,169 @@
+{
+  "recordedAt": "2026-10-03T02:36:12.742Z",
+  "goalComplete": false,
+  "replayedOriginalRequests": false,
+  "r2BeforeFeeDeclineFix": {
+    "source": {
+      "path": "/tmp/fm-native-chain-queue-protocol-r2.json",
+      "sha256": "033e068add61820ff264c8b8b432a4eca44333c1104b0588886b12f296032135"
+    },
+    "complete": true,
+    "checks": 12,
+    "confirmedTransactions": 18,
+    "state": {
+      "phase": "validated_native_app_real_envd",
+      "humanId": "0x4d63ccf35ad21a9201a5c4803e7193c7ee6935a641ee15bc0af552b15e561f07",
+      "organizationId": "0x05bfcbc2bca60c6dd4a02e24fbe7908e9020eba13b3a0e561a45e65e8f0c8bd7",
+      "deviceAddress": "0x2e68f7c0c360b531807ea564bd915ad24a93bc087f64b44663ea24dbb25919d3",
+      "originalRequest": {
+        "label": "native revocation of actual Host",
+        "requestId": "host:88ea6176-d425-44b9-b5b2-5337316dfc14",
+        "digest": "8PBY7PmSWAjVKCgqYJ4cqC53iHiGMHPmCg1AbHav2vmV",
+        "phase": "quoted_before_submission"
+      },
+      "bindingId": "0x79c3aa2a63aa1974a8b9091447bf91f2316e8d9631f4cf5eb6087bba6cb83c26",
+      "membershipId": "0x64c9589d5ff31ef8e3f2dbaae3ddf9201b17dffeb40d9c08a4f6687c3be997c6",
+      "hostAddress": "0x916e9ec66dc1a57df57e8cf0c041f3b7618b80fb0f093ca290bd5d8bafc2e354",
+      "joinDigest": "4FgDyFxwTahxWrgfZtncjpouayv8R2zi3KKNYCHKdYFz",
+      "hostJoinBroadcasts": 1,
+      "managedAgentId": "0x64aca7a234543a88bd1722ea507b14eaeb1db6bf2767b5bb15a4093b69335fe4",
+      "instanceId": "native-8edc84505318187e33b2d7e553e167a7102b99a5b3bd6a598341c959a81dd649",
+      "okrId": "0xfd0610b1d73aa22538d4eeb8d9c658b117d21058c56697215817a36a2d335fb0",
+      "reviewExecutionId": "0x89aa4024784eb1c0b0eb00e53f8c4c7df607e425ccf346eb8544795e5cca2e0d",
+      "reviewDigest": "BvZ4HWUtfPzc2iY2u8psBkggpCbUuiSyc8QhBovgA5jq",
+      "originalReviewDelivery": {},
+      "reviewRunState": 2,
+      "reviewResultId": "0x86c178f90b053c9f18d35f9866226f1117546af7438efcbc22cea61c4953b7b2",
+      "continuationExecutionId": "0x69322d5495a03f7d110f56b2568a6a416b7790e1424cc8c79a3e9eefbb8a0208",
+      "continuationDigest": "BWtMyUU9vmDX62g82D5yeSShYsegzpUaxQo8suDv7S3J",
+      "ticketRecordId": "0x61fab4ceee24f54d8569a5527abffc6dd9d28e8eb4830c9bd7400cd5bc86fa06",
+      "capabilityId": "0x51c338ea97328b4e7247d6a235b1958359ee56db58ca4a10b724994eb6666f16",
+      "chainDeliveryDigest": "368gAsnQ3nJLqgaTYjPksb2ygnmdPiW7D92FvNgX1wbv",
+      "chainDeliveryKeyVersion": "1",
+      "firstDeliveryStatus": "awaiting_confirmation",
+      "firstDeliveryReason": "awaiting_chain_execution_progress",
+      "transportCalls": 2,
+      "commandDeliveries": 1,
+      "chainCommandQueueVerified": true,
+      "resultRecordId": "0x3fda315107768f016a894a790bd91690f4aeae86c2466392950dfdda69ec0fad",
+      "resultCreationDigest": "EqXxKvieiYDNJ65mNWYT97c6pz7csZNnBNrkzJXU6ssT",
+      "observationId": "0x255ed68d27f2a4521e23f6ee8d1899005ca85b9ffde88bd5ec6cf632874bb69a",
+      "observedCurrent": "1",
+      "humanVerified": true,
+      "okrState": 3,
+      "budget": {
+        "spent": "6",
+        "reserved": "0"
+      },
+      "restoredStatus": "awaiting_verification",
+      "feeConfirmations": 3,
+      "humanDecisions": [
+        {
+          "krIndex": "0",
+          "requestId": "okr-human:0xfd0610b1d73aa22538d4eeb8d9c658b117d21058c56697215817a36a2d335fb0:1:3:verify:0",
+          "digest": "5yd2AwqWivrntZGtaYwnKJyQHuXopwv8ZpZkbU2BBo7r",
+          "verificationRecordId": "0x7381914cc8c0e086d43cf3b74f3c247405cf51abae03d9bc5591d3536d1b92d8",
+          "runId": "0x69322d5495a03f7d110f56b2568a6a416b7790e1424cc8c79a3e9eefbb8a0208"
+        },
+        {
+          "krIndex": "1",
+          "requestId": "okr-human:0xfd0610b1d73aa22538d4eeb8d9c658b117d21058c56697215817a36a2d335fb0:1:5:verify:1",
+          "digest": "AdxJimQVorddhpQnUjGGSdfskw7o7B6HZ5eSFcNWdKL2",
+          "verificationRecordId": "0x5cad7ef56af829f680790de5008c38397bffb648072521172716cb94277a8ba3",
+          "runId": "0x427e93c90c8638ba7d694b47017856b26eb61e8cf4df3bf311b130cb1759beca"
+        }
+      ],
+      "nextKr": "2",
+      "secondExecutionId": "0x427e93c90c8638ba7d694b47017856b26eb61e8cf4df3bf311b130cb1759beca",
+      "secondPreparationDigest": "3wJUyqEhqD1r2hACT4gsyVDCjXLqnSzPRTUwtMxzDFdX",
+      "secondResultRecordId": "0xf3ff8a53fdd344b8a67a4fa07fb0601a1cf2bcac651f4213fe2a986acabde222",
+      "humanAcceptanceVerified": true,
+      "acceptanceRecordId": "0xe732faf4b2840a656b73e5cc83f429ccb781029a5b1ab6ecb64ab212ecc5719b",
+      "acceptanceDigest": "EBrnDG6anmjgkJ3ydTVG9T1ujZntySvV8W8gw8ywNDvB",
+      "historicalVerificationRecordIds": [
+        "0x7381914cc8c0e086d43cf3b74f3c247405cf51abae03d9bc5591d3536d1b92d8",
+        "0x5cad7ef56af829f680790de5008c38397bffb648072521172716cb94277a8ba3"
+      ],
+      "krExecutionIds": [
+        "0x69322d5495a03f7d110f56b2568a6a416b7790e1424cc8c79a3e9eefbb8a0208",
+        "0x427e93c90c8638ba7d694b47017856b26eb61e8cf4df3bf311b130cb1759beca"
+      ],
+      "connectionRevocation": {
+        "chain_endpoint_used": true,
+        "mutual_authentication": true,
+        "heartbeat_sent": true,
+        "revoked_pointer_rejected": true,
+        "worker_revoked_heartbeat_rejected": true,
+        "coordinator_revoked_routing_rejected": true,
+        "generated_memory_keys": true,
+        "loopback_only": true
+      },
+      "hostExitedSuccessfully": true
+    },
+    "limits": {
+      "actualOSVault": true,
+      "installedUIVerified": false,
+      "envdDispatchVerified": true,
+      "hostKeyStorage": "isolated memory provider",
+      "realCoordinatorDeviceHTTP": true,
+      "humanFinalAcceptanceVerified": true,
+      "directPermissionProtocolVerified": false,
+      "directMessageEnvdDispatchVerified": false,
+      "directMessageUIVerified": false,
+      "directAppControllerVerified": false,
+      "interventionControllerVerified": false,
+      "autonomyControllerVerified": false,
+      "installedAutonomyUIVerified": false,
+      "projectionControllerVerified": false,
+      "installedProjectionUIVerified": false,
+      "automaticHostProjectionDelivery": false,
+      "chainCommandQueueVerified": true,
+      "modelProviderKind": "not configured",
+      "actualModelProviderVerified": false,
+      "modelProtocolFixtureVerified": false,
+      "installedHumanReviewVerified": false,
+      "reviewDecisions": "explicit scripted test approvals, not installed Human UI",
+      "physicalHostVerified": false,
+      "humanHandoverVerified": false,
+      "nativeWindowSourceVerified": false,
+      "testTransport": "isolated subprocess",
+      "technicalJournal": "memory",
+      "cleanupConfirmed": true,
+      "privateKeysInReport": false,
+      "recoveryCodeInReport": false
+    }
+  },
+  "r1NativeOptionPreflightFailure": {
+    "log": {
+      "path": "/tmp/fm-native-chain-queue-protocol-r1.log",
+      "sha256": "c853c2d05b8eab4e5c5a8064e1ce0f9c37c2deb7287cd86226bc48251c38a964"
+    },
+    "failedBeforeNativeCreation": true,
+    "nativeProfileCreated": false,
+    "transactionBroadcast": false
+  },
+  "r1DeploymentBuildFailure": {
+    "progress": {
+      "chain": {
+        "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+      },
+      "packages": [],
+      "complete": false,
+      "privateKeysInReport": false,
+      "validatorLimitsChanged": false
+    },
+    "log": {
+      "path": "/tmp/fm-chain-queue-three-package-deployment-r1.log",
+      "sha256": "9466942af17d4d0a8a6d4b4add778c9c236792f09eb63a6c81dcc5312bc70afc"
+    },
+    "replayed": false
+  },
+  "r3": {
+    "newIsolatedIdentity": true,
+    "source": {
+      "path": "/tmp/fm-native-chain-queue-protocol-r3.json",
+      "sha256": "9a9be901d81294df7c8f69a2b8443ef37785efad0c3ffd462822a01e93b8c88d"
+    },
+    "previousOriginalRequestsReplayed": false
+  }
+}

@@ -84,6 +84,28 @@ func TestNewExecutorWithStateDirCreatesDirectory(t *testing.T) {
 	}
 }
 
+func TestDuplicateWithLostResultDoesNotRepeatRuntimeEffect(t *testing.T) {
+	validator := testStateDirValidator()
+	firstAdapter := &stateDirFakeRunner{response: Response{SchemaVersion: SchemaVersion, Adapter: AdapterName, OK: true, ObservedAt: "2026-07-19T00:00:00Z"}}
+	command := runtimeCommand("status", "lifecycle", `{}`)
+	if _, _, err := NewExecutor(validator, firstAdapter).Execute(context.Background(), command); err != nil {
+		t.Fatal(err)
+	}
+	if firstAdapter.calls != 1 {
+		t.Fatalf("first runtime calls = %d", firstAdapter.calls)
+	}
+	// The authority reservation survives independently of the disposable result
+	// cache. A fresh executor cannot infer that repeating the effect is safe.
+	restartedAdapter := &stateDirFakeRunner{}
+	response, _, err := NewExecutor(validator, restartedAdapter).Execute(context.Background(), command)
+	if nodecommand.CodeOf(err) != nodecommand.CodeExecutionUnknown || response.OK {
+		t.Fatalf("lost result must require confirmation: response=%+v err=%v", response, err)
+	}
+	if restartedAdapter.calls != 0 {
+		t.Fatalf("duplicate repeated runtime effect %d times", restartedAdapter.calls)
+	}
+}
+
 func testStateDirValidator() *nodecommand.Validator {
 	now := testNow()
 	state := nodecommand.CapabilityState{

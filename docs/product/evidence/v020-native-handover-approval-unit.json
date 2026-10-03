@@ -1,0 +1,34 @@
+{
+  "recordedAt": "2026-10-02T15:02:30.323388+00:00",
+  "appRegression": {
+    "command": "npm test",
+    "passed": 116,
+    "failed": 0,
+    "newTestGroups": 7
+  },
+  "appTypecheckAndProductionBuild": {
+    "command": "npm run build",
+    "passed": true,
+    "warnings": [
+      "existing large entry chunk",
+      "dependency PURE annotation"
+    ]
+  },
+  "localnetScriptStrictTypecheck": {
+    "command": "npx tsc --noEmit --module ESNext --moduleResolution bundler --target ES2022 --skipLibCheck --esModuleInterop --strict --types node scripts/native-command-results-localnet.ts",
+    "passed": true
+  },
+  "limits": {
+    "sdkRustGoMoveChanged": false,
+    "appApprovalUIConnected": false,
+    "installedUIVerified": false,
+    "nativeTransport": "isolated subprocess",
+    "technicalJournal": "memory",
+    "envdDispatchVerified": false,
+    "physicalHostReviewVerified": false,
+    "humanApprovalUIVerified": false,
+    "explicitContinuationDispatched": false,
+    "fullV020Complete": false,
+    "fivePlatformsVerified": false
+  }
+}

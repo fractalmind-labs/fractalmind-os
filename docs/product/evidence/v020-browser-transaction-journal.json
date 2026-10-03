@@ -1,0 +1,29 @@
+{
+  "testedAt": "2026-10-01T12:45:52.464Z",
+  "browser": "Codex in-app browser",
+  "initial": {
+    "phase": "initial",
+    "database": "fractalmind-test-1790858665923",
+    "checks": [
+      "concurrent duplicate claims: exactly one",
+      "pending Gas conflict rejected",
+      "stale revision rejected",
+      "confirmed update releases Gas",
+      "second request persisted",
+      "read copy cannot mutate stored digest"
+    ],
+    "passed": true
+  },
+  "restored": {
+    "phase": "restore",
+    "database": "fractalmind-test-1790858665923",
+    "checks": [
+      "confirmed metadata restored",
+      "original pending digest restored",
+      "duplicate request rejected",
+      "pending Gas remains reserved"
+    ],
+    "passed": true
+  },
+  "productUiVerified": false
+}
