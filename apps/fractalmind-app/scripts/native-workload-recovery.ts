@@ -56,6 +56,18 @@ type Options = {
   assertNoDispatch: () => void;
 };
 type HistoricalRecord = { pointer: RecordPointer; sha256: string };
+type RecoveryReadChallenge = {
+  human_id: string;
+  grant_id: string;
+  device_address: string;
+  organization_id: string;
+  binding_id: string;
+  method: "GET";
+  path: string;
+  chain_identifier: string;
+  nonce: string;
+  expires_at_ms: number;
+};
 const digest = (bytes: Uint8Array) =>
   createHash("sha256").update(bytes).digest("hex");
 
@@ -263,15 +275,62 @@ export async function nativeWorkloadRecovery(o: Options) {
       host: "http://127.0.0.1:29123",
       recipient: imported.material.recovery.address,
     });
-    // Prepare an old-device transport immediately before recovery. Its current
-    // grant must be checked again after the Human generation changes.
+    // An independent successful HTTP read proves this device and endpoint are
+    // usable before recovery. Keep a different challenge unconsumed so the
+    // later raw HTTP request tests server revocation, not nonce replay.
     const previousChain = last?.chain ?? o.chain;
+    const oldHosts = await new CoordinatorReadClient(
+      previousChain,
+      previousDevice,
+      previousGrant,
+      o.organizationId,
+    ).readHosts(o.bindingId);
+    assert.ok(
+      oldHosts.some(
+        (h) => h.state === "verified" && h.membershipId === originalMember.id,
+      ),
+    );
+    let capturedChallenge: RecoveryReadChallenge | undefined;
+    const captureChallenge: typeof fetch = async (input, init) => {
+      const response = await fetch(input, init);
+      if (String(input).endsWith("/api/device-challenge") && response.ok)
+        capturedChallenge = (await response
+          .clone()
+          .json()) as RecoveryReadChallenge;
+      return response;
+    };
     const staleRead = await new CoordinatorReadClient(
       previousChain,
       previousDevice,
       previousGrant,
       o.organizationId,
+      captureChallenge,
     ).prepare(o.bindingId);
+    // prepare validates the Coordinator signature and chain binding. Native
+    // proveDevice independently verifies the exact personal-message signature.
+    assert.ok(capturedChallenge);
+    const challenge = capturedChallenge;
+    const proof = await previousDevice.proveDevice({
+      chainIdentifier: challenge.chain_identifier,
+      humanId: challenge.human_id,
+      grantId: challenge.grant_id,
+      nonce: challenge.nonce,
+      expiresAtMs: challenge.expires_at_ms,
+    });
+    const authorization =
+      "FractalMind " +
+      Buffer.from(
+        JSON.stringify({ nonce: challenge.nonce, signature: proof.signature }),
+      ).toString("base64url");
+    const oldRequest = {
+      human_id: challenge.human_id,
+      grant_id: challenge.grant_id,
+      device_address: challenge.device_address,
+      organization_id: challenge.organization_id,
+      binding_id: challenge.binding_id,
+      method: challenge.method,
+      path: challenge.path,
+    };
     const quote = await recovery.prepare(true);
     assert.ok(!("status" in quote));
     await o.preparedQuote(`native workload recovery ${round + 1}`, quote);
@@ -301,6 +360,74 @@ export async function nativeWorkloadRecovery(o: Options) {
     );
     assert.equal(restored.organizations[0].keyVersion, String(round + 2));
     assert.ok(restored.grantId);
+    // This request bypasses all App grant preflight. Its challenge has never
+    // reached the protected endpoint and must still be valid on both sides of
+    // the real request, so expiry/replay cannot make the assertion pass.
+    const sentAtMs = Date.now();
+    assert.ok(
+      sentAtMs < challenge.expires_at_ms,
+      "Original proof must be unexpired",
+    );
+    const serverRejection = await fetch(
+      originalBinding.endpoint + challenge.path,
+      {
+        method: challenge.method,
+        headers: { Authorization: authorization },
+        credentials: "omit",
+        cache: "no-store",
+        redirect: "error",
+        signal: AbortSignal.timeout(15_000),
+      },
+    );
+    const rejectedAtMs = Date.now();
+    assert.ok(
+      rejectedAtMs < challenge.expires_at_ms,
+      "Rejection must precede expiry",
+    );
+    assert.equal(serverRejection.status, 403);
+    assert.deepEqual(await serverRejection.json(), {
+      error: "device_read_rejected",
+    });
+    const oldChallengeRejection = await fetch(
+      originalBinding.endpoint + "/api/device-challenge",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(oldRequest),
+        credentials: "omit",
+        cache: "no-store",
+        redirect: "error",
+        signal: AbortSignal.timeout(15_000),
+      },
+    );
+    assert.equal(oldChallengeRejection.status, 403);
+    assert.deepEqual(await oldChallengeRejection.json(), {
+      error: "device_authority_unavailable",
+    });
+    const independentCoordinatorRejection = {
+      oldGrantId: previousGrant,
+      oldDeviceAddress: previousDevice.device.address,
+      oldAuthorityReadVerifiedBeforeRecovery: true,
+      originalChallengeUnconsumedBeforeRequest: true,
+      nativePersonalMessageSignatureVerified: true,
+      bypassedClientPreflight: true,
+      sentAtMs,
+      rejectedAtMs,
+      challengeExpiresAtMs: challenge.expires_at_ms,
+      requestHash: digest(new TextEncoder().encode(JSON.stringify(oldRequest))),
+      protectedReadStatus: serverRejection.status,
+      protectedReadError: "device_read_rejected",
+      newChallengeStatus: oldChallengeRejection.status,
+      newChallengeError: "device_authority_unavailable",
+    };
+    await o.checkpoint({
+      workloadRecoveryPhase: "old_device_rejected_by_actual_coordinator",
+      recoveryRound: round + 1,
+      independentCoordinatorRejection,
+    });
+    o.checks.push(
+      `workload recovery ${round + 1}: actual Coordinator denies an unconsumed, unexpired native-signed old-device proof over raw HTTP after recovery and refuses to issue a new old-grant challenge; old-device protected reads succeeded before recovery`,
+    );
     const chain = new ChainReadSession(restored.profile),
       grantId = restored.grantId;
     last = { chain, device, grantId, invoke };
@@ -655,6 +782,7 @@ export async function nativeWorkloadRecovery(o: Options) {
       historicalRecordsVerified: originalHistory.length,
       originalMessagesVerified: originalMessages.length,
       broadcasts,
+      independentCoordinatorRejection,
     });
     await o.checkpoint({
       workloadRecoveryPhase: "history_and_authority_verified",

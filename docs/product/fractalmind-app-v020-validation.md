@@ -8,6 +8,12 @@
 
 以下按增量从新到旧记录；每项证明范围和当时尚未完成的事项独立保留，整体验收仍以 #40 为准。
 
+### 恢复后的 Coordinator 独立撤权验收增量
+
+- 两轮恢复前先用旧设备完成实际受保护读取，再保留另一条未消费挑战和 OS 签名；恢复后绕过 App 预检直接请求实际 Coordinator。旧签名读取均返回 **403 / device_read_rejected**，旧设备新挑战均返回 **403 / device_authority_unavailable**，拒绝时原挑战仍有约 **59 秒**有效期；新设备随后正常读取。
+- [实际 OS＋localnet＋生产 envd／Coordinator](evidence/v020-recovery-coordinator-authority-localnet.json)：**24 项检查、59 笔 App 确认交易**，原两轮 38 份正文哈希／9 条消息／两个已验证 KR／最终验收／来源草稿恢复仍通过，恢复派发与模型调用 **0**，测试凭据清理确认。复用的 race Host 二进制及未改动 Go 夹具哈希已核对。
+- [严格类型及来源记录](evidence/v020-recovery-coordinator-authority-validation.json)通过，生产源码未变。**仍未完成**：绕过 Coordinator 的实际 Host 旧命令拒绝、安装后 UI／清缓存重启、真实模型、云 Host、手机及 main 旧包升级。本轮原生只读检查仍返回 Mac 锁定；#40 未完成。详见[验收方法与范围](v020-recovery-coordinator-authority.md)。
+
 ### 已完成工作历史的双次身份／密文恢复验收增量
 
 - 正式恢复控制器与实际 OKR／直接消息工作历史联测：两次仅凭恢复码和公开部署配置定位同一 Human，独立设备签名资格和内容钥版本推进，重建 **38 份历史／当前正文哈希、9 条消息**、原 Run／证据、两个已验证 KR／最终验收及来源草稿。新设备零余额拒绝写入，显式夹具充值后写入 v2 DRAFT；旧历史密钥不能解密，第二次恢复仍可读取。恢复阶段新增派发／模型请求 **0**，全部测试凭据已清理。

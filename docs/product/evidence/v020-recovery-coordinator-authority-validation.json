@@ -1,0 +1,58 @@
+{
+  "recordedAt": "2026-10-03T05:39:03.788102+00:00",
+  "baselineCommit": "7afe3d7",
+  "sourceHashes": {
+    "apps/fractalmind-app/scripts/native-workload-recovery.ts": "555227449cda2c9e7a361ebdfb97ff06926aa2080f314178c985d59e6dee4cc1",
+    "apps/fractalmind-app/scripts/native-app-execution-localnet.ts": "3db241813e4fd8989e493d74be67dfdfd11d13da5b22888fba69cb6007a218b1",
+    "runtime/fractalmind-envd/cmd/envd/host_join_cli_live_test.go": "e25d9e0b00cd218f5034fa14364659a085ccf4584e2989adcd83287498d2627e"
+  },
+  "checks": [
+    {
+      "name": "strict TypeScript for workload recovery and native execution entry",
+      "command": "tsc --noEmit --strict --target ES2022 --module ESNext --moduleResolution Bundler --esModuleInterop --skipLibCheck scripts/native-app-execution-localnet.ts",
+      "exitCode": 0,
+      "path": "/tmp/fm-recovery-coordinator-auth-types-r1.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "actual OS/localnet workload with independent Coordinator recovery rejection",
+      "exitCode": 0,
+      "report": "v020-recovery-coordinator-authority-localnet.json",
+      "checks": 24,
+      "confirmedAppTransactions": 59,
+      "cleanupConfirmed": true
+    },
+    {
+      "name": "unchanged Go fixture and race Host binary provenance",
+      "matchesOriginalEvidence": true,
+      "reference": "v020-workload-recovery-localnet.json",
+      "binarySha256": "96c66a76c06060bb12d9a3504e8cddc557165cf9ccae5b46d337f56a6e625835"
+    }
+  ],
+  "unchangedProductionSource": {
+    "AppUnitTestsRerun": false,
+    "SDKMoveRustGoProductionChanged": false,
+    "nativeInstalledBundleRebuilt": false
+  },
+  "nativeUIGate": {
+    "observedThisTurn": true,
+    "app": "org.fractalmind.desktop",
+    "method": "Computer Use get_app_state",
+    "result": "Mac locked; automatic unlock unavailable",
+    "installedRecoveryUIVerified": false
+  },
+  "limits": {
+    "coordinatorProtectedReadRevocationVerified": true,
+    "coordinatorOldGrantChallengeRevocationVerified": true,
+    "allCoordinatorCommandEndpointsVerified": false,
+    "independentHostRecoveryCommandRevocationVerified": false,
+    "installedCacheWipeVerified": false,
+    "physicalRestartVerified": false,
+    "actualLanguageModelVerified": false,
+    "cloudHostVerified": false,
+    "mobileVerified": false,
+    "mainPackageUpgradeVerified": false,
+    "recoveryCodeInReport": false,
+    "privateKeysInReport": false
+  }
+}
