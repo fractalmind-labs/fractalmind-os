@@ -272,7 +272,7 @@ func containsAddress(values []moveAddress, value moveAddress) bool {
 	return false
 }
 func (r *chainRead) joinPin(ctx context.Context) (string, error) {
-	return r.versionPin(ctx, fmt.Errorf("join authority changed during inspection"))
+	return r.versionPin(ctx, fmt.Errorf("join authority changed during inspection: %w", ErrChainSnapshotChanged))
 }
 
 type HostAdmissionState struct {

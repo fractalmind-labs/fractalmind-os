@@ -2,10 +2,15 @@ package nodecommand
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
 )
+
+// ErrChainSnapshotChanged means a fresh read raced with a chain write. It is
+// unknown authority, never a successful check or evidence of revocation.
+var ErrChainSnapshotChanged = errors.New("chain snapshot changed during read")
 
 // A batch is a fresh read, not a cache or an atomic snapshot. Implementations
 // return the exact requested order or an error; the resolver still compares

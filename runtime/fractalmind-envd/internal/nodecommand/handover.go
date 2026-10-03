@@ -92,10 +92,69 @@ func (p HandoverProposal) Hash() (string, error) {
 }
 
 type HandoverAuthority struct {
+	proof            *handoverReadProof
 	ProposalHash     string
 	CoverageRevision Uint64String
 	ClockMS          int64
 }
+
+type handoverReadProof struct {
+	resolver                       *ChainAuthorityResolver
+	executionID, attemptID, intent string
+	proposalHash                   string
+	coverage                       Uint64String
+	cursor                         uint64
+	clockMS, authorityExpiresAtMS  int64
+	versions                       map[string]uint64
+}
+
+// RecheckHandover re-reads every typed source after physical exclusion. Version
+// equality proves the same full authority/coverage/checkpoint inspection still
+// holds. Clock is read separately; neither this private per-review proof nor a
+// physical lease authorizes tools or survives a process restart.
+func (s *ChainAuthorityResolver) RecheckHandover(ctx context.Context, command NodeCommand, run ChainExecution, p HandoverProposal, source HandoverAuthority) (HandoverAuthority, error) {
+	fail := func() (HandoverAuthority, error) {
+		return HandoverAuthority{}, fmt.Errorf("handover source or authority changed")
+	}
+	proof := source.proof
+	hash, err := p.Hash()
+	if err != nil {
+		return HandoverAuthority{}, err
+	}
+	signed, err := ProposalForCommand(command)
+	if err != nil {
+		return HandoverAuthority{}, err
+	}
+	signedHash, err := signed.Hash()
+	if err != nil || signedHash != hash {
+		return fail()
+	}
+	signing, err := command.SigningBytes()
+	if err != nil {
+		return HandoverAuthority{}, err
+	}
+	if proof == nil || proof.resolver != s || len(proof.versions) == 0 || proof.executionID != run.ID || proof.attemptID != run.AttemptID || proof.intent != run.Fingerprint || proof.intent != hashBytes(signing) || proof.proposalHash != hash || source.ProposalHash != hash || source.CoverageRevision != proof.coverage || source.ClockMS != proof.clockMS || run.State != 1 || run.StopRequested || run.Cursor != proof.cursor {
+		return fail()
+	}
+	if err := (Ed25519Verifier{}).Verify(ctx, command.Signer, signing, command.Signature); err != nil {
+		return HandoverAuthority{}, err
+	}
+	r := &chainRead{resolver: s, versions: proof.versions}
+	if _, err := r.joinPin(ctx); err != nil {
+		return HandoverAuthority{}, err
+	}
+	now, err := s.ChainTime(ctx)
+	if err != nil {
+		return HandoverAuthority{}, err
+	}
+	if now < proof.clockMS || now >= p.ReviewExpiresAtMS || now >= proof.authorityExpiresAtMS || now >= p.ExpiresAtMS {
+		return fail()
+	}
+	source.ClockMS = now
+	source.proof = nil // Recheck cannot become a new reusable inspection proof.
+	return source, nil
+}
+
 type HandoverAuthorityReader interface {
 	InspectHandover(context.Context, NodeCommand, ChainExecution, HandoverProposal) (HandoverAuthority, error)
 }
@@ -292,7 +351,7 @@ func (s *ChainAuthorityResolver) InspectHandover(ctx context.Context, command No
 	if now <= 0 || command.IssuedAtMS > now || state.ExpiresAtMS <= now || p.ReviewExpiresAtMS <= now || p.ReviewExpiresAtMS-now > 60_000 || p.ReviewExpiresAtMS > run.ExpiresAtMS || p.ReviewExpiresAtMS > state.ExpiresAtMS || p.ExpiresAtMS <= now || uint64(p.ExpiresAtMS) > grant.Expiry {
 		return fail()
 	}
-	current, found, err := s.LookupExecution(ctx, command.Capability.ID, run.Fingerprint)
+	current, found, err := s.RecheckExecution(ctx, run)
 	if err != nil {
 		return HandoverAuthority{}, err
 	}
@@ -316,6 +375,12 @@ func (s *ChainAuthorityResolver) InspectHandover(ctx context.Context, command No
 		}
 		r.versions[id] = version
 	}
+	for id, version := range current.readVersions {
+		if previous, found := r.versions[id]; found && previous != version {
+			return fail()
+		}
+		r.versions[id] = version
+	}
 	if _, err := r.joinPin(ctx); err != nil {
 		return HandoverAuthority{}, err
 	}
@@ -326,5 +391,7 @@ func (s *ChainAuthorityResolver) InspectHandover(ctx context.Context, command No
 	if afterClock < now || afterClock >= p.ReviewExpiresAtMS || afterClock >= state.ExpiresAtMS || afterClock >= p.ExpiresAtMS {
 		return fail()
 	}
-	return HandoverAuthority{ProposalHash: hash, CoverageRevision: Uint64String(ledger.Revision), ClockMS: afterClock}, nil
+	coverage := Uint64String(ledger.Revision)
+	proof := &handoverReadProof{resolver: s, executionID: current.ID, attemptID: current.AttemptID, intent: current.Fingerprint, proposalHash: hash, coverage: coverage, cursor: current.Cursor, clockMS: afterClock, authorityExpiresAtMS: state.ExpiresAtMS, versions: r.versions}
+	return HandoverAuthority{ProposalHash: hash, CoverageRevision: coverage, ClockMS: afterClock, proof: proof}, nil
 }

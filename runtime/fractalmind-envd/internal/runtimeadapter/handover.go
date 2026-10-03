@@ -95,7 +95,14 @@ func (a *boundedFileAgent) reviewHandover(ctx context.Context, r Request, comman
 	}
 	// Recheck every source after obtaining physical exclusion. Any intervening
 	// new Run, revocation, version or budget change invalidates acceptance.
-	after, err := reader.InspectHandover(ctx, command, *checkpoint, proposal)
+	var after nodecommand.HandoverAuthority
+	if recheck, ok := reader.(interface {
+		RecheckHandover(context.Context, nodecommand.NodeCommand, nodecommand.ChainExecution, nodecommand.HandoverProposal, nodecommand.HandoverAuthority) (nodecommand.HandoverAuthority, error)
+	}); ok {
+		after, err = recheck.RecheckHandover(ctx, command, *checkpoint, proposal, source)
+	} else {
+		after, err = reader.InspectHandover(ctx, command, *checkpoint, proposal)
+	}
 	if err != nil || after.ProposalHash != hash || after.CoverageRevision != source.CoverageRevision || after.ClockMS >= proposal.ReviewExpiresAtMS || !time.Now().Before(deadline) {
 		release()
 		return deny("handover_changed", fmt.Errorf("review source changed while reserving the physical instance"))

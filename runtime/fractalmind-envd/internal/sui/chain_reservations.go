@@ -128,7 +128,7 @@ func (s *ChainReservations) Reserve(ctx context.Context, r nodecommand.Reservati
 	if result.Digest != digest || result.Effects.Status.Status != "success" {
 		return nodecommand.ReservationResult{}, &nodecommand.RejectionError{Code: nodecommand.CodeExecutionUnknown, Message: "Host start result is incomplete; query digest " + digest, ExecutionID: execution.ID, TransactionDigest: digest}
 	}
-	started, err := s.confirmStart(ctx, r, hex.EncodeToString(attempt))
+	started, err := s.confirmStart(ctx, r, execution, hex.EncodeToString(attempt))
 	if err != nil {
 		return nodecommand.ReservationResult{}, &nodecommand.RejectionError{Code: nodecommand.CodeExecutionUnknown, Message: "start ownership was not confirmed; query digest " + digest, Cause: err, ExecutionID: execution.ID, TransactionDigest: digest}
 	}
@@ -137,14 +137,23 @@ func (s *ChainReservations) Reserve(ctx context.Context, r nodecommand.Reservati
 
 // A successful execution receipt can precede the ledger's latest object view.
 // Poll only reads of this exact checkpoint and attempt; never send another start.
-func (s *ChainReservations) confirmStart(ctx context.Context, r nodecommand.Reservation, attempt string) (nodecommand.ChainExecution, error) {
+func (s *ChainReservations) confirmStart(ctx context.Context, r nodecommand.Reservation, known nodecommand.ChainExecution, attempt string) (nodecommand.ChainExecution, error) {
 	// This bounds reads of the original successful start receipt, not command
 	// authority. Remote dependency resolution can exceed five seconds; the
 	// exact attempt and all normal expiry checks still have to pass.
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	for {
-		started, found, err := s.resolver.LookupExecution(ctx, r.CapabilityID, r.Fingerprint)
+		var started nodecommand.ChainExecution
+		var found bool
+		var err error
+		if reader, ok := s.resolver.(interface {
+			RecheckExecution(context.Context, nodecommand.ChainExecution) (nodecommand.ChainExecution, bool, error)
+		}); ok {
+			started, found, err = reader.RecheckExecution(ctx, known)
+		} else {
+			started, found, err = s.resolver.LookupExecution(ctx, r.CapabilityID, r.Fingerprint)
+		}
 		if err == nil && found && started.State != 0 {
 			if started.State == 1 && started.AttemptID == attempt && started.Matches(r) && started.HostAddress == s.keypair.Address() {
 				return started, nil

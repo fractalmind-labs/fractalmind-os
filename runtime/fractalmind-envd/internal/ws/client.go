@@ -3,12 +3,14 @@ package ws
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
 	"time"
 
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/heartbeat"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/wsauth"
 	"github.com/gorilla/websocket"
 )
@@ -303,6 +305,13 @@ func readMsg(conn *websocket.Conn, wantType string, out interface{}) error {
 // Send sends a message to Gateway.
 func (c *Client) Send(msgType string, payload interface{}) error {
 	if err := c.validate(); err != nil {
+		// A concurrent product-record transaction can change the organization
+		// version during a heartbeat read without revoking this Host. Drop this
+		// unverified frame and recheck on the next send; keep the socket so an
+		// unrelated in-flight command is not lost. All other failures close it.
+		if errors.Is(err, nodecommand.ErrChainSnapshotChanged) {
+			return err
+		}
 		c.mu.Lock()
 		if c.conn != nil {
 			c.conn.Close()
@@ -379,7 +388,12 @@ func (c *Client) readLoop(conn *websocket.Conn) {
 			return
 		}
 		if err := c.validate(); err != nil {
-			return
+			// Re-read authority for this already received message once if a chain
+			// write raced with the snapshot. This is not another delivery and it
+			// never refreshes the command's signed expiry or grants permission.
+			if !errors.Is(err, nodecommand.ErrChainSnapshotChanged) || c.validate() != nil {
+				return
+			}
 		}
 
 		switch msg.Type {

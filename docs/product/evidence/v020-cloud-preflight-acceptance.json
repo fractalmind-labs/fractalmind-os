@@ -1,0 +1,567 @@
+{
+  "format": 1,
+  "baseline": "8fa6b61",
+  "at": "2026-10-03T19:43:53.394304+00:00",
+  "scope": "Actual isolated Ubuntu cloud envd over SSH loopback tunnels to the existing local Sui network and Coordinator. Original installed Android APK Keystore IPC with current production controllers; fee and independent Human decisions are scripted. Cloud model disabled. Not physical phone, visible installed UI, public testnet, Host OS reboot or complete v0.2.0.",
+  "identity": {
+    "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+    "hostAddress": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+    "managedAgentId": "0x9b4ff2b3ec0ea8752e17602a04fa32f071d7bffb694cfc85783a628d1260dbba",
+    "instanceId": "native-6d7b9b0fd14328ffde7e93bdb67245b826ca515fe2b768b2597c18018b478c41",
+    "deviceAddress": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+    "okrId": "0x3bb8296d04e2eb04eaf485c3c47ccdc02c4eb9cf49a6972d1a30a7496f955333",
+    "logicalId": "de29f847-8242-488a-9c22-6d9ee288591e"
+  },
+  "runtime": {
+    "version": "fractalmind-envd v020-cloud-preflight-8fa6b61-r9",
+    "binarySha256": "f0a0ba10d101daf23cc84cb0e97e3fd7bd04765a50190bb9a2d6941b76438d8d",
+    "workerPid": 2385424,
+    "keyringSha256": "4ef9771b59e896aa04bcd1ab9c839c1f93b1b48bae1bcdd4ee3b19bba67e01d3",
+    "keyringMode": "0o600",
+    "keyringSize": 728,
+    "previousWorkerExited": true,
+    "priorUserEnvdsPresent": {
+      "1872983": true,
+      "2244585": true
+    },
+    "systemSessionRestartTested": false
+  },
+  "priorAttempts": [
+    {
+      "fixture": "r4",
+      "reason": "Full handover source re-read exceeded original physical review expiry; encrypted failure settled with zero budget.",
+      "originalRun": {
+        "id": "0x5529d1d567c4fe58cb00861cc3f7402486efb942ca0c8f05833b4c9325b40c59",
+        "state": 3,
+        "cursor": "3",
+        "stop_requested": false,
+        "result_record": "0x56d0cdda9f72aee23d0ad8db800abdf29e3048d79b8968c3b717c736e61f3a20",
+        "created_at_ms": "1791050679450",
+        "started_at_ms": "1791050722250",
+        "updated_at_ms": "1791050758185",
+        "capability_id": "0xe1ef4c77eb5bbcc115e49b470f49215d94f898d0e955b14be60eadca9b703f87",
+        "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+        "managed_agent": "0xe50a43dcb2ef884fb656cb9dc42b914b61c4f34e5699d639321350de0d7328a5",
+        "budget_amount": "0"
+      },
+      "transactions": [
+        {
+          "label": "cloud one-use observation capability",
+          "status": "confirmed",
+          "digest": "FhMAZ3Jxzax93SNyERpr1mzGGgVUSbrhHRfL3wENaoYw",
+          "actualGas": "10173480",
+          "at": "2026-10-03T18:04:38.493Z"
+        },
+        {
+          "label": "cloud exact review ticket and Run",
+          "status": "confirmed",
+          "digest": "GTZyYW7iroEv2wAfomxaaqJWLJY1Z6T3oVxeKe87hX2",
+          "actualGas": "60069000",
+          "at": "2026-10-03T18:04:39.617Z"
+        }
+      ],
+      "checks": [
+        "Exact original failed review settled with encrypted result and zero reservation",
+        "Managed instance still observation-only and has no unsettled control",
+        "Original revised draft unchanged, no accepted handover or KR"
+      ],
+      "dispatchAttempts": 1
+    },
+    {
+      "fixture": "r5",
+      "reason": "Allowed docs root did not exist; physical review refused to create it. Operator subsequently prepared an empty root only.",
+      "originalRun": {
+        "id": "0x3fad0f4877703b32551c14452f89ab844c135908ce0f58645e9e7d986360605a",
+        "state": 3,
+        "cursor": "3",
+        "stop_requested": false,
+        "result_record": "0x9ec4888fa984c9f774841699d04ba3e51567baaceee011a1c011c9e5e8a94e27",
+        "created_at_ms": "1791051912566",
+        "started_at_ms": "1791051937399",
+        "updated_at_ms": "1791051966559",
+        "capability_id": "0x2763dea7d71f3b4d1212e8c1c66c61c1bbcb1c63312f7afecea7e0479a5349ba",
+        "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+        "managed_agent": "0x9b4415aaa0af1cc9663e06fa6a18ce95cc949861ad9145e1b6d86e3d05bf1437",
+        "budget_amount": "0"
+      },
+      "transactions": [
+        {
+          "label": "cloud one-use observation capability",
+          "status": "confirmed",
+          "digest": "HPJzMqTowiVDtciUtMVNyEtgSNj8amZyHhnR6smLwwPm",
+          "actualGas": "10173480",
+          "at": "2026-10-03T18:25:11.371Z"
+        },
+        {
+          "label": "cloud exact review ticket and Run",
+          "status": "confirmed",
+          "digest": "6uPTU3vvuRTUzZ98Y5c3foPwDHkFCVkSuGqB423pusZa",
+          "actualGas": "60069000",
+          "at": "2026-10-03T18:25:12.734Z"
+        }
+      ],
+      "checks": [
+        "Exact original failed review settled with encrypted result and zero reservation",
+        "Managed instance still observation-only and has no unsettled control",
+        "Original revised draft unchanged, no accepted handover or KR"
+      ],
+      "dispatchAttempts": 1
+    },
+    {
+      "fixture": "r6",
+      "reason": "Host signed acceptance before expiry but immutable publication arrived after expiry; App rejected approval.",
+      "originalRun": {
+        "id": "0x7b21c35ec22fa449b6ee797bdf8a4c868676eb58f438b0a75f89a5cd40d7d56e",
+        "state": 2,
+        "cursor": "3",
+        "stop_requested": false,
+        "result_record": "0xfed38b3b37c95e787a66457cbc218848fa961b5391660d01fe422dfe1af0abab",
+        "created_at_ms": "1791052752332",
+        "started_at_ms": "1791052777322",
+        "updated_at_ms": "1791052808898",
+        "capability_id": "0x1d689c98db133283cf8253d12b69d5dbd78045942bba15ca174b1747c9e759f9",
+        "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+        "managed_agent": "0x5d81906e9fd5abf6abc78546ee4dbf481d371cbdff4fe3348fd1f1a26a193ea1",
+        "budget_amount": "0"
+      },
+      "transactions": [
+        {
+          "label": "cloud one-use observation capability",
+          "status": "confirmed",
+          "digest": "3WuxDVD33cmrS7scQh57KZgwG2kuvjR8cLodnCSepNrZ",
+          "actualGas": "10173480",
+          "at": "2026-10-03T18:39:11.134Z"
+        },
+        {
+          "label": "cloud exact review ticket and Run",
+          "status": "confirmed",
+          "digest": "4673B8ReVg2HXWbEmz1aHB9zcpftr3TXHSukpzWrmf42",
+          "actualGas": "60079000",
+          "at": "2026-10-03T18:39:12.498Z"
+        }
+      ],
+      "checks": [
+        "Original Host acceptance signed before expiry and encrypted original Run succeeded",
+        "App freshness guard rejected expired acceptance; zero budget settled",
+        "Original OKR remains draft and instance observation-only, no KR"
+      ],
+      "dispatchAttempts": 1
+    },
+    {
+      "fixture": "r7",
+      "reason": "Heartbeat authority snapshot raced a chain write and closed the transport; original queued review explicitly stopped, no command replay.",
+      "originalRun": {
+        "id": "0xbe55b57f2b133be571c3b5a259eed3171476977a03d72a7c873029caa7af1ddd",
+        "state": 5,
+        "cursor": "2",
+        "stop_requested": true,
+        "result_record": null,
+        "created_at_ms": "1791053815701",
+        "started_at_ms": "0",
+        "updated_at_ms": "1791054318057",
+        "capability_id": "0xcdc29c04eb03217835e1c592267b2b76dfa91b5a8daa9a546226497b9839ad39",
+        "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+        "managed_agent": "0xf12d4b8c49d36d32a7db0158a529782860c43278fee20c71067fe6eb3b2e9821",
+        "budget_amount": "0"
+      },
+      "transactions": [
+        {
+          "label": "cloud one-use observation capability",
+          "status": "confirmed",
+          "digest": "2Za7Az4xBsX5R5imRvhyaLHddoU8MMfCxNd4LJHY3RFK",
+          "actualGas": "10173480",
+          "at": "2026-10-03T18:56:54.798Z"
+        },
+        {
+          "label": "cloud exact review ticket and Run",
+          "status": "confirmed",
+          "digest": "DVge8UKjgQiuEV4aNsg76pqvc4ywWpHoB3diztr82rSq",
+          "actualGas": "60069000",
+          "at": "2026-10-03T18:56:55.864Z"
+        }
+      ],
+      "checks": [
+        "Exact original queued review is cancelled by original confirmed stop; no fabricated Host result or replay",
+        "Managed instance still observation-only and has no unsettled control",
+        "Original revised draft unchanged, no accepted handover or KR"
+      ],
+      "dispatchAttempts": 1
+    }
+  ],
+  "originalSpec2": {
+    "reviewRun": {
+      "id": "0x4ca9873ecfbc5fa98993b7381002dfdfd834a38ec65d1b38034152f202adf1f5",
+      "state": 2,
+      "cursor": "3",
+      "stop_requested": false,
+      "result_record": "0x83384ce31b83477ee25258c8c3ca547ae9092753ee72cfdb0710d105fff8ca99",
+      "created_at_ms": "1791055031901",
+      "started_at_ms": "1791055057146",
+      "updated_at_ms": "1791055081653",
+      "capability_id": "0xbbccd22b9d46c7d26a0db8eea3b889249d4a7771bb58f3eae6bf766495b61cad",
+      "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+      "managed_agent": "0x9b4ff2b3ec0ea8752e17602a04fa32f071d7bffb694cfc85783a628d1260dbba",
+      "budget_amount": "0"
+    },
+    "approvalTransaction": {
+      "label": "independent cloud handover approval",
+      "status": "confirmed",
+      "digest": "8M5btTLj2Xq5czjE6mamiBH2snY9xx6TVszcsh5qeCMW",
+      "actualGas": "49584976",
+      "at": "2026-10-03T19:18:03.423Z"
+    },
+    "successfulKrRun": {
+      "id": "0x99e16d127f0bf007d244439fab186fe5184ba326c9b6e0c0e3aeb8e7e6779977",
+      "state": 2,
+      "cursor": "3",
+      "stop_requested": false,
+      "result_record": "0x93ca8fbfdb6259f5d23b52806360e4acf436bdc374a4dce8c9031860f112ac5a",
+      "created_at_ms": "1791055085567",
+      "started_at_ms": "1791055136282",
+      "updated_at_ms": "1791055214590",
+      "capability_id": "0x398a271121e650b9d477a40125076f975a378903f5c3f70115a54a748fa10deb",
+      "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+      "managed_agent": "0x9b4ff2b3ec0ea8752e17602a04fa32f071d7bffb694cfc85783a628d1260dbba",
+      "budget_amount": "3"
+    },
+    "resultRecordId": "0x93ca8fbfdb6259f5d23b52806360e4acf436bdc374a4dce8c9031860f112ac5a",
+    "spend": {
+      "asset": "TOOL_CALLS",
+      "amount": "3",
+      "known": true
+    },
+    "metricExpiryRejectChecks": [
+      "Original cloud KR 1 restores its successful encrypted result, with three spent and zero reserved; no replay or new fee",
+      "Independent Human review rejects expired original five-minute metric evidence; no cursor advance or acceptance"
+    ],
+    "verificationBeforeRevision": false,
+    "acceptanceBeforeRevision": false
+  },
+  "explicitSpec3Revision": {
+    "pause": {
+      "status": "confirmed",
+      "digest": "8Jx8YGKX9NSuX3U9AMZohdmenXW1mWMzJLtpM8PtTzg8",
+      "actualGas": "1130492"
+    },
+    "replace": {
+      "status": "confirmed",
+      "digest": "62z3sf7f1QEYxZLp8dY3RF77Hqvm5TEdfqDgXoVYxFB",
+      "actualGas": "12171696"
+    },
+    "sameOkrId": "0x3bb8296d04e2eb04eaf485c3c47ccdc02c4eb9cf49a6972d1a30a7496f955333",
+    "specRevision": "3",
+    "metricMaxAgeMs": "1800000",
+    "approvedBudgetLimit": "9",
+    "preservedPriorSpent": "3",
+    "checks": [
+      "Explicit native Human pause and specification revision preserve original OKR ID, logical ID and immutable successful Run; prior 3 spent calls remain settled",
+      "New spec 3 explicitly sets a 30-minute evidence review window and total 9-call budget; prior agreement is paused and no new tool permission or Host delivery occurs until fresh reviewed approval"
+    ]
+  },
+  "successfulSpec3": {
+    "startedAt": "2026-10-03T19:34:08.356Z",
+    "finishedAt": "2026-10-03T19:42:26.510Z",
+    "reviewRun": {
+      "id": "0xc98d43570545330d0999d33447723c1ea7875045f522e48d0a959859cc6c16cf",
+      "state": 2,
+      "cursor": "3",
+      "stop_requested": false,
+      "result_record": "0xd0ec110c8f34be8699f9e8985db712f9e4bcf91dbf48b11797ee39f54c0988f8",
+      "created_at_ms": "1791056050956",
+      "started_at_ms": "1791056074367",
+      "updated_at_ms": "1791056099122",
+      "capability_id": "0x84ece3f6835c0dccce08bf37324196d2a115050e6c0a4b3fbca2a072d76a6303",
+      "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+      "managed_agent": "0x9b4ff2b3ec0ea8752e17602a04fa32f071d7bffb694cfc85783a628d1260dbba",
+      "budget_amount": "0"
+    },
+    "reviewExpiresAtMs": 1791056105305,
+    "acceptanceObservedAtMs": 1791056093216,
+    "approvalConfirmedAt": "2026-10-03T19:35:01.219Z",
+    "approvalRemainingMs": 4086,
+    "transactions": [
+      {
+        "label": "cloud one-use observation capability",
+        "status": "confirmed",
+        "digest": "3aJe5b1AhwL7GXukjRjGA3wiqs2WrP6o7qRibX8FFLvr",
+        "actualGas": "10173480",
+        "at": "2026-10-03T19:34:09.646Z"
+      },
+      {
+        "label": "cloud exact review ticket and Run",
+        "status": "confirmed",
+        "digest": "643iXCBLBHvyoky4mtGoPvriQ5rruqNs37FSmvG4gCPg",
+        "actualGas": "60069000",
+        "at": "2026-10-03T19:34:11.120Z"
+      },
+      {
+        "label": "independent cloud handover approval",
+        "status": "confirmed",
+        "digest": "5PXkMjPp2UnrVG1uYdgvAxuSkbyr95BQx9Sw5QpQamJo",
+        "actualGas": "36691044",
+        "at": "2026-10-03T19:35:01.219Z"
+      },
+      {
+        "label": "cloud KR 1 one-use control",
+        "status": "confirmed",
+        "digest": "aZ2AgPnuvYTtUVZmbgU5QqH4zMR1iaD5xqPXRSnCY5E",
+        "actualGas": "15662680",
+        "at": "2026-10-03T19:35:02.138Z"
+      },
+      {
+        "label": "cloud KR 1 exact queued Run",
+        "status": "confirmed",
+        "digest": "8Xme8RFTFFtjpCHpm1N2wg7qkZyjAxLmyhXHuHuUiFdg",
+        "actualGas": "64354192",
+        "at": "2026-10-03T19:35:04.386Z"
+      },
+      {
+        "label": "cloud KR 1 independent Human verification",
+        "status": "confirmed",
+        "digest": "8XvMyr417cYzcXwbnbvbvJSq22hbtK77C2YRMj83QjKZ",
+        "actualGas": "15595876",
+        "at": "2026-10-03T19:38:00.147Z"
+      },
+      {
+        "label": "cloud KR 2 one-use control",
+        "status": "confirmed",
+        "digest": "7FqaNsufoSmxryXsCw92bLTvswpzwfJKQ8yyLPkBMUuJ",
+        "actualGas": "15662680",
+        "at": "2026-10-03T19:40:03.411Z"
+      },
+      {
+        "label": "cloud KR 2 exact queued Run",
+        "status": "confirmed",
+        "digest": "82KndWcCykPsg8HB5WwFJubhDoWrU5RCkLTVmzaaLAKw",
+        "actualGas": "64483696",
+        "at": "2026-10-03T19:40:05.396Z"
+      },
+      {
+        "label": "cloud KR 2 independent Human verification",
+        "status": "confirmed",
+        "digest": "6cvTAC8cBc4bJjsu9nfuFbSKcsarutewqud8zVQzxYk2",
+        "actualGas": "12818608",
+        "at": "2026-10-03T19:42:25.182Z"
+      },
+      {
+        "label": "separate final cloud Human acceptance",
+        "status": "confirmed",
+        "digest": "AsXNMWfXgqY9AhmC58SxWSVsRi3tEBDQmH9ugbkx2XtQ",
+        "actualGas": "12559828",
+        "at": "2026-10-03T19:42:26.184Z"
+      }
+    ],
+    "deliveryAttempts": [
+      {
+        "ordinal": 1,
+        "attemptedAt": "2026-10-03T19:34:11.951Z",
+        "phase": "send_original_cloud_review_once"
+      },
+      {
+        "ordinal": 2,
+        "attemptedAt": "2026-10-03T19:35:04.650Z",
+        "phase": "cloud_kr_1_dispatch_once"
+      },
+      {
+        "ordinal": 3,
+        "attemptedAt": "2026-10-03T19:40:05.647Z",
+        "phase": "cloud_kr_2_dispatch_once"
+      }
+    ],
+    "checks": [
+      "Same original cloud member and authenticated instance remain controlled after explicit pause and spec replacement; prior Run settled, no replacement identity or replay",
+      "Continues the same original paused OKR after explicit spec 3 revision; prior successful Run and its 3 spent calls are preserved, new reviewed agreement required",
+      "Real cloud envd reviews exact signed proposal, reserves original instance and publishes its signed acceptance and immutable encrypted result",
+      "Independent Android Human approval activates the cloud OKR without implicitly delivering either KR",
+      "Cloud KR 1 original queued Run restores with an empty journal and no fee or delivery",
+      "Original completed KR 1 restores after the observation timeout, with no new permission, fee, command or execution",
+      "Real cloud KR 1 satisfies its maximum three-call boundary and settles only actual tools; original encrypted evidence matches independently read remote file, while Human verification remains pending",
+      "Previously confirmed KR 1 Human decision and immutable result restore after a fixture assertion failure; no reauthorization, fee or dispatch",
+      "Cloud KR 2 original queued Run restores with an empty journal and no fee or delivery",
+      "Real cloud KR 2 satisfies its maximum three-call boundary and settles only actual tools; original encrypted evidence matches independently read remote file, while Human verification remains pending",
+      "Separate Human confirmation verifies cloud KR 2 and advances only the cursor; it does not deliver another command or accept the whole objective",
+      "Separate final Human decision reads both original cloud results and prior independent verification revisions; OKR achieved with seven spent including the original three-call Run, zero reserved and no implicit acceptance",
+      "Fresh source reads recover both original encrypted cloud results after acceptance without replay, new signature or command"
+    ],
+    "krRuns": [
+      {
+        "krIndex": 0,
+        "run": {
+          "id": "0x8694410ed4037980852631a31174b0e9864f99e8826a52346f2c294da84aeb6a",
+          "state": 2,
+          "cursor": "3",
+          "stop_requested": false,
+          "result_record": "0xa775d1da221e09d67b2e2fb12d8be892c0fa61b841e79a44b56cba72e63ba7e0",
+          "created_at_ms": "1791056103532",
+          "started_at_ms": "1791056153325",
+          "updated_at_ms": "1791056194600",
+          "capability_id": "0x61cdad103a06fe2f4c302770a004a5d8d1792319b18f3f95503f24e6e8705a49",
+          "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+          "managed_agent": "0x9b4ff2b3ec0ea8752e17602a04fa32f071d7bffb694cfc85783a628d1260dbba",
+          "budget_amount": "3"
+        },
+        "resultRecordId": "0xa775d1da221e09d67b2e2fb12d8be892c0fa61b841e79a44b56cba72e63ba7e0",
+        "responseOk": true,
+        "actualSpend": {
+          "asset": "TOOL_CALLS",
+          "amount": "1",
+          "known": true
+        },
+        "observation": {
+          "id": "0x7ea2db31673bc62834c975f8dc031b6e2ec84a4039385704cc2fff341046c30e",
+          "kr_index": "0",
+          "agreement_version": "5",
+          "current": "1",
+          "sampled_at_ms": "1791056188589",
+          "recorded_at_ms": "1791056209942",
+          "run_id": "0x8694410ed4037980852631a31174b0e9864f99e8826a52346f2c294da84aeb6a",
+          "evidence_id": "0xa775d1da221e09d67b2e2fb12d8be892c0fa61b841e79a44b56cba72e63ba7e0"
+        },
+        "independentlyReadCloudFile": {
+          "path": "docs/CLOUD-FIRST.md",
+          "bytes": 58,
+          "sha256": "6e035eb916ed35dd60d9a6ee7379fe747da0eaf74c8784a8a756e1006d95bb15"
+        }
+      },
+      {
+        "krIndex": 1,
+        "run": {
+          "id": "0x5868a5e5d12cc226e62ed74ca977eb930348bc474fd7dd88a18deb15e82bdae7",
+          "state": 2,
+          "cursor": "3",
+          "stop_requested": false,
+          "result_record": "0x5aa7649cb3f9926df834a9ad29f9541babf67b9c16a5555683d7a8a8404daf9c",
+          "created_at_ms": "1791056404435",
+          "started_at_ms": "1791056445049",
+          "updated_at_ms": "1791056524536",
+          "capability_id": "0xa62a9f701d17ade0a52d9924ff4157c8ca8a6ee35ebf077b5d3e953fbe43204d",
+          "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+          "managed_agent": "0x9b4ff2b3ec0ea8752e17602a04fa32f071d7bffb694cfc85783a628d1260dbba",
+          "budget_amount": "3"
+        },
+        "resultRecordId": "0x5aa7649cb3f9926df834a9ad29f9541babf67b9c16a5555683d7a8a8404daf9c",
+        "responseOk": true,
+        "actualSpend": {
+          "asset": "TOOL_CALLS",
+          "amount": "3",
+          "known": true
+        },
+        "observation": {
+          "id": "0xbb6b602ee0142967d52ac259c9065e5ee08650febf6dfadf56eaaa5e183ef2a6",
+          "kr_index": "1",
+          "agreement_version": "5",
+          "current": "1",
+          "sampled_at_ms": "1791056518406",
+          "recorded_at_ms": "1791056538259",
+          "run_id": "0x5868a5e5d12cc226e62ed74ca977eb930348bc474fd7dd88a18deb15e82bdae7",
+          "evidence_id": "0x5aa7649cb3f9926df834a9ad29f9541babf67b9c16a5555683d7a8a8404daf9c"
+        },
+        "independentlyReadCloudFile": {
+          "path": "docs/CLOUD-SECOND.md",
+          "bytes": 73,
+          "sha256": "17ffabfbe5c77fd8f9b5e0a65c9b43510abed44fae351a4d4644e1a021e99a87"
+        }
+      }
+    ],
+    "humanDecisions": [
+      {
+        "krIndex": 0,
+        "runId": "0x8694410ed4037980852631a31174b0e9864f99e8826a52346f2c294da84aeb6a",
+        "requestId": "okr-human:0x3bb8296d04e2eb04eaf485c3c47ccdc02c4eb9cf49a6972d1a30a7496f955333:5:8:verify:0",
+        "digest": "8XvMyr417cYzcXwbnbvbvJSq22hbtK77C2YRMj83QjKZ",
+        "verificationRecordId": "0x3da518863cd6173dcdd332d9ba2e19a1b90c8c2af5a18a5b0d915cd25b0ca6c9"
+      },
+      {
+        "krIndex": 1,
+        "runId": "0x5868a5e5d12cc226e62ed74ca977eb930348bc474fd7dd88a18deb15e82bdae7",
+        "requestId": "okr-human:0x3bb8296d04e2eb04eaf485c3c47ccdc02c4eb9cf49a6972d1a30a7496f955333:5:10:verify:1",
+        "digest": "6cvTAC8cBc4bJjsu9nfuFbSKcsarutewqud8zVQzxYk2",
+        "verificationRecordId": "0xb1feca7b7f9cd00aae4beb54772ca2cc684973c103f8b8edd94058b693083640"
+      }
+    ],
+    "final": {
+      "okrState": 3,
+      "nextKr": "2",
+      "acceptedByHuman": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+      "spent": "7",
+      "reserved": "0",
+      "acceptanceRecordId": "0x5a5237994d67986b01ddc7067e21c8d077441b2260ebcda0f94ff665aa15d07d",
+      "digest": "AsXNMWfXgqY9AhmC58SxWSVsRi3tEBDQmH9ugbkx2XtQ"
+    },
+    "reconstructedOriginalResultIds": [
+      "0xa775d1da221e09d67b2e2fb12d8be892c0fa61b841e79a44b56cba72e63ba7e0",
+      "0x5aa7649cb3f9926df834a9ad29f9541babf67b9c16a5555683d7a8a8404daf9c"
+    ]
+  },
+  "retainedFixtureFailures": [
+    {
+      "fixture": "r8 resume r1",
+      "failure": "esbuild Unexpected end of file before execution",
+      "effects": "No IPC, fees or transactions. Private helper extraction corrected."
+    },
+    {
+      "fixture": "spec3 first run",
+      "failure": "Expected values to be strictly equal:\n\n4n !== 6n\n",
+      "effects": "Original KR 1 succeeded using one read because its file already matched. Fixture incorrectly expected maximum 3 calls as actual expenditure. No Run replay."
+    },
+    {
+      "fixture": "spec3 resume r1",
+      "failure": "Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- '0x8694410ed4037980852631a31174b0e9864f99e8826a52346f2c294da84aeb6a'\n",
+      "effects": "Independent KR 1 verification already confirmed. Fixture incorrectly expected current navigation to return historical Run after cursor advancement. Resume r2 reads historical result and checks old execution context refusal instead; no repeated verification."
+    }
+  ],
+  "verification": {
+    "goRacePackages": [
+      "internal/nodecommand",
+      "internal/runtimeadapter",
+      "internal/sui",
+      "internal/ws",
+      "cmd/envd"
+    ],
+    "finalLog": "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand\t(cached)\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter\t(cached)\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui\t(cached)\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/ws\t2.657s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd\t(cached)\n",
+    "linuxAmd64Build": true,
+    "installedApkRebuilt": false,
+    "appSdkMoveRustProductionChanged": false
+  },
+  "completion": {
+    "cloudBoundedOkrAndIndependentHumanAcceptance": true,
+    "completeMilestone": false
+  },
+  "provenance": {
+    "sourceSha256": {
+      "runtime/fractalmind-envd/internal/nodecommand/chain_authority_store.go": "5f005bcab40e247957925c9ef7868ad968653a055474c4eb23d08abb03aa04b2",
+      "runtime/fractalmind-envd/internal/nodecommand/chain_execution.go": "07f89127d782bd2504c24ecc5363dce5851c5853f2925f12d0940334961fa27c",
+      "runtime/fractalmind-envd/internal/nodecommand/chain_execution_test.go": "59eb9c3bca2be43a3c8b2bad822bbb046cd7022685f810453304d9de5e40bb66",
+      "runtime/fractalmind-envd/internal/nodecommand/chain_result.go": "a6063f82604f46ff8ac738900b938a3678791d09cb2ba175feaa1ca76bf711ad",
+      "runtime/fractalmind-envd/internal/nodecommand/chain_result_test.go": "c41741a92b43cbfd4ab4c4121eb24280cf09c2859287002dedbd53319a12ca80",
+      "runtime/fractalmind-envd/internal/nodecommand/chain_snapshot.go": "e06552b589abe9369fb993549dc4364a49393db7643bfb451905db982a908009",
+      "runtime/fractalmind-envd/internal/nodecommand/handover.go": "febd4bbf5f4b673e1e44401373e93f9693b97996c9bf6b43dbf594db97c1400a",
+      "runtime/fractalmind-envd/internal/nodecommand/handover_test.go": "3ff81505deda46bccedcd4e25f2020947702248063f85649bf83417446bf6985",
+      "runtime/fractalmind-envd/internal/nodecommand/host_join.go": "a47d7c9dfd240cdee32b0156935eb99798be73b3864c7788f524a33cc170f3fb",
+      "runtime/fractalmind-envd/internal/nodecommand/validator.go": "adc0e57ea2f6ed0a8368b54cc0916f7dd1bfd38657d06b85a4cf4ec68ea7f5bc",
+      "runtime/fractalmind-envd/internal/runtimeadapter/executor.go": "4bc0e5289d9c8d4c9c76702a031cc951f018536fff8dd285a75a74242c58f6fe",
+      "runtime/fractalmind-envd/internal/runtimeadapter/handover.go": "e1573f968bd88cf67f20b465c5ff16230d3093dc5e054fda6b44a85a595dcada",
+      "runtime/fractalmind-envd/internal/sui/chain_execution_store.go": "441506a0d9664d72ea6a25a1ffffa500ff6d8a3e1710a87f3eb413adbbea3c7d",
+      "runtime/fractalmind-envd/internal/sui/chain_execution_store_test.go": "f9a8150c6a20338319e2e599d5a515a8a6adb2c78e67102377b294dbf7008cfb",
+      "runtime/fractalmind-envd/internal/sui/chain_reservations.go": "e059414e85f1876d4d446bf52d448c88559de6953b3e4610438961c0e1e9800e",
+      "runtime/fractalmind-envd/internal/ws/chain_connection_test.go": "b91c38098a53b496a777dc9e1107cf312a87868550e34678ac764005c63539f0",
+      "runtime/fractalmind-envd/internal/ws/client.go": "81e35dc2a92facc4e2f282b8198c05a1b6d5b4e7d8e3bf5b5b4329ed3febd2b6",
+      "runtime/fractalmind-envd/internal/nodecommand/chain_preflight_test.go": "9620548d36f7e5203d472f6ac6e6fe94fec40b8d52b4042b845fc66448b386bb"
+    },
+    "privateEvidenceSha256": {
+      "fm-v020-cloud-okr-r4.json.progress.json": "c41a26316452d8676fa83bf94a151c529786477ade0859cb120ce5238b763bec",
+      "fm-v020-cloud-okr-r5.json.progress.json": "e15f61abb44e5a510b0a66d887b0572531400665950e8cd6caa286ebf5fa2bd3",
+      "fm-v020-cloud-okr-r6.json.progress.json": "1784fe5e211dba5b6d8f2ef51a31bf04f8391067a235e387963c9a21e3fa5516",
+      "fm-v020-cloud-okr-r7.json.progress.json": "1a201df869482e734f84801782d3d67d51baaf27e6340f41fc0385a65d4cd96b",
+      "fm-v020-cloud-okr-r8.json.progress.json": "23758d5cea1eaae166c97104769d52145ef886507b5e3d58bd167ac15f7846f1",
+      "fm-v020-cloud-okr-r8-stale-read-r1.json": "fad95b1ce3048bfc4ef0a69eec16cbfd372aa18c635c8a583c9ed33488c1e976",
+      "fm-v020-cloud-active-replace-r2.json": "eac8f1321eb1d860f5153a19b9ee30aabc0110d4b3215c27f853a44ddf743a35",
+      "fm-v020-cloud-okr-r9-spec3.json.progress.json": "a52da9e3a9aeb02cb133b35bef668b7966a5bf5415571f7ed8c749295f08ff44",
+      "fm-v020-cloud-okr-r9-spec3-resume-r1.json.progress.json": "d9f6d6e204feb8900d824c530bcfabe5a530ac3b46cddc491daaa1ba3285a353",
+      "fm-v020-cloud-okr-r9-spec3-resume-r2.json": "0101e804c13e794f9b8558855d3d080a47646526e16a8e89491cd64932ed85eb",
+      "fm-v020-cloud-okr-r9-spec3-resume-r2.mts": "762b2cb477670e60e12a359064e9e50bc5ab776aa0b23a4ef7c0412410a545d5",
+      "fm-v020-cloud-envd-final-proof-r9.json": "e4acc229926926c6a43f9147821a49bd7ca029d76fa7986d4345dd8382b54144",
+      "fm-v020-cloud-preflight-go-final.log": "936831aedc74afde700c36c1283a12d4aa39161a677ab3b6b691db69ca1fbae4"
+    }
+  }
+}

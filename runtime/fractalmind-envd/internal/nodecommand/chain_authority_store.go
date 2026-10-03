@@ -52,6 +52,45 @@ func (s *ChainAuthorityStore) Reserve(ctx context.Context, reservation Reservati
 	if err != nil {
 		return ReservationResult{}, err
 	}
+	return s.reserveResolved(ctx, reservation, state)
+}
+
+// recheckResolved uses only the private dependencies of a typed resolution in
+// this validation call. A fresh full batch must match all original versions.
+// It grants no execution ownership and is never reused by a subsequent call.
+func (s *ChainAuthorityStore) recheckResolved(ctx context.Context, reservation Reservation, state CapabilityState) error {
+	if state.ID != reservation.CapabilityID || len(state.readVersions) == 0 || state.readVersions[state.ID] == 0 || !contains(state.AuthorizedSigners, reservation.Signer) {
+		return reject(CodeUnauthorized, "typed current authority is required", nil)
+	}
+	r := &chainRead{resolver: s.resolver, versions: state.readVersions}
+	pin, err := r.versionPin(ctx, reject(CodeAuthorityStale, "chain authority changed during preflight", nil))
+	if err != nil {
+		return err
+	}
+	if pin != state.AuthorityVersionHash {
+		return reject(CodeAuthorityStale, "authority dependency proof changed", nil)
+	}
+	if state.ExpiresAtMS <= s.resolver.now().UnixMilli() || reservation.ExpiresAtMS <= s.resolver.now().UnixMilli() {
+		return reject(CodeExpired, "authority or command expired during preflight", nil)
+	}
+	return nil
+}
+
+func (s *ChainAuthorityStore) InspectResolved(ctx context.Context, reservation Reservation, state CapabilityState) (ReservationResult, bool, error) {
+	if err := s.recheckResolved(ctx, reservation, state); err != nil {
+		return ReservationResult{}, false, err
+	}
+	return s.reservations.Inspect(ctx, reservation)
+}
+
+func (s *ChainAuthorityStore) ReserveResolved(ctx context.Context, reservation Reservation, state CapabilityState) (ReservationResult, error) {
+	if err := s.recheckResolved(ctx, reservation, state); err != nil {
+		return ReservationResult{}, err
+	}
+	return s.reserveResolved(ctx, reservation, state)
+}
+
+func (s *ChainAuthorityStore) reserveResolved(ctx context.Context, reservation Reservation, state CapabilityState) (ReservationResult, error) {
 	if !s.Supports(reservation.Scope) || state.ReservationScope != reservation.Scope || !contains(state.AuthorizedSigners, reservation.Signer) {
 		return ReservationResult{}, reject(CodeUnauthorized, "unsupported reservation or signer", nil)
 	}

@@ -179,19 +179,13 @@ func (e *Executor) Execute(ctx context.Context, command nodecommand.NodeCommand)
 }
 
 func (e *Executor) executeFirst(ctx context.Context, command nodecommand.NodeCommand, key string) execution {
+	var validation nodecommand.ValidationResult
+	var err error
 	if e.commandStore != nil {
-		if err := e.validator.CheckCurrentAuthority(ctx, command); err != nil {
-			event, eventErr := e.commandRejectedEvent(command, err)
-			if eventErr != nil {
-				return execution{err: eventErr}
-			}
-			return execution{event: event, err: err}
-		}
-		if err := e.commandStore.Preflight(ctx, command); err != nil {
-			return execution{err: err}
-		}
+		validation, err = e.validator.ValidateWithPreflight(ctx, command, e.commandStore.Preflight)
+	} else {
+		validation, err = e.validator.Validate(ctx, command)
 	}
-	validation, err := e.validator.Validate(ctx, command)
 	if err != nil {
 		event, eventErr := e.commandRejectedEvent(command, err)
 		if eventErr != nil {

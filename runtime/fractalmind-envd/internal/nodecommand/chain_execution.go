@@ -38,6 +38,8 @@ type moveExecution struct {
 }
 
 type ChainExecution struct {
+	// Typed dependencies of this read only; never serialized as permission.
+	readVersions                                                                           map[string]uint64
 	ID, CapabilityID, HumanID, GrantID, MembershipID, CoordinatorBindingID, ManagedAgentID string
 	Signer, HostAddress, CommandID, Nonce, IdempotencyKey, Fingerprint, Action, Scope      string
 	Target                                                                                 Target
@@ -64,31 +66,66 @@ type ChainExecutionReader interface {
 // checkpoint. Not-found is distinct from a network error and is never treated
 // as evidence that an unknown prior execution may safely run again.
 func (s *ChainAuthorityResolver) LookupExecution(ctx context.Context, capabilityID, fingerprint string) (ChainExecution, bool, error) {
+	return s.lookupExecution(ctx, capabilityID, fingerprint, "")
+}
+
+// RecheckExecution reads a previously typed checkpoint directly, along with
+// its capability. The private read provenance cannot be reconstructed from
+// JSON. Both objects, all bindings, budget and dependency versions are still
+// checked freshly; this read never grants ownership of a new attempt.
+func (s *ChainAuthorityResolver) RecheckExecution(ctx context.Context, known ChainExecution) (ChainExecution, bool, error) {
+	if known.readVersions[known.ID] == 0 || known.readVersions[known.CapabilityID] == 0 {
+		return ChainExecution{}, false, fmt.Errorf("typed original checkpoint is required")
+	}
+	current, found, err := s.lookupExecution(ctx, known.CapabilityID, known.Fingerprint, known.ID)
+	if err != nil || !found {
+		return current, found, err
+	}
+	r := Reservation{CapabilityID: known.CapabilityID, Signer: known.Signer, CommandID: known.CommandID, Nonce: known.Nonce, IdempotencyKey: known.IdempotencyKey, Fingerprint: known.Fingerprint, Budget: known.Budget, Target: known.Target, Action: known.Action, CommandScope: known.Scope, IssuedAtMS: known.IssuedAtMS, ExpiresAtMS: known.ExpiresAtMS}
+	if !current.Matches(r) || current.ID != known.ID || current.CapabilityVersion != known.CapabilityVersion || current.GrantVersion != known.GrantVersion || current.HumanID != known.HumanID || current.GrantID != known.GrantID || current.MembershipID != known.MembershipID || current.ManagedAgentID != known.ManagedAgentID || current.CoordinatorBindingID != known.CoordinatorBindingID || current.HostAddress != known.HostAddress {
+		return ChainExecution{}, false, fmt.Errorf("original execution binding changed")
+	}
+	return current, true, nil
+}
+
+func (s *ChainAuthorityResolver) lookupExecution(ctx context.Context, capabilityID, fingerprint, knownID string) (ChainExecution, bool, error) {
 	key, err := hex.DecodeString(fingerprint)
 	if err != nil || len(key) != 32 {
 		return ChainExecution{}, false, fmt.Errorf("invalid execution fingerprint")
 	}
 	r := &chainRead{resolver: s, versions: map[string]uint64{}}
+	if knownID != "" {
+		if err := r.prefetchObjects(ctx, []string{capabilityID, knownID}); err != nil {
+			return ChainExecution{}, false, err
+		}
+	}
 	var cap moveCapability
 	if err = r.object(ctx, capabilityID, "remote_authority::RemoteCapability", &cap); err != nil {
 		return ChainExecution{}, false, err
 	}
-	var index moveExecutionIndex
-	keyType := s.packageID + "::node_execution::ExecutionIndexKey"
-	err = r.field(ctx, capabilityID, structKeyTag(s.packageID, "node_execution", "ExecutionIndexKey"), []byte{0}, keyType, s.packageID+"::node_execution::ExecutionIndex", &index)
-	if errors.Is(err, ErrChainObjectNotFound) {
-		return ChainExecution{}, false, nil
-	}
-	if err != nil {
-		return ChainExecution{}, false, err
-	}
 	var runID moveAddress
-	err = r.field(ctx, index.Executions.ID.String(), []byte{6, 1}, appendBCSBytes(nil, key), "vector<u8>", "0x2::object::ID", &runID)
-	if errors.Is(err, ErrChainObjectNotFound) {
-		return ChainExecution{}, false, nil
-	}
-	if err != nil {
-		return ChainExecution{}, false, err
+	if knownID != "" {
+		runID, err = chainAddress(knownID)
+		if err != nil || runID.String() != knownID {
+			return ChainExecution{}, false, fmt.Errorf("invalid original execution ID")
+		}
+	} else {
+		var index moveExecutionIndex
+		keyType := s.packageID + "::node_execution::ExecutionIndexKey"
+		err = r.field(ctx, capabilityID, structKeyTag(s.packageID, "node_execution", "ExecutionIndexKey"), []byte{0}, keyType, s.packageID+"::node_execution::ExecutionIndex", &index)
+		if errors.Is(err, ErrChainObjectNotFound) {
+			return ChainExecution{}, false, nil
+		}
+		if err != nil {
+			return ChainExecution{}, false, err
+		}
+		err = r.field(ctx, index.Executions.ID.String(), []byte{6, 1}, appendBCSBytes(nil, key), "vector<u8>", "0x2::object::ID", &runID)
+		if errors.Is(err, ErrChainObjectNotFound) {
+			return ChainExecution{}, false, nil
+		}
+		if err != nil {
+			return ChainExecution{}, false, err
+		}
 	}
 	var run moveExecution
 	if err = r.object(ctx, runID.String(), "node_execution::CommandExecution", &run); err != nil {
@@ -150,6 +187,7 @@ func (s *ChainAuthorityResolver) LookupExecution(ctx context.Context, capability
 	if _, err := r.versionPin(ctx, reject(CodeAuthorityStale, "chain execution changed during resolution", nil)); err != nil {
 		return ChainExecution{}, false, err
 	}
+	value.readVersions = r.versions
 	return value, true, nil
 }
 

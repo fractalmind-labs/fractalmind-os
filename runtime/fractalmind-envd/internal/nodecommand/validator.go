@@ -100,44 +100,83 @@ func NewValidator(signatures SignatureVerifier, authority AuthorityStore, option
 // It does not consume uses, reserve budget or authorize execution; Validate
 // still checks actions, scopes and the exact claim before every execution.
 func (v *Validator) CheckCurrentAuthority(ctx context.Context, command NodeCommand) error {
+	_, err := v.checkCurrentAuthority(ctx, command)
+	return err
+}
+
+func (v *Validator) checkCurrentAuthority(ctx context.Context, command NodeCommand) (CapabilityState, error) {
+	state, err := v.currentAuthority(ctx, command)
+	if err != nil {
+		return state, err
+	}
+	if state.Revoked || state.RevocationVersion != uint64(command.Capability.RevocationVersion) {
+		return state, reject(CodeRevoked, "capability permission changed", nil)
+	}
+	if state.ExpiresAtMS <= v.options.Now().UnixMilli() {
+		return state, reject(CodeExpired, "capability expired", nil)
+	}
+	if !contains(state.AuthorizedSigners, command.Signer) {
+		return state, reject(CodeUnauthorized, "command signer is not authorized", nil)
+	}
+	return state, nil
+}
+
+func (v *Validator) currentAuthority(ctx context.Context, command NodeCommand) (CapabilityState, error) {
 	if err := v.validateEnvelope(command); err != nil {
-		return err
+		return CapabilityState{}, err
 	}
 	signingBytes, err := command.SigningBytes()
 	if err != nil {
-		return reject(CodeInvalidEnvelope, "canonicalize signing payload", err)
+		return CapabilityState{}, reject(CodeInvalidEnvelope, "canonicalize signing payload", err)
 	}
 	if v.signatures == nil {
-		return reject(CodeSignatureInvalid, "signature verifier is not configured", nil)
+		return CapabilityState{}, reject(CodeSignatureInvalid, "signature verifier is not configured", nil)
 	}
 	if err := v.signatures.Verify(ctx, command.Signer, signingBytes, command.Signature); err != nil {
-		return reject(CodeSignatureInvalid, "signature verification failed", err)
+		return CapabilityState{}, reject(CodeSignatureInvalid, "signature verification failed", err)
 	}
 	if v.authority == nil {
-		return reject(CodeUnauthorized, "capability resolver is not configured", nil)
+		return CapabilityState{}, reject(CodeUnauthorized, "capability resolver is not configured", nil)
 	}
 	state, err := v.authority.Resolve(ctx, command.Capability)
 	if err != nil {
 		if CodeOf(err) != "" {
-			return err
+			return state, err
 		}
-		return reject(CodeUnauthorized, "resolve current authority", err)
-	}
-	if state.Revoked || state.RevocationVersion != uint64(command.Capability.RevocationVersion) {
-		return reject(CodeRevoked, "capability permission changed", nil)
-	}
-	if state.ExpiresAtMS <= v.options.Now().UnixMilli() {
-		return reject(CodeExpired, "capability expired", nil)
-	}
-	if !contains(state.AuthorizedSigners, command.Signer) {
-		return reject(CodeUnauthorized, "command signer is not authorized", nil)
+		return state, reject(CodeUnauthorized, "resolve current authority", err)
 	}
 	// Remaining uses/budget may already be consumed by an exact duplicate. Only
 	// Validate/Inspect can decide whether that original claim is still usable.
-	return nil
+	return state, nil
 }
 
 func (v *Validator) Validate(ctx context.Context, command NodeCommand) (ValidationResult, error) {
+	return v.validate(ctx, command, nil)
+}
+
+// ValidateWithPreflight checks current authority before reading protected result
+// keys, then reserves only after preflight succeeds. Typed chain stores recheck
+// every dependency version before using this call's resolution; no state is
+// cached across requests, and the start transaction checks authority atomically.
+func (v *Validator) ValidateWithPreflight(ctx context.Context, command NodeCommand, preflight func(context.Context, NodeCommand) error) (ValidationResult, error) {
+	state, err := v.checkCurrentAuthority(ctx, command)
+	if err != nil {
+		return ValidationResult{}, err
+	}
+	if preflight != nil {
+		if err := preflight(ctx, command); err != nil {
+			return ValidationResult{}, err
+		}
+	}
+	return v.validate(ctx, command, &state)
+}
+
+type resolvedAuthorityStore interface {
+	InspectResolved(context.Context, Reservation, CapabilityState) (ReservationResult, bool, error)
+	ReserveResolved(context.Context, Reservation, CapabilityState) (ReservationResult, error)
+}
+
+func (v *Validator) validate(ctx context.Context, command NodeCommand, resolved *CapabilityState) (ValidationResult, error) {
 	if err := v.validateEnvelope(command); err != nil {
 		return ValidationResult{}, err
 	}
@@ -171,15 +210,27 @@ func (v *Validator) Validate(ctx context.Context, command NodeCommand) (Validati
 	if v.authority == nil {
 		return ValidationResult{}, reject(CodeUnauthorized, "capability resolver is not configured", nil)
 	}
-	if result, found, err := v.authority.Inspect(ctx, reservation); err != nil {
+	var inspected ReservationResult
+	var found bool
+	if store, ok := v.authority.(resolvedAuthorityStore); ok && resolved != nil {
+		inspected, found, err = store.InspectResolved(ctx, reservation, *resolved)
+	} else {
+		inspected, found, err = v.authority.Inspect(ctx, reservation)
+	}
+	if err != nil {
 		return ValidationResult{}, err
 	} else if found {
-		result.Duplicate = true
-		return result, nil
+		inspected.Duplicate = true
+		return inspected, nil
 	}
-	state, err := v.authority.Resolve(ctx, command.Capability)
-	if err != nil {
-		return ValidationResult{}, reject(CodeUnauthorized, "resolve capability", err)
+	var state CapabilityState
+	if resolved != nil {
+		state = *resolved
+	} else {
+		state, err = v.authority.Resolve(ctx, command.Capability)
+		if err != nil {
+			return ValidationResult{}, reject(CodeUnauthorized, "resolve capability", err)
+		}
 	}
 	if err := v.validateAuthority(command, state); err != nil {
 		return ValidationResult{}, err
@@ -201,7 +252,12 @@ func (v *Validator) Validate(ctx context.Context, command NodeCommand) (Validati
 	reservation.ExpectedAuthorityHash = state.SnapshotHash()
 	reservation.ExpectedRevocationVersion = state.RevocationVersion
 	reservation.AuthorityObservedAtMS = state.CheckpointObservedAtMS
-	result, err := v.authority.Reserve(ctx, reservation)
+	var result ReservationResult
+	if store, ok := v.authority.(resolvedAuthorityStore); ok && resolved != nil {
+		result, err = store.ReserveResolved(ctx, reservation, state)
+	} else {
+		result, err = v.authority.Reserve(ctx, reservation)
+	}
 	if err != nil {
 		if CodeOf(err) != "" {
 			return ValidationResult{}, err

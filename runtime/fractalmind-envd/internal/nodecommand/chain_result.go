@@ -74,12 +74,22 @@ func (s *ChainAuthorityResolver) ReadResultKey(ctx context.Context, capabilityID
 	if !found || keyVersion == 0 {
 		return ChainResultKeyGrant{}, fmt.Errorf("prepared command and key version are required")
 	}
-	hash, _ := hex.DecodeString(fingerprint)
+	return s.ReadResultKeyForExecution(ctx, run, keyVersion)
+}
+
+// ReadResultKeyForExecution binds the freshly read key envelope to the exact
+// checkpoint already verified by LookupExecution in the same caller operation.
+// This is a key binding check, never permission to execute or disclose a result.
+func (s *ChainAuthorityResolver) ReadResultKeyForExecution(ctx context.Context, run ChainExecution, keyVersion uint64) (ChainResultKeyGrant, error) {
+	hash, err := hex.DecodeString(run.Fingerprint)
+	if err != nil || len(hash) != 32 || keyVersion == 0 || run.ID == "" || run.CapabilityID == "" {
+		return ChainResultKeyGrant{}, fmt.Errorf("prepared command and key version are required")
+	}
 	name := appendBCSBytes(nil, hash)
 	name = binary.LittleEndian.AppendUint64(name, keyVersion)
 	r := &chainRead{resolver: s, versions: map[string]uint64{}}
 	var grant moveResultKeyGrant
-	if err := r.field(ctx, capabilityID, structKeyTag(s.packageID, "node_execution", "ResultKeyKey"), name, s.packageID+"::node_execution::ResultKeyKey", s.packageID+"::node_execution::ResultKeyGrant", &grant); err != nil {
+	if err := r.field(ctx, run.CapabilityID, structKeyTag(s.packageID, "node_execution", "ResultKeyKey"), name, s.packageID+"::node_execution::ResultKeyKey", s.packageID+"::node_execution::ResultKeyGrant", &grant); err != nil {
 		return ChainResultKeyGrant{}, err
 	}
 	if grant.Org.String() != run.Target.OrganizationID || grant.Membership.String() != run.MembershipID || grant.Host.String() != run.HostAddress || grant.KeyVersion != keyVersion || len(grant.WrappedKey) != 132 || string(grant.WrappedKey[:4]) != "FMW1" || string(grant.WrappedKey[68:72]) != "FME1" {
@@ -93,6 +103,18 @@ func (s *ChainAuthorityResolver) ReadExecutionResult(ctx context.Context, capabi
 	if err != nil || !found {
 		return ChainExecutionResult{}, false, err
 	}
+	return s.executionResultForRun(ctx, run)
+}
+
+func (s *ChainAuthorityResolver) ReadExecutionResultForCheckpoint(ctx context.Context, known ChainExecution) (ChainExecutionResult, bool, error) {
+	run, found, err := s.RecheckExecution(ctx, known)
+	if err != nil || !found {
+		return ChainExecutionResult{}, false, err
+	}
+	return s.executionResultForRun(ctx, run)
+}
+
+func (s *ChainAuthorityResolver) executionResultForRun(ctx context.Context, run ChainExecution) (ChainExecutionResult, bool, error) {
 	if run.ResultRecordID == "" {
 		if run.State == 2 || run.State == 3 || run.State == 4 {
 			return ChainExecutionResult{}, false, fmt.Errorf("terminal checkpoint is missing its encrypted result")
@@ -117,7 +139,7 @@ func (s *ChainAuthorityResolver) ReadExecutionResult(ctx context.Context, capabi
 	if err := decodeChainBCS(object.Content, &record); err != nil {
 		return ChainExecutionResult{}, false, fmt.Errorf("decode execution result: %w", err)
 	}
-	if record.ID.String() != object.ID || record.Org.String() != run.Target.OrganizationID || record.Kind != 5 || record.LogicalID != "command-"+fingerprint || record.Revision != 1 || record.KeyVersion == 0 || len(record.Previous) != 0 || record.Human.String() != run.HumanID || record.Device.String() != run.HostAddress || record.Grant.String() != run.GrantID || record.GrantVersion != run.GrantVersion || record.CreatedMS > math.MaxInt64 || int64(record.CreatedMS) != run.UpdatedAtMS {
+	if record.ID.String() != object.ID || record.Org.String() != run.Target.OrganizationID || record.Kind != 5 || record.LogicalID != "command-"+run.Fingerprint || record.Revision != 1 || record.KeyVersion == 0 || len(record.Previous) != 0 || record.Human.String() != run.HumanID || record.Device.String() != run.HostAddress || record.Grant.String() != run.GrantID || record.GrantVersion != run.GrantVersion || record.CreatedMS > math.MaxInt64 || int64(record.CreatedMS) != run.UpdatedAtMS {
 		return ChainExecutionResult{}, false, fmt.Errorf("execution result metadata mismatch")
 	}
 	if len(record.Body) < 32 || len(record.Body) > 65536 || (string(record.Body[:4]) != "FME1" && string(record.Body[:4]) != "FME2") {
@@ -128,7 +150,7 @@ func (s *ChainAuthorityResolver) ReadExecutionResult(ctx context.Context, capabi
 		return ChainExecutionResult{}, false, fmt.Errorf("execution result hash mismatch")
 	}
 	if string(record.Body[:4]) == "FME2" {
-		if _, err := s.ReadResultKey(ctx, capabilityID, fingerprint, record.KeyVersion); err != nil {
+		if _, err := s.ReadResultKeyForExecution(ctx, run, record.KeyVersion); err != nil {
 			return ChainExecutionResult{}, false, fmt.Errorf("command result key: %w", err)
 		}
 	}

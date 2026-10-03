@@ -3,10 +3,59 @@ package nodecommand
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
 	"testing"
 
 	"github.com/block-vision/sui-go-sdk/mystenbcs"
 )
+
+func TestResultKeyForCheckedExecutionRejectsDifferentRecipient(t *testing.T) {
+	f, fingerprint, _ := executionFixture(t, 1, moveBoundBudgetClaim{Reserved: 20})
+	run, found, err := f.resolver.LookupExecution(context.Background(), f.cap.ID.String(), fingerprint)
+	if err != nil || !found {
+		t.Fatalf("original execution unavailable: %v", err)
+	}
+	hash, _ := hex.DecodeString(fingerprint)
+	name := binary.LittleEndian.AppendUint64(appendBCSBytes(nil, hash), 2)
+	body := make([]byte, 132)
+	copy(body, "FMW1")
+	copy(body[68:], "FME1")
+	org, _ := chainAddress(run.Target.OrganizationID)
+	member, _ := chainAddress(run.MembershipID)
+	host, _ := chainAddress(run.HostAddress)
+	grant := moveResultKeyGrant{Org: org, Membership: member, Host: host, KeyVersion: 2, WrappedKey: body}
+	pkg := f.resolver.packageID
+	f.saveField(t, f.cap.ID, structKeyTag(pkg, "node_execution", "ResultKeyKey"), name, pkg+"::node_execution::ResultKeyKey", pkg+"::node_execution::ResultKeyGrant", grant)
+	if _, err := f.resolver.ReadResultKeyForExecution(context.Background(), run, 2); err != nil {
+		t.Fatalf("exact original recipient rejected: %v", err)
+	}
+	for _, mode := range []string{"organization", "membership", "Host", "version", "fingerprint", "capability"} {
+		t.Run(mode, func(t *testing.T) {
+			grant.KeyVersion = 2
+			f.saveField(t, f.cap.ID, structKeyTag(pkg, "node_execution", "ResultKeyKey"), name, pkg+"::node_execution::ResultKeyKey", pkg+"::node_execution::ResultKeyGrant", grant)
+			changed := run
+			switch mode {
+			case "organization":
+				changed.Target.OrganizationID = addressNumber(99).String()
+			case "membership":
+				changed.MembershipID = addressNumber(99).String()
+			case "Host":
+				changed.HostAddress = addressNumber(99).String()
+			case "version":
+				grant.KeyVersion++
+				f.saveField(t, f.cap.ID, structKeyTag(pkg, "node_execution", "ResultKeyKey"), name, pkg+"::node_execution::ResultKeyKey", pkg+"::node_execution::ResultKeyGrant", grant)
+			case "fingerprint":
+				changed.Fingerprint = "malformed"
+			case "capability":
+				changed.CapabilityID = addressNumber(99).String()
+			}
+			if _, err := f.resolver.ReadResultKeyForExecution(context.Background(), changed, 2); err == nil {
+				t.Fatal("result key disclosed to a different command recipient")
+			}
+		})
+	}
+}
 
 func resultFixture(t *testing.T) (*chainFixture, string, moveEncryptedRecord) {
 	t.Helper()

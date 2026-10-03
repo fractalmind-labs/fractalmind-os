@@ -79,6 +79,73 @@ func TestHandoverUsesExactTypedAuthorityAndCompleteCoverage(t *testing.T) {
 	}
 }
 
+func TestHandoverPhysicalRecheckRejectsChangesToEverySource(t *testing.T) {
+	for _, mode := range []string{"unchanged", "grant", "Human", "membership", "managed", "OKR", "ledger", "Run stop", "budget", "missing", "RPC failure", "expired", "clock rollback", "serialized proof", "wrong attempt", "wrong payload"} {
+		t.Run(mode, func(t *testing.T) {
+			f, command, run, proposal, ledger := handoverChainFixture(t)
+			f.resolver.reader = &authorityBatchFixture{chainFixture: f}
+			source, err := f.resolver.InspectHandover(context.Background(), command, run, proposal)
+			if err != nil {
+				t.Fatal(err)
+			}
+			change := func(id string) { object := f.objects[id]; object.Version++; f.objects[id] = object }
+			switch mode {
+			case "grant":
+				change(f.grant.ID.String())
+			case "Human":
+				change(f.human.ID.String())
+			case "membership":
+				change(f.member.ID.String())
+			case "managed":
+				change(f.managed.ID.String())
+			case "OKR":
+				change(proposal.OkrID)
+			case "ledger":
+				change(ledger)
+			case "Run stop":
+				change(run.ID)
+			case "budget":
+				for id := range source.proof.versions {
+					if strings.Contains(f.objects[id].Type, "BoundBudgetClaim>") {
+						change(id)
+					}
+				}
+			case "missing":
+				delete(f.objects, run.ID)
+			case "RPC failure":
+				f.fail = true
+			case "expired", "clock rollback":
+				clock := f.objects[addressNumber(6).String()]
+				clock.Content = append([]byte(nil), clock.Content...)
+				timestamp := uint64(proposal.ReviewExpiresAtMS)
+				if mode == "clock rollback" {
+					timestamp = uint64(source.ClockMS - 1)
+				}
+				binary.LittleEndian.PutUint64(clock.Content[32:], timestamp)
+				f.objects[clock.ID] = clock
+			case "serialized proof":
+				data, _ := json.Marshal(source)
+				source = HandoverAuthority{}
+				if err := json.Unmarshal(data, &source); err != nil {
+					t.Fatal(err)
+				}
+			case "wrong attempt":
+				run.AttemptID = strings.Repeat("e", 64)
+			case "wrong payload":
+				command.Payload = []byte(`{}`)
+			}
+			after, err := f.resolver.RecheckHandover(context.Background(), command, run, proposal, source)
+			if mode == "unchanged" {
+				if err != nil || after.ProposalHash != source.ProposalHash || after.CoverageRevision != source.CoverageRevision || after.proof != nil {
+					t.Fatalf("unchanged physical review rejected: %+v %v", after, err)
+				}
+			} else if err == nil {
+				t.Fatal("changed source accepted after physical exclusion")
+			}
+		})
+	}
+}
+
 func TestHandoverRejectsUnknownCoverageAndChangedAuthority(t *testing.T) {
 	for _, mode := range []string{"missing coverage", "unsettled control", "unknown revision", "wrong owner", "wrong type", "changed coverage", "RPC failure", "changed proposal", "changed payload", "wrong run Human", "wrong run Grant", "wrong run binding", "wrong attempt", "approval missing", "host management missing", "non-admin", "managed version", "OKR changed", "expired review", "forged device signature"} {
 		t.Run(mode, func(t *testing.T) {

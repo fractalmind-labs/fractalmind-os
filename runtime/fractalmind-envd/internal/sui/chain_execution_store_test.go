@@ -47,6 +47,15 @@ func (r *resultReaderFixture) CurrentRecordKeyVersion(context.Context, string) (
 	return 1, nil
 }
 
+func TestConfirmStartRejectsStopRequestedBeforeAdapter(t *testing.T) {
+	store, reader, _, command, _, _ := chainStoreFixture(t)
+	started := reader.run
+	reader.run.StopRequested = true
+	if nodecommand.CodeOf(store.ConfirmStart(context.Background(), command, &started)) != nodecommand.CodeExecutionUnknown {
+		t.Fatal("stopped running attempt authorized physical execution")
+	}
+}
+
 func chainStoreFixture(t *testing.T, direct ...bool) (*ChainExecutionStore, *resultReaderFixture, *reservationRPC, nodecommand.NodeCommand, runtimeadapter.ExecutionRecord, []byte) {
 	t.Helper()
 	id := func(n string) string { return "0x" + strings.Repeat(n, 64) }

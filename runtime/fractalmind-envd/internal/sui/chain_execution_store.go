@@ -97,11 +97,23 @@ func commandReservation(command nodecommand.NodeCommand) (nodecommand.Reservatio
 	return nodecommand.Reservation{CapabilityID: command.Capability.ID, Signer: command.Signer, CommandID: command.CommandID, Nonce: command.Nonce, IdempotencyKey: command.IdempotencyKey, Fingerprint: hex.EncodeToString(hash[:]), Budget: command.Budget, Target: command.Target, Action: command.Action, CommandScope: command.Scope, IssuedAtMS: command.IssuedAtMS, ExpiresAtMS: command.ExpiresAtMS}, nil
 }
 func (s *ChainExecutionStore) lookup(ctx context.Context, command nodecommand.NodeCommand) (nodecommand.ChainExecution, nodecommand.Reservation, error) {
+	return s.lookupCheckpoint(ctx, command, nil)
+}
+
+func (s *ChainExecutionStore) lookupCheckpoint(ctx context.Context, command nodecommand.NodeCommand, known *nodecommand.ChainExecution) (nodecommand.ChainExecution, nodecommand.Reservation, error) {
 	reservation, err := commandReservation(command)
 	if err != nil {
 		return nodecommand.ChainExecution{}, reservation, err
 	}
-	run, found, err := s.reader.LookupExecution(ctx, reservation.CapabilityID, reservation.Fingerprint)
+	var run nodecommand.ChainExecution
+	var found bool
+	if reader, ok := s.reader.(interface {
+		RecheckExecution(context.Context, nodecommand.ChainExecution) (nodecommand.ChainExecution, bool, error)
+	}); ok && known != nil {
+		run, found, err = reader.RecheckExecution(ctx, *known)
+	} else {
+		run, found, err = s.reader.LookupExecution(ctx, reservation.CapabilityID, reservation.Fingerprint)
+	}
 	if err != nil {
 		return run, reservation, err
 	}
@@ -114,7 +126,15 @@ func unknownResult(run nodecommand.ChainExecution, digest string, cause error) e
 	return &nodecommand.RejectionError{Code: nodecommand.CodeExecutionUnknown, Message: "execution result is not confirmed; query the checkpoint before any retry", Cause: cause, ExecutionID: run.ID, TransactionDigest: digest}
 }
 func (s *ChainExecutionStore) resultKey(ctx context.Context, run nodecommand.ChainExecution, version uint64) ([]byte, error) {
-	grant, err := s.reader.ReadResultKey(ctx, run.CapabilityID, run.Fingerprint, version)
+	var grant nodecommand.ChainResultKeyGrant
+	var err error
+	if reader, ok := s.reader.(interface {
+		ReadResultKeyForExecution(context.Context, nodecommand.ChainExecution, uint64) (nodecommand.ChainResultKeyGrant, error)
+	}); ok {
+		grant, err = reader.ReadResultKeyForExecution(ctx, run, version)
+	} else {
+		grant, err = s.reader.ReadResultKey(ctx, run.CapabilityID, run.Fingerprint, version)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -132,11 +152,26 @@ func (s *ChainExecutionStore) resultKey(ctx context.Context, run nodecommand.Cha
 	defer clear(secret)
 	return productcrypto.UnwrapResultKey(grant.WrappedKey, secret, context)
 }
+
+func (s *ChainExecutionStore) readResult(ctx context.Context, run nodecommand.ChainExecution) (nodecommand.ChainExecutionResult, bool, error) {
+	if reader, ok := s.reader.(interface {
+		ReadExecutionResultForCheckpoint(context.Context, nodecommand.ChainExecution) (nodecommand.ChainExecutionResult, bool, error)
+	}); ok {
+		return reader.ReadExecutionResultForCheckpoint(ctx, run)
+	}
+	return s.reader.ReadExecutionResult(ctx, run.CapabilityID, run.Fingerprint)
+}
 func (s *ChainExecutionStore) Preflight(ctx context.Context, command nodecommand.NodeCommand) error {
 	run, _, err := s.lookup(ctx, command)
 	if err != nil {
 		return err
 	}
+	return s.preflightRun(ctx, command, run)
+}
+
+// The caller has just read and matched this exact checkpoint. Repeating the
+// index/Run read adds remote latency without an additional authority check.
+func (s *ChainExecutionStore) preflightRun(ctx context.Context, command nodecommand.NodeCommand, run nodecommand.ChainExecution) error {
 	task, err := nativeMeasurementTask(command)
 	if err != nil {
 		return err
@@ -157,33 +192,52 @@ func (s *ChainExecutionStore) Preflight(ctx context.Context, command nodecommand
 	if run.State == 5 && run.ResultRecordID == "" {
 		return nil
 	}
-	version, err := s.reader.CurrentRecordKeyVersion(ctx, run.Target.OrganizationID)
-	if run.ResultRecordID != "" {
-		result, found, readErr := s.reader.ReadExecutionResult(ctx, run.CapabilityID, run.Fingerprint)
-		if readErr != nil {
-			return readErr
-		}
-		if !found {
-			return unknownResult(run, "", fmt.Errorf("missing recorded result"))
-		}
-		version, err = result.KeyVersion, nil
-	}
-	if err != nil {
-		return err
-	}
-	key, err := s.resultKey(ctx, run, version)
-	if err != nil {
-		return unknownResult(run, "", fmt.Errorf("result key unavailable: %w", err))
-	}
-	clear(key)
+	// Coins and encrypted-result keys are independent prerequisites. Wait for
+	// both before reserving; key failure retains its original diagnostic priority.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	gas := make(chan error, 1)
 	if run.State == 0 || run.State == 1 {
-		if err := s.checkResultGas(ctx, run.State == 0, task != nil); err != nil {
-			code, message := nodecommand.CodeHostGasUnavailable, "Host SUI balance could not be verified; execution has not been authorized"
-			if errors.Is(err, errHostGasInsufficient) {
-				code, message = nodecommand.CodeHostGasInsufficient, "Host needs SUI for start and encrypted result publication before executing"
+		go func() { gas <- s.checkResultGas(ctx, run.State == 0, task != nil) }()
+	} else {
+		gas <- nil
+	}
+	keyErr := func() error {
+		version, err := s.reader.CurrentRecordKeyVersion(ctx, run.Target.OrganizationID)
+		if run.ResultRecordID != "" {
+			result, found, readErr := s.readResult(ctx, run)
+			if readErr != nil {
+				return readErr
 			}
-			return &nodecommand.RejectionError{Code: code, Message: message, Cause: err, ExecutionID: run.ID}
+			if !found {
+				return unknownResult(run, "", fmt.Errorf("missing recorded result"))
+			}
+			version, err = result.KeyVersion, nil
 		}
+		if err != nil {
+			return err
+		}
+		key, err := s.resultKey(ctx, run, version)
+		if err != nil {
+			return unknownResult(run, "", fmt.Errorf("result key unavailable: %w", err))
+		}
+		clear(key)
+		return nil
+	}()
+	if keyErr != nil {
+		cancel()
+	}
+	gasErr := <-gas
+	if keyErr != nil {
+		return keyErr
+	}
+	if gasErr != nil {
+		err := gasErr
+		code, message := nodecommand.CodeHostGasUnavailable, "Host SUI balance could not be verified; execution has not been authorized"
+		if errors.Is(err, errHostGasInsufficient) {
+			code, message = nodecommand.CodeHostGasInsufficient, "Host needs SUI for start and encrypted result publication before executing"
+		}
+		return &nodecommand.RejectionError{Code: code, Message: message, Cause: err, ExecutionID: run.ID}
 	}
 	return nil
 }
@@ -234,14 +288,14 @@ func (s *ChainExecutionStore) checkResultGas(ctx context.Context, queued, observ
 }
 
 func (s *ChainExecutionStore) ConfirmStart(ctx context.Context, command nodecommand.NodeCommand, started *nodecommand.ChainExecution) error {
-	run, _, err := s.lookup(ctx, command)
+	run, _, err := s.lookupCheckpoint(ctx, command, started)
 	if err != nil {
 		return err
 	}
-	if started == nil || run.State != 1 || run.ID != started.ID || run.AttemptID == "" || run.AttemptID != started.AttemptID {
+	if started == nil || run.State != 1 || run.StopRequested || run.ID != started.ID || run.AttemptID == "" || run.AttemptID != started.AttemptID {
 		return unknownResult(run, "", fmt.Errorf("chain start ownership is not current"))
 	}
-	return s.Preflight(ctx, command)
+	return s.preflightRun(ctx, command, run)
 }
 
 func resultContext(run nodecommand.ChainExecution, version uint64) string {
@@ -273,7 +327,7 @@ func (s *ChainExecutionStore) LoadCommand(ctx context.Context, command nodecomma
 		record := runtimeadapter.ExecutionRecord{Version: "1", Response: runtimeadapter.Response{SchemaVersion: runtimeadapter.SchemaVersion, Adapter: runtimeadapter.AdapterName, CommandID: command.CommandID, Operation: runtimeadapter.Operation(command.Action), ObservedAt: time.UnixMilli(run.UpdatedAtMS).UTC().Format(time.RFC3339Nano), Error: &runtimeadapter.Error{Code: "cancelled", Message: "Command was cancelled before start."}, ExecutionID: run.ID, ExecutionState: "cancelled"}, Event: nodecommand.NodeEvent{Version: nodecommand.ProtocolVersion, CommandID: command.CommandID, Target: command.Target, Type: "runtime_cancelled", ResultCode: "runtime_cancelled", OccurredAtMS: run.UpdatedAtMS}, ErrorCode: "cancelled", ErrorMessage: "Command was cancelled before start."}
 		return record, true, nil
 	}
-	result, found, err := s.reader.ReadExecutionResult(ctx, run.CapabilityID, run.Fingerprint)
+	result, found, err := s.readResult(ctx, run)
 	if err != nil || !found {
 		return runtimeadapter.ExecutionRecord{}, false, err
 	}
@@ -352,7 +406,7 @@ func settlement(command nodecommand.NodeCommand, record runtimeadapter.Execution
 	return state, uint64(spend.Amount), nil
 }
 func (s *ChainExecutionStore) SaveCommand(ctx context.Context, command nodecommand.NodeCommand, started *nodecommand.ChainExecution, record runtimeadapter.ExecutionRecord) (runtimeadapter.ExecutionRecord, error) {
-	run, _, err := s.lookup(ctx, command)
+	run, _, err := s.lookupCheckpoint(ctx, command, started)
 	if err != nil {
 		return record, err
 	}
@@ -457,7 +511,7 @@ func (s *ChainExecutionStore) SaveCommand(ctx context.Context, command nodecomma
 	queryCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	for !confirmed {
-		result, found, readErr := s.reader.ReadExecutionResult(queryCtx, run.CapabilityID, run.Fingerprint)
+		result, found, readErr := s.readResult(queryCtx, run)
 		if readErr == nil && found {
 			if result.Execution.State != state || result.Execution.AttemptID != run.AttemptID || result.Execution.ResultHash != hex.EncodeToString(hash[:]) {
 				return record, unknownResult(run, digest, fmt.Errorf("another terminal result owns the checkpoint"))

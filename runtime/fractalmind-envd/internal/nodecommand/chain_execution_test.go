@@ -3,9 +3,59 @@ package nodecommand
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"strings"
 	"testing"
 )
+
+func TestOriginalCheckpointRecheckReadsStopAndRejectsSplicedOrUnprovenSources(t *testing.T) {
+	for _, mode := range []string{"stopped", "serialized", "wrong ID", "wrong fingerprint", "wrong membership", "wrong Host", "budget missing", "changed during read"} {
+		t.Run(mode, func(t *testing.T) {
+			f, fingerprint, claim := executionFixture(t, 1, moveBoundBudgetClaim{Reserved: 20})
+			f.resolver.reader = &authorityBatchFixture{chainFixture: f}
+			known, found, err := f.resolver.LookupExecution(context.Background(), f.cap.ID.String(), fingerprint)
+			if err != nil || !found {
+				t.Fatal(err)
+			}
+			var current moveExecution
+			if err := decodeChainBCS(f.objects[known.ID].Content, &current); err != nil {
+				t.Fatal(err)
+			}
+			current.StopRequested = true
+			current.Cursor++
+			f.saveObject(t, current.ID, "node_execution::CommandExecution", current)
+			switch mode {
+			case "serialized":
+				data, _ := json.Marshal(known)
+				known = ChainExecution{}
+				if err := json.Unmarshal(data, &known); err != nil {
+					t.Fatal(err)
+				}
+			case "wrong ID":
+				known.ID = addressNumber(99).String()
+			case "wrong fingerprint":
+				known.Fingerprint = strings.Repeat("cd", 32)
+			case "wrong membership":
+				known.MembershipID = addressNumber(99).String()
+			case "wrong Host":
+				known.HostAddress = addressNumber(99).String()
+			case "budget missing":
+				delete(f.objects, claim)
+			case "changed during read":
+				f.reads = make(map[string]int)
+				f.changeOnRead = known.ID
+			}
+			got, found, err := f.resolver.RecheckExecution(context.Background(), known)
+			if mode == "stopped" {
+				if err != nil || !found || !got.StopRequested || got.Cursor != current.Cursor {
+					t.Fatalf("stale checkpoint reused: %+v %v", got, err)
+				}
+			} else if err == nil || found {
+				t.Fatalf("unproven or changed checkpoint admitted: %+v %v", got, err)
+			}
+		})
+	}
+}
 
 func executionFixture(t *testing.T, state uint8, claim moveBoundBudgetClaim) (*chainFixture, string, string) {
 	t.Helper()
