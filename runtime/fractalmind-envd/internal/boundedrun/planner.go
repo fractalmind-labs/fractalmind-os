@@ -92,7 +92,11 @@ func RunPlannedFileGoals(ctx context.Context, tools *Tools, task FileTask, plann
 		d, err := planner.Next(ctx, input)
 		if err != nil {
 			if ctx.Err() != nil {
-				return finish(reason(ctx.Err()), "")
+				return finish(reason(context.Cause(ctx)), "")
+			}
+			var watchError *ExecutionWatchError
+			if errors.As(err, &watchError) {
+				return finish(reason(watchError.Cause), "")
 			}
 			return finish("model_unavailable", "")
 		}

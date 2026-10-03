@@ -184,7 +184,7 @@ func (a *boundedFileAgent) runAuthorized(ctx context.Context, request Request, c
 	if a.model != nil {
 		// Choose exactly one execution strategy; never run the deterministic task
 		// before asking the model, or retry it after a failed model response.
-		result = boundedrun.RunPlannedFileGoals(ctx, tools, task, a.model, a.model.MaxRequests(), check)
+		result = boundedrun.RunPlannedFileGoals(ctx, tools, task, guard.Planner(a.model), a.model.MaxRequests(), check)
 	} else {
 		result = boundedrun.RunFileGoals(ctx, tools, task)
 	}

@@ -8,6 +8,13 @@
 
 以下按增量从新到旧记录；每项证明范围和当时尚未完成的事项独立保留，整体验收仍以 #40 为准。
 
+### RUNNING Run 等待模型期间的停止确认增量
+
+- 生产 Host 在待模型请求期间只读监听精确原 Run；停止请求取消提供方连接，检查点不可用不能冒充停止确认。逐工具权限检查、原 Executor 和账本保持；已发生副作用及实际支出保留，只有 Host 原结算／加密结果确认取消。
+- [实际 OS＋localnet＋生产 envd](evidence/v020-running-stop-localnet.json)：**14 项检查、25 笔 App 确认交易**。第二 KR 实际读取／写入后停在合成提供方请求中，正式暂停和停止后 Host **810 毫秒**内确认取消，支出 **2**／无 KR 达成测量，全局 **5 已用／0 预留**。新审阅与独立审批后新 Run 只读原文件，没有重复写入；两 KR 独立验证及最终 Human 验收通过，全局 **6／0**。原请求没有重放，Host 撤销与测试凭据清理通过。
+- [回归与前序失败](evidence/v020-running-stop-unit.json)：Go 六包 race、严格脚本类型／Host 编译通过；保留测试 HTTP 请求体未消费导致的清理阻塞和沙箱监听拒绝。**仍未完成**：任意工具中断／副作用回滚、实际语言模型、安装后 UI、云 Host、手机、完整恢复与旧包升级。详见[实现与证明范围](v020-running-stop.md)，完整 #40 保持未完成。
+- 状态补充：2026-10-02 21:06 PDT，Computer Use 已成功读取 `FractalMind · isolated local acceptance` 原生窗口（`tauri://localhost`）。此前锁屏阻塞已解除；这次只读观察不能计作完整原生交互验收。
+
 ### 当前代码的 macOS 原生验收包
 
 - [原生产前端打包＋Tauri 构建记录](evidence/v020-app-native-bundle.json)：`e9db070` 构建 macOS arm64 debug `.app`（约 35 MiB），Tauri origin guard **1/1**。开发包初始 linker 签名未封装资源，生成产物另行本地 ad hoc 签名后严格验证通过；这是隔离验收包，没有 Apple 开发者签名或公证，不是五平台生产发布。

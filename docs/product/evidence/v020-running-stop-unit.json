@@ -1,0 +1,58 @@
+{
+  "recordedAt": "2026-10-03T04:08:04.530984+00:00",
+  "baseline": "4ddd295",
+  "scope": "Original Run stop during a pending provider call; no new execution engine",
+  "checks": [
+    {
+      "suite": "Go six-package race R4",
+      "passed": true,
+      "path": "/tmp/fm-running-stop-go-race-r4.log",
+      "sha256": "3a4aaf57a67576e2f0326d8fa22d720237e8cf20be5479ca8c632c5c21e37513"
+    },
+    {
+      "suite": "Native harness strict TypeScript",
+      "passed": true,
+      "path": "/tmp/fm-running-stop-script-types-r1.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "suite": "Native production Host test-binary compile",
+      "passed": true,
+      "path": "/tmp/fm-running-stop-go-binary-r1.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "priorRuns": [
+    {
+      "path": "/tmp/fm-running-stop-go-race-r2.log",
+      "sha256": "ef241f328c09f7aed7a7180462076accfe4dc3895ae8680340c6562cf054c69f",
+      "passed": false,
+      "reason": "Original test server did not consume the HTTP request body; client cancellation was not observed and cleanup stalled. Only original runtimeadapter test child was terminated with SIGQUIT to preserve its stack. Test server now consumes the request as a real provider does."
+    },
+    {
+      "path": "/tmp/fm-running-stop-go-race-r3.log",
+      "sha256": "1137955e8fae40938a5c37b27fc09a0f9c77a7d8877d5b7f808cc9fca59a5559",
+      "passed": false,
+      "reason": "Restricted sandbox denied local HTTP listeners and test workspace inspection. This is not a product runtime result. The same suite was rerun with required permissions in R4."
+    }
+  ],
+  "sourceHashes": {
+    "runtime/fractalmind-envd/internal/boundedrun/stop_watch.go": "f07eedc77daa9157f3ac89846666bdfd1d59ba35088dd385e84ebe4fbe6dbd61",
+    "runtime/fractalmind-envd/internal/boundedrun/planner.go": "6f9114460edc2727cbdb63a36571bceac7dd70ed724f33554a916577186ba8c1",
+    "runtime/fractalmind-envd/internal/runtimeadapter/bounded_files.go": "6a47ef62a7d78e557dd0a0eac4a406ba0e451ca7adf0c8cfec9e21e9e521236e",
+    "runtime/fractalmind-envd/internal/runtimeadapter/direct.go": "f46dd63a2bfb66f04b1131ad37be00961a76befedcfd840d8f066bfe3678f673",
+    "apps/fractalmind-app/scripts/native-app-execution-localnet.ts": "53a8753ec85c1f31b98a2b5b4e4323e4d5d96f3a61d951d2a888ba8e488275a4",
+    "runtime/fractalmind-envd/internal/boundedrun/stop_watch_test.go": "84522d2a936b714a7b127e0f7a818d405a6808740c020d0af8c65a827fbf4b69",
+    "runtime/fractalmind-envd/internal/runtimeadapter/model_stop_test.go": "92b85a73f40da78e87b5f742b537dfffdc25e3a1f7f419bc2683a06245467bd8"
+  },
+  "limits": {
+    "appAndSDKRegressionNotRepeated": true,
+    "priorAppRegression": 218,
+    "priorSDKRegression": 158,
+    "unchangedMoveAndRustNotRepeated": true,
+    "installedUIVerified": false,
+    "actualModelProviderVerified": false,
+    "cloudHostVerified": false,
+    "mobileVerified": false
+  }
+}

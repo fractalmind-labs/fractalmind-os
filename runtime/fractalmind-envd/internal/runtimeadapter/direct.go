@@ -82,7 +82,14 @@ func (a *boundedFileAgent) runDirect(ctx context.Context, request Request, comma
 		// slot are acquired; only the exact signed message is sent to the model.
 		modelCtx, cancel := context.WithDeadline(ctx, time.UnixMilli(command.ExpiresAtMS))
 		defer cancel()
-		answer, modelErr := a.model.Answer(modelCtx, p.Message)
+		watchedCtx, finishWatch := guard.Watch(modelCtx)
+		answer, modelErr := a.model.Answer(watchedCtx, p.Message)
+		if cause := finishWatch(); cause != nil {
+			if errors.Is(cause, boundedrun.ErrStopped) || errors.Is(cause, context.Canceled) || errors.Is(cause, context.DeadlineExceeded) {
+				return reject("cancelled", fmt.Errorf("original question was stopped or expired"))
+			}
+			return reject("operation_unconfirmed", cause)
+		}
 		if err := guard.Check(modelCtx); err != nil {
 			if errors.Is(err, boundedrun.ErrStopped) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				return reject("cancelled", fmt.Errorf("original question was stopped or expired"))

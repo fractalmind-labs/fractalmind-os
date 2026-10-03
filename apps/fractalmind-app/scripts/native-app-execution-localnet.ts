@@ -64,7 +64,9 @@ const humanSequence = process.argv.slice(4).includes("--human-sequence");
 const directPermission = process.argv.slice(4).includes("--direct-permission");
 const directDispatch = process.argv.slice(4).includes("--direct-dispatch");
 const directApp = process.argv.slice(4).includes("--direct-app");
-const intervention = process.argv.slice(4).includes("--intervention");
+const runningStop = process.argv.slice(4).includes("--running-stop");
+const intervention =
+  process.argv.slice(4).includes("--intervention") || runningStop;
 const autonomy = process.argv.slice(4).includes("--autonomy");
 const projection = process.argv.slice(4).includes("--projection");
 const modelFixture = process.argv.slice(4).includes("--model-fixture");
@@ -81,8 +83,18 @@ assert.ok(
   "Chain delivery has its own original-command Human sequence",
 );
 assert.ok(
-  !modelFixture || directApp,
-  "Model protocol fixture requires the formal direct App sequence",
+  !modelFixture || directApp || runningStop,
+  "Model protocol fixture requires the formal direct App or running-stop sequence",
+);
+assert.ok(
+  !runningStop ||
+    (humanSequence &&
+      modelFixture &&
+      !directPermission &&
+      !chainQueue &&
+      !autonomy &&
+      !projection),
+  "Running stop has a separate original Human intervention sequence and synthetic provider",
 );
 assert.ok(
   !projection ||
@@ -121,6 +133,7 @@ assert.ok(
         "--model-fixture",
         "--chain-queue",
         "--scheduled-queue",
+        "--running-stop",
       ].includes(a),
     ),
   "Unknown harness option",
@@ -150,6 +163,9 @@ let modelAPIBase = "";
 let modelRequests = 0;
 let modelPlanningRequests = 0;
 let modelQuestionRequests = 0;
+let stoppedModelWaitSeen = false,
+  stoppedModelConnectionClosed = false;
+let heldModelResponse: import("node:http").ServerResponse | undefined;
 let created = false,
   cleanupConfirmed = false,
   state: Record<string, unknown> = { phase: "before_native_creation" };
@@ -215,6 +231,9 @@ async function save(complete = false) {
           ...(modelFixture
             ? { modelRequests, modelPlanningRequests, modelQuestionRequests }
             : {}),
+          ...(runningStop
+            ? { stoppedModelWaitSeen, stoppedModelConnectionClosed }
+            : {}),
         },
         limits: {
           actualOSVault: true,
@@ -244,6 +263,7 @@ async function save(complete = false) {
           scheduledPreauthorizationVerified:
             scheduledQueue && state.scheduledHostContinuationVerified === true,
           installedScheduledUIVerified: false,
+          runningStopConfirmed: state.runningStopConfirmed === true,
           modelProviderKind: modelFixture
             ? "synthetic loopback Messages API fixture; not an actual language model"
             : "not configured",
@@ -381,6 +401,21 @@ try {
           const latest = input.host_observations
             .filter((o) => o.result.path === goal.path)
             .at(-1);
+          if (
+            runningStop &&
+            !stoppedModelWaitSeen &&
+            goal.path === "docs/SECOND.md" &&
+            latest?.result.action === "file.write"
+          ) {
+            // Hold the third request after an actual read and write. Only the
+            // production Host's cancellation closes it; there is no release
+            // response or injected stop state.
+            stoppedModelWaitSeen = true;
+            heldModelResponse = res;
+            await new Promise<void>((resolve) => res.once("close", resolve));
+            stoppedModelConnectionClosed = true;
+            return;
+          }
           const call =
             latest?.result.action === "file.read"
               ? {
@@ -761,7 +796,7 @@ try {
     deadlineMs: String(Date.now() + 3600000),
     allowedPaths: ["docs"],
     prohibitedActions: ["external network", "no shell"],
-    maxCalls: humanSequence ? "6" : "3",
+    maxCalls: runningStop ? "8" : humanSequence ? "6" : "3",
     krs: Array.from({ length: humanSequence ? 2 : 1 }, (_, index) => ({
       title: `Create exact documentation file ${index + 1}`,
       unit: "files",
@@ -1591,14 +1626,38 @@ try {
         journal,
       );
       const originalQueued = nextQueued.executionId!;
+      let pendingDelivery: Promise<unknown> | undefined;
+      const interventionDeliveries =
+        firstCommandDeliveries + (runningStop ? 1 : 0);
+      if (runningStop) {
+        pendingDelivery = runner
+          .step({ ...nextInput, releaseQueued: true })
+          .then(
+            (result) => ({ result }),
+            (error) => ({ error: String(error) }),
+          );
+        const started = await readVisible(
+          () => sdk.nodeExecution.getExecution(originalQueued),
+          (run) => run.state === 1 && stoppedModelWaitSeen,
+        );
+        assert.equal(started.stop_requested, false);
+        assert.equal(deliveries, interventionDeliveries);
+        state = {
+          ...state,
+          phase: "original_run_waiting_for_model_after_write",
+          runningOriginalRun: started.id,
+        };
+        await save();
+      }
       const beforePause = await interventionController.read();
       assert.equal(beforePause.budget!.reserved, 3n);
       const pauseQuote = await interventionController.prepare(
         { kind: "pause", expectedVersion: beforePause.okr.version },
         {
           reviewed: true,
-          reason:
-            "Explicit scripted pause before delivering the second KR; retain the first verified result.",
+          reason: runningStop
+            ? "Explicit scripted pause while the second KR is running after a real file write; retain the first verified result and wait for the original Host stop acknowledgement."
+            : "Explicit scripted pause before delivering the second KR; retain the first verified result.",
         },
       );
       assert.ok(!("status" in pauseQuote));
@@ -1610,29 +1669,94 @@ try {
       assert.equal(paused.next_kr, "1");
       assert.equal((await sdk.okr.getBudget(okrId)).reserved, 3n);
       assert.equal(
-        (await runner.step({ ...nextInput, releaseQueued: true })).status,
+        (
+          await (
+            runningStop
+              ? new NativeOkrRunner(
+                  chain,
+                  device,
+                  auth.grantId,
+                  organizationId,
+                  invoke,
+                  journal,
+                  async () => false,
+                  transport,
+                )
+              : runner
+          ).step({
+            ...nextInput,
+            ...(runningStop ? {} : { releaseQueued: true }),
+          })
+        ).status,
         "paused",
       );
-      assert.equal(deliveries, firstCommandDeliveries);
+      assert.equal(deliveries, interventionDeliveries);
       await assert.rejects(nextControl.use(nextCapability));
       const stopQuote = await interventionController.prepare(
         { kind: "stop", runId: originalQueued },
         { reviewed: true },
       );
       assert.ok(!("status" in stopQuote));
-      await preparedQuote("native stop of original queued OKR Run", stopQuote);
+      const stopLabel = runningStop
+        ? "native stop request for original running OKR Run"
+        : "native stop of original queued OKR Run";
+      await preparedQuote(stopLabel, stopQuote);
       const stopOutcome = await interventionController.submit(stopQuote);
-      await record("native stop of original queued OKR Run", stopOutcome);
-      assert.equal(
-        (await sdk.nodeExecution.getExecution(originalQueued)).state,
-        5,
+      await record(stopLabel, stopOutcome);
+      const stopConfirmedAt = Date.now();
+      const stopRequested =
+        await sdk.nodeExecution.getExecution(originalQueued);
+      assert.equal(stopRequested.stop_requested, true);
+      const cancelled = await readVisible(
+        () => sdk.nodeExecution.getExecution(originalQueued),
+        (r) => r.state === 5 && (!runningStop || !!r.result_record),
       );
+      assert.equal(cancelled.state, 5);
+      if (pendingDelivery) await pendingDelivery;
       const settledBudget = await sdk.okr.getBudget(okrId);
-      assert.equal(settledBudget.spent, 3n);
+      assert.equal(settledBudget.spent, runningStop ? 5n : 3n);
       assert.equal(settledBudget.reserved, 0n);
+      if (runningStop) {
+        const result = await reader.read(cancelled.id, managedAgentId);
+        const error = result.response?.error as { code: string };
+        assert.equal(error?.code, "cancelled");
+        const claim = await sdk.okr.getReservationBudget(okrId, cancelled.id);
+        assert.equal(claim.spent, "2");
+        assert.equal(claim.settled, true);
+        assert.equal(stoppedModelConnectionClosed, true);
+        assert.equal(modelPlanningRequests, 6);
+        assert.equal((await sdk.okr.getOkr(okrId)).metrics[1].current, null);
+        const latencyMs = Date.now() - stopConfirmedAt;
+        assert.ok(
+          latencyMs < 20000,
+          "Host stop confirmation must precede the held provider timeout",
+        );
+        state = {
+          ...state,
+          runningStopConfirmed: true,
+          modelProtocolFixtureVerified: true,
+          stoppingRead: {
+            state: stopRequested.state,
+            stopRequested: stopRequested.stop_requested,
+            resultPresent: !!stopRequested.result_record,
+          },
+          cancelledResultRecord: result.recordId,
+          cancelledToolSpend: claim.spent,
+          budgetAfterRunningStop: {
+            spent: String(settledBudget.spent),
+            reserved: String(settledBudget.reserved),
+          },
+          stopConfirmationLatencyMs: latencyMs,
+        };
+        checks.push(
+          "after an actual read and write, a Human pause and stop of the original RUNNING KR interrupts the pending synthetic provider; production Host confirms CANCELLED with an immutable encrypted receipt and 2 actual tool calls, preserves no KR measurement, refunds the remaining reservation and never replays the original Run",
+        );
+      }
       state = {
         ...state,
-        phase: "original_queued_okr_cancelled_after_pause",
+        phase: runningStop
+          ? "original_running_okr_cancelled_after_pause"
+          : "original_queued_okr_cancelled_after_pause",
         pausedAgreementVersion: paused.agreement_version,
         cancelledOriginalRun: originalQueued,
         pauseDigest: pauseOutcome.digest,
@@ -1733,7 +1857,7 @@ try {
       assert.equal(resumed.metrics[0].verified, true);
       assert.equal(
         deliveries,
-        firstCommandDeliveries,
+        interventionDeliveries,
         "Renewed agreement does not dispatch",
       );
       const description = await runner.describe(okrId);
@@ -1772,9 +1896,11 @@ try {
         "native renewed exact second KR ticket and Run",
         runner.lastSubmission!,
       );
-      assert.equal(deliveries, firstCommandDeliveries);
+      assert.equal(deliveries, interventionDeliveries);
       checks.push(
-        "formal native intervention pauses a queued second KR without clearing its reservation, blocks old continuation, settles only the original queued Run and renews through fresh real Host review and separate Human approval without implicit dispatch",
+        runningStop
+          ? "after confirmed stop, fresh real Host review and a separate Human approval renew the original OKR without clearing already used budget or implicitly dispatching the new Run"
+          : "formal native intervention pauses a queued second KR without clearing its reservation, blocks old continuation, settles only the original queued Run and renews through fresh real Host review and separate Human approval without implicit dispatch",
       );
       state = {
         ...state,
@@ -1797,7 +1923,10 @@ try {
       (r) => r.metrics[1].run_id === second.id && r.metrics[1].current === "1",
     );
     krRuns.push(second.id);
-    assert.equal(deliveries, firstCommandDeliveries + (scheduledQueue ? 0 : 1));
+    assert.equal(
+      deliveries,
+      firstCommandDeliveries + (runningStop ? 1 : 0) + (scheduledQueue ? 0 : 1),
+    );
     assert.equal(
       feeConfirmations,
       scheduledQueue ? 4 : intervention || chainQueue ? 3 : 2,
@@ -1954,7 +2083,10 @@ try {
     );
     assert.equal(total.spent, 6n);
     assert.equal(total.reserved, 0n);
-    assert.equal(deliveries, firstCommandDeliveries + (scheduledQueue ? 0 : 1));
+    assert.equal(
+      deliveries,
+      firstCommandDeliveries + (runningStop ? 1 : 0) + (scheduledQueue ? 0 : 1),
+    );
     assert.equal(
       (await sdk.okr.listExecutions(okrId)).executions.length,
       intervention ? 3 : 2,
@@ -3354,6 +3486,9 @@ try {
   await save();
   throw error;
 } finally {
+  // Tear down only the synthetic held socket on a failed test; it is not a
+  // production stop acknowledgement or a replay of the original request.
+  heldModelResponse?.destroy();
   if (modelServer)
     await new Promise<void>((resolve, reject) =>
       modelServer!.close((err) => (err ? reject(err) : resolve())),
