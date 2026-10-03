@@ -1,0 +1,79 @@
+{
+  "recordedAt": "2026-10-03T03:43:49.361316+00:00",
+  "sourceCommit": "e9db070",
+  "artifactKind": "macOS arm64 debug bundle with bundled frontend, for isolated acceptance only",
+  "buildCommand": "tauri build --debug --bundles app --config {\"bundle\": {\"active\": true}}",
+  "buildExitCode": 0,
+  "bundlePath": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/bundle/macos/FractalMind.app",
+  "bundleInfo": {
+    "CFBundleIdentifier": "org.fractalmind.desktop",
+    "CFBundleExecutable": "fractalmind-app",
+    "CFBundleShortVersionString": "0.2.0",
+    "CFBundleVersion": "0.2.0"
+  },
+  "executable": {
+    "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/bundle/macos/FractalMind.app/Contents/MacOS/fractalmind-app",
+    "bytes": 36775664,
+    "sha256": "8f2235c0e6989faaa52c722bf76d4e63b792ac3a73e9b1d99c962dbc27067c05"
+  },
+  "logs": [
+    {
+      "path": "/tmp/fm-native-app-e9db070-bundle.log",
+      "bytes": 5770,
+      "sha256": "d467f2788d3089916bc1c5c64c408048b0423338993836373fe37ddcf818383b"
+    },
+    {
+      "path": "/tmp/fm-native-app-e9db070-codesign-verify.log",
+      "bytes": 141,
+      "sha256": "3d7d1a8cc421ca6ad7f67925e35880a9358bbeac39532f6fe5052ea8c2512411"
+    },
+    {
+      "path": "/tmp/fm-native-app-e9db070-codesign-display.log",
+      "bytes": 468,
+      "sha256": "39fba49ea830f903fbfe168e323da17f0f691e7ae3e65f359bc8509737389764"
+    },
+    {
+      "path": "/tmp/fm-native-app-e9db070-local-sign.log",
+      "bytes": 103,
+      "sha256": "bc247834a174e56d46c623901d7e5efd064847eb614770ef8851898e1e0222d4"
+    },
+    {
+      "path": "/tmp/fm-native-app-e9db070-codesign-verify-after.log",
+      "bytes": 199,
+      "sha256": "57d8964056c4764d4fe63d258956116fa41863df2e6efc86ee9966862224e52d"
+    },
+    {
+      "path": "/tmp/fm-native-app-e9db070-origin-test.log",
+      "bytes": 993,
+      "sha256": "278d0c6809e6b3d007a7975f4bcadfa566fd9e1a025968826e4878d0c9c2282b"
+    }
+  ],
+  "localSignature": {
+    "initialVerify": "failed: debug linker ad hoc signature did not seal bundle resources",
+    "repair": "codesign --force --deep --sign - <generated bundle>",
+    "repairedStrictVerifyExitCode": 0,
+    "appleDeveloperSignature": false,
+    "notarized": false
+  },
+  "originGuard": {
+    "passed": 1,
+    "failed": 0,
+    "command": "cargo test --manifest-path src-tauri/Cargo.toml --all-features"
+  },
+  "uiAttempt": {
+    "tool": "computer-use via node_repl @oai/sky",
+    "target": "org.fractalmind.desktop",
+    "result": "The Mac is locked and automatic unlock could not unlock it.",
+    "manualUnlockRequested": true,
+    "nativeUIVerified": false,
+    "newBundleLaunched": false
+  },
+  "limits": {
+    "releaseBuild": false,
+    "fivePlatformReleaseVerified": false,
+    "nativeIPCPositiveJourneyVerified": false,
+    "installedIndexedDBVerified": false,
+    "actualAppWindowClosureVerified": false,
+    "macOSUnlocked": false
+  }
+}

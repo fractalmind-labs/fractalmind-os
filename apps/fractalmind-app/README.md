@@ -77,6 +77,21 @@ and prove its possession against a current chain grant. New devices still need
 an existing trusted device's on-chain authorization; a public profile cannot
 authorize one. The Memory & results page now connects current encrypted body reads to fresh device/organization authority checks and native key unwrapping. Management controls, history selection and content writes remain pending.
 
+For a macOS bundle used in isolated native UI acceptance, run:
+
+```sh
+./node_modules/.bin/tauri build --debug --bundles app --config '{"bundle":{"active":true}}'
+codesign --force --deep --sign - src-tauri/target/debug/bundle/macos/FractalMind.app
+codesign --verify --deep --strict src-tauri/target/debug/bundle/macos/FractalMind.app
+FM_NATIVE_ACCEPTANCE=isolated ./src-tauri/target/debug/bundle/macos/FractalMind.app/Contents/MacOS/fractalmind-app
+```
+
+The debug-only acceptance flag selects the `org.fractalmind.app.device.test`
+vault and a separate persistent WebView store; test profiles must start with
+`test-`. Local ad hoc signing seals the generated bundle for testing and does
+not provide an Apple developer signature or notarization. Building and checking
+the bundle cannot establish that its native UI journeys pass.
+
 The native vault keeps independent signing/encryption private keys in the OS
 credential store, never in the WebView. macOS real-Keychain/signature/localnet
 evidence, transport limits and test instructions are documented in
