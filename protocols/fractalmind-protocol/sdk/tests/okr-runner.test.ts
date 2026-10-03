@@ -326,3 +326,23 @@ test('preparing a new ticket can defer all delivery until explicit release of th
   assert.equal(f.stats().calls, 1); assert.equal(f.stats().prepares, 1); assert.equal(f.stats().deliveries, 1);
   assert.equal(f.run().command_id, commandId);
 });
+
+test('explicit release is pinned to the reviewed Run, agreement and KR cursor', async () => {
+  const f = await fixture(), runner = f.runner();
+  const missing = await runner.step({...f.input, createIfMissing: true, expectedExecutionId: id('0x99')});
+  assert.equal(missing.reason, 'reviewed_execution_not_found');
+  assert.equal(f.stats().prepares, 0); assert.equal(f.stats().calls, 0);
+  const prepared = await runner.step({...f.input, createIfMissing: true, prepareOnly: true});
+  for (const changed of [
+    {expectedExecutionId: id('0x99')},
+    {expectedAgreementVersion: '2'},
+    {expectedKrIndex: '1'},
+  ]) {
+    const refused = await runner.step({...f.input, releaseQueued: true, ...changed});
+    assert.equal(refused.status, 'paused');
+    assert.equal(f.stats().deliveries, 0);
+  }
+  assert.equal((await runner.step({...f.input, releaseQueued: true, expectedExecutionId: prepared.executionId, expectedAgreementVersion: '1', expectedKrIndex: '0'})).status, 'running');
+  assert.equal(f.stats().deliveries, 1);
+  assert.equal(f.stats().calls, 1);
+});

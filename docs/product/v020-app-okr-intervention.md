@@ -36,4 +36,4 @@
 
 ## 仍需验收
 
-本联测的 Human 决定来自明确脚本审批；原生桥是实际 OS 密钥库的隔离子进程，Host 密钥和 journal 为内存，Coordinator 为同机 loopback。未证明运行中工具的停止确认、安装后 Tauri IPC／IndexedDB 全旅程、通用模型对话、持续自主循环、技能投影、真实云 TLS Host、手机核心旅程、清缓存重启恢复或旧包升级。浏览器没有注入原生桥，不以网页保护证明原生正向旅程。
+本联测的 Human 决定来自明确脚本审批；原生桥是实际 OS 密钥库的隔离子进程，Host 密钥和 journal 为内存，Coordinator 为同机 loopback。已批准文件计划的持续执行随后由[自动推进增量](v020-app-okr-autonomy.md)接通；技能规划与无人值守 Host 循环仍待实现。未证明运行中工具的停止确认、安装后 Tauri IPC／IndexedDB 全旅程、通用模型对话、技能投影、真实云 TLS Host、手机核心旅程、清缓存重启恢复或旧包升级。浏览器没有注入原生桥，不以网页保护证明原生正向旅程。

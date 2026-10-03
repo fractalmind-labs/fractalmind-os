@@ -248,6 +248,21 @@ async function fixture() {
 }
 const code = (expected: string) => (error: unknown) =>
   error instanceof DeviceIdentityError && error.code === expected;
+test("session authorization is stable across product object versions and changes with grant or role authority", async () => {
+  const f = await fixture();
+  const initial = await f.verifier().verifyOrganization(f.orgId, "approve");
+  f.change();
+  f.org.name = "ordinary metadata update";
+  const written = await f.verifier().verifyOrganization(f.orgId, "approve");
+  assert.notEqual(initial.authorityPin, written.authorityPin);
+  assert.equal(initial.authorityContextPin, written.authorityContextPin);
+  f.role.version = "2";
+  const role = await f.verifier().verifyOrganization(f.orgId, "approve");
+  assert.notEqual(written.authorityContextPin, role.authorityContextPin);
+  f.grant.version = "2";
+  const grant = await f.verifier().verifyOrganization(f.orgId, "approve");
+  assert.notEqual(role.authorityContextPin, grant.authorityContextPin);
+});
 test("device login proves native key possession against a current independent grant", async () => {
   const f = await fixture();
   const result = await f.verifier().verify();

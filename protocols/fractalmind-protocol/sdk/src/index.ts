@@ -159,7 +159,7 @@ export type {
 
 export { executionBoundaryHash } from './execution-boundary.js';
 export { NativeFileOkrRunner, parseNativeFileOkrPlan, okrRunnerTicketName } from './okr-runner.js';
-export type { NativeFileOkrPlan, NativeFileKrPlan, OkrRunnerOptions, OkrRunnerCrypto, OkrRunnerRecord, OkrRunnerTicketContext, OkrRunnerSubmission, OkrRunnerSubmissionContext, OkrRunnerState } from './okr-runner.js';
+export type { NativeFileOkrPlan, NativeFileKrPlan, OkrRunnerOptions, OkrRunnerCrypto, OkrRunnerRecord, OkrRunnerTicketContext, OkrRunnerSubmission, OkrRunnerSubmissionContext, OkrRunnerState, OkrRunnerStepInput } from './okr-runner.js';
 export { SelfPayTransactionManager, MemoryTransactionJournal, TransactionPreflightError, gasCost } from './transaction-manager.js';
 export type { TransactionJournal, TransactionJournalEntry, SelfPayFeeQuote, SelfPayTransactionOutcome, SelfPayTransactionData, SelfPayTransactionManagerOptions } from './transaction-manager.js';
 export { IndexedDbTransactionJournal } from './browser-transaction-journal.js';

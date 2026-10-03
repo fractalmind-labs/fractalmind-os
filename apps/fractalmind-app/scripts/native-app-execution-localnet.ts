@@ -47,6 +47,7 @@ import { canonical } from "../src/handover-plan";
 import { DeviceIdentityVerifier } from "../src/device-identity";
 import { NativeDirectAgent, type DirectOperation } from "../src/direct-agent";
 import { OkrIntervention, specificationDraft } from "../src/okr-intervention";
+import { NativeOkrAutonomy } from "../src/okr-autonomy";
 assert.ok(
   process.argv[2] && process.argv[3],
   "Pass isolated deployment and a new output report",
@@ -58,6 +59,11 @@ const directPermission = process.argv.slice(4).includes("--direct-permission");
 const directDispatch = process.argv.slice(4).includes("--direct-dispatch");
 const directApp = process.argv.slice(4).includes("--direct-app");
 const intervention = process.argv.slice(4).includes("--intervention");
+const autonomy = process.argv.slice(4).includes("--autonomy");
+assert.ok(
+  !autonomy || (humanSequence && !intervention && !directPermission),
+  "Autonomy runs its own Human sequence after the baseline",
+);
 assert.ok(
   !intervention || humanSequence,
   "Intervention needs the independent Human sequence",
@@ -81,6 +87,7 @@ assert.ok(
         "--direct-dispatch",
         "--direct-app",
         "--intervention",
+        "--autonomy",
       ].includes(a),
     ),
   "Unknown harness option",
@@ -181,6 +188,8 @@ async function save(complete = false) {
             state.directAppControllerVerified === true,
           interventionControllerVerified:
             state.interventionControllerVerified === true,
+          autonomyControllerVerified: state.autonomyControllerVerified === true,
+          installedAutonomyUIVerified: false,
           installedHumanReviewVerified: false,
           reviewDecisions: humanSequence
             ? "explicit scripted test approvals, not installed Human UI"
@@ -372,7 +381,7 @@ try {
       FM_ENVD_CHAIN_CONNECTION: "1",
       FM_ENVD_NATIVE_DISCOVERY: "1",
       FM_ENVD_NATIVE_APP_EXECUTION: "1",
-      FM_ENVD_DIRECT_APP: directApp || intervention ? "1" : "0",
+      FM_ENVD_DIRECT_APP: directApp || intervention || autonomy ? "1" : "0",
       FM_ENVD_AGENT_DISCOVERY: "1",
       FM_ENVD_DEVICE_COMMAND: "1",
       FM_ENVD_HANDOVER_APPROVAL: "1",
@@ -1402,6 +1411,317 @@ try {
       transportCalls,
       commandDeliveries: deliveries,
       feeConfirmations,
+    };
+    await save();
+  }
+  if (autonomy) {
+    // A new goal, not a replay of the already accepted baseline. Same actual
+    // Host/instance; a fresh explicit review authorizes this distinct plan.
+    const autoJournal = new MemoryTransactionJournal();
+    const autoDraft = new OkrDraftCreation(
+      chain,
+      device,
+      auth.grantId,
+      organizationId,
+      randomUUID(),
+      invoke,
+      autoJournal,
+    );
+    const aq = await autoDraft.prepare({
+      objective: "Deliver two independently reviewed autonomous artifacts",
+      successCriteria:
+        "Both original file hashes are independently verified and a Human accepts the complete result",
+      priority: 0,
+      deadlineMs: String(Date.now() + 3600000),
+      allowedPaths: ["docs"],
+      prohibitedActions: ["external network", "no shell"],
+      maxCalls: "6",
+      krs: [0, 1].map((i) => ({
+        title: `Deliver autonomous artifact ${i + 1}`,
+        unit: "files",
+        precision: 0,
+        baseline: "0",
+        target: "1",
+        weight: "1",
+        maxAgeMinutes: "5",
+        verificationRule: "Inspect original file bytes and hash",
+      })),
+    });
+    assert.ok(!("status" in aq));
+    await preparedQuote("native autonomous goal draft", aq);
+    const ao = await autoDraft.submit(aq);
+    await record("native autonomous goal draft", ao);
+    const autoOkrId = createdObject(ao, "okr::Okr"),
+      autoAttempt = randomUUID();
+    state = { ...state, phase: "autonomy_goal_drafted", autoOkrId };
+    await save();
+    const autoSetup = new HandoverSetup(
+      chain,
+      device,
+      auth.grantId,
+      organizationId,
+      managedAgentId,
+      autoAttempt,
+      invoke,
+      autoJournal,
+    );
+    const oq = await autoSetup.prepare();
+    assert.ok(!("status" in oq));
+    await preparedQuote("native autonomous review observation authority", oq);
+    const oo = await autoSetup.submit(oq);
+    await record("native autonomous review observation authority", oo);
+    const observeCap = await autoSetup.confirmed(oo);
+    const autoPlan: NativeFileOkrPlan = {
+      format: 1,
+      paths: plan.paths,
+      krs: [0, 1].map((i) => ({
+        maxCalls: "3",
+        files: [
+          {
+            path: `docs/AUTONOMOUS-${i + 1}.md`,
+            content: `Autonomous original artifact ${i + 1} with separate Human verification\n`,
+          },
+        ],
+      })),
+    };
+    const autoReviewInput = await autoSetup.createReview(
+      autoOkrId,
+      observeCap,
+      autoPlan,
+    );
+    const autoReview = new HandoverReview(
+      chain,
+      device,
+      auth.grantId,
+      organizationId,
+      autoAttempt,
+      invoke,
+      autoJournal,
+    );
+    const rq = await autoReview.prepare(autoReviewInput);
+    assert.ok(!("status" in rq));
+    await preparedQuote("native autonomous Host review ticket", rq);
+    const ro = await autoReview.submit(rq);
+    await record("native autonomous Host review ticket", ro);
+    const rt = await readVisible(
+      () => autoReview.restore(),
+      (v) => !!v.run,
+    );
+    await autoReview.send(true);
+    const reviewed = await readVisible(
+      () => sdk.nodeExecution.getExecution(rt.run!.id),
+      (r) => r.state === 2 || r.state === 3,
+    );
+    assert.equal(
+      reviewed.state,
+      2,
+      "New autonomous Host review must succeed without replay",
+    );
+    await autoReview.readAcceptance();
+    const autoApproval = new HandoverApproval(
+      chain,
+      device,
+      auth.grantId,
+      organizationId,
+      rt.run!.id,
+      invoke,
+      autoJournal,
+    );
+    const apq = await autoApproval.prepare({
+      command: autoReviewInput.command,
+      nativeFilePlan: autoPlan,
+    });
+    assert.ok(!("status" in apq));
+    await preparedQuote("native explicit autonomous agreement approval", apq);
+    const apo = await autoApproval.submit(apq);
+    await record("native explicit autonomous agreement approval", apo);
+    let autoDeliveries = 0,
+      autoQuotes = 0,
+      deliveryClaims = 0;
+    const markers = new Set<string>();
+    const autoController = new NativeOkrAutonomy(
+      chain,
+      device,
+      auth.grantId,
+      organizationId,
+      autoOkrId,
+      invoke,
+      autoJournal,
+      {
+        claim: async (key) => {
+          if (markers.has(key)) return false;
+          markers.add(key);
+          deliveryClaims++;
+          return true;
+        },
+      },
+      {
+        onQuote: async (q) => {
+          autoQuotes++;
+          await preparedQuote("native session-bounded autonomous fee", q);
+        },
+        onSubmission: async (r) => {
+          await record("native session-bounded autonomous fee", r);
+          state = {
+            ...state,
+            phase: "autonomy_original_request_confirmed",
+            autoLastRequest: {
+              requestId: r.requestId,
+              digest: r.digest,
+              status: r.status,
+            },
+          };
+          await save();
+        },
+      },
+      async (...args) => {
+        if (String(args[0]).endsWith("/command")) autoDeliveries++;
+        return fetch(...args);
+      },
+    );
+    const autoView = await autoController.review();
+    assert.deepEqual(autoView.plan, autoPlan);
+    assert.equal(autoDeliveries, 0);
+    assert.equal(autoQuotes, 0);
+    const sessionExpiry = [
+      BigInt(Date.now() + 600000),
+      BigInt(autoView.authorityExpiresAtMs),
+      BigInt(autoView.okr.expires_at_ms),
+    ].reduce((a, b) => (a < b ? a : b));
+    await autoController.start(autoView, {
+      reviewed: true,
+      gasLimit: "800000000",
+      expiresAtMs: sessionExpiry.toString(),
+    });
+    assert.equal(autoDeliveries, 0);
+    assert.equal(autoQuotes, 0);
+    const autoRuns: string[] = [],
+      autoDecisions: unknown[] = [];
+    for (let i = 0; i < 2; i++) {
+      const one = autoController.heartbeat(),
+        duplicate = autoController.heartbeat();
+      assert.equal(one, duplicate);
+      const progress = await one;
+      state = {
+        ...state,
+        phase: "autonomy_heartbeat_completed",
+        autoState: progress,
+        autoDeliveries,
+        autoQuotes,
+        deliveryClaims,
+      };
+      await save();
+      assert.equal(
+        progress.runner.status,
+        "awaiting_verification",
+        "Autonomous delivery must end in separate Human verification",
+      );
+      assert.equal(progress.active, true);
+      const measured = await readVisible(
+        () => sdk.okr.getOkr(autoOkrId),
+        (r) => r.metrics[i].current === "1" && !!r.metrics[i].run_id,
+      );
+      assert.equal(measured.next_kr, String(i));
+      assert.equal(measured.metrics[i].verified, false);
+      assert.equal(measured.state, 1);
+      const runId = measured.metrics[i].run_id!;
+      autoRuns.push(runId);
+      await autoController.heartbeat();
+      assert.equal(autoDeliveries, i + 1);
+      assert.equal(autoQuotes, (i + 1) * 2);
+      const human = new OkrHumanReview(
+        chain,
+        device,
+        auth.grantId,
+        organizationId,
+        autoOkrId,
+        humanReviewIntent(measured),
+        invoke,
+        autoJournal,
+      );
+      const view = await human.read();
+      assert.equal(view.evidence[0].result.run.id, runId);
+      assert.equal(
+        view.evidence[0].files[0].expectedHash,
+        view.evidence[0].files[0].observedHash,
+      );
+      const q = await human.prepare(view, {
+        reviewed: true,
+        reason: `Explicit scripted Human review of autonomous KR ${i + 1}: original artifact and SHA-256 match the approved plan.`,
+      });
+      assert.ok(!("status" in q));
+      await preparedQuote("native independent autonomous KR verification", q);
+      const r = await human.submit(q);
+      await record("native independent autonomous KR verification", r);
+      const v = await human.confirmed(r);
+      assert.equal(v.okr.next_kr, String(i + 1));
+      assert.equal(autoDeliveries, i + 1);
+      autoDecisions.push({
+        krIndex: String(i),
+        digest: r.digest,
+        runId,
+        verificationRecordId: v.record.id,
+      });
+    }
+    const awaiting = await autoController.heartbeat();
+    assert.equal(awaiting.runner.status, "awaiting_acceptance");
+    assert.equal(awaiting.active, false);
+    assert.equal(awaiting.gasCommitted, "800000000");
+    assert.equal((await sdk.okr.getOkr(autoOkrId)).state, 1);
+    assert.equal(autoDeliveries, 2);
+    assert.equal(autoQuotes, 4);
+    assert.equal(deliveryClaims, 2);
+    const finalSource = await sdk.okr.getOkr(autoOkrId);
+    const final = new OkrHumanReview(
+      chain,
+      device,
+      auth.grantId,
+      organizationId,
+      autoOkrId,
+      humanReviewIntent(finalSource),
+      invoke,
+      autoJournal,
+    );
+    const finalView = await final.read();
+    assert.equal(finalView.evidence.length, 2);
+    const fq = await final.prepare(finalView, {
+      reviewed: true,
+      reason:
+        "Explicit scripted final acceptance: both independently verified autonomous artifacts meet the complete success criteria.",
+    });
+    assert.ok(!("status" in fq));
+    await preparedQuote("native separate autonomous final acceptance", fq);
+    const fo = await final.submit(fq);
+    await record("native separate autonomous final acceptance", fo);
+    const accepted = await final.confirmed(fo);
+    assert.equal(accepted.okr.state, 3);
+    const budget = await sdk.okr.getBudget(autoOkrId);
+    assert.equal(budget.spent, 6n);
+    assert.equal(budget.reserved, 0n);
+    checks.push(
+      "one explicitly confirmed native session prepares and delivers two actual envd KRs automatically in sequence; duplicate heartbeat never duplicates fees or delivery; each measured KR waits for separate Human verification",
+    );
+    checks.push(
+      "session Gas ceilings total 800000000 MIST across exactly four signed capability/ticket transactions; final Human acceptance remains separate and achieves the original autonomous goal with tool budget 6 spent/0 reserved",
+    );
+    state = {
+      ...state,
+      phase: "autonomy_goal_accepted",
+      autoOkrId,
+      autoRuns,
+      autoDecisions,
+      autoAcceptanceRecordId: accepted.record.id,
+      autoAcceptanceDigest: fo.digest,
+      autoFinalState: accepted.okr.state,
+      autoFinalBudget: {
+        spent: String(budget.spent),
+        reserved: String(budget.reserved),
+      },
+      autoSession: awaiting,
+      autoQuotes,
+      autoDeliveries,
+      deliveryClaims,
+      autonomyControllerVerified: true,
     };
     await save();
   }

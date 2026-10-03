@@ -14,6 +14,10 @@ import {
   scopedNativeInvoke,
 } from "./native-device";
 import { OkrControl } from "./okr-control";
+import {
+  IndexedDbOkrDeliveryJournal,
+  okrDeliveryKey,
+} from "./okr-delivery-journal";
 import { canonical } from "./handover-plan";
 import type { ConnectionProfile } from "./domain";
 type Description = Awaited<ReturnType<NativeOkrRunner["describe"]>>;
@@ -98,6 +102,7 @@ export default function OkrContinuation({
     epoch = useRef(0),
     flight = useRef(false);
   const journal = useRef<IndexedDbTransactionJournal | null>(null),
+    deliveryJournal = useRef<IndexedDbOkrDeliveryJournal | null>(null),
     feeAnswer = useRef<{
       quote: SelfPayFeeQuote;
       resolve: (accepted: boolean) => void;
@@ -127,6 +132,7 @@ export default function OkrContinuation({
       clearInterval(timer);
       document.removeEventListener("visibilitychange", hide);
       void journal.current?.close();
+      void deliveryJournal.current?.close();
     };
   }, []);
   useEffect(() => {
@@ -399,14 +405,31 @@ export default function OkrContinuation({
       !ctx ||
       !locator?.capabilityId ||
       locator.deliveryAttempted !== false ||
-      state?.status !== "queued"
+      state?.status !== "queued" ||
+      !state.executionId
     )
       throw Object.assign(new Error(), { code: "state_changed" });
     save({ ...locator, deliveryAttempted: true });
+    deliveryJournal.current ??= new IndexedDbOkrDeliveryJournal();
+    if (
+      !(await deliveryJournal.current.claim(
+        okrDeliveryKey(
+          profile.network,
+          await ctx.chain.checkNetwork(),
+          ctx.signer.device.address,
+          state.executionId,
+        ),
+      ))
+    )
+      throw Object.assign(new Error(), { code: "original_run_needs_review" });
+    ctx.assertLive();
     const result = await ctx.runner.step({
       okrId,
       capabilityId: locator.capabilityId,
       releaseQueued: true,
+      expectedExecutionId: state.executionId,
+      expectedAgreementVersion: locator.agreementVersion,
+      expectedKrIndex: locator.krIndex,
     });
     ctx.assertLive();
     setState(result);

@@ -127,6 +127,7 @@ export class DeviceIdentityVerifier {
     // Pin mutable inputs across dependent reads. Clock naturally advances and
     // is checked on the second snapshot rather than included in this pin.
     let organizationPin: unknown = null;
+    let organizationAuthority: unknown = null;
     if (organizationId) {
       if (
         !/^0x[0-9a-f]{64}$/.test(organizationId) ||
@@ -159,6 +160,7 @@ export class DeviceIdentityVerifier {
       )
         throw new DeviceIdentityError("invalid_grant");
       organizationPin = [organizationId, orgObject.version, role];
+      organizationAuthority = [organizationId, org.admin, org.is_active, role];
     }
     const versions = JSON.stringify([
       chainIdentifier,
@@ -174,6 +176,20 @@ export class DeviceIdentityVerifier {
       clockMs: BigInt(clock.timestamp_ms),
       chainIdentifier,
       versions,
+      // Across a continuous session, normal product writes mutate the
+      // Organization's object version. Keep authorization semantics separate
+      // from the strict within-operation snapshot/version race guard above.
+      authorityContextPin: JSON.stringify([
+        chainIdentifier,
+        registry.id,
+        registry.protocol_registry,
+        human.id,
+        human.registry_id,
+        human.network,
+        human.generation,
+        grant,
+        organizationAuthority,
+      ]),
     };
   }
   async verify() {
@@ -227,6 +243,7 @@ export class DeviceIdentityVerifier {
               Uint8Array.from(after.grant.encrypted_keys),
             ),
             authorityPin: after.versions,
+            authorityContextPin: after.authorityContextPin,
           }
         : {}),
     });

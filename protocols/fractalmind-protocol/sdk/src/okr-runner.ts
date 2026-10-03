@@ -12,6 +12,12 @@ export type NativeFileKrPlan = { files: Array<{ path: string; content: string }>
 export type NativeFileOkrPlan = { format: 1; paths: Record<string, string[]>; krs: NativeFileKrPlan[] };
 export type OkrRunnerSubmission = { status: 'confirmed' | 'rejected' | 'unknown'; digest?: string; reason?: string };
 export type OkrRunnerSubmissionContext = { requestId: string };
+export type OkrRunnerStepInput = {
+  okrId: string; capabilityId: string; createIfMissing?: boolean; releaseQueued?: boolean; prepareOnly?: boolean;
+  /** Pin the exact queued Run reviewed by a caller. A changed cursor must not
+   * release another KR's ticket after an asynchronous confirmation. */
+  expectedExecutionId?: string; expectedAgreementVersion?: string; expectedKrIndex?: string;
+};
 export type OkrRunnerState = {
   status: 'idle' | 'paused' | 'awaiting_approval' | 'queued' | 'running' | 'awaiting_confirmation' | 'awaiting_verification' | 'awaiting_acceptance' | 'achieved' | 'blocked';
   reason?: string; okrId: string; krIndex?: string; executionId?: string; ticketRecordId?: string; transactionDigest?: string;
@@ -108,7 +114,7 @@ export class NativeFileOkrRunner {
     return { okr, plan };
   }
 
-  step(input: { okrId: string; capabilityId: string; createIfMissing?: boolean; releaseQueued?: boolean; prepareOnly?: boolean }): Promise<OkrRunnerState> {
+  step(input: OkrRunnerStepInput): Promise<OkrRunnerState> {
     const key = normalizeSuiAddress(input.okrId);
     const running = this.flights.get(key); if (running) return running;
     const flight = this.advance({ ...input, okrId: key }).finally(() => this.flights.delete(key));
@@ -199,10 +205,12 @@ export class NativeFileOkrRunner {
     }
     return undefined;
   }
-  private async advance(input: { okrId: string; capabilityId: string; createIfMissing?: boolean; releaseQueued?: boolean; prepareOnly?: boolean }): Promise<OkrRunnerState> {
+  private async advance(input: OkrRunnerStepInput): Promise<OkrRunnerState> {
     const { sdk } = this.options;
     const okr = await sdk.okr.getOkr(input.okrId);
     if (okr.org_id !== normalizeSuiAddress(this.options.organizationId)) throw new Error('Runner organization mismatch.');
+    if (input.expectedAgreementVersion !== undefined && input.expectedAgreementVersion !== okr.agreement_version || input.expectedKrIndex !== undefined && input.expectedKrIndex !== okr.next_kr)
+      return { okrId: okr.id, krIndex: okr.next_kr, status: 'paused', reason: 'reviewed_execution_context_changed' };
     const lifecycle = this.lifecycle(okr); if (lifecycle) return lifecycle;
     const base = { okrId: okr.id, krIndex: okr.next_kr };
     const name = okrRunnerTicketName(okr.id, okr.agreement_version, okr.next_kr);
@@ -219,6 +227,7 @@ export class NativeFileOkrRunner {
       if (prior) return originalState();
       const unknown = this.unknownSubmissions.get(name);
       if (unknown) return { ...base, status: 'awaiting_confirmation', reason: unknown.confirmed ? 'ticket_index_not_visible' : 'ticket_transaction_unknown', transactionDigest: unknown.digest };
+      if (input.expectedExecutionId !== undefined) return { ...base, status: 'paused', reason: 'reviewed_execution_not_found' };
       if (!input.createIfMissing) return { ...base, status: 'idle', reason: 'no_confirmed_ticket' };
     }
     const plan = await this.plan(okr);
@@ -288,6 +297,8 @@ export class NativeFileOkrRunner {
     this.unknownSubmissions.delete(name);
     if (run.command_id !== ticket.command.command_id || run.delegate !== ticket.command.signer || run.node_id !== ticket.command.target.node_id || run.agent_id !== ticket.command.target.agent_id || run.budget_amount !== ticket.command.budget?.amount || run.org_id !== okr.org_id || run.action !== ticket.command.action || run.scope !== ticket.command.scope || run.nonce !== ticket.command.nonce || run.idempotency_key !== ticket.command.idempotency_key || run.budget_asset !== ticket.command.budget?.asset || run.issued_at_ms !== String(ticket.command.issued_at_ms) || run.expires_at_ms !== String(ticket.command.expires_at_ms)) throw new Error('Run differs from the persisted signed ticket.');
     const withRun = { ...detail, executionId: run.id };
+    if (input.expectedExecutionId !== undefined && normalizeSuiAddress(input.expectedExecutionId) !== run.id)
+      return { ...withRun, status: 'paused', reason: 'reviewed_execution_run_changed' };
     if (run.state === 4) return { ...withRun, status: 'awaiting_confirmation', reason: 'execution_outcome_unknown' };
     if (run.state === 1) return { ...withRun, status: 'running' };
     if (run.state === 3 || run.state === 5) return { ...withRun, status: 'blocked', reason: 'execution_failed_or_cancelled' };
