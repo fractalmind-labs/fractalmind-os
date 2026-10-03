@@ -1,0 +1,893 @@
+{
+  "schema": "fractalmind.v020.installed-ui-acceptance.v1",
+  "status": "in_progress",
+  "scope": "Actual installed Android debug App DOM interactions, native Android Keystore signer, real Ubuntu envd, localnet; not physical-phone or five-platform release evidence",
+  "environment": {
+    "avd": "fm-v020-android-r1",
+    "serial": "emulator-5580",
+    "package": "org.fractalmind.desktop",
+    "nativeProfile": "android-ui-9305be0b",
+    "network": "localnet",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+    "humanId": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+    "organizationId": "0xca4b9dfce4026c83f7accf4300cdea5b49677eecc47942348aa97c4e319eb753",
+    "hostAddress": "0xffa58c6cc96d2a1d6b2760d2d5c6a6b67beab290d35f53719969ebf691700b93",
+    "managedAgentId": "0x34aaa06e6154f323782ef46497a3ff5d08a15dd265c51fd5807d5bf650ded35b",
+    "instanceId": "native-c97d8b6b1bd5e5fe8ba8172ff1b1d63d6d2c8bbda63b9fcbd6312e1099f14e5c",
+    "cloudWorkspace": "/tmp/fm-v020-review-window-worker-r11-3k7cx0tc/workspace",
+    "modelEnabled": false
+  },
+  "method": {
+    "actions": "Actual installed WebView DOM clicks and field inputs, native Android Keystore signing/decryption; no injected product state or external controller substituted for UI actions.",
+    "independentChecks": "Public chain object reads and read-only SSH file hash/content verification.",
+    "sourcePrefix": "/tmp/fm-v020-review-window-ui-r1-",
+    "screenshots": [
+      {
+        "file": "v020-installed-ui-accepted-workbench.png",
+        "sha256": "4c3f4b0deec173baf502b8ff59b40833f9605f31f2925fff4b4dcb3bbdf74caf",
+        "step": "49-accepted-workbench"
+      },
+      {
+        "file": "v020-installed-ui-offline-draft.png",
+        "sha256": "d3fca4dbb549c46560994eb689fbc348710966030c915ae2a45cf72e311fa2e9",
+        "step": "52-offline-draft"
+      },
+      {
+        "file": "v020-installed-ui-english-dark.png",
+        "sha256": "0432b4a69e9febf7a0573b554c26f90fd125923b84fe669c945c44b50e1752a6",
+        "step": "58-draft-english-dark"
+      },
+      {
+        "file": "v020-installed-ui-status-result.png",
+        "sha256": "3dcc20af4cebca53c09eff2bec53800e021aa0cab7106732b515ec29237a0914",
+        "step": "72-status-result-visible"
+      },
+      {
+        "file": "v020-installed-ui-expired-approval.png",
+        "sha256": "26d294b2edf341fd8f835a3ea91e99f74241951a20b25847f8db0b818c0a84e5",
+        "step": "84-expired-original-approval-history"
+      },
+      {
+        "file": "v020-installed-ui-unexecuted-verified-history.png",
+        "sha256": "56b91e719c8833d6f8a1a41efc2f998a867c6d7003f6c4775eccc8138367ea78",
+        "step": "135-original-cap-correlation"
+      },
+      {
+        "file": "v020-installed-ui-cache-cold-welcome.png",
+        "sha256": "9d45026bf86c8b0ac4a1e60ffaaff6ac5fb950c567dfe607553f557f6a7d6e21",
+        "step": "140-cold-start-welcome"
+      },
+      {
+        "file": "v020-installed-ui-cache-reconnected-workbench.png",
+        "sha256": "d2f61fa6ecc261ca67dba95d68fe320ce29d55158dd2def39bfbaf5c846a4feb",
+        "step": "142-public-form-reconnect"
+      },
+      {
+        "file": "v020-installed-ui-cache-recovered-status.png",
+        "sha256": "456c10676bef26dc9355058a9ed751af0e1e96aa38f71fbafac338401908f17e",
+        "step": "144-recovered-direct-histories"
+      },
+      {
+        "file": "v020-installed-ui-cache-decrypted-records.png",
+        "sha256": "efaa434c53a110d4ee5a9f2104cfa7c2b0ada5dc3b4a35daa2997a233de1dc2f",
+        "step": "148-recovered-okr-bodies-and-evidence"
+      }
+    ]
+  },
+  "installedUpdates": [
+    {
+      "installedAt": "2026-10-03T21:00:12.414Z",
+      "sha": "c0332bc179eede29a19225c08c9752f93e1ea5c21458f718e9337d4cb09a5405",
+      "bytes": 332327267,
+      "preserveData": true,
+      "result": "Performing Streamed Install\nSuccess\n"
+    },
+    {
+      "installedAt": "2026-10-03T21:16:56.474Z",
+      "sha": "13bd3b630eff2152f5abb0d8134b1626b41e03927367e44b7df34de985f27afe",
+      "bytes": 332327587,
+      "preserveData": true,
+      "result": "Performing Streamed Install\nSuccess\n"
+    },
+    {
+      "installedAt": "2026-10-03T21:52:58.759Z",
+      "sha": "12a5427109b7a8dd0c878a10763208d1856942d2a8af4c8892b10aada8d897e0",
+      "bytes": 332329187,
+      "preserveData": true,
+      "result": "Performing Streamed Install\nSuccess\n"
+    },
+    {
+      "installedAt": "2026-10-03T22:07:32.940Z",
+      "sha": "0a8859b964b63aa6dbe0bfb71c692a4150a8fbbfcad753ec3cacf4b0be8e71c0",
+      "bytes": 332329939,
+      "preserveData": true,
+      "result": "Performing Streamed Install\nSuccess\n"
+    },
+    {
+      "installedAt": "2026-10-03T22:36:39.650Z",
+      "sha": "e75e972a1a63c317c1fb5f67c94f6a5cb81078dd1cfada2d427592f13361c084",
+      "bytes": 332331347,
+      "preserveData": true,
+      "result": "Performing Streamed Install\nSuccess\n"
+    },
+    {
+      "installedAt": "2026-10-03T22:56:38.128Z",
+      "sha": "17743588aaf2c5a14cad9c1cc15386da2713e3626739534545d81d04496fe010",
+      "bytes": 332331875,
+      "preserveData": true,
+      "result": "Performing Streamed Install\nSuccess\n"
+    }
+  ],
+  "okrAcceptance": {
+    "uiConnectionAndOrgSelection": true,
+    "observationOnlyImport": true,
+    "importTransaction": "Gk6SJW9ta6uC2mnkZab5ddRCRBtciwGWVwu8S7eXTfBR",
+    "fixedOriginalReviewWindowMs": 300000,
+    "elapsedBrowserMsAtExplicitApproval": 255622,
+    "reviewRunId": "0x04a6f8a1b6d0147e227aa5cfa01945daf5cfe94a8135afc343c2383b040e5706",
+    "reviewCommandId": "49171c33-a572-405b-b869-0d7f0eb0fd2a",
+    "originalIssuedAtMs": "1791060337310",
+    "originalExpiresAtMs": "1791060637310",
+    "reviewState": 2,
+    "reviewSettled": true,
+    "executionRunId": "0x17f5aa7eac593a22c712e92f6d6096a6e01d9f211bb6549dde618bad7b16a5c7",
+    "executionCommandId": "f2e9abf2-fc82-433e-bdbd-608238eaf65b",
+    "executionState": 2,
+    "executionSettled": true,
+    "independentFile": {
+      "checkedAt": "2026-10-03T20:55:51.271248+00:00",
+      "path": "/tmp/fm-v020-review-window-worker-r11-3k7cx0tc/workspace/docs/REVIEW-WINDOW.md",
+      "exists": true,
+      "bytes": 54,
+      "sha256": "c58966b2e6288daf6c54a5df3bfef3f8eb0bf91833240efaf1744f9a20a24a52",
+      "content": "Reviewed after ninety seconds on the real cloud Host.\n",
+      "exactMatch": true,
+      "workspaceFiles": [
+        "docs/REVIEW-WINDOW.md"
+      ]
+    },
+    "krVerified": true,
+    "verificationRecord": "0xa9b638d91875d26d60df5b39e0091b5792fef94f4bcf7667fc75b965019658ac",
+    "okrState": 3,
+    "nextKr": "1",
+    "acceptanceRecord": "0x4bf4dd523cdf5326bdd7d7264fc68ba06147de55a99da7ff9548b4eb90be730f",
+    "acceptedByHuman": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+    "finalAcceptanceTransaction": "2voUJeLNWeZcb2qZKgQG4EXipZMNFMVTJAW5d1bWDBBQ",
+    "budget": {
+      "asset": "TOOL_CALLS",
+      "spent": "3",
+      "reserved": "0",
+      "claimsId": "0xe76212d7e8ee3b8cb2f3a296319f69adf03546de517d17cd25fd6ea5cf0a0e07"
+    },
+    "unsettledControl": 0,
+    "okrId": "0x61d69e1e86fb60628c86ea58522abe68cde1307f56770bc65df8e87a44fe1ce3",
+    "uiSteps": [
+      "32-delayed-approval-confirmed",
+      "42-independent-file-verified",
+      "45-kr-verification-result",
+      "48-final-accepted",
+      "49-accepted-workbench"
+    ]
+  },
+  "offlineDraft": {
+    "status": "passed",
+    "at": "2026-10-03T21:04:18.262Z",
+    "action": "Actual WebView network blocked, edited and encrypted local draft, closed and restored same draft offline",
+    "offlineProbe": {
+      "failed": true,
+      "name": "TypeError",
+      "message": "Failed to fetch"
+    },
+    "message": "FM actual Android offline draft r2 2026-10-03: query only this fixed native instance status.",
+    "storage": {
+      "key": "fractalmind.app.local-direct-draft.v1:24e0fe1980f61b37cc251fd350acdf5aeb90c9dea71743f15c0c613fc13041c4",
+      "scope": {
+        "network": "localnet",
+        "chain": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+        "human": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+        "organization": "0xca4b9dfce4026c83f7accf4300cdea5b49677eecc47942348aa97c4e319eb753",
+        "managed": "0x34aaa06e6154f323782ef46497a3ff5d08a15dd265c51fd5807d5bf650ded35b",
+        "instance": "native-c97d8b6b1bd5e5fe8ba8172ff1b1d63d6d2c8bbda63b9fcbd6312e1099f14e5c",
+        "host": "0xffa58c6cc96d2a1d6b2760d2d5c6a6b67beab290d35f53719969ebf691700b93",
+        "deviceProfile": "android-ui-9305be0b",
+        "deviceAddress": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e"
+      },
+      "format": 1,
+      "encryptedBodyLength": 1240,
+      "encryptedKeysLength": 524,
+      "plaintextPresent": false,
+      "attemptedRequest": null
+    },
+    "restoredAfterClose": "FM actual Android offline draft r2 2026-10-03: query only this fixed native instance status.",
+    "background": {
+      "visibility": "hidden",
+      "openDialogs": 0
+    },
+    "reopen": {
+      "visible": "visible",
+      "message": "FM actual Android offline draft r2 2026-10-03: query only this fixed native instance status.",
+      "localSaved": true
+    },
+    "englishDarkLayout": {
+      "action": "Read-only English dark-theme layout and same local draft restored; original receipt unresolved and retained",
+      "innerWidth": 411,
+      "documentWidth": 411,
+      "theme": "dark",
+      "language": "en",
+      "draftRestored": true
+    },
+    "afterExplicitSubmission": {
+      "reopened": true,
+      "newMessage": "",
+      "attemptedNotice": true,
+      "plaintextAtRest": false,
+      "draftKey": "fractalmind.app.local-direct-draft.v1:24e0fe1980f61b37cc251fd350acdf5aeb90c9dea71743f15c0c613fc13041c4",
+      "metadata": {
+        "keys": [
+          "format",
+          "scope",
+          "token",
+          "savedAt",
+          "encryptedKeys",
+          "encryptedBody",
+          "attemptedRequest"
+        ],
+        "attemptedRequest": "direct-message:cccc8d52-19ff-465d-82d9-21190467aece"
+      }
+    }
+  },
+  "statusMessage": {
+    "status": "passed",
+    "messageId": "0x95b6367c150001623de9f7e9c418d0e970aee26160f5e007e36d81ce502aec41",
+    "requestId": "direct-message:cccc8d52-19ff-465d-82d9-21190467aece",
+    "permissionId": "0x190cd12b76986f4b0968e2dae3398bc7b6bd585c394d537c2b7ae223037aa1a8",
+    "standingActions": [
+      "status"
+    ],
+    "standingBudget": "0",
+    "runId": "0xb0f0c5c82591c84c79d7467e43e1f5162e7583d76dbbfda3c9f1871fc0a1f001",
+    "commandId": "57882f7e-f738-4144-8f6f-a52c6e5161aa",
+    "confirmedRunTransaction": "GRsQmDKiy77fZQekM3moXhFHjyVeSoV5fVbYe1SdTtZ5",
+    "hostResultTransaction": "GL7dr6cm96qKuhQawSYMVV8WBvMKpEvaSMmXVmnnmaeU",
+    "resultRecord": "0x18e97d8e2e7ae026f2a1eaefdd552f0c01b1fb624788e8535dd513b2f6d1cbca",
+    "state": 2,
+    "settled": true,
+    "spent": "0",
+    "reserved": "0",
+    "budgetAsset": "",
+    "firstDeliveryCount": 1,
+    "duplicate": false,
+    "decryptedInApp": true,
+    "response": "Real fixed-instance status (idle); no model response was requested or claimed.",
+    "dialogRemainedOpenAfterConfirmation": true,
+    "uiSteps": [
+      "62-status-message-submit",
+      "63-status-capability-submit",
+      "64-status-original-run-submit",
+      "65-status-first-delivery",
+      "67-attempted-draft-reopen",
+      "71-status-receipt-and-result"
+    ]
+  },
+  "retainedFailures": [
+    {
+      "kind": "expired_unsubmitted_import",
+      "resolution": "Original request queried and proved unsubmitted before explicit new discovery/import attempt. No broadcast replay."
+    },
+    {
+      "kind": "expired_unsubmitted_status_quote",
+      "resolution": "Disabled expired quote cancelled in UI; original new message then explicitly quoted and submitted once."
+    },
+    {
+      "kind": "original_permission_receipt_pruned",
+      "technicalReceipt": {
+        "requestId": "direct-permission:0x34aaa06e6154f323782ef46497a3ff5d08a15dd265c51fd5807d5bf650ded35b:create",
+        "digest": "2DJ552Lw8icEukCWkSkpZArKzkRj2uySibVWeUVsxTs1",
+        "status": "confirmed",
+        "revision": 2,
+        "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "gasUsed": {
+          "computationCost": "1000000",
+          "storageCost": "27534800",
+          "storageRebate": "7034940",
+          "nonRefundableStorageFee": "71060"
+        },
+        "actualGas": "21499860",
+        "createdAtMs": 1791061510153
+      },
+      "resolution": "Original receipt remains preserved. Verified current permission permits an independent message; original permission is not retried."
+    },
+    {
+      "kind": "original_run_receipt_pruned",
+      "digest": "GRsQmDKiy77fZQekM3moXhFHjyVeSoV5fVbYe1SdTtZ5",
+      "resolution": "Exact original linked Run queried to successful settled state and Host response decrypted. No resend or replacement."
+    },
+    {
+      "kind": "approval_queue_refresh_unmounted_dialog",
+      "messageId": "0xed2c01e46c3feade2ed74b33cf002d253fb91998243f8180d30bfbf64c79ff00",
+      "capabilityDigest": "8nnvituRG5P6BFoJewyvyXATfYNERUtPxEG6jRaYBs5Z",
+      "observation": "Workbench correctly approved the exact message; queue onChanged cleared the rendered row and closed the dialog after both decision and capability confirmations. The original capability receipt later read unknown; no Run was prepared or delivered. Original request expired and all execution controls disappeared.",
+      "status": "fixed_in_installed_apk_r5",
+      "verification": "Distinct second request used the real workbench; decision, capability, original Run confirmation, and first delivery all preserved the open dialog (UI90–93). The original expired request was not replayed."
+    },
+    {
+      "kind": "legacy_import_receipt_org_scope_lock",
+      "status": "fixed_in_installed_apk_r7",
+      "attemptId": "6c6e80e6-2e4f-4c1d-bcd9-48de64f66520",
+      "digest": "Gk6SJW9ta6uC2mnkZab5ddRCRBtciwGWVwu8S7eXTfBR",
+      "observation": "Actual original recovery returned unknown and disabled Start new operation. After discovering the restarted real Host, clicking Import for observation only on its new physical instance still displayed only the old attempt/digest; the new target was hidden and no new operation was available. No record was deleted and no transaction replayed.",
+      "uiSteps": [
+        "97-import-original-restore",
+        "98-import-original-unknown",
+        "100-new-physical-discovery",
+        "101-new-target-old-attempt-lock"
+      ],
+      "newPhysicalInstance": "native-b0f907fcd70b00370193884cc2595fc77c7235bd0943e3e32df4e212c98ceef7",
+      "verification": "UI104–105: new Host/physical target received an independent v2 observation import, confirmed receipt and on-chain record stayed visible. Separate historical query retained original v1 attempt and unknown digest unchanged, with no retry control."
+    },
+    {
+      "kind": "old_replace_unknown_blocks_new_pause",
+      "status": "fixed_in_installed_apk_r8",
+      "observation": "After actual new-instance control approval, the pause UI verified current OKR v3 / agreement2 / zero KR executions but globally disabled an independent pause because the older v1 replacement receipt was pruned. Original receipt and all technical history remain; no pause or direct write was submitted.",
+      "uiSteps": [
+        "120-new-okr-pause-current",
+        "121-pause-blocked-original-correlation"
+      ],
+      "verification": "Actual UI123 independently signed the current-version pause while simultaneously displaying the untouched older replacement unknown receipt; no KR Run was created."
+    },
+    {
+      "kind": "new_instance_oneoff_deadline_after_write",
+      "status": "retained_terminal_failure",
+      "runId": "0xefa2f2a39f4babf66052ef3e38851a9c7a24a1388e55c4cafa9211369f1e7c95",
+      "originalExpiresAtMs": "1791068685149",
+      "observation": "The real workbench approved only the new message, then confirmed capability, original Run, and one delivery. The Host performed 2 tools and stopped at the original shared deadline before producing file-verification evidence. The Run failed and settled at 2/0; SSH independently found the exact written file. This is not counted as a completed file execution."
+    },
+    {
+      "kind": "verified_file_intent_expired_without_run",
+      "status": "retained_unexecuted_failure",
+      "requestId": "direct-message:95786c58-9353-4f04-9982-dd4588399dec",
+      "messageId": "0x3bda0f3c95d58f3fefa9d96ebdd8c93c2e51661259dfa185a7d4ff31e07f839b",
+      "approvalId": "0x2ce35d6e21606e203034b2670c1af18789d1e8256c1903b05a8d77a05b440744",
+      "capabilityReceiptDigestDisplayed": "6g99eVMrACCdsjGnxZjnR3jvjfzCcoksmFN948u1qWks",
+      "originalExpiresAtMs": "1791069251508",
+      "executionId": null,
+      "targetFile": "docs/ONE-OFF-UI-VERIFIED.md",
+      "independentFileRead": {
+        "readAt": "2026-10-03T23:21:43.237124+00:00",
+        "exists": false
+      },
+      "chainReadSource": "/tmp/fm-v020-unexecuted-verified-request-read.json",
+      "uiSteps": [
+        "133-independent-verified-file-full-ui",
+        "134-handoff-readonly",
+        "135-original-cap-correlation"
+      ],
+      "harnessDefect": "Step 133 confirmedAt measured the pre-click time and fee disappearance, not confirmation. After Run preparation failed, automatic querying displayed the prior capability receipt and obscured the error. Those timestamps are not confirmation evidence; no Run or delivery is counted.",
+      "replacementHarness": "/tmp/fm-v020-ui-independent-verified-intent-r2.js",
+      "replacementHarnessPolicy": "Separate actual DOM clicks; current fee title and target; new request ID and digest; matching confirmed UI receipt and read-only technical journal; immediate error snapshot and stop; no automatic query or retry."
+    }
+  ],
+  "singleMessageApproval": {
+    "status": "blocked_before_run_by_queue_dialog_unmount",
+    "messageId": "0xed2c01e46c3feade2ed74b33cf002d253fb91998243f8180d30bfbf64c79ff00",
+    "approvalId": "0xb35b4f29c2a0401b60a0c3766f9721e5c99185802f73de21ab7f27945aae3b06",
+    "requestId": "direct-message:c9cb1288-ac23-4a09-b39f-46952c3e0b20",
+    "standingPermissionVersion": "1",
+    "standingActions": [
+      "status"
+    ],
+    "standingBudget": "0",
+    "approvedViaWorkbench": true,
+    "reviewedExactMessageAndBounds": true,
+    "runCreated": false,
+    "deliveryAttempts": 0,
+    "originalExpiresAtUtc": "2026-10-03T21:58:40Z",
+    "expiredHistoryRetained": true,
+    "expiredOriginalExecuteEntries": [],
+    "technicalReceipts": [
+      {
+        "requestId": "direct-approval:0xed2c01e46c3feade2ed74b33cf002d253fb91998243f8180d30bfbf64c79ff00",
+        "digest": "F4jELeyzg3gnpRXcNMc9c3D6GSzsKmx89cn4RngZ2uqC",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "17857484",
+        "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "createdAtMs": 1791064501115
+      },
+      {
+        "requestId": "direct-capability:0xed2c01e46c3feade2ed74b33cf002d253fb91998243f8180d30bfbf64c79ff00",
+        "digest": "8nnvituRG5P6BFoJewyvyXATfYNERUtPxEG6jRaYBs5Z",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "19166280",
+        "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "createdAtMs": 1791064594991
+      },
+      {
+        "requestId": "direct-decision:0xed2c01e46c3feade2ed74b33cf002d253fb91998243f8180d30bfbf64c79ff00:true",
+        "digest": "A5Hy7wnU7U15bdUJGghycEUDtGbJ7DfkmPQAsTr8RL1j",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "9334008",
+        "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "createdAtMs": 1791064552064
+      }
+    ],
+    "uiSteps": [
+      "75-oneoff-write-compose",
+      "76-oneoff-message-confirm",
+      "77-oneoff-request-approval",
+      "78-oneoff-workbench-review",
+      "79-oneoff-workbench-approve",
+      "81-oneoff-capability",
+      "82-oneoff-original-capability-query",
+      "83-oneoff-original-receipts",
+      "84-expired-original-approval-history",
+      "85-expired-original-readonly"
+    ],
+    "next": "Retain this original expired unexecuted request; the independent second intent used permission v2 and reached a distinct Run."
+  },
+  "cacheRebuild": {
+    "status": "passed",
+    "scope": "All existing history before any successful ONE-OFF-UI-VERIFIED.md intent. No new write is included or implied.",
+    "startedAt": "2026-10-03T23:31:54.302Z",
+    "uiCompletedAt": "2026-10-03T23:40:48.621Z",
+    "actualSettingsClear": true,
+    "httpCacheCleared": true,
+    "forceStopAndColdStart": true,
+    "appDataCleared": false,
+    "nativeProfile": "android-ui-9305be0b",
+    "nativeKeyMaterialRead": false,
+    "nativeKeysPreservedAndUsedForDecryption": true,
+    "coordinatorRestart": {
+      "oldPid": 45233,
+      "command": "/tmp/fm-envd-android-host-r2 --config /tmp/fm-v020-review-window-coordinator-r1.json",
+      "port": 30181,
+      "stopRequestedAt": "2026-10-03T23:34:11.099618+00:00",
+      "scope": "isolated current test Coordinator only; native profile/config unchanged",
+      "stoppedAt": "2026-10-03T23:34:11.316891+00:00",
+      "newPid": 22160,
+      "startedAt": "2026-10-03T23:34:27Z",
+      "cloudWorkerReauthenticatedAt": "2026-10-03T23:34:33Z",
+      "cloudWorkerPidUnchanged": 2441063,
+      "nativeProfileUnchanged": true,
+      "configUnchanged": true,
+      "otherCoordinatorsRestarted": false,
+      "chainTransactions": 0
+    },
+    "reconnectedViaActualPublicForm": true,
+    "publicConnectionRestoredExactly": true,
+    "coldRetention": {
+      "before": "2026-10-03T23:31:54.302Z",
+      "afterColdStart": "2026-10-03T23:34:35.319Z",
+      "journalRowsPreservedExactly": true,
+      "journalDigest": "c1d1d734654006522ac846d5f06135af07f64d1aca77451e01207674533a7d76",
+      "journalCount": 42,
+      "localRecordsPreservedExactly": true,
+      "localRemainingCount": 19,
+      "connectionAbsent": true,
+      "changedLocalKeys": []
+    },
+    "finalJournal": {
+      "before": "2026-10-03T23:31:54.302Z",
+      "after": "2026-10-03T23:40:48.621Z",
+      "journalRowsPreservedExactly": true,
+      "journalDigest": "c1d1d734654006522ac846d5f06135af07f64d1aca77451e01207674533a7d76",
+      "journalCount": 42,
+      "allOriginalRequestIdsAndDigestsPreserved": true,
+      "publicConnectionRestoredExactly": true,
+      "allBeforeKeysRetained": true
+    },
+    "localCacheChange": "Only the old physical instance unresolved-receipt hint changed after read-only history queries: its previously empty entry now displays original direct-run:0xe609706098d76f16356f054bdbe1867384952cac3cd4a5e009faaedf36e8b0df / digest 9Z4VXoMbV3MnqwZm2kYop3E86NQiQZsiJBefqM8HR5PP. The original transaction journal, locators, delivery flags and draft submission markers remained intact.",
+    "restoredDirectResults": [
+      {
+        "kind": "status_success",
+        "runId": "0xb0f0c5c82591c84c79d7467e43e1f5162e7583d76dbbfda3c9f1871fc0a1f001",
+        "commandId": "57882f7e-f738-4144-8f6f-a52c6e5161aa",
+        "state": 2,
+        "settled": true,
+        "tools": 0,
+        "responseDecrypted": true
+      },
+      {
+        "kind": "old_physical_failed_write",
+        "runId": "0xa4c55964031686251ef015d78c2edd2bae69b53d915a47434aa0ebaa72010088",
+        "state": 3,
+        "tools": 0,
+        "responseDecrypted": true
+      },
+      {
+        "kind": "new_physical_failed_write",
+        "runId": "0xefa2f2a39f4babf66052ef3e38851a9c7a24a1388e55c4cafa9211369f1e7c95",
+        "commandId": "9a8cbb04-5b6e-4804-b29e-87f34a4c6773",
+        "state": 3,
+        "settled": true,
+        "tools": 2,
+        "responseDecrypted": true
+      },
+      {
+        "kind": "expired_unexecuted_approval",
+        "messageId": "0x3bda0f3c95d58f3fefa9d96ebdd8c93c2e51661259dfa185a7d4ff31e07f839b",
+        "runId": null,
+        "historyDecrypted": true
+      }
+    ],
+    "restoredEncryptedBodies": [
+      {
+        "label": "okr-719e68cb-fec2-420f-9998-1ad7bbf460aa-spec · 类型 1 · v1",
+        "recordId": "0x31f729bdfdfd9cc6ab6d136ea1fd848d6ac41c53f189b582e3bd79f130a2bca3",
+        "plaintextSha256": "c4dd2f3abb622f4a283044112938c1164dacf26a20507fdcdcf6a17a436d3fa2"
+      },
+      {
+        "label": "runner-61d69e1e86fb60628c86ea58522abe68cde1307f56770bc65df8e87a44fe1ce3-1-0 · 类型 5 · v1",
+        "recordId": "0x3ce59fbefb50c1332ae217acfd01a9979dc9cf3a2ada117de51d64c009403fe4",
+        "plaintextSha256": "4c0151320741e684d08f2cf6c9c3d05a5baa5e096a45dcbcf00d69ec123c5092"
+      },
+      {
+        "label": "okr-719e68cb-fec2-420f-9998-1ad7bbf460aa-verification · 类型 4 · v1",
+        "recordId": "0xa9b638d91875d26d60df5b39e0091b5792fef94f4bcf7667fc75b965019658ac",
+        "plaintextSha256": "f304e364412c07014feac65eea9965a10e6127e128ba673f5edb464f987443e2"
+      },
+      {
+        "label": "okr-719e68cb-fec2-420f-9998-1ad7bbf460aa-acceptance · 类型 4 · v1",
+        "recordId": "0x4bf4dd523cdf5326bdd7d7264fc68ba06147de55a99da7ff9548b4eb90be730f",
+        "plaintextSha256": "369d849a85bb36e2ad435852f5cd9e423298894739075346d3caec7d706973b5"
+      },
+      {
+        "label": "okr-ae169c54-9e09-403b-b728-2e51edae27be-spec · 类型 1 · v2",
+        "recordId": "0x5682025c483c4fca61c3f92feaeb1457fe8771dc4b80372b4cc28863d3874f68",
+        "plaintextSha256": "40a6fa7cd374a7d3dbd733c37c82b7889475499a75bff48edd06f8e9655a3f34"
+      }
+    ],
+    "currentRecordDirectoryCount": 26,
+    "acceptedOkrEvidenceRoute": "The verification dialog preserved original acceptance digest 2voUJeLNWeZcb2qZKgQG4EXipZMNFMVTJAW5d1bWDBBQ as unknown after localnet pruning; it did not display evidence. Existing Memory & results controls then independently decrypted the original OKR specifications, command ticket, Human verification and Human acceptance bodies without signing or replaying.",
+    "transactionJournalBeforeAndAfterCount": 42,
+    "transactionJournalSha256": "c1d1d734654006522ac846d5f06135af07f64d1aca77451e01207674533a7d76",
+    "uiChainWrites": 0,
+    "uiCommandDeliveries": 0,
+    "uiSteps": [
+      "138-cache-before-original-journals",
+      "139-actual-settings-clear-cache",
+      "140-cold-start-welcome",
+      "141-cold-start-journal-retention",
+      "142-public-form-reconnect",
+      "143-recovered-failed-write-result",
+      "144-recovered-direct-histories",
+      "145-recovered-accepted-okr-evidence",
+      "146-recovered-original-acceptance-unknown",
+      "147-recovered-encrypted-record-directory",
+      "148-recovered-okr-bodies-and-evidence",
+      "149-cache-after-original-journals"
+    ],
+    "independentlyConfirmedAt": "2026-10-03T23:42:12.319757+00:00",
+    "independentComparison": {
+      "beforeSource": "/tmp/fm-v020-work-cache-before.json",
+      "afterSource": "/tmp/fm-v020-work-cache-after.json",
+      "businessEqual": true,
+      "businessSha256": "e52910930dfff651d18e2dbb8eea9d497e4421db220a67c062eed4f25b5ba6e9",
+      "counts": {
+        "organizations": 1,
+        "hosts": 1,
+        "memberships": 1,
+        "managedAgents": 2,
+        "okrs": 2,
+        "permissions": 2,
+        "directMessages": 5,
+        "directApprovals": 4,
+        "runs": 6,
+        "unsettledControlRuns": 0,
+        "encryptedRecords": 33,
+        "currentRecordPointers": 26,
+        "chainCommandDeliveries": 0,
+        "chainObjectMetadataRead": 69
+      },
+      "cloudCommandCountBefore": 6,
+      "cloudCommandCountAfter": 6,
+      "cloudFilesIdentical": true,
+      "cloudFiles": [
+        {
+          "name": "REVIEW-WINDOW.md",
+          "exists": true,
+          "bytes": 54,
+          "sha256": "c58966b2e6288daf6c54a5df3bfef3f8eb0bf91833240efaf1744f9a20a24a52"
+        },
+        {
+          "name": "ONE-OFF-UI.md",
+          "exists": true,
+          "bytes": 55,
+          "sha256": "6d7b5941db8bf3340cca6ec235ac7c72bc55ae207689c4e9887d5ad78dd18f1e"
+        },
+        {
+          "name": "ONE-OFF-UI-VERIFIED.md",
+          "exists": false,
+          "bytes": null,
+          "sha256": null
+        }
+      ],
+      "cloudBeforeSource": "/tmp/fm-v020-cloud-cache-before.json",
+      "cloudAfterSource": "/tmp/fm-v020-cloud-cache-after.json",
+      "durableSummary": "v020-work-cache-reconstruction.json"
+    },
+    "timestampNote": "DOM capturedAt/decryptedAt values use the Android device clock, which was approximately 11 seconds behind the independent host clock. Independent before/after reads and Coordinator lifecycle timestamps use their recorded host clocks."
+  },
+  "limitations": [
+    "Android emulator debug APK and real Ubuntu cloud Host on localnet; no physical-phone or other-platform release acceptance claimed.",
+    "Model provider is disabled in this isolated Host profile. Status/file execution is not model conversation.",
+    "Public transaction history on this localnet was pruned during testing; retained technical receipts and original object links were not deleted to bypass unknown outcomes.",
+    "Original device clock lagged chain by about 11 seconds; fixed review lifetime is independently read from original issued/expires fields."
+  ],
+  "singleMessageApprovalSecondAttempt": {
+    "status": "terminal_failed_due_to_original_capability_expiry",
+    "messageId": "0xe609706098d76f16356f054bdbe1867384952cac3cd4a5e009faaedf36e8b0df",
+    "requestId": "direct-message:e968ad16-8d28-4f1e-9c50-37b3a784c04c",
+    "approvalId": "0x4b14764c7831c451ed8c64e2cad6eb30434e796aad58575cde077e9335727af8",
+    "permissionId": "0x190cd12b76986f4b0968e2dae3398bc7b6bd585c394d537c2b7ae223037aa1a8",
+    "standingPermissionVersion": "2",
+    "standingActions": [
+      "status"
+    ],
+    "standingBudget": "0",
+    "explicitSameScopeRenewal": true,
+    "permissionExpiresAtMs": "1791068892707",
+    "approvedViaWorkbench": true,
+    "reviewedExactMessageAndBounds": true,
+    "dialogStillOpenAfter": {
+      "decision": true,
+      "capability": true,
+      "originalRun": true,
+      "firstDelivery": true
+    },
+    "runId": "0xa4c55964031686251ef015d78c2edd2bae69b53d915a47434aa0ebaa72010088",
+    "commandId": "07ff8513-100e-4fdf-b219-b6d3b1f52478",
+    "capabilityId": "0x5b067afb4fef57160e80c7393f6897a6f007e740de6ec12b2eb0f8732a7abef8",
+    "originalRunIssuedAtMs": "1791065429515",
+    "originalExpiresAtMs": "1791065573978",
+    "membershipExpiresAtMs": "1791146059329",
+    "firstDeliveryCount": 1,
+    "state": 3,
+    "settled": true,
+    "spent": "0",
+    "reserved": "0",
+    "resultRecord": "0x75e36b6bcbdca2f7e999f1598c3bebf35528ca3188be29479489a3365a850fdc",
+    "decryptedInApp": true,
+    "responseError": {
+      "code": "operation_unconfirmed",
+      "message": "expired: Host or capability expired"
+    },
+    "hostResultTransaction": "9dFZEEmor4naxoXvccFfYhqQLyocwz1yiLVS7Mu94rzs",
+    "independentFile": {
+      "at": "2026-10-03T22:13:10.323133+00:00",
+      "path": "/tmp/fm-v020-review-window-worker-r11-3k7cx0tc/workspace/docs/ONE-OFF-UI.md",
+      "exists": false,
+      "bytes": null,
+      "sha256": null,
+      "exactMatch": false,
+      "content": null,
+      "originalSha256": "c58966b2e6288daf6c54a5df3bfef3f8eb0bf91833240efaf1744f9a20a24a52",
+      "workspaceFiles": [
+        "docs/REVIEW-WINDOW.md"
+      ]
+    },
+    "uiSteps": [
+      "86-final-queue-apk-renewal-read",
+      "87-status-only-explicit-renewal",
+      "88-new-oneoff-message-confirm",
+      "89-new-oneoff-request-approval",
+      "90-new-oneoff-workbench-approve",
+      "91-new-oneoff-capability",
+      "92-new-oneoff-original-run",
+      "93-new-oneoff-first-delivery",
+      "94-new-oneoff-original-query",
+      "95-new-oneoff-original-after-deadline"
+    ],
+    "next": "Keep original terminal failure unchanged. Await verified envd batch-read optimization and fixed five-minute window for new messages; restart yields a new physical instance and requires its own real discovery/import/control confirmation."
+  },
+  "updatedPhysicalInstanceSetup": {
+    "status": "explicitly_paused_without_kr_execution",
+    "envdVersion": "v020-direct-batch-r13",
+    "hostAddress": "0xffa58c6cc96d2a1d6b2760d2d5c6a6b67beab290d35f53719969ebf691700b93",
+    "managedAgentId": "0x1529e642b997fd72b2509d11e496491c386501bf8afcf771f661d7b4f3ccc1bb",
+    "instanceId": "native-b0f907fcd70b00370193884cc2595fc77c7235bd0943e3e32df4e212c98ceef7",
+    "observationOnlyImport": {
+      "attemptId": "91eae592-a95b-418a-8056-7afd9e43f601",
+      "digest": "H5UNKEUcpfj7EyQTkEBQLQ8UfLbLW2HmH8YX2ysFp2i7",
+      "dialogStillOpen": true,
+      "legacyUnknownPreserved": true,
+      "uiSteps": [
+        "104-new-instance-import-confirmed",
+        "105-new-import-legacy-preserved"
+      ]
+    },
+    "okrId": "0x21893f30a2471287c1fa9b3e3e9c449eaf8428cd18f6e82331197cd6de7cb5c5",
+    "logicalId": "ae169c54-9e09-403b-b728-2e51edae27be",
+    "draftTransaction": "2RqKnEyYaLLXjWBnWueHRfzVXBFvKRdasmDZwLJP9zBn",
+    "constraintCorrection": {
+      "initialUnrecognized": [
+        "shell.execute",
+        "network.request"
+      ],
+      "rejectedBeforeObservationOrReviewTransaction": true,
+      "explicitNewSpecification": [
+        "shell.*",
+        "network.*"
+      ],
+      "replacementDigest": "E9hca36y6VLKVj2W4QREtMC1mZFSNoUcFciZMahxEr42",
+      "preservedOldSpecificationHistory": true,
+      "uiSteps": [
+        "109-new-plan-validation",
+        "112-new-draft-constraint-change"
+      ]
+    },
+    "reviewRunId": "0x1db2b22a4bf8b4459ca3c0e87f05b35acf72e7c04273e326d9fe68d39b9e42d4",
+    "reviewCommandId": "3bbc4cf3-a832-4d7f-8413-b2633aadc1f0",
+    "reviewOriginalIssuedAtMs": "1791067502427",
+    "reviewOriginalExpiresAtMs": "1791067802427",
+    "reviewResultRecord": "0x8f69c35759616efb54df3b9be69ef57df9a8acb6a33e4d34484458ae6371b25b",
+    "reviewState": 2,
+    "reviewSettled": true,
+    "observationTransaction": "EofZuUac3MrVs2ATVBB8DNUCnixnSc4iRtSYZ3eEySju",
+    "reviewTransaction": "6m1Y9T7QTUZr2cDyhuLzQxVmTiz6FLC4qd7KuJjgmEKe",
+    "reviewReceiptPrunedAndOriginalRecovered": true,
+    "reviewDeliveryCount": 1,
+    "agreementApprovalTransaction": "EmrGb597Ubg8yZdVekjtPfSqEmgHmPqJ76pQf58dkDxA",
+    "controlConfirmed": true,
+    "managedVersion": "2",
+    "okrState": 2,
+    "okrVersion": "4",
+    "agreementVersion": "3",
+    "krExecutions": 0,
+    "directPermissionCreated": true,
+    "directMessagesCreated": 1,
+    "pauseBlock": {
+      "originalRequestId": "okr-intervene:0x21893f30a2471287c1fa9b3e3e9c449eaf8428cd18f6e82331197cd6de7cb5c5:1:replace",
+      "digest": "E9hca36y6VLKVj2W4QREtMC1mZFSNoUcFciZMahxEr42",
+      "observedOutcome": "unknown",
+      "freshCurrentOkrVersion": "3",
+      "reasonAndReviewFieldsDisabled": true,
+      "pauseFeeButtonDisabled": true,
+      "pauseTransactionSubmitted": false,
+      "uiSteps": [
+        "120-new-okr-pause-current",
+        "121-pause-blocked-original-correlation"
+      ],
+      "resolvedByUiStep": "123-same-okr-explicit-pause"
+    },
+    "independentFileRead": {
+      "readAt": "2026-10-03T22:50:56.992567+00:00",
+      "target": "/tmp/fm-v020-review-window-worker-r11-3k7cx0tc/workspace/docs/ONE-OFF-UI.md",
+      "targetExists": false,
+      "originalSha256": "c58966b2e6288daf6c54a5df3bfef3f8eb0bf91833240efaf1744f9a20a24a52",
+      "workspaceFiles": [
+        "docs/REVIEW-WINDOW.md"
+      ]
+    },
+    "originalAchievedOkrState": 3,
+    "originalAchievedOkrBudget": {
+      "asset": "TOOL_CALLS",
+      "spent": "3",
+      "reserved": "0",
+      "claimsId": "0xe76212d7e8ee3b8cb2f3a296319f69adf03546de517d17cd25fd6ea5cf0a0e07"
+    },
+    "next": "The original direct write is terminal failed with 2 tools spent; file exists but final runtime verification was not completed. Await investigation without replay or cache clearing.",
+    "pause": {
+      "status": "confirmed",
+      "requestId": "okr-intervene:0x21893f30a2471287c1fa9b3e3e9c449eaf8428cd18f6e82331197cd6de7cb5c5:3:pause",
+      "digest": "Bofe7cmGv74pXb5sGXFLzYgnSkrnBpKAAYxk8fbxy4aV",
+      "okrState": 2,
+      "okrVersion": "4",
+      "agreementVersion": "3",
+      "spent": "0",
+      "reserved": "0",
+      "krExecutions": 0,
+      "oldUnknownReceiptVisible": true,
+      "uiStep": "123-same-okr-explicit-pause"
+    }
+  },
+  "singleMessageApprovalUpdatedInstance": {
+    "status": "terminal_failed_after_write_before_final_verification",
+    "messageId": "0x24221c6a19b947249594fb9718ec9f4a547235c1298982514965f00b934855c5",
+    "requestId": "direct-message:eaccce6a-fb6e-4fd6-a6d4-434286fc5c85",
+    "messageDigest": "AKW7M8rYtCLHJRAfshPJohKN8MnZYAGUsg1DpT1p8sM5",
+    "approvalId": "0x4abbd5caaeaddea6639640967b2f7aac71749fd6f346c9166be751bba99aa04a",
+    "permissionId": "0xf5f22ebcd88e8ae2ffe63b05f3ec3f255379b376feaf7735fe8a11895b2e47cf",
+    "standingActions": [
+      "status"
+    ],
+    "standingMaxCalls": "0",
+    "standingBudget": "0",
+    "permissionVersion": "1",
+    "originalExpiresAtMs": "1791068685149",
+    "runId": "0xefa2f2a39f4babf66052ef3e38851a9c7a24a1388e55c4cafa9211369f1e7c95",
+    "commandId": "9a8cbb04-5b6e-4804-b29e-87f34a4c6773",
+    "capabilityId": "0xf2f09fcb58daaab2f55babc07f2f3b2a4214037cbb2816bca7725e949959e15c",
+    "workbenchOriginalMessageReviewed": true,
+    "singleDecision": true,
+    "firstDeliveryCount": 1,
+    "dialogStillOpenAfterApprovalCapabilityRunAndDelivery": true,
+    "sharedDeadlineDisplayed": true,
+    "deadlineNotExtended": true,
+    "transientMessageReadFailureRecoveredByOriginalQuery": true,
+    "uiSteps": [
+      "126-new-status-only-permission-confirmed",
+      "127-new-physical-oneoff-workbench-approval",
+      "128-new-message-original-recovery",
+      "129-original-oneoff-workbench-approval",
+      "130-original-oneoff-run-and-delivery",
+      "131-new-oneoff-original-query"
+    ],
+    "state": 3,
+    "settled": true,
+    "spent": "2",
+    "reserved": "0",
+    "resultRecord": "0xbe9b43728b42ce2488b0216af3a90e24de54a2e321e64ec1287b3aa39af8d606",
+    "decryptedInApp": true,
+    "response": {
+      "schema_version": "1",
+      "adapter": "agent-manager-runtime",
+      "command_id": "9a8cbb04-5b6e-4804-b29e-87f34a4c6773",
+      "operation": "direct.message",
+      "duplicate": false,
+      "ok": false,
+      "observed_at": "2026-10-03T23:04:45.150247495Z",
+      "result": {
+        "status": "blocked",
+        "reason": "operation_unconfirmed",
+        "blocked_path": "docs/ONE-OFF-UI.md",
+        "tool_calls_used": 2,
+        "evidence": []
+      },
+      "error": {
+        "code": "operation_unconfirmed",
+        "message": "Native direct file task paused: operation_unconfirmed"
+      },
+      "spend": {
+        "asset": "TOOL_CALLS",
+        "amount": "2",
+        "known": true
+      },
+      "execution_id": "0xefa2f2a39f4babf66052ef3e38851a9c7a24a1388e55c4cafa9211369f1e7c95",
+      "execution_state": "failed",
+      "transaction_digest": "6bZGskW2x4fWLqsPVpBKoDEq9VBu42oWEVx7hkinzHYw"
+    },
+    "independentFile": {
+      "readAt": "2026-10-03T23:06:01.597539+00:00",
+      "target": "/tmp/fm-v020-review-window-worker-r11-3k7cx0tc/workspace/docs/ONE-OFF-UI.md",
+      "targetExists": true,
+      "bytes": 55,
+      "sha256": "6d7b5941db8bf3340cca6ec235ac7c72bc55ae207689c4e9887d5ad78dd18f1e",
+      "content": "Approved once through the installed Android workbench.\n",
+      "exactMatch": true,
+      "originalSha256": "c58966b2e6288daf6c54a5df3bfef3f8eb0bf91833240efaf1744f9a20a24a52",
+      "workspaceFiles": [
+        "docs/ONE-OFF-UI.md",
+        "docs/REVIEW-WINDOW.md"
+      ]
+    },
+    "uiTerminalStep": "132-new-oneoff-original-near-deadline",
+    "notCountedAsCompleteFileExecution": true,
+    "next": "Preserve the original failed Run and actual written file. Investigate complete-flow deadline consumption; do not replay this request. Cache acceptance remains pending."
+  },
+  "singleMessageApprovalFollowup": {
+    "status": "awaiting_specific_user_authorization_after_review_rejection",
+    "proposedTarget": "docs/ONE-OFF-UI-VERIFIED.md",
+    "proposedContent": "Approved once and verified through the installed Android workbench.\n",
+    "maxCalls": 3,
+    "newMessageCreated": false,
+    "newRunCreated": false,
+    "newDeliveryAttempts": 0,
+    "reason": "Automatic approval review rejected the paid chain approvals, execution capability, Run creation, and remote file-write delivery as lacking sufficiently specific user authorization. No rejected command ran; no workaround or indirect retry was used.",
+    "reviewAttempts": 2,
+    "secondReviewReason": "Despite tighter localnet guards and bounded scope, this still performs paid approvals, capability/Run creation, and a remote file write; no trusted user message explicitly authorizes this exact payload and side effects.",
+    "readOnlyScopeEvidence": [
+      "/tmp/fm-v020-localnet-scope-proof.json",
+      "/tmp/fm-v020-review-window-ui-r1-137-readonly-public-scope-guards.json"
+    ],
+    "preparedHarnessSha256": "3231c46d2c5204b840b60f4fbad19c42dc0d4b3fbef3b9faa496c901ca9f49f0",
+    "proposedLocalnetGasLimits": {
+      "transactions": 5,
+      "perTransactionMist": "200000000",
+      "totalMist": "1000000000",
+      "noEconomicValue": "local faucet test tokens"
+    }
+  }
+}

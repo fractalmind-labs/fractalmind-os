@@ -1,0 +1,188 @@
+{
+  "schema": "fractalmind.v020.direct-cloud-read-performance.v1",
+  "recordedDate": "2026-10-03",
+  "status": "implementation-and-fixture-regressions-passed",
+  "baselineCommit": "44705baa15d2856970012f564db40f644a2cabe9",
+  "measurement": {
+    "kind": "production-reader-invocation-count-on-fixtures",
+    "countsActualCloudDuration": false,
+    "countsWholeRequestDuration": false,
+    "baselineMethod": "Temporary Go overlay replaced four production source files with their exact baseline HEAD contents. Both variants used the same fixture, with batch capability available. The working tree was not reverted.",
+    "countedMethods": [
+      "ReadChainObject",
+      "ReadChainObjects"
+    ],
+    "includesFinalVersionPin": true,
+    "paths": [
+      {
+        "path": "standing Resolve",
+        "baseline": {
+          "single": 13,
+          "batch": 2,
+          "total": 15
+        },
+        "current": {
+          "single": 8,
+          "batch": 4,
+          "total": 12
+        }
+      },
+      {
+        "path": "one-off approval Resolve",
+        "baseline": {
+          "single": 16,
+          "batch": 2,
+          "total": 18
+        },
+        "current": {
+          "single": 9,
+          "batch": 4,
+          "total": 13
+        }
+      },
+      {
+        "path": "original Run LookupExecution",
+        "baseline": {
+          "single": 19,
+          "batch": 1,
+          "total": 20
+        },
+        "current": {
+          "single": 5,
+          "batch": 5,
+          "total": 10
+        }
+      },
+      {
+        "path": "known original Run RecheckExecution",
+        "baseline": {
+          "single": 15,
+          "batch": 2,
+          "total": 17
+        },
+        "current": {
+          "single": 1,
+          "batch": 6,
+          "total": 7
+        }
+      }
+    ],
+    "serialComparison": {
+      "typedResultsAndPrivateDependencyVersionsEqual": true,
+      "eachSuccessfullyReadDependencyReadTwice": true,
+      "countIncludesOnlySuccessfulObjectReads": true,
+      "standingSuccessfulObjectReads": 34,
+      "oneOffSuccessfulObjectReads": 38,
+      "originalRunSuccessfulObjectReads": 38,
+      "knownRunSuccessfulObjectReads": 34
+    }
+  },
+  "implementation": {
+    "cacheLifetime": "One chainRead resolution only; never reused across requests or tools.",
+    "cacheMissingOrErrors": false,
+    "overwriteFirstRead": false,
+    "preserved": [
+      "Every original authorization stage and per-tool check",
+      "Typed owner, datatype origin, UID and BCS validation",
+      "Exact original message, record, permission, approval, Run and budget bindings",
+      "Fresh final read of every consumed dependency version",
+      "Clock, expiry, stop, current authority and original execution ownership checks",
+      "Original transaction layout, replay rules and command TTL"
+    ],
+    "sourceFiles": [
+      "runtime/fractalmind-envd/internal/nodecommand/chain_snapshot.go",
+      "runtime/fractalmind-envd/internal/nodecommand/chain_authority.go",
+      "runtime/fractalmind-envd/internal/nodecommand/direct_authority.go",
+      "runtime/fractalmind-envd/internal/nodecommand/chain_execution.go"
+    ],
+    "regressionFile": "runtime/fractalmind-envd/internal/nodecommand/direct_batch_test.go"
+  },
+  "verification": {
+    "toolchain": "go1.26.0 darwin/arm64",
+    "workingDirectory": "runtime/fractalmind-envd",
+    "targetedCommand": "GOCACHE=/tmp/fm-envd-direct-batch-go-cache go test ./internal/nodecommand -run 'TestDirect(Batch|Prefetch)|TestPrefetchedFieldUsesDatatypeOrigin' -v",
+    "targetedResult": "passed",
+    "raceCommand": "GOCACHE=/tmp/fm-envd-direct-batch-go-cache go test -race ./internal/nodecommand ./internal/boundedrun ./internal/runtimeadapter ./internal/sui",
+    "raceResult": "all-four-packages-passed",
+    "archivedRaceLogUsesGoCache": true,
+    "raceLog": [
+      "ok  github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand (cached)",
+      "ok  github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun (cached)",
+      "ok  github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter (cached)",
+      "ok  github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui (cached)"
+    ],
+    "initialSandboxAttempt": {
+      "nodecommand": "passed",
+      "boundedrun": "passed",
+      "runtimeadapter": "Own-process inventory unavailable under sandbox",
+      "sui": "Temporary localhost listeners rejected by sandbox",
+      "resolution": "Same four-package race command passed after test-only permission approval; no live Host or chain changes."
+    },
+    "failureCases": [
+      "Missing, reordered or duplicate batch items and RPC failures reject without individual fallback",
+      "Wrong owner, datatype, UID, trailing BCS or mutable message source rejects",
+      "Permission, approval, approver grant, role, workspace, Run, claim, message and record version changes reject at final read",
+      "Prefetch derives fields from verified datatype origins",
+      "Repeated prefetch cannot replace the initial object version",
+      "Successful previous calls cannot satisfy current revocation or unavailable-RPC checks",
+      "Optional workspace absence retains its original meaning"
+    ],
+    "diffCheck": "passed"
+  },
+  "linuxBuild": {
+    "evidenceSource": "Size and worker replacement time reported by parent task; public deployment record independently read by this reviewer. This reviewer did not deploy.",
+    "platform": "linux/amd64",
+    "artifactLabel": "envd-r13",
+    "sizeBytes": 25930921,
+    "sha256": "5e09cc91695d76b880dc072b57ceb6dc93a63eaefc92762b37138756c5356d47",
+    "stateAtRecording": "deployed-and-coordinator-reauthenticated",
+    "version": "v020-direct-batch-r13",
+    "sourceCommitAsRecorded": "d6c293e",
+    "deployment": {
+      "publicRecordTimestampUtc": "2026-10-03T22:28:49.005822+00:00",
+      "workerReplacedAtUtc": "2026-10-03T22:28:58Z",
+      "reconnectedAtUtc": "2026-10-03T22:29:05Z",
+      "oldPid": 2410340,
+      "newPid": 2441063,
+      "oldExitCode": 0,
+      "oldSha256": "d015798503c649ce39770669eac4716594a3f26255752e4722bf5d9946792be5",
+      "nativeProfileUnchanged": true,
+      "configUnchanged": true,
+      "sameHostAddress": "0xffa58c6cc96d2a1d6b2760d2d5c6a6b67beab290d35f53719969ebf691700b93",
+      "otherExistingEnvdPidsStillPresent": [
+        1872983,
+        2244585,
+        2385424
+      ]
+    }
+  },
+  "limits": [
+    "Reader method counts are fixture evidence, not measured cloud latency or whole-request speedup.",
+    "The Run fixtures cover original message, record and budget sources; the separate one-off authority fixture covers the approving device.",
+    "The deployed process reauthenticated; App import repair and explicit control confirmation of the new physical instance have passed. The separate OKR pause UI repair has also passed in r8. Actual new-request latency and execution remain pending.",
+    "The earlier expired Run remains failed with zero tool spend and is not replayed."
+  ],
+  "actualFirstR13Write": {
+    "status": "failed-after-partial-write",
+    "runId": "0xefa2f2a39f4babf66052ef3e38851a9c7a24a1388e55c4cafa9211369f1e7c95",
+    "commandId": "9a8cbb04-5b6e-4804-b29e-87f34a4c6773",
+    "hostReceivedAtUtc": "2026-10-03T23:02:02Z",
+    "startedAtMs": "1791068556750",
+    "expiresAtMs": "1791068685149",
+    "resultObservedAtMs": "1791068685150",
+    "updatedAtMs": "1791068690321",
+    "spent": 2,
+    "reserved": 0,
+    "settled": true,
+    "resultTransaction": "6bZGskW2x4fWLqsPVpBKoDEq9VBu42oWEVx7hkinzHYw",
+    "targetFile": {
+      "name": "ONE-OFF-UI.md",
+      "bytes": 55,
+      "sha256": "6d7b5941db8bf3340cca6ec235ac7c72bc55ae207689c4e9887d5ad78dd18f1e"
+    },
+    "originalOkrFileUnchanged": true,
+    "replayed": false,
+    "fullExecutionAcceptance": false,
+    "clockNote": "Use chain timestamps for exact Run durations; UI device and host wall clocks differ, so UI-to-delivery timing is approximate."
+  }
+}

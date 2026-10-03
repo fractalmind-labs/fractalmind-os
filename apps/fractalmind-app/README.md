@@ -1,7 +1,7 @@
 # FractalMind App
 
-React + TypeScript client for the unified FractalMind entry point. This is an
-implementation in progress whose authoritative interface baseline is
+React + TypeScript client for the unified FractalMind entry point. This is a
+v0.2.0 Alpha implementation whose authoritative interface baseline is
 [prototype v2](../../docs/product/fractalmind-app-prototype-v2/README.md).
 The static prototype supplies the product design; this client supplies real
 chain/native integrations. v1 is not an implementation reference. The current client reads real Sui data directly through the
@@ -80,9 +80,12 @@ The native shell exposes the same Rust library entry point to desktop and mobile
 Its vault uses Keychain on iOS and a named Android Keystore-backed encrypted
 credential store on Android. An ARM64 debug APK now builds and installs;
 actual Android emulator IPC, offline signatures and credential reload after a
-cold process restart pass. Physical phones, on-chain mobile transactions,
-pairing and mobile approval journeys remain unverified. This does not establish
-that the mobile App is ready for release. See
+cold process restart pass. The installed emulator App has also exercised
+on-chain identity/organization creation, Host discovery, cloud OKR handover,
+execution and independent Human verification/acceptance. Physical phones and
+five-platform production releases remain outside this evidence. Current scope
+and remaining checks are maintained in the
+[milestone acceptance map](../../docs/product/v020-milestone-acceptance.md). See
 [Android build and actual evidence](../../docs/product/v020-app-android-native.md)
 and [mobile entry evidence](../../docs/product/v020-app-mobile-native.md).
 
@@ -157,8 +160,9 @@ device grant and organization before approving an operation.
   revokes unused invitations or memberships. Invitation secrets remain in the
   current session only. Membership never implies current connectivity or a
   tool's execution authority. The envd redemption CLI supports inspection,
-  fee confirmation and original-digest recovery; the installed-host/cloud journey
-  still needs acceptance. See [Host access](../../docs/product/v020-app-host-access.md)
+  fee confirmation and original-digest recovery. Real macOS and Ubuntu Host
+  admission/discovery evidence is in the [cloud report](../../docs/product/v020-remote-host-acceptance.md).
+  See [Host access](../../docs/product/v020-app-host-access.md)
   and [envd CLI evidence](../../docs/product/v020-envd-host-join.md).
 - Agents: current organization's managed instance records. Live capability and
   connectivity are not inferred from registration labels. Native review/approval
@@ -166,9 +170,11 @@ device grant and organization before approving an operation.
   restore them read-only and consume authenticated Host proofs through explicit
   fee-confirmed approval. The v2 Include in OKR dialog now connects device-bound
   observation issuance, concrete plan review, separate fees, ticket lookup,
-  Host response validation and approval. Installed UI, expired/failed attempts
-  and the complete autonomous journey still need acceptance;
-  approval never dispatches continuation. See [flow and limits](../../docs/product/v020-app-handover-flow.md)
+  Host response validation and approval. The installed Android UI has approved
+  an original five-minute review after 255 seconds and completed the cloud
+  file task; [current review evidence](../../docs/product/v020-review-window-and-approval-queue.md)
+  records the exact scope and retained failures. Approval never dispatches
+  continuation. See [flow and limits](../../docs/product/v020-app-handover-flow.md)
   and [review tickets](../../docs/product/v020-app-handover-review.md).
 - Native OKR runner bridge: approved-plan decryption, encrypted ticket creation
   and Host-specific result wrapping use the OS vault without organization-key
@@ -177,8 +183,8 @@ device grant and organization before approving an operation.
   detail now expose separate one-use control and command fee confirmations,
   original-request queries and explicit Host delivery. Real OS vault + localnet
   - production envd validates native review, approval, exact file execution,
-    result decryption and revocation. Installed journal/IPC and sustained execution
-    still need end-to-end acceptance.
+    result decryption and revocation. Installed journal/IPC, autonomous execution
+    and their distinct evidence scopes are tracked in the milestone map.
     See [implementation and evidence](../../docs/product/v020-native-okr-runner.md).
 - Human KR verification and final acceptance: Workbench and OKR detail expose
   original evidence, independent confirmation, a reason and separate native fee
@@ -186,8 +192,13 @@ device grant and organization before approving an operation.
   separately confirms overall success criteria. Historical encrypted verification
   records are read from the current head with current authority checks. Actual
   OS + localnet + envd tests cover two ordered KR Runs, both verification decisions
-  and an ACHIEVED OKR, with scripted explicit Human decisions. Installed Human UI,
-  full cache wiping and cloud/phone journeys remain pending. See
+  and an ACHIEVED OKR, with scripted explicit Human decisions. Installed Android
+  UI has separately completed a real cloud task and both Human review steps.
+  Combined installed-client cache clearing and Coordinator restart have also
+  restored the existing encrypted work history without dispatch. The final
+  successful one-off write remains pending explicit acceptance authorization;
+  partial writes and failed Runs are retained. Platform limits are recorded in
+  the milestone map. See
   [review implementation and limits](../../docs/product/v020-app-human-review.md).
 - Identity: chain Human generation/recovery version and device grants. The page
   labels these as snapshots and refreshes them with organization reads.
@@ -201,9 +212,15 @@ specific absent organization index can produce an empty directory. Unknown Run
 outcomes preserve reservations even after agreement expiry or replanning.
 Without action traces, the map does not establish drift or a dead end.
 
-`localStorage` contains public connection metadata, disposable technical attempt identifiers and device appearance settings,
-not business snapshots, keys or encrypted product bodies. Clearing that connection
-and reconnecting reconstructs public state from Sui; it does not modify the chain.
+`localStorage` contains public connection metadata, technical attempt identifiers,
+appearance settings and explicitly saved encrypted **unsent local drafts**.
+Each draft is scoped to the original chain, Human, organization, Host, instance
+and native device; its independent content key is sealed to the device public key.
+No long-term private key or execution authority is stored there. Closing or
+backgrounding clears page plaintext. A submission marker prevents restoring
+an attempted draft as a new unsent message. Drafts never send automatically.
+Clearing local data loses these disposable working copies; committed business
+state is reconstructed from Sui without new execution or chain writes.
 
 ## Verification and remaining scope
 
@@ -220,10 +237,11 @@ node --import tsx scripts/localnet-read.ts /tmp/deployment-report.json /tmp/app-
 ```
 
 See [v0.2.0 validation](../../docs/product/fractalmind-app-v020-validation.md) for
-actual public evidence and browser screenshots. Unit tests and the public reader
-do not prove full v0.2.0 acceptance. Complete native identity/onboarding and
-authorized encrypted-body access, fees and approval UI, dialogue/intervention, sustained autonomous
-execution, a real cloud Host and native platform validation remain required.
+actual public evidence and screenshots. The
+[21-issue acceptance map](../../docs/product/v020-milestone-acceptance.md)
+is the current checklist; historical increment reports retain the limitations
+observed at their own date. Unit tests and a public reader alone do not establish
+installed UI behavior, physical-phone support or production release readiness.
 
 The production bundle currently emits a large-chunk warning. Loading and bundle
 splitting still need performance work before release.
