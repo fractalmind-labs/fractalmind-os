@@ -21,6 +21,7 @@ import {
   directApprovalReasons,
   boundedDirectRequest,
   modelReply,
+  type DirectOperation,
 } from "../src/direct-agent";
 import { NativeDeviceSigner } from "../src/native-device";
 import type { ChainReadSession } from "../src/chain";
@@ -259,16 +260,22 @@ async function fixture() {
     keyVersion: "1",
     workspace: { protected: false, revision: "1", complete: true },
   };
-  let sourceReads = 0,
-    prior: SelfPayTransactionOutcome | undefined;
-  (controller as any).source = async () => {
+  let sourceReads = 0;
+  const prior = new Map<string, SelfPayTransactionOutcome>(),
+    queried: string[] = [],
+    sourceActions: string[] = [];
+  (controller as any).source = async (action = "read") => {
     sourceReads++;
+    sourceActions.push(action);
     assertLive();
     return structuredClone({ ...source, pin });
   };
   const sign = (controller as any).manager.options.signer.signTransaction;
   (controller as any).manager = {
-    query: async () => prior,
+    query: async (requestId: string) => {
+      queried.push(requestId);
+      return prior.get(requestId);
+    },
     prepare: async (input: any) => {
       builds++;
       duringQuote();
@@ -306,6 +313,8 @@ async function fixture() {
     controller,
     source,
     signer,
+    queried,
+    sourceActions,
     counts: () => ({
       nativeCalls,
       builds,
@@ -330,7 +339,7 @@ async function fixture() {
       duringChallenge = fn;
     },
     original: (v: SelfPayTransactionOutcome) => {
-      prior = v;
+      prior.set(v.requestId, v);
     },
   };
 }
@@ -399,7 +408,7 @@ test("original unknown transaction is queried before new sources or crypto", asy
     original = {
       status: "unknown",
       digest: "original",
-      requestId: "direct-permission:original",
+      requestId: `direct-permission:${managed}:create`,
       journalSynced: true,
     } as SelfPayTransactionOutcome;
   f.original(original);
@@ -419,6 +428,180 @@ test("original unknown transaction is queried before new sources or crypto", asy
     signs: 0,
     sourceReads: 0,
   });
+  assert.deepEqual(f.queried, [original.requestId]);
+});
+
+test("every fixed-ID preparation only queries its exact unknown original without another fee or signature", async (t) => {
+  const operations: Array<[DirectOperation, string]> = [
+    [
+      {
+        kind: "permission",
+        expectedVersion: "2",
+        policy: { ...policy(), actions: [...policy().actions] },
+      },
+      `direct-permission:${managed}:2`,
+    ],
+    [{ kind: "revoke", expectedVersion: "2" }, `direct-revoke:${managed}:2`],
+    [{ kind: "approval", messageId }, `direct-approval:${messageId}`],
+    [
+      { kind: "decision", messageId, approve: true },
+      `direct-decision:${messageId}:true`,
+    ],
+    [
+      { kind: "decision", messageId, approve: false },
+      `direct-decision:${messageId}:false`,
+    ],
+    [{ kind: "capability", messageId }, `direct-capability:${messageId}`],
+    [
+      { kind: "run", messageId, capabilityId: capability },
+      `direct-run:${messageId}`,
+    ],
+    [{ kind: "stop", messageId }, `direct-stop:${messageId}`],
+  ];
+  for (const [operation, requestId] of operations)
+    await t.test(requestId, async () => {
+      const f = await fixture();
+      const original: SelfPayTransactionOutcome = {
+        status: "unknown",
+        requestId,
+        digest: "original-pruned-digest",
+        journalSynced: true,
+      };
+      f.original(original);
+      assert.equal(await f.controller.prepare(operation), original);
+      assert.deepEqual(f.queried, [requestId]);
+      assert.deepEqual(f.counts(), {
+        nativeCalls: 0,
+        builds: 0,
+        broadcasts: 0,
+        deliveries: 0,
+        signs: 0,
+        sourceReads: 0,
+      });
+      assert.equal(original.status, "unknown");
+    });
+});
+
+async function decisionFixture() {
+  const f = await fixture();
+  f.source.permission = {
+    id: permission,
+    version: "1",
+    revoked: false,
+    human_generation: "1",
+    managed_version: "1",
+    membership_id: member,
+    membership_version: "1",
+    workspace_hash: f.source.managed.workspace_hash,
+    expires_at_ms: String(Date.now() + 3600000),
+  };
+  const linked = {
+    message: {
+      id: messageId,
+      permission_version: "1",
+      managed_version: "1",
+      human_generation: "1",
+      expires_at_ms: String(Date.now() + 120000),
+      message_token: "12345678-1234-1234-1234-123456789abc",
+    },
+    approval: { id: id("e"), state: 0 } as { id: string; state: number } | null,
+    result: null as { run: { id: string } } | null,
+    request: {
+      message: "Explicit one-off request",
+      bounds: { paths, max_calls: "3" },
+    },
+  };
+  (f.controller as any).message = async (requested: string) => {
+    assert.equal(requested, messageId);
+    return structuredClone(linked);
+  };
+  const original: SelfPayTransactionOutcome = {
+    status: "unknown",
+    requestId: `direct-approval:${messageId}`,
+    digest: "pruned-approval-creation",
+    journalSynced: true,
+  };
+  f.original(original);
+  return { ...f, linked, originalReceipt: original };
+}
+
+test("an independently linked pending approval permits the next decision despite the original creation receipt being unknown", async () => {
+  const f = await decisionFixture(),
+    original = structuredClone(f.originalReceipt);
+  const quote = await f.controller.prepare({
+    kind: "decision",
+    messageId,
+    approve: true,
+  });
+  assert.ok(!("status" in quote));
+  assert.equal(quote.requestId, `direct-decision:${messageId}:true`);
+  assert.deepEqual(f.queried, [`direct-decision:${messageId}:true`]);
+  assert.ok(f.counts().sourceReads >= 2);
+  assert.ok(f.sourceActions.every((action) => action === "approve"));
+  assert.equal(f.counts().builds, 1);
+  assert.equal(f.counts().broadcasts, 0);
+  assert.equal(f.counts().signs, 0);
+  assert.deepEqual(f.originalReceipt, original);
+  // Fresh chain source changes after the preview still prevent signing.
+  f.change();
+  await assert.rejects(f.controller.submit(quote), DirectAgentError);
+  assert.equal(f.counts().signs, 0);
+  assert.equal(f.counts().broadcasts, 0);
+});
+
+test("the independent decision still rejects missing/decided approval, existing Run and changing authority", async (t) => {
+  const mutations: Array<
+    [string, (f: Awaited<ReturnType<typeof decisionFixture>>) => void]
+  > = [
+    [
+      "missing approval",
+      (f) => {
+        f.linked.approval = null;
+      },
+    ],
+    [
+      "already decided",
+      (f) => {
+        f.linked.approval!.state = 1;
+      },
+    ],
+    [
+      "original Run exists",
+      (f) => {
+        f.linked.result = { run: { id: runId } };
+      },
+    ],
+    [
+      "permission revoked",
+      (f) => {
+        f.source.permission.revoked = true;
+      },
+    ],
+    [
+      "expired message",
+      (f) => {
+        f.linked.message.expires_at_ms = "1";
+      },
+    ],
+    [
+      "source changes during crypto",
+      (f) => {
+        f.onNative(f.change);
+      },
+    ],
+  ];
+  for (const [name, mutate] of mutations)
+    await t.test(name, async () => {
+      const f = await decisionFixture();
+      mutate(f);
+      await assert.rejects(
+        f.controller.prepare({ kind: "decision", messageId, approve: true }),
+        DirectAgentError,
+      );
+      assert.equal(f.counts().builds, 0);
+      assert.equal(f.counts().signs, 0);
+      assert.equal(f.counts().broadcasts, 0);
+    });
 });
 test("permission submit rechecks after native signing and rejects foreign quotes", async () => {
   const f = await fixture(),

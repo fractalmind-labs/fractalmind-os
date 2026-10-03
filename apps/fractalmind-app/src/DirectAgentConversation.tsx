@@ -23,9 +23,15 @@ import type { ConnectionProfile, Agent } from "./domain";
 import CreateOkr from "./CreateOkr";
 import {
   canComposeAfterPermissionReceipt,
+  canComposeAfterSettledRun,
   directConversationState,
 } from "./direct-conversation-state";
 import { NativeDirectDraft, type DirectDraft } from "./direct-draft";
+import {
+  DirectUnresolvedRequests,
+  hasUnresolvedDecision,
+  type UnresolvedDirectRequest,
+} from "./direct-unresolved";
 import {
   readMessageOkrSource,
   type MessageOkrSource,
@@ -114,6 +120,8 @@ export default function DirectAgentConversation({
   } | null>(null);
   const [draftError, setDraftError] = useState<string | null>(null);
   const [draftAttempted, setDraftAttempted] = useState<string | null>(null);
+  const originalRequests = useRef<DirectUnresolvedRequests | null>(null);
+  const [unresolved, setUnresolved] = useState<UnresolvedDirectRequest[]>([]);
   const [requestId, setRequestId] = useState<string | null>(null),
     [capabilityId, setCapabilityId] = useState<string | null>(null);
   const [action, setAction] = useState<
@@ -190,6 +198,8 @@ export default function DirectAgentConversation({
     setDraftSaved(null);
     setDraftError(null);
     setDraftAttempted(null);
+    originalRequests.current = null;
+    setUnresolved([]);
     active.current = false;
     epoch.current++;
     context.current = null;
@@ -408,7 +418,10 @@ export default function DirectAgentConversation({
       },
       assertLive,
     );
-    context.current = { controller, chain, assertLive };
+    const originals = new DirectUnresolvedRequests(
+      localStorage,
+      `${key}:${signer.device.address}:unresolved.v1`,
+    );
     const saved = localStorage.getItem(key);
     if (saved) {
       let locator;
@@ -428,8 +441,16 @@ export default function DirectAgentConversation({
       // A missing response is not permission to create a replacement message.
       const prior = await controller.query(locator.requestId);
       assertLive();
+      if (prior) originals.record(prior);
       setReceipt(prior ?? null);
     }
+    const unresolved = await originals.refresh((requestId) =>
+      controller.query(requestId),
+    );
+    assertLive();
+    originalRequests.current = originals;
+    setUnresolved(unresolved);
+    context.current = { controller, chain, assertLive };
     return context.current;
   }
   async function read() {
@@ -494,12 +515,52 @@ export default function DirectAgentConversation({
     setCapabilityId(matches[0].objectId);
   }
   async function prepare(operation: DirectOperation) {
-    const ctx = await load(),
-      value = await ctx.controller.prepare(operation);
+    // Fixed-ID steps query their own original receipt first in the controller.
+    // A different step still needs fresh chain authority; an unknown original
+    // returns without a quote or signature. Random-token messages and actual
+    // Host delivery retain their separate unknown-outcome UI restrictions.
+    const ctx = await load();
+    if (!originalRequests.current)
+      throw Object.assign(new Error(), { code: "journal_unavailable" });
+    if (receipt) setUnresolved(originalRequests.current.record(receipt));
+    const originals = await originalRequests.current.refresh((id) =>
+      ctx.controller.query(id),
+    );
+    ctx.assertLive();
+    setUnresolved(originals);
+    if (operation.kind === "message") {
+      for (const original of originals) {
+        if (
+          !canComposeAfterSettledRun(
+            description,
+            selected,
+            { ...original, status: "unknown", journalSynced: false },
+            BigInt(Date.now()),
+          )
+        )
+          throw Object.assign(new Error(), {
+            code: "original_outcome_unknown",
+          });
+      }
+      // Clear only negative local restrictions independently resolved by the
+      // original verified success. Keep every original journal/digest intact.
+      for (const original of originals)
+        originalRequests.current.resolve(original);
+      setUnresolved(originalRequests.current.list());
+    } else if (
+      operation.kind === "decision" &&
+      hasUnresolvedDecision(originals, operation.messageId)
+    ) {
+      throw Object.assign(new Error(), { code: "original_outcome_unknown" });
+    }
+    const value = await ctx.controller.prepare(operation);
     ctx.assertLive();
     if ("status" in value) {
       setReceipt(value);
       setRequestId(value.requestId);
+      // Preserve the actual outcome in memory even if its extra locator
+      // cannot be saved; the next prepare must attempt that save again.
+      setUnresolved(originalRequests.current.record(value));
       return;
     }
     remember({
@@ -518,7 +579,42 @@ export default function DirectAgentConversation({
     if (!ctx || !fee)
       throw Object.assign(new Error(), { code: "state_changed" });
     const operation = fee.operation;
+    if (operation.kind === "decision") {
+      if (!originalRequests.current)
+        throw Object.assign(new Error(), { code: "journal_unavailable" });
+      const originals = await originalRequests.current.refresh((id) =>
+        ctx.controller.query(id),
+      );
+      ctx.assertLive();
+      setUnresolved(originals);
+      // Another window can record the opposite decision after this preview.
+      // Check before either native signing or a second transaction attempt.
+      if (hasUnresolvedDecision(originals, operation.messageId))
+        throw Object.assign(new Error(), { code: "original_outcome_unknown" });
+    }
     if (operation.kind === "message") {
+      if (!originalRequests.current)
+        throw Object.assign(new Error(), { code: "journal_unavailable" });
+      const originals = await originalRequests.current.refresh((id) =>
+        ctx.controller.query(id),
+      );
+      ctx.assertLive();
+      for (const original of originals) {
+        if (
+          !canComposeAfterSettledRun(
+            description,
+            selected,
+            { ...original, status: "unknown", journalSynced: false },
+            BigInt(Date.now()),
+          )
+        )
+          throw Object.assign(new Error(), {
+            code: "original_outcome_unknown",
+          });
+      }
+      for (const original of originals)
+        originalRequests.current.resolve(original);
+      setUnresolved(originalRequests.current.list());
       if (!localDraft.current)
         throw Object.assign(new Error(), { code: "draft_storage_unavailable" });
       localDraft.current.markAttempted(fee.quote.requestId);
@@ -529,6 +625,10 @@ export default function DirectAgentConversation({
     ctx.assertLive();
     setFee(null);
     setReceipt(result);
+    setRequestId(result.requestId);
+    if (!originalRequests.current)
+      throw Object.assign(new Error(), { code: "journal_unavailable" });
+    setUnresolved(originalRequests.current.record(result));
     if (result.status === "confirmed") {
       if (operation.kind === "message") {
         setMessage("");
@@ -565,6 +665,14 @@ export default function DirectAgentConversation({
     if (original) {
       const result = await ctx.controller.query(original);
       ctx.assertLive();
+      const known =
+        result?.status === "unknown" &&
+        receipt?.digest === result.digest &&
+        receipt.status !== "unknown"
+          ? receipt
+          : result;
+      if (known && originalRequests.current)
+        setUnresolved(originalRequests.current.record(known));
       setReceipt((old) =>
         result?.status === "unknown" &&
         old?.digest === result.digest &&
@@ -572,6 +680,13 @@ export default function DirectAgentConversation({
           ? old
           : (result ?? null),
       );
+    }
+    if (originalRequests.current) {
+      const originals = await originalRequests.current.refresh((id) =>
+        ctx.controller.query(id),
+      );
+      ctx.assertLive();
+      setUnresolved(originals);
     }
     await read();
     if (selected) {
@@ -694,11 +809,29 @@ export default function DirectAgentConversation({
   const m = selected?.message;
   const working = busy || !!fee,
     unknown = receipt?.status === "unknown";
-  const independentMessage = canComposeAfterPermissionReceipt(
+  const independentPermissionMessage = canComposeAfterPermissionReceipt(
     description,
     receipt,
     BigInt(now),
   );
+  const independentSettledRunMessage = canComposeAfterSettledRun(
+    description,
+    selected,
+    receipt,
+    BigInt(now),
+  );
+  const independentMessage =
+    independentPermissionMessage || independentSettledRunMessage;
+  const blockedOriginals = unresolved.filter(
+    (original) =>
+      !canComposeAfterSettledRun(
+        description,
+        selected,
+        { ...original, status: "unknown", journalSynced: false },
+        BigInt(now),
+      ),
+  );
+  const decisionUnknown = Boolean(m && hasUnresolvedDecision(unresolved, m.id));
   return (
     <>
       <button className="secondary" onClick={begin}>
@@ -853,7 +986,7 @@ export default function DirectAgentConversation({
                         ? t("调整或续期权限", "Edit or renew authority")
                         : t("设置常驻权限", "Set standing authority")}
                     </summary>
-                    <fieldset disabled={working || !!unknown}>
+                    <fieldset disabled={working}>
                       <p>
                         {t(
                           "默认只授权零工具状态查询。扩大动作和额度需要你确认费用并签名。",
@@ -954,7 +1087,7 @@ export default function DirectAgentConversation({
                 {canApprove && p && !p.revoked && (
                   <button
                     className="secondary"
-                    disabled={working || !!unknown}
+                    disabled={working}
                     onClick={() =>
                       void perform(() =>
                         prepare({ kind: "revoke", expectedVersion: p.version }),
@@ -1147,7 +1280,7 @@ export default function DirectAgentConversation({
                         !selected.result.run.stop_requested && (
                           <button
                             className="secondary"
-                            disabled={working || !!unknown}
+                            disabled={working}
                             onClick={() =>
                               void perform(() =>
                                 prepare({ kind: "stop", messageId: m!.id }),
@@ -1189,7 +1322,7 @@ export default function DirectAgentConversation({
                         !selected.approval &&
                         selected.reasons.length > 0 && (
                           <button
-                            disabled={working || !!unknown}
+                            disabled={working}
                             onClick={() =>
                               void perform(() =>
                                 prepare({ kind: "approval", messageId: m!.id }),
@@ -1209,7 +1342,9 @@ export default function DirectAgentConversation({
                           <div className="button-row">
                             <button
                               disabled={
-                                working || !!unknown || !approvalWorkspaceFresh
+                                working ||
+                                decisionUnknown ||
+                                !approvalWorkspaceFresh
                               }
                               onClick={() =>
                                 void perform(() =>
@@ -1228,7 +1363,7 @@ export default function DirectAgentConversation({
                             </button>
                             <button
                               className="secondary"
-                              disabled={working || !!unknown}
+                              disabled={working || decisionUnknown}
                               onClick={() =>
                                 void perform(() =>
                                   prepare({
@@ -1253,7 +1388,7 @@ export default function DirectAgentConversation({
                             approvalWorkspaceFresh
                           : selected.reasons.length === 0) && (
                           <button
-                            disabled={working || !!unknown}
+                            disabled={working}
                             onClick={() =>
                               void perform(() =>
                                 prepare(
@@ -1313,12 +1448,33 @@ export default function DirectAgentConversation({
                 "Offline or read-only: edit and save a local unsent draft. Drafts grant no authority and never send automatically. Sending rechecks this instance and requires fee confirmation.",
               )}
             </p>
-            {independentMessage && (
+            {independentPermissionMessage && (
               <p role="status">
                 {t(
                   "原权限交易的回执暂不可查，原摘要和技术记录仍保留。已独立读取并核验当前链上权限，可另发新消息；这不会重试原权限交易，也不代表其历史回执已恢复。",
                   "The original permission receipt is unavailable; its digest and journal remain. Current on-chain authority was independently checked, so you can compose a distinct new message. This neither retries the permission transaction nor restores its historical receipt.",
                 )}
+              </p>
+            )}
+            {independentSettledRunMessage && (
+              <p role="status">
+                {t(
+                  "原交易回执仍不可查，摘要和技术记录继续保留。已独立读取此消息的原 Run 成功结果、核验解密原 Host 结果并确认预算结算，可另发新消息；这不会重试或重新投递原请求。",
+                  "The original transaction receipt remains unavailable; its digest and journal remain. This message's original Run succeeded, its original result was verified and decrypted, and its budget claim is settled. You can compose a distinct new message; the original request is never retried or redelivered.",
+                )}
+              </p>
+            )}
+            {blockedOriginals.length > 0 && (
+              <p className="warn" role="status">
+                {t(
+                  "仍有原请求结果未解决；其他步骤的报价、取消或成功不会清除此限制。请查询原请求，或选中已成功结算的原 Run 核验。",
+                  "An original request remains unresolved. Another step's preview, cancellation or success does not remove this restriction. Query the original request, or select its successfully settled Run for verification.",
+                )}
+                {blockedOriginals.map((original) => (
+                  <small className="long-id" key={original.requestId}>
+                    {original.requestId} · {original.digest}
+                  </small>
+                ))}
               </p>
             )}
             <fieldset disabled={working}>
@@ -1421,6 +1577,7 @@ export default function DirectAgentConversation({
                   !current ||
                   !canOperate ||
                   (!!unknown && !independentMessage) ||
+                  blockedOriginals.length > 0 ||
                   !localDraft.current
                 }
                 onClick={() => void perform(() => prepare(messageOperation()))}
@@ -1437,6 +1594,7 @@ export default function DirectAgentConversation({
                 disabled={
                   working ||
                   (!!unknown && !independentMessage) ||
+                  blockedOriginals.length > 0 ||
                   (!message && !content)
                 }
                 onClick={() => void performDraft(saveDraft)}

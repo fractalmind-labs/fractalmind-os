@@ -1330,8 +1330,8 @@ export function App() {
         )}
         <footer>
           {t(
-            "持久产品状态以 Sui 为准 · Alpha 尚未完成 v0.2.0 验收",
-            "Persistent product state lives on Sui · Alpha is not v0.2.0 acceptance",
+            "持久产品状态以 Sui 为准 · v0.2.0 Alpha",
+            "Persistent product state lives on Sui · v0.2.0 Alpha",
           )}
         </footer>
       </div>

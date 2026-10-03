@@ -24,8 +24,72 @@ export function canComposeAfterPermissionReceipt(
   if (!receipt.requestId.startsWith(prefix)) return false;
   const revision = receipt.requestId.slice(prefix.length);
   if (revision !== "create" && !/^[1-9][0-9]*$/.test(revision)) return false;
-  return BigInt(description.permission.version) >
-    (revision === "create" ? 0n : BigInt(revision));
+  return (
+    BigInt(description.permission.version) >
+    (revision === "create" ? 0n : BigInt(revision))
+  );
+}
+
+/** Only a controller-read original successful Run, its settled direct claim,
+ * and its verified/decrypted immutable result can release the new-message
+ * composer. This never resolves the transaction receipt or enables replay. */
+export function canComposeAfterSettledRun(
+  description: Description | null,
+  selected: DirectMessageView | null,
+  receipt: SelfPayTransactionOutcome | null,
+  now: bigint,
+) {
+  if (
+    receipt?.status !== "unknown" ||
+    !selected ||
+    receipt.requestId !== `direct-run:${selected.message.id}` ||
+    !directConversationState(description, null, now).current
+  )
+    return false;
+  // NativeDirectAgent.message already resolves the exact Sui message_runs
+  // pointer and reads this claim from that Run; NativeExecutionResults checks
+  // original record provenance/hash, decrypts it and verifies settled spend.
+  // Do not accept a linked Run alone, or a cached/undeciphered result locator.
+  const { message, result, claim } = selected;
+  const permission = description!.permission!;
+  // Expiry of the completed original message forbids its reuse, not a
+  // separate message. Current permission/member/device expiry still applies.
+  if (
+    message.permission_id !== permission.id ||
+    message.permission_version !== permission.version ||
+    message.managed_agent !== description!.managed.id ||
+    message.managed_version !== description!.managed.version ||
+    message.membership_id !== description!.member.id ||
+    message.human_generation !== description!.humanGeneration
+  )
+    return false;
+  if (!result || !claim || !result.response || !result.recordId) return false;
+  const { run, response } = result;
+  return Boolean(
+    run.state === 2 &&
+      run.result_record === result.recordId &&
+      run.result_hash.length === 32 &&
+      run.managed_agent === message.managed_agent &&
+      run.org_id === message.org_id &&
+      run.membership_id === message.membership_id &&
+      run.host_address === description!.managed.host_address &&
+      run.agent_id === description!.managed.instance_id &&
+      run.action === "direct.message" &&
+      run.scope === "direct" &&
+      run.delegate === message.writer_device &&
+      run.grant_id === message.grant_id &&
+      run.budget_amount === message.budget_amount &&
+      claim.settled === true &&
+      claim.message_id === message.id &&
+      claim.capability_id === run.capability_id &&
+      claim.permission_version === message.permission_version &&
+      claim.reserved === message.budget_amount &&
+      response.execution_id === run.id &&
+      response.execution_state === "succeeded" &&
+      response.command_id === run.command_id &&
+      response.ok === true &&
+      response.requires_confirmation !== true,
+  );
 }
 
 /** Hide invalid mutation entries using the fresh description, including when

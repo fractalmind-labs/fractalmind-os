@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { DirectMessageView, NativeDirectAgent } from "../src/direct-agent";
 import {
   canComposeAfterPermissionReceipt,
+  canComposeAfterSettledRun,
   directConversationState,
 } from "../src/direct-conversation-state";
 import type { SelfPayTransactionOutcome } from "@fractalmind-labs/fractalmind-sdk";
@@ -78,15 +79,27 @@ test("a pruned permission receipt permits a distinct message only under newer ve
     digest: "original-permission-digest",
     journalSynced: true,
   };
-  assert.equal(canComposeAfterPermissionReceipt(description, receipt, 2000n), true);
+  assert.equal(
+    canComposeAfterPermissionReceipt(description, receipt, 2000n),
+    true,
+  );
   assert.equal(receipt.status, "unknown");
   receipt.requestId = "direct-permission:agent:3";
-  assert.equal(canComposeAfterPermissionReceipt(description, receipt, 2000n), true);
+  assert.equal(
+    canComposeAfterPermissionReceipt(description, receipt, 2000n),
+    true,
+  );
   receipt.requestId = "direct-permission:agent:4";
-  assert.equal(canComposeAfterPermissionReceipt(description, receipt, 2000n), false);
+  assert.equal(
+    canComposeAfterPermissionReceipt(description, receipt, 2000n),
+    false,
+  );
   receipt.requestId = "direct-permission:agent:create";
   description.permission!.revoked = true;
-  assert.equal(canComposeAfterPermissionReceipt(description, receipt, 2000n), false);
+  assert.equal(
+    canComposeAfterPermissionReceipt(description, receipt, 2000n),
+    false,
+  );
 });
 
 test("unknown message, execution, approval and foreign permission remain blocked", () => {
@@ -100,15 +113,335 @@ test("unknown message, execution, approval and foreign permission remain blocked
     "direct-permission:agent:create:extra",
     "direct-permission:agent:-1",
   ]) {
-    assert.equal(canComposeAfterPermissionReceipt(description, {
-      status: "unknown", requestId, digest: "original", journalSynced: true,
-    }, 2000n), false, requestId);
+    assert.equal(
+      canComposeAfterPermissionReceipt(
+        description,
+        {
+          status: "unknown",
+          requestId,
+          digest: "original",
+          journalSynced: true,
+        },
+        2000n,
+      ),
+      false,
+      requestId,
+    );
   }
-  assert.equal(canComposeAfterPermissionReceipt(description, {
-    status: "unknown", requestId: "direct-permission:agent:create",
-    digest: "original", journalSynced: true,
-  }, 4000n), false);
+  assert.equal(
+    canComposeAfterPermissionReceipt(
+      description,
+      {
+        status: "unknown",
+        requestId: "direct-permission:agent:create",
+        digest: "original",
+        journalSynced: true,
+      },
+      4000n,
+    ),
+    false,
+  );
   assert.equal(canComposeAfterPermissionReceipt(null, null, 2000n), false);
+});
+
+function settledRunFixture() {
+  const { description, selected } = fixture();
+  Object.assign(selected.message, {
+    org_id: "organization",
+    writer_device: "device",
+    grant_id: "grant",
+    budget_amount: "0",
+    action: "status",
+  });
+  selected.result = {
+    run: {
+      id: "run",
+      state: 2,
+      result_record: "original-result",
+      result_hash: new Array(32).fill(1),
+      managed_agent: "agent",
+      org_id: "organization",
+      membership_id: "member",
+      host_address: "host",
+      agent_id: description.managed.instance_id,
+      action: "direct.message",
+      scope: "direct",
+      delegate: "device",
+      grant_id: "grant",
+      budget_amount: "0",
+      capability_id: "capability",
+      command_id: "original-command",
+    } as NonNullable<DirectMessageView["result"]>["run"],
+    recordId: "original-result",
+    transactionDigest: "result-object-provenance",
+    response: {
+      execution_id: "run",
+      execution_state: "succeeded",
+      command_id: "original-command",
+      ok: true,
+      requires_confirmation: false,
+    },
+  };
+  selected.claim = {
+    capability_id: "capability",
+    message_id: "message",
+    permission_version: "4",
+    approval_id: null,
+    reserved: "0",
+    spent: "0",
+    settled: true,
+  };
+  const receipt: SelfPayTransactionOutcome = {
+    status: "unknown",
+    requestId: "direct-run:message",
+    digest: "pruned-original-transaction",
+    journalSynced: true,
+  };
+  return { description, selected, receipt };
+}
+
+test("a verified original success and settled claim allow a distinct message without changing an unknown receipt", () => {
+  const f = settledRunFixture(),
+    originalReceipt = structuredClone(f.receipt);
+  assert.equal(
+    canComposeAfterSettledRun(f.description, f.selected, f.receipt, 2000n),
+    true,
+  );
+  assert.deepEqual(f.receipt, originalReceipt);
+  // The independent permission path cannot authorize this Run request.
+  assert.equal(
+    canComposeAfterPermissionReceipt(f.description, f.receipt, 2000n),
+    false,
+  );
+});
+
+test("a linked Run or unverified/unfinished result never releases the composer", () => {
+  const cases: Array<
+    [string, (f: ReturnType<typeof settledRunFixture>) => void]
+  > = [
+    [
+      "Run pointer only",
+      (f) => {
+        f.selected.result!.response = null;
+        f.selected.result!.recordId = null;
+      },
+    ],
+    [
+      "ciphertext was not decrypted",
+      (f) => {
+        f.selected.result!.response = null;
+      },
+    ],
+    [
+      "missing original result record",
+      (f) => {
+        f.selected.result!.recordId = null;
+      },
+    ],
+    [
+      "different original result record",
+      (f) => {
+        f.selected.result!.recordId = "another-result";
+      },
+    ],
+    [
+      "missing original body hash",
+      (f) => {
+        f.selected.result!.run.result_hash = [];
+      },
+    ],
+    [
+      "claim missing",
+      (f) => {
+        f.selected.claim = null;
+      },
+    ],
+    [
+      "claim unsettled",
+      (f) => {
+        f.selected.claim!.settled = false;
+      },
+    ],
+    [
+      "result requests confirmation",
+      (f) => {
+        f.selected.result!.response!.requires_confirmation = true;
+      },
+    ],
+    [
+      "result reports failure",
+      (f) => {
+        f.selected.result!.response!.ok = false;
+      },
+    ],
+    ...[0, 1, 3, 4, 5].map(
+      (state) =>
+        [
+          `Run state ${state}`,
+          (f: ReturnType<typeof settledRunFixture>) => {
+            f.selected.result!.run.state = state;
+          },
+        ] as [string, (f: ReturnType<typeof settledRunFixture>) => void],
+    ),
+  ];
+  for (const [name, update] of cases) {
+    const f = settledRunFixture();
+    update(f);
+    assert.equal(
+      canComposeAfterSettledRun(f.description, f.selected, f.receipt, 2000n),
+      false,
+      name,
+    );
+  }
+});
+
+test("an expired completed message permits only a distinct new message under live authority", () => {
+  const f = settledRunFixture();
+  f.selected.message.expires_at_ms = "1999";
+  assert.equal(
+    canComposeAfterSettledRun(f.description, f.selected, f.receipt, 2000n),
+    true,
+  );
+  assert.equal(
+    directConversationState(f.description, f.selected, 2000n).fresh,
+    false,
+  );
+  f.description.permission!.expires_at_ms = "1999";
+  assert.equal(
+    canComposeAfterSettledRun(f.description, f.selected, f.receipt, 2000n),
+    false,
+  );
+  f.description.permission!.expires_at_ms = "3000";
+  f.description.member.expires_at_ms = "1999";
+  assert.equal(
+    canComposeAfterSettledRun(f.description, f.selected, f.receipt, 2000n),
+    false,
+  );
+});
+
+test("a successful but foreign message, Run or claim and stale current permission cannot release an unknown request", () => {
+  const cases: Array<
+    [string, (f: ReturnType<typeof settledRunFixture>) => void]
+  > = [
+    [
+      "another selected message",
+      (f) => {
+        f.receipt.requestId = "direct-run:other-message";
+      },
+    ],
+    [
+      "unknown message save",
+      (f) => {
+        f.receipt.requestId = "direct-message:token";
+      },
+    ],
+    [
+      "unknown approval",
+      (f) => {
+        f.receipt.requestId = "direct-decision:message:true";
+      },
+    ],
+    [
+      "unknown capability",
+      (f) => {
+        f.receipt.requestId = "direct-capability:message";
+      },
+    ],
+    [
+      "wrong Run",
+      (f) => {
+        f.selected.result!.run.id = "other-run";
+      },
+    ],
+    [
+      "wrong managed instance",
+      (f) => {
+        f.selected.result!.run.managed_agent = "other-agent";
+      },
+    ],
+    [
+      "wrong claim message",
+      (f) => {
+        f.selected.claim!.message_id = "other-message";
+      },
+    ],
+    [
+      "wrong claim capability",
+      (f) => {
+        f.selected.claim!.capability_id = "other-capability";
+      },
+    ],
+    [
+      "wrong claim revision",
+      (f) => {
+        f.selected.claim!.permission_version = "3";
+      },
+    ],
+    [
+      "wrong claim budget",
+      (f) => {
+        f.selected.claim!.reserved = "1";
+      },
+    ],
+    [
+      "wrong receipt body",
+      (f) => {
+        f.selected.result!.response!.execution_id = "other-run";
+      },
+    ],
+    [
+      "permission revoked",
+      (f) => {
+        f.description.permission!.revoked = true;
+      },
+    ],
+    [
+      "permission expired",
+      (f) => {
+        f.description.permission!.expires_at_ms = "1999";
+      },
+    ],
+    [
+      "permission replaced",
+      (f) => {
+        f.description.permission!.version = "5";
+      },
+    ],
+    [
+      "managed version advanced",
+      (f) => {
+        f.description.managed.version = "3";
+      },
+    ],
+    [
+      "device authority expired",
+      (f) => {
+        f.description.authorityExpiresAtMs = "1999";
+      },
+    ],
+  ];
+  for (const [name, update] of cases) {
+    const f = settledRunFixture();
+    update(f);
+    assert.equal(
+      canComposeAfterSettledRun(f.description, f.selected, f.receipt, 2000n),
+      false,
+      name,
+    );
+  }
+  const f = settledRunFixture();
+  assert.equal(
+    canComposeAfterSettledRun(null, f.selected, f.receipt, 2000n),
+    false,
+  );
+  assert.equal(
+    canComposeAfterSettledRun(f.description, null, f.receipt, 2000n),
+    false,
+  );
+  assert.equal(
+    canComposeAfterSettledRun(f.description, f.selected, null, 2000n),
+    false,
+  );
 });
 
 test("conversation mutation entries use fresh managed/member and permission versions", () => {
