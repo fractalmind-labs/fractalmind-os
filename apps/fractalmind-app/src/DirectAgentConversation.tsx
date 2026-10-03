@@ -21,6 +21,8 @@ import {
 } from "./direct-agent";
 import type { ConnectionProfile, Agent } from "./domain";
 import CreateOkr from "./CreateOkr";
+import { directConversationState } from "./direct-conversation-state";
+import { NativeDirectDraft, type DirectDraft } from "./direct-draft";
 import {
   readMessageOkrSource,
   type MessageOkrSource,
@@ -72,19 +74,23 @@ const sui = (value: string) => {
   } SUI`;
 };
 
-/** V2 fixed-instance entry. Plaintext and actionable quotes are only in the
- * open window. Public request locators cannot confer authority or trigger a
- * delivery when the component is restored. */
+/** V2 fixed-instance entry. Plaintext and actionable quotes exist only in the
+ * open window; explicitly saved local drafts are device-encrypted working copies.
+ * Restoring drafts or request locators never authorizes or triggers delivery. */
 export default function DirectAgentConversation({
   profile,
   organizationId,
   managed,
+  initialMessageId,
+  entryLabel,
   onChanged,
   t,
 }: {
   profile: ConnectionProfile;
   organizationId: string;
   managed: Agent;
+  initialMessageId?: string;
+  entryLabel?: string;
   onChanged: () => void;
   t: (zh: string, en: string) => string;
 }) {
@@ -98,6 +104,13 @@ export default function DirectAgentConversation({
     [receipt, setReceipt] = useState<SelfPayTransactionOutcome | null>(null);
   const [draftSource, setDraftSource] = useState<MessageOkrSource | null>(null);
   const [draftExpiresAtMs, setDraftExpiresAtMs] = useState<string>();
+  const localDraft = useRef<NativeDirectDraft | null>(null);
+  const [draftSaved, setDraftSaved] = useState<{
+    at: number;
+    value: string;
+  } | null>(null);
+  const [draftError, setDraftError] = useState<string | null>(null);
+  const [draftAttempted, setDraftAttempted] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | null>(null),
     [capabilityId, setCapabilityId] = useState<string | null>(null);
   const [action, setAction] = useState<
@@ -133,6 +146,22 @@ export default function DirectAgentConversation({
     assertLive: () => void;
   } | null>(null);
   const key = `fractalmind.app.direct.v1:${JSON.stringify([profile.network, profile.chainIdentifier, profile.humanId, organizationId, managed.id])}`;
+  const scopeKey = JSON.stringify([
+    profile,
+    organizationId,
+    managed.id,
+    managed.instance_id,
+    managed.host_address,
+  ]);
+  const liveScope = useRef(scopeKey),
+    previousScope = useRef(scopeKey);
+  liveScope.current = scopeKey;
+  useEffect(() => {
+    if (previousScope.current !== scopeKey) {
+      previousScope.current = scopeKey;
+      close();
+    }
+  }, [scopeKey]);
   useEffect(() => {
     mounted.current = true;
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -154,12 +183,18 @@ export default function DirectAgentConversation({
   }, [now, description?.authorityExpiresAtMs]);
   function close() {
     setDraftSource(null);
+    localDraft.current = null;
+    setDraftSaved(null);
+    setDraftError(null);
+    setDraftAttempted(null);
     active.current = false;
     epoch.current++;
     context.current = null;
     setDescription(null);
     setSelected(null);
     setFee(null);
+    setAction("status");
+    setCalls("3");
     setMessage("");
     setContent("");
     setPath("docs/RESULT.md");
@@ -183,7 +218,104 @@ export default function DirectAgentConversation({
     active.current = true;
     setOpened(true);
     dialog.current?.showModal();
-    void perform(read);
+    void perform(async () => {
+      try {
+        await restoreDraft();
+      } catch (e) {
+        if (active.current) setDraftError(draftFailure(e));
+      }
+      await read();
+      if (initialMessageId) await select(initialMessageId);
+    });
+  }
+  function draftFailure(e: unknown) {
+    return e && typeof e === "object" && "code" in e
+      ? String(e.code)
+      : "draft_invalid";
+  }
+  function draftValue(): DirectDraft {
+    return { action, message, path, requestRoots, content, calls };
+  }
+  async function draftSession() {
+    if (localDraft.current) return localDraft.current;
+    if (!isTauri())
+      throw Object.assign(new Error(), { code: "native_unavailable" });
+    const generation = epoch.current;
+    const assertCurrent = () => {
+      if (
+        !mounted.current ||
+        !active.current ||
+        generation !== epoch.current ||
+        liveScope.current !== scopeKey
+      )
+        throw Object.assign(new Error(), { code: "state_changed" });
+    };
+    const native = scopedNativeInvoke(
+      (command, args) => invoke(command, args),
+      assertCurrent,
+    );
+    const store = await NativeDirectDraft.open(
+      profile,
+      organizationId,
+      managed,
+      deviceProfile,
+      native,
+      localStorage,
+      assertCurrent,
+    );
+    assertCurrent();
+    localDraft.current = store;
+    return store;
+  }
+  async function restoreDraft() {
+    const store = await draftSession(),
+      value = await store.restore();
+    setDraftError(null);
+    setDraftAttempted(value.state === "attempted" ? value.requestId : null);
+    setDraftSaved(null);
+    if (value.state === "saved") {
+      setAction(value.draft.action);
+      setMessage(value.draft.message);
+      setPath(value.draft.path);
+      setRequestRoots(value.draft.requestRoots);
+      setContent(value.draft.content);
+      setCalls(value.draft.calls);
+      setDraftSaved({ at: value.savedAt, value: JSON.stringify(value.draft) });
+    } else {
+      setAction("status");
+      setMessage("");
+      setContent("");
+      setPath("docs/RESULT.md");
+      setRequestRoots("docs");
+      setCalls("3");
+    }
+  }
+  async function saveDraft() {
+    const value = draftValue();
+    const store = await draftSession();
+    // Preserve the opening revision so observed edits in another window reject
+    // this save. The original transaction journal still guards submissions.
+    if (!localDraft.current)
+      throw Object.assign(new Error(), { code: "state_changed" });
+    const at = await store.save(value);
+    setDraftSaved({ at, value: JSON.stringify(value) });
+    setDraftAttempted(null);
+  }
+  async function performDraft(fn: () => Promise<void> | void) {
+    if (flight.current) return;
+    flight.current = true;
+    const generation = epoch.current;
+    setBusy(true);
+    setDraftError(null);
+    try {
+      await fn();
+    } catch (e) {
+      if (mounted.current && active.current && epoch.current === generation)
+        setDraftError(draftFailure(e));
+    } finally {
+      flight.current = false;
+      if (mounted.current) setBusy(false);
+    }
   }
   async function perform(fn: () => Promise<void>) {
     if (flight.current) return;
@@ -229,7 +361,12 @@ export default function DirectAgentConversation({
       throw Object.assign(new Error(), { code: "native_unavailable" });
     const generation = epoch.current,
       assertLive = () => {
-        if (!mounted.current || !active.current || generation !== epoch.current)
+        if (
+          !mounted.current ||
+          !active.current ||
+          generation !== epoch.current ||
+          liveScope.current !== scopeKey
+        )
           throw Object.assign(new Error(), { code: "state_changed" });
       };
     const native = scopedNativeInvoke(
@@ -377,12 +514,23 @@ export default function DirectAgentConversation({
     const ctx = context.current;
     if (!ctx || !fee)
       throw Object.assign(new Error(), { code: "state_changed" });
-    const operation = fee.operation,
-      result = await ctx.controller.submit(fee.quote);
+    const operation = fee.operation;
+    if (operation.kind === "message") {
+      if (!localDraft.current)
+        throw Object.assign(new Error(), { code: "draft_storage_unavailable" });
+      localDraft.current.markAttempted(fee.quote.requestId);
+      setDraftSaved(null);
+      setDraftAttempted(fee.quote.requestId);
+    }
+    const result = await ctx.controller.submit(fee.quote);
     ctx.assertLive();
     setFee(null);
     setReceipt(result);
     if (result.status === "confirmed") {
+      if (operation.kind === "message") {
+        setMessage("");
+        setContent("");
+      }
       await read();
       ctx.assertLive();
       if (operation.kind === "message") {
@@ -538,24 +686,15 @@ export default function DirectAgentConversation({
     selected?.message.action === "ask" && selected.result?.response?.ok
       ? modelReply(selected.result.response.result)
       : null;
-  const current =
-    p &&
-    !p.revoked &&
-    Number(p.expires_at_ms) > now &&
-    managed.control_confirmed &&
-    !managed.revoked;
-  const m = selected?.message,
-    fresh =
-      current &&
-      m &&
-      m.permission_version === p.version &&
-      Number(m.expires_at_ms) > now;
+  const { current, fresh, approvalFresh, approvalWorkspaceFresh } =
+    directConversationState(description, selected, BigInt(now));
+  const m = selected?.message;
   const working = busy || !!fee,
     unknown = receipt?.status === "unknown";
   return (
     <>
       <button className="secondary" onClick={begin}>
-        {t("与 Agent 沟通", "Contact Agent")}
+        {entryLabel ?? t("与 Agent 沟通", "Contact Agent")}
       </button>
       <dialog
         ref={dialog}
@@ -592,7 +731,7 @@ export default function DirectAgentConversation({
             {t("设备配置", "Device profile")}
             <input
               value={deviceProfile}
-              disabled={busy || !!context.current}
+              disabled={busy || !!context.current || !!localDraft.current}
               onChange={(e) => setDeviceProfile(e.target.value)}
             />
           </label>
@@ -852,6 +991,22 @@ export default function DirectAgentConversation({
               {selected && (
                 <article className="panel direct-message-detail">
                   <h3>{t("原消息与执行", "Original message & execution")}</h3>
+                  {!fresh && (
+                    <p className="warn" role="status">
+                      {t(
+                        "原消息的权限版本或有效期已不适用；保留历史结果，新的操作需重新读取当前权限。",
+                        "The original message's authority version or expiry is no longer current. Its history is retained; read current authority before any new action.",
+                      )}
+                    </p>
+                  )}
+                  {approvalFresh && !approvalWorkspaceFresh && (
+                    <p className="warn" role="status">
+                      {t(
+                        "工作区约定已改变，本次审批不能继续批准或执行；仍可明确拒绝。",
+                        "The workspace agreement changed. This approval cannot be approved or executed; an explicit rejection remains available.",
+                      )}
+                    </p>
+                  )}
                   {canApprove && (
                     <button
                       className="secondary"
@@ -1041,10 +1196,13 @@ export default function DirectAgentConversation({
                         )}
                       {canApprove &&
                         fresh &&
+                        approvalFresh &&
                         selected.approval?.state === 0 && (
                           <div className="button-row">
                             <button
-                              disabled={working || !!unknown}
+                              disabled={
+                                working || !!unknown || !approvalWorkspaceFresh
+                              }
                               onClick={() =>
                                 void perform(() =>
                                   prepare({
@@ -1083,7 +1241,8 @@ export default function DirectAgentConversation({
                       {canOperate &&
                         fresh &&
                         (selected.approval
-                          ? selected.approval.state === 1
+                          ? selected.approval.state === 1 &&
+                            approvalWorkspaceFresh
                           : selected.reasons.length === 0) && (
                           <button
                             disabled={working || !!unknown}
@@ -1134,130 +1293,208 @@ export default function DirectAgentConversation({
                   )}
                 </article>
               )}
-              <section className="panel">
-                <h3>{t("新消息", "New message")}</h3>
-                <fieldset
-                  disabled={working || !current || !canOperate || !!unknown}
-                >
-                  <label>
-                    {t("请求类型", "Request type")}
-                    <select
-                      value={action}
-                      onChange={(e) => {
-                        const next = e.target.value as typeof action;
-                        setAction(next);
-                        setRequestRoots(
-                          description.policy?.paths[next]?.join(", ") ?? "docs",
-                        );
-                      }}
-                    >
-                      <option value="status">
-                        {t(
-                          "查询实例状态（0 工具）",
-                          "Instance status (zero tools)",
-                        )}
-                      </option>
-                      <option value="file.read">
-                        {t("读取文件", "Read a file")}
-                      </option>
-                      <option value="file.write">
-                        {t("生成或修改文件", "Create or edit a file")}
-                      </option>
-                      <option value="ask">
-                        {t(
-                          "模型问答（Host 需配置模型，0 工具）",
-                          "Model question (Host model required, zero tools)",
-                        )}
-                      </option>
-                    </select>
-                  </label>
-                  <label>
-                    {t("发送给 Agent 的说明", "Message to the Agent")}
-                    <textarea
-                      maxLength={4096}
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                    />
-                  </label>
-                  {action === "ask" && (
-                    <p className="muted">
-                      {t(
-                        "问题文字会发送给这台 Host 配置的模型。不会自动读取文件，回复和计划需你审阅；模型费用由该模型账号支付，另于链上 Gas。",
-                        "Your question goes to this Host's configured model. No files are read automatically. Review replies and plans; model billing uses that model account and is separate from chain Gas.",
-                      )}
-                    </p>
-                  )}
-                  {action !== "status" && action !== "ask" && (
-                    <>
-                      <label>
-                        {t(
-                          "本次请求的目录边界，逗号分隔",
-                          "Directories for this request, comma separated",
-                        )}
-                        <input
-                          value={requestRoots}
-                          onChange={(e) => setRequestRoots(e.target.value)}
-                        />
-                      </label>
-                      <p className="muted">
-                        {t(
-                          "超出常驻动作、目录或额度时，只申请本次审批；不修改常驻权限。",
-                          "Requests outside standing actions, directories or allowance need one-off approval; standing authority stays unchanged.",
-                        )}
-                      </p>
-                      <label>
-                        {t(
-                          "工作区内相对路径",
-                          "Relative path in the workspace",
-                        )}
-                        <input
-                          value={path}
-                          onChange={(e) => setPath(e.target.value)}
-                        />
-                      </label>
-                      <label>
-                        {t("本消息工具调用上限", "Tool limit for this message")}
-                        <input
-                          type="number"
-                          min="1"
-                          max="1000"
-                          value={calls}
-                          onChange={(e) => setCalls(e.target.value)}
-                        />
-                      </label>
-                    </>
-                  )}
-                  {action === "file.write" && (
-                    <label>
-                      {t("期望文件内容", "Expected file content")}
-                      <textarea
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                      />
-                    </label>
-                  )}
-                  <button
-                    onClick={() =>
-                      void perform(() => prepare(messageOperation()))
-                    }
-                  >
-                    {t(
-                      "保存加密消息，先预览费用",
-                      "Save encrypted message · review fee",
-                    )}
-                  </button>
-                </fieldset>
-                {!canOperate && (
-                  <p>
-                    {t(
-                      "此设备仅可读取；发送与执行需要 operate 权限。",
-                      "This device can only read. Sending and execution require operate authority.",
-                    )}
-                  </p>
-                )}
-              </section>
             </section>
           </div>
+        )}
+        {opened && isTauri() && (
+          <section className="panel">
+            <h3>{t("新消息", "New message")}</h3>
+            <p className="muted">
+              {t(
+                "离线或只读时可编辑并保存仅本机未发送草稿。草稿不授予权限，也不会自动发送；发送前重新核验此实例的当前资格并确认费用。",
+                "Offline or read-only: edit and save a local unsent draft. Drafts grant no authority and never send automatically. Sending rechecks this instance and requires fee confirmation.",
+              )}
+            </p>
+            <fieldset disabled={working}>
+              <label>
+                {t("请求类型", "Request type")}
+                <select
+                  value={action}
+                  onChange={(e) => {
+                    const next = e.target.value as typeof action;
+                    setAction(next);
+                    setRequestRoots(
+                      description?.policy?.paths[next]?.join(", ") ?? "docs",
+                    );
+                  }}
+                >
+                  <option value="status">
+                    {t(
+                      "查询实例状态（0 工具）",
+                      "Instance status (zero tools)",
+                    )}
+                  </option>
+                  <option value="file.read">
+                    {t("读取文件", "Read a file")}
+                  </option>
+                  <option value="file.write">
+                    {t("生成或修改文件", "Create or edit a file")}
+                  </option>
+                  <option value="ask">
+                    {t(
+                      "模型问答（Host 需配置模型，0 工具）",
+                      "Model question (Host model required, zero tools)",
+                    )}
+                  </option>
+                </select>
+              </label>
+              <label>
+                {t("发送给 Agent 的说明", "Message to the Agent")}
+                <textarea
+                  maxLength={4096}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                />
+              </label>
+              {action === "ask" && (
+                <p className="muted">
+                  {t(
+                    "问题文字会发送给这台 Host 配置的模型。不会自动读取文件，回复和计划需你审阅；模型费用由该模型账号支付，另于链上 Gas。",
+                    "Your question goes to this Host's configured model. No files are read automatically. Review replies and plans; model billing uses that model account and is separate from chain Gas.",
+                  )}
+                </p>
+              )}
+              {action !== "status" && action !== "ask" && (
+                <>
+                  <label>
+                    {t(
+                      "本次请求的目录边界，逗号分隔",
+                      "Directories for this request, comma separated",
+                    )}
+                    <input
+                      value={requestRoots}
+                      onChange={(e) => setRequestRoots(e.target.value)}
+                    />
+                  </label>
+                  <p className="muted">
+                    {t(
+                      "超出常驻动作、目录或额度时，只申请本次审批；不修改常驻权限。",
+                      "Requests outside standing actions, directories or allowance need one-off approval; standing authority stays unchanged.",
+                    )}
+                  </p>
+                  <label>
+                    {t("工作区内相对路径", "Relative path in the workspace")}
+                    <input
+                      value={path}
+                      onChange={(e) => setPath(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    {t("本消息工具调用上限", "Tool limit for this message")}
+                    <input
+                      type="number"
+                      min="1"
+                      max="1000"
+                      value={calls}
+                      onChange={(e) => setCalls(e.target.value)}
+                    />
+                  </label>
+                </>
+              )}
+              {action === "file.write" && (
+                <label>
+                  {t("期望文件内容", "Expected file content")}
+                  <textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                  />
+                </label>
+              )}
+              <button
+                disabled={
+                  !current || !canOperate || !!unknown || !localDraft.current
+                }
+                onClick={() => void perform(() => prepare(messageOperation()))}
+              >
+                {t(
+                  "保存加密消息，先预览费用",
+                  "Save encrypted message · review fee",
+                )}
+              </button>
+            </fieldset>
+            <div className="button-row">
+              <button
+                className="secondary"
+                disabled={working || !!unknown || (!message && !content)}
+                onClick={() => void performDraft(saveDraft)}
+              >
+                {t("保存本机草稿", "Save local draft")}
+              </button>
+              <button
+                className="secondary"
+                disabled={working}
+                onClick={() => void performDraft(restoreDraft)}
+              >
+                {t("恢复本机草稿", "Restore local draft")}
+              </button>
+              <button
+                className="secondary"
+                disabled={working || !localDraft.current}
+                onClick={() =>
+                  void performDraft(() => {
+                    localDraft.current!.discard();
+                    setDraftSaved(null);
+                    setDraftAttempted(null);
+                  })
+                }
+              >
+                {t("删除本机草稿", "Delete local draft")}
+              </button>
+            </div>
+            {draftSaved && (
+              <p role="status">
+                {draftSaved.value === JSON.stringify(draftValue())
+                  ? t(
+                      "仅本机未发送草稿已加密保存。",
+                      "Local unsent draft saved encrypted.",
+                    )
+                  : t(
+                      "当前修改尚未保存；关闭或后台后只恢复上次保存版本。",
+                      "Changes are not saved; closing or backgrounding restores only the last saved version.",
+                    )}{" "}
+                {new Date(draftSaved.at).toLocaleTimeString()}
+              </p>
+            )}
+            {!draftSaved && !draftAttempted && (
+              <p className="muted">
+                {t(
+                  "编辑后请选择保存草稿；已保存版本会在关闭或后台后保留。清除本机缓存或丢失设备会删除本机草稿。",
+                  "Choose Save local draft to keep edits after closing or backgrounding. Clearing this device's cache or losing the device removes local drafts.",
+                )}
+              </p>
+            )}
+            {draftAttempted && (
+              <p role="status" className="long-id">
+                {t(
+                  "原草稿已关联一次提交尝试，不恢复成新消息。请查询原请求；删除本机草稿不会取消原交易。",
+                  "The original draft has a submission attempt and is not restored as a new message. Query the original request; deleting the local copy does not cancel its transaction.",
+                )}{" "}
+                {draftAttempted}
+              </p>
+            )}
+            {draftError && (
+              <p role="alert">
+                {t(
+                  "本机草稿未保存或无法恢复。请解锁原设备后重试；其他窗口有修改时先恢复最新草稿。",
+                  "Local draft was not saved or could not be restored. Unlock the original device and retry; restore the latest draft after another window changes it.",
+                )}{" "}
+                <small>{draftError}</small>
+              </p>
+            )}
+            {!canOperate && (
+              <p>
+                {description
+                  ? t(
+                      "此设备仅可读取；发送与执行需要 operate 权限。",
+                      "This device can only read. Sending and execution require operate authority.",
+                    )
+                  : t(
+                      "当前组织与实例的授权尚未确认，只可编辑本机草稿。",
+                      "Current organization and instance authority is unconfirmed; only local draft editing is available.",
+                    )}
+              </p>
+            )}
+          </section>
         )}
         {fee && (
           <section className="notice">

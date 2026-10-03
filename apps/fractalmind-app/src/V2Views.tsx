@@ -195,8 +195,8 @@ export function Decisions({
       </div>
       <p className="muted">
         {t(
-          "根据已读取的链上事实整理；完整审批队列与设备配对请求待接入。",
-          "Based on the chain records read here; the full approval queue and device pairing requests are not connected yet.",
+          "根据已读取的链上事实整理 OKR 待办；Agent 超权申请在下方单列，设备配对从身份页面发起。",
+          "OKR attention items from the chain records read. Agent boundary requests appear below; start device pairing from My identity.",
         )}
       </p>
       {facts.unavailable ? (

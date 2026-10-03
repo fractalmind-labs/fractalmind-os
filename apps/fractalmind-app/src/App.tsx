@@ -44,6 +44,7 @@ const HandoverFlow = lazy(() => import("./HandoverFlow"));
 const OkrContinuation = lazy(() => import("./OkrContinuation"));
 const OkrVerification = lazy(() => import("./OkrVerification"));
 const DirectAgentConversation = lazy(() => import("./DirectAgentConversation"));
+const DirectApprovalQueue = lazy(() => import("./DirectApprovalQueue"));
 const OkrIntervention = lazy(() => import("./OkrIntervention"));
 const OkrAutonomy = lazy(() => import("./OkrAutonomy"));
 const OkrProjection = lazy(() => import("./OkrProjection"));
@@ -549,6 +550,25 @@ export function App() {
               t={t}
               open={(id) => goOkr(id, "okrs")}
             />
+            <Suspense
+              fallback={
+                <p>{t("加载 Agent 审批…", "Loading Agent approvals…")}</p>
+              }
+            >
+              <DirectApprovalQueue
+                key={JSON.stringify([profile, snapshot.organization.objectId])}
+                profile={{
+                  ...profile,
+                  chainIdentifier:
+                    data.identity?.chainIdentifier ?? profile.chainIdentifier,
+                }}
+                snapshot={snapshot}
+                now={now}
+                reachable={data.reachable}
+                onChanged={data.refresh}
+                t={t}
+              />
+            </Suspense>
             <div className="section-heading">
               <h2>{t("进行中的目标", "Goals in progress")}</h2>
               <button onClick={() => setPage("okrs")}>
@@ -1193,20 +1213,45 @@ export function App() {
         {page === "governance" && (
           <>
             {snapshot && (
-              <Decisions
-                snapshot={snapshot}
-                now={now}
-                reachable={data.reachable}
-                t={t}
-                open={(id) => goOkr(id, "okrs")}
-              />
+              <>
+                <Decisions
+                  snapshot={snapshot}
+                  now={now}
+                  reachable={data.reachable}
+                  t={t}
+                  open={(id) => goOkr(id, "okrs")}
+                />
+                <Suspense
+                  fallback={
+                    <p>{t("加载 Agent 审批…", "Loading Agent approvals…")}</p>
+                  }
+                >
+                  <DirectApprovalQueue
+                    key={JSON.stringify([
+                      profile,
+                      snapshot.organization.objectId,
+                    ])}
+                    profile={{
+                      ...profile,
+                      chainIdentifier:
+                        data.identity?.chainIdentifier ??
+                        profile.chainIdentifier,
+                    }}
+                    snapshot={snapshot}
+                    now={now}
+                    reachable={data.reachable}
+                    onChanged={data.refresh}
+                    t={t}
+                  />
+                </Suspense>
+              </>
             )}
             <div className="panel">
               <h2>{t("权限与审批", "Authority & approvals")}</h2>
               <p>
                 {t(
-                  "可用操作 = 组织角色 × 设备授权 × 数据访问。完整审批请求、角色与数据密钥尚未接入，不将授权记录直接视作本设备权限。",
-                  "Available actions = organization role × device grant × data access. Full approval requests, roles and data keys are not connected; a grant record alone is not this device's authority.",
+                  "可用操作 = 组织角色 × 设备授权 × 数据访问。Agent 单次审批可在上方查看；打开原消息后会核验本设备资格、解密边界并单独预览费用。设备配对从身份页面发起。",
+                  "Available actions = organization role × device grant × data access. Review one-off Agent approvals above; opening the original message checks this device, decrypts the bounds and previews the fee separately. Start device pairing from My identity.",
                 )}
               </p>
               <button onClick={() => setPage("identity")}>

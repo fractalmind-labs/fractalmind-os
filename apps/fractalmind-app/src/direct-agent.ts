@@ -580,6 +580,8 @@ export class NativeDirectAgent {
     return {
       managed: s.managed,
       member: s.member,
+      binding: s.binding,
+      humanGeneration: s.authority.generation,
       permission: s.permission,
       policy,
       messages,

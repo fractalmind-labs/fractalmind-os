@@ -491,6 +491,10 @@ export default function HandoverFlow({
       throw Object.assign(new Error(), { code: "state_changed" });
     ctx.assertLive();
     setSpec(current.spec);
+    setReviewState({
+      state: result.run.state,
+      stopRequested: result.run.stop_requested,
+    });
     setHostAccepted(true);
   }
   async function prepareApproval() {
@@ -663,7 +667,15 @@ export default function HandoverFlow({
     | undefined;
   const expired = proposal && now >= proposal.review_expires_at_ms;
   const reviewSecondsLeft = proposal
-    ? Math.max(0, Math.ceil((proposal.review_expires_at_ms - now) / 1000))
+    ? Math.max(
+        0,
+        Math.ceil(
+          Math.min(
+            HANDOVER_REVIEW_WINDOW_MS,
+            proposal.review_expires_at_ms - now,
+          ) / 1000,
+        ),
+      )
     : 0;
   const reviewLabels = [
     t("排队中", "Queued"),
@@ -1049,14 +1061,16 @@ export default function HandoverFlow({
               <p className="notice" role="timer">
                 {t("审阅有效至", "Review valid until")}{" "}
                 {new Date(proposal.review_expires_at_ms).toLocaleTimeString()} ·{" "}
-                {expired ? t("已过期", "Expired") : t("倒计时", "Time left")}{" "}
+                {expired
+                  ? t("已到期，请核对", "Check expiry")
+                  : t("预计剩余", "Estimated time left")}{" "}
                 {!expired &&
                   `${Math.floor(reviewSecondsLeft / 60)}:${String(reviewSecondsLeft % 60).padStart(2, "0")}`}
               </p>
               <p>
                 {t(
-                  "审阅窗口最长 5 分钟，从原请求生成开始。Host 接受后会临时保留此实例；请在到期前核对并批准。刷新和重新读取不会延长期限。",
-                  "The fixed review window is at most 5 minutes from the original request. After acceptance, the Host temporarily reserves this instance. Review and approve before expiry; refreshing or reading again does not extend it.",
+                  "审阅窗口最长 5 分钟，从原请求生成开始。Host 接受后会临时保留此实例；请在到期前核对并批准。剩余时间按本机时钟估算，批准前会重新核对链上期限。刷新和重新读取不会延长期限。",
+                  "The fixed review window is at most 5 minutes from the original request. After acceptance, the Host temporarily reserves this instance. Remaining time is estimated from this device’s clock; expiry is checked on Sui before approval. Refreshing or reading again does not extend it.",
                 )}
               </p>
             </section>
