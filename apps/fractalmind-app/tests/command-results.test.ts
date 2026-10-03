@@ -42,7 +42,7 @@ const Pointer = bcs.struct("InstancePointer", {
   control_confirmed: bcs.bool(),
   revoked: bcs.bool(),
 });
-async function fixture(review = false) {
+async function fixture(review = false, delivery = false) {
   const key = Ed25519Keypair.generate(),
     host = Ed25519Keypair.generate(),
     coordinator = Ed25519Keypair.generate();
@@ -118,6 +118,11 @@ async function fixture(review = false) {
   envelope.set(new TextEncoder().encode("FMW1"));
   envelope.set(new TextEncoder().encode("FME1"), 68);
   response = toBase64(envelope);
+  if (delivery) {
+    const body = new Uint8Array(40);
+    body.set(new TextEncoder().encode("FME3"));
+    response = toBase64(body);
+  }
   const invoke = async (command: string, args: Record<string, string>) => {
     if (command === "fm_device_public")
       return {
@@ -127,7 +132,12 @@ async function fixture(review = false) {
         signingPublicKey: key.getPublicKey().toBase64(),
         encryptionPublicKey: toBase64(new Uint8Array(32)),
       };
-    assert.equal(command, "fm_device_wrap_command_result_key");
+    assert.equal(
+      command,
+      delivery
+        ? "fm_device_encrypt_command_delivery"
+        : "fm_device_wrap_command_result_key",
+    );
     wraps++;
     requested = JSON.parse(args.request);
     duringNative();
@@ -280,12 +290,41 @@ async function fixture(review = false) {
     bindingId,
     managedAgentId: managedId,
   };
+  let run = {
+    id: id("0x10"),
+    state: 0,
+    stop_requested: false,
+    grant_id: grant,
+    human_id: human,
+    org_id: org,
+    capability_id: command.capability.id,
+    intent_hash: Array.from(nodeCommandIntentHash(command)),
+  };
+  if (delivery) {
+    (chain.sdk.nodeExecution as any).getExecution = async () =>
+      structuredClone(run);
+    (chain.sdk.nodeExecution as any).queueCommand = async (value: any) => {
+      builds++;
+      assert.equal(value.executionId, run.id);
+      assert.equal(value.command.signature, command.signature);
+      assert.equal(value.keyVersion, "2");
+      assert.equal(
+        new TextDecoder().decode(value.encryptedCommand.slice(0, 4)),
+        "FME3",
+      );
+      duringBuilder();
+      return new Transaction();
+    };
+  }
   return {
     controller,
     input,
     member,
     managed,
     binding,
+    changeRun: () => {
+      run = { ...run, state: 1 };
+    },
     counts: () => ({ wraps, builds, required, requested }),
     native: (f: () => void) => {
       duringNative = f;
@@ -313,6 +352,45 @@ async function fixture(review = false) {
     },
   };
 }
+test("explicit chain delivery encrypts only the original signed command and retains current-source broadcast guard", async () => {
+  const f = await fixture(false, true),
+    prepared = await f.controller.prepareDelivery(f.input, id("0x10"));
+  assert.equal(f.counts().wraps, 1);
+  assert.equal(f.counts().builds, 1);
+  const request = f.counts().requested;
+  assert.equal(
+    request.context.intentHash,
+    bytesToHex(nodeCommandIntentHash(f.input.command)),
+  );
+  assert.deepEqual(
+    JSON.parse(
+      new TextDecoder().decode(Buffer.from(request.plaintext, "base64")),
+    ),
+    f.input.command,
+  );
+  assert.equal(request.context.organizationKey, undefined);
+  await prepared.assertCurrent();
+  f.changeRun();
+  await assert.rejects(prepared.assertCurrent(), /state_changed/);
+});
+test("chain delivery stops on changed authority, active Run, wrong ciphertext or key rotation before any publication", async () => {
+  for (const mode of [
+    "native authority",
+    "native key",
+    "builder authority",
+    "run",
+    "ciphertext",
+  ]) {
+    const f = await fixture(false, true);
+    if (mode === "native authority") f.native(f.pin);
+    if (mode === "native key") f.native(f.rotate);
+    if (mode === "builder authority") f.builder(f.pin);
+    if (mode === "run") f.changeRun();
+    if (mode === "ciphertext") f.response(toBase64(new Uint8Array(40)));
+    await assert.rejects(f.controller.prepareDelivery(f.input, id("0x10")));
+    if (mode !== "builder authority") assert.equal(f.counts().builds, 0);
+  }
+});
 test("App prepares native result ciphertext under current exact Host and retains a broadcast preflight", async () => {
   const f = await fixture(true),
     prepared = await f.controller.prepare(f.input);

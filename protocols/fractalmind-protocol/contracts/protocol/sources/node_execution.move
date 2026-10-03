@@ -12,7 +12,7 @@ module fractalmind_protocol::node_execution {
     use std::hash;
     use std::option::{Self, Option};
     use std::string::{Self, String};
-    use fractalmind_protocol::organization::Organization;
+    use fractalmind_protocol::organization::{Self, Organization};
     use fractalmind_protocol::identity::{Self, HumanIdentity, DeviceGrant};
     use fractalmind_protocol::host::{Self, HostMembership, CoordinatorBinding, ManagedAgent};
     use fractalmind_protocol::remote_authority::{Self as ra, RemoteCapability, ContractWitness};
@@ -27,6 +27,7 @@ module fractalmind_protocol::node_execution {
     const E_BUDGET_SETTLEMENT_REQUIRED: u64 = 9310;
     const E_RESULT_KEY: u64 = 9311;
     const E_DIRECT_PERMISSION_REQUIRED: u64 = 9312;
+    const E_DELIVERY: u64 = 9313;
     const QUEUED: u8 = 0;
     const RUNNING: u8 = 1;
     const SUCCEEDED: u8 = 2;
@@ -37,6 +38,18 @@ module fractalmind_protocol::node_execution {
     public struct ExecutionIndex has store { executions: Table<vector<u8>, ID> }
     public struct ResultKeyKey has copy, drop, store { intent_hash: vector<u8>, key_version: u64 }
     public struct ResultKeyGrant has store { org_id: ID, membership_id: ID, host_address: address, key_version: u64, wrapped_key: vector<u8> }
+    public struct CommandDeliveryKey has copy, drop, store {}
+    public struct CommandDelivery has store {
+        key_version: u64, encrypted_command: vector<u8>, body_hash: vector<u8>, queued_at_ms: u64,
+    }
+    public struct HostCommandQueueKey has copy, drop, store { host_address: address }
+    public struct HostCommandQueue has store { commands: Table<u64, QueuedCommandPointer> }
+    public struct QueuedCommandPointer has copy, drop, store {
+        execution_id: ID, capability_id: ID, membership_id: ID, intent_hash: vector<u8>,
+    }
+    public struct CommandQueued has copy, drop {
+        execution_id: ID, host_address: address, body_hash: vector<u8>, duplicate: bool,
+    }
     public struct CommandExecution has key {
         id: UID, org_id: ID, capability_id: ID, capability_version: u64,
         human_id: ID, grant_id: ID, grant_version: u64,
@@ -51,6 +64,58 @@ module fractalmind_protocol::node_execution {
     }
     public struct CommandPrepared has copy, drop { execution_id: ID, capability_id: ID, intent_hash: vector<u8>, duplicate: bool }
     public struct ExecutionChanged has copy, drop { execution_id: ID, state: u8, cursor: u64, stop_requested: bool, updated_at_ms: u64 }
+
+    /// Explicit delivery of an already prepared command. Preparing a Run alone
+    /// never enqueues it. Ciphertext is immutable; the Host must independently
+    /// verify the original signature, payload hash and all current execution
+    /// sources before using the existing begin/finish path.
+    public fun queue_command(
+        run: &mut CommandExecution, cap: &RemoteCapability, org: &mut Organization,
+        human: &HumanIdentity, grant: &DeviceGrant, member: &HostMembership,
+        binding: &CoordinatorBinding, managed: &ManagedAgent,
+        key_version: u64, encrypted_command: vector<u8>, clock: &Clock, ctx: &mut TxContext,
+    ) {
+        host::assert_agent_authority(org, human, grant, member, binding, managed, cap, clock);
+        assert!(tx_context::sender(ctx) == run.delegate && run.delegate == ra::delegate(cap), E_TARGET);
+        assert!(run.org_id == object::id(org) && run.capability_id == object::id(cap)
+            && run.membership_id == object::id(member) && run.host_address == host::membership_host_address(member)
+            && run.managed_agent == option::some(object::id(managed))
+            && run.human_id == object::id(human) && run.grant_id == object::id(grant)
+            && run.grant_version == identity::grant_version(grant)
+            && run.capability_version == ra::revocation_version(cap)
+            && execution_id(cap, run.intent_hash) == option::some(object::id(run)), E_TARGET);
+        ra::assert_authorized_with_clock(cap, &run.action, &run.scope, ra::target_kind(cap), &run.node_id, &run.agent_id, clock, ctx);
+        assert!(key_version == product_record::key_version(org)
+            && df::exists_(ra::capability_uid(cap), ResultKeyKey { intent_hash: run.intent_hash, key_version }), E_RESULT_KEY);
+        let key: &ResultKeyGrant = df::borrow(ra::capability_uid(cap), ResultKeyKey { intent_hash: run.intent_hash, key_version });
+        assert!(key.org_id == run.org_id && key.membership_id == run.membership_id && key.host_address == run.host_address, E_RESULT_KEY);
+        assert!(vector::length(&encrypted_command) >= 33 && vector::length(&encrypted_command) <= 65536
+            && encrypted_command[0] == 70 && encrypted_command[1] == 77
+            && encrypted_command[2] == 69 && encrypted_command[3] == 51, E_DELIVERY);
+        let body_hash = hash::sha2_256(encrypted_command);
+        if (df::exists_(&run.id, CommandDeliveryKey {})) {
+            let old: &CommandDelivery = df::borrow(&run.id, CommandDeliveryKey {});
+            assert!(old.key_version == key_version && old.body_hash == body_hash && old.encrypted_command == encrypted_command, E_DELIVERY);
+            event::emit(CommandQueued { execution_id: object::id(run), host_address: run.host_address, body_hash, duplicate: true });
+            return
+        };
+        assert!(run.state == QUEUED && !run.stop_requested, E_STATE);
+        assert!(clock::timestamp_ms(clock) < run.expires_at_ms, E_EXPIRED);
+        df::add(&mut run.id, CommandDeliveryKey {}, CommandDelivery {
+            key_version, encrypted_command, body_hash, queued_at_ms: clock::timestamp_ms(clock),
+        });
+        let queue_key = HostCommandQueueKey { host_address: run.host_address };
+        if (!df::exists_(organization::borrow_uid(org), queue_key)) {
+            df::add(organization::borrow_uid_mut(org), queue_key, HostCommandQueue { commands: table::new(ctx) });
+        };
+        let queue: &mut HostCommandQueue = df::borrow_mut(organization::borrow_uid_mut(org), queue_key);
+        let position = table::length(&queue.commands);
+        table::add(&mut queue.commands, position, QueuedCommandPointer {
+            execution_id: object::id(run), capability_id: run.capability_id,
+            membership_id: run.membership_id, intent_hash: run.intent_hash,
+        });
+        event::emit(CommandQueued { execution_id: object::id(run), host_address: run.host_address, body_hash, duplicate: false });
+    }
 
     /// Include before prepare_* in the same PTB. Wrapping is to the Host's
     /// membership encryption key and carries only this command's result key.
@@ -186,6 +251,13 @@ module fractalmind_protocol::node_execution {
         if (!df::exists_(ra::capability_uid(cap), ExecutionIndexKey {})) return option::none();
         let idx: &ExecutionIndex = df::borrow(ra::capability_uid(cap), ExecutionIndexKey {});
         if (table::contains(&idx.executions, intent_hash)) option::some(*table::borrow(&idx.executions, intent_hash)) else option::none()
+    }
+    public fun has_command_delivery(run: &CommandExecution): bool { df::exists_(&run.id, CommandDeliveryKey {}) }
+    public fun host_command_queue_size(org: &Organization, host_address: address): u64 {
+        let key = HostCommandQueueKey { host_address };
+        if (!df::exists_(organization::borrow_uid(org), key)) return 0;
+        let queue: &HostCommandQueue = df::borrow(organization::borrow_uid(org), key);
+        table::length(&queue.commands)
     }
     public fun begin_agent_command(
         run: &mut CommandExecution, cap: &RemoteCapability, org: &Organization,

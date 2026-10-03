@@ -68,6 +68,16 @@ const intervention = process.argv.slice(4).includes("--intervention");
 const autonomy = process.argv.slice(4).includes("--autonomy");
 const projection = process.argv.slice(4).includes("--projection");
 const modelFixture = process.argv.slice(4).includes("--model-fixture");
+const chainQueue = process.argv.slice(4).includes("--chain-queue");
+assert.ok(
+  !chainQueue ||
+    (humanSequence &&
+      !directPermission &&
+      !intervention &&
+      !autonomy &&
+      !projection),
+  "Chain delivery has its own original-command Human sequence",
+);
 assert.ok(
   !modelFixture || directApp,
   "Model protocol fixture requires the formal direct App sequence",
@@ -107,6 +117,7 @@ assert.ok(
         "--autonomy",
         "--projection",
         "--model-fixture",
+        "--chain-queue",
       ].includes(a),
     ),
   "Unknown harness option",
@@ -179,6 +190,8 @@ const invoke: NativeInvoke = async (command, args) => {
       return request("decryptRecord", { record: args.record });
     case "fm_device_wrap_command_result_key":
       return request("wrapCommandResultKey", { record: args.request });
+    case "fm_device_encrypt_command_delivery":
+      return request("encryptCommandDelivery", { record: args.request });
     default:
       throw new Error("Unexpected native operation");
   }
@@ -223,6 +236,8 @@ async function save(complete = false) {
             state.projectionControllerVerified === true,
           installedProjectionUIVerified: false,
           automaticHostProjectionDelivery: false,
+          chainCommandQueueVerified:
+            chainQueue && state.chainCommandQueueVerified === true,
           modelProviderKind: modelFixture
             ? "synthetic loopback Messages API fixture; not an actual language model"
             : "not configured",
@@ -507,6 +522,7 @@ try {
       FM_ENVD_NATIVE_APP_EXECUTION: "1",
       FM_ENVD_DIRECT_APP:
         directApp || intervention || autonomy || projection ? "1" : "0",
+      FM_ENVD_CHAIN_QUEUE: chainQueue ? "1" : "0",
       FM_ENVD_AGENT_DISCOVERY: "1",
       FM_ENVD_DEVICE_COMMAND: "1",
       FM_ENVD_HANDOVER_APPROVAL: "1",
@@ -1081,6 +1097,8 @@ try {
   let feeConfirmations = 0,
     deliveries = 0,
     transportCalls = 0;
+  const firstCommandDeliveries = chainQueue ? 0 : 1;
+  let declineFirstChainQuote = chainQueue;
   const transport: typeof fetch = async (...args) => {
     transportCalls++;
     if (String(args[0]).endsWith("/command")) deliveries++;
@@ -1094,6 +1112,12 @@ try {
     invoke,
     journal,
     async (q) => {
+      if (q.requestId.startsWith("chain-delivery:") && declineFirstChainQuote) {
+        declineFirstChainQuote = false;
+        state = { ...state, declinedChainDeliveryQuoteDigest: q.digest };
+        await save();
+        return false;
+      }
       feeConfirmations++;
       await preparedQuote("native exact continuation ticket fee", q);
       return true;
@@ -1172,7 +1196,53 @@ try {
   checks.push(
     "formal native control quotation/issuance and command preparation do not dispatch; a fresh runner with an empty journal restores the same encrypted ticket and queued Run",
   );
-  const sent = await runner.step({ ...runInput, releaseQueued: true });
+  if (chainQueue) {
+    const declined = await runner.step(
+      { ...runInput, releaseQueued: true },
+      "chain",
+    );
+    assert.equal(declined.status, "queued");
+    assert.equal(declined.reason, "chain_delivery_fee_declined");
+    assert.equal(
+      await sdk.nodeExecution.getCommandDelivery(queued.executionId!),
+      null,
+    );
+    assert.equal(
+      (await sdk.nodeExecution.getExecution(queued.executionId!)).state,
+      0,
+    );
+    assert.equal(deliveries, 0);
+    assert.equal(feeConfirmations, 1);
+    checks.push(
+      "declining the separate chain delivery fee leaves the original Run queued and no delivery record or Coordinator send; subsequent release requires a new explicit fee confirmation",
+    );
+    await save();
+  }
+  const sent = await runner.step(
+    { ...runInput, releaseQueued: true },
+    chainQueue ? "chain" : "coordinator",
+  );
+  if (chainQueue) {
+    await record(
+      "native original command chain delivery",
+      runner.lastSubmission!,
+    );
+    const delivery = await sdk.nodeExecution.getCommandDelivery(
+      queued.executionId!,
+    );
+    assert.ok(delivery);
+    assert.equal(
+      deliveries,
+      0,
+      "Chain reception cannot depend on a Coordinator command send",
+    );
+    state = {
+      ...state,
+      chainDeliveryDigest: runner.lastSubmission!.digest,
+      chainDeliveryKeyVersion: delivery.key_version,
+    };
+    await save();
+  }
   state = {
     ...state,
     phase: "continuation_sent",
@@ -1241,10 +1311,16 @@ try {
   assert.equal(result.recordId, settled.result_record);
   const restoredFinal = await reopened.step(runInput);
   assert.equal(restoredFinal.status, "awaiting_verification");
-  assert.equal(deliveries, 1);
-  assert.equal(feeConfirmations, 1);
+  assert.equal(deliveries, firstCommandDeliveries);
+  assert.equal(feeConfirmations, chainQueue ? 2 : 1);
+  if (chainQueue) {
+    state = { ...state, chainCommandQueueVerified: true };
+    checks.push(
+      "formal native App explicitly pays and signs immutable encrypted delivery; production Host independently reads Sui and executes the original Run with zero Coordinator command sends; original result and separate Human verification are preserved",
+    );
+  }
   checks.push(
-    "explicit continuation reaches the actual production envd and native file adapter exactly once; original encrypted result decrypts through the OS vault, Host measurement is 1 and tool budget is 3 spent/0 reserved",
+    "explicit continuation reaches the actual production envd and native file adapter; original encrypted result decrypts through the OS vault, Host measurement is 1 and tool budget is 3 spent/0 reserved",
   );
   checks.push(
     "fresh native runner recovers the original successful Run and measurement without another fee or delivery; KR verification and final Human acceptance remain pending",
@@ -1374,7 +1450,7 @@ try {
     });
     assert.equal(nextQueued.status, "queued");
     assert.ok(nextQueued.executionId);
-    assert.equal(deliveries, 1);
+    assert.equal(deliveries, firstCommandDeliveries);
     await record(
       "native second KR exact ticket and Run",
       runner.lastSubmission!,
@@ -1419,7 +1495,7 @@ try {
         (await runner.step({ ...nextInput, releaseQueued: true })).status,
         "paused",
       );
-      assert.equal(deliveries, 1);
+      assert.equal(deliveries, firstCommandDeliveries);
       await assert.rejects(nextControl.use(nextCapability));
       const stopQuote = await interventionController.prepare(
         { kind: "stop", runId: originalQueued },
@@ -1537,7 +1613,11 @@ try {
       assert.equal(resumed.state, 1);
       assert.equal(resumed.next_kr, "1");
       assert.equal(resumed.metrics[0].verified, true);
-      assert.equal(deliveries, 1, "Renewed agreement does not dispatch");
+      assert.equal(
+        deliveries,
+        firstCommandDeliveries,
+        "Renewed agreement does not dispatch",
+      );
       const description = await runner.describe(okrId);
       const renewedControl = new OkrControl(
         chain,
@@ -1574,7 +1654,7 @@ try {
         "native renewed exact second KR ticket and Run",
         runner.lastSubmission!,
       );
-      assert.equal(deliveries, 1);
+      assert.equal(deliveries, firstCommandDeliveries);
       checks.push(
         "formal native intervention pauses a queued second KR without clearing its reservation, blocks old continuation, settles only the original queued Run and renews through fresh real Host review and separate Human approval without implicit dispatch",
       );
@@ -1598,8 +1678,8 @@ try {
       (r) => r.metrics[1].run_id === second.id && r.metrics[1].current === "1",
     );
     krRuns.push(second.id);
-    assert.equal(deliveries, 2);
-    assert.equal(feeConfirmations, intervention ? 3 : 2);
+    assert.equal(deliveries, firstCommandDeliveries + 1);
+    assert.equal(feeConfirmations, intervention || chainQueue ? 3 : 2);
     const afterSecond = await verifyCurrent(
       "native independent KR 2 verification",
     );
@@ -1653,7 +1733,7 @@ try {
     );
     assert.equal(total.spent, 6n);
     assert.equal(total.reserved, 0n);
-    assert.equal(deliveries, 2);
+    assert.equal(deliveries, firstCommandDeliveries + 1);
     assert.equal(
       (await sdk.okr.listExecutions(okrId)).executions.length,
       intervention ? 3 : 2,

@@ -143,6 +143,7 @@ type RuntimeConfig struct {
 	AdapterArgs     []string          `yaml:"adapter_args"`
 	ResultGasBudget uint64            `yaml:"result_gas_budget"`
 	Model           ModelConfig       `yaml:"model"`
+	ChainQueue      bool              `yaml:"chain_queue"` // explicitly published encrypted deliveries only
 }
 
 // Enabling this sends signed messages and approved file-task observations to

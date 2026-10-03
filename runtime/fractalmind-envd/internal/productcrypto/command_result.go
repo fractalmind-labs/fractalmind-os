@@ -43,6 +43,21 @@ func CommandResultWrapContext(organizationID, capabilityID, membershipID, finger
 	return "fractalmind.command-result-wrap.v1:" + organizationID + ":" + capabilityID + ":" + membershipID + ":" + fingerprint + ":" + strconv.FormatUint(version, 10), nil
 }
 
+func CommandDeliveryContext(organizationID, capabilityID, membershipID, fingerprint string, version uint64) (string, error) {
+	if !canonicalAddress(organizationID) || !canonicalAddress(capabilityID) || !canonicalAddress(membershipID) || !validFingerprint(fingerprint) || version == 0 {
+		return "", fmt.Errorf("invalid command delivery context")
+	}
+	return "fractalmind.command-delivery.v1:" + organizationID + ":" + capabilityID + ":" + membershipID + ":" + fingerprint + ":" + strconv.FormatUint(version, 10), nil
+}
+func DecryptCommandDelivery(envelope, commandKey []byte, context string) ([]byte, error) {
+	if len(envelope) < 33 || len(envelope) > 65536 || string(envelope[:4]) != "FME3" || !strings.HasPrefix(context, "fractalmind.command-delivery.v1:") {
+		return nil, fmt.Errorf("invalid command delivery envelope")
+	}
+	legacy := append([]byte(nil), envelope...)
+	legacy[3] = '1'
+	return Decrypt(legacy, commandKey, context)
+}
+
 // UnwrapResultKey accepts only a 32-byte per-command result key. A caller's
 // Host secret stays local; low-order X25519 public keys are rejected by ECDH.
 func UnwrapResultKey(envelope, hostSecret []byte, context string) ([]byte, error) {

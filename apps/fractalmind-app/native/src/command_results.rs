@@ -5,6 +5,7 @@ use super::*;
 use hkdf::Hkdf;
 use serde::Deserialize;
 use sha2::Sha256;
+use zeroize::Zeroize;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -70,6 +71,23 @@ impl WrapRequest {
     }
 }
 impl DeviceVault {
+    pub fn encrypt_command_delivery(&self, profile: &str, request: &str) -> Result<String> {
+        if request.len() > 250_000 {
+            return Err(VaultError::InvalidEnvelope);
+        }
+        let input: DeliveryRequest =
+            serde_json::from_str(request).map_err(|_| VaultError::InvalidEnvelope)?;
+        input.context.validate()?;
+        let plaintext = Zeroizing::new(records::encoded(&input.plaintext, 65504)?);
+        if plaintext.is_empty() {
+            return Err(VaultError::InvalidEnvelope);
+        }
+        let key = command_key(&self.load(profile)?, profile, &input.context)?;
+        let context = delivery_context(&input.context);
+        let mut body = records::seal_body(&plaintext, key.as_ref(), &context)?;
+        body[3] = b'3';
+        Ok(STANDARD.encode(body))
+    }
     pub fn wrap_command_result_key(&self, profile: &str, request: &str) -> Result<String> {
         if request.len() > 150_000 {
             return Err(VaultError::InvalidEnvelope);
@@ -85,12 +103,48 @@ impl DeviceVault {
         )?))
     }
 }
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct DeliveryRequest {
+    context: WrapRequest,
+    plaintext: String,
+}
+impl Drop for DeliveryRequest {
+    fn drop(&mut self) {
+        self.plaintext.zeroize();
+    }
+}
+fn delivery_context(input: &WrapRequest) -> String {
+    format!(
+        "fractalmind.command-delivery.v1:{}:{}:{}:{}:{}",
+        input.organization_id,
+        input.capability_id,
+        input.membership_id,
+        input.intent_hash,
+        input.key_version
+    )
+}
 fn wrap_result(
     keys: &[u8],
     profile: &str,
     input: &WrapRequest,
     recipient: &[u8; 32],
 ) -> Result<Vec<u8>> {
+    let derived = command_key(keys, profile, input)?;
+    onboarding::wrap(
+        derived.as_ref(),
+        recipient,
+        &format!(
+            "fractalmind.command-result-wrap.v1:{}:{}:{}:{}:{}",
+            input.organization_id,
+            input.capability_id,
+            input.membership_id,
+            input.intent_hash,
+            input.key_version
+        ),
+    )
+}
+fn command_key(keys: &[u8], profile: &str, input: &WrapRequest) -> Result<Zeroizing<[u8; 32]>> {
     validate_keys(keys)?;
     let device = public(profile, keys)?;
     let secret = StaticSecret::from(
@@ -106,23 +160,11 @@ fn wrap_result(
         ),
     )?;
     let content = keyrings::select(&ring, &input.organization_id, &input.key_version)?;
-    let derived = derive_result_key(
+    derive_result_key(
         content.as_ref(),
         &input.organization_id,
         &input.intent_hash,
         &input.key_version,
-    )?;
-    onboarding::wrap(
-        derived.as_ref(),
-        recipient,
-        &format!(
-            "fractalmind.command-result-wrap.v1:{}:{}:{}:{}:{}",
-            input.organization_id,
-            input.capability_id,
-            input.membership_id,
-            input.intent_hash,
-            input.key_version
-        ),
     )
 }
 pub(super) fn derive_result_key(
@@ -217,6 +259,40 @@ mod tests {
         assert!(wrap_result(&keys, "test-result", &input, &recipient).is_err());
         input.organization_id = format!("0x{}", "55".repeat(32));
         assert!(wrap_result(&keys, "test-result", &input, &recipient).is_err());
+    }
+    #[test]
+    fn delivery_uses_only_the_command_key_and_a_distinct_authenticated_domain() {
+        let (keys, input, host) = fixture();
+        let key = command_key(&keys, "test-result", &input).unwrap();
+        let context = delivery_context(&input);
+        let mut body =
+            records::seal_body(b"signed original command", key.as_ref(), &context).unwrap();
+        body[3] = b'3';
+        let wrapped =
+            wrap_result(&keys, "test-result", &input, &input.validate().unwrap()).unwrap();
+        let host_key = records::unwrap(
+            &wrapped,
+            &host,
+            &format!(
+                "fractalmind.command-result-wrap.v1:{}:{}:{}:{}:{}",
+                input.organization_id,
+                input.capability_id,
+                input.membership_id,
+                input.intent_hash,
+                input.key_version
+            ),
+        )
+        .unwrap();
+        let plain = records::open_body(&body, &host_key, &context, b"FME3").unwrap();
+        assert_eq!(plain.as_slice(), b"signed original command");
+        assert!(records::open_body(&body, &[0xaa; 32], &context, b"FME3").is_err());
+        assert!(records::open_body(&body, &host_key, &(context + "0"), b"FME3").is_err());
+        assert!(records::open_body(&body, &host_key, "result", b"FME2").is_err());
+        let vault = DeviceVault::new("org.fractalmind.app.device.test", PathBuf::new());
+        assert!(matches!(
+            vault.encrypt_command_delivery("test-absent", r#"{"context":{},"plaintext":""}"#),
+            Err(VaultError::InvalidEnvelope)
+        ));
     }
     #[test]
     fn invalid_requests_fail_before_os_key_access() {

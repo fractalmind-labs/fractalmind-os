@@ -26,6 +26,22 @@ export function commandResultWrapContext(organizationId: string, capabilityId: s
   return `fractalmind.command-result-wrap.v1:${normalizeSuiAddress(organizationId)}:${normalizeSuiAddress(capabilityId)}:${normalizeSuiAddress(membershipId)}:${fingerprint(intentHash)}:${version(keyVersion)}`;
 }
 
+/** Distinct authenticated domain for the exact command, never a result body. */
+export function commandDeliveryContext(organizationId: string, capabilityId: string, membershipId: string, intentHash: string, keyVersion: bigint | string | number): string {
+  return `fractalmind.command-delivery.v1:${normalizeSuiAddress(organizationId)}:${normalizeSuiAddress(capabilityId)}:${normalizeSuiAddress(membershipId)}:${fingerprint(intentHash)}:${version(keyVersion)}`;
+}
+export async function encryptCommandDelivery(plaintext: Uint8Array, commandKey: Uint8Array, context: string): Promise<Uint8Array> {
+  if (plaintext.length === 0 || plaintext.length > 65504 || !context.startsWith('fractalmind.command-delivery.v1:')) throw new Error('Invalid command delivery context or size.');
+  const body = await encryptContent(plaintext, commandKey, context);
+  body[3] = 51;
+  return body;
+}
+export async function decryptCommandDelivery(body: Uint8Array, commandKey: Uint8Array, context: string): Promise<Uint8Array> {
+  if (body.length < 33 || body.length > 65536 || new TextDecoder().decode(body.slice(0, 4)) !== 'FME3' || !context.startsWith('fractalmind.command-delivery.v1:')) throw new Error('Invalid command delivery envelope.');
+  const legacy = body.slice(); legacy[3] = 49;
+  return decryptContent(legacy, commandKey, context);
+}
+
 /** FME2 distinguishes command-specific keys from legacy FME1 org-key bodies. */
 export async function encryptCommandResult(plaintext: Uint8Array, derivedKey: Uint8Array, recordContext: string): Promise<Uint8Array> {
   const body = await encryptContent(plaintext, derivedKey, recordContext);

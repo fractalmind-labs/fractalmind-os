@@ -24,7 +24,8 @@ export type NativeDeviceCommand =
   | "fm_recovery_prepared_public"
   | "fm_recovery_sign_transaction"
   | "fm_device_wrap_organization_keys"
-  | "fm_device_wrap_command_result_key";
+  | "fm_device_wrap_command_result_key"
+  | "fm_device_encrypt_command_delivery";
 export type NativeInvoke = (
   command: NativeDeviceCommand,
   args: Record<string, string>,

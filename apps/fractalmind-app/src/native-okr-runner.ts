@@ -3,6 +3,7 @@ import type { Transaction } from "@mysten/sui/transactions";
 import {
   NativeFileOkrRunner,
   bytesToHex,
+  nodeCommandIntentHash,
   SelfPayTransactionManager,
   createSelfPayOkrSubmitter,
   okrRunnerTicketName,
@@ -71,8 +72,11 @@ export class NativeOkrRunner {
   private readonly runner: NativeFileOkrRunner;
   private readonly guards = new WeakMap<Transaction, () => Promise<void>>();
   private signingGuard?: () => Promise<void>;
+  private deliveryMode: "coordinator" | "chain" = "coordinator";
+  private chainFeeDeclined = false;
   private flight?: {
     okrId: string;
+    deliveryMode: "coordinator" | "chain";
     result: ReturnType<NativeFileOkrRunner["step"]>;
   };
   private readonly invoke: NativeInvoke;
@@ -234,6 +238,55 @@ export class NativeOkrRunner {
         };
         const before = await this.policyPin(target);
         const preflight = await this.results.preflight(target);
+        const executions = await chain.sdk.nodeExecution.readAgentExecutions(
+          organizationId,
+          managed.id,
+        );
+        const original = executions.executions.find(
+          (row) =>
+            row.run.capability_id === command.capability.id &&
+            bytesToHex(Uint8Array.from(row.run.intent_hash)) ===
+              bytesToHex(nodeCommandIntentHash(command)),
+        );
+        if (!original) throw new NativeOkrRunnerError("invalid_source");
+        const published = await chain.sdk.nodeExecution.getCommandDelivery(
+          original.run.id,
+        );
+        // An existing chain delivery is already a send. It never authorizes an
+        // additional Coordinator send, even when local delivery state is empty.
+        if (published) return;
+        if (this.deliveryMode === "chain") {
+          const requestId = `chain-delivery:${original.run.id}`;
+          const prior = await this.manager.query(requestId);
+          if (prior) throw new NativeOkrRunnerError("state_changed");
+          const prepared = await this.results.prepareDelivery(
+            target,
+            original.run.id,
+          );
+          const guard = async () => {
+            assertActive();
+            await preflight();
+            await prepared.assertCurrent();
+            if ((await this.policyPin(target)) !== before)
+              throw new NativeOkrRunnerError("state_changed");
+            assertActive();
+          };
+          await guard();
+          if (this.signingGuard)
+            throw new NativeOkrRunnerError("invalid_transaction");
+          this.signingGuard = guard;
+          try {
+            const receipt = await submit(prepared.transaction, { requestId });
+            this.chainFeeDeclined =
+              receipt.status === "rejected" &&
+              receipt.reason === "fee_approval_declined";
+            if (receipt.status !== "confirmed")
+              throw new NativeOkrRunnerError("state_changed");
+          } finally {
+            this.signingGuard = undefined;
+          }
+          return;
+        }
         const request = await this.coordinator.prepareCommand(
           member.coordinator_binding,
           command,
@@ -247,21 +300,50 @@ export class NativeOkrRunner {
       },
     });
   }
-  step(input: Parameters<NativeFileOkrRunner["step"]>[0]) {
+  step(
+    input: Parameters<NativeFileOkrRunner["step"]>[0],
+    deliveryMode: "coordinator" | "chain" = "coordinator",
+  ) {
     this.assertActive();
     if (this.flight) {
-      if (this.flight.okrId !== input.okrId)
+      if (
+        this.flight.okrId !== input.okrId ||
+        this.flight.deliveryMode !== deliveryMode
+      )
         throw new NativeOkrRunnerError("invalid_transaction");
       return this.flight.result;
     }
-    const result = this.runner.step(input).finally(() => {
-      this.flight = undefined;
-    });
-    this.flight = { okrId: input.okrId, result };
+    this.deliveryMode = deliveryMode;
+    this.chainFeeDeclined = false;
+    const result = this.runner
+      .step(input)
+      .then((value) =>
+        this.chainFeeDeclined && value.status === "awaiting_confirmation"
+          ? {
+              ...value,
+              status: "queued" as const,
+              reason: "chain_delivery_fee_declined",
+            }
+          : value,
+      )
+      .finally(() => {
+        this.flight = undefined;
+        this.deliveryMode = "coordinator";
+      });
+    this.flight = { okrId: input.okrId, deliveryMode, result };
     return result;
   }
   get lastSubmission() {
     return this.manager.lastSubmission;
+  }
+  get lastChainDeliverySubmission() {
+    const result = this.manager.lastSubmission;
+    return result?.requestId.startsWith("chain-delivery:") ? result : undefined;
+  }
+  queryChainDelivery(executionId: string) {
+    this.assertActive();
+    if (!id.test(executionId)) throw new NativeOkrRunnerError("invalid_source");
+    return this.manager.query(`chain-delivery:${executionId}`);
   }
   async describe(okrId: string) {
     this.assertActive();

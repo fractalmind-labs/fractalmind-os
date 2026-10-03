@@ -96,6 +96,9 @@ export default function OkrContinuation({
       null,
     );
   const [now, setNow] = useState(Date.now());
+  const [chainDelivery, setChainDelivery] = useState(false);
+  const [chainOutcome, setChainOutcome] =
+    useState<SelfPayTransactionOutcome | null>(null);
   const dialog = useRef<HTMLDialogElement>(null),
     mounted = useRef(true),
     opened = useRef(false),
@@ -147,6 +150,8 @@ export default function OkrContinuation({
     setDescription(null);
     setFee(null);
     setState(null);
+    setChainOutcome(null);
+    setChainDelivery(false);
     setLocator(null);
     setControlOutcome(null);
     setRunOutcome(null);
@@ -412,6 +417,7 @@ export default function OkrContinuation({
     save({ ...locator, deliveryAttempted: true });
     deliveryJournal.current ??= new IndexedDbOkrDeliveryJournal();
     if (
+      !chainDelivery &&
       !(await deliveryJournal.current.claim(
         okrDeliveryKey(
           profile.network,
@@ -423,15 +429,22 @@ export default function OkrContinuation({
     )
       throw Object.assign(new Error(), { code: "original_run_needs_review" });
     ctx.assertLive();
-    const result = await ctx.runner.step({
-      okrId,
-      capabilityId: locator.capabilityId,
-      releaseQueued: true,
-      expectedExecutionId: state.executionId,
-      expectedAgreementVersion: locator.agreementVersion,
-      expectedKrIndex: locator.krIndex,
-    });
+    const result = await ctx.runner.step(
+      {
+        okrId,
+        capabilityId: locator.capabilityId,
+        releaseQueued: true,
+        expectedExecutionId: state.executionId,
+        expectedAgreementVersion: locator.agreementVersion,
+        expectedKrIndex: locator.krIndex,
+      },
+      chainDelivery ? "chain" : "coordinator",
+    );
     ctx.assertLive();
+    if (chainDelivery)
+      setChainOutcome(ctx.runner.lastChainDeliverySubmission ?? null);
+    if (result.reason === "chain_delivery_fee_declined")
+      save({ ...locator, deliveryAttempted: false });
     setState(result);
     onChanged();
   }
@@ -440,6 +453,11 @@ export default function OkrContinuation({
     const original = await ctx.runner.query(okrId);
     ctx.assertLive();
     setRunOutcome((old) => retainReceipt(old, original ?? null));
+    if (state?.executionId) {
+      const delivery = await ctx.runner.queryChainDelivery(state.executionId);
+      ctx.assertLive();
+      setChainOutcome((old) => retainReceipt(old, delivery ?? null));
+    }
     if (ctx.control) {
       const cap = await ctx.control.query();
       ctx.assertLive();
@@ -598,12 +616,20 @@ export default function OkrContinuation({
                 )}
               </p>
             )}
-            {state.reason && (
-              <details>
-                <summary>{t("状态详情", "State details")}</summary>
-                <code>{state.reason}</code>
-              </details>
-            )}
+            {state.reason &&
+              (state.reason === "chain_delivery_fee_declined" ? (
+                <p>
+                  {t(
+                    "你取消了投递费用确认，原命令尚未发布到队列。可重新确认费用或查看原 Run。",
+                    "You declined the delivery fee. The original command was not published to the queue. Review its Run or explicitly confirm a new quote.",
+                  )}
+                </p>
+              ) : (
+                <details>
+                  <summary>{t("状态详情", "State details")}</summary>
+                  <code>{state.reason}</code>
+                </details>
+              ))}
           </section>
         )}
         {description && state?.status === "idle" && (
@@ -627,19 +653,48 @@ export default function OkrContinuation({
           </div>
         )}
         {state?.status === "queued" && locator?.deliveryAttempted === false && (
-          <button disabled={busy || !!fee} onClick={() => void perform(send)}>
-            {t("发送原命令到 Host", "Send original command to Host")}
-          </button>
+          <section>
+            <label>
+              <input
+                type="checkbox"
+                checked={chainDelivery}
+                disabled={busy || !!fee}
+                onChange={(event) => setChainDelivery(event.target.checked)}
+              />
+              {t(
+                "允许 Host 从链上接收这条命令",
+                "Allow Host to receive this command from Sui",
+              )}
+            </label>
+            {chainDelivery && (
+              <p>
+                {t(
+                  "需要额外确认一次投递存储费用。Host 开启链上接收后，可在 App 关闭时执行这条原命令；权限、工具预算和最晚到期保持原约定。下一 KR 与人工验收仍需独立确认。",
+                  "Confirm a separate delivery storage fee. A Host with chain reception enabled can execute this original command after the App closes, within its original authority, tool budget and expiry. The next KR and Human acceptance still require separate confirmation.",
+                )}
+              </p>
+            )}
+            <button disabled={busy || !!fee} onClick={() => void perform(send)}>
+              {chainDelivery
+                ? t("确认链上投递费用", "Review chain delivery fee")
+                : t("发送原命令到 Host", "Send original command to Host")}
+            </button>
+          </section>
         )}
         {fee && (
           <section className="notice">
             <h3>
               {fee.kind === "control"
                 ? t("确认单次权限费用", "Confirm one-use authority fee")
-                : t(
-                    "确认票据与执行准备费用",
-                    "Confirm ticket & execution preparation fee",
-                  )}
+                : fee.quote.requestId.startsWith("chain-delivery:")
+                  ? t(
+                      "确认原命令链上投递费用",
+                      "Confirm original command chain delivery fee",
+                    )
+                  : t(
+                      "确认票据与执行准备费用",
+                      "Confirm ticket & execution preparation fee",
+                    )}
             </h3>
             <p>
               {profile.network} · {t("余额", "Balance")}:{" "}
@@ -679,14 +734,19 @@ export default function OkrContinuation({
             </button>
           </section>
         )}
-        {[controlOutcome, runOutcome].map(
+        {[controlOutcome, runOutcome, chainOutcome].map(
           (result, index) =>
             result && (
               <section key={index}>
                 <p>
                   {index === 0
                     ? t("单次执行权限", "One-use execution authority")
-                    : t("原命令准备交易", "Original command preparation")}
+                    : index === 1
+                      ? t("原命令准备交易", "Original command preparation")
+                      : t(
+                          "原命令链上投递交易",
+                          "Original command chain delivery",
+                        )}
                   :{" "}
                   {result.status === "confirmed"
                     ? t("交易已确认", "Transaction confirmed")

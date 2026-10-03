@@ -122,6 +122,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             &request.profile,
             &request.record.ok_or("Command result request required")?,
         )?)?,
+        "encryptCommandDelivery" => serde_json::to_value(vault.encrypt_command_delivery(
+            &request.profile,
+            &request.record.ok_or("Command delivery request required")?,
+        )?)?,
         "decryptRecord" => serde_json::to_value(
             vault.decrypt_record(&request.profile, &request.record.ok_or("Record required")?)?,
         )?,

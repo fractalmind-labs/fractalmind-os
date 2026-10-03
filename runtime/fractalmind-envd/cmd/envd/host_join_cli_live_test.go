@@ -230,6 +230,7 @@ func TestHostJoinLiveCLI(t *testing.T) {
 				nativeConfig.SUI.OrgID = input.OrganizationID
 				nativeConfig.Runtime.AdapterKind = "native-file-agent"
 				nativeConfig.Runtime.Workspaces = map[string]string{"native-files": workspace}
+				nativeConfig.Runtime.ChainQueue = os.Getenv("FM_ENVD_CHAIN_QUEUE") == "1"
 				if endpoint := os.Getenv("FM_ENVD_TEST_MODEL_API_BASE"); endpoint != "" {
 					nativeConfig.Runtime.Model = config.ModelConfig{Enabled: true, APIBase: endpoint, Name: "synthetic-protocol-fixture", MaxTokens: 2048, MaxRequests: 12, TimeoutSeconds: 30}
 				}

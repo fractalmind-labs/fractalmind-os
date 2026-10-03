@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
@@ -24,15 +25,25 @@ type chainRuntimeRPC interface {
 }
 type chainRuntimeExecutor struct {
 	*runtimeadapter.Executor
-	keys     *hostidentity.Keys
-	signer   *sui.Keypair
-	rpc      chainRuntimeRPC
-	once     sync.Once
-	closeErr error
+	keys        *hostidentity.Keys
+	signer      *sui.Keypair
+	rpc         chainRuntimeRPC
+	once        sync.Once
+	closeErr    error
+	queueCancel context.CancelFunc
+	queueDone   chan struct{}
 }
 
 func (e *chainRuntimeExecutor) Close() error {
-	e.once.Do(func() { e.closeErr = e.rpc.Close(); clear(e.signer.Private); e.keys.Close() })
+	e.once.Do(func() {
+		if e.queueCancel != nil {
+			e.queueCancel()
+			<-e.queueDone
+		}
+		e.closeErr = e.rpc.Close()
+		clear(e.signer.Private)
+		e.keys.Close()
+	})
 	return e.closeErr
 }
 func (e *chainRuntimeExecutor) controlKeypair() (*sui.Keypair, error) {
@@ -119,7 +130,26 @@ func newChainRuntimeExecutor(cfg *config.Config, keys *hostidentity.Keys, rpc ch
 		clear(private)
 		return nil, err
 	}
-	return &chainRuntimeExecutor{Executor: executor, keys: keys, signer: signer, rpc: rpc}, nil
+	out := &chainRuntimeExecutor{Executor: executor, keys: keys, signer: signer, rpc: rpc}
+	if cfg.Runtime.ChainQueue {
+		public, err := keys.Public(cfg.Identity.KeyProfile)
+		if err != nil {
+			clear(private)
+			return nil, err
+		}
+		encryption, err := hex.DecodeString(public.EncryptionPublicKey)
+		if err != nil {
+			clear(private)
+			return nil, err
+		}
+		queueContext, cancel := context.WithCancel(context.Background())
+		out.queueCancel, out.queueDone = cancel, make(chan struct{})
+		go func() {
+			defer close(out.queueDone)
+			consumeChainCommandQueue(queueContext, resolver, results, executor, org, signer.Public, encryption)
+		}()
+	}
+	return out, nil
 }
 
 func runtimeConfigurationEnabled(cfg *config.Config) (bool, error) {

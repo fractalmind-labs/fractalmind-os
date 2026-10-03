@@ -27,6 +27,7 @@ const BudgetClaimKey = bcs.struct('BoundBudgetClaimKey', { intent_hash: Bytes })
 const BudgetClaim = bcs.struct('BoundBudgetClaim', { reserved_amount: bcs.u64(), spent_amount: bcs.u64(), settled: bcs.bool() });
 const ResultKeyName = bcs.struct('ResultKeyKey', { intent_hash: Bytes, key_version: bcs.u64() });
 const ResultKeyGrant = bcs.struct('ResultKeyGrant', { org_id: ID, membership_id: ID, host_address: ID, key_version: bcs.u64(), wrapped_key: Bytes });
+const CommandDeliveryBcs = bcs.struct('CommandDelivery', { key_version: bcs.u64(), encrypted_command: Bytes, body_hash: Bytes, queued_at_ms: bcs.u64() });
 export const CommandExecutionBcs = bcs.struct('CommandExecution', {
   id: ID, org_id: ID, capability_id: ID, capability_version: bcs.u64(),
   human_id: ID, grant_id: ID, grant_version: bcs.u64(), membership_id: ID,
@@ -73,6 +74,39 @@ export async function verifySignedNodeCommand(command: SignedNodeCommand) {
 
 export class NodeExecutionApi {
   constructor(private readonly fm: FractalMindClient) {}
+  /** Explicitly publish delivery of an existing queued Run. The caller must
+   * quote and sign this separate transaction; preparing a command is not send. */
+  async queueCommand(input: Authority & { executionId: string; command: SignedNodeCommand; keyVersion: bigint | string | number; encryptedCommand: Uint8Array; tx?: Transaction }) {
+    const value = { ...input, command: structuredClone(input.command), encryptedCommand: input.encryptedCommand.slice() };
+    await verifySignedNodeCommand(value.command);
+    const c = value.command, version = toBigInt(value.keyVersion);
+    if (!value.managedAgentId || version < 1n || version > 0xffffffffffffffffn || value.encryptedCommand.length < 33 || value.encryptedCommand.length > 65536 || new TextDecoder().decode(value.encryptedCommand.slice(0, 4)) !== 'FME3') throw new Error('Invalid command delivery.');
+    const run = await this.getExecution(value.executionId);
+    const fingerprint = nodeCommandIntentHash(c);
+    if (run.state !== EXECUTION_STATES.queued || run.stop_requested || run.org_id !== c.target.organization_id || run.capability_id !== c.capability.id || run.capability_version !== c.capability.revocation_version.toString() || run.delegate !== c.signer || run.human_id !== normalizeSuiAddress(value.humanId) || run.grant_id !== normalizeSuiAddress(value.grantId) || run.membership_id !== normalizeSuiAddress(value.membershipId) || run.managed_agent !== normalizeSuiAddress(value.managedAgentId) || run.host_address !== c.target.node_id || bytesToHex(Uint8Array.from(run.intent_hash)) !== bytesToHex(fingerprint) || run.command_id !== c.command_id || run.nonce !== c.nonce || run.idempotency_key !== c.idempotency_key || run.issued_at_ms !== c.issued_at_ms.toString() || run.expires_at_ms !== c.expires_at_ms.toString() || run.action !== c.action || run.scope !== c.scope || run.agent_id !== c.target.agent_id || run.budget_amount !== (c.budget?.amount ?? 0).toString() || run.budget_asset !== (c.budget?.asset ?? '')) throw new Error('Delivery does not match the original queued Run.');
+    const key = await this.getResultKey(c.capability.id, fingerprint, version);
+    if (key.org_id !== run.org_id || key.membership_id !== run.membership_id || key.host_address !== run.host_address) throw new Error('Delivery key recipient changed.');
+    const tx = this.fm.useTransaction(value.tx);
+    tx.moveCall({ target: `${this.fm.packageId}::node_execution::queue_command`, arguments: [tx.object(value.executionId), tx.object(c.capability.id), tx.object(c.target.organization_id), tx.object(value.humanId), tx.object(value.grantId), tx.object(value.membershipId), tx.object(value.bindingId), tx.object(value.managedAgentId), tx.pure.u64(version), bytesArgument(tx, this.fm.packageId, value.encryptedCommand), tx.object('0x6')] });
+    return tx;
+  }
+  /** Immutable ciphertext for the original Run; absence is never permission
+   * to send or retry, and a malformed or unavailable source remains an error. */
+  async getCommandDelivery(executionId: string) {
+    const parentId = normalizeSuiAddress(executionId), type = `${this.fm.typesPackageId}::node_execution::CommandDeliveryKey`;
+    const name = { type, bcs: new Uint8Array([0]) };
+    const absentId = deriveDynamicFieldID(parentId, TypeTagSerializer.parseFromStr(type), name.bcs);
+    try {
+      const { dynamicField } = await this.fm.client.core.getDynamicField({ parentId, name });
+      if (dynamicField.value.type !== `${this.fm.typesPackageId}::node_execution::CommandDelivery`) throw new Error('Unexpected command delivery type.');
+      const value = CommandDeliveryBcs.parse(dynamicField.value.bcs), body = Uint8Array.from(value.encrypted_command);
+      if (BigInt(value.key_version) < 1n || BigInt(value.queued_at_ms) < 1n || body.length < 33 || body.length > 65536 || new TextDecoder().decode(body.slice(0, 4)) !== 'FME3' || bytesToHex(sha256(body)) !== bytesToHex(Uint8Array.from(value.body_hash))) throw new Error('Invalid command delivery record.');
+      return value;
+    } catch (error) {
+      if (error && typeof error === 'object' && 'reason' in error && error.reason === 'notFound' && 'objectId' in error && error.objectId === absentId) return null;
+      throw error;
+    }
+  }
   /** Complete instance history across capabilities and OKRs. Only known
    * terminal states with settled budget cease blocking handover. This is not
    * physical idle, current device permission or permission to continue. */

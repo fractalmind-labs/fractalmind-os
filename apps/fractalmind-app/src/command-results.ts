@@ -195,6 +195,90 @@ export class NativeCommandResults {
         throw new CommandResultError("state_changed");
     };
   }
+  /** Explicit chain delivery of one existing Run. Returned transaction still
+   * requires a separate fee confirmation and device signature. */
+  async prepareDelivery(raw: CommandResultTarget, executionId: string) {
+    if (!id.test(executionId)) throw new CommandResultError("invalid_source");
+    const input = await this.snapshot(raw),
+      c = input.command;
+    const before = await this.source(input),
+      fingerprint = bytesToHex(nodeCommandIntentHash(c));
+    const run = await this.chain.sdk.nodeExecution.getExecution(executionId);
+    if (
+      run.state !== 0 ||
+      run.stop_requested ||
+      run.grant_id !== this.grantId ||
+      run.human_id !== this.chain.profile.humanId ||
+      run.org_id !== this.organizationId ||
+      run.capability_id !== c.capability.id ||
+      bytesToHex(Uint8Array.from(run.intent_hash)) !== fingerprint
+    )
+      throw new CommandResultError("state_changed");
+    const encrypted = await call(
+      this.invoke,
+      "fm_device_encrypt_command_delivery",
+      {
+        profile: this.signer.device.profile,
+        request: JSON.stringify({
+          context: {
+            network: this.chain.profile.network,
+            encryptedKeys: before.authority.encryptedKeys,
+            organizationId: this.organizationId,
+            capabilityId: c.capability.id,
+            membershipId: before.member.id,
+            intentHash: fingerprint,
+            keyVersion: before.keyVersion,
+            hostAddress: before.member.host_address,
+            hostSigningPublicKey: toBase64(
+              Uint8Array.from(before.member.host_public_key),
+            ),
+            hostEncryptionPublicKey: toBase64(
+              Uint8Array.from(before.member.encryption_public_key),
+            ),
+          },
+          plaintext: toBase64(new TextEncoder().encode(JSON.stringify(c))),
+        }),
+      },
+    );
+    let body: Uint8Array;
+    try {
+      if (typeof encrypted !== "string" || encrypted.length > 87384)
+        throw new Error();
+      body = fromBase64(encrypted);
+      if (
+        body.length < 33 ||
+        body.length > 65536 ||
+        toBase64(body) !== encrypted ||
+        new TextDecoder().decode(body.slice(0, 4)) !== "FME3"
+      )
+        throw new Error();
+    } catch {
+      throw new CommandResultError("invalid_envelope");
+    }
+    const assertCurrent = async () => {
+      if (
+        (await this.source(input)).pin !== before.pin ||
+        JSON.stringify(
+          await this.chain.sdk.nodeExecution.getExecution(executionId),
+        ) !== JSON.stringify(run)
+      )
+        throw new CommandResultError("state_changed");
+    };
+    await assertCurrent();
+    const transaction = await this.chain.sdk.nodeExecution.queueCommand({
+      executionId,
+      command: c,
+      humanId: this.chain.profile.humanId,
+      grantId: this.grantId,
+      membershipId: input.membershipId,
+      bindingId: input.bindingId,
+      managedAgentId: input.managedAgentId,
+      keyVersion: before.keyVersion,
+      encryptedCommand: body,
+    });
+    await assertCurrent();
+    return Object.freeze({ transaction, assertCurrent });
+  }
   async prepare(
     raw: CommandResultTarget,
     options: { tx?: Transaction; expectedKeyVersion?: string } = {},

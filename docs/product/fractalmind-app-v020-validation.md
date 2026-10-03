@@ -6,6 +6,12 @@
 
 ## 当前验证证据
 
+### 原命令通过 Sui 独立投递到 Host 增量
+
+- 正式 App 在原 Run 准备后支持另行确认费用、原生加密与签名，将原命令固定到链上 Host 队列；生产 Host 开启 `runtime.chain_queue` 后独立读取 Sui，沿同一 Executor 与原权限／预算／期限执行。已发布命令不补发 Coordinator；取消费用在签名／广播之前保持原排队状态，再次发布须用户明确确认。后续 KR 授权与 Human 验收仍独立。
+- [实际 OS＋localnet＋生产 envd](evidence/v020-chain-command-delivery-localnet.json)：**13 项检查、18 笔确认交易**。费用取消无发布／派发，重新明确确认后的首 KR 从链上执行，Coordinator 命令派发 **0 次**；次 KR 独立授权后走原 HTTP 路径，整轮派发 **1 次**。两 KR 独立验证和最终验收通过，工具预算 **6 已用／0 预留**。原记录恢复、Host 撤销与测试凭据清理通过；[前序失败与原回执](evidence/v020-chain-command-delivery-prior.json)已保留，无旧请求重放。
+- [回归](evidence/v020-chain-command-delivery-unit.json)：App **218/218**、SDK **155/155**、Move **147/147**、Rust **21/21**、Tauri origin guard **1/1**、Go 四包 race、构建／类型通过。[三包新部署](evidence/v020-chain-command-delivery-deployment.json)保持标准 validator 限制；[真实网页](evidence/v020-chain-command-delivery-browser.json)核对双语明暗和原生保护。**仍未完成**：完整无人值守授权／下一 KR、实际 App 关闭／Host 重启、真实模型、安装后 UI、云 Host、手机、恢复及旧包升级。详见[能力与证明范围](v020-chain-command-delivery.md)。完整 #40 保持未完成。
+
 ### Host 配置模型问答与受约束工具选择增量
 
 - 正式 App 接通 `ask` 常驻授权、零工具消息、独立费用／签名、原命令投递与加密原回复；模型文字标记为待审阅建议。生产 Host 可明确配置 Anthropic Messages 兼容提供方，由模型选择已批准文件任务的下一步工具动作，逐次权限、预算、冲突哈希及实际测量继续由原执行端检查；模型失败不转为其他执行策略。

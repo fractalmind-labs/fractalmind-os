@@ -182,7 +182,7 @@ pub(super) fn unwrap(
         .map_err(|_| VaultError::InvalidEnvelope)?;
     open_body(&body[68..], key.as_ref(), context, b"FME1")
 }
-fn seal_body(plaintext: &[u8], key: &[u8], context: &str) -> Result<Vec<u8>> {
+pub(super) fn seal_body(plaintext: &[u8], key: &[u8], context: &str) -> Result<Vec<u8>> {
     if plaintext.len() > 65504 || context.is_empty() || context.len() > 1024 {
         return Err(VaultError::InvalidEnvelope);
     }
@@ -205,7 +205,7 @@ fn seal_body(plaintext: &[u8], key: &[u8], context: &str) -> Result<Vec<u8>> {
     body.extend_from_slice(&encrypted);
     Ok(body)
 }
-fn open_body(
+pub(super) fn open_body(
     body: &[u8],
     key: &[u8],
     context: &str,

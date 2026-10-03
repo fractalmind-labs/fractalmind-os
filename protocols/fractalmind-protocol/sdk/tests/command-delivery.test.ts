@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { commandDeliveryContext, commandResultKey, decryptCommandDelivery, encryptCommandDelivery } from '../src/command-result-crypto.js';
+import { decryptCommandResult } from '../src/command-result-crypto.js';
+import { bcs } from '@mysten/sui/bcs';
+import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import type { ClientWithCoreApi } from '@mysten/sui/client';
+import { FractalMindClient } from '../src/client.js';
+import { NodeExecutionApi,CommandExecutionBcs,nodeCommandIntentHash } from '../src/node-execution.js';
+import { signNodeCommand } from '../src/node-command.js';
+const id=(n:string)=>`0x${n.repeat(64)}`;
+test('command ciphertext is randomized and bound to original org/capability/member/intent/key version',async()=>{
+ const key=commandResultKey(new Uint8Array(32).fill(7),id('1'),'ab'.repeat(32),1n);
+ const context=commandDeliveryContext(id('1'),id('2'),id('3'),'ab'.repeat(32),1n);
+ const text=new TextEncoder().encode('{"original":"signed command"}');
+ const a=await encryptCommandDelivery(text,key,context),b=await encryptCommandDelivery(text,key,context);
+ assert.notDeepEqual(a,b);assert.equal(new TextDecoder().decode(a.slice(0,4)),'FME3');
+ assert.deepEqual(await decryptCommandDelivery(a,key,context),text);
+ for(const domain of [commandDeliveryContext(id('4'),id('2'),id('3'),'ab'.repeat(32),1n),commandDeliveryContext(id('1'),id('4'),id('3'),'ab'.repeat(32),1n),commandDeliveryContext(id('1'),id('2'),id('4'),'ab'.repeat(32),1n),commandDeliveryContext(id('1'),id('2'),id('3'),'cd'.repeat(32),1n),commandDeliveryContext(id('1'),id('2'),id('3'),'ab'.repeat(32),2n)]) await assert.rejects(decryptCommandDelivery(a,key,domain));
+ await assert.rejects(decryptCommandResult(a,key,context));
+ const tampered=a.slice();tampered[32]^=1;await assert.rejects(decryptCommandDelivery(tampered,key,context));
+ await assert.rejects(decryptCommandDelivery(a,new Uint8Array(32),context));
+ await assert.rejects(encryptCommandDelivery(new Uint8Array(),key,context));
+ await assert.rejects(encryptCommandDelivery(new Uint8Array(65505),key,context));
+ await assert.rejects(encryptCommandDelivery(text,key,'result-domain'));
+ key.fill(0);
+});
+test('explicit queue preparation binds existing signed Run and chunks ciphertext inside one transaction',async()=>{
+ const command=await signNodeCommand(Ed25519Keypair.generate(),{commandId:'original',nonce:'nonce',idempotencyKey:'original',target:{organizationId:id('1'),nodeId:id('2'),agentId:'native-fixture'},action:'assign',scope:'control',capability:{id:id('3'),revocationVersion:1n},issuedAtMs:Date.now(),expiresAtMs:Date.now()+60000,budget:{asset:'TOOL_CALLS',amount:3n},payload:{task:'exact original'}});
+ const original={id:id('4'),org_id:id('1'),capability_id:id('3'),capability_version:'1',human_id:id('5'),grant_id:id('6'),grant_version:'1',membership_id:id('7'),host_address:id('2'),managed_agent:id('8'),delegate:command.signer,node_id:id('2'),agent_id:command.target.agent_id!,command_id:command.command_id,nonce:command.nonce,idempotency_key:command.idempotency_key,intent_hash:Array.from(nodeCommandIntentHash(command)),action:command.action,scope:command.scope,budget_asset:'TOOL_CALLS',budget_amount:'3',issued_at_ms:String(command.issued_at_ms),expires_at_ms:String(command.expires_at_ms),state:0,cursor:'1',stop_requested:false,created_at_ms:'1',started_at_ms:'0',updated_at_ms:'1',result_record:null,result_hash:[],attempt_id:[]};
+ let run=structuredClone(original),reads=0;
+ const grant=bcs.struct('Key',{org_id:bcs.Address,membership_id:bcs.Address,host_address:bcs.Address,key_version:bcs.u64(),wrapped_key:bcs.vector(bcs.u8())});
+ const core={getObject:async()=>({object:{objectId:run.id,type:`${id('9')}::node_execution::CommandExecution`,owner:{$kind:'Shared'},content:CommandExecutionBcs.serialize(run).toBytes()}}),getDynamicField:async()=>{reads++;return{dynamicField:{value:{type:`${id('9')}::node_execution::ResultKeyGrant`,bcs:grant.serialize({org_id:id('1'),membership_id:id('7'),host_address:id('2'),key_version:'1',wrapped_key:Array(132).fill(0)}).toBytes()}}};}};
+ const api=new NodeExecutionApi(new FractalMindClient({packageId:id('a'),originalPackageId:id('9'),client:{core} as unknown as ClientWithCoreApi}));
+ const body=new Uint8Array(20000);body.set(new TextEncoder().encode('FME3'));
+ const input={executionId:id('4'),command,humanId:id('5'),grantId:id('6'),membershipId:id('7'),bindingId:id('b'),managedAgentId:id('8'),keyVersion:1n,encryptedCommand:body};
+ const tx=await api.queueCommand(input);
+ const calls=tx.getData().commands.filter(c=>c.$kind==='MoveCall');
+ assert.deepEqual(calls.map(c=>c.MoveCall.function),['append_bytes','queue_command']);assert.equal(reads,1);
+ for(const patch of [{state:1},{state:4},{state:5},{stop_requested:true},{membership_id:id('c')},{grant_id:id('c')},{intent_hash:Array(32).fill(0)}]){run={...structuredClone(original),...patch};await assert.rejects(api.queueCommand(input),/original queued Run/);}
+ run=structuredClone(original);await assert.rejects(api.queueCommand({...input,command:{...command,payload:{changed:true}}}),/payload/);
+});
