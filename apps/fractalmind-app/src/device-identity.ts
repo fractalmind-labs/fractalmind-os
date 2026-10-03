@@ -85,12 +85,20 @@ export class DeviceIdentityVerifier {
         throw new DeviceIdentityError("invalid_source");
       return object;
     };
-    const prefix = `${sdk.client.typesPackageId}::identity::`;
     const [registryObject, humanObject, grantObject, clockObject] =
       await Promise.all([
-        fetch(registryId, prefix + "IdentityRegistry"),
-        fetch(this.chain.profile.humanId, prefix + "HumanIdentity"),
-        fetch(this.grantId, prefix + "DeviceGrant"),
+        fetch(
+          registryId,
+          await sdk.client.coreType("identity", "IdentityRegistry"),
+        ),
+        fetch(
+          this.chain.profile.humanId,
+          await sdk.client.coreType("identity", "HumanIdentity"),
+        ),
+        fetch(
+          this.grantId,
+          await sdk.client.coreType("identity", "DeviceGrant"),
+        ),
         fetch(
           normalizeSuiAddress("0x6"),
           `${normalizeSuiAddress("0x2")}::clock::Clock`,
@@ -137,7 +145,7 @@ export class DeviceIdentityVerifier {
         throw new DeviceIdentityError("invalid_grant");
       const orgObject = await fetch(
         organizationId,
-        `${sdk.client.typesPackageId}::organization::Organization`,
+        await sdk.client.coreType("organization", "Organization"),
       );
       const org = OrganizationBcs.parse(orgObject.content!);
       const { dynamicField } = await core.getDynamicField({
@@ -147,7 +155,10 @@ export class DeviceIdentityVerifier {
           bcs: bcs.Address.serialize(organizationId).toBytes(),
         },
       });
-      if (dynamicField.value.type !== prefix + "OrgRole")
+      if (
+        dynamicField.value.type !==
+        (await sdk.client.coreType("identity", "OrgRole"))
+      )
         throw new DeviceIdentityError("invalid_source");
       const role = OrgRoleBcs.parse(dynamicField.value.bcs);
       if (

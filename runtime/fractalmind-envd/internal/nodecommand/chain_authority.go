@@ -39,6 +39,7 @@ type ChainAuthorityResolver struct {
 	okrPackageID    string
 	directPackageID string
 	now             func() time.Time
+	origins         *coreTypeOrigins
 }
 
 // Extension origins are ordered OKR, direct. Empty positions retain the core
@@ -201,7 +202,11 @@ func (r *chainRead) object(ctx context.Context, id string, kind string, out any)
 	} else if strings.HasPrefix(kind, "direct_agent::") {
 		pkg = r.resolver.directPackageID
 	}
-	if obj.ID != id || obj.Type != pkg+"::"+kind || obj.Version == 0 || !obj.Shared {
+	expected, err := r.resolver.resolveType(ctx, pkg+"::"+kind)
+	if err != nil {
+		return err
+	}
+	if obj.ID != id || obj.Type != expected || obj.Version == 0 || !obj.Shared {
 		return fmt.Errorf("unexpected protocol object, owner or version for %s", kind)
 	}
 	if err := decodeChainBCS(obj.Content, out); err != nil {
@@ -216,6 +221,20 @@ func (r *chainRead) object(ctx context.Context, id string, kind string, out any)
 }
 
 func (r *chainRead) field(ctx context.Context, parent string, keyTag []byte, key []byte, keyType, valueType string, out any) error {
+	// Derivation and validation must use the same per-datatype origin. An
+	// upgrade can introduce a new field on an original-type capability.
+	keyType, err := r.resolver.resolveType(ctx, keyType)
+	if err != nil {
+		return err
+	}
+	valueType, err = r.resolver.resolveType(ctx, valueType)
+	if err != nil {
+		return err
+	}
+	keyTag, err = r.resolver.resolveTypeTag(ctx, keyTag)
+	if err != nil {
+		return err
+	}
 	id, err := dynamicFieldID(parent, keyTag, key)
 	if err != nil {
 		return err

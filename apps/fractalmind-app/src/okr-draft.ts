@@ -240,7 +240,7 @@ export class OkrDraftCreation {
         hasNextPage: boolean;
       } = await this.chain.sdk.okr
         .listOkrs(this.organizationId, cursor, 50)
-        .catch((error) => {
+        .catch(async (error) => {
           if (
             cursor === null &&
             this.chain.sdk.okr.isMissingIndex(error, this.organizationId)
@@ -275,12 +275,15 @@ export class OkrDraftCreation {
     await this.verifySource(spec.source);
     const page = await this.chain.sdk.productRecord
       .listCurrent(this.organizationId, null, 1)
-      .catch((error) => {
+      .catch(async (error) => {
         if (
           missingIndex(
             error,
             this.organizationId,
-            `${this.chain.sdk.client.typesPackageId}::product_record::IndexBinding`,
+            await this.chain.sdk.client.coreType(
+              "product_record",
+              "IndexBinding",
+            ),
           )
         )
           return { keyVersion: "1" };

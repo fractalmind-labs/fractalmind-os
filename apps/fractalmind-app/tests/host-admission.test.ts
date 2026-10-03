@@ -1,3 +1,4 @@
+import { fixtureCoreTypes } from "./helpers/type-origins";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
@@ -171,7 +172,11 @@ async function fixture() {
       loadedAtMs: Date.now(),
     }),
     sdk: {
-      client: { typesPackageId: packageId, client: { core } },
+      client: {
+        ...fixtureCoreTypes(packageId),
+        typesPackageId: packageId,
+        client: { core },
+      },
       host: {
         createInvite: (params: {
           proofPublicKey: Uint8Array;

@@ -361,7 +361,11 @@ func (r *chainRead) immutable(ctx context.Context, id, kind string, out any) err
 	if strings.HasPrefix(kind, "direct_agent::") {
 		pkg = r.resolver.directPackageID
 	}
-	if o.ID != id || o.Type != pkg+"::"+kind || !o.Immutable || o.Shared || o.Version == 0 || len(o.Content) < 32 || "0x"+hex.EncodeToString(o.Content[:32]) != id {
+	expected, err := r.resolver.resolveType(ctx, pkg+"::"+kind)
+	if err != nil {
+		return err
+	}
+	if o.ID != id || o.Type != expected || !o.Immutable || o.Shared || o.Version == 0 || len(o.Content) < 32 || "0x"+hex.EncodeToString(o.Content[:32]) != id {
 		return fmt.Errorf("invalid immutable %s source", kind)
 	}
 	if err = decodeChainBCS(o.Content, out); err != nil {

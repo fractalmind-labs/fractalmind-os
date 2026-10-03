@@ -118,7 +118,7 @@ async function object(
   });
   if (
     object.objectId !== objectId ||
-    object.type !== `${chain.sdk.client.typesPackageId}::${module}::${kind}` ||
+    object.type !== (await chain.sdk.client.coreType(module, kind)) ||
     object.owner.$kind !== "Shared" ||
     !object.content ||
     !/^[1-9][0-9]*$/.test(object.version)
@@ -148,13 +148,13 @@ export async function hostDirectory(
         await chain.sdk.client.client.core.getDynamicField({
           parentId: organizationId,
           name: {
-            type: `${chain.sdk.client.typesPackageId}::host::HostIndexBinding`,
+            type: await chain.sdk.client.coreType("host", "HostIndexBinding"),
             bcs: new Uint8Array([0]),
           },
         });
       if (
         dynamicField.value.type !==
-        `${chain.sdk.client.typesPackageId}::host::HostIndex`
+        (await chain.sdk.client.coreType("host", "HostIndex"))
       )
         bad();
       const value = HostIndexBcs.parse(dynamicField.value.bcs);
@@ -171,7 +171,7 @@ export async function hostDirectory(
         missingIndex(
           e,
           organizationId,
-          `${chain.sdk.client.typesPackageId}::host::HostIndexBinding`,
+          await chain.sdk.client.coreType("host", "HostIndexBinding"),
         )
       )
         return null;

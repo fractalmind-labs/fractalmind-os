@@ -1,3 +1,4 @@
+import { fixtureCoreTypes } from "./helpers/type-origins";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { bcs, TypeTagSerializer } from "@mysten/sui/bcs";
@@ -261,7 +262,12 @@ async function fixture(
       loadedAtMs: Date.now(),
     }),
     sdk: {
-      client: { typesPackageId: pkg, packageId: pkg, client: { core } },
+      client: {
+        ...fixtureCoreTypes(pkg),
+        typesPackageId: pkg,
+        packageId: pkg,
+        client: { core },
+      },
       host: {
         rebindAgent: (input: any) => {
           assert.equal(input.controlConfirmed, false);

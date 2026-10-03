@@ -60,7 +60,7 @@ export class PrivateRecords {
         hasNextPage: boolean;
       } = await this.chain.sdk.productRecord
         .listCurrent(this.organizationId, cursor, 50)
-        .catch((error) => {
+        .catch(async (error) => {
           // Only the exact missing organization index on the first page is empty.
           // Missing child records, later pages and transport failures stay errors.
           if (
@@ -68,7 +68,10 @@ export class PrivateRecords {
             missingIndex(
               error,
               this.organizationId,
-              `${this.chain.sdk.client.typesPackageId}::product_record::IndexBinding`,
+              await this.chain.sdk.client.coreType(
+                "product_record",
+                "IndexBinding",
+              ),
             )
           )
             return { records: [], cursor: null, hasNextPage: false };

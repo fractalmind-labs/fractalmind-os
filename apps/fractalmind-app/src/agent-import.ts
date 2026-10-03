@@ -109,7 +109,7 @@ export async function managedInstance(
   const directory = await hostDirectory(chain, organizationId);
   if (!directory.instancesTableId) return null;
   const table = directory.instancesTableId,
-    type = `${chain.sdk.client.typesPackageId}::host::InstanceKey`;
+    type = await chain.sdk.client.coreType("host", "InstanceKey");
   const name = {
     type,
     bcs: InstanceKey.serialize({
@@ -131,7 +131,7 @@ export async function managedInstance(
         });
       if (
         dynamicField.value.type !==
-        `${chain.sdk.client.typesPackageId}::host::InstancePointer`
+        (await chain.sdk.client.coreType("host", "InstancePointer"))
       )
         fail("invalid_source");
       return Pointer.parse(dynamicField.value.bcs);
@@ -158,7 +158,7 @@ export async function managedInstance(
     if (
       object.objectId !== pointer.record_id ||
       object.type !==
-        `${chain.sdk.client.typesPackageId}::host::ManagedAgent` ||
+        (await chain.sdk.client.coreType("host", "ManagedAgent")) ||
       object.owner.$kind !== "Shared" ||
       !object.content ||
       !/^[1-9][0-9]*$/.test(object.version)
@@ -488,10 +488,12 @@ export class AgentImport {
       if (e instanceof TransactionVisibilityError) fail("invalid_source");
       throw e;
     }
+    const eventType = await this.chain.sdk.client.coreType(
+      "host",
+      "AgentImported",
+    );
     const events = outcome.transaction!.events?.filter(
-      (e) =>
-        e.eventType ===
-        `${this.chain.sdk.client.typesPackageId}::host::AgentImported`,
+      (e) => e.eventType === eventType,
     );
     if (events?.length !== 1) fail("invalid_source");
     const event = events[0];
@@ -510,7 +512,7 @@ export class AgentImport {
     if (
       object.objectId !== imported.record_id ||
       object.type !==
-        `${this.chain.sdk.client.typesPackageId}::host::ManagedAgent` ||
+        (await this.chain.sdk.client.coreType("host", "ManagedAgent")) ||
       object.owner.$kind !== "Shared" ||
       !object.content
     )

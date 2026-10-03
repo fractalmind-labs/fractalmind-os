@@ -413,11 +413,14 @@ export async function nativeWorkloadRecovery(o: Options) {
         prepared.transaction,
         prepared.assertCurrent,
       );
+      const executionType = await previousChain.sdk.client.coreType(
+        "node_execution",
+        "CommandExecution",
+      );
       const candidates = created.transaction!.effects.changedObjects.filter(
         (r) =>
           r.idOperation === "Created" &&
-          created.transaction!.objectTypes?.[r.objectId] ===
-            `${previousChain.sdk.client.typesPackageId}::node_execution::CommandExecution`,
+          created.transaction!.objectTypes?.[r.objectId] === executionType,
       );
       assert.equal(candidates.length, 1);
       const executionId = candidates[0].objectId;

@@ -293,13 +293,16 @@ export class OkrControl {
   async use(capabilityId: string) {
     if (!id.test(capabilityId)) throw new OkrControlError("invalid_source");
     const source = await this.source();
-    const core = this.chain.sdk.client.client.core,
-      types = this.chain.sdk.client.typesPackageId;
+    const core = this.chain.sdk.client.client.core;
     const { object } = await core.getObject({ objectId: capabilityId });
     if (
       !id.test(capabilityId) ||
       object.objectId !== capabilityId ||
-      object.type !== `${types}::remote_authority::RemoteCapability` ||
+      object.type !==
+        (await this.chain.sdk.client.coreType(
+          "remote_authority",
+          "RemoteCapability",
+        )) ||
       object.owner.$kind !== "Shared"
     )
       throw new OkrControlError("invalid_source");
@@ -309,12 +312,18 @@ export class OkrControl {
       core.getDynamicField({
         parentId: capabilityId,
         name: {
-          type: `${types}::host::AuthorityBindingKey`,
+          type: await this.chain.sdk.client.coreType(
+            "host",
+            "AuthorityBindingKey",
+          ),
           bcs: new Uint8Array([0]),
         },
       }),
     ]);
-    if (dynamicField.value.type !== `${types}::host::AuthorityBinding`)
+    if (
+      dynamicField.value.type !==
+      (await this.chain.sdk.client.coreType("host", "AuthorityBinding"))
+    )
       throw new OkrControlError("invalid_source");
     const binding = AuthorityBindingBcs.parse(dynamicField.value.bcs);
     if (
@@ -363,12 +372,15 @@ export class OkrControl {
       result.transaction?.digest !== result.digest
     )
       throw new OkrControlError("invalid_source");
+    const capabilityType = await this.chain.sdk.client.coreType(
+      "remote_authority",
+      "RemoteCapability",
+    );
     const created = result.transaction.effects.changedObjects.filter(
       (o) =>
         o.idOperation === "Created" &&
         o.outputState === "ObjectWrite" &&
-        result.transaction?.objectTypes?.[o.objectId] ===
-          `${this.chain.sdk.client.typesPackageId}::remote_authority::RemoteCapability`,
+        result.transaction?.objectTypes?.[o.objectId] === capabilityType,
     );
     if (created.length !== 1) throw new OkrControlError("invalid_source");
     if (!(await awaitTransactionVisible(this.chain, result)))

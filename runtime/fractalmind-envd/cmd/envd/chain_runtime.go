@@ -99,7 +99,7 @@ func newChainRuntimeExecutor(cfg *config.Config, keys *hostidentity.Keys, rpc ch
 		clear(private)
 		return nil, fmt.Errorf("identity.host_id must match the secure Host signing address")
 	}
-	resolver, err := nodecommand.NewChainAuthorityResolver(rpc, original, okrTypeOrigin(cfg), directTypeOrigin(cfg))
+	resolver, err := nodecommand.NewChainAuthorityResolverForPackage(rpc, cfg.SUI.ProtocolPackageID, original, okrTypeOrigin(cfg), directTypeOrigin(cfg))
 	if err != nil {
 		clear(private)
 		return nil, err
@@ -219,7 +219,7 @@ func newRuntimeCommandExecutorWithStore(cfg *config.Config, store hostidentity.S
 		if original == "" {
 			original = cfg.SUI.ProtocolPackageID
 		}
-		resolver, resolverErr := nodecommand.NewChainAuthorityResolver(rpc, original, okrTypeOrigin(cfg), directTypeOrigin(cfg))
+		resolver, resolverErr := nodecommand.NewChainAuthorityResolverForPackage(rpc, cfg.SUI.ProtocolPackageID, original, okrTypeOrigin(cfg), directTypeOrigin(cfg))
 		if resolverErr != nil {
 			rpc.Close()
 			keys.Close()

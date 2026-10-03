@@ -323,7 +323,7 @@ export default function DirectAgentConversation({
     // read and never recreates an unknown or failed issuance.
     const prior = await ctx.controller.query(`direct-capability:${messageId}`);
     ctx.assertLive();
-    if (prior?.status === "confirmed") useCapability(prior);
+    if (prior?.status === "confirmed") await useCapability(prior);
   }
   async function convertToOkr() {
     const ctx = await load();
@@ -337,14 +337,17 @@ export default function DirectAgentConversation({
     setDraftSource(source);
     setDraftExpiresAtMs(description?.authorityExpiresAtMs);
   }
-  function useCapability(value: SelfPayTransactionOutcome) {
+  async function useCapability(value: SelfPayTransactionOutcome) {
     const ctx = context.current;
     if (!ctx || !value.transaction) return;
+    const capabilityType = await ctx.chain.sdk.client.coreType(
+      "remote_authority",
+      "RemoteCapability",
+    );
     const matches = value.transaction.effects.changedObjects.filter(
       (o) =>
         o.idOperation === "Created" &&
-        value.transaction!.objectTypes?.[o.objectId] ===
-          `${ctx.chain.sdk.client.typesPackageId}::remote_authority::RemoteCapability`,
+        value.transaction!.objectTypes?.[o.objectId] === capabilityType,
     );
     if (matches.length !== 1)
       throw Object.assign(new Error(), { code: "invalid_source" });
@@ -399,7 +402,7 @@ export default function DirectAgentConversation({
         const view = await ctx.controller.message(operation.messageId);
         ctx.assertLive();
         setSelected(view);
-        if (operation.kind === "capability") useCapability(result);
+        if (operation.kind === "capability") await useCapability(result);
       }
       onChanged();
     }

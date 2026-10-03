@@ -93,13 +93,13 @@ cp sentinel.yaml.example sentinel.yaml
 ```yaml
 wireguard:
   enabled: true
-  interface_name: "utun99"    # macOS requires utun[0-9]* names (not wg0)
+  interface_name: "utun99" # macOS requires utun[0-9]* names (not wg0)
   listen_port: 51820
   keypair_path: "~/.wireguard/envd.key"
 
 stun:
   enabled: true
-  bind_address: ""            # Set to your physical IP if VPN causes STUN timeouts
+  bind_address: "" # Set to your physical IP if VPN causes STUN timeouts
   servers:
     - stun:stun.l.google.com:19302
 ```
@@ -172,6 +172,15 @@ address, then run:
 ```sh
 envd --config sentinel.yaml --join-host
 ```
+
+For an upgraded core, `protocol_package_id` is the current call package and
+`protocol_original_package_id` is its first publication. Production admission,
+Coordinator reads, worker connection and execution use the immutable current
+package BCS datatype table. Field IDs, generic keys and value/object validation
+all resolve the same per-type origins; unavailable or inconsistent package
+metadata blocks authority instead of falling back to the original address.
+OKR/direct extension call and original type IDs stay separately configured.
+See [actual upgraded execution and recovery](../../docs/product/v020-mixed-type-origins.md).
 
 Enter the one-use code through hidden terminal input, check the chain/organization,
 Coordinator public key, finite observation permissions and Gas quote, then type
@@ -267,26 +276,26 @@ acceptance remain pending. See [connection implementation and evidence](../../do
 and `FRACTALMIND_NODE_COMMAND_AUTHORITY_FILE` is rejected when the chain runtime
 is enabled. Legacy file stores remain only for compatibility tests.
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `coordinator.listen_addr` | `:8080` | Bind address for the embedded coordinator API |
-| `coordinator.api_token` | `""` | Optional bearer token for `/api/*` (when set, requests must send `Authorization: Bearer <token>`) |
-| `gateway.url` | `ws://localhost:8080/ws` | Coordinator WebSocket URL for worker nodes |
-| `agents.scan_method` | `tmux` | Agent discovery method |
-| `agents.auto_restart` | `true` | Auto-restart crashed agents |
-| `heartbeat.interval` | `30s` | Heartbeat frequency |
+| Setting                   | Default                  | Description                                                                                       |
+| ------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------- |
+| `coordinator.listen_addr` | `:8080`                  | Bind address for the embedded coordinator API                                                     |
+| `coordinator.api_token`   | `""`                     | Optional bearer token for `/api/*` (when set, requests must send `Authorization: Bearer <token>`) |
+| `gateway.url`             | `ws://localhost:8080/ws` | Coordinator WebSocket URL for worker nodes                                                        |
+| `agents.scan_method`      | `tmux`                   | Agent discovery method                                                                            |
+| `agents.auto_restart`     | `true`                   | Auto-restart crashed agents                                                                       |
+| `heartbeat.interval`      | `30s`                    | Heartbeat frequency                                                                               |
 
 `roles.coordinator=true` now starts the REST API and WebSocket server inside `envd`. Worker nodes still use `gateway.url` as the transport target, so point it at the coordinator node, for example `ws://10.87.12.34:8080/ws`.
 
 ## Remote Commands
 
-| Command | Description |
-|---------|-------------|
-| `status` | List all agents and their status |
-| `restart <agent>` | Restart a specific agent |
-| `kill <agent>` | Stop an agent |
-| `logs <agent>` | Get recent agent logs |
-| `shell <cmd>` | Execute a shell command |
+| Command           | Description                      |
+| ----------------- | -------------------------------- |
+| `status`          | List all agents and their status |
+| `restart <agent>` | Restart a specific agent         |
+| `kill <agent>`    | Stop an agent                    |
+| `logs <agent>`    | Get recent agent logs            |
+| `shell <cmd>`     | Execute a shell command          |
 
 ## Docs
 

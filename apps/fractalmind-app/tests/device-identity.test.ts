@@ -1,3 +1,4 @@
+import { fixtureCoreTypes } from "./helpers/type-origins";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { bcs, TypeTagSerializer } from "@mysten/sui/bcs";
@@ -153,6 +154,7 @@ async function fixture() {
     sdk: {
       identity: { resolveRegistry: async () => registry.id },
       client: {
+        ...fixtureCoreTypes(packageId),
         typesPackageId: packageId,
         client: {
           core: {

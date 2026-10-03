@@ -1,3 +1,4 @@
+import { fixtureCoreTypes } from "./helpers/type-origins";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Transaction } from "@mysten/sui/transactions";
@@ -175,6 +176,7 @@ async function fixture() {
     checkNetwork: async () => "fixture",
     sdk: {
       client: {
+        ...fixtureCoreTypes(pkg),
         typesPackageId: pkg,
         okrTypesPackageId: pkg,
         client: {

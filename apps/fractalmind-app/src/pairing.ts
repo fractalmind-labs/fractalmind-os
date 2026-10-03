@@ -158,7 +158,7 @@ export class DevicePairing {
     if (
       object.objectId !== objectId ||
       object.owner.$kind !== "Shared" ||
-      object.type !== `${this.sdk.client.typesPackageId}::${module}::${kind}` ||
+      object.type !== (await this.sdk.client.coreType(module, kind)) ||
       !object.content
     )
       throw new PairingError("invalid_source");
@@ -414,12 +414,12 @@ export class DevicePairing {
   private async keyVersion(organizationId: string) {
     const index = await this.sdk.productRecord
       .listCurrent(organizationId, null, 1)
-      .catch((error) => {
+      .catch(async (error) => {
         if (
           missingIndex(
             error,
             organizationId,
-            `${this.sdk.client.typesPackageId}::product_record::IndexBinding`,
+            await this.sdk.client.coreType("product_record", "IndexBinding"),
           )
         )
           return { keyVersion: "1" };
@@ -540,12 +540,14 @@ export class DevicePairing {
     if (pin !== plan.pin) throw new PairingError("state_changed");
     return this.manager.submit(quote);
   }
-  requestFromResult(outcome: SelfPayTransactionOutcome) {
+  async requestFromResult(outcome: SelfPayTransactionOutcome) {
     if (outcome.status !== "confirmed") throw new PairingError("state_changed");
+    const requestType = await this.sdk.client.coreType(
+      "identity",
+      "DevicePairingRequest",
+    );
     const found = Object.entries(outcome.transaction?.objectTypes ?? {}).filter(
-      ([, type]) =>
-        type ===
-        `${this.sdk.client.typesPackageId}::identity::DevicePairingRequest`,
+      ([, type]) => type === requestType,
     );
     if (found.length !== 1) throw new PairingError("invalid_source");
     return found[0][0];

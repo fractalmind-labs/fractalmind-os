@@ -1,3 +1,4 @@
+import { fixtureCoreTypes } from "./helpers/type-origins";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { bcs } from "@mysten/sui/bcs";
@@ -344,7 +345,12 @@ async function fixture() {
       loadedAtMs: Date.now(),
     }),
     sdk: {
-      client: { typesPackageId: pkg, okrTypesPackageId: pkg, client: { core } },
+      client: {
+        ...fixtureCoreTypes(pkg),
+        typesPackageId: pkg,
+        okrTypesPackageId: pkg,
+        client: { core },
+      },
       productRecord: {
         getCurrent: async () => ({ ...head }),
         listCurrent: async () => ({

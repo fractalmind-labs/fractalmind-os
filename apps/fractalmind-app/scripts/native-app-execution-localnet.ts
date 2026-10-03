@@ -314,6 +314,9 @@ async function save(complete = false) {
         complete,
         chain: deployment.chain,
         packageId: deployment.packageId,
+        originalPackageId: deployment.originalPackageId,
+        okrPackageId: deployment.okrPackageId,
+        directPackageId: deployment.directPackageId,
         checks,
         transactions,
         state: {
@@ -568,6 +571,9 @@ try {
     network: "localnet",
     rpcUrl: rpc,
     packageId: deployment.packageId,
+    originalPackageId: deployment.originalPackageId,
+    originalOkrPackageId: deployment.originalOkrPackageId,
+    originalDirectPackageId: deployment.originalDirectPackageId,
     okrPackageId: deployment.okrPackageId,
     directPackageId: deployment.directPackageId,
     registryId: deployment.registryId,
@@ -639,7 +645,9 @@ try {
         ? (deployment.okrPackageId ?? deployment.packageId)
         : suffix.startsWith("direct_agent::")
           ? (deployment.directPackageId ?? deployment.packageId)
-          : deployment.packageId;
+          : chain.sdk.client
+              .coreTypeTag(...(suffix.split("::") as [string, string]))
+              .split("::")[0];
     const matches = result.transaction!.effects.changedObjects.filter(
       (o) =>
         o.idOperation === "Created" &&
@@ -742,6 +750,9 @@ try {
   child.stdin.write(
     JSON.stringify({
       PackageID: deployment.packageId,
+      OriginalPackageID: deployment.originalPackageId,
+      OriginalOkrPackageID: deployment.originalOkrPackageId,
+      OriginalDirectPackageID: deployment.originalDirectPackageId,
       OkrPackageID: deployment.okrPackageId,
       DirectPackageID: deployment.directPackageId,
       RegistryID: deployment.registryId,

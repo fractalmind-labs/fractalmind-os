@@ -1,3 +1,4 @@
+import { fixtureCoreTypes } from "./helpers/type-origins";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { bcs } from "@mysten/sui/bcs";
@@ -237,7 +238,11 @@ async function fixture(review = false, delivery = false) {
       loadedAtMs: Date.now(),
     }),
     sdk: {
-      client: { typesPackageId: pkg, client: { core } },
+      client: {
+        ...fixtureCoreTypes(pkg),
+        typesPackageId: pkg,
+        client: { core },
+      },
       productRecord: { listCurrent: async () => ({ keyVersion: currentKey }) },
       nodeExecution: {
         prepareCommand: async (input: any) => {

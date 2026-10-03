@@ -83,7 +83,7 @@ if (mode === "create") {
     assert.ok(!("status" in quote));
     const result = await pairing.submit(quote);
     assert.equal(result.status, "confirmed");
-    const requestId = pairing.requestFromResult(result);
+    const requestId = await pairing.requestFromResult(result);
     // Ledger indexing can trail confirmed effects. Wait for this exact created
     // object only; never repeat the transaction or treat a network error as empty.
     let state: Awaited<ReturnType<DevicePairing["inspect"]>> | undefined;

@@ -126,14 +126,13 @@ export class IdentityRecovery {
     return object;
   }
   private async identity() {
-    const chainIdentifier = await this.pin(),
-      prefix = `${this.sdk.client.typesPackageId}::identity::`;
+    const chainIdentifier = await this.pin();
     const registryId = await this.sdk.identity.resolveRegistry(
       this.deployment.registryId,
     );
     const registryObject = await this.shared(
       registryId,
-      prefix + "IdentityRegistry",
+      await this.sdk.client.coreType("identity", "IdentityRegistry"),
     );
     const registry = IdentityRegistryBcs.parse(registryObject.content!);
     if (
@@ -149,7 +148,7 @@ export class IdentityRecovery {
     };
     const locationResponse = await this.client.core
       .getDynamicField({ parentId: registry.recoveries.id, name })
-      .catch((error) => {
+      .catch(async (error) => {
         const expected = deriveDynamicFieldID(
           registry.recoveries.id,
           { address: null },
@@ -168,15 +167,21 @@ export class IdentityRecovery {
       });
     if (
       locationResponse.dynamicField.value.type !==
-      prefix + "RecoveryLocation"
+      (await this.sdk.client.coreType("identity", "RecoveryLocation"))
     )
       reject();
     const location = RecoveryLocationBcs.parse(
       locationResponse.dynamicField.value.bcs,
     );
     const [humanObject, recordObject] = await Promise.all([
-      this.shared(location.human_id, prefix + "HumanIdentity"),
-      this.shared(location.record_id, prefix + "RecoveryRecord"),
+      this.shared(
+        location.human_id,
+        await this.sdk.client.coreType("identity", "HumanIdentity"),
+      ),
+      this.shared(
+        location.record_id,
+        await this.sdk.client.coreType("identity", "RecoveryRecord"),
+      ),
     ]);
     const human = HumanIdentityBcs.parse(humanObject.content!),
       record = RecoveryRecordBcs.parse(recordObject.content!);
@@ -216,18 +221,18 @@ export class IdentityRecovery {
     for (const objectId of [...ids].sort()) {
       const object = await this.shared(
         objectId,
-        `${this.sdk.client.typesPackageId}::organization::Organization`,
+        await this.sdk.client.coreType("organization", "Organization"),
       );
       const org = OrganizationBcs.parse(object.content!);
       if (org.id !== objectId) reject();
       const index = await this.sdk.productRecord
         .listCurrent(objectId, null, 1)
-        .catch((error) => {
+        .catch(async (error) => {
           if (
             missingIndex(
               error,
               objectId,
-              `${this.sdk.client.typesPackageId}::product_record::IndexBinding`,
+              await this.sdk.client.coreType("product_record", "IndexBinding"),
             )
           )
             return { keyVersion: "1" };
@@ -338,10 +343,9 @@ export class IdentityRecovery {
       BigInt(human.recovery_version) !== BigInt(record.version) + 1n
     )
       throw new IdentityRecoveryError("code_consumed");
-    const prefix = `${this.sdk.client.typesPackageId}::identity::`;
     const nextObject = await this.shared(
       human.recovery_record,
-      prefix + "RecoveryRecord",
+      await this.sdk.client.coreType("identity", "RecoveryRecord"),
     );
     const next = RecoveryRecordBcs.parse(nextObject.content!);
     if (

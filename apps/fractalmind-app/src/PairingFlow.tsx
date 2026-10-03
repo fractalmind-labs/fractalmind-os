@@ -206,7 +206,7 @@ export default function PairingFlow({
       setOperation("create");
       setOutcome(prior ?? null);
       if (prior?.status === "confirmed" && !requestId) {
-        const pairingId = current.requestFromResult(prior);
+        const pairingId = await current.requestFromResult(prior);
         setRequestId(pairingId);
         cache(current, pairingId);
         await refresh(current, pairingId);
@@ -259,7 +259,9 @@ export default function PairingFlow({
       confirmedReceipt.current = result;
       setState(null);
       const pairingId =
-        operation === "create" ? session.requestFromResult(result) : requestId;
+        operation === "create"
+          ? await session.requestFromResult(result)
+          : requestId;
       if (operation === "create") {
         setRequestId(pairingId);
         cache(session, pairingId);
@@ -282,7 +284,7 @@ export default function PairingFlow({
       operation === "create" &&
       !requestId
     ) {
-      const pairingId = session.requestFromResult(result);
+      const pairingId = await session.requestFromResult(result);
       setRequestId(pairingId);
       cache(session, pairingId);
       await refresh(session, pairingId);

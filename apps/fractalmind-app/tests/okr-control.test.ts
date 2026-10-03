@@ -1,3 +1,4 @@
+import { fixtureCoreTypes } from "./helpers/type-origins";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
@@ -159,6 +160,7 @@ async function fixture() {
     checkNetwork: async () => "fixture",
     sdk: {
       client: {
+        ...fixtureCoreTypes(pkg),
         typesPackageId: pkg,
         client: {
           core: {

@@ -83,7 +83,10 @@ export class NativeExecutionResults {
       source.objectId !== executionId ||
       source.owner.$kind !== "Shared" ||
       source.type !==
-        `${this.chain.sdk.client.typesPackageId}::node_execution::CommandExecution` ||
+        (await this.chain.sdk.client.coreType(
+          "node_execution",
+          "CommandExecution",
+        )) ||
       !source.content
     )
       throw new ExecutionResultError("invalid_source");
@@ -138,7 +141,10 @@ export class NativeExecutionResults {
       source.owner.$kind !== "Immutable" ||
       !source.content ||
       source.type !==
-        `${this.chain.sdk.client.typesPackageId}::product_record::EncryptedRecord`
+        (await this.chain.sdk.client.coreType(
+          "product_record",
+          "EncryptedRecord",
+        ))
     )
       throw new ExecutionResultError("invalid_source");
     const record = EncryptedRecordBcs.parse(source.content);
@@ -339,7 +345,7 @@ export class NativeExecutionResults {
       memberSource.owner.$kind !== "Shared" ||
       !memberSource.content ||
       memberSource.type !==
-        `${this.chain.sdk.client.typesPackageId}::host::HostMembership`
+        (await this.chain.sdk.client.coreType("host", "HostMembership"))
     )
       throw new ExecutionResultError("invalid_review");
     const member = HostMembershipBcs.parse(memberSource.content);

@@ -210,7 +210,7 @@ export class ChainReadSession {
     if (
       org.objectId !== id ||
       org.type !==
-        `${this.sdk.client.typesPackageId}::organization::Organization`
+        (await this.sdk.client.coreType("organization", "Organization"))
     )
       throw new ChainReadError("invalid_provenance");
     return org;
@@ -296,7 +296,7 @@ export class ChainReadSession {
           missingIndex(
             error,
             organizationId,
-            `${this.sdk.client.typesPackageId}::host::HostIndexBinding`,
+            await this.sdk.client.coreType("host", "HostIndexBinding"),
           )
         )
           return null;

@@ -373,7 +373,7 @@ try {
   const created = await applicant.submit(createQuote);
   assert.equal(created.status, "confirmed");
   await effectsVisible(created);
-  const requestId = applicant.requestFromResult(created);
+  const requestId = await applicant.requestFromResult(created);
   transactions.push({
     action: "native device publishes ten-minute pairing request",
     digest: created.digest,

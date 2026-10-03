@@ -1,3 +1,4 @@
+import { fixtureCoreTypes } from "./helpers/type-origins";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { bcs } from "@mysten/sui/bcs";
@@ -223,7 +224,13 @@ async function fixture(mode = "valid") {
       clockMs: BigInt(mode === "expired" ? now + 60001 : now),
       loadedAtMs: Date.now(),
     }),
-    sdk: { client: { typesPackageId: pkg, client: { core } } },
+    sdk: {
+      client: {
+        ...fixtureCoreTypes(pkg),
+        typesPackageId: pkg,
+        client: { core },
+      },
+    },
   } as unknown as ChainReadSession;
   const s = sources[0].host_observation;
   if (mode === "body-tampered")

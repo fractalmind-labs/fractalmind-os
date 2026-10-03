@@ -106,7 +106,11 @@ func (s *ChainAuthorityResolver) ReadExecutionResult(ctx context.Context, capabi
 	if err != nil {
 		return ChainExecutionResult{}, false, err
 	}
-	if object.ID != run.ResultRecordID || object.Type != s.packageID+"::product_record::EncryptedRecord" || object.Version == 0 || !object.Immutable || object.Shared || object.OwnerID != "" {
+	expected, err := s.resolveType(ctx, s.packageID+"::product_record::EncryptedRecord")
+	if err != nil {
+		return ChainExecutionResult{}, false, err
+	}
+	if object.ID != run.ResultRecordID || object.Type != expected || object.Version == 0 || !object.Immutable || object.Shared || object.OwnerID != "" {
 		return ChainExecutionResult{}, false, fmt.Errorf("unexpected execution result source, owner or version")
 	}
 	var record moveEncryptedRecord

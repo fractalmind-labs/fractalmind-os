@@ -214,7 +214,10 @@ export class HandoverReview {
       capSource.object.objectId !== c.capability.id ||
       capSource.object.owner.$kind !== "Shared" ||
       capSource.object.type !==
-        `${this.chain.sdk.client.typesPackageId}::remote_authority::RemoteCapability`
+        (await this.chain.sdk.client.coreType(
+          "remote_authority",
+          "RemoteCapability",
+        ))
     )
       throw new HandoverReviewError("invalid_source");
     const capability = await this.chain.sdk.remoteAuthority.getCapability(
@@ -224,13 +227,16 @@ export class HandoverReview {
       await this.chain.sdk.client.client.core.getDynamicField({
         parentId: c.capability.id,
         name: {
-          type: `${this.chain.sdk.client.typesPackageId}::host::AuthorityBindingKey`,
+          type: await this.chain.sdk.client.coreType(
+            "host",
+            "AuthorityBindingKey",
+          ),
           bcs: new Uint8Array([0]),
         },
       });
     if (
       dynamicField.value.type !==
-      `${this.chain.sdk.client.typesPackageId}::host::AuthorityBinding`
+      (await this.chain.sdk.client.coreType("host", "AuthorityBinding"))
     )
       throw new HandoverReviewError("invalid_source");
     const binding = AuthorityBindingBcs.parse(dynamicField.value.bcs);
@@ -539,7 +545,10 @@ export class HandoverReview {
       provenance.objectId !== directory.ticket.record_id ||
       provenance.owner.$kind !== "Immutable" ||
       provenance.type !==
-        `${this.chain.sdk.client.typesPackageId}::product_record::EncryptedRecord` ||
+        (await this.chain.sdk.client.coreType(
+          "product_record",
+          "EncryptedRecord",
+        )) ||
       !provenance.previousTransaction ||
       !isValidTransactionDigest(provenance.previousTransaction) ||
       (originalOutcome &&

@@ -42,17 +42,19 @@ export async function readRecordPointer(
     new TextEncoder().encode(logicalId).length > 128
   )
     throw new RecordPointerError("invalid_source");
-  const core = chain.sdk.client.client.core,
-    types = chain.sdk.client.typesPackageId;
+  const core = chain.sdk.client.client.core;
   const index = async () => {
     const { dynamicField } = await core.getDynamicField({
       parentId: organizationId,
       name: {
-        type: `${types}::product_record::IndexBinding`,
+        type: await chain.sdk.client.coreType("product_record", "IndexBinding"),
         bcs: new Uint8Array([0]),
       },
     });
-    if (dynamicField.value.type !== `${types}::product_record::RecordIndex`)
+    if (
+      dynamicField.value.type !==
+      (await chain.sdk.client.coreType("product_record", "RecordIndex"))
+    )
       throw new RecordPointerError("invalid_source");
     const value = Index.parse(dynamicField.value.bcs);
     if (BigInt(value.key_version) < 1n || !id.test(value.records.id))
@@ -61,7 +63,7 @@ export async function readRecordPointer(
   };
   const before = await index(),
     name = {
-      type: `${types}::product_record::RecordKey`,
+      type: await chain.sdk.client.coreType("product_record", "RecordKey"),
       bcs: Key.serialize({
         kind: PRODUCT_RECORD_KINDS[kind],
         logical_id: logicalId,
@@ -73,7 +75,10 @@ export async function readRecordPointer(
       parentId: before.records.id,
       name,
     });
-    if (dynamicField.value.type !== `${types}::product_record::RecordPointer`)
+    if (
+      dynamicField.value.type !==
+      (await chain.sdk.client.coreType("product_record", "RecordPointer"))
+    )
       throw new RecordPointerError("invalid_source");
     const value = Pointer.parse(dynamicField.value.bcs);
     if (

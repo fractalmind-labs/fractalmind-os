@@ -1,3 +1,4 @@
+import { fixtureCoreTypes } from "./helpers/type-origins";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { bcs, TypeTagSerializer } from "@mysten/sui/bcs";
@@ -48,6 +49,7 @@ function fixture() {
   };
   const sdk = {
     client: {
+      ...fixtureCoreTypes(profile.packageId),
       typesPackageId: profile.packageId,
       client: {
         core: {

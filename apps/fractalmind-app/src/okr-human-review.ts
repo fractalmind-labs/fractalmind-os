@@ -741,11 +741,14 @@ export class OkrHumanReview {
       throw new OkrHumanReviewError("invalid_source");
     if (!(await awaitTransactionVisible(this.chain, outcome)))
       throw new OkrHumanReviewError("sync_pending");
+    const recordType = await this.chain.sdk.client.coreType(
+      "product_record",
+      "EncryptedRecord",
+    );
     const records = outcome.transaction.effects.changedObjects.filter(
       (o) =>
         o.idOperation === "Created" &&
-        outcome.transaction?.objectTypes?.[o.objectId] ===
-          `${this.chain.sdk.client.typesPackageId}::product_record::EncryptedRecord`,
+        outcome.transaction?.objectTypes?.[o.objectId] === recordType,
     );
     if (records.length !== 1) throw new OkrHumanReviewError("invalid_source");
     const record = await this.chain.sdk.productRecord.getRecord(

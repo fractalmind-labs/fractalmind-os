@@ -133,7 +133,7 @@ export class IdentityCreation {
     );
     const object = await this.shared(
       id,
-      `${this.sdk.client.typesPackageId}::identity::IdentityRegistry`,
+      await this.sdk.client.coreType("identity", "IdentityRegistry"),
     );
     const value = IdentityRegistryBcs.parse(object.content!);
     if (
@@ -186,10 +186,15 @@ export class IdentityCreation {
         return null;
       throw error;
     }
-    const prefix = `${this.sdk.client.typesPackageId}::identity::`;
     const [humanObject, recordObject] = await Promise.all([
-      this.shared(location.human_id, prefix + "HumanIdentity"),
-      this.shared(location.record_id, prefix + "RecoveryRecord"),
+      this.shared(
+        location.human_id,
+        await this.sdk.client.coreType("identity", "HumanIdentity"),
+      ),
+      this.shared(
+        location.record_id,
+        await this.sdk.client.coreType("identity", "RecoveryRecord"),
+      ),
     ]);
     const human = HumanIdentityBcs.parse(humanObject.content!),
       record = RecoveryRecordBcs.parse(recordObject.content!);

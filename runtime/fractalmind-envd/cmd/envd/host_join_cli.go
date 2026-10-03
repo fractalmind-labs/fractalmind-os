@@ -106,7 +106,7 @@ func runHostJoinCLI(ctx context.Context, cfg *config.Config, statusOnly, newAtte
 		typesPackage = cfg.SUI.ProtocolPackageID
 	}
 	factory := func(original string) (hostjoin.Authority, error) {
-		return nodecommand.NewChainAuthorityResolver(client, original)
+		return nodecommand.NewChainAuthorityResolverForPackage(client, cfg.SUI.ProtocolPackageID, original)
 	}
 	result, err := hostjoin.Run(ctx, client, factory, keys, hostjoin.Options{Network: cfg.SUI.Network, Chain: cfg.SUI.ChainIdentifier, PackageID: cfg.SUI.ProtocolPackageID, TypesPackageID: typesPackage, RegistryID: cfg.SUI.ProtocolRegistryID, ExpectedOrganization: cfg.SUI.OrgID, Profile: cfg.Identity.KeyProfile, Name: cfg.Identity.Hostname, PublicAddress: address, GasBudget: cfg.SUI.HostJoinGasBudget, StatusOnly: statusOnly, NewAttempt: newAttempt}, hostJoinInteraction(input, output, diagnostic))
 	if result.State != "" {

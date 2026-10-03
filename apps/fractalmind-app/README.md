@@ -48,7 +48,14 @@ deployment. Supply the full package, ProtocolRegistry and Human object IDs:
 }
 ```
 
-For an upgraded package, also supply `originalPackageId` if required by the SDK.
+For an upgraded core package, supply its current `packageId` and first-published
+`originalPackageId`. The SDK and App read the exact immutable package BCS table
+for each datatype: old Organization/RemoteCapability types and new identity,
+Host, Run and budget types can have different origins, even within one module.
+Missing or inconsistent metadata remains an unavailable read, never an empty
+directory or guessed permission. Extension call/type IDs remain explicit.
+Actual upgraded App/Host execution and recovery evidence is recorded in
+[`v020-mixed-type-origins.md`](../../docs/product/v020-mixed-type-origins.md).
 The SDK resolves the IdentityRegistry through the ProtocolRegistry's private
 dynamic-field binding; the two registry IDs are not interchangeable.
 The session verifies the identity's registry/network and pins the actual chain
@@ -133,10 +140,10 @@ evidence, transport limits and test instructions are documented in
   preparation can remain queued until explicit delivery. Workbench and OKR
   detail now expose separate one-use control and command fee confirmations,
   original-request queries and explicit Host delivery. Real OS vault + localnet
-  + production envd validates native review, approval, exact file execution,
-  result decryption and revocation. Installed journal/IPC and sustained execution
-  still need end-to-end acceptance.
-  See [implementation and evidence](../../docs/product/v020-native-okr-runner.md).
+  - production envd validates native review, approval, exact file execution,
+    result decryption and revocation. Installed journal/IPC and sustained execution
+    still need end-to-end acceptance.
+    See [implementation and evidence](../../docs/product/v020-native-okr-runner.md).
 - Human KR verification and final acceptance: Workbench and OKR detail expose
   original evidence, independent confirmation, a reason and separate native fee
   submissions. KR verification advances only its cursor; final acceptance

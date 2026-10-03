@@ -85,6 +85,7 @@ func TestHostJoinLiveCLI(t *testing.T) {
 	}
 	var input struct {
 		PackageID, OkrPackageID, DirectPackageID, RegistryID, OrganizationID, ChainIdentifier, JournalRoot string
+		OriginalPackageID, OriginalOkrPackageID, OriginalDirectPackageID                                   string
 		LiveConnection                                                                                     bool
 	}
 	if json.Unmarshal(frame, &input) != nil || input.JournalRoot == "" {
@@ -136,9 +137,21 @@ func TestHostJoinLiveCLI(t *testing.T) {
 	}
 	defer base.Close()
 	client := &cliDropReceipt{GRPCClient: base}
-	options := hostjoin.Options{Network: "localnet", Chain: input.ChainIdentifier, PackageID: input.PackageID, TypesPackageID: input.PackageID, RegistryID: input.RegistryID, ExpectedOrganization: input.OrganizationID, Profile: "test-cli", Name: "envd CLI fixture", GasBudget: 200000000, JournalRoot: input.JournalRoot}
+	original := input.OriginalPackageID
+	if original == "" {
+		original = input.PackageID
+	}
+	okrOrigin := input.OriginalOkrPackageID
+	if okrOrigin == "" {
+		okrOrigin = input.OkrPackageID
+	}
+	directOrigin := input.OriginalDirectPackageID
+	if directOrigin == "" {
+		directOrigin = input.DirectPackageID
+	}
+	options := hostjoin.Options{Network: "localnet", Chain: input.ChainIdentifier, PackageID: input.PackageID, TypesPackageID: original, RegistryID: input.RegistryID, ExpectedOrganization: input.OrganizationID, Profile: "test-cli", Name: "envd CLI fixture", GasBudget: 200000000, JournalRoot: input.JournalRoot}
 	factory := func(original string) (hostjoin.Authority, error) {
-		return nodecommand.NewChainAuthorityResolver(base, original)
+		return nodecommand.NewChainAuthorityResolverForPackage(base, input.PackageID, original)
 	}
 	result, runErr := hostjoin.Run(ctx, client, factory, keys, options, hostJoinInteraction(os.Stdin, os.Stdout, os.Stderr))
 	if result.Digest == "" {
@@ -173,11 +186,11 @@ func TestHostJoinLiveCLI(t *testing.T) {
 	var nativeWorkspace string
 	var deviceCommandDispatches atomic.Int64
 	if input.LiveConnection {
-		reader, err = nodecommand.NewChainAuthorityResolver(base, input.PackageID, input.OkrPackageID, input.DirectPackageID)
+		reader, err = nodecommand.NewChainAuthorityResolverForPackage(base, input.PackageID, original, okrOrigin, directOrigin)
 		if err != nil {
 			t.Fatal(err)
 		}
-		liveConfig = &config.Config{SUI: config.SUIConfig{Network: "localnet", ProtocolRegistryID: input.RegistryID, ProtocolPackageID: input.PackageID, OkrPackageID: input.OkrPackageID, DirectPackageID: input.DirectPackageID, ChainIdentifier: input.ChainIdentifier, OrgID: input.OrganizationID}, Coordinator: config.CoordinatorConfig{BindingID: result.Membership.BindingID}}
+		liveConfig = &config.Config{SUI: config.SUIConfig{Network: "localnet", ProtocolRegistryID: input.RegistryID, ProtocolPackageID: input.PackageID, ProtocolOriginalPackageID: original, OkrPackageID: input.OkrPackageID, OkrOriginalPackageID: okrOrigin, DirectPackageID: input.DirectPackageID, DirectOriginalPackageID: directOrigin, ChainIdentifier: input.ChainIdentifier, OrgID: input.OrganizationID}, Coordinator: config.CoordinatorConfig{BindingID: result.Membership.BindingID}}
 		commandTimeout := time.Second
 		if os.Getenv("FM_ENVD_DEVICE_COMMAND") == "1" || os.Getenv("FM_ENVD_HANDOVER_APPROVAL") == "1" {
 			commandTimeout = 30 * time.Second
@@ -225,6 +238,9 @@ func TestHostJoinLiveCLI(t *testing.T) {
 				nativeConfig = chainRuntimeConfig()
 				nativeConfig.SUI.Network = "localnet"
 				nativeConfig.SUI.ProtocolPackageID = input.PackageID
+				nativeConfig.SUI.ProtocolOriginalPackageID = original
+				nativeConfig.SUI.OkrOriginalPackageID = okrOrigin
+				nativeConfig.SUI.DirectOriginalPackageID = directOrigin
 				nativeConfig.SUI.OkrPackageID = input.OkrPackageID
 				nativeConfig.SUI.DirectPackageID = input.DirectPackageID
 				nativeConfig.SUI.ProtocolRegistryID = input.RegistryID

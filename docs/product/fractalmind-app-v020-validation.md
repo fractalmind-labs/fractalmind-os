@@ -8,6 +8,14 @@
 
 以下按增量从新到旧记录；每项证明范围和当时尚未完成的事项独立保留，整体验收仍以 #40 为准。
 
+### 升级后 App／envd 混合类型执行、恢复与 Sui 队列增量
+
+- App 核心对象、字段、回执与事件按具体 datatype 使用 SDK 实际来源；envd 从精确不可变调用包 BCS 验证来源表，字段 ID／BCS TypeTag、键值及对象校验采用同一来源。Host 准入、Coordinator／worker、设备读取与执行工厂均接通；缺少元数据或类型不能猜测权限／空目录。
+- 复用下述 main R8 升级部署，[真实 OS＋生产 envd／Coordinator R2](evidence/v020-mixed-origins-app-envd-localnet.json)通过 **26 项检查、65 笔 App 确认交易**：两 KR 执行／独立验收、直接消息／单次审批、来源草稿、两次单码恢复／38 份正文哈希／9 条消息、Coordinator 和 Host 独立撤权，以及新设备原 Run 取消结算。预算 OKR **6／0**、常驻 **4／0**、单次累计 **6／0**；测试 Host 最后撤销、凭据清理。
+- [实际预授权 Sui 队列](evidence/v020-mixed-origins-scheduled-localnet.json)通过 **17 项检查、19 笔 App 确认交易**：执行上下文关闭后原两个 KR 从 Sui 依序执行、Coordinator 命令派发 **0**，空 journal 恢复原票据／Run／派发表，回执裁剪保留原 digest／unknown，不重发；最后独立人工验收、预算 **6／0**。两次实际 Host 均开启 race。
+- [App 231/231、三包 Go race、类型／浏览器构建及夹具严格类型](evidence/v020-mixed-origins-validation.json)通过；本轮 SDK／Move／Rust 生产源码未改，没有计作全量重跑。[原 R1 57 笔确认及零广播复查](evidence/v020-mixed-origins-prior.json)保留测试回执筛选失败、原 QUEUED／零预算／未撤销 Host 的事实，没有原请求重放。
+- [最新版 macOS debug 包](evidence/v020-mixed-origins-native-bundle.json)重新构建、本地签名严格验证通过；[实际进程重启](evidence/v020-mixed-origins-native-restart.json)保留公开连接并重建原身份／组织。原生设备钥读取等待系统授权，Computer Use 拒绝访问 SecurityAgent，已请求手动处理；设备验证、完整安装 UI／清缓存、物理 Host／设备重启、真实模型、云 Host、手机及公共旧部署升级仍未验收。完整 #40 保持进行中，详见[实现与证明范围](v020-mixed-type-origins.md)。
+
 ### main 原包升级、组织迁移与 SDK 类型来源修复增量
 
 - 从 GitHub 已核对的 main `5271324` 直接提取生产源码，在隔离 localnet 发布、创建旧组织／Objective／KR，再执行当前 core 的真实兼容升级。原五个对象 ID／BCS 内容保持，身份目录明确初始化于原 Registry；原组织管理员 Cap 迁入稳定 Human 表，当前设备受保护写入及只读设备 `9001` 拒绝通过。

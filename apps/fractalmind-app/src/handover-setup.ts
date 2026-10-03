@@ -260,7 +260,10 @@ export class HandoverSetup {
       object.objectId !== capabilityId ||
       object.owner.$kind !== "Shared" ||
       object.type !==
-        `${this.chain.sdk.client.typesPackageId}::remote_authority::RemoteCapability`
+        (await this.chain.sdk.client.coreType(
+          "remote_authority",
+          "RemoteCapability",
+        ))
     )
       throw new HandoverSetupError("invalid_source");
     const cap =
@@ -269,13 +272,16 @@ export class HandoverSetup {
       await this.chain.sdk.client.client.core.getDynamicField({
         parentId: capabilityId,
         name: {
-          type: `${this.chain.sdk.client.typesPackageId}::host::AuthorityBindingKey`,
+          type: await this.chain.sdk.client.coreType(
+            "host",
+            "AuthorityBindingKey",
+          ),
           bcs: new Uint8Array([0]),
         },
       });
     if (
       dynamicField.value.type !==
-      `${this.chain.sdk.client.typesPackageId}::host::AuthorityBinding`
+      (await this.chain.sdk.client.coreType("host", "AuthorityBinding"))
     )
       throw new HandoverSetupError("invalid_source");
     const binding = AuthorityBindingBcs.parse(dynamicField.value.bcs);
@@ -316,12 +322,15 @@ export class HandoverSetup {
       outcome.transaction?.digest !== outcome.digest
     )
       throw new HandoverSetupError("invalid_source");
+    const capabilityType = await this.chain.sdk.client.coreType(
+      "remote_authority",
+      "RemoteCapability",
+    );
     const created = outcome.transaction?.effects?.changedObjects.filter(
       (o) =>
         o.outputState === "ObjectWrite" &&
         o.idOperation === "Created" &&
-        outcome.transaction?.objectTypes?.[o.objectId] ===
-          `${this.chain.sdk.client.typesPackageId}::remote_authority::RemoteCapability`,
+        outcome.transaction?.objectTypes?.[o.objectId] === capabilityType,
     );
     if (created?.length !== 1 || !id.test(created[0].objectId))
       throw new HandoverSetupError("invalid_source");
