@@ -106,6 +106,10 @@ func main() {
 		return
 	}
 	log.Printf("starting fractalmind-envd %s (host=%s)", version, cfg.Identity.Hostname)
+	peerRegistry, err := peerRegistryEnabled(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	runtimeExecutor, err := newRuntimeCommandExecutorFromEnv(cfg)
 	if err != nil {
@@ -256,7 +260,7 @@ func main() {
 	var suiPollTicker *time.Ticker
 	var eventCursor interface{}
 
-	if cfg.SUI.Enabled {
+	if peerRegistry {
 		// --- WireGuard init (optional, graceful degradation) ---
 		if cfg.WireGuard.Enabled {
 			log.Printf("SUI + WireGuard integration enabled")
@@ -290,7 +294,7 @@ func main() {
 		}
 
 		// Init SUI client (works independently of WireGuard)
-		if _, ok := runtimeExecutor.(*chainRuntimeExecutor); ok {
+		if connectionKeys != nil {
 			suiClient, err = sui.NewClientWithKeypair(cfg.SUI, ctrlKey)
 		} else {
 			suiClient, err = sui.NewClient(cfg.SUI)

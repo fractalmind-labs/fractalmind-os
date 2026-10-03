@@ -156,7 +156,10 @@ export class CoordinatorReadClient {
   }
   private async request(url: string, init: RequestInit) {
     try {
-      return await this.transport(url, {
+      // Browser fetch is a Window operation. Calling it as this.transport()
+      // gives it the client as its receiver and fails in installed WebViews.
+      const transport = this.transport;
+      return await transport(url, {
         ...init,
         credentials: "omit",
         cache: "no-store",

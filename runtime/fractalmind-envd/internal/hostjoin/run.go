@@ -3,6 +3,7 @@ package hostjoin
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -218,11 +219,34 @@ func reconstruct(ctx context.Context, out Result, record *Record, factory func(s
 	}
 	readCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
-	member, err := authority.ReadHostAdmission(readCtx, record.OrganizationID, record.InviteID, host, enc)
+	member, err := awaitAdmission(readCtx, authority, record.OrganizationID, record.InviteID, host, enc)
 	if err != nil {
 		out.ReconstructionPending = true
-		return out, fmt.Errorf("transaction confirmed; membership reconstruction pending, query original digest %s", record.Digest)
+		return out, fmt.Errorf("transaction confirmed; membership reconstruction pending, query original digest %s: %w", record.Digest, err)
 	}
 	out.Membership = &member
 	return out, nil
+}
+
+// A confirmed receipt can precede visibility of its newly created membership
+// and directory fields. Wait only for missing objects, within the original
+// reconstruction deadline. Every read rechecks current chain authority; no
+// signing, invitation redemption, or transaction query is repeated here.
+func awaitAdmission(ctx context.Context, authority Authority, organization, invite string, host, encryption []byte) (nodecommand.HostAdmissionState, error) {
+	for {
+		if err := ctx.Err(); err != nil {
+			return nodecommand.HostAdmissionState{}, err
+		}
+		member, err := authority.ReadHostAdmission(ctx, organization, invite, host, encryption)
+		if !errors.Is(err, nodecommand.ErrChainObjectNotFound) {
+			return member, err
+		}
+		timer := time.NewTimer(200 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nodecommand.HostAdmissionState{}, ctx.Err()
+		case <-timer.C:
+		}
+	}
 }

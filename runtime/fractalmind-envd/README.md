@@ -163,6 +163,12 @@ not grant it. The `native-file-agent` adapter supports 1–3 explicit text-file
 goals with bounded file tools. App handover and execution authorization remain
 under implementation.
 
+`sui.enabled` also enables this signed execution runtime. Startup only performs
+legacy mesh peer/AgentCertificate registration when **both** `sui.package_id`
+and `sui.registry_id` are explicitly configured. Omitting both leaves mesh
+registration disabled; supplying only one rejects startup. Chain-connected
+Hosts reuse their native signing identity if mesh registration is configured.
+
 ### Host invitation admission
 
 Copy the App's public connection fields into `sentinel.yaml`: `sui.network`,
@@ -192,6 +198,11 @@ configuration. Cancelling signs/broadcasts nothing. Admission grants chain
 membership and bounded observation; execution authority and connectivity are
 verified separately.
 
+After a confirmed receipt, admission waits within its 20-second reconstruction
+deadline for missing membership/directory objects to become visible. It repeats
+only chain reads, preserves the original digest and fee, and reports other
+source failures with their cause. A timeout does not redeem another invitation.
+
 Before broadcast, envd flushes an original digest and public Gas/object metadata
 under the OS cache's `fractalmind/host-join-v1` directory. It never persists the
 invitation, signed transaction or business state there. Re-running queries the
@@ -211,8 +222,11 @@ historical admission receipt does not establish current membership.
 Real localnet tests cover production signing/gRPC and a disk journal with injected
 memory Host keys, including a deliberately lost receipt and a single broadcast;
 a separate pseudo-terminal verifies hidden input. Native credential-store,
-physical/cloud Host and five-platform acceptance remain pending. See
-[Host admission implementation and evidence](../../docs/product/v020-envd-host-join.md).
+physical/cloud Host and five-platform acceptance remain pending. The
+[installed Android Host flow](../../docs/product/v020-app-android-host-flow.md)
+also exercises the formal CLI with macOS native Host keys, signed observations,
+explicit observation-only import, and an actual Coordinator process restart.
+See [Host admission implementation and evidence](../../docs/product/v020-envd-host-join.md).
 
 ### Chain-bound Host connections
 

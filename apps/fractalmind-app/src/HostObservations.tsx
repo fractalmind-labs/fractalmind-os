@@ -287,6 +287,15 @@ export default function HostObservations({
                   result.state === "verified" &&
                   result.freshUntilMs !== null &&
                   now < result.freshUntilMs;
+                const instanceCount = (
+                  scan: VerifiedHostObservation["discovery"] | undefined,
+                ) =>
+                  current &&
+                  scan?.state === "complete" &&
+                  scan.freshUntilMs !== null &&
+                  now < scan.freshUntilMs
+                    ? scan.instances.length
+                    : t("未知", "Unknown");
                 return (
                   <article className="panel" key={result.address}>
                     <span className="badge">
@@ -327,10 +336,10 @@ export default function HostObservations({
                           ? `${row.system.os} / ${row.system.arch} · ${row.system.cpu}`
                           : t("未知", "Unknown")}
                       </dd>
-                      <dt>{t("发现的实例数", "Observed instances")}</dt>
-                      <dd>
-                        {current && row ? row.agentCount : t("未知", "Unknown")}
-                      </dd>
+                      <dt>{t("tmux 实例数", "tmux instances")}</dt>
+                      <dd>{instanceCount(result.discovery)}</dd>
+                      <dt>{t("原生文件 Agent 数", "Native file instances")}</dt>
+                      <dd>{instanceCount(result.nativeDiscovery)}</dd>
                     </dl>
                     {showDiscovery &&
                       [

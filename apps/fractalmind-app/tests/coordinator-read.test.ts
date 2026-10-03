@@ -140,7 +140,10 @@ async function fixture(mode = "valid", commandMode = false, direct = false) {
     nonce: "cmd-nonce",
     idempotencyKey: "cmd-native-test",
   });
-  const fetcher: typeof fetch = async (input, init) => {
+  const fetcher: typeof fetch = async function (this: unknown, input, init) {
+    // An arrow mock hides the WebView fetch receiver error. Every read and
+    // command request must call this transport without a client receiver.
+    assert.equal(this, undefined);
     assert.equal(init?.credentials, "omit");
     assert.equal(init?.redirect, "error");
     assert.equal(init?.cache, "no-store");

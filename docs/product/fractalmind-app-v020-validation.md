@@ -8,6 +8,13 @@
 
 以下按增量从新到旧记录；每项证明范围和当时尚未完成的事项独立保留，整体验收仍以 #40 为准。
 
+### Android 安装版 Host 接入／发现与 Coordinator 重连增量
+
+- 原设备 UI 登记入口、创建限时单次邀请，正式 envd 使用独立 macOS Keychain Host 和 stdin 明确入组。原交易确认后首次成员重建待同步；保留原摘要，SDK／生产 Go 来源读取随后验证原成员及已消费邀请，没有再次兑换。
+- 修复真实 WebView `fetch` 的调用上下文、确认后缺失成员的有限等待及新运行时误触发旧 mesh 登记；主机页按扫描状态分别显示 tmux／原生实例数量。
+- [实际报告](evidence/v020-app-android-host-flow.json)：完整 APK／签名／升级安装、原设备签名观测、原生实例仅观察导入通过。独立 SDK 验证精确原 ManagedInstance、成员和摘要，未授予执行权限。实际 Coordinator 进程重启后，worker 再次认证／登记，App 重新读取相同 Host／实例；App **234/234**、Go 两包 race、严格类型通过。
+- 修复前旧 worker 的非预期 AgentCertificate、裁剪后的 original unknown、夹具与构建失败均保留。此增量仍是同机 Host＋Android 模拟器，不证明云 Host、实体手机、运行中任务续跑或完整 #40 门禁。详见[方法与限制](v020-app-android-host-flow.md)，目标保持进行中。
+
 ### Android 系统栏与实际安装版身份／组织重建增量
 
 - 修复系统栏随 App 外观变化及系统栏／切口 insets；追踪平台模板与 npm 生命周期钩子。身份生成前校验 Registry 精确类型来源，升级部署遗漏原始包字段时明确提示。
