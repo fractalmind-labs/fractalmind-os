@@ -150,6 +150,7 @@ type RuntimeConfig struct {
 // this Host-selected provider. Credentials are process environment only.
 type ModelConfig struct {
 	Enabled        bool   `yaml:"enabled"`
+	Protocol       string `yaml:"protocol"` // anthropic-messages (default) or ollama
 	APIBase        string `yaml:"api_base"`
 	APIKeyEnv      string `yaml:"api_key_env"`
 	Name           string `yaml:"name"`

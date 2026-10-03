@@ -270,7 +270,11 @@ func TestHostJoinLiveCLI(t *testing.T) {
 				nativeConfig.Runtime.Workspaces = map[string]string{"native-files": workspace}
 				nativeConfig.Runtime.ChainQueue = os.Getenv("FM_ENVD_CHAIN_QUEUE") == "1"
 				if endpoint := os.Getenv("FM_ENVD_TEST_MODEL_API_BASE"); endpoint != "" {
-					nativeConfig.Runtime.Model = config.ModelConfig{Enabled: true, APIBase: endpoint, Name: "synthetic-protocol-fixture", MaxTokens: 2048, MaxRequests: 12, TimeoutSeconds: 30}
+					name := os.Getenv("FM_ENVD_TEST_MODEL_NAME")
+					if name == "" {
+						name = "synthetic-protocol-fixture"
+					}
+					nativeConfig.Runtime.Model = config.ModelConfig{Enabled: true, Protocol: os.Getenv("FM_ENVD_TEST_MODEL_PROTOCOL"), APIBase: endpoint, Name: name, MaxTokens: 2048, MaxRequests: 12, TimeoutSeconds: 30}
 				}
 				created, e := newRuntimeCommandExecutorWithStore(nativeConfig, store)
 				if e != nil {

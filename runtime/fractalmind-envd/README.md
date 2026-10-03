@@ -6,7 +6,7 @@
 
 [![Go](https://img.shields.io/badge/Go-1.25+-00ADD8)](https://go.dev/)
 [![SUI](https://img.shields.io/badge/SUI-Identity-4DA2FF)](https://sui.io/)
-[![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](../../LICENSE)
 
 </div>
 
@@ -26,9 +26,12 @@ Unlike traditional remote control tools (TeamViewer, Tailscale), envd uses **SUI
 ## Native model questions and file planning
 
 The chain-authorized `native-file-agent` can use a Host-configured Anthropic
-Messages-compatible provider. Set `runtime.model.enabled`, the explicit
-`api_base` and model `name` in `sentinel.yaml`; provide the credential through
-the named `api_key_env`. This is disabled by default. Questions send only the
+Messages-compatible provider or Ollama's native chat API. Set
+`runtime.model.enabled`, `protocol` (`anthropic-messages`, the default, or
+`ollama`), the explicit `api_base` and model `name` in `sentinel.yaml`; provide
+remote credentials through the named `api_key_env`. A local Ollama server can
+use `http://127.0.0.1:11434` with an empty `api_key_env`; install the selected
+generation model separately. This is disabled by default. Questions send only the
 signed message and use zero file tools. Approved text-file OKRs may let the
 model select the next tool action, while envd enforces the original exact goals,
 directories, tool allowance, deadline and current Sui authority.

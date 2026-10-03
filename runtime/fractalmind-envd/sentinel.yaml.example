@@ -61,12 +61,15 @@ runtime:
   # provider tools, retries or authority to alter an approved goal are enabled.
   model:
     enabled: false
+    protocol: anthropic-messages # anthropic-messages (default) | ollama
     api_base: https://api.anthropic.com # Anthropic Messages API; loopback HTTP also allowed
     api_key_env: FRACTALMIND_MODEL_API_KEY # secret value is never saved here or on chain
     name: "" # choose a model supported by your provider; required when enabled
     max_tokens: 2048 # per model response, 1–4096
     timeout_seconds: 30 # per request; the original Run deadline still applies
     max_requests: 12 # per OKR Run, 1–32; a direct question makes one request
+    # Local Ollama: protocol: ollama, api_base: http://127.0.0.1:11434,
+    # api_key_env: "", name: qwen2.5-coder:1.5b (pull the model separately).
 
 # Optional local remote-desktop relay and self-healing supervision. When
 # command is set, envd starts envd-desktop as its direct child, restarts it on

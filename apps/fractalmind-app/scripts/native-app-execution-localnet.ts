@@ -94,6 +94,23 @@ const intervention =
 const autonomy = process.argv.slice(4).includes("--autonomy");
 const projection = process.argv.slice(4).includes("--projection");
 const modelFixture = process.argv.slice(4).includes("--model-fixture");
+const realModel = process.argv.slice(4).includes("--ollama");
+const modelEnabled = modelFixture || realModel;
+assert.ok(
+  !realModel || !modelFixture,
+  "Real Ollama and synthetic model modes are separate",
+);
+assert.ok(
+  !realModel ||
+    (humanSequence &&
+      directApp &&
+      !hostRestart &&
+      !runningStop &&
+      !intervention &&
+      !autonomy &&
+      !projection),
+  "Real Ollama uses the full original two-KR/direct App sequence",
+);
 const messageOkr = process.argv.slice(4).includes("--message-okr");
 const workloadRecovery = process.argv.slice(4).includes("--workload-recovery");
 const recoveryAuthority = process.argv
@@ -108,8 +125,8 @@ assert.ok(
   "Workload recovery requires completed OKR, actual direct execution and a message-derived draft",
 );
 assert.ok(
-  !messageOkr || (directApp && modelFixture),
-  "Message-derived OKR requires formal direct App and its model-protocol fixture",
+  !messageOkr || (directApp && modelEnabled),
+  "Message-derived OKR requires formal direct App and an explicit model provider",
 );
 const scheduledQueue = process.argv.slice(4).includes("--scheduled-queue");
 const chainQueue =
@@ -173,6 +190,7 @@ assert.ok(
         "--autonomy",
         "--projection",
         "--model-fixture",
+        "--ollama",
         "--chain-queue",
         "--scheduled-queue",
         "--running-stop",
@@ -217,6 +235,12 @@ let modelAPIBase = "";
 let modelRequests = 0;
 let modelPlanningRequests = 0;
 let modelQuestionRequests = 0;
+let baselineOkrSpend = humanSequence ? 6n : 3n;
+const realModelName = realModel
+  ? (process.env.FM_ENVD_LIVE_MODEL_NAME ?? "")
+  : "";
+let realModelMetadata: unknown;
+const modelObservations: unknown[] = [];
 let stoppedModelWaitSeen = false,
   stoppedModelConnectionClosed = false;
 let heldModelResponse: import("node:http").ServerResponse | undefined;
@@ -350,8 +374,13 @@ async function save(complete = false) {
         transactions,
         state: {
           ...state,
-          ...(modelFixture
-            ? { modelRequests, modelPlanningRequests, modelQuestionRequests }
+          ...(modelEnabled
+            ? {
+                modelRequests,
+                modelPlanningRequests,
+                modelQuestionRequests,
+                ...(realModel ? { realModelMetadata, modelObservations } : {}),
+              }
             : {}),
           ...(runningStop
             ? { stoppedModelWaitSeen, stoppedModelConnectionClosed }
@@ -399,10 +428,13 @@ async function save(complete = false) {
             scheduledQueue && state.scheduledHostContinuationVerified === true,
           installedScheduledUIVerified: false,
           runningStopConfirmed: state.runningStopConfirmed === true,
-          modelProviderKind: modelFixture
-            ? "synthetic loopback Messages API fixture; not an actual language model"
-            : "not configured",
-          actualModelProviderVerified: false,
+          modelProviderKind: realModel
+            ? "actual local Ollama model; observing proxy forwards original requests and replies unchanged"
+            : modelFixture
+              ? "synthetic loopback Messages API fixture; not an actual language model"
+              : "not configured",
+          actualModelProviderVerified:
+            realModel && state.actualModelProviderVerified === true,
           modelProtocolFixtureVerified:
             state.modelProtocolFixtureVerified === true,
           installedHumanReviewVerified: false,
@@ -490,6 +522,114 @@ async function readVisible<T>(
   );
 }
 try {
+  if (realModel) {
+    const base = new URL(process.env.FM_ENVD_LIVE_MODEL_BASE ?? "");
+    assert.ok(
+      base.protocol === "http:" &&
+        ["127.0.0.1", "localhost", "[::1]"].includes(base.hostname) &&
+        !base.username &&
+        !base.password &&
+        !base.search &&
+        !base.hash &&
+        base.pathname === "/",
+      "Live model fixture requires an explicit loopback base",
+    );
+    assert.ok(realModelName.length > 0 && realModelName.length <= 160);
+    const versionResponse = await fetch(new URL("api/version", base), {
+      redirect: "manual",
+    });
+    assert.equal(versionResponse.status, 200);
+    const version = await versionResponse.json();
+    const tagsResponse = await fetch(new URL("api/tags", base), {
+      redirect: "manual",
+    });
+    assert.equal(tagsResponse.status, 200);
+    const tags = (await tagsResponse.json()) as {
+      models: { name: string; digest: string; size: number }[];
+    };
+    const selected = tags.models.find((m) => m.name === realModelName);
+    assert.ok(selected && /^[0-9a-f]{64}$/.test(selected.digest));
+    realModelMetadata = { base: base.origin, version, selected };
+    modelServer = createServer(async (req, res) => {
+      const cancellation = new AbortController();
+      res.once("close", () => cancellation.abort());
+      try {
+        assert.equal(req.url, "/api/chat");
+        assert.equal(req.method, "POST");
+        const chunks: Buffer[] = [];
+        let size = 0;
+        for await (const chunk of req) {
+          size += chunk.length;
+          assert.ok(size <= 1 << 20);
+          chunks.push(Buffer.from(chunk));
+        }
+        const originalRequest = Buffer.concat(chunks);
+        const body = JSON.parse(originalRequest.toString("utf8"));
+        assert.equal(body.model, realModelName);
+        assert.equal(body.stream, false);
+        assert.equal(body.tools, undefined);
+        assert.equal(body.messages.length, 2);
+        assert.equal(body.messages[0].role, "system");
+        assert.equal(body.messages[1].role, "user");
+        const kind = body.format === undefined ? "question" : "planning";
+        modelRequests++;
+        if (kind === "planning") modelPlanningRequests++;
+        else modelQuestionRequests++;
+        const upstream = await fetch(new URL("api/chat", base), {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          redirect: "manual",
+          body: originalRequest,
+          signal: cancellation.signal,
+        });
+        const originalResponse = Buffer.from(await upstream.arrayBuffer());
+        assert.ok(originalResponse.length <= 1 << 20);
+        const value = JSON.parse(originalResponse.toString("utf8"));
+        modelObservations.push({
+          sequence: modelRequests,
+          kind,
+          requestSha256: createHash("sha256")
+            .update(originalRequest)
+            .digest("hex"),
+          responseSha256: createHash("sha256")
+            .update(originalResponse)
+            .digest("hex"),
+          status: upstream.status,
+          model: value.model,
+          done: value.done,
+          doneReason: value.done_reason,
+          inputTokens: value.prompt_eval_count,
+          outputTokens: value.eval_count,
+          text: value.message?.content,
+          ...(kind === "planning"
+            ? { planningInput: JSON.parse(body.messages[1].content) }
+            : {}),
+        });
+        res.statusCode = upstream.status;
+        res.setHeader("content-type", "application/json");
+        res.end(originalResponse);
+      } catch (error) {
+        modelObservations.push({
+          error: cancellation.signal.aborted
+            ? "original request cancelled"
+            : error instanceof Error
+              ? error.message
+              : "observer failed",
+        });
+        if (!res.destroyed) {
+          res.statusCode = 502;
+          res.end("live model observer failed");
+        }
+      }
+    });
+    await new Promise<void>((resolve, reject) => {
+      modelServer!.once("error", reject);
+      modelServer!.listen(0, "127.0.0.1", resolve);
+    });
+    const address = modelServer.address();
+    assert.ok(address && typeof address !== "string");
+    modelAPIBase = `http://127.0.0.1:${address.port}`;
+  }
   if (modelFixture) {
     // This deterministic HTTP fixture tests transport and Host enforcement. It
     // must never be reported as a real model or intelligence-quality proof.
@@ -719,6 +859,8 @@ try {
       FM_ENVD_NATIVE_EXECUTION: "0",
       FM_ENVD_HOST_REJOIN: "0",
       FM_ENVD_TEST_MODEL_API_BASE: modelAPIBase,
+      FM_ENVD_TEST_MODEL_PROTOCOL: realModel ? "ollama" : "",
+      FM_ENVD_TEST_MODEL_NAME: realModel ? realModelName : "",
       FM_ENVD_WORKLOAD_RECOVERY: workloadRecovery ? "1" : "0",
       FM_ENVD_RECOVERY_AUTHORITY: recoveryAuthority ? "1" : "0",
     },
@@ -1612,7 +1754,8 @@ try {
   assert.equal(current.metrics[0].verified, false);
   assert.equal(current.next_kr, "0");
   assert.equal(current.metrics[0].run_id, settled.id);
-  assert.equal(budget.spent, 3n);
+  if (realModel) assert.ok(budget.spent >= 1n && budget.spent <= 3n);
+  else assert.equal(budget.spent, 3n);
   assert.equal(budget.reserved, scheduledQueue ? 3n : 0n);
   const reader = new NativeExecutionResults(
     chain,
@@ -1902,7 +2045,7 @@ try {
         assert.equal(claim.spent, "2");
         assert.equal(claim.settled, true);
         assert.equal(stoppedModelConnectionClosed, true);
-        assert.equal(modelPlanningRequests, 6);
+        assert.equal(modelPlanningRequests, Number(baselineOkrSpend));
         assert.equal((await sdk.okr.getOkr(okrId)).metrics[1].current, null);
         const latencyMs = Date.now() - stopConfirmedAt;
         assert.ok(
@@ -2259,7 +2402,11 @@ try {
       accepted.okr.agreement_version,
       String(BigInt(afterSecond.agreement_version) + 1n),
     );
-    assert.equal(total.spent, 6n);
+    if (realModel) {
+      assert.ok(total.spent > budget.spent && total.spent - budget.spent <= 3n);
+      assert.equal(modelPlanningRequests, Number(total.spent));
+      baselineOkrSpend = total.spent;
+    } else assert.equal(total.spent, 6n);
     assert.equal(total.reserved, 0n);
     assert.equal(
       deliveries,
@@ -2315,7 +2462,7 @@ try {
       ),
     );
     assert.equal(final.snapshot.acceptance.recordId, state.acceptanceRecordId);
-    assert.equal(final.snapshot.budget!.spent, "6");
+    assert.equal(final.snapshot.budget!.spent, String(baselineOkrSpend));
     assert.equal(final.snapshot.budget!.reserved, "0");
     assert.equal(final.snapshot.executions.length, 2);
     assert.ok(activeProjectionText);
@@ -2617,7 +2764,7 @@ try {
     const accepted = await final.confirmed(fo);
     assert.equal(accepted.okr.state, 3);
     const budget = await sdk.okr.getBudget(autoOkrId);
-    assert.equal(budget.spent, 6n);
+    assert.equal(budget.spent, baselineOkrSpend);
     assert.equal(budget.reserved, 0n);
     checks.push(
       "one explicitly confirmed native session prepares and delivers two actual envd KRs automatically in sequence; duplicate heartbeat never duplicates fees or delivery; each measured KR waits for separate Human verification",
@@ -3029,7 +3176,7 @@ try {
     assert.equal(finalPermission.approved_spent, "0");
     assert.equal(finalPermission.version, "2");
     assert.equal((await sdk.directAgent.listMessages(permissionId)).length, 2);
-    assert.equal((await sdk.okr.getBudget(okrId)).spent, 6n);
+    assert.equal((await sdk.okr.getBudget(okrId)).spent, baselineOkrSpend);
     assert.equal(deliveries, 2);
     checks.push(
       "actual OS-encrypted direct messages and versioned standing permission rebuild from Sui; ordinary and explicit one-off Run reservations use separate ledgers and can be cancelled historically after a policy change, without direct dispatch or OKR budget changes",
@@ -3355,7 +3502,7 @@ try {
       );
       assert.equal(budget.budget_limit, "6");
       assert.equal(budget.max_calls, "3");
-      assert.equal((await sdk.okr.getBudget(okrId)).spent, 6n);
+      assert.equal((await sdk.okr.getBudget(okrId)).spent, baselineOkrSpend);
       assert.equal((await sdk.okr.getBudget(okrId)).reserved, 0n);
       checks.push(
         "actual OS-signed direct write, read and zero-tool status traverse authenticated Coordinator to production envd; original encrypted results decrypt through the OS vault",
@@ -3413,7 +3560,7 @@ try {
           expectedVersion: "2",
           policy: {
             ...description.policy!,
-            actions: modelFixture
+            actions: modelEnabled
               ? ["ask", "status", "file.read", "file.write"]
               : ["status", "file.read", "file.write"],
             maxCalls: "1",
@@ -3512,7 +3659,7 @@ try {
         }
         const statusId = await create("status", "0");
         await run(statusId);
-        if (modelFixture) {
+        if (modelEnabled) {
           const questionBefore = modelQuestionRequests;
           const askId = await create("ask", "0");
           const answered = await run(askId);
@@ -3523,19 +3670,27 @@ try {
           };
           assert.equal(reply.schema, "fractalmind.model-reply.v1");
           assert.equal(reply.verified, false);
-          assert.equal(reply.reply.model, "synthetic-protocol-fixture");
-          assert.match(reply.reply.text, /Synthetic model-protocol reply/);
+          assert.equal(
+            reply.reply.model,
+            realModel ? realModelName : "synthetic-protocol-fixture",
+          );
+          if (realModel) assert.ok(reply.reply.text.length > 0);
+          else assert.match(reply.reply.text, /Synthetic model-protocol reply/);
           assert.equal(modelQuestionRequests, questionBefore + 1);
           assert.equal(answered.claim!.spent, "0");
           assert.equal(
             (await sdk.directAgent.getPermission(permissionId)).spent,
             "4",
           );
-          assert.equal((await sdk.okr.getBudget(okrId)).spent, 6n);
-          assert.equal(modelPlanningRequests, 6);
+          assert.equal(
+            (await sdk.okr.getBudget(okrId)).spent,
+            baselineOkrSpend,
+          );
+          assert.equal(modelPlanningRequests, Number(baselineOkrSpend));
           state = {
             ...state,
-            modelProtocolFixtureVerified: true,
+            modelProtocolFixtureVerified: modelFixture,
+            actualModelProviderVerified: realModel,
             modelRequests,
             modelPlanningRequests,
             modelQuestionRequests,
@@ -3544,7 +3699,9 @@ try {
             modelOriginalResultRecordId: answered.result!.recordId,
           };
           checks.push(
-            "formal App zero-tool question reaches the configured synthetic Messages API exactly once; encrypted original reply is rebuilt from Sui, marked unverified, and leaves OKR/direct tool ledgers unchanged; six model-selected OKR tool steps were enforced by production envd (no real-model quality claim)",
+            realModel
+              ? `formal App zero-tool question reaches actual local Ollama once; original encrypted reply is rebuilt from Sui and marked unverified; ${modelPlanningRequests} actual model-selected OKR tool steps were enforced by production envd, with independent Human KR validation and final acceptance`
+              : "formal App zero-tool question reaches the configured synthetic Messages API exactly once; encrypted original reply is rebuilt from Sui, marked unverified, and leaves OKR/direct tool ledgers unchanged; six model-selected OKR tool steps were enforced by production envd (no real-model quality claim)",
           );
           await save();
           if (messageOkr) {
@@ -3690,7 +3847,10 @@ try {
               await sdk.directAgent.getPermission(permissionId),
               beforePermission,
             );
-            assert.equal((await sdk.okr.getBudget(okrId)).spent, 6n);
+            assert.equal(
+              (await sdk.okr.getBudget(okrId)).spent,
+              baselineOkrSpend,
+            );
             state = {
               ...state,
               messageOkrControllerVerified: true,
@@ -3753,7 +3913,7 @@ try {
           (await controller.message(writeId)).result!.recordId,
           written.result!.recordId,
         );
-        assert.equal((await sdk.okr.getBudget(okrId)).spent, 6n);
+        assert.equal((await sdk.okr.getBudget(okrId)).spent, baselineOkrSpend);
         checks.push(
           "formal native Direct App controller edits and revokes versioned authority, stores messages, quotes every operation, sends status at zero remaining budget and executes an explicitly approved file request without changing the standing ceiling",
         );
@@ -3788,7 +3948,7 @@ try {
     const deliveriesBefore = deliveries,
       modelsBefore = modelRequests;
     const oldBudget = await sdk.okr.getBudget(okrId);
-    assert.equal(oldBudget.spent, 6n);
+    assert.equal(oldBudget.spent, baselineOkrSpend);
     assert.equal(oldBudget.reserved, 0n);
     const restored = await nativeWorkloadRecovery({
       deployment: connection,
@@ -3997,7 +4157,7 @@ try {
     assert.deepEqual(await sdk.nodeExecution.getExecution(settled.id), settled);
     assert.deepEqual(await snapshotFiles(), filesBefore);
     const budgetAfter = await sdk.okr.getBudget(okrId);
-    assert.equal(budgetAfter.spent, 6n);
+    assert.equal(budgetAfter.spent, baselineOkrSpend);
     assert.equal(budgetAfter.reserved, 0n);
     state = {
       ...state,
@@ -4084,7 +4244,9 @@ try {
     await restartExitWait?.catch(() => {});
   }
   const nativeCleanupAllowed =
-    !hostRestart || state.nativeHostMembershipRevoked === true;
+    (!hostRestart && !realModel) ||
+    (hostRestart && state.nativeHostMembershipRevoked === true) ||
+    (realModel && state.phase === "validated_native_app_real_envd");
   if (hostRestart && nativeCleanupAllowed) {
     const removed = spawnSync(
       process.env.FM_ENVD_JOIN_CLI_BIN!,
@@ -4124,10 +4286,12 @@ try {
     request("remove");
     cleanupConfirmed = true;
     assert.throws(() => request("public"), /NotInitialized/);
-  } else if (created && hostRestart) {
+  } else if (created && (hostRestart || realModel)) {
     state = {
       ...state,
-      nativeHostCredentialsRetainedForOriginalRequests: true,
+      ...(hostRestart
+        ? { nativeHostCredentialsRetainedForOriginalRequests: true }
+        : { humanCredentialsRetainedForOriginalRequests: true }),
       retainedHumanProfile: profile,
     };
   }

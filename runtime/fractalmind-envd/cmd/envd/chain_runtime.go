@@ -228,7 +228,7 @@ func newRuntimeCommandExecutorWithStore(cfg *config.Config, store hostidentity.S
 		var model *modelclient.Client
 		if cfg.Runtime.Model.Enabled {
 			m := cfg.Runtime.Model
-			model, err = modelclient.New(modelclient.Config{APIBase: m.APIBase, APIKeyEnv: m.APIKeyEnv, Model: m.Name, MaxTokens: m.MaxTokens, TimeoutSeconds: m.TimeoutSeconds, MaxRequests: m.MaxRequests})
+			model, err = modelclient.New(modelclient.Config{Protocol: m.Protocol, APIBase: m.APIBase, APIKeyEnv: m.APIKeyEnv, Model: m.Name, MaxTokens: m.MaxTokens, TimeoutSeconds: m.TimeoutSeconds, MaxRequests: m.MaxRequests})
 			if err != nil {
 				rpc.Close()
 				keys.Close()

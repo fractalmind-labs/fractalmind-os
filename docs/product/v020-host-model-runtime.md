@@ -3,6 +3,8 @@
 依据 #34/#43/#45、PRD v0.11 与原型 v2；基线 `5990409`。
 本增量接通真实生产配置、HTTP 客户端和执行适配器。完整 #40 仍未完成。
 
+后续[真实 Ollama 模型增量](v020-ollama-model-runtime.md)已完成明确文件目标与问答的实际模型联测；下文合成接口记录保留其原基线与证明范围。
+
 ## 实际能力
 
 原生 App 的固定实例沟通窗口支持 `ask`：常驻权限明确勾选问答、分别确认消息／能力／Run 的费用与签名，再明确投递原命令。问题工具预算固定为零，不能附带文件任务；不会打开文件句柄、暂停已有 OKR 或取得物理执行槽。Host 只把这条已签名的问题发给自己配置的模型。
@@ -21,7 +23,7 @@ Host 执行端在请求模型之前和收到回复之后重查链上权限、当
 
 ## Host 配置与数据去向
 
-`sentinel.yaml.example` 的 `runtime.model` 默认为关闭；启用时必须选择 `native-file-agent`，明确设置 `api_base` 和模型名称。接口采用 [Anthropic Messages API](https://platform.claude.com/docs/en/api/messages/create)。提供方不获得 Host 工具；不启用远端工具或 shell。
+`sentinel.yaml.example` 的 `runtime.model` 默认为关闭；启用时必须选择 `native-file-agent`，明确设置 `api_base` 和模型名称。`protocol` 默认采用 [Anthropic Messages API](https://platform.claude.com/docs/en/api/messages/create)，也可明确选择 `ollama` 使用其原生 [Chat API](https://docs.ollama.com/api/chat)。Ollama 问答返回文本，工具规划使用 JSON 格式；提供方不获得 Host 工具，不启用远端工具或 shell。
 
 远端端点要求 HTTPS；本机兼容模型可以使用显式 loopback HTTP。禁止端点中的登录信息、查询参数和片段，也不跟随 HTTP 重定向。凭据从指定的进程环境变量读取，不保存到 YAML／Sui，也不放进回执或错误正文。默认每次回复最多 2048 token、请求超时 30 秒，每个 OKR Run 最多 12 次模型请求；可设置的上限分别是 4096 token、300 秒和 32 次，原 Run 期限仍生效。直接问题只有一次模型请求。
 
