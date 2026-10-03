@@ -8,6 +8,13 @@
 
 以下按增量从新到旧记录；每项证明范围和当时尚未完成的事项独立保留，整体验收仍以 #40 为准。
 
+### 升级部署上的独立设备配对增量
+
+- 基于 `716eb0f` 复用 main R8 升级部署，补齐配对夹具的当前／原包配置和精确链核对；每次提交前保存公开 pending 摘要，失败与清理结果保留，已有报告／进度路径拒绝覆盖启动。
+- [实际 OS＋Sui 配对](evidence/v020-upgraded-device-pairing-localnet.json)：**14 项检查、10 笔交易，9 成功／1 预期失败，退出 0**。组织范围 read 批准、单独数据分享／原生解密、重复批准拒绝、签名期轮换真实 `9102` 失败、独立撤销及测试钥清理通过。明确丢失批准响应后只查原摘要，广播 **1**；记录 **10 份 pending／10 份终态**。
+- [专项回归／零广播复查](evidence/v020-upgraded-device-pairing-validation.json)：控制器 **4/4**、严格类型及报告覆盖保护通过；原组织／新身份类型来源、原请求关联及已撤销 Grant 确认，三次 OS 只读查询返回 `NotInitialized`。生产源码未改，未计作 App／SDK／Move／Rust 全量重跑。
+- 仍是同机子进程，安装后 IPC／IndexedDB、实体多设备及手机 UI 未验收；系统解锁／授权、真实模型、云 Host 和完整 #40 剩余门禁保持。前轮遗留 QUEUED Run 未结清。详见[流程、证据及限制](v020-upgraded-device-pairing.md)。
+
 ### 升级后 App／envd 混合类型执行、恢复与 Sui 队列增量
 
 - App 核心对象、字段、回执与事件按具体 datatype 使用 SDK 实际来源；envd 从精确不可变调用包 BCS 验证来源表，字段 ID／BCS TypeTag、键值及对象校验采用同一来源。Host 准入、Coordinator／worker、设备读取与执行工厂均接通；缺少元数据或类型不能猜测权限／空目录。

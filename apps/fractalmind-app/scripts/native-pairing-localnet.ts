@@ -3,15 +3,12 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
+import { access, open, readFile, rename, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { requestSuiFromFaucetV2 } from "@mysten/sui/faucet";
-import { bcs } from "@mysten/sui/bcs";
-import { Transaction } from "@mysten/sui/transactions";
 import { PrivateRecords } from "../src/private-records";
 import { ChainReadSession } from "../src/chain";
 import { DeviceIdentityVerifier } from "../src/device-identity";
-import { NativeImportedRecoverySigner } from "../src/native-recovery";
 import { DevicePairing } from "../src/pairing";
 import { fromBase64, toBase64 } from "@mysten/sui/utils";
 import {
@@ -20,8 +17,8 @@ import {
   MemoryTransactionJournal,
   TransactionPreflightError,
   SelfPayTransactionManager,
-  RecoveryLocationBcs,
   type SelfPayTransactionOutcome,
+  type TransactionJournalEntry,
 } from "@fractalmind-labs/fractalmind-sdk";
 import { NativeDeviceSigner, type NativeInvoke } from "../src/native-device";
 import { NativeRecoverySigner } from "../src/native-onboarding";
@@ -31,6 +28,16 @@ assert.ok(
   "Pass deployment and output reports",
 );
 const deployment = JSON.parse(await readFile(process.argv[2], "utf8"));
+const output = process.argv[3],
+  progress = output + ".progress.json";
+for (const path of [output, progress]) {
+  try {
+    await access(path);
+    throw new Error("Inspect the original report; do not overwrite or restart");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+}
 const profile = `test-${randomUUID()}`,
   helper = resolve("native/target/debug/examples/device-test-helper");
 const rpc = "http://127.0.0.1:29000",
@@ -70,19 +77,109 @@ const invoke: NativeInvoke = async (command, args) => {
 };
 const checks: string[] = [],
   transactions: unknown[] = [];
+const journalEvents: { journal: number; entry: TransactionJournalEntry }[] = [];
+const state: Record<string, unknown> = { phase: "starting" };
+let journalCount = 0,
+  complete = false;
+async function save(final = false) {
+  const report = {
+    format: 2,
+    recordedAt: new Date().toISOString(),
+    complete,
+    platform: process.platform,
+    profile,
+    deployment: {
+      packageId: deployment.packageId,
+      originalPackageId: deployment.originalPackageId,
+      okrPackageId: deployment.okrPackageId,
+      originalOkrPackageId: deployment.originalOkrPackageId,
+      directPackageId: deployment.directPackageId,
+      originalDirectPackageId: deployment.originalDirectPackageId,
+      registryId: deployment.registryId,
+    },
+    chain: { rpc, chainIdentifier: deployment.chain.chainIdentifier },
+    checks,
+    transactions,
+    journalEvents,
+    state,
+    limits: {
+      nativeTransport:
+        "isolated production bridge subprocess; installed UI/IPC not exercised",
+      journal:
+        "independent in-memory fixtures with public pre-broadcast journal snapshots; not installed IndexedDB",
+      fullV020Complete: false,
+      privateKeysInReport: false,
+      physicalSecondDeviceVerified: false,
+    },
+  };
+  const content = JSON.stringify(report, null, 2) + "\n";
+  if (final) {
+    await writeFile(output, content, { flag: "wx", mode: 0o600 });
+  } else {
+    const temporary = progress + "." + randomUUID();
+    const file = await open(temporary, "wx", 0o600);
+    try {
+      await file.writeFile(content);
+      await file.sync();
+    } finally {
+      await file.close();
+    }
+    await rename(temporary, progress);
+  }
+}
+/** Preserve original technical digests before the manager broadcasts. Each
+ * instance is still a separate cache, including the intentionally empty ones. */
+class EvidenceJournal extends MemoryTransactionJournal {
+  private readonly journalId = ++journalCount;
+  async claim(entry: TransactionJournalEntry) {
+    const claimed = await super.claim(entry);
+    if (claimed) {
+      journalEvents.push({
+        journal: this.journalId,
+        entry: structuredClone(entry),
+      });
+      await save();
+    }
+    return claimed;
+  }
+  async replace(entry: TransactionJournalEntry, expectedRevision: number) {
+    const replaced = await super.replace(entry, expectedRevision);
+    if (replaced) {
+      journalEvents.push({
+        journal: this.journalId,
+        entry: structuredClone(entry),
+      });
+      await save();
+    }
+    return replaced;
+  }
+}
+async function check(message: string) {
+  checks.push(message);
+  await save();
+}
+async function record(value: unknown) {
+  transactions.push(value);
+  await save();
+}
 const recoveryProfiles = [profile + "-a", profile + "-b", profile + "-used"];
+let runFailed = false,
+  runError: unknown;
+await writeFile(progress, "{}\n", { flag: "wx", mode: 0o600 });
 try {
+  await save();
   await assert.rejects(
     NativeRecoverySigner.load(invoke, profile, "localnet"),
     /not_initialized/,
   );
-  checks.push("loading an absent onboarding profile does not create keys");
+  await check("loading an absent onboarding profile does not create keys");
   const result = await NativeRecoverySigner.create(invoke, profile, "localnet");
   const recovery = result.signer,
     device = await NativeDeviceSigner.load(invoke, profile);
   // The one-shot code is an explicit backup credential. Independent JS derivation
   // is an interoperability test only, never the signer used by the controller.
   const independent = recoveryKeys(result.recoveryCode, "localnet");
+  result.recoveryCode = "";
   assert.equal(independent.address, recovery.material.recovery.address);
   assert.equal(
     toBase64(independent.encryptionPublicKey),
@@ -99,7 +196,7 @@ try {
   assert.equal(keyring.historicalKeys["1"], keyring.contentKey);
   backup.fill(0);
   independent.encryptionSecret.fill(0);
-  checks.push(
+  await check(
     "native recovery code/HKDF keys and FMW1/AES-GCM backup interoperate with the official JS path",
   );
   const reloaded = await NativeRecoverySigner.load(invoke, profile, "localnet");
@@ -118,24 +215,34 @@ try {
     () => request("publicOnboarding", { network: "mainnet" }),
     /InvalidRecovery/,
   );
-  checks.push(
+  await check(
     "fresh-process reload reveals public keys/ciphertext only; re-creation and wrong network are rejected",
   );
-  const journal = new MemoryTransactionJournal();
+  const journal = new EvidenceJournal();
   const profileData = normalizeDeployment({
     network: "localnet",
     rpcUrl: rpc,
     packageId: deployment.packageId,
+    originalPackageId: deployment.originalPackageId,
+    originalOkrPackageId: deployment.originalOkrPackageId,
+    originalDirectPackageId: deployment.originalDirectPackageId,
+    okrPackageId: deployment.okrPackageId,
+    directPackageId: deployment.directPackageId,
     registryId: deployment.registryId,
     chainIdentifier: deployment.chain.chainIdentifier,
   });
   let creation = new IdentityCreation(profileData, recovery, device, journal);
+  assert.equal(
+    (await creation.client.core.getChainIdentifier()).chainIdentifier,
+    profileData.chainIdentifier,
+  );
+  state.phase = "chain_verified";
   assert.equal(await creation.locate(), null);
   await assert.rejects(
     creation.prepareIdentity(),
     (e) => e instanceof TransactionPreflightError && e.code === "needs_funds",
   );
-  checks.push(
+  await check(
     "zero recovery balance blocks Human preparation without submitting",
   );
   for (const recipient of [
@@ -152,7 +259,7 @@ try {
   assert.ok(!("status" in quote));
   const humanResult = await creation.submitIdentity(quote);
   assert.equal(humanResult.status, "confirmed");
-  transactions.push({
+  await record({
     action: "create Human with native recovery signature and self-paid Gas",
     digest: humanResult.digest,
     actualGas: humanResult.actualGas,
@@ -196,7 +303,7 @@ try {
   const found = await visible();
   assert.equal(found.organizations.length, 0);
   assert.equal((await creation.queryIdentity())!.digest, humanResult.digest);
-  checks.push(
+  await check(
     "native recovery signs a real self-paid Human transaction; independent device possession resolves stable Human",
   );
   const orgQuote = await creation.prepareOrganization(
@@ -205,7 +312,7 @@ try {
   assert.ok(!("status" in orgQuote));
   const orgResult = await creation.submitOrganization(orgQuote);
   assert.equal(orgResult.status, "confirmed");
-  transactions.push({
+  await record({
     action: "create personal organization with independent native device",
     digest: orgResult.digest,
     actualGas: orgResult.actualGas,
@@ -233,7 +340,7 @@ try {
     ).digest,
     orgResult.digest,
   );
-  checks.push(
+  await check(
     "new native processes and a rebuilt controller query original digests and reconstruct the same Human/organization without replay",
   );
   // Clear all technical journal data and reconstruct from chain directory + OS
@@ -242,7 +349,7 @@ try {
     profileData,
     reloaded,
     device,
-    new MemoryTransactionJournal(),
+    new EvidenceJournal(),
   );
   const noCache = await creation.locate();
   assert.equal(noCache!.profile.humanId, found.profile.humanId);
@@ -252,13 +359,12 @@ try {
     creation.prepareOrganization("duplicate"),
     /already exists/,
   );
-  checks.push(
+  await check(
     "discarding transaction caches reconstructs confirmed business state from chain and refuses duplicate creation",
   );
   const organizationId = noCache!.organizations[0].objectId;
   const stableHuman = noCache!.profile.humanId;
-  const identityRegistryId = await creation.sdk.identity.resolveRegistry();
-  const registry = await creation.sdk.identity.getRegistry(identityRegistryId);
+  Object.assign(state, { humanId: stableHuman, organizationId });
   const recordInput = {
     network: "localnet",
     organizationId,
@@ -294,7 +400,7 @@ try {
   const historical = await creation.deviceManager.submit(historicalQuote);
   assert.equal(historical.status, "confirmed");
   await effectsVisible(historical);
-  transactions.push({
+  await record({
     action: "save historical body with native content key/signature",
     digest: historical.digest,
     actualGas: historical.actualGas,
@@ -341,7 +447,7 @@ try {
   );
   assert.notEqual(paired.device.address, device.device.address);
   const chainProfile = { ...profileData, humanId: stableHuman };
-  const pairedJournal = new MemoryTransactionJournal();
+  const pairedJournal = new EvidenceJournal();
   const applicant = new DevicePairing(
     new ChainReadSession(chainProfile),
     paired,
@@ -352,7 +458,7 @@ try {
   const manager = new DevicePairing(
     new ChainReadSession(chainProfile),
     device,
-    new MemoryTransactionJournal(),
+    new EvidenceJournal(),
     ownerInvoke,
   );
   await assert.rejects(
@@ -374,7 +480,8 @@ try {
   assert.equal(created.status, "confirmed");
   await effectsVisible(created);
   const requestId = await applicant.requestFromResult(created);
-  transactions.push({
+  state.requestId = requestId;
+  await record({
     action: "native device publishes ten-minute pairing request",
     digest: created.digest,
     actualGas: created.actualGas,
@@ -388,7 +495,7 @@ try {
     requestState.fingerprint,
   );
   await assert.rejects(applicant.verifyRequester(requestId));
-  checks.push(
+  await check(
     "unapproved request does not authorize a device; both ends reconstruct the identical public fingerprint from chain",
   );
   await assert.rejects(
@@ -407,15 +514,39 @@ try {
     manager.chain.sdk.client.client.core.executeTransaction.bind(
       manager.chain.sdk.client.client.core,
     );
+  const originalQuery =
+    manager.chain.sdk.client.client.core.getTransaction.bind(
+      manager.chain.sdk.client.client.core,
+    );
   let broadcasts = 0;
   manager.chain.sdk.client.client.core.executeTransaction = async (input) => {
+    const saved = JSON.parse(await readFile(progress, "utf8"));
+    assert.ok(
+      saved.journalEvents.some(
+        (event: { entry: TransactionJournalEntry }) =>
+          event.entry.digest === approvalQuote.digest &&
+          event.entry.status === "pending",
+      ),
+      "original pending digest must be saved before broadcast",
+    );
     broadcasts++;
     await originalExecute(input);
     throw new Error("Isolated approval receipt lost");
   };
-  const ambiguous = await manager.submit(approvalQuote);
+  manager.chain.sdk.client.client.core.getTransaction = async () => {
+    throw new Error("Isolated original receipt temporarily unavailable");
+  };
+  let ambiguous: SelfPayTransactionOutcome;
+  try {
+    ambiguous = await manager.submit(approvalQuote);
+  } finally {
+    manager.chain.sdk.client.client.core.executeTransaction = originalExecute;
+    manager.chain.sdk.client.client.core.getTransaction = originalQuery;
+  }
+  state.approvalBroadcasts = broadcasts;
+  state.ambiguousApprovalDigest = ambiguous.digest;
+  await save();
   assert.equal(ambiguous.status, "unknown");
-  manager.chain.sdk.client.client.core.executeTransaction = originalExecute;
   const approval = await wait(
     () => manager.query("approve", requestId),
     (value) => value?.status === "confirmed",
@@ -424,13 +555,18 @@ try {
   await effectsVisible(approval);
   assert.equal(approval.digest, ambiguous.digest);
   assert.equal(broadcasts, 1);
-  transactions.push({
+  await record({
     action:
       "scoped read-only pairing approval; lost receipt resolved by original digest",
     digest: approval.digest,
     actualGas: approval.actualGas,
   });
   const authorized = await applicant.verifyRequester(requestId);
+  state.publicPair = {
+    device: paired.device,
+    grantId: authorized.grantId,
+    fingerprint: requestState.fingerprint,
+  };
   assert.equal(authorized.profile.humanId, stableHuman);
   assert.equal(authorized.data, "pending");
   const postApproval = await manager.inspect(requestId);
@@ -455,13 +591,13 @@ try {
       authorized.grantId,
     ).verifyOrganization(organizationId, "approve"),
   );
-  checks.push(
+  await check(
     "approval preserves the same Human with independent organization-scoped read permission, no identity-management/approval permission and no decryptable data keys",
   );
   const restarted = new DevicePairing(
     new ChainReadSession(chainProfile),
     device,
-    new MemoryTransactionJournal(),
+    new EvidenceJournal(),
     ownerInvoke,
   );
   await assert.rejects(
@@ -480,7 +616,7 @@ try {
     ).digest,
     approval.digest,
   );
-  checks.push(
+  await check(
     "consumed pairing cannot issue a second grant; persisted original outcome is returned instead of replaying approval",
   );
   await assert.rejects(
@@ -496,7 +632,7 @@ try {
   const shared = await manager.submit(dataQuote);
   assert.equal(shared.status, "confirmed");
   await effectsVisible(shared);
-  transactions.push({
+  await record({
     action:
       "separate native selected-organization data wrapping and key-envelope publication",
     digest: shared.digest,
@@ -521,7 +657,7 @@ try {
   );
   assert.deepEqual(plain, expected);
   plain.fill(0);
-  checks.push(
+  await check(
     "explicit second transaction shares only the selected organization, reloaded independent native device authenticates/decrypts the real chain body; no JS content key used",
   );
   const clock = (await manager.chain.human()).clockMs;
@@ -541,13 +677,13 @@ try {
   );
   assert.equal(permissionChange.status, "confirmed");
   await effectsVisible(permissionChange);
-  transactions.push({
+  await record({
     action:
       "explicitly change paired device to scoped approval without root identity rights",
     digest: permissionChange.digest,
     actualGas: permissionChange.actualGas,
   });
-  checks.push(
+  await check(
     "paired permissions change only through an explicit owner-signed organization-scoped transaction",
   );
   let beforeShareSignature: (() => Promise<void>) | null = null;
@@ -563,7 +699,7 @@ try {
   const lateSharing = new DevicePairing(
     new ChainReadSession(chainProfile),
     guardedOwner,
-    new MemoryTransactionJournal(),
+    new EvidenceJournal(),
     guardedInvoke,
   );
   const lateQuote = await lateSharing.prepareDataSharing(
@@ -578,7 +714,7 @@ try {
       client: creation.client,
       network: "localnet",
       signer: paired,
-      journal: new MemoryTransactionJournal(),
+      journal: new EvidenceJournal(),
     });
     const rotated = await rotator.submit(
       await rotator.prepare({
@@ -594,7 +730,7 @@ try {
     );
     assert.equal(rotated.status, "confirmed");
     await effectsVisible(rotated);
-    transactions.push({
+    await record({
       action:
         "rotate organization key version after share source checks, before owner native signature",
       digest: rotated.digest,
@@ -614,7 +750,7 @@ try {
   const retained = (await lateSharing.inspect(requestId)).grant!;
   assert.equal(retained.version, oldTarget.version);
   assert.deepEqual(retained.encrypted_keys, oldTarget.encrypted_keys);
-  transactions.push({
+  await record({
     action: "atomic key-version guard rejects stale data sharing",
     digest: staleShare.digest,
     actualGas: staleShare.actualGas,
@@ -625,7 +761,7 @@ try {
     (await lateSharing.query("share", requestId))!.digest,
     staleShare.digest,
   );
-  checks.push(
+  await check(
     "actual key rotation during native signing rejects stale distribution atomically at product_record::assert_key_version 9102, retaining prior envelope/version and actual failed Gas",
   );
   const revoke = await creation.deviceManager.submit(
@@ -641,7 +777,7 @@ try {
   );
   assert.equal(revoke.status, "confirmed");
   await effectsVisible(revoke);
-  transactions.push({
+  await record({
     action: "revoke paired device independently",
     digest: revoke.digest,
     actualGas: revoke.actualGas,
@@ -650,7 +786,8 @@ try {
   await assert.rejects(
     reader.read(readHeads.find((r) => r.logicalId === recordInput.logicalId)!),
   );
-  checks.push(
+  state.pairedGrantRevoked = true;
+  await check(
     "actual on-chain revocation blocks paired possession and subsequent plaintext release while owner's independent grant remains valid",
   );
   await new DeviceIdentityVerifier(
@@ -661,42 +798,43 @@ try {
   expected.fill(0);
   keyring.contentKey = "";
   keyring.historicalKeys = {};
-  const report = {
-    format: 1,
-    recordedAt: new Date().toISOString(),
-    platform: process.platform,
-    deployment: {
-      packageId: profileData.packageId,
-      registryId: profileData.registryId,
-    },
-    chain: { rpc, chainIdentifier: profileData.chainIdentifier },
-    humanId: stableHuman,
-    organizationId,
-    requestId,
-    publicPair: {
-      device: paired.device,
-      grantId: authorized.grantId,
-      fingerprint: requestState.fingerprint,
-    },
-    checks,
-    transactions,
-    limits: {
-      nativeTransport:
-        "isolated production bridge subprocess; installed UI/IPC not exercised",
-      journal: "in-memory test fixture",
-      fullV020Complete: false,
-      privateKeysInReport: false,
-    },
+  state.phase = "validated_native_pairing";
+} catch (error) {
+  runFailed = true;
+  runError = error;
+  state.phase = "failed";
+  state.failure = {
+    name: error instanceof Error ? error.name : "unknown",
+    message:
+      error instanceof Error
+        ? error.message.replace(
+            /FM1:[A-Za-z0-9:]+/g,
+            "[redacted recovery code]",
+          )
+        : "unknown failure",
   };
-  await writeFile(process.argv[3], JSON.stringify(report, null, 2) + "\n");
-  console.log(
-    JSON.stringify({
-      passed: checks.length,
-      transactions: transactions.length,
-      report: process.argv[3],
-    }),
-  );
 } finally {
-  for (const target of [profile, ...recoveryProfiles])
-    request("remove", { profile: target });
+  const cleanup: { profile: string; removed: boolean }[] = [];
+  for (const target of [profile, ...recoveryProfiles]) {
+    try {
+      assert.equal(request("remove", { profile: target }).removed, true);
+      cleanup.push({ profile: target, removed: true });
+    } catch {
+      cleanup.push({ profile: target, removed: false });
+    }
+  }
+  state.credentialCleanup = cleanup;
+  state.credentialsRemoved = cleanup.every((entry) => entry.removed);
+  complete = !runFailed && state.credentialsRemoved === true;
+  await save();
 }
+if (runFailed) throw runError;
+assert.equal(state.credentialsRemoved, true, "test credential cleanup failed");
+await save(true);
+console.log(
+  JSON.stringify({
+    passed: checks.length,
+    transactions: transactions.length,
+    report: output,
+  }),
+);
