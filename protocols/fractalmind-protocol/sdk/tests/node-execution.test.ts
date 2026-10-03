@@ -1,3 +1,4 @@
+import { withPackageOrigins } from './helpers/package-origins.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHash } from 'node:crypto';
@@ -38,7 +39,7 @@ test('budget reads use original package types after upgrade and retain full u64 
     read = true;
     return { dynamicField: { value: { type: `${original}::remote_authority::BoundBudgetTotals`, bcs: totals.serialize({ spent, reserved }).toBytes() } } };
   } };
-  const api = new NodeExecutionApi(new FractalMindClient({ packageId: '0x2', originalPackageId: original, client: { core } as unknown as ClientWithCoreApi }));
+  const api = new NodeExecutionApi(new FractalMindClient({ packageId: '0x2', originalPackageId: original, client: { core: withPackageOrigins(core, '0x2', original, ['remote_authority::BoundBudgetKey', 'remote_authority::BoundBudgetTotals']) } as unknown as ClientWithCoreApi }));
   assert.deepEqual(await api.getBudget('0x3'), { spent, reserved });
   assert.equal(read, true);
 });

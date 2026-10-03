@@ -93,12 +93,12 @@ export class NodeExecutionApi {
   /** Immutable ciphertext for the original Run; absence is never permission
    * to send or retry, and a malformed or unavailable source remains an error. */
   async getCommandDelivery(executionId: string) {
-    const parentId = normalizeSuiAddress(executionId), type = `${this.fm.typesPackageId}::node_execution::CommandDeliveryKey`;
+    const parentId = normalizeSuiAddress(executionId), type = await this.fm.coreType('node_execution', 'CommandDeliveryKey');
     const name = { type, bcs: new Uint8Array([0]) };
     const absentId = deriveDynamicFieldID(parentId, TypeTagSerializer.parseFromStr(type), name.bcs);
     try {
       const { dynamicField } = await this.fm.client.core.getDynamicField({ parentId, name });
-      if (dynamicField.value.type !== `${this.fm.typesPackageId}::node_execution::CommandDelivery`) throw new Error('Unexpected command delivery type.');
+      if (dynamicField.value.type !== await this.fm.coreType('node_execution', 'CommandDelivery')) throw new Error('Unexpected command delivery type.');
       const value = CommandDeliveryBcs.parse(dynamicField.value.bcs), body = Uint8Array.from(value.encrypted_command);
       if (BigInt(value.key_version) < 1n || BigInt(value.queued_at_ms) < 1n || body.length < 33 || body.length > 65536 || new TextDecoder().decode(body.slice(0, 4)) !== 'FME3' || bytesToHex(sha256(body)) !== bytesToHex(Uint8Array.from(value.body_hash))) throw new Error('Invalid command delivery record.');
       return value;
@@ -115,19 +115,19 @@ export class NodeExecutionApi {
     const invalid = (): never => { throw new AgentExecutionReadError('invalid_source'); };
     const readManaged = async () => {
       const { object } = await this.fm.client.core.getObject({ objectId: managedId, include: { content: true } });
-      if (object.objectId !== managedId || object.type !== `${this.fm.typesPackageId}::host::ManagedAgent` || object.owner.$kind !== 'Shared' || !object.content) invalid();
+      if (object.objectId !== managedId || object.type !== await this.fm.coreType('host', 'ManagedAgent') || object.owner.$kind !== 'Shared' || !object.content) invalid();
       const value = ManagedAgentBcs.parse(object.content!);
       if (value.id !== managedId || value.org_id !== org || value.workspace_hash.length !== 32 || BigInt(value.version) < 1n) invalid();
       return value;
     };
     const managed = await readManaged();
-    const type = `${this.fm.typesPackageId}::host::AgentExecutionIndexKey`;
+    const type = await this.fm.coreType('host', 'AgentExecutionIndexKey');
     const name = { type, bcs: ID.serialize(managedId).toBytes() };
     const absentId = deriveDynamicFieldID(org, TypeTagSerializer.parseFromStr(type), name.bcs);
     const readIndex = async () => {
       try {
         const { dynamicField } = await this.fm.client.core.getDynamicField({ parentId: org, name });
-        if (dynamicField.value.type !== `${this.fm.typesPackageId}::host::AgentExecutionIndex`) invalid();
+        if (dynamicField.value.type !== await this.fm.coreType('host', 'AgentExecutionIndex')) invalid();
         const value = AgentExecutionIndexBcs.parse(dynamicField.value.bcs);
         if (BigInt(value.revision) < 1n || BigInt(value.unsettled_control) > BigInt(value.executions.size)) invalid();
         return { value, version: dynamicField.version };
@@ -149,10 +149,10 @@ export class NodeExecutionApi {
         if (ids.has(executionId)) invalid();
         ids.add(executionId);
         const { dynamicField } = await this.fm.client.core.getDynamicField({ parentId: before.value.executions.id, name: field.name });
-        if (dynamicField.value.type !== `${this.fm.typesPackageId}::host::AgentExecutionPointer`) invalid();
+        if (dynamicField.value.type !== await this.fm.coreType('host', 'AgentExecutionPointer')) invalid();
         const pointer = AgentExecutionPointerBcs.parse(dynamicField.value.bcs);
         const { object } = await this.fm.client.core.getObject({ objectId: executionId, include: { content: true } });
-        if (object.objectId !== executionId || object.type !== `${this.fm.typesPackageId}::node_execution::CommandExecution` || object.owner.$kind !== 'Shared' || !object.content) invalid();
+        if (object.objectId !== executionId || object.type !== await this.fm.coreType('node_execution', 'CommandExecution') || object.owner.$kind !== 'Shared' || !object.content) invalid();
         const run = CommandExecutionBcs.parse(object.content!);
         const control = ['start', 'stop', 'assign', 'direct.message'].includes(run.action);
         if (!control && !['inventory', 'status', 'monitor', 'logs', 'health', 'availability'].includes(run.action)) invalid();
@@ -248,30 +248,30 @@ export class NodeExecutionApi {
     return tx;
   }
   async getBudget(capabilityId: string) {
-    const field = await this.fm.client.core.getDynamicField({ parentId: capabilityId, name: { type: `${this.fm.typesPackageId}::remote_authority::BoundBudgetKey`, bcs: new Uint8Array([0]) } });
-    if (field.dynamicField.value.type !== `${this.fm.typesPackageId}::remote_authority::BoundBudgetTotals`) throw new Error('Unexpected budget ledger type.');
+    const field = await this.fm.client.core.getDynamicField({ parentId: capabilityId, name: { type: await this.fm.coreType('remote_authority', 'BoundBudgetKey'), bcs: new Uint8Array([0]) } });
+    if (field.dynamicField.value.type !== await this.fm.coreType('remote_authority', 'BoundBudgetTotals')) throw new Error('Unexpected budget ledger type.');
     const value = BudgetTotals.parse(field.dynamicField.value.bcs);
     return { spent: BigInt(value.spent), reserved: BigInt(value.reserved) };
   }
   async getReservationBudget(capabilityId: string, intentHash: Uint8Array) {
     if (intentHash.length !== 32) throw new Error('Expected a 32-byte intent hash.');
-    const field = await this.fm.client.core.getDynamicField({ parentId: capabilityId, name: { type: `${this.fm.typesPackageId}::remote_authority::BoundBudgetClaimKey`, bcs: BudgetClaimKey.serialize({ intent_hash: Array.from(intentHash) }).toBytes() } });
-    if (field.dynamicField.value.type !== `${this.fm.typesPackageId}::remote_authority::BoundBudgetClaim`) throw new Error('Unexpected reservation ledger type.');
+    const field = await this.fm.client.core.getDynamicField({ parentId: capabilityId, name: { type: await this.fm.coreType('remote_authority', 'BoundBudgetClaimKey'), bcs: BudgetClaimKey.serialize({ intent_hash: Array.from(intentHash) }).toBytes() } });
+    if (field.dynamicField.value.type !== await this.fm.coreType('remote_authority', 'BoundBudgetClaim')) throw new Error('Unexpected reservation ledger type.');
     const value = BudgetClaim.parse(field.dynamicField.value.bcs);
     if (BigInt(value.spent_amount) > BigInt(value.reserved_amount) || (!value.settled && BigInt(value.spent_amount) !== 0n)) throw new Error('Invalid reservation budget.');
     return { reservedAmount: BigInt(value.reserved_amount), spentAmount: BigInt(value.spent_amount), settled: value.settled };
   }
   async getExecution(id: string) {
     const { object } = await this.fm.client.core.getObject({ objectId: id, include: { content: true } });
-    if (object.type !== `${this.fm.typesPackageId}::node_execution::CommandExecution` || !object.content) throw new Error('Unexpected execution object type or content.');
+    if (object.type !== await this.fm.coreType('node_execution', 'CommandExecution') || !object.content) throw new Error('Unexpected execution object type or content.');
     const value = CommandExecutionBcs.parse(object.content);
     if (value.id !== id || value.state > 5 || value.intent_hash.length !== 32) throw new Error('Invalid execution checkpoint.');
     return value;
   }
   async getResultKey(capabilityId: string, intentHash: Uint8Array, keyVersion: bigint | string | number) {
     if (intentHash.length !== 32) throw new Error('Expected a 32-byte intent hash.');
-    const field = await this.fm.client.core.getDynamicField({ parentId: capabilityId, name: { type: `${this.fm.typesPackageId}::node_execution::ResultKeyKey`, bcs: ResultKeyName.serialize({ intent_hash: Array.from(intentHash), key_version: toBigInt(keyVersion).toString() }).toBytes() } });
-    if (field.dynamicField.value.type !== `${this.fm.typesPackageId}::node_execution::ResultKeyGrant`) throw new Error('Unexpected command result key type.');
+    const field = await this.fm.client.core.getDynamicField({ parentId: capabilityId, name: { type: await this.fm.coreType('node_execution', 'ResultKeyKey'), bcs: ResultKeyName.serialize({ intent_hash: Array.from(intentHash), key_version: toBigInt(keyVersion).toString() }).toBytes() } });
+    if (field.dynamicField.value.type !== await this.fm.coreType('node_execution', 'ResultKeyGrant')) throw new Error('Unexpected command result key type.');
     const value = ResultKeyGrant.parse(field.dynamicField.value.bcs);
     if (value.key_version !== toBigInt(keyVersion).toString() || value.wrapped_key.length !== 132) throw new Error('Invalid command result key grant.');
     return value;

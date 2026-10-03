@@ -1,3 +1,4 @@
+import { withPackageOrigins } from './helpers/package-origins.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { commandDeliveryContext, commandResultKey, decryptCommandDelivery, encryptCommandDelivery } from '../src/command-result-crypto.js';
@@ -31,7 +32,7 @@ test('explicit queue preparation binds existing signed Run and chunks ciphertext
  let run=structuredClone(original),reads=0;
  const grant=bcs.struct('Key',{org_id:bcs.Address,membership_id:bcs.Address,host_address:bcs.Address,key_version:bcs.u64(),wrapped_key:bcs.vector(bcs.u8())});
  const core={getObject:async()=>({object:{objectId:run.id,type:`${id('9')}::node_execution::CommandExecution`,owner:{$kind:'Shared'},content:CommandExecutionBcs.serialize(run).toBytes()}}),getDynamicField:async()=>{reads++;return{dynamicField:{value:{type:`${id('9')}::node_execution::ResultKeyGrant`,bcs:grant.serialize({org_id:id('1'),membership_id:id('7'),host_address:id('2'),key_version:'1',wrapped_key:Array(132).fill(0)}).toBytes()}}};}};
- const api=new NodeExecutionApi(new FractalMindClient({packageId:id('a'),originalPackageId:id('9'),client:{core} as unknown as ClientWithCoreApi}));
+ const api=new NodeExecutionApi(new FractalMindClient({packageId:id('a'),originalPackageId:id('9'),client:{core:withPackageOrigins(core,id('a'),id('9'),['node_execution::CommandExecution','node_execution::ResultKeyKey','node_execution::ResultKeyGrant'])} as unknown as ClientWithCoreApi}));
  const body=new Uint8Array(20000);body.set(new TextEncoder().encode('FME3'));
  const input={executionId:id('4'),command,humanId:id('5'),grantId:id('6'),membershipId:id('7'),bindingId:id('b'),managedAgentId:id('8'),keyVersion:1n,encryptedCommand:body};
  const tx=await api.queueCommand(input);

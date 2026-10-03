@@ -27,13 +27,14 @@ export function recordContext(organizationId: string, kind: ProductRecordKind, l
 export class ProductRecordApi {
   private readonly typesPackageId: string;
   constructor(private readonly fm: FractalMindClient, typesPackageId?: string) {
-    this.typesPackageId = normalizeSuiAddress(typesPackageId ?? fm.typesPackageId);
+    this.typesPackageId = typesPackageId ? normalizeSuiAddress(typesPackageId) : '';
   }
+  private type(name: string) { return this.typesPackageId ? Promise.resolve(`${this.typesPackageId}::product_record::${name}`) : this.fm.coreType('product_record', name); }
   async getCurrent(organizationId: string, kind: ProductRecordKind, logicalId: string) {
     if (!PRODUCT_RECORD_KINDS[kind]) throw new Error('Invalid product record kind.');
-    const binding = await this.fm.client.core.getDynamicField({ parentId: organizationId, name: { type: `${this.typesPackageId}::product_record::IndexBinding`, bcs: EmptyBinding.serialize({ dummy_field: false }).toBytes() } });
+    const binding = await this.fm.client.core.getDynamicField({ parentId: organizationId, name: { type: await this.type('IndexBinding'), bcs: EmptyBinding.serialize({ dummy_field: false }).toBytes() } });
     const index = Index.parse(binding.dynamicField.value.bcs);
-    const field = await this.fm.client.core.getDynamicField({ parentId: index.records.id, name: { type: `${this.typesPackageId}::product_record::RecordKey`, bcs: Key.serialize({ kind: PRODUCT_RECORD_KINDS[kind], logical_id: logicalId }).toBytes() } });
+    const field = await this.fm.client.core.getDynamicField({ parentId: index.records.id, name: { type: await this.type('RecordKey'), bcs: Key.serialize({ kind: PRODUCT_RECORD_KINDS[kind], logical_id: logicalId }).toBytes() } });
     return Pointer.parse(field.dynamicField.value.bcs);
   }
   save(input: { organizationId: string; humanId: string; grantId: string; kind: ProductRecordKind; logicalId: string; expectedRevision: bigint | string | number; keyVersion: bigint | string | number; encryptedBody: Uint8Array; tx?: Transaction }): Transaction {
@@ -50,7 +51,7 @@ export class ProductRecordApi {
   }
   async getRecord(recordId: string) {
     const { object } = await this.fm.client.core.getObject({ objectId: recordId, include: { content: true } });
-    if (object.type !== `${this.typesPackageId}::product_record::EncryptedRecord` || !object.content || object.owner.$kind !== 'Immutable') throw new Error('Unexpected encrypted record type, content, or ownership.');
+    if (object.type !== await this.type('EncryptedRecord') || !object.content || object.owner.$kind !== 'Immutable') throw new Error('Unexpected encrypted record type, content, or ownership.');
     const record = EncryptedRecordBcs.parse(object.content);
     if (record.id !== normalizeSuiAddress(recordId)) throw new Error('Encrypted record UID mismatch.');
     return record;
@@ -110,7 +111,7 @@ export class ProductRecordApi {
     return { record, plaintext };
   }
   async listCurrent(organizationId: string, cursor?: string | null, limit = 50) {
-    const binding = await this.fm.client.core.getDynamicField({ parentId: organizationId, name: { type: `${this.typesPackageId}::product_record::IndexBinding`, bcs: EmptyBinding.serialize({ dummy_field: false }).toBytes() } });
+    const binding = await this.fm.client.core.getDynamicField({ parentId: organizationId, name: { type: await this.type('IndexBinding'), bcs: EmptyBinding.serialize({ dummy_field: false }).toBytes() } });
     const index = Index.parse(binding.dynamicField.value.bcs);
     const page = await this.fm.client.core.listDynamicFields({ parentId: index.records.id, cursor, limit });
     const records = await Promise.all(page.dynamicFields.map(async field => {

@@ -1,3 +1,4 @@
+import { withPackageOrigins } from './helpers/package-origins.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { bcs } from '@mysten/sui/bcs';
@@ -42,7 +43,7 @@ test('capability contract reads use original package types and reject spoofed or
     assert.deepEqual(request.name.bcs, new Uint8Array([0]));
     return { dynamicField: { value: { type: responseType, bcs: schema.serialize({ contract_id: id('0x20'), agreement_version: agreement, boundary_hash: boundary }).toBytes() } } };
   } };
-  const api = new OkrApi(new FractalMindClient({ packageId: id('0x99'), originalPackageId: original, client: { core } as unknown as ClientWithCoreApi }));
+  const api = new OkrApi(new FractalMindClient({ packageId: id('0x99'), originalPackageId: original, client: { core: withPackageOrigins(core, '0x99', original, ['remote_authority::ExecutionContractKey', 'remote_authority::ExecutionContractBinding']) } as unknown as ClientWithCoreApi }));
   assert.equal((await api.getCapabilityContract(capability)).agreement_version, '4');
   responseType = `${id('0x99')}::remote_authority::ExecutionContractBinding`;
   await assert.rejects(api.getCapabilityContract(capability), /type/);
@@ -50,4 +51,18 @@ test('capability contract reads use original package types and reject spoofed or
   await assert.rejects(api.getCapabilityContract(capability), /Invalid/);
   agreement = 4; boundary = [5];
   await assert.rejects(api.getCapabilityContract(capability), /Invalid/);
+});
+
+test('a lagging empty directory is unavailable, rather than a successful empty OKR list', async () => {
+  const index = bcs.struct('OkrIndex', { active_count: bcs.u64(), records: bcs.struct('Table', { id: bcs.Address, size: bcs.u64() }) });
+  const pkg = id('0x42');
+  let size = 1;
+  const core = {
+    getDynamicField: async () => ({ dynamicField: { value: { type: `${pkg}::okr::OkrIndex`, bcs: index.serialize({ active_count: 0, records: { id: id('0x50'), size } }).toBytes() } } }),
+    listDynamicFields: async () => ({ dynamicFields: [], hasNextPage: false, cursor: null }),
+  };
+  const api = new OkrApi(new FractalMindClient({ packageId: pkg, client: { core } as unknown as ClientWithCoreApi }));
+  await assert.rejects(api.listOkrs(id('0x10')), /directory is not yet complete/);
+  size = 0;
+  assert.deepEqual(await api.listOkrs(id('0x10')), { okrs: [], hasNextPage: false, cursor: null });
 });

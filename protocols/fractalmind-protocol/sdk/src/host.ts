@@ -135,7 +135,7 @@ export class HostApi {
   }
   private async content(id: string, kind: string) {
     const { object } = await this.fm.client.core.getObject({ objectId: id, include: { content: true } });
-    if (object.type !== `${this.fm.typesPackageId}::host::${kind}` || !object.content) throw new Error(`Unexpected ${kind} object type or content.`);
+    if (object.type !== await this.fm.coreType('host', kind) || !object.content) throw new Error(`Unexpected ${kind} object type or content.`);
     return object.content;
   }
   async getCoordinatorBinding(id: string) { return CoordinatorBindingBcs.parse(await this.content(id, 'CoordinatorBinding')); }
@@ -143,11 +143,11 @@ export class HostApi {
   async getMembership(id: string) { return HostMembershipBcs.parse(await this.content(id, 'HostMembership')); }
   async getManagedAgent(id: string) { return ManagedAgentBcs.parse(await this.content(id, 'ManagedAgent')); }
   async getAuthorityBinding(capabilityId: string) {
-    const field = await this.fm.client.core.getDynamicField({ parentId: capabilityId, name: { type: `${this.fm.typesPackageId}::host::AuthorityBindingKey`, bcs: new Uint8Array([0]) } });
+    const field = await this.fm.client.core.getDynamicField({ parentId: capabilityId, name: { type: await this.fm.coreType('host', 'AuthorityBindingKey'), bcs: new Uint8Array([0]) } });
     return AuthorityBindingBcs.parse(field.dynamicField.value.bcs);
   }
   async getIndex(organizationId: string) {
-    const field = await this.fm.client.core.getDynamicField({ parentId: organizationId, name: { type: `${this.fm.typesPackageId}::host::HostIndexBinding`, bcs: new Uint8Array([0]) } });
+    const field = await this.fm.client.core.getDynamicField({ parentId: organizationId, name: { type: await this.fm.coreType('host', 'HostIndexBinding'), bcs: new Uint8Array([0]) } });
     return HostIndexBcs.parse(field.dynamicField.value.bcs);
   }
   async listManagedAgents(organizationId: string, cursor?: string | null, limit = 50) {

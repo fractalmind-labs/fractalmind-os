@@ -2,6 +2,7 @@ import type { ClientWithCoreApi, SuiClientTypes } from '@mysten/sui/client';
 import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { Transaction } from '@mysten/sui/transactions';
 import { normalizeSuiAddress } from '@mysten/sui/utils';
+import { bcs } from '@mysten/sui/bcs';
 
 import type {
   Address,
@@ -24,6 +25,8 @@ export class FractalMindClient {
   public readonly directTypesPackageId: ObjectId;
   public readonly network: NetworkName;
   public readonly registryId?: ObjectId;
+  private coreOrigins?: ReadonlyMap<string, ObjectId>;
+  private coreOriginsLoading?: Promise<void>;
 
   constructor(options: FractalMindClientOptions) {
     this.packageId = normalizeSuiAddress(options.packageId);
@@ -51,6 +54,45 @@ export class FractalMindClient {
 
   newTransaction(): Transaction {
     return new Transaction();
+  }
+
+  /** A Sui upgrade preserves existing type origins, while each new datatype
+   * belongs to the version that introduced it. Read the immutable package BCS
+   * rather than assuming every type belongs to originalPackageId. */
+  async loadCoreTypeOrigins(): Promise<void> {
+    if (this.packageId === this.typesPackageId || this.coreOrigins) return;
+    if (!this.coreOriginsLoading) {
+      this.coreOriginsLoading = (async () => {
+        const { object } = await this.client.core.getObject({ objectId: this.packageId, include: { objectBcs: true } });
+        if (object.objectId !== this.packageId || object.type !== 'package' || object.owner.$kind !== 'Immutable' || !object.objectBcs) throw new Error('Missing immutable core package BCS.');
+        const envelope = bcs.Object.parse(object.objectBcs);
+        if (envelope.data.$kind !== 'Package' || envelope.owner.$kind !== 'Immutable') throw new Error('Unexpected core package envelope.');
+        const pkg = envelope.data.Package;
+        if (pkg.id !== this.packageId || pkg.version !== object.version) throw new Error('Core package ID or version mismatch.');
+        const origins = new Map<string, string>();
+        for (const type of pkg.typeOriginTable) {
+          const key = `${type.moduleName}::${type.datatypeName}`;
+          if (!/^[A-Za-z_][A-Za-z0-9_]*::[A-Za-z_][A-Za-z0-9_]*$/.test(key) || origins.has(key)) throw new Error('Invalid or duplicate core type origin.');
+          origins.set(key, normalizeSuiAddress(type.package));
+        }
+        if (origins.get('organization::Organization') !== this.typesPackageId || origins.get('organization::ProtocolRegistry') !== this.typesPackageId) throw new Error('Configured original core package does not match the actual type origins.');
+        this.coreOrigins = origins;
+      })().finally(() => { this.coreOriginsLoading = undefined; });
+    }
+    await this.coreOriginsLoading;
+  }
+
+  coreTypeTag(module: string, name: string): string {
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(module) || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) throw new Error('Invalid core datatype name.');
+    const key = `${module}::${name}`;
+    const origin = this.packageId === this.typesPackageId ? this.typesPackageId : this.coreOrigins?.get(key);
+    if (!origin) throw new Error('Core type origin is unavailable; load the actual package before deriving a type or field name.');
+    return `${origin}::${key}`;
+  }
+
+  async coreType(module: string, name: string): Promise<string> {
+    await this.loadCoreTypeOrigins();
+    return this.coreTypeTag(module, name);
   }
 
   target(entryFunction: string): string {

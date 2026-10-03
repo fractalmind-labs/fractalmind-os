@@ -1,3 +1,4 @@
+import { withPackageOrigins } from './helpers/package-origins.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { ClientWithCoreApi } from '@mysten/sui/client';
@@ -19,7 +20,7 @@ function fixture() {
     const record = records.get(input.objectId); assert.ok(record);
     return { object: { type: `${original}::product_record::EncryptedRecord`, owner: { $kind: 'Immutable' }, content: EncryptedRecordBcs.serialize(record).toBytes() } };
   } };
-  const api = new ProductRecordApi(new FractalMindClient({ packageId: '0x99', originalPackageId: original, client: { core } as unknown as ClientWithCoreApi }));
+  const api = new ProductRecordApi(new FractalMindClient({ packageId: '0x99', originalPackageId: original, client: { core: withPackageOrigins(core, '0x99', original, ['product_record::EncryptedRecord']) } as unknown as ClientWithCoreApi }));
   api.getCurrent = async () => ({ record_id: id('0x3'), revision: '3', key_version: '1' });
   return { api, records, org, fail: () => { rpcFailure = true; } };
 }

@@ -8,6 +8,13 @@
 
 以下按增量从新到旧记录；每项证明范围和当时尚未完成的事项独立保留，整体验收仍以 #40 为准。
 
+### main 原包升级、组织迁移与 SDK 类型来源修复增量
+
+- 从 GitHub 已核对的 main `5271324` 直接提取生产源码，在隔离 localnet 发布、创建旧组织／Objective／KR，再执行当前 core 的真实兼容升级。原五个对象 ID／BCS 内容保持，身份目录明确初始化于原 Registry；原组织管理员 Cap 迁入稳定 Human 表，当前设备受保护写入及只读设备 `9001` 拒绝通过。
+- SDK 改为从不可变包 BCS 按 datatype 核对实际来源，支持同一旧模块内原 `RemoteCapability` 与新预算字段混用，身份／Host／Run／正文及扩展字段读取不猜测原包地址。目录索引滞后不再被返回为成功空 OKR 列表。
+- [R8 实际升级／SDK 联测](evidence/v020-main-upgrade-localnet.json)：**13 项检查、22 笔确认交易，退出 0**；加密历史／OKR DRAFT、三包依赖、Host 邀请兑换、原 Capability 上的新 Run／结果密钥读取、显式取消／零工具结算及测试 Host 撤销通过。[R1–R7](evidence/v020-main-upgrade-prior.json)保留原结果及 R5 零广播复查，无原请求重放。
+- [回归](evidence/v020-main-upgrade-validation.json)：SDK **161/161**、App **229/229**、类型与构建通过。**仍未完成**：App／envd 混合来源完整接线及实际升级执行、公共旧部署升级／开发单包历史迁移、安装 UI／清缓存重启、真实模型、云 Host、手机。原生包尚未随 SDK 重建，完整 #40 保持未完成。详见[升级方法与证明范围](v020-main-upgrade.md)。
+
 ### 恢复后的 Host 独立撤权与原 Run 取消增量
 
 - 生产结果执行器增加预留前的只读当前授权检查，避免内容密钥轮换把撤权原因掩盖为密钥不可用；原逐执行／逐工具权限与 claim 检查保持。两轮实际恢复后，绕过 Coordinator 向生产 Host 提交同一原有效 QUEUED 状态命令，均返回 **revoked / identity generation changed**，剩余期限约 **298 秒**；Run、Capability 和零预算不变。恢复后的新设备另行签名取消原 Run，CANCELLED／claim 结算／工具 **0／0**。

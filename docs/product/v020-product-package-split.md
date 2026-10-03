@@ -24,6 +24,8 @@
 - SDK／App 配置区分 core、OKR、direct 的调用包和原始类型包。envd 区分 core 和 OKR，分块密文 helper 仍路由 core。直接消息运行时尚未接入。
 - 从 main 已有源码保留既有模块及结构；本次移动的是尚未发布到 main 的产品 OKR/handover/direct 模块。**没有验证已发布 main 的真实原地升级、混合类型来源或旧开发单包对象迁移**。
 
+后续[main 原包升级增量](v020-main-upgrade.md)已在新的隔离 localnet 部署验证真实兼容升级、原组织迁移以及 SDK 混合类型来源；本报告的原证明范围保持不变。App／envd 完整升级执行、公共部署升级及旧开发单包历史迁移仍未完成。
+
 ## 真实执行与直接权限验证
 
 [实际 OS 密钥库＋localnet＋生产 envd](evidence/v020-product-three-package-native-localnet.json)：12 项检查、29 笔 App 确认交易／费用。

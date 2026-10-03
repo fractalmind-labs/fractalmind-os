@@ -52,7 +52,7 @@ type Authorized = { humanId: string; grantId: string };
 export class IdentityApi {
   private readonly typesPackageId: string;
   constructor(private readonly fm: FractalMindClient, typesPackageId?: string) {
-    this.typesPackageId = normalizeSuiAddress(typesPackageId ?? fm.typesPackageId);
+    this.typesPackageId = typesPackageId ? normalizeSuiAddress(typesPackageId) : '';
   }
   private call(name: string, tx: Transaction, args: Parameters<Transaction['moveCall']>[0]['arguments']): Transaction {
     tx.moveCall({ target: `${this.fm.packageId}::identity::${name}`, arguments: args });
@@ -147,7 +147,8 @@ export class IdentityApi {
   }
   private async content(objectId: string, kind: string): Promise<Uint8Array> {
     const { object } = await this.fm.client.core.getObject({ objectId, include: { content: true } });
-    if (object.type !== `${this.typesPackageId}::identity::${kind}` || !object.content) throw new Error(`Unexpected ${kind} object type or missing BCS content.`);
+    const expected = this.typesPackageId ? `${this.typesPackageId}::identity::${kind}` : await this.fm.coreType('identity', kind);
+    if (object.type !== expected || !object.content) throw new Error(`Unexpected ${kind} object type or missing BCS content.`);
     return object.content;
   }
   async getHuman(humanId: string) { return HumanIdentityBcs.parse(await this.content(humanId, 'HumanIdentity')); }
@@ -157,7 +158,8 @@ export class IdentityApi {
   async getRegistry(registryId: string) { return IdentityRegistryBcs.parse(await this.content(registryId, 'IdentityRegistry')); }
   async resolveRegistry(protocolRegistryId?: string): Promise<string> {
     const protocolId = this.fm.resolveRegistryId(protocolRegistryId);
-    const response = await this.fm.client.core.getDynamicField({ parentId: protocolId, name: { type: `${this.typesPackageId}::identity::RegistryBinding`, bcs: RegistryBindingBcs.serialize({ dummy_field: false }).toBytes() } });
+    const type = this.typesPackageId ? `${this.typesPackageId}::identity::RegistryBinding` : await this.fm.coreType('identity', 'RegistryBinding');
+    const response = await this.fm.client.core.getDynamicField({ parentId: protocolId, name: { type, bcs: RegistryBindingBcs.serialize({ dummy_field: false }).toBytes() } });
     const id = ID.parse(response.dynamicField.value.bcs);
     const registry = await this.getRegistry(id);
     if (registry.protocol_registry !== protocolId) throw new Error('Identity registry does not belong to the configured protocol registry.');

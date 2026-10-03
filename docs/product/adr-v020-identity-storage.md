@@ -18,7 +18,9 @@ HumanIdentity 是共享链上对象，ID 不随设备、钱包或恢复码更换
 
 cap 不通过 public 函数借出。每个新受保护业务入口必须先检查指定 DeviceGrant 动作，再在 package 内调用相应旧能力。不能把统一 cap 暴露给“只通过某一个动作检查”的调用方，否则会扩大授权。
 
-已绑定 Human 的组织，不能直接套用仍要求 sender == Organization.admin 的旧业务入口。OKR、邀请、审批、运行授权等入口会随各 Issue 接入，当前未完成全量入口迁移。SDK 的 packageId 用于调用，originalPackageId 用于升级包的类型与动态字段地址。
+已绑定 Human 的组织，不能直接套用仍要求 sender == Organization.admin 的旧业务入口。OKR、邀请、审批、运行授权等入口会随各 Issue 接入，当前未完成全量入口迁移。SDK 的 packageId 用于调用，originalPackageId 标识原 core 发布；具体类型与动态字段地址由链上类型来源表核对。
+
+升级验证补充：`originalPackageId` 标识原 core 发布，不能作为所有新增 datatype 的来源。SDK 从精确调用包的不可变 BCS 类型来源表按类型解析，原 `RemoteCapability` 与同模块新增预算类型可以有不同定义地址。main 原包的真实 localnet 兼容升级、原管理员 Cap 迁入 Human、身份目录初始化和 SDK 混合读取已通过；App／envd 完整升级执行及公共部署升级尚未验收，见[实际升级证据](v020-main-upgrade.md)。
 
 ## 2. 一份恢复码
 

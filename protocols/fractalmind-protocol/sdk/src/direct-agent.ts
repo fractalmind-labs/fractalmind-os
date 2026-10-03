@@ -604,7 +604,7 @@ export class DirectAgentApi {
     if (
       object.objectId !== expectedId ||
       object.type !==
-        `${module === "direct_agent" ? this.fm.directTypesPackageId : this.fm.typesPackageId}::${module}::${name}` ||
+        (module === "direct_agent" ? `${this.fm.directTypesPackageId}::${module}::${name}` : await this.fm.coreType(module, name)) ||
       object.owner.$kind !== owner ||
       !object.content
     )
@@ -699,7 +699,7 @@ export class DirectAgentApi {
     const org = normalizeSuiAddress(organizationId),
       managed = normalizeSuiAddress(managedAgentId),
       name = {
-        type: `${this.fm.typesPackageId}::execution_extension::IndexKey`,
+        type: await this.fm.coreType('execution_extension', 'IndexKey'),
         bcs: new Uint8Array([0]),
       };
     let index: ReturnType<typeof PermissionIndex.parse>;
@@ -707,7 +707,7 @@ export class DirectAgentApi {
       index = PermissionIndex.parse(
         await this.field(
           org,
-          `${this.fm.typesPackageId}::execution_extension::PermissionIndex`,
+          await this.fm.coreType('execution_extension', 'PermissionIndex'),
           name,
         ),
       );
@@ -794,9 +794,9 @@ export class DirectAgentApi {
     if (workspaceHash.length !== 32)
       throw new Error("Workspace hash required.");
     const org = normalizeSuiAddress(organizationId),
-      module = `${this.fm.typesPackageId}::execution_extension`,
+      stateType = await this.fm.coreType('execution_extension', 'ActiveAssignments'),
       name = {
-        type: `${module}::ActiveAssignmentsKey`,
+        type: await this.fm.coreType('execution_extension', 'ActiveAssignmentsKey'),
         bcs: new Uint8Array([0]),
       };
     const Entries = bcs.struct("ActiveAssignments", {
@@ -805,7 +805,7 @@ export class DirectAgentApi {
       agents: Table,
       workspaces: Table,
     });
-    const read = () => this.field(org, `${module}::ActiveAssignments`, name);
+    const read = () => this.field(org, stateType, name);
     let original: Uint8Array;
     try {
       original = await read();
@@ -845,7 +845,7 @@ export class DirectAgentApi {
         bcs: ID.serialize(normalizeSuiAddress(managedAgentId)).toBytes(),
       }),
       count(entries.workspaces.id, {
-        type: `${module}::WorkspaceKey`,
+        type: await this.fm.coreType('execution_extension', 'WorkspaceKey'),
         bcs: Workspace.serialize({
           host_address: normalizeSuiAddress(hostAddress),
           workspace_hash: workspaceHash,
@@ -907,7 +907,7 @@ export class DirectAgentApi {
     const module = `${this.fm.directTypesPackageId}::direct_agent`;
     return PermissionBinding.parse(
       await this.field(capabilityId, `${module}::PermissionCapability`, {
-        type: `${this.fm.typesPackageId}::execution_extension::FieldKey<${module}::Witness>`,
+        type: `${await this.fm.coreType('execution_extension', 'FieldKey')}<${module}::Witness>`,
         bcs: Bytes.serialize(
           Array.from(new TextEncoder().encode("permission")),
         ).toBytes(),
@@ -920,7 +920,7 @@ export class DirectAgentApi {
     const module = `${this.fm.directTypesPackageId}::direct_agent`;
     return CommandBinding.parse(
       await this.field(capabilityId, `${module}::DirectCommandBinding`, {
-        type: `${this.fm.typesPackageId}::execution_extension::FieldKey<${module}::Witness>`,
+        type: `${await this.fm.coreType('execution_extension', 'FieldKey')}<${module}::Witness>`,
         bcs: Bytes.serialize(Array.from(intentHash)).toBytes(),
       }),
     );
@@ -1004,7 +1004,7 @@ export class DirectAgentApi {
   }
   /** Exact absence is distinct from a corrupt index or network failure. */
   isMissingPermissionIndex(error: unknown, organizationId: string) {
-    const type = `${this.fm.typesPackageId}::execution_extension::IndexKey`;
+    const type = this.fm.coreTypeTag('execution_extension', 'IndexKey');
     const expected = deriveDynamicFieldID(
       normalizeSuiAddress(organizationId),
       TypeTagSerializer.parseFromStr(type),
@@ -1084,7 +1084,7 @@ export class DirectAgentApi {
       member.coordinator_binding !== normalizeSuiAddress(authority.bindingId) ||
       cap.objectId !== command.capability.id ||
       cap.type !==
-        `${this.fm.typesPackageId}::remote_authority::RemoteCapability` ||
+        await this.fm.coreType('remote_authority', 'RemoteCapability') ||
       cap.orgId !== p.org_id ||
       cap.targetKind !== 3 ||
       cap.nodeId !== command.target.node_id ||

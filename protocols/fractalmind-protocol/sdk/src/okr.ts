@@ -113,8 +113,8 @@ export class OkrApi {
     return value;
   }
   async getCapabilityContract(capabilityId: string) {
-    const field = await this.fm.client.core.getDynamicField({ parentId: capabilityId, name: { type: `${this.fm.typesPackageId}::remote_authority::ExecutionContractKey`, bcs: new Uint8Array([0]) } });
-    if (field.dynamicField.value.type !== `${this.fm.typesPackageId}::remote_authority::ExecutionContractBinding`) throw new Error('Unexpected capability contract type.');
+    const field = await this.fm.client.core.getDynamicField({ parentId: capabilityId, name: { type: await this.fm.coreType('remote_authority', 'ExecutionContractKey'), bcs: new Uint8Array([0]) } });
+    if (field.dynamicField.value.type !== await this.fm.coreType('remote_authority', 'ExecutionContractBinding')) throw new Error('Unexpected capability contract type.');
     const value = CapabilityContract.parse(field.dynamicField.value.bcs);
     if (value.agreement_version === '0' || value.boundary_hash.length !== 32) throw new Error('Invalid capability contract.');
     return value;
@@ -138,8 +138,8 @@ export class OkrApi {
       if (pointer.dynamicField.value.type !== `${this.fm.okrTypesPackageId}::okr::BudgetClaim`) throw new Error('Unexpected OKR claim type.');
       const claim = Claim.parse(pointer.dynamicField.value.bcs);
       const run = await reader.getExecution(executionId);
-      const binding = await this.fm.client.core.getDynamicField({ parentId: run.capability_id, name: { type: `${this.fm.typesPackageId}::remote_authority::CommandContractKey`, bcs: CommandContractKey.serialize({ intent_hash: run.intent_hash }).toBytes() } });
-      if (binding.dynamicField.value.type !== `${this.fm.typesPackageId}::remote_authority::CommandContractBinding`) throw new Error('Unexpected execution contract type.');
+      const binding = await this.fm.client.core.getDynamicField({ parentId: run.capability_id, name: { type: await this.fm.coreType('remote_authority', 'CommandContractKey'), bcs: CommandContractKey.serialize({ intent_hash: run.intent_hash }).toBytes() } });
+      if (binding.dynamicField.value.type !== await this.fm.coreType('remote_authority', 'CommandContractBinding')) throw new Error('Unexpected execution contract type.');
       const contract = CommandContract.parse(binding.dynamicField.value.bcs);
       const localClaim = await reader.getReservationBudget(run.capability_id, Uint8Array.from(run.intent_hash));
       if (localClaim.reservedAmount !== BigInt(claim.reserved) || localClaim.spentAmount !== BigInt(claim.spent) || localClaim.settled !== claim.settled) throw new Error('OKR and capability budget claims differ.');
@@ -159,13 +159,14 @@ export class OkrApi {
   indexName() {
     return this.fm.okrTypesPackageId === this.fm.typesPackageId
       ? { type: `${this.fm.okrTypesPackageId}::okr::IndexKey`, bcs: new Uint8Array([0]) }
-      : { type: `${this.fm.typesPackageId}::execution_extension::FieldKey<${this.fm.okrTypesPackageId}::okr::Witness>`, bcs: Bytes.serialize(Array.from(new TextEncoder().encode('okr-index'))).toBytes() };
+      : { type: `${this.fm.coreTypeTag('execution_extension', 'FieldKey')}<${this.fm.okrTypesPackageId}::okr::Witness>`, bcs: Bytes.serialize(Array.from(new TextEncoder().encode('okr-index'))).toBytes() };
   }
   isMissingIndex(error: unknown, organizationId: string) {
     const name = this.indexName(), expected = deriveDynamicFieldID(normalizeSuiAddress(organizationId), TypeTagSerializer.parseFromStr(name.type), name.bcs);
     return Boolean(error && typeof error === 'object' && 'reason' in error && error.reason === 'notFound' && 'objectId' in error && error.objectId === expected);
   }
   async getIndex(organizationId: string) {
+    await this.fm.loadCoreTypeOrigins();
     const field = await this.fm.client.core.getDynamicField({ parentId: organizationId, name: this.indexName() });
     if (field.dynamicField.value.type !== `${this.fm.okrTypesPackageId}::okr::OkrIndex`) throw new Error('Unexpected OKR index source.');
     const value = Index.parse(field.dynamicField.value.bcs);
@@ -190,6 +191,7 @@ export class OkrApi {
     const index = await this.getIndex(organizationId);
     const page = await this.fm.client.core.listDynamicFields({ parentId: index.records.id, cursor, limit });
     if (page.hasNextPage && (!page.cursor || page.cursor === cursor)) throw new Error('Invalid OKR page cursor.');
+    if (!cursor && !page.hasNextPage && BigInt(page.dynamicFields.length) !== BigInt(index.records.size)) throw new Error('OKR directory is not yet complete; retry the read.');
     const okrs = await Promise.all(page.dynamicFields.map(async field => {
       const pointer = await this.fm.client.core.getDynamicField({ parentId: index.records.id, name: field.name });
       const okr = await this.getOkr(Pointer.parse(pointer.dynamicField.value.bcs).id);

@@ -1,3 +1,4 @@
+import { withPackageOrigins } from './helpers/package-origins.js';
 import assert from "node:assert/strict";
 import test from "node:test";
 import { bcs, TypeTagSerializer } from "@mysten/sui/bcs";
@@ -231,7 +232,7 @@ function fixture(states: number[], action = "assign") {
     new FractalMindClient({
       packageId: id(90),
       originalPackageId: pkg,
-      client: { core } as unknown as ClientWithCoreApi,
+      client: { core: withPackageOrigins(core, id(90), pkg, ['host::ManagedAgent', 'host::AgentExecutionIndexKey', 'host::AgentExecutionIndex', 'host::AgentExecutionPointer', 'node_execution::CommandExecution', 'remote_authority::BoundBudgetClaimKey', 'remote_authority::BoundBudgetClaim']) } as unknown as ClientWithCoreApi,
     }),
   );
   return {
