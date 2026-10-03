@@ -61,3 +61,15 @@ test('unknown result cannot request settlement with nonzero cost', () => {
   const api = new NodeExecutionApi(new FractalMindClient({ packageId: '0x2' }));
   assert.throws(() => api.finishCommand({ executionId: '0x3', capabilityId: '0x4', organizationId: '0x5', finalState: 4, expectedCursor: 2n, spentAmount: 7n, keyVersion: 1n, encryptedResult: new Uint8Array(32) }), /Unknown execution/);
 });
+
+test('scheduled preparation uses a separate OKR entry and rejects non-OKR commands', async () => {
+  const command=await signNodeCommand(Ed25519Keypair.generate(),{target:{organizationId:'0x2',nodeId:'0x3',agentId:'native-file'},action:'assign',scope:'control',capability:{id:'0x4',revocationVersion:1n},payload:{okr:{id:`0x${'5'.padStart(64,'0')}`,agreement_version:'1',kr_index:'1'}},budget:{asset:'TOOL_CALLS',amount:3n}});
+  const api=new NodeExecutionApi(new FractalMindClient({packageId:'0x2',okrPackageId:'0x6'}));
+  const input={humanId:'0x7',grantId:'0x8',membershipId:'0x9',bindingId:'0xa',managedAgentId:'0xb',command};
+  const scheduled=await api.prepareCommand({...input,scheduled:true});
+  assert.equal(scheduled.getData().commands[0].MoveCall?.function,'prepare_scheduled_command_v2');
+  const normal=await api.prepareCommand(input);
+  assert.equal(normal.getData().commands[0].MoveCall?.function,'prepare_command_v2');
+  const status=await signNodeCommand(Ed25519Keypair.generate(),{target:{organizationId:'0x2',nodeId:'0x3',agentId:'native-file'},action:'status',scope:'observation',capability:{id:'0x4',revocationVersion:1n},payload:{}});
+  await assert.rejects(api.prepareCommand({...input,command:status,scheduled:true}),/Scheduled preparation/);
+});

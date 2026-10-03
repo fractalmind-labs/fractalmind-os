@@ -171,11 +171,11 @@ export class NodeExecutionApi {
       throw new AgentExecutionReadError('invalid_source', `directory size ${before.value.executions.size}, read ${executions.length}; unsettled ${before.value.unsettled_control}, read ${unsettledControl}`);
     return { managed, revision: before.value.revision, executions, unsettledControl };
   }
-  async prepareCommand(input: Authority & { command: SignedNodeCommand; resultKey?: CommandResultKeyInput; tx?: Transaction }) {
+  async prepareCommand(input: Authority & { command: SignedNodeCommand; resultKey?: CommandResultKeyInput; scheduled?: boolean; tx?: Transaction }) {
     // Snapshot mutable caller data before signature and membership reads.
     const command = structuredClone(input.command),
       resultKey = input.resultKey ? structuredClone(input.resultKey) : undefined,
-      authority = { humanId: input.humanId, grantId: input.grantId, membershipId: input.membershipId, bindingId: input.bindingId, managedAgentId: input.managedAgentId };
+      authority = { humanId: input.humanId, grantId: input.grantId, membershipId: input.membershipId, bindingId: input.bindingId, managedAgentId: input.managedAgentId }, scheduled = input.scheduled === true;
     try {
       await verifySignedNodeCommand(command);
       if (Boolean(command.target.agent_id) !== Boolean(authority.managedAgentId)) throw new Error('Managed instance authority must match the command target.');
@@ -187,6 +187,7 @@ export class NodeExecutionApi {
       if ('okr' in (command.payload ?? {})) {
         if (!contract || !authority.managedAgentId || typeof contract.id !== 'string' || typeof contract.agreement_version !== 'string' || typeof contract.kr_index !== 'string' || normalizeSuiAddress(contract.id) !== contract.id || !/^[1-9][0-9]*$/.test(contract.agreement_version) || !/^[0-2]$/.test(contract.kr_index)) throw new Error('Invalid signed OKR context.');
       }
+      if (scheduled && (!contract || command.action !== 'assign' || command.scope !== 'control' || direct)) throw new Error('Scheduled preparation requires an exact signed OKR assignment.');
       if (resultKey) {
         const member = await new HostApi(this.fm).getMembership(authority.membershipId);
         if (member.id !== normalizeSuiAddress(authority.membershipId) || member.org_id !== normalizeSuiAddress(command.target.organization_id) || member.host_address !== normalizeSuiAddress(command.target.node_id) || member.revoked || member.coordinator_binding !== normalizeSuiAddress(authority.bindingId)) throw new Error('Host membership does not match command key recipient.');
@@ -222,7 +223,7 @@ export class NodeExecutionApi {
       if (contract) args.push(tx.pure.u64(toBigInt(contract.agreement_version)), tx.pure.u64(toBigInt(contract.kr_index)));
       args.push(tx.pure.string(command.action), tx.pure.string(command.scope), tx.pure.string(command.command_id), tx.pure.string(command.nonce), tx.pure.string(command.idempotency_key), tx.pure.string(command.budget?.asset ?? ''), tx.pure.u64(toBigInt(command.budget?.amount ?? 0)), tx.pure.vector('u8', nodeCommandIntentHash(command)), tx.pure.u64(command.issued_at_ms), tx.pure.u64(command.expires_at_ms), tx.object('0x6'));
       if (contract) args.unshift(tx.object(contract.id));
-      tx.moveCall({ target: contract ? `${this.fm.okrPackageId}::okr::prepare_command_v2` : `${this.fm.packageId}::node_execution::prepare_${authority.managedAgentId ? 'agent_command_v2' : 'host_command'}`, arguments: args });
+      tx.moveCall({ target: contract ? `${this.fm.okrPackageId}::okr::${scheduled ? 'prepare_scheduled_command_v2' : 'prepare_command_v2'}` : `${this.fm.packageId}::node_execution::prepare_${authority.managedAgentId ? 'agent_command_v2' : 'host_command'}`, arguments: args });
       return tx;
     } finally { resultKey?.organizationKey?.fill(0); }
   }

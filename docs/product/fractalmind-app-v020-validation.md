@@ -6,6 +6,14 @@
 
 ## 当前验证证据
 
+以下按增量从新到旧记录；每项证明范围和当时尚未完成的事项独立保留，整体验收仍以 #40 为准。
+
+### 后续 KR 提前授权与原链上状态恢复增量
+
+- 工作台接通剩余 KR 的逐笔权限／准备／链上投递费用审阅；Host 只在独立 Human 验证推进游标后执行原预授权命令，不取得 Human 权限。全部预留计入同一 OKR 上限，最终验收要求预留为零；原 **5 分钟**命令期限仍保持。
+- [R3 实际 OS＋localnet＋生产 envd](evidence/v020-scheduled-okr-delivery-localnet.json)：**17 项检查、19 笔 App 确认交易**。未来 KR 先排队，原执行控制器关闭后 Host 从 Sui 顺序完成两 KR，Coordinator 派发 **0 次**；独立 Human 验证及最终验收通过，工具预算 **6 已用／0 预留**。历史裁剪使原回执查询保持 unknown，空技术 journal 的新原生控制器仍从 Sui 恢复原票据／成功 Run／投递，无新增费用或派发。[R1／R2 原结果与只读复查](evidence/v020-scheduled-okr-delivery-prior.json)单独保留；R2 未最终验收，无原请求重放。
+- [回归](evidence/v020-scheduled-okr-delivery-unit.json)：App **218/218**、SDK **158/158**、OKR Move **13/13**、Go 三包 race、构建／类型通过；[三包新部署](evidence/v020-scheduled-okr-delivery-deployment.json)保持标准 validator 限制。**仍未完成**：安装后 UI／IndexedDB、实际 App 窗口关闭／物理 Host 重启、长时间自主推进、真实模型、云 Host、手机、完整恢复及 main 旧包升级。详见[能力与证明范围](v020-scheduled-okr-delivery.md)。完整 #40 保持未完成。
+
 ### 原命令通过 Sui 独立投递到 Host 增量
 
 - 正式 App 在原 Run 准备后支持另行确认费用、原生加密与签名，将原命令固定到链上 Host 队列；生产 Host 开启 `runtime.chain_queue` 后独立读取 Sui，沿同一 Executor 与原权限／预算／期限执行。已发布命令不补发 Coordinator；取消费用在签名／广播之前保持原排队状态，再次发布须用户明确确认。后续 KR 授权与 Human 验收仍独立。

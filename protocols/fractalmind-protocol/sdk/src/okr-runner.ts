@@ -17,6 +17,9 @@ export type OkrRunnerStepInput = {
   /** Pin the exact queued Run reviewed by a caller. A changed cursor must not
    * release another KR's ticket after an asynchronous confirmation. */
   expectedExecutionId?: string; expectedAgreementVersion?: string; expectedKrIndex?: string;
+  /** Explicitly prepare a remaining approved KR without changing the actual
+   * execution cursor. Requires prepareOnly; it can never deliver early. */
+  scheduledKrIndex?: string;
 };
 export type OkrRunnerState = {
   status: 'idle' | 'paused' | 'awaiting_approval' | 'queued' | 'running' | 'awaiting_confirmation' | 'awaiting_verification' | 'awaiting_acceptance' | 'achieved' | 'blocked';
@@ -29,7 +32,7 @@ export type OkrRunnerTicketContext = { organizationId: string; logicalId: string
 export type OkrRunnerCrypto = {
   decrypt(record: OkrRunnerRecord): Promise<Uint8Array>;
   encrypt(plaintext: Uint8Array, context: OkrRunnerTicketContext): Promise<Uint8Array>;
-  prepareCommand(input: { command: SignedNodeCommand; membershipId: string; bindingId: string; managedAgentId: string; keyVersion: string; tx: Transaction }): Promise<Transaction>;
+  prepareCommand(input: { command: SignedNodeCommand; membershipId: string; bindingId: string; managedAgentId: string; keyVersion: string; scheduled?: boolean; tx: Transaction }): Promise<Transaction>;
 };
 export type OkrRunnerOptions = {
   sdk: FractalMindSDK; organizationId: string; humanId: string; grantId: string;
@@ -98,7 +101,7 @@ export function okrRunnerTicketName(okrId: string, agreement: string, kr: string
  * Fresh runners restore/query by default; enabling a new ticket or releasing
  * a recovered queued ticket is an explicit caller action. */
 export class NativeFileOkrRunner {
-  private readonly flights = new Map<string, Promise<OkrRunnerState>>();
+  private readonly flights = new Map<string, { pin: string; result: Promise<OkrRunnerState> }>();
   private readonly unknownSubmissions = new Map<string, { digest?: string; confirmed?: boolean }>();
   constructor(private readonly options: OkrRunnerOptions) {
     if (Boolean(options.crypto) === Boolean(options.keyForVersion)) throw new Error('Choose exactly one runner crypto provider.');
@@ -116,9 +119,14 @@ export class NativeFileOkrRunner {
 
   step(input: OkrRunnerStepInput): Promise<OkrRunnerState> {
     const key = normalizeSuiAddress(input.okrId);
-    const running = this.flights.get(key); if (running) return running;
-    const flight = this.advance({ ...input, okrId: key }).finally(() => this.flights.delete(key));
-    this.flights.set(key, flight); return flight;
+    const snapshot = { ...input, okrId: key }, pin = JSON.stringify(snapshot);
+    const running = this.flights.get(key);
+    if (running) {
+      if (running.pin !== pin) return Promise.reject(new Error('A different original runner operation is already pending.'));
+      return running.result;
+    }
+    const flight = this.advance(snapshot).finally(() => this.flights.delete(key));
+    this.flights.set(key, { pin, result: flight }); return flight;
   }
   private async directory(logicalId: string): Promise<Directory> {
     if (this.options.discoverTicket) return this.options.discoverTicket(logicalId);
@@ -207,10 +215,14 @@ export class NativeFileOkrRunner {
   }
   private async advance(input: OkrRunnerStepInput): Promise<OkrRunnerState> {
     const { sdk } = this.options;
-    const okr = await sdk.okr.getOkr(input.okrId);
+    let okr = await sdk.okr.getOkr(input.okrId);
     if (okr.org_id !== normalizeSuiAddress(this.options.organizationId)) throw new Error('Runner organization mismatch.');
+    const currentKrIndex = okr.next_kr, scheduled = input.scheduledKrIndex !== undefined;
+    if (scheduled && (!input.prepareOnly || input.releaseQueued || !/^[0-2]$/.test(input.scheduledKrIndex!) || BigInt(input.scheduledKrIndex!) < BigInt(currentKrIndex) || Number(input.scheduledKrIndex) >= okr.metrics.length))
+      return { okrId: okr.id, krIndex: currentKrIndex, status: 'paused', reason: 'invalid_scheduled_preparation' };
     if (input.expectedAgreementVersion !== undefined && input.expectedAgreementVersion !== okr.agreement_version || input.expectedKrIndex !== undefined && input.expectedKrIndex !== okr.next_kr)
       return { okrId: okr.id, krIndex: okr.next_kr, status: 'paused', reason: 'reviewed_execution_context_changed' };
+    if (scheduled) okr = { ...okr, next_kr: input.scheduledKrIndex! };
     const lifecycle = this.lifecycle(okr); if (lifecycle) return lifecycle;
     const base = { okrId: okr.id, krIndex: okr.next_kr };
     const name = okrRunnerTicketName(okr.id, okr.agreement_version, okr.next_kr);
@@ -260,7 +272,7 @@ export class NativeFileOkrRunner {
       if (expires <= BigInt(now)) return { ...base, status: 'awaiting_approval', reason: 'execution_authority_expired' };
       const command = await signNodeCommand(this.options.signer, { target: { organizationId: okr.org_id, nodeId: member.host_address, agentId: managed.instance_id }, action: 'assign', scope: 'control', capability: { id: capability.objectId, revocationVersion: capability.revocationVersion }, budget: { asset: 'TOOL_CALLS', amount: BigInt(kr.maxCalls) }, issuedAtMs: now, expiresAtMs: Number(expires), payload: { handover_continue: continuation, okr: { id: okr.id, agreement_version: okr.agreement_version, kr_index: okr.next_kr }, measurement: { kind: 'verified_text_file_count' }, bounds: { paths: plan.paths, max_calls: kr.maxCalls }, task: JSON.stringify({ kind: 'ensure_text_files', files: kr.files }) } });
       const latest = await sdk.okr.getOkr(okr.id);
-      if (latest.state !== 1 || latest.version !== okr.version || latest.agreement_version !== okr.agreement_version || latest.agreement_record !== okr.agreement_record || latest.next_kr !== okr.next_kr) return { ...base, status: 'paused', reason: 'agreement_changed_during_planning' };
+      if (latest.state !== 1 || latest.version !== okr.version || latest.agreement_version !== okr.agreement_version || latest.agreement_record !== okr.agreement_record || latest.next_kr !== currentKrIndex) return { ...base, status: 'paused', reason: 'agreement_changed_during_planning' };
       if (JSON.stringify(await sdk.handover.getPolicy(okr.id)) !== JSON.stringify(policy)) return { ...base, status: 'paused', reason: 'reviewed_policy_changed_during_signing' };
       const key = this.options.crypto ? undefined : new Uint8Array(await this.options.keyForVersion(directory.keyVersion));
       try {
@@ -272,9 +284,9 @@ export class NativeFileOkrRunner {
           : await encryptContent(plaintext, key!, recordContext(okr.org_id, 'checkpoint', name, 1n, directory.keyVersion)); } finally { plaintext.fill(0); }
         const tx = sdk.productRecord.save({ organizationId: okr.org_id, humanId: this.options.humanId, grantId: this.options.grantId, kind: 'checkpoint', logicalId: name, expectedRevision: 0n, keyVersion: directory.keyVersion, encryptedBody: ciphertext });
         if (this.options.crypto) {
-          const prepared = await this.options.crypto.prepareCommand({ membershipId: member.id, bindingId: member.coordinator_binding, managedAgentId: managed.id, command, keyVersion: directory.keyVersion, tx });
+          const prepared = await this.options.crypto.prepareCommand({ membershipId: member.id, bindingId: member.coordinator_binding, managedAgentId: managed.id, command, keyVersion: directory.keyVersion, scheduled, tx });
           if (prepared !== tx) throw new Error('Runner command preparation must preserve the atomic ticket transaction.');
-        } else await sdk.nodeExecution.prepareCommand({ humanId: this.options.humanId, grantId: this.options.grantId, membershipId: member.id, bindingId: member.coordinator_binding, managedAgentId: managed.id, command, resultKey: { organizationKey: key!, keyVersion: directory.keyVersion }, tx });
+        } else await sdk.nodeExecution.prepareCommand({ humanId: this.options.humanId, grantId: this.options.grantId, membershipId: member.id, bindingId: member.coordinator_binding, managedAgentId: managed.id, command, resultKey: { organizationKey: key!, keyVersion: directory.keyVersion }, scheduled, tx });
         newFingerprint = bytesToHex(nodeCommandIntentHash(command));
         this.unknownSubmissions.set(name, {});
         try { submission = await this.options.submit(tx, { requestId: name }); } catch { submission = { status: 'unknown' }; }

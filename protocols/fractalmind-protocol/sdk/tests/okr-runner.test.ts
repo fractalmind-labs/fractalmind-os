@@ -18,13 +18,13 @@ const plan = { format: 1, paths, krs: [{ files: [{ path: 'README.md', content: '
 /** Mock only chain transport/state transitions. Encryption, record AAD,
  * Ed25519 signatures and ticket builders use production SDK code. Move and
  * actual Host execution are covered by the separate localnet acceptance. */
-async function fixture() {
+async function fixture(nativePlan = plan) {
   const org = id('0x10'), human = id('0x11'), grant = id('0x12'), memberId = id('0x13'), managedId = id('0x14');
   const device = Ed25519Keypair.generate(), host = Ed25519Keypair.generate();
   const key = crypto.getRandomValues(new Uint8Array(32));
   const sdk = new FractalMindSDK({ packageId: id('0x42'), client: { core: {} } as unknown as ClientWithCoreApi });
   const metric = { baseline: '0', target: '1', weight: '1', max_age_ms: '1000', current: null as string | null, sampled_at_ms: '0', run_id: null as string | null, evidence_id: null as string | null, verified: false, verification_id: null };
-  const okr = { id: id('0x20'), org_id: org, owner_human: human, logical_id: 'file-goal', state: 1, version: '2', agreement_version: '1', priority: 0, deadline_ms: '900000', spec_record: id('0x21'), spec_revision: '1', metrics: [metric], next_kr: '0', observations: { id: id('0x22'), size: '0' }, managed_agent: managedId, managed_version: '1', membership_id: memberId, membership_version: '1', workspace_hash: new Array(32).fill(7), boundary_hash: Array.from(executionBoundaryHash(paths)), budget_asset: 'TOOL_CALLS', budget_limit: '10', expires_at_ms: '500000', activated_at_ms: '90000', agreement_record: id('0x23'), acceptance_record: null, accepted_by_human: null, accepted_at_ms: '0' };
+  const okr = { id: id('0x20'), org_id: org, owner_human: human, logical_id: 'file-goal', state: 1, version: '2', agreement_version: '1', priority: 0, deadline_ms: '900000', spec_record: id('0x21'), spec_revision: '1', metrics: nativePlan.krs.map((_, i) => i === 0 ? metric : {...metric}), next_kr: '0', observations: { id: id('0x22'), size: '0' }, managed_agent: managedId, managed_version: '1', membership_id: memberId, membership_version: '1', workspace_hash: new Array(32).fill(7), boundary_hash: Array.from(executionBoundaryHash(paths)), budget_asset: 'TOOL_CALLS', budget_limit: '10', expires_at_ms: '500000', activated_at_ms: '90000', agreement_record: id('0x23'), acceptance_record: null, accepted_by_human: null, accepted_at_ms: '0' };
   const managed = { id: managedId, org_id: org, membership_id: memberId, host_address: host.toSuiAddress(), instance_id: 'native-file-agent', runtime: 'bounded-process-v1', workspace_hash: okr.workspace_hash, control_confirmed: true, confirmed_by_human: human, confirmed_by_device: device.toSuiAddress(), version: '1', revoked: false, imported_at_ms: '80000' };
   const member = { id: memberId, org_id: org, host_address: host.toSuiAddress(), host_public_key: Array.from(host.getPublicKey().toRawBytes()), encryption_public_key: new Array(32).fill(1), name: 'test', coordinator_binding: id('0x15'), version: '1', revoked: false, expires_at_ms: '800000', joined_at_ms: '80000', source_invite: id('0x16'), observation_capability: id('0x17') };
   const capability = { objectId: id('0x30'), type: `${sdk.client.typesPackageId}::remote_authority::RemoteCapability`, schemaVersion: 1, orgId: org, issuer: device.toSuiAddress(), delegate: device.toSuiAddress(), parentId: null, parentRevocationVersion: 0n, reservationScope: 'node' as const, targetKind: 3 as const, nodeId: host.toSuiAddress(), agentId: managed.instance_id, actions: ['assign'], scope: 'control', maxUses: 10n, usesClaimed: 0n, usesDelegated: 0n, budgetAsset: 'TOOL_CALLS', maxBudget: 10n, budgetClaimed: 0n, budgetDelegated: 0n, expiresAtMs: 700000n, revocationVersion: 1n, revoked: false };
@@ -39,7 +39,7 @@ async function fixture() {
     return EncryptedRecordBcs.parse(EncryptedRecordBcs.serialize({ id: recordId, organization_id: org, kind, logical_id: name, revision: 1, key_version: 1, previous: null, writer_human: human, writer_device: device.toSuiAddress(), grant_id: grant, grant_version: 1, created_at_ms: 100000, encrypted_body: encryptedBody }).toBytes());
   }
   records.set(okr.agreement_record, await makeRecord(okr.agreement_record, 'okr-file-goal-agreement', 2,
-    await encryptContent(new TextEncoder().encode(JSON.stringify({ nativeFilePlan: plan })), key, recordContext(org, 'contract', 'okr-file-goal-agreement', 1, 1))));
+    await encryptContent(new TextEncoder().encode(JSON.stringify({ nativeFilePlan: nativePlan })), key, recordContext(org, 'contract', 'okr-file-goal-agreement', 1, 1))));
   const pending = new Map<Transaction, { body: Parameters<typeof sdk.productRecord.save>[0]; command?: SignedNodeCommand }>();
   let ticketId: string | undefined;
   let run: Awaited<ReturnType<typeof sdk.nodeExecution.getExecution>> | undefined;
@@ -115,6 +115,27 @@ test('device steps join one atomic ticket submission and fixed-instance delivery
   assert.equal(f.stats().calls, 1); assert.equal(f.stats().prepares, 1); assert.equal(f.stats().deliveries, 1);
   assert.equal((await f.runner().step(f.input)).status, 'running'); assert.equal(f.stats().deliveries, 1);
   assert.ok(f.key.some(byte => byte !== 0), 'Caller-owned organization key must remain intact.');
+});
+
+test('advance preparation persists the exact remaining KR without advancing or delivering', async () => {
+  const f = await fixture({...plan,krs:[plan.krs[0],{files:[{path:'NEXT.md',content:'next approved result\n'}],maxCalls:'3'}]});
+  const input = {...f.input,scheduledKrIndex:'1',createIfMissing:true,prepareOnly:true,expectedKrIndex:'0'};
+  const result = await f.runner().step(input);
+  assert.equal(result.status,'queued');assert.equal(result.krIndex,'1');
+  assert.equal(f.okr.next_kr,'0');assert.equal(f.stats().deliveries,0);
+  assert.equal((await f.runner().step({...input,createIfMissing:false})).executionId,result.executionId);
+  assert.equal(f.stats().calls,1);assert.equal(f.stats().deliveries,0);
+});
+
+test('scheduled operation cannot deliver, target a missing KR, or join a different in-flight operation', async () => {
+  const f = await fixture({...plan,krs:[plan.krs[0],plan.krs[0]]}), runner=f.runner();
+  for (const input of [{...f.input,scheduledKrIndex:'1',createIfMissing:true},{...f.input,scheduledKrIndex:'1',prepareOnly:true,releaseQueued:true},{...f.input,scheduledKrIndex:'2',prepareOnly:true}]) {
+    assert.equal((await runner.step(input)).reason,'invalid_scheduled_preparation');
+  }
+  assert.equal(f.stats().calls,0);assert.equal(f.stats().deliveries,0);
+  const pending=runner.step({...f.input,scheduledKrIndex:'1',prepareOnly:true,createIfMissing:true});
+  await assert.rejects(runner.step({...f.input,prepareOnly:true,createIfMissing:true}),/different original/);
+  assert.equal((await pending).status,'queued');
 });
 
 test('displaying the approved plan does not sign, reserve, submit or deliver and rejects concurrent agreement drift', async () => {

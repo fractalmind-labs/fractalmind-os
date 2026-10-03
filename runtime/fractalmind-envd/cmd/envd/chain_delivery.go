@@ -12,6 +12,7 @@ import (
 type commandDeliveryReader interface {
 	ReadHostConnection(context.Context, string, []byte, []byte) (nodecommand.HostConnection, error)
 	ReadHostCommandQueuePage(context.Context, nodecommand.HostConnection, uint64, uint64) ([]nodecommand.ChainCommandDelivery, uint64, bool, error)
+	ReadOkrObservationState(context.Context, nodecommand.ChainExecution) (nodecommand.OkrObservationState, error)
 }
 type commandDeliveryOpener interface {
 	OpenCommandDelivery(context.Context, nodecommand.ChainCommandDelivery) (nodecommand.NodeCommand, error)
@@ -59,6 +60,16 @@ func consumeChainCommandQueue(ctx context.Context, reader commandDeliveryReader,
 						stop()
 						log.Printf("[chain-queue] original Run %s unavailable; no dispatch", row.Run.ID)
 						continue
+					}
+					if row.Run.Contract != nil {
+						// Later explicitly prepared KRs remain queued until an
+						// independent Human verification advances the chain cursor.
+						// Deferral is a read, never an execution attempt or retry.
+						state, stateErr := reader.ReadOkrObservationState(commandCtx, row.Run)
+						if stateErr != nil || state.State != 1 || state.OrganizationID != org || state.AgreementVersion != uint64(row.Run.Contract.AgreementVersion) || state.KRIndex != uint64(row.Run.Contract.KRIndex) || state.MembershipID != row.Run.MembershipID || state.ManagedAgentID != row.Run.ManagedAgentID || state.Current != nil || state.Verified {
+							stop()
+							continue
+						}
 					}
 					response, _, executeErr := executor.Execute(commandCtx, command)
 					stop()

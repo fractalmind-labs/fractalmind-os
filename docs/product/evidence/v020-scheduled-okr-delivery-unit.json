@@ -1,0 +1,88 @@
+{
+  "recordedAt": "2026-10-03T03:31:12.691Z",
+  "baseline": "2b2c9aa",
+  "scope": "scheduled remaining KR preparation, deferred production Host consumption and original-state recovery",
+  "checks": [
+    {
+      "suite": "App regression",
+      "passed": 218,
+      "failed": 0,
+      "path": "/tmp/fm-scheduled-queue-app-tests-r3.log",
+      "sha256": "724194e88204a42345d2c8246f69f144181f2ada0286a37bf7ad02eb52f957e4"
+    },
+    {
+      "suite": "App production build",
+      "passed": true,
+      "path": "/tmp/fm-scheduled-queue-app-build-r3.log",
+      "sha256": "7ea6b5c681d318c8c6e038c3cb95439ad8c5651d0fa203d94f1e91ca60346274"
+    },
+    {
+      "suite": "Native script strict TypeScript",
+      "passed": true,
+      "path": "/tmp/fm-scheduled-queue-script-types-r3.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "suite": "SDK regression",
+      "passed": 158,
+      "failed": 0,
+      "path": "/tmp/fm-scheduled-queue-sdk-tests-r2.log",
+      "sha256": "6e8ff4a6692d5ecd3c4252ef4fc606081f61a826df182c57acaf950429140427"
+    },
+    {
+      "suite": "SDK build",
+      "passed": true,
+      "path": "/tmp/fm-scheduled-queue-sdk-build-r1.log",
+      "sha256": "dcd4658fbc5af48be5fec75f18c6bbf16ab306e69f58156aa82336298392c2b0"
+    },
+    {
+      "suite": "SDK strict TypeScript",
+      "passed": true,
+      "path": "/tmp/fm-scheduled-queue-sdk-types-r1.log",
+      "sha256": "d03b6f91caee853e3dcd0fd8a44660e3e88cee7f8eca3adc212209c6666eccd1"
+    },
+    {
+      "suite": "OKR Move including five scheduled preparation scenarios",
+      "passed": 13,
+      "failed": 0,
+      "path": "/tmp/fm-scheduled-queue-move-r3.log",
+      "sha256": "0a185ab29f5d2a0bb574096e901c9bb3312226b43c29c4713fdfc87a92162e4b"
+    },
+    {
+      "suite": "Go race: internal/nodecommand, internal/sui, cmd/envd",
+      "passed": true,
+      "packages": 3,
+      "path": "/tmp/fm-scheduled-queue-go-race-r1.log",
+      "sha256": "14c1a38bdbabbc03a4fa6fd2ce86295406b99f81c729a0e545bd7072d800de01"
+    }
+  ],
+  "nativeBinary": {
+    "path": "/tmp/fm-envd-scheduled-queue-app-tests",
+    "sha256": "25b2db4e6f46a4864d07f2d6fb892a33f6f185ac9da83817325cc160115e53a9"
+  },
+  "sourceHashes": {
+    "apps/fractalmind-app/scripts/native-app-execution-localnet.ts": "9349fa03c2c823642f4d55e8da0f6e94673cb1e45c19dc379abc04a2dcfad322",
+    "apps/fractalmind-app/src/OkrContinuation.tsx": "244971da516d1258261a66495f75455abbfdf2380ae5fd8cec2ee6a63d51c5cd",
+    "apps/fractalmind-app/src/command-results.ts": "1f9efd68739136d4a9336222f31920573a9f7b81332222627c37d2988995874e",
+    "apps/fractalmind-app/src/native-okr-runner.ts": "0430b14b32eb7483afc05a49b243d1872de3896a0e67b8eed9fceb253b535e52",
+    "apps/fractalmind-app/src/okr-control.ts": "397d3ed55563dad1e58bf59647b2e7f330824de47deeef04dbed660c04aed333",
+    "apps/fractalmind-app/src/okr-human-review.ts": "d5d9f66d1c13eefd81a3358625d9f357d63318de2d3cb8a9a067cbb1476b95ca",
+    "protocols/fractalmind-protocol/contracts/okr/sources/okr.move": "dbce2ee12e3f30fa9892b6425f91b3b025df13104fb00fd4ec12c64c1e86ee86",
+    "protocols/fractalmind-protocol/contracts/okr/sources/tests/scheduled_command_tests.move": "304167fb4b44d560546f9e576e950f2250f89ba30d3fb26d89810fa1f0ef27bf",
+    "protocols/fractalmind-protocol/sdk/src/node-execution.ts": "c3e770f1bbd8681fac4a7058673b07fadce3fbc4df1fe46b77847b13083cd6f6",
+    "protocols/fractalmind-protocol/sdk/src/okr-runner.ts": "a6d201424e6e39e19a76308937c12c9ab9f2ff0ee723d1654e3304b3b52c4df2",
+    "protocols/fractalmind-protocol/sdk/tests/node-execution.test.ts": "4973265a70c77fb7eefa058b91699997fda0974527b840005e6a61b1d531fd35",
+    "protocols/fractalmind-protocol/sdk/tests/okr-runner.test.ts": "b6847b70a2e70a27d35f318e43ce62944201c09c0344fd2ec198ba9f12e52852",
+    "runtime/fractalmind-envd/cmd/envd/chain_delivery.go": "a6f7c84e4d991a70fda42f9a3cb045131ea2f0b86fb3c3297a5218e3ef87320a"
+  },
+  "limits": {
+    "coreAndDirectMoveNotRerunInThisIncrement": true,
+    "installedUIVerified": false,
+    "actualAppWindowClosureVerified": false,
+    "physicalHostRestartVerified": false,
+    "realModelVerified": false,
+    "cloudHostVerified": false,
+    "mobileVerified": false,
+    "originalMainPackageUpgradeVerified": false
+  }
+}

@@ -297,7 +297,7 @@ export class OkrHumanReview {
       acceptanceHead.pointer
     )
       throw new OkrHumanReviewError("state_changed");
-    if (budget.reserved !== 0n)
+    if (this.intent.kind === "accept" && budget.reserved !== 0n)
       throw new OkrHumanReviewError("unsettled_execution");
     if (
       policy.agreement_version !== okr.agreement_version ||
@@ -320,7 +320,26 @@ export class OkrHumanReview {
       cursor = page.hasNextPage ? page.cursor : null;
       if (cursor) seen.add(cursor);
     } while (cursor);
-    if (executions.some((e) => e.run.scope === "control" && !e.claim.settled))
+    let deferredReserved = 0n;
+    for (const e of executions) {
+      if (e.run.scope !== "control" || e.claim.settled) continue;
+      const deferred =
+        this.intent.kind === "verify" &&
+        e.run.state === 0 &&
+        !e.run.stop_requested &&
+        e.run.action === "assign" &&
+        e.run.managed_agent === okr.managed_agent &&
+        e.run.membership_id === okr.membership_id &&
+        e.contract.agreement_version === okr.agreement_version &&
+        e.claim.agreement_version === okr.agreement_version &&
+        e.contract.kr_index === e.claim.kr_index &&
+        BigInt(e.contract.kr_index) > BigInt(okr.next_kr) &&
+        Number(e.contract.kr_index) < okr.metrics.length &&
+        canonical(e.contract.boundary_hash) === canonical(okr.boundary_hash);
+      if (!deferred) throw new OkrHumanReviewError("unsettled_execution");
+      deferredReserved += BigInt(e.claim.reserved);
+    }
+    if (deferredReserved !== budget.reserved)
       throw new OkrHumanReviewError("unsettled_execution");
     const selected = indices.map((i) => {
       const m = okr.metrics[i],

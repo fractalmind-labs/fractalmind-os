@@ -222,9 +222,18 @@ module fractalmind_okr::okr {
         okr: &Okr, org: &Organization, member: &HostMembership, binding: &CoordinatorBinding,
         managed: &ManagedAgent, cap: &RemoteCapability, kr_index: u64, clock: &Clock,
     ): ContractWitness {
+        assert!(kr_index == okr.next_kr, E_ORDER);
+        remaining_assignment_witness(okr, org, member, binding, managed, cap, kr_index, clock)
+    }
+    // Human-signed preparation may reserve a later approved KR. Starting and
+    // observing still use assignment_witness and require the current cursor.
+    fun remaining_assignment_witness(
+        okr: &Okr, org: &Organization, member: &HostMembership, binding: &CoordinatorBinding,
+        managed: &ManagedAgent, cap: &RemoteCapability, kr_index: u64, clock: &Clock,
+    ): ContractWitness {
         assert!(okr.org_id == object::id(org) && ra::org_id(cap) == okr.org_id, E_TARGET);
         assert!(okr.state == ACTIVE && clock::timestamp_ms(clock) < okr.expires_at_ms, E_STATE);
-        assert!(kr_index == okr.next_kr && kr_index < vector::length(&okr.metrics), E_ORDER);
+        assert!(kr_index >= okr.next_kr && kr_index < vector::length(&okr.metrics), E_ORDER);
         host::assert_member(org, member, binding, clock); host::assert_managed(org, member, managed, true);
         assert!(okr.managed_agent == option::some(object::id(managed)) && okr.managed_version == host::managed_version(managed)
             && okr.membership_id == option::some(object::id(member)) && okr.membership_version == host::membership_version(member)
@@ -283,8 +292,32 @@ module fractalmind_okr::okr {
         budget_asset: String, budget_amount: u64, intent_hash: vector<u8>, issued_at_ms: u64, expires_at_ms: u64,
         clock: &Clock, ctx: &mut TxContext,
     ) {
+        assert!(kr_index == okr.next_kr, E_ORDER);
+        prepare_remaining_command_v2(okr, cap, org, human, grant, member, binding, managed, expected_agreement, kr_index,
+            action, scope, command_id, nonce, idempotency_key, budget_asset, budget_amount, intent_hash, issued_at_ms, expires_at_ms, clock, ctx);
+    }
+    /// Explicit advance preparation reserves the exact remaining KR's budget.
+    /// It cannot start, verify or advance the cursor; all original identity,
+    /// capability, agreement, member, result-key and five-minute limits apply.
+    public fun prepare_scheduled_command_v2(
+        okr: &mut Okr, cap: &mut RemoteCapability, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent, expected_agreement: u64, kr_index: u64,
+        action: String, scope: String, command_id: String, nonce: String, idempotency_key: String,
+        budget_asset: String, budget_amount: u64, intent_hash: vector<u8>, issued_at_ms: u64, expires_at_ms: u64,
+        clock: &Clock, ctx: &mut TxContext,
+    ) {
+        prepare_remaining_command_v2(okr, cap, org, human, grant, member, binding, managed, expected_agreement, kr_index,
+            action, scope, command_id, nonce, idempotency_key, budget_asset, budget_amount, intent_hash, issued_at_ms, expires_at_ms, clock, ctx);
+    }
+    fun prepare_remaining_command_v2(
+        okr: &mut Okr, cap: &mut RemoteCapability, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
+        member: &HostMembership, binding: &CoordinatorBinding, managed: &ManagedAgent, expected_agreement: u64, kr_index: u64,
+        action: String, scope: String, command_id: String, nonce: String, idempotency_key: String,
+        budget_asset: String, budget_amount: u64, intent_hash: vector<u8>, issued_at_ms: u64, expires_at_ms: u64,
+        clock: &Clock, ctx: &mut TxContext,
+    ) {
         assert!(expected_agreement == okr.agreement_version, E_VERSION);
-        let witness = assignment_witness(okr, org, member, binding, managed, cap, kr_index, clock);
+        let witness = remaining_assignment_witness(okr, org, member, binding, managed, cap, kr_index, clock);
         assert!(budget_asset == okr.budget_asset && budget_amount > 0, E_BUDGET);
         let old = node_execution::execution_id(cap, intent_hash);
         let limit = okr.budget_limit; let agreement_version = okr.agreement_version;
@@ -474,6 +507,10 @@ module fractalmind_okr::okr {
     public fun version(okr: &Okr): u64 { okr.version }
     public fun agreement_version(okr: &Okr): u64 { okr.agreement_version }
     public fun next_kr(okr: &Okr): u64 { okr.next_kr }
+    #[test_only]
+    public fun budget_totals_for_testing(okr: &Okr): (u64, u64) {
+        let ledger: &BudgetState = df::borrow(&okr.id, BudgetKey {}); (ledger.spent, ledger.reserved)
+    }
     public fun active_count(org: &Organization): u64 {
         if (!extension::has_org_field(org, 1, &Witness {}, b"okr-index")) return 0;
         let registry: &OkrIndex = extension::org_field(org, 1, &Witness {}, b"okr-index"); registry.active_count

@@ -68,7 +68,9 @@ const intervention = process.argv.slice(4).includes("--intervention");
 const autonomy = process.argv.slice(4).includes("--autonomy");
 const projection = process.argv.slice(4).includes("--projection");
 const modelFixture = process.argv.slice(4).includes("--model-fixture");
-const chainQueue = process.argv.slice(4).includes("--chain-queue");
+const scheduledQueue = process.argv.slice(4).includes("--scheduled-queue");
+const chainQueue =
+  process.argv.slice(4).includes("--chain-queue") || scheduledQueue;
 assert.ok(
   !chainQueue ||
     (humanSequence &&
@@ -118,6 +120,7 @@ assert.ok(
         "--projection",
         "--model-fixture",
         "--chain-queue",
+        "--scheduled-queue",
       ].includes(a),
     ),
   "Unknown harness option",
@@ -238,6 +241,9 @@ async function save(complete = false) {
           automaticHostProjectionDelivery: false,
           chainCommandQueueVerified:
             chainQueue && state.chainCommandQueueVerified === true,
+          scheduledPreauthorizationVerified:
+            scheduledQueue && state.scheduledHostContinuationVerified === true,
+          installedScheduledUIVerified: false,
           modelProviderKind: modelFixture
             ? "synthetic loopback Messages API fixture; not an actual language model"
             : "not configured",
@@ -1099,6 +1105,9 @@ try {
     transportCalls = 0;
   const firstCommandDeliveries = chainQueue ? 0 : 1;
   let declineFirstChainQuote = chainQueue;
+  let executionContextOpen = true;
+  let preparedNext: Awaited<ReturnType<NativeOkrRunner["step"]>> | undefined;
+  let preparedNextCapability = "";
   const transport: typeof fetch = async (...args) => {
     transportCalls++;
     if (String(args[0]).endsWith("/command")) deliveries++;
@@ -1112,7 +1121,12 @@ try {
     invoke,
     journal,
     async (q) => {
-      if (q.requestId.startsWith("chain-delivery:") && declineFirstChainQuote) {
+      if (
+        q.requestId.startsWith("chain-delivery:") &&
+        declineFirstChainQuote &&
+        (!scheduledQueue ||
+          q.requestId === `chain-delivery:${state.continuationExecutionId}`)
+      ) {
         declineFirstChainQuote = false;
         state = { ...state, declinedChainDeliveryQuoteDigest: q.digest };
         await save();
@@ -1123,6 +1137,10 @@ try {
       return true;
     },
     transport,
+    () => {
+      if (!executionContextOpen)
+        throw new Error("Original execution context is closed");
+    },
   );
   const displayed = await runner.describe(okrId);
   assert.deepEqual(displayed.plan, plan);
@@ -1196,6 +1214,89 @@ try {
   checks.push(
     "formal native control quotation/issuance and command preparation do not dispatch; a fresh runner with an empty journal restores the same encrypted ticket and queued Run",
   );
+  if (scheduledQueue) {
+    const description = await runner.describe(okrId);
+    const futureControl = new OkrControl(
+      chain,
+      device,
+      auth.grantId,
+      organizationId,
+      okrId,
+      description.okr.agreement_version,
+      "1",
+      journal,
+      () => {},
+      {
+        scheduled: true,
+        okrVersion: description.okr.version,
+        policyPin: canonical(description.policy),
+      },
+    );
+    const quote = await futureControl.prepare();
+    assert.ok(!("status" in quote));
+    await preparedQuote("native remaining KR explicit control fee", quote);
+    const controlOutcome = await futureControl.submit(quote);
+    await record("native remaining KR explicit control fee", controlOutcome);
+    preparedNextCapability = await futureControl.confirmed(controlOutcome);
+    preparedNext = await runner.step({
+      okrId,
+      capabilityId: preparedNextCapability,
+      createIfMissing: true,
+      prepareOnly: true,
+      scheduledKrIndex: "1",
+      expectedKrIndex: "0",
+      expectedAgreementVersion: description.okr.agreement_version,
+    });
+    assert.equal(preparedNext.status, "queued");
+    assert.ok(preparedNext.executionId);
+    await record(
+      "native remaining KR exact ticket and Run",
+      runner.lastSubmission!,
+    );
+    const published = await runner.queuePreparedKr(
+      okrId,
+      description.okr.agreement_version,
+      "1",
+    );
+    assert.equal(published.receipt?.status, "confirmed");
+    await record(
+      "native remaining KR immutable chain delivery",
+      runner.lastSubmission!,
+    );
+    const beforeRepeatedFee = feeConfirmations;
+    const sameDelivery = await runner.queuePreparedKr(
+      okrId,
+      description.okr.agreement_version,
+      "1",
+    );
+    assert.equal(sameDelivery.alreadyPublished, true);
+    assert.equal(sameDelivery.executionId, preparedNext.executionId);
+    assert.equal(feeConfirmations, beforeRepeatedFee);
+    checks.push(
+      "querying the already published later KR returns its original Run without another fee, command body, transaction or Coordinator delivery",
+    );
+    await new Promise((resolve) => setTimeout(resolve, 6000));
+    const untouched = await sdk.nodeExecution.getExecution(
+      preparedNext.executionId!,
+    );
+    const reserved = await sdk.okr.getBudget(okrId);
+    assert.equal(untouched.state, 0);
+    assert.equal(untouched.stop_requested, false);
+    assert.equal(reserved.spent, 0n);
+    assert.equal(reserved.reserved, 6n);
+    assert.equal((await sdk.okr.getOkr(okrId)).next_kr, "0");
+    assert.equal(deliveries, 0);
+    state = {
+      ...state,
+      scheduledExecutionId: preparedNext.executionId,
+      scheduledQueuePreparedBeforeFirstKR: true,
+      scheduledBudgetBeforeExecution: { spent: "0", reserved: "6" },
+    };
+    checks.push(
+      "explicit native preparation and immutable delivery of the later KR reserve both original budgets; production Host defers the future command without executing or advancing the Human cursor",
+    );
+    await save();
+  }
   if (chainQueue) {
     const declined = await runner.step(
       { ...runInput, releaseQueued: true },
@@ -1212,7 +1313,7 @@ try {
       0,
     );
     assert.equal(deliveries, 0);
-    assert.equal(feeConfirmations, 1);
+    assert.equal(feeConfirmations, scheduledQueue ? 3 : 1);
     checks.push(
       "declining the separate chain delivery fee leaves the original Run queued and no delivery record or Coordinator send; subsequent release requires a new explicit fee confirmation",
     );
@@ -1222,6 +1323,14 @@ try {
     { ...runInput, releaseQueued: true },
     chainQueue ? "chain" : "coordinator",
   );
+  if (scheduledQueue) {
+    executionContextOpen = false;
+    state = { ...state, originalExecutionContextClosed: true };
+    await assert.rejects(
+      async () => runner.step(runInput),
+      /context is closed/,
+    );
+  }
   if (chainQueue) {
     await record(
       "native original command chain delivery",
@@ -1291,7 +1400,7 @@ try {
   assert.equal(current.next_kr, "0");
   assert.equal(current.metrics[0].run_id, settled.id);
   assert.equal(budget.spent, 3n);
-  assert.equal(budget.reserved, 0n);
+  assert.equal(budget.reserved, scheduledQueue ? 3n : 0n);
   const reader = new NativeExecutionResults(
     chain,
     device,
@@ -1312,7 +1421,7 @@ try {
   const restoredFinal = await reopened.step(runInput);
   assert.equal(restoredFinal.status, "awaiting_verification");
   assert.equal(deliveries, firstCommandDeliveries);
-  assert.equal(feeConfirmations, chainQueue ? 2 : 1);
+  assert.equal(feeConfirmations, scheduledQueue ? 4 : chainQueue ? 2 : 1);
   if (chainQueue) {
     state = { ...state, chainCommandQueueVerified: true };
     checks.push(
@@ -1320,7 +1429,7 @@ try {
     );
   }
   checks.push(
-    "explicit continuation reaches the actual production envd and native file adapter; original encrypted result decrypts through the OS vault, Host measurement is 1 and tool budget is 3 spent/0 reserved",
+    "explicit continuation reaches the actual production envd and native file adapter; original encrypted result decrypts through the OS vault and Host measurement is 1; remaining scheduled budgets are preserved",
   );
   checks.push(
     "fresh native runner recovers the original successful Run and measurement without another fee or delivery; KR verification and final Human acceptance remain pending",
@@ -1418,50 +1527,59 @@ try {
     const afterFirst = await verifyCurrent(
       "native independent KR 1 verification",
     );
-    assert.equal((await sdk.okr.listExecutions(okrId)).executions.length, 1);
-    const nextDescription = await runner.describe(okrId);
-    const nextControl = new OkrControl(
-      chain,
-      device,
-      auth.grantId,
-      organizationId,
-      okrId,
-      afterFirst.agreement_version,
-      afterFirst.next_kr,
-      journal,
-      () => {},
-      {
-        okrVersion: nextDescription.okr.version,
-        policyPin: canonical(nextDescription.policy),
-      },
+    assert.equal(
+      (await sdk.okr.listExecutions(okrId)).executions.length,
+      scheduledQueue ? 2 : 1,
     );
-    const nextQuote = await nextControl.prepare();
-    assert.ok(!("status" in nextQuote));
-    await preparedQuote("native second KR explicit control fee", nextQuote);
-    const nextOutcome = await nextControl.submit(nextQuote);
-    await record("native second KR explicit control fee", nextOutcome);
-    const nextCapability = await nextControl.confirmed(nextOutcome);
-    await nextControl.use(nextCapability);
+    let nextControl!: OkrControl;
+    let nextCapability = preparedNextCapability;
     let nextInput = { okrId, capabilityId: nextCapability };
-    let nextQueued = await runner.step({
-      ...nextInput,
-      createIfMissing: true,
-      prepareOnly: true,
-    });
-    assert.equal(nextQueued.status, "queued");
-    assert.ok(nextQueued.executionId);
-    assert.equal(deliveries, firstCommandDeliveries);
-    await record(
-      "native second KR exact ticket and Run",
-      runner.lastSubmission!,
-    );
-    state = {
-      ...state,
-      phase: "second_kr_queued",
-      secondExecutionId: nextQueued.executionId,
-      secondPreparationDigest: nextQueued.transactionDigest,
-    };
-    await save();
+    let nextQueued = preparedNext!;
+    if (!scheduledQueue) {
+      const nextDescription = await runner.describe(okrId);
+      nextControl = new OkrControl(
+        chain,
+        device,
+        auth.grantId,
+        organizationId,
+        okrId,
+        afterFirst.agreement_version,
+        afterFirst.next_kr,
+        journal,
+        () => {},
+        {
+          okrVersion: nextDescription.okr.version,
+          policyPin: canonical(nextDescription.policy),
+        },
+      );
+      const nextQuote = await nextControl.prepare();
+      assert.ok(!("status" in nextQuote));
+      await preparedQuote("native second KR explicit control fee", nextQuote);
+      const nextOutcome = await nextControl.submit(nextQuote);
+      await record("native second KR explicit control fee", nextOutcome);
+      nextCapability = await nextControl.confirmed(nextOutcome);
+      await nextControl.use(nextCapability);
+      nextInput = { okrId, capabilityId: nextCapability };
+      nextQueued = await runner.step({
+        ...nextInput,
+        createIfMissing: true,
+        prepareOnly: true,
+      });
+      assert.equal(nextQueued.status, "queued");
+      assert.ok(nextQueued.executionId);
+      assert.equal(deliveries, firstCommandDeliveries);
+      await record(
+        "native second KR exact ticket and Run",
+        runner.lastSubmission!,
+      );
+      state = {
+        ...state,
+        phase: "second_kr_queued",
+        secondExecutionId: nextQueued.executionId,
+        secondPreparationDigest: nextQueued.transactionDigest,
+      };
+      await save();
+    }
     if (intervention) {
       const interventionController = new OkrIntervention(
         chain,
@@ -1668,7 +1786,8 @@ try {
       };
       await save();
     }
-    await runner.step({ ...nextInput, releaseQueued: true });
+    if (!scheduledQueue)
+      await runner.step({ ...nextInput, releaseQueued: true });
     const second = await readVisible(
       () => sdk.nodeExecution.getExecution(nextQueued.executionId!),
       (r) => r.state === 2 && !!r.result_record,
@@ -1678,8 +1797,110 @@ try {
       (r) => r.metrics[1].run_id === second.id && r.metrics[1].current === "1",
     );
     krRuns.push(second.id);
-    assert.equal(deliveries, firstCommandDeliveries + 1);
-    assert.equal(feeConfirmations, intervention || chainQueue ? 3 : 2);
+    assert.equal(deliveries, firstCommandDeliveries + (scheduledQueue ? 0 : 1));
+    assert.equal(
+      feeConfirmations,
+      scheduledQueue ? 4 : intervention || chainQueue ? 3 : 2,
+    );
+    if (scheduledQueue) {
+      state = {
+        ...state,
+        scheduledHostContinuationVerified: true,
+        originalExecutionContextStillClosed: !executionContextOpen,
+      };
+      checks.push(
+        "after separate Human KR 1 verification, production Host executes the original preauthorized KR 2 from Sui with the original execution context closed, zero Coordinator command deliveries and no new execution authorization",
+      );
+      await save();
+      const history = new NativeOkrRunner(
+        chain,
+        device,
+        auth.grantId,
+        organizationId,
+        invoke,
+        journal,
+        async () => {
+          throw new Error("Original history cannot charge another fee");
+        },
+        async () => {
+          throw new Error("Original history cannot send another command");
+        },
+      );
+      const prepReceipt = await history.queryPreparedKr(
+        okrId,
+        afterFirst.agreement_version,
+        "1",
+      );
+      const sendReceipt = await history.queryChainDelivery(
+        preparedNext!.executionId!,
+      );
+      for (const [receipt, label] of [
+        [prepReceipt, "native remaining KR exact ticket and Run"],
+        [sendReceipt, "native remaining KR immutable chain delivery"],
+      ] as const) {
+        assert.ok(receipt);
+        const originalTransaction = transactions.find(
+          (t) =>
+            typeof t === "object" &&
+            t !== null &&
+            "label" in t &&
+            t.label === label,
+        ) as { digest: string } | undefined;
+        assert.ok(originalTransaction);
+        assert.equal(receipt.digest, originalTransaction.digest);
+        assert.ok(
+          receipt.status === "confirmed" || receipt.status === "unknown",
+        );
+        if (receipt.status === "unknown")
+          assert.equal(receipt.reason, "original_transaction_not_confirmed");
+      }
+      const coldHistory = new NativeOkrRunner(
+        chain,
+        device,
+        auth.grantId,
+        organizationId,
+        invoke,
+        new MemoryTransactionJournal(),
+        async () => {
+          throw new Error("Cold recovery cannot charge a fee");
+        },
+        async () => {
+          throw new Error("Cold recovery cannot send a command");
+        },
+      );
+      const originalSource = await coldHistory.readPreparedKr(
+        okrId,
+        afterFirst.agreement_version,
+        "1",
+      );
+      assert.ok(originalSource);
+      assert.equal(originalSource.run.id, preparedNext!.executionId);
+      assert.equal(originalSource.run.state, 2);
+      assert.equal(originalSource.ticketRecordId, preparedNext!.ticketRecordId);
+      assert.ok(originalSource.delivery);
+      const coldState = await coldHistory.step({
+        okrId,
+        capabilityId: `0x${"0".repeat(64)}`,
+      });
+      assert.equal(coldState.status, "awaiting_verification");
+      assert.equal(coldState.executionId, originalSource.run.id);
+      assert.equal(feeConfirmations, 4);
+      assert.equal(deliveries, 0);
+      state = {
+        ...state,
+        scheduledPreparationQueryDigest: prepReceipt!.digest,
+        scheduledDeliveryQueryDigest: sendReceipt!.digest,
+        scheduledPreparationQueryStatus: prepReceipt!.status,
+        scheduledDeliveryQueryStatus: sendReceipt!.status,
+        scheduledColdRecoveryRun: originalSource.run.id,
+        scheduledColdRecoveryTicket: originalSource.ticketRecordId,
+        scheduledColdRecoveryStatus: coldState.status,
+      };
+      checks.push(
+        "fresh read contexts retain both original transaction digests, leave pruned receipts unknown and recover the exact encrypted ticket, successful Run, immutable delivery and current verification state from Sui with an empty journal and no new fee or dispatch; the original execution context remains closed",
+      );
+      await save();
+    }
     const afterSecond = await verifyCurrent(
       "native independent KR 2 verification",
     );
@@ -1733,13 +1954,15 @@ try {
     );
     assert.equal(total.spent, 6n);
     assert.equal(total.reserved, 0n);
-    assert.equal(deliveries, firstCommandDeliveries + 1);
+    assert.equal(deliveries, firstCommandDeliveries + (scheduledQueue ? 0 : 1));
     assert.equal(
       (await sdk.okr.listExecutions(okrId)).executions.length,
       intervention ? 3 : 2,
     );
     checks.push(
-      "two real envd KR Runs are explicitly released in order; native Human verification advances the cursor without another dispatch or implicit acceptance",
+      scheduledQueue
+        ? "two original preauthorized KR Runs execute in order from Sui; independent Human verification advances the cursor without new execution authorization or implicit acceptance"
+        : "two real envd KR Runs are explicitly released in order; native Human verification advances the cursor without another dispatch or implicit acceptance",
     );
     checks.push(
       "final native review reads both original results and separate immutable verification revisions; an explicit, separately quoted Human decision achieves the OKR on Sui",

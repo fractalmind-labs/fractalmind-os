@@ -281,7 +281,11 @@ export class NativeCommandResults {
   }
   async prepare(
     raw: CommandResultTarget,
-    options: { tx?: Transaction; expectedKeyVersion?: string } = {},
+    options: {
+      tx?: Transaction;
+      expectedKeyVersion?: string;
+      scheduled?: boolean;
+    } = {},
   ) {
     const compose = { ...options };
     const input = await this.snapshot(raw),
@@ -356,6 +360,7 @@ export class NativeCommandResults {
       managedAgentId: input.managedAgentId,
       command: c,
       resultKey,
+      scheduled: compose.scheduled,
       tx: compose.tx,
     });
     if (compose.tx && transaction !== compose.tx)

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import {
   IndexedDbTransactionJournal,
+  okrRunnerTicketName,
   type OkrRunnerState,
   type SelfPayFeeQuote,
   type SelfPayTransactionOutcome,
@@ -19,6 +20,7 @@ import {
   okrDeliveryKey,
 } from "./okr-delivery-journal";
 import { canonical } from "./handover-plan";
+import { readRecordPointer } from "./record-pointer";
 import type { ConnectionProfile } from "./domain";
 type Description = Awaited<ReturnType<NativeOkrRunner["describe"]>>;
 type Locator = {
@@ -99,6 +101,19 @@ export default function OkrContinuation({
   const [chainDelivery, setChainDelivery] = useState(false);
   const [chainOutcome, setChainOutcome] =
     useState<SelfPayTransactionOutcome | null>(null);
+  const [scheduleConsent, setScheduleConsent] = useState(false);
+  const [scheduledRows, setScheduledRows] = useState<
+    Array<{
+      krIndex: string;
+      agreementVersion: string;
+      stage: "control" | "run" | "delivery";
+      status: string;
+      executionId?: string;
+      digest?: string;
+      runState?: number;
+      deliveryPresent?: boolean;
+    }>
+  >([]);
   const dialog = useRef<HTMLDialogElement>(null),
     mounted = useRef(true),
     opened = useRef(false),
@@ -152,6 +167,8 @@ export default function OkrContinuation({
     setState(null);
     setChainOutcome(null);
     setChainDelivery(false);
+    setScheduleConsent(false);
+    setScheduledRows([]);
     setLocator(null);
     setControlOutcome(null);
     setRunOutcome(null);
@@ -233,15 +250,7 @@ export default function OkrContinuation({
       organizationId,
       native,
       journal.current,
-      (quote) => {
-        assertLive();
-        if (feeAnswer.current)
-          throw Object.assign(new Error(), { code: "state_changed" });
-        return new Promise<boolean>((resolve) => {
-          feeAnswer.current = { quote, resolve };
-          setFee({ kind: "run", quote });
-        });
-      },
+      requestFee,
       async (url, init) => {
         assertLive();
         return fetch(url, init);
@@ -257,6 +266,196 @@ export default function OkrContinuation({
     };
     return context.current;
   }
+  function requestFee(quote: SelfPayFeeQuote) {
+    if (!context.current)
+      throw Object.assign(new Error(), { code: "state_changed" });
+    context.current.assertLive();
+    if (feeAnswer.current)
+      throw Object.assign(new Error(), { code: "state_changed" });
+    return new Promise<boolean>((resolve) => {
+      feeAnswer.current = { quote, resolve };
+      setFee({ kind: "run", quote });
+    });
+  }
+  async function scheduleLaterKrs() {
+    const ctx = context.current;
+    if (!ctx || !description || !scheduleConsent)
+      throw Object.assign(new Error(), { code: "state_changed" });
+    const reviewed = description;
+    const update = (
+      input: Omit<(typeof scheduledRows)[number], "agreementVersion">,
+    ) => {
+      const row = {
+        ...input,
+        agreementVersion: reviewed.okr.agreement_version,
+      };
+      ctx.assertLive();
+      setScheduledRows((previous) => [
+        ...previous.filter(
+          (old) => !(old.krIndex === row.krIndex && old.stage === row.stage),
+        ),
+        row,
+      ]);
+    };
+    // Prepare the most distant KR first. The current KR is released separately
+    // through the existing original-command flow, after this authorization.
+    for (
+      let i = reviewed.plan.krs.length - 1;
+      i > Number(reviewed.okr.next_kr);
+      i--
+    ) {
+      const desc = await ctx.runner.describe(okrId);
+      if (
+        desc.okr.state !== 1 ||
+        desc.okr.next_kr !== reviewed.okr.next_kr ||
+        desc.okr.agreement_version !== reviewed.okr.agreement_version ||
+        desc.okr.spec_record !== reviewed.okr.spec_record ||
+        desc.okr.agreement_record !== reviewed.okr.agreement_record ||
+        canonical(desc.plan) !== canonical(reviewed.plan) ||
+        canonical(desc.policy) !== canonical(reviewed.policy)
+      )
+        throw Object.assign(new Error(), { code: "state_changed" });
+      const krIndex = String(i);
+      // Use the SDK's exact original-ticket identity, never a generated nonce
+      // after a previously confirmed or unknown request.
+      const head = await readRecordPointer(
+        ctx.chain,
+        organizationId,
+        "checkpoint",
+        okrRunnerTicketName(okrId, desc.okr.agreement_version, krIndex),
+      );
+      ctx.assertLive();
+      if (!head.pointer) {
+        const control = new OkrControl(
+          ctx.chain,
+          ctx.signer,
+          ctx.grantId,
+          organizationId,
+          okrId,
+          desc.okr.agreement_version,
+          krIndex,
+          journal.current!,
+          ctx.assertLive,
+          {
+            scheduled: true,
+            okrVersion: desc.okr.version,
+            policyPin: canonical(desc.policy),
+          },
+        );
+        const q = await control.prepare();
+        let result: SelfPayTransactionOutcome;
+        if ("status" in q) result = q;
+        else {
+          if (!(await requestFee(q))) {
+            update({ krIndex, stage: "control", status: "declined" });
+            return;
+          }
+          result = await control.submit(q);
+        }
+        update({
+          krIndex,
+          stage: "control",
+          status: result.status,
+          digest: result.digest,
+        });
+        if (result.status !== "confirmed") return;
+        const capabilityId = await control.confirmed(result);
+        const prepared = await ctx.runner.step({
+          okrId,
+          capabilityId,
+          createIfMissing: true,
+          prepareOnly: true,
+          scheduledKrIndex: krIndex,
+          expectedKrIndex: reviewed.okr.next_kr,
+          expectedAgreementVersion: reviewed.okr.agreement_version,
+        });
+        update({
+          krIndex,
+          stage: "run",
+          status: prepared.status,
+          executionId: prepared.executionId,
+          digest: prepared.transactionDigest,
+        });
+        if (prepared.status !== "queued") return;
+      }
+      const published = await ctx.runner.queuePreparedKr(
+        okrId,
+        reviewed.okr.agreement_version,
+        krIndex,
+      );
+      update({
+        krIndex,
+        stage: "delivery",
+        status: published.alreadyPublished
+          ? "published"
+          : (published.receipt?.status ?? "unknown"),
+        executionId: published.executionId,
+        digest: published.receipt?.digest,
+      });
+      if (
+        !published.alreadyPublished &&
+        published.receipt?.status !== "confirmed"
+      )
+        return;
+    }
+    ctx.assertLive();
+    setScheduleConsent(false);
+    onChanged();
+    setDescription(await ctx.runner.describe(okrId));
+  }
+  async function queryScheduledRow(row: (typeof scheduledRows)[number]) {
+    const ctx = await load();
+    const result =
+      row.stage === "control"
+        ? await new OkrControl(
+            ctx.chain,
+            ctx.signer,
+            ctx.grantId,
+            organizationId,
+            okrId,
+            row.agreementVersion,
+            row.krIndex,
+            journal.current!,
+            ctx.assertLive,
+          ).query()
+        : row.stage === "run"
+          ? await ctx.runner.queryPreparedKr(
+              okrId,
+              row.agreementVersion,
+              row.krIndex,
+            )
+          : row.executionId
+            ? await ctx.runner.queryChainDelivery(row.executionId)
+            : undefined;
+    const original =
+      row.stage === "control"
+        ? null
+        : await ctx.runner.readPreparedKr(
+            okrId,
+            row.agreementVersion,
+            row.krIndex,
+          );
+    if (original && row.executionId && original.run.id !== row.executionId)
+      throw new Error("Original prepared Run changed");
+    ctx.assertLive();
+    setScheduledRows((previous) =>
+      previous.map((old) =>
+        old.krIndex === row.krIndex &&
+        old.stage === row.stage &&
+        old.agreementVersion === row.agreementVersion
+          ? {
+              ...old,
+              status: result?.status ?? old.status,
+              digest: result?.digest ?? old.digest,
+              executionId: original?.run.id ?? old.executionId,
+              runState: original?.run.state,
+              deliveryPresent: original ? !!original.delivery : undefined,
+            }
+          : old,
+      ),
+    );
+    onChanged();
+  }
   async function read() {
     const ctx = await load();
     const restored = await ctx.runner.step({
@@ -265,8 +464,33 @@ export default function OkrContinuation({
     });
     ctx.assertLive();
     const desc = await ctx.runner.describe(okrId);
+    const originals: typeof scheduledRows = [];
+    for (let index = 0; index < desc.plan.krs.length; index++) {
+      const krIndex = String(index);
+      const original = await ctx.runner.readPreparedKr(
+        okrId,
+        desc.okr.agreement_version,
+        krIndex,
+      );
+      if (!original) continue;
+      const base = {
+        krIndex,
+        agreementVersion: desc.okr.agreement_version,
+        executionId: original.run.id,
+        runState: original.run.state,
+        deliveryPresent: !!original.delivery,
+      };
+      originals.push({ ...base, stage: "run", status: "chain_found" });
+      originals.push({
+        ...base,
+        stage: "delivery",
+        status: original.delivery ? "published" : "not_published",
+      });
+    }
     ctx.assertLive();
+    setScheduledRows(originals);
     setDescription(desc);
+    setScheduleConsent(false);
     setState(restored);
     if (
       desc.okr.state !== 1 ||
@@ -585,6 +809,157 @@ export default function OkrContinuation({
             </p>
           </section>
         )}
+        {description?.okr.state === 1 &&
+          Number(description.okr.next_kr) + 1 < description.plan.krs.length && (
+            <section className="notice">
+              <h3>{t("提前授权后续 KR", "Authorize later KRs in advance")}</h3>
+              <p>
+                {t(
+                  "逐条确认权限、命令准备与链上投递费用。Host 开启链上接收后，人工验证当前 KR 才会执行下一条；App 关闭不撤销已发布命令。每条命令最长有效 5 分钟，到期后须处理原 Run 并重新授权。",
+                  "Confirm each authority, preparation and delivery fee. A Host with chain reception enabled waits for Human verification before executing the next KR. Closing the App does not revoke published commands. Each command lasts at most five minutes; expired original Runs must be settled before new authorization.",
+                )}
+              </p>
+              {description.plan.krs
+                .slice(Number(description.okr.next_kr) + 1)
+                .map((later, i) => (
+                  <details key={i}>
+                    <summary>
+                      KR {Number(description.okr.next_kr) + i + 2} ·{" "}
+                      {t("工具上限", "Tool limit")}: {later.maxCalls}
+                    </summary>
+                    {later.files.map((file) => (
+                      <div key={file.path}>
+                        <strong>{file.path}</strong>
+                        <pre>{file.content}</pre>
+                      </div>
+                    ))}
+                  </details>
+                ))}
+              <label>
+                <input
+                  type="checkbox"
+                  checked={scheduleConsent}
+                  disabled={busy || !!fee}
+                  onChange={(e) => setScheduleConsent(e.target.checked)}
+                />
+                {t(
+                  "我确认上述后续计划与当前边界，允许 Host 在独立验收后继续",
+                  "I confirm these later plans and current boundaries, and allow Host continuation after independent verification",
+                )}
+              </label>
+              <button
+                disabled={busy || !!fee || !scheduleConsent}
+                onClick={() => void perform(scheduleLaterKrs)}
+              >
+                {t(
+                  "确认后续 KR 的权限与费用",
+                  "Review later KR authority and fees",
+                )}
+              </button>
+            </section>
+          )}
+        {scheduledRows.length > 0 && (
+          <section aria-live="polite">
+            <h3>{t("后续 KR 原请求", "Original later KR requests")}</h3>
+            {scheduledRows.map((row) => (
+              <div key={`${row.krIndex}:${row.stage}`}>
+                <p>
+                  KR {Number(row.krIndex) + 1} ·{" "}
+                  {row.stage === "control"
+                    ? t("权限", "Authority")
+                    : row.stage === "run"
+                      ? t("执行准备", "Preparation")
+                      : t("链上投递", "Chain delivery")}{" "}
+                  ·{" "}
+                  {row.status === "confirmed"
+                    ? t("已确认", "Confirmed")
+                    : row.status === "chain_found"
+                      ? t("原 Run 已在链上", "Original Run exists on chain")
+                      : row.status === "unknown"
+                        ? t(
+                            "原交易回执暂不可读",
+                            "Original transaction receipt is currently unavailable",
+                          )
+                        : row.status === "not_published"
+                          ? t(
+                              "未发现链上投递记录",
+                              "No chain delivery record found",
+                            )
+                          : row.status === "published"
+                            ? t("已在链上", "Already published")
+                            : row.status === "queued"
+                              ? t("原 Run 已排队", "Original Run queued")
+                              : row.status === "declined"
+                                ? t(
+                                    "未提交，保留已准备的原 Run",
+                                    "Not submitted; prepared original Runs are retained",
+                                  )
+                                : t(
+                                    "查询原请求确认状态",
+                                    "Query the original request for its status",
+                                  )}
+                </p>
+                {row.runState !== undefined && (
+                  <p>
+                    {t(
+                      "链上原 Run 当前状态",
+                      "Current original Run state on chain",
+                    )}
+                    :{" "}
+                    {t(
+                      [
+                        "已排队",
+                        "运行中",
+                        "执行成功",
+                        "执行失败",
+                        "执行结果未知",
+                        "已取消",
+                      ][row.runState] ?? "未知",
+                      [
+                        "Queued",
+                        "Running",
+                        "Succeeded",
+                        "Failed",
+                        "Outcome unknown",
+                        "Cancelled",
+                      ][row.runState] ?? "Unknown",
+                    )}{" "}
+                    ·{" "}
+                    {row.deliveryPresent
+                      ? t("命令已发布", "Command published")
+                      : t("未发现投递记录", "No delivery record found")}
+                  </p>
+                )}
+                {row.status === "unknown" && (
+                  <p>
+                    {t(
+                      "回执不可读不代表任务未执行。以上链上状态独立核对；此次查询不会收费或重发。",
+                      "An unavailable receipt does not mean the task did not execute. Chain state is checked separately; this query never charges or resends.",
+                    )}
+                  </p>
+                )}
+                {row.executionId && (
+                  <p className="long-id">Run: {row.executionId}</p>
+                )}
+                {row.digest && (
+                  <details>
+                    <summary>
+                      {t("原交易摘要", "Original transaction digest")}
+                    </summary>
+                    <code className="long-id">{row.digest}</code>
+                  </details>
+                )}
+                <button
+                  className="secondary"
+                  disabled={busy || !!fee}
+                  onClick={() => void perform(() => queryScheduledRow(row))}
+                >
+                  {t("查询这条原请求", "Query this original request")}
+                </button>
+              </div>
+            ))}
+          </section>
+        )}
         {state && (
           <section>
             <h3>{t(...labels[state.status])}</h3>
@@ -684,7 +1059,8 @@ export default function OkrContinuation({
         {fee && (
           <section className="notice">
             <h3>
-              {fee.kind === "control"
+              {fee.kind === "control" ||
+              fee.quote.requestId.startsWith("okr-control:")
                 ? t("确认单次权限费用", "Confirm one-use authority fee")
                 : fee.quote.requestId.startsWith("chain-delivery:")
                   ? t(

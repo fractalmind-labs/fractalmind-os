@@ -50,7 +50,11 @@ export class OkrControl {
     readonly krIndex: string,
     journal: TransactionJournal,
     private readonly assertActive: () => void = () => {},
-    private readonly expected?: { okrVersion: string; policyPin: string },
+    private readonly expected?: {
+      okrVersion?: string;
+      policyPin?: string;
+      scheduled?: boolean;
+    },
   ) {
     if (
       ![grantId, organizationId, okrId].every((v) => id.test(v)) ||
@@ -99,24 +103,54 @@ export class OkrControl {
       okr.org_id !== this.organizationId ||
       okr.owner_human !== authority.humanId ||
       okr.state !== 1 ||
-      (this.expected && okr.version !== this.expected.okrVersion) ||
+      (this.expected?.okrVersion && okr.version !== this.expected.okrVersion) ||
       okr.agreement_version !== this.agreementVersion ||
-      okr.next_kr !== this.krIndex ||
+      (this.expected?.scheduled
+        ? BigInt(this.krIndex) < BigInt(okr.next_kr) ||
+          Number(this.krIndex) >= okr.metrics.length
+        : okr.next_kr !== this.krIndex) ||
       !okr.managed_agent ||
       !okr.membership_id ||
       BigInt(okr.expires_at_ms) <= authority.clockMs ||
       BigInt(okr.expires_at_ms) <= BigInt(Date.now())
     )
       throw new OkrControlError("state_changed");
-    const metric = okr.metrics[Number(okr.next_kr)];
+    const metric = okr.metrics[Number(this.krIndex)];
     if (metric?.current !== null && metric?.run_id && metric?.evidence_id)
       throw new OkrControlError("state_changed");
     const coverage = await this.chain.sdk.nodeExecution.readAgentExecutions(
       this.organizationId,
       okr.managed_agent,
     );
-    if (coverage.unsettledControl)
-      throw new OkrControlError("unsettled_execution");
+    if (coverage.unsettledControl) {
+      if (!this.expected?.scheduled)
+        throw new OkrControlError("unsettled_execution");
+      // Only this reviewed agreement's original reservations may coexist with
+      // advance preparation. Another OKR/direct/unknown Run still blocks it.
+      const owned = new Set<string>();
+      let cursor: string | null = null;
+      const seen = new Set<string>();
+      do {
+        const page = await this.chain.sdk.okr.listExecutions(
+          okr.id,
+          cursor,
+          100,
+        );
+        for (const row of page.executions)
+          if (row.contract.agreement_version === okr.agreement_version)
+            owned.add(row.run.id);
+        cursor = page.cursor;
+        if (cursor && seen.has(cursor))
+          throw new OkrControlError("invalid_source");
+        if (cursor) seen.add(cursor);
+      } while (cursor);
+      if (
+        coverage.executions.some(
+          (row) => row.control && !row.settled && !owned.has(row.run.id),
+        )
+      )
+        throw new OkrControlError("unsettled_execution");
+    }
     const managed = coverage.managed;
     if (
       managed.revoked ||
@@ -170,7 +204,8 @@ export class OkrControl {
     ]);
     if (
       policy.agreement_version !== okr.agreement_version ||
-      (this.expected && canonical(policy) !== this.expected.policyPin) ||
+      (this.expected?.policyPin &&
+        canonical(policy) !== this.expected.policyPin) ||
       policy.managed_version !== managed.version ||
       BigInt(policy.max_calls) < 1n ||
       BigInt(policy.max_calls) > BigInt(okr.budget_limit) ||
