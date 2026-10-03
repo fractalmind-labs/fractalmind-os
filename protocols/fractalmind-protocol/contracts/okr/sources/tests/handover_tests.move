@@ -4,6 +4,51 @@ module fractalmind_okr::handover_tests {
     use sui::ed25519;
     use std::string;
     use fractalmind_okr::handover;
+
+    #[test]
+    fun original_short_review_windows_remain_valid() {
+        handover::assert_review_window_for_testing(1000000, 1000000, 1030000);
+        handover::assert_review_window_for_testing(1000000, 1059999, 1060000);
+    }
+    #[test]
+    fun review_can_exceed_old_minute_limit() {
+        handover::assert_review_window_for_testing(1000000, 1060000, 1060001);
+    }
+    #[test]
+    fun five_minute_review_accepts_exact_maximum_and_last_millisecond() {
+        handover::assert_review_window_for_testing(1000000, 1000000, 1300000);
+        handover::assert_review_window_for_testing(1000000, 1299999, 1300000);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9502, location = fractalmind_okr::handover)]
+    fun review_rejects_one_millisecond_above_maximum() {
+        handover::assert_review_window_for_testing(1000000, 1000000, 1300001);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9502, location = fractalmind_okr::handover)]
+    fun review_rejects_exact_expiry() {
+        handover::assert_review_window_for_testing(1000000, 1300000, 1300000);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9502, location = fractalmind_okr::handover)]
+    fun review_rejects_after_expiry() {
+        handover::assert_review_window_for_testing(1000000, 1300001, 1300000);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9502, location = fractalmind_okr::handover)]
+    fun review_rejects_future_observation() {
+        handover::assert_review_window_for_testing(1000000, 999999, 1300000);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9502, location = fractalmind_okr::handover)]
+    fun review_rejects_zero_length_without_underflow() {
+        handover::assert_review_window_for_testing(1000000, 1000000, 1000000);
+    }
+    #[test]
+    #[expected_failure(abort_code = 9502, location = fractalmind_okr::handover)]
+    fun review_rejects_negative_length_without_underflow() {
+        handover::assert_review_window_for_testing(1000000, 1000000, 999999);
+    }
     #[test]
     fun independent_go_sdk_bcs_and_host_signature_vector() {
         let p = handover::proposal(object::id_from_address(@0x6666666666666666666666666666666666666666666666666666666666666666), object::id_from_address(@0x7777777777777777777777777777777777777777777777777777777777777777), 1, 1, 1,

@@ -68,6 +68,9 @@ export default function CreateIdentity({
   const [stage, setStage] = useState<"identity" | "organization">("identity");
   const [quote, setQuote] = useState<SelfPayFeeQuote | null>(null),
     [outcome, setOutcome] = useState<SelfPayTransactionOutcome | null>(null);
+  const [failedAttempts, setFailedAttempts] = useState<
+    readonly SelfPayTransactionOutcome[]
+  >([]);
   const [name, setName] = useState(""),
     [found, setFound] =
       useState<Awaited<ReturnType<IdentityCreation["locate"]>>>(null);
@@ -148,6 +151,7 @@ export default function CreateIdentity({
     setSavedCode(false);
     setQuote(null);
     setOutcome(null);
+    setFailedAttempts([]);
     try {
       localStorage.setItem(
         CACHE,
@@ -166,6 +170,7 @@ export default function CreateIdentity({
     setFound(identity);
     setStage(identity ? "organization" : "identity");
     setOutcome(prior ?? null);
+    setFailedAttempts(current.failedTransactions);
     setBalances(funds);
     setQuote(null);
   }
@@ -180,6 +185,15 @@ export default function CreateIdentity({
     if (!mounted.current) return;
     if ("status" in result) setOutcome(result);
     else setQuote(result);
+    setFailedAttempts(session.failedTransactions);
+  }
+  async function beginNewAttempt() {
+    if (!session || outcome?.status !== "failed") return;
+    await session.beginNewAttempt(stage, outcome.digest);
+    if (!mounted.current) return;
+    setOutcome(null);
+    setQuote(null);
+    setFailedAttempts(session.failedTransactions);
   }
   async function submit() {
     if (!session || !quote || !savedCode) return;
@@ -452,12 +466,42 @@ export default function CreateIdentity({
                 </p>
               )}
               <p>
-                {t(
-                  "检查只查询原交易，不重放；失败后的新尝试流程仍待接线。",
-                  "Checking queries the original and does not replay. A new attempt after failure is not connected yet.",
-                )}
+                {outcome.status === "failed"
+                  ? t(
+                      "原交易已确认失败。开始新尝试后，重新估算并确认费用；设备、恢复码和已创建的身份保持。",
+                      "The original transaction failed on chain. Start a new attempt, then estimate and confirm its fee. Your device, recovery code and existing Human identity are retained.",
+                    )
+                  : t(
+                      "检查只查询原交易。结果未知时保留原摘要，等待确认。",
+                      "Checking queries the original transaction. An unknown outcome keeps its original digest until confirmed.",
+                    )}
               </p>
+              {outcome.status === "failed" && (
+                <button
+                  disabled={busy}
+                  onClick={() => void action(beginNewAttempt)}
+                >
+                  {t("开始新的创建尝试", "Start a new creation attempt")}
+                </button>
+              )}
             </div>
+          )}
+          {failedAttempts.length > 0 && (
+            <details>
+              <summary>
+                {t("保留的失败记录", "Retained failed attempts")}
+              </summary>
+              {failedAttempts.map((attempt) => (
+                <div key={attempt.digest}>
+                  <code className="long-id">{attempt.digest}</code>
+                  {attempt.actualGas && (
+                    <p>
+                      {t("实际 Gas", "Actual Gas")}: {sui(attempt.actualGas)}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </details>
           )}
           {Boolean(found?.organizations.length) && (
             <button
@@ -520,10 +564,21 @@ export default function CreateIdentity({
                       "报价或 Gas 已变化，请重新估算并确认。",
                       "Quote or Gas changed. Estimate and confirm again.",
                     )
-                  : t(
-                      "本次未完成。检查部署、密钥库和原交易；已有配置可继续，不自动重建或重放。",
-                      "Not completed. Check deployment, credential store and original transaction. Continue existing setup; no silent regeneration or replay.",
-                    )}
+                  : error === "original_transaction_not_failed" ||
+                      error === "creation_attempt_changed"
+                    ? t(
+                        "原尝试状态已变化，当前不能开始新尝试。请检查余额与原交易，再按最新结果继续。",
+                        "The original attempt changed; a new attempt cannot start now. Check balance and the original transaction, then continue from its current result.",
+                      )
+                    : error === "creation_already_exists"
+                      ? t(
+                          "身份或组织状态已推进。请检查原交易并继续已创建的身份或组织。",
+                          "Identity or organization creation has progressed. Check the original transaction and continue with the existing identity or organization.",
+                        )
+                      : t(
+                          "本次未完成。检查部署、密钥库和原交易；已有配置可继续，不自动重建或重放。",
+                          "Not completed. Check deployment, credential store and original transaction. Continue existing setup; no silent regeneration or replay.",
+                        )}
         </p>
       )}
     </section>

@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import {
+  HANDOVER_REVIEW_WINDOW_MS,
   bytesToHex,
   handoverAcceptanceSigningBytes,
   handoverProposalHash,
@@ -55,6 +57,51 @@ test("Go BCS Host acceptance and signature verified independently by the SDK", a
   assert.equal(
     a.proposal.review_expires_at_ms,
     vector.acceptance.proposal.review_expires_at_ms,
+  );
+});
+
+test("fixed review windows retain short proofs, permit five minutes and never renew at expiry", async () => {
+  const host = Ed25519Keypair.generate();
+  for (const duration of [30_000, 60_000, 60_001, HANDOVER_REVIEW_WINDOW_MS]) {
+    const a = structuredClone(vector.acceptance);
+    a.host_address = host.toSuiAddress();
+    a.proposal.expires_at_ms =
+      a.observed_at_ms + HANDOVER_REVIEW_WINDOW_MS + 60_000;
+    a.proposal.review_expires_at_ms = a.observed_at_ms + duration;
+    const bytes = handoverAcceptanceSigningBytes(a);
+    a.signature = `ed25519:${bytesToHex(host.getPublicKey().toRawBytes())}:${bytesToHex(await host.sign(bytes))}`;
+    await verifyHandoverAcceptanceSignature(a, a.host_address);
+    const original = structuredClone(a);
+    assertFreshHandoverAcceptance(
+      a,
+      a.proposal.review_expires_at_ms - 1,
+      a.proposal,
+    );
+    assert.throws(
+      () =>
+        assertFreshHandoverAcceptance(
+          a,
+          a.proposal.review_expires_at_ms,
+          a.proposal,
+        ),
+      /expired/,
+    );
+    assert.deepEqual(a, original);
+    const changed = structuredClone(a.proposal);
+    changed.review_expires_at_ms++;
+    assert.throws(
+      () => assertFreshHandoverAcceptance(a, a.observed_at_ms, changed),
+      /changed/,
+    );
+  }
+  const tooLong = structuredClone(vector.acceptance);
+  tooLong.proposal.expires_at_ms =
+    tooLong.observed_at_ms + HANDOVER_REVIEW_WINDOW_MS + 60_000;
+  tooLong.proposal.review_expires_at_ms =
+    tooLong.observed_at_ms + HANDOVER_REVIEW_WINDOW_MS + 1;
+  assert.throws(
+    () => handoverAcceptanceSigningBytes(tooLong),
+    /Invalid native/,
   );
 });
 

@@ -10,6 +10,10 @@ import (
 	"slices"
 )
 
+// MaxHandoverReviewWindowMS bounds the original, non-renewable Host review.
+// The review never authorizes tools; independent Human approval remains required.
+const MaxHandoverReviewWindowMS int64 = 5 * 60 * 1000
+
 // A proposed agreement is not authority. A status command can ask the native
 // adapter to review it, without starting, changing or approving an OKR.
 type HandoverProposal struct {
@@ -198,7 +202,7 @@ func (a HandoverAcceptance) SigningBytes() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if a.Version != "1" || a.CoverageRevision == 0 || a.ObservedAtMS <= 0 || a.ObservedAtMS >= a.Proposal.ReviewExpiresAtMS || a.Proposal.ReviewExpiresAtMS-a.ObservedAtMS > 60_000 || len(a.InstanceID) != 71 || a.InstanceID[:7] != "native-" {
+	if a.Version != "1" || a.CoverageRevision == 0 || a.ObservedAtMS <= 0 || a.ObservedAtMS >= a.Proposal.ReviewExpiresAtMS || a.Proposal.ReviewExpiresAtMS-a.ObservedAtMS > MaxHandoverReviewWindowMS || len(a.InstanceID) != 71 || a.InstanceID[:7] != "native-" {
 		return nil, fmt.Errorf("invalid native acceptance")
 	}
 	if _, err := canonicalHex(a.InstanceID[7:], 32); err != nil {
@@ -348,7 +352,7 @@ func (s *ChainAuthorityResolver) InspectHandover(ctx context.Context, command No
 	if err != nil {
 		return HandoverAuthority{}, err
 	}
-	if now <= 0 || command.IssuedAtMS > now || state.ExpiresAtMS <= now || p.ReviewExpiresAtMS <= now || p.ReviewExpiresAtMS-now > 60_000 || p.ReviewExpiresAtMS > run.ExpiresAtMS || p.ReviewExpiresAtMS > state.ExpiresAtMS || p.ExpiresAtMS <= now || uint64(p.ExpiresAtMS) > grant.Expiry {
+	if now <= 0 || command.IssuedAtMS > now || state.ExpiresAtMS <= now || p.ReviewExpiresAtMS <= now || p.ReviewExpiresAtMS-now > MaxHandoverReviewWindowMS || p.ReviewExpiresAtMS > run.ExpiresAtMS || p.ReviewExpiresAtMS > state.ExpiresAtMS || p.ExpiresAtMS <= now || uint64(p.ExpiresAtMS) > grant.Expiry {
 		return fail()
 	}
 	current, found, err := s.RecheckExecution(ctx, run)

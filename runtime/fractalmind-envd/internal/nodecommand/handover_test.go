@@ -17,8 +17,14 @@ import (
 
 func handoverChainFixture(t *testing.T) (*chainFixture, NodeCommand, ChainExecution, HandoverProposal, string) {
 	t.Helper()
+	return handoverChainFixtureWindow(t, 30000)
+}
+
+func handoverChainFixtureWindow(t *testing.T, window int64) (*chainFixture, NodeCommand, ChainExecution, HandoverProposal, string) {
+	t.Helper()
 	f := newChainFixture(t)
 	const now = 1700000000000
+	expires := now + max(int64(60000), window)
 	f.coordinator.ID = addressNumber(20)
 	f.member.Binding = f.coordinator.ID
 	f.human.Grants = []moveAddress{f.grant.ID}
@@ -32,15 +38,18 @@ func handoverChainFixture(t *testing.T) (*chainFixture, NodeCommand, ChainExecut
 	f.cap.ReservationScope = 2
 	f.cap.MaxBudget = 0
 	f.cap.BudgetAsset = ""
+	f.cap.Expiry = uint64(expires)
+	f.grant.Expiry = f.cap.Expiry
+	f.member.Expiry = uint64(now + window + 90000)
 	f.managed.Instance = "native-" + strings.Repeat("b", 64)
 	f.cap.Agent = f.managed.Instance
 	f.managed.Control = false
 	f.auth.RequiredAction = 1
 	f.sync(t)
-	p := HandoverProposal{Version: "1", ManagedAgentID: f.managed.ID.String(), ManagedVersion: 1, OkrID: addressNumber(21).String(), OkrVersion: 1, SpecRevision: 1, WorkspaceHash: hex.EncodeToString(f.managed.Workspace), Paths: map[string][]string{"file.read": {"."}, "file.write": {"."}}, BudgetAsset: "TOOL_CALLS", BudgetLimit: 10, MaxCalls: 3, ExpiresAtMS: now + 60000, ReviewExpiresAtMS: now + 30000, Nonce: strings.Repeat("c", 64)}
-	okr := moveOkr{ID: addressNumber(21), Org: f.org.ID, Human: f.human.ID, State: 0, Version: 1, SpecRevision: 1, Deadline: now + 120000, Metrics: []moveOkrMetric{{Target: 1, Weight: 100, MaxAge: 60000}}}
+	p := HandoverProposal{Version: "1", ManagedAgentID: f.managed.ID.String(), ManagedVersion: 1, OkrID: addressNumber(21).String(), OkrVersion: 1, SpecRevision: 1, WorkspaceHash: hex.EncodeToString(f.managed.Workspace), Paths: map[string][]string{"file.read": {"."}, "file.write": {"."}}, BudgetAsset: "TOOL_CALLS", BudgetLimit: 10, MaxCalls: 3, ExpiresAtMS: expires, ReviewExpiresAtMS: now + window, Nonce: strings.Repeat("c", 64)}
+	okr := moveOkr{ID: addressNumber(21), Org: f.org.ID, Human: f.human.ID, State: 0, Version: 1, SpecRevision: 1, Deadline: uint64(now + window + 90000), Metrics: []moveOkrMetric{{Target: 1, Weight: 100, MaxAge: 60000}}}
 	f.saveObject(t, okr.ID, "okr::Okr", okr)
-	command := NodeCommand{Version: "1", CommandID: "review-1", Signer: f.grant.Device.String(), Target: Target{OrganizationID: f.org.ID.String(), NodeID: f.member.Host.String(), AgentID: f.managed.Instance}, Action: "status", Scope: "observation", Capability: CapabilityRef{ID: f.cap.ID.String(), RevocationVersion: 1}, IssuedAtMS: now, ExpiresAtMS: now + 60000, Nonce: "review-nonce", IdempotencyKey: "review-idem"}
+	command := NodeCommand{Version: "1", CommandID: "review-1", Signer: f.grant.Device.String(), Target: Target{OrganizationID: f.org.ID.String(), NodeID: f.member.Host.String(), AgentID: f.managed.Instance}, Action: "status", Scope: "observation", Capability: CapabilityRef{ID: f.cap.ID.String(), RevocationVersion: 1}, IssuedAtMS: now, ExpiresAtMS: expires, Nonce: "review-nonce", IdempotencyKey: "review-idem"}
 	command.Payload, _ = json.Marshal(map[string]any{"handover_review": p})
 	command.PayloadHash = HashPayload(command.Payload)
 	signing, err := command.SigningBytes()
@@ -76,6 +85,51 @@ func TestHandoverUsesExactTypedAuthorityAndCompleteCoverage(t *testing.T) {
 	}
 	if f.managed.Control {
 		t.Fatal("review changed control")
+	}
+}
+
+func TestHandoverReviewWindowBounds(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		window int64
+		valid  bool
+	}{
+		{"short original", 30000, true},
+		{"old maximum", 60000, true},
+		{"beyond old maximum", 60001, true},
+		{"maximum", MaxHandoverReviewWindowMS, true},
+		{"above maximum", MaxHandoverReviewWindowMS + 1, false},
+		{"at expiry", 0, false},
+		{"after expiry", -1, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f, command, run, proposal, _ := handoverChainFixtureWindow(t, tc.window)
+			source, err := f.resolver.InspectHandover(context.Background(), command, run, proposal)
+			if (err == nil) != tc.valid {
+				t.Fatalf("window %d accepted=%v, wanted %v: %v", tc.window, err == nil, tc.valid, err)
+			}
+			acceptance := HandoverAcceptance{Version: "1", ExecutionID: run.ID, OrganizationID: command.Target.OrganizationID, HumanID: run.HumanID, GrantID: run.GrantID, MembershipID: run.MembershipID, BindingID: run.CoordinatorBindingID, HostAddress: run.HostAddress, InstanceID: command.Target.AgentID, Proposal: proposal, CoverageRevision: 2, ObservedAtMS: command.IssuedAtMS}
+			if _, err := acceptance.SigningBytes(); (err == nil) != tc.valid {
+				t.Fatalf("acceptance window %d accepted=%v, wanted %v: %v", tc.window, err == nil, tc.valid, err)
+			}
+			if !tc.valid {
+				return
+			}
+			// The original fixed deadline remains authoritative after a long
+			// Human review; the read proof cannot turn expiry into a renewal.
+			clock := f.objects[addressNumber(6).String()]
+			clock.Content = append([]byte(nil), clock.Content...)
+			binary.LittleEndian.PutUint64(clock.Content[32:], uint64(proposal.ReviewExpiresAtMS-1))
+			f.objects[clock.ID] = clock
+			if _, err := f.resolver.RecheckHandover(context.Background(), command, run, proposal, source); err != nil {
+				t.Fatalf("last millisecond rejected: %v", err)
+			}
+			binary.LittleEndian.PutUint64(clock.Content[32:], uint64(proposal.ReviewExpiresAtMS))
+			f.objects[clock.ID] = clock
+			if _, err := f.resolver.RecheckHandover(context.Background(), command, run, proposal, source); err == nil {
+				t.Fatal("exact expiry renewed the original review")
+			}
+		})
 	}
 }
 

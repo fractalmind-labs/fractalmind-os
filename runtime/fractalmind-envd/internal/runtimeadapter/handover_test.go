@@ -22,6 +22,7 @@ type reviewAuthorityFixture struct {
 	inspections        int
 	changeAfterReserve bool
 	onSecond           func()
+	clockMS            int64
 }
 
 func (p *reviewAuthorityFixture) InspectHandover(_ context.Context, _ nodecommand.NodeCommand, _ nodecommand.ChainExecution, proposal nodecommand.HandoverProposal) (nodecommand.HandoverAuthority, error) {
@@ -33,9 +34,17 @@ func (p *reviewAuthorityFixture) InspectHandover(_ context.Context, _ nodecomman
 		return nodecommand.HandoverAuthority{}, errors.New("authority changed")
 	}
 	hash, err := proposal.Hash()
-	return nodecommand.HandoverAuthority{ProposalHash: hash, CoverageRevision: 2, ClockMS: time.Now().UnixMilli()}, err
+	now := p.clockMS
+	if now == 0 {
+		now = time.Now().UnixMilli()
+	}
+	return nodecommand.HandoverAuthority{ProposalHash: hash, CoverageRevision: 2, ClockMS: now}, err
 }
 func nativeReviewFixture(t *testing.T) (*boundedFileAgent, *reviewAuthorityFixture, *fakeRunner, Request, nodecommand.NodeCommand, nodecommand.ChainExecution, string) {
+	t.Helper()
+	return nativeReviewFixtureWindow(t, 30000)
+}
+func nativeReviewFixtureWindow(t *testing.T, window int64) (*boundedFileAgent, *reviewAuthorityFixture, *fakeRunner, Request, nodecommand.NodeCommand, nodecommand.ChainExecution, string) {
 	t.Helper()
 	a, probe, observer, id, dir := nativeFixture(t)
 	reader := &reviewAuthorityFixture{blockingNativeAuthority: probe}
@@ -45,9 +54,10 @@ func nativeReviewFixture(t *testing.T) (*boundedFileAgent, *reviewAuthorityFixtu
 	public := private.Public().(ed25519.PublicKey)
 	address := blake2b.Sum256(append([]byte{0}, public...))
 	now := time.Now().UnixMilli()
+	expires := now + max(int64(60000), window)
 	workspace := a.NativeDiscovery().Instances[0].WorkspaceHash
-	p := nodecommand.HandoverProposal{Version: "1", ManagedAgentID: full("5"), ManagedVersion: 1, OkrID: full("6"), OkrVersion: 1, SpecRevision: 1, WorkspaceHash: workspace, Paths: map[string][]string{"file.read": {"."}, "file.write": {"."}}, BudgetAsset: "TOOL_CALLS", BudgetLimit: 10, MaxCalls: 3, ExpiresAtMS: now + 60000, ReviewExpiresAtMS: now + 30000, Nonce: strings.Repeat("b", 64)}
-	command := nodecommand.NodeCommand{Version: "1", CommandID: "review-native", Signer: "0x" + hex.EncodeToString(address[:]), Target: nodecommand.Target{OrganizationID: full("2"), NodeID: full("3"), AgentID: id}, Capability: nodecommand.CapabilityRef{ID: full("1"), RevocationVersion: 1}, Action: "status", Scope: "observation", IssuedAtMS: now, ExpiresAtMS: now + 60000, Nonce: "nonce", IdempotencyKey: "idem"}
+	p := nodecommand.HandoverProposal{Version: "1", ManagedAgentID: full("5"), ManagedVersion: 1, OkrID: full("6"), OkrVersion: 1, SpecRevision: 1, WorkspaceHash: workspace, Paths: map[string][]string{"file.read": {"."}, "file.write": {"."}}, BudgetAsset: "TOOL_CALLS", BudgetLimit: 10, MaxCalls: 3, ExpiresAtMS: expires, ReviewExpiresAtMS: now + window, Nonce: strings.Repeat("b", 64)}
+	command := nodecommand.NodeCommand{Version: "1", CommandID: "review-native", Signer: "0x" + hex.EncodeToString(address[:]), Target: nodecommand.Target{OrganizationID: full("2"), NodeID: full("3"), AgentID: id}, Capability: nodecommand.CapabilityRef{ID: full("1"), RevocationVersion: 1}, Action: "status", Scope: "observation", IssuedAtMS: now, ExpiresAtMS: expires, Nonce: "nonce", IdempotencyKey: "idem"}
 	command.Payload, _ = json.Marshal(map[string]any{"handover_review": p})
 	command.PayloadHash = nodecommand.HashPayload(command.Payload)
 	data, err := command.SigningBytes()
@@ -59,6 +69,54 @@ func nativeReviewFixture(t *testing.T) (*boundedFileAgent, *reviewAuthorityFixtu
 	run := nodecommand.ChainExecution{ID: full("7"), CapabilityID: command.Capability.ID, HumanID: full("8"), GrantID: full("9"), MembershipID: full("a"), CoordinatorBindingID: full("b"), ManagedAgentID: p.ManagedAgentID, HostAddress: command.Target.NodeID, Signer: command.Signer, Target: command.Target, Action: command.Action, Scope: command.Scope, State: 1, Fingerprint: hex.EncodeToString(fingerprint[:]), ExpiresAtMS: command.ExpiresAtMS}
 	request := Request{SchemaVersion: SchemaVersion, CommandID: command.CommandID, Operation: OperationStatus, Agent: id, Handover: &p}
 	return a, reader, observer, request, command, run, dir
+}
+func TestNativeReviewFixedWindowBoundsAndNoRenewal(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		window int64
+		valid  bool
+	}{
+		{"short original", 30000, true},
+		{"old maximum", 60000, true},
+		{"beyond old maximum", 60001, true},
+		{"maximum", nodecommand.MaxHandoverReviewWindowMS, true},
+		{"above maximum", nodecommand.MaxHandoverReviewWindowMS + 1, false},
+		{"at expiry", 0, false},
+		{"after expiry", -1, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			a, reader, observer, request, command, run, dir := nativeReviewFixtureWindow(t, tc.window)
+			// Fix the chain clock so the +1ms upper-bound case cannot become
+			// valid merely because a scheduler delayed the initial read.
+			reader.clockMS = command.IssuedAtMS
+			response, err := a.runAuthorized(context.Background(), request, command, &run)
+			if err != nil || response.OK != tc.valid {
+				t.Fatalf("window %d accepted=%v, wanted %v: %+v %v", tc.window, response.OK, tc.valid, response, err)
+			}
+			entries, err := os.ReadDir(dir)
+			if err != nil || len(entries) != 0 || observer.callCount() != 0 {
+				t.Fatal("review invoked tools or touched files", entries, err)
+			}
+			lease := a.reviews[request.Agent]
+			if !tc.valid {
+				if lease != nil {
+					t.Fatal("denied window retained physical exclusion")
+				}
+				return
+			}
+			if lease == nil || lease.expiresAtMS != request.Handover.ReviewExpiresAtMS {
+				t.Fatal("review did not retain its original expiry")
+			}
+			deadline := lease.deadline
+			if _, ok := a.beginNative("files", "unapproved", "another-run"); ok {
+				t.Fatal("review alone allowed tool execution")
+			}
+			again, err := a.runAuthorized(context.Background(), request, command, &run)
+			if err != nil || again.OK || again.Error == nil || again.Error.Code != "instance_busy" || a.reviews[request.Agent] != lease || !lease.deadline.Equal(deadline) {
+				t.Fatal("duplicate refreshed or replaced the original lease", again, err)
+			}
+		})
+	}
 }
 func TestNativeReviewHoldsBothAliasesWithoutExecutingTools(t *testing.T) {
 	a, reader, observer, request, command, run, dir := nativeReviewFixture(t)

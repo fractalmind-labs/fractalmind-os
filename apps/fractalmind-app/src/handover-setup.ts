@@ -1,6 +1,7 @@
 import { bcs } from "@mysten/sui/bcs";
 import {
   AuthorityBindingBcs,
+  HANDOVER_REVIEW_WINDOW_MS,
   OkrBcs,
   SelfPayTransactionManager,
   bytesToHex,
@@ -192,11 +193,12 @@ export class HandoverSetup {
       BigInt(before.member.expires_at_ms),
       BigInt(before.authority.expiresAtMs),
     ].reduce((a, b) => (a < b ? a : b));
-    if (expires <= now + 60000n) throw new HandoverSetupError("review_expired");
+    if (expires <= now + BigInt(HANDOVER_REVIEW_WINDOW_MS))
+      throw new HandoverSetupError("review_expired");
     const guard = async () => {
       if ((await this.source()).pin !== before.pin)
         throw new HandoverSetupError("state_changed");
-      if (BigInt(Date.now()) + 55000n >= expires)
+      if (BigInt(Date.now()) + BigInt(HANDOVER_REVIEW_WINDOW_MS) >= expires)
         throw new HandoverSetupError("review_expired");
     };
     const transaction = this.chain.sdk.host.issueCapability({
@@ -369,8 +371,10 @@ export class HandoverSetup {
     )
       throw new HandoverSetupError("invalid_source");
     if (
-      BigInt(okr.deadline_ms) <= source.authority.clockMs + 60000n ||
-      BigInt(okr.deadline_ms) <= BigInt(Date.now()) + 60000n
+      BigInt(okr.deadline_ms) <=
+        source.authority.clockMs + BigInt(HANDOVER_REVIEW_WINDOW_MS) ||
+      BigInt(okr.deadline_ms) <=
+        BigInt(Date.now()) + BigInt(HANDOVER_REVIEW_WINDOW_MS)
     )
       throw new HandoverSetupError("review_expired");
     const logicalId = `okr-${okr.logical_id}-spec`;
@@ -427,7 +431,8 @@ export class HandoverSetup {
       throw new HandoverSetupError("state_changed");
     const cap = await this.capability(capabilityId, before.source);
     const now = Math.max(Date.now(), Number(before.source.authority.clockMs));
-    const expiresAtMs = Math.min(Number(cap.expiresAtMs), now + 120000);
+    const reviewExpiresAtMs = now + HANDOVER_REVIEW_WINDOW_MS;
+    const expiresAtMs = Math.min(Number(cap.expiresAtMs), reviewExpiresAtMs);
     const executionExpiry = [
       before.okr.deadline_ms,
       before.source.authority.expiresAtMs,
@@ -437,8 +442,8 @@ export class HandoverSetup {
       .reduce((a, b) => Math.min(a, b));
     if (
       !Number.isSafeInteger(executionExpiry) ||
-      executionExpiry <= now + 60000 ||
-      expiresAtMs <= now + 55000
+      executionExpiry <= reviewExpiresAtMs ||
+      expiresAtMs < reviewExpiresAtMs
     )
       throw new HandoverSetupError("review_expired");
     const proposal: HandoverProposal = {
@@ -459,7 +464,7 @@ export class HandoverSetup {
         "0",
       ),
       expires_at_ms: executionExpiry,
-      review_expires_at_ms: Math.min(now + 55000, expiresAtMs, executionExpiry),
+      review_expires_at_ms: reviewExpiresAtMs,
       nonce: bytesToHex(crypto.getRandomValues(new Uint8Array(32))),
     };
     handoverProposalHash(proposal);
@@ -480,12 +485,18 @@ export class HandoverSetup {
       issuedAtMs: now,
       expiresAtMs,
     });
+    const after = await this.specification(okrId);
     if (
-      (await this.specification(okrId)).pin !== before.pin ||
+      after.pin !== before.pin ||
       canonical(await this.capability(capabilityId, before.source)) !==
         canonical(cap)
     )
       throw new HandoverSetupError("state_changed");
+    if (
+      Math.max(Date.now(), Number(after.source.authority.clockMs)) >=
+      reviewExpiresAtMs
+    )
+      throw new HandoverSetupError("review_expired");
     return {
       command,
       membershipId: before.source.member.id,

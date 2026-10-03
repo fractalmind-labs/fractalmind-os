@@ -10,6 +10,7 @@ import {
 } from "@mysten/sui/utils";
 import {
   AuthorityBindingBcs,
+  HANDOVER_REVIEW_WINDOW_MS,
   MemoryTransactionJournal,
   verifySignedNodeCommand,
   type NativeFileOkrPlan,
@@ -262,6 +263,7 @@ async function fixture() {
     cap,
     authorityBinding,
     authority,
+    source,
     managedRecord,
     originalSource,
     set: (v: {
@@ -356,10 +358,69 @@ test("review factory signs the current exact spec and bounded plan without creat
   assert.equal(p.okr_version, "2");
   assert.equal(p.spec_revision, "3");
   assert.equal(p.budget_limit, "3");
+  assert.equal(
+    p.review_expires_at_ms - request.command.issued_at_ms,
+    HANDOVER_REVIEW_WINDOW_MS,
+  );
+  assert.equal(request.command.expires_at_ms, p.review_expires_at_ms);
   assert.deepEqual(request.nativeFilePlan, f.nativePlan);
   assert.equal(f.counts().builds, 0);
   f.nativePlan.krs[0].files[0].content = "changed afterward";
   assert.equal(request.nativeFilePlan.krs[0].files[0].content, "Reviewed");
+});
+test("a full fixed review window must fit capability, member, device and OKR expiry before signing", async (t) => {
+  const now = Date.now();
+  t.mock.method(Date, "now", () => now);
+  for (const boundary of ["capability", "member", "device", "okr"] as const) {
+    const f = await fixture();
+    const short = now + HANDOVER_REVIEW_WINDOW_MS - 1;
+    if (boundary === "capability") f.cap.expiresAtMs = BigInt(short);
+    if (boundary === "member") f.source.member.expires_at_ms = String(short);
+    if (boundary === "device") f.authority.expiresAtMs = String(short);
+    if (boundary === "okr") f.spec.deadlineMs = String(short);
+    await assert.rejects(
+      f.setup.createReview(f.okr, f.cap.objectId, f.nativePlan),
+      /review_expired/,
+    );
+    assert.deepEqual(f.counts(), { signatures: 0, broadcasts: 0, builds: 0 });
+  }
+  const exact = await fixture();
+  exact.cap.expiresAtMs = BigInt(now + HANDOVER_REVIEW_WINDOW_MS);
+  const value = await exact.setup.createReview(
+    exact.okr,
+    exact.cap.objectId,
+    exact.nativePlan,
+  );
+  assert.equal(value.command.expires_at_ms, now + HANDOVER_REVIEW_WINDOW_MS);
+});
+test("native signing or fee review cannot renew an expired review window", async (t) => {
+  let now = Date.now();
+  t.mock.method(Date, "now", () => now);
+  const signing = await fixture();
+  signing.set({
+    native: () => {
+      now += HANDOVER_REVIEW_WINDOW_MS;
+    },
+  });
+  await assert.rejects(
+    signing.setup.createReview(
+      signing.okr,
+      signing.cap.objectId,
+      signing.nativePlan,
+    ),
+    /review_expired/,
+  );
+  assert.equal(signing.counts().signatures, 1);
+  assert.equal(signing.counts().broadcasts, 0);
+  const quoting = await fixture();
+  quoting.set({
+    quoting: () => {
+      now += HANDOVER_REVIEW_WINDOW_MS;
+    },
+  });
+  await assert.rejects(quoting.setup.prepare(), /review_expired/);
+  assert.equal(quoting.counts().signatures, 0);
+  assert.equal(quoting.counts().broadcasts, 0);
 });
 test("review factory rejects stale native-signing snapshots, unsupported constraints, escaped paths and mismatched capability bindings", async () => {
   const signing = await fixture();

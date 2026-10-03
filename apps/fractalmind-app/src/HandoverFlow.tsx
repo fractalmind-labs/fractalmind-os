@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import {
   IndexedDbTransactionJournal,
+  HANDOVER_REVIEW_WINDOW_MS,
   TransactionPreflightError,
   type HandoverProposal,
   type NativeFileOkrPlan,
@@ -326,7 +327,7 @@ export default function HandoverFlow({
         "0",
       ),
       expires_at_ms: Number(spec.deadlineMs),
-      review_expires_at_ms: Date.now() + 55000,
+      review_expires_at_ms: Date.now() + HANDOVER_REVIEW_WINDOW_MS,
       nonce: "00".repeat(32),
     };
     validateHandoverPlan(spec, candidate, proposal);
@@ -661,6 +662,9 @@ export default function HandoverFlow({
     | HandoverProposal
     | undefined;
   const expired = proposal && now >= proposal.review_expires_at_ms;
+  const reviewSecondsLeft = proposal
+    ? Math.max(0, Math.ceil((proposal.review_expires_at_ms - now) / 1000))
+    : 0;
   const reviewLabels = [
     t("排队中", "Queued"),
     t("运行中", "Running"),
@@ -1042,16 +1046,18 @@ export default function HandoverFlow({
                 {t("执行授权最晚到期", "Execution authority expires by")}:{" "}
                 {new Date(proposal.expires_at_ms).toLocaleString()}
               </p>
-              <p className="notice">
+              <p className="notice" role="timer">
                 {t("审阅有效至", "Review valid until")}{" "}
                 {new Date(proposal.review_expires_at_ms).toLocaleTimeString()} ·{" "}
                 {expired ? t("已过期", "Expired") : t("倒计时", "Time left")}{" "}
                 {!expired &&
-                  Math.max(
-                    0,
-                    Math.ceil((proposal.review_expires_at_ms - now) / 1000),
-                  )}{" "}
-                {t("秒", "seconds")}
+                  `${Math.floor(reviewSecondsLeft / 60)}:${String(reviewSecondsLeft % 60).padStart(2, "0")}`}
+              </p>
+              <p>
+                {t(
+                  "审阅窗口最长 5 分钟，从原请求生成开始。Host 接受后会临时保留此实例；请在到期前核对并批准。刷新和重新读取不会延长期限。",
+                  "The fixed review window is at most 5 minutes from the original request. After acceptance, the Host temporarily reserves this instance. Review and approve before expiry; refreshing or reading again does not extend it.",
+                )}
               </p>
             </section>
           )}

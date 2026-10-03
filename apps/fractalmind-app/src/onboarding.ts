@@ -20,6 +20,18 @@ import { DeviceIdentityVerifier } from "./device-identity";
 import type { ConnectionProfile } from "./domain";
 
 export type DeploymentProfile = Omit<ConnectionProfile, "humanId">;
+export type CreationStage = "identity" | "organization";
+export class IdentityCreationAttemptError extends Error {
+  constructor(
+    readonly code:
+      | "original_transaction_not_failed"
+      | "creation_attempt_changed"
+      | "creation_already_exists"
+      | "creation_history_unavailable",
+  ) {
+    super(code);
+  }
+}
 export class IdentityDeploymentError extends Error {
   readonly code = "deployment_type_origin_mismatch";
   constructor() {
@@ -54,6 +66,7 @@ export function identityCreationFailure(
   packageId: string,
 ): string {
   if (error instanceof IdentityDeploymentError) return error.code;
+  if (error instanceof IdentityCreationAttemptError) return error.code;
   if (!(error instanceof TransactionPreflightError))
     return "native_or_chain_unavailable";
   const cause = error.cause as
@@ -99,11 +112,13 @@ export class IdentityCreation {
   readonly recoveryManager: SelfPayTransactionManager;
   readonly deviceManager: SelfPayTransactionManager;
   readonly identityRequest: string;
+  private readonly nextAttempts = new Map<string, string>();
+  private readonly failed = new Map<string, SelfPayTransactionOutcome>();
   constructor(
     readonly deployment: DeploymentProfile,
     readonly recovery: NativeRecoverySigner,
     readonly device: NativeDeviceSigner,
-    journal: TransactionJournal,
+    private readonly journal: TransactionJournal,
   ) {
     if (
       recovery.material.network !== deployment.network ||
@@ -130,6 +145,89 @@ export class IdentityCreation {
       journal,
     });
     this.identityRequest = `identity:${device.device.profile}`;
+  }
+  get failedTransactions(): readonly SelfPayTransactionOutcome[] {
+    return [...this.failed.values()];
+  }
+  /** Follow only attempts already recorded in the durable journal. An absent
+   * successor remains the original failed operation until the user explicitly
+   * starts it. Its ID is derived from the failed digest, so concurrent windows
+   * converge on one request and retain all original receipts. */
+  private async attempt(
+    manager: SelfPayTransactionManager,
+    root: string,
+    stage: CreationStage,
+  ) {
+    let requestId = root;
+    let outcome = await manager.query(requestId);
+    const visited = new Set<string>();
+    while (outcome) {
+      const confirmedFailed = outcome.status === "failed";
+      if (!confirmedFailed) {
+        if (outcome.status !== "unknown") break;
+        // A pruned historical receipt must not hide a successor that is already
+        // journaled. Cached failure is used only to find that existing request;
+        // it never permits allocating or quoting a missing successor.
+        const namespace = JSON.stringify([
+          this.deployment.network,
+          await this.pin(),
+          stage === "identity"
+            ? this.recovery.material.recovery.address
+            : this.device.device.address,
+        ]);
+        const historical = await this.journal.get(namespace, requestId);
+        if (
+          historical?.status !== "failed" ||
+          historical.digest !== outcome.digest
+        )
+          break;
+      }
+      if (visited.has(outcome.digest) || visited.size >= 64)
+        throw new IdentityCreationAttemptError("creation_history_unavailable");
+      visited.add(outcome.digest);
+      if (confirmedFailed) this.failed.set(outcome.digest, outcome);
+      const next = `${stage}-retry:${outcome.digest}`;
+      const recorded = await manager.query(next);
+      if (!recorded) {
+        return confirmedFailed && this.nextAttempts.get(root) === next
+          ? { requestId: next, outcome: undefined }
+          : { requestId, outcome };
+      }
+      requestId = next;
+      outcome = recorded;
+    }
+    return { requestId, outcome };
+  }
+  /** This allocates no keys and submits nothing. A fresh failed receipt, the
+   * exact reviewed digest, and the current stage are all required before a new
+   * quote may be requested. Unknown or pending originals never advance. */
+  async beginNewAttempt(stage: CreationStage, failedDigest: string) {
+    await this.pin();
+    const found = await this.locate();
+    if (
+      (stage === "identity" && found) ||
+      (stage === "organization" && (!found || found.organizations.length))
+    )
+      throw new IdentityCreationAttemptError("creation_already_exists");
+    const root =
+      stage === "identity"
+        ? this.identityRequest
+        : this.organizationRequest(found!.profile.humanId);
+    const manager =
+      stage === "identity" ? this.recoveryManager : this.deviceManager;
+    const current = await this.attempt(manager, root, stage);
+    if (current.outcome?.status !== "failed")
+      throw new IdentityCreationAttemptError("original_transaction_not_failed");
+    if (current.outcome.digest !== failedDigest)
+      throw new IdentityCreationAttemptError("creation_attempt_changed");
+    if (!current.outcome.journalSynced)
+      throw new TransactionPreflightError(
+        "journal_unavailable",
+        "Keep the failed original receipt before starting another attempt.",
+      );
+    const next = `${stage}-retry:${failedDigest}`;
+    this.nextAttempts.set(root, next);
+    return next;
   }
   private async pin() {
     const { chainIdentifier } = await this.client.core.getChainIdentifier();
@@ -285,14 +383,18 @@ export class IdentityCreation {
     SelfPayFeeQuote | SelfPayTransactionOutcome
   > {
     await this.pin();
-    const prior = await this.recoveryManager.query(this.identityRequest);
-    if (prior) return prior;
+    const current = await this.attempt(
+      this.recoveryManager,
+      this.identityRequest,
+      "identity",
+    );
+    if (current.outcome) return current.outcome;
     if (await this.locate())
       throw new Error("Identity already exists; continue from chain");
     const material = this.recovery.material,
       registry = await this.registry();
     return this.recoveryManager.prepare({
-      requestId: this.identityRequest,
+      requestId: current.requestId,
       gasBudget: 200_000_000n,
       transaction: this.sdk.identity.createIdentity({
         identityRegistryId: registry.id,
@@ -310,13 +412,20 @@ export class IdentityCreation {
   }
   async submitIdentity(quote: SelfPayFeeQuote) {
     await this.pin();
-    if (quote.requestId !== this.identityRequest)
+    const current = await this.attempt(
+      this.recoveryManager,
+      this.identityRequest,
+      "identity",
+    );
+    if (quote.requestId !== current.requestId)
       throw new Error("Wrong creation quote");
     return this.recoveryManager.submit(quote);
   }
   async queryIdentity() {
     await this.pin();
-    return this.recoveryManager.query(this.identityRequest);
+    return (
+      await this.attempt(this.recoveryManager, this.identityRequest, "identity")
+    ).outcome;
   }
   async prepareOrganization(
     name: string,
@@ -325,13 +434,16 @@ export class IdentityCreation {
       throw new Error("Invalid organization name");
     const found = await this.locate();
     if (!found) throw new Error("Human not confirmed");
-    const requestId = this.organizationRequest(found.profile.humanId),
-      prior = await this.deviceManager.query(requestId);
-    if (prior) return prior;
+    const current = await this.attempt(
+      this.deviceManager,
+      this.organizationRequest(found.profile.humanId),
+      "organization",
+    );
+    if (current.outcome) return current.outcome;
     if (found.organizations.length)
       throw new Error("Organization already exists; open it");
     return this.deviceManager.prepare({
-      requestId,
+      requestId: current.requestId,
       gasBudget: 200_000_000n,
       transaction: this.sdk.identity.createOrganization({
         humanId: found.profile.humanId,
@@ -346,14 +458,27 @@ export class IdentityCreation {
   }
   async submitOrganization(quote: SelfPayFeeQuote) {
     await this.pin();
+    const found = await this.locate();
+    if (!found) throw new Error("Human not confirmed");
+    const current = await this.attempt(
+      this.deviceManager,
+      this.organizationRequest(found.profile.humanId),
+      "organization",
+    );
+    if (quote.requestId !== current.requestId)
+      throw new Error("Wrong organization quote");
     return this.deviceManager.submit(quote);
   }
   async queryOrganization() {
     const found = await this.locate();
     return found
-      ? this.deviceManager.query(
-          this.organizationRequest(found.profile.humanId),
-        )
+      ? (
+          await this.attempt(
+            this.deviceManager,
+            this.organizationRequest(found.profile.humanId),
+            "organization",
+          )
+        ).outcome
       : undefined;
   }
 }

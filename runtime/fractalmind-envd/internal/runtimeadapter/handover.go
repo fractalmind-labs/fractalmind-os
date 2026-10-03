@@ -62,7 +62,7 @@ func (a *boundedFileAgent) reviewHandover(ctx context.Context, r Request, comman
 		return deny("workspace_changed", fmt.Errorf("workspace identity unavailable"))
 	}
 	duration := time.Duration(proposal.ReviewExpiresAtMS-source.ClockMS) * time.Millisecond
-	if duration <= 0 || duration > time.Minute {
+	if duration <= 0 || duration > time.Duration(nodecommand.MaxHandoverReviewWindowMS)*time.Millisecond {
 		return deny("handover_changed", fmt.Errorf("review is not fresh"))
 	}
 	deadline := time.Now().Add(duration)

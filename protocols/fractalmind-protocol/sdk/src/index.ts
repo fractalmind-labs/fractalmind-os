@@ -167,7 +167,7 @@ export { IndexedDbTransactionJournal } from './browser-transaction-journal.js';
 export { createSelfPayOkrSubmitter } from './selfpay-okr-submit.js';
 export type { SelfPayOkrSubmitterOptions } from './selfpay-okr-submit.js';
 
-export { handoverProposalHash, handoverAcceptanceSigningBytes, verifyHandoverAcceptanceSignature, assertFreshHandoverAcceptance } from './handover.js';
+export { HANDOVER_REVIEW_WINDOW_MS, handoverProposalHash, handoverAcceptanceSigningBytes, verifyHandoverAcceptanceSignature, assertFreshHandoverAcceptance } from './handover.js';
 export type { HandoverProposal, HandoverAcceptance } from './handover.js';
 
 export { HandoverApi, HandoverApprovalBcs, HandoverPolicyBcs } from './handover.js';

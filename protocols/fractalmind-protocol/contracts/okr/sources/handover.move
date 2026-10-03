@@ -24,6 +24,8 @@ module fractalmind_okr::handover {
     const E_PROOF: u64 = 9504;
     const E_USED: u64 = 9505;
     const E_SCOPE: u64 = 9506;
+    // Fixed expiry signed in the original proposal; approval cannot renew it.
+    const MAX_REVIEW_WINDOW_MS: u64 = 300000;
 
     public struct Proposal has copy, drop, store {
         version: u8, managed: ID, okr: ID, managed_version: u64,
@@ -77,6 +79,14 @@ module fractalmind_okr::handover {
         let mut bytes = b"fractalmind.handover-acceptance.v1";
         vector::append(&mut bytes, bcs::to_bytes(a)); bytes
     }
+    fun assert_review_window(observed_at: u64, now: u64, review_expires: u64) {
+        assert!(observed_at <= now && now < review_expires && observed_at < review_expires
+            && review_expires - observed_at <= MAX_REVIEW_WINDOW_MS, E_STALE);
+    }
+    #[test_only]
+    public fun assert_review_window_for_testing(observed_at: u64, now: u64, review_expires: u64) {
+        assert_review_window(observed_at, now, review_expires);
+    }
     public fun confirm_okr(
         okr: &mut Okr, org: &mut Organization, human: &HumanIdentity, grant: &DeviceGrant,
         member: &HostMembership, binding: &CoordinatorBinding, managed: &mut ManagedAgent,
@@ -104,8 +114,8 @@ module fractalmind_okr::handover {
         let p = proposal(object::id(managed), object::id(okr), expected_managed_version, expected_okr_version,
             expected_spec_revision, workspace, boundary, asset, limit, max_calls, expires, review_expires, nonce);
         let now = clock::timestamp_ms(clock);
-        assert!(observed_at <= now && now < review_expires && observed_at < review_expires
-            && review_expires - observed_at <= 60000 && expires <= okr::deadline_ms(okr)
+        assert_review_window(observed_at, now, review_expires);
+        assert!(expires <= okr::deadline_ms(okr)
             && expires <= identity::grant_expiry(grant), E_STALE);
         node_execution::assert_handover_review(review, org, human, grant, member, managed, cap, observed_at);
         let key = UsedReviewKey { execution: object::id(review) };

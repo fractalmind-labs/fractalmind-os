@@ -7,6 +7,9 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex, hexToBytes } from "./identity-crypto.js";
 import { executionBoundaryHash } from "./execution-boundary.js";
 
+/** Fixed upper bound for a signed review. Reading or approving never renews it. */
+export const HANDOVER_REVIEW_WINDOW_MS = 5 * 60_000;
+
 /** Wire format of the exact proposed agreement. A proposal is not authority. */
 export interface HandoverProposal {
   version: "1";
@@ -135,7 +138,8 @@ export function handoverAcceptanceSigningBytes(
     a.version !== "1" ||
     !/^native-[0-9a-f]{64}$/.test(a.instance_id) ||
     timestamp(a.observed_at_ms) >= a.proposal.review_expires_at_ms ||
-    a.proposal.review_expires_at_ms - a.observed_at_ms > 60000
+    a.proposal.review_expires_at_ms - a.observed_at_ms >
+      HANDOVER_REVIEW_WINDOW_MS
   )
     throw new Error("Invalid native handover acceptance.");
   const data = AcceptanceBcs.serialize({
