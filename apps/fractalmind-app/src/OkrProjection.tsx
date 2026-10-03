@@ -19,6 +19,7 @@ import {
   type OkrProposalReview,
 } from "./okr-projection";
 import type { ConnectionProfile } from "./domain";
+import MessageOkrContext from "./MessageOkrContext";
 
 const sui = (value: string) => {
   const n = BigInt(value),
@@ -368,6 +369,12 @@ export default function OkrProjectionDialog({
           <section className="panel">
             <h3>{view.snapshot.specification.objective}</h3>
             <p>{view.snapshot.specification.successCriteria}</p>
+            {view.snapshot.specification.source && (
+              <MessageOkrContext
+                source={view.snapshot.specification.source}
+                t={t}
+              />
+            )}
             <p>
               {view.snapshot.state} ·{" "}
               {t("来源版本／约定", "Source version / agreement")}:{" "}

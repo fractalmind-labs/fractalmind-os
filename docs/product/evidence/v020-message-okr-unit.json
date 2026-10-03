@@ -1,0 +1,51 @@
+{
+  "recordedAt": "2026-10-03T04:39:47.833786+00:00",
+  "baseline": "cc78331",
+  "checks": [
+    {
+      "suite": "App regression 229/229",
+      "passed": true,
+      "path": "/tmp/fm-message-okr-app-tests-r1.log",
+      "sha256": "e35aa881b328df02f8da857f5e56c6e759d5fb1a3d11265a556108f7d0fbe470"
+    },
+    {
+      "suite": "App production build and strict TypeScript",
+      "passed": true,
+      "path": "/tmp/fm-message-okr-app-build-r1.log",
+      "sha256": "7743e43b05f2936b0e8fc2543d3ae9894baf74f5d3032406d617e02d0a7eba2f"
+    },
+    {
+      "suite": "Native harness strict TypeScript with Bundler resolution",
+      "passed": true,
+      "path": "/tmp/fm-message-okr-script-types-r2.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "priorCompilerInvocation": {
+    "path": "/tmp/fm-message-okr-script-types-r1.log",
+    "sha256": "0009e9011634bbce4fc37a6554b655118e99db20ab0f414b9fc77f1f2e33c703",
+    "passed": false,
+    "reason": "NodeNext resolution was incorrectly used for extensionless application imports. The project uses Bundler resolution; strict checking with that configuration passed in R2."
+  },
+  "sourceHashes": {
+    "apps/fractalmind-app/src/message-okr-source.ts": "ec29ce6ab7432d138d692536b53e0456b0e6594fdff40895ccf7a6e243369696",
+    "apps/fractalmind-app/src/MessageOkrContext.tsx": "535cd8c38d35cac0f5bc6f2e795f90c99fd82a883974a0502db32175e35d51b3",
+    "apps/fractalmind-app/src/okr-draft.ts": "1bd13d0c31029e72dfb3d2629a89a1065094e04d863a1741385ba18d7a5a6857",
+    "apps/fractalmind-app/src/CreateOkr.tsx": "3a6b0290f11c1e092e96d15b0fd48b0f10f0481d061d5f5d277e8f06192aa6ad",
+    "apps/fractalmind-app/src/DirectAgentConversation.tsx": "b0c36f4cfd0348a157dea8e0d431314d98d8af70250b3ed826015009bdf1a97a",
+    "apps/fractalmind-app/src/OkrProjection.tsx": "39de0b1c028a70bbf7c3789222659ca71682e0cca77ca78c3feac545fcfb80ea",
+    "apps/fractalmind-app/src/handover-plan.ts": "ab8c8ec639a9dbfe901083ecbbc427d31b08acd37dcb0527587bbae9e9d09dcd",
+    "apps/fractalmind-app/src/okr-intervention.ts": "e9fcf4158c778295baf12c9882101d31e6a9210575a37e721a62921d2303dad2",
+    "apps/fractalmind-app/tests/message-okr-source.test.ts": "17795fcdadc1f023a448590e35eaf4e15c98faadcdbfbe30e858d555e70b8942",
+    "apps/fractalmind-app/tests/okr-intervention.test.ts": "4c7ace2d3c7bc3ffb78270890bc3a0ef19c55077fea7eff7b0a2e30f9c9c20a8",
+    "apps/fractalmind-app/scripts/native-app-execution-localnet.ts": "ba83cfa30d0198f46820cb845f8c1696afe8ff9a9089700c735195c8b259ff04"
+  },
+  "limits": {
+    "sdkMoveAndGoNotModifiedOrRerun": true,
+    "installedUIVerified": false,
+    "actualLanguageModelVerified": false,
+    "cloudHostVerified": false,
+    "physicalMobileVerified": false,
+    "mainPackageUpgradeVerified": false
+  }
+}

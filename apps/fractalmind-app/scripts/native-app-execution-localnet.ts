@@ -44,10 +44,14 @@ import {
   CoordinatorReadClient,
   CoordinatorReadError,
 } from "../src/coordinator-read";
-import { canonical } from "../src/handover-plan";
+import { canonical, parseOkrSpecification } from "../src/handover-plan";
 import { DeviceIdentityVerifier } from "../src/device-identity";
 import { NativeDirectAgent, type DirectOperation } from "../src/direct-agent";
 import { OkrIntervention, specificationDraft } from "../src/okr-intervention";
+import {
+  readMessageOkrSource,
+  MessageOkrSourceError,
+} from "../src/message-okr-source";
 import { NativeOkrAutonomy } from "../src/okr-autonomy";
 import {
   OkrProjection,
@@ -70,6 +74,11 @@ const intervention =
 const autonomy = process.argv.slice(4).includes("--autonomy");
 const projection = process.argv.slice(4).includes("--projection");
 const modelFixture = process.argv.slice(4).includes("--model-fixture");
+const messageOkr = process.argv.slice(4).includes("--message-okr");
+assert.ok(
+  !messageOkr || (directApp && modelFixture),
+  "Message-derived OKR requires formal direct App and its model-protocol fixture",
+);
 const scheduledQueue = process.argv.slice(4).includes("--scheduled-queue");
 const chainQueue =
   process.argv.slice(4).includes("--chain-queue") || scheduledQueue;
@@ -134,6 +143,7 @@ assert.ok(
         "--chain-queue",
         "--scheduled-queue",
         "--running-stop",
+        "--message-okr",
       ].includes(a),
     ),
   "Unknown harness option",
@@ -248,6 +258,9 @@ async function save(complete = false) {
           directMessageEnvdDispatchVerified:
             state.directMessageEnvdDispatchVerified === true,
           directMessageUIVerified: false,
+          messageOkrControllerVerified:
+            state.messageOkrControllerVerified === true,
+          installedMessageOkrUIVerified: false,
           directAppControllerVerified:
             state.directAppControllerVerified === true,
           interventionControllerVerified:
@@ -3369,6 +3382,165 @@ try {
             "formal App zero-tool question reaches the configured synthetic Messages API exactly once; encrypted original reply is rebuilt from Sui, marked unverified, and leaves OKR/direct tool ledgers unchanged; six model-selected OKR tool steps were enforced by production envd (no real-model quality claim)",
           );
           await save();
+          if (messageOkr) {
+            const beforeDeliveries = deliveries;
+            const beforeRequests = modelRequests;
+            const beforePermission =
+              await sdk.directAgent.getPermission(permissionId);
+            const source = await readMessageOkrSource(controller, askId);
+            assert.equal(source.reply!.runId, answered.result!.run.id);
+            assert.equal(source.reply!.recordId, answered.result!.recordId);
+            assert.equal(source.reply!.verified, false);
+            const fromMessage = new OkrDraftCreation(
+              chain,
+              device,
+              auth.grantId,
+              organizationId,
+              randomUUID(),
+              invoke,
+              new MemoryTransactionJournal(),
+            );
+            const candidate = {
+              objective:
+                "Review the original model suggestion and deliver an approved document",
+              successCriteria:
+                "Human independently verifies the file and its original evidence",
+              priority: 1,
+              deadlineMs: String(Date.now() + 3600000),
+              allowedPaths: ["docs"],
+              prohibitedActions: ["network.*", "shell.*"],
+              maxCalls: "3",
+              krs: [
+                {
+                  title: "Independently reviewed document",
+                  unit: "files",
+                  precision: 0,
+                  baseline: "0",
+                  target: "1",
+                  weight: "1",
+                  maxAgeMinutes: "5",
+                  verificationRule:
+                    "Inspect the original file and hash, then decide independently",
+                },
+              ],
+              source,
+            };
+            const forged = structuredClone(candidate);
+            forged.source.reply!.text = "A substituted model answer";
+            await assert.rejects(
+              fromMessage.prepare(forged),
+              MessageOkrSourceError,
+            );
+            const sourceQuote = await fromMessage.prepare(candidate);
+            assert.ok(!("status" in sourceQuote));
+            await preparedQuote(
+              "native message-derived encrypted OKR draft",
+              sourceQuote,
+            );
+            const sourceOutcome = await fromMessage.submit(sourceQuote);
+            await record(
+              "native message-derived encrypted OKR draft",
+              sourceOutcome,
+            );
+            const sourceOkrId = createdObject(sourceOutcome, "okr::Okr");
+            state = {
+              ...state,
+              sourceOkrId,
+              sourceDraftDigest: sourceOutcome.digest,
+              sourceMessageId: source.messageId,
+              sourceMessageRecordId: source.messageRecordId,
+              sourceReplyRunId: source.reply!.runId,
+              sourceReplyRecordId: source.reply!.recordId,
+            };
+            await save();
+            const sourceEditor = new OkrIntervention(
+              chain,
+              device,
+              auth.grantId,
+              organizationId,
+              sourceOkrId,
+              invoke,
+              new MemoryTransactionJournal(),
+            );
+            const sourceView = await sourceEditor.read();
+            assert.equal(sourceView.okr.state, 0);
+            assert.equal(sourceView.okr.managed_agent, null);
+            assert.equal(sourceView.okr.agreement_record, null);
+            assert.equal(sourceView.executions.length, 0);
+            assert.deepEqual(
+              parseOkrSpecification(sourceView.spec).source,
+              source,
+            );
+            const replacement = specificationDraft(sourceView.spec);
+            const removed = structuredClone(replacement);
+            delete removed.source;
+            await assert.rejects(
+              sourceEditor.prepare(
+                { kind: "replace", expectedVersion: sourceView.okr.version },
+                { reviewed: true, replacement: removed },
+              ),
+              /invalid_source/,
+            );
+            replacement.successCriteria +=
+              "; preserve the original discussion for review";
+            const editQuote = await sourceEditor.prepare(
+              { kind: "replace", expectedVersion: sourceView.okr.version },
+              { reviewed: true, replacement },
+            );
+            assert.ok(!("status" in editQuote));
+            await preparedQuote(
+              "native source-preserving OKR specification revision",
+              editQuote,
+            );
+            const editOutcome = await sourceEditor.submit(editQuote);
+            await record(
+              "native source-preserving OKR specification revision",
+              editOutcome,
+            );
+            const rebuilt = new OkrProjection(
+              new OkrIntervention(
+                chain,
+                device,
+                auth.grantId,
+                organizationId,
+                sourceOkrId,
+                invoke,
+                new MemoryTransactionJournal(),
+              ),
+            );
+            const projected = await rebuilt.read();
+            assert.equal(projected.snapshot.state, "DRAFT");
+            assert.equal(projected.snapshot.provenance.specRevision, "2");
+            assert.deepEqual(projected.snapshot.specification.source, source);
+            assert.deepEqual(
+              parseOkrProjection(projected.text).proposal.source,
+              source,
+            );
+            const original = await fromMessage.prepare(candidate);
+            assert.ok("status" in original);
+            assert.equal(original.digest, sourceOutcome.digest);
+            assert.equal(deliveries, beforeDeliveries);
+            assert.equal(modelRequests, beforeRequests);
+            assert.deepEqual(
+              await sdk.directAgent.getPermission(permissionId),
+              beforePermission,
+            );
+            assert.equal((await sdk.okr.getBudget(okrId)).spent, 6n);
+            state = {
+              ...state,
+              messageOkrControllerVerified: true,
+              sourceOkrState: projected.snapshot.state,
+              sourceOkrRevision: projected.snapshot.provenance.specRevision,
+              sourceOkrExecutionCount: projected.snapshot.executions.length,
+              sourceSpecEditDigest: editOutcome.digest,
+              sourceCreationRecoveryStatus: original.status,
+              sourceCreatedWithoutDelivery: true,
+            };
+            checks.push(
+              "formal native conversion retains the exact encrypted original message, fixed instance and unverified Host-receipted model suggestion; substituted reply and source removal fail before a quote, independent fee/signature creates only a DRAFT, and source-preserving revision plus empty-journal Sui/skill projection rebuilds provenance without any Run, model request, tool spend or dispatch",
+            );
+            await save();
+          }
         }
         const writeId = await create(
           "file.write",

@@ -9,6 +9,12 @@ import {
 import { ChainReadSession, missingIndex } from "./chain";
 import { DeviceIdentityVerifier } from "./device-identity";
 import { NativeDeviceSigner, type NativeInvoke, call } from "./native-device";
+import { NativeDirectAgent } from "./direct-agent";
+import {
+  normalizeMessageOkrSource,
+  verifyMessageOkrSource,
+  type MessageOkrSource,
+} from "./message-okr-source";
 export type DraftKr = {
   title: string;
   unit: string;
@@ -28,6 +34,7 @@ export type DraftInput = {
   allowedPaths: string[];
   prohibitedActions: string[];
   maxCalls: string;
+  source?: MessageOkrSource;
 };
 export class OkrDraftError extends Error {
   constructor(
@@ -132,6 +139,9 @@ export function normalizeDraft(input: DraftInput) {
   });
   return {
     schema: "fractalmind.okr-spec.v1",
+    ...(input.source === undefined
+      ? {}
+      : { source: normalizeMessageOkrSource(input.source) }),
     objective: text(input.objective, 512),
     successCriteria: text(input.successCriteria, 4096),
     priority: input.priority,
@@ -155,8 +165,9 @@ export class OkrDraftCreation {
   private verifier: DeviceIdentityVerifier;
   private plans = new WeakMap<
     SelfPayFeeQuote,
-    { pin: string; deadline: string }
+    { pin: string; deadline: string; source?: MessageOkrSource }
   >();
+  private signingGuard?: () => Promise<void>;
   constructor(
     readonly chain: ChainReadSession,
     readonly signer: NativeDeviceSigner,
@@ -164,7 +175,8 @@ export class OkrDraftCreation {
     readonly organizationId: string,
     readonly logicalId: string,
     private invoke: NativeInvoke,
-    journal: TransactionJournal,
+    private journal: TransactionJournal,
+    private assertActive: () => void = () => {},
   ) {
     if (
       !/^0x[0-9a-f]{64}$/.test(organizationId) ||
@@ -178,13 +190,44 @@ export class OkrDraftCreation {
     this.manager = new SelfPayTransactionManager({
       client: chain.sdk.client.client,
       network: chain.profile.network,
-      signer,
+      assertBeforeBroadcast: assertActive,
+      signer: {
+        getPublicKey: () => signer.getPublicKey(),
+        signTransaction: async (bytes) => {
+          const guard = this.signingGuard;
+          if (!guard) throw new OkrDraftError("invalid_quote");
+          await guard();
+          const signed = await signer.signTransaction(bytes);
+          await guard();
+          return signed;
+        },
+      },
       journal,
     });
   }
   async query() {
+    this.assertActive();
     await this.chain.checkNetwork();
     return this.manager.query(this.requestId);
+  }
+  private async verifySource(source?: MessageOkrSource) {
+    this.assertActive();
+    if (source)
+      await verifyMessageOkrSource(
+        new NativeDirectAgent(
+          this.chain,
+          this.signer,
+          this.grantId,
+          this.organizationId,
+          source.managedAgentId,
+          this.invoke,
+          this.journal,
+          fetch,
+          this.assertActive,
+        ),
+        source,
+      );
+    this.assertActive();
   }
   private async exists() {
     let cursor: string | null = null;
@@ -229,6 +272,7 @@ export class OkrDraftCreation {
     if (BigInt(spec.deadlineMs) <= before.clockMs)
       throw new OkrDraftError("deadline_expired");
     if (await this.exists()) throw new OkrDraftError("already_exists");
+    await this.verifySource(spec.source);
     const page = await this.chain.sdk.productRecord
       .listCurrent(this.organizationId, null, 1)
       .catch((error) => {
@@ -283,6 +327,7 @@ export class OkrDraftCreation {
     );
     if (before.authorityPin !== after.authorityPin || !after.authorityPin)
       throw new OkrDraftError("authority_changed");
+    await this.verifySource(spec.source);
     const transaction = this.chain.sdk.okr.createDraft({
       organizationId: this.organizationId,
       humanId: this.chain.profile.humanId,
@@ -302,9 +347,11 @@ export class OkrDraftCreation {
       gasBudget: 200_000_000n,
       transaction,
     });
+    await this.verifySource(spec.source);
     this.plans.set(quote, {
       pin: after.authorityPin,
       deadline: spec.deadlineMs,
+      source: spec.source,
     });
     return quote;
   }
@@ -312,14 +359,24 @@ export class OkrDraftCreation {
     const plan = this.plans.get(quote);
     if (!plan || quote.requestId !== this.requestId)
       throw new OkrDraftError("invalid_quote");
-    const current = await this.verifier.verifyOrganization(
-      this.organizationId,
-      "approve",
-    );
-    if (current.authorityPin !== plan.pin)
-      throw new OkrDraftError("authority_changed");
-    if (BigInt(plan.deadline) <= current.clockMs)
-      throw new OkrDraftError("deadline_expired");
-    return this.manager.submit(quote);
+    const guard = async () => {
+      this.assertActive();
+      const current = await this.verifier.verifyOrganization(
+        this.organizationId,
+        "approve",
+      );
+      if (current.authorityPin !== plan.pin)
+        throw new OkrDraftError("authority_changed");
+      if (BigInt(plan.deadline) <= current.clockMs)
+        throw new OkrDraftError("deadline_expired");
+      await this.verifySource(plan.source);
+    };
+    await guard();
+    this.signingGuard = guard;
+    try {
+      return await this.manager.submit(quote);
+    } finally {
+      this.signingGuard = undefined;
+    }
   }
 }

@@ -10,6 +10,7 @@ import {
   NativeDeviceSigner,
   NativeDeviceError,
   preferredDeviceProfile,
+  scopedNativeInvoke,
   type NativeInvoke,
 } from "./native-device";
 import { ChainReadSession, normalizeProfile } from "./chain";
@@ -21,6 +22,11 @@ import {
   type DraftKr,
 } from "./okr-draft";
 import type { ConnectionProfile } from "./domain";
+import MessageOkrContext from "./MessageOkrContext";
+import {
+  MessageOkrSourceError,
+  type MessageOkrSource,
+} from "./message-okr-source";
 const transport: NativeInvoke = (command, args) => invoke(command, args);
 const blankKr = (): DraftKr => ({
   title: "",
@@ -50,11 +56,19 @@ export default function CreateOkr({
   organizationId,
   t,
   onCreated,
+  source,
+  initialDeviceProfile,
+  sourceExpiresAtMs,
+  onClosed,
 }: {
   profile: ConnectionProfile;
   organizationId: string;
   t: (zh: string, en: string) => string;
   onCreated: () => void;
+  source?: MessageOkrSource;
+  initialDeviceProfile?: string;
+  sourceExpiresAtMs?: string;
+  onClosed?: () => void;
 }) {
   const [open, setOpen] = useState(false),
     [objective, setObjective] = useState(""),
@@ -62,10 +76,24 @@ export default function CreateOkr({
   const [priority, setPriority] = useState(1),
     [deadline, setDeadline] = useState(deadlineDefault),
     [krs, setKrs] = useState<DraftKr[]>([blankKr()]);
-  const [paths, setPaths] = useState(""),
+  const [paths, setPaths] = useState(
+      source
+        ? [...new Set(Object.values(source.request.bounds.paths).flat())].join(
+            "\n",
+          )
+        : "",
+    ),
     [prohibited, setProhibited] = useState(""),
-    [maxCalls, setMaxCalls] = useState("20");
-  const [deviceProfile, setDeviceProfile] = useState(preferredDeviceProfile),
+    [maxCalls, setMaxCalls] = useState(
+      source
+        ? source.request.bounds.max_calls === "0"
+          ? ""
+          : source.request.bounds.max_calls
+        : "20",
+    );
+  const [deviceProfile, setDeviceProfile] = useState(
+      initialDeviceProfile ?? preferredDeviceProfile(),
+    ),
     [attempt, setAttempt] = useState<Attempt | null>(null);
   const [review, setReview] = useState<ReturnType<
       typeof normalizeDraft
@@ -78,21 +106,34 @@ export default function CreateOkr({
   const session = useRef<OkrDraftCreation | null>(null),
     journal = useRef<IndexedDbTransactionJournal | null>(null),
     flight = useRef(false),
-    mounted = useRef(true);
-  const attemptKey = `${pendingKey}:${JSON.stringify([profile.network, profile.chainIdentifier ?? "", profile.humanId, organizationId])}`;
+    mounted = useRef(true),
+    active = useRef(false),
+    epoch = useRef(0);
+  const attemptKey = `${pendingKey}:${JSON.stringify([profile.network, profile.chainIdentifier ?? "", profile.humanId, organizationId, ...(source ? [source.messageId] : [])])}`;
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     mounted.current = true;
     const timer = setInterval(() => setNow(Date.now()), 1000);
+    const hide = () => {
+      if (document.hidden) close(true);
+    };
+    document.addEventListener("visibilitychange", hide);
+    if (source) start();
     return () => {
       mounted.current = false;
+      active.current = false;
+      epoch.current++;
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", hide);
       void journal.current?.close();
     };
   }, []);
   useEffect(() => {
     if (open && !dialog.current?.open) dialog.current?.showModal();
   }, [open]);
+  useEffect(() => {
+    if (sourceExpiresAtMs && Number(sourceExpiresAtMs) <= now) close(true);
+  }, [now, sourceExpiresAtMs]);
   function change() {
     setReview(null);
     setQuote(null);
@@ -112,6 +153,7 @@ export default function CreateOkr({
       allowedPaths: paths.split("\n").filter((p) => p.trim()),
       prohibitedActions: prohibited.split("\n").filter((p) => p.trim()),
       maxCalls,
+      ...(source ? { source } : {}),
     };
   }
   function reviewDraft() {
@@ -137,12 +179,16 @@ export default function CreateOkr({
     setAttempt(value);
   }
   async function load(value: Attempt, forQuery = false) {
-    const signer = await NativeDeviceSigner.load(
-        transport,
-        value.deviceProfile,
-      ),
+    const generation = epoch.current;
+    const assertLive = () => {
+      if (!mounted.current || !active.current || generation !== epoch.current)
+        throw new OkrDraftError("authority_changed");
+    };
+    const native = scopedNativeInvoke(transport, assertLive);
+    const signer = await NativeDeviceSigner.load(native, value.deviceProfile),
       chain = new ChainReadSession(profile);
     const identity = await chain.human();
+    assertLive();
     const all = identity.grants.value?.filter(
       (g) => g.device === signer.device.address,
     );
@@ -174,8 +220,9 @@ export default function CreateOkr({
       selected.id,
       organizationId,
       value.logicalId,
-      transport,
+      native,
       journal.current,
+      assertLive,
     );
     return session.current;
   }
@@ -184,6 +231,9 @@ export default function CreateOkr({
     flight.current = true;
     setBusy(true);
     setError(null);
+    const generation = epoch.current;
+    const live = () =>
+      mounted.current && active.current && generation === epoch.current;
     try {
       let value = attempt;
       if (!value) {
@@ -195,10 +245,11 @@ export default function CreateOkr({
         };
       }
       const client = session.current ?? (await load(value, action === "query"));
+      if (!live()) throw new OkrDraftError("authority_changed");
       if (!attempt) saveAttempt(value);
       if (action === "query") {
         const found = await client.query();
-        if (mounted.current) {
+        if (live()) {
           setOutcome(found ?? null);
           if (found) setQuote(null);
           else if (!quote) session.current = null;
@@ -208,14 +259,14 @@ export default function CreateOkr({
       } else if (action === "submit") {
         if (!quote) throw new OkrDraftError("invalid_quote");
         const found = await client.submit(quote);
-        if (mounted.current) {
+        if (live()) {
           setQuote(null);
           setOutcome(found);
           if (found.status === "confirmed") onCreated();
         }
       } else {
         const result = await client.prepare(input());
-        if (mounted.current) {
+        if (live()) {
           if ("status" in result) {
             setOutcome(result);
             setQuote(null);
@@ -224,11 +275,12 @@ export default function CreateOkr({
         }
       }
     } catch (e) {
-      if (mounted.current)
+      if (live())
         setError(
           e instanceof OkrDraftError ||
             e instanceof TransactionPreflightError ||
-            e instanceof NativeDeviceError
+            e instanceof NativeDeviceError ||
+            e instanceof MessageOkrSourceError
             ? e.code
             : "operation_failed",
         );
@@ -238,6 +290,7 @@ export default function CreateOkr({
     }
   }
   function start() {
+    active.current = true;
     setOpen(true);
     setError(null);
     try {
@@ -267,8 +320,10 @@ export default function CreateOkr({
     setReview(null);
     setError(null);
   }
-  function close() {
-    if (busy) return;
+  function close(force = false) {
+    if (busy && !force) return;
+    active.current = false;
+    epoch.current++;
     dialog.current?.close();
     setOpen(false);
     setObjective("");
@@ -280,11 +335,16 @@ export default function CreateOkr({
     setQuote(null);
     session.current = null;
     setOutcome(null);
+    onClosed?.();
   }
   const ready = isTauri();
   return (
     <>
-      <button onClick={start}>{t("创建 OKR 候选", "Create OKR draft")}</button>
+      {!source && (
+        <button onClick={start}>
+          {t("创建 OKR 候选", "Create OKR draft")}
+        </button>
+      )}
       {open && (
         <dialog
           ref={dialog}
@@ -301,7 +361,7 @@ export default function CreateOkr({
             </h2>
             <button
               disabled={busy}
-              onClick={close}
+              onClick={() => close()}
               aria-label={t("关闭", "Close")}
             >
               ×
@@ -313,6 +373,7 @@ export default function CreateOkr({
               "Save the objective, measurable KRs and constraints first. Confirmation creates a draft; activation still requires workspace, Host, Agent capability and execution authority.",
             )}
           </p>
+          {source && <MessageOkrContext source={source} t={t} />}
           {!ready && (
             <p role="status">
               {t(

@@ -78,6 +78,9 @@ export function specificationDraft(spec: OkrSpecification): DraftInput {
     allowedPaths: [...spec.constraints.allowedPaths],
     prohibitedActions: [...spec.constraints.prohibitedActions],
     maxCalls: spec.constraints.budget.limit,
+    ...(spec.source === undefined
+      ? {}
+      : { source: structuredClone(spec.source) }),
     krs: spec.krs.map((k) => ({
       title: k.title,
       unit: k.unit,
@@ -455,6 +458,22 @@ export class OkrIntervention {
       )
         throw new OkrInterventionError("state_changed");
       const spec = normalizeDraft(structuredClone(input.replacement));
+      if (!before.spec.pointer)
+        throw new OkrInterventionError("invalid_source");
+      const originalBytes = await this.records.read(before.spec.pointer);
+      try {
+        const original = parseOkrSpecification(
+          JSON.parse(
+            new TextDecoder("utf-8", { fatal: true }).decode(originalBytes),
+          ),
+        );
+        if (
+          canonical(original.source ?? null) !== canonical(spec.source ?? null)
+        )
+          throw new OkrInterventionError("invalid_source");
+      } finally {
+        originalBytes.fill(0);
+      }
       if (
         BigInt(spec.deadlineMs) <= before.authority.clockMs ||
         BigInt(spec.deadlineMs) <= BigInt(Date.now())

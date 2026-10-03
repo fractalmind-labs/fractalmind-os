@@ -90,6 +90,7 @@ export function parseOkrSpecification(value: unknown): OkrSpecification {
       allowedPaths: constraints.allowedPaths,
       prohibitedActions: constraints.prohibitedActions,
       maxCalls: budget.limit,
+      ...(v.source === undefined ? {} : { source: v.source }),
     } as DraftInput);
     if (canonical(normalized) !== canonical(v)) throw new Error();
     return normalized;

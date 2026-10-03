@@ -20,6 +20,11 @@ import {
   type StandingInput,
 } from "./direct-agent";
 import type { ConnectionProfile, Agent } from "./domain";
+import CreateOkr from "./CreateOkr";
+import {
+  readMessageOkrSource,
+  type MessageOkrSource,
+} from "./message-okr-source";
 
 type Description = Awaited<ReturnType<NativeDirectAgent["describe"]>>;
 type Fee = { quote: SelfPayFeeQuote; operation: DirectOperation };
@@ -91,6 +96,8 @@ export default function DirectAgentConversation({
     [selected, setSelected] = useState<DirectMessageView | null>(null);
   const [fee, setFee] = useState<Fee | null>(null),
     [receipt, setReceipt] = useState<SelfPayTransactionOutcome | null>(null);
+  const [draftSource, setDraftSource] = useState<MessageOkrSource | null>(null);
+  const [draftExpiresAtMs, setDraftExpiresAtMs] = useState<string>();
   const [requestId, setRequestId] = useState<string | null>(null),
     [capabilityId, setCapabilityId] = useState<string | null>(null);
   const [action, setAction] = useState<
@@ -146,6 +153,7 @@ export default function DirectAgentConversation({
     if (description && Number(description.authorityExpiresAtMs) <= now) close();
   }, [now, description?.authorityExpiresAtMs]);
   function close() {
+    setDraftSource(null);
     active.current = false;
     epoch.current++;
     context.current = null;
@@ -316,6 +324,18 @@ export default function DirectAgentConversation({
     const prior = await ctx.controller.query(`direct-capability:${messageId}`);
     ctx.assertLive();
     if (prior?.status === "confirmed") useCapability(prior);
+  }
+  async function convertToOkr() {
+    const ctx = await load();
+    if (!selected) throw Object.assign(new Error(), { code: "state_changed" });
+    const source = await readMessageOkrSource(
+      ctx.controller,
+      selected.message.id,
+    );
+    ctx.assertLive();
+    close();
+    setDraftSource(source);
+    setDraftExpiresAtMs(description?.authorityExpiresAtMs);
   }
   function useCapability(value: SelfPayTransactionOutcome) {
     const ctx = context.current;
@@ -829,6 +849,15 @@ export default function DirectAgentConversation({
               {selected && (
                 <article className="panel direct-message-detail">
                   <h3>{t("原消息与执行", "Original message & execution")}</h3>
+                  {canApprove && (
+                    <button
+                      className="secondary"
+                      disabled={working || !!unknown}
+                      onClick={() => void perform(convertToOkr)}
+                    >
+                      {t("转为 OKR 草稿", "Convert to OKR draft")}
+                    </button>
+                  )}
                   <p className="direct-message-text">
                     {selected.request.message}
                   </p>
@@ -1322,6 +1351,19 @@ export default function DirectAgentConversation({
           </section>
         )}
       </dialog>
+      {draftSource && (
+        <CreateOkr
+          key={draftSource.messageId}
+          profile={profile}
+          organizationId={organizationId}
+          source={draftSource}
+          initialDeviceProfile={deviceProfile}
+          sourceExpiresAtMs={draftExpiresAtMs}
+          t={t}
+          onCreated={onChanged}
+          onClosed={() => setDraftSource(null)}
+        />
+      )}
     </>
   );
 }

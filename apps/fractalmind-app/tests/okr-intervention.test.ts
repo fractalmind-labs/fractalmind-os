@@ -9,6 +9,7 @@ import {
 import {
   FractalMindSDK,
   MemoryTransactionJournal,
+  directRequestHash,
   type SelfPayTransactionOutcome,
 } from "@fractalmind-labs/fractalmind-sdk";
 import {
@@ -174,6 +175,9 @@ async function fixture() {
   (sdk.okr as any).getBudget = async () => structuredClone(budget);
   (sdk.nodeExecution as any).readAgentExecutions = async () =>
     structuredClone(coverage);
+  let originalSpecification = normalizeDraft(draft());
+  (controller as any).records.read = async () =>
+    new TextEncoder().encode(JSON.stringify(originalSpecification));
   const sign = (controller as any).manager.options.signer.signTransaction;
   (controller as any).manager = {
     query: async () => prior,
@@ -207,6 +211,9 @@ async function fixture() {
     plaintexts,
     transactions,
     setPrior: (value: SelfPayTransactionOutcome) => (prior = value),
+    setSpecification: (value: ReturnType<typeof normalizeDraft>) => {
+      originalSpecification = value;
+    },
     change: () => {
       pin = "changed";
     },
@@ -409,6 +416,60 @@ test("specification replacement requires pause, zero pending control and suffici
           f.controller.submit(quote as any),
           OkrInterventionError,
         );
+      }
+      assert.equal(f.counts().broadcasts, 0);
+    });
+});
+test("specification revisions preserve original message provenance; removing or replacing it aborts before encryption", async (t) => {
+  const request = {
+    message: "Original discussion",
+    bounds: { paths: { "file.read": ["docs"] }, max_calls: "0" },
+  };
+  const original = normalizeDraft({
+    ...draft(),
+    source: {
+      schema: "fractalmind.okr-message-source.v1",
+      network: "localnet",
+      chainIdentifier: "testchain",
+      organizationId: org,
+      managedAgentId: managed,
+      managedVersion: "1",
+      membershipId: id("e"),
+      messageId: id("f"),
+      messageRecordId: id("10"),
+      permissionId: id("11"),
+      permissionVersion: "1",
+      authorHumanId: human,
+      authorDevice: id("12"),
+      createdAtMs: "1000",
+      action: "status",
+      requestHash: Buffer.from(directRequestHash(request, "status")).toString(
+        "hex",
+      ),
+      request,
+    },
+  });
+  for (const mode of ["preserve", "remove", "replace"] as const)
+    await t.test(mode, async () => {
+      const f = await fixture();
+      f.source.okr.state = 2;
+      f.setSpecification(original);
+      const replacement = specificationDraft(original);
+      replacement.objective = "A revised goal";
+      if (mode === "remove") delete replacement.source;
+      if (mode === "replace") replacement.source!.messageId = id("13");
+      const prepare = () =>
+        f.controller.prepare(
+          { kind: "replace", expectedVersion: "2" },
+          { reviewed: true, replacement },
+        );
+      if (mode === "preserve") {
+        const quote = await prepare();
+        assert.ok(!("status" in quote));
+        assert.deepEqual(f.plaintexts[0].plaintext.source, original.source);
+      } else {
+        await assert.rejects(prepare(), OkrInterventionError);
+        assert.equal(f.counts().encryptions, 0);
       }
       assert.equal(f.counts().broadcasts, 0);
     });
