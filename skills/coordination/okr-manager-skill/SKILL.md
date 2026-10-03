@@ -34,6 +34,8 @@ For v0.2.0, use one explicitly managed Agent and 1–3 sequential KRs. Each KR d
 
 Submitting a proposal requires an authorized device, current version checks and explicit signing. An unknown transaction result is queried before any retry. If the client submission path is unavailable, leave the proposal unsubmitted. Refresh before execution, check spent plus pending reservations against the approved budget, and keep within the current agreement. A file edit cannot widen the approved boundary. Pause/replan requires a newly approved agreement before resuming.
 
+In the native FractalMind App, use **Skill context & proposals** in the Workbench or OKR details to export `OKR.md`. Save plaintext only in the workspace approved by the human. Keep the `fractalmind-okr-snapshot` block and surrounding text unchanged; edit only `fractalmind-okr-proposal`. Import the edited file to review the exact differences before fee confirmation and signing. Draft or paused goals can replace their specification after original Runs settle. Do not edit measurements, verification, acceptance, budget spent/reserved or provenance to report progress. Re-export after a confirmed change. See the example for the interchange fields and remaining execution boundaries.
+
 ## OKR Creation Checklist
 
 Every OKR MUST have ALL of these. Reject or flag any OKR missing items.

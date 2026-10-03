@@ -1,6 +1,19 @@
 # Sui organization projection — v0.2.0
 
-Use this mode only for a FractalMind chain-backed OKR. File-only projects may keep the ordinary templates. Keep provenance beside each projected Objective; use actual complete IDs when exporting. Example field names below describe the contract, not an implemented automatic file synchronizer.
+Use this mode only for a FractalMind chain-backed OKR. File-only projects may keep the ordinary templates. Keep provenance beside each projected Objective and use actual complete IDs. The native App now exports and imports a concrete `OKR.md` snapshot. The YAML below illustrates the concepts; use the App's JSON blocks for actual interchange.
+
+## Native App export and proposal submission
+
+1. Open **Skill context & proposals** from the Workbench or OKR details and unlock a device with current read permission. Refresh the chain context.
+2. Explicitly confirm plaintext export and save `OKR.md` in the human-approved Agent workspace. Export does not write to a Host or consume a tool budget.
+3. Read the `fractalmind-okr-snapshot` JSON block. Its schema is `fractalmind.okr-projection.v1`. `provenance` contains network, chain identifier, both original package IDs, organization/Human/OKR IDs, `sourceVersion`, `agreementVersion`, specification/ agreement record IDs and revisions, key version and `chainReadAtMs`. `specification`, `metrics`, `agreement`, `budget`, `executions` and `acceptance` retain separate chain facts. A paused goal does not expose its invalidated plan as an approved plan.
+4. Edit only `fractalmind-okr-proposal`. Its fields are `objective`, `successCriteria`, `priority` (0–2), `deadlineMs`, `allowedPaths`, `prohibitedActions`, `maxCalls` and `krs`. Each KR has `title`, `unit`, `precision` (0–6), decimal `baseline`/`target`, integer-string `weight`, `maxAgeMinutes` and `verificationRule`. Metrics in chain facts use scaled u64 strings; the proposal uses exact decimal strings. Do not change the read-only source or introduce new fields. LF/CRLF and JSON indentation differences are accepted.
+5. Import the file in the App. It refreshes the chain and shows CLEAN or UNSUBMITTED with actual field differences; import alone has no transaction. Changed source versions, metrics, budgets, agreement or Runs require re-export and explicit reapplication of intended edits, never automatic merging.
+6. Only DRAFT/PAUSED with settled old executions can submit. Review the KR reset and cumulative budget impact, then separately confirm the fee and sign with current approve permission. Unknown outcomes are queried by the retained original request. A confirmed replacement retains spent budget/history and still requires a newly reviewed and approved execution agreement.
+
+The file does not prove current Host admission or permission, submit a Host observation, verify a KR, accept a goal, or start a Run. Before execution, refresh current authority through the runtime. App export/import is implemented; automatic Host file synchronization, general model planning and unattended Host execution remain separate work.
+
+## Illustrative provenance and observations
 
 ```yaml
 mode: sui_projection

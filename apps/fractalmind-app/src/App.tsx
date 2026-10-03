@@ -45,6 +45,7 @@ const OkrVerification = lazy(() => import("./OkrVerification"));
 const DirectAgentConversation = lazy(() => import("./DirectAgentConversation"));
 const OkrIntervention = lazy(() => import("./OkrIntervention"));
 const OkrAutonomy = lazy(() => import("./OkrAutonomy"));
+const OkrProjection = lazy(() => import("./OkrProjection"));
 const runLabels: Array<[string, string]> = [
   ["待启动", "Queued"],
   ["链上记录：运行中", "Chain record: running"],
@@ -671,6 +672,15 @@ export function App() {
                       onReviewAgreement={() => setPage("agents")}
                       t={t}
                     />
+                    <OkrProjection
+                      key={`projection:${JSON.stringify([profile, snapshot.organization.objectId, focus.okr.id])}`}
+                      profile={profile!}
+                      organizationId={snapshot.organization.objectId}
+                      okrId={focus.okr.id}
+                      onChanged={data.refresh}
+                      onIntervene={() => goOkr(focus.okr.id, "workbench")}
+                      t={t}
+                    />
                   </Suspense>
                   <div className="summary-grid">
                     <div className="panel">
@@ -833,6 +843,15 @@ export function App() {
                     okrId={detailId}
                     onChanged={data.refresh}
                     onReviewAgreement={() => setPage("agents")}
+                    t={t}
+                  />
+                  <OkrProjection
+                    key={`projection:${JSON.stringify([profile, snapshot.organization.objectId, detailId])}`}
+                    profile={profile!}
+                    organizationId={snapshot.organization.objectId}
+                    okrId={detailId}
+                    onChanged={data.refresh}
+                    onIntervene={() => goOkr(detailId, "workbench")}
                     t={t}
                   />
                 </Suspense>

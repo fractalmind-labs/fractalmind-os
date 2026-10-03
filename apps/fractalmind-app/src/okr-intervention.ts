@@ -99,6 +99,10 @@ export class OkrIntervention {
   private readonly invoke: NativeInvoke;
   private readonly manager: SelfPayTransactionManager;
   private readonly quotes = new WeakMap<SelfPayFeeQuote, () => Promise<void>>();
+  private readonly reads = new WeakMap<
+    object,
+    { content: string; source: string }
+  >();
   private signingGuard?: () => Promise<void>;
   private flight?: {
     quote: SelfPayFeeQuote;
@@ -199,7 +203,7 @@ export class OkrIntervention {
       pin: canonical([authority.authorityPin, okr, spec, agreement]),
     };
   }
-  async read() {
+  async read(options: { includeAgreement?: boolean } = {}) {
     const before = await this.source(),
       plaintext = await this.records.read(before.spec.pointer!);
     let spec: OkrSpecification;
@@ -228,16 +232,69 @@ export class OkrIntervention {
     const budget = okr.managed_agent
       ? await this.chain.sdk.okr.getBudget(okr.id)
       : null;
+    let agreementBody: unknown = null;
+    if (options.includeAgreement && before.agreement.pointer) {
+      const bytes = await this.records.read(before.agreement.pointer);
+      try {
+        agreementBody = JSON.parse(
+          new TextDecoder("utf-8", { fatal: true }).decode(bytes),
+        );
+      } finally {
+        bytes.fill(0);
+      }
+    }
     if ((await this.source()).pin !== before.pin)
       throw new OkrInterventionError("state_changed");
-    return {
+    const chainIdentifier = await this.chain.checkNetwork();
+    if ((await this.source()).pin !== before.pin)
+      throw new OkrInterventionError("state_changed");
+    const result = {
       okr,
       spec,
       executions,
       budget,
       actions: before.authority.actions,
       authorityExpiresAtMs: before.authority.expiresAtMs,
+      agreementBody,
+      provenance: {
+        network: this.chain.profile.network,
+        chainIdentifier,
+        originalPackageId: this.chain.sdk.client.typesPackageId,
+        originalOkrPackageId: this.chain.sdk.client.okrTypesPackageId,
+        organizationId: this.organizationId,
+        humanId: before.authority.humanId,
+        okrId: okr.id,
+        sourceVersion: okr.version,
+        agreementVersion: okr.agreement_version,
+        specRecordId: okr.spec_record,
+        specRevision: okr.spec_revision,
+        agreementRecordId: okr.agreement_record,
+        agreementRevision: before.agreement.pointer?.revision ?? null,
+        keyVersion: before.spec.keyVersion,
+        chainReadAtMs: before.authority.clockMs.toString(),
+      },
     };
+    this.reads.set(result, { content: canonical(result), source: before.pin });
+    return result;
+  }
+  /** Recheck the native read's authority after asynchronous projection proof
+   * verification. A caller-created or modified view is not a read receipt. */
+  async assertCurrentRead(view: OkrInterventionView) {
+    const original = this.reads.get(view);
+    const [executions, budget] = await Promise.all([
+      this.executions(),
+      view.okr.managed_agent ? this.chain.sdk.okr.getBudget(this.okrId) : null,
+    ]);
+    const ordered = (rows: OkrInterventionView["executions"]) =>
+      canonical([...rows].sort((a, b) => a.run.id.localeCompare(b.run.id)));
+    if (
+      !original ||
+      original.content !== canonical(view) ||
+      ordered(executions) !== ordered(view.executions) ||
+      canonical(budget) !== canonical(view.budget) ||
+      (await this.source()).pin !== original.source
+    )
+      throw new OkrInterventionError("state_changed");
   }
   private async executions() {
     const rows: Awaited<

@@ -48,6 +48,11 @@ import { DeviceIdentityVerifier } from "../src/device-identity";
 import { NativeDirectAgent, type DirectOperation } from "../src/direct-agent";
 import { OkrIntervention, specificationDraft } from "../src/okr-intervention";
 import { NativeOkrAutonomy } from "../src/okr-autonomy";
+import {
+  OkrProjection,
+  parseOkrProjection,
+  renderOkrProjection,
+} from "../src/okr-projection";
 assert.ok(
   process.argv[2] && process.argv[3],
   "Pass isolated deployment and a new output report",
@@ -60,6 +65,12 @@ const directDispatch = process.argv.slice(4).includes("--direct-dispatch");
 const directApp = process.argv.slice(4).includes("--direct-app");
 const intervention = process.argv.slice(4).includes("--intervention");
 const autonomy = process.argv.slice(4).includes("--autonomy");
+const projection = process.argv.slice(4).includes("--projection");
+assert.ok(
+  !projection ||
+    (humanSequence && !autonomy && !intervention && !directPermission),
+  "Projection runs its own explicit edit and Human sequence",
+);
 assert.ok(
   !autonomy || (humanSequence && !intervention && !directPermission),
   "Autonomy runs its own Human sequence after the baseline",
@@ -88,6 +99,7 @@ assert.ok(
         "--direct-app",
         "--intervention",
         "--autonomy",
+        "--projection",
       ].includes(a),
     ),
   "Unknown harness option",
@@ -190,6 +202,10 @@ async function save(complete = false) {
             state.interventionControllerVerified === true,
           autonomyControllerVerified: state.autonomyControllerVerified === true,
           installedAutonomyUIVerified: false,
+          projectionControllerVerified:
+            state.projectionControllerVerified === true,
+          installedProjectionUIVerified: false,
+          automaticHostProjectionDelivery: false,
           installedHumanReviewVerified: false,
           reviewDecisions: humanSequence
             ? "explicit scripted test approvals, not installed Human UI"
@@ -381,7 +397,8 @@ try {
       FM_ENVD_CHAIN_CONNECTION: "1",
       FM_ENVD_NATIVE_DISCOVERY: "1",
       FM_ENVD_NATIVE_APP_EXECUTION: "1",
-      FM_ENVD_DIRECT_APP: directApp || intervention || autonomy ? "1" : "0",
+      FM_ENVD_DIRECT_APP:
+        directApp || intervention || autonomy || projection ? "1" : "0",
       FM_ENVD_AGENT_DISCOVERY: "1",
       FM_ENVD_DEVICE_COMMAND: "1",
       FM_ENVD_HANDOVER_APPROVAL: "1",
@@ -634,6 +651,102 @@ try {
   await save();
   const attempt = randomUUID(),
     journal = new MemoryTransactionJournal();
+  const projectionController = projection
+    ? new OkrProjection(
+        new OkrIntervention(
+          chain,
+          device,
+          auth.grantId,
+          organizationId,
+          okrId,
+          invoke,
+          journal,
+        ),
+      )
+    : null;
+  let originalProjectionText: string | undefined,
+    activeProjectionText: string | undefined;
+  if (projectionController) {
+    const view = await projectionController.read();
+    await assert.rejects(
+      projectionController.export(view, { reviewed: false }),
+      /confirmation_required/,
+    );
+    const exported = await projectionController.export(view, {
+      reviewed: true,
+    });
+    const filePath = output + ".OKR.md";
+    await writeFile(filePath, exported.content, { flag: "wx", mode: 0o600 });
+    originalProjectionText = await readFile(filePath, "utf8");
+    const parsed = parseOkrProjection(originalProjectionText);
+    assert.equal(parsed.snapshot.provenance.okrId, okrId);
+    assert.equal(parsed.snapshot.provenance.organizationId, organizationId);
+    assert.equal(
+      parsed.snapshot.provenance.chainIdentifier,
+      await chain.checkNetwork(),
+    );
+    assert.equal(parsed.snapshot.state, "DRAFT");
+    assert.equal(parsed.snapshot.agreement.approvedPlan, null);
+    const proposal = structuredClone(parsed.proposal);
+    proposal.successCriteria =
+      "Human independently reviews both original documentation files and separate KR verification records";
+    await writeFile(filePath, renderOkrProjection(parsed.snapshot, proposal), {
+      mode: 0o600,
+    });
+    const imported = await projectionController.review(
+      await readFile(filePath, "utf8"),
+    );
+    assert.equal(imported.status, "UNSUBMITTED");
+    assert.deepEqual(
+      imported.changes.map((c) => c.field),
+      ["successCriteria"],
+    );
+    assert.equal((await sdk.okr.getOkr(okrId)).spec_revision, "1");
+    await assert.rejects(
+      projectionController.prepare(imported, { reviewed: false }),
+      /confirmation_required/,
+    );
+    const quote = await projectionController.prepare(imported, {
+      reviewed: true,
+    });
+    assert.ok(!("status" in quote));
+    await preparedQuote(
+      "native explicit imported projection specification replacement",
+      quote,
+    );
+    const outcome = await projectionController.submit(quote);
+    await record(
+      "native explicit imported projection specification replacement",
+      outcome,
+    );
+    const updated = await projectionController.read();
+    assert.equal(updated.snapshot.state, "DRAFT");
+    assert.equal(updated.snapshot.provenance.specRevision, "2");
+    assert.equal(
+      updated.snapshot.specification.successCriteria,
+      proposal.successCriteria,
+    );
+    assert.equal(updated.snapshot.executions.length, 0);
+    await assert.rejects(
+      projectionController.review(originalProjectionText),
+      /state_changed/,
+    );
+    const prior = await projectionController.prepare(imported, {
+      reviewed: false,
+    });
+    assert.ok("status" in prior);
+    assert.equal(prior.digest, outcome.digest);
+    state = {
+      ...state,
+      projectionDraftFile: filePath,
+      projectionReplacementDigest: outcome.digest,
+      projectionProposalExplicitlyCommitted: true,
+    };
+    checks.push(
+      "formal native OKR.md export and disk import preserve exact chain provenance; an unsubmitted proposal changes no state, explicit fee/signature revises encrypted specification once, old versions conflict and original request recovery does not replay",
+    );
+    await save();
+  }
   if (intervention) {
     const editor = new OkrIntervention(
       chain,
@@ -813,6 +926,37 @@ try {
     () => sdk.okr.getOkr(okrId),
     (r) => r.state === 1,
   );
+  if (projectionController) {
+    const active = await projectionController.read();
+    const exported = await projectionController.export(active, {
+      reviewed: true,
+    });
+    activeProjectionText = exported.content;
+    await writeFile(output + ".active.OKR.md", exported.content, {
+      flag: "wx",
+      mode: 0o600,
+    });
+    assert.equal(active.snapshot.state, "ACTIVE");
+    assert.deepEqual(active.snapshot.agreement.approvedPlan, plan);
+    assert.ok(active.snapshot.agreement.approvalId);
+    assert.equal(active.snapshot.budget!.spent, "0");
+    assert.equal(active.snapshot.budget!.reserved, "0");
+    const parsed = parseOkrProjection(exported.content);
+    parsed.proposal.objective = "Proposed change while ACTIVE";
+    const proposed = await projectionController.review(
+      renderOkrProjection(parsed.snapshot, parsed.proposal),
+    );
+    await assert.rejects(
+      projectionController.prepare(proposed, { reviewed: true }),
+      /pause_required/,
+    );
+    assert.equal((await sdk.okr.getOkr(okrId)).state, 1);
+    checks.push(
+      "ACTIVE projection authenticates the original Host proof and approved policy, exports exact file plan and separate budget, and rejects committing or resuming from a local edit without pause",
+    );
+    state = { ...state, projectionApprovedPlanVerified: true };
+    await save();
+  }
   assert.equal(
     (
       await sdk.nodeExecution.readAgentExecutions(
@@ -1412,6 +1556,41 @@ try {
       commandDeliveries: deliveries,
       feeConfirmations,
     };
+    await save();
+  }
+  if (projectionController) {
+    const final = await projectionController.read(),
+      exported = await projectionController.export(final, { reviewed: true });
+    await writeFile(output + ".accepted.OKR.md", exported.content, {
+      flag: "wx",
+      mode: 0o600,
+    });
+    assert.equal(final.snapshot.state, "ACHIEVED");
+    assert.equal(final.snapshot.nextKr, "2");
+    assert.ok(
+      final.snapshot.metrics.every(
+        (m) => m.verified && m.run_id && m.evidence_id && m.verification_id,
+      ),
+    );
+    assert.equal(final.snapshot.acceptance.recordId, state.acceptanceRecordId);
+    assert.equal(final.snapshot.budget!.spent, "6");
+    assert.equal(final.snapshot.budget!.reserved, "0");
+    assert.equal(final.snapshot.executions.length, 2);
+    assert.ok(activeProjectionText);
+    await assert.rejects(
+      projectionController.review(activeProjectionText),
+      /state_changed/,
+    );
+    state = {
+      ...state,
+      projectionControllerVerified: true,
+      projectionFinalBudget: final.snapshot.budget,
+      projectionFinalVersion: final.snapshot.provenance.sourceVersion,
+      projectionAcceptanceRecordId: final.snapshot.acceptance.recordId,
+    };
+    checks.push(
+      "after two actual envd KR Runs and independent Human verification/acceptance, native projection rebuilds original Run/evidence/verification IDs and acceptance from Sui with 6 spent/0 reserved; old active context cannot become current by editing a file",
+    );
     await save();
   }
   if (autonomy) {

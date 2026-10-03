@@ -24,7 +24,7 @@ Copy the skill directory, including `SKILL.md` and `examples/`, into your agent'
 - **Heartbeat audit** — periodic check-ins that identify blocked KRs and push work forward
 - **Report status** in a compact, scannable format
 
-For FractalMind Sui organizations, use [chain projection mode](examples/sui-projection.md): `OKR.md` carries source versions and measurable KR fields; local edits remain unsubmitted until an authorized device signs and confirms them. Measurements, KR verification and final human acceptance stay separate. The skill does not implement an automatic file synchronizer or grant execution permissions.
+For FractalMind Sui organizations, use [chain projection mode](examples/sui-projection.md). The native App's **Skill context & proposals** entry exports `OKR.md` with chain provenance, measurable KRs, the approved plan, budget and original evidence IDs. Edit only its proposal block, then import it for explicit difference review, fee confirmation and an authorized device signature. Measurements, KR verification and final human acceptance stay separate. The file is a local snapshot; the skill does not automatically synchronize it to a Host or grant execution permissions.
 
 ## Recommended Shape for AI Teams
 

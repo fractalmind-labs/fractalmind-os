@@ -247,6 +247,36 @@ test("specification editor round-trips exact u64 decimal metrics; request IDs fi
     OkrInterventionError,
   );
 });
+test("a native read receipt detects changed original Runs, budgets and authority before projection publication", async (t) => {
+  for (const mode of ["budget", "run", "authority"] as const)
+    await t.test(mode, async () => {
+      const f = await fixture(),
+        spec = normalizeDraft(draft());
+      Object.assign(f.source.okr, {
+        priority: spec.priority,
+        deadline_ms: spec.deadlineMs,
+        metrics: spec.krs.map((k) => ({
+          baseline: k.baseline,
+          target: k.target,
+          weight: k.weight,
+          max_age_ms: k.maxAgeMs,
+        })),
+      });
+      (f.controller as any).records.read = async () =>
+        new TextEncoder().encode(JSON.stringify(spec));
+      const view = await f.controller.read();
+      await f.controller.assertCurrentRead(view);
+      if (mode === "budget") f.budget.reserved = 3n;
+      if (mode === "run") f.rows[0].run.state = 1;
+      if (mode === "authority") f.change();
+      await assert.rejects(f.controller.assertCurrentRead(view), {
+        code: "state_changed",
+      });
+      assert.equal(f.counts().builds, 0);
+      assert.equal(f.counts().signs, 0);
+      assert.equal(f.counts().broadcasts, 0);
+    });
+});
 test("pause encrypts its reason and original agreement pointer without cancelling or clearing pending Run budgets", async () => {
   const f = await fixture();
   f.budget.reserved = 3n;
