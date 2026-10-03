@@ -20,33 +20,24 @@ import {
   NativeDeviceSigner,
   NativeDeviceError,
   preferredDeviceProfile,
+  scopedNativeInvoke,
 } from "./native-device";
 import { DeviceIdentityError } from "./device-identity";
 import { CoordinatorReadError } from "./coordinator-read";
 import type { ConnectionProfile } from "./domain";
 import type { DiscoveredInstance } from "./agent-discovery";
+import {
+  agentImportAttemptKey,
+  readAgentImportAttempt,
+  saveAgentImportAttempt,
+  type AgentImportAttempt,
+} from "./agent-import-attempt";
 export type ImportTarget = {
   selection: AgentImportSelection;
   instance: DiscoveredInstance;
 };
-type Attempt = {
-  id: string;
-  deviceProfile: string;
-  grantId: string;
-  kind: "import" | "rebind";
-};
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const id = /^0x[0-9a-f]{64}$/;
-
-export default function AgentImportFlow({
-  profile,
-  organizationId,
-  authorityRevision,
-  target,
-  onClose,
-  onChanged,
-  t,
-}: {
+type Attempt = AgentImportAttempt;
+type Props = {
   profile: ConnectionProfile;
   organizationId: string;
   authorityRevision: string;
@@ -54,7 +45,59 @@ export default function AgentImportFlow({
   onClose: () => void;
   onChanged: () => void;
   t: (zh: string, en: string) => string;
-}) {
+};
+
+export default function AgentImportFlow(props: Props) {
+  const legacyKey = agentImportAttemptKey(
+    props.profile,
+    props.organizationId,
+    null,
+  );
+  const targetKey = props.target
+    ? agentImportAttemptKey(
+        props.profile,
+        props.organizationId,
+        props.target.selection,
+      )
+    : null;
+  return (
+    <>
+      {props.target && targetKey && (
+        <AgentImportSession
+          {...props}
+          key={JSON.stringify([
+            targetKey,
+            props.target.selection.bindingId,
+            props.target.selection.workspaceHash,
+          ])}
+          storageKey={targetKey}
+          historyOnly={false}
+        />
+      )}
+      <AgentImportSession
+        {...props}
+        key={legacyKey}
+        storageKey={legacyKey}
+        historyOnly={true}
+        target={null}
+        onClose={() => {}}
+        onChanged={() => {}}
+      />
+    </>
+  );
+}
+
+function AgentImportSession({
+  profile,
+  organizationId,
+  authorityRevision,
+  target,
+  onClose,
+  onChanged,
+  t,
+  storageKey,
+  historyOnly,
+}: Props & { storageKey: string; historyOnly: boolean }) {
   const [open, setOpen] = useState(false),
     [deviceProfile, setDeviceProfile] = useState(preferredDeviceProfile),
     [confirmed, setConfirmed] = useState(false);
@@ -80,7 +123,7 @@ export default function AgentImportFlow({
     revision = useRef(authorityRevision);
   const latestRevision = useRef(authorityRevision);
   latestRevision.current = authorityRevision;
-  const key = `fractalmind.app.agent-import-attempt.v1:${JSON.stringify([profile.network, profile.chainIdentifier, profile.humanId, organizationId])}`;
+  const key = storageKey;
   useEffect(() => {
     mounted.current = true;
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -114,28 +157,19 @@ export default function AgentImportFlow({
   }, [open]);
   function restore() {
     try {
-      const saved = JSON.parse(localStorage.getItem(key) ?? "null");
-      if (
-        saved &&
-        uuid.test(saved.id) &&
-        id.test(saved.grantId) &&
-        typeof saved.deviceProfile === "string" &&
-        /^[A-Za-z0-9_-]{1,64}$/.test(saved.deviceProfile) &&
-        (saved.kind === undefined ||
-          saved.kind === "import" ||
-          saved.kind === "rebind")
-      ) {
-        setAttempt({
-          id: saved.id,
-          grantId: saved.grantId,
-          deviceProfile: saved.deviceProfile,
-          kind: saved.kind ?? "import",
-        });
-        setKind(saved.kind ?? "import");
+      const saved = readAgentImportAttempt(
+        localStorage,
+        key,
+        target?.selection ?? null,
+      );
+      if (saved) {
+        setAttempt(saved);
+        setKind(saved.kind);
         setDeviceProfile(saved.deviceProfile);
         setRestored(true);
       }
     } catch {
+      setRestored(true);
       setError("journal_unavailable");
     }
   }
@@ -163,7 +197,12 @@ export default function AgentImportFlow({
             e instanceof CoordinatorReadError ||
             e instanceof TransactionPreflightError
             ? e.code
-            : "operation_failed",
+            : e &&
+                typeof e === "object" &&
+                "code" in e &&
+                e.code === "journal_unavailable"
+              ? "journal_unavailable"
+              : "operation_failed",
         );
     } finally {
       flight.current = false;
@@ -173,14 +212,23 @@ export default function AgentImportFlow({
   async function load(value?: Attempt, forQuote = false) {
     if (session.current) return session.current;
     if (!isTauri()) throw new NativeDeviceError("native_unavailable");
+    const assertCurrent = () => {
+      if (!mounted.current) throw new AgentImportError("state_changed");
+    };
     const device = await NativeDeviceSigner.load(
-        (command, args) => invoke(command, args),
+        scopedNativeInvoke(
+          (command, args) => invoke(command, args),
+          assertCurrent,
+        ),
         value?.deviceProfile ?? deviceProfile,
       ),
       chain = new ChainReadSession(profile);
+    assertCurrent();
     if (mounted.current) setPayer(device.device.address);
     let grantId = value?.grantId;
     if (!grantId) {
+      if (historyOnly || !target)
+        throw new AgentImportError("invalid_selection");
       const human = await chain.human(),
         candidates = human.grants.value?.filter(
           (g) =>
@@ -195,11 +243,16 @@ export default function AgentImportFlow({
       const scoped = candidates?.filter((g) => g.org_scope === organizationId),
         usable = scoped?.length ? scoped : candidates;
       if (usable?.length !== 1) throw new DeviceIdentityError("invalid_grant");
+      assertCurrent();
       grantId = usable[0].id;
       value = { id: crypto.randomUUID(), deviceProfile, grantId, kind };
-      // Technical correlation only. Instance, workspace, Host payload and
-      // derived product records remain in memory or Sui, never this cache.
-      localStorage.setItem(key, JSON.stringify(value));
+      // Public instance locator only; no workspace body or cached authority.
+      value = saveAgentImportAttempt(
+        localStorage,
+        key,
+        value,
+        target.selection,
+      );
       setAttempt(value);
     }
     journal.current ??= new IndexedDbTransactionJournal();
@@ -233,7 +286,10 @@ export default function AgentImportFlow({
     setOutcome(value);
     setUnsubmitted(false);
     if (value.status === "confirmed") {
-      const found = await controller.confirmed(value);
+      const found = await controller.confirmed(
+        value,
+        historyOnly ? undefined : target?.selection,
+      );
       if (mounted.current) setRecord(found);
       onChanged();
     }
@@ -248,7 +304,12 @@ export default function AgentImportFlow({
     onClose();
   }
   function reset() {
-    if (busy || outcome?.status === "unknown" || (!outcome && !unsubmitted))
+    if (
+      historyOnly ||
+      busy ||
+      outcome?.status === "unknown" ||
+      (!outcome && !unsubmitted)
+    )
       return;
     localStorage.removeItem(key);
     session.current?.dispose();
@@ -301,15 +362,17 @@ export default function AgentImportFlow({
   };
   return (
     <>
-      <button
-        disabled={!isTauri()}
-        onClick={() => {
-          restore();
-          setOpen(true);
-        }}
-      >
-        {t("恢复登记交易", "Recover registration transaction")}
-      </button>
+      {historyOnly && (
+        <button
+          disabled={!isTauri()}
+          onClick={() => {
+            restore();
+            setOpen(true);
+          }}
+        >
+          {t("恢复历史登记交易", "Recover historical registration transaction")}
+        </button>
+      )}
       {open && (
         <dialog
           className="host-dialog"
@@ -321,21 +384,40 @@ export default function AgentImportFlow({
         >
           <div className="dialog-head">
             <h2>
-              {kind === "rebind"
-                ? t("重新关联为仅观察", "Rebind for observation only")
-                : t("导入为仅观察", "Import for observation only")}
+              {historyOnly
+                ? t("历史登记交易查询", "Historical registration query")
+                : kind === "rebind"
+                  ? t("重新关联为仅观察", "Rebind for observation only")
+                  : t("导入为仅观察", "Import for observation only")}
             </h2>
             <button disabled={busy} onClick={close}>
               {t("关闭", "Close")}
             </button>
           </div>
-          <p>
-            {t(
-              "保留原进程和任务。链上确认后建立仅观察关联；支持约束的适配器也必须另行完成交接与 OKR 授权。",
-              "Keep the existing process and tasks. Confirmation creates an observation-only association on Sui; bounded adapters require separate handover and OKR authorization.",
-            )}
-          </p>
-          {restored && !unsubmitted && !outcome && !record && (
+          {historyOnly ? (
+            <p>
+              {t(
+                "此旧格式记录没有实例定位，只能查询原交易。其结果和技术日志保留；从新的 Host 扫描中选择实例，单独核验并确认导入。",
+                "This legacy record has no instance locator and is only for querying its original transaction. Its outcome and journal are retained; select an instance from a fresh Host scan for a separate reviewed import.",
+              )}
+            </p>
+          ) : (
+            <p>
+              {t(
+                "保留原进程和任务。链上确认后建立仅观察关联；支持约束的适配器也必须另行完成交接与 OKR 授权。",
+                "Keep the existing process and tasks. Confirmation creates an observation-only association on Sui; bounded adapters require separate handover and OKR authorization.",
+              )}
+            </p>
+          )}
+          {historyOnly && !attempt && (
+            <p>
+              {t(
+                "此组织没有可恢复的旧格式登记记录。",
+                "No legacy registration record is available for this organization.",
+              )}
+            </p>
+          )}
+          {!historyOnly && restored && !unsubmitted && !outcome && !record && (
             <p className="warn">
               {t(
                 "先查询上次交易。确认未提交或已有结果后，开始新操作再核对所选实例。",
@@ -467,7 +549,7 @@ export default function AgentImportFlow({
               {t("返回普通导入", "Return to import")}
             </button>
           )}
-          {!outcome && !record && (
+          {!historyOnly && !outcome && !record && (
             <fieldset disabled={busy || !!quote}>
               <label>
                 {t("本机设备资料", "Local device profile")}
@@ -491,7 +573,7 @@ export default function AgentImportFlow({
               </label>
             </fieldset>
           )}
-          {!outcome && !record && (
+          {!historyOnly && !outcome && !record && (
             <button
               disabled={
                 busy ||
@@ -622,16 +704,18 @@ export default function AgentImportFlow({
               >
                 {t("查询原交易", "Query original transaction")}
               </button>
-              <button
-                disabled={
-                  busy ||
-                  outcome?.status === "unknown" ||
-                  (!outcome && !unsubmitted)
-                }
-                onClick={reset}
-              >
-                {t("开始新操作", "Start new operation")}
-              </button>
+              {!historyOnly && (
+                <button
+                  disabled={
+                    busy ||
+                    outcome?.status === "unknown" ||
+                    (!outcome && !unsubmitted)
+                  }
+                  onClick={reset}
+                >
+                  {t("开始新操作", "Start new operation")}
+                </button>
+              )}
             </section>
           )}
           {record && (

@@ -203,6 +203,7 @@ export class AgentImport {
   private verifier: DeviceIdentityVerifier;
   private reads: CoordinatorReadClient;
   private plans = new Map<SelfPayFeeQuote, Plan>();
+  private disposed = false;
   constructor(
     readonly chain: ChainReadSession,
     readonly device: NativeDeviceSigner,
@@ -257,6 +258,9 @@ export class AgentImport {
         },
       },
       journal,
+      assertBeforeBroadcast: () => {
+        if (this.disposed) fail("state_changed");
+      },
     });
   }
   private request(attemptId: string) {
@@ -397,6 +401,7 @@ export class AgentImport {
     attemptId: string,
     confirmed: boolean,
   ): Promise<SelfPayFeeQuote | SelfPayTransactionOutcome | AlreadyImported> {
+    if (this.disposed) fail("state_changed");
     const requestId = this.request(attemptId),
       prior = await this.query(attemptId);
     if (prior) return prior;
@@ -451,6 +456,7 @@ export class AgentImport {
       fail("state_changed");
     const duplicate = await this.existing(input);
     if (duplicate) return duplicate;
+    if (this.disposed) fail("state_changed");
     this.plans.set(quote, {
       requestId,
       input,
@@ -563,6 +569,7 @@ export class AgentImport {
     this.plans.delete(quote);
   }
   dispose() {
+    this.disposed = true;
     this.plans.clear();
   }
 }

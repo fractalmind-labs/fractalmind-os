@@ -555,6 +555,42 @@ test("cancelled and superseded quotes cannot submit; confirmed receipt reconstru
   assert.equal(record.id, f.record.id);
   assert.equal(record.revoked, true);
 });
+
+test("switching physical instances disposes the old quote and prevents even a late pre-broadcast continuation", async () => {
+  const f = await fixture();
+  const quote = await f.controller.prepare(f.selected, attempt, true);
+  assert.ok(!("status" in quote));
+  f.controller.dispose();
+  await assert.rejects(f.controller.submit(quote), /invalid_quote/);
+  await assert.rejects(
+    f.controller.prepare(f.selected, attempt, true),
+    /state_changed/,
+  );
+  assert.throws(
+    () => (f.controller.manager as any).options.assertBeforeBroadcast(),
+    /state_changed/,
+  );
+});
+
+test("a v2 target never inherits a valid historical receipt for a different Host, instance or workspace", async () => {
+  const f = await fixture();
+  f.setExists(true);
+  assert.equal(
+    (await f.controller.confirmed(f.outcome, f.selected)).id,
+    f.record.id,
+  );
+  for (const changed of [
+    { ...f.selected, hostAddress: id("0xef") },
+    { ...f.selected, instanceId: `tmux-${"f".repeat(64)}` },
+    { ...f.selected, workspaceHash: "f".repeat(64) },
+  ])
+    await assert.rejects(
+      f.controller.confirmed(f.outcome, changed),
+      /state_changed/,
+    );
+  // Legacy recovery is intentionally only a query of the actual old record.
+  assert.equal((await f.controller.confirmed(f.outcome)).id, f.record.id);
+});
 test("idempotent receipt reconstructs an existing record; foreign or forged event scope is rejected", async () => {
   const f = await fixture();
   f.setExists(true);
