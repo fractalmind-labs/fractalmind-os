@@ -237,6 +237,18 @@ See [Host admission implementation and evidence](../../docs/product/v020-envd-ho
 
 ### Chain-bound Host connections
 
+An explicitly stopped, expired, zero-tool handover observation can be settled by
+the existing Host operator using `envd --config sentinel.yaml
+--settle-stopped-review`. Supply `{ "execution_id": "<original full Run ID>",
+"command": <original signed NodeCommand> }` through stdin, retaining the compact
+signed payload bytes. The App must first request the stop on Sui. This maintenance
+command loads the existing native credential profile, checks the pinned chain,
+signature, exact Run, stop flag and expiry, and publishes only an encrypted
+cancellation acknowledgement. It does not start the adapter or approve an OKR.
+An unknown published digest must be queried rather than submitted again. This
+path cannot reconcile unknown mutating tasks and is not an automatic runtime
+worker. See [real cloud validation and limits](../../docs/product/v020-cloud-review-stop.md).
+
 Set `sui.host_connection_enabled: true` after admission and start envd normally.
 This mode loads the explicitly initialized NativeStore Host keys independently
 of the execution adapter. It reads the exact current membership and Coordinator

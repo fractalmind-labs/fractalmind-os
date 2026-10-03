@@ -30,7 +30,7 @@ type Attempt = {
   deliveryAttempted?: boolean;
 };
 type Fee = {
-  kind: "capability" | "review" | "approval";
+  kind: "capability" | "review" | "approval" | "stop";
   quote: SelfPayFeeQuote;
 };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -78,6 +78,10 @@ export default function HandoverFlow({
     [reviewed, setReviewed] = useState(false);
   const [input, setInput] = useState<HandoverReviewInput | null>(null),
     [runId, setRunId] = useState<string | null>(null);
+  const [reviewState, setReviewState] = useState<{
+    state: number;
+    stopRequested: boolean;
+  } | null>(null);
   const [fee, setFee] = useState<Fee | null>(null),
     [outcomes, setOutcomes] = useState<
       Partial<Record<Fee["kind"], SelfPayTransactionOutcome>>
@@ -132,6 +136,7 @@ export default function HandoverFlow({
     setHostAccepted(false);
     setDiscovered(null);
     setRunId(null);
+    setReviewState(null);
   }
   function close() {
     opened.current = false;
@@ -372,7 +377,7 @@ export default function HandoverFlow({
         ctx.assertLive();
         save({ ...ctx.attempt, capabilityId });
       }
-      if (kind === "review") await restore();
+      if (kind === "review" || kind === "stop") await restore();
       onChanged();
     }
   }
@@ -432,6 +437,11 @@ export default function HandoverFlow({
       });
     setInput(original.ticket.input);
     setRunId(original.run.id);
+    setReviewState({
+      state: original.run.state,
+      stopRequested: original.run.stop_requested,
+    });
+    setHostAccepted(false);
     setOkrId(
       (
         original.ticket.input.command.payload
@@ -494,8 +504,20 @@ export default function HandoverFlow({
     if ("status" in quote) await receive("approval", quote);
     else setFee({ kind: "approval", quote });
   }
+  async function prepareStop() {
+    const ctx = await load();
+    const quote = await ctx.review.prepareStop(true);
+    ctx.assertLive();
+    if ("status" in quote) await receive("stop", quote);
+    else setFee({ kind: "stop", quote });
+  }
   async function submitFee() {
     if (!fee) return;
+    if (fee.kind === "stop") {
+      const ctx = await load();
+      await receive("stop", await ctx.review.submitStop(fee.quote));
+      return;
+    }
     const ctx = await load(),
       controller =
         fee.kind === "capability"
@@ -509,6 +531,13 @@ export default function HandoverFlow({
     await receive(fee.kind, await controller.submit(fee.quote));
   }
   async function query(kind: Fee["kind"]) {
+    if (kind === "stop") {
+      const ctx = await load(),
+        found = await ctx.review.queryStop();
+      if (!found) throw Object.assign(new Error(), { code: "not_recorded" });
+      await receive("stop", found);
+      return;
+    }
     const ctx = await load(),
       controller =
         kind === "capability"
@@ -624,12 +653,22 @@ export default function HandoverFlow({
       ? t("单次观察权限", "Single-use observation")
       : kind === "review"
         ? t("保存审阅请求", "Save review request")
-        : t("确认执行约定", "Approve agreement");
+        : kind === "stop"
+          ? t("停止原审阅", "Stop original review")
+          : t("确认执行约定", "Approve agreement");
   const candidateOkrs = okrs?.filter((v) => [0, 2].includes(v.okr.state)) ?? [];
   const proposal = input?.command.payload.handover_review as
     | HandoverProposal
     | undefined;
   const expired = proposal && now >= proposal.review_expires_at_ms;
+  const reviewLabels = [
+    t("排队中", "Queued"),
+    t("运行中", "Running"),
+    t("已成功", "Succeeded"),
+    t("已失败", "Failed"),
+    t("待确认", "Needs confirmation"),
+    t("已取消", "Cancelled"),
+  ];
   const locked = busy || !!fee || !!input;
   return (
     <>
@@ -1046,6 +1085,8 @@ export default function HandoverFlow({
                     busy ||
                     !!fee ||
                     !!expired ||
+                    !!reviewState?.stopRequested ||
+                    (reviewState !== null && reviewState.state !== 0) ||
                     attempt?.deliveryAttempted ||
                     !!outcomes.approval
                   }
@@ -1075,6 +1116,49 @@ export default function HandoverFlow({
                     "Delivery attempt recorded. Query the original request if its response is lost.",
                   )}
                 </p>
+              )}
+              {reviewState && (
+                <p role="status">
+                  {reviewState.state === 5
+                    ? t("原审阅已取消。", "Original review cancelled.")
+                    : [0, 1].includes(reviewState.state) &&
+                        reviewState.stopRequested
+                      ? t(
+                          "停止请求已上链，等待 Host 确认取消。",
+                          "Stop requested on Sui; awaiting Host acknowledgement.",
+                        )
+                      : [0, 1].includes(reviewState.state) &&
+                          outcomes.stop?.status === "confirmed"
+                        ? t(
+                            "停止交易已确认，正在等待原运行的最新状态；请恢复原审阅。",
+                            "Stop transaction confirmed. Awaiting the latest original Run state; restore the review.",
+                          )
+                        : t("原执行状态", "Original execution state") +
+                          `: ${reviewLabels[reviewState.state]}`}
+                </p>
+              )}
+              {reviewState &&
+                [0, 1].includes(reviewState.state) &&
+                !reviewState.stopRequested && (
+                  <button
+                    className="secondary"
+                    disabled={busy || !!fee || !!outcomes.stop}
+                    onClick={() => void perform(prepareStop)}
+                  >
+                    {t(
+                      "停止原审阅 · 查看费用",
+                      "Stop original review · review fee",
+                    )}
+                  </button>
+                )}
+              {outcomes.stop && (
+                <button
+                  className="secondary"
+                  disabled={busy}
+                  onClick={() => void perform(() => query("stop"))}
+                >
+                  {t("查询原停止交易", "Query original stop transaction")}
+                </button>
               )}
               {hostAccepted && (
                 <>
@@ -1128,7 +1212,8 @@ export default function HandoverFlow({
                 disabled={
                   busy ||
                   now >= fee.quote.expiresAtMs ||
-                  (fee.kind !== "capability" && !!expired)
+                  ((fee.kind === "review" || fee.kind === "approval") &&
+                    !!expired)
                 }
                 onClick={() => void perform(submitFee)}
               >

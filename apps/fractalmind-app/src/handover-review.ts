@@ -68,6 +68,17 @@ export class HandoverReview {
   private readonly records: PrivateRecords;
   private readonly results: NativeCommandResults;
   private readonly manager: SelfPayTransactionManager;
+  private readonly stopManager: SelfPayTransactionManager;
+  readonly stopRequestId: string;
+  private stopGuard?: () => Promise<void>;
+  private readonly stopQuotes = new WeakMap<
+    SelfPayFeeQuote,
+    () => Promise<void>
+  >();
+  private stopping?: {
+    quote: SelfPayFeeQuote;
+    outcome: Promise<SelfPayTransactionOutcome>;
+  };
   private readonly plans = new WeakMap<
     SelfPayFeeQuote,
     { assertCurrent: () => Promise<void> }
@@ -98,6 +109,7 @@ export class HandoverReview {
       throw new HandoverReviewError("invalid_input");
     this.logicalId = `handover-review-${attemptId}`;
     this.requestId = this.logicalId;
+    this.stopRequestId = `handover-stop:${attemptId}`;
     this.verifier = new DeviceIdentityVerifier(chain, signer, grantId);
     this.records = new PrivateRecords(
       chain,
@@ -130,10 +142,109 @@ export class HandoverReview {
         },
       },
     });
+    this.stopManager = new SelfPayTransactionManager({
+      client: chain.sdk.client.client,
+      network: chain.profile.network,
+      journal,
+      assertBeforeBroadcast: assertActive,
+      signer: {
+        getPublicKey: () => signer.getPublicKey(),
+        signTransaction: async (bytes) => {
+          const guard = this.stopGuard;
+          if (!guard) throw new HandoverReviewError("invalid_quote");
+          await guard();
+          const signed = await signer.signTransaction(bytes);
+          await guard();
+          return signed;
+        },
+      },
+    });
   }
   async query() {
     await this.chain.checkNetwork();
     return this.manager.query(this.requestId);
+  }
+  async queryStop() {
+    await this.chain.checkNetwork();
+    return this.stopManager.query(this.stopRequestId);
+  }
+  private async stopSource() {
+    this.assertActive();
+    const original = await this.restore();
+    const authority = await this.verifier.verifyOrganization(
+      this.organizationId,
+      "operate",
+    );
+    if (
+      !original.run ||
+      !original.ticket ||
+      !authority.authorityPin ||
+      original.run.human_id !== authority.humanId ||
+      ![0, 1].includes(original.run.state) ||
+      original.run.stop_requested ||
+      original.run.result_record ||
+      original.run.budget_asset ||
+      original.run.budget_amount !== "0"
+    )
+      throw new HandoverReviewError("state_changed");
+    return {
+      run: original.run,
+      humanId: authority.humanId,
+      pin: canonical([authority.authorityPin, original.run, original.ticket]),
+    };
+  }
+  /** Stop uses current Human authority and the original Run. Review expiry
+   * never blocks cancellation. A running Run remains pending until the Host
+   * records its acknowledgement; a stop request is not a terminal result. */
+  async prepareStop(reviewed: boolean) {
+    if (!reviewed) throw new HandoverReviewError("confirmation_required");
+    const prior = await this.queryStop();
+    if (prior) return prior;
+    const before = await this.stopSource();
+    const guard = async () => {
+      if ((await this.stopSource()).pin !== before.pin)
+        throw new HandoverReviewError("state_changed");
+    };
+    const quote = await this.stopManager.prepare({
+      requestId: this.stopRequestId,
+      transaction: this.chain.sdk.nodeExecution.requestStop({
+        executionId: before.run.id,
+        capabilityId: before.run.capability_id,
+        organizationId: this.organizationId,
+        humanId: before.humanId,
+        grantId: this.grantId,
+      }),
+      gasBudget: 200_000_000n,
+    });
+    await guard();
+    this.stopQuotes.set(quote, guard);
+    return quote;
+  }
+  submitStop(quote: SelfPayFeeQuote): Promise<SelfPayTransactionOutcome> {
+    if (this.stopping) {
+      if (this.stopping.quote !== quote)
+        return Promise.reject(new HandoverReviewError("invalid_quote"));
+      return this.stopping.outcome;
+    }
+    const outcome = this.submitStopOnce(quote).finally(() => {
+      this.stopping = undefined;
+    });
+    this.stopping = { quote, outcome };
+    return outcome;
+  }
+  private async submitStopOnce(quote: SelfPayFeeQuote) {
+    const prior = await this.queryStop();
+    if (prior) return prior;
+    const guard = this.stopQuotes.get(quote);
+    if (!guard || quote.requestId !== this.stopRequestId)
+      throw new HandoverReviewError("invalid_quote");
+    await guard();
+    this.stopGuard = guard;
+    try {
+      return await this.stopManager.submit(quote);
+    } finally {
+      this.stopGuard = undefined;
+    }
   }
   private async directory() {
     const found = await readRecordPointer(

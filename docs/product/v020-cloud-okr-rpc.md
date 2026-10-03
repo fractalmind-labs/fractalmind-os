@@ -2,6 +2,8 @@
 
 基线 `147b0e3`，复用已经入组的 Ubuntu 云 Host、原 Android APK／Keystore 设备、Human、组织和任务 localnet。完整云 OKR 验收仍未通过，版本目标保持进行中。
 
+后续[原审阅停止结算与 envd 升级](v020-cloud-review-stop.md)已明确停止并取消下述同一 Run，保留原草稿和失败证据；最终修复已部署到隔离云 worker。下文保留本次尝试时的状态，不代表后续最新状态。
+
 ## 实际执行事实
 
 [公开原报告与只读核对](evidence/v020-cloud-okr-rpc.json)：

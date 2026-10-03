@@ -58,8 +58,9 @@ func main() {
 	joinStatus := flag.Bool("host-join-status", false, "query the original Host admission transaction without accessing private keys")
 	newJoinAttempt := flag.Bool("new-host-join-attempt", false, "explicitly prepare another admission after a known terminal original receipt")
 	joinAddress := flag.String("host-address", "", "public Host address for --host-join-status")
+	settleReview := flag.Bool("settle-stopped-review", false, "acknowledge an explicitly stopped expired zero-tool handover review; original signed command is read from stdin")
 	flag.Parse()
-	if flag.NArg() != 0 || *initHost && (*joinHost || *joinStatus) || *joinHost && *joinStatus || *newJoinAttempt && !*joinHost || *joinAddress != "" && !*joinStatus {
+	if flag.NArg() != 0 || *initHost && (*joinHost || *joinStatus) || *joinHost && *joinStatus || *newJoinAttempt && !*joinHost || *joinAddress != "" && !*joinStatus || *settleReview && (*initHost || *joinHost || *joinStatus || *showVersion) {
 		fmt.Fprintln(os.Stderr, "invalid Host command options; invitations are entered through stdin, never argv")
 		os.Exit(2)
 	}
@@ -75,6 +76,15 @@ func main() {
 	cfg, err := config.Load(*configPath)
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
+	}
+	if *settleReview {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		if err := runStoppedReviewCLI(ctx, cfg, os.Stdin, os.Stdout); err != nil {
+			log.Print(err)
+			os.Exit(1)
+		}
+		return
 	}
 	if *joinHost || *joinStatus {
 		if err := runHostJoinCLI(context.Background(), cfg, *joinStatus, *newJoinAttempt, *joinAddress, os.Stdin, os.Stdout, os.Stderr); err != nil {

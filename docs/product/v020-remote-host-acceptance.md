@@ -4,6 +4,8 @@
 
 后续[真实云 OKR 尝试与 RPC 修复](v020-cloud-okr-rpc.md)保留原草稿／未确认审阅、只读复查和网络测量；它尚未完成云 KR 执行，不改变本轮接入证据的证明范围。
 
+再后续[停止结算与 envd 升级](v020-cloud-review-stop.md)已取消原审阅并更新隔离云 worker，原身份／成员保持，新实例仅发现，完整云 OKR 仍未验收。
+
 ## 本次修复
 
 Linux 的 Secret Service collection 可以通过 `identity.secret_service_collection` 显式选择。初始化、邀请码兑换、观察连接和正式执行工厂均使用同一配置；省略保留 `fractalmind`。选项仅适用于 Linux，名称限制为 1–64 个 ASCII 字母、数字、连字符或下划线；其他平台的非空配置拒绝。不可用、锁定或读取失败时不切换凭据库，也不生成替代身份。

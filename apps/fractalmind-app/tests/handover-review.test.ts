@@ -244,6 +244,7 @@ async function fixture() {
   };
   (review as any).verifier.verifyOrganization = async () => ({
     authorityPin: pin,
+    humanId: human,
   });
   (review as any).records.read = async () =>
     new TextEncoder().encode(JSON.stringify(ticket));
@@ -427,4 +428,105 @@ test("unknown preparation is returned before authority or command regeneration",
   assert.equal((await f.review.prepare(f.input)).digest, "same-original");
   assert.equal(f.counts().reads, 0);
   assert.equal(f.counts().prepares, 0);
+});
+
+async function stoppedFixture() {
+  const f = await fixture(),
+    manager = (f.review as any).stopManager;
+  let prior: SelfPayTransactionOutcome | undefined,
+    sends = 0;
+  (f.chain.sdk.nodeExecution as any).requestStop = (input: any) => {
+    assert.equal(input.executionId, f.run.id);
+    assert.equal(input.capabilityId, f.run.capability_id);
+    assert.equal(input.organizationId, f.org);
+    assert.equal(input.grantId, f.grant);
+    assert.equal(input.okrId, undefined);
+    const tx = new Transaction();
+    tx.moveCall({
+      target: `${id("9")}::node_execution::request_stop_with_budget_v2`,
+      arguments: [],
+    });
+    return tx;
+  };
+  manager.query = async () => prior;
+  manager.prepare = async (input: any) => {
+    assert.equal(input.requestId, f.review.stopRequestId);
+    assert.equal(input.transaction.getData().commands.length, 1);
+    return { requestId: f.review.stopRequestId } as SelfPayFeeQuote;
+  };
+  manager.submit = async () => {
+    await manager.options.signer.signTransaction(new Uint8Array([1, 2]));
+    sends++;
+    prior = {
+      status: "unknown",
+      digest: f.digest,
+      requestId: f.review.stopRequestId,
+      journalSynced: true,
+    };
+    return prior;
+  };
+  return { ...f, sends: () => sends, stopGuarded: manager.options.signer };
+}
+
+test("expired review can be explicitly stopped with the original Run; unknown receipt never creates a new request or delivery", async (t) => {
+  const f = await stoppedFixture();
+  t.mock.method(Date, "now", () => Number(f.run.expires_at_ms) + 1);
+  f.run.state = 1;
+  await assert.rejects(f.review.prepareStop(false), /confirmation_required/);
+  assert.equal(f.counts().signs, 0);
+  const quote = await f.review.prepareStop(true);
+  assert(!("status" in quote));
+  assert.equal(f.counts().signs, 0);
+  const [a, b] = await Promise.all([
+    f.review.submitStop(quote),
+    f.review.submitStop(quote),
+  ]);
+  assert.equal(a.digest, b.digest);
+  assert.equal(a.status, "unknown");
+  assert.equal(f.sends(), 1);
+  assert.equal(f.run.state, 1);
+  assert.equal(f.run.stop_requested, false); // No optimistic terminal state.
+  assert.equal((await f.review.prepareStop(true)).digest, f.digest);
+  assert.equal((await f.review.queryStop())?.digest, f.digest);
+  assert.equal(f.counts().prepares, 0);
+  assert.equal(f.counts().broadcasts, 0);
+});
+
+test("stopping rejects terminal/changed Runs, forged quotes, revoked authority and signing outside confirmation", async () => {
+  for (const mode of [
+    "terminal",
+    "already stopped",
+    "authority changed",
+    "Run changed",
+    "signature dialog changed",
+  ] as const) {
+    const f = await stoppedFixture();
+    if (mode === "terminal") f.run.state = 3;
+    if (mode === "already stopped") f.run.stop_requested = true;
+    if (["terminal", "already stopped"].includes(mode)) {
+      await assert.rejects(f.review.prepareStop(true), /state_changed/);
+    } else {
+      const quote = await f.review.prepareStop(true);
+      assert(!("status" in quote));
+      if (mode === "authority changed") f.mutate({ pin: "revoked" });
+      if (mode === "Run changed") f.run.state = 1;
+      if (mode === "signature dialog changed")
+        f.mutate({
+          signing: () => {
+            f.run.stop_requested = true;
+          },
+        });
+      await assert.rejects(f.review.submitStop(quote), /state_changed/);
+    }
+    assert.equal(f.sends(), 0);
+  }
+  const f = await stoppedFixture(),
+    quote = await f.review.prepareStop(true);
+  assert(!("status" in quote));
+  await assert.rejects(f.review.submitStop({ ...quote }), /invalid_quote/);
+  await assert.rejects(
+    f.stopGuarded.signTransaction(new Uint8Array([1])),
+    /invalid_quote/,
+  );
+  assert.equal(f.sends(), 0);
 });
