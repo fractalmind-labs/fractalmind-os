@@ -452,7 +452,9 @@ func (s *ChainExecutionStore) SaveCommand(ctx context.Context, command nodecomma
 	}
 	hash := sha256.Sum256(encrypted)
 	confirmed := false
-	queryCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	// Read only the original result/checkpoint. A slow network never permits a
+	// second publication, another execution or a different terminal attempt.
+	queryCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	for !confirmed {
 		result, found, readErr := s.reader.ReadExecutionResult(queryCtx, run.CapabilityID, run.Fingerprint)

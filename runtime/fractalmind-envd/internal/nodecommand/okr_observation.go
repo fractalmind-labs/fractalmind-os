@@ -61,14 +61,8 @@ func (s *ChainAuthorityResolver) ReadOkrObservationState(ctx context.Context, ru
 	if len(metric.Evidence) == 1 {
 		out.EvidenceID = metric.Evidence[0].String()
 	}
-	for id, version := range r.versions {
-		object, err := s.reader.ReadChainObject(ctx, id)
-		if err != nil {
-			return out, err
-		}
-		if object.ID != id || object.Version != version {
-			return out, reject(CodeAuthorityStale, "observation state changed during read", nil)
-		}
+	if _, err := r.versionPin(ctx, reject(CodeAuthorityStale, "observation state changed during read", nil)); err != nil {
+		return out, err
 	}
 	return out, nil
 }

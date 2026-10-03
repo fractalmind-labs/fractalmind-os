@@ -66,7 +66,7 @@ func NewGRPCClient(endpoint, graphqlURL string) (*GRPCClient, error) {
 			graphqlURL = "https://graphql.mainnet.sui.io/graphql"
 		}
 	}
-	conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(transport), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(16<<20)))
+	conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(transport), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(16<<20)), grpc.WithUnaryInterceptor(boundUnaryRPC))
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +74,15 @@ func NewGRPCClient(endpoint, graphqlURL string) (*GRPCClient, error) {
 }
 
 func (c *GRPCClient) Close() error { return c.conn.Close() }
+
+// Background command contexts must not leave a disconnected ledger read
+// waiting indefinitely. A caller's shorter deadline/cancellation still wins;
+// this timeout never authorizes retrying an uncertain transaction.
+func boundUnaryRPC(ctx context.Context, method string, req, reply any, conn *grpc.ClientConn, invoke grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	return invoke(ctx, method, req, reply, conn, opts...)
+}
 
 func inputArgument(index uint32) *v2.Argument {
 	return &v2.Argument{Kind: v2.Argument_INPUT.Enum(), Input: proto.Uint32(index)}

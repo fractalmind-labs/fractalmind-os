@@ -18,6 +18,10 @@ type SignatureVerifier interface {
 // CapabilityState is an authority-plane projection. Implementations may load
 // it from SUI RPC, an indexer, or a bounded local cache.
 type CapabilityState struct {
+	// Private dependencies of one typed resolution. Handover can freshly
+	// recheck these exact versions instead of decoding identical objects twice.
+	// This is never serialized, persisted or reused across authority calls.
+	readVersions           map[string]uint64
 	ID                     string                      `json:"id"`
 	Target                 Target                      `json:"target"`
 	AuthorizedSigners      []string                    `json:"authorized_signers"`

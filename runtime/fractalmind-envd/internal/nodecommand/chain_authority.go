@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math"
 	"reflect"
-	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -189,10 +188,11 @@ type moveManaged struct {
 type chainRead struct {
 	resolver *ChainAuthorityResolver
 	versions map[string]uint64
+	objects  map[string]ChainObject
 }
 
 func (r *chainRead) object(ctx context.Context, id string, kind string, out any) error {
-	obj, err := r.resolver.reader.ReadChainObject(ctx, id)
+	obj, err := r.readObject(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -322,6 +322,16 @@ func (s *ChainAuthorityResolver) Resolve(ctx context.Context, ref CapabilityRef)
 	var member moveMembership
 	var org moveOrganization
 	var coordinator moveCoordinator
+	dependencies := []string{auth.Membership.String(), cap.Org.String()}
+	if len(auth.Grant) == 1 {
+		dependencies = append(dependencies, auth.Human.String(), auth.Grant[0].String())
+	}
+	if len(auth.Managed) == 1 {
+		dependencies = append(dependencies, auth.Managed[0].String())
+	}
+	if err := r.prefetchObjects(ctx, dependencies); err != nil {
+		return CapabilityState{}, err
+	}
 	if err := r.object(ctx, auth.Membership.String(), "host::HostMembership", &member); err != nil {
 		return CapabilityState{}, err
 	}
@@ -468,24 +478,16 @@ func (s *ChainAuthorityResolver) Resolve(ctx context.Context, ref CapabilityRef)
 	}
 	// Re-read each dependency by latest version. Any change during resolution
 	// fails closed; the chain reservation transaction will check again atomically.
-	ids := make([]string, 0, len(r.versions))
-	for id := range r.versions {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
-	var stamp strings.Builder
-	for _, id := range ids {
-		obj, err := s.reader.ReadChainObject(ctx, id)
-		if err != nil {
-			return CapabilityState{}, err
-		}
-		if obj.ID != id || obj.Version != r.versions[id] {
-			return CapabilityState{}, reject(CodeAuthorityStale, "chain state changed during resolution", nil)
-		}
-		fmt.Fprintf(&stamp, "%s:%d;", id, obj.Version)
+	versionPin, err := r.versionPin(ctx, reject(CodeAuthorityStale, "chain state changed during resolution", nil))
+	if err != nil {
+		return CapabilityState{}, err
 	}
 	uses := cap.MaxUses - cap.DelegatedUses
-	state := CapabilityState{ID: ref.ID, Target: Target{OrganizationID: cap.Org.String(), NodeID: cap.Node, AgentID: cap.Agent}, AuthorizedSigners: []string{cap.Delegate.String()}, Actions: cap.Actions, Scopes: []string{cap.Scope}, ExpiresAtMS: int64(expiry), RevocationVersion: cap.Version, CheckpointObservedAtMS: now, ReservationScope: ReservationScopeNode, RemainingUses: &uses, AuthorityVersionHash: hashBytes([]byte(stamp.String()))}
+	state := CapabilityState{ID: ref.ID, Target: Target{OrganizationID: cap.Org.String(), NodeID: cap.Node, AgentID: cap.Agent}, AuthorizedSigners: []string{cap.Delegate.String()}, Actions: cap.Actions, Scopes: []string{cap.Scope}, ExpiresAtMS: int64(expiry), RevocationVersion: cap.Version, CheckpointObservedAtMS: now, ReservationScope: ReservationScopeNode, RemainingUses: &uses, AuthorityVersionHash: versionPin}
+	state.readVersions = make(map[string]uint64, len(r.versions))
+	for id, version := range r.versions {
+		state.readVersions[id] = version
+	}
 	state.ManagedInstance = instance
 	state.Contract = contract
 	state.Direct = direct

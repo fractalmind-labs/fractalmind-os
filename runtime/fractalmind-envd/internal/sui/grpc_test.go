@@ -24,6 +24,11 @@ type transportServer struct {
 	list     func(*v2.ListOwnedObjectsRequest) (*v2.ListOwnedObjectsResponse, error)
 	query    func(*v2.GetTransactionRequest) (*v2.GetTransactionResponse, error)
 	object   func(*v2.GetObjectRequest) (*v2.GetObjectResponse, error)
+	batch    func(*v2.BatchGetObjectsRequest) (*v2.BatchGetObjectsResponse, error)
+}
+
+func (s *transportServer) BatchGetObjects(_ context.Context, req *v2.BatchGetObjectsRequest) (*v2.BatchGetObjectsResponse, error) {
+	return s.batch(req)
 }
 
 func (s *transportServer) GetTransaction(_ context.Context, r *v2.GetTransactionRequest) (*v2.GetTransactionResponse, error) {

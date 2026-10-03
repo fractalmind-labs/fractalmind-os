@@ -138,7 +138,10 @@ func (s *ChainReservations) Reserve(ctx context.Context, r nodecommand.Reservati
 // A successful execution receipt can precede the ledger's latest object view.
 // Poll only reads of this exact checkpoint and attempt; never send another start.
 func (s *ChainReservations) confirmStart(ctx context.Context, r nodecommand.Reservation, attempt string) (nodecommand.ChainExecution, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	// This bounds reads of the original successful start receipt, not command
+	// authority. Remote dependency resolution can exceed five seconds; the
+	// exact attempt and all normal expiry checks still have to pass.
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	for {
 		started, found, err := s.resolver.LookupExecution(ctx, r.CapabilityID, r.Fingerprint)

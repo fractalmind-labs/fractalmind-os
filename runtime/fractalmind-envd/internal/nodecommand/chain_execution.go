@@ -147,14 +147,8 @@ func (s *ChainAuthorityResolver) LookupExecution(ctx context.Context, capability
 	}
 	// A settlement mutates the capability, private claim and checkpoint in one
 	// transaction. Do not return a mixed view while those writes become visible.
-	for id, version := range r.versions {
-		current, err := s.reader.ReadChainObject(ctx, id)
-		if err != nil {
-			return ChainExecution{}, false, err
-		}
-		if current.ID != id || current.Version != version {
-			return ChainExecution{}, false, reject(CodeAuthorityStale, "chain execution changed during resolution", nil)
-		}
+	if _, err := r.versionPin(ctx, reject(CodeAuthorityStale, "chain execution changed during resolution", nil)); err != nil {
+		return ChainExecution{}, false, err
 	}
 	return value, true, nil
 }

@@ -11,7 +11,6 @@ import (
 	"io"
 	"math"
 	"net/url"
-	"sort"
 	"strings"
 
 	"github.com/block-vision/sui-go-sdk/mystenbcs"
@@ -273,23 +272,7 @@ func containsAddress(values []moveAddress, value moveAddress) bool {
 	return false
 }
 func (r *chainRead) joinPin(ctx context.Context) (string, error) {
-	ids := make([]string, 0, len(r.versions))
-	for id := range r.versions {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
-	var stamp strings.Builder
-	for _, id := range ids {
-		object, err := r.resolver.reader.ReadChainObject(ctx, id)
-		if err != nil {
-			return "", err
-		}
-		if object.ID != id || object.Version != r.versions[id] {
-			return "", fmt.Errorf("join authority changed during inspection")
-		}
-		fmt.Fprintf(&stamp, "%s:%d;", id, object.Version)
-	}
-	return hashBytes([]byte(stamp.String())), nil
+	return r.versionPin(ctx, fmt.Errorf("join authority changed during inspection"))
 }
 
 type HostAdmissionState struct {

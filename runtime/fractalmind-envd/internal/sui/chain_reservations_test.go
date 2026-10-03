@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/block-vision/sui-go-sdk/models"
 	"github.com/block-vision/sui-go-sdk/utils"
@@ -19,6 +20,46 @@ type executionLookupFunc func(context.Context, string, string) (nodecommand.Chai
 
 func (f executionLookupFunc) LookupExecution(ctx context.Context, cap, hash string) (nodecommand.ChainExecution, bool, error) {
 	return f(ctx, cap, hash)
+}
+
+func TestOriginalConfirmedStartSurvivesSlowReadWithoutSecondBroadcast(t *testing.T) {
+	kp, run, request, state := reservationFixture(t)
+	reads, sends := 0, 0
+	var attempt string
+	reader := executionLookupFunc(func(ctx context.Context, _, _ string) (nodecommand.ChainExecution, bool, error) {
+		reads++
+		if reads > 1 {
+			// Actual remote reads exceeded the old five-second observation
+			// budget. Waiting is only for this original transaction/attempt.
+			timer := time.NewTimer(5100 * time.Millisecond)
+			defer timer.Stop()
+			select {
+			case <-ctx.Done():
+				return nodecommand.ChainExecution{}, false, ctx.Err()
+			case <-timer.C:
+			}
+			run.State, run.Cursor, run.AttemptID = 1, 2, attempt
+		}
+		return run, true, nil
+	})
+	rpc := &reservationRPC{
+		build: func(call models.MoveCallRequest) (models.TxnMetaData, error) {
+			attempt = attemptFromCall(call)
+			return models.TxnMetaData{TxBytes: base64.StdEncoding.EncodeToString([]byte(attempt))}, nil
+		},
+		send: func(call models.SignAndExecuteTransactionBlockRequest) (models.SuiTransactionBlockResponse, error) {
+			sends++
+			return txResponse(t, call.TxnMetaData, "success"), nil
+		},
+	}
+	backend, err := NewChainReservations(reader, rpc, kp, "0x42")
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := backend.Reserve(context.Background(), request, state)
+	if err != nil || result.Execution == nil || result.Execution.AttemptID != attempt || result.TransactionDigest == "" || sends != 1 || reads != 2 {
+		t.Fatalf("slow original receipt lost or rebroadcast: %+v sends=%d reads=%d err=%v", result, sends, reads, err)
+	}
 }
 
 type reservationRPC struct {

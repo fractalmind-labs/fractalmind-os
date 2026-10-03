@@ -243,6 +243,9 @@ func (s *ChainAuthorityResolver) InspectHandover(ctx context.Context, command No
 	var grant moveGrant
 	var role moveRole
 	var okr moveOkr
+	if err := r.prefetchObjects(ctx, []string{command.Target.OrganizationID, run.HumanID, run.GrantID, p.OkrID}); err != nil {
+		return HandoverAuthority{}, err
+	}
 	for _, item := range []struct {
 		id, kind string
 		value    any
@@ -300,15 +303,28 @@ func (s *ChainAuthorityResolver) InspectHandover(ctx context.Context, command No
 	if !current.Matches(reservation) {
 		return fail()
 	}
+	// The first Resolve decoded/validated every authority dependency. Recheck
+	// all of those exact versions together with this review's sources. An
+	// unchanged version cannot change its role, revocation or capability bytes;
+	// clocks must still be checked again after the network reads complete.
+	if len(state.readVersions) == 0 {
+		return fail()
+	}
+	for id, version := range state.readVersions {
+		if other, present := r.versions[id]; present && other != version {
+			return fail()
+		}
+		r.versions[id] = version
+	}
 	if _, err := r.joinPin(ctx); err != nil {
 		return HandoverAuthority{}, err
 	}
-	after, err := s.Resolve(ctx, command.Capability)
+	afterClock, err := s.ChainTime(ctx)
 	if err != nil {
 		return HandoverAuthority{}, err
 	}
-	if after.AuthorityVersionHash != state.AuthorityVersionHash {
+	if afterClock < now || afterClock >= p.ReviewExpiresAtMS || afterClock >= state.ExpiresAtMS || afterClock >= p.ExpiresAtMS {
 		return fail()
 	}
-	return HandoverAuthority{ProposalHash: hash, CoverageRevision: Uint64String(ledger.Revision), ClockMS: now}, nil
+	return HandoverAuthority{ProposalHash: hash, CoverageRevision: Uint64String(ledger.Revision), ClockMS: afterClock}, nil
 }
