@@ -28,6 +28,7 @@ export class AgentImportError extends Error {
       | "invalid_source"
       | "existing_conflict"
       | "invalid_quote"
+      | "quote_expired"
       | "sync_pending"
       | "handover_required",
   ) {
@@ -189,6 +190,89 @@ export async function managedInstance(
   return record;
 }
 
+/** Confirm a public historical receipt without loading a device private key. */
+export async function confirmedAgentImport(
+  chain: ChainReadSession,
+  organizationId: string,
+  deviceAddress: string,
+  outcome: SelfPayTransactionOutcome,
+  input?: AgentImportSelection,
+  intent: RegistrationIntent = { kind: "import" },
+) {
+  try {
+    if (!(await awaitTransactionVisible(chain, outcome))) fail("sync_pending");
+  } catch (e) {
+    if (e instanceof TransactionVisibilityError) fail("invalid_source");
+    throw e;
+  }
+  const eventType = await chain.sdk.client.coreType("host", "AgentImported");
+  const events = outcome.transaction!.events?.filter(
+    (e) => e.eventType === eventType,
+  );
+  if (events?.length !== 1) fail("invalid_source");
+  const event = events[0];
+  if (
+    event.sender !== deviceAddress ||
+    event.module !== "host" ||
+    event.packageId !== chain.sdk.client.packageId
+  )
+    fail("invalid_source");
+  const imported = Imported.parse(event.bcs);
+  if (imported.org_id !== organizationId) fail("invalid_source");
+  const { object } = await chain.sdk.client.client.core.getObject({
+    objectId: imported.record_id,
+    include: { content: true },
+  });
+  if (
+    object.objectId !== imported.record_id ||
+    object.type !== (await chain.sdk.client.coreType("host", "ManagedAgent")) ||
+    object.owner.$kind !== "Shared" ||
+    !object.content
+  )
+    fail("invalid_source");
+  const record = ManagedAgentBcs.parse(object.content!);
+  if (
+    record.id !== imported.record_id ||
+    record.org_id !== imported.org_id ||
+    record.instance_id !== imported.instance_id ||
+    record.membership_id !== imported.membership_id ||
+    (!imported.duplicate &&
+      (record.confirmed_by_human !== chain.profile.humanId ||
+        record.confirmed_by_device !== deviceAddress))
+  )
+    fail("invalid_source");
+  if (
+    record.runtime !== observationRuntime(record.instance_id) ||
+    record.control_confirmed ||
+    record.workspace_hash.length !== 32 ||
+    !/^(tmux|native)-[0-9a-f]{64}$/.test(record.instance_id)
+  )
+    fail("state_changed");
+  if (
+    input &&
+    (record.host_address !== input.hostAddress ||
+      record.instance_id !== input.instanceId ||
+      hash(record.workspace_hash) !== input.workspaceHash)
+  )
+    fail("state_changed");
+  if (
+    intent.kind === "rebind" &&
+    intent.reviewed &&
+    (record.id !== intent.reviewed.id ||
+      BigInt(record.version) !== BigInt(intent.reviewed.version) + 1n)
+  )
+    fail("state_changed");
+  const indexed = await managedInstance(
+    chain,
+    organizationId,
+    record.host_address,
+    record.instance_id,
+  );
+  if (!indexed || JSON.stringify(indexed) !== JSON.stringify(record))
+    fail("state_changed");
+  return record;
+}
+
 type Plan = {
   requestId: string;
   input: AgentImportSelection;
@@ -229,6 +313,9 @@ export class AgentImport {
     this.manager = new SelfPayTransactionManager({
       client: chain.sdk.client.client,
       network: chain.profile.network,
+      // Import revalidates live discovery after quoting, before signing and
+      // after native authorization. Keep those checks within one fixed quote.
+      quoteTtlMs: 120000,
       signer: {
         getPublicKey: () => device.getPublicKey(),
         signTransaction: async (bytes) => {
@@ -241,8 +328,8 @@ export class AgentImport {
           const signed = await device.signTransaction(bytes);
           // Native authorization can wait longer than the observation/quote.
           // Recheck after it returns, before the manager claims/broadcasts.
-          if (this.plans.get(quote) !== plan || quote.expiresAtMs <= Date.now())
-            fail("state_changed");
+          if (this.plans.get(quote) !== plan) fail("state_changed");
+          if (quote.expiresAtMs <= Date.now()) fail("quote_expired");
           const authority = await this.verifier.verifyOrganization(
             this.organizationId,
             "manage_hosts",
@@ -250,10 +337,10 @@ export class AgentImport {
           if (
             authority.authorityPin !== plan.authorityPin ||
             (await this.source(plan.input)).sourcePin !== plan.sourcePin ||
-            (await this.existing(plan.input)) ||
-            quote.expiresAtMs <= Date.now()
+            (await this.existing(plan.input))
           )
             fail("state_changed");
+          if (quote.expiresAtMs <= Date.now()) fail("quote_expired");
           return signed;
         },
       },
@@ -487,83 +574,14 @@ export class AgentImport {
     outcome: SelfPayTransactionOutcome,
     input?: AgentImportSelection,
   ) {
-    try {
-      if (!(await awaitTransactionVisible(this.chain, outcome)))
-        fail("sync_pending");
-    } catch (e) {
-      if (e instanceof TransactionVisibilityError) fail("invalid_source");
-      throw e;
-    }
-    const eventType = await this.chain.sdk.client.coreType(
-      "host",
-      "AgentImported",
-    );
-    const events = outcome.transaction!.events?.filter(
-      (e) => e.eventType === eventType,
-    );
-    if (events?.length !== 1) fail("invalid_source");
-    const event = events[0];
-    if (
-      event.sender !== this.device.device.address ||
-      event.module !== "host" ||
-      event.packageId !== this.chain.sdk.client.packageId
-    )
-      fail("invalid_source");
-    const imported = Imported.parse(event.bcs);
-    if (imported.org_id !== this.organizationId) fail("invalid_source");
-    const { object } = await this.chain.sdk.client.client.core.getObject({
-      objectId: imported.record_id,
-      include: { content: true },
-    });
-    if (
-      object.objectId !== imported.record_id ||
-      object.type !==
-        (await this.chain.sdk.client.coreType("host", "ManagedAgent")) ||
-      object.owner.$kind !== "Shared" ||
-      !object.content
-    )
-      fail("invalid_source");
-    const record = ManagedAgentBcs.parse(object.content!);
-    if (
-      record.id !== imported.record_id ||
-      record.org_id !== imported.org_id ||
-      record.instance_id !== imported.instance_id ||
-      record.membership_id !== imported.membership_id ||
-      (!imported.duplicate &&
-        (record.confirmed_by_human !== this.chain.profile.humanId ||
-          record.confirmed_by_device !== this.device.device.address))
-    )
-      fail("invalid_source");
-    if (
-      record.runtime !== observationRuntime(record.instance_id) ||
-      record.control_confirmed ||
-      record.workspace_hash.length !== 32 ||
-      !/^(tmux|native)-[0-9a-f]{64}$/.test(record.instance_id)
-    )
-      fail("state_changed");
-    if (
-      input &&
-      (record.host_address !== input.hostAddress ||
-        record.instance_id !== input.instanceId ||
-        hash(record.workspace_hash) !== input.workspaceHash)
-    )
-      fail("state_changed");
-    if (
-      this.intent.kind === "rebind" &&
-      this.intent.reviewed &&
-      (record.id !== this.intent.reviewed.id ||
-        BigInt(record.version) !== BigInt(this.intent.reviewed.version) + 1n)
-    )
-      fail("state_changed");
-    const indexed = await managedInstance(
+    return confirmedAgentImport(
       this.chain,
       this.organizationId,
-      record.host_address,
-      record.instance_id,
+      this.device.device.address,
+      outcome,
+      input,
+      this.intent,
     );
-    if (!indexed || JSON.stringify(indexed) !== JSON.stringify(record))
-      fail("state_changed");
-    return record;
   }
   cancel(quote: SelfPayFeeQuote) {
     this.plans.delete(quote);

@@ -24,6 +24,10 @@ import {
   type RecoveryInspection,
 } from "./recovery";
 import { normalizeDeployment } from "./onboarding";
+import {
+  reconcileRecoveryReceipt,
+  type RecoveryReceiptState,
+} from "./recovery-outcome";
 import type { ConnectionProfile } from "./domain";
 const CACHE = "fractalmind.app.recovery-connection.v1";
 const transport: NativeInvoke = (command, args) => invoke(command, args);
@@ -68,7 +72,14 @@ export default function RecoverIdentity({
     [inspection, setInspection] = useState<RecoveryInspection | null>(null),
     [stage, setStage] = useState<RecoveryStage | null>(null);
   const [quote, setQuote] = useState<SelfPayFeeQuote | null>(null),
-    [outcome, setOutcome] = useState<SelfPayTransactionOutcome | null>(null);
+    [receipt, setReceipt] = useState<RecoveryReceiptState>({
+      outcome: null,
+      queryUnavailable: false,
+    });
+  const outcome = receipt.outcome;
+  function setOutcome(value: SelfPayTransactionOutcome | null) {
+    setReceipt((previous) => reconcileRecoveryReceipt(previous.outcome, value));
+  }
   const [balances, setBalances] = useState<{
       recovery: string;
       device: string;
@@ -559,6 +570,14 @@ export default function RecoverIdentity({
                       )}
               </strong>
               <code className="long-id">{outcome.digest}</code>
+              {receipt.queryUnavailable && (
+                <p className="warn">
+                  {t(
+                    "本次查询暂时无法取得原始回执。上方保留本会话已验证的交易结果；身份及设备权限仍另行核验。请查询原交易，不要重复提交。",
+                    "This lookup could not retrieve the original receipt. The verified result already received in this session remains above; identity and device authority are checked separately. Query the original transaction without resubmitting it.",
+                  )}
+                </p>
+              )}
               {outcome.actualGas !== undefined && (
                 <p>
                   {t("实际 Gas", "Actual Gas")}: {sui(outcome.actualGas)}

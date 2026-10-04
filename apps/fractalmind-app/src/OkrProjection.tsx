@@ -20,6 +20,7 @@ import {
 } from "./okr-projection";
 import type { ConnectionProfile } from "./domain";
 import MessageOkrContext from "./MessageOkrContext";
+import { OkrProjectionFilePicker } from "./okr-projection-file-picker";
 
 const sui = (value: string) => {
   const n = BigInt(value),
@@ -65,6 +66,11 @@ export default function OkrProjectionDialog({
     epoch = useRef(0),
     flight = useRef(false);
   const journal = useRef<IndexedDbTransactionJournal | null>(null);
+  const picker = useRef(new OkrProjectionFilePicker<File>()),
+    resumePicker = useRef<() => void>(() => {});
+  const sourceScope = JSON.stringify([profile, organizationId, okrId]),
+    currentScope = useRef("");
+  currentScope.current = JSON.stringify([sourceScope, deviceProfile]);
   const context = useRef<{
     controller: OkrProjection;
     assertLive: () => void;
@@ -74,19 +80,30 @@ export default function OkrProjectionDialog({
     mounted.current = true;
     const timer = setInterval(() => setNow(Date.now()), 1000),
       hide = () => {
-        if (document.hidden) close();
+        if (document.hidden) {
+          picker.current.suspend();
+          resetPrivateSession();
+        } else resumePicker.current();
       };
+    const fileInput = input.current,
+      cancelPicker = () => picker.current.cancel();
     document.addEventListener("visibilitychange", hide);
+    fileInput?.addEventListener("cancel", cancelPicker);
     return () => {
       mounted.current = false;
       active.current = false;
       epoch.current++;
       context.current = null;
+      picker.current.cancel();
       clearInterval(timer);
       document.removeEventListener("visibilitychange", hide);
+      fileInput?.removeEventListener("cancel", cancelPicker);
       void journal.current?.close();
     };
   }, []);
+  useEffect(() => {
+    close();
+  }, [sourceScope]);
   useEffect(() => {
     if (open && !dialog.current?.open) dialog.current?.showModal();
   }, [open]);
@@ -102,7 +119,7 @@ export default function OkrProjectionDialog({
     setWorkspaceConfirmed(false);
     if (input.current) input.current.value = "";
   }
-  function close() {
+  function resetPrivateSession() {
     active.current = false;
     epoch.current++;
     context.current = null;
@@ -111,6 +128,10 @@ export default function OkrProjectionDialog({
     setReceipt(null);
     setOpen(false);
     dialog.current?.close();
+  }
+  function close() {
+    picker.current.cancel();
+    resetPrivateSession();
   }
   async function perform(fn: () => Promise<void>) {
     if (flight.current) return;
@@ -139,8 +160,15 @@ export default function OkrProjectionDialog({
     if (!isTauri())
       throw Object.assign(new Error(), { code: "native_unavailable" });
     const token = epoch.current,
+      scope = currentScope.current,
       assertLive = () => {
-        if (!mounted.current || !active.current || token !== epoch.current)
+        if (
+          !mounted.current ||
+          !active.current ||
+          document.hidden ||
+          token !== epoch.current ||
+          scope !== currentScope.current
+        )
           throw Object.assign(new Error(), { code: "state_changed" });
       };
     const native = scopedNativeInvoke(
@@ -207,6 +235,14 @@ export default function OkrProjectionDialog({
       reviewed: workspaceConfirmed,
     });
     ctx.assertLive();
+    if (
+      await invoke<boolean>("fm_export_okr", {
+        content: file.content,
+        reviewed: workspaceConfirmed,
+      })
+    )
+      return;
+    ctx.assertLive();
     const url = URL.createObjectURL(
         new Blob([file.content], { type: "text/markdown;charset=utf-8" }),
       ),
@@ -219,19 +255,49 @@ export default function OkrProjectionDialog({
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
   }
-  async function importFile(file: File) {
+  async function importFile(file: File, assertSelection: () => void) {
+    assertSelection();
     const ctx = await load();
     ctx.assertLive();
+    assertSelection();
     if (file.size > 262144)
       throw Object.assign(new Error(), { code: "invalid_projection" });
     const text = await file.text();
     ctx.assertLive();
+    assertSelection();
     const next = await ctx.controller.review(text);
     ctx.assertLive();
+    assertSelection();
     setReview(next);
     setFee(null);
     setReviewed(false);
   }
+  resumePicker.current = () => {
+    const selection = picker.current.take(
+      currentScope.current,
+      mounted.current && !document.hidden,
+    );
+    if (!selection) return;
+    // Returning from a native file chooser is a new read session. Never reuse
+    // the old native signer/controller or restore a private view/quote.
+    resetPrivateSession();
+    active.current = true;
+    setOpen(true);
+    // Desktop pickers need not hide the WebView. React can batch false/true
+    // back to the previous open value, so reopen the reset dialog explicitly.
+    if (!dialog.current?.open) dialog.current?.showModal();
+    void perform(async () => {
+      try {
+        const assertSelection = () => {
+          if (!picker.current.current(selection, currentScope.current))
+            throw Object.assign(new Error(), { code: "state_changed" });
+        };
+        await importFile(selection.file, assertSelection);
+      } finally {
+        picker.current.finish(selection);
+      }
+    });
+  };
   async function prepare() {
     const ctx = await load();
     if (!review) throw Object.assign(new Error(), { code: "state_changed" });
@@ -297,6 +363,7 @@ export default function OkrProjectionDialog({
       <button
         className="secondary"
         onClick={() => {
+          picker.current.cancel();
           active.current = true;
           setOpen(true);
           void perform(read);
@@ -431,9 +498,16 @@ export default function OkrProjectionDialog({
               type="file"
               accept=".md,text/markdown,text/plain"
               disabled={blocked}
+              onClick={() => picker.current.begin(currentScope.current)}
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) void perform(() => importFile(file));
+                e.target.value = "";
+                if (!file) {
+                  picker.current.cancel();
+                  return;
+                }
+                picker.current.select(currentScope.current, file);
+                resumePicker.current();
               }}
             />
           </label>

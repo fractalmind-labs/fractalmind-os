@@ -8,6 +8,18 @@ import {
 } from "@fractalmind-labs/fractalmind-sdk";
 import { ChainReadSession } from "./chain";
 import {
+  queryDeviceTransactionHistory,
+  TransactionHistoryError,
+  type DeviceTransactionHistory,
+} from "./transaction-history";
+import {
+  archiveHostTransactionHistory,
+  readHostTransactionHistory,
+  type HostAttempt,
+  type HistoricalHostAttempt,
+} from "./host-transaction-history";
+import { awaitTransactionVisible } from "./transaction-visibility";
+import {
   NativeDeviceSigner,
   NativeDeviceError,
   preferredDeviceProfile,
@@ -24,12 +36,7 @@ import {
   type HostInvite,
 } from "./host-admission";
 import type { ConnectionProfile } from "./domain";
-type Attempt = {
-  id: string;
-  deviceProfile: string;
-  grantId: string;
-  kind: HostOperation["kind"];
-};
+type Attempt = HostAttempt;
 const transport: NativeInvoke = (command, args) => invoke(command, args);
 const kinds = ["binding", "invite", "revoke-invite", "revoke-member"];
 const id = /^0x[0-9a-f]{64}$/;
@@ -67,6 +74,12 @@ export default function HostAccess({
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null),
     [now, setNow] = useState(Date.now());
+  const [historicalResult, setHistoricalResult] =
+      useState<DeviceTransactionHistory | null>(null),
+    [history, setHistory] = useState<HistoricalHostAttempt[]>([]),
+    [historyResults, setHistoryResults] = useState<
+      Record<string, SelfPayTransactionOutcome>
+    >({});
   const dialog = useRef<HTMLDialogElement>(null),
     flight = useRef(false),
     mounted = useRef(true);
@@ -101,6 +114,7 @@ export default function HostAccess({
   function issue(e: unknown) {
     setError(
       e instanceof HostAdmissionError ||
+        e instanceof TransactionHistoryError ||
         e instanceof NativeDeviceError ||
         e instanceof DeviceIdentityError ||
         e instanceof TransactionPreflightError
@@ -166,7 +180,10 @@ export default function HostAccess({
     } catch {
       setError("journal_unavailable");
     }
-    void run(refresh);
+    void run(async () => {
+      setHistory(readHostTransactionHistory(localStorage, attemptKey));
+      await refresh();
+    });
   }
   async function load(value: Attempt) {
     if (session.current) return session.current;
@@ -267,10 +284,31 @@ export default function HostAccess({
   }
   async function query() {
     if (!attempt) return;
-    const controller = await load(attempt),
-      result = await controller.query(attempt.id);
-    if (result) await receive(result, controller, attempt.kind);
-    else if (mounted.current) {
+    setHistoricalResult(null);
+    const chain = new ChainReadSession(profile);
+    journal.current ??= new IndexedDbTransactionJournal();
+    const result = await queryDeviceTransactionHistory(
+      chain,
+      organizationId,
+      attempt.grantId,
+      `host:${attempt.id}`,
+      journal.current,
+    );
+    if (!mounted.current) return;
+    if (result) {
+      setHistoricalResult(result.historicalTerminal ? result : null);
+      setOutcome(result.outcome);
+      setQuote(null);
+      setCode(null);
+      setInvite(null);
+      if (result.outcome.status === "confirmed") {
+        if (!(await awaitTransactionVisible(chain, result.outcome)))
+          throw new HostAdmissionError("sync_pending");
+        await refresh();
+        if (attempt.kind === "invite") setError("historical_invite_code");
+        onChanged();
+      }
+    } else {
       setOutcome(null);
       setError("not_submitted");
     }
@@ -291,15 +329,73 @@ export default function HostAccess({
     )
       return;
     localStorage.removeItem(attemptKey);
+    clearCurrent();
+  }
+  function clearCurrent() {
     session.current?.dispose();
     session.current = null;
     setAttempt(null);
+    setDeviceProfile(preferredDeviceProfile());
     setOutcome(null);
     setQuote(null);
     setCode(null);
     setInvite(null);
     setConfirmed(false);
     setError(null);
+    setHistoricalResult(null);
+  }
+  async function startIndependent() {
+    if (!attempt || !historicalResult?.historicalTerminal) return;
+    // Recheck the original technical row and exact notFound response at the
+    // explicit action. Unknown/pending/error paths cannot release the form.
+    journal.current ??= new IndexedDbTransactionJournal();
+    const result = await queryDeviceTransactionHistory(
+      new ChainReadSession(profile),
+      organizationId,
+      attempt.grantId,
+      `host:${attempt.id}`,
+      journal.current,
+    );
+    if (!mounted.current) return;
+    if (!result?.historicalTerminal || result.outcome.status !== "unknown") {
+      setHistoricalResult(null);
+      if (result) setOutcome(result.outcome);
+      throw new HostAdmissionError("state_changed");
+    }
+    const retained = archiveHostTransactionHistory(
+      localStorage,
+      attemptKey,
+      attempt,
+      result,
+    );
+    setHistory(retained);
+    setHistoryResults((current) => ({
+      ...current,
+      [attempt.id]: result.outcome,
+    }));
+    clearCurrent();
+  }
+  async function queryHistory(value: HistoricalHostAttempt) {
+    setHistoryResults((current) => {
+      const next = { ...current };
+      delete next[value.attempt.id];
+      return next;
+    });
+    journal.current ??= new IndexedDbTransactionJournal();
+    const result = await queryDeviceTransactionHistory(
+      new ChainReadSession(profile),
+      organizationId,
+      value.attempt.grantId,
+      `host:${value.attempt.id}`,
+      journal.current,
+    );
+    if (!mounted.current) return;
+    if (!result || result.outcome.digest !== value.digest)
+      throw new TransactionHistoryError("invalid_source");
+    setHistoryResults((current) => ({
+      ...current,
+      [value.attempt.id]: result.outcome,
+    }));
   }
   function cancelQuote() {
     if (quote) session.current?.cancel(quote);
@@ -318,10 +414,15 @@ export default function HostAccess({
     session.current?.dispose();
     session.current = null;
     setOutcome(null);
+    setHistoricalResult(null);
   }
   const locked = busy || !!quote || !!outcome || !!attempt;
   const ready = isTauri();
   const messages: Record<string, [string, string]> = {
+    historical_invite_code: [
+      "原交易已确认。此历史查询不恢复一次性邀请码；请在当前公开邀请列表核对状态，遗失的未使用邀请可撤销。",
+      "The original transaction is confirmed. This historical query cannot recover the one-use code. Review the public invitation list and revoke any unused invitation whose code was lost.",
+    ],
     needs_funds: [
       "管理设备的 SUI 不足，请先充值后重新报价。",
       "Fund the management device, then request a fresh quote.",
@@ -746,7 +847,81 @@ export default function HostAccess({
                   {t("开始新操作", "Start new operation")}
                 </button>
               </div>
+              {outcome?.status === "unknown" &&
+                historicalResult?.historicalTerminal && (
+                  <>
+                    <p className="warn">
+                      {t(
+                        "技术日志此前记录",
+                        "Previously recorded in the technical journal",
+                      )}
+                      :{" "}
+                      {historicalResult.historicalTerminal.status ===
+                      "confirmed"
+                        ? t("已成功", "Confirmed")
+                        : t("已失败", "Failed")}
+                      .
+                      {t(
+                        "当前节点无法返回原始回执，当前查询仍为未知。可保留这条历史后明确开始独立新操作，不会重发原交易。",
+                        "The current node cannot return the original receipt; this query remains unknown. Keep this history before explicitly starting an independent operation. The original transaction will not be resent.",
+                      )}
+                    </p>
+                    <button
+                      disabled={busy}
+                      onClick={() => void run(startIndependent)}
+                    >
+                      {t(
+                        "保留历史并开始独立操作",
+                        "Keep history & start independent operation",
+                      )}
+                    </button>
+                  </>
+                )}
             </section>
+          )}
+          {history.length > 0 && (
+            <details className="panel">
+              <summary>
+                {t("历史 Host 操作", "Historical Host operations")} ·{" "}
+                {history.length}
+              </summary>
+              <p>
+                {t(
+                  "这里只保留公开交易追踪；当前操作使用新的请求与明确授权。",
+                  "These are public transaction references. Current operations use new requests and explicit authorization.",
+                )}
+              </p>
+              {history.map((value) => (
+                <section key={value.attempt.id}>
+                  <p>
+                    {value.attempt.kind} · <code>{value.attempt.id}</code>
+                  </p>
+                  <code className="long-id">{value.digest}</code>
+                  <p>
+                    {t(
+                      "技术日志此前记录",
+                      "Previously recorded in the technical journal",
+                    )}
+                    :{" "}
+                    {value.previousStatus === "confirmed"
+                      ? t("已成功", "Confirmed")
+                      : t("已失败", "Failed")}{" "}
+                    · {value.actualGas} MIST
+                  </p>
+                  <p>
+                    {t("当前回执查询", "Current receipt query")}:{" "}
+                    {historyResults[value.attempt.id]?.status ??
+                      t("未查询", "Not queried")}
+                  </p>
+                  <button
+                    disabled={busy}
+                    onClick={() => void run(() => queryHistory(value))}
+                  >
+                    {t("只读查询此原交易", "Query this original transaction")}
+                  </button>
+                </section>
+              ))}
+            </details>
           )}
           {invite && (
             <section className="panel">

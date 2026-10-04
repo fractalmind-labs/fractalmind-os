@@ -16,6 +16,8 @@ import {
   CoordinatorBindingBcs,
   ManagedAgentBcs,
   MemoryTransactionJournal,
+  TransactionPreflightError,
+  type SelfPayTransactionData,
   type SelfPayTransactionOutcome,
 } from "@fractalmind-labs/fractalmind-sdk";
 import { AgentImport, managedInstance } from "../src/agent-import";
@@ -57,15 +59,23 @@ async function fixture(
   controlled = false,
   rejoined = false,
   native = false,
+  realManager = false,
 ) {
   const key = Ed25519Keypair.generate(),
     host = Ed25519Keypair.generate(),
     coordinator = Ed25519Keypair.generate(),
     now = Date.now();
   let signingMutation = () => {},
-    quoteDigest = "";
+    quoteDigest = "",
+    sourceRead = (_read: number) => {};
+  const signedDigests: string[] = [],
+    simulatedDigests: string[] = [],
+    broadcastDigests: string[] = [];
   const device = await NativeDeviceSigner.load(async (command, args) => {
     if (command === "fm_device_sign_transaction") {
+      signedDigests.push(
+        await Transaction.from(fromBase64(args.bytes)).getDigest(),
+      );
       signingMutation();
       return key.signTransaction(fromBase64(args.bytes));
     }
@@ -155,8 +165,107 @@ async function fixture(
     reads = 0,
     authorityReads = 0;
   let prior: SelfPayTransactionOutcome | undefined;
+  const receipts = new Map<string, SelfPayTransactionData>();
+  async function receipt(bytes: Uint8Array): Promise<SelfPayTransactionData> {
+    const transaction = Transaction.from(bytes),
+      digest = await transaction.getDigest(),
+      status = { success: true as const, error: null };
+    return {
+      digest,
+      status,
+      transaction: transaction.getData(),
+      signatures: [],
+      epoch: "1",
+      timestampMs: null,
+      checkpoint: null,
+      objectTypes: {},
+      events: [],
+      bcs: undefined,
+      balanceChanges: [
+        {
+          coinType: "0x2::sui::SUI",
+          address: device.device.address,
+          amount: "-100",
+        },
+      ],
+      effects: {
+        status,
+        transactionDigest: digest,
+        gasUsed: {
+          computationCost: "100",
+          storageCost: "0",
+          storageRebate: "0",
+          nonRefundableStorageFee: "0",
+        },
+        bcs: null,
+        version: 2,
+        gasObject: null,
+        eventsDigest: null,
+        dependencies: [],
+        lamportVersion: "2",
+        changedObjects: [],
+        unchangedConsensusObjects: [],
+        auxiliaryDataDigest: null,
+      },
+    };
+  }
   const core = {
+    getChainIdentifier: async () => ({ chainIdentifier: "TestChain" }),
+    getBalance: async () => ({
+      balance: {
+        coinType: "0x2::sui::SUI",
+        balance: "1000000000",
+        coinBalance: "1000000000",
+        addressBalance: "0",
+      },
+    }),
+    getReferenceGasPrice: async () => ({ referenceGasPrice: "1" }),
+    listCoins: async () => ({
+      objects: [{ objectId: id("0xf1"), balance: "1000000000" }],
+      hasNextPage: false,
+      cursor: null,
+    }),
+    simulateTransaction: async ({
+      transaction,
+    }: {
+      transaction: Uint8Array;
+    }) => {
+      const data = await receipt(transaction);
+      simulatedDigests.push(data.digest);
+      return { $kind: "Transaction", Transaction: data };
+    },
+    executeTransaction: async ({
+      transaction,
+    }: {
+      transaction: Uint8Array;
+    }) => {
+      const data = await receipt(transaction);
+      broadcastDigests.push(data.digest);
+      receipts.set(data.digest, data);
+      return { $kind: "Transaction", Transaction: data };
+    },
+    getTransaction: async ({ digest }: { digest: string }) => {
+      assert.ok(receipts.has(digest));
+      return { $kind: "Transaction", Transaction: receipts.get(digest)! };
+    },
     getObject: async ({ objectId }: { objectId: string }) => {
+      if (objectId === id("0xf1"))
+        return {
+          object: {
+            objectId,
+            version: "1",
+            digest: "11111111111111111111111111111111",
+            owner: {
+              $kind: "AddressOwner",
+              AddressOwner: device.device.address,
+            },
+            type: "0x2::coin::Coin<0x2::sui::SUI>",
+            content: bcs
+              .struct("Coin", { id: bcs.Address, balance: bcs.u64() })
+              .serialize({ id: objectId, balance: "1000000000" })
+              .toBytes(),
+          },
+        };
       const sources = {
         [org]: {
           type: `${pkg}::organization::Organization`,
@@ -327,6 +436,7 @@ async function fixture(
   };
   (controller as any).reads.readHosts = async () => {
     reads++;
+    sourceRead(reads);
     const valid = mode !== "unknown-host";
     return [
       {
@@ -363,25 +473,27 @@ async function fixture(
       },
     ];
   };
-  controller.manager.query = async () => prior;
-  controller.manager.prepare = async ({ requestId }) => {
-    prepares++;
-    if (mode === "change-during-quote") authority = "changed";
-    return Object.freeze({
-      requestId,
-      digest: quoteDigest,
-      expiresAtMs: Date.now() + 60000,
-    }) as any;
-  };
-  controller.manager.submit = async () => {
-    submits++;
-    return {
-      status: "unknown",
-      digest: "original",
-      requestId: `agent-import:${attempt}`,
-      journalSynced: true,
+  if (!realManager) {
+    controller.manager.query = async () => prior;
+    controller.manager.prepare = async ({ requestId }) => {
+      prepares++;
+      if (mode === "change-during-quote") authority = "changed";
+      return Object.freeze({
+        requestId,
+        digest: quoteDigest,
+        expiresAtMs: Date.now() + 60000,
+      }) as any;
     };
-  };
+    controller.manager.submit = async () => {
+      submits++;
+      return {
+        status: "unknown",
+        digest: "original",
+        requestId: `agent-import:${attempt}`,
+        journalSynced: true,
+      };
+    };
+  }
   const outcome = {
     status: "confirmed",
     requestId: `agent-import:${attempt}`,
@@ -416,6 +528,8 @@ async function fixture(
     },
   } as unknown as SelfPayTransactionOutcome;
   return {
+    setSourceRead: (fn: (read: number) => void) => (sourceRead = fn),
+    transactions: { signedDigests, simulatedDigests, broadcastDigests },
     setSigningMutation: (fn: () => void) => (signingMutation = fn),
     setQuoteDigest: (digest: string) => (quoteDigest = digest),
     controller,
@@ -655,6 +769,117 @@ test("native signature wait cannot release a transaction after the authority, sc
     else await assert.rejects(signer.signTransaction(bytes));
   }
 });
+
+test("one fixed import quote survives 75 seconds of fresh checks and signs/broadcasts its original digest once", async (t) => {
+  const started = 1800000000000;
+  t.mock.timers.enable({ apis: ["Date"], now: started });
+  const f = await fixture(false, false, false, true, true);
+  // Each source fetch obtains a new 60-second observation. Only the three
+  // source checks after quote creation contribute to this quote's age.
+  f.setSourceRead((read) => {
+    if (read > 1) t.mock.timers.tick(25000);
+  });
+  const quote = await f.controller.prepare(f.selected, attempt, true);
+  assert.ok(!("status" in quote));
+  assert.equal(Date.now(), started + 25000);
+  assert.equal(quote.expiresAtMs, started + 120000);
+  assert.ok(Object.isFrozen(quote));
+  const result = await f.controller.submit(quote);
+  assert.equal(Date.now(), started + 75000);
+  assert.equal(result.status, "confirmed");
+  assert.ok("digest" in result);
+  assert.equal(result.digest, quote.digest);
+  assert.deepEqual(f.transactions, {
+    simulatedDigests: [quote.digest],
+    signedDigests: [quote.digest],
+    broadcastDigests: [quote.digest],
+  });
+  assert.equal(f.counts().reads, 4);
+  // Subsequent explicit submission resolves the original journal entry.
+  await f.controller.submit(quote);
+  assert.equal(f.transactions.signedDigests.length, 1);
+  assert.equal(f.transactions.broadcastDigests.length, 1);
+  assert.equal(quote.expiresAtMs, started + 120000);
+});
+
+for (const phase of [
+  "before-signing",
+  "native-authorization",
+  "final-source",
+] as const) {
+  test(`expired import quote during ${phase} never broadcasts or automatically requotes`, async (t) => {
+    const started = 1800000000000;
+    t.mock.timers.enable({ apis: ["Date"], now: started });
+    const f = await fixture(false, false, false, true, true);
+    f.setSourceRead((read) => {
+      if (read > 1)
+        t.mock.timers.tick(phase === "final-source" ? 41000 : 25000);
+    });
+    const quote = await f.controller.prepare(f.selected, attempt, true);
+    assert.ok(!("status" in quote));
+    if (phase === "before-signing") t.mock.timers.tick(96000);
+    if (phase === "native-authorization")
+      f.setSigningMutation(() => t.mock.timers.tick(71000));
+    await assert.rejects(f.controller.submit(quote), (error: unknown) => {
+      assert.ok(error instanceof TransactionPreflightError);
+      if (phase === "before-signing") assert.equal(error.code, "stale_quote");
+      else {
+        assert.equal(error.code, "signature_not_obtained");
+        assert.equal((error.cause as { code: string }).code, "quote_expired");
+      }
+      return true;
+    });
+    assert.ok(Date.now() > quote.expiresAtMs);
+    assert.equal(quote.expiresAtMs, started + 120000);
+    assert.deepEqual(f.transactions.simulatedDigests, [quote.digest]);
+    assert.equal(
+      f.transactions.signedDigests.length,
+      phase === "before-signing" ? 0 : 1,
+    );
+    assert.deepEqual(f.transactions.broadcastDigests, []);
+    assert.equal(await f.controller.query(attempt), undefined);
+  });
+}
+
+for (const changed of [
+  "authority",
+  "workspace",
+  "observation",
+  "membership",
+  "instance",
+] as const) {
+  test(`120-second quote preserves the post-signature ${changed} check and broadcasts nothing on change`, async (t) => {
+    t.mock.timers.enable({ apis: ["Date"], now: 1800000000000 });
+    const f = await fixture(false, false, false, true, true);
+    f.setSourceRead((read) => {
+      if (read > 1) t.mock.timers.tick(25000);
+    });
+    const quote = await f.controller.prepare(f.selected, attempt, true);
+    assert.ok(!("status" in quote));
+    f.setSigningMutation(() => {
+      if (changed === "authority") f.setAuthority("revoked");
+      if (changed === "workspace") f.setMode("changed-workspace");
+      if (changed === "observation") f.setMode("expired-scan");
+      if (changed === "membership") f.member.revoked = true;
+      if (changed === "instance") f.setMode("missing-instance");
+    });
+    await assert.rejects(f.controller.submit(quote), (error: unknown) => {
+      assert.ok(error instanceof TransactionPreflightError);
+      assert.equal(error.code, "signature_not_obtained");
+      assert.ok(
+        ["state_changed", "discovery_unavailable"].includes(
+          (error.cause as { code: string }).code,
+        ),
+      );
+      return true;
+    });
+    assert.ok(Date.now() < quote.expiresAtMs);
+    assert.deepEqual(f.transactions.simulatedDigests, [quote.digest]);
+    assert.deepEqual(f.transactions.signedDigests, [quote.digest]);
+    assert.deepEqual(f.transactions.broadcastDigests, []);
+    assert.equal(await f.controller.query(attempt), undefined);
+  });
+}
 
 test("rebind requires explicit review, pins the revoked record and retains observation-only scope", async () => {
   const f = await fixture(true);

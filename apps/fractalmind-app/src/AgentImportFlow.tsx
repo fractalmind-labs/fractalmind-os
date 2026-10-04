@@ -9,6 +9,7 @@ import {
 import {
   AgentImport,
   AgentImportError,
+  confirmedAgentImport,
   managedInstance,
   observationRuntime,
   type AgentImportSelection,
@@ -26,6 +27,7 @@ import { DeviceIdentityError } from "./device-identity";
 import { CoordinatorReadError } from "./coordinator-read";
 import type { ConnectionProfile } from "./domain";
 import type { DiscoveredInstance } from "./agent-discovery";
+import { queryAgentImportHistory } from "./agent-import-history";
 import {
   agentImportAttemptKey,
   readAgentImportAttempt,
@@ -273,7 +275,7 @@ function AgentImportSession({
   }
   async function receive(
     value: SelfPayTransactionOutcome | AlreadyImported,
-    controller: AgentImport,
+    controller: Pick<AgentImport, "confirmed">,
   ) {
     if (!mounted.current) return;
     setQuote(null);
@@ -321,6 +323,7 @@ function AgentImportSession({
     setConfirmed(false);
     setUnsubmitted(false);
     setRestored(false);
+    setDeviceProfile(preferredDeviceProfile());
     setPayer(null);
     setError(null);
     setKind("import");
@@ -338,6 +341,14 @@ function AgentImportSession({
     state_changed: [
       "权限、Host 或工作区已改变。原交易结果保留；重新发现后再授权。",
       "Authority, Host or workspace changed. Original transaction results remain; rediscover before authorizing again.",
+    ],
+    quote_expired: [
+      "报价已到期，交易未广播。取消此报价，重新核验并确认新报价。",
+      "The quote expired; nothing was broadcast. Cancel this quote, verify again and explicitly confirm a new quote.",
+    ],
+    stale_quote: [
+      "报价已到期或付款条件已改变，交易未广播。取消此报价，重新核验并确认新报价。",
+      "The quote expired or payment conditions changed; nothing was broadcast. Cancel this quote, verify again and explicitly confirm a new quote.",
     ],
     handover_required: [
       "该记录曾确认可控能力，须完成旧执行停止与安全交接后再关联。",
@@ -692,10 +703,28 @@ function AgentImportSession({
                 disabled={busy}
                 onClick={() =>
                   void run(async () => {
-                    const controller = await load(attempt);
-                    const result = await controller.query(attempt.id);
-                    if (result) await receive(result, controller);
-                    else {
+                    const chain = new ChainReadSession(profile);
+                    journal.current ??= new IndexedDbTransactionJournal();
+                    const result = await queryAgentImportHistory(
+                      chain,
+                      organizationId,
+                      attempt,
+                      journal.current,
+                    );
+                    if (!mounted.current) return;
+                    if (result) {
+                      setPayer(result.sender);
+                      await receive(result.outcome, {
+                        confirmed: (value, input) =>
+                          confirmedAgentImport(
+                            chain,
+                            organizationId,
+                            result.sender,
+                            value,
+                            input,
+                          ),
+                      });
+                    } else {
                       setUnsubmitted(true);
                       setError("not_submitted");
                     }

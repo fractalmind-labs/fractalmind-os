@@ -4,6 +4,7 @@ use fractalmind_device_vault::{
 };
 use std::sync::Arc;
 use tauri::{Manager, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+mod okr_export;
 
 fn local_origin(url: &tauri::Url) -> bool {
     if !url.username().is_empty() || url.password().is_some() {
@@ -389,6 +390,7 @@ async fn fm_device_encrypt_command_delivery(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(okr_export::init())
         .setup(|app| {
             let cache = app.path().app_cache_dir()?.join("device-locks-v1");
             // Debug-only, isolated native UI acceptance. Never access production
@@ -426,6 +428,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             fm_app_appearance,
+            okr_export::fm_export_okr,
             fm_device_public,
             fm_device_initialize,
             fm_device_sign_transaction,
