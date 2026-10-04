@@ -1,0 +1,768 @@
+{
+  "schema": "fractalmind.v020.authorized-ui-progress.v1",
+  "status": "passed_scoped_acceptance",
+  "recordedAt": "2026-10-04T01:13:20.427082+00:00",
+  "sourceHead": "d381738c5e00b5fb2ed66ab9e85a742721d5b0a8",
+  "prDraft": true,
+  "publicationScope": "Selected public object IDs, transaction metadata, hashes and observed outcomes only. No recovery code, invitation secret, key material, signing bytes or full UI text is included.",
+  "authorization": {
+    "status": "granted",
+    "userMessage": "授权你审批写入",
+    "scope": "Explicitly reviewed isolated localnet one-off file intent; fee/signature and original deadline checks remain in the actual UI.",
+    "earlierAutomaticReviewRejections": "Historical rejections remain recorded; waiting for user authorization is no longer the current blocker."
+  },
+  "authorizedAttemptOne": {
+    "recordedAt": "2026-10-04T00:17:26.459Z",
+    "status": "failed_target_file_absent",
+    "apkSha256": "17743588aaf2c5a14cad9c1cc15386da2713e3626739534545d81d04496fe010",
+    "messageId": "0xab65af66a8cac5b469d58264f6e49026505a05cae5de645aa701c5e1e11b3a37",
+    "messageToken": "3f99c769-2b8e-4ddd-9f83-773c5cddcf08",
+    "runId": "0x25dee1a777147d0242c8e45bb0c8936aef3db773469eefc525d15254f51b79a5",
+    "commandId": "281883cc-1d04-4f3d-a61b-35f9ff85c24d",
+    "originalExpiryMs": 1791073025621,
+    "target": "docs/ONE-OFF-UI-VERIFIED.md",
+    "content": "Approved once and verified through the installed Android workbench.\n",
+    "sixDeviceConfirmedTransactions": [
+      {
+        "requestId": "direct-message:3f99c769-2b8e-4ddd-9f83-773c5cddcf08",
+        "digest": "5KdqTkdfHSK36hFXMz6HmgcfyxRPJATheX9imBzaMDRm",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "19134284"
+      },
+      {
+        "requestId": "direct-permission:0x1529e642b997fd72b2509d11e496491c386501bf8afcf771f661d7b4f3ccc1bb:1",
+        "digest": "Fx7wxjnunYizMBetfDGFKdjRiDRGK8kk6paJv2oMg1tn",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "6828820"
+      },
+      {
+        "requestId": "direct-approval:0xab65af66a8cac5b469d58264f6e49026505a05cae5de645aa701c5e1e11b3a37",
+        "digest": "4zSioztdnf8JNL9W8DbMzgAMVArzbNLKSfE5pxyuVGKL",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "18769484"
+      },
+      {
+        "requestId": "direct-decision:0xab65af66a8cac5b469d58264f6e49026505a05cae5de645aa701c5e1e11b3a37:true",
+        "digest": "DXY5g6iZqMQFk7mPTfyahN1A84hDTvF4QALy7yexdqmQ",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "10246008"
+      },
+      {
+        "requestId": "direct-capability:0xab65af66a8cac5b469d58264f6e49026505a05cae5de645aa701c5e1e11b3a37",
+        "digest": "ARUh3JsEs69u9wt8zJMW9XysmSnTZd9A6F91BbaHZH3w",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "19166280"
+      },
+      {
+        "requestId": "direct-run:0xab65af66a8cac5b469d58264f6e49026505a05cae5de645aa701c5e1e11b3a37",
+        "digest": "9ntfiZnb4CFFQfqPdTGuA6Crn3SnyoJBLQbMmsMxTeXH",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "48836944"
+      }
+    ],
+    "deviceTotalActualGasMist": "122981820",
+    "deviceTotalQuoteGasCeilingMist": "1200000000",
+    "standingRenewal": {
+      "version": 2,
+      "actions": [
+        "status"
+      ],
+      "paths": {
+        "file.read": [
+          "docs"
+        ]
+      },
+      "maxCalls": "0",
+      "budgetLimit": "0",
+      "spent": "0",
+      "reserved": "0",
+      "beforeApprovedSpent": "2",
+      "afterApprovedSpent": "4",
+      "afterApprovedReserved": "0",
+      "expiresAtMs": "1791076233022"
+    },
+    "delivery": {
+      "clickedOnce": true,
+      "deviceClickAt": 1791072879707,
+      "uiOutcome": "unknown",
+      "deliveryAttempted": true,
+      "noSecondDelivery": true
+    },
+    "terminal": {
+      "success": false,
+      "state": "failed",
+      "settled": true,
+      "spent": "2",
+      "reserved": "0",
+      "observedAt": "2026-10-04T00:17:05.622243734Z",
+      "reason": "operation_unconfirmed",
+      "evidence": [],
+      "resultTransaction": "B49KSero1PPW1jgEAT3ZAWg3BmTveaNkhDL4dM5j1A2H"
+    },
+    "independentRootVerification": {
+      "reportedAt": "2026-10-04T00:17:37Z",
+      "targetFileExists": false,
+      "cloudSignedCommandCountBefore": 6,
+      "cloudSignedCommandCountAfter": 7,
+      "chainState": "failed",
+      "settled": true,
+      "toolSpend": 2,
+      "approvedSpent": 4,
+      "approvedReserved": 0,
+      "standingSpent": 0,
+      "standingReserved": 0,
+      "source": "Root independently read chain and SSH cloud; exact raw artifacts held by root."
+    },
+    "chainState": 3,
+    "targetFileExists": false,
+    "interpretation": "Two charged tools do not prove the target was written. Independent SSH found ONE-OFF-UI-VERIFIED.md absent. The earlier partial write was a different file, ONE-OFF-UI.md."
+  },
+  "authorizedAttemptTwo": {
+    "recordedAt": "2026-10-04T00:27:43.230Z",
+    "status": "delivery_unknown_then_explicitly_cancelled_settled_zero",
+    "apkSha256": "17743588aaf2c5a14cad9c1cc15386da2713e3626739534545d81d04496fe010",
+    "messageId": "0xdbc03ead75698cb43b8e96bea62d40a856b3307f10498f7c81c8a9fa6cbdee3b",
+    "messageToken": "f3fd12ba-8dd8-457a-9703-570b47b2a2de",
+    "runId": "0x8403b4b71666a02ee0d53df65de8d89d3eb1578ad54224f42f1e0c96a3ca3730",
+    "expiresAtMs": "1791073634227",
+    "deviceActualGasMist": "117384200",
+    "deviceQuoteGasLimitMist": "1000000000",
+    "deviceConfirmedJournalEntries": [
+      {
+        "requestId": "direct-message:f3fd12ba-8dd8-457a-9703-570b47b2a2de",
+        "digest": "CB6FdCPLsEAyzCZY15yep76Px6SmvVfo749ELTyrxyTA",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "19544684"
+      },
+      {
+        "requestId": "direct-approval:0xdbc03ead75698cb43b8e96bea62d40a856b3307f10498f7c81c8a9fa6cbdee3b",
+        "digest": "4cXUVBQz1Zm6dG1Dwv2XJM34f8TTu5oYKhVkqNu1pPxW",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "19179884"
+      },
+      {
+        "requestId": "direct-decision:0xdbc03ead75698cb43b8e96bea62d40a856b3307f10498f7c81c8a9fa6cbdee3b:true",
+        "digest": "6R2xZKzuscd7mto7ZzhuCELZ5PtfhfCMfVEioPJfwUzK",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "10656408"
+      },
+      {
+        "requestId": "direct-capability:0xdbc03ead75698cb43b8e96bea62d40a856b3307f10498f7c81c8a9fa6cbdee3b",
+        "digest": "Fvknb1L7sKjN6Z3kkEqnHnHa7Zvcaw6LcQHx31fgybaa",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "19166280"
+      },
+      {
+        "requestId": "direct-run:0xdbc03ead75698cb43b8e96bea62d40a856b3307f10498f7c81c8a9fa6cbdee3b",
+        "digest": "5DAjeE8nV7psEp44WdFm3EMnA7pb18hZM8YoMGas9cg4",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "48836944"
+      }
+    ],
+    "firstDeliveryClickOnly": true,
+    "deliveryAttemptedMarkerRetained": true,
+    "deliveryOutcome": "unknown",
+    "secondDeliveryClicks": 0,
+    "commandId": "d8450993-1715-4393-acd7-cc12cded6a19",
+    "target": "docs/ONE-OFF-UI-VERIFIED.md",
+    "beforeStop": {
+      "runUiState": "prepared",
+      "spent": 0,
+      "reserved": 3,
+      "settled": false,
+      "approvedSpent": 4,
+      "approvedReserved": 3
+    },
+    "explicitUiStop": {
+      "uiConfirmedAt": "2026-10-04T00:31:31.083Z",
+      "originalRunId": "0x8403b4b71666a02ee0d53df65de8d89d3eb1578ad54224f42f1e0c96a3ca3730",
+      "stopClickedOnce": true,
+      "requestId": "direct-stop:0xdbc03ead75698cb43b8e96bea62d40a856b3307f10498f7c81c8a9fa6cbdee3b",
+      "digest": "s1YD9pcGePQLWW9dudGnpAWy5DaFwmSGukm2kYNT81A",
+      "journalStatus": "confirmed",
+      "actualGasMist": "1360772",
+      "gasCeilingMist": "200000000",
+      "uiRunState": "cancelled",
+      "spent": 0,
+      "reserved": 0,
+      "settled": true,
+      "standingSpent": 0,
+      "standingReserved": 0,
+      "approvedSpent": 4,
+      "approvedReserved": 0,
+      "originalDeliveryUnknownPreserved": true,
+      "hostCommandPostDuringStop": false
+    },
+    "independentAfterStop": {
+      "checkedAt": "2026-10-04T01:00:57.482Z",
+      "readOnly": true,
+      "transactionBroadcasts": 0,
+      "run": {
+        "id": "0x8403b4b71666a02ee0d53df65de8d89d3eb1578ad54224f42f1e0c96a3ca3730",
+        "state": 5,
+        "stop_requested": true,
+        "result_record": null
+      },
+      "permission": {
+        "id": "0xf5f22ebcd88e8ae2ffe63b05f3ec3f255379b376feaf7735fe8a11895b2e47cf",
+        "version": "2",
+        "allowed_actions": [
+          "status"
+        ],
+        "max_calls": "0",
+        "budget_limit": "0",
+        "spent": "0",
+        "reserved": "0",
+        "approved_spent": "4",
+        "approved_reserved": "0"
+      },
+      "claim": {
+        "capability_id": "0xcad14f3ba14077c423939447dbdee7a0cb9f9386f65abc480a36221d8d9e40d9",
+        "message_id": "0xdbc03ead75698cb43b8e96bea62d40a856b3307f10498f7c81c8a9fa6cbdee3b",
+        "permission_version": "2",
+        "approval_id": "0x8393c031f916c1dea5e7bdc975e517314e16133bab57a29ca0991dc75c91fb6e",
+        "reserved": "3",
+        "spent": "0",
+        "settled": true
+      },
+      "budget": {
+        "spent": "0",
+        "reserved": "0"
+      },
+      "reservation": {
+        "reservedAmount": "3",
+        "spentAmount": "0",
+        "settled": true
+      }
+    },
+    "interpretation": "The original command_outcome_unknown and first-delivery marker remain. No second delivery was attempted; the Host log did not observe this command. A separate explicit stop transaction cancelled the original prepared Run and settled the reservation at zero. This is cancellation, not successful execution or proof that transport was definitively absent."
+  },
+  "desktopProjection": {
+    "status": "passed_for_projection_only",
+    "profile": "test-core-4bea7f30",
+    "deviceAddress": "0x6cded1c1fa1d2e0fc478e4ec217b91c746a52e0c3087525aebe871fdac828fec",
+    "humanId": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+    "organizationId": "0x53e622cedfe98236634e3340753b4191f9840dfae36ded85588b18efa12f7bef",
+    "okrId": "0x5ae0d408b36fda916f0a11c610eefef145d6dbb9b783c24d20a1d6f522ee05fa",
+    "installedExportVerified": true,
+    "systemFileImportVerified": true,
+    "explicitFeeSignVerified": true,
+    "digest": "JCNrdXyAFu6WfarfkfWQTkKLEnzVCXermYKf2n7VARhc",
+    "sourceVersion": "2",
+    "agreementVersion": "1",
+    "actualGasMist": "10735752",
+    "build": "d381738 macOS (before picker fix)",
+    "fileHashes": [
+      {
+        "exportSha256": "74558456c6145faddaf151a403f7228f5d04229d1af4b74e709840b1e908fec4",
+        "proposalSha256": "f152f23b6f854affb99d6d1b44da31a6e6474e1041213f6af8985b063ef4d3e0"
+      }
+    ],
+    "independentChain": {
+      "checkedAt": "2026-10-04T01:01:57.827Z",
+      "readOnly": true,
+      "broadcasts": 0,
+      "okr": {
+        "id": "0x5ae0d408b36fda916f0a11c610eefef145d6dbb9b783c24d20a1d6f522ee05fa",
+        "version": "2",
+        "agreement_version": "1",
+        "spec_record": "0xe9618781d62de9075be187703d4885379d507839a060c6cd011dc2d70663dafc",
+        "spec_revision": "2"
+      },
+      "specRecord": {
+        "id": "0xe9618781d62de9075be187703d4885379d507839a060c6cd011dc2d70663dafc",
+        "revision": "2",
+        "previous": "0x61095ec0279a75ee0f2f5d62f1c7b1cce3b6b3c319405b6d6237a3c01225b0fc",
+        "encrypted_body": {
+          "bytes": 839,
+          "sha256": "ed65826d8595c1a659ecf9018d6448bfe721a47e456421cf2726f27532d6ba3f"
+        }
+      }
+    },
+    "remaining": "Desktop Host connection and signed observation UI acceptance are still in progress; this projection result does not establish the complete desktop flow."
+  },
+  "androidProjection": {
+    "status": "passed_installed_projection_only",
+    "evidence": "v020-android-projection-installed.json",
+    "apkSha256": "40ce53867d850ea451cf2e5db2652062f8412b02214adc5086672302bb94b6ee",
+    "exportBytes": 4749,
+    "exportSha256": "b8072178f6e2a781c8b006cc0644f62611d25d06cb46541c3b92b98718315818",
+    "systemPickerImport": true,
+    "freshConsentAfterBackground": true,
+    "oldQuoteRestored": false,
+    "transactionDigest": "6rH9DET71SduPsYCCAAPXLtp58p1QXwojwGRzMAed7xX",
+    "actualGasMist": "10456680",
+    "state": "PAUSED",
+    "sourceVersion": "5",
+    "agreementVersion": "4",
+    "spent": "0",
+    "reserved": "0",
+    "independentFreshChain": "passed current object/digest linkage; full historical transaction receipt not found, fee not independently verified"
+  },
+  "localRegression": {
+    "appTests": 375,
+    "passed": 375,
+    "failed": 0,
+    "newAgentImportManagerFakeClockTests": 9,
+    "source": "/tmp/fm-v020-final-app-375.log",
+    "typescript": "passed_r3_exit_0",
+    "vite": "r16_build_and_signature_passed_exact_source_4063bb0",
+    "finalCiConfirmed": true,
+    "nativeExportBoundaryTests": {
+      "passed": 1,
+      "failed": 0,
+      "source": "/tmp/fm-v020-native-okr-export-test.log"
+    },
+    "newImportHistoryTests": 8,
+    "hostHistoryFocusedTests": 25,
+    "newRecoveryOutcomeTests": 5,
+    "ciSourceHead": "4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1"
+  },
+  "historicalCacheProof": {
+    "file": "v020-work-cache-reconstruction.json",
+    "unchanged": true,
+    "scope": "Original 2026-10-03 cache/Coordinator interval only: 6 settled Runs and 33 encrypted records. The two later authorized attempts and new desktop objects are outside that snapshot."
+  },
+  "remaining": [],
+  "sources": [
+    {
+      "path": "/tmp/fm-v020-authorized-installed-ui-final-attempt-r1.json",
+      "sha256": "501949e22a300029eddd66020de667ed36332caef0642ac9041a4b692fa6798a"
+    },
+    {
+      "path": "/tmp/fm-v020-authorized-installed-ui-final-attempt-r2.json",
+      "sha256": "44375b80db992f23a87082586d054cd1f1650b2dda07104f6945d20f4dcffbab"
+    },
+    {
+      "path": "/tmp/fm-v020-authorized-result-second-cancel-independent.json",
+      "sha256": "b615b1f9473a42d8c871e68f202da9c0b3e34ece00483d8cb46d0d57218e82a3"
+    },
+    {
+      "path": "/tmp/fm-v020-desktop-core-ui.json",
+      "sha256": "1ed1a33105caa71f650f8aabe4e337bf9f4b98d89be2f49c530da6a048980f56"
+    },
+    {
+      "path": "/tmp/fm-v020-desktop-core-chain-after-projection.json",
+      "sha256": "94d24302b35739ca63f67c7c68b812753619ea7aa704bf4c7a8df18dc8fb0f13"
+    },
+    {
+      "path": "/tmp/fm-v020-final-app-regression.log",
+      "sha256": "38211cf77379fef4a71e6c9e33f7c3b622261c911563e7bd58ad04c9c72163d1"
+    }
+  ],
+  "androidProjectionHistory": [
+    {
+      "status": "not_passed",
+      "observation": "Installed r9 includes the three-file picker lifecycle fix, but actual export produced no file. Native file-saving repair is being compiled and has not passed installed UI acceptance.",
+      "evidenceType": "Root and implementation-agent observation; no successful export artifact is claimed."
+    },
+    {
+      "build": "r10",
+      "outcome": "Native export command ACL registration was missing; repaired in r11.",
+      "source": "Root implementation/installed-test report; not counted as a successful export."
+    }
+  ],
+  "updatedAt": "2026-10-04T03:16:51.852209+00:00",
+  "authorizedAttemptThree": {
+    "status": "passed_installed_ui_chain_file_and_additional_cache",
+    "evidence": "v020-authorized-oneoff-write.json",
+    "runId": "0x897aec205819d80a46ae00cd4b9e8ca04e163261d4db07f8be00bb96a5a864ff",
+    "chainState": 2,
+    "spent": 3,
+    "reserved": 0,
+    "settled": true,
+    "fileBytes": 68,
+    "fileSha256": "4a9a40358fa6c07b2bee30f6835887391ca11e220541478f9228ae93ba88d313",
+    "originalDeliveryOutcome": "unknown",
+    "replayed": false,
+    "decryptedOriginalResult": true,
+    "newResultCacheEvidence": "v020-authorized-result-cache-reconstruction.json"
+  },
+  "desktopRecoveryR12": {
+    "evidence": "v020-desktop-recovery-installed.json",
+    "status": "recovery_and_public_state_verified_core_flow_in_progress",
+    "sameHumanAndOrganization": true,
+    "generation": 2,
+    "recoveryVersion": 2,
+    "newDevice": "0xc6a10e97c5ebe48bf83873d383c47f5086eedee71b29d8c1840689d462e983f3",
+    "transaction": "FfFs5CSL9dbKfu2EpJFSxVgH5vCCKUmw8nJsq23a1c3i",
+    "historicalOkrUnchanged": true,
+    "currentBlocker": "Read-only query of the old import attempt tries to load the old device key after official recovery. Minimal repair is in progress; no successful desktop import/handover/execution claim."
+  },
+  "localRegressionHistory": [
+    {
+      "appTests": 343,
+      "passed": 343,
+      "failed": 0,
+      "newPickerLifecycleTests": 6,
+      "source": "/tmp/fm-v020-final-app-regression.log",
+      "finalCiConfirmed": false
+    },
+    {
+      "appTests": 352,
+      "passed": 352,
+      "failed": 0,
+      "newAgentImportManagerFakeClockTests": 9,
+      "source": "/tmp/fm-v020-agent-import-120s-app-suite.log",
+      "typescript": "passed",
+      "vite": "passed",
+      "finalCiConfirmed": false,
+      "nativeExportBoundaryTests": {
+        "passed": 1,
+        "failed": 0,
+        "source": "/tmp/fm-v020-native-okr-export-test.log"
+      }
+    },
+    {
+      "appTests": 360,
+      "passed": 360,
+      "failed": 0,
+      "newAgentImportManagerFakeClockTests": 9,
+      "source": "/tmp/fm-v020-final-code-validation-app-tests.log",
+      "typescript": "passed",
+      "vite": "passed_in_r14_build",
+      "finalCiConfirmed": false,
+      "nativeExportBoundaryTests": {
+        "passed": 1,
+        "failed": 0,
+        "source": "/tmp/fm-v020-native-okr-export-test.log"
+      },
+      "newImportHistoryTests": 8
+    },
+    {
+      "appTests": 370,
+      "passed": 370,
+      "failed": 0,
+      "newAgentImportManagerFakeClockTests": 9,
+      "source": "/tmp/fm-v020-host-history-full-app-r2.log",
+      "typescript": "passed_r3_exit_0",
+      "vite": "r15_build_and_signature_passed_pending_recovery_followup_fix",
+      "finalCiConfirmed": false,
+      "nativeExportBoundaryTests": {
+        "passed": 1,
+        "failed": 0,
+        "source": "/tmp/fm-v020-native-okr-export-test.log"
+      },
+      "newImportHistoryTests": 8,
+      "hostHistoryFocusedTests": 25
+    }
+  ],
+  "desktopRecoveryR14": {
+    "evidence": "v020-desktop-recovery-installed.json",
+    "section": "latestProgressR14",
+    "status": "recovery_and_database_continuity_verified_core_flow_in_progress",
+    "sameHumanAndOrganization": true,
+    "generation": 3,
+    "recoveryVersion": 3,
+    "newDevice": "0xed96225f2dbc1a86c0c3e1884bcb74be17925375d136243a77cdc7bae9317d5c",
+    "transaction": "5cQLkQ6aoqZtY9b3nvJ88tynxGc9eFkvXo5ofPTV9fVU",
+    "sameDatabaseRestored": true,
+    "newHostAdmission": "in_progress",
+    "currentBlocker": "Host public-history and independent-operation repairs passed 25 focused tests and full App 370/370 plus strict TypeScript. Original unknown/history remains retained; only exact notFound plus a valid prior terminal journal permits a separate user-selected UUID, while pending stays blocked. Rebuilt installed UI, new Host admission, desktop import/handover/execution and final-source CI remain unverified."
+  },
+  "transactionAvailabilityDiagnosis": {
+    "evidence": "v020-desktop-recovery-installed.json",
+    "section": "transactionAvailabilityDiagnosis",
+    "oldHostInviteGrpc": "NOT_FOUND below the gRPC available checkpoint window; same-node diagnostic legacy JSON-RPC returns full success effects",
+    "recoveryR14ActualGasMist": "19893680",
+    "initialR14UnknownCause": "not established",
+    "productJsonRpcFallback": false
+  },
+  "hostHistoryLocalValidation": {
+    "recordedAt": "2026-10-04T02:27:30.428084+00:00",
+    "status": "local_tests_passed_installed_ui_pending",
+    "focused": {
+      "passed": 25,
+      "failed": 0
+    },
+    "fullApp": {
+      "passed": 370,
+      "failed": 0
+    },
+    "typescript": {
+      "status": "passed",
+      "exitCode": 0,
+      "evidence": "Operator-confirmed r3 exit 0; the saved tsc log is empty, as expected for successful tsc."
+    },
+    "diffCheck": "passed",
+    "buildStatus": "r15_pending_at_this_snapshot",
+    "finalCiConfirmed": false,
+    "sourceHashes": [
+      {
+        "path": "apps/fractalmind-app/src/HostAccess.tsx",
+        "sha256": "638f7caf38408df3379a6ecba41003b26ab6002cc9677ab4f5e2a94d6fa6ea3a"
+      },
+      {
+        "path": "apps/fractalmind-app/src/host-transaction-history.ts",
+        "sha256": "39bc80291e435f2d32985e727c63ce2a03f5fdac5c7b64767d2bf5cc77bcf067"
+      },
+      {
+        "path": "apps/fractalmind-app/src/transaction-history.ts",
+        "sha256": "9a8f1c0b26db6b141ac61624682740360e467f94b2d8ae8e8dff4e52a417efd9"
+      },
+      {
+        "path": "apps/fractalmind-app/src/agent-import-history.ts",
+        "sha256": "41196e1290d05817e3241848cdcb807ac7c8eb5e3a907c7243973f76b9a9b2df"
+      },
+      {
+        "path": "apps/fractalmind-app/tests/host-transaction-history.test.ts",
+        "sha256": "eb7b1c0a23213c8e17e7f2c887006b5d8a9cfc4cd59da72b3015d2059c03c873"
+      },
+      {
+        "path": "apps/fractalmind-app/tests/transaction-history.test.ts",
+        "sha256": "cd07a9794e1dbdba290883a868ed503b166a628493a757ed2c5fce0225828c05"
+      }
+    ],
+    "sources": [
+      {
+        "path": "/tmp/fm-v020-host-history-focused-r2.log",
+        "sha256": "301b980197bbda8279b3a9d1a869d9c3de61c4ed58be631835d5ffb6a875d507"
+      },
+      {
+        "path": "/tmp/fm-v020-host-history-full-app-r2.log",
+        "sha256": "ecb0932f881db9c349107d6526947146a6eb2a2316087897f386dbef475092ba"
+      },
+      {
+        "path": "/tmp/fm-v020-host-history-tsc-r3.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "scope": "Public read-only old-device queries; Host/Agent namespace isolation; exact missing-digest and terminal-journal checks; pending/error/inconsistent/CAS/archive failure paths fail closed. No installed-UI or complete desktop flow claim."
+  },
+  "desktopRecoveryR15": {
+    "evidence": "v020-desktop-recovery-installed.json",
+    "section": "latestProgressR15",
+    "status": "recovery_and_host_history_ui_verified_core_flow_in_progress",
+    "generation": 4,
+    "recoveryVersion": 4,
+    "sameHumanAndOrganization": true,
+    "recoveryDigest": "H3MYAY57XAqn47thVn8a7sMEGR7YUqzbDNrHyBdXakT2",
+    "actualRecoveryGasMist": "20980708",
+    "hostHistoryArchiveUi": "passed",
+    "newBindingAndInvitationUi": "confirmed",
+    "currentBlocker": "r15 installed Host history query/archive and independent new binding/invitation passed. Official recovery retained Human/organization at generation 4; the independently confirmed recovery result was overwritten by a subsequent unknown read in the UI. A minimal presentation/control-flow repair is in progress; the initial query exception was not saved, so its network cause is not established. New Host join, desktop import/handover/execution and final-source build/CI remain outstanding."
+  },
+  "sourceValidation4063bb0": {
+    "sourceHead": "4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1",
+    "checkedAt": "2026-10-04T02:49:57.693005+00:00",
+    "sourceCommittedAndPushed": true,
+    "fullApp": {
+      "passed": 375,
+      "failed": 0,
+      "newRecoveryOutcomeRegressions": 5,
+      "source": {
+        "path": "/tmp/fm-v020-final-app-375.log",
+        "sha256": "f447e529d096d7deca23c2025ecfa8a26592e428f5860e724f61fd48ea3d0193"
+      }
+    },
+    "ci": {
+      "query": "gh pr view 53 --repo fractalmind-labs/fractalmind-os --json number,url,isDraft,headRefOid,statusCheckRollup",
+      "headRefOid": "4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1",
+      "isDraft": true,
+      "total": 38,
+      "completedSuccess": 38,
+      "pending": 0,
+      "failed": 0,
+      "lastCompletedAt": "2026-10-04T02:43:25Z",
+      "allChecksStatus": "COMPLETED",
+      "allChecksConclusion": "SUCCESS",
+      "checks": [
+        "Sui transport migration",
+        "Prototype state regressions",
+        "Detect changes",
+        "Prototype v2 model regressions",
+        "Go (runtime/fractalbot)",
+        "Go (runtime/fractalmind-envd)",
+        "Go (runtime/fractalmind-envd/desktop)",
+        "Go (runtime/claude-code-go)",
+        "Go (protocols/fractal-demail/client-go)",
+        "Go (protocols/fractal-demail/gas-station-adapter)",
+        "Go (protocols/fractal-demail/bridge)",
+        "agent-manager (Python 3.9)",
+        "agent-manager (Python 3.10)",
+        "agent-manager (Python 3.11)",
+        "agent-manager (Python 3.12)",
+        "agent-manager quality gates",
+        "team-manager (Python 3.10)",
+        "team-manager (Python 3.12)",
+        "team-chat",
+        "Skills CLI layout",
+        "Skill structure",
+        "Agent Console",
+        "FractalMind App",
+        "FractalMind device core (macos-latest)",
+        "FractalMind device core (windows-latest)",
+        "FractalMind device core (ubuntu-latest)",
+        "FractalMind Android APK (ARM64)",
+        "Explorer",
+        "Docs site",
+        "Protocol SDK",
+        "Move (protocols/fractalmind-protocol/contracts/protocol)",
+        "Move (protocols/fractalmind-protocol/contracts/okr)",
+        "Move (protocols/fractalmind-protocol/contracts/direct-agent)",
+        "Move (runtime/fractalmind-envd/contracts/envd)",
+        "Move (protocols/fractal-demail/sui-contracts)",
+        "TypeMind Android",
+        "OpenClaw gateway app",
+        "CI result"
+      ],
+      "workflowUrls": [
+        "https://github.com/fractalmind-labs/fractalmind-os/actions/runs/37171671324",
+        "https://github.com/fractalmind-labs/fractalmind-os/actions/runs/37171671316"
+      ],
+      "evidenceMethod": "One read-only GitHub CLI status snapshot; named checks were all returned completed/success for the exact PR head."
+    },
+    "limits": [
+      "CI applies to this exact source commit, not later commits.",
+      "This validation does not establish the unfinished installed desktop handover/execution gate.",
+      "The recovery receipt-preservation fix is committed and locally tested; installed verification after a rebuilt package remains separate."
+    ]
+  },
+  "desktopImportAndSpecR15": {
+    "recordedAt": "2026-10-04T02:49:57.693005+00:00",
+    "status": "agent_import_and_spec_revision_confirmed_handover_in_progress",
+    "sourceEvidence": {
+      "path": "/tmp/fm-v020-desktop-core-ui.json",
+      "sha256": "9cc860c2866b25e8d58e85ef717baa052a0a7d432b3b549d0ee4e9a7563c118b"
+    },
+    "agentImport": {
+      "transaction": "FefqSSJk2rc9DxCGAwoUznJj74st8HGec46BUu4L7ZcW",
+      "actualGasMist": "11883736",
+      "state": "confirmed_observation_only",
+      "physicalId": "native-9e352106a3bf250b8a95dab174ff48136bb4b58c1709a369ed2dbabcfa13400c",
+      "prepareHistory": [
+        "First prepare returned read_unavailable before submission.",
+        "Second prepare on the same attempt succeeded and the actual UI explicitly confirmed the fee."
+      ]
+    },
+    "specification": {
+      "originalFixture": "Natural-language prohibited actions were rejected as unsupported by the bounded adapter.",
+      "transaction": "5coGZYHswajEmFXaoEBEUmeFo3HmCRsNTJ14HJ8cty3z",
+      "actualGasMist": "10583752",
+      "state": "Draft",
+      "version": 4,
+      "agreementVersion": 3,
+      "prohibitedActions": [
+        "shell.*",
+        "network.*",
+        "write outside project"
+      ],
+      "allowedPaths": [
+        "docs"
+      ],
+      "maxCalls": 3,
+      "route": "Official specification edit/review/fee/signature UI; no boundary expansion."
+    },
+    "actualUiSteps": [
+      {
+        "name": "r15-fresh-instance-import-selection",
+        "at": "2026-10-04T02:38:40.759Z"
+      },
+      {
+        "name": "r15-import-prepare-read-unavailable",
+        "at": "2026-10-04T02:40:43.246Z"
+      },
+      {
+        "name": "r15-agent-import-fee",
+        "at": "2026-10-04T02:41:46.640Z"
+      },
+      {
+        "name": "r15-agent-import-result",
+        "at": "2026-10-04T02:42:33.664Z"
+      },
+      {
+        "name": "r15-handover-unsupported-fixture-prose",
+        "at": "2026-10-04T02:43:54.795Z"
+      },
+      {
+        "name": "r15-canonical-constraint-review",
+        "at": "2026-10-04T02:44:35.207Z"
+      },
+      {
+        "name": "r15-canonical-constraint-fee",
+        "at": "2026-10-04T02:44:44.244Z"
+      },
+      {
+        "name": "r15-canonical-constraint-result",
+        "at": "2026-10-04T02:44:45.214Z"
+      }
+    ],
+    "currentBlocker": "Source 4063bb0 passes App 375/375 and all 38 CI checks. Installed r15 Agent observation import confirmed after an initial prepare read_unavailable without submission. A supported canonical specification replaced the unsupported prose fixture, preserving docs-only paths and maxCalls 3. Desktop handover, execution/verification and rebuilt recovery-outcome UI verification remain outstanding.",
+    "limits": [
+      "Observation import does not authorize execution.",
+      "Unsupported natural-language fixture rejection and original no-submit read failure remain retained.",
+      "The handover and complete desktop execution path are not marked passed."
+    ]
+  },
+  "desktopCoreInstalled": {
+    "evidence": "v020-desktop-core-installed.json",
+    "status": "passed_scoped_acceptance",
+    "okrState": "ACHIEVED",
+    "okrVersion": 8,
+    "agreementVersion": 5,
+    "specRevision": 4,
+    "verifiedKrs": 1,
+    "totalKrs": 1,
+    "originalRun": "0x41db7d62cdb0e7b8b7b63627558c156ccab6cda2ed995bfe590702e1fe07ad63",
+    "runState": "SUCCEEDED",
+    "spent": 3,
+    "reserved": 0,
+    "capabilitySpent": 3,
+    "capabilityReserved": 0,
+    "allClaimsSettled": true,
+    "finalAcceptanceDigest": "6EU2mgkZUGywx1fmVYehRE1daGM581J9uHDVCkU4bES7",
+    "actualAcceptanceGasMist": "10731572",
+    "independentFullReceipts": 7,
+    "fileBytes": 80,
+    "fileSha256": "a9708edbceee0608a3afa3dd1154667d7962e89b0f8390c64189b271ac53efab",
+    "remaining": [],
+    "directStatus": {
+      "runId": "0x143c8b0a0ff07ff58032476bf31b2631265db1bc69cf27f5d23da863e239c7f6",
+      "state": "SUCCEEDED",
+      "spent": 0,
+      "reserved": 0,
+      "settled": true,
+      "originalReceiptDecrypted": true,
+      "originalDeliveryUnknownRetained": true,
+      "fileUnchanged": true
+    }
+  },
+  "historyScope": "Only top-level remaining, localRegression, sourceValidation4063bb0 and desktopCoreInstalled summarize current progress. Earlier named r12/r14/r15/projection/attempt snapshots preserve their original status and remaining text at capture time; they do not reopen completed gates.",
+  "finalRecoveryR16": {
+    "evidence": "v020-desktop-core-installed.json",
+    "section": "finalRecoveryR16",
+    "status": "passed",
+    "sourceCommit": "4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1",
+    "generation": 5,
+    "recoveryVersion": 5,
+    "transaction": "2bsi3pu18YpDuBgwqgwAcFji7AFjDdMZYDKNsfGhngtC",
+    "actualGasMist": "22067736",
+    "gasEvidence": "Actual installed UI confirmed receipt; later independent full receipt NOT_FOUND retained.",
+    "sameHumanAndOrganization": true,
+    "newDevice": "0x2bea8d6b07615d377d2e3f4ae1fe222686c49ae9e8ef4e8cd4507e605a38d72f",
+    "restoredHistoricalStatusDecrypted": true,
+    "finalWorkbenchHumanAccepted": true,
+    "unavailableLookupBranchReproduced": false,
+    "currentStateIndependentlyVerified": true,
+    "receiptIndependentlyConfirmed": false
+  },
+  "finalUiSource": {
+    "path": "/tmp/fm-v020-desktop-core-ui.json",
+    "sha256": "45cdc121addf1a68845a86b3a6bd846c5209f20ee3175ffd4e9f3e2e2c44f850"
+  },
+  "finalCommitVerification": {
+    "policy": "Final PR verification follows the checks attached to the current PR head. The recorded 38/38 success applies specifically to source commit 4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1 and is not inherited by a later head.",
+    "checksUrl": "https://github.com/fractalmind-labs/fractalmind-os/pull/53/checks"
+  }
+}

@@ -1,0 +1,175 @@
+{
+  "schema": "fractalmind.v020.authorized-result-cache-reconstruction.v1",
+  "recordedAt": "2026-10-04T01:34:46.259Z",
+  "completed": true,
+  "scope": "Additional installed Android r11 cache reconstruction of the third independently approved and successful Direct Run. Historical cache proof remains separate and unchanged.",
+  "sources": {
+    "chainBefore": "/tmp/fm-v020-work-cache-authorized-final-before.json",
+    "chainAfter": "/tmp/fm-v020-work-cache-authorized-final-after.json",
+    "uiOriginal": "/tmp/fm-v020-review-window-ui-r1-215-direct-r11-original-success-read.json",
+    "uiBefore": "/tmp/fm-v020-review-window-ui-r1-216-direct-r11-final-cache-before.json",
+    "uiClear": "/tmp/fm-v020-review-window-ui-r1-217-direct-r11-final-cache-clear.json",
+    "uiCold": "/tmp/fm-v020-review-window-ui-r1-218a-direct-r11-final-cache-cold-retention.json",
+    "uiReconnect": "/tmp/fm-v020-review-window-ui-r1-219-direct-r11-final-cache-reconnect.json",
+    "uiResult": "/tmp/fm-v020-review-window-ui-r1-220-direct-r11-final-cache-success.json",
+    "uiAfter": "/tmp/fm-v020-review-window-ui-r1-221-direct-r11-final-cache-after.json",
+    "cloudBefore": "/tmp/fm-v020-authorized-cloud-third-direct-final.json",
+    "cloudAfter": "/tmp/fm-v020-authorized-final-cache-cloud-after.json"
+  },
+  "chain": {
+    "beforeAt": "2026-10-04T01:26:25.877Z",
+    "afterAt": "2026-10-04T01:29:36.534Z",
+    "stableIndependentReadsBefore": 2,
+    "stableIndependentReadsAfter": 2,
+    "businessSha256": "31adcf56e25f6bfab3930429d121b72f7edb6109b418df3994307e9e8f4359dd",
+    "counts": {
+      "organizations": 1,
+      "hosts": 1,
+      "memberships": 1,
+      "managedAgents": 2,
+      "okrs": 2,
+      "permissions": 2,
+      "directMessages": 8,
+      "directApprovals": 7,
+      "runs": 9,
+      "unsettledControlRuns": 0,
+      "encryptedRecords": 47,
+      "currentRecordPointers": 34,
+      "chainCommandDeliveries": 0,
+      "chainObjectMetadataRead": 96
+    },
+    "allBusinessObjectsAndCiphertextHashesEqual": true
+  },
+  "journals": {
+    "count": 62,
+    "exactRowsIncludingRowHashesEqualBeforeColdAndAfter": true,
+    "reportedDigest": "706f7bb61632fc60b843602e5c2b6131a8b098ed4dd15cd2bc780768ac962eff"
+  },
+  "installedUi": {
+    "settingsClearConnectionObserved": true,
+    "coldPublicConnection": null,
+    "pidBefore": "11172",
+    "pidAfter": "11643",
+    "publicFormReconnectObserved": true,
+    "samePublicConnectionAfter": true,
+    "restoredViaActualWorkbench": true,
+    "identicalDecryptedResult": true,
+    "resultJsonSha256": "824b0b419c8e33ec68eae06509e15697e6258d3b4ea7c2ae952e323db1a4fc03",
+    "httpCacheClear": {
+      "operatorReported": true,
+      "standaloneOperationArtifact": null,
+      "runner": "/tmp/fm-v020-review-window-ui-network-durable-r2.mjs",
+      "runnerSha256": "92d4e8232eb07af436b62a3abe35d7c810673a2ea8947c0cb49de570ba9f470c",
+      "flag": "--clear-http-cache",
+      "calls": [
+        "Network.enable",
+        "Network.clearBrowserCache"
+      ],
+      "operatorAttestation": "authorized_ui_finish confirms step217 executed this branch and the runner completed successfully; no separate response was saved and no repeated cache clear was performed"
+    }
+  },
+  "originalExecution": {
+    "id": "0x897aec205819d80a46ae00cd4b9e8ca04e163261d4db07f8be00bb96a5a864ff",
+    "state": 2,
+    "commandId": "ddef7a41-7763-4d8c-ac51-f562ae3f06a9",
+    "messageId": "0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b",
+    "resultRecord": "0x218293a97b000fdc6dfa683268b2afdaf6f7c05a834019afc263d4d07425564f",
+    "resultCiphertext": {
+      "bytes": 1418,
+      "sha256": "1437f3c7b97c272450df16a329fa2647be85eb686d564ce42ce89809348976b5"
+    },
+    "resultTransaction": "5k5C56ypLdRJia9gE5AkY3CR2tjf1PMT2nqFVZpGkw9a",
+    "claimSpent": "3",
+    "claimSettled": true,
+    "budget": {
+      "reserved": "0",
+      "spent": "3"
+    },
+    "standingPermission": {
+      "version": "3",
+      "allowedActions": [
+        "status"
+      ],
+      "maxCalls": "0",
+      "budgetLimit": "0",
+      "spent": "0",
+      "reserved": "0",
+      "approvedSpent": "7",
+      "approvedReserved": "0"
+    }
+  },
+  "cloud": {
+    "checkedAt": "2026-10-04T01:29:40.193562+00:00",
+    "pid": 2441063,
+    "runtimeSha256": "5e09cc91695d76b880dc072b57ceb6dc93a63eaefc92762b37138756c5356d47",
+    "commandCountBefore": 8,
+    "commandCountAfter": 8,
+    "sameFileHashesAndModificationTimes": true,
+    "verifiedFile": {
+      "name": "ONE-OFF-UI-VERIFIED.md",
+      "bytes": 68,
+      "sha256": "4a9a40358fa6c07b2bee30f6835887391ca11e220541478f9228ae93ba88d313",
+      "modifiedAtUtc": "2026-10-04T01:21:51.447474+00:00"
+    }
+  },
+  "checks": {
+    "sameChainObjectsVersionsCiphertexts": true,
+    "sameOriginalResultAndBudget": true,
+    "journalsRetainedExactly": true,
+    "noAdditionalHostCommand": true,
+    "sameFiles": true,
+    "noProbeTransactions": true,
+    "noProbeNativeKeyAccess": true
+  },
+  "limitations": [
+    "Independent probe only reads public Sui state and designated test Host logs/files; native decryption and Settings/HTTP cache actions come from the separate installed UI operator evidence.",
+    "HTTP cache clearing was reported successful by the UI operator; the Settings clear artifact itself does not contain a standalone HTTP-cache operation response.",
+    "RPC pruning can add disposable unresolved local entries; retained durable technical journal rows and chain state stayed identical.",
+    "This additional pass did not restart the Coordinator or Host and does not replace the historical cache/restart evidence."
+  ],
+  "uiResult": {
+    "schema_version": "1",
+    "adapter": "agent-manager-runtime",
+    "command_id": "ddef7a41-7763-4d8c-ac51-f562ae3f06a9",
+    "operation": "direct.message",
+    "duplicate": false,
+    "ok": true,
+    "observed_at": "2026-10-04T01:22:39.289003411Z",
+    "result": {
+      "status": "submitted",
+      "tool_calls_used": 3,
+      "evidence": [
+        {
+          "path": "docs/ONE-OFF-UI-VERIFIED.md",
+          "expected_hash": "4a9a40358fa6c07b2bee30f6835887391ca11e220541478f9228ae93ba88d313",
+          "observed_hash": "4a9a40358fa6c07b2bee30f6835887391ca11e220541478f9228ae93ba88d313",
+          "verified": true,
+          "observed_at": "2026-10-04T01:22:39.288917909Z"
+        }
+      ]
+    },
+    "error": null,
+    "spend": {
+      "asset": "TOOL_CALLS",
+      "amount": "3",
+      "known": true
+    },
+    "execution_id": "0x897aec205819d80a46ae00cd4b9e8ca04e163261d4db07f8be00bb96a5a864ff",
+    "execution_state": "succeeded",
+    "transaction_digest": "5k5C56ypLdRJia9gE5AkY3CR2tjf1PMT2nqFVZpGkw9a"
+  },
+  "uiTransactionWrites": 0,
+  "uiCommandDeliveries": 0,
+  "originalTechnicalReceipt": "Pruned localnet transaction receipt remains unknown in UI; exact original Run, encrypted Host result, settlement verified. Technical unknown locator retained; no replay.",
+  "sourceReports": [
+    {
+      "path": "/tmp/fm-v020-authorized-final-cache-reconstruction.json",
+      "sha256": "7592063f9fbbe42a661fb96934deee54b39039d167363fa5b2f01b7b734902ee"
+    },
+    {
+      "path": "/tmp/fm-v020-android-success-cache-rebuild-final.json",
+      "sha256": "9d4ecc1a13f96afbebcd5fe66a9353d96a99cad8d8f47ec460542a114d7e8851"
+    }
+  ],
+  "historicalReceiptTerminologyCorrection": "Historical pruning wording records RPC notFound/unknown during that interval. It does not establish that receipt data was lost from Sui. The later availability diagnosis is in v020-desktop-recovery-installed.json; the old cache comparison and its original fields remain unchanged."
+}

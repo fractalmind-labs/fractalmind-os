@@ -1,0 +1,385 @@
+{
+  "schema": "fractalmind.v020.authorized-oneoff-write.v1",
+  "status": "passed_installed_ui_chain_file_and_additional_cache",
+  "recordedAt": "2026-10-04T01:39:29.950943+00:00",
+  "scope": "Third distinct authorized intent on the installed Android r11 App, real isolated Ubuntu envd and localnet; no replay of earlier failed or cancelled Runs.",
+  "nativeUi": {
+    "at": "2026-10-04T01:23:10.004299+00:00",
+    "apk": "/tmp/fm-v020-projection-android-build-r11.json",
+    "messageId": "0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b",
+    "runId": "0x897aec205819d80a46ae00cd4b9e8ca04e163261d4db07f8be00bb96a5a864ff",
+    "messageToken": "38baadcd-b427-4094-ad2e-fbb70e311ecb",
+    "explicitNewIntent": "New independent Android r11 intent after settled cancelled Run 0x8403b4b71666a02ee0d53df65de8d89d3eb1578ad54224f42f1e0c96a3ca3730 and freshly verified absent target: create docs/ONE-OFF-UI-VERIFIED.md only after one-off Human approval in the installed Android workbench.",
+    "scope": {
+      "scopeGuard": {
+        "network": "localnet",
+        "rpcUrl": "http://127.0.0.1:29000",
+        "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+        "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+        "directPackageId": "0x70e43f069c7012b0e0ec2fa40792c64b0697ab0dff35184db0426a6402c8aafb",
+        "humanId": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe"
+      },
+      "host": "0xffa58c6cc96d2a1d6b2760d2d5c6a6b67beab290d35f53719969ebf691700b93",
+      "physical": "native-b0f907fcd70b00370193884cc2595fc77c7235bd0943e3e32df4e212c98ceef7",
+      "org": "0xca4b9dfce4026c83f7accf4300cdea5b49677eecc47942348aa97c4e319eb753",
+      "target": {
+        "kind": "ensure_text_files",
+        "files": [
+          {
+            "path": "docs/ONE-OFF-UI-VERIFIED.md",
+            "content": "Approved once and verified through the installed Android workbench.\n"
+          }
+        ]
+      },
+      "bounds": {
+        "paths": {
+          "file.read": [
+            "docs"
+          ],
+          "file.write": [
+            "docs"
+          ]
+        },
+        "max_calls": "3"
+      },
+      "localFaucetOnly": true
+    },
+    "displayedTaskJsonSha256": "ee9668b1ec1d96f23f687d5360dcd045d7406c88f88ed5b234bb3ff234aa9f40",
+    "displayedBoundsJsonSha256": "4200f43275d32b604a3e535ddec623d2be8c1cad22cfe8b08c47cfa09e46170c",
+    "desiredFileContentSha256": "4a9a40358fa6c07b2bee30f6835887391ca11e220541478f9228ae93ba88d313",
+    "httpSignedCommandBodySha256": null,
+    "httpBodyNotCollected": "Network logging intentionally records no body/headers/signatures; displayed task hash is not a transport body hash",
+    "fiveTransactionsActualGasMist": "117908600",
+    "fiveTransactionsMaxGasMist": "1000000000",
+    "renewal": {
+      "digest": "2HWK9NZRbtmHiQahsV9DaY6Ntt3Uj4ku6RY6K8b5yFoy",
+      "actualGasMist": "6828820",
+      "maxGasMist": "200000000",
+      "newVersion": 3,
+      "expiresAtMs": "1791080075991",
+      "scope": "status-only maxCalls0/budget0; approved historical4 preserved"
+    },
+    "firstDeliveryClickedOnce": true,
+    "technicalLocator": {
+      "requestId": "direct-run:0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b",
+      "messageId": "0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b",
+      "deliveryAttempted": true
+    },
+    "observerLimitation": "Listener closed 8s after first delivery while POST pending; resumed after UI had settled unknown. Final HTTP response/loadingFailed was not captured. No status inferred from absent events.",
+    "noAutomaticMutationRetry": true
+  },
+  "originalDeliveryOutcome": "SUCCEEDED_VERIFIED_THROUGH_INSTALLED_ANDROID_UI",
+  "confirmedUiTransactions": [
+    {
+      "title": "保存加密消息",
+      "locator": {
+        "requestId": "direct-message:38baadcd-b427-4094-ad2e-fbb70e311ecb",
+        "messageToken": "38baadcd-b427-4094-ad2e-fbb70e311ecb"
+      },
+      "submitClickedAt": 1791076740039,
+      "confirmedObservedAt": 1791076743311,
+      "receipt": {
+        "digest": "FDRq7EY9N7VD7it2p7c34oGugRzFSpteedDFocvXLgEw",
+        "status": "原交易已确认；执行状态请查看原 Run。"
+      },
+      "journal": {
+        "requestId": "direct-message:38baadcd-b427-4094-ad2e-fbb70e311ecb",
+        "digest": "FDRq7EY9N7VD7it2p7c34oGugRzFSpteedDFocvXLgEw",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "19719484"
+      }
+    },
+    {
+      "title": "申请本次审批",
+      "locator": {
+        "requestId": "direct-approval:0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b",
+        "messageId": "0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b"
+      },
+      "submitClickedAt": 1791076745178,
+      "confirmedObservedAt": 1791076748243,
+      "receipt": {
+        "digest": "89wSiYy7jk7UEwNjdbsqy2noKp791dsZoCwXTCDfHgB5",
+        "status": "原交易已确认；执行状态请查看原 Run。"
+      },
+      "journal": {
+        "requestId": "direct-approval:0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b",
+        "digest": "89wSiYy7jk7UEwNjdbsqy2noKp791dsZoCwXTCDfHgB5",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "19354684"
+      }
+    },
+    {
+      "title": "记录本次审批决定",
+      "locator": {
+        "requestId": "direct-decision:0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b:true",
+        "messageId": "0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b"
+      },
+      "submitClickedAt": 1791076753271,
+      "confirmedObservedAt": 1791076756179,
+      "receipt": {
+        "digest": "FoT4mnk38YNdbA2WPWBF75byG8MTo8kgdEAhNHj2QX2Q",
+        "status": "原交易已确认；执行状态请查看原 Run。"
+      },
+      "journal": {
+        "requestId": "direct-decision:0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b:true",
+        "digest": "FoT4mnk38YNdbA2WPWBF75byG8MTo8kgdEAhNHj2QX2Q",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "10831208"
+      }
+    },
+    {
+      "title": "授予执行权限",
+      "locator": {
+        "requestId": "direct-capability:0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b",
+        "messageId": "0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b"
+      },
+      "submitClickedAt": 1791076758605,
+      "confirmedObservedAt": 1791076761298,
+      "receipt": {
+        "digest": "4ynTj3356PFYsaB9aYG4gRQ59dRaLcwWoE5QxFySyK5y",
+        "status": "原交易已确认；执行状态请查看原 Run。"
+      },
+      "journal": {
+        "requestId": "direct-capability:0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b",
+        "digest": "4ynTj3356PFYsaB9aYG4gRQ59dRaLcwWoE5QxFySyK5y",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "19166280"
+      }
+    },
+    {
+      "title": "准备原执行",
+      "locator": {
+        "requestId": "direct-run:0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b",
+        "messageId": "0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b"
+      },
+      "submitClickedAt": 1791076764532,
+      "confirmedObservedAt": 1791076770264,
+      "receipt": {
+        "digest": "J2D2aq6Eyjdb8dtJiMWB7HFPisyMpLBywGGtCuC1RqSp",
+        "status": "原交易已确认；执行状态请查看原 Run。"
+      },
+      "journal": {
+        "requestId": "direct-run:0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b",
+        "digest": "J2D2aq6Eyjdb8dtJiMWB7HFPisyMpLBywGGtCuC1RqSp",
+        "status": "confirmed",
+        "revision": 2,
+        "actualGas": "48836944"
+      }
+    }
+  ],
+  "independentChain": {
+    "checkedAt": "2026-10-04T01:23:39.861Z",
+    "readOnly": true,
+    "transactionBroadcasts": 0,
+    "successVerified": true,
+    "run": {
+      "id": "0x897aec205819d80a46ae00cd4b9e8ca04e163261d4db07f8be00bb96a5a864ff",
+      "command_id": "ddef7a41-7763-4d8c-ac51-f562ae3f06a9",
+      "state": 2,
+      "issued_at_ms": "1791076762920",
+      "expires_at_ms": "1791077038853",
+      "started_at_ms": "1791076825291",
+      "updated_at_ms": "1791076964884",
+      "result_record": "0x218293a97b000fdc6dfa683268b2afdaf6f7c05a834019afc263d4d07425564f"
+    },
+    "message": {
+      "id": "0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b",
+      "expires_at_ms": "1791077038853",
+      "permission_id": "0xf5f22ebcd88e8ae2ffe63b05f3ec3f255379b376feaf7735fe8a11895b2e47cf",
+      "permission_version": "3"
+    },
+    "permission": {
+      "id": "0xf5f22ebcd88e8ae2ffe63b05f3ec3f255379b376feaf7735fe8a11895b2e47cf",
+      "version": "3",
+      "allowed_actions": [
+        "status"
+      ],
+      "max_calls": "0",
+      "budget_limit": "0",
+      "spent": "0",
+      "reserved": "0",
+      "approved_spent": "7",
+      "approved_reserved": "0"
+    },
+    "claim": {
+      "capability_id": "0x8769f77980bb21b187bce32358455f1f6663e0921b7b31e1d3011f2dfd481d46",
+      "message_id": "0xa326d07a12a5693b6f33d01c9683d0312c21dc658a36827271d0bb21a2a14b4b",
+      "permission_version": "3",
+      "approval_id": "0xaf008579fa9ce1346156b1a1df90ff79cee9247686752f59223f466f029925a3",
+      "reserved": "3",
+      "spent": "3",
+      "settled": true
+    },
+    "budget": {
+      "spent": "3",
+      "reserved": "0"
+    },
+    "reservation": {
+      "reservedAmount": "3",
+      "spentAmount": "3",
+      "settled": true
+    },
+    "resultRecord": {
+      "id": "0x218293a97b000fdc6dfa683268b2afdaf6f7c05a834019afc263d4d07425564f",
+      "kind": 5,
+      "revision": "1",
+      "key_version": "1",
+      "encrypted_body": {
+        "bytes": 1418,
+        "sha256": "1437f3c7b97c272450df16a329fa2647be85eb686d564ce42ce89809348976b5"
+      }
+    }
+  },
+  "independentCloud": {
+    "checkedAt": "2026-10-04T01:22:25.645297+00:00",
+    "readOnly": true,
+    "runtimeSha256": "5e09cc91695d76b880dc072b57ceb6dc93a63eaefc92762b37138756c5356d47",
+    "signedCommandCount": 8,
+    "files": [
+      {
+        "name": "REVIEW-WINDOW.md",
+        "exists": true,
+        "bytes": 54,
+        "sha256": "c58966b2e6288daf6c54a5df3bfef3f8eb0bf91833240efaf1744f9a20a24a52",
+        "matchesRequestedContent": null
+      },
+      {
+        "name": "ONE-OFF-UI.md",
+        "exists": true,
+        "bytes": 55,
+        "sha256": "6d7b5941db8bf3340cca6ec235ac7c72bc55ae207689c4e9887d5ad78dd18f1e",
+        "matchesRequestedContent": null
+      },
+      {
+        "name": "ONE-OFF-UI-VERIFIED.md",
+        "exists": true,
+        "bytes": 68,
+        "sha256": "4a9a40358fa6c07b2bee30f6835887391ca11e220541478f9228ae93ba88d313",
+        "matchesRequestedContent": true
+      }
+    ],
+    "oldHashesStable": true
+  },
+  "installedResultDecryption": {
+    "status": "passed",
+    "source": "/tmp/fm-v020-review-window-ui-r1-215-direct-r11-original-success-read.json",
+    "originalRun": "0x897aec205819d80a46ae00cd4b9e8ca04e163261d4db07f8be00bb96a5a864ff",
+    "resultRecord": "0x218293a97b000fdc6dfa683268b2afdaf6f7c05a834019afc263d4d07425564f",
+    "resultTransaction": "5k5C56ypLdRJia9gE5AkY3CR2tjf1PMT2nqFVZpGkw9a",
+    "resultJsonSha256": "824b0b419c8e33ec68eae06509e15697e6258d3b4ea7c2ae952e323db1a4fc03",
+    "duplicate": false,
+    "ok": true,
+    "evidenceVerified": true
+  },
+  "newResultCacheReconstruction": {
+    "status": "passed",
+    "evidence": "v020-authorized-result-cache-reconstruction.json",
+    "businessSha256": "31adcf56e25f6bfab3930429d121b72f7edb6109b418df3994307e9e8f4359dd",
+    "counts": {
+      "organizations": 1,
+      "hosts": 1,
+      "memberships": 1,
+      "managedAgents": 2,
+      "okrs": 2,
+      "permissions": 2,
+      "directMessages": 8,
+      "directApprovals": 7,
+      "runs": 9,
+      "unsettledControlRuns": 0,
+      "encryptedRecords": 47,
+      "currentRecordPointers": 34,
+      "chainCommandDeliveries": 0,
+      "chainObjectMetadataRead": 96
+    },
+    "journalRows": 62,
+    "noNewTransactions": true,
+    "noNewCommands": true,
+    "coordinatorRestartedThisPass": false,
+    "historicalCacheProofUnchanged": "v020-work-cache-reconstruction.json"
+  },
+  "limitations": [
+    "The initial HTTP outcome remains unknown; the listener did not capture the final response. Original Run queries recovered the successful business result, without another delivery.",
+    "Displayed task and boundary hashes are not signed transport-body hashes; no request body, headers or signatures were recorded.",
+    "This evidence does not declare all installed UI or v0.2.0 complete. Desktop Host admission/handover/execution verification and final source build/CI remain."
+  ],
+  "sources": [
+    {
+      "path": "/tmp/fm-v020-authorized-installed-ui-final-attempt-r3.json",
+      "sha256": "8e6343d6195c891fc87bc11397e9d54b0dbdde08bdeddb5052b7508f2209abb7"
+    },
+    {
+      "path": "/tmp/fm-v020-authorized-result-third-direct-observed-02.json",
+      "sha256": "49528d98436d8f53fe37c8bc63b5b8cc5b4f64c5170a5aac2e7aaba1b714d873"
+    },
+    {
+      "path": "/tmp/fm-v020-authorized-cloud-third-direct-observed-01.json",
+      "sha256": "63b2629dc6348cb97fcc1e490d58d0e9cb7c5587cd187fd2e3c0fa7bc2763535"
+    },
+    {
+      "path": "/tmp/fm-v020-authorized-cloud-third-direct-final.json",
+      "sha256": "ba3fb905468a34f2f2d6991f91b273c580dfb9a653657d7070c18c537bd54cdf"
+    },
+    {
+      "path": "/tmp/fm-v020-authorized-final-cache-reconstruction.json",
+      "sha256": "7592063f9fbbe42a661fb96934deee54b39039d167363fa5b2f01b7b734902ee"
+    },
+    {
+      "path": "/tmp/fm-v020-android-success-cache-rebuild-final.json",
+      "sha256": "9d4ecc1a13f96afbebcd5fe66a9353d96a99cad8d8f47ec460542a114d7e8851"
+    }
+  ],
+  "independentCloudFinal": {
+    "checkedAt": "2026-10-04T01:24:51.100221+00:00",
+    "readOnly": true,
+    "pid": 2441063,
+    "runtimeSha256": "5e09cc91695d76b880dc072b57ceb6dc93a63eaefc92762b37138756c5356d47",
+    "signedCommandCount": 8,
+    "files": [
+      {
+        "name": "REVIEW-WINDOW.md",
+        "exists": true,
+        "bytes": 54,
+        "sha256": "c58966b2e6288daf6c54a5df3bfef3f8eb0bf91833240efaf1744f9a20a24a52",
+        "modifiedAtUtc": "2026-10-03T20:54:11.919142+00:00",
+        "matchesRequestedContent": null
+      },
+      {
+        "name": "ONE-OFF-UI.md",
+        "exists": true,
+        "bytes": 55,
+        "sha256": "6d7b5941db8bf3340cca6ec235ac7c72bc55ae207689c4e9887d5ad78dd18f1e",
+        "modifiedAtUtc": "2026-10-03T23:04:04.601176+00:00",
+        "matchesRequestedContent": null
+      },
+      {
+        "name": "ONE-OFF-UI-VERIFIED.md",
+        "exists": true,
+        "bytes": 68,
+        "sha256": "4a9a40358fa6c07b2bee30f6835887391ca11e220541478f9228ae93ba88d313",
+        "modifiedAtUtc": "2026-10-04T01:21:51.447474+00:00",
+        "matchesRequestedContent": true
+      }
+    ],
+    "workspaceFiles": [
+      "docs/ONE-OFF-UI-VERIFIED.md",
+      "docs/ONE-OFF-UI.md",
+      "docs/REVIEW-WINDOW.md"
+    ],
+    "oldHashesStable": true,
+    "oneAdditionalHostCommand": true,
+    "exactFileContentVerified": true,
+    "runId": "0x897aec205819d80a46ae00cd4b9e8ca04e163261d4db07f8be00bb96a5a864ff",
+    "chainReport": "/tmp/fm-v020-authorized-result-third-direct-observed-02.json",
+    "chainState": 2,
+    "spent": "3",
+    "reserved": "0",
+    "resultRecord": "0x218293a97b000fdc6dfa683268b2afdaf6f7c05a834019afc263d4d07425564f",
+    "runStartedAtUtc": "2026-10-04T01:20:25.291000+00:00",
+    "runUpdatedAtUtc": "2026-10-04T01:22:44.884000+00:00",
+    "runExpiresAtUtc": "2026-10-04T01:23:58.853000+00:00"
+  }
+}

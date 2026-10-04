@@ -1,0 +1,885 @@
+{
+  "schema": "fractalmind.v020.desktop-recovery-installed.v1",
+  "status": "passed_scoped_acceptance",
+  "recordedAt": "2026-10-04T01:54:05.787807+00:00",
+  "build": {
+    "label": "desktop-r12",
+    "at": "2026-10-04T01:41:47.602142+00:00",
+    "baseHead": "d381738c5e00b5fb2ed66ab9e85a742721d5b0a8",
+    "uncommittedSource": true,
+    "binarySha256": "544450679a0623b09d06b756f0240a049698032510e839b72d7f30454729b13d",
+    "sourceSha256": {
+      "apps/fractalmind-app/src/agent-import.ts": "dd1fbd499ae9f14a403546c21b6863d1e8e8f14821cd417d470a9603912eb029",
+      "apps/fractalmind-app/src/AgentImportFlow.tsx": "ddf06b03f5228bd8757e09f7317631ebffc8717d20626f0e3c6c7515aac04ea1",
+      "apps/fractalmind-app/src/OkrProjection.tsx": "49f69791729f2ab04fa7bd40ee92286a3825a61434da60651a57f54d63e1b333",
+      "apps/fractalmind-app/src/okr-projection-file-picker.ts": "b5bf2f3ca0c904f4fd4019a895c50e40a256552898174c04f91a670af113f71e",
+      "apps/fractalmind-app/src-tauri/src/okr_export.rs": "5c31067a2ddacf23c00b549e16fdf5bc21d1f5fbcd075aadefc2666aefbb34db",
+      "apps/fractalmind-app/src-tauri/platform/android/MainActivity.kt": "3731e87df45301d91649e2b7b2682dbf059d68a5ca1605506692814cb33790bb"
+    },
+    "buildLog": "/tmp/fm-v020-desktop-final-r12-build.log",
+    "codesignStrictVerify": true,
+    "isolatedProfile": "test-core-4bea7f30"
+  },
+  "trigger": "Rebuilt debug package waited on the old isolated profile Keychain. The operator did not interact with the security dialog or change ACLs; it exited the uncompleted read and used the official Recovery UI with the test recovery code to a new isolated profile.",
+  "profileAfter": "test-core-r12-recovery",
+  "actualUiSteps": [
+    {
+      "name": "r12-official-recovery-fee",
+      "at": "2026-10-04T01:45:48.585Z",
+      "digest": "FfFs5CSL9dbKfu2EpJFSxVgH5vCCKUmw8nJsq23a1c3i",
+      "estimatedGasMist": "18798292",
+      "gasCeilingMist": "200000000",
+      "profile": "test-core-r12-recovery",
+      "newDevice": "0xc6a10e97c5ebe48bf83873d383c47f5086eedee71b29d8c1840689d462e983f3"
+    },
+    {
+      "name": "r12-official-recovery-result",
+      "at": "2026-10-04T01:46:05.321Z"
+    },
+    {
+      "name": "r12-recovery-first-discovery-read-unavailable",
+      "at": "2026-10-04T01:47:53.853Z"
+    },
+    {
+      "name": "r12-old-import-history-depends-on-old-profile",
+      "at": "2026-10-04T01:52:15.578Z"
+    }
+  ],
+  "independentPublicRead": {
+    "checkedAt": "2026-10-04T01:49:17.982Z",
+    "readOnly": true,
+    "broadcasts": 0,
+    "scope": {
+      "network": "localnet",
+      "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+      "humanId": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+      "organizationId": "0x53e622cedfe98236634e3340753b4191f9840dfae36ded85588b18efa12f7bef",
+      "okrId": "0x5ae0d408b36fda916f0a11c610eefef145d6dbb9b783c24d20a1d6f522ee05fa"
+    },
+    "recovery": {
+      "transaction": "FfFs5CSL9dbKfu2EpJFSxVgH5vCCKUmw8nJsq23a1c3i",
+      "generationBefore": "1",
+      "generationAfter": "2",
+      "recoveryVersionBefore": "1",
+      "recoveryVersionAfter": "2",
+      "previousRecord": {
+        "id": "0xcb5d7012cf74a6580938651fd39b25c69bca7dca63a2c88749493fb4cf1d8bc7",
+        "version": "1",
+        "active": false
+      },
+      "currentRecord": {
+        "id": "0xb166d05e1f6644a04aaaf701bcfdb14dfb7aaea2e6dc1903cc5116541e00cb56",
+        "version": "2",
+        "active": true
+      }
+    },
+    "grants": [
+      {
+        "id": "0xa2e55a061e498a88b2777a475d7cc586cde8da4e39f7d49ed2eeac0129f3d1ee",
+        "device": "0x6cded1c1fa1d2e0fc478e4ec217b91c746a52e0c3087525aebe871fdac828fec",
+        "generation": "1",
+        "revoked": false,
+        "currentGeneration": false,
+        "currentValid": false
+      },
+      {
+        "id": "0x8d5bbaeae5eeb412828ec9fbfb87df5fb6b6c1d5920c46c611816b5120b3c881",
+        "device": "0xc6a10e97c5ebe48bf83873d383c47f5086eedee71b29d8c1840689d462e983f3",
+        "generation": "2",
+        "revoked": false,
+        "currentGeneration": true,
+        "currentValid": true
+      }
+    ],
+    "organization": {
+      "objectId": "0x53e622cedfe98236634e3340753b4191f9840dfae36ded85588b18efa12f7bef",
+      "admin": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a"
+    },
+    "okr": {
+      "id": "0x5ae0d408b36fda916f0a11c610eefef145d6dbb9b783c24d20a1d6f522ee05fa",
+      "state": 0,
+      "version": "3",
+      "spec_revision": "3",
+      "agreement_version": "2",
+      "spec_record": "0x33f2cdd46e3043b2d5787235e0136759b09b02c639b77759ff3d693c861e2de8"
+    },
+    "specRecord": {
+      "id": "0x33f2cdd46e3043b2d5787235e0136759b09b02c639b77759ff3d693c861e2de8",
+      "revision": "3",
+      "previous": "0xe9618781d62de9075be187703d4885379d507839a060c6cd011dc2d70663dafc",
+      "encrypted_body": {
+        "bytes": 840,
+        "sha256": "b178a60bcc2660f1480a71fba9770a2acf0dbebb192d506e8bb455aa9721f264"
+      }
+    },
+    "objectTransactionAssociations": [
+      {
+        "id": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+        "previousTransaction": "FfFs5CSL9dbKfu2EpJFSxVgH5vCCKUmw8nJsq23a1c3i",
+        "bcsSha256": "437e253bbdca981887fddd5b12188b3524e2fdc826cba1ec39eef84dc1788a9c"
+      },
+      {
+        "id": "0x8d5bbaeae5eeb412828ec9fbfb87df5fb6b6c1d5920c46c611816b5120b3c881",
+        "previousTransaction": "FfFs5CSL9dbKfu2EpJFSxVgH5vCCKUmw8nJsq23a1c3i",
+        "bcsSha256": "69f6723297338a9f0ae4ca09ff7a36ac652abd3aa689436d6bcc830c8ef98f22"
+      },
+      {
+        "id": "0xb166d05e1f6644a04aaaf701bcfdb14dfb7aaea2e6dc1903cc5116541e00cb56",
+        "previousTransaction": "FfFs5CSL9dbKfu2EpJFSxVgH5vCCKUmw8nJsq23a1c3i",
+        "bcsSha256": "d38617349a14b77c61d273cbe74a8386804eadbb004e4780ca73443aa56eeed6"
+      },
+      {
+        "id": "0xcb5d7012cf74a6580938651fd39b25c69bca7dca63a2c88749493fb4cf1d8bc7",
+        "previousTransaction": "FfFs5CSL9dbKfu2EpJFSxVgH5vCCKUmw8nJsq23a1c3i",
+        "bcsSha256": "5bad0ddf78383abb3f22b1d2d1a8aab103432b39bc7def25903b8004094e2e2d"
+      }
+    ],
+    "checks": {
+      "sameHuman": true,
+      "sameOrganization": true,
+      "oneCurrentGenerationGrant": true,
+      "currentDeviceMatches": true,
+      "oldGrantInvalidByGeneration": true,
+      "oldRecoveryRecordInactive": true,
+      "newRecoveryRecordActive": true,
+      "okrUnchanged": true,
+      "specCiphertextUnchanged": true,
+      "recoveryTransactionAssociations": true
+    },
+    "limits": [
+      "No recovery code, private key, native vault or decrypted historical key material was accessed.",
+      "Historical key usability and transaction fee are not independently verified by this public-state-only probe."
+    ]
+  },
+  "freshHostDiscovery": {
+    "status": "passed_after_recovery",
+    "source": "Root actual UI observation; prior read-unavailable step remains in the source history.",
+    "retainedReadHistory": [
+      "First new-profile read returned read_unavailable after the read timeout.",
+      "Second read succeeded but its observation expired during the UI pause.",
+      "Third continuous actual UI read produced a fresh verified observation."
+    ],
+    "notKeychain": "These new-profile read/expiry events are distinct from the old profile Keychain wait that triggered official recovery."
+  },
+  "importQuoteFix": {
+    "status": "implemented_and_local_tests_passed",
+    "ttlMs": 120000,
+    "scope": "AgentImport only; explicit expired-quote guidance. Other operation deadlines unchanged.",
+    "newRealTransactionManagerFakeClockTests": 9,
+    "fullAppTestsPassed": 352,
+    "fullAppTestsFailed": 0,
+    "typescript": "passed",
+    "vite": "passed",
+    "installedFullImportAcceptance": "not_passed"
+  },
+  "currentBlocker": "Read-only query of the old import attempt tries to load the old device key after official recovery. Minimal repair is in progress; no successful desktop import/handover/execution claim.",
+  "limitations": [
+    "No recovery code, invitation secret, private key or full native UI text is published.",
+    "Old grant remains revoked=false but is invalid by generation mismatch; do not describe it as flag-revoked.",
+    "Public-state continuity does not independently prove recovered historical keys can decrypt or independently verify recovery fees.",
+    "Final source build/CI and complete desktop core flow remain required; PR remains draft."
+  ],
+  "sources": [
+    {
+      "path": "/tmp/fm-v020-desktop-core-recovery-r12-public-independent.json",
+      "sha256": "f4d8553dd439568b3533281b1dfa277a56accc9df78d34675f3bda270b30234e"
+    },
+    {
+      "path": "/tmp/fm-v020-desktop-r12-build-public.json",
+      "sha256": "faef9cd456681ec4b051e0da37cdb17073bfd324f6f3475e4dc8af1eb6cd9e04"
+    },
+    {
+      "path": "/tmp/fm-v020-agent-import-120s-app-suite.log",
+      "sha256": "611779f9c3f998b956fcf8e3c58f137e426e225224df1b85b44013aa5482e976"
+    },
+    {
+      "path": "/tmp/fm-v020-desktop-core-ui.json",
+      "sha256": "bdad3f6b91ef65b9dad4d18a95105b6d298f39f4140200ab358e6503cce335e4"
+    },
+    {
+      "path": "/tmp/fm-v020-native-okr-export-test.log",
+      "sha256": "982824376993b3e16f3178fc9425792ac8d653b33ea50b8d7b00f691838b97bf"
+    }
+  ],
+  "nativeExportBoundaryTest": {
+    "command": "cargo test --lib okr_export::tests",
+    "passed": 1,
+    "failed": 0,
+    "test": "export_requires_consent_and_bounded_projection",
+    "source": "/tmp/fm-v020-native-okr-export-test.log"
+  },
+  "latestProgressR14": {
+    "status": "recovery_and_database_continuity_verified_core_flow_in_progress",
+    "recordedAt": "2026-10-04T02:11:35.643049+00:00",
+    "build": {
+      "label": "desktop-r14",
+      "at": "2026-10-04T02:03:20.465766+00:00",
+      "baseHead": "d381738c5e00b5fb2ed66ab9e85a742721d5b0a8",
+      "uncommittedSource": true,
+      "binarySha256": "fa5c23c6a38de30b13f55030f8b1863e50f9c9f3baffa9cfdebd384b17def137",
+      "sourceSha256": {
+        "apps/fractalmind-app/src/agent-import.ts": "f3a37b3b0fe91e901590bd13960d7e412a2775c0a4440acec7fe255ff50b3170",
+        "apps/fractalmind-app/src/agent-import-history.ts": "9b8a539b6aeb4b640eccc581370e8acbfcbf82c267756b497bed05d35c3b62c9",
+        "apps/fractalmind-app/src/AgentImportFlow.tsx": "36fa8de2c0015a9dc1ff1aadf4f5b48352759339849af1178a137d005cf2bc9b",
+        "apps/fractalmind-app/src/OkrProjection.tsx": "49f69791729f2ab04fa7bd40ee92286a3825a61434da60651a57f54d63e1b333",
+        "apps/fractalmind-app/src/okr-projection-file-picker.ts": "b5bf2f3ca0c904f4fd4019a895c50e40a256552898174c04f91a670af113f71e",
+        "apps/fractalmind-app/src-tauri/src/okr_export.rs": "5c31067a2ddacf23c00b549e16fdf5bc21d1f5fbcd075aadefc2666aefbb34db",
+        "apps/fractalmind-app/src-tauri/platform/android/MainActivity.kt": "3731e87df45301d91649e2b7b2682dbf059d68a5ca1605506692814cb33790bb"
+      },
+      "buildLog": "/tmp/fm-v020-desktop-final-r14-build.log",
+      "codesignStrictVerify": true
+    },
+    "actualUiSteps": [
+      {
+        "name": "r14-official-recovery-fee",
+        "at": "2026-10-04T02:05:32.475Z",
+        "digest": "5cQLkQ6aoqZtY9b3nvJ88tynxGc9eFkvXo5ofPTV9fVU",
+        "estimatedGasMist": "19893680",
+        "gasCeilingMist": "200000000",
+        "profile": "test-core-r14-recovery",
+        "deviceAddress": "0xed96225f2dbc1a86c0c3e1884bcb74be17925375d136243a77cdc7bae9317d5c"
+      },
+      {
+        "name": "r14-official-recovery-result",
+        "at": "2026-10-04T02:05:47.010Z"
+      }
+    ],
+    "recovery": {
+      "transaction": "5cQLkQ6aoqZtY9b3nvJ88tynxGc9eFkvXo5ofPTV9fVU",
+      "profileAfter": "test-core-r14-recovery",
+      "newDevice": "0xed96225f2dbc1a86c0c3e1884bcb74be17925375d136243a77cdc7bae9317d5c",
+      "generationBefore": "2",
+      "generationAfter": "3",
+      "recoveryVersionBefore": "2",
+      "recoveryVersionAfter": "3",
+      "estimatedGasMist": "19893680",
+      "gasEvidence": "Later independent full SDK and raw gRPC receipts both report success; computationCost + storageCost - storageRebate = 19,893,680 MIST.",
+      "actualGasMist": "19893680"
+    },
+    "independentPublicRead": {
+      "checkedAt": "2026-10-04T02:08:02.880Z",
+      "readOnly": true,
+      "broadcasts": 0,
+      "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+      "humanId": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+      "organizationId": "0x53e622cedfe98236634e3340753b4191f9840dfae36ded85588b18efa12f7bef",
+      "organizationAdmin": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+      "generation": "3",
+      "recoveryVersion": "3",
+      "grants": [
+        {
+          "id": "0xa2e55a061e498a88b2777a475d7cc586cde8da4e39f7d49ed2eeac0129f3d1ee",
+          "device": "0x6cded1c1fa1d2e0fc478e4ec217b91c746a52e0c3087525aebe871fdac828fec",
+          "generation": "1",
+          "revoked": false,
+          "currentGeneration": false
+        },
+        {
+          "id": "0x8d5bbaeae5eeb412828ec9fbfb87df5fb6b6c1d5920c46c611816b5120b3c881",
+          "device": "0xc6a10e97c5ebe48bf83873d383c47f5086eedee71b29d8c1840689d462e983f3",
+          "generation": "2",
+          "revoked": false,
+          "currentGeneration": false
+        },
+        {
+          "id": "0xe39bfe0405199bb2d94e5c68614c8ee8603bf47e5aaba7dbeac967e1fc4ef116",
+          "device": "0xed96225f2dbc1a86c0c3e1884bcb74be17925375d136243a77cdc7bae9317d5c",
+          "generation": "3",
+          "revoked": false,
+          "currentGeneration": true
+        }
+      ],
+      "okr": {
+        "id": "0x5ae0d408b36fda916f0a11c610eefef145d6dbb9b783c24d20a1d6f522ee05fa",
+        "state": 0,
+        "version": "3",
+        "agreement_version": "2",
+        "spec_record": "0x33f2cdd46e3043b2d5787235e0136759b09b02c639b77759ff3d693c861e2de8",
+        "spec_revision": "3"
+      },
+      "specCiphertext": {
+        "bytes": 840,
+        "sha256": "b178a60bcc2660f1480a71fba9770a2acf0dbebb192d506e8bb455aa9721f264"
+      }
+    },
+    "environmentRestoration": {
+      "chainRestored": true,
+      "genesisReset": false,
+      "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+      "genesisAndConfigHashes": {
+        "genesis.blob": "f6b99211058ded3a7fd44b1bf646116a6619beb448b1830a87024476b52ba40f",
+        "network.yaml": "24e64f0803368a681a9a4c0508e38b43d21ea6eef8503c2c69219c8f9285fc39",
+        "fullnode.yaml": "b1617b71b84588b6bd2622315526d3ab92852f05b9a69fa82b745d6fa21b75b1"
+      },
+      "oldCloudRuntime": {
+        "pid": 2487512,
+        "terminated": true,
+        "lastLog": "received signal terminated, shutting down",
+        "vaultSessionGone": true,
+        "encryptedKeyringPreserved": true,
+        "oldSigningKeyRecovered": false
+      },
+      "newHost": {
+        "format": "1",
+        "profile": "test-desktop-restored-cd7e75187dcf18f9a8ad7628",
+        "host_address": "0xe71fb93375793024af0a8aba7d2c27e8f10afa726b8e7aeb6617f99c0d0057c3",
+        "signing_public_key": "320c15ee91c83e987c94545231efde4267f8a30e285f26d97cbc060d373cd2ca",
+        "encryption_public_key": "e4f08b67d14bdafec30ef67b6e165ce9feeed739d6a8a9af5d554ce54512413f"
+      },
+      "workerStartedAtSnapshot": false,
+      "otherUserEnvdProcessesModified": false,
+      "scope": "The interrupted localnet, Coordinator and temporary cloud supervisor stopped. The same localnet database was reopened. The old temporary cloud Secret Service session password was not persisted and cannot unlock the preserved encrypted vault; a new isolated Host is prepared for normal invitation admission. Prior Host identities, files and historical evidence remain preserved."
+    },
+    "localValidation": {
+      "appTests": 360,
+      "passed": 360,
+      "failed": 0,
+      "typescript": "passed",
+      "vite": "passed_in_r14_build",
+      "newImportHistoryTests": 8,
+      "precedingImportQuoteTests": 9,
+      "finalCiConfirmed": false
+    },
+    "currentBlocker": "Host public-history and independent-operation repairs passed 25 focused tests and full App 370/370 plus strict TypeScript. Original unknown/history remains retained; only exact notFound plus a valid prior terminal journal permits a separate user-selected UUID, while pending stays blocked. Rebuilt installed UI, new Host admission, desktop import/handover/execution and final-source CI remain unverified.",
+    "limits": [
+      "The fresh public snapshot proves Human/organization and public-state continuity, not historical key usability. Actual r14 recovery Gas is independently verified by the separately retained full-receipt diagnosis.",
+      "The prepared new Host had not joined or started its worker at the restoration snapshot.",
+      "The complete desktop core flow and final-source CI remain required; PR remains draft."
+    ],
+    "sources": [
+      {
+        "path": "/tmp/fm-v020-desktop-r14-build-public.json",
+        "sha256": "051f5ed1dd098c4c0cb307c5e65a279eccad1ebcefc24ed87e50baff6351fcde"
+      },
+      {
+        "path": "/tmp/fm-v020-desktop-core-ui.json",
+        "sha256": "5754041772f920e4dd4368056edb6a2ee3f77f045db216514daade198695fc1d"
+      },
+      {
+        "path": "/tmp/fm-v020-desktop-core-chain-restored-detached-20261004.json",
+        "sha256": "3c350ffb9af3326568184cc6b3bb4e02f07a7e9e868ae7064d2bbf13bef423d0"
+      },
+      {
+        "path": "/tmp/fm-v020-desktop-restored-833288c0674f/restoration-public.json",
+        "sha256": "270d09c3c0779d5ae347b577f08ecfb61942bc0bd7de4b1d2c3cc2b50c803e28"
+      },
+      {
+        "path": "/tmp/fm-v020-final-code-validation-app-tests.log",
+        "sha256": "9cacd57b9198e3a16711f0dc3e5355f58b8887d9a0a4cf7c9d5174cb11281322"
+      },
+      {
+        "path": "/tmp/fm-v020-final-code-validation-tsc.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "/tmp/fm-v020-desktop-final-r14-build.log",
+        "sha256": "823fbbf71c7358134d9f69ed58ed3bd68e9ebb2fa58dba8c9a1e1dc96dea7935"
+      }
+    ]
+  },
+  "transactionAvailabilityDiagnosis": {
+    "checkedAt": "2026-10-04T02:17:40.605172+00:00",
+    "readOnly": true,
+    "newProductJsonRpcFallback": false,
+    "scope": "Diagnostic comparison only. NOT_FOUND describes the queried RPC availability; it does not establish that the transaction/effects were lost from the chain.",
+    "oldHostInvitation": {
+      "digest": "CAqJfSAbAH5BEpNDM3fx48h5iEB7SEagDhy6c89qrYmQ",
+      "grpcSdkFullAndMinimal": "NOT_FOUND",
+      "grpcRawFullAndDigest": "NOT_FOUND",
+      "grpcCli": "NOT_FOUND",
+      "lowestAvailableCheckpoint": "1178598",
+      "legacyJsonRpcSameNode": {
+        "status": "success",
+        "checkpoint": "1161953",
+        "executedEpoch": "4211",
+        "actualGasMist": "4958376"
+      },
+      "finding": "The full legacy JSON-RPC effects remain readable for checkpoint 1161953, below this gRPC service retention window. SDK field masks are not the cause."
+    },
+    "recoveryR14": {
+      "digest": "5cQLkQ6aoqZtY9b3nvJ88tynxGc9eFkvXo5ofPTV9fVU",
+      "checkedAt": "2026-10-04T02:12:32.099Z",
+      "sdkFullReceipt": "success",
+      "rawFullReceipt": "success",
+      "checkpoint": "1179330",
+      "effectsGasUsed": {
+        "computationCost": "1450000",
+        "storageCost": "37103200",
+        "storageRebate": "18659520",
+        "nonRefundableStorageFee": "188480"
+      },
+      "actualGasMist": "19893680",
+      "initialUiUnknownCause": "The original five-second unknown observation has no saved wire diagnostic; do not attribute it to the later proven old-invitation retention window."
+    },
+    "androidProjection": {
+      "digest": "6rH9DET71SduPsYCCAAPXLtp58p1QXwojwGRzMAed7xX",
+      "legacyJsonRpcSameNode": {
+        "status": "success",
+        "checkpoint": "1165494",
+        "executedEpoch": "4224",
+        "actualGasMist": "10456680"
+      },
+      "earlierGrpcNotFoundRetained": true
+    },
+    "historicalTerminologyCorrection": "Earlier historical fields named pruned retain the observed NOT_FOUND/unknown outcome. A stronger claim of chain data loss or universal receipt unavailability is not supported.",
+    "sources": [
+      {
+        "path": "/tmp/fm-v020-transaction-read-diagnosis-CAqJfSAb.json",
+        "sha256": "12609e079142e1a37a4612f8abd38e9b96c4de76289cf0cf832b294f09122ae7"
+      },
+      {
+        "path": "/tmp/fm-v020-transaction-cli-diagnosis-CAqJfSAb.json",
+        "sha256": "a11003d29f4bcd11d917c0887a435ee692e07d74e064fd5d84d4351f63b94338"
+      },
+      {
+        "path": "/tmp/fm-v020-transaction-read-diagnosis-5cQLkQ6a.json",
+        "sha256": "3270c2ba2ae44e25fe1fb208dfea40ef07d5a16033198f896ce2afae027c08b4"
+      },
+      {
+        "path": "/tmp/fm-v020-transaction-jsonrpc-read-comparison.json",
+        "sha256": "731875e3ff4218062fae45fdfd7983303b564439d33b405f3f60e4f0c1b775e7"
+      }
+    ]
+  },
+  "hostHistoryLocalValidation": {
+    "recordedAt": "2026-10-04T02:27:30.428084+00:00",
+    "status": "local_tests_passed_installed_ui_pending",
+    "focused": {
+      "passed": 25,
+      "failed": 0
+    },
+    "fullApp": {
+      "passed": 370,
+      "failed": 0
+    },
+    "typescript": {
+      "status": "passed",
+      "exitCode": 0,
+      "evidence": "Operator-confirmed r3 exit 0; the saved tsc log is empty, as expected for successful tsc."
+    },
+    "diffCheck": "passed",
+    "buildStatus": "r15_pending_at_this_snapshot",
+    "finalCiConfirmed": false,
+    "sourceHashes": [
+      {
+        "path": "apps/fractalmind-app/src/HostAccess.tsx",
+        "sha256": "638f7caf38408df3379a6ecba41003b26ab6002cc9677ab4f5e2a94d6fa6ea3a"
+      },
+      {
+        "path": "apps/fractalmind-app/src/host-transaction-history.ts",
+        "sha256": "39bc80291e435f2d32985e727c63ce2a03f5fdac5c7b64767d2bf5cc77bcf067"
+      },
+      {
+        "path": "apps/fractalmind-app/src/transaction-history.ts",
+        "sha256": "9a8f1c0b26db6b141ac61624682740360e467f94b2d8ae8e8dff4e52a417efd9"
+      },
+      {
+        "path": "apps/fractalmind-app/src/agent-import-history.ts",
+        "sha256": "41196e1290d05817e3241848cdcb807ac7c8eb5e3a907c7243973f76b9a9b2df"
+      },
+      {
+        "path": "apps/fractalmind-app/tests/host-transaction-history.test.ts",
+        "sha256": "eb7b1c0a23213c8e17e7f2c887006b5d8a9cfc4cd59da72b3015d2059c03c873"
+      },
+      {
+        "path": "apps/fractalmind-app/tests/transaction-history.test.ts",
+        "sha256": "cd07a9794e1dbdba290883a868ed503b166a628493a757ed2c5fce0225828c05"
+      }
+    ],
+    "sources": [
+      {
+        "path": "/tmp/fm-v020-host-history-focused-r2.log",
+        "sha256": "301b980197bbda8279b3a9d1a869d9c3de61c4ed58be631835d5ffb6a875d507"
+      },
+      {
+        "path": "/tmp/fm-v020-host-history-full-app-r2.log",
+        "sha256": "ecb0932f881db9c349107d6526947146a6eb2a2316087897f386dbef475092ba"
+      },
+      {
+        "path": "/tmp/fm-v020-host-history-tsc-r3.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "scope": "Public read-only old-device queries; Host/Agent namespace isolation; exact missing-digest and terminal-journal checks; pending/error/inconsistent/CAS/archive failure paths fail closed. No installed-UI or complete desktop flow claim."
+  },
+  "latestProgressR15": {
+    "recordedAt": "2026-10-04T02:37:17.405679+00:00",
+    "status": "recovery_and_host_history_ui_verified_core_flow_in_progress",
+    "build": {
+      "at": "2026-10-04T02:26:37.375645+00:00",
+      "build": "r15",
+      "binarySha256": "e8bee4f13a3553b64e0cf9dc6a83de97fd4fa1c4048ee921931bbe670de88683",
+      "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/bundle/macos/FractalMind.app",
+      "strictSignatureVerified": true,
+      "signing": "ad-hoc isolated test build",
+      "pid": 87050
+    },
+    "actualUiSteps": [
+      {
+        "name": "r15-recovery-fee-review",
+        "at": "2026-10-04T02:28:48.418Z"
+      },
+      {
+        "name": "r15-recovery-submission",
+        "at": "2026-10-04T02:28:49.489Z"
+      },
+      {
+        "name": "r15-host-original-readonly-query",
+        "at": "2026-10-04T02:29:39.052Z"
+      },
+      {
+        "name": "r15-host-original-archived-independent-operation",
+        "at": "2026-10-04T02:29:46.756Z"
+      },
+      {
+        "name": "r15-new-binding-fee",
+        "at": "2026-10-04T02:30:22.335Z"
+      },
+      {
+        "name": "r15-new-binding-result",
+        "at": "2026-10-04T02:30:23.104Z"
+      },
+      {
+        "name": "r15-new-binding-confirmed",
+        "at": "2026-10-04T02:30:41.387Z"
+      },
+      {
+        "name": "r15-restored-host-invite-review",
+        "at": "2026-10-04T02:31:23.333Z"
+      },
+      {
+        "name": "r15-invite-fee",
+        "at": "2026-10-04T02:32:29.413Z"
+      },
+      {
+        "name": "r15-fresh-invite-fee",
+        "at": "2026-10-04T02:32:57.803Z"
+      },
+      {
+        "name": "r15-invite-confirmed",
+        "at": "2026-10-04T02:32:58.789Z"
+      }
+    ],
+    "recovery": {
+      "profile": "test-core-r15-recovery",
+      "transaction": "H3MYAY57XAqn47thVn8a7sMEGR7YUqzbDNrHyBdXakT2",
+      "actualGasMist": "20980708",
+      "independentReceiptStatus": "confirmed",
+      "independentJournalSynced": true,
+      "independentSigningCalls": 0,
+      "generationBefore": "3",
+      "generationAfter": "4",
+      "recoveryVersionBefore": "3",
+      "recoveryVersionAfter": "4",
+      "newDevice": "0xe0cdbb7bb7bbf0c4d35d9bbaa17a6576e73a9d9f5a4d229e05f4b7bebb29af75",
+      "uiIssue": "The UI displayed generation 4/4 with the original outcome unknown. The confirmed submit result is followed by a query that can overwrite it with unknown. The original read error was not captured; no specific notFound or retention-window cause is claimed.",
+      "fullReceiptChecks": {
+        "digest": true,
+        "effectsDigest": true,
+        "status": true,
+        "sender": true,
+        "owner": true,
+        "budget": true,
+        "withinBudget": true
+      }
+    },
+    "hostHistory": {
+      "originalDigest": "CAqJfSAbAH5BEpNDM3fx48h5iEB7SEagDhy6c89qrYmQ",
+      "currentQuery": "unknown",
+      "previousTechnicalJournal": "confirmed",
+      "explicitArchive": "passed_actual_ui",
+      "originalHistoryRetained": true,
+      "originalResubmission": false,
+      "newOperation": "explicit_user_selected_independent_attempt"
+    },
+    "newBinding": {
+      "transaction": "7XxvRAQRDVjvmNJhGvc27RWJsEg1gP51qBpwULecCqah",
+      "actualGasMist": "4089240",
+      "uiStatus": "confirmed",
+      "id": "0xd5bf57dbb48f6e2b3c3ea4b7798aa680e5e666860084735db7c484c5eb5e3c55",
+      "coordinatorAddress": "0xe71fb93375793024af0a8aba7d2c27e8f10afa726b8e7aeb6617f99c0d0057c3"
+    },
+    "newInvitation": {
+      "transaction": "HU8xFDaBnnvaaK4Dfy9GM2mX74m15DsdbW6UvTcfdRNb",
+      "actualGasMist": "4965672",
+      "uiStatus": "confirmed",
+      "retainedQuoteHistory": "The initial fee view and the fresh fee view both remain in the UI evidence; only the final confirmed result is claimed."
+    },
+    "independentPublicRead": {
+      "checkedAt": "2026-10-04T02:34:21.161Z",
+      "readOnly": true,
+      "broadcasts": 0,
+      "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+      "humanId": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+      "organizationId": "0x53e622cedfe98236634e3340753b4191f9840dfae36ded85588b18efa12f7bef",
+      "organizationAdmin": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+      "generation": "4",
+      "recoveryVersion": "4",
+      "currentGrant": [
+        {
+          "id": "0x4f72e9548ad66c78a0c1c4fc4d0420b71d4c6af3dacd14191d5cfffbdf3fd3be",
+          "device": "0xe0cdbb7bb7bbf0c4d35d9bbaa17a6576e73a9d9f5a4d229e05f4b7bebb29af75",
+          "generation": "4",
+          "revoked": false
+        }
+      ],
+      "bindingIds": [
+        "0x4c4b98962fc76e79ba5d700f2a777990b556d9f4ba0f2b5ee46fa0eaf21d0c6c",
+        "0xd5bf57dbb48f6e2b3c3ea4b7798aa680e5e666860084735db7c484c5eb5e3c55"
+      ],
+      "okr": {
+        "id": "0x5ae0d408b36fda916f0a11c610eefef145d6dbb9b783c24d20a1d6f522ee05fa",
+        "state": 0,
+        "version": "3",
+        "agreement_version": "2",
+        "spec_record": "0x33f2cdd46e3043b2d5787235e0136759b09b02c639b77759ff3d693c861e2de8",
+        "spec_revision": "3"
+      },
+      "specCiphertext": {
+        "bytes": 840,
+        "sha256": "b178a60bcc2660f1480a71fba9770a2acf0dbebb192d506e8bb455aa9721f264"
+      }
+    },
+    "currentBlocker": "r15 installed Host history query/archive and independent new binding/invitation passed. Official recovery retained Human/organization at generation 4; the independently confirmed recovery result was overwritten by a subsequent unknown read in the UI. A minimal presentation/control-flow repair is in progress; the initial query exception was not saved, so its network cause is not established. New Host join, desktop import/handover/execution and final-source build/CI remain outstanding.",
+    "limits": [
+      "Recovery actual Gas is independently verified by full receipt; binding/invitation fees are the original installed UI evidence.",
+      "This proves the Host history and independent setup UI subflow, not successful new Host join, Agent import, handover or execution.",
+      "No recovery code, invitation secret, native key or full UI text is published."
+    ],
+    "sources": [
+      {
+        "path": "/tmp/fm-v020-desktop-r15-build-public.json",
+        "sha256": "aadb3bbe121b366c9caf4a676bccbd1062717e948832249b64bdfd39b8b61b91"
+      },
+      {
+        "path": "/tmp/fm-v020-desktop-core-ui.json",
+        "sha256": "b6dc988ce7dad663320cfb915825aad597402a34e5154b67fa91950ba3715efd"
+      },
+      {
+        "path": "/tmp/fm-v020-desktop-core-chain-r15-recovered-new-entry.json",
+        "sha256": "d3fba01cb64d6aab6196c38c635d2c68d46c678f6cceb7d745733b4dc44b0a71"
+      },
+      {
+        "path": "/tmp/fm-v020-r15-recovery-receipt-diagnosis.json",
+        "sha256": "39de89d259b897a628f0974f3edc5bc1ddeee62f78ce9b863f2785bba4471450"
+      }
+    ]
+  },
+  "sourceValidation4063bb0": {
+    "sourceHead": "4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1",
+    "checkedAt": "2026-10-04T02:49:57.693005+00:00",
+    "sourceCommittedAndPushed": true,
+    "fullApp": {
+      "passed": 375,
+      "failed": 0,
+      "newRecoveryOutcomeRegressions": 5,
+      "source": {
+        "path": "/tmp/fm-v020-final-app-375.log",
+        "sha256": "f447e529d096d7deca23c2025ecfa8a26592e428f5860e724f61fd48ea3d0193"
+      }
+    },
+    "ci": {
+      "query": "gh pr view 53 --repo fractalmind-labs/fractalmind-os --json number,url,isDraft,headRefOid,statusCheckRollup",
+      "headRefOid": "4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1",
+      "isDraft": true,
+      "total": 38,
+      "completedSuccess": 38,
+      "pending": 0,
+      "failed": 0,
+      "lastCompletedAt": "2026-10-04T02:43:25Z",
+      "allChecksStatus": "COMPLETED",
+      "allChecksConclusion": "SUCCESS",
+      "checks": [
+        "Sui transport migration",
+        "Prototype state regressions",
+        "Detect changes",
+        "Prototype v2 model regressions",
+        "Go (runtime/fractalbot)",
+        "Go (runtime/fractalmind-envd)",
+        "Go (runtime/fractalmind-envd/desktop)",
+        "Go (runtime/claude-code-go)",
+        "Go (protocols/fractal-demail/client-go)",
+        "Go (protocols/fractal-demail/gas-station-adapter)",
+        "Go (protocols/fractal-demail/bridge)",
+        "agent-manager (Python 3.9)",
+        "agent-manager (Python 3.10)",
+        "agent-manager (Python 3.11)",
+        "agent-manager (Python 3.12)",
+        "agent-manager quality gates",
+        "team-manager (Python 3.10)",
+        "team-manager (Python 3.12)",
+        "team-chat",
+        "Skills CLI layout",
+        "Skill structure",
+        "Agent Console",
+        "FractalMind App",
+        "FractalMind device core (macos-latest)",
+        "FractalMind device core (windows-latest)",
+        "FractalMind device core (ubuntu-latest)",
+        "FractalMind Android APK (ARM64)",
+        "Explorer",
+        "Docs site",
+        "Protocol SDK",
+        "Move (protocols/fractalmind-protocol/contracts/protocol)",
+        "Move (protocols/fractalmind-protocol/contracts/okr)",
+        "Move (protocols/fractalmind-protocol/contracts/direct-agent)",
+        "Move (runtime/fractalmind-envd/contracts/envd)",
+        "Move (protocols/fractal-demail/sui-contracts)",
+        "TypeMind Android",
+        "OpenClaw gateway app",
+        "CI result"
+      ],
+      "workflowUrls": [
+        "https://github.com/fractalmind-labs/fractalmind-os/actions/runs/37171671324",
+        "https://github.com/fractalmind-labs/fractalmind-os/actions/runs/37171671316"
+      ],
+      "evidenceMethod": "One read-only GitHub CLI status snapshot; named checks were all returned completed/success for the exact PR head."
+    },
+    "limits": [
+      "CI applies to this exact source commit, not later commits.",
+      "This validation does not establish the unfinished installed desktop handover/execution gate.",
+      "The recovery receipt-preservation fix is committed and locally tested; installed verification after a rebuilt package remains separate."
+    ]
+  },
+  "desktopImportAndSpecR15": {
+    "recordedAt": "2026-10-04T02:49:57.693005+00:00",
+    "status": "agent_import_and_spec_revision_confirmed_handover_in_progress",
+    "sourceEvidence": {
+      "path": "/tmp/fm-v020-desktop-core-ui.json",
+      "sha256": "9cc860c2866b25e8d58e85ef717baa052a0a7d432b3b549d0ee4e9a7563c118b"
+    },
+    "agentImport": {
+      "transaction": "FefqSSJk2rc9DxCGAwoUznJj74st8HGec46BUu4L7ZcW",
+      "actualGasMist": "11883736",
+      "state": "confirmed_observation_only",
+      "physicalId": "native-9e352106a3bf250b8a95dab174ff48136bb4b58c1709a369ed2dbabcfa13400c",
+      "prepareHistory": [
+        "First prepare returned read_unavailable before submission.",
+        "Second prepare on the same attempt succeeded and the actual UI explicitly confirmed the fee."
+      ]
+    },
+    "specification": {
+      "originalFixture": "Natural-language prohibited actions were rejected as unsupported by the bounded adapter.",
+      "transaction": "5coGZYHswajEmFXaoEBEUmeFo3HmCRsNTJ14HJ8cty3z",
+      "actualGasMist": "10583752",
+      "state": "Draft",
+      "version": 4,
+      "agreementVersion": 3,
+      "prohibitedActions": [
+        "shell.*",
+        "network.*",
+        "write outside project"
+      ],
+      "allowedPaths": [
+        "docs"
+      ],
+      "maxCalls": 3,
+      "route": "Official specification edit/review/fee/signature UI; no boundary expansion."
+    },
+    "actualUiSteps": [
+      {
+        "name": "r15-fresh-instance-import-selection",
+        "at": "2026-10-04T02:38:40.759Z"
+      },
+      {
+        "name": "r15-import-prepare-read-unavailable",
+        "at": "2026-10-04T02:40:43.246Z"
+      },
+      {
+        "name": "r15-agent-import-fee",
+        "at": "2026-10-04T02:41:46.640Z"
+      },
+      {
+        "name": "r15-agent-import-result",
+        "at": "2026-10-04T02:42:33.664Z"
+      },
+      {
+        "name": "r15-handover-unsupported-fixture-prose",
+        "at": "2026-10-04T02:43:54.795Z"
+      },
+      {
+        "name": "r15-canonical-constraint-review",
+        "at": "2026-10-04T02:44:35.207Z"
+      },
+      {
+        "name": "r15-canonical-constraint-fee",
+        "at": "2026-10-04T02:44:44.244Z"
+      },
+      {
+        "name": "r15-canonical-constraint-result",
+        "at": "2026-10-04T02:44:45.214Z"
+      }
+    ],
+    "currentBlocker": "Source 4063bb0 passes App 375/375 and all 38 CI checks. Installed r15 Agent observation import confirmed after an initial prepare read_unavailable without submission. A supported canonical specification replaced the unsupported prose fixture, preserving docs-only paths and maxCalls 3. Desktop handover, execution/verification and rebuilt recovery-outcome UI verification remain outstanding.",
+    "limits": [
+      "Observation import does not authorize execution.",
+      "Unsupported natural-language fixture rejection and original no-submit read failure remain retained.",
+      "The handover and complete desktop execution path are not marked passed."
+    ]
+  },
+  "desktopCoreInstalled": {
+    "evidence": "v020-desktop-core-installed.json",
+    "status": "passed_scoped_acceptance",
+    "okrState": "ACHIEVED",
+    "okrVersion": 8,
+    "agreementVersion": 5,
+    "specRevision": 4,
+    "verifiedKrs": 1,
+    "totalKrs": 1,
+    "originalRun": "0x41db7d62cdb0e7b8b7b63627558c156ccab6cda2ed995bfe590702e1fe07ad63",
+    "runState": "SUCCEEDED",
+    "spent": 3,
+    "reserved": 0,
+    "capabilitySpent": 3,
+    "capabilityReserved": 0,
+    "allClaimsSettled": true,
+    "finalAcceptanceDigest": "6EU2mgkZUGywx1fmVYehRE1daGM581J9uHDVCkU4bES7",
+    "actualAcceptanceGasMist": "10731572",
+    "independentFullReceipts": 7,
+    "fileBytes": 80,
+    "fileSha256": "a9708edbceee0608a3afa3dd1154667d7962e89b0f8390c64189b271ac53efab",
+    "remaining": [],
+    "directStatus": {
+      "runId": "0x143c8b0a0ff07ff58032476bf31b2631265db1bc69cf27f5d23da863e239c7f6",
+      "state": "SUCCEEDED",
+      "spent": 0,
+      "reserved": 0,
+      "settled": true,
+      "originalReceiptDecrypted": true,
+      "originalDeliveryUnknownRetained": true,
+      "fileUnchanged": true
+    }
+  },
+  "historicalEnvelopeStatus": "recovery_and_public_state_verified_core_flow_in_progress",
+  "historyScope": "Original top-level r12 build/profile/steps/public-read/currentBlocker and named r14/r15 sections are historical snapshots. currentProgress and desktopCoreInstalled are authoritative for remaining work.",
+  "currentProgress": {
+    "status": "passed_scoped_acceptance",
+    "desktopCoreEvidence": "v020-desktop-core-installed.json",
+    "remaining": [],
+    "desktopCore": "Installed desktop OKR execution, independent Human acceptance, zero-tool direct status and r16 recovery/history-decryption checks passed within the agreed scope. PR verification follows checks on the current head."
+  },
+  "finalRecoveryR16": {
+    "evidence": "v020-desktop-core-installed.json",
+    "section": "finalRecoveryR16",
+    "status": "passed",
+    "sourceCommit": "4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1",
+    "generation": 5,
+    "recoveryVersion": 5,
+    "transaction": "2bsi3pu18YpDuBgwqgwAcFji7AFjDdMZYDKNsfGhngtC",
+    "actualGasMist": "22067736",
+    "gasEvidence": "Actual installed UI confirmed receipt; later independent full receipt NOT_FOUND retained.",
+    "sameHumanAndOrganization": true,
+    "newDevice": "0x2bea8d6b07615d377d2e3f4ae1fe222686c49ae9e8ef4e8cd4507e605a38d72f",
+    "restoredHistoricalStatusDecrypted": true,
+    "finalWorkbenchHumanAccepted": true,
+    "unavailableLookupBranchReproduced": false,
+    "currentStateIndependentlyVerified": true,
+    "receiptIndependentlyConfirmed": false
+  },
+  "remaining": [],
+  "finalCommitVerification": {
+    "policy": "Final PR verification follows the checks attached to the current PR head. The recorded 38/38 success applies specifically to source commit 4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1 and is not inherited by a later head.",
+    "checksUrl": "https://github.com/fractalmind-labs/fractalmind-os/pull/53/checks"
+  },
+  "updatedAt": "2026-10-04T03:16:51.852209+00:00"
+}

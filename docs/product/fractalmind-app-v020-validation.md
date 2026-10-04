@@ -8,13 +8,68 @@
 
 以下按增量从新到旧记录；每项证明范围和当时尚未完成的事项独立保留，整体验收仍以 #40 为准。
 
+### 最终安装版验收收口
+
+收敛范围内的桌面与 Android 验收已通过，详见[21 项映射](v020-milestone-acceptance.md)与[桌面最终报告](v020-desktop-core-acceptance.md)。r16 从源码 4063bb0 重包，正式恢复提交后／刷新后均 confirmed，保持同 Human／组织至 **5／5**；新 profile 成功解密原状态消息／Host 回执，返回工作台仍为 Human accepted、KR **1/1**、预算 **3／0**。原 Expired 权限与 unknown 连通性如实保留，没有新增命令。
+
+独立 gRPC 当前状态与原交易关联通过；后续完整回执精确 NOT_FOUND，**22,067,736 MIST** 费用仅引用原实际 UI confirmed 回执。现场未复现 unknown 故障告警，5 项回归覆盖该保留分支。App **375/375** 与源码4063bb0的 **38/38 CI** 已通过；最终以 [PR 当前 head 检查](https://github.com/fractalmind-labs/fractalmind-os/pull/53/checks)为准。下方原增量、失败和 pending 表述是历史时间截面。
+
+### 桌面安装版 OKR 闭环通过
+
+[独立验收](v020-desktop-core-acceptance.md)确认实际 macOS r15 App 完成明确交接、受限执行、原证据解密、KR 独立验证与最终 Human 验收。fresh gRPC 读取为 ACHIEVED v8／agreement 5／spec 4、KR **1/1**；唯一原 Run 成功，两级预算 **已用 3／预留 0**，claim 均结算。云文件精确 **80 字节**，哈希与批准正文／解密证据一致；7 笔完整成功回执独立确认，最终验收实付 **10,731,572 MIST**。源码、二进制和证据哈希收录在[JSON](evidence/v020-desktop-core-installed.json)。桌面零工具状态消息、原回执解密和独立 0／0 结算／文件无变化也已通过；当前仅余 r16 恢复提示与最终证据提交，PR 保持草稿。
+
+### 源码提交 4063bb0 与桌面观察导入进展
+
+- 源码 **`4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1`** 已推送，完整 App **375/375**（新增 5 项恢复回执保留回归）。只读核对 PR #53 同一 head 的 **38/38 CI 全部成功**：[主 CI](https://github.com/fractalmind-labs/fractalmind-os/actions/runs/37171671324)、[原型回归](https://github.com/fractalmind-labs/fractalmind-os/actions/runs/37171671316)。后续文档或源码提交不继承该结果。
+- 实际 r15 UI 观察导入 `FefqSSJk2rc9DxCGAwoUznJj74st8HGec46BUu4L7ZcW` 确认，实付 **11,883,736 MIST**。第一次 prepare 返回 read_unavailable，未提交；第二次使用同一 attempt 成功。适配器正确拒绝自然语言禁止项，随后通过正式规格编辑提交 `5coGZYHswajEmFXaoEBEUmeFo3HmCRsNTJ14HJ8cty3z`，实付 **10,583,752 MIST**，Draft spec **4**／agreement **3**；禁止项使用 `shell.*`、`network.*`、`write outside project`，允许路径仍为 `docs`、预算仍为 3。
+- [当前证据](evidence/v020-authorized-ui-progress.json)保留原失败、同请求和全部费用。观察导入不授权执行；桌面交接／执行／验证仍在进行，恢复结果保留修复后的重包 UI 专项另验，PR 保持草稿。
+
+### r15 安装版正式恢复与 Host 历史归档
+
+- r15 构建及严格验签通过。正式恢复保持同 Human／组织，代次／恢复版本 **4／4**；独立完整回执确认 `H3MYAY57XAqn47thVn8a7sMEGR7YUqzbDNrHyBdXakT2` 成功、实付 **20,980,708 MIST**，只读 manager 查询没有签名。界面仍出现原结果 unknown：确认结果被紧随的查询 unknown 覆盖，最小修复正在进行；初次异常没有网络留底，不断言 notFound 或窗口原因。
+- 实际 UI 查询旧 `CAqJ…` 保留当前 unknown／历史 Confirmed，明确归档后成功创建独立新绑定 `7Xxv…`（**4,089,240 MIST**）和邀请 `HU8x…`（**4,965,672 MIST**）。独立链读确认同身份／组织、新当前设备与绑定，原 OKR／密文保持。详见[公开 r15 子流程证据](evidence/v020-desktop-recovery-installed.json)。新 Host 加入、桌面导入→交接→执行及最终重包／CI 尚未通过，原 370/370 回归时间截面保留。
+
+### Host 历史查询与新独立操作本地回归
+
+- HostAccess 共享只读历史查询与归档入口已完成本地回归：专项 **25/25**、完整 App **370/370**、严格 TypeScript r3 exit 0 和差异格式检查通过。确切 notFound 加有效历史 terminal 才允许保留原 unknown／history，并由用户另起独立 UUID；pending、普通错误、摘要不符、记录改变和归档失败均不放开。
+- [阶段证据](evidence/v020-authorized-ui-progress.json)保留日志／源码哈希。r15 重包、正式恢复后的新 Host 准入与安装 UI 归档实测尚待完成；桌面纳管→交接→执行及最终源码 CI 仍未通过，PR 保持草稿。
+
+### 回执可用性诊断修正
+
+- 旧 Host 邀请 `CAqJ…` 在 SDK／raw gRPC／CLI 查询均 NOT_FOUND；同节点旧 JSON-RPC 只读诊断仍返回成功 effects（checkpoint **1161953**，低于 gRPC 最低可用 **1178598**，Gas **4,958,376 MIST**）。历史“裁剪”用语应读作“当时 RPC 不可用”，并非交易或 Sui 链数据丢失，也不是 SDK 字段选择错误。原 notFound／unknown 观察和全部缓存截面保留，产品不加旧 JSON-RPC fallback。
+- 较新恢复 `5cQL…` 的 SDK／raw gRPC 完整成功回执已确认实付 **19,893,680 MIST**。原 5 秒 UI unknown 没有保存网络诊断，不能归因于上述旧交易窗口。见[公开诊断与原始报告摘要](evidence/v020-desktop-recovery-installed.json)。该诊断阶段的 360/360 历史回归保留，最新结果见上节。
+
+### 桌面 r14 恢复、只读历史与测试环境恢复增量
+
+- AgentImport 历史查询已移除旧设备密钥依赖，新增 **8 项回归**；完整 App **360/360**、严格 TypeScript 通过，r14 Vite／macOS 构建与严格验签通过。此前 9 项报价期限测试保留；这些结果不替代最终源码 CI。
+- 正式 Recovery UI 保持同 Human／组织，代次／恢复版本推进到 **3／3**，原交易 `5cQLkQ6aoqZtY9b3nvJ88tynxGc9eFkvXo5ofPTV9fVU`，后续独立完整 SDK／raw gRPC 回执确认实付 **19,893,680 MIST**。独立公开链读确认当前代次设备与原 OKR／密文连续性；[公开证据](evidence/v020-desktop-recovery-installed.json)的 `latestProgressR14` 保留构建、原日志摘要和证明范围。
+- 中断后原 localnet 数据库恢复，chain identifier／genesis 保持；旧临时云 Secret Service 会话结束，其会话密码未持久化，旧加密库保留，正以新隔离 Host 正常准入。HostAccess 共享只读历史修复已过专项检查；旧 terminal 记录的回执在当前 RPC 不可用时，新独立操作入口仍在收口，原 unknown／history 保留，pending 不放开。完整桌面纳管→交接→执行验收尚未通过，PR 保持草稿；下方 r12、原失败与缓存时间截面不改写。
+
+### 桌面 r12 正式恢复与导入收口增量
+
+- AgentImport 局部报价改为 **120 秒**，增加明确过期提示和 **9 项真实交易 manager／fake-clock 回归**；完整 App **352/352**、严格 TypeScript／Vite 通过。r12 macOS 实际构建、验签和运行通过，未提交源文件与二进制哈希保存在[公开证据](evidence/v020-desktop-recovery-installed.json)。
+- 重包触发旧隔离 profile 的系统 Keychain 等待；没有操作安全窗口或改 ACL，退出未完成读取后通过正式 Recovery UI 恢复到新的隔离 profile。独立链读确认原 Human／组织不变、generation／recovery version **2／2**，旧 Grant 按代次失效，OKR 与 spec 密文不变。恢复后 fresh Host discovery 已通过；当前旧导入历史查询错误依赖旧设备密钥，最小修复仍在进行。完整桌面核心流程与最终源码 CI 未完成，PR 保持草稿。
+
+### 第三笔单次写入成功与投影独立核验增量
+
+- [第三笔独立意图](evidence/v020-authorized-oneoff-write.json)在 Android r11 中分别完成消息、请求审批、工作台批准、Capability 和 Run 的 5 笔明确费用确认，只首次投递一次。HTTP 最初显示 unknown；后续查询同一原 Run，独立链读在 2026-10-04 01:23:39 UTC 确认 SUCCEEDED、支出 **3**／预留 **0**／已结算，单次累计 **7／0**，常驻 status-only 仍 **0／0**。云端目标文件 **68 字节**，正文逐字节一致、两份旧文件未变。没有将原 HTTP unknown 改写为传输确认。
+- 原成功结果 `0x218293…25564f` 已在实际安装 UI 解密；清连接／HTTP 缓存、冷启动和公开表单重连后，从工作台恢复了完全相同的结果。独立前后双读确认 **47 密文／9 Run／96 对象**和预算不变，**62 条技术日志** before→cold→after 一致，云命令 **8→8**、三份文件哈希与修改时间不变，新写入／派发 **0／0**。见[新增结果恢复证据](evidence/v020-authorized-result-cache-reconstruction.json)；该次未重启 Coordinator，HTTP 调用成功有操作代理及 runner 分支证据，未另存 CDP 返回值。前两次失败／取消和旧 6 Run／33 密文缓存证明保留，不能由第三次成功覆盖。
+- [Android r11 投影独立链读](evidence/v020-android-projection-installed.json)已确认 PAUSED spec 5／agreement 4、预算 0／0，当前 OKR 与不可变 spec 的 previousTransaction 都关联原 `6rH9…`。当时 gRPC 完整交易回执为 notFound，原安装 UI／技术日志记录实付。其后同节点旧 JSON-RPC 的独立只读诊断取得成功 effects，确认相同实际费用；产品未增加该兼容路径。桌面 Host 纳管→交接→执行验证、最终构建与 CI 尚待完成，PR 保持草稿。该增量发现的 60 秒报价问题已在后续 r12 修复；最新旧设备历史查询卡点见上节。
+
+### 已获授权后的写入、桌面投影与 Android 保存增量
+
+- 用户已明确“授权你审批写入”。[当前阶段证据](evidence/v020-authorized-ui-progress.json)保留两次独立安装 UI 尝试：第一笔 Run `0x25dee1…b79a5` 为 FAILED／支出 2／预留 0，SSH 确认 `ONE-OFF-UI-VERIFIED.md` 不存在；第二笔 `0x8403b4…a3730` 原投递 unknown、无第二次派发，通过真实 UI 独立停止后为 CANCELLED／支出 0／预留 0。fresh 链读确认单次累计 4／0，常驻仍为 status-only、0／0。这些是前两笔当时的结果；其后的第三笔成功及当前 UI 收口见上节，已不再等待授权。
+- macOS 安装界面实际导出文件、系统选择器导入本地提案、费用预览与明确签名均通过；交易 `JCNrdXyAFu6WfarfkfWQTkKLEnzVCXermYKf2n7VARhc`，独立 fresh 链核验 spec **2**／agreement **1**。桌面 Host 连接和签名观测仍在验证，不能把投影结果算作整个桌面流程通过。
+- Android r9 导出未产生文件、r10 原生保存命令 ACL 遗漏均保留为失败历史。r11 安装版已通过实际 SAF 保存 **4749 字节**、取消不生成文件、系统选择器导入、后台清明文后返回重新审阅、明确费用签名与回读：交易 `6rH9DET71SduPsYCCAAPXLtp58p1QXwojwGRzMAed7xX`，实付 **10,456,680 MIST**，独立 PAUSED OKR spec **5**／agreement **4**、预算 **0／0**；[公开安装证据](evidence/v020-android-projection-installed.json)记录 APK／未提交源文件哈希，独立 fresh 链对象及原交易关联已核验。最新本地完整 App **343/343**（含新增 6 项 picker 生命周期测试）通过，不替代最终 CI。
+- 既有[缓存／Coordinator 恢复](evidence/v020-work-cache-reconstruction.json)仍为通过，保留原 6 Run／33 密文的历史时间截面；本次两个新 Run 和新桌面对象不被加入旧前后对照。源码基线 `d381738` 上的阶段记录不宣告 v0.2.0 或全部安装 UI 完成，[PR #53](https://github.com/fractalmind-labs/fractalmind-os/pull/53)保持草稿。
+
 ### 安装版固定审阅、草稿和并发恢复增量
 
 - [当前 21 项验收映射](v020-milestone-acceptance.md)以 #40/#38 的 v0.2.0 切片为准。下方历史记录保留当时状态；后续证据已补足的项目不再重复计为当前阻塞。PRD P2 五平台生产发行、实体手机／蜂窝和指定 Mac mini 授权另列范围限制。
 - [固定审阅与审批队列](v020-review-window-and-approval-queue.md)：App、SDK、Move、Go 统一固定 5 分钟，旧请求不续期。安装版在原 issuedAt 后 **255,622 毫秒**明确批准，再首次投递同一执行；真实 Ubuntu 文件核对、独立 KR 验证及最终验收均通过，工作台 KR **1/1**、实测 **100%**、工具 **3／3，预留 0**。
-- 身份／组织明确失败后的新尝试、工作台单次审批队列、固定设备与实例加密本机未发送草稿已实现。App **337/337**、直接沟通专项 **82/82**、严格 TypeScript／前端及完整 Android APK 构建、签名验证通过；SDK 交接 **5/5**、App 交接 **22/22**、Move OKR **22/22**及 Go 两包 race 通过。实际离线草稿／后台恢复、原状态消息执行和结果解密已通过；[组合缓存恢复](evidence/v020-work-cache-reconstruction.json)也已通过，33 份密文／6 个 Run／原预算不变、零新派发。完整成功的单次写入仍等待具体用户授权；部分写入的原失败保留。
+- 身份／组织明确失败后的新尝试、工作台单次审批队列、固定设备与实例加密本机未发送草稿已实现。App **337/337**、直接沟通专项 **82/82**、严格 TypeScript／前端及完整 Android APK 构建、签名验证通过；SDK 交接 **5/5**、App 交接 **22/22**、Move OKR **22/22**及 Go 两包 race 通过。实际离线草稿／后台恢复、原状态消息执行和结果解密已通过；[组合缓存恢复](evidence/v020-work-cache-reconstruction.json)也已通过，33 份密文／6 个 Run／原预算不变、零新派发。该增量当时尚待具体用户授权；其后已获授权的两次尝试及当前剩余见上节，部分写入的原失败保留。
 - [两个候选并发恢复](v020-recovery-race.md)：同一隔离 Human／RecoveryRecord、不同 Gas、各广播一次；一胜一拒 **9005**，身份代次与恢复版本均只推进一次。旧码消费、败方无授权／设备目录、原失败费用和测试凭据清理均记录；原 Human、组织与 Host 保持。
-- [草稿 PR #53](https://github.com/fractalmind-labs/fractalmind-os/pull/53) 的当前源码提交 `f81567841cd9fe2aacb48fcc0e1ef1f50a0b7a3f` 已通过 **38 项检查**，包含 App、SDK、Move、Go、三个桌面设备核心和 Android APK。最终文档提交将独立确认 CI；不继承前一提交的状态。
+- [草稿 PR #53](https://github.com/fractalmind-labs/fractalmind-os/pull/53) 的该增量源码提交 `f81567841cd9fe2aacb48fcc0e1ef1f50a0b7a3f` 已通过 **38 项检查**，包含 App、SDK、Move、Go、三个桌面设备核心和 Android APK。最终文档提交将独立确认 CI；不继承前一提交的状态。
 
 ### 真实云 Host 执行与独立验收增量
 

@@ -1,6 +1,6 @@
 {
   "schema": "fractalmind.v020.installed-ui-acceptance.v1",
-  "status": "in_progress",
+  "status": "passed_scoped_acceptance",
   "scope": "Actual installed Android debug App DOM interactions, native Android Keystore signer, real Ubuntu envd, localnet; not physical-phone or five-platform release evidence",
   "environment": {
     "avd": "fm-v020-android-r1",
@@ -889,5 +889,284 @@
       "totalMist": "1000000000",
       "noEconomicValue": "local faucet test tokens"
     }
-  }
+  },
+  "currentProgress": {
+    "status": "passed_scoped_acceptance",
+    "evidence": "v020-authorized-ui-progress.json",
+    "authorization": "granted: 授权你审批写入",
+    "authorizedWriteOutcomes": [
+      {
+        "runId": "0x25dee1a777147d0242c8e45bb0c8936aef3db773469eefc525d15254f51b79a5",
+        "state": 3,
+        "spent": 2,
+        "reserved": 0,
+        "settled": true,
+        "targetFileExists": false
+      },
+      {
+        "runId": "0x8403b4b71666a02ee0d53df65de8d89d3eb1578ad54224f42f1e0c96a3ca3730",
+        "state": 5,
+        "spent": 0,
+        "reserved": 0,
+        "settled": true,
+        "originalDeliveryOutcome": "unknown",
+        "replayed": false
+      },
+      {
+        "runId": "0x897aec205819d80a46ae00cd4b9e8ca04e163261d4db07f8be00bb96a5a864ff",
+        "state": 2,
+        "spent": 3,
+        "reserved": 0,
+        "settled": true,
+        "targetFileExists": true,
+        "originalDeliveryOutcome": "unknown",
+        "replayed": false
+      }
+    ],
+    "approvedSpendAfterBoth": 4,
+    "approvedReservedAfterBoth": 0,
+    "standingSpend": 0,
+    "standingReserved": 0,
+    "desktopProjection": "Actual Mac export, system-file import and explicit signature passed; source 2/agreement 1 at that historical projection checkpoint. The later desktop core execution and direct status are independently passed in desktopCoreInstalled.",
+    "androidProjection": "r11 actual export/import/fresh review/signature passed; PAUSED 5/4, budget 0/0. Original gRPC full-receipt notFound remains observed; a later independent same-node legacy JSON-RPC diagnostic returned full success effects and actual Gas 10,456,680 MIST. No product fallback added.",
+    "appLocalRegression": "375/375 and exact source head 4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1 passes 38/38 CI. Installed desktop OKR/direct status and rebuilt r16 recovery/history checks passed. Final PR validation follows checks on its current head.",
+    "historicalAuthorizationField": "singleMessageApprovalFollowup records the earlier rejected attempts; authorization is now granted. Its original no-message/no-Run facts apply only to those rejected commands.",
+    "cacheProofScope": "cacheRebuild is unchanged and applies only to its original interval, before these later attempts.",
+    "remaining": [],
+    "approvedSpendAfterThird": 7,
+    "approvedReservedAfterThird": 0,
+    "thirdWriteAndCache": "Passed actual installed UI original-result decryption and additional cold-start reconstruction; 47 encrypted records/9 Runs/96 metadata objects identical, 62 journals retained, 0 writes/0 deliveries.",
+    "desktopCore": "Installed desktop OKR execution, independent Human acceptance, zero-tool direct status and r16 recovery/history-decryption checks passed within the agreed scope. PR verification follows checks on the current head."
+  },
+  "androidProjectionR11": {
+    "evidence": "v020-android-projection-installed.json",
+    "status": "passed_installed_projection_only",
+    "apkSha256": "40ce53867d850ea451cf2e5db2652062f8412b02214adc5086672302bb94b6ee",
+    "digest": "6rH9DET71SduPsYCCAAPXLtp58p1QXwojwGRzMAed7xX",
+    "sourceVersion": "5",
+    "agreementVersion": "4",
+    "historicalCacheUnchanged": true,
+    "independentFreshChain": "passed_current_object_and_digest_linkage"
+  },
+  "authorizedOneoffWriteThird": {
+    "evidence": "v020-authorized-oneoff-write.json",
+    "status": "passed_installed_ui_chain_file_and_additional_cache",
+    "runId": "0x897aec205819d80a46ae00cd4b9e8ca04e163261d4db07f8be00bb96a5a864ff",
+    "state": 2,
+    "spent": 3,
+    "reserved": 0,
+    "approvedSpent": 7,
+    "approvedReserved": 0,
+    "originalDeliveryUnknownPreserved": true,
+    "decryptedOriginalResult": true
+  },
+  "authorizedResultCacheRebuild": {
+    "status": "passed",
+    "evidence": "v020-authorized-result-cache-reconstruction.json",
+    "businessSha256": "31adcf56e25f6bfab3930429d121b72f7edb6109b418df3994307e9e8f4359dd",
+    "resultJsonSha256": "824b0b419c8e33ec68eae06509e15697e6258d3b4ea7c2ae952e323db1a4fc03",
+    "journalRows": 62,
+    "chainObjects": 96,
+    "encryptedRecords": 47,
+    "runs": 9,
+    "unsettledControlRuns": 0,
+    "chainWrites": 0,
+    "commandDeliveries": 0,
+    "cloudCommandsBefore": 8,
+    "cloudCommandsAfter": 8,
+    "historicalCacheRebuildUnchanged": true,
+    "coordinatorRestartedThisPass": false,
+    "httpCacheEvidenceLimitation": "Operator confirms the successful runner call with --clear-http-cache; exact runner hash/awaited CDP call is recorded, but no standalone HTTP-cache response artifact was saved."
+  },
+  "desktopRecoveryR12": {
+    "evidence": "v020-desktop-recovery-installed.json",
+    "status": "recovery_and_public_state_verified_core_flow_in_progress",
+    "transaction": "FfFs5CSL9dbKfu2EpJFSxVgH5vCCKUmw8nJsq23a1c3i",
+    "generation": 2,
+    "recoveryVersion": 2,
+    "oldGrantInvalidByGeneration": true,
+    "oldGrantRevokedFlag": false,
+    "okrAndSpecCiphertextUnchanged": true
+  },
+  "desktopRecoveryR14": {
+    "evidence": "v020-desktop-recovery-installed.json",
+    "section": "latestProgressR14",
+    "status": "recovery_and_database_continuity_verified_core_flow_in_progress",
+    "sameHumanAndOrganization": true,
+    "generation": 3,
+    "recoveryVersion": 3,
+    "newDevice": "0xed96225f2dbc1a86c0c3e1884bcb74be17925375d136243a77cdc7bae9317d5c",
+    "transaction": "5cQLkQ6aoqZtY9b3nvJ88tynxGc9eFkvXo5ofPTV9fVU",
+    "sameDatabaseRestored": true,
+    "newHostAdmission": "in_progress",
+    "currentBlocker": "Host public-history and independent-operation repairs passed 25 focused tests and full App 370/370 plus strict TypeScript. Original unknown/history remains retained; only exact notFound plus a valid prior terminal journal permits a separate user-selected UUID, while pending stays blocked. Rebuilt installed UI, new Host admission, desktop import/handover/execution and final-source CI remain unverified."
+  },
+  "transactionAvailabilityDiagnosis": {
+    "evidence": "v020-desktop-recovery-installed.json",
+    "section": "transactionAvailabilityDiagnosis",
+    "oldHostInviteGrpc": "NOT_FOUND below the gRPC available checkpoint window; same-node diagnostic legacy JSON-RPC returns full success effects",
+    "recoveryR14ActualGasMist": "19893680",
+    "initialR14UnknownCause": "not established",
+    "productJsonRpcFallback": false
+  },
+  "hostHistoryLocalValidation": {
+    "evidence": "v020-authorized-ui-progress.json",
+    "section": "hostHistoryLocalValidation",
+    "fullAppPassed": 370,
+    "focusedPassed": 25,
+    "typescript": "passed_r3_exit_0",
+    "installedUi": "pending"
+  },
+  "desktopRecoveryR15": {
+    "evidence": "v020-desktop-recovery-installed.json",
+    "section": "latestProgressR15",
+    "status": "recovery_and_host_history_ui_verified_core_flow_in_progress",
+    "generation": 4,
+    "recoveryVersion": 4,
+    "sameHumanAndOrganization": true,
+    "recoveryDigest": "H3MYAY57XAqn47thVn8a7sMEGR7YUqzbDNrHyBdXakT2",
+    "actualRecoveryGasMist": "20980708",
+    "hostHistoryArchiveUi": "passed",
+    "newBindingAndInvitationUi": "confirmed",
+    "currentBlocker": "r15 installed Host history query/archive and independent new binding/invitation passed. Official recovery retained Human/organization at generation 4; the independently confirmed recovery result was overwritten by a subsequent unknown read in the UI. A minimal presentation/control-flow repair is in progress; the initial query exception was not saved, so its network cause is not established. New Host join, desktop import/handover/execution and final-source build/CI remain outstanding."
+  },
+  "sourceValidation4063bb0": {
+    "sourceHead": "4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1",
+    "checkedAt": "2026-10-04T02:49:57.693005+00:00",
+    "sourceCommittedAndPushed": true,
+    "fullApp": {
+      "passed": 375,
+      "failed": 0,
+      "newRecoveryOutcomeRegressions": 5,
+      "source": {
+        "path": "/tmp/fm-v020-final-app-375.log",
+        "sha256": "f447e529d096d7deca23c2025ecfa8a26592e428f5860e724f61fd48ea3d0193"
+      }
+    },
+    "ci": {
+      "query": "gh pr view 53 --repo fractalmind-labs/fractalmind-os --json number,url,isDraft,headRefOid,statusCheckRollup",
+      "headRefOid": "4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1",
+      "isDraft": true,
+      "total": 38,
+      "completedSuccess": 38,
+      "pending": 0,
+      "failed": 0,
+      "lastCompletedAt": "2026-10-04T02:43:25Z",
+      "allChecksStatus": "COMPLETED",
+      "allChecksConclusion": "SUCCESS",
+      "checks": [
+        "Sui transport migration",
+        "Prototype state regressions",
+        "Detect changes",
+        "Prototype v2 model regressions",
+        "Go (runtime/fractalbot)",
+        "Go (runtime/fractalmind-envd)",
+        "Go (runtime/fractalmind-envd/desktop)",
+        "Go (runtime/claude-code-go)",
+        "Go (protocols/fractal-demail/client-go)",
+        "Go (protocols/fractal-demail/gas-station-adapter)",
+        "Go (protocols/fractal-demail/bridge)",
+        "agent-manager (Python 3.9)",
+        "agent-manager (Python 3.10)",
+        "agent-manager (Python 3.11)",
+        "agent-manager (Python 3.12)",
+        "agent-manager quality gates",
+        "team-manager (Python 3.10)",
+        "team-manager (Python 3.12)",
+        "team-chat",
+        "Skills CLI layout",
+        "Skill structure",
+        "Agent Console",
+        "FractalMind App",
+        "FractalMind device core (macos-latest)",
+        "FractalMind device core (windows-latest)",
+        "FractalMind device core (ubuntu-latest)",
+        "FractalMind Android APK (ARM64)",
+        "Explorer",
+        "Docs site",
+        "Protocol SDK",
+        "Move (protocols/fractalmind-protocol/contracts/protocol)",
+        "Move (protocols/fractalmind-protocol/contracts/okr)",
+        "Move (protocols/fractalmind-protocol/contracts/direct-agent)",
+        "Move (runtime/fractalmind-envd/contracts/envd)",
+        "Move (protocols/fractal-demail/sui-contracts)",
+        "TypeMind Android",
+        "OpenClaw gateway app",
+        "CI result"
+      ],
+      "workflowUrls": [
+        "https://github.com/fractalmind-labs/fractalmind-os/actions/runs/37171671324",
+        "https://github.com/fractalmind-labs/fractalmind-os/actions/runs/37171671316"
+      ],
+      "evidenceMethod": "One read-only GitHub CLI status snapshot; named checks were all returned completed/success for the exact PR head."
+    },
+    "limits": [
+      "CI applies to this exact source commit, not later commits.",
+      "This validation does not establish the unfinished installed desktop handover/execution gate.",
+      "The recovery receipt-preservation fix is committed and locally tested; installed verification after a rebuilt package remains separate."
+    ]
+  },
+  "desktopImportAndSpecR15": {
+    "evidence": "v020-authorized-ui-progress.json",
+    "section": "desktopImportAndSpecR15",
+    "status": "agent_import_and_spec_revision_confirmed_handover_in_progress"
+  },
+  "desktopCoreInstalled": {
+    "evidence": "v020-desktop-core-installed.json",
+    "status": "passed_scoped_acceptance",
+    "okrState": "ACHIEVED",
+    "okrVersion": 8,
+    "agreementVersion": 5,
+    "specRevision": 4,
+    "verifiedKrs": 1,
+    "totalKrs": 1,
+    "originalRun": "0x41db7d62cdb0e7b8b7b63627558c156ccab6cda2ed995bfe590702e1fe07ad63",
+    "runState": "SUCCEEDED",
+    "spent": 3,
+    "reserved": 0,
+    "capabilitySpent": 3,
+    "capabilityReserved": 0,
+    "allClaimsSettled": true,
+    "finalAcceptanceDigest": "6EU2mgkZUGywx1fmVYehRE1daGM581J9uHDVCkU4bES7",
+    "actualAcceptanceGasMist": "10731572",
+    "independentFullReceipts": 7,
+    "fileBytes": 80,
+    "fileSha256": "a9708edbceee0608a3afa3dd1154667d7962e89b0f8390c64189b271ac53efab",
+    "remaining": [],
+    "directStatus": {
+      "runId": "0x143c8b0a0ff07ff58032476bf31b2631265db1bc69cf27f5d23da863e239c7f6",
+      "state": "SUCCEEDED",
+      "spent": 0,
+      "reserved": 0,
+      "settled": true,
+      "originalReceiptDecrypted": true,
+      "originalDeliveryUnknownRetained": true,
+      "fileUnchanged": true
+    }
+  },
+  "historyScope": "currentProgress and desktopCoreInstalled are current. Earlier failures, per-build snapshots and original cache intervals remain unchanged; their stage-specific pending statements are historical.",
+  "finalRecoveryR16": {
+    "evidence": "v020-desktop-core-installed.json",
+    "section": "finalRecoveryR16",
+    "status": "passed",
+    "sourceCommit": "4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1",
+    "generation": 5,
+    "recoveryVersion": 5,
+    "transaction": "2bsi3pu18YpDuBgwqgwAcFji7AFjDdMZYDKNsfGhngtC",
+    "actualGasMist": "22067736",
+    "gasEvidence": "Actual installed UI confirmed receipt; later independent full receipt NOT_FOUND retained.",
+    "sameHumanAndOrganization": true,
+    "newDevice": "0x2bea8d6b07615d377d2e3f4ae1fe222686c49ae9e8ef4e8cd4507e605a38d72f",
+    "restoredHistoricalStatusDecrypted": true,
+    "finalWorkbenchHumanAccepted": true,
+    "unavailableLookupBranchReproduced": false,
+    "currentStateIndependentlyVerified": true,
+    "receiptIndependentlyConfirmed": false
+  },
+  "remaining": [],
+  "finalCommitVerification": {
+    "policy": "Final PR verification follows the checks attached to the current PR head. The recorded 38/38 success applies specifically to source commit 4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1 and is not inherited by a later head.",
+    "checksUrl": "https://github.com/fractalmind-labs/fractalmind-os/pull/53/checks"
+  },
+  "updatedAt": "2026-10-04T03:16:51.852209+00:00"
 }
