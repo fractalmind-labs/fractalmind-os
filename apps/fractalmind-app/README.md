@@ -50,6 +50,26 @@ The interface follows prototype v2 in three layers:
 `src/display.ts` holds display-name rules: a readable name first, and chain
 IDs only shortened as secondary detail.
 
+## Device session
+
+The native App unlocks device keys once per sign-in instead of reading the OS
+credential store (Keychain, Keystore, Credential Manager, Secret Service) for
+every operation:
+
+- `fm_device_unlock` reads the store once and keeps the keys in native process
+  memory (`DeviceVault` session, zeroized on drop). Signing, decryption and the
+  other device operations use only that session; a locked or expired session
+  returns `Locked` and never falls back to the store.
+- The App unlocks automatically at start. It locks on "Lock this app", after
+  the idle timeout (default 15 minutes, set in Settings; machine sleep counts
+  as idle), after more than a minute in the background on phones, and when this
+  device's grant is revoked. While locked nothing from the organization is
+  rendered.
+- Keys never cross IPC; the WebView only sees public keys, signatures and
+  decrypted results. With the session unlocked, OKR titles are decrypted
+  automatically (`src/use-okr-texts.ts`) and kept in memory only. The browser
+  preview has no device keys and keeps the "Title encrypted" fallback.
+
 ## Public read-only connection
 
 The welcome page's development preview accepts a public profile for an existing

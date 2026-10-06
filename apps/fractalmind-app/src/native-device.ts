@@ -9,6 +9,11 @@ import {
  * file path is accepted from the WebView. Possession is not chain authority. */
 export type NativeDeviceCommand =
   | "fm_device_public"
+  | "fm_device_unlock"
+  | "fm_device_lock"
+  | "fm_device_session"
+  | "fm_device_touch"
+  | "fm_device_set_idle_timeout"
   | "fm_device_initialize"
   | "fm_device_sign_transaction"
   | "fm_device_sign_node_command"
@@ -62,12 +67,15 @@ export class NativeDeviceError extends Error {
       | "invalid_proof"
       | "invalid_recovery"
       | "invalid_envelope"
-      | "already_initialized",
+      | "already_initialized"
+      | "locked",
   ) {
     super(code);
     this.name = "NativeDeviceError";
   }
 }
+/** Dispatched on window when a native operation reports a locked session. */
+export const DEVICE_LOCKED_EVENT = "fractalmind:device-locked";
 const id = /^0x[0-9a-f]{64}$/;
 const profilePattern = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 /** Disposable local connection preference; it is never identity authority. */
@@ -162,6 +170,13 @@ export async function call(
       throw new NativeDeviceError("invalid_command");
     if (code === "AlreadyInitialized")
       throw new NativeDeviceError("already_initialized");
+    if (code === "Locked") {
+      // Any operation can find the session locked (lock, idle timeout); the
+      // App shows its lock screen instead of each flow failing on its own.
+      if (typeof window !== "undefined")
+        window.dispatchEvent(new Event(DEVICE_LOCKED_EVENT));
+      throw new NativeDeviceError("locked");
+    }
     throw new NativeDeviceError("native_unavailable");
   }
 }

@@ -29,7 +29,6 @@ const DROP = [
   /^\.welcome\b/, /^\.w-/, // App welcome page keeps its own port
   /^\.rv-/, /^\.journey\b/, /^\.jr-dock\b/, /#review/, // review tooling
   /^\.palette\b/, // command palette is not implemented in the App
-  /^\.lockscreen\b/,
 ];
 
 function statements(css) {

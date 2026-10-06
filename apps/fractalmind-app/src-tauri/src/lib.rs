@@ -1,6 +1,6 @@
 use fractalmind_device_vault::{
     DevicePublic, DeviceVault, OnboardingCreated, OnboardingPublic, RecoveryImported,
-    RecoveryPrepared, RecoveryPublic, SignedBytes, DEVICE_SERVICE,
+    RecoveryPrepared, RecoveryPublic, SessionStatus, SignedBytes, DEVICE_SERVICE,
 };
 use std::sync::Arc;
 use tauri::{Manager, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
@@ -82,6 +82,58 @@ async fn fm_device_public(
     tauri::async_runtime::spawn_blocking(move || vault.public(&profile).map_err(|e| e.to_string()))
         .await
         .map_err(|_| "NativeTaskFailed".to_string())?
+}
+/// Reads the device keys from the OS store once and keeps them in native memory
+/// for this session. Returns public material only.
+#[tauri::command]
+async fn fm_device_unlock(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: String,
+) -> Result<DevicePublic, String> {
+    main_window(&window)?;
+    let vault = Arc::clone(vault.inner());
+    tauri::async_runtime::spawn_blocking(move || vault.unlock(&profile).map_err(|e| e.to_string()))
+        .await
+        .map_err(|_| "NativeTaskFailed".to_string())?
+}
+/// Zeroizes one profile's session, or all sessions when no profile is given.
+#[tauri::command]
+async fn fm_device_lock(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: Option<String>,
+) -> Result<(), String> {
+    main_window(&window)?;
+    vault.lock(profile.as_deref()).map_err(|e| e.to_string())
+}
+#[tauri::command]
+async fn fm_device_session(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: String,
+) -> Result<SessionStatus, String> {
+    main_window(&window)?;
+    vault.session_status(&profile).map_err(|e| e.to_string())
+}
+#[tauri::command]
+async fn fm_device_touch(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: String,
+) -> Result<SessionStatus, String> {
+    main_window(&window)?;
+    vault.touch(&profile).map_err(|e| e.to_string())
+}
+#[tauri::command]
+async fn fm_device_set_idle_timeout(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    ms: String,
+) -> Result<u64, String> {
+    main_window(&window)?;
+    let ms: u64 = ms.parse().map_err(|_| "InvalidTimeout".to_string())?;
+    vault.set_idle_timeout(ms).map_err(|e| e.to_string())
 }
 #[tauri::command]
 async fn fm_device_initialize(
@@ -430,6 +482,11 @@ pub fn run() {
             fm_app_appearance,
             okr_export::fm_export_okr,
             fm_device_public,
+            fm_device_unlock,
+            fm_device_lock,
+            fm_device_session,
+            fm_device_touch,
+            fm_device_set_idle_timeout,
             fm_device_initialize,
             fm_device_sign_transaction,
             fm_device_sign_node_command,
