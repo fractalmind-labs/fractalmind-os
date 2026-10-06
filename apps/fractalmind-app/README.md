@@ -51,6 +51,12 @@ VITE_FRACTALMIND_FAUCET=http://127.0.0.1:29123
 Without a built-in deployment the setup asks for the deployment JSON under
 "Advanced". Faucets are offered only for localnet and devnet.
 
+A v0.2.0 deployment on Sui testnet is recorded in
+[`v021-testnet-deployment.json`](../../docs/product/evidence/v021-testnet-deployment.json);
+use its `deployment` object as `VITE_FRACTALMIND_DEPLOYMENT` for a testnet
+build. Testnet has no faucet the App can call: fund the two setup addresses at
+faucet.sui.io or by transfer.
+
 ## Styles
 
 The interface follows prototype v2 in three layers:
