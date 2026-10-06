@@ -33,6 +33,24 @@ contacts the configured Sui RPC directly. That RPC must support browser
 gRPC-Web requests and permit the preview origin. The production bundle has a
 CSP restricting scripts and styles to this origin; development uses Vite HMR.
 
+## New device setup
+
+The native App sets up a new device instead of browsing read-only: without
+device keys it opens "Create my identity" (device keys and one recovery code,
+funds, Human identity, personal organization), with pairing and recovery as
+alternatives. The read-only chain browser exists only in the web preview.
+
+The network and contracts come from the build. For a local network, put the
+public deployment and faucet in `.env.local` (not committed):
+
+```sh
+VITE_FRACTALMIND_DEPLOYMENT={"network":"localnet","rpcUrl":"http://127.0.0.1:29000","packageId":"0x…","okrPackageId":"0x…","directPackageId":"0x…","registryId":"0x…"}
+VITE_FRACTALMIND_FAUCET=http://127.0.0.1:29123
+```
+
+Without a built-in deployment the setup asks for the deployment JSON under
+"Advanced". Faucets are offered only for localnet and devnet.
+
 ## Styles
 
 The interface follows prototype v2 in three layers:
