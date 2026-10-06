@@ -36,3 +36,5 @@ jobs:
         with:
           node-version: '22'
       - run: node docs/product/fractalmind-app-prototype-v2/verify.cjs
+      - name: App components match the prototype styles
+        run: node apps/fractalmind-app/scripts/port-prototype-v2-components.mjs --check
