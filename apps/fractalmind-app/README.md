@@ -33,6 +33,23 @@ contacts the configured Sui RPC directly. That RPC must support browser
 gRPC-Web requests and permit the preview origin. The production bundle has a
 CSP restricting scripts and styles to this origin; development uses Vite HMR.
 
+## Styles
+
+The interface follows prototype v2 in three layers:
+
+- `src/prototype-v2-tokens.css`: the prototype's color and spacing tokens.
+- `src/prototype-v2-components.css`: the prototype's component classes
+  (buttons, chips, cards, notes, tabs, shell, decision cards and so on),
+  generated from the prototype stylesheet. Do not edit it by hand; change the
+  prototype, then run `node scripts/port-prototype-v2-components.mjs`. CI runs
+  it with `--check` to catch drift.
+- `src/styles.css`: maps existing App markup (`panel`, `badge`, `notice`, bare
+  controls, native dialogs) onto those components and holds App-only views
+  such as the run map. Use prototype class names for new markup.
+
+`src/display.ts` holds display-name rules: a readable name first, and chain
+IDs only shortened as secondary detail.
+
 ## Public read-only connection
 
 The welcome page's development preview accepts a public profile for an existing

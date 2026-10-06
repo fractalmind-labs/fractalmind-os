@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChainReadSession } from "./chain";
 import type { Agent, ConnectionProfile, OrganizationSnapshot } from "./domain";
 import DirectAgentConversation from "./DirectAgentConversation";
+import { actionLabel, agentName, hostName } from "./display";
 import {
   directApprovalStatus,
   directApprovalNeedsAttention,
@@ -46,6 +47,7 @@ export default function DirectApprovalQueue({
   now,
   reachable,
   onChanged,
+  onAttention,
   t,
 }: {
   profile: ConnectionProfile;
@@ -53,6 +55,8 @@ export default function DirectApprovalQueue({
   now: bigint;
   reachable: boolean;
   onChanged: () => void;
+  /** Requests that need the user's attention, or null while unknown. */
+  onAttention?: (count: number | null) => void;
   t: (zh: string, en: string) => string;
 }) {
   const [queue, setQueue] = useState<Queue | null>(null);
@@ -116,9 +120,6 @@ export default function DirectApprovalQueue({
     };
   }, [scope, reachable, refresh]);
   const unavailable = !reachable || !snapshot.agents.value || failed;
-  const pending =
-    queue?.rows.filter((row) => directApprovalStatus(row, now) === "pending")
-      .length ?? 0;
   const attention =
     queue?.rows.filter((row) => directApprovalNeedsAttention(row, now)) ?? [];
   const visibleRows = showAll ? (queue?.rows ?? []) : attention;
@@ -126,27 +127,45 @@ export default function DirectApprovalQueue({
     setRefresh((value) => value + 1);
     onChanged();
   };
+  const reported = unavailable || !queue ? null : attention.length;
+  useEffect(() => onAttention?.(reported), [reported, onAttention]);
+  const hostOf = (managed: Agent) => {
+    const member = snapshot.memberships.value?.find(
+      (row) => row.id === managed.membership_id,
+    );
+    return member ? hostName(member) : short(managed.host_address);
+  };
   return (
     <section
-      className="decisions"
-      aria-label={t("Agent 超权审批", "Agent boundary approvals")}
+      className="direct-queue"
+      aria-label={t("Agent 超出常驻权限的申请", "Agent requests beyond standing authority")}
     >
-      <div className="section-heading">
-        <h2>{t("Agent 超权审批", "Agent boundary approvals")}</h2>
-        <button
-          className="secondary"
-          disabled={busy || !reachable || !snapshot.agents.value}
-          onClick={() => setRefresh((value) => value + 1)}
-        >
-          {busy ? t("读取中…", "Reading…") : t("刷新审批", "Refresh approvals")}
-        </button>
+      <div className="direct-queue-bar">
+        <span className="tiny muted">
+          {t("Agent 超出常驻权限的单次申请", "One-off Agent requests beyond standing authority")}
+          {queue &&
+            ` · ${t("读取于", "read")} ${date(queue.loadedAtMs)}`}
+        </span>
+        <span className="row">
+          {queue && queue.rows.length > 0 && (
+            <span className="seg" role="group" aria-label={t("筛选", "Filter")}>
+              <button aria-pressed={!showAll} onClick={() => setShowAll(false)}>
+                {t("待处理", "Needs attention")} {attention.length}
+              </button>
+              <button aria-pressed={showAll} onClick={() => setShowAll(true)}>
+                {t("全部", "All")} {queue.rows.length}
+              </button>
+            </span>
+          )}
+          <button
+            className="btn ghost sm"
+            disabled={busy || !reachable || !snapshot.agents.value}
+            onClick={() => setRefresh((value) => value + 1)}
+          >
+            {busy ? t("读取中…", "Reading…") : t("刷新", "Refresh")}
+          </button>
+        </span>
       </div>
-      <p className="muted">
-        {t(
-          "从链上恢复固定实例的超权申请及处理记录。打开原消息查看加密内容与费用，再明确批准或拒绝；单次批准不扩大常驻权限。",
-          "Boundary requests and decisions are restored from Sui for each fixed instance. Open the original message to review its encrypted content and fee, then explicitly approve or reject. One-off approval leaves standing authority unchanged.",
-        )}
-      </p>
       {unavailable ? (
         <div className="panel warn" role="status">
           {t(
@@ -160,10 +179,6 @@ export default function DirectApprovalQueue({
         </div>
       ) : (
         <>
-          <p className="muted">
-            {t("读取时间", "Read at")}: {date(queue.loadedAtMs)} · {pending}{" "}
-            {t("项等待复核决定", "requests awaiting review")}
-          </p>
           {queue.unavailableAgents.length > 0 && (
             <div className="panel warn" role="status">
               {t(
@@ -179,47 +194,7 @@ export default function DirectApprovalQueue({
               </ul>
             </div>
           )}
-          {queue.rows.length > 0 && (
-            <div className="button-row">
-              <button
-                className="secondary"
-                aria-pressed={!showAll}
-                onClick={() => setShowAll(false)}
-              >
-                {t("待处理", "Needs attention")} ({attention.length})
-              </button>
-              <button
-                className="secondary"
-                aria-pressed={showAll}
-                onClick={() => setShowAll(true)}
-              >
-                {t("全部审批与结果", "All approvals & results")} (
-                {queue.rows.length})
-              </button>
-            </div>
-          )}
-          {!queue.rows.length && (
-            <div className="panel">
-              {queue.unavailableAgents.length
-                ? t(
-                    "已成功读取的实例暂无审批记录。",
-                    "No approval records in the instances successfully read.",
-                  )
-                : t(
-                    "已读取的实例暂无超权审批记录。",
-                    "No boundary approval records in the instances read.",
-                  )}
-            </div>
-          )}
           <div className="decision-grid">
-            {queue.rows.length > 0 && !visibleRows.length && (
-              <div className="panel">
-                {t(
-                  "已读取的审批暂无待处理事项；可查看全部审批、失效记录和执行结果。",
-                  "No attention items in the approvals read. View all approvals, invalidated requests and execution results.",
-                )}
-              </div>
-            )}
             {visibleRows.map((row) => {
               const status = directApprovalStatus(row, now),
                 run = row.run.value;
@@ -228,13 +203,21 @@ export default function DirectApprovalQueue({
                   className={`panel decision-card ${["reconcile", "superseded", "expired"].includes(status) ? "blocked" : ""}`}
                   key={row.approval.id}
                 >
-                  <span className="badge">
-                    {t(labels[status][0], labels[status][1])}
-                  </span>
+                  <div className="d-top">
+                    <span
+                      className={`chip ${status === "pending" ? "warn" : ["reconcile", "superseded", "expired"].includes(status) ? "danger" : ""}`}
+                    >
+                      {t(labels[status][0], labels[status][1])}
+                    </span>
+                    <span>{hostOf(row.managed)}</span>
+                  </div>
                   <h3>
-                    {row.message.action} · {t("单次申请", "One-off request")}
+                    {actionLabel(row.message.action, t)} ·{" "}
+                    {t("单次申请", "One-off request")}
                   </h3>
-                  <p className="long-id">{row.managed.instance_id}</p>
+                  <p className="tiny muted" title={row.managed.instance_id}>
+                    {agentName(row.managed)}
+                  </p>
                   <dl>
                     <dt>{t("来源", "Source")}</dt>
                     <dd>
@@ -244,10 +227,8 @@ export default function DirectApprovalQueue({
                       </code>
                     </dd>
                     <dt>{t("Host", "Host")}</dt>
-                    <dd>
-                      <code title={row.managed.host_address}>
-                        {short(row.managed.host_address)}
-                      </code>
+                    <dd title={row.managed.host_address}>
+                      {hostOf(row.managed)}
                     </dd>
                     <dt>{t("权限版本", "Authority version")}</dt>
                     <dd>
@@ -301,7 +282,7 @@ export default function DirectApprovalQueue({
                     </dd>
                   </dl>
                   <button
-                    className="secondary"
+                    className={status === "pending" ? "primary" : "secondary"}
                     onClick={() =>
                       setConversation({
                         managed: row.managed,

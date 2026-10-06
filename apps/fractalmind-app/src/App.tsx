@@ -9,7 +9,8 @@ import {
   Decisions,
   OrganizationViews,
 } from "./V2Views";
-import { trustState } from "./v2-model";
+import { decisionFacts, trustState } from "./v2-model";
+import { agentName, hostName, initial } from "./display";
 import { useChain } from "./use-chain";
 import { clockNow, memberStatus, navigation } from "./domain";
 import type {
@@ -58,6 +59,7 @@ const runLabels: Array<[string, string]> = [
 ];
 const short = (id?: string | null) =>
   id ? `${id.slice(0, 8)}…${id.slice(-6)}` : "—";
+
 function savedProfile() {
   try {
     const text = localStorage.getItem(PROFILE_KEY);
@@ -86,9 +88,9 @@ const labels: Record<Page, [string, string]> = {
   hosts: ["主机与算力", "Hosts & compute"],
   agents: ["团队与 Agents", "Team & Agents"],
   memory: ["记忆与成果", "Memory & results"],
-  governance: ["治理与审批", "Governance & approvals"],
+  governance: ["治理与审批", "Governance"],
   identity: ["我的身份", "My identity"],
-  settings: ["组织设置", "Organization settings"],
+  settings: ["组织设置", "Settings"],
   orgs: ["我的组织", "My organizations"],
   network: ["开放网络", "Open network"],
 };
@@ -232,6 +234,8 @@ export function App() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [okrFilter, setOkrFilter] = useState("all");
   const [allFeatures, setAllFeatures] = useState(false);
+  // One-off Agent requests needing attention, reported by DirectApprovalQueue; null = unknown.
+  const [directPending, setDirectPending] = useState<number | null>(null);
   const allDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     if (allFeatures) allDialog.current?.showModal();
@@ -270,36 +274,36 @@ export function App() {
     const timer = setInterval(() => setWallMs(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
+  const themeLabel = {
+    system: t("跟随系统", "System"),
+    light: t("浅色", "Light"),
+    dark: t("深色", "Dark"),
+  }[prefs.theme];
+  const nextTheme = { system: "light", light: "dark", dark: "system" } as const;
+  // Prototype v2 top-bar tools: a language toggle and an appearance button.
   const appearance = (
-    <div className="appearance">
-      <label>
-        <span className="sr-only">{t("语言", "Language")}</span>
-        <select
-          aria-label={t("语言", "Language")}
-          value={prefs.language}
-          onChange={(e) =>
-            setPrefs({ ...prefs, language: e.target.value as "zh" | "en" })
-          }
-        >
-          <option value="zh">简体中文</option>
-          <option value="en">English</option>
-        </select>
-      </label>
-      <label>
-        <span className="sr-only">{t("外观", "Appearance")}</span>
-        <select
-          aria-label={t("外观", "Appearance")}
-          value={prefs.theme}
-          onChange={(e) =>
-            setPrefs({ ...prefs, theme: e.target.value as typeof prefs.theme })
-          }
-        >
-          <option value="system">{t("跟随系统", "System")}</option>
-          <option value="light">{t("白天", "Light")}</option>
-          <option value="dark">{t("黑夜", "Dark")}</option>
-        </select>
-      </label>
-    </div>
+    <>
+      <button
+        className="tb-btn lang"
+        title={t("Switch to English", "切换到中文")}
+        aria-label={t("切换语言", "Switch language")}
+        onClick={() =>
+          setPrefs({ ...prefs, language: prefs.language === "zh" ? "en" : "zh" })
+        }
+      >
+        {prefs.language === "zh" ? "EN" : "中"}
+      </button>
+      <button
+        className="tb-btn"
+        title={`${t("外观", "Appearance")}：${themeLabel}`}
+        aria-label={`${t("外观", "Appearance")}：${themeLabel}`}
+        onClick={() => setPrefs({ ...prefs, theme: nextTheme[prefs.theme] })}
+      >
+        <NavIcon
+          name={{ system: "monitor", light: "sun", dark: "moon" }[prefs.theme]}
+        />
+      </button>
+    </>
   );
   const connect = (value: ConnectionProfile) => {
     setProfile(value);
@@ -374,6 +378,7 @@ export function App() {
     setDetailId(null);
     setFocusId("");
     setOkrFilter("all");
+    setDirectPending(null);
     data.selectOrganization(id);
   };
   const contextHost = snapshot?.memberships.value?.find(
@@ -382,124 +387,291 @@ export function App() {
   const contextAgent = snapshot?.agents.value?.find(
     (agent) => agent.id === focus?.okr.managed_agent,
   );
+  const attention = snapshot ? decisionFacts(snapshot, now, data.reachable) : null;
+  const attentionCount = attention?.items.length ?? 0;
+  const decisionTotal = attentionCount + (directPending ?? 0);
+  const decisionsClear =
+    !!attention && !attention.unavailable && attentionCount === 0 && directPending === 0;
+  const counts: Partial<Record<Page, number>> = {
+    workbench: decisionTotal,
+    governance: decisionTotal,
+  };
+  const organization = data.identity?.organizations.find(
+    (org) => org.objectId === data.organizationId,
+  );
+  const organizationName =
+    organization?.name ??
+    (data.identity ? t("未选择组织", "No organization") : t("正在读取", "Loading"));
+  const go = (id: Page) => {
+    setPage(id);
+    if (id !== "okrs") setDetailId(null);
+    setAllFeatures(false);
+  };
   const navButton = (id: Page) => (
     <button
       key={id}
+      className="sb-link"
       aria-current={page === id ? "page" : undefined}
-      onClick={() => {
-        setPage(id);
-        if (id !== "okrs") setDetailId(null);
-        setAllFeatures(false);
-      }}
+      onClick={() => go(id)}
     >
       <NavIcon name={pageIcons[id]} />
-      {t(...labels[id])}
+      <span>{t(...labels[id])}</span>
+      {!!counts[id] && <span className="count">{counts[id]}</span>}
     </button>
   );
-  return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <BrandMark /> FractalMind <small>Alpha</small>
+  const organizationSelect = (
+    <select
+      aria-label={t("切换组织", "Switch organization")}
+      value={data.organizationId}
+      onChange={(e) => selectOrganization(e.target.value)}
+    >
+      {data.identity?.organizations.map((org) => (
+        <option key={org.objectId} value={org.objectId}>
+          {org.name}
+        </option>
+      ))}
+      {!data.identity && <option>{t("正在读取", "Loading")}</option>}
+    </select>
+  );
+  const refreshButton = (
+    <button
+      className="tb-btn"
+      aria-label={t("刷新链上数据", "Refresh chain data")}
+      title={data.busy ? t("同步中…", "Syncing…") : t("刷新链上数据", "Refresh chain data")}
+      aria-busy={data.busy}
+      disabled={data.busy}
+      onClick={data.refresh}
+    >
+      <NavIcon name="refresh" />
+    </button>
+  );
+  const activeGoals = okrs?.filter((row) => row.okr.state === 1).length ?? 0;
+  const snapshotText = snapshot
+    ? `${t("快照", "Snapshot")} ${new Date(snapshot.loadedAtMs).toLocaleTimeString()}`
+    : t("尚无快照", "No snapshot");
+  const pageSummary: Partial<Record<Page, string>> = {
+    workbench: `${snapshotText} · ${t(`${activeGoals} 个进行中的目标`, `${activeGoals} goals in progress`)}`,
+    okrs: t("目标、关键结果与执行约定", "Goals, key results and agreements"),
+    hosts: t("执行主机、连接入口与运行观测", "Execution hosts, endpoints and observations"),
+    agents: t("受管理实例、发现与对话", "Managed instances, discovery and chat"),
+    memory: t("已验收成果与加密记录", "Accepted results and encrypted records"),
+    governance: t("待你决定的事项与审批记录", "Decisions and approval records"),
+    identity: t("Human 身份与设备授权", "Human identity and device grants"),
+    settings: t("连接与数据来源", "Connection and data source"),
+    orgs: t("组织关系与成长路径", "Organizations and growth path"),
+    network: t("公开组织与联邦协作", "Public organizations and federation"),
+  };
+  const decisionSection = (onWorkbench: boolean) =>
+    snapshot && (
+      <section
+        className="sec"
+        aria-label={t("需要你决定", "Needs your decision")}
+      >
+        <div className="sec-h">
+          <h2>
+            {t("需要你决定", "Needs your decision")}
+            {decisionTotal > 0 && <span className="count">{decisionTotal}</span>}
+          </h2>
+          {onWorkbench && (
+            <button className="link-btn" onClick={() => go("governance")}>
+              {t("全部审批", "All approvals")} →
+            </button>
+          )}
         </div>
-        <label className="org-select">
-          <span>{t("当前组织", "Current organization")}</span>
-          <select
-            aria-label={t("切换组织", "Switch organization")}
-            value={data.organizationId}
-            onChange={(e) => selectOrganization(e.target.value)}
+        <div className="col gap-lg">
+          <Decisions
+            snapshot={snapshot}
+            now={now}
+            reachable={data.reachable}
+            t={t}
+            open={(id) => goOkr(id, "okrs")}
+          />
+          <Suspense
+            fallback={
+              <p className="tiny muted">
+                {t("加载 Agent 审批…", "Loading Agent approvals…")}
+              </p>
+            }
           >
-            {data.identity?.organizations.map((org) => (
-              <option key={org.objectId} value={org.objectId}>
-                {org.name}
-              </option>
-            ))}
-            {!data.identity && <option>{t("正在读取", "Loading")}</option>}
-          </select>
+            <DirectApprovalQueue
+              key={JSON.stringify([profile, snapshot.organization.objectId])}
+              profile={{
+                ...profile,
+                chainIdentifier:
+                  data.identity?.chainIdentifier ?? profile.chainIdentifier,
+              }}
+              snapshot={snapshot}
+              now={now}
+              reachable={data.reachable}
+              onChanged={data.refresh}
+              onAttention={setDirectPending}
+              t={t}
+            />
+          </Suspense>
+          {decisionsClear && (
+            <div>
+              <div className="calm">
+                <NavIcon name="check" />
+                <span>
+                  {t("没有需要你决定的事项。", "Nothing needs your decision.")}
+                </span>
+              </div>
+              <p className="tiny muted">
+                {t(
+                  "依据已读取的链上记录；实时 Agent 观测尚未接入，不代表执行一切正常。",
+                  "Based on the chain records read. Live Agent observation is not connected, so this does not establish healthy execution.",
+                )}
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+    );
+  const pagePrimary =
+    page === "workbench" ? (
+      <button className="primary" onClick={() => go("okrs")}>
+        + {t("新建 OKR", "New OKR")}
+      </button>
+    ) : null;
+  return (
+    <div className="shell">
+      <aside className="sidebar" aria-label={t("主导航", "Main navigation")}>
+        <div className="sb-brand">
+          <BrandMark />
+          <span>FractalMind</span>
+          <span className="chip outline">Alpha</span>
+        </div>
+        <label className="sb-org">
+          <span className="avatar">
+            {initial(organizationName)}
+          </span>
+          <span className="grow">
+            <span className="t ellipsis" style={{ display: "block" }}>
+              {organizationName}
+            </span>
+            <span className="s">
+              {profile.network} · {t("链上只读", "Read-only chain")}
+            </span>
+          </span>
+          <NavIcon name="down" />
+          {organizationSelect}
         </label>
         <nav aria-label={t("主导航", "Main navigation")}>
-          {navGroups.map((group) => (
-            <div className="nav-group" key={group.label[1]}>
-              <span className="nav-group-label">{t(...group.label)}</span>
+          {navGroups.map((group, index) => (
+            <div className="col" style={{ gap: 2 }} key={group.label[1]}>
+              {index > 0 && (
+                <div className="sb-group">{t(...group.label)}</div>
+              )}
               {group.pages.map(navButton)}
             </div>
           ))}
         </nav>
-        <div className="sidebar-foot">
-          <span className="badge">{profile.network}</span>
-          <p>{t("链上只读浏览", "Read-only chain browser")}</p>
-          <small>
-            {t(
-              "公开连接不提供设备授权",
-              "A public connection does not grant device authority",
-            )}
-          </small>
-          <button onClick={disconnect}>
-            {t("清除连接缓存", "Clear connection cache")}
+        <div className="sb-foot">
+          <div className="sb-me">
+            <span className="avatar round sm human">H</span>
+            <span className="grow">
+              <span className="t ellipsis" style={{ display: "block" }}>
+                {t("链上只读浏览", "Read-only chain browser")}
+              </span>
+              <span className="s ellipsis" style={{ display: "block" }}>
+                {t("公开连接不提供设备授权", "No device authority")}
+              </span>
+            </span>
+          </div>
+          <button className="btn ghost sm" onClick={disconnect}>
+            <NavIcon name="logout" />
+            <span>{t("清除连接缓存", "Clear connection cache")}</span>
           </button>
         </div>
       </aside>
       <div className="main">
         <header className="topbar">
-          <div>
-            <span className="eyebrow">
-              {t("让 Agent 朝目标前进", "Agents working toward your goals")}
-            </span>
-            <h1>{t(...labels[page])}</h1>
-          </div>
-          {appearance}
-          <button className="all-features" onClick={() => setAllFeatures(true)}>
-            {t("全部功能", "All features")}
-          </button>
-          <button
-            aria-label={t("刷新链上数据", "Refresh chain data")}
-            disabled={data.busy}
-            onClick={data.refresh}
+          <div
+            className="ctx"
+            role="group"
+            aria-label={t("运行上下文", "Execution context")}
           >
-            {data.busy ? t("同步中…", "Syncing…") : t("刷新", "Refresh")}
+            <span
+              className="ctx-item"
+              title={t("工作区", "Workspace")}
+            >
+              <NavIcon name="folder" />
+              <span className="k">{t("工作区", "Workspace")}</span>
+              <span className="v">
+                {focus
+                  ? t("约定正文待解锁", "Agreement body locked")
+                  : t("未选择 OKR", "No OKR selected")}
+              </span>
+            </span>
+            <span className="ctx-sep">
+              <NavIcon name="right" />
+            </span>
+            <span
+              className="ctx-item"
+              title={`${contextHost?.host_address ?? t("执行主机", "Execution Host")} · ${t("在线状态未知", "Connectivity unknown")}`}
+            >
+              <span className="dot" />
+              <span className="k">{t("执行", "Runs on")}</span>
+              <span className="v">
+                {contextHost
+                  ? hostName(contextHost)
+                  : t("未指定", "Not set")}
+              </span>
+            </span>
+            <span className="ctx-sep">
+              <NavIcon name="right" />
+            </span>
+            <span
+              className="ctx-item"
+              title={contextAgent?.instance_id ?? t("Agent", "Agent")}
+            >
+              <NavIcon name="users" />
+              <span className="v">
+                {contextAgent ? agentName(contextAgent) : "—"}
+              </span>
+            </span>
+            <span
+              className="chip ctx-perm"
+              title={t(
+                "本设备在当前组织的权限",
+                "This device's permission in this organization",
+              )}
+            >
+              <NavIcon name="laptop" />
+              {t("公开只读 · 未核验", "Public read-only · unverified")}
+            </span>
+          </div>
+          <div className="tb-tools">
+            {appearance}
+            {refreshButton}
+          </div>
+        </header>
+        <header className="m-top">
+          <label className="org">
+            <span className="avatar sm">
+              {initial(organizationName)}
+            </span>
+            <span className="t">{organizationName}</span>
+            <NavIcon name="down" />
+            {organizationSelect}
+          </label>
+          <span className="grow" />
+          {refreshButton}
+          <button
+            className="tb-btn"
+            aria-label={t("全部功能", "All features")}
+            onClick={() => setAllFeatures(true)}
+          >
+            <NavIcon name="grid" />
           </button>
         </header>
-        <div
-          className="context"
-          aria-label={t("运行上下文", "Execution context")}
-        >
-          <span>
-            <small>{t("工作区", "Workspace")}</small>
-            <strong>
-              {focus
-                ? t("约定正文待解锁", "Agreement body locked")
-                : t("未选择 OKR", "No OKR selected")}
-            </strong>
-          </span>
-          <span>
-            <small>{t("执行主机", "Execution Host")}</small>
-            <strong>
-              {short(contextHost?.host_address)} ·{" "}
-              {t("在线状态未知", "Connectivity unknown")}
-            </strong>
-          </span>
-          <span>
-            <small>{t("Agent 与模型", "Agent & model")}</small>
-            <strong>
-              {contextAgent?.instance_id ?? "—"} ·{" "}
-              {contextAgent?.runtime ?? "—"}
-            </strong>
-            <small>{t("模型配置待读取", "Model configuration not read")}</small>
-          </span>
-          <span>
-            <small>{t("本设备权限", "This device's authority")}</small>
-            <strong>
-              {t(
-                "未核验 · 公开只读入口",
-                "Unverified · public read-only entry",
-              )}
-            </strong>
-          </span>
-          <span className="context-snapshot">
-            {snapshot
-              ? `${t("快照", "Snapshot")} ${new Date(snapshot.loadedAtMs).toLocaleTimeString()}`
-              : t("尚无快照", "No snapshot")}
-          </span>
+        <main className="page" id="main">
+        <div className="page-h">
+          <div>
+            <h1>{t(...labels[page])}</h1>
+            {pageSummary[page] && <p className="muted">{pageSummary[page]}</p>}
+          </div>
+          {pagePrimary}
         </div>
         {data.error && (
           <div role="alert" className="banner warn">
@@ -543,36 +715,11 @@ export function App() {
         )}
         {page === "workbench" && snapshot && (
           <>
-            <Decisions
-              snapshot={snapshot}
-              now={now}
-              reachable={data.reachable}
-              t={t}
-              open={(id) => goOkr(id, "okrs")}
-            />
-            <Suspense
-              fallback={
-                <p>{t("加载 Agent 审批…", "Loading Agent approvals…")}</p>
-              }
-            >
-              <DirectApprovalQueue
-                key={JSON.stringify([profile, snapshot.organization.objectId])}
-                profile={{
-                  ...profile,
-                  chainIdentifier:
-                    data.identity?.chainIdentifier ?? profile.chainIdentifier,
-                }}
-                snapshot={snapshot}
-                now={now}
-                reachable={data.reachable}
-                onChanged={data.refresh}
-                t={t}
-              />
-            </Suspense>
+            {decisionSection(true)}
             <div className="section-heading">
               <h2>{t("进行中的目标", "Goals in progress")}</h2>
-              <button onClick={() => setPage("okrs")}>
-                {t("查看全部 OKR", "View all OKRs")} →
+              <button className="link-btn" onClick={() => go("okrs")}>
+                {t("全部 OKR", "All OKRs")} →
               </button>
             </div>
             <div className="goal-strip">
@@ -606,17 +753,19 @@ export function App() {
                   )}
                 </p>
               </div>
-              <select
-                aria-label={t("关注的 OKR", "Focused OKR")}
-                value={focus?.okr.id ?? ""}
-                onChange={(e) => setFocusId(e.target.value)}
-              >
-                {okrs?.map((row) => (
-                  <option key={row.okr.id} value={row.okr.id}>
-                    {row.okr.logical_id}
-                  </option>
-                ))}
-              </select>
+              {!!okrs?.length && (
+                <select
+                  aria-label={t("关注的 OKR", "Focused OKR")}
+                  value={focus?.okr.id ?? ""}
+                  onChange={(e) => setFocusId(e.target.value)}
+                >
+                  {okrs.map((row) => (
+                    <option key={row.okr.id} value={row.okr.id}>
+                      OKR {short(row.okr.logical_id)}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             {!okrs ? (
               <ReadFailure t={t} />
@@ -1212,40 +1361,7 @@ export function App() {
         )}
         {page === "governance" && (
           <>
-            {snapshot && (
-              <>
-                <Decisions
-                  snapshot={snapshot}
-                  now={now}
-                  reachable={data.reachable}
-                  t={t}
-                  open={(id) => goOkr(id, "okrs")}
-                />
-                <Suspense
-                  fallback={
-                    <p>{t("加载 Agent 审批…", "Loading Agent approvals…")}</p>
-                  }
-                >
-                  <DirectApprovalQueue
-                    key={JSON.stringify([
-                      profile,
-                      snapshot.organization.objectId,
-                    ])}
-                    profile={{
-                      ...profile,
-                      chainIdentifier:
-                        data.identity?.chainIdentifier ??
-                        profile.chainIdentifier,
-                    }}
-                    snapshot={snapshot}
-                    now={now}
-                    reachable={data.reachable}
-                    onChanged={data.refresh}
-                    t={t}
-                  />
-                </Suspense>
-              </>
-            )}
+            {snapshot && decisionSection(false)}
             <div className="panel">
               <h2>{t("权限与审批", "Authority & approvals")}</h2>
               <p>
@@ -1334,27 +1450,25 @@ export function App() {
             "Persistent product state lives on Sui · v0.2.0 Alpha",
           )}
         </footer>
+        </main>
       </div>
-      <nav
-        className="mobile-nav"
-        aria-label={t("移动导航", "Mobile navigation")}
-      >
+      <nav className="tabbar" aria-label={t("移动导航", "Mobile navigation")}>
         {(["workbench", "okrs", "hosts", "orgs", "settings"] as Page[]).map(
           (id) => (
             <button
               aria-current={page === id ? "page" : undefined}
               key={id}
-              onClick={() => {
-                setPage(id);
-                setDetailId(null);
-              }}
+              onClick={() => go(id)}
             >
               <NavIcon name={pageIcons[id]} />
               {id === "hosts"
                 ? t("主机", "Hosts")
-                : id === "settings"
-                  ? t("设置", "Settings")
-                  : t(...labels[id])}
+                : id === "orgs"
+                  ? t("组织", "Orgs")
+                  : id === "settings"
+                    ? t("设置", "Settings")
+                    : t(...labels[id])}
+              {!!counts[id] && <span className="count">{counts[id]}</span>}
             </button>
           ),
         )}
@@ -1366,22 +1480,29 @@ export function App() {
         onCancel={() => setAllFeatures(false)}
         onClose={() => setAllFeatures(false)}
       >
-        <div className="section-heading">
+        <div className="dialog-heading">
           <h2>{t("全部功能", "All features")}</h2>
-          <button autoFocus onClick={() => setAllFeatures(false)}>
-            {t("关闭", "Close")}
+          <button
+            className="btn ghost icon sm"
+            autoFocus
+            aria-label={t("关闭", "Close")}
+            onClick={() => setAllFeatures(false)}
+          >
+            <NavIcon name="x" />
           </button>
         </div>
         {navGroups.map((group) => (
           <nav
-            className="nav-group"
+            className="col"
+            style={{ gap: 2 }}
             key={group.label[1]}
             aria-label={t(...group.label)}
           >
-            <span className="nav-group-label">{t(...group.label)}</span>
+            <div className="sb-group">{t(...group.label)}</div>
             {group.pages.map(navButton)}
           </nav>
         ))}
+        <div className="row mt-12">{appearance}</div>
       </dialog>
     </div>
   );

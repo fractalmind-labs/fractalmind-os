@@ -404,6 +404,9 @@ jobs:
         working-directory: apps/fractalmind-app
       - run: npm test
         working-directory: apps/fractalmind-app
+      - name: Components match the prototype v2 styles
+        run: node scripts/port-prototype-v2-components.mjs --check
+        working-directory: apps/fractalmind-app
       - name: Typecheck and build App
         run: npm run build
         working-directory: apps/fractalmind-app
