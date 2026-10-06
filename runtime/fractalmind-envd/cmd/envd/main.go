@@ -3,7 +3,10 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/ed25519"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -11,9 +14,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -23,6 +24,7 @@ import (
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/config"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/coordinator"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/heartbeat"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/hostidentity"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/processsupervisor"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/relay"
@@ -51,7 +53,17 @@ type runtimeCommandExecutor interface {
 func main() {
 	configPath := flag.String("config", "sentinel.yaml", "path to config file")
 	showVersion := flag.Bool("version", false, "show version")
+	initHost := flag.Bool("init-host", false, "initialize Host signing/encryption keys in the system credential store")
+	joinHost := flag.Bool("join-host", false, "redeem an organization invitation entered through hidden terminal input")
+	joinStatus := flag.Bool("host-join-status", false, "query the original Host admission transaction without accessing private keys")
+	newJoinAttempt := flag.Bool("new-host-join-attempt", false, "explicitly prepare another admission after a known terminal original receipt")
+	joinAddress := flag.String("host-address", "", "public Host address for --host-join-status")
+	settleReview := flag.Bool("settle-stopped-review", false, "acknowledge an explicitly stopped expired zero-tool handover review; original signed command is read from stdin")
 	flag.Parse()
+	if flag.NArg() != 0 || *initHost && (*joinHost || *joinStatus) || *joinHost && *joinStatus || *newJoinAttempt && !*joinHost || *joinAddress != "" && !*joinStatus || *settleReview && (*initHost || *joinHost || *joinStatus || *showVersion) {
+		fmt.Fprintln(os.Stderr, "invalid Host command options; invitations are entered through stdin, never argv")
+		os.Exit(2)
+	}
 
 	if *showVersion {
 		fmt.Printf("fractalmind-envd %s\n", version)
@@ -65,12 +77,59 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
+	if *settleReview {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		if err := runStoppedReviewCLI(ctx, cfg, os.Stdin, os.Stdout); err != nil {
+			log.Print(err)
+			os.Exit(1)
+		}
+		return
+	}
+	if *joinHost || *joinStatus {
+		if err := runHostJoinCLI(context.Background(), cfg, *joinStatus, *newJoinAttempt, *joinAddress, os.Stdin, os.Stdout, os.Stderr); err != nil {
+			log.Print(err)
+			os.Exit(1)
+		}
+		return
+	}
 
+	if *initHost {
+		store, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
+		if err != nil {
+			log.Fatal(err)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		keys, err := hostidentity.Initialize(ctx, store, cfg.Identity.KeyProfile, "")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer keys.Close()
+		public, err := keys.Public(cfg.Identity.KeyProfile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := json.NewEncoder(os.Stdout).Encode(public); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	log.Printf("starting fractalmind-envd %s (host=%s)", version, cfg.Identity.Hostname)
+	peerRegistry, err := peerRegistryEnabled(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	runtimeExecutor, err := newRuntimeCommandExecutorFromEnv(cfg)
 	if err != nil {
 		log.Fatalf("[runtimeadapter] failed to initialize persistent signed-command runtime: %v", err)
+	}
+	if chainRuntime, ok := runtimeExecutor.(*chainRuntimeExecutor); ok {
+		cfg.Identity.HostID = chainRuntime.signer.Address()
+	}
+	if closer, ok := runtimeExecutor.(io.Closer); ok {
+		defer closer.Close()
 	}
 	if runtimeExecutor != nil {
 		log.Printf("[runtimeadapter] persistent signed-command runtime enabled (executor=%T)", runtimeExecutor)
@@ -111,7 +170,7 @@ func main() {
 	}
 
 	// Initialize components
-	scanner := agent.NewScanner(cfg.Agents.ScanMethod)
+	scanner := agent.NewScannerAtSocket(cfg.Agents.ScanMethod, cfg.Agents.TmuxSocket)
 	wsClient := ws.NewClient(cfg.Gateway.URL, reconnectWait)
 
 	var desktopCancel context.CancelFunc
@@ -129,17 +188,76 @@ func main() {
 		log.Printf("[desktop-supervisor] enabled command=%s", cfg.Desktop.Command)
 	}
 
-	// Control-channel identity: load (or generate) this node's SUI keypair so the
-	// coordinator<->worker channel is mutually authenticated. Loaded independently
-	// of the full SUI role so control-channel auth works even when on-chain
-	// features are disabled.
+	// The chain connection and execution runtime share the explicitly initialized
+	// NativeStore Host identity. Only legacy configurations use a wallet file.
 	var ctrlKey *sui.Keypair
-	if kp, kerr := sui.LoadOrGenerateKeypair(cfg.SUI.KeypairPath); kerr != nil {
+	var connectionReader connectionRPC
+	var connectionKeys *hostidentity.Keys
+	if chainRuntime, ok := runtimeExecutor.(*chainRuntimeExecutor); ok {
+		connectionReader, ok = chainRuntime.rpc.(connectionRPC)
+		if !ok {
+			log.Fatal("[auth] chain connection reader unavailable")
+		}
+		connectionKeys = chainRuntime.keys
+	} else if cfg.SUI.HostConnectionEnabled {
+		store, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
+		if err != nil {
+			log.Fatal("[auth] native Host store unavailable")
+		}
+		connectionKeys, err = hostidentity.Load(store, cfg.Identity.KeyProfile)
+		if err != nil {
+			log.Fatal("[auth] initialize native Host keys with --init-host first")
+		}
+		defer connectionKeys.Close()
+		rpc, err := sui.NewGRPCClient(cfg.SUI.RPC, cfg.SUI.GraphQLURL)
+		if err != nil {
+			log.Fatal("[auth] chain connection RPC unavailable")
+		}
+		defer rpc.Close()
+		connectionReader = rpc
+	}
+	loadControlKey := func() (*sui.Keypair, error) {
+		if connectionKeys != nil {
+			private, err := connectionKeys.SigningPrivate()
+			if err != nil {
+				return nil, err
+			}
+			return &sui.Keypair{Private: private, Public: private.Public().(ed25519.PublicKey)}, nil
+		}
+		return sui.LoadOrGenerateKeypair(cfg.SUI.KeypairPath)
+	}
+	if kp, kerr := loadControlKey(); kerr != nil {
+		if connectionKeys != nil {
+			log.Fatalf("[auth] secure Host control-channel identity unavailable: %v", kerr)
+		}
 		log.Printf("[auth] WARNING: could not load control-channel keypair (%v); control channel will be UNAUTHENTICATED", kerr)
 	} else {
 		ctrlKey = kp
+		if connectionKeys != nil {
+			defer clear(ctrlKey.Private)
+			if cfg.Identity.HostID != "" && cfg.Identity.HostID != ctrlKey.Address() {
+				log.Fatal("[auth] host_id must match the native Host address")
+			}
+			cfg.Identity.HostID = ctrlKey.Address()
+		}
+		// Hostnames remain display labels. Authenticated workers always register
+		// the address derived from their actual control key.
+		cfg.Identity.HostID = ctrlKey.Address()
 		wsClient.SetAuth(ctrlKey, cfg.Gateway.CoordinatorAddress)
 		log.Printf("[auth] control channel enabled, node identity=%s", ctrlKey.Address())
+	}
+	if connectionKeys != nil {
+		public, err := connectionKeys.Public(cfg.Identity.KeyProfile)
+		if err != nil {
+			log.Fatal("[auth] Host public keys unavailable")
+		}
+		encryption, err := hex.DecodeString(public.EncryptionPublicKey)
+		if err != nil {
+			log.Fatal("[auth] Host encryption key unavailable")
+		}
+		if err := configureChainWorker(wsClient, cfg, connectionReader, ctrlKey, encryption); err != nil {
+			log.Fatalf("[auth] %v", err)
+		}
 	}
 
 	// Track agents and restart counts
@@ -152,7 +270,7 @@ func main() {
 	var suiPollTicker *time.Ticker
 	var eventCursor interface{}
 
-	if cfg.SUI.Enabled {
+	if peerRegistry {
 		// --- WireGuard init (optional, graceful degradation) ---
 		if cfg.WireGuard.Enabled {
 			log.Printf("SUI + WireGuard integration enabled")
@@ -186,7 +304,11 @@ func main() {
 		}
 
 		// Init SUI client (works independently of WireGuard)
-		suiClient, err = sui.NewClient(cfg.SUI)
+		if connectionKeys != nil {
+			suiClient, err = sui.NewClientWithKeypair(cfg.SUI, ctrlKey)
+		} else {
+			suiClient, err = sui.NewClient(cfg.SUI)
+		}
 		if err != nil {
 			log.Fatalf("failed to create sui client: %v", err)
 		}
@@ -329,6 +451,11 @@ func main() {
 
 	if activeRoles.Coordinator {
 		coordinatorServer = coordinator.NewServer(cfg.Coordinator.ListenAddr, 30*time.Second, cfg.Coordinator.APIToken)
+		if connectionKeys != nil {
+			if err := configureChainCoordinator(coordinatorServer, cfg, connectionReader, ctrlKey); err != nil {
+				log.Fatalf("[coordinator] %v", err)
+			}
+		}
 		if ctrlKey != nil {
 			coordinatorServer.SetAuth(ctrlKey, cfg.Coordinator.AllowedSigners)
 			log.Printf("[coordinator] control-channel auth enabled (allowed_signers=%d)", len(cfg.Coordinator.AllowedSigners))
@@ -415,6 +542,12 @@ func main() {
 	// envd-desktop server, so the console reaches the desktop over the
 	// authenticated control channel instead of a public tunnel.
 	wsClient.OnDesktopSignal(func(sig ws.DesktopSignalPayload) {
+		if connectionKeys != nil {
+			// Admission/observation is not a device's permission to control the
+			// desktop. This legacy envelope cannot carry the required authority.
+			wsClient.Send("desktop_signal_result", ws.DesktopSignalResult{RequestID: sig.RequestID, Status: http.StatusForbidden, Error: "signed device desktop authority required"})
+			return
+		}
 		res := proxyDesktopSignal(cfg.Desktop, sig)
 		wsClient.Send("desktop_signal_result", res)
 	})
@@ -446,10 +579,32 @@ func main() {
 		defer suiPollTicker.Stop()
 	}
 
-	// Initial scan
-	if agents, err := scanner.Scan(); err == nil {
+	var discovery *agent.Discovery
+	var nativeDiscovery *agent.Discovery
+	// Chain-connected Hosts report a scan's actual timestamp and failure state.
+	// An unreadable inventory must never keep renewing the previous list.
+	scan := func() ([]agent.Agent, error) {
+		if connectionKeys == nil {
+			return scanner.Scan()
+		}
+		value := scanner.Discover()
+		discovery = &value
+		if runtime, ok := runtimeExecutor.(interface{ NativeDiscovery() *agent.Discovery }); ok {
+			nativeDiscovery = runtime.NativeDiscovery()
+		}
+		rows := []agent.Agent{}
+		for _, instance := range value.Instances {
+			status := "running"
+			if instance.State == "dead" {
+				status = "dead"
+			}
+			rows = append(rows, agent.Agent{ID: instance.Session, Session: instance.Session, Status: status})
+		}
+		return rows, nil
+	}
+	if agents, err := scan(); err == nil {
 		lastAgents = agents
-		log.Printf("initial scan: %d agents found", len(agents))
+		log.Printf("initial scan: %d agent panes found", len(agents))
 	}
 
 	// Signal handling
@@ -467,14 +622,14 @@ func main() {
 	for {
 		select {
 		case <-scanTicker.C:
-			agents, err := scanner.Scan()
+			agents, err := scan()
 			if err != nil {
 				log.Printf("[scan] error: %v", err)
 				continue
 			}
 
 			// Detect crashed agents (was running, now missing)
-			if cfg.Agents.AutoRestart {
+			if cfg.Agents.AutoRestart && connectionKeys == nil {
 				detectAndRestart(lastAgents, agents, scanner, restartCounts, cfg.Agents.MaxRestartAttempts, wsClient)
 			}
 
@@ -487,6 +642,8 @@ func main() {
 				lastAgents,
 				startedAt,
 			)
+			payload.Discovery = discovery
+			payload.NativeDiscovery = nativeDiscovery
 
 			// v3: Attach relay load info if this node is a relay
 			if activeRoles.Relay && relayServer != nil {
@@ -621,66 +778,6 @@ func parseSupervisorDuration(raw string, fallback time.Duration) (time.Duration,
 	return value, nil
 }
 
-func newRuntimeCommandExecutorFromEnv(cfg *config.Config) (runtimeCommandExecutor, error) {
-	runtimeStateDir := strings.TrimSpace(os.Getenv("FRACTALMIND_RUNTIME_STATE_DIR"))
-	if runtimeStateDir == "" {
-		return nil, nil
-	}
-	if cfg == nil {
-		return nil, fmt.Errorf("config is required")
-	}
-
-	localTarget := nodecommand.Target{
-		OrganizationID: strings.TrimSpace(cfg.SUI.OrgID),
-		NodeID:         strings.TrimSpace(cfg.Identity.HostID),
-	}
-	if localTarget.NodeID == "" {
-		localTarget.NodeID = strings.TrimSpace(cfg.Identity.Hostname)
-	}
-	if localTarget.OrganizationID == "" || localTarget.NodeID == "" {
-		return nil, fmt.Errorf("sui.org_id and identity.host_id or identity.hostname are required for signed-command validation")
-	}
-
-	authorityFile := strings.TrimSpace(os.Getenv("FRACTALMIND_NODE_COMMAND_AUTHORITY_FILE"))
-	if authorityFile == "" {
-		authorityFile = filepath.Join(runtimeStateDir, "authority.json")
-	}
-	authorityStore, err := nodecommand.NewFileAuthorityStore(authorityFile, filepath.Join(runtimeStateDir, "authority-reservations"))
-	if err != nil {
-		return nil, err
-	}
-	validator := nodecommand.NewValidator(
-		nodecommand.Ed25519Verifier{},
-		authorityStore,
-		nodecommand.ValidatorOptions{
-			LocalTarget:              localTarget,
-			LowRiskActions:           signedCommandLowRiskActions(),
-			HighRiskActions:          signedCommandHighRiskActions(),
-			BudgetedActions:          map[string]struct{}{},
-			MaxCommandTTL:            5 * time.Minute,
-			MaxLowRiskCheckpointAge:  24 * time.Hour,
-			MaxHighRiskCheckpointAge: 2 * time.Minute,
-		},
-	)
-
-	adapterCommand := strings.TrimSpace(os.Getenv("FRACTALMIND_AGENT_MANAGER_COMMAND"))
-	adapterArgs := splitRuntimeAdapterArgs(os.Getenv("FRACTALMIND_AGENT_MANAGER_ARGS"))
-	if adapterCommand == "" {
-		if mainPath := strings.TrimSpace(os.Getenv("FRACTALMIND_AGENT_MANAGER_MAIN")); mainPath != "" {
-			adapterCommand = "python3"
-			adapterArgs = append([]string{mainPath}, adapterArgs...)
-		} else {
-			adapterCommand = "agent-manager"
-		}
-	}
-
-	executor, err := runtimeadapter.NewExecutorWithStateDir(validator, runtimeadapter.AgentManager(adapterCommand, adapterArgs...), runtimeStateDir)
-	if err != nil {
-		return nil, err
-	}
-	return executor, nil
-}
-
 func signedCommandLowRiskActions() map[string]struct{} {
 	return map[string]struct{}{
 		"inventory":    {},
@@ -694,9 +791,10 @@ func signedCommandLowRiskActions() map[string]struct{} {
 
 func signedCommandHighRiskActions() map[string]struct{} {
 	return map[string]struct{}{
-		"start":  {},
-		"stop":   {},
-		"assign": {},
+		"start":          {},
+		"stop":           {},
+		"assign":         {},
+		"direct.message": {},
 	}
 }
 
@@ -789,103 +887,19 @@ func proxyDesktopSignal(cfg config.DesktopConfig, sig ws.DesktopSignalPayload) w
 	return res
 }
 
-// handleCommand processes a command from Gateway.
-func handleCommand(cmd ws.CommandPayload, scanner *agent.Scanner, cfg *config.Config, runtimeExecutor runtimeCommandExecutor) map[string]interface{} {
-	result := map[string]interface{}{
-		"success": true,
-	}
-
+// handleCommand accepts only signed intents. Coordinator credentials establish
+// a transport connection; they never authorize local agent or shell actions.
+func handleCommand(cmd ws.CommandPayload, _ *agent.Scanner, _ *config.Config, runtimeExecutor runtimeCommandExecutor) map[string]interface{} {
 	switch cmd.Command {
 	case "signed_command", "signed-command", "node_command":
 		return handleSignedCommand(context.Background(), cmd.Args, runtimeExecutor)
-
-	case "status":
-		agents, err := scanner.Scan()
-		if err != nil {
-			result["success"] = false
-			result["error"] = err.Error()
-			return result
-		}
-		result["agents"] = agents
-
-	case "restart":
-		if cmd.AgentID == "" {
-			result["success"] = false
-			result["error"] = "agent_id required"
-			return result
-		}
-		if err := scanner.RestartAgent(cmd.AgentID); err != nil {
-			result["success"] = false
-			result["error"] = err.Error()
-			return result
-		}
-		result["message"] = fmt.Sprintf("agent %s restarted", cmd.AgentID)
-
-	case "logs":
-		if cmd.AgentID == "" {
-			result["success"] = false
-			result["error"] = "agent_id required"
-			return result
-		}
-		lines := "100"
-		if cmd.Args != "" {
-			lines = cmd.Args
-		}
-		out, err := exec.Command("tmux", "capture-pane", "-t", cmd.AgentID, "-p", "-S", "-"+lines).Output()
-		if err != nil {
-			result["success"] = false
-			result["error"] = err.Error()
-			return result
-		}
-		result["logs"] = string(out)
-
-	case "kill":
-		if cmd.AgentID == "" {
-			result["success"] = false
-			result["error"] = "agent_id required"
-			return result
-		}
-		if err := exec.Command("tmux", "kill-session", "-t", cmd.AgentID).Run(); err != nil {
-			result["success"] = false
-			result["error"] = err.Error()
-			return result
-		}
-		result["message"] = fmt.Sprintf("agent %s killed", cmd.AgentID)
-
-	case "shell":
-		if !cfg.Agents.AllowShell {
-			result["success"] = false
-			result["error"] = "shell command disabled (set agents.allow_shell=true to enable)"
-			log.Printf("[cmd] rejected shell: agents.allow_shell is false")
-			return result
-		}
-		if cmd.Args == "" {
-			result["success"] = false
-			result["error"] = "args required (shell command)"
-			return result
-		}
-		if !shellCommandAllowed(cmd.Args, cfg.Agents.ShellAllowlist) {
-			result["success"] = false
-			result["error"] = "shell command not in agents.shell_allowlist"
-			log.Printf("[cmd] rejected shell: command not in allowlist")
-			return result
-		}
-		out, err := runShellCommand(cmd.Args, parseShellTimeout(cfg.Agents.ShellTimeout))
-		if err != nil {
-			result["success"] = false
-			result["error"] = err.Error()
-			result["output"] = string(out)
-			return result
-		}
-		result["output"] = string(out)
-
 	default:
-		result["success"] = false
-		result["error"] = fmt.Sprintf("unknown command: %s", cmd.Command)
+		return map[string]interface{}{
+			"success":    false,
+			"error_code": "unsigned_command_disabled",
+			"error":      "commands require a signed NodeCommand with an authorized target, action and scope",
+		}
 	}
-
-	log.Printf("[cmd] %s result: success=%v", cmd.Command, result["success"])
-	return result
 }
 
 func parseShellTimeout(raw string) time.Duration {
@@ -907,8 +921,8 @@ func handleSignedCommand(ctx context.Context, rawCommand string, runtimeExecutor
 		"success": false,
 	}
 	if runtimeExecutor == nil {
-		result["error_code"] = "runtime_state_dir_required"
-		result["error"] = "signed-command runtime requires FRACTALMIND_RUNTIME_STATE_DIR-backed persistent executor"
+		result["error_code"] = "runtime_configuration_required"
+		result["error"] = "signed-command runtime requires runtime.enabled, Sui configuration and an initialized secure Host identity"
 		return result
 	}
 	if strings.TrimSpace(rawCommand) == "" {
@@ -944,6 +958,18 @@ func handleSignedCommand(ctx context.Context, rawCommand string, runtimeExecutor
 	}
 	if err != nil {
 		result["error"] = err.Error()
+		var rejection *nodecommand.RejectionError
+		if errors.As(err, &rejection) {
+			if rejection.ExecutionID != "" {
+				result["execution_id"] = rejection.ExecutionID
+			}
+			if rejection.TransactionDigest != "" {
+				result["transaction_digest"] = rejection.TransactionDigest
+			}
+			if rejection.Code == nodecommand.CodeExecutionUnknown {
+				result["requires_confirmation"] = true
+			}
+		}
 		if code := nodecommand.CodeOf(err); code != "" {
 			result["error_code"] = code
 		} else {

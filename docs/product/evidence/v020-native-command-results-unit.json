@@ -1,0 +1,38 @@
+{
+  "recordedAt": "2026-10-02T14:06:15.337748+00:00",
+  "results": {
+    "sdk": {
+      "command": "node --import tsx --test tests/*.test.ts",
+      "passed": 121,
+      "failed": 0
+    },
+    "app": {
+      "command": "npm test",
+      "passed": 103,
+      "failed": 0
+    },
+    "nativeCore": {
+      "command": "cargo test --manifest-path native/Cargo.toml",
+      "passed": 19,
+      "failed": 0
+    },
+    "desktopOrigin": {
+      "command": "cargo test --manifest-path src-tauri/Cargo.toml",
+      "passed": 1,
+      "failed": 0
+    },
+    "sdkBuild": "passed",
+    "appTypecheckAndBuild": "passed",
+    "nativeDesktopCheck": "passed",
+    "localnetScriptTypecheck": "passed"
+  },
+  "limits": {
+    "installedAppFullJourneyVerified": false,
+    "fivePlatformsVerified": false,
+    "newGoOrMoveChanges": false,
+    "knownBuildWarnings": [
+      "existing large entry chunk",
+      "dependency PURE annotation"
+    ]
+  }
+}

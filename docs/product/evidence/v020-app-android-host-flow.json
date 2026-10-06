@@ -1,0 +1,725 @@
+{
+  "format": 1,
+  "baseline": "5aef584",
+  "scope": "Actual installed task Android debug App, formal envd CLI and OS native Host keys, original upgraded localnet objects; incomplete full v0.2.0",
+  "publicConfiguration": {
+    "root": "/private/tmp/fm-android-host-ui-m8d0bgy5",
+    "profiles": {
+      "coordinator": "test-native-restart-396a842e-4b4b-4b32-ade9-b29172d720f7",
+      "worker": "test-native-restart-c147966b-bddc-45a7-adac-73b566a14479"
+    },
+    "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+    "publicConnection": {
+      "network": "localnet",
+      "rpcUrl": "http://127.0.0.1:29000",
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+      "originalPackageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10",
+      "okrPackageId": "0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163",
+      "directPackageId": "0x70e43f069c7012b0e0ec2fa40792c64b0697ab0dff35184db0426a6402c8aafb",
+      "registryId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32",
+      "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+      "humanId": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe"
+    },
+    "deviceProfile": "android-ui-9305be0b",
+    "port": 30180,
+    "binary": "/tmp/fm-envd-android-host-r1"
+  },
+  "nativePublic": {
+    "binary": "/tmp/fm-envd-android-host-r1",
+    "nativePublic": {
+      "coordinator": {
+        "format": "1",
+        "profile": "test-native-restart-396a842e-4b4b-4b32-ade9-b29172d720f7",
+        "host_address": "0x4e2910af107ceea8c029a26a650e52caccfd88f4f232db3b5e181f069a687c42",
+        "signing_public_key": "c654917a0e714ee24583ecdecffab05a8902f9299a5327ed5ed7de524b7dffb0",
+        "encryption_public_key": "5870e5fc89e739456a04e518f3d7ebcf64894c8f3735ea26836ee20e0c0f2002"
+      },
+      "worker": {
+        "format": "1",
+        "profile": "test-native-restart-c147966b-bddc-45a7-adac-73b566a14479",
+        "host_address": "0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd",
+        "signing_public_key": "aec1c149616bf109203d32ded5d2deee6d4e1c6384c2f4e3042837971657acd9",
+        "encryption_public_key": "770e37440f7a30868e1fa91b251236295d1c314fccb52f0494bf27cf03c9fc1a"
+      }
+    }
+  },
+  "reports": {
+    "bindingUI": {
+      "format": 1,
+      "pid": "3578",
+      "scope": "Installed Android production UI Coordinator binding; no operation replay",
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "profile": "android-ui-9305be0b",
+      "coordinator": {
+        "format": "1",
+        "profile": "test-native-restart-396a842e-4b4b-4b32-ade9-b29172d720f7",
+        "host_address": "0x4e2910af107ceea8c029a26a650e52caccfd88f4f232db3b5e181f069a687c42",
+        "signing_public_key": "c654917a0e714ee24583ecdecffab05a8902f9299a5327ed5ed7de524b7dffb0",
+        "encryption_public_key": "5870e5fc89e739456a04e518f3d7ebcf64894c8f3735ea26836ee20e0c0f2002"
+      },
+      "checks": [
+        "Actual installed Host page opens an empty original-organization directory",
+        "OS-backed original device verifies current management grant and displays self-pay fee quote",
+        "Explicit production UI payment confirms chain binding and directory refresh without replay"
+      ],
+      "submitted": true,
+      "error": null,
+      "quote": "Confirm transaction feePayer: 0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192eBalance: 999985283984 MISTEstimated Gas: 6821212 MIST · Gas limit: 200000000 MISTQuote expiry: 6:48:58 AMConfirm payment & submitCancel quote",
+      "attempt": {
+        "id": "518a4cda-eb20-406d-95dd-897f3dcde234",
+        "deviceProfile": "android-ui-9305be0b",
+        "grantId": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+        "kind": "binding"
+      },
+      "result": {
+        "text": "Transaction result: ConfirmedFj2GEqVnHsWff8AHrFYLHTAiwMurS4CU2oiq4hVnj4vG",
+        "digest": "Fj2GEqVnHsWff8AHrFYLHTAiwMurS4CU2oiq4hVnj4vG",
+        "error": null,
+        "entries": [
+          "Organization entrieshttp://127.0.0.1:30180 · Bound on chain; connectivity unknown0x4e2910af107ceea8c029a26a650e52caccfd88f4f232db3b5e181f069a687c42Register entryCreate one-use inviteRefresh chain state"
+        ]
+      },
+      "completed": true
+    },
+    "bindingChain": {
+      "format": 1,
+      "scope": "Read-only verification of the original installed Android UI transaction",
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "binding": {
+        "id": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "coordinator_address": "0x4e2910af107ceea8c029a26a650e52caccfd88f4f232db3b5e181f069a687c42",
+        "public_key": [
+          198, 84, 145, 122, 14, 113, 78, 226, 69, 131, 236, 222, 207, 250, 176,
+          90, 137, 2, 249, 41, 154, 83, 39, 237, 94, 215, 222, 82, 75, 125, 255,
+          176
+        ],
+        "endpoint": "http://127.0.0.1:30180",
+        "version": "1",
+        "revoked": false
+      },
+      "object": {
+        "id": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "type": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::CoordinatorBinding",
+        "version": "3864209",
+        "previousTransaction": "Fj2GEqVnHsWff8AHrFYLHTAiwMurS4CU2oiq4hVnj4vG"
+      },
+      "directoryCounts": {
+        "bindings": 1,
+        "invitations": 0,
+        "memberships": 0
+      },
+      "checks": [
+        "Current SDK verifies original organization and Host directory provenance",
+        "Only one exact original Coordinator binding, with expected endpoint and public address",
+        "Original binding previousTransaction equals the installed UI receipt; no extra submission",
+        "No invite or Host membership yet; connection and Agent execution are unverified"
+      ],
+      "completed": true
+    },
+    "originalInvitationAndJoin": {
+      "format": 1,
+      "pid": "3578",
+      "scope": "Installed Android native invitation -> formal envd CLI with independent OS Host identity",
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "bindingId": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+      "checks": [
+        "Installed UI shows an independent self-pay quote for a one-use 1-day membership invitation",
+        "Original UI invitation confirmed; bearer remains only in the open session",
+        "Local faucet funds only this independent native worker address"
+      ],
+      "cliRecords": [
+        {
+          "phase": "preview",
+          "plan": {
+            "network": "localnet",
+            "invite_id": "0xccef1983c3356fdf9888e5f8668e999f8d02c44fd7fe89ff807a3961b68a815a",
+            "organization_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+            "organization_name": "Android UI android-ui-9305be0b",
+            "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+            "binding_version": 1,
+            "coordinator_address": "0x4e2910af107ceea8c029a26a650e52caccfd88f4f232db3b5e181f069a687c42",
+            "coordinator_public_key": "c654917a0e714ee24583ecdecffab05a8902f9299a5327ed5ed7de524b7dffb0",
+            "coordinator_endpoint": "http://127.0.0.1:30180",
+            "issuer_human": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+            "issuer_grant": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+            "invite_expires_at_ms": 1791039245346,
+            "membership_ttl_ms": 86400000,
+            "observation_ttl_ms": 86400000,
+            "clock_ms": 1791035647221,
+            "proof_expires_at_ms": 1791035767221
+          },
+          "quote": {
+            "digest": "7AK74u2s3m8mkvGz6LFXFTMGcdKNXrvpRrVc2BXvNmqo",
+            "sender": "0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd",
+            "gas_budget_mist": 200000000,
+            "gas_price_mist": 1000,
+            "estimated_net_fee_mist": "11443408"
+          },
+          "host": {
+            "format": "1",
+            "profile": "test-native-restart-c147966b-bddc-45a7-adac-73b566a14479",
+            "host_address": "0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd",
+            "signing_public_key": "aec1c149616bf109203d32ded5d2deee6d4e1c6384c2f4e3042837971657acd9",
+            "encryption_public_key": "770e37440f7a30868e1fa91b251236295d1c314fccb52f0494bf27cf03c9fc1a"
+          }
+        },
+        {
+          "phase": "prepared",
+          "transaction": {
+            "format": 1,
+            "chain_identifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+            "sender": "0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd",
+            "digest": "7AK74u2s3m8mkvGz6LFXFTMGcdKNXrvpRrVc2BXvNmqo",
+            "gas_budget_mist": 200000000,
+            "gas_price_mist": 1000,
+            "package_id": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+            "types_package_id": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10",
+            "organization_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+            "invite_id": "0xccef1983c3356fdf9888e5f8668e999f8d02c44fd7fe89ff807a3961b68a815a"
+          }
+        },
+        {
+          "state": "confirmed",
+          "digest": "7AK74u2s3m8mkvGz6LFXFTMGcdKNXrvpRrVc2BXvNmqo",
+          "actual_fee_mist": "11443408",
+          "membership_reconstruction_pending": true
+        }
+      ],
+      "submittedInvite": true,
+      "confirmedJoin": true,
+      "error": null,
+      "inviteQuote": "Confirm transaction feePayer: 0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192eBalance: 999978462772 MISTEstimated Gas: 4958908 MIST · Gas limit: 200000000 MISTQuote expiry: 6:54:54 AMConfirm payment & submitCancel quote",
+      "inviteAttempt": {
+        "id": "3d9047e7-c70b-448d-a89a-59a58d3b327e",
+        "deviceProfile": "android-ui-9305be0b",
+        "grantId": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+        "kind": "invite"
+      },
+      "inviteResult": {
+        "text": "Transaction result: Confirmed83FfqwmAc8D3ZVMJQyenFdMxMq5gcBYXJBuuwzeRtF24",
+        "digest": "83FfqwmAc8D3ZVMJQyenFdMxMq5gcBYXJBuuwzeRtF24",
+        "id": "0xccef1983c3356fdf9888e5f8668e999f8d02c44fd7fe89ff807a3961b68a815a",
+        "error": null
+      },
+      "faucet": {
+        "recipient": "0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd",
+        "status": 200,
+        "result": {
+          "status": "Success",
+          "coins_sent": [
+            {
+              "amount": 200000000000,
+              "id": "0x18fd3a3a9990eafb5417285506f5b12b237285abf6f8d5ac3cd4cd8cbc87e206",
+              "transferTxDigest": "DAo8nQoQmT7pUqpSg1vQg4e1XSr58HtBgRVh3TJGpyRh"
+            },
+            {
+              "amount": 200000000000,
+              "id": "0x23856c9ec206e1cda55a5710fce689a03c32fad45ef1f9622ac418866b2bf036",
+              "transferTxDigest": "DAo8nQoQmT7pUqpSg1vQg4e1XSr58HtBgRVh3TJGpyRh"
+            },
+            {
+              "amount": 200000000000,
+              "id": "0x45b5a15b67c67991a1bb77a9ae740effac5969e58df114905e28fedd47f46dff",
+              "transferTxDigest": "DAo8nQoQmT7pUqpSg1vQg4e1XSr58HtBgRVh3TJGpyRh"
+            },
+            {
+              "amount": 200000000000,
+              "id": "0x6b6b63004e0f439ce21c456b8bf18c57accf52a0e70128c56624d24c21c7f0e5",
+              "transferTxDigest": "DAo8nQoQmT7pUqpSg1vQg4e1XSr58HtBgRVh3TJGpyRh"
+            },
+            {
+              "amount": 200000000000,
+              "id": "0xfb848e5ad9f69ae1d7c4d78c8a7fc71cf60150eb1c14f21a4cf6b9cb5fc65d64",
+              "transferTxDigest": "DAo8nQoQmT7pUqpSg1vQg4e1XSr58HtBgRVh3TJGpyRh"
+            }
+          ]
+        }
+      },
+      "cliPid": 38342,
+      "cliTerminal": {
+        "exitCode": 1,
+        "signal": null
+      },
+      "cliDiagnostic": "Enter one-use Host invitation (hidden): Verify network, organization, Coordinator key and finite observation permissions. This does not grant Agent execution authority.\nHost pays Gas (MIST); estimated 11443408, maximum 200000000.\nTo confirm type JOIN 0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82; anything else cancels: 2026/10/03 06:54:07 [envd] transaction confirmed; membership reconstruction pending, query original digest 7AK74u2s3m8mkvGz6LFXFTMGcdKNXrvpRrVc2BXvNmqo\n",
+      "completed": false,
+      "failure": "Formal envd Host join CLI failed; original result retained\n\n1 !== 0\n"
+    },
+    "originalAdmissionChain": {
+      "format": 1,
+      "scope": "Original admission objects after formal CLI returned reconstruction_pending; read only",
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "invite": {
+        "id": "0xccef1983c3356fdf9888e5f8668e999f8d02c44fd7fe89ff807a3961b68a815a",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "binding_version": "1",
+        "issuer_human": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+        "issuer_device": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "issuer_grant": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+        "issuer_grant_version": "1",
+        "issuer_generation": "1",
+        "proof_public_key": [
+          45, 199, 131, 56, 102, 231, 234, 126, 146, 117, 193, 121, 159, 68, 37,
+          74, 98, 208, 51, 39, 155, 238, 23, 161, 158, 217, 170, 195, 201, 123,
+          16, 231
+        ],
+        "template_version": "1",
+        "expires_at_ms": "1791039245346",
+        "membership_ttl_ms": "86400000",
+        "capability_ttl_ms": "86400000",
+        "max_uses": 1,
+        "uses": 1,
+        "revoked": false
+      },
+      "member": {
+        "id": "0x291ef80e2edc698e8aa9f37452e8aa5131f2c5c4b5e3fb1c00f96e6f49bd81e4",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "host_address": "0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd",
+        "host_public_key": [
+          174, 193, 193, 73, 97, 107, 241, 9, 32, 61, 50, 222, 213, 210, 222,
+          238, 109, 78, 28, 99, 132, 194, 244, 227, 4, 40, 55, 151, 22, 87, 172,
+          217
+        ],
+        "encryption_public_key": [
+          119, 14, 55, 68, 15, 122, 48, 134, 142, 31, 169, 27, 37, 18, 54, 41,
+          93, 28, 49, 79, 204, 181, 47, 4, 148, 191, 39, 207, 3, 201, 252, 26
+        ],
+        "name": "Android UI worker",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "version": "1",
+        "revoked": false,
+        "expires_at_ms": "1791122047690",
+        "joined_at_ms": "1791035647690",
+        "source_invite": "0xccef1983c3356fdf9888e5f8668e999f8d02c44fd7fe89ff807a3961b68a815a",
+        "observation_capability": "0xded74415d807f596be62a70c1b7cc8ea9bedb9e918ed0ea8a62cd17e6699075c"
+      },
+      "memberObject": {
+        "id": "0x291ef80e2edc698e8aa9f37452e8aa5131f2c5c4b5e3fb1c00f96e6f49bd81e4",
+        "type": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::HostMembership",
+        "version": "3870765",
+        "previousTransaction": "7AK74u2s3m8mkvGz6LFXFTMGcdKNXrvpRrVc2BXvNmqo"
+      },
+      "clockMs": "1791035757680",
+      "completed": true
+    },
+    "observationPrior1": {
+      "format": 1,
+      "pid": "3578",
+      "scope": "Installed Android App signed production Coordinator/Host observations and native Agent discovery",
+      "checks": [],
+      "consumed": [
+        "On-chain invitation: 0xccef1983c3356fdf9888e5f8668e999f8d02c44fd7fe89ff807a3961b68a815a · Awaiting fresh verification"
+      ],
+      "completed": false,
+      "failure": "The expression evaluated to a falsy value:\n\n  assert(report.consumed.some(x=>x.includes('Consumed')))\n"
+    },
+    "observationPrior2": {
+      "format": 1,
+      "pid": "3578",
+      "scope": "Installed Android App signed production Coordinator/Host observations and native Agent discovery",
+      "checks": [
+        "Installed App marks the original invitation consumed and removes bearer from DOM"
+      ],
+      "consumed": [
+        "On-chain invitation: 0xccef1983c3356fdf9888e5f8668e999f8d02c44fd7fe89ff807a3961b68a815a · Consumed"
+      ],
+      "hostRead": {
+        "error": "Read failed. Current state is unknown. Check the connection and read again.",
+        "text": "Runtime observationsRead the Hosts and resources observed by an organization entry point. Check heartbeat times for freshness.Local device profileLoad organization entry pointsOrganization entry pointhttp://127.0.0.1:30180 · 0xb19e97b20xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8Verify device and read observationsRead failed. Current state is unknown. Check the connection and read again.Entry point and Host signatures are checked separately against the current chain directory. A signed heartbeat proves a recent observation; it grants no execution authority or independent Agent identity. Observations remain in this page's memory only and become unknown on expiry."
+      },
+      "completed": false,
+      "failure": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'Read failed. Current state is unknown. Check the connection and read again.'\n- null\n"
+    },
+    "fetchReceiverProbe": [
+      {
+        "method": "object-method",
+        "errorName": "TypeError",
+        "error": "Failed to execute 'fetch' on 'Window': Illegal invocation"
+      },
+      {
+        "method": "standalone",
+        "status": 403
+      }
+    ],
+    "observationAfterFetchFix": {
+      "format": 1,
+      "pid": "4073",
+      "scope": "Installed Android App signed production Coordinator/Host observations and native Agent discovery",
+      "checks": [
+        "Actual Android native device signs read challenge; verifies Coordinator and fresh admitted Host signatures",
+        "Actual installed discovery displays one authenticated native bounded-file instance with explicit observation-only import"
+      ],
+      "hostRead": {
+        "error": null,
+        "text": "Runtime observationsRead the Hosts and resources observed by an organization entry point. Check heartbeat times for freshness.Local device profileLoad organization entry pointsOrganization entry pointhttp://127.0.0.1:30180 · 0xb19e97b20xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8Verify device and read observationsEntry point signature verified · Recently read observation · 7:15:38 AMHost signature verifiedAndroid UI worker0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bdHeartbeat time10/3/2026, 7:15:48 AMHeartbeat freshnessHost-signed observation within its validity windowSystem / CPUdarwin / arm64 · 10Observed instances0Entry point and Host signatures are checked separately against the current chain directory. A signed heartbeat proves a recent observation; it grants no execution authority or independent Agent identity. Observations remain in this page's memory only and become unknown on expiry."
+      },
+      "discovery": {
+        "error": null,
+        "text": "Discover existing AgentsRead the Hosts' recent scans through an organization entry point. Review instances, workspaces and continuity. Discovery does not start or change existing tasks.Local device profileLoad organization entry pointsOrganization entry pointhttp://127.0.0.1:30180 · 0xb19e97b20xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8Verify device and read observationsEntry point signature verified · Recently read observation · 7:15:39 AMHost signature verifiedAndroid UI worker0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bdHeartbeat time10/3/2026, 7:15:49 AMHeartbeat freshnessHost-signed observation within its validity windowSystem / CPUdarwin / arm64 · 10Observed instances0tmux instance scanScan unavailable. Check the Host and read againScan time · 10/3/2026, 7:15:48 AMNative file AgentsHost scan verifiedScan time · 10/3/2026, 7:15:48 AMnative-filesInstance continuity observed · observation onlynative-490117ebd4851446755e54253c5bb87312d2509731289eb6ba8ee39bbd778740Workspace: /private/tmp/fm-android-host-ui-m8d0bgy5/workspaceWorkspace fingerprint: c4f2393d9d8d0353287a7a9630c403bbb2459357e11b49d528b2ce85e98297a5Adapter: native file Agent, supporting 1–3 file goals and bounded read/write. Observation only; execution requires handover and ACTIVE OKR authorization.Import for observation onlyRecover registration transactionEntry point and Host signatures are checked separately against the current chain directory. A signed heartbeat proves a recent observation; it grants no execution authority or independent Agent identity. Observations remain in this page's memory only and become unknown on expiry.",
+        "imports": 1
+      },
+      "completed": true
+    },
+    "finalInstalledObservation": {
+      "format": 1,
+      "pid": "4367",
+      "scope": "Installed Android App signed production Coordinator/Host observations and native Agent discovery",
+      "checks": [
+        "Final installed UI shows unavailable tmux count as unknown and verified native instance count as one",
+        "Actual Android native device signs read challenge; verifies Coordinator and fresh admitted Host signatures",
+        "Actual installed discovery displays one authenticated native bounded-file instance with explicit observation-only import",
+        "Final APK cold start retains the original Human and reads the unchanged native instance after Coordinator restart"
+      ],
+      "hostRead": {
+        "error": null,
+        "text": "Runtime observationsRead the Hosts and resources observed by an organization entry point. Check heartbeat times for freshness.Local device profileLoad organization entry pointsOrganization entry pointhttp://127.0.0.1:30180 · 0xb19e97b20xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8Verify device and read observationsEntry point signature verified · Recently read observation · 7:36:40 AMHost signature verifiedAndroid UI worker0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bdHeartbeat time10/3/2026, 7:36:50 AMHeartbeat freshnessHost-signed observation within its validity windowSystem / CPUdarwin / arm64 · 10tmux instancesUnknownNative file instances1Entry point and Host signatures are checked separately against the current chain directory. A signed heartbeat proves a recent observation; it grants no execution authority or independent Agent identity. Observations remain in this page's memory only and become unknown on expiry."
+      },
+      "counts": {
+        "Heartbeat time": "10/3/2026, 7:36:50 AM",
+        "Heartbeat freshness": "Host-signed observation within its validity window",
+        "System / CPU": "darwin / arm64 · 10",
+        "tmux instances": "Unknown",
+        "Native file instances": "1"
+      },
+      "discovery": {
+        "error": null,
+        "text": "Discover existing AgentsRead the Hosts' recent scans through an organization entry point. Review instances, workspaces and continuity. Discovery does not start or change existing tasks.Local device profileLoad organization entry pointsOrganization entry pointhttp://127.0.0.1:30180 · 0xb19e97b20xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8Verify device and read observationsEntry point signature verified · Recently read observation · 7:36:41 AMHost signature verifiedAndroid UI worker0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bdHeartbeat time10/3/2026, 7:36:51 AMHeartbeat freshnessHost-signed observation within its validity windowSystem / CPUdarwin / arm64 · 10tmux instancesUnknownNative file instances1tmux instance scanScan unavailable. Check the Host and read againScan time · 10/3/2026, 7:36:50 AMNative file AgentsHost scan verifiedScan time · 10/3/2026, 7:36:50 AMnative-filesInstance continuity observed · observation onlynative-490117ebd4851446755e54253c5bb87312d2509731289eb6ba8ee39bbd778740Workspace: /private/tmp/fm-android-host-ui-m8d0bgy5/workspaceWorkspace fingerprint: c4f2393d9d8d0353287a7a9630c403bbb2459357e11b49d528b2ce85e98297a5Adapter: native file Agent, supporting 1–3 file goals and bounded read/write. Observation only; execution requires handover and ACTIVE OKR authorization.Import for observation onlyRecover registration transactionEntry point and Host signatures are checked separately against the current chain directory. A signed heartbeat proves a recent observation; it grants no execution authority or independent Agent identity. Observations remain in this page's memory only and become unknown on expiry.",
+        "imports": 1
+      },
+      "publicConnection": {
+        "network": "localnet",
+        "rpcUrl": "http://127.0.0.1:29000",
+        "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+        "originalPackageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10",
+        "okrPackageId": "0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163",
+        "directPackageId": "0x70e43f069c7012b0e0ec2fa40792c64b0697ab0dff35184db0426a6402c8aafb",
+        "registryId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32",
+        "humanId": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+        "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+      },
+      "completed": true
+    },
+    "importUI": {
+      "format": 1,
+      "pid": "4073",
+      "scope": "Installed Android production UI observation-only import of formal native envd instance",
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "hostAddress": "0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd",
+      "checks": [
+        "Actual installed import reviews original organization, current Host, native instance and absent prior registration",
+        "Fresh production Coordinator discovery and device authority verified; separate self-pay quote displayed",
+        "Explicit payment imports only the original observed instance and confirms its original chain record"
+      ],
+      "submitted": true,
+      "selection": [
+        "Keep the existing process and tasks. Confirmation creates an observation-only association on Sui; bounded adapters require separate handover and OKR authorization.",
+        "native-files",
+        "Organization: 0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "Host: 0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd",
+        "native-490117ebd4851446755e54253c5bb87312d2509731289eb6ba8ee39bbd778740",
+        "Workspace: /private/tmp/fm-android-host-ui-m8d0bgy5/workspace",
+        "c4f2393d9d8d0353287a7a9630c403bbb2459357e11b49d528b2ce85e98297a5"
+      ],
+      "quote": "Confirm transaction feePayer: 0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192eBalance: 999973503864 MISTEstimated Gas: 11876972 MIST · Gas limit: 200000000 MISTQuote expiry: 7:18:55 AMConfirm payment & importCancel quote",
+      "attempt": {
+        "id": "623d5887-f747-41bd-9a8e-34835a27c2c1",
+        "deviceProfile": "android-ui-9305be0b",
+        "grantId": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+        "kind": "import"
+      },
+      "result": {
+        "text": "Transaction result: Confirmed",
+        "error": null,
+        "records": []
+      },
+      "record": "Registered for observation; rediscover to check current process state",
+      "completed": true
+    },
+    "importOriginalUIReceipt": {
+      "format": 1,
+      "pid": "4073",
+      "attempt": {
+        "id": "623d5887-f747-41bd-9a8e-34835a27c2c1",
+        "deviceProfile": "android-ui-9305be0b",
+        "grantId": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+        "kind": "import"
+      },
+      "original": {
+        "receipt": "Transaction result: Confirmed",
+        "digest": "HrvfDhizhMMPCuYWUP1zaTHNZSB3wACRCcjmnx547EGC",
+        "managedId": "0xe818f72ef815b8b7d972ca002d863f048c87c999590430e6e76df36d3a03c03b",
+        "record": "On-chain registration0xe818f72ef815b8b7d972ca002d863f048c87c999590430e6e76df36d3a03c03bHost: 0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bdnative-490117ebd4851446755e54253c5bb87312d2509731289eb6ba8ee39bbd778740Registered for observation; rediscover to check current process state",
+        "error": null
+      },
+      "completed": true
+    },
+    "importChain": {
+      "format": 1,
+      "scope": "Read-only independent SDK verification of original installed Android import and Host membership",
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "invite": {
+        "id": "0xccef1983c3356fdf9888e5f8668e999f8d02c44fd7fe89ff807a3961b68a815a",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "binding_version": "1",
+        "issuer_human": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+        "issuer_device": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "issuer_grant": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+        "issuer_grant_version": "1",
+        "issuer_generation": "1",
+        "proof_public_key": [
+          45, 199, 131, 56, 102, 231, 234, 126, 146, 117, 193, 121, 159, 68, 37,
+          74, 98, 208, 51, 39, 155, 238, 23, 161, 158, 217, 170, 195, 201, 123,
+          16, 231
+        ],
+        "template_version": "1",
+        "expires_at_ms": "1791039245346",
+        "membership_ttl_ms": "86400000",
+        "capability_ttl_ms": "86400000",
+        "max_uses": 1,
+        "uses": 1,
+        "revoked": false
+      },
+      "member": {
+        "id": "0x291ef80e2edc698e8aa9f37452e8aa5131f2c5c4b5e3fb1c00f96e6f49bd81e4",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "host_address": "0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd",
+        "host_public_key": [
+          174, 193, 193, 73, 97, 107, 241, 9, 32, 61, 50, 222, 213, 210, 222,
+          238, 109, 78, 28, 99, 132, 194, 244, 227, 4, 40, 55, 151, 22, 87, 172,
+          217
+        ],
+        "encryption_public_key": [
+          119, 14, 55, 68, 15, 122, 48, 134, 142, 31, 169, 27, 37, 18, 54, 41,
+          93, 28, 49, 79, 204, 181, 47, 4, 148, 191, 39, 207, 3, 201, 252, 26
+        ],
+        "name": "Android UI worker",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "version": "1",
+        "revoked": false,
+        "expires_at_ms": "1791122047690",
+        "joined_at_ms": "1791035647690",
+        "source_invite": "0xccef1983c3356fdf9888e5f8668e999f8d02c44fd7fe89ff807a3961b68a815a",
+        "observation_capability": "0xded74415d807f596be62a70c1b7cc8ea9bedb9e918ed0ea8a62cd17e6699075c"
+      },
+      "memberObject": {
+        "id": "0x291ef80e2edc698e8aa9f37452e8aa5131f2c5c4b5e3fb1c00f96e6f49bd81e4",
+        "type": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::HostMembership",
+        "version": "3870765",
+        "previousTransaction": "7AK74u2s3m8mkvGz6LFXFTMGcdKNXrvpRrVc2BXvNmqo"
+      },
+      "managed": {
+        "id": "0xe818f72ef815b8b7d972ca002d863f048c87c999590430e6e76df36d3a03c03b",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "membership_id": "0x291ef80e2edc698e8aa9f37452e8aa5131f2c5c4b5e3fb1c00f96e6f49bd81e4",
+        "host_address": "0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd",
+        "instance_id": "native-490117ebd4851446755e54253c5bb87312d2509731289eb6ba8ee39bbd778740",
+        "runtime": "bounded-process-v1",
+        "workspace_hash": [
+          196, 242, 57, 61, 157, 141, 3, 83, 40, 122, 122, 150, 48, 196, 3, 187,
+          178, 69, 147, 87, 225, 27, 73, 213, 40, 178, 206, 133, 233, 130, 151,
+          165
+        ],
+        "control_confirmed": false,
+        "confirmed_by_human": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+        "confirmed_by_device": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "version": "1",
+        "revoked": false,
+        "imported_at_ms": "1791037088769"
+      },
+      "managedObject": {
+        "id": "0xe818f72ef815b8b7d972ca002d863f048c87c999590430e6e76df36d3a03c03b",
+        "type": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::host::ManagedAgent",
+        "version": "3897309",
+        "previousTransaction": "HrvfDhizhMMPCuYWUP1zaTHNZSB3wACRCcjmnx547EGC"
+      },
+      "legacyOrganizationAgentCount": "1",
+      "clockMs": "1791037414419",
+      "checks": [
+        "Exactly one original binding, consumed invite and original membership after Coordinator/worker process restarts",
+        "Original membership previousTransaction remains the initial confirmed join digest",
+        "Exact original native instance has one current observation-only managed record",
+        "Managed record previousTransaction equals the actual installed UI import receipt; no execution permission"
+      ],
+      "completed": true
+    },
+    "legacyStartupSideEffect": {
+      "format": 1,
+      "scope": "Public original legacy AgentCertificate generated by old formal worker startup; preserved for audit",
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "hostAddress": "0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd",
+      "legacyOrganizationAgentCount": "1",
+      "certificates": [
+        {
+          "id": "0xd0e8adcc4770ce61cea95c2911958c71649320b2e15c23614fbc5589b7ee1652",
+          "type": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10::agent::AgentCertificate",
+          "version": "3870766",
+          "previousTransaction": "Fg1ZaWNrHPjeuHRN6PRc947mb7dAiPf6hG9QZjKJgEhB"
+        }
+      ],
+      "completed": true
+    },
+    "reconnectPrior": {
+      "format": 1,
+      "pid": "4073",
+      "scope": "Formal Coordinator process restart; original admitted worker reauthentication/registration and installed App fresh read",
+      "initialInstance": "native-490117ebd4851446755e54253c5bb87312d2509731289eb6ba8ee39bbd778740",
+      "checks": [],
+      "current": {
+        "error": null,
+        "text": "Discover existing AgentsRead the Hosts' recent scans through an organization entry point. Review instances, workspaces and continuity. Discovery does not start or change existing tasks.Local device profileLoad organization entry pointsOrganization entry pointhttp://127.0.0.1:30180 · 0xb19e97b20xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8Verify device and read observationsEntry point signature verified · Recently read observation · 7:23:18 AMHost signature verifiedAndroid UI worker0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bdHeartbeat time10/3/2026, 7:23:28 AMHeartbeat freshnessHost-signed observation within its validity windowSystem / CPUdarwin / arm64 · 10Observed instances0tmux instance scanScan unavailable. Check the Host and read againScan time · 10/3/2026, 7:23:27 AMNative file AgentsHost scan verifiedScan time · 10/3/2026, 7:23:27 AMnative-filesInstance continuity observed · observation onlynative-490117ebd4851446755e54253c5bb87312d2509731289eb6ba8ee39bbd778740Workspace: /private/tmp/fm-android-host-ui-m8d0bgy5/workspaceWorkspace fingerprint: c4f2393d9d8d0353287a7a9630c403bbb2459357e11b49d528b2ce85e98297a5Adapter: native file Agent, supporting 1–3 file goals and bounded read/write. Observation only; execution requires handover and ACTIVE OKR authorization.Import for observation onlyRecover registration transactionEntry point and Host signatures are checked separately against the current chain directory. A signed heartbeat proves a recent observation; it grants no execution authority or independent Agent identity. Observations remain in this page's memory only and become unknown on expiry."
+      },
+      "workerLog": "2026/10/03 07:12:57 [envd] starting fractalmind-envd dev (host=Android UI worker)\n2026/10/03 07:13:10 [envd] [runtimeadapter] persistent signed-command runtime enabled (executor=*main.chainRuntimeExecutor)\n2026/10/03 07:13:10 [envd] [roles] active: worker=true coordinator=false relay=false stun_server=false sponsor=false\n2026/10/03 07:13:10 [envd] [auth] control channel enabled, node identity=0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd\n2026/10/03 07:13:10 [envd] initial scan: 0 agent panes found\n2026/10/03 07:13:10 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:13:10 [envd] [ws] connected to ws://127.0.0.1:30180/ws\n2026/10/03 07:13:10 [envd] [ws] control-channel authenticated (coordinator verified)\n2026/10/03 07:21:41 [envd] [ws] read error: websocket: close 1006 (abnormal closure): unexpected EOF\n2026/10/03 07:21:41 [envd] [ws] disconnected, reconnecting in 1s\n2026/10/03 07:21:41 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:42 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:42 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:42 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:43 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:43 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:43 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:44 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:44 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:44 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:45 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:45 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:45 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:46 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:46 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:46 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:47 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:47 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:47 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:48 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:48 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:48 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:49 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:49 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:49 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:50 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:50 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:50 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:51 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:51 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:51 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:52 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:52 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:52 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:53 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:53 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:53 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:54 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:54 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:54 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:55 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:55 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:55 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:56 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:56 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:56 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:57 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:57 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:57 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:58 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:58 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:58 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:59 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:59 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:59 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:22:00 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:22:00 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:22:00 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:22:01 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:22:01 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:22:01 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:22:02 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:22:02 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:22:02 [envd] [ws] connected to ws://127.0.0.1:30180/ws\n2026/10/03 07:22:02 [envd] [ws] control-channel authenticated (coordinator verified)\n",
+      "completed": false,
+      "failure": "The expression evaluated to a falsy value:\n\n  assert(report.workerLog.includes('connection lost'))\n"
+    },
+    "reconnectRead": {
+      "format": 1,
+      "pid": "4073",
+      "scope": "Formal Coordinator process restart; original admitted worker reauthentication/registration and installed App fresh read",
+      "initialInstance": "native-490117ebd4851446755e54253c5bb87312d2509731289eb6ba8ee39bbd778740",
+      "checks": [
+        "Actual Coordinator old process terminated and new process uses original native identity/binding",
+        "Formal existing worker detects disconnect and completes a second authenticated connection",
+        "Installed Android App reads fresh verified original Host and identical native instance after service-cache reconstruction",
+        "New signed execution startup performed no automatic mesh/AgentCertificate registration"
+      ],
+      "current": {
+        "error": null,
+        "text": "Discover existing AgentsRead the Hosts' recent scans through an organization entry point. Review instances, workspaces and continuity. Discovery does not start or change existing tasks.Local device profileLoad organization entry pointsOrganization entry pointhttp://127.0.0.1:30180 · 0xb19e97b20xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8Verify device and read observationsEntry point signature verified · Recently read observation · 7:24:59 AMHost signature verifiedAndroid UI worker0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bdHeartbeat time10/3/2026, 7:25:09 AMHeartbeat freshnessHost-signed observation within its validity windowSystem / CPUdarwin / arm64 · 10Observed instances0tmux instance scanScan unavailable. Check the Host and read againScan time · 10/3/2026, 7:25:08 AMNative file AgentsHost scan verifiedScan time · 10/3/2026, 7:25:08 AMnative-filesInstance continuity observed · observation onlynative-490117ebd4851446755e54253c5bb87312d2509731289eb6ba8ee39bbd778740Workspace: /private/tmp/fm-android-host-ui-m8d0bgy5/workspaceWorkspace fingerprint: c4f2393d9d8d0353287a7a9630c403bbb2459357e11b49d528b2ce85e98297a5Adapter: native file Agent, supporting 1–3 file goals and bounded read/write. Observation only; execution requires handover and ACTIVE OKR authorization.Import for observation onlyRecover registration transactionEntry point and Host signatures are checked separately against the current chain directory. A signed heartbeat proves a recent observation; it grants no execution authority or independent Agent identity. Observations remain in this page's memory only and become unknown on expiry."
+      },
+      "workerLog": "2026/10/03 07:12:57 [envd] starting fractalmind-envd dev (host=Android UI worker)\n2026/10/03 07:13:10 [envd] [runtimeadapter] persistent signed-command runtime enabled (executor=*main.chainRuntimeExecutor)\n2026/10/03 07:13:10 [envd] [roles] active: worker=true coordinator=false relay=false stun_server=false sponsor=false\n2026/10/03 07:13:10 [envd] [auth] control channel enabled, node identity=0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd\n2026/10/03 07:13:10 [envd] initial scan: 0 agent panes found\n2026/10/03 07:13:10 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:13:10 [envd] [ws] connected to ws://127.0.0.1:30180/ws\n2026/10/03 07:13:10 [envd] [ws] control-channel authenticated (coordinator verified)\n2026/10/03 07:21:41 [envd] [ws] read error: websocket: close 1006 (abnormal closure): unexpected EOF\n2026/10/03 07:21:41 [envd] [ws] disconnected, reconnecting in 1s\n2026/10/03 07:21:41 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:42 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:42 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:42 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:43 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:43 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:43 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:44 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:44 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:44 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:45 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:45 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:45 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:46 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:46 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:46 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:47 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:47 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:47 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:48 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:48 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:48 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:49 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:49 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:49 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:50 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:50 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:50 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:51 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:51 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:51 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:52 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:52 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:52 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:53 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:53 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:53 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:54 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:54 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:54 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:55 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:55 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:55 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:56 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:56 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:56 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:57 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:57 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:57 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:58 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:58 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:58 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:21:59 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:21:59 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:21:59 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:22:00 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:22:00 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:22:00 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:22:01 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:22:01 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:22:01 [envd] [ws] connect failed: dial tcp 127.0.0.1:30180: connect: connection refused, retrying in 1s\n2026/10/03 07:22:02 [envd] [heartbeat] send failed: not connected\n2026/10/03 07:22:02 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 07:22:02 [envd] [ws] connected to ws://127.0.0.1:30180/ws\n2026/10/03 07:22:02 [envd] [ws] control-channel authenticated (coordinator verified)\n",
+      "completed": true
+    },
+    "firstFixedAPK": {
+      "format": 1,
+      "scope": "Upgrade only the isolated task emulator App, preserving original native keys and data",
+      "apk": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk",
+      "sha256": "da45b2fa9d9d5120de01dee72a721723e587b8c6d3836c5c80c05088e62f0d53",
+      "size": 332315531,
+      "signatureVerification": "Verifies\nVerified using v1 scheme (JAR signing): false\nVerified using v2 scheme (APK Signature Scheme v2): true\nVerified using v3 scheme (APK Signature Scheme v3): false\nVerified using v3.1 scheme (APK Signature Scheme v3.1): false\nVerified using v4 scheme (APK Signature Scheme v4): false\nVerified for SourceStamp: false\nNumber of signers: 1\n",
+      "beforePid": "3578",
+      "install": "Performing Streamed Install\nSuccess\n",
+      "start": "Starting: Intent { cmp=org.fractalmind.desktop/.MainActivity }\nStatus: ok\nLaunchState: COLD\nActivity: org.fractalmind.desktop/.MainActivity\nTotalTime: 1427\nWaitTime: 1430\nComplete\n",
+      "afterPid": "4073",
+      "completed": true
+    },
+    "finalAPK": {
+      "format": 1,
+      "scope": "Final counter/fetch APK upgrade only on task emulator; original native credentials/data retained",
+      "apk": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk",
+      "sha256": "bc40942bd9749ec098c427911ea6b5e2cde2c97781921844b599312c4230462f",
+      "size": 332315611,
+      "signatureVerification": "Verifies\nVerified using v1 scheme (JAR signing): false\nVerified using v2 scheme (APK Signature Scheme v2): true\nVerified using v3 scheme (APK Signature Scheme v3): false\nVerified using v3.1 scheme (APK Signature Scheme v3.1): false\nVerified using v4 scheme (APK Signature Scheme v4): false\nVerified for SourceStamp: false\nNumber of signers: 1\n",
+      "beforePid": "4073",
+      "install": "Performing Streamed Install\nSuccess\n",
+      "start": "Starting: Intent { cmp=org.fractalmind.desktop/.MainActivity }\nStatus: ok\nLaunchState: COLD\nActivity: org.fractalmind.desktop/.MainActivity\nTotalTime: 1205\nWaitTime: 1207\nComplete\n",
+      "afterPid": "4367",
+      "completed": true
+    },
+    "originalWorkerStop": {
+      "format": 1,
+      "pid": 38779,
+      "command": "/tmp/fm-envd-android-host-r1 --config /private/tmp/fm-android-host-ui-m8d0bgy5/worker.json",
+      "signal": "SIGTERM",
+      "scope": "Only the exact task-owned original worker"
+    },
+    "originalCoordinatorStop": {
+      "format": 1,
+      "pid": 37911,
+      "command": "/tmp/fm-envd-android-host-r1 --config /private/tmp/fm-android-host-ui-m8d0bgy5/coordinator.json",
+      "signal": "SIGTERM",
+      "scope": "Only the exact task-owned original Coordinator"
+    }
+  },
+  "originalReceiptReadAfterPruning": "{\"state\":\"unknown\",\"digest\":\"7AK74u2s3m8mkvGz6LFXFTMGcdKNXrvpRrVc2BXvNmqo\"}\n2026/10/03 06:56:04 [envd] original Host join outcome is unknown; query digest 7AK74u2s3m8mkvGz6LFXFTMGcdKNXrvpRrVc2BXvNmqo, do not replay\n",
+  "productionGoAdmissionRead": {
+    "result": {
+      "membership": {
+        "organization_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "invite_id": "0xccef1983c3356fdf9888e5f8668e999f8d02c44fd7fe89ff807a3961b68a815a",
+        "membership_id": "0x291ef80e2edc698e8aa9f37452e8aa5131f2c5c4b5e3fb1c00f96e6f49bd81e4",
+        "host_address": "0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "observation_capability": "0xded74415d807f596be62a70c1b7cc8ea9bedb9e918ed0ea8a62cd17e6699075c",
+        "expires_at_ms": 1791122047690,
+        "revoked": false,
+        "current_membership": true
+      },
+      "connection": {
+        "OrganizationID": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "MembershipID": "0x291ef80e2edc698e8aa9f37452e8aa5131f2c5c4b5e3fb1c00f96e6f49bd81e4",
+        "BindingID": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "HostAddress": "0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd",
+        "CoordinatorAddress": "0x4e2910af107ceea8c029a26a650e52caccfd88f4f232db3b5e181f069a687c42",
+        "CoordinatorPublicKey": "c654917a0e714ee24583ecdecffab05a8902f9299a5327ed5ed7de524b7dffb0",
+        "Endpoint": "http://127.0.0.1:30180",
+        "MembershipVersion": 1,
+        "BindingVersion": 1,
+        "ExpiresAtMS": 1791122047690,
+        "VersionPin": "481978bdbdb4a3519e9aaefe8a302209299f7ff7152097cdb7ca7434fe21ec7a",
+        "AuthorityPin": ""
+      },
+      "broadcasts": 0
+    },
+    "log": "=== RUN   TestHostAdmissionReadLive\nFM_HOST_ADMISSION_READ_RESULT {\"membership\":{\"organization_id\":\"0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82\",\"invite_id\":\"0xccef1983c3356fdf9888e5f8668e999f8d02c44fd7fe89ff807a3961b68a815a\",\"membership_id\":\"0x291ef80e2edc698e8aa9f37452e8aa5131f2c5c4b5e3fb1c00f96e6f49bd81e4\",\"host_address\":\"0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd\",\"coordinator_binding\":\"0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8\",\"observation_capability\":\"0xded74415d807f596be62a70c1b7cc8ea9bedb9e918ed0ea8a62cd17e6699075c\",\"expires_at_ms\":1791122047690,\"revoked\":false,\"current_membership\":true},\"connection\":{\"OrganizationID\":\"0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82\",\"MembershipID\":\"0x291ef80e2edc698e8aa9f37452e8aa5131f2c5c4b5e3fb1c00f96e6f49bd81e4\",\"BindingID\":\"0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8\",\"HostAddress\":\"0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd\",\"CoordinatorAddress\":\"0x4e2910af107ceea8c029a26a650e52caccfd88f4f232db3b5e181f069a687c42\",\"CoordinatorPublicKey\":\"c654917a0e714ee24583ecdecffab05a8902f9299a5327ed5ed7de524b7dffb0\",\"Endpoint\":\"http://127.0.0.1:30180\",\"MembershipVersion\":1,\"BindingVersion\":1,\"ExpiresAtMS\":1791122047690,\"VersionPin\":\"481978bdbdb4a3519e9aaefe8a302209299f7ff7152097cdb7ca7434fe21ec7a\",\"AuthorityPin\":\"\"},\"broadcasts\":0}\n--- PASS: TestHostAdmissionReadLive (0.01s)\nPASS\n",
+    "binarySha256": "11eb0f2409b84849c6f820a30e778194c05383e444b9fbf2e9ecbdd08b8bf768"
+  },
+  "unit": {
+    "goRaceCommand": "go test -race ./internal/hostjoin ./cmd/envd",
+    "goRaceExitCode": 0,
+    "goRaceLog": "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/hostjoin\t3.111s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd\t4.103s\n",
+    "appTestCommand": "npm test",
+    "appTestExitCode": 0,
+    "appTests": 234,
+    "appPassed": 234,
+    "strictTypecheckExitCode": 0
+  },
+  "builds": {
+    "finalAPKBuildCommand": "npm run android:build -- --debug --apk --target aarch64 --ci",
+    "finalAPKBuildExitCode": 0,
+    "finalBuildLog": "\n> @fractalmind-labs/fractalmind-app@0.2.0 preandroid:build\n> node scripts/android-platform.mjs\n\nApplied FractalMind Android system-bar appearance and insets\n\n> @fractalmind-labs/fractalmind-app@0.2.0 android:build\n> tauri android build --debug --apk --target aarch64 --ci\n\n        Info Using installed NDK: /tmp/fm-v020-android-kkr_ahu_/sdk/ndk/30.0.16248370\n        Info Looking up installed tauri packages to check mismatched versions...\n     Running beforeBuildCommand `npm run build`\n\n> @fractalmind-labs/fractalmind-app@0.2.0 build\n> tsc --noEmit && vite build\n\nvite v7.3.6 building client environment for production...\ntransforming...\nnode_modules/@scure/base/index.js (2:0): A comment\n\n\"// Freeze the result of a thunk. `/* @__PURE__ */ freeze(() => expr)` keeps the whole\"\n\nin \"node_modules/@scure/base/index.js\" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.\n../../protocols/fractalmind-protocol/sdk/node_modules/@scure/base/index.js (2:0): A comment\n\n\"// Freeze the result of a thunk. `/* @__PURE__ */ freeze(() => expr)` keeps the whole\"\n\nin \"../../protocols/fractalmind-protocol/sdk/node_modules/@scure/base/index.js\" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.\n✓ 696 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                                        0.51 kB │ gzip:   0.32 kB\ndist/assets/index-qUct96CR.css                        23.75 kB │ gzip:   6.05 kB\ndist/assets/MessageOkrContext-Y8qfnXzQ.js              1.53 kB │ gzip:   0.76 kB\ndist/assets/record-pointer-Cr3H4kCo.js                 1.91 kB │ gzip:   0.84 kB\ndist/assets/browser-transaction-journal-BJ96eH_d.js    2.10 kB │ gzip:   0.85 kB\ndist/assets/native-onboarding-CFGoTSKR.js              2.36 kB │ gzip:   0.91 kB\ndist/assets/private-records-CUCA29_0.js                3.51 kB │ gzip:   1.28 kB\ndist/assets/PrivateRecordView-D9r3l9pB.js              3.98 kB │ gzip:   2.05 kB\ndist/assets/DeviceAccess-DQvqbwgR.js                   4.06 kB │ gzip:   1.94 kB\ndist/assets/onboarding-C6Yt4PpD.js                     6.54 kB │ gzip:   2.22 kB\ndist/assets/execution-results-BMVYS2oz.js              7.07 kB │ gzip:   2.55 kB\ndist/assets/coordinator-read-B-u13AXV.js               7.34 kB │ gzip:   2.63 kB\ndist/assets/AgentCheckpointView-2dZb4tPk.js            7.95 kB │ gzip:   3.55 kB\ndist/assets/host-signatures-CyQ1K3HM.js                8.37 kB │ gzip:   3.07 kB\ndist/assets/host-admission-DGDSKTvL.js                 8.54 kB │ gzip:   3.14 kB\ndist/assets/agent-import-DSx5FwzP.js                   9.80 kB │ gzip:   3.21 kB\ndist/assets/okr-intervention-DIRVsT6x.js              10.28 kB │ gzip:   3.53 kB\ndist/assets/HostObservations-uQ5RjMiF.js              10.93 kB │ gzip:   4.65 kB\ndist/assets/CreateIdentity-B2Cv0exR.js                11.91 kB │ gzip:   4.81 kB\ndist/assets/AgentImportFlow-CYp5Fn6r.js               12.69 kB │ gzip:   5.11 kB\ndist/assets/CreateOkr-BPzDzce7.js                     14.28 kB │ gzip:   5.96 kB\ndist/assets/OkrIntervention-B_f8E394.js               14.71 kB │ gzip:   6.05 kB\ndist/assets/OkrProjection-Duhl-bLG.js                 18.86 kB │ gzip:   7.37 kB\ndist/assets/OkrAutonomy-Bi3dYukd.js                   19.84 kB │ gzip:   7.33 kB\ndist/assets/HostAccess-BkYqqPYA.js                    19.90 kB │ gzip:   7.42 kB\ndist/assets/OkrContinuation-CTMLBPwR.js               22.71 kB │ gzip:   7.91 kB\ndist/assets/okr-delivery-journal-B1eFs-Bh.js          22.82 kB │ gzip:   6.60 kB\ndist/assets/PairingFlow-BRkN1y8_.js                   25.88 kB │ gzip:   8.85 kB\ndist/assets/RecoverIdentity-llUiFufq.js               25.95 kB │ gzip:   8.72 kB\ndist/assets/OkrVerification-DCGcnJcv.js               26.01 kB │ gzip:   8.84 kB\ndist/assets/DirectAgentConversation-BLv6_XR2.js       27.00 kB │ gzip:   9.38 kB\ndist/assets/HandoverFlow-Sd72my1p.js                  52.38 kB │ gzip:  15.47 kB\ndist/assets/okr-draft-DJPPv7Uy.js                     54.44 kB │ gzip:  14.80 kB\ndist/assets/Transaction-7DBdvxi8.js                   62.02 kB │ gzip:  18.26 kB\ndist/assets/device-identity-CnBdWm7R.js               78.24 kB │ gzip:  27.77 kB\ndist/assets/index-BShr9nLO.js                        957.36 kB │ gzip: 269.11 kB\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n✓ built in 1.44s\n\u001b[1m\u001b[92m   Compiling\u001b[0m fractalmind-app v0.2.0 (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri)\n\u001b[1m\u001b[92m    Finished\u001b[0m `dev` profile [unoptimized + debuginfo] target(s) in 6.15s\n        Info symlinking lib \"/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/aarch64-linux-android/debug/libfractalmind_app_lib.so\" in jniLibs dir \"/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a\"\n        Info \"/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/aarch64-linux-android/debug/libfractalmind_app_lib.so\" requires shared lib \"libandroid.so\"\n        Info \"/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/aarch64-linux-android/debug/libfractalmind_app_lib.so\" requires shared lib \"libdl.so\"\n        Info \"/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/aarch64-linux-android/debug/libfractalmind_app_lib.so\" requires shared lib \"liblog.so\"\n        Info \"/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/aarch64-linux-android/debug/libfractalmind_app_lib.so\" requires shared lib \"libm.so\"\n        Info \"/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/aarch64-linux-android/debug/libfractalmind_app_lib.so\" requires shared lib \"libc.so\"\n        Info symlink at \"/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a/libfractalmind_app_lib.so\" points to \"/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/aarch64-linux-android/debug/libfractalmind_app_lib.so\"\n        Info connection; remote_addr=127.0.0.1:51033 conn_id=0\n\n> @fractalmind-labs/fractalmind-app@0.2.0 tauri\n> tauri android android-studio-script --target aarch64\n\n\u001b[1m\u001b[32m        Info\u001b[0m Using installed NDK: /tmp/fm-v020-android-kkr_ahu_/sdk/ndk/30.0.16248370\n\u001b[1m\u001b[92m   Compiling\u001b[0m fractalmind-app v0.2.0 (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri)\n\u001b[1m\u001b[92m    Finished\u001b[0m `dev` profile [unoptimized + debuginfo] target(s) in 3.26s\n\u001b[1m\u001b[32m        Info\u001b[0m symlinking lib \"/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/aarch64-linux-android/debug/libfractalmind_app_lib.so\" in jniLibs dir \"/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a\"\n\u001b[1m\u001b[32m        Info\u001b[0m \"/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/aarch64-linux-android/debug/libfractalmind_app_lib.so\" requires shared lib \"libandroid.so\"\n\u001b[1m\u001b[32m        Info\u001b[0m \"/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/aarch64-linux-android/debug/libfractalmind_app_lib.so\" requires shared lib \"libdl.so\"\n\u001b[1m\u001b[32m        Info\u001b[0m \"/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/aarch64-linux-android/debug/libfractalmind_app_lib.so\" requires shared lib \"liblog.so\"\n\u001b[1m\u001b[32m        Info\u001b[0m \"/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/aarch64-linux-android/debug/libfractalmind_app_lib.so\" requires shared lib \"libm.so\"\n\u001b[1m\u001b[32m        Info\u001b[0m \"/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/aarch64-linux-android/debug/libfractalmind_app_lib.so\" requires shared lib \"libc.so\"\nConfiguration cache entry reused.\n    Finished 1 APK at:\n        /Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk\n\n",
+    "priorCounterTypeFailureLog": "\n> @fractalmind-labs/fractalmind-app@0.2.0 preandroid:build\n> node scripts/android-platform.mjs\n\nApplied FractalMind Android system-bar appearance and insets\n\n> @fractalmind-labs/fractalmind-app@0.2.0 android:build\n> tauri android build --debug --apk --target aarch64 --ci\n\n        Info Using installed NDK: /tmp/fm-v020-android-kkr_ahu_/sdk/ndk/30.0.16248370\n        Info Looking up installed tauri packages to check mismatched versions...\n     Running beforeBuildCommand `npm run build`\n\n> @fractalmind-labs/fractalmind-app@0.2.0 build\n> tsc --noEmit && vite build\n\nsrc/HostObservations.tsx(342,42): error TS2345: Argument of type 'AgentDiscovery | null | undefined' is not assignable to parameter of type 'AgentDiscovery | null'.\n  Type 'undefined' is not assignable to type 'AgentDiscovery | null'.\nbeforeBuildCommand `npm run build` failed with exit code 2\n       Error beforeBuildCommand `npm run build` failed with exit code 2\n",
+    "productionEnvdBuildExitCode": 0,
+    "originalEnvdSha256": "9406575a2969f218366597fd8ff9975682966bb44e23613d9c5837cbcc2e477d",
+    "fixedEnvdSha256": "7b5b276edf1cf0e2ff6707a7e8191682fa7c372b45032b770c1e01d549a301c6"
+  },
+  "sourceSha256": {
+    "apps/fractalmind-app/src/coordinator-read.ts": "0a33a54e3fa26a64499d17e4fe399343522f8ef4b9050ac2c3e801a8f3cf3e1f",
+    "apps/fractalmind-app/src/HostObservations.tsx": "83d34473fd92ed3dcf5f05ce178ee45f7df210a5db79426f6eea9951ae2709ec",
+    "apps/fractalmind-app/tests/coordinator-read.test.ts": "f0eb75ee7b4f99c128618025b49688d8657b3af30ac96ab3b8d7aa89940c07a0",
+    "runtime/fractalmind-envd/cmd/envd/main.go": "f8d0be0f54f05ba2a54fe8f5b6ae99c92f90a310010fd389a16edf5f037f1eba",
+    "runtime/fractalmind-envd/cmd/envd/peer_registry.go": "849a098062d5de7c5c1b6beaa8ed51dd0ddee95c85e16e61936059e786e3e25b",
+    "runtime/fractalmind-envd/cmd/envd/peer_registry_test.go": "7d67c91c5e0c63b250800681b3ce11d2acb7851f1f9beccbf48b6c5dbbde349d",
+    "runtime/fractalmind-envd/cmd/envd/host_admission_read_live_test.go": "9ef7e65639be9def77528b242598e78fa574c78e2f0639d2c33aa3f037d09c37",
+    "runtime/fractalmind-envd/internal/hostjoin/run.go": "096568a9e25737f30d6059e48cfefddb294009ad165301904c65c7d0f0e5a391",
+    "runtime/fractalmind-envd/internal/hostjoin/run_test.go": "df791d77a6aae694fd8593bba79624660bb1588570da559250f7ac8b7638bb04"
+  },
+  "fixtureSha256": {
+    "/tmp/fm-android-host-binding-r1.mjs": "eb46f6977026f1a58c823e8792acf002c9480908df04dfe46b5fe915cd0636d4",
+    "/tmp/fm-android-host-binding-read-r1.mts": "36dc239b41a447947befcc31b30a779b16293452e02c4df59890f6834c0e39a0",
+    "/tmp/fm-android-host-invite-join-r1.mjs": "ec3bdddf4e58875d0eeba75284e2e34f217eabc7ffe195ca006ce3d2d639762e",
+    "/tmp/fm-android-host-admission-read-r1.mts": "9f1b97d5d5c936d74a3f51d1293405bd6235a5e16cfbe24042ff77513dd9c7b9",
+    "/tmp/fm-android-host-observations-r1.mjs": "b97af2581350c5b6adeb22aa08f369fba46541a65d89224a8c70a29bd2ed8f1c",
+    "/tmp/fm-android-host-observations-r2.mjs": "80914bf44b4e8084dd41d8414dbe178e8b52bf494e23076c3f00af1749170dda",
+    "/tmp/fm-android-host-observations-r3.mjs": "c0454ac141c3509a3c9fed58bc31412830731424e0e0e28234776733914f5107",
+    "/tmp/fm-android-host-observations-r4.mjs": "a6542c0ec26615eb7d0dc679cc64482502c4ff16d854467b6fbf92714dfd5387",
+    "/tmp/fm-android-host-fetch-context-r1.mjs": "f4be2354c06d4120d1ef1dbedb71759531b543e83c95df6fe1b637fd34e9018b",
+    "/tmp/fm-android-host-reconnect-r1.mjs": "d43bc95e572d4252dbb02ccbc5bc994f9512203da2983679e7a11ea4d36e6e08",
+    "/tmp/fm-android-host-reconnect-r2.mjs": "40d6c37ce4ae172fdd976d09ec1c768315ef67eaeb1fe383927ab1f60b355def",
+    "/tmp/fm-android-agent-import-r1.mjs": "68c21f91425233f5659a9fb61db69889119ef174156288f4a1d02cb089bd3dd7",
+    "/tmp/fm-android-agent-import-original-read-r1.mjs": "af69b3a7d25827231df96df1a19d7ca42e91f0a04e283ba95d1191740781c9fa",
+    "/tmp/fm-android-agent-import-chain-read-r1.mts": "f32ae4c1039ada67164d6cbb9c637712149898dc28d77f291d627e53de276c23",
+    "/tmp/fm-android-host-legacy-registration-read-r1.mts": "2dd68f9eb48b79f36b1c8d4b4fbe3d5ca8049720d675d3c11f1787f16cdc216a"
+  },
+  "limitations": [
+    "Task Android emulator and same-Mac processes only; no physical phone, cellular network or cloud Host",
+    "Original admission confirmed before fix; reconstruction_pending was not replayed, and later receipt query remained unknown after localnet pruning",
+    "Bounded missing-object wait verified by race tests; the original source error classification was not exposed by the old CLI",
+    "Old formal worker unexpectedly created one legacy AgentCertificate; original object and digest preserved; fixed startup no longer enables that path without explicit mesh IDs",
+    "New managed instance remains observation-only; no handover, ACTIVE OKR execution, running Host resumption, dialogue/approval, full cache recovery or historical Run cleanup in this increment",
+    "Coordinator restart verified current observation reconnection/registration only; coordinator-only role still emits unavailable worker membership messages",
+    "No GitHub CI or complete #40 acceptance claimed; native task profiles retained for continued original-object validation"
+  ]
+}

@@ -1,12 +1,16 @@
 package ws
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
 	"time"
 
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/heartbeat"
+	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand"
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/wsauth"
 	"github.com/gorilla/websocket"
 )
@@ -51,6 +55,9 @@ type Client struct {
 	conn            *websocket.Conn
 	mu              sync.Mutex
 	done            chan struct{}
+	ctx             context.Context
+	cancel          context.CancelFunc
+	closeOnce       sync.Once
 	onCommand       func(CommandPayload)
 	onConnect       func()
 	onDesktopSignal func(DesktopSignalPayload)
@@ -58,18 +65,58 @@ type Client struct {
 	// Control-channel authentication. signer proves this worker's SUI
 	// identity to the coordinator; expectedCoordAddr, when non-empty, pins the
 	// coordinator's SUI address so a spoofed gateway cannot drive this worker.
-	signer            wsauth.Signer
-	expectedCoordAddr string
-	handshakeTimeout  time.Duration
+	signer              wsauth.Signer
+	expectedCoordAddr   string
+	handshakeTimeout    time.Duration
+	resolveEndpoint     func(context.Context) (string, string, error)
+	validateConnection  func(context.Context) error
+	observationScope    func(context.Context) (heartbeat.Scope, uint64, error)
+	sessionNonce        string
+	observationSequence uint64
+}
+
+// SetHostObservation is configured before Connect; only current admitted Host
+// keys can produce a signed heartbeat. No legacy unsigned fallback is permitted.
+func (c *Client) SetHostObservation(read func(context.Context) (heartbeat.Scope, uint64, error)) {
+	c.observationScope = read
+}
+
+// SetChainAuthority is configured before Connect. Resolve reads current chain
+// admission on every dial; validate rechecks it before observed/protected traffic.
+func (c *Client) SetChainAuthority(resolve func(context.Context) (string, string, error), validate func(context.Context) error) {
+	c.resolveEndpoint, c.validateConnection = resolve, validate
+}
+
+func (c *Client) validate() error {
+	if c.validateConnection == nil {
+		return nil
+	}
+	if c.signer == nil {
+		return fmt.Errorf("Host signing identity required")
+	}
+	ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second)
+	defer cancel()
+	return c.validateConnection(ctx)
 }
 
 // NewClient creates a WebSocket client.
 func NewClient(url string, reconnectWait time.Duration) *Client {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Client{
+		ctx: ctx, cancel: cancel,
 		url:              url,
 		reconnectWait:    reconnectWait,
 		done:             make(chan struct{}),
 		handshakeTimeout: 15 * time.Second,
+	}
+}
+
+func (c *Client) waitReconnect() {
+	timer := time.NewTimer(c.reconnectWait)
+	defer timer.Stop()
+	select {
+	case <-c.done:
+	case <-timer.C:
 	}
 }
 
@@ -111,23 +158,36 @@ func (c *Client) Connect() {
 			return
 		default:
 		}
+		if c.resolveEndpoint != nil {
+			ctx, cancel := context.WithTimeout(c.ctx, 15*time.Second)
+			url, address, err := c.resolveEndpoint(ctx)
+			cancel()
+			if err != nil || url == "" || address == "" || c.signer == nil {
+				log.Printf("[ws] current chain admission unavailable; retrying in %s", c.reconnectWait)
+				c.waitReconnect()
+				continue
+			}
+			c.url, c.expectedCoordAddr = url, address
+		}
 
 		log.Printf("[ws] connecting to %s ...", c.url)
 
-		conn, _, err := websocket.DefaultDialer.Dial(c.url, nil)
+		conn, _, err := websocket.DefaultDialer.DialContext(c.ctx, c.url, nil)
 		if err != nil {
 			log.Printf("[ws] connect failed: %v, retrying in %s", err, c.reconnectWait)
-			time.Sleep(c.reconnectWait)
+			c.waitReconnect()
 			continue
 		}
 
 		log.Printf("[ws] connected to %s", c.url)
+		stopClose := context.AfterFunc(c.ctx, func() { conn.Close() })
 
 		if c.signer != nil {
 			if err := c.authenticate(conn); err != nil {
 				log.Printf("[ws] control-channel auth failed: %v, retrying in %s", err, c.reconnectWait)
 				conn.Close()
-				time.Sleep(c.reconnectWait)
+				stopClose()
+				c.waitReconnect()
 				continue
 			}
 			log.Printf("[ws] control-channel authenticated (coordinator verified)")
@@ -144,13 +204,15 @@ func (c *Client) Connect() {
 		}
 
 		c.readLoop(conn)
+		conn.Close()
+		stopClose()
 
 		c.mu.Lock()
 		c.conn = nil
 		c.mu.Unlock()
 
 		log.Printf("[ws] disconnected, reconnecting in %s", c.reconnectWait)
-		time.Sleep(c.reconnectWait)
+		c.waitReconnect()
 	}
 }
 
@@ -208,6 +270,9 @@ func (c *Client) authenticate(conn *websocket.Conn) error {
 	}
 	switch raw.Type {
 	case wsauth.MsgAuthOK:
+		c.mu.Lock()
+		c.sessionNonce, c.observationSequence = challenge.ServerNonce, 0
+		c.mu.Unlock()
 		return nil
 	case wsauth.MsgAuthError:
 		var ep wsauth.ErrorPayload
@@ -239,12 +304,55 @@ func readMsg(conn *websocket.Conn, wantType string, out interface{}) error {
 
 // Send sends a message to Gateway.
 func (c *Client) Send(msgType string, payload interface{}) error {
+	if err := c.validate(); err != nil {
+		// A concurrent product-record transaction can change the organization
+		// version during a heartbeat read without revoking this Host. Drop this
+		// unverified frame and recheck on the next send; keep the socket so an
+		// unrelated in-flight command is not lost. All other failures close it.
+		if errors.Is(err, nodecommand.ErrChainSnapshotChanged) {
+			return err
+		}
+		c.mu.Lock()
+		if c.conn != nil {
+			c.conn.Close()
+		}
+		c.mu.Unlock()
+		return err
+	}
 	c.mu.Lock()
 	conn := c.conn
 	c.mu.Unlock()
 
 	if conn == nil {
 		return fmt.Errorf("not connected")
+	}
+	var scope heartbeat.Scope
+	var expiry uint64
+	if msgType == "heartbeat" && c.observationScope != nil {
+		ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second)
+		var err error
+		scope, expiry, err = c.observationScope(ctx)
+		cancel()
+		if err != nil {
+			return err
+		}
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if conn != c.conn {
+		return fmt.Errorf("Host connection changed before send")
+	}
+	if msgType == "heartbeat" && c.observationScope != nil {
+		observed, ok := payload.(*heartbeat.Payload)
+		if !ok {
+			return fmt.Errorf("typed Host heartbeat required")
+		}
+		signed, err := heartbeat.Sign(c.signer, scope, c.sessionNonce, c.observationSequence+1, heartbeat.Expiry(observed.Timestamp, expiry), observed)
+		if err != nil {
+			return err
+		}
+		c.observationSequence++
+		msgType, payload = "host_observation", signed
 	}
 
 	data, err := json.Marshal(payload)
@@ -257,14 +365,12 @@ func (c *Client) Send(msgType string, payload interface{}) error {
 		Payload: data,
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
 	return conn.WriteJSON(msg)
 }
 
 // Close shuts down the client.
 func (c *Client) Close() {
-	close(c.done)
+	c.closeOnce.Do(func() { close(c.done); c.cancel() })
 	c.mu.Lock()
 	if c.conn != nil {
 		c.conn.Close()
@@ -280,6 +386,14 @@ func (c *Client) readLoop(conn *websocket.Conn) {
 				log.Printf("[ws] read error: %v", err)
 			}
 			return
+		}
+		if err := c.validate(); err != nil {
+			// Re-read authority for this already received message once if a chain
+			// write raced with the snapshot. This is not another delivery and it
+			// never refreshes the command's signed expiry or grants permission.
+			if !errors.Is(err, nodecommand.ErrChainSnapshotChanged) || c.validate() != nil {
+				return
+			}
 		}
 
 		switch msg.Type {

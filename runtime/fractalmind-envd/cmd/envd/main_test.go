@@ -19,7 +19,7 @@ import (
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/wsauth"
 )
 
-func TestSignedCommandWithoutStateDirExecutorFailsClosed(t *testing.T) {
+func TestSignedCommandWithoutEnabledRuntimeFailsClosed(t *testing.T) {
 	t.Setenv("FRACTALMIND_RUNTIME_STATE_DIR", "")
 
 	executor, err := newRuntimeCommandExecutorFromEnv(testRuntimeConfig())
@@ -27,22 +27,22 @@ func TestSignedCommandWithoutStateDirExecutorFailsClosed(t *testing.T) {
 		t.Fatalf("newRuntimeCommandExecutorFromEnv: %v", err)
 	}
 	if executor != nil {
-		t.Fatal("missing FRACTALMIND_RUNTIME_STATE_DIR must not create memory-backed executor")
+		t.Fatal("disabled runtime must not create a memory-backed executor")
 	}
 
 	result := handleSignedCommand(context.Background(), `{}`, executor)
 	if result["success"] != false {
 		t.Fatalf("success = %v, want false", result["success"])
 	}
-	if result["error_code"] != "runtime_state_dir_required" {
-		t.Fatalf("error_code = %v, want runtime_state_dir_required", result["error_code"])
+	if result["error_code"] != "runtime_configuration_required" {
+		t.Fatalf("error_code = %v, want runtime_configuration_required", result["error_code"])
 	}
-	if !strings.Contains(fmt.Sprint(result["error"]), "FRACTALMIND_RUNTIME_STATE_DIR") {
-		t.Fatalf("error = %v, want state-dir guidance", result["error"])
+	if !strings.Contains(fmt.Sprint(result["error"]), "runtime.enabled") {
+		t.Fatalf("error = %v, want chain runtime configuration guidance", result["error"])
 	}
 }
 
-func TestRuntimeCommandExecutorRejectsUnusableStateDir(t *testing.T) {
+func TestRuntimeCommandExecutorRejectsLegacyStatePath(t *testing.T) {
 	blockingFile := t.TempDir() + "/state-file"
 	if err := os.WriteFile(blockingFile, []byte("not a directory"), 0o600); err != nil {
 		t.Fatal(err)
@@ -54,11 +54,11 @@ func TestRuntimeCommandExecutorRejectsUnusableStateDir(t *testing.T) {
 	}
 }
 
-func TestRuntimeCommandExecutorRequiresAuthorityFile(t *testing.T) {
+func TestRuntimeCommandExecutorRejectsLegacyStateDirectory(t *testing.T) {
 	t.Setenv("FRACTALMIND_RUNTIME_STATE_DIR", t.TempDir())
 
 	if _, err := newRuntimeCommandExecutorFromEnv(testRuntimeConfig()); err == nil {
-		t.Fatal("missing authority state file was accepted")
+		t.Fatal("legacy state directory enabled a production file authority store")
 	}
 }
 
@@ -182,29 +182,48 @@ func TestHandleSignedCommandMalformedJSONHasNoNodeEvent(t *testing.T) {
 	}
 }
 
-func TestHandleCommandShellTimesOutAndReleasesHandler(t *testing.T) {
-	cfg := &config.Config{Agents: config.AgentsConfig{
-		AllowShell:   true,
-		ShellTimeout: "50ms",
-	}}
+func TestHandleSignedCommandPreservesUnknownTransactionForQuery(t *testing.T) {
+	result := handleSignedCommand(context.Background(), `{"command_id":"cmd"}`, runtimeCommandExecutorFunc(func(context.Context, nodecommand.NodeCommand) (runtimeadapter.Response, nodecommand.NodeEvent, error) {
+		return runtimeadapter.Response{}, nodecommand.NodeEvent{}, &nodecommand.RejectionError{Code: nodecommand.CodeExecutionUnknown, Message: "start receipt lost", ExecutionID: "execution-1", TransactionDigest: "original-digest"}
+	}))
+	if result["success"] != false || result["error_code"] != nodecommand.CodeExecutionUnknown || result["requires_confirmation"] != true || result["execution_id"] != "execution-1" || result["transaction_digest"] != "original-digest" {
+		t.Fatalf("App cannot query the original unknown execution: %+v", result)
+	}
+}
 
+func TestHandleCommandRejectsEveryUnsignedOperation(t *testing.T) {
+	for _, operation := range []string{"inventory", "status", "logs", "restart", "kill", "shell", "start", "stop", "assign"} {
+		t.Run(operation, func(t *testing.T) {
+			// Even explicitly enabling the old shell config must not authorize it.
+			cfg := &config.Config{Agents: config.AgentsConfig{AllowShell: true}}
+			marker := t.TempDir() + "/escaped"
+			result := handleCommand(ws.CommandPayload{
+				Command: operation, AgentID: "agent-1", Args: "touch " + marker,
+			}, nil, cfg, runtimeCommandExecutorFunc(func(context.Context, nodecommand.NodeCommand) (runtimeadapter.Response, nodecommand.NodeEvent, error) {
+				t.Fatal("unsigned operation reached the executor")
+				return runtimeadapter.Response{}, nodecommand.NodeEvent{}, nil
+			}))
+			if result["success"] != false || result["error_code"] != "unsigned_command_disabled" {
+				t.Fatalf("unsigned command accepted: %+v", result)
+			}
+			if _, err := os.Stat(marker); !os.IsNotExist(err) {
+				t.Fatal("unsigned shell produced a side effect")
+			}
+		})
+	}
+}
+
+func TestRunShellTimeoutReleasesProcess(t *testing.T) {
 	started := time.Now()
-	result := handleCommand(ws.CommandPayload{
-		Command: "shell",
-		Args:    "printf started; sleep 30",
-	}, nil, cfg, nil)
-
-	if result["success"] != false {
-		t.Fatalf("success = %v, want false: %+v", result["success"], result)
+	out, err := runShellCommand("printf started; sleep 30", 50*time.Millisecond)
+	if err == nil || !strings.Contains(err.Error(), "timed out after 50ms") {
+		t.Fatalf("expected timeout, got %v", err)
 	}
-	if !strings.Contains(fmt.Sprint(result["error"]), "timed out after 50ms") {
-		t.Fatalf("error = %v, want timeout", result["error"])
+	if string(out) != "started" {
+		t.Fatalf("output = %q", out)
 	}
-	if result["output"] != "started" {
-		t.Fatalf("output = %q, want started", result["output"])
-	}
-	if elapsed := time.Since(started); elapsed > 2*time.Second {
-		t.Fatalf("shell timeout took %s, handler remained blocked", elapsed)
+	if time.Since(started) > 2*time.Second {
+		t.Fatal("shell timeout remained blocked")
 	}
 }
 
@@ -228,7 +247,18 @@ func newTestPersistentRuntimeExecutor(
 	t.Setenv("FRACTALMIND_AGENT_MANAGER_COMMAND", os.Args[0])
 	t.Setenv("FRACTALMIND_AGENT_MANAGER_ARGS", "-test.run=TestEnvdRuntimeAdapterHelperProcess --")
 
-	executor, err := newRuntimeCommandExecutorFromEnv(testRuntimeConfig())
+	// File-state replay tests remain Phase 0 compatibility tests. Production
+	// construction is independently tested and never selects this backend.
+	authority, err := nodecommand.NewFileAuthorityStore(stateDir+"/authority.json", stateDir+"/authority-reservations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	validator := nodecommand.NewValidator(nodecommand.Ed25519Verifier{}, authority, nodecommand.ValidatorOptions{
+		LocalTarget:    nodecommand.Target{OrganizationID: "org-1", NodeID: "node-1"},
+		LowRiskActions: signedCommandLowRiskActions(), HighRiskActions: signedCommandHighRiskActions(),
+		MaxCommandTTL: 5 * time.Minute, MaxLowRiskCheckpointAge: 24 * time.Hour, MaxHighRiskCheckpointAge: 2 * time.Minute,
+	})
+	executor, err := runtimeadapter.NewExecutorWithStateDir(validator, runtimeadapter.AgentManager(os.Args[0], "-test.run=TestEnvdRuntimeAdapterHelperProcess", "--"), stateDir)
 	if err != nil {
 		t.Fatalf("newRuntimeCommandExecutorFromEnv: %v", err)
 	}

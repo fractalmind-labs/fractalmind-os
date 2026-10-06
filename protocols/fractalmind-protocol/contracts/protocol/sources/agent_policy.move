@@ -2,6 +2,9 @@
 /// Grants a specific agent bounded authority to emit verifiable on-chain
 /// action evidence for one action kind and target scope.
 module fractalmind_protocol::agent_policy {
+    use sui::clock::{Self, Clock};
+    const E_CLOCK_REQUIRED: u64 = 8399;
+
     use sui::event;
     use std::string::String;
     use std::option::{Self, Option};
@@ -86,6 +89,8 @@ module fractalmind_protocol::agent_policy {
 
     /// Create and share a bounded policy for one agent.
     /// Only the organization admin may create policies.
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun create_policy(
         org: &Organization,
         agent_addr: address,
@@ -96,8 +101,22 @@ module fractalmind_protocol::agent_policy {
         max_gas_budget: u64,
         ctx: &mut TxContext,
     ) {
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun create_policy_with_clock(
+        org: &Organization,
+        agent_addr: address,
+        allowed_action: String,
+        target_scope: String,
+        max_uses: u64,
+        expires_at_ms: u64,
+        max_gas_budget: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
         let sender = ctx.sender();
-        let now = ctx.epoch_timestamp_ms();
+        let now = clock::timestamp_ms(clock);
         let org_id = organization::org_id(org);
 
         assert!(organization::admin(org) == sender, E_NOT_POLICY_OWNER);
@@ -145,6 +164,8 @@ module fractalmind_protocol::agent_policy {
 
 
     /// Create and share a bounded policy scoped to an Objective.
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun create_policy_for_objective(
         org: &Organization,
         objective: &Objective,
@@ -156,8 +177,23 @@ module fractalmind_protocol::agent_policy {
         max_gas_budget: u64,
         ctx: &mut TxContext,
     ) {
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun create_policy_for_objective_with_clock(
+        org: &Organization,
+        objective: &Objective,
+        agent_addr: address,
+        allowed_action: String,
+        target_scope: String,
+        max_uses: u64,
+        expires_at_ms: u64,
+        max_gas_budget: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
         let sender = ctx.sender();
-        let now = ctx.epoch_timestamp_ms();
+        let now = clock::timestamp_ms(clock);
         let org_id = organization::org_id(org);
 
         assert!(objective::objective_org_id(objective) == org_id, constants::e_unauthorized());
@@ -205,6 +241,8 @@ module fractalmind_protocol::agent_policy {
     }
 
     /// Create and share a bounded policy scoped to a KeyResult.
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun create_policy_for_key_result(
         org: &Organization,
         objective: &Objective,
@@ -217,8 +255,24 @@ module fractalmind_protocol::agent_policy {
         max_gas_budget: u64,
         ctx: &mut TxContext,
     ) {
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun create_policy_for_key_result_with_clock(
+        org: &Organization,
+        objective: &Objective,
+        key_result: &KeyResult,
+        agent_addr: address,
+        allowed_action: String,
+        target_scope: String,
+        max_uses: u64,
+        expires_at_ms: u64,
+        max_gas_budget: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
         let sender = ctx.sender();
-        let now = ctx.epoch_timestamp_ms();
+        let now = clock::timestamp_ms(clock);
         let org_id = organization::org_id(org);
 
         assert!(objective::objective_org_id(objective) == org_id, constants::e_unauthorized());
@@ -292,6 +346,8 @@ module fractalmind_protocol::agent_policy {
     }
 
     /// Record one policy-authorized action with canonical hashes.
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun execute_action(
         policy: &mut AgentPolicy,
         org: &Organization,
@@ -303,8 +359,23 @@ module fractalmind_protocol::agent_policy {
         gas_budget: u64,
         ctx: &TxContext,
     ) {
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun execute_action_with_clock(
+        policy: &mut AgentPolicy,
+        org: &Organization,
+        cert: &AgentCertificate,
+        action_kind: String,
+        target_scope: String,
+        intent_hash: vector<u8>,
+        result_hash: vector<u8>,
+        gas_budget: u64,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
         let sender = ctx.sender();
-        let now = ctx.epoch_timestamp_ms();
+        let now = clock::timestamp_ms(clock);
         let org_id = organization::org_id(org);
 
         assert!(policy.org_id == org_id, constants::e_unauthorized());

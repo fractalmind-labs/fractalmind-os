@@ -1,0 +1,1495 @@
+{
+  "format": 1,
+  "baseline": "aad4400",
+  "scope": "Real Ubuntu cloud Host admission, original Android native IPC signer, actual installed Android signed observations, observation-only import and idle envd process restart. Mac mini Keychain authorization pending. Not full v0.2.0 acceptance.",
+  "completedIncrement": true,
+  "fullMilestoneAccepted": false,
+  "sourceSha256": {
+    "runtime/fractalmind-envd/internal/hostidentity/native_options.go": "ace18230f825bbee32894bb8c41359c88b2848dfc988e2d0c5e3a551f430c7a8",
+    "runtime/fractalmind-envd/internal/hostidentity/native_options_test.go": "55a310da37a4b6618f7c05ce8f6966450bdb6f704eca984e6c6b7aaa24ed9cb6",
+    "runtime/fractalmind-envd/internal/hostidentity/native_darwin.go": "69c0b408b37d3c60907562ff9ed9e1d4a7ba36a7776b4c4b35b404bb88117297",
+    "runtime/fractalmind-envd/internal/hostidentity/native_other.go": "afd029cd807ec4ce3aa163eafd096409115d83e85213e96a6542a244957273a9",
+    "runtime/fractalmind-envd/internal/config/config.go": "95f0106f92f7bf51761f069949ecc8385480f79553e55f97126e42c274849a6b",
+    "runtime/fractalmind-envd/cmd/envd/main.go": "f48b5dbea3ad2094305b2aa673051625d8b11c82a9bde31c741e17b8c8acf26e",
+    "runtime/fractalmind-envd/cmd/envd/host_join_cli.go": "b8529c801031ebc556f4a6372e816b922169dab49be1331898fc9485a22e9e74",
+    "runtime/fractalmind-envd/cmd/envd/chain_runtime.go": "62a565d7f318c2dd861432f681bac3ff2a883fb96596b9cad816065a32768e00"
+  },
+  "fixtureSha256AtCollection": {
+    "/tmp/fm-v020-remote-cloud-admission-r4.mts": "5e27e9e26ef983d230155424534a08c01eb822de53f2f07c54f74d9ec349c889",
+    "/tmp/fm-v020-remote-cloud-signed-read-after-r4.mts": "c5fc2e288820fb61fc5afc1486f4b3a0fea0d9945f827ce638baf69d15fa2606",
+    "/tmp/fm-v020-remote-cloud-signed-read-r4.mts": "c1ae37e119bc02bf9869bff8b26c4c14fe600b3ff46c2d6eb14376f875a114f6",
+    "/tmp/fm-v020-remote-cloud-revoke-r1.mts": "f0772028bd10eecdcd217ec852ceb3743d0ad2ec2f9b7bf773c83862bd079093",
+    "/tmp/fm-v020-remote-cloud-admission-r3.mts": "5a930b10741f4f12f165b7959f9d76616bd19afc6f70af5a1449c4c611998f01",
+    "/tmp/fm-v020-remote-cloud-admission-r1.mts": "41781c03f718e7150358ba53ad8294440754b4505a74eef65dc25e432ce429eb",
+    "/tmp/fm-v020-remote-cloud-revoke-r3.mts": "dc73c976eb39252168825e9173e10d6073996f08e8a0d75bf1bb0253a33db9fb",
+    "/tmp/fm-v020-remote-cloud-agent-import-r4.mts": "b8baa84ac4da84ddd9220197f131a5169b8a58c59e93d89f795824296069b082",
+    "/tmp/fm-v020-remote-cloud-ui-observations-after-r4b.mjs": "29aab2cc652abd72deb8a224f32e7fae109e732e299d6602f31bc9ff1d82df88",
+    "/tmp/fm-v020-remote-cloud-ui-observations-r2.mjs": "5fe11dff1374fb367f26b62be39e3c7b5fb35d4948e633a1b0b0e8df7608fa1f",
+    "/tmp/fm-v020-remote-cloud-ui-observations-r1.mjs": "5357147487d1bbde36f2d419193c8dbe0a0135405739dd7c87ef33ed94506f54",
+    "/tmp/fm-v020-remote-cloud-ui-observations-r4.mjs": "5601113e963ba9a43557f2e25f79cc63146f65d134c109d71a2063d3b8d98aa5",
+    "/tmp/fm-v020-remote-cloud-ui-observations-after-r4.mjs": "7fca95a213e15a275bf14ef80298255a5b0891036a5de6debe4ec62db00fd348",
+    "/tmp/fm-v020-remote-cloud-vault-cli-r1.py": "0edd462bbefbbb3a6df4f77b71ce6070ddc983bce4f3b6b04cf0cd699de266e8",
+    "/tmp/fm-v020-remote-cloud-supervisor-r3.py": "2363e8b686a415d4985dab031069d444c56ee46a66bdaa70ad73c5be6047dc76",
+    "/tmp/fm-v020-remote-cloud-vault-cli-r4.py": "550c7c463ee630cea3c02671960fb84f39053f53c9b6460251eaa9aefbaefe5e",
+    "/tmp/fm-v020-remote-cloud-vault-cli-r3.py": "07c18f345250cf07f4443df8d4c6612b2859b629968023eb8e3dddce16e3562a",
+    "/tmp/fm-v020-remote-cloud-supervisor-r4.py": "b3f08b3647d246e88f3736f9a7faf7d008739d5455b2e6c5869ca7abf7486ac5",
+    "/tmp/fm-v020-remote-cloud-supervisor-r1.py": "2ddf9f11c6393661ce8be5a3fd274b4f762ff7012e9d0fbae365314edc234186"
+  },
+  "fixtureHashLimit": "Current fixture sources at evidence collection; reporting instrumentation was added after the first R4 signed-read failure.",
+  "goRace": {
+    "command": "go test -race ./internal/hostidentity ./internal/hostjoin ./internal/ws ./cmd/envd",
+    "exitCode": 0,
+    "output": "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/hostidentity\t(cached)\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/hostjoin\t2.959s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/ws\t(cached)\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd\t(cached)\n",
+    "cacheLimit": "hostidentity/ws/cmd reused the earlier successful race run; hostjoin ran again. No App/SDK/Move/Rust full rerun."
+  },
+  "priorFixtureFailures": [
+    {
+      "case": "Cloud R1 vault guard",
+      "failure": "Assertion incorrectly treated crypto algorithm ID zero as plaintext; controller exited after already confirmed admission. Original member explicitly revoked; no admission replay. Upstream encrypted format uses ID zero for AES128."
+    },
+    {
+      "case": "Cloud R3 process stop",
+      "failure": "Supervisor wait(timeout=20) expired, original worker later exited during cleanup. Logs and exact original revocation retained. R4 wait raised to 45 seconds; original process exitCode 0 captured."
+    }
+  ],
+  "processRestart": {
+    "beforePid": 2323604,
+    "beforeStopExitCode": 0,
+    "afterPid": 2325124,
+    "beforeInstance": "native-c1291bdfa3c2fb1cc36d42f3ca2dbf7cb0300dd146d508ef08a230bb214bee46",
+    "afterInstance": "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5",
+    "sameWorkspaceHash": "695a618ffe276db70e333eed018a9830d9f1f4e76106b040d537078aa44d5d0a",
+    "sameHostAddress": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+    "sameMembershipId": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+    "originalMembershipPreviousTransaction": "7cWW8UBdhMzy43WXfL73o9K6HrCPsDbtHQHjTDS8fY5s"
+  },
+  "results": {
+    "macNativeInit": {
+      "kind": "mac",
+      "root": "/private/tmp/fm-v020-remote-mac-nPgeChda",
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "2026/10/03 22:56:33 [envd] macOS Host Keychain create failed: User interaction is not allowed. (-25308)\n"
+    },
+    "cloudUnavailableInit": {
+      "kind": "cloud",
+      "root": "/tmp/fm-v020-remote-cloud-61aRZZHv",
+      "exitCode": 1,
+      "stdout": "",
+      "stderr": "2026/10/03 22:57:07 [envd] native Host credential store unavailable: Specified keyring backend not available\n"
+    },
+    "cloudAdmissionR1": {
+      "format": 1,
+      "baseline": "aad4400 plus explicit Linux collection",
+      "scope": "Actual Android installed native signer + production App HostAdmission controller + Ubuntu cloud formal envd via encrypted SSH tunnels; fee review is scripted, not UI walkthrough",
+      "pid": "4367",
+      "host": {
+        "format": "1",
+        "profile": "test-native-restart-5bca2f28-d795-4c45-870a-3149ba11767d",
+        "host_address": "0x0cdabf1012ebcacb2740ff8d785634f567155dc0b6b00f4db0c1e67c6f6ad87c",
+        "signing_public_key": "1a1541d43e71a10001e88ad9510a0fb0cfa27d548389ae996d0f309b3f2c1fbc",
+        "encryption_public_key": "40692ab85a8c2b014d7435f02f4828e2611394f13fa9ee86ce53bbfea1d2963f"
+      },
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "bindingId": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+      "checks": [
+        "Loads original installed Android device from actual Keystore IPC; no key export or new Human",
+        "Separate explicit one-use invite and self-pay quote, preserving older Android Host attempt unchanged",
+        "Original Android native signature confirms new cloud Host invitation on original organization",
+        "Formal Ubuntu envd reviews exact public keys and fee, confirms original admission, and reconstructs current membership without replay",
+        "Independent SDK proves original member previousTransaction and consumed single-use invite"
+      ],
+      "cliRecords": [
+        {
+          "phase": "preview",
+          "plan": {
+            "network": "localnet",
+            "invite_id": "0x74c4226131bfa65dc2ecfb515e06e4ea5b8d855c4be3811e07fb0996ef3abcc3",
+            "organization_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+            "organization_name": "Android UI android-ui-9305be0b",
+            "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+            "binding_version": 1,
+            "coordinator_address": "0x4e2910af107ceea8c029a26a650e52caccfd88f4f232db3b5e181f069a687c42",
+            "coordinator_public_key": "c654917a0e714ee24583ecdecffab05a8902f9299a5327ed5ed7de524b7dffb0",
+            "coordinator_endpoint": "http://127.0.0.1:30180",
+            "issuer_human": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+            "issuer_grant": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+            "invite_expires_at_ms": 1791043907424,
+            "membership_ttl_ms": 86400000,
+            "observation_ttl_ms": 86400000,
+            "clock_ms": 1791040322058,
+            "proof_expires_at_ms": 1791040442058
+          },
+          "quote": {
+            "digest": "9efRbMMRbDzCu8qVom5dF6u9xtiRSqJBcDgzLWVmhLVt",
+            "sender": "0x0cdabf1012ebcacb2740ff8d785634f567155dc0b6b00f4db0c1e67c6f6ad87c",
+            "gas_budget_mist": 200000000,
+            "gas_price_mist": 1000,
+            "estimated_net_fee_mist": "11569872"
+          },
+          "host": {
+            "format": "1",
+            "profile": "test-native-restart-5bca2f28-d795-4c45-870a-3149ba11767d",
+            "host_address": "0x0cdabf1012ebcacb2740ff8d785634f567155dc0b6b00f4db0c1e67c6f6ad87c",
+            "signing_public_key": "1a1541d43e71a10001e88ad9510a0fb0cfa27d548389ae996d0f309b3f2c1fbc",
+            "encryption_public_key": "40692ab85a8c2b014d7435f02f4828e2611394f13fa9ee86ce53bbfea1d2963f"
+          }
+        },
+        {
+          "phase": "prepared",
+          "transaction": {
+            "format": 1,
+            "chain_identifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+            "sender": "0x0cdabf1012ebcacb2740ff8d785634f567155dc0b6b00f4db0c1e67c6f6ad87c",
+            "digest": "9efRbMMRbDzCu8qVom5dF6u9xtiRSqJBcDgzLWVmhLVt",
+            "gas_budget_mist": 200000000,
+            "gas_price_mist": 1000,
+            "package_id": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+            "types_package_id": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10",
+            "organization_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+            "invite_id": "0x74c4226131bfa65dc2ecfb515e06e4ea5b8d855c4be3811e07fb0996ef3abcc3"
+          }
+        },
+        {
+          "state": "confirmed",
+          "digest": "9efRbMMRbDzCu8qVom5dF6u9xtiRSqJBcDgzLWVmhLVt",
+          "actual_fee_mist": "11569872",
+          "membership": {
+            "organization_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+            "invite_id": "0x74c4226131bfa65dc2ecfb515e06e4ea5b8d855c4be3811e07fb0996ef3abcc3",
+            "membership_id": "0x785cb252cc90232e57ccb6d4e7ec1ac90d81dc03aab53d05c4156dde03fe5437",
+            "host_address": "0x0cdabf1012ebcacb2740ff8d785634f567155dc0b6b00f4db0c1e67c6f6ad87c",
+            "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+            "observation_capability": "0xf6e58bc0711369258802fcd7079e2a1922dcdb93b340e44a98b7788a2559cbf2",
+            "expires_at_ms": 1791126761343,
+            "revoked": false,
+            "current_membership": true
+          }
+        }
+      ],
+      "submitted": true,
+      "joinConfirmed": true,
+      "device": {
+        "format": 1,
+        "profile": "android-ui-9305be0b",
+        "address": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "signingPublicKey": "zNXU1BM3af2iqWu/9rf2qA3lYX1uvklZ3n5fsUIBhLo=",
+        "encryptionPublicKey": "hZhfQ5ArKR7laJXP3QJXEw+L+ussgSF+p3xdtTpZLmw="
+      },
+      "attemptId": "300501f9-079e-4e96-822f-4260fbf6e5a0",
+      "quote": {
+        "requestId": "host:300501f9-079e-4e96-822f-4260fbf6e5a0",
+        "digest": "8iuXYc9Ng7RabYWpD3WkEeChefwK8mLUBCj2BP5dBJH1",
+        "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "gasBudget": "200000000"
+      },
+      "inviteOutcome": {
+        "status": "confirmed",
+        "digest": "8iuXYc9Ng7RabYWpD3WkEeChefwK8mLUBCj2BP5dBJH1",
+        "actualGas": "4963772",
+        "requestId": "host:300501f9-079e-4e96-822f-4260fbf6e5a0"
+      },
+      "invite": {
+        "id": "0x74c4226131bfa65dc2ecfb515e06e4ea5b8d855c4be3811e07fb0996ef3abcc3",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "binding_version": "1",
+        "issuer_human": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+        "issuer_device": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "issuer_grant": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+        "issuer_grant_version": "1",
+        "issuer_generation": "1",
+        "proof_public_key": [
+          232, 120, 197, 240, 55, 158, 81, 237, 139, 73, 75, 46, 255, 246, 244,
+          167, 246, 34, 131, 61, 52, 30, 64, 179, 197, 125, 139, 123, 240, 198,
+          200, 104
+        ],
+        "template_version": "1",
+        "expires_at_ms": "1791043907424",
+        "membership_ttl_ms": "86400000",
+        "capability_ttl_ms": "86400000",
+        "max_uses": 1,
+        "uses": 0,
+        "revoked": false
+      },
+      "faucet": {
+        "status": 200,
+        "recipient": "0x0cdabf1012ebcacb2740ff8d785634f567155dc0b6b00f4db0c1e67c6f6ad87c"
+      },
+      "cliTerminal": {
+        "exitCode": 0,
+        "signal": null
+      },
+      "diagnostic": "Enter one-use Host invitation (hidden): Verify network, organization, Coordinator key and finite observation permissions. This does not grant Agent execution authority.\nHost pays Gas (MIST); estimated 11569872, maximum 200000000.\nTo confirm type JOIN 0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82; anything else cancels: ",
+      "originalJoin": {
+        "state": "confirmed",
+        "digest": "9efRbMMRbDzCu8qVom5dF6u9xtiRSqJBcDgzLWVmhLVt",
+        "actual_fee_mist": "11569872",
+        "membership": {
+          "organization_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+          "invite_id": "0x74c4226131bfa65dc2ecfb515e06e4ea5b8d855c4be3811e07fb0996ef3abcc3",
+          "membership_id": "0x785cb252cc90232e57ccb6d4e7ec1ac90d81dc03aab53d05c4156dde03fe5437",
+          "host_address": "0x0cdabf1012ebcacb2740ff8d785634f567155dc0b6b00f4db0c1e67c6f6ad87c",
+          "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+          "observation_capability": "0xf6e58bc0711369258802fcd7079e2a1922dcdb93b340e44a98b7788a2559cbf2",
+          "expires_at_ms": 1791126761343,
+          "revoked": false,
+          "current_membership": true
+        }
+      },
+      "member": {
+        "id": "0x785cb252cc90232e57ccb6d4e7ec1ac90d81dc03aab53d05c4156dde03fe5437",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "host_address": "0x0cdabf1012ebcacb2740ff8d785634f567155dc0b6b00f4db0c1e67c6f6ad87c",
+        "host_public_key": [
+          26, 21, 65, 212, 62, 113, 161, 0, 1, 232, 138, 217, 81, 10, 15, 176,
+          207, 162, 125, 84, 131, 137, 174, 153, 109, 15, 48, 155, 63, 44, 31,
+          188
+        ],
+        "encryption_public_key": [
+          64, 105, 42, 184, 90, 140, 43, 1, 77, 116, 53, 240, 47, 72, 40, 226,
+          97, 19, 148, 241, 63, 169, 238, 134, 206, 83, 187, 254, 161, 210, 150,
+          63
+        ],
+        "name": "v0.2.0 Ubuntu cloud isolated Host",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "version": "1",
+        "revoked": false,
+        "expires_at_ms": "1791126761343",
+        "joined_at_ms": "1791040361343",
+        "source_invite": "0x74c4226131bfa65dc2ecfb515e06e4ea5b8d855c4be3811e07fb0996ef3abcc3",
+        "observation_capability": "0xf6e58bc0711369258802fcd7079e2a1922dcdb93b340e44a98b7788a2559cbf2"
+      },
+      "previousTransaction": "9efRbMMRbDzCu8qVom5dF6u9xtiRSqJBcDgzLWVmhLVt",
+      "completed": true
+    },
+    "cloudRevocationR1": {
+      "format": 1,
+      "baseline": "aad4400 plus explicit Linux collection",
+      "scope": "Actual Android installed native signer + production App HostAdmission controller + Ubuntu cloud formal envd via encrypted SSH tunnels; fee review is scripted, not UI walkthrough",
+      "pid": "4367",
+      "host": {
+        "format": "1",
+        "profile": "test-native-restart-5bca2f28-d795-4c45-870a-3149ba11767d",
+        "host_address": "0x0cdabf1012ebcacb2740ff8d785634f567155dc0b6b00f4db0c1e67c6f6ad87c",
+        "signing_public_key": "1a1541d43e71a10001e88ad9510a0fb0cfa27d548389ae996d0f309b3f2c1fbc",
+        "encryption_public_key": "40692ab85a8c2b014d7435f02f4828e2611394f13fa9ee86ce53bbfea1d2963f"
+      },
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "bindingId": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+      "checks": [
+        "Loads original installed Android device from actual Keystore IPC; no key export or new Human",
+        "Independent original Android signer explicitly revokes exact original cloud member after fixture session loss; original admission is never replayed"
+      ],
+      "cliRecords": [],
+      "submitted": true,
+      "joinConfirmed": false,
+      "device": {
+        "format": 1,
+        "profile": "android-ui-9305be0b",
+        "address": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "signingPublicKey": "zNXU1BM3af2iqWu/9rf2qA3lYX1uvklZ3n5fsUIBhLo=",
+        "encryptionPublicKey": "hZhfQ5ArKR7laJXP3QJXEw+L+ussgSF+p3xdtTpZLmw="
+      },
+      "originalMember": {
+        "id": "0x785cb252cc90232e57ccb6d4e7ec1ac90d81dc03aab53d05c4156dde03fe5437",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "host_address": "0x0cdabf1012ebcacb2740ff8d785634f567155dc0b6b00f4db0c1e67c6f6ad87c",
+        "host_public_key": [
+          26, 21, 65, 212, 62, 113, 161, 0, 1, 232, 138, 217, 81, 10, 15, 176,
+          207, 162, 125, 84, 131, 137, 174, 153, 109, 15, 48, 155, 63, 44, 31,
+          188
+        ],
+        "encryption_public_key": [
+          64, 105, 42, 184, 90, 140, 43, 1, 77, 116, 53, 240, 47, 72, 40, 226,
+          97, 19, 148, 241, 63, 169, 238, 134, 206, 83, 187, 254, 161, 210, 150,
+          63
+        ],
+        "name": "v0.2.0 Ubuntu cloud isolated Host",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "version": "1",
+        "revoked": false,
+        "expires_at_ms": "1791126761343",
+        "joined_at_ms": "1791040361343",
+        "source_invite": "0x74c4226131bfa65dc2ecfb515e06e4ea5b8d855c4be3811e07fb0996ef3abcc3",
+        "observation_capability": "0xf6e58bc0711369258802fcd7079e2a1922dcdb93b340e44a98b7788a2559cbf2"
+      },
+      "quote": {
+        "digest": "Ahq2gT5eXXmV96B2tLBo5eReXrMXMgLuKWz9Gu81ExuJ",
+        "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "gasBudget": "200000000"
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "Ahq2gT5eXXmV96B2tLBo5eReXrMXMgLuKWz9Gu81ExuJ",
+        "actualGas": "-591220"
+      },
+      "revokedMember": {
+        "id": "0x785cb252cc90232e57ccb6d4e7ec1ac90d81dc03aab53d05c4156dde03fe5437",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "host_address": "0x0cdabf1012ebcacb2740ff8d785634f567155dc0b6b00f4db0c1e67c6f6ad87c",
+        "host_public_key": [
+          26, 21, 65, 212, 62, 113, 161, 0, 1, 232, 138, 217, 81, 10, 15, 176,
+          207, 162, 125, 84, 131, 137, 174, 153, 109, 15, 48, 155, 63, 44, 31,
+          188
+        ],
+        "encryption_public_key": [
+          64, 105, 42, 184, 90, 140, 43, 1, 77, 116, 53, 240, 47, 72, 40, 226,
+          97, 19, 148, 241, 63, 169, 238, 134, 206, 83, 187, 254, 161, 210, 150,
+          63
+        ],
+        "name": "v0.2.0 Ubuntu cloud isolated Host",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "version": "2",
+        "revoked": true,
+        "expires_at_ms": "1791126761343",
+        "joined_at_ms": "1791040361343",
+        "source_invite": "0x74c4226131bfa65dc2ecfb515e06e4ea5b8d855c4be3811e07fb0996ef3abcc3",
+        "observation_capability": "0xf6e58bc0711369258802fcd7079e2a1922dcdb93b340e44a98b7788a2559cbf2"
+      },
+      "completed": true
+    },
+    "cloudAdmissionR3": {
+      "format": 1,
+      "baseline": "aad4400 plus explicit Linux collection",
+      "scope": "Actual Android installed native signer + production App HostAdmission controller + Ubuntu cloud formal envd via encrypted SSH tunnels; fee review is scripted, not UI walkthrough",
+      "pid": "4367",
+      "host": {
+        "format": "1",
+        "profile": "test-native-restart-dfd40f56-e05c-45a5-8d06-ee1471ef2bd3",
+        "host_address": "0x913c5f998fdb4c0a2035055651d361d15579d6684647ffd0a392059ba1742497",
+        "signing_public_key": "b77ac9c389057d81e50f1cae008d1903c0929da1485a3921ad53217a42277cae",
+        "encryption_public_key": "d6edb5a3070f23b30ddd518c05728dc94abbee9f5da84a5b7f9dc3a9a6383740"
+      },
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "bindingId": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+      "checks": [
+        "Loads original installed Android device from actual Keystore IPC; no key export or new Human",
+        "Separate explicit one-use invite and self-pay quote, preserving older Android Host attempt unchanged",
+        "Original Android native signature confirms new cloud Host invitation on original organization",
+        "Formal Ubuntu envd reviews exact public keys and fee, confirms original admission, and reconstructs current membership without replay",
+        "Independent SDK proves original member previousTransaction and consumed single-use invite"
+      ],
+      "cliRecords": [
+        {
+          "phase": "preview",
+          "plan": {
+            "network": "localnet",
+            "invite_id": "0xee1d578512d8bec46047d196bb8a8333e76534e86944fe458a10b6c6613aefdc",
+            "organization_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+            "organization_name": "Android UI android-ui-9305be0b",
+            "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+            "binding_version": 1,
+            "coordinator_address": "0x4e2910af107ceea8c029a26a650e52caccfd88f4f232db3b5e181f069a687c42",
+            "coordinator_public_key": "c654917a0e714ee24583ecdecffab05a8902f9299a5327ed5ed7de524b7dffb0",
+            "coordinator_endpoint": "http://127.0.0.1:30180",
+            "issuer_human": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+            "issuer_grant": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+            "invite_expires_at_ms": 1791044306079,
+            "membership_ttl_ms": 86400000,
+            "observation_ttl_ms": 86400000,
+            "clock_ms": 1791040722029,
+            "proof_expires_at_ms": 1791040842029
+          },
+          "quote": {
+            "digest": "9oFaye7FYTKziJUUg4Hp4MaEkedsAxwvV93adMqdvcd1",
+            "sender": "0x913c5f998fdb4c0a2035055651d361d15579d6684647ffd0a392059ba1742497",
+            "gas_budget_mist": 200000000,
+            "gas_price_mist": 1000,
+            "estimated_net_fee_mist": "11574736"
+          },
+          "host": {
+            "format": "1",
+            "profile": "test-native-restart-dfd40f56-e05c-45a5-8d06-ee1471ef2bd3",
+            "host_address": "0x913c5f998fdb4c0a2035055651d361d15579d6684647ffd0a392059ba1742497",
+            "signing_public_key": "b77ac9c389057d81e50f1cae008d1903c0929da1485a3921ad53217a42277cae",
+            "encryption_public_key": "d6edb5a3070f23b30ddd518c05728dc94abbee9f5da84a5b7f9dc3a9a6383740"
+          }
+        },
+        {
+          "phase": "prepared",
+          "transaction": {
+            "format": 1,
+            "chain_identifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+            "sender": "0x913c5f998fdb4c0a2035055651d361d15579d6684647ffd0a392059ba1742497",
+            "digest": "9oFaye7FYTKziJUUg4Hp4MaEkedsAxwvV93adMqdvcd1",
+            "gas_budget_mist": 200000000,
+            "gas_price_mist": 1000,
+            "package_id": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+            "types_package_id": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10",
+            "organization_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+            "invite_id": "0xee1d578512d8bec46047d196bb8a8333e76534e86944fe458a10b6c6613aefdc"
+          }
+        },
+        {
+          "state": "confirmed",
+          "digest": "9oFaye7FYTKziJUUg4Hp4MaEkedsAxwvV93adMqdvcd1",
+          "actual_fee_mist": "11574736",
+          "membership": {
+            "organization_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+            "invite_id": "0xee1d578512d8bec46047d196bb8a8333e76534e86944fe458a10b6c6613aefdc",
+            "membership_id": "0xecd043dd8d1e0ddecc82c96e90aa61753fe41a79a371e9e6930e97ee9fade4ce",
+            "host_address": "0x913c5f998fdb4c0a2035055651d361d15579d6684647ffd0a392059ba1742497",
+            "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+            "observation_capability": "0xf1580d484ea9d07f4599a319cac5d99d7ea1ad100b39094cccbd34db0947986c",
+            "expires_at_ms": 1791127157984,
+            "revoked": false,
+            "current_membership": true
+          }
+        }
+      ],
+      "submitted": true,
+      "joinConfirmed": true,
+      "device": {
+        "format": 1,
+        "profile": "android-ui-9305be0b",
+        "address": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "signingPublicKey": "zNXU1BM3af2iqWu/9rf2qA3lYX1uvklZ3n5fsUIBhLo=",
+        "encryptionPublicKey": "hZhfQ5ArKR7laJXP3QJXEw+L+ussgSF+p3xdtTpZLmw="
+      },
+      "attemptId": "25c728f8-12d1-4f97-b208-77573163f6c1",
+      "quote": {
+        "requestId": "host:25c728f8-12d1-4f97-b208-77573163f6c1",
+        "digest": "89XzQGf7H494XjZFbapJJFsBmxzx2ShFH5iRFX7jKCcx",
+        "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "gasBudget": "200000000"
+      },
+      "inviteOutcome": {
+        "status": "confirmed",
+        "digest": "89XzQGf7H494XjZFbapJJFsBmxzx2ShFH5iRFX7jKCcx",
+        "actualGas": "4968636",
+        "requestId": "host:25c728f8-12d1-4f97-b208-77573163f6c1"
+      },
+      "invite": {
+        "id": "0xee1d578512d8bec46047d196bb8a8333e76534e86944fe458a10b6c6613aefdc",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "binding_version": "1",
+        "issuer_human": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+        "issuer_device": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "issuer_grant": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+        "issuer_grant_version": "1",
+        "issuer_generation": "1",
+        "proof_public_key": [
+          244, 170, 84, 34, 58, 228, 160, 47, 239, 241, 20, 180, 57, 223, 130,
+          180, 177, 198, 216, 18, 16, 212, 135, 221, 73, 246, 171, 124, 226, 37,
+          108, 66
+        ],
+        "template_version": "1",
+        "expires_at_ms": "1791044306079",
+        "membership_ttl_ms": "86400000",
+        "capability_ttl_ms": "86400000",
+        "max_uses": 1,
+        "uses": 0,
+        "revoked": false
+      },
+      "faucet": {
+        "status": 200,
+        "recipient": "0x913c5f998fdb4c0a2035055651d361d15579d6684647ffd0a392059ba1742497"
+      },
+      "cliTerminal": {
+        "exitCode": 0,
+        "signal": null
+      },
+      "diagnostic": "Enter one-use Host invitation (hidden): Verify network, organization, Coordinator key and finite observation permissions. This does not grant Agent execution authority.\nHost pays Gas (MIST); estimated 11574736, maximum 200000000.\nTo confirm type JOIN 0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82; anything else cancels: ",
+      "originalJoin": {
+        "state": "confirmed",
+        "digest": "9oFaye7FYTKziJUUg4Hp4MaEkedsAxwvV93adMqdvcd1",
+        "actual_fee_mist": "11574736",
+        "membership": {
+          "organization_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+          "invite_id": "0xee1d578512d8bec46047d196bb8a8333e76534e86944fe458a10b6c6613aefdc",
+          "membership_id": "0xecd043dd8d1e0ddecc82c96e90aa61753fe41a79a371e9e6930e97ee9fade4ce",
+          "host_address": "0x913c5f998fdb4c0a2035055651d361d15579d6684647ffd0a392059ba1742497",
+          "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+          "observation_capability": "0xf1580d484ea9d07f4599a319cac5d99d7ea1ad100b39094cccbd34db0947986c",
+          "expires_at_ms": 1791127157984,
+          "revoked": false,
+          "current_membership": true
+        }
+      },
+      "member": {
+        "id": "0xecd043dd8d1e0ddecc82c96e90aa61753fe41a79a371e9e6930e97ee9fade4ce",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "host_address": "0x913c5f998fdb4c0a2035055651d361d15579d6684647ffd0a392059ba1742497",
+        "host_public_key": [
+          183, 122, 201, 195, 137, 5, 125, 129, 229, 15, 28, 174, 0, 141, 25, 3,
+          192, 146, 157, 161, 72, 90, 57, 33, 173, 83, 33, 122, 66, 39, 124, 174
+        ],
+        "encryption_public_key": [
+          214, 237, 181, 163, 7, 15, 35, 179, 13, 221, 81, 140, 5, 114, 141,
+          201, 74, 187, 238, 159, 93, 168, 74, 91, 127, 157, 195, 169, 166, 56,
+          55, 64
+        ],
+        "name": "v0.2.0 Ubuntu cloud isolated Host",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "version": "1",
+        "revoked": false,
+        "expires_at_ms": "1791127157984",
+        "joined_at_ms": "1791040757984",
+        "source_invite": "0xee1d578512d8bec46047d196bb8a8333e76534e86944fe458a10b6c6613aefdc",
+        "observation_capability": "0xf1580d484ea9d07f4599a319cac5d99d7ea1ad100b39094cccbd34db0947986c"
+      },
+      "previousTransaction": "9oFaye7FYTKziJUUg4Hp4MaEkedsAxwvV93adMqdvcd1",
+      "completed": true
+    },
+    "cloudUiPrematureR1": {
+      "format": 1,
+      "pid": "4367",
+      "scope": "Actual installed Android UI verifying local macOS and remote Ubuntu cloud Host observations via production Coordinator",
+      "hostAddress": "0x913c5f998fdb4c0a2035055651d361d15579d6684647ffd0a392059ba1742497",
+      "checks": [],
+      "completed": false,
+      "failure": "Original UI operation not visible; no replay"
+    },
+    "cloudUiR3": {
+      "format": 1,
+      "pid": "4367",
+      "scope": "Actual installed Android UI verifying local macOS and remote Ubuntu cloud Host observations via production Coordinator",
+      "hostAddress": "0x913c5f998fdb4c0a2035055651d361d15579d6684647ffd0a392059ba1742497",
+      "checks": [
+        "Actual original Android device verifies signed local macOS and real Ubuntu cloud Host observations in one organization",
+        "Cloud reports actual Linux/AMD64 system and one current native instance; absent dedicated tmux socket remains unknown",
+        "Actual installed Team view discovers original authenticated cloud native instance with explicit observation-only import"
+      ],
+      "hostRead": {
+        "error": null,
+        "rows": [
+          {
+            "text": "Host signature verifiedAndroid UI worker0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bdHeartbeat time10/3/2026, 8:22:42 AMHeartbeat freshnessHost-signed observation within its validity windowSystem / CPUdarwin / arm64 · 10tmux instancesUnknownNative file instances1",
+            "counts": {
+              "Heartbeat time": "10/3/2026, 8:22:42 AM",
+              "Heartbeat freshness": "Host-signed observation within its validity window",
+              "System / CPU": "darwin / arm64 · 10",
+              "tmux instances": "Unknown",
+              "Native file instances": "1"
+            }
+          },
+          {
+            "text": "Host signature verifiedv0.2.0 Ubuntu cloud isolated Host0x913c5f998fdb4c0a2035055651d361d15579d6684647ffd0a392059ba1742497Heartbeat time10/3/2026, 8:22:24 AMHeartbeat freshnessHost-signed observation within its validity windowSystem / CPUlinux / amd64 · 2tmux instancesUnknownNative file instances1",
+            "counts": {
+              "Heartbeat time": "10/3/2026, 8:22:24 AM",
+              "Heartbeat freshness": "Host-signed observation within its validity window",
+              "System / CPU": "linux / amd64 · 2",
+              "tmux instances": "Unknown",
+              "Native file instances": "1"
+            }
+          }
+        ]
+      },
+      "discovery": {
+        "error": null,
+        "text": "Host signature verifiedv0.2.0 Ubuntu cloud isolated Host0x913c5f998fdb4c0a2035055651d361d15579d6684647ffd0a392059ba1742497Heartbeat time10/3/2026, 8:22:24 AMHeartbeat freshnessHost-signed observation within its validity windowSystem / CPUlinux / amd64 · 2tmux instancesUnknownNative file instances1tmux instance scanScan unavailable. Check the Host and read againScan time · 10/3/2026, 8:22:13 AMNative file AgentsHost scan verifiedScan time · 10/3/2026, 8:22:13 AMnative-filesInstance continuity observed · observation onlynative-ff2937e200636ac955fed9ecba0dda24e9e11f47dca3d770b2cba19186c51a6aWorkspace: /tmp/fm-v020-remote-cloud-61aRZZHv/r3/workspaceWorkspace fingerprint: 4826c2632ca0e03db077b0aecf035a2ef25e011efbb8af1d3b655debba8f4175Adapter: native file Agent, supporting 1–3 file goals and bounded read/write. Observation only; execution requires handover and ACTIVE OKR authorization.Import for observation only",
+        "instanceIds": [
+          "native-ff2937e200636ac955fed9ecba0dda24e9e11f47dca3d770b2cba19186c51a6a"
+        ],
+        "imports": 1
+      },
+      "completed": true
+    },
+    "cloudRevocationR3": {
+      "format": 1,
+      "baseline": "aad4400 plus explicit Linux collection",
+      "scope": "Actual Android installed native signer + production App HostAdmission controller + Ubuntu cloud formal envd via encrypted SSH tunnels; fee review is scripted, not UI walkthrough",
+      "pid": "4367",
+      "host": {
+        "format": "1",
+        "profile": "test-native-restart-dfd40f56-e05c-45a5-8d06-ee1471ef2bd3",
+        "host_address": "0x913c5f998fdb4c0a2035055651d361d15579d6684647ffd0a392059ba1742497",
+        "signing_public_key": "b77ac9c389057d81e50f1cae008d1903c0929da1485a3921ad53217a42277cae",
+        "encryption_public_key": "d6edb5a3070f23b30ddd518c05728dc94abbee9f5da84a5b7f9dc3a9a6383740"
+      },
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "bindingId": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+      "checks": [
+        "Loads original installed Android device from actual Keystore IPC; no key export or new Human",
+        "Independent original Android signer explicitly revokes exact original cloud member after fixture session loss; original admission is never replayed"
+      ],
+      "cliRecords": [],
+      "submitted": true,
+      "joinConfirmed": false,
+      "device": {
+        "format": 1,
+        "profile": "android-ui-9305be0b",
+        "address": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "signingPublicKey": "zNXU1BM3af2iqWu/9rf2qA3lYX1uvklZ3n5fsUIBhLo=",
+        "encryptionPublicKey": "hZhfQ5ArKR7laJXP3QJXEw+L+ussgSF+p3xdtTpZLmw="
+      },
+      "originalMember": {
+        "id": "0xecd043dd8d1e0ddecc82c96e90aa61753fe41a79a371e9e6930e97ee9fade4ce",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "host_address": "0x913c5f998fdb4c0a2035055651d361d15579d6684647ffd0a392059ba1742497",
+        "host_public_key": [
+          183, 122, 201, 195, 137, 5, 125, 129, 229, 15, 28, 174, 0, 141, 25, 3,
+          192, 146, 157, 161, 72, 90, 57, 33, 173, 83, 33, 122, 66, 39, 124, 174
+        ],
+        "encryption_public_key": [
+          214, 237, 181, 163, 7, 15, 35, 179, 13, 221, 81, 140, 5, 114, 141,
+          201, 74, 187, 238, 159, 93, 168, 74, 91, 127, 157, 195, 169, 166, 56,
+          55, 64
+        ],
+        "name": "v0.2.0 Ubuntu cloud isolated Host",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "version": "1",
+        "revoked": false,
+        "expires_at_ms": "1791127157984",
+        "joined_at_ms": "1791040757984",
+        "source_invite": "0xee1d578512d8bec46047d196bb8a8333e76534e86944fe458a10b6c6613aefdc",
+        "observation_capability": "0xf1580d484ea9d07f4599a319cac5d99d7ea1ad100b39094cccbd34db0947986c"
+      },
+      "quote": {
+        "digest": "Cjr3vENjTmL4CqXaxqs8QVEgjpUWLvf43VE7Hhux1hZX",
+        "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "gasBudget": "200000000"
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "Cjr3vENjTmL4CqXaxqs8QVEgjpUWLvf43VE7Hhux1hZX",
+        "actualGas": "-586356"
+      },
+      "revokedMember": {
+        "id": "0xecd043dd8d1e0ddecc82c96e90aa61753fe41a79a371e9e6930e97ee9fade4ce",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "host_address": "0x913c5f998fdb4c0a2035055651d361d15579d6684647ffd0a392059ba1742497",
+        "host_public_key": [
+          183, 122, 201, 195, 137, 5, 125, 129, 229, 15, 28, 174, 0, 141, 25, 3,
+          192, 146, 157, 161, 72, 90, 57, 33, 173, 83, 33, 122, 66, 39, 124, 174
+        ],
+        "encryption_public_key": [
+          214, 237, 181, 163, 7, 15, 35, 179, 13, 221, 81, 140, 5, 114, 141,
+          201, 74, 187, 238, 159, 93, 168, 74, 91, 127, 157, 195, 169, 166, 56,
+          55, 64
+        ],
+        "name": "v0.2.0 Ubuntu cloud isolated Host",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "version": "2",
+        "revoked": true,
+        "expires_at_ms": "1791127157984",
+        "joined_at_ms": "1791040757984",
+        "source_invite": "0xee1d578512d8bec46047d196bb8a8333e76534e86944fe458a10b6c6613aefdc",
+        "observation_capability": "0xf1580d484ea9d07f4599a319cac5d99d7ea1ad100b39094cccbd34db0947986c"
+      },
+      "completed": true
+    },
+    "cloudAdmissionR4": {
+      "format": 1,
+      "baseline": "aad4400 plus explicit Linux collection",
+      "scope": "Actual Android installed native signer + production App HostAdmission controller + Ubuntu cloud formal envd via encrypted SSH tunnels; fee review is scripted, not UI walkthrough",
+      "pid": "4367",
+      "host": {
+        "format": "1",
+        "profile": "test-native-restart-4685ec27-b36c-4df0-a03a-b2a95479a5da",
+        "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "signing_public_key": "210e9849fe29b1953656f094e197e88cfca45563874ddd06e197c004cc3c2933",
+        "encryption_public_key": "207518ee6ac585d2badc9eef70d9295580159837cc166b99e551c742aa8b6c7a"
+      },
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "bindingId": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+      "checks": [
+        "Loads original installed Android device from actual Keystore IPC; no key export or new Human",
+        "Separate explicit one-use invite and self-pay quote, preserving older Android Host attempt unchanged",
+        "Original Android native signature confirms new cloud Host invitation on original organization",
+        "Formal Ubuntu envd reviews exact public keys and fee, confirms original admission, and reconstructs current membership without replay",
+        "Independent SDK proves original member previousTransaction and consumed single-use invite"
+      ],
+      "cliRecords": [
+        {
+          "phase": "preview",
+          "plan": {
+            "network": "localnet",
+            "invite_id": "0x20cd1ba84f23fce9d9b8d2a12d966c0fec4c6642a4facaccf25f68ed0e9e08a6",
+            "organization_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+            "organization_name": "Android UI android-ui-9305be0b",
+            "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+            "binding_version": 1,
+            "coordinator_address": "0x4e2910af107ceea8c029a26a650e52caccfd88f4f232db3b5e181f069a687c42",
+            "coordinator_public_key": "c654917a0e714ee24583ecdecffab05a8902f9299a5327ed5ed7de524b7dffb0",
+            "coordinator_endpoint": "http://127.0.0.1:30180",
+            "issuer_human": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+            "issuer_grant": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+            "invite_expires_at_ms": 1791045118015,
+            "membership_ttl_ms": 86400000,
+            "observation_ttl_ms": 86400000,
+            "clock_ms": 1791041533382,
+            "proof_expires_at_ms": 1791041653382
+          },
+          "quote": {
+            "digest": "7cWW8UBdhMzy43WXfL73o9K6HrCPsDbtHQHjTDS8fY5s",
+            "sender": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+            "gas_budget_mist": 200000000,
+            "gas_price_mist": 1000,
+            "estimated_net_fee_mist": "11579600"
+          },
+          "host": {
+            "format": "1",
+            "profile": "test-native-restart-4685ec27-b36c-4df0-a03a-b2a95479a5da",
+            "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+            "signing_public_key": "210e9849fe29b1953656f094e197e88cfca45563874ddd06e197c004cc3c2933",
+            "encryption_public_key": "207518ee6ac585d2badc9eef70d9295580159837cc166b99e551c742aa8b6c7a"
+          }
+        },
+        {
+          "phase": "prepared",
+          "transaction": {
+            "format": 1,
+            "chain_identifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+            "sender": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+            "digest": "7cWW8UBdhMzy43WXfL73o9K6HrCPsDbtHQHjTDS8fY5s",
+            "gas_budget_mist": 200000000,
+            "gas_price_mist": 1000,
+            "package_id": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+            "types_package_id": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10",
+            "organization_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+            "invite_id": "0x20cd1ba84f23fce9d9b8d2a12d966c0fec4c6642a4facaccf25f68ed0e9e08a6"
+          }
+        },
+        {
+          "state": "confirmed",
+          "digest": "7cWW8UBdhMzy43WXfL73o9K6HrCPsDbtHQHjTDS8fY5s",
+          "actual_fee_mist": "11579600",
+          "membership": {
+            "organization_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+            "invite_id": "0x20cd1ba84f23fce9d9b8d2a12d966c0fec4c6642a4facaccf25f68ed0e9e08a6",
+            "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+            "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+            "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+            "observation_capability": "0x89bb4b61c4126f7a915ee3db9f8b352f694175166ae1f7c219eec2f259fceb9e",
+            "expires_at_ms": 1791127971141,
+            "revoked": false,
+            "current_membership": true
+          }
+        }
+      ],
+      "submitted": true,
+      "joinConfirmed": true,
+      "device": {
+        "format": 1,
+        "profile": "android-ui-9305be0b",
+        "address": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "signingPublicKey": "zNXU1BM3af2iqWu/9rf2qA3lYX1uvklZ3n5fsUIBhLo=",
+        "encryptionPublicKey": "hZhfQ5ArKR7laJXP3QJXEw+L+ussgSF+p3xdtTpZLmw="
+      },
+      "attemptId": "f6be4585-4e31-44d9-87a5-ac45e31e1a49",
+      "quote": {
+        "requestId": "host:f6be4585-4e31-44d9-87a5-ac45e31e1a49",
+        "digest": "ADU9k24Hes7JHpNs66u8XYvB3SuXhgaTWmFkMNawgufH",
+        "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "gasBudget": "200000000"
+      },
+      "inviteOutcome": {
+        "status": "confirmed",
+        "digest": "ADU9k24Hes7JHpNs66u8XYvB3SuXhgaTWmFkMNawgufH",
+        "actualGas": "4973500",
+        "requestId": "host:f6be4585-4e31-44d9-87a5-ac45e31e1a49"
+      },
+      "invite": {
+        "id": "0x20cd1ba84f23fce9d9b8d2a12d966c0fec4c6642a4facaccf25f68ed0e9e08a6",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "binding_version": "1",
+        "issuer_human": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+        "issuer_device": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "issuer_grant": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+        "issuer_grant_version": "1",
+        "issuer_generation": "1",
+        "proof_public_key": [
+          136, 249, 221, 162, 11, 120, 223, 64, 11, 41, 216, 22, 246, 120, 156,
+          171, 149, 55, 64, 38, 96, 86, 248, 148, 105, 4, 205, 104, 172, 9, 21,
+          22
+        ],
+        "template_version": "1",
+        "expires_at_ms": "1791045118015",
+        "membership_ttl_ms": "86400000",
+        "capability_ttl_ms": "86400000",
+        "max_uses": 1,
+        "uses": 0,
+        "revoked": false
+      },
+      "faucet": {
+        "status": 200,
+        "recipient": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142"
+      },
+      "cliTerminal": {
+        "exitCode": 0,
+        "signal": null
+      },
+      "diagnostic": "Enter one-use Host invitation (hidden): Verify network, organization, Coordinator key and finite observation permissions. This does not grant Agent execution authority.\nHost pays Gas (MIST); estimated 11579600, maximum 200000000.\nTo confirm type JOIN 0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82; anything else cancels: ",
+      "originalJoin": {
+        "state": "confirmed",
+        "digest": "7cWW8UBdhMzy43WXfL73o9K6HrCPsDbtHQHjTDS8fY5s",
+        "actual_fee_mist": "11579600",
+        "membership": {
+          "organization_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+          "invite_id": "0x20cd1ba84f23fce9d9b8d2a12d966c0fec4c6642a4facaccf25f68ed0e9e08a6",
+          "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+          "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+          "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+          "observation_capability": "0x89bb4b61c4126f7a915ee3db9f8b352f694175166ae1f7c219eec2f259fceb9e",
+          "expires_at_ms": 1791127971141,
+          "revoked": false,
+          "current_membership": true
+        }
+      },
+      "member": {
+        "id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "host_public_key": [
+          33, 14, 152, 73, 254, 41, 177, 149, 54, 86, 240, 148, 225, 151, 232,
+          140, 252, 164, 85, 99, 135, 77, 221, 6, 225, 151, 192, 4, 204, 60, 41,
+          51
+        ],
+        "encryption_public_key": [
+          32, 117, 24, 238, 106, 197, 133, 210, 186, 220, 158, 239, 112, 217,
+          41, 85, 128, 21, 152, 55, 204, 22, 107, 153, 229, 81, 199, 66, 170,
+          139, 108, 122
+        ],
+        "name": "v0.2.0 Ubuntu cloud isolated Host",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "version": "1",
+        "revoked": false,
+        "expires_at_ms": "1791127971141",
+        "joined_at_ms": "1791041571141",
+        "source_invite": "0x20cd1ba84f23fce9d9b8d2a12d966c0fec4c6642a4facaccf25f68ed0e9e08a6",
+        "observation_capability": "0x89bb4b61c4126f7a915ee3db9f8b352f694175166ae1f7c219eec2f259fceb9e"
+      },
+      "previousTransaction": "7cWW8UBdhMzy43WXfL73o9K6HrCPsDbtHQHjTDS8fY5s",
+      "completed": true
+    },
+    "cloudSignedPrematureR4": {
+      "format": 1,
+      "baseline": "aad4400 plus explicit Linux collection",
+      "scope": "Actual Android installed native signer + production App HostAdmission controller + Ubuntu cloud formal envd via encrypted SSH tunnels; fee review is scripted, not UI walkthrough",
+      "pid": "4367",
+      "host": {
+        "format": "1",
+        "profile": "test-native-restart-4685ec27-b36c-4df0-a03a-b2a95479a5da",
+        "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "signing_public_key": "210e9849fe29b1953656f094e197e88cfca45563874ddd06e197c004cc3c2933",
+        "encryption_public_key": "207518ee6ac585d2badc9eef70d9295580159837cc166b99e551c742aa8b6c7a"
+      },
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "bindingId": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+      "checks": [
+        "Loads original installed Android device from actual Keystore IPC; no key export or new Human"
+      ],
+      "cliRecords": [],
+      "submitted": false,
+      "joinConfirmed": false,
+      "device": {
+        "format": 1,
+        "profile": "android-ui-9305be0b",
+        "address": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "signingPublicKey": "zNXU1BM3af2iqWu/9rf2qA3lYX1uvklZ3n5fsUIBhLo=",
+        "encryptionPublicKey": "hZhfQ5ArKR7laJXP3QJXEw+L+ussgSF+p3xdtTpZLmw="
+      },
+      "completed": false,
+      "failure": "Original cloud Host has no fresh authenticated scan"
+    },
+    "cloudSignedBeforeR4": {
+      "format": 1,
+      "baseline": "aad4400 plus explicit Linux collection",
+      "scope": "Actual Android installed native signer + production App HostAdmission controller + Ubuntu cloud formal envd via encrypted SSH tunnels; fee review is scripted, not UI walkthrough",
+      "pid": "4367",
+      "host": {
+        "format": "1",
+        "profile": "test-native-restart-4685ec27-b36c-4df0-a03a-b2a95479a5da",
+        "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "signing_public_key": "210e9849fe29b1953656f094e197e88cfca45563874ddd06e197c004cc3c2933",
+        "encryption_public_key": "207518ee6ac585d2badc9eef70d9295580159837cc166b99e551c742aa8b6c7a"
+      },
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "bindingId": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+      "checks": [
+        "Loads original installed Android device from actual Keystore IPC; no key export or new Human",
+        "Original Android native signer verifies current cloud Host and native scan through formal Coordinator",
+        "Exact original member, public keys and admission previousTransaction unchanged, no signing transaction or replay"
+      ],
+      "cliRecords": [],
+      "submitted": false,
+      "joinConfirmed": false,
+      "device": {
+        "format": 1,
+        "profile": "android-ui-9305be0b",
+        "address": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "signingPublicKey": "zNXU1BM3af2iqWu/9rf2qA3lYX1uvklZ3n5fsUIBhLo=",
+        "encryptionPublicKey": "hZhfQ5ArKR7laJXP3QJXEw+L+ussgSF+p3xdtTpZLmw="
+      },
+      "lastRows": [
+        {
+          "address": "0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd",
+          "state": "verified",
+          "observation": {
+            "address": "0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd",
+            "hostname": "Android UI worker",
+            "heartbeatMs": 1791041852699,
+            "agentCount": 0,
+            "system": {
+              "os": "darwin",
+              "arch": "arm64",
+              "cpu": 10
+            }
+          },
+          "membershipId": "0x291ef80e2edc698e8aa9f37452e8aa5131f2c5c4b5e3fb1c00f96e6f49bd81e4",
+          "expiresAtMs": 1791041912699,
+          "freshUntilMs": 1791041913157,
+          "nativeDiscovery": {
+            "state": "complete",
+            "observedAtMs": 1791041851718,
+            "expiresAtMs": 1791041911718,
+            "freshUntilMs": 1791041912176,
+            "instances": [
+              {
+                "instanceId": "native-490117ebd4851446755e54253c5bb87312d2509731289eb6ba8ee39bbd778740",
+                "session": "native-files",
+                "pane": "",
+                "state": "observed",
+                "runtime": "bounded-process-v1",
+                "continuity": "envd-process-v1",
+                "workspace": "/private/tmp/fm-android-host-ui-m8d0bgy5/workspace",
+                "workspaceHash": "c4f2393d9d8d0353287a7a9630c403bbb2459357e11b49d528b2ce85e98297a5"
+              }
+            ]
+          },
+          "discovery": {
+            "state": "unavailable",
+            "observedAtMs": 1791041851714,
+            "expiresAtMs": 1791041911714,
+            "freshUntilMs": 1791041912172,
+            "instances": []
+          }
+        },
+        {
+          "address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+          "state": "verified",
+          "observation": {
+            "address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+            "hostname": "v0.2.0 Ubuntu cloud isolated Host",
+            "heartbeatMs": 1791041827246,
+            "agentCount": 0,
+            "system": {
+              "os": "linux",
+              "arch": "amd64",
+              "cpu": 2
+            }
+          },
+          "membershipId": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+          "expiresAtMs": 1791041887246,
+          "freshUntilMs": 1791041887704,
+          "nativeDiscovery": {
+            "state": "complete",
+            "observedAtMs": 1791041827246,
+            "expiresAtMs": 1791041887246,
+            "freshUntilMs": 1791041887704,
+            "instances": [
+              {
+                "instanceId": "native-c1291bdfa3c2fb1cc36d42f3ca2dbf7cb0300dd146d508ef08a230bb214bee46",
+                "session": "native-files",
+                "pane": "",
+                "state": "observed",
+                "runtime": "bounded-process-v1",
+                "continuity": "envd-process-v1",
+                "workspace": "/tmp/fm-v020-remote-cloud-61aRZZHv/r4/workspace",
+                "workspaceHash": "695a618ffe276db70e333eed018a9830d9f1f4e76106b040d537078aa44d5d0a"
+              }
+            ]
+          },
+          "discovery": {
+            "state": "unavailable",
+            "observedAtMs": 1791041827242,
+            "expiresAtMs": 1791041887242,
+            "freshUntilMs": 1791041887700,
+            "instances": []
+          }
+        }
+      ],
+      "row": {
+        "address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "state": "verified",
+        "observation": {
+          "address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+          "hostname": "v0.2.0 Ubuntu cloud isolated Host",
+          "heartbeatMs": 1791041827246,
+          "agentCount": 0,
+          "system": {
+            "os": "linux",
+            "arch": "amd64",
+            "cpu": 2
+          }
+        },
+        "membershipId": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+        "expiresAtMs": 1791041887246,
+        "freshUntilMs": 1791041887704,
+        "nativeDiscovery": {
+          "state": "complete",
+          "observedAtMs": 1791041827246,
+          "expiresAtMs": 1791041887246,
+          "freshUntilMs": 1791041887704,
+          "instances": [
+            {
+              "instanceId": "native-c1291bdfa3c2fb1cc36d42f3ca2dbf7cb0300dd146d508ef08a230bb214bee46",
+              "session": "native-files",
+              "pane": "",
+              "state": "observed",
+              "runtime": "bounded-process-v1",
+              "continuity": "envd-process-v1",
+              "workspace": "/tmp/fm-v020-remote-cloud-61aRZZHv/r4/workspace",
+              "workspaceHash": "695a618ffe276db70e333eed018a9830d9f1f4e76106b040d537078aa44d5d0a"
+            }
+          ]
+        },
+        "discovery": {
+          "state": "unavailable",
+          "observedAtMs": 1791041827242,
+          "expiresAtMs": 1791041887242,
+          "freshUntilMs": 1791041887700,
+          "instances": []
+        }
+      },
+      "attempts": 1,
+      "member": {
+        "id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "host_public_key": [
+          33, 14, 152, 73, 254, 41, 177, 149, 54, 86, 240, 148, 225, 151, 232,
+          140, 252, 164, 85, 99, 135, 77, 221, 6, 225, 151, 192, 4, 204, 60, 41,
+          51
+        ],
+        "encryption_public_key": [
+          32, 117, 24, 238, 106, 197, 133, 210, 186, 220, 158, 239, 112, 217,
+          41, 85, 128, 21, 152, 55, 204, 22, 107, 153, 229, 81, 199, 66, 170,
+          139, 108, 122
+        ],
+        "name": "v0.2.0 Ubuntu cloud isolated Host",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "version": "1",
+        "revoked": false,
+        "expires_at_ms": "1791127971141",
+        "joined_at_ms": "1791041571141",
+        "source_invite": "0x20cd1ba84f23fce9d9b8d2a12d966c0fec4c6642a4facaccf25f68ed0e9e08a6",
+        "observation_capability": "0x89bb4b61c4126f7a915ee3db9f8b352f694175166ae1f7c219eec2f259fceb9e"
+      },
+      "memberPreviousTransaction": "7cWW8UBdhMzy43WXfL73o9K6HrCPsDbtHQHjTDS8fY5s",
+      "completed": true
+    },
+    "cloudUiBeforeR4": {
+      "format": 1,
+      "pid": "4367",
+      "scope": "Actual installed Android UI verifying local macOS and remote Ubuntu cloud Host observations via production Coordinator",
+      "hostAddress": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+      "checks": [
+        "Actual original Android device verifies signed local macOS and real Ubuntu cloud Host observations in one organization",
+        "Cloud reports actual Linux/AMD64 system and one current native instance; absent dedicated tmux socket remains unknown",
+        "Actual installed Team view discovers original authenticated cloud native instance with explicit observation-only import"
+      ],
+      "hostRead": {
+        "error": null,
+        "rows": [
+          {
+            "text": "Host signature verifiedAndroid UI worker0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bdHeartbeat time10/3/2026, 8:36:36 AMHeartbeat freshnessHost-signed observation within its validity windowSystem / CPUdarwin / arm64 · 10tmux instancesUnknownNative file instances1",
+            "counts": {
+              "Heartbeat time": "10/3/2026, 8:36:36 AM",
+              "Heartbeat freshness": "Host-signed observation within its validity window",
+              "System / CPU": "darwin / arm64 · 10",
+              "tmux instances": "Unknown",
+              "Native file instances": "1"
+            }
+          },
+          {
+            "text": "Host signature verifiedv0.2.0 Ubuntu cloud isolated Host0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142Heartbeat time10/3/2026, 8:36:17 AMHeartbeat freshnessHost-signed observation within its validity windowSystem / CPUlinux / amd64 · 2tmux instancesUnknownNative file instances1",
+            "counts": {
+              "Heartbeat time": "10/3/2026, 8:36:17 AM",
+              "Heartbeat freshness": "Host-signed observation within its validity window",
+              "System / CPU": "linux / amd64 · 2",
+              "tmux instances": "Unknown",
+              "Native file instances": "1"
+            }
+          }
+        ]
+      },
+      "discovery": {
+        "error": null,
+        "text": "Host signature verifiedv0.2.0 Ubuntu cloud isolated Host0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142Heartbeat time10/3/2026, 8:36:17 AMHeartbeat freshnessHost-signed observation within its validity windowSystem / CPUlinux / amd64 · 2tmux instancesUnknownNative file instances1tmux instance scanScan unavailable. Check the Host and read againScan time · 10/3/2026, 8:36:17 AMNative file AgentsHost scan verifiedScan time · 10/3/2026, 8:36:17 AMnative-filesInstance continuity observed · observation onlynative-c1291bdfa3c2fb1cc36d42f3ca2dbf7cb0300dd146d508ef08a230bb214bee46Workspace: /tmp/fm-v020-remote-cloud-61aRZZHv/r4/workspaceWorkspace fingerprint: 695a618ffe276db70e333eed018a9830d9f1f4e76106b040d537078aa44d5d0aAdapter: native file Agent, supporting 1–3 file goals and bounded read/write. Observation only; execution requires handover and ACTIVE OKR authorization.Import for observation only",
+        "instanceIds": [
+          "native-c1291bdfa3c2fb1cc36d42f3ca2dbf7cb0300dd146d508ef08a230bb214bee46"
+        ],
+        "imports": 1
+      },
+      "completed": true
+    },
+    "cloudSignedAfterR4": {
+      "format": 1,
+      "baseline": "aad4400 plus explicit Linux collection",
+      "scope": "Actual Android installed native signer + production App HostAdmission controller + Ubuntu cloud formal envd via encrypted SSH tunnels; fee review is scripted, not UI walkthrough",
+      "pid": "4367",
+      "host": {
+        "format": "1",
+        "profile": "test-native-restart-4685ec27-b36c-4df0-a03a-b2a95479a5da",
+        "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "signing_public_key": "210e9849fe29b1953656f094e197e88cfca45563874ddd06e197c004cc3c2933",
+        "encryption_public_key": "207518ee6ac585d2badc9eef70d9295580159837cc166b99e551c742aa8b6c7a"
+      },
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "bindingId": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+      "checks": [
+        "Loads original installed Android device from actual Keystore IPC; no key export or new Human",
+        "Original Android native signer verifies current cloud Host and native scan through formal Coordinator",
+        "Exact original member, public keys and admission previousTransaction unchanged, no signing transaction or replay"
+      ],
+      "cliRecords": [],
+      "submitted": false,
+      "joinConfirmed": false,
+      "device": {
+        "format": 1,
+        "profile": "android-ui-9305be0b",
+        "address": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "signingPublicKey": "zNXU1BM3af2iqWu/9rf2qA3lYX1uvklZ3n5fsUIBhLo=",
+        "encryptionPublicKey": "hZhfQ5ArKR7laJXP3QJXEw+L+ussgSF+p3xdtTpZLmw="
+      },
+      "lastRows": [
+        {
+          "address": "0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd",
+          "state": "verified",
+          "observation": {
+            "address": "0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bd",
+            "hostname": "Android UI worker",
+            "heartbeatMs": 1791042058698,
+            "agentCount": 0,
+            "system": {
+              "os": "darwin",
+              "arch": "arm64",
+              "cpu": 10
+            }
+          },
+          "membershipId": "0x291ef80e2edc698e8aa9f37452e8aa5131f2c5c4b5e3fb1c00f96e6f49bd81e4",
+          "expiresAtMs": 1791042118698,
+          "freshUntilMs": 1791042119033,
+          "nativeDiscovery": {
+            "state": "complete",
+            "observedAtMs": 1791042057705,
+            "expiresAtMs": 1791042117705,
+            "freshUntilMs": 1791042118040,
+            "instances": [
+              {
+                "instanceId": "native-490117ebd4851446755e54253c5bb87312d2509731289eb6ba8ee39bbd778740",
+                "session": "native-files",
+                "pane": "",
+                "state": "observed",
+                "runtime": "bounded-process-v1",
+                "continuity": "envd-process-v1",
+                "workspace": "/private/tmp/fm-android-host-ui-m8d0bgy5/workspace",
+                "workspaceHash": "c4f2393d9d8d0353287a7a9630c403bbb2459357e11b49d528b2ce85e98297a5"
+              }
+            ]
+          },
+          "discovery": {
+            "state": "unavailable",
+            "observedAtMs": 1791042057700,
+            "expiresAtMs": 1791042117700,
+            "freshUntilMs": 1791042118035,
+            "instances": []
+          }
+        },
+        {
+          "address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+          "state": "verified",
+          "observation": {
+            "address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+            "hostname": "v0.2.0 Ubuntu cloud isolated Host",
+            "heartbeatMs": 1791042046619,
+            "agentCount": 0,
+            "system": {
+              "os": "linux",
+              "arch": "amd64",
+              "cpu": 2
+            }
+          },
+          "membershipId": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+          "expiresAtMs": 1791042106619,
+          "freshUntilMs": 1791042106954,
+          "nativeDiscovery": {
+            "state": "complete",
+            "observedAtMs": 1791042036695,
+            "expiresAtMs": 1791042096695,
+            "freshUntilMs": 1791042097030,
+            "instances": [
+              {
+                "instanceId": "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5",
+                "session": "native-files",
+                "pane": "",
+                "state": "observed",
+                "runtime": "bounded-process-v1",
+                "continuity": "envd-process-v1",
+                "workspace": "/tmp/fm-v020-remote-cloud-61aRZZHv/r4/workspace",
+                "workspaceHash": "695a618ffe276db70e333eed018a9830d9f1f4e76106b040d537078aa44d5d0a"
+              }
+            ]
+          },
+          "discovery": {
+            "state": "unavailable",
+            "observedAtMs": 1791042036688,
+            "expiresAtMs": 1791042096688,
+            "freshUntilMs": 1791042097023,
+            "instances": []
+          }
+        }
+      ],
+      "row": {
+        "address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "state": "verified",
+        "observation": {
+          "address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+          "hostname": "v0.2.0 Ubuntu cloud isolated Host",
+          "heartbeatMs": 1791042046619,
+          "agentCount": 0,
+          "system": {
+            "os": "linux",
+            "arch": "amd64",
+            "cpu": 2
+          }
+        },
+        "membershipId": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+        "expiresAtMs": 1791042106619,
+        "freshUntilMs": 1791042106954,
+        "nativeDiscovery": {
+          "state": "complete",
+          "observedAtMs": 1791042036695,
+          "expiresAtMs": 1791042096695,
+          "freshUntilMs": 1791042097030,
+          "instances": [
+            {
+              "instanceId": "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5",
+              "session": "native-files",
+              "pane": "",
+              "state": "observed",
+              "runtime": "bounded-process-v1",
+              "continuity": "envd-process-v1",
+              "workspace": "/tmp/fm-v020-remote-cloud-61aRZZHv/r4/workspace",
+              "workspaceHash": "695a618ffe276db70e333eed018a9830d9f1f4e76106b040d537078aa44d5d0a"
+            }
+          ]
+        },
+        "discovery": {
+          "state": "unavailable",
+          "observedAtMs": 1791042036688,
+          "expiresAtMs": 1791042096688,
+          "freshUntilMs": 1791042097023,
+          "instances": []
+        }
+      },
+      "attempts": 27,
+      "member": {
+        "id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "host_public_key": [
+          33, 14, 152, 73, 254, 41, 177, 149, 54, 86, 240, 148, 225, 151, 232,
+          140, 252, 164, 85, 99, 135, 77, 221, 6, 225, 151, 192, 4, 204, 60, 41,
+          51
+        ],
+        "encryption_public_key": [
+          32, 117, 24, 238, 106, 197, 133, 210, 186, 220, 158, 239, 112, 217,
+          41, 85, 128, 21, 152, 55, 204, 22, 107, 153, 229, 81, 199, 66, 170,
+          139, 108, 122
+        ],
+        "name": "v0.2.0 Ubuntu cloud isolated Host",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "version": "1",
+        "revoked": false,
+        "expires_at_ms": "1791127971141",
+        "joined_at_ms": "1791041571141",
+        "source_invite": "0x20cd1ba84f23fce9d9b8d2a12d966c0fec4c6642a4facaccf25f68ed0e9e08a6",
+        "observation_capability": "0x89bb4b61c4126f7a915ee3db9f8b352f694175166ae1f7c219eec2f259fceb9e"
+      },
+      "memberPreviousTransaction": "7cWW8UBdhMzy43WXfL73o9K6HrCPsDbtHQHjTDS8fY5s",
+      "completed": true
+    },
+    "cloudImportR4": {
+      "format": 1,
+      "baseline": "aad4400 plus explicit Linux collection",
+      "scope": "Actual Android installed native signer + production App HostAdmission controller + Ubuntu cloud formal envd via encrypted SSH tunnels; fee review is scripted, not UI walkthrough",
+      "pid": "4367",
+      "host": {
+        "format": "1",
+        "profile": "test-native-restart-4685ec27-b36c-4df0-a03a-b2a95479a5da",
+        "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "signing_public_key": "210e9849fe29b1953656f094e197e88cfca45563874ddd06e197c004cc3c2933",
+        "encryption_public_key": "207518ee6ac585d2badc9eef70d9295580159837cc166b99e551c742aa8b6c7a"
+      },
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "bindingId": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+      "checks": [
+        "Loads original installed Android device from actual Keystore IPC; no key export or new Human",
+        "Fresh authenticated cloud instance after restart has no prior managed registration",
+        "Actual original Android Keystore signs explicit self-pay import of only current cloud instance, control remains false",
+        "Independent exact import transaction proof; duplicate selection returns original registration with no new quote, signature or broadcast"
+      ],
+      "cliRecords": [],
+      "submitted": true,
+      "joinConfirmed": false,
+      "device": {
+        "format": 1,
+        "profile": "android-ui-9305be0b",
+        "address": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "signingPublicKey": "zNXU1BM3af2iqWu/9rf2qA3lYX1uvklZ3n5fsUIBhLo=",
+        "encryptionPublicKey": "hZhfQ5ArKR7laJXP3QJXEw+L+ussgSF+p3xdtTpZLmw="
+      },
+      "selection": {
+        "bindingId": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "hostAddress": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "instanceId": "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5",
+        "workspaceHash": "695a618ffe276db70e333eed018a9830d9f1f4e76106b040d537078aa44d5d0a"
+      },
+      "quote": {
+        "digest": "GHUz15nVc38tDXHMoUDwkRzSUH5v3t5hEmhnMFUZKiD3",
+        "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "gasBudget": "200000000"
+      },
+      "outcome": {
+        "status": "confirmed",
+        "digest": "GHUz15nVc38tDXHMoUDwkRzSUH5v3t5hEmhnMFUZKiD3",
+        "actualGas": "11891564"
+      },
+      "managed": {
+        "id": "0x88148f91a547e54750132d9442627c1ea6eefb89540ef1f78ef0f48f9f374140",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+        "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "instance_id": "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5",
+        "runtime": "bounded-process-v1",
+        "workspace_hash": [
+          105, 90, 97, 143, 254, 39, 109, 183, 14, 51, 62, 237, 1, 138, 152, 48,
+          217, 241, 244, 231, 97, 6, 176, 64, 213, 55, 7, 138, 164, 77, 93, 10
+        ],
+        "control_confirmed": false,
+        "confirmed_by_human": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+        "confirmed_by_device": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "version": "1",
+        "revoked": false,
+        "imported_at_ms": "1791042223165"
+      },
+      "managedPreviousTransaction": "GHUz15nVc38tDXHMoUDwkRzSUH5v3t5hEmhnMFUZKiD3",
+      "completed": true
+    },
+    "cloudUiConcurrentR4": {
+      "format": 1,
+      "pid": "4367",
+      "scope": "Actual installed Android UI verifying local macOS and remote Ubuntu cloud Host observations via production Coordinator",
+      "hostAddress": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+      "checks": [],
+      "completed": false,
+      "failure": "Original UI operation not visible; no replay"
+    },
+    "cloudUiAfterR4": {
+      "format": 1,
+      "pid": "4367",
+      "scope": "Actual installed Android UI verifying local macOS and remote Ubuntu cloud Host observations via production Coordinator",
+      "hostAddress": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+      "checks": [
+        "Actual original Android device verifies signed local macOS and real Ubuntu cloud Host observations in one organization",
+        "Cloud reports actual Linux/AMD64 system and one current native instance; absent dedicated tmux socket remains unknown",
+        "Actual installed Team view discovers original authenticated cloud native instance with explicit observation-only import"
+      ],
+      "hostRead": {
+        "error": null,
+        "rows": [
+          {
+            "text": "Host signature verifiedAndroid UI worker0x2baf2f9120fd5cb3b67176b21924bb78158ef7500d4d670e8179e54af81394bdHeartbeat time10/3/2026, 8:46:34 AMHeartbeat freshnessHost-signed observation within its validity windowSystem / CPUdarwin / arm64 · 10tmux instancesUnknownNative file instances1",
+            "counts": {
+              "Heartbeat time": "10/3/2026, 8:46:34 AM",
+              "Heartbeat freshness": "Host-signed observation within its validity window",
+              "System / CPU": "darwin / arm64 · 10",
+              "tmux instances": "Unknown",
+              "Native file instances": "1"
+            }
+          },
+          {
+            "text": "Host signature verifiedv0.2.0 Ubuntu cloud isolated Host0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142Heartbeat time10/3/2026, 8:46:13 AMHeartbeat freshnessHost-signed observation within its validity windowSystem / CPUlinux / amd64 · 2tmux instancesUnknownNative file instances1",
+            "counts": {
+              "Heartbeat time": "10/3/2026, 8:46:13 AM",
+              "Heartbeat freshness": "Host-signed observation within its validity window",
+              "System / CPU": "linux / amd64 · 2",
+              "tmux instances": "Unknown",
+              "Native file instances": "1"
+            }
+          }
+        ]
+      },
+      "discovery": {
+        "error": null,
+        "text": "Host signature verifiedv0.2.0 Ubuntu cloud isolated Host0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142Heartbeat time10/3/2026, 8:46:13 AMHeartbeat freshnessHost-signed observation within its validity windowSystem / CPUlinux / amd64 · 2tmux instancesUnknownNative file instances1tmux instance scanScan unavailable. Check the Host and read againScan time · 10/3/2026, 8:46:13 AMNative file AgentsHost scan verifiedScan time · 10/3/2026, 8:46:13 AMnative-filesInstance continuity observed · observation onlynative-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5Workspace: /tmp/fm-v020-remote-cloud-61aRZZHv/r4/workspaceWorkspace fingerprint: 695a618ffe276db70e333eed018a9830d9f1f4e76106b040d537078aa44d5d0aAdapter: native file Agent, supporting 1–3 file goals and bounded read/write. Observation only; execution requires handover and ACTIVE OKR authorization.Import for observation only",
+        "instanceIds": [
+          "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5"
+        ],
+        "imports": 1
+      },
+      "completed": true
+    },
+    "cloudFilesystemAuditR4": {
+      "root": "/tmp/fm-v020-remote-cloud-61aRZZHv",
+      "files": {
+        "envd-r2": {
+          "sha256": "165790a6eefc9999385a56f92b77828343af15319e658ef681ec4468e6a9a40a",
+          "size": 25825100
+        },
+        "r4/worker-r2.json": {
+          "sha256": "76ca0f19d01c36494f3ec529a11b4ba9648f5ad6b78a5e5e06ae782a94aa8765",
+          "size": 1853
+        },
+        "r4/supervisor-r4.py": {
+          "sha256": "b3f08b3647d246e88f3736f9a7faf7d008739d5455b2e6c5869ca7abf7486ac5",
+          "size": 6729
+        },
+        "r4/vault-cli-r4.py": {
+          "sha256": "550c7c463ee630cea3c02671960fb84f39053f53c9b6460251eaa9aefbaefe5e",
+          "size": 598
+        }
+      },
+      "vault": [
+        {
+          "filename": "login.keyring",
+          "mode": "0o600",
+          "size": 728,
+          "sha256": "4ef9771b59e896aa04bcd1ab9c839c1f93b1b48bae1bcdd4ee3b19bba67e01d3",
+          "binaryEncryptedFormat": true,
+          "cryptoAlgorithm": 0
+        }
+      ],
+      "processes": {
+        "1872983": "envd",
+        "2244585": "envd",
+        "2323604": "exited"
+      },
+      "workerLog": "2026/10/03 23:35:25 [envd] starting fractalmind-envd dev (host=v0.2.0 Ubuntu cloud isolated Host)\n2026/10/03 23:35:25 [envd] [runtimeadapter] persistent signed-command runtime enabled (executor=*main.chainRuntimeExecutor)\n2026/10/03 23:35:25 [envd] [roles] active: worker=true coordinator=false relay=false stun_server=false sponsor=false\n2026/10/03 23:35:25 [envd] [auth] control channel enabled, node identity=0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142\n2026/10/03 23:35:25 [envd] initial scan: 0 agent panes found\n2026/10/03 23:35:34 [envd] [heartbeat] send failed: chain connection changed; reconnect and reauthenticate\n2026/10/03 23:35:35 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 23:35:37 [envd] [ws] connected to ws://127.0.0.1:30180/ws\n2026/10/03 23:35:38 [envd] [ws] control-channel authenticated (coordinator verified)\n2026/10/03 23:36:03 [envd] [heartbeat] send failed: rpc error: code = DeadlineExceeded desc = context deadline exceeded\n2026/10/03 23:38:30 [envd] received signal terminated, shutting down\n",
+      "priorWorkerLog": "2026/10/03 23:21:00 [envd] starting fractalmind-envd dev (host=v0.2.0 Ubuntu cloud isolated Host)\n2026/10/03 23:21:00 [envd] [runtimeadapter] persistent signed-command runtime enabled (executor=*main.chainRuntimeExecutor)\n2026/10/03 23:21:00 [envd] [roles] active: worker=true coordinator=false relay=false stun_server=false sponsor=false\n2026/10/03 23:21:00 [envd] [auth] control channel enabled, node identity=0x913c5f998fdb4c0a2035055651d361d15579d6684647ffd0a392059ba1742497\n2026/10/03 23:21:00 [envd] initial scan: 0 agent panes found\n2026/10/03 23:21:09 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 23:21:09 [envd] [heartbeat] send failed: chain connection changed; reconnect and reauthenticate\n2026/10/03 23:21:10 [envd] [ws] connected to ws://127.0.0.1:30180/ws\n2026/10/03 23:21:12 [envd] [ws] control-channel authenticated (coordinator verified)\n2026/10/03 23:24:54 [envd] received signal terminated, shutting down\n",
+      "dependencyInstallLog": "Reading package lists...\nBuilding dependency tree...\nReading state information...\nThe following packages were automatically installed and are no longer required:\n  eatmydata libeatmydata1 python3-json-pointer python3-jsonpatch\n  python3-jsonschema python3-pyrsistent\nUse 'sudo apt autoremove' to remove them.\nThe following additional packages will be installed:\n  gcr gcr4 libcairo-script-interpreter2 libgck-1-0 libgck-2-2 libgcr-4-4\n  libgcr-base-3-1 libgcr-ui-3-1 libgles2 libgraphene-1.0-0 libgtk-4-1\n  libgtk-4-common libp11-kit0 libsecret-1-0 libsecret-common p11-kit\n  p11-kit-modules pinentry-gnome3\nSuggested packages:\n  gvfs pinentry-doc\nRecommended packages:\n  libpam-gnome-keyring gnome-keyring-pkcs11 libgtk-4-bin\n  libgtk-4-media-gstreamer\nThe following NEW packages will be installed:\n  gcr gcr4 gnome-keyring libcairo-script-interpreter2 libgck-1-0 libgck-2-2\n  libgcr-4-4 libgcr-base-3-1 libgcr-ui-3-1 libgles2 libgraphene-1.0-0\n  libgtk-4-1 libgtk-4-common libsecret-1-0 libsecret-common p11-kit\n  p11-kit-modules pinentry-gnome3\nThe following packages will be upgraded:\n  libp11-kit0\n1 upgraded, 18 newly installed, 0 to remove and 379 not upgraded.\nNeed to get 7262 kB of archives.\nAfter this operation, 28.5 MB of additional disk space will be used.\nGet:1 http://mirrors.tencentyun.com/ubuntu noble-updates/main amd64 libp11-kit0 amd64 0.25.3-4ubuntu2.2 [297 kB]\nGet:2 http://mirrors.tencentyun.com/ubuntu noble/main amd64 libgck-2-2 amd64 4.2.0-5 [77.0 kB]\nGet:3 http://mirrors.tencentyun.com/ubuntu noble/main amd64 libgcr-4-4 amd64 4.2.0-5 [192 kB]\nGet:4 http://mirrors.tencentyun.com/ubuntu noble/main amd64 libcairo-script-interpreter2 amd64 1.18.0-3build1 [60.3 kB]\nGet:5 http://mirrors.tencentyun.com/ubuntu noble/main amd64 libgraphene-1.0-0 amd64 1.10.8-3build2 [46.2 kB]\nGet:6 http://mirrors.tencentyun.com/ubuntu noble/main amd64 libgles2 amd64 1.7.0-1build1 [17.1 kB]\nGet:7 http://mirrors.tencentyun.com/ubuntu noble-updates/main amd64 libgtk-4-common all 4.14.5+ds-0ubuntu0.10 [1497 kB]\nGet:8 http://mirrors.tencentyun.com/ubuntu noble-updates/main amd64 libgtk-4-1 amd64 4.14.5+ds-0ubuntu0.10 [3295 kB]\nGet:9 http://mirrors.tencentyun.com/ubuntu noble/main amd64 libsecret-common all 0.21.4-1build3 [4962 B]\nGet:10 http://mirrors.tencentyun.com/ubuntu noble/main amd64 libsecret-1-0 amd64 0.21.4-1build3 [116 kB]\nGet:11 http://mirrors.tencentyun.com/ubuntu noble/main amd64 gcr4 amd64 4.2.0-5 [42.9 kB]\nGet:12 http://mirrors.tencentyun.com/ubuntu noble/main amd64 libgck-1-0 amd64 3.41.2-1build3 [79.9 kB]\nGet:13 http://mirrors.tencentyun.com/ubuntu noble/main amd64 libgcr-base-3-1 amd64 3.41.2-1build3 [202 kB]\nGet:14 http://mirrors.tencentyun.com/ubuntu noble/main amd64 libgcr-ui-3-1 amd64 3.41.2-1build3 [124 kB]\nGet:15 http://mirrors.tencentyun.com/ubuntu noble/main amd64 gcr amd64 3.41.2-1build3 [60.4 kB]\nGet:16 http://mirrors.tencentyun.com/ubuntu noble-updates/main amd64 p11-kit-modules amd64 0.25.3-4ubuntu2.2 [329 kB]\nGet:17 http://mirrors.tencentyun.com/ubuntu noble-updates/main amd64 p11-kit amd64 0.25.3-4ubuntu2.2 [141 kB]\nGet:18 http://mirrors.tencentyun.com/ubuntu noble/main amd64 pinentry-gnome3 amd64 1.2.1-3ubuntu5 [38.3 kB]\nGet:19 http://mirrors.tencentyun.com/ubuntu noble-updates/main amd64 gnome-keyring amd64 46.1-2ubuntu0.2 [640 kB]\ndebconf: unable to initialize frontend: Dialog\ndebconf: (Dialog frontend will not work on a dumb terminal, an emacs shell buffer, or without a controlling terminal.)\ndebconf: falling back to frontend: Readline\ndebconf: unable to initialize frontend: Readline\ndebconf: (This frontend requires a controlling tty.)\ndebconf: falling back to frontend: Teletype\ndpkg-preconfigure: unable to re-open stdin: \nFetched 7262 kB in 1s (9913 kB/s)\n(Reading database ... \n(Reading database ... 5%\n(Reading database ... 10%\n(Reading database ... 15%\n(Reading database ... 20%\n(Reading database ... 25%\n(Reading database ... 30%\n(Reading database ... 35%\n(Reading database ... 40%\n(Reading database ... 45%\n(Reading database ... 50%\n(Reading database ... 55%\n(Reading database ... 60%\n(Reading database ... 65%\n(Reading database ... 70%\n(Reading database ... 75%\n(Reading database ... 80%\n(Reading database ... 85%\n(Reading database ... 90%\n(Reading database ... 95%\n(Reading database ... 100%\n(Reading database ... 104883 files and directories currently installed.)\nPreparing to unpack .../libp11-kit0_0.25.3-4ubuntu2.2_amd64.deb ...\nUnpacking libp11-kit0:amd64 (0.25.3-4ubuntu2.2) over (0.25.3-4ubuntu2) ...\nSetting up libp11-kit0:amd64 (0.25.3-4ubuntu2.2) ...\nSelecting previously unselected package libgck-2-2:amd64.\n(Reading database ... \n(Reading database ... 5%\n(Reading database ... 10%\n(Reading database ... 15%\n(Reading database ... 20%\n(Reading database ... 25%\n(Reading database ... 30%\n(Reading database ... 35%\n(Reading database ... 40%\n(Reading database ... 45%\n(Reading database ... 50%\n(Reading database ... 55%\n(Reading database ... 60%\n(Reading database ... 65%\n(Reading database ... 70%\n(Reading database ... 75%\n(Reading database ... 80%\n(Reading database ... 85%\n(Reading database ... 90%\n(Reading database ... 95%\n(Reading database ... 100%\n(Reading database ... 104883 files and directories currently installed.)\nPreparing to unpack .../00-libgck-2-2_4.2.0-5_amd64.deb ...\nUnpacking libgck-2-2:amd64 (4.2.0-5) ...\nSelecting previously unselected package libgcr-4-4:amd64.\nPreparing to unpack .../01-libgcr-4-4_4.2.0-5_amd64.deb ...\nUnpacking libgcr-4-4:amd64 (4.2.0-5) ...\nSelecting previously unselected package libcairo-script-interpreter2:amd64.\nPreparing to unpack .../02-libcairo-script-interpreter2_1.18.0-3build1_amd64.deb ...\nUnpacking libcairo-script-interpreter2:amd64 (1.18.0-3build1) ...\nSelecting previously unselected package libgraphene-1.0-0:amd64.\nPreparing to unpack .../03-libgraphene-1.0-0_1.10.8-3build2_amd64.deb ...\nUnpacking libgraphene-1.0-0:amd64 (1.10.8-3build2) ...\nSelecting previously unselected package libgles2:amd64.\nPreparing to unpack .../04-libgles2_1.7.0-1build1_amd64.deb ...\nUnpacking libgles2:amd64 (1.7.0-1build1) ...\nSelecting previously unselected package libgtk-4-common.\nPreparing to unpack .../05-libgtk-4-common_4.14.5+ds-0ubuntu0.10_all.deb ...\nUnpacking libgtk-4-common (4.14.5+ds-0ubuntu0.10) ...\nSelecting previously unselected package libgtk-4-1:amd64.\nPreparing to unpack .../06-libgtk-4-1_4.14.5+ds-0ubuntu0.10_amd64.deb ...\nUnpacking libgtk-4-1:amd64 (4.14.5+ds-0ubuntu0.10) ...\nSelecting previously unselected package libsecret-common.\nPreparing to unpack .../07-libsecret-common_0.21.4-1build3_all.deb ...\nUnpacking libsecret-common (0.21.4-1build3) ...\nSelecting previously unselected package libsecret-1-0:amd64.\nPreparing to unpack .../08-libsecret-1-0_0.21.4-1build3_amd64.deb ...\nUnpacking libsecret-1-0:amd64 (0.21.4-1build3) ...\nSelecting previously unselected package gcr4.\nPreparing to unpack .../09-gcr4_4.2.0-5_amd64.deb ...\nUnpacking gcr4 (4.2.0-5) ...\nSelecting previously unselected package libgck-1-0:amd64.\nPreparing to unpack .../10-libgck-1-0_3.41.2-1build3_amd64.deb ...\nUnpacking libgck-1-0:amd64 (3.41.2-1build3) ...\nSelecting previously unselected package libgcr-base-3-1:amd64.\nPreparing to unpack .../11-libgcr-base-3-1_3.41.2-1build3_amd64.deb ...\nUnpacking libgcr-base-3-1:amd64 (3.41.2-1build3) ...\nSelecting previously unselected package libgcr-ui-3-1:amd64.\nPreparing to unpack .../12-libgcr-ui-3-1_3.41.2-1build3_amd64.deb ...\nUnpacking libgcr-ui-3-1:amd64 (3.41.2-1build3) ...\nSelecting previously unselected package gcr.\nPreparing to unpack .../13-gcr_3.41.2-1build3_amd64.deb ...\nUnpacking gcr (3.41.2-1build3) ...\nSelecting previously unselected package p11-kit-modules:amd64.\nPreparing to unpack .../14-p11-kit-modules_0.25.3-4ubuntu2.2_amd64.deb ...\nUnpacking p11-kit-modules:amd64 (0.25.3-4ubuntu2.2) ...\nSelecting previously unselected package p11-kit.\nPreparing to unpack .../15-p11-kit_0.25.3-4ubuntu2.2_amd64.deb ...\nUnpacking p11-kit (0.25.3-4ubuntu2.2) ...\nSelecting previously unselected package pinentry-gnome3.\nPreparing to unpack .../16-pinentry-gnome3_1.2.1-3ubuntu5_amd64.deb ...\nUnpacking pinentry-gnome3 (1.2.1-3ubuntu5) ...\nSelecting previously unselected package gnome-keyring.\nPreparing to unpack .../17-gnome-keyring_46.1-2ubuntu0.2_amd64.deb ...\nUnpacking gnome-keyring (46.1-2ubuntu0.2) ...\nSetting up libcairo-script-interpreter2:amd64 (1.18.0-3build1) ...\nSetting up libgck-2-2:amd64 (4.2.0-5) ...\nSetting up libgcr-4-4:amd64 (4.2.0-5) ...\nSetting up p11-kit-modules:amd64 (0.25.3-4ubuntu2.2) ...\nSetting up libgles2:amd64 (1.7.0-1build1) ...\nSetting up libgtk-4-common (4.14.5+ds-0ubuntu0.10) ...\nSetting up p11-kit (0.25.3-4ubuntu2.2) ...\nSetting up libgck-1-0:amd64 (3.41.2-1build3) ...\nSetting up libgcr-base-3-1:amd64 (3.41.2-1build3) ...\nSetting up libsecret-common (0.21.4-1build3) ...\nSetting up libgraphene-1.0-0:amd64 (1.10.8-3build2) ...\nSetting up libgcr-ui-3-1:amd64 (3.41.2-1build3) ...\nSetting up libsecret-1-0:amd64 (0.21.4-1build3) ...\nSetting up gcr (3.41.2-1build3) ...\nProcessing triggers for libglib2.0-0t64:amd64 (2.80.0-6ubuntu3.4) ...\nSetting up pinentry-gnome3 (1.2.1-3ubuntu5) ...\nProcessing triggers for shared-mime-info (2.4-4) ...\nSetting up libgtk-4-1:amd64 (4.14.5+ds-0ubuntu0.10) ...\nProcessing triggers for hicolor-icon-theme (0.17-2) ...\nSetting up gnome-keyring (46.1-2ubuntu0.2) ...\nCreated symlink /etc/systemd/user/graphical-session-pre.target.wants/gnome-keyring-daemon.service → /usr/lib/systemd/user/gnome-keyring-daemon.service.\n\nCreated symlink /etc/systemd/user/sockets.target.wants/gnome-keyring-daemon.socket → /usr/lib/systemd/user/gnome-keyring-daemon.socket.\n\nSetting up gcr4 (4.2.0-5) ...\nCreated symlink /etc/systemd/user/graphical-session-pre.target.wants/gcr-ssh-agent.service → /usr/lib/systemd/user/gcr-ssh-agent.service.\n\nCreated symlink /etc/systemd/user/sockets.target.wants/gcr-ssh-agent.socket → /usr/lib/systemd/user/gcr-ssh-agent.socket.\n\nProcessing triggers for libc-bin (2.39-0ubuntu8.6) ...\nProcessing triggers for man-db (2.12.0-4build2) ...\ndebconf: unable to initialize frontend: Dialog\ndebconf: (Dialog frontend will not work on a dumb terminal, an emacs shell buffer, or without a controlling terminal.)\ndebconf: falling back to frontend: Readline\ndebconf: unable to initialize frontend: Readline\ndebconf: (This frontend requires a controlling tty.)\ndebconf: falling back to frontend: Teletype\n\nRunning kernel seems to be up-to-date.\n\nRestarting services...\n systemctl restart chrony.service coturn.service cron.service fwupd.service\n\nService restarts being deferred:\n /etc/needrestart/restart.d/dbus.service\n systemctl restart networkd-dispatcher.service\n systemctl restart unattended-upgrades.service\n\nNo containers need to be restarted.\n\nNo user sessions are running outdated binaries.\n\nNo VM guests are running outdated hypervisor (qemu) binaries on this host.\n"
+    },
+    "cloudRestartAuditR4": {
+      "public": {
+        "format": "1",
+        "profile": "test-native-restart-4685ec27-b36c-4df0-a03a-b2a95479a5da",
+        "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "signing_public_key": "210e9849fe29b1953656f094e197e88cfca45563874ddd06e197c004cc3c2933",
+        "encryption_public_key": "207518ee6ac585d2badc9eef70d9295580159837cc166b99e551c742aa8b6c7a"
+      },
+      "processes": {
+        "1872983": "envd",
+        "2244585": "envd",
+        "2323604": "exited",
+        "2325124": "envd-r2"
+      },
+      "workerLog": "2026/10/03 23:35:25 [envd] starting fractalmind-envd dev (host=v0.2.0 Ubuntu cloud isolated Host)\n2026/10/03 23:35:25 [envd] [runtimeadapter] persistent signed-command runtime enabled (executor=*main.chainRuntimeExecutor)\n2026/10/03 23:35:25 [envd] [roles] active: worker=true coordinator=false relay=false stun_server=false sponsor=false\n2026/10/03 23:35:25 [envd] [auth] control channel enabled, node identity=0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142\n2026/10/03 23:35:25 [envd] initial scan: 0 agent panes found\n2026/10/03 23:35:34 [envd] [heartbeat] send failed: chain connection changed; reconnect and reauthenticate\n2026/10/03 23:35:35 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 23:35:37 [envd] [ws] connected to ws://127.0.0.1:30180/ws\n2026/10/03 23:35:38 [envd] [ws] control-channel authenticated (coordinator verified)\n2026/10/03 23:36:03 [envd] [heartbeat] send failed: rpc error: code = DeadlineExceeded desc = context deadline exceeded\n2026/10/03 23:38:30 [envd] received signal terminated, shutting down\n2026/10/03 23:40:36 [envd] starting fractalmind-envd dev (host=v0.2.0 Ubuntu cloud isolated Host)\n2026/10/03 23:40:36 [envd] [runtimeadapter] persistent signed-command runtime enabled (executor=*main.chainRuntimeExecutor)\n2026/10/03 23:40:36 [envd] [roles] active: worker=true coordinator=false relay=false stun_server=false sponsor=false\n2026/10/03 23:40:36 [envd] [auth] control channel enabled, node identity=0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142\n2026/10/03 23:40:36 [envd] initial scan: 0 agent panes found\n2026/10/03 23:40:46 [envd] [heartbeat] send failed: chain connection changed; reconnect and reauthenticate\n2026/10/03 23:40:46 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 23:40:47 [envd] [ws] connected to ws://127.0.0.1:30180/ws\n2026/10/03 23:40:48 [envd] [ws] control-channel authenticated (coordinator verified)\n2026/10/03 23:43:45 [envd] [heartbeat] send failed: join authority changed during inspection\n2026/10/03 23:43:45 [envd] [ws] disconnected, reconnecting in 1s\n2026/10/03 23:43:52 [envd] [heartbeat] send failed: not connected\n2026/10/03 23:43:53 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...\n2026/10/03 23:43:54 [envd] [ws] connected to ws://127.0.0.1:30180/ws\n2026/10/03 23:43:55 [envd] [ws] control-channel authenticated (coordinator verified)\n",
+      "vaultSha256": "4ef9771b59e896aa04bcd1ab9c839c1f93b1b48bae1bcdd4ee3b19bba67e01d3"
+    }
+  },
+  "limits": [
+    "SSH tunnels expose task Sui and Coordinator only on remote loopback; no public Sui testnet, production TLS or VPN acceptance.",
+    "Android is actual debug APK/Keystore in task emulator, not physical phone. Remote transaction fee review uses scripted production controllers via actual Android IPC, not a full visible UI payment walkthrough.",
+    "Mac mini SSH/toolchain/staging verified, native initialization rejected by Keychain and remains pending human authorization. Existing local macOS worker shown in App is a separate earlier task Host.",
+    "Cloud native-file Agent has only observation registration; no OKR handover, control, real model, dialogue/approval or active Run resumption verified this increment.",
+    "Isolated Secret Service uses a generated nonempty unlock password retained only in live test-session memory; process restart proved, machine reboot/unattended post-reboot unlock not proved.",
+    "Actual cloud logs include one RPC heartbeat timeout and directory-change reauthentication; fresh later proofs/observations passed.",
+    "apt installed gnome-keyring dependencies; needrestart restarted chrony/coturn/cron/fwupd. Both preexisting envd PIDs were still running at final read."
+  ]
+}

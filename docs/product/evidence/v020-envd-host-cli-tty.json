@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "actualPseudoTerminal": true,
+  "echoDisabledDuringSecretInput": true,
+  "credentialNotInCapturedOutput": true,
+  "exactConfirmationPassed": true,
+  "osCredentialStoreVerified": false,
+  "cloudHostVerified": false,
+  "evidenceNotes": {
+    "credential": "non-Sui fake input only",
+    "chainTransactionVerified": false,
+    "nativeKeyStoreVerified": false
+  }
+}

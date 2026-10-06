@@ -1,0 +1,55 @@
+{
+  "recordedAt": "2026-10-03T00:14:39.036408+00:00",
+  "baselineCommit": "c6b6e16",
+  "checkedWorkingTree": true,
+  "app": {
+    "testsPassed": 189,
+    "testsFailed": 0,
+    "buildPassed": true,
+    "nativeScriptStrictTypesPassed": true
+  },
+  "sdk": {
+    "testsPassed": 153,
+    "testsFailed": 0,
+    "buildPassed": true,
+    "typecheckPassed": true
+  },
+  "logs": {
+    "appTests": {
+      "sha256": "8486c73e28994386408528222cbf33650d5b972ed7d5b15b03474c1197f67d5c",
+      "bytes": 19863
+    },
+    "appBuild": {
+      "sha256": "78b467920aa6c35953684a1043a45c108db391b0a59cf12a86b2838a011ea2cf",
+      "bytes": 4272
+    },
+    "scriptTypes": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "sdkTests": {
+      "sha256": "863616440d6654e77bdf334994411b0f54838d171df7c255705e297518a119c1",
+      "bytes": 13619
+    },
+    "sdkBuild": {
+      "sha256": "dcd4658fbc5af48be5fec75f18c6bbf16ab306e69f58156aa82336298392c2b0",
+      "bytes": 73
+    },
+    "sdkTypes": {
+      "sha256": "d03b6f91caee853e3dcd0fd8a44660e3e88cee7f8eca3adc212209c6666eccd1",
+      "bytes": 83
+    }
+  },
+  "limits": {
+    "installedUIVerified": false,
+    "productionIndexedDbDeliveryClaimVerified": false,
+    "generalModelPlanningVerified": false,
+    "unattendedHostLoopVerified": false,
+    "realCloudHostVerified": false,
+    "phoneJourneyVerified": false,
+    "cacheWipeAndRestartVerified": false,
+    "mainUpgradeVerified": false,
+    "fullGoalComplete": false,
+    "timing": "R2 includes authorization context and live assignment checks. Later missing-reviewed-Run guard and blocked IndexedDB open handling are covered by final unit/types/build checks. App domain tests precede the final public receipt UI addition; final build and browser entry proof include it. Final build also includes removal of the dialog close callback, so starting a session cannot depend on the timing of a native close event."
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "recordedAt": "2026-10-02T12:28:47.978Z",
+  "chain": {
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "packageId": "0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c",
+  "registryId": "0x18d674327b499a3c30aff714328733286182680283f370f13b380895f7f7ad18",
+  "checks": [
+    {
+      "action": "publish Host-proof-gated OKR package",
+      "digest": "GVYEuSYPuMXud519D6ETfBH79KY1AWPXpz6hHJ3gELSS",
+      "actualGas": "784974280"
+    },
+    {
+      "action": "initialize existing isolated identity registry after visibility",
+      "digest": "3FAMjLYEXwp47cNCXVenpFdVcbmCfogYhpi3hZ7ecDdM",
+      "actualGas": "6161028"
+    }
+  ],
+  "limits": {
+    "isolatedLocalnet": true,
+    "rawPrivateKeysInReport": false
+  }
+}

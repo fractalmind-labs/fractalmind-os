@@ -1,0 +1,60 @@
+{
+  "chain": {
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "packages": [
+    {
+      "name": "protocol",
+      "packageId": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500",
+      "digest": "uduCgJN9MtEoLSoepiGePA7xuRMCH3HwrvZGcAAMzDV",
+      "actualGas": "698270680",
+      "modules": 19,
+      "rawModuleBytes": 82363
+    },
+    {
+      "name": "okr",
+      "packageId": "0xd6e51e2728a3fa0cfe3465494b257d894fa97fd1d68942545c286e5f132c89bc",
+      "digest": "3oe8GJgy1wPViVGnawpWtMRC4amHWeNAHaQR93gvJDEk",
+      "actualGas": "144983880",
+      "modules": 2,
+      "rawModuleBytes": 17313
+    },
+    {
+      "name": "direct-agent",
+      "packageId": "0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab",
+      "digest": "E9MzCSfPp5hm9CPyJCZUTYQCMWNnsMgZiXVJQJEbnDqa",
+      "actualGas": "105727480",
+      "modules": 1,
+      "rawModuleBytes": 12493
+    }
+  ],
+  "complete": true,
+  "privateKeysInReport": false,
+  "validatorLimitsChanged": false,
+  "phase": "published_three_packages",
+  "originalQuote": {
+    "requestId": "publish-direct-agent",
+    "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0xf4a766f63c9ac88557625333282a547f2fd4fb7d1f787a67548983d238a0adfd\"]",
+    "digest": "E9MzCSfPp5hm9CPyJCZUTYQCMWNnsMgZiXVJQJEbnDqa",
+    "sender": "0xf4a766f63c9ac88557625333282a547f2fd4fb7d1f787a67548983d238a0adfd",
+    "balance": "999156745440",
+    "requiredBalance": "2000000000",
+    "gasBudget": "2000000000",
+    "maxSuiSpend": "0",
+    "estimatedGas": "105727480",
+    "simulatedSuiSpend": "0",
+    "expiresAtMs": 1790972338456
+  },
+  "originalOutcome": {
+    "status": "confirmed",
+    "digest": "E9MzCSfPp5hm9CPyJCZUTYQCMWNnsMgZiXVJQJEbnDqa",
+    "actualGas": "105727480"
+  },
+  "packageId": "0xcbbd44a49fc307b914e4c2260ea1ad73bbafbcbf94eefc34cbdbd48621c54500",
+  "registryId": "0xff72a697c54e02b2b122e3ccf382b35a25d4e2cbec8180f1ec6e5e1dfe38d1b8",
+  "okrPackageId": "0xd6e51e2728a3fa0cfe3465494b257d894fa97fd1d68942545c286e5f132c89bc",
+  "directPackageId": "0x59e2c11ae4eecc50d00d007185068e9b3478d0bc72b33818aa953e3eebbecbab",
+  "identityRegistryId": "0xce5fba176c2dd01863bed9314cc69474b7e2bc16a07778a47a02c5a249b5b3f3",
+  "initDigest": "uduCgJN9MtEoLSoepiGePA7xuRMCH3HwrvZGcAAMzDV",
+  "identityInitialization": "atomic_with_core_publish"
+}

@@ -130,3 +130,37 @@ fractalbot                        ← Multi-channel messaging
 ## License
 
 MIT
+
+
+## v0.2.0 时间入口迁移
+
+到期和截止判断通过共享 `sui::clock::Clock`（对象 `0x6`）读取毫秒时间。
+`remote_authority`、`agent_policy`、Objective 创建及治理投票的相关入口新增
+`_with_clock` 版本，Clock 参数位于 TxContext 之前；SDK 和 envd 已同步传入。
+展示用途的历史时间字段继续保持原有结构。
+
+旧 public/entry 签名保留以维持包升级的 ABI 兼容，但这些旧时间入口以
+`8399`（Clock required）拒绝操作，防止绕过新到期判断。调用方应升级 SDK
+并配置包含新入口的协议包；不提供回退到 epoch 时间校验的执行路径。
+部署或升级协议后再使用这些客户端变更。本地合约测试不代表线上包已升级。
+
+验证：`make -C protocols/fractalmind-protocol test`，包括 epoch 不变时到期前
+1 ms、恰好到期、到期后 1 ms、过期父授权委托和旧验证入口拒绝的场景。
+
+## v0.2.0 身份、恢复与正文验证
+
+新增 `identity` 模块提供稳定 Human、独立 DeviceGrant 和消费式恢复记录；
+`product_record` 保存七类产品加密正文、不可变修订及组织内容密钥代次。
+现有组织可在持有旧管理员 cap 的设备上迁移到 Human，业务入口按指定动作
+逐项接入 DeviceGrant；当前仍在实施完整 App/Host/运行授权集成。
+
+SDK 提供 Recovery Code 派生、签名、公钥密钥分发、BCS 查询与正文读写。
+加密正文最多 64 KiB，较大载荷通过同一 PTB 内分块组装。恢复与设备撤销
+需同步轮换后续正文密钥，历史已下载内容不会被追溯擦除。
+
+- [身份与存储 ADR](../../docs/product/adr-v020-identity-storage.md)：兼容、权限、恢复与费用边界。
+- [验证记录](../../docs/product/fractalmind-app-v020-validation.md)：各 Issue 的验收状态。
+- [真实链 PoC 证据](../../docs/product/evidence/v020-identity-storage-localnet.json)：本地网络的交易、Gas 和容量。
+
+PoC 复现步骤见 ADR。测试 fixture 只加入独立的零地址测试包，不会修改
+仓库已发布地址、用户 keystore 或线上协议。测试通过不代表整个版本已交付。

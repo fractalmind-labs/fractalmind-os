@@ -1,5 +1,6 @@
 #[test_only]
 module fractalmind_protocol::objective_tests {
+    use sui::clock::{Self, Clock};
     use sui::object;
     use sui::test_scenario::{Self as ts};
     use std::string;
@@ -41,14 +42,18 @@ module fractalmind_protocol::objective_tests {
         {
             let admin_cap = ts::take_from_sender<OrgAdminCap>(scenario);
             let org = ts::take_shared<Organization>(scenario);
-            objective::create_objective(
+            let mut fm_clock = ts::take_shared<Clock>(scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(scenario).epoch_timestamp_ms());
+            objective::create_objective_with_clock(
                 &admin_cap,
                 &org,
                 string::utf8(b"Ship Sui Overflow"),
                 hash32(),
                 1_000_000,
+                &fm_clock,
                 ts::ctx(scenario),
             );
+            ts::return_shared(fm_clock);
             ts::return_shared(org);
             ts::return_to_sender(scenario, admin_cap);
         };
@@ -73,6 +78,7 @@ module fractalmind_protocol::objective_tests {
     #[test]
     fun test_objective_key_result_review_lifecycle() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org_agent_objective_kr(&mut scenario);
 
         ts::next_tx(&mut scenario, ADMIN);
@@ -101,6 +107,7 @@ module fractalmind_protocol::objective_tests {
     #[test]
     fun test_task_and_policy_bind_to_key_result() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org_agent_objective_kr(&mut scenario);
 
         ts::next_tx(&mut scenario, AGENT1);
@@ -138,7 +145,9 @@ module fractalmind_protocol::objective_tests {
             let kr = ts::take_shared<KeyResult>(&scenario);
             let obj_id = object::id(&obj);
             let kr_id = object::id(&kr);
-            agent_policy::create_policy_for_key_result(
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            agent_policy::create_policy_for_key_result_with_clock(
                 &org,
                 &obj,
                 &kr,
@@ -148,8 +157,10 @@ module fractalmind_protocol::objective_tests {
                 1,
                 1_000_000,
                 10_000,
+                &fm_clock,
                 ts::ctx(&mut scenario),
             );
+            ts::return_shared(fm_clock);
             ts::return_shared(kr);
             ts::return_shared(obj);
             ts::return_shared(org);
@@ -169,6 +180,7 @@ module fractalmind_protocol::objective_tests {
     #[expected_failure(abort_code = 8305, location = fractalmind_protocol::objective)]
     fun test_closed_objective_rejects_kr_review() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org_agent_objective_kr(&mut scenario);
 
         ts::next_tx(&mut scenario, ADMIN);
@@ -198,6 +210,7 @@ module fractalmind_protocol::objective_tests {
     #[expected_failure(abort_code = 1001)]
     fun test_closed_objective_rejects_kr_bound_task() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org_agent_objective_kr(&mut scenario);
 
         ts::next_tx(&mut scenario, ADMIN);
@@ -237,6 +250,7 @@ module fractalmind_protocol::objective_tests {
     #[expected_failure(abort_code = 8302, location = fractalmind_protocol::objective)]
     fun test_objective_rejects_invalid_hash() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         ts::next_tx(&mut scenario, ADMIN);
         {
             let mut registry = organization::create_test_registry(ts::ctx(&mut scenario));
@@ -253,14 +267,18 @@ module fractalmind_protocol::objective_tests {
         {
             let admin_cap = ts::take_from_sender<OrgAdminCap>(&scenario);
             let org = ts::take_shared<Organization>(&scenario);
-            objective::create_objective(
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            objective::create_objective_with_clock(
                 &admin_cap,
                 &org,
                 string::utf8(b"Bad hash"),
                 b"short",
                 1_000_000,
+                &fm_clock,
                 ts::ctx(&mut scenario),
             );
+            ts::return_shared(fm_clock);
             ts::return_shared(org);
             ts::return_to_sender(&scenario, admin_cap);
         };

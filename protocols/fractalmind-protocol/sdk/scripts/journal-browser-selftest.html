@@ -1,0 +1,38 @@
+<!doctype html><html lang="zh"><meta charset="utf-8"><title>FractalMind 交易日志自测</title>
+<style>body{font:16px system-ui;max-width:900px;margin:40px auto;padding:20px;background:#f7f8fa;color:#243043}button{padding:12px}pre{white-space:pre-wrap;background:white;padding:20px}</style>
+<h1>交易日志自测</h1><p>使用独立测试数据库，验证原子预留与刷新恢复，不连接钱包。</p>
+<button id="run">运行测试</button><pre id="result">尚未运行</pre>
+<script type="module">
+import {IndexedDbTransactionJournal} from './journal.js';
+const parameters=new URLSearchParams(location.search),name=parameters.get('db'),restore=parameters.get('phase')==='restore';
+if(!name?.startsWith('fractalmind-test-')) throw new Error('An isolated test database is required');
+const namespace=JSON.stringify(['localnet','test-chain','test-device']);
+const entry={format:1,namespace,requestId:'request-one',revision:1,digest:'11111111111111111111111111111112',sender:'test-device',gasBudget:'1000',maxSuiSpend:'0',estimatedGas:'115',gasReferences:[{objectId:'test-gas',version:'1',digest:'test-ref'}],addressGas:false,createdAtMs:Date.now(),status:'pending'};
+const assert=(value,message)=>{if(!value)throw new Error(message)};
+document.querySelector('#run').onclick=async()=>{
+ const report={phase:restore?'restore':'initial',database:name,checks:[]};
+ const a=new IndexedDbTransactionJournal(name),b=new IndexedDbTransactionJournal(name);
+ try{
+  if(restore){
+   const first=await a.get(namespace,'request-one'),second=await b.get(namespace,'request-two');
+   assert(first.status==='confirmed'&&first.revision===2,'Terminal metadata lost on reload');
+   assert(second.status==='pending'&&second.digest===entry.digest,'Pending digest lost on reload');
+   assert(!await a.claim({...entry,requestId:'request-two'}),'Restore replaced a pending request');
+   assert(!await b.claim({...entry,requestId:'request-three'}),'Restore lost pending Gas lock');
+   report.checks=['confirmed metadata restored','original pending digest restored','duplicate request rejected','pending Gas remains reserved'];
+  }else{
+   const duplicates=await Promise.all([a.claim(entry),b.claim(entry)]);
+   assert(duplicates.filter(Boolean).length===1,'Duplicate claim succeeded twice');
+   assert(!await b.claim({...entry,requestId:'request-two'}),'Overlapping Gas was reserved twice');
+   assert(!await b.replace({...entry,status:'confirmed',revision:2},2),'Stale revision replaced pending state');
+   assert(await a.replace({...entry,status:'confirmed',revision:2},1),'Confirmed update failed');
+   assert(await b.claim({...entry,requestId:'request-two'}),'Confirmed Gas reservation was not released');
+   const copy=await a.get(namespace,'request-two');copy.digest='tampered-copy';
+   assert((await b.get(namespace,'request-two')).digest===entry.digest,'Returned object mutated stored state');
+   report.checks=['concurrent duplicate claims: exactly one','pending Gas conflict rejected','stale revision rejected','confirmed update releases Gas','second request persisted','read copy cannot mutate stored digest'];
+  }
+  report.passed=true;
+ }catch(error){report.passed=false;report.error=error.message;}
+ finally{await a.close();await b.close();document.querySelector('#result').textContent=JSON.stringify(report,null,2);}
+};
+</script></html>

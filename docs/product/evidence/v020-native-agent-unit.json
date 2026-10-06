@@ -1,0 +1,47 @@
+{
+  "recordedAt": "2026-10-02T08:59:48.173727+00:00",
+  "baselineCommit": "e5982a3",
+  "app": {
+    "command": "npm test",
+    "passed": 90,
+    "failed": 0,
+    "outputSha256": "ec1271e71c7c9f7b94521231d203277be2cea5cf0b2db3e7f05c6ed6cd277699"
+  },
+  "go": {
+    "command": "go test -race ./internal/agent ./internal/runtimeadapter ./internal/heartbeat ./internal/boundedrun ./cmd/envd",
+    "passed": true,
+    "output": "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/agent\t(cached)\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter\t(cached)\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/heartbeat\t2.816s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/boundedrun\t(cached)\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd\t(cached)\n"
+  },
+  "appBuild": {
+    "passed": true,
+    "existingLargeChunkWarning": true,
+    "outputSha256": "613fd0c093efe9fb5a70aa96ff275433c6e9272cb868d580381fad1121e8fa19"
+  },
+  "appTypesPassed": true,
+  "chainScriptTypesPassed": true,
+  "helperSha256": "fa155336a93b62140d54ba360856c0d9de3a2607cc2c018fdcb7690fa8384cc7",
+  "sourceSha256": {
+    "runtime/fractalmind-envd/internal/agent/native_discovery.go": "91fc7c7c3578c582a31526694ba106b79e333eb68e8222c682ef12ccbaeed22c",
+    "runtime/fractalmind-envd/internal/runtimeadapter/bounded_files.go": "c193d5c6861290428c3afe411f9d25b5a17e5ed895a3da807357a9a2d0bf8b2b",
+    "runtime/fractalmind-envd/internal/boundedrun/tools.go": "fff26cbe0764c9a64360aef3e5b6ef27e0b5dd691dc6bba1c06de609fc14ad45",
+    "apps/fractalmind-app/src/agent-import.ts": "1f82cba92a33c17c0be33777a1b056047dffaf667d6db16897bf1fd14e1f4436",
+    "apps/fractalmind-app/src/agent-discovery.ts": "7c7f3627b39ea07f46e47599fa423ed3bff8df329d15714d1438281a9c926fb1",
+    "apps/fractalmind-app/scripts/host-admission-localnet.ts": "297d995cec0eb859218c87db7c8b0ce5d973736d7ff9bc4b0aac696619a1651a"
+  },
+  "limits": {
+    "generatedFixtureKeys": true,
+    "appNativeTransportInjected": true,
+    "actualMacOSKernelReads": true,
+    "nativeAliasExecutionVerified": false,
+    "nativeHostRejoinVerified": false,
+    "safeHandoverVerified": false,
+    "installedUiVerified": false,
+    "nativeStoreVerified": false,
+    "cloudHostVerified": false,
+    "fivePlatformInstalledAcceptanceVerified": false
+  },
+  "earlierSandboxRun": {
+    "tmuxContinuityFailed": true,
+    "resolvedByActualKernelAndTmuxRaceRunOutsideSandbox": true
+  }
+}

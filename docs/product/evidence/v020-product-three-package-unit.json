@@ -1,0 +1,62 @@
+{
+  "recordedAt": "2026-10-02T20:44:54.461625+00:00",
+  "move": {
+    "core": {
+      "passed": 114,
+      "failed": 0
+    },
+    "okr": {
+      "passed": 8,
+      "failed": 0
+    },
+    "direct": {
+      "passed": 21,
+      "failed": 0
+    },
+    "total": 143
+  },
+  "sdk": {
+    "passed": 137,
+    "failed": 0,
+    "typecheck": true,
+    "build": true
+  },
+  "app": {
+    "passed": 146,
+    "failed": 0,
+    "build": true
+  },
+  "nativeRust": {
+    "passed": 20,
+    "failed": 0,
+    "helperBuild": true
+  },
+  "envdRace": {
+    "passedPackages": [
+      "internal/nodecommand",
+      "internal/sui",
+      "internal/runtimeadapter",
+      "cmd/envd"
+    ],
+    "configHasNoTests": true,
+    "helperBuild": true
+  },
+  "strictScriptTypecheck": [
+    "native-app-execution-localnet.ts",
+    "product-deployment-localnet.ts",
+    "recovery-deployment-localnet.ts"
+  ],
+  "extensionSourceNegativeTests": [
+    "reject replacement of registered direct source",
+    "reject execution witness creation by another package",
+    "reject OKR directory mutation by another package"
+  ],
+  "limits": {
+    "nativeDirectScopeUnitVerified": true,
+    "directEnvdDispatchVerified": false,
+    "directUIVerified": false,
+    "mainUpgradeVerified": false,
+    "historicalMonolithMigrationVerified": false,
+    "installedUIVerified": false
+  }
+}

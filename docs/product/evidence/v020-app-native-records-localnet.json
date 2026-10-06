@@ -1,0 +1,72 @@
+{
+  "format": 1,
+  "recordedAt": "2026-10-01T22:53:56.415Z",
+  "platform": "darwin",
+  "chain": {
+    "rpc": "http://127.0.0.1:29000",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "profile": "test-2f1daef6-30ad-4766-baea-110802c08b4c",
+  "publicDevice": {
+    "format": 1,
+    "profile": "test-2f1daef6-30ad-4766-baea-110802c08b4c",
+    "address": "0x7f87633008dbb43aec7b5928e42ebcea2ad9366e8b06996bd82c1390332c6962",
+    "signingPublicKey": "MXfa1V4JCOCUMGaAudG2uPq3+6FI80RoUdsiEWHmJ4I=",
+    "encryptionPublicKey": "DWC/ZrOfNiCCbgUHsst6ur8hLsBOK4IXdvtzrlKiRlE="
+  },
+  "recoveryAddress": "0x858ef2bb2aae543404f120178d7c5260531640fb7e5b2cef13cd2841d3b9e224",
+  "humanId": "0xa08e7ecaf090cdbadc3f2ce8ad2ea3d23a43796a0dab5b91c7bbf353226dde8b",
+  "organizationId": "0x032c96011b9509ae2a19c32b3a0b214c0a81c128c016247b5ae6555555c3ae44",
+  "checks": [
+    "loading an absent onboarding profile does not create keys",
+    "native recovery code/HKDF keys and FMW1/AES-GCM backup interoperate with the official JS path",
+    "fresh-process reload reveals public keys/ciphertext only; re-creation and wrong network are rejected",
+    "zero recovery balance blocks Human preparation without submitting",
+    "native recovery signs a real self-paid Human transaction; independent device possession resolves stable Human",
+    "new native processes and a rebuilt controller query original digests and reconstruct the same Human/organization without replay",
+    "discarding transaction caches reconstructs confirmed business state from chain and refuses duplicate creation",
+    "independent JS FME1/UTF-8/quoted contexts decrypt natively; tamper, wrong network/org/logical id/revision/key version and noncanonical versions fail",
+    "production controller reads actual immutable chain body, unwraps on-chain device keyring natively, and verifies role/grant before and after read",
+    "independently derived FME2 command results interoperate with native HKDF and reject substitution as an OKR",
+    "a rebuilt controller and fresh native process reconstruct/decrypt current bodies from chain without a plaintext/key cache",
+    "actual chain revocation blocks future controller listing and decrypt, even with unchanged native credentials"
+  ],
+  "transactions": [
+    {
+      "action": "create Human with native recovery signature and self-paid Gas",
+      "digest": "EXvtMbNPnUJvLdsf2X43U7WvSmjczUCsjHgqomRF8YVL",
+      "actualGas": "18742548"
+    },
+    {
+      "action": "create personal organization with independent native device",
+      "digest": "AvA9fzUvVhxcTLBA3EeNXWDXWVH8JNMetRY8dSKUwPBM",
+      "actualGas": "14701216"
+    },
+    {
+      "action": "save independently encrypted OKR body with native device signer",
+      "digest": "49AgyxWqAB7Xj2t9grcNbb48ViA3uKtSf8HxEXEymCvu",
+      "actualGas": "10722888"
+    },
+    {
+      "action": "save command-derived FME2 result with native device signer",
+      "digest": "71xbjVCnxpHhizoxCVn3USBzjk6Yc2sJjgkEDaMvDAiG",
+      "actualGas": "8421260"
+    },
+    {
+      "action": "authorize independent native revocation device",
+      "digest": "364HAvN7cEdyjLfJMRJ7WA9LncrvZiAW3Xne6KcX2vHL",
+      "actualGas": "8351568"
+    },
+    {
+      "action": "revoke native device grant",
+      "digest": "gTMZMLawnMZuJauvpvHDJUucdHTynyUe6sdfsRkaXuF",
+      "actualGas": "1454568"
+    }
+  ],
+  "limits": {
+    "nativeTransport": "isolated subprocess test transport, not installed UI IPC",
+    "journal": "in-memory fixture; installed UI uses IndexedDbTransactionJournal",
+    "rawCodeInReport": false,
+    "fullV020Complete": false
+  }
+}

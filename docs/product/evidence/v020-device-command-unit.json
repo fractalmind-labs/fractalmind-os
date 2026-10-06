@@ -1,0 +1,85 @@
+{
+  "checkedAt": "2026-10-02T11:26:40.799Z",
+  "checks": [
+    {
+      "name": "App regression",
+      "command": "npm test",
+      "cwd": "apps/fractalmind-app",
+      "passed": 98,
+      "failed": 0,
+      "evidence": [
+        "ℹ tests 98",
+        "ℹ pass 98",
+        "ℹ fail 0"
+      ]
+    },
+    {
+      "name": "Native signature core",
+      "command": "cargo test --manifest-path apps/fractalmind-app/native/Cargo.toml --offline",
+      "passed": 17,
+      "failed": 0,
+      "evidence": [
+        "test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ]
+    },
+    {
+      "name": "App types/build",
+      "command": "npm run build",
+      "cwd": "apps/fractalmind-app",
+      "success": true,
+      "existingWarning": "Vite large entry chunk warning remains"
+    },
+    {
+      "name": "Real-chain harness types",
+      "command": "tsc --noEmit --module esnext --target es2022 --moduleResolution bundler --skipLibCheck scripts/host-admission-localnet.ts",
+      "cwd": "apps/fractalmind-app",
+      "success": true
+    },
+    {
+      "name": "Native desktop compilation",
+      "command": "cargo check --manifest-path apps/fractalmind-app/src-tauri/Cargo.toml --offline",
+      "success": true,
+      "platform": "macOS aarch64; compile only"
+    },
+    {
+      "name": "Go production regression",
+      "command": "go test ./internal/coordinator ./internal/nodecommand ./cmd/envd -count=1",
+      "cwd": "runtime/fractalmind-envd",
+      "success": true,
+      "evidence": [
+        "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/coordinator\t1.221s",
+        "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand\t1.566s",
+        "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd\t1.667s"
+      ]
+    },
+    {
+      "name": "Go concurrency",
+      "command": "go test -race ./internal/coordinator ./internal/nodecommand ./cmd/envd -count=1",
+      "cwd": "runtime/fractalmind-envd",
+      "success": true,
+      "evidence": [
+        "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/coordinator\t2.494s",
+        "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand\t2.891s",
+        "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd\t3.545s"
+      ]
+    }
+  ],
+  "coverage": {
+    "sharedPublicVectorSignedByRust": true,
+    "sdkAndProductionEnvdVerify": true,
+    "malformedCommandRejectedBeforeOsLookup": true,
+    "currentOperateRequiredForControl": true,
+    "commandRequestHashBound": true,
+    "authorityRecheckedBeforeHttp": true,
+    "singleUseChallenge": true,
+    "unknownResponseNotReplayed": true
+  },
+  "limits": {
+    "installedAppVerified": false,
+    "osKeyStoreNewCommandVerified": false,
+    "cloudHostVerified": false,
+    "fivePlatformAcceptanceVerified": false,
+    "completeAppHandoverVerified": false
+  }
+}

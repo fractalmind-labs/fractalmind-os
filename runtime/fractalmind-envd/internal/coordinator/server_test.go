@@ -204,75 +204,19 @@ func TestCoordinatorDesktopStatusRelay(t *testing.T) {
 	}
 }
 
-func TestCoordinatorShellCommandProxy(t *testing.T) {
-	server := NewServer(":0", 2*time.Second, "")
+func TestCoordinatorRejectsUnsignedCommandsEvenWithBearerToken(t *testing.T) {
+	server := NewServer(":0", time.Second, "transport-only")
 	testServer := httptest.NewServer(server.Handler())
 	defer testServer.Close()
-
-	conn := dialTestWebSocket(t, testServer.URL)
-	defer conn.Close()
-
-	registerWorker(t, conn, "node-2", "worker-b", "dev", heartbeat.Payload{})
-
-	commandDone := make(chan struct{})
-	go func() {
-		defer close(commandDone)
-
-		var msg ws.Message
-		if err := conn.ReadJSON(&msg); err != nil {
-			t.Errorf("read command: %v", err)
-			return
-		}
-		if msg.Type != "command" {
-			t.Errorf("message type = %q, want command", msg.Type)
-			return
-		}
-
-		var payload ws.CommandPayload
-		if err := json.Unmarshal(msg.Payload, &payload); err != nil {
-			t.Errorf("decode command payload: %v", err)
-			return
-		}
-		if payload.Command != "shell" {
-			t.Errorf("command = %q, want shell", payload.Command)
-			return
-		}
-		if payload.Args != "echo hello" {
-			t.Errorf("args = %q, want echo hello", payload.Args)
-			return
-		}
-
-		sendWSMessage(t, conn, ws.Message{
-			Type: "command_result",
-			Payload: mustRawJSON(commandResultPayload{
-				RequestID: payload.RequestID,
-				Result: map[string]interface{}{
-					"success": true,
-					"output":  "hello\n",
-				},
-			}),
+	for _, operation := range []string{"status", "logs", "restart", "kill", "shell", "start", "stop", "assign"} {
+		t.Run(operation, func(t *testing.T) {
+			status, body := httpPostJSONWithHeaders(t, testServer.URL+"/api/sentinels/any/command", commandRequest{
+				Command: operation, Args: "echo forbidden",
+			}, map[string]string{"Authorization": "Bearer transport-only"})
+			if status != http.StatusGone || !strings.Contains(string(body), "unsigned_command_disabled") {
+				t.Fatalf("status=%d body=%s", status, body)
+			}
 		})
-	}()
-
-	waitForSentinel(t, testServer.URL, "node-2", nil)
-
-	body := httpPostJSON(t, testServer.URL+"/api/sentinels/node-2/command", commandRequest{
-		Command: "shell",
-		Args:    "echo hello",
-	})
-	<-commandDone
-
-	var resp struct {
-		Success bool   `json:"success"`
-		Output  string `json:"output"`
-	}
-	decodeJSON(t, body, &resp)
-
-	if !resp.Success {
-		t.Fatal("expected success=true")
-	}
-	if resp.Output != "hello\n" {
-		t.Fatalf("output = %q, want hello\\n", resp.Output)
 	}
 }
 
@@ -461,8 +405,8 @@ func TestCoordinatorAPITokenAuthOnCommandEndpoint(t *testing.T) {
 	registerWorker(t, conn, "node-command", "worker-command", "dev", heartbeat.Payload{})
 
 	status, _ := httpPostJSONWithHeaders(t, testServer.URL+"/api/sentinels/node-command/command", commandRequest{
-		Command: "shell",
-		Args:    "echo hello",
+		Command: "signed_command",
+		Args:    `{"version":"1","signature":"validated-by-envd"}`,
 	}, nil)
 	if status != http.StatusUnauthorized {
 		t.Fatalf("POST /api/sentinels/{id}/command without token status = %d, want %d", status, http.StatusUnauthorized)
@@ -505,8 +449,8 @@ func TestCoordinatorAPITokenAuthOnCommandEndpoint(t *testing.T) {
 	})
 
 	status, body := httpPostJSONWithHeaders(t, testServer.URL+"/api/sentinels/node-command/command", commandRequest{
-		Command: "shell",
-		Args:    "echo hello",
+		Command: "signed_command",
+		Args:    `{"version":"1","signature":"validated-by-envd"}`,
 	}, map[string]string{
 		"Authorization": "Bearer command-token",
 	})

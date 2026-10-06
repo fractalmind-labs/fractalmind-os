@@ -1,0 +1,158 @@
+{
+  "recordedAt": "2026-10-02T01:55:55.912Z",
+  "profile": "test-ui-pair-8503f4b6",
+  "publicConnection": {
+    "network": "localnet",
+    "rpcUrl": "http://127.0.0.1:29000",
+    "packageId": "0x2ef39db88cffefa9c16dcaf6593032ccd6ac0e79acfd22e30fc10d4b4c7a45e5",
+    "registryId": "0xfdf5ad498229c22b1652cae940c8803e9bc8de20ead4fbc049c514198e123220",
+    "humanId": "0x20c367bccff1b18d995faa45083cd88441738c9cf7031e24de53ab11762b4522",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "organizationId": "0xed555682e35b6b2b1e63a1a05bfdf672edc5220fcfa1048ea0cad9da26edafe1",
+  "requestId": "0x0a2d52725d9397fb38dc37225181a019a695574a08292c290a366525f8636b04",
+  "fingerprint": "bc3eeb228a1fda75be0d75fdf088f1d3a48cbfa873c9f6e5905d21376fce02f9",
+  "device": {
+    "format": 1,
+    "profile": "test-ui-pair-8503f4b6",
+    "address": "0xa2c055c0ca783103bdf99020f2ca64068303e14b2c89194811c5944a24b95650",
+    "signingPublicKey": "XYCYpo25VxWdV63+dqxkh9HZJqij+ywkrFstmO0Q4aQ=",
+    "encryptionPublicKey": "82aET1b9sBFje3r8qRDgtNpLp1ugEm0koxqJ6WTzMig="
+  },
+  "digest": "7gePMfSJrRPVSm6L64Ct5WCo2ZASvCzVHnpvagEhPfH1",
+  "actualGas": "4431880",
+  "limits": {
+    "localnet": true,
+    "secondDeviceUsesSubprocess": true,
+    "uiApprovalAndSharingPending": false,
+    "keysRetainedForUiAcceptance": true,
+    "restartedNativeKeychainAccessPendingUserAuthorization": true,
+    "durableOriginalTransactionQueryAfterRestartVerified": false,
+    "fullV020Complete": false,
+    "noPrivateKeysOrRecoveryCodesInReport": true
+  },
+  "uiResult": {
+    "requestStatus": 1,
+    "grantId": "0x7eef992c65a360ea511a0f6d775b2396ad2273307a735b1fc08e965afad41d7b",
+    "encryptedEnvelopeBytes": 392,
+    "requesterVerified": true,
+    "fingerprint": "bc3eeb228a1fda75be0d75fdf088f1d3a48cbfa873c9f6e5905d21376fce02f9",
+    "verifiedAt": "2026-10-02T01:58:45.209Z"
+  },
+  "ownerProfile": "test-ui-16c56b86",
+  "nativeUiAcceptance": {
+    "appOrigin": "tauri://localhost",
+    "isolatedKeychain": true,
+    "isolatedPersistentWebview": true,
+    "actualTauriIpc": true,
+    "actualIndexedDbJournal": true,
+    "checks": [
+      {
+        "check": "fresh v2 welcome without production public connection",
+        "passed": true
+      },
+      {
+        "check": "OS-native independent device/recovery key creation with one-shot recovery code",
+        "passed": true
+      },
+      {
+        "check": "recovery-code acknowledgement hides displayed code",
+        "passed": true
+      },
+      {
+        "check": "zero balances prevent identity fee quotation",
+        "passed": true
+      },
+      {
+        "check": "faucet funding and balance check do not automatically submit",
+        "passed": true
+      },
+      {
+        "check": "cancelled quote is removed without submitting",
+        "passed": true
+      },
+      {
+        "check": "expired quote disables confirmation",
+        "passed": true
+      },
+      {
+        "check": "explicit native recovery signature creates Human",
+        "passed": true
+      },
+      {
+        "check": "separately confirmed independent device signature creates personal organization",
+        "passed": true
+      },
+      {
+        "check": "new organization reconstructs from chain in v2 workbench",
+        "passed": true
+      },
+      {
+        "check": "manager reads the exact independent device fingerprint",
+        "passed": true
+      },
+      {
+        "check": "approval remains disabled until comparison",
+        "passed": true
+      },
+      {
+        "check": "default organization read authorization is seven days without root actions",
+        "passed": true
+      },
+      {
+        "check": "approval confirmation shows actual gas receipt",
+        "passed": true
+      },
+      {
+        "check": "approval does not automatically share keys",
+        "passed": true
+      },
+      {
+        "check": "separate data-sharing confirmation uses native organization-key wrapping",
+        "passed": true
+      },
+      {
+        "check": "sharing confirmation shows actual gas receipt",
+        "passed": true
+      },
+      {
+        "check": "second-device native possession verifies organization grant",
+        "passed": true
+      },
+      {
+        "check": "restart reconstructs same Human, organization and current device grants",
+        "passed": true
+      }
+    ],
+    "transactions": [
+      {
+        "action": "native UI create Human",
+        "digest": "H6ErwUVac7sPSzfSiz11C8XDrKjs9wzFeyp87QPm57Jt",
+        "actualGas": "18772548"
+      },
+      {
+        "action": "native UI create personal organization",
+        "digest": "EbJGpTqcE3jQY4wHwVvRMkQaMkU2DQBKU6FXuQ91bVZu",
+        "actualGas": "14564016"
+      },
+      {
+        "action": "native UI approve organization-read device",
+        "digest": "8bB4pxs36ZXewfSkp6ThQmCb1MZf3ZFCkhkG5N4nWLYL",
+        "actualGas": "6734388"
+      },
+      {
+        "action": "native UI separately publish organization envelope",
+        "digest": "Z2fWGLTnvHiJNkTotj7yqf1AsaxK2uCzqcMDdc2F4mx",
+        "actualGas": "4452064"
+      }
+    ]
+  },
+  "browserChecks": {
+    "origin": "http://localhost:4189",
+    "productionBundle": true,
+    "zhNativePairingGuidance": true,
+    "enNativePairingGuidance": true,
+    "englishDarkSelected": true,
+    "noWebDeviceInitializationOrGrantControls": true
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "recordedAt": "2026-10-02T07:34:23.744741+00:00",
+  "url": "http://127.0.0.1:4189/",
+  "network": "localnet",
+  "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+  "sourceFixture": "Earlier same-controller chain integration /tmp/fractalmind-agent-import-localnet-final.json; separate from guarded integration evidence",
+  "humanId": "0x9a88a91b68d337e7d26ca8df113c136037bbfc3cf084220e6e4aac1dc1de61b0",
+  "organizationId": "0x73ef4eb43740a6f1126bfca920c2226801cc39b1aa9dacd9b68e61b40fa53743",
+  "recordId": "0x32513713412a63fa4aa8ddff03a5e4ff4378f94cd386eaa736116896c90d2dc1",
+  "instanceId": "tmux-0d8f2f22736a4370ec448670752f4726e46decfd3f6a3a1c2b91b2597098387c",
+  "checks": [
+    "Actual chain record read through visible public profile entry",
+    "Full instance and chain record ID visible and wrapped inside card",
+    "Observation-only registration does not imply online status or messaging authority",
+    "Device verification and import recovery disabled in browser without native signer",
+    "Chinese Light and English Dark inspected visually; Chinese Light restored",
+    "No synthetic Host instances or authority injected"
+  ],
+  "screenshots": {
+    "v020-agent-import-browser-zh-light.jpg": "8b670b29428b6edb738930efe3b403365e844d9927a150dd571e0a2323b911a8",
+    "v020-agent-import-browser-en-dark.jpg": "89cc9f75ec6320ac92018d6a6f054554755dadd4b9afdb7b18ab23e3c27c6a7c"
+  },
+  "limits": {
+    "nativeImportDialogVerified": false,
+    "installedNativeSigningVerified": false,
+    "persistentBrowserJournalRestartVerified": false,
+    "mobileVerified": false
+  }
+}

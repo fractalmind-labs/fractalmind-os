@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/block-vision/sui-go-sdk/models"
@@ -21,11 +22,48 @@ type transportServer struct {
 	simulate func(*v2.SimulateTransactionRequest) (*v2.SimulateTransactionResponse, error)
 	execute  func(*v2.ExecuteTransactionRequest) (*v2.ExecuteTransactionResponse, error)
 	list     func(*v2.ListOwnedObjectsRequest) (*v2.ListOwnedObjectsResponse, error)
+	query    func(*v2.GetTransactionRequest) (*v2.GetTransactionResponse, error)
+	object   func(*v2.GetObjectRequest) (*v2.GetObjectResponse, error)
+	batch    func(*v2.BatchGetObjectsRequest) (*v2.BatchGetObjectsResponse, error)
 }
 
-func (s *transportServer) GetObject(context.Context, *v2.GetObjectRequest) (*v2.GetObjectResponse, error) {
+func (s *transportServer) BatchGetObjects(_ context.Context, req *v2.BatchGetObjectsRequest) (*v2.BatchGetObjectsResponse, error) {
+	return s.batch(req)
+}
+
+func (s *transportServer) GetTransaction(_ context.Context, r *v2.GetTransactionRequest) (*v2.GetTransactionResponse, error) {
+	return s.query(r)
+}
+
+func (s *transportServer) GetObject(_ context.Context, req *v2.GetObjectRequest) (*v2.GetObjectResponse, error) {
+	if s.object != nil {
+		return s.object(req)
+	}
 	owner, _ := normalizeAddress("0x2")
 	return &v2.GetObjectResponse{Object: &v2.Object{ObjectId: proto.String("0xcoin"), Version: proto.Uint64(7), Digest: proto.String("coin-digest"), Owner: &v2.Owner{Address: proto.String(owner)}}}, nil
+}
+
+func TestChainObjectRetainsImmutableCreationTransaction(t *testing.T) {
+	id, _ := normalizeAddress("0x3")
+	s := &transportServer{object: func(req *v2.GetObjectRequest) (*v2.GetObjectResponse, error) {
+		if req.GetObjectId() != id {
+			t.Fatal("read a different object")
+		}
+		requested := false
+		for _, path := range req.ReadMask.Paths {
+			if path == "previous_transaction" {
+				requested = true
+			}
+		}
+		if !requested {
+			t.Fatal("original digest cannot be reconstructed from this mask")
+		}
+		return &v2.GetObjectResponse{Object: &v2.Object{ObjectId: proto.String(id), Version: proto.Uint64(8), ObjectType: proto.String("0x3::product_record::EncryptedRecord"), Owner: &v2.Owner{Kind: v2.Owner_IMMUTABLE.Enum()}, Contents: &v2.Bcs{Value: []byte("raw encrypted BCS")}, PreviousTransaction: proto.String("creation-transaction")}}, nil
+	}}
+	object, err := testTransport(t, s).ReadChainObject(context.Background(), id)
+	if err != nil || !object.Immutable || object.Shared || object.PreviousTransaction != "creation-transaction" || string(object.Content) != "raw encrypted BCS" {
+		t.Fatalf("creation metadata lost: %+v %v", object, err)
+	}
 }
 func (s *transportServer) SimulateTransaction(_ context.Context, r *v2.SimulateTransactionRequest) (*v2.SimulateTransactionResponse, error) {
 	return s.simulate(r)
@@ -37,7 +75,11 @@ func (s *transportServer) ListOwnedObjects(_ context.Context, r *v2.ListOwnedObj
 	return s.list(r)
 }
 
-func testTransport(t *testing.T, s *transportServer) *GRPCClient {
+func testTransport(t *testing.T, s interface {
+	v2.LedgerServiceServer
+	v2.StateServiceServer
+	v2.TransactionExecutionServiceServer
+}) *GRPCClient {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -126,7 +168,7 @@ func TestSimulationRefusesModifiedAuthorityOrBudget(t *testing.T) {
 func TestExecutionFailureAndOpaqueOwnedObjectPagination(t *testing.T) {
 	c := testTransport(t, &transportServer{
 		execute: func(*v2.ExecuteTransactionRequest) (*v2.ExecuteTransactionResponse, error) {
-			return &v2.ExecuteTransactionResponse{Transaction: &v2.ExecutedTransaction{Effects: &v2.TransactionEffects{Status: &v2.ExecutionStatus{Success: proto.Bool(false)}}}}, nil
+			return &v2.ExecuteTransactionResponse{Transaction: &v2.ExecutedTransaction{Digest: proto.String("failed-digest"), Effects: &v2.TransactionEffects{Status: &v2.ExecutionStatus{Success: proto.Bool(false)}}}}, nil
 		},
 		list: func(req *v2.ListOwnedObjectsRequest) (*v2.ListOwnedObjectsResponse, error) {
 			if string(req.PageToken) != "page-2" {
@@ -135,8 +177,8 @@ func TestExecutionFailureAndOpaqueOwnedObjectPagination(t *testing.T) {
 			return &v2.ListOwnedObjectsResponse{NextPageToken: []byte("page-3"), Objects: []*v2.Object{{ObjectId: proto.String("0xcoin"), Balance: proto.Uint64(18446744073709551615)}}}, nil
 		},
 	})
-	if _, err := c.SuiExecuteTransactionBlock(context.Background(), models.SuiExecuteTransactionBlockRequest{TxBytes: "dHg="}); err == nil {
-		t.Fatal("failed execution accepted")
+	if result, err := c.SuiExecuteTransactionBlock(context.Background(), models.SuiExecuteTransactionBlockRequest{TxBytes: "dHg="}); err == nil || result.Digest != "failed-digest" || result.Effects.Status.Status != "failure" {
+		t.Fatalf("confirmed failure must preserve its digest and status: result=%+v err=%v", result, err)
 	}
 	token := base64.StdEncoding.EncodeToString([]byte("page-2"))
 	coins, err := c.SuiXGetCoins(context.Background(), models.SuiXGetCoinsRequest{Owner: "0x1", Cursor: token, Limit: 1})
@@ -153,6 +195,62 @@ func TestLiteralRejectsUnsafeDoubles(t *testing.T) {
 		if _, err := literal(value); err == nil {
 			t.Fatalf("accepted unsafe argument %v", value)
 		}
+	}
+}
+
+func TestFirstCoinPageOmitsEmptyToken(t *testing.T) {
+	client := testTransport(t, &transportServer{list: func(req *v2.ListOwnedObjectsRequest) (*v2.ListOwnedObjectsResponse, error) {
+		if req.PageToken != nil {
+			t.Fatal("first page must omit page_token rather than send an empty token")
+		}
+		return &v2.ListOwnedObjectsResponse{}, nil
+	}})
+	for _, cursor := range []interface{}{nil, ""} {
+		if _, err := client.SuiXGetCoins(context.Background(), models.SuiXGetCoinsRequest{Owner: "0x1", Cursor: cursor, Limit: 100}); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestObjectArgumentsRemainDistinctFromAddressPrimitives(t *testing.T) {
+	object, err := literal(ObjectArgument("0x6"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	address, err := literal("0x6")
+	if err != nil {
+		t.Fatal(err)
+	}
+	normalized, _ := normalizeAddress("0x6")
+	if object.GetObjectId() != normalized || object.Literal != nil {
+		t.Fatal("object reference encoded as a primitive literal")
+	}
+	if address.ObjectId != nil || address.GetLiteral().GetStringValue() != "0x6" {
+		t.Fatal("primitive address inferred as an object reference")
+	}
+	if _, err := literal(ObjectArgument("invalid")); err == nil {
+		t.Fatal("invalid object ID accepted")
+	}
+}
+
+func TestRepeatedObjectArgumentsUseOneInputWithoutMergingAddressValues(t *testing.T) {
+	ptb := &v2.ProgrammableTransaction{}
+	grant := "0x" + strings.Repeat("0", 63) + "6"
+	first, err := appendMoveArgument(ptb, "0x3", ObjectArgument("0x6"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := appendMoveArgument(ptb, "0x3", ObjectArgument(grant))
+	if err != nil || len(ptb.Inputs) != 1 || first.GetInput() != second.GetInput() {
+		t.Fatal("grant was duplicated", err)
+	}
+	value, err := appendMoveArgument(ptb, "0x3", grant)
+	if err != nil || len(ptb.Inputs) != 2 || value.GetInput() == first.GetInput() || ptb.Inputs[1].GetObjectId() != "" {
+		t.Fatal("address primitive merged into an object", err)
+	}
+	other, err := appendMoveArgument(ptb, "0x3", ObjectArgument("0x7"))
+	if err != nil || len(ptb.Inputs) != 3 || other.GetInput() == first.GetInput() {
+		t.Fatal("different object merged", err)
 	}
 }
 

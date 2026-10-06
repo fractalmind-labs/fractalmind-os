@@ -12,9 +12,10 @@ import (
 
 const reservationRecordVersion = "1"
 
-// FileAuthorityStore uses a local authority projection plus durable reservation
-// records. It is the target-local production store for node-scoped capabilities;
-// authority-wide capabilities must be backed by a shared authority store.
+// FileAuthorityStore is the legacy Phase 0 fixture store. It uses a local
+// projection and durable local reservations, and does not implement the v0.2.0
+// chain-authoritative product contract. Production migration uses
+// ChainAuthorityStore, with chain-backed claims and execution checkpoints.
 type FileAuthorityStore struct {
 	statePath      string
 	reservationDir string

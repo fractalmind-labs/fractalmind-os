@@ -1,0 +1,74 @@
+{
+  "checkedAt": "2026-10-02T12:50:58.700739+00:00",
+  "checks": [
+    {
+      "name": "SDK regression/types/build",
+      "cwd": "protocols/fractalmind-protocol/sdk",
+      "commands": [
+        "npm run typecheck",
+        "npm run build",
+        "node --import tsx --test tests/*.test.ts"
+      ],
+      "passed": 115,
+      "failed": 0
+    },
+    {
+      "name": "App regression/types/production build",
+      "cwd": "apps/fractalmind-app",
+      "commands": [
+        "npm test",
+        "npm run build"
+      ],
+      "passed": 98,
+      "failed": 0,
+      "existingWarning": "large entry chunk and dependency PURE annotations"
+    },
+    {
+      "name": "Actual-chain harness typecheck",
+      "cwd": "apps/fractalmind-app",
+      "command": "tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck scripts/host-admission-localnet.ts",
+      "success": true
+    },
+    {
+      "name": "Move regression and independent Go/SDK proof vector",
+      "cwd": "protocols/fractalmind-protocol/contracts/protocol",
+      "command": "sui move test",
+      "passed": 122,
+      "failed": 0
+    },
+    {
+      "name": "Go concurrency/regression",
+      "cwd": "runtime/fractalmind-envd",
+      "command": "go test -race ./internal/nodecommand ./internal/runtimeadapter ./internal/sui ./internal/coordinator ./cmd/envd -count=1",
+      "success": true,
+      "evidence": [
+        "ok nodecommand 3.865s",
+        "ok runtimeadapter 6.089s",
+        "ok sui 4.575s",
+        "ok coordinator 2.928s",
+        "ok cmd/envd 4.918s"
+      ]
+    }
+  ],
+  "coverage": {
+    "exactHostBcsProofOnChain": true,
+    "completeCoverageAndCurrentVersionsRequired": true,
+    "approvalAtomic": true,
+    "legacyControlBypassRejected": true,
+    "legacyActivationRejected": true,
+    "proofReplayRejected": true,
+    "reviewedCapabilityCeiling": 3,
+    "totalOkrBudget": 10
+  },
+  "limits": {
+    "isolatedFreshDeployment": true,
+    "upgradeMigrationVerified": false,
+    "appSafeHandoverComplete": false,
+    "explicitContinueComplete": false,
+    "runtimeHandoverPolicyRecheckComplete": false,
+    "installedOsStoreVerified": false,
+    "cloudHostVerified": false,
+    "fivePlatformAcceptanceComplete": false,
+    "uiChanged": false
+  }
+}

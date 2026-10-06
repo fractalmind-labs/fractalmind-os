@@ -1,0 +1,3457 @@
+{
+  "recordedAt": "2026-10-03T05:17:03.431329+00:00",
+  "replayed": false,
+  "originalFailedRuns": [
+    {
+      "round": "R1",
+      "terminal": true,
+      "exitCode": 1,
+      "originalReportPath": "/tmp/fm-native-workload-recovery-protocol-r1.json.progress.json",
+      "originalReportSha256": "c4a3f1627cd47727861384fc86d293b57c77180f4555126e1be5e61309f76789",
+      "originalLogSha256": "36a66bd31719a4f073983812809fac12bc4ffa8b357d40596fd78c9e10c73075",
+      "originalReportComplete": false,
+      "originalChecks": [
+        "real native recovery and device signatures create Human and organization on the existing isolated chain",
+        "native App registers the actual Coordinator and one-use invitation; production envd CLI persists and queries one lost join receipt without another broadcast",
+        "signed live Host discovery is authenticated by the native device; formal App imports the existing actual native file Agent with observation rights only",
+        "formal native review ticket is sent through the actual device HTTP Coordinator to production envd; actual Agent reserves its physical slot and publishes the exact signed acceptance on Sui",
+        "formal native approval atomically activates the current OKR and exact reviewed policy, without preparing or delivering a continuation Run",
+        "formal native control quotation/issuance and command preparation do not dispatch; a fresh runner with an empty journal restores the same encrypted ticket and queued Run",
+        "explicit continuation reaches the actual production envd and native file adapter; original encrypted result decrypts through the OS vault and Host measurement is 1; remaining scheduled budgets are preserved",
+        "fresh native runner recovers the original successful Run and measurement without another fee or delivery; KR verification and final Human acceptance remain pending",
+        "two real envd KR Runs are explicitly released in order; native Human verification advances the cursor without another dispatch or implicit acceptance",
+        "final native review reads both original results and separate immutable verification revisions; an explicit, separately quoted Human decision achieves the OKR on Sui",
+        "actual OS-encrypted direct messages and versioned standing permission rebuild from Sui; ordinary and explicit one-off Run reservations use separate ledgers and can be cancelled historically after a policy change, without direct dispatch or OKR budget changes",
+        "actual OS-signed direct write, read and zero-tool status traverse authenticated Coordinator to production envd; original encrypted results decrypt through the OS vault",
+        "exact direct replay reuses the original Run and immutable result without another tool spend; explicit five-call approval spends three and refunds two in its separate ledger, without changing the six-call OKR ledger",
+        "formal App zero-tool question reaches the configured synthetic Messages API exactly once; encrypted original reply is rebuilt from Sui, marked unverified, and leaves OKR/direct tool ledgers unchanged; six model-selected OKR tool steps were enforced by production envd (no real-model quality claim)",
+        "formal native conversion retains the exact encrypted original message, fixed instance and unverified Host-receipted model suggestion; substituted reply and source removal fail before a quote, independent fee/signature creates only a DRAFT, and source-preserving revision plus empty-journal Sui/skill projection rebuilds provenance without any Run, model request, tool spend or dispatch",
+        "formal native Direct App controller edits and revokes versioned authority, stores messages, quotes every operation, sends status at zero remaining budget and executes an explicitly approved file request without changing the standing ceiling",
+        "fresh Direct App controller with an empty technical journal rebuilds both original encrypted results from Sui, refuses to infer resend authority and retains historical read access after permission revocation"
+      ],
+      "originalState": {
+        "phase": "human_sequence_accepted",
+        "humanId": "0x873f5fd4017a8c9a4a3ba5d4e2585b31139e5ffd75e8e7fceb3dfb5ab6203016",
+        "organizationId": "0x20b7f1fc614dcd8a5c5be59b5e6c4e931e91b8190fcc15d7e3371f5b515cf9ad",
+        "deviceAddress": "0xb3faddeefd8cbb1259d575df8934c5971444d84f079b5736e1d71a6e779881c0",
+        "originalRequest": {
+          "label": "native workload recovery 1",
+          "requestId": "recover:test-2a2b64c2-1b56-49e5-b278-0e5aa128ab8f-recover-a",
+          "digest": "ArzkY9dguhz3HMmVcAZc9m4pusFXb9bxVnrvd9Fxsmpf",
+          "phase": "quoted_before_submission"
+        },
+        "bindingId": "0x404b061cdf33e2c14615d44ae073b1c92029a015bd647e4ef04a1819d2a8d324",
+        "membershipId": "0x4faf3b2a04cc2a9e68237390899bd5a23bbef033c52414ccc8bf4d2a97280e2a",
+        "hostAddress": "0xa05ce488aff3a25f8f47aa4f371dbe96fb281d51637d4bc390c61dabdf6fd226",
+        "joinDigest": "BsHUfJVftLKBvU9FdJvP8CFQkgWF5UCKDXBc4Eq8eCJF",
+        "hostJoinBroadcasts": 1,
+        "managedAgentId": "0x415f81c4fcf55c9598287c5e74faf302e24521c0fb81c02436542eb2098e9a8c",
+        "instanceId": "native-4463295113be0162eb2d60e606f8e3bfff8b8d287bdb9518b77a688c42a76418",
+        "okrId": "0xe8c0ff37f0af0af1fe6368972bdd82970a15fbc44de4b516ec99d3154d095659",
+        "reviewExecutionId": "0x7a6b668a62bdd5e0a634988f92ea6c53a78a85c976562783e6739edc7bc284c7",
+        "reviewDigest": "GVZq7HYaTGFbGDLEuVjPqxzeGGQm2XZ97j6tpmVuuXQF",
+        "originalReviewDelivery": {},
+        "reviewRunState": 2,
+        "reviewResultId": "0x79bc7d66a57887b39b602f42f7817b8bf1bff124a5face0a834cf9f6107ee235",
+        "continuationExecutionId": "0xfb94785336b3b6677ee52cf88af32d9136c3b19d3faf4def1ef48ec10b2ca4a0",
+        "continuationDigest": "7fvRa9YNK9Bihup1W8oWFtCsEpfR1Dpoq3W63vMKUg1e",
+        "ticketRecordId": "0x03307b44abeec6fe9b41c2feeeec267d92f8a26146bac9b78ec1e8d6f3a30680",
+        "capabilityId": "0x014d6f1b83c1096c1690ad342363d7d44be594070283ffbb46f7f4448cc0679c",
+        "firstDeliveryStatus": "awaiting_verification",
+        "transportCalls": 20,
+        "commandDeliveries": 10,
+        "resultRecordId": "0xdcc83780d38d64c5ac312c55dd5b0d6d5fb770c6593cd7df6d32120ebb972da9",
+        "resultCreationDigest": "CpmDcda5FgBozs3wxLDPXJJMUkBjztsTP3fofqRxwcTd",
+        "observationId": "0x910ed356d7dbeaf39904956653bc5edacc0b37901dffdac870a88d43c1b6fca5",
+        "observedCurrent": "1",
+        "humanVerified": true,
+        "okrState": 3,
+        "budget": {
+          "spent": "6",
+          "reserved": "0"
+        },
+        "restoredStatus": "awaiting_verification",
+        "feeConfirmations": 2,
+        "humanDecisions": [
+          {
+            "krIndex": "0",
+            "requestId": "okr-human:0xe8c0ff37f0af0af1fe6368972bdd82970a15fbc44de4b516ec99d3154d095659:1:3:verify:0",
+            "digest": "GBK99xCsSXSbAG1puN19yVqYxLt519J9Ka53iUzbodQw",
+            "verificationRecordId": "0x48dfb3e3289f49bb063ab398901e5e046ab8ff9fd2e8468798b09d05ddf04932",
+            "runId": "0xfb94785336b3b6677ee52cf88af32d9136c3b19d3faf4def1ef48ec10b2ca4a0"
+          },
+          {
+            "krIndex": "1",
+            "requestId": "okr-human:0xe8c0ff37f0af0af1fe6368972bdd82970a15fbc44de4b516ec99d3154d095659:1:5:verify:1",
+            "digest": "7StAzh7xKD1jbnwD5hudY692CiXsyZJnkH7nFXdt3HDM",
+            "verificationRecordId": "0xef0255e3260ebe218fd90d70b385bd6e017715d59a1940e7a2e41465960b10b7",
+            "runId": "0x3abf7e67facf6ba239473c4be2e55f5a41020b618778d553ff3db3ee023b447c"
+          }
+        ],
+        "nextKr": "2",
+        "secondExecutionId": "0x3abf7e67facf6ba239473c4be2e55f5a41020b618778d553ff3db3ee023b447c",
+        "secondPreparationDigest": "69Vggtq8s2G3WjmWn98T6KkUnipxhMKrxVtssRnwBNXR",
+        "secondResultRecordId": "0x3f304f6fcaa6d33a10ead88129779c04a61440fe22d8d812eb8b6822bd83ec81",
+        "humanAcceptanceVerified": true,
+        "acceptanceRecordId": "0x0e8ae12e61b4e93ab6139ca162997150f19560fdcbf3b32608ec33cb4ad6acf0",
+        "acceptanceDigest": "7cNjmv83VNBnGcEScaqAKaT27qrMM5qHZD5q4Go1NC4j",
+        "historicalVerificationRecordIds": [
+          "0x48dfb3e3289f49bb063ab398901e5e046ab8ff9fd2e8468798b09d05ddf04932",
+          "0xef0255e3260ebe218fd90d70b385bd6e017715d59a1940e7a2e41465960b10b7"
+        ],
+        "krExecutionIds": [
+          "0xfb94785336b3b6677ee52cf88af32d9136c3b19d3faf4def1ef48ec10b2ca4a0",
+          "0x3abf7e67facf6ba239473c4be2e55f5a41020b618778d553ff3db3ee023b447c"
+        ],
+        "directPermissionProtocolVerified": true,
+        "directPermissionId": "0x889d617c4070183a0056524b8512b8bcf82152b89185624669f60248e9ac274e",
+        "directMessageIds": [
+          "0x772b235e55dffd05ad4d68503584d1167750b8ab1563fce54c0cb013c019c043",
+          "0x75519720adecf7dddd90f303f2865253715e4d2127f99083788a5003437686af"
+        ],
+        "directRunIds": [
+          "0x39c516bbba577c0c84ffbc094048fdb73ecaaa27a0af7f0bade51033f064e5d0",
+          "0xc02a9dc234ba7fa7ef9d98dd663521aa3ff76481b5899b66b8f21766e91456c7"
+        ],
+        "directApprovalId": "0xabaaba19a81b2d6eb2d1901f30e45cee73ec480542b672eb2c9bdaf49586c004",
+        "directPermissionVersion": "2",
+        "directFinalBudget": {
+          "spent": "4",
+          "reserved": "0",
+          "approvedSpent": "3",
+          "approvedReserved": "0"
+        },
+        "originalDirectDelivery": {
+          "runId": "0xbd933ce30dbaaa060fbc8c4ff54295a52b35832dafd1e1df6c50b445a0ad7a96",
+          "phase": "confirmed_original_result",
+          "resultId": "0xe6aa28679af8fd7036723fe47139ce164edb78b4df0329c28ed1bb096501afab",
+          "creationDigest": "CvRJsp2YmZUYDAWtaVSQnZy3w1KcVFnkjRnbbPpEeV5T"
+        },
+        "directRelayReply": {
+          "success": true
+        },
+        "directRuntimeRuns": [
+          "0x1c7eb29d4d5fcd8af930c9c9d92a0aeec0ab10b7c33463a9c7ea1d5c3ec7f2aa",
+          "0x1ab4e4d40a33835d4347eee6569e20841734b96a7299e2d1dde49c5181021eb9",
+          "0x69e17636231c991f37daa3a2b1a3847cc1409e6afe0c85d7199fd4e6299f3b05",
+          "0xbd933ce30dbaaa060fbc8c4ff54295a52b35832dafd1e1df6c50b445a0ad7a96"
+        ],
+        "directMessageEnvdDispatchVerified": true,
+        "directAppOriginalRun": "0x8ad15733b9b157efe34fc761d8cd53afbaf638d4c9f16e5a7568103e0198d1fe",
+        "directAppOriginalMessage": "0x990f515a8c24626155b8ca0143f0383a9c4ef44c4561dd79884dbd1d1a00c764",
+        "directAppDeliveryAttempted": true,
+        "directAppDelivered": 3,
+        "modelProtocolFixtureVerified": true,
+        "modelRequests": 7,
+        "modelPlanningRequests": 6,
+        "modelQuestionRequests": 1,
+        "modelOriginalMessageId": "0x02553d0bc2aa4f4a7c438b43ac96b73ac49cb46c61fed8c4ab69b17589bd8943",
+        "modelOriginalRunId": "0x8ebcfffdcae8dc453ddb0cbaf8c7c672d8afde95ae0d19dac59582a11bc03e5d",
+        "modelOriginalResultRecordId": "0x711a25ae88a517a59035857ff2e8b24bb9929b4674208ebf4f89f030e2a3cc16",
+        "sourceOkrId": "0x6a209daf53d5c7aa99a70b596bdec4fc51d6eba780f8208e92edd10471d9bf74",
+        "sourceDraftDigest": "F9kaXfK4KcoVDh5d5Ga6nKev7rrXraf4qMA81SpYUiDn",
+        "sourceMessageId": "0x02553d0bc2aa4f4a7c438b43ac96b73ac49cb46c61fed8c4ab69b17589bd8943",
+        "sourceMessageRecordId": "0xaa04a5e1e393ff50f66adffe5a11e154c29b8d4cba6c5fdb2141a254f2810f96",
+        "sourceReplyRunId": "0x8ebcfffdcae8dc453ddb0cbaf8c7c672d8afde95ae0d19dac59582a11bc03e5d",
+        "sourceReplyRecordId": "0x711a25ae88a517a59035857ff2e8b24bb9929b4674208ebf4f89f030e2a3cc16",
+        "messageOkrControllerVerified": true,
+        "sourceOkrState": "DRAFT",
+        "sourceOkrRevision": "2",
+        "sourceOkrExecutionCount": 0,
+        "sourceSpecEditDigest": "F69Ro8vqi7bCiMpi8z94XTBmnjuTNif69ZmydvfccmzN",
+        "sourceCreationRecoveryStatus": "unknown",
+        "sourceCreatedWithoutDelivery": true,
+        "directAppControllerVerified": true,
+        "directAppFinalBudget": {
+          "permissionVersion": "4",
+          "revoked": true,
+          "maxCalls": "1",
+          "budgetLimit": "4",
+          "spent": "4",
+          "reserved": "0",
+          "approvedSpent": "6",
+          "approvedReserved": "0"
+        },
+        "workloadRecoveryPhase": "recovery_quoted",
+        "recoveryHistoricalRecords": [
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-d8f66b4ec9dd3b431c4a93df6fc4b7e6106a13e0d8c0222e8d876a760bccff66",
+              "record_id": "0x01340c94c8b9570a23c5a06b736cf57dbaf2a948867963839335f64b968d2db7",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "d357e1944f7962b7fad9c4b203e8b6bac50dfe28df752223fb618bfd25521c80"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-5be46574-9580-40e4-ac71-c97e3e6c0105",
+              "record_id": "0x0284fd0095fba23901962dee75e5965767cafdfb0dc83bd623018690eec0aa4f",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "c8c076ec809ca47edd5944f56f845a981d38eb1ff6c874939743e7511a4510f0"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "runner-e8c0ff37f0af0af1fe6368972bdd82970a15fbc44de4b516ec99d3154d095659-1-0",
+              "record_id": "0x03307b44abeec6fe9b41c2feeeec267d92f8a26146bac9b78ec1e8d6f3a30680",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "df08121ee2c4ed02785f29796c8c0277e8146aaefbce03949314f02fcf4bb345"
+          },
+          {
+            "pointer": {
+              "kind": 4,
+              "logicalId": "okr-e45b18a8-135b-4049-ac0b-df2247cdf37c-acceptance",
+              "record_id": "0x0e8ae12e61b4e93ab6139ca162997150f19560fdcbf3b32608ec33cb4ad6acf0",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "a610654e66f8ac22b0f090b601053d3335501bc31a402a328b00be8e4408b6af"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-7498dd0ccdd760e06fc80da7db15da2a545f4f3abfe5a1b6edf05ee1eb0eb7f1",
+              "record_id": "0x162e36b51b438e3d882ccccb47c54a0a7b78e1e9e055b2ef47a19eb7e3007bc3",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "f6da4812b6338acc598db46b70f92467d34b211dd1bdb2e91141a522cb3ada42"
+          },
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-e57852df-2df3-4aca-8675-e045da95f9b8",
+              "record_id": "0x18ba707666cec66826c95520e7bfdce704314855a99ec789bb678523421a24fb",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "6e2b3f4bc0ee7438c4522b384e7b585b0c8c014aaae17e699932a9d6b6c9d663"
+          },
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-83000d65-7c29-426c-a699-b4062d4e5f70",
+              "record_id": "0x1b5f69a101395caa67440b58abe111bfb214b430bbab41ee6702981db9d88784",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "25afcb7720a96658e70d6cb4815a91dba6135b84e98cfc43a771b3e3d3ed7158"
+          },
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-83000d65-7c29-426c-a699-b4062d4e5f70",
+              "record_id": "0x1cc1619e67776c1ca02ed79f67d2a2e0cebb85b8c2fd3e3e778300047f310a6c",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "c85997d7b014edaa6ef77d65db0bea95eef63faf479956af48dc68b11ac474db"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-a4434c24aae6a0db6b95cad051c1c9857c5a59a95a81bdb07f46bb2e4eefde2e",
+              "record_id": "0x22c08aa5497c00adb5ea75f0db6321faa0c6658f43005ae001f8cca41f1845aa",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "b3d7f9f8a973444080fb920aa722d697efa99c781f0b079f7256e6ebcf45d83d"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-7984b321276b8682f14a5c0b2cf220b1e147f1ac91948e5756ef24c290c60bd0",
+              "record_id": "0x31492ada389fe8cd8017c7f307d87cebe6bbaa6ac318326b8694e10211f09eb7",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "49cb34fd28a8c020dcb05badf4fc36a1b682f8a05874a45adab77757c7e3b050"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-df44d82155ae0859ccdff59ce39bc11640c8a5ac5293a13e9ffac5e7a9130330",
+              "record_id": "0x3f304f6fcaa6d33a10ead88129779c04a61440fe22d8d812eb8b6822bd83ec81",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "6f8fb7ec7f6a52285ac1e64611ed6cc916a337e3a1fe17bf365bfa35d78e4062"
+          },
+          {
+            "pointer": {
+              "kind": 4,
+              "logicalId": "okr-e45b18a8-135b-4049-ac0b-df2247cdf37c-verification",
+              "record_id": "0x48dfb3e3289f49bb063ab398901e5e046ab8ff9fd2e8468798b09d05ddf04932",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "b5eed2f8b89121bdd7c67d9db25287b52a21f51886955423d0b9eba22358dc4d"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-bd0873cc499da690095366b1915cc9c83385ea6253fa88dd906e200c8ae6274e",
+              "record_id": "0x5f1074128e5e1a2795ff03edeb11baae381196804151181665ae0852ca1fee1e",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "aeea31721950f1ff8e30240d8e8abfaf54e5f379c7c252b7a22bd35dfb956ce2"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-e8c2f2a2-5960-42b9-8be4-03ee5188d923",
+              "record_id": "0x60d44c50fefbfd1c7252808e9051054382c95a312f639128822a7c9d6075e1f9",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "203b366d8fb5479f65fe709d4d68a0a9089d7d28ae0934a0fccd651a01100d9d"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-67354045-50bf-4766-a80c-eaa1add187b3",
+              "record_id": "0x6435ca0364c0b21bd0915582b334f765ba788e41f43356a518a276ec8df384fa",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "93356d219877b344b0dbd12d232631d37420d929e65059b1b88883428db53d31"
+          },
+          {
+            "pointer": {
+              "kind": 2,
+              "logicalId": "standing-0x415f81c4fcf55c9598287c5e74faf302e24521c0fb81c02436542eb2098e9a8c-permission",
+              "record_id": "0x65a88840d9f94834d0f33ecbd04bfd3da171aab68dd60f939693c559f6085476",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "dd984c182204644b3ac1787db1ae1c677b23ef793cffc490c526fa152badeb52"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-66d6c757028af5c9f3f78a100a35258d2b8fc4bfc1778a43ed93a8f4410aa958",
+              "record_id": "0x711a25ae88a517a59035857ff2e8b24bb9929b4674208ebf4f89f030e2a3cc16",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "6dd965732a4c977783354b2049eb7fb267e054db6e482ae7b705a655fd5a13be"
+          },
+          {
+            "pointer": {
+              "kind": 1,
+              "logicalId": "okr-e45b18a8-135b-4049-ac0b-df2247cdf37c-spec",
+              "record_id": "0x71db9e9eb8a05f0b405ac49c6886e13c04395e82c3c4dbfaa0bf498b2de565b0",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "5c3733cb80b8733c594804bfaa4ec089ae56b553b1690bd3be98f3bdd577f6a9"
+          },
+          {
+            "pointer": {
+              "kind": 1,
+              "logicalId": "okr-96f5cd64-af52-4996-a8eb-f045b73bb66f-spec",
+              "record_id": "0x745e408a14b857991b0d62c9719b86fffa0e28986eb6bb3362103b3aef0cfec0",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "95a2813005588f1bea89215f231f1a1390eeb896a5620842147f85697b489a20"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "runner-e8c0ff37f0af0af1fe6368972bdd82970a15fbc44de4b516ec99d3154d095659-1-1",
+              "record_id": "0x779172a306f59afdc25975e8cf4bf1be0d74150c960bfe3d65e7d8c99abd1612",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "11cf4572b5c100257824c20d82d89ea25a26ddb78638da735621181eb39cdf40"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-89c20a6ba5c898500fc4df63d260ff786ec1b43a3d306addbfdb6e96906edd5f",
+              "record_id": "0x79bc7d66a57887b39b602f42f7817b8bf1bff124a5face0a834cf9f6107ee235",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "5354ec79da7a0219cc81b83712bda77a2655ea36dabc28b3dfa564e6ce11c6ed"
+          },
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-e57852df-2df3-4aca-8675-e045da95f9b8",
+              "record_id": "0x83e5053d3714765ff961b1c577258a85fea8e4b885de36b9ce1cb6ff969af5b3",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "60e55416de157c5edc6b86ad5f30aa51683c5971c562056bee8e78c19f451735"
+          },
+          {
+            "pointer": {
+              "kind": 1,
+              "logicalId": "okr-96f5cd64-af52-4996-a8eb-f045b73bb66f-spec",
+              "record_id": "0x880b32bcb985a8fd1f4701ef7d78f4c71ca640fa79abdb1308d5d63f0e70ed38",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "b6bff8b3494b522f5c6dcf771bd4b7c25c771cb141df4105e940113ccf4ed3ce"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-d5a93165-8544-4fa2-a0b6-63acd2a1b617",
+              "record_id": "0x8b682c2db529ccf3b6a5dce62ac44f52dd65e7fa0d7ac1cdc6a1572cf351b1ab",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "91531b5dd1bcdacb0227438fe1e73e1583e795c41fe982411dc920977dfa133a"
+          },
+          {
+            "pointer": {
+              "kind": 2,
+              "logicalId": "okr-e45b18a8-135b-4049-ac0b-df2247cdf37c-agreement",
+              "record_id": "0x915e0669560ac65821a1ec3adcc4418b7c764177a01053b59abf1d3653006fb6",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "17a74049f1e4106f1f674863300e2c5240372f957b9d730e4474923a238752b7"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-be423a84-ef67-4ba5-bf95-a729f51b368e",
+              "record_id": "0xaa04a5e1e393ff50f66adffe5a11e154c29b8d4cba6c5fdb2141a254f2810f96",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "cc7adc7ba00f041f842e9afb7eeefdf03f47c5afa754b2a43d023771be4e2a6f"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-b043b255-24b6-4a17-9ad5-72a3f4a8a8f5",
+              "record_id": "0xac6730200b51f0a4a6834cb2756aeeb1c0bae31c65ce9fef7e4db4a51468cce0",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "fbc3244f00ee94be7e60d4ed7d89e6237074418b9516abb5718a3092fc6002fe"
+          },
+          {
+            "pointer": {
+              "kind": 2,
+              "logicalId": "standing-0x415f81c4fcf55c9598287c5e74faf302e24521c0fb81c02436542eb2098e9a8c-permission",
+              "record_id": "0xb38052ac5d476fa1f0ab1e60106eacba08dec1178fc64e8f4c5aeb7e23b384c6",
+              "revision": "3",
+              "key_version": "1"
+            },
+            "sha256": "c0e1e35654d241d734ed1e3394a81c05985f84b323c45bc6f9b3b89f7df3b510"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "handover-review-b5a3e790-cd79-4567-84fe-8507e92c8767",
+              "record_id": "0xc193b7395a58a27d962fb2cc794f67bdcd075718b3aac52667889bcd1e851d89",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "df17f7bb1448f4c7c1ded2e2baadc5cad95974f05189b1d9aa6d9e89e1ed8b13"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-e57852df-2df3-4aca-8675-e045da95f9b8",
+              "record_id": "0xd086befc28b19b4bd121cdaba377a43665a53c9555dce9cc5f8634e5835200ed",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "dbccb042d5b2556dd94a917edb2ddd3fc1e9c4b2a0acbd44b9822ac97bc7ba0c"
+          },
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-e8c2f2a2-5960-42b9-8be4-03ee5188d923",
+              "record_id": "0xd31c6db16653c87b841683fc9561063dab547b111fd48bd739b2e2b5a4530046",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "4422363899bb8f9a9384f5abe96116e3421db766c87ae298f46b51b8d49e491e"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-2b3d04f9fbe10a07e061511ebb23a39a9668cdfb115c955514f351a591385867",
+              "record_id": "0xdcc83780d38d64c5ac312c55dd5b0d6d5fb770c6593cd7df6d32120ebb972da9",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "84f54d90e41fe49e8eaea1a1263290a2eaa182b573ae8f3ba8e3526a60096e96"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-83000d65-7c29-426c-a699-b4062d4e5f70",
+              "record_id": "0xe0151e2b70eeb85eaf8ec3c38a7b07ca6695cfc05462e5eb6d0398229e503684",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "ef4eac8a1822645972fe9d5c047d4cb94b326793bb7c17086f33c97f9f50d798"
+          },
+          {
+            "pointer": {
+              "kind": 2,
+              "logicalId": "standing-0x415f81c4fcf55c9598287c5e74faf302e24521c0fb81c02436542eb2098e9a8c-permission",
+              "record_id": "0xe4ad77057b0fb6d20e5c6c7225f3b69a3e418e6f0296987d7fab89179046d411",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "a0f8fadb9518aea0dea7cb954f877e1675bb4a339c19b925ee2724c83c464743"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-8c6401ac20e17ed07312caf0609c91edc7c9773ae79457eb1978af9c152d3fb8",
+              "record_id": "0xe6aa28679af8fd7036723fe47139ce164edb78b4df0329c28ed1bb096501afab",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "97bee09a1a51eab8f374a71be604314bc7e4395ee8564b39beaf5ed484a8c849"
+          },
+          {
+            "pointer": {
+              "kind": 4,
+              "logicalId": "okr-e45b18a8-135b-4049-ac0b-df2247cdf37c-verification",
+              "record_id": "0xef0255e3260ebe218fd90d70b385bd6e017715d59a1940e7a2e41465960b10b7",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "0e21c123c4e89070d7bea9efba41d7185d9e497e6f0c894aa548cb37f611c9ad"
+          },
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-e8c2f2a2-5960-42b9-8be4-03ee5188d923",
+              "record_id": "0xf675547851460249ff3e748c96af38a445e6505f69f3748b4ac0c4161a57fade",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "dabf18a12091e72a356adc5a9848a184c363881fff1953cbe2c357444e2ca951"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-94c77a36-e34e-4d76-bb1a-f3ba24bcce88",
+              "record_id": "0xfe3c880d737c1a582c98ad302c52f02ed898b545d39fb037a6513f6821a559a7",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "994f006be2fbb93a2a6084ea1c8443e24801c20cfb13484173d749e9fa32833f"
+          }
+        ],
+        "recoveryOriginalGeneration": "1",
+        "recoveryRound": 1,
+        "recoveryTargetProfile": "test-2a2b64c2-1b56-49e5-b278-0e5aa128ab8f-recover-a",
+        "recoveryQuotedDigest": "ArzkY9dguhz3HMmVcAZc9m4pusFXb9bxVnrvd9Fxsmpf",
+        "error": "The expression evaluated to a falsy value:\n\n  assert.ok(\n"
+      },
+      "originalLimits": {
+        "actualOSVault": true,
+        "installedUIVerified": false,
+        "envdDispatchVerified": false,
+        "hostKeyStorage": "isolated memory provider",
+        "realCoordinatorDeviceHTTP": true,
+        "humanFinalAcceptanceVerified": true,
+        "directPermissionProtocolVerified": true,
+        "directMessageEnvdDispatchVerified": true,
+        "directMessageUIVerified": false,
+        "messageOkrControllerVerified": true,
+        "workloadRecoveryControllerVerified": false,
+        "installedCacheWipeVerified": false,
+        "actualDeviceRestartVerified": false,
+        "installedMessageOkrUIVerified": false,
+        "directAppControllerVerified": true,
+        "interventionControllerVerified": false,
+        "autonomyControllerVerified": false,
+        "installedAutonomyUIVerified": false,
+        "projectionControllerVerified": false,
+        "installedProjectionUIVerified": false,
+        "automaticHostProjectionDelivery": false,
+        "chainCommandQueueVerified": false,
+        "scheduledPreauthorizationVerified": false,
+        "installedScheduledUIVerified": false,
+        "runningStopConfirmed": false,
+        "modelProviderKind": "synthetic loopback Messages API fixture; not an actual language model",
+        "actualModelProviderVerified": false,
+        "modelProtocolFixtureVerified": true,
+        "installedHumanReviewVerified": false,
+        "reviewDecisions": "explicit scripted test approvals, not installed Human UI",
+        "physicalHostVerified": false,
+        "humanHandoverVerified": false,
+        "nativeWindowSourceVerified": false,
+        "testTransport": "isolated subprocess",
+        "technicalJournal": "memory",
+        "cleanupConfirmed": true,
+        "privateKeysInReport": false,
+        "recoveryCodeInReport": false
+      },
+      "confirmedTransactions": [
+        {
+          "label": "native self-paid Human creation",
+          "requestId": "identity:test-2a2b64c2-1b56-49e5-b278-0e5aa128ab8f",
+          "digest": "HS2nMPorLoUvutLB3D7gpF8bkWFb6mt52vYjr9BS9sh4",
+          "status": "confirmed",
+          "actualGas": "18772548"
+        },
+        {
+          "label": "native self-paid organization creation",
+          "requestId": "org:test-2a2b64c2-1b56-49e5-b278-0e5aa128ab8f:0x873f5fd4017a8c9a4a3ba5d4e2585b31139e5ffd75e8e7fceb3dfb5ab6203016",
+          "digest": "6qc38M7Wwwk5zW5q5A246GsJ1VMBiWCXAiuMdETjDhgg",
+          "status": "confirmed",
+          "actualGas": "15141616"
+        },
+        {
+          "label": "native registration of actual loopback Coordinator",
+          "requestId": "host:e685c644-a7e6-4e63-a6e0-90628741780b",
+          "digest": "8zzrhgudhmKYZy6enwxQEwNJN78Yf7DMzHAx7aboVzZ4",
+          "status": "confirmed",
+          "actualGas": "6823340"
+        },
+        {
+          "label": "native single-use Host invitation",
+          "requestId": "host:e9e3299a-233c-4ca8-b637-651a2cfa1857",
+          "digest": "BntYy7xGDAkAQn967TqNay7i4z1hkuPk264tEnQLqLMC",
+          "status": "confirmed",
+          "actualGas": "4961036"
+        },
+        {
+          "label": "native import of actual bounded Agent",
+          "requestId": "agent-import:b678b181-1049-447e-9e9d-ba0213daa11f",
+          "digest": "HJmm7hDmSo9UTNTDkdZUrUALZfQxJriQ4VBde1PAEysE",
+          "status": "confirmed",
+          "actualGas": "11879100"
+        },
+        {
+          "label": "native encrypted actual Host OKR draft",
+          "requestId": "okr-draft:0x20b7f1fc614dcd8a5c5be59b5e6c4e931e91b8190fcc15d7e3371f5b515cf9ad:e45b18a8-135b-4049-ac0b-df2247cdf37c",
+          "digest": "3DvfdVnY8pLvEgqwLgu3xvgd8GYmKEPuvHxLsH94CP4P",
+          "status": "confirmed",
+          "actualGas": "28828540"
+        },
+        {
+          "label": "native one-use observation capability",
+          "requestId": "handover-observe-b5a3e790-cd79-4567-84fe-8507e92c8767",
+          "digest": "U8XjzVVpcFPDsDYjSmv94EJueEUoF6cwzLdLABEaMMz",
+          "status": "confirmed",
+          "actualGas": "10173480"
+        },
+        {
+          "label": "native exact review ticket and Run",
+          "requestId": "handover-review-b5a3e790-cd79-4567-84fe-8507e92c8767",
+          "digest": "GVZq7HYaTGFbGDLEuVjPqxzeGGQm2XZ97j6tpmVuuXQF",
+          "status": "confirmed",
+          "actualGas": "59934328"
+        },
+        {
+          "label": "native approval of actual Host acceptance",
+          "requestId": "handover-approve:0x7a6b668a62bdd5e0a634988f92ea6c53a78a85c976562783e6739edc7bc284c7",
+          "digest": "8eC3SGSUM8g5k8Crj21odsYtHM65ifpJrSdiSgbHKaAF",
+          "status": "confirmed",
+          "actualGas": "49450304"
+        },
+        {
+          "label": "formal native single-use KR control fee",
+          "requestId": "okr-control:0xe8c0ff37f0af0af1fe6368972bdd82970a15fbc44de4b516ec99d3154d095659:1:0",
+          "digest": "5BzhuLogiAHmkwA46zSW4bJwR7ZGsG5o6P2dvSYAvTex",
+          "status": "confirmed",
+          "actualGas": "15662680"
+        },
+        {
+          "label": "formal native atomic continuation ticket and queued Run",
+          "requestId": "runner-e8c0ff37f0af0af1fe6368972bdd82970a15fbc44de4b516ec99d3154d095659-1-0",
+          "digest": "7fvRa9YNK9Bihup1W8oWFtCsEpfR1Dpoq3W63vMKUg1e",
+          "status": "confirmed",
+          "actualGas": "64386720"
+        },
+        {
+          "label": "native independent KR 1 verification",
+          "requestId": "okr-human:0xe8c0ff37f0af0af1fe6368972bdd82970a15fbc44de4b516ec99d3154d095659:1:3:verify:0",
+          "digest": "GBK99xCsSXSbAG1puN19yVqYxLt519J9Ka53iUzbodQw",
+          "status": "confirmed",
+          "actualGas": "15636004"
+        },
+        {
+          "label": "native second KR explicit control fee",
+          "requestId": "okr-control:0xe8c0ff37f0af0af1fe6368972bdd82970a15fbc44de4b516ec99d3154d095659:1:1",
+          "digest": "D66emFy3G2tDpgZbQS2cZtHup6otTxWkFHrgzsJNfrVE",
+          "status": "confirmed",
+          "actualGas": "15662680"
+        },
+        {
+          "label": "native second KR exact ticket and Run",
+          "requestId": "runner-e8c0ff37f0af0af1fe6368972bdd82970a15fbc44de4b516ec99d3154d095659-1-1",
+          "digest": "69Vggtq8s2G3WjmWn98T6KkUnipxhMKrxVtssRnwBNXR",
+          "status": "confirmed",
+          "actualGas": "64318624"
+        },
+        {
+          "label": "native independent KR 2 verification",
+          "requestId": "okr-human:0xe8c0ff37f0af0af1fe6368972bdd82970a15fbc44de4b516ec99d3154d095659:1:5:verify:1",
+          "digest": "7StAzh7xKD1jbnwD5hudY692CiXsyZJnkH7nFXdt3HDM",
+          "status": "confirmed",
+          "actualGas": "12851136"
+        },
+        {
+          "label": "native separate final Human acceptance",
+          "requestId": "okr-human:0xe8c0ff37f0af0af1fe6368972bdd82970a15fbc44de4b516ec99d3154d095659:1:6:accept:2",
+          "digest": "7cNjmv83VNBnGcEScaqAKaT27qrMM5qHZD5q4Go1NC4j",
+          "status": "confirmed",
+          "actualGas": "12159156"
+        },
+        {
+          "label": "native standing permission creation",
+          "requestId": "direct-test:184d0017-b948-4d8f-bfca-9f2d48bbe388",
+          "digest": "2uEoWky2Z9i5P3XhCUXKkDdCKPajEKmqrWqCg9HbEv7R",
+          "status": "confirmed",
+          "actualGas": "21999712"
+        },
+        {
+          "label": "native standing direct capability",
+          "requestId": "direct-test:28256ae8-5cea-405e-8a12-64d2b64f3145",
+          "digest": "GEkznAvtLuKrA8gByBQ4TYuPNiTNzLHKdpTTeHqyfXcc",
+          "status": "confirmed",
+          "actualGas": "18923080"
+        },
+        {
+          "label": "native encrypted direct message 3",
+          "requestId": "direct-test:a6fb0864-5f5a-4d5c-97ee-2183bb658308",
+          "digest": "45J64oSw2MErMwgDL4EdAKArABic5xybyiAKu896EP4i",
+          "status": "confirmed",
+          "actualGas": "17135332"
+        },
+        {
+          "label": "native original direct Run preparation",
+          "requestId": "direct-test:aff18796-35d4-4b86-ab7d-700199e38c2b",
+          "digest": "417bYrpzHJNn3wFnEDn7kJ8bSjfLej7xvwShgkEz92s7",
+          "status": "confirmed",
+          "actualGas": "42894164"
+        },
+        {
+          "label": "native queued direct cancellation",
+          "requestId": "direct-test:d6785b9f-2e44-4c17-b66c-6637d1e75176",
+          "digest": "5Poio7okE61guvahczKbuoWH5eFfNp3cWaWoLxoDpW6D",
+          "status": "confirmed",
+          "actualGas": "1358188"
+        },
+        {
+          "label": "native encrypted direct message 5",
+          "requestId": "direct-test:4a965c1b-3e6f-4cfa-9a8a-1a665f9ddfc0",
+          "digest": "7cEnynLNCzginsLSEFMzdE1dPsV42yUdZQ9VtsR7rAiw",
+          "status": "confirmed",
+          "actualGas": "17135332"
+        },
+        {
+          "label": "native exact one-off approval request",
+          "requestId": "direct-test:2f1e83af-54e3-4902-b1ce-d9f2f6d9f901",
+          "digest": "55Lu3QEjQJpkUQSKFRufa5uvMY9cTXsfZAuoZL3kfWRx",
+          "status": "confirmed",
+          "actualGas": "14315732"
+        },
+        {
+          "label": "native explicit one-off approval",
+          "requestId": "direct-test:2458a1b4-e04f-4607-8960-e89788b5a83c",
+          "digest": "CFV9R79H86gxAdq6QTdPu3JZFYPchZJXNNcrK3Qk74CT",
+          "status": "confirmed",
+          "actualGas": "6185860"
+        },
+        {
+          "label": "native one-off direct capability",
+          "requestId": "direct-test:765609a5-737a-447b-ad92-8c2337cb6f81",
+          "digest": "59wFtTPzm3dZ5fseMKRyD3io8hRBt8HTNqTJH5ycfXkn",
+          "status": "confirmed",
+          "actualGas": "19166280"
+        },
+        {
+          "label": "native one-off approval consumption",
+          "requestId": "direct-test:5dd3ecc6-3c0e-49fd-98d2-0132c2884cf7",
+          "digest": "q1A3QV4ZosBV95KwFdoneXGkcAot63w3u87x8E2rtkB",
+          "status": "confirmed",
+          "actualGas": "43418792"
+        },
+        {
+          "label": "native standing permission version change",
+          "requestId": "direct-test:d1298f4e-02df-462b-b525-837076e09c3c",
+          "digest": "6RvxdKeSdyYkDyHVQfHVf7m6uG97upzcG8Ew5ipraepu",
+          "status": "confirmed",
+          "actualGas": "7277068"
+        },
+        {
+          "label": "native historical direct cancellation after policy change",
+          "requestId": "direct-test:14bbb432-2d80-42fc-911e-b612b3a229c6",
+          "digest": "AjG1b9fg4kNEcjqRDkPKwxY9Xc4LrMbKk3b5Yb7cg2rm",
+          "status": "confirmed",
+          "actualGas": "1360620"
+        },
+        {
+          "label": "native runtime direct capability v2",
+          "requestId": "direct-test:330f74f4-23cc-478d-96d7-c09601d2ad6f",
+          "digest": "4etAn23RrrAQoqBaKkCmA3EZEKTz7qbtxNJR8tt82oWQ",
+          "status": "confirmed",
+          "actualGas": "18923080"
+        },
+        {
+          "label": "native encrypted direct message 3",
+          "requestId": "direct-test:e0ce8747-a47b-43e3-bcc3-7ab11c112a9f",
+          "digest": "9sUDP4ZVQW328Wb2JrGMSVRJZWmmoA5EB66YkRtJvU8c",
+          "status": "confirmed",
+          "actualGas": "17294932"
+        },
+        {
+          "label": "native direct Run and OS-wrapped result key",
+          "requestId": "direct-test:65ba0d2d-f8a4-4bc9-bf71-7d1de2d77dae",
+          "digest": "DQeGRn1YjwWCKSEvhAWFUmpKtqvP7jCBkfRVTi4dAPiP",
+          "status": "confirmed",
+          "actualGas": "48282164"
+        },
+        {
+          "label": "native encrypted direct message 1",
+          "requestId": "direct-test:d3b02b83-cc02-4010-ad61-703e8dcfa4ae",
+          "digest": "HJu6LV7w7txJQMrJxbU8WunRDV4JWmLSkB9vg56DUC53",
+          "status": "confirmed",
+          "actualGas": "16816132"
+        },
+        {
+          "label": "native direct Run and OS-wrapped result key",
+          "requestId": "direct-test:b27f7acd-af2e-4a93-a796-462ff58c98d2",
+          "digest": "8bcDy1Jtv2D6YfoSJRicrVPzkFKdKPJGFqvgTY9bvzkB",
+          "status": "confirmed",
+          "actualGas": "43210988"
+        },
+        {
+          "label": "native encrypted direct message 0",
+          "requestId": "direct-test:ce637213-1c10-4b6d-98aa-c3448901e902",
+          "digest": "CBPa9f3ixfwQBJJwGCFks9JMxVZnrnbPutNshpofExMr",
+          "status": "confirmed",
+          "actualGas": "16147332"
+        },
+        {
+          "label": "native direct Run and OS-wrapped result key",
+          "requestId": "direct-test:bf8978ae-90f0-4b2a-b553-51f012cb4db9",
+          "digest": "9b7Rb2tgP4AS5LLoa2oJcYpKn2jUcFDs2RZHNJX6f45q",
+          "status": "confirmed",
+          "actualGas": "43044136"
+        },
+        {
+          "label": "native encrypted direct message 5",
+          "requestId": "direct-test:24342aa5-2182-4dcd-afc6-5d76abea1cc6",
+          "digest": "5vhJGBMcEQYWhXd5ogKd3x8phuKVsB8NUhN9141LNUFW",
+          "status": "confirmed",
+          "actualGas": "17355732"
+        },
+        {
+          "label": "native runtime exception request",
+          "requestId": "direct-test:fefa9388-d097-4595-b95f-ec2f7fe9a4c2",
+          "digest": "9Fig2Ukck4rSavpCgBD2RwTJ9bYhR1uZwLvZVJWcernW",
+          "status": "confirmed",
+          "actualGas": "14315732"
+        },
+        {
+          "label": "native runtime explicit exception",
+          "requestId": "direct-test:77b6df1c-eea3-401b-99fa-ae28f09400ea",
+          "digest": "2zvVNGx6MesFNBqKi6RxjKdVGpVwctZcmvY4HPwq3CUP",
+          "status": "confirmed",
+          "actualGas": "5980660"
+        },
+        {
+          "label": "native runtime one-off capability",
+          "requestId": "direct-test:ad15e599-cb3a-477f-8db4-07bb920a0481",
+          "digest": "BzhfVKJf3V4obhLzXrXBZZswULfVNi3ucijSAjPDx7To",
+          "status": "confirmed",
+          "actualGas": "19166280"
+        },
+        {
+          "label": "native direct Run and OS-wrapped result key",
+          "requestId": "direct-test:71626b58-ec27-4193-b624-8881253381db",
+          "digest": "AG6a1cgEyqa5X6KDje7GEk6YCrGMyjqr2XMvuK2Rod1c",
+          "status": "confirmed",
+          "actualGas": "48826792"
+        },
+        {
+          "label": "formal direct App permission edit",
+          "requestId": "direct-permission:0x415f81c4fcf55c9598287c5e74faf302e24521c0fb81c02436542eb2098e9a8c:2",
+          "digest": "6QQ56m1bFekfpj26dEyFnjETXzvZg2F9x9by1hMLS1qV",
+          "status": "confirmed",
+          "actualGas": "7261868"
+        },
+        {
+          "label": "formal direct App encrypted message",
+          "requestId": "direct-message:b043b255-24b6-4a17-9ad5-72a3f4a8a8f5",
+          "digest": "3Ra4nNNP1Vma4A4R2eERH2CqjhH9nSraxhZC14JaqVBN",
+          "status": "confirmed",
+          "actualGas": "16466836"
+        },
+        {
+          "label": "formal direct App capability",
+          "requestId": "direct-capability:0x2727baedd117cfa37f9550e7f7f0042924ad416e895219b0d01ee97a710812ff",
+          "digest": "DBnoZsR4wRGbKnVHJSr7RcYdSdzVDrnz5FVVK59Ey9VX",
+          "status": "confirmed",
+          "actualGas": "18923080"
+        },
+        {
+          "label": "formal direct App original Run and OS result wrap",
+          "requestId": "direct-run:0x2727baedd117cfa37f9550e7f7f0042924ad416e895219b0d01ee97a710812ff",
+          "digest": "CxzBknNiK9Vj8QzDFLp2ygNfmdCxqPkSwMuVXKjgJkMo",
+          "status": "confirmed",
+          "actualGas": "48130468"
+        },
+        {
+          "label": "formal direct App encrypted message",
+          "requestId": "direct-message:be423a84-ef67-4ba5-bf95-a729f51b368e",
+          "digest": "55vuXLQ9t92qDkoLvrE9C5JFYxtX1TJHE8trAqjHwg9y",
+          "status": "confirmed",
+          "actualGas": "16421236"
+        },
+        {
+          "label": "formal direct App capability",
+          "requestId": "direct-capability:0x02553d0bc2aa4f4a7c438b43ac96b73ac49cb46c61fed8c4ab69b17589bd8943",
+          "digest": "4VVxjKSTuMSn2g8YY96mccwBAEWsHokVs91NL5j6tWiT",
+          "status": "confirmed",
+          "actualGas": "18923080"
+        },
+        {
+          "label": "formal direct App original Run and OS result wrap",
+          "requestId": "direct-run:0x02553d0bc2aa4f4a7c438b43ac96b73ac49cb46c61fed8c4ab69b17589bd8943",
+          "digest": "AH7XUwFpyZLJJpX7SjkiC5hUdJ5Kqj7oz8da7JmXVoPU",
+          "status": "confirmed",
+          "actualGas": "48130468"
+        },
+        {
+          "label": "native message-derived encrypted OKR draft",
+          "requestId": "okr-draft:0x20b7f1fc614dcd8a5c5be59b5e6c4e931e91b8190fcc15d7e3371f5b515cf9ad:96f5cd64-af52-4996-a8eb-f045b73bb66f",
+          "digest": "F9kaXfK4KcoVDh5d5Ga6nKev7rrXraf4qMA81SpYUiDn",
+          "status": "confirmed",
+          "actualGas": "29636876"
+        },
+        {
+          "label": "native source-preserving OKR specification revision",
+          "requestId": "okr-intervene:0x6a209daf53d5c7aa99a70b596bdec4fc51d6eba780f8208e92edd10471d9bf74:1:replace",
+          "digest": "F69Ro8vqi7bCiMpi8z94XTBmnjuTNif69ZmydvfccmzN",
+          "status": "confirmed",
+          "actualGas": "20747612"
+        },
+        {
+          "label": "formal direct App encrypted message",
+          "requestId": "direct-message:e8c2f2a2-5960-42b9-8be4-03ee5188d923",
+          "digest": "3a9xFUyeWRjQSnNmzhqTvcVxvn7ZGciNNziwHwKRRK9N",
+          "status": "confirmed",
+          "actualGas": "17667636"
+        },
+        {
+          "label": "formal direct App one-off request",
+          "requestId": "direct-approval:0x990f515a8c24626155b8ca0143f0383a9c4ef44c4561dd79884dbd1d1a00c764",
+          "digest": "2nQJ7oQdYKU1ifhKvJ5V3GRmRGoVT1pkFfcsuFNza1tb",
+          "status": "confirmed",
+          "actualGas": "17150836"
+        },
+        {
+          "label": "formal direct App explicit decision",
+          "requestId": "direct-decision:0x990f515a8c24626155b8ca0143f0383a9c4ef44c4561dd79884dbd1d1a00c764:true",
+          "digest": "4UoifJeEfRpq8VRxFngK9kmn2iGHtYCXBgouGx6TVwZx",
+          "status": "confirmed",
+          "actualGas": "8777460"
+        },
+        {
+          "label": "formal direct App capability",
+          "requestId": "direct-capability:0x990f515a8c24626155b8ca0143f0383a9c4ef44c4561dd79884dbd1d1a00c764",
+          "digest": "4qRrjaMpsqUEwAA6bMVTRD1t4jF1GprRWwUNSfCfK2qC",
+          "status": "confirmed",
+          "actualGas": "19166280"
+        },
+        {
+          "label": "formal direct App original Run and OS result wrap",
+          "requestId": "direct-run:0x990f515a8c24626155b8ca0143f0383a9c4ef44c4561dd79884dbd1d1a00c764",
+          "digest": "9kT1q919AohApJgUHkBGb8Ek4p7Bd4bucS2xwyNwQkaj",
+          "status": "confirmed",
+          "actualGas": "48837096"
+        },
+        {
+          "label": "formal direct App permission revocation",
+          "requestId": "direct-revoke:0x415f81c4fcf55c9598287c5e74faf302e24521c0fb81c02436542eb2098e9a8c:3",
+          "digest": "FWzDp2WYbHvQbTbTwx7WMVY2uTBPHbamsz1HsVEnoibd",
+          "status": "confirmed",
+          "actualGas": "1070604"
+        },
+        {
+          "label": "native workload recovery 1",
+          "requestId": "recover:test-2a2b64c2-1b56-49e5-b278-0e5aa128ab8f-recover-a",
+          "digest": "ArzkY9dguhz3HMmVcAZc9m4pusFXb9bxVnrvd9Fxsmpf",
+          "status": "confirmed",
+          "actualGas": "18800952"
+        }
+      ],
+      "recoveryAndPostRecoveryTransactions": [
+        {
+          "label": "native workload recovery 1",
+          "requestId": "recover:test-2a2b64c2-1b56-49e5-b278-0e5aa128ab8f-recover-a",
+          "digest": "ArzkY9dguhz3HMmVcAZc9m4pusFXb9bxVnrvd9Fxsmpf",
+          "status": "confirmed",
+          "actualGas": "18800952",
+          "createdObjects": [
+            {
+              "id": "0x210d8aa95e9a74014910cce7d2033c8ec7029ee51755e69892aa83be24798a7a",
+              "type": "0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::RecoveryRecord",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0x687ea6ad6f81cd0d9a82d329dae3aa428d7ff76858225c79bb9c1d4f03e62ac5",
+              "type": "0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::DeviceGrant",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0x6e9ea67794e34a9be2f02885d85bdf65580a989cdfa644ba153bd73ff38d6e7b",
+              "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,vector<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>>",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0xc7f2e84d75569416e7cb60231d4bc8db8955824418cbe74472c27dda0771146c",
+              "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::RecoveryLocation>",
+              "outputState": "ObjectWrite"
+            }
+          ]
+        }
+      ],
+      "readOnlyFollowup": {
+        "recordedAt": "2026-10-03T05:07:52.642Z",
+        "originalReport": "/tmp/fm-native-workload-recovery-protocol-r1.json.progress.json",
+        "originalReportSha256": "c4a3f1627cd47727861384fc86d293b57c77180f4555126e1be5e61309f76789",
+        "originalExecutionTerminal": true,
+        "originalExitCode": 1,
+        "originalFailure": "The expression evaluated to a falsy value:\n\n  assert.ok(\n",
+        "originalConfirmedRecovery": {
+          "label": "native workload recovery 1",
+          "requestId": "recover:test-2a2b64c2-1b56-49e5-b278-0e5aa128ab8f-recover-a",
+          "digest": "ArzkY9dguhz3HMmVcAZc9m4pusFXb9bxVnrvd9Fxsmpf",
+          "status": "confirmed",
+          "actualGas": "18800952",
+          "createdObjects": [
+            {
+              "id": "0x210d8aa95e9a74014910cce7d2033c8ec7029ee51755e69892aa83be24798a7a",
+              "type": "0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::RecoveryRecord",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0x687ea6ad6f81cd0d9a82d329dae3aa428d7ff76858225c79bb9c1d4f03e62ac5",
+              "type": "0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::DeviceGrant",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0x6e9ea67794e34a9be2f02885d85bdf65580a989cdfa644ba153bd73ff38d6e7b",
+              "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,vector<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>>",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0xc7f2e84d75569416e7cb60231d4bc8db8955824418cbe74472c27dda0771146c",
+              "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::RecoveryLocation>",
+              "outputState": "ObjectWrite"
+            }
+          ]
+        },
+        "recoveryTransactionQuery": {
+          "available": false,
+          "reason": "original receipt currently unavailable; not retried"
+        },
+        "readOnlyCurrentState": {
+          "humanId": "0x873f5fd4017a8c9a4a3ba5d4e2585b31139e5ffd75e8e7fceb3dfb5ab6203016",
+          "generation": "2",
+          "recoveryVersion": "2",
+          "recoveryRecordId": "0x210d8aa95e9a74014910cce7d2033c8ec7029ee51755e69892aa83be24798a7a",
+          "recoveryActive": true,
+          "organizations": [
+            "0x20b7f1fc614dcd8a5c5be59b5e6c4e931e91b8190fcc15d7e3371f5b515cf9ad"
+          ],
+          "organizationKeyVersion": "2",
+          "grants": [
+            {
+              "id": "0x1edea0b072e34e1b119a959f8fe3ac83d22bc3557e89a5535a56fa49e34f53fb",
+              "generation": "1",
+              "device": "0xb3faddeefd8cbb1259d575df8934c5971444d84f079b5736e1d71a6e779881c0",
+              "revoked": false
+            },
+            {
+              "id": "0x687ea6ad6f81cd0d9a82d329dae3aa428d7ff76858225c79bb9c1d4f03e62ac5",
+              "generation": "2",
+              "device": "0xd2c333242a4374438b4fcb1ab4dd0e9310c7b272948a35c644dbb53ca89b7e98",
+              "revoked": false
+            }
+          ],
+          "goal": {
+            "id": "0xe8c0ff37f0af0af1fe6368972bdd82970a15fbc44de4b516ec99d3154d095659",
+            "state": 3,
+            "nextKr": "2",
+            "acceptanceRecordId": "0x0e8ae12e61b4e93ab6139ca162997150f19560fdcbf3b32608ec33cb4ad6acf0"
+          },
+          "sourceDraft": {
+            "id": "0x6a209daf53d5c7aa99a70b596bdec4fc51d6eba780f8208e92edd10471d9bf74",
+            "state": 0,
+            "specRevision": "2"
+          },
+          "budget": {
+            "asset": "TOOL_CALLS",
+            "spent": "6",
+            "reserved": "0",
+            "claimsId": "0xc07a438f8f4d47b6d9f8807cf0d8857564c64ee781edd8da93b55f9babb49269"
+          }
+        },
+        "limits": {
+          "nativeRecoveryConfirmed": true,
+          "failedAtFreshHostObservationAssertion": true,
+          "recoveredWorkloadComplete": false,
+          "periodicHeartbeatAbsentInOriginalFixture": true,
+          "observationTTLUnchanged": 60000,
+          "replayed": false,
+          "broadcasts": 0,
+          "originalCredentialsCleaned": true,
+          "decryptedBodyClaim": "Original script reached live Host assertion only after 38 history hashes and typed OKR/direct readers passed; this follow-up does not decrypt",
+          "privateKeysInReport": false,
+          "recoveryCodeInReport": false
+        }
+      }
+    },
+    {
+      "round": "R2",
+      "terminal": true,
+      "exitCode": 1,
+      "originalReportPath": "/tmp/fm-native-workload-recovery-protocol-r2.json.progress.json",
+      "originalReportSha256": "4de46587abb7a7212308ba71311e55d63b4f7940130ab716befc37220bfa1727",
+      "originalLogSha256": "0a6decfdab7179d4e97790260858e97dffab49ae5ce0f40f6d645f6fc6ceeb0f",
+      "originalReportComplete": false,
+      "originalChecks": [
+        "real native recovery and device signatures create Human and organization on the existing isolated chain",
+        "native App registers the actual Coordinator and one-use invitation; production envd CLI persists and queries one lost join receipt without another broadcast",
+        "signed live Host discovery is authenticated by the native device; formal App imports the existing actual native file Agent with observation rights only",
+        "formal native review ticket is sent through the actual device HTTP Coordinator to production envd; actual Agent reserves its physical slot and publishes the exact signed acceptance on Sui",
+        "formal native approval atomically activates the current OKR and exact reviewed policy, without preparing or delivering a continuation Run",
+        "formal native control quotation/issuance and command preparation do not dispatch; a fresh runner with an empty journal restores the same encrypted ticket and queued Run",
+        "explicit continuation reaches the actual production envd and native file adapter; original encrypted result decrypts through the OS vault and Host measurement is 1; remaining scheduled budgets are preserved",
+        "fresh native runner recovers the original successful Run and measurement without another fee or delivery; KR verification and final Human acceptance remain pending",
+        "two real envd KR Runs are explicitly released in order; native Human verification advances the cursor without another dispatch or implicit acceptance",
+        "final native review reads both original results and separate immutable verification revisions; an explicit, separately quoted Human decision achieves the OKR on Sui",
+        "actual OS-encrypted direct messages and versioned standing permission rebuild from Sui; ordinary and explicit one-off Run reservations use separate ledgers and can be cancelled historically after a policy change, without direct dispatch or OKR budget changes",
+        "actual OS-signed direct write, read and zero-tool status traverse authenticated Coordinator to production envd; original encrypted results decrypt through the OS vault",
+        "exact direct replay reuses the original Run and immutable result without another tool spend; explicit five-call approval spends three and refunds two in its separate ledger, without changing the six-call OKR ledger",
+        "formal App zero-tool question reaches the configured synthetic Messages API exactly once; encrypted original reply is rebuilt from Sui, marked unverified, and leaves OKR/direct tool ledgers unchanged; six model-selected OKR tool steps were enforced by production envd (no real-model quality claim)",
+        "formal native conversion retains the exact encrypted original message, fixed instance and unverified Host-receipted model suggestion; substituted reply and source removal fail before a quote, independent fee/signature creates only a DRAFT, and source-preserving revision plus empty-journal Sui/skill projection rebuilds provenance without any Run, model request, tool spend or dispatch",
+        "formal native Direct App controller edits and revokes versioned authority, stores messages, quotes every operation, sends status at zero remaining budget and executes an explicitly approved file request without changing the standing ceiling",
+        "fresh Direct App controller with an empty technical journal rebuilds both original encrypted results from Sui, refuses to infer resend authority and retains historical read access after permission revocation",
+        "workload recovery 1: only the saved code locates the stable Human; one native self-paid transaction consumes it, advances generation/key version and authorizes an independent device; old device/prepared transport and replay fail; fresh controllers restore 38 exact current/historical plaintext hashes, two verified KRs/final acceptance, original Agent/Host/binding, revoked standing permission, messages/results and unchanged message-derived draft without delivery/model calls or tool spend"
+      ],
+      "originalState": {
+        "phase": "human_sequence_accepted",
+        "humanId": "0xe6d6a9dbcc2f8d19b839bacfa13ee9c885e7006077d1b4f1de61c68b3c2c1498",
+        "organizationId": "0x7d0d1179c00cdb9d4e33c6bef103ea49fb8cc019c2b592ab47bb99c7a706e5db",
+        "deviceAddress": "0xabd3c1aff1c20659419f97b9464ed36036ba0c04341341328264044dd087829f",
+        "originalRequest": {
+          "label": "native workload recovery 1",
+          "requestId": "recover:test-1658a713-5b77-42f6-aded-7dfed3a2153a-recover-a",
+          "digest": "FNczRGfRCr3EvHJ2VfV56QZDLpzvBTF9r1knYnZrmrX4",
+          "phase": "quoted_before_submission"
+        },
+        "bindingId": "0x82636731cba5836443a5db3dc05784da33a658f506d3896ea7ce9b4c0ac5f796",
+        "membershipId": "0x32e56c2c5338e2d2b122c7de68f2eb3001286f68f38b1b7f45541ddb2ee45d85",
+        "hostAddress": "0xfc5c4a20c8bdca66cfbb1fe724d110da305d3f5a24cab4123e8a2243d0fff620",
+        "joinDigest": "4C1BK7K6gikFRimYPYWUJtueVXd6eERpg96oUhpdg5tD",
+        "hostJoinBroadcasts": 1,
+        "managedAgentId": "0x24f723497c3cc8d6afc4d185dc40dc7903c4bec15312648995f6e7c0f8f23e00",
+        "instanceId": "native-67e2e3df2c3f5c104994a0cabd89354fd3fca95df0a97786931f3403a57338ca",
+        "okrId": "0x933798bd1be9ab2e79c21322b515ff21a7cfe6ae189bc75752b32f7d6f4aee5b",
+        "reviewExecutionId": "0xe1b788b80d1bf290278920e3e233349ed29576209b67797cecaa5c2d6dd17865",
+        "reviewDigest": "AMNRb45xaE4jHrVsWSCEMGbVqDPHSYLBfs18rYmke4BW",
+        "originalReviewDelivery": {},
+        "reviewRunState": 2,
+        "reviewResultId": "0xce844b76999645c42dca65df67a73070aeea39104a5415bec58fb677d3dc1fa7",
+        "continuationExecutionId": "0x23e24dd939c982396ccddd832602ca4d62ca23b0ff72f0a5c952cadaa955c233",
+        "continuationDigest": "3hovqhTUgekHrtFEeP1ZNFA6rjrGX11F5PR8kNujrkA4",
+        "ticketRecordId": "0xf864d40cdcafba62a386af24e50c9177d508459ce54c502bda0cc89b16bf437a",
+        "capabilityId": "0x13d176781394048c80c6aab88ef45976a908a73612f258b5361fbde3848afd19",
+        "firstDeliveryStatus": "awaiting_verification",
+        "transportCalls": 20,
+        "commandDeliveries": 10,
+        "resultRecordId": "0x9ea01dc8b94eba98c582ce2f3b8b45d30a2b1cfe4c3e937840696542c9318626",
+        "resultCreationDigest": "4DXFKSaPPZnWM5uQrbBHnT6XTXjyghLCMEs1kziJDpPg",
+        "observationId": "0xfb2fd54b5967bbc33c9ea10313a4152a97fd2b87f77ce31f1703e80aa824d072",
+        "observedCurrent": "1",
+        "humanVerified": true,
+        "okrState": 3,
+        "budget": {
+          "spent": "6",
+          "reserved": "0"
+        },
+        "restoredStatus": "awaiting_verification",
+        "feeConfirmations": 2,
+        "humanDecisions": [
+          {
+            "krIndex": "0",
+            "requestId": "okr-human:0x933798bd1be9ab2e79c21322b515ff21a7cfe6ae189bc75752b32f7d6f4aee5b:1:3:verify:0",
+            "digest": "Fe3twEpfv3Ug944GaETkxhEVuH38tMJPB6QHTs1XUrvU",
+            "verificationRecordId": "0x70517c53481f065daeae90f1ab129562cc05c3b79f809183435f3e6153ab6712",
+            "runId": "0x23e24dd939c982396ccddd832602ca4d62ca23b0ff72f0a5c952cadaa955c233"
+          },
+          {
+            "krIndex": "1",
+            "requestId": "okr-human:0x933798bd1be9ab2e79c21322b515ff21a7cfe6ae189bc75752b32f7d6f4aee5b:1:5:verify:1",
+            "digest": "g8YeybWTvcXta4N9qn1dPF4R6XoqvkDLvBp7Sf5nmDC",
+            "verificationRecordId": "0xf636ef5a6f84ffe371e52d1c35013a834ba157dd9c16d534f24b6831a7c375bb",
+            "runId": "0x70785d4ada716e2bacc51fe0e7ef5a1196430291f9f31a8639480a2426b05f9c"
+          }
+        ],
+        "nextKr": "2",
+        "secondExecutionId": "0x70785d4ada716e2bacc51fe0e7ef5a1196430291f9f31a8639480a2426b05f9c",
+        "secondPreparationDigest": "zkRRU4M7XSa8FCDUuJQ2JVgAZ5UkWBtMmScJZUxgALh",
+        "secondResultRecordId": "0x76e32452edfa6ebbb148f3351efd91d3af052c14102405fec166110255825b82",
+        "humanAcceptanceVerified": true,
+        "acceptanceRecordId": "0xd5b175836761d2333f1aeb29793385263297b5a6ec600570ecb10fa83f1e461a",
+        "acceptanceDigest": "8pLrPfNnzLe1bTGqAPhcM5BaZ7LP7w2ZEb2t18JRPnmG",
+        "historicalVerificationRecordIds": [
+          "0x70517c53481f065daeae90f1ab129562cc05c3b79f809183435f3e6153ab6712",
+          "0xf636ef5a6f84ffe371e52d1c35013a834ba157dd9c16d534f24b6831a7c375bb"
+        ],
+        "krExecutionIds": [
+          "0x23e24dd939c982396ccddd832602ca4d62ca23b0ff72f0a5c952cadaa955c233",
+          "0x70785d4ada716e2bacc51fe0e7ef5a1196430291f9f31a8639480a2426b05f9c"
+        ],
+        "directPermissionProtocolVerified": true,
+        "directPermissionId": "0x1455ea0ee5c7fa89045dceffa1235d624690a56f5da691483691f9e006206176",
+        "directMessageIds": [
+          "0xdcd3322e804f5d2202b4c350754e7051dace5590cbf814d46aa1298165f6c02e",
+          "0x80b5dcf00d98331f375d08db864f2416474d32bdc60fc996e9aecf9b02a49e10"
+        ],
+        "directRunIds": [
+          "0xe40537f201ed4a4aa3cbb7c3646b0eb976daac3bd0ae0b1ef3a43ff69c060fb4",
+          "0x33a276fd1eb18afb8776b77000eb1602fac2c4065b7c8b5fb0ec4f2f55349a54"
+        ],
+        "directApprovalId": "0xff3ff2a05abc0e80ebfd62432d93763d6e866475a689eceae886058f2b04d748",
+        "directPermissionVersion": "2",
+        "directFinalBudget": {
+          "spent": "4",
+          "reserved": "0",
+          "approvedSpent": "3",
+          "approvedReserved": "0"
+        },
+        "originalDirectDelivery": {
+          "runId": "0xee09c1a25b5f68f07722215f5c1c549a5f16ff60459a6fbe590e83514c4c95ff",
+          "phase": "confirmed_original_result",
+          "resultId": "0x714fdbc474b40c0ea48500b2b7169a147f8da2cf095f00016535c6fb148e13bf",
+          "creationDigest": "9uLGTjcqVXPBVCoRMQvuytrzHgF4CXgckQBRpgxDiMJe"
+        },
+        "directRelayReply": {
+          "success": true
+        },
+        "directRuntimeRuns": [
+          "0x3c0b7a00db0b5450273b38ad5d0560081dde9b5a45ecc8b0ab351e848f02435b",
+          "0x6b7c04ef0b407ab128baec41bed86072fd8c1eb57c85bef05efa535ef7d65d65",
+          "0xad9b3a7e9f8521f4321add71e80b8161ec50cc05879f394781465a325f6307ba",
+          "0xee09c1a25b5f68f07722215f5c1c549a5f16ff60459a6fbe590e83514c4c95ff"
+        ],
+        "directMessageEnvdDispatchVerified": true,
+        "directAppOriginalRun": "0xb689141f5fffe60cd4dbfb4330ba431101850f06288c970dcd0532759cd29c20",
+        "directAppOriginalMessage": "0x89af79dab8b9748e49850e4a311034c1fb40a0d522ef9678294a291c501ee7e5",
+        "directAppDeliveryAttempted": true,
+        "directAppDelivered": 3,
+        "modelProtocolFixtureVerified": true,
+        "modelRequests": 7,
+        "modelPlanningRequests": 6,
+        "modelQuestionRequests": 1,
+        "modelOriginalMessageId": "0xbb9430db9a6a213127214c33cf9231c13442e98bc1cd4ab900e001b1b1627dac",
+        "modelOriginalRunId": "0x05ddb3d014ec74a9db6be16a628c95bde5b3327f6b36f7c74c2f1d7b7d5fc33d",
+        "modelOriginalResultRecordId": "0xb58d21318ea4b18d474aea73bc6e3dca460183f45c15e543a60f395f5d34ed84",
+        "sourceOkrId": "0x81be23cc3544fbf177480e934fedcda2161013026f3b6c2e1e82761eafaabbed",
+        "sourceDraftDigest": "48EA9JJmu3LfAis3gC4NmZc8ciPCogb6g85iU4WNDKqP",
+        "sourceMessageId": "0xbb9430db9a6a213127214c33cf9231c13442e98bc1cd4ab900e001b1b1627dac",
+        "sourceMessageRecordId": "0x0d1654efa63981e5bff52ac9921aae7b00f47308e52eb1256568ae46492059cb",
+        "sourceReplyRunId": "0x05ddb3d014ec74a9db6be16a628c95bde5b3327f6b36f7c74c2f1d7b7d5fc33d",
+        "sourceReplyRecordId": "0xb58d21318ea4b18d474aea73bc6e3dca460183f45c15e543a60f395f5d34ed84",
+        "messageOkrControllerVerified": true,
+        "sourceOkrState": "DRAFT",
+        "sourceOkrRevision": "2",
+        "sourceOkrExecutionCount": 0,
+        "sourceSpecEditDigest": "GqHnrB5ByTcd3jTz5AGCEenFAfkPAZcUAuJdgppgEvgb",
+        "sourceCreationRecoveryStatus": "confirmed",
+        "sourceCreatedWithoutDelivery": true,
+        "directAppControllerVerified": true,
+        "directAppFinalBudget": {
+          "permissionVersion": "4",
+          "revoked": true,
+          "maxCalls": "1",
+          "budgetLimit": "4",
+          "spent": "4",
+          "reserved": "0",
+          "approvedSpent": "6",
+          "approvedReserved": "0"
+        },
+        "workloadRecoveryPhase": "restored_history_and_live_host_read",
+        "recoveryHistoricalRecords": [
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-68480f84-51f4-438e-b892-44829f62448c",
+              "record_id": "0x0434a54fb3537a7ee5ddb08b7e88f992027f9c47f43e91ef54a6fdf53fdee012",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "b7d18a9ec5c7305e6ab3474b8a59e77d10bb9bcec5101495a32097ecfd93f44d"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-78401623-1fe4-4a70-b665-75a9ac0c83ba",
+              "record_id": "0x0d1654efa63981e5bff52ac9921aae7b00f47308e52eb1256568ae46492059cb",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "cc7adc7ba00f041f842e9afb7eeefdf03f47c5afa754b2a43d023771be4e2a6f"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-954ec098e5b87e7267e1b8165063a6812dae19c3709454a8bafa3a2db2612270",
+              "record_id": "0x0db18c61f939181d95ea8969d60b41fd228ff921d3a321c19bcd068b9138df42",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "a9f84b136277a0a3f6f66df1dcaebd1d8c008f1e62ac318d1fd962f6312cad56"
+          },
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-68480f84-51f4-438e-b892-44829f62448c",
+              "record_id": "0x10b05bdfe8a661c8b3a03414575de7f212c21c4b3ce9871dba911e3fb4cbe1f7",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "ff99d7250cd5a9d6a86687df73f6c330eade257b3e6111d819b0f5f514e2a6e2"
+          },
+          {
+            "pointer": {
+              "kind": 2,
+              "logicalId": "okr-703f8c03-0c55-40aa-b4c7-fc237124867c-agreement",
+              "record_id": "0x149570a0c137fe5fd62e2fa90788751a3396b1ab37e784b1959e59e1bc294244",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "885a6d7fca9f094f8aa342d792e354700768510de72f749030797492fb78cc9b"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-4ea3ea7f0645bf384f02c54f998d4d468b1a9826b469abfa2bb56e1b67aeb7bf",
+              "record_id": "0x1909b662e34c88da07d51c36ba7e447c2b598f3a02566585df7733a612aa97dd",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "dc78b9ff7c34a757bc7f633f7f54d9245c20fac794e9b80099e0c83c8c6e25ca"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-cb2a9f523c21fbe41543e2945e2b87cdbf29ff5ba0668eea84ba4996d8e09963",
+              "record_id": "0x1d0cca2644d4af929cff13e40fe07e96d02af651b82d76ec1031cabb7ea2d211",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "a7da6c632acdf4a618d520eea996b5a7f42f4402db9e678cbebb4bc5c572649f"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-0d0f88d7-74db-4a5a-994c-b2ed77301249",
+              "record_id": "0x28527699c6a09ada8aa3edb11824f1660740dade2524d47d21c968bc08b08a4d",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "91531b5dd1bcdacb0227438fe1e73e1583e795c41fe982411dc920977dfa133a"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-db96aad0-73e7-4160-b725-502d2b60f21c",
+              "record_id": "0x560dd5e8a88515220dee74623a621776c0e6811c434d6f3e6b4edcd7ff5d2740",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "994f006be2fbb93a2a6084ea1c8443e24801c20cfb13484173d749e9fa32833f"
+          },
+          {
+            "pointer": {
+              "kind": 2,
+              "logicalId": "standing-0x24f723497c3cc8d6afc4d185dc40dc7903c4bec15312648995f6e7c0f8f23e00-permission",
+              "record_id": "0x5ea9c19ce570b563b07b75ed5a99e606ef66e837aaf0133920b5b9d29c60e2eb",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "26be8e0da24a746c8123d81310b18988b335e173fc053fd1820f63e29d8df302"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "handover-review-2be213c7-64bb-40d2-aee9-a79843a5961b",
+              "record_id": "0x660c3109f515c4f455f99d96673db2c5aae5132cd14a02dab59339d8b80db846",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "061c8e989b2b500715bb5ab1979f17ba3641c0aee683ee7baf36e6d7b56a1935"
+          },
+          {
+            "pointer": {
+              "kind": 1,
+              "logicalId": "okr-703f8c03-0c55-40aa-b4c7-fc237124867c-spec",
+              "record_id": "0x6d91379285f606d03d083c4f87c02cd70ac287d977d02efdcf7b1e4635a43399",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "71910f6561a0784d96eab8698f037cd9d70899597b99c138a2a9e93b779c3bc9"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-878c2340-99ea-49c5-958c-184ad12bf12d",
+              "record_id": "0x6f59cd3cd308c56520c23291878557904778f173d366b50144dbc8afe91627f3",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "c8c076ec809ca47edd5944f56f845a981d38eb1ff6c874939743e7511a4510f0"
+          },
+          {
+            "pointer": {
+              "kind": 4,
+              "logicalId": "okr-703f8c03-0c55-40aa-b4c7-fc237124867c-verification",
+              "record_id": "0x70517c53481f065daeae90f1ab129562cc05c3b79f809183435f3e6153ab6712",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "b86201835486d02553c5bc159f0318381bbaae1b115af92a2fe0747c0f5d9e57"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-d28a66c9fc62c124745db4b31763909893ec5a9a7d126d2c631fb49db7c6f0ec",
+              "record_id": "0x714fdbc474b40c0ea48500b2b7169a147f8da2cf095f00016535c6fb148e13bf",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "84a80070fb460d0c0b6aa7539f7607f2fb54987c4be766eee75f7be62e288d5d"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-40a1a741-2f8f-4bb9-ae14-e80e1768f680",
+              "record_id": "0x7464d2481e75a3ddf6473beaa2c8328b26cd859e689da852e476cbb9e5f60dab",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "93356d219877b344b0dbd12d232631d37420d929e65059b1b88883428db53d31"
+          },
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-d7ccfb3c-7898-4bb9-a1aa-a281ca73241f",
+              "record_id": "0x7579d0896b574428005b1da6e2e3cc3be80623ce983761ccbbda5987d7c7ae0f",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "29309decfa40219371240fe202ea5fa7d411edce1e392199f04f635b33c6115d"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-2b57352bc37aa57b3ef0c39c1935e56b0a7b44143ec56034eb181e6ba797b6cd",
+              "record_id": "0x76e32452edfa6ebbb148f3351efd91d3af052c14102405fec166110255825b82",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "abca10b432c0882d68715625c4495cff3778178e3622356f19218148ed4d04a0"
+          },
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-7b24e7c7-cda5-4f6b-b836-ef1101a57056",
+              "record_id": "0x7d15c2f5444b02c18278f6be4bed72dc8c3b340f679a4aebf222b68ba0c5bbcc",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "9f611d0d90351c5e00bc612a916293b2e713184968d33021dcf4a9e2ff6bc4bc"
+          },
+          {
+            "pointer": {
+              "kind": 1,
+              "logicalId": "okr-ff75d9a4-5bb3-4042-ac96-ec0f0b1c2e83-spec",
+              "record_id": "0x98b3373cf5633d9ad5dd2a6a83b12ecde343142d6a0053ec46c97e5e50dc6ea8",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "2fc208b0bf9d78ddccdb9baa7df66206cbb20c6f463324a8acab32c581989800"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "runner-933798bd1be9ab2e79c21322b515ff21a7cfe6ae189bc75752b32f7d6f4aee5b-1-1",
+              "record_id": "0x9af80ab60f84ed38b7ab103050975848fa2af87c613368e7edd7ce6ec8d70108",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "23ed6cf86df05c40eadcac4bf3f0ebbbcce8a632036ae78505ef229e89556a7a"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-ebe4999ace67352ddbdb11e4a2244bf6288d00c188cb873246e556ceeedc214c",
+              "record_id": "0x9ea01dc8b94eba98c582ce2f3b8b45d30a2b1cfe4c3e937840696542c9318626",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "e33d90e10ab242789bf4d74ca804427664930be333199b33e74984a0861110e7"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-d7ccfb3c-7898-4bb9-a1aa-a281ca73241f",
+              "record_id": "0xa72e142778e8d5836f7246c1931fb16165c06d0c2796f6f6aa456d24b005418b",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "203b366d8fb5479f65fe709d4d68a0a9089d7d28ae0934a0fccd651a01100d9d"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-5acfc97d2a453f6dc2f811ac3a04c4cac0dd7e081c787d1368855e8398d6c0c9",
+              "record_id": "0xb58d21318ea4b18d474aea73bc6e3dca460183f45c15e543a60f395f5d34ed84",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "678a5ffcad88f019c2fdd75ca1fcd082aee94f9da6eac53a90a4a1f18b717bce"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-7b83238b1d274b1ec0abc6b5e1d706487073d91424a2d1edb24da6120068c165",
+              "record_id": "0xb640c728281fc334d1af5fca22a825705248e28a205ea2c3173eb8cb74baa0c1",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "eea230899ae566429f965e68af5251e3126c89d49d828495330fd0a89f14b1c7"
+          },
+          {
+            "pointer": {
+              "kind": 2,
+              "logicalId": "standing-0x24f723497c3cc8d6afc4d185dc40dc7903c4bec15312648995f6e7c0f8f23e00-permission",
+              "record_id": "0xb7750a2bad917cc1310e080bca25edbc6367d8f16b83388f226328d3d3cf22fb",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "6639d0a9e6401d25634f3e553e7a0d02c09375d50359c258b4d097c77bbf117c"
+          },
+          {
+            "pointer": {
+              "kind": 1,
+              "logicalId": "okr-ff75d9a4-5bb3-4042-ac96-ec0f0b1c2e83-spec",
+              "record_id": "0xbb8beaf4e18aef999d2ad5f37a85d4d6af1bfcd504b68e88a520ff1e23f7f417",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "8487e1c767315093db133d857a48bbe2102790fea11b544a45f6ec3a20fc7726"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-50e2ae10c6cd34a5658f22cfcf0602fb039f864387dd89fcf46ee124bd9295ae",
+              "record_id": "0xce844b76999645c42dca65df67a73070aeea39104a5415bec58fb677d3dc1fa7",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "862ab43f1cfea465704b2af4a8feb576404ea6587e87aee0f2a18ade769e351a"
+          },
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-d7ccfb3c-7898-4bb9-a1aa-a281ca73241f",
+              "record_id": "0xd1f5bb766123b78861476d2686d6f5a1044f6cc4287ca4586ac16b571c245517",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "9605c56171689a8c95746845d525c6e97cba48bb4412dbeb11946419646891a3"
+          },
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-7b24e7c7-cda5-4f6b-b836-ef1101a57056",
+              "record_id": "0xd29302b1347f51762238b7aac53997ee17197d58bc144b05686705269fadb7e0",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "692f3de16e3ee9896ad7156ca0e3c8a4aa503ca925e8f0ac907719f13dae466d"
+          },
+          {
+            "pointer": {
+              "kind": 4,
+              "logicalId": "okr-703f8c03-0c55-40aa-b4c7-fc237124867c-acceptance",
+              "record_id": "0xd5b175836761d2333f1aeb29793385263297b5a6ec600570ecb10fa83f1e461a",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "83d7f358f4af76a2af6862614e84a77b078785e56e64d67c17b72170f65e2680"
+          },
+          {
+            "pointer": {
+              "kind": 2,
+              "logicalId": "standing-0x24f723497c3cc8d6afc4d185dc40dc7903c4bec15312648995f6e7c0f8f23e00-permission",
+              "record_id": "0xd63f6afa6ad1a9cb312c18a527599470a15e37de0fde6acb3a570c370f8b2f96",
+              "revision": "3",
+              "key_version": "1"
+            },
+            "sha256": "860642bf6deaadc9949469095273b2b6eef726eb8c78e52225699030054ab51d"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-68480f84-51f4-438e-b892-44829f62448c",
+              "record_id": "0xe57c7faede032e4ea970c850f355320202980920daaeac5cea75342f8e40273d",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "ef4eac8a1822645972fe9d5c047d4cb94b326793bb7c17086f33c97f9f50d798"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-1e72c969-da22-4064-8962-cde73fa29eb4",
+              "record_id": "0xe8ef5fdf6e8ef1a82fd525c498b39de4c41bd18efb5d164ba303c0d2a7bc89da",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "fbc3244f00ee94be7e60d4ed7d89e6237074418b9516abb5718a3092fc6002fe"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-d382b7cf070b49c8dfacc26cb3858b1f968cbb81ce2062ddd0338363a0a3c09c",
+              "record_id": "0xeaaf64f94bcb015da720ba6ce03a1ad5d5a32a0eaa8405d030f65ffbf6cb870e",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "9434536cc0ebe7f4fafe98270df527262f93eadc0c48a541030027d0a3131dc1"
+          },
+          {
+            "pointer": {
+              "kind": 4,
+              "logicalId": "okr-703f8c03-0c55-40aa-b4c7-fc237124867c-verification",
+              "record_id": "0xf636ef5a6f84ffe371e52d1c35013a834ba157dd9c16d534f24b6831a7c375bb",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "2ba598d8d832a7e3c3b3d252cd4af025eba0ff96f79140752f7a8d65b199be00"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-7b24e7c7-cda5-4f6b-b836-ef1101a57056",
+              "record_id": "0xf6b9193855b931b6442e17f95b19ba9cd92d5df13e9b7329d60a8252094273e5",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "dbccb042d5b2556dd94a917edb2ddd3fc1e9c4b2a0acbd44b9822ac97bc7ba0c"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "runner-933798bd1be9ab2e79c21322b515ff21a7cfe6ae189bc75752b32f7d6f4aee5b-1-0",
+              "record_id": "0xf864d40cdcafba62a386af24e50c9177d508459ce54c502bda0cc89b16bf437a",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "14a30a12c61c2c696369fda326aca43635b7e3ef823a4235fa934821993cd3b3"
+          }
+        ],
+        "recoveryOriginalGeneration": "1",
+        "recoveryRound": 1,
+        "recoveryTargetProfile": "test-1658a713-5b77-42f6-aded-7dfed3a2153a-recover-a",
+        "recoveryQuotedDigest": "FNczRGfRCr3EvHJ2VfV56QZDLpzvBTF9r1knYnZrmrX4",
+        "recoveryObservedHosts": [
+          {
+            "address": "0xfc5c4a20c8bdca66cfbb1fe724d110da305d3f5a24cab4123e8a2243d0fff620",
+            "state": "verified",
+            "membershipId": "0x32e56c2c5338e2d2b122c7de68f2eb3001286f68f38b1b7f45541ddb2ee45d85",
+            "expiresAtMs": 1791004180785
+          }
+        ],
+        "recoveryHistoricalHashesVerified": 38,
+        "recoveryOriginalMessagesVerified": 9,
+        "error": "Required 200000000 MIST; available 0 MIST."
+      },
+      "originalLimits": {
+        "actualOSVault": true,
+        "installedUIVerified": false,
+        "envdDispatchVerified": false,
+        "hostKeyStorage": "isolated memory provider",
+        "realCoordinatorDeviceHTTP": true,
+        "humanFinalAcceptanceVerified": true,
+        "directPermissionProtocolVerified": true,
+        "directMessageEnvdDispatchVerified": true,
+        "directMessageUIVerified": false,
+        "messageOkrControllerVerified": true,
+        "workloadRecoveryControllerVerified": false,
+        "installedCacheWipeVerified": false,
+        "actualDeviceRestartVerified": false,
+        "installedMessageOkrUIVerified": false,
+        "directAppControllerVerified": true,
+        "interventionControllerVerified": false,
+        "autonomyControllerVerified": false,
+        "installedAutonomyUIVerified": false,
+        "projectionControllerVerified": false,
+        "installedProjectionUIVerified": false,
+        "automaticHostProjectionDelivery": false,
+        "chainCommandQueueVerified": false,
+        "scheduledPreauthorizationVerified": false,
+        "installedScheduledUIVerified": false,
+        "runningStopConfirmed": false,
+        "modelProviderKind": "synthetic loopback Messages API fixture; not an actual language model",
+        "actualModelProviderVerified": false,
+        "modelProtocolFixtureVerified": true,
+        "installedHumanReviewVerified": false,
+        "reviewDecisions": "explicit scripted test approvals, not installed Human UI",
+        "physicalHostVerified": false,
+        "humanHandoverVerified": false,
+        "nativeWindowSourceVerified": false,
+        "testTransport": "isolated subprocess",
+        "technicalJournal": "memory",
+        "cleanupConfirmed": true,
+        "privateKeysInReport": false,
+        "recoveryCodeInReport": false
+      },
+      "confirmedTransactions": [
+        {
+          "label": "native self-paid Human creation",
+          "requestId": "identity:test-1658a713-5b77-42f6-aded-7dfed3a2153a",
+          "digest": "3vezNC3yHKANG46S6Ld3G1vm9ywPqmbjjNyyHQbxLLQ4",
+          "status": "confirmed",
+          "actualGas": "18772548"
+        },
+        {
+          "label": "native self-paid organization creation",
+          "requestId": "org:test-1658a713-5b77-42f6-aded-7dfed3a2153a:0xe6d6a9dbcc2f8d19b839bacfa13ee9c885e7006077d1b4f1de61c68b3c2c1498",
+          "digest": "EyU3QqvNw5kC3uzy8SiTxYFmgmKoSNjaJ3tfzy5pNRMG",
+          "status": "confirmed",
+          "actualGas": "15141616"
+        },
+        {
+          "label": "native registration of actual loopback Coordinator",
+          "requestId": "host:81e8d99f-cbea-4c51-8a96-07b76039cef3",
+          "digest": "2ZWBFBQKCTCB2eWi4PDw7XLbe8ZBYVdvqh4pbG2pMkhd",
+          "status": "confirmed",
+          "actualGas": "6823340"
+        },
+        {
+          "label": "native single-use Host invitation",
+          "requestId": "host:8f5470e1-9e49-4661-8ed7-89de62ff1b68",
+          "digest": "ETj2ysWMpmLrAhTuo6mjQq5SHBpRmfxaa55C8NSf8x37",
+          "status": "confirmed",
+          "actualGas": "4961036"
+        },
+        {
+          "label": "native import of actual bounded Agent",
+          "requestId": "agent-import:fa047e99-b473-48b9-999a-49bade207899",
+          "digest": "Fv8thLBF1bKUjmeyAwV3aY1fvDDNa4qEjifKK2gE8G5W",
+          "status": "confirmed",
+          "actualGas": "11879100"
+        },
+        {
+          "label": "native encrypted actual Host OKR draft",
+          "requestId": "okr-draft:0x7d0d1179c00cdb9d4e33c6bef103ea49fb8cc019c2b592ab47bb99c7a706e5db:703f8c03-0c55-40aa-b4c7-fc237124867c",
+          "digest": "9hJpqNPsig9kA8JFoaHcTBXHHoX8bQ52xzBEbAQJs1T7",
+          "status": "confirmed",
+          "actualGas": "28828540"
+        },
+        {
+          "label": "native one-use observation capability",
+          "requestId": "handover-observe-2be213c7-64bb-40d2-aee9-a79843a5961b",
+          "digest": "DJNjNrHaFxwZ2tenBeSgSfmhYg5Pe6xrA2GF5RqkiTuR",
+          "status": "confirmed",
+          "actualGas": "10173480"
+        },
+        {
+          "label": "native exact review ticket and Run",
+          "requestId": "handover-review-2be213c7-64bb-40d2-aee9-a79843a5961b",
+          "digest": "AMNRb45xaE4jHrVsWSCEMGbVqDPHSYLBfs18rYmke4BW",
+          "status": "confirmed",
+          "actualGas": "59944328"
+        },
+        {
+          "label": "native approval of actual Host acceptance",
+          "requestId": "handover-approve:0xe1b788b80d1bf290278920e3e233349ed29576209b67797cecaa5c2d6dd17865",
+          "digest": "CfdWWjupjY3MgZYh3556oJBUjWBoFTKfspRcRopw7CpX",
+          "status": "confirmed",
+          "actualGas": "49450304"
+        },
+        {
+          "label": "formal native single-use KR control fee",
+          "requestId": "okr-control:0x933798bd1be9ab2e79c21322b515ff21a7cfe6ae189bc75752b32f7d6f4aee5b:1:0",
+          "digest": "Edg6QZwQHHhxC4ZnBES7F2hzbZjCdinhRhPb4Wy57ZdD",
+          "status": "confirmed",
+          "actualGas": "15662680"
+        },
+        {
+          "label": "formal native atomic continuation ticket and queued Run",
+          "requestId": "runner-933798bd1be9ab2e79c21322b515ff21a7cfe6ae189bc75752b32f7d6f4aee5b-1-0",
+          "digest": "3hovqhTUgekHrtFEeP1ZNFA6rjrGX11F5PR8kNujrkA4",
+          "status": "confirmed",
+          "actualGas": "64386720"
+        },
+        {
+          "label": "native independent KR 1 verification",
+          "requestId": "okr-human:0x933798bd1be9ab2e79c21322b515ff21a7cfe6ae189bc75752b32f7d6f4aee5b:1:3:verify:0",
+          "digest": "Fe3twEpfv3Ug944GaETkxhEVuH38tMJPB6QHTs1XUrvU",
+          "status": "confirmed",
+          "actualGas": "15636004"
+        },
+        {
+          "label": "native second KR explicit control fee",
+          "requestId": "okr-control:0x933798bd1be9ab2e79c21322b515ff21a7cfe6ae189bc75752b32f7d6f4aee5b:1:1",
+          "digest": "4Zg1jafS7vJAnMe4rz43e9D1ZBdzWtMDwdop1FX5does",
+          "status": "confirmed",
+          "actualGas": "15662680"
+        },
+        {
+          "label": "native second KR exact ticket and Run",
+          "requestId": "runner-933798bd1be9ab2e79c21322b515ff21a7cfe6ae189bc75752b32f7d6f4aee5b-1-1",
+          "digest": "zkRRU4M7XSa8FCDUuJQ2JVgAZ5UkWBtMmScJZUxgALh",
+          "status": "confirmed",
+          "actualGas": "64318624"
+        },
+        {
+          "label": "native independent KR 2 verification",
+          "requestId": "okr-human:0x933798bd1be9ab2e79c21322b515ff21a7cfe6ae189bc75752b32f7d6f4aee5b:1:5:verify:1",
+          "digest": "g8YeybWTvcXta4N9qn1dPF4R6XoqvkDLvBp7Sf5nmDC",
+          "status": "confirmed",
+          "actualGas": "12851136"
+        },
+        {
+          "label": "native separate final Human acceptance",
+          "requestId": "okr-human:0x933798bd1be9ab2e79c21322b515ff21a7cfe6ae189bc75752b32f7d6f4aee5b:1:6:accept:2",
+          "digest": "8pLrPfNnzLe1bTGqAPhcM5BaZ7LP7w2ZEb2t18JRPnmG",
+          "status": "confirmed",
+          "actualGas": "12159156"
+        },
+        {
+          "label": "native standing permission creation",
+          "requestId": "direct-test:52d9ef59-6d6c-4144-ae83-f562662b77cc",
+          "digest": "8qWXnCBNtC3XEuNdUFJ1hJv67QUayp3u2FTPxUSevwLf",
+          "status": "confirmed",
+          "actualGas": "21999712"
+        },
+        {
+          "label": "native standing direct capability",
+          "requestId": "direct-test:a5707d04-ced3-4b17-b97f-d10e1e0f95c9",
+          "digest": "7Dee9GAAJkmViUVwz4Hes8zqzpRwkRYBRDtGxE8PkdYx",
+          "status": "confirmed",
+          "actualGas": "18923080"
+        },
+        {
+          "label": "native encrypted direct message 3",
+          "requestId": "direct-test:a2b6a675-dc89-473f-b2ee-9f42f14a44c4",
+          "digest": "7B4fYgmQ3CqUKBTpf3xoSUX2hoGftHFEzqggiZZTkVSN",
+          "status": "confirmed",
+          "actualGas": "17135332"
+        },
+        {
+          "label": "native original direct Run preparation",
+          "requestId": "direct-test:9d58d361-316f-4a94-9ef1-2c2307ff0012",
+          "digest": "CEDg23dyK8xUgpPSCZiioiCfEj4aoSfJJetNqpVzpfRG",
+          "status": "confirmed",
+          "actualGas": "42894164"
+        },
+        {
+          "label": "native queued direct cancellation",
+          "requestId": "direct-test:20013298-bce4-47cc-9702-b0caceb63677",
+          "digest": "CZe46FH58zjcLqzSh9ekXwLBFhxMXQmmoDEJGwjKr19t",
+          "status": "confirmed",
+          "actualGas": "1358188"
+        },
+        {
+          "label": "native encrypted direct message 5",
+          "requestId": "direct-test:73f51c36-3993-421c-ad18-3e8d28943e29",
+          "digest": "HiGjRgUFJHoZ7KHXEXRhkh7AGMieDpAXeuoNabwSXJxM",
+          "status": "confirmed",
+          "actualGas": "17135332"
+        },
+        {
+          "label": "native exact one-off approval request",
+          "requestId": "direct-test:e83957f4-3e03-49dd-b9e9-3d146d20b23b",
+          "digest": "8ZLUMgxxdhpSW5GRyPzYGPrEpGSYZViGryCtwen9BXdk",
+          "status": "confirmed",
+          "actualGas": "14315732"
+        },
+        {
+          "label": "native explicit one-off approval",
+          "requestId": "direct-test:25c6f9a2-ae5f-47d1-8455-d0f7b308c873",
+          "digest": "CMptT6uVBmZzrW4qnGZYLhgaYTKFTk9VRYHc3dmxWbdX",
+          "status": "confirmed",
+          "actualGas": "6185860"
+        },
+        {
+          "label": "native one-off direct capability",
+          "requestId": "direct-test:12f943ce-634d-46e3-8ccf-2bf6ba7dc4bc",
+          "digest": "48iN2ECwpS2wZo58XwDsFNcnJKMU5zV5VXP8CdE8ex3K",
+          "status": "confirmed",
+          "actualGas": "19166280"
+        },
+        {
+          "label": "native one-off approval consumption",
+          "requestId": "direct-test:58e20e4c-5d10-4560-9bb2-a5d3ca5fce21",
+          "digest": "Ekw7mZCP7rFBTFr7ixrjk6sctaHxJRiDzXfY8oY9TWEZ",
+          "status": "confirmed",
+          "actualGas": "43418792"
+        },
+        {
+          "label": "native standing permission version change",
+          "requestId": "direct-test:649fbea9-d67e-43c6-a973-c3e98168b099",
+          "digest": "A9DGLMbwNvbE2QUe6Xc8YuGSNAd3pBGqB1o9ViSouaBr",
+          "status": "confirmed",
+          "actualGas": "7277068"
+        },
+        {
+          "label": "native historical direct cancellation after policy change",
+          "requestId": "direct-test:a5c34337-a84f-4370-aa9b-68737a8cb04c",
+          "digest": "GVxe6M2Tg1FTkdNWwUD6Qgc6oN9dP2nde2MmpvNTgshk",
+          "status": "confirmed",
+          "actualGas": "1360620"
+        },
+        {
+          "label": "native runtime direct capability v2",
+          "requestId": "direct-test:266d8c27-67b1-4b36-9a4c-9b2d18f1d865",
+          "digest": "8eYLFy3aF8pYSuxSnkrf5S5fPnHWNj89LNhpEE5vGPt1",
+          "status": "confirmed",
+          "actualGas": "18923080"
+        },
+        {
+          "label": "native encrypted direct message 3",
+          "requestId": "direct-test:133a0ce2-831b-4f15-8a90-262904d7010b",
+          "digest": "CPXPtcon98Thtzgqv2KnT7WTY9UBgYctGK34AhGA2cc2",
+          "status": "confirmed",
+          "actualGas": "17294932"
+        },
+        {
+          "label": "native direct Run and OS-wrapped result key",
+          "requestId": "direct-test:4c3a24f7-db94-4a44-8cc5-c896ca72135f",
+          "digest": "FS1WUDnMDv7Ti14zetMCiMAWBk14fKzUfoxXXHsjHeE3",
+          "status": "confirmed",
+          "actualGas": "48282164"
+        },
+        {
+          "label": "native encrypted direct message 1",
+          "requestId": "direct-test:d2ef1d31-fd2d-428f-adb2-57767d498b44",
+          "digest": "BpuibFgjkECmFXoKkESsLzHyWFWVFspB9w2H5sUh96WE",
+          "status": "confirmed",
+          "actualGas": "16816132"
+        },
+        {
+          "label": "native direct Run and OS-wrapped result key",
+          "requestId": "direct-test:fbec8499-b698-4de0-bc79-2d304cc2260f",
+          "digest": "HrnbtoJyP6HRjd6DMfXbkpYLwCqJcmByMfnAFPx1xuKW",
+          "status": "confirmed",
+          "actualGas": "43220988"
+        },
+        {
+          "label": "native encrypted direct message 0",
+          "requestId": "direct-test:30584f7c-3ace-4b67-a0b4-b534717ed848",
+          "digest": "Enk8rg74fJouKyiywXDTSh6nUJbhhsS7UZPuvfzEUsAT",
+          "status": "confirmed",
+          "actualGas": "16147332"
+        },
+        {
+          "label": "native direct Run and OS-wrapped result key",
+          "requestId": "direct-test:9af3d6dc-0541-43f8-82d7-86c1c6815869",
+          "digest": "Hms6TN9J9sswFcC3QoCfu6yF9h5doRGr5SAcifZhiW1V",
+          "status": "confirmed",
+          "actualGas": "43044136"
+        },
+        {
+          "label": "native encrypted direct message 5",
+          "requestId": "direct-test:090b07c9-d994-4f5e-a7ed-21ac10b102a5",
+          "digest": "5NDQUdYk4M63Cfpg46P9HdAG1Bhpe4qAKeWfgLSs1iDz",
+          "status": "confirmed",
+          "actualGas": "17355732"
+        },
+        {
+          "label": "native runtime exception request",
+          "requestId": "direct-test:71e4c63d-731f-425d-8839-e71cf7fe1d7f",
+          "digest": "3z9dUmvRa3edXhd74jMaS3bHgspuJ5xsYZtAZLWNkJu1",
+          "status": "confirmed",
+          "actualGas": "14315732"
+        },
+        {
+          "label": "native runtime explicit exception",
+          "requestId": "direct-test:8fe91b4e-f653-44d8-bc74-d41f9a1551aa",
+          "digest": "JEEEHzcfRCkmDgQsZkM2bwn7qV3L4ZMh2nhictLh8uDv",
+          "status": "confirmed",
+          "actualGas": "5980660"
+        },
+        {
+          "label": "native runtime one-off capability",
+          "requestId": "direct-test:dcddcf85-f726-4a67-88a4-3a5e50100334",
+          "digest": "8ULpfqZjsXKD7eYKgfGwtDpfABBTyzxdYWexLn7AHVcD",
+          "status": "confirmed",
+          "actualGas": "19166280"
+        },
+        {
+          "label": "native direct Run and OS-wrapped result key",
+          "requestId": "direct-test:00db816d-b2fb-472f-b81c-d65305d335e0",
+          "digest": "D5kfAera87ZzW7qTpu6NyH7WUh3BNyuhStxnr6ehvwhx",
+          "status": "confirmed",
+          "actualGas": "48836792"
+        },
+        {
+          "label": "formal direct App permission edit",
+          "requestId": "direct-permission:0x24f723497c3cc8d6afc4d185dc40dc7903c4bec15312648995f6e7c0f8f23e00:2",
+          "digest": "4xcXxT2VnZtCbQXuATWoLZNLm3YViffiZYPkVc19DLN8",
+          "status": "confirmed",
+          "actualGas": "7261868"
+        },
+        {
+          "label": "formal direct App encrypted message",
+          "requestId": "direct-message:1e72c969-da22-4064-8962-cde73fa29eb4",
+          "digest": "EaAp3jY4PNiiw5Cjtg7gkgnAxa5rStgQnQXHfqRH2adM",
+          "status": "confirmed",
+          "actualGas": "16466836"
+        },
+        {
+          "label": "formal direct App capability",
+          "requestId": "direct-capability:0xf258868c1be1b75d5d748611ef4bb94852108f949d594812986c1a2d3f8c862e",
+          "digest": "HnKPLiqfTxwYZmhqJBVnxvMzmHdry3anTkub2qccGuY4",
+          "status": "confirmed",
+          "actualGas": "18923080"
+        },
+        {
+          "label": "formal direct App original Run and OS result wrap",
+          "requestId": "direct-run:0xf258868c1be1b75d5d748611ef4bb94852108f949d594812986c1a2d3f8c862e",
+          "digest": "FPAqH7ZUcGSe1V6bDc8dEif9N7eQASRCgbwHpx5cWaFZ",
+          "status": "confirmed",
+          "actualGas": "48130468"
+        },
+        {
+          "label": "formal direct App encrypted message",
+          "requestId": "direct-message:78401623-1fe4-4a70-b665-75a9ac0c83ba",
+          "digest": "2joxkpL5cYgMzDS7B6g8z2yjXqFE596a2D56xVZ7kuXC",
+          "status": "confirmed",
+          "actualGas": "16421236"
+        },
+        {
+          "label": "formal direct App capability",
+          "requestId": "direct-capability:0xbb9430db9a6a213127214c33cf9231c13442e98bc1cd4ab900e001b1b1627dac",
+          "digest": "HC7QhqvKuR2nBVLwJtoFHS4UzeUdXhJvyFnsgZfBsumJ",
+          "status": "confirmed",
+          "actualGas": "18923080"
+        },
+        {
+          "label": "formal direct App original Run and OS result wrap",
+          "requestId": "direct-run:0xbb9430db9a6a213127214c33cf9231c13442e98bc1cd4ab900e001b1b1627dac",
+          "digest": "GsXH7q3ckdF6TKtJqRNtrE9YTyktivqvaExXvwMmz34M",
+          "status": "confirmed",
+          "actualGas": "48130468"
+        },
+        {
+          "label": "native message-derived encrypted OKR draft",
+          "requestId": "okr-draft:0x7d0d1179c00cdb9d4e33c6bef103ea49fb8cc019c2b592ab47bb99c7a706e5db:ff75d9a4-5bb3-4042-ac96-ec0f0b1c2e83",
+          "digest": "48EA9JJmu3LfAis3gC4NmZc8ciPCogb6g85iU4WNDKqP",
+          "status": "confirmed",
+          "actualGas": "29636876"
+        },
+        {
+          "label": "native source-preserving OKR specification revision",
+          "requestId": "okr-intervene:0x81be23cc3544fbf177480e934fedcda2161013026f3b6c2e1e82761eafaabbed:1:replace",
+          "digest": "GqHnrB5ByTcd3jTz5AGCEenFAfkPAZcUAuJdgppgEvgb",
+          "status": "confirmed",
+          "actualGas": "20747612"
+        },
+        {
+          "label": "formal direct App encrypted message",
+          "requestId": "direct-message:d7ccfb3c-7898-4bb9-a1aa-a281ca73241f",
+          "digest": "4eLdQ2SCUNgr5YBAVweaz4HVdSvyRBHhuizQdXcJ1nPx",
+          "status": "confirmed",
+          "actualGas": "17667636"
+        },
+        {
+          "label": "formal direct App one-off request",
+          "requestId": "direct-approval:0x89af79dab8b9748e49850e4a311034c1fb40a0d522ef9678294a291c501ee7e5",
+          "digest": "28UBA8GsNbpumpJ23LQZzEnQ4XA1eiL2m6sgp54gZwWD",
+          "status": "confirmed",
+          "actualGas": "17150836"
+        },
+        {
+          "label": "formal direct App explicit decision",
+          "requestId": "direct-decision:0x89af79dab8b9748e49850e4a311034c1fb40a0d522ef9678294a291c501ee7e5:true",
+          "digest": "D46aWikNvhLUe7N9dNMQJ5mX1yR72xpjEJLdZCor3nNw",
+          "status": "confirmed",
+          "actualGas": "8777460"
+        },
+        {
+          "label": "formal direct App capability",
+          "requestId": "direct-capability:0x89af79dab8b9748e49850e4a311034c1fb40a0d522ef9678294a291c501ee7e5",
+          "digest": "EkZmknHeVPTUGa79xo3PvcMJND6tyPeUmekxM2J6jJCJ",
+          "status": "confirmed",
+          "actualGas": "19166280"
+        },
+        {
+          "label": "formal direct App original Run and OS result wrap",
+          "requestId": "direct-run:0x89af79dab8b9748e49850e4a311034c1fb40a0d522ef9678294a291c501ee7e5",
+          "digest": "BXEzo21hK3mUWSHNQtRbTptcB7Z5A8XoFccMCMHDp1dC",
+          "status": "confirmed",
+          "actualGas": "48837096"
+        },
+        {
+          "label": "formal direct App permission revocation",
+          "requestId": "direct-revoke:0x24f723497c3cc8d6afc4d185dc40dc7903c4bec15312648995f6e7c0f8f23e00:3",
+          "digest": "2UpKivmLfZXdtfDc1zS41qSj8uRph7iVhkzXQedod4Bn",
+          "status": "confirmed",
+          "actualGas": "1070604"
+        },
+        {
+          "label": "native workload recovery 1",
+          "requestId": "recover:test-1658a713-5b77-42f6-aded-7dfed3a2153a-recover-a",
+          "digest": "FNczRGfRCr3EvHJ2VfV56QZDLpzvBTF9r1knYnZrmrX4",
+          "status": "confirmed",
+          "actualGas": "18800952"
+        }
+      ],
+      "recoveryAndPostRecoveryTransactions": [
+        {
+          "label": "native workload recovery 1",
+          "requestId": "recover:test-1658a713-5b77-42f6-aded-7dfed3a2153a-recover-a",
+          "digest": "FNczRGfRCr3EvHJ2VfV56QZDLpzvBTF9r1knYnZrmrX4",
+          "status": "confirmed",
+          "actualGas": "18800952",
+          "createdObjects": [
+            {
+              "id": "0x3937e080e6c42d167da9a3ebc457f0cff9d5ee8fcd183e3ec92610a40d000da8",
+              "type": "0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::RecoveryRecord",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0x7fd7d7bdb26455f624752765968ddd685811632a81ebb688c6520a3ec9e68092",
+              "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::RecoveryLocation>",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0xa584ac8b076c65dcb783dad7b27c2e178e0ea6bdd825bb252213331ab45d3ad9",
+              "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,vector<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>>",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0xff3b80a6da5b8fdc1fc833eec4c296c9647d03861f6191e3a9b1c76ad2099bbc",
+              "type": "0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::DeviceGrant",
+              "outputState": "ObjectWrite"
+            }
+          ]
+        }
+      ],
+      "readOnlyFollowup": {
+        "recordedAt": "2026-10-03T05:10:54.205Z",
+        "originalReport": "/tmp/fm-native-workload-recovery-protocol-r2.json.progress.json",
+        "originalReportSha256": "4de46587abb7a7212308ba71311e55d63b4f7940130ab716befc37220bfa1727",
+        "originalExecutionTerminal": true,
+        "originalExitCode": 1,
+        "originalFailure": "Required 200000000 MIST; available 0 MIST.",
+        "originalConfirmedRecovery": {
+          "label": "native workload recovery 1",
+          "requestId": "recover:test-1658a713-5b77-42f6-aded-7dfed3a2153a-recover-a",
+          "digest": "FNczRGfRCr3EvHJ2VfV56QZDLpzvBTF9r1knYnZrmrX4",
+          "status": "confirmed",
+          "actualGas": "18800952",
+          "createdObjects": [
+            {
+              "id": "0x3937e080e6c42d167da9a3ebc457f0cff9d5ee8fcd183e3ec92610a40d000da8",
+              "type": "0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::RecoveryRecord",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0x7fd7d7bdb26455f624752765968ddd685811632a81ebb688c6520a3ec9e68092",
+              "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::RecoveryLocation>",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0xa584ac8b076c65dcb783dad7b27c2e178e0ea6bdd825bb252213331ab45d3ad9",
+              "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,vector<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>>",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0xff3b80a6da5b8fdc1fc833eec4c296c9647d03861f6191e3a9b1c76ad2099bbc",
+              "type": "0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::DeviceGrant",
+              "outputState": "ObjectWrite"
+            }
+          ]
+        },
+        "recoveryTransactionQuery": {
+          "available": false,
+          "reason": "original receipt currently unavailable; not retried"
+        },
+        "readOnlyCurrentState": {
+          "humanId": "0xe6d6a9dbcc2f8d19b839bacfa13ee9c885e7006077d1b4f1de61c68b3c2c1498",
+          "generation": "2",
+          "recoveryVersion": "2",
+          "recoveryRecordId": "0x3937e080e6c42d167da9a3ebc457f0cff9d5ee8fcd183e3ec92610a40d000da8",
+          "recoveryActive": true,
+          "organizations": [
+            "0x7d0d1179c00cdb9d4e33c6bef103ea49fb8cc019c2b592ab47bb99c7a706e5db"
+          ],
+          "organizationKeyVersion": "2",
+          "grants": [
+            {
+              "id": "0x49d46b28921cee0e640f7ade54f16a141ccc8309d9ebce28f4953ebd4237d633",
+              "generation": "1",
+              "device": "0xabd3c1aff1c20659419f97b9464ed36036ba0c04341341328264044dd087829f",
+              "revoked": false
+            },
+            {
+              "id": "0xff3b80a6da5b8fdc1fc833eec4c296c9647d03861f6191e3a9b1c76ad2099bbc",
+              "generation": "2",
+              "device": "0x031f175c91573433a24bffc897a80b3002ba26393c1f80c1e7afe812558f1cf7",
+              "revoked": false
+            }
+          ],
+          "goal": {
+            "id": "0x933798bd1be9ab2e79c21322b515ff21a7cfe6ae189bc75752b32f7d6f4aee5b",
+            "state": 3,
+            "nextKr": "2",
+            "acceptanceRecordId": "0xd5b175836761d2333f1aeb29793385263297b5a6ec600570ecb10fa83f1e461a"
+          },
+          "sourceDraft": {
+            "id": "0x81be23cc3544fbf177480e934fedcda2161013026f3b6c2e1e82761eafaabbed",
+            "state": 0,
+            "specRevision": "2"
+          },
+          "budget": {
+            "asset": "TOOL_CALLS",
+            "spent": "6",
+            "reserved": "0",
+            "claimsId": "0x4f9f489e8876bca4323fdf3fd3a3a4ef63e05bc05cb2a9e188f96c441a62f9be"
+          }
+        },
+        "limits": {
+          "nativeRecoveryConfirmed": true,
+          "failurePhase": "restored_history_and_live_host_read",
+          "recoveredWorkloadComplete": false,
+          "periodicHeartbeatAbsentInOriginalFixture": false,
+          "observationTTLUnchanged": 60000,
+          "replayed": false,
+          "broadcasts": 0,
+          "originalCredentialsCleaned": true,
+          "decryptedBodyClaim": "Follow-up only reads public chain objects; original progress report supplies its own proof scope",
+          "privateKeysInReport": false,
+          "recoveryCodeInReport": false
+        }
+      }
+    },
+    {
+      "round": "R3",
+      "terminal": true,
+      "exitCode": 1,
+      "originalReportPath": "/tmp/fm-native-workload-recovery-protocol-r3.json.progress.json",
+      "originalReportSha256": "ed6aca8bf91ec1ba0d4fb49c2a686dc74c749cd191aa65b3c21d3076df4160c8",
+      "originalLogSha256": "d4213c97114d2040ef21bb44779e6f8c735fcdf3cba7ff93cf974b6a2b925cca",
+      "originalReportComplete": false,
+      "originalChecks": [
+        "real native recovery and device signatures create Human and organization on the existing isolated chain",
+        "native App registers the actual Coordinator and one-use invitation; production envd CLI persists and queries one lost join receipt without another broadcast",
+        "signed live Host discovery is authenticated by the native device; formal App imports the existing actual native file Agent with observation rights only",
+        "formal native review ticket is sent through the actual device HTTP Coordinator to production envd; actual Agent reserves its physical slot and publishes the exact signed acceptance on Sui",
+        "formal native approval atomically activates the current OKR and exact reviewed policy, without preparing or delivering a continuation Run",
+        "formal native control quotation/issuance and command preparation do not dispatch; a fresh runner with an empty journal restores the same encrypted ticket and queued Run",
+        "explicit continuation reaches the actual production envd and native file adapter; original encrypted result decrypts through the OS vault and Host measurement is 1; remaining scheduled budgets are preserved",
+        "fresh native runner recovers the original successful Run and measurement without another fee or delivery; KR verification and final Human acceptance remain pending",
+        "two real envd KR Runs are explicitly released in order; native Human verification advances the cursor without another dispatch or implicit acceptance",
+        "final native review reads both original results and separate immutable verification revisions; an explicit, separately quoted Human decision achieves the OKR on Sui",
+        "actual OS-encrypted direct messages and versioned standing permission rebuild from Sui; ordinary and explicit one-off Run reservations use separate ledgers and can be cancelled historically after a policy change, without direct dispatch or OKR budget changes",
+        "actual OS-signed direct write, read and zero-tool status traverse authenticated Coordinator to production envd; original encrypted results decrypt through the OS vault",
+        "exact direct replay reuses the original Run and immutable result without another tool spend; explicit five-call approval spends three and refunds two in its separate ledger, without changing the six-call OKR ledger",
+        "formal App zero-tool question reaches the configured synthetic Messages API exactly once; encrypted original reply is rebuilt from Sui, marked unverified, and leaves OKR/direct tool ledgers unchanged; six model-selected OKR tool steps were enforced by production envd (no real-model quality claim)",
+        "formal native conversion retains the exact encrypted original message, fixed instance and unverified Host-receipted model suggestion; substituted reply and source removal fail before a quote, independent fee/signature creates only a DRAFT, and source-preserving revision plus empty-journal Sui/skill projection rebuilds provenance without any Run, model request, tool spend or dispatch",
+        "formal native Direct App controller edits and revokes versioned authority, stores messages, quotes every operation, sends status at zero remaining budget and executes an explicitly approved file request without changing the standing ceiling",
+        "fresh Direct App controller with an empty technical journal rebuilds both original encrypted results from Sui, refuses to infer resend authority and retains historical read access after permission revocation",
+        "workload recovery 1: only the saved code locates the stable Human; one native self-paid transaction consumes it, advances generation/key version and authorizes an independent device; old device/prepared transport and replay fail; fresh controllers restore 38 exact current/historical plaintext hashes, two verified KRs/final acceptance, original Agent/Host/binding, revoked standing permission, messages/results and unchanged message-derived draft without delivery/model calls or tool spend"
+      ],
+      "originalState": {
+        "phase": "human_sequence_accepted",
+        "humanId": "0x34c090b23ff20c6b54f1674af5baea84976342cf743f0b99c430a2820801fb5e",
+        "organizationId": "0x99c4ef91fe84db80e29dde4feb10f156e90e7b657735f6539675ccb7cd89c9fe",
+        "deviceAddress": "0xaf4e66f2ac508a63c2ba86b16bf87844f2d80747fc935ab50d814d25b4180623",
+        "originalRequest": {
+          "label": "native recovered-device new key-version OKR draft",
+          "requestId": "okr-draft:0x99c4ef91fe84db80e29dde4feb10f156e90e7b657735f6539675ccb7cd89c9fe:e51f8fda-1bf8-463a-8c36-e0bf753d14f9",
+          "digest": "3XUUHohzzCbkrWPZnWd26RxQaXPJErcp1KVkpvkxtNpi",
+          "phase": "quoted_before_submission"
+        },
+        "bindingId": "0x51361f2fe4beb6b8337d8179edacfe564ff331d1604d1d2cc428a33974bd4a23",
+        "membershipId": "0xb5750ce3857b6993e69cb5d9573ac1b182abe07fdd918ebdf70ffbb91642c97e",
+        "hostAddress": "0xe719c3d521878ad4337d1ad8bef988f39205a887f9cd1d4c636c64fccdc89b7d",
+        "joinDigest": "FHUfjEbo9au1Mr8LLzBJnbTNNsg6d2U3gVvKGCDXF4t9",
+        "hostJoinBroadcasts": 1,
+        "managedAgentId": "0x0dc96d11bd914d97f3c942da5f879cf979eeb48e0efffc114cb28bcff52f712d",
+        "instanceId": "native-80989100110ba4f1a7f57b3ed080a75e40aef7aabf363b44cd5ac0da014df760",
+        "okrId": "0x3e24031ae251d2b48a96d06541d14634b1dc12279ca0905b73024fe6490e3df5",
+        "reviewExecutionId": "0x5a8c13a1c5b83d242da5ae88f9908e263ce7a475f6f66af19d72ed80ce7acb55",
+        "reviewDigest": "FyCh1YiAbfdPjE6vxHqiAxvnAJj1sDvoYEuALrX6bWfV",
+        "originalReviewDelivery": {},
+        "reviewRunState": 2,
+        "reviewResultId": "0x4d21f4ab42692f2161ec34c59bc3775a440394ff5d6a07f321072897b2df3751",
+        "continuationExecutionId": "0x3c62e3438aaf08dd885d885f148dfe0dedd8d4ec44312661a6912e009106c183",
+        "continuationDigest": "KE5dohEg7Rbhb9rHPBNimjDGdgA2hTnaXg2TeCLHbYp",
+        "ticketRecordId": "0x196aa4f28b8a5be441fda6a291334b8a9d83f04fb81dda00c88c5da55d4f005c",
+        "capabilityId": "0x94fb6e0f5da655a98dde06022c04389b41d2b88aa71c0771946e530db6d3a740",
+        "firstDeliveryStatus": "awaiting_verification",
+        "transportCalls": 20,
+        "commandDeliveries": 10,
+        "resultRecordId": "0xddc4d66e66ab6ffa5b96a089116fb976a9b7bae1d2bf60a3d13f5a519148aec0",
+        "resultCreationDigest": "FwTJ1fvQ7ZzPRQRd84mWEEv6MF82crajj4abu4BnV91f",
+        "observationId": "0x7d956f87d132b674f9120e6265c9c034f5d6402794b7ec4feac736ca4065467d",
+        "observedCurrent": "1",
+        "humanVerified": true,
+        "okrState": 3,
+        "budget": {
+          "spent": "6",
+          "reserved": "0"
+        },
+        "restoredStatus": "awaiting_verification",
+        "feeConfirmations": 2,
+        "humanDecisions": [
+          {
+            "krIndex": "0",
+            "requestId": "okr-human:0x3e24031ae251d2b48a96d06541d14634b1dc12279ca0905b73024fe6490e3df5:1:3:verify:0",
+            "digest": "4gqUiqdTuVnhq4nDbCNyVxrSbbF64nwafYnVjWP9hJr5",
+            "verificationRecordId": "0xe19904c7f43c98442e0898892c693a78a006819b5e6254bfff148cdbaefb795c",
+            "runId": "0x3c62e3438aaf08dd885d885f148dfe0dedd8d4ec44312661a6912e009106c183"
+          },
+          {
+            "krIndex": "1",
+            "requestId": "okr-human:0x3e24031ae251d2b48a96d06541d14634b1dc12279ca0905b73024fe6490e3df5:1:5:verify:1",
+            "digest": "3kx6LwnB2j6od4NZx3npqhVLwGepnqCq5vj2pv9teQBz",
+            "verificationRecordId": "0xd7ded35d648464c08b07fef1894f21c139fbe04e2b599e2fceec18197c70b3ec",
+            "runId": "0xb79586f3713145742e219a1849604a23a8bf7da89e1cbf7a25d9db79841525bc"
+          }
+        ],
+        "nextKr": "2",
+        "secondExecutionId": "0xb79586f3713145742e219a1849604a23a8bf7da89e1cbf7a25d9db79841525bc",
+        "secondPreparationDigest": "B4mbdSkMZXcziN9eNqMgMhdWq2oQGUw574u6x6DFXqiB",
+        "secondResultRecordId": "0x76095c2837650de605f81361d750d933a37eb054f218a7cd23034884f93bea3c",
+        "humanAcceptanceVerified": true,
+        "acceptanceRecordId": "0x35e648a44b121b6f34f99d8ca5d3d29130b22814bacb162f52be7569a977809f",
+        "acceptanceDigest": "HPrwYghET8Cp6wQknSxnqYF1KBp8GRQBqvgpL98Kdhbm",
+        "historicalVerificationRecordIds": [
+          "0xe19904c7f43c98442e0898892c693a78a006819b5e6254bfff148cdbaefb795c",
+          "0xd7ded35d648464c08b07fef1894f21c139fbe04e2b599e2fceec18197c70b3ec"
+        ],
+        "krExecutionIds": [
+          "0x3c62e3438aaf08dd885d885f148dfe0dedd8d4ec44312661a6912e009106c183",
+          "0xb79586f3713145742e219a1849604a23a8bf7da89e1cbf7a25d9db79841525bc"
+        ],
+        "directPermissionProtocolVerified": true,
+        "directPermissionId": "0xb8a2cb92cdd3b2175a0910ce2bfea4a7e9a4d823245afff225826794ec19297a",
+        "directMessageIds": [
+          "0x69efc2a6874acb22378d5d64559760955a022cc403da4f3a17654f75b68cff87",
+          "0x3fa62c52685aebd4359c85c62df45cada02897440a7ed507ec06458c3c1dcac0"
+        ],
+        "directRunIds": [
+          "0x43a84eb1b04a3ee7d7f5fc551145a088d3cf1077d1247f40a77599800b15cb8a",
+          "0x9f63a6228e2fad8a89cee2c2fd73a3ca9e098f69cb6904ed46155b0dfe3a66e4"
+        ],
+        "directApprovalId": "0x2c048129bb76423ab0c2dac4b182dbfebada9c0da7421fb3ed60652e595dab96",
+        "directPermissionVersion": "2",
+        "directFinalBudget": {
+          "spent": "4",
+          "reserved": "0",
+          "approvedSpent": "3",
+          "approvedReserved": "0"
+        },
+        "originalDirectDelivery": {
+          "runId": "0x42f01da3a2881c777703fe84f77601f1135da97ebc10079ac320a8ed3fbdc70c",
+          "phase": "confirmed_original_result",
+          "resultId": "0x2f82d7fa3ff2d8e4caa35db6664ef14c8210ac31209c7d3f788611dc8ae23c61",
+          "creationDigest": "8SVg6Xfvi7qELYsQatDr7MzpBYErycQ78YtfySpZbFGg"
+        },
+        "directRelayReply": {
+          "success": true
+        },
+        "directRuntimeRuns": [
+          "0x23bd05f07d2e1e50cf3775de148129afb63e45411cf65e370edbe7e4f7fa7516",
+          "0xefda6c929957a836c06220ec1c8bb48603f908539ed9f0ea274bddf9d9da68eb",
+          "0x76129cf574f9bf1accbb967e19b9e902e029d898825066080ad06ac62ff4ee6a",
+          "0x42f01da3a2881c777703fe84f77601f1135da97ebc10079ac320a8ed3fbdc70c"
+        ],
+        "directMessageEnvdDispatchVerified": true,
+        "directAppOriginalRun": "0xadf9247594e31df8fcd4a4b27ffc350f1d162a64124370b7f3c520aa84bbc47d",
+        "directAppOriginalMessage": "0xcd677e6967e25a5d909be629e263cb0463780f6cea64e4a1064c42f7d7f55054",
+        "directAppDeliveryAttempted": true,
+        "directAppDelivered": 3,
+        "modelProtocolFixtureVerified": true,
+        "modelRequests": 7,
+        "modelPlanningRequests": 6,
+        "modelQuestionRequests": 1,
+        "modelOriginalMessageId": "0x4ba851936583a2a3cae0b309062656945dc151643d5d5a749261e6291c518328",
+        "modelOriginalRunId": "0xb53e68e25cc11fcd7d5b58d1213fb9f8eb8027f83dcf9ce2d38cbc337cad4245",
+        "modelOriginalResultRecordId": "0xf41c72a97acddab2a2a0753abc11fafb16ff84a62dd96fc88d13d94642cefc0b",
+        "sourceOkrId": "0x9b7d797758e133f608fc605f3926e5ca6f7e0cd73c3d9cd5571b9b7058c029af",
+        "sourceDraftDigest": "4v2tiYoqsrpCcz3EdmfUiP5gPFTTRTUjLU75h8W49arG",
+        "sourceMessageId": "0x4ba851936583a2a3cae0b309062656945dc151643d5d5a749261e6291c518328",
+        "sourceMessageRecordId": "0x5c24b242ac2fc1ade6f637e9efcc04a23e5b00ff7d6741f3d1c51bb105d5095c",
+        "sourceReplyRunId": "0xb53e68e25cc11fcd7d5b58d1213fb9f8eb8027f83dcf9ce2d38cbc337cad4245",
+        "sourceReplyRecordId": "0xf41c72a97acddab2a2a0753abc11fafb16ff84a62dd96fc88d13d94642cefc0b",
+        "messageOkrControllerVerified": true,
+        "sourceOkrState": "DRAFT",
+        "sourceOkrRevision": "2",
+        "sourceOkrExecutionCount": 0,
+        "sourceSpecEditDigest": "5NJTGZdrC198tk3VXniwafxaXPAfyhuqq4cL99t95yMy",
+        "sourceCreationRecoveryStatus": "confirmed",
+        "sourceCreatedWithoutDelivery": true,
+        "directAppControllerVerified": true,
+        "directAppFinalBudget": {
+          "permissionVersion": "4",
+          "revoked": true,
+          "maxCalls": "1",
+          "budgetLimit": "4",
+          "spent": "4",
+          "reserved": "0",
+          "approvedSpent": "6",
+          "approvedReserved": "0"
+        },
+        "workloadRecoveryPhase": "new_device_needs_own_funds",
+        "recoveryHistoricalRecords": [
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-6acf7cb9-ac4a-4897-932f-73fd0a642401",
+              "record_id": "0x021ef0242c6745ba65d97392d03902a60830436ba99146170164378b81ceb5f4",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "f2a93ae53c3f89bf0f09edcb2960cc4a12c64310a09ae76d31cdfb7757916372"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-40f04198b9cdf2b3b13acb077e8d8910c2cff24e72964fe63ccb3a7682b4e275",
+              "record_id": "0x03ebc377a8ca552d83a41a4f02116b7bf371f6c9d0079290f4369f302f82f7eb",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "11510459b4cd6bbd1364add3188cad70c4c1229b1e46910fa192862b8b9b4a46"
+          },
+          {
+            "pointer": {
+              "kind": 1,
+              "logicalId": "okr-34cb8ecc-80e5-4147-b68b-2378378b6e7e-spec",
+              "record_id": "0x04eefbdae175e92ff01ed5aa8acc371b3f2a66d7349b5511352124455b77aad1",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "496a37c07fbd59ebafe64bb02af48404f2492088b87e21f57f29769d7b360ec6"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-a9d970d0-ceb8-4d80-90be-b393a91fc97a",
+              "record_id": "0x0990dbd29385d027f6215ea72a41d89270006faabdaa25b3f257eeebb55c5e06",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "ef4eac8a1822645972fe9d5c047d4cb94b326793bb7c17086f33c97f9f50d798"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "runner-3e24031ae251d2b48a96d06541d14634b1dc12279ca0905b73024fe6490e3df5-1-1",
+              "record_id": "0x0add42b92b4b77219f4fad26ad8869d061b43a2589d5e7c6f6de298eae8786d1",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "de2e47cef7cc3ddfa54614b07393c3c62d075a649171a2eb5ab2466de56b1733"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "handover-review-01ca6158-a201-48c4-8548-3ea5ccd57465",
+              "record_id": "0x173cade8913e1acc979f5c9699fa7c6513869aa11f44c6d6d43e028d7d13e252",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "565862a5a80def281560905f51d4e24d8c697839bdfe50850ae5ede30ec36142"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "runner-3e24031ae251d2b48a96d06541d14634b1dc12279ca0905b73024fe6490e3df5-1-0",
+              "record_id": "0x196aa4f28b8a5be441fda6a291334b8a9d83f04fb81dda00c88c5da55d4f005c",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "e761cebcca111bea7c840847662007a3aeea80a98a398bdf74649df7d674773f"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-ad1cd1eb-b62d-41ac-8897-1fe42f9c4e37",
+              "record_id": "0x1a56ac0f1fac6a83b87ec0c4923aa13298aac71a511db4b57cf04d40c0c1d8b5",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "dbccb042d5b2556dd94a917edb2ddd3fc1e9c4b2a0acbd44b9822ac97bc7ba0c"
+          },
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-6acf7cb9-ac4a-4897-932f-73fd0a642401",
+              "record_id": "0x20c7aaac0cfb1f37419d0318ca2d4dff01ac1e2563cfff9bdcd4eec0cbc0b862",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "a90b7e5ca3b4d510ba7d269822b5a99585e4410a86a2ed293c56735162d6111b"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-af4bc8d431b1506a616dffe1bece8f462bf3600eeb7c2d7b11271f9cbef30a60",
+              "record_id": "0x2f82d7fa3ff2d8e4caa35db6664ef14c8210ac31209c7d3f788611dc8ae23c61",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "95f52ab6dbf3a36f00b2b5bd013061f1cbe5bceeac459c4d6c05b0837bf025ea"
+          },
+          {
+            "pointer": {
+              "kind": 4,
+              "logicalId": "okr-b8faa2c6-7cf7-4751-9c89-57b5f61a91dc-acceptance",
+              "record_id": "0x35e648a44b121b6f34f99d8ca5d3d29130b22814bacb162f52be7569a977809f",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "a5eb3e6d06edd2aa98658972dca85a16d1c8c8346dc8cd84291c170b79281eea"
+          },
+          {
+            "pointer": {
+              "kind": 2,
+              "logicalId": "standing-0x0dc96d11bd914d97f3c942da5f879cf979eeb48e0efffc114cb28bcff52f712d-permission",
+              "record_id": "0x36424a0113ef756a5f05f3d8f7465d89ac06d4e9867dfa6917259f4c49b06305",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "e79fe6661a1d38e6f0ccc2b324ed2c714422040b48aefe50493480f65c32b35a"
+          },
+          {
+            "pointer": {
+              "kind": 2,
+              "logicalId": "okr-b8faa2c6-7cf7-4751-9c89-57b5f61a91dc-agreement",
+              "record_id": "0x3eeab87c11fa9a437bf2d385374060ae1f0457dab78ea7e77eafaba07ffbf259",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "33a2daf55fe99ac7c0f6760d8e3a09d8fe2d7d07f94dff3295995a423eb3a702"
+          },
+          {
+            "pointer": {
+              "kind": 2,
+              "logicalId": "standing-0x0dc96d11bd914d97f3c942da5f879cf979eeb48e0efffc114cb28bcff52f712d-permission",
+              "record_id": "0x3f2958661cb2b87b66fb0f3f14e946f1098f95d1bfaa29bf55229332c53812b2",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "144ecec7b25374425eb033d09cf47baa89f7535b4d5c708039e97681ab55ca48"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-75f77adf7c69062e00c5169b060e80654623c107294041ee2d8342e8bec73345",
+              "record_id": "0x4bda1208ac1bdfabf96168430bff8ba93b3e34cb2a1ea10a4d49e480a69d8fa8",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "28bb6252aa583521657e06937203d469d9d0eb617b667ffa83c6ba0746fc9ff8"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-ecf204e4afc6b6370b893d325e66c5c886d96174350525c8a1b19c9b8da10988",
+              "record_id": "0x4d21f4ab42692f2161ec34c59bc3775a440394ff5d6a07f321072897b2df3751",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "8bdd4f0417a569ab54cccd7055c6b1417e6117d7d6993ab45f9113535db5fd98"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-6acf7cb9-ac4a-4897-932f-73fd0a642401",
+              "record_id": "0x50372a8d4aaa4010370b6aa05148fada7c24c4e1b25373fef280f34f21072853",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "203b366d8fb5479f65fe709d4d68a0a9089d7d28ae0934a0fccd651a01100d9d"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-b60f8834d3d4ad7c082f31737803d285110776f22c1b2048a37e81a55c313da8",
+              "record_id": "0x51feada19e2a4dfd0816d5636f0ecab2f06222493e2d78b42c4dccd41309a5c2",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "04d9dc8dedc2de7f52fd6d4f5db2f092c92fa20bd0150c318637623f520ffe48"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-1a7d21ee-dee6-4c79-abc6-f39ef7699a9c",
+              "record_id": "0x5b1b540c8eff199bf38ac7038b653597385770475122071cb53e89d4a947688e",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "fbc3244f00ee94be7e60d4ed7d89e6237074418b9516abb5718a3092fc6002fe"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-3c7043ea-85b2-4230-a102-6391019049d4",
+              "record_id": "0x5c24b242ac2fc1ade6f637e9efcc04a23e5b00ff7d6741f3d1c51bb105d5095c",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "cc7adc7ba00f041f842e9afb7eeefdf03f47c5afa754b2a43d023771be4e2a6f"
+          },
+          {
+            "pointer": {
+              "kind": 1,
+              "logicalId": "okr-34cb8ecc-80e5-4147-b68b-2378378b6e7e-spec",
+              "record_id": "0x699e9a2864e8e30bc72069ea210e7ec71c26e0f0061e5e660be9a88860feb529",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "d96436614e23bc76fab7bd1413b79181f60886039540c816df666cf1c42e8b2e"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-c281f41a132bf1dde50be3c9fdb45094c5270858932d344f6f34eede5fdf3b68",
+              "record_id": "0x76095c2837650de605f81361d750d933a37eb054f218a7cd23034884f93bea3c",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "fee50c026e3186f5ca951e314283dc85cd776d1d7870debf8ddf6036e687cabd"
+          },
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-ad1cd1eb-b62d-41ac-8897-1fe42f9c4e37",
+              "record_id": "0x7fac7120040faab81de566e387f9416f5c2d47065ad4209165f6cc1082f01528",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "9f86e390e3cf70b8be6c50257cd5ba0f184e0948c43f87d1b0d2250892198b6b"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-f9056345-ea96-4c29-9aa8-a54e71a8f420",
+              "record_id": "0x8dfb7478acaa6d279a44efbccddada557d8b562887469c7c59e7707e210f5caf",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "994f006be2fbb93a2a6084ea1c8443e24801c20cfb13484173d749e9fa32833f"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-3ec49c54bf302696727f1fc09f6888feb573e1f308a93bb5a96c594e9ff1d4a4",
+              "record_id": "0x8ea96358f328ff2e7073ff7ee34b07793acf11de0507b08ab59e94266c1818da",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "a2023353efd9924beb728c0cbf0fe0277220f61b554758123fb3005e72afbfb0"
+          },
+          {
+            "pointer": {
+              "kind": 1,
+              "logicalId": "okr-b8faa2c6-7cf7-4751-9c89-57b5f61a91dc-spec",
+              "record_id": "0x9a59a85ca9fe87fc8128f437ca12abe1d8b2743abfe38774e722f217ef634a87",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "cfd566d4ed1861f28d41d9aa11efb22ceb2061476ed15a33296fd4857f172bb4"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-f92f2f2db3585df2b96daf058438964614eadec075c5b555d4b53a0077604b53",
+              "record_id": "0x9c48000d998235473b20d40fa593b1047a44f76115235456dea184d62c31b04a",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "accaf9e22031632b953730376b3580d722e431b5af4ba5dc7db6cf2f69443871"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-a8f0f41b-306d-439a-9a62-f9382afae39f",
+              "record_id": "0xb78108be230f3cb54bf5bd44af04bc09412b8b9f55e1802082bd0e04cb955925",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "c8c076ec809ca47edd5944f56f845a981d38eb1ff6c874939743e7511a4510f0"
+          },
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-a9d970d0-ceb8-4d80-90be-b393a91fc97a",
+              "record_id": "0xba15ca4ec01071646e52a90a199ed8e8932935d989d27c69fc4af03918ae045e",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "542238905ed08ed5af689c915fffd4051badeffc92abb597acc41a574bf0f6e3"
+          },
+          {
+            "pointer": {
+              "kind": 2,
+              "logicalId": "standing-0x0dc96d11bd914d97f3c942da5f879cf979eeb48e0efffc114cb28bcff52f712d-permission",
+              "record_id": "0xba72a2a44b2d6a46ab6141568fd6a31c4d4624d328d69eee3308deb19221d88b",
+              "revision": "3",
+              "key_version": "1"
+            },
+            "sha256": "6eb212b0fe9f2c3697427636667c96035a32d438ed555d31ad377ef6fc33f7b3"
+          },
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-ad1cd1eb-b62d-41ac-8897-1fe42f9c4e37",
+              "record_id": "0xc0f62cb76c6c9b5c51988c18e0a25c9068151018e38282a555148f720f72ffa0",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "270b1ebbb78d7e3e73b45135e2cb81856ef14a3836d01b5a51f4240392fd514b"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-5616d38f-52bf-4dc1-afde-8c3c70418cd9",
+              "record_id": "0xc30fdb859b8adf51d154b52959e153fca24a0155d0436f32f3e00ed6b6d7292a",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "93356d219877b344b0dbd12d232631d37420d929e65059b1b88883428db53d31"
+          },
+          {
+            "pointer": {
+              "kind": 6,
+              "logicalId": "direct-message-4ac876ae-6132-4268-9ca6-cb9e5b27e341",
+              "record_id": "0xce738f4a288ef06bccfe1156697b634bda53d3bf904c883ccd2ce464b53425b6",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "91531b5dd1bcdacb0227438fe1e73e1583e795c41fe982411dc920977dfa133a"
+          },
+          {
+            "pointer": {
+              "kind": 3,
+              "logicalId": "direct-approval-a9d970d0-ceb8-4d80-90be-b393a91fc97a",
+              "record_id": "0xd10735d297d43eb3b52bfb0af3ca92d50483bc19b0d903a5280f2d0d6e47ff4d",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "d8edbf90613b5f56fce61a1a94829345904ee866098307ccaa10d2fdc9b6d15d"
+          },
+          {
+            "pointer": {
+              "kind": 4,
+              "logicalId": "okr-b8faa2c6-7cf7-4751-9c89-57b5f61a91dc-verification",
+              "record_id": "0xd7ded35d648464c08b07fef1894f21c139fbe04e2b599e2fceec18197c70b3ec",
+              "revision": "2",
+              "key_version": "1"
+            },
+            "sha256": "3570cc36a392ec82b807fecb6cce6a874f5c47fc99e4d09226619e91c3ee4b4b"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-09df5293af8018a71b08ba9e9755acb8ba698d287123b2a3074648c26835059c",
+              "record_id": "0xddc4d66e66ab6ffa5b96a089116fb976a9b7bae1d2bf60a3d13f5a519148aec0",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "5b351f8ded0a80d60f329a859135913724bde1a5ca062d0e872f71f54458a3da"
+          },
+          {
+            "pointer": {
+              "kind": 4,
+              "logicalId": "okr-b8faa2c6-7cf7-4751-9c89-57b5f61a91dc-verification",
+              "record_id": "0xe19904c7f43c98442e0898892c693a78a006819b5e6254bfff148cdbaefb795c",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "b14a34aad2253ccc514c4183eece2e26f1ff2cbd5415f91cbd2b6f675a0ecc00"
+          },
+          {
+            "pointer": {
+              "kind": 5,
+              "logicalId": "command-a548050a0c299d532b6c980d130d01cb2cceb725ff16df24cbff06f3a8197616",
+              "record_id": "0xf41c72a97acddab2a2a0753abc11fafb16ff84a62dd96fc88d13d94642cefc0b",
+              "revision": "1",
+              "key_version": "1"
+            },
+            "sha256": "3a8668ffd45a513af651c62b239272c8f5c17038c1684f4af07f72dfcef45b40"
+          }
+        ],
+        "recoveryOriginalGeneration": "1",
+        "recoveryRound": 1,
+        "recoveryTargetProfile": "test-612746ec-e485-4ee3-a610-405a13d97be1-recover-a",
+        "recoveryQuotedDigest": "F2c2MB7ArNST2BWje2Y6iEZb9EoRbB3fFsA88CCXDATW",
+        "recoveryObservedHosts": [
+          {
+            "address": "0xe719c3d521878ad4337d1ad8bef988f39205a887f9cd1d4c636c64fccdc89b7d",
+            "state": "verified",
+            "membershipId": "0xb5750ce3857b6993e69cb5d9573ac1b182abe07fdd918ebdf70ffbb91642c97e",
+            "expiresAtMs": 1791004397609
+          }
+        ],
+        "recoveryHistoricalHashesVerified": 38,
+        "recoveryOriginalMessagesVerified": 9,
+        "recoveryNewDeviceAddress": "0xa5d50bc2c480095aeee8a288d543894a2aa63d4143d8577804c0a345de414704",
+        "recoveryNewDeviceBalance": "0",
+        "recoveryFundingDoesNotSubmit": true,
+        "error": "The input did not match the regular expression /invalid_envelope/. Input:\n\n'Error: InvalidEnvelope'\n"
+      },
+      "originalLimits": {
+        "actualOSVault": true,
+        "installedUIVerified": false,
+        "envdDispatchVerified": false,
+        "hostKeyStorage": "isolated memory provider",
+        "realCoordinatorDeviceHTTP": true,
+        "humanFinalAcceptanceVerified": true,
+        "directPermissionProtocolVerified": true,
+        "directMessageEnvdDispatchVerified": true,
+        "directMessageUIVerified": false,
+        "messageOkrControllerVerified": true,
+        "workloadRecoveryControllerVerified": false,
+        "installedCacheWipeVerified": false,
+        "actualDeviceRestartVerified": false,
+        "installedMessageOkrUIVerified": false,
+        "directAppControllerVerified": true,
+        "interventionControllerVerified": false,
+        "autonomyControllerVerified": false,
+        "installedAutonomyUIVerified": false,
+        "projectionControllerVerified": false,
+        "installedProjectionUIVerified": false,
+        "automaticHostProjectionDelivery": false,
+        "chainCommandQueueVerified": false,
+        "scheduledPreauthorizationVerified": false,
+        "installedScheduledUIVerified": false,
+        "runningStopConfirmed": false,
+        "modelProviderKind": "synthetic loopback Messages API fixture; not an actual language model",
+        "actualModelProviderVerified": false,
+        "modelProtocolFixtureVerified": true,
+        "installedHumanReviewVerified": false,
+        "reviewDecisions": "explicit scripted test approvals, not installed Human UI",
+        "physicalHostVerified": false,
+        "humanHandoverVerified": false,
+        "nativeWindowSourceVerified": false,
+        "testTransport": "isolated subprocess",
+        "technicalJournal": "memory",
+        "cleanupConfirmed": true,
+        "privateKeysInReport": false,
+        "recoveryCodeInReport": false
+      },
+      "confirmedTransactions": [
+        {
+          "label": "native self-paid Human creation",
+          "requestId": "identity:test-612746ec-e485-4ee3-a610-405a13d97be1",
+          "digest": "DmsPaE3JGYwWRj4do3GfZR2o91T44pCWSRYMGfNpeHaB",
+          "status": "confirmed",
+          "actualGas": "18772548"
+        },
+        {
+          "label": "native self-paid organization creation",
+          "requestId": "org:test-612746ec-e485-4ee3-a610-405a13d97be1:0x34c090b23ff20c6b54f1674af5baea84976342cf743f0b99c430a2820801fb5e",
+          "digest": "29gkcijWJAkSDRopA65PSVVjvLBYnsuLGzLAsHjkU3aC",
+          "status": "confirmed",
+          "actualGas": "15141616"
+        },
+        {
+          "label": "native registration of actual loopback Coordinator",
+          "requestId": "host:fee58995-1eaa-43af-afea-5ec1bf709419",
+          "digest": "B4DxZLLTpzKVEn4JE37umtGT1nfNuHekSfd4wSGdRHjU",
+          "status": "confirmed",
+          "actualGas": "6823340"
+        },
+        {
+          "label": "native single-use Host invitation",
+          "requestId": "host:e05ac358-3f52-444e-98a0-b3c336ff2808",
+          "digest": "7JHcmQ2FfWgHt4wbH3XgN3mQCtdYZSX4L11mb9FN3Hvo",
+          "status": "confirmed",
+          "actualGas": "4961036"
+        },
+        {
+          "label": "native import of actual bounded Agent",
+          "requestId": "agent-import:268ded24-5386-42ca-b0f4-e8f9f612131a",
+          "digest": "3zfwfTJpwYtECN4rd2yQLUPxTFVJ4p7sHUXuZ26ifEj8",
+          "status": "confirmed",
+          "actualGas": "11879100"
+        },
+        {
+          "label": "native encrypted actual Host OKR draft",
+          "requestId": "okr-draft:0x99c4ef91fe84db80e29dde4feb10f156e90e7b657735f6539675ccb7cd89c9fe:b8faa2c6-7cf7-4751-9c89-57b5f61a91dc",
+          "digest": "5ee6hN1tnXxo3pDAKqLTHuLzv74jMJ4SdkQ3sEx2EVR3",
+          "status": "confirmed",
+          "actualGas": "28828540"
+        },
+        {
+          "label": "native one-use observation capability",
+          "requestId": "handover-observe-01ca6158-a201-48c4-8548-3ea5ccd57465",
+          "digest": "BVpwxu7J5kMXnTiaFsEjeYN7fmUNc2De586tUuqw8CVo",
+          "status": "confirmed",
+          "actualGas": "10173480"
+        },
+        {
+          "label": "native exact review ticket and Run",
+          "requestId": "handover-review-01ca6158-a201-48c4-8548-3ea5ccd57465",
+          "digest": "FyCh1YiAbfdPjE6vxHqiAxvnAJj1sDvoYEuALrX6bWfV",
+          "status": "confirmed",
+          "actualGas": "59944328"
+        },
+        {
+          "label": "native approval of actual Host acceptance",
+          "requestId": "handover-approve:0x5a8c13a1c5b83d242da5ae88f9908e263ce7a475f6f66af19d72ed80ce7acb55",
+          "digest": "6uriY4YrSaspH9PaF3zKZcb2frMxDHisFSGz3zVwXPLJ",
+          "status": "confirmed",
+          "actualGas": "49450304"
+        },
+        {
+          "label": "formal native single-use KR control fee",
+          "requestId": "okr-control:0x3e24031ae251d2b48a96d06541d14634b1dc12279ca0905b73024fe6490e3df5:1:0",
+          "digest": "38uSpHFBushfLAaVW2kBs2AANCVbWvyJSco3K5fNGhuV",
+          "status": "confirmed",
+          "actualGas": "15662680"
+        },
+        {
+          "label": "formal native atomic continuation ticket and queued Run",
+          "requestId": "runner-3e24031ae251d2b48a96d06541d14634b1dc12279ca0905b73024fe6490e3df5-1-0",
+          "digest": "KE5dohEg7Rbhb9rHPBNimjDGdgA2hTnaXg2TeCLHbYp",
+          "status": "confirmed",
+          "actualGas": "64386720"
+        },
+        {
+          "label": "native independent KR 1 verification",
+          "requestId": "okr-human:0x3e24031ae251d2b48a96d06541d14634b1dc12279ca0905b73024fe6490e3df5:1:3:verify:0",
+          "digest": "4gqUiqdTuVnhq4nDbCNyVxrSbbF64nwafYnVjWP9hJr5",
+          "status": "confirmed",
+          "actualGas": "15636004"
+        },
+        {
+          "label": "native second KR explicit control fee",
+          "requestId": "okr-control:0x3e24031ae251d2b48a96d06541d14634b1dc12279ca0905b73024fe6490e3df5:1:1",
+          "digest": "8GF4dKUU3NZ3SF39u4JrvWD2SaYDJ7ZVtNdjt3qKV5h6",
+          "status": "confirmed",
+          "actualGas": "15662680"
+        },
+        {
+          "label": "native second KR exact ticket and Run",
+          "requestId": "runner-3e24031ae251d2b48a96d06541d14634b1dc12279ca0905b73024fe6490e3df5-1-1",
+          "digest": "B4mbdSkMZXcziN9eNqMgMhdWq2oQGUw574u6x6DFXqiB",
+          "status": "confirmed",
+          "actualGas": "64318624"
+        },
+        {
+          "label": "native independent KR 2 verification",
+          "requestId": "okr-human:0x3e24031ae251d2b48a96d06541d14634b1dc12279ca0905b73024fe6490e3df5:1:5:verify:1",
+          "digest": "3kx6LwnB2j6od4NZx3npqhVLwGepnqCq5vj2pv9teQBz",
+          "status": "confirmed",
+          "actualGas": "12851136"
+        },
+        {
+          "label": "native separate final Human acceptance",
+          "requestId": "okr-human:0x3e24031ae251d2b48a96d06541d14634b1dc12279ca0905b73024fe6490e3df5:1:6:accept:2",
+          "digest": "HPrwYghET8Cp6wQknSxnqYF1KBp8GRQBqvgpL98Kdhbm",
+          "status": "confirmed",
+          "actualGas": "12159156"
+        },
+        {
+          "label": "native standing permission creation",
+          "requestId": "direct-test:d44217d3-4e56-4326-8170-8be39c2b8e38",
+          "digest": "5CWpm3gNGuvr2aaoa4wBiTyi1VjAXXMEsYsk99WR332m",
+          "status": "confirmed",
+          "actualGas": "21999712"
+        },
+        {
+          "label": "native standing direct capability",
+          "requestId": "direct-test:b8a66a1f-0885-482e-8d60-d4f67a3a3e79",
+          "digest": "HQG8f9wZDqJ63esHh51ARsrVrP5ucEx8Vxg3XtShF2tC",
+          "status": "confirmed",
+          "actualGas": "18923080"
+        },
+        {
+          "label": "native encrypted direct message 3",
+          "requestId": "direct-test:92f3236e-7f7e-427a-a3e7-9c8c6973a095",
+          "digest": "6jFhCwCXvuhY5pp6jQbgdWoov2iUTRJ8AuxjzxSXyDsF",
+          "status": "confirmed",
+          "actualGas": "17135332"
+        },
+        {
+          "label": "native original direct Run preparation",
+          "requestId": "direct-test:ffc3ef67-636c-4b1a-adfb-0482a9b8dc9f",
+          "digest": "Gw6NeRyG2TgnCVMefBDM4bMupr4f3dZwPmn9aAqgazQ",
+          "status": "confirmed",
+          "actualGas": "42894164"
+        },
+        {
+          "label": "native queued direct cancellation",
+          "requestId": "direct-test:1818d679-6146-4fa0-b096-4117ddd051c7",
+          "digest": "EofX5wQ1FUhhS6vLypYUs8cGv8sfv8VQV1qi48XUuw1n",
+          "status": "confirmed",
+          "actualGas": "1358188"
+        },
+        {
+          "label": "native encrypted direct message 5",
+          "requestId": "direct-test:edd240c8-288f-4f54-87d8-91344afbaeff",
+          "digest": "FYa1QFYWZpki37Zm2uTG9nTcM25sJ9x4a9G2zd2PpuRM",
+          "status": "confirmed",
+          "actualGas": "17135332"
+        },
+        {
+          "label": "native exact one-off approval request",
+          "requestId": "direct-test:5a9b8079-bcd4-47a7-93a4-34b22412336d",
+          "digest": "Ctnwg3EooNbUS6YfMdcs8xjvJajx93PG334BSjay7YvC",
+          "status": "confirmed",
+          "actualGas": "14315732"
+        },
+        {
+          "label": "native explicit one-off approval",
+          "requestId": "direct-test:1f853dce-980e-494d-bbd3-e26ce40574b7",
+          "digest": "vsKxzWVU7k362GDbwS9MEt863QU4RSNRtDSuyDHos7S",
+          "status": "confirmed",
+          "actualGas": "6185860"
+        },
+        {
+          "label": "native one-off direct capability",
+          "requestId": "direct-test:f3cba766-7725-4178-86a9-e3ff5afb89e6",
+          "digest": "5wmV48jwYHq68qkyQWuokatUsgL1WrVoiZtcB3WK8qPw",
+          "status": "confirmed",
+          "actualGas": "19166280"
+        },
+        {
+          "label": "native one-off approval consumption",
+          "requestId": "direct-test:7f2bb865-998e-4a20-9158-56984b9926d9",
+          "digest": "FButJXCmRaDMbaWHXADJzbMMjFU7JHEZ24DY83BNJBsh",
+          "status": "confirmed",
+          "actualGas": "43418792"
+        },
+        {
+          "label": "native standing permission version change",
+          "requestId": "direct-test:9ef05ebe-8cf6-45d9-9683-15735ed5c96a",
+          "digest": "FZ78RCfDHuNoC1ywRqXqyrs9xaMXuAyibtzhDLoCrAJS",
+          "status": "confirmed",
+          "actualGas": "7277068"
+        },
+        {
+          "label": "native historical direct cancellation after policy change",
+          "requestId": "direct-test:a420246a-a4c6-4338-8bf8-9db63cbfe254",
+          "digest": "6JRVDK6ugcrbzf52mhHP3GiLTkaAgGfFhpo7DhUj8Qza",
+          "status": "confirmed",
+          "actualGas": "1360620"
+        },
+        {
+          "label": "native runtime direct capability v2",
+          "requestId": "direct-test:0f000af6-496e-4de2-ab5c-a2f746b2b7fd",
+          "digest": "6Fw6K4rsNfXpyT516efKYf8EhPLSZcUnyokSiqDwNVbf",
+          "status": "confirmed",
+          "actualGas": "18923080"
+        },
+        {
+          "label": "native encrypted direct message 3",
+          "requestId": "direct-test:9175f4ba-823c-485b-b399-7476e9040686",
+          "digest": "9nJfBRyuc3BZn3wYoYigQveCvq3446exx5RswMXnKpFV",
+          "status": "confirmed",
+          "actualGas": "17294932"
+        },
+        {
+          "label": "native direct Run and OS-wrapped result key",
+          "requestId": "direct-test:e7a4ee7f-e8e1-4661-999f-4646473c6223",
+          "digest": "6BPoiKJLAjhrGFkYtoBgVsqcJ7CiXmFr1UZ2DC6cVCgg",
+          "status": "confirmed",
+          "actualGas": "48282164"
+        },
+        {
+          "label": "native encrypted direct message 1",
+          "requestId": "direct-test:f990fc2e-dcdf-4c38-8d2f-2e788ed38681",
+          "digest": "7jWvxecFcnSV9xDUKfipqM9Y1VZfYMCGbVVg4ZThXTrz",
+          "status": "confirmed",
+          "actualGas": "16816132"
+        },
+        {
+          "label": "native direct Run and OS-wrapped result key",
+          "requestId": "direct-test:03c72f8d-7208-414f-8cd7-aef3aff979a4",
+          "digest": "2i5QG84TPyXFqs9hRQBj9NmS4GryUU41BDVRbZpHi3EB",
+          "status": "confirmed",
+          "actualGas": "43210988"
+        },
+        {
+          "label": "native encrypted direct message 0",
+          "requestId": "direct-test:a221ef56-0067-4b06-a3d7-92d053685e9f",
+          "digest": "E36jp5riiNfa4qjm7YPtWj3U7qHN4TG4qkdmWwVhN8TW",
+          "status": "confirmed",
+          "actualGas": "16147332"
+        },
+        {
+          "label": "native direct Run and OS-wrapped result key",
+          "requestId": "direct-test:1ae71840-edef-4c5c-9a48-47801e324c7f",
+          "digest": "GXmYBXF3iFg1h6YZ1JBQVRxNKwBzkjGznsH2Cfra76Dd",
+          "status": "confirmed",
+          "actualGas": "43044136"
+        },
+        {
+          "label": "native encrypted direct message 5",
+          "requestId": "direct-test:375bbf7a-4109-4103-affd-c49cd2213bb3",
+          "digest": "3ZWwspL3oH7yfKQgom1RY1DgqoA4x1Z59pnik4aucSeV",
+          "status": "confirmed",
+          "actualGas": "17355732"
+        },
+        {
+          "label": "native runtime exception request",
+          "requestId": "direct-test:1b77221f-9a0b-4cc4-b2a1-9d1c8b40017c",
+          "digest": "G1JK864VcNJ4FbcnE45Afr3U7KKXJ6X18MWDTVNbPqbD",
+          "status": "confirmed",
+          "actualGas": "14315732"
+        },
+        {
+          "label": "native runtime explicit exception",
+          "requestId": "direct-test:a2d52ec5-d2c1-442a-a201-c3113155efac",
+          "digest": "6QXJCgmtf6FycMSxtJx4KB2MYaWPPTk3paJfJWs6AuYP",
+          "status": "confirmed",
+          "actualGas": "5980660"
+        },
+        {
+          "label": "native runtime one-off capability",
+          "requestId": "direct-test:183773d1-7083-4d3e-832c-60f96bbd75aa",
+          "digest": "7xKLM2HR2oqmXcgmAxrvGzDpccno91rCLrdSEuttYvJH",
+          "status": "confirmed",
+          "actualGas": "19166280"
+        },
+        {
+          "label": "native direct Run and OS-wrapped result key",
+          "requestId": "direct-test:8c5dbc50-0bf9-444e-80f8-5753bdd7cce9",
+          "digest": "3XQhJiGc5SoPJp6n5uw4AYsqRx5Ss337QL6N9JURSkyo",
+          "status": "confirmed",
+          "actualGas": "48826792"
+        },
+        {
+          "label": "formal direct App permission edit",
+          "requestId": "direct-permission:0x0dc96d11bd914d97f3c942da5f879cf979eeb48e0efffc114cb28bcff52f712d:2",
+          "digest": "G12vKj8YRXbeHFMLpszK8E3gACN9xCoSiWL8UfgDBN51",
+          "status": "confirmed",
+          "actualGas": "7261868"
+        },
+        {
+          "label": "formal direct App encrypted message",
+          "requestId": "direct-message:1a7d21ee-dee6-4c79-abc6-f39ef7699a9c",
+          "digest": "9r6Xzea4Rc3UNmSqR7fj1sdECjLCjdijALfPpATmvbH6",
+          "status": "confirmed",
+          "actualGas": "16466836"
+        },
+        {
+          "label": "formal direct App capability",
+          "requestId": "direct-capability:0x9d4e38f5866b5a3ea21b4e02339244cc23a1b7390d235b4f7201309dacf1bf24",
+          "digest": "AayeKcNhzVfTWuueTUvvpijNcYKkdLnHQoGda4MTfPLS",
+          "status": "confirmed",
+          "actualGas": "18923080"
+        },
+        {
+          "label": "formal direct App original Run and OS result wrap",
+          "requestId": "direct-run:0x9d4e38f5866b5a3ea21b4e02339244cc23a1b7390d235b4f7201309dacf1bf24",
+          "digest": "EwPSezNLdWEC57W4HjKrjUq2ZxNj43kJSDmQvTRToEpB",
+          "status": "confirmed",
+          "actualGas": "48130468"
+        },
+        {
+          "label": "formal direct App encrypted message",
+          "requestId": "direct-message:3c7043ea-85b2-4230-a102-6391019049d4",
+          "digest": "99zA9h1cfrQB5yw5jEeS2fd65cJ79KfX465p2UKTX3F9",
+          "status": "confirmed",
+          "actualGas": "16421236"
+        },
+        {
+          "label": "formal direct App capability",
+          "requestId": "direct-capability:0x4ba851936583a2a3cae0b309062656945dc151643d5d5a749261e6291c518328",
+          "digest": "8L1CvmgYp6kuFejg1JedJq5q5yk262HxzuZeGBQM41v7",
+          "status": "confirmed",
+          "actualGas": "18923080"
+        },
+        {
+          "label": "formal direct App original Run and OS result wrap",
+          "requestId": "direct-run:0x4ba851936583a2a3cae0b309062656945dc151643d5d5a749261e6291c518328",
+          "digest": "3tnCWjsyPuL5Pe9FxZw73D4r46dmzhRQTq6JsCf95Hy6",
+          "status": "confirmed",
+          "actualGas": "48130468"
+        },
+        {
+          "label": "native message-derived encrypted OKR draft",
+          "requestId": "okr-draft:0x99c4ef91fe84db80e29dde4feb10f156e90e7b657735f6539675ccb7cd89c9fe:34cb8ecc-80e5-4147-b68b-2378378b6e7e",
+          "digest": "4v2tiYoqsrpCcz3EdmfUiP5gPFTTRTUjLU75h8W49arG",
+          "status": "confirmed",
+          "actualGas": "29636876"
+        },
+        {
+          "label": "native source-preserving OKR specification revision",
+          "requestId": "okr-intervene:0x9b7d797758e133f608fc605f3926e5ca6f7e0cd73c3d9cd5571b9b7058c029af:1:replace",
+          "digest": "5NJTGZdrC198tk3VXniwafxaXPAfyhuqq4cL99t95yMy",
+          "status": "confirmed",
+          "actualGas": "20747612"
+        },
+        {
+          "label": "formal direct App encrypted message",
+          "requestId": "direct-message:6acf7cb9-ac4a-4897-932f-73fd0a642401",
+          "digest": "6wkZZY96P8pcQ911MUJgpBfTATeMdXrSqjGnKPtc2q1H",
+          "status": "confirmed",
+          "actualGas": "17667636"
+        },
+        {
+          "label": "formal direct App one-off request",
+          "requestId": "direct-approval:0xcd677e6967e25a5d909be629e263cb0463780f6cea64e4a1064c42f7d7f55054",
+          "digest": "Dju4B8TuArDNVWG4UjCwYDSUausmfGpxZqgrW4QfkXV7",
+          "status": "confirmed",
+          "actualGas": "17150836"
+        },
+        {
+          "label": "formal direct App explicit decision",
+          "requestId": "direct-decision:0xcd677e6967e25a5d909be629e263cb0463780f6cea64e4a1064c42f7d7f55054:true",
+          "digest": "DVBn8fJfQ1Z9t2gQ8xFGhBEtdM5gGCucqsVT77DYc5Se",
+          "status": "confirmed",
+          "actualGas": "8777460"
+        },
+        {
+          "label": "formal direct App capability",
+          "requestId": "direct-capability:0xcd677e6967e25a5d909be629e263cb0463780f6cea64e4a1064c42f7d7f55054",
+          "digest": "6BtCLEEDnFNqEeS4pMcJxogJK6Nj5hV6EkZzRKRsEkZ9",
+          "status": "confirmed",
+          "actualGas": "19166280"
+        },
+        {
+          "label": "formal direct App original Run and OS result wrap",
+          "requestId": "direct-run:0xcd677e6967e25a5d909be629e263cb0463780f6cea64e4a1064c42f7d7f55054",
+          "digest": "BeP7svvsQGRYngttev7tPBKZE6NvPNHrdt6h3pQVG6dW",
+          "status": "confirmed",
+          "actualGas": "48837096"
+        },
+        {
+          "label": "formal direct App permission revocation",
+          "requestId": "direct-revoke:0x0dc96d11bd914d97f3c942da5f879cf979eeb48e0efffc114cb28bcff52f712d:3",
+          "digest": "A3UDsv9ATEJQTLdMycpHBC5GvPnC5z8UYmVFGHBrZWyw",
+          "status": "confirmed",
+          "actualGas": "1070604"
+        },
+        {
+          "label": "native workload recovery 1",
+          "requestId": "recover:test-612746ec-e485-4ee3-a610-405a13d97be1-recover-a",
+          "digest": "F2c2MB7ArNST2BWje2Y6iEZb9EoRbB3fFsA88CCXDATW",
+          "status": "confirmed",
+          "actualGas": "18800952"
+        },
+        {
+          "label": "native recovered-device new key-version OKR draft",
+          "requestId": "okr-draft:0x99c4ef91fe84db80e29dde4feb10f156e90e7b657735f6539675ccb7cd89c9fe:e51f8fda-1bf8-463a-8c36-e0bf753d14f9",
+          "digest": "3XUUHohzzCbkrWPZnWd26RxQaXPJErcp1KVkpvkxtNpi",
+          "status": "confirmed",
+          "actualGas": "17940476"
+        }
+      ],
+      "recoveryAndPostRecoveryTransactions": [
+        {
+          "label": "native workload recovery 1",
+          "requestId": "recover:test-612746ec-e485-4ee3-a610-405a13d97be1-recover-a",
+          "digest": "F2c2MB7ArNST2BWje2Y6iEZb9EoRbB3fFsA88CCXDATW",
+          "status": "confirmed",
+          "actualGas": "18800952",
+          "createdObjects": [
+            {
+              "id": "0x015842adaee98607aaa572615c38061cea7d59bd066fa794d5f0f9b955f0aee6",
+              "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,vector<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>>",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0x1a709721d3114acc1e2782e3226a4419c67192fe3071263b38d9dc5a06328781",
+              "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::RecoveryLocation>",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0xc635fb394f98a5fda101c95390db84739de4270fb7faf225833f7bc97206174d",
+              "type": "0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::DeviceGrant",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0xf2486324b2070e6c0e462ebd5277cba4a3845b83a1d539406fe92d2ed891b965",
+              "type": "0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::RecoveryRecord",
+              "outputState": "ObjectWrite"
+            }
+          ]
+        },
+        {
+          "label": "native recovered-device new key-version OKR draft",
+          "requestId": "okr-draft:0x99c4ef91fe84db80e29dde4feb10f156e90e7b657735f6539675ccb7cd89c9fe:e51f8fda-1bf8-463a-8c36-e0bf753d14f9",
+          "digest": "3XUUHohzzCbkrWPZnWd26RxQaXPJErcp1KVkpvkxtNpi",
+          "status": "confirmed",
+          "actualGas": "17940476",
+          "createdObjects": [
+            {
+              "id": "0x76194a2fdbc0b20db69cf9cdb6adde084559976ac57a565cc0d62c4b16bd5303",
+              "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::product_record::RecordKey,0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::product_record::RecordPointer>",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0x90aeac1722514abca28e346ed75fa3d8aea112f215e0cb10134ed4e24f90c141",
+              "type": "0x5050745ced821f0bbc8ccc6fff4b2af1dd30cfff463bccb0e219333c45669e75::okr::Okr",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0x94220f7430e3ccb6d9cd04489e565d3a2fc1afab1d7b6a8a73ae83f928a14ada",
+              "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000001::string::String,0x5050745ced821f0bbc8ccc6fff4b2af1dd30cfff463bccb0e219333c45669e75::okr::DraftPointer>",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0x9898b3d74472cd9d8ad561f0a750e6610e55a63467ffecbc800ba5afbdaf51db",
+              "outputState": "DoesNotExist"
+            },
+            {
+              "id": "0xd6b4cb313a9705ca0c6973b28d8addff34f6bfa718c8a227a3c27c743a5875c9",
+              "type": "0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::product_record::EncryptedRecord",
+              "outputState": "ObjectWrite"
+            }
+          ]
+        }
+      ],
+      "readOnlyFollowup": {
+        "recordedAt": "2026-10-03T05:14:38.579Z",
+        "originalReport": "/tmp/fm-native-workload-recovery-protocol-r3.json.progress.json",
+        "originalReportSha256": "ed6aca8bf91ec1ba0d4fb49c2a686dc74c749cd191aa65b3c21d3076df4160c8",
+        "originalExecutionTerminal": true,
+        "originalExitCode": 1,
+        "originalFailure": "The input did not match the regular expression /invalid_envelope/. Input:\n\n'Error: InvalidEnvelope'\n",
+        "originalConfirmedRecovery": {
+          "label": "native workload recovery 1",
+          "requestId": "recover:test-612746ec-e485-4ee3-a610-405a13d97be1-recover-a",
+          "digest": "F2c2MB7ArNST2BWje2Y6iEZb9EoRbB3fFsA88CCXDATW",
+          "status": "confirmed",
+          "actualGas": "18800952",
+          "createdObjects": [
+            {
+              "id": "0x015842adaee98607aaa572615c38061cea7d59bd066fa794d5f0f9b955f0aee6",
+              "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,vector<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>>",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0x1a709721d3114acc1e2782e3226a4419c67192fe3071263b38d9dc5a06328781",
+              "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::RecoveryLocation>",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0xc635fb394f98a5fda101c95390db84739de4270fb7faf225833f7bc97206174d",
+              "type": "0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::DeviceGrant",
+              "outputState": "ObjectWrite"
+            },
+            {
+              "id": "0xf2486324b2070e6c0e462ebd5277cba4a3845b83a1d539406fe92d2ed891b965",
+              "type": "0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa::identity::RecoveryRecord",
+              "outputState": "ObjectWrite"
+            }
+          ]
+        },
+        "recoveryTransactionQuery": {
+          "available": false,
+          "reason": "original receipt currently unavailable; not retried"
+        },
+        "readOnlyCurrentState": {
+          "humanId": "0x34c090b23ff20c6b54f1674af5baea84976342cf743f0b99c430a2820801fb5e",
+          "generation": "2",
+          "recoveryVersion": "2",
+          "recoveryRecordId": "0xf2486324b2070e6c0e462ebd5277cba4a3845b83a1d539406fe92d2ed891b965",
+          "recoveryActive": true,
+          "organizations": [
+            "0x99c4ef91fe84db80e29dde4feb10f156e90e7b657735f6539675ccb7cd89c9fe"
+          ],
+          "organizationKeyVersion": "2",
+          "grants": [
+            {
+              "id": "0x11463321c3d90fa1271648c0647d58cc369dad209dfac9fd02d9390d3ab0d789",
+              "generation": "1",
+              "device": "0xaf4e66f2ac508a63c2ba86b16bf87844f2d80747fc935ab50d814d25b4180623",
+              "revoked": false
+            },
+            {
+              "id": "0xc635fb394f98a5fda101c95390db84739de4270fb7faf225833f7bc97206174d",
+              "generation": "2",
+              "device": "0xa5d50bc2c480095aeee8a288d543894a2aa63d4143d8577804c0a345de414704",
+              "revoked": false
+            }
+          ],
+          "goal": {
+            "id": "0x3e24031ae251d2b48a96d06541d14634b1dc12279ca0905b73024fe6490e3df5",
+            "state": 3,
+            "nextKr": "2",
+            "acceptanceRecordId": "0x35e648a44b121b6f34f99d8ca5d3d29130b22814bacb162f52be7569a977809f"
+          },
+          "sourceDraft": {
+            "id": "0x9b7d797758e133f608fc605f3926e5ca6f7e0cd73c3d9cd5571b9b7058c029af",
+            "state": 0,
+            "specRevision": "2"
+          },
+          "budget": {
+            "asset": "TOOL_CALLS",
+            "spent": "6",
+            "reserved": "0",
+            "claimsId": "0xa204de2a3c2103a6c7ad1106b8fbe67fa7f84b16915239f2366fe68d5c4d0388"
+          }
+        },
+        "limits": {
+          "nativeRecoveryConfirmed": true,
+          "failurePhase": "new_device_needs_own_funds",
+          "recoveredWorkloadComplete": false,
+          "periodicHeartbeatAbsentInOriginalFixture": false,
+          "observationTTLUnchanged": 60000,
+          "replayed": false,
+          "broadcasts": 0,
+          "originalCredentialsCleaned": true,
+          "decryptedBodyClaim": "Follow-up only reads public chain objects; original progress report supplies its own proof scope",
+          "privateKeysInReport": false,
+          "recoveryCodeInReport": false
+        }
+      }
+    }
+  ],
+  "readOnlyFollowupPreparationFailures": [
+    {
+      "path": "/tmp/fm-native-workload-recovery-original-check-r1.log",
+      "sha256": "ed2d1e81530776fcded3680599240ab479d9c0bb5cdb5e03ea493279e9f83adf",
+      "scope": "read-only helper preparation; not a recovery broadcast"
+    },
+    {
+      "path": "/tmp/fm-native-workload-recovery-original-check-r2.log",
+      "sha256": "282f0dc4ab85ea86ec3a388b09b9bf7af79a219c4c85ecdb79e5be2ee4e0ffee",
+      "scope": "read-only helper preparation; not a recovery broadcast"
+    }
+  ],
+  "interpretation": [
+    "R1 confirmed recovery, then original test fixture had no recurring heartbeat and the fresh Host assertion failed after the historical checks. The production freshness limit remains 60000 ms.",
+    "R2 added recurring signed observations and restored 38 record hashes/9 original messages plus a live Host; a zero-balance independent recovered device then correctly prevented draft quotation.",
+    "R3 explicitly funded the new device and confirmed the v2 draft; native old-envelope decryption rejected with InvalidEnvelope, while the test assertion expected a lower-case error without the standard App bridge normalization. No second recovery was completed."
+  ],
+  "limits": {
+    "laterPassingRunDoesNotSettlePriorRuns": true,
+    "priorHostRevocationNotCompleted": true,
+    "privateKeysInReport": false,
+    "recoveryCodeInReport": false
+  }
+}

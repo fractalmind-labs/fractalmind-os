@@ -1,0 +1,790 @@
+{
+  "format": 1,
+  "baseline": "06d6cf3",
+  "recordedAt": "2026-10-03T17:54:26.070347+00:00",
+  "fullMilestoneAccepted": false,
+  "fullCloudOkrAccepted": false,
+  "scope": "Scripted production App HandoverReview with original installed Android APK Keystore IPC, real Ubuntu Host maintenance CLI, original localnet over SSH. No physical phone, updated installed UI, automatic orphan-review acknowledgement or cloud KR execution.",
+  "explicitNativeStop": {
+    "quote": {
+      "requestId": "handover-stop:dedc9200-c3ea-43ee-a20b-34de27c5d146",
+      "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e\"]",
+      "digest": "4pYBctfNyXjqARwusBgibisBtN52NTyQBJLL1cVNKV39",
+      "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+      "balance": "999834718904",
+      "requiredBalance": "200000000",
+      "gasBudget": "200000000",
+      "maxSuiSpend": "0",
+      "estimatedGas": "1597700",
+      "simulatedSuiSpend": "0",
+      "expiresAtMs": 1791048584987
+    },
+    "outcome": {
+      "status": "confirmed",
+      "digest": "4pYBctfNyXjqARwusBgibisBtN52NTyQBJLL1cVNKV39",
+      "requestId": "handover-stop:dedc9200-c3ea-43ee-a20b-34de27c5d146",
+      "actualGas": "1597700",
+      "journalSynced": true
+    },
+    "initialImmediateSnapshot": {
+      "id": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+      "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "capability_id": "0x8ee3fbfb3d56d6e8e6e6ec69be4f753645acb8c09f90917d81cbebc876ba6de8",
+      "capability_version": "1",
+      "human_id": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+      "grant_id": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+      "grant_version": "1",
+      "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+      "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+      "managed_agent": "0x88148f91a547e54750132d9442627c1ea6eefb89540ef1f78ef0f48f9f374140",
+      "delegate": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+      "node_id": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+      "agent_id": "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5",
+      "command_id": "af0fa220-58d9-411d-8978-0803de77ed3f",
+      "nonce": "e74781b1-6e1f-47a9-9237-97658f5868cc",
+      "idempotency_key": "af0fa220-58d9-411d-8978-0803de77ed3f",
+      "intent_hash": [
+        80, 5, 74, 147, 130, 180, 142, 112, 48, 52, 223, 137, 180, 135, 28, 164,
+        36, 240, 76, 220, 33, 114, 16, 206, 2, 145, 247, 55, 163, 171, 99, 147
+      ],
+      "action": "status",
+      "scope": "observation",
+      "budget_asset": "",
+      "budget_amount": "0",
+      "issued_at_ms": "1791044239333",
+      "expires_at_ms": "1791044359333",
+      "state": 1,
+      "cursor": "2",
+      "stop_requested": false,
+      "created_at_ms": "1791044239910",
+      "started_at_ms": "1791044331604",
+      "updated_at_ms": "1791044331604",
+      "result_record": null,
+      "result_hash": [],
+      "attempt_id": [
+        113, 168, 62, 156, 228, 136, 140, 175, 130, 3, 66, 77, 175, 167, 20, 63,
+        25, 24, 176, 24, 61, 88, 245, 157, 52, 94, 151, 228, 23, 129, 148, 185
+      ]
+    },
+    "initialFixtureFailure": "Expected values to be strictly equal:\n\nfalse !== true\n",
+    "independentLaterSnapshot": {
+      "id": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+      "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "capability_id": "0x8ee3fbfb3d56d6e8e6e6ec69be4f753645acb8c09f90917d81cbebc876ba6de8",
+      "capability_version": "1",
+      "human_id": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+      "grant_id": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+      "grant_version": "1",
+      "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+      "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+      "managed_agent": "0x88148f91a547e54750132d9442627c1ea6eefb89540ef1f78ef0f48f9f374140",
+      "delegate": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+      "node_id": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+      "agent_id": "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5",
+      "command_id": "af0fa220-58d9-411d-8978-0803de77ed3f",
+      "nonce": "e74781b1-6e1f-47a9-9237-97658f5868cc",
+      "idempotency_key": "af0fa220-58d9-411d-8978-0803de77ed3f",
+      "intent_hash": [
+        80, 5, 74, 147, 130, 180, 142, 112, 48, 52, 223, 137, 180, 135, 28, 164,
+        36, 240, 76, 220, 33, 114, 16, 206, 2, 145, 247, 55, 163, 171, 99, 147
+      ],
+      "action": "status",
+      "scope": "observation",
+      "budget_asset": "",
+      "budget_amount": "0",
+      "issued_at_ms": "1791044239333",
+      "expires_at_ms": "1791044359333",
+      "state": 1,
+      "cursor": "3",
+      "stop_requested": true,
+      "created_at_ms": "1791044239910",
+      "started_at_ms": "1791044331604",
+      "updated_at_ms": "1791048525309",
+      "result_record": null,
+      "result_hash": [],
+      "attempt_id": [
+        113, 168, 62, 156, 228, 136, 140, 175, 130, 3, 66, 77, 175, 167, 20, 63,
+        25, 24, 176, 24, 61, 88, 245, 157, 52, 94, 151, 228, 23, 129, 148, 185
+      ]
+    },
+    "originalDeliveryCountStill": 1,
+    "newCommandDeliveries": 0
+  },
+  "hostCancellation": {
+    "startedAt": "2026-10-03T17:34:56.619893+00:00",
+    "scope": "Host-only encrypted cancellation of the explicitly stopped original expired zero-tool observation; no command execution",
+    "executionId": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+    "binarySha256": "4c53a37d5dce9b8876628e4a686ba3b5acaeade7411b3d4b08b7ebfc6a1c51b6",
+    "originalPayloadHashVerified": true,
+    "exitCode": 0,
+    "output": [
+      {
+        "execution_id": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+        "state": "cancelled",
+        "transaction_digest": "2jGdwXwyUC3sU1HP7641jXPKjcFoF17iR1R956j9uyTS"
+      }
+    ],
+    "diagnostic": "",
+    "finishedAt": "2026-10-03T17:35:29.133660+00:00"
+  },
+  "priorRejectedMaintenanceCall": {
+    "startedAt": "2026-10-03T17:30:50.458774+00:00",
+    "scope": "Host-only encrypted cancellation of the explicitly stopped original expired zero-tool observation; no command execution",
+    "executionId": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+    "binarySha256": "4a69e809fec5662fa3006f1d1b87e40970cdf255330c97aaf3d0bf32fe6d099e",
+    "exitCode": 1,
+    "output": [
+      {
+        "execution_id": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+        "state": "unconfirmed"
+      }
+    ],
+    "diagnostic": "2026/10/04 01:30:56 [envd] review requires an exact signed status payload\n",
+    "finishedAt": "2026-10-03T17:30:56.569655+00:00",
+    "outcomeClass": "payload validation rejected before transaction construction or broadcast"
+  },
+  "independentReadBeforeUpgrade": {
+    "complete": true,
+    "checks": [
+      "Original installed native controller decrypts the immutable Host cancellation for the same original Run and exact settlement transaction, without acceptance or tool spend",
+      "Original zero-tool reservation and execution ledger are terminal and settled; managed Agent remains observation-only",
+      "Original OKR remains draft with cursor zero and no measurement or independent Human acceptance",
+      "Independent SSH read confirms both cloud KR files are absent and existing user envd processes remain running",
+      "Fresh chain/controller source reconstructs the same original encrypted cancellation without charging, signing or command delivery"
+    ],
+    "run": {
+      "id": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+      "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "capability_id": "0x8ee3fbfb3d56d6e8e6e6ec69be4f753645acb8c09f90917d81cbebc876ba6de8",
+      "capability_version": "1",
+      "human_id": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+      "grant_id": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+      "grant_version": "1",
+      "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+      "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+      "managed_agent": "0x88148f91a547e54750132d9442627c1ea6eefb89540ef1f78ef0f48f9f374140",
+      "delegate": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+      "node_id": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+      "agent_id": "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5",
+      "command_id": "af0fa220-58d9-411d-8978-0803de77ed3f",
+      "nonce": "e74781b1-6e1f-47a9-9237-97658f5868cc",
+      "idempotency_key": "af0fa220-58d9-411d-8978-0803de77ed3f",
+      "intent_hash": [
+        80, 5, 74, 147, 130, 180, 142, 112, 48, 52, 223, 137, 180, 135, 28, 164,
+        36, 240, 76, 220, 33, 114, 16, 206, 2, 145, 247, 55, 163, 171, 99, 147
+      ],
+      "action": "status",
+      "scope": "observation",
+      "budget_asset": "",
+      "budget_amount": "0",
+      "issued_at_ms": "1791044239333",
+      "expires_at_ms": "1791044359333",
+      "state": 5,
+      "cursor": "4",
+      "stop_requested": true,
+      "created_at_ms": "1791044239910",
+      "started_at_ms": "1791044331604",
+      "updated_at_ms": "1791048919845",
+      "result_record": "0x34127d41a8cb85b4eb53143613e331dd0ec3b43ca12568c8a0d1db543bfe96a0",
+      "result_hash": [
+        110, 141, 240, 6, 201, 196, 224, 161, 52, 212, 220, 109, 165, 235, 83,
+        216, 152, 220, 254, 95, 142, 155, 143, 83, 48, 43, 30, 209, 238, 151,
+        47, 211
+      ],
+      "attempt_id": [
+        113, 168, 62, 156, 228, 136, 140, 175, 130, 3, 66, 77, 175, 167, 20, 63,
+        25, 24, 176, 24, 61, 88, 245, 157, 52, 94, 151, 228, 23, 129, 148, 185
+      ]
+    },
+    "recordId": "0x34127d41a8cb85b4eb53143613e331dd0ec3b43ca12568c8a0d1db543bfe96a0",
+    "resultCreationDigest": "2jGdwXwyUC3sU1HP7641jXPKjcFoF17iR1R956j9uyTS",
+    "response": {
+      "schema_version": "1",
+      "adapter": "agent-manager-runtime",
+      "command_id": "af0fa220-58d9-411d-8978-0803de77ed3f",
+      "operation": "status",
+      "duplicate": false,
+      "ok": false,
+      "observed_at": "2026-10-03T17:35:09.102Z",
+      "result": null,
+      "error": {
+        "code": "cancelled",
+        "message": "Host acknowledged the on-chain stop after the original observation and handover lease expired; no acceptance or tool execution was issued."
+      },
+      "execution_id": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+      "execution_state": "cancelled",
+      "transaction_digest": "2jGdwXwyUC3sU1HP7641jXPKjcFoF17iR1R956j9uyTS"
+    },
+    "budget": {
+      "reservedAmount": "0",
+      "spentAmount": "0",
+      "settled": true
+    },
+    "ledgerEntry": {
+      "run": {
+        "id": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "capability_id": "0x8ee3fbfb3d56d6e8e6e6ec69be4f753645acb8c09f90917d81cbebc876ba6de8",
+        "capability_version": "1",
+        "human_id": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+        "grant_id": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+        "grant_version": "1",
+        "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+        "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "managed_agent": "0x88148f91a547e54750132d9442627c1ea6eefb89540ef1f78ef0f48f9f374140",
+        "delegate": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "node_id": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "agent_id": "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5",
+        "command_id": "af0fa220-58d9-411d-8978-0803de77ed3f",
+        "nonce": "e74781b1-6e1f-47a9-9237-97658f5868cc",
+        "idempotency_key": "af0fa220-58d9-411d-8978-0803de77ed3f",
+        "intent_hash": [
+          80, 5, 74, 147, 130, 180, 142, 112, 48, 52, 223, 137, 180, 135, 28,
+          164, 36, 240, 76, 220, 33, 114, 16, 206, 2, 145, 247, 55, 163, 171,
+          99, 147
+        ],
+        "action": "status",
+        "scope": "observation",
+        "budget_asset": "",
+        "budget_amount": "0",
+        "issued_at_ms": "1791044239333",
+        "expires_at_ms": "1791044359333",
+        "state": 5,
+        "cursor": "4",
+        "stop_requested": true,
+        "created_at_ms": "1791044239910",
+        "started_at_ms": "1791044331604",
+        "updated_at_ms": "1791048919845",
+        "result_record": "0x34127d41a8cb85b4eb53143613e331dd0ec3b43ca12568c8a0d1db543bfe96a0",
+        "result_hash": [
+          110, 141, 240, 6, 201, 196, 224, 161, 52, 212, 220, 109, 165, 235, 83,
+          216, 152, 220, 254, 95, 142, 155, 143, 83, 48, 43, 30, 209, 238, 151,
+          47, 211
+        ],
+        "attempt_id": [
+          113, 168, 62, 156, 228, 136, 140, 175, 130, 3, 66, 77, 175, 167, 20,
+          63, 25, 24, 176, 24, 61, 88, 245, 157, 52, 94, 151, 228, 23, 129, 148,
+          185
+        ]
+      },
+      "control": false,
+      "settled": true,
+      "spent": "0",
+      "reserved": "0"
+    },
+    "managedControlConfirmed": false,
+    "unsettledControl": 0,
+    "okr": {
+      "id": "0x3bb8296d04e2eb04eaf485c3c47ccdc02c4eb9cf49a6972d1a30a7496f955333",
+      "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "owner_human": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+      "logical_id": "de29f847-8242-488a-9c22-6d9ee288591e",
+      "state": 0,
+      "version": "1",
+      "agreement_version": "0",
+      "priority": 0,
+      "deadline_ms": "1791047728480",
+      "spec_record": "0xd06dee8422bdf8cea6926d5235a626c01b9d3a799d9aa3e033b92385cb35d997",
+      "spec_revision": "1",
+      "metrics": [
+        {
+          "baseline": "0",
+          "target": "1",
+          "weight": "1",
+          "max_age_ms": "300000",
+          "current": null,
+          "sampled_at_ms": "0",
+          "run_id": null,
+          "evidence_id": null,
+          "verified": false,
+          "verification_id": null
+        },
+        {
+          "baseline": "0",
+          "target": "1",
+          "weight": "1",
+          "max_age_ms": "300000",
+          "current": null,
+          "sampled_at_ms": "0",
+          "run_id": null,
+          "evidence_id": null,
+          "verified": false,
+          "verification_id": null
+        }
+      ],
+      "next_kr": "0",
+      "observations": {
+        "id": "0xc2d5405f4b5cf444670d1be29d82c8ceb304280508de68fa593ebc17c2dd210d",
+        "size": "0"
+      },
+      "managed_agent": null,
+      "managed_version": "0",
+      "membership_id": null,
+      "membership_version": "0",
+      "workspace_hash": [],
+      "boundary_hash": [],
+      "budget_asset": "",
+      "budget_limit": "0",
+      "expires_at_ms": "0",
+      "activated_at_ms": "0",
+      "agreement_record": null,
+      "acceptance_record": null,
+      "accepted_by_human": null,
+      "accepted_at_ms": "0"
+    },
+    "remote": {
+      "files": {
+        "docs/CLOUD-FIRST.md": false,
+        "docs/CLOUD-SECOND.md": false
+      },
+      "processes": "1872983 Sl+  envd\n2244585 Ssl  envd\n2325124 Sl   envd-r2\n"
+    },
+    "coldRecordId": "0x34127d41a8cb85b4eb53143613e331dd0ec3b43ca12568c8a0d1db543bfe96a0",
+    "nativeCalls": [
+      "fm_device_public",
+      "fm_device_prove",
+      "fm_device_decrypt_record",
+      "fm_device_prove",
+      "fm_device_prove",
+      "fm_device_decrypt_record",
+      "fm_device_prove"
+    ],
+    "noSignatures": true,
+    "noNewTransactions": true,
+    "noCommandDelivery": true,
+    "finishedAt": "2026-10-03T17:36:38.849Z"
+  },
+  "independentReadAfterUpgrade": {
+    "complete": true,
+    "checks": [
+      "Original installed native controller decrypts the immutable Host cancellation for the same original Run and exact settlement transaction, without acceptance or tool spend",
+      "Original zero-tool reservation and execution ledger are terminal and settled; managed Agent remains observation-only",
+      "Original OKR remains draft with cursor zero and no measurement or independent Human acceptance",
+      "Independent SSH read confirms both cloud KR files are absent and existing user envd processes remain running",
+      "Fresh chain/controller source reconstructs the same original encrypted cancellation without charging, signing or command delivery"
+    ],
+    "run": {
+      "id": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+      "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "capability_id": "0x8ee3fbfb3d56d6e8e6e6ec69be4f753645acb8c09f90917d81cbebc876ba6de8",
+      "capability_version": "1",
+      "human_id": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+      "grant_id": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+      "grant_version": "1",
+      "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+      "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+      "managed_agent": "0x88148f91a547e54750132d9442627c1ea6eefb89540ef1f78ef0f48f9f374140",
+      "delegate": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+      "node_id": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+      "agent_id": "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5",
+      "command_id": "af0fa220-58d9-411d-8978-0803de77ed3f",
+      "nonce": "e74781b1-6e1f-47a9-9237-97658f5868cc",
+      "idempotency_key": "af0fa220-58d9-411d-8978-0803de77ed3f",
+      "intent_hash": [
+        80, 5, 74, 147, 130, 180, 142, 112, 48, 52, 223, 137, 180, 135, 28, 164,
+        36, 240, 76, 220, 33, 114, 16, 206, 2, 145, 247, 55, 163, 171, 99, 147
+      ],
+      "action": "status",
+      "scope": "observation",
+      "budget_asset": "",
+      "budget_amount": "0",
+      "issued_at_ms": "1791044239333",
+      "expires_at_ms": "1791044359333",
+      "state": 5,
+      "cursor": "4",
+      "stop_requested": true,
+      "created_at_ms": "1791044239910",
+      "started_at_ms": "1791044331604",
+      "updated_at_ms": "1791048919845",
+      "result_record": "0x34127d41a8cb85b4eb53143613e331dd0ec3b43ca12568c8a0d1db543bfe96a0",
+      "result_hash": [
+        110, 141, 240, 6, 201, 196, 224, 161, 52, 212, 220, 109, 165, 235, 83,
+        216, 152, 220, 254, 95, 142, 155, 143, 83, 48, 43, 30, 209, 238, 151,
+        47, 211
+      ],
+      "attempt_id": [
+        113, 168, 62, 156, 228, 136, 140, 175, 130, 3, 66, 77, 175, 167, 20, 63,
+        25, 24, 176, 24, 61, 88, 245, 157, 52, 94, 151, 228, 23, 129, 148, 185
+      ]
+    },
+    "recordId": "0x34127d41a8cb85b4eb53143613e331dd0ec3b43ca12568c8a0d1db543bfe96a0",
+    "resultCreationDigest": "2jGdwXwyUC3sU1HP7641jXPKjcFoF17iR1R956j9uyTS",
+    "response": {
+      "schema_version": "1",
+      "adapter": "agent-manager-runtime",
+      "command_id": "af0fa220-58d9-411d-8978-0803de77ed3f",
+      "operation": "status",
+      "duplicate": false,
+      "ok": false,
+      "observed_at": "2026-10-03T17:35:09.102Z",
+      "result": null,
+      "error": {
+        "code": "cancelled",
+        "message": "Host acknowledged the on-chain stop after the original observation and handover lease expired; no acceptance or tool execution was issued."
+      },
+      "execution_id": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+      "execution_state": "cancelled",
+      "transaction_digest": "2jGdwXwyUC3sU1HP7641jXPKjcFoF17iR1R956j9uyTS"
+    },
+    "budget": {
+      "reservedAmount": "0",
+      "spentAmount": "0",
+      "settled": true
+    },
+    "ledgerEntry": {
+      "run": {
+        "id": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "capability_id": "0x8ee3fbfb3d56d6e8e6e6ec69be4f753645acb8c09f90917d81cbebc876ba6de8",
+        "capability_version": "1",
+        "human_id": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+        "grant_id": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+        "grant_version": "1",
+        "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+        "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "managed_agent": "0x88148f91a547e54750132d9442627c1ea6eefb89540ef1f78ef0f48f9f374140",
+        "delegate": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "node_id": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "agent_id": "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5",
+        "command_id": "af0fa220-58d9-411d-8978-0803de77ed3f",
+        "nonce": "e74781b1-6e1f-47a9-9237-97658f5868cc",
+        "idempotency_key": "af0fa220-58d9-411d-8978-0803de77ed3f",
+        "intent_hash": [
+          80, 5, 74, 147, 130, 180, 142, 112, 48, 52, 223, 137, 180, 135, 28,
+          164, 36, 240, 76, 220, 33, 114, 16, 206, 2, 145, 247, 55, 163, 171,
+          99, 147
+        ],
+        "action": "status",
+        "scope": "observation",
+        "budget_asset": "",
+        "budget_amount": "0",
+        "issued_at_ms": "1791044239333",
+        "expires_at_ms": "1791044359333",
+        "state": 5,
+        "cursor": "4",
+        "stop_requested": true,
+        "created_at_ms": "1791044239910",
+        "started_at_ms": "1791044331604",
+        "updated_at_ms": "1791048919845",
+        "result_record": "0x34127d41a8cb85b4eb53143613e331dd0ec3b43ca12568c8a0d1db543bfe96a0",
+        "result_hash": [
+          110, 141, 240, 6, 201, 196, 224, 161, 52, 212, 220, 109, 165, 235, 83,
+          216, 152, 220, 254, 95, 142, 155, 143, 83, 48, 43, 30, 209, 238, 151,
+          47, 211
+        ],
+        "attempt_id": [
+          113, 168, 62, 156, 228, 136, 140, 175, 130, 3, 66, 77, 175, 167, 20,
+          63, 25, 24, 176, 24, 61, 88, 245, 157, 52, 94, 151, 228, 23, 129, 148,
+          185
+        ]
+      },
+      "control": false,
+      "settled": true,
+      "spent": "0",
+      "reserved": "0"
+    },
+    "managedControlConfirmed": false,
+    "unsettledControl": 0,
+    "okr": {
+      "id": "0x3bb8296d04e2eb04eaf485c3c47ccdc02c4eb9cf49a6972d1a30a7496f955333",
+      "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "owner_human": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+      "logical_id": "de29f847-8242-488a-9c22-6d9ee288591e",
+      "state": 0,
+      "version": "1",
+      "agreement_version": "0",
+      "priority": 0,
+      "deadline_ms": "1791047728480",
+      "spec_record": "0xd06dee8422bdf8cea6926d5235a626c01b9d3a799d9aa3e033b92385cb35d997",
+      "spec_revision": "1",
+      "metrics": [
+        {
+          "baseline": "0",
+          "target": "1",
+          "weight": "1",
+          "max_age_ms": "300000",
+          "current": null,
+          "sampled_at_ms": "0",
+          "run_id": null,
+          "evidence_id": null,
+          "verified": false,
+          "verification_id": null
+        },
+        {
+          "baseline": "0",
+          "target": "1",
+          "weight": "1",
+          "max_age_ms": "300000",
+          "current": null,
+          "sampled_at_ms": "0",
+          "run_id": null,
+          "evidence_id": null,
+          "verified": false,
+          "verification_id": null
+        }
+      ],
+      "next_kr": "0",
+      "observations": {
+        "id": "0xc2d5405f4b5cf444670d1be29d82c8ceb304280508de68fa593ebc17c2dd210d",
+        "size": "0"
+      },
+      "managed_agent": null,
+      "managed_version": "0",
+      "membership_id": null,
+      "membership_version": "0",
+      "workspace_hash": [],
+      "boundary_hash": [],
+      "budget_asset": "",
+      "budget_limit": "0",
+      "expires_at_ms": "0",
+      "activated_at_ms": "0",
+      "agreement_record": null,
+      "acceptance_record": null,
+      "accepted_by_human": null,
+      "accepted_at_ms": "0"
+    },
+    "remote": {
+      "files": {
+        "docs/CLOUD-FIRST.md": false,
+        "docs/CLOUD-SECOND.md": false
+      },
+      "processes": "1872983 Sl+  envd\n2244585 Ssl  envd\n2358982 Sl   envd-r2\n"
+    },
+    "coldRecordId": "0x34127d41a8cb85b4eb53143613e331dd0ec3b43ca12568c8a0d1db543bfe96a0",
+    "nativeCalls": [
+      "fm_device_public",
+      "fm_device_prove",
+      "fm_device_decrypt_record",
+      "fm_device_prove",
+      "fm_device_prove",
+      "fm_device_decrypt_record",
+      "fm_device_prove"
+    ],
+    "noSignatures": true,
+    "noNewTransactions": true,
+    "noCommandDelivery": true,
+    "finishedAt": "2026-10-03T17:44:18.915Z"
+  },
+  "cloudUpgrade": {
+    "at": "2026-10-03T17:39:21.574489+00:00",
+    "exitCode": 0,
+    "output": {
+      "backup": "/tmp/fm-v020-remote-cloud-61aRZZHv/envd-r2-original-147b0e3",
+      "activeBinarySha256": "4c53a37d5dce9b8876628e4a686ba3b5acaeade7411b3d4b08b7ebfc6a1c51b6",
+      "version": "fractalmind-envd v020-stopped-review-06d6cf3-r5",
+      "existingUserProcesses": "1872983 Sl+  envd\n2244585 Ssl  envd\n"
+    },
+    "diagnostic": "",
+    "oldWorkerStop": {
+      "pid": 2325124,
+      "exitCode": 0
+    },
+    "newWorkerPid": 2358982,
+    "publicIdentityUnchanged": true,
+    "processProof": {
+      "workerPid": 2358982,
+      "workerExecutable": "/tmp/fm-v020-remote-cloud-61aRZZHv/envd-r2",
+      "workerBinarySha256": "4c53a37d5dce9b8876628e4a686ba3b5acaeade7411b3d4b08b7ebfc6a1c51b6",
+      "processes": "1872983 Sl+  envd\n2244585 Ssl  envd\n2322229 SLl  gnome-keyring-d\n2358982 Sl   envd-r2\n",
+      "keyringSha256": "4ef9771b59e896aa04bcd1ab9c839c1f93b1b48bae1bcdd4ee3b19bba67e01d3",
+      "keyringMode": "0o600",
+      "keyringSize": 728,
+      "targetFiles": {
+        "docs/CLOUD-FIRST.md": false,
+        "docs/CLOUD-SECOND.md": false
+      },
+      "at": "2026-10-03T17:44:22.162638+00:00"
+    },
+    "freshAuthenticatedObservation": {
+      "completed": true,
+      "checks": [
+        "Loads original installed Android device from actual Keystore IPC; no key export or new Human",
+        "Original Android native signer verifies current cloud Host and native scan through formal Coordinator",
+        "Exact original member, public keys and admission previousTransaction unchanged, no signing transaction or replay"
+      ],
+      "host": {
+        "format": "1",
+        "profile": "test-native-restart-4685ec27-b36c-4df0-a03a-b2a95479a5da",
+        "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "signing_public_key": "210e9849fe29b1953656f094e197e88cfca45563874ddd06e197c004cc3c2933",
+        "encryption_public_key": "207518ee6ac585d2badc9eef70d9295580159837cc166b99e551c742aa8b6c7a"
+      },
+      "row": {
+        "address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "state": "verified",
+        "observation": {
+          "address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+          "hostname": "v0.2.0 Ubuntu cloud isolated Host",
+          "heartbeatMs": 1791049231895,
+          "agentCount": 0,
+          "system": {
+            "os": "linux",
+            "arch": "amd64",
+            "cpu": 2
+          }
+        },
+        "membershipId": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+        "expiresAtMs": 1791049291895,
+        "freshUntilMs": 1791049294257,
+        "nativeDiscovery": {
+          "state": "complete",
+          "observedAtMs": 1791049231895,
+          "expiresAtMs": 1791049291895,
+          "freshUntilMs": 1791049294257,
+          "instances": [
+            {
+              "instanceId": "native-7c0b396cb316bef65619fc9356a94e0cb334e80a8e918dd83111cec5b529ca69",
+              "session": "native-files",
+              "pane": "",
+              "state": "observed",
+              "runtime": "bounded-process-v1",
+              "continuity": "envd-process-v1",
+              "workspace": "/tmp/fm-v020-remote-cloud-61aRZZHv/r4/workspace",
+              "workspaceHash": "695a618ffe276db70e333eed018a9830d9f1f4e76106b040d537078aa44d5d0a"
+            }
+          ]
+        },
+        "discovery": {
+          "state": "unavailable",
+          "observedAtMs": 1791049231890,
+          "expiresAtMs": 1791049291890,
+          "freshUntilMs": 1791049294252,
+          "instances": []
+        }
+      },
+      "member": {
+        "id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "host_public_key": [
+          33, 14, 152, 73, 254, 41, 177, 149, 54, 86, 240, 148, 225, 151, 232,
+          140, 252, 164, 85, 99, 135, 77, 221, 6, 225, 151, 192, 4, 204, 60, 41,
+          51
+        ],
+        "encryption_public_key": [
+          32, 117, 24, 238, 106, 197, 133, 210, 186, 220, 158, 239, 112, 217,
+          41, 85, 128, 21, 152, 55, 204, 22, 107, 153, 229, 81, 199, 66, 170,
+          139, 108, 122
+        ],
+        "name": "v0.2.0 Ubuntu cloud isolated Host",
+        "coordinator_binding": "0xb19e97b2fd6e4f438145bb823d82db6e185e80bc5ec7ceee110d3880a14ed8b8",
+        "version": "1",
+        "revoked": false,
+        "expires_at_ms": "1791127971141",
+        "joined_at_ms": "1791041571141",
+        "source_invite": "0x20cd1ba84f23fce9d9b8d2a12d966c0fec4c6642a4facaccf25f68ed0e9e08a6",
+        "observation_capability": "0x89bb4b61c4126f7a915ee3db9f8b352f694175166ae1f7c219eec2f259fceb9e"
+      },
+      "memberPreviousTransaction": "7cWW8UBdhMzy43WXfL73o9K6HrCPsDbtHQHjTDS8fY5s"
+    },
+    "newInstanceImported": false,
+    "oldManagedRebound": false
+  },
+  "validation": {
+    "appRelatedTests": {
+      "passed": 18,
+      "failed": 0
+    },
+    "appTypeAndBrowserBuild": "passed",
+    "goRacePackages": ["internal/sui", "cmd/envd"],
+    "goRace": "passed; final run reused successful same-increment cache",
+    "linuxAmd64Build": "passed",
+    "binary": {
+      "path": "/tmp/fm-envd-v020-remote-linux-r5",
+      "sha256": "4c53a37d5dce9b8876628e4a686ba3b5acaeade7411b3d4b08b7ebfc6a1c51b6"
+    },
+    "sourceFiles": [
+      {
+        "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src/HandoverFlow.tsx",
+        "sha256": "eb96321ef811e6251275ac9eb44a322ce798778301576de372c1f956515ad1e7"
+      },
+      {
+        "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src/handover-review.ts",
+        "sha256": "42ee44b7da6ee48c363636d9bcae3bc44a728d2e1f48fad8fb31a4a1d6df71ee"
+      },
+      {
+        "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/tests/handover-review.test.ts",
+        "sha256": "90c7accbd7d58747aa2c85424d577d56e874a9444f8ec9fec794569ba6dfffad"
+      },
+      {
+        "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd/main.go",
+        "sha256": "85a9e6bd98b3211c75392c1b8ab9422d9ff2f811d7a873b0f38975cd6b1dd058"
+      },
+      {
+        "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd/stopped_review_cli.go",
+        "sha256": "3eb7444ec3d44a04a812f4d6af470a40c20885e145804e740cf6692c29167094"
+      },
+      {
+        "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd/stopped_review_cli_test.go",
+        "sha256": "107f615842e30367e7fb7bd2d7dc3c62e403d902c376aa6b20d757de39e91450"
+      },
+      {
+        "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui/stopped_review.go",
+        "sha256": "1ee6ca6fec20a3cec378012ac8eb17529cb94027b9a101d9d0a3f562e739ab63"
+      },
+      {
+        "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui/stopped_review_test.go",
+        "sha256": "8e3a92e7a0226a6150217c98698d47164eaab475833f5248ba195d20c8f419bf"
+      }
+    ],
+    "fixtures": [
+      {
+        "path": "/tmp/fm-v020-cloud-stopped-review-r1.mts",
+        "sha256": "904245434a9556bdd68d0a5b1a11672e7c38931b39cadb98ac55883a8a557b1c"
+      },
+      {
+        "path": "/tmp/fm-v020-cloud-stopped-review-read-r2.mts",
+        "sha256": "23e15e4cc5ce5404a1a0d40efb3ef4f1928aa68652e8826477a8fa0da9b96fa6"
+      },
+      {
+        "path": "/tmp/fm-v020-cloud-stopped-review-final-read-r3.mts",
+        "sha256": "151927edafef2239ed21bf60a1b0aa9cefd09ae474c43bdcc548e102c866d1a6"
+      },
+      {
+        "path": "/tmp/fm-v020-cloud-stopped-review-after-upgrade-r4.mts",
+        "sha256": "251f6eb678bfa4df1398d47b4f3cb97d2af3f670dd7703a9651e730044f6d1de"
+      },
+      {
+        "path": "/tmp/fm-v020-cloud-review-settle-run-r2.py",
+        "sha256": "31010a7ede501b06ca9f28f1fc7a99e01ebb860661e96a5d5e17b4811bda18e3"
+      },
+      {
+        "path": "/tmp/fm-v020-remote-cloud-signed-read-upgrade-r5.mts",
+        "sha256": "9fe9f838e0b679dbb5696a349b9d8538542f797ea018780f9502375b3f98abb6"
+      }
+    ],
+    "logs": [
+      {
+        "path": "/tmp/fm-v020-stopped-review-regression-r1.log",
+        "sha256": "fe32bf55736872190d16e8aa22f00a54c50444afd2678daeaaf396be82257475"
+      },
+      {
+        "path": "/tmp/fm-v020-stopped-review-regression-r2.log",
+        "sha256": "fa213750f989de95992cfa01a1ab4374b589863439c5cf878354c957f5f12e9e"
+      },
+      {
+        "path": "/tmp/fm-v020-stopped-review-app-tests-r2.log",
+        "sha256": "dd28913e498d3556dd29d9e53ff9337b9cdffa6fed42d9655b5f9dcd41931413"
+      },
+      {
+        "path": "/tmp/fm-v020-stopped-review-app-build-r2.log",
+        "sha256": "024050bc6a04ca315193da61cace38b0cf45050707d5ae3c22a72bae7366ab0a"
+      },
+      {
+        "path": "/tmp/fm-v020-stopped-review-app-build-r3.log",
+        "sha256": "b55ef47033f7b0a3f86babb61f8a76a3ae2fa3d782946e3c4266d8e79aca3181"
+      }
+    ]
+  },
+  "limits": [
+    "Full cloud OKR remains draft; both files and measurements absent; original specification deadline expired.",
+    "Cloud envd restart creates a new physical instance. It is discovered only; explicit import and fresh reviewed agreement are still needed.",
+    "New stop UI built, not reinstalled or visually accepted. Scripted native IPC is not a visible Human fee-confirmation walkthrough.",
+    "Orphan review cancellation currently uses an explicit Host maintenance CLI, not automatic runtime processing.",
+    "Zero execution-tool spend is not zero SUI Gas; Host actual cancellation Gas was not independently recovered.",
+    "Task Secret Service remains live with original encrypted vault; OS reboot and unattended unlock are not verified.",
+    "Physical phone and user-provided Mac mini Keychain authorization remain pending.",
+    "Do not infer zero unsettled historical Runs elsewhere in the organization.",
+    "SDK, Move and Rust production sources unchanged in this increment."
+  ]
+}

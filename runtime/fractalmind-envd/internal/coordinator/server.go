@@ -26,16 +26,17 @@ type commandRequest struct {
 }
 
 type sentinelSummary struct {
-	ID            string                `json:"id"`
-	HostID        string                `json:"host_id"`
-	Hostname      string                `json:"hostname"`
-	Version       string                `json:"version"`
-	ConnectedAt   time.Time             `json:"connected_at"`
-	LastHeartbeat *time.Time            `json:"last_heartbeat"`
-	AgentCount    int                   `json:"agent_count"`
-	UptimeSeconds int64                 `json:"uptime_seconds"`
-	System        *heartbeat.SystemInfo `json:"system"`
-	DesktopURL    string                `json:"desktop_url,omitempty"`
+	ID              string                `json:"id"`
+	HostID          string                `json:"host_id"`
+	Hostname        string                `json:"hostname"`
+	Version         string                `json:"version"`
+	ConnectedAt     time.Time             `json:"connected_at"`
+	LastHeartbeat   *time.Time            `json:"last_heartbeat"`
+	AgentCount      int                   `json:"agent_count"`
+	UptimeSeconds   int64                 `json:"uptime_seconds"`
+	System          *heartbeat.SystemInfo `json:"system"`
+	DesktopURL      string                `json:"desktop_url,omitempty"`
+	HostObservation *heartbeat.Signed     `json:"host_observation,omitempty"`
 }
 
 // Server exposes the embedded coordinator REST and WebSocket API.
@@ -48,6 +49,7 @@ type Server struct {
 	listener     net.Listener
 	pingInterval time.Duration
 	done         chan struct{}
+	deviceRead   *DeviceReadAuth
 }
 
 func NewServer(addr string, commandTimeout time.Duration, apiToken string) *Server {
@@ -73,12 +75,36 @@ func (s *Server) SetAuth(signer wsauth.Signer, allowedSigners []string) {
 	s.manager.SetAuth(signer, allowedSigners)
 }
 
+func (s *Server) SetWorkerAuthority(authorize func(context.Context, string, []byte) error) {
+	s.manager.SetWorkerAuthority(authorize)
+}
+
+func (s *Server) SetHostObservationAuthority(check func(context.Context, heartbeat.Signed, []byte) error) {
+	s.manager.SetHostObservationAuthority(check)
+}
+
+func (s *Server) SetDeviceReadAuth(auth *DeviceReadAuth) { s.deviceRead = auth }
+
+// SendCommand routes an already-authorized internal request. HTTP clients still
+// pass the request middleware; the target Host verifies its execution envelope.
+func (s *Server) SendCommand(nodeID, command, agentID, args string) (map[string]interface{}, error) {
+	return s.manager.SendCommand(nodeID, command, agentID, args)
+}
+
 func (s *Server) Start() error {
 	listener, err := net.Listen("tcp", s.addr)
 	if err != nil {
 		return err
 	}
+	return s.StartOnListener(listener)
+}
 
+// StartOnListener supports a reserved endpoint, so its exact origin can be
+// registered on chain before the server accepts any connections.
+func (s *Server) StartOnListener(listener net.Listener) error {
+	if listener == nil {
+		return errors.New("Coordinator listener required")
+	}
 	s.listener = listener
 	s.httpServer = &http.Server{
 		Handler:           s.Handler(),
@@ -145,16 +171,17 @@ func (s *Server) handleListSentinels(w http.ResponseWriter, _ *http.Request) {
 	summaries := make([]sentinelSummary, 0, len(nodes))
 	for _, node := range nodes {
 		summaries = append(summaries, sentinelSummary{
-			ID:            node.ID,
-			HostID:        node.HostID,
-			Hostname:      node.Hostname,
-			Version:       node.Version,
-			ConnectedAt:   node.ConnectedAt,
-			LastHeartbeat: node.LastHeartbeat,
-			AgentCount:    len(node.Agents),
-			UptimeSeconds: node.UptimeSeconds,
-			System:        node.System,
-			DesktopURL:    node.DesktopURL,
+			ID:              node.ID,
+			HostID:          node.HostID,
+			Hostname:        node.Hostname,
+			Version:         node.Version,
+			ConnectedAt:     node.ConnectedAt,
+			LastHeartbeat:   node.LastHeartbeat,
+			AgentCount:      len(node.Agents),
+			UptimeSeconds:   node.UptimeSeconds,
+			System:          node.System,
+			DesktopURL:      node.DesktopURL,
+			HostObservation: node.HostObservation,
 		})
 	}
 
@@ -240,7 +267,19 @@ func (s *Server) handleCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := s.manager.SendCommand(r.PathValue("id"), req.Command, req.AgentID, req.Args)
+	// The relay's bearer credential is not execution authority. Reject legacy
+	// commands here too, so older workers cannot remain reachable through it.
+	switch req.Command {
+	case "signed_command", "signed-command", "node_command":
+	default:
+		writeJSON(w, http.StatusGone, map[string]string{
+			"error":      "commands require a signed node_command",
+			"error_code": "unsigned_command_disabled",
+		})
+		return
+	}
+
+	result, err := s.SendCommand(r.PathValue("id"), req.Command, req.AgentID, req.Args)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if errors.Is(err, context.DeadlineExceeded) {
@@ -318,6 +357,9 @@ func (s *Server) pingLoop() {
 }
 
 func (s *Server) withAPITokenAuth(next http.Handler) http.Handler {
+	if s.deviceRead != nil {
+		return s.deviceRead.Wrap(next)
+	}
 	if s.apiToken == "" {
 		return next
 	}

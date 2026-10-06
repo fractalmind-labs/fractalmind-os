@@ -135,7 +135,7 @@ const moveCallCases: Array<{
 
   {
     name: 'objective.createObjective',
-    expectedFunction: 'create_objective',
+    expectedFunction: 'create_objective_with_clock',
     build: (sdk) =>
       sdk.objective.createObjective({
         adminCapId: '0x61',
@@ -190,7 +190,7 @@ const moveCallCases: Array<{
   },
   {
     name: 'agentPolicy.createPolicy',
-    expectedFunction: 'create_agent_policy',
+    expectedFunction: 'create_agent_policy_with_clock',
     build: (sdk) =>
       sdk.agentPolicy.createPolicy({
         organizationId: '0x23',
@@ -205,7 +205,7 @@ const moveCallCases: Array<{
 
   {
     name: 'agentPolicy.createPolicyForObjective',
-    expectedFunction: 'create_agent_policy_for_objective',
+    expectedFunction: 'create_agent_policy_for_objective_with_clock',
     build: (sdk) =>
       sdk.agentPolicy.createPolicyForObjective({
         organizationId: '0x23',
@@ -220,7 +220,7 @@ const moveCallCases: Array<{
   },
   {
     name: 'agentPolicy.createPolicyForKeyResult',
-    expectedFunction: 'create_agent_policy_for_key_result',
+    expectedFunction: 'create_agent_policy_for_key_result_with_clock',
     build: (sdk) =>
       sdk.agentPolicy.createPolicyForKeyResult({
         organizationId: '0x23',
@@ -245,7 +245,7 @@ const moveCallCases: Array<{
   },
   {
     name: 'agentPolicy.executeAction',
-    expectedFunction: 'execute_agent_action',
+    expectedFunction: 'execute_agent_action_with_clock',
     build: (sdk) =>
       sdk.agentPolicy.executeAction({
         policyId: '0x25',
@@ -365,7 +365,7 @@ const moveCallCases: Array<{
   },
   {
     name: 'governance.createProposal',
-    expectedFunction: 'create_proposal',
+    expectedFunction: 'create_proposal_with_clock',
     build: (sdk) =>
       sdk.governance.createProposal({
         governanceId: '0x53',
@@ -379,7 +379,7 @@ const moveCallCases: Array<{
   },
   {
     name: 'governance.startProposalVoting',
-    expectedFunction: 'start_proposal_voting',
+    expectedFunction: 'start_proposal_voting_with_clock',
     build: (sdk) =>
       sdk.governance.startProposalVoting({
         adminCapId: '0x51',
@@ -389,7 +389,7 @@ const moveCallCases: Array<{
   },
   {
     name: 'governance.castVote',
-    expectedFunction: 'cast_proposal_vote',
+    expectedFunction: 'cast_proposal_vote_with_clock',
     build: (sdk) =>
       sdk.governance.castVote({
         proposalId: '0x55',
@@ -399,7 +399,7 @@ const moveCallCases: Array<{
   },
   {
     name: 'governance.finalizeProposalVoting',
-    expectedFunction: 'finalize_proposal_voting',
+    expectedFunction: 'finalize_proposal_voting_with_clock',
     build: (sdk) =>
       sdk.governance.finalizeProposalVoting({
         adminCapId: '0x51',
@@ -409,7 +409,7 @@ const moveCallCases: Array<{
   },
   {
     name: 'governance.closeProposalVoting',
-    expectedFunction: 'close_proposal_voting',
+    expectedFunction: 'close_proposal_voting_with_clock',
     build: (sdk) =>
       sdk.governance.closeProposalVoting({
         adminCapId: '0x51',

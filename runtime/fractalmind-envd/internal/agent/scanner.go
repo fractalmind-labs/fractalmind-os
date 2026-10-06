@@ -17,12 +17,20 @@ type Agent struct {
 
 // Scanner discovers AI agents running on the local machine.
 type Scanner struct {
-	method string
+	method     string
+	tmuxSocket string
 }
 
 // NewScanner creates a scanner with the given method (currently only "tmux").
 func NewScanner(method string) *Scanner {
 	return &Scanner{method: method}
+}
+
+// NewScannerAtSocket scopes discovery to an explicitly selected tmux server.
+// The empty socket uses tmux's usual default. It is passed as an argument,
+// never interpolated into shell code.
+func NewScannerAtSocket(method, socket string) *Scanner {
+	return &Scanner{method: method, tmuxSocket: socket}
 }
 
 // Scan discovers all agent sessions.
@@ -37,7 +45,7 @@ func (s *Scanner) Scan() ([]Agent, error) {
 
 // scanTmux lists tmux sessions and identifies agent sessions.
 func (s *Scanner) scanTmux() ([]Agent, error) {
-	out, err := exec.Command("tmux", "list-sessions", "-F", "#{session_name}:#{session_created}:#{session_attached}").Output()
+	out, err := s.tmuxCommand("list-sessions", "-F", "#{session_name}:#{session_created}:#{session_attached}").Output()
 	if err != nil {
 		// tmux not running or no sessions
 		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
@@ -85,12 +93,19 @@ func (s *Scanner) scanTmux() ([]Agent, error) {
 // RestartAgent attempts to restart a dead agent session.
 func (s *Scanner) RestartAgent(sessionName string) error {
 	// Check if session exists
-	err := exec.Command("tmux", "has-session", "-t", sessionName).Run()
+	err := s.tmuxCommand("has-session", "-t", sessionName).Run()
 	if err == nil {
 		// Session exists, send respawn command
-		return exec.Command("tmux", "respawn-pane", "-t", sessionName, "-k").Run()
+		return s.tmuxCommand("respawn-pane", "-t", sessionName, "-k").Run()
 	}
 	return fmt.Errorf("session %s not found, cannot restart", sessionName)
+}
+
+func (s *Scanner) tmuxCommand(args ...string) *exec.Cmd {
+	if s.tmuxSocket != "" {
+		args = append([]string{"-S", s.tmuxSocket}, args...)
+	}
+	return exec.Command("tmux", args...)
 }
 
 // isAgentSession checks if a tmux session name matches agent naming convention.

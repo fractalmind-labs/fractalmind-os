@@ -1,0 +1,190 @@
+{
+  "format": 1,
+  "recordedAt": "2026-10-03T20:59:06.438Z",
+  "sourceRevisionAtRun": "9ba4dfc16b752ba324c8565c032ae0de964221d8",
+  "complete": true,
+  "scope": "One isolated localnet recovery race through production native signing and SDK identity PTBs",
+  "chain": {
+    "network": "localnet",
+    "rpcUrl": "http://127.0.0.1:29000",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+    "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+    "originalPackageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10",
+    "registryId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32"
+  },
+  "identityRegistryId": "0xc9dec3c798d0cb9b4eb7b1bdc2756421ddad0475d05844bde67a917721a3f962",
+  "humanId": "0x21f6c50b2f1ed863491dfe54e2102f30e6bd47c22b7249b27ab3793931ea04d9",
+  "oldRecoveryRecordId": "0x099e0c437d651c553614a3efedd7f95e236d1f5dba9ad75767f953421dcbcd3d",
+  "oldGrantId": "0x4015b566df723b9a0c07e5eff5015b1f2bb180dfb48a0cd13fcef01b7e97cef2",
+  "initialDeviceAddress": "0x5546db9d465e065012f11480cc6cda02c56ab26545d3ef126317a772f8b9e48f",
+  "before": {
+    "generation": "1",
+    "recoveryVersion": "1",
+    "grants": [
+      "0x4015b566df723b9a0c07e5eff5015b1f2bb180dfb48a0cd13fcef01b7e97cef2"
+    ],
+    "organizations": [],
+    "oldRecordActive": true
+  },
+  "candidates": [
+    {
+      "device": "0xb4741ea94743ae2ddcfd7cba7f2e4a3b16d044b73679fcf3863d0f260786ac59",
+      "nextRecovery": "0x9040f7553d5b1aeeb2cb1d319049209d78b6fd7b0fc4cd53df27cd74649b5631",
+      "digest": "9KycxR7rdnZSCzx1dqTJct94jpnpjgRf3Bx5ottwmZct",
+      "gasObjectId": "0x9a7e09afca3de0138b6817830844ba4248a0bbc25f4c88efdd68ba5667360a1f",
+      "sourceFingerprint": "7bf3cd415f97320720acf112c2470f956f1ee87e3e7d87a91a7465f67a6d9c70",
+      "label": "A"
+    },
+    {
+      "device": "0x3e0889c7d9675c9d876628bed626d9bab7611322bf074b6a2e827d727291836f",
+      "nextRecovery": "0xcc76c8d5a0b2e1150c9b2ca14931bfb6b3ce2584e6c83bfbce04c5a4ee6080b0",
+      "digest": "7JuXidb7AuGfyuQwjUW1dhX96GyTKnx4W5fYLGTjXDZy",
+      "gasObjectId": "0x9ef992b8ac704d8815510618dc549b83c4b07b0b1eba92231d27844283289793",
+      "sourceFingerprint": "7bf3cd415f97320720acf112c2470f956f1ee87e3e7d87a91a7465f67a6d9c70",
+      "label": "B"
+    }
+  ],
+  "race": {
+    "winner": "A",
+    "broadcastCountPerCandidate": 1,
+    "bothPreparedBeforeBroadcast": true,
+    "bothSimulatedSuccessfully": true,
+    "sameSharedHumanAndRecoveryRecord": true,
+    "differentGasObjects": true,
+    "submissionTimeDifferenceMs": 0,
+    "responseLoss": false,
+    "replayCount": 0
+  },
+  "transactions": [
+    {
+      "label": "create isolated Human",
+      "digest": "5zAWpG2rJiYgqoGewAQVtEtTtuj5GT9tBxKYDJTPKwuy",
+      "sender": "0x7ae498c9ce8f59c44b7f66862c76c4ea62995732ec6956efc64e7a71bef2a340",
+      "gasObjectId": "0x76c1545e3efe8600923a78f1eccfcfc17d8f3fa4f254bfeaa2057038862b2cb1",
+      "gasBudget": "200000000",
+      "preparedAtMs": 1791061145680,
+      "submittedAtMs": 1791061145681,
+      "receivedAtMs": 1791061145839,
+      "status": "confirmed",
+      "broadcasts": 1,
+      "simulationSucceeded": true,
+      "actualGas": "18772548",
+      "gasUsed": {
+        "computationCost": "1420000",
+        "storageCost": "20535200",
+        "storageRebate": "3182652",
+        "nonRefundableStorageFee": "32148"
+      },
+      "validatorStatus": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "candidate A",
+      "digest": "9KycxR7rdnZSCzx1dqTJct94jpnpjgRf3Bx5ottwmZct",
+      "sender": "0x7ae498c9ce8f59c44b7f66862c76c4ea62995732ec6956efc64e7a71bef2a340",
+      "gasObjectId": "0x9a7e09afca3de0138b6817830844ba4248a0bbc25f4c88efdd68ba5667360a1f",
+      "gasBudget": "200000000",
+      "preparedAtMs": 1791061146158,
+      "submittedAtMs": 1791061146277,
+      "receivedAtMs": 1791061146433,
+      "status": "confirmed",
+      "broadcasts": 1,
+      "simulationSucceeded": true,
+      "actualGas": "13672688",
+      "gasUsed": {
+        "computationCost": "1430000",
+        "storageCost": "23438400",
+        "storageRebate": "11195712",
+        "nonRefundableStorageFee": "113088"
+      },
+      "validatorStatus": {
+        "success": true,
+        "error": null
+      }
+    },
+    {
+      "label": "candidate B",
+      "digest": "7JuXidb7AuGfyuQwjUW1dhX96GyTKnx4W5fYLGTjXDZy",
+      "sender": "0x7ae498c9ce8f59c44b7f66862c76c4ea62995732ec6956efc64e7a71bef2a340",
+      "gasObjectId": "0x9ef992b8ac704d8815510618dc549b83c4b07b0b1eba92231d27844283289793",
+      "gasBudget": "200000000",
+      "preparedAtMs": 1791061146274,
+      "submittedAtMs": 1791061146277,
+      "receivedAtMs": 1791061146438,
+      "status": "failed",
+      "broadcasts": 1,
+      "simulationSucceeded": true,
+      "actualGas": "1525520",
+      "gasUsed": {
+        "computationCost": "1410000",
+        "storageCost": "11552000",
+        "storageRebate": "11436480",
+        "nonRefundableStorageFee": "115520"
+      },
+      "validatorStatus": {
+        "success": false,
+        "error": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9005, in '0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::assert_current_recovery' (instruction 66)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9005",
+            "location": {
+              "package": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+              "module": "identity",
+              "function": 30,
+              "instruction": 66,
+              "functionName": "assert_current_recovery"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "after": {
+    "generation": "2",
+    "recoveryVersion": "2",
+    "recoveryRecordId": "0x9117bab9b95c3cc38e0f4e5c8b88adaa58160b935c64575f0ebdd81d6c6e915d",
+    "recoveryAddress": "0x9040f7553d5b1aeeb2cb1d319049209d78b6fd7b0fc4cd53df27cd74649b5631",
+    "grants": [
+      "0x4015b566df723b9a0c07e5eff5015b1f2bb180dfb48a0cd13fcef01b7e97cef2",
+      "0x4c08a5345e10ef48c4f0b6b0f7d5262657d2840f69d1d8aa3ee2529085e82be7"
+    ],
+    "activeDevice": "0xb4741ea94743ae2ddcfd7cba7f2e4a3b16d044b73679fcf3863d0f260786ac59",
+    "oldRecoveryRecordActive": false,
+    "activeGrantCount": 1,
+    "losingDeviceDirectoryMissing": true,
+    "consumedCodeLookupRejected": true,
+    "winnerNativeDeviceVerificationPassed": true,
+    "initialIsolatedDeviceVerificationRejected": "invalid_grant"
+  },
+  "checks": [
+    "Fresh isolated Human and original recovery record created through production native signer; existing Human and Android profiles not used",
+    "Both candidates independently import the same code, stage distinct replacements, simulate successfully and sign before either broadcast; gas objects differ",
+    "One validator success and one identity recovery-used abort 9005, with separate original receipts and actual gas retained; each candidate broadcast once",
+    "Generation advances exactly once; original recovery consumed, losing candidate has no active Grant or device-directory entry, winner alone verifies, original isolated device loses authority"
+  ],
+  "cleanup": {
+    "isolatedNativeProfilesCreated": 3,
+    "isolatedNativeProfilesRemoved": 3,
+    "existingProfilesUsed": false,
+    "existingHumanOrganizationOrHostModified": false
+  },
+  "artifacts": {
+    "fixtureScriptSha256": "b996e9b9428461362d97743dbbff907dd1f3df36a1efce07d7cac1497698ebcd",
+    "nativeHelperSha256": "21b853f80c3c4f560e09f889ebe42feb4c73c42c924477986abac128bcf7e0ad",
+    "rawPublicReportSha256": "231f8404a9d071e06ec4c9f4130ee62b0940176eb9c3445df5ae0c8361f10e69",
+    "method": "../v020-recovery-race.md"
+  },
+  "limits": {
+    "nativeTransport": "production bridge methods via isolated device-test-helper subprocess and test Keychain namespace, not installed UI IPC",
+    "transactionPath": "SDK createIdentity/assertRecoverySnapshot/recoverIdentity PTBs; direct single-send fixture, not two live application controllers",
+    "gas": "Both transactions are self-paid by the same original recovery address using different coin objects; no sponsorship",
+    "organizations": "Fresh Human has no organizations; concurrent organization rotation not exercised",
+    "history": "This records the original validator receipts; localnet retention may later prune digest reads",
+    "credentials": "No recovery code, private key, transaction bytes, signature or decrypted keyring in this report",
+    "fullV020Complete": false
+  }
+}

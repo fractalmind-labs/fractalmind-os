@@ -1,0 +1,131 @@
+{
+  "recordedAt": "2026-10-02T02:50:40.526Z",
+  "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+  "profile": {
+    "network": "localnet",
+    "rpcUrl": "http://127.0.0.1:29000",
+    "packageId": "0x2ef39db88cffefa9c16dcaf6593032ccd6ac0e79acfd22e30fc10d4b4c7a45e5",
+    "registryId": "0xfdf5ad498229c22b1652cae940c8803e9bc8de20ead4fbc049c514198e123220",
+    "humanId": "0x659eb1707313ef49729175851cf022a77f2dc24185cea0c129759a30a4bd7a45",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "organizationId": "0xbf51ecb0245f311509865669c8866254e8638891dcc2c996e16ef9b6440d2d4a",
+  "grantId": "0xed0f5d5fb4566efcfd526976719fb0b2f0e9f05caedadab71111fe81d8e0133d",
+  "checks": [
+    "exact absent Host index reconstructs as empty",
+    "production verifier proves fresh device/organization management authority; public binding is not online evidence",
+    "code is released only after exact receipt objects are visible and match invitation proof material",
+    "redemption consumes the invitation; reconstruction finds membership and finite observation authority, not execution authority",
+    "membership revocation remains chain-owned and visible; consumed-invite revocation never substitutes for it",
+    "new controller reconstructs chain state but cannot recover the invitation bearer secret",
+    "a lost unused code has an explicit on-chain revocation path",
+    "management revocation between quote and submit rejects the App operation before a new broadcast"
+  ],
+  "transactions": [
+    {
+      "label": "create isolated fixture Human",
+      "digest": "qJxY36hqZ1i1EfVrvi9cFYsmG6pohqUvmWw2wiyU5ws",
+      "phase": "prepared"
+    },
+    {
+      "label": "create isolated fixture Human",
+      "requestId": "fixture:df5ea644-edd3-4ebd-b718-a0130a477778",
+      "digest": "qJxY36hqZ1i1EfVrvi9cFYsmG6pohqUvmWw2wiyU5ws",
+      "status": "confirmed",
+      "actualGas": "17708548"
+    },
+    {
+      "label": "create isolated fixture organization",
+      "digest": "5q9mbiH2FfzGXQsPeexbXf4EdQmjs844dwf4fyYkh57N",
+      "phase": "prepared"
+    },
+    {
+      "label": "create isolated fixture organization",
+      "requestId": "fixture:ed8d5890-a910-4910-a76d-5997bacd7956",
+      "digest": "5q9mbiH2FfzGXQsPeexbXf4EdQmjs844dwf4fyYkh57N",
+      "status": "confirmed",
+      "actualGas": "15278416"
+    },
+    {
+      "label": "App registers Coordinator binding",
+      "requestId": "host:681f85e8-f654-4089-ba10-7f167a00c65d",
+      "digest": "Fcp7e8x9Foncc5rSw3RL6j3Yf6nekxHyxhJaCxaTUd57",
+      "status": "confirmed",
+      "actualGas": "6825696"
+    },
+    {
+      "label": "App creates one-use invitation",
+      "requestId": "host:4bea973f-0398-4813-8b8e-5a0481027db8",
+      "digest": "7NN3BLweq8EtAtKtFAWadcwjahR5XZfmtBYPZDT73bQ2",
+      "status": "confirmed",
+      "actualGas": "4963392"
+    },
+    {
+      "label": "SDK fixture Host redeems App invitation",
+      "digest": "GEjumfgM4k47C9N61CMg11f9WQXuyGA4oMy5LJK4zVyC",
+      "phase": "prepared"
+    },
+    {
+      "label": "SDK fixture Host redeems App invitation",
+      "requestId": "fixture:3c0e2463-acd6-443a-97c4-ec8186a0382b",
+      "digest": "GEjumfgM4k47C9N61CMg11f9WQXuyGA4oMy5LJK4zVyC",
+      "status": "confirmed",
+      "actualGas": "15474372"
+    },
+    {
+      "label": "App revokes Host membership",
+      "requestId": "host:bfde6af9-c2ac-42e8-a5b6-b4c4b55e94ae",
+      "digest": "Gfuvs2AaUDGGaWVoELeCs11o9TRWc82xd6ZagHzg2PpA",
+      "status": "confirmed",
+      "actualGas": "-591676"
+    },
+    {
+      "label": "App creates invitation for reload test",
+      "requestId": "host:cf22adc1-f8b6-4d2d-8434-bae7e7a4c6e6",
+      "digest": "4j5xfm73UomJNCwSGQ1WKhvscPVjhMwS42ahtiHNCFLG",
+      "status": "confirmed",
+      "actualGas": "4968256"
+    },
+    {
+      "label": "App revokes unrecoverable unused invitation",
+      "requestId": "host:8de7889a-f364-4a66-b05e-a7ec4e373905",
+      "digest": "3DUE75pT231XsdbSeQj4n5v6kvxukq6n4vMwDpRpmpyz",
+      "status": "confirmed",
+      "actualGas": "1472028"
+    },
+    {
+      "label": "fixture explicitly adds independent root management device",
+      "digest": "7i77CTuaFhcPVRUzyYorycfs4dRDKKe8W39dYWoJS6C",
+      "phase": "prepared"
+    },
+    {
+      "label": "fixture explicitly adds independent root management device",
+      "requestId": "fixture:49f4ea46-aed7-4598-b98c-372c97b61a1f",
+      "digest": "7i77CTuaFhcPVRUzyYorycfs4dRDKKe8W39dYWoJS6C",
+      "status": "confirmed",
+      "actualGas": "7839568"
+    },
+    {
+      "label": "independent root fixture revokes managing device",
+      "digest": "8Bn1EZxBzsSFT4LU7QCr5cBZ7TNV7uVVATMswbBnjVVY",
+      "phase": "prepared"
+    },
+    {
+      "label": "independent root fixture revokes managing device",
+      "requestId": "fixture:340a6b47-69a6-486b-8c3d-80272d615fbe",
+      "digest": "8Bn1EZxBzsSFT4LU7QCr5cBZ7TNV7uVVATMswbBnjVVY",
+      "status": "confirmed",
+      "actualGas": "1469248"
+    }
+  ],
+  "limits": {
+    "generatedFixtureKeysOnly": true,
+    "injectedNativeTransport": true,
+    "memoryTechnicalJournal": true,
+    "installedAppVerified": false,
+    "nativeStoreVerified": false,
+    "envdJoinCliVerified": false,
+    "cloudHostVerified": false,
+    "invitationSecretsIncluded": false
+  }
+}

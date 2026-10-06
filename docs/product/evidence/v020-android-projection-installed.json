@@ -1,0 +1,199 @@
+{
+  "schema": "fractalmind.v020.android-projection-installed.v1",
+  "status": "passed_installed_projection_only",
+  "recordedAt": "2026-10-04T01:13:39.144506+00:00",
+  "scope": "Installed Android emulator APK on isolated localnet. Actual SAF save, system picker import, fresh consent, explicit native fee signature and readback. Not complete v0.2.0 acceptance.",
+  "apk": {
+    "apkSha256": "40ce53867d850ea451cf2e5db2652062f8412b02214adc5086672302bb94b6ee",
+    "bytes": 332842843,
+    "builtAt": "2026-10-04T01:06:33.131989+00:00",
+    "verified": true,
+    "installed": true,
+    "installedAt": "2026-10-04T01:07:13.640178+00:00"
+  },
+  "sourceBase": "d381738c5e00b5fb2ed66ab9e85a742721d5b0a8",
+  "sourceWorkingTreeFiles": {
+    "apps/fractalmind-app/src/OkrProjection.tsx": "49f69791729f2ab04fa7bd40ee92286a3825a61434da60651a57f54d63e1b333",
+    "apps/fractalmind-app/src/okr-projection-file-picker.ts": "b5bf2f3ca0c904f4fd4019a895c50e40a256552898174c04f91a670af113f71e",
+    "apps/fractalmind-app/tests/okr-projection-file-picker.test.ts": "4f369bff1a0532b925918769d6312a7589a59338f8fbfeb262690ce421272557",
+    "apps/fractalmind-app/src-tauri/Cargo.toml": "fbd6a4aeb1c2ecbb693572418bb6dc708ae9ce89ec658bb797d20c66afe84cfc",
+    "apps/fractalmind-app/src-tauri/Cargo.lock": "c952ef5eb3861b6dc22751a6ada7c28b249980933553f097a628a0b3bca67f93",
+    "apps/fractalmind-app/src-tauri/src/lib.rs": "05975460efe8c3baeeeca5d9b71373a26a5ac4b4a22598c2cc22952b0d37a667",
+    "apps/fractalmind-app/src-tauri/src/okr_export.rs": "5c31067a2ddacf23c00b549e16fdf5bc21d1f5fbcd075aadefc2666aefbb34db",
+    "apps/fractalmind-app/src-tauri/platform/android/MainActivity.kt": "3731e87df45301d91649e2b7b2682dbf059d68a5ca1605506692814cb33790bb",
+    "apps/fractalmind-app/src-tauri/build.rs": "39ca69f4910bb73e4180c7f8cc9cd1c69be917fee076f710b0cab7a6786763cf",
+    "apps/fractalmind-app/src-tauri/capabilities/device-main.json": "b4e21ddef15a9009cb415b90a67bf7da1a1d5d3ad39a3188ea21373edea59d80",
+    "apps/fractalmind-app/src-tauri/permissions/okr-export.toml": "dbd844e826fad6b929561e45afdc09386303ae91fd24bcd968bdfc85bf1cf5be"
+  },
+  "uncommittedAtBuild": true,
+  "okrId": "0x21893f30a2471287c1fa9b3e3e9c449eaf8428cd18f6e82331197cd6de7cb5c5",
+  "nativeExport": {
+    "path": "/sdcard/Download/OKR.md",
+    "bytes": 4749,
+    "sha256": "b8072178f6e2a781c8b006cc0644f62611d25d06cb46541c3b92b98718315818",
+    "systemPicker": "/tmp/fm-v020-android-r11-save-picker.xml",
+    "savedUsingSystemButton": true
+  },
+  "cancel": {
+    "picker": "/tmp/fm-v020-android-r11-cancel-save-picker.xml",
+    "newFiles": 0,
+    "fallbackWrite": false
+  },
+  "import": {
+    "path": "/sdcard/Download/OKR-proposal.md",
+    "sha256": "d37e37e9df439dfd4a3a503cf1c4f2d3b051aa2b0b3411e6ee59914c05f6d479",
+    "systemPicker": "/tmp/fm-v020-android-r11-import-picker.xml",
+    "backgroundEvidence": "/tmp/fm-v020-review-window-ui-r1-200-projection-r11-picker-background.json",
+    "returnEvidence": "/tmp/fm-v020-review-window-ui-r1-201-projection-r11-import-review.json",
+    "newConsentRequired": true,
+    "oldQuoteRestored": false
+  },
+  "mutation": {
+    "changed": [
+      "objective",
+      "successCriteria",
+      "deadlineMs"
+    ],
+    "deadlineMs": "1791079842085",
+    "requestId": "okr-intervene:0x21893f30a2471287c1fa9b3e3e9c449eaf8428cd18f6e82331197cd6de7cb5c5:4:replace",
+    "digest": "6rH9DET71SduPsYCCAAPXLtp58p1QXwojwGRzMAed7xX",
+    "status": "confirmed",
+    "journal": "confirmed",
+    "actualGasMist": "10456680",
+    "maxGasMist": "200000000",
+    "submittedOnce": true,
+    "readback": "/tmp/fm-v020-review-window-ui-r1-204-projection-r11-proposal-readback.json",
+    "state": "PAUSED",
+    "version": "5",
+    "agreementVersion": "4",
+    "spent": "0",
+    "reserved": "0",
+    "maxCalls": "3"
+  },
+  "retainedFailures": [
+    {
+      "build": "r9",
+      "outcome": "Three-file picker fix installed, but actual export produced no file."
+    },
+    {
+      "build": "r10",
+      "outcome": "Native export command ACL registration was missing; repaired in r11.",
+      "source": "Root implementation/installed-test report; not counted as a successful export."
+    }
+  ],
+  "independentFreshChain": {
+    "status": "passed_current_object_and_digest_linkage",
+    "checkedAt": "2026-10-04T01:18:24.973Z",
+    "readOnly": true,
+    "transactionBroadcasts": 0,
+    "rpc": "http://127.0.0.1:29000",
+    "transaction": {
+      "digest": "6rH9DET71SduPsYCCAAPXLtp58p1QXwojwGRzMAed7xX",
+      "linkedFromCurrentOkr": true,
+      "linkedFromImmutableSpec": true,
+      "fullReceiptQuery": "notFound",
+      "fullReceiptIndependentlyAvailable": false,
+      "actualFeeIndependentlyVerified": false
+    },
+    "projectionOkr": {
+      "id": "0x21893f30a2471287c1fa9b3e3e9c449eaf8428cd18f6e82331197cd6de7cb5c5",
+      "state": 2,
+      "version": "5",
+      "agreementVersion": "4",
+      "specRecord": "0x15c3c45c2709515e5c0f9a67597cbf5bd885460fff4ce3da799ad0c8e8b6b015",
+      "specRevision": "3",
+      "agreementRecord": "0xde14afd68b3cbf2c1a7917436f8cd838dd5ee90ef1e87d5c03e647e256907675",
+      "deadlineMs": "1791079842085",
+      "budget": {
+        "asset": "TOOL_CALLS",
+        "spent": "0",
+        "reserved": "0"
+      },
+      "metrics": [
+        {
+          "baseline": "0",
+          "target": "1",
+          "weight": "1",
+          "max_age_ms": "300000",
+          "current": null,
+          "sampled_at_ms": "0",
+          "run_id": null,
+          "evidence_id": null,
+          "verified": false,
+          "verification_id": null
+        }
+      ]
+    },
+    "spec": {
+      "id": "0x15c3c45c2709515e5c0f9a67597cbf5bd885460fff4ce3da799ad0c8e8b6b015",
+      "revision": "3",
+      "keyVersion": "1",
+      "previous": "0x5682025c483c4fca61c3f92feaeb1457fe8771dc4b80372b4cc28863d3874f68",
+      "kind": 1,
+      "organizationId": "0xca4b9dfce4026c83f7accf4300cdea5b49677eecc47942348aa97c4e319eb753",
+      "writerHuman": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+      "writerDevice": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+      "createdAtMs": "1791076350814",
+      "ciphertextBytes": 800,
+      "ciphertextSha256": "a9c6544667811ba7cb15383f74aa0fe4de57c5ed2abeff96d39783e33b2f7e76"
+    },
+    "acceptedOkr": {
+      "id": "0x61d69e1e86fb60628c86ea58522abe68cde1307f56770bc65df8e87a44fe1ce3",
+      "state": 3,
+      "version": "5",
+      "agreementVersion": "2",
+      "metrics": [
+        {
+          "baseline": "0",
+          "target": "1",
+          "weight": "1",
+          "max_age_ms": "3600000",
+          "current": "1",
+          "sampled_at_ms": "1791060875307",
+          "run_id": "0x17f5aa7eac593a22c712e92f6d6096a6e01d9f211bb6549dde618bad7b16a5c7",
+          "evidence_id": "0x959c77dbfd473a2ccbf10536aa1f0c62c6ce995b208046dd81edd5098a7f590f",
+          "verified": true,
+          "verification_id": "0xa9b638d91875d26d60df5b39e0091b5792fef94f4bcf7667fc75b965019658ac"
+        }
+      ],
+      "acceptanceRecord": "0x4bf4dd523cdf5326bdd7d7264fc68ba06147de55a99da7ff9548b4eb90be730f",
+      "acceptedAtMs": "1791061094817",
+      "lastMutationDigest": "2voUJeLNWeZcb2qZKgQG4EXipZMNFMVTJAW5d1bWDBBQ",
+      "changedByProjectionTx": false
+    },
+    "privateKeysRead": false,
+    "plaintextDecrypted": false
+  },
+  "limitations": [
+    "Native ByteArray and Rust Zeroizing clear owned buffers; no claim of securely wiping every bridge/Java String copy",
+    "No destructive file or credential access",
+    "Original accepted OKR and direct historical Runs unchanged by this projection operation",
+    "One-off direct write remains unpassed and is separate"
+  ],
+  "sources": [
+    {
+      "path": "/tmp/fm-v020-android-r11-projection-acceptance.json",
+      "sha256": "dcec73d328fe622fed2ae4d3f629b150320775a20257773096d8ceddfd5348fa"
+    },
+    {
+      "path": "/tmp/fm-v020-projection-android-build-r11.json",
+      "sha256": "7591a124f367bd6a4d0808d5026b8e0815ed0ee1842ff673ef4016b8212dfafb"
+    },
+    {
+      "path": "/tmp/fm-v020-projection-android-build-r11-source.json",
+      "sha256": "3b28a08e86b8477cc68564a1f946ab08e34c422ca4cdf0be9d8aee5ede1dbb2c"
+    },
+    {
+      "path": "/tmp/fm-v020-android-r11-projection-independent-chain.json",
+      "sha256": "db32d6d3787d2123e8e471ee7916225a1c8af06b80ff78f0e7f8991d65e31b5d"
+    }
+  ],
+  "laterReceiptDiagnosis": {
+    "evidence": "v020-desktop-recovery-installed.json",
+    "section": "transactionAvailabilityDiagnosis.androidProjection",
+    "earlierGrpcNotFoundRetained": true,
+    "sameNodeLegacyJsonRpcReadOnlyDiagnostic": "full success effects",
+    "actualGasMist": "10456680",
+    "productFallbackAdded": false
+  }
+}

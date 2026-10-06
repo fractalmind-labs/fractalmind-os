@@ -1,0 +1,309 @@
+{
+  "recordedAt": "2026-10-02T18:01:27.698Z",
+  "chain": {
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "packageId": "0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c",
+  "prior": [
+    {
+      "attempt": 1,
+      "harnessComplete": false,
+      "phase": "review_prepared",
+      "error": "Original effects not visible; no replay: read timeout",
+      "nativeCleanupConfirmed": true,
+      "originalRequests": [
+        {
+          "label": "native self-paid Human creation",
+          "digest": "3sKTd7hCniHpnM6QD2BiYSpN3JSct9Hfhwdj7ah4Qf1s",
+          "status": "confirmed",
+          "actualGas": "18912548"
+        },
+        {
+          "label": "native self-paid organization creation",
+          "digest": "CrWKCS1dWSJkfwtZW5KbH7NogxJZBJMk9CHnyMbwbvkv",
+          "status": "confirmed",
+          "actualGas": "15291616"
+        },
+        {
+          "label": "native registration of actual loopback Coordinator",
+          "digest": "ARoDkDdm1o3oiTD8wYVvphW5bwFH9xVtsbU9CvNWXNZ2",
+          "status": "confirmed",
+          "actualGas": "6963340"
+        },
+        {
+          "label": "native single-use Host invitation",
+          "digest": "HCALYbYnyj3oJFJgKFqCwL2rrxVeg9zeALeV1aSsDk9U",
+          "status": "confirmed",
+          "actualGas": "5101036"
+        },
+        {
+          "label": "native import of actual bounded Agent",
+          "digest": "F8yPFoiz5XkXYmX7JumyHwvNBAS83yTzq9eWS1qWU5P3",
+          "status": "confirmed",
+          "actualGas": "12019100"
+        },
+        {
+          "label": "native encrypted actual Host OKR draft",
+          "digest": "GRJtptDf1ZL8XbGoHG6i2YyWEXNjyuugiHVx7bXA68HF",
+          "status": "confirmed",
+          "actualGas": "23736140"
+        },
+        {
+          "label": "native one-use observation capability",
+          "digest": "4ou4GNZBeKwq1L2NmYqhNXUfVyGFCemNT3ncnc3pNtaP",
+          "status": "confirmed",
+          "actualGas": "10323480"
+        },
+        {
+          "label": "native exact review ticket and Run",
+          "digest": "6J2MCyZn8WimKxfx6XZ91NMh95JfwrPMZKZw5caWUr4M",
+          "status": "confirmed",
+          "actualGas": "59141928"
+        }
+      ],
+      "readOnlyOriginalCheck": {
+        "replayed": false,
+        "reviewId": "0xdc6c6859e24425d802b4e0ec325787de361aed2f28a9d87053bea46cbd2beb1d",
+        "reviewState": 3,
+        "reviewResult": "0x3eb190e7dc335803f91e913653047027bda2bbba1f011ee413a5a73e5cc92511",
+        "reviewToolReservation": "0",
+        "okrId": "0x507224082874ca93b88ffddfeba21bd13e252ed47b1e0b9626efa6867eed8990",
+        "okrState": 0,
+        "nextKr": "0",
+        "metrics": [
+          {
+            "baseline": "0",
+            "target": "1",
+            "weight": "1",
+            "max_age_ms": "300000",
+            "current": null,
+            "sampled_at_ms": "0",
+            "run_id": null,
+            "evidence_id": null,
+            "verified": false,
+            "verification_id": null
+          }
+        ],
+        "toolBudget": {
+          "unknown": true,
+          "reason": "notFound",
+          "objectId": "0xfcd217baa9d2cad74ed40981905f2890ab1f696c7e302a748bfeb66d6c3141c1"
+        }
+      },
+      "limits": {
+        "hostRevocationTailCompleted": false,
+        "firstAttemptOriginalErrorNotCaptured": true,
+        "firstAttemptEmptyDocsRoot": true,
+        "secondAttemptStoppedOnIncompletePagination": false,
+        "thirdAttemptCountedAuthRequestAsCommand": false
+      }
+    },
+    {
+      "attempt": 2,
+      "harnessComplete": false,
+      "phase": "real_agent_imported",
+      "error": "invalid_source: directory size 1, read 0; unsettled 0, read 0",
+      "nativeCleanupConfirmed": true,
+      "originalRequests": [
+        {
+          "label": "native self-paid Human creation",
+          "digest": "EZLPk2Lrgyn5aQbdGba9mRVGW64XQ84KrZiSiB1Sd7eU",
+          "status": "confirmed",
+          "actualGas": "18912548"
+        },
+        {
+          "label": "native self-paid organization creation",
+          "digest": "FYAXBXw9CuXhs95mh85hfLKbPWGt9BFr52Wt5HFLjgbS",
+          "status": "confirmed",
+          "actualGas": "15291616"
+        },
+        {
+          "label": "native registration of actual loopback Coordinator",
+          "digest": "EFtEiaxjwmezhZ294eqgaQcLRFnkc5ZEHZgLy6VDczay",
+          "status": "confirmed",
+          "actualGas": "6963340"
+        },
+        {
+          "label": "native single-use Host invitation",
+          "digest": "6PwcTcHQGRmGLQ3aneNvTkrTozg82KniMMRFuLshT8xo",
+          "status": "confirmed",
+          "actualGas": "5101036"
+        },
+        {
+          "label": "native import of actual bounded Agent",
+          "digest": "6D82MeuCivrXvUoxRhqcUUb1H29YmP8tDoZ45MXXBbiL",
+          "status": "confirmed",
+          "actualGas": "12019100"
+        },
+        {
+          "label": "native encrypted actual Host OKR draft",
+          "digest": "9V4Zqg45DaXm7rnYXQX6Khgf1D3kRLxL1bqvy7LiAELC",
+          "status": "confirmed",
+          "actualGas": "23736140"
+        },
+        {
+          "label": "native one-use observation capability",
+          "digest": "EiFmoy6E3bSJut2CujZa59oaTSEtiPZnCGz7wJjwDywV",
+          "status": "confirmed",
+          "actualGas": "10323480"
+        },
+        {
+          "label": "native exact review ticket and Run",
+          "digest": "Vj3pvDRqGuyYzNqHzwKxD82QRs1mnFYPNKRuAegs2WG",
+          "status": "confirmed",
+          "actualGas": "59141928"
+        }
+      ],
+      "readOnlyOriginalCheck": {
+        "replayed": false,
+        "reviewId": "0x3f9d6f5ca382bc9b1734c90da56a0f49775675db363df063703e1397fb126ef7",
+        "reviewState": 0,
+        "reviewResult": null,
+        "reviewToolReservation": "0",
+        "okrId": "0x2fee5f3d4ac799f820beee9ce41abd502c5d158910033a855bf0546c1a7acd02",
+        "okrState": 0,
+        "nextKr": "0",
+        "metrics": [
+          {
+            "baseline": "0",
+            "target": "1",
+            "weight": "1",
+            "max_age_ms": "300000",
+            "current": null,
+            "sampled_at_ms": "0",
+            "run_id": null,
+            "evidence_id": null,
+            "verified": false,
+            "verification_id": null
+          }
+        ],
+        "toolBudget": {
+          "unknown": true,
+          "reason": "notFound",
+          "objectId": "0x1ff0daa1fd8c4beba3c723ff893dd654cc849cbc0514a2c43000d479c55db98a"
+        }
+      },
+      "limits": {
+        "hostRevocationTailCompleted": false,
+        "firstAttemptOriginalErrorNotCaptured": false,
+        "firstAttemptEmptyDocsRoot": false,
+        "secondAttemptStoppedOnIncompletePagination": true,
+        "thirdAttemptCountedAuthRequestAsCommand": false
+      }
+    },
+    {
+      "attempt": 3,
+      "harnessComplete": false,
+      "phase": "continuation_sent",
+      "error": "Expected values to be strictly equal:\n\n2 !== 1\n",
+      "nativeCleanupConfirmed": true,
+      "originalRequests": [
+        {
+          "label": "native self-paid Human creation",
+          "digest": "GXW2FyJBgffSELigZaK257xrL6KZEgGMX1HHMtHJjW8z",
+          "status": "confirmed",
+          "actualGas": "18912548"
+        },
+        {
+          "label": "native self-paid organization creation",
+          "digest": "7KmyQTLYBK49bXYUtivg2Cnp5VW3fAcJhdyFQRWgNtNX",
+          "status": "confirmed",
+          "actualGas": "15291616"
+        },
+        {
+          "label": "native registration of actual loopback Coordinator",
+          "digest": "2DXkzqahPoxo7itNqe2Ku8bwvZU8hbqyyGwFvUqMosn9",
+          "status": "confirmed",
+          "actualGas": "6963340"
+        },
+        {
+          "label": "native single-use Host invitation",
+          "digest": "8nLwShWqWSbgwaa2HPRX7D4m1BfiJacMsuQz7cVC1ucw",
+          "status": "confirmed",
+          "actualGas": "5101036"
+        },
+        {
+          "label": "native import of actual bounded Agent",
+          "digest": "76P2pA7qo66yzMjUpBNfCWNoDgNsQ6wK72pjTpGGU9ES",
+          "status": "confirmed",
+          "actualGas": "12019100"
+        },
+        {
+          "label": "native encrypted actual Host OKR draft",
+          "digest": "FFkVQ57rUV5FSkLibLVtLeDh3UYXch9G7eprtfVRFUm5",
+          "status": "confirmed",
+          "actualGas": "23736140"
+        },
+        {
+          "label": "native one-use observation capability",
+          "digest": "BUDhmHB2TfNn9VMXxCUhJRGNq97aTSrrphF2T5DEbVDp",
+          "status": "confirmed",
+          "actualGas": "10323480"
+        },
+        {
+          "label": "native exact review ticket and Run",
+          "digest": "4ogCdB1ELk5ZxQTk4pChQeRwvLzSjPpxBqk3urmTqTDq",
+          "status": "confirmed",
+          "actualGas": "59141928"
+        },
+        {
+          "label": "native approval of actual Host acceptance",
+          "digest": "AQowpD2JVEC3xhdSAQ6MSdBxcaNBzBqAcy2s1UNHtEu3",
+          "status": "confirmed",
+          "actualGas": "38141088"
+        },
+        {
+          "label": "formal native single-use KR control fee",
+          "digest": "9bEZoRZjE2BiHaQPc8da27ZVGZqPqPmEdUvQjQqhVXAW",
+          "status": "confirmed",
+          "actualGas": "13416280"
+        },
+        {
+          "label": "formal native atomic continuation ticket and queued Run",
+          "digest": "8fMS7hN8QAJt7BhBuySspTsYEsrBVhUvJk51uD9qdwS",
+          "status": "confirmed",
+          "actualGas": "64243300"
+        }
+      ],
+      "readOnlyOriginalCheck": {
+        "replayed": false,
+        "reviewId": "0xcdfa5bd71987990a8a9c05a7c506faf89444b4075c92b77233ea613d743597df",
+        "reviewState": 2,
+        "reviewResult": "0x079573914147cdaec786802dd93f27218734a91ea1ee0e2a94ad0e37225fb158",
+        "reviewToolReservation": "0",
+        "continuationId": "0xf1eba16f984dcccea6cfdcc156fa9e10708ff6be3e515ab4ddf22ebc5a5895be",
+        "continuationState": 2,
+        "continuationResult": "0xe06cec2f71d9c3196b35659b19dc691a29bf158643bea502f430af25719d7503",
+        "okrId": "0x7f06dd3f83a9615566b7ddb46631ddb189b2d5d9331888716908347b04261080",
+        "okrState": 1,
+        "nextKr": "0",
+        "metrics": [
+          {
+            "baseline": "0",
+            "target": "1",
+            "weight": "1",
+            "max_age_ms": "300000",
+            "current": "1",
+            "sampled_at_ms": "1790963752169",
+            "run_id": "0xf1eba16f984dcccea6cfdcc156fa9e10708ff6be3e515ab4ddf22ebc5a5895be",
+            "evidence_id": "0xe06cec2f71d9c3196b35659b19dc691a29bf158643bea502f430af25719d7503",
+            "verified": false,
+            "verification_id": null
+          }
+        ],
+        "toolBudget": {
+          "spent": "3",
+          "reserved": "0"
+        }
+      },
+      "limits": {
+        "hostRevocationTailCompleted": false,
+        "firstAttemptOriginalErrorNotCaptured": false,
+        "firstAttemptEmptyDocsRoot": false,
+        "secondAttemptStoppedOnIncompletePagination": false,
+        "thirdAttemptCountedAuthRequestAsCommand": true
+      }
+    }
+  ],
+  "scope": "Original failed/stopped isolated harnesses queried without replay. r4 uses a new identity and preserves these outcomes."
+}

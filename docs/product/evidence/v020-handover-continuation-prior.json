@@ -1,0 +1,1042 @@
+{
+  "recordedAt": "2026-10-02T13:19:04.964010+00:00",
+  "fixtures": [
+    {
+      "fixture": 1,
+      "progress": {
+        "complete": false,
+        "checks": [
+          "exact absent Host index reconstructs as empty",
+          "production verifier proves fresh device/organization management authority; public binding is not online evidence",
+          "code is released only after exact receipt objects are visible and match invitation proof material",
+          "production CLI pipeline confirms organization and fees, signs once with generated Go Host keys, persists original digest, recovers lost receipt and supports public query without keys; OS/TTY/cloud not verified",
+          "redemption consumes the invitation; reconstruction finds membership and finite observation authority, not execution authority",
+          "Actual instantiated native file adapter and envd kernel birth identity traverse Host signature, authenticated Coordinator read and App discovery verification; workspace binding is canonical, import remains observation-only",
+          "Actual chain consumes Host proof atomically, preserves original evidence, activates Draft and advances ManagedAgent once without tool dispatch",
+          "Validator preflights reject wrong coverage/signature, raw control, legacy activation and proof replay; capability ceiling 3 retains total OKR budget 10"
+        ],
+        "transactions": [
+          {
+            "label": "create isolated fixture Human",
+            "digest": "9dWhPGRnzzZpaRokU6TbA3bscaNAQZQtNDaoxod1z12",
+            "phase": "prepared"
+          },
+          {
+            "label": "create isolated fixture Human",
+            "requestId": "fixture:a6442233-1e35-4d11-be6e-c2b4d07c88ce",
+            "digest": "9dWhPGRnzzZpaRokU6TbA3bscaNAQZQtNDaoxod1z12",
+            "status": "confirmed",
+            "actualGas": "17848548"
+          },
+          {
+            "label": "create isolated fixture organization",
+            "digest": "Hrhyti7QpiRiZRoJiNkw82BqJ5YQa5y4BRReWLzSKmzx",
+            "phase": "prepared"
+          },
+          {
+            "label": "create isolated fixture organization",
+            "requestId": "fixture:00be214b-b489-4a55-b24c-d11eaa955947",
+            "digest": "Hrhyti7QpiRiZRoJiNkw82BqJ5YQa5y4BRReWLzSKmzx",
+            "status": "confirmed",
+            "actualGas": "15418416"
+          },
+          {
+            "label": "App registers Coordinator binding",
+            "requestId": "host:65e84447-b825-40f4-b6fe-86ce058f79e1",
+            "digest": "6cQnKGf91yDNHm6JiojM2GNGpSxdTqSXMpPGqmW4Lzwf",
+            "status": "confirmed",
+            "actualGas": "6965696"
+          },
+          {
+            "label": "App creates one-use invitation",
+            "requestId": "host:c48640f9-b583-4593-b633-30816f8721aa",
+            "digest": "9hHpZyRE7EWzMdPNGC6B2rfVbyqUnLEzc9ApK1ayRH6z",
+            "status": "confirmed",
+            "actualGas": "5103392"
+          },
+          {
+            "label": "Go envd CLI redeems App invitation; injected response loss recovered by original query",
+            "requestId": "go-envd-cli-fixture",
+            "digest": "6NLbxrp1QcQWcnshhk54Ravkfm8rVJNtbkxPt9UtWJgg",
+            "status": "confirmed",
+            "actualGas": "11590292"
+          },
+          {
+            "label": "App observation-only Agent import; lost response recovered by original digest",
+            "requestId": "agent-import:1a6f5f9b-6047-49a1-9ecd-428583f945be",
+            "digest": "Gk2TtDfvp3n9hJLeczuj71nfX25P6or2gMBSofDftLqx",
+            "status": "confirmed",
+            "actualGas": "12021456"
+          },
+          {
+            "label": "Deliberate contract duplicate receipt; App normal duplicates remain fee-free",
+            "requestId": "agent-import-race:6e7b5c0a-79ef-41f4-8120-28536df8e7a2",
+            "digest": "HcVeeNsLS59BanbDpdbRGoUpZNLBaB7BcaiJhsL7Lnyn",
+            "status": "confirmed",
+            "actualGas": "1635296"
+          },
+          {
+            "label": "Host proof: create measurable draft",
+            "digest": "BAH7T2UbUTBeKqZ8CovqNMpKFQxkkguWyf8L5Gx3BtxY",
+            "phase": "prepared"
+          },
+          {
+            "label": "Host proof: create measurable draft",
+            "requestId": "fixture:bc10d871-1d29-4c08-8770-78619c64bffc",
+            "digest": "BAH7T2UbUTBeKqZ8CovqNMpKFQxkkguWyf8L5Gx3BtxY",
+            "status": "confirmed",
+            "actualGas": "20417296"
+          },
+          {
+            "label": "Host proof: issue observation capability",
+            "digest": "HDv3mwPXzhFeeCMgGtdr1Yr9Qx4A2AHS6GW21PEZn2hr",
+            "phase": "prepared"
+          },
+          {
+            "label": "Host proof: issue observation capability",
+            "requestId": "fixture:76f82cb6-0fbc-436c-8ada-3121278dbfbf",
+            "digest": "HDv3mwPXzhFeeCMgGtdr1Yr9Qx4A2AHS6GW21PEZn2hr",
+            "status": "confirmed",
+            "actualGas": "10323480"
+          },
+          {
+            "label": "Host proof: prepare review and encrypted result recipient",
+            "digest": "68Uc349jfZtRvAYs1DESiJM5W3MFvkq4AfPQPyPekGrB",
+            "phase": "prepared"
+          },
+          {
+            "label": "Host proof: prepare review and encrypted result recipient",
+            "requestId": "fixture:19230a38-dea3-4f67-8d5e-73d27d4ce8c1",
+            "digest": "68Uc349jfZtRvAYs1DESiJM5W3MFvkq4AfPQPyPekGrB",
+            "status": "confirmed",
+            "actualGas": "35520312"
+          },
+          {
+            "label": "Host proof: original review result",
+            "digest": "HBmRRmYsxYPRZCxJ1QEGAHx9omXSHDw4LjgaSMzLhzZn",
+            "phase": "original_host_digest_received"
+          },
+          {
+            "label": "Host proof: original review result",
+            "requestId": "native-host:40591757-ea8e-413c-b3de-2dcc6934c422",
+            "digest": "HBmRRmYsxYPRZCxJ1QEGAHx9omXSHDw4LjgaSMzLhzZn",
+            "status": "confirmed",
+            "actualGas": "30657700"
+          },
+          {
+            "label": "Host proof: consume constraints and activate atomically",
+            "digest": "9FREFePa6msoTTtqnz5U5RknRPyUJxwzWbtQXSt5nLVV",
+            "phase": "prepared"
+          },
+          {
+            "label": "Host proof: consume constraints and activate atomically",
+            "requestId": "fixture:5f2a09cb-668f-474b-b058-c086b50a6e0a",
+            "digest": "9FREFePa6msoTTtqnz5U5RknRPyUJxwzWbtQXSt5nLVV",
+            "status": "confirmed",
+            "actualGas": "37109844"
+          },
+          {
+            "label": "Host proof: issue reviewed tool ceiling",
+            "digest": "FQPLLx8bK2BBQKZcbu6Baq57eDu3nU1wwiwjDpiDTbbJ",
+            "phase": "prepared"
+          },
+          {
+            "label": "Host proof: issue reviewed tool ceiling",
+            "requestId": "fixture:00e75a3a-f279-4bb5-90aa-65da7b0d2123",
+            "digest": "FQPLLx8bK2BBQKZcbu6Baq57eDu3nU1wwiwjDpiDTbbJ",
+            "status": "confirmed",
+            "actualGas": "13406280"
+          },
+          {
+            "label": "Reviewed continuation: prepare signed exact-policy file goal",
+            "digest": "28ePsCT1UzQfc8Kz2H2feqAyANfBNcECC6ua92iNN7u8",
+            "phase": "prepared"
+          },
+          {
+            "label": "Reviewed continuation: prepare signed exact-policy file goal",
+            "requestId": "fixture:e511e007-0c85-4093-a1ca-b51dc69daeb2",
+            "digest": "28ePsCT1UzQfc8Kz2H2feqAyANfBNcECC6ua92iNN7u8",
+            "status": "confirmed",
+            "actualGas": "41799684"
+          }
+        ],
+        "nativeExecution": {
+          "phase": "continuation_prepared",
+          "executionId": "0x247aaa0d9c3ad2f8f28fc9cb0274cdf9b0cf21b308bfc2214b0a38ab35012bf6",
+          "okrId": "0x9aa43700692b29bbb876cac136736976da4d7b550f1f0af6c8109e6a7299ada4",
+          "managedId": "0x5956f92309b4164160bc04c6f5c57f18730626321fde23f269ce15d4925010fc",
+          "safeAppHandoverVerified": false,
+          "acceptance": {
+            "binding_id": "0x7ac70ddd8419d9a2d5a7f5dd91ec589e48ba82c9aed8b245ac0d4372e9ed4d69",
+            "coverage_revision": "2",
+            "execution_id": "0x247aaa0d9c3ad2f8f28fc9cb0274cdf9b0cf21b308bfc2214b0a38ab35012bf6",
+            "grant_id": "0x286c4f4bd72d5c7def64a496b189bfb6eeda878f293abd5ea4fd19031b6dac95",
+            "host_address": "0x2edd317e92d601c55643002e3e2101bd602680f86727b093f590251aa906e0c9",
+            "human_id": "0x07c7e837e74c49b75af12ab43bc571667cbd36c9a34285957f6a155876e38a6c",
+            "instance_id": "native-0701fbc821090878a3b79dbc91be9be83e29df8d19e8c6facd7bd86040a76cbf",
+            "membership_id": "0x3085a8366ceb485332532586fe10c8e2c6c00ac937b1f4aae61b12f607bf8b83",
+            "observed_at_ms": 1790946475092,
+            "organization_id": "0x88ec05f3bed5909a9b3bce16e5fd4739e48dec65c9710ae040ea9e3d9ab7deb7",
+            "proposal": {
+              "budget_asset": "TOOL_CALLS",
+              "budget_limit": "10",
+              "expires_at_ms": 1790946594686,
+              "managed_agent_id": "0x5956f92309b4164160bc04c6f5c57f18730626321fde23f269ce15d4925010fc",
+              "managed_version": "1",
+              "max_calls": "3",
+              "nonce": "ec60ac46e5654cf5a6b9811051901b0469009e8c4813422ca1a2c0b590dd5d44",
+              "okr_id": "0x9aa43700692b29bbb876cac136736976da4d7b550f1f0af6c8109e6a7299ada4",
+              "okr_version": "1",
+              "paths": {
+                "file.read": [
+                  "."
+                ],
+                "file.write": [
+                  "."
+                ]
+              },
+              "review_expires_at_ms": 1790946529686,
+              "spec_revision": "1",
+              "version": "1",
+              "workspace_hash": "40aa00482274e04ed6a266c82527aad68a57f549b1b2636454d9aa45fffeee2c"
+            },
+            "signature": "ed25519:42b203020a4fdb4f8e289445bbc0eff2664040dafdcd084ef58337b91ce382f8:46c98648d41c80c57c164f7504273e3047921e6724f4f61426358dfef75d8d1bd00556afe24c59e2806ca312b596c40c2ff6f5363d617286ab465dfe271fe002",
+            "version": "1"
+          },
+          "originalReviewDigest": "HBmRRmYsxYPRZCxJ1QEGAHx9omXSHDw4LjgaSMzLhzZn",
+          "negativePreflights": [
+            {
+              "label": "wrong coverage cannot approve",
+              "error": "{\"$kind\":\"MoveAbort\",\"message\":\"MoveAbort in 1st command, abort code: 9503, in '0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c::handover::confirm_okr' (instruction 233)\",\"command\":0,\"MoveAbort\":{\"abortCode\":\"9503\",\"location\":{\"package\":\"0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c\",\"module\":\"handover\",\"function\":4,\"instruction\":233,\"functionName\":\"confirm_okr\"}}}"
+            },
+            {
+              "label": "wrong Host signature cannot approve",
+              "error": "{\"$kind\":\"MoveAbort\",\"message\":\"MoveAbort in 1st command, abort code: 9504, in '0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c::handover::confirm_okr' (instruction 435)\",\"command\":0,\"MoveAbort\":{\"abortCode\":\"9504\",\"location\":{\"package\":\"0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c\",\"module\":\"handover\",\"function\":4,\"instruction\":435,\"functionName\":\"confirm_okr\"}}}"
+            },
+            {
+              "label": "raw control flag cannot bypass",
+              "error": "{\"$kind\":\"MoveAbort\",\"message\":\"MoveAbort in 1st command, abort code: 9211, in '0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c::host::rebind_agent' (instruction 27)\",\"command\":0,\"MoveAbort\":{\"abortCode\":\"9211\",\"location\":{\"package\":\"0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c\",\"module\":\"host\",\"function\":12,\"instruction\":27,\"functionName\":\"rebind_agent\"}}}"
+            },
+            {
+              "label": "legacy activation cannot bypass",
+              "error": "{\"$kind\":\"MoveAbort\",\"message\":\"MoveAbort in 1st command, abort code: 9410, in '0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c::okr::activate' (instruction 1)\",\"command\":0,\"MoveAbort\":{\"abortCode\":\"9410\",\"location\":{\"package\":\"0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c\",\"module\":\"okr\",\"function\":7,\"instruction\":1,\"functionName\":\"activate\"}}}"
+            },
+            {
+              "label": "same proof cannot be consumed twice",
+              "error": "{\"$kind\":\"MoveAbort\",\"message\":\"MoveAbort in 1st command, abort code: 9203, in '0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c::host::assert_agent_authority' (instruction 42)\",\"command\":0,\"MoveAbort\":{\"abortCode\":\"9203\",\"location\":{\"package\":\"0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c\",\"module\":\"host\",\"function\":44,\"instruction\":42,\"functionName\":\"assert_agent_authority\"}}}"
+            }
+          ],
+          "approvalId": "0xa5f3d7474295ea522482d89806e77056c0a83bb83f87942d86016609e837c422",
+          "approvalDigest": "9FREFePa6msoTTtqnz5U5RknRPyUJxwzWbtQXSt5nLVV",
+          "boundedCapabilityId": "0x907d544c5f9b038af6b9f94f99522a42d84c016929294d3fd471e551b8174fd5",
+          "reviewedMaxCalls": 3,
+          "totalBudget": 10,
+          "approvalPolicyVerified": true,
+          "hostProofPersisted": true,
+          "explicitContinueVerified": false,
+          "actualToolsDispatched": false,
+          "continuedRunId": "0xb4737161d27e28d29839b01b46da241c373e0c8c22dd331f99bdfb6d4fc8ce0f"
+        },
+        "limits": {
+          "generatedFixtureKeysOnly": true,
+          "invitationSecretsIncluded": false
+        }
+      },
+      "originalChainQuery": {
+        "recordedAt": "2026-10-02T13:10:07.731Z",
+        "originalExecution": {
+          "id": "0xb4737161d27e28d29839b01b46da241c373e0c8c22dd331f99bdfb6d4fc8ce0f",
+          "org_id": "0x88ec05f3bed5909a9b3bce16e5fd4739e48dec65c9710ae040ea9e3d9ab7deb7",
+          "capability_id": "0x907d544c5f9b038af6b9f94f99522a42d84c016929294d3fd471e551b8174fd5",
+          "capability_version": "1",
+          "human_id": "0x07c7e837e74c49b75af12ab43bc571667cbd36c9a34285957f6a155876e38a6c",
+          "grant_id": "0x286c4f4bd72d5c7def64a496b189bfb6eeda878f293abd5ea4fd19031b6dac95",
+          "grant_version": "1",
+          "membership_id": "0x3085a8366ceb485332532586fe10c8e2c6c00ac937b1f4aae61b12f607bf8b83",
+          "host_address": "0x2edd317e92d601c55643002e3e2101bd602680f86727b093f590251aa906e0c9",
+          "managed_agent": "0x5956f92309b4164160bc04c6f5c57f18730626321fde23f269ce15d4925010fc",
+          "delegate": "0x95e12bde58f364d4bd82d1555c9214af76aaa93cb6d5d0820b08ec6378e69f13",
+          "node_id": "0x2edd317e92d601c55643002e3e2101bd602680f86727b093f590251aa906e0c9",
+          "agent_id": "native-0701fbc821090878a3b79dbc91be9be83e29df8d19e8c6facd7bd86040a76cbf",
+          "command_id": "f36a9174-e484-475c-98c2-717b9f4eb3d3",
+          "nonce": "63cc745e-7c37-4259-bda9-aa2a36b976b3",
+          "idempotency_key": "f36a9174-e484-475c-98c2-717b9f4eb3d3",
+          "intent_hash": [
+            61,
+            67,
+            60,
+            163,
+            76,
+            59,
+            199,
+            146,
+            151,
+            112,
+            150,
+            130,
+            17,
+            170,
+            208,
+            190,
+            71,
+            155,
+            150,
+            216,
+            206,
+            157,
+            104,
+            209,
+            147,
+            93,
+            47,
+            222,
+            252,
+            239,
+            211,
+            192
+          ],
+          "action": "assign",
+          "scope": "control",
+          "budget_asset": "TOOL_CALLS",
+          "budget_amount": "3",
+          "issued_at_ms": "1790946476765",
+          "expires_at_ms": "1790946594686",
+          "state": 3,
+          "cursor": "3",
+          "stop_requested": false,
+          "created_at_ms": "1790946476758",
+          "started_at_ms": "1790946477174",
+          "updated_at_ms": "1790946477593",
+          "result_record": "0x9577d5e1986e209bc5a7c112f6c94d68602f3d46b6fb3cf9251a1f9d6f56a7d2",
+          "result_hash": [
+            234,
+            138,
+            39,
+            132,
+            235,
+            174,
+            60,
+            0,
+            132,
+            29,
+            10,
+            108,
+            75,
+            102,
+            142,
+            10,
+            180,
+            61,
+            14,
+            146,
+            30,
+            88,
+            147,
+            120,
+            243,
+            147,
+            68,
+            124,
+            182,
+            50,
+            35,
+            213
+          ],
+          "attempt_id": [
+            198,
+            168,
+            220,
+            98,
+            219,
+            187,
+            1,
+            204,
+            152,
+            236,
+            107,
+            170,
+            88,
+            108,
+            245,
+            57,
+            29,
+            201,
+            29,
+            172,
+            215,
+            190,
+            43,
+            40,
+            186,
+            161,
+            110,
+            150,
+            83,
+            48,
+            44,
+            89
+          ]
+        },
+        "budget": {
+          "asset": "TOOL_CALLS",
+          "spent": "0",
+          "reserved": "0",
+          "claimsId": "0x7408db19907c01366bfde94305b762d2ea2e6e88f6e32b8097afad43638f2ffe"
+        },
+        "replayed": false,
+        "limits": {
+          "originalResponseNotSaved": true,
+          "strictAdapterDecoderHadNoHandoverContinuationField": true
+        }
+      }
+    },
+    {
+      "fixture": 2,
+      "progress": {
+        "complete": false,
+        "checks": [
+          "exact absent Host index reconstructs as empty",
+          "production verifier proves fresh device/organization management authority; public binding is not online evidence",
+          "code is released only after exact receipt objects are visible and match invitation proof material",
+          "production CLI pipeline confirms organization and fees, signs once with generated Go Host keys, persists original digest, recovers lost receipt and supports public query without keys; OS/TTY/cloud not verified",
+          "redemption consumes the invitation; reconstruction finds membership and finite observation authority, not execution authority",
+          "Actual instantiated native file adapter and envd kernel birth identity traverse Host signature, authenticated Coordinator read and App discovery verification; workspace binding is canonical, import remains observation-only",
+          "Actual chain consumes Host proof atomically, preserves original evidence, activates Draft and advances ManagedAgent once without tool dispatch",
+          "Validator preflights reject wrong coverage/signature, raw control, legacy activation and proof replay; capability ceiling 3 retains total OKR budget 10"
+        ],
+        "transactions": [
+          {
+            "label": "create isolated fixture Human",
+            "digest": "3sdjTF3vLScq1R8h74v1GYtXfRp3yJK4gjSA5FfPstx2",
+            "phase": "prepared"
+          },
+          {
+            "label": "create isolated fixture Human",
+            "requestId": "fixture:fb5368c4-6f40-45f9-b05d-e4302b61abf8",
+            "digest": "3sdjTF3vLScq1R8h74v1GYtXfRp3yJK4gjSA5FfPstx2",
+            "status": "confirmed",
+            "actualGas": "17848548"
+          },
+          {
+            "label": "create isolated fixture organization",
+            "digest": "7CxdvwSMe7pdGP9FdkrraHcXRRCXKeDNLwbqpmqZ3nxp",
+            "phase": "prepared"
+          },
+          {
+            "label": "create isolated fixture organization",
+            "requestId": "fixture:fbf500c3-202d-4f06-91c2-173b644bfcf2",
+            "digest": "7CxdvwSMe7pdGP9FdkrraHcXRRCXKeDNLwbqpmqZ3nxp",
+            "status": "confirmed",
+            "actualGas": "15418416"
+          },
+          {
+            "label": "App registers Coordinator binding",
+            "requestId": "host:fce9d750-4fad-48ec-9db8-0ea5e726a58e",
+            "digest": "Az2gyVpPSq5u2KSJTmAkzKY8CHKLzMyGTLJbiDW15jdZ",
+            "status": "confirmed",
+            "actualGas": "6965696"
+          },
+          {
+            "label": "App creates one-use invitation",
+            "requestId": "host:2aae1cd9-e79d-45af-bfd9-81e939d56747",
+            "digest": "GUy3MyGNdiR8MYE9QsesSBUHQ53Yak4X462u7FDZMPtT",
+            "status": "confirmed",
+            "actualGas": "5103392"
+          },
+          {
+            "label": "Go envd CLI redeems App invitation; injected response loss recovered by original query",
+            "requestId": "go-envd-cli-fixture",
+            "digest": "7FRxCSk51Evmnvt3MmPsJ3xAoamL4zXnxGjzeoehhhMq",
+            "status": "confirmed",
+            "actualGas": "11590292"
+          },
+          {
+            "label": "App observation-only Agent import; lost response recovered by original digest",
+            "requestId": "agent-import:72c7a2e2-1198-41e0-a2b3-24c68a8ac5a9",
+            "digest": "AEBU66ZRSV6bc9pzNRTC3UQXNt8cwVUVCDmBxu3zxsPj",
+            "status": "confirmed",
+            "actualGas": "12021456"
+          },
+          {
+            "label": "Deliberate contract duplicate receipt; App normal duplicates remain fee-free",
+            "requestId": "agent-import-race:c83f36d4-a4d4-47f8-acc8-d849ccb7bd77",
+            "digest": "7mM9us7tkbo7Cp7v5LeSK7npiGCTZT18DhyJBWivr3kf",
+            "status": "confirmed",
+            "actualGas": "1635296"
+          },
+          {
+            "label": "Host proof: create measurable draft",
+            "digest": "HzGxVoVTZBzPRnoaN7JWfXXDAzNHWYBhzeqpu8DesckF",
+            "phase": "prepared"
+          },
+          {
+            "label": "Host proof: create measurable draft",
+            "requestId": "fixture:4259b4ef-bef3-41d4-8b0a-49366274ca6d",
+            "digest": "HzGxVoVTZBzPRnoaN7JWfXXDAzNHWYBhzeqpu8DesckF",
+            "status": "confirmed",
+            "actualGas": "20417296"
+          },
+          {
+            "label": "Host proof: issue observation capability",
+            "digest": "8CtodmmvrjrWSv4SBJWC79hVrpYN31Vq4KwUP633vSJ4",
+            "phase": "prepared"
+          },
+          {
+            "label": "Host proof: issue observation capability",
+            "requestId": "fixture:976b4ec0-b93d-417f-8575-91ecc64afc24",
+            "digest": "8CtodmmvrjrWSv4SBJWC79hVrpYN31Vq4KwUP633vSJ4",
+            "status": "confirmed",
+            "actualGas": "10323480"
+          },
+          {
+            "label": "Host proof: prepare review and encrypted result recipient",
+            "digest": "55mTc6nCDG355qLwe734nFUMX5SjXhcNCyLVdBhmxRL4",
+            "phase": "prepared"
+          },
+          {
+            "label": "Host proof: prepare review and encrypted result recipient",
+            "requestId": "fixture:abae1540-e737-457f-a005-6d3f7e8fe6bc",
+            "digest": "55mTc6nCDG355qLwe734nFUMX5SjXhcNCyLVdBhmxRL4",
+            "status": "confirmed",
+            "actualGas": "35520312"
+          },
+          {
+            "label": "Host proof: original review result",
+            "digest": "3RSm69JhdqXuBnLU3A6T1tJTzcbctCvJthCeriCHrPdA",
+            "phase": "original_host_digest_received"
+          },
+          {
+            "label": "Host proof: original review result",
+            "digest": "3RSm69JhdqXuBnLU3A6T1tJTzcbctCvJthCeriCHrPdA",
+            "status": "immutable_effect_confirmed",
+            "immutableObjectId": "0x306661abe9e26ba60687d2cd866ad4d41df9b81a17cf69fc970edeeeebf4b80c",
+            "actualGas": null,
+            "feeState": "original_transaction_unavailable"
+          },
+          {
+            "label": "Host proof: consume constraints and activate atomically",
+            "digest": "6MXKwFvWEgMCriuXuighbGBaqnjsRR7qQcSnjhhD1Jak",
+            "phase": "prepared"
+          },
+          {
+            "label": "Host proof: consume constraints and activate atomically",
+            "requestId": "fixture:24974a7a-066a-4555-9f73-eed66668e6dc",
+            "digest": "6MXKwFvWEgMCriuXuighbGBaqnjsRR7qQcSnjhhD1Jak",
+            "status": "confirmed",
+            "actualGas": "37109844"
+          },
+          {
+            "label": "Host proof: issue reviewed tool ceiling",
+            "digest": "H1PCFZrYcsFj1jBaYQYgP8cDwEmKvQgsNSphGPnw7W7Z",
+            "phase": "prepared"
+          },
+          {
+            "label": "Host proof: issue reviewed tool ceiling",
+            "requestId": "fixture:a3398d86-4c3e-4c1d-80f7-2183e8aefcd3",
+            "digest": "H1PCFZrYcsFj1jBaYQYgP8cDwEmKvQgsNSphGPnw7W7Z",
+            "status": "confirmed",
+            "actualGas": "13416280"
+          },
+          {
+            "label": "Reviewed continuation: prepare signed exact-policy file goal",
+            "digest": "8wDdec3CH162yizo4jXPPuMs5aek2PXrE4p5YWcdcrK3",
+            "phase": "prepared"
+          },
+          {
+            "label": "Reviewed continuation: prepare signed exact-policy file goal",
+            "requestId": "fixture:f18cf237-ae62-4e08-bce9-0d0d673ebd30",
+            "digest": "8wDdec3CH162yizo4jXPPuMs5aek2PXrE4p5YWcdcrK3",
+            "status": "confirmed",
+            "actualGas": "41799684"
+          },
+          {
+            "label": "Reviewed continuation: original file execution result",
+            "digest": "pXZ3uQpkJFcttxztq3CsFvpg7wcsChgJYxJgp9TUSBU",
+            "phase": "original_host_digest_received"
+          },
+          {
+            "label": "Reviewed continuation: original file execution result",
+            "requestId": "native-host:aa055eb1-45a0-4c39-9172-1c8d83584891",
+            "digest": "pXZ3uQpkJFcttxztq3CsFvpg7wcsChgJYxJgp9TUSBU",
+            "status": "confirmed",
+            "actualGas": "19464996"
+          }
+        ],
+        "nativeExecution": {
+          "phase": "continuation_response_received",
+          "executionId": "0x8c2b673b510b30fb3095ed1e74065b5595747cf351b63a1b435cf17790ccfc13",
+          "okrId": "0x1dc6f3b6637c3fc6899702607a5a4e2f42263814d00e1c93d3d1dcae26195257",
+          "managedId": "0x16adc6b03f295e56e2b85816e4508aff6c3569a79da83486faae4bbcf23106f1",
+          "safeAppHandoverVerified": false,
+          "acceptance": {
+            "binding_id": "0xfb58da4501764b99a028574f95a97f26fa96ced17d1dbc9ab18a5907cc0bd296",
+            "coverage_revision": "2",
+            "execution_id": "0x8c2b673b510b30fb3095ed1e74065b5595747cf351b63a1b435cf17790ccfc13",
+            "grant_id": "0x3e8ec894c6bd2629ffb61b6c37392a236285b2300694ec6cf9de09b7f2dd7314",
+            "host_address": "0x0de3bc6fe17edc873b2af78a0f1c1df146e7ef80ac17192ef7eb27e14001ee54",
+            "human_id": "0x25aec00bb4a37ce9599b216db77658df1deb768b25d70fbb0b20b3524da143e6",
+            "instance_id": "native-6c4fed28cf42c9ad5c09fc2f56c34636d77336f67a25b1088d99e0f507c6f6c7",
+            "membership_id": "0x2d0b7386ad3b8b4ab142ab5ab975fe98a5d7cb35562f5259f67321c5f012fd00",
+            "observed_at_ms": 1790946669718,
+            "organization_id": "0xe48f820b03108c524e21e05c4a100e33857ac5a98c5876c85bb30a79969a69ac",
+            "proposal": {
+              "budget_asset": "TOOL_CALLS",
+              "budget_limit": "10",
+              "expires_at_ms": 1790946789054,
+              "managed_agent_id": "0x16adc6b03f295e56e2b85816e4508aff6c3569a79da83486faae4bbcf23106f1",
+              "managed_version": "1",
+              "max_calls": "3",
+              "nonce": "e342d8d5b168425788c8a8fcd2f8c77a3c0776aafc634b7b8c3f975cd91b98f2",
+              "okr_id": "0x1dc6f3b6637c3fc6899702607a5a4e2f42263814d00e1c93d3d1dcae26195257",
+              "okr_version": "1",
+              "paths": {
+                "file.read": [
+                  "."
+                ],
+                "file.write": [
+                  "."
+                ]
+              },
+              "review_expires_at_ms": 1790946724054,
+              "spec_revision": "1",
+              "version": "1",
+              "workspace_hash": "defae0fc01701fbaa315f2eab4cbf82b354288784fec7dd05688a5ad335efeaa"
+            },
+            "signature": "ed25519:5e5e5fe62ea4ec8eabcfd155b727b1b86a2b07aed86937b8e0de48074d30af09:5ad606f50e7ff4a6279f0e48a6a8f7ca675b57763bac6abf282167c1f289166ec22d8a144b502091913638127aa9848232abb78d9948c1e36f046121ff1b1002",
+            "version": "1"
+          },
+          "originalReviewDigest": "3RSm69JhdqXuBnLU3A6T1tJTzcbctCvJthCeriCHrPdA",
+          "negativePreflights": [
+            {
+              "label": "wrong coverage cannot approve",
+              "error": "{\"$kind\":\"MoveAbort\",\"message\":\"MoveAbort in 1st command, abort code: 9503, in '0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c::handover::confirm_okr' (instruction 233)\",\"command\":0,\"MoveAbort\":{\"abortCode\":\"9503\",\"location\":{\"package\":\"0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c\",\"module\":\"handover\",\"function\":4,\"instruction\":233,\"functionName\":\"confirm_okr\"}}}"
+            },
+            {
+              "label": "wrong Host signature cannot approve",
+              "error": "{\"$kind\":\"MoveAbort\",\"message\":\"MoveAbort in 1st command, abort code: 9504, in '0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c::handover::confirm_okr' (instruction 435)\",\"command\":0,\"MoveAbort\":{\"abortCode\":\"9504\",\"location\":{\"package\":\"0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c\",\"module\":\"handover\",\"function\":4,\"instruction\":435,\"functionName\":\"confirm_okr\"}}}"
+            },
+            {
+              "label": "raw control flag cannot bypass",
+              "error": "{\"$kind\":\"MoveAbort\",\"message\":\"MoveAbort in 1st command, abort code: 9211, in '0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c::host::rebind_agent' (instruction 27)\",\"command\":0,\"MoveAbort\":{\"abortCode\":\"9211\",\"location\":{\"package\":\"0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c\",\"module\":\"host\",\"function\":12,\"instruction\":27,\"functionName\":\"rebind_agent\"}}}"
+            },
+            {
+              "label": "legacy activation cannot bypass",
+              "error": "{\"$kind\":\"MoveAbort\",\"message\":\"MoveAbort in 1st command, abort code: 9410, in '0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c::okr::activate' (instruction 1)\",\"command\":0,\"MoveAbort\":{\"abortCode\":\"9410\",\"location\":{\"package\":\"0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c\",\"module\":\"okr\",\"function\":7,\"instruction\":1,\"functionName\":\"activate\"}}}"
+            },
+            {
+              "label": "same proof cannot be consumed twice",
+              "error": "{\"$kind\":\"MoveAbort\",\"message\":\"MoveAbort in 1st command, abort code: 9203, in '0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c::host::assert_agent_authority' (instruction 42)\",\"command\":0,\"MoveAbort\":{\"abortCode\":\"9203\",\"location\":{\"package\":\"0xae18b33007b82ca2b22f4e28baff110895fe4a97389e39f995c31cddcfc4475c\",\"module\":\"host\",\"function\":44,\"instruction\":42,\"functionName\":\"assert_agent_authority\"}}}"
+            }
+          ],
+          "approvalId": "0x68fc4e8c56bf50e22e1e43fac540cd1f4074a4adf2b0ea18e177d7c67491b38f",
+          "approvalDigest": "6MXKwFvWEgMCriuXuighbGBaqnjsRR7qQcSnjhhD1Jak",
+          "boundedCapabilityId": "0xbc746c4adec9294aaea0c8e9e98726506f238451b9829211a06dea8e6522f9f5",
+          "reviewedMaxCalls": 3,
+          "totalBudget": 10,
+          "approvalPolicyVerified": true,
+          "hostProofPersisted": true,
+          "explicitContinueVerified": false,
+          "actualToolsDispatched": false,
+          "continuedRunId": "0x918fbdcda977b5b08e0d612472e43a456c5e127df013d13d402874801705035b",
+          "originalContinuationResponse": {
+            "event": {
+              "command_id": "aa055eb1-45a0-4c39-9172-1c8d83584891",
+              "event_id": "runtime-9c136ac0c1c236614d8f66ff",
+              "evidence_hash": "1886a481e68c973c824b80ce7fe75ed39e3b85a50d141b4951281b5113035464",
+              "occurred_at_ms": 1790946672201,
+              "result_code": "runtime_ok",
+              "result_hash": "1886a481e68c973c824b80ce7fe75ed39e3b85a50d141b4951281b5113035464",
+              "target": {
+                "agent_id": "native-6c4fed28cf42c9ad5c09fc2f56c34636d77336f67a25b1088d99e0f507c6f6c7",
+                "node_id": "0x0de3bc6fe17edc873b2af78a0f1c1df146e7ef80ac17192ef7eb27e14001ee54",
+                "organization_id": "0xe48f820b03108c524e21e05c4a100e33857ac5a98c5876c85bb30a79969a69ac"
+              },
+              "type": "runtime_result",
+              "version": "1"
+            },
+            "response": {
+              "adapter": "agent-manager-runtime",
+              "command_id": "aa055eb1-45a0-4c39-9172-1c8d83584891",
+              "duplicate": false,
+              "error": null,
+              "execution_id": "0x918fbdcda977b5b08e0d612472e43a456c5e127df013d13d402874801705035b",
+              "execution_state": "succeeded",
+              "observed_at": "2026-10-02T13:11:12.201022Z",
+              "ok": true,
+              "okr_observation": {
+                "current": "1",
+                "sampled_at_ms": "1790946672200",
+                "status": "submitted",
+                "transaction_digest": "4xDHgWHvo4HvwEbLDENDV8TKeXLpy7k9XF7DhAHvnkfo"
+              },
+              "operation": "assign",
+              "result": {
+                "evidence": [
+                  {
+                    "expected_hash": "28148d0d1b7e996b49a12c2af20f7eae287da30bc5a2bf5ed1bd34205554c532",
+                    "observed_at": "2026-10-02T13:11:12.200963Z",
+                    "observed_hash": "28148d0d1b7e996b49a12c2af20f7eae287da30bc5a2bf5ed1bd34205554c532",
+                    "path": "APPROVED.md",
+                    "verified": true
+                  }
+                ],
+                "status": "submitted",
+                "tool_calls_used": 3
+              },
+              "schema_version": "1",
+              "spend": {
+                "amount": "3",
+                "asset": "TOOL_CALLS",
+                "known": true
+              },
+              "transaction_digest": "pXZ3uQpkJFcttxztq3CsFvpg7wcsChgJYxJgp9TUSBU"
+            },
+            "success": true
+          }
+        },
+        "limits": {
+          "generatedFixtureKeysOnly": true,
+          "invitationSecretsIncluded": false
+        }
+      },
+      "originalChainQuery": {
+        "recordedAt": "2026-10-02T13:12:42.466Z",
+        "originalExecution": {
+          "id": "0x918fbdcda977b5b08e0d612472e43a456c5e127df013d13d402874801705035b",
+          "org_id": "0xe48f820b03108c524e21e05c4a100e33857ac5a98c5876c85bb30a79969a69ac",
+          "capability_id": "0xbc746c4adec9294aaea0c8e9e98726506f238451b9829211a06dea8e6522f9f5",
+          "capability_version": "1",
+          "human_id": "0x25aec00bb4a37ce9599b216db77658df1deb768b25d70fbb0b20b3524da143e6",
+          "grant_id": "0x3e8ec894c6bd2629ffb61b6c37392a236285b2300694ec6cf9de09b7f2dd7314",
+          "grant_version": "1",
+          "membership_id": "0x2d0b7386ad3b8b4ab142ab5ab975fe98a5d7cb35562f5259f67321c5f012fd00",
+          "host_address": "0x0de3bc6fe17edc873b2af78a0f1c1df146e7ef80ac17192ef7eb27e14001ee54",
+          "managed_agent": "0x16adc6b03f295e56e2b85816e4508aff6c3569a79da83486faae4bbcf23106f1",
+          "delegate": "0xe5e058174ed6a50e6634fa00f4d87f676f0c27a7f4e8ade2ced21226a52b64b1",
+          "node_id": "0x0de3bc6fe17edc873b2af78a0f1c1df146e7ef80ac17192ef7eb27e14001ee54",
+          "agent_id": "native-6c4fed28cf42c9ad5c09fc2f56c34636d77336f67a25b1088d99e0f507c6f6c7",
+          "command_id": "aa055eb1-45a0-4c39-9172-1c8d83584891",
+          "nonce": "1b964605-606f-4808-8142-9d1a061d04ac",
+          "idempotency_key": "aa055eb1-45a0-4c39-9172-1c8d83584891",
+          "intent_hash": [
+            192,
+            149,
+            148,
+            84,
+            19,
+            93,
+            205,
+            23,
+            27,
+            210,
+            56,
+            100,
+            195,
+            144,
+            206,
+            106,
+            39,
+            184,
+            235,
+            108,
+            35,
+            169,
+            38,
+            198,
+            251,
+            145,
+            184,
+            219,
+            38,
+            89,
+            2,
+            75
+          ],
+          "action": "assign",
+          "scope": "control",
+          "budget_asset": "TOOL_CALLS",
+          "budget_amount": "3",
+          "issued_at_ms": "1790946671390",
+          "expires_at_ms": "1790946789054",
+          "state": 2,
+          "cursor": "3",
+          "stop_requested": false,
+          "created_at_ms": "1790946671379",
+          "started_at_ms": "1790946671793",
+          "updated_at_ms": "1790946672209",
+          "result_record": "0xfeb6c5b1f05df51e7bce1e53de782cabfda265dccbdbc8f86d4a72790f3a5d62",
+          "result_hash": [
+            22,
+            213,
+            250,
+            200,
+            83,
+            211,
+            83,
+            163,
+            147,
+            77,
+            215,
+            29,
+            36,
+            180,
+            137,
+            171,
+            96,
+            116,
+            39,
+            250,
+            6,
+            74,
+            181,
+            129,
+            158,
+            104,
+            232,
+            29,
+            59,
+            250,
+            243,
+            147
+          ],
+          "attempt_id": [
+            196,
+            171,
+            32,
+            113,
+            105,
+            99,
+            226,
+            168,
+            31,
+            233,
+            206,
+            30,
+            139,
+            73,
+            32,
+            26,
+            74,
+            36,
+            145,
+            89,
+            177,
+            149,
+            41,
+            196,
+            4,
+            162,
+            236,
+            81,
+            163,
+            200,
+            102,
+            197
+          ]
+        },
+        "budget": {
+          "asset": "TOOL_CALLS",
+          "spent": "3",
+          "reserved": "0",
+          "claimsId": "0x372e29c1a9a03f725ee56fcd0a762ea8c8dd4ca68495658a570d1de02668a5c2"
+        },
+        "okr": {
+          "id": "0x1dc6f3b6637c3fc6899702607a5a4e2f42263814d00e1c93d3d1dcae26195257",
+          "org_id": "0xe48f820b03108c524e21e05c4a100e33857ac5a98c5876c85bb30a79969a69ac",
+          "owner_human": "0x25aec00bb4a37ce9599b216db77658df1deb768b25d70fbb0b20b3524da143e6",
+          "logical_id": "e76bec5c-c8e5-468f-8597-6b7d8fcaddfb",
+          "state": 1,
+          "version": "3",
+          "agreement_version": "1",
+          "priority": 0,
+          "deadline_ms": "1790946968247",
+          "spec_record": "0xd939ca847d2c07570fe94852540010c716f94a2429b753b728b724c3592334af",
+          "spec_revision": "1",
+          "metrics": [
+            {
+              "baseline": "0",
+              "target": "1",
+              "weight": "1",
+              "max_age_ms": "60000",
+              "current": "1",
+              "sampled_at_ms": "1790946672200",
+              "run_id": "0x918fbdcda977b5b08e0d612472e43a456c5e127df013d13d402874801705035b",
+              "evidence_id": "0xfeb6c5b1f05df51e7bce1e53de782cabfda265dccbdbc8f86d4a72790f3a5d62",
+              "verified": false,
+              "verification_id": null
+            }
+          ],
+          "next_kr": "0",
+          "observations": {
+            "id": "0x9f5d55d6a1ab1bd209e4028b2b279c3003ac9ac1c4e5256d0929a79680b6fb20",
+            "size": "1"
+          },
+          "managed_agent": "0x16adc6b03f295e56e2b85816e4508aff6c3569a79da83486faae4bbcf23106f1",
+          "managed_version": "2",
+          "membership_id": "0x2d0b7386ad3b8b4ab142ab5ab975fe98a5d7cb35562f5259f67321c5f012fd00",
+          "membership_version": "1",
+          "workspace_hash": [
+            222,
+            250,
+            224,
+            252,
+            1,
+            112,
+            31,
+            186,
+            163,
+            21,
+            242,
+            234,
+            180,
+            203,
+            248,
+            43,
+            53,
+            66,
+            136,
+            120,
+            79,
+            236,
+            125,
+            208,
+            86,
+            136,
+            165,
+            173,
+            51,
+            94,
+            254,
+            170
+          ],
+          "boundary_hash": [
+            35,
+            255,
+            90,
+            146,
+            4,
+            189,
+            70,
+            37,
+            222,
+            176,
+            12,
+            149,
+            171,
+            68,
+            91,
+            163,
+            181,
+            164,
+            157,
+            186,
+            156,
+            55,
+            142,
+            75,
+            226,
+            37,
+            50,
+            197,
+            46,
+            237,
+            239,
+            141
+          ],
+          "budget_asset": "TOOL_CALLS",
+          "budget_limit": "10",
+          "expires_at_ms": "1790946789054",
+          "activated_at_ms": "1790946670547",
+          "agreement_record": "0x79ea40e32e4a4746a01cb670fc99a1366f4b842cd365871e9cac5ddd7633bdcc",
+          "acceptance_record": null,
+          "accepted_by_human": null,
+          "accepted_at_ms": "0"
+        },
+        "observations": {
+          "observations": [
+            {
+              "id": "0x44e07b67668a6df73e7d0e71d35e23b7380a62522e3e4e457b014c3d66bb63f0",
+              "org_id": "0xe48f820b03108c524e21e05c4a100e33857ac5a98c5876c85bb30a79969a69ac",
+              "okr_id": "0x1dc6f3b6637c3fc6899702607a5a4e2f42263814d00e1c93d3d1dcae26195257",
+              "kr_index": "0",
+              "agreement_version": "1",
+              "current": "1",
+              "sampled_at_ms": "1790946672200",
+              "recorded_at_ms": "1790946672574",
+              "run_id": "0x918fbdcda977b5b08e0d612472e43a456c5e127df013d13d402874801705035b",
+              "evidence_id": "0xfeb6c5b1f05df51e7bce1e53de782cabfda265dccbdbc8f86d4a72790f3a5d62",
+              "host_address": "0x0de3bc6fe17edc873b2af78a0f1c1df146e7ef80ac17192ef7eb27e14001ee54"
+            }
+          ],
+          "cursor": null,
+          "hasNextPage": false
+        },
+        "originalResponse": {
+          "event": {
+            "command_id": "aa055eb1-45a0-4c39-9172-1c8d83584891",
+            "event_id": "runtime-9c136ac0c1c236614d8f66ff",
+            "evidence_hash": "1886a481e68c973c824b80ce7fe75ed39e3b85a50d141b4951281b5113035464",
+            "occurred_at_ms": 1790946672201,
+            "result_code": "runtime_ok",
+            "result_hash": "1886a481e68c973c824b80ce7fe75ed39e3b85a50d141b4951281b5113035464",
+            "target": {
+              "agent_id": "native-6c4fed28cf42c9ad5c09fc2f56c34636d77336f67a25b1088d99e0f507c6f6c7",
+              "node_id": "0x0de3bc6fe17edc873b2af78a0f1c1df146e7ef80ac17192ef7eb27e14001ee54",
+              "organization_id": "0xe48f820b03108c524e21e05c4a100e33857ac5a98c5876c85bb30a79969a69ac"
+            },
+            "type": "runtime_result",
+            "version": "1"
+          },
+          "response": {
+            "adapter": "agent-manager-runtime",
+            "command_id": "aa055eb1-45a0-4c39-9172-1c8d83584891",
+            "duplicate": false,
+            "error": null,
+            "execution_id": "0x918fbdcda977b5b08e0d612472e43a456c5e127df013d13d402874801705035b",
+            "execution_state": "succeeded",
+            "observed_at": "2026-10-02T13:11:12.201022Z",
+            "ok": true,
+            "okr_observation": {
+              "current": "1",
+              "sampled_at_ms": "1790946672200",
+              "status": "submitted",
+              "transaction_digest": "4xDHgWHvo4HvwEbLDENDV8TKeXLpy7k9XF7DhAHvnkfo"
+            },
+            "operation": "assign",
+            "result": {
+              "evidence": [
+                {
+                  "expected_hash": "28148d0d1b7e996b49a12c2af20f7eae287da30bc5a2bf5ed1bd34205554c532",
+                  "observed_at": "2026-10-02T13:11:12.200963Z",
+                  "observed_hash": "28148d0d1b7e996b49a12c2af20f7eae287da30bc5a2bf5ed1bd34205554c532",
+                  "path": "APPROVED.md",
+                  "verified": true
+                }
+              ],
+              "status": "submitted",
+              "tool_calls_used": 3
+            },
+            "schema_version": "1",
+            "spend": {
+              "amount": "3",
+              "asset": "TOOL_CALLS",
+              "known": true
+            },
+            "transaction_digest": "pXZ3uQpkJFcttxztq3CsFvpg7wcsChgJYxJgp9TUSBU"
+          },
+          "success": true
+        },
+        "replayed": false,
+        "limits": {
+          "assertionWasImmediateObservationListSize": true,
+          "observedEffectDoesNotImplyHumanAcceptance": true
+        }
+      }
+    }
+  ],
+  "limits": {
+    "readOnlyOriginalChecks": true,
+    "generatedFixtureKeysOnly": true,
+    "noReplay": true
+  }
+}

@@ -1,5 +1,6 @@
 #[test_only]
 module fractalmind_protocol::governance_tests {
+    use sui::clock::{Self, Clock};
     use sui::test_scenario::{Self as ts};
     use std::string;
     use std::vector;
@@ -58,7 +59,9 @@ module fractalmind_protocol::governance_tests {
             let cert = ts::take_from_sender<AgentCertificate>(scenario);
             let mut governance_obj = ts::take_shared<Governance>(scenario);
             let org = ts::take_shared<Organization>(scenario);
-            governance::create_proposal(
+            let mut fm_clock = ts::take_shared<Clock>(scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(scenario).epoch_timestamp_ms());
+            governance::create_proposal_with_clock(
                 &mut governance_obj,
                 &org,
                 &cert,
@@ -66,8 +69,10 @@ module fractalmind_protocol::governance_tests {
                 string::utf8(b"Switch to stricter review"),
                 voting_deadline,
                 b"payload",
+                &fm_clock,
                 ts::ctx(scenario),
             );
+            ts::return_shared(fm_clock);
             ts::return_shared(org);
             ts::return_shared(governance_obj);
             ts::return_to_sender(scenario, cert);
@@ -78,7 +83,10 @@ module fractalmind_protocol::governance_tests {
             let admin_cap = ts::take_from_sender<OrgAdminCap>(scenario);
             let governance_obj = ts::take_shared<Governance>(scenario);
             let mut proposal = ts::take_shared<Proposal>(scenario);
-            governance::start_voting(&admin_cap, &governance_obj, &mut proposal, ts::ctx(scenario));
+            let mut fm_clock = ts::take_shared<Clock>(scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(scenario).epoch_timestamp_ms());
+            governance::start_voting_with_clock(&admin_cap, &governance_obj, &mut proposal, &fm_clock, ts::ctx(scenario));
+            ts::return_shared(fm_clock);
             ts::return_shared(proposal);
             ts::return_shared(governance_obj);
             ts::return_to_sender(scenario, admin_cap);
@@ -88,6 +96,7 @@ module fractalmind_protocol::governance_tests {
     #[test]
     fun test_create_governance_and_proposal() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_governance_with_started_proposal(&mut scenario, 1000);
 
         ts::next_tx(&mut scenario, ADMIN);
@@ -106,13 +115,17 @@ module fractalmind_protocol::governance_tests {
     #[test]
     fun test_finalize_pass_and_execute() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_governance_with_started_proposal(&mut scenario, 2);
 
         ts::next_tx(&mut scenario, AGENT1);
         {
             let cert = ts::take_from_sender<AgentCertificate>(&scenario);
             let mut proposal = ts::take_shared<Proposal>(&scenario);
-            governance::cast_vote(&mut proposal, &cert, constants::vote_for(), ts::ctx(&mut scenario));
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            governance::cast_vote_with_clock(&mut proposal, &cert, constants::vote_for(), &fm_clock, ts::ctx(&mut scenario));
+            ts::return_shared(fm_clock);
             ts::return_shared(proposal);
             ts::return_to_sender(&scenario, cert);
         };
@@ -121,7 +134,10 @@ module fractalmind_protocol::governance_tests {
         {
             let cert = ts::take_from_sender<AgentCertificate>(&scenario);
             let mut proposal = ts::take_shared<Proposal>(&scenario);
-            governance::cast_vote(&mut proposal, &cert, constants::vote_abstain(), ts::ctx(&mut scenario));
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            governance::cast_vote_with_clock(&mut proposal, &cert, constants::vote_abstain(), &fm_clock, ts::ctx(&mut scenario));
+            ts::return_shared(fm_clock);
             ts::return_shared(proposal);
             ts::return_to_sender(&scenario, cert);
         };
@@ -131,8 +147,11 @@ module fractalmind_protocol::governance_tests {
             let admin_cap = ts::take_from_sender<OrgAdminCap>(&scenario);
             let governance_obj = ts::take_shared<Governance>(&scenario);
             let mut proposal = ts::take_shared<Proposal>(&scenario);
-            governance::close_voting(&admin_cap, &governance_obj, &mut proposal, ts::ctx(&mut scenario));
-            governance::finalize_voting(&admin_cap, &governance_obj, &mut proposal, ts::ctx(&mut scenario));
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            governance::close_voting_with_clock(&admin_cap, &governance_obj, &mut proposal, &fm_clock, ts::ctx(&mut scenario));
+            governance::finalize_voting_with_clock(&admin_cap, &governance_obj, &mut proposal, &fm_clock, ts::ctx(&mut scenario));
+            ts::return_shared(fm_clock);
             assert!(governance::proposal_status(&proposal) == constants::proposal_status_passed(), 0);
             governance::execute_proposal(&admin_cap, &governance_obj, &mut proposal, ts::ctx(&mut scenario));
             assert!(governance::proposal_status(&proposal) == constants::proposal_status_executed(), 1);
@@ -147,13 +166,17 @@ module fractalmind_protocol::governance_tests {
     #[test]
     fun test_finalize_rejected_on_tie() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_governance_with_started_proposal(&mut scenario, 2);
 
         ts::next_tx(&mut scenario, AGENT1);
         {
             let cert = ts::take_from_sender<AgentCertificate>(&scenario);
             let mut proposal = ts::take_shared<Proposal>(&scenario);
-            governance::cast_vote(&mut proposal, &cert, constants::vote_for(), ts::ctx(&mut scenario));
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            governance::cast_vote_with_clock(&mut proposal, &cert, constants::vote_for(), &fm_clock, ts::ctx(&mut scenario));
+            ts::return_shared(fm_clock);
             ts::return_shared(proposal);
             ts::return_to_sender(&scenario, cert);
         };
@@ -162,7 +185,10 @@ module fractalmind_protocol::governance_tests {
         {
             let cert = ts::take_from_sender<AgentCertificate>(&scenario);
             let mut proposal = ts::take_shared<Proposal>(&scenario);
-            governance::cast_vote(&mut proposal, &cert, constants::vote_against(), ts::ctx(&mut scenario));
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            governance::cast_vote_with_clock(&mut proposal, &cert, constants::vote_against(), &fm_clock, ts::ctx(&mut scenario));
+            ts::return_shared(fm_clock);
             ts::return_shared(proposal);
             ts::return_to_sender(&scenario, cert);
         };
@@ -172,8 +198,11 @@ module fractalmind_protocol::governance_tests {
             let admin_cap = ts::take_from_sender<OrgAdminCap>(&scenario);
             let governance_obj = ts::take_shared<Governance>(&scenario);
             let mut proposal = ts::take_shared<Proposal>(&scenario);
-            governance::close_voting(&admin_cap, &governance_obj, &mut proposal, ts::ctx(&mut scenario));
-            governance::finalize_voting(&admin_cap, &governance_obj, &mut proposal, ts::ctx(&mut scenario));
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            governance::close_voting_with_clock(&admin_cap, &governance_obj, &mut proposal, &fm_clock, ts::ctx(&mut scenario));
+            governance::finalize_voting_with_clock(&admin_cap, &governance_obj, &mut proposal, &fm_clock, ts::ctx(&mut scenario));
+            ts::return_shared(fm_clock);
             assert!(governance::proposal_status(&proposal) == constants::proposal_status_rejected(), 0);
             ts::return_shared(proposal);
             ts::return_shared(governance_obj);
@@ -187,14 +216,18 @@ module fractalmind_protocol::governance_tests {
     #[expected_failure(abort_code = 6003)]
     fun test_double_vote_fails() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_governance_with_started_proposal(&mut scenario, 1000);
 
         ts::next_tx(&mut scenario, AGENT1);
         {
             let cert = ts::take_from_sender<AgentCertificate>(&scenario);
             let mut proposal = ts::take_shared<Proposal>(&scenario);
-            governance::cast_vote(&mut proposal, &cert, constants::vote_for(), ts::ctx(&mut scenario));
-            governance::cast_vote(&mut proposal, &cert, constants::vote_for(), ts::ctx(&mut scenario));
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            governance::cast_vote_with_clock(&mut proposal, &cert, constants::vote_for(), &fm_clock, ts::ctx(&mut scenario));
+            governance::cast_vote_with_clock(&mut proposal, &cert, constants::vote_for(), &fm_clock, ts::ctx(&mut scenario));
+            ts::return_shared(fm_clock);
             ts::return_shared(proposal);
             ts::return_to_sender(&scenario, cert);
         };
@@ -206,13 +239,17 @@ module fractalmind_protocol::governance_tests {
     #[expected_failure(abort_code = 6002)]
     fun test_invalid_vote_option_fails() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_governance_with_started_proposal(&mut scenario, 1000);
 
         ts::next_tx(&mut scenario, AGENT1);
         {
             let cert = ts::take_from_sender<AgentCertificate>(&scenario);
             let mut proposal = ts::take_shared<Proposal>(&scenario);
-            governance::cast_vote(&mut proposal, &cert, 9, ts::ctx(&mut scenario));
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            governance::cast_vote_with_clock(&mut proposal, &cert, 9, &fm_clock, ts::ctx(&mut scenario));
+            ts::return_shared(fm_clock);
             ts::return_shared(proposal);
             ts::return_to_sender(&scenario, cert);
         };
@@ -224,6 +261,7 @@ module fractalmind_protocol::governance_tests {
     #[expected_failure(abort_code = 6005)]
     fun test_finalize_before_deadline_fails() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_governance_with_started_proposal(&mut scenario, 1000);
 
         ts::next_tx(&mut scenario, ADMIN);
@@ -231,7 +269,10 @@ module fractalmind_protocol::governance_tests {
             let admin_cap = ts::take_from_sender<OrgAdminCap>(&scenario);
             let governance_obj = ts::take_shared<Governance>(&scenario);
             let mut proposal = ts::take_shared<Proposal>(&scenario);
-            governance::finalize_voting(&admin_cap, &governance_obj, &mut proposal, ts::ctx(&mut scenario));
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            governance::finalize_voting_with_clock(&admin_cap, &governance_obj, &mut proposal, &fm_clock, ts::ctx(&mut scenario));
+            ts::return_shared(fm_clock);
             ts::return_shared(proposal);
             ts::return_shared(governance_obj);
             ts::return_to_sender(&scenario, admin_cap);

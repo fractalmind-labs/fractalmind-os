@@ -1,0 +1,672 @@
+{
+  "recordedAt": "2026-10-03T03:31:12.691Z",
+  "replayedOriginalRequests": false,
+  "r1": {
+    "recordedAt": "2026-10-03T03:03:21.779Z",
+    "complete": true,
+    "chain": {
+      "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+    },
+    "packageId": "0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa",
+    "checks": [
+      "real native recovery and device signatures create Human and organization on the existing isolated chain",
+      "native App registers the actual Coordinator and one-use invitation; production envd CLI persists and queries one lost join receipt without another broadcast",
+      "signed live Host discovery is authenticated by the native device; formal App imports the existing actual native file Agent with observation rights only",
+      "formal native review ticket is sent through the actual device HTTP Coordinator to production envd; actual Agent reserves its physical slot and publishes the exact signed acceptance on Sui",
+      "formal native approval atomically activates the current OKR and exact reviewed policy, without preparing or delivering a continuation Run",
+      "formal native control quotation/issuance and command preparation do not dispatch; a fresh runner with an empty journal restores the same encrypted ticket and queued Run",
+      "explicit native preparation and immutable delivery of the later KR reserve both original budgets; production Host defers the future command without executing or advancing the Human cursor",
+      "declining the separate chain delivery fee leaves the original Run queued and no delivery record or Coordinator send; subsequent release requires a new explicit fee confirmation",
+      "formal native App explicitly pays and signs immutable encrypted delivery; production Host independently reads Sui and executes the original Run with zero Coordinator command sends; original result and separate Human verification are preserved",
+      "explicit continuation reaches the actual production envd and native file adapter; original encrypted result decrypts through the OS vault and Host measurement is 1; remaining scheduled budgets are preserved",
+      "fresh native runner recovers the original successful Run and measurement without another fee or delivery; KR verification and final Human acceptance remain pending",
+      "after separate Human KR 1 verification, production Host executes the original preauthorized KR 2 from Sui with the original execution context closed, zero Coordinator command deliveries and no new execution authorization",
+      "two real envd KR Runs are explicitly released in order; native Human verification advances the cursor without another dispatch or implicit acceptance",
+      "final native review reads both original results and separate immutable verification revisions; an explicit, separately quoted Human decision achieves the OKR on Sui",
+      "actual on-chain Host revocation rejects Coordinator routing and worker heartbeat; currently authorized Human can still read the immutable original historical result"
+    ],
+    "transactions": [
+      {
+        "label": "native self-paid Human creation",
+        "requestId": "identity:test-a3b79f2c-397e-4904-b38d-3cc6769ceb93",
+        "digest": "DvAjiscvtHm2ktCNnZGZc1MRXKq8dndgUyA1ESiTnpew",
+        "status": "confirmed",
+        "actualGas": "18772548"
+      },
+      {
+        "label": "native self-paid organization creation",
+        "requestId": "org:test-a3b79f2c-397e-4904-b38d-3cc6769ceb93:0xd9b2159eb1f9de45fee64b405a3f649f7d46542cd970cd6cff0475193acf9a03",
+        "digest": "Ad991CHaU3Ac5Vpa1YvY33DQx97qJEJxA1CwD9JabRHt",
+        "status": "confirmed",
+        "actualGas": "15141616"
+      },
+      {
+        "label": "native registration of actual loopback Coordinator",
+        "requestId": "host:2a8f64ab-2b78-4c71-8538-1d2918ccf49f",
+        "digest": "5N95ZirFDDTq2nxNNkDMKFQcM8iF5ok3mL2JfuDeuHtN",
+        "status": "confirmed",
+        "actualGas": "6823340"
+      },
+      {
+        "label": "native single-use Host invitation",
+        "requestId": "host:2e8d17b6-e414-4767-993b-4f1a8c9c4fbc",
+        "digest": "A4mnrYiu2vmootutpr26xk3Xvs2w3jDqWp7RVaFuEFSk",
+        "status": "confirmed",
+        "actualGas": "4961036"
+      },
+      {
+        "label": "native import of actual bounded Agent",
+        "requestId": "agent-import:95621648-c00c-493e-a709-d761962782f9",
+        "digest": "SyPYc8oVe4s4CkQoeJje2RnFh4MZdsP9vBKH2YVhq8N",
+        "status": "confirmed",
+        "actualGas": "11879100"
+      },
+      {
+        "label": "native encrypted actual Host OKR draft",
+        "requestId": "okr-draft:0xeecf8f6cf38f85add9acfe8ea864de5128d71774d38ab8663745154ac2e26001:075c3835-6a39-4448-abee-1981c47d670a",
+        "digest": "dLmAzFAq5uQjda9E7jJLfTiEadcJV7MThZbvxZCmA1X",
+        "status": "confirmed",
+        "actualGas": "28828540"
+      },
+      {
+        "label": "native one-use observation capability",
+        "requestId": "handover-observe-1e2b3781-3499-437c-a4e8-077dcaed4adc",
+        "digest": "DRv1hyDowprLx1LLwRHUxiPq9zJTGTUucLybyYeX3bmW",
+        "status": "confirmed",
+        "actualGas": "10173480"
+      },
+      {
+        "label": "native exact review ticket and Run",
+        "requestId": "handover-review-1e2b3781-3499-437c-a4e8-077dcaed4adc",
+        "digest": "3PF2M5G93zsHqM5feK1L8NHp4m3G4Asvg6oDnZnmxz9w",
+        "status": "confirmed",
+        "actualGas": "59944328"
+      },
+      {
+        "label": "native approval of actual Host acceptance",
+        "requestId": "handover-approve:0xdb580aed1f7ff893fa3af751dbf5729049d98c2a080bd043871918c1da69b333",
+        "digest": "9mPWuw4gaMfNFuGsoMvRTe85nhWFw7ivA83EFr2ZqoaS",
+        "status": "confirmed",
+        "actualGas": "49450304"
+      },
+      {
+        "label": "formal native single-use KR control fee",
+        "requestId": "okr-control:0x925b284bec529b59a7a304f59117fe81dcda8334a6cd9e8db6679210834e3cf7:1:0",
+        "digest": "2JB7Mi9pQTkLh49pTaiHLyD3CLsWtwvq4NoUUtDQZ5E4",
+        "status": "confirmed",
+        "actualGas": "15662680"
+      },
+      {
+        "label": "formal native atomic continuation ticket and queued Run",
+        "requestId": "runner-925b284bec529b59a7a304f59117fe81dcda8334a6cd9e8db6679210834e3cf7-1-0",
+        "digest": "HsR2s6P9HR9SzHyBxchNcuRc7WNuxXHpANqLp1TDV37w",
+        "status": "confirmed",
+        "actualGas": "64386720"
+      },
+      {
+        "label": "native remaining KR explicit control fee",
+        "requestId": "okr-control:0x925b284bec529b59a7a304f59117fe81dcda8334a6cd9e8db6679210834e3cf7:1:1",
+        "digest": "7MFbZiufxkgjFmWPnGZ7SHNjz97LT5cyergDNJpvTjBG",
+        "status": "confirmed",
+        "actualGas": "15662680"
+      },
+      {
+        "label": "native remaining KR exact ticket and Run",
+        "requestId": "runner-925b284bec529b59a7a304f59117fe81dcda8334a6cd9e8db6679210834e3cf7-1-1",
+        "digest": "CRkQdWqHyv8xbHzAHgqf6KaFMqA8r9zsceTR9iUQyVVV",
+        "status": "confirmed",
+        "actualGas": "64310720"
+      },
+      {
+        "label": "native remaining KR immutable chain delivery",
+        "requestId": "chain-delivery:0xcba32b6b76fd5fef695cd8ec3ebfa5700252f5b8d2a4f7575285a609bb2a8ecf",
+        "digest": "6SbsDb3XRvnCL3EtF7jcnG5TvHo4ASroPdszGq8CAGhb",
+        "status": "confirmed",
+        "actualGas": "23761620"
+      },
+      {
+        "label": "native original command chain delivery",
+        "requestId": "chain-delivery:0x8742e6ddf9309af417bd65cd48f36721dc1f4264019a711b57d7eaf3b9d0204a",
+        "digest": "8uzZxUPPat4VkCkv7DY2sjnEAR8Rn3pttygufeVGmTdX",
+        "status": "confirmed",
+        "actualGas": "20963452"
+      },
+      {
+        "label": "native independent KR 1 verification",
+        "requestId": "okr-human:0x925b284bec529b59a7a304f59117fe81dcda8334a6cd9e8db6679210834e3cf7:1:3:verify:0",
+        "digest": "GQDKBxVAXUDCPqtkHphr4qBZWqh5HNsjh9y4Sw9FHbzL",
+        "status": "confirmed",
+        "actualGas": "15636004"
+      },
+      {
+        "label": "native independent KR 2 verification",
+        "requestId": "okr-human:0x925b284bec529b59a7a304f59117fe81dcda8334a6cd9e8db6679210834e3cf7:1:5:verify:1",
+        "digest": "31tEngkpWuKvrUufw9XN3mFP1WihbKiN35PGr6bVCETu",
+        "status": "confirmed",
+        "actualGas": "12851136"
+      },
+      {
+        "label": "native separate final Human acceptance",
+        "requestId": "okr-human:0x925b284bec529b59a7a304f59117fe81dcda8334a6cd9e8db6679210834e3cf7:1:6:accept:2",
+        "digest": "DkPwP6w1rEfx9WKEsTg3FXSAugHatznd1h8Zy3Yy4GZy",
+        "status": "confirmed",
+        "actualGas": "12159156"
+      },
+      {
+        "label": "native revocation of actual Host",
+        "requestId": "host:da08a440-26a7-48a8-b40d-8f07e643aecf",
+        "digest": "HnBrgs4wxWQqVz1ignuu99FKCvmidKggXHzSuaUFogav",
+        "status": "confirmed",
+        "actualGas": "-595248"
+      }
+    ],
+    "state": {
+      "phase": "validated_native_app_real_envd",
+      "humanId": "0xd9b2159eb1f9de45fee64b405a3f649f7d46542cd970cd6cff0475193acf9a03",
+      "organizationId": "0xeecf8f6cf38f85add9acfe8ea864de5128d71774d38ab8663745154ac2e26001",
+      "deviceAddress": "0x84e35b218970d1ae5df7e0a05ac433c25d83b7a64301f36e0eb805f93dafb82f",
+      "originalRequest": {
+        "label": "native revocation of actual Host",
+        "requestId": "host:da08a440-26a7-48a8-b40d-8f07e643aecf",
+        "digest": "HnBrgs4wxWQqVz1ignuu99FKCvmidKggXHzSuaUFogav",
+        "phase": "quoted_before_submission"
+      },
+      "bindingId": "0x94016f0e0f3935d3ffa3c94d763a8c3c46d2b85448ff8be0b30ad8a261692695",
+      "membershipId": "0x0d2e1b3d70c65326804d314b7a0f83907e5028b86b2826a15f32cc9ab89453f0",
+      "hostAddress": "0x08e4690895bdf5ee2b35e4fdb4c93f3bbc73aaa39e278cfd4f98c1098bef2afc",
+      "joinDigest": "FdgW6Dc3MoWYf1AWa37veSazNnoWA95UmQ9DT77JxLoH",
+      "hostJoinBroadcasts": 1,
+      "managedAgentId": "0xec378ba18eac424b8feabef1ea1c162dfe9e31adc7570f882774987a8712570c",
+      "instanceId": "native-9f275cc067a467f42223b5d58b29c7f38808320358c4c2746e6fde6a7c06e019",
+      "okrId": "0x925b284bec529b59a7a304f59117fe81dcda8334a6cd9e8db6679210834e3cf7",
+      "reviewExecutionId": "0xdb580aed1f7ff893fa3af751dbf5729049d98c2a080bd043871918c1da69b333",
+      "reviewDigest": "3PF2M5G93zsHqM5feK1L8NHp4m3G4Asvg6oDnZnmxz9w",
+      "originalReviewDelivery": {},
+      "reviewRunState": 2,
+      "reviewResultId": "0x10bb2e8b22831e11a08578bd3637597ef02871d68a97ea5f0b5cf04ea48c16a3",
+      "continuationExecutionId": "0x8742e6ddf9309af417bd65cd48f36721dc1f4264019a711b57d7eaf3b9d0204a",
+      "continuationDigest": "HsR2s6P9HR9SzHyBxchNcuRc7WNuxXHpANqLp1TDV37w",
+      "ticketRecordId": "0x880dd97ba1175038e77e60f2ec91d33d4c46e552f3b190b5253e70f283b25eb4",
+      "capabilityId": "0x457ea23b47bc1190baf3a373473d3b24ab38c63397db517c9fd5abbe85f9f667",
+      "scheduledExecutionId": "0xcba32b6b76fd5fef695cd8ec3ebfa5700252f5b8d2a4f7575285a609bb2a8ecf",
+      "scheduledQueuePreparedBeforeFirstKR": true,
+      "scheduledBudgetBeforeExecution": {
+        "spent": "0",
+        "reserved": "6"
+      },
+      "declinedChainDeliveryQuoteDigest": "7NTU3T6egYppVhgfGUAgHiMyr3tbagSpUFEWnxcMgoa",
+      "originalExecutionContextClosed": true,
+      "chainDeliveryDigest": "8uzZxUPPat4VkCkv7DY2sjnEAR8Rn3pttygufeVGmTdX",
+      "chainDeliveryKeyVersion": "1",
+      "firstDeliveryStatus": "awaiting_confirmation",
+      "firstDeliveryReason": "awaiting_chain_execution_progress",
+      "transportCalls": 0,
+      "commandDeliveries": 0,
+      "chainCommandQueueVerified": true,
+      "resultRecordId": "0xcbefef6863ffc29e78fca3afa605ad9111064b17579ef904f0bb62b924b1d137",
+      "resultCreationDigest": "HX6bWGANSqkZ6ALSTePEe1HV2fhvtjAmuSJGrcXx1PKW",
+      "observationId": "0x803382fc84546f78dc241336a4db8f9c4be05df993063d663816cfb7f39c1ac7",
+      "observedCurrent": "1",
+      "humanVerified": true,
+      "okrState": 3,
+      "budget": {
+        "spent": "6",
+        "reserved": "0"
+      },
+      "restoredStatus": "awaiting_verification",
+      "feeConfirmations": 4,
+      "humanDecisions": [
+        {
+          "krIndex": "0",
+          "requestId": "okr-human:0x925b284bec529b59a7a304f59117fe81dcda8334a6cd9e8db6679210834e3cf7:1:3:verify:0",
+          "digest": "GQDKBxVAXUDCPqtkHphr4qBZWqh5HNsjh9y4Sw9FHbzL",
+          "verificationRecordId": "0x2a85f6836b70a15a7a0eea208db83e82f54a4f12c7635e348ba1d86d2d7da61c",
+          "runId": "0x8742e6ddf9309af417bd65cd48f36721dc1f4264019a711b57d7eaf3b9d0204a"
+        },
+        {
+          "krIndex": "1",
+          "requestId": "okr-human:0x925b284bec529b59a7a304f59117fe81dcda8334a6cd9e8db6679210834e3cf7:1:5:verify:1",
+          "digest": "31tEngkpWuKvrUufw9XN3mFP1WihbKiN35PGr6bVCETu",
+          "verificationRecordId": "0x47557a8df2e675ef877e812293e81de47a333f73ff8bdd9b991ce91c4eeb8619",
+          "runId": "0xcba32b6b76fd5fef695cd8ec3ebfa5700252f5b8d2a4f7575285a609bb2a8ecf"
+        }
+      ],
+      "nextKr": "2",
+      "scheduledHostContinuationVerified": true,
+      "originalExecutionContextStillClosed": true,
+      "secondExecutionId": "0xcba32b6b76fd5fef695cd8ec3ebfa5700252f5b8d2a4f7575285a609bb2a8ecf",
+      "secondResultRecordId": "0xcc33491e4b76e60df42f306468d5182b3e88d1252aa907d095f0492f7f81c140",
+      "humanAcceptanceVerified": true,
+      "acceptanceRecordId": "0x09e7b8e4cab95bd1f79f945a607fc445088e69c2ed85e8f79f6baf6f48d53753",
+      "acceptanceDigest": "DkPwP6w1rEfx9WKEsTg3FXSAugHatznd1h8Zy3Yy4GZy",
+      "historicalVerificationRecordIds": [
+        "0x2a85f6836b70a15a7a0eea208db83e82f54a4f12c7635e348ba1d86d2d7da61c",
+        "0x47557a8df2e675ef877e812293e81de47a333f73ff8bdd9b991ce91c4eeb8619"
+      ],
+      "krExecutionIds": [
+        "0x8742e6ddf9309af417bd65cd48f36721dc1f4264019a711b57d7eaf3b9d0204a",
+        "0xcba32b6b76fd5fef695cd8ec3ebfa5700252f5b8d2a4f7575285a609bb2a8ecf"
+      ],
+      "connectionRevocation": {
+        "chain_endpoint_used": true,
+        "mutual_authentication": true,
+        "heartbeat_sent": true,
+        "revoked_pointer_rejected": true,
+        "worker_revoked_heartbeat_rejected": true,
+        "coordinator_revoked_routing_rejected": true,
+        "generated_memory_keys": true,
+        "loopback_only": true
+      },
+      "hostExitedSuccessfully": true
+    },
+    "limits": {
+      "actualOSVault": true,
+      "installedUIVerified": false,
+      "envdDispatchVerified": true,
+      "hostKeyStorage": "isolated memory provider",
+      "realCoordinatorDeviceHTTP": true,
+      "humanFinalAcceptanceVerified": true,
+      "directPermissionProtocolVerified": false,
+      "directMessageEnvdDispatchVerified": false,
+      "directMessageUIVerified": false,
+      "directAppControllerVerified": false,
+      "interventionControllerVerified": false,
+      "autonomyControllerVerified": false,
+      "installedAutonomyUIVerified": false,
+      "projectionControllerVerified": false,
+      "installedProjectionUIVerified": false,
+      "automaticHostProjectionDelivery": false,
+      "chainCommandQueueVerified": true,
+      "modelProviderKind": "not configured",
+      "actualModelProviderVerified": false,
+      "modelProtocolFixtureVerified": false,
+      "installedHumanReviewVerified": false,
+      "reviewDecisions": "explicit scripted test approvals, not installed Human UI",
+      "physicalHostVerified": false,
+      "humanHandoverVerified": false,
+      "nativeWindowSourceVerified": false,
+      "testTransport": "isolated subprocess",
+      "technicalJournal": "memory",
+      "cleanupConfirmed": true,
+      "privateKeysInReport": false,
+      "recoveryCodeInReport": false
+    },
+    "fullOriginalReport": {
+      "path": "/tmp/fm-native-scheduled-queue-protocol-r1.json",
+      "sha256": "f545cba7d20adad58017611e7e017861d21d9a88a8523b93e24cbb011fbf2523"
+    }
+  },
+  "r1Note": "Earlier positive run: 15 checks and 19 transactions. Final in-order label refers to execution/Human verification order; future KR delivery was published first. Query/recovery assertions were added after R1.",
+  "r2": {
+    "recordedAt": "2026-10-03T03:16:51.843Z",
+    "complete": false,
+    "chain": {
+      "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+    },
+    "packageId": "0xe20c98684ddaa1b673e7765e02730f04e8a965ed874bea6ce4d8072626beeeaa",
+    "checks": [
+      "real native recovery and device signatures create Human and organization on the existing isolated chain",
+      "native App registers the actual Coordinator and one-use invitation; production envd CLI persists and queries one lost join receipt without another broadcast",
+      "signed live Host discovery is authenticated by the native device; formal App imports the existing actual native file Agent with observation rights only",
+      "formal native review ticket is sent through the actual device HTTP Coordinator to production envd; actual Agent reserves its physical slot and publishes the exact signed acceptance on Sui",
+      "formal native approval atomically activates the current OKR and exact reviewed policy, without preparing or delivering a continuation Run",
+      "formal native control quotation/issuance and command preparation do not dispatch; a fresh runner with an empty journal restores the same encrypted ticket and queued Run",
+      "querying the already published later KR returns its original Run without another fee, command body, transaction or Coordinator delivery",
+      "explicit native preparation and immutable delivery of the later KR reserve both original budgets; production Host defers the future command without executing or advancing the Human cursor",
+      "declining the separate chain delivery fee leaves the original Run queued and no delivery record or Coordinator send; subsequent release requires a new explicit fee confirmation",
+      "formal native App explicitly pays and signs immutable encrypted delivery; production Host independently reads Sui and executes the original Run with zero Coordinator command sends; original result and separate Human verification are preserved",
+      "explicit continuation reaches the actual production envd and native file adapter; original encrypted result decrypts through the OS vault and Host measurement is 1; remaining scheduled budgets are preserved",
+      "fresh native runner recovers the original successful Run and measurement without another fee or delivery; KR verification and final Human acceptance remain pending",
+      "after separate Human KR 1 verification, production Host executes the original preauthorized KR 2 from Sui with the original execution context closed, zero Coordinator command deliveries and no new execution authorization"
+    ],
+    "transactions": [
+      {
+        "label": "native self-paid Human creation",
+        "requestId": "identity:test-a243d879-86ab-4aec-a789-bcfffeae2b2e",
+        "digest": "7frGSBjxM7vnAULFh97Fgpekky7GuhMu7uZxvWCTnJFH",
+        "status": "confirmed",
+        "actualGas": "18772548"
+      },
+      {
+        "label": "native self-paid organization creation",
+        "requestId": "org:test-a243d879-86ab-4aec-a789-bcfffeae2b2e:0x19c6ff5aadd3f1034eb97f0ad6ace679a99fa283509dba4a776f912e6743e000",
+        "digest": "DR8ZBVFnCtzu3UgftcuU8YxdQ3gmKpfqd2H9zq2RuY7Q",
+        "status": "confirmed",
+        "actualGas": "15141616"
+      },
+      {
+        "label": "native registration of actual loopback Coordinator",
+        "requestId": "host:afdb6e12-be81-4968-b2dd-3f333dcb664d",
+        "digest": "4mWtYYnqB81sYbXsKy9vBjeG9JTCP8cQdheF1ErzQYVn",
+        "status": "confirmed",
+        "actualGas": "6823340"
+      },
+      {
+        "label": "native single-use Host invitation",
+        "requestId": "host:8a03a572-a3e8-42d0-bc90-05a0a9337029",
+        "digest": "7VvR8k5xNt8vsSYSgBuWn9D7TBxCHRN87ByhKNC3mdMe",
+        "status": "confirmed",
+        "actualGas": "4961036"
+      },
+      {
+        "label": "native import of actual bounded Agent",
+        "requestId": "agent-import:8f43567c-425c-4dcc-ac78-49c2b0cc35fc",
+        "digest": "DJ33U5QLbvPhoQRGPoAW64YWKWRdHPvXqpJtDZcyAeYP",
+        "status": "confirmed",
+        "actualGas": "11879100"
+      },
+      {
+        "label": "native encrypted actual Host OKR draft",
+        "requestId": "okr-draft:0x2d9ab78e483468f6bd6ed9d934221b129ab1c1b67c5b36ac8f8a0ae820a1d140:793644f1-63f1-40de-8f33-ce3d5f3f964f",
+        "digest": "CSEwzeax7xeqWLn1ca4z5BriZ29zxMVB3XhJnDWASELj",
+        "status": "confirmed",
+        "actualGas": "28828540"
+      },
+      {
+        "label": "native one-use observation capability",
+        "requestId": "handover-observe-b04e600f-fd99-4f68-bd96-856dd8fb5796",
+        "digest": "F1qTwtqriReaktGwC4xkm5ZJ3nte4ygv5VqPBnJex68h",
+        "status": "confirmed",
+        "actualGas": "10173480"
+      },
+      {
+        "label": "native exact review ticket and Run",
+        "requestId": "handover-review-b04e600f-fd99-4f68-bd96-856dd8fb5796",
+        "digest": "FKC2a8qvJmCa9aasRrx8MdRmrLKVVqJf74Jo31RaiQzZ",
+        "status": "confirmed",
+        "actualGas": "59944328"
+      },
+      {
+        "label": "native approval of actual Host acceptance",
+        "requestId": "handover-approve:0x5b61496a1675e2347292e898877db9fe1575cad87e19023b574981534ca478fd",
+        "digest": "FirJRyzHvWa2HFGpk9LAxpM61EE9Q1Vn3Y1tSubTfrng",
+        "status": "confirmed",
+        "actualGas": "49450304"
+      },
+      {
+        "label": "formal native single-use KR control fee",
+        "requestId": "okr-control:0x320895223617979f635267f4438bbbf68d24b8ee2f8dced0d47eabdaa8295273:1:0",
+        "digest": "D1r1H72cLzrg9xD27Wff8mPfDmkwEDxNPe6YZmjDG2bT",
+        "status": "confirmed",
+        "actualGas": "15662680"
+      },
+      {
+        "label": "formal native atomic continuation ticket and queued Run",
+        "requestId": "runner-320895223617979f635267f4438bbbf68d24b8ee2f8dced0d47eabdaa8295273-1-0",
+        "digest": "9XtcXHnk83xKzcdQxpwBpUcTKbYRgCKevmupUec5E55N",
+        "status": "confirmed",
+        "actualGas": "64386720"
+      },
+      {
+        "label": "native remaining KR explicit control fee",
+        "requestId": "okr-control:0x320895223617979f635267f4438bbbf68d24b8ee2f8dced0d47eabdaa8295273:1:1",
+        "digest": "Aj46xPekPKvfvV67UGD8URpGXHmJSasZfBvLHxk45QqD",
+        "status": "confirmed",
+        "actualGas": "15662680"
+      },
+      {
+        "label": "native remaining KR exact ticket and Run",
+        "requestId": "runner-320895223617979f635267f4438bbbf68d24b8ee2f8dced0d47eabdaa8295273-1-1",
+        "digest": "z4ZiwYLNJ5mP8DpSFzNDMsXsSJjx2JwBKdbYRoWq7ML",
+        "status": "confirmed",
+        "actualGas": "64310720"
+      },
+      {
+        "label": "native remaining KR immutable chain delivery",
+        "requestId": "chain-delivery:0x710afbcd32a5f03fa4a0facb68a18e18e41457a200c9d2128204c33d2f001161",
+        "digest": "36GY2jzfSrqjUzaDGdkJshbhNH9GxJZsTdER4Bzewbpb",
+        "status": "confirmed",
+        "actualGas": "23761620"
+      },
+      {
+        "label": "native original command chain delivery",
+        "requestId": "chain-delivery:0x675f807cb58dc02d09213c9034fbbcc2bfb775aa019d7e8dd9ce834cd69d5c77",
+        "digest": "BNeuE5W9KmCthoNEzuQiKSDHSYVCnBcEZZeGiGd6jZjP",
+        "status": "confirmed",
+        "actualGas": "20963452"
+      },
+      {
+        "label": "native independent KR 1 verification",
+        "requestId": "okr-human:0x320895223617979f635267f4438bbbf68d24b8ee2f8dced0d47eabdaa8295273:1:3:verify:0",
+        "digest": "9c5Nkgte3VLbeBbDXZSyz973phbrt1B5XzXNefBJ84nn",
+        "status": "confirmed",
+        "actualGas": "15628404"
+      }
+    ],
+    "state": {
+      "phase": "human_kr_verified",
+      "humanId": "0x19c6ff5aadd3f1034eb97f0ad6ace679a99fa283509dba4a776f912e6743e000",
+      "organizationId": "0x2d9ab78e483468f6bd6ed9d934221b129ab1c1b67c5b36ac8f8a0ae820a1d140",
+      "deviceAddress": "0xf3f867050e93de345737bcbce2f3c11fdd09bbd69b2dd2f701d3c2eca2cd2bb1",
+      "originalRequest": {
+        "label": "native independent KR 1 verification",
+        "requestId": "okr-human:0x320895223617979f635267f4438bbbf68d24b8ee2f8dced0d47eabdaa8295273:1:3:verify:0",
+        "digest": "9c5Nkgte3VLbeBbDXZSyz973phbrt1B5XzXNefBJ84nn",
+        "phase": "quoted_before_submission"
+      },
+      "bindingId": "0x790f9a5f79c740cb04541a43fbf7c34cfbaa52ac01125dd7aaed9830852a320f",
+      "membershipId": "0xeaa6243173c2f9135dc4aaa48485c68ff8f1a4f7349a35a57714515fb54a54b8",
+      "hostAddress": "0x1cdbf212b35799566daf5a1ea7f502ae287e12885bf7bccde1be5fdf2aa40e3b",
+      "joinDigest": "8B49zc7z9nZcq8PCRH9nP4ByfGGjFaTnjAJm89nF1Bio",
+      "hostJoinBroadcasts": 1,
+      "managedAgentId": "0xfed6c9817771a01ce7f9b6002213e888a6c6431304c08c4781f9752b4846ed40",
+      "instanceId": "native-7aabad82d32ab3000d5469a9b58c1f9a8166ddeccec0353480bff8d4a11da4dd",
+      "okrId": "0x320895223617979f635267f4438bbbf68d24b8ee2f8dced0d47eabdaa8295273",
+      "reviewExecutionId": "0x5b61496a1675e2347292e898877db9fe1575cad87e19023b574981534ca478fd",
+      "reviewDigest": "FKC2a8qvJmCa9aasRrx8MdRmrLKVVqJf74Jo31RaiQzZ",
+      "originalReviewDelivery": {},
+      "reviewRunState": 2,
+      "reviewResultId": "0x6b4848f4fddcc7258ac189f097108bcb397624ad73b4deef72d589fa272cb210",
+      "continuationExecutionId": "0x675f807cb58dc02d09213c9034fbbcc2bfb775aa019d7e8dd9ce834cd69d5c77",
+      "continuationDigest": "9XtcXHnk83xKzcdQxpwBpUcTKbYRgCKevmupUec5E55N",
+      "ticketRecordId": "0x3a6df3177c1f98417a4823e72400b16d23a269dc7cdf580211e9a6be3205dde1",
+      "capabilityId": "0xa69a52652f4afdae09cc9d9696af3d77320078d68f09397ff64743886b433a8d",
+      "scheduledExecutionId": "0x710afbcd32a5f03fa4a0facb68a18e18e41457a200c9d2128204c33d2f001161",
+      "scheduledQueuePreparedBeforeFirstKR": true,
+      "scheduledBudgetBeforeExecution": {
+        "spent": "0",
+        "reserved": "6"
+      },
+      "declinedChainDeliveryQuoteDigest": "7rEZCvuWvRfingMFpayFdSCmjEQWTpmmUBzK5fZB2GBA",
+      "originalExecutionContextClosed": true,
+      "chainDeliveryDigest": "BNeuE5W9KmCthoNEzuQiKSDHSYVCnBcEZZeGiGd6jZjP",
+      "chainDeliveryKeyVersion": "1",
+      "firstDeliveryStatus": "awaiting_confirmation",
+      "firstDeliveryReason": "awaiting_chain_execution_progress",
+      "transportCalls": 0,
+      "commandDeliveries": 0,
+      "chainCommandQueueVerified": true,
+      "resultRecordId": "0x7419fd76a1946b3fd4ac89aa8857ca14e74f858a7f0eccc723bbb35f09c5af91",
+      "resultCreationDigest": "d9cfaoEQtC5HyfbRnxCrfMFuvzmGa3WMreTy7x9TiaN",
+      "observationId": "0xe73ae9cff9a929dde54e721dbbec873c546eece08b961cc73688271760055232",
+      "observedCurrent": "1",
+      "humanVerified": false,
+      "okrState": 1,
+      "budget": {
+        "spent": "3",
+        "reserved": "3"
+      },
+      "restoredStatus": "awaiting_verification",
+      "feeConfirmations": 4,
+      "humanDecisions": [
+        {
+          "krIndex": "0",
+          "requestId": "okr-human:0x320895223617979f635267f4438bbbf68d24b8ee2f8dced0d47eabdaa8295273:1:3:verify:0",
+          "digest": "9c5Nkgte3VLbeBbDXZSyz973phbrt1B5XzXNefBJ84nn",
+          "verificationRecordId": "0xd335b0508a877a3e3f349259b26176c37d21f524507be92bb3bccd068c871a58",
+          "runId": "0x675f807cb58dc02d09213c9034fbbcc2bfb775aa019d7e8dd9ce834cd69d5c77"
+        }
+      ],
+      "nextKr": "1",
+      "scheduledHostContinuationVerified": true,
+      "originalExecutionContextStillClosed": true,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'unknown'\n- 'confirmed'\n"
+    },
+    "limits": {
+      "actualOSVault": true,
+      "installedUIVerified": false,
+      "envdDispatchVerified": false,
+      "hostKeyStorage": "isolated memory provider",
+      "realCoordinatorDeviceHTTP": true,
+      "humanFinalAcceptanceVerified": false,
+      "directPermissionProtocolVerified": false,
+      "directMessageEnvdDispatchVerified": false,
+      "directMessageUIVerified": false,
+      "directAppControllerVerified": false,
+      "interventionControllerVerified": false,
+      "autonomyControllerVerified": false,
+      "installedAutonomyUIVerified": false,
+      "projectionControllerVerified": false,
+      "installedProjectionUIVerified": false,
+      "automaticHostProjectionDelivery": false,
+      "chainCommandQueueVerified": true,
+      "scheduledPreauthorizationVerified": true,
+      "installedScheduledUIVerified": false,
+      "modelProviderKind": "not configured",
+      "actualModelProviderVerified": false,
+      "modelProtocolFixtureVerified": false,
+      "installedHumanReviewVerified": false,
+      "reviewDecisions": "explicit scripted test approvals, not installed Human UI",
+      "physicalHostVerified": false,
+      "humanHandoverVerified": false,
+      "nativeWindowSourceVerified": false,
+      "testTransport": "isolated subprocess",
+      "technicalJournal": "memory",
+      "cleanupConfirmed": true,
+      "privateKeysInReport": false,
+      "recoveryCodeInReport": false
+    },
+    "fullOriginalReport": {
+      "path": "/tmp/fm-native-scheduled-queue-protocol-r2.json.progress.json",
+      "sha256": "40565fa7a0d10932efe5f795cb19dc55ba774c05c21c4fbb1a90794f4de8b14b"
+    }
+  },
+  "r2Terminal": {
+    "exitCode": 1,
+    "failedAssertion": "preparation receipt status expected confirmed, actual unknown",
+    "assertionWasIncorrect": "Confirmed history can be pruned independently of current product state. No cached status is promoted into chain confirmation.",
+    "currentProcessLive": false,
+    "log": {
+      "path": "/tmp/fm-native-scheduled-queue-protocol-r2.log",
+      "sha256": "62746e90a66c36eb50a4f59b6ff12bf55d211997da93933d2371b1800160ac7c"
+    }
+  },
+  "r2OriginalRead": {
+    "recordedAt": "2026-10-03T03:29:10.944Z",
+    "readOnly": true,
+    "replayed": false,
+    "chain": {
+      "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+    },
+    "originalOkrId": "0x320895223617979f635267f4438bbbf68d24b8ee2f8dced0d47eabdaa8295273",
+    "originalReads": [
+      {
+        "requestId": "runner-320895223617979f635267f4438bbbf68d24b8ee2f8dced0d47eabdaa8295273-1-1",
+        "digest": "z4ZiwYLNJ5mP8DpSFzNDMsXsSJjx2JwBKdbYRoWq7ML",
+        "error": "Error: Transaction z4ZiwYLNJ5mP8DpSFzNDMsXsSJjx2JwBKdbYRoWq7ML not found",
+        "rpcCode": "NOT_FOUND",
+        "metadata": {
+          "access-control-allow-origin": "*",
+          "access-control-expose-headers": "*",
+          "content-length": "0",
+          "date": "Sat, 03 Oct 2026 03:29:10 GMT",
+          "grpc-status-details-bin": "CAUSQVRyYW5zYWN0aW9uIHo0Wml3WUxOSjVtUDhEcFNGek5ETXNYc1NKangySndCS2RiWVJvV3E3TUwgbm90IGZvdW5k",
+          "server": "sui-node/unknown",
+          "server-timing": "finish_request;dur=1",
+          "vary": "origin, access-control-request-method, access-control-request-headers",
+          "x-sui-chain": "unknown",
+          "x-sui-chain-id": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+          "x-sui-checkpoint-height": "806071",
+          "x-sui-epoch": "2923",
+          "x-sui-lowest-available-checkpoint": "806041",
+          "x-sui-lowest-available-checkpoint-objects": "806041",
+          "x-sui-timestamp": "2026-10-03T03:29:10.320Z",
+          "x-sui-timestamp-ms": "1790998150320"
+        }
+      },
+      {
+        "requestId": "chain-delivery:0x710afbcd32a5f03fa4a0facb68a18e18e41457a200c9d2128204c33d2f001161",
+        "digest": "36GY2jzfSrqjUzaDGdkJshbhNH9GxJZsTdER4Bzewbpb",
+        "error": "Error: Transaction 36GY2jzfSrqjUzaDGdkJshbhNH9GxJZsTdER4Bzewbpb not found",
+        "rpcCode": "NOT_FOUND",
+        "metadata": {
+          "access-control-allow-origin": "*",
+          "access-control-expose-headers": "*",
+          "content-length": "0",
+          "date": "Sat, 03 Oct 2026 03:29:10 GMT",
+          "grpc-status-details-bin": "CAUSQlRyYW5zYWN0aW9uIDM2R1kyanpmU3JxalV6YURHZGtKc2hiaE5IOUd4SlpzVGRFUjRCemV3YnBiIG5vdCBmb3VuZA",
+          "server": "sui-node/unknown",
+          "server-timing": "finish_request;dur=0",
+          "vary": "origin, access-control-request-method, access-control-request-headers",
+          "x-sui-chain": "unknown",
+          "x-sui-chain-id": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+          "x-sui-checkpoint-height": "806071",
+          "x-sui-epoch": "2923",
+          "x-sui-lowest-available-checkpoint": "806041",
+          "x-sui-lowest-available-checkpoint-objects": "806041",
+          "x-sui-timestamp": "2026-10-03T03:29:10.320Z",
+          "x-sui-timestamp-ms": "1790998150320"
+        }
+      },
+      {
+        "runId": "0x675f807cb58dc02d09213c9034fbbcc2bfb775aa019d7e8dd9ce834cd69d5c77",
+        "state": 2,
+        "resultRecord": "0x7419fd76a1946b3fd4ac89aa8857ca14e74f858a7f0eccc723bbb35f09c5af91",
+        "deliveryPresent": true
+      },
+      {
+        "runId": "0x710afbcd32a5f03fa4a0facb68a18e18e41457a200c9d2128204c33d2f001161",
+        "state": 2,
+        "resultRecord": "0x294884a23b6ed6d008bb537363d61cc94329c88be4423f8a2ee65ae4f61ff2e6",
+        "deliveryPresent": true
+      }
+    ],
+    "currentOkr": {
+      "state": 1,
+      "nextKr": "1",
+      "metrics": [
+        {
+          "baseline": "0",
+          "target": "1",
+          "weight": "1",
+          "max_age_ms": "300000",
+          "current": "1",
+          "sampled_at_ms": "1790997405968",
+          "run_id": "0x675f807cb58dc02d09213c9034fbbcc2bfb775aa019d7e8dd9ce834cd69d5c77",
+          "evidence_id": "0x7419fd76a1946b3fd4ac89aa8857ca14e74f858a7f0eccc723bbb35f09c5af91",
+          "verified": true,
+          "verification_id": "0xd335b0508a877a3e3f349259b26176c37d21f524507be92bb3bccd068c871a58"
+        },
+        {
+          "baseline": "0",
+          "target": "1",
+          "weight": "1",
+          "max_age_ms": "300000",
+          "current": "1",
+          "sampled_at_ms": "1790997410854",
+          "run_id": "0x710afbcd32a5f03fa4a0facb68a18e18e41457a200c9d2128204c33d2f001161",
+          "evidence_id": "0x294884a23b6ed6d008bb537363d61cc94329c88be4423f8a2ee65ae4f61ff2e6",
+          "verified": false,
+          "verification_id": null
+        }
+      ],
+      "budget": {
+        "spent": "6",
+        "reserved": "0"
+      }
+    }
+  },
+  "r2Note": "Both original Runs are successful with immutable chain deliveries; budget 6 spent/0 reserved. OKR remains ACTIVE at cursor 1 with only first Human KR verified. No final acceptance or replay. OS test credential cleanup confirmed; successful Host exit is not proven by failed report.",
+  "otherPriorChecks": {
+    "moveFixtureParserFailure": {
+      "reason": "Comparison whitespace parsed as generic syntax; repaired fixture only",
+      "path": "/tmp/fm-scheduled-queue-move-r2.log",
+      "sha256": "7b170b328d3355a2b6ca83b1e184293f7d8b584be8fb5a23e80a40084d2d85f1"
+    },
+    "sdkSandboxPipeFailure": {
+      "reason": "tsx CLI pipe EPERM; same tests run through node --import tsx",
+      "path": "/tmp/fm-scheduled-queue-sdk-tests-r1.log",
+      "sha256": "5d6c36e7fa94966505519f769c5a77c13253c1978484b22698d10190e61ef0fc"
+    }
+  }
+}

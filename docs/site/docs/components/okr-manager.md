@@ -16,6 +16,8 @@ okr-manager gives AI agents the ability to autonomously manage Objectives and Ke
 - **Heartbeat audit**: Automatic OKR review during agent heartbeats
 - **Report status**: Formatted progress reports for humans
 
+For a FractalMind Sui organization, `OKR.md` is a versioned projection. Local edits are unsubmitted proposals; an authorized device must explicitly submit them with current version checks. Record baseline/current/target, unit/scale/direction, freshness and evidence. Measured progress, KR verification and final human acceptance are distinct; a file edit cannot grant permission or mark the chain Objective achieved. See the skill's [projection example](https://github.com/fractalmind-labs/fractalmind-os/blob/main/skills/coordination/okr-manager-skill/examples/sui-projection.md).
+
 ## Quality Gates
 
 Every OKR must pass quality checks before creation:

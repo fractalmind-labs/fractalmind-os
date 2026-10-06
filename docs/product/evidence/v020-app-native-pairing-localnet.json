@@ -1,0 +1,117 @@
+{
+  "format": 1,
+  "recordedAt": "2026-10-02T01:27:24.769Z",
+  "platform": "darwin",
+  "deployment": {
+    "packageId": "0x2ef39db88cffefa9c16dcaf6593032ccd6ac0e79acfd22e30fc10d4b4c7a45e5",
+    "registryId": "0xfdf5ad498229c22b1652cae940c8803e9bc8de20ead4fbc049c514198e123220"
+  },
+  "chain": {
+    "rpc": "http://127.0.0.1:29000",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "humanId": "0xcd5fa89dc4c1e7d5b924827ebc02828483816549a5ebb4ed507f2e6a5a67e2d5",
+  "organizationId": "0x4fe86207bfc2d88762d33e4133460e18ed6c4f2a83e42e07d69a6e0c6c4bf1c7",
+  "requestId": "0x9136e5ab27b85aebde452aae852789fb550e7be28ac002838e2b7129b7c0fce7",
+  "publicPair": {
+    "device": {
+      "format": 1,
+      "profile": "test-77f6eeb5-1705-43d5-b6ed-4d05e0abcf11-a",
+      "address": "0x88482544a55a08e6cc0c8ffff52704ea17b082ce1b0d334e5f0e49185e2efe13",
+      "signingPublicKey": "CP6alqyGduTc1UfJKKxo2ofmDT8Td88u1nwsrM+jJpk=",
+      "encryptionPublicKey": "lBq6pfzzfEY+FeCcz1ZCw93L/AY/FMESz9L7DUjR2l4="
+    },
+    "grantId": "0x89f6af219d98c385e130b0922e72397d0e71bc8d319665249e82136328032709",
+    "fingerprint": "90aa316f69bf4dbc50ed97e45ec56c1fa4f8c62d9f81bb6a431a78d57246abde"
+  },
+  "checks": [
+    "loading an absent onboarding profile does not create keys",
+    "native recovery code/HKDF keys and FMW1/AES-GCM backup interoperate with the official JS path",
+    "fresh-process reload reveals public keys/ciphertext only; re-creation and wrong network are rejected",
+    "zero recovery balance blocks Human preparation without submitting",
+    "native recovery signs a real self-paid Human transaction; independent device possession resolves stable Human",
+    "new native processes and a rebuilt controller query original digests and reconstruct the same Human/organization without replay",
+    "discarding transaction caches reconstructs confirmed business state from chain and refuses duplicate creation",
+    "unapproved request does not authorize a device; both ends reconstruct the identical public fingerprint from chain",
+    "approval preserves the same Human with independent organization-scoped read permission, no identity-management/approval permission and no decryptable data keys",
+    "consumed pairing cannot issue a second grant; persisted original outcome is returned instead of replaying approval",
+    "explicit second transaction shares only the selected organization, reloaded independent native device authenticates/decrypts the real chain body; no JS content key used",
+    "paired permissions change only through an explicit owner-signed organization-scoped transaction",
+    "actual key rotation during native signing rejects stale distribution atomically at product_record::assert_key_version 9102, retaining prior envelope/version and actual failed Gas",
+    "actual on-chain revocation blocks paired possession and subsequent plaintext release while owner's independent grant remains valid"
+  ],
+  "transactions": [
+    {
+      "action": "create Human with native recovery signature and self-paid Gas",
+      "digest": "6xN5aBKzQw6QxjDrawcWvSzEtg5dEqXnxVsGwqXKsGM5",
+      "actualGas": "18772548"
+    },
+    {
+      "action": "create personal organization with independent native device",
+      "digest": "6Gqvqn4mbXgRXuFGopHqK8qxF26xvmjsp4RrYuP1kDZo",
+      "actualGas": "14731216"
+    },
+    {
+      "action": "save historical body with native content key/signature",
+      "digest": "5zKGZ7khpsGX7ectAr1hR3xSsG37b891e9mj7HTXTHEU",
+      "actualGas": "10309688"
+    },
+    {
+      "action": "native device publishes ten-minute pairing request",
+      "digest": "95Efu8VFXU9eBjB8nrFwz2NKLQEkVJSaVhH723NauRVe",
+      "actualGas": "4279880"
+    },
+    {
+      "action": "scoped read-only pairing approval; lost receipt resolved by original digest",
+      "digest": "7EMuVnL1MsgSpoPh7gEPzgWcAUpfHmikkewFTuDUFtL7",
+      "actualGas": "6732868"
+    },
+    {
+      "action": "separate native selected-organization data wrapping and key-envelope publication",
+      "digest": "HxKGViEaxjLX4rZv6etGNqJ3ZB83Zm31YugtMLqiiAbF",
+      "actualGas": "4452064"
+    },
+    {
+      "action": "explicitly change paired device to scoped approval without root identity rights",
+      "digest": "Hqjxyo2TbPQQ4fVxvzhsCxjfYyekycxTvKvC9BqQXxYF",
+      "actualGas": "1502732"
+    },
+    {
+      "action": "rotate organization key version after share source checks, before owner native signature",
+      "digest": "3NJXdjFZoCKzscMdsyBpZhdW6t8gvM9NdKLaxvdC5B5K",
+      "actualGas": "1487260"
+    },
+    {
+      "action": "atomic key-version guard rejects stale data sharing",
+      "digest": "swREBSY9hww4WPiN2mXPsKTpo95vDGfyaS7AmPk5dLj",
+      "actualGas": "1495208",
+      "status": "expected failure",
+      "failure": {
+        "$kind": "MoveAbort",
+        "message": "MoveAbort in 1st command, abort code: 9102, in '0x2ef39db88cffefa9c16dcaf6593032ccd6ac0e79acfd22e30fc10d4b4c7a45e5::product_record::assert_key_version' (instruction 7)",
+        "command": 0,
+        "MoveAbort": {
+          "abortCode": "9102",
+          "location": {
+            "package": "0x2ef39db88cffefa9c16dcaf6593032ccd6ac0e79acfd22e30fc10d4b4c7a45e5",
+            "module": "product_record",
+            "function": 4,
+            "instruction": 7,
+            "functionName": "assert_key_version"
+          }
+        }
+      }
+    },
+    {
+      "action": "revoke paired device independently",
+      "digest": "EJGcWwgubt6AaLpnrfCPyJhmJbC36CdzL6uKEkBnAZkM",
+      "actualGas": "1485208"
+    }
+  ],
+  "limits": {
+    "nativeTransport": "isolated production bridge subprocess; installed UI/IPC not exercised",
+    "journal": "in-memory test fixture",
+    "fullV020Complete": false,
+    "privateKeysInReport": false
+  }
+}

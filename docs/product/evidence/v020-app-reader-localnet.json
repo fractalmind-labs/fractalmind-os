@@ -1,0 +1,348 @@
+{
+  "schema": "fractalmind.v020-app-chain-reader.v1",
+  "testedAt": "2026-10-01T15:08:19.579Z",
+  "profile": {
+    "network": "localnet",
+    "rpcUrl": "http://127.0.0.1:29000",
+    "packageId": "0x400dc9cf9e2973fd3024660216dd8be34fe5548268f0f2b913c7c9f269165d87",
+    "registryId": "0x713c99a46f2afb657bbd839230214d7d7603bcf542b63c1ed6b3d2fa072aa5d8",
+    "humanId": "0xce907ca770d4fee16b713e66f2a17ff8c68274b5054da1c75f8bb8cd250a7147",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "humanGeneration": "2",
+  "organizationIds": [
+    "0x24f250fed82ef63c48360f32bf5db0cac70ffada45f4464c9116460a756aa208",
+    "0x7621d8db2e68b10c6eddb5a26401ee03acd7a06f065203954c14bd4b66e692b3"
+  ],
+  "okrs": [
+    {
+      "id": "0x345566858ebe9235316925fd00afb4cfc239787aaaea00859e2870e165e20542",
+      "logicalId": "7bcceaac-1840-4c06-a3ff-bf3ef738a7b6",
+      "state": 1,
+      "navigation": {
+        "condition": "unknown",
+        "reason": "execution_outcome_unknown",
+        "verifiedCheckpoints": 0,
+        "currentKr": 0,
+        "metricProgress": [
+          null,
+          null
+        ],
+        "progress": null,
+        "boundary": "invalid",
+        "latest": {
+          "run": {
+            "id": "0xb0b062e7837e8cbd307a3a486d4efb90e8e9415effbcc26769efa63d28729d9b",
+            "org_id": "0x24f250fed82ef63c48360f32bf5db0cac70ffada45f4464c9116460a756aa208",
+            "capability_id": "0xda97279e7c822d8cdf39657dd1fe4a908602212f966484c6d773c78a62475916",
+            "capability_version": "1",
+            "human_id": "0xce907ca770d4fee16b713e66f2a17ff8c68274b5054da1c75f8bb8cd250a7147",
+            "grant_id": "0x0b5b51d68612095b82c578e969ac0036ee9911e77b3dace54f8ed547b3949023",
+            "grant_version": "1",
+            "membership_id": "0xe3954bbf0ab1b2c3fa7fe21dea80f85e975a3b38c8844a0670b8772d0dec755b",
+            "host_address": "0x935005779470e1de43d6dea25f564e1daa237b24faa7cac2927fc5e25d54efd3",
+            "managed_agent": "0xc482af5cbd4c0303cf7bceacfd58ec04228dd3baa2ddbdc0c757b4f803dcf57d",
+            "delegate": "0x9e6fd2b31614cb3d792585a8ec48096a1442400414b33de25f33d6ec146ef0ba",
+            "node_id": "0x935005779470e1de43d6dea25f564e1daa237b24faa7cac2927fc5e25d54efd3",
+            "agent_id": "bounded-agent",
+            "command_id": "c2c1d0ef-a9db-445d-bcbe-fb1918ae6c85",
+            "nonce": "33feb387-d904-4e31-bc04-ebc52ac3faaa",
+            "idempotency_key": "c2c1d0ef-a9db-445d-bcbe-fb1918ae6c85",
+            "intent_hash": [
+              161,
+              213,
+              52,
+              121,
+              228,
+              34,
+              9,
+              83,
+              42,
+              47,
+              27,
+              115,
+              204,
+              129,
+              45,
+              229,
+              141,
+              249,
+              198,
+              67,
+              170,
+              183,
+              137,
+              210,
+              9,
+              16,
+              5,
+              41,
+              5,
+              63,
+              161,
+              133
+            ],
+            "action": "assign",
+            "scope": "control",
+            "budget_asset": "TOOL_CALLS",
+            "budget_amount": "14",
+            "issued_at_ms": "1790858833805",
+            "expires_at_ms": "1790859104305",
+            "state": 4,
+            "cursor": "3",
+            "stop_requested": false,
+            "created_at_ms": "1790858833790",
+            "started_at_ms": "1790858835004",
+            "updated_at_ms": "1790858835529",
+            "result_record": "0x24d3ca057fc54ae1d102d65ac5635ca7e0682effdfc82f5424c9e1d73b8fb3df",
+            "result_hash": [
+              114,
+              15,
+              197,
+              5,
+              180,
+              169,
+              28,
+              88,
+              163,
+              194,
+              89,
+              197,
+              153,
+              78,
+              0,
+              29,
+              9,
+              144,
+              230,
+              105,
+              101,
+              28,
+              82,
+              203,
+              75,
+              24,
+              168,
+              34,
+              196,
+              193,
+              233,
+              119
+            ],
+            "attempt_id": [
+              113,
+              219,
+              248,
+              21,
+              209,
+              97,
+              241,
+              100,
+              17,
+              47,
+              143,
+              140,
+              226,
+              165,
+              39,
+              124,
+              168,
+              28,
+              19,
+              49,
+              165,
+              115,
+              237,
+              162,
+              90,
+              15,
+              209,
+              118,
+              135,
+              2,
+              186,
+              197
+            ]
+          },
+          "claim": {
+            "capability_id": "0xda97279e7c822d8cdf39657dd1fe4a908602212f966484c6d773c78a62475916",
+            "agreement_version": "1",
+            "kr_index": "0",
+            "reserved": "14",
+            "spent": "0",
+            "settled": false
+          },
+          "contract": {
+            "contract_id": "0x345566858ebe9235316925fd00afb4cfc239787aaaea00859e2870e165e20542",
+            "agreement_version": "1",
+            "kr_index": "0",
+            "boundary_hash": [
+              35,
+              255,
+              90,
+              146,
+              4,
+              189,
+              70,
+              37,
+              222,
+              176,
+              12,
+              149,
+              171,
+              68,
+              91,
+              163,
+              181,
+              164,
+              157,
+              186,
+              156,
+              55,
+              142,
+              75,
+              226,
+              37,
+              50,
+              197,
+              46,
+              237,
+              239,
+              141
+            ]
+          }
+        }
+      },
+      "budget": {
+        "asset": "TOOL_CALLS",
+        "spent": "0",
+        "reserved": "14"
+      },
+      "observations": 0,
+      "executions": 1
+    },
+    {
+      "id": "0x083333fe10667be4b0fe14bc89fd4a3ce8fae76b31664322bccf25194e6cec12",
+      "logicalId": "47b2e4db-64ef-49a4-b18b-8a2567f32843",
+      "state": 3,
+      "navigation": {
+        "condition": "achieved",
+        "reason": "human_accepted",
+        "verifiedCheckpoints": 2,
+        "currentKr": 2,
+        "metricProgress": [
+          null,
+          null
+        ],
+        "progress": null,
+        "boundary": "invalid"
+      },
+      "budget": {
+        "asset": "TOOL_CALLS",
+        "spent": "11",
+        "reserved": "0"
+      },
+      "observations": 3,
+      "executions": 4
+    },
+    {
+      "id": "0xcd457dd418ef0cd58dc745f324c69a6bb20bccfa82ba21fd5288918806260e6d",
+      "logicalId": "771089ad-8e6e-4c9d-9fad-be9889e8e272",
+      "state": 1,
+      "navigation": {
+        "condition": "expired",
+        "reason": "agreement_expired",
+        "verifiedCheckpoints": 0,
+        "currentKr": 0,
+        "metricProgress": [
+          null,
+          null
+        ],
+        "progress": null,
+        "boundary": "invalid"
+      },
+      "budget": {
+        "asset": "TOOL_CALLS",
+        "spent": "0",
+        "reserved": "0"
+      },
+      "observations": 0,
+      "executions": 0
+    },
+    {
+      "id": "0x191dd673b220c459cdd43f0c127012ff4916a563ef6caa8b4f192999e891eb54",
+      "logicalId": "65b53e4f-dfa7-409d-b242-ec7ba5eefade",
+      "state": 2,
+      "navigation": {
+        "condition": "paused",
+        "reason": "chain_paused",
+        "verifiedCheckpoints": 0,
+        "currentKr": 0,
+        "metricProgress": [
+          null,
+          null
+        ],
+        "progress": null,
+        "boundary": "invalid"
+      },
+      "budget": {
+        "asset": "TOOL_CALLS",
+        "spent": "0",
+        "reserved": "0"
+      },
+      "observations": 0,
+      "executions": 1
+    }
+  ],
+  "hosts": [
+    {
+      "address": "0x935005779470e1de43d6dea25f564e1daa237b24faa7cac2927fc5e25d54efd3",
+      "currentMembershipId": "0xc5893f50b4c1ab14049cd948b195f3f9f7ff9fc99bb2affc9fa8fe8b1485a7a4",
+      "historyIds": [
+        "0xe3954bbf0ab1b2c3fa7fe21dea80f85e975a3b38c8844a0670b8772d0dec755b",
+        "0xc5893f50b4c1ab14049cd948b195f3f9f7ff9fc99bb2affc9fa8fe8b1485a7a4"
+      ]
+    },
+    {
+      "address": "0xb2c480facfd1284342c2f22fe10b3312d087bd732dc180ac0941ceba19a374b5",
+      "currentMembershipId": "0x5495c215b69687ee92cba97b7460cd4fbede09ab5922636e9670f4929808d0d4",
+      "historyIds": [
+        "0x5495c215b69687ee92cba97b7460cd4fbede09ab5922636e9670f4929808d0d4"
+      ]
+    }
+  ],
+  "memberships": [
+    {
+      "id": "0xe3954bbf0ab1b2c3fa7fe21dea80f85e975a3b38c8844a0670b8772d0dec755b",
+      "name": "local integration Host",
+      "version": "2",
+      "revoked": true
+    },
+    {
+      "id": "0x5495c215b69687ee92cba97b7460cd4fbede09ab5922636e9670f4929808d0d4",
+      "name": "competing Host",
+      "version": "1",
+      "revoked": false
+    },
+    {
+      "id": "0xc5893f50b4c1ab14049cd948b195f3f9f7ff9fc99bb2affc9fa8fe8b1485a7a4",
+      "name": "explicitly re-admitted Host",
+      "version": "1",
+      "revoked": false
+    }
+  ],
+  "checks": {
+    "productionSdkReads": true,
+    "twoOrganizations": true,
+    "fourOkrs": true,
+    "acceptedStateAndHistory": true,
+    "unknownRunAndReservations": true,
+    "stableHostDirectory": true,
+    "rejoinedHostUsesAuthoritativePointer": true,
+    "noPublicIdLoginAuthority": true,
+    "emptyDirectoryNotRpcFailure": true,
+    "newReaderCacheFreeRebuild": true,
+    "browserUiVerifiedSeparately": false,
+    "fullV020Acceptance": false
+  }
+}

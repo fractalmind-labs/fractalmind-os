@@ -1,0 +1,29 @@
+{
+  "recordedAt": "2026-10-02T02:46:53.221Z",
+  "url": "http://localhost:4189/",
+  "profile": {
+    "network": "localnet",
+    "rpcUrl": "http://127.0.0.1:29000",
+    "packageId": "0x2ef39db88cffefa9c16dcaf6593032ccd6ac0e79acfd22e30fc10d4b4c7a45e5",
+    "registryId": "0xfdf5ad498229c22b1652cae940c8803e9bc8de20ead4fbc049c514198e123220",
+    "humanId": "0xf0d554179133a5ffd69c63f2205a165e36f97a29ea6d70072228d50a18504daf",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "organizationId": "0x1d91a3a67fcc9d947aad0542cb037c9f883ea0bdb4b12f1469d03b09d141997e",
+  "checks": [
+    "live chain Host directory reconstructed via public metadata without private keys",
+    "connect Host modal and Coordinator registration form opened",
+    "English dark and Chinese light UI checked",
+    "browser quote remained disabled after permission acknowledgement",
+    "consumed/revoked invitations and revoked membership cannot be revoked again",
+    "reloaded latest build renders an absent current Host pointer as no membership, not RPC failure",
+    "Chinese light screenshot inspected; no invitation bearer secret present"
+  ],
+  "limits": {
+    "browserOnly": true,
+    "installedNativeUiVerified": false,
+    "envdRedemptionVerified": false,
+    "actualFeeUiSubmitted": false,
+    "nativeKeychainAuthorizationPending": true
+  }
+}

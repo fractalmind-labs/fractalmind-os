@@ -1,0 +1,40 @@
+{
+  "recordedAt": "2026-10-02T07:34:23.744741+00:00",
+  "command": "npm test",
+  "tests": 80,
+  "passed": 80,
+  "failed": 0,
+  "skipped": 0,
+  "testLogSha256": "dd28b91bfba6ec17bfd6925aa0d1e813a8583840d7ef5161c1dc0f535bf75d80",
+  "build": {
+    "command": "npm run build",
+    "passed": true,
+    "logSha256": "86a5b12d2b91c77238857eeacf88568b129fb7c5f78ca61272aea06f52ee22c0",
+    "scriptTypesPassed": true
+  },
+  "sourceSha256": {
+    "apps/fractalmind-app/src/agent-import.ts": "cc24b15b20a8a544c3c0fa6e8ef88ac54a242079bd5fc8cfe15921218bf012e0",
+    "apps/fractalmind-app/src/AgentImportFlow.tsx": "31bb7f26a1f9b66d21275babcb351fdce59f96d7b8552c4b4274ed9abc7a6ab8",
+    "apps/fractalmind-app/src/transaction-visibility.ts": "fce2b793f1d6e0739eb149a83ec5b636b510dd84020131493276cc975ff66787",
+    "apps/fractalmind-app/src/HostObservations.tsx": "3e7c49efc59d3367a0fd38a5af570cc1d7a2aaf394d8e289741ae1635c11bb77",
+    "apps/fractalmind-app/src/host-admission.ts": "afc9bf187d26e77997078a690946c98d9d55f5d97cf6eb0e9587c5ddb681441a",
+    "apps/fractalmind-app/src/App.tsx": "6d0dcc2708a6fd1b2c97d4e624c850cf5b93f54c2fc9e01412fa936aeaaa0da6",
+    "apps/fractalmind-app/tests/agent-import.test.ts": "4b76d8313ed56d83e1b45c9b2ff8865eb18d8f655fd885d49add57d1938154cc",
+    "apps/fractalmind-app/scripts/host-admission-localnet.ts": "4a04eeb95a770b623eb0b70ebbc1b7643d27a648ff46a7f05bfbbd8c4ba3fe7f"
+  },
+  "checks": [
+    "Independent fresh authenticated Host observation and current chain directory required",
+    "Exact instance pointer missing differs from failed RPC",
+    "Original import digest queried before new source/selection",
+    "Existing consistent registration avoids quotation and payment",
+    "Authority, observation, cancellation and expiry checked again after native signing returns",
+    "Typed AgentImported event and exact indexed shared record reconstruct both new and contract duplicate receipts"
+  ],
+  "limits": {
+    "installedNativeSigningVerified": false,
+    "persistentBrowserJournalRestartVerified": false,
+    "goRuntimeRerunThisIncrement": false,
+    "cloudHostVerified": false,
+    "fivePlatformsInstalledVerified": false
+  }
+}

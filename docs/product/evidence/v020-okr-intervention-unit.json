@@ -1,0 +1,35 @@
+{
+  "recordedAt": "2026-10-02T23:37:57.868693+00:00",
+  "baselineCommit": "d2db282",
+  "checkedWorkingTree": true,
+  "app": {
+    "testsPassed": 178,
+    "testsFailed": 0,
+    "buildPassed": true,
+    "nativeScriptStrictTypesPassed": true
+  },
+  "logs": {
+    "appTests": {
+      "sha256": "2fa292d9b4979e07f5785271f66a4da2d864886e2d409b71f3f6606daa502ca9",
+      "bytes": 18772
+    },
+    "appBuild": {
+      "sha256": "7cd04eba6aa29b2b31758756459f5b225355bf174503a7f13d41a7913715140c",
+      "bytes": 4106
+    },
+    "scriptTypes": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  },
+  "limits": {
+    "installedUIVerified": false,
+    "activeToolStopAcknowledgementVerified": false,
+    "realCloudHostVerified": false,
+    "phoneJourneyVerified": false,
+    "cacheWipeAndRestartVerified": false,
+    "mainUpgradeVerified": false,
+    "fullGoalComplete": false,
+    "testTiming": "App domain tests precede the final UI tuple typing fix; final build includes that fix."
+  }
+}

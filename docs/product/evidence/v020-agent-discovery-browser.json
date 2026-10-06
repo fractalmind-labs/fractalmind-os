@@ -1,0 +1,17 @@
+{
+  "recordedAt": "2026-10-02T06:33:52.972782+00:00",
+  "url": "http://127.0.0.1:4189/",
+  "checks": [
+    "Actual Agents page has discovery entry and independent on-chain managed records",
+    "Current chain directory entry loads; browser signing remains disabled",
+    "Chinese Light and English Dark discovery descriptions render",
+    "No synthetic trusted instances injected"
+  ],
+  "screenshot": "v020-agent-discovery-browser-zh-light.jpg",
+  "screenshotSha256": "8a575095c2f515ca253f04e06c40e15c416444018289287eccefc72449ecbb8b",
+  "limits": {
+    "installedNativeSigningVerified": false,
+    "verifiedInstancesRenderedInInstalledApp": false,
+    "mobileVerified": false
+  }
+}

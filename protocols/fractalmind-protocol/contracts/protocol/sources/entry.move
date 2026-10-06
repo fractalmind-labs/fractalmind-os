@@ -2,6 +2,9 @@
 /// Thin `entry` wrappers for PTB (Programmable Transaction Block) usage.
 #[allow(lint(public_entry))]
 module fractalmind_protocol::entry {
+    use sui::clock::{Self, Clock};
+    const E_CLOCK_REQUIRED: u64 = 8399;
+
     use sui::tx_context::TxContext;
     use std::string::String;
 
@@ -101,6 +104,8 @@ module fractalmind_protocol::entry {
 
     // ===== Objective / OKR Entry Points =====
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public entry fun create_objective(
         admin_cap: &OrgAdminCap,
         org: &Organization,
@@ -109,7 +114,19 @@ module fractalmind_protocol::entry {
         deadline_ms: u64,
         ctx: &mut TxContext,
     ) {
-        objective::create_objective(admin_cap, org, title, description_hash, deadline_ms, ctx);
+        abort E_CLOCK_REQUIRED
+    }
+
+    public entry fun create_objective_with_clock(
+        admin_cap: &OrgAdminCap,
+        org: &Organization,
+        title: String,
+        description_hash: vector<u8>,
+        deadline_ms: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        objective::create_objective_with_clock(admin_cap, org, title, description_hash, deadline_ms, clock, ctx);
     }
 
     public entry fun create_key_result(
@@ -153,6 +170,8 @@ module fractalmind_protocol::entry {
 
     // ===== Agent Policy Entry Points =====
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public entry fun create_agent_policy(
         org: &Organization,
         agent_addr: address,
@@ -163,7 +182,21 @@ module fractalmind_protocol::entry {
         max_gas_budget: u64,
         ctx: &mut TxContext,
     ) {
-        agent_policy::create_policy(
+        abort E_CLOCK_REQUIRED
+    }
+
+    public entry fun create_agent_policy_with_clock(
+        org: &Organization,
+        agent_addr: address,
+        allowed_action: String,
+        target_scope: String,
+        max_uses: u64,
+        expires_at_ms: u64,
+        max_gas_budget: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        agent_policy::create_policy_with_clock(
             org,
             agent_addr,
             allowed_action,
@@ -171,6 +204,7 @@ module fractalmind_protocol::entry {
             max_uses,
             expires_at_ms,
             max_gas_budget,
+            clock,
             ctx,
         );
     }
@@ -183,6 +217,8 @@ module fractalmind_protocol::entry {
         agent_policy::revoke_policy(policy, org, ctx);
     }
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public entry fun execute_agent_action(
         policy: &mut AgentPolicy,
         org: &Organization,
@@ -194,7 +230,22 @@ module fractalmind_protocol::entry {
         gas_budget: u64,
         ctx: &TxContext,
     ) {
-        agent_policy::execute_action(
+        abort E_CLOCK_REQUIRED
+    }
+
+    public entry fun execute_agent_action_with_clock(
+        policy: &mut AgentPolicy,
+        org: &Organization,
+        cert: &AgentCertificate,
+        action_kind: String,
+        target_scope: String,
+        intent_hash: vector<u8>,
+        result_hash: vector<u8>,
+        gas_budget: u64,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
+        agent_policy::execute_action_with_clock(
             policy,
             org,
             cert,
@@ -203,12 +254,15 @@ module fractalmind_protocol::entry {
             intent_hash,
             result_hash,
             gas_budget,
+            clock,
             ctx,
         );
     }
 
 
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public entry fun create_agent_policy_for_objective(
         org: &Organization,
         objective_obj: &Objective,
@@ -220,7 +274,22 @@ module fractalmind_protocol::entry {
         max_gas_budget: u64,
         ctx: &mut TxContext,
     ) {
-        agent_policy::create_policy_for_objective(
+        abort E_CLOCK_REQUIRED
+    }
+
+    public entry fun create_agent_policy_for_objective_with_clock(
+        org: &Organization,
+        objective_obj: &Objective,
+        agent_addr: address,
+        allowed_action: String,
+        target_scope: String,
+        max_uses: u64,
+        expires_at_ms: u64,
+        max_gas_budget: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        agent_policy::create_policy_for_objective_with_clock(
             org,
             objective_obj,
             agent_addr,
@@ -229,10 +298,13 @@ module fractalmind_protocol::entry {
             max_uses,
             expires_at_ms,
             max_gas_budget,
+            clock,
             ctx,
         );
     }
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public entry fun create_agent_policy_for_key_result(
         org: &Organization,
         objective_obj: &Objective,
@@ -245,7 +317,23 @@ module fractalmind_protocol::entry {
         max_gas_budget: u64,
         ctx: &mut TxContext,
     ) {
-        agent_policy::create_policy_for_key_result(
+        abort E_CLOCK_REQUIRED
+    }
+
+    public entry fun create_agent_policy_for_key_result_with_clock(
+        org: &Organization,
+        objective_obj: &Objective,
+        key_result: &KeyResult,
+        agent_addr: address,
+        allowed_action: String,
+        target_scope: String,
+        max_uses: u64,
+        expires_at_ms: u64,
+        max_gas_budget: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        agent_policy::create_policy_for_key_result_with_clock(
             org,
             objective_obj,
             key_result,
@@ -255,12 +343,15 @@ module fractalmind_protocol::entry {
             max_uses,
             expires_at_ms,
             max_gas_budget,
+            clock,
             ctx,
         );
     }
 
     // ===== Remote Authority Entry Points =====
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public entry fun create_remote_capability(
         org: &Organization,
         delegate: address,
@@ -275,12 +366,32 @@ module fractalmind_protocol::entry {
         expires_at_ms: u64,
         ctx: &mut TxContext,
     ) {
-        remote_authority::create_capability(
+        abort E_CLOCK_REQUIRED
+    }
+
+    public entry fun create_remote_capability_with_clock(
+        org: &Organization,
+        delegate: address,
+        target_kind: u8,
+        node_id: String,
+        agent_id: String,
+        actions: vector<String>,
+        scope: String,
+        max_uses: u64,
+        budget_asset: String,
+        max_budget: u64,
+        expires_at_ms: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        remote_authority::create_capability_with_clock(
             org, delegate, target_kind, node_id, agent_id, actions, scope,
-            max_uses, budget_asset, max_budget, expires_at_ms, ctx,
+            max_uses, budget_asset, max_budget, expires_at_ms, clock, ctx,
         );
     }
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public entry fun delegate_remote_capability(
         parent: &mut RemoteCapability,
         org: &Organization,
@@ -296,9 +407,28 @@ module fractalmind_protocol::entry {
         expires_at_ms: u64,
         ctx: &mut TxContext,
     ) {
-        let _child_id = remote_authority::delegate_capability(
+        abort E_CLOCK_REQUIRED
+    }
+
+    public entry fun delegate_remote_capability_with_clock(
+        parent: &mut RemoteCapability,
+        org: &Organization,
+        delegate: address,
+        target_kind: u8,
+        node_id: String,
+        agent_id: String,
+        actions: vector<String>,
+        scope: String,
+        max_uses: u64,
+        budget_asset: String,
+        max_budget: u64,
+        expires_at_ms: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        let _child_id = remote_authority::delegate_capability_with_clock(
             parent, org, delegate, target_kind, node_id, agent_id, actions, scope,
-            max_uses, budget_asset, max_budget, expires_at_ms, ctx,
+            max_uses, budget_asset, max_budget, expires_at_ms, clock, ctx,
         );
     }
 
@@ -310,6 +440,8 @@ module fractalmind_protocol::entry {
         remote_authority::revoke_capability(capability, org, ctx);
     }
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public entry fun claim_remote_authority_use(
         capability: &mut RemoteCapability,
         action: String,
@@ -325,10 +457,29 @@ module fractalmind_protocol::entry {
         intent_hash: vector<u8>,
         ctx: &TxContext,
     ) {
-        remote_authority::claim_authority_use(
+        abort E_CLOCK_REQUIRED
+    }
+
+    public entry fun claim_remote_authority_use_with_clock(
+        capability: &mut RemoteCapability,
+        action: String,
+        scope: String,
+        target_kind: u8,
+        node_id: String,
+        agent_id: String,
+        command_id: String,
+        nonce: String,
+        idempotency_key: String,
+        budget_asset: String,
+        budget_amount: u64,
+        intent_hash: vector<u8>,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
+        remote_authority::claim_authority_use_with_clock(
             capability, action, scope, target_kind, node_id, agent_id,
             command_id, nonce, idempotency_key, budget_asset, budget_amount,
-            intent_hash, ctx,
+            intent_hash, clock, ctx,
         );
     }
 
@@ -434,6 +585,8 @@ module fractalmind_protocol::entry {
         governance::create_governance(admin_cap, org, ctx);
     }
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public entry fun create_proposal(
         governance_obj: &mut Governance,
         org: &Organization,
@@ -444,7 +597,21 @@ module fractalmind_protocol::entry {
         execution_payload: vector<u8>,
         ctx: &mut TxContext,
     ) {
-        governance::create_proposal(
+        abort E_CLOCK_REQUIRED
+    }
+
+    public entry fun create_proposal_with_clock(
+        governance_obj: &mut Governance,
+        org: &Organization,
+        proposer_cert: &AgentCertificate,
+        title: String,
+        description: String,
+        voting_deadline: u64,
+        execution_payload: vector<u8>,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        governance::create_proposal_with_clock(
             governance_obj,
             org,
             proposer_cert,
@@ -452,44 +619,93 @@ module fractalmind_protocol::entry {
             description,
             voting_deadline,
             execution_payload,
+            clock,
             ctx,
         );
     }
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public entry fun start_proposal_voting(
         admin_cap: &OrgAdminCap,
         governance_obj: &Governance,
         proposal: &mut Proposal,
         ctx: &TxContext,
     ) {
-        governance::start_voting(admin_cap, governance_obj, proposal, ctx);
+        abort E_CLOCK_REQUIRED
     }
 
+    public entry fun start_proposal_voting_with_clock(
+        admin_cap: &OrgAdminCap,
+        governance_obj: &Governance,
+        proposal: &mut Proposal,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
+        governance::start_voting_with_clock(admin_cap, governance_obj, proposal, clock, ctx);
+    }
+
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public entry fun cast_proposal_vote(
         proposal: &mut Proposal,
         voter_cert: &AgentCertificate,
         vote: u8,
         ctx: &TxContext,
     ) {
-        governance::cast_vote(proposal, voter_cert, vote, ctx);
+        abort E_CLOCK_REQUIRED
     }
 
+    public entry fun cast_proposal_vote_with_clock(
+        proposal: &mut Proposal,
+        voter_cert: &AgentCertificate,
+        vote: u8,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
+        governance::cast_vote_with_clock(proposal, voter_cert, vote, clock, ctx);
+    }
+
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public entry fun finalize_proposal_voting(
         admin_cap: &OrgAdminCap,
         governance_obj: &Governance,
         proposal: &mut Proposal,
         ctx: &TxContext,
     ) {
-        governance::finalize_voting(admin_cap, governance_obj, proposal, ctx);
+        abort E_CLOCK_REQUIRED
     }
 
+    public entry fun finalize_proposal_voting_with_clock(
+        admin_cap: &OrgAdminCap,
+        governance_obj: &Governance,
+        proposal: &mut Proposal,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
+        governance::finalize_voting_with_clock(admin_cap, governance_obj, proposal, clock, ctx);
+    }
+
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public entry fun close_proposal_voting(
         admin_cap: &OrgAdminCap,
         governance_obj: &Governance,
         proposal: &mut Proposal,
         ctx: &TxContext,
     ) {
-        governance::close_voting(admin_cap, governance_obj, proposal, ctx);
+        abort E_CLOCK_REQUIRED
+    }
+
+    public entry fun close_proposal_voting_with_clock(
+        admin_cap: &OrgAdminCap,
+        governance_obj: &Governance,
+        proposal: &mut Proposal,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
+        governance::close_voting_with_clock(admin_cap, governance_obj, proposal, clock, ctx);
     }
 
     public entry fun execute_proposal(

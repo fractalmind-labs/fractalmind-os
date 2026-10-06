@@ -19,6 +19,7 @@ type Config struct {
 	Sponsor     SponsorConfig     `yaml:"sponsor"`
 	Relay       RelayConfig       `yaml:"relay"`
 	Desktop     DesktopConfig     `yaml:"desktop"`
+	Runtime     RuntimeConfig     `yaml:"runtime"`
 
 	// Gateway config is the worker-side transport target.
 	// Workers connect to the coordinator envd WebSocket at this URL.
@@ -58,6 +59,7 @@ type RolesConfig struct {
 }
 
 type CoordinatorConfig struct {
+	BindingID  string `yaml:"binding_id"` // chain protocol CoordinatorBinding, required for the v0.2.0 chain runtime
 	ListenAddr string `yaml:"listen_addr"`
 	APIToken   string `yaml:"api_token"`
 	// AllowedSigners, when non-empty, restricts which verified worker SUI
@@ -77,8 +79,13 @@ type GatewayConfig struct {
 }
 
 type IdentityConfig struct {
-	HostID   string `yaml:"host_id"`
-	Hostname string `yaml:"hostname"`
+	// KeyProfile names this Host's private keys in the OS credential store.
+	KeyProfile string `yaml:"key_profile"`
+	// SecretServiceCollection explicitly selects a provisioned Linux collection.
+	// Empty retains the dedicated fractalmind collection; no fallback is allowed.
+	SecretServiceCollection string `yaml:"secret_service_collection"`
+	HostID                  string `yaml:"host_id"`
+	Hostname                string `yaml:"hostname"`
 	// DesktopURL is the public URL of this node's envd-desktop server (e.g. a
 	// tunnel). When set, the worker advertises it on register so a console can
 	// open the remote desktop without the operator pasting the URL.
@@ -87,6 +94,7 @@ type IdentityConfig struct {
 
 type AgentsConfig struct {
 	ScanMethod         string `yaml:"scan_method"`
+	TmuxSocket         string `yaml:"tmux_socket"`
 	ScanInterval       string `yaml:"scan_interval"`
 	AutoRestart        bool   `yaml:"auto_restart"`
 	MaxRestartAttempts int    `yaml:"max_restart_attempts"`
@@ -106,16 +114,52 @@ type HeartbeatConfig struct {
 }
 
 type SUIConfig struct {
-	Enabled           bool   `yaml:"enabled"`
-	RPC               string `yaml:"rpc"` // gRPC fullnode endpoint
-	GraphQLURL        string `yaml:"graphql_url"`
-	KeypairPath       string `yaml:"keypair_path"`
-	PackageID         string `yaml:"package_id"`
-	ProtocolPackageID string `yaml:"protocol_package_id"`
-	RegistryID        string `yaml:"registry_id"`
-	OrgID             string `yaml:"org_id"`
-	CertID            string `yaml:"cert_id"`
-	PollInterval      string `yaml:"poll_interval"`
+	HostConnectionEnabled     bool   `yaml:"host_connection_enabled"` // Native Host keys and chain-bound control channel, independent of execution adapter
+	Network                   string `yaml:"network"`
+	ChainIdentifier           string `yaml:"chain_identifier"`
+	HostJoinGasBudget         uint64 `yaml:"host_join_gas_budget"`
+	Enabled                   bool   `yaml:"enabled"`
+	RPC                       string `yaml:"rpc"` // gRPC fullnode endpoint
+	GraphQLURL                string `yaml:"graphql_url"`
+	KeypairPath               string `yaml:"keypair_path"`
+	PackageID                 string `yaml:"package_id"`
+	ProtocolPackageID         string `yaml:"protocol_package_id"`
+	ProtocolRegistryID        string `yaml:"protocol_registry_id"`
+	ProtocolOriginalPackageID string `yaml:"protocol_original_package_id"`
+	OkrPackageID              string `yaml:"okr_package_id"`
+	OkrOriginalPackageID      string `yaml:"okr_original_package_id"`
+	DirectPackageID           string `yaml:"direct_package_id"`
+	DirectOriginalPackageID   string `yaml:"direct_original_package_id"`
+	RegistryID                string `yaml:"registry_id"`
+	OrgID                     string `yaml:"org_id"`
+	CertID                    string `yaml:"cert_id"`
+	PollInterval              string `yaml:"poll_interval"`
+}
+
+// RuntimeConfig enables the chain-authorized command path. Local result or
+// authority files are not accepted as production persistence.
+type RuntimeConfig struct {
+	Enabled         bool              `yaml:"enabled"`
+	AdapterKind     string            `yaml:"adapter_kind"` // observation (default) or native-file-agent
+	Workspaces      map[string]string `yaml:"workspaces"`   // physical instance bindings, not authority
+	AdapterCommand  string            `yaml:"adapter_command"`
+	AdapterArgs     []string          `yaml:"adapter_args"`
+	ResultGasBudget uint64            `yaml:"result_gas_budget"`
+	Model           ModelConfig       `yaml:"model"`
+	ChainQueue      bool              `yaml:"chain_queue"` // explicitly published encrypted deliveries only
+}
+
+// Enabling this sends signed messages and approved file-task observations to
+// this Host-selected provider. Credentials are process environment only.
+type ModelConfig struct {
+	Enabled        bool   `yaml:"enabled"`
+	Protocol       string `yaml:"protocol"` // anthropic-messages (default) or ollama
+	APIBase        string `yaml:"api_base"`
+	APIKeyEnv      string `yaml:"api_key_env"`
+	Name           string `yaml:"name"`
+	MaxTokens      int    `yaml:"max_tokens"`
+	TimeoutSeconds int    `yaml:"timeout_seconds"`
+	MaxRequests    int    `yaml:"max_requests"`
 }
 
 // SponsorConfig configures the built-in gas sponsorship role.
@@ -170,8 +214,9 @@ func DefaultConfig() *Config {
 			ReconnectInterval: "5s",
 		},
 		Identity: IdentityConfig{
-			HostID:   "",
-			Hostname: hostname,
+			KeyProfile: "default",
+			HostID:     "",
+			Hostname:   hostname,
 		},
 		Roles: RolesConfig{
 			Coordinator: false,
@@ -198,11 +243,13 @@ func DefaultConfig() *Config {
 			UnhealthyThreshold:  3,
 		},
 		SUI: SUIConfig{
-			Enabled:      false,
-			RPC:          "https://fullnode.testnet.sui.io:443",
-			GraphQLURL:   "", // inferred for official fullnodes; set explicitly for custom nodes
-			KeypairPath:  "~/.sui/envd.key",
-			PollInterval: "30s",
+			Network:           "testnet",
+			HostJoinGasBudget: 200000000,
+			Enabled:           false,
+			RPC:               "https://fullnode.testnet.sui.io:443",
+			GraphQLURL:        "", // inferred for official fullnodes; set explicitly for custom nodes
+			KeypairPath:       "~/.sui/envd.key",
+			PollInterval:      "30s",
 		},
 		WireGuard: WireGuardConfig{
 			Enabled:       false,

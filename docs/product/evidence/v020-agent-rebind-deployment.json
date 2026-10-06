@@ -1,0 +1,26 @@
+{
+  "recordedAt": "2026-10-02T07:47:23.093Z",
+  "chain": {
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "packageId": "0x4bc3adef64b6ec90f19f505f25dff439fc2a327a6e52a098c758a6c8a57567a3",
+  "registryId": "0x037f3398761bc64064f4d3a5c9e99df6cd9231270f9cb42a9fd71ad4f46085ef",
+  "checks": [
+    {
+      "action": "publish guarded recovery test package",
+      "digest": "CBG8oNyBPzdgin79pn4iZAfzy5az227JZ7DRu1nFvzgY",
+      "actualGas": "712778680"
+    },
+    {
+      "action": "initialize isolated identity registry",
+      "digest": "9kRJaCgWEMWfJv57XJvLyYFVRwhUEczk7y6FisayPKMJ",
+      "actualGas": "6021028"
+    }
+  ],
+  "limits": {
+    "isolatedLocalnet": true,
+    "rawPrivateKeysInReport": false
+  },
+  "deploymentPurpose": "Isolated Agent rebind reviewed-version CAS acceptance",
+  "bytecodeSha256": "9f5ddf488eff34189a3202beafc40ff2d1d9a3dd094180b524b06f17f03c4899"
+}

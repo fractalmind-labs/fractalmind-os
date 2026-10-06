@@ -1,0 +1,190 @@
+{
+  "recordedAt": "2026-10-02T06:30:40.325Z",
+  "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+  "profile": {
+    "network": "localnet",
+    "rpcUrl": "http://127.0.0.1:29000",
+    "packageId": "0x2ef39db88cffefa9c16dcaf6593032ccd6ac0e79acfd22e30fc10d4b4c7a45e5",
+    "registryId": "0xfdf5ad498229c22b1652cae940c8803e9bc8de20ead4fbc049c514198e123220",
+    "humanId": "0xebd42214c99f5436204ce2769e03323605b2b6d4e10c08c77a5c7ca68a54a04e",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+  },
+  "organizationId": "0x0ed8784c526e99de9bb518c2797f83d9c4f96cf1b9604ae5c7a522f5b598f587",
+  "grantId": "0xe70d39257ed21601251d34bd5c237189bd7818287d1528afca23bd4daa875be4",
+  "checks": [
+    "exact absent Host index reconstructs as empty",
+    "production verifier proves fresh device/organization management authority; public binding is not online evidence",
+    "code is released only after exact receipt objects are visible and match invitation proof material",
+    "production CLI pipeline confirms organization and fees, signs once with generated Go Host keys, persists original digest, recovers lost receipt and supports public query without keys; OS/TTY/cloud not verified",
+    "redemption consumes the invitation; reconstruction finds membership and finite observation authority, not execution authority",
+    "Actual isolated tmux pane and native kernel birth identity traverse Host signature, authenticated Coordinator read and App discovery verification; observation-only capabilities and independent scan deadline preserved",
+    "App production read client uses injected fixture device signing; Go verifies current grant; unsigned/token reads denied and Coordinator-signed response returns actual Host heartbeat",
+    "Go Host signs its actual heartbeat; App independently verifies exact body, current membership pointer, scoped chain and Coordinator versions; forged body remains unknown",
+    "a retained, cryptographically valid Host heartbeat cannot regain trust after actual chain membership revocation",
+    "membership revocation remains chain-owned and visible; consumed-invite revocation never substitutes for it",
+    "real loopback Coordinator/Host mutually authenticate using chain endpoint and keys; live heartbeat observed; App chain revocation rejects both Coordinator routing and worker heartbeat",
+    "new controller reconstructs chain state but cannot recover the invitation bearer secret",
+    "a lost unused code has an explicit on-chain revocation path",
+    "device revocation after challenge preparation is rejected by actual Coordinator HTTP authority check; no cached device login survives",
+    "management revocation between quote and submit rejects the App operation before a new broadcast"
+  ],
+  "transactions": [
+    {
+      "label": "create isolated fixture Human",
+      "digest": "2vvH5BehApDwDAAofvHEWhBoBxdnVN3BPU3iCaPtNEt5",
+      "phase": "prepared"
+    },
+    {
+      "label": "create isolated fixture Human",
+      "requestId": "fixture:0d3776a6-e0ea-4ab4-b115-54f0c5a0dfa8",
+      "digest": "2vvH5BehApDwDAAofvHEWhBoBxdnVN3BPU3iCaPtNEt5",
+      "status": "confirmed",
+      "actualGas": "17708548"
+    },
+    {
+      "label": "create isolated fixture organization",
+      "digest": "AN5U8M3Zn87LBf7jDFX6TyG63R5qofQYcEqX6o4vZoJc",
+      "phase": "prepared"
+    },
+    {
+      "label": "create isolated fixture organization",
+      "requestId": "fixture:c403b8b0-0602-42b0-9395-e549fae7c521",
+      "digest": "AN5U8M3Zn87LBf7jDFX6TyG63R5qofQYcEqX6o4vZoJc",
+      "status": "confirmed",
+      "actualGas": "15278416"
+    },
+    {
+      "label": "App registers Coordinator binding",
+      "requestId": "host:04c86336-44e3-438c-93e5-8bb2c7392e1e",
+      "digest": "6tX2EAfnYQRYXdQ1knoHaJHdo9YbDr2CEXFdkfBV2zzX",
+      "status": "confirmed",
+      "actualGas": "6825696"
+    },
+    {
+      "label": "App creates one-use invitation",
+      "requestId": "host:ff21e07e-fadd-43ca-9659-59b0bf7faabc",
+      "digest": "FrAQuHPVLWLoRbgsZJVg4FzdjBQei7JE1cE5T5Cft2V4",
+      "status": "confirmed",
+      "actualGas": "4963392"
+    },
+    {
+      "label": "Go envd CLI redeems App invitation; injected response loss recovered by original query",
+      "requestId": "go-envd-cli-fixture",
+      "digest": "5t254vRe7Uz5mV5h3W7KA4qSZEghCjJkw82jNBxu6ejT",
+      "status": "confirmed",
+      "actualGas": "11450292"
+    },
+    {
+      "label": "App revokes Host membership",
+      "requestId": "host:31dab679-3523-4034-8c6c-6d19d14ddc80",
+      "digest": "Xw7zoaSyj2CUB1PzMw8sYSoGH75REA4BeBbLox8Gczt",
+      "status": "confirmed",
+      "actualGas": "-592892"
+    },
+    {
+      "label": "App creates invitation for reload test",
+      "requestId": "host:e20fb30f-d3fc-4b86-bd9b-cde0e333546a",
+      "digest": "EDQnsdgXy2GXwHjueJp1CL8S5TUo7Y6Ei2M4pkZu5pX7",
+      "status": "confirmed",
+      "actualGas": "4968256"
+    },
+    {
+      "label": "App revokes unrecoverable unused invitation",
+      "requestId": "host:7f50b0eb-31f3-47e4-8c8b-045e21663b3c",
+      "digest": "EGphx3nLZX3Hao3nySJ4wkD8wvNsq8jiBoXYLjVmvKxX",
+      "status": "confirmed",
+      "actualGas": "1472028"
+    },
+    {
+      "label": "fixture explicitly adds independent root management device",
+      "digest": "9JtCrWxFN4DhQ8WRqq9czTdKYJqTkYV7PcvMhPEzRjEr",
+      "phase": "prepared"
+    },
+    {
+      "label": "fixture explicitly adds independent root management device",
+      "requestId": "fixture:3ec912e5-94ac-47fb-9ead-25c5dd465397",
+      "digest": "9JtCrWxFN4DhQ8WRqq9czTdKYJqTkYV7PcvMhPEzRjEr",
+      "status": "confirmed",
+      "actualGas": "7839568"
+    },
+    {
+      "label": "independent root fixture revokes managing device",
+      "digest": "2tmMQED14mHwxE574pMDWfdjaDns9SqoNAgWDeJmPZpt",
+      "phase": "prepared"
+    },
+    {
+      "label": "independent root fixture revokes managing device",
+      "requestId": "fixture:372ae57d-3d0d-4b2f-9aa1-265cfe330a15",
+      "digest": "2tmMQED14mHwxE574pMDWfdjaDns9SqoNAgWDeJmPZpt",
+      "status": "confirmed",
+      "actualGas": "1469248"
+    }
+  ],
+  "envdCli": {
+    "initial": {
+      "state": "unknown",
+      "digest": "5t254vRe7Uz5mV5h3W7KA4qSZEghCjJkw82jNBxu6ejT"
+    },
+    "result": {
+      "state": "confirmed",
+      "digest": "5t254vRe7Uz5mV5h3W7KA4qSZEghCjJkw82jNBxu6ejT",
+      "actual_fee_mist": "11450292",
+      "membership": {
+        "organization_id": "0x0ed8784c526e99de9bb518c2797f83d9c4f96cf1b9604ae5c7a522f5b598f587",
+        "invite_id": "0x45171147826928d22556d4684ff704d5036aecd3205874c1bbaa58890f71148a",
+        "membership_id": "0x8b341c959fb4b32b236ac00ec3ad3453573eadc64208281873d16d38f645e398",
+        "host_address": "0x4e66d5182b51ab895186628b7edaa1085ad7b5506aaa5d43fb7a75423e8d74e0",
+        "coordinator_binding": "0x99d63a6635128bb80fae07d9ca77d03f00727d6541544ebbe2c6cac766e1920d",
+        "observation_capability": "0x5f93c39a6446451e624651ec5b9df538b54110b1b05d65ac01363f83e24ab43b",
+        "expires_at_ms": 1793514637050,
+        "revoked": false,
+        "current_membership": true
+      }
+    },
+    "broadcasts": 1,
+    "public_query_without_keys": true,
+    "real_disk_journal": true,
+    "hostAddress": "0x4e66d5182b51ab895186628b7edaa1085ad7b5506aaa5d43fb7a75423e8d74e0",
+    "journalRoot": "/tmp/fractalmind-agent-discovery-localnet-final.json.journal"
+  },
+  "envdConnection": {
+    "chain_endpoint_used": true,
+    "mutual_authentication": true,
+    "heartbeat_sent": true,
+    "revoked_pointer_rejected": true,
+    "worker_revoked_heartbeat_rejected": true,
+    "coordinator_revoked_routing_rejected": true,
+    "generated_memory_keys": true,
+    "loopback_only": true
+  },
+  "deviceHttp": {
+    "unsignedRejected": true,
+    "bearerRejected": true,
+    "actualAppDeviceProofAndSignedResponse": true,
+    "coordinatorObservedHost": "0x4e66d5182b51ab895186628b7edaa1085ad7b5506aaa5d43fb7a75423e8d74e0",
+    "observedAt": "2026-10-01T23:30:37.618773-07:00",
+    "hostSignatureVerified": true,
+    "tamperedHostBodyRejected": true,
+    "hostMembershipId": "0x8b341c959fb4b32b236ac00ec3ad3453573eadc64208281873d16d38f645e398",
+    "appDisplaySchemaVerified": true,
+    "realTmuxDiscoveryVerified": true,
+    "retainedHostSignatureRejectedAfterRevocation": true,
+    "deviceRevokedAfterChallengeRejected": true
+  },
+  "limits": {
+    "generatedFixtureKeysOnly": true,
+    "injectedNativeTransport": true,
+    "memoryTechnicalJournal": true,
+    "appTechnicalJournal": "injected memory journal",
+    "envdTechnicalJournal": "real disk journal",
+    "envdRecovery": "new runner in the same test process",
+    "installedAppVerified": false,
+    "nativeStoreVerified": false,
+    "envdJoinCliVerified": false,
+    "envdJoinCliInjectedKeysVerified": true,
+    "envdJoinQuoteVerified": false,
+    "loopbackChainConnectionVerified": true,
+    "cloudHostVerified": false,
+    "invitationSecretsIncluded": false
+  }
+}

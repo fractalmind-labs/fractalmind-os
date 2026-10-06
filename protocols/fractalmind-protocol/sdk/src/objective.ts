@@ -30,13 +30,14 @@ export class ObjectiveApi {
     const tx = this.fm.useTransaction(input.tx);
 
     tx.moveCall({
-      target: this.fm.target('create_objective'),
+      target: this.fm.target('create_objective_with_clock'),
       arguments: [
         tx.object(input.adminCapId),
         tx.object(input.organizationId),
         tx.pure.string(input.title),
         tx.pure.vector('u8', input.descriptionHash),
         tx.pure.u64(toBigInt(input.deadlineMs)),
+        tx.object('0x6'),
       ],
     });
 

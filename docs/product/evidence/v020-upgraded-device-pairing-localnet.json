@@ -1,0 +1,749 @@
+{
+  "recordedAt": "2026-10-03T08:14:17.257777+00:00",
+  "baselineCommit": "716eb0f",
+  "source": {
+    "path": "/tmp/fm-mixed-origins-pairing-r1.json",
+    "sha256": "b51227a68f23d0f089f75f984f9c5a97a3b16e71fdb3ab87c66789e7cf6ac743",
+    "log": {
+      "path": "/tmp/fm-mixed-origins-pairing-r1.log",
+      "sha256": "ecd690b0cb9e84962011e623d2e1c742706bead547cd5357332185faa4d951b7",
+      "exitCode": 0,
+      "text": "{\"passed\":14,\"transactions\":10,\"report\":\"/tmp/fm-mixed-origins-pairing-r1.json\"}\n"
+    },
+    "sessionId": 53787,
+    "terminal": true
+  },
+  "deploymentSource": {
+    "path": "/tmp/fm-mixed-origin-deployment-r1.json",
+    "sha256": "dd22cd44c47f0604aa01998166c022b370ce5634f6c349478a5d00ac3602093b"
+  },
+  "sourceHashes": {
+    "apps/fractalmind-app/scripts/native-pairing-localnet.ts": "0ec99fe9b2001765c8603e821d442eb063e753dc59135a89a14949c7911b25d4",
+    "apps/fractalmind-app/src/pairing.ts": "e108aacb8e38a96269477f4e75ad03f0d8968ad253a57331a0fac64754bde13a",
+    "apps/fractalmind-app/src/onboarding.ts": "fe7c61e3f011a9e36659488e8be9bd98c529970144a827ca802f3555dc1d749b",
+    "apps/fractalmind-app/src/native-device.ts": "f5ce5ae423f3e78c660bc7b360cbd54a44f675711712c2dd310f6e80e955cb0d",
+    "apps/fractalmind-app/src/native-onboarding.ts": "87feabe74a1bee68ed262d3377aee47843de8205153039449a1623d46b98fca7",
+    "apps/fractalmind-app/src/private-records.ts": "b843f1aa1a4e31fb5885fc70f51367afc736f4dff7dc06cd03f1bca354314ec7",
+    "apps/fractalmind-app/src/device-identity.ts": "61f13404cb9c272c551a8aa2afba29edac0968c5e34802e745b48900a3eb45de",
+    "apps/fractalmind-app/src/chain.ts": "2165a8a419624f4fb1bdb6ecb9a582b01eb25862f05927db73bdba1f1e5e05bc",
+    "apps/fractalmind-app/tests/pairing.test.ts": "8b050d53694398695008f0b1ee990d26e66bc901eef183a38d6cacd25ad97b81",
+    "apps/fractalmind-app/native/examples/device-test-helper.rs": "ca57e3e51aea748cfb8be23e0ac28d358ddca84fad585879e35f425a6ac6503f",
+    "protocols/fractalmind-protocol/sdk/src/client.ts": "8bf53e1d611073599c8c2a3cdc94a84140e025ffd03c8c8634bbb64319b2934a",
+    "protocols/fractalmind-protocol/sdk/src/identity.ts": "d179f104d46f710304128f8c130cbf8e63868863b95e054a798029260f1633ff",
+    "protocols/fractalmind-protocol/sdk/src/transaction-manager.ts": "c7174a2a1bb7d5435c1b6ba2bad0df8e200f7e5965574fd05ef60ee63a266d84",
+    "apps/fractalmind-app/native/src/command_results.rs": "09be2003b0c777af31d1d66f35bd9206c99b5765d20a90362bc057196ac1f1d3",
+    "apps/fractalmind-app/native/src/keyrings.rs": "fa4e076063db718f64b596c3637c9077d920929efbb1848a82d41b160710f339",
+    "apps/fractalmind-app/native/src/lib.rs": "dddae7043e3c260f222f782d21f5f86f65e423bbb1ae52fcde704c50e22a8567",
+    "apps/fractalmind-app/native/src/node_command.rs": "5675cb99c0da0246762b47036222d662d4a05cf407483d1bf7b98e28535f6bd5",
+    "apps/fractalmind-app/native/src/onboarding.rs": "a78c8ba45e5182dfc983d8b1b2cd64f98030e34a9f91fe0de066c89c2335081b",
+    "apps/fractalmind-app/native/src/pairing.rs": "926099a804ec8ca575136ec0e9475b1ba8d05f0d5ae917aa90d6fcdb72579a71",
+    "apps/fractalmind-app/native/src/records.rs": "b6d1750c38f5cb384faddc1705cc300bed88fcca476221b589a17a1872d9db7e",
+    "apps/fractalmind-app/native/src/recovery.rs": "0ef19806ee494f77ab9bcf0968c3e2d9c9a48f29e5e910dac47162e8beff520f"
+  },
+  "nativeHelper": {
+    "path": "apps/fractalmind-app/native/target/debug/examples/device-test-helper",
+    "sha256": "f5d4ad52eee162b90f2bce65890fca3926858ed851a862061deb98963d38d288",
+    "rebuiltThisIncrement": false
+  },
+  "report": {
+    "format": 2,
+    "recordedAt": "2026-10-03T08:08:40.583Z",
+    "complete": true,
+    "platform": "darwin",
+    "profile": "test-e804014d-1cd0-449f-82c0-1e69bcaeefaa",
+    "deployment": {
+      "packageId": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+      "originalPackageId": "0x848f2fc2fb8fff5155644af3dbcb69fa734283539de9d572789949e740b83e10",
+      "okrPackageId": "0xaa8664fe2727ce3e991d2082c3a361e5a79f2353523106f55aa5fc818f251163",
+      "directPackageId": "0x70e43f069c7012b0e0ec2fa40792c64b0697ab0dff35184db0426a6402c8aafb",
+      "registryId": "0x31c71fc2de56c257e7b76f1f28098bc423e067ec0d37ca8f86ae2fa838b89b32"
+    },
+    "chain": {
+      "rpc": "http://127.0.0.1:29000",
+      "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+    },
+    "checks": [
+      "loading an absent onboarding profile does not create keys",
+      "native recovery code/HKDF keys and FMW1/AES-GCM backup interoperate with the official JS path",
+      "fresh-process reload reveals public keys/ciphertext only; re-creation and wrong network are rejected",
+      "zero recovery balance blocks Human preparation without submitting",
+      "native recovery signs a real self-paid Human transaction; independent device possession resolves stable Human",
+      "new native processes and a rebuilt controller query original digests and reconstruct the same Human/organization without replay",
+      "discarding transaction caches reconstructs confirmed business state from chain and refuses duplicate creation",
+      "unapproved request does not authorize a device; both ends reconstruct the identical public fingerprint from chain",
+      "approval preserves the same Human with independent organization-scoped read permission, no identity-management/approval permission and no decryptable data keys",
+      "consumed pairing cannot issue a second grant; persisted original outcome is returned instead of replaying approval",
+      "explicit second transaction shares only the selected organization, reloaded independent native device authenticates/decrypts the real chain body; no JS content key used",
+      "paired permissions change only through an explicit owner-signed organization-scoped transaction",
+      "actual key rotation during native signing rejects stale distribution atomically at product_record::assert_key_version 9102, retaining prior envelope/version and actual failed Gas",
+      "actual on-chain revocation blocks paired possession and subsequent plaintext release while owner's independent grant remains valid"
+    ],
+    "transactions": [
+      {
+        "action": "create Human with native recovery signature and self-paid Gas",
+        "digest": "GgVBRtwHtWo48Sebvdvvix66SQehDc37w9LesFevoadi",
+        "actualGas": "18772548"
+      },
+      {
+        "action": "create personal organization with independent native device",
+        "digest": "DdjNzm6M5fisrjCNWZPQPv7DAyrhqfsA5wJxk2Fz5DoZ",
+        "actualGas": "14731216"
+      },
+      {
+        "action": "save historical body with native content key/signature",
+        "digest": "BSyHDf8MFRwfVzNKnNqHAiwQMX4sEj5F494iUdALBtDR",
+        "actualGas": "10309688"
+      },
+      {
+        "action": "native device publishes ten-minute pairing request",
+        "digest": "9orqsRPgwPjL3AosmLbgCKZyZQ1X59if8acj2kZmPjpJ",
+        "actualGas": "4269880"
+      },
+      {
+        "action": "scoped read-only pairing approval; lost receipt resolved by original digest",
+        "digest": "Ea5SMgdYsv6t391QvKR1Bg5J6KcbiLUbuA62yxetvVQT",
+        "actualGas": "6732868"
+      },
+      {
+        "action": "separate native selected-organization data wrapping and key-envelope publication",
+        "digest": "DX7e9mgjN6Y8RhCsnF2uqKyPTUujtF15BcxqvK3u9NMH",
+        "actualGas": "4442064"
+      },
+      {
+        "action": "explicitly change paired device to scoped approval without root identity rights",
+        "digest": "3Ddsj186QVbaWH6KLpJhj5EzCz4B4sbRZSvhmEGtNeaN",
+        "actualGas": "1502732"
+      },
+      {
+        "action": "rotate organization key version after share source checks, before owner native signature",
+        "digest": "9YC48UdXvS9RazetyBiDvGzNTC2bPogSMwYBVknjRD1b",
+        "actualGas": "1487260"
+      },
+      {
+        "action": "atomic key-version guard rejects stale data sharing",
+        "digest": "AmyDe4uHGe6CWtGrkCeUqfedXYWvCJyUNutPQMkphLNE",
+        "actualGas": "1485208",
+        "status": "expected failure",
+        "failure": {
+          "$kind": "MoveAbort",
+          "message": "MoveAbort in 1st command, abort code: 9102, in '0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::product_record::assert_key_version' (instruction 7)",
+          "command": 0,
+          "MoveAbort": {
+            "abortCode": "9102",
+            "location": {
+              "package": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521",
+              "module": "product_record",
+              "function": 4,
+              "instruction": 7,
+              "functionName": "assert_key_version"
+            }
+          }
+        }
+      },
+      {
+        "action": "revoke paired device independently",
+        "digest": "swbQDiVQswnioKQMRvk7mbKbeiDGoCuFp6ttqoGQqLW",
+        "actualGas": "1485208"
+      }
+    ],
+    "journalEvents": [
+      {
+        "journal": 1,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x0591fca872991e53aeede3455556019e8ceacbb34ef4b1bb6758d26480c821d6\"]",
+          "requestId": "identity:test-e804014d-1cd0-449f-82c0-1e69bcaeefaa",
+          "revision": 1,
+          "digest": "GgVBRtwHtWo48Sebvdvvix66SQehDc37w9LesFevoadi",
+          "sender": "0x0591fca872991e53aeede3455556019e8ceacbb34ef4b1bb6758d26480c821d6",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "18772548",
+          "gasReferences": [
+            {
+              "objectId": "0x1d8dfe316a3dd0a83e43f3c4117145b9e4de3b7abd672d61d6ac84b221be5888",
+              "version": "730",
+              "digest": "AfUZsCZ8VZctHwb8F3DjqNWzZKRF8y72GqrwhfViK7Ug"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014912963,
+          "status": "pending"
+        }
+      },
+      {
+        "journal": 1,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x0591fca872991e53aeede3455556019e8ceacbb34ef4b1bb6758d26480c821d6\"]",
+          "requestId": "identity:test-e804014d-1cd0-449f-82c0-1e69bcaeefaa",
+          "revision": 2,
+          "digest": "GgVBRtwHtWo48Sebvdvvix66SQehDc37w9LesFevoadi",
+          "sender": "0x0591fca872991e53aeede3455556019e8ceacbb34ef4b1bb6758d26480c821d6",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "18772548",
+          "gasReferences": [
+            {
+              "objectId": "0x1d8dfe316a3dd0a83e43f3c4117145b9e4de3b7abd672d61d6ac84b221be5888",
+              "version": "730",
+              "digest": "AfUZsCZ8VZctHwb8F3DjqNWzZKRF8y72GqrwhfViK7Ug"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014912963,
+          "status": "confirmed",
+          "gasUsed": {
+            "computationCost": "1420000",
+            "storageCost": "20535200",
+            "storageRebate": "3182652",
+            "nonRefundableStorageFee": "32148"
+          },
+          "actualGas": "18772548"
+        }
+      },
+      {
+        "journal": 1,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9\"]",
+          "requestId": "org:test-e804014d-1cd0-449f-82c0-1e69bcaeefaa:0x5302ba87bdf88c94f866d9af4fc6374b1cb2d5a2c5885b392d2f281785097967",
+          "revision": 1,
+          "digest": "DdjNzm6M5fisrjCNWZPQPv7DAyrhqfsA5wJxk2Fz5DoZ",
+          "sender": "0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "14731216",
+          "gasReferences": [
+            {
+              "objectId": "0x605fc45546199fb4bbcfbba1f259907c423082c5e6fb837863a364d50b149dbc",
+              "version": "731",
+              "digest": "DwBzHp1SCJTYgVFnrau6Kw4UUbbpbsoFVu6Q6eFtRrxG"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014913873,
+          "status": "pending"
+        }
+      },
+      {
+        "journal": 1,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9\"]",
+          "requestId": "org:test-e804014d-1cd0-449f-82c0-1e69bcaeefaa:0x5302ba87bdf88c94f866d9af4fc6374b1cb2d5a2c5885b392d2f281785097967",
+          "revision": 2,
+          "digest": "DdjNzm6M5fisrjCNWZPQPv7DAyrhqfsA5wJxk2Fz5DoZ",
+          "sender": "0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "14731216",
+          "gasReferences": [
+            {
+              "objectId": "0x605fc45546199fb4bbcfbba1f259907c423082c5e6fb837863a364d50b149dbc",
+              "version": "731",
+              "digest": "DwBzHp1SCJTYgVFnrau6Kw4UUbbpbsoFVu6Q6eFtRrxG"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014913873,
+          "status": "confirmed",
+          "gasUsed": {
+            "computationCost": "1430000",
+            "storageCost": "19440800",
+            "storageRebate": "6139584",
+            "nonRefundableStorageFee": "62016"
+          },
+          "actualGas": "14731216"
+        }
+      },
+      {
+        "journal": 2,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9\"]",
+          "requestId": "recovery-history:test-e804014d-1cd0-449f-82c0-1e69bcaeefaa",
+          "revision": 1,
+          "digest": "BSyHDf8MFRwfVzNKnNqHAiwQMX4sEj5F494iUdALBtDR",
+          "sender": "0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "10309688",
+          "gasReferences": [
+            {
+              "objectId": "0x62a849d5f5b0a7a14f3897e79bce7cc0c88f6b745bfe88f720318c89b5b5d7dd",
+              "version": "731",
+              "digest": "3h2UN5UePoeNZhsmB1KSZjNLEqBbc2KMGerX1Sg7r1RR"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014914635,
+          "status": "pending"
+        }
+      },
+      {
+        "journal": 2,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9\"]",
+          "requestId": "recovery-history:test-e804014d-1cd0-449f-82c0-1e69bcaeefaa",
+          "revision": 2,
+          "digest": "BSyHDf8MFRwfVzNKnNqHAiwQMX4sEj5F494iUdALBtDR",
+          "sender": "0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "10309688",
+          "gasReferences": [
+            {
+              "objectId": "0x62a849d5f5b0a7a14f3897e79bce7cc0c88f6b745bfe88f720318c89b5b5d7dd",
+              "version": "731",
+              "digest": "3h2UN5UePoeNZhsmB1KSZjNLEqBbc2KMGerX1Sg7r1RR"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014914635,
+          "status": "confirmed",
+          "gasUsed": {
+            "computationCost": "1430000",
+            "storageCost": "12927600",
+            "storageRebate": "4047912",
+            "nonRefundableStorageFee": "40888"
+          },
+          "actualGas": "10309688"
+        }
+      },
+      {
+        "journal": 3,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x82c34b5a1fe24de466e98e31e544acf202f6cca61de0c64cc93ae41afa80852e\"]",
+          "requestId": "pair-create:test-e804014d-1cd0-449f-82c0-1e69bcaeefaa-a",
+          "revision": 1,
+          "digest": "9orqsRPgwPjL3AosmLbgCKZyZQ1X59if8acj2kZmPjpJ",
+          "sender": "0x82c34b5a1fe24de466e98e31e544acf202f6cca61de0c64cc93ae41afa80852e",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "4269880",
+          "gasReferences": [
+            {
+              "objectId": "0x08af10addeb9bd3b5f06a1858167bfee6c28350839f1561952dc96e41a0542cb",
+              "version": "732",
+              "digest": "KexeUTeHCjtPveKaBSm9ovk6xPHZFapwCig4GExjiga"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014915910,
+          "status": "pending"
+        }
+      },
+      {
+        "journal": 3,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x82c34b5a1fe24de466e98e31e544acf202f6cca61de0c64cc93ae41afa80852e\"]",
+          "requestId": "pair-create:test-e804014d-1cd0-449f-82c0-1e69bcaeefaa-a",
+          "revision": 2,
+          "digest": "9orqsRPgwPjL3AosmLbgCKZyZQ1X59if8acj2kZmPjpJ",
+          "sender": "0x82c34b5a1fe24de466e98e31e544acf202f6cca61de0c64cc93ae41afa80852e",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "4269880",
+          "gasReferences": [
+            {
+              "objectId": "0x08af10addeb9bd3b5f06a1858167bfee6c28350839f1561952dc96e41a0542cb",
+              "version": "732",
+              "digest": "KexeUTeHCjtPveKaBSm9ovk6xPHZFapwCig4GExjiga"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014915910,
+          "status": "confirmed",
+          "gasUsed": {
+            "computationCost": "1410000",
+            "storageCost": "3838000",
+            "storageRebate": "978120",
+            "nonRefundableStorageFee": "9880"
+          },
+          "actualGas": "4269880"
+        }
+      },
+      {
+        "journal": 4,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9\"]",
+          "requestId": "pair-approve:0xd655935eba507ed436392c2022343266e403a186af3520ff7b6bd0d91e8667c0",
+          "revision": 1,
+          "digest": "Ea5SMgdYsv6t391QvKR1Bg5J6KcbiLUbuA62yxetvVQT",
+          "sender": "0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "6732868",
+          "gasReferences": [
+            {
+              "objectId": "0xba0b49688457e2415bca8af3e235839acac2240b33d935b7e69af69d64a511ac",
+              "version": "731",
+              "digest": "8QaywPPZXTp4DzvJgvjLxrC5opz4u75opQTdbXMfy3bL"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014916561,
+          "status": "pending"
+        }
+      },
+      {
+        "journal": 4,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9\"]",
+          "requestId": "pair-approve:0xd655935eba507ed436392c2022343266e403a186af3520ff7b6bd0d91e8667c0",
+          "revision": 2,
+          "digest": "Ea5SMgdYsv6t391QvKR1Bg5J6KcbiLUbuA62yxetvVQT",
+          "sender": "0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "6732868",
+          "gasReferences": [
+            {
+              "objectId": "0xba0b49688457e2415bca8af3e235839acac2240b33d935b7e69af69d64a511ac",
+              "version": "731",
+              "digest": "8QaywPPZXTp4DzvJgvjLxrC5opz4u75opQTdbXMfy3bL"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014916561,
+          "status": "confirmed",
+          "gasUsed": {
+            "computationCost": "1440000",
+            "storageCost": "14645200",
+            "storageRebate": "9352332",
+            "nonRefundableStorageFee": "94468"
+          },
+          "actualGas": "6732868"
+        }
+      },
+      {
+        "journal": 4,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9\"]",
+          "requestId": "pair-share:0xd655935eba507ed436392c2022343266e403a186af3520ff7b6bd0d91e8667c0",
+          "revision": 1,
+          "digest": "DX7e9mgjN6Y8RhCsnF2uqKyPTUujtF15BcxqvK3u9NMH",
+          "sender": "0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "4442064",
+          "gasReferences": [
+            {
+              "objectId": "0xbecef97cc88276f18967bae39b6b24058468be37c6556eb884ed25df59315231",
+              "version": "731",
+              "digest": "DofB8ei6PAT7Zu9BpRaPayfLWBxwU4u3gXruaT7LKjBh"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014917671,
+          "status": "pending"
+        }
+      },
+      {
+        "journal": 4,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9\"]",
+          "requestId": "pair-share:0xd655935eba507ed436392c2022343266e403a186af3520ff7b6bd0d91e8667c0",
+          "revision": 2,
+          "digest": "DX7e9mgjN6Y8RhCsnF2uqKyPTUujtF15BcxqvK3u9NMH",
+          "sender": "0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "4442064",
+          "gasReferences": [
+            {
+              "objectId": "0xbecef97cc88276f18967bae39b6b24058468be37c6556eb884ed25df59315231",
+              "version": "731",
+              "digest": "DofB8ei6PAT7Zu9BpRaPayfLWBxwU4u3gXruaT7LKjBh"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014917671,
+          "status": "confirmed",
+          "gasUsed": {
+            "computationCost": "1420000",
+            "storageCost": "6513200",
+            "storageRebate": "3491136",
+            "nonRefundableStorageFee": "35264"
+          },
+          "actualGas": "4442064"
+        }
+      },
+      {
+        "journal": 2,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9\"]",
+          "requestId": "pair-permissions:test-e804014d-1cd0-449f-82c0-1e69bcaeefaa",
+          "revision": 1,
+          "digest": "3Ddsj186QVbaWH6KLpJhj5EzCz4B4sbRZSvhmEGtNeaN",
+          "sender": "0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "1502732",
+          "gasReferences": [
+            {
+              "objectId": "0xbecef97cc88276f18967bae39b6b24058468be37c6556eb884ed25df59315231",
+              "version": "3495577",
+              "digest": "4v4cymsd7pSr7jLdJvAN4JhFtxAtYmJUjtmyaS6tmb4M"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014918359,
+          "status": "pending"
+        }
+      },
+      {
+        "journal": 2,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9\"]",
+          "requestId": "pair-permissions:test-e804014d-1cd0-449f-82c0-1e69bcaeefaa",
+          "revision": 2,
+          "digest": "3Ddsj186QVbaWH6KLpJhj5EzCz4B4sbRZSvhmEGtNeaN",
+          "sender": "0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "1502732",
+          "gasReferences": [
+            {
+              "objectId": "0xbecef97cc88276f18967bae39b6b24058468be37c6556eb884ed25df59315231",
+              "version": "3495577",
+              "digest": "4v4cymsd7pSr7jLdJvAN4JhFtxAtYmJUjtmyaS6tmb4M"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014918359,
+          "status": "confirmed",
+          "gasUsed": {
+            "computationCost": "1430000",
+            "storageCost": "6520800",
+            "storageRebate": "6448068",
+            "nonRefundableStorageFee": "65132"
+          },
+          "actualGas": "1502732"
+        }
+      },
+      {
+        "journal": 7,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x82c34b5a1fe24de466e98e31e544acf202f6cca61de0c64cc93ae41afa80852e\"]",
+          "requestId": "pair-rotate:test-e804014d-1cd0-449f-82c0-1e69bcaeefaa",
+          "revision": 1,
+          "digest": "9YC48UdXvS9RazetyBiDvGzNTC2bPogSMwYBVknjRD1b",
+          "sender": "0x82c34b5a1fe24de466e98e31e544acf202f6cca61de0c64cc93ae41afa80852e",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "1487260",
+          "gasReferences": [
+            {
+              "objectId": "0x4c28e29a1d5697e2c6922d55dd2716723066e3a15fde65bc8aeb226193ebebb4",
+              "version": "732",
+              "digest": "EHnqe7TNMdwNK2xgWm7kEwCnAXJGxQWAXa3Tp8kFUNX"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014919074,
+          "status": "pending"
+        }
+      },
+      {
+        "journal": 7,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x82c34b5a1fe24de466e98e31e544acf202f6cca61de0c64cc93ae41afa80852e\"]",
+          "requestId": "pair-rotate:test-e804014d-1cd0-449f-82c0-1e69bcaeefaa",
+          "revision": 2,
+          "digest": "9YC48UdXvS9RazetyBiDvGzNTC2bPogSMwYBVknjRD1b",
+          "sender": "0x82c34b5a1fe24de466e98e31e544acf202f6cca61de0c64cc93ae41afa80852e",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "1487260",
+          "gasReferences": [
+            {
+              "objectId": "0x4c28e29a1d5697e2c6922d55dd2716723066e3a15fde65bc8aeb226193ebebb4",
+              "version": "732",
+              "digest": "EHnqe7TNMdwNK2xgWm7kEwCnAXJGxQWAXa3Tp8kFUNX"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014919074,
+          "status": "confirmed",
+          "gasUsed": {
+            "computationCost": "1420000",
+            "storageCost": "6726000",
+            "storageRebate": "6658740",
+            "nonRefundableStorageFee": "67260"
+          },
+          "actualGas": "1487260"
+        }
+      },
+      {
+        "journal": 6,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9\"]",
+          "requestId": "pair-share:0xd655935eba507ed436392c2022343266e403a186af3520ff7b6bd0d91e8667c0",
+          "revision": 1,
+          "digest": "AmyDe4uHGe6CWtGrkCeUqfedXYWvCJyUNutPQMkphLNE",
+          "sender": "0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "1495208",
+          "gasReferences": [
+            {
+              "objectId": "0xc03004030cc517eb1467aa44064734b9efeac7fbb7bf5524c583e69ff091a830",
+              "version": "731",
+              "digest": "AdkmM2darU1ZUPmxbhgRx2bUfBpcj6LJpxhZs9YWXtBH"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014918949,
+          "status": "pending"
+        }
+      },
+      {
+        "journal": 6,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9\"]",
+          "requestId": "pair-share:0xd655935eba507ed436392c2022343266e403a186af3520ff7b6bd0d91e8667c0",
+          "revision": 2,
+          "digest": "AmyDe4uHGe6CWtGrkCeUqfedXYWvCJyUNutPQMkphLNE",
+          "sender": "0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "1495208",
+          "gasReferences": [
+            {
+              "objectId": "0xc03004030cc517eb1467aa44064734b9efeac7fbb7bf5524c583e69ff091a830",
+              "version": "731",
+              "digest": "AdkmM2darU1ZUPmxbhgRx2bUfBpcj6LJpxhZs9YWXtBH"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014918949,
+          "status": "failed",
+          "gasUsed": {
+            "computationCost": "1420000",
+            "storageCost": "6520800",
+            "storageRebate": "6455592",
+            "nonRefundableStorageFee": "65208"
+          },
+          "actualGas": "1485208",
+          "failure": "{\"$kind\":\"MoveAbort\",\"message\":\"MoveAbort in 1st command, abort code: 9102, in '0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::product_record::assert_key_version' (instruction 7)\",\"command\":0,\"MoveAbort\":{\"abortCode\":\"9102\",\"location\":{\"package\":\"0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521\",\"module\":\"product_record\",\"function\":4,\"instruction\":7,\"functionName\":\"assert_key_version\"}}}"
+        }
+      },
+      {
+        "journal": 2,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9\"]",
+          "requestId": "revoke-pair:test-e804014d-1cd0-449f-82c0-1e69bcaeefaa",
+          "revision": 1,
+          "digest": "swbQDiVQswnioKQMRvk7mbKbeiDGoCuFp6ttqoGQqLW",
+          "sender": "0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "1485208",
+          "gasReferences": [
+            {
+              "objectId": "0xc03004030cc517eb1467aa44064734b9efeac7fbb7bf5524c583e69ff091a830",
+              "version": "3495611",
+              "digest": "9jXBBNWPr2ZYPVtNPCkC4x9h9cyxqhhxV66q5JNPdhfS"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014920060,
+          "status": "pending"
+        }
+      },
+      {
+        "journal": 2,
+        "entry": {
+          "format": 1,
+          "namespace": "[\"localnet\",\"9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk\",\"0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9\"]",
+          "requestId": "revoke-pair:test-e804014d-1cd0-449f-82c0-1e69bcaeefaa",
+          "revision": 2,
+          "digest": "swbQDiVQswnioKQMRvk7mbKbeiDGoCuFp6ttqoGQqLW",
+          "sender": "0x776c85657b429b269707fd705850c2acc02d2ecd51c821a461f47a4ca58dd6f9",
+          "gasBudget": "200000000",
+          "maxSuiSpend": "0",
+          "estimatedGas": "1485208",
+          "gasReferences": [
+            {
+              "objectId": "0xc03004030cc517eb1467aa44064734b9efeac7fbb7bf5524c583e69ff091a830",
+              "version": "3495611",
+              "digest": "9jXBBNWPr2ZYPVtNPCkC4x9h9cyxqhhxV66q5JNPdhfS"
+            }
+          ],
+          "addressGas": false,
+          "createdAtMs": 1791014920060,
+          "status": "confirmed",
+          "gasUsed": {
+            "computationCost": "1420000",
+            "storageCost": "6520800",
+            "storageRebate": "6455592",
+            "nonRefundableStorageFee": "65208"
+          },
+          "actualGas": "1485208"
+        }
+      }
+    ],
+    "state": {
+      "phase": "validated_native_pairing",
+      "humanId": "0x5302ba87bdf88c94f866d9af4fc6374b1cb2d5a2c5885b392d2f281785097967",
+      "organizationId": "0x764fbee00efcde2b71ab1fd5a53c62343c2c255bcb01f2255f7a2109e4f932d9",
+      "requestId": "0xd655935eba507ed436392c2022343266e403a186af3520ff7b6bd0d91e8667c0",
+      "approvalBroadcasts": 1,
+      "ambiguousApprovalDigest": "Ea5SMgdYsv6t391QvKR1Bg5J6KcbiLUbuA62yxetvVQT",
+      "publicPair": {
+        "device": {
+          "format": 1,
+          "profile": "test-e804014d-1cd0-449f-82c0-1e69bcaeefaa-a",
+          "address": "0x82c34b5a1fe24de466e98e31e544acf202f6cca61de0c64cc93ae41afa80852e",
+          "signingPublicKey": "NHjIh8D1c6HCqp4CkKwtrjOu/AsvxvTLQoDM/NTnedA=",
+          "encryptionPublicKey": "Jxp79Wq/LP9X4MsytPRuIv7/G77MGRSxvOaWVmbd5gc="
+        },
+        "grantId": "0xf86482293a6fcc82b49fed0e72cb2a1209730bdf6081ddfc6bf0d1b338fc2dbd",
+        "fingerprint": "f10a1994b049efd73fe9985f32df6c85d2cd3882b993d94f54d41dea6609f2cd"
+      },
+      "pairedGrantRevoked": true,
+      "credentialCleanup": [
+        {
+          "profile": "test-e804014d-1cd0-449f-82c0-1e69bcaeefaa",
+          "removed": true
+        },
+        {
+          "profile": "test-e804014d-1cd0-449f-82c0-1e69bcaeefaa-a",
+          "removed": true
+        },
+        {
+          "profile": "test-e804014d-1cd0-449f-82c0-1e69bcaeefaa-b",
+          "removed": true
+        },
+        {
+          "profile": "test-e804014d-1cd0-449f-82c0-1e69bcaeefaa-used",
+          "removed": true
+        }
+      ],
+      "credentialsRemoved": true
+    },
+    "limits": {
+      "nativeTransport": "isolated production bridge subprocess; installed UI/IPC not exercised",
+      "journal": "independent in-memory fixtures with public pre-broadcast journal snapshots; not installed IndexedDB",
+      "fullV020Complete": false,
+      "privateKeysInReport": false,
+      "physicalSecondDeviceVerified": false
+    }
+  }
+}

@@ -1,6 +1,9 @@
 /// FractalMind Protocol — Governance
 /// Organization-level DAO proposals and weighted voting.
 module fractalmind_protocol::governance {
+    use sui::clock::{Self, Clock};
+    const E_CLOCK_REQUIRED: u64 = 8399;
+
     use sui::object::{Self, ID, UID};
     use sui::tx_context::{Self, TxContext};
     use sui::transfer;
@@ -122,7 +125,8 @@ module fractalmind_protocol::governance {
         transfer::share_object(governance);
     }
 
-    #[allow(lint(self_transfer))]
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable, lint(self_transfer))]
     public fun create_proposal(
         governance: &mut Governance,
         org: &Organization,
@@ -133,7 +137,21 @@ module fractalmind_protocol::governance {
         execution_payload: vector<u8>,
         ctx: &mut TxContext,
     ) {
-        let now = tx_context::epoch_timestamp_ms(ctx);
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun create_proposal_with_clock(
+        governance: &mut Governance,
+        org: &Organization,
+        proposer_cert: &AgentCertificate,
+        title: String,
+        description: String,
+        voting_deadline: u64,
+        execution_payload: vector<u8>,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        let now = clock::timestamp_ms(clock);
         let sender = tx_context::sender(ctx);
 
         assert!(organization::is_active(org), constants::e_org_not_active());
@@ -180,10 +198,22 @@ module fractalmind_protocol::governance {
         transfer::share_object(proposal);
     }
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun start_voting(
         admin_cap: &OrgAdminCap,
         governance: &Governance,
         proposal: &mut Proposal,
+        ctx: &TxContext,
+    ) {
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun start_voting_with_clock(
+        admin_cap: &OrgAdminCap,
+        governance: &Governance,
+        proposal: &mut Proposal,
+        clock: &Clock,
         ctx: &TxContext,
     ) {
         assert!(organization::admin_cap_org_id(admin_cap) == governance.org_id, constants::e_not_admin());
@@ -191,7 +221,7 @@ module fractalmind_protocol::governance {
         assert!(proposal.status == constants::proposal_status_created(), constants::e_gov_invalid_transition());
 
         proposal.status = constants::proposal_status_voting();
-        proposal.voting_started_at = option::some(tx_context::epoch_timestamp_ms(ctx));
+        proposal.voting_started_at = option::some(clock::timestamp_ms(clock));
 
         event::emit(ProposalVotingStarted {
             proposal_id: object::id(proposal),
@@ -200,14 +230,26 @@ module fractalmind_protocol::governance {
         });
     }
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun cast_vote(
         proposal: &mut Proposal,
         voter_cert: &AgentCertificate,
         vote: u8,
         ctx: &TxContext,
     ) {
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun cast_vote_with_clock(
+        proposal: &mut Proposal,
+        voter_cert: &AgentCertificate,
+        vote: u8,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
         let sender = tx_context::sender(ctx);
-        let now = tx_context::epoch_timestamp_ms(ctx);
+        let now = clock::timestamp_ms(clock);
 
         assert!(proposal.status == constants::proposal_status_voting(), constants::e_gov_invalid_transition());
         assert!(now <= proposal.voting_deadline, constants::e_gov_voting_closed());
@@ -241,13 +283,25 @@ module fractalmind_protocol::governance {
         });
     }
 
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun finalize_voting(
         admin_cap: &OrgAdminCap,
         governance: &Governance,
         proposal: &mut Proposal,
         ctx: &TxContext,
     ) {
-        let now = tx_context::epoch_timestamp_ms(ctx);
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun finalize_voting_with_clock(
+        admin_cap: &OrgAdminCap,
+        governance: &Governance,
+        proposal: &mut Proposal,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
+        let now = clock::timestamp_ms(clock);
 
         assert!(organization::admin_cap_org_id(admin_cap) == governance.org_id, constants::e_not_admin());
         assert!(proposal.governance_id == object::id(governance), constants::e_unauthorized());
@@ -272,13 +326,25 @@ module fractalmind_protocol::governance {
 
     /// Admin may close voting early in operational emergencies.
     /// This sets deadline to current timestamp; finalization still follows normal logic.
+    /// Deprecated ABI retained for upgrades. Use the Clock entry.
+    #[allow(unused_variable)]
     public fun close_voting(
         admin_cap: &OrgAdminCap,
         governance: &Governance,
         proposal: &mut Proposal,
         ctx: &TxContext,
     ) {
-        let now = tx_context::epoch_timestamp_ms(ctx);
+        abort E_CLOCK_REQUIRED
+    }
+
+    public fun close_voting_with_clock(
+        admin_cap: &OrgAdminCap,
+        governance: &Governance,
+        proposal: &mut Proposal,
+        clock: &Clock,
+        ctx: &TxContext,
+    ) {
+        let now = clock::timestamp_ms(clock);
 
         assert!(organization::admin_cap_org_id(admin_cap) == governance.org_id, constants::e_not_admin());
         assert!(proposal.governance_id == object::id(governance), constants::e_unauthorized());

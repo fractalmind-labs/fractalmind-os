@@ -1,0 +1,32 @@
+{
+  "recordedAt": "2026-10-02T18:37:17.778323+00:00",
+  "appRegression": {
+    "command": "npm test",
+    "tests": 146,
+    "pass": 146,
+    "fail": 0
+  },
+  "appTypecheckAndProductionBuild": {
+    "command": "npm run build",
+    "passed": true
+  },
+  "nativeHumanSequenceScriptStrictTypecheck": {
+    "command": "npx tsc --noEmit --module ESNext --moduleResolution bundler --target ES2022 --skipLibCheck --esModuleInterop --strict --types node scripts/native-app-execution-localnet.ts",
+    "passed": true
+  },
+  "sdkRegression": {
+    "tests": 128,
+    "pass": 128,
+    "source": "v020-okr-continuation-unit.json",
+    "scope": "previous committed baseline; SDK unchanged in this increment"
+  },
+  "limits": {
+    "installedHumanReviewVerified": false,
+    "fullCacheWipeVerified": false,
+    "cloudHostVerified": false,
+    "fullV020Complete": false,
+    "controllerUnitTests": "controlled RPC/source/fee manager; production native signatures",
+    "nativeIntegration": "actual OS vault subprocess, production envd/Coordinator, Host memory key provider, memory journal, explicit scripted Human decisions",
+    "browser": "real public chain data and native-denial flow, without a native mock"
+  }
+}

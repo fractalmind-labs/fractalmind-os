@@ -1,5 +1,6 @@
 #[test_only]
 module fractalmind_protocol::agent_policy_tests {
+    use sui::clock::{Self, Clock};
     use sui::test_scenario::{Self as ts};
     use std::string;
 
@@ -34,12 +35,15 @@ module fractalmind_protocol::agent_policy_tests {
     #[test]
     fun test_create_policy_and_execute_action() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org_with_agent(&mut scenario);
 
         ts::next_tx(&mut scenario, ADMIN);
         {
             let org = ts::take_shared<Organization>(&scenario);
-            agent_policy::create_policy(
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            agent_policy::create_policy_with_clock(
                 &org,
                 AGENT1,
                 string::utf8(b"shell_exec"),
@@ -47,8 +51,10 @@ module fractalmind_protocol::agent_policy_tests {
                 2,
                 1_000_000,
                 10_000_000,
+                &fm_clock,
                 ts::ctx(&mut scenario),
             );
+            ts::return_shared(fm_clock);
             ts::return_shared(org);
         };
 
@@ -58,7 +64,9 @@ module fractalmind_protocol::agent_policy_tests {
             let org = ts::take_shared<Organization>(&scenario);
             let mut policy_obj = ts::take_shared<AgentPolicy>(&scenario);
 
-            agent_policy::execute_action(
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            agent_policy::execute_action_with_clock(
                 &mut policy_obj,
                 &org,
                 &cert,
@@ -67,8 +75,10 @@ module fractalmind_protocol::agent_policy_tests {
                 b"01234567890123456789012345678901",
                 b"abcdefghijabcdefghijabcdefghijab",
                 1000,
+                &fm_clock,
                 ts::ctx(&mut scenario),
             );
+            ts::return_shared(fm_clock);
 
             assert!(agent_policy::policy_agent(&policy_obj) == AGENT1, 0);
             assert!(agent_policy::policy_owner(&policy_obj) == ADMIN, 1);
@@ -88,12 +98,15 @@ module fractalmind_protocol::agent_policy_tests {
     #[test]
     fun test_revoke_policy() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org_with_agent(&mut scenario);
 
         ts::next_tx(&mut scenario, ADMIN);
         {
             let org = ts::take_shared<Organization>(&scenario);
-            agent_policy::create_policy(
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            agent_policy::create_policy_with_clock(
                 &org,
                 AGENT1,
                 string::utf8(b"shell_exec"),
@@ -101,8 +114,10 @@ module fractalmind_protocol::agent_policy_tests {
                 1,
                 1_000_000,
                 10_000_000,
+                &fm_clock,
                 ts::ctx(&mut scenario),
             );
+            ts::return_shared(fm_clock);
             ts::return_shared(org);
         };
 
@@ -123,12 +138,15 @@ module fractalmind_protocol::agent_policy_tests {
     #[expected_failure(abort_code = 8204, location = fractalmind_protocol::agent_policy)]
     fun test_execute_action_rejects_revoked_policy() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org_with_agent(&mut scenario);
 
         ts::next_tx(&mut scenario, ADMIN);
         {
             let org = ts::take_shared<Organization>(&scenario);
-            agent_policy::create_policy(
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            agent_policy::create_policy_with_clock(
                 &org,
                 AGENT1,
                 string::utf8(b"shell_exec"),
@@ -136,8 +154,10 @@ module fractalmind_protocol::agent_policy_tests {
                 1,
                 1_000_000,
                 10_000_000,
+                &fm_clock,
                 ts::ctx(&mut scenario),
             );
+            ts::return_shared(fm_clock);
             ts::return_shared(org);
         };
 
@@ -155,7 +175,9 @@ module fractalmind_protocol::agent_policy_tests {
             let cert = ts::take_from_sender<AgentCertificate>(&scenario);
             let org = ts::take_shared<Organization>(&scenario);
             let mut policy_obj = ts::take_shared<AgentPolicy>(&scenario);
-            agent_policy::execute_action(
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            agent_policy::execute_action_with_clock(
                 &mut policy_obj,
                 &org,
                 &cert,
@@ -164,8 +186,10 @@ module fractalmind_protocol::agent_policy_tests {
                 b"01234567890123456789012345678901",
                 b"abcdefghijabcdefghijabcdefghijab",
                 1000,
+                &fm_clock,
                 ts::ctx(&mut scenario),
             );
+            ts::return_shared(fm_clock);
             ts::return_shared(org);
             ts::return_shared(policy_obj);
             ts::return_to_sender(&scenario, cert);
@@ -178,12 +202,15 @@ module fractalmind_protocol::agent_policy_tests {
     #[expected_failure(abort_code = 8207, location = fractalmind_protocol::agent_policy)]
     fun test_execute_action_rejects_wrong_action_kind() {
         let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
         setup_org_with_agent(&mut scenario);
 
         ts::next_tx(&mut scenario, ADMIN);
         {
             let org = ts::take_shared<Organization>(&scenario);
-            agent_policy::create_policy(
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            agent_policy::create_policy_with_clock(
                 &org,
                 AGENT1,
                 string::utf8(b"shell_exec"),
@@ -191,8 +218,10 @@ module fractalmind_protocol::agent_policy_tests {
                 1,
                 1_000_000,
                 10_000_000,
+                &fm_clock,
                 ts::ctx(&mut scenario),
             );
+            ts::return_shared(fm_clock);
             ts::return_shared(org);
         };
 
@@ -201,7 +230,9 @@ module fractalmind_protocol::agent_policy_tests {
             let cert = ts::take_from_sender<AgentCertificate>(&scenario);
             let org = ts::take_shared<Organization>(&scenario);
             let mut policy_obj = ts::take_shared<AgentPolicy>(&scenario);
-            agent_policy::execute_action(
+            let mut fm_clock = ts::take_shared<Clock>(&scenario);
+            clock::set_for_testing(&mut fm_clock, ts::ctx(&mut scenario).epoch_timestamp_ms());
+            agent_policy::execute_action_with_clock(
                 &mut policy_obj,
                 &org,
                 &cert,
@@ -210,8 +241,10 @@ module fractalmind_protocol::agent_policy_tests {
                 b"01234567890123456789012345678901",
                 b"abcdefghijabcdefghijabcdefghijab",
                 1000,
+                &fm_clock,
                 ts::ctx(&mut scenario),
             );
+            ts::return_shared(fm_clock);
             ts::return_shared(org);
             ts::return_shared(policy_obj);
             ts::return_to_sender(&scenario, cert);
@@ -219,4 +252,37 @@ module fractalmind_protocol::agent_policy_tests {
 
         ts::end(scenario);
     }
+
+    fun execute_at_millisecond(now_ms: u64) {
+        let mut scenario = ts::begin(ADMIN);
+        clock::share_for_testing(clock::create_for_testing(ts::ctx(&mut scenario)));
+        setup_org_with_agent(&mut scenario);
+        ts::next_tx(&mut scenario, ADMIN);
+        let org = ts::take_shared<Organization>(&scenario);
+        let clock_obj = ts::take_shared<Clock>(&scenario);
+        agent_policy::create_policy_with_clock(&org, AGENT1, string::utf8(b"shell_exec"), string::utf8(b"host:worker-1"), 1, 1000, 100, &clock_obj, ts::ctx(&mut scenario));
+        ts::return_shared(org);
+        ts::return_shared(clock_obj);
+        ts::next_tx(&mut scenario, AGENT1);
+        let org = ts::take_shared<Organization>(&scenario);
+        let cert = ts::take_from_sender<AgentCertificate>(&scenario);
+        let mut policy = ts::take_shared<AgentPolicy>(&scenario);
+        let mut clock_obj = ts::take_shared<Clock>(&scenario);
+        clock::set_for_testing(&mut clock_obj, now_ms);
+        assert!(ts::ctx(&mut scenario).epoch_timestamp_ms() == 0, 900);
+        let hash = vector[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+        agent_policy::execute_action_with_clock(&mut policy, &org, &cert, string::utf8(b"shell_exec"), string::utf8(b"host:worker-1"), hash, hash, 1, &clock_obj, ts::ctx(&mut scenario));
+        ts::return_shared(org);
+        ts::return_shared(policy);
+        ts::return_shared(clock_obj);
+        ts::return_to_sender(&scenario, cert);
+        ts::end(scenario);
+    }
+
+    #[test]
+    fun test_policy_one_ms_before_expiry() { execute_at_millisecond(999); }
+
+    #[test]
+    #[expected_failure(abort_code = 8205, location = fractalmind_protocol::agent_policy)]
+    fun test_policy_exact_expiry_within_epoch() { execute_at_millisecond(1000); }
 }

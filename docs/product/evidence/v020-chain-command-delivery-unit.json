@@ -1,0 +1,110 @@
+{
+  "recordedAt": "2026-10-03T02:36:12.742Z",
+  "completeGoal": false,
+  "results": {
+    "app": {
+      "passed": 218,
+      "failed": 0,
+      "build": true,
+      "scriptStrictTypes": true
+    },
+    "sdk": {
+      "passed": 155,
+      "failed": 0,
+      "build": true,
+      "types": true
+    },
+    "move": {
+      "protocol": 118,
+      "okr": 8,
+      "direct": 21,
+      "failed": 0
+    },
+    "rustNative": {
+      "passed": 21,
+      "failed": 0
+    },
+    "tauri": {
+      "originGuardPassed": 1,
+      "failed": 0,
+      "installedUIVerified": false
+    },
+    "goRace": {
+      "passedPackages": [
+        "internal/nodecommand",
+        "internal/productcrypto",
+        "internal/sui",
+        "cmd/envd"
+      ],
+      "failedPackages": 0
+    }
+  },
+  "logs": [
+    {
+      "path": "/tmp/fm-chain-queue-app-tests-r4.log",
+      "sha256": "a628856fcbda4454877ad94b2c43d3495036b8ca895ceb9b35bebf208a142b7c"
+    },
+    {
+      "path": "/tmp/fm-chain-queue-app-build-r4.log",
+      "sha256": "d45aed937e476e12d2509245eb0d3d7607053f60d2c67cf39a34ccc82451fe98"
+    },
+    {
+      "path": "/tmp/fm-chain-queue-script-types-r4.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/tmp/fm-chain-queue-sdk-build-r1.log",
+      "sha256": "dcd4658fbc5af48be5fec75f18c6bbf16ab306e69f58156aa82336298392c2b0"
+    },
+    {
+      "path": "/tmp/fm-chain-queue-sdk-types-r1.log",
+      "sha256": "d03b6f91caee853e3dcd0fd8a44660e3e88cee7f8eca3adc212209c6666eccd1"
+    },
+    {
+      "path": "/tmp/fm-chain-queue-sdk-tests-r1.log",
+      "sha256": "32fc6cbc7393994fc3e93e650c4660bbdb3d41497799fc67b9cae50f575b0130"
+    },
+    {
+      "path": "/tmp/fm-chain-queue-go-race-r1.log",
+      "sha256": "5dea997fb8f41a07b33f7aeed49c2bf424590cea928ec11f7a9cdec319bec8f7"
+    },
+    {
+      "path": "/tmp/fm-chain-queue-rust-r1.log",
+      "sha256": "209e3d45519dd5110f6d4956f847445972285030dfe74874f715a00cf29b781d"
+    },
+    {
+      "path": "/tmp/fm-chain-queue-native-helper-r1.log",
+      "sha256": "1debc49d7bb18608fec579a1b913f591e708e7305b3221894b487dd6e759bc0d"
+    },
+    {
+      "path": "/tmp/fm-chain-queue-move-final.log",
+      "sha256": "1fcbd2259566d07d2d6592663626699cb4a7f0d6dbe87cdb9ec2301dbfa3b401"
+    },
+    {
+      "path": "/tmp/fm-chain-queue-move-okr-final.log",
+      "sha256": "08e49f96c23cf87e4574fd33c5d39312a7be0ce3cac57041f2c68f16feaf7d24"
+    },
+    {
+      "path": "/tmp/fm-chain-queue-move-all-final.log",
+      "sha256": "628a2d6940a2c67e9ee8885cbeaa5985e835cee5f07e8d76e703135d91a57f4f"
+    },
+    {
+      "path": "/tmp/fm-chain-queue-tauri-tests-final.log",
+      "sha256": "4679a3b6a733703d4071bbf238ab82cfa37432d4dc587101aa374106ab84d385"
+    },
+    {
+      "path": "/tmp/fm-native-chain-queue-protocol-r3.log",
+      "sha256": "67910beb70debfcd15505d807f49f771ef6a56c2c47153e85d9015dc112378c7"
+    }
+  ],
+  "nativeFixtureBinary": {
+    "path": "/tmp/fm-envd-chain-queue-app-tests",
+    "sha256": "68fcc57dee864ca1048b5296cd9943963601b435419a4a9a824f2a2b17275494"
+  },
+  "limits": [
+    "These are scoped regressions and native-controller tests, not a complete v0.2.0 platform acceptance.",
+    "Go Host keys and transaction journal use isolated memory providers; Human keys use the actual OS vault.",
+    "No installed Tauri dialog or IndexedDB fee-cancellation UI acceptance; the native controller fee-decline path is verified.",
+    "No actual model, cloud Host, phone, physical Host restart, full cache-wipe recovery or main-package upgrade acceptance."
+  ]
+}

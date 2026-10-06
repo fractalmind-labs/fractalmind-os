@@ -1,6 +1,6 @@
 # Build artifacts
-contracts/protocol/build/
-contracts/protocol/Move.lock
+contracts/*/build/
+contracts/*/Move.lock
 sdk/*.tgz
 
 # IDE

@@ -26,7 +26,7 @@ export class AgentPolicyApi {
     const tx = this.fm.useTransaction(input.tx);
 
     tx.moveCall({
-      target: this.fm.target('create_agent_policy'),
+      target: this.fm.target('create_agent_policy_with_clock'),
       arguments: [
         tx.object(input.organizationId),
         tx.pure.address(input.agent),
@@ -35,6 +35,7 @@ export class AgentPolicyApi {
         tx.pure.u64(toBigInt(input.maxUses)),
         tx.pure.u64(toBigInt(input.expiresAtMs)),
         tx.pure.u64(toBigInt(input.maxGasBudget)),
+        tx.object('0x6'),
       ],
     });
 
@@ -47,7 +48,7 @@ export class AgentPolicyApi {
     const tx = this.fm.useTransaction(input.tx);
 
     tx.moveCall({
-      target: this.fm.target('create_agent_policy_for_objective'),
+      target: this.fm.target('create_agent_policy_for_objective_with_clock'),
       arguments: [
         tx.object(input.organizationId),
         tx.object(input.objectiveId),
@@ -57,6 +58,7 @@ export class AgentPolicyApi {
         tx.pure.u64(toBigInt(input.maxUses)),
         tx.pure.u64(toBigInt(input.expiresAtMs)),
         tx.pure.u64(toBigInt(input.maxGasBudget)),
+        tx.object('0x6'),
       ],
     });
 
@@ -67,7 +69,7 @@ export class AgentPolicyApi {
     const tx = this.fm.useTransaction(input.tx);
 
     tx.moveCall({
-      target: this.fm.target('create_agent_policy_for_key_result'),
+      target: this.fm.target('create_agent_policy_for_key_result_with_clock'),
       arguments: [
         tx.object(input.organizationId),
         tx.object(input.objectiveId),
@@ -78,6 +80,7 @@ export class AgentPolicyApi {
         tx.pure.u64(toBigInt(input.maxUses)),
         tx.pure.u64(toBigInt(input.expiresAtMs)),
         tx.pure.u64(toBigInt(input.maxGasBudget)),
+        tx.object('0x6'),
       ],
     });
 
@@ -102,7 +105,7 @@ export class AgentPolicyApi {
     const tx = this.fm.useTransaction(input.tx);
 
     tx.moveCall({
-      target: this.fm.target('execute_agent_action'),
+      target: this.fm.target('execute_agent_action_with_clock'),
       arguments: [
         tx.object(input.policyId),
         tx.object(input.organizationId),
@@ -112,6 +115,7 @@ export class AgentPolicyApi {
         tx.pure.vector('u8', input.intentHash),
         tx.pure.vector('u8', input.resultHash),
         tx.pure.u64(toBigInt(input.gasBudget)),
+        tx.object('0x6'),
       ],
     });
 

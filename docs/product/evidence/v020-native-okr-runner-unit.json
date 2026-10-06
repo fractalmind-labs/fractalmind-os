@@ -1,0 +1,41 @@
+{
+  "recordedAt": "2026-10-02T17:10:08.182041+00:00",
+  "sdkRegression": {
+    "command": "node --import tsx --test tests/*.test.ts",
+    "passed": 127,
+    "failed": 0
+  },
+  "appRegression": {
+    "command": "npm test",
+    "passed": 132,
+    "failed": 0
+  },
+  "sdkBuild": {
+    "command": "npm run build",
+    "passed": true
+  },
+  "appTypecheckAndProductionBuild": {
+    "command": "npm run build",
+    "passed": true,
+    "warnings": [
+      "existing large entry chunk",
+      "dependency PURE annotation"
+    ]
+  },
+  "localnetScriptStrictTypecheck": {
+    "passed": true
+  },
+  "limits": {
+    "nativeCryptoBridgeVerified": true,
+    "continuationUIConnected": false,
+    "installedUIVerified": false,
+    "envdDispatchVerified": false,
+    "physicalHostVerified": false,
+    "fullCacheWipeUIVerified": false,
+    "fullV020Complete": false,
+    "rustGoMoveChanged": false,
+    "unitChainState": "controlled RPC/state transitions; SDK signatures/encryption/ticket builders are real",
+    "nativeIntegration": "separate real OS vault + localnet fixture, subprocess transport and memory journal",
+    "finalSdkRefinement": "Durable query precedes private decryption; regression explicitly rejects private reads for prior confirmed/rejected/unknown requests. Native pipeline localnet positive was recorded before this query ordering refinement."
+  }
+}

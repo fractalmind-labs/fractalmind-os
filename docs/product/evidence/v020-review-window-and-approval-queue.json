@@ -1,0 +1,364 @@
+{
+  "format": 1,
+  "purpose": "Fixed five-minute handover review, independent cloud Host admission and app fixes",
+  "sourceCommits": [
+    "29a6eb4",
+    "9ba4dfc",
+    "a997617",
+    "ac94273",
+    "44705ba",
+    "d6c293e",
+    "967972c",
+    "f815678"
+  ],
+  "scope": {
+    "sui": "isolated localnet",
+    "cloud": "real Ubuntu process via SSH loopback tunnels",
+    "mobile": "installed Android ARM64 debug APK on emulator",
+    "cloudModelEnabled": false,
+    "completeMilestone": false,
+    "combinedCacheReconstructionPassed": true
+  },
+  "regressions": {
+    "app": {
+      "passed": 337,
+      "failed": 0
+    },
+    "directFocused": 82,
+    "sdkHandover": 5,
+    "appHandover": 22,
+    "moveOkr": 22,
+    "goRacePackages": [
+      "internal/nodecommand",
+      "internal/runtimeadapter"
+    ],
+    "androidBuild": "passed",
+    "signature": "APK v2 verified",
+    "importFocused": 23,
+    "interventionFocused": 45
+  },
+  "upgrade": {
+    "originalOkrPackageId": "0x3aaf38335c1156bb96234577a660b17f98e3587d316f47166330b40315e91cb5",
+    "okrPackageId": "0x30a3337a15823ce984699f0c8c1540eb8105fddaaaaf8ba76053fa8ed12b421a",
+    "upgradeCapId": "0x1921f6fbcb6ceaced963220be4a3cd494725cbc30a86ee15e08d805d6d8739c5",
+    "organizationId": "0xca4b9dfce4026c83f7accf4300cdea5b49677eecc47942348aa97c4e319eb753",
+    "bindingId": "0x7e8d6fc94ab41e66035658e549a4ef3ceffab9af561076ffcd14b2277d353708",
+    "okrId": "0x61d69e1e86fb60628c86ea58522abe68cde1307f56770bc65df8e87a44fe1ce3",
+    "draftBefore": {
+      "id": "0x61d69e1e86fb60628c86ea58522abe68cde1307f56770bc65df8e87a44fe1ce3",
+      "version": "4288634",
+      "digest": "4urukRB3yC91ghvxPFcLEGNPXmhP7DuaJHMg1pypmgLd"
+    },
+    "draftAfter": {
+      "id": "0x61d69e1e86fb60628c86ea58522abe68cde1307f56770bc65df8e87a44fe1ce3",
+      "version": "4288634",
+      "digest": "4urukRB3yC91ghvxPFcLEGNPXmhP7DuaJHMg1pypmgLd"
+    },
+    "oldBytecodeSha256": "e0427a2d471d5abe82627baac66d11c0f8902c3e16e04d7722671b9a119a5769",
+    "currentBytecodeSha256": "06eadb7b39c6b5067163c111ba6c2643b421c0c8145ed6f44cef23ae5bd127d9",
+    "completed": true
+  },
+  "admission": {
+    "host": "0xffa58c6cc96d2a1d6b2760d2d5c6a6b67beab290d35f53719969ebf691700b93",
+    "membershipId": "0x19d3a6c8437c97079c0a32c85897c37ee14f7e479249ae4d6e07c84cfc2a928d",
+    "inviteId": "0x3f6359a87d0b2257e3d0b72662e9524e3ff6f32e876099a0d6008f0e26ed584a",
+    "membershipPreviousTransaction": "FrCBJ9RKXXLnYDyhzcDp73QuaLuQhoBfawsaMqN85Zj",
+    "checks": [
+      "Loads original installed Android device from actual Keystore IPC; no key export or new Human",
+      "Original invitation was rejected by the localnet validators for spent Gas; original digest retained, confirmed revocation and its newer Gas object read before explicit new preview",
+      "Separate explicit one-use invite and self-pay quote, preserving older Android Host attempt unchanged",
+      "Original Android native signature confirms new cloud Host invitation on separate review-window test organization",
+      "Formal Ubuntu envd reviews exact public keys and fee, confirms original admission, and reconstructs current membership without replay",
+      "Independent SDK proves original member previousTransaction and consumed single-use invite"
+    ],
+    "completed": true
+  },
+  "installedReviewApk": {
+    "apkSha256": "9d1bd0da19e8485d2aefe661ded68adff9c8f2c3ff04be717bf84939a72c0306",
+    "bytes": 332323939,
+    "signatureVerification": "Verifies\nVerified using v1 scheme (JAR signing): false\nVerified using v2 scheme (APK Signature Scheme v2): true\nVerified using v3 scheme (APK Signature Scheme v3): false\nVerified using v3.1 scheme (APK Signature Scheme v3.1): false\nVerified using v4 scheme (APK Signature Scheme v4): false\nVerified for SourceStamp: false\nNumber of signers: 1\n",
+    "installedAt": "2026-10-03T20:19:06.011467+00:00",
+    "retainsAppData": true,
+    "sourceBase": "f00e307 + working review-window/onboarding/approval changes"
+  },
+  "newDraftApk": {
+    "apkSha256": "13bd3b630eff2152f5abb0d8134b1626b41e03927367e44b7df34de985f27afe",
+    "bytes": 332327587,
+    "sourceBase": "9ba4dfc + direct refresh/current permission working changes",
+    "signatureVerification": "Verifies\nVerified using v1 scheme (JAR signing): false\nVerified using v2 scheme (APK Signature Scheme v2): true\nVerified using v3 scheme (APK Signature Scheme v3): false\nVerified using v3.1 scheme (APK Signature Scheme v3.1): false\nVerified using v4 scheme (APK Signature Scheme v4): false\nVerified for SourceStamp: false\nNumber of signers: 1",
+    "verified": true,
+    "installed": true,
+    "installedAt": "2026-10-03T21:16:56.474Z",
+    "retainsAppData": true
+  },
+  "retainedFailures": [
+    "Confirmed publish was temporarily not readable; continued from original UpgradeCap without repeat publish.",
+    "Old Host original admission receipt pruned to unknown; preserved journal and used a separate Host profile for the new organization.",
+    "First new invitation used a stale Gas object: SDK outcome remained unknown; exact local validator log proved original digest rejected as InvalidTransaction, after which operator explicitly quoted a distinct request.",
+    "First isolated worker startup had sui.enabled=false and exited before running; corrected only that isolated test configuration."
+  ],
+  "artifacts": [
+    {
+      "name": "fm-v020-review-window-upgrade-r1.json",
+      "sha256": "ce9c6a059b127566b02fa8081c312ce3fa02cec7e6b2bc161e5ab28a73be23df"
+    },
+    {
+      "name": "admission-r12.json",
+      "sha256": "6782621c15a5db67d6b4913e82b9ecb6d8d98b88c55cb3296e8b2c771d1a6417"
+    },
+    {
+      "name": "fm-v020-review-window-android-install-r1.json",
+      "sha256": "d1c20c30e7cbfd3772e5a502463e3193df56478ce887dd3f6c1bbb623f5e0847"
+    },
+    {
+      "name": "fm-v020-offline-draft-app-tests-r1.log",
+      "sha256": "f3049a9a5240b0abd531dbaece8358b970bcc1424957064edc936a30f1f85643"
+    },
+    {
+      "name": "fm-v020-review-window-go-r2.log",
+      "sha256": "28b62c2d93f368476429ee3a97fae49bfb1e382f75d88734e128bdb3feeb905b"
+    },
+    {
+      "name": "fm-v020-review-window-move-r1.log",
+      "sha256": "a199ca25afcf17a1b3a52d4d53fe9696126aa2958d93399e795dd5a5e483bcb2"
+    },
+    {
+      "name": "fm-v020-review-window-ui-r1-32-delayed-approval-confirmed.json",
+      "sha256": "5b4284bf5f62e0daeb4652f0ef9b3b3d4df6cdc37b89675032770fc5d327073b"
+    },
+    {
+      "name": "fm-v020-review-window-ui-r1-42-independent-file-verified.json",
+      "sha256": "ae1290dfad1ff06c05cce37a207e85f415d4769abb19c921708d9d1dda7fa242"
+    },
+    {
+      "name": "fm-v020-review-window-ui-r1-44-kr-verification-quote.json",
+      "sha256": "835dd28890e1666c89c1a1699b866d449690cba277b85e78cdfc56b6903890ce"
+    },
+    {
+      "name": "fm-v020-review-window-ui-r1-45-kr-verification-result.json",
+      "sha256": "3cdd057622a39bbefd96cc804b55231b4aaa5e7d1517e919633fe4a745741716"
+    },
+    {
+      "name": "fm-v020-review-window-ui-r1-48-final-accepted.json",
+      "sha256": "126771a36fdbc2457a1fea62209a424a224dc05a5a8c766bc6d42f863cb4f7fe"
+    },
+    {
+      "name": "fm-v020-review-window-ui-r1-49-accepted-workbench.json",
+      "sha256": "eb14ce9c21413fe67a12933768e2f0092f103529a33abcefabfc8d1ad52f943e"
+    },
+    {
+      "name": "fm-v020-review-window-ui-r1-57-permission-technical-receipt.json",
+      "sha256": "6c9c18943875f1bd9738a3b8949ce84cc4431662cd05622b78f9842608227087"
+    },
+    {
+      "name": "fm-v020-permission-retention-r1.json",
+      "sha256": "ac8cdc516194ca551eed5a2a5381e23c80d981fd8088fe1cc73b0b048055deb5"
+    },
+    {
+      "name": "fm-v020-direct-refresh-app-tests-r1.log",
+      "sha256": "86469731d01a1415e61a8ed672fe8a3ba84c62237e1d894f41345315ab3b3012"
+    },
+    {
+      "name": "fm-v020-final-direct-app-tests-r3.log",
+      "sha256": "a76f335f6f2c013cf9e095a47d18a55997ba3bc019fa867457cc716c837af5e8"
+    },
+    {
+      "name": "fm-v020-final-direct-android-build-r3.json",
+      "sha256": "4acabb4c8f6ac7ab0d09f7853d032aa7af5c83b318f5a17e391a2a57842c5df2"
+    },
+    {
+      "name": "fm-v020-queue-app-tests-r4.log",
+      "sha256": "10bc714e4126675889b6cf2f68bf506b8f22f10d8447dae08a9ae15bd7b8a9b9"
+    },
+    {
+      "name": "fm-v020-queue-android-build-r4.json",
+      "sha256": "2cea2a791cc045162ddaccfa4b4bdc68f9095f4f809bd7610c2f65502944412e"
+    },
+    {
+      "name": "fm-v020-import-scope-app-tests-r7.log",
+      "sha256": "386f65d0d095fe017d911fb8bed99b615975a27705de88dff809e8c0318dd79c"
+    },
+    {
+      "name": "fm-v020-import-scope-android-build-r7.json",
+      "sha256": "f28c1208a4327f2d483deef93f94ce34c175f8ba097928d08a4e9a10972b6d11"
+    },
+    {
+      "name": "fm-v020-intervention-app-tests-r8.log",
+      "sha256": "57497a8626e55cbaba6bcb2888fda6687448c40a1ce93641b3fa13bde4462c03"
+    },
+    {
+      "name": "fm-v020-intervention-pause-tests-r1.log",
+      "sha256": "da9b2dd18e63aed27e0a13c36f493226dd83b6371b9dd763e4ec76295a60d8a6"
+    },
+    {
+      "name": "fm-v020-intervention-android-build-r8.json",
+      "sha256": "5cb0578730eb6cd38682edd327fec05fc874354f9a7234f4b7f4d4d27174eca8"
+    }
+  ],
+  "pending": [
+    "Complete successful one-off write through installed UI: explicit user authorization requested after two automatic approval-review denials."
+  ],
+  "installedReviewUi": {
+    "status": "passed",
+    "reviewWindowMs": 300000,
+    "approvalDelaySinceOriginalIssuedAtMs": 255622,
+    "executionId": "0x17f5aa7eac593a22c712e92f6d6096a6e01d9f211bb6549dde618bad7b16a5c7",
+    "finalAcceptanceTransaction": "2voUJeLNWeZcb2qZKgQG4EXipZMNFMVTJAW5d1bWDBBQ",
+    "verifiedKrs": 1,
+    "totalKrs": 1,
+    "measurementPercent": 100,
+    "tools": {
+      "spent": 3,
+      "reserved": 0,
+      "budget": 3
+    },
+    "file": {
+      "checkedAt": "2026-10-03T20:55:51.271248+00:00",
+      "path": "/tmp/fm-v020-review-window-worker-r11-3k7cx0tc/workspace/docs/REVIEW-WINDOW.md",
+      "exists": true,
+      "bytes": 54,
+      "sha256": "c58966b2e6288daf6c54a5df3bfef3f8eb0bf91833240efaf1744f9a20a24a52",
+      "content": "Reviewed after ninety seconds on the real cloud Host.\n",
+      "exactMatch": true,
+      "workspaceFiles": [
+        "docs/REVIEW-WINDOW.md"
+      ]
+    },
+    "method": "Actual installed DOM actions and native IPC; all transaction stages explicitly confirmed; original Run delivered once; independent SSH read-only file check"
+  },
+  "prunedPermissionReceipt": {
+    "technicalJournal": {
+      "requestId": "direct-permission:0x34aaa06e6154f323782ef46497a3ff5d08a15dd265c51fd5807d5bf650ded35b:create",
+      "digest": "2DJ552Lw8icEukCWkSkpZArKzkRj2uySibVWeUVsxTs1",
+      "status": "confirmed",
+      "revision": 2,
+      "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+      "gasUsed": {
+        "computationCost": "1000000",
+        "storageCost": "27534800",
+        "storageRebate": "7034940",
+        "nonRefundableStorageFee": "71060"
+      },
+      "actualGas": "21499860",
+      "createdAtMs": 1791061510153
+    },
+    "currentRpcOutcome": "unknown / NOT_FOUND",
+    "receiptRestored": false,
+    "retentionObservation": {
+      "recordedAt": "2026-10-03T21:11:00.983Z",
+      "serviceInfo": {
+        "chainId": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+        "chain": "unknown",
+        "epoch": "3983",
+        "checkpointHeight": "1099113",
+        "timestamp": {
+          "seconds": "1791061860",
+          "nanos": 164000000
+        },
+        "lowestAvailableCheckpoint": "1099089",
+        "lowestAvailableCheckpointObjects": "1099089",
+        "server": "sui-node/unknown"
+      },
+      "checkpoints": [
+        {
+          "checkpoint": {
+            "transactions": [],
+            "sequenceNumber": "1099089",
+            "digest": "DdtCMfHtdiPkrsR3rWk2855W8RZBZrhH6t1piSPDjVxw",
+            "summary": {
+              "commitments": [],
+              "epoch": "3983",
+              "timestamp": {
+                "seconds": "1791061855",
+                "nanos": 201000000
+              }
+            }
+          }
+        },
+        {
+          "checkpoint": {
+            "transactions": [],
+            "sequenceNumber": "1099113",
+            "digest": "C3xZHodGqQwWm1UaX7kYFy5c2yJNuRfCG5SqXKacn42a",
+            "summary": {
+              "commitments": [],
+              "epoch": "3983",
+              "timestamp": {
+                "seconds": "1791061860",
+                "nanos": 164000000
+              }
+            }
+          }
+        }
+      ]
+    },
+    "fix": "A loading refresh no longer remounts the open dialog. Only an independently verified newer permission allows composition of a distinct new message. Original digest remains, and unknown message/approval/Run still cannot be repeated."
+  },
+  "installedDraftApkBeforeRefreshFix": {
+    "installedAt": "2026-10-03T21:00:12.414Z",
+    "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk",
+    "sha": "c0332bc179eede29a19225c08c9752f93e1ea5c21458f718e9337d4cb09a5405",
+    "bytes": 332327267,
+    "avd": "fm-v020-android-r1",
+    "serial": "emulator-5580",
+    "preserveData": true,
+    "result": "Performing Streamed Install\nSuccess\n",
+    "activity": "Starting: Intent { cmp=org.fractalmind.desktop/.MainActivity }\n"
+  },
+  "recoveryRaceReport": "v020-recovery-race-localnet.json",
+  "finalDirectApk": {
+    "builtAt": "2026-10-03T22:55:40.909493+00:00",
+    "apkPath": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk",
+    "apkSha256": "17743588aaf2c5a14cad9c1cc15386da2713e3626739534545d81d04496fe010",
+    "bytes": 332331875,
+    "sourceBase": "f81567841cd9fe2aacb48fcc0e1ef1f50a0b7a3f",
+    "signatureVerification": "Verifies\nVerified using v1 scheme (JAR signing): false\nVerified using v2 scheme (APK Signature Scheme v2): true\nVerified using v3 scheme (APK Signature Scheme v3): false\nVerified using v3.1 scheme (APK Signature Scheme v3.1): false\nVerified using v4 scheme (APK Signature Scheme v4): false\nVerified for SourceStamp: false\nNumber of signers: 1",
+    "verified": true,
+    "installed": true,
+    "sourceCommit": "f81567841cd9fe2aacb48fcc0e1ef1f50a0b7a3f",
+    "retainsAppData": true,
+    "installedAt": "2026-10-03T22:56:38.128Z"
+  },
+  "cloudReadOptimizationReport": "v020-direct-cloud-read-performance.json",
+  "sourceCi": {
+    "commit": "f81567841cd9fe2aacb48fcc0e1ef1f50a0b7a3f",
+    "checkedAt": "2026-10-03T23:02:48Z",
+    "checks": 38,
+    "result": "success",
+    "scope": "Final tested application source; subsequent documentation commit checks are reported on the PR."
+  },
+  "interventionPause": {
+    "sourceCommit": "f815678",
+    "focusedTests": 45,
+    "fullAppTests": 337,
+    "status": "installed-ui-passed",
+    "installedVerificationPending": false,
+    "originalUnknownRequest": "okr-intervene:0x21893f30a2471287c1fa9b3e3e9c449eaf8428cd18f6e82331197cd6de7cb5c5:1:replace",
+    "originalDigest": "E9hca36y6VLKVj2W4QREtMC1mZFSNoUcFciZMahxEr42",
+    "originalReceiptRestored": false,
+    "newPauseRequiresFreshHigherActiveVersion": true,
+    "pausedOkrId": "0x21893f30a2471287c1fa9b3e3e9c449eaf8428cd18f6e82331197cd6de7cb5c5",
+    "pauseTransaction": "Bofe7cmGv74pXb5sGXFLzYgnSkrnBpKAAYxk8fbxy4aV",
+    "originalUnknownPreserved": true,
+    "okrVersionAfter": "4",
+    "agreementVersionAfter": "3",
+    "stateAfter": 2,
+    "krRunsCreated": 0,
+    "spent": 0,
+    "reserved": 0
+  },
+  "previousImportApk": {
+    "builtAt": "2026-10-03T22:35:20.737235+00:00",
+    "apkPath": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk",
+    "apkSha256": "e75e972a1a63c317c1fb5f67c94f6a5cb81078dd1cfada2d427592f13361c084",
+    "bytes": 332331347,
+    "sourceBase": "967972cc7800596b9001c16c85092fd9a182ae03 (App sources unchanged from final r7 build)",
+    "signatureVerification": "Verifies\nVerified using v1 scheme (JAR signing): false\nVerified using v2 scheme (APK Signature Scheme v2): true\nVerified using v3 scheme (APK Signature Scheme v3): false\nVerified using v3.1 scheme (APK Signature Scheme v3.1): false\nVerified using v4 scheme (APK Signature Scheme v4): false\nVerified for SourceStamp: false\nNumber of signers: 1",
+    "verified": true,
+    "installed": true,
+    "sourceCommit": "967972cc7800596b9001c16c85092fd9a182ae03",
+    "retainsAppData": true,
+    "installedAt": "2026-10-03T22:36:39.650Z"
+  },
+  "cacheReconstructionReport": "v020-work-cache-reconstruction.json"
+}

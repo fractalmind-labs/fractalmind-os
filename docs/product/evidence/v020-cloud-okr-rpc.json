@@ -1,0 +1,809 @@
+{
+  "format": 1,
+  "baseline": "147b0e3",
+  "recordedAt": "2026-10-03T17:00:05.418541+00:00",
+  "fullMilestoneAccepted": false,
+  "fullCloudOkrAccepted": false,
+  "proofScope": "Original installed Android APK native Keystore IPC, scripted production App controllers, real Ubuntu Host over original SSH tunnels to task localnet. No physical phone, visible fee-confirmation walkthrough, real cloud model or updated-envd full execution proof.",
+  "attempts": {
+    "r1": {
+      "format": 1,
+      "baseline": "147b0e3",
+      "startedAt": "2026-10-03T16:14:50.409Z",
+      "scope": "Actual installed Android APK Keystore IPC and production App controllers execute on the real Ubuntu cloud envd over SSH loopback tunnels to the existing localnet. Scripted fee confirmation and scripted independent Human role, not visible UI or physical phone acceptance; cloud model disabled.",
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "hostAddress": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+      "managedAgentId": "0x88148f91a547e54750132d9442627c1ea6eefb89540ef1f78ef0f48f9f374140",
+      "instanceId": "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5",
+      "checks": [],
+      "quotes": [],
+      "transactions": [],
+      "deliveries": [],
+      "krRuns": [],
+      "humanDecisions": [],
+      "completed": false,
+      "plan": {
+        "format": 1,
+        "paths": {
+          "file.read": ["docs"],
+          "file.write": ["docs"]
+        },
+        "krs": [
+          {
+            "maxCalls": "3",
+            "files": [
+              {
+                "path": "docs/CLOUD-FIRST.md",
+                "content": "First original KR executed on the real Ubuntu cloud Host.\n"
+              }
+            ]
+          },
+          {
+            "maxCalls": "3",
+            "files": [
+              {
+                "path": "docs/CLOUD-SECOND.md",
+                "content": "Second original KR independently verified before final Human acceptance.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "deviceAddress": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+      "phase": "verify_original_cloud_host",
+      "failure": "Expected values to be strictly equal:\n\n0 !== false\n",
+      "failureStack": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== false\n\n    at <anonymous> (/private/tmp/fm-v020-cloud-okr-r1.mts:56:9)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+      "failedAt": "2026-10-03T16:14:50.452Z"
+    },
+    "r2": {
+      "format": 1,
+      "baseline": "147b0e3",
+      "startedAt": "2026-10-03T16:15:28.284Z",
+      "scope": "Actual installed Android APK Keystore IPC and production App controllers execute on the real Ubuntu cloud envd over SSH loopback tunnels to the existing localnet. Scripted fee confirmation and scripted independent Human role, not visible UI or physical phone acceptance; cloud model disabled.",
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "hostAddress": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+      "managedAgentId": "0x88148f91a547e54750132d9442627c1ea6eefb89540ef1f78ef0f48f9f374140",
+      "instanceId": "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5",
+      "checks": [
+        "Original cloud member and fresh authenticated instance match the observation-only import; no previous unsettled control or replacement identity",
+        "Original Android native device creates encrypted cloud OKR draft on Sui with two measurable KRs and a total six-tool boundary"
+      ],
+      "quotes": [
+        {
+          "label": "cloud OKR draft",
+          "requestId": "okr-draft:0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82:de29f847-8242-488a-9c22-6d9ee288591e",
+          "digest": "H9UYTydzASRwNcVXMjdZPTursUV4gL5iFUe6vUeqdYWi",
+          "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+          "gasBudget": "200000000",
+          "preparedAt": "2026-10-03T16:15:28.594Z"
+        },
+        {
+          "label": "cloud one-use observation capability",
+          "requestId": "handover-observe-dedc9200-c3ea-43ee-a20b-34de27c5d146",
+          "digest": "HpetJ92UNmjai7byYpkkuyr7Z8hHJ49DhfEU2maMvgzp",
+          "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+          "gasBudget": "200000000",
+          "preparedAt": "2026-10-03T16:15:28.905Z"
+        }
+      ],
+      "transactions": [
+        {
+          "label": "cloud OKR draft",
+          "status": "confirmed",
+          "digest": "H9UYTydzASRwNcVXMjdZPTursUV4gL5iFUe6vUeqdYWi",
+          "actualGas": "31045612",
+          "at": "2026-10-03T16:15:28.839Z"
+        }
+      ],
+      "deliveries": [],
+      "krRuns": [],
+      "humanDecisions": [],
+      "completed": false,
+      "plan": {
+        "format": 1,
+        "paths": {
+          "file.read": ["docs"],
+          "file.write": ["docs"]
+        },
+        "krs": [
+          {
+            "maxCalls": "3",
+            "files": [
+              {
+                "path": "docs/CLOUD-FIRST.md",
+                "content": "First original KR executed on the real Ubuntu cloud Host.\n"
+              }
+            ]
+          },
+          {
+            "maxCalls": "3",
+            "files": [
+              {
+                "path": "docs/CLOUD-SECOND.md",
+                "content": "Second original KR independently verified before final Human acceptance.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "deviceAddress": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+      "phase": "cloud_handover_observation",
+      "freshCloudObservation": {
+        "address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "state": "verified",
+        "observation": {
+          "address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+          "hostname": "v0.2.0 Ubuntu cloud isolated Host",
+          "heartbeatMs": 1791044110190,
+          "agentCount": 0,
+          "system": {
+            "os": "linux",
+            "arch": "amd64",
+            "cpu": 2
+          }
+        },
+        "membershipId": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+        "expiresAtMs": 1791044170190,
+        "freshUntilMs": 1791044170644,
+        "nativeDiscovery": {
+          "state": "complete",
+          "observedAtMs": 1791044069123,
+          "expiresAtMs": 1791044129123,
+          "freshUntilMs": 1791044129577,
+          "instances": [
+            {
+              "instanceId": "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5",
+              "session": "native-files",
+              "pane": "",
+              "state": "observed",
+              "runtime": "bounded-process-v1",
+              "continuity": "envd-process-v1",
+              "workspace": "/tmp/fm-v020-remote-cloud-61aRZZHv/r4/workspace",
+              "workspaceHash": "695a618ffe276db70e333eed018a9830d9f1f4e76106b040d537078aa44d5d0a"
+            }
+          ]
+        },
+        "discovery": {
+          "state": "unavailable",
+          "observedAtMs": 1791044069117,
+          "expiresAtMs": 1791044129117,
+          "freshUntilMs": 1791044129571,
+          "instances": []
+        }
+      },
+      "logicalId": "de29f847-8242-488a-9c22-6d9ee288591e",
+      "reviewAttemptId": "dedc9200-c3ea-43ee-a20b-34de27c5d146",
+      "okrId": "0x3bb8296d04e2eb04eaf485c3c47ccdc02c4eb9cf49a6972d1a30a7496f955333",
+      "failure": "No valid signature was obtained; nothing was broadcast.",
+      "failureStack": "TransactionPreflightError: No valid signature was obtained; nothing was broadcast.\n    at SelfPayTransactionManager.broadcast (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/protocols/fractalmind-protocol/sdk/src/transaction-manager.ts:213:29)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async HandoverSetup.submitOnce (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src/handover-setup.ts:245:14)\n    at async HandoverSetup.submit (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src/handover-setup.ts:232:14)\n    at async <anonymous> (/private/tmp/fm-v020-cloud-okr-r2.mts:71:96)",
+      "failedAt": "2026-10-03T16:15:29.002Z"
+    },
+    "r3": {
+      "format": 1,
+      "baseline": "147b0e3",
+      "startedAt": "2026-10-03T16:17:18.345Z",
+      "scope": "Actual installed Android APK Keystore IPC and production App controllers execute on the real Ubuntu cloud envd over SSH loopback tunnels to the existing localnet. Scripted fee confirmation and scripted independent Human role, not visible UI or physical phone acceptance; cloud model disabled.",
+      "organizationId": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "hostAddress": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+      "managedAgentId": "0x88148f91a547e54750132d9442627c1ea6eefb89540ef1f78ef0f48f9f374140",
+      "instanceId": "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5",
+      "checks": [
+        "Original cloud member and fresh authenticated instance match the observation-only import; no previous unsettled control or replacement identity",
+        "Original Android native device creates encrypted cloud OKR draft on Sui with two measurable KRs and a total six-tool boundary",
+        "Original cloud member and fresh authenticated instance match the observation-only import; no previous unsettled control or replacement identity",
+        "Continues the exact original successful cloud draft and original unbroadcast observation request; no draft replay"
+      ],
+      "quotes": [
+        {
+          "label": "cloud OKR draft",
+          "requestId": "okr-draft:0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82:de29f847-8242-488a-9c22-6d9ee288591e",
+          "digest": "H9UYTydzASRwNcVXMjdZPTursUV4gL5iFUe6vUeqdYWi",
+          "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+          "gasBudget": "200000000",
+          "preparedAt": "2026-10-03T16:15:28.594Z"
+        },
+        {
+          "label": "cloud one-use observation capability",
+          "requestId": "handover-observe-dedc9200-c3ea-43ee-a20b-34de27c5d146",
+          "digest": "HpetJ92UNmjai7byYpkkuyr7Z8hHJ49DhfEU2maMvgzp",
+          "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+          "gasBudget": "200000000",
+          "preparedAt": "2026-10-03T16:15:28.905Z"
+        },
+        {
+          "label": "cloud one-use observation capability",
+          "requestId": "handover-observe-dedc9200-c3ea-43ee-a20b-34de27c5d146",
+          "digest": "CXoEvK8rwUpnd5mcu32L11srJTEq5qLbEqV5RHKcC5xw",
+          "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+          "gasBudget": "200000000",
+          "preparedAt": "2026-10-03T16:17:18.665Z"
+        },
+        {
+          "label": "cloud exact review ticket and Run",
+          "requestId": "handover-review-dedc9200-c3ea-43ee-a20b-34de27c5d146",
+          "digest": "AcbHCppdoFAZ7YGd88WXdEX4fx6kbxKZD9tonet6FCsN",
+          "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+          "gasBudget": "200000000",
+          "preparedAt": "2026-10-03T16:17:19.719Z"
+        }
+      ],
+      "transactions": [
+        {
+          "label": "cloud OKR draft",
+          "status": "confirmed",
+          "digest": "H9UYTydzASRwNcVXMjdZPTursUV4gL5iFUe6vUeqdYWi",
+          "actualGas": "31045612",
+          "at": "2026-10-03T16:15:28.839Z"
+        },
+        {
+          "label": "cloud one-use observation capability",
+          "status": "confirmed",
+          "digest": "CXoEvK8rwUpnd5mcu32L11srJTEq5qLbEqV5RHKcC5xw",
+          "actualGas": "10173480",
+          "at": "2026-10-03T16:17:18.962Z"
+        },
+        {
+          "label": "cloud exact review ticket and Run",
+          "status": "confirmed",
+          "digest": "AcbHCppdoFAZ7YGd88WXdEX4fx6kbxKZD9tonet6FCsN",
+          "actualGas": "60069000",
+          "at": "2026-10-03T16:17:20.078Z"
+        }
+      ],
+      "deliveries": [
+        {
+          "ordinal": 1,
+          "attemptedAt": "2026-10-03T16:17:20.908Z",
+          "phase": "send_original_cloud_review_once"
+        }
+      ],
+      "krRuns": [],
+      "humanDecisions": [],
+      "completed": false,
+      "plan": {
+        "format": 1,
+        "paths": {
+          "file.read": ["docs"],
+          "file.write": ["docs"]
+        },
+        "krs": [
+          {
+            "maxCalls": "3",
+            "files": [
+              {
+                "path": "docs/CLOUD-FIRST.md",
+                "content": "First original KR executed on the real Ubuntu cloud Host.\n"
+              }
+            ]
+          },
+          {
+            "maxCalls": "3",
+            "files": [
+              {
+                "path": "docs/CLOUD-SECOND.md",
+                "content": "Second original KR independently verified before final Human acceptance.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "deviceAddress": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+      "phase": "send_original_cloud_review_once",
+      "freshCloudObservation": {
+        "address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "state": "verified",
+        "observation": {
+          "address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+          "hostname": "v0.2.0 Ubuntu cloud isolated Host",
+          "heartbeatMs": 1791044216738,
+          "agentCount": 0,
+          "system": {
+            "os": "linux",
+            "arch": "amd64",
+            "cpu": 2
+          }
+        },
+        "membershipId": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+        "expiresAtMs": 1791044276738,
+        "freshUntilMs": 1791044277221,
+        "nativeDiscovery": {
+          "state": "complete",
+          "observedAtMs": 1791044189687,
+          "expiresAtMs": 1791044249687,
+          "freshUntilMs": 1791044250170,
+          "instances": [
+            {
+              "instanceId": "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5",
+              "session": "native-files",
+              "pane": "",
+              "state": "observed",
+              "runtime": "bounded-process-v1",
+              "continuity": "envd-process-v1",
+              "workspace": "/tmp/fm-v020-remote-cloud-61aRZZHv/r4/workspace",
+              "workspaceHash": "695a618ffe276db70e333eed018a9830d9f1f4e76106b040d537078aa44d5d0a"
+            }
+          ]
+        },
+        "discovery": {
+          "state": "unavailable",
+          "observedAtMs": 1791044189681,
+          "expiresAtMs": 1791044249681,
+          "freshUntilMs": 1791044250164,
+          "instances": []
+        }
+      },
+      "logicalId": "de29f847-8242-488a-9c22-6d9ee288591e",
+      "reviewAttemptId": "dedc9200-c3ea-43ee-a20b-34de27c5d146",
+      "okrId": "0x3bb8296d04e2eb04eaf485c3c47ccdc02c4eb9cf49a6972d1a30a7496f955333",
+      "failure": "command_outcome_unknown",
+      "failureStack": "Error: command_outcome_unknown\n    at Object.send (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src/coordinator-read.ts:412:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async HandoverReview.send (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src/handover-review.ts:644:5)\n    at async <anonymous> (/private/tmp/fm-v020-cloud-okr-r3.mts:78:86)",
+      "failedAt": "2026-10-03T16:17:35.913Z",
+      "previousFailure": {
+        "phase": "cloud_handover_observation",
+        "failure": "No valid signature was obtained; nothing was broadcast.",
+        "quotes": [
+          {
+            "label": "cloud OKR draft",
+            "requestId": "okr-draft:0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82:de29f847-8242-488a-9c22-6d9ee288591e",
+            "digest": "H9UYTydzASRwNcVXMjdZPTursUV4gL5iFUe6vUeqdYWi",
+            "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+            "gasBudget": "200000000",
+            "preparedAt": "2026-10-03T16:15:28.594Z"
+          },
+          {
+            "label": "cloud one-use observation capability",
+            "requestId": "handover-observe-dedc9200-c3ea-43ee-a20b-34de27c5d146",
+            "digest": "HpetJ92UNmjai7byYpkkuyr7Z8hHJ49DhfEU2maMvgzp",
+            "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+            "gasBudget": "200000000",
+            "preparedAt": "2026-10-03T16:15:28.905Z"
+          },
+          {
+            "label": "cloud one-use observation capability",
+            "requestId": "handover-observe-dedc9200-c3ea-43ee-a20b-34de27c5d146",
+            "digest": "CXoEvK8rwUpnd5mcu32L11srJTEq5qLbEqV5RHKcC5xw",
+            "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+            "gasBudget": "200000000",
+            "preparedAt": "2026-10-03T16:17:18.665Z"
+          },
+          {
+            "label": "cloud exact review ticket and Run",
+            "requestId": "handover-review-dedc9200-c3ea-43ee-a20b-34de27c5d146",
+            "digest": "AcbHCppdoFAZ7YGd88WXdEX4fx6kbxKZD9tonet6FCsN",
+            "sender": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+            "gasBudget": "200000000",
+            "preparedAt": "2026-10-03T16:17:19.719Z"
+          }
+        ]
+      },
+      "observationCapabilityId": "0x8ee3fbfb3d56d6e8e6e6ec69be4f753645acb8c09f90917d81cbebc876ba6de8",
+      "reviewExpiresAtMs": 1791044294333,
+      "reviewExecutionId": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+      "reviewDeliveryAttempted": true,
+      "failureCauses": [
+        {
+          "name": "Error",
+          "message": "command_outcome_unknown",
+          "code": "command_outcome_unknown",
+          "stack": "Error: command_outcome_unknown\n    at Object.send (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src/coordinator-read.ts:412:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async HandoverReview.send (/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src/handover-review.ts:644:5)\n    at async <anonymous> (/private/tmp/fm-v020-cloud-okr-r3.mts:78:86)"
+        }
+      ]
+    }
+  },
+  "independentRead": {
+    "format": 1,
+    "scope": "Read-only original installed Android native controller + original cloud Run/source, no signing, quoting, broadcast or delivery",
+    "startedAt": "2026-10-03T16:51:20.530Z",
+    "checks": [
+      "Original installed native controller reads exact running cloud review and retains absent result as pending; no fabricated success",
+      "Exact original cloud draft remains unapproved with both measurements absent and cursor zero; no replacement objective",
+      "Independent SSH read confirms neither proposed cloud KR file was written; prior user processes and original task envd remain running"
+    ],
+    "nativeCalls": ["fm_device_public", "fm_device_prove", "fm_device_prove"],
+    "complete": true,
+    "originalResult": {
+      "run": {
+        "id": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+        "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+        "capability_id": "0x8ee3fbfb3d56d6e8e6e6ec69be4f753645acb8c09f90917d81cbebc876ba6de8",
+        "capability_version": "1",
+        "human_id": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+        "grant_id": "0x028148a3b785a0d9306e8699fbee77f5efa369a450fe027770a91c6948515164",
+        "grant_version": "1",
+        "membership_id": "0xc39e7a5840abc858eeaebe8e0a66cd64a5ef6459fd8eeba32e4d716713d7d66d",
+        "host_address": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "managed_agent": "0x88148f91a547e54750132d9442627c1ea6eefb89540ef1f78ef0f48f9f374140",
+        "delegate": "0x68723f7f663a37a510b6878e90debee65348ca459f7c91093c7bd484803d192e",
+        "node_id": "0x1c576b4502435f69000d38d4d20328e7256cc0ac3841fec0f2634b7d7f4a0142",
+        "agent_id": "native-5fa1472eda68447f23ae28194c1399f4d4ffc6b7179f0baf79292995420be2c5",
+        "command_id": "af0fa220-58d9-411d-8978-0803de77ed3f",
+        "nonce": "e74781b1-6e1f-47a9-9237-97658f5868cc",
+        "idempotency_key": "af0fa220-58d9-411d-8978-0803de77ed3f",
+        "intent_hash": [
+          80, 5, 74, 147, 130, 180, 142, 112, 48, 52, 223, 137, 180, 135, 28,
+          164, 36, 240, 76, 220, 33, 114, 16, 206, 2, 145, 247, 55, 163, 171,
+          99, 147
+        ],
+        "action": "status",
+        "scope": "observation",
+        "budget_asset": "",
+        "budget_amount": "0",
+        "issued_at_ms": "1791044239333",
+        "expires_at_ms": "1791044359333",
+        "state": 1,
+        "cursor": "2",
+        "stop_requested": false,
+        "created_at_ms": "1791044239910",
+        "started_at_ms": "1791044331604",
+        "updated_at_ms": "1791044331604",
+        "result_record": null,
+        "result_hash": [],
+        "attempt_id": [
+          113, 168, 62, 156, 228, 136, 140, 175, 130, 3, 66, 77, 175, 167, 20,
+          63, 25, 24, 176, 24, 61, 88, 245, 157, 52, 94, 151, 228, 23, 129, 148,
+          185
+        ]
+      },
+      "recordId": null,
+      "transactionDigest": null,
+      "response": null
+    },
+    "originalStartDigest": "C2cNn9UhRspAGW54NcVeytdCSsDrkchNXiZUrEuiZVDU",
+    "originalStartQuery": {
+      "status": "unavailable",
+      "name": "Error"
+    },
+    "originalOkr": {
+      "id": "0x3bb8296d04e2eb04eaf485c3c47ccdc02c4eb9cf49a6972d1a30a7496f955333",
+      "org_id": "0x757b21d9f6b744ddae224f02e934476c1507a009e02e32175d632dd9c7ca7a82",
+      "owner_human": "0x539dd250f83cc4a3f1d5403560d1d23ba108c436fae67444183665e9ebe8aefe",
+      "logical_id": "de29f847-8242-488a-9c22-6d9ee288591e",
+      "state": 0,
+      "version": "1",
+      "agreement_version": "0",
+      "priority": 0,
+      "deadline_ms": "1791047728480",
+      "spec_record": "0xd06dee8422bdf8cea6926d5235a626c01b9d3a799d9aa3e033b92385cb35d997",
+      "spec_revision": "1",
+      "metrics": [
+        {
+          "baseline": "0",
+          "target": "1",
+          "weight": "1",
+          "max_age_ms": "300000",
+          "current": null,
+          "sampled_at_ms": "0",
+          "run_id": null,
+          "evidence_id": null,
+          "verified": false,
+          "verification_id": null
+        },
+        {
+          "baseline": "0",
+          "target": "1",
+          "weight": "1",
+          "max_age_ms": "300000",
+          "current": null,
+          "sampled_at_ms": "0",
+          "run_id": null,
+          "evidence_id": null,
+          "verified": false,
+          "verification_id": null
+        }
+      ],
+      "next_kr": "0",
+      "observations": {
+        "id": "0xc2d5405f4b5cf444670d1be29d82c8ceb304280508de68fa593ebc17c2dd210d",
+        "size": "0"
+      },
+      "managed_agent": null,
+      "managed_version": "0",
+      "membership_id": null,
+      "membership_version": "0",
+      "workspace_hash": [],
+      "boundary_hash": [],
+      "budget_asset": "",
+      "budget_limit": "0",
+      "expires_at_ms": "0",
+      "activated_at_ms": "0",
+      "agreement_record": null,
+      "acceptance_record": null,
+      "accepted_by_human": null,
+      "accepted_at_ms": "0"
+    },
+    "remote": {
+      "files": {
+        "docs/CLOUD-FIRST.md": false,
+        "docs/CLOUD-SECOND.md": false
+      },
+      "processes": "1872983 Sl+  envd\n2244585 Ssl  envd\n2325124 Sl   envd-r2\n",
+      "workerLogTail": [
+        "2026/10/04 00:11:52 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...",
+        "2026/10/04 00:11:54 [envd] [ws] connected to ws://127.0.0.1:30180/ws",
+        "2026/10/04 00:11:55 [envd] [ws] control-channel authenticated (coordinator verified)",
+        "2026/10/04 00:15:33 [envd] [heartbeat] send failed: join authority changed during inspection",
+        "2026/10/04 00:17:22 [envd] [heartbeat] send failed: join authority changed during inspection",
+        "2026/10/04 00:17:27 [envd] [cmd] received: signed_command agent=",
+        "2026/10/04 00:19:49 [envd] [heartbeat] send failed: rpc error: code = DeadlineExceeded desc = context deadline exceeded",
+        "2026/10/04 00:19:50 [envd] [ws] disconnected, reconnecting in 1s",
+        "2026/10/04 00:19:56 [envd] [heartbeat] send failed: not connected",
+        "2026/10/04 00:19:58 [envd] [ws] connecting to ws://127.0.0.1:30180/ws ...",
+        "2026/10/04 00:19:59 [envd] [ws] connected to ws://127.0.0.1:30180/ws",
+        "2026/10/04 00:20:00 [envd] [ws] control-channel authenticated (coordinator verified)"
+      ]
+    },
+    "noSignatures": true,
+    "noNewTransactions": true,
+    "noCommandDelivery": true,
+    "finishedAt": "2026-10-03T16:51:25.884Z"
+  },
+  "performance": {
+    "singleObject": [
+      {
+        "durationMs": 1557,
+        "error": "<nil>",
+        "ordinal": 0,
+        "version": 3979708
+      },
+      {
+        "durationMs": 539,
+        "error": "<nil>",
+        "ordinal": 1,
+        "version": 3979708
+      },
+      {
+        "durationMs": 465,
+        "error": "<nil>",
+        "ordinal": 2,
+        "version": 3979708
+      },
+      {
+        "durationMs": 468,
+        "error": "<nil>",
+        "ordinal": 3,
+        "version": 3979708
+      },
+      {
+        "durationMs": 468,
+        "error": "<nil>",
+        "ordinal": 4,
+        "version": 3979708
+      },
+      {
+        "durationMs": 470,
+        "error": "<nil>",
+        "ordinal": 5,
+        "version": 3979708
+      },
+      {
+        "durationMs": 466,
+        "error": "<nil>",
+        "ordinal": 6,
+        "version": 3979708
+      },
+      {
+        "durationMs": 694,
+        "error": "<nil>",
+        "ordinal": 7,
+        "version": 3979708
+      }
+    ],
+    "originalExecutionLookups": [
+      {
+        "batchReads": 0,
+        "durationMs": 11176,
+        "error": "<nil>",
+        "executionId": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+        "found": true,
+        "matchesOriginal": true,
+        "mode": "serial",
+        "round": 0,
+        "singleReads": 13,
+        "state": 1
+      },
+      {
+        "batchReads": 1,
+        "durationMs": 7210,
+        "error": "<nil>",
+        "executionId": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+        "found": true,
+        "matchesOriginal": true,
+        "mode": "batch",
+        "round": 0,
+        "singleReads": 7,
+        "state": 1
+      },
+      {
+        "batchReads": 0,
+        "durationMs": 6406,
+        "error": "<nil>",
+        "executionId": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+        "found": true,
+        "matchesOriginal": true,
+        "mode": "serial",
+        "round": 1,
+        "singleReads": 13,
+        "state": 1
+      },
+      {
+        "batchReads": 1,
+        "durationMs": 4833,
+        "error": "<nil>",
+        "executionId": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+        "found": true,
+        "matchesOriginal": true,
+        "mode": "batch",
+        "round": 1,
+        "singleReads": 7,
+        "state": 1
+      },
+      {
+        "batchReads": 0,
+        "durationMs": 6583,
+        "error": "<nil>",
+        "executionId": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+        "found": true,
+        "matchesOriginal": true,
+        "mode": "serial",
+        "round": 2,
+        "singleReads": 13,
+        "state": 1
+      },
+      {
+        "batchReads": 1,
+        "durationMs": 4234,
+        "error": "<nil>",
+        "executionId": "0x649e9009562fd59a0a5250f543af31710d32545266bc78f9431d2f961a3be4af",
+        "found": true,
+        "matchesOriginal": true,
+        "mode": "batch",
+        "round": 2,
+        "singleReads": 7,
+        "state": 1
+      }
+    ],
+    "medianMs": {
+      "serial": 6583,
+      "batch": 4833
+    },
+    "allExactOriginalReads": true,
+    "medianReductionPercent": 26.58,
+    "limitation": "R2 timing binary was compiled before final handover source reuse and original transaction read-confirmation timeout changes. Current source fingerprints captured after all final modifications, not historical timing build fingerprints."
+  },
+  "regression": {
+    "command": "go test -race ./internal/nodecommand ./internal/sui ./internal/runtimeadapter ./internal/hostjoin ./internal/ws ./cmd/envd",
+    "exitCode": 0,
+    "finalOutput": "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand\t3.929s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui\t8.287s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter\t(cached)\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/hostjoin\t(cached)\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/ws\t(cached)\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd\t4.746s\n",
+    "earlierFreshOutput": "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand\t3.611s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/sui\t4.601s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/runtimeadapter\t8.261s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/hostjoin\t(cached)\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/ws\t(cached)\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd\t5.486s\n",
+    "cacheDisclosure": "Some final package results use successful same-increment earlier test cache. App/SDK/Move/Rust were unchanged and not counted as a fresh full rerun."
+  },
+  "artifacts": {
+    "linuxEnvdBuild": {
+      "exitCode": 0,
+      "path": "/tmp/fm-envd-v020-remote-linux-r3",
+      "sha256": "a403711ac7a79a7e42875efa7d6d6fa9950d95c196962d82cbfa62299ad21e1e",
+      "bytes": 25840550,
+      "deployedToCloud": false
+    },
+    "cloudTimingBinary": {
+      "path": "/tmp/fm-v020-cloud-rpc-timing-r2",
+      "sha256": "fa6da9e62ff0e00d7c90b80f857951d4baae592934313f42c4e079efd2ce195e",
+      "bytes": 20008600
+    }
+  },
+  "currentSourceFingerprints": [
+    {
+      "path": "runtime/fractalmind-envd/internal/nodecommand/chain_authority.go",
+      "sha256": "54792698297f33426873e10832ea2acd2ea62085a08a5641c044967b47a52c28",
+      "bytes": 22906
+    },
+    {
+      "path": "runtime/fractalmind-envd/internal/nodecommand/chain_execution.go",
+      "sha256": "530c6cc7c197b7fb794ecd63c26ba72ba830710f3babad7ce48e491359a83f72",
+      "bytes": 8781
+    },
+    {
+      "path": "runtime/fractalmind-envd/internal/nodecommand/handover.go",
+      "sha256": "0570256169081cadb3d8a634ed5c014af45dd84d9553c3029b8beefaf412e8cd",
+      "bytes": 15157
+    },
+    {
+      "path": "runtime/fractalmind-envd/internal/nodecommand/host_join.go",
+      "sha256": "303c6d69b69fd70534e6403a97426ed67a8d8d9cb0312721c5f07bb2d81525ac",
+      "bytes": 16353
+    },
+    {
+      "path": "runtime/fractalmind-envd/internal/nodecommand/okr_observation.go",
+      "sha256": "d4f421599b5f522bc94b9a2505521d03ea052690be7bff925e9b75e8d50801e4",
+      "bytes": 3073
+    },
+    {
+      "path": "runtime/fractalmind-envd/internal/nodecommand/validator.go",
+      "sha256": "1dbb9b6f46e0ea7b97de8e0abc424da7f4ff3387a4502d3280bd12ba4ea5fe08",
+      "bytes": 18767
+    },
+    {
+      "path": "runtime/fractalmind-envd/internal/nodecommand/chain_snapshot.go",
+      "sha256": "602c338a73b8eb9f51f4c2be49f4477ccceafe1f1d70490686487c271002d1d8",
+      "bytes": 2575
+    },
+    {
+      "path": "runtime/fractalmind-envd/internal/nodecommand/chain_snapshot_test.go",
+      "sha256": "40a4f6317de5f595ec40edc79dd0344594bc08e578014752425832950ce42ff4",
+      "bytes": 5158
+    },
+    {
+      "path": "runtime/fractalmind-envd/internal/sui/chain_authority.go",
+      "sha256": "c037e88c5955daea10419f55d5b76585bba9f3732184bb36d2f6db5d7f6cb263",
+      "bytes": 3856
+    },
+    {
+      "path": "runtime/fractalmind-envd/internal/sui/chain_execution_store.go",
+      "sha256": "5bace2fbd3e8bed113eec43e541ba5d176ecea3579dc73dd40e7c88361b3f6db",
+      "bytes": 20617
+    },
+    {
+      "path": "runtime/fractalmind-envd/internal/sui/chain_reservations.go",
+      "sha256": "405474b408161db84f5c82d45967da3dca3b54a2b67473fc830228a7e04225f3",
+      "bytes": 9036
+    },
+    {
+      "path": "runtime/fractalmind-envd/internal/sui/chain_reservations_test.go",
+      "sha256": "4fb3b8addb9c80a4fed4dd273f03f40dd8391e8b9d50ce001f51a27c4b43d7d8",
+      "bytes": 14784
+    },
+    {
+      "path": "runtime/fractalmind-envd/internal/sui/grpc.go",
+      "sha256": "9cfece942033a48c08b8d35b2db61cb22c7741e7618c6ec21da9cbd83de06e7b",
+      "bytes": 19405
+    },
+    {
+      "path": "runtime/fractalmind-envd/internal/sui/grpc_test.go",
+      "sha256": "ef693b75dbaaa7602416067c45c0cf8c46e478c9258e3d68651a2921d4f43e5c",
+      "bytes": 13135
+    },
+    {
+      "path": "runtime/fractalmind-envd/internal/sui/chain_batch_test.go",
+      "sha256": "17ec57566d28697469edeb64c4ae76871cd560a43be5daa6e9d09e889d89cfd7",
+      "bytes": 5047
+    }
+  ],
+  "fixtureFingerprints": [
+    {
+      "path": "/tmp/fm-v020-cloud-okr-r1.mts",
+      "sha256": "f6e9f56ecc0cc679c9b7f09dacd22acaf01fe64bbd31b3971de590678636b2ac",
+      "bytes": 21544
+    },
+    {
+      "path": "/tmp/fm-v020-cloud-okr-r2.mts",
+      "sha256": "ad23c629d61bdc35a17af284cd04efce3b58abd08398d733c2e723d6a16d3a6f",
+      "bytes": 21540
+    },
+    {
+      "path": "/tmp/fm-v020-cloud-okr-r3.mts",
+      "sha256": "43afbd5feb5fb718419266180ab5996ec379fb341a73710fa39febff366127aa",
+      "bytes": 21607
+    },
+    {
+      "path": "/tmp/fm-v020-cloud-original-review-native-read-r1.mts",
+      "sha256": "47499fe9476bc7ae02d87ea84fc3bb3152b201c9fe2a1340f35840d08f5316ad",
+      "bytes": 7950
+    },
+    {
+      "path": "/tmp/fm-v020-cloud-rpc-timing-r1.go",
+      "sha256": "b96c6a02983efd5cfb3ff3c8b8666a650831d64b9676a74ce1df1e411e1aff35",
+      "bytes": 627
+    },
+    {
+      "path": "/tmp/fm-v020-cloud-rpc-timing-r2.go",
+      "sha256": "0626924773e409b040ad201dd4f1498050579b48f46bafcf3c58206b400aaf88",
+      "bytes": 2268
+    }
+  ],
+  "remaining": [
+    "Original cloud review Run remains RUNNING without result; retain original digest and never replay.",
+    "Updated formal envd cloud deployment and full handover/KR/independent Human acceptance still require verification.",
+    "Cloud direct conversation, approvals, run recovery and full cache reconstruction remain.",
+    "Physical phone and provided Mac mini Keychain authorization remain."
+  ]
+}

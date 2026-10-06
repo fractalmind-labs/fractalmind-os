@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "okr-export"
+description = "Export an explicitly reviewed, bounded OKR.md snapshot through Android's system document picker. No caller path/URI, general filesystem access or persistent document permission."
+commands.allow = ["fm_export_okr"]

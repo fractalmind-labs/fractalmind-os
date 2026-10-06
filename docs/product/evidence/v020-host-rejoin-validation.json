@@ -1,0 +1,30 @@
+{
+  "recordedAt": "2026-10-02T08:29:58.318Z",
+  "baselineCommit": "39f8cd1",
+  "changes": "Acceptance harness only; production runtime/App/contracts unchanged in this increment",
+  "scriptTypecheck": {
+    "command": "./node_modules/.bin/tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --skipLibCheck scripts/host-admission-localnet.ts",
+    "passed": true
+  },
+  "goRace": {
+    "command": "go test -race ./cmd/envd ./internal/hostjoin ./internal/ws ./internal/coordinator ./internal/nodecommand ./internal/agent",
+    "passed": true,
+    "output": "ok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/cmd/envd\t3.239s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/hostjoin\t4.388s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/ws\t3.453s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/coordinator\t2.822s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/nodecommand\t4.163s\nok  \tgithub.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/agent\t1.601s\n",
+    "sha256": "8f64692d100135980e4f2d8e1f52a55b6def59ef64227d6be5310e4fe4fae666"
+  },
+  "sourceSha256": {
+    "apps/fractalmind-app/scripts/host-admission-localnet.ts": "7ee151fcdeb4893dee2c6418729dd7cc4e227bdba91916c0585eaa66f3560bd7",
+    "runtime/fractalmind-envd/cmd/envd/host_join_cli_live_test.go": "9007f1280a951c27d7b4fc6e0daaa74303db567043544c73f1a3867bb0cdb2f7"
+  },
+  "helperSha256": "0857cfab044c80cb276769d747d5f9ae8bd872920e54a2269637d87a0c3fcda4",
+  "limits": {
+    "sameWorkerAndProcess": true,
+    "sameTmuxKernelInstance": true,
+    "actualLocalnetTransactions": true,
+    "fixtureKeysAndInjectedAppNativeTransport": true,
+    "installedNativeStoreVerified": false,
+    "processRestartVerified": false,
+    "cloudHostVerified": false,
+    "fivePlatformInstalledAcceptanceVerified": false
+  }
+}

@@ -1,0 +1,913 @@
+{
+  "schema": "fractalmind.v020.desktop-core-installed.v1",
+  "status": "passed_scoped_acceptance",
+  "recordedAt": "2026-10-04T03:00:12.236193+00:00",
+  "method": {
+    "ui": "Actual isolated macOS r15 installed App for identity, invitation, import, handover, execution and verification; explicit fee confirmation/signing through product controls. The new Host redeemed its invite using the official envd CLI.",
+    "independent": "Fresh public gRPC reads from a separate read-only CLI script plus separately recorded read-only cloud file verification.",
+    "nativeAccessByVerifier": false,
+    "signaturesByVerifier": 0,
+    "broadcastsByVerifier": 0,
+    "productStateInjection": false
+  },
+  "installedBuild": {
+    "at": "2026-10-04T02:26:37.375645+00:00",
+    "build": "r15",
+    "binarySha256": "e8bee4f13a3553b64e0cf9dc6a83de97fd4fa1c4048ee921931bbe670de88683",
+    "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/bundle/macos/FractalMind.app",
+    "strictSignatureVerified": true,
+    "signing": "ad-hoc isolated test build",
+    "pid": 87050
+  },
+  "sourceValidation": {
+    "head": "4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1",
+    "appTestsPassed": 375,
+    "ciCompletedSuccess": 38,
+    "evidence": "v020-authorized-ui-progress.json#sourceValidation4063bb0",
+    "sourceSha256": {
+      "apps/fractalmind-app/src-tauri/Cargo.lock": "c952ef5eb3861b6dc22751a6ada7c28b249980933553f097a628a0b3bca67f93",
+      "apps/fractalmind-app/src-tauri/Cargo.toml": "fbd6a4aeb1c2ecbb693572418bb6dc708ae9ce89ec658bb797d20c66afe84cfc",
+      "apps/fractalmind-app/src-tauri/build.rs": "39ca69f4910bb73e4180c7f8cc9cd1c69be917fee076f710b0cab7a6786763cf",
+      "apps/fractalmind-app/src-tauri/capabilities/device-main.json": "b4e21ddef15a9009cb415b90a67bf7da1a1d5d3ad39a3188ea21373edea59d80",
+      "apps/fractalmind-app/src-tauri/permissions/okr-export.toml": "dbd844e826fad6b929561e45afdc09386303ae91fd24bcd968bdfc85bf1cf5be",
+      "apps/fractalmind-app/src-tauri/platform/android/MainActivity.kt": "3731e87df45301d91649e2b7b2682dbf059d68a5ca1605506692814cb33790bb",
+      "apps/fractalmind-app/src-tauri/src/lib.rs": "05975460efe8c3baeeeca5d9b71373a26a5ac4b4a22598c2cc22952b0d37a667",
+      "apps/fractalmind-app/src-tauri/src/okr_export.rs": "5c31067a2ddacf23c00b549e16fdf5bc21d1f5fbcd075aadefc2666aefbb34db",
+      "apps/fractalmind-app/src/AgentImportFlow.tsx": "36fa8de2c0015a9dc1ff1aadf4f5b48352759339849af1178a137d005cf2bc9b",
+      "apps/fractalmind-app/src/HostAccess.tsx": "638f7caf38408df3379a6ecba41003b26ab6002cc9677ab4f5e2a94d6fa6ea3a",
+      "apps/fractalmind-app/src/OkrProjection.tsx": "49f69791729f2ab04fa7bd40ee92286a3825a61434da60651a57f54d63e1b333",
+      "apps/fractalmind-app/src/RecoverIdentity.tsx": "25f3a3ec41ff708f7f73dc69851dfb8cb717ef00da97ba41cb201d0bd332f5b1",
+      "apps/fractalmind-app/src/agent-import-history.ts": "41196e1290d05817e3241848cdcb807ac7c8eb5e3a907c7243973f76b9a9b2df",
+      "apps/fractalmind-app/src/agent-import.ts": "f3a37b3b0fe91e901590bd13960d7e412a2775c0a4440acec7fe255ff50b3170",
+      "apps/fractalmind-app/src/host-transaction-history.ts": "39bc80291e435f2d32985e727c63ce2a03f5fdac5c7b64767d2bf5cc77bcf067",
+      "apps/fractalmind-app/src/okr-projection-file-picker.ts": "b5bf2f3ca0c904f4fd4019a895c50e40a256552898174c04f91a670af113f71e",
+      "apps/fractalmind-app/src/recovery-outcome.ts": "ba783a95e33a4623142cf4416999e0e55c22762c8bd5aa3ae127bb9353b9e12a",
+      "apps/fractalmind-app/src/transaction-history.ts": "9a8f1c0b26db6b141ac61624682740360e467f94b2d8ae8e8dff4e52a417efd9",
+      "apps/fractalmind-app/tests/agent-import-history.test.ts": "403578d771a238ab0d7ecb805c764a1283334b77f3ea0e7bfa24eb9e523a5f29",
+      "apps/fractalmind-app/tests/agent-import.test.ts": "51cf3b081985d63c4c9622ada84a240207c038c2429a78fa07c081362513d19c",
+      "apps/fractalmind-app/tests/host-transaction-history.test.ts": "eb7b1c0a23213c8e17e7f2c887006b5d8a9cfc4cd59da72b3015d2059c03c873",
+      "apps/fractalmind-app/tests/okr-projection-file-picker.test.ts": "4f369bff1a0532b925918769d6312a7589a59338f8fbfeb262690ce421272557",
+      "apps/fractalmind-app/tests/recovery-outcome.test.ts": "555a0ea37c87be1b60ed0c64c14d561acde6128116dd8370bd2b19ece9679fba",
+      "apps/fractalmind-app/tests/transaction-history.test.ts": "cd07a9794e1dbdba290883a868ed503b166a628493a757ed2c5fce0225828c05"
+    },
+    "distinction": "The r15 installed binary is identified by its own hash. The later committed recovery-outcome fix and its 375-test/CI validation are not represented as already exercised by r15."
+  },
+  "scope": {
+    "network": "localnet",
+    "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk",
+    "humanId": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+    "organizationId": "0x53e622cedfe98236634e3340753b4191f9840dfae36ded85588b18efa12f7bef",
+    "deviceAddress": "0xe0cdbb7bb7bbf0c4d35d9bbaa17a6576e73a9d9f5a4d229e05f4b7bebb29af75",
+    "hostAddress": "0xe71fb93375793024af0a8aba7d2c27e8f10afa726b8e7aeb6617f99c0d0057c3",
+    "membershipId": "0x6c49692f80aeb9dabe7114e6022552ecef31c22ee24b2dfc4cff3b974e95ae42",
+    "managedAgentId": "0xeecce3407ff47e89e46fb958c9ca20c022d4eac6043014fdbe045a542461d3e1",
+    "physicalId": "native-9e352106a3bf250b8a95dab174ff48136bb4b58c1709a369ed2dbabcfa13400c",
+    "okrId": "0x5ae0d408b36fda916f0a11c610eefef145d6dbb9b783c24d20a1d6f522ee05fa"
+  },
+  "actualUiSequence": [
+    {
+      "name": "r15-handover-unsupported-fixture-prose",
+      "at": "2026-10-04T02:43:54.795Z"
+    },
+    {
+      "name": "r15-handover-plan-approved",
+      "at": "2026-10-04T02:45:37.412Z"
+    },
+    {
+      "name": "r15-handover-observation-fee",
+      "at": "2026-10-04T02:45:48.855Z"
+    },
+    {
+      "name": "r15-handover-observation-confirmed",
+      "at": "2026-10-04T02:45:50.779Z"
+    },
+    {
+      "name": "r15-handover-review-fee",
+      "at": "2026-10-04T02:46:01.362Z"
+    },
+    {
+      "name": "r15-handover-review-confirmed",
+      "at": "2026-10-04T02:46:23.624Z"
+    },
+    {
+      "name": "r15-handover-original-review-pending",
+      "at": "2026-10-04T02:46:57.838Z"
+    },
+    {
+      "name": "r15-handover-original-response-check",
+      "at": "2026-10-04T02:48:31.624Z"
+    },
+    {
+      "name": "r15-agreement-approval-fee",
+      "at": "2026-10-04T02:48:43.771Z"
+    },
+    {
+      "name": "r15-agreement-approval-result",
+      "at": "2026-10-04T02:48:53.457Z"
+    },
+    {
+      "name": "r15-agreement-approved-details",
+      "at": "2026-10-04T02:49:03.323Z"
+    },
+    {
+      "name": "r15-execution-capability-fee",
+      "at": "2026-10-04T02:49:41.056Z"
+    },
+    {
+      "name": "r15-okr-command-fee",
+      "at": "2026-10-04T02:49:59.806Z"
+    },
+    {
+      "name": "r15-okr-command-ready",
+      "at": "2026-10-04T02:50:01.641Z"
+    },
+    {
+      "name": "r15-okr-original-run-query",
+      "at": "2026-10-04T02:50:36.162Z"
+    },
+    {
+      "name": "r15-okr-original-run-progress",
+      "at": "2026-10-04T02:52:29.007Z"
+    },
+    {
+      "name": "r15-okr-run-after-file-check",
+      "at": "2026-10-04T02:52:56.391Z"
+    },
+    {
+      "name": "r15-okr-execution-succeeded",
+      "at": "2026-10-04T02:53:18.793Z"
+    },
+    {
+      "name": "r15-human-original-evidence",
+      "at": "2026-10-04T02:53:42.104Z"
+    },
+    {
+      "name": "r15-kr-verification-fee",
+      "at": "2026-10-04T02:54:11.252Z"
+    },
+    {
+      "name": "r15-kr-verification-result",
+      "at": "2026-10-04T02:54:12.009Z"
+    },
+    {
+      "name": "r15-kr-confirmed-details",
+      "at": "2026-10-04T02:54:24.538Z"
+    },
+    {
+      "name": "r15-final-acceptance-fee",
+      "at": "2026-10-04T02:54:48.695Z"
+    },
+    {
+      "name": "r15-final-acceptance-result",
+      "at": "2026-10-04T02:54:50.503Z"
+    },
+    {
+      "name": "r15-final-acceptance-confirmed-details",
+      "at": "2026-10-04T02:55:02.389Z"
+    }
+  ],
+  "independentPublicRead": {
+    "checkedAt": "2026-10-04T02:57:54.855Z",
+    "checks": {
+      "achieved": true,
+      "verifiedKrs": 1,
+      "totalKrs": 1,
+      "oneOriginalRun": true,
+      "runSucceeded": true,
+      "okrSpent3Reserved0": true,
+      "capabilitySpent3Reserved0": true,
+      "claimsSettled": true,
+      "noAdditionalRun": true
+    },
+    "okr": {
+      "id": "0x5ae0d408b36fda916f0a11c610eefef145d6dbb9b783c24d20a1d6f522ee05fa",
+      "state": 3,
+      "version": "8",
+      "agreement_version": "5",
+      "spec_revision": "4",
+      "spec_record": "0xf2ef495a541489ebf8259d323c5681a6bd2e99af7728903cbc9470fd1a2a1712",
+      "next_kr": "1",
+      "metrics": [
+        {
+          "baseline": "0",
+          "target": "1",
+          "weight": "1",
+          "max_age_ms": "300000",
+          "current": "1",
+          "sampled_at_ms": "1791082346651",
+          "run_id": "0x41db7d62cdb0e7b8b7b63627558c156ccab6cda2ed995bfe590702e1fe07ad63",
+          "evidence_id": "0x93adcf5a934c4ed754f38daaf7253df81fd0e18ae6618cdbbce3dbf882436f68",
+          "verified": true,
+          "verification_id": "0x37cea0d765c4a063fa46fda8721228ddd8aa5fc8ab1020806cd964d25791ad59"
+        }
+      ],
+      "budget_asset": "TOOL_CALLS",
+      "budget_limit": "3",
+      "agreement_record": "0x5d7fe5345ed9476999e86759ea8a527978402f88b0fecc2ee3f675bd47a576cb",
+      "acceptance_record": "0xd7aacba2993ad593eba9a6bb5e7ca0339988130f91edcf6146991291feadb867",
+      "accepted_by_human": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+      "accepted_at_ms": "1791082488841"
+    },
+    "run": {
+      "id": "0x41db7d62cdb0e7b8b7b63627558c156ccab6cda2ed995bfe590702e1fe07ad63",
+      "capability_id": "0x03ef619128a7673f70efd6801f00992b54b0a0c06aeeeef62f4eb7276aaab8b3",
+      "state": 2,
+      "cursor": "3",
+      "action": "assign",
+      "scope": "control",
+      "command_id": "e2b29b64-7ede-419a-bca4-889c9ee1c2f1",
+      "idempotency_key": "e2b29b64-7ede-419a-bca4-889c9ee1c2f1",
+      "budget_asset": "TOOL_CALLS",
+      "budget_amount": "3",
+      "issued_at_ms": "1791082198527",
+      "expires_at_ms": "1791082498527",
+      "started_at_ms": "1791082268965",
+      "updated_at_ms": "1791082352834",
+      "result_record": "0x93adcf5a934c4ed754f38daaf7253df81fd0e18ae6618cdbbce3dbf882436f68",
+      "stop_requested": false
+    },
+    "okrBudget": {
+      "asset": "TOOL_CALLS",
+      "spent": "3",
+      "reserved": "0",
+      "claimsId": "0xdf85f6b3a3c76ade59f50f7a8207362bce49ac4f9a12cf845215958eb03b85d9"
+    },
+    "okrClaim": {
+      "capability_id": "0x03ef619128a7673f70efd6801f00992b54b0a0c06aeeeef62f4eb7276aaab8b3",
+      "agreement_version": "4",
+      "kr_index": "0",
+      "reserved": "3",
+      "spent": "3",
+      "settled": true
+    },
+    "capabilityBudget": {
+      "spent": "3",
+      "reserved": "0"
+    },
+    "capabilityClaim": {
+      "reservedAmount": "3",
+      "spentAmount": "3",
+      "settled": true
+    },
+    "executionCount": 1,
+    "hasNextExecutionPage": false,
+    "records": [
+      {
+        "id": "0xf2ef495a541489ebf8259d323c5681a6bd2e99af7728903cbc9470fd1a2a1712",
+        "organization_id": "0x53e622cedfe98236634e3340753b4191f9840dfae36ded85588b18efa12f7bef",
+        "kind": 1,
+        "logical_id": "okr-89d1560b-6fc0-4b07-8d8a-b6ad52d72470-spec",
+        "revision": "4",
+        "key_version": "4",
+        "previous": "0x33f2cdd46e3043b2d5787235e0136759b09b02c639b77759ff3d693c861e2de8",
+        "writer_human": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+        "writer_device": "0xe0cdbb7bb7bbf0c4d35d9bbaa17a6576e73a9d9f5a4d229e05f4b7bebb29af75",
+        "grant_id": "0x4f72e9548ad66c78a0c1c4fc4d0420b71d4c6af3dacd14191d5cfffbdf3fd3be",
+        "grant_version": "1",
+        "created_at_ms": "1791081884372",
+        "encrypted_body": {
+          "bytes": 819,
+          "sha256": "7d025227fa14f8811806580b35d185a50802cfbeea62155b84ec0b08574cc11c"
+        }
+      },
+      {
+        "id": "0x5d7fe5345ed9476999e86759ea8a527978402f88b0fecc2ee3f675bd47a576cb",
+        "organization_id": "0x53e622cedfe98236634e3340753b4191f9840dfae36ded85588b18efa12f7bef",
+        "kind": 2,
+        "logical_id": "okr-89d1560b-6fc0-4b07-8d8a-b6ad52d72470-agreement",
+        "revision": "1",
+        "key_version": "4",
+        "previous": null,
+        "writer_human": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+        "writer_device": "0xe0cdbb7bb7bbf0c4d35d9bbaa17a6576e73a9d9f5a4d229e05f4b7bebb29af75",
+        "grant_id": "0x4f72e9548ad66c78a0c1c4fc4d0420b71d4c6af3dacd14191d5cfffbdf3fd3be",
+        "grant_version": "1",
+        "created_at_ms": "1791082124456",
+        "encrypted_body": {
+          "bytes": 1943,
+          "sha256": "51acec89294e105a1d694955ac2de0f86b31a78a988ee2ee2a6ee5bf03f085ff"
+        }
+      },
+      {
+        "id": "0x93adcf5a934c4ed754f38daaf7253df81fd0e18ae6618cdbbce3dbf882436f68",
+        "organization_id": "0x53e622cedfe98236634e3340753b4191f9840dfae36ded85588b18efa12f7bef",
+        "kind": 5,
+        "logical_id": "command-32126a02140d458ed0a1ba06e3fbaaf6470f65bb8df86c4e14549a95c14b22ba",
+        "revision": "1",
+        "key_version": "4",
+        "previous": null,
+        "writer_human": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+        "writer_device": "0xe71fb93375793024af0a8aba7d2c27e8f10afa726b8e7aeb6617f99c0d0057c3",
+        "grant_id": "0x4f72e9548ad66c78a0c1c4fc4d0420b71d4c6af3dacd14191d5cfffbdf3fd3be",
+        "grant_version": "1",
+        "created_at_ms": "1791082352834",
+        "encrypted_body": {
+          "bytes": 1403,
+          "sha256": "8f69662fb6551886153f233b1b57da3ca340855e1a26de70b257db6f080b2405"
+        }
+      },
+      {
+        "id": "0x37cea0d765c4a063fa46fda8721228ddd8aa5fc8ab1020806cd964d25791ad59",
+        "organization_id": "0x53e622cedfe98236634e3340753b4191f9840dfae36ded85588b18efa12f7bef",
+        "kind": 4,
+        "logical_id": "okr-89d1560b-6fc0-4b07-8d8a-b6ad52d72470-verification",
+        "revision": "1",
+        "key_version": "4",
+        "previous": null,
+        "writer_human": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+        "writer_device": "0xe0cdbb7bb7bbf0c4d35d9bbaa17a6576e73a9d9f5a4d229e05f4b7bebb29af75",
+        "grant_id": "0x4f72e9548ad66c78a0c1c4fc4d0420b71d4c6af3dacd14191d5cfffbdf3fd3be",
+        "grant_version": "1",
+        "created_at_ms": "1791082451436",
+        "encrypted_body": {
+          "bytes": 1251,
+          "sha256": "93af620b42c3f5ef30badb625c4941d97aee5fe2ebc26c88cf49695031748a32"
+        }
+      },
+      {
+        "id": "0xd7aacba2993ad593eba9a6bb5e7ca0339988130f91edcf6146991291feadb867",
+        "organization_id": "0x53e622cedfe98236634e3340753b4191f9840dfae36ded85588b18efa12f7bef",
+        "kind": 4,
+        "logical_id": "okr-89d1560b-6fc0-4b07-8d8a-b6ad52d72470-acceptance",
+        "revision": "1",
+        "key_version": "4",
+        "previous": null,
+        "writer_human": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+        "writer_device": "0xe0cdbb7bb7bbf0c4d35d9bbaa17a6576e73a9d9f5a4d229e05f4b7bebb29af75",
+        "grant_id": "0x4f72e9548ad66c78a0c1c4fc4d0420b71d4c6af3dacd14191d5cfffbdf3fd3be",
+        "grant_version": "1",
+        "created_at_ms": "1791082488841",
+        "encrypted_body": {
+          "bytes": 1390,
+          "sha256": "88cea29edb1194455dff8eeaaf955c4f9164af53079d2969bfef48c9db59b9a9"
+        }
+      }
+    ],
+    "receipts": [
+      {
+        "purpose": "humanAcceptance",
+        "digest": "6EU2mgkZUGywx1fmVYehRE1daGM581J9uHDVCkU4bES7",
+        "status": {
+          "success": true,
+          "error": null
+        },
+        "checkpoint": "1193069",
+        "sender": "0xe0cdbb7bb7bbf0c4d35d9bbaa17a6576e73a9d9f5a4d229e05f4b7bebb29af75",
+        "gasBudget": "200000000",
+        "actualGasMist": "10731572",
+        "effectsGasUsed": {
+          "computationCost": "1000000",
+          "storageCost": "35666800",
+          "storageRebate": "25935228",
+          "nonRefundableStorageFee": "261972"
+        }
+      },
+      {
+        "purpose": "krVerification",
+        "digest": "BVKB7RgLvrNYL45f5YCz4aVbXBJx2VfAYSFSp37Aqjkw",
+        "status": {
+          "success": true,
+          "error": null
+        },
+        "checkpoint": "1192889",
+        "sender": "0xe0cdbb7bb7bbf0c4d35d9bbaa17a6576e73a9d9f5a4d229e05f4b7bebb29af75",
+        "gasBudget": "200000000",
+        "actualGasMist": "16982724",
+        "effectsGasUsed": {
+          "computationCost": "1000000",
+          "storageCost": "28013600",
+          "storageRebate": "12030876",
+          "nonRefundableStorageFee": "121524"
+        }
+      },
+      {
+        "purpose": "executionEvidence",
+        "digest": "4RTnk31bzFEAajifV4h5YDqNBNA2Zs2vYA1KTaW47hs6",
+        "status": {
+          "success": true,
+          "error": null
+        },
+        "checkpoint": "1192434",
+        "sender": "0xe71fb93375793024af0a8aba7d2c27e8f10afa726b8e7aeb6617f99c0d0057c3",
+        "gasBudget": "2000000000",
+        "actualGasMist": "18943980",
+        "effectsGasUsed": {
+          "computationCost": "1000000",
+          "storageCost": "57106400",
+          "storageRebate": "39162420",
+          "nonRefundableStorageFee": "395580"
+        }
+      },
+      {
+        "purpose": "reviewRequest",
+        "digest": "HSnSkWADXkAnCTYtjeZDciNFVHD7ka3YaWhF2kLN9z6z",
+        "status": {
+          "success": true,
+          "error": null
+        },
+        "checkpoint": "1190610",
+        "sender": "0xe0cdbb7bb7bbf0c4d35d9bbaa17a6576e73a9d9f5a4d229e05f4b7bebb29af75",
+        "gasBudget": "200000000",
+        "actualGasMist": "59158868",
+        "effectsGasUsed": {
+          "computationCost": "1730000",
+          "storageCost": "72048000",
+          "storageRebate": "14619132",
+          "nonRefundableStorageFee": "147668"
+        }
+      },
+      {
+        "purpose": "agreementApproval",
+        "digest": "Bu8EwTTBNPHrEbz4GmR9yGN4YQSKEHt9EDZJm4FkhdRm",
+        "status": {
+          "success": true,
+          "error": null
+        },
+        "checkpoint": "1191373",
+        "sender": "0xe0cdbb7bb7bbf0c4d35d9bbaa17a6576e73a9d9f5a4d229e05f4b7bebb29af75",
+        "gasBudget": "200000000",
+        "actualGasMist": "48661424",
+        "effectsGasUsed": {
+          "computationCost": "1000000",
+          "storageCost": "68156800",
+          "storageRebate": "20495376",
+          "nonRefundableStorageFee": "207024"
+        }
+      },
+      {
+        "purpose": "agentImport",
+        "digest": "FefqSSJk2rc9DxCGAwoUznJj74st8HGec46BUu4L7ZcW",
+        "status": {
+          "success": true,
+          "error": null
+        },
+        "checkpoint": "1189643",
+        "sender": "0xe0cdbb7bb7bbf0c4d35d9bbaa17a6576e73a9d9f5a4d229e05f4b7bebb29af75",
+        "gasBudget": "200000000",
+        "actualGasMist": "11883736",
+        "effectsGasUsed": {
+          "computationCost": "1450000",
+          "storageCost": "18604800",
+          "storageRebate": "8171064",
+          "nonRefundableStorageFee": "82536"
+        }
+      },
+      {
+        "purpose": "specification",
+        "digest": "5coGZYHswajEmFXaoEBEUmeFo3HmCRsNTJ14HJ8cty3z",
+        "status": {
+          "success": true,
+          "error": null
+        },
+        "checkpoint": "1190256",
+        "sender": "0xe0cdbb7bb7bbf0c4d35d9bbaa17a6576e73a9d9f5a4d229e05f4b7bebb29af75",
+        "gasBudget": "200000000",
+        "actualGasMist": "10583752",
+        "effectsGasUsed": {
+          "computationCost": "1000000",
+          "storageCost": "20132400",
+          "storageRebate": "10548648",
+          "nonRefundableStorageFee": "106552"
+        }
+      }
+    ]
+  },
+  "fileVerification": {
+    "observedAt": 1791082336.1494935,
+    "readOnly": true,
+    "targetExists": true,
+    "workspaceFiles": [
+      {
+        "path": "docs/DESKTOP-CORE.md",
+        "bytes": 80,
+        "sha256": "a9708edbceee0608a3afa3dd1154667d7962e89b0f8390c64189b271ac53efab"
+      }
+    ],
+    "expectedBytes": 80,
+    "expectedSha256": "a9708edbceee0608a3afa3dd1154667d7962e89b0f8390c64189b271ac53efab",
+    "exactBytesMatch": true,
+    "actualSha256": "a9708edbceee0608a3afa3dd1154667d7962e89b0f8390c64189b271ac53efab",
+    "noOtherWorkspaceFiles": true,
+    "commandsReceived": 2
+  },
+  "interpretation": {
+    "outcome": "ACHIEVED with one independently verified KR; the original Run succeeded and both budget layers settled at spent 3/reserved 0.",
+    "agreementVersions": "Run/claim execution agreement 4; final Human acceptance advances the current OKR agreement to 5.",
+    "file": "docs/DESKTOP-CORE.md is exactly 80 approved bytes with SHA-256 a9708edbceee0608a3afa3dd1154667d7962e89b0f8390c64189b271ac53efab and no additional workspace files.",
+    "commandCount": "The recorded Host total is 2 commands (review and execution); this is not a claim of two execution deliveries. The OKR claim directory contains exactly one Run.",
+    "runDeliveryUi": "The UI reported no chain delivery record because this observed execution used the direct Coordinator path. The original Run advanced queued → running → succeeded; its result and settlement were queried rather than creating a replacement Run."
+  },
+  "retainedHistory": [
+    "Initial Agent import prepare read_unavailable had no submission; the same attempt later confirmed.",
+    "Unsupported natural-language prohibition fixture was correctly rejected; canonical actions were explicitly reviewed through official specification editing, docs-only/maxCalls 3 unchanged.",
+    "Review/result waits and original transaction queries remain in the actual UI sequence; no successful terminal state is inferred from a pending view.",
+    "Earlier r12/r14/r15 identity recovery and both Android cache intervals remain in their original evidence files."
+  ],
+  "remaining": [],
+  "sources": [
+    {
+      "path": "/tmp/fm-v020-desktop-core-ui.json",
+      "sha256": "77c23f4aae784b2e2a627e4eb18fd5b3bd8918019258403ac7ad11d147410ae0"
+    },
+    {
+      "path": "/tmp/fm-v020-desktop-core-chain-r15-achieved.json",
+      "sha256": "22a0220d0045125301671b79547f339731df18235627134ff15a6afc8e10858a"
+    },
+    {
+      "path": "/tmp/fm-v020-desktop-core-independent-accepted.json",
+      "sha256": "34848f92f0a87147dbcb7bfdf6d70d5962e377be31f82965bfd75ff6b47e85cb"
+    },
+    {
+      "path": "/tmp/fm-v020-desktop-core-independent-read.ts",
+      "sha256": "8be18a0a394078499ca8708885621f0dfddcb47bb12857aaae97ccaeeb73033c"
+    },
+    {
+      "path": "/tmp/fm-v020-desktop-restored-833288c0674f/execution-file-independent.json",
+      "sha256": "b6d2588ece98aa41cf9d5f0e2af6bded5455972afa880705358ad8d0a86c8aba"
+    },
+    {
+      "path": "/tmp/fm-v020-desktop-r15-build-public.json",
+      "sha256": "aadb3bbe121b366c9caf4a676bccbd1062717e948832249b64bdfd39b8b61b91"
+    },
+    {
+      "path": "/tmp/fm-v020-final-app-375.log",
+      "sha256": "f447e529d096d7deca23c2025ecfa8a26592e428f5860e724f61fd48ea3d0193"
+    }
+  ],
+  "directStatus": {
+    "status": "passed_actual_ui_and_independent_chain_file_checks",
+    "actualUiLastReadAt": "2026-10-04T03:00:14.068Z",
+    "runId": "0x143c8b0a0ff07ff58032476bf31b2631265db1bc69cf27f5d23da863e239c7f6",
+    "resultRecord": "0x0775d659c43f2528d6009efa99372994b249dc601d93efdc0300380ceee3de76",
+    "commandId": "363a23f8-e3ce-4843-a3b7-26e4674ff5f3",
+    "originalDeliveryOutcome": "unknown_retained",
+    "resubmitted": false,
+    "uiReadback": {
+      "heading": "Execution succeeded",
+      "originalHostReceipt": "read_and_decrypted",
+      "ok": true,
+      "duplicate": false,
+      "physicalState": "idle",
+      "workspaceHash": "7592e530fe8822e534a6e9603211a98b4926ad11a19ed2058d054a580ce2ab3c",
+      "scope": "Fields visible in the saved actual UI accessibility snapshot; not a claim that it captured the complete decrypted JSON."
+    },
+    "independentChain": {
+      "checkedAt": "2026-10-04T03:04:58.253Z",
+      "checks": {
+        "statusSucceeded": true,
+        "statusOnlyPermission": true,
+        "spent0Reserved0": true,
+        "claimSettled": true,
+        "capabilityBudget0_0": true,
+        "okrBudgetUnchanged3_0": true
+      },
+      "run": {
+        "id": "0x143c8b0a0ff07ff58032476bf31b2631265db1bc69cf27f5d23da863e239c7f6",
+        "state": 2,
+        "action": "direct.message",
+        "scope": "direct",
+        "budget_asset": "",
+        "budget_amount": "0",
+        "started_at_ms": "1791082718522",
+        "updated_at_ms": "1791082770305",
+        "result_record": "0x0775d659c43f2528d6009efa99372994b249dc601d93efdc0300380ceee3de76"
+      },
+      "permission": {
+        "id": "0x46b3503cf952692b633eb46020d62c5b327d4b4301b034365b357d907e9c35a0",
+        "version": "1",
+        "allowed_actions": [
+          "status"
+        ],
+        "max_calls": "0",
+        "budget_limit": "0",
+        "spent": "0",
+        "reserved": "0",
+        "approved_spent": "0",
+        "approved_reserved": "0",
+        "expires_at_ms": "1791083461787"
+      },
+      "claim": {
+        "capability_id": "0x842e5513e35222eee8be8964d559104816a6f3d63a11594392432000c11d0dc1",
+        "message_id": "0xcfeb645a63175b39aff818461a223bec8d37d90aa6c2311201a7829d4fca8e4b",
+        "permission_version": "1",
+        "approval_id": null,
+        "reserved": "0",
+        "spent": "0",
+        "settled": true
+      },
+      "capabilityBudget": {
+        "spent": "0",
+        "reserved": "0"
+      },
+      "okrBudget": {
+        "asset": "TOOL_CALLS",
+        "spent": "3",
+        "reserved": "0",
+        "claimsId": "0xdf85f6b3a3c76ade59f50f7a8207362bce49ac4f9a12cf845215958eb03b85d9"
+      }
+    },
+    "fileProof": {
+      "beforeCheckedAt": 1791082693.3737433,
+      "finalCheckedAt": 1791082853.7983217,
+      "exactByteCheckAt": "2026-10-04T03:01:48.243050+00:00",
+      "workerPid": 2514179,
+      "commandCountBefore": 3,
+      "commandCountAfter": 3,
+      "workspaceFiles": [
+        {
+          "path": "docs/DESKTOP-CORE.md",
+          "bytes": 80,
+          "sha256": "a9708edbceee0608a3afa3dd1154667d7962e89b0f8390c64189b271ac53efab",
+          "mtimeNs": 1791082321709536141
+        }
+      ],
+      "sameFileBytesHashAndMtime": true,
+      "exactBytesComparedAfterSuccess": true,
+      "onlyOriginalFile": true,
+      "interval": "The baseline was taken while the original status command was already in flight; it is not relabeled as a pre-dispatch snapshot."
+    },
+    "probeHistory": "The first independent budget probe used an incorrect field name actions and failed its assertion without mutation; correcting it to the SDK field allowed_actions produced the saved successful report.",
+    "sources": [
+      {
+        "path": "/tmp/fm-v020-desktop-status-independent-budget.json",
+        "sha256": "46bb87d373ed876844cfbe3a86a041150d4db5a49a69491b897350af47dba385"
+      },
+      {
+        "path": "/tmp/fm-v020-desktop-status-independent-read.ts",
+        "sha256": "106ccd94d21f4be4a1265d6ef69c2bee3abfee417ba9cce8994081611d58a245"
+      },
+      {
+        "path": "/tmp/fm-v020-desktop-restored-833288c0674f/status-run-public.json",
+        "sha256": "2b046a645be65ac4b64c5566a6b0bbd2d5579369d3cd49e2b80c51fa99048df0"
+      },
+      {
+        "path": "/tmp/fm-v020-desktop-restored-833288c0674f/status-command-before-public.json",
+        "sha256": "e7b0a7ba5ef199c01c3cebc5f2130f1028a14337f26b1e1324f092b0a88abfae"
+      },
+      {
+        "path": "/tmp/fm-v020-desktop-restored-833288c0674f/status-command-final-public.json",
+        "sha256": "9e3f97c3c0010262b2c73d6a303c3c5b874216d6bb086a95da239591999dfec9"
+      },
+      {
+        "path": "/tmp/fm-v020-desktop-core-ui.json",
+        "sha256": "3369cc1536228598a7a9cceaa9495d4c613c38d8fb791084f2594f1d59a772b2"
+      }
+    ]
+  },
+  "updatedAt": "2026-10-04T03:16:51.852209+00:00",
+  "hostAdmission": {
+    "method": "Official envd Host-join CLI on the isolated cloud Host, after actual App invitation creation. Joining was not performed by a replacement UI controller.",
+    "digest": "FKan8PdYTr3xbvx7YHjrJhXU3zsQdw71A9kuwnmSiFaY",
+    "actualGasMist": "11589372",
+    "cliState": "confirmed",
+    "cliExitCode": 0,
+    "membershipId": "0x6c49692f80aeb9dabe7114e6022552ecef31c22ee24b2dfc4cff3b974e95ae42",
+    "inviteId": "0x6d1128f53e1807bd6eb841a757f0bf295a5889aa0995739ccfa588bbb530652a",
+    "bindingId": "0xd5bf57dbb48f6e2b3c3ea4b7798aa680e5e666860084735db7c484c5eb5e3c55",
+    "independentCheckedAt": "2026-10-04T02:40:22.665Z",
+    "verifiedAdmissionLimits": {
+      "oneUseInviteConsumed": true,
+      "membershipTtlMs": 86400000,
+      "observationTtlMs": 14400000,
+      "observationMaxCalls": 10000,
+      "executionAuthorityGranted": false
+    },
+    "sources": [
+      {
+        "path": "/tmp/fm-v020-desktop-restored-833288c0674f/join-public.json",
+        "sha256": "4c0de8500900908ee4249faf0ce33da0f7059a42925604ac2bfe6ef2175160fe"
+      },
+      {
+        "path": "/tmp/fm-v020-desktop-restored-833288c0674f/joined-chain-public.json",
+        "sha256": "d1d865917e6cde0cf96c0127541a9c44db191a7a727854b22580db4b8195ce37"
+      },
+      {
+        "path": "/tmp/fm-v020-desktop-restored-833288c0674f/runtime-public.json",
+        "sha256": "6ce45e46699516bff7df74c2257fb1d1a3a73df7ab773902fbc36b2e8267a1be"
+      }
+    ]
+  },
+  "finalRecoveryR16": {
+    "status": "passed",
+    "recordedAt": "2026-10-04T03:14:43.679449+00:00",
+    "build": {
+      "at": "2026-10-04T03:01:47.022324+00:00",
+      "build": "r16",
+      "sourceCommit": "4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1",
+      "binarySha256": "e08da498d0b41d965c060e95bf2c5017d8db8213a63b7d53522f15637b563405",
+      "path": "/Users/yubing/Workspace/fractalmind-labs/fractalmind-os/apps/fractalmind-app/src-tauri/target/debug/bundle/macos/FractalMind.app",
+      "strictSignatureVerified": true,
+      "signing": "ad-hoc isolated test build",
+      "pid": 92707
+    },
+    "sourceCommit": "4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1",
+    "profile": "test-core-r16-recovery",
+    "transaction": "2bsi3pu18YpDuBgwqgwAcFji7AFjDdMZYDKNsfGhngtC",
+    "actualGasMist": "22067736",
+    "gasEvidence": "Actual installed r16 original transaction confirmation, observed immediately after submit and after refresh; not independently re-confirmed by the later receipt read.",
+    "uiChecks": {
+      "immediateOriginalTransaction": "confirmed",
+      "afterRefreshOriginalTransaction": "confirmed",
+      "postRefreshGeneration": 5,
+      "postRefreshRecoveryVersion": 5,
+      "unknownShown": false,
+      "unavailableLookupWarningShown": false,
+      "reproducedUnavailableLookupBranch": false,
+      "faultBranchCoverage": "Five recovery-outcome regression tests in the 375/375 suite cover preserving an actual consistent terminal receipt, same digest/request binding and explicit later-unavailable notice. No forced UI error was injected."
+    },
+    "independentRead": {
+      "checkedAt": "2026-10-04T03:12:47.046Z",
+      "finishedAt": "2026-10-04T03:12:47.111Z",
+      "readOnly": true,
+      "broadcasts": 0,
+      "nativeKeyCalls": 0,
+      "transport": "Sui SDK gRPC; no JSON-RPC fallback",
+      "currentStateAssertionsPassed": true,
+      "receiptIndependentlyConfirmed": false,
+      "receiptUnavailable": {
+        "checkedAt": "2026-10-04T03:11:09Z",
+        "reason": "notFound",
+        "digest": "2bsi3pu18YpDuBgwqgwAcFji7AFjDdMZYDKNsfGhngtC",
+        "grpcCode": "NOT_FOUND",
+        "checkpointHeight": "1197607",
+        "lowestAvailableCheckpoint": "1197596",
+        "chainIdentifier": "9hgLHx5WyzdWSt4fH9jmLzQgMDV5kn5AuL9KFFYz7YUk"
+      },
+      "humanId": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+      "organizationId": "0x53e622cedfe98236634e3340753b4191f9840dfae36ded85588b18efa12f7bef",
+      "organizationAdmin": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+      "generation": "5",
+      "recoveryVersion": "5",
+      "newDeviceGrant": {
+        "id": "0x22947957189c6ae73078d23c85609189d71df8cea642654b11b855c8e87e302d",
+        "human_id": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+        "device": "0x2bea8d6b07615d377d2e3f4ae1fe222686c49ae9e8ef4e8cd4507e605a38d72f",
+        "org_scope": null,
+        "actions": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "expires_at_ms": "1793675380271",
+        "revoked": false,
+        "version": "1",
+        "generation": "5"
+      },
+      "transactionAssociations": {
+        "human": {
+          "objectId": "0xa5213baf8e8c3e81785bc4f2ed644674d119ade5822b6830908b540f3af9d72a",
+          "version": "4739268",
+          "digest": "Defx7tKZTtUvFRdGfsXEkZG2PqfZCUEUdYxDj5JojHWD",
+          "owner": {
+            "$kind": "Shared",
+            "Shared": {
+              "initialSharedVersion": "4590242"
+            }
+          },
+          "type": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::HumanIdentity",
+          "previousTransaction": "2bsi3pu18YpDuBgwqgwAcFji7AFjDdMZYDKNsfGhngtC"
+        },
+        "grant": {
+          "objectId": "0x22947957189c6ae73078d23c85609189d71df8cea642654b11b855c8e87e302d",
+          "version": "4739268",
+          "digest": "3Y9aNVvAX9ZFgVFVzCyLZptoXnvyMwMWHc63MLLU9mvg",
+          "owner": {
+            "$kind": "Shared",
+            "Shared": {
+              "initialSharedVersion": "4739268"
+            }
+          },
+          "type": "0x4ebfe2e81449cedf6adeb5876f682c05257ed0702887ccd1fc5ce85269379521::identity::DeviceGrant",
+          "previousTransaction": "2bsi3pu18YpDuBgwqgwAcFji7AFjDdMZYDKNsfGhngtC"
+        }
+      },
+      "okr": {
+        "id": "0x5ae0d408b36fda916f0a11c610eefef145d6dbb9b783c24d20a1d6f522ee05fa",
+        "state": 3,
+        "version": "8",
+        "agreement_version": "5",
+        "spec_revision": "4",
+        "next_kr": "1",
+        "metrics": [
+          {
+            "baseline": "0",
+            "target": "1",
+            "weight": "1",
+            "max_age_ms": "300000",
+            "current": "1",
+            "sampled_at_ms": "1791082346651",
+            "run_id": "0x41db7d62cdb0e7b8b7b63627558c156ccab6cda2ed995bfe590702e1fe07ad63",
+            "evidence_id": "0x93adcf5a934c4ed754f38daaf7253df81fd0e18ae6618cdbbce3dbf882436f68",
+            "verified": true,
+            "verification_id": "0x37cea0d765c4a063fa46fda8721228ddd8aa5fc8ab1020806cd964d25791ad59"
+          }
+        ],
+        "acceptance_record": "0xd7aacba2993ad593eba9a6bb5e7ca0339988130f91edcf6146991291feadb867"
+      },
+      "budget": {
+        "asset": "TOOL_CALLS",
+        "spent": "3",
+        "reserved": "0",
+        "claimsId": "0xdf85f6b3a3c76ade59f50f7a8207362bce49ac4f9a12cf845215958eb03b85d9"
+      },
+      "scope": "Independent current-state verification only. The original fresh SDK full receipt returned exact NOT_FOUND; no repeat request or fallback. Gas comes from the root agent actual installed UI confirmation, not this independent read. Current objects reference the original digest but do not substitute for its full receipt. The unavailable-lookup UI branch was not reproduced during r16 acceptance."
+    },
+    "recoveredHistoryUi": {
+      "originalStatusRun": "0x143c8b0a0ff07ff58032476bf31b2631265db1bc69cf27f5d23da863e239c7f6",
+      "originalCommandId": "363a23f8-e3ce-4843-a3b7-26e4674ff5f3",
+      "originalHostReceipt": "read_and_decrypted",
+      "executionState": "succeeded",
+      "spent": 0,
+      "settled": true,
+      "visibleResponse": {
+        "ok": true,
+        "duplicate": false,
+        "physicalState": "idle",
+        "workspaceHash": "7592e530fe8822e534a6e9603211a98b4926ad11a19ed2058d054a580ce2ab3c"
+      },
+      "standingPermission": "expired_truthfully_displayed",
+      "newPermissionMessagesOrCommands": 0,
+      "finalWorkbench": {
+        "humanAccepted": true,
+        "verifiedKrs": 1,
+        "totalKrs": 1,
+        "spent": 3,
+        "reserved": 0,
+        "limit": 3,
+        "measuredProgress": "unknown_truthfully_displayed",
+        "hostConnectivity": "unknown_truthfully_displayed"
+      },
+      "scope": "Historical decrypt/readback does not claim current execution authority or live Host connectivity."
+    },
+    "actualUiSteps": [
+      {
+        "name": "r16-cold-launch-achieved-state",
+        "at": "2026-10-04T03:02:11.164Z"
+      },
+      {
+        "name": "r16-import-recovery-code",
+        "at": "2026-10-04T03:08:52.266Z"
+      },
+      {
+        "name": "r16-replacement-code-prepared",
+        "at": "2026-10-04T03:09:16.264Z"
+      },
+      {
+        "name": "r16-recovery-fee-reviewed",
+        "at": "2026-10-04T03:09:32.316Z"
+      },
+      {
+        "name": "r16-recovery-submit-immediate",
+        "at": "2026-10-04T03:09:40.812Z"
+      },
+      {
+        "name": "r16-recovery-post-refresh",
+        "at": "2026-10-04T03:09:49.799Z"
+      },
+      {
+        "name": "r16-restored-organization-opened",
+        "at": "2026-10-04T03:10:25.332Z"
+      },
+      {
+        "name": "r16-recovery-historical-status-decrypted",
+        "at": "2026-10-04T03:11:23.008Z"
+      },
+      {
+        "name": "r16-final-accepted-workbench",
+        "at": "2026-10-04T03:11:32.794Z"
+      }
+    ],
+    "sources": [
+      {
+        "path": "/tmp/fm-v020-desktop-r16-build-public.json",
+        "sha256": "c36cad63cab8e96be2a69f5ea66895439310d085f49be8302a756f55d5dc9af1"
+      },
+      {
+        "path": "/tmp/fm-v020-r16-independent-final-recovery.json",
+        "sha256": "33c0ecc392c205ce90fe0737e8a91d9557e2255627e1c8fe2a43246d1cb6fca6"
+      },
+      {
+        "path": "/tmp/fm-v020-desktop-core-ui.json",
+        "sha256": "45cdc121addf1a68845a86b3a6bd846c5209f20ee3175ffd4e9f3e2e2c44f850"
+      },
+      {
+        "path": "apps/fractalmind-app/tests/recovery-outcome.test.ts",
+        "sha256": "555a0ea37c87be1b60ed0c64c14d561acde6128116dd8370bd2b19ece9679fba"
+      },
+      {
+        "path": "/tmp/fm-v020-final-app-375.log",
+        "sha256": "f447e529d096d7deca23c2025ecfa8a26592e428f5860e724f61fd48ea3d0193"
+      }
+    ],
+    "publicationScope": "Public identifiers, hashes and bounded observations only; no recovery codes, invitation secrets, encrypted key arrays, private keys or raw full UI text are included."
+  },
+  "finalUiSource": {
+    "path": "/tmp/fm-v020-desktop-core-ui.json",
+    "sha256": "45cdc121addf1a68845a86b3a6bd846c5209f20ee3175ffd4e9f3e2e2c44f850"
+  },
+  "finalCommitVerification": {
+    "policy": "Final PR verification follows the checks attached to the current PR head. The recorded 38/38 success applies specifically to source commit 4063bb05bfd1b7b10b5a0ae7af40ad48ee39d7f1 and is not inherited by a later head.",
+    "checksUrl": "https://github.com/fractalmind-labs/fractalmind-os/pull/53/checks"
+  }
+}

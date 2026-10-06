@@ -1,0 +1,70 @@
+{
+  "checkedAt": "2026-10-02T12:10:11.949056+00:00",
+  "checks": [
+    {
+      "name": "SDK typecheck/build and regression",
+      "cwd": "protocols/fractalmind-protocol/sdk",
+      "commands": [
+        "npm run typecheck",
+        "npm run build",
+        "node --import tsx --test tests/*.test.ts"
+      ],
+      "passed": 114,
+      "failed": 0
+    },
+    {
+      "name": "App regression/types/production build",
+      "cwd": "apps/fractalmind-app",
+      "commands": [
+        "npm test",
+        "npm run build"
+      ],
+      "passed": 98,
+      "failed": 0,
+      "existingWarning": "Vite large entry chunk warning remains"
+    },
+    {
+      "name": "Actual-chain harness typecheck",
+      "cwd": "apps/fractalmind-app",
+      "command": "tsc --noEmit --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck scripts/host-admission-localnet.ts",
+      "success": true
+    },
+    {
+      "name": "Go five-package concurrency/regression",
+      "cwd": "runtime/fractalmind-envd",
+      "command": "go test -race ./internal/nodecommand ./internal/runtimeadapter ./internal/sui ./internal/coordinator ./cmd/envd -count=1",
+      "success": true,
+      "evidence": [
+        "ok internal/nodecommand 3.509s",
+        "ok internal/runtimeadapter 6.220s",
+        "ok internal/sui 4.610s",
+        "ok internal/coordinator 3.604s",
+        "ok cmd/envd 5.284s"
+      ]
+    }
+  ],
+  "coverage": {
+    "typedCurrentSuiReview": true,
+    "missingCoverageNotEmpty": true,
+    "zeroUnsettledControlRequired": true,
+    "exactSignedProposal": true,
+    "physicalAliasesExcluded": true,
+    "noToolCallsDuringReview": true,
+    "hostProofSignedBeforeEncryption": true,
+    "sdkVerifiesIndependentGoBcsVector": true,
+    "historyDoesNotRefreshExpiry": true,
+    "publicationRequiresChainClock": true,
+    "lateFailureCannotReleaseAnotherReview": true,
+    "historicalNativeStateRetainsOriginalReviewDeadline": true
+  },
+  "limits": {
+    "appSafeHandoverComplete": false,
+    "approvalConsumesHostProofOnChain": false,
+    "explicitContinueComplete": false,
+    "installedOsStoreVerified": false,
+    "cloudHostVerified": false,
+    "fivePlatformAcceptanceComplete": false,
+    "uiChanged": false,
+    "moveContractChanged": false
+  }
+}
