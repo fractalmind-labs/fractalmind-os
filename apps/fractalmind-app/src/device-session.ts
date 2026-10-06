@@ -174,12 +174,17 @@ export function useDeviceSession(transport: NativeInvoke = defaultTransport) {
     [native, transport],
   );
 
-  /** After a failed unlock, keep using the App as a read-only browser. */
-  const browseReadOnly = useCallback(() => {
-    setSession((s) =>
-      s.state === "locked" ? { state: "no_device", profile: s.profile } : s,
-    );
-  }, []);
+  /** Re-read the device profile after setup or recovery created device keys
+   * in this App; their native session is already open. */
+  const resync = useCallback(async () => {
+    if (!native) return;
+    profile.current = preferredDeviceProfile();
+    try {
+      await unlocked();
+    } catch {
+      await unlock();
+    }
+  }, [native, unlocked, unlock]);
 
   const setIdleMinutes = useCallback(
     async (minutes: number) => {
@@ -282,5 +287,5 @@ export function useDeviceSession(transport: NativeInvoke = defaultTransport) {
     return () => document.removeEventListener("visibilitychange", visibility);
   }, [isUnlocked, lock]);
 
-  return { session, unlock, lock, browseReadOnly, idleMinutes, setIdleMinutes };
+  return { session, unlock, lock, resync, idleMinutes, setIdleMinutes };
 }

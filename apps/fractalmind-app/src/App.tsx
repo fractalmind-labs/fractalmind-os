@@ -342,6 +342,7 @@ export function App() {
     </>
   );
   const connect = (value: ConnectionProfile) => {
+    void device.resync();
     setProfile(value);
     setPage("workbench");
     setFocusId("");
@@ -374,8 +375,17 @@ export function App() {
     // Persist the verified pin once. Rewriting it on every snapshot refresh
     // would recreate a connection another window explicitly cleared.
   }, [profile, data.identity?.human.id, data.identity?.chainIdentifier]);
-  if (!profile)
-    return <Welcome t={t} appearance={appearance} connect={connect} />;
+  // A native App without device keys on this machine sets up (or recovers) a
+  // real identity; it never falls back to a read-only browser.
+  if (!profile || device.session.state === "no_device")
+    return (
+      <Welcome
+        t={t}
+        appearance={appearance}
+        connect={connect}
+        newDevice={device.session.state === "no_device"}
+      />
+    );
   // While locked nothing from the organization is rendered: unmounting the
   // shell also drops decrypted text held by open views and dialogs.
   if (
@@ -383,14 +393,7 @@ export function App() {
     device.session.state === "unlocking" ||
     device.session.state === "locked"
   )
-    return (
-      <LockScreen
-        session={device.session}
-        unlock={device.unlock}
-        browseReadOnly={device.browseReadOnly}
-        t={t}
-      />
-    );
+    return <LockScreen session={device.session} unlock={device.unlock} t={t} />;
   const snapshot = data.snapshot;
   const hostAuthorityRevision = JSON.stringify([
     data.reachable,
@@ -672,9 +675,7 @@ export function App() {
                     {t("链上只读浏览", "Read-only chain browser")}
                   </span>
                   <span className="s ellipsis" style={{ display: "block" }}>
-                    {device.session.state === "web"
-                      ? t("网页预览没有设备密钥", "No device keys in the web preview")
-                      : t("未使用本机设备密钥", "Device keys not in use")}
+                    {t("网页预览没有设备密钥", "No device keys in the web preview")}
                   </span>
                 </>
               )}
@@ -1569,8 +1570,7 @@ export function App() {
             </button>
           </div>
         )}
-        {page === "settings" && device.session.state !== "web" &&
-          device.session.state !== "no_device" && (
+        {page === "settings" && device.session.state === "unlocked" && (
           <div className="panel">
             <div className="card-h">
               <h2>{t("自动锁定", "Auto-lock")}</h2>
@@ -1704,12 +1704,10 @@ export function App() {
 function LockScreen({
   session,
   unlock,
-  browseReadOnly,
   t,
 }: {
   session: Extract<DeviceSession, { state: "checking" | "locked" | "unlocking" }>;
   unlock: () => Promise<void>;
-  browseReadOnly: () => void;
   t: Translate;
 }) {
   const busy = session.state !== "locked";
@@ -1757,11 +1755,6 @@ function LockScreen({
               : t("解锁本设备", "Unlock this device")}
           </span>
         </button>
-        {session.state === "locked" && session.reason === "error" && (
-          <button className="btn ghost block mt-8" onClick={browseReadOnly}>
-            {t("以只读方式继续", "Continue read-only")}
-          </button>
-        )}
         <p className="tiny muted mt-12">
           {t(
             "解锁只读取一次本机凭据，密钥留在本机内存；它不能代替链上授权，已撤销或到期的设备解锁后仍无权限。",
