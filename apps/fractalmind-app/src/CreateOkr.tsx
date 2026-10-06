@@ -341,8 +341,8 @@ export default function CreateOkr({
   return (
     <>
       {!source && (
-        <button onClick={start}>
-          {t("创建 OKR 候选", "Create OKR draft")}
+        <button className="primary" onClick={start}>
+          + {t("创建 OKR 候选", "Create OKR draft")}
         </button>
       )}
       {open && (

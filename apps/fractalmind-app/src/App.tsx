@@ -234,6 +234,14 @@ export function App() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [okrFilter, setOkrFilter] = useState("all");
   const [allFeatures, setAllFeatures] = useState(false);
+  const [discoverOpen, setDiscoverOpen] = useState(false);
+  const discoverDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = discoverDialog.current;
+    if (!dialog) return;
+    if (discoverOpen && !dialog.open) dialog.showModal();
+    else if (!discoverOpen && dialog.open) dialog.close();
+  });
   // One-off Agent requests needing attention, reported by DirectApprovalQueue; null = unknown.
   const [directPending, setDirectPending] = useState<number | null>(null);
   const allDialog = useRef<HTMLDialogElement>(null);
@@ -406,6 +414,7 @@ export function App() {
     setPage(id);
     if (id !== "okrs") setDetailId(null);
     setAllFeatures(false);
+    setDiscoverOpen(false);
   };
   const navButton = (id: Page) => (
     <button
@@ -451,9 +460,15 @@ export function App() {
     : t("尚无快照", "No snapshot");
   const pageSummary: Partial<Record<Page, string>> = {
     workbench: `${snapshotText} · ${t(`${activeGoals} 个进行中的目标`, `${activeGoals} goals in progress`)}`,
-    okrs: t("目标、关键结果与执行约定", "Goals, key results and agreements"),
+    okrs: t(
+      "每个组织最多 3 个运行中的目标；打开目标查看 KR、观测与执行来源。",
+      "At most 3 active goals per organization. Open a goal for KRs, observations and execution provenance.",
+    ),
     hosts: t("执行主机、连接入口与运行观测", "Execution hosts, endpoints and observations"),
-    agents: t("受管理实例、发现与对话", "Managed instances, discovery and chat"),
+    agents: t(
+      "Agent 实例与所在主机。可以直接和任一实例对话；没有 OKR 时它按常驻权限行事。",
+      "Agent instances and their hosts. Chat with any instance; without an OKR it acts within its standing authority.",
+    ),
     memory: t("已验收成果与加密记录", "Accepted results and encrypted records"),
     governance: t("待你决定的事项与审批记录", "Decisions and approval records"),
     identity: t("Human 身份与设备授权", "Human identity and device grants"),
@@ -532,7 +547,28 @@ export function App() {
       <button className="primary" onClick={() => go("okrs")}>
         + {t("新建 OKR", "New OKR")}
       </button>
+    ) : page === "agents" && snapshot ? (
+      <button className="primary" onClick={() => setDiscoverOpen(true)}>
+        <NavIcon name="globe" />
+        {t("从 Host 发现 Agent", "Discover on a Host")}
+      </button>
+    ) : page === "okrs" && snapshot ? (
+      <Suspense fallback={null}>
+        <CreateOkr
+          key={JSON.stringify([profile, snapshot.organization.objectId])}
+          profile={{
+            ...profile,
+            chainIdentifier:
+              data.identity?.chainIdentifier ?? profile.chainIdentifier,
+          }}
+          organizationId={snapshot.organization.objectId}
+          t={t}
+          onCreated={data.refresh}
+        />
+      </Suspense>
     ) : null;
+  // An open OKR shows its own header; the page header would repeat it.
+  const showPageHeader = !(page === "okrs" && detailId);
   return (
     <div className="shell">
       <aside className="sidebar" aria-label={t("主导航", "Main navigation")}>
@@ -666,13 +702,17 @@ export function App() {
           </button>
         </header>
         <main className="page" id="main">
-        <div className="page-h">
-          <div>
-            <h1>{t(...labels[page])}</h1>
-            {pageSummary[page] && <p className="muted">{pageSummary[page]}</p>}
+        {showPageHeader && (
+          <div className="page-h">
+            <div>
+              <h1>{t(...labels[page])}</h1>
+              {pageSummary[page] && (
+                <p className="muted">{pageSummary[page]}</p>
+              )}
+            </div>
+            {pagePrimary}
           </div>
-          {pagePrimary}
-        </div>
+        )}
         {data.error && (
           <div role="alert" className="banner warn">
             <strong>{t("同步失败", "Sync failed")}</strong>
@@ -954,26 +994,13 @@ export function App() {
         )}
         {page === "okrs" && snapshot && (
           <>
-            <Suspense
-              fallback={<p>{t("加载创建入口…", "Loading creation…")}</p>}
-            >
-              <CreateOkr
-                key={JSON.stringify([profile, snapshot.organization.objectId])}
-                profile={{
-                  ...profile,
-                  chainIdentifier:
-                    data.identity?.chainIdentifier ?? profile.chainIdentifier,
-                }}
-                organizationId={snapshot.organization.objectId}
-                t={t}
-                onCreated={data.refresh}
-              />
-            </Suspense>
             {detailId && okrs?.find((row) => row.okr.id === detailId) ? (
               <>
                 <OkrDetails
                   focus={okrs.find((row) => row.okr.id === detailId)!}
+                  snapshot={snapshot}
                   now={now}
+                  reachable={data.reachable}
                   t={t}
                   back={() => setDetailId(null)}
                   workbench={() => goOkr(detailId, "workbench")}
@@ -1035,6 +1062,9 @@ export function App() {
             ) : (
               <OkrList
                 okrs={okrs ?? null}
+                snapshot={snapshot}
+                now={now}
+                reachable={data.reachable}
                 t={t}
                 open={(id) => goOkr(id, "okrs")}
                 filter={okrFilter}
@@ -1089,142 +1119,200 @@ export function App() {
         )}
         {page === "agents" && snapshot && (
           <>
-            <Suspense
-              fallback={
-                <p>{t("加载实例发现…", "Loading instance discovery…")}</p>
-              }
+            <dialog
+              ref={discoverDialog}
+              className="discover-dialog"
+              aria-label={t("从 Host 发现 Agent", "Discover Agents on a Host")}
+              onClose={() => setDiscoverOpen(false)}
             >
-              <HostObservations
-                key={JSON.stringify([profile, snapshot.organization.objectId])}
-                profile={{
-                  ...profile,
-                  chainIdentifier:
-                    data.identity?.chainIdentifier ?? profile.chainIdentifier,
-                }}
-                organizationId={snapshot.organization.objectId}
-                authorityRevision={hostAuthorityRevision}
-                showDiscovery
-                onChanged={data.refresh}
-                t={t}
-              />
-            </Suspense>
-            <h2>{t("受管理实例", "Managed instances")}</h2>
-            <p className="muted">
-              {t(
-                "链上纳管记录与当前运行观测分开；控制标签不能代替适配器核验。",
-                "Managed records and live observations are separate. A control label does not replace adapter verification.",
-              )}
-            </p>
+              <div className="dialog-heading">
+                <div>
+                  <h2>{t("从 Host 发现已有 Agent", "Discover existing Agents on a Host")}</h2>
+                  <p>
+                    {t(
+                      "发现快照是观测；导入关系、OKR 绑定与授权是链上状态。",
+                      "Discovery snapshots are observations; imports, OKR bindings and grants are chain state.",
+                    )}
+                  </p>
+                </div>
+                <button
+                  className="btn ghost icon sm"
+                  aria-label={t("关闭", "Close")}
+                  onClick={() => setDiscoverOpen(false)}
+                >
+                  <NavIcon name="x" />
+                </button>
+              </div>
+              {/* Kept mounted while the page is open: observations live in page memory only. */}
+              <Suspense
+                fallback={
+                  <p>{t("加载实例发现…", "Loading instance discovery…")}</p>
+                }
+              >
+                <HostObservations
+                  key={JSON.stringify([profile, snapshot.organization.objectId])}
+                  profile={{
+                    ...profile,
+                    chainIdentifier:
+                      data.identity?.chainIdentifier ?? profile.chainIdentifier,
+                  }}
+                  organizationId={snapshot.organization.objectId}
+                  authorityRevision={hostAuthorityRevision}
+                  showDiscovery
+                  onChanged={data.refresh}
+                  t={t}
+                />
+              </Suspense>
+            </dialog>
+            <div className="sec-h">
+              <h2>
+                {t("受管理实例", "Managed instances")}{" "}
+                {snapshot.agents.value && (
+                  <span className="muted num small">
+                    {snapshot.agents.value.length}
+                  </span>
+                )}
+              </h2>
+              <span className="tiny muted">
+                {t(
+                  "链上纳管记录；实际能力以适配器核验为准",
+                  "Chain records; actual capability is verified by the adapter",
+                )}
+              </span>
+            </div>
             {!snapshot.agents.value ? (
               <ReadFailure t={t} />
             ) : !snapshot.agents.value.length ? (
-              <Empty t={t} />
+              <Empty t={t} icon="users" />
             ) : (
-              <div className="card-grid">
-                {snapshot.agents.value.map((agent) => (
-                  <div className="panel" key={agent.id}>
-                    <span className="badge">
-                      {agent.revoked
-                        ? t("已撤销", "Revoked")
-                        : t("已登记", "Registered")}
-                    </span>
-                    <h3 className="long-id">{agent.instance_id}</h3>
-                    <p className="long-id">
-                      <small>
-                        {t("链上记录", "Chain record")}: <code>{agent.id}</code>
-                      </small>
-                    </p>
-                    <p>
-                      {agent.runtime} · v{agent.version}
-                    </p>
-                    <code>{short(agent.host_address)}</code>
-                    <p>
-                      {agent.control_confirmed
-                        ? t(
-                            "管理设备已确认控制标签；实际能力尚需适配器核验",
-                            "Management device confirmed a control label; adapter capability still needs verification",
-                          )
-                        : t("仅观察登记", "Observation registration only")}
-                    </p>
-                    <small>
-                      {t(
-                        "实例状态待核实 · 发送时重新检查固定实例与权限",
-                        "Instance state needs verification · fixed instance and authority rechecked when sending",
-                      )}
-                    </small>
-                    <Suspense
-                      fallback={
-                        <p>{t("加载沟通入口…", "Loading communication…")}</p>
-                      }
-                    >
-                      <DirectAgentConversation
-                        key={JSON.stringify([
-                          profile,
-                          agent,
-                          hostAuthorityRevision,
-                        ])}
-                        profile={{
-                          ...profile,
-                          chainIdentifier:
-                            data.identity?.chainIdentifier ??
-                            profile.chainIdentifier,
-                        }}
-                        organizationId={snapshot.organization.objectId}
-                        managed={agent}
-                        onChanged={data.refresh}
-                        t={t}
-                      />
-                    </Suspense>
-                    <Suspense
-                      fallback={
-                        <p>{t("加载执行检查…", "Loading execution check…")}</p>
-                      }
-                    >
-                      <AgentCheckpointView
-                        key={JSON.stringify([
-                          profile,
-                          agent,
-                          hostAuthorityRevision,
-                        ])}
-                        profile={{
-                          ...profile,
-                          chainIdentifier:
-                            data.identity?.chainIdentifier ??
-                            profile.chainIdentifier,
-                        }}
-                        organizationId={snapshot.organization.objectId}
-                        managed={agent}
-                        grants={data.identity?.grants.value}
-                        t={t}
-                      />
-                    </Suspense>
-                    <Suspense
-                      fallback={
-                        <p>{t("加载 OKR 接入…", "Loading OKR inclusion…")}</p>
-                      }
-                    >
-                      <HandoverFlow
-                        key={JSON.stringify([
-                          profile,
-                          snapshot.organization.objectId,
-                          agent.id,
-                        ])}
-                        profile={{
-                          ...profile,
-                          chainIdentifier:
-                            data.identity?.chainIdentifier ??
-                            profile.chainIdentifier,
-                        }}
-                        organizationId={snapshot.organization.objectId}
-                        managed={agent}
-                        okrs={snapshot.okrs.value}
-                        onChanged={data.refresh}
-                        onContinue={(id) => goOkr(id, "workbench")}
-                        t={t}
-                      />
-                    </Suspense>
-                  </div>
-                ))}
+              <div className="grid-2 agent-grid">
+                {snapshot.agents.value.map((agent) => {
+                  const member = snapshot.memberships.value?.find(
+                    (row) => row.id === agent.membership_id,
+                  );
+                  const agentProfile = {
+                    ...profile,
+                    chainIdentifier:
+                      data.identity?.chainIdentifier ?? profile.chainIdentifier,
+                  };
+                  return (
+                    <article className="card agent-card" key={agent.id}>
+                      <div className="row between top">
+                        <div className="row">
+                          <span className="avatar round">
+                            {initial(agent.runtime)}
+                          </span>
+                          <div className="grow">
+                            <div className="strong" title={agent.instance_id}>
+                              {agentName(agent)}
+                            </div>
+                            <div
+                              className="small muted"
+                              title={agent.host_address}
+                            >
+                              {member
+                                ? hostName(member)
+                                : short(agent.host_address)}
+                            </div>
+                          </div>
+                        </div>
+                        <span
+                          className={`chip ${agent.revoked ? "danger" : "ok"}`}
+                        >
+                          {agent.revoked
+                            ? t("已撤销", "Revoked")
+                            : t("已登记", "Registered")}
+                        </span>
+                      </div>
+                      <dl>
+                        <dt>{t("运行时", "Runtime")}</dt>
+                        <dd>
+                          {agent.runtime} · v{agent.version}
+                        </dd>
+                        <dt>{t("控制", "Control")}</dt>
+                        <dd>
+                          {agent.control_confirmed ? (
+                            <span className="chip warn">
+                              {t(
+                                "管理设备已确认 · 待适配器核验",
+                                "Confirmed by a management device · adapter check pending",
+                              )}
+                            </span>
+                          ) : (
+                            <span className="chip outline">
+                              {t("仅观察", "Observe only")}
+                            </span>
+                          )}
+                        </dd>
+                        <dt>{t("实例状态", "Instance state")}</dt>
+                        <dd className="small muted">
+                          {t(
+                            "待核实 · 发送时重新检查固定实例与权限",
+                            "Unverified · rechecked when sending",
+                          )}
+                        </dd>
+                        <dt>{t("链上记录", "Chain record")}</dt>
+                        <dd>
+                          <code title={agent.id}>{short(agent.id)}</code>
+                        </dd>
+                      </dl>
+                      <div className="agent-actions">
+                        <Suspense fallback={null}>
+                          <DirectAgentConversation
+                            key={JSON.stringify([
+                              profile,
+                              agent,
+                              hostAuthorityRevision,
+                            ])}
+                            profile={agentProfile}
+                            organizationId={snapshot.organization.objectId}
+                            managed={agent}
+                            entryLabel={t("对话", "Chat")}
+                            onChanged={data.refresh}
+                            t={t}
+                          />
+                          <HandoverFlow
+                            key={JSON.stringify([
+                              profile,
+                              snapshot.organization.objectId,
+                              agent.id,
+                            ])}
+                            profile={agentProfile}
+                            organizationId={snapshot.organization.objectId}
+                            managed={agent}
+                            okrs={snapshot.okrs.value}
+                            onChanged={data.refresh}
+                            onContinue={(id) => goOkr(id, "workbench")}
+                            t={t}
+                          />
+                        </Suspense>
+                      </div>
+                      <details className="agent-check">
+                        <summary>
+                          {t("接管前的执行检查", "Execution check before handover")}
+                        </summary>
+                        <Suspense
+                          fallback={
+                            <p>{t("加载执行检查…", "Loading execution check…")}</p>
+                          }
+                        >
+                          <AgentCheckpointView
+                            key={JSON.stringify([
+                              profile,
+                              agent,
+                              hostAuthorityRevision,
+                            ])}
+                            profile={agentProfile}
+                            organizationId={snapshot.organization.objectId}
+                            managed={agent}
+                            grants={data.identity?.grants.value}
+                            t={t}
+                          />
+                        </Suspense>
+                      </details>
+                    </article>
+                  );
+                })}
               </div>
             )}
           </>
@@ -1518,51 +1606,76 @@ function ReadFailure({ t }: { t: Translate }) {
     </div>
   );
 }
-function Empty({ t }: { t: Translate }) {
+function Empty({ t, icon = "layers" }: { t: Translate; icon?: string }) {
   return (
-    <div className="panel">
-      {t(
-        "该组织暂无此类记录。可用操作见对应功能页面。",
-        "No records of this kind in this organization. Available actions are shown on the corresponding feature page.",
-      )}
+    <div className="card">
+      <div className="empty">
+        <div className="ico">
+          <NavIcon name={icon} />
+        </div>
+        <p className="small">
+          {t(
+            "该组织暂无此类记录。可用操作见对应功能页面。",
+            "No records of this kind in this organization. Available actions are shown on the corresponding feature page.",
+          )}
+        </p>
+      </div>
     </div>
   );
 }
+/** Spent and in-flight reservations against the OKR budget (prototype .meter). */
 function BudgetPanel({ focus, t }: { focus: OkrSnapshot; t: Translate }) {
   const budget = focus.budget.value;
+  const limit = BigInt(focus.okr.budget_limit);
+  const share = (part: bigint) =>
+    limit === 0n
+      ? 0
+      : Math.min(100, Number((part * 1000000n) / limit) / 10000);
   return (
     <div className="panel">
-      <span className="eyebrow">
-        {t("预算 · 含在途预留", "Budget · includes reservations")}
-      </span>
+      <div className="card-h">
+        <h3>{t("预算", "Budget")}</h3>
+        <span className="tiny muted">
+          {t("含在途预留", "Includes reservations")}
+        </span>
+      </div>
       {budget ? (
         <>
-          <h3>
-            {budget.spent.toString()} + {budget.reserved.toString()} /{" "}
-            {focus.okr.budget_limit}
-          </h3>
-          <p>
-            {t("已支出 + 在途 / 上限", "Spent + reserved / limit")} ·{" "}
-            {budget.asset || "—"}
-          </p>
-          <progress
+          <div className="row between small">
+            <span className="muted">
+              {t("已支出 + 在途 / 上限", "Spent + reserved / limit")}
+            </span>
+            <strong className="num">
+              {budget.spent.toString()} + {budget.reserved.toString()} /{" "}
+              {focus.okr.budget_limit} {budget.asset}
+            </strong>
+          </div>
+          <div
+            className="meter mt-8"
+            role="img"
             aria-label={t("预算使用与预留", "Spent and reserved budget")}
-            max={1}
-            value={
-              BigInt(focus.okr.budget_limit) === 0n
-                ? 0
-                : Math.min(
-                    1,
-                    Number(
-                      ((budget.spent + budget.reserved) * 1000000n) /
-                        BigInt(focus.okr.budget_limit),
-                    ) / 1000000,
-                  )
-            }
-          />
+          >
+            <i className="spent" style={{ width: `${share(budget.spent)}%` }} />
+            <i
+              className="reserved"
+              style={{ width: `${share(budget.reserved)}%` }}
+            />
+          </div>
+          <div className="legend mt-8">
+            <span>
+              <i className="sw" style={{ background: "var(--text-2)" }} />
+              {t("已支出", "Spent")}
+            </span>
+            <span>
+              <i className="sw" style={{ background: "var(--warn)" }} />
+              {t("在途预留", "Reserved")}
+            </span>
+          </div>
         </>
       ) : (
-        <p>{t("预算未知，不显示为零", "Budget unknown; not shown as zero")}</p>
+        <p className="small muted">
+          {t("预算未知，不显示为零", "Budget unknown; not shown as zero")}
+        </p>
       )}
     </div>
   );
@@ -1819,76 +1932,198 @@ function MapView({
     </section>
   );
 }
+const lifecycleLabels: Array<[string, string]> = [
+  ["草稿", "Draft"],
+  ["运行中", "Active"],
+  ["暂停", "Paused"],
+  ["达成", "Achieved"],
+  ["归档", "Archived"],
+];
+const lifecycleChip = ["", "info", "", "brand", "outline"];
+/** Road-condition badge class (prototype .cond) for a navigation condition. */
+const conditionClass: Record<Navigation["condition"], string> = {
+  achieved: "c-achieved",
+  archived: "c-paused",
+  draft: "c-paused",
+  paused: "c-paused",
+  ready: "c-idle",
+  stopped: "c-paused",
+  unknown: "c-unknown",
+  expired: "c-blocked",
+  permission: "c-blocked",
+  budget: "c-blocked",
+  failed: "c-blocked",
+  queued: "c-waiting",
+  running: "c-waiting",
+  measurement: "c-waiting",
+  verification: "c-boundary",
+  acceptance: "c-boundary",
+};
+const pct = (value: number | null) =>
+  value === null ? "—" : `${Math.round(value * 100)}%`;
+function OkrTitle({ id, t }: { id: string; t: Translate }) {
+  return (
+    <>
+      <span title={id}>OKR {short(id)}</span>
+      <span className="chip outline" title={t(
+        "目标标题与成功标准已加密，需授权设备解锁",
+        "Title and success criteria are encrypted; an authorized device unlocks them",
+      )}>
+        {t("标题已加密", "Title encrypted")}
+      </span>
+    </>
+  );
+}
+
 function OkrList({
   okrs,
+  snapshot,
+  now,
+  reachable,
   t,
   open,
   filter,
   setFilter,
 }: {
   okrs: OkrSnapshot[] | null;
+  snapshot: OrganizationSnapshot;
+  now: bigint;
+  reachable: boolean;
   t: Translate;
   open: (id: string) => void;
   filter: string;
   setFilter: (value: string) => void;
 }) {
-  const lifecycle: Array<[string, string]> = [
-    ["草稿", "Draft"],
-    ["运行中", "Active"],
-    ["暂停", "Paused"],
-    ["达成", "Achieved"],
-    ["归档", "Archived"],
+  const filtered = okrs
+    ?.filter((row) => filter === "all" || String(row.okr.state) === filter)
+    .sort(
+      (a, b) =>
+        (a.okr.state === 1 ? -1 : a.okr.state) -
+          (b.okr.state === 1 ? -1 : b.okr.state) ||
+        a.okr.priority - b.okr.priority,
+    );
+  const attention = decisionFacts(snapshot, now, reachable);
+  const tabs: Array<[string, string, string]> = [
+    ["all", "全部", "All"],
+    ...lifecycleLabels.map(
+      ([zh, en], i) => [String(i), zh, en] as [string, string, string],
+    ),
   ];
-  const filtered = okrs?.filter(
-    (row) => filter === "all" || String(row.okr.state) === filter,
-  );
   return (
     <>
-      <div className="section-heading">
-        <h2>{t("目标列表", "Objectives")}</h2>
-        <select
-          aria-label={t("OKR 生命周期筛选", "OKR lifecycle filter")}
-          value={filter}
-          onChange={(event) => setFilter(event.target.value)}
-        >
-          <option value="all">{t("全部", "All")}</option>
-          {lifecycle.map((label, i) => (
-            <option key={i} value={String(i)}>
-              {t(...label)}
-            </option>
-          ))}
-        </select>
+      <div className="tabs" role="tablist">
+        {tabs.map(([key, zh, en]) => {
+          const n =
+            okrs?.filter((row) => key === "all" || String(row.okr.state) === key)
+              .length ?? 0;
+          return (
+            <button
+              key={key}
+              className="tab"
+              role="tab"
+              aria-selected={filter === key}
+              onClick={() => setFilter(key)}
+            >
+              {t(zh, en)}{" "}
+              <span className="muted num">{key === "1" ? `${n}/3` : n}</span>
+            </button>
+          );
+        })}
       </div>
       {!okrs ? (
         <ReadFailure t={t} />
       ) : !okrs.length ? (
-        <Empty t={t} />
+        <Empty t={t} icon="target" />
       ) : !filtered?.length ? (
-        <div className="panel">
-          {t("没有符合筛选条件的 OKR。", "No OKRs match this filter.")}
+        <div className="card">
+          <div className="empty">
+            <p className="small">
+              {t("没有符合筛选条件的 OKR。", "No OKRs match this filter.")}
+            </p>
+          </div>
         </div>
       ) : (
-        <div className="okr-list">
-          {filtered.map(({ okr }) => (
-            <button
-              className="panel okr-row"
-              key={okr.id}
-              onClick={() => open(okr.id)}
-            >
-              <span>
-                <strong>{okr.logical_id}</strong>
-                <small>
-                  {t("KR 已验证", "KRs verified")}{" "}
-                  {okr.metrics.filter((metric) => metric.verified).length}/
-                  {okr.metrics.length} · {t("约定", "Agreement")} v
-                  {okr.agreement_version}
-                </small>
-              </span>
-              <span className="badge">{t(...lifecycle[okr.state])}</span>
-              <span>P{okr.priority}</span>
-              <span>→</span>
-            </button>
-          ))}
+        <div className="okr-grid">
+          {filtered.map((row) => {
+            const { okr } = row;
+            const nav = navigation(row, snapshot, now, reachable);
+            const agent = snapshot.agents.value?.find(
+              (a) => a.id === okr.managed_agent,
+            );
+            const verified = okr.metrics.filter((m) => m.verified).length;
+            const unknown = nav.metricProgress.filter((v) => v === null).length;
+            const decide = attention.items.filter(
+              (item) => item.row.okr.id === okr.id,
+            ).length;
+            const width =
+              nav.progress === null ? 0 : Math.round(nav.progress * 100);
+            return (
+              <button
+                key={okr.id}
+                className="card okr-card"
+                onClick={() => open(okr.id)}
+              >
+                <span className="row between">
+                  <span className="row gap-sm">
+                    <span className={`prio P${okr.priority}`}>
+                      P{okr.priority}
+                    </span>
+                    <span className={`chip ${lifecycleChip[okr.state] ?? ""}`}>
+                      {t(...lifecycleLabels[okr.state])}
+                    </span>
+                  </span>
+                  {okr.state === 1 && (
+                    <span className={`cond ${conditionClass[nav.condition]}`}>
+                      {t(...statusLabels[nav.condition])}
+                    </span>
+                  )}
+                </span>
+                <span className="t row wrap gap-sm">
+                  <OkrTitle id={okr.logical_id} t={t} />
+                </span>
+                <span className="row between small muted">
+                  <span className="ellipsis">
+                    {t("负责", "Owner")}{" "}
+                    {agent ? agentName(agent) : t("未指定", "Not set")}
+                  </span>
+                  <span className="nowrap">
+                    {t("约定", "Agreement")} v{okr.agreement_version}
+                  </span>
+                </span>
+                <span className="col gap-sm">
+                  <span className="row between small">
+                    <span className="muted">
+                      {t("实测达成度", "Measured progress")}
+                    </span>
+                    <strong className="num">{pct(nav.progress)}</strong>
+                  </span>
+                  <span
+                    className={`bar thick ${okr.state === 3 ? "brand" : nav.progress === null ? "unknown" : ""}`}
+                  >
+                    <i style={{ width: `${width}%` }} />
+                  </span>
+                </span>
+                <span className="row wrap small muted">
+                  <span>
+                    {t(
+                      `${verified}/${okr.metrics.length} 个 KR 已验证`,
+                      `${verified}/${okr.metrics.length} KRs verified`,
+                    )}
+                  </span>
+                  {unknown > 0 && (
+                    <span className="chip warn">
+                      {t(`${unknown} 项未知`, `${unknown} unknown`)}
+                    </span>
+                  )}
+                  {decide > 0 && (
+                    <span className="chip danger">
+                      {t("需要你决定", "Needs your decision")}
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
     </>
@@ -1896,165 +2131,274 @@ function OkrList({
 }
 function OkrDetails({
   focus,
+  snapshot,
   now,
+  reachable,
   t,
   back,
   workbench,
 }: {
   focus: OkrSnapshot;
+  snapshot: OrganizationSnapshot;
   now: bigint;
+  reachable: boolean;
   t: Translate;
   back: () => void;
   workbench: () => void;
 }) {
   const { okr } = focus;
+  const nav = navigation(focus, snapshot, now, reachable);
+  const agent = snapshot.agents.value?.find((a) => a.id === okr.managed_agent);
+  const host = snapshot.memberships.value?.find(
+    (m) => m.id === okr.membership_id,
+  );
   return (
     <>
-      <div className="section-heading">
-        <button onClick={back}>← {t("返回列表", "Back to list")}</button>
+      <button className="link-btn back" onClick={back}>
+        ← {t("全部 OKR", "All OKRs")}
+      </button>
+      <div className="page-h">
+        <div className="col gap-sm">
+          <span className="row wrap gap-sm">
+            <span className={`prio P${okr.priority}`}>P{okr.priority}</span>
+            <span className={`chip ${lifecycleChip[okr.state] ?? ""}`}>
+              {t(...lifecycleLabels[okr.state])}
+            </span>
+            <span className={`cond ${conditionClass[nav.condition]}`}>
+              {t(...statusLabels[nav.condition])}
+            </span>
+          </span>
+          <h2 className="row wrap gap-sm" style={{ fontSize: 20 }}>
+            <OkrTitle id={okr.logical_id} t={t} />
+          </h2>
+        </div>
         <button className="primary" onClick={workbench}>
-          {t("在工作台查看运行", "View in workbench")} →
+          {t("在工作台查看运行", "View in workbench")}
         </button>
       </div>
-      <div className="panel">
-        <h2>{okr.logical_id}</h2>
-        <code className="long-id">{okr.id}</code>
-        <p>
-          {t(
-            "目标标题、成功标准、单位和执行约定正文已加密；需授权设备解锁后查看，不能用公开逻辑 ID 代替完整目标。",
-            "Title, success criteria, units and agreement bodies are encrypted. An authorized device must unlock them; the public logical ID is not the complete objective.",
-          )}
-        </p>
-        <p>
-          {t("规格记录", "Spec record")}: <code>{short(okr.spec_record)}</code>{" "}
-          · {t("约定版本", "Agreement version")} {okr.agreement_version}
-        </p>
-      </div>
-      <h2>{t("关键结果", "Key results")}</h2>
-      <div className="card-grid">
-        {okr.metrics.map((metric, i) => {
-          const fresh =
-            metric.current !== null &&
-            BigInt(metric.sampled_at_ms) <= now &&
-            now - BigInt(metric.sampled_at_ms) <= BigInt(metric.max_age_ms);
-          return (
-            <div className="panel" key={i}>
-              <span className="badge">
-                {metric.verified
-                  ? t("已验证", "Verified")
-                  : t("未验证", "Unverified")}
-              </span>
-              <h3>KR{i + 1}</h3>
-              <TrustLadder {...trustState(okr, i, now)} t={t} />
-              <dl>
-                <dt>
-                  {t("基线 / 实测 / 目标", "Baseline / measured / target")}
-                </dt>
-                <dd>
-                  {metric.baseline} / {metric.current ?? "—"} / {metric.target}
-                </dd>
-                <dt>{t("观测", "Observation")}</dt>
-                <dd>
-                  {fresh
-                    ? t("新鲜", "Fresh")
-                    : t("未知或过期", "Unknown or stale")}
-                </dd>
-                <dt>{t("Run", "Run")}</dt>
-                <dd>
-                  <code>{short(metric.run_id)}</code>
-                </dd>
-                <dt>{t("证据", "Evidence")}</dt>
-                <dd>
-                  <code>{short(metric.evidence_id)}</code>
-                </dd>
-              </dl>
-              <small>
+      <div className="detail">
+        <div className="col gap-lg">
+          <section className="card">
+            <div className="card-h">
+              <h3>{t("关键结果", "Key results")}</h3>
+              <span className="tiny muted">
                 {t(
                   "原始整数；单位与精度需解密规格",
                   "Raw integers; decrypt the spec for units and scale",
                 )}
-              </small>
+              </span>
             </div>
-          );
-        })}
-      </div>
-      <BudgetPanel focus={focus} t={t} />
-      <h2>{t("观测历史", "Observation history")}</h2>
-      {!focus.observations.value ? (
-        <ReadFailure t={t} />
-      ) : !focus.observations.value.length ? (
-        <p>{t("暂无已确认观测", "No confirmed observations")}</p>
-      ) : (
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>{t("约定", "Agreement")}</th>
-                <th>KR</th>
-                <th>{t("实测值", "Measured")}</th>
-                <th>{t("采样", "Sampled")}</th>
-                <th>Run / {t("证据", "Evidence")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {focus.observations.value.map((row) => (
-                <tr key={row.id}>
-                  <td>
-                    v{row.agreement_version}
-                    {row.agreement_version !== okr.agreement_version &&
-                      ` · ${t("历史", "Historical")}`}
-                  </td>
-                  <td>{Number(row.kr_index) + 1}</td>
-                  <td>{row.current}</td>
-                  <td>
-                    {new Date(Number(row.sampled_at_ms)).toLocaleString()}
-                  </td>
-                  <td>
-                    <code title={row.run_id}>{short(row.run_id)}</code>
-                    <br />
-                    <code title={row.evidence_id}>
-                      {short(row.evidence_id)}
-                    </code>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            {okr.metrics.map((metric, i) => {
+              const fresh =
+                metric.current !== null &&
+                BigInt(metric.sampled_at_ms) <= now &&
+                now - BigInt(metric.sampled_at_ms) <=
+                  BigInt(metric.max_age_ms);
+              const progress = nav.metricProgress[i] ?? null;
+              return (
+                <div className="kr" key={i}>
+                  <div className="kr-h">
+                    <span className="kr-id">KR{i + 1}</span>
+                    <div className="grow">
+                      <div className="kr-t">
+                        {metric.verified
+                          ? t("已验证", "Verified")
+                          : t("未验证", "Unverified")}
+                        {!fresh && (
+                          <span className="chip warn" style={{ marginLeft: 8 }}>
+                            {t("观测未知或过期", "Observation unknown or stale")}
+                          </span>
+                        )}
+                      </div>
+                      <TrustLadder {...trustState(okr, i, now)} t={t} />
+                    </div>
+                  </div>
+                  <div className="kr-metric">
+                    <span>
+                      <span className="m-l">{t("基线", "Baseline")}</span>
+                      <br />
+                      <span className="m-v">{metric.baseline}</span>
+                    </span>
+                    <span>
+                      <span className="m-l">{t("实测", "Measured")}</span>
+                      <br />
+                      <span className="m-v">{metric.current ?? "—"}</span>
+                    </span>
+                    <span>
+                      <span className="m-l">{t("目标", "Target")}</span>
+                      <br />
+                      <span className="m-v">{metric.target}</span>
+                    </span>
+                    <span
+                      className={`bar bar-cell ${metric.verified ? "ok" : progress === null ? "unknown" : ""}`}
+                    >
+                      <i
+                        style={{
+                          width: `${progress === null ? 0 : Math.round(progress * 100)}%`,
+                        }}
+                      />
+                    </span>
+                    <span className="pct-cell num strong">{pct(progress)}</span>
+                  </div>
+                  <div className="kr-meta">
+                    <span title={metric.run_id ?? ""}>
+                      Run {short(metric.run_id)}
+                    </span>
+                    <span title={metric.evidence_id ?? ""}>
+                      {t("证据", "Evidence")} {short(metric.evidence_id)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+          <section className="card">
+            <div className="card-h">
+              <h3>{t("观测历史", "Observation history")}</h3>
+            </div>
+            {!focus.observations.value ? (
+              <ReadFailure t={t} />
+            ) : !focus.observations.value.length ? (
+              <p className="small muted">
+                {t("暂无已确认观测", "No confirmed observations")}
+              </p>
+            ) : (
+              <div className="table-scroll" style={{ margin: 0 }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t("约定", "Agreement")}</th>
+                      <th>KR</th>
+                      <th>{t("实测值", "Measured")}</th>
+                      <th>{t("采样", "Sampled")}</th>
+                      <th>Run / {t("证据", "Evidence")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {focus.observations.value.map((row) => (
+                      <tr key={row.id}>
+                        <td>
+                          v{row.agreement_version}
+                          {row.agreement_version !== okr.agreement_version &&
+                            ` · ${t("历史", "Historical")}`}
+                        </td>
+                        <td>{Number(row.kr_index) + 1}</td>
+                        <td className="num">{row.current}</td>
+                        <td>
+                          {new Date(Number(row.sampled_at_ms)).toLocaleString()}
+                        </td>
+                        <td>
+                          <code title={row.run_id}>{short(row.run_id)}</code>
+                          <br />
+                          <code title={row.evidence_id}>
+                            {short(row.evidence_id)}
+                          </code>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+          <section className="card">
+            <div className="card-h">
+              <h3>{t("执行与验收来源", "Execution & acceptance provenance")}</h3>
+            </div>
+            {!focus.executions.value ? (
+              <ReadFailure t={t} />
+            ) : !focus.executions.value.length ? (
+              <p className="small muted">{t("暂无 Run", "No Runs yet")}</p>
+            ) : (
+              <div className="run">
+                {focus.executions.value.map((row) => (
+                  <div className="run-row" key={row.run.id}>
+                    <span className="run-id" title={row.run.id}>
+                      {short(row.run.id)}
+                    </span>
+                    <span className="grow">
+                      KR{Number(row.contract.kr_index) + 1} · {t("约定", "Agreement")} v
+                      {row.contract.agreement_version} ·{" "}
+                      {t(...runLabels[row.run.state])}
+                    </span>
+                    <span className="small muted nowrap">
+                      {t("支出 / 预留", "Spent / reserved")} {row.claim.spent} /{" "}
+                      {row.claim.reserved} ·{" "}
+                      {row.claim.settled
+                        ? t("已结算", "Settled")
+                        : t("预留未结算", "Unsettled")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
-      )}
-      <h2>{t("执行与验收来源", "Execution & acceptance provenance")}</h2>
-      {!focus.executions.value ? (
-        <ReadFailure t={t} />
-      ) : (
-        focus.executions.value.map((row) => (
-          <div className="panel" key={row.run.id}>
-            <code className="long-id">{row.run.id}</code>
-            <p>
-              {t("约定", "Agreement")} v{row.contract.agreement_version} · KR
-              {Number(row.contract.kr_index) + 1} ·{" "}
-              {t(...runLabels[row.run.state])} ·{" "}
-              {t("实际支出 / 初始预留", "Actual spend / initial reservation")}{" "}
-              {row.claim.spent} / {row.claim.reserved}
+        <aside className="detail-side">
+          <section className="card">
+            <div className="kpi">
+              <span className="kpi-l">{t("实测达成度", "Measured progress")}</span>
+              <span className="kpi-v">{pct(nav.progress)}</span>
+            </div>
+            <p className="small muted">
+              {t(
+                `${nav.verifiedCheckpoints}/${okr.metrics.length} 个 KR 已验证；实测不等于验证。`,
+                `${nav.verifiedCheckpoints}/${okr.metrics.length} KRs verified; measured is not verified.`,
+              )}
             </p>
-            <small>
-              {row.claim.settled
-                ? t("已结算", "Settled")
-                : t("预留未结算", "Reservation unsettled")}
-            </small>
-          </div>
-        ))
-      )}
-      <div className="panel">
-        <p>
-          {t("最终验收记录", "Final acceptance record")}:{" "}
-          <code className="long-id">
-            {okr.acceptance_record ?? t("尚无", "None")}
-          </code>
-        </p>
-        <p>
-          {t("验收者 Human", "Accepting Human")}:{" "}
-          <code>{short(okr.accepted_by_human)}</code>
-        </p>
+          </section>
+          <section className="card">
+            <div className="card-h">
+              <h3>{t("执行约定", "Agreement")}</h3>
+              <span className="chip">v{okr.agreement_version}</span>
+            </div>
+            <dl>
+              <dt>{t("负责", "Owner")}</dt>
+              <dd title={agent?.instance_id}>
+                {agent ? agentName(agent) : t("未指定", "Not set")}
+              </dd>
+              <dt>{t("执行主机", "Host")}</dt>
+              <dd title={host?.host_address}>
+                {host ? hostName(host) : t("未指定", "Not set")}
+              </dd>
+              <dt>{t("有效至", "Expires")}</dt>
+              <dd>
+                {Number(okr.expires_at_ms) > 0
+                  ? new Date(Number(okr.expires_at_ms)).toLocaleString()
+                  : t("未设置", "Not set")}
+              </dd>
+              <dt>{t("规格记录", "Spec record")}</dt>
+              <dd>
+                <code title={okr.spec_record ?? ""}>{short(okr.spec_record)}</code>
+              </dd>
+            </dl>
+          </section>
+          <BudgetPanel focus={focus} t={t} />
+          <section className="card">
+            <div className="card-h">
+              <h3>{t("最终验收", "Final acceptance")}</h3>
+              {okr.acceptance_record ? (
+                <span className="chip brand">{t("已验收", "Accepted")}</span>
+              ) : (
+                <span className="chip outline">{t("尚无", "None")}</span>
+              )}
+            </div>
+            <dl>
+              <dt>{t("验收记录", "Record")}</dt>
+              <dd>
+                <code title={okr.acceptance_record ?? ""}>
+                  {short(okr.acceptance_record)}
+                </code>
+              </dd>
+              <dt>{t("验收者", "Accepted by")}</dt>
+              <dd>
+                <code title={okr.accepted_by_human ?? ""}>
+                  {short(okr.accepted_by_human)}
+                </code>
+              </dd>
+            </dl>
+          </section>
+        </aside>
       </div>
     </>
   );
