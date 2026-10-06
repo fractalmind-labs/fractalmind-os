@@ -11,6 +11,15 @@ import {
 } from "./V2Views";
 import { decisionFacts, trustState } from "./v2-model";
 import { agentName, hostName, initial } from "./display";
+import {
+  IDLE_CHOICES_MINUTES,
+  useDeviceSession,
+  type DeviceSession,
+} from "./device-session";
+import { useOkrTexts } from "./use-okr-texts";
+import { deviceConnection } from "./native-device";
+import { matchesTarget } from "./build-target";
+import type { OkrText } from "./okr-text";
 import { useChain } from "./use-chain";
 import { clockNow, memberStatus, navigation } from "./domain";
 import type {
@@ -251,6 +260,27 @@ export function App() {
   }, [allFeatures]);
   const [wallMs, setWallMs] = useState(Date.now());
   const data = useChain(profile);
+  // Device keys are unlocked once per sign-in and kept in native memory.
+  const device = useDeviceSession();
+  const okrTexts = useOkrTexts(
+    device.session,
+    profile,
+    data.snapshot?.organization.objectId,
+    data.snapshot?.okrs.value,
+    data.identity?.grants.value,
+  );
+  const sessionAddress =
+    device.session.state === "unlocked" ? device.session.device.address : null;
+  const grants = data.identity?.grants.value;
+  useEffect(() => {
+    // A revoked device grant ends the session at once.
+    if (
+      sessionAddress &&
+      grants?.some((g) => g.device === sessionAddress) &&
+      !grants.some((g) => g.device === sessionAddress && !g.revoked)
+    )
+      void device.lock("revoked");
+  }, [sessionAddress, grants, device.lock]);
   const t: Translate = (zh, en) => (prefs.language === "zh" ? zh : en);
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
@@ -314,6 +344,7 @@ export function App() {
     </>
   );
   const connect = (value: ConnectionProfile) => {
+    void device.resync();
     setProfile(value);
     setPage("workbench");
     setFocusId("");
@@ -346,8 +377,30 @@ export function App() {
     // Persist the verified pin once. Rewriting it on every snapshot refresh
     // would recreate a connection another window explicitly cleared.
   }, [profile, data.identity?.human.id, data.identity?.chainIdentifier]);
-  if (!profile)
-    return <Welcome t={t} appearance={appearance} connect={connect} />;
+  // A native App only opens the organization views for the identity this
+  // device was set up, paired or recovered for. Without device keys, or with
+  // only a saved public connection (e.g. during setup), it shows the setup
+  // flow; it never falls back to a read-only browser.
+  const linked =
+    !isTauri() ||
+    (deviceConnection()?.humanId === profile?.humanId && matchesTarget(profile));
+  if (!profile || device.session.state === "no_device" || !linked)
+    return (
+      <Welcome
+        t={t}
+        appearance={appearance}
+        connect={connect}
+        newDevice={isTauri()}
+      />
+    );
+  // While locked nothing from the organization is rendered: unmounting the
+  // shell also drops decrypted text held by open views and dialogs.
+  if (
+    device.session.state === "checking" ||
+    device.session.state === "unlocking" ||
+    device.session.state === "locked"
+  )
+    return <LockScreen session={device.session} unlock={device.unlock} t={t} />;
   const snapshot = data.snapshot;
   const hostAuthorityRevision = JSON.stringify([
     data.reachable,
@@ -606,14 +659,41 @@ export function App() {
           <div className="sb-me">
             <span className="avatar round sm human">H</span>
             <span className="grow">
-              <span className="t ellipsis" style={{ display: "block" }}>
-                {t("链上只读浏览", "Read-only chain browser")}
-              </span>
-              <span className="s ellipsis" style={{ display: "block" }}>
-                {t("公开连接不提供设备授权", "No device authority")}
-              </span>
+              {device.session.state === "unlocked" ? (
+                <>
+                  <span
+                    className="t ellipsis"
+                    style={{ display: "block" }}
+                    title={device.session.device.address}
+                  >
+                    {t("本设备", "This device")} ·{" "}
+                    {short(device.session.device.address)}
+                  </span>
+                  <span className="s ellipsis" style={{ display: "block" }}>
+                    {t(
+                      `已解锁 · ${Math.max(1, Math.round(device.session.remainingMs / 60000))} 分钟无操作后锁定`,
+                      `Unlocked · locks after ${Math.max(1, Math.round(device.session.remainingMs / 60000))} min idle`,
+                    )}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="t ellipsis" style={{ display: "block" }}>
+                    {t("链上只读浏览", "Read-only chain browser")}
+                  </span>
+                  <span className="s ellipsis" style={{ display: "block" }}>
+                    {t("网页预览没有设备密钥", "No device keys in the web preview")}
+                  </span>
+                </>
+              )}
             </span>
           </div>
+          {device.session.state === "unlocked" && (
+            <button className="btn ghost sm" onClick={() => void device.lock()}>
+              <NavIcon name="lock" />
+              <span>{t("锁定此 App", "Lock this app")}</span>
+            </button>
+          )}
           <button className="btn ghost sm" onClick={disconnect}>
             <NavIcon name="logout" />
             <span>{t("清除连接缓存", "Clear connection cache")}</span>
@@ -673,8 +753,10 @@ export function App() {
                 "This device's permission in this organization",
               )}
             >
-              <NavIcon name="laptop" />
-              {t("公开只读 · 未核验", "Public read-only · unverified")}
+              <NavIcon name={device.session.state === "unlocked" ? "lock" : "laptop"} />
+              {device.session.state === "unlocked"
+                ? t("本设备已解锁", "This device unlocked")
+                : t("公开只读 · 未核验", "Public read-only · unverified")}
             </span>
           </div>
           <div className="tb-tools">
@@ -771,7 +853,10 @@ export function App() {
                     aria-pressed={focus?.okr.id === row.okr.id}
                     onClick={() => setFocusId(row.okr.id)}
                   >
-                    <strong>{row.okr.logical_id}</strong>
+                    <strong>
+                      {okrTexts.get(row.okr.id)?.objective ??
+                        `OKR ${short(row.okr.logical_id)}`}
+                    </strong>
                     <small>
                       {t("已验证 KR", "Verified KRs")}{" "}
                       {
@@ -801,7 +886,8 @@ export function App() {
                 >
                   {okrs.map((row) => (
                     <option key={row.okr.id} value={row.okr.id}>
-                      OKR {short(row.okr.logical_id)}
+                      {okrTexts.get(row.okr.id)?.objective ??
+                        `OKR ${short(row.okr.logical_id)}`}
                     </option>
                   ))}
                 </select>
@@ -1001,6 +1087,7 @@ export function App() {
                   snapshot={snapshot}
                   now={now}
                   reachable={data.reachable}
+                  text={okrTexts.get(detailId)}
                   t={t}
                   back={() => setDetailId(null)}
                   workbench={() => goOkr(detailId, "workbench")}
@@ -1065,6 +1152,7 @@ export function App() {
                 snapshot={snapshot}
                 now={now}
                 reachable={data.reachable}
+                texts={okrTexts}
                 t={t}
                 open={(id) => goOkr(id, "okrs")}
                 filter={okrFilter}
@@ -1489,6 +1577,30 @@ export function App() {
             </button>
           </div>
         )}
+        {page === "settings" && device.session.state === "unlocked" && (
+          <div className="panel">
+            <div className="card-h">
+              <h2>{t("自动锁定", "Auto-lock")}</h2>
+              <select
+                aria-label={t("无操作多久后锁定", "Lock after idle time")}
+                value={device.idleMinutes}
+                onChange={(e) => void device.setIdleMinutes(Number(e.target.value))}
+              >
+                {IDLE_CHOICES_MINUTES.map((m) => (
+                  <option key={m} value={m}>
+                    {t(`${m} 分钟`, `${m} min`)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="small muted">
+              {t(
+                "登录时解锁一次，设备密钥只保存在本机原生进程的内存里；无操作超过设定时间、手动锁定、手机进入后台超过 1 分钟或设备授权被撤销时立即清除，之后需要重新解锁。",
+                "Unlocked once at sign-in; device keys stay in this machine's native process memory. They are cleared on idle timeout, manual lock, more than a minute in the background on phones, or a revoked device grant; then unlock again.",
+              )}
+            </p>
+          </div>
+        )}
         {page === "settings" && (
           <div className="panel">
             <h2>{t("连接与数据来源", "Connection & source")}</h2>
@@ -1596,6 +1708,70 @@ export function App() {
   );
 }
 
+function LockScreen({
+  session,
+  unlock,
+  t,
+}: {
+  session: Extract<DeviceSession, { state: "checking" | "locked" | "unlocking" }>;
+  unlock: () => Promise<void>;
+  t: Translate;
+}) {
+  const busy = session.state !== "locked";
+  const why =
+    session.state !== "locked"
+      ? t("正在读取本机凭据…", "Reading this device's credentials…")
+      : {
+          manual: t("已手动锁定", "Locked manually"),
+          idle: t("长时间无操作，已自动锁定", "Locked after inactivity"),
+          background: t("在后台停留过久，已锁定", "Locked while in the background"),
+          revoked: t("本设备授权已撤销，已锁定", "Locked: this device's grant was revoked"),
+          error: t(
+            "未能读取本机凭据：系统凭据库不可用或访问被拒绝。",
+            "Could not read this device's credentials: the OS store is unavailable or access was denied.",
+          ),
+        }[session.reason];
+  return (
+    <div
+      className="lockscreen"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("已锁定", "Locked")}
+    >
+      <div
+        className="card"
+        style={{ width: "min(380px, calc(100% - 32px))", textAlign: "center", padding: "28px 24px" }}
+      >
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <BrandMark />
+        </div>
+        <h2 className="mt-12">{t("FractalMind 已锁定", "FractalMind is locked")}</h2>
+        <p className="small muted mt-8">
+          {why} · {t("组织内容已隐藏", "Organization content hidden")}
+        </p>
+        <button
+          className="btn primary lg block mt-16"
+          disabled={busy}
+          onClick={() => void unlock()}
+          autoFocus
+        >
+          <NavIcon name="lock" />
+          <span>
+            {busy
+              ? t("解锁中…", "Unlocking…")
+              : t("解锁本设备", "Unlock this device")}
+          </span>
+        </button>
+        <p className="tiny muted mt-12">
+          {t(
+            "解锁只读取一次本机凭据，密钥留在本机内存；它不能代替链上授权，已撤销或到期的设备解锁后仍无权限。",
+            "Unlocking reads local credentials once and keeps keys in local memory. It does not replace chain grants; revoked or expired devices stay without access.",
+          )}
+        </p>
+      </div>
+    </div>
+  );
+}
 function ReadFailure({ t }: { t: Translate }) {
   return (
     <div className="panel warn" role="status">
@@ -1961,7 +2137,16 @@ const conditionClass: Record<Navigation["condition"], string> = {
 };
 const pct = (value: number | null) =>
   value === null ? "—" : `${Math.round(value * 100)}%`;
-function OkrTitle({ id, t }: { id: string; t: Translate }) {
+function OkrTitle({
+  id,
+  text,
+  t,
+}: {
+  id: string;
+  text?: OkrText;
+  t: Translate;
+}) {
+  if (text) return <span title={id}>{text.objective}</span>;
   return (
     <>
       <span title={id}>OKR {short(id)}</span>
@@ -1980,12 +2165,14 @@ function OkrList({
   snapshot,
   now,
   reachable,
+  texts,
   t,
   open,
   filter,
   setFilter,
 }: {
   okrs: OkrSnapshot[] | null;
+  texts: ReadonlyMap<string, OkrText>;
   snapshot: OrganizationSnapshot;
   now: bigint;
   reachable: boolean;
@@ -2079,7 +2266,11 @@ function OkrList({
                   )}
                 </span>
                 <span className="t row wrap gap-sm">
-                  <OkrTitle id={okr.logical_id} t={t} />
+                  <OkrTitle
+                    id={okr.logical_id}
+                    text={texts.get(okr.id)}
+                    t={t}
+                  />
                 </span>
                 <span className="row between small muted">
                   <span className="ellipsis">
@@ -2134,11 +2325,13 @@ function OkrDetails({
   snapshot,
   now,
   reachable,
+  text,
   t,
   back,
   workbench,
 }: {
   focus: OkrSnapshot;
+  text?: OkrText;
   snapshot: OrganizationSnapshot;
   now: bigint;
   reachable: boolean;
@@ -2169,7 +2362,7 @@ function OkrDetails({
             </span>
           </span>
           <h2 className="row wrap gap-sm" style={{ fontSize: 20 }}>
-            <OkrTitle id={okr.logical_id} t={t} />
+            <OkrTitle id={okr.logical_id} text={text} t={t} />
           </h2>
         </div>
         <button className="primary" onClick={workbench}>
@@ -2201,9 +2394,16 @@ function OkrDetails({
                     <span className="kr-id">KR{i + 1}</span>
                     <div className="grow">
                       <div className="kr-t">
-                        {metric.verified
-                          ? t("已验证", "Verified")
-                          : t("未验证", "Unverified")}
+                        {text?.krTitles[i] && (
+                          <span style={{ marginRight: 8 }}>
+                            {text.krTitles[i]}
+                          </span>
+                        )}
+                        <span className={`chip ${metric.verified ? "ok" : "outline"}`}>
+                          {metric.verified
+                            ? t("已验证", "Verified")
+                            : t("未验证", "Unverified")}
+                        </span>
                         {!fresh && (
                           <span className="chip warn" style={{ marginLeft: 8 }}>
                             {t("观测未知或过期", "Observation unknown or stale")}

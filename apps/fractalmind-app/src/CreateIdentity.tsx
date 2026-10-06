@@ -8,7 +8,7 @@ import {
 } from "@fractalmind-labs/fractalmind-sdk";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
 import { NativeDeviceSigner, type NativeInvoke } from "./native-device";
-import { NativeRecoverySigner } from "./native-onboarding";
+import { NativeRecoverySigner, revealRecoveryCode } from "./native-onboarding";
 import {
   IdentityCreation,
   normalizeDeployment,
@@ -16,13 +16,23 @@ import {
   validateCreationDeployment,
 } from "./onboarding";
 import type { ConnectionProfile } from "./domain";
+import {
+  builtInDeployment,
+  faucetHost,
+  requestTestFunds,
+} from "./deployments";
+import { NavIcon } from "./V2Views";
+import { defaultDeviceProfile, matchesTarget } from "./build-target";
 type Translate = (zh: string, en: string) => string;
 const CACHE = "fractalmind.app.onboarding-connection.v1";
 const transport: NativeInvoke = (command, args) => invoke(command, args);
 function saved() {
   try {
     const value = JSON.parse(localStorage.getItem(CACHE) ?? "null");
-    return value && typeof value.profile === "string"
+    // A setup for another network than this build's is not resumed.
+    return value &&
+      typeof value.profile === "string" &&
+      matchesTarget(value.deployment)
       ? {
           profile: value.profile,
           deployment: normalizeDeployment(value.deployment),
@@ -32,6 +42,8 @@ function saved() {
     return null;
   }
 }
+/** Each creation transaction has a 0.2 SUI Gas ceiling. */
+const GAS_CEILING_MIST = 200_000_000n;
 function sui(mist: string) {
   const n = BigInt(mist);
   return `${n / 1000000000n}.${(n % 1000000000n).toString().padStart(9, "0").replace(/0+$/, "") || "0"} SUI`;
@@ -49,11 +61,13 @@ export default function CreateIdentity({
   onBusyChange: (busy: boolean) => void;
 }) {
   const [initial] = useState(saved);
+  const defaultDeployment = initial?.deployment ?? builtInDeployment;
   const [deploymentText, setDeploymentText] = useState(
-    initial ? JSON.stringify(initial.deployment, null, 2) : "",
+    defaultDeployment ? JSON.stringify(defaultDeployment, null, 2) : "",
   );
+  // A new device uses the App's default profile so later starts unlock it.
   const [profile, setProfile] = useState(
-    initial?.profile ?? `identity-${crypto.randomUUID().slice(0, 8)}`,
+    initial?.profile ?? defaultDeviceProfile,
   );
   const [session, setSession] = useState<IdentityCreation | null>(null),
     [code, setCode] = useState(""),
@@ -84,6 +98,24 @@ export default function CreateIdentity({
       mounted.current = false;
     };
   }, []);
+  // An unfinished setup on this device resumes without re-entering anything.
+  const resumed = useRef(false);
+  useEffect(() => {
+    if (!isTauri() || !initial || resumed.current) return;
+    resumed.current = true;
+    void action(() => start(true));
+    // Once, on open.
+  }, []);
+  async function fund() {
+    if (!session) return;
+    const host = faucetHost(session.deployment.network);
+    if (!host) return;
+    await requestTestFunds(host, [
+      session.recovery.material.recovery.address,
+      session.device.device.address,
+    ]);
+    await read(session);
+  }
   async function action(run: () => Promise<void>) {
     if (flight.current) return;
     flight.current = true;
@@ -227,88 +259,161 @@ export default function CreateIdentity({
         </p>
       </div>
     );
+  const funded =
+    !!balances &&
+    BigInt(balances.recovery) >= GAS_CEILING_MIST &&
+    BigInt(balances.device) >= GAS_CEILING_MIST;
+  const hasOrganization = Boolean(found?.organizations.length);
+  const step = !session
+    ? 0
+    : !savedCode
+      ? 1
+      : hasOrganization
+        ? 5
+        : stage === "organization"
+          ? 4
+          : funded || outcome
+            ? 3
+            : 2;
+  const steps: Array<[string, string]> = [
+    ["设备与恢复码", "Device & recovery code"],
+    ["运行费", "Funds"],
+    ["创建身份", "Create identity"],
+    ["创建组织", "Create organization"],
+    ["完成", "Done"],
+  ];
+  const faucet = session ? faucetHost(session.deployment.network) : null;
+  const deploymentForm = (
+    <>
+      <label>
+        {t("本机设备配置名", "Local device profile")}
+        <input
+          value={profile}
+          disabled={busy || Boolean(session)}
+          maxLength={64}
+          onChange={(e) => setProfile(e.target.value)}
+        />
+      </label>
+      <label>
+        {t("网络与合约部署（公开 JSON）", "Network & contract deployment (public JSON)")}
+        <textarea
+          aria-label={t("公开部署资料 JSON", "Public deployment JSON")}
+          value={deploymentText}
+          disabled={busy || Boolean(session)}
+          onChange={(e) => setDeploymentText(e.target.value)}
+          placeholder={
+            '{"network":"localnet","rpcUrl":"http://127.0.0.1:29000","packageId":"0x…","originalPackageId":"0x…","okrPackageId":"0x…","originalOkrPackageId":"0x…","directPackageId":"0x…","registryId":"0x…"}'
+          }
+        />
+      </label>
+    </>
+  );
   return (
     <section
       className="panel create-identity"
       aria-label={t("创建我的身份", "Create my identity")}
     >
-      <h3>{t("创建我的身份", "Create my identity")}</h3>
-      <ol className="creation-steps">
-        <li>{t("设备与恢复码", "Device & recovery")}</li>
-        <li>{t("准备运行费", "Prepare funds")}</li>
-        <li>{t("确认身份与组织", "Confirm Human & organization")}</li>
-      </ol>
-      {code && (
-        <div className="recovery-display">
-          <strong>{t("保存这一份恢复码", "Save this recovery code")}</strong>
-          <code className="long-id">{code}</code>
+      <div className="steps-nav" aria-label={t("创建进度", "Setup progress")}>
+        {steps.map(([zh, en], i) => (
+          <span
+            key={zh}
+            className={i + 1 < Math.max(step, 1) ? "done" : i + 1 === Math.max(step, 1) ? "on" : ""}
+            aria-current={i + 1 === Math.max(step, 1) ? "step" : undefined}
+          >
+            <b>{i + 1 < Math.max(step, 1) ? "✓" : i + 1}</b>
+            {t(zh, en)}
+          </span>
+        ))}
+      </div>
+
+      {!session && (
+        <>
           <p>
             {t(
-              "只保存恢复码即可定位稳定身份。此页仅显示一次，离开或刷新后隐藏；任何持码者都能恢复身份。",
-              "This one code locates your stable identity. Shown only in this session; leaving or refreshing hides it. Anyone holding it can recover your identity.",
+              "这台设备还没有 FractalMind 身份。先在本机生成设备密钥和一份恢复码；私钥只保存在系统密钥库里。",
+              "This device has no FractalMind identity yet. First generate device keys and one recovery code on this machine; private keys stay in the OS credential store.",
             )}
           </p>
-        </div>
-      )}
-
-      {!session ? (
-        <>
-          <label>
-            {t("本机配置名", "Local profile")}
-            <input
-              value={profile}
-              disabled={busy}
-              maxLength={64}
-              onChange={(e) => setProfile(e.target.value)}
-            />
-          </label>
-          <details open={!deploymentText}>
-            <summary>
-              {t("网络与合约部署", "Network & contract deployment")}
-            </summary>
-            <p>
-              {t(
-                "开发部署需要 RPC、合约包和 ProtocolRegistry，不需要先有 Human ID。升级部署还需原始包 ID；会先校验类型来源，再生成密钥。正式网络配置仍待发布。",
-                "Development setup needs RPC, packages and ProtocolRegistry, with no existing Human ID. Upgraded deployments also need the original package IDs; type origins are checked before keys are generated. Official network configuration is not published yet.",
-              )}
+          {builtInDeployment ? (
+            <p className="small muted">
+              {t("网络", "Network")}: {builtInDeployment.network} ·{" "}
+              <code>{builtInDeployment.rpcUrl}</code>
             </p>
-            <textarea
-              aria-label={t("公开部署资料 JSON", "Public deployment JSON")}
-              value={deploymentText}
-              disabled={busy}
-              onChange={(e) => setDeploymentText(e.target.value)}
-              placeholder={
-                '{"network":"localnet","rpcUrl":"http://127.0.0.1:29000","packageId":"0x…","originalPackageId":"0x…","okrPackageId":"0x…","originalOkrPackageId":"0x…","directPackageId":"0x…","originalDirectPackageId":"0x…","registryId":"0x…"}'
-              }
-            />
-          </details>
+          ) : (
+            deploymentForm
+          )}
           <div className="actions">
             <button
+              className="primary"
               disabled={busy || !deploymentText}
               onClick={() => void action(() => start(false))}
             >
-              {t("准备设备与恢复码", "Prepare device & recovery")}
+              {t("生成设备密钥与恢复码", "Generate device keys & recovery code")}
             </button>
             <button
               disabled={busy || !deploymentText}
               onClick={() => void action(() => start(true))}
             >
-              {t("继续已有创建流程", "Continue existing setup")}
+              {t("继续上次的设置", "Continue previous setup")}
             </button>
           </div>
-          <small>
-            {t(
-              "已有配置不会被覆盖；加载不自动创建或提交。",
-              "Existing profiles are not overwritten; loading never creates or submits.",
-            )}
-          </small>
+          {builtInDeployment && (
+            <details>
+              <summary className="small muted">
+                {t("高级：配置名或其他部署", "Advanced: profile or another deployment")}
+              </summary>
+              {deploymentForm}
+            </details>
+          )}
         </>
-      ) : (
+      )}
+
+      {session && step === 1 && (
         <>
-          <p>
-            {t("网络", "Network")}: {session.deployment.network} ·{" "}
-            <code>{session.deployment.chainIdentifier}</code>
-          </p>
+          {code ? (
+            <div className="recovery-display">
+              <strong>{t("保存这一份恢复码", "Save this recovery code")}</strong>
+              <code className="long-id">{code}</code>
+              <p>
+                {t(
+                  "只要这一份恢复码就能在所有设备丢失后找回身份。它只显示这一次；任何持有它的人都能恢复你的身份。",
+                  "This one code recovers your identity if every device is lost. It is shown only once; anyone holding it can recover your identity.",
+                )}
+              </p>
+            </div>
+          ) : found ? (
+            <p className="small muted">
+              {t(
+                "身份已经在链上创建；恢复码只在设置时显示。",
+                "The identity is already on chain; the recovery code was shown during setup.",
+              )}
+            </p>
+          ) : (
+            <div className="recovery-display">
+              <p className="small">
+                {t(
+                  "已找到本机未完成的设置，身份尚未上链。如果还没保存恢复码，现在可以再显示一次。",
+                  "Found this device's unfinished setup; the identity is not on chain yet. If you have not saved the recovery code, show it again now.",
+                )}
+              </p>
+              <button
+                className="primary"
+                disabled={busy}
+                onClick={() =>
+                  void action(async () => {
+                    const shown = await revealRecoveryCode(
+                      transport,
+                      session.device.device.profile,
+                      session.deployment.network,
+                    );
+                    if (mounted.current) setCode(shown);
+                  })
+                }
+              >
+                {t("显示恢复码", "Show recovery code")}
+              </button>
+            </div>
+          )}
           <label className="checkline">
             <input
               type="checkbox"
@@ -325,61 +430,89 @@ export default function CreateIdentity({
               "I have saved the recovery code securely",
             )}
           </label>
-          <h3>{t("准备运行费", "Prepare transaction funds")}</h3>
-          <p>
-            {t(
-              "恢复地址支付创建 Human，独立设备支付创建组织；两笔分别确认，没有自动充值或代扣。",
-              "The recovery address pays for Human creation; the independent device pays for the organization. Confirm separately; no automatic top-up or debit occurs.",
-            )}
-          </p>
+        </>
+      )}
+
+      {session && step >= 2 && step <= 4 && (
+        <div className="fee-quote">
+          <div className="row between">
+            <strong>{t("运行费", "Funds")}</strong>
+            <span className={`chip ${funded ? "ok" : "warn"}`}>
+              {funded ? t("已就绪", "Ready") : t("需要充值", "Needs funds")}
+            </span>
+          </div>
           <dl>
-            <dt>{t("身份创建充值地址", "Fund Human creation")}</dt>
+            <dt>{t("创建身份（恢复地址）", "Identity (recovery address)")}</dt>
             <dd>
               <code className="long-id">
                 {session.recovery.material.recovery.address}
               </code>
-              <p>
-                {balances
-                  ? sui(balances.recovery)
-                  : t("余额未知", "Balance unknown")}
-              </p>
+              <br />
+              {balances ? sui(balances.recovery) : t("余额未知", "Balance unknown")}
             </dd>
-            <dt>{t("设备运行费地址", "Device fee address")}</dt>
+            <dt>{t("创建组织（本设备）", "Organization (this device)")}</dt>
             <dd>
               <code className="long-id">{session.device.device.address}</code>
-              <p>
-                {balances
-                  ? sui(balances.device)
-                  : t("余额未知", "Balance unknown")}
-              </p>
+              <br />
+              {balances ? sui(balances.device) : t("余额未知", "Balance unknown")}
             </dd>
           </dl>
-          <small>
+          <p className="small muted">
             {t(
-              "每笔 Gas 上限为 0.2 SUI，实际费用以模拟报价及链上记录为准；充值后重新检查，不会自动提交。",
-              "Each Gas ceiling is 0.2 SUI; simulation and chain receipts show actual fees. Recheck after funding; no automatic submission.",
+              "每笔交易 Gas 上限 0.2 SUI，实际费用以报价和链上记录为准；没有自动扣费，每笔都需要你确认。",
+              "Each transaction has a 0.2 SUI Gas ceiling; quotes and chain records show actual fees. Nothing is charged automatically; you confirm each one.",
             )}
-          </small>
+          </p>
+          {!faucet && !funded && session.deployment.network === "testnet" && (
+            <p className="notice">
+              {t(
+                "testnet 没有可供 App 调用的水龙头：请在 faucet.sui.io 为上面两个地址领取测试 SUI（每个至少 0.2 SUI），或从你已有的 testnet 地址转账，然后刷新余额。",
+                "Testnet has no faucet the App can call: get test SUI for both addresses above at faucet.sui.io (at least 0.2 SUI each), or transfer from a testnet address you own, then refresh the balance.",
+              )}
+            </p>
+          )}
           <div className="actions">
-            <button
-              disabled={busy}
-              onClick={() => void action(() => read(session))}
-            >
-              {t("检查余额与原交易", "Check balance & original transaction")}
+            {faucet && !funded && (
+              <button
+                className="primary"
+                disabled={busy}
+                onClick={() => void action(fund)}
+              >
+                {t(
+                  `从 ${session.deployment.network} 水龙头领取测试 SUI`,
+                  `Get test SUI from the ${session.deployment.network} faucet`,
+                )}
+              </button>
+            )}
+            <button disabled={busy} onClick={() => void action(() => read(session))}>
+              {t("刷新余额", "Refresh balance")}
             </button>
           </div>
+        </div>
+      )}
+
+      {session && (step === 3 || step === 4) && (
+        <>
+          <h3>
+            {stage === "identity"
+              ? t("创建你的 Human 身份", "Create your Human identity")
+              : t("创建你的个人组织", "Create your personal organization")}
+          </h3>
           {stage === "organization" && (
             <>
-              <h3>{t("稳定 Human 已确认", "Stable Human confirmed")}</h3>
-              <code className="long-id">{found?.profile.humanId}</code>
+              <p className="small muted" title={found?.profile.humanId}>
+                {t("身份已在链上确认", "Identity confirmed on chain")} ·{" "}
+                <code>{found?.profile.humanId.slice(0, 10)}…</code>
+              </p>
               <label>
                 {t(
-                  "个人组织名称（公开上链）",
-                  "Personal organization name (public on chain)",
+                  "组织名称（公开上链）",
+                  "Organization name (public on chain)",
                 )}
                 <input
                   value={name}
                   maxLength={128}
+                  placeholder={t("例如：Ada 的个人组织", "e.g. Ada's organization")}
                   disabled={busy || Boolean(quote)}
                   onChange={(e) => {
                     setName(e.target.value);
@@ -389,121 +522,120 @@ export default function CreateIdentity({
               </label>
             </>
           )}
-          {!found?.organizations.length && (
-            <button
-              disabled={
-                busy ||
-                !savedCode ||
-                Boolean(outcome) ||
-                (stage === "organization" && !name.trim())
-              }
-              onClick={() => void action(prepare)}
-            >
-              {stage === "identity"
-                ? t("估算创建身份费用", "Estimate Human creation fee")
-                : t("估算创建组织费用", "Estimate organization fee")}
-            </button>
-          )}
-          {quote && (
-            <div className="fee-quote" role="status">
-              <h3>{t("确认本次费用", "Confirm this fee")}</h3>
-              <dl>
-                <dt>{t("预计 Gas", "Estimated Gas")}</dt>
-                <dd>{sui(quote.estimatedGas)}</dd>
-                <dt>{t("Gas 上限", "Gas ceiling")}</dt>
-                <dd>{sui(quote.gasBudget)}</dd>
-                <dt>{t("交易摘要", "Digest")}</dt>
-                <dd>
-                  <code className="long-id">{quote.digest}</code>
-                </dd>
-              </dl>
-              <p>
-                {quote.expiresAtMs > now
-                  ? t(
-                      "确认后原生签名并提交一次。",
-                      "Confirm to sign natively and submit once.",
-                    )
-                  : t(
-                      "报价已过期，请重新估算。",
-                      "Quote expired. Estimate again.",
-                    )}
-              </p>
-              <div className="actions">
-                <button
-                  disabled={busy || !savedCode || quote.expiresAtMs <= now}
-                  className="primary"
-                  onClick={() => void action(submit)}
-                >
-                  {t("确认费用并提交", "Confirm fee & submit")}
-                </button>
-                <button disabled={busy} onClick={() => setQuote(null)}>
-                  {t("取消本次报价", "Cancel quote")}
-                </button>
-              </div>
+          {!quote && !outcome && (
+            <div className="actions">
+              <button
+                className="primary"
+                disabled={
+                  busy ||
+                  !savedCode ||
+                  (stage === "identity" && !funded) ||
+                  (stage === "organization" && !name.trim())
+                }
+                onClick={() => void action(prepare)}
+              >
+                {t("估算费用", "Estimate fee")}
+              </button>
             </div>
           )}
-          {outcome && (
-            <div role="status" className="transaction-outcome">
-              <strong>
-                {outcome.status === "confirmed"
-                  ? t("链上已确认", "Confirmed on chain")
-                  : outcome.status === "failed"
-                    ? t(
-                        "交易失败，保留原记录",
-                        "Transaction failed; original retained",
-                      )
-                    : t(
-                        "结果未知，查询原交易",
-                        "Outcome unknown; query original",
-                      )}
-              </strong>
-              <p>
-                <code className="long-id">{outcome.digest}</code>
-              </p>
-              {outcome.actualGas && (
+        </>
+      )}
+
+      {quote && (
+        <div className="fee-quote" role="status">
+          <h3>{t("确认本次费用", "Confirm this fee")}</h3>
+          <dl>
+            <dt>{t("预计 Gas", "Estimated Gas")}</dt>
+            <dd>{sui(quote.estimatedGas)}</dd>
+            <dt>{t("Gas 上限", "Gas ceiling")}</dt>
+            <dd>{sui(quote.gasBudget)}</dd>
+            <dt>{t("交易摘要", "Digest")}</dt>
+            <dd>
+              <code className="long-id">{quote.digest}</code>
+            </dd>
+          </dl>
+          <p className="small">
+            {quote.expiresAtMs > now
+              ? t(
+                  "确认后在本机签名并提交一次。",
+                  "Confirm to sign on this device and submit once.",
+                )
+              : t("报价已过期，请重新估算。", "Quote expired. Estimate again.")}
+          </p>
+          <div className="actions">
+            <button
+              disabled={busy || !savedCode || quote.expiresAtMs <= now}
+              className="primary"
+              onClick={() => void action(submit)}
+            >
+              {t("确认费用并提交", "Confirm fee & submit")}
+            </button>
+            <button disabled={busy} onClick={() => setQuote(null)}>
+              {t("取消", "Cancel")}
+            </button>
+          </div>
+        </div>
+      )}
+      {outcome && !hasOrganization && (
+        <div role="status" className="transaction-outcome">
+          <strong>
+            {outcome.status === "confirmed"
+              ? t("链上已确认", "Confirmed on chain")
+              : outcome.status === "failed"
+                ? t("交易失败，保留原记录", "Transaction failed; original retained")
+                : t("结果未知，查询原交易", "Outcome unknown; query original")}
+          </strong>
+          <p>
+            <code className="long-id">{outcome.digest}</code>
+          </p>
+          {outcome.actualGas && (
+            <p>
+              {t("实际 Gas", "Actual Gas")}: {sui(outcome.actualGas)}
+            </p>
+          )}
+          <div className="actions">
+            {outcome.status === "failed" ? (
+              <button disabled={busy} onClick={() => void action(beginNewAttempt)}>
+                {t("开始新的尝试", "Start a new attempt")}
+              </button>
+            ) : (
+              <button disabled={busy} onClick={() => void action(() => read(session!))}>
+                {t("查询原交易", "Query original transaction")}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {failedAttempts.length > 0 && (
+        <details>
+          <summary className="small muted">
+            {t("保留的失败记录", "Retained failed attempts")}
+          </summary>
+          {failedAttempts.map((attempt) => (
+            <div key={attempt.digest}>
+              <code className="long-id">{attempt.digest}</code>
+              {attempt.actualGas && (
                 <p>
-                  {t("实际 Gas", "Actual Gas")}: {sui(outcome.actualGas)}
+                  {t("实际 Gas", "Actual Gas")}: {sui(attempt.actualGas)}
                 </p>
               )}
-              <p>
-                {outcome.status === "failed"
-                  ? t(
-                      "原交易已确认失败。开始新尝试后，重新估算并确认费用；设备、恢复码和已创建的身份保持。",
-                      "The original transaction failed on chain. Start a new attempt, then estimate and confirm its fee. Your device, recovery code and existing Human identity are retained.",
-                    )
-                  : t(
-                      "检查只查询原交易。结果未知时保留原摘要，等待确认。",
-                      "Checking queries the original transaction. An unknown outcome keeps its original digest until confirmed.",
-                    )}
-              </p>
-              {outcome.status === "failed" && (
-                <button
-                  disabled={busy}
-                  onClick={() => void action(beginNewAttempt)}
-                >
-                  {t("开始新的创建尝试", "Start a new creation attempt")}
-                </button>
-              )}
             </div>
-          )}
-          {failedAttempts.length > 0 && (
-            <details>
-              <summary>
-                {t("保留的失败记录", "Retained failed attempts")}
-              </summary>
-              {failedAttempts.map((attempt) => (
-                <div key={attempt.digest}>
-                  <code className="long-id">{attempt.digest}</code>
-                  {attempt.actualGas && (
-                    <p>
-                      {t("实际 Gas", "Actual Gas")}: {sui(attempt.actualGas)}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </details>
-          )}
-          {Boolean(found?.organizations.length) && (
+          ))}
+        </details>
+      )}
+
+      {session && hasOrganization && (
+        <div className="calm-done">
+          <div className="calm">
+            <NavIcon name="check" />
+            <span>
+              {t(
+                "身份和个人组织已创建。",
+                "Your identity and personal organization are ready.",
+              )}
+            </span>
+          </div>
+          <div className="actions">
             <button
               disabled={busy}
               className="primary"
@@ -529,17 +661,14 @@ export default function CreateIdentity({
                 })
               }
             >
-              {t("查看我的组织", "View my organization")}
+              {t("进入我的组织", "Open my organization")}
             </button>
-          )}
-        </>
+          </div>
+        </div>
       )}
       {busy && (
-        <p role="status">
-          {t(
-            "正在核对原生密钥与链上状态…",
-            "Checking native keys and chain state…",
-          )}
+        <p role="status" className="small muted">
+          {t("正在处理…", "Working…")}
         </p>
       )}
       {error && (

@@ -33,6 +33,30 @@ contacts the configured Sui RPC directly. That RPC must support browser
 gRPC-Web requests and permit the preview origin. The production bundle has a
 CSP restricting scripts and styles to this origin; development uses Vite HMR.
 
+## New device setup
+
+The native App sets up a new device instead of browsing read-only: without
+device keys it opens "Create my identity" (device keys and one recovery code,
+funds, Human identity, personal organization), with pairing and recovery as
+alternatives. The read-only chain browser exists only in the web preview.
+
+The network and contracts come from the build. For a local network, put the
+public deployment and faucet in `.env.local` (not committed):
+
+```sh
+VITE_FRACTALMIND_DEPLOYMENT={"network":"localnet","rpcUrl":"http://127.0.0.1:29000","packageId":"0x…","okrPackageId":"0x…","directPackageId":"0x…","registryId":"0x…"}
+VITE_FRACTALMIND_FAUCET=http://127.0.0.1:29123
+```
+
+Without a built-in deployment the setup asks for the deployment JSON under
+"Advanced". Faucets are offered only for localnet and devnet.
+
+A v0.2.0 deployment on Sui testnet is recorded in
+[`v021-testnet-deployment.json`](../../docs/product/evidence/v021-testnet-deployment.json);
+use its `deployment` object as `VITE_FRACTALMIND_DEPLOYMENT` for a testnet
+build. Testnet has no faucet the App can call: fund the two setup addresses at
+faucet.sui.io or by transfer.
+
 ## Styles
 
 The interface follows prototype v2 in three layers:
@@ -49,6 +73,26 @@ The interface follows prototype v2 in three layers:
 
 `src/display.ts` holds display-name rules: a readable name first, and chain
 IDs only shortened as secondary detail.
+
+## Device session
+
+The native App unlocks device keys once per sign-in instead of reading the OS
+credential store (Keychain, Keystore, Credential Manager, Secret Service) for
+every operation:
+
+- `fm_device_unlock` reads the store once and keeps the keys in native process
+  memory (`DeviceVault` session, zeroized on drop). Signing, decryption and the
+  other device operations use only that session; a locked or expired session
+  returns `Locked` and never falls back to the store.
+- The App unlocks automatically at start. It locks on "Lock this app", after
+  the idle timeout (default 15 minutes, set in Settings; machine sleep counts
+  as idle), after more than a minute in the background on phones, and when this
+  device's grant is revoked. While locked nothing from the organization is
+  rendered.
+- Keys never cross IPC; the WebView only sees public keys, signatures and
+  decrypted results. With the session unlocked, OKR titles are decrypted
+  automatically (`src/use-okr-texts.ts`) and kept in memory only. The browser
+  preview has no device keys and keeps the "Title encrypted" fallback.
 
 ## Public read-only connection
 

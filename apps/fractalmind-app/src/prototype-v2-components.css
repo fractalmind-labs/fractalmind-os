@@ -452,6 +452,7 @@ code, .mono { font-family: var(--mono); font-size: 0.92em; }
 .toast.ok .i { color: #4ade80; }
 .toast.warn .i { color: #fbbf24; }
 .toast.danger .i { color: #f87171; }
+.lockscreen { position: fixed; inset: 0; z-index: 85; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
 .msg { display: flex; flex-direction: column; gap: 6px; max-width: 88%; }
 .msg.me { align-self: flex-end; align-items: flex-end; }
 .msg .bubble { padding: 10px 12px; border-radius: 14px; font-size: 13.5px; line-height: 1.5; background: var(--surface-3); white-space: pre-wrap; word-break: break-word; }
