@@ -1,4 +1,5 @@
 import { Ed25519PublicKey } from "@mysten/sui/keypairs/ed25519";
+import { defaultDeviceProfile, matchesTarget } from "./build-target";
 import { fromBase64, toBase64 } from "@mysten/sui/utils";
 import {
   verifyPersonalMessageSignature,
@@ -79,7 +80,8 @@ export class NativeDeviceError extends Error {
 export const DEVICE_LOCKED_EVENT = "fractalmind:device-locked";
 const id = /^0x[0-9a-f]{64}$/;
 const profilePattern = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
-/** Disposable local connection preference; it is never identity authority. */
+/** Disposable local connection preference; it is never identity authority.
+ * Records for another network than this build's are ignored. */
 export function preferredDeviceProfile() {
   try {
     const preferred = JSON.parse(
@@ -88,7 +90,8 @@ export function preferredDeviceProfile() {
     if (
       preferred &&
       typeof preferred.profile === "string" &&
-      profilePattern.test(preferred.profile)
+      profilePattern.test(preferred.profile) &&
+      matchesTarget(preferred, undefined, { registry: false })
     )
       return preferred.profile as string;
     const stored = JSON.parse(
@@ -98,11 +101,12 @@ export function preferredDeviceProfile() {
     if (
       stored &&
       typeof stored.profile === "string" &&
-      profilePattern.test(stored.profile)
+      profilePattern.test(stored.profile) &&
+      matchesTarget(stored.deployment)
     )
       return stored.profile as string;
   } catch {}
-  return "primary";
+  return defaultDeviceProfile;
 }
 /** The identity this device was set up, paired or recovered for. Written
  * only when setup, pairing or recovery finishes; a public read-only connection
@@ -117,7 +121,8 @@ export function deviceConnection(): { profile: string; humanId: string } | null 
       typeof value.profile === "string" &&
       profilePattern.test(value.profile) &&
       typeof value.humanId === "string" &&
-      id.test(value.humanId)
+      id.test(value.humanId) &&
+      matchesTarget(value, undefined, { registry: false })
     )
       return { profile: value.profile, humanId: value.humanId };
   } catch {}

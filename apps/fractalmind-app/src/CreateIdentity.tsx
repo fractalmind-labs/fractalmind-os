@@ -22,13 +22,17 @@ import {
   requestTestFunds,
 } from "./deployments";
 import { NavIcon } from "./V2Views";
+import { defaultDeviceProfile, matchesTarget } from "./build-target";
 type Translate = (zh: string, en: string) => string;
 const CACHE = "fractalmind.app.onboarding-connection.v1";
 const transport: NativeInvoke = (command, args) => invoke(command, args);
 function saved() {
   try {
     const value = JSON.parse(localStorage.getItem(CACHE) ?? "null");
-    return value && typeof value.profile === "string"
+    // A setup for another network than this build's is not resumed.
+    return value &&
+      typeof value.profile === "string" &&
+      matchesTarget(value.deployment)
       ? {
           profile: value.profile,
           deployment: normalizeDeployment(value.deployment),
@@ -62,7 +66,9 @@ export default function CreateIdentity({
     defaultDeployment ? JSON.stringify(defaultDeployment, null, 2) : "",
   );
   // A new device uses the App's default profile so later starts unlock it.
-  const [profile, setProfile] = useState(initial?.profile ?? "primary");
+  const [profile, setProfile] = useState(
+    initial?.profile ?? defaultDeviceProfile,
+  );
   const [session, setSession] = useState<IdentityCreation | null>(null),
     [code, setCode] = useState(""),
     [savedCode, setSavedCode] = useState(false);
@@ -457,6 +463,14 @@ export default function CreateIdentity({
               "Each transaction has a 0.2 SUI Gas ceiling; quotes and chain records show actual fees. Nothing is charged automatically; you confirm each one.",
             )}
           </p>
+          {!faucet && !funded && session.deployment.network === "testnet" && (
+            <p className="notice">
+              {t(
+                "testnet 没有可供 App 调用的水龙头：请在 faucet.sui.io 为上面两个地址领取测试 SUI（每个至少 0.2 SUI），或从你已有的 testnet 地址转账，然后刷新余额。",
+                "Testnet has no faucet the App can call: get test SUI for both addresses above at faucet.sui.io (at least 0.2 SUI each), or transfer from a testnet address you own, then refresh the balance.",
+              )}
+            </p>
+          )}
           <div className="actions">
             {faucet && !funded && (
               <button

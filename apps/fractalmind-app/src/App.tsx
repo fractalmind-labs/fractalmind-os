@@ -18,6 +18,7 @@ import {
 } from "./device-session";
 import { useOkrTexts } from "./use-okr-texts";
 import { deviceConnection } from "./native-device";
+import { matchesTarget } from "./build-target";
 import type { OkrText } from "./okr-text";
 import { useChain } from "./use-chain";
 import { clockNow, memberStatus, navigation } from "./domain";
@@ -381,7 +382,8 @@ export function App() {
   // only a saved public connection (e.g. during setup), it shows the setup
   // flow; it never falls back to a read-only browser.
   const linked =
-    !isTauri() || deviceConnection()?.humanId === profile?.humanId;
+    !isTauri() ||
+    (deviceConnection()?.humanId === profile?.humanId && matchesTarget(profile));
   if (!profile || device.session.state === "no_device" || !linked)
     return (
       <Welcome
