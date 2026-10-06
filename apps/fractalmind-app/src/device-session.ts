@@ -219,19 +219,19 @@ export function useDeviceSession(transport: NativeInvoke = defaultTransport) {
   }, []);
 
   const isUnlocked = session.state === "unlocked";
-  const watching = isUnlocked || session.state === "no_device";
-  // Poll status (no OS-store access, no extension) to notice idle expiry, and
-  // a session started by creating or recovering a device in this App.
+  // Poll status (no OS-store access, no extension) to notice idle expiry.
+  // Only an unlocked session is watched: a session that device setup opens
+  // natively must not move the App out of its setup flow; setup finishes
+  // with connect(), which calls resync().
   useEffect(() => {
-    if (!watching) return;
+    if (!isUnlocked) return;
     const timer = setInterval(() => {
       void call(transport, "fm_device_session", { profile: profile.current })
         .then((value) => {
           const status = sessionStatusResult(value, profile.current);
-          if (status.unlocked && !isUnlocked) void unlocked().catch(() => undefined);
-          else if (!status.unlocked && isUnlocked)
+          if (!status.unlocked)
             setSession({ state: "locked", profile: profile.current, reason: "idle" });
-          else if (status.unlocked)
+          else
             setSession((s) =>
               s.state === "unlocked"
                 ? { ...s, remainingMs: status.remainingMs, idleTimeoutMs: status.idleTimeoutMs }
@@ -241,7 +241,7 @@ export function useDeviceSession(transport: NativeInvoke = defaultTransport) {
         .catch(() => undefined);
     }, POLL_MS);
     return () => clearInterval(timer);
-  }, [watching, isUnlocked, transport, unlocked]);
+  }, [isUnlocked, transport]);
 
   // User activity keeps an attended session open (throttled).
   useEffect(() => {

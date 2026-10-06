@@ -17,6 +17,7 @@ import {
   type DeviceSession,
 } from "./device-session";
 import { useOkrTexts } from "./use-okr-texts";
+import { deviceConnection } from "./native-device";
 import type { OkrText } from "./okr-text";
 import { useChain } from "./use-chain";
 import { clockNow, memberStatus, navigation } from "./domain";
@@ -375,15 +376,19 @@ export function App() {
     // Persist the verified pin once. Rewriting it on every snapshot refresh
     // would recreate a connection another window explicitly cleared.
   }, [profile, data.identity?.human.id, data.identity?.chainIdentifier]);
-  // A native App without device keys on this machine sets up (or recovers) a
-  // real identity; it never falls back to a read-only browser.
-  if (!profile || device.session.state === "no_device")
+  // A native App only opens the organization views for the identity this
+  // device was set up, paired or recovered for. Without device keys, or with
+  // only a saved public connection (e.g. during setup), it shows the setup
+  // flow; it never falls back to a read-only browser.
+  const linked =
+    !isTauri() || deviceConnection()?.humanId === profile?.humanId;
+  if (!profile || device.session.state === "no_device" || !linked)
     return (
       <Welcome
         t={t}
         appearance={appearance}
         connect={connect}
-        newDevice={device.session.state === "no_device"}
+        newDevice={isTauri()}
       />
     );
   // While locked nothing from the organization is rendered: unmounting the

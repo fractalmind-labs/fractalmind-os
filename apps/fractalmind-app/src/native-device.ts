@@ -20,6 +20,7 @@ export type NativeDeviceCommand =
   | "fm_device_prove"
   | "fm_onboarding_create"
   | "fm_onboarding_public"
+  | "fm_onboarding_reveal"
   | "fm_onboarding_sign_transaction"
   | "fm_device_decrypt_record"
   | "fm_device_encrypt_record"
@@ -102,6 +103,25 @@ export function preferredDeviceProfile() {
       return stored.profile as string;
   } catch {}
   return "primary";
+}
+/** The identity this device was set up, paired or recovered for. Written
+ * only when setup, pairing or recovery finishes; a public read-only connection
+ * never writes it. */
+export function deviceConnection(): { profile: string; humanId: string } | null {
+  try {
+    const value = JSON.parse(
+      localStorage.getItem("fractalmind.app.device-connection.v1") ?? "null",
+    );
+    if (
+      value &&
+      typeof value.profile === "string" &&
+      profilePattern.test(value.profile) &&
+      typeof value.humanId === "string" &&
+      id.test(value.humanId)
+    )
+      return { profile: value.profile, humanId: value.humanId };
+  } catch {}
+  return null;
 }
 export function profileCheck(profile: string) {
   if (!profilePattern.test(profile))

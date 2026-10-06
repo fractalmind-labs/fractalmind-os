@@ -229,6 +229,24 @@ async fn fm_onboarding_create(
     .await
     .map_err(|_| "NativeTaskFailed".to_string())?
 }
+/// Shows an unfinished setup's recovery code again (unlocked session only).
+#[tauri::command]
+async fn fm_onboarding_reveal(
+    window: WebviewWindow,
+    vault: State<'_, Arc<DeviceVault>>,
+    profile: String,
+    network: String,
+) -> Result<String, String> {
+    main_window(&window)?;
+    let vault = Arc::clone(vault.inner());
+    tauri::async_runtime::spawn_blocking(move || {
+        vault
+            .reveal_onboarding_code(&profile, &network)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|_| "NativeTaskFailed".to_string())?
+}
 #[tauri::command]
 async fn fm_onboarding_public(
     window: WebviewWindow,
@@ -493,6 +511,7 @@ pub fn run() {
             fm_device_prove,
             fm_onboarding_create,
             fm_onboarding_public,
+            fm_onboarding_reveal,
             fm_onboarding_sign_transaction,
             fm_device_decrypt_record,
             fm_device_encrypt_record,

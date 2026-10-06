@@ -8,7 +8,7 @@ import {
 } from "@fractalmind-labs/fractalmind-sdk";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
 import { NativeDeviceSigner, type NativeInvoke } from "./native-device";
-import { NativeRecoverySigner } from "./native-onboarding";
+import { NativeRecoverySigner, revealRecoveryCode } from "./native-onboarding";
 import {
   IdentityCreation,
   normalizeDeployment,
@@ -375,13 +375,38 @@ export default function CreateIdentity({
                 )}
               </p>
             </div>
-          ) : (
+          ) : found ? (
             <p className="small muted">
               {t(
-                "已找到本机上次的设置。恢复码只在生成时显示过一次。",
-                "Found this device's previous setup. The recovery code was shown once when it was generated.",
+                "身份已经在链上创建；恢复码只在设置时显示。",
+                "The identity is already on chain; the recovery code was shown during setup.",
               )}
             </p>
+          ) : (
+            <div className="recovery-display">
+              <p className="small">
+                {t(
+                  "已找到本机未完成的设置，身份尚未上链。如果还没保存恢复码，现在可以再显示一次。",
+                  "Found this device's unfinished setup; the identity is not on chain yet. If you have not saved the recovery code, show it again now.",
+                )}
+              </p>
+              <button
+                className="primary"
+                disabled={busy}
+                onClick={() =>
+                  void action(async () => {
+                    const shown = await revealRecoveryCode(
+                      transport,
+                      session.device.device.profile,
+                      session.deployment.network,
+                    );
+                    if (mounted.current) setCode(shown);
+                  })
+                }
+              >
+                {t("显示恢复码", "Show recovery code")}
+              </button>
+            </div>
           )}
           <label className="checkline">
             <input
