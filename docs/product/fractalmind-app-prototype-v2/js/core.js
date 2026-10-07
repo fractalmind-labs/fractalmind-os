@@ -348,7 +348,6 @@
     'agent.import': ['导入 Agent（仅观察）', 'Import Agent (observe only)'],
     'agent.include': ['授权 Agent 纳入 OKR', 'Authorize Agent for an OKR'],
     'agent.create': ['创建 Agent', 'Create an Agent'],
-    'agent.rebind': ['重新关联 Agent 实例', 'Relink an Agent instance'],
     'agent.policy': ['更新 Agent 常驻权限', 'Update Agent standing permission'],
     'memory.write': ['写入记忆', 'Write memory'],
     'memory.archive': ['归档记忆', 'Archive memory'],

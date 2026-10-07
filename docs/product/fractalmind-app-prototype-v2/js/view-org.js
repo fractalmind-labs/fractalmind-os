@@ -93,12 +93,15 @@
       <div class="note mt-12">${icon('info')}<div>${T('Workspace 指向实际项目目录，不是另一种组织。现有 Agent OS 文件（OKR.md、memory/ 等）是链上记录的投影，编辑需版本校验。', 'A workspace points to a real project folder; it is not another kind of organization. Agent OS files (OKR.md, memory/…) project chain records and are version-checked on edit.')}</div></div></section>`;
   }
 
+  /** Launchers installed on this computer (#67). A launcher's own profile
+   * decides the model; the App never reads its accounts or keys. */
   function runtime() {
     const svc = M.localServiceFor(P());
-    const model = svc.model;
-    return `<section class="card"><div class="card-h"><h2>${T('默认运行时', 'Default runtime')}</h2><span class="chip ${model ? 'ok' : 'warn'}">${model ? T('已连接模型', 'Model connected') : T('未连接模型', 'No model')}</span></div>
-      <dl class="kv"><dt>${T('运行时', 'Runtime')}</dt><dd>${T('FractalMind 文件 Agent（随执行主机的后台服务运行）', 'FractalMind file Agent (runs in the execution host’s background service)')}</dd><dt>${T('模型', 'Model')}</dt><dd>${esc(L(M.modelLabel(model)))}${model && model.keyInKeychain ? ` · ${T('密钥在系统钥匙串', 'key in the system keychain')}` : ''}</dd><dt>${T('计费来源', 'Billing')}</dt><dd>${T('模型费用由服务商计费，与链上运行费分开显示', 'Billed by the model provider, shown separately from chain run fees')}</dd><dt>${T('已知限制', 'Known limits')}</dt><dd>${T('工作区内文本文件；没有命令执行与网络工具。tmux 观察适配器不支持暂停与约束；手机不运行 Agent', 'Text files in the workspace; no commands or network tools. The tmux observe adapter cannot pause or take constraints; phones do not run Agents')}</dd></dl>
-      <div class="card-f" style="justify-content:flex-start">${U.btn({ action: 'open', data: { dialog: 'model' }, label: model ? T('更改模型', 'Change model') : T('连接模型', 'Connect a model'), icon: 'sparkle', kind: model ? '' : 'primary', perm: 'manage_hosts' })}</div></section>`;
+    const host = U.host(svc.hostId);
+    const launchers = (host && host.launchers) || [];
+    return `<section class="card"><div class="card-h"><h2>${T('Agent 启动器', 'Agent launchers')}</h2><span class="chip ${launchers.length ? 'ok' : 'warn'}">${launchers.length ? T('这台电脑', 'This computer') : T('还不是执行主机', 'Not a host yet')}</span></div>
+      ${launchers.length ? `<dl class="kv">${launchers.map(l => `<dt>${esc(l.name)}</dt><dd>${l.profiles.map(pr => `<span class="mono">${esc(pr.id)}</span> · ${esc(L(pr.model))}`).join('<br>')}</dd>`).join('')}</dl>` : `<div class="small muted">${T('把这台电脑设为执行主机后，这里列出已安装的启动器（Codex CLI、Claude Code 等）及其配置。', 'After this computer becomes an execution host, its launchers (Codex CLI, Claude Code…) and profiles appear here.')}</div>`}
+      <div class="tiny muted mt-8">${T('Agent 的 AGENTS.md 选择启动器与配置；模型、账号与密钥由启动器自己管理，模型费用由服务商计费，与链上运行费分开。', 'Each Agent’s AGENTS.md picks a launcher and profile; models, accounts and keys stay with the launcher, and model usage is billed by the provider, separately from chain fees.')}</div></section>`;
   }
 
   function connections() {
@@ -234,44 +237,6 @@
     };
   };
 
-  /* Model connection for this computer's host (#67). One per host: every
-   * Agent on it shares the model. The prototype never asks for or stores a
-   * real API key; "use a demo key" stands in for saving one to the keychain. */
-  FM.dialogs.model = st => {
-    const p = P();
-    const svc = M.localServiceFor(p);
-    if (svc.state === 'not_installed') {
-      return {
-        title: T('连接模型', 'Connect a model'), size: 'sm',
-        body: `<div class="note">${icon('info')}<div>${T('模型连接属于执行主机。先把这台电脑设为执行主机。', 'A model connection belongs to an execution host. Set up this computer as one first.')}</div></div>`,
-        foot: `<button class="btn" data-action="close-dialog">${T('关闭', 'Close')}</button>${U.btn({ action: 'open', data: { dialog: 'bootstrap' }, label: T('设为执行主机', 'Set up'), kind: 'primary', perm: 'manage_hosts' })}`,
-      };
-    }
-    const cur = svc.model;
-    const provider = U.f('model.provider', cur ? cur.provider : 'anthropic');
-    const choices = M.MODEL_CHOICES[provider] || [];
-    const name = U.f(`model.${provider}`, cur && cur.provider === provider ? cur.name : choices[0]);
-    const demoKey = U.f('model.demoKey', !!(cur && cur.provider === 'anthropic'));
-    const lim = M.MODEL_LIMITS;
-    const opts = [
-      ['anthropic', 'sparkle', 'Claude（Anthropic API）', 'Claude (Anthropic API)', '用你的 API 密钥；按服务商价格计费', 'Your API key; billed at the provider’s prices'],
-      ['ollama', 'cpu', '本地 Ollama', 'Local Ollama', '在这台电脑上运行，不出本机', 'Runs on this computer; nothing leaves it'],
-      ['none', 'file', '暂不连接', 'Not now', '只做 OKR 中写明内容的文件任务', 'Only file tasks whose content the OKR spells out'],
-    ];
-    return {
-      title: T('这台主机的模型', 'This host’s model'), size: 'lg',
-      sub: T('模型连接属于主机，这台主机上的 Agent 共用；修改后后台服务重启生效。', 'The model belongs to the host and its Agents share it; changes take effect after the service restarts.'),
-      body: `<div class="col">${opts.map(([k, ic, zh, en, dzh, den]) => `<button class="opt" data-action="set-f" data-key="model.provider" data-value="${k}" aria-pressed="${provider === k}"><span class="ico">${icon(ic)}</span><span class="grow"><span class="strong">${esc(T(zh, en))}</span><span class="small muted" style="display:block">${esc(T(dzh, den))}</span></span></button>`).join('')}</div>
-        ${provider === 'anthropic' ? `<div class="field"><label for="model-key">${T('API 密钥', 'API key')}</label><input id="model-key" class="input" type="password" disabled placeholder="${esc(T('原型不接受真实密钥', 'The prototype accepts no real key'))}">
-            <label class="check mt-4"><input type="checkbox" data-f="model.demoKey" ${demoKey ? 'checked' : ''}>${T('使用演示密钥（不是真实密钥）', 'Use a demo key (not a real one)')}</label>
-            <div class="tiny muted">${T('真实 App 中，密钥只写入这台电脑的系统钥匙串，由后台服务读取；不写配置文件、不上链、不显示在日志里。断开或撤销主机时删除。', 'In the real App the key is written only to this computer’s system keychain and read by the background service; never to config files, the chain or logs. It is deleted when you disconnect or revoke the host.')}</div></div>` : ''}
-        ${provider === 'ollama' ? `<div class="note ok">${icon('check')}<div>${T('已在本机 11434 端口检测到 Ollama（演示）。列表只显示已拉取的模型。', 'Ollama detected on local port 11434 (demo). Only pulled models are listed.')}</div></div>` : ''}
-        ${choices.length ? `<div class="field"><label for="model-name">${T('模型', 'Model')}</label><select id="model-name" class="select" data-f="model.${provider}">${choices.map(c => `<option ${c === name ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>` : ''}
-        ${provider !== 'none' ? `<dl class="kv"><dt>${T('每次运行', 'Per run')}</dt><dd>${T(`最多 ${lim.maxRequests} 次请求，单次 ${lim.maxTokens} tokens，超时 ${lim.timeoutSeconds} 秒`, `Up to ${lim.maxRequests} requests, ${lim.maxTokens} tokens each, ${lim.timeoutSeconds} s timeout`)}</dd><dt>${T('计费', 'Billing')}</dt><dd>${provider === 'ollama' ? T('本地运行，没有服务商费用', 'Runs locally; no provider charges') : T('由 Anthropic 按你的账号计费，与 SUI Gas 分开', 'Billed by Anthropic to your account, separate from SUI Gas')}</dd><dt>${T('数据', 'Data')}</dt><dd>${provider === 'ollama' ? T('提示与工作区内容不离开这台电脑', 'Prompts and workspace content stay on this computer') : T('已批准的目标与相关工作区内容会发送给 Anthropic', 'Approved goals and relevant workspace content are sent to Anthropic')}</dd></dl>` : `<div class="note">${icon('info')}<div>${T('不连接模型时，Agent 只写入 OKR 里写明内容的 1–3 个文本文件，不能生成内容。之后随时可以连接。', 'Without a model, the Agent only writes 1–3 text files whose content the OKR spells out; it cannot generate content. Connect one any time.')}</div></div>`}`,
-      foot: `<button class="btn" data-action="${st.back ? 'model-back' : 'close-dialog'}">${T('取消', 'Cancel')}</button>${U.btn({ action: 'model-save', label: provider === 'none' ? (cur ? T('断开模型', 'Disconnect') : T('暂不连接', 'Not now')) : T('保存并重启服务', 'Save and restart'), kind: 'primary', perm: 'manage_hosts', disabled: provider === 'anthropic' && !demoKey, why: T('原型需勾选演示密钥', 'Tick the demo key in the prototype') })}`,
-    };
-  };
-
   Object.assign(FM.actions, {
     'ws-import': () => {
       const p = P();
@@ -288,21 +253,6 @@
       if (FM.review) FM.review.mark('onboard.workspace');
       render();
     },
-    'model-save': () => {
-      const p = P();
-      const st = ui.dialog;
-      const provider = U.f('model.provider', (M.localServiceFor(p).model || {}).provider || 'anthropic');
-      const name = U.f(`model.${provider}`, (M.MODEL_CHOICES[provider] || [])[0]);
-      const res = M.setModelConnection(p, O(), { provider, name, demoKey: !!U.f('model.demoKey', false) });
-      if (!res.ok) { toast(res.code, 'warn'); return; }
-      U.save();
-      U.clearForm('model');
-      toast(res.model ? T(`已连接 ${res.model.name}，后台服务已重启。`, `Connected ${res.model.name}; the background service restarted.`) : T('未连接模型：只做明确内容的文件任务。', 'No model: explicit file tasks only.'), 'ok');
-      if (FM.review) FM.review.mark('onboard.model');
-      if (st && st.back) U.openDialog(st.back, { setup: st.setup || '' });
-      else { ui.dialog = null; render(); }
-    },
-    'model-back': () => { const st = ui.dialog; U.openDialog(st.back, { setup: st.setup || '' }); },
   });
 
   /* This computer as the organization's first host (J1, issue #64): envd runs
@@ -354,9 +304,9 @@
         ${st.err ? `<div class="note danger">${icon('x')}<div>${esc(st.err)} ${T('已完成的步骤会保留；继续时先查询原交易，不会重复提交。', 'Completed steps are kept; continuing queries the original transaction and never resubmits.')}</div></div>` : ''}
         ${done >= BOOT_STEPS.length ? `<div class="calm">${icon('check')}<span>${T(`这台电脑已是执行主机，Coordinator 入口 ${endpoint}（${scopeText}）。`, `This computer is an execution host; coordinator endpoint ${endpoint} (${scopeText}).`)}</span></div>` : ''}`,
       foot: done >= BOOT_STEPS.length
-        ? (O().agents.some(a => a.origin === 'app' && a.hostId === svcNow.hostId)
+        ? (O().agents.some(a => a.hostId === svcNow.hostId)
           ? `<button class="btn primary" data-action="close-dialog">${T('完成', 'Done')}</button>`
-          : `<button class="btn" data-action="close-dialog">${T('稍后', 'Later')}</button>${U.btn({ action: 'open', data: { dialog: 'agent-create', setup: '1' }, label: T('下一步：创建默认 Agent', 'Next: create your default Agent'), kind: 'primary', perm: 'manage_hosts' })}`)
+          : `<button class="btn" data-action="close-dialog">${T('稍后', 'Later')}</button>${U.btn({ action: 'open', data: { dialog: 'discover', host: svcNow.hostId }, label: T('导入已运行的 Agent', 'Import a running Agent') })}${U.btn({ action: 'open', data: { dialog: 'agent-create', setup: '1' }, label: T('下一步：新建 Agent', 'Next: create an Agent'), kind: 'primary', perm: 'manage_hosts' })}`)
         : `${st.err ? `<button class="btn" data-action="close-dialog">${T('稍后继续', 'Continue later')}</button>${U.btn({ action: 'bootstrap-next', label: T('继续', 'Continue'), kind: 'primary', disabled: !!st.busy })}` : ''}`,
     };
   };
@@ -419,11 +369,10 @@
           r.host.isThisDevice = true;
           r.host.roles = ['host', 'coordinator'];
           M.localServiceFor(pp).hostId = r.host.id;
-          if (!o.agents.length) {
-            o.agents.push({ id: 'agent-builder', name: 'Builder', role: { zh: '构建与交付', en: 'Build and deliver' }, runtime: 'Claude Code', model: 'Claude Sonnet 5.5', capabilities: [{ zh: '文件读写', en: 'Files' }, { zh: '命令执行', en: 'Commands' }], standing: { version: 1, actions: [], dailyBudget: 200, spentToday: 0, dayStart: 0, confirmedAt: U.now() } });
-            o.agents.push({ id: 'agent-reviewer', name: 'Reviewer', role: { zh: '独立验证', en: 'Independent verification' }, runtime: 'Claude Code', model: 'Claude Opus 5.5', verifier: true, capabilities: [{ zh: '只读检查', en: 'Read-only checks' }], standing: { version: 1, actions: [], dailyBudget: 200, spentToday: 0, dayStart: 0, confirmedAt: U.now() } });
-          }
-          o.instances.push({ id: M.nextId(pp, 'inst'), name: 'builder-1', agentId: 'agent-builder', hostId: r.host.id, runtime: 'Claude Code 2.4', adapter: 'native', status: 'idle', workspace: (o.workspaces[0] || {}).path || '', sessionKey: 'fm:builder-1', okrIds: [] });
+          // The host reports its launchers and folder states; Agents are added
+          // explicitly afterwards (create from a ROM, or import a running one).
+          r.host.launchers = U.F.localLaunchers();
+          r.host.folders = U.F.localFolders();
           o.workspaces.forEach(w => { if (!w.hostIds.includes(r.host.id)) w.hostIds.push(r.host.id); });
           if (pp.onboarding) pp.onboarding.host = true;
           if (FM.review) FM.review.mark('onboard.host');

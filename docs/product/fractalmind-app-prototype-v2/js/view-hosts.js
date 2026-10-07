@@ -101,11 +101,10 @@
         <dt>${T('后台服务', 'Background service')}</dt><dd>${esc(service)} · ${svc.startAtLogin ? T('登录后自动运行', 'Starts at login') : T('手动启动', 'Starts manually')}</dd>
         <dt>${T('Coordinator 入口', 'Coordinator endpoint')}</dt><dd><span class="mono">${esc(b ? b.endpoint : '')}</span> <span class="chip ${scope[2]}">${esc(T(scope[0], scope[1]))}</span> <span class="tiny muted">v${(b && b.version) || 1}</span></dd>
         <dt>${T('密钥', 'Keys')}</dt><dd>${svc.keys ? T('主机与 Coordinator 密钥在系统钥匙串', 'Host and coordinator keys in the system keychain') : '—'}</dd>
-        <dt>${T('模型', 'Model')}</dt><dd>${esc(L(M.modelLabel(svc.model)))}${svc.model && svc.model.keyInKeychain ? ` · <span class="tiny muted">${T('API 密钥在系统钥匙串', 'API key in the system keychain')}</span>` : ''}</dd>
-        <dt>${T('Agent', 'Agents')}</dt><dd>${O().agents.filter(a => a.origin === 'app' && a.hostId === svc.hostId).map(a => esc(a.name)).join('、') || `<span class="muted">${T('还没有由 App 创建的 Agent', 'No Agents created by the app yet')}</span>`}</dd>
+        <dt>Agent</dt><dd>${O().agents.filter(a => a.hostId === svc.hostId && a.home).map(a => `<a href="#/agents">${esc(a.name)}</a> <span class="tiny muted mono">${esc(a.home)}</span>`).join('<br>') || `<span class="muted">${T('还没有。', 'None yet.')}</span> <a href="#/agents">${T('新建或导入', 'Create or import')}</a>`}</dd>
       </dl>
       ${(b && (b.scope || 'loopback') === 'loopback') ? `<div class="note mt-12">${icon('info')}<div>${T('入口仅本机可访问：手机等其他设备暂时连不上。需要时开放到局域网或公网（需 HTTPS）。', 'The endpoint is reachable from this computer only: phones and other devices cannot connect yet. Open it to your network or the internet (HTTPS) when needed.')}</div></div>` : ''}
-      <div class="card-f">${U.btn({ action: 'local-service-toggle', label: running ? T('停止服务', 'Stop service') : T('启动服务', 'Start service'), icon: running ? 'pause' : 'play', perm: 'manage_hosts' })}${running ? U.btn({ action: 'local-service-restart', label: T('重启服务', 'Restart service'), icon: 'refresh', perm: 'manage_hosts' }) : ''}${U.btn({ action: 'open', data: { dialog: 'model' }, label: svc.model ? T('更改模型', 'Change model') : T('连接模型', 'Connect a model'), icon: 'sparkle', perm: 'manage_hosts' })}${U.btn({ action: 'open', data: { dialog: 'local-endpoint' }, label: T('修改入口', 'Change endpoint'), icon: 'link', perm: 'manage_hosts' })}</div></section>`;
+      <div class="card-f">${U.btn({ action: 'local-service-toggle', label: running ? T('停止服务', 'Stop service') : T('启动服务', 'Start service'), icon: running ? 'pause' : 'play', perm: 'manage_hosts' })}${U.btn({ action: 'open', data: { dialog: 'local-endpoint' }, label: T('修改入口', 'Change endpoint'), icon: 'link', perm: 'manage_hosts' })}</div></section>`;
   }
 
   function overview(h) {
@@ -316,16 +315,6 @@
           if (FM.review) FM.review.mark('host.revoked');
         },
       });
-    },
-    'local-service-restart': () => {
-      const res = M.restartLocalService(P(), O());
-      if (!res.ok) { toast(res.code, 'warn'); return; }
-      U.save();
-      toast(res.stale.length
-        ? T(`服务已重启。App 创建的 Agent 身份不变；${res.stale.length} 个手动导入的实例 ID 随进程变化，需要重新关联。`, `Service restarted. App-created Agents keep their identity; ${res.stale.length} imported instance(s) changed ID with the process and need relinking.`)
-        : T('服务已重启，Agent 身份不变。', 'Service restarted; Agent identities are unchanged.'), res.stale.length ? 'warn' : 'ok', 5200);
-      if (FM.review) FM.review.mark('host.restarted');
-      render();
     },
     'local-service-toggle': () => {
       const p = P();

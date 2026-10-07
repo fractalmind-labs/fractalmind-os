@@ -76,7 +76,7 @@
     const step = w.step || 1;
     // Step 5 (this computer as the execution host) continues in the App right
     // after the organization opens (issue #64).
-    const nav = stepsNav([['资料', 'Profile'], ['运行费', 'Run fee'], ['核对提交', 'Review'], ['恢复码', 'Recovery'], ['执行主机', 'Host'], ['默认 Agent', 'Agent']], step);
+    const nav = stepsNav([['资料', 'Profile'], ['运行费', 'Run fee'], ['核对提交', 'Review'], ['恢复码', 'Recovery'], ['执行主机', 'Host'], ['Agent', 'Agent']], step);
     const name = wf('name', '');
     let body = '', foot = '';
     if (step === 1) {
