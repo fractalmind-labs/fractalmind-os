@@ -33,7 +33,7 @@ const snapshot = (
   }) as unknown as OrganizationSnapshot;
 const seen = (fresh: boolean): VerifiedHostObservation => ({
   address: a("2"),
-  state: "verified",
+  state: fresh ? "verified" : "expired",
   observation: {
     address: a("2"),
     hostname: "mini",
@@ -74,6 +74,46 @@ test("a fresh signed heartbeat is online; a stale or missing one is no heartbeat
   const missing = row(member(), { state: "ok", at: NOW, rows: [] });
   assert.equal(missing.live, "no_heartbeat");
   assert.equal(missing.attention, true);
+});
+
+test("a verified heartbeat stays current for a while after its read, then is unknown", () => {
+  const old = { state: "ok" as const, at: NOW - 91_000, rows: [seen(true)] };
+  assert.equal(row(member(), { ...old, at: NOW - 60_000 }).live, "online");
+  assert.equal(row(member(), old).live, "unknown");
+  assert.equal(
+    fleetRows(snapshot(member()), reads(), null, NOW, BigInt(NOW), true)[0]
+      .live,
+    "checking",
+  );
+});
+
+test("this computer shows its own service state until a heartbeat is read", () => {
+  const local = (
+    service: "running" | "stopped" | "starting",
+    listening = true,
+  ) => ({ address: a("2"), service, listening });
+  const r = (l: ReturnType<typeof local>, read?: BindingRead) =>
+    fleetRows(snapshot(member()), reads(read), l, NOW, BigInt(NOW))[0];
+  assert.deepEqual(
+    [r(local("running")).live, r(local("running")).liveSource],
+    ["online", "local"],
+  );
+  assert.deepEqual(
+    [r(local("stopped")).live, r(local("stopped")).attention],
+    ["stopped", true],
+  );
+  assert.equal(r(local("starting", false)).live, "checking");
+  assert.equal(r(local("running", false)).live, "unknown");
+  // A verified heartbeat wins over the local guess; a stopped service wins over both.
+  assert.equal(
+    r(local("running"), { state: "ok", at: NOW, rows: [seen(true)] })
+      .liveSource,
+    "heartbeat",
+  );
+  assert.equal(
+    r(local("stopped"), { state: "ok", at: NOW, rows: [seen(true)] }).live,
+    "stopped",
+  );
 });
 
 test("revoked, expired and expiring memberships need attention", () => {

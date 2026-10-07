@@ -9,7 +9,7 @@ import { LocalHostNative } from "./local-host";
 import { definitionName } from "./agents";
 import { agentName, shortId } from "./display";
 import { NavIcon } from "./V2Views";
-import { age, fleetRows, type BindingRead, type FleetRow } from "./host-fleet";
+import { age, fleetRows, type BindingRead, type FleetRow, type LocalService } from "./host-fleet";
 import type { ConnectionProfile, OrganizationSnapshot } from "./domain";
 import type { DiscoveredInstance } from "./agent-discovery";
 
@@ -21,23 +21,30 @@ const native = new LocalHostNative();
 
 /** This computer's Host address, when it is configured for this organization.
  * Reads the cached public keys; never the keychain. */
-function useLocalAddress(deviceProfile: string | null, organizationId: string, network: string) {
-  const [address, setAddress] = useState<string | null>(null);
+/** This computer's Host address and service state, when it is configured
+ * for this organization. Reads cached public keys and the OS service state;
+ * never the keychain. Polled, since the service can stop or start. */
+function useLocalHost(deviceProfile: string | null, organizationId: string, network: string) {
+  const [local, setLocal] = useState<LocalService | null>(null);
   useEffect(() => {
-    setAddress(null);
+    setLocal(null);
     if (!isTauri() || !deviceProfile) return;
-    let live = true;
-    void (async () => {
+    let live = true,
+      address: string | null = null;
+    const poll = async () => {
       const s = await native.status(deviceProfile);
-      if (s.configured?.organizationId !== organizationId) return;
-      const keys = await native.keys(deviceProfile, network);
-      if (live) setAddress(keys.host_address);
-    })().catch(() => {});
+      if (s.configured?.organizationId !== organizationId) return live && setLocal(null);
+      address ??= (await native.keys(deviceProfile, network)).host_address;
+      if (live) setLocal({ address, service: s.service, listening: s.listening });
+    };
+    void poll().catch(() => {});
+    const timer = setInterval(() => void poll().catch(() => {}), 10_000);
     return () => {
       live = false;
+      clearInterval(timer);
     };
   }, [deviceProfile, organizationId, network]);
-  return address;
+  return local;
 }
 
 /** Signed Host observations from every active coordinator, read while the
@@ -48,19 +55,29 @@ function useObservations(
   organizationId: string,
   deviceProfile: string | null,
   bindingIds: string[],
-  authorityRevision: string,
+  /** Only changes that matter to these reads: bindings and memberships. */
+  revision: string,
 ) {
   const [reads, setReads] = useState<Map<string, BindingRead>>(new Map());
   const [busy, setBusy] = useState(false);
-  const flight = useRef(false);
-  const authority = useRef(authorityRevision);
-  authority.current = authorityRevision;
+  const flight = useRef(false),
+    again = useRef(false);
+  const current = useRef(revision);
+  current.current = revision;
+  const args = useRef({ profile, organizationId, deviceProfile, bindingIds });
+  args.current = { profile, organizationId, deviceProfile, bindingIds };
   const key = bindingIds.join(",");
   async function refresh() {
-    if (!isTauri() || !deviceProfile || !bindingIds.length || flight.current) return;
+    const { profile, organizationId, deviceProfile, bindingIds } = args.current;
+    if (!isTauri() || !deviceProfile || !bindingIds.length) return;
+    if (flight.current) {
+      // Run once more when the read in flight ends.
+      again.current = true;
+      return;
+    }
     flight.current = true;
     setBusy(true);
-    const revision = authorityRevision;
+    const started = current.current;
     try {
       const chain = new ChainReadSession(profile);
       let client: CoordinatorReadClient | null = null,
@@ -75,28 +92,39 @@ function useObservations(
       }
       const entries = await Promise.all(
         bindingIds.map(async (id): Promise<[string, BindingRead]> => {
-          const at = Date.now();
-          if (!client) return [id, { state: "failed", at, error: failure! }];
+          if (!client) return [id, { state: "failed", at: Date.now(), error: failure! }];
           try {
-            return [id, { state: "ok", at: Date.now(), rows: await client.readHosts(id) }];
+            const rows = await client.readHosts(id);
+            return [id, { state: "ok", at: Date.now(), rows }];
           } catch (e) {
-            return [id, { state: "failed", at, error: e instanceof CoordinatorReadError ? e.code : "read_unavailable" }];
+            return [id, { state: "failed", at: Date.now(), error: e instanceof CoordinatorReadError ? e.code : "read_unavailable" }];
           }
         }),
       );
-      // Authority changed mid-read: drop the result rather than show it.
-      if (revision === authority.current) setReads(new Map(entries));
+      // A binding or membership changed mid-read: read again instead.
+      if (started === current.current)
+        setReads((prev) => {
+          const next = new Map(prev);
+          // A failed read keeps the last good one visible; its time shows its age.
+          for (const [id, r] of entries) if (r.state === "ok" || prev.get(id)?.state !== "ok") next.set(id, r);
+          else next.set(id, { ...(prev.get(id) as Extract<BindingRead, { state: "ok" }>), lastError: { at: r.at, error: r.error } });
+          return next;
+        });
+      else again.current = true;
     } finally {
       flight.current = false;
       setBusy(false);
+      if (again.current) {
+        again.current = false;
+        void refresh();
+      }
     }
   }
   useEffect(() => {
-    setReads(new Map());
     void refresh();
     const timer = setInterval(() => void refresh(), REFRESH_MS);
     return () => clearInterval(timer);
-  }, [deviceProfile, key, authorityRevision, organizationId]);
+  }, [deviceProfile, key, revision, organizationId]);
   return { reads, busy, refresh };
 }
 
@@ -128,26 +156,29 @@ export default function HostsPage({
   t: Translate;
 }) {
   const organizationId = snapshot.organization.objectId;
-  const localAddress = useLocalAddress(deviceProfile, organizationId, profile.network);
+  const local = useLocalHost(deviceProfile, organizationId, profile.network);
   const bindingIds = useMemo(
     () => (snapshot.bindings.value ?? []).filter((b) => !b.revoked).map((b) => b.id),
     [snapshot.bindings.value],
   );
-  const { reads, busy, refresh } = useObservations(
-    profile,
-    organizationId,
-    deviceProfile,
-    bindingIds,
-    authorityRevision,
-  );
+  const readRevision = JSON.stringify([
+    authorityRevision ? 1 : 0,
+    (snapshot.bindings.value ?? []).map((b) => [b.id, b.version, b.revoked]),
+    (snapshot.hosts.value ?? []).map((h) => [h.address, h.current.value?.id, h.current.value?.version, h.current.value?.revoked]),
+  ]);
+  const { reads, busy, refresh } = useObservations(profile, organizationId, deviceProfile, bindingIds, readRevision);
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 5000);
     return () => clearInterval(timer);
   }, []);
   const clockMs = snapshot.clockMs + BigInt(Math.max(0, now - snapshot.loadedAtMs));
-  const rows = fleetRows(snapshot, reads, localAddress, now, clockMs);
-  const failed = [...reads.values()].find((r) => r.state === "failed");
+  const rows = fleetRows(snapshot, reads, local, now, clockMs, busy && reads.size === 0);
+  const all = [...reads.values()];
+  const failure = all
+    .map((r) => (r.state === "failed" ? { at: r.at, error: r.error } : (r.lastError ?? null)))
+    .find(Boolean);
+  const lastRead = Math.max(0, ...all.filter((r) => r.state === "ok").map((r) => r.at)) || null;
   const shared = { t, now, okrTitle, onOpenOkr };
   const host = detail ? rows.find((r) => r.address === detail) : null;
   if (detail)
@@ -196,7 +227,8 @@ export default function HostsPage({
         failed={snapshot.hosts.value === null}
         observing={!!deviceProfile && isTauri()}
         busy={busy}
-        observationError={failed?.state === "failed" ? failed.error : null}
+        observationError={failure?.error ?? null}
+        lastRead={lastRead}
         onRefresh={() => void refresh()}
         onOpen={onDetail}
       />
@@ -211,9 +243,30 @@ function liveState(row: FleetRow, t: Translate) {
   if (row.membership === "none") return <span className="st muted">{t("无当前资格", "No current membership")}</span>;
   if (row.live === "online")
     return (
-      <span className="st ok">
+      <span
+        className="st ok"
+        title={
+          row.liveSource === "local"
+            ? t("本机服务正在运行；签名心跳读取后更新", "This computer's service is running; updated when a signed heartbeat is read")
+            : t("来自已验证的签名心跳", "From a verified signed heartbeat")
+        }
+      >
         <span className="dot ok pulse" />
         {t("在线", "Online")}
+      </span>
+    );
+  if (row.live === "stopped")
+    return (
+      <span className="st warn" title={t("这台电脑的服务状态", "This computer's service state")}>
+        <span className="dot warn" />
+        {t("服务已停用", "Service stopped")}
+      </span>
+    );
+  if (row.live === "checking")
+    return (
+      <span className="st info">
+        <span className="dot" />
+        {t("读取中…", "Checking…")}
       </span>
     );
   if (row.live === "no_heartbeat")
@@ -230,6 +283,16 @@ function liveState(row: FleetRow, t: Translate) {
     </span>
   );
 }
+const READ_ERRORS: Record<string, [string, string]> = {
+  invalid_grant: ["本设备没有读取主机状态的授权。", "This device cannot read Host status."],
+  locked: ["设备已锁定，解锁后显示在线状态。", "Unlock the device to see liveness."],
+  not_initialized: ["本设备的密钥未初始化。", "This device's key is not initialized."],
+  device_read_rejected: ["连接入口拒绝了这次读取。", "The connection entry rejected the read."],
+  binding_changed: ["连接入口刚刚变化，正在重新读取。", "The connection entry just changed; reading again."],
+  invalid_challenge: ["连接入口身份或读取期限验证失败。", "The entry's identity or read window failed verification."],
+  invalid_observation: ["连接入口返回的心跳无法验证。", "The entry returned a heartbeat that could not be verified."],
+  read_unavailable: ["读取主机状态失败（网络或链上读取超时），稍后自动重试。", "Reading Host status failed (network or chain read timeout); retrying shortly."],
+};
 const displayName = (row: FleetRow) => row.name ?? `Host ${shortId(row.address)}`;
 const systemLine = (row: FleetRow) => (row.system ? `${row.system.os} · ${row.system.arch}` : null);
 
@@ -239,6 +302,7 @@ function HostTable({
   observing,
   busy,
   observationError,
+  lastRead,
   onRefresh,
   onOpen,
   okrTitle,
@@ -250,6 +314,7 @@ function HostTable({
   observing: boolean;
   busy: boolean;
   observationError: string | null;
+  lastRead: number | null;
   onRefresh: () => void;
   onOpen: (address: string) => void;
   okrTitle: (id: string) => string;
@@ -329,10 +394,17 @@ function HostTable({
           />
         </div>
         {observing && (
-          <button className="btn sm" disabled={busy} onClick={onRefresh}>
-            <NavIcon name="refresh" />
-            {busy ? t("读取中…", "Reading…") : t("刷新状态", "Refresh status")}
-          </button>
+          <span className="row gap-sm">
+            {lastRead && (
+              <span className="tiny muted">
+                {t("状态读取于", "Status read")} {age(lastRead, now, t)}
+              </span>
+            )}
+            <button className="btn sm" disabled={busy} onClick={onRefresh}>
+              <NavIcon name="refresh" />
+              {busy ? t("读取中…", "Reading…") : t("刷新状态", "Refresh status")}
+            </button>
+          </span>
         )}
       </div>
       {failed ? (
@@ -446,11 +518,8 @@ function HostTable({
         <div className="note warn mt-16" role="status">
           <NavIcon name="alert" />
           <div>
-            {observationError === "invalid_grant"
-              ? t("本设备没有读取主机状态的授权，在线状态未知。", "This device cannot read Host status; liveness is unknown.")
-              : observationError === "locked"
-                ? t("设备已锁定，解锁后显示在线状态。", "Unlock the device to see liveness.")
-                : t("有连接入口读取失败，相关主机状态未知。", "A connection entry could not be read; those Hosts' status is unknown.")}
+            {t(...(READ_ERRORS[observationError] ?? READ_ERRORS.read_unavailable))}
+            {lastRead && t(" 下面显示的是上次读取的结果。", " The table shows the last successful read.")}
           </div>
         </div>
       )}
@@ -463,8 +532,8 @@ function HostTable({
                 "Liveness, heartbeat and system come from signed Host heartbeats, read after unlocking the device in the App. Only chain membership, Agents and OKRs are shown now.",
               )
             : t(
-                "在线和系统信息来自主机签名心跳，每 30 秒读取一次；读不到时显示未知。资源目前只有 CPU 核数：主机还不上报使用率。主机名称不能充当身份凭证。",
-                "Liveness and system come from signed heartbeats, read every 30 s; unknown when unread. Resources show CPU cores only: Hosts do not report usage yet. Host names are not credentials.",
+                "在线和系统信息来自主机签名心跳，每 30 秒读取一次；这台电脑在读到心跳前先显示本机服务状态。读不到时显示未知。资源目前只有 CPU 核数：主机还不上报使用率。主机名称不能充当身份凭证。",
+                "Liveness and system come from signed heartbeats, read every 30 s; until one is read, this computer shows its own service state. Unknown when unread. Resources show CPU cores only: Hosts do not report usage yet. Host names are not credentials.",
               )}
         </div>
       </div>
