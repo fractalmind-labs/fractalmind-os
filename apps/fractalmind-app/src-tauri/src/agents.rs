@@ -598,6 +598,49 @@ pub fn deliver_okr(
     })
 }
 
+/// Local chat with an agent-manager Agent on this computer (#75): the
+/// message is typed into its session by agent-manager. Nothing is recorded
+/// on chain.
+pub fn send_message(home: &Path, user_home: &Path, agent: &str, message: &str) -> Result<(), String> {
+    if !(agent == "main" || valid_name(agent)) || message.trim().is_empty() || message.len() > 4000 {
+        return Err("InvalidMessage".into());
+    }
+    let (ok, out) = agent_manager(home, user_home, &["send", agent, "--", message], Duration::from_secs(60))?;
+    if ok {
+        Ok(())
+    } else {
+        Err(format!("SendFailed: {}", last_line(&out)))
+    }
+}
+
+/// The Agent's recent terminal output, as agent-manager captures it.
+pub fn agent_output(home: &Path, user_home: &Path, agent: &str, lines: u32) -> Result<String, String> {
+    if !(agent == "main" || valid_name(agent)) {
+        return Err("InvalidAgent".into());
+    }
+    let lines = lines.clamp(10, 400).to_string();
+    let (ok, out) = agent_manager(home, user_home, &["monitor", agent, "--lines", &lines], Duration::from_secs(30))?;
+    if !ok {
+        return Err(format!("NotRunning: {}", last_line(&out)));
+    }
+    Ok(monitor_body(&out))
+}
+
+/// The captured text between agent-manager's two `====` rulers.
+pub fn monitor_body(out: &str) -> String {
+    let lines: Vec<&str> = out.lines().collect();
+    let rulers: Vec<usize> = lines
+        .iter()
+        .enumerate()
+        .filter(|(_, l)| l.len() >= 20 && l.chars().all(|c| c == '='))
+        .map(|(i, _)| i)
+        .collect();
+    match (rulers.first(), rulers.last()) {
+        (Some(&a), Some(&b)) if b > a => lines[a + 1..b].join("\n"),
+        _ => out.to_string(),
+    }
+}
+
 pub fn create(assets: &Assets, user_home: &Path, spec: &Spec) -> Result<Created, String> {
     if !valid_name(&spec.name) {
         return Err("InvalidAgentName".into());
@@ -856,6 +899,45 @@ pub async fn fm_agent_deliver_okr(
     .await
 }
 
+fn agent_home(app: &AppHandle, home: &str) -> Result<(PathBuf, PathBuf), String> {
+    let user = user_home(app)?;
+    let path = resolve_home(&user, home).ok_or("InvalidHome")?;
+    if home_state(&path) != "agent_home" {
+        return Err("HomeNotUsable".into());
+    }
+    Ok((path, user))
+}
+#[tauri::command]
+pub async fn fm_agent_send(
+    window: WebviewWindow,
+    app: AppHandle,
+    home: String,
+    agent: String,
+    message: String,
+) -> Result<(), String> {
+    super::main_window(&window)?;
+    blocking(move || {
+        let (path, user) = agent_home(&app, &home)?;
+        send_message(&path, &user, &agent, &message)
+    })
+    .await
+}
+#[tauri::command]
+pub async fn fm_agent_output(
+    window: WebviewWindow,
+    app: AppHandle,
+    home: String,
+    agent: String,
+    lines: u32,
+) -> Result<String, String> {
+    super::main_window(&window)?;
+    blocking(move || {
+        let (path, user) = agent_home(&app, &home)?;
+        agent_output(&path, &user, &agent, lines)
+    })
+    .await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -884,6 +966,17 @@ mod tests {
         assert!(deliver_okr(&dir, &user, "main", "# other", "t").is_err());
         assert!(deliver_okr(&dir, &user, "Bad Name", "# FractalMind OKR", "t").is_err());
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn monitor_output_is_the_captured_text_only() {
+        let out = "📺 Last 5 lines from x--main(main):\n============================================================\nhello\n> answer\n============================================================\n";
+        assert_eq!(monitor_body(out), "hello\n> answer");
+        assert_eq!(monitor_body("no rulers"), "no rulers");
+        let dir = std::env::temp_dir();
+        assert!(send_message(&dir, &dir, "Bad", "hi").is_err());
+        assert!(send_message(&dir, &dir, "main", "  ").is_err());
+        assert_eq!(send_message(&dir, &dir, "main", "hi").unwrap_err(), "AgentManagerMissing");
     }
 
     #[test]

@@ -537,7 +537,9 @@ pub fn run() {
             agents::fm_agent_home_check,
             agents::fm_agent_create,
             agents::fm_agent_start,
-            agents::fm_agent_deliver_okr
+            agents::fm_agent_deliver_okr,
+            agents::fm_agent_send,
+            agents::fm_agent_output
         ])
         .run(tauri::generate_context!())
         .expect("FractalMind App runtime failed");

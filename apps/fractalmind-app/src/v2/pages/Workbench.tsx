@@ -10,6 +10,7 @@ import { ago, Btn, Icon, shortId, useLang, useT, type Translate } from "../ui";
 import { activeOkrs, COND, condOf, decisions, focusOkr, nav, okrTitle, onboarding, type Cond } from "../model";
 import { trustState } from "../../v2-model";
 import type { OkrSnapshot } from "../../domain";
+import MapView from "../../MapView";
 
 const pct = (v: number | null | undefined) => (v === null || v === undefined ? "—" : `${Math.round(v * 100)}%`);
 
@@ -292,12 +293,11 @@ function FocusCard({ row }: { row: OkrSnapshot }) {
           );
         })}
       </div>
-      <p className="tiny muted mt-12">
-        {t(
-          "运行导航地图将在 OKR 页面完成后提供；这里显示每个 KR 的实测值和可信度。",
-          "The route map arrives with the OKR pages; this shows each KR's measured value and trust level.",
-        )}
-      </p>
+      {n && (
+        <div className="mt-12">
+          <MapView focus={row} nav={n} t={t} onDetails={() => go(`okrs/${row.okr.id}`)} />
+        </div>
+      )}
     </section>
   );
 }

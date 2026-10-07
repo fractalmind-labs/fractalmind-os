@@ -8,6 +8,9 @@ import { Btn, Empty, Icon, date, shortId, useLang, useT } from "../ui";
 import { okrTitle } from "../model";
 import { agentName, hostName } from "../../display";
 import { useLocalSessions } from "../local-agents";
+import { ChatDrawer } from "../Chat";
+import { useState } from "react";
+import type { AgentDefinition } from "../../agents";
 import { definitionName } from "../../agents";
 import type { Agent } from "../../domain";
 
@@ -26,6 +29,7 @@ export default function Agents() {
   const lang = useLang();
   const dialogs = useDialogs();
   const sessions = useLocalSessions(app.deviceProfile);
+  const [chat, setChat] = useState<{ name: string; def: AgentDefinition } | null>(null);
   const snapshot = app.snapshot;
   if (!snapshot) return null;
   const agents = (snapshot.agents.value ?? []).filter((a) => !a.revoked);
@@ -140,8 +144,25 @@ export default function Agents() {
                       : t("只能观察：不能承接 OKR。", "Observe only: cannot own OKRs.")}
                 </div>
                 <div className="row wrap mt-12">
-                  <Btn label={t("对话", "Chat")} icon="message" size="sm" disabled why={t("即将推出", "Coming soon")} />
-                  <Btn label={t("常驻权限", "Standing permission")} icon="shield" size="sm" disabled why={t("即将推出", "Coming soon")} />
+                  <Btn
+                    label={t("对话", "Chat")}
+                    icon="message"
+                    size="sm"
+                    kind={def ? "primary" : ""}
+                    disabled={!def}
+                    why={t("目前只能和这台电脑上的 agent-manager Agent 对话", "For now you can chat with agent-manager Agents on this computer")}
+                    onClick={() => def && setChat({ name, def })}
+                  />
+                  <Btn
+                    label={t("常驻权限", "Standing permission")}
+                    icon="shield"
+                    size="sm"
+                    disabled
+                    why={t(
+                      "即将推出：常驻权限是链上记录，需要升级 direct-agent 合约；agent-manager Agent 的工具调用也无法由 FractalMind 强制。",
+                      "Coming soon: standing permission is a chain record that needs a direct-agent upgrade, and an agent-manager Agent's tool use cannot be enforced by FractalMind.",
+                    )}
+                  />
                 </div>
               </article>
             );
@@ -203,6 +224,7 @@ export default function Agents() {
           </div>
         </section>
       )}
+      {chat && <ChatDrawer name={chat.name} def={chat.def} onClose={() => setChat(null)} />}
     </>
   );
 }
