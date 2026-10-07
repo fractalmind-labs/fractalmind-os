@@ -35,6 +35,9 @@ func (nativeStore) Get(profile string) ([]byte, error) {
 		return nil, ErrNotFound
 	}
 	if err != nil {
+		if deniedByPerson(err) {
+			return nil, fmt.Errorf("macOS Host Keychain read: %w (%v)", ErrAccessDenied, err)
+		}
 		return nil, fmt.Errorf("macOS Host Keychain read failed: %w", err)
 	}
 	// QueryItem normalizes only errSecItemNotFound to (nil, nil).
@@ -79,4 +82,11 @@ func (nativeStore) Delete(profile string) error {
 		return fmt.Errorf("macOS Host Keychain delete failed: %w", err)
 	}
 	return nil
+}
+
+// errSecUserCanceled (-128): the prompt was cancelled or denied.
+const errUserCanceled = keychain.Error(-128)
+
+func deniedByPerson(err error) bool {
+	return err == errUserCanceled || err == keychain.ErrorAuthFailed || err == keychain.ErrorInteractionNotAllowed || err == keychain.ErrorNoAccessForItem
 }

@@ -22,6 +22,11 @@ import (
 
 var ErrNotFound = errors.New("Host identity is not initialized")
 var ErrAlreadyExists = errors.New("Host identity already exists")
+
+// ErrAccessDenied: the person cancelled or denied the OS prompt to read the
+// Host key, or the store cannot ask right now. Retrying on its own would
+// only ask again, so callers wait for an explicit restart.
+var ErrAccessDenied = errors.New("access to the Host key was not allowed")
 var profilePattern = regexp.MustCompile("^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$")
 
 const nativeService = "org.fractalmind.envd.host"
