@@ -132,6 +132,37 @@ Building the desktop App needs Go: `scripts/build-envd.mjs` builds
 `src-tauri/examples/local-host-helper.rs`; see
 [`v021-local-host-localnet.json`](../../docs/product/evidence/v021-local-host-localnet.json).
 
+## Agents: create from a ROM, or import a running one
+
+An Agent is a Home directory (#67). Its Agent OS files (SYSTEM, SOUL,
+AGENTS, USER, HEARTBEAT, OKR, `memory/`, `okrs/`…) and skills
+(`.agents/skills`) make it up; the root `AGENTS.md` frontmatter names it
+(`namespace`), says how to launch it (`launcher` + `launcher_args`, e.g.
+`codex --profile main`, whose profile decides the model) and when it wakes
+(`heartbeat`, `schedules`). agent-manager runs it in tmux as
+`<namespace>--main` and installs its heartbeat in the Home's own crontab
+block.
+
+- **Import** (Team & Agents → Import from a host): envd discovers tmux
+  sessions whose working directory is an agent-manager Home and reports the
+  definition it read from `AGENTS.md` (name, Home, launch, model,
+  heartbeat, ROM, skill and employee counts). Import stays observe-only and
+  changes nothing on the host.
+- **New Agent**: a name (namespace and tmux session), a Home directory
+  (empty or new) and a ROM from `roms/agent-os-roms/roms`, plus optional
+  skills and a launcher profile detected on this computer. The App writes
+  the ROM's files and skills, rewrites `AGENTS.md` (namespace, launcher and
+  profile, installed skills, `rom:`), runs `git init`, starts the session
+  and syncs the heartbeat, then you register it with the organization
+  through Import (one transaction). On macOS, writing the crontab from an
+  app asks you to allow FractalMind to administer the computer.
+
+`scripts/build-agent-assets.mjs` bundles the ROMs and the skills they
+install from this repository into `src-tauri/resources/agent-assets`;
+skills this repository does not contain are listed as unavailable and
+reported as an incomplete install. `src-tauri/examples/agent-helper.rs`
+runs the same creation code outside the App for acceptance tests.
+
 ## Public read-only connection
 
 The welcome page's development preview accepts a public profile for an existing
