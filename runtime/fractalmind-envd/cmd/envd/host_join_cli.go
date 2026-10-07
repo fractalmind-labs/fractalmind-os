@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"os"
 
 	"github.com/fractalmind-labs/fractalmind-os/runtime/fractalmind-envd/internal/config"
@@ -17,9 +18,9 @@ import (
 	"golang.org/x/term"
 )
 
-func hostJoinInteraction(input *os.File, output, diagnostic io.Writer) hostjoin.Interaction {
+func boundedLine(input io.Reader) func() ([]byte, error) {
 	reader := bufio.NewReaderSize(input, 512)
-	line := func() ([]byte, error) {
+	return func() ([]byte, error) {
 		frame, err := reader.ReadSlice('\n')
 		if err != nil && err != io.EOF {
 			clear(frame)
@@ -33,6 +34,9 @@ func hostJoinInteraction(input *os.File, output, diagnostic io.Writer) hostjoin.
 		}
 		return owned, nil
 	}
+}
+func hostJoinInteraction(input *os.File, output, diagnostic io.Writer) hostjoin.Interaction {
+	line := boundedLine(input)
 	return hostjoin.Interaction{
 		ReadInvitation: func() ([]byte, error) {
 			if _, err := fmt.Fprint(diagnostic, "Enter one-use Host invitation (hidden): "); err != nil {
@@ -72,15 +76,61 @@ func hostJoinInteraction(input *os.File, output, diagnostic io.Writer) hostjoin.
 			defer clear(answer)
 			return bytes.Equal(answer, []byte("JOIN "+plan.OrganizationID)), nil
 		},
-		Prepared: func(record hostjoin.Record) error {
-			return json.NewEncoder(output).Encode(struct {
-				Phase  string          `json:"phase"`
-				Record hostjoin.Record `json:"transaction"`
-			}{"prepared", record})
-		},
+		Prepared: preparedOutput(output),
 	}
 }
-func runHostJoinCLI(ctx context.Context, cfg *config.Config, statusOnly, newAttempt bool, address string, input *os.File, output, diagnostic io.Writer) error {
+func preparedOutput(output io.Writer) func(hostjoin.Record) error {
+	return func(record hostjoin.Record) error {
+		return json.NewEncoder(output).Encode(struct {
+			Phase  string          `json:"phase"`
+			Record hostjoin.Record `json:"transaction"`
+		}{"prepared", record})
+	}
+}
+
+// localHostEndpoint is the only Coordinator origin a desktop-local setup binds.
+func localHostEndpoint(listen string) (string, error) {
+	host, port, err := net.SplitHostPort(listen)
+	if err != nil || host != "127.0.0.1" || port == "" || port == "0" {
+		return "", fmt.Errorf("local Host setup requires a fixed 127.0.0.1 Coordinator port")
+	}
+	return "http://" + net.JoinHostPort(host, port), nil
+}
+
+// appHostJoinInteraction serves the desktop App's one-confirmation setup. The
+// person confirmed the organization, this Host key as the Coordinator key and
+// the loopback endpoint in the App, which created exactly that binding and a
+// one-use invitation. Here the invitation arrives on stdin (never argv or
+// output) and the join proceeds only when the chain plan matches that
+// configuration; anything else cancels without signing.
+func appHostJoinInteraction(input io.Reader, output io.Writer, cfg *config.Config) hostjoin.Interaction {
+	line := boundedLine(input)
+	return hostjoin.Interaction{
+		ReadInvitation: line,
+		Confirm: func(plan nodecommand.HostJoinPlan, quote sui.HostJoinQuote, public hostidentity.Public) (bool, error) {
+			endpoint, err := localHostEndpoint(cfg.Coordinator.ListenAddr)
+			if err != nil {
+				return false, err
+			}
+			matches := cfg.Roles.Coordinator && plan.OrganizationID == cfg.SUI.OrgID && plan.BindingID == cfg.Coordinator.BindingID &&
+				plan.CoordinatorPublicKey == public.SigningPublicKey && plan.CoordinatorAddress == public.Address &&
+				plan.Endpoint == endpoint && quote.GasBudget <= cfg.SUI.HostJoinGasBudget
+			preview := struct {
+				Phase     string                   `json:"phase"`
+				Plan      nodecommand.HostJoinPlan `json:"plan"`
+				Quote     sui.HostJoinQuote        `json:"quote"`
+				Host      hostidentity.Public      `json:"host"`
+				Confirmed bool                     `json:"confirmed"`
+			}{"preview", plan, quote, public, matches}
+			if err := json.NewEncoder(output).Encode(preview); err != nil {
+				return false, err
+			}
+			return matches, nil
+		},
+		Prepared: preparedOutput(output),
+	}
+}
+func runHostJoinCLI(ctx context.Context, cfg *config.Config, statusOnly, newAttempt bool, address string, ui hostjoin.Interaction, output io.Writer) error {
 	client, err := sui.NewGRPCClient(cfg.SUI.RPC, cfg.SUI.GraphQLURL)
 	if err != nil {
 		return err
@@ -108,7 +158,7 @@ func runHostJoinCLI(ctx context.Context, cfg *config.Config, statusOnly, newAtte
 	factory := func(original string) (hostjoin.Authority, error) {
 		return nodecommand.NewChainAuthorityResolverForPackage(client, cfg.SUI.ProtocolPackageID, original)
 	}
-	result, err := hostjoin.Run(ctx, client, factory, keys, hostjoin.Options{Network: cfg.SUI.Network, Chain: cfg.SUI.ChainIdentifier, PackageID: cfg.SUI.ProtocolPackageID, TypesPackageID: typesPackage, RegistryID: cfg.SUI.ProtocolRegistryID, ExpectedOrganization: cfg.SUI.OrgID, Profile: cfg.Identity.KeyProfile, Name: cfg.Identity.Hostname, PublicAddress: address, GasBudget: cfg.SUI.HostJoinGasBudget, StatusOnly: statusOnly, NewAttempt: newAttempt}, hostJoinInteraction(input, output, diagnostic))
+	result, err := hostjoin.Run(ctx, client, factory, keys, hostjoin.Options{Network: cfg.SUI.Network, Chain: cfg.SUI.ChainIdentifier, PackageID: cfg.SUI.ProtocolPackageID, TypesPackageID: typesPackage, RegistryID: cfg.SUI.ProtocolRegistryID, ExpectedOrganization: cfg.SUI.OrgID, Profile: cfg.Identity.KeyProfile, Name: cfg.Identity.Hostname, PublicAddress: address, GasBudget: cfg.SUI.HostJoinGasBudget, StatusOnly: statusOnly, NewAttempt: newAttempt}, ui)
 	if result.State != "" {
 		if writeErr := json.NewEncoder(output).Encode(result); writeErr != nil {
 			return writeErr
