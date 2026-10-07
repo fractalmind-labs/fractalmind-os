@@ -55,12 +55,21 @@ func main() {
 	showVersion := flag.Bool("version", false, "show version")
 	initHost := flag.Bool("init-host", false, "initialize Host signing/encryption keys in the system credential store")
 	joinHost := flag.Bool("join-host", false, "redeem an organization invitation entered through hidden terminal input")
+	appJoinHost := flag.Bool("app-join-host", false, "desktop App setup: redeem the invitation from stdin only for this config's organization and local Coordinator binding")
+	hostPublic := flag.Bool("host-public", false, "print this Host's public keys without creating them")
+	removeHostKeys := flag.Bool("remove-host-keys", false, "delete this Host's private keys from the system credential store")
 	joinStatus := flag.Bool("host-join-status", false, "query the original Host admission transaction without accessing private keys")
 	newJoinAttempt := flag.Bool("new-host-join-attempt", false, "explicitly prepare another admission after a known terminal original receipt")
 	joinAddress := flag.String("host-address", "", "public Host address for --host-join-status")
 	settleReview := flag.Bool("settle-stopped-review", false, "acknowledge an explicitly stopped expired zero-tool handover review; original signed command is read from stdin")
 	flag.Parse()
-	if flag.NArg() != 0 || *initHost && (*joinHost || *joinStatus) || *joinHost && *joinStatus || *newJoinAttempt && !*joinHost || *joinAddress != "" && !*joinStatus || *settleReview && (*initHost || *joinHost || *joinStatus || *showVersion) {
+	exclusive := 0
+	for _, set := range []bool{*initHost, *joinHost, *appJoinHost, *joinStatus, *hostPublic, *removeHostKeys, *settleReview} {
+		if set {
+			exclusive++
+		}
+	}
+	if flag.NArg() != 0 || exclusive > 1 || *newJoinAttempt && !*joinHost && !*appJoinHost || *joinAddress != "" && !*joinStatus || *settleReview && *showVersion {
 		fmt.Fprintln(os.Stderr, "invalid Host command options; invitations are entered through stdin, never argv")
 		os.Exit(2)
 	}
@@ -86,22 +95,41 @@ func main() {
 		}
 		return
 	}
-	if *joinHost || *joinStatus {
-		if err := runHostJoinCLI(context.Background(), cfg, *joinStatus, *newJoinAttempt, *joinAddress, os.Stdin, os.Stdout, os.Stderr); err != nil {
+	if *joinHost || *joinStatus || *appJoinHost {
+		ui := hostJoinInteraction(os.Stdin, os.Stdout, os.Stderr)
+		if *appJoinHost {
+			ui = appHostJoinInteraction(os.Stdin, os.Stdout, cfg)
+		}
+		if err := runHostJoinCLI(context.Background(), cfg, *joinStatus, *newJoinAttempt, *joinAddress, ui, os.Stdout); err != nil {
 			log.Print(err)
 			os.Exit(1)
 		}
 		return
 	}
 
-	if *initHost {
+	if *removeHostKeys {
+		store, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := hostidentity.Remove(store, cfg.Identity.KeyProfile); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	if *initHost || *hostPublic {
 		store, err := hostidentity.OpenNativeStoreWithCollection(cfg.Identity.SecretServiceCollection)
 		if err != nil {
 			log.Fatal(err)
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		keys, err := hostidentity.Initialize(ctx, store, cfg.Identity.KeyProfile, "")
+		var keys *hostidentity.Keys
+		if *hostPublic {
+			keys, err = hostidentity.Load(store, cfg.Identity.KeyProfile)
+		} else {
+			keys, err = hostidentity.Initialize(ctx, store, cfg.Identity.KeyProfile, "")
+		}
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -94,6 +94,44 @@ every operation:
   automatically (`src/use-okr-texts.ts`) and kept in memory only. The browser
   preview has no device keys and keeps the "Title encrypted" fallback.
 
+## This computer as Host
+
+Personal setup ends by making this computer the organization's Host and
+Coordinator (#64), and the Hosts page can do the same later. One confirmation
+runs:
+
+1. envd (bundled as a sidecar) creates the Host key in the OS credential store.
+   The same key signs for both roles in one process; the App gets only public
+   keys.
+2. This device creates a Coordinator binding for that key at
+   `http://127.0.0.1:<port>` (7443 or the next free port, loopback only).
+   `create_coordinator_binding` does not return the binding, so the invitation
+   is a second device transaction.
+3. The App writes a public `sentinel.yaml` (Host + Coordinator roles, pinned
+   binding, runtime with a workspace folder) under the App data directory.
+4. A one-use invitation (15 minutes) is created and, in the same PTB, the Host
+   address receives 0.1 SUI for its own Gas, since it signs its join and later
+   execution results. The invitation goes from memory to envd's stdin;
+   `--app-join-host` joins only if the chain plan matches the configured
+   organization, binding, this Host's key and the loopback endpoint.
+5. The service is installed as a per-user background service (macOS launchd
+   LaunchAgent, Linux systemd user unit, Windows logon task), starts at login
+   and keeps running after the App closes.
+
+Every step is resumable: an original transaction is queried, never
+broadcast again, and a known failure waits for an explicit retry. The Hosts
+page shows the service state, endpoint, log and workspace, stops and starts it,
+and "Revoke this host" revokes the membership on chain and then removes the
+service, configuration and Host key (the workspace stays). Changing the
+endpoint to LAN or internet HTTPS is not offered yet.
+
+Building the desktop App needs Go: `scripts/build-envd.mjs` builds
+`src-tauri/binaries/fractalmind-envd-<target>` before the Rust build
+(`tauri.{macos,linux,windows}.conf.json`). The localnet acceptance script
+`scripts/local-host-localnet.ts` drives the same native code through
+`src-tauri/examples/local-host-helper.rs`; see
+[`v021-local-host-localnet.json`](../../docs/product/evidence/v021-local-host-localnet.json).
+
 ## Public read-only connection
 
 The welcome page's development preview accepts a public profile for an existing

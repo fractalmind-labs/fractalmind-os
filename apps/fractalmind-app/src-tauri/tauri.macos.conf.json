@@ -1,0 +1,7 @@
+{
+  "build": {
+    "beforeDevCommand": "node scripts/build-envd.mjs && npm run dev",
+    "beforeBuildCommand": "npm run build && node scripts/build-envd.mjs"
+  },
+  "bundle": { "externalBin": ["binaries/fractalmind-envd"] }
+}

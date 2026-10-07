@@ -26,6 +26,12 @@ fn main() {
             "fm_recovery_sign_transaction",
             "fm_device_wrap_organization_keys",
             "fm_device_wrap_command_result_key",
+            "fm_local_host_status",
+            "fm_local_host_keys",
+            "fm_local_host_configure",
+            "fm_local_host_join",
+            "fm_local_host_service",
+            "fm_local_host_uninstall",
         ]),
     ))
     .expect("FractalMind App native manifest failed");

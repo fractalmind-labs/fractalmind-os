@@ -66,3 +66,17 @@ func (nativeStore) Create(profile string, data []byte) error {
 	}
 	return nil
 }
+func (nativeStore) Delete(profile string) error {
+	query, err := hostQuery(profile)
+	if err != nil {
+		return err
+	}
+	err = keychain.DeleteItem(query)
+	if err == keychain.ErrorItemNotFound {
+		return ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("macOS Host Keychain delete failed: %w", err)
+	}
+	return nil
+}

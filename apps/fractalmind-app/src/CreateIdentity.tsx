@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import {
   FractalMindSDK,
@@ -23,6 +23,8 @@ import {
 } from "./deployments";
 import { NavIcon } from "./V2Views";
 import { defaultDeviceProfile, matchesTarget } from "./build-target";
+import { canHostLocally } from "./local-host";
+const LocalHostSetup = lazy(() => import("./LocalHostSetup"));
 type Translate = (zh: string, en: string) => string;
 const CACHE = "fractalmind.app.onboarding-connection.v1";
 const transport: NativeInvoke = (command, args) => invoke(command, args);
@@ -85,7 +87,12 @@ export default function CreateIdentity({
   const [failedAttempts, setFailedAttempts] = useState<
     readonly SelfPayTransactionOutcome[]
   >([]);
-  const [name, setName] = useState(""),
+  // The setup ends with this computer as the organization's Host (#64),
+  // unless the person chooses to do it later from Hosts & compute.
+  const [hostStep, setHostStep] = useState<"pending" | "done" | "later">(
+      canHostLocally() ? "pending" : "later",
+    ),
+    [name, setName] = useState(""),
     [found, setFound] =
       useState<Awaited<ReturnType<IdentityCreation["locate"]>>>(null);
   const mounted = useRef(true),
@@ -264,12 +271,17 @@ export default function CreateIdentity({
     BigInt(balances.recovery) >= GAS_CEILING_MIST &&
     BigInt(balances.device) >= GAS_CEILING_MIST;
   const hasOrganization = Boolean(found?.organizations.length);
+  const withHost = canHostLocally();
   const step = !session
     ? 0
     : !savedCode
       ? 1
       : hasOrganization
-        ? 5
+        ? hostStep === "pending"
+          ? 5
+          : withHost
+            ? 6
+            : 5
         : stage === "organization"
           ? 4
           : funded || outcome
@@ -280,6 +292,7 @@ export default function CreateIdentity({
     ["运行费", "Funds"],
     ["创建身份", "Create identity"],
     ["创建组织", "Create organization"],
+    ...(withHost ? ([["执行主机", "Execution host"]] as Array<[string, string]>) : []),
     ["完成", "Done"],
   ];
   const faucet = session ? faucetHost(session.deployment.network) : null;
@@ -624,7 +637,19 @@ export default function CreateIdentity({
         </details>
       )}
 
-      {session && hasOrganization && (
+      {session && hasOrganization && hostStep === "pending" && found && (
+        <Suspense fallback={null}>
+          <LocalHostSetup
+            profile={found.profile}
+            organizationId={found.organizations[0].objectId}
+            deviceProfile={session.device.device.profile}
+            t={t}
+            onDone={() => setHostStep("done")}
+            onSkip={() => setHostStep("later")}
+          />
+        </Suspense>
+      )}
+      {session && hasOrganization && hostStep !== "pending" && (
         <div className="calm-done">
           <div className="calm">
             <NavIcon name="check" />

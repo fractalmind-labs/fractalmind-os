@@ -161,3 +161,45 @@ func TestHostIdentityLockedStoreAndCorruptionNeverRegenerate(t *testing.T) {
 		}
 	}
 }
+
+type removableStore struct{ memoryStore }
+
+func (s *removableStore) Delete(string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.failure != nil {
+		return s.failure
+	}
+	if s.data == nil {
+		return ErrNotFound
+	}
+	clear(s.data)
+	s.data = nil
+	return nil
+}
+func TestHostIdentityRemovalIsExplicitAndRepeatable(t *testing.T) {
+	if err := Remove(&memoryStore{}, "local"); err == nil {
+		t.Fatal("store without delete support reported removal")
+	}
+	store := &removableStore{}
+	keys, err := Initialize(context.Background(), store, "local", t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	keys.Close()
+	if err := Remove(store, "bad profile"); err == nil {
+		t.Fatal("invalid profile accepted")
+	}
+	for i := 0; i < 2; i++ {
+		if err := Remove(store, "local"); err != nil {
+			t.Fatalf("removal %d: %v", i, err)
+		}
+	}
+	if _, err := Load(store, "local"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("identity remains: %v", err)
+	}
+	store.failure = errors.New("locked")
+	if err := Remove(store, "local"); err == nil {
+		t.Fatal("locked store reported removal")
+	}
+}

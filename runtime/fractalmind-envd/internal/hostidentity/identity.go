@@ -31,6 +31,36 @@ type Store interface {
 	Get(profile string) ([]byte, error)
 	Create(profile string, data []byte) error
 }
+
+// Remover is implemented by stores that can delete an identity. Removal is a
+// separate, explicit operation (local Host uninstall), never part of Create.
+type Remover interface {
+	Delete(profile string) error
+}
+
+// Remove deletes this profile's Host keys. A missing identity is not an error,
+// so an interrupted uninstall can be repeated.
+func Remove(store Store, profile string) error {
+	if _, err := account(profile); err != nil {
+		return err
+	}
+	remover, ok := store.(Remover)
+	if !ok {
+		return fmt.Errorf("system credential store cannot remove Host keys")
+	}
+	if err := remover.Delete(profile); err != nil && !errors.Is(err, ErrNotFound) {
+		return err
+	}
+	if data, err := store.Get(profile); !errors.Is(err, ErrNotFound) {
+		clear(data)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("Host identity still present after removal")
+	}
+	return nil
+}
+
 type Keys struct {
 	mu   sync.Mutex
 	data []byte

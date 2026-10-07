@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "local-host"
+description = "Run this computer as the organization's Host and Coordinator: create or read the bundled envd's Host public keys, write its generated public configuration, redeem a one-use invitation through envd's stdin only when it matches the configured organization, binding and loopback endpoint, and install, start, stop or uninstall the per-user background service (removing its Host keys). No arbitrary command, path or shell access."
+commands.allow = ["fm_local_host_status", "fm_local_host_keys", "fm_local_host_configure", "fm_local_host_join", "fm_local_host_service", "fm_local_host_uninstall"]
