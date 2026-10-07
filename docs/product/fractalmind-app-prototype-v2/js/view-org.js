@@ -268,65 +268,121 @@
     },
   });
 
-  /* Bootstrap the first host for a new organization (J1 step 3 via J7). */
+  /* This computer as the organization's first host (J1, issue #64): envd runs
+   * as a background service with the Host and Coordinator roles. One
+   * confirmation: a device-signed PTB (binding + invite), then the host's own
+   * redemption with gas sponsored by this device. */
+  const BOOT_STEPS = [
+    ['service', '安装后台服务（登录后自动运行）', 'Install the background service (runs at login)'],
+    ['keys', '在系统钥匙串初始化主机与 Coordinator 密钥', 'Create host and coordinator keys in the system keychain'],
+    ['prepare', '创建连接入口与一次性邀请（本设备签名）', 'Create the endpoint and a one-time invitation (signed by this device)'],
+    ['redeem', '本机兑换邀请并入组（本设备代付 gas）', 'Redeem on this computer and join (gas paid by this device)'],
+    ['online', '连接 Coordinator 并上线', 'Connect to the coordinator and go online'],
+  ];
+  const LOCAL_ENDPOINT = 'http://127.0.0.1:7443';
+
   FM.dialogs.bootstrap = st => {
-    const org = O();
-    const steps = [
-      ['runtime', '检查运行时与依赖', 'Check runtime and dependencies'],
-      ['binding', '绑定本机 Coordinator 连接入口', 'Bind this computer as the coordinator endpoint'],
-      ['invite', '签发一次性邀请（预授权执行 7 天）', 'Issue a one-time invitation (7-day execution grant)'],
-      ['redeem', '本机兑换邀请：入组、授权并上线', 'Redeem on this computer: join, authorize, go online'],
-    ];
+    const p = P();
+    const dev = U.me() || { name: 'This computer', platform: 'macos' };
+    const started = st.done !== undefined;
     const done = st.done || 0;
+    const service = { macos: 'launchd LaunchAgent', windows: T('Windows 计划任务', 'Windows scheduled task'), ubuntu: 'systemd user service' }[dev.platform] || 'launchd LaunchAgent';
+    const svcNow = M.localServiceFor(p);
+    const existing = M.find(O().bindings, svcNow.bindingId);
+    const reuse = existing && existing.state === 'confirmed';
+    const endpoint = reuse ? existing.endpoint : LOCAL_ENDPOINT;
+    const scopeText = !reuse || (existing.scope || 'loopback') === 'loopback'
+      ? T('仅本机可访问', 'This computer only')
+      : existing.scope === 'lan' ? T('局域网可访问', 'Reachable on your network') : T('公网可访问', 'Reachable from the internet');
+    const fee = (reuse ? M.FEES['invite.create'] : M.FEES['host.prepare']) + M.FEES['invite.redeem'];
+    if (!started) {
+      return {
+        title: T('把这台电脑设为执行主机', 'Use this computer as an execution host'), size: 'lg',
+        sub: T('推荐：Agent 在本机执行你的 OKR。之后可以在“主机与算力”里调整。', 'Recommended: Agents run your OKRs on this computer. Adjust it later under Hosts & compute.'),
+        body: `<div class="field"><label for="boot-name">${T('主机名称（公开上链）', 'Host name (public on chain)')}</label><input id="boot-name" class="input" maxlength="128" data-f="boot.name" value="${esc(U.f('boot.name', dev.name))}"></div>
+          <dl class="kv">
+            <dt>${T('角色', 'Roles')}</dt><dd><span class="chip brand">Host</span> <span class="chip brand">Coordinator</span> <span class="tiny muted">${T('同一个后台服务承担两个角色', 'One background service runs both')}</span></dd>
+            <dt>${T('后台服务', 'Background service')}</dt><dd>${esc(service)} · ${T('登录后自动运行，关掉 App 后 Agent 继续执行；不需要管理员权限', 'Starts at login; Agents keep running after the App closes; no admin rights needed')}</dd>
+            <dt>${T('Coordinator 入口', 'Coordinator endpoint')}</dt><dd><span class="mono">${esc(endpoint)}</span> · ${scopeText}${reuse ? ` · ${T('沿用已有入口', 'existing endpoint')}` : ''}</dd>
+            <dt>${T('授权期限', 'Validity')}</dt><dd>${T('邀请 15 分钟内在本机兑换；主机执行授权 7 天，可续期', 'The invitation is redeemed here within 15 minutes; the host execution grant lasts 7 days and can be renewed')}</dd>
+            <dt>${T('费用', 'Fees')}</dt><dd>${T('两笔交易，合计预计', 'Two transactions, est. total')} <strong>${U.sui(fee)}</strong> · ${T('全部由本设备支付，不需要给主机地址充值', 'all paid by this device; no need to fund the host address')}</dd>
+          </dl>
+          <div class="note">${icon('info')}<div>${T('本机同样经过一次性邀请的链上准入，不会因为是“自己的电脑”而跳过。手机等其他设备暂时连不上仅本机的入口；需要时在“主机与算力”里开放到局域网或公网（需 HTTPS）。', 'This computer still joins through a one-time on-chain invitation; being yours never skips admission. Phones and other devices cannot reach a this-computer-only endpoint; open it to your LAN or the internet (HTTPS) under Hosts & compute when needed.')}</div></div>`,
+        foot: `<button class="btn" data-action="close-dialog">${T('稍后', 'Later')}</button>${U.btn({ action: 'bootstrap-start', label: T('确认并设置', 'Confirm and set up'), kind: 'primary', perm: 'manage_hosts' })}`,
+      };
+    }
     return {
-      title: T('准备本机作为执行主机', 'Prepare this computer as a host'), size: 'lg', sticky: done > 0 && done < 4,
-      body: `<div class="col">${steps.map(([k, zh, en], i) => `<div class="row"><span class="st ${i < done ? 'ok' : i === done && st.busy ? 'info' : 'muted'}">${icon(i < done ? 'check' : i === done && st.busy ? 'refresh' : 'clock', i === done && st.busy ? 'spin' : '')}</span><span class="${i === done ? 'strong' : ''}">${esc(T(zh, en))}</span></div>`).join('')}</div>
-        ${st.err ? `<div class="note danger">${icon('x')}<div>${esc(st.err)} ${T('已完成的步骤会保留，可以重试。', 'Completed steps are kept; retry.')}</div></div>` : ''}
-        <div class="note">${icon('info')}<div>${T('首次执行的本机同样通过一次性邀请获得主机资格与执行授权，不会因为是“自己的电脑”而跳过准入。', 'Your own first computer also joins through a one-time invitation; being “yours” never skips admission.')}</div></div>`,
-      foot: done >= 4 ? `<button class="btn primary" data-action="close-dialog">${T('完成', 'Done')}</button>` : `<button class="btn" data-action="close-dialog">${T('稍后', 'Later')}</button>${U.btn({ action: 'bootstrap-next', label: done ? T('继续', 'Continue') : T('开始', 'Start'), kind: 'primary', disabled: !!st.busy })}`,
+      title: T('正在把这台电脑设为执行主机', 'Setting up this computer as an execution host'), size: 'lg', sticky: done < BOOT_STEPS.length,
+      body: `<div class="col">${BOOT_STEPS.map(([k, zh, en], i) => `<div class="row"><span class="st ${i < done ? 'ok' : i === done && st.busy ? 'info' : 'muted'}">${icon(i < done ? 'check' : i === done && st.busy ? 'refresh' : 'clock', i === done && st.busy ? 'spin' : '')}</span><span class="${i === done ? 'strong' : ''}">${esc(T(zh, en))}</span></div>`).join('')}</div>
+        ${st.err ? `<div class="note danger">${icon('x')}<div>${esc(st.err)} ${T('已完成的步骤会保留；继续时先查询原交易，不会重复提交。', 'Completed steps are kept; continuing queries the original transaction and never resubmits.')}</div></div>` : ''}
+        ${done >= BOOT_STEPS.length ? `<div class="calm">${icon('check')}<span>${T(`这台电脑已是执行主机，Coordinator 入口 ${endpoint}（${scopeText}）。`, `This computer is an execution host; coordinator endpoint ${endpoint} (${scopeText}).`)}</span></div>` : ''}`,
+      foot: done >= BOOT_STEPS.length
+        ? `<button class="btn primary" data-action="close-dialog">${T('完成', 'Done')}</button>`
+        : `${st.err ? `<button class="btn" data-action="close-dialog">${T('稍后继续', 'Continue later')}</button>${U.btn({ action: 'bootstrap-next', label: T('继续', 'Continue'), kind: 'primary', disabled: !!st.busy })}` : ''}`,
     };
+  };
+
+  FM.actions['bootstrap-start'] = () => {
+    const st = ui.dialog;
+    const name = String(U.f('boot.name', (U.me() || {}).name || '')).trim();
+    if (!name) { toast(T('请填写主机名称', 'Enter a host name'), 'warn'); return; }
+    st.name = name;
+    st.done = 0;
+    FM.actions['bootstrap-next']();
   };
 
   FM.actions['bootstrap-next'] = () => {
     const st = ui.dialog;
     const p = P();
     const org = O();
+    const svc = M.localServiceFor(p);
     st.err = null;
     st.busy = true;
     render();
     const step = st.done || 0;
-    const advance = () => { st.busy = false; st.done = step + 1; render(); if (st.done < 4) FM.actions['bootstrap-next'](); };
+    const advance = () => { st.busy = false; st.done = step + 1; render(); if (st.done < BOOT_STEPS.length) FM.actions['bootstrap-next'](); };
     const fail = r => { st.busy = false; st.err = U.txErr(r.code); render(); };
-    if (step === 0) { U.later(700, advance); return; }
-    if (step === 1) {
-      const b = { id: M.nextId(p, 'bind'), endpoint: 'localhost:7443', label: { zh: '本机 Coordinator', en: 'This computer' }, state: 'pending', online: false };
-      org.bindings.push(b);
-      const tx = U.submitTx({ kind: 'binding.create', payload: { bindingId: b.id } }, { onConfirmed: (r, pp) => { M.find(pp.data[r.tx.orgId].bindings, b.id).online = true; advance(); }, onFailed: fail, onRejected: fail });
-      if (!tx) st.busy = false;
-      return;
-    }
+    if (step === 0) { U.later(600, () => { svc.state = 'running'; svc.startAtLogin = true; U.save(); advance(); }); return; }
+    if (step === 1) { U.later(500, () => { svc.keys = true; U.save(); advance(); }); return; }
     if (step === 2) {
+      let b = M.find(org.bindings, svc.bindingId);
+      if (!b) {
+        b = { id: M.nextId(p, 'bind'), endpoint: LOCAL_ENDPOINT, scope: 'loopback', version: 1, label: { zh: '本机 Coordinator', en: 'This computer' }, state: 'pending', online: false, local: true };
+        org.bindings.push(b);
+        svc.bindingId = b.id;
+      }
       const code = FM.makeInviteCode ? FM.makeInviteCode() : `FMI1-${Date.now()}`;
       const dg = M.digest(`fm-invite:1:${code.toUpperCase().replace(/[\s-]/g, '')}`);
-      const res = M.createInvite(p, org, { ttl: '15m', desktop: true, workspaceIds: org.workspaces.map(w => w.id) }, dg, U.now());
+      const res = M.createInvite(p, org, { ttl: '15m', desktop: true, workspaceIds: org.workspaces.map(w => w.id), bindingId: b.id }, dg, U.now());
       if (!res.ok) { fail(res); return; }
       st.inviteId = res.invite.id;
-      U.submitTx({ kind: 'invite.create', payload: { inviteId: res.invite.id } }, { onConfirmed: advance, onFailed: fail, onRejected: fail });
+      U.save();
+      // A binding confirmed earlier (e.g. setting up again after a revoke) only
+      // needs a new invite; a new binding and its invite share one PTB.
+      const spec = b.state === 'confirmed'
+        ? { kind: 'invite.create', payload: { inviteId: res.invite.id } }
+        : { kind: 'host.prepare', payload: { bindingId: b.id, inviteId: res.invite.id } };
+      const tx = U.submitTx(spec, {
+        onConfirmed: (r, pp) => { const x = M.find(pp.data[r.tx.orgId].bindings, b.id); if (x) x.online = true; advance(); },
+        onFailed: fail, onRejected: fail,
+      });
+      if (!tx) st.busy = false;
       return;
     }
     if (step === 3) {
       const inv = M.find(org.invites, st.inviteId);
       const dev = U.me();
       const deviceKey = `ed25519:${Array.from(U.randomBytes(8), b => b.toString(16).padStart(2, '0')).join('')}`;
-      const device = { name: dev.name, kind: 'local', os: { macos: 'macOS 15.6', windows: 'Windows 11', ubuntu: 'Ubuntu 24.04' }[dev.platform] || 'macOS 15.6', arch: 'arm64', desktop: true, location: { zh: '本机', en: 'This computer' }, deviceKey, proof: M.redeemProof(inv.id, inv.codeDigest, deviceKey) };
-      U.submitTx({ kind: 'invite.redeem', payload: { inviteId: inv.id, device } }, {
+      const device = { name: st.name, kind: 'local', os: { macos: 'macOS 15.6', windows: 'Windows 11', ubuntu: 'Ubuntu 24.04' }[dev.platform] || 'macOS 15.6', arch: 'arm64', desktop: true, location: { zh: '本机', en: 'This computer' }, deviceKey, proof: M.redeemProof(inv.id, inv.codeDigest, deviceKey) };
+      U.submitTx({ kind: 'invite.redeem', payload: { inviteId: inv.id, device, sponsoredBy: dev.id } }, {
         onConfirmed: (r, pp) => {
           const o = pp.data[r.tx.orgId];
-          M.connectHost(o, r.host.id, true, U.now());
           r.host.isThisDevice = true;
+          r.host.roles = ['host', 'coordinator'];
+          M.localServiceFor(pp).hostId = r.host.id;
           if (!o.agents.length) {
-            o.agents.push({ id: 'agent-builder', name: 'Builder', role: { zh: '构建与交付', en: 'Build and deliver' }, runtime: 'Claude Code', model: 'Claude Sonnet 5.5', capabilities: [{ zh: '文件读写', en: 'Files' }, { zh: '命令执行', en: 'Commands' }] });
-            o.agents.push({ id: 'agent-reviewer', name: 'Reviewer', role: { zh: '独立验证', en: 'Independent verification' }, runtime: 'Claude Code', model: 'Claude Opus 5.5', verifier: true, capabilities: [{ zh: '只读检查', en: 'Read-only checks' }] });
+            o.agents.push({ id: 'agent-builder', name: 'Builder', role: { zh: '构建与交付', en: 'Build and deliver' }, runtime: 'Claude Code', model: 'Claude Sonnet 5.5', capabilities: [{ zh: '文件读写', en: 'Files' }, { zh: '命令执行', en: 'Commands' }], standing: { version: 1, actions: [], dailyBudget: 200, spentToday: 0, dayStart: 0, confirmedAt: U.now() } });
+            o.agents.push({ id: 'agent-reviewer', name: 'Reviewer', role: { zh: '独立验证', en: 'Independent verification' }, runtime: 'Claude Code', model: 'Claude Opus 5.5', verifier: true, capabilities: [{ zh: '只读检查', en: 'Read-only checks' }], standing: { version: 1, actions: [], dailyBudget: 200, spentToday: 0, dayStart: 0, confirmedAt: U.now() } });
           }
           o.instances.push({ id: M.nextId(pp, 'inst'), name: 'builder-1', agentId: 'agent-builder', hostId: r.host.id, runtime: 'Claude Code 2.4', adapter: 'native', status: 'idle', workspace: (o.workspaces[0] || {}).path || '', sessionKey: 'fm:builder-1', okrIds: [] });
           o.workspaces.forEach(w => { if (!w.hostIds.includes(r.host.id)) w.hostIds.push(r.host.id); });
@@ -335,6 +391,15 @@
           advance();
         },
         onFailed: fail, onRejected: fail,
+      });
+      return;
+    }
+    if (step === 4) {
+      U.later(500, () => {
+        const res = M.connectHost(org, svc.hostId, true, U.now());
+        U.save();
+        if (!res.ok) { fail(res); return; }
+        advance();
       });
     }
   };

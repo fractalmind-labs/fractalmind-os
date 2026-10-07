@@ -49,7 +49,8 @@
     d.focusOkrId = 'okr-alpha';
 
     d.bindings = [
-      { id: 'bind-home', endpoint: 'coordinator.home.arpa:7443', label: L('家庭局域网', 'Home LAN'), state: 'confirmed', online: true, confirmedAt: now - 38 * DAY },
+      // This MacBook's own coordinator (issue #64), later opened to the home LAN over HTTPS.
+      { id: 'bind-home', endpoint: 'https://coordinator.home.arpa:7443', scope: 'lan', version: 2, local: true, label: L('本机 Coordinator · 家庭局域网', 'This computer · Home LAN'), state: 'confirmed', online: true, confirmedAt: now - 38 * DAY },
       { id: 'bind-cloud', endpoint: 'coord-fra.example.net:7443', label: L('云端 · 法兰克福', 'Cloud · Frankfurt'), state: 'confirmed', online: true, confirmedAt: now - 13 * DAY },
     ];
 
@@ -63,7 +64,7 @@
     const grant = (days, desktop) => ({ actions: ['execute'], desktop: !!desktop, expiresAt: now + days * DAY });
     d.hosts = [
       { id: 'host-mini', name: 'Mac mini M4', kind: 'local', location: L('家中书房', 'Home office'), os: 'macOS 15.6', arch: 'arm64', status: 'online', accepting: true, desktop: 'supported', lastHeartbeatAt: now - 20e3, cpu: 38, mem: 61, sampledAt: now - 20e3, bindingId: 'bind-home', membership: member('invite', now - 36 * DAY), grant: grant(6, true) },
-      { id: 'host-mbp', name: 'MacBook Pro 14', kind: 'local', location: L('随身', 'With me'), os: 'macOS 15.6', arch: 'arm64', status: 'online', accepting: true, desktop: 'supported', lastHeartbeatAt: now - 8e3, cpu: 22, mem: 54, sampledAt: now - 8e3, bindingId: 'bind-home', isThisDevice: true, membership: member('bootstrap', now - 40 * DAY), grant: grant(6, true) },
+      { id: 'host-mbp', name: 'MacBook Pro 14', kind: 'local', location: L('随身', 'With me'), os: 'macOS 15.6', arch: 'arm64', status: 'online', accepting: true, desktop: 'supported', lastHeartbeatAt: now - 8e3, cpu: 22, mem: 54, sampledAt: now - 8e3, bindingId: 'bind-home', isThisDevice: true, roles: ['host', 'coordinator'], membership: member('bootstrap', now - 40 * DAY), grant: grant(6, true) },
       { id: 'host-nas', name: 'Home NAS', kind: 'local', location: L('家中机柜', 'Home rack'), os: 'Ubuntu 24.04', arch: 'x86_64', status: 'offline', accepting: true, desktop: 'headless', lastHeartbeatAt: now - 47 * MIN, cpu: 71, mem: 83, sampledAt: now - 47 * MIN, bindingId: 'bind-home', membership: member('invite', now - 20 * DAY), grant: grant(3, false) },
       { id: 'host-pi', name: 'Raspberry Pi 5', kind: 'local', location: L('客厅', 'Living room'), os: 'Ubuntu 24.04', arch: 'arm64', status: 'online', accepting: false, maintenance: true, desktop: 'headless', lastHeartbeatAt: now - 31e3, cpu: 6, mem: 18, sampledAt: now - 31e3, bindingId: 'bind-home', membership: member('review', now - 26 * DAY), grant: grant(2, false) },
       { id: 'host-build', name: 'Build Server', kind: 'cloud', location: L('法兰克福', 'Frankfurt'), os: 'Ubuntu 22.04', arch: 'x86_64', status: 'online', accepting: true, desktop: 'headless', lastHeartbeatAt: now - 12e3, cpu: 64, mem: 47, sampledAt: now - 12e3, bindingId: 'bind-cloud', membership: member('invite', now - 12 * DAY), grant: grant(4, false) },
@@ -480,6 +481,8 @@
       data: { [P]: personalData(now, model), [LABS]: labsData(now) },
       txs: [],
       onboarding: null,
+      // envd on this MacBook: Host + Coordinator background service (issue #64).
+      localService: { state: 'running', hostId: 'host-mbp', bindingId: 'bind-home', startAtLogin: true, keys: true },
     };
   }
 
@@ -508,6 +511,7 @@
       data: { [orgId]: data },
       txs: [],
       onboarding: { workspace: false, host: false, model: false, okr: false },
+      localService: { state: 'not_installed', hostId: null, bindingId: null, startAtLogin: true, keys: false },
     };
   }
 

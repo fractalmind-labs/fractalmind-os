@@ -805,6 +805,88 @@ check('fixtures', 'a new identity starts empty and inherits nothing', () => {
 
 /* ---------------------------------------------------------- Page shell */
 
+check('local-host', 'one PTB binds this computer\'s coordinator and signs the invite', () => {
+  const p = fresh();
+  const org = F.emptyOrgData();
+  p.data[F.P] = org;
+  const b = { id: 'bind-local', endpoint: 'http://127.0.0.1:7443', scope: 'loopback', state: 'pending', online: false, version: 1 };
+  org.bindings.push(b);
+  const inv = M.createInvite(p, org, { ttl: '15m', desktop: true, bindingId: b.id }, M.digest('code'), T0).invite;
+  assert.equal(inv.bindingId, b.id, 'the invite targets the binding in the same PTB');
+  const tx = M.beginTx(p, { kind: 'host.prepare', orgId: F.P, payload: { bindingId: b.id, inviteId: inv.id } }, T0).tx;
+  assert.equal(M.commitTx(p, tx.id, T0 + 1000).ok, true);
+  assert.equal(b.state, 'confirmed');
+  assert.equal(M.inviteStatus(inv, T0 + 1000), 'active');
+  const again = M.beginTx(p, { kind: 'host.prepare', orgId: F.P, payload: { bindingId: b.id, inviteId: inv.id } }, T0).tx;
+  assert.equal(M.commitTx(p, again.id, T0 + 2000).code, 'not_pending', 'never applied twice');
+  const r = M.beginTx(p, { kind: 'invite.redeem', orgId: F.P, payload: { inviteId: inv.id, device: hostDevice(inv, 'local') } }, T0).tx;
+  const done = M.commitTx(p, r.id, T0 + 3000);
+  assert.equal(done.ok, true);
+  assert.equal(done.host.bindingId, b.id);
+});
+check('local-host', 'only loopback may use HTTP; other scopes need HTTPS', () => {
+  assert.equal(M.validEndpoint('loopback', 'http://127.0.0.1:7443'), true);
+  assert.equal(M.validEndpoint('loopback', 'http://192.168.1.5:7443'), false);
+  assert.equal(M.validEndpoint('lan', 'http://fm.local:7443'), false);
+  assert.equal(M.validEndpoint('lan', 'https://fm.local:7443'), true);
+  assert.equal(M.validEndpoint('public', 'https://coordinator.example.org'), true);
+  assert.equal(M.validEndpoint('public', 'https://127.0.0.1:7443'), false);
+  assert.equal(M.validEndpoint('cloud', 'https://x.example'), false);
+});
+check('local-host', 'a new endpoint version supersedes old invites; hosts reconnect', () => {
+  const p = fresh();
+  const org = personal(p);
+  const inv = signedInvite(p, { desktop: true });
+  const b = M.find(org.bindings, inv.bindingId);
+  const host = org.hosts.find(h => h.bindingId === b.id && h.status === 'online');
+  const before = b.version || 1;
+  assert.equal(M.updateBinding(org, b.id, 'lan', 'http://fm.local:7443', T0).code, 'invalid_endpoint');
+  assert.equal(b.version || 1, before, 'a rejected endpoint changes nothing');
+  const res = M.updateBinding(org, b.id, 'lan', 'https://fm.local:7443', T0);
+  assert.equal(res.ok, true);
+  assert.equal(b.version, before + 1);
+  assert.equal(inv.state, 'revoked');
+  assert.equal(M.redeemInvite(p, org, inv.id, hostDevice(inv, 'late'), T0 + 1).code, 'revoked');
+  if (host) assert.equal(host.status, 'connecting', 'hosts on the binding reconnect to the new endpoint');
+});
+check('local-host', 'the demo MacBook runs Host + Coordinator; new identities start without a service', () => {
+  const p = fresh();
+  const svc = p.localService;
+  const host = M.find(personal(p).hosts, svc.hostId);
+  assert.equal(svc.state, 'running');
+  assert.equal(host.isThisDevice, true);
+  assert.deepEqual(host.roles, ['host', 'coordinator']);
+  assert.equal(M.find(personal(p).bindings, svc.bindingId).scope, 'lan');
+  const empty = F.createEmptyProfile({ name: 'N', deviceName: 'Mac', platform: 'macos', orgName: 'O', wallet: {} }, T0, M);
+  assert.equal(empty.localService.state, 'not_installed');
+});
+check('local-host', 'invites for an old binding version cannot be redeemed', () => {
+  const p = fresh();
+  const org = personal(p);
+  const inv = signedInvite(p, { desktop: true });
+  M.find(org.bindings, inv.bindingId).version = 5;
+  assert.equal(M.redeemInvite(p, org, inv.id, hostDevice(inv, 'k'), T0 + 1).code, 'binding_changed');
+});
+check('local-host', 'stopping the service takes this computer offline; starting reconnects', () => {
+  const p = fresh();
+  const org = personal(p);
+  const inv = signedInvite(p, { desktop: true });
+  const r = M.beginTx(p, { kind: 'invite.redeem', orgId: F.P, payload: { inviteId: inv.id, device: hostDevice(inv, 'svc') } }, T0).tx;
+  const host = M.commitTx(p, r.id, T0 + 10).host;
+  delete p.localService;
+  const svc = M.localServiceFor(p);
+  assert.equal(M.setLocalServiceRunning(p, org, false, T0).code, 'not_installed');
+  Object.assign(svc, { state: 'running', hostId: host.id, bindingId: inv.bindingId, keys: true });
+  M.setLocalServiceRunning(p, org, false, T0 + 20);
+  assert.equal(svc.state, 'stopped');
+  assert.equal(host.status, 'offline');
+  assert.equal(host.membership.state, 'active', 'stopping the service keeps chain membership');
+  assert.equal(M.setLocalServiceRunning(p, org, true, T0 + 30).ok, true);
+  assert.equal(host.status, 'online');
+  M.removeLocalService(p);
+  assert.deepEqual([svc.state, svc.keys, svc.hostId], ['not_installed', false, null]);
+});
+
 check('page', 'index.html loads only local files that exist', () => {
   const dir = __dirname;
   const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
