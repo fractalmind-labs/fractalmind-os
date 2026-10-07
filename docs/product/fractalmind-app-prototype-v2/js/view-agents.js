@@ -38,15 +38,15 @@
     const rows = org.instances.map(i => {
       const h = U.host(i.hostId);
       const okrs = org.okrs.filter(o => o.instanceId === i.id && o.lifecycle === 'ACTIVE');
-      const canInclude = i.imported === 'observe' && M.constrainable(i) && i.status !== 'importing';
+      const canInclude = (i.imported === 'observe' || i.imported === 'control' || i.adapter === 'agent-manager') && M.constrainable(i) && i.status !== 'importing' && i.status !== 'creating' && !(i.okrIds || []).length;
       return `<tr><td><div class="strong">${esc(i.name)}</div><div class="tiny muted mono">${esc(i.sessionKey || '')}</div></td><td>${esc(U.agent(i.agentId).name || T('未分配', 'Unassigned'))}</td>
         <td><a href="#/hosts/${esc(i.hostId)}">${esc(h ? h.name : '—')}</a></td><td class="small">${esc(i.runtime)}</td>
-        <td><span class="chip ${M.constrainable(i) ? 'outline' : 'wait'}">${i.adapter === 'tmux-observe' ? T('仅观察', 'Observe only') : i.adapter === 'unconstrained' ? T('不受约束', 'Unconstrained') : T('可控', 'Controllable')}</span></td>
+        <td><span class="chip ${M.constrainable(i) ? 'outline' : 'wait'}">${i.adapter === 'tmux-observe' ? T('仅观察', 'Observe only') : i.adapter === 'unconstrained' ? T('不受约束', 'Unconstrained') : i.adapter === 'agent-manager' ? T('agent-manager · 部分约束', 'agent-manager · partial limits') : T('可控', 'Controllable')}</span></td>
         <td>${instState(i)}</td><td class="small">${okrs.map(o => `${o.priority} ${esc(L(o.title).slice(0, 12))}…`).join('<br>') || '—'}</td>
-        <td class="small">${i.imported === 'observe' ? T('导入 · 仅观察', 'Imported · observe') : i.imported === 'managed' ? T('导入 · 已纳入', 'Imported · managed') : i.origin === 'app' ? T('App 创建', 'Created by the app') : T('App 部署', 'Deployed by app')}${i.status === 'creating' ? (tx => (tx ? `<div class="mt-4">${U.txLine(tx)}</div>` : ''))(U.latestTx(t => t.kind === 'agent.create' && t.payload.instanceId === i.id)) : ''}${canInclude ? `<div class="mt-4">${U.btn({ action: 'open', data: { dialog: 'include', id: i.id }, label: T('纳入 OKR', 'Add to OKR'), size: 'sm', perm: 'manage_hosts' })}</div>` : ''}</td></tr>`;
+        <td class="small">${i.imported === 'observe' ? T('导入 · 仅观察', 'Imported · observe') : i.imported === 'control' ? T('导入 · 可接 OKR', 'Imported · can take OKRs') : i.imported === 'managed' ? T('导入 · 已纳入', 'Imported · managed') : i.origin === 'app' ? T('App 创建', 'Created by the app') : T('App 部署', 'Deployed by app')}${i.status === 'creating' ? (tx => (tx ? `<div class="mt-4">${U.txLine(tx)}</div>` : ''))(U.latestTx(t => t.kind === 'agent.create' && t.payload.instanceId === i.id)) : ''}${canInclude ? `<div class="mt-4">${U.btn({ action: 'open', data: { dialog: 'include', id: i.id }, label: i.adapter === 'agent-manager' ? T('分配 OKR', 'Assign OKR') : T('纳入 OKR', 'Add to OKR'), size: 'sm', perm: 'manage_hosts' })}</div>` : ''}</td></tr>`;
     }).join('');
     return `<div class="page-h"><div><h1>${T('团队与 Agents', 'Team & Agents')}</h1><p class="muted">${T('Agent 角色、运行实例与所在主机。同一角色可以部署在多台主机；命令与授权绑定具体实例。', 'Agent roles, running instances and their hosts. One role can run on several hosts; commands and grants bind a specific instance.')} ${T('可以直接和任一 Agent 对话；没有 OKR 时它按常驻权限行事。', 'You can chat with any Agent directly; without an OKR it acts within its standing permission.')}</p></div>
-        <div class="row">${U.btn({ action: 'open', data: { dialog: 'discover' }, label: T('从主机导入 Agent', 'Import from a host'), icon: 'scan' })}${U.btn({ action: 'open', data: { dialog: 'agent-create' }, label: T('新建 Agent', 'New Agent'), icon: 'plus', kind: 'primary', perm: 'manage_hosts' })}</div></div>
+        <div class="row">${U.btn({ action: 'open', data: { dialog: 'discover' }, label: T('导入已运行的 Agent', 'Import running Agents'), icon: 'scan' })}${U.btn({ action: 'open', data: { dialog: 'agent-create' }, label: T('新建 Agent', 'New Agent'), icon: 'plus', kind: 'primary', perm: 'manage_hosts' })}</div></div>
       <div class="grid-2">${roles}</div>
       <section class="sec"><div class="sec-h"><h2>${T('运行实例', 'Instances')}</h2><span class="small muted">${org.instances.length}</span></div>
         <div class="card flush" style="overflow-x:auto"><table class="table"><thead><tr><th>${T('实例', 'Instance')}</th><th>${T('角色', 'Role')}</th><th>${T('主机', 'Host')}</th><th>${T('运行时', 'Runtime')}</th><th>${T('适配器', 'Adapter')}</th><th>${T('状态', 'Status')}</th><th>OKR</th><th>${T('来源', 'Source')}</th></tr></thead><tbody>${rows}</tbody></table></div></section>
@@ -56,37 +56,60 @@
 
   /* ------------------------------------------------ Discovery (J11) */
 
+  /** Short one-line summary of a running Agent's AGENTS.md. */
+  function definitionLine(s) {
+    const d = s.agentFile;
+    if (!d) return `<span class="mono">${esc(s.workspace)}</span>`;
+    const launch = `${d.launcher}${d.profile && d.profile !== 'default' ? ` --profile ${d.profile}` : ''}`;
+    return `<span class="mono">${esc(s.workspace)}</span> · <span class="mono">${esc(launch)}</span> → ${esc(L(d.model))} · ${heartbeatText(d.heartbeat)} · ${romChip(d.rom)} · ${T(`${d.skills} 个技能`, `${d.skills} skills`)}${d.subAgents ? ` · ${T(`${d.subAgents} 个员工 Agent 留在主机`, `${d.subAgents} employee Agents stay on the host`)}` : ''}`;
+  }
+  function limitsNote() {
+    const Lm = M.AGENT_MANAGER_LIMITS;
+    return `<div class="note">${icon('info')}<div><div class="strong">${T('导入后可以接 OKR', 'Imported Agents can take OKRs')}</div>
+      <div class="small mt-4">${T('FractalMind 会：', 'FractalMind will:')} ${Lm.enforced.map(x => esc(L(x))).join('；')}。</div>
+      <div class="small mt-4">${T('不能强制：', 'Cannot enforce:')} ${Lm.notEnforced.map(x => esc(L(x))).join('；')}。</div>
+      <div class="tiny muted mt-4">${T('导入不重启、不改写文件；不是 agent-manager Home 的 tmux 会话只能观察。', 'Importing restarts nothing and rewrites no files; tmux sessions that are not agent-manager Homes are observe-only.')}</div></div></div>`;
+  }
+
   FM.dialogs.discover = st => {
     const org = O();
     // Opened for a specific host (setup, New Agent): start there.
     if (st.host && !st.hostApplied) { st.hostApplied = true; U.setF('discover.host', st.host); }
-    const hostId = U.f('discover.host', st.host || '');
+    const hostId = U.f('discover.host', st.host || (org.hosts.find(h => h.isThisDevice) || {}).id || '');
+    const host = U.host(hostId);
+    const local = !!(host && host.isThisDevice);
     const scan = st.scan && st.scan.hostId === hostId ? st.scan : null;
-    const hosts = org.hosts.map(h => `<button class="opt" data-action="set-f" data-key="discover.host" data-value="${esc(h.id)}" aria-pressed="${h.id === hostId}"><span class="ico">${icon(h.kind === 'cloud' ? 'cloud' : 'server')}</span><span class="grow"><span class="strong">${esc(h.name)}</span><span class="small muted" style="display:block">${esc(h.os)}</span></span>${U.hostState(h)}</button>`).join('');
+    // This computer is read directly and instantly: no coordinator round trip.
+    if (local && !scan && st.autoScanned !== hostId) { st.autoScanned = hostId; U.later(0, () => FM.actions['scan-host']()); }
+    const hosts = `<div class="row gap-sm"><label class="small muted" for="disc-host" style="white-space:nowrap">${T('主机', 'Host')}</label><select id="disc-host" class="select" data-f="discover.host">${org.hosts.map(h => `<option value="${esc(h.id)}" ${h.id === hostId ? 'selected' : ''}>${esc(h.name)}${h.isThisDevice ? T('（这台电脑）', ' (this computer)') : ''}${h.status === 'online' ? '' : T(' · 离线', ' · offline')}</option>`).join('')}</select></div>`;
     let result = '';
+    let selected = [];
     if (st.err && st.errHost === hostId) result = `<div class="note warn">${icon('alert')}<div>${esc(st.err)}</div></div>`;
     if (scan) {
-      result = scan.sessions.length ? `<div class="label">${T('发现的会话', 'Sessions found')} · ${T('观测于', 'observed')} ${U.agoTag(scan.at)}</div>${scan.sessions.map(s => {
-        const imported = s.importedAs || (org.instances.find(i => i.hostId === s.hostId && i.sessionKey === s.key) || {}).id;
-        const inst = imported ? U.inst(imported) : null;
-        const tx = inst && U.latestTx(t => t.kind === 'agent.import' && t.payload.instanceId === inst.id);
-        const action = inst
-          ? (inst.status === 'importing' ? U.txLine(tx) : `<span class="st ok">${icon('check')}${T('已导入', 'Imported')}</span>${inst.imported === 'observe' && inst.adapter !== 'tmux-observe' ? U.btn({ action: 'open', data: { dialog: 'include', id: inst.id }, label: T('纳入 OKR', 'Add to OKR'), size: 'sm', perm: 'manage_hosts' }) : ''}`)
-          : U.btn({ action: 'import-session', data: { key: s.key }, label: T('导入为仅观察', 'Import as observe-only'), size: 'sm', kind: 'primary', perm: 'manage_hosts', disabled: s.identity !== 'verified', why: T('身份未核实，不能导入', 'Identity not verified; cannot import') });
-        return `<div class="card soft tight"><div class="row between top"><div><div class="row wrap gap-sm"><strong>${esc(s.name)}</strong><span class="chip ${s.adapter === 'tmux-observe' ? 'wait' : 'outline'}">${s.adapter === 'tmux-observe' ? T('tmux · 仅观察', 'tmux · observe only') : T('可接受约束', 'Accepts constraints')}</span><span class="chip ${s.identity === 'verified' ? 'ok' : 'danger'}">${s.identity === 'verified' ? T('身份已核实', 'Identity verified') : T('身份未核实', 'Identity unverified')}</span></div>
-          <div class="tiny muted mt-4">${esc(s.runtime)} · <span class="mono">${esc(s.workspace)}</span> · ${T('启动于', 'started')} ${U.agoTag(s.startedAt)}</div><div class="small mt-4">${esc(L(s.task))}</div>
-          ${s.agentFile ? `<dl class="kv mt-8 small"><dt>${T('定义', 'Definition')}</dt><dd><span class="mono">${esc(s.workspace)}/AGENTS.md</span> · ${T('名称', 'name')} <strong>${esc(s.agentFile.namespace || s.agentFile.name)}</strong></dd>
-            <dt>${T('启动', 'Launch')}</dt><dd class="mono">${esc(s.agentFile.launcher)}${s.agentFile.profile && s.agentFile.profile !== 'default' ? ` --profile ${esc(s.agentFile.profile)}` : ''}</dd><dt>${T('模型', 'Model')}</dt><dd>${esc(L(s.agentFile.model))} <span class="tiny muted">${T('由启动配置决定', 'from the launch profile')}</span></dd>
-            <dt>${T('心跳', 'Heartbeat')}</dt><dd>${heartbeatText(s.agentFile.heartbeat)}</dd><dt>ROM</dt><dd>${romChip(s.agentFile.rom)}</dd>
-            <dt>${T('技能', 'Skills')}</dt><dd>${s.agentFile.skills}${s.agentFile.subAgents ? ` · ${T(`${s.agentFile.subAgents} 个员工 Agent（不随之导入）`, `${s.agentFile.subAgents} employee Agents (not imported with it)`)}` : ''}</dd></dl>` : ''}</div><div class="col" style="align-items:flex-end">${action}</div></div></div>`;
-      }).join('')}` : `<div class="note">${icon('info')}<div>${T('这台主机上没有发现会话。', 'No sessions found on this host.')}</div></div>`;
+      const rows = scan.sessions.map(s => {
+        const instId = (org.instances.find(i => i.hostId === s.hostId && i.sessionKey === s.key) || {}).id;
+        const inst = instId ? U.inst(instId) : null;
+        const can = !inst && s.identity === 'verified';
+        const checked = can && U.f(`discsel.${s.key}`, false);
+        if (checked) selected.push(s);
+        const state = inst
+          ? (inst.status === 'importing' ? `<span class="st info">${icon('refresh', 'spin')}${T('导入中', 'Importing')}</span>` : `<span class="st ok">${icon('check')}${T('已导入', 'Imported')}</span>`)
+          : s.identity !== 'verified' ? `<span class="st danger">${T('身份未核实', 'Identity unverified')}</span>` : '';
+        return `<label class="card soft tight row top gap-sm" style="cursor:${can ? 'pointer' : 'default'}"><input type="checkbox" data-f="discsel.${esc(s.key)}" ${checked ? 'checked' : ''} ${can ? '' : 'disabled'} aria-label="${esc(T('选择', 'Select'))} ${esc(s.name)}">
+          <span class="grow"><span class="row wrap gap-sm"><strong>${esc(s.agentFile ? (s.agentFile.namespace || s.agentFile.name) : s.name)}</strong><span class="tiny muted mono">${esc(s.key.replace(/^tmux:/, ''))}</span><span class="chip ${s.adapter === 'agent-manager' ? 'ok' : 'wait'}">${s.adapter === 'agent-manager' ? T('可接 OKR', 'Can take OKRs') : s.adapter === 'tmux-observe' ? T('仅观察', 'Observe only') : T('可接受约束', 'Accepts constraints')}</span></span>
+          <span class="small muted" style="display:block;margin-top:4px">${definitionLine(s)}</span></span>${state}</label>`;
+      }).join('');
+      result = scan.sessions.length
+        ? `<div class="row between"><div class="label">${local ? T('这台电脑上正在运行', 'Running on this computer') : T('发现的会话', 'Sessions found')} · ${U.agoTag(scan.at)}</div>${U.btn({ action: 'scan-host', label: T('刷新', 'Refresh'), icon: 'refresh', size: 'sm' })}</div>${rows}`
+        : `<div class="note">${icon('info')}<div>${T('这台主机上没有发现会话。', 'No sessions found on this host.')}</div></div>`;
     }
+    const pending = U.latestTx(t => t.kind === 'agent.import' && t.state === 'pending');
+    const fee = selected.length ? M.importFee(selected.length) : 0;
     return {
       title: T('导入主机上已运行的 Agent', 'Import Agents running on a host'), size: 'lg',
-      sub: T('按 tmux 会话发现，读取各自 Home 里的 AGENTS.md：名称、启动方式、心跳与 ROM。发现快照是观测；导入关系、OKR 绑定与授权是链上状态。', 'Found by tmux session, read from each Home’s AGENTS.md: name, launch, heartbeat and ROM. Snapshots are observations; imports, OKR bindings and grants are chain state.'),
-      body: `<div class="col">${hosts}</div>${U.btn({ action: 'scan-host', label: T('扫描', 'Scan'), icon: 'scan', disabled: !hostId, why: T('选择一台主机', 'Choose a host') })}${result}
-        <div class="note">${icon('info')}<div>${T('默认“导入为仅观察”：保留原进程、Home、定时任务与员工 Agent，不重新启动、不改写文件。同名不同主机不合并，同一实例不能重复导入。可以直接对话；纳入 OKR 需要能接受约束的适配器。', 'Default is “observe only”: the process, Home, schedules and employee Agents stay as they are; nothing is restarted or rewritten. Same names on different hosts are not merged; one instance imports once. You can chat with it; joining an OKR needs an adapter that accepts constraints.')}</div></div>`,
-      foot: `<button class="btn primary" data-action="close-dialog">${T('完成', 'Done')}</button>`,
+      sub: local ? T('直接读取这台电脑的 tmux 会话和各 Home 的 AGENTS.md。勾选后一笔交易导入。', 'Reads this computer’s tmux sessions and each Home’s AGENTS.md directly. Tick and import in one transaction.') : T('通过这台主机的 Coordinator 读取它签名的扫描。勾选后一笔交易导入。', 'Reads the host’s signed scan through its coordinator. Tick and import in one transaction.'),
+      body: `${hosts}${local ? '' : U.btn({ action: 'scan-host', label: T('扫描', 'Scan'), icon: 'scan', disabled: !hostId, why: T('选择一台主机', 'Choose a host') })}${result}${scan && scan.sessions.length ? limitsNote() : ''}${pending ? U.txLine(pending) : ''}`,
+      foot: `<button class="btn" data-action="close-dialog">${T('完成', 'Done')}</button>${U.btn({ action: 'import-selected', label: selected.length ? T(`导入所选（${selected.length}）· 预计 ${U.sui(fee)}`, `Import ${selected.length} · est. ${U.sui(fee)}`) : T('导入所选', 'Import selected'), kind: 'primary', perm: 'manage_hosts', disabled: !selected.length || !!pending, why: T('勾选要导入的 Agent', 'Tick the Agents to import') })}`,
     };
   };
 
@@ -94,6 +117,7 @@
     const org = O();
     const inst = U.inst(id);
     if (!inst) return null;
+    if (inst.adapter === 'agent-manager') return assignDialog(org, inst);
     const okrs = org.okrs.filter(o => o.lifecycle === 'ACTIVE');
     const okrId = U.f(`include-${id}.okr`, (okrs.find(o => (M.find(org.workspaces, o.workspaceId) || {}).path === inst.workspace) || okrs[0] || {}).id);
     ui.dialog.okrId = okrId;
@@ -214,10 +238,31 @@
     };
   };
 
+  /** Assign an OKR to an agent-manager Agent: pick the goal, read the limits once. */
+  function assignDialog(org, inst) {
+    const id = inst.id;
+    const okrs = org.okrs.filter(o => o.lifecycle === 'ACTIVE');
+    const okrId = U.f(`include-${id}.okr`, (okrs[0] || {}).id);
+    ui.dialog.okrId = okrId;
+    const ack = !!U.f(`include-${id}.acknowledged`, false);
+    const Lm = M.AGENT_MANAGER_LIMITS;
+    const tx = U.latestTx(t => t.kind === 'agent.include' && t.payload.instanceId === id);
+    const a = U.agent(inst.agentId) || {};
+    return {
+      title: T('分配 OKR', 'Assign an OKR'), sub: `${esc(a.name || inst.name)} · <span class="mono">${esc(inst.workspace)}</span>`, size: 'lg',
+      body: `<div class="field"><label for="inc-okr">${T('目标', 'Goal')}</label><select id="inc-okr" class="select" data-f="include-${esc(id)}.okr">${okrs.map(o => `<option value="${esc(o.id)}" ${o.id === okrId ? 'selected' : ''}>${o.priority} · ${esc(L(o.title))}</option>`).join('')}</select></div>
+        <div class="col small"><div class="label">${T('FractalMind 会', 'FractalMind will')}</div>${Lm.enforced.map(x => `<div class="row">${icon('check', 'sm')}${esc(L(x))}</div>`).join('')}
+          <div class="label mt-8">${T('不能强制', 'Cannot enforce')}</div>${Lm.notEnforced.map(x => `<div class="row">${icon('alert', 'sm')}${esc(L(x))}</div>`).join('')}</div>
+        <label class="check"><input type="checkbox" data-f="include-${esc(id)}.acknowledged" ${ack ? 'checked' : ''}>${T('我了解：工具调用与花费由它自己的启动配置决定', 'I understand: tool use and spending follow its own launch configuration')}</label>
+        ${tx ? U.txLine(tx) : ''}`,
+      foot: `<button class="btn" data-action="close-dialog">${T('取消', 'Cancel')}</button>${U.btn({ action: 'include-do', data: { id }, label: T('确认分配', 'Assign'), kind: 'primary', perm: 'manage_hosts', disabled: !ack || !okrId || !!(tx && tx.state === 'pending'), why: T('请先确认', 'Confirm first') })}`,
+    };
+  }
+
   Object.assign(FM.actions, {
     'scan-host': () => {
       const org = O();
-      const hostId = U.f('discover.host', ui.dialog.host || '');
+      const hostId = U.f('discover.host', ui.dialog.host || (org.hosts.find(h => h.isThisDevice) || {}).id || '');
       const res = M.scanHost(org, hostId, F.observedSessions(U.root.seededAt), U.now());
       ui.dialog.err = null;
       ui.dialog.scan = null;
@@ -227,6 +272,27 @@
       } else ui.dialog.scan = { hostId, at: U.now(), sessions: res.sessions };
       if (FM.review && res.ok) FM.review.mark('agent.scanned');
       render();
+    },
+    'import-selected': () => {
+      const p = P();
+      const org = O();
+      const scan = ui.dialog && ui.dialog.scan;
+      if (!scan) return;
+      const sessions = scan.sessions.filter(s => U.f(`discsel.${s.key}`, false) && !org.instances.some(i => i.hostId === s.hostId && i.sessionKey === s.key));
+      const res = M.importAgents(p, org, sessions, U.now());
+      if (!res.ok) { toast({ duplicate: T('已有 Agent 导入过，不会重复创建。', 'Already imported; nothing is duplicated.'), identity_unverified: T('身份未核实，不能导入。', 'Identity not verified; cannot import.'), none_selected: T('先勾选 Agent。', 'Tick an Agent first.') }[res.code] || res.code, 'warn'); return; }
+      const ids = res.instances.map(i => i.id);
+      U.clearForm('discsel');
+      U.submitTx({ kind: 'agent.import', payload: { instanceIds: ids } }, {
+        ok: T(`已导入 ${ids.length} 个 Agent。`, `Imported ${ids.length} Agent(s).`),
+        onConfirmed: (r, pp) => { if (pp.onboarding) pp.onboarding.agent = true; if (FM.review) FM.review.mark('agent.imported'); },
+        onFailed: (r, pp) => {
+          const o = pp.data[r.tx.orgId];
+          const agentIds = o.instances.filter(i => ids.includes(i.id)).map(i => i.agentId);
+          o.instances = o.instances.filter(i => !ids.includes(i.id));
+          o.agents = o.agents.filter(a => !(agentIds.includes(a.id) && a.origin === 'imported'));
+        },
+      });
     },
     'import-session': el => {
       const p = P();
@@ -273,9 +339,11 @@
     'include-do': el => {
       const id = el.dataset.id;
       const okrId = U.f(`include-${id}.okr`, ui.dialog.okrId || '');
-      const checks = Object.fromEntries(['budget', 'deadline', 'tools', 'escalation', 'checkpoint', 'stopped'].map(k => [k, !!U.f(`include-${id}.${k}`, false)]));
+      const checks = Object.fromEntries(['budget', 'deadline', 'tools', 'escalation', 'checkpoint', 'stopped', 'acknowledged'].map(k => [k, !!U.f(`include-${id}.${k}`, false)]));
       U.submitTx({ kind: 'agent.include', payload: { instanceId: id, okrId, checks } }, {
-        ok: T('已纳入 OKR：责任实例已切换，自主循环暂停，等待你明确继续。', 'Added to the OKR: the responsible instance switched and the loop is paused until you continue.'),
+        ok: (U.inst(id) || {}).adapter === 'agent-manager'
+          ? T('已分配：目标写入它 Home 的 OKR.md，并通过 agent-manager 发送。确认后开始执行。', 'Assigned: the goal is written to OKR.md in its Home and sent through agent-manager. It starts once you continue.')
+          : T('已纳入 OKR：责任实例已切换，自主循环暂停，等待你明确继续。', 'Added to the OKR: the responsible instance switched and the loop is paused until you continue.'),
         onConfirmed: () => { ui.dialog = null; if (FM.review) FM.review.mark('agent.included'); },
       });
     },
