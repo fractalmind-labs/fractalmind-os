@@ -4,6 +4,7 @@ use fractalmind_device_vault::{
 };
 use std::sync::Arc;
 use tauri::{Manager, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+pub mod agents;
 pub mod local_host;
 mod okr_export;
 
@@ -529,7 +530,12 @@ pub fn run() {
             local_host::fm_local_host_configure,
             local_host::fm_local_host_join,
             local_host::fm_local_host_service,
-            local_host::fm_local_host_uninstall
+            local_host::fm_local_host_uninstall,
+            agents::fm_agent_catalog,
+            agents::fm_agent_launchers,
+            agents::fm_agent_home_check,
+            agents::fm_agent_create,
+            agents::fm_agent_start
         ])
         .run(tauri::generate_context!())
         .expect("FractalMind App runtime failed");

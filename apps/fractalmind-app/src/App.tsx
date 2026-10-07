@@ -50,6 +50,7 @@ const PairingFlow = lazy(() => import("./PairingFlow"));
 const HostAccess = lazy(() => import("./HostAccess"));
 const HostObservations = lazy(() => import("./HostObservations"));
 const LocalHostCard = lazy(() => import("./LocalHostCard"));
+const AgentCreate = lazy(() => import("./AgentCreate"));
 const AgentCheckpointView = lazy(() => import("./AgentCheckpointView"));
 const HandoverFlow = lazy(() => import("./HandoverFlow"));
 const OkrContinuation = lazy(() => import("./OkrContinuation"));
@@ -251,6 +252,15 @@ export function App() {
     if (!dialog) return;
     if (discoverOpen && !dialog.open) dialog.showModal();
     else if (!discoverOpen && dialog.open) dialog.close();
+  });
+  // New Agent (#67): created on this computer, then registered via import.
+  const [createOpen, setCreateOpen] = useState(false);
+  const createDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = createDialog.current;
+    if (!dialog) return;
+    if (createOpen && !dialog.open) dialog.showModal();
+    else if (!createOpen && dialog.open) dialog.close();
   });
   // One-off Agent requests needing attention, reported by DirectApprovalQueue; null = unknown.
   const [directPending, setDirectPending] = useState<number | null>(null);
@@ -602,10 +612,17 @@ export function App() {
         + {t("新建 OKR", "New OKR")}
       </button>
     ) : page === "agents" && snapshot ? (
-      <button className="primary" onClick={() => setDiscoverOpen(true)}>
-        <NavIcon name="globe" />
-        {t("从 Host 发现 Agent", "Discover on a Host")}
-      </button>
+      <span className="row">
+        <button onClick={() => setDiscoverOpen(true)}>
+          <NavIcon name="globe" />
+          {t("从主机导入 Agent", "Import from a host")}
+        </button>
+        {isTauri() && (
+          <button className="primary" onClick={() => setCreateOpen(true)}>
+            + {t("新建 Agent", "New Agent")}
+          </button>
+        )}
+      </span>
     ) : page === "okrs" && snapshot ? (
       <Suspense fallback={null}>
         <CreateOkr
@@ -1228,6 +1245,39 @@ export function App() {
         )}
         {page === "agents" && snapshot && (
           <>
+            {isTauri() && (
+              <dialog
+                ref={createDialog}
+                className="discover-dialog"
+                aria-label={t("新建 Agent", "New Agent")}
+                onClose={() => setCreateOpen(false)}
+              >
+                <div className="dialog-heading">
+                  <div>
+                    <h2>{t("新建 Agent", "New Agent")}</h2>
+                  </div>
+                  <button
+                    className="btn ghost icon sm"
+                    aria-label={t("关闭", "Close")}
+                    onClick={() => setCreateOpen(false)}
+                  >
+                    <NavIcon name="x" />
+                  </button>
+                </div>
+                {createOpen && (
+                  <Suspense fallback={<p>{t("加载…", "Loading…")}</p>}>
+                    <AgentCreate
+                      t={t}
+                      onClose={() => setCreateOpen(false)}
+                      onRegister={() => {
+                        setCreateOpen(false);
+                        setDiscoverOpen(true);
+                      }}
+                    />
+                  </Suspense>
+                )}
+              </dialog>
+            )}
             <dialog
               ref={discoverDialog}
               className="discover-dialog"
@@ -1236,7 +1286,7 @@ export function App() {
             >
               <div className="dialog-heading">
                 <div>
-                  <h2>{t("从 Host 发现已有 Agent", "Discover existing Agents on a Host")}</h2>
+                  <h2>{t("导入主机上已运行的 Agent", "Import Agents running on a host")}</h2>
                   <p>
                     {t(
                       "发现快照是观测；导入关系、OKR 绑定与授权是链上状态。",

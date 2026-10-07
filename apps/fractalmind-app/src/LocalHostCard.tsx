@@ -34,9 +34,23 @@ export default function LocalHostCard({
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
+  const upgraded = useRef(false);
   async function refresh() {
     if (!deviceProfile) return;
-    const s = await native.status(deviceProfile);
+    let s = await native.status(deviceProfile);
+    // After an App update the service still runs the old envd or definition;
+    // reinstall it once, keeping it stopped if the person stopped it.
+    if (
+      !upgraded.current &&
+      s.configured?.organizationId === organizationId &&
+      s.envdAvailable &&
+      !s.serviceCurrent &&
+      (s.service === "running" || s.service === "starting")
+    ) {
+      upgraded.current = true;
+      await native.service(deviceProfile, "install").catch(() => {});
+      s = await native.status(deviceProfile);
+    }
     if (mounted.current) setStatus(s);
   }
   useEffect(() => {

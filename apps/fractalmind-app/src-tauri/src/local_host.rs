@@ -63,6 +63,9 @@ pub struct Status {
     pub pid: Option<u32>,
     /// The configured Coordinator port accepts connections on loopback.
     pub listening: bool,
+    /// The installed service definition matches this App's (envd build,
+    /// paths, environment); false after an App update until reinstalled.
+    pub service_current: bool,
     pub config_path: String,
     pub log_path: String,
     pub workspace_path: String,
@@ -214,6 +217,7 @@ pub struct Layout {
     /// launchd plist / systemd unit; unused for the Windows task.
     pub service_file: PathBuf,
     pub envd: Option<PathBuf>,
+    pub home: PathBuf,
 }
 impl Layout {
     /// `data` holds the per-profile configuration; `home` the user's home.
@@ -243,7 +247,7 @@ impl Layout {
                 .join("systemd/user")
                 .join(format!("{label}.service")),
         );
-        let _ = (home, config_dir);
+        let _ = config_dir;
         Ok(Layout {
             profile: profile.into(),
             config: root.join("sentinel.yaml"),
@@ -253,6 +257,7 @@ impl Layout {
             label,
             service_file,
             envd,
+            home: home.to_path_buf(),
         })
     }
     fn envd(&self) -> Result<&Path, String> {
@@ -279,6 +284,7 @@ impl Layout {
                 )
                 .is_ok()
             }),
+            service_current: self.service_current(),
             configured,
             service,
             pid,
@@ -286,6 +292,33 @@ impl Layout {
             log_path: self.log.to_string_lossy().into(),
             workspace_path: self.workspace.to_string_lossy().into(),
             default_host_name: default_host_name(),
+        }
+    }
+    /// The service file this App would install now.
+    pub fn service_definition(&self) -> Option<String> {
+        let envd = self.envd.as_deref()?;
+        let env = service_env(&self.home, envd);
+        #[cfg(target_os = "macos")]
+        return Some(launchd_plist(
+            &self.label,
+            envd,
+            &self.config,
+            &self.log,
+            &env,
+        ));
+        #[cfg(not(target_os = "macos"))]
+        return Some(systemd_unit(envd, &self.config, &self.log, &env));
+    }
+    fn service_current(&self) -> bool {
+        if cfg!(target_os = "windows") {
+            return true;
+        }
+        match (
+            self.service_definition(),
+            fs::read_to_string(&self.service_file),
+        ) {
+            (Some(want), Ok(have)) => want == have,
+            _ => false,
         }
     }
     /// Creates (or reads) this profile's Host keys through envd. Returns only
@@ -612,7 +645,31 @@ fn xml(value: &str) -> String {
         .replace('>', "&gt;")
         .replace('"', "&quot;")
 }
-pub fn launchd_plist(label: &str, envd: &Path, config: &Path, log: &Path) -> String {
+/// Login services start with a minimal PATH; envd and the Agents it observes
+/// or starts need tmux, Homebrew and user-local CLIs (codex, claude).
+pub fn service_path(home: &Path) -> String {
+    let home = home.to_string_lossy();
+    format!("{home}/.local/bin:{home}/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
+}
+/// PATH plus a stamp of the envd build, so an App update that ships a new
+/// envd makes the installed definition out of date and gets reinstalled.
+pub fn service_env(home: &Path, envd: &Path) -> String {
+    let stamp = fs::metadata(envd)
+        .ok()
+        .map(|m| {
+            let modified = m
+                .modified()
+                .ok()
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            format!("{}-{modified}", m.len())
+        })
+        .unwrap_or_default();
+    format!("{}\u{0}{stamp}", service_path(home))
+}
+pub fn launchd_plist(label: &str, envd: &Path, config: &Path, log: &Path, env: &str) -> String {
+    let (path, stamp) = env.split_once('\u{0}').unwrap_or((env, ""));
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -625,6 +682,8 @@ pub fn launchd_plist(label: &str, envd: &Path, config: &Path, log: &Path) -> Str
   <key>KeepAlive</key><true/>
   <key>ThrottleInterval</key><integer>10</integer>
   <key>ProcessType</key><string>Background</string>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>{path}</string><key>LANG</key><string>en_US.UTF-8</string><key>FM_ENVD_BUILD</key><string>{stamp}</string></dict>
   <key>StandardOutPath</key><string>{log}</string>
   <key>StandardErrorPath</key><string>{log}</string>
 </dict>
@@ -634,6 +693,8 @@ pub fn launchd_plist(label: &str, envd: &Path, config: &Path, log: &Path) -> Str
         envd = xml(&envd.to_string_lossy()),
         config = xml(&config.to_string_lossy()),
         log = xml(&log.to_string_lossy()),
+        path = xml(path),
+        stamp = xml(stamp),
     )
 }
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
@@ -647,9 +708,12 @@ fn systemd_quote(value: &str) -> String {
     )
 }
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
-pub fn systemd_unit(envd: &Path, config: &Path, log: &Path) -> String {
+pub fn systemd_unit(envd: &Path, config: &Path, log: &Path, env: &str) -> String {
+    let (path, stamp) = env.split_once('\u{0}').unwrap_or((env, ""));
     format!(
-        "[Unit]\nDescription=FractalMind Host and Coordinator\nAfter=network-online.target\n\n[Service]\nExecStart={} --config {}\nRestart=always\nRestartSec=10\nStandardOutput=append:{}\nStandardError=append:{}\n\n[Install]\nWantedBy=default.target\n",
+        "[Unit]\nDescription=FractalMind Host and Coordinator\nAfter=network-online.target\n\n[Service]\nEnvironment={} {}\nExecStart={} --config {}\nRestart=always\nRestartSec=10\nStandardOutput=append:{}\nStandardError=append:{}\n\n[Install]\nWantedBy=default.target\n",
+        systemd_quote(&format!("PATH={path}")),
+        systemd_quote(&format!("FM_ENVD_BUILD={stamp}")),
         systemd_quote(&envd.to_string_lossy()),
         systemd_quote(&config.to_string_lossy()),
         log.to_string_lossy(),
@@ -708,7 +772,13 @@ mod service {
         if let Some(dir) = layout.log.parent() {
             fs::create_dir_all(dir).map_err(|_| "ServiceUnavailable")?;
         }
-        let content = launchd_plist(&layout.label, envd, &layout.config, &layout.log);
+        let content = launchd_plist(
+            &layout.label,
+            envd,
+            &layout.config,
+            &layout.log,
+            &service_env(&layout.home, envd),
+        );
         fs::create_dir_all(layout.service_file.parent().ok_or("ServiceUnavailable")?)
             .map_err(|_| "ServiceUnavailable")?;
         fs::write(&layout.service_file, content).map_err(|_| "ServiceUnavailable")?;
@@ -792,7 +862,12 @@ mod service {
             .map_err(|_| "ServiceUnavailable")?;
         fs::write(
             &layout.service_file,
-            systemd_unit(envd, &layout.config, &layout.log),
+            systemd_unit(
+                envd,
+                &layout.config,
+                &layout.log,
+                &service_env(&layout.home, envd),
+            ),
         )
         .map_err(|_| "ServiceUnavailable")?;
         systemctl(&["daemon-reload"])?;
@@ -1074,7 +1149,12 @@ mod tests {
             Path::new("/Applications/FractalMind.app/Contents/MacOS/fractalmind-envd"),
             Path::new("/Users/a&b/cfg.yaml"),
             Path::new("/Users/a/Library/Logs/FractalMind/envd-testnet.log"),
+            &service_path(Path::new("/Users/a")),
         );
+        assert!(p.contains(
+            "<key>PATH</key><string>/Users/a/.local/bin:/Users/a/bin:/opt/homebrew/bin:"
+        ));
+        assert!(p.contains("<key>LANG</key><string>en_US.UTF-8</string>"));
         assert!(p.contains("<string>/Users/a&amp;b/cfg.yaml</string>"));
         assert!(
             p.contains("<key>RunAtLoad</key><true/>") && p.contains("<key>KeepAlive</key><true/>")
@@ -1083,6 +1163,19 @@ mod tests {
             Path::new("/opt/fm/fractalmind-envd"),
             Path::new("/home/u/100% \"x\"/cfg"),
             Path::new("/home/u/envd.log"),
+            "/home/u/.local/bin:/usr/bin",
+        );
+        assert!(u.contains("Environment=\"PATH=/home/u/.local/bin:/usr/bin\" \"FM_ENVD_BUILD=\"\n"));
+        let stamped = launchd_plist(
+            "l",
+            Path::new("/e"),
+            Path::new("/c"),
+            Path::new("/l"),
+            "/bin\u{0}123-456",
+        );
+        assert!(
+            stamped.contains("<key>PATH</key><string>/bin</string>")
+                && stamped.contains("<key>FM_ENVD_BUILD</key><string>123-456</string>")
         );
         assert!(u.contains(
             "ExecStart=\"/opt/fm/fractalmind-envd\" --config \"/home/u/100%% \\\"x\\\"/cfg\"\n"

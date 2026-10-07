@@ -15,6 +15,7 @@ import {
 import type { VerifiedHostObservation } from "./host-signatures";
 import type { ConnectionProfile } from "./domain";
 import type { ImportTarget } from "./AgentImportFlow";
+import { definitionName, type AgentDefinition } from "./agents";
 const AgentImportFlow = lazy(() => import("./AgentImportFlow"));
 
 /** Transient observations: no business cache or automatic connection/execution.
@@ -400,9 +401,22 @@ export default function HostObservations({
                                   key={instance.instanceId || instance.pane}
                                 >
                                   <h4>
-                                    {instance.session}
-                                    {instance.pane && ` · ${instance.pane}`}
+                                    {instance.agent
+                                      ? definitionName(instance.agent)
+                                      : instance.session}
+                                    {instance.pane && (
+                                      <small className="muted">
+                                        {" "}
+                                        · {instance.session} · {instance.pane}
+                                      </small>
+                                    )}
                                   </h4>
+                                  {instance.agent && (
+                                    <AgentDefinitionView
+                                      agent={instance.agent}
+                                      t={t}
+                                    />
+                                  )}
                                   <span className="badge">
                                     {instance.state === "observed"
                                       ? t(
@@ -500,5 +514,70 @@ export default function HostObservations({
         )}
       </p>
     </section>
+  );
+}
+
+/** What the Host read from the session's Home AGENTS.md (#67). */
+function AgentDefinitionView({
+  agent,
+  t,
+}: {
+  agent: AgentDefinition;
+  t: (zh: string, en: string) => string;
+}) {
+  const launch = [
+    agent.launcher,
+    agent.profile ? `--profile ${agent.profile}` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return (
+    <dl className="kv small">
+      <dt>Home</dt>
+      <dd className="mono">{agent.home}</dd>
+      {agent.description && (
+        <>
+          <dt>{t("说明", "Description")}</dt>
+          <dd>{agent.description}</dd>
+        </>
+      )}
+      <dt>{t("启动", "Launch")}</dt>
+      <dd className="mono">{launch || t("未声明", "Not declared")}</dd>
+      <dt>{t("模型", "Model")}</dt>
+      <dd>
+        {agent.model ?? t("未知", "Unknown")}{" "}
+        <span className="tiny muted">
+          {t("由启动配置决定", "from the launch profile")}
+        </span>
+      </dd>
+      <dt>{t("心跳", "Heartbeat")}</dt>
+      <dd>
+        {agent.heartbeat ? (
+          <span className="mono">{agent.heartbeat}</span>
+        ) : (
+          t("未启用或由外部调度", "Off or scheduled elsewhere")
+        )}
+        {agent.schedules > 0 &&
+          ` · ${t(`${agent.schedules} 个定时任务`, `${agent.schedules} schedules`)}`}
+      </dd>
+      <dt>ROM</dt>
+      <dd>
+        {agent.rom ? (
+          <span className="chip outline mono">
+            {agent.rom.name}@{agent.rom.version}
+          </span>
+        ) : (
+          <span className="chip wait">
+            {t("未记录 ROM", "No ROM recorded")}
+          </span>
+        )}
+      </dd>
+      <dt>{t("技能", "Skills")}</dt>
+      <dd>
+        {agent.skills}
+        {agent.subAgents > 0 &&
+          ` · ${t(`${agent.subAgents} 个员工 Agent（不随之导入）`, `${agent.subAgents} employee Agents (not imported with it)`)}`}
+      </dd>
+    </dl>
   );
 }

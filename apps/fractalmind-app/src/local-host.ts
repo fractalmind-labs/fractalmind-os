@@ -43,6 +43,8 @@ export type LocalHostStatus = {
   service: ServiceState;
   pid: number | null;
   listening: boolean;
+  /** False after an App update until the service is reinstalled. */
+  serviceCurrent: boolean;
   configPath: string;
   logPath: string;
   workspacePath: string;
