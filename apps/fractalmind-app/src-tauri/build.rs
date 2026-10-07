@@ -38,6 +38,7 @@ fn main() {
             "fm_agent_home_check",
             "fm_agent_create",
             "fm_agent_start",
+            "fm_agent_deliver_okr",
         ]),
     ))
     .expect("FractalMind App native manifest failed");

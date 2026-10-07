@@ -1,37 +1,15 @@
 // App v2 (#75): Team & Agents (prototype view-agents.js). Chain records are
 // the Agents; this computer's scan adds names, Home, model and ROM for the
 // ones running here.
-import { useEffect, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { useApp } from "../store";
 import { useDialogs } from "../dialogs";
 import { Btn, Empty, Icon, date, shortId, useLang, useT } from "../ui";
 import { okrTitle } from "../model";
 import { agentName, hostName } from "../../display";
-import { LocalHostNative } from "../../local-host";
-import { agentDiscovery, type DiscoveredInstance } from "../../agent-discovery";
+import { useLocalSessions } from "../local-agents";
 import { definitionName } from "../../agents";
 import type { Agent } from "../../domain";
-
-const native = new LocalHostNative();
-
-/** Sessions running on this computer, read directly (no keychain, no chain). */
-function useLocalSessions(deviceProfile: string | null) {
-  const [sessions, setSessions] = useState<DiscoveredInstance[]>([]);
-  useEffect(() => {
-    if (!isTauri() || !deviceProfile) return;
-    let live = true;
-    void (async () => {
-      const raw = await native.discover(deviceProfile);
-      const d = await agentDiscovery(raw.discovery, raw.observedAtMs, raw.observedAtMs + 60_000);
-      if (live) setSessions(d.instances);
-    })().catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, [deviceProfile]);
-  return sessions;
-}
 
 function controlChip(a: Agent, t: (zh: string, en: string) => string) {
   if (!a.control_confirmed) return <span className="chip wait">{t("仅观察", "Observe only")}</span>;
