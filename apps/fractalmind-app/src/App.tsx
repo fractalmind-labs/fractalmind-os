@@ -1406,7 +1406,14 @@ export function App() {
                         </dd>
                         <dt>{t("控制", "Control")}</dt>
                         <dd>
-                          {agent.control_confirmed ? (
+                          {agent.control_confirmed && agent.runtime === "agent-manager-v1" ? (
+                            <span className="chip ok">
+                              {t(
+                                "agent-manager 控制 · 工具与模型花费由其启动配置决定",
+                                "agent-manager control · tool use and model spending follow its launch configuration",
+                              )}
+                            </span>
+                          ) : agent.control_confirmed ? (
                             <span className="chip warn">
                               {t(
                                 "管理设备已确认 · 待适配器核验",

@@ -148,6 +148,14 @@ export class LocalHostNative {
   uninstall(profile: string) {
     return this.run<void>("fm_local_host_uninstall", { profile });
   }
+  /** This computer's running Agents, read directly (no coordinator, no keys). */
+  discover(profile: string) {
+    return this.run<{
+      discovery: unknown;
+      hostAddress: string | null;
+      observedAtMs: number;
+    }>("fm_local_host_discover", { profile });
+  }
 }
 
 export const FIRST_PORT = 7443;

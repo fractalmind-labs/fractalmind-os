@@ -32,6 +32,7 @@ fn main() {
             "fm_local_host_join",
             "fm_local_host_service",
             "fm_local_host_uninstall",
+            "fm_local_host_discover",
             "fm_agent_catalog",
             "fm_agent_launchers",
             "fm_agent_home_check",
