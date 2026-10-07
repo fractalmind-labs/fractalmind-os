@@ -14,6 +14,7 @@ import { ChainReadSession } from "../../chain";
 import { NativeDeviceSigner } from "../../native-device";
 import { deviceGrant } from "../../device-grant";
 import { normalizeDraft, OkrDraftCreation, type DraftInput } from "../../okr-draft";
+import { parseOkrProposal, type OkrProposal } from "../../okr-proposal";
 import { awaitTransactionVisible } from "../../transaction-visibility";
 
 const KEY = "fractalmind.v2.okr-new.v1";
@@ -30,6 +31,11 @@ type Form = {
   maxCalls: string;
   paths: string;
   escalate: boolean[];
+  /** From an Agent's proposal: extra prohibited actions, an exact deadline
+   * and where it came from. */
+  extraProhibited?: string[];
+  deadlineMs?: string;
+  importedFrom?: string;
 };
 const ESCALATION: [string, string][] = [
   ["调用付费外部服务或上传代码到第三方", "Paid external services or uploading code to third parties"],
@@ -67,7 +73,7 @@ export function draftInput(f: Form, t: (zh: string, en: string) => string, now =
     objective: f.objective.trim(),
     successCriteria: f.criteria.map((c) => c.trim()).filter(Boolean).join("\n"),
     priority: f.priority,
-    deadlineMs: String(now + Math.round(Number(f.days) * 86_400_000)),
+    deadlineMs: f.deadlineMs ?? String(now + Math.round(Number(f.days) * 86_400_000)),
     krs: f.krs.map((k) => ({
       title: k.title.trim(),
       unit: k.unit.trim() || "-",
@@ -85,13 +91,13 @@ export function draftInput(f: Form, t: (zh: string, en: string) => string, now =
       .split("\n")
       .map((p) => p.trim())
       .filter(Boolean),
-    prohibitedActions: ESCALATION.filter((_, i) => f.escalate[i]).map(([zh, en]) => t(zh, en)),
+    prohibitedActions: [...ESCALATION.filter((_, i) => f.escalate[i]).map(([zh, en]) => t(zh, en)), ...(f.extraProhibited ?? [])],
     maxCalls: f.maxCalls.trim(),
   };
 }
 
 /** Field problems the wizard shows before anything is signed. */
-export function problems(f: Form) {
+export function problems(f: Form, now = Date.now()) {
   const out: Record<string, [string, string]> = {};
   if (!f.objective.trim()) out.objective = ["必填", "Required"];
   if (!(Number(f.days) >= 1)) out.days = ["至少 1 天", "At least 1 day"];
@@ -106,8 +112,28 @@ export function problems(f: Form) {
     if (!/^[1-9][0-9]*$/.test(k.weight.trim())) out[`kr${i}.weight`] = ["需为正整数", "Must be a positive integer"];
   });
   if (!/^[1-9][0-9]*$/.test(f.maxCalls.trim())) out.maxCalls = ["需为正整数", "Must be a positive integer"];
-  if (!f.escalate.some(Boolean)) out.escalate = ["至少保留一项", "Keep at least one"];
+  if (!f.escalate.some(Boolean) && !f.extraProhibited?.length) out.escalate = ["至少保留一项", "Keep at least one"];
+  if (f.deadlineMs && Number(f.deadlineMs) <= now) out.days = ["截止时间已过", "The deadline has passed"];
   return out;
+}
+
+/** A proposal fills the form; the owner still reviews every step. */
+export function formFromProposal(p: OkrProposal, base: Form, agentName: string, now = Date.now()): Form {
+  return {
+    ...base,
+    step: 1,
+    objective: p.objective,
+    priority: p.priority,
+    days: String(Math.max(1, Math.round((Number(p.deadlineMs) - now) / 86_400_000))),
+    deadlineMs: p.deadlineMs,
+    criteria: p.successCriteria,
+    krs: p.krs.map((k) => ({ ...k })),
+    maxCalls: p.maxCalls,
+    paths: p.allowedPaths.join("\n"),
+    escalate: ESCALATION.map(() => false),
+    extraProhibited: p.prohibitedActions,
+    importedFrom: agentName,
+  };
 }
 
 const STEPS: [string, string][] = [
@@ -130,6 +156,7 @@ export default function OkrNew() {
   const [error, setError] = useState<string | null>(null);
   const [okrId, setOkrId] = useState<string | null>(null);
   const creation = useRef<OkrDraftCreation | null>(null);
+  const [proposal, setProposal] = useState<OkrProposal | "invalid" | null>(null);
   useEffect(() => {
     try {
       localStorage.setItem(KEY, JSON.stringify(f));
@@ -140,6 +167,25 @@ export default function OkrNew() {
   const agents = assignable(app.snapshot?.agents.value);
   const busy = new Set(activeOkrs(app).map((r) => r.okr.managed_agent));
   const agent = agents.find((a) => a.id === f.agentId) ?? null;
+  const home = agent ? (local(agent)?.agent?.home ?? null) : null;
+  useEffect(() => {
+    setProposal(null);
+    if (!home || !isTauri()) return;
+    let live = true;
+    void (invoke("fm_agent_read_proposal", { home }) as Promise<string | null>)
+      .then((text) => {
+        if (!live || text === null) return;
+        try {
+          setProposal(parseOkrProposal(text));
+        } catch {
+          setProposal("invalid");
+        }
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [home]);
   const issues = problems(f);
   const stepIssues = (step: number) => Object.keys(issues).filter((k) => STEP_FIELDS[step]?.test(k));
   const err = (field: string) =>
@@ -294,7 +340,7 @@ export default function OkrNew() {
         </div>
         <div className="field">
           <label htmlFor="w-days">{t("期限（天）", "Timeframe (days)")}</label>
-          <input id="w-days" className="input num" type="number" min={1} value={f.days} onChange={(e) => set({ days: e.target.value })} />
+          <input id="w-days" className="input num" type="number" min={1} value={f.days} onChange={(e) => set({ days: e.target.value, deadlineMs: undefined })} />
           {err("days")}
         </div>
         <div className="field full">
@@ -318,6 +364,31 @@ export default function OkrNew() {
           <div className="field full">
             <span className="label">{t("工作区（Agent Home）", "Workspace (Agent Home)")}</span>
             <div className="small mono">{local(agent)!.agent!.home}</div>
+          </div>
+        )}
+        {agent && proposal && (
+          <div className="field full">
+            {proposal === "invalid" ? (
+              <div className="note warn">
+                <Icon name="alert" />
+                <div className="small">{t("这个 Agent 留的 OKR 提案格式不正确，无法导入。", "This Agent's OKR proposal is not in the expected format.")}</div>
+              </div>
+            ) : (
+              <div className="note info">
+                <Icon name="sparkle" />
+                <div className="grow">
+                  <div className="strong">
+                    {t(`${label(agent)} 提出了一个 OKR`, `${label(agent)} proposed an OKR`)}
+                  </div>
+                  <div className="small">{proposal.objective}</div>
+                  <div className="tiny muted">
+                    {t(`${proposal.krs.length} 个 KR`, `${proposal.krs.length} KRs`)}
+                    {proposal.source ? ` · ${t("来自", "from")} ${proposal.source}` : ""} · {t("导入后逐步核对，签名前不会提交", "Review each step after importing; nothing is submitted before you sign")}
+                  </div>
+                </div>
+                <Btn size="sm" kind="primary" label={t("导入提案", "Import proposal")} onClick={() => setF((cur) => formFromProposal(proposal, cur, label(agent)))} />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -448,6 +519,12 @@ export default function OkrNew() {
                 {t(zh, en)}
               </label>
             ))}
+            {(f.extraProhibited ?? []).map((x, i) => (
+              <label className="check" key={`x${i}`}>
+                <input type="checkbox" checked onChange={() => set({ extraProhibited: f.extraProhibited!.filter((_, j) => j !== i) })} />
+                {x}
+              </label>
+            ))}
             {err("escalate")}
           </div>
         </div>
@@ -574,6 +651,17 @@ export default function OkrNew() {
         </div>
       </div>
       <div className="steps-nav">{nav}</div>
+      {f.importedFrom && phase === "form" && (
+        <div className="note" style={{ maxWidth: 820, marginBottom: 12 }}>
+          <Icon name="info" />
+          <div className="small">
+            {t(
+              `内容来自 ${f.importedFrom} 的提案，尚未提交。请逐步核对，尤其是 KR 的基线与目标。`,
+              `Imported from ${f.importedFrom}'s proposal and not submitted. Review each step, especially the KR baselines and targets.`,
+            )}
+          </div>
+        </div>
+      )}
       <div className="card" style={{ maxWidth: 820 }}>
         <div className="col gap-lg">
           {error && (

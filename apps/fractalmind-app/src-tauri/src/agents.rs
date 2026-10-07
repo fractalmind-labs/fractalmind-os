@@ -598,6 +598,18 @@ pub fn deliver_okr(
     })
 }
 
+/// An OKR an Agent proposes for its owner to review and sign (#75): the
+/// `.fractalmind/okr-proposal.json` file in its Home. Reading it changes
+/// nothing; the App shows it as unsubmitted until a device signs.
+pub fn read_proposal(home: &Path) -> Result<Option<String>, String> {
+    let path = home.join(".fractalmind/okr-proposal.json");
+    match fs::metadata(&path) {
+        Err(_) => Ok(None),
+        Ok(m) if !m.is_file() || m.len() > 65_536 => Err("InvalidProposal".into()),
+        Ok(_) => fs::read_to_string(&path).map(Some).map_err(|_| "InvalidProposal".into()),
+    }
+}
+
 /// Local chat with an agent-manager Agent on this computer (#75): the
 /// message is typed into its session by agent-manager. Nothing is recorded
 /// on chain.
@@ -938,6 +950,20 @@ pub async fn fm_agent_output(
     .await
 }
 
+#[tauri::command]
+pub async fn fm_agent_read_proposal(
+    window: WebviewWindow,
+    app: AppHandle,
+    home: String,
+) -> Result<Option<String>, String> {
+    super::main_window(&window)?;
+    blocking(move || {
+        let (path, _) = agent_home(&app, &home)?;
+        read_proposal(&path)
+    })
+    .await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -977,6 +1003,19 @@ mod tests {
         assert!(send_message(&dir, &dir, "Bad", "hi").is_err());
         assert!(send_message(&dir, &dir, "main", "  ").is_err());
         assert_eq!(send_message(&dir, &dir, "main", "hi").unwrap_err(), "AgentManagerMissing");
+    }
+
+    #[test]
+    fn a_proposal_is_read_only_when_present_and_small() {
+        let dir = std::env::temp_dir().join(format!("fm-proposal-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(dir.join(".fractalmind")).unwrap();
+        assert_eq!(read_proposal(&dir).unwrap(), None);
+        fs::write(dir.join(".fractalmind/okr-proposal.json"), "{}").unwrap();
+        assert_eq!(read_proposal(&dir).unwrap().as_deref(), Some("{}"));
+        fs::write(dir.join(".fractalmind/okr-proposal.json"), "x".repeat(70_000)).unwrap();
+        assert!(read_proposal(&dir).is_err());
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]

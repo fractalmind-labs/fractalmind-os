@@ -289,3 +289,73 @@ test("the wizard form becomes a draft the chain spec accepts", () => {
     "objective",
   ]);
 });
+
+test("an Agent's OKR proposal fills the wizard but stays unsubmitted until reviewed", async () => {
+  const { parseOkrProposal, OkrProposalError } =
+    await import("../src/okr-proposal");
+  const { formFromProposal } = await import("../src/v2/pages/OkrNew");
+  const now = 1_000_000;
+  const text = JSON.stringify({
+    schema: "fractalmind.okr-proposal.v1",
+    objective: "Validate the strategy in simulation",
+    successCriteria: ["≥ 1000 settled markets", "Net profit after fees > 0"],
+    priority: 0,
+    deadlineMs: String(now + 10 * 86_400_000),
+    krs: [
+      {
+        title: "Settled markets",
+        unit: "markets",
+        baseline: "0",
+        target: "1000",
+        weight: "2",
+      },
+    ],
+    allowedPaths: ["experiments", "output"],
+    prohibitedActions: ["No real funds or wallet signatures"],
+    maxCalls: "500",
+    source: "OKR.md",
+  });
+  const p = parseOkrProposal(text, now);
+  assert.equal(p.krs[0].verify, "user");
+  const base = {
+    logicalId: "x",
+    step: 3,
+    objective: "",
+    priority: 1 as const,
+    days: "30",
+    agentId: "a",
+    criteria: [""],
+    krs: [],
+    maxCalls: "200",
+    paths: ".",
+    escalate: [true, true, true, true],
+  };
+  const f = formFromProposal(p, base, "burry", now);
+  assert.equal(f.step, 1);
+  assert.equal(f.agentId, "a");
+  assert.equal(f.days, "10");
+  assert.equal(f.paths, "experiments\noutput");
+  assert.deepEqual(f.escalate, [false, false, false, false]);
+  const draft = draftInput(f, (zh: string) => zh, now);
+  assert.equal(draft.deadlineMs, String(now + 10 * 86_400_000));
+  assert.deepEqual(draft.prohibitedActions, [
+    "No real funds or wallet signatures",
+  ]);
+  assert.deepEqual(problems(f, now), {});
+  // Wrong schema, past deadline, non-numeric target or too many KRs are refused.
+  const bad = (patch: object) =>
+    assert.throws(
+      () =>
+        parseOkrProposal(
+          JSON.stringify({ ...JSON.parse(text), ...patch }),
+          now,
+        ),
+      OkrProposalError,
+    );
+  bad({ schema: "other" });
+  bad({ deadlineMs: String(now - 1) });
+  bad({ krs: [{ title: "x", baseline: "0", target: "lots" }] });
+  bad({
+    krs: [1, 2, 3, 4].map(() => ({ title: "x", baseline: "0", target: "1" })),
+  });
+});
